@@ -1,0 +1,1380 @@
+[DEBUG] 2023-04-06 10:24:03 --> 运行Spring-Generator... --> Main.java:58 
+
+[DEBUG] 2023-04-06 10:24:04 --> 初始化首页... --> IndexController.java:377 
+
+[DEBUG] 2023-04-06 10:24:04 --> 初始化首页成功! --> IndexController.java:424 
+
+[DEBUG] 2023-04-06 10:24:04 --> 加载左侧数据库树与事件.... --> IndexController.java:677 
+
+[DEBUG] 2023-04-06 10:24:04 --> 加载所有数据库到左侧树集成功! --> IndexController.java:429 
+
+[DEBUG] 2023-04-06 10:24:04 --> 执行查询默认配置信息并加载到首页... --> IndexController.java:436 
+
+[DEBUG] 2023-04-06 10:24:04 --> 执行加载模板文件夹里面所有模板的名字... --> IndexController.java:956 
+
+[DEBUG] 2023-04-06 10:24:04 --> 执行加载模板文件夹里面所有模板的名字-->成功! --> IndexController.java:963 
+
+[DEBUG] 2023-04-06 10:24:05 --> 加载配置信息到首页成功! --> IndexController.java:440 
+
+[DEBUG] 2023-04-06 10:24:07 --> 初始化数据库连接窗口.... --> ConnectionController.java:86 
+
+[DEBUG] 2023-04-06 10:24:07 --> 初始化数据库连接成功! --> ConnectionController.java:103 
+
+[DEBUG] 2023-04-06 10:25:03 --> 执行测试数据库连接... --> ConnectionController.java:170 
+
+[DEBUG] 2023-04-06 10:25:04 --> 连接数据库的数据为null,取消测试操作!!! --> ConnectionController.java:173 
+
+[DEBUG] 2023-04-06 10:25:22 --> 执行测试数据库连接... --> ConnectionController.java:170 
+
+[DEBUG] 2023-04-06 10:25:22 --> 连接数据库的数据为null,取消测试操作!!! --> ConnectionController.java:173 
+
+[DEBUG] 2023-04-06 10:25:32 --> 执行测试数据库连接... --> ConnectionController.java:170 
+
+[DEBUG] 2023-04-06 10:25:33 --> 数据库测试连接成功! --> ConnectionController.java:179 
+
+[DEBUG] 2023-04-06 10:25:35 --> 执行保存数据库连接... --> ConnectionController.java:137 
+
+[DEBUG] 2023-04-06 10:25:35 --> 保存数据库连接成功! --> ConnectionController.java:147 
+
+[DEBUG] 2023-04-06 10:25:47 --> 选择文件项目目录:D:\GitProject --> IndexController.java:1492 
+
+[DEBUG] 2023-04-06 10:27:31 --> 初始化SetCustomConterller... --> SetCustomController.java:165 
+
+[DEBUG] 2023-04-06 10:27:31 --> 初始化SetCustomConterller->初始化属性... --> SetCustomController.java:166 
+
+[DEBUG] 2023-04-06 10:27:31 --> 初始化SetCustomConterller->初始化模板文件名选择... --> SetCustomController.java:209 
+
+[DEBUG] 2023-04-06 10:27:31 --> 初始化SetCustomConterller->初始化配置信息... --> SetCustomController.java:210 
+
+[DEBUG] 2023-04-06 10:27:31 --> 执行从数据库中获取配置文件... --> SetCustomController.java:266 
+
+[DEBUG] 2023-04-06 10:27:31 --> 执行获取配置文件-->成功! --> SetCustomController.java:269 
+
+[DEBUG] 2023-04-06 10:27:31 --> 执行加载配置文件到当前页面... --> SetCustomController.java:299 
+
+[DEBUG] 2023-04-06 10:27:31 --> 执行加载配置文件到当前页面->成功! --> SetCustomController.java:314 
+
+[DEBUG] 2023-04-06 10:27:31 --> 初始化SetCustomConterller-->成功! --> SetCustomController.java:225 
+
+[DEBUG] 2023-04-06 10:27:41 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 10:27:53 --> 执行保存配置文件... --> IndexController.java:1391 
+
+[DEBUG] 2023-04-06 10:27:55 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 10:28:00 --> 加载所有表.... --> IndexController.java:778 
+
+[DEBUG] 2023-04-06 10:28:00 --> 加载所有表成功! --> IndexController.java:796 
+
+[DEBUG] 2023-04-06 10:28:03 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:28:03 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:28:05 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:28:05 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:28:06 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:28:06 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:28:07 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:28:07 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:28:12 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:28:12 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:28:13 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:28:13 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:28:14 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:28:14 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:28:16 --> 初始化SetCustomPropertyController... --> SetCustomPropertyController.java:121 
+
+[DEBUG] 2023-04-06 10:28:16 --> 初始化SetCustomPropertyController->初始化属性... --> SetCustomPropertyController.java:122 
+
+[DEBUG] 2023-04-06 10:28:16 --> 初始化SetCustomPropertyController->初始化配置信息... --> SetCustomPropertyController.java:160 
+
+[DEBUG] 2023-04-06 10:28:16 --> 执行从数据库中获取配置文件... --> SetCustomPropertyController.java:211 
+
+[DEBUG] 2023-04-06 10:28:16 --> 执行获取配置文件-->成功! --> SetCustomPropertyController.java:214 
+
+[DEBUG] 2023-04-06 10:28:16 --> 执行加载配置文件到当前页面... --> SetCustomPropertyController.java:244 
+
+[DEBUG] 2023-04-06 10:28:16 --> 执行加载配置文件到当前页面->成功! --> SetCustomPropertyController.java:251 
+
+[DEBUG] 2023-04-06 10:28:16 --> 初始化SetCustomPropertyController-->成功! --> SetCustomPropertyController.java:175 
+
+[DEBUG] 2023-04-06 10:39:30 --> 选择文件项目目录:D:\GitProject\ShenShanScreen\src\main\java --> IndexController.java:1492 
+
+[DEBUG] 2023-04-06 10:39:33 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 10:39:34 --> Couldn't find template in cache for "tkyEntity.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyEntity_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyEntity_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyEntity.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> Loading template for "tkyEntity.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyEntity.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> 执行生成实体类-->成功! --> IndexController.java:1218 
+
+[DEBUG] 2023-04-06 10:39:34 --> Couldn't find template in cache for "tkyService.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyService_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyService_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyService.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> Loading template for "tkyService.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyService.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> 执行生成Service-->成功! --> IndexController.java:1232 
+
+[DEBUG] 2023-04-06 10:39:34 --> Couldn't find template in cache for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyServiceImpl.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> Loading template for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyServiceImpl.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> 执行生成ServiceImpl-->成功! --> IndexController.java:1246 
+
+[DEBUG] 2023-04-06 10:39:34 --> Couldn't find template in cache for "tkyDao.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyDao_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyDao_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyDao.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> Loading template for "tkyDao.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDao.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> 执行生成DAO-->成功! --> IndexController.java:1260 
+
+[DEBUG] 2023-04-06 10:39:34 --> Couldn't find template in cache for "tkyController.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyController_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyController_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyController.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> Loading template for "tkyController.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyController.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> 执行生成Controller-->成功! --> IndexController.java:1274 
+
+[DEBUG] 2023-04-06 10:39:34 --> Couldn't find template in cache for "tkyDto.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyDto_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyDto_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyDto.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> Loading template for "tkyDto.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDto.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> 执行生成createDto实体类-->成功! --> IndexController.java:1288 
+
+[DEBUG] 2023-04-06 10:39:34 --> Couldn't find template in cache for "MySQLMapper.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("MySQLMapper_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("MySQLMapper_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("MySQLMapper.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> Loading template for "MySQLMapper.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\MySQLMapper.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> 执行生成Mapper-->成功! --> IndexController.java:1307 
+
+[DEBUG] 2023-04-06 10:39:34 --> Couldn't find template in cache for "tkySwagger.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkySwagger_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkySwagger_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkySwagger.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> Loading template for "tkySwagger.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkySwagger.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> 执行生成swagger-->成功! --> IndexController.java:1324 
+
+[DEBUG] 2023-04-06 10:39:34 --> Couldn't find template in cache for "tkyMeta.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyMeta_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyMeta_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> TemplateLoader.findTemplateSource("tkyMeta.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> Loading template for "tkyMeta.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyMeta.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:34 --> 执行生成swagger-->成功! --> IndexController.java:1343 
+
+[DEBUG] 2023-04-06 10:39:34 --> 执行创建-->成功! --> IndexController.java:1372 
+
+[DEBUG] 2023-04-06 10:39:40 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 10:39:40 --> Couldn't find template in cache for "tkyEntity.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:40 --> TemplateLoader.findTemplateSource("tkyEntity_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:40 --> TemplateLoader.findTemplateSource("tkyEntity_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:40 --> TemplateLoader.findTemplateSource("tkyEntity.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:40 --> Loading template for "tkyEntity.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyEntity.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:40 --> 执行生成实体类-->成功! --> IndexController.java:1218 
+
+[DEBUG] 2023-04-06 10:39:40 --> Couldn't find template in cache for "tkyService.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:40 --> TemplateLoader.findTemplateSource("tkyService_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:40 --> TemplateLoader.findTemplateSource("tkyService_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:40 --> TemplateLoader.findTemplateSource("tkyService.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:40 --> Loading template for "tkyService.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyService.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> 执行生成Service-->成功! --> IndexController.java:1232 
+
+[DEBUG] 2023-04-06 10:39:41 --> Couldn't find template in cache for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("tkyServiceImpl.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> Loading template for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyServiceImpl.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> 执行生成ServiceImpl-->成功! --> IndexController.java:1246 
+
+[DEBUG] 2023-04-06 10:39:41 --> Couldn't find template in cache for "tkyDao.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("tkyDao_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("tkyDao_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("tkyDao.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> Loading template for "tkyDao.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDao.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> 执行生成DAO-->成功! --> IndexController.java:1260 
+
+[DEBUG] 2023-04-06 10:39:41 --> Couldn't find template in cache for "tkyController.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("tkyController_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("tkyController_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("tkyController.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> Loading template for "tkyController.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyController.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> 执行生成Controller-->成功! --> IndexController.java:1274 
+
+[DEBUG] 2023-04-06 10:39:41 --> Couldn't find template in cache for "tkyDto.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("tkyDto_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("tkyDto_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("tkyDto.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> Loading template for "tkyDto.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDto.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> 执行生成createDto实体类-->成功! --> IndexController.java:1288 
+
+[DEBUG] 2023-04-06 10:39:41 --> Couldn't find template in cache for "MySQLMapper.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("MySQLMapper_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("MySQLMapper_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> TemplateLoader.findTemplateSource("MySQLMapper.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> Loading template for "MySQLMapper.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\MySQLMapper.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:39:41 --> 执行生成Mapper-->成功! --> IndexController.java:1307 
+
+[DEBUG] 2023-04-06 10:39:41 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 10:39:41 --> 执行生成swagger-->成功! --> IndexController.java:1324 
+
+[DEBUG] 2023-04-06 10:39:41 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 10:39:41 --> 执行生成swagger-->成功! --> IndexController.java:1343 
+
+[DEBUG] 2023-04-06 10:39:41 --> 执行创建-->成功! --> IndexController.java:1372 
+
+[DEBUG] 2023-04-06 10:41:33 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:41:33 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:42:56 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:42:56 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:42:57 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 10:42:57 --> Couldn't find template in cache for "tkyEntity.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyEntity_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyEntity_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyEntity.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> Loading template for "tkyEntity.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyEntity.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> 执行生成实体类-->成功! --> IndexController.java:1218 
+
+[DEBUG] 2023-04-06 10:42:57 --> Couldn't find template in cache for "tkyService.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyService_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyService_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyService.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> Loading template for "tkyService.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyService.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> 执行生成Service-->成功! --> IndexController.java:1232 
+
+[DEBUG] 2023-04-06 10:42:57 --> Couldn't find template in cache for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyServiceImpl.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> Loading template for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyServiceImpl.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> 执行生成ServiceImpl-->成功! --> IndexController.java:1246 
+
+[DEBUG] 2023-04-06 10:42:57 --> Couldn't find template in cache for "tkyDao.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyDao_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyDao_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyDao.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> Loading template for "tkyDao.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDao.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> 执行生成DAO-->成功! --> IndexController.java:1260 
+
+[DEBUG] 2023-04-06 10:42:57 --> Couldn't find template in cache for "tkyController.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyController_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyController_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyController.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> Loading template for "tkyController.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyController.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> 执行生成Controller-->成功! --> IndexController.java:1274 
+
+[DEBUG] 2023-04-06 10:42:57 --> Couldn't find template in cache for "tkyDto.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyDto_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyDto_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyDto.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> Loading template for "tkyDto.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDto.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> 执行生成createDto实体类-->成功! --> IndexController.java:1288 
+
+[DEBUG] 2023-04-06 10:42:57 --> Couldn't find template in cache for "MySQLMapper.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("MySQLMapper_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("MySQLMapper_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("MySQLMapper.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> Loading template for "MySQLMapper.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\MySQLMapper.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> 执行生成Mapper-->成功! --> IndexController.java:1307 
+
+[DEBUG] 2023-04-06 10:42:57 --> Couldn't find template in cache for "tkySwagger.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkySwagger_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkySwagger_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkySwagger.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> Loading template for "tkySwagger.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkySwagger.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> 执行生成swagger-->成功! --> IndexController.java:1324 
+
+[DEBUG] 2023-04-06 10:42:57 --> Couldn't find template in cache for "tkyMeta.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyMeta_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyMeta_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> TemplateLoader.findTemplateSource("tkyMeta.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> Loading template for "tkyMeta.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyMeta.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:42:57 --> 执行生成swagger-->成功! --> IndexController.java:1343 
+
+[DEBUG] 2023-04-06 10:42:57 --> 执行创建-->成功! --> IndexController.java:1372 
+
+[DEBUG] 2023-04-06 10:43:33 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 10:43:33 --> Couldn't find template in cache for "tkyEntity.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyEntity_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyEntity_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyEntity.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> Loading template for "tkyEntity.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyEntity.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> 执行生成实体类-->成功! --> IndexController.java:1218 
+
+[DEBUG] 2023-04-06 10:43:33 --> Couldn't find template in cache for "tkyService.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyService_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyService_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyService.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> Loading template for "tkyService.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyService.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> 执行生成Service-->成功! --> IndexController.java:1232 
+
+[DEBUG] 2023-04-06 10:43:33 --> Couldn't find template in cache for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyServiceImpl.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> Loading template for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyServiceImpl.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> 执行生成ServiceImpl-->成功! --> IndexController.java:1246 
+
+[DEBUG] 2023-04-06 10:43:33 --> Couldn't find template in cache for "tkyDao.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyDao_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyDao_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyDao.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> Loading template for "tkyDao.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDao.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> 执行生成DAO-->成功! --> IndexController.java:1260 
+
+[DEBUG] 2023-04-06 10:43:33 --> Couldn't find template in cache for "tkyController.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyController_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyController_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyController.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> Loading template for "tkyController.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyController.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> 执行生成Controller-->成功! --> IndexController.java:1274 
+
+[DEBUG] 2023-04-06 10:43:33 --> Couldn't find template in cache for "tkyDto.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyDto_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyDto_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("tkyDto.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> Loading template for "tkyDto.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDto.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> 执行生成createDto实体类-->成功! --> IndexController.java:1288 
+
+[DEBUG] 2023-04-06 10:43:33 --> Couldn't find template in cache for "MySQLMapper.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("MySQLMapper_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("MySQLMapper_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> TemplateLoader.findTemplateSource("MySQLMapper.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> Loading template for "MySQLMapper.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\MySQLMapper.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:43:33 --> 执行生成Mapper-->成功! --> IndexController.java:1307 
+
+[DEBUG] 2023-04-06 10:43:33 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 10:43:33 --> 执行生成swagger-->成功! --> IndexController.java:1324 
+
+[DEBUG] 2023-04-06 10:43:33 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 10:43:33 --> 执行生成swagger-->成功! --> IndexController.java:1343 
+
+[DEBUG] 2023-04-06 10:43:33 --> 执行创建-->成功! --> IndexController.java:1372 
+
+[DEBUG] 2023-04-06 10:44:02 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 10:44:02 --> Couldn't find template in cache for "tkyEntity.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyEntity_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyEntity_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyEntity.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> Loading template for "tkyEntity.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyEntity.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> 执行生成实体类-->成功! --> IndexController.java:1218 
+
+[DEBUG] 2023-04-06 10:44:02 --> Couldn't find template in cache for "tkyService.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyService_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyService_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyService.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> Loading template for "tkyService.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyService.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> 执行生成Service-->成功! --> IndexController.java:1232 
+
+[DEBUG] 2023-04-06 10:44:02 --> Couldn't find template in cache for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyServiceImpl.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> Loading template for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyServiceImpl.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> 执行生成ServiceImpl-->成功! --> IndexController.java:1246 
+
+[DEBUG] 2023-04-06 10:44:02 --> Couldn't find template in cache for "tkyDao.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyDao_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyDao_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyDao.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> Loading template for "tkyDao.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDao.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> 执行生成DAO-->成功! --> IndexController.java:1260 
+
+[DEBUG] 2023-04-06 10:44:02 --> Couldn't find template in cache for "tkyController.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyController_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyController_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyController.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> Loading template for "tkyController.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyController.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> 执行生成Controller-->成功! --> IndexController.java:1274 
+
+[DEBUG] 2023-04-06 10:44:02 --> Couldn't find template in cache for "tkyDto.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyDto_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyDto_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("tkyDto.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> Loading template for "tkyDto.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDto.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> 执行生成createDto实体类-->成功! --> IndexController.java:1288 
+
+[DEBUG] 2023-04-06 10:44:02 --> Couldn't find template in cache for "MySQLMapper.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("MySQLMapper_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("MySQLMapper_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> TemplateLoader.findTemplateSource("MySQLMapper.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> Loading template for "MySQLMapper.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\MySQLMapper.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:02 --> 执行生成Mapper-->成功! --> IndexController.java:1307 
+
+[DEBUG] 2023-04-06 10:44:02 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 10:44:02 --> 执行生成swagger-->成功! --> IndexController.java:1324 
+
+[DEBUG] 2023-04-06 10:44:02 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 10:44:02 --> 执行生成swagger-->成功! --> IndexController.java:1343 
+
+[DEBUG] 2023-04-06 10:44:02 --> 执行创建-->成功! --> IndexController.java:1372 
+
+[DEBUG] 2023-04-06 10:44:13 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:44:13 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:44:14 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:44:14 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:44:16 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 10:44:17 --> Couldn't find template in cache for "tkyEntity.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyEntity_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyEntity_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyEntity.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> Loading template for "tkyEntity.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyEntity.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> 执行生成实体类-->成功! --> IndexController.java:1218 
+
+[DEBUG] 2023-04-06 10:44:17 --> Couldn't find template in cache for "tkyService.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyService_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyService_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyService.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> Loading template for "tkyService.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyService.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> 执行生成Service-->成功! --> IndexController.java:1232 
+
+[DEBUG] 2023-04-06 10:44:17 --> Couldn't find template in cache for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyServiceImpl.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> Loading template for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyServiceImpl.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> 执行生成ServiceImpl-->成功! --> IndexController.java:1246 
+
+[DEBUG] 2023-04-06 10:44:17 --> Couldn't find template in cache for "tkyDao.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyDao_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyDao_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyDao.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> Loading template for "tkyDao.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDao.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> 执行生成DAO-->成功! --> IndexController.java:1260 
+
+[DEBUG] 2023-04-06 10:44:17 --> Couldn't find template in cache for "tkyController.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyController_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyController_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyController.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> Loading template for "tkyController.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyController.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> 执行生成Controller-->成功! --> IndexController.java:1274 
+
+[DEBUG] 2023-04-06 10:44:17 --> Couldn't find template in cache for "tkyDto.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyDto_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyDto_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("tkyDto.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> Loading template for "tkyDto.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDto.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> 执行生成createDto实体类-->成功! --> IndexController.java:1288 
+
+[DEBUG] 2023-04-06 10:44:17 --> Couldn't find template in cache for "MySQLMapper.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("MySQLMapper_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("MySQLMapper_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> TemplateLoader.findTemplateSource("MySQLMapper.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> Loading template for "MySQLMapper.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\MySQLMapper.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:17 --> 执行生成Mapper-->成功! --> IndexController.java:1307 
+
+[DEBUG] 2023-04-06 10:44:17 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 10:44:17 --> 执行生成swagger-->成功! --> IndexController.java:1324 
+
+[DEBUG] 2023-04-06 10:44:17 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 10:44:17 --> 执行生成swagger-->成功! --> IndexController.java:1343 
+
+[DEBUG] 2023-04-06 10:44:17 --> 执行创建-->成功! --> IndexController.java:1372 
+
+[DEBUG] 2023-04-06 10:44:23 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:44:23 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:44:24 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 10:44:24 --> Couldn't find template in cache for "tkyEntity.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyEntity_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyEntity_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyEntity.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> Loading template for "tkyEntity.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyEntity.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> 执行生成实体类-->成功! --> IndexController.java:1218 
+
+[DEBUG] 2023-04-06 10:44:24 --> Couldn't find template in cache for "tkyService.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyService_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyService_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyService.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> Loading template for "tkyService.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyService.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> 执行生成Service-->成功! --> IndexController.java:1232 
+
+[DEBUG] 2023-04-06 10:44:24 --> Couldn't find template in cache for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyServiceImpl.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> Loading template for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyServiceImpl.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> 执行生成ServiceImpl-->成功! --> IndexController.java:1246 
+
+[DEBUG] 2023-04-06 10:44:24 --> Couldn't find template in cache for "tkyDao.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyDao_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyDao_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyDao.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> Loading template for "tkyDao.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDao.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> 执行生成DAO-->成功! --> IndexController.java:1260 
+
+[DEBUG] 2023-04-06 10:44:24 --> Couldn't find template in cache for "tkyController.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyController_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyController_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyController.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> Loading template for "tkyController.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyController.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> 执行生成Controller-->成功! --> IndexController.java:1274 
+
+[DEBUG] 2023-04-06 10:44:24 --> Couldn't find template in cache for "tkyDto.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyDto_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyDto_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("tkyDto.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> Loading template for "tkyDto.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDto.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> 执行生成createDto实体类-->成功! --> IndexController.java:1288 
+
+[DEBUG] 2023-04-06 10:44:24 --> Couldn't find template in cache for "MySQLMapper.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("MySQLMapper_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("MySQLMapper_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> TemplateLoader.findTemplateSource("MySQLMapper.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> Loading template for "MySQLMapper.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\MySQLMapper.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:24 --> 执行生成Mapper-->成功! --> IndexController.java:1307 
+
+[DEBUG] 2023-04-06 10:44:24 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 10:44:24 --> 执行生成swagger-->成功! --> IndexController.java:1324 
+
+[DEBUG] 2023-04-06 10:44:24 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 10:44:24 --> 执行生成swagger-->成功! --> IndexController.java:1343 
+
+[DEBUG] 2023-04-06 10:44:24 --> 执行创建-->成功! --> IndexController.java:1372 
+
+[DEBUG] 2023-04-06 10:44:26 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 10:44:26 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 10:44:28 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 10:44:28 --> Couldn't find template in cache for "tkyEntity.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyEntity_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyEntity_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyEntity.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> Loading template for "tkyEntity.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyEntity.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> 执行生成实体类-->成功! --> IndexController.java:1218 
+
+[DEBUG] 2023-04-06 10:44:28 --> Couldn't find template in cache for "tkyService.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyService_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyService_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyService.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> Loading template for "tkyService.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyService.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> 执行生成Service-->成功! --> IndexController.java:1232 
+
+[DEBUG] 2023-04-06 10:44:28 --> Couldn't find template in cache for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyServiceImpl.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> Loading template for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyServiceImpl.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> 执行生成ServiceImpl-->成功! --> IndexController.java:1246 
+
+[DEBUG] 2023-04-06 10:44:28 --> Couldn't find template in cache for "tkyDao.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyDao_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyDao_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyDao.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> Loading template for "tkyDao.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDao.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> 执行生成DAO-->成功! --> IndexController.java:1260 
+
+[DEBUG] 2023-04-06 10:44:28 --> Couldn't find template in cache for "tkyController.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyController_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyController_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyController.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> Loading template for "tkyController.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyController.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> 执行生成Controller-->成功! --> IndexController.java:1274 
+
+[DEBUG] 2023-04-06 10:44:28 --> Couldn't find template in cache for "tkyDto.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyDto_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyDto_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("tkyDto.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> Loading template for "tkyDto.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDto.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> 执行生成createDto实体类-->成功! --> IndexController.java:1288 
+
+[DEBUG] 2023-04-06 10:44:28 --> Couldn't find template in cache for "MySQLMapper.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("MySQLMapper_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("MySQLMapper_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> TemplateLoader.findTemplateSource("MySQLMapper.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> Loading template for "MySQLMapper.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\MySQLMapper.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 10:44:28 --> 执行生成Mapper-->成功! --> IndexController.java:1307 
+
+[DEBUG] 2023-04-06 10:44:28 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 10:44:28 --> 执行生成swagger-->成功! --> IndexController.java:1324 
+
+[DEBUG] 2023-04-06 10:44:28 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 10:44:28 --> 执行生成swagger-->成功! --> IndexController.java:1343 
+
+[DEBUG] 2023-04-06 10:44:28 --> 执行创建-->成功! --> IndexController.java:1372 
+
+[DEBUG] 2023-04-06 11:48:33 --> 关闭Spring-Generator!!! --> Main.java:60 
+
+[DEBUG] 2023-04-06 15:44:39 --> 运行Spring-Generator... --> Main.java:58 
+
+[DEBUG] 2023-04-06 15:44:40 --> 初始化首页... --> IndexController.java:377 
+
+[DEBUG] 2023-04-06 15:44:40 --> 初始化首页成功! --> IndexController.java:424 
+
+[DEBUG] 2023-04-06 15:44:40 --> 加载左侧数据库树与事件.... --> IndexController.java:677 
+
+[DEBUG] 2023-04-06 15:44:40 --> 加载所有数据库到左侧树集成功! --> IndexController.java:429 
+
+[DEBUG] 2023-04-06 15:44:40 --> 执行查询默认配置信息并加载到首页... --> IndexController.java:436 
+
+[DEBUG] 2023-04-06 15:44:40 --> 执行加载模板文件夹里面所有模板的名字... --> IndexController.java:956 
+
+[DEBUG] 2023-04-06 15:44:40 --> 执行加载模板文件夹里面所有模板的名字-->成功! --> IndexController.java:963 
+
+[DEBUG] 2023-04-06 15:44:40 --> 加载配置信息到首页成功! --> IndexController.java:440 
+
+[DEBUG] 2023-04-06 15:44:44 --> 加载所有表.... --> IndexController.java:778 
+
+[DEBUG] 2023-04-06 15:44:44 --> 加载所有表成功! --> IndexController.java:796 
+
+[DEBUG] 2023-04-06 15:44:48 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 15:44:48 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 15:45:25 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 15:45:48 --> 选择文件项目目录:D:\GitProject\ShenShanScreen\src\main\java --> IndexController.java:1492 
+
+[DEBUG] 2023-04-06 15:45:49 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 15:45:50 --> Couldn't find template in cache for "tkyEntity.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyEntity_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyEntity_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyEntity.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> Loading template for "tkyEntity.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyEntity.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> 执行生成实体类-->成功! --> IndexController.java:1218 
+
+[DEBUG] 2023-04-06 15:45:50 --> Couldn't find template in cache for "tkyService.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyService_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyService_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyService.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> Loading template for "tkyService.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyService.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> 执行生成Service-->成功! --> IndexController.java:1232 
+
+[DEBUG] 2023-04-06 15:45:50 --> Couldn't find template in cache for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyServiceImpl.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> Loading template for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyServiceImpl.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> 执行生成ServiceImpl-->成功! --> IndexController.java:1246 
+
+[DEBUG] 2023-04-06 15:45:50 --> Couldn't find template in cache for "tkyDao.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyDao_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyDao_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyDao.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> Loading template for "tkyDao.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDao.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> 执行生成DAO-->成功! --> IndexController.java:1260 
+
+[DEBUG] 2023-04-06 15:45:50 --> Couldn't find template in cache for "tkyController.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyController_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyController_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyController.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> Loading template for "tkyController.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyController.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> 执行生成Controller-->成功! --> IndexController.java:1274 
+
+[DEBUG] 2023-04-06 15:45:50 --> Couldn't find template in cache for "tkyDto.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyDto_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyDto_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyDto.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> Loading template for "tkyDto.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDto.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> 执行生成createDto实体类-->成功! --> IndexController.java:1288 
+
+[DEBUG] 2023-04-06 15:45:50 --> Couldn't find template in cache for "MySQLMapper.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("MySQLMapper_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("MySQLMapper_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("MySQLMapper.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> Loading template for "MySQLMapper.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\MySQLMapper.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> 执行生成Mapper-->成功! --> IndexController.java:1307 
+
+[DEBUG] 2023-04-06 15:45:50 --> Couldn't find template in cache for "tkySwagger.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkySwagger_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkySwagger_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkySwagger.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> Loading template for "tkySwagger.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkySwagger.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> 执行生成swagger-->成功! --> IndexController.java:1324 
+
+[DEBUG] 2023-04-06 15:45:50 --> Couldn't find template in cache for "tkyMeta.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyMeta_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyMeta_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> TemplateLoader.findTemplateSource("tkyMeta.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> Loading template for "tkyMeta.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyMeta.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:50 --> 执行生成swagger-->成功! --> IndexController.java:1343 
+
+[DEBUG] 2023-04-06 15:45:50 --> 执行创建-->成功! --> IndexController.java:1372 
+
+[DEBUG] 2023-04-06 15:45:52 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 15:45:52 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 15:45:54 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 15:45:54 --> Couldn't find template in cache for "tkyEntity.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyEntity_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyEntity_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyEntity.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> Loading template for "tkyEntity.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyEntity.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> 执行生成实体类-->成功! --> IndexController.java:1218 
+
+[DEBUG] 2023-04-06 15:45:54 --> Couldn't find template in cache for "tkyService.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyService_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyService_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyService.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> Loading template for "tkyService.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyService.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> 执行生成Service-->成功! --> IndexController.java:1232 
+
+[DEBUG] 2023-04-06 15:45:54 --> Couldn't find template in cache for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyServiceImpl.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> Loading template for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyServiceImpl.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> 执行生成ServiceImpl-->成功! --> IndexController.java:1246 
+
+[DEBUG] 2023-04-06 15:45:54 --> Couldn't find template in cache for "tkyDao.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyDao_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyDao_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyDao.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> Loading template for "tkyDao.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDao.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> 执行生成DAO-->成功! --> IndexController.java:1260 
+
+[DEBUG] 2023-04-06 15:45:54 --> Couldn't find template in cache for "tkyController.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyController_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyController_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyController.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> Loading template for "tkyController.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyController.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> 执行生成Controller-->成功! --> IndexController.java:1274 
+
+[DEBUG] 2023-04-06 15:45:54 --> Couldn't find template in cache for "tkyDto.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyDto_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyDto_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("tkyDto.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> Loading template for "tkyDto.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDto.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> 执行生成createDto实体类-->成功! --> IndexController.java:1288 
+
+[DEBUG] 2023-04-06 15:45:54 --> Couldn't find template in cache for "MySQLMapper.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("MySQLMapper_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("MySQLMapper_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> TemplateLoader.findTemplateSource("MySQLMapper.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> Loading template for "MySQLMapper.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\MySQLMapper.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:45:54 --> 执行生成Mapper-->成功! --> IndexController.java:1307 
+
+[DEBUG] 2023-04-06 15:45:54 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 15:45:54 --> 执行生成swagger-->成功! --> IndexController.java:1324 
+
+[DEBUG] 2023-04-06 15:45:54 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 15:45:54 --> 执行生成swagger-->成功! --> IndexController.java:1343 
+
+[DEBUG] 2023-04-06 15:45:54 --> 执行创建-->成功! --> IndexController.java:1372 
+
+[DEBUG] 2023-04-06 15:47:42 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 15:47:42 --> Couldn't find template in cache for "tkyEntity.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyEntity_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyEntity_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyEntity.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> Loading template for "tkyEntity.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyEntity.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> 执行生成实体类-->成功! --> IndexController.java:1218 
+
+[DEBUG] 2023-04-06 15:47:42 --> Couldn't find template in cache for "tkyService.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyService_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyService_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyService.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> Loading template for "tkyService.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyService.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> 执行生成Service-->成功! --> IndexController.java:1232 
+
+[DEBUG] 2023-04-06 15:47:42 --> Couldn't find template in cache for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyServiceImpl.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> Loading template for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyServiceImpl.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> 执行生成ServiceImpl-->成功! --> IndexController.java:1246 
+
+[DEBUG] 2023-04-06 15:47:42 --> Couldn't find template in cache for "tkyDao.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyDao_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyDao_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyDao.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> Loading template for "tkyDao.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDao.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> 执行生成DAO-->成功! --> IndexController.java:1260 
+
+[DEBUG] 2023-04-06 15:47:42 --> Couldn't find template in cache for "tkyController.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyController_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyController_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyController.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> Loading template for "tkyController.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyController.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> 执行生成Controller-->成功! --> IndexController.java:1274 
+
+[DEBUG] 2023-04-06 15:47:42 --> Couldn't find template in cache for "tkyDto.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyDto_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyDto_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("tkyDto.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> Loading template for "tkyDto.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDto.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> 执行生成createDto实体类-->成功! --> IndexController.java:1288 
+
+[DEBUG] 2023-04-06 15:47:42 --> Couldn't find template in cache for "MySQLMapper.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("MySQLMapper_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("MySQLMapper_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> TemplateLoader.findTemplateSource("MySQLMapper.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> Loading template for "MySQLMapper.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\MySQLMapper.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:42 --> 执行生成Mapper-->成功! --> IndexController.java:1307 
+
+[DEBUG] 2023-04-06 15:47:42 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 15:47:42 --> 执行生成swagger-->成功! --> IndexController.java:1324 
+
+[DEBUG] 2023-04-06 15:47:42 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 15:47:42 --> 执行生成swagger-->成功! --> IndexController.java:1343 
+
+[DEBUG] 2023-04-06 15:47:42 --> 执行创建-->成功! --> IndexController.java:1372 
+
+[DEBUG] 2023-04-06 15:47:44 --> 将表的数据加载到数据面板... --> IndexController.java:804 
+
+[DEBUG] 2023-04-06 15:47:44 --> 将表的数据加载到数据面板成功! --> IndexController.java:819 
+
+[DEBUG] 2023-04-06 15:47:46 --> 执行创建... --> IndexController.java:1186 
+
+[DEBUG] 2023-04-06 15:47:46 --> Couldn't find template in cache for "tkyEntity.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyEntity_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyEntity_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyEntity.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> Loading template for "tkyEntity.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyEntity.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> 执行生成实体类-->成功! --> IndexController.java:1218 
+
+[DEBUG] 2023-04-06 15:47:46 --> Couldn't find template in cache for "tkyService.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyService_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyService_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyService.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> Loading template for "tkyService.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyService.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> 执行生成Service-->成功! --> IndexController.java:1232 
+
+[DEBUG] 2023-04-06 15:47:46 --> Couldn't find template in cache for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyServiceImpl_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyServiceImpl.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> Loading template for "tkyServiceImpl.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyServiceImpl.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> 执行生成ServiceImpl-->成功! --> IndexController.java:1246 
+
+[DEBUG] 2023-04-06 15:47:46 --> Couldn't find template in cache for "tkyDao.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyDao_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyDao_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyDao.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> Loading template for "tkyDao.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDao.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> 执行生成DAO-->成功! --> IndexController.java:1260 
+
+[DEBUG] 2023-04-06 15:47:46 --> Couldn't find template in cache for "tkyController.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyController_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyController_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyController.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> Loading template for "tkyController.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyController.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> 执行生成Controller-->成功! --> IndexController.java:1274 
+
+[DEBUG] 2023-04-06 15:47:46 --> Couldn't find template in cache for "tkyDto.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyDto_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyDto_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("tkyDto.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> Loading template for "tkyDto.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\tkyDto.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> 执行生成createDto实体类-->成功! --> IndexController.java:1288 
+
+[DEBUG] 2023-04-06 15:47:46 --> Couldn't find template in cache for "MySQLMapper.ftl"("zh_CN", utf-8, parsed); will try to load it. --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("MySQLMapper_zh_CN.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("MySQLMapper_zh.ftl"): Not found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> TemplateLoader.findTemplateSource("MySQLMapper.ftl"): Found --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> Loading template for "MySQLMapper.ftl"("zh_CN", utf-8, parsed) from "D:\\GitProject\\generateCode\\template\\MySQLMapper.ftl" --> _Log4jLoggerFactory.java:45 
+
+[DEBUG] 2023-04-06 15:47:46 --> 执行生成Mapper-->成功! --> IndexController.java:1307 
+
+[DEBUG] 2023-04-06 15:47:46 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 15:47:46 --> 执行生成swagger-->成功! --> IndexController.java:1324 
+
+[DEBUG] 2023-04-06 15:47:46 --> 设置了文件存在不覆盖,文件已经存在,忽略本文件的创建 --> CreateFileUtil.java:49 
+
+[DEBUG] 2023-04-06 15:47:46 --> 执行生成swagger-->成功! --> IndexController.java:1343 
+
+[DEBUG] 2023-04-06 15:47:46 --> 执行创建-->成功! --> IndexController.java:1372 
+
+[DEBUG] 2023-04-06 17:44:13 --> 关闭Spring-Generator!!! --> Main.java:60 
+
