@@ -828,6 +828,8 @@ public class IndexController extends BaseController {
 						DatabaseConfig selectedConfig = (DatabaseConfig) treeItem.getGraphic().getUserData();
 						try {
 							ConfigUtil.deleteDatabaseConfig(selectedConfig.getConnName());
+							DBUtil.closeConnection(selectedConfig);
+							DBUtil.closeMongoClient(selectedConfig);
 							this.loadTVDataBase();
 						} catch (Exception e) {
 							AlertUtil.showErrorAlert("删除数据库连接失败: " + e.getMessage());
@@ -886,6 +888,8 @@ public class IndexController extends BaseController {
 						} catch (Exception e) {
 							AlertUtil.showErrorAlert(e.getMessage());
 							LOG.error("加载所有表失败!!!" + e);
+						} finally {
+							DBUtil.closeAllConnections();
 						}
 					} else if (level == 2) {
 						LOG.debug("将表的数据加载到数据面板...");
@@ -1255,15 +1259,19 @@ public class IndexController extends BaseController {
 			Task<Void> task = new Task<Void>() {
 				@Override
 				protected Void call() throws Exception {
-					for (int i = 0; i < tables.size(); i++) {
-						updateProgress(progIndex * (i + 1), 1.0);
-						updateMessage(runCreateTipsText + " {t} ...".replace("{t}", tables.get(i)));
-						createAllRun(databaseConfig, tables.get(i));
-						loadIndexConfigInfo(historyConfigName == null ? "default" : historyConfigName);
+					try {
+						for (int i = 0; i < tables.size(); i++) {
+							updateProgress(progIndex * (i + 1), 1.0);
+							updateMessage(runCreateTipsText + " {t} ...".replace("{t}", tables.get(i)));
+							createAllRun(databaseConfig, tables.get(i));
+							loadIndexConfigInfo(historyConfigName == null ? "default" : historyConfigName);
+						}
+						updateMessage("创建成功!");
+						LOG.debug("执行全库生成-->成功");
+						return null;
+					} finally {
+						DBUtil.closeAllConnections();
 					}
-					updateMessage("创建成功!");
-					LOG.debug("执行全库生成-->成功");
-					return null;
 				}
 			};
 			probCreateAll.progressProperty().bind(task.progressProperty());
@@ -1458,6 +1466,7 @@ public class IndexController extends BaseController {
 			Task<Void> task = new Task<Void>() {
 				@Override
 				protected Void call() throws Exception {
+					try {
 					updateProgress(1, 15);
 					// 项目生成的路径
 					String projectPath = txtProjectPath.getText();
@@ -1638,6 +1647,9 @@ public class IndexController extends BaseController {
 					updateMessage("创建成功!");
 					LOG.debug("执行创建-->成功!");
 					return null;
+					} finally {
+						DBUtil.closeAllConnections();
+					}
 				}
 			};
 			probCreateAll.progressProperty().bind(task.progressProperty());

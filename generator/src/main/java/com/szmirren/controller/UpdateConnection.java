@@ -192,6 +192,8 @@ public class UpdateConnection extends BaseController {
 		} catch (Exception e) {
 			AlertUtil.showErrorAlert("连接失败!原因:" + e.getMessage());
 			LOG.error("数据库连接测试失败!!!" + e);
+		} finally {
+			DBUtil.closeConnection(config);
 		}
 	}
 

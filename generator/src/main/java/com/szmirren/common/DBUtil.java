@@ -42,6 +42,44 @@ public class DBUtil {
 	/** Cache of MongoClient instances keyed by "host:port@user" to avoid creating a new client per call. */
 	private static final ConcurrentHashMap<String, MongoClient> MONGO_CLIENT_CACHE = new ConcurrentHashMap<>();
 
+	/**
+	 * 关闭所有缓存的数据库连接并清空缓存。
+	 * 应在代码生成、加载表列表等数据库操作完成后调用，释放 MySQL 连接，避免连接池打满。
+	 */
+	public static synchronized void closeAllConnections() {
+		for (Map.Entry<String, Connection> entry : CONN_CACHE.entrySet()) {
+			try {
+				Connection conn = entry.getValue();
+				if (conn != null && !conn.isClosed()) {
+					conn.close();
+				}
+			} catch (SQLException e) {
+				System.err.println("关闭连接失败: " + entry.getKey() + " - " + e.getMessage());
+			}
+		}
+		CONN_CACHE.clear();
+	}
+
+	/**
+	 * 关闭指定配置对应的 JDBC 连接并从缓存中移除（切换/删除数据库连接时调用）
+	 */
+	public static synchronized void closeConnection(DatabaseConfig config) {
+		if (config == null) {
+			return;
+		}
+		String key = buildConnKey(config);
+		Connection conn = CONN_CACHE.remove(key);
+		if (conn != null) {
+			try {
+				if (!conn.isClosed()) {
+					conn.close();
+				}
+			} catch (SQLException e) {
+				System.err.println("关闭连接失败: " + key + " - " + e.getMessage());
+			}
+		}
+	}
+
 	private static String buildConnKey(DatabaseConfig config) {
 		return config.getDbType() + "|" + config.getConnURL() + ":" + config.getListenPort()
 				+ "/" + config.getDbName() + "@" + config.getUserName();
@@ -504,16 +542,6 @@ public class DBUtil {
     public static void closeAllMongoClients() {
         MONGO_CLIENT_CACHE.values().forEach(MongoClient::close);
         MONGO_CLIENT_CACHE.clear();
-    }
-
-    /**
-     * 关闭所有缓存的 JDBC 物理连接并清空缓存（应用退出时调用）
-     */
-    public static void closeAllConnections() {
-        CONN_CACHE.values().forEach(conn -> {
-            try { conn.close(); } catch (SQLException ignore) {}
-        });
-        CONN_CACHE.clear();
     }
 
 

@@ -7,9 +7,9 @@
           <value>
             <TabSessionState>
               <option name="provider" value="claude" />
-              <option name="sessionId" value="11276c79-e222-4764-a0cd-718a972adf0f" />
-              <option name="cwd" value="$PROJECT_DIR$" />
-              <option name="model" value="claude-sonnet-4-6[1m]" />
+              <option name="sessionId" value="e4805b5e-08d4-442d-bdb7-ca7816c8cdd7" />
+              <option name="cwd" value="D:\code\dz\basketball\scaffolding-v2" />
+              <option name="model" value="claude-opus-4-8[1m]" />
               <option name="permissionMode" value="bypassPermissions" />
             </TabSessionState>
           </value>
