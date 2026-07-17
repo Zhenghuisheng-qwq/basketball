@@ -33,7 +33,7 @@ public class JavaType {
 		} else if (isString(str)) {
 			return "String";
 		} else if (isJson(str)) {
-			return "JsonObject";
+			return "JSONObject";
 		} else if (isDecimal(str)) {
 			return "java.math.BigDecimal";
 		} else {

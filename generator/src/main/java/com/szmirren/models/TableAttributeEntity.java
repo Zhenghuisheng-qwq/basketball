@@ -68,7 +68,7 @@ public class TableAttributeEntity implements Comparable<TableAttributeEntity> {
 	public void initComboBox() {
 		tdJavaType.setEditable(true);
 		tdJavaType.getItems().addAll("int", "double", "char", "long", "java.util.Date", "java.sql.Date", "java.time.LocalDate",
-				"java.time.LocalTime", "java.time.LocalDateTime", "java.util.List<E>", "java.util.Set<E>", "java.util.Map<K, V>", "JsonObject",
+				"java.time.LocalTime", "java.time.LocalDateTime", "java.util.List<E>", "java.util.Set<E>", "java.util.Map<K, V>", "JSONObject",
 				"String", "Character", "Double", "Integer", "Long", "Object");
 	}
 
