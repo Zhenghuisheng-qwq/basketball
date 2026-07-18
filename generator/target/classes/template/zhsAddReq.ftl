@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.alibaba.fastjson2.JSONObject;
 
 /**
  *
