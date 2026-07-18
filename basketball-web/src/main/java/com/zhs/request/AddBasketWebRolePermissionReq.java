@@ -25,7 +25,7 @@ import com.alibaba.fastjson2.JSONObject;
 public class AddBasketWebRolePermissionReq implements Serializable {
         //表字段
         @JsonSerialize(using = ToStringSerializer.class)
-        private Long roleId;
+        private Long id;
 
         @JsonSerialize(using = ToStringSerializer.class)
         private Long permissionId;

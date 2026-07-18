@@ -29,7 +29,7 @@ public class BasketWebRolePermissionDetailResp implements Serializable {
         //表字段
         @JsonSerialize(using = ToStringSerializer.class)
         @ApiModelProperty(value = "角色编号")
-        private Long roleId;
+        private Long id;
 
         @JsonSerialize(using = ToStringSerializer.class)
         @ApiModelProperty(value = "权限编号")
