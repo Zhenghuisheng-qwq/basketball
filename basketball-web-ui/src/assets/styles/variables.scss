@@ -15,16 +15,29 @@
   --green: #18b46b;
   --purple: #8c36ff;
 
-  --cnpa-bg-primary: #050607;
-  --cnpa-bg-card: #101115;
-  --cnpa-color-primary: #ff3218;
-  --cnpa-color-primary-hover: #ff5a1f;
-  --cnpa-text-primary: #f4f4f4;
-  --cnpa-text-secondary: #a8abb6;
-  --cnpa-border-color: rgba(255, 255, 255, 0.14);
+  --cnpa-bg-primary: #050505;
+  --cnpa-bg-card: #111111;
+  --cnpa-color-primary: #e10613;
+  --cnpa-color-primary-hover: #ff3218;
+  --cnpa-text-primary: #f5f5f5;
+  --cnpa-text-secondary: rgba(255, 255, 255, 0.62);
+  --cnpa-border-color: rgba(255, 255, 255, 0.12);
+
+  --cnpa-red: #e10613;
+  --cnpa-red-dark: #8e0008;
+  --cnpa-black: #080808;
+  --cnpa-panel: #111111;
+  --cnpa-border: rgba(255, 255, 255, 0.12);
+  --cnpa-text: #f5f5f5;
 
   --site-gutter: clamp(16px, 3.2vw, 72px);
-  --site-width: calc(100vw - var(--site-gutter) * 2);
-  --site-max-width: 1680px;
+  --site-width: 1440px;
+  --site-max-width: 1440px;
   --site-inner-padding: clamp(20px, 2vw, 36px);
+  --header-height: 72px;
+}
+
+.site-shell {
+  width: min(calc(100% - var(--site-gutter) * 2), var(--site-width));
+  margin: 0 auto;
 }

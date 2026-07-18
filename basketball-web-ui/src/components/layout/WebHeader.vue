@@ -71,6 +71,12 @@ function goRegister() {
       </div>
 
       <div class="header-actions">
+        <button type="button" class="search-btn" aria-label="搜索">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2" />
+            <path d="M20 20l-4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
         <button type="button" class="login-btn" @click="goLogin">登录</button>
         <button type="button" class="register-btn" @click="goRegister">注册</button>
       </div>
@@ -99,9 +105,10 @@ function goRegister() {
 }
 
 .web-header-inner {
-  width: 100%;
+  width: min(calc(100% - var(--site-gutter) * 2), var(--site-width));
   height: 100%;
-  padding: 0 var(--site-inner-padding);
+  margin: 0 auto;
+  padding: 0;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -158,7 +165,7 @@ function goRegister() {
   }
 
   &.nav-link-active {
-    color: #ff321f;
+    color: var(--cnpa-red);
 
     &::after {
       content: '';
@@ -168,9 +175,8 @@ function goRegister() {
       width: 28px;
       height: 3px;
       border-radius: 999px;
-      background: #ff321f;
+      background: var(--cnpa-red);
       transform: translateX(-50%);
-      box-shadow: 0 0 12px rgba(255, 45, 25, 0.75);
     }
   }
 }
@@ -181,6 +187,24 @@ function goRegister() {
   align-items: center;
   gap: 16px;
   margin-left: 32px;
+}
+
+.search-btn {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+  }
 }
 
 .login-btn,

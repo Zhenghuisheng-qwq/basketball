@@ -31,7 +31,7 @@ function handleTeamClick(teamKey: string) {
 </script>
 
 <template>
-  <div class="home-page">
+  <div class="home-page site-shell">
     <section class="home-hero-section">
       <img class="hero-image" :src="homeTop" alt="CNPA 篮球赛事平台" />
     </section>

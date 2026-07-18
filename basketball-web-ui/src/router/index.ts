@@ -16,7 +16,7 @@ const router = createRouter({
     {
       path: '/tournament',
       name: 'Tournament',
-      component: () => import('@/views/tournament/index.vue'),
+      component: () => import('@/views/events/EventsPage.vue'),
       meta: { title: '赛事' },
     },
     {

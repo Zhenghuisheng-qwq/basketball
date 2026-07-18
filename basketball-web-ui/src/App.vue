@@ -5,13 +5,11 @@ import WebFooter from '@/components/layout/WebFooter.vue'
 
 <template>
   <div class="app">
-    <div class="site-shell">
-      <WebHeader />
-      <main class="app-main">
-        <router-view />
-      </main>
-      <WebFooter />
-    </div>
+    <WebHeader />
+    <main class="app-main">
+      <router-view />
+    </main>
+    <WebFooter />
   </div>
 </template>
 
@@ -24,16 +22,8 @@ import WebFooter from '@/components/layout/WebFooter.vue'
   overflow-x: hidden;
 }
 
-.site-shell {
-  width: min(var(--site-width), var(--site-max-width));
-  margin: 0 auto;
-  min-height: 100vh;
-  background: #050505;
-  position: relative;
-}
-
 .app-main {
   width: 100%;
-  min-height: calc(100vh - 72px);
+  min-height: calc(100vh - var(--header-height));
 }
 </style>
