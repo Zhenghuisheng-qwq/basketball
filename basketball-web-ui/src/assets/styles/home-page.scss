@@ -26,8 +26,55 @@
 }
 
 .paper-band-light {
-  background: #fff;
+  position: relative;
+  background:
+    radial-gradient(
+      ellipse at 12% 24%,
+      rgba(101, 87, 68, 0.035) 0%,
+      rgba(101, 87, 68, 0.018) 22%,
+      transparent 48%
+    ),
+    radial-gradient(
+      ellipse at 78% 68%,
+      rgba(91, 78, 61, 0.03) 0%,
+      rgba(91, 78, 61, 0.014) 26%,
+      transparent 52%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      transparent 18%,
+      rgba(93, 79, 62, 0.018) 48%,
+      transparent 74%,
+      rgba(255, 255, 255, 0.16) 100%
+    ),
+    linear-gradient(180deg, #f6f3ed 0%, #f2efe8 48%, #ebe7de 100%);
   color: #111;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.42;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        rgba(67, 55, 42, 0.015) 0,
+        rgba(67, 55, 42, 0.015) 1px,
+        transparent 1px,
+        transparent 6px
+      ),
+      repeating-linear-gradient(
+        92deg,
+        rgba(255, 255, 255, 0.025) 0,
+        rgba(255, 255, 255, 0.025) 1px,
+        transparent 1px,
+        transparent 11px
+      );
+    mix-blend-mode: multiply;
+  }
 }
 
 .paper-band-dark {
@@ -67,6 +114,7 @@
 
 .about-paper-section {
   margin: 0;
+  color: #111;
 }
 
 .about-paper-inner {
@@ -118,8 +166,9 @@
   }
 }
 
-.section-head-dark h2 {
-  color: #111;
+.section-head-dark h2,
+.paper-band-light .section-head h2 {
+  color: #0d0d0d;
 }
 
 .section-head-dark h2::before {
@@ -146,7 +195,7 @@
 }
 
 .section-more-dark {
-  color: rgba(0, 0, 0, 0.72);
+  color: rgba(15, 15, 15, 0.72);
 
   &:hover {
     color: #ff2d19;
@@ -316,11 +365,11 @@
     font-size: clamp(30px, 2.6vw, 46px);
     line-height: 1.12;
     font-weight: 900;
-    color: #0a0a0a;
+    color: #0d0d0d;
     white-space: normal;
 
     span {
-      color: #ff2d19;
+      color: #ff321f;
     }
   }
 
@@ -330,7 +379,7 @@
     font-size: clamp(13px, 1vw, 16px);
     line-height: 1.75;
     font-weight: 700;
-    color: #141414;
+    color: #1b1b1b;
     word-break: break-word;
   }
 }
@@ -347,7 +396,7 @@
   min-width: 0;
   min-height: clamp(72px, 6vw, 96px);
   text-align: center;
-  border-left: 1px solid rgba(0, 0, 0, 0.14);
+  border-left: 1px solid rgba(40, 32, 24, 0.12);
   box-sizing: border-box;
 
   &:first-child {
@@ -359,7 +408,7 @@
     font-size: clamp(38px, 4vw, 68px);
     line-height: 1;
     font-weight: 900;
-    color: #ff2d19;
+    color: #ff321f;
     letter-spacing: -1px;
     white-space: nowrap;
   }

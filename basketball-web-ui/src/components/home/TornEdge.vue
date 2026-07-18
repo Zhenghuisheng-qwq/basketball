@@ -13,7 +13,7 @@ const props = withDefaults(
 )
 
 const edgeColor = computed(() => {
-  return props.tone === 'light' ? '#ffffff' : '#050505'
+  return props.tone === 'light' ? '#f2efe8' : '#050505'
 })
 
 const shadowColor = computed(() => {
