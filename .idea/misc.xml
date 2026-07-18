@@ -9,6 +9,8 @@
         <option value="$PROJECT_DIR$/jsj-mini/pom.xml" />
         <option value="$PROJECT_DIR$/jsj-admin/pom.xml" />
         <option value="$PROJECT_DIR$/generator/pom.xml" />
+        <option value="$PROJECT_DIR$/basketball-admin/pom.xml" />
+        <option value="$PROJECT_DIR$/basketball-mini/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">
