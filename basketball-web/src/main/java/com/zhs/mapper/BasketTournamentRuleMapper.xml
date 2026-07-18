@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTournamentRuleDao">
+	<resultMap id="result_BasketTournamentRuleMapper.xml" type="com.zhs.model.BasketTournamentRule">
+		<id column="id" property="id" />
+		<result column="tournament_id" property="tournamentId" />
+		<result column="rule_title" property="ruleTitle" />
+		<result column="rule_content" property="ruleContent" />
+		<result column="score_win" property="scoreWin" />
+		<result column="score_draw" property="scoreDraw" />
+		<result column="score_lose" property="scoreLose" />
+		<result column="sort_no" property="sortNo" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="update_by" property="updateBy" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_tournament_rule的列名 -->
+	<sql id="basket_tournament_rule_Column">
+		id,tournament_id,rule_title,rule_content,score_win,score_draw,score_lose,sort_no,create_by,create_time,update_by,update_time
+	</sql>
+
+	<!-- 通过BasketTournamentRule的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTournamentRuleById" parameterType="Long" resultMap="result_BasketTournamentRuleMapper.xml">
+		select
+		<include refid="basket_tournament_rule_Column" />
+		from basket_tournament_rule
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTournamentRule对象,以参数BasketTournamentRule对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTournamentRuleObjSingle" parameterType="com.zhs.model.BasketTournamentRule" resultMap="result_BasketTournamentRuleMapper.xml">
+		select
+		<include refid="basket_tournament_rule_Column" />
+		from basket_tournament_rule
+		<where>
+		<if test="ruleContent != null"> and rule_content = #{ruleContent}</if>
+		<if test="scoreWin != null"> and score_win = #{scoreWin}</if>
+		<if test="scoreDraw != null"> and score_draw = #{scoreDraw}</if>
+		<if test="scoreLose != null"> and score_lose = #{scoreLose}</if>
+		<if test="sortNo != null"> and sort_no = #{sortNo}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="ruleTitle != null"> and rule_title = #{ruleTitle}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTournamentRule对象,以参数BasketTournamentRule对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTournamentRuleByObj" parameterType="com.zhs.model.BasketTournamentRule" resultMap="result_BasketTournamentRuleMapper.xml">
+		select
+		<include refid="basket_tournament_rule_Column" />
+		from basket_tournament_rule
+		<where>
+		<if test="ruleContent != null"> and rule_content = #{ruleContent}</if>
+		<if test="scoreWin != null"> and score_win = #{scoreWin}</if>
+		<if test="scoreDraw != null"> and score_draw = #{scoreDraw}</if>
+		<if test="scoreLose != null"> and score_lose = #{scoreLose}</if>
+		<if test="sortNo != null"> and sort_no = #{sortNo}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="ruleTitle != null"> and rule_title = #{ruleTitle}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTournamentRule插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTournamentRule" parameterType="com.zhs.model.BasketTournamentRule">
+		insert into 
+		basket_tournament_rule (id,tournament_id,rule_title,rule_content,score_win,score_draw,score_lose,sort_no,create_by,create_time,update_by,update_time) 
+		values(#{id},#{tournamentId},#{ruleTitle},#{ruleContent},#{scoreWin},#{scoreDraw},#{scoreLose},#{sortNo},#{createBy},#{createTime},#{updateBy},#{updateTime})
+	</insert>
+
+	<!-- 将BasketTournamentRule中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTournamentRule" parameterType="com.zhs.model.BasketTournamentRule">
+		insert into basket_tournament_rule
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="tournamentId != null">tournament_id,</if>
+			<if test="ruleTitle != null">rule_title,</if>
+			<if test="ruleContent != null">rule_content,</if>
+			<if test="scoreWin != null">score_win,</if>
+			<if test="scoreDraw != null">score_draw,</if>
+			<if test="scoreLose != null">score_lose,</if>
+			<if test="sortNo != null">sort_no,</if>
+			<if test="createBy != null">create_by,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateBy != null">update_by,</if>
+			<if test="updateTime != null">update_time,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="tournamentId != null">#{tournamentId},</if>
+			<if test="ruleTitle != null">#{ruleTitle},</if>
+			<if test="ruleContent != null">#{ruleContent},</if>
+			<if test="scoreWin != null">#{scoreWin},</if>
+			<if test="scoreDraw != null">#{scoreDraw},</if>
+			<if test="scoreLose != null">#{scoreLose},</if>
+			<if test="sortNo != null">#{sortNo},</if>
+			<if test="createBy != null">#{createBy},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateBy != null">#{updateBy},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTournamentRule批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTournamentRuleByBatch" parameterType="ArrayList">
+		insert into basket_tournament_rule(id,tournament_id,rule_title,rule_content,score_win,score_draw,score_lose,sort_no,create_by,create_time,update_by,update_time) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{tournamentId},#{ruleTitle},#{ruleContent},#{scoreWin},#{scoreDraw},#{scoreLose},#{sortNo},#{createBy},#{createTime},#{updateBy},#{updateTime})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTournamentRule的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTournamentRuleById" parameterType="Long">
+		delete from basket_tournament_rule
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTournamentRule的id将BasketTournamentRule的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTournamentRuleById" parameterType="com.zhs.model.BasketTournamentRule"> 
+		update basket_tournament_rule set
+		<set>
+			tournament_id = #{tournamentId} , 
+			rule_title = #{ruleTitle} , 
+			rule_content = #{ruleContent} , 
+			score_win = #{scoreWin} , 
+			score_draw = #{scoreDraw} , 
+			score_lose = #{scoreLose} , 
+			sort_no = #{sortNo} , 
+			create_by = #{createBy} , 
+			create_time = #{createTime} , 
+			update_by = #{updateBy} , 
+			update_time = #{updateTime} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTournamentRule的id将BasketTournamentRule中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTournamentRuleById" parameterType="com.zhs.model.BasketTournamentRule">
+		update basket_tournament_rule
+		<set>
+					<if test="tournamentId != null">tournament_id = #{tournamentId},</if>
+					<if test="ruleTitle != null">rule_title = #{ruleTitle},</if>
+					<if test="ruleContent != null">rule_content = #{ruleContent},</if>
+					<if test="scoreWin != null">score_win = #{scoreWin},</if>
+					<if test="scoreDraw != null">score_draw = #{scoreDraw},</if>
+					<if test="scoreLose != null">score_lose = #{scoreLose},</if>
+					<if test="sortNo != null">sort_no = #{sortNo},</if>
+					<if test="createBy != null">create_by = #{createBy},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateBy != null">update_by = #{updateBy},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

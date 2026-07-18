@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketGroupDao">
+	<resultMap id="result_BasketGroupMapper.xml" type="com.zhs.model.BasketGroup">
+		<id column="id" property="id" />
+		<result column="tournament_id" property="tournamentId" />
+		<result column="group_name" property="groupName" />
+		<result column="group_sort" property="groupSort" />
+		<result column="group_status" property="groupStatus" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="update_by" property="updateBy" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_group的列名 -->
+	<sql id="basket_group_Column">
+		id,tournament_id,group_name,group_sort,group_status,create_by,create_time,update_by,update_time
+	</sql>
+
+	<!-- 通过BasketGroup的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketGroupById" parameterType="Long" resultMap="result_BasketGroupMapper.xml">
+		select
+		<include refid="basket_group_Column" />
+		from basket_group
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketGroup对象,以参数BasketGroup对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketGroupObjSingle" parameterType="com.zhs.model.BasketGroup" resultMap="result_BasketGroupMapper.xml">
+		select
+		<include refid="basket_group_Column" />
+		from basket_group
+		<where>
+		<if test="groupSort != null"> and group_sort = #{groupSort}</if>
+		<if test="groupStatus != null"> and group_status = #{groupStatus}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="groupName != null"> and group_name = #{groupName}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketGroup对象,以参数BasketGroup对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketGroupByObj" parameterType="com.zhs.model.BasketGroup" resultMap="result_BasketGroupMapper.xml">
+		select
+		<include refid="basket_group_Column" />
+		from basket_group
+		<where>
+		<if test="groupSort != null"> and group_sort = #{groupSort}</if>
+		<if test="groupStatus != null"> and group_status = #{groupStatus}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="groupName != null"> and group_name = #{groupName}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketGroup插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketGroup" parameterType="com.zhs.model.BasketGroup">
+		insert into 
+		basket_group (id,tournament_id,group_name,group_sort,group_status,create_by,create_time,update_by,update_time) 
+		values(#{id},#{tournamentId},#{groupName},#{groupSort},#{groupStatus},#{createBy},#{createTime},#{updateBy},#{updateTime})
+	</insert>
+
+	<!-- 将BasketGroup中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketGroup" parameterType="com.zhs.model.BasketGroup">
+		insert into basket_group
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="tournamentId != null">tournament_id,</if>
+			<if test="groupName != null">group_name,</if>
+			<if test="groupSort != null">group_sort,</if>
+			<if test="groupStatus != null">group_status,</if>
+			<if test="createBy != null">create_by,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateBy != null">update_by,</if>
+			<if test="updateTime != null">update_time,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="tournamentId != null">#{tournamentId},</if>
+			<if test="groupName != null">#{groupName},</if>
+			<if test="groupSort != null">#{groupSort},</if>
+			<if test="groupStatus != null">#{groupStatus},</if>
+			<if test="createBy != null">#{createBy},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateBy != null">#{updateBy},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketGroup批量插入到对应数据库的表中 -->
+	<insert id="insertBasketGroupByBatch" parameterType="ArrayList">
+		insert into basket_group(id,tournament_id,group_name,group_sort,group_status,create_by,create_time,update_by,update_time) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{tournamentId},#{groupName},#{groupSort},#{groupStatus},#{createBy},#{createTime},#{updateBy},#{updateTime})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketGroup的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketGroupById" parameterType="Long">
+		delete from basket_group
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketGroup的id将BasketGroup的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketGroupById" parameterType="com.zhs.model.BasketGroup"> 
+		update basket_group set
+		<set>
+			tournament_id = #{tournamentId} , 
+			group_name = #{groupName} , 
+			group_sort = #{groupSort} , 
+			group_status = #{groupStatus} , 
+			create_by = #{createBy} , 
+			create_time = #{createTime} , 
+			update_by = #{updateBy} , 
+			update_time = #{updateTime} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketGroup的id将BasketGroup中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketGroupById" parameterType="com.zhs.model.BasketGroup">
+		update basket_group
+		<set>
+					<if test="tournamentId != null">tournament_id = #{tournamentId},</if>
+					<if test="groupName != null">group_name = #{groupName},</if>
+					<if test="groupSort != null">group_sort = #{groupSort},</if>
+					<if test="groupStatus != null">group_status = #{groupStatus},</if>
+					<if test="createBy != null">create_by = #{createBy},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateBy != null">update_by = #{updateBy},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTeamLogDao">
+	<resultMap id="result_BasketTeamLogMapper.xml" type="com.zhs.model.BasketTeamLog">
+		<id column="id" property="id" />
+		<result column="team_id" property="teamId" />
+		<result column="operate_type" property="operateType" />
+		<result column="player_id" property="playerId" />
+		<result column="operate_content" property="operateContent" />
+		<result column="operator_user_id" property="operatorUserId" />
+		<result column="operate_time" property="operateTime" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_team_log的列名 -->
+	<sql id="basket_team_log_Column">
+		id,team_id,player_id,operate_type,operate_content,operator_user_id,operate_time,create_by,create_time
+	</sql>
+
+	<!-- 通过BasketTeamLog的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTeamLogById" parameterType="Long" resultMap="result_BasketTeamLogMapper.xml">
+		select
+		<include refid="basket_team_log_Column" />
+		from basket_team_log
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTeamLog对象,以参数BasketTeamLog对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamLogObjSingle" parameterType="com.zhs.model.BasketTeamLog" resultMap="result_BasketTeamLogMapper.xml">
+		select
+		<include refid="basket_team_log_Column" />
+		from basket_team_log
+		<where>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="operateContent != null"> and operate_content = #{operateContent}</if>
+		<if test="operatorUserId != null"> and operator_user_id = #{operatorUserId}</if>
+		<if test="operateTime != null"> and operate_time = #{operateTime}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="operateType != null"> and operate_type = #{operateType}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTeamLog对象,以参数BasketTeamLog对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamLogByObj" parameterType="com.zhs.model.BasketTeamLog" resultMap="result_BasketTeamLogMapper.xml">
+		select
+		<include refid="basket_team_log_Column" />
+		from basket_team_log
+		<where>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="operateContent != null"> and operate_content = #{operateContent}</if>
+		<if test="operatorUserId != null"> and operator_user_id = #{operatorUserId}</if>
+		<if test="operateTime != null"> and operate_time = #{operateTime}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="operateType != null"> and operate_type = #{operateType}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTeamLog插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTeamLog" parameterType="com.zhs.model.BasketTeamLog">
+		insert into 
+		basket_team_log (id,team_id,player_id,operate_type,operate_content,operator_user_id,operate_time,create_by,create_time) 
+		values(#{id},#{teamId},#{playerId},#{operateType},#{operateContent},#{operatorUserId},#{operateTime},#{createBy},#{createTime})
+	</insert>
+
+	<!-- 将BasketTeamLog中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTeamLog" parameterType="com.zhs.model.BasketTeamLog">
+		insert into basket_team_log
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="playerId != null">player_id,</if>
+			<if test="operateType != null">operate_type,</if>
+			<if test="operateContent != null">operate_content,</if>
+			<if test="operatorUserId != null">operator_user_id,</if>
+			<if test="operateTime != null">operate_time,</if>
+			<if test="createBy != null">create_by,</if>
+			<if test="createTime != null">create_time,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="playerId != null">#{playerId},</if>
+			<if test="operateType != null">#{operateType},</if>
+			<if test="operateContent != null">#{operateContent},</if>
+			<if test="operatorUserId != null">#{operatorUserId},</if>
+			<if test="operateTime != null">#{operateTime},</if>
+			<if test="createBy != null">#{createBy},</if>
+			<if test="createTime != null">#{createTime},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTeamLog批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTeamLogByBatch" parameterType="ArrayList">
+		insert into basket_team_log(id,team_id,player_id,operate_type,operate_content,operator_user_id,operate_time,create_by,create_time) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{teamId},#{playerId},#{operateType},#{operateContent},#{operatorUserId},#{operateTime},#{createBy},#{createTime})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTeamLog的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTeamLogById" parameterType="Long">
+		delete from basket_team_log
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTeamLog的id将BasketTeamLog的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTeamLogById" parameterType="com.zhs.model.BasketTeamLog"> 
+		update basket_team_log set
+		<set>
+			team_id = #{teamId} , 
+			player_id = #{playerId} , 
+			operate_type = #{operateType} , 
+			operate_content = #{operateContent} , 
+			operator_user_id = #{operatorUserId} , 
+			operate_time = #{operateTime} , 
+			create_by = #{createBy} , 
+			create_time = #{createTime} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTeamLog的id将BasketTeamLog中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTeamLogById" parameterType="com.zhs.model.BasketTeamLog">
+		update basket_team_log
+		<set>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="playerId != null">player_id = #{playerId},</if>
+					<if test="operateType != null">operate_type = #{operateType},</if>
+					<if test="operateContent != null">operate_content = #{operateContent},</if>
+					<if test="operatorUserId != null">operator_user_id = #{operatorUserId},</if>
+					<if test="operateTime != null">operate_time = #{operateTime},</if>
+					<if test="createBy != null">create_by = #{createBy},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

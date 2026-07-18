@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTournamentAuditDao">
+	<resultMap id="result_BasketTournamentAuditMapper.xml" type="com.zhs.model.BasketTournamentAudit">
+		<id column="id" property="id" />
+		<result column="tournament_id" property="tournamentId" />
+		<result column="audit_type" property="auditType" />
+		<result column="registration_id" property="registrationId" />
+		<result column="audit_status" property="auditStatus" />
+		<result column="audit_content" property="auditContent" />
+		<result column="auditor_user_id" property="auditorUserId" />
+		<result column="audit_time" property="auditTime" />
+		<result column="audit_remark" property="auditRemark" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_tournament_audit的列名 -->
+	<sql id="basket_tournament_audit_Column">
+		id,tournament_id,registration_id,audit_type,audit_status,audit_content,auditor_user_id,audit_time,audit_remark,create_by,create_time
+	</sql>
+
+	<!-- 通过BasketTournamentAudit的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTournamentAuditById" parameterType="Long" resultMap="result_BasketTournamentAuditMapper.xml">
+		select
+		<include refid="basket_tournament_audit_Column" />
+		from basket_tournament_audit
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTournamentAudit对象,以参数BasketTournamentAudit对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTournamentAuditObjSingle" parameterType="com.zhs.model.BasketTournamentAudit" resultMap="result_BasketTournamentAuditMapper.xml">
+		select
+		<include refid="basket_tournament_audit_Column" />
+		from basket_tournament_audit
+		<where>
+		<if test="registrationId != null"> and registration_id = #{registrationId}</if>
+		<if test="auditStatus != null"> and audit_status = #{auditStatus}</if>
+		<if test="auditContent != null"> and audit_content = #{auditContent}</if>
+		<if test="auditorUserId != null"> and auditor_user_id = #{auditorUserId}</if>
+		<if test="auditTime != null"> and audit_time = #{auditTime}</if>
+		<if test="auditRemark != null"> and audit_remark = #{auditRemark}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="auditType != null"> and audit_type = #{auditType}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTournamentAudit对象,以参数BasketTournamentAudit对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTournamentAuditByObj" parameterType="com.zhs.model.BasketTournamentAudit" resultMap="result_BasketTournamentAuditMapper.xml">
+		select
+		<include refid="basket_tournament_audit_Column" />
+		from basket_tournament_audit
+		<where>
+		<if test="registrationId != null"> and registration_id = #{registrationId}</if>
+		<if test="auditStatus != null"> and audit_status = #{auditStatus}</if>
+		<if test="auditContent != null"> and audit_content = #{auditContent}</if>
+		<if test="auditorUserId != null"> and auditor_user_id = #{auditorUserId}</if>
+		<if test="auditTime != null"> and audit_time = #{auditTime}</if>
+		<if test="auditRemark != null"> and audit_remark = #{auditRemark}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="auditType != null"> and audit_type = #{auditType}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTournamentAudit插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTournamentAudit" parameterType="com.zhs.model.BasketTournamentAudit">
+		insert into 
+		basket_tournament_audit (id,tournament_id,registration_id,audit_type,audit_status,audit_content,auditor_user_id,audit_time,audit_remark,create_by,create_time) 
+		values(#{id},#{tournamentId},#{registrationId},#{auditType},#{auditStatus},#{auditContent},#{auditorUserId},#{auditTime},#{auditRemark},#{createBy},#{createTime})
+	</insert>
+
+	<!-- 将BasketTournamentAudit中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTournamentAudit" parameterType="com.zhs.model.BasketTournamentAudit">
+		insert into basket_tournament_audit
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="tournamentId != null">tournament_id,</if>
+			<if test="registrationId != null">registration_id,</if>
+			<if test="auditType != null">audit_type,</if>
+			<if test="auditStatus != null">audit_status,</if>
+			<if test="auditContent != null">audit_content,</if>
+			<if test="auditorUserId != null">auditor_user_id,</if>
+			<if test="auditTime != null">audit_time,</if>
+			<if test="auditRemark != null">audit_remark,</if>
+			<if test="createBy != null">create_by,</if>
+			<if test="createTime != null">create_time,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="tournamentId != null">#{tournamentId},</if>
+			<if test="registrationId != null">#{registrationId},</if>
+			<if test="auditType != null">#{auditType},</if>
+			<if test="auditStatus != null">#{auditStatus},</if>
+			<if test="auditContent != null">#{auditContent},</if>
+			<if test="auditorUserId != null">#{auditorUserId},</if>
+			<if test="auditTime != null">#{auditTime},</if>
+			<if test="auditRemark != null">#{auditRemark},</if>
+			<if test="createBy != null">#{createBy},</if>
+			<if test="createTime != null">#{createTime},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTournamentAudit批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTournamentAuditByBatch" parameterType="ArrayList">
+		insert into basket_tournament_audit(id,tournament_id,registration_id,audit_type,audit_status,audit_content,auditor_user_id,audit_time,audit_remark,create_by,create_time) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{tournamentId},#{registrationId},#{auditType},#{auditStatus},#{auditContent},#{auditorUserId},#{auditTime},#{auditRemark},#{createBy},#{createTime})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTournamentAudit的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTournamentAuditById" parameterType="Long">
+		delete from basket_tournament_audit
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTournamentAudit的id将BasketTournamentAudit的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTournamentAuditById" parameterType="com.zhs.model.BasketTournamentAudit"> 
+		update basket_tournament_audit set
+		<set>
+			tournament_id = #{tournamentId} , 
+			registration_id = #{registrationId} , 
+			audit_type = #{auditType} , 
+			audit_status = #{auditStatus} , 
+			audit_content = #{auditContent} , 
+			auditor_user_id = #{auditorUserId} , 
+			audit_time = #{auditTime} , 
+			audit_remark = #{auditRemark} , 
+			create_by = #{createBy} , 
+			create_time = #{createTime} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTournamentAudit的id将BasketTournamentAudit中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTournamentAuditById" parameterType="com.zhs.model.BasketTournamentAudit">
+		update basket_tournament_audit
+		<set>
+					<if test="tournamentId != null">tournament_id = #{tournamentId},</if>
+					<if test="registrationId != null">registration_id = #{registrationId},</if>
+					<if test="auditType != null">audit_type = #{auditType},</if>
+					<if test="auditStatus != null">audit_status = #{auditStatus},</if>
+					<if test="auditContent != null">audit_content = #{auditContent},</if>
+					<if test="auditorUserId != null">auditor_user_id = #{auditorUserId},</if>
+					<if test="auditTime != null">audit_time = #{auditTime},</if>
+					<if test="auditRemark != null">audit_remark = #{auditRemark},</if>
+					<if test="createBy != null">create_by = #{createBy},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

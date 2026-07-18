@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketFileResourceDao">
+	<resultMap id="result_BasketFileResourceMapper.xml" type="com.zhs.model.BasketFileResource">
+		<id column="id" property="id" />
+		<result column="file_name" property="fileName" />
+		<result column="file_path" property="filePath" />
+		<result column="file_url" property="fileUrl" />
+		<result column="file_type" property="fileType" />
+		<result column="file_size" property="fileSize" />
+		<result column="business_type" property="businessType" />
+		<result column="business_id" property="businessId" />
+		<result column="upload_user_id" property="uploadUserId" />
+		<result column="upload_time" property="uploadTime" />
+		<result column="file_status" property="fileStatus" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="remark" property="remark" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_file_resource的列名 -->
+	<sql id="basket_file_resource_Column">
+		id,file_name,file_path,file_url,file_type,file_size,business_type,business_id,upload_user_id,upload_time,file_status,create_by,create_time,remark
+	</sql>
+
+	<!-- 通过BasketFileResource的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketFileResourceById" parameterType="Long" resultMap="result_BasketFileResourceMapper.xml">
+		select
+		<include refid="basket_file_resource_Column" />
+		from basket_file_resource
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketFileResource对象,以参数BasketFileResource对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketFileResourceObjSingle" parameterType="com.zhs.model.BasketFileResource" resultMap="result_BasketFileResourceMapper.xml">
+		select
+		<include refid="basket_file_resource_Column" />
+		from basket_file_resource
+		<where>
+		<if test="fileType != null"> and file_type = #{fileType}</if>
+		<if test="fileSize != null"> and file_size = #{fileSize}</if>
+		<if test="businessType != null"> and business_type = #{businessType}</if>
+		<if test="businessId != null"> and business_id = #{businessId}</if>
+		<if test="uploadUserId != null"> and upload_user_id = #{uploadUserId}</if>
+		<if test="uploadTime != null"> and upload_time = #{uploadTime}</if>
+		<if test="fileStatus != null"> and file_status = #{fileStatus}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="fileName != null"> and file_name = #{fileName}</if>
+		<if test="filePath != null"> and file_path = #{filePath}</if>
+		<if test="fileUrl != null"> and file_url = #{fileUrl}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketFileResource对象,以参数BasketFileResource对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketFileResourceByObj" parameterType="com.zhs.model.BasketFileResource" resultMap="result_BasketFileResourceMapper.xml">
+		select
+		<include refid="basket_file_resource_Column" />
+		from basket_file_resource
+		<where>
+		<if test="fileType != null"> and file_type = #{fileType}</if>
+		<if test="fileSize != null"> and file_size = #{fileSize}</if>
+		<if test="businessType != null"> and business_type = #{businessType}</if>
+		<if test="businessId != null"> and business_id = #{businessId}</if>
+		<if test="uploadUserId != null"> and upload_user_id = #{uploadUserId}</if>
+		<if test="uploadTime != null"> and upload_time = #{uploadTime}</if>
+		<if test="fileStatus != null"> and file_status = #{fileStatus}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="fileName != null"> and file_name = #{fileName}</if>
+		<if test="filePath != null"> and file_path = #{filePath}</if>
+		<if test="fileUrl != null"> and file_url = #{fileUrl}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketFileResource插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketFileResource" parameterType="com.zhs.model.BasketFileResource">
+		insert into 
+		basket_file_resource (id,file_name,file_path,file_url,file_type,file_size,business_type,business_id,upload_user_id,upload_time,file_status,create_by,create_time,remark) 
+		values(#{id},#{fileName},#{filePath},#{fileUrl},#{fileType},#{fileSize},#{businessType},#{businessId},#{uploadUserId},#{uploadTime},#{fileStatus},#{createBy},#{createTime},#{remark})
+	</insert>
+
+	<!-- 将BasketFileResource中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketFileResource" parameterType="com.zhs.model.BasketFileResource">
+		insert into basket_file_resource
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="fileName != null">file_name,</if>
+			<if test="filePath != null">file_path,</if>
+			<if test="fileUrl != null">file_url,</if>
+			<if test="fileType != null">file_type,</if>
+			<if test="fileSize != null">file_size,</if>
+			<if test="businessType != null">business_type,</if>
+			<if test="businessId != null">business_id,</if>
+			<if test="uploadUserId != null">upload_user_id,</if>
+			<if test="uploadTime != null">upload_time,</if>
+			<if test="fileStatus != null">file_status,</if>
+			<if test="createBy != null">create_by,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="remark != null">remark,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="fileName != null">#{fileName},</if>
+			<if test="filePath != null">#{filePath},</if>
+			<if test="fileUrl != null">#{fileUrl},</if>
+			<if test="fileType != null">#{fileType},</if>
+			<if test="fileSize != null">#{fileSize},</if>
+			<if test="businessType != null">#{businessType},</if>
+			<if test="businessId != null">#{businessId},</if>
+			<if test="uploadUserId != null">#{uploadUserId},</if>
+			<if test="uploadTime != null">#{uploadTime},</if>
+			<if test="fileStatus != null">#{fileStatus},</if>
+			<if test="createBy != null">#{createBy},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="remark != null">#{remark},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketFileResource批量插入到对应数据库的表中 -->
+	<insert id="insertBasketFileResourceByBatch" parameterType="ArrayList">
+		insert into basket_file_resource(id,file_name,file_path,file_url,file_type,file_size,business_type,business_id,upload_user_id,upload_time,file_status,create_by,create_time,remark) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{fileName},#{filePath},#{fileUrl},#{fileType},#{fileSize},#{businessType},#{businessId},#{uploadUserId},#{uploadTime},#{fileStatus},#{createBy},#{createTime},#{remark})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketFileResource的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketFileResourceById" parameterType="Long">
+		delete from basket_file_resource
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketFileResource的id将BasketFileResource的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketFileResourceById" parameterType="com.zhs.model.BasketFileResource"> 
+		update basket_file_resource set
+		<set>
+			file_name = #{fileName} , 
+			file_path = #{filePath} , 
+			file_url = #{fileUrl} , 
+			file_type = #{fileType} , 
+			file_size = #{fileSize} , 
+			business_type = #{businessType} , 
+			business_id = #{businessId} , 
+			upload_user_id = #{uploadUserId} , 
+			upload_time = #{uploadTime} , 
+			file_status = #{fileStatus} , 
+			create_by = #{createBy} , 
+			create_time = #{createTime} , 
+			remark = #{remark} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketFileResource的id将BasketFileResource中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketFileResourceById" parameterType="com.zhs.model.BasketFileResource">
+		update basket_file_resource
+		<set>
+					<if test="fileName != null">file_name = #{fileName},</if>
+					<if test="filePath != null">file_path = #{filePath},</if>
+					<if test="fileUrl != null">file_url = #{fileUrl},</if>
+					<if test="fileType != null">file_type = #{fileType},</if>
+					<if test="fileSize != null">file_size = #{fileSize},</if>
+					<if test="businessType != null">business_type = #{businessType},</if>
+					<if test="businessId != null">business_id = #{businessId},</if>
+					<if test="uploadUserId != null">upload_user_id = #{uploadUserId},</if>
+					<if test="uploadTime != null">upload_time = #{uploadTime},</if>
+					<if test="fileStatus != null">file_status = #{fileStatus},</if>
+					<if test="createBy != null">create_by = #{createBy},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="remark != null">remark = #{remark},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

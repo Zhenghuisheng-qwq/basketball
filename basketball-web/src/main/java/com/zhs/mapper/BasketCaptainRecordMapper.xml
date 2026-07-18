@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketCaptainRecordDao">
+	<resultMap id="result_BasketCaptainRecordMapper.xml" type="com.zhs.model.BasketCaptainRecord">
+		<id column="id" property="id" />
+		<result column="player_id" property="playerId" />
+		<result column="old_captain_flag" property="oldCaptainFlag" />
+		<result column="new_captain_flag" property="newCaptainFlag" />
+		<result column="reason" property="reason" />
+		<result column="operator_type" property="operatorType" />
+		<result column="operator_id" property="operatorId" />
+		<result column="operate_time" property="operateTime" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="remark" property="remark" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_captain_record的列名 -->
+	<sql id="basket_captain_record_Column">
+		id,player_id,old_captain_flag,new_captain_flag,reason,operator_type,operator_id,operate_time,create_by,create_time,remark
+	</sql>
+
+	<!-- 通过BasketCaptainRecord的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketCaptainRecordById" parameterType="Long" resultMap="result_BasketCaptainRecordMapper.xml">
+		select
+		<include refid="basket_captain_record_Column" />
+		from basket_captain_record
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketCaptainRecord对象,以参数BasketCaptainRecord对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketCaptainRecordObjSingle" parameterType="com.zhs.model.BasketCaptainRecord" resultMap="result_BasketCaptainRecordMapper.xml">
+		select
+		<include refid="basket_captain_record_Column" />
+		from basket_captain_record
+		<where>
+		<if test="oldCaptainFlag != null"> and old_captain_flag = #{oldCaptainFlag}</if>
+		<if test="newCaptainFlag != null"> and new_captain_flag = #{newCaptainFlag}</if>
+		<if test="reason != null"> and reason = #{reason}</if>
+		<if test="operatorType != null"> and operator_type = #{operatorType}</if>
+		<if test="operatorId != null"> and operator_id = #{operatorId}</if>
+		<if test="operateTime != null"> and operate_time = #{operateTime}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketCaptainRecord对象,以参数BasketCaptainRecord对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketCaptainRecordByObj" parameterType="com.zhs.model.BasketCaptainRecord" resultMap="result_BasketCaptainRecordMapper.xml">
+		select
+		<include refid="basket_captain_record_Column" />
+		from basket_captain_record
+		<where>
+		<if test="oldCaptainFlag != null"> and old_captain_flag = #{oldCaptainFlag}</if>
+		<if test="newCaptainFlag != null"> and new_captain_flag = #{newCaptainFlag}</if>
+		<if test="reason != null"> and reason = #{reason}</if>
+		<if test="operatorType != null"> and operator_type = #{operatorType}</if>
+		<if test="operatorId != null"> and operator_id = #{operatorId}</if>
+		<if test="operateTime != null"> and operate_time = #{operateTime}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketCaptainRecord插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketCaptainRecord" parameterType="com.zhs.model.BasketCaptainRecord">
+		insert into 
+		basket_captain_record (id,player_id,old_captain_flag,new_captain_flag,reason,operator_type,operator_id,operate_time,create_by,create_time,remark) 
+		values(#{id},#{playerId},#{oldCaptainFlag},#{newCaptainFlag},#{reason},#{operatorType},#{operatorId},#{operateTime},#{createBy},#{createTime},#{remark})
+	</insert>
+
+	<!-- 将BasketCaptainRecord中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketCaptainRecord" parameterType="com.zhs.model.BasketCaptainRecord">
+		insert into basket_captain_record
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="playerId != null">player_id,</if>
+			<if test="oldCaptainFlag != null">old_captain_flag,</if>
+			<if test="newCaptainFlag != null">new_captain_flag,</if>
+			<if test="reason != null">reason,</if>
+			<if test="operatorType != null">operator_type,</if>
+			<if test="operatorId != null">operator_id,</if>
+			<if test="operateTime != null">operate_time,</if>
+			<if test="createBy != null">create_by,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="remark != null">remark,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="playerId != null">#{playerId},</if>
+			<if test="oldCaptainFlag != null">#{oldCaptainFlag},</if>
+			<if test="newCaptainFlag != null">#{newCaptainFlag},</if>
+			<if test="reason != null">#{reason},</if>
+			<if test="operatorType != null">#{operatorType},</if>
+			<if test="operatorId != null">#{operatorId},</if>
+			<if test="operateTime != null">#{operateTime},</if>
+			<if test="createBy != null">#{createBy},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="remark != null">#{remark},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketCaptainRecord批量插入到对应数据库的表中 -->
+	<insert id="insertBasketCaptainRecordByBatch" parameterType="ArrayList">
+		insert into basket_captain_record(id,player_id,old_captain_flag,new_captain_flag,reason,operator_type,operator_id,operate_time,create_by,create_time,remark) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{playerId},#{oldCaptainFlag},#{newCaptainFlag},#{reason},#{operatorType},#{operatorId},#{operateTime},#{createBy},#{createTime},#{remark})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketCaptainRecord的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketCaptainRecordById" parameterType="Long">
+		delete from basket_captain_record
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketCaptainRecord的id将BasketCaptainRecord的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketCaptainRecordById" parameterType="com.zhs.model.BasketCaptainRecord"> 
+		update basket_captain_record set
+		<set>
+			player_id = #{playerId} , 
+			old_captain_flag = #{oldCaptainFlag} , 
+			new_captain_flag = #{newCaptainFlag} , 
+			reason = #{reason} , 
+			operator_type = #{operatorType} , 
+			operator_id = #{operatorId} , 
+			operate_time = #{operateTime} , 
+			create_by = #{createBy} , 
+			create_time = #{createTime} , 
+			remark = #{remark} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketCaptainRecord的id将BasketCaptainRecord中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketCaptainRecordById" parameterType="com.zhs.model.BasketCaptainRecord">
+		update basket_captain_record
+		<set>
+					<if test="playerId != null">player_id = #{playerId},</if>
+					<if test="oldCaptainFlag != null">old_captain_flag = #{oldCaptainFlag},</if>
+					<if test="newCaptainFlag != null">new_captain_flag = #{newCaptainFlag},</if>
+					<if test="reason != null">reason = #{reason},</if>
+					<if test="operatorType != null">operator_type = #{operatorType},</if>
+					<if test="operatorId != null">operator_id = #{operatorId},</if>
+					<if test="operateTime != null">operate_time = #{operateTime},</if>
+					<if test="createBy != null">create_by = #{createBy},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="remark != null">remark = #{remark},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketRegistrationPlayerDao">
+	<resultMap id="result_BasketRegistrationPlayerMapper.xml" type="com.zhs.model.BasketRegistrationPlayer">
+		<id column="id" property="id" />
+		<result column="registration_id" property="registrationId" />
+		<result column="tournament_id" property="tournamentId" />
+		<result column="team_id" property="teamId" />
+		<result column="player_id" property="playerId" />
+		<result column="player_name" property="playerName" />
+		<result column="jersey_no" property="jerseyNo" />
+		<result column="position_name" property="positionName" />
+		<result column="starter_flag" property="starterFlag" />
+		<result column="captain_flag" property="captainFlag" />
+		<result column="join_status" property="joinStatus" />
+		<result column="sort_no" property="sortNo" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="update_by" property="updateBy" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_registration_player的列名 -->
+	<sql id="basket_registration_player_Column">
+		id,registration_id,tournament_id,team_id,player_id,player_name,jersey_no,position_name,starter_flag,captain_flag,join_status,sort_no,create_by,create_time,update_by,update_time
+	</sql>
+
+	<!-- 通过BasketRegistrationPlayer的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketRegistrationPlayerById" parameterType="Long" resultMap="result_BasketRegistrationPlayerMapper.xml">
+		select
+		<include refid="basket_registration_player_Column" />
+		from basket_registration_player
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketRegistrationPlayer对象,以参数BasketRegistrationPlayer对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketRegistrationPlayerObjSingle" parameterType="com.zhs.model.BasketRegistrationPlayer" resultMap="result_BasketRegistrationPlayerMapper.xml">
+		select
+		<include refid="basket_registration_player_Column" />
+		from basket_registration_player
+		<where>
+		<if test="jerseyNo != null"> and jersey_no = #{jerseyNo}</if>
+		<if test="positionName != null"> and position_name = #{positionName}</if>
+		<if test="starterFlag != null"> and starter_flag = #{starterFlag}</if>
+		<if test="captainFlag != null"> and captain_flag = #{captainFlag}</if>
+		<if test="joinStatus != null"> and join_status = #{joinStatus}</if>
+		<if test="sortNo != null"> and sort_no = #{sortNo}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="registrationId != null"> and registration_id = #{registrationId}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="playerName != null"> and player_name = #{playerName}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketRegistrationPlayer对象,以参数BasketRegistrationPlayer对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketRegistrationPlayerByObj" parameterType="com.zhs.model.BasketRegistrationPlayer" resultMap="result_BasketRegistrationPlayerMapper.xml">
+		select
+		<include refid="basket_registration_player_Column" />
+		from basket_registration_player
+		<where>
+		<if test="jerseyNo != null"> and jersey_no = #{jerseyNo}</if>
+		<if test="positionName != null"> and position_name = #{positionName}</if>
+		<if test="starterFlag != null"> and starter_flag = #{starterFlag}</if>
+		<if test="captainFlag != null"> and captain_flag = #{captainFlag}</if>
+		<if test="joinStatus != null"> and join_status = #{joinStatus}</if>
+		<if test="sortNo != null"> and sort_no = #{sortNo}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="registrationId != null"> and registration_id = #{registrationId}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="playerName != null"> and player_name = #{playerName}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketRegistrationPlayer插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketRegistrationPlayer" parameterType="com.zhs.model.BasketRegistrationPlayer">
+		insert into 
+		basket_registration_player (id,registration_id,tournament_id,team_id,player_id,player_name,jersey_no,position_name,starter_flag,captain_flag,join_status,sort_no,create_by,create_time,update_by,update_time) 
+		values(#{id},#{registrationId},#{tournamentId},#{teamId},#{playerId},#{playerName},#{jerseyNo},#{positionName},#{starterFlag},#{captainFlag},#{joinStatus},#{sortNo},#{createBy},#{createTime},#{updateBy},#{updateTime})
+	</insert>
+
+	<!-- 将BasketRegistrationPlayer中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketRegistrationPlayer" parameterType="com.zhs.model.BasketRegistrationPlayer">
+		insert into basket_registration_player
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="registrationId != null">registration_id,</if>
+			<if test="tournamentId != null">tournament_id,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="playerId != null">player_id,</if>
+			<if test="playerName != null">player_name,</if>
+			<if test="jerseyNo != null">jersey_no,</if>
+			<if test="positionName != null">position_name,</if>
+			<if test="starterFlag != null">starter_flag,</if>
+			<if test="captainFlag != null">captain_flag,</if>
+			<if test="joinStatus != null">join_status,</if>
+			<if test="sortNo != null">sort_no,</if>
+			<if test="createBy != null">create_by,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateBy != null">update_by,</if>
+			<if test="updateTime != null">update_time,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="registrationId != null">#{registrationId},</if>
+			<if test="tournamentId != null">#{tournamentId},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="playerId != null">#{playerId},</if>
+			<if test="playerName != null">#{playerName},</if>
+			<if test="jerseyNo != null">#{jerseyNo},</if>
+			<if test="positionName != null">#{positionName},</if>
+			<if test="starterFlag != null">#{starterFlag},</if>
+			<if test="captainFlag != null">#{captainFlag},</if>
+			<if test="joinStatus != null">#{joinStatus},</if>
+			<if test="sortNo != null">#{sortNo},</if>
+			<if test="createBy != null">#{createBy},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateBy != null">#{updateBy},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketRegistrationPlayer批量插入到对应数据库的表中 -->
+	<insert id="insertBasketRegistrationPlayerByBatch" parameterType="ArrayList">
+		insert into basket_registration_player(id,registration_id,tournament_id,team_id,player_id,player_name,jersey_no,position_name,starter_flag,captain_flag,join_status,sort_no,create_by,create_time,update_by,update_time) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{registrationId},#{tournamentId},#{teamId},#{playerId},#{playerName},#{jerseyNo},#{positionName},#{starterFlag},#{captainFlag},#{joinStatus},#{sortNo},#{createBy},#{createTime},#{updateBy},#{updateTime})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketRegistrationPlayer的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketRegistrationPlayerById" parameterType="Long">
+		delete from basket_registration_player
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketRegistrationPlayer的id将BasketRegistrationPlayer的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketRegistrationPlayerById" parameterType="com.zhs.model.BasketRegistrationPlayer"> 
+		update basket_registration_player set
+		<set>
+			registration_id = #{registrationId} , 
+			tournament_id = #{tournamentId} , 
+			team_id = #{teamId} , 
+			player_id = #{playerId} , 
+			player_name = #{playerName} , 
+			jersey_no = #{jerseyNo} , 
+			position_name = #{positionName} , 
+			starter_flag = #{starterFlag} , 
+			captain_flag = #{captainFlag} , 
+			join_status = #{joinStatus} , 
+			sort_no = #{sortNo} , 
+			create_by = #{createBy} , 
+			create_time = #{createTime} , 
+			update_by = #{updateBy} , 
+			update_time = #{updateTime} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketRegistrationPlayer的id将BasketRegistrationPlayer中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketRegistrationPlayerById" parameterType="com.zhs.model.BasketRegistrationPlayer">
+		update basket_registration_player
+		<set>
+					<if test="registrationId != null">registration_id = #{registrationId},</if>
+					<if test="tournamentId != null">tournament_id = #{tournamentId},</if>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="playerId != null">player_id = #{playerId},</if>
+					<if test="playerName != null">player_name = #{playerName},</if>
+					<if test="jerseyNo != null">jersey_no = #{jerseyNo},</if>
+					<if test="positionName != null">position_name = #{positionName},</if>
+					<if test="starterFlag != null">starter_flag = #{starterFlag},</if>
+					<if test="captainFlag != null">captain_flag = #{captainFlag},</if>
+					<if test="joinStatus != null">join_status = #{joinStatus},</if>
+					<if test="sortNo != null">sort_no = #{sortNo},</if>
+					<if test="createBy != null">create_by = #{createBy},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateBy != null">update_by = #{updateBy},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

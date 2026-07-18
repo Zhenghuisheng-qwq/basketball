@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketPlayerDao">
+	<resultMap id="result_BasketPlayerMapper.xml" type="com.zhs.model.BasketPlayer">
+		<id column="id" property="id" />
+		<result column="web_user_id" property="webUserId" />
+		<result column="player_no" property="playerNo" />
+		<result column="email" property="email" />
+		<result column="nickname" property="nickname" />
+		<result column="terminal_type" property="terminalType" />
+		<result column="avatar_url" property="avatarUrl" />
+		<result column="gender" property="gender" />
+		<result column="age" property="age" />
+		<result column="city" property="city" />
+		<result column="game_account" property="gameAccount" />
+		<result column="game_role_name" property="gameRoleName" />
+		<result column="main_position" property="mainPosition" />
+		<result column="play_style" property="playStyle" />
+		<result column="profile_desc" property="profileDesc" />
+		<result column="captain_flag" property="captainFlag" />
+		<result column="player_status" property="playerStatus" />
+		<result column="register_time" property="registerTime" />
+		<result column="last_login_time" property="lastLoginTime" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="update_by" property="updateBy" />
+		<result column="update_time" property="updateTime" />
+		<result column="remark" property="remark" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_player的列名 -->
+	<sql id="basket_player_Column">
+		id,web_user_id,player_no,email,nickname,avatar_url,terminal_type,gender,age,city,game_account,game_role_name,main_position,play_style,profile_desc,captain_flag,player_status,register_time,last_login_time,create_by,create_time,update_by,update_time,remark
+	</sql>
+
+	<!-- 通过BasketPlayer的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketPlayerById" parameterType="Long" resultMap="result_BasketPlayerMapper.xml">
+		select
+		<include refid="basket_player_Column" />
+		from basket_player
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketPlayer对象,以参数BasketPlayer对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketPlayerObjSingle" parameterType="com.zhs.model.BasketPlayer" resultMap="result_BasketPlayerMapper.xml">
+		select
+		<include refid="basket_player_Column" />
+		from basket_player
+		<where>
+		<if test="avatarUrl != null"> and avatar_url = #{avatarUrl}</if>
+		<if test="gender != null"> and gender = #{gender}</if>
+		<if test="age != null"> and age = #{age}</if>
+		<if test="city != null"> and city = #{city}</if>
+		<if test="gameAccount != null"> and game_account = #{gameAccount}</if>
+		<if test="gameRoleName != null"> and game_role_name = #{gameRoleName}</if>
+		<if test="mainPosition != null"> and main_position = #{mainPosition}</if>
+		<if test="playStyle != null"> and play_style = #{playStyle}</if>
+		<if test="profileDesc != null"> and profile_desc = #{profileDesc}</if>
+		<if test="captainFlag != null"> and captain_flag = #{captainFlag}</if>
+		<if test="playerStatus != null"> and player_status = #{playerStatus}</if>
+		<if test="registerTime != null"> and register_time = #{registerTime}</if>
+		<if test="lastLoginTime != null"> and last_login_time = #{lastLoginTime}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="webUserId != null"> and web_user_id = #{webUserId}</if>
+		<if test="playerNo != null"> and player_no = #{playerNo}</if>
+		<if test="email != null"> and email = #{email}</if>
+		<if test="nickname != null"> and nickname = #{nickname}</if>
+		<if test="terminalType != null"> and terminal_type = #{terminalType}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketPlayer对象,以参数BasketPlayer对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketPlayerByObj" parameterType="com.zhs.model.BasketPlayer" resultMap="result_BasketPlayerMapper.xml">
+		select
+		<include refid="basket_player_Column" />
+		from basket_player
+		<where>
+		<if test="avatarUrl != null"> and avatar_url = #{avatarUrl}</if>
+		<if test="gender != null"> and gender = #{gender}</if>
+		<if test="age != null"> and age = #{age}</if>
+		<if test="city != null"> and city = #{city}</if>
+		<if test="gameAccount != null"> and game_account = #{gameAccount}</if>
+		<if test="gameRoleName != null"> and game_role_name = #{gameRoleName}</if>
+		<if test="mainPosition != null"> and main_position = #{mainPosition}</if>
+		<if test="playStyle != null"> and play_style = #{playStyle}</if>
+		<if test="profileDesc != null"> and profile_desc = #{profileDesc}</if>
+		<if test="captainFlag != null"> and captain_flag = #{captainFlag}</if>
+		<if test="playerStatus != null"> and player_status = #{playerStatus}</if>
+		<if test="registerTime != null"> and register_time = #{registerTime}</if>
+		<if test="lastLoginTime != null"> and last_login_time = #{lastLoginTime}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="webUserId != null"> and web_user_id = #{webUserId}</if>
+		<if test="playerNo != null"> and player_no = #{playerNo}</if>
+		<if test="email != null"> and email = #{email}</if>
+		<if test="nickname != null"> and nickname = #{nickname}</if>
+		<if test="terminalType != null"> and terminal_type = #{terminalType}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketPlayer插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketPlayer" parameterType="com.zhs.model.BasketPlayer">
+		insert into 
+		basket_player (id,web_user_id,player_no,email,nickname,avatar_url,terminal_type,gender,age,city,game_account,game_role_name,main_position,play_style,profile_desc,captain_flag,player_status,register_time,last_login_time,create_by,create_time,update_by,update_time,remark) 
+		values(#{id},#{webUserId},#{playerNo},#{email},#{nickname},#{avatarUrl},#{terminalType},#{gender},#{age},#{city},#{gameAccount},#{gameRoleName},#{mainPosition},#{playStyle},#{profileDesc},#{captainFlag},#{playerStatus},#{registerTime},#{lastLoginTime},#{createBy},#{createTime},#{updateBy},#{updateTime},#{remark})
+	</insert>
+
+	<!-- 将BasketPlayer中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketPlayer" parameterType="com.zhs.model.BasketPlayer">
+		insert into basket_player
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="webUserId != null">web_user_id,</if>
+			<if test="playerNo != null">player_no,</if>
+			<if test="email != null">email,</if>
+			<if test="nickname != null">nickname,</if>
+			<if test="avatarUrl != null">avatar_url,</if>
+			<if test="terminalType != null">terminal_type,</if>
+			<if test="gender != null">gender,</if>
+			<if test="age != null">age,</if>
+			<if test="city != null">city,</if>
+			<if test="gameAccount != null">game_account,</if>
+			<if test="gameRoleName != null">game_role_name,</if>
+			<if test="mainPosition != null">main_position,</if>
+			<if test="playStyle != null">play_style,</if>
+			<if test="profileDesc != null">profile_desc,</if>
+			<if test="captainFlag != null">captain_flag,</if>
+			<if test="playerStatus != null">player_status,</if>
+			<if test="registerTime != null">register_time,</if>
+			<if test="lastLoginTime != null">last_login_time,</if>
+			<if test="createBy != null">create_by,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateBy != null">update_by,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="remark != null">remark,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="webUserId != null">#{webUserId},</if>
+			<if test="playerNo != null">#{playerNo},</if>
+			<if test="email != null">#{email},</if>
+			<if test="nickname != null">#{nickname},</if>
+			<if test="avatarUrl != null">#{avatarUrl},</if>
+			<if test="terminalType != null">#{terminalType},</if>
+			<if test="gender != null">#{gender},</if>
+			<if test="age != null">#{age},</if>
+			<if test="city != null">#{city},</if>
+			<if test="gameAccount != null">#{gameAccount},</if>
+			<if test="gameRoleName != null">#{gameRoleName},</if>
+			<if test="mainPosition != null">#{mainPosition},</if>
+			<if test="playStyle != null">#{playStyle},</if>
+			<if test="profileDesc != null">#{profileDesc},</if>
+			<if test="captainFlag != null">#{captainFlag},</if>
+			<if test="playerStatus != null">#{playerStatus},</if>
+			<if test="registerTime != null">#{registerTime},</if>
+			<if test="lastLoginTime != null">#{lastLoginTime},</if>
+			<if test="createBy != null">#{createBy},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateBy != null">#{updateBy},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="remark != null">#{remark},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketPlayer批量插入到对应数据库的表中 -->
+	<insert id="insertBasketPlayerByBatch" parameterType="ArrayList">
+		insert into basket_player(id,web_user_id,player_no,email,nickname,avatar_url,terminal_type,gender,age,city,game_account,game_role_name,main_position,play_style,profile_desc,captain_flag,player_status,register_time,last_login_time,create_by,create_time,update_by,update_time,remark) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{webUserId},#{playerNo},#{email},#{nickname},#{avatarUrl},#{terminalType},#{gender},#{age},#{city},#{gameAccount},#{gameRoleName},#{mainPosition},#{playStyle},#{profileDesc},#{captainFlag},#{playerStatus},#{registerTime},#{lastLoginTime},#{createBy},#{createTime},#{updateBy},#{updateTime},#{remark})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketPlayer的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketPlayerById" parameterType="Long">
+		delete from basket_player
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketPlayer的id将BasketPlayer的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketPlayerById" parameterType="com.zhs.model.BasketPlayer"> 
+		update basket_player set
+		<set>
+			web_user_id = #{webUserId} , 
+			player_no = #{playerNo} , 
+			email = #{email} , 
+			nickname = #{nickname} , 
+			avatar_url = #{avatarUrl} , 
+			terminal_type = #{terminalType} , 
+			gender = #{gender} , 
+			age = #{age} , 
+			city = #{city} , 
+			game_account = #{gameAccount} , 
+			game_role_name = #{gameRoleName} , 
+			main_position = #{mainPosition} , 
+			play_style = #{playStyle} , 
+			profile_desc = #{profileDesc} , 
+			captain_flag = #{captainFlag} , 
+			player_status = #{playerStatus} , 
+			register_time = #{registerTime} , 
+			last_login_time = #{lastLoginTime} , 
+			create_by = #{createBy} , 
+			create_time = #{createTime} , 
+			update_by = #{updateBy} , 
+			update_time = #{updateTime} , 
+			remark = #{remark} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketPlayer的id将BasketPlayer中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketPlayerById" parameterType="com.zhs.model.BasketPlayer">
+		update basket_player
+		<set>
+					<if test="webUserId != null">web_user_id = #{webUserId},</if>
+					<if test="playerNo != null">player_no = #{playerNo},</if>
+					<if test="email != null">email = #{email},</if>
+					<if test="nickname != null">nickname = #{nickname},</if>
+					<if test="avatarUrl != null">avatar_url = #{avatarUrl},</if>
+					<if test="terminalType != null">terminal_type = #{terminalType},</if>
+					<if test="gender != null">gender = #{gender},</if>
+					<if test="age != null">age = #{age},</if>
+					<if test="city != null">city = #{city},</if>
+					<if test="gameAccount != null">game_account = #{gameAccount},</if>
+					<if test="gameRoleName != null">game_role_name = #{gameRoleName},</if>
+					<if test="mainPosition != null">main_position = #{mainPosition},</if>
+					<if test="playStyle != null">play_style = #{playStyle},</if>
+					<if test="profileDesc != null">profile_desc = #{profileDesc},</if>
+					<if test="captainFlag != null">captain_flag = #{captainFlag},</if>
+					<if test="playerStatus != null">player_status = #{playerStatus},</if>
+					<if test="registerTime != null">register_time = #{registerTime},</if>
+					<if test="lastLoginTime != null">last_login_time = #{lastLoginTime},</if>
+					<if test="createBy != null">create_by = #{createBy},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateBy != null">update_by = #{updateBy},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="remark != null">remark = #{remark},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

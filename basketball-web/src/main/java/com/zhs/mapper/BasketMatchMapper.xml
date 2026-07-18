@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketMatchDao">
+	<resultMap id="result_BasketMatchMapper.xml" type="com.zhs.model.BasketMatch">
+		<id column="id" property="id" />
+		<result column="tournament_id" property="tournamentId" />
+		<result column="match_no" property="matchNo" />
+		<result column="home_team_id" property="homeTeamId" />
+		<result column="away_team_id" property="awayTeamId" />
+		<result column="group_id" property="groupId" />
+		<result column="round_id" property="roundId" />
+		<result column="match_name" property="matchName" />
+		<result column="match_time" property="matchTime" />
+		<result column="room_name" property="roomName" />
+		<result column="home_score" property="homeScore" />
+		<result column="away_score" property="awayScore" />
+		<result column="winner_team_id" property="winnerTeamId" />
+		<result column="match_status" property="matchStatus" />
+		<result column="data_status" property="dataStatus" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="update_by" property="updateBy" />
+		<result column="update_time" property="updateTime" />
+		<result column="remark" property="remark" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_match的列名 -->
+	<sql id="basket_match_Column">
+		id,tournament_id,group_id,round_id,match_no,match_name,match_time,room_name,home_team_id,away_team_id,home_score,away_score,winner_team_id,match_status,data_status,create_by,create_time,update_by,update_time,remark
+	</sql>
+
+	<!-- 通过BasketMatch的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketMatchById" parameterType="Long" resultMap="result_BasketMatchMapper.xml">
+		select
+		<include refid="basket_match_Column" />
+		from basket_match
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketMatch对象,以参数BasketMatch对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketMatchObjSingle" parameterType="com.zhs.model.BasketMatch" resultMap="result_BasketMatchMapper.xml">
+		select
+		<include refid="basket_match_Column" />
+		from basket_match
+		<where>
+		<if test="groupId != null"> and group_id = #{groupId}</if>
+		<if test="roundId != null"> and round_id = #{roundId}</if>
+		<if test="matchName != null"> and match_name = #{matchName}</if>
+		<if test="matchTime != null"> and match_time = #{matchTime}</if>
+		<if test="roomName != null"> and room_name = #{roomName}</if>
+		<if test="homeScore != null"> and home_score = #{homeScore}</if>
+		<if test="awayScore != null"> and away_score = #{awayScore}</if>
+		<if test="winnerTeamId != null"> and winner_team_id = #{winnerTeamId}</if>
+		<if test="matchStatus != null"> and match_status = #{matchStatus}</if>
+		<if test="dataStatus != null"> and data_status = #{dataStatus}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="matchNo != null"> and match_no = #{matchNo}</if>
+		<if test="homeTeamId != null"> and home_team_id = #{homeTeamId}</if>
+		<if test="awayTeamId != null"> and away_team_id = #{awayTeamId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketMatch对象,以参数BasketMatch对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketMatchByObj" parameterType="com.zhs.model.BasketMatch" resultMap="result_BasketMatchMapper.xml">
+		select
+		<include refid="basket_match_Column" />
+		from basket_match
+		<where>
+		<if test="groupId != null"> and group_id = #{groupId}</if>
+		<if test="roundId != null"> and round_id = #{roundId}</if>
+		<if test="matchName != null"> and match_name = #{matchName}</if>
+		<if test="matchTime != null"> and match_time = #{matchTime}</if>
+		<if test="roomName != null"> and room_name = #{roomName}</if>
+		<if test="homeScore != null"> and home_score = #{homeScore}</if>
+		<if test="awayScore != null"> and away_score = #{awayScore}</if>
+		<if test="winnerTeamId != null"> and winner_team_id = #{winnerTeamId}</if>
+		<if test="matchStatus != null"> and match_status = #{matchStatus}</if>
+		<if test="dataStatus != null"> and data_status = #{dataStatus}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="matchNo != null"> and match_no = #{matchNo}</if>
+		<if test="homeTeamId != null"> and home_team_id = #{homeTeamId}</if>
+		<if test="awayTeamId != null"> and away_team_id = #{awayTeamId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketMatch插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketMatch" parameterType="com.zhs.model.BasketMatch">
+		insert into 
+		basket_match (id,tournament_id,group_id,round_id,match_no,match_name,match_time,room_name,home_team_id,away_team_id,home_score,away_score,winner_team_id,match_status,data_status,create_by,create_time,update_by,update_time,remark) 
+		values(#{id},#{tournamentId},#{groupId},#{roundId},#{matchNo},#{matchName},#{matchTime},#{roomName},#{homeTeamId},#{awayTeamId},#{homeScore},#{awayScore},#{winnerTeamId},#{matchStatus},#{dataStatus},#{createBy},#{createTime},#{updateBy},#{updateTime},#{remark})
+	</insert>
+
+	<!-- 将BasketMatch中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketMatch" parameterType="com.zhs.model.BasketMatch">
+		insert into basket_match
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="tournamentId != null">tournament_id,</if>
+			<if test="groupId != null">group_id,</if>
+			<if test="roundId != null">round_id,</if>
+			<if test="matchNo != null">match_no,</if>
+			<if test="matchName != null">match_name,</if>
+			<if test="matchTime != null">match_time,</if>
+			<if test="roomName != null">room_name,</if>
+			<if test="homeTeamId != null">home_team_id,</if>
+			<if test="awayTeamId != null">away_team_id,</if>
+			<if test="homeScore != null">home_score,</if>
+			<if test="awayScore != null">away_score,</if>
+			<if test="winnerTeamId != null">winner_team_id,</if>
+			<if test="matchStatus != null">match_status,</if>
+			<if test="dataStatus != null">data_status,</if>
+			<if test="createBy != null">create_by,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateBy != null">update_by,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="remark != null">remark,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="tournamentId != null">#{tournamentId},</if>
+			<if test="groupId != null">#{groupId},</if>
+			<if test="roundId != null">#{roundId},</if>
+			<if test="matchNo != null">#{matchNo},</if>
+			<if test="matchName != null">#{matchName},</if>
+			<if test="matchTime != null">#{matchTime},</if>
+			<if test="roomName != null">#{roomName},</if>
+			<if test="homeTeamId != null">#{homeTeamId},</if>
+			<if test="awayTeamId != null">#{awayTeamId},</if>
+			<if test="homeScore != null">#{homeScore},</if>
+			<if test="awayScore != null">#{awayScore},</if>
+			<if test="winnerTeamId != null">#{winnerTeamId},</if>
+			<if test="matchStatus != null">#{matchStatus},</if>
+			<if test="dataStatus != null">#{dataStatus},</if>
+			<if test="createBy != null">#{createBy},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateBy != null">#{updateBy},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="remark != null">#{remark},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketMatch批量插入到对应数据库的表中 -->
+	<insert id="insertBasketMatchByBatch" parameterType="ArrayList">
+		insert into basket_match(id,tournament_id,group_id,round_id,match_no,match_name,match_time,room_name,home_team_id,away_team_id,home_score,away_score,winner_team_id,match_status,data_status,create_by,create_time,update_by,update_time,remark) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{tournamentId},#{groupId},#{roundId},#{matchNo},#{matchName},#{matchTime},#{roomName},#{homeTeamId},#{awayTeamId},#{homeScore},#{awayScore},#{winnerTeamId},#{matchStatus},#{dataStatus},#{createBy},#{createTime},#{updateBy},#{updateTime},#{remark})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketMatch的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketMatchById" parameterType="Long">
+		delete from basket_match
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketMatch的id将BasketMatch的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketMatchById" parameterType="com.zhs.model.BasketMatch"> 
+		update basket_match set
+		<set>
+			tournament_id = #{tournamentId} , 
+			group_id = #{groupId} , 
+			round_id = #{roundId} , 
+			match_no = #{matchNo} , 
+			match_name = #{matchName} , 
+			match_time = #{matchTime} , 
+			room_name = #{roomName} , 
+			home_team_id = #{homeTeamId} , 
+			away_team_id = #{awayTeamId} , 
+			home_score = #{homeScore} , 
+			away_score = #{awayScore} , 
+			winner_team_id = #{winnerTeamId} , 
+			match_status = #{matchStatus} , 
+			data_status = #{dataStatus} , 
+			create_by = #{createBy} , 
+			create_time = #{createTime} , 
+			update_by = #{updateBy} , 
+			update_time = #{updateTime} , 
+			remark = #{remark} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketMatch的id将BasketMatch中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketMatchById" parameterType="com.zhs.model.BasketMatch">
+		update basket_match
+		<set>
+					<if test="tournamentId != null">tournament_id = #{tournamentId},</if>
+					<if test="groupId != null">group_id = #{groupId},</if>
+					<if test="roundId != null">round_id = #{roundId},</if>
+					<if test="matchNo != null">match_no = #{matchNo},</if>
+					<if test="matchName != null">match_name = #{matchName},</if>
+					<if test="matchTime != null">match_time = #{matchTime},</if>
+					<if test="roomName != null">room_name = #{roomName},</if>
+					<if test="homeTeamId != null">home_team_id = #{homeTeamId},</if>
+					<if test="awayTeamId != null">away_team_id = #{awayTeamId},</if>
+					<if test="homeScore != null">home_score = #{homeScore},</if>
+					<if test="awayScore != null">away_score = #{awayScore},</if>
+					<if test="winnerTeamId != null">winner_team_id = #{winnerTeamId},</if>
+					<if test="matchStatus != null">match_status = #{matchStatus},</if>
+					<if test="dataStatus != null">data_status = #{dataStatus},</if>
+					<if test="createBy != null">create_by = #{createBy},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateBy != null">update_by = #{updateBy},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="remark != null">remark = #{remark},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

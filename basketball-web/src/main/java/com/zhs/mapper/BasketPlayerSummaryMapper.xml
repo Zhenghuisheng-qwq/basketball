@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketPlayerSummaryDao">
+	<resultMap id="result_BasketPlayerSummaryMapper.xml" type="com.zhs.model.BasketPlayerSummary">
+		<id column="id" property="id" />
+		<result column="source_player_id" property="sourcePlayerId" />
+		<result column="player_name" property="playerName" />
+		<result column="season_id" property="seasonId" />
+		<result column="tournament_id" property="tournamentId" />
+		<result column="match_count" property="matchCount" />
+		<result column="points_total" property="pointsTotal" />
+		<result column="rebounds_total" property="reboundsTotal" />
+		<result column="assists_total" property="assistsTotal" />
+		<result column="steals_total" property="stealsTotal" />
+		<result column="blocks_total" property="blocksTotal" />
+		<result column="points_avg" property="pointsAvg" />
+		<result column="rebounds_avg" property="reboundsAvg" />
+		<result column="assists_avg" property="assistsAvg" />
+		<result column="summary_type" property="summaryType" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="update_by" property="updateBy" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_player_summary的列名 -->
+	<sql id="basket_player_summary_Column">
+		id,season_id,tournament_id,source_player_id,player_name,match_count,points_total,rebounds_total,assists_total,steals_total,blocks_total,points_avg,rebounds_avg,assists_avg,summary_type,create_by,create_time,update_by,update_time
+	</sql>
+
+	<!-- 通过BasketPlayerSummary的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketPlayerSummaryById" parameterType="Long" resultMap="result_BasketPlayerSummaryMapper.xml">
+		select
+		<include refid="basket_player_summary_Column" />
+		from basket_player_summary
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketPlayerSummary对象,以参数BasketPlayerSummary对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketPlayerSummaryObjSingle" parameterType="com.zhs.model.BasketPlayerSummary" resultMap="result_BasketPlayerSummaryMapper.xml">
+		select
+		<include refid="basket_player_summary_Column" />
+		from basket_player_summary
+		<where>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="matchCount != null"> and match_count = #{matchCount}</if>
+		<if test="pointsTotal != null"> and points_total = #{pointsTotal}</if>
+		<if test="reboundsTotal != null"> and rebounds_total = #{reboundsTotal}</if>
+		<if test="assistsTotal != null"> and assists_total = #{assistsTotal}</if>
+		<if test="stealsTotal != null"> and steals_total = #{stealsTotal}</if>
+		<if test="blocksTotal != null"> and blocks_total = #{blocksTotal}</if>
+		<if test="pointsAvg != null"> and points_avg = #{pointsAvg}</if>
+		<if test="reboundsAvg != null"> and rebounds_avg = #{reboundsAvg}</if>
+		<if test="assistsAvg != null"> and assists_avg = #{assistsAvg}</if>
+		<if test="summaryType != null"> and summary_type = #{summaryType}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="sourcePlayerId != null"> and source_player_id = #{sourcePlayerId}</if>
+		<if test="playerName != null"> and player_name = #{playerName}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketPlayerSummary对象,以参数BasketPlayerSummary对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketPlayerSummaryByObj" parameterType="com.zhs.model.BasketPlayerSummary" resultMap="result_BasketPlayerSummaryMapper.xml">
+		select
+		<include refid="basket_player_summary_Column" />
+		from basket_player_summary
+		<where>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="matchCount != null"> and match_count = #{matchCount}</if>
+		<if test="pointsTotal != null"> and points_total = #{pointsTotal}</if>
+		<if test="reboundsTotal != null"> and rebounds_total = #{reboundsTotal}</if>
+		<if test="assistsTotal != null"> and assists_total = #{assistsTotal}</if>
+		<if test="stealsTotal != null"> and steals_total = #{stealsTotal}</if>
+		<if test="blocksTotal != null"> and blocks_total = #{blocksTotal}</if>
+		<if test="pointsAvg != null"> and points_avg = #{pointsAvg}</if>
+		<if test="reboundsAvg != null"> and rebounds_avg = #{reboundsAvg}</if>
+		<if test="assistsAvg != null"> and assists_avg = #{assistsAvg}</if>
+		<if test="summaryType != null"> and summary_type = #{summaryType}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="sourcePlayerId != null"> and source_player_id = #{sourcePlayerId}</if>
+		<if test="playerName != null"> and player_name = #{playerName}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketPlayerSummary插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketPlayerSummary" parameterType="com.zhs.model.BasketPlayerSummary">
+		insert into 
+		basket_player_summary (id,season_id,tournament_id,source_player_id,player_name,match_count,points_total,rebounds_total,assists_total,steals_total,blocks_total,points_avg,rebounds_avg,assists_avg,summary_type,create_by,create_time,update_by,update_time) 
+		values(#{id},#{seasonId},#{tournamentId},#{sourcePlayerId},#{playerName},#{matchCount},#{pointsTotal},#{reboundsTotal},#{assistsTotal},#{stealsTotal},#{blocksTotal},#{pointsAvg},#{reboundsAvg},#{assistsAvg},#{summaryType},#{createBy},#{createTime},#{updateBy},#{updateTime})
+	</insert>
+
+	<!-- 将BasketPlayerSummary中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketPlayerSummary" parameterType="com.zhs.model.BasketPlayerSummary">
+		insert into basket_player_summary
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="seasonId != null">season_id,</if>
+			<if test="tournamentId != null">tournament_id,</if>
+			<if test="sourcePlayerId != null">source_player_id,</if>
+			<if test="playerName != null">player_name,</if>
+			<if test="matchCount != null">match_count,</if>
+			<if test="pointsTotal != null">points_total,</if>
+			<if test="reboundsTotal != null">rebounds_total,</if>
+			<if test="assistsTotal != null">assists_total,</if>
+			<if test="stealsTotal != null">steals_total,</if>
+			<if test="blocksTotal != null">blocks_total,</if>
+			<if test="pointsAvg != null">points_avg,</if>
+			<if test="reboundsAvg != null">rebounds_avg,</if>
+			<if test="assistsAvg != null">assists_avg,</if>
+			<if test="summaryType != null">summary_type,</if>
+			<if test="createBy != null">create_by,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateBy != null">update_by,</if>
+			<if test="updateTime != null">update_time,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="seasonId != null">#{seasonId},</if>
+			<if test="tournamentId != null">#{tournamentId},</if>
+			<if test="sourcePlayerId != null">#{sourcePlayerId},</if>
+			<if test="playerName != null">#{playerName},</if>
+			<if test="matchCount != null">#{matchCount},</if>
+			<if test="pointsTotal != null">#{pointsTotal},</if>
+			<if test="reboundsTotal != null">#{reboundsTotal},</if>
+			<if test="assistsTotal != null">#{assistsTotal},</if>
+			<if test="stealsTotal != null">#{stealsTotal},</if>
+			<if test="blocksTotal != null">#{blocksTotal},</if>
+			<if test="pointsAvg != null">#{pointsAvg},</if>
+			<if test="reboundsAvg != null">#{reboundsAvg},</if>
+			<if test="assistsAvg != null">#{assistsAvg},</if>
+			<if test="summaryType != null">#{summaryType},</if>
+			<if test="createBy != null">#{createBy},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateBy != null">#{updateBy},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketPlayerSummary批量插入到对应数据库的表中 -->
+	<insert id="insertBasketPlayerSummaryByBatch" parameterType="ArrayList">
+		insert into basket_player_summary(id,season_id,tournament_id,source_player_id,player_name,match_count,points_total,rebounds_total,assists_total,steals_total,blocks_total,points_avg,rebounds_avg,assists_avg,summary_type,create_by,create_time,update_by,update_time) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{seasonId},#{tournamentId},#{sourcePlayerId},#{playerName},#{matchCount},#{pointsTotal},#{reboundsTotal},#{assistsTotal},#{stealsTotal},#{blocksTotal},#{pointsAvg},#{reboundsAvg},#{assistsAvg},#{summaryType},#{createBy},#{createTime},#{updateBy},#{updateTime})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketPlayerSummary的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketPlayerSummaryById" parameterType="Long">
+		delete from basket_player_summary
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketPlayerSummary的id将BasketPlayerSummary的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketPlayerSummaryById" parameterType="com.zhs.model.BasketPlayerSummary"> 
+		update basket_player_summary set
+		<set>
+			season_id = #{seasonId} , 
+			tournament_id = #{tournamentId} , 
+			source_player_id = #{sourcePlayerId} , 
+			player_name = #{playerName} , 
+			match_count = #{matchCount} , 
+			points_total = #{pointsTotal} , 
+			rebounds_total = #{reboundsTotal} , 
+			assists_total = #{assistsTotal} , 
+			steals_total = #{stealsTotal} , 
+			blocks_total = #{blocksTotal} , 
+			points_avg = #{pointsAvg} , 
+			rebounds_avg = #{reboundsAvg} , 
+			assists_avg = #{assistsAvg} , 
+			summary_type = #{summaryType} , 
+			create_by = #{createBy} , 
+			create_time = #{createTime} , 
+			update_by = #{updateBy} , 
+			update_time = #{updateTime} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketPlayerSummary的id将BasketPlayerSummary中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketPlayerSummaryById" parameterType="com.zhs.model.BasketPlayerSummary">
+		update basket_player_summary
+		<set>
+					<if test="seasonId != null">season_id = #{seasonId},</if>
+					<if test="tournamentId != null">tournament_id = #{tournamentId},</if>
+					<if test="sourcePlayerId != null">source_player_id = #{sourcePlayerId},</if>
+					<if test="playerName != null">player_name = #{playerName},</if>
+					<if test="matchCount != null">match_count = #{matchCount},</if>
+					<if test="pointsTotal != null">points_total = #{pointsTotal},</if>
+					<if test="reboundsTotal != null">rebounds_total = #{reboundsTotal},</if>
+					<if test="assistsTotal != null">assists_total = #{assistsTotal},</if>
+					<if test="stealsTotal != null">steals_total = #{stealsTotal},</if>
+					<if test="blocksTotal != null">blocks_total = #{blocksTotal},</if>
+					<if test="pointsAvg != null">points_avg = #{pointsAvg},</if>
+					<if test="reboundsAvg != null">rebounds_avg = #{reboundsAvg},</if>
+					<if test="assistsAvg != null">assists_avg = #{assistsAvg},</if>
+					<if test="summaryType != null">summary_type = #{summaryType},</if>
+					<if test="createBy != null">create_by = #{createBy},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateBy != null">update_by = #{updateBy},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

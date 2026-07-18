@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketWebUserDao">
+	<resultMap id="result_BasketWebUserMapper.xml" type="com.zhs.model.BasketWebUser">
+		<id column="id" property="id" />
+		<result column="user_no" property="userNo" />
+		<result column="email" property="email" />
+		<result column="password" property="password" />
+		<result column="nickname" property="nickname" />
+		<result column="terminal_type" property="terminalType" />
+		<result column="avatar_url" property="avatarUrl" />
+		<result column="account_status" property="accountStatus" />
+		<result column="register_ip" property="registerIp" />
+		<result column="register_time" property="registerTime" />
+		<result column="last_login_ip" property="lastLoginIp" />
+		<result column="last_login_time" property="lastLoginTime" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="update_by" property="updateBy" />
+		<result column="update_time" property="updateTime" />
+		<result column="remark" property="remark" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_web_user的列名 -->
+	<sql id="basket_web_user_Column">
+		id,user_no,email,password,nickname,avatar_url,terminal_type,account_status,register_ip,register_time,last_login_ip,last_login_time,create_by,create_time,update_by,update_time,remark
+	</sql>
+
+	<!-- 通过BasketWebUser的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketWebUserById" parameterType="Long" resultMap="result_BasketWebUserMapper.xml">
+		select
+		<include refid="basket_web_user_Column" />
+		from basket_web_user
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketWebUser对象,以参数BasketWebUser对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketWebUserObjSingle" parameterType="com.zhs.model.BasketWebUser" resultMap="result_BasketWebUserMapper.xml">
+		select
+		<include refid="basket_web_user_Column" />
+		from basket_web_user
+		<where>
+		<if test="avatarUrl != null"> and avatar_url = #{avatarUrl}</if>
+		<if test="accountStatus != null"> and account_status = #{accountStatus}</if>
+		<if test="registerIp != null"> and register_ip = #{registerIp}</if>
+		<if test="registerTime != null"> and register_time = #{registerTime}</if>
+		<if test="lastLoginIp != null"> and last_login_ip = #{lastLoginIp}</if>
+		<if test="lastLoginTime != null"> and last_login_time = #{lastLoginTime}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="userNo != null"> and user_no = #{userNo}</if>
+		<if test="email != null"> and email = #{email}</if>
+		<if test="password != null"> and password = #{password}</if>
+		<if test="nickname != null"> and nickname = #{nickname}</if>
+		<if test="terminalType != null"> and terminal_type = #{terminalType}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketWebUser对象,以参数BasketWebUser对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketWebUserByObj" parameterType="com.zhs.model.BasketWebUser" resultMap="result_BasketWebUserMapper.xml">
+		select
+		<include refid="basket_web_user_Column" />
+		from basket_web_user
+		<where>
+		<if test="avatarUrl != null"> and avatar_url = #{avatarUrl}</if>
+		<if test="accountStatus != null"> and account_status = #{accountStatus}</if>
+		<if test="registerIp != null"> and register_ip = #{registerIp}</if>
+		<if test="registerTime != null"> and register_time = #{registerTime}</if>
+		<if test="lastLoginIp != null"> and last_login_ip = #{lastLoginIp}</if>
+		<if test="lastLoginTime != null"> and last_login_time = #{lastLoginTime}</if>
+		<if test="createBy != null"> and create_by = #{createBy}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateBy != null"> and update_by = #{updateBy}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="userNo != null"> and user_no = #{userNo}</if>
+		<if test="email != null"> and email = #{email}</if>
+		<if test="password != null"> and password = #{password}</if>
+		<if test="nickname != null"> and nickname = #{nickname}</if>
+		<if test="terminalType != null"> and terminal_type = #{terminalType}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketWebUser插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketWebUser" parameterType="com.zhs.model.BasketWebUser">
+		insert into 
+		basket_web_user (id,user_no,email,password,nickname,avatar_url,terminal_type,account_status,register_ip,register_time,last_login_ip,last_login_time,create_by,create_time,update_by,update_time,remark) 
+		values(#{id},#{userNo},#{email},#{password},#{nickname},#{avatarUrl},#{terminalType},#{accountStatus},#{registerIp},#{registerTime},#{lastLoginIp},#{lastLoginTime},#{createBy},#{createTime},#{updateBy},#{updateTime},#{remark})
+	</insert>
+
+	<!-- 将BasketWebUser中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketWebUser" parameterType="com.zhs.model.BasketWebUser">
+		insert into basket_web_user
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="userNo != null">user_no,</if>
+			<if test="email != null">email,</if>
+			<if test="password != null">password,</if>
+			<if test="nickname != null">nickname,</if>
+			<if test="avatarUrl != null">avatar_url,</if>
+			<if test="terminalType != null">terminal_type,</if>
+			<if test="accountStatus != null">account_status,</if>
+			<if test="registerIp != null">register_ip,</if>
+			<if test="registerTime != null">register_time,</if>
+			<if test="lastLoginIp != null">last_login_ip,</if>
+			<if test="lastLoginTime != null">last_login_time,</if>
+			<if test="createBy != null">create_by,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateBy != null">update_by,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="remark != null">remark,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="userNo != null">#{userNo},</if>
+			<if test="email != null">#{email},</if>
+			<if test="password != null">#{password},</if>
+			<if test="nickname != null">#{nickname},</if>
+			<if test="avatarUrl != null">#{avatarUrl},</if>
+			<if test="terminalType != null">#{terminalType},</if>
+			<if test="accountStatus != null">#{accountStatus},</if>
+			<if test="registerIp != null">#{registerIp},</if>
+			<if test="registerTime != null">#{registerTime},</if>
+			<if test="lastLoginIp != null">#{lastLoginIp},</if>
+			<if test="lastLoginTime != null">#{lastLoginTime},</if>
+			<if test="createBy != null">#{createBy},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateBy != null">#{updateBy},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="remark != null">#{remark},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketWebUser批量插入到对应数据库的表中 -->
+	<insert id="insertBasketWebUserByBatch" parameterType="ArrayList">
+		insert into basket_web_user(id,user_no,email,password,nickname,avatar_url,terminal_type,account_status,register_ip,register_time,last_login_ip,last_login_time,create_by,create_time,update_by,update_time,remark) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{userNo},#{email},#{password},#{nickname},#{avatarUrl},#{terminalType},#{accountStatus},#{registerIp},#{registerTime},#{lastLoginIp},#{lastLoginTime},#{createBy},#{createTime},#{updateBy},#{updateTime},#{remark})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketWebUser的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketWebUserById" parameterType="Long">
+		delete from basket_web_user
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketWebUser的id将BasketWebUser的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketWebUserById" parameterType="com.zhs.model.BasketWebUser"> 
+		update basket_web_user set
+		<set>
+			user_no = #{userNo} , 
+			email = #{email} , 
+			password = #{password} , 
+			nickname = #{nickname} , 
+			avatar_url = #{avatarUrl} , 
+			terminal_type = #{terminalType} , 
+			account_status = #{accountStatus} , 
+			register_ip = #{registerIp} , 
+			register_time = #{registerTime} , 
+			last_login_ip = #{lastLoginIp} , 
+			last_login_time = #{lastLoginTime} , 
+			create_by = #{createBy} , 
+			create_time = #{createTime} , 
+			update_by = #{updateBy} , 
+			update_time = #{updateTime} , 
+			remark = #{remark} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketWebUser的id将BasketWebUser中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketWebUserById" parameterType="com.zhs.model.BasketWebUser">
+		update basket_web_user
+		<set>
+					<if test="userNo != null">user_no = #{userNo},</if>
+					<if test="email != null">email = #{email},</if>
+					<if test="password != null">password = #{password},</if>
+					<if test="nickname != null">nickname = #{nickname},</if>
+					<if test="avatarUrl != null">avatar_url = #{avatarUrl},</if>
+					<if test="terminalType != null">terminal_type = #{terminalType},</if>
+					<if test="accountStatus != null">account_status = #{accountStatus},</if>
+					<if test="registerIp != null">register_ip = #{registerIp},</if>
+					<if test="registerTime != null">register_time = #{registerTime},</if>
+					<if test="lastLoginIp != null">last_login_ip = #{lastLoginIp},</if>
+					<if test="lastLoginTime != null">last_login_time = #{lastLoginTime},</if>
+					<if test="createBy != null">create_by = #{createBy},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateBy != null">update_by = #{updateBy},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="remark != null">remark = #{remark},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>
