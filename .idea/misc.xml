@@ -11,6 +11,7 @@
         <option value="$PROJECT_DIR$/generator/pom.xml" />
         <option value="$PROJECT_DIR$/basketball-admin/pom.xml" />
         <option value="$PROJECT_DIR$/basketball-mini/pom.xml" />
+        <option value="$PROJECT_DIR$/basketball-web/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">
