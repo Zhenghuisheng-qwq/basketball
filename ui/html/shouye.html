@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CNPA 线上篮球赛事平台</title>
+    <style>
+        * { box-sizing: border-box; }
+        :root {
+            --bg: #050607;
+            --bg2: #0b0c0f;
+            --panel: #101115;
+            --panel2: #15171c;
+            --line: rgba(255,255,255,.14);
+            --line2: rgba(255,255,255,.08);
+            --text: #f4f4f4;
+            --muted: #a8abb6;
+            --red: #ff3218;
+            --red2: #e3130b;
+            --orange: #ff5a1f;
+            --gold: #c9a360;
+            --blue: #3f8cff;
+            --green: #18b46b;
+            --purple: #8c36ff;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+            color: var(--text);
+            background:
+                    radial-gradient(circle at 52% 8%, rgba(255,49,24,.18), transparent 24%),
+                    radial-gradient(circle at 20% 36%, rgba(255,72,20,.1), transparent 24%),
+                    linear-gradient(180deg, #060709 0%, #020303 100%);
+        }
+        a { color: inherit; text-decoration: none; }
+        button { font-family: inherit; }
+        .page {
+            width: 1000px;
+            max-width: 100%;
+            margin: 0 auto;
+            background: #050607;
+            overflow: hidden;
+            border-left: 1px solid rgba(255,255,255,.12);
+            border-right: 1px solid rgba(255,255,255,.12);
+            box-shadow: 0 0 80px rgba(0,0,0,.7);
+        }
+
+        /* 顶部导航 */
+        .header {
+            height: 74px;
+            padding: 0 38px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(4,5,8,.96);
+            border-top: 3px solid #f23118;
+            border-bottom: 1px solid rgba(255,49,24,.9);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        .brand { display: flex; flex-direction: column; line-height: 1; letter-spacing: .5px; }
+        .brand .logo { font-size: 28px; font-weight: 950; font-style: italic; letter-spacing: -1px; }
+        .brand .sub { margin-top: 8px; color: #e8e8e8; font-size: 12px; transform: scale(.92); transform-origin: left; }
+        .nav { display: flex; align-items: center; gap: 58px; margin-left: 40px; }
+        .nav a {
+            height: 72px;
+            line-height: 72px;
+            position: relative;
+            color: #d7d9df;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .nav a.active { color: var(--red); }
+        .nav a.active::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: 13px;
+            width: 22px;
+            height: 3px;
+            transform: translateX(-50%);
+            background: var(--red);
+        }
+        .nav a:hover { color: #fff; }
+        .actions { display: flex; align-items: center; gap: 16px; }
+        .btn {
+            height: 42px;
+            min-width: 82px;
+            padding: 0 22px;
+            border: 1px solid rgba(255,255,255,.22);
+            color: #fff;
+            background: rgba(255,255,255,.03);
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: .22s;
+        }
+        .btn:hover { border-color: var(--red); color: #fff; }
+        .btn.primary { border-color: var(--red); background: linear-gradient(180deg, #ff3d22 0%, #e7190d 100%); }
+        .btn.dark { background: rgba(0,0,0,.42); }
+
+        /* 首屏 */
+        .hero {
+            height: 430px;
+            position: relative;
+            overflow: hidden;
+            background:
+                    linear-gradient(90deg, rgba(0,0,0,.9) 0%, rgba(0,0,0,.76) 32%, rgba(0,0,0,.24) 66%, rgba(0,0,0,.7) 100%),
+                    radial-gradient(circle at 72% 18%, rgba(255,74,31,.68), transparent 19%),
+                    radial-gradient(circle at 58% 5%, rgba(255,255,255,.32), transparent 18%),
+                    radial-gradient(circle at 81% 50%, rgba(255,20,12,.5), transparent 26%),
+                    linear-gradient(135deg, #11151f 0%, #07080c 55%, #210804 100%);
+        }
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                    repeating-linear-gradient(105deg, transparent 0 34px, rgba(255,255,255,.035) 35px 36px),
+                    repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 74px),
+                    linear-gradient(180deg, transparent 0%, rgba(0,0,0,.12) 54%, rgba(0,0,0,.62) 100%);
+            mix-blend-mode: screen;
+            opacity: .55;
+        }
+        .hero::after {
+            content: "";
+            position: absolute;
+            left: 0; right: 0; bottom: 0; height: 105px;
+            background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.78) 100%);
+        }
+        .arena-light {
+            position: absolute;
+            width: 580px;
+            height: 210px;
+            right: 90px;
+            top: 10px;
+            border-radius: 0 0 50% 50%;
+            border: 1px solid rgba(255,255,255,.16);
+            border-top: 0;
+            transform: rotate(-5deg);
+            background:
+                    radial-gradient(circle at 42% 7%, rgba(255,255,255,.9), transparent 2%),
+                    radial-gradient(circle at 54% 9%, rgba(255,255,255,.7), transparent 2%),
+                    radial-gradient(circle at 65% 12%, rgba(255,255,255,.65), transparent 2%),
+                    radial-gradient(circle at 78% 17%, rgba(255,255,255,.5), transparent 2%),
+                    linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,0,0,.06));
+            opacity: .85;
+        }
+        .screen {
+            position: absolute;
+            right: 62px;
+            top: 82px;
+            width: 235px;
+            height: 96px;
+            transform: perspective(500px) rotateY(-13deg) rotateZ(-7deg);
+            border: 2px solid rgba(255,255,255,.18);
+            background: linear-gradient(135deg, rgba(255,52,22,.8), rgba(30,0,0,.8));
+            box-shadow: 0 0 32px rgba(255,39,12,.45);
+            display: grid;
+            place-items: center;
+            font-size: 34px;
+            font-weight: 950;
+            color: rgba(255,255,255,.9);
+            letter-spacing: 2px;
+        }
+        .hero-content { position: relative; z-index: 3; padding: 58px 0 0 42px; max-width: 470px; }
+        .hero-title .en {
+            font-size: 116px;
+            line-height: .82;
+            font-weight: 950;
+            letter-spacing: -6px;
+            color: #f6f2e8;
+            text-shadow: 0 4px 0 rgba(0,0,0,.6), 0 0 26px rgba(255,255,255,.08);
+            filter: drop-shadow(0 0 2px rgba(255,255,255,.3));
+        }
+        .hero-title .cn {
+            margin-top: 8px;
+            font-size: 78px;
+            line-height: .96;
+            font-weight: 950;
+            color: var(--red);
+            letter-spacing: -3px;
+            text-shadow: 0 5px 0 rgba(0,0,0,.46), 0 0 24px rgba(255,39,14,.38);
+        }
+        .hero-subtitle {
+            margin-top: 20px;
+            font-size: 22px;
+            letter-spacing: 8px;
+            color: #f3f3f3;
+        }
+        .hero-actions { display: flex; gap: 22px; margin-top: 32px; }
+        .hero-actions .btn { min-width: 150px; height: 50px; font-size: 15px; }
+
+        .player {
+            position: absolute;
+            z-index: 2;
+            bottom: 0;
+            width: 150px;
+            height: 310px;
+            filter: drop-shadow(0 0 28px rgba(255,30,12,.25));
+        }
+        .player.main { right: 210px; height: 355px; width: 174px; }
+        .player.side { right: 64px; height: 294px; width: 132px; opacity: .88; }
+        .player.small { right: 425px; height: 216px; width: 92px; opacity: .55; }
+        .body-shape {
+            position: absolute; left: 50%; transform: translateX(-50%); bottom: 64px;
+            width: 82px; height: 150px; border-radius: 35px 35px 16px 16px;
+            background: linear-gradient(90deg, #100f13, #262731 42%, #0d0d11 100%);
+            border: 2px solid rgba(255,62,29,.55);
+            box-shadow: inset -8px 0 0 rgba(255,46,24,.22);
+        }
+        .head {
+            position: absolute; left: 50%; top: 28px; transform: translateX(-50%);
+            width: 58px; height: 58px; border-radius: 50%;
+            background: radial-gradient(circle at 46% 18%, #4b291f, #1c1010 72%);
+        }
+        .head::before {
+            content:""; position:absolute; left:-8px; right:-8px; top:-13px; height:26px;
+            background: radial-gradient(circle, #12110f 40%, transparent 43%);
+            background-size: 15px 15px;
+            border-radius: 50%;
+        }
+        .arm { position: absolute; bottom: 92px; width: 22px; height: 128px; border-radius: 18px; background: linear-gradient(#49261d,#1d1010); }
+        .arm.left { left: 21px; transform: rotate(9deg); }
+        .arm.right { right: 23px; transform: rotate(-12deg); }
+        .leg { position:absolute; bottom:0; width:28px; height:78px; border-radius: 15px 15px 5px 5px; background:#121216; border-left: 2px solid rgba(255,49,24,.4); }
+        .leg.l { left: 50px; transform: rotate(5deg); }
+        .leg.r { right: 50px; transform: rotate(-5deg); }
+        .jersey { position:absolute; left:50%; top:114px; transform:translateX(-50%); color:#e9e9e9; text-align:center; font-weight:950; letter-spacing:1px; }
+        .jersey b { display:block; font-size:48px; color:#ececec; -webkit-text-stroke: 1px rgba(255,47,20,.8); }
+        .basketball {
+            position:absolute; right:2px; bottom:72px; width:48px; height:48px; border-radius:50%;
+            background: radial-gradient(circle at 35% 35%, #d46a2e, #6b210f 80%);
+            border: 2px solid #2a0b04;
+        }
+        .basketball::before, .basketball::after { content:""; position:absolute; inset:7px; border:2px solid rgba(0,0,0,.45); border-left:0; border-right:0; border-radius:50%; }
+        .basketball::after { transform: rotate(90deg); }
+        .hero-splatter span {
+            position:absolute; width:4px; height:4px; border-radius:50%; background:var(--red); z-index:2;
+            box-shadow: 0 0 10px var(--red);
+        }
+        .hero-splatter span:nth-child(1){ left:27px; top:84px; width:7px; height:7px; }
+        .hero-splatter span:nth-child(2){ left:210px; top:294px; }
+        .hero-splatter span:nth-child(3){ right:70px; top:215px; width:5px; height:5px; }
+        .hero-splatter span:nth-child(4){ right:350px; top:58px; width:5px; height:5px; }
+
+        /* 公共区块 */
+        .section { padding: 0 38px; position: relative; background: #08090a; }
+        .section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 0 18px;
+        }
+        .section-title h2 {
+            margin: 0;
+            padding-left: 15px;
+            position: relative;
+            font-size: 29px;
+            font-weight: 950;
+            letter-spacing: -1px;
+        }
+        .section-title h2::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 5px;
+            width: 4px;
+            height: 28px;
+            background: var(--red);
+        }
+        .section-title .more { color: #bfc1c8; font-size: 13px; }
+
+        .matches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+        .match-card {
+            min-height: 195px;
+            padding: 18px 18px 16px;
+            border: 1px solid rgba(255,255,255,.18);
+            background:
+                    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)),
+                    radial-gradient(circle at 50% 40%, rgba(255,255,255,.06), transparent 45%),
+                    #090a0c;
+            border-radius: 7px;
+        }
+        .match-meta { display: flex; justify-content: space-between; color: #d7d7d7; font-size: 12px; margin-bottom: 20px; }
+        .versus { display: grid; grid-template-columns: 1fr 68px 1fr; align-items: center; text-align: center; }
+        .vs { color: #fff; font-size: 42px; font-weight: 950; font-style: italic; transform: skew(-6deg); }
+        .team-mini { display:flex; flex-direction:column; align-items:center; gap:8px; font-size:14px; font-weight:900; }
+        .team-logo {
+            width: 64px; height: 64px; display:grid; place-items:center; position:relative;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,.08));
+        }
+        .match-btn { width:100%; height:42px; border:0; color:white; background:linear-gradient(180deg,#ff4223,#eb160b); margin-top:17px; border-radius:4px; font-weight:900; font-size:15px; cursor:pointer; }
+
+        /* CSS 原创战队徽章 */
+        .badge { width:64px; height:64px; position:relative; display:grid; place-items:center; }
+        .badge.titan .shield { width:48px; height:58px; clip-path: polygon(50% 0, 90% 13%, 82% 76%, 50% 100%, 18% 76%, 10% 13%); background: linear-gradient(135deg,#e8d7ad,#7b6132); border:2px solid #111; }
+        .badge.titan .shield::after { content:"T"; display:grid; place-items:center; color:#111; font-size:28px; font-weight:950; height:100%; }
+        .badge.phoenix .flame { width:58px; height:58px; background: conic-gradient(from 215deg,#ffd45c,#ff3a16,#5b0300,#ff8c15,#ffd45c); clip-path: polygon(58% 0,79% 18%,70% 39%,100% 37%,74% 60%,83% 100%,51% 75%,18% 97%,30% 62%,0 42%,36% 40%,32% 17%); filter: drop-shadow(0 0 8px rgba(255,58,22,.5)); }
+        .badge.wolves .wolf { width:58px; height:56px; background: linear-gradient(135deg,#e8f1ff,#3c76c4 45%,#151c2f 70%); clip-path: polygon(13% 23%,39% 5%,49% 22%,78% 9%,93% 33%,75% 76%,47% 98%,17% 71%,0 42%); }
+        .badge.dragon .dragon { width:60px; height:56px; background: linear-gradient(135deg,#d8ec62,#12a56a,#044d35); clip-path: polygon(12% 54%,25% 22%,52% 6%,47% 25%,79% 16%,64% 39%,95% 50%,60% 57%,52% 87%,38% 62%,8% 83%,28% 58%); filter: drop-shadow(0 0 8px rgba(22,198,99,.42)); }
+        .badge.legend .crown { width:60px; height:60px; background: linear-gradient(180deg,#cc59ff,#3b155d); clip-path: polygon(9% 32%,23% 12%,37% 33%,50% 5%,64% 33%,79% 12%,93% 32%,84% 82%,16% 82%); display:grid; place-items:center; color:#fff; font-size:12px; font-weight:950; }
+        .badge.legend .crown::after { content:"LEG"; margin-top:16px; }
+        .badge.rangers .ranger { width:60px; height:60px; background: linear-gradient(145deg,#ff3b24,#2b0605 65%,#111); clip-path: polygon(50% 0,82% 18%,93% 62%,72% 96%,25% 96%,4% 62%,17% 18%); display:grid; place-items:center; color:#fff; font-size:10px; font-weight:950; }
+        .badge.rangers .ranger::after { content:"R"; font-size:36px; }
+
+        .teams { display:grid; grid-template-columns: repeat(6, 1fr); gap: 13px; padding-bottom: 38px; }
+        .team-card {
+            height: 144px;
+            border:1px solid rgba(255,255,255,.18);
+            background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.01));
+            border-radius: 7px;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; gap: 12px;
+            transition: .2s;
+        }
+        .team-card:hover { border-color: rgba(255,51,24,.75); transform: translateY(-2px); }
+        .team-card .badge { transform: scale(1.18); }
+        .team-card b { font-size:17px; letter-spacing:.5px; }
+
+        /* 白色撕纸区 */
+        .about {
+            position:relative;
+            margin-top: -1px;
+            min-height: 172px;
+            background:#f0ede5;
+            color:#161616;
+            padding: 34px 48px 28px;
+            display:grid;
+            grid-template-columns: 1.05fr 1.7fr;
+            align-items:center;
+            gap:40px;
+        }
+        .about::before, .about::after {
+            content:""; position:absolute; left:0; right:0; height:24px; background:#f0ede5;
+            mask-image: radial-gradient(13px 9px at 10px 12px, transparent 11px, #000 12px);
+            mask-size: 36px 22px;
+        }
+        .about::before { top:-16px; transform: rotate(180deg); }
+        .about::after { bottom:-16px; }
+        .about h2 { margin: 0 0 14px; font-size: 31px; font-weight:950; letter-spacing:-.5px; }
+        .about h2 span { color: var(--red); }
+        .about p { margin:0; color:#242424; line-height:1.8; font-size:13px; font-weight:600; }
+        .stats { display:grid; grid-template-columns: repeat(4,1fr); align-items:center; }
+        .stat { min-height:84px; display:flex; flex-direction:column; justify-content:center; align-items:center; border-left:1px solid rgba(0,0,0,.14); }
+        .stat:first-child { border-left:0; }
+        .stat strong { color:var(--red); font-size:47px; line-height:1; font-weight:950; }
+        .stat span { margin-top:13px; font-size:13px; font-weight:700; color:#333; }
+
+        .ranking { padding-top: 34px; padding-bottom: 28px; background:#060707; }
+        .rank-card {
+            border:1px solid rgba(255,255,255,.18);
+            border-radius:7px;
+            background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.01));
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 276px;
+            overflow:hidden;
+        }
+        .rank-block { padding: 24px 28px; }
+        .rank-block + .rank-block { border-left:1px solid rgba(255,255,255,.14); }
+        .rank-block h3 { margin:0 0 16px; font-size:20px; color: var(--red); }
+        table { width:100%; border-collapse:collapse; font-size:13px; }
+        th { text-align:left; color:#aeb2bc; font-weight:700; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.12); }
+        td { padding:10px 0; border-bottom:1px solid rgba(255,255,255,.07); color:#ebedf2; }
+        tr:last-child td { border-bottom:0; }
+        .rank-num { color:var(--red); font-weight:950; font-size:16px; }
+        .team-name { display:flex; align-items:center; gap:8px; font-weight:800; }
+        .tiny-logo { width:20px; height:20px; border-radius:50%; display:inline-grid; place-items:center; background:#20242c; overflow:hidden; }
+        .tiny-logo .badge { transform:scale(.34); }
+        .player-row { display:grid; grid-template-columns:34px 1.35fr 1fr 1fr; align-items:center; height:36px; border-bottom:1px solid rgba(255,255,255,.07); color:#edf0f5; font-size:13px; }
+        .player-row.head { color:#aeb2bc; height:30px; }
+        .avatar { width:24px; height:24px; border-radius:50%; background: radial-gradient(circle at 35% 22%, #ffd7ad, #7e3724 45%, #141414 46%); border:1px solid rgba(255,255,255,.25); }
+        .player-name { display:flex; gap:8px; align-items:center; font-weight:750; }
+
+        /* CTA */
+        .join {
+            position:relative;
+            height: 150px;
+            padding: 30px 70px;
+            display:flex;
+            align-items:center;
+            gap: 60px;
+            background:
+                    linear-gradient(90deg, rgba(240,44,14,.98), rgba(255,77,21,.92) 46%, rgba(22,5,4,.92) 100%),
+                    repeating-linear-gradient(110deg, transparent 0 18px, rgba(0,0,0,.16) 19px 22px);
+            overflow:hidden;
+        }
+        .join::before {
+            content:""; position:absolute; inset:0;
+            background: repeating-linear-gradient(-9deg, transparent 0 22px, rgba(255,255,255,.08) 23px 24px);
+            opacity:.5;
+        }
+        .join h2 { position:relative; z-index:2; margin:0; font-size:42px; line-height:1.05; font-weight:950; letter-spacing:1px; }
+        .join h2 span { display:block; font-size:27px; margin-top:8px; }
+        .join-actions { position:relative; z-index:2; display:flex; gap:22px; }
+        .join .btn { min-width:140px; height:46px; }
+        .hoop {
+            position:absolute; right:35px; bottom:5px; width:190px; height:130px; transform: rotate(-9deg);
+        }
+        .rim { position:absolute; right:38px; top:38px; width:95px; height:28px; border:6px solid #f1f1f1; border-radius:50%; box-shadow:0 0 18px rgba(255,255,255,.25); }
+        .net { position:absolute; right:52px; top:59px; width:70px; height:58px; background: repeating-linear-gradient(110deg, transparent 0 8px, rgba(255,255,255,.55) 9px 10px), repeating-linear-gradient(70deg, transparent 0 8px, rgba(255,255,255,.55) 9px 10px); clip-path: polygon(0 0,100% 0,72% 100%,28% 100%); opacity:.65; }
+        .ball { position:absolute; right:3px; top:0; width:76px; height:76px; border-radius:50%; background: radial-gradient(circle at 35% 30%, #ec8744, #7d250d 76%); border:3px solid rgba(0,0,0,.6); display:grid; place-items:center; color:#1a0602; font-weight:950; font-size:14px; }
+
+        /* Footer */
+        .footer { background:#0b0d0f; border-top:1px solid rgba(255,255,255,.08); padding: 42px 48px 0; }
+        .footer-main { display:grid; grid-template-columns: 1.2fr .72fr .72fr .72fr .72fr 1.25fr; gap:26px; padding-bottom: 34px; }
+        .footer-brand .logo { font-size:35px; font-weight:950; font-style:italic; line-height:1; }
+        .footer-brand p { margin:7px 0 24px; color:#d7d7d7; font-size:13px; }
+        .social { display:flex; gap:10px; }
+        .social span { width:26px; height:26px; border:1px solid rgba(255,255,255,.22); border-radius:50%; display:grid; place-items:center; color:#fff; font-size:12px; }
+        .footer-col { border-left:1px solid rgba(255,255,255,.12); padding-left:24px; }
+        .footer-col h4 { margin:0 0 13px; font-size:16px; }
+        .footer-col a, .footer-col p { display:block; margin:0 0 10px; color:#b8bbc3; font-size:13px; }
+        .copyright { margin:0 -48px; height:46px; border-top:1px solid rgba(255,255,255,.07); display:grid; place-items:center; color:#767b84; font-size:12px; background:#070809; }
+
+        @media (max-width: 760px) {
+            .page { width:100%; }
+            .header { padding:0 18px; height:auto; min-height:70px; gap:14px; flex-wrap:wrap; }
+            .nav { order:3; width:100%; gap:0; justify-content:space-between; margin:0; }
+            .nav a { height:42px; line-height:42px; font-size:12px; }
+            .actions .btn { min-width:58px; height:34px; padding:0 12px; }
+            .hero { height:440px; }
+            .hero-content { padding:42px 20px; }
+            .hero-title .en { font-size:78px; }
+            .hero-title .cn { font-size:54px; }
+            .hero-subtitle { font-size:15px; letter-spacing:4px; }
+            .hero-actions .btn { min-width:120px; }
+            .player.main { right:45px; opacity:.45; }
+            .player.side, .player.small, .screen { display:none; }
+            .section { padding:0 20px; }
+            .matches, .teams, .rank-card, .about, .footer-main { grid-template-columns:1fr; }
+            .about { padding:30px 24px; gap:24px; }
+            .stats { grid-template-columns:repeat(2,1fr); }
+            .stat { border-left:0; border-top:1px solid rgba(0,0,0,.12); padding:18px 0; }
+            .join { height:auto; padding:28px 24px; flex-direction:column; align-items:flex-start; gap:22px; }
+            .hoop { opacity:.35; }
+            .footer-col { border-left:0; padding-left:0; }
+        }
+    </style>
+</head>
+<body>
+<main class="page">
+    <header class="header">
+        <a href="#" class="brand" aria-label="CNPA">
+            <span class="logo">CNPA</span>
+            <span class="sub">线上篮球赛事平台</span>
+        </a>
+        <nav class="nav" aria-label="主导航">
+            <a class="active" href="#">首页</a>
+            <a href="#matches">赛事</a>
+            <a href="#ranking">数据</a>
+            <a href="#teams">名人堂</a>
+            <a href="#footer">公告</a>
+        </nav>
+        <div class="actions">
+            <button class="btn dark">登录</button>
+            <button class="btn primary">注册</button>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="arena-light"></div>
+        <div class="screen">CNPA</div>
+        <div class="hero-splatter"><span></span><span></span><span></span><span></span></div>
+        <div class="hero-content">
+            <div class="hero-title">
+                <div class="en">CNPA</div>
+                <div class="cn">热血开战</div>
+            </div>
+            <div class="hero-subtitle">中国职业电竞篮球联赛</div>
+            <div class="hero-actions">
+                <button class="btn primary">立即报名 〉</button>
+                <button class="btn dark">了解赛事</button>
+            </div>
+        </div>
+        <div class="player small">
+            <div class="head"></div><div class="arm left"></div><div class="arm right"></div><div class="body-shape"></div><div class="jersey">CNPA<b>11</b></div><div class="leg l"></div><div class="leg r"></div>
+        </div>
+        <div class="player main">
+            <div class="head"></div><div class="arm left"></div><div class="arm right"></div><div class="body-shape"></div><div class="jersey">CNPA<b>23</b></div><div class="basketball"></div><div class="leg l"></div><div class="leg r"></div>
+        </div>
+        <div class="player side">
+            <div class="head"></div><div class="arm left"></div><div class="arm right"></div><div class="body-shape"></div><div class="jersey">CNPA<b>7</b></div><div class="leg l"></div><div class="leg r"></div>
+        </div>
+    </section>
+
+    <section id="matches" class="section">
+        <div class="section-title">
+            <h2>近期赛事</h2>
+            <a class="more" href="#">查看全部赛事 〉</a>
+        </div>
+        <div class="matches">
+            <article class="match-card">
+                <div class="match-meta"><span>05.18 周六 19:00</span><span>常规赛 R05</span></div>
+                <div class="versus">
+                    <div class="team-mini"><div class="badge titan"><div class="shield"></div></div><span>TITAN</span></div>
+                    <div class="vs">VS</div>
+                    <div class="team-mini"><div class="badge phoenix"><div class="flame"></div></div><span>PHOENIX</span></div>
+                </div>
+                <button class="match-btn">预约观赛</button>
+            </article>
+            <article class="match-card">
+                <div class="match-meta"><span>05.18 周六 21:00</span><span>常规赛 R05</span></div>
+                <div class="versus">
+                    <div class="team-mini"><div class="badge wolves"><div class="wolf"></div></div><span>WOLVES</span></div>
+                    <div class="vs">VS</div>
+                    <div class="team-mini"><div class="badge legend"><div class="crown"></div></div><span>LEGEND</span></div>
+                </div>
+                <button class="match-btn">预约观赛</button>
+            </article>
+            <article class="match-card">
+                <div class="match-meta"><span>05.19 周日 19:00</span><span>常规赛 R05</span></div>
+                <div class="versus">
+                    <div class="team-mini"><div class="badge dragon"><div class="dragon"></div></div><span>DRAGON</span></div>
+                    <div class="vs">VS</div>
+                    <div class="team-mini"><div class="badge rangers"><div class="ranger"></div></div><span>RANGERS</span></div>
+                </div>
+                <button class="match-btn">预约观赛</button>
+            </article>
+        </div>
+    </section>
+
+    <section id="teams" class="section">
+        <div class="section-title">
+            <h2>参赛战队</h2>
+            <a class="more" href="#">查看全部战队 〉</a>
+        </div>
+        <div class="teams">
+            <article class="team-card"><div class="badge titan"><div class="shield"></div></div><b>TITAN</b></article>
+            <article class="team-card"><div class="badge phoenix"><div class="flame"></div></div><b>PHOENIX</b></article>
+            <article class="team-card"><div class="badge wolves"><div class="wolf"></div></div><b>WOLVES</b></article>
+            <article class="team-card"><div class="badge dragon"><div class="dragon"></div></div><b>DRAGON</b></article>
+            <article class="team-card"><div class="badge legend"><div class="crown"></div></div><b>LEGEND</b></article>
+            <article class="team-card"><div class="badge rangers"><div class="ranger"></div></div><b>RANGERS</b></article>
+        </div>
+    </section>
+
+    <section class="about">
+        <div>
+            <h2>关于 CNPA <span>联赛体系</span></h2>
+            <p>CNPA 中国职业电竞篮球联赛，致力于打造专业、公平、热血的线上篮球竞技舞台。我们汇聚顶尖战队与职业选手，通过全年多级别赛事体系，推动电竞篮球运动的发展与普及。</p>
+        </div>
+        <div class="stats">
+            <div class="stat"><strong>16</strong><span>支参赛战队</span></div>
+            <div class="stat"><strong>320+</strong><span>职业电竞选手</span></div>
+            <div class="stat"><strong>120+</strong><span>全年比赛场次</span></div>
+            <div class="stat"><strong>500W+</strong><span>年度曝光人次</span></div>
+        </div>
+    </section>
+
+    <section id="ranking" class="section ranking">
+        <div class="section-title" style="padding-top:0">
+            <h2>数据榜单</h2>
+        </div>
+        <div class="rank-card">
+            <div class="rank-block">
+                <h3>球队排行</h3>
+                <table>
+                    <thead><tr><th>排名</th><th>战队</th><th>胜场</th><th>负场</th><th>胜率</th><th>连胜</th></tr></thead>
+                    <tbody>
+                    <tr><td class="rank-num">1</td><td><span class="team-name"><span class="tiny-logo"><span class="badge titan"><span class="shield"></span></span></span>TITAN</span></td><td>12</td><td>2</td><td>85.7%</td><td>5连胜</td></tr>
+                    <tr><td class="rank-num">2</td><td><span class="team-name"><span class="tiny-logo"><span class="badge wolves"><span class="wolf"></span></span></span>WOLVES</span></td><td>11</td><td>3</td><td>78.6%</td><td>3连胜</td></tr>
+                    <tr><td class="rank-num">3</td><td><span class="team-name"><span class="tiny-logo"><span class="badge phoenix"><span class="flame"></span></span></span>PHOENIX</span></td><td>10</td><td>4</td><td>71.4%</td><td>2连胜</td></tr>
+                    <tr><td class="rank-num">4</td><td><span class="team-name"><span class="tiny-logo"><span class="badge dragon"><span class="dragon"></span></span></span>DRAGON</span></td><td>8</td><td>6</td><td>57.1%</td><td>1连胜</td></tr>
+                    <tr><td class="rank-num">5</td><td><span class="team-name"><span class="tiny-logo"><span class="badge legend"><span class="crown"></span></span></span>LEGEND</span></td><td>7</td><td>7</td><td>50.0%</td><td>2连胜</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="rank-block">
+                <h3>球员得分榜 TOP5</h3>
+                <div class="player-row head"><span>排名</span><span>球员</span><span>战队</span><span>场均得分 PPG</span></div>
+                <div class="player-row"><span class="rank-num">1</span><span class="player-name"><i class="avatar"></i>CNPA_TitanX</span><span>TITAN</span><span>28.4 PPG</span></div>
+                <div class="player-row"><span class="rank-num">2</span><span class="player-name"><i class="avatar"></i>Wolf_King</span><span>WOLVES</span><span>24.1 PPG</span></div>
+                <div class="player-row"><span class="rank-num">3</span><span class="player-name"><i class="avatar"></i>Phx_Fire</span><span>PHOENIX</span><span>22.3 PPG</span></div>
+                <div class="player-row"><span class="rank-num">4</span><span class="player-name"><i class="avatar"></i>Drg_Lion</span><span>DRAGON</span><span>21.8 PPG</span></div>
+                <div class="player-row"><span class="rank-num">5</span><span class="player-name"><i class="avatar"></i>Leg_Zeus</span><span>LEGEND</span><span>20.4 PPG</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="join">
+        <h2>加入 CNPA<span>为热爱而战</span></h2>
+        <div class="join-actions">
+            <button class="btn dark">报名参赛 〉</button>
+            <button class="btn primary">成为合作伙伴</button>
+        </div>
+        <div class="hoop"><div class="ball">CNPA</div><div class="rim"></div><div class="net"></div></div>
+    </section>
+
+    <footer id="footer" class="footer">
+        <div class="footer-main">
+            <div class="footer-brand">
+                <div class="logo">CNPA</div>
+                <p>线上篮球赛事平台</p>
+                <div class="social"><span>微</span><span>博</span><span>抖</span><span>B</span></div>
+            </div>
+            <div class="footer-col"><h4>赛事</h4><a>赛事中心</a><a>赛程日历</a><a>比赛规则</a></div>
+            <div class="footer-col"><h4>数据</h4><a>战队数据</a><a>球员数据</a><a>数据榜单</a></div>
+            <div class="footer-col"><h4>关于</h4><a>关于我们</a><a>加入我们</a><a>联系我们</a></div>
+            <div class="footer-col"><h4>帮助</h4><a>新手指南</a><a>常见问题</a><a>意见反馈</a></div>
+            <div class="footer-col"><h4>联系我们</h4><p>support@cnpaesports.com</p><p>400-888-8888</p><p>工作日 10:00 - 18:00</p></div>
+        </div>
+        <div class="copyright">© 2024 CNPA 中国职业电竞篮球联赛 版权所有　京ICP备202400001号-1</div>
+    </footer>
+</main>
+</body>
+</html>

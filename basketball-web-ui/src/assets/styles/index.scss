@@ -1,0 +1,78 @@
+@use './variables.scss';
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Inter, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+  color: var(--text);
+  background: var(--cnpa-bg-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3a3a44;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cnpa-bg-primary);
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --site-gutter: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --site-gutter: 12px;
+    --site-inner-padding: 16px;
+  }
+}
+
+.page-container {
+  width: 100%;
+  padding: 48px var(--site-inner-padding) 64px;
+  box-sizing: border-box;
+}
+
+.page-title {
+  margin: 0 0 12px;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.page-desc {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--cnpa-text-secondary);
+}
+
+.page-card {
+  margin-top: 32px;
+  padding: 32px;
+  background: var(--cnpa-bg-card);
+  border: 1px solid var(--cnpa-border-color);
+  border-left: 3px solid var(--cnpa-color-primary);
+}
