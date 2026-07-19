@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import PaperSection from '@/components/common/PaperSection.vue'
 import { seasonLeaders } from '../mock'
 import { getTeamById } from '../mock/teams.mock'
+import TeamEntryLink from '@/components/team/TeamEntryLink.vue'
 import TeamLogo from './TeamLogo.vue'
 
 const imageErrors = ref<Record<number, boolean>>({})
@@ -32,10 +33,14 @@ function handlePortraitError(id: number) {
                 <small>{{ leader.unit }}</small>
               </div>
               <strong class="leader-name">{{ leader.playerName }}</strong>
-              <div v-if="getTeamById(leader.teamId)" class="leader-team">
+              <TeamEntryLink
+                v-if="getTeamById(leader.teamId)"
+                :team="getTeamById(leader.teamId)!"
+                class="leader-team"
+              >
                 <TeamLogo :team="getTeamById(leader.teamId)!" size="sm" />
                 <span>{{ getTeamById(leader.teamId)!.name }}</span>
-              </div>
+              </TeamEntryLink>
             </div>
 
             <div class="leader-portrait">
@@ -138,6 +143,7 @@ function handlePortraitError(id: number) {
   margin-top: auto;
   font-size: 13px;
   color: var(--cnpa-text-secondary);
+  text-decoration: none;
 }
 
 .leader-portrait {

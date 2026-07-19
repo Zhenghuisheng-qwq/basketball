@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getTeamById } from '../mock/teams.mock'
 import type { Match, MatchStatus } from '../types/events'
+import TeamEntryLink from '@/components/team/TeamEntryLink.vue'
 import TeamLogo from './TeamLogo.vue'
 
 defineProps<{
@@ -40,12 +41,14 @@ const statusMap: Record<
     <article v-for="match in matches" :key="match.id" class="match-row">
       <span class="cell time">{{ match.startTime }}</span>
 
-      <div class="cell team-cell">
-        <template v-if="getTeamById(match.awayTeamId)">
-          <TeamLogo :team="getTeamById(match.awayTeamId)!" size="sm" />
-          <span>{{ getTeamById(match.awayTeamId)!.name }}</span>
-        </template>
-      </div>
+      <TeamEntryLink
+        v-if="getTeamById(match.awayTeamId)"
+        :team="getTeamById(match.awayTeamId)!"
+        class="cell team-cell"
+      >
+        <TeamLogo :team="getTeamById(match.awayTeamId)!" size="sm" />
+        <span>{{ getTeamById(match.awayTeamId)!.name }}</span>
+      </TeamEntryLink>
 
       <div class="cell score-cell sport-num">
         <template v-if="match.status === 'finished' || match.status === 'live'">
@@ -55,12 +58,14 @@ const statusMap: Record<
         <template v-else>VS</template>
       </div>
 
-      <div class="cell team-cell">
-        <template v-if="getTeamById(match.homeTeamId)">
-          <TeamLogo :team="getTeamById(match.homeTeamId)!" size="sm" />
-          <span>{{ getTeamById(match.homeTeamId)!.name }}</span>
-        </template>
-      </div>
+      <TeamEntryLink
+        v-if="getTeamById(match.homeTeamId)"
+        :team="getTeamById(match.homeTeamId)!"
+        class="cell team-cell"
+      >
+        <TeamLogo :team="getTeamById(match.homeTeamId)!" size="sm" />
+        <span>{{ getTeamById(match.homeTeamId)!.name }}</span>
+      </TeamEntryLink>
 
       <span class="cell venue">{{ match.venue }}</span>
 
@@ -130,6 +135,8 @@ const statusMap: Record<
   gap: 8px;
   font-size: 13px;
   font-weight: 800;
+  text-decoration: none;
+  color: inherit;
 }
 
 .score-cell {

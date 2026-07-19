@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { standings, playoffCutoffRank } from '../mock'
 import { getTeamById } from '../mock/teams.mock'
+import TeamEntryLink from '@/components/team/TeamEntryLink.vue'
 import TeamLogo from './TeamLogo.vue'
 
 const playoffZone = computed(() => standings.filter((item) => item.rank <= playoffCutoffRank))
@@ -27,10 +28,14 @@ function formatPointDiff(value: number) {
           </div>
           <div v-for="row in playoffZone" :key="row.rank" class="table-row">
             <span class="rank rank-playoff">{{ row.rank }}</span>
-            <span class="team">
-              <TeamLogo v-if="getTeamById(row.teamId)" :team="getTeamById(row.teamId)!" size="sm" />
-              {{ getTeamById(row.teamId)?.name }}
-            </span>
+            <TeamEntryLink
+              v-if="getTeamById(row.teamId)"
+              :team="getTeamById(row.teamId)!"
+              class="team"
+            >
+              <TeamLogo :team="getTeamById(row.teamId)!" size="sm" />
+              {{ getTeamById(row.teamId)!.name }}
+            </TeamEntryLink>
             <span>{{ row.wins }}</span>
             <span>{{ row.losses }}</span>
             <span>{{ formatWinRate(row.winRate) }}</span>
@@ -50,10 +55,14 @@ function formatPointDiff(value: number) {
           </div>
           <div v-for="row in regularZone" :key="row.rank" class="table-row">
             <span class="rank rank-regular">{{ row.rank }}</span>
-            <span class="team">
-              <TeamLogo v-if="getTeamById(row.teamId)" :team="getTeamById(row.teamId)!" size="sm" />
-              {{ getTeamById(row.teamId)?.name }}
-            </span>
+            <TeamEntryLink
+              v-if="getTeamById(row.teamId)"
+              :team="getTeamById(row.teamId)!"
+              class="team"
+            >
+              <TeamLogo :team="getTeamById(row.teamId)!" size="sm" />
+              {{ getTeamById(row.teamId)!.name }}
+            </TeamEntryLink>
             <span>{{ row.wins }}</span>
             <span>{{ row.losses }}</span>
             <span>{{ formatWinRate(row.winRate) }}</span>

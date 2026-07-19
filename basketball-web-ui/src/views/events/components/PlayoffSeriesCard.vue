@@ -74,28 +74,34 @@ function showLogoImage(teamId: number, logo?: string) {
     >
       <span class="playoff-series-card__seed">{{ teamRow.seed }}</span>
 
-      <div class="playoff-series-card__logo-wrap">
-        <img
-          v-if="teamRow.team && showLogoImage(teamRow.teamId, teamRow.team.logo)"
-          class="playoff-series-card__logo"
-          :src="teamRow.team.logo"
-          :alt="`${teamRow.team.name} Logo`"
-          @error="handleLogoError(teamRow.teamId)"
-        />
-        <div
-          v-else-if="teamRow.team?.badgeKey"
-          class="playoff-series-card__badge-scale"
-        >
-          <TeamBadge :type="teamRow.team.badgeKey" />
+      <router-link
+        v-if="teamRow.team"
+        :to="`/tournament/team/${teamRow.team.teamId}/overview`"
+        class="playoff-series-card__team-link"
+      >
+        <div class="playoff-series-card__logo-wrap">
+          <img
+            v-if="showLogoImage(teamRow.teamId, teamRow.team.logo)"
+            class="playoff-series-card__logo"
+            :src="teamRow.team.logo"
+            :alt="`${teamRow.team.name} Logo`"
+            @error="handleLogoError(teamRow.teamId)"
+          />
+          <div
+            v-else-if="teamRow.team.badgeKey"
+            class="playoff-series-card__badge-scale"
+          >
+            <TeamBadge :type="teamRow.team.badgeKey" />
+          </div>
+          <span v-else class="playoff-series-card__logo-fallback">
+            {{ teamRow.team.shortName.slice(0, 2) }}
+          </span>
         </div>
-        <span v-else class="playoff-series-card__logo-fallback">
-          {{ teamRow.team?.shortName.slice(0, 2) || '--' }}
-        </span>
-      </div>
 
-      <span class="playoff-series-card__name">
-        {{ teamRow.team?.shortName || '--' }}
-      </span>
+        <span class="playoff-series-card__name">
+          {{ teamRow.team.shortName }}
+        </span>
+      </router-link>
 
       <strong class="playoff-series-card__score">{{ teamRow.score }}</strong>
     </div>
@@ -157,6 +163,23 @@ function showLogoImage(teamId: number, logo?: string) {
 
 .playoff-series-card__team--bordered {
   border-top: 1px solid rgba(10, 10, 10, 0.1);
+}
+
+.playoff-series-card__team-link {
+  grid-column: 2 / 4;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 9px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.82;
+  }
 }
 
 .playoff-series-card__seed {
@@ -332,6 +355,11 @@ function showLogoImage(teamId: number, logo?: string) {
   .playoff-series-card__team {
     grid-template-columns: 22px 32px minmax(0, 1fr) 26px;
     padding-inline: 10px;
+  }
+
+  .playoff-series-card__team-link {
+    grid-column: 2 / 4;
+    grid-template-columns: 32px minmax(0, 1fr);
   }
 }
 </style>

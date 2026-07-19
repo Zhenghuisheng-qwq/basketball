@@ -52,10 +52,15 @@ function goPage(index: number) {
         <button type="button" class="carousel-arrow" aria-label="上一页" @click="goPrev">‹</button>
 
         <div class="team-grid">
-          <article v-for="team in visibleTeams" :key="team.id" class="team-card">
+          <router-link
+            v-for="team in visibleTeams"
+            :key="team.id"
+            :to="`/tournament/team/${team.teamId}/overview`"
+            class="team-card team-card-link"
+          >
             <TeamLogo :team="team" size="lg" />
             <h3>{{ team.name }}</h3>
-          </article>
+          </router-link>
         </div>
 
         <button type="button" class="carousel-arrow" aria-label="下一页" @click="goNext">›</button>
@@ -138,7 +143,7 @@ function goPage(index: number) {
   padding: 22px 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: #0d0d0d;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
 
   h3 {
     margin: 0;
@@ -149,6 +154,16 @@ function goPage(index: number) {
   &:hover {
     border-color: rgba(225, 6, 19, 0.45);
     transform: translateY(-2px);
+  }
+}
+
+.team-card-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.88;
   }
 }
 

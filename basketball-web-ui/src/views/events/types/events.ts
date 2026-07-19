@@ -6,6 +6,7 @@ export type MatchStatus = 'scheduled' | 'live' | 'finished' | 'cancelled'
 
 export interface Team {
   id: number
+  teamId: string
   code: string
   name: string
   shortName: string
