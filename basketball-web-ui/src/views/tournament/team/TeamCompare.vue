@@ -6,6 +6,7 @@ import compareIcon1 from '@/assets/icon/tournament/compare_1.png'
 import compareIcon2 from '@/assets/icon/tournament/compare_2.png'
 import compareIcon3 from '@/assets/icon/tournament/compare_3.png'
 import compareIcon4 from '@/assets/icon/tournament/compare_4.png'
+import vsIcon from '@/assets/icon/tournament/vs.png'
 import TeamSelectModal from '@/components/team/TeamSelectModal.vue'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import PaperTear from '@/components/common/PaperTear.vue'
@@ -211,6 +212,13 @@ function handleTeamSelect(teamId: string) {
 
   closeSelector()
 }
+
+function getTeamNameSizeClass(name: string) {
+  return {
+    'compare-team__name--medium': name.length >= 7,
+    'compare-team__name--long': name.length >= 10,
+  }
+}
 </script>
 
 <template>
@@ -220,7 +228,7 @@ function handleTeamSelect(teamId: string) {
         <div class="compare-hero__bg" :style="compareHeroBgStyle" aria-hidden="true" />
         <div class="compare-hero__overlay" aria-hidden="true" />
 
-        <div class="compare-hero__inner">
+        <div class="compare-hero__inner team-compare-content">
           <nav class="compare-hero__crumb" aria-label="面包屑">
             <router-link to="/tournament">赛事</router-link>
             <span>/</span>
@@ -229,57 +237,79 @@ function handleTeamSelect(teamId: string) {
             <b>球队对比</b>
           </nav>
 
-          <div class="compare-hero__battle team-compare-inner">
-            <div class="compare-team-side compare-team-side--left team-side team-side-left">
-              <TeamLogo :team="leftTeam" size="xl" class="compare-team-side__logo" />
-              <div class="compare-team-info">
-                <h2 class="compare-team-name">{{ leftTeam.name }}</h2>
-                <p class="compare-team-record">
+          <div class="compare-hero__battle team-compare-main">
+            <div class="compare-team compare-team--left">
+              <div class="compare-team__logo">
+                <TeamLogo :team="leftTeam" size="xl" />
+              </div>
+              <div class="compare-team__info">
+                <div class="compare-team__name" :class="getTeamNameSizeClass(leftTeam.name)">
+                  {{ leftTeam.name }}
+                </div>
+                <div class="compare-team__record">
                   {{ getRecordText(leftTeam.wins, leftTeam.losses) }}
-                </p>
-                <p class="compare-team-rank">
+                </div>
+                <div class="compare-team__rank">
                   {{ stageLabels[leftTeam.currentStage] }}第{{ leftTeam.ranking }}
-                </p>
-                <button type="button" class="compare-switch-btn" @click="openSelector('left')">
+                </div>
+              </div>
+            </div>
+
+            <div class="compare-center compare-vs-area">
+              <img :src="vsIcon" alt="VS" class="compare-vs-img match-vs" />
+            </div>
+
+            <div class="compare-team compare-team--right">
+              <template v-if="rightTeam">
+                <div class="compare-team__logo">
+                  <TeamLogo :team="rightTeam" size="xl" />
+                </div>
+                <div class="compare-team__info">
+                  <div class="compare-team__name" :class="getTeamNameSizeClass(rightTeam.name)">
+                    {{ rightTeam.name }}
+                  </div>
+                  <div class="compare-team__record">
+                    {{ getRecordText(rightTeam.wins, rightTeam.losses) }}
+                  </div>
+                  <div class="compare-team__rank">
+                    {{ stageLabels[rightTeam.currentStage] }}第{{ rightTeam.ranking }}
+                  </div>
+                </div>
+              </template>
+
+              <template v-else>
+                <div class="compare-team__logo compare-team__logo--placeholder" aria-hidden="true">
+                  ?
+                </div>
+                <div class="compare-team__info">
+                  <div class="compare-team__name compare-team__name--placeholder">请选择对比球队</div>
+                  <div class="compare-team__record compare-team__record--placeholder">
+                    点击更换球队或从弹窗中选择
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <div class="compare-hero__foot compare-hero__foot--left">
+              <div class="compare-hero__foot-align compare-hero__foot-align--left">
+                <span class="compare-hero__foot-logo-spacer" aria-hidden="true" />
+                <button type="button" class="compare-team__button" @click="openSelector('left')">
                   更换球队
                 </button>
               </div>
             </div>
 
-            <div class="compare-vs-area team-center">
-              <span class="compare-vs match-vs">VS</span>
-              <span class="compare-season-pill">{{ compareCompetitionText }}</span>
+            <div class="compare-hero__foot compare-hero__foot--center">
+              <span class="compare-season-pill match-season-tag">{{ compareCompetitionText }}</span>
             </div>
 
-            <div class="compare-team-side compare-team-side--right team-side team-side-right">
-              <template v-if="rightTeam">
-                <TeamLogo :team="rightTeam" size="xl" class="compare-team-side__logo" />
-                <div class="compare-team-info">
-                  <h2 class="compare-team-name">{{ rightTeam.name }}</h2>
-                  <p class="compare-team-record">
-                    {{ getRecordText(rightTeam.wins, rightTeam.losses) }}
-                  </p>
-                  <p class="compare-team-rank">
-                    {{ stageLabels[rightTeam.currentStage] }}第{{ rightTeam.ranking }}
-                  </p>
-                  <button type="button" class="compare-switch-btn" @click="openSelector('right')">
-                    更换球队
-                  </button>
-                </div>
-              </template>
-
-              <template v-else>
-                <div class="compare-team-side__placeholder" aria-hidden="true">?</div>
-                <div class="compare-team-info">
-                  <h2 class="compare-team-name compare-team-name--placeholder">请选择对比球队</h2>
-                  <p class="compare-team-record compare-team-record--placeholder">
-                    点击更换球队或从弹窗中选择
-                  </p>
-                  <button type="button" class="compare-switch-btn" @click="openSelector('right')">
-                    更换球队
-                  </button>
-                </div>
-              </template>
+            <div class="compare-hero__foot compare-hero__foot--right">
+              <div class="compare-hero__foot-align compare-hero__foot-align--right">
+                <span class="compare-hero__foot-logo-spacer" aria-hidden="true" />
+                <button type="button" class="compare-team__button" @click="openSelector('right')">
+                  更换球队
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -457,12 +487,11 @@ function handleTeamSelect(teamId: string) {
 <style scoped lang="scss">
 .compare-hero {
   position: relative;
-  min-height: clamp(420px, 38vw, 460px);
+  z-index: 1;
   overflow: hidden;
   width: 100%;
-  padding: clamp(22px, 2vw, 30px) 0 clamp(28px, 2.4vw, 36px);
   background: #050505;
-  color: #f4f0e8;
+  color: #f1eee8;
 
   &::before {
     content: '';
@@ -508,9 +537,16 @@ function handleTeamSelect(teamId: string) {
   pointer-events: none;
 }
 
+.team-compare-content,
 .compare-hero__inner {
   position: relative;
   z-index: 3;
+  min-height: auto;
+  display: flex;
+  flex-direction: column;
+  padding-top: 18px;
+  padding-bottom: clamp(12px, 1.4vw, 18px);
+  box-sizing: border-box;
 }
 
 .compare-hero__crumb {
@@ -518,7 +554,7 @@ function handleTeamSelect(teamId: string) {
   align-items: center;
   flex-wrap: wrap;
   gap: 9px;
-  margin: 0 0 clamp(20px, 2.4vw, 32px);
+  margin: 0 0 clamp(45px, 4.5vw, 65px);
   font-size: clamp(15px, 1.1vw, 17px);
   font-weight: 700;
   color: rgba(236, 232, 224, 0.76);
@@ -543,151 +579,227 @@ function handleTeamSelect(teamId: string) {
   }
 }
 
-.compare-hero__battle,
-.team-compare-inner {
+.team-compare-main,
+.compare-hero__battle {
+  flex: 0 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(200px, 18vw, 260px) minmax(0, 1fr);
-  align-items: center;
-  column-gap: clamp(24px, 3vw, 48px);
-  min-height: clamp(320px, 28vw, 380px);
-  max-width: min(100%, 1380px);
-  margin-inline: auto;
-  padding-inline: clamp(8px, 1.2vw, 20px);
+  grid-template-columns: 43% 14% 43%;
+  grid-template-rows: auto auto;
+  align-items: end;
+  row-gap: clamp(8px, 1.2vw, 14px);
+  width: 100%;
+  margin: 0 auto;
+  transform: translateY(-18px);
   box-sizing: border-box;
+  overflow: visible;
 }
 
-.compare-team-side,
-.team-side {
+.compare-team--left {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.compare-center,
+.compare-vs-area {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+
+.compare-team--right {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.compare-hero__foot {
   display: flex;
   align-items: center;
-  gap: clamp(20px, 2.4vw, 36px);
+  min-height: 0;
+}
+
+.compare-hero__foot--left {
+  grid-column: 1;
+  grid-row: 2;
+  justify-content: flex-end;
+}
+
+.compare-hero__foot--center {
+  grid-column: 2;
+  grid-row: 2;
+  justify-content: center;
+}
+
+.compare-hero__foot--right {
+  grid-column: 3;
+  grid-row: 2;
+  justify-content: flex-start;
+}
+
+.compare-hero__foot-align {
+  display: flex;
+  align-items: center;
+  gap: clamp(20px, 2.4vw, 46px);
+  width: min(92%, 560px);
+}
+
+.compare-hero__foot-align--left {
+  justify-content: flex-start;
+  margin-left: auto;
+  padding-right: clamp(2%, 3vw, 7%);
+}
+
+.compare-hero__foot-align--right {
+  justify-content: flex-start;
+  margin-right: auto;
+  padding-left: clamp(2%, 3vw, 7%);
+}
+
+.compare-hero__foot-logo-spacer {
+  flex: 0 0 auto;
+  width: clamp(118px, 9vw, 178px);
+  height: 0;
+}
+
+.compare-team {
+  display: flex;
+  align-items: center;
+  gap: clamp(20px, 2.4vw, 46px);
+  width: min(94%, 540px);
   min-width: 0;
+  overflow: visible;
 }
 
-.compare-team-side--left,
-.team-side-left {
+.compare-team--left {
+  justify-self: end;
+  width: min(92%, 560px);
   justify-content: flex-end;
-
-  .compare-team-info {
-    text-align: right;
-  }
+  padding-right: clamp(2%, 3vw, 7%);
+  margin-left: auto;
 }
 
-.compare-team-side--right,
-.team-side-right {
-  flex-direction: row-reverse;
-  justify-content: flex-end;
-
-  .compare-team-info {
-    text-align: left;
-  }
+.compare-team--right {
+  justify-self: start;
+  width: min(92%, 560px);
+  justify-content: flex-start;
+  padding-left: clamp(2%, 3vw, 7%);
+  margin-right: auto;
 }
 
-.compare-team-side__logo {
-  flex-shrink: 0;
+.compare-team__logo {
+  flex: 0 0 auto;
+  width: clamp(118px, 9vw, 178px);
+  height: clamp(118px, 9vw, 178px);
 
   :deep(.team-logo) {
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+    width: 100%;
+    height: 100%;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
   }
 
   :deep(.team-logo--xl) {
-    width: clamp(150px, 12vw, 210px);
-    height: clamp(150px, 12vw, 210px);
+    width: 100%;
+    height: 100%;
 
     .team-logo__fallback {
-      font-size: clamp(32px, 2.8vw, 44px);
-      letter-spacing: 0.08em;
+      font-size: clamp(26px, 2.2vw, 34px);
+      letter-spacing: 0.06em;
     }
   }
 
   :deep(.team-logo--xl .badge) {
-    transform: scale(3.28);
+    transform: scale(2.78);
   }
 }
 
-.compare-team-side__placeholder {
-  flex-shrink: 0;
-  width: clamp(150px, 12vw, 210px);
-  height: clamp(150px, 12vw, 210px);
+.compare-team__logo--placeholder {
   display: grid;
   place-items: center;
   border: 2px dashed rgba(255, 255, 255, 0.28);
   border-radius: 4px;
   color: rgba(255, 255, 255, 0.42);
-  font-size: clamp(42px, 3.5vw, 58px);
+  font-size: clamp(36px, 3vw, 48px);
   font-weight: 900;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
 }
 
-.compare-team-info {
+.compare-team__info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 1 auto;
+  width: auto;
   min-width: 0;
+  overflow: visible;
+}
+
+.compare-team__name {
+  display: block;
+  width: max-content;
   max-width: 100%;
-}
-
-.compare-team-name {
-  margin: 0 0 clamp(16px, 1.6vw, 20px);
-  max-width: min(100%, 480px);
-  font-size: clamp(36px, 4.2vw, 72px);
-  line-height: 0.98;
-  font-weight: 900;
-  letter-spacing: 1px;
-  color: #f4f0e8;
-  text-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.compare-team-side--left .compare-team-name {
-  margin-left: auto;
-}
-
-.compare-team-side--right .compare-team-name {
-  margin-right: auto;
-}
-
-.compare-team-name--placeholder {
-  font-size: clamp(28px, 2.8vw, 40px);
-  letter-spacing: 0.5px;
-  white-space: normal;
-}
-
-.compare-team-record,
-.compare-team-rank {
-  margin: 0;
-  font-size: clamp(20px, 1.7vw, 28px);
-  line-height: 1.2;
+  margin: 0 0 16px;
+  color: #f1eee8;
+  font-size: clamp(48px, 3.6vw, 66px);
   font-weight: 800;
-  letter-spacing: 0.5px;
+  line-height: 0.95;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-.compare-team-record {
-  margin-bottom: clamp(4px, 0.5vw, 8px);
-  color: #f8f5ef;
-}
-
-.compare-team-rank {
-  margin-bottom: clamp(24px, 2vw, 28px);
-  color: #d8c5a0;
-}
-
-.compare-team-record--placeholder {
-  margin-bottom: clamp(24px, 2vw, 28px);
-  font-size: clamp(15px, 1.3vw, 18px);
-  font-weight: 700;
-  color: rgba(236, 232, 224, 0.58);
+.compare-team__name--medium {
+  font-size: clamp(42px, 3.1vw, 58px);
   letter-spacing: 0;
 }
 
-.compare-switch-btn {
-  height: clamp(44px, 3.6vw, 48px);
-  padding: 0 clamp(22px, 2vw, 28px);
-  border: 1px solid rgba(206, 151, 45, 0.9);
-  border-radius: 2px;
-  background: rgba(10, 10, 10, 0.36);
-  color: #e7cf93;
-  font-size: clamp(16px, 1.2vw, 18px);
-  font-weight: 800;
+.compare-team__name--long {
+  font-size: clamp(34px, 2.6vw, 48px);
+  letter-spacing: -1px;
+}
+
+.compare-team__name--placeholder {
+  font-size: clamp(24px, 2.4vw, 32px);
+  white-space: normal;
+  line-height: 1.15;
+}
+
+.compare-team__record {
+  margin: 0;
+  font-size: clamp(22px, 1.7vw, 28px);
+  line-height: 1.3;
+  font-weight: 700;
+  color: #f6f2eb;
+}
+
+.compare-team__rank {
+  margin: 4px 0 0;
+  font-size: clamp(21px, 1.6vw, 27px);
+  line-height: 1.3;
+  font-weight: 700;
+  color: #cfc7b8;
+}
+
+.compare-team__record--placeholder {
+  margin-top: 8px;
+  margin-bottom: 0;
+  font-size: clamp(14px, 1.2vw, 16px);
+  font-weight: 600;
+  color: rgba(236, 232, 224, 0.58);
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.compare-team__button {
+  margin-top: 0;
+  height: 46px;
+  padding: 0 26px;
+  border: 1px solid rgba(184, 130, 27, 0.88);
+  border-radius: 0;
+  background: rgba(8, 8, 8, 0.35);
+  color: #d8c8a7;
+  font-size: 17px;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
@@ -697,87 +809,59 @@ function handleTeamSelect(teamId: string) {
     box-shadow 0.2s ease;
 
   &:hover {
-    border-color: rgba(227, 174, 65, 0.95);
-    color: #f2dea0;
-    box-shadow: 0 0 14px rgba(227, 174, 65, 0.2);
+    border-color: rgba(196, 145, 40, 0.95);
+    color: #e2d4b3;
+    box-shadow: 0 0 10px rgba(184, 130, 27, 0.15);
   }
 }
 
-.compare-vs-area,
-.team-center {
+.compare-center,
+.compare-vs-area {
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  align-self: center;
-  min-width: 0;
+  justify-self: center;
 }
 
-.compare-vs,
+.compare-vs-img,
 .match-vs {
-  position: relative;
-  display: inline-block;
-  font-size: clamp(72px, 6vw, 100px);
-  line-height: 0.9;
-  font-style: italic;
-  font-weight: 900;
-  letter-spacing: -5px;
-  transform: skew(-10deg);
-  background: linear-gradient(180deg, #ff493f 0%, #ed111d 48%, #a9000b 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  clip-path: polygon(1% 0, 99% 1%, 100% 99%, 0 100%);
-  filter:
-    drop-shadow(0 0 8px rgba(255, 30, 30, 0.28))
-    drop-shadow(0 8px 10px rgba(0, 0, 0, 0.55));
-
-  &::before {
-    content: 'VS';
-    position: absolute;
-    inset: 0;
-    z-index: -2;
-    color: rgba(55, 0, 0, 0.55);
-    -webkit-text-fill-color: rgba(55, 0, 0, 0.55);
-    transform: translate(3px, 7px) skew(2deg);
-    clip-path: polygon(0 4%, 100% 0, 97% 100%, 3% 96%);
-  }
-
-  &::after {
-    content: 'VS';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    color: rgba(90, 0, 0, 0.7);
-    -webkit-text-fill-color: rgba(90, 0, 0, 0.7);
-    transform: translate(5px, 5px);
-  }
+  display: block;
+  width: clamp(160px, 13vw, 210px);
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+  flex-shrink: 0;
+  user-select: none;
+  pointer-events: none;
 }
 
-.compare-season-pill {
-  display: inline-flex;
+.compare-season-pill,
+.match-season-tag {
+  display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: clamp(28px, 2.8vw, 36px);
-  min-width: 0;
-  max-width: 100%;
-  height: clamp(48px, 4vw, 54px);
-  padding: 0 clamp(28px, 2.4vw, 36px);
-  border: 1px solid rgba(196, 139, 32, 0.9);
-  border-radius: 2px;
-  color: #f0e9dc;
-  font-size: clamp(18px, 1.35vw, 21px);
+  min-width: 260px;
+  max-width: min(100%, 330px);
+  width: fit-content;
+  height: 46px;
+  padding: 0 26px;
+  border: 1px solid rgba(185, 132, 31, 0.88);
+  border-radius: 0;
+  background: rgba(8, 8, 8, 0.5);
+  color: #e9e3d8;
+  font-size: 18px;
   font-weight: 700;
-  background: rgba(8, 8, 8, 0.55);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 4px 16px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .compare-content {
-  padding-block: 40px 64px;
+  padding-block: clamp(16px, 1.6vw, 24px) 64px;
   color: var(--cnpa-paper-text);
 }
 
@@ -1037,52 +1121,124 @@ function handleTeamSelect(teamId: string) {
   letter-spacing: 1px;
 }
 
-@media (max-width: 1280px) {
-  .compare-hero__battle,
-  .team-compare-inner {
-    grid-template-columns: minmax(0, 1fr) clamp(180px, 16vw, 220px) minmax(0, 1fr);
-    column-gap: clamp(20px, 2.5vw, 36px);
+@media (min-width: 1600px) {
+  .team-compare-main,
+  .compare-hero__battle {
+    grid-template-columns: 43% 14% 43%;
   }
 
-  .compare-team-name {
-    font-size: clamp(42px, 3.8vw, 58px);
+  .compare-team--left {
+    padding-right: 6%;
   }
 
-  .compare-team-side__logo :deep(.team-logo--xl),
-  .compare-team-side__placeholder {
-    width: clamp(140px, 12vw, 190px);
-    height: clamp(140px, 12vw, 190px);
-  }
-
-  .compare-team-side__logo :deep(.team-logo--xl .badge) {
-    transform: scale(2.97);
+  .compare-team--right {
+    padding-left: 6%;
   }
 }
 
-@media (max-width: 1024px) {
-  .compare-hero__battle,
-  .team-compare-inner {
-    grid-template-columns: minmax(0, 1fr) 200px minmax(0, 1fr);
-    column-gap: clamp(18px, 2vw, 28px);
+@media (max-width: 1599px) {
+  .team-compare-main,
+  .compare-hero__battle {
+    grid-template-columns: 42% 16% 42%;
   }
 
-  .compare-team-name {
-    font-size: clamp(36px, 4vw, 54px);
+  .compare-team--left {
+    padding-right: 3%;
   }
 
-  .compare-vs,
+  .compare-team--right {
+    padding-left: 3%;
+  }
+}
+
+@media (max-width: 1350px) {
+  .team-compare-main,
+  .compare-hero__battle {
+    grid-template-columns: 41% 18% 41%;
+  }
+
+  .compare-team {
+    width: 96%;
+    gap: clamp(16px, 2vw, 28px);
+  }
+
+  .compare-team--left {
+    padding-right: 1%;
+  }
+
+  .compare-team--right {
+    padding-left: 1%;
+  }
+
+  .compare-team__logo,
+  .compare-team__logo--placeholder {
+    width: clamp(105px, 8vw, 138px);
+    height: clamp(105px, 8vw, 138px);
+  }
+
+  .compare-team__logo :deep(.team-logo--xl .badge) {
+    transform: scale(2.16);
+  }
+
+  .compare-team__name {
+    font-size: clamp(40px, 3.4vw, 54px);
+  }
+
+  .compare-team__name--medium {
+    font-size: clamp(36px, 3vw, 46px);
+  }
+
+  .compare-team__name--long {
+    font-size: clamp(30px, 2.6vw, 40px);
+  }
+}
+
+@media (max-width: 1200px) {
+  .team-compare-main,
+  .compare-hero__battle {
+    grid-template-columns: 40% 20% 40%;
+    transform: translateY(-12px);
+  }
+
+  .compare-team {
+    width: 100%;
+    gap: 16px;
+  }
+
+  .compare-team__name {
+    font-size: clamp(34px, 4vw, 44px);
+  }
+
+  .compare-team__name--medium {
+    font-size: clamp(30px, 3.6vw, 38px);
+  }
+
+  .compare-team__name--long {
+    font-size: clamp(26px, 3.2vw, 34px);
+  }
+
+  .compare-team__logo,
+  .compare-team__logo--placeholder {
+    width: clamp(90px, 8vw, 112px);
+    height: clamp(90px, 8vw, 112px);
+  }
+
+  .compare-team__logo :deep(.team-logo--xl .badge) {
+    transform: scale(1.75);
+  }
+
+  .compare-vs-img,
   .match-vs {
-    font-size: clamp(64px, 7vw, 88px);
+    width: clamp(130px, 12vw, 168px);
   }
 
-  .compare-team-side__logo :deep(.team-logo--xl),
-  .compare-team-side__placeholder {
-    width: clamp(130px, 13vw, 170px);
-    height: clamp(130px, 13vw, 170px);
-  }
-
-  .compare-team-side__logo :deep(.team-logo--xl .badge) {
-    transform: scale(2.66);
+  .compare-season-pill,
+  .match-season-tag {
+    min-width: 0;
+    width: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 15px;
   }
 }
 
@@ -1101,50 +1257,95 @@ function handleTeamSelect(teamId: string) {
 }
 
 @media (max-width: 720px) {
-  .compare-hero {
+  .team-compare-content,
+  .compare-hero__inner {
     min-height: auto;
+    padding-bottom: 32px;
   }
 
-  .compare-hero__battle,
-  .team-compare-inner {
-    grid-template-columns: 1fr;
-    gap: clamp(20px, 5vw, 28px);
-    min-height: auto;
-    padding-bottom: clamp(24px, 4vw, 32px);
+  .team-compare-main,
+  .compare-hero__battle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(20px, 4vw, 28px);
+    transform: none;
   }
 
-  .compare-team-side,
-  .compare-team-side--left,
-  .compare-team-side--right,
-  .team-side,
-  .team-side-left,
-  .team-side-right {
-    flex-direction: row;
-    justify-content: center;
-
-    .compare-team-info {
-      text-align: center;
-    }
-  }
-
-  .compare-team-side--left .compare-team-name,
-  .compare-team-side--right .compare-team-name {
+  .compare-team,
+  .compare-team--left,
+  .compare-team--right {
+    justify-self: center;
+    width: min(100%, 540px);
     margin-inline: auto;
+    justify-content: center;
+    padding-inline: 0;
   }
 
-  .compare-vs-area,
-  .team-center {
+  .compare-hero__foot {
+    width: min(100%, 540px);
+    min-height: 0;
+  }
+
+  .compare-team--left {
+    order: 1;
+  }
+
+  .compare-hero__foot--left {
     order: 2;
+    justify-content: center;
   }
 
-  .compare-team-name {
-    font-size: clamp(32px, 8vw, 44px);
-    max-width: 100%;
+  .compare-center,
+  .compare-vs-area {
+    order: 3;
   }
 
-  .compare-vs,
+  .compare-hero__foot--center {
+    order: 4;
+  }
+
+  .compare-team--right {
+    order: 5;
+  }
+
+  .compare-hero__foot--right {
+    order: 6;
+    justify-content: center;
+  }
+
+  .compare-hero__foot-align {
+    width: 100%;
+    padding-inline: 0;
+    margin-inline: 0;
+    justify-content: center;
+  }
+
+  .compare-hero__foot-logo-spacer {
+    display: none;
+  }
+
+  .compare-team__info {
+    align-items: flex-start;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .compare-team__name {
+    font-size: clamp(32px, 7vw, 44px);
+  }
+
+  .compare-team__name--medium {
+    font-size: clamp(28px, 6vw, 38px);
+  }
+
+  .compare-team__name--long {
+    font-size: clamp(24px, 5.5vw, 32px);
+  }
+
+  .compare-vs-img,
   .match-vs {
-    font-size: clamp(56px, 14vw, 72px);
+    width: clamp(112px, 14vw, 142px);
   }
 }
 
@@ -1153,36 +1354,38 @@ function handleTeamSelect(teamId: string) {
     grid-template-columns: 1fr;
   }
 
-  .compare-season-pill {
+  .compare-season-pill,
+  .match-season-tag {
+    min-width: 0;
     width: 100%;
-    max-width: min(100%, 320px);
-    font-size: clamp(15px, 3.8vw, 18px);
-    padding-inline: clamp(16px, 4vw, 24px);
+    max-width: min(100%, 300px);
+    font-size: 16px;
+    padding-inline: 18px;
   }
 
-  .compare-team-side,
-  .team-side {
-    gap: clamp(14px, 3.5vw, 20px);
+  .compare-team {
+    gap: clamp(16px, 4vw, 24px);
   }
 
-  .compare-team-side__logo :deep(.team-logo--xl),
-  .compare-team-side__placeholder {
-    width: clamp(110px, 26vw, 140px);
-    height: clamp(110px, 26vw, 140px);
+  .compare-team__logo,
+  .compare-team__logo--placeholder {
+    width: clamp(100px, 22vw, 120px);
+    height: clamp(100px, 22vw, 120px);
   }
 
-  .compare-team-side__logo :deep(.team-logo--xl .badge) {
-    transform: scale(2.19);
+  .compare-team__logo :deep(.team-logo--xl .badge) {
+    transform: scale(1.875);
   }
 
-  .compare-team-record,
-  .compare-team-rank {
-    font-size: clamp(17px, 4.2vw, 22px);
+  .compare-team__record,
+  .compare-team__rank {
+    font-size: clamp(17px, 4vw, 22px);
   }
 
-  .compare-switch-btn {
+  .compare-team__button {
     height: 42px;
     font-size: 15px;
+    padding-inline: 20px;
   }
 }
 </style>
