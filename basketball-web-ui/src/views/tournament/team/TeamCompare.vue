@@ -7,11 +7,14 @@ import compareIcon2 from '@/assets/icon/tournament/compare_2.png'
 import compareIcon3 from '@/assets/icon/tournament/compare_3.png'
 import compareIcon4 from '@/assets/icon/tournament/compare_4.png'
 import vsIcon from '@/assets/icon/tournament/vs.png'
+import ComparisonMetricRow from '@/components/team/ComparisonMetricRow.vue'
+import ComparisonSummaryCard from '@/components/team/ComparisonSummaryCard.vue'
 import TeamSelectModal from '@/components/team/TeamSelectModal.vue'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import PaperTear from '@/components/common/PaperTear.vue'
 import { getCompareData, getTeamById } from '@/mock/team'
-import type { TeamCompareBarStat, TeamCompareData, TeamStage } from '@/types/team'
+import type { TeamCompareData, TeamCompareOverviewStat, TeamStage } from '@/types/team'
+import type { MetricFormatType } from '@/utils/compareMetrics'
 import './styles/team.scss'
 
 const route = useRoute()
@@ -86,43 +89,64 @@ const rightOverview = computed(() => {
   return getCompareData(rightTeamId.value, leftTeamId.value).overview
 })
 
+interface OverviewMetricDef {
+  key: string
+  label: string
+  formatType: MetricFormatType
+  higherIsBetter: boolean
+  field: keyof TeamCompareOverviewStat
+}
+
+const overviewMetricDefs: OverviewMetricDef[] = [
+  {
+    key: 'winRate',
+    label: '胜率',
+    formatType: 'percent',
+    higherIsBetter: true,
+    field: 'winRate',
+  },
+  {
+    key: 'avgPoints',
+    label: '场均得分',
+    formatType: 'decimal',
+    higherIsBetter: true,
+    field: 'avgPoints',
+  },
+  {
+    key: 'avgPointsAgainst',
+    label: '场均失分',
+    formatType: 'decimal',
+    higherIsBetter: false,
+    field: 'avgPointsAgainst',
+  },
+  {
+    key: 'avgPointDiff',
+    label: '场均净胜分',
+    formatType: 'signed',
+    higherIsBetter: true,
+    field: 'avgPointDiff',
+  },
+]
+
 const overviewCards = computed(() => {
   if (!compareData.value || !rightOverview.value) return []
 
-  return [
-    {
-      label: '胜率',
-      left: `${compareData.value.overview.winRate.toFixed(1)}%`,
-      right: `${rightOverview.value.winRate.toFixed(1)}%`,
-      leftRaw: compareData.value.overview.winRate,
-      rightRaw: rightOverview.value.winRate,
-      higherIsBetter: true,
-    },
-    {
-      label: '场均得分',
-      left: compareData.value.overview.avgPoints.toFixed(1),
-      right: rightOverview.value.avgPoints.toFixed(1),
-      leftRaw: compareData.value.overview.avgPoints,
-      rightRaw: rightOverview.value.avgPoints,
-      higherIsBetter: true,
-    },
-    {
-      label: '场均失分',
-      left: compareData.value.overview.avgPointsAgainst.toFixed(1),
-      right: rightOverview.value.avgPointsAgainst.toFixed(1),
-      leftRaw: compareData.value.overview.avgPointsAgainst,
-      rightRaw: rightOverview.value.avgPointsAgainst,
-      higherIsBetter: false,
-    },
-    {
-      label: '场均净胜分',
-      left: formatSigned(compareData.value.overview.avgPointDiff),
-      right: formatSigned(rightOverview.value.avgPointDiff),
-      leftRaw: compareData.value.overview.avgPointDiff,
-      rightRaw: rightOverview.value.avgPointDiff,
-      higherIsBetter: true,
-    },
-  ]
+  return overviewMetricDefs.map((metric) => ({
+    ...metric,
+    icon: overviewIconMap[metric.label],
+    leftValue: compareData.value!.overview[metric.field],
+    rightValue: rightOverview.value![metric.field],
+  }))
+})
+
+const comparisonHeadingMeta = computed(() => {
+  const leftGames = leftTeam.value.wins + leftTeam.value.losses
+  const rightGames = rightTeam.value ? rightTeam.value.wins + rightTeam.value.losses : 0
+
+  return {
+    scope: `统计范围：${leftTeam.value.seasonYear} 常规赛已审核比赛`,
+    games: `${leftTeam.value.code} ${leftGames}场 · ${rightTeam.value?.code ?? '--'} ${rightGames}场`,
+  }
 })
 
 watch(
@@ -146,44 +170,8 @@ watch(
   { immediate: true },
 )
 
-function formatSigned(value: number): string {
-  return value > 0 ? `+${value.toFixed(1)}` : value.toFixed(1)
-}
-
 function getRecordText(wins: number, losses: number): string {
   return `${wins}胜${losses}负`
-}
-
-function getBarWidth(value: number, other: number): number {
-  const max = Math.max(value, other, 0.0001)
-  return (value / max) * 100
-}
-
-function isWinner(stat: TeamCompareBarStat, side: 'left' | 'right'): boolean {
-  if (stat.higherIsBetter) {
-    if (stat.left === stat.right) return true
-    return side === 'left' ? stat.left > stat.right : stat.right > stat.left
-  }
-  if (stat.left === stat.right) return true
-  return side === 'left' ? stat.left < stat.right : stat.right < stat.left
-}
-
-function isOverviewWinner(
-  card: (typeof overviewCards.value)[number],
-  side: 'left' | 'right',
-): boolean {
-  if (card.higherIsBetter) {
-    if (card.leftRaw === card.rightRaw) return true
-    return side === 'left' ? card.leftRaw > card.rightRaw : card.rightRaw > card.leftRaw
-  }
-  if (card.leftRaw === card.rightRaw) return true
-  return side === 'left' ? card.leftRaw < card.rightRaw : card.rightRaw < card.leftRaw
-}
-
-function formatBarValue(stat: TeamCompareBarStat, side: 'left' | 'right'): string {
-  const value = side === 'left' ? stat.left : stat.right
-  if (stat.key.endsWith('Pct')) return `${value.toFixed(1)}%`
-  return value.toFixed(1)
 }
 
 function openSelector(side: 'left' | 'right') {
@@ -256,7 +244,7 @@ function getTeamNameSizeClass(name: string) {
             </div>
 
             <div class="compare-center compare-vs-area">
-              <img :src="vsIcon" alt="VS" class="compare-vs-img match-vs" />
+              <img :src="vsIcon" alt="VS" class="compare-vs-img match-vs-image" />
             </div>
 
             <div class="compare-team compare-team--right">
@@ -318,152 +306,67 @@ function getTeamNameSizeClass(name: string) {
       <div class="compare-paper">
         <PaperTear position="top" tone="light" />
         <div class="compare-paper__body">
-          <div class="site-shell-inner compare-content">
-            <div class="compare-section-title">
-              <h1 class="compare-section-title__cn">常规赛数据对比</h1>
-              <span class="compare-section-title__en">Regular Season Comparison</span>
-            </div>
-            <p class="compare-scope">统计范围：已审核完成比赛</p>
+          <div class="site-shell-inner compare-content team-comparison">
+            <header class="comparison-heading">
+              <div class="comparison-heading__main">
+                <h2>常规赛数据对比</h2>
+                <span>REGULAR SEASON COMPARISON</span>
+              </div>
+
+              <div v-if="hasValidPair" class="comparison-heading__meta">
+                <span>{{ comparisonHeadingMeta.scope }}</span>
+                <span>{{ comparisonHeadingMeta.games }}</span>
+              </div>
+            </header>
 
             <div v-if="!hasValidPair" class="compare-empty">请选择对比球队后查看数据</div>
 
             <template v-else-if="compareData && rightTeam">
-              <section class="compare-top-stats">
-                <article v-for="card in overviewCards" :key="card.label" class="compare-card">
-                  <div class="compare-card__head">
-                    <img
-                      v-if="overviewIconMap[card.label]"
-                      :src="overviewIconMap[card.label]"
-                      :alt="card.label"
-                      class="compare-card__icon"
+              <section class="comparison-section">
+                <div class="summary-grid">
+                  <ComparisonSummaryCard
+                    v-for="card in overviewCards"
+                    :key="card.key"
+                    :label="card.label"
+                    :icon="card.icon"
+                    :left-value="card.leftValue"
+                    :right-value="card.rightValue"
+                    :left-team-code="leftTeam.code"
+                    :right-team-code="rightTeam.code"
+                    :higher-is-better="card.higherIsBetter"
+                    :format-type="card.formatType"
+                  />
+                </div>
+
+                <section class="metric-section">
+                  <h3 class="metric-section__title">基础数据</h3>
+                  <div class="metric-section__rows">
+                    <ComparisonMetricRow
+                      v-for="stat in compareData.basics"
+                      :key="stat.key"
+                      :stat="stat"
                     />
-                    <span>{{ card.label }}</span>
                   </div>
-                  <div class="compare-card__values">
-                    <strong
-                      class="compare-card__value compare-card__value--left"
-                      :class="{ 'is-winner': isOverviewWinner(card, 'left') }"
-                    >
-                      {{ card.left }}
-                    </strong>
-                    <strong
-                      class="compare-card__value compare-card__value--right"
-                      :class="{ 'is-winner': isOverviewWinner(card, 'right') }"
-                    >
-                      {{ card.right }}
-                    </strong>
-                  </div>
-                  <div class="compare-card__teams">
-                    <span>{{ leftTeam.code }}</span>
-                    <i aria-hidden="true" />
-                    <span>{{ rightTeam.code }}</span>
-                  </div>
-                </article>
-              </section>
+                </section>
 
-              <section class="compare-block">
-                <div class="compare-block-title">
-                  <h2>基础数据</h2>
-                </div>
-                <div class="metric-grid">
-                  <div class="metric-side metric-side--left">
-                    <div v-for="stat in compareData.basics" :key="stat.key" class="metric-row">
-                      <strong
-                        class="metric-value"
-                        :class="{
-                          'is-winner': isWinner(stat, 'left'),
-                          'is-muted': !isWinner(stat, 'left'),
-                        }"
-                      >
-                        {{ formatBarValue(stat, 'left') }}
-                      </strong>
-                      <span class="bar-track">
-                        <span
-                          class="bar-fill bar-fill--left"
-                          :class="{ 'is-gray': !isWinner(stat, 'left') }"
-                          :style="{ width: `${getBarWidth(stat.left, stat.right)}%` }"
-                        />
-                      </span>
-                    </div>
+                <section class="metric-section">
+                  <h3 class="metric-section__title">投篮表现</h3>
+                  <div class="metric-section__rows">
+                    <ComparisonMetricRow
+                      v-for="stat in compareData.shooting"
+                      :key="stat.key"
+                      :stat="stat"
+                    />
                   </div>
-                  <div class="metric-labels">
-                    <span v-for="stat in compareData.basics" :key="stat.key">{{ stat.label }}</span>
-                  </div>
-                  <div class="metric-side metric-side--right">
-                    <div v-for="stat in compareData.basics" :key="stat.key" class="metric-row">
-                      <span class="bar-track">
-                        <span
-                          class="bar-fill bar-fill--right"
-                          :class="{ 'is-gray': !isWinner(stat, 'right') }"
-                          :style="{ width: `${getBarWidth(stat.right, stat.left)}%` }"
-                        />
-                      </span>
-                      <strong
-                        class="metric-value"
-                        :class="{
-                          'is-winner': isWinner(stat, 'right'),
-                          'is-muted': !isWinner(stat, 'right'),
-                        }"
-                      >
-                        {{ formatBarValue(stat, 'right') }}
-                      </strong>
-                    </div>
-                  </div>
+                </section>
+
+                <div class="comparison-note">
+                  <span class="comparison-note__icon" aria-hidden="true">▼</span>
+                  <span>
+                    数值越高通常代表表现越优；场均失分、场均失误和场均犯规为数值越低越优。
+                  </span>
                 </div>
               </section>
-
-              <section class="compare-block">
-                <div class="compare-block-title">
-                  <h2>投篮表现</h2>
-                </div>
-                <div class="metric-grid">
-                  <div class="metric-side metric-side--left">
-                    <div v-for="stat in compareData.shooting" :key="stat.key" class="metric-row">
-                      <strong
-                        class="metric-value"
-                        :class="{
-                          'is-winner': isWinner(stat, 'left'),
-                          'is-muted': !isWinner(stat, 'left'),
-                        }"
-                      >
-                        {{ formatBarValue(stat, 'left') }}
-                      </strong>
-                      <span class="bar-track">
-                        <span
-                          class="bar-fill bar-fill--left"
-                          :class="{ 'is-gray': !isWinner(stat, 'left') }"
-                          :style="{ width: `${getBarWidth(stat.left, stat.right)}%` }"
-                        />
-                      </span>
-                    </div>
-                  </div>
-                  <div class="metric-labels">
-                    <span v-for="stat in compareData.shooting" :key="stat.key">{{ stat.label }}</span>
-                  </div>
-                  <div class="metric-side metric-side--right">
-                    <div v-for="stat in compareData.shooting" :key="stat.key" class="metric-row">
-                      <span class="bar-track">
-                        <span
-                          class="bar-fill bar-fill--right"
-                          :class="{ 'is-gray': !isWinner(stat, 'right') }"
-                          :style="{ width: `${getBarWidth(stat.right, stat.left)}%` }"
-                        />
-                      </span>
-                      <strong
-                        class="metric-value"
-                        :class="{
-                          'is-winner': isWinner(stat, 'right'),
-                          'is-muted': !isWinner(stat, 'right'),
-                        }"
-                      >
-                        {{ formatBarValue(stat, 'right') }}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <p class="compare-note">▼ 高亮代表该项表现更优；失误、犯规为数值越低越优</p>
             </template>
           </div>
         </div>
@@ -586,7 +489,7 @@ function getTeamNameSizeClass(name: string) {
   grid-template-columns: 43% 14% 43%;
   grid-template-rows: auto auto;
   align-items: end;
-  row-gap: clamp(8px, 1.2vw, 14px);
+  row-gap: clamp(4px, 0.8vw, 10px);
   width: 100%;
   margin: 0 auto;
   transform: translateY(-18px);
@@ -824,12 +727,13 @@ function getTeamNameSizeClass(name: string) {
   align-items: center;
   justify-content: center;
   justify-self: center;
+  gap: clamp(24px, 2.1vw, 34px);
 }
 
 .compare-vs-img,
-.match-vs {
+.match-vs-image {
   display: block;
-  width: clamp(160px, 13vw, 210px);
+  width: clamp(108px, 8.5vw, 142px);
   height: auto;
   max-width: 100%;
   object-fit: contain;
@@ -846,8 +750,8 @@ function getTeamNameSizeClass(name: string) {
   min-width: 260px;
   max-width: min(100%, 330px);
   width: fit-content;
-  height: 46px;
-  padding: 0 26px;
+  min-height: 46px;
+  padding: 0 22px;
   border: 1px solid rgba(185, 132, 31, 0.88);
   border-radius: 0;
   background: rgba(8, 8, 8, 0.5);
@@ -861,264 +765,8 @@ function getTeamNameSizeClass(name: string) {
 }
 
 .compare-content {
-  padding-block: clamp(16px, 1.6vw, 24px) 64px;
+  padding-block: clamp(16px, 1.6vw, 24px) clamp(56px, 5vw, 72px);
   color: var(--cnpa-paper-text);
-}
-
-.compare-section-title {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 18px;
-}
-
-.compare-section-title__cn {
-  margin: 0;
-  font-size: clamp(28px, 2.4vw, 32px);
-  line-height: 1;
-  font-weight: 900;
-  letter-spacing: -1px;
-}
-
-.compare-section-title__en {
-  color: var(--cnpa-red);
-  font-size: 13px;
-  line-height: 1.05;
-  font-style: italic;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.compare-scope {
-  margin: 14px 0 0;
-  color: rgba(0, 0, 0, 0.55);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.compare-empty {
-  margin-top: 26px;
-  padding: 48px 16px;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  background: rgba(255, 255, 255, 0.22);
-  text-align: center;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--cnpa-paper-text-muted);
-}
-
-.compare-top-stats {
-  margin-top: 26px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.compare-card {
-  min-height: 146px;
-  padding: 24px 20px 15px;
-  background: rgba(255, 255, 255, 0.33);
-  border: 1px solid rgba(0, 0, 0, 0.13);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
-  box-sizing: border-box;
-}
-
-.compare-card__head {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  min-height: 38px;
-  color: #111;
-  font-size: 17px;
-  font-weight: 900;
-}
-
-.compare-card__icon {
-  width: 38px;
-  height: 38px;
-  flex-shrink: 0;
-  object-fit: contain;
-  display: block;
-}
-
-.compare-card__values {
-  margin-top: 24px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: end;
-  gap: 18px;
-}
-
-.compare-card__value {
-  text-align: center;
-  font-size: clamp(22px, 2vw, 28px);
-  line-height: 1;
-  font-weight: 900;
-  color: #777;
-
-  &--left.is-winner {
-    color: var(--gold);
-  }
-
-  &--right.is-winner {
-    color: #174b92;
-  }
-}
-
-.compare-card__teams {
-  margin-top: 18px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(0, 0, 0, 0.16);
-  display: grid;
-  grid-template-columns: 1fr 1px 1fr;
-  gap: 12px;
-  color: rgba(0, 0, 0, 0.58);
-  font-size: 13px;
-  font-weight: 800;
-  text-align: center;
-
-  i {
-    width: 1px;
-    height: 16px;
-    background: rgba(0, 0, 0, 0.22);
-    display: block;
-    margin: 0 auto;
-  }
-}
-
-.compare-block {
-  margin-top: 42px;
-}
-
-.compare-block-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-
-  &::before {
-    content: '';
-    width: 4px;
-    height: 28px;
-    background: var(--cnpa-red);
-    flex-shrink: 0;
-  }
-
-  h2 {
-    margin: 0;
-    font-size: clamp(24px, 2vw, 28px);
-    line-height: 1;
-    font-weight: 900;
-  }
-}
-
-.metric-grid {
-  margin-top: 22px;
-  display: grid;
-  grid-template-columns: 1fr 120px 1fr;
-  gap: 24px;
-  align-items: center;
-}
-
-.metric-side {
-  display: flex;
-  flex-direction: column;
-  gap: 13px;
-}
-
-.metric-row {
-  height: 40px;
-  display: grid;
-  align-items: center;
-  gap: 13px;
-  padding: 0 16px;
-  background: rgba(255, 255, 255, 0.28);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  box-sizing: border-box;
-}
-
-.metric-side--left .metric-row {
-  grid-template-columns: 66px 1fr;
-}
-
-.metric-side--right .metric-row {
-  grid-template-columns: 1fr 66px;
-}
-
-.metric-value {
-  font-size: 21px;
-  line-height: 1;
-  font-weight: 900;
-}
-
-.metric-side--left .metric-value {
-  color: var(--gold);
-
-  &.is-muted {
-    color: #787878;
-  }
-}
-
-.metric-side--right .metric-value {
-  color: #174b92;
-  text-align: right;
-
-  &.is-muted {
-    color: #787878;
-  }
-}
-
-.bar-track {
-  height: 14px;
-  background: rgba(0, 0, 0, 0.08);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.2s ease;
-
-  &--left {
-    background: #c0963e;
-  }
-
-  &--right {
-    background: #174c9f;
-    margin-left: auto;
-  }
-
-  &.is-gray {
-    background: rgba(0, 0, 0, 0.13);
-  }
-}
-
-.metric-labels {
-  display: flex;
-  flex-direction: column;
-  gap: 13px;
-  text-align: center;
-
-  span {
-    height: 40px;
-    display: grid;
-    place-items: center;
-    font-size: 18px;
-    font-weight: 900;
-    color: #111;
-  }
-}
-
-.compare-note {
-  margin: 27px 0 0 24px;
-  color: rgba(0, 0, 0, 0.62);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 1px;
 }
 
 @media (min-width: 1600px) {
@@ -1228,8 +876,8 @@ function getTeamNameSizeClass(name: string) {
   }
 
   .compare-vs-img,
-  .match-vs {
-    width: clamp(130px, 12vw, 168px);
+  .match-vs-image {
+    width: clamp(130px, 12vw, 142px);
   }
 
   .compare-season-pill,
@@ -1243,16 +891,13 @@ function getTeamNameSizeClass(name: string) {
 }
 
 @media (max-width: 992px) {
-  .compare-top-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .metric-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .metric-labels {
-    order: -1;
+  .compare-season-pill,
+  .match-season-tag {
+    min-width: 0;
+    width: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 15px;
   }
 }
 
@@ -1344,16 +989,12 @@ function getTeamNameSizeClass(name: string) {
   }
 
   .compare-vs-img,
-  .match-vs {
-    width: clamp(112px, 14vw, 142px);
+  .match-vs-image {
+    width: clamp(108px, 14vw, 132px);
   }
 }
 
 @media (max-width: 640px) {
-  .compare-top-stats {
-    grid-template-columns: 1fr;
-  }
-
   .compare-season-pill,
   .match-season-tag {
     min-width: 0;
