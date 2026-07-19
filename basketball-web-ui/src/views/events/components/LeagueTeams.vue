@@ -29,10 +29,11 @@ function goPage(index: number) {
 </script>
 
 <template>
-  <section class="league-teams events-section events-section-panel">
-    <div class="events-inner">
+  <div class="site-shell">
+    <section class="league-teams events-section-panel">
+      <div class="site-shell-inner">
       <div class="section-head">
-        <div>
+        <div class="section-head-group">
           <h2 class="section-head-title">联赛战队</h2>
           <span class="section-head-sub">League Teams</span>
         </div>
@@ -44,10 +45,6 @@ function goPage(index: number) {
               </option>
             </select>
           </label>
-          <button type="button" class="section-head-action">
-            查看全部战队
-            <span>→</span>
-          </button>
         </div>
       </div>
 
@@ -58,7 +55,6 @@ function goPage(index: number) {
           <article v-for="team in visibleTeams" :key="team.id" class="team-card">
             <TeamLogo :team="team" size="lg" />
             <h3>{{ team.name }}</h3>
-            <p class="team-record sport-num">{{ team.wins }}-{{ team.losses }}</p>
           </article>
         </div>
 
@@ -76,8 +72,9 @@ function goPage(index: number) {
           @click="goPage(index - 1)"
         />
       </div>
-    </div>
-  </section>
+      </div>
+    </section>
+  </div>
 </template>
 
 <style scoped lang="scss">
@@ -153,12 +150,6 @@ function goPage(index: number) {
     border-color: rgba(225, 6, 19, 0.45);
     transform: translateY(-2px);
   }
-}
-
-.team-record {
-  margin: 0;
-  font-size: 18px;
-  color: var(--cnpa-red);
 }
 
 .carousel-dots {

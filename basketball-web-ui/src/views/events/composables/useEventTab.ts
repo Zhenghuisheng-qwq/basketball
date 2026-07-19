@@ -1,12 +1,14 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { EventTab } from '../types/events'
+import { useCompetitionSelector } from './useCompetitionSelector'
 
 const VALID_TABS: EventTab[] = ['overview', 'schedule', 'stage']
 
 export function useEventTab() {
   const route = useRoute()
   const router = useRouter()
+  const { currentCompetitionId } = useCompetitionSelector()
 
   const activeTab = computed<EventTab>(() => {
     const tab = route.query.tab
@@ -18,7 +20,13 @@ export function useEventTab() {
 
   function setTab(tab: EventTab) {
     if (tab === activeTab.value) return
-    router.push({ path: '/tournament', query: { tab } })
+    router.push({
+      path: '/tournament',
+      query: {
+        competition: currentCompetitionId.value,
+        tab,
+      },
+    })
   }
 
   return { activeTab, setTab, VALID_TABS }

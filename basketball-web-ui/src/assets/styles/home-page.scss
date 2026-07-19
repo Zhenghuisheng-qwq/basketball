@@ -21,8 +21,10 @@
 .paper-band {
   position: relative;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
-  overflow: visible;
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .paper-band-light {
@@ -89,8 +91,6 @@
   z-index: 2;
   width: 100%;
   box-sizing: border-box;
-  padding-left: clamp(24px, 3.2%, 56px);
-  padding-right: clamp(24px, 3.2%, 56px);
 }
 
 .match-section {
@@ -121,9 +121,8 @@
   position: relative;
   z-index: 2;
   width: 100%;
-  padding:
+  padding-block:
     clamp(54px, 4.5vw, 78px)
-    clamp(24px, 3.2%, 56px)
     clamp(58px, 4.8vw, 84px);
   box-sizing: border-box;
   display: grid;
@@ -135,7 +134,7 @@
 .ranking-section {
   width: 100%;
   box-sizing: border-box;
-  padding: clamp(56px, 4.8vw, 72px) var(--site-inner-padding) 64px;
+  padding-block: clamp(56px, 4.8vw, 72px) 64px;
 }
 
 .section-head {
@@ -574,16 +573,6 @@ tr:last-child td {
 }
 
 @media (max-width: 768px) {
-  .paper-band-inner {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
-  .about-paper-inner {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
   .about-text h2 {
     font-size: 28px;
   }

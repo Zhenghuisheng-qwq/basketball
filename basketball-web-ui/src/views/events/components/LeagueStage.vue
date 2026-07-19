@@ -1,49 +1,55 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import PaperSection from '@/components/common/PaperSection.vue'
 import type { StageType } from '../types/events'
 import RegularStandings from './RegularStandings.vue'
 import PlayoffBracket from './PlayoffBracket.vue'
 import CompetitionFormat from './CompetitionFormat.vue'
 import LeagueAbout from './LeagueAbout.vue'
+import StageProgressHeader from './StageProgressHeader.vue'
 
 const selectedStage = ref<StageType>('regular')
-
-const stageOptions: Array<{ key: StageType; label: string }> = [
-  { key: 'regular', label: '常规赛' },
-  { key: 'playoffs', label: '季后赛' },
-]
 </script>
 
 <template>
   <div class="league-stage">
-    <section class="events-section events-section-dark stage-main">
-      <div class="events-inner">
-        <div class="stage-head">
-          <div>
-            <h2 class="section-head-title">赛事进度</h2>
-            <span class="section-head-sub">Stage Progress</span>
+    <template v-if="selectedStage === 'regular'">
+      <div class="site-shell">
+        <section class="events-section-dark stage-main">
+          <div class="site-shell-inner">
+            <StageProgressHeader
+              :selected-stage="selectedStage"
+              variant="dark"
+              @update:selected-stage="selectedStage = $event"
+            />
+            <RegularStandings />
           </div>
-
-          <div class="stage-switch">
-            <button
-              v-for="option in stageOptions"
-              :key="option.key"
-              type="button"
-              class="stage-btn"
-              :class="{ active: selectedStage === option.key }"
-              @click="selectedStage = option.key"
-            >
-              {{ option.label }}
-            </button>
-          </div>
-        </div>
-
-        <RegularStandings v-if="selectedStage === 'regular'" />
-        <PlayoffBracket v-else />
+        </section>
       </div>
-    </section>
 
-    <CompetitionFormat :current-stage="selectedStage === 'regular' ? 'regular' : 'playoffs'" />
+      <CompetitionFormat current-stage="regular" />
+    </template>
+
+    <template v-else>
+      <div class="site-shell stage-playoffs-shell">
+        <PaperSection edge="top" tone="gray" class="stage-progress-section">
+          <div class="stage-progress-section__inner">
+            <StageProgressHeader
+              :selected-stage="selectedStage"
+              variant="paper"
+              @update:selected-stage="selectedStage = $event"
+            />
+            <PlayoffBracket />
+          </div>
+        </PaperSection>
+
+        <PaperSection edge="bottom" tone="gray" class="competition-format-section">
+          <div class="stage-section-divider" aria-hidden="true" />
+          <CompetitionFormat embedded current-stage="playoffs" />
+        </PaperSection>
+      </div>
+    </template>
+
     <LeagueAbout />
   </div>
 </template>
@@ -53,45 +59,47 @@ const stageOptions: Array<{ key: StageType; label: string }> = [
   padding: 48px 0 24px;
 }
 
-.stage-head {
+.stage-playoffs-shell {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
+  flex-direction: column;
 }
 
-.stage-switch {
-  display: inline-flex;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+.stage-progress-section,
+.competition-format-section {
+  margin-top: 0;
 }
 
-.stage-btn {
-  min-width: 96px;
-  height: 40px;
-  border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 0.2s ease;
+.stage-progress-section__inner {
+  padding:
+    clamp(28px, 2.4vw, 42px)
+    clamp(28px, 3vw, 52px)
+    clamp(18px, 1.6vw, 28px);
+}
 
-  &.active {
-    background: var(--cnpa-red);
-    color: #fff;
-  }
-
-  &:hover:not(.active) {
-    color: #fff;
-    background: rgba(225, 6, 19, 0.12);
-  }
+.stage-section-divider {
+  height: 1px;
+  margin:
+    0
+    clamp(28px, 3vw, 52px)
+    clamp(4px, 0.5vw, 8px);
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(17, 17, 17, 0.28) 8%,
+      rgba(17, 17, 17, 0.28) 92%,
+      transparent 100%
+    );
 }
 
 @media (max-width: 768px) {
-  .stage-head {
-    flex-direction: column;
+  .stage-progress-section__inner {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .stage-section-divider {
+    margin-inline: 16px;
   }
 }
 </style>

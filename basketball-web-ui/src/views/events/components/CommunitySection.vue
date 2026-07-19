@@ -17,8 +17,9 @@ function handleClick(_link: CommunityLink, event: Event) {
 </script>
 
 <template>
-  <section class="community-section events-section events-section-red">
-    <div class="events-inner">
+  <div class="site-shell">
+    <section class="community-section events-section-red">
+      <div class="site-shell-inner">
       <div class="section-head">
         <div>
           <h2 class="section-head-title">加入 CNPA</h2>
@@ -44,8 +45,9 @@ function handleClick(_link: CommunityLink, event: Event) {
           <span class="community-arrow">→</span>
         </a>
       </div>
-    </div>
-  </section>
+      </div>
+    </section>
+  </div>
 </template>
 
 <style scoped lang="scss">

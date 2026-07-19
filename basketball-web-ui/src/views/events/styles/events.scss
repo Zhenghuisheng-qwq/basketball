@@ -3,7 +3,13 @@
 .events-page {
   width: 100%;
   background: #050505;
-  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+.league-overview,
+.league-stage {
+  width: 100%;
+  overflow-x: clip;
 }
 
 .events-hero-section {
@@ -21,6 +27,7 @@
 
 .events-section {
   width: 100%;
+  box-sizing: border-box;
 }
 
 .events-section-dark {
@@ -29,30 +36,6 @@
 
 .events-section-panel {
   background: #0d0d0d;
-}
-
-.events-section-paper {
-  position: relative;
-  background:
-    radial-gradient(ellipse at 12% 24%, rgba(101, 87, 68, 0.035) 0%, transparent 48%),
-    linear-gradient(180deg, #f1f0ed 0%, #ebeae7 100%);
-  color: #111;
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.35;
-    background-image:
-      repeating-linear-gradient(
-        135deg,
-        rgba(0, 0, 0, 0.018) 0,
-        rgba(0, 0, 0, 0.018) 1px,
-        transparent 1px,
-        transparent 6px
-      );
-  }
 }
 
 .events-section-red {
@@ -113,12 +96,5 @@
   &:hover {
     filter: brightness(1.08);
     transform: translateY(-1px);
-  }
-}
-
-@media (max-width: 768px) {
-  .events-inner {
-    padding-left: 16px;
-    padding-right: 16px;
   }
 }

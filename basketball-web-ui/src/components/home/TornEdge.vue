@@ -4,7 +4,7 @@ import { computed } from 'vue'
 const props = withDefaults(
   defineProps<{
     position?: 'top' | 'bottom'
-    tone?: 'light' | 'dark'
+    tone?: 'light' | 'dark' | 'gray'
   }>(),
   {
     position: 'top',
@@ -13,6 +13,7 @@ const props = withDefaults(
 )
 
 const edgeColor = computed(() => {
+  if (props.tone === 'gray') return '#ecebe7'
   return props.tone === 'light' ? '#f2efe8' : '#050505'
 })
 

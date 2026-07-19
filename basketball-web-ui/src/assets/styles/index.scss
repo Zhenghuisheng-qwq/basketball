@@ -1,7 +1,7 @@
 @use './variables.scss';
+@use './components/paper-section';
 
-* {
-  box-sizing: border-box;
+* {  box-sizing: border-box;
 }
 
 body {
@@ -51,7 +51,8 @@ a {
 
 .page-container {
   width: min(calc(100% - var(--site-gutter) * 2), var(--site-width));
-  margin: 0 auto;
+  max-width: var(--site-width);
+  margin-inline: auto;
   padding: 48px var(--site-inner-padding) 64px;
   box-sizing: border-box;
 }
@@ -78,20 +79,34 @@ a {
   border-left: 3px solid var(--cnpa-color-primary);
 }
 
-.events-inner {
+.events-inner,
+.site-content {
   width: min(calc(100% - var(--site-gutter) * 2), var(--site-width));
-  margin: 0 auto;
-  padding-left: var(--site-inner-padding);
-  padding-right: var(--site-inner-padding);
+  max-width: var(--site-width);
+  margin-inline: auto;
+  padding-inline: var(--site-inner-padding);
   box-sizing: border-box;
 }
 
 .section-head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 28px;
+}
+
+.section-head-group {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(10px, 1.1vw, 18px);
+  flex-wrap: wrap;
+  min-width: 0;
+
+  .section-head-sub,
+  .cnpa-paper-section__subtitle {
+    margin-top: 0;
+  }
 }
 
 .section-head-title {

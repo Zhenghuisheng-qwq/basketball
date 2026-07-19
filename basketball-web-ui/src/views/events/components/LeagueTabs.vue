@@ -34,9 +34,10 @@ const tabs: Array<{ key: EventTab; label: string }> = [
 
 <style scoped lang="scss">
 .league-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  width: 100%;
+  display: inline-flex;
+  align-items: stretch;
+  width: fit-content;
+  max-width: 100%;
   min-height: 64px;
   margin-top: 0;
   background: #080808;
@@ -48,6 +49,9 @@ const tabs: Array<{ key: EventTab; label: string }> = [
 
 .league-tab {
   position: relative;
+  flex: 0 0 auto;
+  min-width: clamp(88px, 8vw, 120px);
+  padding: 0 clamp(20px, 2vw, 36px);
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.72);
@@ -75,6 +79,18 @@ const tabs: Array<{ key: EventTab; label: string }> = [
       height: 3px;
       background: var(--cnpa-red);
     }
+  }
+}
+
+@media (max-width: 480px) {
+  .league-tabs {
+    min-height: 56px;
+  }
+
+  .league-tab {
+    min-width: 72px;
+    padding: 0 16px;
+    font-size: 14px;
   }
 }
 </style>

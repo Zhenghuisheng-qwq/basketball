@@ -27,7 +27,10 @@ function handleShift(offset: number) {
 </script>
 
 <template>
-  <div class="calendar-panel schedule-panel" @click.stop>
+  <div
+    class="calendar-panel schedule-panel cnpa-paper-section cnpa-paper-section--gray cnpa-paper-floating-panel"
+    @click.stop
+  >
     <div class="calendar-head">
       <button type="button" class="month-arrow" aria-label="上一组月份" @click="handleShift(-3)">
         ‹
@@ -73,9 +76,6 @@ function handleShift(offset: number) {
 .calendar-panel {
   width: min(760px, calc(100vw - 32px));
   padding: 18px;
-  border: 1px solid rgba(10, 10, 10, 0.12);
-  background: #f1f0ed;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
 }
 
 .calendar-head {

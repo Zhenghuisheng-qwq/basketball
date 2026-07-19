@@ -20,6 +20,13 @@ const router = createRouter({
       meta: { title: '赛事' },
     },
     {
+      path: '/events',
+      redirect: (to) => ({
+        path: '/tournament',
+        query: to.query,
+      }),
+    },
+    {
       path: '/data',
       name: 'Data',
       component: () => import('@/views/data/index.vue'),

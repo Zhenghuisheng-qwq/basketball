@@ -12,7 +12,10 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="team-panel schedule-panel" @click.stop>
+  <div
+    class="team-panel schedule-panel cnpa-paper-section cnpa-paper-section--gray cnpa-paper-floating-panel"
+    @click.stop
+  >
     <h3>选择参赛战队</h3>
     <div class="team-list">
       <button
@@ -46,17 +49,6 @@ const emit = defineEmits<{
 .team-panel {
   width: min(920px, calc(100vw - 32px));
   padding: 20px;
-  border: 1px solid rgba(10, 10, 10, 0.12);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, #f1f0ed 100%),
-    repeating-linear-gradient(
-      135deg,
-      rgba(0, 0, 0, 0.018) 0,
-      rgba(0, 0, 0, 0.018) 1px,
-      transparent 1px,
-      transparent 6px
-    );
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
 
   h3 {
     margin: 0 0 16px;

@@ -83,6 +83,24 @@ export interface LeagueInfo {
   platform: string
 }
 
+export interface LeagueSummary {
+  seasonName: string
+  seasonPeriod: string
+  teamCount: number
+  teamDescription: string
+  currentStageName: string
+  platformName: string
+}
+
+export type LeagueHeroMetaIcon = 'calendar' | 'trophy' | 'stage' | 'gamepad'
+
+export interface LeagueHeroMetaItem {
+  key: 'season' | 'teams' | 'stage' | 'platform'
+  icon: LeagueHeroMetaIcon
+  title: string
+  value: string
+}
+
 export interface CommunityLink {
   id: string
   title: string

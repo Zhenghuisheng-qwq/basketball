@@ -13,6 +13,8 @@ defineProps<{
     <div v-else-if="type === 'dragon'" class="dragon" />
     <div v-else-if="type === 'legend'" class="crown" />
     <div v-else-if="type === 'rangers'" class="ranger" />
+    <div v-else-if="type === 'omega'" class="omega" />
+    <div v-else-if="type === 'allstar'" class="allstar" />
   </div>
 </template>
 
@@ -102,5 +104,41 @@ defineProps<{
     content: 'R';
     font-size: 36px;
   }
+}
+
+.omega {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #6f7dff, #2a2f8f 55%, #12152f);
+  border: 2px solid rgba(17, 17, 17, 0.35);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 950;
+
+  &::after {
+    content: 'Ω';
+  }
+}
+
+.allstar {
+  width: 58px;
+  height: 58px;
+  background: linear-gradient(145deg, #ffd86b, #e8a317 45%, #8a5a00);
+  clip-path: polygon(
+    50% 0%,
+    61% 35%,
+    98% 35%,
+    68% 57%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 57%,
+    2% 35%,
+    39% 35%
+  );
+  filter: drop-shadow(0 0 6px rgba(232, 163, 23, 0.35));
 }
 </style>

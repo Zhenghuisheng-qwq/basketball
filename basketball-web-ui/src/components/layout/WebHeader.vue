@@ -1,15 +1,22 @@
 <script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import logoImg from '@/assets/icon/logo.png'
+import CompetitionDropdown from './CompetitionDropdown.vue'
+import { useCompetitionSelector } from '@/views/events/composables/useCompetitionSelector'
 
 const route = useRoute()
 const router = useRouter()
 
+const {
+  competitionOptions,
+  currentCompetitionId,
+  selectCompetition,
+} = useCompetitionSelector()
+
 const hasHonorRoute = router.getRoutes().some((r) => r.path === '/honor')
 
 const navItems = [
-  { label: '首页', to: '/home', exact: true },
-  { label: '赛事', to: '/tournament' },
   { label: '数据', to: '/data' },
   {
     label: '名人堂',
@@ -19,12 +26,128 @@ const navItems = [
   { label: '公告', to: '/notice' },
 ]
 
+const isCompetitionMenuOpen = ref(false)
+const isMobileMenuOpen = ref(false)
+const isMobileCompetitionOpen = ref(false)
+const competitionNavRef = ref<HTMLElement | null>(null)
+const competitionTriggerRef = ref<HTMLButtonElement | null>(null)
+const competitionDropdownRef = ref<InstanceType<typeof CompetitionDropdown> | null>(null)
+
+let closeTimer: ReturnType<typeof setTimeout> | null = null
+
+const isTournamentRoute = computed(
+  () => route.path === '/tournament' || route.path === '/events',
+)
+
 function isActive(item: (typeof navItems)[number]) {
-  if (item.exact) return route.path === '/home' && !route.hash
   if (item.hashMatch) return route.path === '/home' && route.hash === '#teams'
   if (item.to === '/honor') return route.path === '/honor'
   if (typeof item.to === 'string') return route.path === item.to
   return false
+}
+
+function clearCloseTimer() {
+  if (closeTimer) {
+    clearTimeout(closeTimer)
+    closeTimer = null
+  }
+}
+
+function openCompetitionMenu() {
+  clearCloseTimer()
+  isCompetitionMenuOpen.value = true
+}
+
+function closeCompetitionMenu(focusTrigger = false) {
+  clearCloseTimer()
+  isCompetitionMenuOpen.value = false
+  if (focusTrigger) {
+    competitionTriggerRef.value?.focus()
+  }
+}
+
+function toggleCompetitionMenu() {
+  if (isCompetitionMenuOpen.value) {
+    closeCompetitionMenu()
+  } else {
+    openCompetitionMenu()
+  }
+}
+
+function handleCompetitionMouseEnter() {
+  clearCloseTimer()
+  isCompetitionMenuOpen.value = true
+}
+
+function handleCompetitionMouseLeave() {
+  clearCloseTimer()
+  closeTimer = setTimeout(() => {
+    isCompetitionMenuOpen.value = false
+  }, 150)
+}
+
+function handleSelectCompetition(competition: (typeof competitionOptions)[number]) {
+  selectCompetition(competition)
+  closeCompetitionMenu()
+  isMobileCompetitionOpen.value = false
+  isMobileMenuOpen.value = false
+}
+
+function handleDocumentPointerDown(event: PointerEvent) {
+  if (!isCompetitionMenuOpen.value) return
+
+  const target = event.target as Node | null
+  if (!target) return
+
+  const root = competitionNavRef.value
+  if (root?.contains(target)) return
+
+  closeCompetitionMenu()
+}
+
+function handleDocumentKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    if (isCompetitionMenuOpen.value) {
+      event.preventDefault()
+      closeCompetitionMenu(true)
+      return
+    }
+
+    if (isMobileMenuOpen.value) {
+      isMobileMenuOpen.value = false
+      isMobileCompetitionOpen.value = false
+    }
+  }
+}
+
+function handleCompetitionTriggerKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    toggleCompetitionMenu()
+    if (isCompetitionMenuOpen.value) {
+      competitionDropdownRef.value?.focusFirstItem()
+    }
+    return
+  }
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    if (!isCompetitionMenuOpen.value) {
+      openCompetitionMenu()
+    }
+    competitionDropdownRef.value?.focusFirstItem()
+  }
+}
+
+function toggleMobileMenu() {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value
+  if (!isMobileMenuOpen.value) {
+    isMobileCompetitionOpen.value = false
+  }
+}
+
+function toggleMobileCompetitionMenu() {
+  isMobileCompetitionOpen.value = !isMobileCompetitionOpen.value
 }
 
 function goHome() {
@@ -39,11 +162,27 @@ function goRegister() {
   const hasRegister = router.getRoutes().some((r) => r.path === '/register')
   router.push(hasRegister ? '/register' : '/login')
 }
+
+function closeMobileMenu() {
+  isMobileMenuOpen.value = false
+  isMobileCompetitionOpen.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', handleDocumentPointerDown)
+  document.addEventListener('keydown', handleDocumentKeyDown)
+})
+
+onBeforeUnmount(() => {
+  clearCloseTimer()
+  document.removeEventListener('pointerdown', handleDocumentPointerDown)
+  document.removeEventListener('keydown', handleDocumentKeyDown)
+})
 </script>
 
 <template>
   <header class="web-header">
-    <div class="web-header-inner">
+    <div class="site-shell web-header-inner">
       <div class="header-left">
         <div
           class="header-logo"
@@ -56,6 +195,52 @@ function goRegister() {
         </div>
 
         <nav class="header-nav" aria-label="主导航">
+          <router-link
+            to="/home"
+            class="nav-link"
+            active-class=""
+            exact-active-class=""
+            :class="{ 'nav-link-active': route.path === '/home' && !route.hash }"
+          >
+            首页
+          </router-link>
+
+          <div
+            ref="competitionNavRef"
+            class="site-nav__item site-nav__item--competitions"
+            @mouseenter="handleCompetitionMouseEnter"
+            @mouseleave="handleCompetitionMouseLeave"
+          >
+            <button
+              ref="competitionTriggerRef"
+              type="button"
+              class="nav-link nav-link--button"
+              :class="{ 'nav-link-active': isTournamentRoute }"
+              aria-haspopup="menu"
+              :aria-expanded="isCompetitionMenuOpen"
+              @click="toggleCompetitionMenu"
+              @keydown="handleCompetitionTriggerKeyDown"
+            >
+              赛事
+            </button>
+
+            <Transition name="competition-menu">
+              <div
+                v-if="isCompetitionMenuOpen"
+                class="competition-dropdown-anchor"
+                @mouseenter="handleCompetitionMouseEnter"
+                @mouseleave="handleCompetitionMouseLeave"
+              >
+                <CompetitionDropdown
+                  ref="competitionDropdownRef"
+                  :competitions="competitionOptions"
+                  :current-competition-id="currentCompetitionId"
+                  @select="handleSelectCompetition"
+                />
+              </div>
+            </Transition>
+          </div>
+
           <router-link
             v-for="item in navItems"
             :key="item.label"
@@ -79,8 +264,66 @@ function goRegister() {
         </button>
         <button type="button" class="login-btn" @click="goLogin">登录</button>
         <button type="button" class="register-btn" @click="goRegister">注册</button>
+        <button
+          type="button"
+          class="mobile-menu-btn"
+          aria-label="打开导航菜单"
+          :aria-expanded="isMobileMenuOpen"
+          @click="toggleMobileMenu"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
       </div>
     </div>
+
+    <Transition name="mobile-nav">
+      <nav
+        v-if="isMobileMenuOpen"
+        class="mobile-nav"
+        aria-label="移动端主导航"
+      >
+        <router-link
+          to="/home"
+          class="mobile-nav__link"
+          @click="closeMobileMenu"
+        >
+          首页
+        </router-link>
+
+        <div class="mobile-nav__group">
+          <button
+            type="button"
+            class="mobile-nav__link mobile-nav__link--toggle"
+            :class="{ 'mobile-nav__link--active': isTournamentRoute }"
+            :aria-expanded="isMobileCompetitionOpen"
+            @click="toggleMobileCompetitionMenu"
+          >
+            赛事
+          </button>
+
+          <CompetitionDropdown
+            v-if="isMobileCompetitionOpen"
+            mobile
+            :competitions="competitionOptions"
+            :current-competition-id="currentCompetitionId"
+            @select="handleSelectCompetition"
+          />
+        </div>
+
+        <router-link
+          v-for="item in navItems"
+          :key="item.label"
+          :to="item.to"
+          class="mobile-nav__link"
+          :class="{ 'mobile-nav__link--active': isActive(item) }"
+          @click="closeMobileMenu"
+        >
+          {{ item.label }}
+        </router-link>
+      </nav>
+    </Transition>
   </header>
 </template>
 
@@ -90,7 +333,8 @@ function goRegister() {
   top: 0;
   z-index: 100;
   width: 100%;
-  height: 72px;
+  min-height: 72px;
+  overflow: visible;
   background:
     linear-gradient(
       90deg,
@@ -105,11 +349,7 @@ function goRegister() {
 }
 
 .web-header-inner {
-  width: min(calc(100% - var(--site-gutter) * 2), var(--site-width));
   height: 100%;
-  margin: 0 auto;
-  padding: 0;
-  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -147,6 +387,33 @@ function goRegister() {
   min-width: 0;
 }
 
+.site-nav__item--competitions {
+  position: relative;
+  height: 72px;
+  display: flex;
+  align-items: center;
+}
+
+.competition-dropdown-anchor {
+  position: absolute;
+  top: calc(100% + 1px);
+  left: 0;
+  z-index: 1200;
+}
+
+.competition-menu-enter-active,
+.competition-menu-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.competition-menu-enter-from,
+.competition-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
 .nav-link {
   position: relative;
   height: 72px;
@@ -179,6 +446,14 @@ function goRegister() {
       transform: translateX(-50%);
     }
   }
+}
+
+.nav-link--button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
 }
 
 .header-actions {
@@ -239,6 +514,67 @@ function goRegister() {
   filter: brightness(1.08);
 }
 
+.mobile-menu-btn {
+  display: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+
+  span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    margin: 4px auto;
+    background: #fff;
+    border-radius: 999px;
+  }
+}
+
+.mobile-nav {
+  display: none;
+  width: 100%;
+  padding: 8px 0 16px;
+  background: rgba(8, 8, 10, 0.98);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mobile-nav__link {
+  display: block;
+  width: 100%;
+  padding: 14px clamp(16px, 3.2vw, 72px);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+
+  &--active {
+    color: var(--cnpa-red);
+  }
+}
+
+.mobile-nav__group {
+  width: 100%;
+}
+
+.mobile-nav-enter-active,
+.mobile-nav-leave-active {
+  transition: opacity 160ms ease;
+}
+
+.mobile-nav-enter-from,
+.mobile-nav-leave-to {
+  opacity: 0;
+}
+
 @media (max-width: 1200px) {
   .header-logo {
     margin-right: 40px;
@@ -261,11 +597,11 @@ function goRegister() {
 
 @media (max-width: 900px) {
   .web-header {
-    height: 64px;
+    min-height: 64px;
   }
 
   .web-header-inner {
-    padding: 0 16px;
+    padding: 0;
   }
 
   .logo-image {
@@ -288,6 +624,14 @@ function goRegister() {
     min-width: 66px;
     padding: 0 14px;
     font-size: 13px;
+  }
+
+  .mobile-menu-btn {
+    display: block;
+  }
+
+  .mobile-nav {
+    display: block;
   }
 }
 </style>

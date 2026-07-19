@@ -1,16 +1,25 @@
-import type { LeagueInfo, CommunityLink, CompetitionStage } from '../types/events'
+import type { LeagueInfo, CommunityLink, CompetitionStage, LeagueSummary } from '../types/events'
+
+export const leagueSummary: LeagueSummary = {
+  seasonName: '2026 赛季',
+  seasonPeriod: '1月 - 9月',
+  teamCount: 16,
+  teamDescription: '角逐冠军',
+  currentStageName: '常规赛',
+  platformName: 'PS5 / Xbox',
+}
 
 export const leagueInfo: LeagueInfo = {
   name: 'CNPA LEAGUE',
   tag: '5V5 官方职业联赛',
   description:
     'CNPA League 是 CNPA 体系中最高级别的 5V5 职业联赛，汇聚全国顶尖战队，争夺年度总冠军荣耀。',
-  season: '2026 赛季',
-  seasonPeriod: '1月 - 9月',
-  teamCount: '16 支战队',
-  teamCountDesc: '角逐冠军',
-  currentStage: '常规赛',
-  platform: 'PS5 / Xbox',
+  season: leagueSummary.seasonName,
+  seasonPeriod: leagueSummary.seasonPeriod,
+  teamCount: `${leagueSummary.teamCount} 支战队`,
+  teamCountDesc: leagueSummary.teamDescription,
+  currentStage: leagueSummary.currentStageName,
+  platform: leagueSummary.platformName,
 }
 
 export const competitionStages: CompetitionStage[] = [

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import PaperSection from '@/components/common/PaperSection.vue'
 import { useScheduleFilters } from '../composables/useScheduleFilters'
 import ScheduleFilters from './ScheduleFilters.vue'
 import WeekDateNav from './WeekDateNav.vue'
@@ -50,54 +51,66 @@ function closeStats() {
 </script>
 
 <template>
-  <section class="league-schedule events-section events-section-paper">
-    <div class="events-inner">
-      <div class="schedule-head">
-        <div>
-          <h2 class="section-head-title schedule-title">赛程</h2>
-          <span class="section-head-sub">Schedule</span>
+  <div class="site-shell league-schedule-shell">
+    <PaperSection edge="both" tone="gray" class="league-schedule">
+      <div class="league-schedule__inner">
+        <div class="schedule-head">
+          <div>
+            <h2 class="cnpa-paper-section__title">赛程</h2>
+            <span class="cnpa-paper-section__subtitle">Schedule</span>
+          </div>
+
+          <ScheduleFilters
+            :selected-season="selectedSeason"
+            :selected-date="selectedDate"
+            :selected-team-id="selectedTeamId"
+            :is-calendar-open="isCalendarOpen"
+            :is-team-selector-open="isTeamSelectorOpen"
+            @update:selected-season="selectSeason"
+            @toggle-calendar="toggleCalendar"
+            @toggle-team-selector="toggleTeamSelector"
+            @select-date="selectDate"
+            @select-team="selectTeam"
+            @shift-months="() => {}"
+          />
         </div>
 
-        <ScheduleFilters
-          :selected-season="selectedSeason"
+        <WeekDateNav
           :selected-date="selectedDate"
-          :selected-team-id="selectedTeamId"
-          :is-calendar-open="isCalendarOpen"
-          :is-team-selector-open="isTeamSelectorOpen"
-          @update:selected-season="selectSeason"
-          @toggle-calendar="toggleCalendar"
-          @toggle-team-selector="toggleTeamSelector"
+          :week-number="currentWeek"
           @select-date="selectDate"
-          @select-team="selectTeam"
-          @shift-months="() => {}"
+          @prev-week="goPrevWeek"
+          @next-week="goNextWeek"
+        />
+
+        <MatchList
+          :matches="filteredMatches"
+          @open-detail="openDetail"
+          @open-stats="openStats"
         />
       </div>
-
-      <WeekDateNav
-        :selected-date="selectedDate"
-        :week-number="currentWeek"
-        @select-date="selectDate"
-        @prev-week="goPrevWeek"
-        @next-week="goNextWeek"
-      />
-
-      <MatchList
-        :matches="filteredMatches"
-        @open-detail="openDetail"
-        @open-stats="openStats"
-      />
-    </div>
+    </PaperSection>
 
     <MatchDetailModal :visible="detailVisible" :match="detailMatch" @close="closeDetail" />
     <StatsModal :visible="statsVisible" :match="statsMatch" @close="closeStats" />
-  </section>
+  </div>
 </template>
 
 <style scoped lang="scss">
+.league-schedule-shell {
+  margin-top: 0;
+}
+
 .league-schedule {
   position: relative;
   z-index: 1;
-  padding: 48px 0 56px;
+}
+
+.league-schedule__inner {
+  padding:
+    clamp(28px, 2.4vw, 42px)
+    clamp(28px, 3vw, 52px)
+    clamp(32px, 2.8vw, 48px);
 }
 
 .schedule-head {
@@ -108,15 +121,12 @@ function closeStats() {
   margin-bottom: 20px;
 }
 
-.schedule-title {
-  color: #111;
-}
-
-.section-head-sub {
-  color: rgba(10, 10, 10, 0.45);
-}
-
 @media (max-width: 768px) {
+  .league-schedule__inner {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
   .schedule-head {
     flex-direction: column;
   }

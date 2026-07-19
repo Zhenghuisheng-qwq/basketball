@@ -1,0 +1,152 @@
+@use '../variables.scss' as *;
+
+@mixin cnpa-paper-surface {
+  background-color: var(--paper-background, var(--cnpa-paper-gray));
+  background-image:
+    radial-gradient(
+      circle at 20% 30%,
+      rgba(0, 0, 0, 0.025) 0,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 70% 60%,
+      rgba(255, 255, 255, 0.2) 0,
+      transparent 1px
+    ),
+    radial-gradient(
+      ellipse at 12% 24%,
+      rgba(101, 87, 68, var(--cnpa-paper-texture-opacity)) 0%,
+      rgba(101, 87, 68, calc(var(--cnpa-paper-texture-opacity) * 0.5)) 22%,
+      transparent 48%
+    ),
+    radial-gradient(
+      ellipse at 78% 68%,
+      rgba(91, 78, 61, calc(var(--cnpa-paper-texture-opacity) * 0.85)) 0%,
+      transparent 52%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.18) 0%,
+      transparent 18%,
+      rgba(93, 79, 62, 0.018) 48%,
+      transparent 74%,
+      rgba(255, 255, 255, 0.12) 100%
+    );
+  background-size:
+    24px 24px,
+    31px 31px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+}
+
+.cnpa-paper-section {
+  --paper-background: var(--cnpa-paper-gray);
+
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: clip;
+  overflow-y: visible;
+  color: var(--cnpa-paper-text);
+
+  @include cnpa-paper-surface;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.38;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        rgba(67, 55, 42, 0.015) 0,
+        rgba(67, 55, 42, 0.015) 1px,
+        transparent 1px,
+        transparent 6px
+      ),
+      repeating-linear-gradient(
+        92deg,
+        rgba(255, 255, 255, 0.022) 0,
+        rgba(255, 255, 255, 0.022) 1px,
+        transparent 1px,
+        transparent 11px
+      );
+    mix-blend-mode: multiply;
+  }
+}
+
+.cnpa-paper-section--gray {
+  --paper-background: var(--cnpa-paper-gray);
+}
+
+.cnpa-paper-section--light {
+  --paper-background: var(--cnpa-paper-light);
+}
+
+.cnpa-paper-section__content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cnpa-paper-floating-panel {
+  border: 1px solid rgba(10, 10, 10, 0.12);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
+}
+
+.cnpa-paper-section__title {
+  margin: 0;
+  font-size: clamp(28px, 2.4vw, 34px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--cnpa-paper-text);
+}
+
+.cnpa-paper-section__subtitle {
+  display: block;
+  margin-top: 6px;
+  font-size: clamp(13px, 1.2vw, 16px);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cnpa-red);
+}
+
+.cnpa-paper-section__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: #161616;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.2s ease;
+
+  span {
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    color: var(--cnpa-red);
+
+    span {
+      transform: translateX(4px);
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --cnpa-paper-edge-height: 10px;
+  }
+}
