@@ -1,0 +1,163 @@
+.register-page {
+  max-width: 520px;
+}
+
+.register-page__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.register-page__title {
+  margin: 0;
+  font-size: clamp(24px, 2.4vw, 30px);
+  font-weight: 900;
+  color: var(--cnpa-paper-text);
+}
+
+.register-page__sub {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cnpa-paper-text-muted);
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-field__label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cnpa-paper-text);
+}
+
+.form-field__input {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(17, 17, 17, 0.16);
+  border-radius: 2px;
+  background: #fff;
+  color: var(--cnpa-paper-text);
+  font-size: 14px;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--cnpa-red);
+  }
+}
+
+.form-field__error {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cnpa-red);
+}
+
+.password-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: 4px 10px;
+    border: 1px solid rgba(17, 17, 17, 0.12);
+    background: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cnpa-paper-text-muted);
+
+    &.is-valid {
+      border-color: rgba(24, 180, 107, 0.35);
+      color: #18b46b;
+    }
+  }
+}
+
+.form-agreement {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--cnpa-paper-text-muted);
+
+  input {
+    margin-top: 3px;
+  }
+}
+
+.btn-primary,
+.btn-secondary {
+  height: 44px;
+  border-radius: 2px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  border: 1px solid var(--cnpa-red);
+  background: var(--cnpa-red);
+  color: #fff;
+
+  &:hover {
+    background: var(--cnpa-color-primary-hover);
+    border-color: var(--cnpa-color-primary-hover);
+  }
+}
+
+.btn-secondary {
+  width: 100%;
+  border: 1px solid rgba(17, 17, 17, 0.16);
+  background: #fff;
+  color: var(--cnpa-paper-text);
+
+  &:hover {
+    border-color: var(--cnpa-red);
+    color: var(--cnpa-red);
+  }
+}
+
+.text-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--cnpa-red);
+  font-size: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+
+  &:hover {
+    opacity: 0.82;
+  }
+}
+
+.register-form__login {
+  margin: 0;
+  font-size: 13px;
+  color: var(--cnpa-paper-text-muted);
+}
+
+.register-form__hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--cnpa-paper-text-muted);
+}

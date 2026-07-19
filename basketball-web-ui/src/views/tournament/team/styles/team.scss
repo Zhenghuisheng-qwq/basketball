@@ -1,0 +1,44 @@
+.team-page,
+.team-compare-page {
+  width: 100%;
+  overflow-x: clip;
+  background: #050505;
+}
+
+.team-page__shell,
+.team-compare-page__shell {
+  position: relative;
+}
+
+.team-page__paper.cnpa-paper-section,
+.compare-paper.cnpa-paper-section {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  overflow-y: visible;
+  --paper-background: #f2efe8;
+
+  &::before {
+    top: clamp(20px, 1.8vw, 32px);
+  }
+}
+
+.team-page__paper-body,
+.compare-paper__body {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding-top: clamp(22px, 2vw, 36px);
+  box-sizing: border-box;
+}
+
+.team-page__paper-inner {
+  padding-top: 0;
+}
+
+.team-page__content {
+  padding-block: 32px 64px;
+  color: var(--cnpa-paper-text);
+  min-height: 320px;
+  box-sizing: border-box;
+}
