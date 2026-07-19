@@ -96,23 +96,47 @@ const singleMatchStats = computed(() =>
   getTeamSingleMatchStats(teamId.value, matchId.value),
 )
 
-const summaryMaxMap = computed(() => buildMaxMap(summaryPlayerStats.value))
+const summaryStatsMode = computed<PlayerStatsMode>(() => {
+  if (stageFilter.value === 'regular') {
+    return playerStatsMode.value
+  }
+  return playoffStatsMode.value === 'summary' ? 'total' : 'average'
+})
+
+const summaryMaxMap = computed(() => buildMaxMap(summaryPlayerStats.value, summaryStatsMode.value))
 
 const singleMaxMap = computed(() => {
   if (!singleMatchStats.value) return {}
   return buildSingleMaxMap(singleMatchStats.value.players)
 })
 
-function buildMaxMap(rows: Array<TeamPlayerAverageStat | TeamPlayerTotalStat>) {
+function normalizeSummaryValue(value: number, col: NumericColumn, mode: PlayerStatsMode): number {
+  if (col === 'fgPct' || col === 'tpPct' || col === 'ftPct') {
+    return Number(value.toFixed(1))
+  }
+  if (mode === 'average') {
+    return Number(value.toFixed(1))
+  }
+  return Math.round(value)
+}
+
+function buildMaxMap(
+  rows: Array<TeamPlayerAverageStat | TeamPlayerTotalStat>,
+  mode: PlayerStatsMode,
+) {
   const maxes: Partial<Record<NumericColumn, number>> = {}
+  if (!rows.length) return maxes
+
   for (const col of numericColumns) {
-    maxes[col] = Math.max(...rows.map((row) => row[col]))
+    maxes[col] = Math.max(...rows.map((row) => normalizeSummaryValue(row[col], col, mode)))
   }
   return maxes
 }
 
 function buildSingleMaxMap(rows: TeamSingleMatchPlayerStat[]) {
   const maxes: Partial<Record<(typeof singleNumericColumns)[number], number>> = {}
+  if (!rows.length) return maxes
+
   for (const col of singleNumericColumns) {
     maxes[col] = Math.max(...rows.map((row) => row[col]))
   }
@@ -123,11 +147,17 @@ function isSummaryMax(
   row: TeamPlayerAverageStat | TeamPlayerTotalStat,
   col: NumericColumn,
 ): boolean {
-  return row[col] === summaryMaxMap.value[col]
+  const maxValue = summaryMaxMap.value[col]
+  if (maxValue === undefined) return false
+  return (
+    normalizeSummaryValue(row[col], col, summaryStatsMode.value) === maxValue
+  )
 }
 
 function isSingleMax(row: TeamSingleMatchPlayerStat, col: (typeof singleNumericColumns)[number]) {
-  return row[col] === singleMaxMap.value[col]
+  const maxValue = singleMaxMap.value[col]
+  if (maxValue === undefined) return false
+  return row[col] === maxValue
 }
 
 function getPlayerNumber(nickname: string): string {
@@ -158,28 +188,26 @@ function showSingleTable() {
 
 <template>
   <div class="team-stats">
-    <div class="section-head">
+    <div class="team-stats__toolbar">
       <div class="section-head-group">
         <h2 class="section-head-title">球队数据</h2>
         <span class="section-head-sub">Team Stats</span>
       </div>
-    </div>
 
-    <div class="stats-filters">
-      <label class="filter-select">
-        <span class="filter-label">赛事</span>
-        <select v-model="competitionFilter">
-          <option value="2026 CNPA League">2026 CNPA League</option>
-        </select>
-      </label>
+      <div class="stats-filters">
+        <label class="filter-select">
+          <select v-model="competitionFilter">
+            <option value="2026 CNPA League">2026 CNPA League</option>
+          </select>
+        </label>
 
-      <label class="filter-select">
-        <span class="filter-label">赛段</span>
-        <select v-model="stageFilter">
-          <option value="regular">常规赛</option>
-          <option value="playoffs">季后赛</option>
-        </select>
-      </label>
+        <label class="filter-select">
+          <select v-model="stageFilter">
+            <option value="regular">常规赛</option>
+            <option value="playoffs">季后赛</option>
+          </select>
+        </label>
+      </div>
     </div>
 
     <section class="stats-section">
@@ -287,29 +315,25 @@ function showSingleTable() {
               </td>
               <td>{{ row.games }}</td>
               <td :class="{ 'is-max': isSummaryMax(row, 'points') }">
-                {{ formatCount(row.points, stageFilter === 'regular' ? playerStatsMode : 'total') }}
+                {{ formatCount(row.points, summaryStatsMode) }}
               </td>
               <td :class="{ 'is-max': isSummaryMax(row, 'rebounds') }">
-                {{
-                  formatCount(row.rebounds, stageFilter === 'regular' ? playerStatsMode : 'total')
-                }}
+                {{ formatCount(row.rebounds, summaryStatsMode) }}
               </td>
               <td :class="{ 'is-max': isSummaryMax(row, 'assists') }">
-                {{ formatCount(row.assists, stageFilter === 'regular' ? playerStatsMode : 'total') }}
+                {{ formatCount(row.assists, summaryStatsMode) }}
               </td>
               <td :class="{ 'is-max': isSummaryMax(row, 'steals') }">
-                {{ formatCount(row.steals, stageFilter === 'regular' ? playerStatsMode : 'total') }}
+                {{ formatCount(row.steals, summaryStatsMode) }}
               </td>
               <td :class="{ 'is-max': isSummaryMax(row, 'blocks') }">
-                {{ formatCount(row.blocks, stageFilter === 'regular' ? playerStatsMode : 'total') }}
+                {{ formatCount(row.blocks, summaryStatsMode) }}
               </td>
               <td :class="{ 'is-max': isSummaryMax(row, 'fouls') }">
-                {{ formatCount(row.fouls, stageFilter === 'regular' ? playerStatsMode : 'total') }}
+                {{ formatCount(row.fouls, summaryStatsMode) }}
               </td>
               <td :class="{ 'is-max': isSummaryMax(row, 'turnovers') }">
-                {{
-                  formatCount(row.turnovers, stageFilter === 'regular' ? playerStatsMode : 'total')
-                }}
+                {{ formatCount(row.turnovers, summaryStatsMode) }}
               </td>
               <td :class="{ 'is-max': isSummaryMax(row, 'fgPct') }">
                 {{ formatPct(row.fgPct) }}
@@ -412,13 +436,41 @@ function showSingleTable() {
 
 <style scoped lang="scss">
 .team-stats {
+  .section-head-group {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: nowrap;
+    gap: clamp(14px, 1.2vw, 18px);
+  }
+
   .section-head-title {
+    font-size: clamp(34px, 3.2vw, 38px);
+    font-weight: 900;
     color: var(--cnpa-paper-text);
   }
 
   .section-head-sub {
-    color: var(--cnpa-paper-text-muted);
+    color: var(--cnpa-red);
+    font-size: clamp(16px, 1.5vw, 22px);
+    font-style: italic;
+    text-transform: uppercase;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
   }
+
+  .section-head--compact .section-head-sub {
+    font-size: clamp(14px, 1.3vw, 18px);
+  }
+}
+
+.team-stats__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
 }
 
 .section-head--compact {
@@ -432,33 +484,33 @@ function showSingleTable() {
 .stats-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 32px;
-}
-
-.filter-select {
-  display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.filter-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--cnpa-paper-text-muted);
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
 }
 
 .filter-select select {
   min-width: 160px;
-  height: 40px;
+  height: 44px;
   padding: 0 12px;
-  border: 1px solid rgba(17, 17, 17, 0.16);
+  border: 1px solid rgba(0, 0, 0, 0.14);
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--cnpa-paper-text);
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.filter-select:first-child select {
+  min-width: 210px;
+  max-width: 240px;
+}
+
+.filter-select:last-child select {
+  min-width: 150px;
+  max-width: 170px;
 }
 
 .stats-section + .stats-section {
@@ -468,8 +520,8 @@ function showSingleTable() {
 .stats-empty {
   padding: 40px 16px;
   text-align: center;
-  border: 1px solid rgba(17, 17, 17, 0.1);
-  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  background: rgba(255, 255, 255, 0.22);
   color: var(--cnpa-paper-text-muted);
   font-size: 14px;
 }
@@ -477,34 +529,46 @@ function showSingleTable() {
 .season-cards {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .season-card {
-  padding: 18px 12px;
-  border: 1px solid rgba(17, 17, 17, 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 122px;
+  padding: 24px 18px 22px;
+  border: 1px solid var(--cnpa-paper-border);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
   text-align: center;
+  box-sizing: border-box;
 }
 
 .season-card__label {
   display: block;
-  margin-bottom: 10px;
-  font-size: 12px;
+  margin: 0 0 16px;
+  font-size: 15px;
   font-weight: 700;
-  color: var(--cnpa-paper-text-muted);
+  color: rgba(0, 0, 0, 0.62);
+  text-align: center;
 }
 
 .season-card__value {
-  font-size: clamp(22px, 2vw, 28px);
+  margin: 0;
+  font-size: clamp(38px, 3vw, 50px);
+  line-height: 1;
   font-weight: 900;
-  color: var(--cnpa-paper-text);
+  color: #111;
+  letter-spacing: -0.02em;
 }
 
 .mode-tabs {
   display: inline-flex;
-  border: 1px solid rgba(17, 17, 17, 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--cnpa-paper-border);
+  background: rgba(255, 255, 255, 0.52);
 }
 
 .mode-tab {
@@ -546,13 +610,13 @@ function showSingleTable() {
   width: 100%;
   min-width: 980px;
   border-collapse: collapse;
-  border: 1px solid rgba(17, 17, 17, 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--cnpa-paper-border);
+  background: rgba(255, 255, 255, 0.32);
 
   th,
   td {
     padding: 12px 10px;
-    border-top: 1px solid rgba(17, 17, 17, 0.08);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
     text-align: center;
     font-size: 12px;
     color: var(--cnpa-paper-text);
@@ -560,13 +624,17 @@ function showSingleTable() {
   }
 
   th {
-    background: rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.46);
     color: var(--cnpa-paper-text-muted);
     font-weight: 800;
   }
 
+  tbody tr {
+    background: rgba(255, 255, 255, 0.24);
+  }
+
   tbody tr:hover {
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.38);
   }
 }
 
@@ -576,10 +644,10 @@ function showSingleTable() {
 }
 
 .player-cell {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  text-align: left;
 }
 
 .player-cell__avatar {
@@ -611,8 +679,8 @@ function showSingleTable() {
 .view-btn {
   height: 28px;
   padding: 0 10px;
-  border: 1px solid rgba(17, 17, 17, 0.16);
-  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--cnpa-paper-text);
   font-size: 11px;
   font-weight: 700;
@@ -627,7 +695,7 @@ function showSingleTable() {
 }
 
 .team-total-row {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.46);
   font-weight: 800;
 }
 
@@ -638,29 +706,42 @@ function showSingleTable() {
   color: var(--cnpa-paper-text-muted);
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
   .season-cards {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .season-card {
+    min-height: 112px;
+    padding: 20px 12px;
+  }
+
+  .season-card__value {
+    font-size: 38px;
+  }
+}
+
+@media (max-width: 992px) {
+  .season-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
-  .season-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .team-stats__toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .stats-filters {
+    width: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
   }
 
   .section-head--compact {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .stats-filters {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .filter-select select {
-    width: 100%;
   }
 }
 </style>

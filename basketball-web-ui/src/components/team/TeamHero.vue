@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import teamBackground from '@/assets/icon/tournament/team_background.png'
 import TeamLogo from '@/components/team/TeamLogo.vue'
+import TeamSelectModal from '@/components/team/TeamSelectModal.vue'
 import type { TeamBase, TeamStage } from '@/types/team'
 
 const props = defineProps<{
   team: TeamBase
   teamId: string
 }>()
+
+const router = useRouter()
+const compareModalVisible = ref(false)
 
 const stageLabels: Record<TeamStage, string> = {
   regular: '常规赛',
@@ -18,11 +23,25 @@ const stageLabel = computed(() => stageLabels[props.team.currentStage])
 
 const recordText = computed(() => `${props.team.wins}胜${props.team.losses}负`)
 
-const compareLink = computed(() => {
-  const left = props.teamId
-  const right = left === 'titan' ? 'rng' : 'titan'
-  return `/tournament/team/compare?left=${left}&right=${right}`
-})
+const compareCompetitionText = computed(
+  () => `${props.team.seasonName} · ${stageLabels[props.team.currentStage]}`,
+)
+
+function openCompareModal() {
+  compareModalVisible.value = true
+}
+
+function handleSelectCompareTeam(targetTeamId: string) {
+  if (targetTeamId === props.teamId) return
+  compareModalVisible.value = false
+  router.push({
+    path: '/tournament/team/compare',
+    query: {
+      left: props.teamId,
+      right: targetTeamId,
+    },
+  })
+}
 
 const heroBgStyle = computed(() => ({
   backgroundImage: `linear-gradient(90deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.38) 45%, rgba(0, 0, 0, 0.15) 100%), url(${teamBackground})`,
@@ -88,9 +107,9 @@ const infoCards = computed(() => [
             <span class="team-hero__stat">排名第{{ team.ranking }}</span>
           </div>
 
-          <router-link :to="compareLink" class="team-hero__compare-btn">
+          <button type="button" class="team-hero__compare-btn" @click="openCompareModal">
             球队对比
-          </router-link>
+          </button>
         </div>
       </div>
 
@@ -155,11 +174,24 @@ const infoCards = computed(() => [
       </div>
     </div>
   </section>
+
+  <TeamSelectModal
+    :visible="compareModalVisible"
+    title="选择球队"
+    subtitle="点击球队即可完成更换"
+    :competition-text="compareCompetitionText"
+    :disabled-team-ids="[teamId]"
+    :selected-team-ids="[teamId]"
+    side-text="正在选择对比球队"
+    @close="compareModalVisible = false"
+    @select="handleSelectCompareTeam"
+  />
 </template>
 
 <style scoped lang="scss">
 .team-hero {
   --team-hero-content-offset: clamp(36px, 4vw, 86px);
+  --team-hero-main-offset: clamp(56px, 5vw, 108px);
 
   position: relative;
   overflow: hidden;
@@ -221,15 +253,30 @@ const infoCards = computed(() => [
 .team-hero__main {
   display: flex;
   align-items: center;
-  gap: 40px;
-  margin-top: 48px;
-  padding-left: var(--team-hero-content-offset);
+  gap: clamp(42px, 4vw, 64px);
+  margin-top: 40px;
+  margin-left: var(--team-hero-main-offset);
   position: relative;
   z-index: 2;
 }
 
 .team-hero__logo-wrap {
   flex-shrink: 0;
+
+  :deep(.team-logo--hero) {
+    width: clamp(148px, 10vw, 180px);
+    height: clamp(148px, 10vw, 180px);
+
+    .team-logo__fallback {
+      font-size: clamp(58px, 4.8vw, 82px);
+      letter-spacing: 0.06em;
+      border-radius: 4px;
+    }
+
+    .badge {
+      transform: scale(2.35);
+    }
+  }
 }
 
 .team-hero__summary {
@@ -304,6 +351,8 @@ const infoCards = computed(() => [
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.04em;
+  cursor: pointer;
+  font-family: inherit;
   transition: filter 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 
   &:hover {
@@ -394,28 +443,56 @@ const infoCards = computed(() => [
 }
 
 @media (max-width: 1280px) {
+  .team-hero {
+    --team-hero-main-offset: 36px;
+  }
+
   .team-hero__logo-wrap :deep(.team-logo--hero) {
-    width: 168px;
-    height: 112px;
+    width: 160px;
+    height: 160px;
 
     .team-logo__fallback {
-      font-size: 34px;
+      font-size: clamp(52px, 4.2vw, 68px);
     }
 
     .badge {
-      transform: scale(1.75);
+      transform: scale(2.1);
     }
   }
 
   .team-hero__main {
-    gap: 32px;
-    margin-top: 40px;
+    gap: clamp(36px, 3.5vw, 52px);
+    margin-top: 36px;
+  }
+}
+
+@media (max-width: 992px) {
+  .team-hero {
+    --team-hero-main-offset: 20px;
+  }
+
+  .team-hero__main {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
 @media (max-width: 991px) {
   .team-hero {
     --team-hero-content-offset: 20px;
+  }
+
+  .team-hero__logo-wrap :deep(.team-logo--hero) {
+    width: 148px;
+    height: 148px;
+
+    .team-logo__fallback {
+      font-size: 50px;
+    }
+
+    .badge {
+      transform: scale(1.95);
+    }
   }
 
   .team-hero__info-panel {
@@ -447,8 +524,6 @@ const infoCards = computed(() => [
   }
 
   .team-hero__main {
-    flex-direction: column;
-    align-items: flex-start;
     gap: 24px;
     margin-top: 32px;
   }

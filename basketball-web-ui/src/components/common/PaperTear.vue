@@ -21,10 +21,15 @@ withDefaults(
 
 <style scoped lang="scss">
 .paper-tear {
+  --paper-tear-color: var(--cnpa-paper-bg-soft, #f6f2ea);
   position: relative;
   width: 100%;
   pointer-events: none;
   z-index: 5;
+}
+
+.paper-tear :deep(.torn-edge-main) {
+  fill: var(--paper-tear-color) !important;
 }
 
 .paper-tear--top {

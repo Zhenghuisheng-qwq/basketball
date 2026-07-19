@@ -36,8 +36,12 @@
   --site-inner-padding: clamp(20px, 2vw, 36px);
   --header-height: 72px;
 
-  --cnpa-paper-gray: #ecebe7;
-  --cnpa-paper-light: #f2f1ee;
+  --cnpa-paper-bg: #f1ede4;
+  --cnpa-paper-bg-soft: #f6f2ea;
+  --cnpa-paper-bg-deep: #e8e2d7;
+  --cnpa-paper-border: rgba(0, 0, 0, 0.12);
+  --cnpa-paper-gray: #e8e2d7;
+  --cnpa-paper-light: #f6f2ea;
   --cnpa-paper-text: #111111;
   --cnpa-paper-text-muted: rgba(17, 17, 17, 0.58);
   --cnpa-paper-edge-height: 14px;

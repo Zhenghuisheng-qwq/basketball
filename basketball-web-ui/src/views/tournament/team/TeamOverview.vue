@@ -9,6 +9,12 @@ import {
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import type { TeamMatchRecord, TeamRosterPlayer, TeamStage } from '@/types/team'
 
+interface MonthGroup {
+  key: string
+  label: string
+  matches: TeamMatchRecord[]
+}
+
 const route = useRoute()
 const router = useRouter()
 
@@ -37,9 +43,28 @@ const pagedRecentMatches = computed(() => {
   return filteredRecentMatches.value.slice(start, start + matchPageSize)
 })
 
-const matchPageNumbers = computed(() =>
-  Array.from({ length: Math.max(2, matchTotalPages.value) }, (_, index) => index + 1),
-)
+const groupedRecentMatches = computed<MonthGroup[]>(() => {
+  const groups = new Map<string, MonthGroup>()
+
+  for (const match of pagedRecentMatches.value) {
+    const [year, month] = match.date.split('-')
+    const key = `${year}-${month}`
+    const existing = groups.get(key)
+
+    if (existing) {
+      existing.matches.push(match)
+      continue
+    }
+
+    groups.set(key, {
+      key,
+      label: `${year}年${Number(month)}月`,
+      matches: [match],
+    })
+  }
+
+  return Array.from(groups.values())
+})
 
 const rosterTotalPages = computed(() =>
   Math.max(1, Math.ceil(roster.value.length / rosterPageSize)),
@@ -55,10 +80,24 @@ const stageLabels: Record<TeamStage, string> = {
   playoffs: '季后赛',
 }
 
-const resultLabels = {
-  win: '胜利',
-  loss: '失败',
-} as const
+function formatDateTime(match: TeamMatchRecord): string {
+  const [, month, day] = match.date.split('-')
+  return `${month}-${day} ${match.time}`
+}
+
+function getStatusLabel(match: TeamMatchRecord): string {
+  if (match.status === 'scheduled') return '未开始'
+  if (match.result === 'win') return '胜利'
+  if (match.result === 'loss') return '失败'
+  return '已结束'
+}
+
+function getStatusClass(match: TeamMatchRecord): string {
+  if (match.status === 'scheduled') return 'is-scheduled'
+  if (match.result === 'win') return 'is-win'
+  if (match.result === 'loss') return 'is-loss'
+  return 'is-finished'
+}
 
 function goRosterPrev() {
   rosterPage.value =
@@ -114,21 +153,19 @@ function onMatchStageChange() {
 
 <template>
   <div class="team-overview">
-    <section class="overview-section">
+    <section class="overview-section roster-section">
       <div class="section-head">
-        <div class="section-head-group">
-          <h2 class="section-head-title">本赛季阵容</h2>
-          <span class="section-head-sub">Current Roster</span>
-        </div>
+        <h2 class="section-head-title">本赛季阵容</h2>
+        <span class="section-head-sub">Current Roster</span>
       </div>
 
       <div v-if="roster.length === 0" class="overview-empty">暂无阵容数据</div>
 
       <template v-else>
-        <div class="carousel">
+        <div class="roster-wrap">
           <button
             type="button"
-            class="carousel-arrow"
+            class="roster-arrow roster-arrow--left"
             aria-label="上一页"
             @click="goRosterPrev"
           >
@@ -136,59 +173,54 @@ function onMatchStageChange() {
           </button>
 
           <div class="roster-grid">
-            <article v-for="player in visibleRoster" :key="player.id" class="player-card">
-              <div class="player-card__avatar-wrap">
+            <article v-for="player in visibleRoster" :key="player.id" class="roster-card">
+              <div class="player-avatar">
                 <img
                   v-if="player.avatar"
                   :src="player.avatar"
                   :alt="player.nickname"
-                  class="player-card__avatar-img"
+                  class="player-avatar__img"
                 />
-                <div v-else class="player-card__avatar-placeholder">
-                  {{ getPlayerNumber(player) }}
-                </div>
+                <span v-else class="player-avatar__placeholder">{{ getPlayerNumber(player) }}</span>
               </div>
 
-              <div class="player-card__body">
-                <div class="player-card__name-row">
-                  <h3 class="player-card__name">{{ player.nickname }}</h3>
-                  <span v-if="player.isCaptain" class="player-card__captain">队长</span>
-                </div>
-                <p class="player-card__position">{{ player.position }}</p>
-              </div>
+              <div class="player-name">{{ player.nickname }}</div>
+              <span v-if="player.isCaptain" class="captain-badge">队长</span>
+              <div class="player-position">{{ player.position }}</div>
             </article>
           </div>
 
           <button
             type="button"
-            class="carousel-arrow"
+            class="roster-arrow roster-arrow--right"
             aria-label="下一页"
             @click="goRosterNext"
           >
             ›
           </button>
-        </div>
 
-        <div class="carousel-dots">
-          <button
-            v-for="index in rosterTotalPages"
-            :key="index"
-            type="button"
-            class="dot"
-            :class="{ active: rosterPage === index - 1 }"
-            :aria-label="`第 ${index} 页`"
-            @click="goRosterPage(index - 1)"
-          />
+          <div class="carousel-dots">
+            <button
+              v-for="index in rosterTotalPages"
+              :key="index"
+              type="button"
+              class="dot"
+              :class="{ active: rosterPage === index - 1 }"
+              :aria-label="`第 ${index} 页`"
+              @click="goRosterPage(index - 1)"
+            />
+          </div>
         </div>
       </template>
     </section>
 
-    <section class="overview-section overview-section--matches match-history">
-      <div class="section-head">
-        <div class="section-head-group">
+    <section class="overview-section overview-section--matches">
+      <div class="match-head">
+        <div class="section-head">
           <h2 class="section-head-title">比赛记录</h2>
           <span class="section-head-sub">Match History</span>
         </div>
+
         <label class="match-filter">
           <span class="match-filter__sr-only">赛季赛段筛选</span>
           <select
@@ -205,57 +237,74 @@ function onMatchStageChange() {
       <div v-if="filteredRecentMatches.length === 0" class="overview-empty">暂无比赛记录</div>
 
       <template v-else>
-        <div class="match-table-wrap">
-          <div class="match-table">
-          <div class="match-table__head">
-            <span>状态</span>
-            <span>日期</span>
-            <span>对手</span>
-            <span>比分</span>
-            <span>赛段</span>
-            <span>查看</span>
-          </div>
-
-          <article v-for="match in pagedRecentMatches" :key="match.id" class="match-table__row">
-            <span
-              class="match-table__result"
-              :class="match.result === 'win' ? 'is-win' : 'is-loss'"
-            >
-              {{ match.result ? resultLabels[match.result] : '-' }}
-            </span>
-
-            <span class="match-table__date">{{ match.date }}</span>
-
-            <div class="match-table__opponent">
-              <TeamLogo :team="getOpponent(match)" size="xs" class="match-table__opponent-logo" />
-              <span class="match-table__opponent-name">{{ getOpponent(match).name }}</span>
+        <div class="match-groups">
+          <section v-for="group in groupedRecentMatches" :key="group.key" class="match-group">
+            <div class="match-group__title">
+              <span class="match-group__bar" aria-hidden="true" />
+              <h3>{{ group.label }}</h3>
             </div>
 
-            <div class="match-table__score">
-              <span
-                class="score-number"
-                :class="{ 'is-winner': match.result === 'win' }"
-              >
-                {{ match.teamScore }}
-              </span>
-              <span class="score-separator">:</span>
-              <span
-                class="score-number"
-                :class="{ 'is-winner': match.result === 'loss' }"
-              >
-                {{ match.opponentScore }}
-              </span>
-            </div>
+            <div class="match-table">
+              <div class="match-table__head">
+                <span>状态</span>
+                <span>日期时间</span>
+                <span>对手</span>
+                <span>比分</span>
+                <span>赛段</span>
+                <span>查看</span>
+              </div>
 
-            <span class="match-table__stage">{{ stageLabels[match.stage] }}</span>
+              <article v-for="match in group.matches" :key="match.id" class="match-table__row">
+                <span class="match-table__status" :class="getStatusClass(match)">
+                  {{ getStatusLabel(match) }}
+                </span>
 
-            <div class="match-table__actions">
-              <button type="button" class="action-btn" @click="goMatchStats(match)">
-                技术统计
-              </button>
+                <span class="match-table__datetime">{{ formatDateTime(match) }}</span>
+
+                <div class="match-table__opponent">
+                  <TeamLogo :team="getOpponent(match)" size="md" class="match-table__opponent-logo" />
+                  <span>{{ getOpponent(match).name }}</span>
+                </div>
+
+                <template v-if="match.status === 'scheduled'">
+                  <span class="match-table__score is-vs">VS</span>
+                </template>
+                <template v-else>
+                  <span class="match-table__score">
+                    <span
+                      class="score-number"
+                      :class="{ 'is-winner': match.result === 'win' }"
+                    >
+                      {{ match.teamScore }}
+                    </span>
+                    <span class="score-separator">:</span>
+                    <span
+                      class="score-number"
+                      :class="{ 'is-winner': match.result === 'loss' }"
+                    >
+                      {{ match.opponentScore }}
+                    </span>
+                  </span>
+                </template>
+
+                <span class="match-table__stage">{{ stageLabels[match.stage] }}</span>
+
+                <div class="match-table__actions">
+                  <button
+                    v-if="match.status === 'scheduled'"
+                    type="button"
+                    class="action-btn action-btn--disabled"
+                    disabled
+                  >
+                    敬请期待
+                  </button>
+                  <button v-else type="button" class="action-btn" @click="goMatchStats(match)">
+                    查看数据
+                  </button>
+                </div>
+              </article>
             </div>
-          </article>
-          </div>
+          </section>
         </div>
 
         <nav class="match-pagination" aria-label="比赛记录分页">
@@ -270,7 +319,7 @@ function onMatchStageChange() {
 
           <div class="match-pagination__pages">
             <button
-              v-for="page in matchPageNumbers"
+              v-for="page in matchTotalPages"
               :key="page"
               type="button"
               class="match-pagination__page"
@@ -302,60 +351,53 @@ function onMatchStageChange() {
 }
 
 .overview-section {
+  .section-head {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 0 0 30px;
+  }
+
   .section-head-title {
+    margin: 0;
     color: var(--cnpa-paper-text);
+    font-size: clamp(30px, 3vw, 34px);
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: -0.02em;
   }
 
   .section-head-sub {
     color: var(--cnpa-red);
-    font-size: clamp(14px, 1.4vw, 18px);
+    font-size: clamp(13px, 1.2vw, 14px);
+    line-height: 1.1;
     font-style: italic;
-    font-weight: 800;
+    font-weight: 900;
     letter-spacing: 0.02em;
     text-transform: uppercase;
+    white-space: nowrap;
   }
 }
 
-.section-meta {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--cnpa-paper-text-muted);
-  white-space: nowrap;
+.roster-section {
+  margin-top: 42px;
 }
 
 .overview-section--matches {
   margin-top: clamp(52px, 4vw, 64px);
   padding-bottom: 48px;
-  overflow: visible;
+}
+
+.match-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
 
   .section-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    margin-bottom: 0;
-    overflow: visible;
-  }
-
-  .section-head-group {
-    gap: clamp(14px, 1.2vw, 18px);
-    align-items: baseline;
-  }
-
-  .section-head-title {
-    font-size: clamp(34px, 2.6vw, 38px);
-    line-height: 1.15;
-  }
-
-  .section-head-sub {
-    font-size: clamp(14px, 1.3vw, 17px);
-    letter-spacing: 0.04em;
-  }
-
-  .match-filter {
-    flex-shrink: 0;
-    min-width: 260px;
-    max-width: 300px;
+    margin: 0;
   }
 }
 
@@ -363,21 +405,24 @@ function onMatchStageChange() {
   position: relative;
   display: inline-flex;
   align-items: center;
-  min-width: 220px;
-  height: 40px;
-  border: 1px solid rgba(0, 0, 0, 0.16);
+  flex-shrink: 0;
+  min-width: 260px;
+  max-width: 300px;
+  height: 42px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.5);
   box-sizing: border-box;
 
   &::after {
-    content: '˅';
+    content: '⌄';
     position: absolute;
-    right: 14px;
-    color: rgba(17, 17, 17, 0.45);
-    font-size: 14px;
+    right: 18px;
+    color: rgba(17, 17, 17, 0.55);
+    font-size: 18px;
     line-height: 1;
     pointer-events: none;
+    transform: translateY(-1px);
   }
 }
 
@@ -396,13 +441,13 @@ function onMatchStageChange() {
 .match-filter__select {
   width: 100%;
   height: 100%;
-  padding: 0 36px 0 16px;
+  padding: 0 36px 0 18px;
   border: none;
   border-radius: 2px;
   background: transparent;
   color: var(--cnpa-paper-text);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 900;
   font-family: inherit;
   cursor: pointer;
   appearance: none;
@@ -421,155 +466,200 @@ function onMatchStageChange() {
 .overview-empty {
   padding: 40px 16px;
   text-align: center;
-  border: 1px solid rgba(17, 17, 17, 0.1);
-  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  background: rgba(255, 255, 255, 0.22);
   color: var(--cnpa-paper-text-muted);
   font-size: 14px;
 }
 
-.carousel {
-  display: grid;
-  grid-template-columns: 40px 1fr 40px;
-  gap: 12px;
-  align-items: center;
-}
-
-.carousel-arrow {
-  width: 40px;
-  height: 40px;
-  border: 1px solid rgba(17, 17, 17, 0.16);
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--cnpa-paper-text);
-  font-size: 24px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: var(--cnpa-red);
-    color: var(--cnpa-red);
-  }
+.roster-wrap {
+  position: relative;
+  margin: 0 22px 52px;
 }
 
 .roster-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 14px;
+  gap: 22px;
+  padding: 0 18px;
 }
 
-.player-card {
+.roster-card {
+  min-height: 250px;
+  padding-top: 34px;
+  border: 1px solid var(--cnpa-paper-border);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 20px 12px 18px;
-  border: 1px solid rgba(17, 17, 17, 0.1);
-  background: rgba(255, 255, 255, 0.72);
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  justify-content: flex-start;
+  box-sizing: border-box;
+}
 
-  &:hover {
-    border-color: rgba(225, 6, 19, 0.35);
-    transform: translateY(-2px);
+.player-avatar {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  position: relative;
+  border: 3px solid rgba(193, 134, 32, 0.75);
+  box-shadow:
+    0 12px 20px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.18), transparent 35%),
+    linear-gradient(135deg, #111, #2b2b2b);
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    pointer-events: none;
   }
 }
 
-.player-card__avatar-wrap {
-  width: 72px;
-  height: 72px;
-}
-
-.player-card__avatar-img {
+.player-avatar__img {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   object-fit: cover;
+  border-radius: 50%;
 }
 
-.player-card__avatar-placeholder {
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 1px solid rgba(17, 17, 17, 0.12);
-  background: linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 100%);
+.player-avatar__placeholder {
   color: #fff;
-  font-size: 18px;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.player-name {
+  margin-top: 21px;
+  color: var(--cnpa-paper-text);
+  font-size: clamp(18px, 1.6vw, 22px);
+  line-height: 1;
   font-weight: 900;
 }
 
-.player-card__body {
-  width: 100%;
-  text-align: center;
-}
-
-.player-card__name-row {
-  display: flex;
+.captain-badge {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-
-.player-card__name {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--cnpa-paper-text);
-}
-
-.player-card__captain {
-  padding: 2px 6px;
+  margin-top: 12px;
+  min-width: 52px;
+  height: 26px;
+  padding: 0 10px;
+  color: #fff;
+  background: var(--cnpa-red);
+  font-size: 13px;
+  font-weight: 900;
   border-radius: 2px;
-  background: rgba(225, 6, 19, 0.12);
-  color: var(--cnpa-red);
-  font-size: 11px;
-  font-weight: 800;
+  box-shadow: 0 5px 10px rgba(217, 8, 20, 0.22);
 }
 
-.player-card__position {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--cnpa-paper-text-muted);
+.player-position {
+  margin-top: 13px;
+  color: var(--cnpa-paper-text);
+  font-size: clamp(16px, 1.4vw, 20px);
+  line-height: 1;
+  font-weight: 900;
+}
+
+.roster-arrow {
+  position: absolute;
+  top: 118px;
+  width: 28px;
+  height: 46px;
+  border: none;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 56px;
+  line-height: 1;
+  font-weight: 300;
+  cursor: pointer;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--cnpa-red);
+  }
+}
+
+.roster-arrow--left {
+  left: -28px;
+}
+
+.roster-arrow--right {
+  right: -28px;
 }
 
 .carousel-dots {
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: 22px;
+  gap: 11px;
+  margin-top: 24px;
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border: none;
   border-radius: 50%;
-  background: rgba(17, 17, 17, 0.18);
+  background: rgba(0, 0, 0, 0.22);
   cursor: pointer;
   transition: background 0.2s ease, transform 0.2s ease;
 
   &.active {
     background: var(--cnpa-red);
-    transform: scale(1.2);
+    transform: scale(1.05);
   }
 }
 
-.match-table-wrap {
-  width: 100%;
-  margin-top: 20px;
+.match-groups {  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.match-group {
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+}
+
+.match-group__title {
+  height: 48px;
+  padding: 0 22px;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(180deg, #111 0%, #050505 100%);
+  color: #fff;
+  border-radius: 2px 2px 0 0;
+  margin-bottom: 0;
+}
+
+.match-group__bar {
+  flex-shrink: 0;
+  width: 4px;
+  height: 22px;
+  background: var(--cnpa-red);
+  margin-right: 12px;
+}
+
+.match-group__title h3 {
+  margin: 0;
+  font-size: clamp(22px, 2vw, 24px);
+  font-weight: 900;
 }
 
 .match-table {
   width: 100%;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.58);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.035);
+  min-width: 1140px;
+  border: 1px solid var(--cnpa-paper-border);
+  border-top: none;
+  background: rgba(255, 255, 255, 0.32);
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -577,33 +667,38 @@ function onMatchStageChange() {
 .match-table__head,
 .match-table__row {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: 120px 190px minmax(260px, 1fr) 150px 140px 260px;
   align-items: center;
-  column-gap: 8px;
-  padding: 0 18px;
+  column-gap: 12px;
+  padding: 0 28px;
+}
+
+.match-table__head > * {
+  justify-self: center;
+  text-align: center;
 }
 
 .match-table__head {
-  min-height: 44px;
-  background: linear-gradient(180deg, #111 0%, #050505 100%);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 800;
-
-  > * {
-    justify-self: center;
-    align-self: center;
-    text-align: center;
-  }
+  min-height: 54px;
+  background: rgba(255, 255, 255, 0.46);
+  color: #171717;
+  font-size: 16px;
+  font-weight: 900;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .match-table__row {
-  min-height: 68px;
+  min-height: 76px;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.24);
   transition: background 0.2s ease;
 
+  &:first-of-type {
+    border-top: none;
+  }
+
   &:hover {
-    background: rgba(255, 255, 255, 0.72);
+    background: rgba(255, 255, 255, 0.38);
   }
 
   > * {
@@ -612,135 +707,153 @@ function onMatchStageChange() {
   }
 }
 
-.match-table__result {
+.match-table__status {
+  justify-self: center;
   text-align: center;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 900;
 
   &.is-win {
-    color: #d90012;
-    font-weight: 900;
+    color: var(--cnpa-red);
   }
 
   &.is-loss {
-    color: #111;
-    font-weight: 900;
+    color: #333;
+  }
+
+  &.is-scheduled,
+  &.is-finished {
+    color: #666;
   }
 }
 
-.match-table__date {
+.match-table__datetime {
+  justify-self: center;
   text-align: center;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--cnpa-paper-text);
+  font-size: 17px;
+  font-weight: 800;
+  color: #555;
+  letter-spacing: 0.02em;
 }
 
 .match-table__opponent {
+  justify-self: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
   min-width: 0;
-  max-width: 100%;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
-  color: var(--cnpa-paper-text);
-}
+  color: #333;
 
-.match-table__opponent-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  span {
+    white-space: nowrap;
+  }
 }
 
 .match-table__opponent-logo {
   flex-shrink: 0;
+  width: 52px;
+  height: 52px;
 }
 
 .match-table__score {
+  justify-self: center;
   display: inline-flex;
   align-items: baseline;
   justify-content: center;
-  gap: 6px;
-  min-width: auto;
+  gap: 7px;
   font-size: 28px;
   font-weight: 900;
   line-height: 1;
+  color: #111;
 }
 
 .score-number {
-  font-size: inherit;
-  font-weight: 900;
   color: #111;
-  letter-spacing: 0.02em;
-  line-height: 1;
 
   &.is-winner {
-    color: #d90012;
+    color: var(--cnpa-red);
   }
 }
 
 .score-separator {
-  font-size: inherit;
-  font-weight: 900;
   color: #111;
-  line-height: 1;
+}
+
+.match-table__score.is-vs {
+  font-size: 24px;
+  color: #111;
 }
 
 .match-table__stage {
+  justify-self: center;
   text-align: center;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--cnpa-paper-text-muted);
+  font-size: 16px;
+  font-weight: 800;
+  color: #555;
 }
 
 .match-table__actions {
+  justify-self: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
 }
 
 .action-btn {
-  width: 80px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid rgba(0, 0, 0, 0.22);
+  min-width: 92px;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.62);
   color: #222;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 800;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.2s ease;
 
-  &:hover {
-    border-color: #d90012;
-    color: #d90012;
-    background: #fff;
+  &:hover:not(:disabled) {
+    border-color: var(--cnpa-red);
+    color: var(--cnpa-red);
+    background: rgba(255, 255, 255, 0.78);
   }
+}
+
+.action-btn--disabled,
+.action-btn:disabled {
+  color: #666;
+  background: rgba(255, 255, 255, 0.48);
+  border-color: rgba(0, 0, 0, 0.12);
+  cursor: not-allowed;
 }
 
 .match-pagination {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  margin-top: 28px;
+  gap: 16px;
+  margin-top: 32px;
 }
 
 .match-pagination__nav {
   border: none;
   background: transparent;
-  color: rgba(17, 17, 17, 0.58);
-  font-size: 13px;
+  color: #777;
+  min-width: auto;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
   transition: color 0.2s ease;
 
   &:hover:not(:disabled) {
-    color: #d90012;
+    color: var(--cnpa-red);
   }
 
   &:disabled {
@@ -756,64 +869,61 @@ function onMatchStageChange() {
 }
 
 .match-pagination__page {
+  width: 30px;
   min-width: 30px;
   height: 30px;
-  padding: 0 8px;
-  border: 1px solid rgba(0, 0, 0, 0.16);
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.14);
   border-radius: 2px;
-  background: #fff;
-  color: var(--cnpa-paper-text);
-  font-size: 13px;
-  font-weight: 700;
+  background: rgba(255, 255, 255, 0.62);
+  color: #333;
+  font-size: 14px;
+  font-weight: 800;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 
   &.active {
-    border-color: #d90012;
-    background: #d90012;
+    background: var(--cnpa-red);
+    border-color: var(--cnpa-red);
     color: #fff;
   }
 
   &:hover:not(.active) {
-    border-color: rgba(217, 0, 18, 0.45);
-    color: #d90012;
+    border-color: var(--cnpa-red);
+    color: var(--cnpa-red);
   }
 }
 
 @media (max-width: 1200px) {
   .roster-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 992px) {
-  .roster-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 980px;
   }
 
-  .match-table {
-    min-width: 900px;
+  .roster-wrap {
+    overflow-x: auto;
+    margin-left: 0;
+    margin-right: 0;
   }
 }
 
 @media (max-width: 768px) {
-  .roster-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .carousel {
-    grid-template-columns: 32px 1fr 32px;
-  }
-
-  .section-head {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .overview-section--matches .section-head {
+  .match-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .match-filter {
+    width: 100%;
+    max-width: none;
+  }
+
+  .roster-arrow--left {
+    left: 0;
+  }
+
+  .roster-arrow--right {
+    right: 0;
   }
 }
 </style>

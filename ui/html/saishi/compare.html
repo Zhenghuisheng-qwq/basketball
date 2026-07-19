@@ -1,0 +1,889 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CNPA 球队对比静态复刻</title>
+    <style>
+        :root {
+            --site-width: 971px;
+            --red: #d70b16;
+            --deep-red: #6d080c;
+            --gold: #b58a34;
+            --blue: #174b92;
+            --black: #050505;
+            --paper: #f0ece3;
+            --paper-soft: #f7f4ee;
+            --paper-deep: #e6ded1;
+            --line: rgba(0,0,0,.15);
+            --text: #101010;
+            --muted: rgba(0,0,0,.58);
+        }
+
+        * { box-sizing: border-box; }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            background: #000;
+            color: var(--text);
+            font-family: "Arial Narrow", "DIN Condensed", "Roboto Condensed", "Microsoft YaHei", Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+        }
+
+        .page {
+            width: min(var(--site-width), 100vw);
+            min-height: 100vh;
+            background: #000;
+            overflow: hidden;
+        }
+
+        /* ======================== Header ======================== */
+        .header {
+            height: 58px;
+            background: linear-gradient(180deg, #060606 0%, #000 100%);
+            border-bottom: 1px solid rgba(255,255,255,.12);
+            display: flex;
+            align-items: center;
+            padding: 0 26px;
+            color: #fff;
+        }
+
+        .brand {
+            width: 145px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            flex-shrink: 0;
+        }
+
+        .brand-mark {
+            width: 34px;
+            height: 34px;
+            border: 1px solid rgba(255,255,255,.55);
+            clip-path: polygon(50% 0, 90% 23%, 90% 75%, 50% 100%, 10% 75%, 10% 23%);
+            display: grid;
+            place-items: center;
+            font-size: 10px;
+            font-weight: 900;
+            color: #eee;
+            background: linear-gradient(135deg, #161616, #444);
+        }
+
+        .brand-text strong {
+            display: block;
+            font-size: 26px;
+            line-height: 1;
+            letter-spacing: 1px;
+            font-weight: 900;
+        }
+
+        .brand-text span {
+            display: block;
+            margin-top: 1px;
+            font-size: 6px;
+            color: rgba(255,255,255,.62);
+            white-space: nowrap;
+            letter-spacing: .4px;
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: 38px;
+            height: 100%;
+            margin-left: 54px;
+            font-size: 15px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .nav a {
+            position: relative;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            color: rgba(255,255,255,.92);
+            text-decoration: none;
+        }
+
+        .nav a.active { color: var(--red); }
+
+        .nav a.active::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            width: 68px;
+            height: 3px;
+            background: var(--red);
+            transform: translateX(-50%);
+        }
+
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .search-icon {
+            width: 22px;
+            height: 22px;
+            position: relative;
+            opacity: .85;
+        }
+
+        .search-icon::before {
+            content: "";
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            left: 1px;
+            top: 1px;
+        }
+
+        .search-icon::after {
+            content: "";
+            position: absolute;
+            width: 9px;
+            height: 2px;
+            background: #fff;
+            transform: rotate(45deg);
+            left: 13px;
+            top: 14px;
+            transform-origin: left center;
+        }
+
+        .login,
+        .register {
+            width: 62px;
+            height: 34px;
+            border: 1px solid rgba(255,255,255,.42);
+            display: grid;
+            place-items: center;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .register {
+            background: var(--red);
+            border-color: var(--red);
+        }
+
+        /* ======================== Compare Hero ======================== */
+        .compare-hero {
+            position: relative;
+            min-height: 296px;
+            padding: 26px 30px 0;
+            overflow: hidden;
+            color: #fff;
+            background:
+                    radial-gradient(circle at 72% 22%, rgba(188, 0, 0, .24), transparent 28%),
+                    radial-gradient(circle at 17% 48%, rgba(120, 20, 16, .22), transparent 26%),
+                    linear-gradient(120deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.88) 37%, rgba(14,14,14,.94) 50%, rgba(44,4,7,.75) 77%, rgba(0,0,0,.9) 100%),
+                    repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 1px, transparent 1px 10px);
+        }
+
+        .compare-hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            opacity: .56;
+            background:
+                    linear-gradient(112deg, transparent 0 54%, rgba(150,20,15,.45) 54.5%, rgba(160,20,15,.32) 67%, transparent 67.5%),
+                    linear-gradient(126deg, transparent 0 76%, rgba(208,164,60,.7) 76.2%, transparent 76.8%),
+                    linear-gradient(126deg, transparent 0 80%, rgba(196,30,19,.55) 80.2%, transparent 81%),
+                    radial-gradient(circle at 82% 44%, rgba(255,208,80,.14), transparent 22%);
+            pointer-events: none;
+        }
+
+        .compare-hero::after {
+            content: "";
+            position: absolute;
+            right: -20px;
+            top: 60px;
+            width: 190px;
+            height: 220px;
+            transform: skewX(-19deg);
+            border-left: 2px solid rgba(184,133,32,.7);
+            background: linear-gradient(110deg, rgba(0,0,0,.3), rgba(194,133,45,.15), rgba(0,0,0,.78));
+            opacity: .85;
+        }
+
+        .crumb {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            font-size: 13px;
+            color: rgba(255,255,255,.56);
+            font-weight: 700;
+        }
+
+        .crumb b { color: #fff; }
+
+        .battle {
+            position: relative;
+            z-index: 2;
+            height: 244px;
+            display: grid;
+            grid-template-columns: 1fr 180px 1fr;
+            align-items: center;
+            column-gap: 22px;
+        }
+
+        .team-side {
+            display: flex;
+            align-items: center;
+            gap: 34px;
+            min-width: 0;
+        }
+
+        .team-side.right {
+            justify-content: flex-end;
+            text-align: left;
+            gap: 28px;
+        }
+
+        .team-emblem {
+            width: 152px;
+            height: 112px;
+            display: grid;
+            place-items: center;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .team-emblem.rng {
+            width: 178px;
+            height: 100px;
+            color: transparent;
+            position: relative;
+        }
+
+        .team-emblem.rng::before,
+        .team-emblem.rng::after {
+            content: "";
+            position: absolute;
+            background: linear-gradient(135deg, #efc690, #9e6e37 55%, #6c3f18);
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,.25));
+        }
+
+        .team-emblem.rng::before {
+            left: 0;
+            top: 22px;
+            width: 126px;
+            height: 58px;
+            clip-path: polygon(0 0, 100% 0, 100% 32%, 52% 32%, 66% 50%, 100% 50%, 100% 100%, 35% 100%, 0 42%);
+        }
+
+        .team-emblem.rng::after {
+            right: 0;
+            top: 24px;
+            width: 86px;
+            height: 56px;
+            clip-path: polygon(0 0, 100% 0, 100% 36%, 48% 36%, 65% 52%, 100% 52%, 100% 100%, 32% 100%, 0 52%);
+        }
+
+        .team-emblem.titan {
+            width: 112px;
+            height: 122px;
+            color: transparent;
+            background: linear-gradient(135deg, #194d9a, #0b2c5b);
+            clip-path: polygon(50% 0, 84% 14%, 98% 47%, 78% 92%, 50% 100%, 22% 92%, 2% 47%, 16% 14%);
+            position: relative;
+            box-shadow: inset 0 0 0 6px rgba(0,0,0,.2);
+        }
+
+        .team-emblem.titan::before {
+            content: "T";
+            color: rgba(255,255,255,.14);
+            position: absolute;
+            font-size: 90px;
+            line-height: 1;
+            font-weight: 900;
+            top: 17px;
+            left: 32px;
+        }
+
+        .team-name {
+            font-size: 46px;
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: 2px;
+            margin: 0 0 16px;
+            color: #f7f7f7;
+        }
+
+        .team-record {
+            margin: 0 0 7px;
+            font-size: 19px;
+            line-height: 1.25;
+            font-weight: 800;
+            color: rgba(255,255,255,.86);
+            letter-spacing: 1px;
+        }
+
+        .team-rank {
+            margin: 0 0 22px;
+            font-size: 17px;
+            line-height: 1.25;
+            font-weight: 800;
+            color: rgba(255,255,255,.86);
+        }
+
+        .switch-btn {
+            width: 98px;
+            height: 35px;
+            border: 1px solid rgba(181,138,52,.95);
+            background: rgba(0,0,0,.22);
+            color: #ddd;
+            font-size: 14px;
+            font-weight: 800;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: inset 0 0 14px rgba(181,138,52,.14);
+        }
+
+        .vs-area {
+            text-align: center;
+            align-self: center;
+            transform: translateY(12px);
+        }
+
+        .vs {
+            display: block;
+            color: var(--red);
+            font-size: 58px;
+            line-height: 1;
+            font-weight: 900;
+            font-style: italic;
+            text-shadow: 0 3px 12px rgba(0,0,0,.5);
+            letter-spacing: -4px;
+        }
+
+        .season-pill {
+            margin: 24px auto 0;
+            min-width: 230px;
+            height: 38px;
+            padding: 0 22px;
+            border: 1px solid rgba(181,138,52,.95);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,.86);
+            font-size: 15px;
+            font-weight: 800;
+            background: rgba(0,0,0,.24);
+            box-shadow: inset 0 0 18px rgba(181,138,52,.12);
+        }
+
+        .paper-tear {
+            height: 33px;
+            position: relative;
+            margin-top: -7px;
+            background: var(--paper-soft);
+            z-index: 4;
+        }
+
+        .paper-tear::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: -20px;
+            height: 35px;
+            background:
+                    radial-gradient(circle at 12px 24px, var(--paper-soft) 0 13px, transparent 14px),
+                    radial-gradient(circle at 41px 20px, var(--paper-soft) 0 16px, transparent 17px),
+                    radial-gradient(circle at 77px 25px, var(--paper-soft) 0 13px, transparent 14px);
+            background-size: 92px 35px;
+            background-repeat: repeat-x;
+            filter: drop-shadow(0 -2px 3px rgba(0,0,0,.32));
+        }
+
+        /* ======================== Paper Content ======================== */
+        .paper {
+            margin-top: -1px;
+            padding: 40px 46px 0;
+            background: linear-gradient(180deg, var(--paper-soft) 0%, var(--paper) 58%, var(--paper-deep) 100%);
+        }
+
+        .section-title-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 18px;
+        }
+
+        .section-title-row h1,
+        .section-title-row h2 {
+            margin: 0;
+            font-size: 32px;
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: -1px;
+        }
+
+        .en {
+            color: var(--red);
+            font-size: 13px;
+            line-height: 1.05;
+            font-style: italic;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+
+        .scope {
+            margin: 14px 0 0;
+            color: rgba(0,0,0,.55);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .top-stats {
+            margin-top: 26px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .compare-card {
+            height: 146px;
+            padding: 24px 20px 15px;
+            background: rgba(255,255,255,.33);
+            border: 1px solid rgba(0,0,0,.13);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.65);
+        }
+
+        .compare-card__head {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            height: 26px;
+            color: #111;
+            font-size: 17px;
+            font-weight: 900;
+        }
+
+        .mini-icon {
+            font-size: 23px;
+            line-height: 1;
+            font-weight: 900;
+            color: #151515;
+        }
+
+        .compare-card__values {
+            margin-top: 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: end;
+            gap: 18px;
+        }
+
+        .compare-value {
+            text-align: center;
+            font-size: 28px;
+            line-height: 1;
+            font-weight: 900;
+            color: #777;
+        }
+
+        .compare-value.left { color: var(--gold); }
+        .compare-value.right { color: #777; }
+
+        .compare-card__teams {
+            margin-top: 18px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(0,0,0,.16);
+            display: grid;
+            grid-template-columns: 1fr 1px 1fr;
+            gap: 12px;
+            color: rgba(0,0,0,.58);
+            font-size: 13px;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .compare-card__teams i {
+            width: 1px;
+            height: 16px;
+            background: rgba(0,0,0,.22);
+            display: block;
+            margin: 0 auto;
+        }
+
+        .block-title {
+            margin-top: 42px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .block-title::before {
+            content: "";
+            width: 4px;
+            height: 28px;
+            background: var(--red);
+            display: block;
+        }
+
+        .block-title h2 {
+            margin: 0;
+            font-size: 28px;
+            line-height: 1;
+            font-weight: 900;
+        }
+
+        .metric-grid {
+            margin-top: 22px;
+            display: grid;
+            grid-template-columns: 1fr 120px 1fr;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .metric-side {
+            display: flex;
+            flex-direction: column;
+            gap: 13px;
+        }
+
+        .metric-row {
+            height: 40px;
+            display: grid;
+            grid-template-columns: 66px 1fr;
+            align-items: center;
+            gap: 13px;
+            padding: 0 16px;
+            background: rgba(255,255,255,.28);
+            border: 1px solid rgba(0,0,0,.12);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.5);
+        }
+
+        .metric-side.right .metric-row {
+            grid-template-columns: 1fr 66px;
+        }
+
+        .metric-value {
+            font-size: 21px;
+            line-height: 1;
+            font-weight: 900;
+        }
+
+        .metric-side.left .metric-value { color: var(--gold); }
+        .metric-side.right .metric-value { color: var(--blue); text-align: right; }
+        .metric-side.right .metric-value.muted { color: #787878; }
+
+        .bar-track {
+            height: 14px;
+            background: rgba(0,0,0,.08);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: #c0963e;
+        }
+
+        .metric-side.right .bar-fill { background: #174c9f; margin-left: auto; }
+        .bar-fill.gray { background: rgba(0,0,0,.13); }
+
+        .metric-labels {
+            display: flex;
+            flex-direction: column;
+            gap: 13px;
+            text-align: center;
+        }
+
+        .metric-labels span {
+            height: 40px;
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+            font-weight: 900;
+            color: #111;
+        }
+
+        .note {
+            margin: 27px 0 0 24px;
+            color: rgba(0,0,0,.62);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        /* ======================== Footer ======================== */
+        .footer {
+            min-height: 255px;
+            padding: 34px 44px 26px;
+            color: rgba(255,255,255,.64);
+            background:
+                    radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), transparent 28%),
+                    linear-gradient(180deg, #060606, #000);
+            border-top: 1px solid rgba(255,255,255,.08);
+        }
+
+        .footer-main {
+            display: grid;
+            grid-template-columns: 1.35fr .55fr .55fr .55fr 1.05fr;
+            gap: 34px;
+            align-items: start;
+        }
+
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            color: #fff;
+        }
+
+        .footer-brand .brand-mark { width: 38px; height: 38px; }
+        .footer-brand strong { font-size: 32px; line-height: 1; }
+        .footer-copy { max-width: 210px; font-size: 13px; line-height: 1.9; color: rgba(255,255,255,.55); }
+
+        .socials { margin-top: 18px; display: flex; gap: 13px; color: #fff; font-size: 18px; }
+
+        .footer-col h3 {
+            margin: 0 0 14px;
+            color: #fff;
+            font-size: 15px;
+        }
+
+        .footer-col a {
+            display: block;
+            color: rgba(255,255,255,.5);
+            font-size: 13px;
+            line-height: 2.05;
+            text-decoration: none;
+        }
+
+        .qr-area {
+            display: flex;
+            justify-content: flex-end;
+            gap: 26px;
+            padding-left: 30px;
+            border-left: 1px solid rgba(255,255,255,.18);
+        }
+
+        .qr-item { text-align: center; color: #fff; font-size: 12px; font-weight: 800; }
+        .qr {
+            width: 76px;
+            height: 76px;
+            margin-top: 10px;
+            background:
+                    linear-gradient(90deg, #111 9px, transparent 9px 17px, #111 17px 24px, transparent 24px 32px, #111 32px 43px, transparent 43px 52px, #111 52px 64px, transparent 64px),
+                    linear-gradient(#111 9px, transparent 9px 17px, #111 17px 24px, transparent 24px 32px, #111 32px 43px, transparent 43px 52px, #111 52px 64px, transparent 64px),
+                    #fff;
+            background-blend-mode: multiply;
+            border: 6px solid #fff;
+        }
+
+        .copyright {
+            margin-top: 34px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255,255,255,.12);
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255,255,255,.38);
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 760px) {
+            .page { width: 100vw; }
+            .header { padding: 0 16px; }
+            .nav { display: none; }
+            .battle { grid-template-columns: 1fr; height: auto; gap: 24px; padding: 38px 0 36px; }
+            .team-side, .team-side.right { justify-content: center; }
+            .vs-area { order: 2; transform: none; }
+            .top-stats { grid-template-columns: 1fr 1fr; }
+            .metric-grid { grid-template-columns: 1fr; }
+            .metric-labels { order: -1; }
+            .footer-main { grid-template-columns: 1fr 1fr; }
+            .qr-area { justify-content: flex-start; border-left: 0; padding-left: 0; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header class="header">
+        <div class="brand">
+            <div class="brand-mark">CNPA</div>
+            <div class="brand-text">
+                <strong>CNPA</strong>
+                <span>CHINA PRO AM ASSOCIATION</span>
+            </div>
+        </div>
+        <nav class="nav">
+            <a href="#">首页</a>
+            <a class="active" href="#">赛事</a>
+            <a href="#">数据</a>
+            <a href="#">名人堂</a>
+            <a href="#">公告</a>
+            <a href="#">合作伙伴</a>
+        </nav>
+        <div class="header-actions">
+            <span class="search-icon"></span>
+            <a class="login" href="#">登录</a>
+            <a class="register" href="#">注册</a>
+        </div>
+    </header>
+
+    <section class="compare-hero">
+        <div class="crumb"><span>赛事</span><span>/</span><span>CNPA League</span><span>/</span><b>球队对比</b></div>
+        <div class="battle">
+            <div class="team-side left">
+                <div class="team-emblem rng">RNG</div>
+                <div class="team-info">
+                    <h2 class="team-name">RNG</h2>
+                    <p class="team-record">12胜2负</p>
+                    <p class="team-rank">常规赛第1</p>
+                    <button class="switch-btn">更换球队</button>
+                </div>
+            </div>
+
+            <div class="vs-area">
+                <span class="vs">VS</span>
+                <span class="season-pill">2026 CNPA League · 常规赛</span>
+            </div>
+
+            <div class="team-side right">
+                <div class="team-emblem titan">T</div>
+                <div class="team-info">
+                    <h2 class="team-name">TITAN</h2>
+                    <p class="team-record">10胜4负</p>
+                    <p class="team-rank">常规赛第3</p>
+                    <button class="switch-btn">更换球队</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="paper-tear"></div>
+
+    <main class="paper">
+        <div class="section-title-row">
+            <h1>常规赛数据对比</h1>
+            <span class="en">REGULAR SEASON COMPARISON</span>
+        </div>
+        <p class="scope">统计范围：已审核完成比赛</p>
+
+        <section class="top-stats">
+            <article class="compare-card">
+                <div class="compare-card__head"><span class="mini-icon">♕</span><span>胜率</span></div>
+                <div class="compare-card__values">
+                    <strong class="compare-value left">85.7%</strong>
+                    <strong class="compare-value right">71.4%</strong>
+                </div>
+                <div class="compare-card__teams"><span>RNG</span><i></i><span>TITAN</span></div>
+            </article>
+            <article class="compare-card">
+                <div class="compare-card__head"><span class="mini-icon">◉</span><span>场均得分</span></div>
+                <div class="compare-card__values">
+                    <strong class="compare-value left">78.1</strong>
+                    <strong class="compare-value right">75.6</strong>
+                </div>
+                <div class="compare-card__teams"><span>RNG</span><i></i><span>TITAN</span></div>
+            </article>
+            <article class="compare-card">
+                <div class="compare-card__head"><span class="mini-icon">⬟</span><span>场均失分</span></div>
+                <div class="compare-card__values">
+                    <strong class="compare-value left">69.8</strong>
+                    <strong class="compare-value right">72.4</strong>
+                </div>
+                <div class="compare-card__teams"><span>RNG</span><i></i><span>TITAN</span></div>
+            </article>
+            <article class="compare-card">
+                <div class="compare-card__head"><span class="mini-icon">↗</span><span>场均净胜分</span></div>
+                <div class="compare-card__values">
+                    <strong class="compare-value left">+8.3</strong>
+                    <strong class="compare-value right">+3.2</strong>
+                </div>
+                <div class="compare-card__teams"><span>RNG</span><i></i><span>TITAN</span></div>
+            </article>
+        </section>
+
+        <section class="block-title"><h2>基础数据</h2></section>
+        <section class="metric-grid">
+            <div class="metric-side left">
+                <div class="metric-row"><strong class="metric-value">21.2</strong><span class="bar-track"><span class="bar-fill" style="width: 92%"></span></span></div>
+                <div class="metric-row"><strong class="metric-value">18.0</strong><span class="bar-track"><span class="bar-fill" style="width: 92%"></span></span></div>
+                <div class="metric-row"><strong class="metric-value">4.7</strong><span class="bar-track"><span class="bar-fill gray" style="width: 92%"></span></span></div>
+                <div class="metric-row"><strong class="metric-value">1.2</strong><span class="bar-track"><span class="bar-fill gray" style="width: 92%"></span></span></div>
+                <div class="metric-row"><strong class="metric-value">5.5</strong><span class="bar-track"><span class="bar-fill" style="width: 92%"></span></span></div>
+                <div class="metric-row"><strong class="metric-value">9.7</strong><span class="bar-track"><span class="bar-fill" style="width: 92%"></span></span></div>
+            </div>
+            <div class="metric-labels">
+                <span>场均篮板</span>
+                <span>场均助攻</span>
+                <span>场均抢断</span>
+                <span>场均盖帽</span>
+                <span>场均失误</span>
+                <span>场均犯规</span>
+            </div>
+            <div class="metric-side right">
+                <div class="metric-row"><span class="bar-track"><span class="bar-fill" style="width: 88%"></span></span><strong class="metric-value">22.4</strong></div>
+                <div class="metric-row"><span class="bar-track"><span class="bar-fill gray" style="width: 66%"></span></span><strong class="metric-value muted">16.8</strong></div>
+                <div class="metric-row"><span class="bar-track"><span class="bar-fill" style="width: 88%"></span></span><strong class="metric-value">5.2</strong></div>
+                <div class="metric-row"><span class="bar-track"><span class="bar-fill" style="width: 88%"></span></span><strong class="metric-value">1.5</strong></div>
+                <div class="metric-row"><span class="bar-track"><span class="bar-fill gray" style="width: 76%"></span></span><strong class="metric-value muted">6.3</strong></div>
+                <div class="metric-row"><span class="bar-track"><span class="bar-fill" style="width: 88%"></span></span><strong class="metric-value">8.9</strong></div>
+            </div>
+        </section>
+
+        <section class="block-title"><h2>投篮表现</h2></section>
+        <section class="metric-grid">
+            <div class="metric-side left">
+                <div class="metric-row"><strong class="metric-value">51.6%</strong><span class="bar-track"><span class="bar-fill" style="width: 90%"></span></span></div>
+                <div class="metric-row"><strong class="metric-value">39.4%</strong><span class="bar-track"><span class="bar-fill" style="width: 91%"></span></span></div>
+                <div class="metric-row"><strong class="metric-value">81.3%</strong><span class="bar-track"><span class="bar-fill" style="width: 91%"></span></span></div>
+            </div>
+            <div class="metric-labels">
+                <span>投篮命中率</span>
+                <span>三分命中率</span>
+                <span>罚球命中率</span>
+            </div>
+            <div class="metric-side right">
+                <div class="metric-row"><span class="bar-track"><span class="bar-fill gray" style="width: 74%"></span></span><strong class="metric-value muted">49.8%</strong></div>
+                <div class="metric-row"><span class="bar-track"><span class="bar-fill gray" style="width: 72%"></span></span><strong class="metric-value muted">37.2%</strong></div>
+                <div class="metric-row"><span class="bar-track"><span class="bar-fill gray" style="width: 72%"></span></span><strong class="metric-value muted">78.6%</strong></div>
+            </div>
+        </section>
+
+        <p class="note">▼ 高亮代表该项表现更优；失误、犯规为数值越低越优</p>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-main">
+            <div>
+                <div class="footer-brand"><div class="brand-mark">CNPA</div><strong>CNPA</strong></div>
+                <p class="footer-copy">CNPA 致力于打造专业、开放、公平的电子竞技赛事体系，为热爱而战。</p>
+                <div class="socials"><span>◎</span><span>●</span><span>◌</span><span>♪</span><span>PS</span><span>XB</span></div>
+            </div>
+            <div class="footer-col"><h3>赛事</h3><a>CNPA League</a><a>CNPA Arena</a><a>CNPA Cup</a><a>CNPA Open</a></div>
+            <div class="footer-col"><h3>数据</h3><a>球员数据</a><a>战队数据</a><a>赛事赛程</a><a>数据记录</a></div>
+            <div class="footer-col"><h3>名人堂</h3><a>传奇球员</a><a>荣誉战队</a><a>年度时刻</a><a>最佳阵容</a></div>
+            <div class="qr-area"><div class="qr-item">关注 CNPA<div class="qr"></div></div><div class="qr-item">下载 CNPA APP<div class="qr"></div></div></div>
+        </div>
+        <div class="copyright">© 2024 CNPA，中国职业电竞篮球联盟，保留所有权利。 ｜ 隐私政策 ｜ 服务条款</div>
+    </footer>
+</div>
+</body>
+</html>

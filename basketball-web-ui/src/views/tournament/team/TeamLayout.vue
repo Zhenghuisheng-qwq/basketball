@@ -18,7 +18,7 @@ const team = computed(() => getTeamById(teamId.value))
     <div class="site-shell team-page__shell">
       <TeamHero :team="team" :team-id="teamId" />
 
-      <div class="team-page__paper cnpa-paper-section cnpa-paper-section--light">
+      <div class="team-page__paper">
         <PaperTear position="top" tone="light" />
         <div class="team-page__paper-body">
           <div class="site-shell-inner team-page__paper-inner">
