@@ -5,7 +5,6 @@ import { useAuth } from '@/composables/useAuth'
 import { useAccountStore } from '@/stores/account'
 import { useNotificationCenterStore } from '@/stores/notificationCenter'
 import { resolvePlayerIdentityRoute } from '@/utils/playerIdentityNavigate'
-import sidebarBg from '@/assets/account/member-sidebar-bg.png'
 
 const route = useRoute()
 const router = useRouter()
@@ -107,14 +106,6 @@ function handleAvatarError() {
     class="account-sidebar"
     :class="{ 'account-sidebar--drawer-open': drawerOpen }"
   >
-    <img
-      class="account-sidebar__bg"
-      :src="sidebarBg"
-      alt=""
-      aria-hidden="true"
-      draggable="false"
-    />
-
     <button
       type="button"
       class="account-sidebar__mobile-toggle"

@@ -37,7 +37,6 @@ withDefaults(
       <span>{{ statusText }}</span>
     </div>
 
-    <div class="account-welcome-banner__tear" aria-hidden="true" />
   </section>
 </template>
 

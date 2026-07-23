@@ -47,8 +47,11 @@
 
 /* ── Sidebar ── */
 
-/* Sidebar: real background image + foreground content (no CSS tear fake) */
+/* Sidebar: CSS background image (member-sidebar-bg) — no CSS tear fake, no <img>
+   Image includes a wide taupe paper strip on the right; scale+left-align so that
+   strip is clipped by overflow, leaving black/red + natural white tear at the edge. */
 .account-sidebar {
+  --account-sidebar-bg-scale-x: 115%;
   position: relative;
   z-index: 10;
   align-self: stretch;
@@ -62,45 +65,30 @@
   isolation: isolate;
   color: #fff;
   background-color: #080808;
+  background-image: url('@/assets/account/member-sidebar-bg.png');
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: var(--account-sidebar-bg-scale-x) 100%;
   box-sizing: border-box;
 }
 
-.account-sidebar__bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  object-position: left top;
-  pointer-events: none;
-  user-select: none;
-}
-
-.account-sidebar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.1) 0%,
-    rgba(0, 0, 0, 0.18) 100%
-  );
+.account-sidebar::before,
+.account-sidebar::after {
+  content: none;
+  display: none;
 }
 
 .account-sidebar__content,
 .account-sidebar__inner {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: inherit;
   height: 100%;
-  padding: clamp(28px, 3vw, 40px) clamp(20px, 2vw, 28px) clamp(24px, 2.4vw, 32px);
-  padding-right: clamp(28px, 3vw, 40px); /* keep text clear of tear teeth */
+  padding: clamp(28px, 3vw, 40px) clamp(22px, 2.2vw, 32px) clamp(24px, 2.4vw, 32px);
+  padding-right: clamp(32px, 3.2vw, 44px); /* keep text clear of tear edge */
   box-sizing: border-box;
 }
 
@@ -330,7 +318,7 @@
     var(--account-main-padding-y, var(--account-page-padding-y))
     var(--account-main-padding-x, var(--account-page-padding));
   color: var(--account-text);
-  background: var(--account-paper-bg, #eeeae5);
+  background-color: var(--account-paper-bg, #eeeae5);
   background-image:
     linear-gradient(
       rgba(238, 234, 229, 0.97),
@@ -422,7 +410,7 @@
   }
 }
 
-/* ── Status banner ── */
+/* ── Welcome / status banner: member-center-bg as CSS background ── */
 
 .account-hero-banner,
 .account-welcome-banner,
@@ -434,25 +422,24 @@
   justify-content: space-between;
   gap: 24px;
   width: 100%;
-  min-height: var(--account-hero-height);
+  min-height: clamp(120px, 11vw, 168px);
   height: auto;
   margin-bottom: var(--account-card-gap);
-  padding: clamp(22px, 2vw, 34px) clamp(28px, 3vw, 44px);
+  padding: clamp(22px, 2vw, 34px) clamp(28px, 3vw, 44px) clamp(34px, 3.2vw, 52px);
   overflow: hidden;
-  background: linear-gradient(90deg, #050505 0%, #0b0b0b 58%, rgba(80, 0, 0, 0.9) 100%);
   color: #fff;
+  background-color: #080808;
+  background-image: url('@/assets/account/member-center-bg.png');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 100% 100%;
+  border: 0;
   box-sizing: border-box;
 
+  &::before,
   &::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 0;
-    width: clamp(80px, 9vw, 150px);
-    height: 100%;
-    background: linear-gradient(135deg, transparent 0 40%, #b60000 41% 100%);
-    opacity: 0.9;
-    pointer-events: none;
+    content: none;
+    display: none;
   }
 }
 
@@ -520,42 +507,7 @@
 }
 
 .account-welcome-banner__tear {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: clamp(12px, 1.2vw, 18px);
-  pointer-events: none;
-  background: var(--account-paper-bg);
-  clip-path: polygon(
-    0 100%,
-    3% 72%,
-    7% 88%,
-    11% 65%,
-    15% 82%,
-    19% 58%,
-    23% 78%,
-    27% 62%,
-    31% 84%,
-    35% 68%,
-    39% 86%,
-    43% 64%,
-    47% 80%,
-    51% 60%,
-    55% 82%,
-    59% 66%,
-    63% 88%,
-    67% 70%,
-    71% 86%,
-    75% 62%,
-    79% 80%,
-    83% 58%,
-    87% 76%,
-    91% 64%,
-    95% 84%,
-    100% 70%,
-    100% 100%
-  );
+  display: none;
 }
 
 /* ── Panels / cards ── */
@@ -1616,11 +1568,8 @@
     height: auto;
     min-height: auto;
     overflow: visible;
+    background-image: none;
     background-color: transparent;
-  }
-
-  .account-sidebar__bg {
-    display: none;
   }
 
   .account-sidebar__mobile-toggle {
@@ -1654,9 +1603,12 @@
     height: calc(100vh - var(--site-header-height, 72px));
     padding: 24px 20px;
     box-shadow: 8px 0 24px rgba(0, 0, 0, 0.35);
-    background:
-      url('@/assets/account/member-sidebar-bg.png') left top / 100% 100% no-repeat,
-      #080808;
+    overflow: hidden;
+    background-color: #080808;
+    background-image: url('@/assets/account/member-sidebar-bg.png');
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: var(--account-sidebar-bg-scale-x, 115%) 100%;
   }
 
   .account-sidebar__nav {
