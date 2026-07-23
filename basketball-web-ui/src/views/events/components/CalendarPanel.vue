@@ -90,8 +90,8 @@ function handleShift(offset: number) {
 .month-arrow {
   width: 32px;
   height: 32px;
-  border: 1px solid rgba(10, 10, 10, 0.12);
-  background: #fff;
+  border: 1px solid var(--cnpa-paper-border);
+  background: var(--cnpa-paper-surface);
   cursor: pointer;
 }
 

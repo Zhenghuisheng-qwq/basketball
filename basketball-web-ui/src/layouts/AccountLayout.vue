@@ -1,32 +1,27 @@
 <script setup lang="ts">
 import WebHeader from '@/components/layout/WebHeader.vue'
-
-const featureTags = ['赛事报名', '球员档案', '数据记录']
+import loginBackground from '@/assets/icon/login/login_background.png'
 </script>
 
 <template>
   <div class="account-layout">
     <WebHeader />
 
-    <div class="account-layout__body">
-      <aside class="account-layout__promo" aria-label="CNPA 会员系统">
-        <div class="account-layout__promo-inner">
-          <p class="account-layout__eyebrow">CNPA MEMBER SYSTEM · 2026</p>
-          <h1 class="account-layout__hero-title">加入 CNPA</h1>
-          <p class="account-layout__hero-sub">连接赛事 · 战队 · 球员</p>
+    <div class="account-layout__body site-main">
+      <div class="site-shell account-layout__shell">
+        <div
+          class="account-layout__panel"
+          :style="{ backgroundImage: `url(${loginBackground})` }"
+        >
+          <aside class="account-layout__visual" aria-hidden="true" />
 
-          <ul class="account-layout__tags">
-            <li v-for="tag in featureTags" :key="tag">{{ tag }}</li>
-          </ul>
+          <main class="account-layout__main">
+            <div class="account-layout__form-wrap">
+              <router-view />
+            </div>
+          </main>
         </div>
-      </aside>
-
-      <main class="account-layout__main">
-        <div class="account-layout__edge" aria-hidden="true" />
-        <div class="account-layout__form-wrap">
-          <router-view />
-        </div>
-      </main>
+      </div>
     </div>
 
     <footer class="account-layout__footer">
@@ -46,88 +41,42 @@ const featureTags = ['赛事报名', '球员档案', '数据记录']
 }
 
 .account-layout__body {
+  width: 100%;
+  min-height: calc(100vh - var(--site-header-height) - 56px);
+}
+
+.account-layout__shell {
+  min-height: inherit;
+}
+
+.account-layout__panel {
   display: grid;
-  grid-template-columns: minmax(320px, 42%) 1fr;
-  min-height: calc(100vh - var(--header-height) - 56px);
-}
-
-.account-layout__promo {
-  position: relative;
+  grid-template-columns: 58% 42%;
+  min-height: calc(100vh - var(--site-header-height) - 56px);
   overflow: hidden;
-  background:
-    linear-gradient(115deg, rgba(225, 6, 19, 0.24) 0%, transparent 45%),
-    linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
+  background-color: #050505;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
 }
 
-.account-layout__promo-inner {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 100%;
-  padding: clamp(32px, 5vw, 72px);
-}
-
-.account-layout__eyebrow {
-  margin: 0 0 18px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.account-layout__hero-title {
-  margin: 0;
-  font-size: clamp(48px, 6vw, 72px);
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  color: var(--cnpa-red);
-}
-
-.account-layout__hero-sub {
-  margin: 16px 0 32px;
-  font-size: 16px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.account-layout__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  li {
-    padding: 8px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(255, 255, 255, 0.04);
-    font-size: 13px;
-    font-weight: 700;
-  }
+.account-layout__visual {
+  min-width: 0;
 }
 
 .account-layout__main {
   position: relative;
-  background: var(--cnpa-paper-light);
+  min-width: 0;
+  background: transparent;
   color: var(--cnpa-paper-text);
 }
 
-.account-layout__edge {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, var(--cnpa-paper-light) 100%);
-  clip-path: polygon(0 0, 100% 2%, 100% 98%, 0 100%);
-  pointer-events: none;
-}
-
 .account-layout__form-wrap {
+  display: flex;
+  align-items: center;
   min-height: 100%;
-  padding: clamp(32px, 4vw, 56px) clamp(24px, 4vw, 64px);
+  padding: clamp(28px, 3.5vw, 48px) clamp(20px, 3vw, 40px);
+  box-sizing: border-box;
 }
 
 .account-layout__footer {
@@ -147,17 +96,43 @@ const featureTags = ['赛事报名', '球员档案', '数据记录']
 }
 
 @media (max-width: 992px) {
-  .account-layout__body {
+  .account-layout__panel {
     grid-template-columns: 1fr;
-  }
-
-  .account-layout__promo-inner {
     min-height: auto;
-    padding-block: 40px;
+    background-position: center top;
   }
 
-  .account-layout__edge {
-    display: none;
+  .account-layout__body {
+    min-height: auto;
+  }
+
+  .account-layout__visual {
+    min-height: clamp(180px, 34vw, 260px);
+  }
+
+  .account-layout__main {
+    background-color: var(--cnpa-paper-bg);
+    background-image: linear-gradient(
+      180deg,
+      #ebe9e9 0%,
+      var(--cnpa-paper-bg) 45%,
+      #e7e5e5 100%
+    );
+  }
+
+  .account-layout__form-wrap {
+    align-items: flex-start;
+    padding: 28px 20px 36px;
+  }
+}
+
+@media (max-width: 767px) {
+  .account-layout__visual {
+    min-height: clamp(160px, 42vw, 220px);
+  }
+
+  .account-layout__form-wrap {
+    padding-inline: 18px;
   }
 }
 </style>

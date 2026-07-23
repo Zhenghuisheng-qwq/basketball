@@ -2,13 +2,14 @@
 import { computed, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getMaskedRegisterEmail } from '@/composables/useRegisterFlow'
-import RegisterSteps from './components/RegisterSteps.vue'
+import AuthStepper from './components/AuthStepper.vue'
 
 const router = useRouter()
 
 const digits = ref(['', '', '', '', '', ''])
 const inputRefs = ref<Array<HTMLInputElement | null>>([])
 const countdown = ref(60)
+const verifying = ref(false)
 const maskedEmail = computed(() => getMaskedRegisterEmail())
 
 let timer: ReturnType<typeof setInterval> | null = null
@@ -49,6 +50,11 @@ function handleDigitInput(index: number, event: Event) {
 }
 
 function handleDigitKeydown(index: number, event: KeyboardEvent) {
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    handleVerify()
+    return
+  }
   if (event.key !== 'Backspace') return
   if (digits.value[index]) {
     digits.value[index] = ''
@@ -69,7 +75,11 @@ function handlePaste(event: ClipboardEvent) {
   inputRefs.value[Math.min(pasted.length, 5)]?.focus()
 }
 
-function handleVerify() {
+async function handleVerify() {
+  if (verifying.value) return
+  verifying.value = true
+  await new Promise((resolve) => window.setTimeout(resolve, 320))
+  verifying.value = false
   router.push('/register/success')
 }
 
@@ -83,126 +93,66 @@ function handleChangeEmail() {
 }
 
 function goLogin() {
-  router.push('/account')
+  router.push('/login')
 }
 </script>
 
 <template>
-  <div class="register-page">
-    <RegisterSteps :current="2" />
+  <div class="auth-page auth-verify">
+    <AuthStepper :current="2" />
 
-    <div class="register-page__head">
-      <h2 class="register-page__title">邮箱验证</h2>
-      <span class="register-page__sub">Verify Email</span>
+    <header class="auth-register__title">
+      <h1 class="auth-register__title-cn">邮箱验证</h1>
+      <p class="auth-register__title-en">VERIFY EMAIL</p>
+    </header>
+
+    <div class="auth-verify__icon" aria-hidden="true">@</div>
+
+    <p class="auth-verify__desc">验证码已发送至</p>
+    <p class="auth-verify__email">{{ maskedEmail }}</p>
+    <p class="auth-verify__timer">验证码 10 分钟内有效</p>
+
+    <div class="verify-code" @paste="handlePaste">
+      <input
+        v-for="(_, index) in digits"
+        :key="index"
+        :ref="(el) => setInputRef(el as HTMLInputElement | null, index)"
+        class="verify-code__input"
+        type="text"
+        inputmode="numeric"
+        maxlength="1"
+        :value="digits[index]"
+        :aria-label="`验证码第 ${index + 1} 位`"
+        @input="handleDigitInput(index, $event)"
+        @keydown="handleDigitKeydown(index, $event)"
+      />
     </div>
 
-    <div class="verify-panel">
-      <div class="verify-panel__icon" aria-hidden="true">
-        <span class="verify-panel__icon-envelope">@</span>
-      </div>
+    <button
+      type="button"
+      class="auth-primary-button"
+      :disabled="verifying"
+      @click="handleVerify"
+    >
+      {{ verifying ? '验证中...' : '验证邮箱' }}
+    </button>
 
-      <p class="verify-panel__email">验证码已发送至 {{ maskedEmail }}</p>
-
-      <div class="otp-inputs" @paste="handlePaste">
-        <input
-          v-for="(_, index) in digits"
-          :key="index"
-          :ref="(el) => setInputRef(el as HTMLInputElement | null, index)"
-          class="otp-input"
-          type="text"
-          inputmode="numeric"
-          maxlength="1"
-          :value="digits[index]"
-          :aria-label="`验证码第 ${index + 1} 位`"
-          @input="handleDigitInput(index, $event)"
-          @keydown="handleDigitKeydown(index, $event)"
-        />
-      </div>
-
-      <button type="button" class="btn-primary" @click="handleVerify">验证邮箱</button>
-
-      <div class="verify-panel__actions">
-        <button type="button" class="text-link" :disabled="countdown > 0" @click="handleResend">
-          {{ countdown > 0 ? `${countdown}s 后重发` : '重新发送验证码' }}
-        </button>
-        <button type="button" class="text-link" @click="handleChangeEmail">更换邮箱</button>
-      </div>
-
-      <p class="register-form__hint">请检查垃圾邮件或广告邮件文件夹</p>
-
-      <p class="register-form__login">
-        已有账号？
-        <button type="button" class="text-link" @click="goLogin">立即登录</button>
-      </p>
+    <div class="auth-verify__actions">
+      <button type="button" class="auth-text-link" :disabled="countdown > 0" @click="handleResend">
+        {{ countdown > 0 ? `${countdown}s 后重发` : '重新发送验证码' }}
+      </button>
+      <button type="button" class="auth-text-link" @click="handleChangeEmail">更换邮箱</button>
     </div>
+
+    <p class="auth-form__hint">请检查垃圾邮件或广告邮件文件夹</p>
+
+    <p class="auth-form__footer-link">
+      已有账号？
+      <button type="button" class="auth-text-link" @click="goLogin">立即登录</button>
+    </p>
   </div>
 </template>
 
 <style scoped lang="scss">
-@import './styles/account-form.scss';
-
-.verify-panel {
-  max-width: 420px;
-}
-
-.verify-panel__icon {
-  width: 72px;
-  height: 72px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 20px;
-  border: 2px solid rgba(17, 17, 17, 0.12);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.verify-panel__icon-envelope {
-  font-size: 28px;
-  font-weight: 900;
-  color: var(--cnpa-red);
-}
-
-.verify-panel__email {
-  margin: 0 0 24px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--cnpa-paper-text-muted);
-}
-
-.otp-inputs {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 24px;
-}
-
-.otp-input {
-  width: 100%;
-  height: 52px;
-  border: 1px solid rgba(17, 17, 17, 0.16);
-  border-radius: 2px;
-  background: #fff;
-  color: var(--cnpa-paper-text);
-  font-size: 22px;
-  font-weight: 900;
-  text-align: center;
-  font-family: inherit;
-
-  &:focus {
-    outline: none;
-    border-color: var(--cnpa-red);
-  }
-}
-
-.verify-panel__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 16px;
-
-  .text-link:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-}
+@import './styles/auth-shared.scss';
 </style>

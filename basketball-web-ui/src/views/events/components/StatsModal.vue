@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import PlayerLink from '@/components/player/PlayerLink.vue'
+import { getAllPlayerProfiles } from '@/views/player/detail/mock/playerDetail'
 import type { Match } from '../types/events'
 
 defineProps<{
@@ -9,6 +12,16 @@ defineProps<{
 const emit = defineEmits<{
   close: []
 }>()
+
+const mockPlayers = computed(() =>
+  getAllPlayerProfiles().slice(0, 5).map((player, index) => ({
+    playerId: player.id,
+    playerName: player.displayName,
+    points: 18 + index * 2,
+    rebounds: 4 + index,
+    assists: 7 + index,
+  })),
+)
 </script>
 
 <template>
@@ -17,13 +30,35 @@ const emit = defineEmits<{
       <button type="button" class="modal-close" aria-label="关闭" @click="emit('close')">×</button>
       <h3 id="stats-title">技术统计</h3>
       <p class="modal-meta">比赛 ID：{{ match.id }}</p>
-      <div class="stats-placeholder">
-        <div v-for="item in 4" :key="item" class="stats-row">
-          <span>统计项 {{ item }}</span>
-          <span>--</span>
-        </div>
+
+      <div class="stats-table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>球员</th>
+              <th>得分</th>
+              <th>篮板</th>
+              <th>助攻</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="player in mockPlayers" :key="player.playerId">
+              <td>
+                <PlayerLink
+                  :player-id="player.playerId"
+                  :player-name="player.playerName"
+                  tab="matches"
+                />
+              </td>
+              <td>{{ player.points }}</td>
+              <td>{{ player.rebounds }}</td>
+              <td>{{ player.assists }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <p class="modal-tip">Mock 技术统计占位，后续接入真实数据。</p>
+
+      <p class="modal-tip">Mock 技术统计，点击球员名称进入球员详情。</p>
     </div>
   </div>
 </template>
@@ -41,7 +76,7 @@ const emit = defineEmits<{
 
 .modal-card {
   position: relative;
-  width: min(520px, 100%);
+  width: min(640px, 100%);
   padding: 28px;
   background: #111;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -65,22 +100,32 @@ const emit = defineEmits<{
   font-size: 13px;
 }
 
-.stats-placeholder {
+.stats-table-wrap {
   margin: 20px 0;
-  display: grid;
-  gap: 10px;
+  overflow-x: auto;
 }
 
-.stats-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: left;
+    font-size: 14px;
+  }
+
+  th {
+    color: rgba(255, 255, 255, 0.72);
+    font-weight: 500;
+  }
 }
 
 .modal-tip {
   margin: 0;
-  font-size: 13px;
-  color: var(--cnpa-text-secondary);
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 12px;
 }
 </style>

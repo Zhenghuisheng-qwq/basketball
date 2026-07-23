@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { getMaskedRegisterEmail } from '@/composables/useRegisterFlow'
-import RegisterSteps from './components/RegisterSteps.vue'
+import { getMaskedRegisterEmail, getRegisterEmail } from '@/composables/useRegisterFlow'
+import AuthStepper from './components/AuthStepper.vue'
 
 const router = useRouter()
 const maskedEmail = computed(() => getMaskedRegisterEmail())
 
 function goLogin() {
-  router.push('/account')
+  router.push({
+    path: '/login',
+    query: { email: getRegisterEmail() },
+  })
 }
 
 function goHome() {
@@ -17,71 +20,33 @@ function goHome() {
 </script>
 
 <template>
-  <div class="register-page">
-    <RegisterSteps :current="3" />
+  <div class="auth-page auth-complete">
+    <AuthStepper :current="3" />
 
-    <div class="register-page__head">
-      <h2 class="register-page__title">注册完成</h2>
-      <span class="register-page__sub">Account Ready</span>
+    <header class="auth-register__title">
+      <h1 class="auth-register__title-cn">注册完成</h1>
+      <p class="auth-register__title-en">ACCOUNT READY</p>
+    </header>
+
+    <div class="auth-complete__icon" aria-hidden="true">
+      <span class="auth-complete__check" />
     </div>
 
-    <div class="success-panel">
-      <div class="success-panel__icon" aria-hidden="true">
-        <span class="success-panel__check" />
-      </div>
+    <h2 class="auth-complete__heading">CNPA 账号创建成功</h2>
+    <p class="auth-complete__email">绑定邮箱：{{ maskedEmail }}</p>
 
-      <h3 class="success-panel__title">CNPA 账号创建成功</h3>
-      <p class="success-panel__email">绑定邮箱：{{ maskedEmail }}</p>
+    <button type="button" class="auth-primary-button" @click="goLogin">立即登录</button>
+    <button type="button" class="auth-secondary-button" @click="goHome">返回首页</button>
 
-      <button type="button" class="btn-primary" @click="goLogin">立即登录</button>
-      <button type="button" class="btn-secondary" @click="goHome">返回首页</button>
+    <p class="auth-form__hint">登录后可进入个人中心并申请球员认证</p>
 
-      <p class="register-form__hint">登录后可进入个人中心并申请球员认证</p>
+    <div class="auth-notice-strip">
+      <span aria-hidden="true">✓</span>
+      <span>你的 CNPA 账号已就绪，登录后即可管理个人资料与球员认证</span>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-@import './styles/account-form.scss';
-
-.success-panel {
-  max-width: 420px;
-}
-
-.success-panel__icon {
-  width: 80px;
-  height: 80px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 24px;
-  border: 3px solid #18b46b;
-  border-radius: 50%;
-  background: rgba(24, 180, 107, 0.08);
-}
-
-.success-panel__check {
-  width: 18px;
-  height: 32px;
-  border-right: 4px solid #18b46b;
-  border-bottom: 4px solid #18b46b;
-  transform: rotate(45deg) translate(-2px, -4px);
-}
-
-.success-panel__title {
-  margin: 0 0 10px;
-  font-size: 22px;
-  font-weight: 900;
-  color: var(--cnpa-paper-text);
-}
-
-.success-panel__email {
-  margin: 0 0 28px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--cnpa-paper-text-muted);
-}
-
-.btn-secondary {
-  margin-top: 12px;
-}
+@import './styles/auth-shared.scss';
 </style>

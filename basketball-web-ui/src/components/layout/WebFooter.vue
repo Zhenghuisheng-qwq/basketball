@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import logoImg from '@/assets/icon/logo.png'
+
+const hallLinks = [
+  { label: '周最佳', query: { tab: 'weekly' } },
+  { label: '赛事荣誉', query: { tab: 'event' } },
+  { label: '历届冠军', query: { tab: 'champions' } },
+  { label: '最佳阵容', query: { tab: 'event', tournamentId: '2026-league-s1' } },
+]
 </script>
 
 <template>
@@ -26,24 +33,27 @@ import logoImg from '@/assets/icon/logo.png'
 
         <div class="footer-col">
           <h4>数据</h4>
-          <a href="#">球员数据</a>
-          <a href="#">战队数据</a>
-          <a href="#">赛事赛程</a>
-          <a href="#">数据记录</a>
+          <router-link to="/data">球员数据</router-link>
+          <router-link to="/data">战队数据</router-link>
+          <router-link to="/tournament?tab=schedule">赛事赛程</router-link>
+          <router-link to="/data">数据记录</router-link>
         </div>
 
         <div class="footer-col">
           <h4>名人堂</h4>
-          <a href="#">传奇球员</a>
-          <a href="#">荣耀战队</a>
-          <a href="#">年度时刻</a>
-          <a href="#">最佳阵容</a>
+          <router-link
+            v-for="item in hallLinks"
+            :key="item.label"
+            :to="{ path: '/hall-of-fame', query: item.query }"
+          >
+            {{ item.label }}
+          </router-link>
         </div>
 
         <div class="footer-col">
           <h4>关于 CNPA</h4>
           <a href="#">关于我们</a>
-          <a href="#">公告中心</a>
+          <router-link to="/announcements">公告中心</router-link>
           <a href="#">合作伙伴</a>
           <a href="#">联系我们</a>
         </div>
@@ -128,10 +138,12 @@ import logoImg from '@/assets/icon/logo.png'
     color: #fff;
   }
 
-  a {
+  a,
+  :deep(a) {
     font-size: 13px;
     color: var(--cnpa-text-secondary);
     transition: color 0.2s ease;
+    text-decoration: none;
 
     &:hover {
       color: var(--cnpa-red);

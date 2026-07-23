@@ -23,6 +23,7 @@ export interface TeamRankItem {
 
 export interface PlayerRankItem {
   rank: number
+  playerId: number
   name: string
   team: string
   ppg: string
@@ -75,11 +76,11 @@ export const mockTeamRanks: TeamRankItem[] = [
 ]
 
 export const mockPlayerRanks: PlayerRankItem[] = [
-  { rank: 1, name: 'CNPA_TitanX', team: 'TITAN', ppg: '28.4 PPG' },
-  { rank: 2, name: 'Wolf_King', team: 'WOLVES', ppg: '24.1 PPG' },
-  { rank: 3, name: 'Phx_Fire', team: 'PHOENIX', ppg: '22.3 PPG' },
-  { rank: 4, name: 'Drg_Lion', team: 'DRAGON', ppg: '21.8 PPG' },
-  { rank: 5, name: 'Leg_Zeus', team: 'LEGEND', ppg: '20.4 PPG' },
+  { rank: 1, playerId: 10001, name: 'CNPA_TitanX', team: 'TITAN', ppg: '28.4 PPG' },
+  { rank: 2, playerId: 10006, name: 'Wolf_King', team: 'WOLVES', ppg: '24.1 PPG' },
+  { rank: 3, playerId: 10003, name: 'Phx_Fire', team: 'PHOENIX', ppg: '22.3 PPG' },
+  { rank: 4, playerId: 10004, name: 'Drg_Lion', team: 'DRAGON', ppg: '21.8 PPG' },
+  { rank: 5, playerId: 10005, name: 'Leg_Zeus', team: 'LEGEND', ppg: '20.4 PPG' },
 ]
 
 export const mockStats: StatItem[] = [

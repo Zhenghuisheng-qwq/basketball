@@ -1,0 +1,140 @@
+.login-page {
+  width: 100%;
+  max-width: none;
+}
+
+.login-page__divider {
+  width: clamp(48px, 4vw, 56px);
+  height: 3px;
+  margin-bottom: clamp(16px, 2vw, 22px);
+  background: #d5080d;
+}
+
+.login-page__eyebrow {
+  margin: 0 0 10px;
+  font-size: clamp(11px, 0.9vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--cnpa-paper-text-muted, #666);
+}
+
+.login-page__welcome {
+  margin: 0 0 8px;
+  font-size: clamp(14px, 1.1vw, 16px);
+  font-weight: 700;
+  color: var(--cnpa-paper-text-secondary, #666);
+}
+
+.login-page__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: clamp(10px, 1.2vw, 16px);
+  margin-bottom: clamp(20px, 2.5vw, 32px);
+}
+
+.login-page__title {
+  margin: 0;
+  font-size: clamp(36px, 3.2vw, 56px);
+  font-weight: 900;
+  line-height: 1;
+  color: #080808;
+}
+
+.login-page__sub {
+  margin: 0;
+  font-size: clamp(16px, 1.5vw, 26px);
+  font-style: italic;
+  font-weight: 800;
+  color: #d20910;
+  white-space: nowrap;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 1.6vw, 20px);
+  width: 100%;
+}
+
+.form-field__input--login {
+  height: clamp(48px, 3.5vw, 58px);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+:deep(.password-input__field) {
+  height: clamp(48px, 3.5vw, 58px);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.28);
+  font-size: clamp(14px, 1vw, 17px);
+}
+
+.login-form__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: -4px;
+}
+
+.login-form__remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(12px, 1vw, 14px);
+  color: var(--cnpa-paper-text-muted, #666);
+  cursor: pointer;
+
+  input {
+    margin: 0;
+  }
+}
+
+.login-form__forgot {
+  font-size: clamp(12px, 1vw, 14px);
+}
+
+.login-form__error {
+  margin: -6px 0 0;
+  font-size: clamp(12px, 1vw, 14px);
+  font-weight: 600;
+  color: #d5080d;
+}
+
+.btn-primary--login {
+  margin-top: clamp(12px, 1.5vw, 20px);
+}
+
+.login-form__security {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 4px;
+  padding: clamp(12px, 1.2vw, 16px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.28);
+  color: var(--cnpa-paper-text-muted, #666);
+  font-size: clamp(12px, 1vw, 14px);
+  line-height: 1.5;
+}
+
+.login-form__security-icon {
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+
+@media (max-width: 767px) {
+  .login-page__title {
+    font-size: clamp(36px, 10vw, 48px);
+  }
+
+  .login-page__sub {
+    font-size: clamp(16px, 4.5vw, 22px);
+    white-space: normal;
+  }
+
+  .login-form__actions {
+    flex-wrap: wrap;
+  }
+}

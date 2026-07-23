@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import PaperSection from '@/components/common/PaperSection.vue'
+import PlayerLink from '@/components/player/PlayerLink.vue'
 import { seasonLeaders } from '../mock'
 import { getTeamById } from '../mock/teams.mock'
 import TeamEntryLink from '@/components/team/TeamEntryLink.vue'
@@ -32,7 +33,13 @@ function handlePortraitError(id: number) {
                 {{ leader.value }}
                 <small>{{ leader.unit }}</small>
               </div>
-              <strong class="leader-name">{{ leader.playerName }}</strong>
+              <strong class="leader-name">
+                <PlayerLink
+                  :player-id="leader.playerId"
+                  :player-name="leader.playerName"
+                  tab="data"
+                />
+              </strong>
               <TeamEntryLink
                 v-if="getTeamById(leader.teamId)"
                 :team="getTeamById(leader.teamId)!"

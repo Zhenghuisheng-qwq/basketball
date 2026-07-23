@@ -72,7 +72,7 @@ const emit = defineEmits<{
   min-height: 92px;
   padding: 10px 8px;
   border: 1px solid rgba(10, 10, 10, 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--cnpa-paper-surface);
   color: #111;
   font-size: 12px;
   font-weight: 700;

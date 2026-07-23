@@ -18,6 +18,7 @@ export interface Team {
 
 export interface PlayerLeader {
   id: number
+  playerId: number
   title: string
   value: number
   unit: 'PPG' | 'APG' | 'RPG'

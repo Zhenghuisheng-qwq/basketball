@@ -32,7 +32,7 @@ const tabs = [
   width: fit-content;
   max-width: 100%;
   min-height: 56px;
-  margin: 0 0 8px;
+  margin: 0 0 clamp(4px, 0.6vw, 8px);
   background: transparent;
   box-sizing: border-box;
 }

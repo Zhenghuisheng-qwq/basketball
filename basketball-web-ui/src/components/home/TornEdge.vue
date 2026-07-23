@@ -13,13 +13,13 @@ const props = withDefaults(
 )
 
 const edgeColor = computed(() => {
-  if (props.tone === 'gray') return '#ecebe7'
-  return props.tone === 'light' ? '#f2efe8' : '#050505'
+  if (props.tone === 'gray') return '#e7e5e5'
+  return props.tone === 'light' ? '#e9e7e7' : '#050505'
 })
 
 const shadowColor = computed(() => {
-  return props.tone === 'light'
-    ? 'rgba(0, 0, 0, 0.22)'
+  return props.tone === 'light' || props.tone === 'gray'
+    ? 'rgba(0, 0, 0, 0.18)'
     : 'rgba(255, 255, 255, 0.05)'
 })
 

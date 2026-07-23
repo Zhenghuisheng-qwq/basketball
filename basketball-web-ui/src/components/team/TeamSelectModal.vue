@@ -173,9 +173,9 @@ onUnmounted(() => {
   border-radius: 2px;
   background: linear-gradient(
     180deg,
-    var(--cnpa-paper-bg-soft) 0%,
+    #ebe9e9 0%,
     var(--cnpa-paper-bg) 45%,
-    var(--cnpa-paper-bg-deep) 100%
+    #e7e5e5 100%
   );
   box-shadow: 0 28px 72px rgba(0, 0, 0, 0.32);
   box-sizing: border-box;

@@ -8,12 +8,6 @@ import type { TeamMatchRecord, TeamMatchStatus, TeamStage } from '@/types/team'
 type StatusFilter = 'all' | TeamMatchStatus
 type StageFilter = 'all' | TeamStage
 
-interface MonthGroup {
-  key: string
-  label: string
-  matches: TeamMatchRecord[]
-}
-
 const pageSize = 8
 
 const route = useRoute()
@@ -71,29 +65,6 @@ const totalPages = computed(() => Math.max(1, Math.ceil(filteredMatches.value.le
 const paginatedMatches = computed(() => {
   const start = (currentPage.value - 1) * pageSize
   return filteredMatches.value.slice(start, start + pageSize)
-})
-
-const groupedMatches = computed<MonthGroup[]>(() => {
-  const groups = new Map<string, MonthGroup>()
-
-  for (const match of paginatedMatches.value) {
-    const [year, month] = match.date.split('-')
-    const key = `${year}-${month}`
-    const existing = groups.get(key)
-
-    if (existing) {
-      existing.matches.push(match)
-      continue
-    }
-
-    groups.set(key, {
-      key,
-      label: `${year}年${Number(month)}月`,
-      matches: [match],
-    })
-  }
-
-  return Array.from(groups.values())
 })
 
 watch([statusFilter, competitionFilter, stageFilter], () => {
@@ -194,79 +165,72 @@ function goPage(page: number) {
     <div v-if="filteredMatches.length === 0" class="matches-empty">暂无符合条件的比赛</div>
 
     <template v-else>
-      <div class="match-groups">
-        <section v-for="group in groupedMatches" :key="group.key" class="match-group">
-          <div class="match-group__title">
-            <span class="match-group__bar" aria-hidden="true" />
-            <h3>{{ group.label }}</h3>
+      <div class="match-list">
+        <div class="match-table">
+          <div class="match-table__head">
+            <span>状态</span>
+            <span>日期时间</span>
+            <span>对手</span>
+            <span>比分</span>
+            <span>赛段</span>
+            <span>查看</span>
           </div>
 
-          <div class="match-table">
-              <div class="match-table__head">
-                <span>状态</span>
-                <span>日期时间</span>
-                <span>对手</span>
-                <span>比分</span>
-                <span>赛段</span>
-                <span>查看</span>
-              </div>
+          <article v-for="match in paginatedMatches" :key="match.id" class="match-table__row">
+            <span class="match-table__status" :class="getStatusClass(match)">
+              {{ getStatusLabel(match) }}
+            </span>
 
-              <article v-for="match in group.matches" :key="match.id" class="match-table__row">
-                <span class="match-table__status" :class="getStatusClass(match)">
-                  {{ getStatusLabel(match) }}
-                </span>
+            <span class="match-table__datetime">{{ formatDateTime(match) }}</span>
 
-                <span class="match-table__datetime">{{ formatDateTime(match) }}</span>
-
-                <div class="match-table__opponent">
-                  <TeamLogo :team="getOpponent(match)" size="md" class="match-table__opponent-logo" />
-                  <span>{{ getOpponent(match).name }}</span>
-                </div>
-
-                <template v-if="match.status === 'scheduled'">
-                  <span class="match-table__score is-vs">VS</span>
-                </template>
-                <template v-else>
-                  <span class="match-table__score">
-                    <span
-                      class="score-number"
-                      :class="{ 'is-winner': match.result === 'win' }"
-                    >
-                      {{ match.teamScore }}
-                    </span>
-                    <span class="score-separator">:</span>
-                    <span
-                      class="score-number"
-                      :class="{ 'is-winner': match.result === 'loss' }"
-                    >
-                      {{ match.opponentScore }}
-                    </span>
-                  </span>
-                </template>
-
-                <span class="match-table__stage">{{ stageLabels[match.stage] }}</span>
-
-                <div class="match-table__actions">
-                  <button
-                    v-if="match.status === 'scheduled'"
-                    type="button"
-                    class="action-btn action-btn--disabled"
-                    disabled
-                  >
-                    敬请期待
-                  </button>
-                  <button
-                    v-else
-                    type="button"
-                    class="action-btn"
-                    @click="goMatchStats(match)"
-                  >
-                    查看数据
-                  </button>
-                </div>
-              </article>
+            <div class="match-table__opponent">
+              <TeamLogo :team="getOpponent(match)" size="md" class="match-table__opponent-logo" />
+              <span>{{ getOpponent(match).name }}</span>
             </div>
-        </section>
+
+            <template v-if="match.status === 'scheduled'">
+              <span class="match-table__score is-vs">VS</span>
+            </template>
+            <template v-else>
+              <span class="match-table__score">
+                <span
+                  class="score-number"
+                  :class="{ 'is-winner': match.result === 'win' }"
+                >
+                  {{ match.teamScore }}
+                </span>
+                <span class="score-separator">:</span>
+                <span
+                  class="score-number"
+                  :class="{ 'is-winner': match.result === 'loss' }"
+                >
+                  {{ match.opponentScore }}
+                </span>
+              </span>
+            </template>
+
+            <span class="match-table__stage">{{ stageLabels[match.stage] }}</span>
+
+            <div class="match-table__actions">
+              <button
+                v-if="match.status === 'scheduled'"
+                type="button"
+                class="action-btn action-btn--disabled"
+                disabled
+              >
+                敬请期待
+              </button>
+              <button
+                v-else
+                type="button"
+                class="action-btn"
+                @click="goMatchStats(match)"
+              >
+                查看数据
+              </button>
+            </div>
+          </article>
+        </div>
       </div>
 
       <div class="pagination">
@@ -314,10 +278,10 @@ function goPage(page: number) {
   }
 
   .section-head-sub {
-    color: var(--cnpa-red);
+    color: #e51b23;
     font-style: italic;
     text-transform: uppercase;
-    font-weight: 900;
+    font-weight: 800;
     letter-spacing: 0.02em;
   }
 }
@@ -351,7 +315,7 @@ function goPage(page: number) {
   padding: 0 16px;
   border: none;
   border-right: 1px solid rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--cnpa-paper-surface);
   color: var(--cnpa-paper-text-muted);
   font-size: 14px;
   font-weight: 700;
@@ -381,7 +345,7 @@ function goPage(page: number) {
   padding: 0 12px;
   border: 1px solid rgba(0, 0, 0, 0.14);
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--cnpa-paper-surface);
   color: var(--cnpa-paper-text);
   font-family: inherit;
   font-size: 14px;
@@ -402,50 +366,18 @@ function goPage(page: number) {
   padding: 48px 16px;
   text-align: center;
   border: 1px solid rgba(0, 0, 0, 0.18);
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(25, 25, 25, 0.025);
   color: var(--cnpa-paper-text-muted);
   font-size: 14px;
 }
 
-.match-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-}
-
-.match-group {
+.match-list {
   overflow-x: auto;
-}
-
-.match-group__title {
-  height: 48px;
-  padding: 0 22px;
-  display: flex;
-  align-items: center;
-  background: linear-gradient(180deg, #111 0%, #050505 100%);
-  color: #fff;
-  border-radius: 2px 2px 0 0;
-  margin-bottom: 0;
-}
-
-.match-group__bar {
-  flex-shrink: 0;
-  width: 4px;
-  height: 22px;
-  background: var(--cnpa-red);
-  margin-right: 12px;
-}
-
-.match-group__title h3 {
-  margin: 0;
-  font-size: clamp(22px, 2vw, 24px);
-  font-weight: 900;
 }
 
 .match-table {
   border: 1px solid var(--cnpa-paper-border);
-  border-top: none;
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(25, 25, 25, 0.03);
   overflow: hidden;
 }
 
@@ -465,7 +397,7 @@ function goPage(page: number) {
 
 .match-table__head {
   min-height: 54px;
-  background: rgba(255, 255, 255, 0.46);
+  background: var(--cnpa-paper-surface);
   color: #171717;
   font-size: 16px;
   font-weight: 900;
@@ -475,7 +407,7 @@ function goPage(page: number) {
 .match-table__row {
   min-height: 76px;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(25, 25, 25, 0.025);
   transition: background 0.2s ease;
 
   &:first-of-type {
@@ -483,7 +415,7 @@ function goPage(page: number) {
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.38);
+    background: rgba(25, 25, 25, 0.035);
   }
 }
 
@@ -587,7 +519,7 @@ function goPage(page: number) {
   height: 36px;
   padding: 0 16px;
   border: 1px solid rgba(0, 0, 0, 0.14);
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--cnpa-paper-surface);
   color: #222;
   font-size: 14px;
   font-weight: 800;
@@ -599,14 +531,14 @@ function goPage(page: number) {
   &:hover:not(:disabled) {
     border-color: var(--cnpa-red);
     color: var(--cnpa-red);
-    background: rgba(255, 255, 255, 0.78);
+    background: var(--cnpa-paper-surface);
   }
 }
 
 .action-btn--disabled,
 .action-btn:disabled {
   color: #666;
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--cnpa-paper-surface);
   border-color: rgba(0, 0, 0, 0.12);
   cursor: not-allowed;
 }
@@ -652,7 +584,7 @@ function goPage(page: number) {
   min-width: 30px;
   height: 30px;
   border: 1px solid rgba(0, 0, 0, 0.14);
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--cnpa-paper-surface);
   color: #333;
   font-size: 14px;
   font-weight: 800;

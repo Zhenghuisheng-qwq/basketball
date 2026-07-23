@@ -21,7 +21,7 @@ withDefaults(
 
 <style scoped lang="scss">
 .paper-tear {
-  --paper-tear-color: var(--cnpa-paper-bg-soft, #f6f2ea);
+  --paper-tear-color: var(--cnpa-paper-bg, #e9e7e7);
   position: relative;
   width: 100%;
   pointer-events: none;

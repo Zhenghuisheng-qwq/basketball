@@ -224,7 +224,7 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
   min-height: 168px;
   padding: 28px 20px;
   border: 1px solid rgba(0, 0, 0, 0.18);
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(25, 25, 25, 0.025);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -347,7 +347,7 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
   padding: 16px 18px;
   border: 1px solid var(--cnpa-paper-border);
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(25, 25, 25, 0.03);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
   box-sizing: border-box;
 }

@@ -6,6 +6,7 @@ const playerPortrait = (name: string) => `/images/players/${name.toLowerCase()}.
 export const seasonLeaders: PlayerLeader[] = [
   {
     id: 1,
+    playerId: 10002,
     title: '得分王',
     value: 28.6,
     unit: 'PPG',
@@ -15,6 +16,7 @@ export const seasonLeaders: PlayerLeader[] = [
   },
   {
     id: 2,
+    playerId: 10006,
     title: '助攻王',
     value: 10.4,
     unit: 'APG',
@@ -24,6 +26,7 @@ export const seasonLeaders: PlayerLeader[] = [
   },
   {
     id: 3,
+    playerId: 10003,
     title: '篮板王',
     value: 13.2,
     unit: 'RPG',

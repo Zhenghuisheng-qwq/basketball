@@ -30,27 +30,33 @@
   --cnpa-border: rgba(255, 255, 255, 0.12);
   --cnpa-text: #f5f5f5;
 
-  /* 全站统一版心 */
-  --site-gutter: clamp(16px, 3.2vw, 72px);
-  --site-width: 1440px;
-  --site-inner-padding: clamp(20px, 2vw, 36px);
-  --header-height: 72px;
+  /* 全站统一版心：左右各 15%，内容区 70%，随视口等比缩放 */
+  --site-margin-inline: 15%;
+  --site-content-width: 70%;
+  --site-gutter: var(--site-margin-inline);
+  --site-inner-padding: 0;
+  --site-header-height: 72px;
+  --header-height: var(--site-header-height);
 
-  --cnpa-paper-bg: #f1ede4;
-  --cnpa-paper-bg-soft: #f6f2ea;
-  --cnpa-paper-bg-deep: #e8e2d7;
-  --cnpa-paper-border: rgba(0, 0, 0, 0.12);
-  --cnpa-paper-gray: #e8e2d7;
-  --cnpa-paper-light: #f6f2ea;
-  --cnpa-paper-text: #111111;
-  --cnpa-paper-text-muted: rgba(17, 17, 17, 0.58);
+  /* 全站浅色纸张正文 */
+  --cnpa-paper-bg: #e9e7e7;
+  --cnpa-paper-surface: #f1efef;
+  --cnpa-paper-border: rgba(25, 25, 25, 0.11);
+  --cnpa-paper-text: #171717;
+  --cnpa-paper-text-secondary: #666;
+
+  /* 兼容旧变量：纹理允许在 #e7e5e5 ~ #ebe9e9 轻微变化 */
+  --cnpa-paper-bg-soft: var(--cnpa-paper-surface);
+  --cnpa-paper-bg-deep: #e7e5e5;
+  --cnpa-paper-gray: var(--cnpa-paper-bg);
+  --cnpa-paper-light: var(--cnpa-paper-surface);
+  --cnpa-paper-text-muted: var(--cnpa-paper-text-secondary);
   --cnpa-paper-edge-height: 14px;
-  --cnpa-paper-texture-opacity: 0.035;
+  --cnpa-paper-texture-opacity: 0.018;
 }
 
 .site-shell {
-  width: min(calc(100% - var(--site-gutter) * 2), var(--site-width));
-  max-width: var(--site-width);
+  width: var(--site-content-width);
   margin-inline: auto;
   box-sizing: border-box;
   overflow-x: clip;
@@ -63,9 +69,21 @@
 }
 
 .site-content {
-  width: min(calc(100% - var(--site-gutter) * 2), var(--site-width));
-  max-width: var(--site-width);
+  width: var(--site-content-width);
   margin-inline: auto;
   padding-inline: var(--site-inner-padding);
   box-sizing: border-box;
+}
+
+.site-main {
+  width: 100%;
+  min-height: calc(100vh - var(--site-header-height));
+  padding-top: var(--site-header-height);
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --site-header-height: 60px;
+  }
 }

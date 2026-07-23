@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router'
 import TeamBadge from '@/components/home/TeamBadge.vue'
 import TornEdge from '@/components/home/TornEdge.vue'
+import PlayerLink from '@/components/player/PlayerLink.vue'
 import homeTop from '@/assets/icon/home_top.png'
 import {
   mockMatches,
@@ -190,7 +191,11 @@ function handleTeamClick(teamKey: string) {
                 <span class="rank-num">{{ player.rank }}</span>
                 <span class="player-name">
                   <i class="avatar" />
-                  {{ player.name }}
+                  <PlayerLink
+                    :player-id="player.playerId"
+                    :player-name="player.name"
+                    tab="data"
+                  />
                 </span>
                 <span>{{ player.team }}</span>
                 <span>{{ player.ppg }}</span>

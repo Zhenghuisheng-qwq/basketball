@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { useRoute, useRouter } from 'vue-router'
 import {
   getTeamPlayerAverageStats,
   getTeamPlayerTotalStats,
@@ -16,6 +15,8 @@ import type {
   TeamSingleMatchPlayerStat,
   TeamStage,
 } from '@/types/team'
+import PlayerLink from '@/components/player/PlayerLink.vue'
+import { goToPlayerDetail } from '@/utils/playerNavigate'
 
 type NumericColumn =
   | 'points'
@@ -47,6 +48,7 @@ const singleNumericColumns: Array<
 > = ['points', 'rebounds', 'assists', 'steals', 'blocks', 'fouls', 'turnovers']
 
 const route = useRoute()
+const router = useRouter()
 
 const competitionFilter = ref('2026 CNPA League')
 const stageFilter = ref<TeamStage>('regular')
@@ -173,8 +175,8 @@ function formatPct(value: number): string {
   return `${value.toFixed(1)}%`
 }
 
-function handlePlayerDetailClick() {
-  ElMessage.info('球员详情暂未开放')
+function handlePlayerDetailClick(playerId: string) {
+  goToPlayerDetail(router, playerId, 'overview')
 }
 
 function showSummaryTable() {
@@ -310,7 +312,11 @@ function showSingleTable() {
                       {{ getPlayerNumber(row.nickname) }}
                     </span>
                   </div>
-                  <span>{{ row.nickname }}</span>
+                  <PlayerLink
+                    :player-id="row.playerId"
+                    :player-name="row.nickname"
+                    tab="overview"
+                  />
                 </div>
               </td>
               <td>{{ row.games }}</td>
@@ -345,7 +351,7 @@ function showSingleTable() {
                 {{ formatPct(row.ftPct) }}
               </td>
               <td>
-                <button type="button" class="view-btn" @click="handlePlayerDetailClick">
+                <button type="button" class="view-btn" @click="handlePlayerDetailClick(row.playerId)">
                   球员详情
                 </button>
               </td>
@@ -387,7 +393,11 @@ function showSingleTable() {
                         {{ getPlayerNumber(row.nickname) }}
                       </div>
                     </div>
-                    <span>{{ row.nickname }}</span>
+                    <PlayerLink
+                    :player-id="row.playerId"
+                    :player-name="row.nickname"
+                    tab="overview"
+                  />
                   </div>
                 </td>
                 <td>{{ row.grade }}</td>
@@ -402,7 +412,7 @@ function showSingleTable() {
                 <td>{{ row.tp }}</td>
                 <td>{{ row.ft }}</td>
                 <td>
-                  <button type="button" class="view-btn" @click="handlePlayerDetailClick">
+                  <button type="button" class="view-btn" @click="handlePlayerDetailClick(row.playerId)">
                     球员详情
                   </button>
                 </td>
@@ -450,11 +460,11 @@ function showSingleTable() {
   }
 
   .section-head-sub {
-    color: var(--cnpa-red);
+    color: #e51b23;
     font-size: clamp(16px, 1.5vw, 22px);
     font-style: italic;
     text-transform: uppercase;
-    font-weight: 900;
+    font-weight: 800;
     letter-spacing: 0.02em;
     white-space: nowrap;
   }
@@ -496,7 +506,7 @@ function showSingleTable() {
   padding: 0 12px;
   border: 1px solid rgba(0, 0, 0, 0.14);
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--cnpa-paper-surface);
   color: var(--cnpa-paper-text);
   font-family: inherit;
   font-size: 14px;
@@ -521,7 +531,7 @@ function showSingleTable() {
   padding: 40px 16px;
   text-align: center;
   border: 1px solid rgba(0, 0, 0, 0.18);
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(25, 25, 25, 0.025);
   color: var(--cnpa-paper-text-muted);
   font-size: 14px;
 }
@@ -541,7 +551,7 @@ function showSingleTable() {
   padding: 24px 18px 22px;
   border: 1px solid var(--cnpa-paper-border);
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(25, 25, 25, 0.03);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
   text-align: center;
   box-sizing: border-box;
@@ -568,7 +578,7 @@ function showSingleTable() {
 .mode-tabs {
   display: inline-flex;
   border: 1px solid var(--cnpa-paper-border);
-  background: rgba(255, 255, 255, 0.52);
+  background: var(--cnpa-paper-surface);
 }
 
 .mode-tab {
@@ -611,7 +621,7 @@ function showSingleTable() {
   min-width: 980px;
   border-collapse: collapse;
   border: 1px solid var(--cnpa-paper-border);
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(25, 25, 25, 0.03);
 
   th,
   td {
@@ -624,17 +634,17 @@ function showSingleTable() {
   }
 
   th {
-    background: rgba(255, 255, 255, 0.46);
+    background: var(--cnpa-paper-surface);
     color: var(--cnpa-paper-text-muted);
     font-weight: 800;
   }
 
   tbody tr {
-    background: rgba(255, 255, 255, 0.24);
+    background: rgba(25, 25, 25, 0.025);
   }
 
   tbody tr:hover {
-    background: rgba(255, 255, 255, 0.38);
+    background: rgba(25, 25, 25, 0.035);
   }
 }
 
@@ -680,7 +690,7 @@ function showSingleTable() {
   height: 28px;
   padding: 0 10px;
   border: 1px solid rgba(0, 0, 0, 0.14);
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--cnpa-paper-surface);
   color: var(--cnpa-paper-text);
   font-size: 11px;
   font-weight: 700;
@@ -695,7 +705,7 @@ function showSingleTable() {
 }
 
 .team-total-row {
-  background: rgba(255, 255, 255, 0.46);
+  background: var(--cnpa-paper-surface);
   font-weight: 800;
 }
 

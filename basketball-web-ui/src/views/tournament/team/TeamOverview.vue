@@ -7,13 +7,8 @@ import {
   getTeamRoster,
 } from '@/mock/team'
 import TeamLogo from '@/components/team/TeamLogo.vue'
+import { goToPlayerDetail } from '@/utils/playerNavigate'
 import type { TeamMatchRecord, TeamRosterPlayer, TeamStage } from '@/types/team'
-
-interface MonthGroup {
-  key: string
-  label: string
-  matches: TeamMatchRecord[]
-}
 
 const route = useRoute()
 const router = useRouter()
@@ -41,29 +36,6 @@ const matchTotalPages = computed(() =>
 const pagedRecentMatches = computed(() => {
   const start = (matchCurrentPage.value - 1) * matchPageSize
   return filteredRecentMatches.value.slice(start, start + matchPageSize)
-})
-
-const groupedRecentMatches = computed<MonthGroup[]>(() => {
-  const groups = new Map<string, MonthGroup>()
-
-  for (const match of pagedRecentMatches.value) {
-    const [year, month] = match.date.split('-')
-    const key = `${year}-${month}`
-    const existing = groups.get(key)
-
-    if (existing) {
-      existing.matches.push(match)
-      continue
-    }
-
-    groups.set(key, {
-      key,
-      label: `${year}年${Number(month)}月`,
-      matches: [match],
-    })
-  }
-
-  return Array.from(groups.values())
 })
 
 const rosterTotalPages = computed(() =>
@@ -117,6 +89,10 @@ function getPlayerNumber(player: TeamRosterPlayer): string {
   return match ? match[1].padStart(2, '0') : player.nickname.slice(-2)
 }
 
+function openPlayerDetail(player: TeamRosterPlayer) {
+  goToPlayerDetail(router, player.id, 'overview')
+}
+
 function getOpponent(match: TeamMatchRecord) {
   return getTeamById(match.opponentId)
 }
@@ -155,8 +131,10 @@ function onMatchStageChange() {
   <div class="team-overview">
     <section class="overview-section roster-section">
       <div class="section-head">
-        <h2 class="section-head-title">本赛季阵容</h2>
-        <span class="section-head-sub">Current Roster</span>
+        <div class="section-head-group">
+          <h2 class="section-head-title">本赛季阵容</h2>
+          <span class="section-head-sub">Current Roster</span>
+        </div>
       </div>
 
       <div v-if="roster.length === 0" class="overview-empty">暂无阵容数据</div>
@@ -173,7 +151,15 @@ function onMatchStageChange() {
           </button>
 
           <div class="roster-grid">
-            <article v-for="player in visibleRoster" :key="player.id" class="roster-card">
+            <article
+              v-for="player in visibleRoster"
+              :key="player.id"
+              class="roster-card"
+              role="button"
+              tabindex="0"
+              @click="openPlayerDetail(player)"
+              @keydown.enter="openPlayerDetail(player)"
+            >
               <div class="player-avatar">
                 <img
                   v-if="player.avatar"
@@ -217,8 +203,10 @@ function onMatchStageChange() {
     <section class="overview-section overview-section--matches">
       <div class="match-head">
         <div class="section-head">
-          <h2 class="section-head-title">比赛记录</h2>
-          <span class="section-head-sub">Match History</span>
+          <div class="section-head-group">
+            <h2 class="section-head-title">比赛记录</h2>
+            <span class="section-head-sub">Match History</span>
+          </div>
         </div>
 
         <label class="match-filter">
@@ -237,74 +225,67 @@ function onMatchStageChange() {
       <div v-if="filteredRecentMatches.length === 0" class="overview-empty">暂无比赛记录</div>
 
       <template v-else>
-        <div class="match-groups">
-          <section v-for="group in groupedRecentMatches" :key="group.key" class="match-group">
-            <div class="match-group__title">
-              <span class="match-group__bar" aria-hidden="true" />
-              <h3>{{ group.label }}</h3>
+        <div class="match-list">
+          <div class="match-table">
+            <div class="match-table__head">
+              <span>状态</span>
+              <span>日期时间</span>
+              <span>对手</span>
+              <span>比分</span>
+              <span>赛段</span>
+              <span>查看</span>
             </div>
 
-            <div class="match-table">
-              <div class="match-table__head">
-                <span>状态</span>
-                <span>日期时间</span>
-                <span>对手</span>
-                <span>比分</span>
-                <span>赛段</span>
-                <span>查看</span>
+            <article v-for="match in pagedRecentMatches" :key="match.id" class="match-table__row">
+              <span class="match-table__status" :class="getStatusClass(match)">
+                {{ getStatusLabel(match) }}
+              </span>
+
+              <span class="match-table__datetime">{{ formatDateTime(match) }}</span>
+
+              <div class="match-table__opponent">
+                <TeamLogo :team="getOpponent(match)" size="md" class="match-table__opponent-logo" />
+                <span>{{ getOpponent(match).name }}</span>
               </div>
 
-              <article v-for="match in group.matches" :key="match.id" class="match-table__row">
-                <span class="match-table__status" :class="getStatusClass(match)">
-                  {{ getStatusLabel(match) }}
-                </span>
-
-                <span class="match-table__datetime">{{ formatDateTime(match) }}</span>
-
-                <div class="match-table__opponent">
-                  <TeamLogo :team="getOpponent(match)" size="md" class="match-table__opponent-logo" />
-                  <span>{{ getOpponent(match).name }}</span>
-                </div>
-
-                <template v-if="match.status === 'scheduled'">
-                  <span class="match-table__score is-vs">VS</span>
-                </template>
-                <template v-else>
-                  <span class="match-table__score">
-                    <span
-                      class="score-number"
-                      :class="{ 'is-winner': match.result === 'win' }"
-                    >
-                      {{ match.teamScore }}
-                    </span>
-                    <span class="score-separator">:</span>
-                    <span
-                      class="score-number"
-                      :class="{ 'is-winner': match.result === 'loss' }"
-                    >
-                      {{ match.opponentScore }}
-                    </span>
-                  </span>
-                </template>
-
-                <span class="match-table__stage">{{ stageLabels[match.stage] }}</span>
-
-                <div class="match-table__actions">
-                  <button
-                    v-if="match.status === 'scheduled'"
-                    type="button"
-                    class="action-btn action-btn--disabled"
-                    disabled
+              <template v-if="match.status === 'scheduled'">
+                <span class="match-table__score is-vs">VS</span>
+              </template>
+              <template v-else>
+                <span class="match-table__score">
+                  <span
+                    class="score-number"
+                    :class="{ 'is-winner': match.result === 'win' }"
                   >
-                    敬请期待
-                  </button>
-                  <button v-else type="button" class="action-btn" @click="goMatchStats(match)">
-                    查看数据
-                  </button>
-                </div>
-              </article>
-            </div>
-          </section>
+                    {{ match.teamScore }}
+                  </span>
+                  <span class="score-separator">:</span>
+                  <span
+                    class="score-number"
+                    :class="{ 'is-winner': match.result === 'loss' }"
+                  >
+                    {{ match.opponentScore }}
+                  </span>
+                </span>
+              </template>
+
+              <span class="match-table__stage">{{ stageLabels[match.stage] }}</span>
+
+              <div class="match-table__actions">
+                <button
+                  v-if="match.status === 'scheduled'"
+                  type="button"
+                  class="action-btn action-btn--disabled"
+                  disabled
+                >
+                  敬请期待
+                </button>
+                <button v-else type="button" class="action-btn" @click="goMatchStats(match)">
+                  查看数据
+                </button>
+              </div>
+            </article>
+          </div>
         </div>
 
         <nav class="match-pagination" aria-label="比赛记录分页">
@@ -355,8 +336,16 @@ function onMatchStageChange() {
     display: flex;
     align-items: flex-end;
     flex-wrap: wrap;
-    gap: 16px;
-    margin: 0 0 30px;
+    gap: clamp(10px, 1.2vw, 16px);
+    margin: 0 0 clamp(14px, 1.8vw, 22px);
+  }
+
+  .section-head-group {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: clamp(10px, 1.2vw, 16px);
+    min-width: 0;
   }
 
   .section-head-title {
@@ -369,11 +358,11 @@ function onMatchStageChange() {
   }
 
   .section-head-sub {
-    color: var(--cnpa-red);
-    font-size: clamp(13px, 1.2vw, 14px);
+    color: #e51b23;
+    font-size: clamp(14px, 1.3vw, 18px);
     line-height: 1.1;
     font-style: italic;
-    font-weight: 900;
+    font-weight: 800;
     letter-spacing: 0.02em;
     text-transform: uppercase;
     white-space: nowrap;
@@ -381,20 +370,20 @@ function onMatchStageChange() {
 }
 
 .roster-section {
-  margin-top: 42px;
+  margin-top: clamp(14px, 1.8vw, 24px);
 }
 
 .overview-section--matches {
-  margin-top: clamp(52px, 4vw, 64px);
-  padding-bottom: 48px;
+  margin-top: clamp(24px, 2.8vw, 36px);
+  padding-bottom: clamp(28px, 3.2vw, 40px);
 }
 
 .match-head {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 18px;
+  gap: clamp(12px, 1.4vw, 18px);
+  margin-bottom: clamp(10px, 1.2vw, 14px);
 
   .section-head {
     margin: 0;
@@ -411,7 +400,7 @@ function onMatchStageChange() {
   height: 42px;
   border: 1px solid rgba(0, 0, 0, 0.15);
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--cnpa-paper-surface);
   box-sizing: border-box;
 
   &::after {
@@ -467,35 +456,42 @@ function onMatchStageChange() {
   padding: 40px 16px;
   text-align: center;
   border: 1px solid rgba(0, 0, 0, 0.18);
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(25, 25, 25, 0.025);
   color: var(--cnpa-paper-text-muted);
   font-size: 14px;
 }
 
 .roster-wrap {
   position: relative;
-  margin: 0 22px 52px;
+  margin: 0 clamp(14px, 1.6vw, 22px);
 }
 
 .roster-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 22px;
-  padding: 0 18px;
+  gap: clamp(14px, 1.6vw, 22px);
+  padding: 0 clamp(10px, 1.2vw, 18px);
 }
 
 .roster-card {
-  min-height: 250px;
-  padding-top: 34px;
+  min-height: clamp(220px, 18vw, 250px);
+  padding-top: clamp(24px, 2.2vw, 34px);
   border: 1px solid var(--cnpa-paper-border);
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(25, 25, 25, 0.03);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 0.16s ease, transform 0.16s ease;
+
+  &:hover {
+    border-color: rgba(225, 6, 19, 0.45);
+    transform: translateY(-2px);
+  }
 }
 
 .player-avatar {
@@ -602,7 +598,7 @@ function onMatchStageChange() {
   align-items: center;
   justify-content: center;
   gap: 11px;
-  margin-top: 24px;
+  margin-top: clamp(12px, 1.4vw, 18px);
 }
 
 .dot {
@@ -620,46 +616,15 @@ function onMatchStageChange() {
   }
 }
 
-.match-groups {  display: flex;
-  flex-direction: column;
-  gap: 28px;
-}
-
-.match-group {
+.match-list {
   overflow-x: auto;
-}
-
-.match-group__title {
-  height: 48px;
-  padding: 0 22px;
-  display: flex;
-  align-items: center;
-  background: linear-gradient(180deg, #111 0%, #050505 100%);
-  color: #fff;
-  border-radius: 2px 2px 0 0;
-  margin-bottom: 0;
-}
-
-.match-group__bar {
-  flex-shrink: 0;
-  width: 4px;
-  height: 22px;
-  background: var(--cnpa-red);
-  margin-right: 12px;
-}
-
-.match-group__title h3 {
-  margin: 0;
-  font-size: clamp(22px, 2vw, 24px);
-  font-weight: 900;
 }
 
 .match-table {
   width: 100%;
   min-width: 1140px;
   border: 1px solid var(--cnpa-paper-border);
-  border-top: none;
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(25, 25, 25, 0.03);
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -680,7 +645,7 @@ function onMatchStageChange() {
 
 .match-table__head {
   min-height: 54px;
-  background: rgba(255, 255, 255, 0.46);
+  background: var(--cnpa-paper-surface);
   color: #171717;
   font-size: 16px;
   font-weight: 900;
@@ -690,7 +655,7 @@ function onMatchStageChange() {
 .match-table__row {
   min-height: 76px;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(25, 25, 25, 0.025);
   transition: background 0.2s ease;
 
   &:first-of-type {
@@ -698,7 +663,7 @@ function onMatchStageChange() {
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.38);
+    background: rgba(25, 25, 25, 0.035);
   }
 
   > * {
@@ -808,7 +773,7 @@ function onMatchStageChange() {
   padding: 0 16px;
   border: 1px solid rgba(0, 0, 0, 0.14);
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--cnpa-paper-surface);
   color: #222;
   font-size: 14px;
   font-weight: 800;
@@ -819,14 +784,14 @@ function onMatchStageChange() {
   &:hover:not(:disabled) {
     border-color: var(--cnpa-red);
     color: var(--cnpa-red);
-    background: rgba(255, 255, 255, 0.78);
+    background: var(--cnpa-paper-surface);
   }
 }
 
 .action-btn--disabled,
 .action-btn:disabled {
   color: #666;
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--cnpa-paper-surface);
   border-color: rgba(0, 0, 0, 0.12);
   cursor: not-allowed;
 }
@@ -836,7 +801,7 @@ function onMatchStageChange() {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  margin-top: 32px;
+  margin-top: clamp(18px, 2vw, 26px);
 }
 
 .match-pagination__nav {
@@ -875,7 +840,7 @@ function onMatchStageChange() {
   padding: 0;
   border: 1px solid rgba(0, 0, 0, 0.14);
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--cnpa-paper-surface);
   color: #333;
   font-size: 14px;
   font-weight: 800;

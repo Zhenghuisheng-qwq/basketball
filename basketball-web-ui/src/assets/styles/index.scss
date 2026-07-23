@@ -20,6 +20,7 @@ a {
 
 #app {
   min-height: 100vh;
+  overflow-x: clip;
 }
 
 ::-webkit-scrollbar {
@@ -36,22 +37,8 @@ a {
   background: var(--cnpa-bg-primary);
 }
 
-@media (max-width: 1024px) {
-  :root {
-    --site-gutter: 24px;
-  }
-}
-
-@media (max-width: 768px) {
-  :root {
-    --site-gutter: 12px;
-    --site-inner-padding: 16px;
-  }
-}
-
 .page-container {
-  width: min(calc(100% - var(--site-gutter) * 2), var(--site-width));
-  max-width: var(--site-width);
+  width: var(--site-content-width);
   margin-inline: auto;
   padding: 48px var(--site-inner-padding) 64px;
   box-sizing: border-box;
@@ -81,8 +68,7 @@ a {
 
 .events-inner,
 .site-content {
-  width: min(calc(100% - var(--site-gutter) * 2), var(--site-width));
-  max-width: var(--site-width);
+  width: var(--site-content-width);
   margin-inline: auto;
   padding-inline: var(--site-inner-padding);
   box-sizing: border-box;

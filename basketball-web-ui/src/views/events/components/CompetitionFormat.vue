@@ -225,7 +225,7 @@ const activeKey = computed(() => props.currentStage || 'regular')
   padding: 24px;
   border: 1px solid rgba(17, 17, 17, 0.12);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.58);
+  background: var(--cnpa-paper-surface);
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 
   &.active {

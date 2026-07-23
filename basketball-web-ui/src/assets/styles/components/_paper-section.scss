@@ -1,47 +1,43 @@
 @use '../variables.scss' as *;
 
 @mixin cnpa-paper-surface {
-  background-color: var(--paper-background, var(--cnpa-paper-gray));
+  background-color: var(--paper-background, var(--cnpa-paper-bg));
   background-image:
-    radial-gradient(
-      circle at 20% 30%,
-      rgba(0, 0, 0, 0.025) 0,
-      transparent 1px
-    ),
-    radial-gradient(
-      circle at 70% 60%,
-      rgba(255, 255, 255, 0.2) 0,
-      transparent 1px
-    ),
-    radial-gradient(
-      ellipse at 12% 24%,
-      rgba(101, 87, 68, var(--cnpa-paper-texture-opacity)) 0%,
-      rgba(101, 87, 68, calc(var(--cnpa-paper-texture-opacity) * 0.5)) 22%,
-      transparent 48%
-    ),
-    radial-gradient(
-      ellipse at 78% 68%,
-      rgba(91, 78, 61, calc(var(--cnpa-paper-texture-opacity) * 0.85)) 0%,
-      transparent 52%
-    ),
     linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.18) 0%,
-      transparent 18%,
-      rgba(93, 79, 62, 0.018) 48%,
-      transparent 74%,
-      rgba(255, 255, 255, 0.12) 100%
+      180deg,
+      #ebe9e9 0%,
+      var(--cnpa-paper-bg) 42%,
+      #e7e5e5 100%
     );
-  background-size:
-    24px 24px,
-    31px 31px,
-    100% 100%,
-    100% 100%,
-    100% 100%;
+}
+
+@mixin cnpa-paper-texture {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.28;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(25, 25, 25, 0.012) 0,
+      rgba(25, 25, 25, 0.012) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.018) 0,
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px,
+      transparent 9px
+    );
 }
 
 .cnpa-paper-section {
-  --paper-background: var(--cnpa-paper-gray);
+  --paper-background: var(--cnpa-paper-bg);
+  --paper-tear-color: var(--cnpa-paper-bg);
 
   position: relative;
   isolation: isolate;
@@ -55,37 +51,16 @@
   @include cnpa-paper-surface;
 
   &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    opacity: 0.38;
-    background:
-      repeating-linear-gradient(
-        0deg,
-        rgba(67, 55, 42, 0.015) 0,
-        rgba(67, 55, 42, 0.015) 1px,
-        transparent 1px,
-        transparent 6px
-      ),
-      repeating-linear-gradient(
-        92deg,
-        rgba(255, 255, 255, 0.022) 0,
-        rgba(255, 255, 255, 0.022) 1px,
-        transparent 1px,
-        transparent 11px
-      );
-    mix-blend-mode: multiply;
+    @include cnpa-paper-texture;
   }
 }
 
 .cnpa-paper-section--gray {
-  --paper-background: var(--cnpa-paper-gray);
+  --paper-background: var(--cnpa-paper-bg);
 }
 
 .cnpa-paper-section--light {
-  --paper-background: var(--cnpa-paper-light);
+  --paper-background: var(--cnpa-paper-bg);
 }
 
 .cnpa-paper-section__content {
@@ -96,7 +71,7 @@
 }
 
 .cnpa-paper-floating-panel {
-  border: 1px solid rgba(10, 10, 10, 0.12);
+  border: 1px solid var(--cnpa-paper-border);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
 }
 
@@ -125,7 +100,7 @@
   gap: 6px;
   border: none;
   background: transparent;
-  color: #161616;
+  color: var(--cnpa-paper-text);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;

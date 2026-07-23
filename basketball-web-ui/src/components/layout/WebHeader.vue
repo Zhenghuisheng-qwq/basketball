@@ -3,10 +3,15 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import logoImg from '@/assets/icon/logo.png'
 import CompetitionDropdown from './CompetitionDropdown.vue'
+import { useAuth } from '@/composables/useAuth'
 import { useCompetitionSelector } from '@/views/events/composables/useCompetitionSelector'
+import { searchPlayerProfiles } from '@/views/player/detail/mock/playerDetail'
+import { goToPlayerDetail } from '@/utils/playerNavigate'
+import { getAvatarInitials } from '@/utils/accountAvatar'
 
 const route = useRoute()
 const router = useRouter()
+const { isAuthenticated, currentUser, unreadNotificationCount } = useAuth()
 
 const {
   competitionOptions,
@@ -14,21 +19,22 @@ const {
   selectCompetition,
 } = useCompetitionSelector()
 
-const hasHonorRoute = router.getRoutes().some((r) => r.path === '/honor')
-
 const navItems = [
   { label: '数据', to: '/data' },
   {
     label: '名人堂',
-    to: hasHonorRoute ? '/honor' : { path: '/home', hash: '#teams' },
-    hashMatch: !hasHonorRoute,
+    to: '/hall-of-fame',
   },
-  { label: '公告', to: '/notice' },
+  { label: '公告', to: '/announcements' },
 ]
 
 const isCompetitionMenuOpen = ref(false)
 const isMobileMenuOpen = ref(false)
 const isMobileCompetitionOpen = ref(false)
+const isSearchOpen = ref(false)
+const searchQuery = ref('')
+const searchPanelRef = ref<HTMLElement | null>(null)
+const searchInputRef = ref<HTMLInputElement | null>(null)
 const competitionNavRef = ref<HTMLElement | null>(null)
 const competitionTriggerRef = ref<HTMLButtonElement | null>(null)
 const competitionDropdownRef = ref<InstanceType<typeof CompetitionDropdown> | null>(null)
@@ -39,9 +45,16 @@ const isTournamentRoute = computed(
   () => route.path === '/tournament' || route.path === '/events',
 )
 
+const searchResults = computed(() => searchPlayerProfiles(searchQuery.value, 8))
+
+const accountLabel = computed(() => currentUser.value?.nickname || '个人中心')
+const accountInitials = computed(() => getAvatarInitials(currentUser.value?.nickname))
+const showAccountInitials = computed(() => Boolean(accountInitials.value))
+
 function isActive(item: (typeof navItems)[number]) {
-  if (item.hashMatch) return route.path === '/home' && route.hash === '#teams'
-  if (item.to === '/honor') return route.path === '/honor'
+  if (item.to === '/announcements') {
+    return route.path.startsWith('/announcements')
+  }
   if (typeof item.to === 'string') return route.path === item.to
   return false
 }
@@ -94,19 +107,32 @@ function handleSelectCompetition(competition: (typeof competitionOptions)[number
 }
 
 function handleDocumentPointerDown(event: PointerEvent) {
-  if (!isCompetitionMenuOpen.value) return
-
   const target = event.target as Node | null
   if (!target) return
 
-  const root = competitionNavRef.value
-  if (root?.contains(target)) return
+  if (isCompetitionMenuOpen.value) {
+    const root = competitionNavRef.value
+    if (!root?.contains(target)) {
+      closeCompetitionMenu()
+    }
+  }
 
-  closeCompetitionMenu()
+  if (isSearchOpen.value) {
+    const searchRoot = searchPanelRef.value
+    if (!searchRoot?.contains(target)) {
+      closeSearch()
+    }
+  }
 }
 
 function handleDocumentKeyDown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
+    if (isSearchOpen.value) {
+      event.preventDefault()
+      closeSearch(true)
+      return
+    }
+
     if (isCompetitionMenuOpen.value) {
       event.preventDefault()
       closeCompetitionMenu(true)
@@ -159,8 +185,11 @@ function goLogin() {
 }
 
 function goRegister() {
-  const hasRegister = router.getRoutes().some((r) => r.path === '/register')
-  router.push(hasRegister ? '/register' : '/login')
+  router.push('/register')
+}
+
+function goAccount() {
+  router.push('/account')
 }
 
 function closeMobileMenu() {
@@ -168,21 +197,57 @@ function closeMobileMenu() {
   isMobileCompetitionOpen.value = false
 }
 
+function openSearch() {
+  isSearchOpen.value = true
+  window.setTimeout(() => searchInputRef.value?.focus(), 0)
+}
+
+function closeSearch(focusTrigger = false) {
+  isSearchOpen.value = false
+  searchQuery.value = ''
+  if (focusTrigger) {
+    document.querySelector<HTMLButtonElement>('.search-btn')?.focus()
+  }
+}
+
+function toggleSearch() {
+  if (isSearchOpen.value) {
+    closeSearch()
+  } else {
+    openSearch()
+  }
+}
+
+const isScrolled = ref(false)
+
+function handleWindowScroll() {
+  isScrolled.value = window.scrollY > 20
+}
+
+function handleSearchSelect(playerId: number) {
+  goToPlayerDetail(router, playerId, 'overview')
+  closeSearch()
+  closeMobileMenu()
+}
+
 onMounted(() => {
+  handleWindowScroll()
+  window.addEventListener('scroll', handleWindowScroll, { passive: true })
   document.addEventListener('pointerdown', handleDocumentPointerDown)
   document.addEventListener('keydown', handleDocumentKeyDown)
 })
 
 onBeforeUnmount(() => {
   clearCloseTimer()
+  window.removeEventListener('scroll', handleWindowScroll)
   document.removeEventListener('pointerdown', handleDocumentPointerDown)
   document.removeEventListener('keydown', handleDocumentKeyDown)
 })
 </script>
 
 <template>
-  <header class="web-header">
-    <div class="site-shell web-header-inner">
+  <header class="site-header" :class="{ 'is-scrolled': isScrolled }">
+    <div class="site-shell site-header__inner">
       <div class="header-left">
         <div
           class="header-logo"
@@ -256,14 +321,68 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="header-actions">
-        <button type="button" class="search-btn" aria-label="搜索">
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-            <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2" />
-            <path d="M20 20l-4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
+        <div ref="searchPanelRef" class="header-search">
+          <button
+            type="button"
+            class="search-btn"
+            aria-label="搜索"
+            :aria-expanded="isSearchOpen"
+            @click="toggleSearch"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2" />
+              <path d="M20 20l-4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </button>
+
+          <div v-if="isSearchOpen" class="header-search__panel">
+            <label class="header-search__field">
+              <span class="header-search__icon" aria-hidden="true">⌕</span>
+              <input
+                ref="searchInputRef"
+                v-model="searchQuery"
+                type="search"
+                placeholder="搜索球员"
+                autocomplete="off"
+              />
+            </label>
+
+            <ul v-if="searchQuery.trim()" class="header-search__results">
+              <li v-if="searchResults.length === 0" class="header-search__empty">未找到相关球员</li>
+              <li v-for="player in searchResults" :key="player.id">
+                <button type="button" class="header-search__item" @click="handleSearchSelect(player.id)">
+                  <span class="header-search__type">PLAYER</span>
+                  <span class="header-search__name">{{ player.displayName }}</span>
+                  <span class="header-search__meta">{{ player.currentTeamAbbr }} · {{ player.position }}</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <button
+          v-if="isAuthenticated"
+          type="button"
+          class="account-btn"
+          @click="goAccount"
+        >
+          <span class="account-btn__avatar" aria-hidden="true">
+            <template v-if="showAccountInitials">{{ accountInitials }}</template>
+            <svg v-else class="account-btn__avatar-icon" viewBox="0 0 24 24">
+              <path
+                fill="currentColor"
+                d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+              />
+            </svg>
+          </span>
+          <span class="account-btn__label">个人中心</span>
+          <span v-if="unreadNotificationCount > 0" class="account-btn__badge">
+            {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
+          </span>
         </button>
-        <button type="button" class="login-btn" @click="goLogin">登录</button>
-        <button type="button" class="register-btn" @click="goRegister">注册</button>
+        <template v-else>
+          <button type="button" class="login-btn" @click="goLogin">登录</button>
+          <button type="button" class="register-btn" @click="goRegister">注册</button>
+        </template>
         <button
           type="button"
           class="mobile-menu-btn"
@@ -322,34 +441,64 @@ onBeforeUnmount(() => {
         >
           {{ item.label }}
         </router-link>
+
+        <button
+          v-if="isAuthenticated"
+          type="button"
+          class="mobile-nav__link mobile-nav__link--account"
+          @click="goAccount(); closeMobileMenu()"
+        >
+          个人中心 · {{ accountLabel }}
+        </button>
+        <template v-else>
+          <button
+            type="button"
+            class="mobile-nav__link mobile-nav__link--account"
+            @click="goLogin(); closeMobileMenu()"
+          >
+            登录
+          </button>
+          <button
+            type="button"
+            class="mobile-nav__link mobile-nav__link--account"
+            @click="goRegister(); closeMobileMenu()"
+          >
+            注册
+          </button>
+        </template>
       </nav>
     </Transition>
   </header>
 </template>
 
 <style scoped lang="scss">
-.web-header {
-  position: sticky;
+.site-header {
+  position: fixed;
   top: 0;
-  z-index: 100;
+  left: 0;
+  right: 0;
+  z-index: 2000;
   width: 100%;
-  min-height: 72px;
+  height: var(--site-header-height);
+  min-height: var(--site-header-height);
   overflow: visible;
-  background:
-    linear-gradient(
-      90deg,
-      rgba(14, 22, 25, 0.94) 0%,
-      rgba(8, 8, 10, 0.96) 42%,
-      rgba(36, 18, 34, 0.92) 100%
-    );
-  border-top: 2px solid #ff2d19;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.36);
+  background: rgba(7, 8, 10, 0.96);
+  border-top: 2px solid var(--cnpa-red, #e10613);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  box-shadow: none;
+  transition:
+    background-color 0.24s ease,
+    box-shadow 0.24s ease;
+
+  &.is-scrolled {
+    background: rgba(7, 8, 10, 0.98);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.42);
+  }
 }
 
-.web-header-inner {
-  height: 100%;
+.site-header__inner {
+  height: var(--site-header-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -383,13 +532,13 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: flex-start;
   gap: clamp(34px, 3.4vw, 72px);
-  height: 72px;
+  height: var(--site-header-height);
   min-width: 0;
 }
 
 .site-nav__item--competitions {
   position: relative;
-  height: 72px;
+  height: var(--site-header-height);
   display: flex;
   align-items: center;
 }
@@ -398,7 +547,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: calc(100% + 1px);
   left: 0;
-  z-index: 1200;
+  z-index: 2100;
 }
 
 .competition-menu-enter-active,
@@ -416,7 +565,7 @@ onBeforeUnmount(() => {
 
 .nav-link {
   position: relative;
-  height: 72px;
+  height: var(--site-header-height);
   display: flex;
   align-items: center;
   color: rgba(255, 255, 255, 0.88);
@@ -482,6 +631,97 @@ onBeforeUnmount(() => {
   }
 }
 
+.header-search {
+  position: relative;
+}
+
+.header-search__panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(360px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  background: #111;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  z-index: 2100;
+}
+
+.header-search__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.header-search__field input {
+  width: 100%;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  outline: none;
+}
+
+.header-search__icon {
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.header-search__results {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.header-search__empty {
+  padding: 12px;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 13px;
+}
+
+.header-search__item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+
+  &:hover {
+    background: rgba(225, 6, 19, 0.12);
+  }
+}
+
+.header-search__type {
+  grid-row: span 2;
+  align-self: center;
+  padding: 2px 6px;
+  border: 1px solid rgba(225, 6, 19, 0.65);
+  color: #ff4d57;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.header-search__name {
+  font-weight: 700;
+}
+
+.header-search__meta {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 12px;
+}
+
 .login-btn,
 .register-btn {
   height: 44px;
@@ -509,9 +749,59 @@ onBeforeUnmount(() => {
 }
 
 .login-btn:hover,
-.register-btn:hover {
+.register-btn:hover,
+.account-btn:hover {
   transform: translateY(-1px);
   filter: brightness(1.08);
+}
+
+.account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  min-width: 92px;
+  padding: 0 20px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.account-btn__avatar {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(225, 6, 19, 0.28);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.account-btn__avatar-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.account-btn__label {
+  white-space: nowrap;
+}
+
+.account-btn__badge {
+  min-width: 18px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: var(--cnpa-red, #e10613);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.2;
 }
 
 .mobile-menu-btn {
@@ -536,6 +826,8 @@ onBeforeUnmount(() => {
 
 .mobile-nav {
   display: none;
+  position: relative;
+  z-index: 2100;
   width: 100%;
   padding: 8px 0 16px;
   background: rgba(8, 8, 10, 0.98);
@@ -545,7 +837,7 @@ onBeforeUnmount(() => {
 .mobile-nav__link {
   display: block;
   width: 100%;
-  padding: 14px clamp(16px, 3.2vw, 72px);
+  padding: 14px var(--site-margin-inline);
   color: rgba(255, 255, 255, 0.88);
   font-size: 15px;
   font-weight: 800;
@@ -589,18 +881,15 @@ onBeforeUnmount(() => {
   }
 
   .login-btn,
-  .register-btn {
+  .register-btn,
+  .account-btn {
     min-width: 78px;
     padding: 0 18px;
   }
 }
 
 @media (max-width: 900px) {
-  .web-header {
-    min-height: 64px;
-  }
-
-  .web-header-inner {
+  .site-header__inner {
     padding: 0;
   }
 
@@ -619,11 +908,16 @@ onBeforeUnmount(() => {
   }
 
   .login-btn,
-  .register-btn {
+  .register-btn,
+  .account-btn {
     height: 38px;
     min-width: 66px;
     padding: 0 14px;
     font-size: 13px;
+  }
+
+  .account-btn__label {
+    display: none;
   }
 
   .mobile-menu-btn {

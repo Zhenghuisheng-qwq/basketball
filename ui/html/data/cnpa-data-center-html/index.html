@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="CNPA 数据中心 1:1 高保真交互原型" />
+  <title>CNPA 数据中心</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --design-width: 1145;
+      --design-height: 1374;
+      --cnpa-red: #ff1717;
+      --panel-black: rgba(12, 12, 12, 0.98);
+      --panel-line: rgba(255, 255, 255, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+      background:
+        radial-gradient(circle at 50% 8%, rgba(120, 0, 0, 0.15), transparent 28%),
+        #000;
+      font-family:
+        "Microsoft YaHei",
+        "PingFang SC",
+        "Noto Sans CJK SC",
+        Arial,
+        sans-serif;
+    }
+
+    body {
+      overflow-x: hidden;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .page-shell {
+      position: relative;
+      width: 1145px;
+      height: 1374px;
+      margin: 0 auto;
+      transform-origin: top center;
+      background: #000;
+      overflow: hidden;
+      box-shadow: 0 0 44px rgba(0, 0, 0, 0.72);
+    }
+
+    .design-stage {
+      position: absolute;
+      inset: 0;
+      width: 1145px;
+      height: 1374px;
+      overflow: hidden;
+      background: #000;
+      isolation: isolate;
+    }
+
+    .screen-image {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: block;
+      width: 1145px;
+      height: 1374px;
+      object-fit: cover;
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
+    }
+
+    .hit-button {
+      position: absolute;
+      z-index: 10;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 2px;
+      background: transparent;
+      color: transparent;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .hit-button:focus-visible {
+      box-shadow:
+        0 0 0 2px #fff,
+        0 0 0 5px rgba(255, 23, 23, 0.96);
+    }
+
+    .hit-button:hover::after {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      border-radius: inherit;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .season-hit {
+      left: 845px;
+      top: 102px;
+      width: 254px;
+      height: 42px;
+      border-radius: 6px;
+    }
+
+    .team-tab-hit {
+      left: 48px;
+      top: 354px;
+      width: 135px;
+      height: 77px;
+    }
+
+    .player-tab-hit {
+      left: 194px;
+      top: 354px;
+      width: 137px;
+      height: 77px;
+    }
+
+    .average-hit {
+      left: 917px;
+      top: 479px;
+      width: 88px;
+      height: 51px;
+      border-radius: 5px;
+    }
+
+    .total-hit {
+      left: 996px;
+      top: 479px;
+      width: 89px;
+      height: 51px;
+      border-radius: 5px;
+    }
+
+    .search-hit {
+      left: 742px;
+      top: 25px;
+      width: 198px;
+      height: 39px;
+      border-radius: 5px;
+    }
+
+    .login-hit {
+      left: 949px;
+      top: 25px;
+      width: 77px;
+      height: 39px;
+      border-radius: 5px;
+    }
+
+    .register-hit {
+      left: 1040px;
+      top: 25px;
+      width: 67px;
+      height: 39px;
+      border-radius: 5px;
+    }
+
+    /*
+     * 设计稿表格右侧带有内部纵向滚动条。
+     * 正式页面不保留内部滚动，因此通过白色遮盖层移除。
+     */
+    .table-scrollbar-cover {
+      position: absolute;
+      z-index: 4;
+      left: 1105px;
+      top: 536px;
+      width: 15px;
+      height: 534px;
+      border-radius: 8px;
+      background:
+        linear-gradient(
+          90deg,
+          rgba(252, 252, 252, 0) 0,
+          rgba(252, 252, 252, 0.96) 25%,
+          #f8f8f8 100%
+        );
+      pointer-events: none;
+    }
+
+    .season-dropdown {
+      position: absolute;
+      z-index: 30;
+      left: 835px;
+      top: 136px;
+      width: 279px;
+      min-height: 405px;
+      padding: 14px 12px 12px;
+      border: 1px solid #4a4a4a;
+      border-radius: 5px;
+      background:
+        linear-gradient(180deg, rgba(17, 17, 17, 0.99), rgba(9, 9, 9, 0.99));
+      box-shadow:
+        0 14px 34px rgba(0, 0, 0, 0.72),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      color: #fff;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-5px);
+      transition:
+        opacity 130ms ease,
+        transform 130ms ease,
+        visibility 130ms ease;
+    }
+
+    .season-dropdown.is-open {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .dropdown-title {
+      margin: 0 0 11px;
+      font-size: 15px;
+      line-height: 1;
+      font-weight: 700;
+      color: #f2f2f2;
+    }
+
+    .event-search {
+      position: relative;
+      height: 36px;
+      margin-bottom: 15px;
+    }
+
+    .event-search input {
+      width: 100%;
+      height: 36px;
+      padding: 0 38px 0 34px;
+      border: 1px solid #3c3c3c;
+      border-radius: 4px;
+      outline: none;
+      background: #0a0a0a;
+      color: #eee;
+      font-size: 13px;
+      line-height: 36px;
+    }
+
+    .event-search input::placeholder {
+      color: #8c8c8c;
+    }
+
+    .event-search input:focus {
+      border-color: #777;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .search-icon {
+      position: absolute;
+      top: 50%;
+      color: #aaa;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .search-icon.left {
+      left: 10px;
+    }
+
+    .search-icon.right {
+      right: 10px;
+    }
+
+    .season-group + .season-group {
+      margin-top: 13px;
+    }
+
+    .season-group-title {
+      margin: 0 0 7px;
+      font-size: 12px;
+      line-height: 1;
+      color: #8c8c8c;
+    }
+
+    .event-option {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+      height: 31px;
+      margin: 0 0 3px;
+      padding: 0 34px 0 11px;
+      border: 0;
+      border-radius: 4px;
+      background:
+        linear-gradient(90deg, #2d2d2d, #232323);
+      color: #eaeaea;
+      cursor: pointer;
+      text-align: left;
+      font-size: 13px;
+      transition:
+        filter 120ms ease,
+        transform 120ms ease;
+    }
+
+    .event-option:hover {
+      filter: brightness(1.16);
+    }
+
+    .event-option:active {
+      transform: translateY(1px);
+    }
+
+    .event-option.is-selected {
+      background:
+        linear-gradient(90deg, #fb2727, #ed1111);
+      color: #fff;
+    }
+
+    .selected-mark {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      display: none;
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid #fff;
+      border-radius: 50%;
+      transform: translateY(-50%);
+    }
+
+    .event-option.is-selected .selected-mark {
+      display: block;
+    }
+
+    .selected-mark::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 3px;
+      width: 5px;
+      height: 3px;
+      border-left: 1.5px solid #fff;
+      border-bottom: 1.5px solid #fff;
+      transform: rotate(-45deg);
+    }
+
+    .dropdown-backdrop {
+      position: absolute;
+      z-index: 20;
+      inset: 0;
+      display: none;
+      background: transparent;
+    }
+
+    .dropdown-backdrop.is-open {
+      display: block;
+    }
+
+    .toast {
+      position: absolute;
+      z-index: 60;
+      left: 50%;
+      bottom: 96px;
+      min-width: 210px;
+      max-width: 520px;
+      padding: 12px 18px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 6px;
+      background: rgba(13, 13, 13, 0.94);
+      color: #fff;
+      font-size: 14px;
+      line-height: 1.45;
+      text-align: center;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 12px);
+      transition:
+        opacity 160ms ease,
+        transform 160ms ease;
+    }
+
+    .toast.is-visible {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .loading-mask {
+      position: absolute;
+      z-index: 50;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      visibility: hidden;
+      transition:
+        opacity 90ms ease,
+        visibility 90ms ease;
+      pointer-events: none;
+    }
+
+    .loading-mask.is-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .loading-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--cnpa-red);
+      box-shadow:
+        18px 0 0 rgba(255, 23, 23, 0.5),
+        -18px 0 0 rgba(255, 23, 23, 0.5);
+      animation: pulse 650ms ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse {
+      from {
+        transform: scale(0.85);
+        opacity: 0.75;
+      }
+      to {
+        transform: scale(1.2);
+        opacity: 1;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="pageShell" class="page-shell" aria-label="CNPA 数据中心高保真原型">
+    <section id="designStage" class="design-stage">
+      <img
+        id="screenImage"
+        class="screen-image"
+        src="assets/team-average.png"
+        alt="CNPA 数据中心页面"
+        width="1145"
+        height="1374"
+        draggable="false"
+      />
+
+      <div class="table-scrollbar-cover" aria-hidden="true"></div>
+
+      <button class="hit-button search-hit" type="button" aria-label="搜索战队、选手或赛事"></button>
+      <button class="hit-button login-hit" type="button" aria-label="登录"></button>
+      <button class="hit-button register-hit" type="button" aria-label="注册"></button>
+
+      <button
+        id="seasonTrigger"
+        class="hit-button season-hit"
+        type="button"
+        aria-label="选择赛事"
+        aria-haspopup="listbox"
+        aria-expanded="false"
+      ></button>
+
+      <button
+        id="teamTab"
+        class="hit-button team-tab-hit"
+        type="button"
+        aria-label="查看球队数据"
+      ></button>
+
+      <button
+        id="playerTab"
+        class="hit-button player-tab-hit"
+        type="button"
+        aria-label="查看个人数据"
+      ></button>
+
+      <button
+        id="averageButton"
+        class="hit-button average-hit"
+        type="button"
+        aria-label="查看场均数据"
+      ></button>
+
+      <button
+        id="totalButton"
+        class="hit-button total-hit"
+        type="button"
+        aria-label="查看总计数据"
+      ></button>
+
+      <div id="dropdownBackdrop" class="dropdown-backdrop" aria-hidden="true"></div>
+
+      <aside
+        id="seasonDropdown"
+        class="season-dropdown"
+        role="listbox"
+        aria-label="赛事列表"
+      >
+        <h2 class="dropdown-title">选择赛事</h2>
+
+        <label class="event-search">
+          <span class="search-icon left" aria-hidden="true">⌕</span>
+          <input id="eventSearchInput" type="search" placeholder="搜索赛事" autocomplete="off" />
+          <span class="search-icon right" aria-hidden="true">⌕</span>
+        </label>
+
+        <div class="season-group" data-group="2026赛季">
+          <p class="season-group-title">2026赛季</p>
+          <button class="event-option is-selected" type="button" data-event="CNPA League S1">
+            CNPA League S1
+            <span class="selected-mark" aria-hidden="true"></span>
+          </button>
+          <button class="event-option" type="button" data-event="CNPA Cup">
+            CNPA Cup
+            <span class="selected-mark" aria-hidden="true"></span>
+          </button>
+          <button class="event-option" type="button" data-event="CNPA Arena">
+            CNPA Arena
+            <span class="selected-mark" aria-hidden="true"></span>
+          </button>
+          <button class="event-option" type="button" data-event="CNPA Open">
+            CNPA Open
+            <span class="selected-mark" aria-hidden="true"></span>
+          </button>
+        </div>
+
+        <div class="season-group" data-group="2025赛季">
+          <p class="season-group-title">2025赛季</p>
+          <button class="event-option" type="button" data-event="2025 CNPA League S2">
+            CNPA League S2
+            <span class="selected-mark" aria-hidden="true"></span>
+          </button>
+          <button class="event-option" type="button" data-event="2025 CNPA League S1">
+            CNPA League S1
+            <span class="selected-mark" aria-hidden="true"></span>
+          </button>
+          <button class="event-option" type="button" data-event="2025 CNPA Cup">
+            CNPA Cup
+            <span class="selected-mark" aria-hidden="true"></span>
+          </button>
+          <button class="event-option" type="button" data-event="2025 CNPA Open">
+            CNPA Open
+            <span class="selected-mark" aria-hidden="true"></span>
+          </button>
+        </div>
+      </aside>
+
+      <div id="loadingMask" class="loading-mask" aria-hidden="true">
+        <span class="loading-dot"></span>
+      </div>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const DESIGN_WIDTH = 1145;
+      const DESIGN_HEIGHT = 1374;
+
+      const assets = {
+        team: {
+          average: "assets/team-average.png",
+          total: "assets/team-total.png"
+        },
+        player: {
+          average: "assets/player-average.png",
+          total: "assets/player-total.png"
+        }
+      };
+
+      const state = {
+        dataType: "team",
+        statisticType: "average",
+        selectedEvent: "2026 CNPA League S1",
+        dropdownOpen: false
+      };
+
+      const pageShell = document.getElementById("pageShell");
+      const screenImage = document.getElementById("screenImage");
+      const loadingMask = document.getElementById("loadingMask");
+      const toast = document.getElementById("toast");
+
+      const seasonTrigger = document.getElementById("seasonTrigger");
+      const seasonDropdown = document.getElementById("seasonDropdown");
+      const dropdownBackdrop = document.getElementById("dropdownBackdrop");
+      const eventSearchInput = document.getElementById("eventSearchInput");
+
+      const teamTab = document.getElementById("teamTab");
+      const playerTab = document.getElementById("playerTab");
+      const averageButton = document.getElementById("averageButton");
+      const totalButton = document.getElementById("totalButton");
+
+      let toastTimer = null;
+      let renderTimer = null;
+
+      function resizePrototype() {
+        const viewportWidth = document.documentElement.clientWidth;
+        const scale = Math.min(viewportWidth / DESIGN_WIDTH, 1);
+
+        pageShell.style.transform = `scale(${scale})`;
+        pageShell.style.marginBottom = `${DESIGN_HEIGHT * (scale - 1)}px`;
+      }
+
+      function showToast(message) {
+        window.clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add("is-visible");
+
+        toastTimer = window.setTimeout(() => {
+          toast.classList.remove("is-visible");
+        }, 1700);
+      }
+
+      function renderScreen(options = {}) {
+        const { silent = false } = options;
+        const nextSource = assets[state.dataType][state.statisticType];
+
+        window.clearTimeout(renderTimer);
+        loadingMask.classList.add("is-visible");
+
+        const preload = new Image();
+        preload.onload = () => {
+          renderTimer = window.setTimeout(() => {
+            screenImage.src = nextSource;
+            loadingMask.classList.remove("is-visible");
+          }, silent ? 0 : 80);
+        };
+
+        preload.onerror = () => {
+          loadingMask.classList.remove("is-visible");
+          showToast("页面资源加载失败");
+        };
+
+        preload.src = nextSource;
+      }
+
+      function setDataType(dataType) {
+        if (state.dataType === dataType) return;
+        state.dataType = dataType;
+        renderScreen();
+      }
+
+      function setStatisticType(statisticType) {
+        if (state.statisticType === statisticType) return;
+        state.statisticType = statisticType;
+        renderScreen();
+      }
+
+      function setDropdown(open) {
+        state.dropdownOpen = open;
+        seasonDropdown.classList.toggle("is-open", open);
+        dropdownBackdrop.classList.toggle("is-open", open);
+        seasonTrigger.setAttribute("aria-expanded", String(open));
+
+        if (open) {
+          window.setTimeout(() => eventSearchInput.focus(), 100);
+        } else {
+          eventSearchInput.value = "";
+          filterEventOptions("");
+        }
+      }
+
+      function filterEventOptions(keyword) {
+        const normalized = keyword.trim().toLowerCase();
+        const groups = seasonDropdown.querySelectorAll(".season-group");
+
+        groups.forEach((group) => {
+          let visibleCount = 0;
+
+          group.querySelectorAll(".event-option").forEach((option) => {
+            const visible = option.textContent.toLowerCase().includes(normalized);
+            option.hidden = !visible;
+            if (visible) visibleCount += 1;
+          });
+
+          group.hidden = visibleCount === 0;
+        });
+      }
+
+      function selectEvent(option) {
+        seasonDropdown.querySelectorAll(".event-option").forEach((item) => {
+          item.classList.toggle("is-selected", item === option);
+        });
+
+        state.selectedEvent = option.dataset.event || option.textContent.trim();
+        setDropdown(false);
+        showToast(`已切换至 ${state.selectedEvent}`);
+      }
+
+      function bindPrototypeActions() {
+        teamTab.addEventListener("click", () => setDataType("team"));
+        playerTab.addEventListener("click", () => setDataType("player"));
+        averageButton.addEventListener("click", () => setStatisticType("average"));
+        totalButton.addEventListener("click", () => setStatisticType("total"));
+
+        seasonTrigger.addEventListener("click", () => {
+          setDropdown(!state.dropdownOpen);
+        });
+
+        dropdownBackdrop.addEventListener("click", () => setDropdown(false));
+
+        eventSearchInput.addEventListener("input", (event) => {
+          filterEventOptions(event.target.value);
+        });
+
+        seasonDropdown.querySelectorAll(".event-option").forEach((option) => {
+          option.addEventListener("click", () => selectEvent(option));
+        });
+
+        document.querySelector(".search-hit").addEventListener("click", () => {
+          showToast("搜索框交互将在 Vue 页面中接入");
+        });
+
+        document.querySelector(".login-hit").addEventListener("click", () => {
+          showToast("登录入口");
+        });
+
+        document.querySelector(".register-hit").addEventListener("click", () => {
+          showToast("注册入口");
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && state.dropdownOpen) {
+            setDropdown(false);
+            seasonTrigger.focus();
+          }
+        });
+
+        window.addEventListener("resize", resizePrototype, { passive: true });
+      }
+
+      resizePrototype();
+      bindPrototypeActions();
+      renderScreen({ silent: true });
+    })();
+  </script>
+</body>
+</html>

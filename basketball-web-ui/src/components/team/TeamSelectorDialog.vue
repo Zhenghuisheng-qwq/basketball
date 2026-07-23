@@ -158,7 +158,7 @@ onUnmounted(() => {
   overflow: auto;
   padding: 24px;
   border: 1px solid rgba(17, 17, 17, 0.12);
-  background: var(--cnpa-paper-light);
+  background: var(--cnpa-paper-bg);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
 }
 

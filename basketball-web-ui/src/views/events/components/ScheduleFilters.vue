@@ -97,10 +97,10 @@ const selectedTeamLabel = computed(() => {
   min-width: 140px;
   height: 40px;
   padding: 0 14px;
-  border: 1px solid rgba(10, 10, 10, 0.16);
+  border: 1px solid var(--cnpa-paper-border);
   border-radius: 2px;
-  background: #fff;
-  color: #111;
+  background: var(--cnpa-paper-surface);
+  color: var(--cnpa-paper-text);
   font-size: 13px;
   font-weight: 700;
   font-family: inherit;

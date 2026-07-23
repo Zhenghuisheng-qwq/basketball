@@ -112,7 +112,7 @@ const statusMap: Record<
 
 .match-head {
   min-height: 48px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--cnpa-paper-surface);
   color: rgba(10, 10, 10, 0.55);
   font-size: 12px;
   font-weight: 800;
@@ -163,9 +163,9 @@ const statusMap: Record<
 
 .action-btn {
   height: 32px;
-  border: 1px solid rgba(10, 10, 10, 0.16);
-  background: #fff;
-  color: #111;
+  border: 1px solid var(--cnpa-paper-border);
+  background: var(--cnpa-paper-surface);
+  color: var(--cnpa-paper-text);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
