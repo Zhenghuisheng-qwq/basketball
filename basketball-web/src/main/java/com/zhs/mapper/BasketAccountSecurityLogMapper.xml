@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketAccountSecurityLogDao">
+	<resultMap id="result_BasketAccountSecurityLogMapper.xml" type="com.zhs.model.BasketAccountSecurityLog">
+		<id column="id" property="id" />
+		<result column="member_id" property="memberId" />
+		<result column="event_type" property="eventType" />
+		<result column="event_title" property="eventTitle" />
+		<result column="event_time" property="eventTime" />
+		<result column="old_value_masked" property="oldValueMasked" />
+		<result column="new_value_masked" property="newValueMasked" />
+		<result column="operator_type" property="operatorType" />
+		<result column="operator_id" property="operatorId" />
+		<result column="client_ip" property="clientIp" />
+		<result column="terminal_type" property="terminalType" />
+		<result column="remark" property="remark" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_account_security_log的列名 -->
+	<sql id="basket_account_security_log_Column">
+		id,member_id,event_type,event_title,old_value_masked,new_value_masked,operator_type,operator_id,client_ip,terminal_type,event_time,remark,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketAccountSecurityLog的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketAccountSecurityLogById" parameterType="Long" resultMap="result_BasketAccountSecurityLogMapper.xml">
+		select
+		<include refid="basket_account_security_log_Column" />
+		from basket_account_security_log
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketAccountSecurityLog对象,以参数BasketAccountSecurityLog对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketAccountSecurityLogObjSingle" parameterType="com.zhs.model.BasketAccountSecurityLog" resultMap="result_BasketAccountSecurityLogMapper.xml">
+		select
+		<include refid="basket_account_security_log_Column" />
+		from basket_account_security_log
+		<where>
+		<if test="oldValueMasked != null"> and old_value_masked = #{oldValueMasked}</if>
+		<if test="newValueMasked != null"> and new_value_masked = #{newValueMasked}</if>
+		<if test="operatorType != null"> and operator_type = #{operatorType}</if>
+		<if test="operatorId != null"> and operator_id = #{operatorId}</if>
+		<if test="clientIp != null"> and client_ip = #{clientIp}</if>
+		<if test="terminalType != null"> and terminal_type = #{terminalType}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="memberId != null"> and member_id = #{memberId}</if>
+		<if test="eventType != null"> and event_type = #{eventType}</if>
+		<if test="eventTitle != null"> and event_title = #{eventTitle}</if>
+		<if test="eventTime != null"> and event_time = #{eventTime}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketAccountSecurityLog对象,以参数BasketAccountSecurityLog对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketAccountSecurityLogByObj" parameterType="com.zhs.model.BasketAccountSecurityLog" resultMap="result_BasketAccountSecurityLogMapper.xml">
+		select
+		<include refid="basket_account_security_log_Column" />
+		from basket_account_security_log
+		<where>
+		<if test="oldValueMasked != null"> and old_value_masked = #{oldValueMasked}</if>
+		<if test="newValueMasked != null"> and new_value_masked = #{newValueMasked}</if>
+		<if test="operatorType != null"> and operator_type = #{operatorType}</if>
+		<if test="operatorId != null"> and operator_id = #{operatorId}</if>
+		<if test="clientIp != null"> and client_ip = #{clientIp}</if>
+		<if test="terminalType != null"> and terminal_type = #{terminalType}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="memberId != null"> and member_id = #{memberId}</if>
+		<if test="eventType != null"> and event_type = #{eventType}</if>
+		<if test="eventTitle != null"> and event_title = #{eventTitle}</if>
+		<if test="eventTime != null"> and event_time = #{eventTime}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketAccountSecurityLog插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketAccountSecurityLog" parameterType="com.zhs.model.BasketAccountSecurityLog">
+		insert into 
+		basket_account_security_log (id,member_id,event_type,event_title,old_value_masked,new_value_masked,operator_type,operator_id,client_ip,terminal_type,event_time,remark,create_time,update_time,is_delete) 
+		values(#{id},#{memberId},#{eventType},#{eventTitle},#{oldValueMasked},#{newValueMasked},#{operatorType},#{operatorId},#{clientIp},#{terminalType},#{eventTime},#{remark},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketAccountSecurityLog中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketAccountSecurityLog" parameterType="com.zhs.model.BasketAccountSecurityLog">
+		insert into basket_account_security_log
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="memberId != null">member_id,</if>
+			<if test="eventType != null">event_type,</if>
+			<if test="eventTitle != null">event_title,</if>
+			<if test="oldValueMasked != null">old_value_masked,</if>
+			<if test="newValueMasked != null">new_value_masked,</if>
+			<if test="operatorType != null">operator_type,</if>
+			<if test="operatorId != null">operator_id,</if>
+			<if test="clientIp != null">client_ip,</if>
+			<if test="terminalType != null">terminal_type,</if>
+			<if test="eventTime != null">event_time,</if>
+			<if test="remark != null">remark,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="memberId != null">#{memberId},</if>
+			<if test="eventType != null">#{eventType},</if>
+			<if test="eventTitle != null">#{eventTitle},</if>
+			<if test="oldValueMasked != null">#{oldValueMasked},</if>
+			<if test="newValueMasked != null">#{newValueMasked},</if>
+			<if test="operatorType != null">#{operatorType},</if>
+			<if test="operatorId != null">#{operatorId},</if>
+			<if test="clientIp != null">#{clientIp},</if>
+			<if test="terminalType != null">#{terminalType},</if>
+			<if test="eventTime != null">#{eventTime},</if>
+			<if test="remark != null">#{remark},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketAccountSecurityLog批量插入到对应数据库的表中 -->
+	<insert id="insertBasketAccountSecurityLogByBatch" parameterType="ArrayList">
+		insert into basket_account_security_log(id,member_id,event_type,event_title,old_value_masked,new_value_masked,operator_type,operator_id,client_ip,terminal_type,event_time,remark,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{memberId},#{eventType},#{eventTitle},#{oldValueMasked},#{newValueMasked},#{operatorType},#{operatorId},#{clientIp},#{terminalType},#{eventTime},#{remark},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketAccountSecurityLog的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketAccountSecurityLogById" parameterType="Long">
+		delete from basket_account_security_log
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketAccountSecurityLog的id将BasketAccountSecurityLog的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketAccountSecurityLogById" parameterType="com.zhs.model.BasketAccountSecurityLog"> 
+		update basket_account_security_log set
+		<set>
+			member_id = #{memberId} , 
+			event_type = #{eventType} , 
+			event_title = #{eventTitle} , 
+			old_value_masked = #{oldValueMasked} , 
+			new_value_masked = #{newValueMasked} , 
+			operator_type = #{operatorType} , 
+			operator_id = #{operatorId} , 
+			client_ip = #{clientIp} , 
+			terminal_type = #{terminalType} , 
+			event_time = #{eventTime} , 
+			remark = #{remark} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketAccountSecurityLog的id将BasketAccountSecurityLog中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketAccountSecurityLogById" parameterType="com.zhs.model.BasketAccountSecurityLog">
+		update basket_account_security_log
+		<set>
+					<if test="memberId != null">member_id = #{memberId},</if>
+					<if test="eventType != null">event_type = #{eventType},</if>
+					<if test="eventTitle != null">event_title = #{eventTitle},</if>
+					<if test="oldValueMasked != null">old_value_masked = #{oldValueMasked},</if>
+					<if test="newValueMasked != null">new_value_masked = #{newValueMasked},</if>
+					<if test="operatorType != null">operator_type = #{operatorType},</if>
+					<if test="operatorId != null">operator_id = #{operatorId},</if>
+					<if test="clientIp != null">client_ip = #{clientIp},</if>
+					<if test="terminalType != null">terminal_type = #{terminalType},</if>
+					<if test="eventTime != null">event_time = #{eventTime},</if>
+					<if test="remark != null">remark = #{remark},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

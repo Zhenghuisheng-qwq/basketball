@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketPrivacySettingDao">
+	<resultMap id="result_BasketPrivacySettingMapper.xml" type="com.zhs.model.BasketPrivacySetting">
+		<id column="id" property="id" />
+		<result column="member_id" property="memberId" />
+		<result column="profile_visible" property="profileVisible" />
+		<result column="allow_team_invite" property="allowTeamInvite" />
+		<result column="show_team_history" property="showTeamHistory" />
+		<result column="show_match_data" property="showMatchData" />
+		<result column="show_online_status" property="showOnlineStatus" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_privacy_setting的列名 -->
+	<sql id="basket_privacy_setting_Column">
+		id,member_id,profile_visible,allow_team_invite,show_team_history,show_match_data,show_online_status,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketPrivacySetting的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketPrivacySettingById" parameterType="Long" resultMap="result_BasketPrivacySettingMapper.xml">
+		select
+		<include refid="basket_privacy_setting_Column" />
+		from basket_privacy_setting
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketPrivacySetting对象,以参数BasketPrivacySetting对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketPrivacySettingObjSingle" parameterType="com.zhs.model.BasketPrivacySetting" resultMap="result_BasketPrivacySettingMapper.xml">
+		select
+		<include refid="basket_privacy_setting_Column" />
+		from basket_privacy_setting
+		<where>
+		<if test="profileVisible != null"> and profile_visible = #{profileVisible}</if>
+		<if test="allowTeamInvite != null"> and allow_team_invite = #{allowTeamInvite}</if>
+		<if test="showTeamHistory != null"> and show_team_history = #{showTeamHistory}</if>
+		<if test="showMatchData != null"> and show_match_data = #{showMatchData}</if>
+		<if test="showOnlineStatus != null"> and show_online_status = #{showOnlineStatus}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="memberId != null"> and member_id = #{memberId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketPrivacySetting对象,以参数BasketPrivacySetting对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketPrivacySettingByObj" parameterType="com.zhs.model.BasketPrivacySetting" resultMap="result_BasketPrivacySettingMapper.xml">
+		select
+		<include refid="basket_privacy_setting_Column" />
+		from basket_privacy_setting
+		<where>
+		<if test="profileVisible != null"> and profile_visible = #{profileVisible}</if>
+		<if test="allowTeamInvite != null"> and allow_team_invite = #{allowTeamInvite}</if>
+		<if test="showTeamHistory != null"> and show_team_history = #{showTeamHistory}</if>
+		<if test="showMatchData != null"> and show_match_data = #{showMatchData}</if>
+		<if test="showOnlineStatus != null"> and show_online_status = #{showOnlineStatus}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="memberId != null"> and member_id = #{memberId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketPrivacySetting插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketPrivacySetting" parameterType="com.zhs.model.BasketPrivacySetting">
+		insert into 
+		basket_privacy_setting (id,member_id,profile_visible,allow_team_invite,show_team_history,show_match_data,show_online_status,create_time,update_time,is_delete) 
+		values(#{id},#{memberId},#{profileVisible},#{allowTeamInvite},#{showTeamHistory},#{showMatchData},#{showOnlineStatus},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketPrivacySetting中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketPrivacySetting" parameterType="com.zhs.model.BasketPrivacySetting">
+		insert into basket_privacy_setting
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="memberId != null">member_id,</if>
+			<if test="profileVisible != null">profile_visible,</if>
+			<if test="allowTeamInvite != null">allow_team_invite,</if>
+			<if test="showTeamHistory != null">show_team_history,</if>
+			<if test="showMatchData != null">show_match_data,</if>
+			<if test="showOnlineStatus != null">show_online_status,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="memberId != null">#{memberId},</if>
+			<if test="profileVisible != null">#{profileVisible},</if>
+			<if test="allowTeamInvite != null">#{allowTeamInvite},</if>
+			<if test="showTeamHistory != null">#{showTeamHistory},</if>
+			<if test="showMatchData != null">#{showMatchData},</if>
+			<if test="showOnlineStatus != null">#{showOnlineStatus},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketPrivacySetting批量插入到对应数据库的表中 -->
+	<insert id="insertBasketPrivacySettingByBatch" parameterType="ArrayList">
+		insert into basket_privacy_setting(id,member_id,profile_visible,allow_team_invite,show_team_history,show_match_data,show_online_status,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{memberId},#{profileVisible},#{allowTeamInvite},#{showTeamHistory},#{showMatchData},#{showOnlineStatus},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketPrivacySetting的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketPrivacySettingById" parameterType="Long">
+		delete from basket_privacy_setting
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketPrivacySetting的id将BasketPrivacySetting的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketPrivacySettingById" parameterType="com.zhs.model.BasketPrivacySetting"> 
+		update basket_privacy_setting set
+		<set>
+			member_id = #{memberId} , 
+			profile_visible = #{profileVisible} , 
+			allow_team_invite = #{allowTeamInvite} , 
+			show_team_history = #{showTeamHistory} , 
+			show_match_data = #{showMatchData} , 
+			show_online_status = #{showOnlineStatus} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketPrivacySetting的id将BasketPrivacySetting中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketPrivacySettingById" parameterType="com.zhs.model.BasketPrivacySetting">
+		update basket_privacy_setting
+		<set>
+					<if test="memberId != null">member_id = #{memberId},</if>
+					<if test="profileVisible != null">profile_visible = #{profileVisible},</if>
+					<if test="allowTeamInvite != null">allow_team_invite = #{allowTeamInvite},</if>
+					<if test="showTeamHistory != null">show_team_history = #{showTeamHistory},</if>
+					<if test="showMatchData != null">show_match_data = #{showMatchData},</if>
+					<if test="showOnlineStatus != null">show_online_status = #{showOnlineStatus},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

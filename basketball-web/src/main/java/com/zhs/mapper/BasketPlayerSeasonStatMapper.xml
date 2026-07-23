@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketPlayerSeasonStatDao">
+	<resultMap id="result_BasketPlayerSeasonStatMapper.xml" type="com.zhs.model.BasketPlayerSeasonStat">
+		<id column="id" property="id" />
+		<result column="season_id" property="seasonId" />
+		<result column="team_id" property="teamId" />
+		<result column="player_id" property="playerId" />
+		<result column="stage_id" property="stageId" />
+		<result column="games" property="games" />
+		<result column="starts" property="starts" />
+		<result column="minutes_seconds" property="minutesSeconds" />
+		<result column="points" property="points" />
+		<result column="rebounds" property="rebounds" />
+		<result column="assists" property="assists" />
+		<result column="steals" property="steals" />
+		<result column="blocks" property="blocks" />
+		<result column="turnovers" property="turnovers" />
+		<result column="fouls" property="fouls" />
+		<result column="avg_minutes" property="avgMinutes" />
+		<result column="avg_points" property="avgPoints" />
+		<result column="avg_rebounds" property="avgRebounds" />
+		<result column="avg_assists" property="avgAssists" />
+		<result column="avg_steals" property="avgSteals" />
+		<result column="avg_blocks" property="avgBlocks" />
+		<result column="field_goal_pct" property="fieldGoalPct" />
+		<result column="three_point_pct" property="threePointPct" />
+		<result column="free_throw_pct" property="freeThrowPct" />
+		<result column="avg_efficiency" property="avgEfficiency" />
+		<result column="double_double_count" property="doubleDoubleCount" />
+		<result column="triple_double_count" property="tripleDoubleCount" />
+		<result column="last_calculated_time" property="lastCalculatedTime" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_player_season_stat的列名 -->
+	<sql id="basket_player_season_stat_Column">
+		id,season_id,stage_id,team_id,player_id,games,starts,minutes_seconds,points,rebounds,assists,steals,blocks,turnovers,fouls,avg_minutes,avg_points,avg_rebounds,avg_assists,avg_steals,avg_blocks,field_goal_pct,three_point_pct,free_throw_pct,avg_efficiency,double_double_count,triple_double_count,last_calculated_time,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketPlayerSeasonStat的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketPlayerSeasonStatById" parameterType="Long" resultMap="result_BasketPlayerSeasonStatMapper.xml">
+		select
+		<include refid="basket_player_season_stat_Column" />
+		from basket_player_season_stat
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketPlayerSeasonStat对象,以参数BasketPlayerSeasonStat对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketPlayerSeasonStatObjSingle" parameterType="com.zhs.model.BasketPlayerSeasonStat" resultMap="result_BasketPlayerSeasonStatMapper.xml">
+		select
+		<include refid="basket_player_season_stat_Column" />
+		from basket_player_season_stat
+		<where>
+		<if test="stageId != null"> and stage_id = #{stageId}</if>
+		<if test="games != null"> and games = #{games}</if>
+		<if test="starts != null"> and starts = #{starts}</if>
+		<if test="minutesSeconds != null"> and minutes_seconds = #{minutesSeconds}</if>
+		<if test="points != null"> and points = #{points}</if>
+		<if test="rebounds != null"> and rebounds = #{rebounds}</if>
+		<if test="assists != null"> and assists = #{assists}</if>
+		<if test="steals != null"> and steals = #{steals}</if>
+		<if test="blocks != null"> and blocks = #{blocks}</if>
+		<if test="turnovers != null"> and turnovers = #{turnovers}</if>
+		<if test="fouls != null"> and fouls = #{fouls}</if>
+		<if test="avgMinutes != null"> and avg_minutes = #{avgMinutes}</if>
+		<if test="avgPoints != null"> and avg_points = #{avgPoints}</if>
+		<if test="avgRebounds != null"> and avg_rebounds = #{avgRebounds}</if>
+		<if test="avgAssists != null"> and avg_assists = #{avgAssists}</if>
+		<if test="avgSteals != null"> and avg_steals = #{avgSteals}</if>
+		<if test="avgBlocks != null"> and avg_blocks = #{avgBlocks}</if>
+		<if test="fieldGoalPct != null"> and field_goal_pct = #{fieldGoalPct}</if>
+		<if test="threePointPct != null"> and three_point_pct = #{threePointPct}</if>
+		<if test="freeThrowPct != null"> and free_throw_pct = #{freeThrowPct}</if>
+		<if test="avgEfficiency != null"> and avg_efficiency = #{avgEfficiency}</if>
+		<if test="doubleDoubleCount != null"> and double_double_count = #{doubleDoubleCount}</if>
+		<if test="tripleDoubleCount != null"> and triple_double_count = #{tripleDoubleCount}</if>
+		<if test="lastCalculatedTime != null"> and last_calculated_time = #{lastCalculatedTime}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketPlayerSeasonStat对象,以参数BasketPlayerSeasonStat对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketPlayerSeasonStatByObj" parameterType="com.zhs.model.BasketPlayerSeasonStat" resultMap="result_BasketPlayerSeasonStatMapper.xml">
+		select
+		<include refid="basket_player_season_stat_Column" />
+		from basket_player_season_stat
+		<where>
+		<if test="stageId != null"> and stage_id = #{stageId}</if>
+		<if test="games != null"> and games = #{games}</if>
+		<if test="starts != null"> and starts = #{starts}</if>
+		<if test="minutesSeconds != null"> and minutes_seconds = #{minutesSeconds}</if>
+		<if test="points != null"> and points = #{points}</if>
+		<if test="rebounds != null"> and rebounds = #{rebounds}</if>
+		<if test="assists != null"> and assists = #{assists}</if>
+		<if test="steals != null"> and steals = #{steals}</if>
+		<if test="blocks != null"> and blocks = #{blocks}</if>
+		<if test="turnovers != null"> and turnovers = #{turnovers}</if>
+		<if test="fouls != null"> and fouls = #{fouls}</if>
+		<if test="avgMinutes != null"> and avg_minutes = #{avgMinutes}</if>
+		<if test="avgPoints != null"> and avg_points = #{avgPoints}</if>
+		<if test="avgRebounds != null"> and avg_rebounds = #{avgRebounds}</if>
+		<if test="avgAssists != null"> and avg_assists = #{avgAssists}</if>
+		<if test="avgSteals != null"> and avg_steals = #{avgSteals}</if>
+		<if test="avgBlocks != null"> and avg_blocks = #{avgBlocks}</if>
+		<if test="fieldGoalPct != null"> and field_goal_pct = #{fieldGoalPct}</if>
+		<if test="threePointPct != null"> and three_point_pct = #{threePointPct}</if>
+		<if test="freeThrowPct != null"> and free_throw_pct = #{freeThrowPct}</if>
+		<if test="avgEfficiency != null"> and avg_efficiency = #{avgEfficiency}</if>
+		<if test="doubleDoubleCount != null"> and double_double_count = #{doubleDoubleCount}</if>
+		<if test="tripleDoubleCount != null"> and triple_double_count = #{tripleDoubleCount}</if>
+		<if test="lastCalculatedTime != null"> and last_calculated_time = #{lastCalculatedTime}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketPlayerSeasonStat插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketPlayerSeasonStat" parameterType="com.zhs.model.BasketPlayerSeasonStat">
+		insert into 
+		basket_player_season_stat (id,season_id,stage_id,team_id,player_id,games,starts,minutes_seconds,points,rebounds,assists,steals,blocks,turnovers,fouls,avg_minutes,avg_points,avg_rebounds,avg_assists,avg_steals,avg_blocks,field_goal_pct,three_point_pct,free_throw_pct,avg_efficiency,double_double_count,triple_double_count,last_calculated_time,create_time,update_time,is_delete) 
+		values(#{id},#{seasonId},#{stageId},#{teamId},#{playerId},#{games},#{starts},#{minutesSeconds},#{points},#{rebounds},#{assists},#{steals},#{blocks},#{turnovers},#{fouls},#{avgMinutes},#{avgPoints},#{avgRebounds},#{avgAssists},#{avgSteals},#{avgBlocks},#{fieldGoalPct},#{threePointPct},#{freeThrowPct},#{avgEfficiency},#{doubleDoubleCount},#{tripleDoubleCount},#{lastCalculatedTime},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketPlayerSeasonStat中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketPlayerSeasonStat" parameterType="com.zhs.model.BasketPlayerSeasonStat">
+		insert into basket_player_season_stat
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="seasonId != null">season_id,</if>
+			<if test="stageId != null">stage_id,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="playerId != null">player_id,</if>
+			<if test="games != null">games,</if>
+			<if test="starts != null">starts,</if>
+			<if test="minutesSeconds != null">minutes_seconds,</if>
+			<if test="points != null">points,</if>
+			<if test="rebounds != null">rebounds,</if>
+			<if test="assists != null">assists,</if>
+			<if test="steals != null">steals,</if>
+			<if test="blocks != null">blocks,</if>
+			<if test="turnovers != null">turnovers,</if>
+			<if test="fouls != null">fouls,</if>
+			<if test="avgMinutes != null">avg_minutes,</if>
+			<if test="avgPoints != null">avg_points,</if>
+			<if test="avgRebounds != null">avg_rebounds,</if>
+			<if test="avgAssists != null">avg_assists,</if>
+			<if test="avgSteals != null">avg_steals,</if>
+			<if test="avgBlocks != null">avg_blocks,</if>
+			<if test="fieldGoalPct != null">field_goal_pct,</if>
+			<if test="threePointPct != null">three_point_pct,</if>
+			<if test="freeThrowPct != null">free_throw_pct,</if>
+			<if test="avgEfficiency != null">avg_efficiency,</if>
+			<if test="doubleDoubleCount != null">double_double_count,</if>
+			<if test="tripleDoubleCount != null">triple_double_count,</if>
+			<if test="lastCalculatedTime != null">last_calculated_time,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="seasonId != null">#{seasonId},</if>
+			<if test="stageId != null">#{stageId},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="playerId != null">#{playerId},</if>
+			<if test="games != null">#{games},</if>
+			<if test="starts != null">#{starts},</if>
+			<if test="minutesSeconds != null">#{minutesSeconds},</if>
+			<if test="points != null">#{points},</if>
+			<if test="rebounds != null">#{rebounds},</if>
+			<if test="assists != null">#{assists},</if>
+			<if test="steals != null">#{steals},</if>
+			<if test="blocks != null">#{blocks},</if>
+			<if test="turnovers != null">#{turnovers},</if>
+			<if test="fouls != null">#{fouls},</if>
+			<if test="avgMinutes != null">#{avgMinutes},</if>
+			<if test="avgPoints != null">#{avgPoints},</if>
+			<if test="avgRebounds != null">#{avgRebounds},</if>
+			<if test="avgAssists != null">#{avgAssists},</if>
+			<if test="avgSteals != null">#{avgSteals},</if>
+			<if test="avgBlocks != null">#{avgBlocks},</if>
+			<if test="fieldGoalPct != null">#{fieldGoalPct},</if>
+			<if test="threePointPct != null">#{threePointPct},</if>
+			<if test="freeThrowPct != null">#{freeThrowPct},</if>
+			<if test="avgEfficiency != null">#{avgEfficiency},</if>
+			<if test="doubleDoubleCount != null">#{doubleDoubleCount},</if>
+			<if test="tripleDoubleCount != null">#{tripleDoubleCount},</if>
+			<if test="lastCalculatedTime != null">#{lastCalculatedTime},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketPlayerSeasonStat批量插入到对应数据库的表中 -->
+	<insert id="insertBasketPlayerSeasonStatByBatch" parameterType="ArrayList">
+		insert into basket_player_season_stat(id,season_id,stage_id,team_id,player_id,games,starts,minutes_seconds,points,rebounds,assists,steals,blocks,turnovers,fouls,avg_minutes,avg_points,avg_rebounds,avg_assists,avg_steals,avg_blocks,field_goal_pct,three_point_pct,free_throw_pct,avg_efficiency,double_double_count,triple_double_count,last_calculated_time,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{seasonId},#{stageId},#{teamId},#{playerId},#{games},#{starts},#{minutesSeconds},#{points},#{rebounds},#{assists},#{steals},#{blocks},#{turnovers},#{fouls},#{avgMinutes},#{avgPoints},#{avgRebounds},#{avgAssists},#{avgSteals},#{avgBlocks},#{fieldGoalPct},#{threePointPct},#{freeThrowPct},#{avgEfficiency},#{doubleDoubleCount},#{tripleDoubleCount},#{lastCalculatedTime},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketPlayerSeasonStat的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketPlayerSeasonStatById" parameterType="Long">
+		delete from basket_player_season_stat
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketPlayerSeasonStat的id将BasketPlayerSeasonStat的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketPlayerSeasonStatById" parameterType="com.zhs.model.BasketPlayerSeasonStat"> 
+		update basket_player_season_stat set
+		<set>
+			season_id = #{seasonId} , 
+			stage_id = #{stageId} , 
+			team_id = #{teamId} , 
+			player_id = #{playerId} , 
+			games = #{games} , 
+			starts = #{starts} , 
+			minutes_seconds = #{minutesSeconds} , 
+			points = #{points} , 
+			rebounds = #{rebounds} , 
+			assists = #{assists} , 
+			steals = #{steals} , 
+			blocks = #{blocks} , 
+			turnovers = #{turnovers} , 
+			fouls = #{fouls} , 
+			avg_minutes = #{avgMinutes} , 
+			avg_points = #{avgPoints} , 
+			avg_rebounds = #{avgRebounds} , 
+			avg_assists = #{avgAssists} , 
+			avg_steals = #{avgSteals} , 
+			avg_blocks = #{avgBlocks} , 
+			field_goal_pct = #{fieldGoalPct} , 
+			three_point_pct = #{threePointPct} , 
+			free_throw_pct = #{freeThrowPct} , 
+			avg_efficiency = #{avgEfficiency} , 
+			double_double_count = #{doubleDoubleCount} , 
+			triple_double_count = #{tripleDoubleCount} , 
+			last_calculated_time = #{lastCalculatedTime} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketPlayerSeasonStat的id将BasketPlayerSeasonStat中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketPlayerSeasonStatById" parameterType="com.zhs.model.BasketPlayerSeasonStat">
+		update basket_player_season_stat
+		<set>
+					<if test="seasonId != null">season_id = #{seasonId},</if>
+					<if test="stageId != null">stage_id = #{stageId},</if>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="playerId != null">player_id = #{playerId},</if>
+					<if test="games != null">games = #{games},</if>
+					<if test="starts != null">starts = #{starts},</if>
+					<if test="minutesSeconds != null">minutes_seconds = #{minutesSeconds},</if>
+					<if test="points != null">points = #{points},</if>
+					<if test="rebounds != null">rebounds = #{rebounds},</if>
+					<if test="assists != null">assists = #{assists},</if>
+					<if test="steals != null">steals = #{steals},</if>
+					<if test="blocks != null">blocks = #{blocks},</if>
+					<if test="turnovers != null">turnovers = #{turnovers},</if>
+					<if test="fouls != null">fouls = #{fouls},</if>
+					<if test="avgMinutes != null">avg_minutes = #{avgMinutes},</if>
+					<if test="avgPoints != null">avg_points = #{avgPoints},</if>
+					<if test="avgRebounds != null">avg_rebounds = #{avgRebounds},</if>
+					<if test="avgAssists != null">avg_assists = #{avgAssists},</if>
+					<if test="avgSteals != null">avg_steals = #{avgSteals},</if>
+					<if test="avgBlocks != null">avg_blocks = #{avgBlocks},</if>
+					<if test="fieldGoalPct != null">field_goal_pct = #{fieldGoalPct},</if>
+					<if test="threePointPct != null">three_point_pct = #{threePointPct},</if>
+					<if test="freeThrowPct != null">free_throw_pct = #{freeThrowPct},</if>
+					<if test="avgEfficiency != null">avg_efficiency = #{avgEfficiency},</if>
+					<if test="doubleDoubleCount != null">double_double_count = #{doubleDoubleCount},</if>
+					<if test="tripleDoubleCount != null">triple_double_count = #{tripleDoubleCount},</if>
+					<if test="lastCalculatedTime != null">last_calculated_time = #{lastCalculatedTime},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

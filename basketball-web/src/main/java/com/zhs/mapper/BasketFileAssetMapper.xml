@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketFileAssetDao">
+	<resultMap id="result_BasketFileAssetMapper.xml" type="com.zhs.model.BasketFileAsset">
+		<id column="id" property="id" />
+		<result column="storage_provider" property="storageProvider" />
+		<result column="object_key" property="objectKey" />
+		<result column="file_name" property="fileName" />
+		<result column="access_url" property="accessUrl" />
+		<result column="usage_type" property="usageType" />
+		<result column="bucket_name" property="bucketName" />
+		<result column="original_name" property="originalName" />
+		<result column="file_ext" property="fileExt" />
+		<result column="mime_type" property="mimeType" />
+		<result column="file_size" property="fileSize" />
+		<result column="file_hash" property="fileHash" />
+		<result column="owner_member_id" property="ownerMemberId" />
+		<result column="file_status" property="fileStatus" />
+		<result column="remark" property="remark" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_file_asset的列名 -->
+	<sql id="basket_file_asset_Column">
+		id,storage_provider,bucket_name,object_key,file_name,original_name,file_ext,mime_type,file_size,file_hash,access_url,usage_type,owner_member_id,file_status,remark,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketFileAsset的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketFileAssetById" parameterType="Long" resultMap="result_BasketFileAssetMapper.xml">
+		select
+		<include refid="basket_file_asset_Column" />
+		from basket_file_asset
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketFileAsset对象,以参数BasketFileAsset对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketFileAssetObjSingle" parameterType="com.zhs.model.BasketFileAsset" resultMap="result_BasketFileAssetMapper.xml">
+		select
+		<include refid="basket_file_asset_Column" />
+		from basket_file_asset
+		<where>
+		<if test="bucketName != null"> and bucket_name = #{bucketName}</if>
+		<if test="originalName != null"> and original_name = #{originalName}</if>
+		<if test="fileExt != null"> and file_ext = #{fileExt}</if>
+		<if test="mimeType != null"> and mime_type = #{mimeType}</if>
+		<if test="fileSize != null"> and file_size = #{fileSize}</if>
+		<if test="fileHash != null"> and file_hash = #{fileHash}</if>
+		<if test="ownerMemberId != null"> and owner_member_id = #{ownerMemberId}</if>
+		<if test="fileStatus != null"> and file_status = #{fileStatus}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="storageProvider != null"> and storage_provider = #{storageProvider}</if>
+		<if test="objectKey != null"> and object_key = #{objectKey}</if>
+		<if test="fileName != null"> and file_name = #{fileName}</if>
+		<if test="accessUrl != null"> and access_url = #{accessUrl}</if>
+		<if test="usageType != null"> and usage_type = #{usageType}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketFileAsset对象,以参数BasketFileAsset对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketFileAssetByObj" parameterType="com.zhs.model.BasketFileAsset" resultMap="result_BasketFileAssetMapper.xml">
+		select
+		<include refid="basket_file_asset_Column" />
+		from basket_file_asset
+		<where>
+		<if test="bucketName != null"> and bucket_name = #{bucketName}</if>
+		<if test="originalName != null"> and original_name = #{originalName}</if>
+		<if test="fileExt != null"> and file_ext = #{fileExt}</if>
+		<if test="mimeType != null"> and mime_type = #{mimeType}</if>
+		<if test="fileSize != null"> and file_size = #{fileSize}</if>
+		<if test="fileHash != null"> and file_hash = #{fileHash}</if>
+		<if test="ownerMemberId != null"> and owner_member_id = #{ownerMemberId}</if>
+		<if test="fileStatus != null"> and file_status = #{fileStatus}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="storageProvider != null"> and storage_provider = #{storageProvider}</if>
+		<if test="objectKey != null"> and object_key = #{objectKey}</if>
+		<if test="fileName != null"> and file_name = #{fileName}</if>
+		<if test="accessUrl != null"> and access_url = #{accessUrl}</if>
+		<if test="usageType != null"> and usage_type = #{usageType}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketFileAsset插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketFileAsset" parameterType="com.zhs.model.BasketFileAsset">
+		insert into 
+		basket_file_asset (id,storage_provider,bucket_name,object_key,file_name,original_name,file_ext,mime_type,file_size,file_hash,access_url,usage_type,owner_member_id,file_status,remark,create_time,update_time,is_delete) 
+		values(#{id},#{storageProvider},#{bucketName},#{objectKey},#{fileName},#{originalName},#{fileExt},#{mimeType},#{fileSize},#{fileHash},#{accessUrl},#{usageType},#{ownerMemberId},#{fileStatus},#{remark},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketFileAsset中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketFileAsset" parameterType="com.zhs.model.BasketFileAsset">
+		insert into basket_file_asset
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="storageProvider != null">storage_provider,</if>
+			<if test="bucketName != null">bucket_name,</if>
+			<if test="objectKey != null">object_key,</if>
+			<if test="fileName != null">file_name,</if>
+			<if test="originalName != null">original_name,</if>
+			<if test="fileExt != null">file_ext,</if>
+			<if test="mimeType != null">mime_type,</if>
+			<if test="fileSize != null">file_size,</if>
+			<if test="fileHash != null">file_hash,</if>
+			<if test="accessUrl != null">access_url,</if>
+			<if test="usageType != null">usage_type,</if>
+			<if test="ownerMemberId != null">owner_member_id,</if>
+			<if test="fileStatus != null">file_status,</if>
+			<if test="remark != null">remark,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="storageProvider != null">#{storageProvider},</if>
+			<if test="bucketName != null">#{bucketName},</if>
+			<if test="objectKey != null">#{objectKey},</if>
+			<if test="fileName != null">#{fileName},</if>
+			<if test="originalName != null">#{originalName},</if>
+			<if test="fileExt != null">#{fileExt},</if>
+			<if test="mimeType != null">#{mimeType},</if>
+			<if test="fileSize != null">#{fileSize},</if>
+			<if test="fileHash != null">#{fileHash},</if>
+			<if test="accessUrl != null">#{accessUrl},</if>
+			<if test="usageType != null">#{usageType},</if>
+			<if test="ownerMemberId != null">#{ownerMemberId},</if>
+			<if test="fileStatus != null">#{fileStatus},</if>
+			<if test="remark != null">#{remark},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketFileAsset批量插入到对应数据库的表中 -->
+	<insert id="insertBasketFileAssetByBatch" parameterType="ArrayList">
+		insert into basket_file_asset(id,storage_provider,bucket_name,object_key,file_name,original_name,file_ext,mime_type,file_size,file_hash,access_url,usage_type,owner_member_id,file_status,remark,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{storageProvider},#{bucketName},#{objectKey},#{fileName},#{originalName},#{fileExt},#{mimeType},#{fileSize},#{fileHash},#{accessUrl},#{usageType},#{ownerMemberId},#{fileStatus},#{remark},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketFileAsset的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketFileAssetById" parameterType="Long">
+		delete from basket_file_asset
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketFileAsset的id将BasketFileAsset的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketFileAssetById" parameterType="com.zhs.model.BasketFileAsset"> 
+		update basket_file_asset set
+		<set>
+			storage_provider = #{storageProvider} , 
+			bucket_name = #{bucketName} , 
+			object_key = #{objectKey} , 
+			file_name = #{fileName} , 
+			original_name = #{originalName} , 
+			file_ext = #{fileExt} , 
+			mime_type = #{mimeType} , 
+			file_size = #{fileSize} , 
+			file_hash = #{fileHash} , 
+			access_url = #{accessUrl} , 
+			usage_type = #{usageType} , 
+			owner_member_id = #{ownerMemberId} , 
+			file_status = #{fileStatus} , 
+			remark = #{remark} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketFileAsset的id将BasketFileAsset中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketFileAssetById" parameterType="com.zhs.model.BasketFileAsset">
+		update basket_file_asset
+		<set>
+					<if test="storageProvider != null">storage_provider = #{storageProvider},</if>
+					<if test="bucketName != null">bucket_name = #{bucketName},</if>
+					<if test="objectKey != null">object_key = #{objectKey},</if>
+					<if test="fileName != null">file_name = #{fileName},</if>
+					<if test="originalName != null">original_name = #{originalName},</if>
+					<if test="fileExt != null">file_ext = #{fileExt},</if>
+					<if test="mimeType != null">mime_type = #{mimeType},</if>
+					<if test="fileSize != null">file_size = #{fileSize},</if>
+					<if test="fileHash != null">file_hash = #{fileHash},</if>
+					<if test="accessUrl != null">access_url = #{accessUrl},</if>
+					<if test="usageType != null">usage_type = #{usageType},</if>
+					<if test="ownerMemberId != null">owner_member_id = #{ownerMemberId},</if>
+					<if test="fileStatus != null">file_status = #{fileStatus},</if>
+					<if test="remark != null">remark = #{remark},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

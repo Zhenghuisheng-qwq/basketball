@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTeamRankDao">
+	<resultMap id="result_BasketTeamRankMapper.xml" type="com.zhs.model.BasketTeamRank">
+		<id column="id" property="id" />
+		<result column="season_id" property="seasonId" />
+		<result column="rank_type" property="rankType" />
+		<result column="team_id" property="teamId" />
+		<result column="rank_no" property="rankNo" />
+		<result column="snapshot_date" property="snapshotDate" />
+		<result column="stage_id" property="stageId" />
+		<result column="previous_rank" property="previousRank" />
+		<result column="stat_value" property="statValue" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_team_rank的列名 -->
+	<sql id="basket_team_rank_Column">
+		id,season_id,stage_id,rank_type,team_id,rank_no,previous_rank,stat_value,snapshot_date,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketTeamRank的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTeamRankById" parameterType="Long" resultMap="result_BasketTeamRankMapper.xml">
+		select
+		<include refid="basket_team_rank_Column" />
+		from basket_team_rank
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTeamRank对象,以参数BasketTeamRank对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamRankObjSingle" parameterType="com.zhs.model.BasketTeamRank" resultMap="result_BasketTeamRankMapper.xml">
+		select
+		<include refid="basket_team_rank_Column" />
+		from basket_team_rank
+		<where>
+		<if test="stageId != null"> and stage_id = #{stageId}</if>
+		<if test="previousRank != null"> and previous_rank = #{previousRank}</if>
+		<if test="statValue != null"> and stat_value = #{statValue}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="rankType != null"> and rank_type = #{rankType}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="rankNo != null"> and rank_no = #{rankNo}</if>
+		<if test="snapshotDate != null"> and snapshot_date = #{snapshotDate}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTeamRank对象,以参数BasketTeamRank对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamRankByObj" parameterType="com.zhs.model.BasketTeamRank" resultMap="result_BasketTeamRankMapper.xml">
+		select
+		<include refid="basket_team_rank_Column" />
+		from basket_team_rank
+		<where>
+		<if test="stageId != null"> and stage_id = #{stageId}</if>
+		<if test="previousRank != null"> and previous_rank = #{previousRank}</if>
+		<if test="statValue != null"> and stat_value = #{statValue}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="rankType != null"> and rank_type = #{rankType}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="rankNo != null"> and rank_no = #{rankNo}</if>
+		<if test="snapshotDate != null"> and snapshot_date = #{snapshotDate}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTeamRank插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTeamRank" parameterType="com.zhs.model.BasketTeamRank">
+		insert into 
+		basket_team_rank (id,season_id,stage_id,rank_type,team_id,rank_no,previous_rank,stat_value,snapshot_date,create_time,update_time,is_delete) 
+		values(#{id},#{seasonId},#{stageId},#{rankType},#{teamId},#{rankNo},#{previousRank},#{statValue},#{snapshotDate},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketTeamRank中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTeamRank" parameterType="com.zhs.model.BasketTeamRank">
+		insert into basket_team_rank
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="seasonId != null">season_id,</if>
+			<if test="stageId != null">stage_id,</if>
+			<if test="rankType != null">rank_type,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="rankNo != null">rank_no,</if>
+			<if test="previousRank != null">previous_rank,</if>
+			<if test="statValue != null">stat_value,</if>
+			<if test="snapshotDate != null">snapshot_date,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="seasonId != null">#{seasonId},</if>
+			<if test="stageId != null">#{stageId},</if>
+			<if test="rankType != null">#{rankType},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="rankNo != null">#{rankNo},</if>
+			<if test="previousRank != null">#{previousRank},</if>
+			<if test="statValue != null">#{statValue},</if>
+			<if test="snapshotDate != null">#{snapshotDate},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTeamRank批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTeamRankByBatch" parameterType="ArrayList">
+		insert into basket_team_rank(id,season_id,stage_id,rank_type,team_id,rank_no,previous_rank,stat_value,snapshot_date,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{seasonId},#{stageId},#{rankType},#{teamId},#{rankNo},#{previousRank},#{statValue},#{snapshotDate},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTeamRank的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTeamRankById" parameterType="Long">
+		delete from basket_team_rank
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTeamRank的id将BasketTeamRank的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTeamRankById" parameterType="com.zhs.model.BasketTeamRank"> 
+		update basket_team_rank set
+		<set>
+			season_id = #{seasonId} , 
+			stage_id = #{stageId} , 
+			rank_type = #{rankType} , 
+			team_id = #{teamId} , 
+			rank_no = #{rankNo} , 
+			previous_rank = #{previousRank} , 
+			stat_value = #{statValue} , 
+			snapshot_date = #{snapshotDate} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTeamRank的id将BasketTeamRank中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTeamRankById" parameterType="com.zhs.model.BasketTeamRank">
+		update basket_team_rank
+		<set>
+					<if test="seasonId != null">season_id = #{seasonId},</if>
+					<if test="stageId != null">stage_id = #{stageId},</if>
+					<if test="rankType != null">rank_type = #{rankType},</if>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="rankNo != null">rank_no = #{rankNo},</if>
+					<if test="previousRank != null">previous_rank = #{previousRank},</if>
+					<if test="statValue != null">stat_value = #{statValue},</if>
+					<if test="snapshotDate != null">snapshot_date = #{snapshotDate},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

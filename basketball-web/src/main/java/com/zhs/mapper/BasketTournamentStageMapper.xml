@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTournamentStageDao">
+	<resultMap id="result_BasketTournamentStageMapper.xml" type="com.zhs.model.BasketTournamentStage">
+		<id column="id" property="id" />
+		<result column="season_id" property="seasonId" />
+		<result column="stage_no" property="stageNo" />
+		<result column="stage_name" property="stageName" />
+		<result column="stage_type" property="stageType" />
+		<result column="format_type" property="formatType" />
+		<result column="start_time" property="startTime" />
+		<result column="end_time" property="endTime" />
+		<result column="sequence_no" property="sequenceNo" />
+		<result column="stage_status" property="stageStatus" />
+		<result column="qualification_rule_text" property="qualificationRuleText" />
+		<result column="public_status" property="publicStatus" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_tournament_stage的列名 -->
+	<sql id="basket_tournament_stage_Column">
+		id,season_id,stage_no,stage_name,stage_type,format_type,start_time,end_time,sequence_no,stage_status,qualification_rule_text,public_status,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketTournamentStage的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTournamentStageById" parameterType="Long" resultMap="result_BasketTournamentStageMapper.xml">
+		select
+		<include refid="basket_tournament_stage_Column" />
+		from basket_tournament_stage
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTournamentStage对象,以参数BasketTournamentStage对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTournamentStageObjSingle" parameterType="com.zhs.model.BasketTournamentStage" resultMap="result_BasketTournamentStageMapper.xml">
+		select
+		<include refid="basket_tournament_stage_Column" />
+		from basket_tournament_stage
+		<where>
+		<if test="startTime != null"> and start_time = #{startTime}</if>
+		<if test="endTime != null"> and end_time = #{endTime}</if>
+		<if test="sequenceNo != null"> and sequence_no = #{sequenceNo}</if>
+		<if test="stageStatus != null"> and stage_status = #{stageStatus}</if>
+		<if test="qualificationRuleText != null"> and qualification_rule_text = #{qualificationRuleText}</if>
+		<if test="publicStatus != null"> and public_status = #{publicStatus}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="stageNo != null"> and stage_no = #{stageNo}</if>
+		<if test="stageName != null"> and stage_name = #{stageName}</if>
+		<if test="stageType != null"> and stage_type = #{stageType}</if>
+		<if test="formatType != null"> and format_type = #{formatType}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTournamentStage对象,以参数BasketTournamentStage对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTournamentStageByObj" parameterType="com.zhs.model.BasketTournamentStage" resultMap="result_BasketTournamentStageMapper.xml">
+		select
+		<include refid="basket_tournament_stage_Column" />
+		from basket_tournament_stage
+		<where>
+		<if test="startTime != null"> and start_time = #{startTime}</if>
+		<if test="endTime != null"> and end_time = #{endTime}</if>
+		<if test="sequenceNo != null"> and sequence_no = #{sequenceNo}</if>
+		<if test="stageStatus != null"> and stage_status = #{stageStatus}</if>
+		<if test="qualificationRuleText != null"> and qualification_rule_text = #{qualificationRuleText}</if>
+		<if test="publicStatus != null"> and public_status = #{publicStatus}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="stageNo != null"> and stage_no = #{stageNo}</if>
+		<if test="stageName != null"> and stage_name = #{stageName}</if>
+		<if test="stageType != null"> and stage_type = #{stageType}</if>
+		<if test="formatType != null"> and format_type = #{formatType}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTournamentStage插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTournamentStage" parameterType="com.zhs.model.BasketTournamentStage">
+		insert into 
+		basket_tournament_stage (id,season_id,stage_no,stage_name,stage_type,format_type,start_time,end_time,sequence_no,stage_status,qualification_rule_text,public_status,create_time,update_time,is_delete) 
+		values(#{id},#{seasonId},#{stageNo},#{stageName},#{stageType},#{formatType},#{startTime},#{endTime},#{sequenceNo},#{stageStatus},#{qualificationRuleText},#{publicStatus},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketTournamentStage中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTournamentStage" parameterType="com.zhs.model.BasketTournamentStage">
+		insert into basket_tournament_stage
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="seasonId != null">season_id,</if>
+			<if test="stageNo != null">stage_no,</if>
+			<if test="stageName != null">stage_name,</if>
+			<if test="stageType != null">stage_type,</if>
+			<if test="formatType != null">format_type,</if>
+			<if test="startTime != null">start_time,</if>
+			<if test="endTime != null">end_time,</if>
+			<if test="sequenceNo != null">sequence_no,</if>
+			<if test="stageStatus != null">stage_status,</if>
+			<if test="qualificationRuleText != null">qualification_rule_text,</if>
+			<if test="publicStatus != null">public_status,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="seasonId != null">#{seasonId},</if>
+			<if test="stageNo != null">#{stageNo},</if>
+			<if test="stageName != null">#{stageName},</if>
+			<if test="stageType != null">#{stageType},</if>
+			<if test="formatType != null">#{formatType},</if>
+			<if test="startTime != null">#{startTime},</if>
+			<if test="endTime != null">#{endTime},</if>
+			<if test="sequenceNo != null">#{sequenceNo},</if>
+			<if test="stageStatus != null">#{stageStatus},</if>
+			<if test="qualificationRuleText != null">#{qualificationRuleText},</if>
+			<if test="publicStatus != null">#{publicStatus},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTournamentStage批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTournamentStageByBatch" parameterType="ArrayList">
+		insert into basket_tournament_stage(id,season_id,stage_no,stage_name,stage_type,format_type,start_time,end_time,sequence_no,stage_status,qualification_rule_text,public_status,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{seasonId},#{stageNo},#{stageName},#{stageType},#{formatType},#{startTime},#{endTime},#{sequenceNo},#{stageStatus},#{qualificationRuleText},#{publicStatus},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTournamentStage的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTournamentStageById" parameterType="Long">
+		delete from basket_tournament_stage
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTournamentStage的id将BasketTournamentStage的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTournamentStageById" parameterType="com.zhs.model.BasketTournamentStage"> 
+		update basket_tournament_stage set
+		<set>
+			season_id = #{seasonId} , 
+			stage_no = #{stageNo} , 
+			stage_name = #{stageName} , 
+			stage_type = #{stageType} , 
+			format_type = #{formatType} , 
+			start_time = #{startTime} , 
+			end_time = #{endTime} , 
+			sequence_no = #{sequenceNo} , 
+			stage_status = #{stageStatus} , 
+			qualification_rule_text = #{qualificationRuleText} , 
+			public_status = #{publicStatus} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTournamentStage的id将BasketTournamentStage中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTournamentStageById" parameterType="com.zhs.model.BasketTournamentStage">
+		update basket_tournament_stage
+		<set>
+					<if test="seasonId != null">season_id = #{seasonId},</if>
+					<if test="stageNo != null">stage_no = #{stageNo},</if>
+					<if test="stageName != null">stage_name = #{stageName},</if>
+					<if test="stageType != null">stage_type = #{stageType},</if>
+					<if test="formatType != null">format_type = #{formatType},</if>
+					<if test="startTime != null">start_time = #{startTime},</if>
+					<if test="endTime != null">end_time = #{endTime},</if>
+					<if test="sequenceNo != null">sequence_no = #{sequenceNo},</if>
+					<if test="stageStatus != null">stage_status = #{stageStatus},</if>
+					<if test="qualificationRuleText != null">qualification_rule_text = #{qualificationRuleText},</if>
+					<if test="publicStatus != null">public_status = #{publicStatus},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

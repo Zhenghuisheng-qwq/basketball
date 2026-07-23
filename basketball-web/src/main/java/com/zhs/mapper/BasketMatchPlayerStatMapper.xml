@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketMatchPlayerStatDao">
+	<resultMap id="result_BasketMatchPlayerStatMapper.xml" type="com.zhs.model.BasketMatchPlayerStat">
+		<id column="id" property="id" />
+		<result column="match_id" property="matchId" />
+		<result column="season_id" property="seasonId" />
+		<result column="stage_id" property="stageId" />
+		<result column="team_id" property="teamId" />
+		<result column="player_id" property="playerId" />
+		<result column="roster_id" property="rosterId" />
+		<result column="started_flag" property="startedFlag" />
+		<result column="minutes_seconds" property="minutesSeconds" />
+		<result column="points" property="points" />
+		<result column="rebounds" property="rebounds" />
+		<result column="offensive_rebounds" property="offensiveRebounds" />
+		<result column="defensive_rebounds" property="defensiveRebounds" />
+		<result column="assists" property="assists" />
+		<result column="steals" property="steals" />
+		<result column="blocks" property="blocks" />
+		<result column="turnovers" property="turnovers" />
+		<result column="fouls" property="fouls" />
+		<result column="field_goals_made" property="fieldGoalsMade" />
+		<result column="field_goals_attempted" property="fieldGoalsAttempted" />
+		<result column="field_goal_pct" property="fieldGoalPct" />
+		<result column="three_points_made" property="threePointsMade" />
+		<result column="three_points_attempted" property="threePointsAttempted" />
+		<result column="three_point_pct" property="threePointPct" />
+		<result column="free_throws_made" property="freeThrowsMade" />
+		<result column="free_throws_attempted" property="freeThrowsAttempted" />
+		<result column="free_throw_pct" property="freeThrowPct" />
+		<result column="plus_minus" property="plusMinus" />
+		<result column="efficiency" property="efficiency" />
+		<result column="double_double" property="doubleDouble" />
+		<result column="triple_double" property="tripleDouble" />
+		<result column="data_status" property="dataStatus" />
+		<result column="confirmed_by" property="confirmedBy" />
+		<result column="confirmed_time" property="confirmedTime" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_match_player_stat的列名 -->
+	<sql id="basket_match_player_stat_Column">
+		id,match_id,season_id,stage_id,team_id,player_id,roster_id,started_flag,minutes_seconds,points,rebounds,offensive_rebounds,defensive_rebounds,assists,steals,blocks,turnovers,fouls,field_goals_made,field_goals_attempted,field_goal_pct,three_points_made,three_points_attempted,three_point_pct,free_throws_made,free_throws_attempted,free_throw_pct,plus_minus,efficiency,double_double,triple_double,data_status,confirmed_by,confirmed_time,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketMatchPlayerStat的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketMatchPlayerStatById" parameterType="Long" resultMap="result_BasketMatchPlayerStatMapper.xml">
+		select
+		<include refid="basket_match_player_stat_Column" />
+		from basket_match_player_stat
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketMatchPlayerStat对象,以参数BasketMatchPlayerStat对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketMatchPlayerStatObjSingle" parameterType="com.zhs.model.BasketMatchPlayerStat" resultMap="result_BasketMatchPlayerStatMapper.xml">
+		select
+		<include refid="basket_match_player_stat_Column" />
+		from basket_match_player_stat
+		<where>
+		<if test="rosterId != null"> and roster_id = #{rosterId}</if>
+		<if test="startedFlag != null"> and started_flag = #{startedFlag}</if>
+		<if test="minutesSeconds != null"> and minutes_seconds = #{minutesSeconds}</if>
+		<if test="points != null"> and points = #{points}</if>
+		<if test="rebounds != null"> and rebounds = #{rebounds}</if>
+		<if test="offensiveRebounds != null"> and offensive_rebounds = #{offensiveRebounds}</if>
+		<if test="defensiveRebounds != null"> and defensive_rebounds = #{defensiveRebounds}</if>
+		<if test="assists != null"> and assists = #{assists}</if>
+		<if test="steals != null"> and steals = #{steals}</if>
+		<if test="blocks != null"> and blocks = #{blocks}</if>
+		<if test="turnovers != null"> and turnovers = #{turnovers}</if>
+		<if test="fouls != null"> and fouls = #{fouls}</if>
+		<if test="fieldGoalsMade != null"> and field_goals_made = #{fieldGoalsMade}</if>
+		<if test="fieldGoalsAttempted != null"> and field_goals_attempted = #{fieldGoalsAttempted}</if>
+		<if test="fieldGoalPct != null"> and field_goal_pct = #{fieldGoalPct}</if>
+		<if test="threePointsMade != null"> and three_points_made = #{threePointsMade}</if>
+		<if test="threePointsAttempted != null"> and three_points_attempted = #{threePointsAttempted}</if>
+		<if test="threePointPct != null"> and three_point_pct = #{threePointPct}</if>
+		<if test="freeThrowsMade != null"> and free_throws_made = #{freeThrowsMade}</if>
+		<if test="freeThrowsAttempted != null"> and free_throws_attempted = #{freeThrowsAttempted}</if>
+		<if test="freeThrowPct != null"> and free_throw_pct = #{freeThrowPct}</if>
+		<if test="plusMinus != null"> and plus_minus = #{plusMinus}</if>
+		<if test="efficiency != null"> and efficiency = #{efficiency}</if>
+		<if test="doubleDouble != null"> and double_double = #{doubleDouble}</if>
+		<if test="tripleDouble != null"> and triple_double = #{tripleDouble}</if>
+		<if test="dataStatus != null"> and data_status = #{dataStatus}</if>
+		<if test="confirmedBy != null"> and confirmed_by = #{confirmedBy}</if>
+		<if test="confirmedTime != null"> and confirmed_time = #{confirmedTime}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="matchId != null"> and match_id = #{matchId}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="stageId != null"> and stage_id = #{stageId}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketMatchPlayerStat对象,以参数BasketMatchPlayerStat对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketMatchPlayerStatByObj" parameterType="com.zhs.model.BasketMatchPlayerStat" resultMap="result_BasketMatchPlayerStatMapper.xml">
+		select
+		<include refid="basket_match_player_stat_Column" />
+		from basket_match_player_stat
+		<where>
+		<if test="rosterId != null"> and roster_id = #{rosterId}</if>
+		<if test="startedFlag != null"> and started_flag = #{startedFlag}</if>
+		<if test="minutesSeconds != null"> and minutes_seconds = #{minutesSeconds}</if>
+		<if test="points != null"> and points = #{points}</if>
+		<if test="rebounds != null"> and rebounds = #{rebounds}</if>
+		<if test="offensiveRebounds != null"> and offensive_rebounds = #{offensiveRebounds}</if>
+		<if test="defensiveRebounds != null"> and defensive_rebounds = #{defensiveRebounds}</if>
+		<if test="assists != null"> and assists = #{assists}</if>
+		<if test="steals != null"> and steals = #{steals}</if>
+		<if test="blocks != null"> and blocks = #{blocks}</if>
+		<if test="turnovers != null"> and turnovers = #{turnovers}</if>
+		<if test="fouls != null"> and fouls = #{fouls}</if>
+		<if test="fieldGoalsMade != null"> and field_goals_made = #{fieldGoalsMade}</if>
+		<if test="fieldGoalsAttempted != null"> and field_goals_attempted = #{fieldGoalsAttempted}</if>
+		<if test="fieldGoalPct != null"> and field_goal_pct = #{fieldGoalPct}</if>
+		<if test="threePointsMade != null"> and three_points_made = #{threePointsMade}</if>
+		<if test="threePointsAttempted != null"> and three_points_attempted = #{threePointsAttempted}</if>
+		<if test="threePointPct != null"> and three_point_pct = #{threePointPct}</if>
+		<if test="freeThrowsMade != null"> and free_throws_made = #{freeThrowsMade}</if>
+		<if test="freeThrowsAttempted != null"> and free_throws_attempted = #{freeThrowsAttempted}</if>
+		<if test="freeThrowPct != null"> and free_throw_pct = #{freeThrowPct}</if>
+		<if test="plusMinus != null"> and plus_minus = #{plusMinus}</if>
+		<if test="efficiency != null"> and efficiency = #{efficiency}</if>
+		<if test="doubleDouble != null"> and double_double = #{doubleDouble}</if>
+		<if test="tripleDouble != null"> and triple_double = #{tripleDouble}</if>
+		<if test="dataStatus != null"> and data_status = #{dataStatus}</if>
+		<if test="confirmedBy != null"> and confirmed_by = #{confirmedBy}</if>
+		<if test="confirmedTime != null"> and confirmed_time = #{confirmedTime}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="matchId != null"> and match_id = #{matchId}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="stageId != null"> and stage_id = #{stageId}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketMatchPlayerStat插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketMatchPlayerStat" parameterType="com.zhs.model.BasketMatchPlayerStat">
+		insert into 
+		basket_match_player_stat (id,match_id,season_id,stage_id,team_id,player_id,roster_id,started_flag,minutes_seconds,points,rebounds,offensive_rebounds,defensive_rebounds,assists,steals,blocks,turnovers,fouls,field_goals_made,field_goals_attempted,field_goal_pct,three_points_made,three_points_attempted,three_point_pct,free_throws_made,free_throws_attempted,free_throw_pct,plus_minus,efficiency,double_double,triple_double,data_status,confirmed_by,confirmed_time,create_time,update_time,is_delete) 
+		values(#{id},#{matchId},#{seasonId},#{stageId},#{teamId},#{playerId},#{rosterId},#{startedFlag},#{minutesSeconds},#{points},#{rebounds},#{offensiveRebounds},#{defensiveRebounds},#{assists},#{steals},#{blocks},#{turnovers},#{fouls},#{fieldGoalsMade},#{fieldGoalsAttempted},#{fieldGoalPct},#{threePointsMade},#{threePointsAttempted},#{threePointPct},#{freeThrowsMade},#{freeThrowsAttempted},#{freeThrowPct},#{plusMinus},#{efficiency},#{doubleDouble},#{tripleDouble},#{dataStatus},#{confirmedBy},#{confirmedTime},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketMatchPlayerStat中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketMatchPlayerStat" parameterType="com.zhs.model.BasketMatchPlayerStat">
+		insert into basket_match_player_stat
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="matchId != null">match_id,</if>
+			<if test="seasonId != null">season_id,</if>
+			<if test="stageId != null">stage_id,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="playerId != null">player_id,</if>
+			<if test="rosterId != null">roster_id,</if>
+			<if test="startedFlag != null">started_flag,</if>
+			<if test="minutesSeconds != null">minutes_seconds,</if>
+			<if test="points != null">points,</if>
+			<if test="rebounds != null">rebounds,</if>
+			<if test="offensiveRebounds != null">offensive_rebounds,</if>
+			<if test="defensiveRebounds != null">defensive_rebounds,</if>
+			<if test="assists != null">assists,</if>
+			<if test="steals != null">steals,</if>
+			<if test="blocks != null">blocks,</if>
+			<if test="turnovers != null">turnovers,</if>
+			<if test="fouls != null">fouls,</if>
+			<if test="fieldGoalsMade != null">field_goals_made,</if>
+			<if test="fieldGoalsAttempted != null">field_goals_attempted,</if>
+			<if test="fieldGoalPct != null">field_goal_pct,</if>
+			<if test="threePointsMade != null">three_points_made,</if>
+			<if test="threePointsAttempted != null">three_points_attempted,</if>
+			<if test="threePointPct != null">three_point_pct,</if>
+			<if test="freeThrowsMade != null">free_throws_made,</if>
+			<if test="freeThrowsAttempted != null">free_throws_attempted,</if>
+			<if test="freeThrowPct != null">free_throw_pct,</if>
+			<if test="plusMinus != null">plus_minus,</if>
+			<if test="efficiency != null">efficiency,</if>
+			<if test="doubleDouble != null">double_double,</if>
+			<if test="tripleDouble != null">triple_double,</if>
+			<if test="dataStatus != null">data_status,</if>
+			<if test="confirmedBy != null">confirmed_by,</if>
+			<if test="confirmedTime != null">confirmed_time,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="matchId != null">#{matchId},</if>
+			<if test="seasonId != null">#{seasonId},</if>
+			<if test="stageId != null">#{stageId},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="playerId != null">#{playerId},</if>
+			<if test="rosterId != null">#{rosterId},</if>
+			<if test="startedFlag != null">#{startedFlag},</if>
+			<if test="minutesSeconds != null">#{minutesSeconds},</if>
+			<if test="points != null">#{points},</if>
+			<if test="rebounds != null">#{rebounds},</if>
+			<if test="offensiveRebounds != null">#{offensiveRebounds},</if>
+			<if test="defensiveRebounds != null">#{defensiveRebounds},</if>
+			<if test="assists != null">#{assists},</if>
+			<if test="steals != null">#{steals},</if>
+			<if test="blocks != null">#{blocks},</if>
+			<if test="turnovers != null">#{turnovers},</if>
+			<if test="fouls != null">#{fouls},</if>
+			<if test="fieldGoalsMade != null">#{fieldGoalsMade},</if>
+			<if test="fieldGoalsAttempted != null">#{fieldGoalsAttempted},</if>
+			<if test="fieldGoalPct != null">#{fieldGoalPct},</if>
+			<if test="threePointsMade != null">#{threePointsMade},</if>
+			<if test="threePointsAttempted != null">#{threePointsAttempted},</if>
+			<if test="threePointPct != null">#{threePointPct},</if>
+			<if test="freeThrowsMade != null">#{freeThrowsMade},</if>
+			<if test="freeThrowsAttempted != null">#{freeThrowsAttempted},</if>
+			<if test="freeThrowPct != null">#{freeThrowPct},</if>
+			<if test="plusMinus != null">#{plusMinus},</if>
+			<if test="efficiency != null">#{efficiency},</if>
+			<if test="doubleDouble != null">#{doubleDouble},</if>
+			<if test="tripleDouble != null">#{tripleDouble},</if>
+			<if test="dataStatus != null">#{dataStatus},</if>
+			<if test="confirmedBy != null">#{confirmedBy},</if>
+			<if test="confirmedTime != null">#{confirmedTime},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketMatchPlayerStat批量插入到对应数据库的表中 -->
+	<insert id="insertBasketMatchPlayerStatByBatch" parameterType="ArrayList">
+		insert into basket_match_player_stat(id,match_id,season_id,stage_id,team_id,player_id,roster_id,started_flag,minutes_seconds,points,rebounds,offensive_rebounds,defensive_rebounds,assists,steals,blocks,turnovers,fouls,field_goals_made,field_goals_attempted,field_goal_pct,three_points_made,three_points_attempted,three_point_pct,free_throws_made,free_throws_attempted,free_throw_pct,plus_minus,efficiency,double_double,triple_double,data_status,confirmed_by,confirmed_time,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{matchId},#{seasonId},#{stageId},#{teamId},#{playerId},#{rosterId},#{startedFlag},#{minutesSeconds},#{points},#{rebounds},#{offensiveRebounds},#{defensiveRebounds},#{assists},#{steals},#{blocks},#{turnovers},#{fouls},#{fieldGoalsMade},#{fieldGoalsAttempted},#{fieldGoalPct},#{threePointsMade},#{threePointsAttempted},#{threePointPct},#{freeThrowsMade},#{freeThrowsAttempted},#{freeThrowPct},#{plusMinus},#{efficiency},#{doubleDouble},#{tripleDouble},#{dataStatus},#{confirmedBy},#{confirmedTime},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketMatchPlayerStat的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketMatchPlayerStatById" parameterType="Long">
+		delete from basket_match_player_stat
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketMatchPlayerStat的id将BasketMatchPlayerStat的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketMatchPlayerStatById" parameterType="com.zhs.model.BasketMatchPlayerStat"> 
+		update basket_match_player_stat set
+		<set>
+			match_id = #{matchId} , 
+			season_id = #{seasonId} , 
+			stage_id = #{stageId} , 
+			team_id = #{teamId} , 
+			player_id = #{playerId} , 
+			roster_id = #{rosterId} , 
+			started_flag = #{startedFlag} , 
+			minutes_seconds = #{minutesSeconds} , 
+			points = #{points} , 
+			rebounds = #{rebounds} , 
+			offensive_rebounds = #{offensiveRebounds} , 
+			defensive_rebounds = #{defensiveRebounds} , 
+			assists = #{assists} , 
+			steals = #{steals} , 
+			blocks = #{blocks} , 
+			turnovers = #{turnovers} , 
+			fouls = #{fouls} , 
+			field_goals_made = #{fieldGoalsMade} , 
+			field_goals_attempted = #{fieldGoalsAttempted} , 
+			field_goal_pct = #{fieldGoalPct} , 
+			three_points_made = #{threePointsMade} , 
+			three_points_attempted = #{threePointsAttempted} , 
+			three_point_pct = #{threePointPct} , 
+			free_throws_made = #{freeThrowsMade} , 
+			free_throws_attempted = #{freeThrowsAttempted} , 
+			free_throw_pct = #{freeThrowPct} , 
+			plus_minus = #{plusMinus} , 
+			efficiency = #{efficiency} , 
+			double_double = #{doubleDouble} , 
+			triple_double = #{tripleDouble} , 
+			data_status = #{dataStatus} , 
+			confirmed_by = #{confirmedBy} , 
+			confirmed_time = #{confirmedTime} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketMatchPlayerStat的id将BasketMatchPlayerStat中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketMatchPlayerStatById" parameterType="com.zhs.model.BasketMatchPlayerStat">
+		update basket_match_player_stat
+		<set>
+					<if test="matchId != null">match_id = #{matchId},</if>
+					<if test="seasonId != null">season_id = #{seasonId},</if>
+					<if test="stageId != null">stage_id = #{stageId},</if>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="playerId != null">player_id = #{playerId},</if>
+					<if test="rosterId != null">roster_id = #{rosterId},</if>
+					<if test="startedFlag != null">started_flag = #{startedFlag},</if>
+					<if test="minutesSeconds != null">minutes_seconds = #{minutesSeconds},</if>
+					<if test="points != null">points = #{points},</if>
+					<if test="rebounds != null">rebounds = #{rebounds},</if>
+					<if test="offensiveRebounds != null">offensive_rebounds = #{offensiveRebounds},</if>
+					<if test="defensiveRebounds != null">defensive_rebounds = #{defensiveRebounds},</if>
+					<if test="assists != null">assists = #{assists},</if>
+					<if test="steals != null">steals = #{steals},</if>
+					<if test="blocks != null">blocks = #{blocks},</if>
+					<if test="turnovers != null">turnovers = #{turnovers},</if>
+					<if test="fouls != null">fouls = #{fouls},</if>
+					<if test="fieldGoalsMade != null">field_goals_made = #{fieldGoalsMade},</if>
+					<if test="fieldGoalsAttempted != null">field_goals_attempted = #{fieldGoalsAttempted},</if>
+					<if test="fieldGoalPct != null">field_goal_pct = #{fieldGoalPct},</if>
+					<if test="threePointsMade != null">three_points_made = #{threePointsMade},</if>
+					<if test="threePointsAttempted != null">three_points_attempted = #{threePointsAttempted},</if>
+					<if test="threePointPct != null">three_point_pct = #{threePointPct},</if>
+					<if test="freeThrowsMade != null">free_throws_made = #{freeThrowsMade},</if>
+					<if test="freeThrowsAttempted != null">free_throws_attempted = #{freeThrowsAttempted},</if>
+					<if test="freeThrowPct != null">free_throw_pct = #{freeThrowPct},</if>
+					<if test="plusMinus != null">plus_minus = #{plusMinus},</if>
+					<if test="efficiency != null">efficiency = #{efficiency},</if>
+					<if test="doubleDouble != null">double_double = #{doubleDouble},</if>
+					<if test="tripleDouble != null">triple_double = #{tripleDouble},</if>
+					<if test="dataStatus != null">data_status = #{dataStatus},</if>
+					<if test="confirmedBy != null">confirmed_by = #{confirmedBy},</if>
+					<if test="confirmedTime != null">confirmed_time = #{confirmedTime},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

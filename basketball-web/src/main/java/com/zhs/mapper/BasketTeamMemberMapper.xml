@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTeamMemberDao">
+	<resultMap id="result_BasketTeamMemberMapper.xml" type="com.zhs.model.BasketTeamMember">
+		<id column="id" property="id" />
+		<result column="membership_no" property="membershipNo" />
+		<result column="team_id" property="teamId" />
+		<result column="member_id" property="memberId" />
+		<result column="player_id" property="playerId" />
+		<result column="join_source" property="joinSource" />
+		<result column="join_time" property="joinTime" />
+		<result column="role_type" property="roleType" />
+		<result column="roster_type" property="rosterType" />
+		<result column="jersey_no" property="jerseyNo" />
+		<result column="membership_status" property="membershipStatus" />
+		<result column="is_current" property="isCurrent" />
+		<result column="leave_time" property="leaveTime" />
+		<result column="leave_reason" property="leaveReason" />
+		<result column="remark" property="remark" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_team_member的列名 -->
+	<sql id="basket_team_member_Column">
+		id,membership_no,team_id,member_id,player_id,role_type,roster_type,jersey_no,join_source,membership_status,is_current,join_time,leave_time,leave_reason,remark,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketTeamMember的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTeamMemberById" parameterType="Long" resultMap="result_BasketTeamMemberMapper.xml">
+		select
+		<include refid="basket_team_member_Column" />
+		from basket_team_member
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTeamMember对象,以参数BasketTeamMember对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamMemberObjSingle" parameterType="com.zhs.model.BasketTeamMember" resultMap="result_BasketTeamMemberMapper.xml">
+		select
+		<include refid="basket_team_member_Column" />
+		from basket_team_member
+		<where>
+		<if test="roleType != null"> and role_type = #{roleType}</if>
+		<if test="rosterType != null"> and roster_type = #{rosterType}</if>
+		<if test="jerseyNo != null"> and jersey_no = #{jerseyNo}</if>
+		<if test="membershipStatus != null"> and membership_status = #{membershipStatus}</if>
+		<if test="isCurrent != null"> and is_current = #{isCurrent}</if>
+		<if test="leaveTime != null"> and leave_time = #{leaveTime}</if>
+		<if test="leaveReason != null"> and leave_reason = #{leaveReason}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="membershipNo != null"> and membership_no = #{membershipNo}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="memberId != null"> and member_id = #{memberId}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="joinSource != null"> and join_source = #{joinSource}</if>
+		<if test="joinTime != null"> and join_time = #{joinTime}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTeamMember对象,以参数BasketTeamMember对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamMemberByObj" parameterType="com.zhs.model.BasketTeamMember" resultMap="result_BasketTeamMemberMapper.xml">
+		select
+		<include refid="basket_team_member_Column" />
+		from basket_team_member
+		<where>
+		<if test="roleType != null"> and role_type = #{roleType}</if>
+		<if test="rosterType != null"> and roster_type = #{rosterType}</if>
+		<if test="jerseyNo != null"> and jersey_no = #{jerseyNo}</if>
+		<if test="membershipStatus != null"> and membership_status = #{membershipStatus}</if>
+		<if test="isCurrent != null"> and is_current = #{isCurrent}</if>
+		<if test="leaveTime != null"> and leave_time = #{leaveTime}</if>
+		<if test="leaveReason != null"> and leave_reason = #{leaveReason}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="membershipNo != null"> and membership_no = #{membershipNo}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="memberId != null"> and member_id = #{memberId}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="joinSource != null"> and join_source = #{joinSource}</if>
+		<if test="joinTime != null"> and join_time = #{joinTime}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTeamMember插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTeamMember" parameterType="com.zhs.model.BasketTeamMember">
+		insert into 
+		basket_team_member (id,membership_no,team_id,member_id,player_id,role_type,roster_type,jersey_no,join_source,membership_status,is_current,join_time,leave_time,leave_reason,remark,create_time,update_time,is_delete) 
+		values(#{id},#{membershipNo},#{teamId},#{memberId},#{playerId},#{roleType},#{rosterType},#{jerseyNo},#{joinSource},#{membershipStatus},#{isCurrent},#{joinTime},#{leaveTime},#{leaveReason},#{remark},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketTeamMember中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTeamMember" parameterType="com.zhs.model.BasketTeamMember">
+		insert into basket_team_member
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="membershipNo != null">membership_no,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="memberId != null">member_id,</if>
+			<if test="playerId != null">player_id,</if>
+			<if test="roleType != null">role_type,</if>
+			<if test="rosterType != null">roster_type,</if>
+			<if test="jerseyNo != null">jersey_no,</if>
+			<if test="joinSource != null">join_source,</if>
+			<if test="membershipStatus != null">membership_status,</if>
+			<if test="isCurrent != null">is_current,</if>
+			<if test="joinTime != null">join_time,</if>
+			<if test="leaveTime != null">leave_time,</if>
+			<if test="leaveReason != null">leave_reason,</if>
+			<if test="remark != null">remark,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="membershipNo != null">#{membershipNo},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="memberId != null">#{memberId},</if>
+			<if test="playerId != null">#{playerId},</if>
+			<if test="roleType != null">#{roleType},</if>
+			<if test="rosterType != null">#{rosterType},</if>
+			<if test="jerseyNo != null">#{jerseyNo},</if>
+			<if test="joinSource != null">#{joinSource},</if>
+			<if test="membershipStatus != null">#{membershipStatus},</if>
+			<if test="isCurrent != null">#{isCurrent},</if>
+			<if test="joinTime != null">#{joinTime},</if>
+			<if test="leaveTime != null">#{leaveTime},</if>
+			<if test="leaveReason != null">#{leaveReason},</if>
+			<if test="remark != null">#{remark},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTeamMember批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTeamMemberByBatch" parameterType="ArrayList">
+		insert into basket_team_member(id,membership_no,team_id,member_id,player_id,role_type,roster_type,jersey_no,join_source,membership_status,is_current,join_time,leave_time,leave_reason,remark,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{membershipNo},#{teamId},#{memberId},#{playerId},#{roleType},#{rosterType},#{jerseyNo},#{joinSource},#{membershipStatus},#{isCurrent},#{joinTime},#{leaveTime},#{leaveReason},#{remark},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTeamMember的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTeamMemberById" parameterType="Long">
+		delete from basket_team_member
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTeamMember的id将BasketTeamMember的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTeamMemberById" parameterType="com.zhs.model.BasketTeamMember"> 
+		update basket_team_member set
+		<set>
+			membership_no = #{membershipNo} , 
+			team_id = #{teamId} , 
+			member_id = #{memberId} , 
+			player_id = #{playerId} , 
+			role_type = #{roleType} , 
+			roster_type = #{rosterType} , 
+			jersey_no = #{jerseyNo} , 
+			join_source = #{joinSource} , 
+			membership_status = #{membershipStatus} , 
+			is_current = #{isCurrent} , 
+			join_time = #{joinTime} , 
+			leave_time = #{leaveTime} , 
+			leave_reason = #{leaveReason} , 
+			remark = #{remark} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTeamMember的id将BasketTeamMember中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTeamMemberById" parameterType="com.zhs.model.BasketTeamMember">
+		update basket_team_member
+		<set>
+					<if test="membershipNo != null">membership_no = #{membershipNo},</if>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="memberId != null">member_id = #{memberId},</if>
+					<if test="playerId != null">player_id = #{playerId},</if>
+					<if test="roleType != null">role_type = #{roleType},</if>
+					<if test="rosterType != null">roster_type = #{rosterType},</if>
+					<if test="jerseyNo != null">jersey_no = #{jerseyNo},</if>
+					<if test="joinSource != null">join_source = #{joinSource},</if>
+					<if test="membershipStatus != null">membership_status = #{membershipStatus},</if>
+					<if test="isCurrent != null">is_current = #{isCurrent},</if>
+					<if test="joinTime != null">join_time = #{joinTime},</if>
+					<if test="leaveTime != null">leave_time = #{leaveTime},</if>
+					<if test="leaveReason != null">leave_reason = #{leaveReason},</if>
+					<if test="remark != null">remark = #{remark},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

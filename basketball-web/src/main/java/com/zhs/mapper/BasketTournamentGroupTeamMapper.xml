@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTournamentGroupTeamDao">
+	<resultMap id="result_BasketTournamentGroupTeamMapper.xml" type="com.zhs.model.BasketTournamentGroupTeam">
+		<id column="id" property="id" />
+		<result column="season_id" property="seasonId" />
+		<result column="stage_id" property="stageId" />
+		<result column="group_id" property="groupId" />
+		<result column="team_id" property="teamId" />
+		<result column="seed_no" property="seedNo" />
+		<result column="draw_order" property="drawOrder" />
+		<result column="group_team_status" property="groupTeamStatus" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_tournament_group_team的列名 -->
+	<sql id="basket_tournament_group_team_Column">
+		id,season_id,stage_id,group_id,team_id,seed_no,draw_order,group_team_status,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketTournamentGroupTeam的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTournamentGroupTeamById" parameterType="Long" resultMap="result_BasketTournamentGroupTeamMapper.xml">
+		select
+		<include refid="basket_tournament_group_team_Column" />
+		from basket_tournament_group_team
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTournamentGroupTeam对象,以参数BasketTournamentGroupTeam对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTournamentGroupTeamObjSingle" parameterType="com.zhs.model.BasketTournamentGroupTeam" resultMap="result_BasketTournamentGroupTeamMapper.xml">
+		select
+		<include refid="basket_tournament_group_team_Column" />
+		from basket_tournament_group_team
+		<where>
+		<if test="seedNo != null"> and seed_no = #{seedNo}</if>
+		<if test="drawOrder != null"> and draw_order = #{drawOrder}</if>
+		<if test="groupTeamStatus != null"> and group_team_status = #{groupTeamStatus}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="stageId != null"> and stage_id = #{stageId}</if>
+		<if test="groupId != null"> and group_id = #{groupId}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTournamentGroupTeam对象,以参数BasketTournamentGroupTeam对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTournamentGroupTeamByObj" parameterType="com.zhs.model.BasketTournamentGroupTeam" resultMap="result_BasketTournamentGroupTeamMapper.xml">
+		select
+		<include refid="basket_tournament_group_team_Column" />
+		from basket_tournament_group_team
+		<where>
+		<if test="seedNo != null"> and seed_no = #{seedNo}</if>
+		<if test="drawOrder != null"> and draw_order = #{drawOrder}</if>
+		<if test="groupTeamStatus != null"> and group_team_status = #{groupTeamStatus}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="stageId != null"> and stage_id = #{stageId}</if>
+		<if test="groupId != null"> and group_id = #{groupId}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTournamentGroupTeam插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTournamentGroupTeam" parameterType="com.zhs.model.BasketTournamentGroupTeam">
+		insert into 
+		basket_tournament_group_team (id,season_id,stage_id,group_id,team_id,seed_no,draw_order,group_team_status,create_time,update_time,is_delete) 
+		values(#{id},#{seasonId},#{stageId},#{groupId},#{teamId},#{seedNo},#{drawOrder},#{groupTeamStatus},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketTournamentGroupTeam中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTournamentGroupTeam" parameterType="com.zhs.model.BasketTournamentGroupTeam">
+		insert into basket_tournament_group_team
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="seasonId != null">season_id,</if>
+			<if test="stageId != null">stage_id,</if>
+			<if test="groupId != null">group_id,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="seedNo != null">seed_no,</if>
+			<if test="drawOrder != null">draw_order,</if>
+			<if test="groupTeamStatus != null">group_team_status,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="seasonId != null">#{seasonId},</if>
+			<if test="stageId != null">#{stageId},</if>
+			<if test="groupId != null">#{groupId},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="seedNo != null">#{seedNo},</if>
+			<if test="drawOrder != null">#{drawOrder},</if>
+			<if test="groupTeamStatus != null">#{groupTeamStatus},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTournamentGroupTeam批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTournamentGroupTeamByBatch" parameterType="ArrayList">
+		insert into basket_tournament_group_team(id,season_id,stage_id,group_id,team_id,seed_no,draw_order,group_team_status,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{seasonId},#{stageId},#{groupId},#{teamId},#{seedNo},#{drawOrder},#{groupTeamStatus},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTournamentGroupTeam的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTournamentGroupTeamById" parameterType="Long">
+		delete from basket_tournament_group_team
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTournamentGroupTeam的id将BasketTournamentGroupTeam的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTournamentGroupTeamById" parameterType="com.zhs.model.BasketTournamentGroupTeam"> 
+		update basket_tournament_group_team set
+		<set>
+			season_id = #{seasonId} , 
+			stage_id = #{stageId} , 
+			group_id = #{groupId} , 
+			team_id = #{teamId} , 
+			seed_no = #{seedNo} , 
+			draw_order = #{drawOrder} , 
+			group_team_status = #{groupTeamStatus} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTournamentGroupTeam的id将BasketTournamentGroupTeam中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTournamentGroupTeamById" parameterType="com.zhs.model.BasketTournamentGroupTeam">
+		update basket_tournament_group_team
+		<set>
+					<if test="seasonId != null">season_id = #{seasonId},</if>
+					<if test="stageId != null">stage_id = #{stageId},</if>
+					<if test="groupId != null">group_id = #{groupId},</if>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="seedNo != null">seed_no = #{seedNo},</if>
+					<if test="drawOrder != null">draw_order = #{drawOrder},</if>
+					<if test="groupTeamStatus != null">group_team_status = #{groupTeamStatus},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

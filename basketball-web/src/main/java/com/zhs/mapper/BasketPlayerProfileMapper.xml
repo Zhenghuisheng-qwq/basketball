@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketPlayerProfileDao">
+	<resultMap id="result_BasketPlayerProfileMapper.xml" type="com.zhs.model.BasketPlayerProfile">
+		<id column="id" property="id" />
+		<result column="member_id" property="memberId" />
+		<result column="player_no" property="playerNo" />
+		<result column="real_name" property="realName" />
+		<result column="id_type" property="idType" />
+		<result column="id_no_cipher" property="idNoCipher" />
+		<result column="id_no_masked" property="idNoMasked" />
+		<result column="game_terminal" property="gameTerminal" />
+		<result column="game_account" property="gameAccount" />
+		<result column="game_nickname" property="gameNickname" />
+		<result column="position_code" property="positionCode" />
+		<result column="dominant_hand" property="dominantHand" />
+		<result column="height_cm" property="heightCm" />
+		<result column="weight_kg" property="weightKg" />
+		<result column="current_team_id" property="currentTeamId" />
+		<result column="certification_status" property="certificationStatus" />
+		<result column="player_status" property="playerStatus" />
+		<result column="certified_time" property="certifiedTime" />
+		<result column="profile_visible" property="profileVisible" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_player_profile的列名 -->
+	<sql id="basket_player_profile_Column">
+		id,member_id,player_no,real_name,id_type,id_no_cipher,id_no_masked,game_terminal,game_account,game_nickname,position_code,dominant_hand,height_cm,weight_kg,current_team_id,certification_status,player_status,certified_time,profile_visible,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketPlayerProfile的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketPlayerProfileById" parameterType="Long" resultMap="result_BasketPlayerProfileMapper.xml">
+		select
+		<include refid="basket_player_profile_Column" />
+		from basket_player_profile
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketPlayerProfile对象,以参数BasketPlayerProfile对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketPlayerProfileObjSingle" parameterType="com.zhs.model.BasketPlayerProfile" resultMap="result_BasketPlayerProfileMapper.xml">
+		select
+		<include refid="basket_player_profile_Column" />
+		from basket_player_profile
+		<where>
+		<if test="playerNo != null"> and player_no = #{playerNo}</if>
+		<if test="realName != null"> and real_name = #{realName}</if>
+		<if test="idType != null"> and id_type = #{idType}</if>
+		<if test="idNoCipher != null"> and id_no_cipher = #{idNoCipher}</if>
+		<if test="idNoMasked != null"> and id_no_masked = #{idNoMasked}</if>
+		<if test="gameTerminal != null"> and game_terminal = #{gameTerminal}</if>
+		<if test="gameAccount != null"> and game_account = #{gameAccount}</if>
+		<if test="gameNickname != null"> and game_nickname = #{gameNickname}</if>
+		<if test="positionCode != null"> and position_code = #{positionCode}</if>
+		<if test="dominantHand != null"> and dominant_hand = #{dominantHand}</if>
+		<if test="heightCm != null"> and height_cm = #{heightCm}</if>
+		<if test="weightKg != null"> and weight_kg = #{weightKg}</if>
+		<if test="currentTeamId != null"> and current_team_id = #{currentTeamId}</if>
+		<if test="certificationStatus != null"> and certification_status = #{certificationStatus}</if>
+		<if test="playerStatus != null"> and player_status = #{playerStatus}</if>
+		<if test="certifiedTime != null"> and certified_time = #{certifiedTime}</if>
+		<if test="profileVisible != null"> and profile_visible = #{profileVisible}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="memberId != null"> and member_id = #{memberId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketPlayerProfile对象,以参数BasketPlayerProfile对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketPlayerProfileByObj" parameterType="com.zhs.model.BasketPlayerProfile" resultMap="result_BasketPlayerProfileMapper.xml">
+		select
+		<include refid="basket_player_profile_Column" />
+		from basket_player_profile
+		<where>
+		<if test="playerNo != null"> and player_no = #{playerNo}</if>
+		<if test="realName != null"> and real_name = #{realName}</if>
+		<if test="idType != null"> and id_type = #{idType}</if>
+		<if test="idNoCipher != null"> and id_no_cipher = #{idNoCipher}</if>
+		<if test="idNoMasked != null"> and id_no_masked = #{idNoMasked}</if>
+		<if test="gameTerminal != null"> and game_terminal = #{gameTerminal}</if>
+		<if test="gameAccount != null"> and game_account = #{gameAccount}</if>
+		<if test="gameNickname != null"> and game_nickname = #{gameNickname}</if>
+		<if test="positionCode != null"> and position_code = #{positionCode}</if>
+		<if test="dominantHand != null"> and dominant_hand = #{dominantHand}</if>
+		<if test="heightCm != null"> and height_cm = #{heightCm}</if>
+		<if test="weightKg != null"> and weight_kg = #{weightKg}</if>
+		<if test="currentTeamId != null"> and current_team_id = #{currentTeamId}</if>
+		<if test="certificationStatus != null"> and certification_status = #{certificationStatus}</if>
+		<if test="playerStatus != null"> and player_status = #{playerStatus}</if>
+		<if test="certifiedTime != null"> and certified_time = #{certifiedTime}</if>
+		<if test="profileVisible != null"> and profile_visible = #{profileVisible}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="memberId != null"> and member_id = #{memberId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketPlayerProfile插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketPlayerProfile" parameterType="com.zhs.model.BasketPlayerProfile">
+		insert into 
+		basket_player_profile (id,member_id,player_no,real_name,id_type,id_no_cipher,id_no_masked,game_terminal,game_account,game_nickname,position_code,dominant_hand,height_cm,weight_kg,current_team_id,certification_status,player_status,certified_time,profile_visible,create_time,update_time,is_delete) 
+		values(#{id},#{memberId},#{playerNo},#{realName},#{idType},#{idNoCipher},#{idNoMasked},#{gameTerminal},#{gameAccount},#{gameNickname},#{positionCode},#{dominantHand},#{heightCm},#{weightKg},#{currentTeamId},#{certificationStatus},#{playerStatus},#{certifiedTime},#{profileVisible},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketPlayerProfile中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketPlayerProfile" parameterType="com.zhs.model.BasketPlayerProfile">
+		insert into basket_player_profile
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="memberId != null">member_id,</if>
+			<if test="playerNo != null">player_no,</if>
+			<if test="realName != null">real_name,</if>
+			<if test="idType != null">id_type,</if>
+			<if test="idNoCipher != null">id_no_cipher,</if>
+			<if test="idNoMasked != null">id_no_masked,</if>
+			<if test="gameTerminal != null">game_terminal,</if>
+			<if test="gameAccount != null">game_account,</if>
+			<if test="gameNickname != null">game_nickname,</if>
+			<if test="positionCode != null">position_code,</if>
+			<if test="dominantHand != null">dominant_hand,</if>
+			<if test="heightCm != null">height_cm,</if>
+			<if test="weightKg != null">weight_kg,</if>
+			<if test="currentTeamId != null">current_team_id,</if>
+			<if test="certificationStatus != null">certification_status,</if>
+			<if test="playerStatus != null">player_status,</if>
+			<if test="certifiedTime != null">certified_time,</if>
+			<if test="profileVisible != null">profile_visible,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="memberId != null">#{memberId},</if>
+			<if test="playerNo != null">#{playerNo},</if>
+			<if test="realName != null">#{realName},</if>
+			<if test="idType != null">#{idType},</if>
+			<if test="idNoCipher != null">#{idNoCipher},</if>
+			<if test="idNoMasked != null">#{idNoMasked},</if>
+			<if test="gameTerminal != null">#{gameTerminal},</if>
+			<if test="gameAccount != null">#{gameAccount},</if>
+			<if test="gameNickname != null">#{gameNickname},</if>
+			<if test="positionCode != null">#{positionCode},</if>
+			<if test="dominantHand != null">#{dominantHand},</if>
+			<if test="heightCm != null">#{heightCm},</if>
+			<if test="weightKg != null">#{weightKg},</if>
+			<if test="currentTeamId != null">#{currentTeamId},</if>
+			<if test="certificationStatus != null">#{certificationStatus},</if>
+			<if test="playerStatus != null">#{playerStatus},</if>
+			<if test="certifiedTime != null">#{certifiedTime},</if>
+			<if test="profileVisible != null">#{profileVisible},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketPlayerProfile批量插入到对应数据库的表中 -->
+	<insert id="insertBasketPlayerProfileByBatch" parameterType="ArrayList">
+		insert into basket_player_profile(id,member_id,player_no,real_name,id_type,id_no_cipher,id_no_masked,game_terminal,game_account,game_nickname,position_code,dominant_hand,height_cm,weight_kg,current_team_id,certification_status,player_status,certified_time,profile_visible,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{memberId},#{playerNo},#{realName},#{idType},#{idNoCipher},#{idNoMasked},#{gameTerminal},#{gameAccount},#{gameNickname},#{positionCode},#{dominantHand},#{heightCm},#{weightKg},#{currentTeamId},#{certificationStatus},#{playerStatus},#{certifiedTime},#{profileVisible},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketPlayerProfile的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketPlayerProfileById" parameterType="Long">
+		delete from basket_player_profile
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketPlayerProfile的id将BasketPlayerProfile的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketPlayerProfileById" parameterType="com.zhs.model.BasketPlayerProfile"> 
+		update basket_player_profile set
+		<set>
+			member_id = #{memberId} , 
+			player_no = #{playerNo} , 
+			real_name = #{realName} , 
+			id_type = #{idType} , 
+			id_no_cipher = #{idNoCipher} , 
+			id_no_masked = #{idNoMasked} , 
+			game_terminal = #{gameTerminal} , 
+			game_account = #{gameAccount} , 
+			game_nickname = #{gameNickname} , 
+			position_code = #{positionCode} , 
+			dominant_hand = #{dominantHand} , 
+			height_cm = #{heightCm} , 
+			weight_kg = #{weightKg} , 
+			current_team_id = #{currentTeamId} , 
+			certification_status = #{certificationStatus} , 
+			player_status = #{playerStatus} , 
+			certified_time = #{certifiedTime} , 
+			profile_visible = #{profileVisible} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketPlayerProfile的id将BasketPlayerProfile中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketPlayerProfileById" parameterType="com.zhs.model.BasketPlayerProfile">
+		update basket_player_profile
+		<set>
+					<if test="memberId != null">member_id = #{memberId},</if>
+					<if test="playerNo != null">player_no = #{playerNo},</if>
+					<if test="realName != null">real_name = #{realName},</if>
+					<if test="idType != null">id_type = #{idType},</if>
+					<if test="idNoCipher != null">id_no_cipher = #{idNoCipher},</if>
+					<if test="idNoMasked != null">id_no_masked = #{idNoMasked},</if>
+					<if test="gameTerminal != null">game_terminal = #{gameTerminal},</if>
+					<if test="gameAccount != null">game_account = #{gameAccount},</if>
+					<if test="gameNickname != null">game_nickname = #{gameNickname},</if>
+					<if test="positionCode != null">position_code = #{positionCode},</if>
+					<if test="dominantHand != null">dominant_hand = #{dominantHand},</if>
+					<if test="heightCm != null">height_cm = #{heightCm},</if>
+					<if test="weightKg != null">weight_kg = #{weightKg},</if>
+					<if test="currentTeamId != null">current_team_id = #{currentTeamId},</if>
+					<if test="certificationStatus != null">certification_status = #{certificationStatus},</if>
+					<if test="playerStatus != null">player_status = #{playerStatus},</if>
+					<if test="certifiedTime != null">certified_time = #{certifiedTime},</if>
+					<if test="profileVisible != null">profile_visible = #{profileVisible},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

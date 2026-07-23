@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketMemberProfileDao">
+	<resultMap id="result_BasketMemberProfileMapper.xml" type="com.zhs.model.BasketMemberProfile">
+		<id column="id" property="id" />
+		<result column="member_id" property="memberId" />
+		<result column="nickname" property="nickname" />
+		<result column="avatar_file_id" property="avatarFileId" />
+		<result column="gender" property="gender" />
+		<result column="birth_date" property="birthDate" />
+		<result column="province_code" property="provinceCode" />
+		<result column="province_name" property="provinceName" />
+		<result column="city_code" property="cityCode" />
+		<result column="city_name" property="cityName" />
+		<result column="bio" property="bio" />
+		<result column="profile_status" property="profileStatus" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_member_profile的列名 -->
+	<sql id="basket_member_profile_Column">
+		id,member_id,nickname,avatar_file_id,gender,birth_date,province_code,province_name,city_code,city_name,bio,profile_status,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketMemberProfile的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketMemberProfileById" parameterType="Long" resultMap="result_BasketMemberProfileMapper.xml">
+		select
+		<include refid="basket_member_profile_Column" />
+		from basket_member_profile
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketMemberProfile对象,以参数BasketMemberProfile对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketMemberProfileObjSingle" parameterType="com.zhs.model.BasketMemberProfile" resultMap="result_BasketMemberProfileMapper.xml">
+		select
+		<include refid="basket_member_profile_Column" />
+		from basket_member_profile
+		<where>
+		<if test="avatarFileId != null"> and avatar_file_id = #{avatarFileId}</if>
+		<if test="gender != null"> and gender = #{gender}</if>
+		<if test="birthDate != null"> and birth_date = #{birthDate}</if>
+		<if test="provinceCode != null"> and province_code = #{provinceCode}</if>
+		<if test="provinceName != null"> and province_name = #{provinceName}</if>
+		<if test="cityCode != null"> and city_code = #{cityCode}</if>
+		<if test="cityName != null"> and city_name = #{cityName}</if>
+		<if test="bio != null"> and bio = #{bio}</if>
+		<if test="profileStatus != null"> and profile_status = #{profileStatus}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="memberId != null"> and member_id = #{memberId}</if>
+		<if test="nickname != null"> and nickname = #{nickname}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketMemberProfile对象,以参数BasketMemberProfile对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketMemberProfileByObj" parameterType="com.zhs.model.BasketMemberProfile" resultMap="result_BasketMemberProfileMapper.xml">
+		select
+		<include refid="basket_member_profile_Column" />
+		from basket_member_profile
+		<where>
+		<if test="avatarFileId != null"> and avatar_file_id = #{avatarFileId}</if>
+		<if test="gender != null"> and gender = #{gender}</if>
+		<if test="birthDate != null"> and birth_date = #{birthDate}</if>
+		<if test="provinceCode != null"> and province_code = #{provinceCode}</if>
+		<if test="provinceName != null"> and province_name = #{provinceName}</if>
+		<if test="cityCode != null"> and city_code = #{cityCode}</if>
+		<if test="cityName != null"> and city_name = #{cityName}</if>
+		<if test="bio != null"> and bio = #{bio}</if>
+		<if test="profileStatus != null"> and profile_status = #{profileStatus}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="memberId != null"> and member_id = #{memberId}</if>
+		<if test="nickname != null"> and nickname = #{nickname}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketMemberProfile插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketMemberProfile" parameterType="com.zhs.model.BasketMemberProfile">
+		insert into 
+		basket_member_profile (id,member_id,nickname,avatar_file_id,gender,birth_date,province_code,province_name,city_code,city_name,bio,profile_status,create_time,update_time,is_delete) 
+		values(#{id},#{memberId},#{nickname},#{avatarFileId},#{gender},#{birthDate},#{provinceCode},#{provinceName},#{cityCode},#{cityName},#{bio},#{profileStatus},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketMemberProfile中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketMemberProfile" parameterType="com.zhs.model.BasketMemberProfile">
+		insert into basket_member_profile
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="memberId != null">member_id,</if>
+			<if test="nickname != null">nickname,</if>
+			<if test="avatarFileId != null">avatar_file_id,</if>
+			<if test="gender != null">gender,</if>
+			<if test="birthDate != null">birth_date,</if>
+			<if test="provinceCode != null">province_code,</if>
+			<if test="provinceName != null">province_name,</if>
+			<if test="cityCode != null">city_code,</if>
+			<if test="cityName != null">city_name,</if>
+			<if test="bio != null">bio,</if>
+			<if test="profileStatus != null">profile_status,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="memberId != null">#{memberId},</if>
+			<if test="nickname != null">#{nickname},</if>
+			<if test="avatarFileId != null">#{avatarFileId},</if>
+			<if test="gender != null">#{gender},</if>
+			<if test="birthDate != null">#{birthDate},</if>
+			<if test="provinceCode != null">#{provinceCode},</if>
+			<if test="provinceName != null">#{provinceName},</if>
+			<if test="cityCode != null">#{cityCode},</if>
+			<if test="cityName != null">#{cityName},</if>
+			<if test="bio != null">#{bio},</if>
+			<if test="profileStatus != null">#{profileStatus},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketMemberProfile批量插入到对应数据库的表中 -->
+	<insert id="insertBasketMemberProfileByBatch" parameterType="ArrayList">
+		insert into basket_member_profile(id,member_id,nickname,avatar_file_id,gender,birth_date,province_code,province_name,city_code,city_name,bio,profile_status,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{memberId},#{nickname},#{avatarFileId},#{gender},#{birthDate},#{provinceCode},#{provinceName},#{cityCode},#{cityName},#{bio},#{profileStatus},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketMemberProfile的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketMemberProfileById" parameterType="Long">
+		delete from basket_member_profile
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketMemberProfile的id将BasketMemberProfile的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketMemberProfileById" parameterType="com.zhs.model.BasketMemberProfile"> 
+		update basket_member_profile set
+		<set>
+			member_id = #{memberId} , 
+			nickname = #{nickname} , 
+			avatar_file_id = #{avatarFileId} , 
+			gender = #{gender} , 
+			birth_date = #{birthDate} , 
+			province_code = #{provinceCode} , 
+			province_name = #{provinceName} , 
+			city_code = #{cityCode} , 
+			city_name = #{cityName} , 
+			bio = #{bio} , 
+			profile_status = #{profileStatus} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketMemberProfile的id将BasketMemberProfile中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketMemberProfileById" parameterType="com.zhs.model.BasketMemberProfile">
+		update basket_member_profile
+		<set>
+					<if test="memberId != null">member_id = #{memberId},</if>
+					<if test="nickname != null">nickname = #{nickname},</if>
+					<if test="avatarFileId != null">avatar_file_id = #{avatarFileId},</if>
+					<if test="gender != null">gender = #{gender},</if>
+					<if test="birthDate != null">birth_date = #{birthDate},</if>
+					<if test="provinceCode != null">province_code = #{provinceCode},</if>
+					<if test="provinceName != null">province_name = #{provinceName},</if>
+					<if test="cityCode != null">city_code = #{cityCode},</if>
+					<if test="cityName != null">city_name = #{cityName},</if>
+					<if test="bio != null">bio = #{bio},</if>
+					<if test="profileStatus != null">profile_status = #{profileStatus},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

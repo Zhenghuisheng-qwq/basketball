@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketDisciplineRecordDao">
+	<resultMap id="result_BasketDisciplineRecordMapper.xml" type="com.zhs.model.BasketDisciplineRecord">
+		<id column="id" property="id" />
+		<result column="record_no" property="recordNo" />
+		<result column="discipline_type" property="disciplineType" />
+		<result column="title" property="title" />
+		<result column="reason_text" property="reasonText" />
+		<result column="penalty_content" property="penaltyContent" />
+		<result column="decision_by" property="decisionBy" />
+		<result column="decision_time" property="decisionTime" />
+		<result column="season_id" property="seasonId" />
+		<result column="match_id" property="matchId" />
+		<result column="team_id" property="teamId" />
+		<result column="player_id" property="playerId" />
+		<result column="member_id" property="memberId" />
+		<result column="effective_start_time" property="effectiveStartTime" />
+		<result column="effective_end_time" property="effectiveEndTime" />
+		<result column="discipline_status" property="disciplineStatus" />
+		<result column="announcement_id" property="announcementId" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_discipline_record的列名 -->
+	<sql id="basket_discipline_record_Column">
+		id,record_no,season_id,match_id,team_id,player_id,member_id,discipline_type,title,reason_text,penalty_content,effective_start_time,effective_end_time,discipline_status,decision_by,decision_time,announcement_id,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketDisciplineRecord的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketDisciplineRecordById" parameterType="Long" resultMap="result_BasketDisciplineRecordMapper.xml">
+		select
+		<include refid="basket_discipline_record_Column" />
+		from basket_discipline_record
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketDisciplineRecord对象,以参数BasketDisciplineRecord对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketDisciplineRecordObjSingle" parameterType="com.zhs.model.BasketDisciplineRecord" resultMap="result_BasketDisciplineRecordMapper.xml">
+		select
+		<include refid="basket_discipline_record_Column" />
+		from basket_discipline_record
+		<where>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="matchId != null"> and match_id = #{matchId}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="memberId != null"> and member_id = #{memberId}</if>
+		<if test="effectiveStartTime != null"> and effective_start_time = #{effectiveStartTime}</if>
+		<if test="effectiveEndTime != null"> and effective_end_time = #{effectiveEndTime}</if>
+		<if test="disciplineStatus != null"> and discipline_status = #{disciplineStatus}</if>
+		<if test="announcementId != null"> and announcement_id = #{announcementId}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="recordNo != null"> and record_no = #{recordNo}</if>
+		<if test="disciplineType != null"> and discipline_type = #{disciplineType}</if>
+		<if test="title != null"> and title = #{title}</if>
+		<if test="reasonText != null"> and reason_text = #{reasonText}</if>
+		<if test="penaltyContent != null"> and penalty_content = #{penaltyContent}</if>
+		<if test="decisionBy != null"> and decision_by = #{decisionBy}</if>
+		<if test="decisionTime != null"> and decision_time = #{decisionTime}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketDisciplineRecord对象,以参数BasketDisciplineRecord对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketDisciplineRecordByObj" parameterType="com.zhs.model.BasketDisciplineRecord" resultMap="result_BasketDisciplineRecordMapper.xml">
+		select
+		<include refid="basket_discipline_record_Column" />
+		from basket_discipline_record
+		<where>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="matchId != null"> and match_id = #{matchId}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="memberId != null"> and member_id = #{memberId}</if>
+		<if test="effectiveStartTime != null"> and effective_start_time = #{effectiveStartTime}</if>
+		<if test="effectiveEndTime != null"> and effective_end_time = #{effectiveEndTime}</if>
+		<if test="disciplineStatus != null"> and discipline_status = #{disciplineStatus}</if>
+		<if test="announcementId != null"> and announcement_id = #{announcementId}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="recordNo != null"> and record_no = #{recordNo}</if>
+		<if test="disciplineType != null"> and discipline_type = #{disciplineType}</if>
+		<if test="title != null"> and title = #{title}</if>
+		<if test="reasonText != null"> and reason_text = #{reasonText}</if>
+		<if test="penaltyContent != null"> and penalty_content = #{penaltyContent}</if>
+		<if test="decisionBy != null"> and decision_by = #{decisionBy}</if>
+		<if test="decisionTime != null"> and decision_time = #{decisionTime}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketDisciplineRecord插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketDisciplineRecord" parameterType="com.zhs.model.BasketDisciplineRecord">
+		insert into 
+		basket_discipline_record (id,record_no,season_id,match_id,team_id,player_id,member_id,discipline_type,title,reason_text,penalty_content,effective_start_time,effective_end_time,discipline_status,decision_by,decision_time,announcement_id,create_time,update_time,is_delete) 
+		values(#{id},#{recordNo},#{seasonId},#{matchId},#{teamId},#{playerId},#{memberId},#{disciplineType},#{title},#{reasonText},#{penaltyContent},#{effectiveStartTime},#{effectiveEndTime},#{disciplineStatus},#{decisionBy},#{decisionTime},#{announcementId},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketDisciplineRecord中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketDisciplineRecord" parameterType="com.zhs.model.BasketDisciplineRecord">
+		insert into basket_discipline_record
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="recordNo != null">record_no,</if>
+			<if test="seasonId != null">season_id,</if>
+			<if test="matchId != null">match_id,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="playerId != null">player_id,</if>
+			<if test="memberId != null">member_id,</if>
+			<if test="disciplineType != null">discipline_type,</if>
+			<if test="title != null">title,</if>
+			<if test="reasonText != null">reason_text,</if>
+			<if test="penaltyContent != null">penalty_content,</if>
+			<if test="effectiveStartTime != null">effective_start_time,</if>
+			<if test="effectiveEndTime != null">effective_end_time,</if>
+			<if test="disciplineStatus != null">discipline_status,</if>
+			<if test="decisionBy != null">decision_by,</if>
+			<if test="decisionTime != null">decision_time,</if>
+			<if test="announcementId != null">announcement_id,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="recordNo != null">#{recordNo},</if>
+			<if test="seasonId != null">#{seasonId},</if>
+			<if test="matchId != null">#{matchId},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="playerId != null">#{playerId},</if>
+			<if test="memberId != null">#{memberId},</if>
+			<if test="disciplineType != null">#{disciplineType},</if>
+			<if test="title != null">#{title},</if>
+			<if test="reasonText != null">#{reasonText},</if>
+			<if test="penaltyContent != null">#{penaltyContent},</if>
+			<if test="effectiveStartTime != null">#{effectiveStartTime},</if>
+			<if test="effectiveEndTime != null">#{effectiveEndTime},</if>
+			<if test="disciplineStatus != null">#{disciplineStatus},</if>
+			<if test="decisionBy != null">#{decisionBy},</if>
+			<if test="decisionTime != null">#{decisionTime},</if>
+			<if test="announcementId != null">#{announcementId},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketDisciplineRecord批量插入到对应数据库的表中 -->
+	<insert id="insertBasketDisciplineRecordByBatch" parameterType="ArrayList">
+		insert into basket_discipline_record(id,record_no,season_id,match_id,team_id,player_id,member_id,discipline_type,title,reason_text,penalty_content,effective_start_time,effective_end_time,discipline_status,decision_by,decision_time,announcement_id,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{recordNo},#{seasonId},#{matchId},#{teamId},#{playerId},#{memberId},#{disciplineType},#{title},#{reasonText},#{penaltyContent},#{effectiveStartTime},#{effectiveEndTime},#{disciplineStatus},#{decisionBy},#{decisionTime},#{announcementId},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketDisciplineRecord的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketDisciplineRecordById" parameterType="Long">
+		delete from basket_discipline_record
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketDisciplineRecord的id将BasketDisciplineRecord的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketDisciplineRecordById" parameterType="com.zhs.model.BasketDisciplineRecord"> 
+		update basket_discipline_record set
+		<set>
+			record_no = #{recordNo} , 
+			season_id = #{seasonId} , 
+			match_id = #{matchId} , 
+			team_id = #{teamId} , 
+			player_id = #{playerId} , 
+			member_id = #{memberId} , 
+			discipline_type = #{disciplineType} , 
+			title = #{title} , 
+			reason_text = #{reasonText} , 
+			penalty_content = #{penaltyContent} , 
+			effective_start_time = #{effectiveStartTime} , 
+			effective_end_time = #{effectiveEndTime} , 
+			discipline_status = #{disciplineStatus} , 
+			decision_by = #{decisionBy} , 
+			decision_time = #{decisionTime} , 
+			announcement_id = #{announcementId} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketDisciplineRecord的id将BasketDisciplineRecord中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketDisciplineRecordById" parameterType="com.zhs.model.BasketDisciplineRecord">
+		update basket_discipline_record
+		<set>
+					<if test="recordNo != null">record_no = #{recordNo},</if>
+					<if test="seasonId != null">season_id = #{seasonId},</if>
+					<if test="matchId != null">match_id = #{matchId},</if>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="playerId != null">player_id = #{playerId},</if>
+					<if test="memberId != null">member_id = #{memberId},</if>
+					<if test="disciplineType != null">discipline_type = #{disciplineType},</if>
+					<if test="title != null">title = #{title},</if>
+					<if test="reasonText != null">reason_text = #{reasonText},</if>
+					<if test="penaltyContent != null">penalty_content = #{penaltyContent},</if>
+					<if test="effectiveStartTime != null">effective_start_time = #{effectiveStartTime},</if>
+					<if test="effectiveEndTime != null">effective_end_time = #{effectiveEndTime},</if>
+					<if test="disciplineStatus != null">discipline_status = #{disciplineStatus},</if>
+					<if test="decisionBy != null">decision_by = #{decisionBy},</if>
+					<if test="decisionTime != null">decision_time = #{decisionTime},</if>
+					<if test="announcementId != null">announcement_id = #{announcementId},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

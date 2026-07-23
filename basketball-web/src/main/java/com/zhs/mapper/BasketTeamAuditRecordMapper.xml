@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTeamAuditRecordDao">
+	<resultMap id="result_BasketTeamAuditRecordMapper.xml" type="com.zhs.model.BasketTeamAuditRecord">
+		<id column="id" property="id" />
+		<result column="team_id" property="teamId" />
+		<result column="audit_type" property="auditType" />
+		<result column="audit_action" property="auditAction" />
+		<result column="after_status" property="afterStatus" />
+		<result column="auditor_id" property="auditorId" />
+		<result column="audit_time" property="auditTime" />
+		<result column="before_status" property="beforeStatus" />
+		<result column="auditor_name" property="auditorName" />
+		<result column="audit_remark" property="auditRemark" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_team_audit_record的列名 -->
+	<sql id="basket_team_audit_record_Column">
+		id,team_id,audit_type,audit_action,before_status,after_status,auditor_id,auditor_name,audit_remark,audit_time,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketTeamAuditRecord的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTeamAuditRecordById" parameterType="Long" resultMap="result_BasketTeamAuditRecordMapper.xml">
+		select
+		<include refid="basket_team_audit_record_Column" />
+		from basket_team_audit_record
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTeamAuditRecord对象,以参数BasketTeamAuditRecord对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamAuditRecordObjSingle" parameterType="com.zhs.model.BasketTeamAuditRecord" resultMap="result_BasketTeamAuditRecordMapper.xml">
+		select
+		<include refid="basket_team_audit_record_Column" />
+		from basket_team_audit_record
+		<where>
+		<if test="beforeStatus != null"> and before_status = #{beforeStatus}</if>
+		<if test="auditorName != null"> and auditor_name = #{auditorName}</if>
+		<if test="auditRemark != null"> and audit_remark = #{auditRemark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="auditType != null"> and audit_type = #{auditType}</if>
+		<if test="auditAction != null"> and audit_action = #{auditAction}</if>
+		<if test="afterStatus != null"> and after_status = #{afterStatus}</if>
+		<if test="auditorId != null"> and auditor_id = #{auditorId}</if>
+		<if test="auditTime != null"> and audit_time = #{auditTime}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTeamAuditRecord对象,以参数BasketTeamAuditRecord对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamAuditRecordByObj" parameterType="com.zhs.model.BasketTeamAuditRecord" resultMap="result_BasketTeamAuditRecordMapper.xml">
+		select
+		<include refid="basket_team_audit_record_Column" />
+		from basket_team_audit_record
+		<where>
+		<if test="beforeStatus != null"> and before_status = #{beforeStatus}</if>
+		<if test="auditorName != null"> and auditor_name = #{auditorName}</if>
+		<if test="auditRemark != null"> and audit_remark = #{auditRemark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="auditType != null"> and audit_type = #{auditType}</if>
+		<if test="auditAction != null"> and audit_action = #{auditAction}</if>
+		<if test="afterStatus != null"> and after_status = #{afterStatus}</if>
+		<if test="auditorId != null"> and auditor_id = #{auditorId}</if>
+		<if test="auditTime != null"> and audit_time = #{auditTime}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTeamAuditRecord插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTeamAuditRecord" parameterType="com.zhs.model.BasketTeamAuditRecord">
+		insert into 
+		basket_team_audit_record (id,team_id,audit_type,audit_action,before_status,after_status,auditor_id,auditor_name,audit_remark,audit_time,create_time,update_time,is_delete) 
+		values(#{id},#{teamId},#{auditType},#{auditAction},#{beforeStatus},#{afterStatus},#{auditorId},#{auditorName},#{auditRemark},#{auditTime},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketTeamAuditRecord中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTeamAuditRecord" parameterType="com.zhs.model.BasketTeamAuditRecord">
+		insert into basket_team_audit_record
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="auditType != null">audit_type,</if>
+			<if test="auditAction != null">audit_action,</if>
+			<if test="beforeStatus != null">before_status,</if>
+			<if test="afterStatus != null">after_status,</if>
+			<if test="auditorId != null">auditor_id,</if>
+			<if test="auditorName != null">auditor_name,</if>
+			<if test="auditRemark != null">audit_remark,</if>
+			<if test="auditTime != null">audit_time,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="auditType != null">#{auditType},</if>
+			<if test="auditAction != null">#{auditAction},</if>
+			<if test="beforeStatus != null">#{beforeStatus},</if>
+			<if test="afterStatus != null">#{afterStatus},</if>
+			<if test="auditorId != null">#{auditorId},</if>
+			<if test="auditorName != null">#{auditorName},</if>
+			<if test="auditRemark != null">#{auditRemark},</if>
+			<if test="auditTime != null">#{auditTime},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTeamAuditRecord批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTeamAuditRecordByBatch" parameterType="ArrayList">
+		insert into basket_team_audit_record(id,team_id,audit_type,audit_action,before_status,after_status,auditor_id,auditor_name,audit_remark,audit_time,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{teamId},#{auditType},#{auditAction},#{beforeStatus},#{afterStatus},#{auditorId},#{auditorName},#{auditRemark},#{auditTime},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTeamAuditRecord的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTeamAuditRecordById" parameterType="Long">
+		delete from basket_team_audit_record
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTeamAuditRecord的id将BasketTeamAuditRecord的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTeamAuditRecordById" parameterType="com.zhs.model.BasketTeamAuditRecord"> 
+		update basket_team_audit_record set
+		<set>
+			team_id = #{teamId} , 
+			audit_type = #{auditType} , 
+			audit_action = #{auditAction} , 
+			before_status = #{beforeStatus} , 
+			after_status = #{afterStatus} , 
+			auditor_id = #{auditorId} , 
+			auditor_name = #{auditorName} , 
+			audit_remark = #{auditRemark} , 
+			audit_time = #{auditTime} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTeamAuditRecord的id将BasketTeamAuditRecord中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTeamAuditRecordById" parameterType="com.zhs.model.BasketTeamAuditRecord">
+		update basket_team_audit_record
+		<set>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="auditType != null">audit_type = #{auditType},</if>
+					<if test="auditAction != null">audit_action = #{auditAction},</if>
+					<if test="beforeStatus != null">before_status = #{beforeStatus},</if>
+					<if test="afterStatus != null">after_status = #{afterStatus},</if>
+					<if test="auditorId != null">auditor_id = #{auditorId},</if>
+					<if test="auditorName != null">auditor_name = #{auditorName},</if>
+					<if test="auditRemark != null">audit_remark = #{auditRemark},</if>
+					<if test="auditTime != null">audit_time = #{auditTime},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketAnnouncementAttachmentDao">
+	<resultMap id="result_BasketAnnouncementAttachmentMapper.xml" type="com.zhs.model.BasketAnnouncementAttachment">
+		<id column="id" property="id" />
+		<result column="announcement_id" property="announcementId" />
+		<result column="file_id" property="fileId" />
+		<result column="attachment_name" property="attachmentName" />
+		<result column="sort_no" property="sortNo" />
+		<result column="download_count" property="downloadCount" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_announcement_attachment的列名 -->
+	<sql id="basket_announcement_attachment_Column">
+		id,announcement_id,file_id,attachment_name,sort_no,download_count,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketAnnouncementAttachment的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketAnnouncementAttachmentById" parameterType="Long" resultMap="result_BasketAnnouncementAttachmentMapper.xml">
+		select
+		<include refid="basket_announcement_attachment_Column" />
+		from basket_announcement_attachment
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketAnnouncementAttachment对象,以参数BasketAnnouncementAttachment对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketAnnouncementAttachmentObjSingle" parameterType="com.zhs.model.BasketAnnouncementAttachment" resultMap="result_BasketAnnouncementAttachmentMapper.xml">
+		select
+		<include refid="basket_announcement_attachment_Column" />
+		from basket_announcement_attachment
+		<where>
+		<if test="sortNo != null"> and sort_no = #{sortNo}</if>
+		<if test="downloadCount != null"> and download_count = #{downloadCount}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="announcementId != null"> and announcement_id = #{announcementId}</if>
+		<if test="fileId != null"> and file_id = #{fileId}</if>
+		<if test="attachmentName != null"> and attachment_name = #{attachmentName}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketAnnouncementAttachment对象,以参数BasketAnnouncementAttachment对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketAnnouncementAttachmentByObj" parameterType="com.zhs.model.BasketAnnouncementAttachment" resultMap="result_BasketAnnouncementAttachmentMapper.xml">
+		select
+		<include refid="basket_announcement_attachment_Column" />
+		from basket_announcement_attachment
+		<where>
+		<if test="sortNo != null"> and sort_no = #{sortNo}</if>
+		<if test="downloadCount != null"> and download_count = #{downloadCount}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="announcementId != null"> and announcement_id = #{announcementId}</if>
+		<if test="fileId != null"> and file_id = #{fileId}</if>
+		<if test="attachmentName != null"> and attachment_name = #{attachmentName}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketAnnouncementAttachment插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketAnnouncementAttachment" parameterType="com.zhs.model.BasketAnnouncementAttachment">
+		insert into 
+		basket_announcement_attachment (id,announcement_id,file_id,attachment_name,sort_no,download_count,create_time,update_time,is_delete) 
+		values(#{id},#{announcementId},#{fileId},#{attachmentName},#{sortNo},#{downloadCount},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketAnnouncementAttachment中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketAnnouncementAttachment" parameterType="com.zhs.model.BasketAnnouncementAttachment">
+		insert into basket_announcement_attachment
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="announcementId != null">announcement_id,</if>
+			<if test="fileId != null">file_id,</if>
+			<if test="attachmentName != null">attachment_name,</if>
+			<if test="sortNo != null">sort_no,</if>
+			<if test="downloadCount != null">download_count,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="announcementId != null">#{announcementId},</if>
+			<if test="fileId != null">#{fileId},</if>
+			<if test="attachmentName != null">#{attachmentName},</if>
+			<if test="sortNo != null">#{sortNo},</if>
+			<if test="downloadCount != null">#{downloadCount},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketAnnouncementAttachment批量插入到对应数据库的表中 -->
+	<insert id="insertBasketAnnouncementAttachmentByBatch" parameterType="ArrayList">
+		insert into basket_announcement_attachment(id,announcement_id,file_id,attachment_name,sort_no,download_count,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{announcementId},#{fileId},#{attachmentName},#{sortNo},#{downloadCount},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketAnnouncementAttachment的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketAnnouncementAttachmentById" parameterType="Long">
+		delete from basket_announcement_attachment
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketAnnouncementAttachment的id将BasketAnnouncementAttachment的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketAnnouncementAttachmentById" parameterType="com.zhs.model.BasketAnnouncementAttachment"> 
+		update basket_announcement_attachment set
+		<set>
+			announcement_id = #{announcementId} , 
+			file_id = #{fileId} , 
+			attachment_name = #{attachmentName} , 
+			sort_no = #{sortNo} , 
+			download_count = #{downloadCount} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketAnnouncementAttachment的id将BasketAnnouncementAttachment中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketAnnouncementAttachmentById" parameterType="com.zhs.model.BasketAnnouncementAttachment">
+		update basket_announcement_attachment
+		<set>
+					<if test="announcementId != null">announcement_id = #{announcementId},</if>
+					<if test="fileId != null">file_id = #{fileId},</if>
+					<if test="attachmentName != null">attachment_name = #{attachmentName},</if>
+					<if test="sortNo != null">sort_no = #{sortNo},</if>
+					<if test="downloadCount != null">download_count = #{downloadCount},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketHomeBannerDao">
+	<resultMap id="result_BasketHomeBannerMapper.xml" type="com.zhs.model.BasketHomeBanner">
+		<id column="id" property="id" />
+		<result column="banner_name" property="bannerName" />
+		<result column="image_file_id" property="imageFileId" />
+		<result column="position_code" property="positionCode" />
+		<result column="title" property="title" />
+		<result column="subtitle" property="subtitle" />
+		<result column="target_type" property="targetType" />
+		<result column="target_value" property="targetValue" />
+		<result column="start_time" property="startTime" />
+		<result column="end_time" property="endTime" />
+		<result column="banner_status" property="bannerStatus" />
+		<result column="sort_no" property="sortNo" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_home_banner的列名 -->
+	<sql id="basket_home_banner_Column">
+		id,banner_name,title,subtitle,image_file_id,position_code,target_type,target_value,start_time,end_time,banner_status,sort_no,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketHomeBanner的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketHomeBannerById" parameterType="Long" resultMap="result_BasketHomeBannerMapper.xml">
+		select
+		<include refid="basket_home_banner_Column" />
+		from basket_home_banner
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketHomeBanner对象,以参数BasketHomeBanner对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketHomeBannerObjSingle" parameterType="com.zhs.model.BasketHomeBanner" resultMap="result_BasketHomeBannerMapper.xml">
+		select
+		<include refid="basket_home_banner_Column" />
+		from basket_home_banner
+		<where>
+		<if test="title != null"> and title = #{title}</if>
+		<if test="subtitle != null"> and subtitle = #{subtitle}</if>
+		<if test="targetType != null"> and target_type = #{targetType}</if>
+		<if test="targetValue != null"> and target_value = #{targetValue}</if>
+		<if test="startTime != null"> and start_time = #{startTime}</if>
+		<if test="endTime != null"> and end_time = #{endTime}</if>
+		<if test="bannerStatus != null"> and banner_status = #{bannerStatus}</if>
+		<if test="sortNo != null"> and sort_no = #{sortNo}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="bannerName != null"> and banner_name = #{bannerName}</if>
+		<if test="imageFileId != null"> and image_file_id = #{imageFileId}</if>
+		<if test="positionCode != null"> and position_code = #{positionCode}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketHomeBanner对象,以参数BasketHomeBanner对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketHomeBannerByObj" parameterType="com.zhs.model.BasketHomeBanner" resultMap="result_BasketHomeBannerMapper.xml">
+		select
+		<include refid="basket_home_banner_Column" />
+		from basket_home_banner
+		<where>
+		<if test="title != null"> and title = #{title}</if>
+		<if test="subtitle != null"> and subtitle = #{subtitle}</if>
+		<if test="targetType != null"> and target_type = #{targetType}</if>
+		<if test="targetValue != null"> and target_value = #{targetValue}</if>
+		<if test="startTime != null"> and start_time = #{startTime}</if>
+		<if test="endTime != null"> and end_time = #{endTime}</if>
+		<if test="bannerStatus != null"> and banner_status = #{bannerStatus}</if>
+		<if test="sortNo != null"> and sort_no = #{sortNo}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="bannerName != null"> and banner_name = #{bannerName}</if>
+		<if test="imageFileId != null"> and image_file_id = #{imageFileId}</if>
+		<if test="positionCode != null"> and position_code = #{positionCode}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketHomeBanner插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketHomeBanner" parameterType="com.zhs.model.BasketHomeBanner">
+		insert into 
+		basket_home_banner (id,banner_name,title,subtitle,image_file_id,position_code,target_type,target_value,start_time,end_time,banner_status,sort_no,create_time,update_time,is_delete) 
+		values(#{id},#{bannerName},#{title},#{subtitle},#{imageFileId},#{positionCode},#{targetType},#{targetValue},#{startTime},#{endTime},#{bannerStatus},#{sortNo},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketHomeBanner中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketHomeBanner" parameterType="com.zhs.model.BasketHomeBanner">
+		insert into basket_home_banner
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="bannerName != null">banner_name,</if>
+			<if test="title != null">title,</if>
+			<if test="subtitle != null">subtitle,</if>
+			<if test="imageFileId != null">image_file_id,</if>
+			<if test="positionCode != null">position_code,</if>
+			<if test="targetType != null">target_type,</if>
+			<if test="targetValue != null">target_value,</if>
+			<if test="startTime != null">start_time,</if>
+			<if test="endTime != null">end_time,</if>
+			<if test="bannerStatus != null">banner_status,</if>
+			<if test="sortNo != null">sort_no,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="bannerName != null">#{bannerName},</if>
+			<if test="title != null">#{title},</if>
+			<if test="subtitle != null">#{subtitle},</if>
+			<if test="imageFileId != null">#{imageFileId},</if>
+			<if test="positionCode != null">#{positionCode},</if>
+			<if test="targetType != null">#{targetType},</if>
+			<if test="targetValue != null">#{targetValue},</if>
+			<if test="startTime != null">#{startTime},</if>
+			<if test="endTime != null">#{endTime},</if>
+			<if test="bannerStatus != null">#{bannerStatus},</if>
+			<if test="sortNo != null">#{sortNo},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketHomeBanner批量插入到对应数据库的表中 -->
+	<insert id="insertBasketHomeBannerByBatch" parameterType="ArrayList">
+		insert into basket_home_banner(id,banner_name,title,subtitle,image_file_id,position_code,target_type,target_value,start_time,end_time,banner_status,sort_no,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{bannerName},#{title},#{subtitle},#{imageFileId},#{positionCode},#{targetType},#{targetValue},#{startTime},#{endTime},#{bannerStatus},#{sortNo},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketHomeBanner的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketHomeBannerById" parameterType="Long">
+		delete from basket_home_banner
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketHomeBanner的id将BasketHomeBanner的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketHomeBannerById" parameterType="com.zhs.model.BasketHomeBanner"> 
+		update basket_home_banner set
+		<set>
+			banner_name = #{bannerName} , 
+			title = #{title} , 
+			subtitle = #{subtitle} , 
+			image_file_id = #{imageFileId} , 
+			position_code = #{positionCode} , 
+			target_type = #{targetType} , 
+			target_value = #{targetValue} , 
+			start_time = #{startTime} , 
+			end_time = #{endTime} , 
+			banner_status = #{bannerStatus} , 
+			sort_no = #{sortNo} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketHomeBanner的id将BasketHomeBanner中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketHomeBannerById" parameterType="com.zhs.model.BasketHomeBanner">
+		update basket_home_banner
+		<set>
+					<if test="bannerName != null">banner_name = #{bannerName},</if>
+					<if test="title != null">title = #{title},</if>
+					<if test="subtitle != null">subtitle = #{subtitle},</if>
+					<if test="imageFileId != null">image_file_id = #{imageFileId},</if>
+					<if test="positionCode != null">position_code = #{positionCode},</if>
+					<if test="targetType != null">target_type = #{targetType},</if>
+					<if test="targetValue != null">target_value = #{targetValue},</if>
+					<if test="startTime != null">start_time = #{startTime},</if>
+					<if test="endTime != null">end_time = #{endTime},</if>
+					<if test="bannerStatus != null">banner_status = #{bannerStatus},</if>
+					<if test="sortNo != null">sort_no = #{sortNo},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

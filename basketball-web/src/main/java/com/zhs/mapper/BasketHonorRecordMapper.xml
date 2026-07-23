@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketHonorRecordDao">
+	<resultMap id="result_BasketHonorRecordMapper.xml" type="com.zhs.model.BasketHonorRecord">
+		<id column="id" property="id" />
+		<result column="honor_category_id" property="honorCategoryId" />
+		<result column="honor_title" property="honorTitle" />
+		<result column="tournament_id" property="tournamentId" />
+		<result column="season_id" property="seasonId" />
+		<result column="team_id" property="teamId" />
+		<result column="player_id" property="playerId" />
+		<result column="match_id" property="matchId" />
+		<result column="honor_subtitle" property="honorSubtitle" />
+		<result column="honor_value" property="honorValue" />
+		<result column="award_date" property="awardDate" />
+		<result column="cover_file_id" property="coverFileId" />
+		<result column="source_type" property="sourceType" />
+		<result column="source_id" property="sourceId" />
+		<result column="display_status" property="displayStatus" />
+		<result column="display_order" property="displayOrder" />
+		<result column="remark" property="remark" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_honor_record的列名 -->
+	<sql id="basket_honor_record_Column">
+		id,tournament_id,season_id,honor_category_id,team_id,player_id,match_id,honor_title,honor_subtitle,honor_value,award_date,cover_file_id,source_type,source_id,display_status,display_order,remark,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketHonorRecord的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketHonorRecordById" parameterType="Long" resultMap="result_BasketHonorRecordMapper.xml">
+		select
+		<include refid="basket_honor_record_Column" />
+		from basket_honor_record
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketHonorRecord对象,以参数BasketHonorRecord对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketHonorRecordObjSingle" parameterType="com.zhs.model.BasketHonorRecord" resultMap="result_BasketHonorRecordMapper.xml">
+		select
+		<include refid="basket_honor_record_Column" />
+		from basket_honor_record
+		<where>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="matchId != null"> and match_id = #{matchId}</if>
+		<if test="honorSubtitle != null"> and honor_subtitle = #{honorSubtitle}</if>
+		<if test="honorValue != null"> and honor_value = #{honorValue}</if>
+		<if test="awardDate != null"> and award_date = #{awardDate}</if>
+		<if test="coverFileId != null"> and cover_file_id = #{coverFileId}</if>
+		<if test="sourceType != null"> and source_type = #{sourceType}</if>
+		<if test="sourceId != null"> and source_id = #{sourceId}</if>
+		<if test="displayStatus != null"> and display_status = #{displayStatus}</if>
+		<if test="displayOrder != null"> and display_order = #{displayOrder}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="honorCategoryId != null"> and honor_category_id = #{honorCategoryId}</if>
+		<if test="honorTitle != null"> and honor_title = #{honorTitle}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketHonorRecord对象,以参数BasketHonorRecord对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketHonorRecordByObj" parameterType="com.zhs.model.BasketHonorRecord" resultMap="result_BasketHonorRecordMapper.xml">
+		select
+		<include refid="basket_honor_record_Column" />
+		from basket_honor_record
+		<where>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="playerId != null"> and player_id = #{playerId}</if>
+		<if test="matchId != null"> and match_id = #{matchId}</if>
+		<if test="honorSubtitle != null"> and honor_subtitle = #{honorSubtitle}</if>
+		<if test="honorValue != null"> and honor_value = #{honorValue}</if>
+		<if test="awardDate != null"> and award_date = #{awardDate}</if>
+		<if test="coverFileId != null"> and cover_file_id = #{coverFileId}</if>
+		<if test="sourceType != null"> and source_type = #{sourceType}</if>
+		<if test="sourceId != null"> and source_id = #{sourceId}</if>
+		<if test="displayStatus != null"> and display_status = #{displayStatus}</if>
+		<if test="displayOrder != null"> and display_order = #{displayOrder}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="honorCategoryId != null"> and honor_category_id = #{honorCategoryId}</if>
+		<if test="honorTitle != null"> and honor_title = #{honorTitle}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketHonorRecord插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketHonorRecord" parameterType="com.zhs.model.BasketHonorRecord">
+		insert into 
+		basket_honor_record (id,tournament_id,season_id,honor_category_id,team_id,player_id,match_id,honor_title,honor_subtitle,honor_value,award_date,cover_file_id,source_type,source_id,display_status,display_order,remark,create_time,update_time,is_delete) 
+		values(#{id},#{tournamentId},#{seasonId},#{honorCategoryId},#{teamId},#{playerId},#{matchId},#{honorTitle},#{honorSubtitle},#{honorValue},#{awardDate},#{coverFileId},#{sourceType},#{sourceId},#{displayStatus},#{displayOrder},#{remark},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketHonorRecord中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketHonorRecord" parameterType="com.zhs.model.BasketHonorRecord">
+		insert into basket_honor_record
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="tournamentId != null">tournament_id,</if>
+			<if test="seasonId != null">season_id,</if>
+			<if test="honorCategoryId != null">honor_category_id,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="playerId != null">player_id,</if>
+			<if test="matchId != null">match_id,</if>
+			<if test="honorTitle != null">honor_title,</if>
+			<if test="honorSubtitle != null">honor_subtitle,</if>
+			<if test="honorValue != null">honor_value,</if>
+			<if test="awardDate != null">award_date,</if>
+			<if test="coverFileId != null">cover_file_id,</if>
+			<if test="sourceType != null">source_type,</if>
+			<if test="sourceId != null">source_id,</if>
+			<if test="displayStatus != null">display_status,</if>
+			<if test="displayOrder != null">display_order,</if>
+			<if test="remark != null">remark,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="tournamentId != null">#{tournamentId},</if>
+			<if test="seasonId != null">#{seasonId},</if>
+			<if test="honorCategoryId != null">#{honorCategoryId},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="playerId != null">#{playerId},</if>
+			<if test="matchId != null">#{matchId},</if>
+			<if test="honorTitle != null">#{honorTitle},</if>
+			<if test="honorSubtitle != null">#{honorSubtitle},</if>
+			<if test="honorValue != null">#{honorValue},</if>
+			<if test="awardDate != null">#{awardDate},</if>
+			<if test="coverFileId != null">#{coverFileId},</if>
+			<if test="sourceType != null">#{sourceType},</if>
+			<if test="sourceId != null">#{sourceId},</if>
+			<if test="displayStatus != null">#{displayStatus},</if>
+			<if test="displayOrder != null">#{displayOrder},</if>
+			<if test="remark != null">#{remark},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketHonorRecord批量插入到对应数据库的表中 -->
+	<insert id="insertBasketHonorRecordByBatch" parameterType="ArrayList">
+		insert into basket_honor_record(id,tournament_id,season_id,honor_category_id,team_id,player_id,match_id,honor_title,honor_subtitle,honor_value,award_date,cover_file_id,source_type,source_id,display_status,display_order,remark,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{tournamentId},#{seasonId},#{honorCategoryId},#{teamId},#{playerId},#{matchId},#{honorTitle},#{honorSubtitle},#{honorValue},#{awardDate},#{coverFileId},#{sourceType},#{sourceId},#{displayStatus},#{displayOrder},#{remark},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketHonorRecord的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketHonorRecordById" parameterType="Long">
+		delete from basket_honor_record
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketHonorRecord的id将BasketHonorRecord的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketHonorRecordById" parameterType="com.zhs.model.BasketHonorRecord"> 
+		update basket_honor_record set
+		<set>
+			tournament_id = #{tournamentId} , 
+			season_id = #{seasonId} , 
+			honor_category_id = #{honorCategoryId} , 
+			team_id = #{teamId} , 
+			player_id = #{playerId} , 
+			match_id = #{matchId} , 
+			honor_title = #{honorTitle} , 
+			honor_subtitle = #{honorSubtitle} , 
+			honor_value = #{honorValue} , 
+			award_date = #{awardDate} , 
+			cover_file_id = #{coverFileId} , 
+			source_type = #{sourceType} , 
+			source_id = #{sourceId} , 
+			display_status = #{displayStatus} , 
+			display_order = #{displayOrder} , 
+			remark = #{remark} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketHonorRecord的id将BasketHonorRecord中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketHonorRecordById" parameterType="com.zhs.model.BasketHonorRecord">
+		update basket_honor_record
+		<set>
+					<if test="tournamentId != null">tournament_id = #{tournamentId},</if>
+					<if test="seasonId != null">season_id = #{seasonId},</if>
+					<if test="honorCategoryId != null">honor_category_id = #{honorCategoryId},</if>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="playerId != null">player_id = #{playerId},</if>
+					<if test="matchId != null">match_id = #{matchId},</if>
+					<if test="honorTitle != null">honor_title = #{honorTitle},</if>
+					<if test="honorSubtitle != null">honor_subtitle = #{honorSubtitle},</if>
+					<if test="honorValue != null">honor_value = #{honorValue},</if>
+					<if test="awardDate != null">award_date = #{awardDate},</if>
+					<if test="coverFileId != null">cover_file_id = #{coverFileId},</if>
+					<if test="sourceType != null">source_type = #{sourceType},</if>
+					<if test="sourceId != null">source_id = #{sourceId},</if>
+					<if test="displayStatus != null">display_status = #{displayStatus},</if>
+					<if test="displayOrder != null">display_order = #{displayOrder},</if>
+					<if test="remark != null">remark = #{remark},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

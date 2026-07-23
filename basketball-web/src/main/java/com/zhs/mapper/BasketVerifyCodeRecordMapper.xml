@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketVerifyCodeRecordDao">
+	<resultMap id="result_BasketVerifyCodeRecordMapper.xml" type="com.zhs.model.BasketVerifyCodeRecord">
+		<id column="id" property="id" />
+		<result column="biz_no" property="bizNo" />
+		<result column="channel_type" property="channelType" />
+		<result column="receiver" property="receiver" />
+		<result column="purpose_type" property="purposeType" />
+		<result column="code_hash" property="codeHash" />
+		<result column="expire_time" property="expireTime" />
+		<result column="send_status" property="sendStatus" />
+		<result column="verify_status" property="verifyStatus" />
+		<result column="verify_time" property="verifyTime" />
+		<result column="send_provider" property="sendProvider" />
+		<result column="provider_message_id" property="providerMessageId" />
+		<result column="client_ip" property="clientIp" />
+		<result column="failure_reason" property="failureReason" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_verify_code_record的列名 -->
+	<sql id="basket_verify_code_record_Column">
+		id,biz_no,channel_type,receiver,purpose_type,code_hash,send_status,verify_status,expire_time,verify_time,send_provider,provider_message_id,client_ip,failure_reason,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketVerifyCodeRecord的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketVerifyCodeRecordById" parameterType="Long" resultMap="result_BasketVerifyCodeRecordMapper.xml">
+		select
+		<include refid="basket_verify_code_record_Column" />
+		from basket_verify_code_record
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketVerifyCodeRecord对象,以参数BasketVerifyCodeRecord对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketVerifyCodeRecordObjSingle" parameterType="com.zhs.model.BasketVerifyCodeRecord" resultMap="result_BasketVerifyCodeRecordMapper.xml">
+		select
+		<include refid="basket_verify_code_record_Column" />
+		from basket_verify_code_record
+		<where>
+		<if test="sendStatus != null"> and send_status = #{sendStatus}</if>
+		<if test="verifyStatus != null"> and verify_status = #{verifyStatus}</if>
+		<if test="verifyTime != null"> and verify_time = #{verifyTime}</if>
+		<if test="sendProvider != null"> and send_provider = #{sendProvider}</if>
+		<if test="providerMessageId != null"> and provider_message_id = #{providerMessageId}</if>
+		<if test="clientIp != null"> and client_ip = #{clientIp}</if>
+		<if test="failureReason != null"> and failure_reason = #{failureReason}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="bizNo != null"> and biz_no = #{bizNo}</if>
+		<if test="channelType != null"> and channel_type = #{channelType}</if>
+		<if test="receiver != null"> and receiver = #{receiver}</if>
+		<if test="purposeType != null"> and purpose_type = #{purposeType}</if>
+		<if test="codeHash != null"> and code_hash = #{codeHash}</if>
+		<if test="expireTime != null"> and expire_time = #{expireTime}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketVerifyCodeRecord对象,以参数BasketVerifyCodeRecord对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketVerifyCodeRecordByObj" parameterType="com.zhs.model.BasketVerifyCodeRecord" resultMap="result_BasketVerifyCodeRecordMapper.xml">
+		select
+		<include refid="basket_verify_code_record_Column" />
+		from basket_verify_code_record
+		<where>
+		<if test="sendStatus != null"> and send_status = #{sendStatus}</if>
+		<if test="verifyStatus != null"> and verify_status = #{verifyStatus}</if>
+		<if test="verifyTime != null"> and verify_time = #{verifyTime}</if>
+		<if test="sendProvider != null"> and send_provider = #{sendProvider}</if>
+		<if test="providerMessageId != null"> and provider_message_id = #{providerMessageId}</if>
+		<if test="clientIp != null"> and client_ip = #{clientIp}</if>
+		<if test="failureReason != null"> and failure_reason = #{failureReason}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="bizNo != null"> and biz_no = #{bizNo}</if>
+		<if test="channelType != null"> and channel_type = #{channelType}</if>
+		<if test="receiver != null"> and receiver = #{receiver}</if>
+		<if test="purposeType != null"> and purpose_type = #{purposeType}</if>
+		<if test="codeHash != null"> and code_hash = #{codeHash}</if>
+		<if test="expireTime != null"> and expire_time = #{expireTime}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketVerifyCodeRecord插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketVerifyCodeRecord" parameterType="com.zhs.model.BasketVerifyCodeRecord">
+		insert into 
+		basket_verify_code_record (id,biz_no,channel_type,receiver,purpose_type,code_hash,send_status,verify_status,expire_time,verify_time,send_provider,provider_message_id,client_ip,failure_reason,create_time,update_time,is_delete) 
+		values(#{id},#{bizNo},#{channelType},#{receiver},#{purposeType},#{codeHash},#{sendStatus},#{verifyStatus},#{expireTime},#{verifyTime},#{sendProvider},#{providerMessageId},#{clientIp},#{failureReason},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketVerifyCodeRecord中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketVerifyCodeRecord" parameterType="com.zhs.model.BasketVerifyCodeRecord">
+		insert into basket_verify_code_record
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="bizNo != null">biz_no,</if>
+			<if test="channelType != null">channel_type,</if>
+			<if test="receiver != null">receiver,</if>
+			<if test="purposeType != null">purpose_type,</if>
+			<if test="codeHash != null">code_hash,</if>
+			<if test="sendStatus != null">send_status,</if>
+			<if test="verifyStatus != null">verify_status,</if>
+			<if test="expireTime != null">expire_time,</if>
+			<if test="verifyTime != null">verify_time,</if>
+			<if test="sendProvider != null">send_provider,</if>
+			<if test="providerMessageId != null">provider_message_id,</if>
+			<if test="clientIp != null">client_ip,</if>
+			<if test="failureReason != null">failure_reason,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="bizNo != null">#{bizNo},</if>
+			<if test="channelType != null">#{channelType},</if>
+			<if test="receiver != null">#{receiver},</if>
+			<if test="purposeType != null">#{purposeType},</if>
+			<if test="codeHash != null">#{codeHash},</if>
+			<if test="sendStatus != null">#{sendStatus},</if>
+			<if test="verifyStatus != null">#{verifyStatus},</if>
+			<if test="expireTime != null">#{expireTime},</if>
+			<if test="verifyTime != null">#{verifyTime},</if>
+			<if test="sendProvider != null">#{sendProvider},</if>
+			<if test="providerMessageId != null">#{providerMessageId},</if>
+			<if test="clientIp != null">#{clientIp},</if>
+			<if test="failureReason != null">#{failureReason},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketVerifyCodeRecord批量插入到对应数据库的表中 -->
+	<insert id="insertBasketVerifyCodeRecordByBatch" parameterType="ArrayList">
+		insert into basket_verify_code_record(id,biz_no,channel_type,receiver,purpose_type,code_hash,send_status,verify_status,expire_time,verify_time,send_provider,provider_message_id,client_ip,failure_reason,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{bizNo},#{channelType},#{receiver},#{purposeType},#{codeHash},#{sendStatus},#{verifyStatus},#{expireTime},#{verifyTime},#{sendProvider},#{providerMessageId},#{clientIp},#{failureReason},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketVerifyCodeRecord的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketVerifyCodeRecordById" parameterType="Long">
+		delete from basket_verify_code_record
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketVerifyCodeRecord的id将BasketVerifyCodeRecord的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketVerifyCodeRecordById" parameterType="com.zhs.model.BasketVerifyCodeRecord"> 
+		update basket_verify_code_record set
+		<set>
+			biz_no = #{bizNo} , 
+			channel_type = #{channelType} , 
+			receiver = #{receiver} , 
+			purpose_type = #{purposeType} , 
+			code_hash = #{codeHash} , 
+			send_status = #{sendStatus} , 
+			verify_status = #{verifyStatus} , 
+			expire_time = #{expireTime} , 
+			verify_time = #{verifyTime} , 
+			send_provider = #{sendProvider} , 
+			provider_message_id = #{providerMessageId} , 
+			client_ip = #{clientIp} , 
+			failure_reason = #{failureReason} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketVerifyCodeRecord的id将BasketVerifyCodeRecord中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketVerifyCodeRecordById" parameterType="com.zhs.model.BasketVerifyCodeRecord">
+		update basket_verify_code_record
+		<set>
+					<if test="bizNo != null">biz_no = #{bizNo},</if>
+					<if test="channelType != null">channel_type = #{channelType},</if>
+					<if test="receiver != null">receiver = #{receiver},</if>
+					<if test="purposeType != null">purpose_type = #{purposeType},</if>
+					<if test="codeHash != null">code_hash = #{codeHash},</if>
+					<if test="sendStatus != null">send_status = #{sendStatus},</if>
+					<if test="verifyStatus != null">verify_status = #{verifyStatus},</if>
+					<if test="expireTime != null">expire_time = #{expireTime},</if>
+					<if test="verifyTime != null">verify_time = #{verifyTime},</if>
+					<if test="sendProvider != null">send_provider = #{sendProvider},</if>
+					<if test="providerMessageId != null">provider_message_id = #{providerMessageId},</if>
+					<if test="clientIp != null">client_ip = #{clientIp},</if>
+					<if test="failureReason != null">failure_reason = #{failureReason},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

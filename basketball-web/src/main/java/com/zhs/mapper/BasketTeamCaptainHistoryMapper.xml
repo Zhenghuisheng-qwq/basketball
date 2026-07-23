@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTeamCaptainHistoryDao">
+	<resultMap id="result_BasketTeamCaptainHistoryMapper.xml" type="com.zhs.model.BasketTeamCaptainHistory">
+		<id column="id" property="id" />
+		<result column="team_id" property="teamId" />
+		<result column="new_captain_member_id" property="newCaptainMemberId" />
+		<result column="new_captain_player_id" property="newCaptainPlayerId" />
+		<result column="change_type" property="changeType" />
+		<result column="effective_time" property="effectiveTime" />
+		<result column="operator_id" property="operatorId" />
+		<result column="old_captain_member_id" property="oldCaptainMemberId" />
+		<result column="old_captain_player_id" property="oldCaptainPlayerId" />
+		<result column="change_reason" property="changeReason" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_team_captain_history的列名 -->
+	<sql id="basket_team_captain_history_Column">
+		id,team_id,old_captain_member_id,old_captain_player_id,new_captain_member_id,new_captain_player_id,change_type,change_reason,effective_time,operator_id,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketTeamCaptainHistory的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTeamCaptainHistoryById" parameterType="Long" resultMap="result_BasketTeamCaptainHistoryMapper.xml">
+		select
+		<include refid="basket_team_captain_history_Column" />
+		from basket_team_captain_history
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTeamCaptainHistory对象,以参数BasketTeamCaptainHistory对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamCaptainHistoryObjSingle" parameterType="com.zhs.model.BasketTeamCaptainHistory" resultMap="result_BasketTeamCaptainHistoryMapper.xml">
+		select
+		<include refid="basket_team_captain_history_Column" />
+		from basket_team_captain_history
+		<where>
+		<if test="oldCaptainMemberId != null"> and old_captain_member_id = #{oldCaptainMemberId}</if>
+		<if test="oldCaptainPlayerId != null"> and old_captain_player_id = #{oldCaptainPlayerId}</if>
+		<if test="changeReason != null"> and change_reason = #{changeReason}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="newCaptainMemberId != null"> and new_captain_member_id = #{newCaptainMemberId}</if>
+		<if test="newCaptainPlayerId != null"> and new_captain_player_id = #{newCaptainPlayerId}</if>
+		<if test="changeType != null"> and change_type = #{changeType}</if>
+		<if test="effectiveTime != null"> and effective_time = #{effectiveTime}</if>
+		<if test="operatorId != null"> and operator_id = #{operatorId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTeamCaptainHistory对象,以参数BasketTeamCaptainHistory对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamCaptainHistoryByObj" parameterType="com.zhs.model.BasketTeamCaptainHistory" resultMap="result_BasketTeamCaptainHistoryMapper.xml">
+		select
+		<include refid="basket_team_captain_history_Column" />
+		from basket_team_captain_history
+		<where>
+		<if test="oldCaptainMemberId != null"> and old_captain_member_id = #{oldCaptainMemberId}</if>
+		<if test="oldCaptainPlayerId != null"> and old_captain_player_id = #{oldCaptainPlayerId}</if>
+		<if test="changeReason != null"> and change_reason = #{changeReason}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="newCaptainMemberId != null"> and new_captain_member_id = #{newCaptainMemberId}</if>
+		<if test="newCaptainPlayerId != null"> and new_captain_player_id = #{newCaptainPlayerId}</if>
+		<if test="changeType != null"> and change_type = #{changeType}</if>
+		<if test="effectiveTime != null"> and effective_time = #{effectiveTime}</if>
+		<if test="operatorId != null"> and operator_id = #{operatorId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTeamCaptainHistory插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTeamCaptainHistory" parameterType="com.zhs.model.BasketTeamCaptainHistory">
+		insert into 
+		basket_team_captain_history (id,team_id,old_captain_member_id,old_captain_player_id,new_captain_member_id,new_captain_player_id,change_type,change_reason,effective_time,operator_id,create_time,update_time,is_delete) 
+		values(#{id},#{teamId},#{oldCaptainMemberId},#{oldCaptainPlayerId},#{newCaptainMemberId},#{newCaptainPlayerId},#{changeType},#{changeReason},#{effectiveTime},#{operatorId},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketTeamCaptainHistory中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTeamCaptainHistory" parameterType="com.zhs.model.BasketTeamCaptainHistory">
+		insert into basket_team_captain_history
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="oldCaptainMemberId != null">old_captain_member_id,</if>
+			<if test="oldCaptainPlayerId != null">old_captain_player_id,</if>
+			<if test="newCaptainMemberId != null">new_captain_member_id,</if>
+			<if test="newCaptainPlayerId != null">new_captain_player_id,</if>
+			<if test="changeType != null">change_type,</if>
+			<if test="changeReason != null">change_reason,</if>
+			<if test="effectiveTime != null">effective_time,</if>
+			<if test="operatorId != null">operator_id,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="oldCaptainMemberId != null">#{oldCaptainMemberId},</if>
+			<if test="oldCaptainPlayerId != null">#{oldCaptainPlayerId},</if>
+			<if test="newCaptainMemberId != null">#{newCaptainMemberId},</if>
+			<if test="newCaptainPlayerId != null">#{newCaptainPlayerId},</if>
+			<if test="changeType != null">#{changeType},</if>
+			<if test="changeReason != null">#{changeReason},</if>
+			<if test="effectiveTime != null">#{effectiveTime},</if>
+			<if test="operatorId != null">#{operatorId},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTeamCaptainHistory批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTeamCaptainHistoryByBatch" parameterType="ArrayList">
+		insert into basket_team_captain_history(id,team_id,old_captain_member_id,old_captain_player_id,new_captain_member_id,new_captain_player_id,change_type,change_reason,effective_time,operator_id,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{teamId},#{oldCaptainMemberId},#{oldCaptainPlayerId},#{newCaptainMemberId},#{newCaptainPlayerId},#{changeType},#{changeReason},#{effectiveTime},#{operatorId},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTeamCaptainHistory的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTeamCaptainHistoryById" parameterType="Long">
+		delete from basket_team_captain_history
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTeamCaptainHistory的id将BasketTeamCaptainHistory的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTeamCaptainHistoryById" parameterType="com.zhs.model.BasketTeamCaptainHistory"> 
+		update basket_team_captain_history set
+		<set>
+			team_id = #{teamId} , 
+			old_captain_member_id = #{oldCaptainMemberId} , 
+			old_captain_player_id = #{oldCaptainPlayerId} , 
+			new_captain_member_id = #{newCaptainMemberId} , 
+			new_captain_player_id = #{newCaptainPlayerId} , 
+			change_type = #{changeType} , 
+			change_reason = #{changeReason} , 
+			effective_time = #{effectiveTime} , 
+			operator_id = #{operatorId} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTeamCaptainHistory的id将BasketTeamCaptainHistory中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTeamCaptainHistoryById" parameterType="com.zhs.model.BasketTeamCaptainHistory">
+		update basket_team_captain_history
+		<set>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="oldCaptainMemberId != null">old_captain_member_id = #{oldCaptainMemberId},</if>
+					<if test="oldCaptainPlayerId != null">old_captain_player_id = #{oldCaptainPlayerId},</if>
+					<if test="newCaptainMemberId != null">new_captain_member_id = #{newCaptainMemberId},</if>
+					<if test="newCaptainPlayerId != null">new_captain_player_id = #{newCaptainPlayerId},</if>
+					<if test="changeType != null">change_type = #{changeType},</if>
+					<if test="changeReason != null">change_reason = #{changeReason},</if>
+					<if test="effectiveTime != null">effective_time = #{effectiveTime},</if>
+					<if test="operatorId != null">operator_id = #{operatorId},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

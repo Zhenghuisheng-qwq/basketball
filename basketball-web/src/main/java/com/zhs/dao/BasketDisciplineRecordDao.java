@@ -1,0 +1,20 @@
+package com.zhs.dao;
+
+
+import com.zhs.model.BasketDisciplineRecord;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Mapper;
+import org.springframework.stereotype.Repository;
+
+
+/**
+ * 赛事处罚记录表 的dao
+ *
+ * @author 
+ * @since 2026-07-24
+ */
+@Mapper
+@Repository
+public interface BasketDisciplineRecordDao extends BaseMapper<BasketDisciplineRecord> {
+
+}

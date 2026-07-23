@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTeamInvitationDao">
+	<resultMap id="result_BasketTeamInvitationMapper.xml" type="com.zhs.model.BasketTeamInvitation">
+		<id column="id" property="id" />
+		<result column="invitation_no" property="invitationNo" />
+		<result column="team_id" property="teamId" />
+		<result column="inviter_member_id" property="inviterMemberId" />
+		<result column="invitee_member_id" property="inviteeMemberId" />
+		<result column="invitee_player_id" property="inviteePlayerId" />
+		<result column="expire_time" property="expireTime" />
+		<result column="invitation_message" property="invitationMessage" />
+		<result column="invitation_status" property="invitationStatus" />
+		<result column="responded_time" property="respondedTime" />
+		<result column="response_remark" property="responseRemark" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_team_invitation的列名 -->
+	<sql id="basket_team_invitation_Column">
+		id,invitation_no,team_id,inviter_member_id,invitee_member_id,invitee_player_id,invitation_message,invitation_status,expire_time,responded_time,response_remark,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketTeamInvitation的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTeamInvitationById" parameterType="Long" resultMap="result_BasketTeamInvitationMapper.xml">
+		select
+		<include refid="basket_team_invitation_Column" />
+		from basket_team_invitation
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTeamInvitation对象,以参数BasketTeamInvitation对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamInvitationObjSingle" parameterType="com.zhs.model.BasketTeamInvitation" resultMap="result_BasketTeamInvitationMapper.xml">
+		select
+		<include refid="basket_team_invitation_Column" />
+		from basket_team_invitation
+		<where>
+		<if test="invitationMessage != null"> and invitation_message = #{invitationMessage}</if>
+		<if test="invitationStatus != null"> and invitation_status = #{invitationStatus}</if>
+		<if test="respondedTime != null"> and responded_time = #{respondedTime}</if>
+		<if test="responseRemark != null"> and response_remark = #{responseRemark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="invitationNo != null"> and invitation_no = #{invitationNo}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="inviterMemberId != null"> and inviter_member_id = #{inviterMemberId}</if>
+		<if test="inviteeMemberId != null"> and invitee_member_id = #{inviteeMemberId}</if>
+		<if test="inviteePlayerId != null"> and invitee_player_id = #{inviteePlayerId}</if>
+		<if test="expireTime != null"> and expire_time = #{expireTime}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTeamInvitation对象,以参数BasketTeamInvitation对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamInvitationByObj" parameterType="com.zhs.model.BasketTeamInvitation" resultMap="result_BasketTeamInvitationMapper.xml">
+		select
+		<include refid="basket_team_invitation_Column" />
+		from basket_team_invitation
+		<where>
+		<if test="invitationMessage != null"> and invitation_message = #{invitationMessage}</if>
+		<if test="invitationStatus != null"> and invitation_status = #{invitationStatus}</if>
+		<if test="respondedTime != null"> and responded_time = #{respondedTime}</if>
+		<if test="responseRemark != null"> and response_remark = #{responseRemark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="invitationNo != null"> and invitation_no = #{invitationNo}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="inviterMemberId != null"> and inviter_member_id = #{inviterMemberId}</if>
+		<if test="inviteeMemberId != null"> and invitee_member_id = #{inviteeMemberId}</if>
+		<if test="inviteePlayerId != null"> and invitee_player_id = #{inviteePlayerId}</if>
+		<if test="expireTime != null"> and expire_time = #{expireTime}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTeamInvitation插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTeamInvitation" parameterType="com.zhs.model.BasketTeamInvitation">
+		insert into 
+		basket_team_invitation (id,invitation_no,team_id,inviter_member_id,invitee_member_id,invitee_player_id,invitation_message,invitation_status,expire_time,responded_time,response_remark,create_time,update_time,is_delete) 
+		values(#{id},#{invitationNo},#{teamId},#{inviterMemberId},#{inviteeMemberId},#{inviteePlayerId},#{invitationMessage},#{invitationStatus},#{expireTime},#{respondedTime},#{responseRemark},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketTeamInvitation中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTeamInvitation" parameterType="com.zhs.model.BasketTeamInvitation">
+		insert into basket_team_invitation
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="invitationNo != null">invitation_no,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="inviterMemberId != null">inviter_member_id,</if>
+			<if test="inviteeMemberId != null">invitee_member_id,</if>
+			<if test="inviteePlayerId != null">invitee_player_id,</if>
+			<if test="invitationMessage != null">invitation_message,</if>
+			<if test="invitationStatus != null">invitation_status,</if>
+			<if test="expireTime != null">expire_time,</if>
+			<if test="respondedTime != null">responded_time,</if>
+			<if test="responseRemark != null">response_remark,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="invitationNo != null">#{invitationNo},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="inviterMemberId != null">#{inviterMemberId},</if>
+			<if test="inviteeMemberId != null">#{inviteeMemberId},</if>
+			<if test="inviteePlayerId != null">#{inviteePlayerId},</if>
+			<if test="invitationMessage != null">#{invitationMessage},</if>
+			<if test="invitationStatus != null">#{invitationStatus},</if>
+			<if test="expireTime != null">#{expireTime},</if>
+			<if test="respondedTime != null">#{respondedTime},</if>
+			<if test="responseRemark != null">#{responseRemark},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTeamInvitation批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTeamInvitationByBatch" parameterType="ArrayList">
+		insert into basket_team_invitation(id,invitation_no,team_id,inviter_member_id,invitee_member_id,invitee_player_id,invitation_message,invitation_status,expire_time,responded_time,response_remark,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{invitationNo},#{teamId},#{inviterMemberId},#{inviteeMemberId},#{inviteePlayerId},#{invitationMessage},#{invitationStatus},#{expireTime},#{respondedTime},#{responseRemark},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTeamInvitation的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTeamInvitationById" parameterType="Long">
+		delete from basket_team_invitation
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTeamInvitation的id将BasketTeamInvitation的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTeamInvitationById" parameterType="com.zhs.model.BasketTeamInvitation"> 
+		update basket_team_invitation set
+		<set>
+			invitation_no = #{invitationNo} , 
+			team_id = #{teamId} , 
+			inviter_member_id = #{inviterMemberId} , 
+			invitee_member_id = #{inviteeMemberId} , 
+			invitee_player_id = #{inviteePlayerId} , 
+			invitation_message = #{invitationMessage} , 
+			invitation_status = #{invitationStatus} , 
+			expire_time = #{expireTime} , 
+			responded_time = #{respondedTime} , 
+			response_remark = #{responseRemark} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTeamInvitation的id将BasketTeamInvitation中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTeamInvitationById" parameterType="com.zhs.model.BasketTeamInvitation">
+		update basket_team_invitation
+		<set>
+					<if test="invitationNo != null">invitation_no = #{invitationNo},</if>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="inviterMemberId != null">inviter_member_id = #{inviterMemberId},</if>
+					<if test="inviteeMemberId != null">invitee_member_id = #{inviteeMemberId},</if>
+					<if test="inviteePlayerId != null">invitee_player_id = #{inviteePlayerId},</if>
+					<if test="invitationMessage != null">invitation_message = #{invitationMessage},</if>
+					<if test="invitationStatus != null">invitation_status = #{invitationStatus},</if>
+					<if test="expireTime != null">expire_time = #{expireTime},</if>
+					<if test="respondedTime != null">responded_time = #{respondedTime},</if>
+					<if test="responseRemark != null">response_remark = #{responseRemark},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

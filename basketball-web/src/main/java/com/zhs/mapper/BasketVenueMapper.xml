@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketVenueDao">
+	<resultMap id="result_BasketVenueMapper.xml" type="com.zhs.model.BasketVenue">
+		<id column="id" property="id" />
+		<result column="venue_no" property="venueNo" />
+		<result column="venue_name" property="venueName" />
+		<result column="province_code" property="provinceCode" />
+		<result column="province_name" property="provinceName" />
+		<result column="city_code" property="cityCode" />
+		<result column="city_name" property="cityName" />
+		<result column="address" property="address" />
+		<result column="contact_name" property="contactName" />
+		<result column="contact_phone" property="contactPhone" />
+		<result column="capacity" property="capacity" />
+		<result column="longitude" property="longitude" />
+		<result column="latitude" property="latitude" />
+		<result column="venue_status" property="venueStatus" />
+		<result column="remark" property="remark" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_venue的列名 -->
+	<sql id="basket_venue_Column">
+		id,venue_no,venue_name,province_code,province_name,city_code,city_name,address,contact_name,contact_phone,capacity,longitude,latitude,venue_status,remark,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketVenue的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketVenueById" parameterType="Long" resultMap="result_BasketVenueMapper.xml">
+		select
+		<include refid="basket_venue_Column" />
+		from basket_venue
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketVenue对象,以参数BasketVenue对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketVenueObjSingle" parameterType="com.zhs.model.BasketVenue" resultMap="result_BasketVenueMapper.xml">
+		select
+		<include refid="basket_venue_Column" />
+		from basket_venue
+		<where>
+		<if test="provinceCode != null"> and province_code = #{provinceCode}</if>
+		<if test="provinceName != null"> and province_name = #{provinceName}</if>
+		<if test="cityCode != null"> and city_code = #{cityCode}</if>
+		<if test="cityName != null"> and city_name = #{cityName}</if>
+		<if test="address != null"> and address = #{address}</if>
+		<if test="contactName != null"> and contact_name = #{contactName}</if>
+		<if test="contactPhone != null"> and contact_phone = #{contactPhone}</if>
+		<if test="capacity != null"> and capacity = #{capacity}</if>
+		<if test="longitude != null"> and longitude = #{longitude}</if>
+		<if test="latitude != null"> and latitude = #{latitude}</if>
+		<if test="venueStatus != null"> and venue_status = #{venueStatus}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="venueNo != null"> and venue_no = #{venueNo}</if>
+		<if test="venueName != null"> and venue_name = #{venueName}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketVenue对象,以参数BasketVenue对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketVenueByObj" parameterType="com.zhs.model.BasketVenue" resultMap="result_BasketVenueMapper.xml">
+		select
+		<include refid="basket_venue_Column" />
+		from basket_venue
+		<where>
+		<if test="provinceCode != null"> and province_code = #{provinceCode}</if>
+		<if test="provinceName != null"> and province_name = #{provinceName}</if>
+		<if test="cityCode != null"> and city_code = #{cityCode}</if>
+		<if test="cityName != null"> and city_name = #{cityName}</if>
+		<if test="address != null"> and address = #{address}</if>
+		<if test="contactName != null"> and contact_name = #{contactName}</if>
+		<if test="contactPhone != null"> and contact_phone = #{contactPhone}</if>
+		<if test="capacity != null"> and capacity = #{capacity}</if>
+		<if test="longitude != null"> and longitude = #{longitude}</if>
+		<if test="latitude != null"> and latitude = #{latitude}</if>
+		<if test="venueStatus != null"> and venue_status = #{venueStatus}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="venueNo != null"> and venue_no = #{venueNo}</if>
+		<if test="venueName != null"> and venue_name = #{venueName}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketVenue插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketVenue" parameterType="com.zhs.model.BasketVenue">
+		insert into 
+		basket_venue (id,venue_no,venue_name,province_code,province_name,city_code,city_name,address,contact_name,contact_phone,capacity,longitude,latitude,venue_status,remark,create_time,update_time,is_delete) 
+		values(#{id},#{venueNo},#{venueName},#{provinceCode},#{provinceName},#{cityCode},#{cityName},#{address},#{contactName},#{contactPhone},#{capacity},#{longitude},#{latitude},#{venueStatus},#{remark},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketVenue中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketVenue" parameterType="com.zhs.model.BasketVenue">
+		insert into basket_venue
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="venueNo != null">venue_no,</if>
+			<if test="venueName != null">venue_name,</if>
+			<if test="provinceCode != null">province_code,</if>
+			<if test="provinceName != null">province_name,</if>
+			<if test="cityCode != null">city_code,</if>
+			<if test="cityName != null">city_name,</if>
+			<if test="address != null">address,</if>
+			<if test="contactName != null">contact_name,</if>
+			<if test="contactPhone != null">contact_phone,</if>
+			<if test="capacity != null">capacity,</if>
+			<if test="longitude != null">longitude,</if>
+			<if test="latitude != null">latitude,</if>
+			<if test="venueStatus != null">venue_status,</if>
+			<if test="remark != null">remark,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="venueNo != null">#{venueNo},</if>
+			<if test="venueName != null">#{venueName},</if>
+			<if test="provinceCode != null">#{provinceCode},</if>
+			<if test="provinceName != null">#{provinceName},</if>
+			<if test="cityCode != null">#{cityCode},</if>
+			<if test="cityName != null">#{cityName},</if>
+			<if test="address != null">#{address},</if>
+			<if test="contactName != null">#{contactName},</if>
+			<if test="contactPhone != null">#{contactPhone},</if>
+			<if test="capacity != null">#{capacity},</if>
+			<if test="longitude != null">#{longitude},</if>
+			<if test="latitude != null">#{latitude},</if>
+			<if test="venueStatus != null">#{venueStatus},</if>
+			<if test="remark != null">#{remark},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketVenue批量插入到对应数据库的表中 -->
+	<insert id="insertBasketVenueByBatch" parameterType="ArrayList">
+		insert into basket_venue(id,venue_no,venue_name,province_code,province_name,city_code,city_name,address,contact_name,contact_phone,capacity,longitude,latitude,venue_status,remark,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{venueNo},#{venueName},#{provinceCode},#{provinceName},#{cityCode},#{cityName},#{address},#{contactName},#{contactPhone},#{capacity},#{longitude},#{latitude},#{venueStatus},#{remark},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketVenue的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketVenueById" parameterType="Long">
+		delete from basket_venue
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketVenue的id将BasketVenue的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketVenueById" parameterType="com.zhs.model.BasketVenue"> 
+		update basket_venue set
+		<set>
+			venue_no = #{venueNo} , 
+			venue_name = #{venueName} , 
+			province_code = #{provinceCode} , 
+			province_name = #{provinceName} , 
+			city_code = #{cityCode} , 
+			city_name = #{cityName} , 
+			address = #{address} , 
+			contact_name = #{contactName} , 
+			contact_phone = #{contactPhone} , 
+			capacity = #{capacity} , 
+			longitude = #{longitude} , 
+			latitude = #{latitude} , 
+			venue_status = #{venueStatus} , 
+			remark = #{remark} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketVenue的id将BasketVenue中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketVenueById" parameterType="com.zhs.model.BasketVenue">
+		update basket_venue
+		<set>
+					<if test="venueNo != null">venue_no = #{venueNo},</if>
+					<if test="venueName != null">venue_name = #{venueName},</if>
+					<if test="provinceCode != null">province_code = #{provinceCode},</if>
+					<if test="provinceName != null">province_name = #{provinceName},</if>
+					<if test="cityCode != null">city_code = #{cityCode},</if>
+					<if test="cityName != null">city_name = #{cityName},</if>
+					<if test="address != null">address = #{address},</if>
+					<if test="contactName != null">contact_name = #{contactName},</if>
+					<if test="contactPhone != null">contact_phone = #{contactPhone},</if>
+					<if test="capacity != null">capacity = #{capacity},</if>
+					<if test="longitude != null">longitude = #{longitude},</if>
+					<if test="latitude != null">latitude = #{latitude},</if>
+					<if test="venueStatus != null">venue_status = #{venueStatus},</if>
+					<if test="remark != null">remark = #{remark},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

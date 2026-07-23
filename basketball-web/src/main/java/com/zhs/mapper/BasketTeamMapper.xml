@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTeamDao">
+	<resultMap id="result_BasketTeamMapper.xml" type="com.zhs.model.BasketTeam">
+		<id column="id" property="id" />
+		<result column="team_no" property="teamNo" />
+		<result column="team_name" property="teamName" />
+		<result column="short_name" property="shortName" />
+		<result column="game_terminal" property="gameTerminal" />
+		<result column="captain_member_id" property="captainMemberId" />
+		<result column="captain_player_id" property="captainPlayerId" />
+		<result column="english_name" property="englishName" />
+		<result column="logo_file_id" property="logoFileId" />
+		<result column="region_code" property="regionCode" />
+		<result column="region_name" property="regionName" />
+		<result column="description" property="description" />
+		<result column="contact_member_id" property="contactMemberId" />
+		<result column="max_member_count" property="maxMemberCount" />
+		<result column="current_member_count" property="currentMemberCount" />
+		<result column="team_status" property="teamStatus" />
+		<result column="audit_status" property="auditStatus" />
+		<result column="public_status" property="publicStatus" />
+		<result column="established_date" property="establishedDate" />
+		<result column="dissolved_time" property="dissolvedTime" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_team的列名 -->
+	<sql id="basket_team_Column">
+		id,team_no,team_name,short_name,english_name,logo_file_id,region_code,region_name,game_terminal,description,contact_member_id,captain_member_id,captain_player_id,max_member_count,current_member_count,team_status,audit_status,public_status,established_date,dissolved_time,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketTeam的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTeamById" parameterType="Long" resultMap="result_BasketTeamMapper.xml">
+		select
+		<include refid="basket_team_Column" />
+		from basket_team
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTeam对象,以参数BasketTeam对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamObjSingle" parameterType="com.zhs.model.BasketTeam" resultMap="result_BasketTeamMapper.xml">
+		select
+		<include refid="basket_team_Column" />
+		from basket_team
+		<where>
+		<if test="englishName != null"> and english_name = #{englishName}</if>
+		<if test="logoFileId != null"> and logo_file_id = #{logoFileId}</if>
+		<if test="regionCode != null"> and region_code = #{regionCode}</if>
+		<if test="regionName != null"> and region_name = #{regionName}</if>
+		<if test="description != null"> and description = #{description}</if>
+		<if test="contactMemberId != null"> and contact_member_id = #{contactMemberId}</if>
+		<if test="maxMemberCount != null"> and max_member_count = #{maxMemberCount}</if>
+		<if test="currentMemberCount != null"> and current_member_count = #{currentMemberCount}</if>
+		<if test="teamStatus != null"> and team_status = #{teamStatus}</if>
+		<if test="auditStatus != null"> and audit_status = #{auditStatus}</if>
+		<if test="publicStatus != null"> and public_status = #{publicStatus}</if>
+		<if test="establishedDate != null"> and established_date = #{establishedDate}</if>
+		<if test="dissolvedTime != null"> and dissolved_time = #{dissolvedTime}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="teamNo != null"> and team_no = #{teamNo}</if>
+		<if test="teamName != null"> and team_name = #{teamName}</if>
+		<if test="shortName != null"> and short_name = #{shortName}</if>
+		<if test="gameTerminal != null"> and game_terminal = #{gameTerminal}</if>
+		<if test="captainMemberId != null"> and captain_member_id = #{captainMemberId}</if>
+		<if test="captainPlayerId != null"> and captain_player_id = #{captainPlayerId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTeam对象,以参数BasketTeam对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamByObj" parameterType="com.zhs.model.BasketTeam" resultMap="result_BasketTeamMapper.xml">
+		select
+		<include refid="basket_team_Column" />
+		from basket_team
+		<where>
+		<if test="englishName != null"> and english_name = #{englishName}</if>
+		<if test="logoFileId != null"> and logo_file_id = #{logoFileId}</if>
+		<if test="regionCode != null"> and region_code = #{regionCode}</if>
+		<if test="regionName != null"> and region_name = #{regionName}</if>
+		<if test="description != null"> and description = #{description}</if>
+		<if test="contactMemberId != null"> and contact_member_id = #{contactMemberId}</if>
+		<if test="maxMemberCount != null"> and max_member_count = #{maxMemberCount}</if>
+		<if test="currentMemberCount != null"> and current_member_count = #{currentMemberCount}</if>
+		<if test="teamStatus != null"> and team_status = #{teamStatus}</if>
+		<if test="auditStatus != null"> and audit_status = #{auditStatus}</if>
+		<if test="publicStatus != null"> and public_status = #{publicStatus}</if>
+		<if test="establishedDate != null"> and established_date = #{establishedDate}</if>
+		<if test="dissolvedTime != null"> and dissolved_time = #{dissolvedTime}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="teamNo != null"> and team_no = #{teamNo}</if>
+		<if test="teamName != null"> and team_name = #{teamName}</if>
+		<if test="shortName != null"> and short_name = #{shortName}</if>
+		<if test="gameTerminal != null"> and game_terminal = #{gameTerminal}</if>
+		<if test="captainMemberId != null"> and captain_member_id = #{captainMemberId}</if>
+		<if test="captainPlayerId != null"> and captain_player_id = #{captainPlayerId}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTeam插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTeam" parameterType="com.zhs.model.BasketTeam">
+		insert into 
+		basket_team (id,team_no,team_name,short_name,english_name,logo_file_id,region_code,region_name,game_terminal,description,contact_member_id,captain_member_id,captain_player_id,max_member_count,current_member_count,team_status,audit_status,public_status,established_date,dissolved_time,create_time,update_time,is_delete) 
+		values(#{id},#{teamNo},#{teamName},#{shortName},#{englishName},#{logoFileId},#{regionCode},#{regionName},#{gameTerminal},#{description},#{contactMemberId},#{captainMemberId},#{captainPlayerId},#{maxMemberCount},#{currentMemberCount},#{teamStatus},#{auditStatus},#{publicStatus},#{establishedDate},#{dissolvedTime},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketTeam中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTeam" parameterType="com.zhs.model.BasketTeam">
+		insert into basket_team
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="teamNo != null">team_no,</if>
+			<if test="teamName != null">team_name,</if>
+			<if test="shortName != null">short_name,</if>
+			<if test="englishName != null">english_name,</if>
+			<if test="logoFileId != null">logo_file_id,</if>
+			<if test="regionCode != null">region_code,</if>
+			<if test="regionName != null">region_name,</if>
+			<if test="gameTerminal != null">game_terminal,</if>
+			<if test="description != null">description,</if>
+			<if test="contactMemberId != null">contact_member_id,</if>
+			<if test="captainMemberId != null">captain_member_id,</if>
+			<if test="captainPlayerId != null">captain_player_id,</if>
+			<if test="maxMemberCount != null">max_member_count,</if>
+			<if test="currentMemberCount != null">current_member_count,</if>
+			<if test="teamStatus != null">team_status,</if>
+			<if test="auditStatus != null">audit_status,</if>
+			<if test="publicStatus != null">public_status,</if>
+			<if test="establishedDate != null">established_date,</if>
+			<if test="dissolvedTime != null">dissolved_time,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="teamNo != null">#{teamNo},</if>
+			<if test="teamName != null">#{teamName},</if>
+			<if test="shortName != null">#{shortName},</if>
+			<if test="englishName != null">#{englishName},</if>
+			<if test="logoFileId != null">#{logoFileId},</if>
+			<if test="regionCode != null">#{regionCode},</if>
+			<if test="regionName != null">#{regionName},</if>
+			<if test="gameTerminal != null">#{gameTerminal},</if>
+			<if test="description != null">#{description},</if>
+			<if test="contactMemberId != null">#{contactMemberId},</if>
+			<if test="captainMemberId != null">#{captainMemberId},</if>
+			<if test="captainPlayerId != null">#{captainPlayerId},</if>
+			<if test="maxMemberCount != null">#{maxMemberCount},</if>
+			<if test="currentMemberCount != null">#{currentMemberCount},</if>
+			<if test="teamStatus != null">#{teamStatus},</if>
+			<if test="auditStatus != null">#{auditStatus},</if>
+			<if test="publicStatus != null">#{publicStatus},</if>
+			<if test="establishedDate != null">#{establishedDate},</if>
+			<if test="dissolvedTime != null">#{dissolvedTime},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTeam批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTeamByBatch" parameterType="ArrayList">
+		insert into basket_team(id,team_no,team_name,short_name,english_name,logo_file_id,region_code,region_name,game_terminal,description,contact_member_id,captain_member_id,captain_player_id,max_member_count,current_member_count,team_status,audit_status,public_status,established_date,dissolved_time,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{teamNo},#{teamName},#{shortName},#{englishName},#{logoFileId},#{regionCode},#{regionName},#{gameTerminal},#{description},#{contactMemberId},#{captainMemberId},#{captainPlayerId},#{maxMemberCount},#{currentMemberCount},#{teamStatus},#{auditStatus},#{publicStatus},#{establishedDate},#{dissolvedTime},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTeam的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTeamById" parameterType="Long">
+		delete from basket_team
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTeam的id将BasketTeam的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTeamById" parameterType="com.zhs.model.BasketTeam"> 
+		update basket_team set
+		<set>
+			team_no = #{teamNo} , 
+			team_name = #{teamName} , 
+			short_name = #{shortName} , 
+			english_name = #{englishName} , 
+			logo_file_id = #{logoFileId} , 
+			region_code = #{regionCode} , 
+			region_name = #{regionName} , 
+			game_terminal = #{gameTerminal} , 
+			description = #{description} , 
+			contact_member_id = #{contactMemberId} , 
+			captain_member_id = #{captainMemberId} , 
+			captain_player_id = #{captainPlayerId} , 
+			max_member_count = #{maxMemberCount} , 
+			current_member_count = #{currentMemberCount} , 
+			team_status = #{teamStatus} , 
+			audit_status = #{auditStatus} , 
+			public_status = #{publicStatus} , 
+			established_date = #{establishedDate} , 
+			dissolved_time = #{dissolvedTime} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTeam的id将BasketTeam中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTeamById" parameterType="com.zhs.model.BasketTeam">
+		update basket_team
+		<set>
+					<if test="teamNo != null">team_no = #{teamNo},</if>
+					<if test="teamName != null">team_name = #{teamName},</if>
+					<if test="shortName != null">short_name = #{shortName},</if>
+					<if test="englishName != null">english_name = #{englishName},</if>
+					<if test="logoFileId != null">logo_file_id = #{logoFileId},</if>
+					<if test="regionCode != null">region_code = #{regionCode},</if>
+					<if test="regionName != null">region_name = #{regionName},</if>
+					<if test="gameTerminal != null">game_terminal = #{gameTerminal},</if>
+					<if test="description != null">description = #{description},</if>
+					<if test="contactMemberId != null">contact_member_id = #{contactMemberId},</if>
+					<if test="captainMemberId != null">captain_member_id = #{captainMemberId},</if>
+					<if test="captainPlayerId != null">captain_player_id = #{captainPlayerId},</if>
+					<if test="maxMemberCount != null">max_member_count = #{maxMemberCount},</if>
+					<if test="currentMemberCount != null">current_member_count = #{currentMemberCount},</if>
+					<if test="teamStatus != null">team_status = #{teamStatus},</if>
+					<if test="auditStatus != null">audit_status = #{auditStatus},</if>
+					<if test="publicStatus != null">public_status = #{publicStatus},</if>
+					<if test="establishedDate != null">established_date = #{establishedDate},</if>
+					<if test="dissolvedTime != null">dissolved_time = #{dissolvedTime},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

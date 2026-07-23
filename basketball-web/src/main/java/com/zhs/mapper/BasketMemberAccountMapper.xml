@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketMemberAccountDao">
+	<resultMap id="result_BasketMemberAccountMapper.xml" type="com.zhs.model.BasketMemberAccount">
+		<id column="id" property="id" />
+		<result column="account_no" property="accountNo" />
+		<result column="mobile" property="mobile" />
+		<result column="username" property="username" />
+		<result column="password_hash" property="passwordHash" />
+		<result column="mobile_country_code" property="mobileCountryCode" />
+		<result column="email" property="email" />
+		<result column="mobile_verified" property="mobileVerified" />
+		<result column="email_verified" property="emailVerified" />
+		<result column="account_status" property="accountStatus" />
+		<result column="register_source" property="registerSource" />
+		<result column="register_terminal" property="registerTerminal" />
+		<result column="last_login_time" property="lastLoginTime" />
+		<result column="last_login_ip" property="lastLoginIp" />
+		<result column="password_update_time" property="passwordUpdateTime" />
+		<result column="lock_expire_time" property="lockExpireTime" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_member_account的列名 -->
+	<sql id="basket_member_account_Column">
+		id,account_no,username,password_hash,mobile_country_code,mobile,email,mobile_verified,email_verified,account_status,register_source,register_terminal,last_login_time,last_login_ip,password_update_time,lock_expire_time,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketMemberAccount的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketMemberAccountById" parameterType="Long" resultMap="result_BasketMemberAccountMapper.xml">
+		select
+		<include refid="basket_member_account_Column" />
+		from basket_member_account
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketMemberAccount对象,以参数BasketMemberAccount对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketMemberAccountObjSingle" parameterType="com.zhs.model.BasketMemberAccount" resultMap="result_BasketMemberAccountMapper.xml">
+		select
+		<include refid="basket_member_account_Column" />
+		from basket_member_account
+		<where>
+		<if test="username != null"> and username = #{username}</if>
+		<if test="passwordHash != null"> and password_hash = #{passwordHash}</if>
+		<if test="mobileCountryCode != null"> and mobile_country_code = #{mobileCountryCode}</if>
+		<if test="email != null"> and email = #{email}</if>
+		<if test="mobileVerified != null"> and mobile_verified = #{mobileVerified}</if>
+		<if test="emailVerified != null"> and email_verified = #{emailVerified}</if>
+		<if test="accountStatus != null"> and account_status = #{accountStatus}</if>
+		<if test="registerSource != null"> and register_source = #{registerSource}</if>
+		<if test="registerTerminal != null"> and register_terminal = #{registerTerminal}</if>
+		<if test="lastLoginTime != null"> and last_login_time = #{lastLoginTime}</if>
+		<if test="lastLoginIp != null"> and last_login_ip = #{lastLoginIp}</if>
+		<if test="passwordUpdateTime != null"> and password_update_time = #{passwordUpdateTime}</if>
+		<if test="lockExpireTime != null"> and lock_expire_time = #{lockExpireTime}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="accountNo != null"> and account_no = #{accountNo}</if>
+		<if test="mobile != null"> and mobile = #{mobile}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketMemberAccount对象,以参数BasketMemberAccount对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketMemberAccountByObj" parameterType="com.zhs.model.BasketMemberAccount" resultMap="result_BasketMemberAccountMapper.xml">
+		select
+		<include refid="basket_member_account_Column" />
+		from basket_member_account
+		<where>
+		<if test="username != null"> and username = #{username}</if>
+		<if test="passwordHash != null"> and password_hash = #{passwordHash}</if>
+		<if test="mobileCountryCode != null"> and mobile_country_code = #{mobileCountryCode}</if>
+		<if test="email != null"> and email = #{email}</if>
+		<if test="mobileVerified != null"> and mobile_verified = #{mobileVerified}</if>
+		<if test="emailVerified != null"> and email_verified = #{emailVerified}</if>
+		<if test="accountStatus != null"> and account_status = #{accountStatus}</if>
+		<if test="registerSource != null"> and register_source = #{registerSource}</if>
+		<if test="registerTerminal != null"> and register_terminal = #{registerTerminal}</if>
+		<if test="lastLoginTime != null"> and last_login_time = #{lastLoginTime}</if>
+		<if test="lastLoginIp != null"> and last_login_ip = #{lastLoginIp}</if>
+		<if test="passwordUpdateTime != null"> and password_update_time = #{passwordUpdateTime}</if>
+		<if test="lockExpireTime != null"> and lock_expire_time = #{lockExpireTime}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="accountNo != null"> and account_no = #{accountNo}</if>
+		<if test="mobile != null"> and mobile = #{mobile}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketMemberAccount插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketMemberAccount" parameterType="com.zhs.model.BasketMemberAccount">
+		insert into 
+		basket_member_account (id,account_no,username,password_hash,mobile_country_code,mobile,email,mobile_verified,email_verified,account_status,register_source,register_terminal,last_login_time,last_login_ip,password_update_time,lock_expire_time,create_time,update_time,is_delete) 
+		values(#{id},#{accountNo},#{username},#{passwordHash},#{mobileCountryCode},#{mobile},#{email},#{mobileVerified},#{emailVerified},#{accountStatus},#{registerSource},#{registerTerminal},#{lastLoginTime},#{lastLoginIp},#{passwordUpdateTime},#{lockExpireTime},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketMemberAccount中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketMemberAccount" parameterType="com.zhs.model.BasketMemberAccount">
+		insert into basket_member_account
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="accountNo != null">account_no,</if>
+			<if test="username != null">username,</if>
+			<if test="passwordHash != null">password_hash,</if>
+			<if test="mobileCountryCode != null">mobile_country_code,</if>
+			<if test="mobile != null">mobile,</if>
+			<if test="email != null">email,</if>
+			<if test="mobileVerified != null">mobile_verified,</if>
+			<if test="emailVerified != null">email_verified,</if>
+			<if test="accountStatus != null">account_status,</if>
+			<if test="registerSource != null">register_source,</if>
+			<if test="registerTerminal != null">register_terminal,</if>
+			<if test="lastLoginTime != null">last_login_time,</if>
+			<if test="lastLoginIp != null">last_login_ip,</if>
+			<if test="passwordUpdateTime != null">password_update_time,</if>
+			<if test="lockExpireTime != null">lock_expire_time,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="accountNo != null">#{accountNo},</if>
+			<if test="username != null">#{username},</if>
+			<if test="passwordHash != null">#{passwordHash},</if>
+			<if test="mobileCountryCode != null">#{mobileCountryCode},</if>
+			<if test="mobile != null">#{mobile},</if>
+			<if test="email != null">#{email},</if>
+			<if test="mobileVerified != null">#{mobileVerified},</if>
+			<if test="emailVerified != null">#{emailVerified},</if>
+			<if test="accountStatus != null">#{accountStatus},</if>
+			<if test="registerSource != null">#{registerSource},</if>
+			<if test="registerTerminal != null">#{registerTerminal},</if>
+			<if test="lastLoginTime != null">#{lastLoginTime},</if>
+			<if test="lastLoginIp != null">#{lastLoginIp},</if>
+			<if test="passwordUpdateTime != null">#{passwordUpdateTime},</if>
+			<if test="lockExpireTime != null">#{lockExpireTime},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketMemberAccount批量插入到对应数据库的表中 -->
+	<insert id="insertBasketMemberAccountByBatch" parameterType="ArrayList">
+		insert into basket_member_account(id,account_no,username,password_hash,mobile_country_code,mobile,email,mobile_verified,email_verified,account_status,register_source,register_terminal,last_login_time,last_login_ip,password_update_time,lock_expire_time,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{accountNo},#{username},#{passwordHash},#{mobileCountryCode},#{mobile},#{email},#{mobileVerified},#{emailVerified},#{accountStatus},#{registerSource},#{registerTerminal},#{lastLoginTime},#{lastLoginIp},#{passwordUpdateTime},#{lockExpireTime},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketMemberAccount的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketMemberAccountById" parameterType="Long">
+		delete from basket_member_account
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketMemberAccount的id将BasketMemberAccount的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketMemberAccountById" parameterType="com.zhs.model.BasketMemberAccount"> 
+		update basket_member_account set
+		<set>
+			account_no = #{accountNo} , 
+			username = #{username} , 
+			password_hash = #{passwordHash} , 
+			mobile_country_code = #{mobileCountryCode} , 
+			mobile = #{mobile} , 
+			email = #{email} , 
+			mobile_verified = #{mobileVerified} , 
+			email_verified = #{emailVerified} , 
+			account_status = #{accountStatus} , 
+			register_source = #{registerSource} , 
+			register_terminal = #{registerTerminal} , 
+			last_login_time = #{lastLoginTime} , 
+			last_login_ip = #{lastLoginIp} , 
+			password_update_time = #{passwordUpdateTime} , 
+			lock_expire_time = #{lockExpireTime} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketMemberAccount的id将BasketMemberAccount中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketMemberAccountById" parameterType="com.zhs.model.BasketMemberAccount">
+		update basket_member_account
+		<set>
+					<if test="accountNo != null">account_no = #{accountNo},</if>
+					<if test="username != null">username = #{username},</if>
+					<if test="passwordHash != null">password_hash = #{passwordHash},</if>
+					<if test="mobileCountryCode != null">mobile_country_code = #{mobileCountryCode},</if>
+					<if test="mobile != null">mobile = #{mobile},</if>
+					<if test="email != null">email = #{email},</if>
+					<if test="mobileVerified != null">mobile_verified = #{mobileVerified},</if>
+					<if test="emailVerified != null">email_verified = #{emailVerified},</if>
+					<if test="accountStatus != null">account_status = #{accountStatus},</if>
+					<if test="registerSource != null">register_source = #{registerSource},</if>
+					<if test="registerTerminal != null">register_terminal = #{registerTerminal},</if>
+					<if test="lastLoginTime != null">last_login_time = #{lastLoginTime},</if>
+					<if test="lastLoginIp != null">last_login_ip = #{lastLoginIp},</if>
+					<if test="passwordUpdateTime != null">password_update_time = #{passwordUpdateTime},</if>
+					<if test="lockExpireTime != null">lock_expire_time = #{lockExpireTime},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

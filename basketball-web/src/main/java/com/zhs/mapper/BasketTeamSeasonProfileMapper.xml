@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTeamSeasonProfileDao">
+	<resultMap id="result_BasketTeamSeasonProfileMapper.xml" type="com.zhs.model.BasketTeamSeasonProfile">
+		<id column="id" property="id" />
+		<result column="team_id" property="teamId" />
+		<result column="season_id" property="seasonId" />
+		<result column="display_name" property="displayName" />
+		<result column="logo_file_id" property="logoFileId" />
+		<result column="captain_player_id" property="captainPlayerId" />
+		<result column="registration_status" property="registrationStatus" />
+		<result column="seed_no" property="seedNo" />
+		<result column="group_id" property="groupId" />
+		<result column="final_rank" property="finalRank" />
+		<result column="season_status" property="seasonStatus" />
+		<result column="remark" property="remark" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_team_season_profile的列名 -->
+	<sql id="basket_team_season_profile_Column">
+		id,team_id,season_id,display_name,logo_file_id,captain_player_id,registration_status,seed_no,group_id,final_rank,season_status,remark,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketTeamSeasonProfile的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTeamSeasonProfileById" parameterType="Long" resultMap="result_BasketTeamSeasonProfileMapper.xml">
+		select
+		<include refid="basket_team_season_profile_Column" />
+		from basket_team_season_profile
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTeamSeasonProfile对象,以参数BasketTeamSeasonProfile对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamSeasonProfileObjSingle" parameterType="com.zhs.model.BasketTeamSeasonProfile" resultMap="result_BasketTeamSeasonProfileMapper.xml">
+		select
+		<include refid="basket_team_season_profile_Column" />
+		from basket_team_season_profile
+		<where>
+		<if test="logoFileId != null"> and logo_file_id = #{logoFileId}</if>
+		<if test="captainPlayerId != null"> and captain_player_id = #{captainPlayerId}</if>
+		<if test="registrationStatus != null"> and registration_status = #{registrationStatus}</if>
+		<if test="seedNo != null"> and seed_no = #{seedNo}</if>
+		<if test="groupId != null"> and group_id = #{groupId}</if>
+		<if test="finalRank != null"> and final_rank = #{finalRank}</if>
+		<if test="seasonStatus != null"> and season_status = #{seasonStatus}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="displayName != null"> and display_name = #{displayName}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTeamSeasonProfile对象,以参数BasketTeamSeasonProfile对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTeamSeasonProfileByObj" parameterType="com.zhs.model.BasketTeamSeasonProfile" resultMap="result_BasketTeamSeasonProfileMapper.xml">
+		select
+		<include refid="basket_team_season_profile_Column" />
+		from basket_team_season_profile
+		<where>
+		<if test="logoFileId != null"> and logo_file_id = #{logoFileId}</if>
+		<if test="captainPlayerId != null"> and captain_player_id = #{captainPlayerId}</if>
+		<if test="registrationStatus != null"> and registration_status = #{registrationStatus}</if>
+		<if test="seedNo != null"> and seed_no = #{seedNo}</if>
+		<if test="groupId != null"> and group_id = #{groupId}</if>
+		<if test="finalRank != null"> and final_rank = #{finalRank}</if>
+		<if test="seasonStatus != null"> and season_status = #{seasonStatus}</if>
+		<if test="remark != null"> and remark = #{remark}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="teamId != null"> and team_id = #{teamId}</if>
+		<if test="seasonId != null"> and season_id = #{seasonId}</if>
+		<if test="displayName != null"> and display_name = #{displayName}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTeamSeasonProfile插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTeamSeasonProfile" parameterType="com.zhs.model.BasketTeamSeasonProfile">
+		insert into 
+		basket_team_season_profile (id,team_id,season_id,display_name,logo_file_id,captain_player_id,registration_status,seed_no,group_id,final_rank,season_status,remark,create_time,update_time,is_delete) 
+		values(#{id},#{teamId},#{seasonId},#{displayName},#{logoFileId},#{captainPlayerId},#{registrationStatus},#{seedNo},#{groupId},#{finalRank},#{seasonStatus},#{remark},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketTeamSeasonProfile中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTeamSeasonProfile" parameterType="com.zhs.model.BasketTeamSeasonProfile">
+		insert into basket_team_season_profile
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="teamId != null">team_id,</if>
+			<if test="seasonId != null">season_id,</if>
+			<if test="displayName != null">display_name,</if>
+			<if test="logoFileId != null">logo_file_id,</if>
+			<if test="captainPlayerId != null">captain_player_id,</if>
+			<if test="registrationStatus != null">registration_status,</if>
+			<if test="seedNo != null">seed_no,</if>
+			<if test="groupId != null">group_id,</if>
+			<if test="finalRank != null">final_rank,</if>
+			<if test="seasonStatus != null">season_status,</if>
+			<if test="remark != null">remark,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="teamId != null">#{teamId},</if>
+			<if test="seasonId != null">#{seasonId},</if>
+			<if test="displayName != null">#{displayName},</if>
+			<if test="logoFileId != null">#{logoFileId},</if>
+			<if test="captainPlayerId != null">#{captainPlayerId},</if>
+			<if test="registrationStatus != null">#{registrationStatus},</if>
+			<if test="seedNo != null">#{seedNo},</if>
+			<if test="groupId != null">#{groupId},</if>
+			<if test="finalRank != null">#{finalRank},</if>
+			<if test="seasonStatus != null">#{seasonStatus},</if>
+			<if test="remark != null">#{remark},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTeamSeasonProfile批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTeamSeasonProfileByBatch" parameterType="ArrayList">
+		insert into basket_team_season_profile(id,team_id,season_id,display_name,logo_file_id,captain_player_id,registration_status,seed_no,group_id,final_rank,season_status,remark,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{teamId},#{seasonId},#{displayName},#{logoFileId},#{captainPlayerId},#{registrationStatus},#{seedNo},#{groupId},#{finalRank},#{seasonStatus},#{remark},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTeamSeasonProfile的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTeamSeasonProfileById" parameterType="Long">
+		delete from basket_team_season_profile
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTeamSeasonProfile的id将BasketTeamSeasonProfile的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTeamSeasonProfileById" parameterType="com.zhs.model.BasketTeamSeasonProfile"> 
+		update basket_team_season_profile set
+		<set>
+			team_id = #{teamId} , 
+			season_id = #{seasonId} , 
+			display_name = #{displayName} , 
+			logo_file_id = #{logoFileId} , 
+			captain_player_id = #{captainPlayerId} , 
+			registration_status = #{registrationStatus} , 
+			seed_no = #{seedNo} , 
+			group_id = #{groupId} , 
+			final_rank = #{finalRank} , 
+			season_status = #{seasonStatus} , 
+			remark = #{remark} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTeamSeasonProfile的id将BasketTeamSeasonProfile中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTeamSeasonProfileById" parameterType="com.zhs.model.BasketTeamSeasonProfile">
+		update basket_team_season_profile
+		<set>
+					<if test="teamId != null">team_id = #{teamId},</if>
+					<if test="seasonId != null">season_id = #{seasonId},</if>
+					<if test="displayName != null">display_name = #{displayName},</if>
+					<if test="logoFileId != null">logo_file_id = #{logoFileId},</if>
+					<if test="captainPlayerId != null">captain_player_id = #{captainPlayerId},</if>
+					<if test="registrationStatus != null">registration_status = #{registrationStatus},</if>
+					<if test="seedNo != null">seed_no = #{seedNo},</if>
+					<if test="groupId != null">group_id = #{groupId},</if>
+					<if test="finalRank != null">final_rank = #{finalRank},</if>
+					<if test="seasonStatus != null">season_status = #{seasonStatus},</if>
+					<if test="remark != null">remark = #{remark},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

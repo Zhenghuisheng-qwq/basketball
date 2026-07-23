@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketTournamentSeasonDao">
+	<resultMap id="result_BasketTournamentSeasonMapper.xml" type="com.zhs.model.BasketTournamentSeason">
+		<id column="id" property="id" />
+		<result column="season_no" property="seasonNo" />
+		<result column="tournament_id" property="tournamentId" />
+		<result column="season_name" property="seasonName" />
+		<result column="season_year" property="seasonYear" />
+		<result column="registration_start_time" property="registrationStartTime" />
+		<result column="registration_end_time" property="registrationEndTime" />
+		<result column="season_start_time" property="seasonStartTime" />
+		<result column="season_end_time" property="seasonEndTime" />
+		<result column="venue_id" property="venueId" />
+		<result column="max_team_count" property="maxTeamCount" />
+		<result column="min_roster_count" property="minRosterCount" />
+		<result column="max_roster_count" property="maxRosterCount" />
+		<result column="season_status" property="seasonStatus" />
+		<result column="current_stage_id" property="currentStageId" />
+		<result column="champion_team_id" property="championTeamId" />
+		<result column="runner_up_team_id" property="runnerUpTeamId" />
+		<result column="public_status" property="publicStatus" />
+		<result column="description" property="description" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_tournament_season的列名 -->
+	<sql id="basket_tournament_season_Column">
+		id,season_no,tournament_id,season_name,season_year,registration_start_time,registration_end_time,season_start_time,season_end_time,venue_id,max_team_count,min_roster_count,max_roster_count,season_status,current_stage_id,champion_team_id,runner_up_team_id,public_status,description,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketTournamentSeason的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketTournamentSeasonById" parameterType="Long" resultMap="result_BasketTournamentSeasonMapper.xml">
+		select
+		<include refid="basket_tournament_season_Column" />
+		from basket_tournament_season
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketTournamentSeason对象,以参数BasketTournamentSeason对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTournamentSeasonObjSingle" parameterType="com.zhs.model.BasketTournamentSeason" resultMap="result_BasketTournamentSeasonMapper.xml">
+		select
+		<include refid="basket_tournament_season_Column" />
+		from basket_tournament_season
+		<where>
+		<if test="registrationStartTime != null"> and registration_start_time = #{registrationStartTime}</if>
+		<if test="registrationEndTime != null"> and registration_end_time = #{registrationEndTime}</if>
+		<if test="seasonStartTime != null"> and season_start_time = #{seasonStartTime}</if>
+		<if test="seasonEndTime != null"> and season_end_time = #{seasonEndTime}</if>
+		<if test="venueId != null"> and venue_id = #{venueId}</if>
+		<if test="maxTeamCount != null"> and max_team_count = #{maxTeamCount}</if>
+		<if test="minRosterCount != null"> and min_roster_count = #{minRosterCount}</if>
+		<if test="maxRosterCount != null"> and max_roster_count = #{maxRosterCount}</if>
+		<if test="seasonStatus != null"> and season_status = #{seasonStatus}</if>
+		<if test="currentStageId != null"> and current_stage_id = #{currentStageId}</if>
+		<if test="championTeamId != null"> and champion_team_id = #{championTeamId}</if>
+		<if test="runnerUpTeamId != null"> and runner_up_team_id = #{runnerUpTeamId}</if>
+		<if test="publicStatus != null"> and public_status = #{publicStatus}</if>
+		<if test="description != null"> and description = #{description}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="seasonNo != null"> and season_no = #{seasonNo}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="seasonName != null"> and season_name = #{seasonName}</if>
+		<if test="seasonYear != null"> and season_year = #{seasonYear}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketTournamentSeason对象,以参数BasketTournamentSeason对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketTournamentSeasonByObj" parameterType="com.zhs.model.BasketTournamentSeason" resultMap="result_BasketTournamentSeasonMapper.xml">
+		select
+		<include refid="basket_tournament_season_Column" />
+		from basket_tournament_season
+		<where>
+		<if test="registrationStartTime != null"> and registration_start_time = #{registrationStartTime}</if>
+		<if test="registrationEndTime != null"> and registration_end_time = #{registrationEndTime}</if>
+		<if test="seasonStartTime != null"> and season_start_time = #{seasonStartTime}</if>
+		<if test="seasonEndTime != null"> and season_end_time = #{seasonEndTime}</if>
+		<if test="venueId != null"> and venue_id = #{venueId}</if>
+		<if test="maxTeamCount != null"> and max_team_count = #{maxTeamCount}</if>
+		<if test="minRosterCount != null"> and min_roster_count = #{minRosterCount}</if>
+		<if test="maxRosterCount != null"> and max_roster_count = #{maxRosterCount}</if>
+		<if test="seasonStatus != null"> and season_status = #{seasonStatus}</if>
+		<if test="currentStageId != null"> and current_stage_id = #{currentStageId}</if>
+		<if test="championTeamId != null"> and champion_team_id = #{championTeamId}</if>
+		<if test="runnerUpTeamId != null"> and runner_up_team_id = #{runnerUpTeamId}</if>
+		<if test="publicStatus != null"> and public_status = #{publicStatus}</if>
+		<if test="description != null"> and description = #{description}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="seasonNo != null"> and season_no = #{seasonNo}</if>
+		<if test="tournamentId != null"> and tournament_id = #{tournamentId}</if>
+		<if test="seasonName != null"> and season_name = #{seasonName}</if>
+		<if test="seasonYear != null"> and season_year = #{seasonYear}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketTournamentSeason插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketTournamentSeason" parameterType="com.zhs.model.BasketTournamentSeason">
+		insert into 
+		basket_tournament_season (id,season_no,tournament_id,season_name,season_year,registration_start_time,registration_end_time,season_start_time,season_end_time,venue_id,max_team_count,min_roster_count,max_roster_count,season_status,current_stage_id,champion_team_id,runner_up_team_id,public_status,description,create_time,update_time,is_delete) 
+		values(#{id},#{seasonNo},#{tournamentId},#{seasonName},#{seasonYear},#{registrationStartTime},#{registrationEndTime},#{seasonStartTime},#{seasonEndTime},#{venueId},#{maxTeamCount},#{minRosterCount},#{maxRosterCount},#{seasonStatus},#{currentStageId},#{championTeamId},#{runnerUpTeamId},#{publicStatus},#{description},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketTournamentSeason中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketTournamentSeason" parameterType="com.zhs.model.BasketTournamentSeason">
+		insert into basket_tournament_season
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="seasonNo != null">season_no,</if>
+			<if test="tournamentId != null">tournament_id,</if>
+			<if test="seasonName != null">season_name,</if>
+			<if test="seasonYear != null">season_year,</if>
+			<if test="registrationStartTime != null">registration_start_time,</if>
+			<if test="registrationEndTime != null">registration_end_time,</if>
+			<if test="seasonStartTime != null">season_start_time,</if>
+			<if test="seasonEndTime != null">season_end_time,</if>
+			<if test="venueId != null">venue_id,</if>
+			<if test="maxTeamCount != null">max_team_count,</if>
+			<if test="minRosterCount != null">min_roster_count,</if>
+			<if test="maxRosterCount != null">max_roster_count,</if>
+			<if test="seasonStatus != null">season_status,</if>
+			<if test="currentStageId != null">current_stage_id,</if>
+			<if test="championTeamId != null">champion_team_id,</if>
+			<if test="runnerUpTeamId != null">runner_up_team_id,</if>
+			<if test="publicStatus != null">public_status,</if>
+			<if test="description != null">description,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="seasonNo != null">#{seasonNo},</if>
+			<if test="tournamentId != null">#{tournamentId},</if>
+			<if test="seasonName != null">#{seasonName},</if>
+			<if test="seasonYear != null">#{seasonYear},</if>
+			<if test="registrationStartTime != null">#{registrationStartTime},</if>
+			<if test="registrationEndTime != null">#{registrationEndTime},</if>
+			<if test="seasonStartTime != null">#{seasonStartTime},</if>
+			<if test="seasonEndTime != null">#{seasonEndTime},</if>
+			<if test="venueId != null">#{venueId},</if>
+			<if test="maxTeamCount != null">#{maxTeamCount},</if>
+			<if test="minRosterCount != null">#{minRosterCount},</if>
+			<if test="maxRosterCount != null">#{maxRosterCount},</if>
+			<if test="seasonStatus != null">#{seasonStatus},</if>
+			<if test="currentStageId != null">#{currentStageId},</if>
+			<if test="championTeamId != null">#{championTeamId},</if>
+			<if test="runnerUpTeamId != null">#{runnerUpTeamId},</if>
+			<if test="publicStatus != null">#{publicStatus},</if>
+			<if test="description != null">#{description},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketTournamentSeason批量插入到对应数据库的表中 -->
+	<insert id="insertBasketTournamentSeasonByBatch" parameterType="ArrayList">
+		insert into basket_tournament_season(id,season_no,tournament_id,season_name,season_year,registration_start_time,registration_end_time,season_start_time,season_end_time,venue_id,max_team_count,min_roster_count,max_roster_count,season_status,current_stage_id,champion_team_id,runner_up_team_id,public_status,description,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{seasonNo},#{tournamentId},#{seasonName},#{seasonYear},#{registrationStartTime},#{registrationEndTime},#{seasonStartTime},#{seasonEndTime},#{venueId},#{maxTeamCount},#{minRosterCount},#{maxRosterCount},#{seasonStatus},#{currentStageId},#{championTeamId},#{runnerUpTeamId},#{publicStatus},#{description},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketTournamentSeason的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketTournamentSeasonById" parameterType="Long">
+		delete from basket_tournament_season
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketTournamentSeason的id将BasketTournamentSeason的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketTournamentSeasonById" parameterType="com.zhs.model.BasketTournamentSeason"> 
+		update basket_tournament_season set
+		<set>
+			season_no = #{seasonNo} , 
+			tournament_id = #{tournamentId} , 
+			season_name = #{seasonName} , 
+			season_year = #{seasonYear} , 
+			registration_start_time = #{registrationStartTime} , 
+			registration_end_time = #{registrationEndTime} , 
+			season_start_time = #{seasonStartTime} , 
+			season_end_time = #{seasonEndTime} , 
+			venue_id = #{venueId} , 
+			max_team_count = #{maxTeamCount} , 
+			min_roster_count = #{minRosterCount} , 
+			max_roster_count = #{maxRosterCount} , 
+			season_status = #{seasonStatus} , 
+			current_stage_id = #{currentStageId} , 
+			champion_team_id = #{championTeamId} , 
+			runner_up_team_id = #{runnerUpTeamId} , 
+			public_status = #{publicStatus} , 
+			description = #{description} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketTournamentSeason的id将BasketTournamentSeason中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketTournamentSeasonById" parameterType="com.zhs.model.BasketTournamentSeason">
+		update basket_tournament_season
+		<set>
+					<if test="seasonNo != null">season_no = #{seasonNo},</if>
+					<if test="tournamentId != null">tournament_id = #{tournamentId},</if>
+					<if test="seasonName != null">season_name = #{seasonName},</if>
+					<if test="seasonYear != null">season_year = #{seasonYear},</if>
+					<if test="registrationStartTime != null">registration_start_time = #{registrationStartTime},</if>
+					<if test="registrationEndTime != null">registration_end_time = #{registrationEndTime},</if>
+					<if test="seasonStartTime != null">season_start_time = #{seasonStartTime},</if>
+					<if test="seasonEndTime != null">season_end_time = #{seasonEndTime},</if>
+					<if test="venueId != null">venue_id = #{venueId},</if>
+					<if test="maxTeamCount != null">max_team_count = #{maxTeamCount},</if>
+					<if test="minRosterCount != null">min_roster_count = #{minRosterCount},</if>
+					<if test="maxRosterCount != null">max_roster_count = #{maxRosterCount},</if>
+					<if test="seasonStatus != null">season_status = #{seasonStatus},</if>
+					<if test="currentStageId != null">current_stage_id = #{currentStageId},</if>
+					<if test="championTeamId != null">champion_team_id = #{championTeamId},</if>
+					<if test="runnerUpTeamId != null">runner_up_team_id = #{runnerUpTeamId},</if>
+					<if test="publicStatus != null">public_status = #{publicStatus},</if>
+					<if test="description != null">description = #{description},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>

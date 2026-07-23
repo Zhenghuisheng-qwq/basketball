@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketAnnouncementDao">
+	<resultMap id="result_BasketAnnouncementMapper.xml" type="com.zhs.model.BasketAnnouncement">
+		<id column="id" property="id" />
+		<result column="announcement_no" property="announcementNo" />
+		<result column="category_code" property="categoryCode" />
+		<result column="title" property="title" />
+		<result column="content_text" property="contentText" />
+		<result column="summary" property="summary" />
+		<result column="cover_file_id" property="coverFileId" />
+		<result column="author_id" property="authorId" />
+		<result column="author_name" property="authorName" />
+		<result column="announcement_status" property="announcementStatus" />
+		<result column="public_scope" property="publicScope" />
+		<result column="is_top" property="isTop" />
+		<result column="is_important" property="isImportant" />
+		<result column="publish_time" property="publishTime" />
+		<result column="offline_time" property="offlineTime" />
+		<result column="view_count" property="viewCount" />
+		<result column="create_time" property="createTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="is_delete" property="isDelete" />
+	</resultMap>
+	<!-- 数据库中表名为:basket_announcement的列名 -->
+	<sql id="basket_announcement_Column">
+		id,announcement_no,category_code,title,summary,cover_file_id,content_text,author_id,author_name,announcement_status,public_scope,is_top,is_important,publish_time,offline_time,view_count,create_time,update_time,is_delete
+	</sql>
+
+	<!-- 通过BasketAnnouncement的id获得对应数据库中表的数据对象 -->
+	<select id="selectBasketAnnouncementById" parameterType="Long" resultMap="result_BasketAnnouncementMapper.xml">
+		select
+		<include refid="basket_announcement_Column" />
+		from basket_announcement
+		where id = #{id}
+	</select>
+	
+	<!-- 获得一个BasketAnnouncement对象,以参数BasketAnnouncement对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketAnnouncementObjSingle" parameterType="com.zhs.model.BasketAnnouncement" resultMap="result_BasketAnnouncementMapper.xml">
+		select
+		<include refid="basket_announcement_Column" />
+		from basket_announcement
+		<where>
+		<if test="summary != null"> and summary = #{summary}</if>
+		<if test="coverFileId != null"> and cover_file_id = #{coverFileId}</if>
+		<if test="authorId != null"> and author_id = #{authorId}</if>
+		<if test="authorName != null"> and author_name = #{authorName}</if>
+		<if test="announcementStatus != null"> and announcement_status = #{announcementStatus}</if>
+		<if test="publicScope != null"> and public_scope = #{publicScope}</if>
+		<if test="isTop != null"> and is_top = #{isTop}</if>
+		<if test="isImportant != null"> and is_important = #{isImportant}</if>
+		<if test="publishTime != null"> and publish_time = #{publishTime}</if>
+		<if test="offlineTime != null"> and offline_time = #{offlineTime}</if>
+		<if test="viewCount != null"> and view_count = #{viewCount}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="announcementNo != null"> and announcement_no = #{announcementNo}</if>
+		<if test="categoryCode != null"> and category_code = #{categoryCode}</if>
+		<if test="title != null"> and title = #{title}</if>
+		<if test="contentText != null"> and content_text = #{contentText}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+		LIMIT 1
+	</select>
+	
+	<!-- 获得BasketAnnouncement对象,以参数BasketAnnouncement对象中不为空的属性作为条件进行查询 -->
+	<select id="selectBasketAnnouncementByObj" parameterType="com.zhs.model.BasketAnnouncement" resultMap="result_BasketAnnouncementMapper.xml">
+		select
+		<include refid="basket_announcement_Column" />
+		from basket_announcement
+		<where>
+		<if test="summary != null"> and summary = #{summary}</if>
+		<if test="coverFileId != null"> and cover_file_id = #{coverFileId}</if>
+		<if test="authorId != null"> and author_id = #{authorId}</if>
+		<if test="authorName != null"> and author_name = #{authorName}</if>
+		<if test="announcementStatus != null"> and announcement_status = #{announcementStatus}</if>
+		<if test="publicScope != null"> and public_scope = #{publicScope}</if>
+		<if test="isTop != null"> and is_top = #{isTop}</if>
+		<if test="isImportant != null"> and is_important = #{isImportant}</if>
+		<if test="publishTime != null"> and publish_time = #{publishTime}</if>
+		<if test="offlineTime != null"> and offline_time = #{offlineTime}</if>
+		<if test="viewCount != null"> and view_count = #{viewCount}</if>
+		<if test="createTime != null"> and create_time = #{createTime}</if>
+		<if test="updateTime != null"> and update_time = #{updateTime}</if>
+		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
+		<if test="announcementNo != null"> and announcement_no = #{announcementNo}</if>
+		<if test="categoryCode != null"> and category_code = #{categoryCode}</if>
+		<if test="title != null"> and title = #{title}</if>
+		<if test="contentText != null"> and content_text = #{contentText}</if>
+		<if test="id != null"> and id = #{id} </if>
+		</where>
+	</select>
+
+	<!-- 将BasketAnnouncement插入到对应数据库的表中,包括属性值为null的数据 -->
+	<insert id="insertBasketAnnouncement" parameterType="com.zhs.model.BasketAnnouncement">
+		insert into 
+		basket_announcement (id,announcement_no,category_code,title,summary,cover_file_id,content_text,author_id,author_name,announcement_status,public_scope,is_top,is_important,publish_time,offline_time,view_count,create_time,update_time,is_delete) 
+		values(#{id},#{announcementNo},#{categoryCode},#{title},#{summary},#{coverFileId},#{contentText},#{authorId},#{authorName},#{announcementStatus},#{publicScope},#{isTop},#{isImportant},#{publishTime},#{offlineTime},#{viewCount},#{createTime},#{updateTime},#{isDelete})
+	</insert>
+
+	<!-- 将BasketAnnouncement中属性值不为null的数据,插入到对应数据库的表中 -->
+	<insert id="insertNotNullBasketAnnouncement" parameterType="com.zhs.model.BasketAnnouncement">
+		insert into basket_announcement
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">id,</if>
+			<if test="announcementNo != null">announcement_no,</if>
+			<if test="categoryCode != null">category_code,</if>
+			<if test="title != null">title,</if>
+			<if test="summary != null">summary,</if>
+			<if test="coverFileId != null">cover_file_id,</if>
+			<if test="contentText != null">content_text,</if>
+			<if test="authorId != null">author_id,</if>
+			<if test="authorName != null">author_name,</if>
+			<if test="announcementStatus != null">announcement_status,</if>
+			<if test="publicScope != null">public_scope,</if>
+			<if test="isTop != null">is_top,</if>
+			<if test="isImportant != null">is_important,</if>
+			<if test="publishTime != null">publish_time,</if>
+			<if test="offlineTime != null">offline_time,</if>
+			<if test="viewCount != null">view_count,</if>
+			<if test="createTime != null">create_time,</if>
+			<if test="updateTime != null">update_time,</if>
+			<if test="isDelete != null">is_delete,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">#{id},</if>
+			<if test="announcementNo != null">#{announcementNo},</if>
+			<if test="categoryCode != null">#{categoryCode},</if>
+			<if test="title != null">#{title},</if>
+			<if test="summary != null">#{summary},</if>
+			<if test="coverFileId != null">#{coverFileId},</if>
+			<if test="contentText != null">#{contentText},</if>
+			<if test="authorId != null">#{authorId},</if>
+			<if test="authorName != null">#{authorName},</if>
+			<if test="announcementStatus != null">#{announcementStatus},</if>
+			<if test="publicScope != null">#{publicScope},</if>
+			<if test="isTop != null">#{isTop},</if>
+			<if test="isImportant != null">#{isImportant},</if>
+			<if test="publishTime != null">#{publishTime},</if>
+			<if test="offlineTime != null">#{offlineTime},</if>
+			<if test="viewCount != null">#{viewCount},</if>
+			<if test="createTime != null">#{createTime},</if>
+			<if test="updateTime != null">#{updateTime},</if>
+			<if test="isDelete != null">#{isDelete},</if>
+		</trim>
+	</insert>
+
+	<!-- 将BasketAnnouncement批量插入到对应数据库的表中 -->
+	<insert id="insertBasketAnnouncementByBatch" parameterType="ArrayList">
+		insert into basket_announcement(id,announcement_no,category_code,title,summary,cover_file_id,content_text,author_id,author_name,announcement_status,public_scope,is_top,is_important,publish_time,offline_time,view_count,create_time,update_time,is_delete) values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{id},#{announcementNo},#{categoryCode},#{title},#{summary},#{coverFileId},#{contentText},#{authorId},#{authorName},#{announcementStatus},#{publicScope},#{isTop},#{isImportant},#{publishTime},#{offlineTime},#{viewCount},#{createTime},#{updateTime},#{isDelete})
+		</foreach>
+	</insert>
+	
+	<!-- 通过BasketAnnouncement的id将数据库表中对应的数据删除 -->
+	<delete id="deleteBasketAnnouncementById" parameterType="Long">
+		delete from basket_announcement
+		where  id  =  #{id}
+	</delete>
+
+
+
+	<!-- 通过BasketAnnouncement的id将BasketAnnouncement的数据更新到数据库中对应的表,包括值null的数据 -->
+	<update id="updateBasketAnnouncementById" parameterType="com.zhs.model.BasketAnnouncement"> 
+		update basket_announcement set
+		<set>
+			announcement_no = #{announcementNo} , 
+			category_code = #{categoryCode} , 
+			title = #{title} , 
+			summary = #{summary} , 
+			cover_file_id = #{coverFileId} , 
+			content_text = #{contentText} , 
+			author_id = #{authorId} , 
+			author_name = #{authorName} , 
+			announcement_status = #{announcementStatus} , 
+			public_scope = #{publicScope} , 
+			is_top = #{isTop} , 
+			is_important = #{isImportant} , 
+			publish_time = #{publishTime} , 
+			offline_time = #{offlineTime} , 
+			view_count = #{viewCount} , 
+			create_time = #{createTime} , 
+			update_time = #{updateTime} , 
+			is_delete = #{isDelete} , 
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- 通过BasketAnnouncement的id将BasketAnnouncement中属性值不为null的数据更新到数据库对应的表中 -->
+	<update id="updateNotNullBasketAnnouncementById" parameterType="com.zhs.model.BasketAnnouncement">
+		update basket_announcement
+		<set>
+					<if test="announcementNo != null">announcement_no = #{announcementNo},</if>
+					<if test="categoryCode != null">category_code = #{categoryCode},</if>
+					<if test="title != null">title = #{title},</if>
+					<if test="summary != null">summary = #{summary},</if>
+					<if test="coverFileId != null">cover_file_id = #{coverFileId},</if>
+					<if test="contentText != null">content_text = #{contentText},</if>
+					<if test="authorId != null">author_id = #{authorId},</if>
+					<if test="authorName != null">author_name = #{authorName},</if>
+					<if test="announcementStatus != null">announcement_status = #{announcementStatus},</if>
+					<if test="publicScope != null">public_scope = #{publicScope},</if>
+					<if test="isTop != null">is_top = #{isTop},</if>
+					<if test="isImportant != null">is_important = #{isImportant},</if>
+					<if test="publishTime != null">publish_time = #{publishTime},</if>
+					<if test="offlineTime != null">offline_time = #{offlineTime},</if>
+					<if test="viewCount != null">view_count = #{viewCount},</if>
+					<if test="createTime != null">create_time = #{createTime},</if>
+					<if test="updateTime != null">update_time = #{updateTime},</if>
+					<if test="isDelete != null">is_delete = #{isDelete},</if>
+		</set>
+		where id = #{id}
+	</update>
+
+</mapper>
