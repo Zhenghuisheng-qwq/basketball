@@ -118,7 +118,7 @@ function goPlayerIdentity() {
       :status-type="isVerified ? 'success' : 'warning'"
     />
 
-    <div class="account-overview-grid">
+    <div class="account-overview-grid account-grid-2">
       <AccountPanel title="\\u8d26\\u53f7\\u4e0e\\u8eab\\u4efd">
         <div class="account-info-list">
           <div class="account-info-row">

@@ -5,9 +5,9 @@ defineProps<{
 </script>
 
 <template>
-  <article class="account-panel">
+  <article class="account-panel account-card">
     <div class="account-panel__head">
-      <h3 class="account-panel__title">{{ title }}</h3>
+      <h3 class="account-panel__title account-card-title">{{ title }}</h3>
       <div v-if="$slots.extra" class="account-panel__extra">
         <slot name="extra" />
       </div>

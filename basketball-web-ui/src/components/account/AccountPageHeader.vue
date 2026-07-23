@@ -7,7 +7,7 @@ defineProps<{
 </script>
 
 <template>
-  <header class="account-page-header">
+  <header class="account-page-header account-page-head">
     <nav class="account-breadcrumb page-breadcrumb" aria-label="面包屑">
       <template v-for="(item, index) in breadcrumbItems" :key="`${item.label}-${index}`">
         <router-link v-if="item.to" :to="item.to">{{ item.label }}</router-link>
@@ -16,9 +16,9 @@ defineProps<{
       </template>
     </nav>
 
-    <div class="account-page-title">
-      <h1>{{ zhTitle }}</h1>
-      <span>{{ enTitle }}</span>
+    <div class="account-page-title account-title">
+      <h1 class="account-title-cn">{{ zhTitle }}</h1>
+      <span class="account-title-en">{{ enTitle }}</span>
     </div>
   </header>
 </template>

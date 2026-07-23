@@ -5,6 +5,7 @@ import { useAuth } from '@/composables/useAuth'
 import { useAccountStore } from '@/stores/account'
 import { useNotificationCenterStore } from '@/stores/notificationCenter'
 import { resolvePlayerIdentityRoute } from '@/utils/playerIdentityNavigate'
+import sidebarBg from '@/assets/account/member-sidebar-bg.png'
 
 const route = useRoute()
 const router = useRouter()
@@ -33,6 +34,13 @@ const isPendingVerification = computed(() => accountStore.verification?.status =
 
 const identityRoute = computed(() => resolvePlayerIdentityRoute(accountStore))
 
+const displayName = computed(() => {
+  if (isVerifiedPlayer.value && account.value?.playerNo) {
+    return account.value.playerNo
+  }
+  return account.value?.nickname || ''
+})
+
 interface MenuItem {
   key: string
   label: string
@@ -46,7 +54,7 @@ const mainMenus = computed<MenuItem[]>(() => [
   { key: 'identity', label: '球员身份', to: identityRoute.value },
   { key: 'tournaments', label: '我的赛事', routeName: 'AccountMyEvents' },
   { key: 'notifications', label: '消息通知', routeName: 'AccountNotifications', badge: true },
-  { key: 'settings', label: '账号设置', routeName: 'AccountSecurity' },
+  { key: 'settings', label: '账号设置', routeName: 'AccountSettings' },
 ])
 
 function isActive(item: MenuItem) {
@@ -54,10 +62,20 @@ function isActive(item: MenuItem) {
     return route.path.startsWith('/account/player-identity')
   }
   if (item.key === 'tournaments') {
-    return route.path.startsWith('/account/my-events') || route.path.startsWith('/account/my-tournaments')
+    return (
+      route.path.startsWith('/account/my-events') ||
+      route.path.startsWith('/account/my-tournaments') ||
+      route.path.startsWith('/account/events')
+    )
   }
-  if (item.routeName === 'AccountSecurity') {
-    return route.name === 'AccountSecurity' || route.path.startsWith('/account/settings')
+  if (item.key === 'settings') {
+    return (
+      route.name === 'AccountSettings' ||
+      route.name === 'AccountSecurity' ||
+      route.path.startsWith('/account/settings') ||
+      route.path.startsWith('/account/security') ||
+      route.path.startsWith('/account/profile')
+    )
   }
   if (item.key === 'notifications') {
     return route.path.startsWith('/account/notifications')
@@ -89,9 +107,13 @@ function handleAvatarError() {
     class="account-sidebar"
     :class="{ 'account-sidebar--drawer-open': drawerOpen }"
   >
-    <div class="account-sidebar__red-patch" aria-hidden="true" />
-    <div class="account-sidebar__tear-shadow" aria-hidden="true" />
-    <div class="account-sidebar__paper-noise" aria-hidden="true" />
+    <img
+      class="account-sidebar__bg"
+      :src="sidebarBg"
+      alt=""
+      aria-hidden="true"
+      draggable="false"
+    />
 
     <button
       type="button"
@@ -102,7 +124,7 @@ function handleAvatarError() {
       账号菜单
     </button>
 
-    <div class="account-sidebar__inner">
+    <div class="account-sidebar__content account-sidebar__inner">
       <div class="account-sidebar__profile">
         <p class="account-sidebar__eyebrow">CNPA MEMBER SYSTEM</p>
 
@@ -126,7 +148,7 @@ function handleAvatarError() {
           </svg>
         </div>
 
-        <p class="account-sidebar__nickname">{{ account?.nickname }}</p>
+        <p class="account-sidebar__nickname">{{ displayName }}</p>
         <div class="account-sidebar__identity-tags">
           <span v-if="!isVerifiedPlayer" class="account-sidebar__identity">基础用户</span>
           <span
@@ -135,7 +157,12 @@ function handleAvatarError() {
           >
             审核中
           </span>
-          <span v-if="isVerifiedPlayer" class="account-sidebar__identity account-sidebar__identity--player">认证球员</span>
+          <span
+            v-if="isVerifiedPlayer"
+            class="account-sidebar__identity account-sidebar__identity--player"
+          >
+            认证球员
+          </span>
         </div>
         <p class="account-sidebar__email">{{ account?.maskedEmail }}</p>
       </div>
@@ -145,10 +172,13 @@ function handleAvatarError() {
           v-for="item in mainMenus"
           :key="item.key"
           :to="item.to ?? { name: item.routeName }"
-          class="account-sidebar__link"
+          class="account-sidebar__link account-side-menu-item account-nav-item"
           active-class=""
           exact-active-class=""
-          :class="{ 'account-sidebar__link--active': isActive(item) }"
+          :class="{
+            'account-sidebar__link--active': isActive(item),
+            'is-active': isActive(item),
+          }"
           @click="closeDrawer"
         >
           <svg
@@ -196,8 +226,14 @@ function handleAvatarError() {
         </RouterLink>
       </nav>
 
+      <div class="account-sidebar__spacer" aria-hidden="true" />
+
       <div class="account-sidebar__logout-wrap">
-        <button type="button" class="account-sidebar__logout" @click="handleLogout">
+        <button
+          type="button"
+          class="account-sidebar__logout account-logout-btn"
+          @click="handleLogout"
+        >
           <svg class="account-sidebar__logout-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
           </svg>

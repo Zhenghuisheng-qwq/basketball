@@ -147,7 +147,7 @@ watch([category, page], syncQuery)
       </button>
     </div>
 
-    <div class="notification-layout">
+    <div class="account-grid-2 notification-layout">
       <section class="notification-list" :class="{ 'notification-list--hidden-mobile': mobileShowDetail }">
         <AccountEmptyState v-if="!paged.length" message="暂无消息" />
         <button
@@ -306,8 +306,9 @@ watch([category, page], syncQuery)
 
 .notification-layout {
   display: grid;
-  grid-template-columns: 42% 58%;
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--account-card-gap);
+  width: 100%;
   min-height: 360px;
 }
 

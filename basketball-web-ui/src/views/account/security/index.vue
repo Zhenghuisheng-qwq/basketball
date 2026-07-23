@@ -71,7 +71,7 @@ async function savePassword() {
 </script>
 
 <template>
-  <div class="account-view">
+  <div class="account-page account-center-vars">
     <AccountPageHeader
       zh-title="账号安全"
       en-title="ACCOUNT SECURITY"
@@ -85,7 +85,7 @@ async function savePassword() {
     <AccountStatusBanner
       title="保护你的 CNPA 账号"
       description="管理登录邮箱与账号密码"
-      status-text="安全状态正常"
+      status-text="账号状态正常"
       status-type="success"
     />
 
@@ -158,22 +158,22 @@ async function savePassword() {
 <style scoped lang="scss">
 @import '../styles/account-center.scss';
 
-.account-view {
+.account-page {
   width: 100%;
   min-width: 0;
-  max-width: none;
-  color: var(--account-text, #111);
-  background: transparent;
 }
 
 .security-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--account-card-gap);
   width: 100%;
 }
 
 .security-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
 .security-form__field {
@@ -182,28 +182,20 @@ async function savePassword() {
   gap: 8px;
 
   label {
-    font-size: 16px;
-    font-weight: 800;
-    color: #111;
-  }
-
-  :deep(.auth-input) {
-    height: 50px;
-    background: rgba(255, 255, 255, 0.72);
-    color: #111;
-    border-color: rgba(0, 0, 0, 0.22);
+    font-size: 14px;
+    font-weight: 700;
   }
 }
 
 .security-form__hint {
   margin: 0;
-  font-size: 13px;
-  color: #666;
+  font-size: 12px;
+  color: #777;
 }
 
 .security-form__error {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--account-danger);
 }
 
@@ -211,38 +203,16 @@ async function savePassword() {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 10px;
-
-  :deep(.account-btn-primary) {
-    min-width: 220px;
-    width: min(100%, 280px);
-    min-height: 48px;
-    height: 48px;
-    font-size: 17px;
-  }
-
-  :deep(.account-btn-secondary) {
-    min-width: 120px;
-    min-height: 48px;
-    height: 48px;
-    font-size: 16px;
-    background: rgba(255, 255, 255, 0.7);
-  }
+  margin-top: 8px;
 }
 
 .security-tip {
-  width: 100%;
-  margin: 24px 0 0;
-  padding: 16px 20px;
-  border: 1px solid var(--account-border, #d6d0c6);
-  background: rgba(255, 255, 255, 0.4);
-  font-size: 15px;
-  font-weight: 700;
-  color: #555;
-  box-sizing: border-box;
+  margin: 18px 0 0;
+  font-size: 13px;
+  color: #777;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 899px) {
   .security-layout {
     grid-template-columns: 1fr;
   }

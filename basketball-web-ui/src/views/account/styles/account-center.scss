@@ -1,22 +1,6 @@
 .account-center-vars {
-  /* Fluid shell tokens — override per breakpoint, never hardcode page width in views */
-  --account-sidebar-width: 330px;
-  --account-content-max: 1400px;
-  --account-page-padding: clamp(40px, 3.2vw, 56px);
-  --account-page-padding-y: clamp(36px, 3vw, 48px);
-  --account-card-gap: 24px;
-  --account-title-size: clamp(48px, 3.4vw, 64px);
-  --account-title-en-size: clamp(22px, 1.7vw, 30px);
-  --account-hero-height: clamp(108px, 8vw, 126px);
-  --account-panel-padding: clamp(22px, 1.8vw, 32px);
-
-  /* Backward-compatible aliases */
-  --account-main-max: var(--account-content-max);
-  --account-main-gutter: var(--account-page-padding);
-  --account-main-gutter-x: var(--account-page-padding);
-  --account-main-gutter-y: var(--account-page-padding-y);
-
-  --account-paper-bg: #f3efe6;
+  /* Layout tokens live in :root (account-layout.css). Keep only theme colors here. */
+  --account-paper-bg: #eeeae5;
   --account-black: #050505;
   --account-dark: #050505;
   --account-red: #d90000;
@@ -49,11 +33,11 @@
 .account-layout,
 .account-page__shell {
   display: grid;
-  grid-template-columns: var(--account-sidebar-width) minmax(0, 1fr);
+  grid-template-columns: var(--account-sidebar-width, clamp(260px, 18vw, 340px)) minmax(0, 1fr);
   align-items: stretch;
   width: 100%;
   max-width: none;
-  min-height: calc(100vh - var(--site-header-height, 72px) - 56px);
+  min-height: calc(100vh - var(--site-header-height, 72px));
   margin-inline: 0;
   padding-inline: 0;
   overflow: visible;
@@ -63,196 +47,85 @@
 
 /* ── Sidebar ── */
 
+/* Sidebar: real background image + foreground content (no CSS tear fake) */
 .account-sidebar {
   position: relative;
   z-index: 10;
   align-self: stretch;
   display: flex;
   flex-direction: column;
-  width: var(--account-sidebar-width);
-  flex: 0 0 var(--account-sidebar-width);
+  width: 100%;
   min-width: 0;
-  min-height: calc(100vh - var(--site-header-height, 72px) - 56px);
+  min-height: calc(100vh - var(--site-header-height, 72px));
   height: auto;
-  overflow: visible;
+  overflow: hidden;
+  isolation: isolate;
   color: #fff;
-  background:
-    radial-gradient(circle at 22% 0%, rgba(190, 0, 0, 0.34), transparent 34%),
-    radial-gradient(circle at 8% 94%, rgba(220, 0, 0, 0.58), transparent 28%),
-    radial-gradient(circle at 78% 62%, rgba(90, 0, 0, 0.22), transparent 42%),
-    linear-gradient(180deg, #130202 0%, #050505 48%, #000 100%);
+  background-color: #080808;
   box-sizing: border-box;
-
-  /* Diagonal grain + soft noise */
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    opacity: 0.42;
-    mix-blend-mode: screen;
-    background:
-      repeating-linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.035) 0,
-        rgba(255, 255, 255, 0.035) 1px,
-        transparent 1px,
-        transparent 7px
-      ),
-      radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.12), transparent 2px),
-      radial-gradient(circle at 70% 72%, rgba(255, 255, 255, 0.06), transparent 2px),
-      radial-gradient(circle at 40% 48%, rgba(255, 255, 255, 0.05), transparent 1.5px);
-    background-size:
-      auto,
-      18px 18px,
-      22px 22px,
-      14px 14px;
-  }
-
-  /* White torn paper edge on the right */
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: -18px;
-    width: 38px;
-    height: 100%;
-    z-index: 5;
-    pointer-events: none;
-    background: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.98) 0%,
-      rgba(244, 239, 229, 0.94) 55%,
-      rgba(243, 239, 230, 0.72) 100%
-    );
-    filter: drop-shadow(5px 0 10px rgba(0, 0, 0, 0.38));
-    clip-path: polygon(
-      45% 0%,
-      72% 3%,
-      48% 7%,
-      80% 11%,
-      50% 16%,
-      76% 22%,
-      44% 27%,
-      70% 34%,
-      42% 40%,
-      78% 47%,
-      46% 53%,
-      72% 60%,
-      43% 67%,
-      78% 74%,
-      48% 82%,
-      74% 88%,
-      45% 94%,
-      66% 100%,
-      0 100%,
-      0 0
-    );
-  }
 }
 
-.account-sidebar__red-patch {
+.account-sidebar__bg {
   position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 168px;
-  height: 196px;
-  z-index: 2;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 30% 40%, rgba(255, 0, 0, 0.72), transparent 55%),
-    linear-gradient(135deg, rgba(210, 0, 0, 0.96), rgba(80, 0, 0, 0.28));
-  clip-path: polygon(0 28%, 38% 20%, 72% 38%, 100% 70%, 82% 100%, 0 100%);
-  opacity: 0.92;
-}
-
-.account-sidebar__paper-noise {
-  position: absolute;
-  top: 0;
-  right: -8px;
-  width: 18px;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
   height: 100%;
-  z-index: 6;
+  object-fit: fill;
+  object-position: left top;
   pointer-events: none;
-  opacity: 0.65;
-  background: repeating-linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.92) 0,
-    rgba(255, 255, 255, 0.92) 6px,
-    rgba(210, 205, 195, 0.82) 6px,
-    rgba(210, 205, 195, 0.82) 8px
-  );
-  clip-path: polygon(
-    55% 0,
-    95% 8%,
-    45% 13%,
-    88% 21%,
-    36% 29%,
-    92% 39%,
-    44% 48%,
-    96% 57%,
-    38% 66%,
-    90% 75%,
-    42% 84%,
-    94% 93%,
-    50% 100%,
-    0 100%,
-    0 0
-  );
+  user-select: none;
 }
 
-.account-sidebar__tear-shadow {
+.account-sidebar::before {
+  content: '';
   position: absolute;
-  top: 0;
-  right: -6px;
-  width: 18px;
-  height: 100%;
-  z-index: 4;
+  inset: 0;
+  z-index: 1;
   pointer-events: none;
   background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.42) 0%,
-    rgba(0, 0, 0, 0.12) 55%,
-    transparent 100%
+    180deg,
+    rgba(0, 0, 0, 0.1) 0%,
+    rgba(0, 0, 0, 0.18) 100%
   );
-  filter: blur(1.5px);
-  opacity: 0.55;
 }
 
+.account-sidebar__content,
 .account-sidebar__inner {
   position: relative;
-  z-index: 3;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: inherit;
-  padding: 36px 28px 28px;
+  height: 100%;
+  padding: clamp(28px, 3vw, 40px) clamp(20px, 2vw, 28px) clamp(24px, 2.4vw, 32px);
+  padding-right: clamp(28px, 3vw, 40px); /* keep text clear of tear teeth */
   box-sizing: border-box;
 }
 
 .account-sidebar__profile {
-  position: relative;
-  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 8px 8px;
+  gap: 12px;
+  margin-bottom: clamp(28px, 4vh, 40px);
+  padding: 0 4px;
   text-align: center;
 }
 
 .account-sidebar__eyebrow {
   margin: 0;
-  font-size: 13px;
+  font-size: clamp(11px, 0.9vw, 13px);
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 0.14em;
   color: rgba(255, 255, 255, 0.68);
 }
 
 .account-sidebar__avatar {
-  width: 118px;
-  height: 118px;
-  margin: 22px auto 0;
+  width: clamp(96px, 8vw, 118px);
+  height: clamp(96px, 8vw, 118px);
+  margin: 4px auto 0;
   border-radius: 50%;
   border: 3px solid rgba(255, 255, 255, 0.86);
   background:
@@ -279,8 +152,8 @@
 
 .account-sidebar__user-id,
 .account-sidebar__nickname {
-  margin: 22px 0 0;
-  font-size: 24px;
+  margin: 0;
+  font-size: clamp(20px, 1.6vw, 24px);
   font-weight: 800;
   letter-spacing: 1px;
   line-height: 1.2;
@@ -292,7 +165,6 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
-  margin-top: 10px;
 }
 
 .account-sidebar__identity--player {
@@ -319,68 +191,56 @@
 }
 
 .account-sidebar__email {
-  margin: 12px 0 0;
-  font-size: 15px;
+  margin: 0;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.78);
   word-break: break-all;
 }
 
 .account-sidebar__nav {
-  position: relative;
-  z-index: 3;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 42px;
+  gap: 12px;
+  margin: 0;
   padding: 0;
 }
 
-.account-sidebar__link {
+.account-sidebar__link,
+.account-nav-item {
   position: relative;
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
-  column-gap: 16px;
+  gap: 14px;
   width: 100%;
-  min-height: 58px;
-  height: 58px;
-  padding: 0 22px;
+  min-height: 56px;
+  height: auto;
+  padding: 0 18px;
   box-sizing: border-box;
-  color: rgba(255, 255, 255, 0.86);
-  font-size: 18px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: clamp(15px, 1.1vw, 18px);
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 0.04em;
   text-decoration: none;
-  border-radius: 3px;
-  border-left: 0;
-  transition:
-    color 0.18s ease,
-    background 0.18s ease,
-    box-shadow 0.18s ease;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 
-  &:hover {
+  &:hover:not(.is-active):not(.account-sidebar__link--active) {
     background: rgba(255, 255, 255, 0.06);
     color: #fff;
   }
 
+  &.is-active,
   &--active {
     color: #fff;
-    background: linear-gradient(
-      90deg,
-      #e30012 0%,
-      #c00000 62%,
-      rgba(160, 0, 0, 0.86) 100%
-    );
-    box-shadow:
-      0 12px 28px rgba(210, 0, 0, 0.28),
-      inset 3px 0 0 rgba(255, 255, 255, 0.82);
+    background: linear-gradient(180deg, #e10600 0%, #c80000 100%);
+    box-shadow: 0 10px 26px rgba(214, 0, 0, 0.28);
   }
 }
 
 .account-sidebar__link-icon {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
 }
 
 .account-sidebar__badge {
@@ -400,33 +260,24 @@
   justify-content: center;
 }
 
-.account-sidebar__section-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 20px 8px 8px;
-  color: rgba(255, 255, 255, 0.52);
-  font-size: 13px;
-  letter-spacing: 1px;
+.account-sidebar__link.is-active .account-sidebar__badge,
+.account-sidebar__link--active .account-sidebar__badge {
+  background: rgba(0, 0, 0, 0.28);
+}
 
-  &::before,
-  &::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.14);
-  }
+.account-sidebar__spacer {
+  flex: 1;
+  min-height: 24px;
 }
 
 .account-sidebar__logout-wrap {
-  position: relative;
-  z-index: 3;
-  margin-top: auto;
-  padding-top: 28px;
-  padding-bottom: 8px;
+  margin-top: 24px;
+  padding-top: 0;
+  padding-bottom: 4px;
 }
 
-.account-sidebar__logout {
+.account-sidebar__logout,
+.account-logout-btn {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -434,10 +285,10 @@
   min-height: 52px;
   margin: 0;
   padding: 0 16px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 2px;
-  background: rgba(0, 0, 0, 0.22);
-  color: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  color: #fff;
   font-size: 15px;
   font-weight: 700;
   font-family: inherit;
@@ -475,13 +326,15 @@
   z-index: 1;
   min-width: 0;
   min-height: calc(100vh - var(--site-header-height, 72px) - 56px);
-  padding: 0;
+  padding:
+    var(--account-main-padding-y, var(--account-page-padding-y))
+    var(--account-main-padding-x, var(--account-page-padding));
   color: var(--account-text);
-  background: var(--account-paper-bg);
+  background: var(--account-paper-bg, #eeeae5);
   background-image:
     linear-gradient(
-      rgba(243, 239, 230, 0.97),
-      rgba(243, 239, 230, 0.97)
+      rgba(238, 234, 229, 0.97),
+      rgba(238, 234, 229, 0.97)
     ),
     radial-gradient(
       rgba(80, 60, 40, 0.08) 0.6px,
@@ -493,19 +346,15 @@
   box-sizing: border-box;
 }
 
-/* Fluid + left-aligned shell: width 100% + max-width + clamp padding */
+/* Unified content shell: width 100% + max-width, fills remaining main area */
 .account-content-inner,
 .account-main-inner,
 .account-page-inner {
   width: 100%;
   max-width: var(--account-content-max);
   min-width: 0;
-  margin-left: 0;
-  margin-right: auto;
-  padding:
-    var(--account-page-padding-y)
-    var(--account-page-padding)
-    clamp(32px, 3vw, 48px);
+  margin: 0 auto;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -554,7 +403,7 @@
   &__cn {
     margin: 0;
     color: #050505;
-    font-size: var(--account-title-size);
+    font-size: var(--account-title-cn-size, var(--account-title-size));
     font-weight: 900;
     line-height: 0.95;
     letter-spacing: 3px;
@@ -575,6 +424,7 @@
 
 /* ── Status banner ── */
 
+.account-hero-banner,
 .account-welcome-banner,
 .account-status-banner,
 .account-hero-strip {
@@ -584,25 +434,24 @@
   justify-content: space-between;
   gap: 24px;
   width: 100%;
-  min-height: 108px;
-  height: var(--account-hero-height);
+  min-height: var(--account-hero-height);
+  height: auto;
   margin-bottom: var(--account-card-gap);
-  padding: clamp(20px, 1.8vw, 28px) clamp(24px, 2.2vw, 36px);
+  padding: clamp(22px, 2vw, 34px) clamp(28px, 3vw, 44px);
   overflow: hidden;
-  background: linear-gradient(90deg, #050505 0%, #090909 70%, rgba(100, 0, 0, 0.75) 100%);
+  background: linear-gradient(90deg, #050505 0%, #0b0b0b 58%, rgba(80, 0, 0, 0.9) 100%);
   color: #fff;
   box-sizing: border-box;
 
   &::after {
     content: '';
     position: absolute;
-    right: -18px;
-    top: -10px;
-    width: 92px;
-    height: 72px;
-    background: #d90000;
-    opacity: 0.92;
-    clip-path: polygon(30% 0, 100% 0, 100% 100%);
+    right: 0;
+    top: 0;
+    width: clamp(80px, 9vw, 150px);
+    height: 100%;
+    background: linear-gradient(135deg, transparent 0 40%, #b60000 41% 100%);
+    opacity: 0.9;
     pointer-events: none;
   }
 }
@@ -613,18 +462,20 @@
   min-width: 0;
 }
 
+.account-hero-title,
 .account-welcome-banner__title {
   margin: 0;
-  font-size: clamp(28px, 2.4vw, 34px);
+  font-size: clamp(26px, 2.2vw, 40px);
   font-weight: 900;
   line-height: 1.15;
-  letter-spacing: 2px;
+  letter-spacing: 0.02em;
   color: #fff;
 }
 
+.account-hero-desc,
 .account-welcome-banner__desc {
   margin: 8px 0 0;
-  font-size: clamp(15px, 1.2vw, 17px);
+  font-size: clamp(15px, 1vw, 18px);
   color: rgba(255, 255, 255, 0.78);
 }
 
@@ -709,28 +560,23 @@
 
 /* ── Panels / cards ── */
 
-.account-panel {
+.account-panel,
+.account-card {
   position: relative;
   min-width: 0;
   width: 100%;
-  padding: var(--account-panel-padding);
-  border: 1px solid var(--account-border, #d6d0c6);
+  min-height: var(--account-card-min-height);
+  padding: var(--account-card-padding, var(--account-panel-padding));
+  border: 1px solid rgba(0, 0, 0, 0.18);
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.42);
-  box-shadow: 0 10px 26px rgba(35, 24, 15, 0.04);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
   transition: border-color 0.18s ease;
 
+  /* Triangle moved to title (global account-card-title) */
   &::before {
-    content: '';
-    position: absolute;
-    top: 18px;
-    left: 18px;
-    width: 0;
-    height: 0;
-    border-top: 16px solid #d90000;
-    border-right: 16px solid transparent;
-    pointer-events: none;
+    display: none;
   }
 
   &:hover {
@@ -738,21 +584,30 @@
   }
 }
 
-.account-panel__title {
+.account-panel__title,
+.account-card-title {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
   margin: 0;
-  padding-left: 28px;
-  padding-bottom: 0;
+  padding-left: 18px;
+  padding-bottom: 16px;
   border-bottom: none;
   color: #090909;
-  font-size: clamp(20px, 1.5vw, 24px);
+  font-size: clamp(22px, 1.5vw, 28px);
   font-weight: 900;
-  letter-spacing: 1px;
+  letter-spacing: 0.02em;
 
   &::before {
-    display: none;
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    width: 0;
+    height: 0;
+    border-top: 16px solid #d90000;
+    border-right: 16px solid transparent;
   }
 }
 
@@ -761,9 +616,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.16);
+  margin-bottom: 18px;
+  padding-bottom: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.14);
 }
 
 .account-panel__extra {
@@ -777,26 +632,12 @@
   min-width: 0;
 }
 
-/* ── Overview grid ── */
+/* ── Overview / shared grids (tokens from account-layout.css) ── */
 
-.account-overview-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--account-card-gap);
-  align-items: stretch;
-
-  > .account-panel:nth-child(-n + 2) {
-    min-height: clamp(260px, 22vw, 318px);
-  }
-
-  > .account-panel:nth-child(n + 3) {
-    min-height: clamp(200px, 16vw, 260px);
-  }
-}
-
+.account-overview-grid,
 .account-grid-2 {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--account-card-gap);
   align-items: stretch;
   width: 100%;
@@ -806,6 +647,16 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--account-card-gap);
+  align-items: stretch;
+  width: 100%;
+}
+
+.account-grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: var(--account-card-gap);
+  align-items: stretch;
+  width: 100%;
 }
 
 .account-full {
@@ -1475,8 +1326,9 @@
 
 .notification-layout {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--account-card-gap);
+  width: 100%;
   min-height: 360px;
 }
 
@@ -1663,95 +1515,93 @@
   color: rgba(255, 255, 255, 0.45);
 }
 
-/* ── Responsive ── */
+/* ── Responsive (shell tokens from account-layout.css :root) ── */
 
-/* >=1600: sidebar 330 / content up to 1360 (defaults in :root vars) */
-
-@media (max-width: 1599px) and (min-width: 1280px) {
-  .account-center-vars {
-    --account-sidebar-width: 300px;
-    --account-main-max: 1220px;
-    --account-main-gutter-x: 40px;
-    --account-main-gutter-y: 40px;
-  }
-
-  .account-layout,
-  .account-page__shell {
-    grid-template-columns: 300px minmax(0, 1fr);
-  }
-
-  .account-sidebar {
-    width: 300px;
-    flex-basis: 300px;
+@media (max-width: 1280px) {
+  .account-info-row,
+  .account-row,
+  .account-field-row {
+    grid-template-columns: 140px minmax(0, 1fr);
+    font-size: 15px;
   }
 }
 
-@media (max-width: 1279px) and (min-width: 1025px) {
-  .account-center-vars {
-    --account-sidebar-width: 280px;
-    --account-main-max: 100%;
-    --account-main-gutter-x: 32px;
-    --account-main-gutter-y: 36px;
-  }
-
-  .account-layout,
-  .account-page__shell {
-    grid-template-columns: 280px minmax(0, 1fr);
-  }
-
-  .account-sidebar {
-    width: 280px;
-    flex-basis: 280px;
-  }
-
-  .account-content-inner,
-  .account-main-inner,
-  .account-page-inner {
-    max-width: none;
-    margin-left: 0;
-    margin-right: 0;
-  }
-}
-
-@media (max-width: 1200px) {
+@media (max-width: 1180px) {
   .account-grid-2,
   .account-grid-3,
   .account-overview-grid,
+  .account-card-grid,
   .identity-entry-grid,
   .identity-review-grid,
   .identity-apply-grid,
-  .security-layout {
-    grid-template-columns: 1fr;
-  }
-
+  .security-layout,
   .profile-grid,
   .verification-layout--split,
   .notification-layout,
   .team-relations-grid,
   .account-security-grid,
   .security-grid {
-    gap: 18px;
     grid-template-columns: 1fr;
+    gap: var(--account-card-gap);
   }
 
-  .team-management-status {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .account-quick-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .account-overview-grid > .account-panel,
+  .account-overview-grid > .account-card {
+    min-height: 0 !important;
   }
 }
 
 @media (max-width: 1024px) {
-  .account-content-inner,
-  .account-main-inner,
-  .account-page-inner {
-    padding: 36px 32px 36px;
+  .account-grid-2,
+  .account-grid-3,
+  .account-overview-grid,
+  .account-card-grid,
+  .identity-entry-grid,
+  .identity-review-grid,
+  .identity-apply-grid,
+  .security-layout,
+  .profile-grid,
+  .verification-layout--split,
+  .notification-layout,
+  .team-relations-grid,
+  .account-security-grid,
+  .security-grid,
+  .account-stepper,
+  .open-apply-grid,
+  .tournament-stats {
+    grid-template-columns: 1fr;
+    gap: var(--account-card-gap);
+  }
+
+  .account-overview-grid > .account-panel,
+  .account-overview-grid > .account-card {
+    min-height: 0 !important;
+  }
+
+  .team-management-status,
+  .account-quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-welcome-banner,
+  .account-status-banner,
+  .account-hero-strip {
+    height: auto;
+    min-height: 108px;
+    flex-wrap: wrap;
+  }
+
+  .account-sidebar__avatar {
+    width: 96px;
+    height: 96px;
+  }
+
+  .account-sidebar__nickname {
+    font-size: 20px;
   }
 }
 
-@media (max-width: 960px) {
+@media (max-width: 900px) {
   .account-layout,
   .account-page__shell {
     display: block;
@@ -1766,60 +1616,16 @@
     height: auto;
     min-height: auto;
     overflow: visible;
-
-    &::after {
-      display: none;
-    }
+    background-color: transparent;
   }
 
-  .account-sidebar__paper-noise,
-  .account-sidebar__tear-shadow {
+  .account-sidebar__bg {
     display: none;
   }
 
-  .account-main {
-    padding-left: 0;
-  }
-
-  .account-content-inner,
-  .account-main-inner,
-  .account-page-inner {
-    max-width: none;
-    margin-left: 0;
-    margin-right: 0;
-    padding: 24px 16px 32px;
-  }
-
-  .account-sidebar__inner {
-    padding: 24px 20px;
-  }
-
-  .account-sidebar__nav {
-    margin-top: 24px;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-}
-
-@media (max-width: 899px) {
-  .account-page__shell {
-    grid-template-columns: 1fr;
-  }
-
-  .account-sidebar {
-    position: relative;
-    top: 0;
-    height: auto;
-    min-height: auto;
-    overflow: visible;
-
-    &::after {
-      display: none;
-    }
-  }
-
   .account-sidebar__mobile-toggle {
+    position: relative;
+    z-index: 3;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1827,8 +1633,8 @@
     margin: 12px 16px 0;
     min-height: 44px;
     border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    background: #120404;
     color: #fff;
     font-size: 14px;
     font-weight: 700;
@@ -1836,6 +1642,7 @@
     cursor: pointer;
   }
 
+  .account-sidebar__content,
   .account-sidebar__inner {
     display: none;
     position: fixed;
@@ -1845,19 +1652,21 @@
     z-index: 1500;
     width: min(320px, 88vw);
     height: calc(100vh - var(--site-header-height, 72px));
+    padding: 24px 20px;
     box-shadow: 8px 0 24px rgba(0, 0, 0, 0.35);
     background:
-      radial-gradient(circle at 22% 0%, rgba(190, 0, 0, 0.34), transparent 34%),
-      radial-gradient(circle at 8% 94%, rgba(220, 0, 0, 0.58), transparent 28%),
-      linear-gradient(180deg, #130202 0%, #050505 48%, #000 100%);
+      url('@/assets/account/member-sidebar-bg.png') left top / 100% 100% no-repeat,
+      #080808;
   }
 
   .account-sidebar__nav {
+    margin-top: 0;
     display: flex;
     flex-direction: column;
-    grid-template-columns: none;
+    gap: 12px;
   }
 
+  .account-sidebar--drawer-open .account-sidebar__content,
   .account-sidebar--drawer-open .account-sidebar__inner {
     display: flex;
   }
@@ -1874,60 +1683,50 @@
 
   .account-main {
     min-height: auto;
+    padding-left: 0;
   }
 
-  .account-overview-grid,
-  .account-card-grid,
-  .profile-grid,
-  .verification-layout--split,
-  .notification-layout,
-  .notification-summary,
-  .team-relations-grid,
-  .account-security-grid,
-  .security-grid {
-    grid-template-columns: 1fr;
-
-    > .account-panel {
-      min-height: auto !important;
-    }
+  .account-content-inner,
+  .account-main-inner,
+  .account-page-inner {
+    width: 100%;
+    max-width: none;
+    margin: 0;
   }
 
-  .team-management-status {
-    grid-template-columns: 1fr 1fr;
+  .account-page-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 
   .account-welcome-banner,
   .account-status-banner,
   .account-hero-strip {
     height: auto;
-    min-height: 118px;
+    min-height: 0;
     flex-direction: column;
     align-items: flex-start;
-    padding: 22px 24px 28px;
+    gap: 14px;
+    padding: 20px 18px 26px;
   }
 
   .account-welcome-banner__status,
   .account-status-banner__state {
     white-space: normal;
-  }
-}
-
-@media (max-width: 767px) {
-  .account-page-title h1 {
-    font-size: clamp(36px, 10vw, 48px);
-  }
-
-  .account-page-title span {
     font-size: 18px;
   }
 
   .account-info-row,
+  .account-row,
   .account-field-row {
     grid-template-columns: 1fr;
     gap: 4px;
     padding-block: 10px;
+    min-height: 0;
 
     .account-info-row__value,
+    .account-row__value,
     dd {
       text-align: left;
     }
@@ -1939,27 +1738,11 @@
   .account-secondary-button {
     width: 100%;
   }
-}
 
-@media (max-width: 519px) {
-  .account-content-inner,
-  .account-main-inner,
-  .account-page-inner {
-    width: 100%;
-    max-width: none;
-    margin-left: 0;
-    margin-right: 0;
-    padding: 24px 16px 32px;
-  }
-
-  .account-quick-actions {
+  .team-management-status,
+  .account-quick-actions,
+  .notification-summary {
     grid-template-columns: 1fr;
-  }
-
-  .account-page-title {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
   }
 }
 
@@ -2051,8 +1834,8 @@
 .identity-review-grid,
 .identity-apply-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 22px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--account-card-gap);
   width: 100%;
   align-items: stretch;
 }
@@ -2481,21 +2264,10 @@
   justify-content: flex-end;
 }
 
-@media (max-width: 991px) {
-  .account-stepper,
-  .identity-entry-grid,
-  .identity-review-grid,
-  .identity-apply-grid,
-  .open-apply-grid,
-  .tournament-stats {
-    grid-template-columns: 1fr;
-  }
-}
-
 .open-apply-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  gap: var(--account-card-gap);
 }
 
 .open-apply-footnotes {
@@ -2732,7 +2504,7 @@
   font-size: 12px;
 }
 
-@media (max-width: 991px) {
+@media (max-width: 1024px) {
   .event-team-grid--2,
   .event-team-ops-grid {
     grid-template-columns: 1fr;

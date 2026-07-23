@@ -6,6 +6,7 @@ import App from './App.vue'
 import router from './router'
 import { initAuthState } from '@/composables/useAuth'
 import '@/assets/styles/index.scss'
+import '@/assets/styles/account-layout.css'
 
 const app = createApp(App)
 

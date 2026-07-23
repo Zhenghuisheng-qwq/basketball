@@ -78,7 +78,7 @@ async function switchDevStatus(next: PlayerVerificationStatus) {
 
     <AccountStatusBanner v-bind="banner" />
 
-    <div class="identity-entry-grid">
+    <div class="account-grid-2 identity-entry-grid">
       <AccountPanel title="当前状态">
         <div class="identity-entry-state">
           <div class="identity-entry-state__icon" aria-hidden="true">

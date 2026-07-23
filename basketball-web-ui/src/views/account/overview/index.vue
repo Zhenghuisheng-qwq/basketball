@@ -96,7 +96,7 @@ function goPlayerIdentity() {
       :status-type="isVerified ? 'success' : 'warning'"
     />
 
-    <div class="account-overview-grid">
+    <div class="account-overview-grid account-grid-2">
       <AccountPanel title="账号与身份">
         <div class="account-info-list">
           <div class="account-info-row">

@@ -13,14 +13,14 @@ withDefaults(
 </script>
 
 <template>
-  <section class="account-welcome-banner">
+  <section class="account-welcome-banner account-hero-banner account-status-banner">
     <div class="account-welcome-banner__content">
-      <h2 class="account-welcome-banner__title">{{ title }}</h2>
-      <p class="account-welcome-banner__desc">{{ description }}</p>
+      <h2 class="account-welcome-banner__title account-hero-title">{{ title }}</h2>
+      <p class="account-welcome-banner__desc account-hero-desc">{{ description }}</p>
     </div>
 
     <div
-      class="account-welcome-banner__status"
+      class="account-welcome-banner__status account-hero-status"
       :class="`account-welcome-banner__status--${statusType}`"
     >
       <span class="account-welcome-banner__status-icon" aria-hidden="true">

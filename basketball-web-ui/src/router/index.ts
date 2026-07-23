@@ -386,6 +386,14 @@ const router = createRouter({
 
         {
 
+          path: 'player-identity/history',
+
+          redirect: { name: 'AccountIdentityChangeHistory' },
+
+        },
+
+        {
+
           path: 'player-identity/eligibility',
 
           name: 'AccountPlayerEligibility',
@@ -393,6 +401,89 @@ const router = createRouter({
           component: () => import('@/views/account/player-identity/eligibility.vue'),
 
           meta: { title: '球员资格状态' },
+
+        },
+
+        {
+
+          path: 'events',
+
+          redirect: { name: 'AccountMyEvents' },
+
+        },
+
+        {
+
+          path: 'events/open/register',
+
+          redirect: { name: 'AccountOpenApplicationApply' },
+
+        },
+
+        {
+
+          path: 'events/open/status',
+
+          redirect: { name: 'AccountOpenApplicationStatusRedirect' },
+
+        },
+
+        {
+
+          path: 'events/team/manage',
+
+          redirect: { name: 'AccountEventTeamManagement', params: { tournamentId: '2026-league-s1' } },
+
+        },
+
+        {
+
+          path: 'events/team/roster',
+
+          redirect: { name: 'AccountEventTeamRoster', params: { tournamentId: '2026-league-s1' } },
+
+        },
+
+        {
+
+          path: 'events/team/free-agent',
+
+          redirect: { name: 'AccountEventTeamFreeAgents', params: { tournamentId: '2026-league-s1' } },
+
+        },
+
+        {
+
+          path: 'events/team/transfer',
+
+          redirect: { name: 'AccountEventTeamTransfers', params: { tournamentId: '2026-league-s1' } },
+
+        },
+
+        {
+
+          path: 'events/team/transfer/create',
+
+          redirect: { name: 'AccountEventTeamTransferInitiate', params: { tournamentId: '2026-league-s1' } },
+
+        },
+
+        {
+
+          path: 'events/team/transfer/detail',
+
+          redirect: {
+            name: 'AccountEventTeamTransferDetail',
+            params: { tournamentId: '2026-league-s1', transferId: 'transfer-demo-1' },
+          },
+
+        },
+
+        {
+
+          path: 'events/team/captain-transfer',
+
+          redirect: { name: 'AccountEventTeamCaptainTransfer', params: { tournamentId: '2026-league-s1' } },
 
         },
 
@@ -666,21 +757,23 @@ const router = createRouter({
 
         {
 
-          path: 'security',
+          path: 'settings',
 
-          name: 'AccountSecurity',
+          name: 'AccountSettings',
 
-          component: () => import('@/views/account/security/index.vue'),
+          component: () => import('@/views/account/settings/index.vue'),
 
-          meta: { title: '账号安全' },
+          meta: { title: '账号设置' },
 
         },
 
         {
 
-          path: 'settings',
+          path: 'security',
 
-          redirect: { name: 'AccountSecurity' },
+          name: 'AccountSecurity',
+
+          redirect: { name: 'AccountSettings', query: { tab: 'security' } },
 
         },
 

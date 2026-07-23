@@ -27,7 +27,7 @@ function handleBackgroundError() {
     <WebHeader />
 
     <main class="member-auth-page">
-      <div class="site-shell member-auth-page__shell">
+      <div class="member-auth-page__shell">
         <div
           class="member-auth-canvas"
           :class="{ 'member-auth-canvas--fallback': backgroundLoadFailed }"
