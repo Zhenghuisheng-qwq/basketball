@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, watch } from 'vue'
 import PlayerLink from '@/components/player/PlayerLink.vue'
-import { getAllPlayerProfiles } from '@/views/player/detail/mock/playerDetail'
+import { getPublicMatchDetail } from '@/api/publicMatch'
+import type { PublicMatchDetailVo, PublicMatchPlayerStatVo } from '@/api/types/public'
+import { displayNumber, displayText, formatPercent } from '@/utils/publicDisplay'
 import type { Match } from '../types/events'
 
-defineProps<{
+const props = defineProps<{
   visible: boolean
   match: Match | null
 }>()
@@ -13,14 +15,51 @@ const emit = defineEmits<{
   close: []
 }>()
 
-const mockPlayers = computed(() =>
-  getAllPlayerProfiles().slice(0, 5).map((player, index) => ({
-    playerId: player.id,
-    playerName: player.displayName,
-    points: 18 + index * 2,
-    rebounds: 4 + index,
-    assists: 7 + index,
-  })),
+const detail = ref<PublicMatchDetailVo | null>(null)
+const players = ref<PublicMatchPlayerStatVo[]>([])
+const state = ref<'idle' | 'loading' | 'success' | 'empty' | 'error'>('idle')
+const errorMessage = ref('')
+let reqId = 0
+
+async function loadStats(matchId: string) {
+  const current = ++reqId
+  state.value = 'loading'
+  errorMessage.value = ''
+  try {
+    const res = await getPublicMatchDetail(matchId)
+    if (current !== reqId) return
+    detail.value = res.data ?? null
+    players.value = res.data?.playerStats ?? []
+    if (!res.data) {
+      state.value = 'error'
+      errorMessage.value = '暂无技术统计'
+      return
+    }
+    if (!res.data.statsAvailable || players.value.length === 0) {
+      state.value = 'empty'
+      return
+    }
+    state.value = 'success'
+  } catch (err) {
+    if (current !== reqId) return
+    detail.value = null
+    players.value = []
+    state.value = 'error'
+    errorMessage.value = err instanceof Error ? err.message : '加载技术统计失败'
+  }
+}
+
+watch(
+  () => [props.visible, props.match?.matchId] as const,
+  ([visible, matchId]) => {
+    if (visible && matchId) {
+      void loadStats(matchId)
+    } else if (!visible) {
+      detail.value = null
+      players.value = []
+      state.value = 'idle'
+    }
+  },
 )
 </script>
 
@@ -29,36 +68,45 @@ const mockPlayers = computed(() =>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="stats-title">
       <button type="button" class="modal-close" aria-label="关闭" @click="emit('close')">×</button>
       <h3 id="stats-title">技术统计</h3>
-      <p class="modal-meta">比赛 ID：{{ match.id }}</p>
+      <p class="modal-meta">
+        {{ displayText(match.awayTeamName) }} vs {{ displayText(match.homeTeamName) }}
+      </p>
 
-      <div class="stats-table-wrap">
+      <div v-if="state === 'loading'" class="modal-state">加载中...</div>
+      <div v-else-if="state === 'error'" class="modal-state is-error">{{ errorMessage }}</div>
+      <div v-else-if="state === 'empty'" class="modal-state">暂无已确认的技术统计</div>
+      <div v-else class="stats-table-wrap">
         <table class="stats-table">
           <thead>
             <tr>
               <th>球员</th>
+              <th>球队</th>
               <th>得分</th>
               <th>篮板</th>
               <th>助攻</th>
+              <th>投篮%</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="player in mockPlayers" :key="player.playerId">
+            <tr v-for="player in players" :key="`${player.playerId}-${player.teamId}`">
               <td>
                 <PlayerLink
+                  v-if="player.playerId"
                   :player-id="player.playerId"
-                  :player-name="player.playerName"
+                  :player-name="displayText(player.playerName)"
                   tab="matches"
                 />
+                <template v-else>{{ displayText(player.playerName) }}</template>
               </td>
-              <td>{{ player.points }}</td>
-              <td>{{ player.rebounds }}</td>
-              <td>{{ player.assists }}</td>
+              <td>{{ displayText(player.teamName) }}</td>
+              <td>{{ displayNumber(player.points) }}</td>
+              <td>{{ displayNumber(player.rebounds) }}</td>
+              <td>{{ displayNumber(player.assists) }}</td>
+              <td>{{ formatPercent(player.fieldGoalPct) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
-
-      <p class="modal-tip">Mock 技术统计，点击球员名称进入球员详情。</p>
     </div>
   </div>
 </template>
@@ -76,10 +124,13 @@ const mockPlayers = computed(() =>
 
 .modal-card {
   position: relative;
-  width: min(640px, 100%);
+  width: min(760px, 100%);
+  max-height: min(80vh, 720px);
+  overflow: auto;
   padding: 28px;
   background: #111;
   border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
 }
 
 .modal-close {
@@ -101,7 +152,7 @@ const mockPlayers = computed(() =>
 }
 
 .stats-table-wrap {
-  margin: 20px 0;
+  margin: 20px 0 0;
   overflow-x: auto;
 }
 
@@ -123,9 +174,13 @@ const mockPlayers = computed(() =>
   }
 }
 
-.modal-tip {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.56);
-  font-size: 12px;
+.modal-state {
+  padding: 28px 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.55);
+
+  &.is-error {
+    color: #e10613;
+  }
 }
 </style>

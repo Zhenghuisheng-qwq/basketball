@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import {
-  getTournamentById,
-  tournamentGroups,
-  type TournamentOption,
-} from '../mock/dataCenter'
+import type { TournamentGroup, TournamentOption } from '../types'
 
 const props = defineProps<{
   modelValue: string
+  groups: TournamentGroup[]
+  loading?: boolean
+  error?: string
 }>()
 
 const emit = defineEmits<{
@@ -19,13 +18,16 @@ const keyword = ref('')
 const rootRef = ref<HTMLElement | null>(null)
 const searchInputRef = ref<HTMLInputElement | null>(null)
 
+const flatOptions = computed(() => props.groups.flatMap((group) => group.tournaments))
+
 const selectedTournament = computed(
-  () => getTournamentById(props.modelValue) ?? tournamentGroups[0]?.tournaments[0],
+  () =>
+    flatOptions.value.find((item) => item.id === props.modelValue) ?? flatOptions.value[0],
 )
 
 const filteredGroups = computed(() => {
   const normalized = keyword.value.trim().toLowerCase()
-  return tournamentGroups
+  return props.groups
     .map((group) => {
       const tournaments = group.tournaments.filter((item) => {
         if (!normalized) return true
@@ -48,6 +50,7 @@ function closeDropdown() {
 }
 
 function toggleDropdown() {
+  if (props.loading || props.error) return
   open.value = !open.value
 }
 
@@ -97,7 +100,9 @@ onBeforeUnmount(() => {
       @click.stop="toggleDropdown"
     >
       <span class="data-tournament-selector__label">
-        {{ selectedTournament?.label || '选择赛事' }}
+        <template v-if="loading">加载赛季中...</template>
+        <template v-else-if="error">{{ error }}</template>
+        <template v-else>{{ selectedTournament?.label || '选择赛季' }}</template>
       </span>
       <span class="data-tournament-selector__arrow" aria-hidden="true" />
     </button>
@@ -106,9 +111,9 @@ onBeforeUnmount(() => {
       v-show="open"
       class="data-tournament-selector__dropdown"
       role="listbox"
-      aria-label="赛事列表"
+      aria-label="赛季列表"
     >
-      <h3 class="data-tournament-selector__title">选择赛事</h3>
+      <h3 class="data-tournament-selector__title">选择赛季</h3>
 
       <label class="data-tournament-selector__search">
         <span class="data-tournament-selector__search-icon" aria-hidden="true">⌕</span>
@@ -116,12 +121,12 @@ onBeforeUnmount(() => {
           ref="searchInputRef"
           v-model="keyword"
           type="search"
-          placeholder="搜索赛事"
+          placeholder="搜索赛季"
           autocomplete="off"
         />
       </label>
 
-      <div v-if="!hasMatches" class="data-tournament-selector__empty">暂无匹配赛事</div>
+      <div v-if="!hasMatches" class="data-tournament-selector__empty">暂无匹配赛季</div>
 
       <div
         v-for="group in filteredGroups"
@@ -167,16 +172,6 @@ onBeforeUnmount(() => {
   background: rgba(12, 12, 12, 0.92);
   color: #fff;
   cursor: pointer;
-  transition: border-color 0.16s ease, background-color 0.16s ease;
-
-  &:hover {
-    border-color: #7a7a7a;
-    background: rgba(20, 20, 20, 0.96);
-  }
-}
-
-.data-tournament-selector.is-open .data-tournament-selector__trigger {
-  border-color: #8a8a8a;
 }
 
 .data-tournament-selector__label {
@@ -184,7 +179,6 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 14px;
-  line-height: 1;
   font-weight: 600;
 }
 
@@ -195,7 +189,6 @@ onBeforeUnmount(() => {
   border-right: 1.5px solid #ddd;
   border-bottom: 1.5px solid #ddd;
   transform: rotate(45deg) translateY(-2px);
-  transition: transform 0.16s ease;
 }
 
 .data-tournament-selector.is-open .data-tournament-selector__arrow {
@@ -215,18 +208,13 @@ onBeforeUnmount(() => {
   border: 1px solid #4a4a4a;
   border-radius: 5px;
   background: linear-gradient(180deg, rgba(17, 17, 17, 0.99), rgba(9, 9, 9, 0.99));
-  box-shadow:
-    0 14px 34px rgba(0, 0, 0, 0.72),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
   color: #fff;
 }
 
 .data-tournament-selector__title {
   margin: 0 0 11px;
   font-size: 15px;
-  line-height: 1;
   font-weight: 700;
-  color: #f2f2f2;
 }
 
 .data-tournament-selector__search {
@@ -246,17 +234,7 @@ onBeforeUnmount(() => {
   background: #0a0a0a;
   color: #eee;
   font-size: 13px;
-  line-height: 36px;
   box-sizing: border-box;
-
-  &::placeholder {
-    color: #8c8c8c;
-  }
-
-  &:focus {
-    border-color: #777;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
-  }
 }
 
 .data-tournament-selector__search-icon {
@@ -266,7 +244,6 @@ onBeforeUnmount(() => {
   color: #aaa;
   transform: translateY(-50%);
   pointer-events: none;
-  font-size: 14px;
 }
 
 .data-tournament-selector__group + .data-tournament-selector__group {
@@ -276,7 +253,6 @@ onBeforeUnmount(() => {
 .data-tournament-selector__group-title {
   margin: 0 0 7px;
   font-size: 12px;
-  line-height: 1;
   color: #8c8c8c;
 }
 
@@ -295,11 +271,6 @@ onBeforeUnmount(() => {
   cursor: pointer;
   text-align: left;
   font-size: 13px;
-  transition: filter 0.12s ease;
-
-  &:hover {
-    filter: brightness(1.16);
-  }
 
   &.is-selected {
     background: linear-gradient(90deg, #fb2727, #ed1111);
@@ -317,19 +288,6 @@ onBeforeUnmount(() => {
   border: 1.5px solid #fff;
   border-radius: 50%;
   transform: translateY(-50%);
-  box-sizing: border-box;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 4px;
-    top: 3px;
-    width: 5px;
-    height: 3px;
-    border-left: 1.5px solid #fff;
-    border-bottom: 1.5px solid #fff;
-    transform: rotate(-45deg);
-  }
 }
 
 .data-tournament-selector__option.is-selected .data-tournament-selector__check {

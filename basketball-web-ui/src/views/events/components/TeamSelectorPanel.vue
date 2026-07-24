@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { teams } from '../mock'
+import type { Team } from '../types/events'
 import TeamLogo from './TeamLogo.vue'
 
 defineProps<{
-  selectedTeamId: number | null
+  teams: Team[]
+  selectedTeamId: string | null
 }>()
 
 const emit = defineEmits<{
-  select: [teamId: number | null]
+  select: [teamId: string | null]
 }>()
 </script>
 
@@ -31,15 +32,15 @@ const emit = defineEmits<{
 
       <button
         v-for="team in teams"
-        :key="team.id"
+        :key="team.teamId"
         type="button"
         class="team-item"
-        :class="{ active: selectedTeamId === team.id }"
-        @click="emit('select', team.id)"
+        :class="{ active: selectedTeamId === team.teamId }"
+        @click="emit('select', team.teamId)"
       >
         <TeamLogo :team="team" size="sm" />
         <span>{{ team.name }}</span>
-        <span v-if="selectedTeamId === team.id" class="check">●</span>
+        <span v-if="selectedTeamId === team.teamId" class="check">●</span>
       </button>
     </div>
   </div>

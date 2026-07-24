@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { getTeamById } from '../mock/teams.mock'
+import { ref, watch } from 'vue'
+import { getPublicMatchDetail } from '@/api/publicMatch'
+import type { PublicMatchDetailVo } from '@/api/types/public'
+import {
+  displayNumber,
+  displayText,
+  formatDateTime,
+  matchStatusLabel,
+} from '@/utils/publicDisplay'
 import type { Match } from '../types/events'
 
-defineProps<{
+const props = defineProps<{
   visible: boolean
   match: Match | null
 }>()
@@ -10,6 +18,41 @@ defineProps<{
 const emit = defineEmits<{
   close: []
 }>()
+
+const detail = ref<PublicMatchDetailVo | null>(null)
+const state = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
+const errorMessage = ref('')
+let reqId = 0
+
+async function loadDetail(matchId: string) {
+  const current = ++reqId
+  state.value = 'loading'
+  errorMessage.value = ''
+  try {
+    const res = await getPublicMatchDetail(matchId)
+    if (current !== reqId) return
+    detail.value = res.data ?? null
+    state.value = detail.value ? 'success' : 'error'
+    if (!detail.value) errorMessage.value = '暂无比赛详情'
+  } catch (err) {
+    if (current !== reqId) return
+    detail.value = null
+    state.value = 'error'
+    errorMessage.value = err instanceof Error ? err.message : '加载比赛详情失败'
+  }
+}
+
+watch(
+  () => [props.visible, props.match?.matchId] as const,
+  ([visible, matchId]) => {
+    if (visible && matchId) {
+      void loadDetail(matchId)
+    } else if (!visible) {
+      detail.value = null
+      state.value = 'idle'
+    }
+  },
+)
 </script>
 
 <template>
@@ -17,16 +60,30 @@ const emit = defineEmits<{
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="match-detail-title">
       <button type="button" class="modal-close" aria-label="关闭" @click="emit('close')">×</button>
       <h3 id="match-detail-title">比赛详情</h3>
-      <p class="modal-meta">{{ match.date }} · {{ match.startTime }} · {{ match.venue }}</p>
-      <div class="modal-versus sport-num">
-        <span>{{ getTeamById(match.awayTeamId)?.name }}</span>
-        <strong>
-          <template v-if="match.homeScore !== undefined">{{ match.awayScore }} : {{ match.homeScore }}</template>
-          <template v-else>VS</template>
-        </strong>
-        <span>{{ getTeamById(match.homeTeamId)?.name }}</span>
-      </div>
-      <p class="modal-tip">Mock 详情占位，后续接入真实比赛详情页。</p>
+
+      <div v-if="state === 'loading'" class="modal-state">加载中...</div>
+      <div v-else-if="state === 'error'" class="modal-state is-error">{{ errorMessage }}</div>
+      <template v-else-if="detail">
+        <p class="modal-meta">
+          {{ formatDateTime(detail.scheduledStartTime).full }} ·
+          {{ displayText(detail.venueName, '--') }} ·
+          {{ matchStatusLabel(detail.matchStatus) }}
+        </p>
+        <p v-if="detail.stageName || detail.seasonName" class="modal-meta">
+          {{ displayText(detail.seasonName) }}
+          <template v-if="detail.stageName"> · {{ detail.stageName }}</template>
+        </p>
+        <div class="modal-versus sport-num">
+          <span>{{ displayText(detail.awayTeamName) }}</span>
+          <strong>
+            <template v-if="detail.homeScore != null || detail.awayScore != null">
+              {{ displayNumber(detail.awayScore) }} : {{ displayNumber(detail.homeScore) }}
+            </template>
+            <template v-else>VS</template>
+          </strong>
+          <span>{{ displayText(detail.homeTeamName) }}</span>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -48,6 +105,7 @@ const emit = defineEmits<{
   padding: 28px;
   background: #111;
   border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
 }
 
 .modal-close {
@@ -73,13 +131,17 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: 24px 0;
+  margin: 24px 0 0;
   font-size: 28px;
 }
 
-.modal-tip {
-  margin: 0;
-  font-size: 13px;
-  color: var(--cnpa-text-secondary);
+.modal-state {
+  padding: 28px 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.55);
+
+  &.is-error {
+    color: #e10613;
+  }
 }
 </style>

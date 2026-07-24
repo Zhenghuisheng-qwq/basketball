@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import { normalizeDataMode, type PlayerDataMode } from '@/utils/playerNavigate'
-import type { PlayerCareerStatistics, PlayerDetailData } from '../mock/playerDetail'
+import type { PlayerCareerStatistics, PlayerDetailData } from '../types'
 
 const props = defineProps<{
   detail: PlayerDetailData
@@ -28,7 +28,7 @@ const selectedStage = computed(
 const careerRows = computed(() => {
   let rows = props.detail.careerStats
   if (seasonFilter.value !== '全部赛季') {
-    rows = rows.filter((row) => row.tournamentName.startsWith(seasonFilter.value.slice(0, 4)))
+    rows = rows.filter((row) => row.tournamentName.includes(seasonFilter.value.slice(0, 4)))
   }
   return rows
 })
@@ -57,44 +57,15 @@ const careerAverageRow = computed(() => {
   }
 })
 
-const seasonGames = computed(() => props.detail.seasonGames[selectedStageId.value] ?? [])
-
-const seasonAverageRow = computed(() => {
-  const rows = seasonGames.value
-  if (rows.length === 0) return null
-  const count = rows.length
-  const sum = (getter: (row: (typeof rows)[number]) => number) =>
-    rows.reduce((total, row) => total + getter(row), 0) / count
-  return {
-    date: '赛事场均',
-    opponentName: '-',
-    result: '-',
-    teamScore: 0,
-    opponentScore: 0,
-    points: sum((row) => row.points),
-    rebounds: sum((row) => row.rebounds),
-    assists: sum((row) => row.assists),
-    steals: sum((row) => row.steals),
-    blocks: sum((row) => row.blocks),
-    turnovers: sum((row) => row.turnovers),
-    fouls: sum((row) => row.fouls),
-    fieldGoalsMade: sum((row) => row.fieldGoalsMade),
-    fieldGoalsAttempted: sum((row) => row.fieldGoalsAttempted),
-    threePointsMade: sum((row) => row.threePointsMade),
-    threePointsAttempted: sum((row) => row.threePointsAttempted),
-    freeThrowsMade: sum((row) => row.freeThrowsMade),
-    freeThrowsAttempted: sum((row) => row.freeThrowsAttempted),
-  }
+const seasonStatRows = computed(() => {
+  if (!selectedStage.value) return []
+  return props.detail.careerStats.filter((row) => row.seasonId === selectedStage.value.id)
 })
 
 function formatStat(value: number, isPct = false): string {
   if (isPct) return `${value.toFixed(1)}%`
   if (statMode.value === 'average') return Number.isInteger(value) ? String(value) : value.toFixed(1)
-  return String(Math.round(value * 12))
-}
-
-function formatShot(made: number, attempted: number): string {
-  return `${made}/${attempted}`
+  return String(Math.round(value))
 }
 
 function setDataMode(mode: PlayerDataMode) {
@@ -130,6 +101,16 @@ watch(
   (value) => {
     dataMode.value = normalizeDataMode(value)
   },
+)
+
+watch(
+  () => props.detail.seasonStageOptions,
+  (options) => {
+    if (!options.some((item) => item.id === selectedStageId.value)) {
+      selectedStageId.value = options[0]?.id ?? ''
+    }
+  },
+  { immediate: true },
 )
 
 onMounted(() => {
@@ -192,14 +173,20 @@ onBeforeUnmount(() => {
       <div class="player-detail-filter-row">
         <select v-model="seasonFilter">
           <option value="全部赛季">全部赛季</option>
-          <option value="2026赛季">2026赛季</option>
-          <option value="2025赛季">2025赛季</option>
-          <option value="2024赛季">2024赛季</option>
+          <option
+            v-for="row in detail.careerStats"
+            :key="row.seasonId"
+            :value="`${row.seasonId}赛季`"
+          >
+            赛季 {{ row.seasonId }}
+          </option>
         </select>
-        <span class="player-detail-data__hint">命中率按累计命中数 ÷ 累计出手数计算</span>
+        <span class="player-detail-data__hint">展示 API 返回的赛季场均统计</span>
       </div>
 
-      <div class="player-detail-table-scroll">
+      <div v-if="careerRows.length === 0" class="player-detail-empty-inline">暂无生涯数据</div>
+
+      <div v-else class="player-detail-table-scroll">
         <table class="player-detail-table">
           <thead>
             <tr>
@@ -220,7 +207,7 @@ onBeforeUnmount(() => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in careerRows" :key="row.tournamentName">
+            <tr v-for="row in careerRows" :key="row.seasonId">
               <td class="is-left">{{ row.tournamentName }}</td>
               <td class="is-left">
                 <router-link :to="`/tournament/team/${row.teamId}/overview`" class="player-detail-team-link">
@@ -267,7 +254,7 @@ onBeforeUnmount(() => {
     <template v-else>
       <div ref="dropdownRef" class="player-detail-stage-selector" :class="{ 'is-open': dropdownOpen }">
         <button type="button" class="player-detail-stage-selector__trigger" @click.stop="toggleDropdown">
-          {{ selectedStage?.label }}
+          {{ selectedStage?.label || '暂无赛季' }}
           <span class="player-detail-stage-selector__arrow" aria-hidden="true" />
         </button>
         <div v-show="dropdownOpen" class="player-detail-stage-selector__dropdown">
@@ -288,87 +275,44 @@ onBeforeUnmount(() => {
       <div class="player-detail-section-head">
         <div>
           <div class="player-detail-section-head__group">
-            <h2 class="player-detail-section-head__title">{{ selectedStage?.tournamentName }}</h2>
+            <h2 class="player-detail-section-head__title">{{ selectedStage?.tournamentName || '赛季数据' }}</h2>
             <span class="player-detail-section-head__sub">
-              {{ selectedStage?.stageLabel }} - 单场数据 · 共 {{ selectedStage?.games }} 场
+              {{ selectedStage?.stageLabel || '常规赛' }} · 共 {{ selectedStage?.games || 0 }} 场
             </span>
           </div>
         </div>
       </div>
 
-      <div class="player-detail-table-scroll">
+      <div v-if="seasonStatRows.length === 0" class="player-detail-empty-inline">暂无赛季数据</div>
+
+      <div v-else class="player-detail-table-scroll">
         <table class="player-detail-table">
           <thead>
             <tr>
-              <th>日期</th>
-              <th>对手</th>
-              <th>结果</th>
-              <th>比赛比分</th>
+              <th>球队</th>
+              <th>出场</th>
               <th>得分</th>
               <th>篮板</th>
               <th>助攻</th>
               <th>抢断</th>
               <th>盖帽</th>
-              <th>失误</th>
-              <th>犯规</th>
-              <th>投篮</th>
-              <th>三分</th>
-              <th>罚球</th>
+              <th>投篮%</th>
+              <th>三分%</th>
+              <th>罚球%</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in seasonGames" :key="row.id">
-              <td>{{ row.date }}</td>
-              <td>{{ row.opponentName }}</td>
-              <td :class="row.result === 'WIN' ? 'player-detail-result--win' : 'player-detail-result--loss'">
-                {{ row.result === 'WIN' ? '胜利' : '失败' }}
-              </td>
-              <td>{{ row.teamScore }}:{{ row.opponentScore }}</td>
-              <td>{{ row.points }}</td>
-              <td>{{ row.rebounds }}</td>
-              <td>{{ row.assists }}</td>
-              <td>{{ row.steals }}</td>
-              <td>{{ row.blocks }}</td>
-              <td>{{ row.turnovers }}</td>
-              <td>{{ row.fouls }}</td>
-              <td>{{ formatShot(row.fieldGoalsMade, row.fieldGoalsAttempted) }}</td>
-              <td>{{ formatShot(row.threePointsMade, row.threePointsAttempted) }}</td>
-              <td>{{ formatShot(row.freeThrowsMade, row.freeThrowsAttempted) }}</td>
-            </tr>
-            <tr v-if="seasonAverageRow" class="is-summary">
-              <td>{{ seasonAverageRow.date }}</td>
-              <td colspan="3">-</td>
-              <td>{{ seasonAverageRow.points.toFixed(1) }}</td>
-              <td>{{ seasonAverageRow.rebounds.toFixed(1) }}</td>
-              <td>{{ seasonAverageRow.assists.toFixed(1) }}</td>
-              <td>{{ seasonAverageRow.steals.toFixed(1) }}</td>
-              <td>{{ seasonAverageRow.blocks.toFixed(1) }}</td>
-              <td>{{ seasonAverageRow.turnovers.toFixed(1) }}</td>
-              <td>{{ seasonAverageRow.fouls.toFixed(1) }}</td>
-              <td>
-                {{
-                  formatShot(
-                    Math.round(seasonAverageRow.fieldGoalsMade),
-                    Math.round(seasonAverageRow.fieldGoalsAttempted),
-                  )
-                }}
-              </td>
-              <td>
-                {{
-                  formatShot(
-                    Math.round(seasonAverageRow.threePointsMade),
-                    Math.round(seasonAverageRow.threePointsAttempted),
-                  )
-                }}
-              </td>
-              <td>
-                {{
-                  formatShot(
-                    Math.round(seasonAverageRow.freeThrowsMade),
-                    Math.round(seasonAverageRow.freeThrowsAttempted),
-                  )
-                }}
-              </td>
+            <tr v-for="row in seasonStatRows" :key="row.seasonId">
+              <td class="is-left">{{ row.teamName }}</td>
+              <td>{{ row.games }}</td>
+              <td>{{ formatStat(row.points) }}</td>
+              <td>{{ formatStat(row.rebounds) }}</td>
+              <td>{{ formatStat(row.assists) }}</td>
+              <td>{{ formatStat(row.steals) }}</td>
+              <td>{{ formatStat(row.blocks) }}</td>
+              <td>{{ formatStat(row.fieldGoalPercentage, true) }}</td>
+              <td>{{ formatStat(row.threePointPercentage, true) }}</td>
+              <td>{{ formatStat(row.freeThrowPercentage, true) }}</td>
             </tr>
           </tbody>
         </table>
@@ -417,6 +361,13 @@ onBeforeUnmount(() => {
   align-self: center;
   color: var(--cnpa-paper-text-secondary);
   font-size: 12px;
+}
+
+.player-detail-empty-inline {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--cnpa-paper-text-muted);
+  font-size: 14px;
 }
 
 .player-detail-stage-selector {

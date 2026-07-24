@@ -1,27 +1,42 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { getTeamById, getTeamMatches } from '@/mock/team'
+import { computed, inject, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { getPublicTeamMatchPage } from '@/api/publicTeam'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import type { TeamMatchRecord, TeamMatchStatus, TeamStage } from '@/types/team'
+import {
+  PUBLIC_TEAM_PAGE_KEY,
+  type PublicTeamPageContext,
+} from './composables/usePublicTeamPage'
+import { mapPublicMatchToTeamRecord, opponentAsTeam } from './utils/mapTeamMatch'
 
 type StatusFilter = 'all' | TeamMatchStatus
 type StageFilter = 'all' | TeamStage
 
 const pageSize = 8
 
-const route = useRoute()
+const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
 const router = useRouter()
 
-const teamId = computed(() => route.params.teamId as string)
-const allMatches = computed(() => getTeamMatches(teamId.value))
+const allMatches = ref<TeamMatchRecord[]>([])
+const loadState = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
+const errorMessage = ref('')
+let reqId = 0
+
+const teamId = computed(() => ctx.teamId.value)
 
 const statusFilter = ref<StatusFilter>('all')
-const competitionFilter = ref('2026 CNPA League')
+const competitionFilter = ref('all')
 const stageFilter = ref<StageFilter>('all')
 const currentPage = ref(1)
 
-const competitionOptions = ['2026 CNPA League']
+const competitionOptions = computed(() => {
+  const values = new Set<string>()
+  for (const match of allMatches.value) {
+    if (match.competition) values.add(match.competition)
+  }
+  return ['all', ...Array.from(values)]
+})
 
 const stageOptions: Array<{ value: StageFilter; label: string }> = [
   { value: 'all', label: '全部赛段' },
@@ -46,7 +61,10 @@ const filteredMatches = computed(() => {
       if (statusFilter.value !== 'all' && match.status !== statusFilter.value) {
         return false
       }
-      if (competitionFilter.value && match.competition !== competitionFilter.value) {
+      if (
+        competitionFilter.value !== 'all' &&
+        match.competition !== competitionFilter.value
+      ) {
         return false
       }
       if (stageFilter.value !== 'all' && match.stage !== stageFilter.value) {
@@ -55,8 +73,8 @@ const filteredMatches = computed(() => {
       return true
     })
     .sort((a, b) => {
-      const dateCompare = a.date.localeCompare(b.date)
-      return dateCompare !== 0 ? dateCompare : a.time.localeCompare(b.time)
+      const dateCompare = (a.date || '').localeCompare(b.date || '')
+      return dateCompare !== 0 ? dateCompare : (a.time || '').localeCompare(b.time || '')
     })
 })
 
@@ -66,6 +84,34 @@ const paginatedMatches = computed(() => {
   const start = (currentPage.value - 1) * pageSize
   return filteredMatches.value.slice(start, start + pageSize)
 })
+
+async function loadMatches() {
+  const id = teamId.value
+  const current = ++reqId
+  if (!id) {
+    allMatches.value = []
+    loadState.value = 'empty'
+    return
+  }
+  loadState.value = 'loading'
+  errorMessage.value = ''
+  try {
+    const res = await getPublicTeamMatchPage(id, { currentPage: 1, pageSize: 200 })
+    if (current !== reqId) return
+    const records = res.data?.records ?? []
+    allMatches.value = records.map((item) => mapPublicMatchToTeamRecord(item, id))
+    loadState.value = allMatches.value.length ? 'success' : 'empty'
+  } catch (err) {
+    if (current !== reqId) return
+    allMatches.value = []
+    loadState.value = 'error'
+    errorMessage.value = err instanceof Error ? err.message : '加载比赛失败'
+  }
+}
+
+watch(teamId, () => {
+  void loadMatches()
+}, { immediate: true })
 
 watch([statusFilter, competitionFilter, stageFilter], () => {
   currentPage.value = 1
@@ -78,12 +124,13 @@ watch(totalPages, (pages) => {
 })
 
 function getOpponent(match: TeamMatchRecord) {
-  return getTeamById(match.opponentId)
+  return opponentAsTeam(match)
 }
 
 function formatDateTime(match: TeamMatchRecord): string {
+  if (!match.date) return match.time || '--'
   const [, month, day] = match.date.split('-')
-  return `${month}-${day} ${match.time}`
+  return `${month}-${day} ${match.time || ''}`.trim()
 }
 
 function getStatusLabel(match: TeamMatchRecord): string {
@@ -98,6 +145,10 @@ function getStatusClass(match: TeamMatchRecord): string {
   if (match.result === 'win') return 'is-win'
   if (match.result === 'loss') return 'is-loss'
   return 'is-finished'
+}
+
+function displayScore(value: number | undefined): number {
+  return value ?? 0
 }
 
 function goMatchStats(match: TeamMatchRecord) {
@@ -145,7 +196,12 @@ function goPage(page: number) {
         <div class="filter-selects">
           <label class="filter-select">
             <select v-model="competitionFilter">
-              <option v-for="option in competitionOptions" :key="option" :value="option">
+              <option value="all">全部赛事</option>
+              <option
+                v-for="option in competitionOptions.filter((item) => item !== 'all')"
+                :key="option"
+                :value="option"
+              >
                 {{ option }}
               </option>
             </select>
@@ -162,7 +218,11 @@ function goPage(page: number) {
       </div>
     </div>
 
-    <div v-if="filteredMatches.length === 0" class="matches-empty">暂无符合条件的比赛</div>
+    <div v-if="loadState === 'loading'" class="matches-empty">加载中...</div>
+    <div v-else-if="loadState === 'error'" class="matches-empty is-error">
+      {{ errorMessage || '加载比赛失败' }}
+    </div>
+    <div v-else-if="filteredMatches.length === 0" class="matches-empty">暂无符合条件的比赛</div>
 
     <template v-else>
       <div class="match-list">
@@ -197,14 +257,14 @@ function goPage(page: number) {
                   class="score-number"
                   :class="{ 'is-winner': match.result === 'win' }"
                 >
-                  {{ match.teamScore }}
+                  {{ displayScore(match.teamScore) }}
                 </span>
                 <span class="score-separator">:</span>
                 <span
                   class="score-number"
                   :class="{ 'is-winner': match.result === 'loss' }"
                 >
-                  {{ match.opponentScore }}
+                  {{ displayScore(match.opponentScore) }}
                 </span>
               </span>
             </template>
@@ -369,6 +429,10 @@ function goPage(page: number) {
   background: rgba(25, 25, 25, 0.025);
   color: var(--cnpa-paper-text-muted);
   font-size: 14px;
+
+  &.is-error {
+    color: var(--cnpa-red);
+  }
 }
 
 .match-list {

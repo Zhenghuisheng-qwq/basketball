@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import NotificationTabs from '@/components/account/notifications/NotificationTabs.vue'
 import NotificationList from '@/components/account/notifications/NotificationList.vue'
+import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import { useNotificationCenterStore } from '@/stores/notificationCenter'
 import type { NotificationTabKey } from '@/types/accountNotifications'
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 10
 
 const router = useRouter()
 const notificationStore = useNotificationCenterStore()
@@ -17,37 +18,41 @@ const notificationStore = useNotificationCenterStore()
 const activeTab = ref<NotificationTabKey>('ALL')
 const page = ref(1)
 
-const filteredItems = computed(() => {
-  if (activeTab.value === 'UNREAD') {
-    return notificationStore.items.filter((item) => item.isUnread)
-  }
-  return notificationStore.items
+onMounted(async () => {
+  await loadPage()
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / PAGE_SIZE)))
+async function loadPage() {
+  const readStatus = activeTab.value === 'UNREAD' ? 0 : undefined
+  await notificationStore.refresh(page.value, PAGE_SIZE, readStatus)
+}
 
-const pagedItems = computed(() => {
-  const start = (page.value - 1) * PAGE_SIZE
-  return filteredItems.value.slice(start, start + PAGE_SIZE)
-})
+const filteredItems = computed(() => notificationStore.items)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(notificationStore.total / PAGE_SIZE)))
+
+const pagedItems = computed(() => filteredItems.value)
 
 const unreadText = computed(() => `${notificationStore.unreadCount} 条未读`)
 
-function setTab(tab: NotificationTabKey) {
+async function setTab(tab: NotificationTabKey) {
   activeTab.value = tab
   page.value = 1
+  await loadPage()
 }
 
-function handleMarkAllRead() {
-  notificationStore.markAllAsRead()
+async function handleMarkAllRead() {
+  await notificationStore.markAllAsRead()
+  await loadPage()
 }
 
 function handleViewDetail(id: string) {
   router.push(`/account/notifications/${id}`)
 }
 
-function handlePageChange(nextPage: number) {
+async function handlePageChange(nextPage: number) {
   page.value = nextPage
+  await loadPage()
 }
 </script>
 
@@ -77,20 +82,30 @@ function handlePageChange(nextPage: number) {
         </button>
       </template>
 
-      <NotificationTabs
-        :active-tab="activeTab"
-        :total="notificationStore.total"
-        :unread="notificationStore.unreadCount"
-        @change="setTab"
+      <div v-if="notificationStore.loading" class="notifications-loading">加载中...</div>
+
+      <AccountEmptyState
+        v-else-if="notificationStore.error"
+        message="加载通知失败"
+        :subtitle="notificationStore.error"
       />
 
-      <NotificationList
-        :items="pagedItems"
-        :page="page"
-        :total-pages="totalPages"
-        @view="handleViewDetail"
-        @update:page="handlePageChange"
-      />
+      <template v-else>
+        <NotificationTabs
+          :active-tab="activeTab"
+          :total="notificationStore.total"
+          :unread="notificationStore.unreadCount"
+          @change="setTab"
+        />
+
+        <NotificationList
+          :items="pagedItems"
+          :page="page"
+          :total-pages="totalPages"
+          @view="handleViewDetail"
+          @update:page="handlePageChange"
+        />
+      </template>
     </AccountPanel>
   </div>
 </template>
@@ -101,6 +116,11 @@ function handlePageChange(nextPage: number) {
 .account-view--notifications {
   width: 100%;
   min-width: 0;
+}
+
+.notifications-loading {
+  padding: 32px 0;
+  color: #666;
 }
 
 .account-btn-secondary--compact {

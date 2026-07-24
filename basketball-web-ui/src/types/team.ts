@@ -69,6 +69,8 @@ export interface TeamMatchRecord {
   id: string
   teamId: string
   opponentId: string
+  opponentName?: string
+  opponentLogoUrl?: string
   date: string
   time: string
   teamScore?: number

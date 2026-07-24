@@ -29,16 +29,28 @@ export interface PlayerLeader {
 
 export interface Match {
   id: number
+  /** 后端比赛主键（字符串 Long） */
+  matchId: string
   season: string
   date: string
   startTime: string
+  /** @deprecated 兼容旧 mock 数字 id，真实数据请用 homeTeamKey */
   homeTeamId: number
+  /** @deprecated 兼容旧 mock 数字 id，真实数据请用 awayTeamKey */
   awayTeamId: number
+  homeTeamKey: string
+  awayTeamKey: string
+  homeTeamName: string
+  awayTeamName: string
+  homeTeamLogo: string
+  awayTeamLogo: string
   homeScore?: number
   awayScore?: number
   venue: string
   status: MatchStatus
   week: number
+  matchStatus?: number
+  stageName?: string
 }
 
 export interface Standing {

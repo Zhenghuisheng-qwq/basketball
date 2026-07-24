@@ -13,7 +13,8 @@ export default defineConfig({
     open: false,
     proxy: {
       '/web-api': {
-        target: 'http://localhost:8080',
+        // 官网业务后端 basketball-web :8881（admin 后台为 :8080）
+        target: 'http://localhost:8881',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/web-api/, ''),
       },

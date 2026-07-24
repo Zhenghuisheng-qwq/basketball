@@ -1,25 +1,48 @@
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { matches as allMatches, defaultScheduleDate, defaultScheduleWeek } from '../mock'
+import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
+import { getPublicSeasonSchedulePage } from '@/api/publicMatch'
+import { getPublicSeasonStanding } from '@/api/publicStanding'
+import type { PublicStandingItemVo } from '@/api/types/public'
 import { getWeekNumber, shiftWeek } from './useCalendar'
 import type { Match } from '../types/events'
+import type { usePublicSeasonContext } from './usePublicSeasonContext'
+import { standingToTeam, toScheduleMatch } from '../utils/mapPublic'
+
+type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
 export function useScheduleFilters() {
-  const selectedSeason = ref('2026 赛季')
-  const selectedDate = ref(defaultScheduleDate)
-  const selectedTeamId = ref<number | null>(null)
-  const currentWeek = ref(defaultScheduleWeek)
+  const ctx = inject<SeasonContext>('publicSeasonContext')!
+
+  const selectedDate = ref('')
+  const selectedTeamId = ref<string | null>(null)
+  const currentWeek = ref(1)
   const isCalendarOpen = ref(false)
   const isTeamSelectorOpen = ref(false)
 
+  const matches = ref<Match[]>([])
+  const teams = ref<PublicStandingItemVo[]>([])
+  const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
+  const errorMessage = ref('')
+  let reqId = 0
+
+  const seasonOptions = computed(() =>
+    ctx.seasons.value.map((item) => ({
+      id: item.seasonId,
+      label: item.seasonName || item.seasonId,
+    })),
+  )
+
+  const selectedSeason = computed(() => ctx.seasonId.value)
+
+  const teamOptions = computed(() => teams.value.map(standingToTeam))
+
   const filteredMatches = computed<Match[]>(() => {
-    return allMatches.filter((match) => {
-      const seasonMatch = match.season === selectedSeason.value
-      const dateMatch = match.date === selectedDate.value
+    return matches.value.filter((match) => {
+      const dateMatch = !selectedDate.value || match.date === selectedDate.value
       const teamMatch =
         selectedTeamId.value === null ||
-        match.homeTeamId === selectedTeamId.value ||
-        match.awayTeamId === selectedTeamId.value
-      return seasonMatch && dateMatch && teamMatch
+        match.homeTeamKey === selectedTeamId.value ||
+        match.awayTeamKey === selectedTeamId.value
+      return dateMatch && teamMatch
     })
   })
 
@@ -40,25 +63,27 @@ export function useScheduleFilters() {
 
   function selectDate(date: string) {
     selectedDate.value = date
-    currentWeek.value = getWeekNumber(date)
+    if (date) currentWeek.value = getWeekNumber(date)
     closePanels()
   }
 
-  function selectTeam(teamId: number | null) {
+  function selectTeam(teamId: string | null) {
     selectedTeamId.value = teamId
     closePanels()
   }
 
-  function selectSeason(season: string) {
-    selectedSeason.value = season
+  function selectSeason(seasonId: string) {
+    ctx.selectSeason(seasonId)
   }
 
   function goPrevWeek() {
+    if (!selectedDate.value) return
     selectedDate.value = shiftWeek(selectedDate.value, -1)
     currentWeek.value = getWeekNumber(selectedDate.value)
   }
 
   function goNextWeek() {
+    if (!selectedDate.value) return
     selectedDate.value = shiftWeek(selectedDate.value, 1)
     currentWeek.value = getWeekNumber(selectedDate.value)
   }
@@ -74,6 +99,57 @@ export function useScheduleFilters() {
     if (event.key === 'Escape') closePanels()
   }
 
+  async function loadSchedule(seasonId: string) {
+    const current = ++reqId
+    if (!seasonId) {
+      matches.value = []
+      teams.value = []
+      state.value = 'empty'
+      return
+    }
+    state.value = 'loading'
+    errorMessage.value = ''
+    try {
+      const [scheduleRes, standingRes] = await Promise.all([
+        getPublicSeasonSchedulePage(seasonId, {
+          currentPage: 1,
+          pageSize: 100,
+          teamId: selectedTeamId.value || undefined,
+        }),
+        getPublicSeasonStanding(seasonId),
+      ])
+      if (current !== reqId) return
+      const seasonName = ctx.currentSeason.value?.seasonName || ''
+      matches.value = (scheduleRes.data?.records ?? []).map((item) =>
+        toScheduleMatch(item, seasonName),
+      )
+      teams.value = standingRes.data ?? []
+
+      if (!selectedDate.value && matches.value.length) {
+        const firstDate = matches.value.find((item) => item.date)?.date
+        if (firstDate) {
+          selectedDate.value = firstDate
+          currentWeek.value = getWeekNumber(firstDate)
+        }
+      }
+
+      state.value = matches.value.length ? 'success' : 'empty'
+    } catch (err) {
+      if (current !== reqId) return
+      matches.value = []
+      state.value = 'error'
+      errorMessage.value = err instanceof Error ? err.message : '加载赛程失败'
+    }
+  }
+
+  watch(
+    () => [ctx.seasonId.value, selectedTeamId.value] as const,
+    ([sid]) => {
+      void loadSchedule(sid)
+    },
+    { immediate: true },
+  )
+
   onMounted(() => {
     document.addEventListener('click', handleOutsideClick)
     document.addEventListener('keydown', handleEscape)
@@ -86,12 +162,16 @@ export function useScheduleFilters() {
 
   return {
     selectedSeason,
+    seasonOptions,
     selectedDate,
     selectedTeamId,
     currentWeek,
     isCalendarOpen,
     isTeamSelectorOpen,
     filteredMatches,
+    teamOptions,
+    state,
+    errorMessage,
     closePanels,
     toggleCalendar,
     toggleTeamSelector,
@@ -100,5 +180,6 @@ export function useScheduleFilters() {
     selectSeason,
     goPrevWeek,
     goNextWeek,
+    reload: () => loadSchedule(ctx.seasonId.value),
   }
 }

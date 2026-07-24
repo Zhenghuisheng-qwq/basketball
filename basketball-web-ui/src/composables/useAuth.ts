@@ -1,123 +1,100 @@
-import { computed, ref } from 'vue'
-import {
-  getCurrentAuth,
-  mockLogin as performMockLogin,
-  mockLogout as performMockLogout,
-  type MockAuthSession,
-  type MockLoginResult,
-} from '@/mock/auth'
+import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useAccountStore } from '@/stores/account'
 import { useNotificationCenterStore } from '@/stores/notificationCenter'
-import type { PlayerVerificationStatus, OpenApplicationStatus } from '@/types/account'
-import { identityQueryToVerificationStatus, isIdentityRestrictedQuery, openStatusQueryToEnum } from '@/types/account'
 
-const authSession = ref<MockAuthSession | null>(getCurrentAuth())
+export interface AuthLoginResult {
+  success: boolean
+  message?: string
+  errorCode?: 'INVALID_CREDENTIALS' | 'ACCOUNT_NOT_FOUND' | 'UNKNOWN'
+}
 
-function syncUserStore(session: MockAuthSession | null) {
-  const userStore = useUserStore()
-  if (!session) {
-    userStore.clearToken()
-    return
+function mapError(error: unknown): AuthLoginResult {
+  const message = error instanceof Error ? error.message : '登录失败'
+  let errorCode: AuthLoginResult['errorCode'] = 'UNKNOWN'
+  if (message.includes('密码') || message.includes('账号或密码')) {
+    errorCode = 'INVALID_CREDENTIALS'
+  } else if (message.includes('不存在') || message.includes('尚未注册')) {
+    errorCode = 'ACCOUNT_NOT_FOUND'
   }
-
-  userStore.setToken(`mock-${session.userId}`)
-  userStore.setUserInfo({
-    id: session.userId,
-    nickname: session.nickname,
-    avatar: session.avatarUrl || undefined,
-  })
+  return { success: false, message, errorCode }
 }
 
-function getDevVerificationOverride(): PlayerVerificationStatus | null {
-  if (!import.meta.env.DEV || typeof window === 'undefined') return null
-  const params = new URLSearchParams(window.location.search)
-  const statusQuery = params.get('status')
-  const identityStatus = identityQueryToVerificationStatus(statusQuery)
-  if (identityStatus) return identityStatus
-
-  const value = params.get('mockVerificationStatus')
-  if (
-    value === 'NOT_APPLIED'
-    || value === 'PENDING'
-    || value === 'APPROVED'
-    || value === 'REJECTED'
-    || value === 'CHANGE_PENDING'
-  ) {
-    return value
-  }
-  return null
-}
-
-function getDevEligibilityLimited(): boolean {
-  if (!import.meta.env.DEV || typeof window === 'undefined') return false
-  const params = new URLSearchParams(window.location.search)
-  if (isIdentityRestrictedQuery(params.get('status'))) return true
-  return params.get('status') === 'limited'
-}
-
-function getDevOpenStatusOverride(): OpenApplicationStatus | null {
-  if (!import.meta.env.DEV || typeof window === 'undefined') return null
-  const params = new URLSearchParams(window.location.search)
-  const openStatus = params.get('openStatus')
-  if (openStatus) return openStatusQueryToEnum(openStatus)
-  if (window.location.pathname.includes('/my-tournaments/open')) {
-    return openStatusQueryToEnum(params.get('status'))
-  }
-  return null
-}
-
-async function syncAccountStore() {
+async function syncAccountAfterLogin(loggedIn: boolean) {
   const accountStore = useAccountStore()
-  if (!authSession.value?.loggedIn) {
+  const notificationStore = useNotificationCenterStore()
+  if (!loggedIn) {
     accountStore.clearAccountState()
     return
   }
-  await accountStore.loadAccountMock(
-    getDevVerificationOverride(),
-    getDevEligibilityLimited(),
-    getDevOpenStatusOverride(),
-  )
+  await Promise.all([
+    accountStore.loadOverview().catch(() => undefined),
+    notificationStore.refresh().catch(() => undefined),
+  ])
 }
 
 export async function initAuthState() {
-  authSession.value = getCurrentAuth()
-  syncUserStore(authSession.value)
-  await syncAccountStore()
+  const userStore = useUserStore()
+  await userStore.ensureInitialized()
+  await syncAccountAfterLogin(userStore.isAuthenticated)
 }
 
 export function useAuth() {
+  const userStore = useUserStore()
   const accountStore = useAccountStore()
   const notificationStore = useNotificationCenterStore()
-  const isAuthenticated = computed(() => Boolean(authSession.value?.loggedIn))
-  const currentUser = computed(() => authSession.value)
+
+  const isAuthenticated = computed(() => userStore.isAuthenticated)
+  const currentUser = computed(() => {
+    const member = userStore.currentMember
+    if (!member) return null
+    return {
+      loggedIn: true as const,
+      userId: Number(member.memberId) || 0,
+      memberId: member.memberId,
+      email: member.emailMasked,
+      nickname: member.nickname,
+      avatarUrl: member.avatarUrl || '',
+      accountRole: 'BASIC_USER' as const,
+      emailVerified: Boolean(member.emailVerified),
+      loginTime: Date.now(),
+    }
+  })
   const unreadNotificationCount = computed(() => notificationStore.unreadCount)
 
-  async function login(
-    email: string,
-    password: string,
-    remember = false,
-  ): Promise<MockLoginResult> {
-    const result = await performMockLogin(email, password, remember)
-    if (result.success && result.session) {
-      authSession.value = result.session
-      syncUserStore(result.session)
-      await syncAccountStore()
+  async function login(account: string, password: string, remember = true): Promise<AuthLoginResult> {
+    try {
+      await userStore.loginByPassword(account, password, remember)
+      await syncAccountAfterLogin(true)
+      return { success: true }
+    } catch (error) {
+      return mapError(error)
     }
-    return result
+  }
+
+  async function loginWithEmailCode(
+    email: string,
+    verifyBizNo: string,
+    verifyCode: string,
+    remember = true,
+  ): Promise<AuthLoginResult> {
+    try {
+      await userStore.loginByEmailCode(email, verifyBizNo, verifyCode, remember)
+      await syncAccountAfterLogin(true)
+      return { success: true }
+    } catch (error) {
+      return mapError(error)
+    }
   }
 
   async function logout() {
-    performMockLogout()
-    authSession.value = null
-    syncUserStore(null)
+    await userStore.logout()
     accountStore.clearAccountState()
   }
 
   async function refreshAuth() {
-    authSession.value = getCurrentAuth()
-    syncUserStore(authSession.value)
-    await syncAccountStore()
+    await userStore.restoreSession()
+    await syncAccountAfterLogin(userStore.isAuthenticated)
   }
 
   return {
@@ -125,6 +102,7 @@ export function useAuth() {
     currentUser,
     unreadNotificationCount,
     login,
+    loginWithEmailCode,
     logout,
     refreshAuth,
   }

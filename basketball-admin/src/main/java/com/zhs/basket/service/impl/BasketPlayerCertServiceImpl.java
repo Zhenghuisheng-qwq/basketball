@@ -1,0 +1,201 @@
+package com.zhs.basket.service.impl;
+
+import com.zhs.basket.domain.*;
+import com.zhs.basket.enums.PlayerCertStatusEnum;
+import com.zhs.basket.mapper.*;
+import com.zhs.basket.query.PlayerCertQuery;
+import com.zhs.basket.req.PlayerCertApproveReq;
+import com.zhs.basket.req.PlayerCertRejectReq;
+import com.zhs.basket.service.IBasketPlayerCertService;
+import com.zhs.basket.support.BasketAccountSecurityLogWriter;
+import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.BasketDataMaskUtil;
+import com.zhs.basket.support.PlayerNoGenerator;
+import com.zhs.basket.vo.*;
+import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.SecurityUtils;
+import com.zhs.common.utils.StringUtils;
+import com.zhs.common.utils.bean.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
+
+    private static final Integer NOT_DELETED = 0;
+    private static final int CERT_APPROVED = PlayerCertStatusEnum.APPROVED.getCode();
+
+    @Autowired private BasketPlayerCertApplicationMapper applicationMapper;
+    @Autowired private BasketPlayerCertAuditMapper auditMapper;
+    @Autowired private BasketPlayerCertMaterialMapper materialMapper;
+    @Autowired private BasketFileAssetMapper fileAssetMapper;
+    @Autowired private BasketPlayerProfileMapper profileMapper;
+    @Autowired private PlayerNoGenerator playerNoGenerator;
+    @Autowired private BasketAdminMessageService messageService;
+    @Autowired private BasketAccountSecurityLogWriter securityLogWriter;
+
+    @Override
+    public List<PlayerCertListVo> selectList(PlayerCertQuery query) {
+        return applicationMapper.selectList(query).stream().map(this::toListVo).collect(Collectors.toList());
+    }
+
+    @Override
+    public PlayerCertDetailVo selectDetail(Long applicationId) {
+        BasketPlayerCertApplication app = requireApplication(applicationId);
+        PlayerCertDetailVo vo = new PlayerCertDetailVo();
+        BeanUtils.copyBeanProp(vo, app);
+        vo.setApplicationId(app.getId());
+        vo.setApplicationStatusName(PlayerCertStatusEnum.fromCode(app.getApplicationStatus()).getDescription());
+        vo.setContactMobileMasked(BasketDataMaskUtil.maskMobile(app.getContactMobile()));
+        vo.setMaterials(loadMaterials(applicationId));
+        vo.setAuditRecords(selectAuditRecords(applicationId));
+        return vo;
+    }
+
+    private List<PlayerCertMaterialVo> loadMaterials(Long applicationId) {
+        List<BasketPlayerCertMaterial> materials = materialMapper.selectByApplicationId(applicationId);
+        if (materials == null || materials.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<PlayerCertMaterialVo> result = new ArrayList<>();
+        for (BasketPlayerCertMaterial material : materials) {
+            PlayerCertMaterialVo item = new PlayerCertMaterialVo();
+            item.setMaterialId(material.getId());
+            item.setMaterialType(material.getMaterialType());
+            item.setFileId(material.getFileId());
+            item.setMaterialName(material.getMaterialName());
+            item.setSortNo(material.getSortNo());
+            item.setUploadTime(material.getCreateTime());
+            if (material.getFileId() != null) {
+                BasketFileAsset file = fileAssetMapper.selectById(material.getFileId());
+                if (file != null && NOT_DELETED.equals(file.getIsDelete())) {
+                    item.setFileName(file.getOriginalName() != null ? file.getOriginalName() : file.getFileName());
+                    item.setMimeType(file.getMimeType());
+                    item.setFileSize(file.getFileSize());
+                }
+            }
+            result.add(item);
+        }
+        return result;
+    }
+
+    @Override
+    public List<PlayerCertAuditRecordVo> selectAuditRecords(Long applicationId) {
+        return auditMapper.selectByApplicationId(applicationId).stream().map(r -> {
+            PlayerCertAuditRecordVo vo = new PlayerCertAuditRecordVo();
+            BeanUtils.copyBeanProp(vo, r);
+            return vo;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void startReview(Long applicationId) {
+        BasketPlayerCertApplication app = requireApplication(applicationId);
+        Long auditorId = SecurityUtils.getUserId();
+        int rows = applicationMapper.updateStatusIfMatch(applicationId,
+                Collections.singletonList(PlayerCertStatusEnum.SUBMITTED.getCode()),
+                PlayerCertStatusEnum.REVIEWING.getCode(), auditorId, null, null, null);
+        assertSingleRow(rows, "开始审核失败，状态已变更");
+        writeAudit(app, "START_REVIEW", app.getApplicationStatus(), PlayerCertStatusEnum.REVIEWING.getCode(), "开始审核");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void approve(Long applicationId, PlayerCertApproveReq req) {
+        BasketPlayerCertApplication app = requireApplication(applicationId);
+        Long auditorId = SecurityUtils.getUserId();
+        Date now = new Date();
+        int rows = applicationMapper.updateStatusIfMatch(applicationId,
+                Arrays.asList(PlayerCertStatusEnum.SUBMITTED.getCode(), PlayerCertStatusEnum.REVIEWING.getCode()),
+                PlayerCertStatusEnum.APPROVED.getCode(), auditorId, req.getAuditRemark(), now, auditorId);
+        assertSingleRow(rows, "审核通过失败，状态已变更");
+        upsertProfile(app, req.getPositionCode(), now);
+        writeAudit(app, "APPROVE", app.getApplicationStatus(), PlayerCertStatusEnum.APPROVED.getCode(), req.getAuditRemark());
+        messageService.sendSiteMessage(app.getMemberId(), auditorId, "PLAYER_CERT", applicationId,
+                "球员认证已通过", "您的球员认证申请已通过审核。");
+        securityLogWriter.write(app.getMemberId(), "PLAYER_CERT_APPROVED", "球员认证通过", null, "已通过", auditorId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void reject(Long applicationId, PlayerCertRejectReq req) {
+        BasketPlayerCertApplication app = requireApplication(applicationId);
+        Long auditorId = SecurityUtils.getUserId();
+        String remark = StringUtils.hasText(req.getRejectReason()) ? req.getRejectReason() : req.getAuditRemark();
+        int rows = applicationMapper.updateStatusIfMatch(applicationId,
+                Collections.singletonList(PlayerCertStatusEnum.REVIEWING.getCode()),
+                PlayerCertStatusEnum.REJECTED.getCode(), auditorId, remark, new Date(), auditorId);
+        assertSingleRow(rows, "驳回失败，状态已变更");
+        writeAudit(app, "REJECT", app.getApplicationStatus(), PlayerCertStatusEnum.REJECTED.getCode(), remark);
+        messageService.sendSiteMessage(app.getMemberId(), auditorId, "PLAYER_CERT", applicationId,
+                "球员认证已驳回", "您的球员认证申请已被驳回：" + remark);
+        securityLogWriter.write(app.getMemberId(), "PLAYER_CERT_REJECTED", "球员认证驳回", null, remark, auditorId);
+    }
+
+    private void upsertProfile(BasketPlayerCertApplication app, String positionCode, Date certifiedTime) {
+        BasketPlayerProfile profile = profileMapper.selectByMemberId(app.getMemberId());
+        if (profile == null) {
+            profile = new BasketPlayerProfile();
+            profile.setMemberId(app.getMemberId());
+            profile.setPlayerNo(playerNoGenerator.generatePlayerNo());
+            profile.setIsDelete(NOT_DELETED);
+        } else if (!StringUtils.hasText(profile.getPlayerNo())) {
+            profile.setPlayerNo(playerNoGenerator.generatePlayerNo());
+        }
+        profile.setRealName(app.getRealName());
+        profile.setIdType(app.getIdType());
+        profile.setIdNoCipher(app.getIdNoCipher());
+        profile.setIdNoMasked(app.getIdNoMasked());
+        profile.setGameTerminal(app.getGameTerminal());
+        profile.setGameAccount(app.getGameAccount());
+        profile.setGameNickname(app.getGameNickname());
+        profile.setPositionCode(StringUtils.hasText(positionCode) ? positionCode : app.getPositionCode());
+        profile.setCertificationStatus(CERT_APPROVED);
+        profile.setCertifiedTime(certifiedTime);
+        if (profile.getId() == null) {
+            profileMapper.insert(profile);
+        } else {
+            profileMapper.updateById(profile);
+        }
+    }
+
+    private void writeAudit(BasketPlayerCertApplication app, String action, Integer before, Integer after, String remark) {
+        BasketPlayerCertAudit audit = new BasketPlayerCertAudit();
+        audit.setApplicationId(app.getId());
+        audit.setAuditAction(action);
+        audit.setBeforeStatus(before);
+        audit.setAfterStatus(after);
+        audit.setAuditorId(SecurityUtils.getUserId());
+        audit.setAuditorName(SecurityUtils.getUsername());
+        audit.setAuditRemark(remark);
+        audit.setAuditTime(new Date());
+        audit.setIsDelete(NOT_DELETED);
+        auditMapper.insert(audit);
+    }
+
+    private BasketPlayerCertApplication requireApplication(Long id) {
+        BasketPlayerCertApplication app = applicationMapper.selectById(id);
+        if (app == null) {
+            throw new ServiceException("认证申请不存在");
+        }
+        return app;
+    }
+
+    private PlayerCertListVo toListVo(BasketPlayerCertApplication app) {
+        PlayerCertListVo vo = new PlayerCertListVo();
+        BeanUtils.copyBeanProp(vo, app);
+        vo.setApplicationStatusName(PlayerCertStatusEnum.fromCode(app.getApplicationStatus()).getDescription());
+        return vo;
+    }
+
+    private void assertSingleRow(int rows, String message) {
+        if (rows != 1) {
+            throw new ServiceException(message);
+        }
+    }
+}

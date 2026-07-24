@@ -1,46 +1,40 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import { useAccountStore } from '@/stores/account'
-import { identityQueryToVerificationStatus } from '@/types/account'
-import type { PlayerVerificationStatus } from '@/types/account'
 
 const route = useRoute()
 const router = useRouter()
 const accountStore = useAccountStore()
-const isDev = import.meta.env.DEV
 
 const identity = computed(() => accountStore.playerIdentity)
-
 const status = computed(() => identity.value?.status || 'NOT_SUBMITTED')
+const cert = computed(() => accountStore.playerCert)
 
-watch(
-  () => route.query.status,
-  async (queryStatus) => {
-    if (!import.meta.env.DEV || typeof queryStatus !== 'string') return
-    const mapped = identityQueryToVerificationStatus(queryStatus)
-    if (!mapped) return
-    await accountStore.loadAccountMock(mapped, queryStatus === 'limited')
-  },
-  { immediate: true },
-)
+onMounted(async () => {
+  try {
+    await accountStore.loadPlayerCertification()
+  } catch {
+    // shown via empty state
+  }
+})
 
 watch(
   [status, () => route.name],
   ([nextStatus, routeName]) => {
     if (routeName !== 'AccountPlayerIdentity') return
-    if (nextStatus === 'PENDING') router.replace({ name: 'AccountPlayerIdentityPending' })
-    else if (nextStatus === 'REJECTED') router.replace({ name: 'AccountPlayerIdentityRejected' })
+    if (nextStatus === 'PENDING') router.replace({ name: 'AccountPlayerIdentityStatusPending' })
+    else if (nextStatus === 'REJECTED') router.replace({ name: 'AccountPlayerIdentityStatusRejected' })
     else if (nextStatus === 'APPROVED' || nextStatus === 'ELIGIBILITY_LIMITED') {
-      if (nextStatus === 'ELIGIBILITY_LIMITED' && route.query.status === 'limited') {
+      if (nextStatus === 'ELIGIBILITY_LIMITED') {
         router.replace({ name: 'AccountPlayerEligibility' })
         return
       }
-      router.replace({ name: 'AccountPlayerIdentityApproved' })
+      router.replace({ name: 'AccountPlayerIdentityStatusApproved' })
     }
   },
   { immediate: true },
@@ -49,18 +43,12 @@ watch(
 const banner = computed(() => ({
   title: 'CNPA 永久球员身份',
   description: '完成一次认证，建立长期有效的球员档案',
-  statusText: '未认证',
+  statusText: cert.value?.applicationStatusText || '未认证',
   statusType: 'warning' as const,
 }))
 
 function goApply() {
   router.push({ name: 'AccountPlayerIdentityApply' })
-}
-
-async function switchDevStatus(next: PlayerVerificationStatus) {
-  if (!import.meta.env.DEV) return
-  await router.replace({ query: { status: next === 'NOT_APPLIED' ? 'not-submitted' : next.toLowerCase() } })
-  await accountStore.loadAccountMock(next)
 }
 </script>
 
@@ -78,7 +66,9 @@ async function switchDevStatus(next: PlayerVerificationStatus) {
 
     <AccountStatusBanner v-bind="banner" />
 
-    <div class="account-grid-2 identity-entry-grid">
+    <div v-if="accountStore.certLoading" class="identity-loading">加载认证状态中...</div>
+
+    <div v-else class="account-grid-2 identity-entry-grid">
       <AccountPanel title="当前状态">
         <div class="identity-entry-state">
           <div class="identity-entry-state__icon" aria-hidden="true">
@@ -86,8 +76,11 @@ async function switchDevStatus(next: PlayerVerificationStatus) {
               <path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
             </svg>
           </div>
-          <AccountStatusBadge type="warning" text="未认证" />
-          <p class="identity-entry-state__title">尚未申请球员认证</p>
+          <AccountStatusBadge type="warning" :text="cert?.applicationStatusText || '未认证'" />
+          <p class="identity-entry-state__title">
+            {{ cert?.hasPlayerProfile ? '已有球员档案' : '尚未申请球员认证' }}
+          </p>
+          <p v-if="cert?.playerNo" class="identity-entry-hint">永久球员 ID：{{ cert.playerNo }}</p>
         </div>
       </AccountPanel>
 
@@ -101,21 +94,25 @@ async function switchDevStatus(next: PlayerVerificationStatus) {
           未认证账号不能报名、接受球队邀请、进入阵容或参与转会
         </p>
         <div class="account-panel__action">
-          <button type="button" class="account-btn-primary" @click="goApply">申请球员认证</button>
+          <button
+            type="button"
+            class="account-btn-primary"
+            :disabled="cert?.canEdit === false"
+            @click="goApply"
+          >
+            申请球员认证
+          </button>
         </div>
       </AccountPanel>
     </div>
-
-    <details v-if="isDev" class="verification-dev-switcher">
-      <summary>DEV</summary>
-      <button type="button" class="verification-dev-switcher__btn" @click="switchDevStatus('NOT_APPLIED')">未提交</button>
-      <button type="button" class="verification-dev-switcher__btn" @click="switchDevStatus('PENDING')">审核中</button>
-      <button type="button" class="verification-dev-switcher__btn" @click="switchDevStatus('REJECTED')">未通过</button>
-      <button type="button" class="verification-dev-switcher__btn" @click="switchDevStatus('APPROVED')">已通过</button>
-    </details>
   </div>
 </template>
 
 <style scoped lang="scss">
 @import '../styles/account-center.scss';
+
+.identity-loading {
+  padding: 32px 0;
+  color: #696969;
+}
 </style>

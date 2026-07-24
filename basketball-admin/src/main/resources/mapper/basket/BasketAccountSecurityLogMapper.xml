@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketAccountSecurityLogMapper">
+    <resultMap type="com.zhs.basket.domain.BasketAccountSecurityLog" id="BasketAccountSecurityLogResult">
+        <id property="id" column="id" />
+        <result property="memberId" column="member_id" />
+        <result property="eventType" column="event_type" />
+        <result property="eventTitle" column="event_title" />
+        <result property="oldValueMasked" column="old_value_masked" />
+        <result property="newValueMasked" column="new_value_masked" />
+        <result property="operatorType" column="operator_type" />
+        <result property="operatorId" column="operator_id" />
+        <result property="clientIp" column="client_ip" />
+        <result property="terminalType" column="terminal_type" />
+        <result property="eventTime" column="event_time" />
+        <result property="remark" column="remark" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_account_security_log (member_id, event_type, event_title, old_value_masked, new_value_masked, operator_type, operator_id, client_ip, terminal_type, event_time, remark, create_time, update_time, is_delete) values (#{memberId}, #{eventType}, #{eventTitle}, #{oldValueMasked}, #{newValueMasked}, #{operatorType}, #{operatorId}, #{clientIp}, #{terminalType}, #{eventTime}, #{remark}, #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+</mapper>

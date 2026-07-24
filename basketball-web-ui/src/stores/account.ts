@@ -1,46 +1,22 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { getCurrentAuth } from '@/mock/auth'
+import { getAccountCenterOverview } from '@/api/accountCenter'
+import { bindAccountAvatar, getAccountProfile, updateAccountProfile } from '@/api/accountProfile'
+import { uploadAccountFile } from '@/api/accountFile'
 import {
-  accountStorageKey,
-  getDefaultAccount,
-} from '@/mock/account/account'
+  getNotificationSetting,
+  getPrivacySetting,
+  updateNotificationSetting,
+  updatePrivacySetting,
+} from '@/api/accountSetting'
+import { getAccountTournamentPage } from '@/api/accountTournament'
 import {
-  getDefaultProfile,
-  profileStorageKey,
-} from '@/mock/account/profile'
-import {
-  applyDevVerificationOverride,
-  getDefaultVerification,
-  verificationStorageKey,
-} from '@/mock/account/verification'
-import {
-  buildPlayerIdentity,
-  buildPlayerNo,
-  eligibilityStorageKey,
-  getDefaultEligibility,
-  getDefaultIdentityChangeHistory,
-  getDefaultPlatformGameIds,
-  mapVerificationPlatform,
-  platformGameIdsStorageKey,
-} from '@/mock/playerIdentityMock'
-import {
-  getDefaultMyTournaments,
-  myTournamentsStorageKey,
-} from '@/mock/tournamentAccountMock'
-import {
-  applyDevOpenApplicationOverride,
-  buildOpenApplicationNo,
-  getDefaultOpenApplication,
-  isOpenRegistrationDeadlinePassed,
-  mockOpenTournament,
-  openApplicationStorageKey,
-} from '@/mock/openRegistrationMock'
-import {
-  countUnread,
-  getDefaultNotifications,
-  notificationsStorageKey,
-} from '@/mock/account/notifications'
+  bindPlayerCertificationMaterial,
+  getPlayerCertificationCurrent,
+  savePlayerCertificationDraft,
+  submitPlayerCertification,
+} from '@/api/playerCertification'
+import { isLoggedIn } from '@/utils/auth'
 import {
   getDefaultTeamRelations,
   teamRelationsStorageKey,
@@ -52,56 +28,68 @@ import {
   validatePasswordRules,
 } from '@/mock/account/security'
 import {
+  buildPlayerIdentity,
+  getDefaultPlatformGameIds,
+  getDefaultIdentityChangeHistory,
+  platformGameIdsStorageKey,
+} from '@/mock/playerIdentityMock'
+import {
+  myTournamentsStorageKey,
+} from '@/mock/tournamentAccountMock'
+import {
+  applyDevOpenApplicationOverride,
+  buildOpenApplicationNo,
+  getDefaultOpenApplication,
+  isOpenRegistrationDeadlinePassed,
+  mockOpenTournament,
+  openApplicationStorageKey,
+} from '@/mock/openRegistrationMock'
+import {
+  getDefaultEligibility,
+  eligibilityStorageKey,
+} from '@/mock/playerIdentityMock'
+import {
   readStorageItem,
-  removeStorageItem,
   safeParseStorage,
   writeStorageItem,
 } from '@/utils/safeParseStorage'
-import { patchAuthSession } from '@/mock/auth'
+import {
+  applyOverviewToStoreState,
+  mapPlatformToGameTerminal,
+  mapPlayerCertToVerification,
+  mapProfileDtoToAccountProfile,
+  mapTournamentItemToMyTournament,
+} from '@/utils/accountMappers'
+import type { NotificationSettingDto, PrivacySettingDto } from '@/api/types/accountSetting'
+import type { PlayerCertCurrentDto, PlayerCertDraftPayload } from '@/api/types/playerCertification'
+import type { PendingTaskDto } from '@/api/types/accountCenter'
 import type {
-  AccountNotification,
   AccountProfile,
   AccountRole,
+  CertifiedPlayerForOpen,
   CurrentAccount,
+  EligibilityLimit,
+  IdentityChangeRecord,
+  IdentityPlatform,
+  MyTournament,
+  OpenApplication,
+  OpenApplicationStatus,
+  OpenTournament,
+  PlatformGameIdRecord,
+  PlayerIdentity,
   PlayerVerification,
   PlayerVerificationSnapshot,
-  PlayerVerificationStatus,
   TeamRelationsData,
   AccountSecurityData,
-  PlayerIdentity,
-  PlatformGameIdRecord,
-  IdentityChangeRecord,
-  EligibilityLimit,
-  MyTournament,
-  IdentityPlatform,
-  OpenApplication,
-  OpenTournament,
-  CertifiedPlayerForOpen,
-  OpenApplicationStatus,
 } from '@/types/account'
 import { IDENTITY_PLATFORM_LABELS, OPEN_APPLICATION_STATUS_LABELS } from '@/types/account'
-
-function syncAccountRoleFromVerification(
-  account: CurrentAccount,
-  verification: PlayerVerification,
-): CurrentAccount {
-  const next = { ...account, playerVerificationStatus: verification.status }
-  if (verification.status === 'APPROVED' || verification.status === 'CHANGE_PENDING') {
-    if (next.accountRole === 'BASIC_USER') {
-      next.accountRole = 'PLAYER'
-    }
-    next.playerNo = buildPlayerNo(account.userId)
-  } else if (verification.status === 'NOT_APPLIED' || verification.status === 'PENDING' || verification.status === 'REJECTED') {
-    next.playerNo = ''
-  }
-  return next
-}
+import { mapVerificationPlatform } from '@/mock/playerIdentityMock'
 
 export const useAccountStore = defineStore('account', () => {
   const currentAccount = ref<CurrentAccount | null>(null)
   const profile = ref<AccountProfile | null>(null)
   const verification = ref<PlayerVerification | null>(null)
-  const notifications = ref<AccountNotification[]>([])
+  const playerCert = ref<PlayerCertCurrentDto | null>(null)
   const teamRelations = ref<TeamRelationsData | null>(null)
   const security = ref<AccountSecurityData | null>(null)
   const platformGameIds = ref<PlatformGameIdRecord[]>([])
@@ -113,14 +101,16 @@ export const useAccountStore = defineStore('account', () => {
   const eligibilityLimited = ref(false)
   const loadedUserId = ref<number | null>(null)
 
-  const isAuthenticated = computed(() => Boolean(getCurrentAuth()?.loggedIn))
-  const unreadCount = computed(() => countUnread(notifications.value))
+  const overviewLoading = ref(false)
+  const overviewError = ref('')
+  const pendingTasks = ref<PendingTaskDto[]>([])
+  const privacySetting = ref<PrivacySettingDto | null>(null)
+  const notificationSetting = ref<NotificationSettingDto | null>(null)
+  const profileLoading = ref(false)
+  const tournamentsLoading = ref(false)
+  const certLoading = ref(false)
 
-  const pendingInvitationCount = computed(() =>
-    myTournaments.value.filter((item) => item.status === 'INVITED').length
-      || teamRelations.value?.invitations.filter((item) => item.status === 'PENDING').length
-      || 0,
-  )
+  const isAuthenticated = computed(() => isLoggedIn())
 
   const playerIdentity = computed<PlayerIdentity | null>(() => {
     if (!verification.value || !currentAccount.value) return null
@@ -144,7 +134,7 @@ export const useAccountStore = defineStore('account', () => {
     const platformRecord = platformGameIds.value.find(
       (item) => item.platform === platformKey && item.status === 'EFFECTIVE',
     )
-    const gameId = platformRecord?.gameId || effective?.gameId || ''
+    const gameId = platformRecord?.gameId || effective?.gameId || playerCert.value?.gameAccount || ''
     return {
       userNo: currentAccount.value.userNo,
       playerNo: currentAccount.value.playerNo,
@@ -169,25 +159,11 @@ export const useAccountStore = defineStore('account', () => {
       : 0,
   }))
 
-  function persistAccount() {
-    if (!currentAccount.value) return
-    writeStorageItem(accountStorageKey(currentAccount.value.userId), JSON.stringify(currentAccount.value))
-  }
-
-  function persistProfile() {
-    if (!profile.value) return
-    writeStorageItem(profileStorageKey(profile.value.userId), JSON.stringify(profile.value))
-  }
-
-  function persistVerification() {
-    if (!verification.value) return
-    writeStorageItem(verificationStorageKey(verification.value.userId), JSON.stringify(verification.value))
-  }
-
-  function persistNotifications() {
-    if (loadedUserId.value == null) return
-    writeStorageItem(notificationsStorageKey(loadedUserId.value), JSON.stringify(notifications.value))
-  }
+  const pendingInvitationCount = computed(() =>
+    myTournaments.value.filter((item) => item.status === 'INVITED').length
+      || teamRelations.value?.invitations.filter((item) => item.status === 'PENDING').length
+      || 0,
+  )
 
   function persistTeamRelations() {
     if (!teamRelations.value) return
@@ -197,11 +173,6 @@ export const useAccountStore = defineStore('account', () => {
   function persistSecurity() {
     if (!security.value) return
     writeStorageItem(securityStorageKey(security.value.userId), JSON.stringify(security.value))
-  }
-
-  function persistPlatformGameIds() {
-    if (loadedUserId.value == null) return
-    writeStorageItem(platformGameIdsStorageKey(loadedUserId.value), JSON.stringify(platformGameIds.value))
   }
 
   function persistMyTournaments() {
@@ -214,49 +185,365 @@ export const useAccountStore = defineStore('account', () => {
     writeStorageItem(openApplicationStorageKey(loadedUserId.value), JSON.stringify(openApplication.value))
   }
 
-  function formatOpenDateTime(iso: string): string {
-    if (!iso) return ''
-    return iso.replace('T', ' ').slice(0, 16)
+  function loadOutOfScopeMocks(userId: number) {
+    teamRelations.value = safeParseStorage<TeamRelationsData>(
+      readStorageItem(teamRelationsStorageKey(userId)),
+      getDefaultTeamRelations(userId),
+    )
+    platformGameIds.value = safeParseStorage<PlatformGameIdRecord[]>(
+      readStorageItem(platformGameIdsStorageKey(userId)),
+      getDefaultPlatformGameIds(userId),
+    )
+    identityChangeHistory.value = safeParseStorage<IdentityChangeRecord[]>(
+      readStorageItem(`${platformGameIdsStorageKey(userId)}_history`),
+      getDefaultIdentityChangeHistory(userId),
+    )
+    eligibility.value = safeParseStorage<EligibilityLimit>(
+      readStorageItem(eligibilityStorageKey(userId)),
+      getDefaultEligibility(userId),
+    )
+    openTournament.value = { ...mockOpenTournament }
+    openApplication.value = safeParseStorage<OpenApplication | null>(
+      readStorageItem(openApplicationStorageKey(userId)),
+      getDefaultOpenApplication(userId),
+    )
   }
 
-  function syncOpenTournamentEntry() {
-    if (!openApplication.value) return
-    const openId = openTournament.value.id
-    let entry = myTournaments.value.find((item) => item.id === openId)
-    if (!entry) {
-      entry = {
-        id: openId,
-        name: openTournament.value.name,
-        type: 'Open',
-        period: openTournament.value.seasonName,
-        status: 'NOT_JOINED',
-        statusText: '未参加',
-        teamName: '',
-        role: '个人参赛',
-        eligibility: 'OK',
-        openRegistrationStatus: openApplication.value.status,
+  async function ensureSecurityLoaded(userId: number) {
+    security.value = safeParseStorage<AccountSecurityData | null>(
+      readStorageItem(securityStorageKey(userId)),
+      null,
+    )
+    if (!security.value) {
+      security.value = await getDefaultSecurity(userId)
+      persistSecurity()
+    }
+  }
+
+  function applyOverviewData(overview: ReturnType<typeof applyOverviewToStoreState>) {
+    currentAccount.value = overview.currentAccount
+    profile.value = overview.profile
+    verification.value = overview.verification
+    myTournaments.value = overview.myTournaments
+    pendingTasks.value = overview.pendingTasks
+    loadedUserId.value = overview.currentAccount.userId
+  }
+
+  async function loadOverview() {
+    if (!isLoggedIn()) {
+      clearAccountState()
+      return
+    }
+    overviewLoading.value = true
+    overviewError.value = ''
+    try {
+      const res = await getAccountCenterOverview()
+      const mapped = applyOverviewToStoreState(res.data, eligibilityLimited.value)
+      applyOverviewData(mapped)
+      if (loadedUserId.value != null) {
+        loadOutOfScopeMocks(loadedUserId.value)
+        await ensureSecurityLoaded(loadedUserId.value)
+        if (currentAccount.value && security.value) {
+          currentAccount.value.lastLoginAt = security.value.lastLoginAt || currentAccount.value.lastLoginAt
+        }
       }
-      myTournaments.value.unshift(entry)
+    } catch (error) {
+      overviewError.value = error instanceof Error ? error.message : '加载失败'
+      throw error
+    } finally {
+      overviewLoading.value = false
     }
-    entry.openRegistrationStatus = openApplication.value.status
-    if (openApplication.value.status === 'APPROVED') {
-      entry.status = 'JOINED'
-      entry.statusText = '正式参赛'
-      entry.role = '个人参赛'
-    } else if (openApplication.value.status === 'PENDING') {
-      entry.status = 'WAITING_REGISTRATION'
-      entry.statusText = '报名审核中'
-    } else if (openApplication.value.status === 'REJECTED') {
-      entry.status = 'NOT_JOINED'
-      entry.statusText = '报名未通过'
-    } else if (openApplication.value.status === 'CANCELLED') {
-      entry.status = 'NOT_JOINED'
-      entry.statusText = '已取消'
-    } else {
-      entry.status = 'NOT_JOINED'
-      entry.statusText = '未参加'
+  }
+
+  async function loadProfile() {
+    profileLoading.value = true
+    try {
+      const res = await getAccountProfile()
+      profile.value = mapProfileDtoToAccountProfile(res.data)
+      if (currentAccount.value) {
+        currentAccount.value.nickname = res.data.nickname
+        currentAccount.value.avatarUrl = res.data.avatarUrl || ''
+        currentAccount.value.maskedEmail = res.data.emailMasked
+        currentAccount.value.email = res.data.emailMasked
+        currentAccount.value.emailVerified = Boolean(res.data.emailVerified)
+        currentAccount.value.lastLoginAt = res.data.lastLoginTime || currentAccount.value.lastLoginAt
+      }
+    } finally {
+      profileLoading.value = false
     }
+  }
+
+  async function updateProfile(payload: Partial<Pick<AccountProfile, 'nickname' | 'avatarUrl'>> & {
+    avatarFile?: File
+  }) {
+    if (!profile.value || !currentAccount.value) return
+
+    if (payload.avatarFile) {
+      const uploadRes = await uploadAccountFile(payload.avatarFile, 'ACCOUNT_AVATAR')
+      await bindAccountAvatar(uploadRes.data.fileId)
+      payload.avatarUrl = uploadRes.data.accessUrl
+    }
+
+    if (payload.nickname !== undefined) {
+      const res = await updateAccountProfile({ nickname: payload.nickname.trim() })
+      profile.value = mapProfileDtoToAccountProfile(res.data)
+      currentAccount.value.nickname = res.data.nickname
+    }
+
+    if (payload.avatarUrl !== undefined) {
+      profile.value.avatarUrl = payload.avatarUrl
+      currentAccount.value.avatarUrl = payload.avatarUrl
+    }
+  }
+
+  async function loadPrivacy() {
+    const res = await getPrivacySetting()
+    privacySetting.value = res.data
+    return res.data
+  }
+
+  async function updatePrivacy(payload: PrivacySettingDto) {
+    const res = await updatePrivacySetting(payload)
+    privacySetting.value = res.data
+    return res.data
+  }
+
+  async function loadNotificationSetting() {
+    const res = await getNotificationSetting()
+    notificationSetting.value = res.data
+    return res.data
+  }
+
+  async function updateNotificationSettingStore(payload: NotificationSettingDto) {
+    const res = await updateNotificationSetting(payload)
+    notificationSetting.value = res.data
+    return res.data
+  }
+
+  async function loadPlayerCertification() {
+    certLoading.value = true
+    try {
+      const res = await getPlayerCertificationCurrent()
+      playerCert.value = res.data
+      if (currentAccount.value) {
+        verification.value = mapPlayerCertToVerification(res.data, currentAccount.value.userId)
+        currentAccount.value.playerVerificationStatus = verification.value.status
+        currentAccount.value.playerNo = res.data.playerNo || currentAccount.value.playerNo
+        if (res.data.certificationStatus === 3) {
+          currentAccount.value.accountRole = 'PLAYER'
+        }
+      }
+      return res.data
+    } finally {
+      certLoading.value = false
+    }
+  }
+
+  async function loadMyTournaments(page = 1, pageSize = 50) {
+    tournamentsLoading.value = true
+    try {
+      const res = await getAccountTournamentPage({ currentPage: page, pageSize })
+      myTournaments.value = (res.data.records || []).map(mapTournamentItemToMyTournament)
+      persistMyTournaments()
+      return res.data
+    } finally {
+      tournamentsLoading.value = false
+    }
+  }
+
+  async function saveCertDraft(payload: PlayerCertDraftPayload) {
+    const res = await savePlayerCertificationDraft(payload)
+    playerCert.value = res.data
+    if (currentAccount.value) {
+      verification.value = mapPlayerCertToVerification(res.data, currentAccount.value.userId)
+    }
+    return res.data
+  }
+
+  async function bindCertMaterial(applicationId: string, fileId: string, materialType: string) {
+    const res = await bindPlayerCertificationMaterial({ applicationId, fileId, materialType })
+    await loadPlayerCertification()
+    return res.data
+  }
+
+  async function submitCertApplication(applicationId: string) {
+    const res = await submitPlayerCertification({ applicationId })
+    playerCert.value = res.data
+    if (currentAccount.value) {
+      verification.value = mapPlayerCertToVerification(res.data, currentAccount.value.userId)
+      currentAccount.value.playerVerificationStatus = verification.value.status
+    }
+    return res.data
+  }
+
+  async function submitPlayerVerificationFromForm(data: {
+    realName: string
+    idType: string
+    idNo: string
+    platform: string
+    gameAccount: string
+    gameNickname: string
+    positionCode?: string
+    contactMobile: string
+    idFrontFile?: File
+    idBackFile?: File
+    gameScreenshotFile?: File
+  }) {
+    const draftPayload: PlayerCertDraftPayload = {
+      realName: data.realName,
+      idType: data.idType,
+      idNo: data.idNo,
+      gameTerminal: mapPlatformToGameTerminal(data.platform),
+      gameAccount: data.gameAccount,
+      gameNickname: data.gameNickname,
+      positionCode: data.positionCode,
+      contactMobile: data.contactMobile,
+    }
+    const draft = await saveCertDraft(draftPayload)
+    const applicationId = draft.currentApplicationId
+    if (!applicationId) throw new Error('未能创建认证申请')
+
+    if (data.idFrontFile) {
+      const uploaded = await uploadAccountFile(data.idFrontFile, 'PLAYER_CERT_ID_FRONT')
+      await bindCertMaterial(applicationId, uploaded.data.fileId, 'PLAYER_CERT_ID_FRONT')
+    }
+    if (data.idBackFile) {
+      const uploaded = await uploadAccountFile(data.idBackFile, 'PLAYER_CERT_ID_BACK')
+      await bindCertMaterial(applicationId, uploaded.data.fileId, 'PLAYER_CERT_ID_BACK')
+    }
+    if (data.gameScreenshotFile) {
+      const uploaded = await uploadAccountFile(data.gameScreenshotFile, 'PLAYER_CERT_GAME_SCREENSHOT')
+      await bindCertMaterial(applicationId, uploaded.data.fileId, 'PLAYER_CERT_GAME_SCREENSHOT')
+    }
+
+    return submitCertApplication(applicationId)
+  }
+
+  function clearAccountState() {
+    currentAccount.value = null
+    profile.value = null
+    verification.value = null
+    playerCert.value = null
+    teamRelations.value = null
+    security.value = null
+    platformGameIds.value = []
+    identityChangeHistory.value = []
+    eligibility.value = null
+    myTournaments.value = []
+    openTournament.value = { ...mockOpenTournament }
+    openApplication.value = null
+    eligibilityLimited.value = false
+    loadedUserId.value = null
+    overviewError.value = ''
+    pendingTasks.value = []
+    privacySetting.value = null
+    notificationSetting.value = null
+  }
+
+  function submitPlayerVerification(data: PlayerVerificationSnapshot) {
+    return submitPlayerVerificationFromForm({
+      realName: data.backupContact || currentAccount.value?.nickname || '',
+      idType: 'ID_CARD',
+      idNo: '000000000000000000',
+      platform: data.primaryPlatform,
+      gameAccount: data.gameId,
+      gameNickname: currentAccount.value?.nickname || '',
+      positionCode: data.gamePosition,
+      contactMobile: data.backupContact || '13800000000',
+      gameScreenshotFile: undefined,
+    })
+  }
+
+  function withdrawPlayerVerification() {
+    if (!verification.value || !currentAccount.value) return
+    if (verification.value.status === 'PENDING') {
+      verification.value.status = 'NOT_APPLIED'
+      verification.value.submittedAt = ''
+      currentAccount.value.playerVerificationStatus = 'NOT_APPLIED'
+    }
+  }
+
+  function resubmitPlayerVerification(data: PlayerVerificationSnapshot) {
+    return submitPlayerVerification(data)
+  }
+
+  function submitVerificationChange(data: PlayerVerificationSnapshot) {
+    return submitPlayerVerification(data)
+  }
+
+  function submitPlatformGameId(payload: { platform: IdentityPlatform; gameId: string }) {
+    if (!loadedUserId.value) return
+    const record = platformGameIds.value.find((item) => item.platform === payload.platform)
+    if (!record) return
+    record.gameId = payload.gameId
+    record.status = 'PENDING'
+    record.statusText = record.gameId ? '新增审核中' : '修改审核中'
+    record.locked = false
+  }
+
+  function acceptTournamentInvitation(invitationId: string) {
+    if (!isVerifiedPlayer.value) return
+    const tournament = myTournaments.value.find((item) => item.invitationId === invitationId)
+    if (!tournament || tournament.status !== 'INVITED') return
+    tournament.status = 'JOINED'
+    tournament.statusText = '已加入阵容'
     persistMyTournaments()
+  }
+
+  function rejectTournamentInvitation(invitationId: string) {
+    const tournament = myTournaments.value.find((item) => item.invitationId === invitationId)
+    if (!tournament || tournament.status !== 'INVITED') return
+    tournament.status = 'NOT_JOINED'
+    tournament.statusText = '未参加'
+    tournament.teamName = ''
+    tournament.role = ''
+    persistMyTournaments()
+  }
+
+  function acceptTeamInvitation(invitationId: string) {
+    if (!teamRelations.value || !currentAccount.value) return
+    const invitation = teamRelations.value.invitations.find((item) => item.id === invitationId)
+    if (!invitation || invitation.status !== 'PENDING') return
+    invitation.status = 'ACCEPTED'
+    teamRelations.value.lineupRelations.push({
+      id: `lr-${currentAccount.value.userId}-${Date.now()}`,
+      userId: currentAccount.value.userId,
+      tournamentId: invitation.tournamentId,
+      tournamentName: invitation.tournamentName,
+      teamId: invitation.teamId,
+      teamName: invitation.teamName,
+      roleName: invitation.inviteRole,
+      status: 'WAITING_TEAM_REGISTRATION',
+    })
+    persistTeamRelations()
+  }
+
+  function rejectTeamInvitation(invitationId: string) {
+    if (!teamRelations.value) return
+    const invitation = teamRelations.value.invitations.find((item) => item.id === invitationId)
+    if (!invitation || invitation.status !== 'PENDING') return
+    invitation.status = 'REJECTED'
+    persistTeamRelations()
+  }
+
+  function submitTeamCreateRequest(_payload: { teamName: string; platform: string; description: string }) {
+    if (!teamRelations.value) return
+    teamRelations.value.createRequestStatus = 'PENDING'
+    teamRelations.value.createRequestSubmittedAt = new Date().toISOString()
+    persistTeamRelations()
+  }
+
+  async function changePassword(currentPassword: string, newPassword: string): Promise<string> {
+    if (!security.value) return '账号数据未加载'
+    const ruleError = validatePasswordRules(newPassword)
+    if (ruleError) return ruleError
+    if (newPassword === currentPassword) return '新密码不能与当前密码一致'
+    const currentHash = await hashPassword(currentPassword)
+    if (currentHash !== security.value.passwordHash) return '当前密码不正确'
+    security.value.passwordHash = await hashPassword(newPassword)
+    security.value.passwordUpdatedAt = new Date().toISOString()
+    persistSecurity()
+    return ''
   }
 
   function getOpenRegistrationBlockReason(): string {
@@ -281,7 +568,7 @@ export const useAccountStore = defineStore('account', () => {
 
   function submitOpenApplication() {
     if (!canSubmitOpenApplication() || !certifiedPlayerForOpen.value || !currentAccount.value) return
-    const now = formatOpenDateTime(new Date().toISOString())
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 16)
     const player = certifiedPlayerForOpen.value
     openApplication.value = {
       applicationNo: buildOpenApplicationNo(currentAccount.value.userId),
@@ -300,14 +587,6 @@ export const useAccountStore = defineStore('account', () => {
       reviewRemark: '',
     }
     persistOpenApplication()
-    syncOpenTournamentEntry()
-    addSystemNotification(
-      '2026 CNPA Open 个人报名已提交',
-      '你的 Open 个人报名已进入管理员审核，审核完成后状态将自动更新。',
-      'EVENT',
-      'VIEW_OPEN_APPLICATION',
-      openTournament.value.id,
-    )
   }
 
   function applyDevOpenStatusOverride(override: OpenApplicationStatus | null) {
@@ -316,7 +595,6 @@ export const useAccountStore = defineStore('account', () => {
       openApplication.value = getDefaultOpenApplication(loadedUserId.value)
       openTournament.value = { ...mockOpenTournament }
       persistOpenApplication()
-      syncOpenTournamentEntry()
       return
     }
     if (override === 'CLOSED') {
@@ -329,389 +607,12 @@ export const useAccountStore = defineStore('account', () => {
       loadedUserId.value,
     )
     persistOpenApplication()
-    syncOpenTournamentEntry()
-  }
-
-  function syncUnreadToAccount() {
-    if (!currentAccount.value) return
-    currentAccount.value.unreadNotificationCount = unreadCount.value
-    persistAccount()
-  }
-
-  async function loadAccountMock(
-    devVerificationOverride?: PlayerVerificationStatus | null,
-    devEligibilityLimited = false,
-    devOpenStatusOverride?: OpenApplicationStatus | null,
-  ) {
-    const session = getCurrentAuth()
-    if (!session?.loggedIn) {
-      clearAccountState()
-      return
-    }
-
-    const userId = session.userId
-    loadedUserId.value = userId
-
-    const storedAccount = safeParseStorage<CurrentAccount | null>(
-      readStorageItem(accountStorageKey(userId)),
-      null,
-    )
-    const baseAccount = storedAccount || getDefaultAccount(userId, session.email, session.nickname)
-
-    const storedProfile = safeParseStorage<AccountProfile | null>(
-      readStorageItem(profileStorageKey(userId)),
-      null,
-    )
-    profile.value = storedProfile || getDefaultProfile(userId, session.email, session.nickname)
-
-    let storedVerification = safeParseStorage<PlayerVerification | null>(
-      readStorageItem(verificationStorageKey(userId)),
-      null,
-    )
-    if (!storedVerification) {
-      storedVerification = getDefaultVerification(userId)
-    }
-    if (import.meta.env.DEV && devVerificationOverride) {
-      storedVerification = applyDevVerificationOverride(storedVerification, devVerificationOverride)
-    }
-    verification.value = storedVerification
-
-    notifications.value = safeParseStorage<AccountNotification[]>(
-      readStorageItem(notificationsStorageKey(userId)),
-      getDefaultNotifications(userId),
-    )
-
-    teamRelations.value = safeParseStorage<TeamRelationsData>(
-      readStorageItem(teamRelationsStorageKey(userId)),
-      getDefaultTeamRelations(userId),
-    )
-
-    security.value = safeParseStorage<AccountSecurityData | null>(
-      readStorageItem(securityStorageKey(userId)),
-      null,
-    )
-    if (!security.value) {
-      security.value = await getDefaultSecurity(userId)
-      persistSecurity()
-    }
-
-    platformGameIds.value = safeParseStorage<PlatformGameIdRecord[]>(
-      readStorageItem(platformGameIdsStorageKey(userId)),
-      getDefaultPlatformGameIds(userId),
-    )
-
-    identityChangeHistory.value = safeParseStorage<IdentityChangeRecord[]>(
-      readStorageItem(`${platformGameIdsStorageKey(userId)}_history`),
-      getDefaultIdentityChangeHistory(userId),
-    )
-
-    eligibility.value = safeParseStorage<EligibilityLimit>(
-      readStorageItem(eligibilityStorageKey(userId)),
-      getDefaultEligibility(userId),
-    )
-
-    myTournaments.value = safeParseStorage<MyTournament[]>(
-      readStorageItem(myTournamentsStorageKey(userId)),
-      getDefaultMyTournaments(userId),
-    )
-
-    openTournament.value = { ...mockOpenTournament }
-    openApplication.value = safeParseStorage<OpenApplication | null>(
-      readStorageItem(openApplicationStorageKey(userId)),
-      getDefaultOpenApplication(userId),
-    )
-
-    if (import.meta.env.DEV && devOpenStatusOverride) {
-      applyDevOpenStatusOverride(devOpenStatusOverride)
-    } else {
-      syncOpenTournamentEntry()
-    }
-
-    eligibilityLimited.value = devEligibilityLimited
-      || (devVerificationOverride === null && eligibility.value.status === 'LIMITED')
-      || false
-
-    if (import.meta.env.DEV && devVerificationOverride === 'APPROVED') {
-      eligibilityLimited.value = devEligibilityLimited
-    }
-
-    currentAccount.value = syncAccountRoleFromVerification(
-      {
-        ...baseAccount,
-        nickname: profile.value.nickname,
-        avatarUrl: profile.value.avatarUrl,
-        email: profile.value.email,
-        maskedEmail: profile.value.maskedEmail,
-        unreadNotificationCount: countUnread(notifications.value),
-        lastLoginAt: security.value.lastLoginAt,
-      },
-      verification.value,
-    )
-    persistAccount()
-  }
-
-  function clearAccountState() {
-    currentAccount.value = null
-    profile.value = null
-    verification.value = null
-    notifications.value = []
-    teamRelations.value = null
-    security.value = null
-    platformGameIds.value = []
-    identityChangeHistory.value = []
-    eligibility.value = null
-    myTournaments.value = []
-    openTournament.value = { ...mockOpenTournament }
-    openApplication.value = null
-    eligibilityLimited.value = false
-    loadedUserId.value = null
-  }
-
-  function updateProfile(payload: Partial<Pick<AccountProfile, 'nickname' | 'avatarUrl'>>) {
-    if (!profile.value || !currentAccount.value) return
-    if (payload.nickname !== undefined) {
-      profile.value.nickname = payload.nickname
-      currentAccount.value.nickname = payload.nickname
-    }
-    if (payload.avatarUrl !== undefined) {
-      profile.value.avatarUrl = payload.avatarUrl
-      currentAccount.value.avatarUrl = payload.avatarUrl
-    }
-    persistProfile()
-    persistAccount()
-    patchAuthSession({
-      nickname: currentAccount.value.nickname,
-      avatarUrl: currentAccount.value.avatarUrl,
-    })
-  }
-
-  function buildApplicationNo(userId: number): string {
-    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    return `CNPA-PV-${date}-${String(userId).padStart(5, '0')}`
-  }
-
-  function submitPlayerVerification(data: PlayerVerificationSnapshot) {
-    if (!verification.value || !currentAccount.value) return
-    const now = new Date().toISOString()
-    verification.value = {
-      ...verification.value,
-      primaryPlatform: data.primaryPlatform,
-      gameId: data.gameId,
-      gameIdScreenshotUrl: data.gameIdScreenshotUrl,
-      gamePosition: data.gamePosition,
-      commonPosition: data.commonPosition,
-      backupContact: data.backupContact,
-      status: 'PENDING',
-      submittedAt: now,
-      reviewedAt: '',
-      effectiveAt: '',
-      reviewerComment: '',
-      rejectedFields: [],
-      applicationNo: buildApplicationNo(currentAccount.value.userId),
-      pendingChangeData: undefined,
-    }
-    currentAccount.value.playerVerificationStatus = 'PENDING'
-    persistVerification()
-    persistAccount()
-    addSystemNotification('球员认证申请已提交', '你的球员认证申请已进入审核队列。', 'VERIFICATION', 'VIEW_PLAYER_IDENTITY')
-  }
-
-  function withdrawPlayerVerification() {
-    if (!verification.value || !currentAccount.value) return
-    if (verification.value.status === 'CHANGE_PENDING') {
-      verification.value.status = 'APPROVED'
-      verification.value.pendingChangeData = undefined
-      currentAccount.value.playerVerificationStatus = 'APPROVED'
-    } else if (verification.value.status === 'PENDING') {
-      verification.value.status = 'NOT_APPLIED'
-      verification.value.submittedAt = ''
-      currentAccount.value.playerVerificationStatus = 'NOT_APPLIED'
-    }
-    persistVerification()
-    persistAccount()
-  }
-
-  function resubmitPlayerVerification(data: PlayerVerificationSnapshot) {
-    if (!verification.value || !currentAccount.value) return
-    submitPlayerVerification(data)
-  }
-
-  function submitVerificationChange(data: PlayerVerificationSnapshot) {
-    if (!verification.value || !currentAccount.value) return
-    verification.value.pendingChangeData = data
-    verification.value.status = 'CHANGE_PENDING'
-    verification.value.submittedAt = new Date().toISOString()
-    verification.value.applicationNo = buildApplicationNo(currentAccount.value.userId)
-    currentAccount.value.playerVerificationStatus = 'CHANGE_PENDING'
-    persistVerification()
-    persistAccount()
-    addSystemNotification('认证资料变更已提交', '变更申请审核期间，当前资料继续生效。', 'VERIFICATION', 'VIEW_VERIFICATION')
-  }
-
-  function addSystemNotification(
-    title: string,
-    content: string,
-    type: AccountNotification['type'] = 'SYSTEM',
-    actionType: AccountNotification['actionType'] = 'NONE',
-    actionTargetId = '',
-  ) {
-    if (loadedUserId.value == null) return
-    notifications.value.unshift({
-      id: `n-${loadedUserId.value}-${Date.now()}`,
-      userId: loadedUserId.value,
-      type,
-      title,
-      summary: content.slice(0, 60),
-      content,
-      createdAt: new Date().toISOString(),
-      read: false,
-      pendingAction: actionType !== 'NONE',
-      actionType,
-      actionTargetId,
-      metadata: { source: 'CNPA 系统' },
-    })
-    persistNotifications()
-    syncUnreadToAccount()
-  }
-
-  function markNotificationRead(id: string) {
-    const item = notifications.value.find((n) => n.id === id)
-    if (!item || item.read) return
-    item.read = true
-    persistNotifications()
-    syncUnreadToAccount()
-  }
-
-  function markAllNotificationsRead() {
-    notifications.value.forEach((item) => {
-      item.read = true
-    })
-    persistNotifications()
-    syncUnreadToAccount()
-  }
-
-  function submitPlatformGameId(payload: { platform: IdentityPlatform; gameId: string }) {
-    if (!loadedUserId.value) return
-    const record = platformGameIds.value.find((item) => item.platform === payload.platform)
-    if (!record) return
-    record.gameId = payload.gameId
-    record.status = 'PENDING'
-    record.statusText = record.gameId ? '新增审核中' : '修改审核中'
-    record.locked = false
-    persistPlatformGameIds()
-    addSystemNotification(
-      '平台与游戏 ID 修改审核中',
-      `${payload.platform} 平台游戏 ID 变更申请已提交，审核通过前继续使用当前已生效 ID。`,
-      'VERIFICATION',
-      'VIEW_PLATFORMS',
-    )
-  }
-
-  function acceptTournamentInvitation(invitationId: string) {
-    if (!isVerifiedPlayer.value) return
-    const tournament = myTournaments.value.find((item) => item.invitationId === invitationId)
-    if (!tournament || tournament.status !== 'INVITED') return
-    tournament.status = 'JOINED'
-    tournament.statusText = '已加入阵容'
-    persistMyTournaments()
-    addSystemNotification('已接受球队邀请', `你已加入 ${tournament.teamName}（${tournament.name}）。`, 'TEAM', 'VIEW_MY_TOURNAMENTS')
-    acceptTeamInvitation(invitationId)
-  }
-
-  function rejectTournamentInvitation(invitationId: string) {
-    const tournament = myTournaments.value.find((item) => item.invitationId === invitationId)
-    if (!tournament || tournament.status !== 'INVITED') return
-    tournament.status = 'NOT_JOINED'
-    tournament.statusText = '未参加'
-    tournament.teamName = ''
-    tournament.role = ''
-    persistMyTournaments()
-    addSystemNotification('已拒绝球队邀请', `你已拒绝 ${tournament.name} 的球队邀请。`, 'TEAM')
-    rejectTeamInvitation(invitationId)
-  }
-
-  function acceptTeamInvitation(invitationId: string) {
-    if (!teamRelations.value || !currentAccount.value) return
-    const invitation = teamRelations.value.invitations.find((item) => item.id === invitationId)
-    if (!invitation || invitation.status !== 'PENDING') return
-
-    invitation.status = 'ACCEPTED'
-    teamRelations.value.lineupRelations.push({
-      id: `lr-${currentAccount.value.userId}-${Date.now()}`,
-      userId: currentAccount.value.userId,
-      tournamentId: invitation.tournamentId,
-      tournamentName: invitation.tournamentName,
-      teamId: invitation.teamId,
-      teamName: invitation.teamName,
-      roleName: invitation.inviteRole,
-      status: 'WAITING_TEAM_REGISTRATION',
-    })
-    persistTeamRelations()
-    addSystemNotification(
-      '已接受球队邀请',
-      `你已加入 ${invitation.teamName}（${invitation.tournamentName}）。`,
-      'TEAM',
-      'NONE',
-    )
-  }
-
-  function rejectTeamInvitation(invitationId: string) {
-    if (!teamRelations.value) return
-    const invitation = teamRelations.value.invitations.find((item) => item.id === invitationId)
-    if (!invitation || invitation.status !== 'PENDING') return
-    invitation.status = 'REJECTED'
-    persistTeamRelations()
-    addSystemNotification(
-      '已拒绝球队邀请',
-      `你已拒绝 ${invitation.teamName} 的邀请。`,
-      'TEAM',
-      'NONE',
-    )
-  }
-
-  function submitTeamCreateRequest(payload: { teamName: string; platform: string; description: string }) {
-    if (!teamRelations.value) return
-    teamRelations.value.createRequestStatus = 'PENDING'
-    teamRelations.value.createRequestSubmittedAt = new Date().toISOString()
-    persistTeamRelations()
-    addSystemNotification(
-      '创建球队申请已提交',
-      `球队「${payload.teamName}」创建申请已提交，等待管理员审核。`,
-      'TEAM',
-    )
-  }
-
-  async function changePassword(currentPassword: string, newPassword: string): Promise<string> {
-    if (!security.value) return '账号数据未加载'
-    const ruleError = validatePasswordRules(newPassword)
-    if (ruleError) return ruleError
-    if (newPassword === currentPassword) return '新密码不能与当前密码一致'
-
-    const currentHash = await hashPassword(currentPassword)
-    if (currentHash !== security.value.passwordHash) {
-      return '当前密码不正确'
-    }
-
-    security.value.passwordHash = await hashPassword(newPassword)
-    security.value.passwordUpdatedAt = new Date().toISOString()
-    persistSecurity()
-    addSystemNotification('密码已更新', '你的账号密码已成功修改。', 'SECURITY')
-    return ''
-  }
-
-  function resetMockAccountData(userId: number) {
-    if (!import.meta.env.DEV) return
-    removeStorageItem(accountStorageKey(userId))
-    removeStorageItem(profileStorageKey(userId))
-    removeStorageItem(verificationStorageKey(userId))
-    removeStorageItem(notificationsStorageKey(userId))
-    removeStorageItem(teamRelationsStorageKey(userId))
-    removeStorageItem(securityStorageKey(userId))
-    removeStorageItem(openApplicationStorageKey(userId))
   }
 
   function getProfileCompleteness() {
-    if (!profile.value) return { percent: 0, items: [] as { key: string; label: string; done: boolean; weight: number }[] }
+    if (!profile.value) {
+      return { percent: 0, items: [] as { key: string; label: string; done: boolean; weight: number }[] }
+    }
     const items = [
       { key: 'email', label: '邮箱已验证', done: profile.value.emailVerified, weight: 40 },
       { key: 'avatar', label: '上传个人头像', done: Boolean(profile.value.avatarUrl?.trim()), weight: 30 },
@@ -725,6 +626,7 @@ export const useAccountStore = defineStore('account', () => {
     currentAccount,
     profile,
     verification,
+    playerCert,
     playerIdentity,
     platformGameIds,
     identityChangeHistory,
@@ -735,22 +637,37 @@ export const useAccountStore = defineStore('account', () => {
     certifiedPlayerForOpen,
     openRegistrationStats,
     eligibilityLimited,
-    notifications,
     teamRelations,
     security,
+    privacySetting,
+    notificationSetting,
+    pendingTasks,
+    overviewLoading,
+    overviewError,
+    profileLoading,
+    tournamentsLoading,
+    certLoading,
     isAuthenticated,
-    unreadCount,
     pendingInvitationCount,
     isVerifiedPlayer,
-    loadAccountMock,
-    clearAccountState,
+    loadOverview,
+    loadProfile,
     updateProfile,
+    loadPrivacy,
+    updatePrivacy,
+    loadNotificationSetting,
+    updateNotificationSetting: updateNotificationSettingStore,
+    loadPlayerCertification,
+    loadMyTournaments,
+    saveCertDraft,
+    bindCertMaterial,
+    submitCertApplication,
+    submitPlayerVerificationFromForm,
+    clearAccountState,
     submitPlayerVerification,
     withdrawPlayerVerification,
     resubmitPlayerVerification,
     submitVerificationChange,
-    markNotificationRead,
-    markAllNotificationsRead,
     acceptTeamInvitation,
     rejectTeamInvitation,
     submitTeamCreateRequest,
@@ -762,7 +679,6 @@ export const useAccountStore = defineStore('account', () => {
     canSubmitOpenApplication,
     applyDevOpenStatusOverride,
     changePassword,
-    resetMockAccountData,
     getProfileCompleteness,
   }
 })

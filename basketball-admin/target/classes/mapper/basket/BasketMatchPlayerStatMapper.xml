@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketMatchPlayerStatMapper">
+    <select id="selectVoByMatchId" resultType="com.zhs.basket.vo.MatchPlayerStatVo">
+        select ps.id, ps.match_id, ps.team_id, t.team_name, ps.player_id, p.real_name as player_name, p.player_no,
+               ps.roster_id, ps.started_flag, ps.minutes_seconds, ps.points, ps.rebounds, ps.offensive_rebounds,
+               ps.defensive_rebounds, ps.assists, ps.steals, ps.blocks, ps.turnovers, ps.fouls,
+               ps.field_goals_made, ps.field_goals_attempted, ps.field_goal_pct,
+               ps.three_points_made, ps.three_points_attempted, ps.three_point_pct,
+               ps.free_throws_made, ps.free_throws_attempted, ps.free_throw_pct,
+               ps.plus_minus, ps.efficiency, ps.data_status, ps.confirmed_by, ps.confirmed_time
+        from basket_match_player_stat ps
+        left join basket_team t on ps.team_id = t.id and t.is_delete = 0
+        left join basket_player_profile p on ps.player_id = p.id and p.is_delete = 0
+        where ps.match_id = #{matchId} and ps.is_delete = 0
+        order by ps.team_id, ps.points desc
+    </select>
+    <update id="softDeleteByMatchId">
+        update basket_match_player_stat set is_delete = 1, update_time = now()
+        where match_id = #{matchId} and is_delete = 0
+    </update>
+    <update id="updateDataStatusByMatchId">
+        update basket_match_player_stat
+        set data_status = #{toStatus}, confirmed_by = #{confirmedBy}, confirmed_time = #{confirmedTime}, update_time = now()
+        where match_id = #{matchId} and is_delete = 0 and data_status in
+        <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+    </update>
+    <insert id="batchInsert">
+        insert into basket_match_player_stat (match_id, season_id, stage_id, team_id, player_id, roster_id, started_flag,
+            minutes_seconds, points, rebounds, offensive_rebounds, defensive_rebounds, assists, steals, blocks,
+            turnovers, fouls, field_goals_made, field_goals_attempted, field_goal_pct, three_points_made,
+            three_points_attempted, three_point_pct, free_throws_made, free_throws_attempted, free_throw_pct,
+            plus_minus, efficiency, double_double, triple_double, data_status, create_time, update_time, is_delete)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.matchId}, #{item.seasonId}, #{item.stageId}, #{item.teamId}, #{item.playerId}, #{item.rosterId},
+             #{item.startedFlag}, #{item.minutesSeconds}, #{item.points}, #{item.rebounds}, #{item.offensiveRebounds},
+             #{item.defensiveRebounds}, #{item.assists}, #{item.steals}, #{item.blocks}, #{item.turnovers}, #{item.fouls},
+             #{item.fieldGoalsMade}, #{item.fieldGoalsAttempted}, #{item.fieldGoalPct}, #{item.threePointsMade},
+             #{item.threePointsAttempted}, #{item.threePointPct}, #{item.freeThrowsMade}, #{item.freeThrowsAttempted},
+             #{item.freeThrowPct}, #{item.plusMinus}, #{item.efficiency}, #{item.doubleDouble}, #{item.tripleDouble},
+             #{item.dataStatus}, #{item.createTime}, #{item.updateTime}, #{item.isDelete})
+        </foreach>
+    </insert>
+</mapper>

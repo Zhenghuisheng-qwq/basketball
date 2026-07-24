@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { computed, onUnmounted, watch } from 'vue'
-import { getAllTeams } from '@/mock/team'
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { getPublicDataCenterSeasons, getPublicDataCenterTeamRanking } from '@/api/publicDataCenter'
+import { getPublicSeasonStanding } from '@/api/publicStanding'
 import TeamLogo from '@/components/team/TeamLogo.vue'
+import { displayText } from '@/utils/publicDisplay'
+import {
+  mapRankToTeamBase,
+  mapStandingToTeamBase,
+} from '@/utils/publicTeamMap'
 import type { TeamBase } from '@/types/team'
 
 const props = withDefaults(
@@ -13,14 +19,18 @@ const props = withDefaults(
     disabledTeamIds?: string[]
     selectedTeamIds?: string[]
     sideText?: string
+    teams?: TeamBase[]
+    teamsState?: 'loading' | 'success' | 'empty' | 'error'
   }>(),
   {
     title: '选择球队',
     subtitle: '点击球队即可完成更换',
-    competitionText: '2026 CNPA League · 常规赛',
+    competitionText: '公开赛季 · 常规赛',
     disabledTeamIds: () => [],
     selectedTeamIds: () => [],
     sideText: '正在选择对比球队',
+    teams: undefined,
+    teamsState: 'success',
   },
 )
 
@@ -29,32 +39,16 @@ const emit = defineEmits<{
   select: [teamId: string]
 }>()
 
-const teamOrder = [
-  'rng',
-  'wolves',
-  'phoenix',
-  'all-star',
-  'titan',
-  'dragon',
-  'legend',
-  'omega',
-  'beast',
-  'unity',
-  'phx-fire',
-  'eik',
-  'storm',
-  'vortex',
-  'knights',
-  'invictus',
-]
+const fetchedTeams = ref<TeamBase[]>([])
+const fetchState = ref<'idle' | 'loading' | 'success' | 'empty' | 'error'>('idle')
+let reqId = 0
 
-const teamMap = computed(() => new Map(getAllTeams().map((team) => [team.id, team])))
+const resolvedTeams = computed(() => props.teams ?? fetchedTeams.value)
 
-const orderedTeams = computed(() =>
-  teamOrder
-    .map((id) => teamMap.value.get(id))
-    .filter((team): team is TeamBase => Boolean(team)),
-)
+const listState = computed(() => {
+  if (props.teams) return props.teamsState
+  return fetchState.value === 'idle' ? 'loading' : fetchState.value
+})
 
 const disabledSet = computed(() => new Set(props.disabledTeamIds))
 const selectedSet = computed(() => new Set(props.selectedTeamIds))
@@ -78,12 +72,51 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
+async function loadTeams() {
+  if (props.teams) return
+  const current = ++reqId
+  fetchState.value = 'loading'
+  try {
+    const seasonsRes = await getPublicDataCenterSeasons()
+    if (current !== reqId) return
+    const season = seasonsRes.data?.[0]
+    if (!season?.seasonId) {
+      fetchedTeams.value = []
+      fetchState.value = 'empty'
+      return
+    }
+
+    let teams: TeamBase[] = []
+    try {
+      const standingRes = await getPublicSeasonStanding(season.seasonId)
+      if (current !== reqId) return
+      teams = (standingRes.data ?? []).map((row) =>
+        mapStandingToTeamBase(row, season.seasonName),
+      )
+    } catch {
+      const rankingRes = await getPublicDataCenterTeamRanking({ seasonId: season.seasonId })
+      if (current !== reqId) return
+      teams = (rankingRes.data ?? []).map((row) => mapRankToTeamBase(row, season.seasonName))
+    }
+
+    fetchedTeams.value = teams
+    fetchState.value = teams.length ? 'success' : 'empty'
+  } catch {
+    if (current !== reqId) return
+    fetchedTeams.value = []
+    fetchState.value = 'error'
+  }
+}
+
 watch(
   () => props.visible,
   (visible) => {
     if (visible) {
       document.body.style.overflow = 'hidden'
       window.addEventListener('keydown', handleKeydown)
+      if (!props.teams) {
+        void loadTeams()
+      }
       return
     }
 
@@ -128,9 +161,17 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="team-select-grid">
+        <div v-if="listState === 'loading'" class="team-select-modal__state">加载中...</div>
+        <div v-else-if="listState === 'error'" class="team-select-modal__state is-error">
+          加载球队列表失败
+        </div>
+        <div v-else-if="resolvedTeams.length === 0" class="team-select-modal__state">
+          暂无可选球队
+        </div>
+
+        <div v-else class="team-select-grid">
           <button
-            v-for="team in orderedTeams"
+            v-for="team in resolvedTeams"
             :key="team.id"
             type="button"
             class="team-select-card"
@@ -142,7 +183,7 @@ onUnmounted(() => {
             @click="handleSelect(team)"
           >
             <TeamLogo :team="team" size="selector" class="team-select-card__logo" />
-            <span class="team-select-card__name">{{ team.name }}</span>
+            <span class="team-select-card__name">{{ displayText(team.name) }}</span>
             <span v-if="isSelected(team.id)" class="team-select-card__badge">已在对比</span>
           </button>
         </div>
@@ -240,6 +281,18 @@ onUnmounted(() => {
 
   &:hover {
     border-color: var(--cnpa-red);
+    color: var(--cnpa-red);
+  }
+}
+
+.team-select-modal__state {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--cnpa-paper-text-muted);
+  font-size: 14px;
+  font-weight: 700;
+
+  &.is-error {
     color: var(--cnpa-red);
   }
 }

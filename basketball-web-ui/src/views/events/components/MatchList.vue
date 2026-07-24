@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { getTeamById } from '../mock/teams.mock'
 import type { Match, MatchStatus } from '../types/events'
+import { matchAwayTeam, matchHomeTeam } from '../utils/mapPublic'
+import { displayNumber } from '@/utils/publicDisplay'
 import TeamEntryLink from '@/components/team/TeamEntryLink.vue'
 import TeamLogo from './TeamLogo.vue'
 
 defineProps<{
   matches: Match[]
+  loading?: boolean
+  error?: string
 }>()
 
 const emit = defineEmits<{
@@ -36,62 +39,58 @@ const statusMap: Record<
       <span>数据</span>
     </div>
 
-    <div v-if="matches.length === 0" class="match-empty">当日暂无比赛</div>
+    <div v-if="loading" class="match-empty">加载中...</div>
+    <div v-else-if="error" class="match-empty is-error">{{ error }}</div>
+    <div v-else-if="matches.length === 0" class="match-empty">当日暂无比赛</div>
 
-    <article v-for="match in matches" :key="match.id" class="match-row">
-      <span class="cell time">{{ match.startTime }}</span>
+    <template v-else>
+      <article v-for="match in matches" :key="match.matchId" class="match-row">
+        <span class="cell time">{{ match.startTime }}</span>
 
-      <TeamEntryLink
-        v-if="getTeamById(match.awayTeamId)"
-        :team="getTeamById(match.awayTeamId)!"
-        class="cell team-cell"
-      >
-        <TeamLogo :team="getTeamById(match.awayTeamId)!" size="sm" />
-        <span>{{ getTeamById(match.awayTeamId)!.name }}</span>
-      </TeamEntryLink>
+        <TeamEntryLink :team="matchAwayTeam(match)" class="cell team-cell">
+          <TeamLogo :team="matchAwayTeam(match)" size="sm" />
+          <span>{{ match.awayTeamName }}</span>
+        </TeamEntryLink>
 
-      <div class="cell score-cell sport-num">
-        <template v-if="match.status === 'finished' || match.status === 'live'">
-          {{ match.awayScore }} : {{ match.homeScore }}
-        </template>
-        <template v-else-if="match.status === 'cancelled'">-</template>
-        <template v-else>VS</template>
-      </div>
+        <div class="cell score-cell sport-num">
+          <template v-if="match.status === 'finished' || match.status === 'live'">
+            {{ displayNumber(match.awayScore) }} : {{ displayNumber(match.homeScore) }}
+          </template>
+          <template v-else-if="match.status === 'cancelled'">-</template>
+          <template v-else>VS</template>
+        </div>
 
-      <TeamEntryLink
-        v-if="getTeamById(match.homeTeamId)"
-        :team="getTeamById(match.homeTeamId)!"
-        class="cell team-cell"
-      >
-        <TeamLogo :team="getTeamById(match.homeTeamId)!" size="sm" />
-        <span>{{ getTeamById(match.homeTeamId)!.name }}</span>
-      </TeamEntryLink>
+        <TeamEntryLink :team="matchHomeTeam(match)" class="cell team-cell">
+          <TeamLogo :team="matchHomeTeam(match)" size="sm" />
+          <span>{{ match.homeTeamName }}</span>
+        </TeamEntryLink>
 
-      <span class="cell venue">{{ match.venue }}</span>
+        <span class="cell venue">{{ match.venue }}</span>
 
-      <span class="cell status" :class="statusMap[match.status].className">
-        {{ statusMap[match.status].label }}
-      </span>
+        <span class="cell status" :class="statusMap[match.status].className">
+          {{ statusMap[match.status].label }}
+        </span>
 
-      <div class="cell actions">
-        <button
-          type="button"
-          class="action-btn"
-          :disabled="statusMap[match.status].disabled"
-          @click="emit('openDetail', match)"
-        >
-          比赛详情
-        </button>
-        <button
-          type="button"
-          class="action-btn"
-          :disabled="statusMap[match.status].disabled"
-          @click="emit('openStats', match)"
-        >
-          技术统计
-        </button>
-      </div>
-    </article>
+        <div class="cell actions">
+          <button
+            type="button"
+            class="action-btn"
+            :disabled="statusMap[match.status].disabled"
+            @click="emit('openDetail', match)"
+          >
+            比赛详情
+          </button>
+          <button
+            type="button"
+            class="action-btn"
+            :disabled="statusMap[match.status].disabled"
+            @click="emit('openStats', match)"
+          >
+            技术统计
+          </button>
+        </div>
+      </article>
+    </template>
   </div>
 </template>
 
@@ -119,63 +118,81 @@ const statusMap: Record<
 }
 
 .match-row {
-  min-height: 108px;
-  border-top: 1px solid rgba(10, 10, 10, 0.1);
-  transition: background 0.2s ease;
+  min-height: 64px;
+  border-top: 1px solid rgba(10, 10, 10, 0.08);
+  background: #fff;
+}
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.42);
+.match-empty {
+  padding: 36px 16px;
+  text-align: center;
+  color: rgba(10, 10, 10, 0.45);
+  font-weight: 600;
+
+  &.is-error {
+    color: #e10613;
   }
 }
 
+.cell {
+  min-width: 0;
+}
+
 .team-cell {
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  font-weight: 800;
-  text-decoration: none;
   color: inherit;
+  text-decoration: none;
+  font-weight: 700;
 }
 
 .score-cell {
   text-align: center;
-  font-size: clamp(22px, 2.2vw, 30px);
-  font-weight: 900;
+  font-size: 18px;
+  font-weight: 800;
 }
 
 .venue {
+  color: rgba(10, 10, 10, 0.62);
   font-size: 13px;
-  color: rgba(10, 10, 10, 0.72);
+}
+
+.status {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.status-finished {
+  color: rgba(10, 10, 10, 0.55);
+}
+
+.status-scheduled {
+  color: #1565c0;
 }
 
 .status-live {
-  color: var(--cnpa-red);
-  font-weight: 800;
+  color: #e10613;
+}
+
+.status-cancelled {
+  color: rgba(10, 10, 10, 0.35);
 }
 
 .actions {
   display: flex;
-  flex-direction: column;
   gap: 8px;
 }
 
 .action-btn {
   height: 32px;
-  border: 1px solid var(--cnpa-paper-border);
-  background: var(--cnpa-paper-surface);
-  color: var(--cnpa-paper-text);
+  padding: 0 10px;
+  border: 1px solid rgba(10, 10, 10, 0.16);
+  background: #fff;
+  color: #111;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  font-family: inherit;
-  transition: all 0.2s ease;
-
-  &:hover:not(:disabled) {
-    border-color: var(--cnpa-red);
-    color: var(--cnpa-red);
-  }
 
   &:disabled {
     opacity: 0.45;
@@ -183,26 +200,27 @@ const statusMap: Record<
   }
 }
 
-.match-empty {
-  padding: 48px 16px;
-  text-align: center;
-  color: rgba(10, 10, 10, 0.55);
-  font-size: 14px;
+@media (max-width: 1100px) {
+  .match-head,
+  .match-row {
+    grid-template-columns: 64px 1fr 90px 1fr 1fr 72px 1fr;
+    font-size: 12px;
+  }
 }
 
-@media (max-width: 992px) {
+@media (max-width: 768px) {
   .match-head {
     display: none;
   }
 
   .match-row {
-    grid-template-columns: 1fr;
-    padding: 16px;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
+    padding: 14px;
   }
 
   .actions {
-    flex-direction: row;
+    grid-column: 1 / -1;
   }
 }
 </style>

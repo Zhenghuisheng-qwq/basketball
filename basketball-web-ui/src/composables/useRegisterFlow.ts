@@ -1,20 +1,52 @@
-const REGISTER_EMAIL_KEY = 'cnpa_register_email'
+const REGISTER_DRAFT_KEY = 'cnpa_register_draft'
+
+export interface RegisterDraft {
+  email: string
+  password: string
+  nickname: string
+  mobile: string
+  verifyBizNo: string
+  agreeUserAgreement: boolean
+  agreePrivacyPolicy: boolean
+}
 
 export function maskEmail(email: string): string {
   const [local, domain] = email.split('@')
-  if (!local || !domain) return 'zlz****@example.com'
-  const visible = local.slice(0, Math.min(3, local.length))
-  return `${visible}****@${domain}`
+  if (!local || !domain) return '****@example.com'
+  const visible = local.slice(0, Math.min(2, local.length))
+  return `${visible}***@${domain}`
 }
 
-export function setRegisterEmail(email: string) {
-  sessionStorage.setItem(REGISTER_EMAIL_KEY, email)
+export function setRegisterDraft(draft: RegisterDraft) {
+  sessionStorage.setItem(REGISTER_DRAFT_KEY, JSON.stringify(draft))
+}
+
+export function getRegisterDraft(): RegisterDraft | null {
+  const raw = sessionStorage.getItem(REGISTER_DRAFT_KEY)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as RegisterDraft
+  } catch {
+    return null
+  }
+}
+
+export function updateRegisterBizNo(bizNo: string) {
+  const draft = getRegisterDraft()
+  if (!draft) return
+  draft.verifyBizNo = bizNo
+  setRegisterDraft(draft)
 }
 
 export function getRegisterEmail(): string {
-  return sessionStorage.getItem(REGISTER_EMAIL_KEY) || 'zlz@example.com'
+  return getRegisterDraft()?.email || ''
 }
 
 export function getMaskedRegisterEmail(): string {
-  return maskEmail(getRegisterEmail())
+  const email = getRegisterEmail()
+  return email ? maskEmail(email) : '****@example.com'
+}
+
+export function clearRegisterDraft() {
+  sessionStorage.removeItem(REGISTER_DRAFT_KEY)
 }

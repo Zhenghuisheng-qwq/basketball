@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketPlayerCertMaterialMapper">
+    <resultMap type="com.zhs.basket.domain.BasketPlayerCertMaterial" id="BasketPlayerCertMaterialResult">
+        <id property="id" column="id" />
+        <result property="applicationId" column="application_id" />
+        <result property="materialType" column="material_type" />
+        <result property="fileId" column="file_id" />
+        <result property="materialName" column="material_name" />
+        <result property="sortNo" column="sort_no" />
+        <result property="materialStatus" column="material_status" />
+        <result property="remark" column="remark" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+    <select id="selectByApplicationId" resultMap="BasketPlayerCertMaterialResult">
+        select id, application_id, material_type, file_id, material_name, sort_no, material_status, remark, create_time, update_time, is_delete from basket_player_cert_material where application_id = #{applicationId} and is_delete = 0 order by sort_no
+    </select>
+    <select id="countByFileIdForCert" resultType="int">
+        select count(1) from basket_player_cert_material m
+        inner join basket_player_cert_application a on a.id = m.application_id and a.is_delete = 0
+        where m.file_id = #{fileId} and m.is_delete = 0
+    </select>
+</mapper>

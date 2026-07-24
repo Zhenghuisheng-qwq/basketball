@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
@@ -11,6 +11,8 @@ import type { AccountNotificationItem } from '@/types/accountNotifications'
 const route = useRoute()
 const router = useRouter()
 const notificationStore = useNotificationCenterStore()
+const loading = ref(false)
+const loadError = ref('')
 
 const notificationId = computed(() => String(route.params.notificationId || ''))
 
@@ -26,7 +28,7 @@ const heroTitle = computed(() => (notification.value ? getHeroTitle(notification
 const heroDescription = computed(() => notification.value?.detailSubtitle || '')
 
 function handlePrimary() {
-  if (!notification.value) return
+  if (!notification.value?.primaryActionRoute) return
   router.push(notification.value.primaryActionRoute)
 }
 
@@ -34,13 +36,29 @@ function handleBack() {
   router.push('/account/notifications')
 }
 
-watch(
-  notificationId,
-  (id) => {
-    if (id) notificationStore.markAsRead(id)
-  },
-  { immediate: true },
-)
+async function loadNotification() {
+  if (!notificationId.value) return
+  loading.value = true
+  loadError.value = ''
+  try {
+    await notificationStore.loadDetail(notificationId.value)
+    await notificationStore.markAsRead(notificationId.value)
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '加载失败'
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(notificationId, () => {
+  loadNotification()
+}, { immediate: true })
+
+onMounted(() => {
+  if (!notificationStore.items.length) {
+    notificationStore.refresh().catch(() => undefined)
+  }
+})
 </script>
 
 <template>
@@ -56,11 +74,18 @@ watch(
       ]"
     />
 
-    <template v-if="notification">
+    <div v-if="loading" class="notification-detail-empty">加载中...</div>
+
+    <AccountEmptyState
+      v-else-if="loadError"
+      :message="loadError"
+    />
+
+    <template v-else-if="notification">
       <AccountStatusBanner
         :title="heroTitle"
         :description="heroDescription"
-        status-text="已读"
+        :status-text="notification.isUnread ? '未读' : '已读'"
         status-type="danger"
       />
 

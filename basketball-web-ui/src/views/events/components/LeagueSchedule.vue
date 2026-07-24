@@ -11,12 +11,16 @@ import type { Match } from '../types/events'
 
 const {
   selectedSeason,
+  seasonOptions,
   selectedDate,
   selectedTeamId,
   currentWeek,
   isCalendarOpen,
   isTeamSelectorOpen,
   filteredMatches,
+  teamOptions,
+  state,
+  errorMessage,
   toggleCalendar,
   toggleTeamSelector,
   selectDate,
@@ -62,8 +66,10 @@ function closeStats() {
 
           <ScheduleFilters
             :selected-season="selectedSeason"
+            :season-options="seasonOptions"
             :selected-date="selectedDate"
             :selected-team-id="selectedTeamId"
+            :teams="teamOptions"
             :is-calendar-open="isCalendarOpen"
             :is-team-selector-open="isTeamSelectorOpen"
             @update:selected-season="selectSeason"
@@ -85,6 +91,8 @@ function closeStats() {
 
         <MatchList
           :matches="filteredMatches"
+          :loading="state === 'loading'"
+          :error="state === 'error' ? errorMessage : ''"
           @open-detail="openDetail"
           @open-stats="openStats"
         />

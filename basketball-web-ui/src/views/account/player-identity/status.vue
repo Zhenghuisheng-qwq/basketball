@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
@@ -10,8 +10,7 @@ import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import AccountConfirmDialog from '@/components/account/AccountConfirmDialog.vue'
 import { useAccountStore } from '@/stores/account'
 import { IDENTITY_PLATFORM_LABELS, GAME_PLATFORM_LABELS } from '@/types/account'
-import { identityQueryToVerificationStatus, isIdentityRestrictedQuery } from '@/types/account'
-import { mapVerificationPlatform, mockRejectedApplication } from '@/mock/playerIdentityMock'
+import { mapVerificationPlatform } from '@/mock/playerIdentityMock'
 import { formatDateTime } from '@/utils/formatDate'
 import { resolvePlayerIdentityRoute } from '@/utils/playerIdentityNavigate'
 import type { StepItem } from '@/components/account/AccountStepper.vue'
@@ -20,26 +19,20 @@ const props = defineProps<{
   statusMode: 'pending' | 'rejected' | 'approved'
 }>()
 
-const route = useRoute()
 const router = useRouter()
 const accountStore = useAccountStore()
 const showWithdraw = ref(false)
 
 const account = computed(() => accountStore.currentAccount)
 const verification = computed(() => accountStore.verification)
+const cert = computed(() => accountStore.playerCert)
 
-watch(
-  () => route.query.status,
-  async (queryStatus) => {
-    if (!import.meta.env.DEV || typeof queryStatus !== 'string') return
-    const mapped = identityQueryToVerificationStatus(queryStatus)
-    if (!mapped) return
-    await accountStore.loadAccountMock(mapped, isIdentityRestrictedQuery(queryStatus))
-  },
-  { immediate: true },
-)
-
-onMounted(() => {
+onMounted(async () => {
+  try {
+    await accountStore.loadPlayerCertification()
+  } catch {
+    // continue with existing state
+  }
   const currentStatus = verification.value?.status
   if (props.statusMode === 'pending' && currentStatus !== 'PENDING') {
     router.replace(resolvePlayerIdentityRoute(accountStore))
@@ -59,7 +52,7 @@ const platformLabel = computed(() => {
 })
 
 const reviewRemark = computed(
-  () => verification.value?.reviewerComment || mockRejectedApplication.reviewRemark,
+  () => cert.value?.rejectReason || verification.value?.reviewerComment || '暂无备注',
 )
 
 const pageConfig = computed(() => {

@@ -1,22 +1,31 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  getTeamPlayerAverageStats,
-  getTeamPlayerTotalStats,
-  getTeamSeasonStats,
-  getTeamSingleMatchStats,
-} from '@/mock/team'
+import { getPublicMatchDetail } from '@/api/publicMatch'
+import { getPublicSeasonPlayerStatPage } from '@/api/publicSeasonStat'
+import { getPublicTeamStat } from '@/api/publicTeam'
 import type {
   PlayerStatsMode,
   PlayoffStatsMode,
   TeamPlayerAverageStat,
   TeamPlayerTotalStat,
+  TeamSeasonAverages,
   TeamSingleMatchPlayerStat,
   TeamStage,
 } from '@/types/team'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
+import { displayText, initials } from '@/utils/publicDisplay'
+import { mapTeamSeasonAverages } from '@/utils/publicTeamMap'
+import {
+  PUBLIC_TEAM_PAGE_KEY,
+  type PublicTeamPageContext,
+} from './composables/usePublicTeamPage'
+import {
+  mapPublicMatchDetailToSingleMatchStats,
+  mapPublicPlayerSeasonStatToAverage,
+  mapPublicPlayerSeasonStatToTotal,
+} from './utils/mapTeamPlayerStats'
 
 type NumericColumn =
   | 'points'
@@ -47,18 +56,50 @@ const singleNumericColumns: Array<
   'points' | 'rebounds' | 'assists' | 'steals' | 'blocks' | 'fouls' | 'turnovers'
 > = ['points', 'rebounds', 'assists', 'steals', 'blocks', 'fouls', 'turnovers']
 
+const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
 const route = useRoute()
 const router = useRouter()
 
-const competitionFilter = ref('2026 CNPA League')
+const competitionFilter = ref('all')
 const stageFilter = ref<TeamStage>('regular')
 const playerStatsMode = ref<PlayerStatsMode>('average')
 const playoffStatsMode = ref<PlayoffStatsMode>('summary')
 
-const teamId = computed(() => route.params.teamId as string)
-const matchId = computed(() => (route.query.matchId as string) || 'rng-po-g1')
+const teamId = computed(() => ctx.teamId.value)
+const matchId = computed(() => (route.query.matchId as string) || '')
 
-const seasonStats = computed(() => getTeamSeasonStats(teamId.value, stageFilter.value))
+const seasonStatState = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
+const playerStatState = ref<'loading' | 'success' | 'empty' | 'error'>('empty')
+const singleMatchState = ref<'loading' | 'success' | 'empty' | 'error'>('empty')
+const seasonErrorMessage = ref('')
+const playerErrorMessage = ref('')
+const singleMatchErrorMessage = ref('')
+
+const seasonStatsList = ref(ctx.stats.value)
+const averagePlayerStats = ref<TeamPlayerAverageStat[]>([])
+const totalPlayerStats = ref<TeamPlayerTotalStat[]>([])
+const singleMatchStats = ref<ReturnType<typeof mapPublicMatchDetailToSingleMatchStats>>(null)
+
+let seasonReqId = 0
+let playerReqId = 0
+let singleReqId = 0
+
+const activeSeasonStat = computed(() => {
+  const stats = seasonStatsList.value
+  if (!stats.length) return null
+  return stats[0]
+})
+
+const seasonId = computed(() => activeSeasonStat.value?.seasonId || '')
+
+const seasonStats = computed<TeamSeasonAverages | null>(() =>
+  mapTeamSeasonAverages(activeSeasonStat.value),
+)
+
+const competitionOptions = computed(() => {
+  const name = displayText(activeSeasonStat.value?.seasonId ? `赛季 ${activeSeasonStat.value.seasonId}` : '', '')
+  return name ? [name] : []
+})
 
 const seasonCardTitle = computed(() =>
   stageFilter.value === 'regular'
@@ -79,24 +120,16 @@ const seasonStatItems = computed(() => {
   ]
 })
 
-const averagePlayerStats = computed(() =>
-  getTeamPlayerAverageStats(teamId.value, stageFilter.value),
-)
-
-const totalPlayerStats = computed(() => getTeamPlayerTotalStats(teamId.value, stageFilter.value))
-
 const summaryPlayerStats = computed(() => {
   if (stageFilter.value === 'regular') {
-    return playerStatsMode.value === 'average' ? averagePlayerStats.value : totalPlayerStats.value
+    return playerStatsMode.value === 'average'
+      ? averagePlayerStats.value
+      : totalPlayerStats.value
   }
   return playoffStatsMode.value === 'summary'
     ? totalPlayerStats.value
     : averagePlayerStats.value
 })
-
-const singleMatchStats = computed(() =>
-  getTeamSingleMatchStats(teamId.value, matchId.value),
-)
 
 const summaryStatsMode = computed<PlayerStatsMode>(() => {
   if (stageFilter.value === 'regular') {
@@ -111,6 +144,120 @@ const singleMaxMap = computed(() => {
   if (!singleMatchStats.value) return {}
   return buildSingleMaxMap(singleMatchStats.value.players)
 })
+
+async function loadSeasonStats() {
+  const id = teamId.value
+  const current = ++seasonReqId
+  if (!id) {
+    seasonStatsList.value = []
+    seasonStatState.value = 'empty'
+    return
+  }
+
+  if (ctx.stats.value.length) {
+    seasonStatsList.value = ctx.stats.value
+    seasonStatState.value = seasonStatsList.value.length ? 'success' : 'empty'
+    return
+  }
+
+  seasonStatState.value = 'loading'
+  seasonErrorMessage.value = ''
+  try {
+    const res = await getPublicTeamStat(id)
+    if (current !== seasonReqId) return
+    seasonStatsList.value = res.data ?? []
+    seasonStatState.value = seasonStatsList.value.length ? 'success' : 'empty'
+  } catch (err) {
+    if (current !== seasonReqId) return
+    seasonStatsList.value = []
+    seasonStatState.value = 'error'
+    seasonErrorMessage.value = err instanceof Error ? err.message : '加载场均数据失败'
+  }
+}
+
+async function loadPlayerStats() {
+  const sid = seasonId.value
+  const tid = teamId.value
+  const current = ++playerReqId
+
+  if (!sid || !tid) {
+    averagePlayerStats.value = []
+    totalPlayerStats.value = []
+    playerStatState.value = 'empty'
+    return
+  }
+
+  playerStatState.value = 'loading'
+  playerErrorMessage.value = ''
+  try {
+    const res = await getPublicSeasonPlayerStatPage(sid, {
+      teamId: tid,
+      currentPage: 1,
+      pageSize: 100,
+    })
+    if (current !== playerReqId) return
+    const records = res.data?.records ?? []
+    averagePlayerStats.value = records.map(mapPublicPlayerSeasonStatToAverage)
+    totalPlayerStats.value = records.map(mapPublicPlayerSeasonStatToTotal)
+    playerStatState.value = records.length ? 'success' : 'empty'
+  } catch (err) {
+    if (current !== playerReqId) return
+    averagePlayerStats.value = []
+    totalPlayerStats.value = []
+    playerStatState.value = 'error'
+    playerErrorMessage.value = err instanceof Error ? err.message : '加载球员数据失败'
+  }
+}
+
+async function loadSingleMatchStats() {
+  const mid = matchId.value
+  const tid = teamId.value
+  const current = ++singleReqId
+
+  if (!showSingleTable() || !mid) {
+    singleMatchStats.value = null
+    singleMatchState.value = 'empty'
+    return
+  }
+
+  singleMatchState.value = 'loading'
+  singleMatchErrorMessage.value = ''
+  try {
+    const res = await getPublicMatchDetail(mid)
+    if (current !== singleReqId) return
+    singleMatchStats.value = res.data
+      ? mapPublicMatchDetailToSingleMatchStats(res.data, tid)
+      : null
+    singleMatchState.value = singleMatchStats.value ? 'success' : 'empty'
+  } catch (err) {
+    if (current !== singleReqId) return
+    singleMatchStats.value = null
+    singleMatchState.value = 'error'
+    singleMatchErrorMessage.value = err instanceof Error ? err.message : '加载单场数据失败'
+  }
+}
+
+watch(teamId, () => {
+  void loadSeasonStats()
+}, { immediate: true })
+
+watch(
+  () => ctx.stats.value,
+  (stats) => {
+    if (stats.length) {
+      seasonStatsList.value = stats
+      seasonStatState.value = 'success'
+    }
+  },
+)
+
+watch([seasonId, teamId, stageFilter, playerStatsMode, playoffStatsMode], () => {
+  void loadPlayerStats()
+}, { immediate: true })
+
+watch([matchId, teamId, stageFilter, playoffStatsMode], () => {
+  void loadSingleMatchStats()
+}, { immediate: true })
 
 function normalizeSummaryValue(value: number, col: NumericColumn, mode: PlayerStatsMode): number {
   if (col === 'fgPct' || col === 'tpPct' || col === 'ftPct') {
@@ -151,9 +298,7 @@ function isSummaryMax(
 ): boolean {
   const maxValue = summaryMaxMap.value[col]
   if (maxValue === undefined) return false
-  return (
-    normalizeSummaryValue(row[col], col, summaryStatsMode.value) === maxValue
-  )
+  return normalizeSummaryValue(row[col], col, summaryStatsMode.value) === maxValue
 }
 
 function isSingleMax(row: TeamSingleMatchPlayerStat, col: (typeof singleNumericColumns)[number]) {
@@ -164,7 +309,7 @@ function isSingleMax(row: TeamSingleMatchPlayerStat, col: (typeof singleNumericC
 
 function getPlayerNumber(nickname: string): string {
   const match = nickname.match(/(\d+)$/)
-  return match ? match[1].padStart(2, '0') : nickname.slice(-2)
+  return match ? match[1].padStart(2, '0') : initials(nickname)
 }
 
 function formatCount(value: number, mode: PlayerStatsMode): string {
@@ -197,9 +342,12 @@ function showSingleTable() {
       </div>
 
       <div class="stats-filters">
-        <label class="filter-select">
+        <label v-if="competitionOptions.length" class="filter-select">
           <select v-model="competitionFilter">
-            <option value="2026 CNPA League">2026 CNPA League</option>
+            <option value="all">全部赛事</option>
+            <option v-for="option in competitionOptions" :key="option" :value="option">
+              {{ option }}
+            </option>
           </select>
         </label>
 
@@ -220,7 +368,11 @@ function showSingleTable() {
         </div>
       </div>
 
-      <div v-if="!seasonStats" class="stats-empty">暂无场均数据</div>
+      <div v-if="seasonStatState === 'loading'" class="stats-empty">加载中...</div>
+      <div v-else-if="seasonStatState === 'error'" class="stats-empty is-error">
+        {{ seasonErrorMessage || '加载场均数据失败' }}
+      </div>
+      <div v-else-if="!seasonStats" class="stats-empty">暂无场均数据</div>
 
       <div v-else class="season-cards">
         <article v-for="item in seasonStatItems" :key="item.label" class="season-card">
@@ -277,7 +429,11 @@ function showSingleTable() {
       </div>
 
       <div v-if="showSummaryTable()" class="stats-table-wrap">
-        <div v-if="summaryPlayerStats.length === 0" class="stats-empty">暂无球员数据</div>
+        <div v-if="playerStatState === 'loading'" class="stats-empty">加载中...</div>
+        <div v-else-if="playerStatState === 'error'" class="stats-empty is-error">
+          {{ playerErrorMessage || '加载球员数据失败' }}
+        </div>
+        <div v-else-if="summaryPlayerStats.length === 0" class="stats-empty">暂无球员数据</div>
 
         <table v-else class="stats-table">
           <thead>
@@ -361,7 +517,12 @@ function showSingleTable() {
       </div>
 
       <div v-if="showSingleTable()" class="stats-table-wrap">
-        <div v-if="!singleMatchStats" class="stats-empty">暂无单场数据</div>
+        <div v-if="!matchId" class="stats-empty">请从比赛列表选择一场比赛查看单场数据</div>
+        <div v-else-if="singleMatchState === 'loading'" class="stats-empty">加载中...</div>
+        <div v-else-if="singleMatchState === 'error'" class="stats-empty is-error">
+          {{ singleMatchErrorMessage || '加载单场数据失败' }}
+        </div>
+        <div v-else-if="!singleMatchStats" class="stats-empty">暂无单场数据</div>
 
         <template v-else>
           <p class="single-match-label">{{ singleMatchStats.label }}</p>
@@ -389,15 +550,21 @@ function showSingleTable() {
                 <td>
                   <div class="player-cell">
                     <div class="player-cell__avatar">
-                      <div class="player-cell__avatar-placeholder">
+                      <img
+                        v-if="row.avatar"
+                        :src="row.avatar"
+                        :alt="row.nickname"
+                        class="player-cell__avatar-img"
+                      />
+                      <span v-else class="player-cell__avatar-placeholder">
                         {{ getPlayerNumber(row.nickname) }}
-                      </div>
+                      </span>
                     </div>
                     <PlayerLink
-                    :player-id="row.playerId"
-                    :player-name="row.nickname"
-                    tab="overview"
-                  />
+                      :player-id="row.playerId"
+                      :player-name="row.nickname"
+                      tab="overview"
+                    />
                   </div>
                 </td>
                 <td>{{ row.grade }}</td>
@@ -534,6 +701,10 @@ function showSingleTable() {
   background: rgba(25, 25, 25, 0.025);
   color: var(--cnpa-paper-text-muted);
   font-size: 14px;
+
+  &.is-error {
+    color: var(--cnpa-red);
+  }
 }
 
 .season-cards {

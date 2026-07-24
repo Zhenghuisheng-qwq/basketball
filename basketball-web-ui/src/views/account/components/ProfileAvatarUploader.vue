@@ -9,6 +9,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: string]
   error: [message: string]
+  'file-selected': [file: File]
 }>()
 
 const previewUrl = ref(props.modelValue)
@@ -40,16 +41,16 @@ function compressImage(file: File): Promise<string> {
         canvas.height = height
         const ctx = canvas.getContext('2d')
         if (!ctx) {
-          reject(new Error('无法处理图片'))
+          reject(new Error('??????'))
           return
         }
         ctx.drawImage(img, 0, 0, width, height)
         resolve(canvas.toDataURL('image/jpeg', 0.82))
       }
-      img.onerror = () => reject(new Error('图片加载失败'))
+      img.onerror = () => reject(new Error('??????'))
       img.src = reader.result as string
     }
-    reader.onerror = () => reject(new Error('文件读取失败'))
+    reader.onerror = () => reject(new Error('??????'))
     reader.readAsDataURL(file)
   })
 }
@@ -62,11 +63,11 @@ async function handleChange(event: Event) {
 
   const allowed = ['image/jpeg', 'image/jpg', 'image/png']
   if (!allowed.includes(file.type)) {
-    emit('error', '仅支�?JPG、JPEG、PNG 格式')
+    emit('error', '????JPG?JPEG?PNG ??')
     return
   }
   if (file.size > 5 * 1024 * 1024) {
-    emit('error', '头像大小不能超过 5MB')
+    emit('error', '???????? 5MB')
     return
   }
 
@@ -75,8 +76,9 @@ async function handleChange(event: Event) {
     previewUrl.value = dataUrl
     imageError.value = false
     emit('update:modelValue', dataUrl)
+    emit('file-selected', file)
   } catch {
-    emit('error', '头像上传失败，请重试')
+    emit('error', '??????????')
   }
 }
 
@@ -91,7 +93,7 @@ function handleImageError() {
       <img
         v-if="showImage"
         :src="previewUrl"
-        alt="头像预览"
+        alt="????"
         @error="handleImageError"
       />
       <span v-else class="profile-avatar-uploader__placeholder" aria-hidden="true">
@@ -105,9 +107,9 @@ function handleImageError() {
     </div>
     <label class="profile-avatar-uploader__label">
       <input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" @change="handleChange" />
-      选择头像
+      ????
     </label>
-    <p class="profile-avatar-uploader__hint">支持 JPG / PNG，最�?5MB，建议正方形</p>
+    <p class="profile-avatar-uploader__hint">?? JPG / PNG????5MB??????</p>
   </div>
 </template>
 

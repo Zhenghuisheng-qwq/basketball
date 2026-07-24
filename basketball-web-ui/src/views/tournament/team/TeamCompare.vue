@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import teamBackground from '@/assets/icon/tournament/team_background.png'
 import compareIcon1 from '@/assets/icon/tournament/compare_1.png'
@@ -12,9 +12,20 @@ import ComparisonSummaryCard from '@/components/team/ComparisonSummaryCard.vue'
 import TeamSelectModal from '@/components/team/TeamSelectModal.vue'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import PaperTear from '@/components/common/PaperTear.vue'
-import { getCompareData, getTeamById } from '@/mock/team'
-import type { TeamCompareData, TeamCompareOverviewStat, TeamStage } from '@/types/team'
+import { getPublicDataCenterSeasons, getPublicDataCenterTeamRanking } from '@/api/publicDataCenter'
+import { getPublicSeasonStanding } from '@/api/publicStanding'
+import { getPublicTeamCompare } from '@/api/publicTeam'
+import type { PublicTeamCompareVo } from '@/api/types/public'
+import type { TeamBase, TeamCompareData, TeamStage } from '@/types/team'
 import type { MetricFormatType } from '@/utils/compareMetrics'
+import { displayText, toNumber } from '@/utils/publicDisplay'
+import {
+  mapPublicTeamToBase,
+  mapRankToTeamBase,
+  mapStandingToTeamBase,
+  placeholderTeamBase,
+} from '@/utils/publicTeamMap'
+import { compareOverviewValues, mapPublicTeamCompareVo } from './utils/mapTeamCompare'
 import './styles/team.scss'
 
 const route = useRoute()
@@ -23,6 +34,18 @@ const router = useRouter()
 const selectorVisible = ref(false)
 const selectorSide = ref<'left' | 'right'>('right')
 
+const compareVo = ref<PublicTeamCompareVo | null>(null)
+const compareData = ref<TeamCompareData | null>(null)
+const compareState = ref<'idle' | 'loading' | 'success' | 'empty' | 'error'>('idle')
+const compareErrorMessage = ref('')
+
+const teamOptions = ref<TeamBase[]>([])
+const teamsLoadState = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
+const seasonName = ref('')
+
+let compareReqId = 0
+let teamsReqId = 0
+
 const stageLabels: Record<TeamStage, string> = {
   regular: '常规赛',
   playoffs: '季后赛',
@@ -30,24 +53,45 @@ const stageLabels: Record<TeamStage, string> = {
 
 function normalizeQueryTeam(value: unknown): string {
   if (typeof value !== 'string' || !value.trim()) return ''
-  return getTeamById(value.toLowerCase().replace(/_/g, '-')).id
+  const id = value.trim()
+  return /^\d+$/.test(id) ? id : ''
 }
 
-const leftTeamId = computed(() => normalizeQueryTeam(route.query.left) || 'rng')
+const leftTeamId = computed(() => normalizeQueryTeam(route.query.left))
 const rightTeamId = computed(() => normalizeQueryTeam(route.query.right))
 
 const hasValidPair = computed(
-  () => Boolean(rightTeamId.value) && leftTeamId.value !== rightTeamId.value,
+  () => Boolean(leftTeamId.value) && Boolean(rightTeamId.value) && leftTeamId.value !== rightTeamId.value,
 )
 
-const leftTeam = computed(() => getTeamById(leftTeamId.value))
-const rightTeam = computed(() =>
-  rightTeamId.value ? getTeamById(rightTeamId.value) : null,
-)
+const leftTeam = computed<TeamBase>(() => {
+  if (compareVo.value?.leftTeam) {
+    return mapPublicTeamToBase(compareVo.value.leftTeam, {
+      wins: compareVo.value.leftStat?.wins,
+      losses: compareVo.value.leftStat?.losses,
+      seasonName: compareVo.value.seasonName,
+    })
+  }
+  const found = teamOptions.value.find((team) => team.id === leftTeamId.value)
+  return found || (leftTeamId.value ? placeholderTeamBase(leftTeamId.value) : placeholderTeamBase('0'))
+})
 
-const compareCompetitionText = computed(
-  () => `${leftTeam.value.seasonName} · ${stageLabels[leftTeam.value.currentStage]}`,
-)
+const rightTeam = computed<TeamBase | null>(() => {
+  if (!rightTeamId.value) return null
+  if (compareVo.value?.rightTeam) {
+    return mapPublicTeamToBase(compareVo.value.rightTeam, {
+      wins: compareVo.value.rightStat?.wins,
+      losses: compareVo.value.rightStat?.losses,
+      seasonName: compareVo.value.seasonName,
+    })
+  }
+  return teamOptions.value.find((team) => team.id === rightTeamId.value) || placeholderTeamBase(rightTeamId.value)
+})
+
+const compareCompetitionText = computed(() => {
+  const season = displayText(compareVo.value?.seasonName || seasonName.value, '公开赛季')
+  return `${season} · ${stageLabels.regular}`
+})
 
 const compareHeroBgStyle = computed(() => ({
   backgroundImage: `url(${teamBackground})`,
@@ -70,23 +114,14 @@ const modalDisabledTeamIds = computed(() => {
   if (selectorSide.value === 'left') {
     return rightTeamId.value ? [rightTeamId.value] : []
   }
-  return [leftTeamId.value]
+  return leftTeamId.value ? [leftTeamId.value] : []
 })
 
 const modalSelectedTeamIds = computed(() => {
-  const ids = [leftTeamId.value]
+  const ids: string[] = []
+  if (leftTeamId.value) ids.push(leftTeamId.value)
   if (rightTeamId.value) ids.push(rightTeamId.value)
   return ids
-})
-
-const compareData = computed<TeamCompareData | null>(() => {
-  if (!hasValidPair.value || !rightTeamId.value) return null
-  return getCompareData(leftTeamId.value, rightTeamId.value)
-})
-
-const rightOverview = computed(() => {
-  if (!hasValidPair.value || !rightTeamId.value) return null
-  return getCompareData(rightTeamId.value, leftTeamId.value).overview
 })
 
 interface OverviewMetricDef {
@@ -94,7 +129,7 @@ interface OverviewMetricDef {
   label: string
   formatType: MetricFormatType
   higherIsBetter: boolean
-  field: keyof TeamCompareOverviewStat
+  field: 'winRate' | 'avgPoints' | 'avgPointsAgainst' | 'avgPointDiff'
 }
 
 const overviewMetricDefs: OverviewMetricDef[] = [
@@ -129,46 +164,124 @@ const overviewMetricDefs: OverviewMetricDef[] = [
 ]
 
 const overviewCards = computed(() => {
-  if (!compareData.value || !rightOverview.value) return []
+  if (!compareVo.value) return []
+  const overview = compareOverviewValues(compareVo.value)
 
   return overviewMetricDefs.map((metric) => ({
     ...metric,
     icon: overviewIconMap[metric.label],
-    leftValue: compareData.value!.overview[metric.field],
-    rightValue: rightOverview.value![metric.field],
+    leftValue: overview.left[metric.field],
+    rightValue: overview.right[metric.field],
   }))
 })
 
 const comparisonHeadingMeta = computed(() => {
-  const leftGames = leftTeam.value.wins + leftTeam.value.losses
-  const rightGames = rightTeam.value ? rightTeam.value.wins + rightTeam.value.losses : 0
+  const leftGames = toNumber(compareVo.value?.leftStat?.games, leftTeam.value.wins + leftTeam.value.losses)
+  const rightGames = toNumber(
+    compareVo.value?.rightStat?.games,
+    rightTeam.value ? rightTeam.value.wins + rightTeam.value.losses : 0,
+  )
 
   return {
-    scope: `统计范围：${leftTeam.value.seasonYear} 常规赛已审核比赛`,
+    scope: `统计范围：${displayText(compareVo.value?.seasonName || seasonName.value, '公开赛季')} 常规赛已审核比赛`,
     games: `${leftTeam.value.code} ${leftGames}场 · ${rightTeam.value?.code ?? '--'} ${rightGames}场`,
   }
 })
 
+async function loadTeamOptions() {
+  const current = ++teamsReqId
+  teamsLoadState.value = 'loading'
+  try {
+    const seasonsRes = await getPublicDataCenterSeasons()
+    if (current !== teamsReqId) return
+    const seasons = seasonsRes.data ?? []
+    const season = seasons[0]
+    seasonName.value = displayText(season?.seasonName, '')
+
+    if (!season?.seasonId) {
+      teamOptions.value = []
+      teamsLoadState.value = 'empty'
+      return
+    }
+
+    let teams: TeamBase[] = []
+    try {
+      const standingRes = await getPublicSeasonStanding(season.seasonId)
+      if (current !== teamsReqId) return
+      teams = (standingRes.data ?? []).map((row) => mapStandingToTeamBase(row, season.seasonName))
+    } catch {
+      const rankingRes = await getPublicDataCenterTeamRanking({ seasonId: season.seasonId })
+      if (current !== teamsReqId) return
+      teams = (rankingRes.data ?? []).map((row) => mapRankToTeamBase(row, season.seasonName))
+    }
+
+    teamOptions.value = teams
+    teamsLoadState.value = teams.length ? 'success' : 'empty'
+  } catch (err) {
+    if (current !== teamsReqId) return
+    teamOptions.value = []
+    teamsLoadState.value = 'error'
+  }
+}
+
+async function loadCompareData() {
+  const left = leftTeamId.value
+  const right = rightTeamId.value
+  const current = ++compareReqId
+
+  if (!hasValidPair.value) {
+    compareVo.value = null
+    compareData.value = null
+    compareState.value = 'idle'
+    return
+  }
+
+  compareState.value = 'loading'
+  compareErrorMessage.value = ''
+  try {
+    const res = await getPublicTeamCompare({
+      leftTeamId: left,
+      rightTeamId: right,
+    })
+    if (current !== compareReqId) return
+    compareVo.value = res.data ?? null
+    compareData.value = compareVo.value ? mapPublicTeamCompareVo(compareVo.value) : null
+    compareState.value = compareData.value ? 'success' : 'empty'
+  } catch (err) {
+    if (current !== compareReqId) return
+    compareVo.value = null
+    compareData.value = null
+    compareState.value = 'error'
+    compareErrorMessage.value = err instanceof Error ? err.message : '加载对比数据失败'
+  }
+}
+
 watch(
   () => [route.query.left, route.query.right] as const,
   ([left, right]) => {
-    const leftId = normalizeQueryTeam(left) || 'rng'
+    const leftId = normalizeQueryTeam(left)
     const rightId = normalizeQueryTeam(right)
 
-    if (!rightId || leftId === rightId) {
-      selectorSide.value = 'right'
+    if (!leftId || !rightId || leftId === rightId) {
+      selectorSide.value = !leftId ? 'left' : 'right'
       selectorVisible.value = true
 
-      if (leftId === rightId && rightId) {
+      if (leftId && rightId && leftId === rightId) {
         router.replace({
           path: route.path,
           query: { left: leftId },
         })
       }
     }
+
+    void loadCompareData()
   },
   { immediate: true },
 )
+
+onMounted(() => {
+  void loadTeamOptions()
+})
 
 function getRecordText(wins: number, losses: number): string {
   return `${wins}胜${losses}负`
@@ -188,13 +301,13 @@ function handleTeamSelect(teamId: string) {
     if (teamId === rightTeamId.value) return
     router.replace({
       path: route.path,
-      query: { left: teamId, right: rightTeamId.value },
+      query: { left: teamId, ...(rightTeamId.value ? { right: rightTeamId.value } : {}) },
     })
   } else {
     if (teamId === leftTeamId.value) return
     router.replace({
       path: route.path,
-      query: { left: leftTeamId.value, right: teamId },
+      query: { left: leftTeamId.value || teamId, right: teamId },
     })
   }
 
@@ -237,7 +350,7 @@ function getTeamNameSizeClass(name: string) {
                 <div class="compare-team__record">
                   {{ getRecordText(leftTeam.wins, leftTeam.losses) }}
                 </div>
-                <div class="compare-team__rank">
+                <div v-if="leftTeam.ranking > 0" class="compare-team__rank">
                   {{ stageLabels[leftTeam.currentStage] }}第{{ leftTeam.ranking }}
                 </div>
               </div>
@@ -259,7 +372,7 @@ function getTeamNameSizeClass(name: string) {
                   <div class="compare-team__record">
                     {{ getRecordText(rightTeam.wins, rightTeam.losses) }}
                   </div>
-                  <div class="compare-team__rank">
+                  <div v-if="rightTeam.ranking > 0" class="compare-team__rank">
                     {{ stageLabels[rightTeam.currentStage] }}第{{ rightTeam.ranking }}
                   </div>
                 </div>
@@ -321,6 +434,16 @@ function getTeamNameSizeClass(name: string) {
 
             <div v-if="!hasValidPair" class="compare-empty">请选择对比球队后查看数据</div>
 
+            <div v-else-if="compareState === 'loading'" class="compare-empty">加载中...</div>
+
+            <div v-else-if="compareState === 'error'" class="compare-empty is-error">
+              {{ compareErrorMessage || '加载对比数据失败' }}
+            </div>
+
+            <div v-else-if="compareState === 'empty' || !compareData" class="compare-empty">
+              暂无对比数据
+            </div>
+
             <template v-else-if="compareData && rightTeam">
               <section class="comparison-section">
                 <div class="summary-grid">
@@ -381,6 +504,8 @@ function getTeamNameSizeClass(name: string) {
       :disabled-team-ids="modalDisabledTeamIds"
       :selected-team-ids="modalSelectedTeamIds"
       :side-text="modalSideText"
+      :teams="teamOptions"
+      :teams-state="teamsLoadState"
       @close="closeSelector"
       @select="handleTeamSelect"
     />
@@ -767,6 +892,10 @@ function getTeamNameSizeClass(name: string) {
 .compare-content {
   padding-block: clamp(16px, 1.6vw, 24px) clamp(56px, 5vw, 72px);
   color: var(--cnpa-paper-text);
+}
+
+.compare-empty.is-error {
+  color: var(--cnpa-red);
 }
 
 @media (min-width: 1600px) {

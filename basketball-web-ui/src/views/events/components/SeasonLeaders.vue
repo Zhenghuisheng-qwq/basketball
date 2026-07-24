@@ -1,17 +1,81 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { inject, ref, watch } from 'vue'
 import PaperSection from '@/components/common/PaperSection.vue'
 import PlayerLink from '@/components/player/PlayerLink.vue'
-import { seasonLeaders } from '../mock'
-import { getTeamById } from '../mock/teams.mock'
 import TeamEntryLink from '@/components/team/TeamEntryLink.vue'
+import { getPublicDataCenterPlayerRanking } from '@/api/publicDataCenter'
+import type { PublicPlayerRankItemVo } from '@/api/types/public'
+import { displayText, formatDecimal, initials } from '@/utils/publicDisplay'
+import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
+import { toEventTeam } from '../utils/mapPublic'
 import TeamLogo from './TeamLogo.vue'
 
-const imageErrors = ref<Record<number, boolean>>({})
+type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
-function handlePortraitError(id: number) {
-  imageErrors.value[id] = true
+interface LeaderCard {
+  key: string
+  title: string
+  unit: string
+  rankType: string
+  data: PublicPlayerRankItemVo | null
 }
+
+const ctx = inject<SeasonContext>('publicSeasonContext')!
+
+const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
+const errorMessage = ref('')
+const leaders = ref<LeaderCard[]>([
+  { key: 'ppg', title: '得分王', unit: 'PPG', rankType: 'AVG_POINTS', data: null },
+  { key: 'apg', title: '助攻王', unit: 'APG', rankType: 'AVG_ASSISTS', data: null },
+  { key: 'rpg', title: '篮板王', unit: 'RPG', rankType: 'AVG_REBOUNDS', data: null },
+])
+const imageErrors = ref<Record<string, boolean>>({})
+let reqId = 0
+
+function handlePortraitError(key: string) {
+  imageErrors.value[key] = true
+}
+
+async function loadLeaders(seasonId: string) {
+  const current = ++reqId
+  if (!seasonId) {
+    leaders.value = leaders.value.map((item) => ({ ...item, data: null }))
+    state.value = 'empty'
+    return
+  }
+  state.value = 'loading'
+  errorMessage.value = ''
+  try {
+    const results = await Promise.all(
+      leaders.value.map((item) =>
+        getPublicDataCenterPlayerRanking({
+          seasonId,
+          rankType: item.rankType,
+          limit: 1,
+        }),
+      ),
+    )
+    if (current !== reqId) return
+    leaders.value = leaders.value.map((item, index) => ({
+      ...item,
+      data: results[index]?.data?.[0] ?? null,
+    }))
+    state.value = leaders.value.some((item) => item.data) ? 'success' : 'empty'
+  } catch (err) {
+    if (current !== reqId) return
+    leaders.value = leaders.value.map((item) => ({ ...item, data: null }))
+    state.value = 'error'
+    errorMessage.value = err instanceof Error ? err.message : '加载高光选手失败'
+  }
+}
+
+watch(
+  () => ctx.seasonId.value,
+  (sid) => {
+    void loadLeaders(sid)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -25,39 +89,59 @@ function handlePortraitError(id: number) {
           </div>
         </div>
 
-        <div class="season-leaders__grid">
-          <article v-for="leader in seasonLeaders" :key="leader.id" class="leader-card">
+        <div v-if="state === 'loading'" class="season-leaders__state">加载中...</div>
+        <div v-else-if="state === 'error'" class="season-leaders__state is-error">{{ errorMessage }}</div>
+        <div v-else-if="state === 'empty'" class="season-leaders__state">暂无高光选手数据</div>
+        <div v-else class="season-leaders__grid">
+          <article v-for="leader in leaders" :key="leader.key" class="leader-card">
             <div class="leader-info">
               <span class="leader-title">{{ leader.title }}</span>
               <div class="leader-value sport-num">
-                {{ leader.value }}
+                {{ leader.data ? formatDecimal(leader.data.statValue) : '0' }}
                 <small>{{ leader.unit }}</small>
               </div>
               <strong class="leader-name">
                 <PlayerLink
-                  :player-id="leader.playerId"
-                  :player-name="leader.playerName"
+                  v-if="leader.data"
+                  :player-id="leader.data.playerId"
+                  :player-name="displayText(leader.data.playerName)"
                   tab="data"
                 />
+                <template v-else>--</template>
               </strong>
               <TeamEntryLink
-                v-if="getTeamById(leader.teamId)"
-                :team="getTeamById(leader.teamId)!"
+                v-if="leader.data?.teamId"
+                :team="
+                  toEventTeam({
+                    teamId: leader.data.teamId,
+                    teamName: leader.data.teamName,
+                  })
+                "
                 class="leader-team"
               >
-                <TeamLogo :team="getTeamById(leader.teamId)!" size="sm" />
-                <span>{{ getTeamById(leader.teamId)!.name }}</span>
+                <TeamLogo
+                  :team="
+                    toEventTeam({
+                      teamId: leader.data.teamId,
+                      teamName: leader.data.teamName,
+                    })
+                  "
+                  size="sm"
+                />
+                <span>{{ displayText(leader.data.teamName) }}</span>
               </TeamEntryLink>
             </div>
 
             <div class="leader-portrait">
               <img
-                v-if="!imageErrors[leader.id]"
-                :src="leader.portrait"
-                :alt="leader.playerName"
-                @error="handlePortraitError(leader.id)"
+                v-if="leader.data?.avatarUrl && !imageErrors[leader.key]"
+                :src="leader.data.avatarUrl"
+                :alt="displayText(leader.data.playerName)"
+                @error="handlePortraitError(leader.key)"
               />
-              <div v-else class="leader-silhouette" aria-hidden="true" />
+              <div v-else class="leader-silhouette" aria-hidden="true">
+                {{ initials(leader.data?.playerName) }}
+              </div>
             </div>
           </article>
         </div>
@@ -88,6 +172,17 @@ function handlePortraitError(id: number) {
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 22px;
+}
+
+.season-leaders__state {
+  padding: 36px 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 600;
+
+  &.is-error {
+    color: #e10613;
+  }
 }
 
 .season-leaders__grid {
@@ -167,10 +262,14 @@ function handlePortraitError(id: number) {
 }
 
 .leader-silhouette {
+  display: grid;
+  place-items: center;
   background:
     radial-gradient(circle at 50% 28%, rgba(255, 255, 255, 0.18) 0%, transparent 34%),
     linear-gradient(180deg, #2a2a2a 0%, #111 100%);
-  clip-path: polygon(28% 100%, 72% 100%, 68% 38%, 50% 24%, 32% 38%);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 18px;
+  font-weight: 900;
 }
 
 @media (max-width: 768px) {

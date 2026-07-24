@@ -1,15 +1,29 @@
 <script setup lang="ts">
-import { computed, onUnmounted, watch } from 'vue'
-import { getAllTeams, getTeamById } from '@/mock/team'
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { getPublicDataCenterSeasons, getPublicDataCenterTeamRanking } from '@/api/publicDataCenter'
+import { getPublicSeasonStanding } from '@/api/publicStanding'
 import TeamLogo from '@/components/team/TeamLogo.vue'
+import { displayText } from '@/utils/publicDisplay'
+import {
+  mapRankToTeamBase,
+  mapStandingToTeamBase,
+} from '@/utils/publicTeamMap'
 import type { TeamBase, TeamStage } from '@/types/team'
 
-const props = defineProps<{
-  visible: boolean
-  side: 'left' | 'right'
-  leftTeamId: string
-  rightTeamId: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    visible: boolean
+    side: 'left' | 'right'
+    leftTeamId: string
+    rightTeamId: string
+    teams?: TeamBase[]
+    competitionText?: string
+  }>(),
+  {
+    teams: undefined,
+    competitionText: '',
+  },
+)
 
 const emit = defineEmits<{
   close: []
@@ -21,36 +35,17 @@ const stageLabels: Record<TeamStage, string> = {
   playoffs: '季后赛',
 }
 
-const teamOrder = [
-  'rng',
-  'wolves',
-  'phoenix',
-  'all-star',
-  'titan',
-  'dragon',
-  'legend',
-  'omega',
-  'beast',
-  'unity',
-  'phx-fire',
-  'eik',
-  'storm',
-  'vortex',
-  'knights',
-  'invictus',
-]
+const fetchedTeams = ref<TeamBase[]>([])
+const fetchState = ref<'idle' | 'loading' | 'success' | 'empty' | 'error'>('idle')
+let reqId = 0
 
-const teamMap = computed(() => new Map(getAllTeams().map((team) => [team.id, team])))
-
-const orderedTeams = computed(() =>
-  teamOrder
-    .map((id) => teamMap.value.get(id))
-    .filter((team): team is TeamBase => Boolean(team)),
-)
+const resolvedTeams = computed(() => props.teams ?? fetchedTeams.value)
 
 const headerMeta = computed(() => {
-  const team = getTeamById(props.leftTeamId)
-  return `${team.seasonName} · ${stageLabels[team.currentStage]}`
+  if (props.competitionText) return props.competitionText
+  const team = resolvedTeams.value.find((item) => item.id === props.leftTeamId)
+  if (team) return `${team.seasonName} · ${stageLabels[team.currentStage]}`
+  return `${stageLabels.regular}`
 })
 
 function isInCompare(teamId: string): boolean {
@@ -68,12 +63,51 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
+async function loadTeams() {
+  if (props.teams) return
+  const current = ++reqId
+  fetchState.value = 'loading'
+  try {
+    const seasonsRes = await getPublicDataCenterSeasons()
+    if (current !== reqId) return
+    const season = seasonsRes.data?.[0]
+    if (!season?.seasonId) {
+      fetchedTeams.value = []
+      fetchState.value = 'empty'
+      return
+    }
+
+    let teams: TeamBase[] = []
+    try {
+      const standingRes = await getPublicSeasonStanding(season.seasonId)
+      if (current !== reqId) return
+      teams = (standingRes.data ?? []).map((row) =>
+        mapStandingToTeamBase(row, season.seasonName),
+      )
+    } catch {
+      const rankingRes = await getPublicDataCenterTeamRanking({ seasonId: season.seasonId })
+      if (current !== reqId) return
+      teams = (rankingRes.data ?? []).map((row) => mapRankToTeamBase(row, season.seasonName))
+    }
+
+    fetchedTeams.value = teams
+    fetchState.value = teams.length ? 'success' : 'empty'
+  } catch {
+    if (current !== reqId) return
+    fetchedTeams.value = []
+    fetchState.value = 'error'
+  }
+}
+
 watch(
   () => props.visible,
   (visible) => {
     if (visible) {
       document.body.style.overflow = 'hidden'
       window.addEventListener('keydown', handleKeydown)
+      if (!props.teams) {
+        void loadTeams()
+      }
       return
     }
 
@@ -121,9 +155,19 @@ onUnmounted(() => {
           正在更换{{ side === 'left' ? '左侧' : '右侧' }}球队
         </p>
 
-        <div class="team-selector-grid">
+        <div v-if="fetchState === 'loading' && !teams" class="team-selector-dialog__state">
+          加载中...
+        </div>
+        <div v-else-if="fetchState === 'error' && !teams" class="team-selector-dialog__state is-error">
+          加载球队列表失败
+        </div>
+        <div v-else-if="resolvedTeams.length === 0" class="team-selector-dialog__state">
+          暂无可选球队
+        </div>
+
+        <div v-else class="team-selector-grid">
           <button
-            v-for="team in orderedTeams"
+            v-for="team in resolvedTeams"
             :key="team.id"
             type="button"
             class="team-selector-card"
@@ -132,7 +176,7 @@ onUnmounted(() => {
             @click="handleSelect(team)"
           >
             <TeamLogo :team="team" size="selector" class="team-selector-card__logo" />
-            <span class="team-selector-card__name">{{ team.name }}</span>
+            <span class="team-selector-card__name">{{ displayText(team.name) }}</span>
             <span v-if="isInCompare(team.id)" class="team-selector-card__badge">已在对比</span>
           </button>
         </div>
@@ -222,6 +266,18 @@ onUnmounted(() => {
   font-size: 13px;
   font-weight: 700;
   color: var(--cnpa-red);
+}
+
+.team-selector-dialog__state {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--cnpa-paper-text-muted);
+  font-size: 14px;
+  font-weight: 700;
+
+  &.is-error {
+    color: var(--cnpa-red);
+  }
 }
 
 .team-selector-grid {

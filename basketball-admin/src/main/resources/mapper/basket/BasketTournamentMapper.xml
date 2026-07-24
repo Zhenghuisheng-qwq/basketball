@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketTournamentMapper">
+    <resultMap type="com.zhs.basket.domain.BasketTournament" id="BasketTournamentResult">
+        <id property="id" column="id" />
+        <result property="tournamentNo" column="tournament_no" />
+        <result property="tournamentName" column="tournament_name" />
+        <result property="shortName" column="short_name" />
+        <result property="englishName" column="english_name" />
+        <result property="logoFileId" column="logo_file_id" />
+        <result property="coverFileId" column="cover_file_id" />
+        <result property="tournamentType" column="tournament_type" />
+        <result property="gameTerminal" column="game_terminal" />
+        <result property="formatCode" column="format_code" />
+        <result property="organizerName" column="organizer_name" />
+        <result property="description" column="description" />
+        <result property="tournamentStatus" column="tournament_status" />
+        <result property="publicStatus" column="public_status" />
+        <result property="displayOrder" column="display_order" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+    <select id="selectList" resultMap="BasketTournamentResult">
+        select id, tournament_no, tournament_name, short_name, english_name, logo_file_id, cover_file_id, tournament_type, game_terminal, format_code, organizer_name, description, tournament_status, public_status, display_order, create_time, update_time, is_delete from basket_tournament where is_delete = 0
+        <if test="tournamentNo != null and tournamentNo != ''">and tournament_no like concat('%', #{tournamentNo}, '%')</if>
+        <if test="tournamentName != null and tournamentName != ''">and tournament_name like concat('%', #{tournamentName}, '%')</if>
+        <if test="tournamentStatus != null">and tournament_status = #{tournamentStatus}</if>
+        order by display_order, create_time desc
+    </select>
+    <select id="selectById" resultMap="BasketTournamentResult">
+        select id, tournament_no, tournament_name, short_name, english_name, logo_file_id, cover_file_id, tournament_type, game_terminal, format_code, organizer_name, description, tournament_status, public_status, display_order, create_time, update_time, is_delete from basket_tournament where id = #{id} and is_delete = 0
+    </select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_tournament (tournament_no, tournament_name, short_name, english_name, logo_file_id, cover_file_id, tournament_type, game_terminal, format_code, organizer_name, description, tournament_status, public_status, display_order, create_time, update_time, is_delete) values (#{tournamentNo}, #{tournamentName}, #{shortName}, #{englishName}, #{logoFileId}, #{coverFileId}, #{tournamentType}, #{gameTerminal}, #{formatCode}, #{organizerName}, #{description}, #{tournamentStatus}, #{publicStatus}, #{displayOrder}, #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+    <update id="updateById">
+        update basket_tournament
+        <set>
+            <if test="tournamentName != null">tournament_name = #{tournamentName},</if>
+            <if test="shortName != null">short_name = #{shortName},</if>
+            <if test="englishName != null">english_name = #{englishName},</if>
+            <if test="logoFileId != null">logo_file_id = #{logoFileId},</if>
+            <if test="coverFileId != null">cover_file_id = #{coverFileId},</if>
+            <if test="tournamentType != null">tournament_type = #{tournamentType},</if>
+            <if test="gameTerminal != null">game_terminal = #{gameTerminal},</if>
+            <if test="formatCode != null">format_code = #{formatCode},</if>
+            <if test="organizerName != null">organizer_name = #{organizerName},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="tournamentStatus != null">tournament_status = #{tournamentStatus},</if>
+            <if test="publicStatus != null">public_status = #{publicStatus},</if>
+            <if test="displayOrder != null">display_order = #{displayOrder},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+    <update id="softDelete">
+        update basket_tournament set is_delete = 1, update_time = now() where id = #{id} and is_delete = 0
+    </update>
+    <update id="updateStatusIfMatch">
+        update basket_tournament set tournament_status = #{toStatus}, update_time = now()
+        where id = #{id} and is_delete = 0 and tournament_status in
+        <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+    </update>
+</mapper>

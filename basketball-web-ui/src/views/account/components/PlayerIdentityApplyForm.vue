@@ -2,30 +2,53 @@
 import { computed, reactive, ref } from 'vue'
 import type { GamePosition, IdentityPlatform } from '@/types/account'
 import { IDENTITY_PLATFORM_LABELS, GAME_POSITION_LABELS } from '@/types/account'
-import { mapIdentityPlatformToVerification } from '@/mock/playerIdentityMock'
-import type { PlayerVerificationSnapshot } from '@/types/account'
+
+export interface PlayerCertFormPayload {
+  realName: string
+  idType: string
+  idNo: string
+  platform: IdentityPlatform
+  gameAccount: string
+  gameNickname: string
+  position: GamePosition
+  contactMobile: string
+  idFrontFile?: File
+  idBackFile?: File
+  gameScreenshotFile?: File
+}
 
 const props = defineProps<{
   initial?: Partial<{
-    avatarUrl: string
+    realName: string
+    idType: string
     platform: IdentityPlatform
-    gameId: string
+    gameAccount: string
+    gameNickname: string
     position: GamePosition
-    proofImageUrl: string
+    contactMobile: string
   }>
-  rejectedFields?: string[]
 }>()
 
 const emit = defineEmits<{
-  submit: [data: PlayerVerificationSnapshot & { avatarUrl: string }]
+  submit: [data: PlayerCertFormPayload]
 }>()
 
-const avatarUrl = ref(props.initial?.avatarUrl || '')
+const realName = ref(props.initial?.realName || '')
+const idType = ref(props.initial?.idType || 'ID_CARD')
 const platform = ref<IdentityPlatform>(props.initial?.platform || 'XBOX')
-const gameId = ref(props.initial?.gameId || '')
+const gameAccount = ref(props.initial?.gameAccount || '')
+const gameNickname = ref(props.initial?.gameNickname || '')
 const position = ref<GamePosition>(props.initial?.position || 'PG')
-const proofImageUrl = ref(props.initial?.proofImageUrl || '')
-const proofUploaded = computed(() => Boolean(proofImageUrl.value))
+const contactMobile = ref(props.initial?.contactMobile || '')
+const idNo = ref('')
+
+const idFrontFile = ref<File | null>(null)
+const idBackFile = ref<File | null>(null)
+const gameScreenshotFile = ref<File | null>(null)
+
+const idFrontName = computed(() => idFrontFile.value?.name || '')
+const idBackName = computed(() => idBackFile.value?.name || '')
+const screenshotName = computed(() => gameScreenshotFile.value?.name || '')
 
 const errors = reactive<Record<string, string>>({})
 
@@ -33,70 +56,75 @@ const platforms = Object.entries(IDENTITY_PLATFORM_LABELS) as [IdentityPlatform,
 const positions = Object.entries(GAME_POSITION_LABELS) as [GamePosition, string][]
 
 const isComplete = computed(() =>
-  Boolean(avatarUrl.value && platform.value && gameId.value.trim() && position.value && proofImageUrl.value),
+  Boolean(
+    realName.value.trim()
+    && idType.value
+    && idNo.value.trim()
+    && platform.value
+    && gameAccount.value.trim()
+    && gameNickname.value.trim()
+    && position.value
+    && contactMobile.value.trim()
+    && idFrontFile.value
+    && gameScreenshotFile.value
+    && (idType.value !== 'ID_CARD' || idBackFile.value),
+  ),
 )
 
-function isRejected(field: string) {
-  return props.rejectedFields?.includes(field)
-}
-
-async function handleAvatar(event: Event) {
+function pickFile(key: 'idFrontFile' | 'idBackFile' | 'gameScreenshotFile', event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = () => {
-    avatarUrl.value = reader.result as string
-    errors.avatarUrl = ''
-  }
-  reader.readAsDataURL(file)
-}
-
-async function handleProof(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  const reader = new FileReader()
-  reader.onload = () => {
-    proofImageUrl.value = reader.result as string
-    errors.proofImageUrl = ''
-  }
-  reader.readAsDataURL(file)
+  if (key === 'idFrontFile') idFrontFile.value = file
+  if (key === 'idBackFile') idBackFile.value = file
+  if (key === 'gameScreenshotFile') gameScreenshotFile.value = file
+  errors[key] = ''
 }
 
 function submit() {
   if (!isComplete.value) return
-  const mappedPlatform = mapIdentityPlatformToVerification(platform.value)
   emit('submit', {
-    avatarUrl: avatarUrl.value,
-    primaryPlatform: mappedPlatform,
-    gameId: gameId.value.trim(),
-    gameIdScreenshotUrl: proofImageUrl.value,
-    gamePosition: position.value,
-    commonPosition: position.value,
-    backupContact: '',
+    realName: realName.value.trim(),
+    idType: idType.value,
+    idNo: idNo.value.trim(),
+    platform: platform.value,
+    gameAccount: gameAccount.value.trim(),
+    gameNickname: gameNickname.value.trim(),
+    position: position.value,
+    contactMobile: contactMobile.value.trim(),
+    idFrontFile: idFrontFile.value || undefined,
+    idBackFile: idBackFile.value || undefined,
+    gameScreenshotFile: gameScreenshotFile.value || undefined,
   })
 }
 </script>
 
 <template>
   <div class="identity-apply-form">
-    <div class="identity-apply-form__field" :class="{ 'identity-apply-form__field--error': isRejected('proofImage') }">
-      <label>A. 球员头像</label>
-      <div class="identity-apply-form__avatar">
-        <div class="identity-apply-form__avatar-preview">
-          <img v-if="avatarUrl" :src="avatarUrl" alt="球员头像预览" />
-          <svg v-else viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-          </svg>
-        </div>
-        <label class="account-btn-secondary identity-apply-form__upload-btn">
-          上传头像
-          <input type="file" accept="image/*" hidden @change="handleAvatar" />
-        </label>
-      </div>
+    <div class="identity-apply-form__field">
+      <label>真实姓名</label>
+      <input v-model="realName" type="text" class="identity-apply-form__input" placeholder="与证件一致" />
     </div>
 
     <div class="identity-apply-form__field">
-      <label>B. 游戏平台</label>
+      <label>证件类型</label>
+      <select v-model="idType" class="identity-apply-form__input">
+        <option value="ID_CARD">身份证</option>
+        <option value="PASSPORT">护照</option>
+      </select>
+    </div>
+
+    <div class="identity-apply-form__field">
+      <label>证件号码</label>
+      <input v-model="idNo" type="text" class="identity-apply-form__input" placeholder="请输入证件号码" />
+    </div>
+
+    <div class="identity-apply-form__field">
+      <label>联系电话</label>
+      <input v-model="contactMobile" type="tel" class="identity-apply-form__input" placeholder="用于审核联系" />
+    </div>
+
+    <div class="identity-apply-form__field">
+      <label>游戏平台</label>
       <div class="identity-apply-form__chips">
         <button
           v-for="[key, label] in platforms"
@@ -112,17 +140,17 @@ function submit() {
     </div>
 
     <div class="identity-apply-form__field">
-      <label>C. 游戏 ID</label>
-      <input
-        v-model="gameId"
-        type="text"
-        class="identity-apply-form__input"
-        placeholder="请输入所选平台使用的游戏 ID"
-      />
+      <label>游戏账号</label>
+      <input v-model="gameAccount" type="text" class="identity-apply-form__input" placeholder="平台游戏账号" />
     </div>
 
     <div class="identity-apply-form__field">
-      <label>D. 常用位置</label>
+      <label>游戏昵称</label>
+      <input v-model="gameNickname" type="text" class="identity-apply-form__input" placeholder="游戏内昵称" />
+    </div>
+
+    <div class="identity-apply-form__field">
+      <label>常用位置</label>
       <div class="identity-apply-form__chips">
         <button
           v-for="[key] in positions"
@@ -137,15 +165,30 @@ function submit() {
       </div>
     </div>
 
-    <div class="identity-apply-form__field" :class="{ 'identity-apply-form__field--error': isRejected('proofImage') }">
-      <label>E. 必要证明材料</label>
+    <div class="identity-apply-form__field">
+      <label>证件正面</label>
+      <label class="account-btn-secondary identity-apply-form__upload-btn">
+        {{ idFrontName || '上传证件正面' }}
+        <input type="file" accept="image/*" hidden @change="pickFile('idFrontFile', $event)" />
+      </label>
+    </div>
+
+    <div v-if="idType === 'ID_CARD'" class="identity-apply-form__field">
+      <label>证件反面</label>
+      <label class="account-btn-secondary identity-apply-form__upload-btn">
+        {{ idBackName || '上传证件反面' }}
+        <input type="file" accept="image/*" hidden @change="pickFile('idBackFile', $event)" />
+      </label>
+    </div>
+
+    <div class="identity-apply-form__field">
+      <label>游戏截图证明</label>
       <div class="identity-apply-form__proof">
-        <p>上传能够清晰显示游戏平台与游戏 ID 的证明材料</p>
+        <p>上传能够清晰显示游戏平台与游戏 ID 的截图</p>
         <label class="account-btn-secondary identity-apply-form__upload-btn">
-          {{ proofUploaded ? '重新上传' : '上传证明材料' }}
-          <input type="file" accept="image/*" hidden @change="handleProof" />
+          {{ screenshotName || '上传游戏截图' }}
+          <input type="file" accept="image/*" hidden @change="pickFile('gameScreenshotFile', $event)" />
         </label>
-        <span class="identity-apply-form__proof-status">{{ proofUploaded ? '已上传' : '未上传' }}</span>
       </div>
     </div>
 

@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import dataHeroBg from '@/assets/icon/data_hero_bg.png'
+import type { TournamentGroup } from '../types'
 import TournamentSelector from './TournamentSelector.vue'
 
 defineProps<{
   tournamentId: string
+  groups: TournamentGroup[]
+  loading?: boolean
+  error?: string
 }>()
 
 const emit = defineEmits<{
@@ -28,6 +32,9 @@ function handleTournamentChange(value: string) {
         <div class="data-hero__selector">
           <TournamentSelector
             :model-value="tournamentId"
+            :groups="groups"
+            :loading="loading"
+            :error="error"
             @update:model-value="handleTournamentChange"
           />
         </div>

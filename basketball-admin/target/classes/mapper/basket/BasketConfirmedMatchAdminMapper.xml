@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketConfirmedMatchAdminMapper">
+
+    <sql id="confirmedWhere">
+        m.is_delete = 0
+        AND m.match_status = 3
+        AND m.data_status = 2
+        AND m.home_team_id IS NOT NULL
+        AND m.away_team_id IS NOT NULL
+        AND m.home_team_id &lt;&gt; m.away_team_id
+        AND m.home_score &gt;= 0
+        AND m.away_score &gt;= 0
+    </sql>
+
+    <select id="selectConfirmedMatches" resultType="com.zhs.basket.vo.ConfirmedMatchBriefVo">
+        select m.id as matchId, m.match_no as matchNo, m.season_id as seasonId, m.stage_id as stageId,
+               ifnull(m.group_id, 0) as groupId, m.home_team_id as homeTeamId, m.away_team_id as awayTeamId,
+               m.home_score as homeScore, m.away_score as awayScore, m.winner_team_id as winnerTeamId,
+               m.walkover_team_id as walkoverTeamId, m.match_status as matchStatus, m.data_status as dataStatus,
+               m.scheduled_start_time as scheduledStartTime, m.actual_end_time as actualEndTime,
+               ht.result_type as homeResultType, at.result_type as awayResultType
+        from basket_match m
+        left join basket_match_team ht on ht.match_id = m.id and ht.team_id = m.home_team_id and ht.is_delete = 0
+        left join basket_match_team at on at.match_id = m.id and at.team_id = m.away_team_id and at.is_delete = 0
+        where <include refid="confirmedWhere"/>
+        <if test="seasonId != null">and m.season_id = #{seasonId}</if>
+        <if test="stageId != null">and m.stage_id = #{stageId}</if>
+        <if test="groupId != null">and ifnull(m.group_id, 0) = #{groupId}</if>
+        order by m.scheduled_start_time asc, m.id asc
+    </select>
+
+    <select id="selectConfirmedMatchById" resultType="com.zhs.basket.vo.ConfirmedMatchBriefVo">
+        select m.id as matchId, m.match_no as matchNo, m.season_id as seasonId, m.stage_id as stageId,
+               ifnull(m.group_id, 0) as groupId, m.home_team_id as homeTeamId, m.away_team_id as awayTeamId,
+               m.home_score as homeScore, m.away_score as awayScore, m.winner_team_id as winnerTeamId,
+               m.walkover_team_id as walkoverTeamId, m.match_status as matchStatus, m.data_status as dataStatus,
+               m.scheduled_start_time as scheduledStartTime, m.actual_end_time as actualEndTime,
+               ht.result_type as homeResultType, at.result_type as awayResultType
+        from basket_match m
+        left join basket_match_team ht on ht.match_id = m.id and ht.team_id = m.home_team_id and ht.is_delete = 0
+        left join basket_match_team at on at.match_id = m.id and at.team_id = m.away_team_id and at.is_delete = 0
+        where m.id = #{matchId} and <include refid="confirmedWhere"/>
+    </select>
+
+    <select id="countBySeasonAndStatuses" resultType="int">
+        select count(1) from basket_match m
+        where m.is_delete = 0 and m.season_id = #{seasonId}
+        <if test="matchStatus != null">and m.match_status = #{matchStatus}</if>
+        <if test="dataStatus != null">and m.data_status = #{dataStatus}</if>
+    </select>
+
+    <select id="countCancelled" resultType="int">
+        select count(1) from basket_match
+        where is_delete = 0 and season_id = #{seasonId} and match_status = 5
+    </select>
+
+    <select id="countReopened" resultType="int">
+        select count(1) from basket_match
+        where is_delete = 0 and season_id = #{seasonId} and data_status = 3
+    </select>
+
+    <select id="countUnfinished" resultType="int">
+        select count(1) from basket_match
+        where is_delete = 0 and season_id = #{seasonId}
+          and match_status in (0, 1, 2, 4)
+    </select>
+
+    <select id="selectTeamStatAgg" resultType="java.util.HashMap">
+        select ts.team_id as teamId,
+               count(distinct ts.match_id) as games,
+               sum(case when m.winner_team_id = ts.team_id then 1 else 0 end) as wins,
+               sum(case when m.winner_team_id is not null and m.winner_team_id &lt;&gt; ts.team_id then 1 else 0 end) as losses,
+               ifnull(sum(ts.points), 0) as pointsFor,
+               ifnull(sum(case when ts.team_id = m.home_team_id then m.away_score else m.home_score end), 0) as pointsAgainst,
+               ifnull(sum(ts.rebounds), 0) as rebounds,
+               ifnull(sum(ts.assists), 0) as assists,
+               ifnull(sum(ts.steals), 0) as steals,
+               ifnull(sum(ts.blocks), 0) as blocks,
+               ifnull(sum(ts.turnovers), 0) as turnovers,
+               ifnull(sum(ts.field_goals_made), 0) as fieldGoalsMade,
+               ifnull(sum(ts.field_goals_attempted), 0) as fieldGoalsAttempted,
+               ifnull(sum(ts.three_points_made), 0) as threePointsMade,
+               ifnull(sum(ts.three_points_attempted), 0) as threePointsAttempted,
+               ifnull(sum(ts.free_throws_made), 0) as freeThrowsMade,
+               ifnull(sum(ts.free_throws_attempted), 0) as freeThrowsAttempted
+        from basket_match_team_stat ts
+        inner join basket_match m on m.id = ts.match_id
+        where ts.is_delete = 0 and ts.data_status = 2
+          and <include refid="confirmedWhere"/>
+          and m.season_id = #{seasonId}
+        <if test="stageId != null">and m.stage_id = #{stageId}</if>
+        group by ts.team_id
+    </select>
+
+    <select id="selectPlayerStatAgg" resultType="java.util.HashMap">
+        select ps.player_id as playerId,
+               ps.team_id as teamId,
+               count(distinct ps.match_id) as games,
+               ifnull(sum(ps.started_flag), 0) as starts,
+               ifnull(sum(ps.minutes_seconds), 0) as minutesSeconds,
+               ifnull(sum(ps.points), 0) as points,
+               ifnull(sum(ps.rebounds), 0) as rebounds,
+               ifnull(sum(ps.assists), 0) as assists,
+               ifnull(sum(ps.steals), 0) as steals,
+               ifnull(sum(ps.blocks), 0) as blocks,
+               ifnull(sum(ps.turnovers), 0) as turnovers,
+               ifnull(sum(ps.fouls), 0) as fouls,
+               ifnull(sum(ps.field_goals_made), 0) as fieldGoalsMade,
+               ifnull(sum(ps.field_goals_attempted), 0) as fieldGoalsAttempted,
+               ifnull(sum(ps.three_points_made), 0) as threePointsMade,
+               ifnull(sum(ps.three_points_attempted), 0) as threePointsAttempted,
+               ifnull(sum(ps.free_throws_made), 0) as freeThrowsMade,
+               ifnull(sum(ps.free_throws_attempted), 0) as freeThrowsAttempted,
+               ifnull(sum(ps.efficiency), 0) as efficiencySum,
+               ifnull(sum(ps.double_double), 0) as doubleDoubleCount,
+               ifnull(sum(ps.triple_double), 0) as tripleDoubleCount
+        from basket_match_player_stat ps
+        inner join basket_match m on m.id = ps.match_id
+        where ps.is_delete = 0 and ps.data_status = 2
+          and <include refid="confirmedWhere"/>
+          and m.season_id = #{seasonId}
+        <if test="stageId != null">and m.stage_id = #{stageId}</if>
+        group by ps.player_id, ps.team_id
+    </select>
+
+    <select id="countConfirmedTeamStat" resultType="int">
+        select count(1) from basket_match_team_stat
+        where is_delete = 0 and data_status = 2 and match_id = #{matchId}
+    </select>
+
+    <select id="countConfirmedPlayerStat" resultType="int">
+        select count(1) from basket_match_player_stat
+        where is_delete = 0 and data_status = 2 and match_id = #{matchId}
+    </select>
+
+    <select id="sumPlayerPointsByMatchTeam" resultType="java.lang.Integer">
+        select ifnull(sum(points), 0) from basket_match_player_stat
+        where is_delete = 0 and data_status = 2 and match_id = #{matchId} and team_id = #{teamId}
+    </select>
+
+    <select id="sumTeamPointsByMatchTeam" resultType="java.lang.Integer">
+        select ifnull(sum(points), 0) from basket_match_team_stat
+        where is_delete = 0 and data_status = 2 and match_id = #{matchId} and team_id = #{teamId}
+    </select>
+
+    <select id="countDuplicateTeamStat" resultType="int">
+        select count(1) from (
+            select team_id from basket_match_team_stat
+            where is_delete = 0 and match_id = #{matchId}
+            group by team_id having count(1) > 1
+        ) t
+    </select>
+
+    <select id="countDuplicatePlayerStat" resultType="int">
+        select count(1) from (
+            select player_id from basket_match_player_stat
+            where is_delete = 0 and match_id = #{matchId}
+            group by player_id having count(1) > 1
+        ) t
+    </select>
+</mapper>

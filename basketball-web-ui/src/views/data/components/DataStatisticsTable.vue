@@ -2,7 +2,6 @@
 import { computed, reactive } from 'vue'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import {
-  formatMadeAttempted,
   formatRate,
   formatStatNumber,
   formatWinLoss,
@@ -12,12 +11,15 @@ import {
   type PlayerStatistics,
   type StatisticType,
   type TeamStatistics,
-} from '../mock/dataCenter'
+} from '../types'
 
 const props = defineProps<{
   dataType: DataType
   statisticType: StatisticType
   rows: Array<TeamStatistics | PlayerStatistics>
+  loading?: boolean
+  error?: string
+  emptyText?: string
 }>()
 
 const brokenLogos = reactive<Record<string, boolean>>({})
@@ -55,7 +57,7 @@ function showLogo(url: string | undefined, key: string): boolean {
 }
 
 function placeholderText(abbr: string): string {
-  return abbr.replace(/\s+/g, '').slice(0, 2).toUpperCase()
+  return abbr.replace(/\s+/g, '').slice(0, 2).toUpperCase() || '--'
 }
 
 function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string {
@@ -70,33 +72,30 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
       case 'points':
         return formatStatNumber(isAverage.value ? row.averagePoints : row.totalPoints, isAverage.value)
       case 'rebounds':
-        return formatStatNumber(isAverage.value ? row.averageRebounds : row.totalRebounds, isAverage.value)
+        return formatStatNumber(
+          isAverage.value ? row.averageRebounds : row.totalRebounds,
+          isAverage.value,
+        )
       case 'assists':
-        return formatStatNumber(isAverage.value ? row.averageAssists : row.totalAssists, isAverage.value)
+        return formatStatNumber(
+          isAverage.value ? row.averageAssists : row.totalAssists,
+          isAverage.value,
+        )
       case 'steals':
         return formatStatNumber(isAverage.value ? row.averageSteals : row.totalSteals, isAverage.value)
       case 'blocks':
         return formatStatNumber(isAverage.value ? row.averageBlocks : row.totalBlocks, isAverage.value)
       case 'turnovers':
-        return formatStatNumber(isAverage.value ? row.averageTurnovers : row.totalTurnovers, isAverage.value)
+        return formatStatNumber(
+          isAverage.value ? row.averageTurnovers : row.totalTurnovers,
+          isAverage.value,
+        )
       case 'fieldGoals':
-        return formatMadeAttempted(
-          isAverage.value ? row.averageFieldGoalsMade : row.fieldGoalsMade,
-          isAverage.value ? row.averageFieldGoalsAttempted : row.fieldGoalsAttempted,
-          isAverage.value,
-        )
+        return formatRate(row.fieldGoalPct)
       case 'threePoints':
-        return formatMadeAttempted(
-          isAverage.value ? row.averageThreePointsMade : row.threePointsMade,
-          isAverage.value ? row.averageThreePointsAttempted : row.threePointsAttempted,
-          isAverage.value,
-        )
+        return formatRate(row.threePointPct)
       case 'freeThrows':
-        return formatMadeAttempted(
-          isAverage.value ? row.averageFreeThrowsMade : row.freeThrowsMade,
-          isAverage.value ? row.averageFreeThrowsAttempted : row.freeThrowsAttempted,
-          isAverage.value,
-        )
+        return formatRate(row.freeThrowPct)
       default:
         return ''
     }
@@ -105,39 +104,36 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
   if (isPlayerRow(row)) {
     switch (key) {
       case 'position':
-        return row.position
+        return row.position || '--'
       case 'games':
         return String(row.games)
       case 'points':
         return formatStatNumber(isAverage.value ? row.averagePoints : row.totalPoints, isAverage.value)
       case 'rebounds':
-        return formatStatNumber(isAverage.value ? row.averageRebounds : row.totalRebounds, isAverage.value)
+        return formatStatNumber(
+          isAverage.value ? row.averageRebounds : row.totalRebounds,
+          isAverage.value,
+        )
       case 'assists':
-        return formatStatNumber(isAverage.value ? row.averageAssists : row.totalAssists, isAverage.value)
+        return formatStatNumber(
+          isAverage.value ? row.averageAssists : row.totalAssists,
+          isAverage.value,
+        )
       case 'steals':
         return formatStatNumber(isAverage.value ? row.averageSteals : row.totalSteals, isAverage.value)
       case 'blocks':
         return formatStatNumber(isAverage.value ? row.averageBlocks : row.totalBlocks, isAverage.value)
       case 'turnovers':
-        return formatStatNumber(isAverage.value ? row.averageTurnovers : row.totalTurnovers, isAverage.value)
+        return formatStatNumber(
+          isAverage.value ? row.averageTurnovers : row.totalTurnovers,
+          isAverage.value,
+        )
       case 'fieldGoals':
-        return formatMadeAttempted(
-          isAverage.value ? row.averageFieldGoalsMade : row.fieldGoalsMade,
-          isAverage.value ? row.averageFieldGoalsAttempted : row.fieldGoalsAttempted,
-          isAverage.value,
-        )
+        return formatRate(row.fieldGoalPct)
       case 'threePoints':
-        return formatMadeAttempted(
-          isAverage.value ? row.averageThreePointsMade : row.threePointsMade,
-          isAverage.value ? row.averageThreePointsAttempted : row.threePointsAttempted,
-          isAverage.value,
-        )
+        return formatRate(row.threePointPct)
       case 'freeThrows':
-        return formatMadeAttempted(
-          isAverage.value ? row.averageFreeThrowsMade : row.freeThrowsMade,
-          isAverage.value ? row.averageFreeThrowsAttempted : row.freeThrowsAttempted,
-          isAverage.value,
-        )
+        return formatRate(row.freeThrowPct)
       default:
         return ''
     }
@@ -149,7 +145,10 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
 
 <template>
   <div class="data-table-scroll">
-    <table class="data-table">
+    <div v-if="loading" class="data-table-state">加载中...</div>
+    <div v-else-if="error" class="data-table-state is-error">{{ error }}</div>
+    <div v-else-if="rows.length === 0" class="data-table-state">{{ emptyText || '暂无数据' }}</div>
+    <table v-else class="data-table">
       <thead>
         <tr>
           <th
@@ -174,7 +173,7 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
             </template>
 
             <template v-else-if="column.key === 'team' && isTeamRow(row)">
-              <div class="data-table__team">
+              <router-link :to="`/tournament/team/${row.teamId}/overview`" class="data-table__team">
                 <img
                   v-if="showLogo(row.logoUrl, `team-${row.id}`)"
                   :src="row.logoUrl"
@@ -191,15 +190,11 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
                   {{ placeholderText(row.teamAbbr) }}
                 </div>
                 <span class="data-table__name">{{ row.teamName }}</span>
-              </div>
+              </router-link>
             </template>
 
             <template v-else-if="column.key === 'player' && isPlayerRow(row)">
-              <PlayerLink
-                :player-id="row.playerId"
-                :player-name="row.playerName"
-                tab="data"
-              />
+              <PlayerLink :player-id="row.playerId" :player-name="row.playerName" tab="data" />
             </template>
 
             <template v-else-if="column.key === 'team' && isPlayerRow(row)">
@@ -238,6 +233,17 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
   width: 100%;
   overflow-x: auto;
   overflow-y: visible;
+}
+
+.data-table-state {
+  padding: 48px 16px;
+  text-align: center;
+  color: rgba(17, 17, 17, 0.5);
+  font-weight: 700;
+
+  &.is-error {
+    color: #e10613;
+  }
 }
 
 .data-table {
@@ -316,6 +322,8 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
   gap: 10px;
   max-width: 100%;
   min-width: 0;
+  color: inherit;
+  text-decoration: none;
 }
 
 .data-table__logo-img,
@@ -351,10 +359,5 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
   font-size: 13px;
   font-weight: 700;
   color: var(--cnpa-paper-text);
-}
-
-.data-table__name--player {
-  display: inline-block;
-  max-width: 100%;
 }
 </style>

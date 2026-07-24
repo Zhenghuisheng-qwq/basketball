@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 8881
 
 spring:
   application:
@@ -34,12 +34,57 @@ spring:
           max-idle: 8
           min-idle: 0
 
+  mail:
+    host: ${CNPA_MAIL_HOST:smtp.qq.com}
+    port: ${CNPA_MAIL_PORT:465}
+    username: ${CNPA_MAIL_USERNAME:}
+    password: ${CNPA_MAIL_AUTH_CODE:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          starttls:
+            enable: false
+
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   type-aliases-package: com.ruoyi.miniapp.domain
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 账户文件与字段加密
+account:
+  file:
+    storage-type: local
+    local-root: ${CNPA_FILE_ROOT:./upload}
+    public-base-url: ${CNPA_FILE_PUBLIC_BASE_URL:}
+    max-image-size: 5242880
+  crypto:
+    aes-key: ${CNPA_FIELD_AES_KEY:}
+
+# 官网会员认证
+member:
+  auth:
+    token-expire-days: 30
+    code-expire-seconds: 300
+    code-resend-seconds: 60
+    code-daily-limit: 20
+    code-ip-hourly-limit: 30
+    code-max-fail-times: 5
+    login-fail-max-times: 5
+    login-lock-minutes: 15
+  mail:
+    from: ${CNPA_MAIL_FROM:${CNPA_MAIL_USERNAME:}}
+
+# 球队业务配置
+team:
+  invitation:
+    expire-days: 7
+  default-max-member-count: 20
 
 # 微信小程序配置
 wx:

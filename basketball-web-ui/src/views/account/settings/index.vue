@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
@@ -9,19 +9,26 @@ import PasswordInput from '@/views/account/components/PasswordInput.vue'
 import { useAccountStore } from '@/stores/account'
 import { validatePasswordRules } from '@/mock/account/security'
 import { formatDateTime } from '@/utils/formatDate'
+import type { NotificationSettingDto, PrivacySettingDto } from '@/api/types/accountSetting'
 
-type SettingsTab = 'profile' | 'security'
+type SettingsTab = 'profile' | 'privacy' | 'notification' | 'security'
 
 const route = useRoute()
 const router = useRouter()
 const accountStore = useAccountStore()
 
 const activeTab = ref<SettingsTab>('security')
+const settingsLoading = ref(false)
+const settingsSaving = ref(false)
 
 watch(
   () => route.query.tab,
   (tab) => {
-    activeTab.value = tab === 'profile' ? 'profile' : 'security'
+    if (tab === 'profile' || tab === 'privacy' || tab === 'notification') {
+      activeTab.value = tab
+    } else {
+      activeTab.value = 'security'
+    }
   },
   { immediate: true },
 )
@@ -52,12 +59,43 @@ const profileForm = reactive({
   nickname: accountStore.profile?.nickname || accountStore.currentAccount?.nickname || '',
 })
 
+const privacyForm = reactive<PrivacySettingDto>({
+  profileVisible: 1,
+  allowTeamInvite: 1,
+  showTeamHistory: 1,
+  showMatchData: 1,
+  showOnlineStatus: 0,
+})
+
+const notificationForm = reactive<NotificationSettingDto>({
+  systemNotice: 1,
+  certificationNotice: 1,
+  tournamentNotice: 1,
+  teamNotice: 1,
+  announcementNotice: 1,
+  emailNotice: 1,
+  smsNotice: 0,
+})
+
 watch(
   () => accountStore.profile?.nickname,
   (v) => {
     if (v) profileForm.nickname = v
   },
 )
+
+onMounted(async () => {
+  settingsLoading.value = true
+  try {
+    await Promise.all([
+      accountStore.loadProfile().catch(() => undefined),
+      accountStore.loadPrivacy().then((data) => Object.assign(privacyForm, data)).catch(() => undefined),
+      accountStore.loadNotificationSetting().then((data) => Object.assign(notificationForm, data)).catch(() => undefined),
+    ])
+  } finally {
+    settingsLoading.value = false
+  }
+})
 
 function resetErrors() {
   errors.currentPassword = ''
@@ -105,10 +143,40 @@ async function saveProfile() {
     ElMessage.warning('请输入昵称')
     return
   }
-  if (typeof accountStore.updateProfile === 'function') {
+  try {
     await accountStore.updateProfile({ nickname })
+    ElMessage.success('资料已保存')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '保存失败')
   }
-  ElMessage.success('资料已保存')
+}
+
+async function savePrivacy() {
+  settingsSaving.value = true
+  try {
+    await accountStore.updatePrivacy({ ...privacyForm })
+    ElMessage.success('隐私设置已保存')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '保存失败')
+  } finally {
+    settingsSaving.value = false
+  }
+}
+
+async function saveNotificationSettings() {
+  settingsSaving.value = true
+  try {
+    await accountStore.updateNotificationSetting({ ...notificationForm })
+    ElMessage.success('通知设置已保存')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '保存失败')
+  } finally {
+    settingsSaving.value = false
+  }
+}
+
+function toggleSetting(target: Record<string, number | undefined>, key: string) {
+  target[key] = target[key] === 1 ? 0 : 1
 }
 </script>
 
@@ -126,31 +194,32 @@ async function saveProfile() {
 
     <AccountStatusBanner
       title="管理你的 CNPA 账号"
-      description="维护账号资料与登录安全"
+      description="维护账号资料、隐私与通知偏好"
       status-text="账号状态正常"
       status-type="success"
     />
 
     <nav class="account-settings-tabs" aria-label="账号设置分类">
       <button
+        v-for="tab in ([
+          ['profile', '账号资料'],
+          ['privacy', '隐私设置'],
+          ['notification', '通知设置'],
+          ['security', '账号安全'],
+        ] as const)"
+        :key="tab[0]"
         type="button"
         class="account-settings-tabs__item"
-        :class="{ 'account-settings-tabs__item--active': activeTab === 'profile' }"
-        @click="setTab('profile')"
+        :class="{ 'account-settings-tabs__item--active': activeTab === tab[0] }"
+        @click="setTab(tab[0])"
       >
-        账号资料
-      </button>
-      <button
-        type="button"
-        class="account-settings-tabs__item"
-        :class="{ 'account-settings-tabs__item--active': activeTab === 'security' }"
-        @click="setTab('security')"
-      >
-        账号安全
+        {{ tab[1] }}
       </button>
     </nav>
 
-    <div v-if="activeTab === 'profile'" class="account-grid-2">
+    <div v-if="settingsLoading" class="settings-loading">加载设置中...</div>
+
+    <div v-else-if="activeTab === 'profile'" class="account-grid-2">
       <AccountPanel title="基本资料">
         <form class="security-form" @submit.prevent="saveProfile">
           <div class="security-form__field">
@@ -170,9 +239,67 @@ async function saveProfile() {
       <AccountPanel title="账号概览">
         <dl class="account-info-list">
           <div class="account-field-row"><dt>账号状态</dt><dd class="account-status-text--success">正常</dd></div>
-          <div class="account-field-row"><dt>邮箱状态</dt><dd class="account-status-text--success">已验证</dd></div>
-          <div class="account-field-row"><dt>最近登录</dt><dd>{{ formatDateTime(security?.lastLoginAt || account?.lastLoginAt || '') }}</dd></div>
+          <div class="account-field-row">
+            <dt>邮箱状态</dt>
+            <dd :class="profile?.emailVerified ? 'account-status-text--success' : ''">
+              {{ profile?.emailVerified ? '已验证' : '未验证' }}
+            </dd>
+          </div>
+          <div class="account-field-row">
+            <dt>最近登录</dt>
+            <dd>{{ formatDateTime(security?.lastLoginAt || account?.lastLoginAt || '') }}</dd>
+          </div>
         </dl>
+      </AccountPanel>
+    </div>
+
+    <div v-else-if="activeTab === 'privacy'" class="account-grid-2">
+      <AccountPanel title="隐私设置">
+        <form class="security-form" @submit.prevent="savePrivacy">
+          <label v-for="item in [
+            ['profileVisible', '公开个人资料'],
+            ['allowTeamInvite', '允许球队邀请'],
+            ['showTeamHistory', '展示球队历史'],
+            ['showMatchData', '展示比赛数据'],
+            ['showOnlineStatus', '展示在线状态'],
+          ]" :key="item[0]" class="settings-toggle">
+            <span>{{ item[1] }}</span>
+            <input
+              type="checkbox"
+              :checked="privacyForm[item[0] as keyof PrivacySettingDto] === 1"
+              @change="toggleSetting(privacyForm, item[0])"
+            />
+          </label>
+          <div class="security-form__actions">
+            <button type="submit" class="account-btn-primary" :disabled="settingsSaving">保存隐私设置</button>
+          </div>
+        </form>
+      </AccountPanel>
+    </div>
+
+    <div v-else-if="activeTab === 'notification'" class="account-grid-2">
+      <AccountPanel title="通知设置">
+        <form class="security-form" @submit.prevent="saveNotificationSettings">
+          <label v-for="item in [
+            ['systemNotice', '系统通知'],
+            ['certificationNotice', '认证通知'],
+            ['tournamentNotice', '赛事通知'],
+            ['teamNotice', '球队通知'],
+            ['announcementNotice', '公告通知'],
+            ['emailNotice', '邮件通知'],
+            ['smsNotice', '短信通知'],
+          ]" :key="item[0]" class="settings-toggle">
+            <span>{{ item[1] }}</span>
+            <input
+              type="checkbox"
+              :checked="notificationForm[item[0] as keyof NotificationSettingDto] === 1"
+              @change="toggleSetting(notificationForm, item[0])"
+            />
+          </label>
+          <div class="security-form__actions">
+            <button type="submit" class="account-btn-primary" :disabled="settingsSaving">保存通知设置</button>
+          </div>
+        </form>
       </AccountPanel>
     </div>
 
@@ -205,10 +332,21 @@ async function saveProfile() {
       <AccountPanel title="账号信息">
         <dl class="account-info-list">
           <div class="account-field-row"><dt>注册邮箱</dt><dd>{{ profile?.maskedEmail }}</dd></div>
-          <div class="account-field-row"><dt>邮箱状态</dt><dd class="account-status-text--success">已验证</dd></div>
+          <div class="account-field-row">
+            <dt>邮箱状态</dt>
+            <dd :class="profile?.emailVerified ? 'account-status-text--success' : ''">
+              {{ profile?.emailVerified ? '已验证' : '未验证' }}
+            </dd>
+          </div>
           <div class="account-field-row"><dt>账号状态</dt><dd class="account-status-text--success">正常</dd></div>
-          <div class="account-field-row"><dt>最近登录</dt><dd>{{ formatDateTime(security?.lastLoginAt || account?.lastLoginAt || '') }}</dd></div>
-          <div class="account-field-row"><dt>密码更新时间</dt><dd>{{ formatDateTime(security?.passwordUpdatedAt || '') }}</dd></div>
+          <div class="account-field-row">
+            <dt>最近登录</dt>
+            <dd>{{ formatDateTime(security?.lastLoginAt || account?.lastLoginAt || '') }}</dd>
+          </div>
+          <div class="account-field-row">
+            <dt>密码更新时间</dt>
+            <dd>{{ formatDateTime(security?.passwordUpdatedAt || '') }}</dd>
+          </div>
         </dl>
         <p class="security-form__hint">如非本人操作，请立即修改密码并联系管理员</p>
       </AccountPanel>
@@ -228,9 +366,15 @@ async function saveProfile() {
   color: var(--account-text, #111);
 }
 
+.settings-loading {
+  padding: 32px 0;
+  color: #666;
+}
+
 .account-settings-tabs {
   display: flex;
-  gap: 36px;
+  flex-wrap: wrap;
+  gap: 24px;
   margin-bottom: 22px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.14);
 }
@@ -259,6 +403,17 @@ async function saveProfile() {
       background: var(--account-red, #d90000);
     }
   }
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .security-form {
@@ -307,16 +462,6 @@ async function saveProfile() {
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 8px;
-
-  :deep(.account-btn-primary) {
-    min-width: 220px;
-    width: min(100%, 280px);
-    min-height: 48px;
-  }
-
-  :deep(.account-btn-secondary) {
-    min-height: 48px;
-  }
 }
 
 .security-tip {

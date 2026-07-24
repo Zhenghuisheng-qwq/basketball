@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import { isAuthenticated, sanitizeRedirect } from '@/mock/auth'
+import { sanitizeRedirect } from '@/utils/auth'
+import { useUserStore } from '@/stores/user'
 
 
 
@@ -130,7 +131,7 @@ const router = createRouter({
 
       component: () => import('@/layouts/MemberAuthLayout.vue'),
 
-      meta: { title: '注册', guestOnly: true, fullBleed: true, layout: 'member-auth' },
+      meta: { title: '注册', fullBleed: true, layout: 'member-auth' },
 
       children: [
 
@@ -142,7 +143,7 @@ const router = createRouter({
 
           component: () => import('@/views/account/RegisterCreate.vue'),
 
-          meta: { title: '创建账号', authContentVariant: 'register' },
+          meta: { title: '创建账号', guestOnly: true, authContentVariant: 'register' },
 
         },
 
@@ -779,13 +780,21 @@ const router = createRouter({
 
         {
 
+          path: 'team',
+
+          name: 'AccountMyTeam',
+
+          component: () => import('@/views/account/team/index.vue'),
+
+          meta: { title: '我的球队' },
+
+        },
+
+        {
+
           path: 'team-relations',
 
-          name: 'AccountTeamRelations',
-
-          component: () => import('@/views/account/team-relations/index.vue'),
-
-          meta: { title: '球队关系' },
+          redirect: { name: 'AccountMyTeam' },
 
         },
 
@@ -875,44 +884,29 @@ const router = createRouter({
 
 
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
+  const userStore = useUserStore()
+  await userStore.ensureInitialized()
 
-  const loggedIn = isAuthenticated()
-
+  const loggedIn = userStore.isAuthenticated
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
-
-
+  const guestOnly = to.matched.some((record) => record.meta.guestOnly)
 
   if (requiresAuth && !loggedIn) {
-
     return {
-
       name: 'Login',
-
       query: {
-
         redirect: to.fullPath,
-
       },
-
     }
-
   }
 
-
-
-  if (to.meta.guestOnly && loggedIn) {
-
+  if (guestOnly && loggedIn) {
     const redirect = sanitizeRedirect(to.query.redirect)
-
     return redirect.startsWith('/account') ? { name: 'AccountOverview' } : redirect
-
   }
-
-
 
   return true
-
 })
 
 

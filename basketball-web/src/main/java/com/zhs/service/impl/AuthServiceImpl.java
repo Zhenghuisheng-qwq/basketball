@@ -78,7 +78,8 @@ public class AuthServiceImpl implements AuthService {
 
         // 4. 生成 token 写入 Redis（自动 30 天过期）
         String token = UUID.randomUUID().toString().replace("-", "");
-        miniRedisUtil.set(new TokenCacheKey(token), user.getId());
+        // RedisTemplate value 为 StringRedisSerializer，统一存字符串
+        miniRedisUtil.set(new TokenCacheKey(token), String.valueOf(user.getId()));
         log.info("[wx-login] 登录成功 userId={} 新用户={}", user.getId(), sensitiveInfo == null);
 
         // 5. 返回

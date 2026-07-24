@@ -1,34 +1,168 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import TeamBadge from '@/components/home/TeamBadge.vue'
 import TornEdge from '@/components/home/TornEdge.vue'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import homeTop from '@/assets/icon/home_top.png'
 import {
-  mockMatches,
-  mockTeams,
-  mockTeamRanks,
-  mockPlayerRanks,
-  mockStats,
-} from '@/mock/home'
+  getPublicHomePlayerRanking,
+  getPublicHomeRecentMatches,
+  getPublicHomeStatSummary,
+  getPublicHomeTeamRanking,
+} from '@/api/publicHome'
+import type {
+  PublicMatchItemVo,
+  PublicPlayerRankItemVo,
+  PublicSeasonSummaryVo,
+  PublicTeamRankItemVo,
+} from '@/api/types/public'
+import {
+  displayText,
+  formatDateTime,
+  formatPercent,
+  formatStatValue,
+  initials,
+} from '@/utils/publicDisplay'
+
+type SectionState = 'loading' | 'success' | 'empty' | 'error'
 
 const router = useRouter()
+
+const matches = ref<PublicMatchItemVo[]>([])
+const teams = ref<PublicTeamRankItemVo[]>([])
+const teamRanks = ref<PublicTeamRankItemVo[]>([])
+const playerRanks = ref<PublicPlayerRankItemVo[]>([])
+const summary = ref<PublicSeasonSummaryVo | null>(null)
+
+const matchState = ref<SectionState>('loading')
+const teamState = ref<SectionState>('loading')
+const rankState = ref<SectionState>('loading')
+const playerState = ref<SectionState>('loading')
+const summaryState = ref<SectionState>('loading')
+
+const matchError = ref('')
+const teamError = ref('')
+const rankError = ref('')
+const playerError = ref('')
+const summaryError = ref('')
+
+const brokenLogos = ref<Record<string, boolean>>({})
+
+const stats = computed(() => {
+  const s = summary.value
+  return [
+    { value: displayText(s?.teamCount ?? 0, '0'), label: '支参赛战队' },
+    { value: displayText(s?.playerStatCount ?? 0, '0'), label: '球员数据记录' },
+    { value: displayText(s?.finishedMatchCount ?? 0, '0'), label: '已结束比赛' },
+    { value: displayText(s?.standingCount ?? 0, '0'), label: '积分榜记录' },
+  ]
+})
+
+function markLogoBroken(key: string) {
+  brokenLogos.value[key] = true
+}
+
+function showLogo(url: string | null | undefined, key: string): boolean {
+  return Boolean(url?.trim()) && !brokenLogos.value[key]
+}
 
 function handleMoreMatches() {
   router.push('/tournament')
 }
 
 function handleMoreTeams() {
-  console.log('[Home] handleMoreTeams')
+  router.push('/data')
 }
 
-function handleWatchMatch(matchId: number) {
-  console.log('[Home] handleWatchMatch', matchId)
+function handleWatchMatch(matchId: string) {
+  router.push({ path: '/tournament', query: { tab: 'schedule', matchId } })
 }
 
-function handleTeamClick(teamKey: string) {
-  console.log('[Home] handleTeamClick', teamKey)
+function handleTeamClick(teamId: string) {
+  router.push(`/tournament/team/${teamId}/overview`)
 }
+
+function matchRound(match: PublicMatchItemVo): string {
+  return displayText(match.stageName || match.groupName, '公开赛事')
+}
+
+async function loadMatches() {
+  matchState.value = 'loading'
+  matchError.value = ''
+  try {
+    const res = await getPublicHomeRecentMatches(6)
+    matches.value = res.data ?? []
+    matchState.value = matches.value.length ? 'success' : 'empty'
+  } catch (err) {
+    matches.value = []
+    matchState.value = 'error'
+    matchError.value = err instanceof Error ? err.message : '加载近期赛事失败'
+  }
+}
+
+async function loadTeams() {
+  teamState.value = 'loading'
+  teamError.value = ''
+  try {
+    const res = await getPublicHomeTeamRanking(8)
+    teams.value = res.data ?? []
+    teamState.value = teams.value.length ? 'success' : 'empty'
+  } catch (err) {
+    teams.value = []
+    teamState.value = 'error'
+    teamError.value = err instanceof Error ? err.message : '加载参赛战队失败'
+  }
+}
+
+async function loadTeamRanks() {
+  rankState.value = 'loading'
+  rankError.value = ''
+  try {
+    const res = await getPublicHomeTeamRanking(5)
+    teamRanks.value = res.data ?? []
+    rankState.value = teamRanks.value.length ? 'success' : 'empty'
+  } catch (err) {
+    teamRanks.value = []
+    rankState.value = 'error'
+    rankError.value = err instanceof Error ? err.message : '加载球队排行失败'
+  }
+}
+
+async function loadPlayerRanks() {
+  playerState.value = 'loading'
+  playerError.value = ''
+  try {
+    const res = await getPublicHomePlayerRanking(5)
+    playerRanks.value = res.data ?? []
+    playerState.value = playerRanks.value.length ? 'success' : 'empty'
+  } catch (err) {
+    playerRanks.value = []
+    playerState.value = 'error'
+    playerError.value = err instanceof Error ? err.message : '加载球员排行失败'
+  }
+}
+
+async function loadSummary() {
+  summaryState.value = 'loading'
+  summaryError.value = ''
+  try {
+    const res = await getPublicHomeStatSummary()
+    summary.value = res.data ?? null
+    summaryState.value = summary.value ? 'success' : 'empty'
+  } catch (err) {
+    summary.value = null
+    summaryState.value = 'error'
+    summaryError.value = err instanceof Error ? err.message : '加载统计摘要失败'
+  }
+}
+
+onMounted(() => {
+  void loadMatches()
+  void loadTeams()
+  void loadTeamRanks()
+  void loadPlayerRanks()
+  void loadSummary()
+})
 </script>
 
 <template>
@@ -52,29 +186,45 @@ function handleTeamClick(teamKey: string) {
                 <span>›</span>
               </button>
             </div>
-            <div class="match-grid">
-              <article v-for="match in mockMatches" :key="match.id" class="match-card">
+
+            <div v-if="matchState === 'loading'" class="home-state">加载中...</div>
+            <div v-else-if="matchState === 'error'" class="home-state home-state--error">{{ matchError }}</div>
+            <div v-else-if="matchState === 'empty'" class="home-state">暂无近期赛事</div>
+            <div v-else class="match-grid">
+              <article v-for="match in matches" :key="match.matchId" class="match-card">
                 <div class="match-card-header">
-                  <span>{{ match.date }}</span>
-                  <span>{{ match.round }}</span>
+                  <span>{{ formatDateTime(match.scheduledStartTime).full }}</span>
+                  <span>{{ matchRound(match) }}</span>
                 </div>
                 <div class="match-versus">
                   <div class="match-team">
                     <div class="match-logo">
-                      <TeamBadge :type="match.homeTeam.key" />
+                      <img
+                        v-if="showLogo(match.homeTeamLogoUrl, `m-h-${match.matchId}`)"
+                        :src="match.homeTeamLogoUrl!"
+                        :alt="displayText(match.homeTeamName)"
+                        @error="markLogoBroken(`m-h-${match.matchId}`)"
+                      />
+                      <span v-else class="logo-fallback">{{ initials(match.homeTeamName) }}</span>
                     </div>
-                    <span class="match-team-name">{{ match.homeTeam.name }}</span>
+                    <span class="match-team-name">{{ displayText(match.homeTeamName) }}</span>
                   </div>
                   <div class="match-vs">VS</div>
                   <div class="match-team">
                     <div class="match-logo">
-                      <TeamBadge :type="match.awayTeam.key" />
+                      <img
+                        v-if="showLogo(match.awayTeamLogoUrl, `m-a-${match.matchId}`)"
+                        :src="match.awayTeamLogoUrl!"
+                        :alt="displayText(match.awayTeamName)"
+                        @error="markLogoBroken(`m-a-${match.matchId}`)"
+                      />
+                      <span v-else class="logo-fallback">{{ initials(match.awayTeamName) }}</span>
                     </div>
-                    <span class="match-team-name">{{ match.awayTeam.name }}</span>
+                    <span class="match-team-name">{{ displayText(match.awayTeamName) }}</span>
                   </div>
                 </div>
-                <button type="button" class="watch-btn" @click="handleWatchMatch(match.id)">
-                  预约观赛
+                <button type="button" class="watch-btn" @click="handleWatchMatch(match.matchId)">
+                  查看赛程
                 </button>
               </article>
             </div>
@@ -92,21 +242,33 @@ function handleTeamClick(teamKey: string) {
             <div class="section-head section-head-light">
               <h2>参赛战队</h2>
               <button type="button" class="section-more section-more-light" @click="handleMoreTeams">
-                查看全部战队
+                查看数据中心
                 <span>›</span>
               </button>
             </div>
-            <div class="team-grid">
+
+            <div v-if="teamState === 'loading'" class="home-state home-state--light">加载中...</div>
+            <div v-else-if="teamState === 'error'" class="home-state home-state--error home-state--light">
+              {{ teamError }}
+            </div>
+            <div v-else-if="teamState === 'empty'" class="home-state home-state--light">暂无参赛战队</div>
+            <div v-else class="team-grid">
               <article
-                v-for="team in mockTeams"
-                :key="team.key"
+                v-for="team in teams"
+                :key="team.teamId"
                 class="team-card"
-                @click="handleTeamClick(team.key)"
+                @click="handleTeamClick(team.teamId)"
               >
                 <div class="team-logo">
-                  <TeamBadge :type="team.key" />
+                  <img
+                    v-if="showLogo(team.teamLogoUrl, `t-${team.teamId}`)"
+                    :src="team.teamLogoUrl!"
+                    :alt="displayText(team.teamName)"
+                    @error="markLogoBroken(`t-${team.teamId}`)"
+                  />
+                  <span v-else class="logo-fallback">{{ initials(team.teamName) }}</span>
                 </div>
-                <span class="team-name">{{ team.name }}</span>
+                <span class="team-name">{{ displayText(team.teamName) }}</span>
               </article>
             </div>
           </div>
@@ -127,8 +289,10 @@ function handleTeamClick(teamKey: string) {
                 通过全年多级赛事体系，推动电竞篮球运动的发展与普及。
               </p>
             </div>
-            <div class="about-stats">
-              <div v-for="item in mockStats" :key="item.label" class="stat-item">
+            <div v-if="summaryState === 'loading'" class="home-state">加载中...</div>
+            <div v-else-if="summaryState === 'error'" class="home-state home-state--error">{{ summaryError }}</div>
+            <div v-else class="about-stats">
+              <div v-for="item in stats" :key="item.label" class="stat-item">
                 <strong>{{ item.value }}</strong>
                 <span>{{ item.label }}</span>
               </div>
@@ -149,57 +313,74 @@ function handleTeamClick(teamKey: string) {
           <div class="ranking-panel">
             <div class="ranking-card">
               <h3>球队排行</h3>
-              <table>
+              <div v-if="rankState === 'loading'" class="home-state">加载中...</div>
+              <div v-else-if="rankState === 'error'" class="home-state home-state--error">{{ rankError }}</div>
+              <div v-else-if="rankState === 'empty'" class="home-state">暂无球队排行</div>
+              <table v-else>
                 <thead>
                   <tr>
                     <th>排名</th>
                     <th>战队</th>
-                    <th>胜场</th>
-                    <th>负场</th>
                     <th>胜率</th>
-                    <th>连胜</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="row in mockTeamRanks" :key="row.rank">
-                    <td class="rank-num">{{ row.rank }}</td>
+                  <tr v-for="row in teamRanks" :key="row.teamId">
+                    <td class="rank-num">{{ displayText(row.rankNo ?? 0, '0') }}</td>
                     <td>
                       <span class="team-name-cell">
                         <span class="tiny-logo">
-                          <TeamBadge :type="row.teamKey" tiny />
+                          <img
+                            v-if="showLogo(row.teamLogoUrl, `r-${row.teamId}`)"
+                            :src="row.teamLogoUrl!"
+                            :alt="displayText(row.teamName)"
+                            @error="markLogoBroken(`r-${row.teamId}`)"
+                          />
+                          <span v-else class="tiny-fallback">{{ initials(row.teamName) }}</span>
                         </span>
-                        {{ row.teamName }}
+                        <router-link :to="`/tournament/team/${row.teamId}/overview`">
+                          {{ displayText(row.teamName) }}
+                        </router-link>
                       </span>
                     </td>
-                    <td>{{ row.wins }}</td>
-                    <td>{{ row.losses }}</td>
-                    <td>{{ row.winRate }}</td>
-                    <td>{{ row.streak }}</td>
+                    <td>{{ formatPercent(row.statValue) }}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <div class="ranking-card">
               <h3>球员得分榜 TOP5</h3>
-              <div class="player-row head">
-                <span>排名</span>
-                <span>球员</span>
-                <span>战队</span>
-                <span>场均得分 PPG</span>
-              </div>
-              <div v-for="player in mockPlayerRanks" :key="player.rank" class="player-row">
-                <span class="rank-num">{{ player.rank }}</span>
-                <span class="player-name">
-                  <i class="avatar" />
-                  <PlayerLink
-                    :player-id="player.playerId"
-                    :player-name="player.name"
-                    tab="data"
-                  />
-                </span>
-                <span>{{ player.team }}</span>
-                <span>{{ player.ppg }}</span>
-              </div>
+              <div v-if="playerState === 'loading'" class="home-state">加载中...</div>
+              <div v-else-if="playerState === 'error'" class="home-state home-state--error">{{ playerError }}</div>
+              <div v-else-if="playerState === 'empty'" class="home-state">暂无球员排行</div>
+              <template v-else>
+                <div class="player-row head">
+                  <span>排名</span>
+                  <span>球员</span>
+                  <span>战队</span>
+                  <span>场均得分 PPG</span>
+                </div>
+                <div v-for="player in playerRanks" :key="player.playerId" class="player-row">
+                  <span class="rank-num">{{ displayText(player.rankNo ?? 0, '0') }}</span>
+                  <span class="player-name">
+                    <i
+                      class="avatar"
+                      :style="
+                        showLogo(player.avatarUrl, `p-${player.playerId}`)
+                          ? { backgroundImage: `url(${player.avatarUrl})`, backgroundSize: 'cover' }
+                          : undefined
+                      "
+                    />
+                    <PlayerLink
+                      :player-id="player.playerId"
+                      :player-name="displayText(player.playerName)"
+                      tab="data"
+                    />
+                  </span>
+                  <span>{{ displayText(player.teamName) }}</span>
+                  <span>{{ formatStatValue(player.statValue, 'PPG') }}</span>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -210,4 +391,66 @@ function handleTeamClick(teamKey: string) {
 
 <style scoped lang="scss">
 @use '@/assets/styles/home-page.scss';
+
+.home-state {
+  padding: 28px 0;
+  text-align: center;
+  color: rgba(17, 17, 17, 0.55);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.home-state--light {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.home-state--error {
+  color: #e10613;
+}
+
+.match-logo,
+.team-logo,
+.tiny-logo {
+  position: relative;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+.logo-fallback,
+.tiny-fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: #151515;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.tiny-logo {
+  .tiny-fallback {
+    position: absolute;
+    inset: 0;
+    font-size: 9px;
+  }
+
+  :deep(.badge) {
+    display: none;
+  }
+}
+
+.team-name-cell a {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--cnpa-red, #e10613);
+  }
+}
 </style>

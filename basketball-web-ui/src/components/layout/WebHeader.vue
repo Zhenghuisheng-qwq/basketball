@@ -5,7 +5,7 @@ import logoImg from '@/assets/icon/logo.png'
 import CompetitionDropdown from './CompetitionDropdown.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useCompetitionSelector } from '@/views/events/composables/useCompetitionSelector'
-import { searchPlayerProfiles } from '@/views/player/detail/mock/playerDetail'
+import type { CompetitionOption } from '@/views/events/types/competition'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
 import { getAvatarInitials } from '@/utils/accountAvatar'
 
@@ -45,7 +45,13 @@ const isTournamentRoute = computed(
   () => route.path === '/tournament' || route.path === '/events',
 )
 
-const searchResults = computed(() => searchPlayerProfiles(searchQuery.value, 8))
+const searchResults = computed(() => [] as Array<{
+  id: string
+  displayName: string
+  currentTeamAbbr: string
+  position: string
+}>)
+const searchUnavailableMessage = '搜索 API 尚未开放'
 
 const accountLabel = computed(() => currentUser.value?.nickname || '个人中心')
 const accountInitials = computed(() => getAvatarInitials(currentUser.value?.nickname))
@@ -99,7 +105,7 @@ function handleCompetitionMouseLeave() {
   }, 150)
 }
 
-function handleSelectCompetition(competition: (typeof competitionOptions)[number]) {
+function handleSelectCompetition(competition: CompetitionOption) {
   selectCompetition(competition)
   closeCompetitionMenu()
   isMobileCompetitionOpen.value = false
@@ -224,7 +230,7 @@ function handleWindowScroll() {
   isScrolled.value = window.scrollY > 20
 }
 
-function handleSearchSelect(playerId: number) {
+function handleSearchSelect(playerId: string) {
   goToPlayerDetail(router, playerId, 'overview')
   closeSearch()
   closeMobileMenu()
@@ -348,7 +354,9 @@ onBeforeUnmount(() => {
             </label>
 
             <ul v-if="searchQuery.trim()" class="header-search__results">
-              <li v-if="searchResults.length === 0" class="header-search__empty">未找到相关球员</li>
+              <li v-if="searchResults.length === 0" class="header-search__empty">
+                {{ searchUnavailableMessage }}
+              </li>
               <li v-for="player in searchResults" :key="player.id">
                 <button type="button" class="header-search__item" @click="handleSearchSelect(player.id)">
                   <span class="header-search__type">PLAYER</span>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import TeamLogo from '@/components/team/TeamLogo.vue'
-import type { PlayerMatchRecord } from '../mock/playerDetail'
+import type { PlayerMatchRecord } from '../types'
 
 withDefaults(
   defineProps<{
@@ -34,8 +34,8 @@ function goTeam(teamId: string) {
   router.push(`/tournament/team/${teamId}/overview`)
 }
 
-function openStats(matchId: number) {
-  router.push({ path: '/tournament', query: { tab: 'schedule', stats: String(matchId) } })
+function openStats(matchId: string) {
+  router.push({ path: '/tournament', query: { tab: 'schedule', stats: matchId } })
 }
 </script>
 

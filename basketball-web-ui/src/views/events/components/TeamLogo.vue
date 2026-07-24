@@ -1,14 +1,23 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import TeamBadge from '@/components/home/TeamBadge.vue'
+import { computed, ref, watch } from 'vue'
 import type { Team } from '../types/events'
+import { initials } from '@/utils/publicDisplay'
 
-defineProps<{
+const props = defineProps<{
   team: Team
   size?: 'sm' | 'md' | 'lg'
 }>()
 
 const imageError = ref(false)
+
+const logoSrc = computed(() => props.team.logo?.trim() || '')
+
+watch(
+  () => props.team.logo,
+  () => {
+    imageError.value = false
+  },
+)
 
 function handleError() {
   imageError.value = true
@@ -17,20 +26,15 @@ function handleError() {
 
 <template>
   <div class="team-logo" :class="[`team-logo-${size || 'md'}`]">
-    <TeamBadge
-      v-if="team.badgeKey && imageError"
-      :type="team.badgeKey"
-      :tiny="size === 'sm'"
-    />
     <img
-      v-else-if="!imageError"
-      :src="team.logo"
+      v-if="logoSrc && !imageError"
+      :src="logoSrc"
       :alt="team.name"
       class="team-logo-image"
       @error="handleError"
     />
     <div v-else class="team-logo-fallback">
-      {{ team.shortName.slice(0, 2) }}
+      {{ initials(team.shortName || team.name) }}
     </div>
   </div>
 </template>

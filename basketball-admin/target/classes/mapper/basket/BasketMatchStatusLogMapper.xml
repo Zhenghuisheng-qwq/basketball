@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketMatchStatusLogMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_match_status_log (match_id, before_status, after_status, change_type, change_reason,
+            operator_id, operator_name, change_time, create_time, update_time, is_delete)
+        values (#{matchId}, #{beforeStatus}, #{afterStatus}, #{changeType}, #{changeReason},
+            #{operatorId}, #{operatorName}, #{changeTime}, #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+    <select id="selectVoByMatchId" resultType="com.zhs.basket.vo.MatchStatusLogVo">
+        select id, before_status, after_status, change_type, change_reason, operator_id, operator_name, change_time
+        from basket_match_status_log
+        where match_id = #{matchId} and is_delete = 0
+        order by change_time desc, id desc
+    </select>
+</mapper>

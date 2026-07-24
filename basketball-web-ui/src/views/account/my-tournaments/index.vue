@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
@@ -13,6 +12,13 @@ import type { OpenApplicationStatus } from '@/types/account'
 
 const router = useRouter()
 const accountStore = useAccountStore()
+
+onMounted(async () => {
+  await Promise.all([
+    accountStore.loadMyTournaments().catch(() => undefined),
+    accountStore.loadPlayerCertification().catch(() => undefined),
+  ])
+})
 
 const tournaments = computed(() => accountStore.myTournaments)
 const isVerified = computed(() => accountStore.isVerifiedPlayer)
@@ -33,11 +39,12 @@ const invited = computed(() => tournaments.value.filter((item) => item.status ==
 const openStatus = computed(() => openApplication.value?.status || 'NOT_SUBMITTED')
 
 const bannerStatus = computed(() => {
+  if (accountStore.tournamentsLoading) return '加载中'
   if (stats.value.pending > 0) return '有待审核'
   if (stats.value.rejected > 0) return '有未通过'
   if (stats.value.joined > 0) return '已参加赛事'
   if (stats.value.available > 0) return '可参与报名'
-  return '暂无赛事'
+  return tournaments.value.length ? '已有参赛记录' : '暂无赛事'
 })
 
 const openAction = computed(() => {
@@ -58,14 +65,7 @@ function goPlayerIdentity() {
 
 function goOpen(routeName?: string) {
   if (!isVerified.value) {
-    ElMessage.warning('请先完成球员身份认证')
     router.push('/account/player-identity')
-    return
-  }
-  const block = accountStore.getOpenRegistrationBlockReason()
-  if (openStatus.value === 'NOT_SUBMITTED' && block) {
-    ElMessage.warning(block)
-    if (block.includes('资格')) router.push('/account/player-identity/eligibility')
     return
   }
   router.push({ name: routeName || openAction.value?.route || 'AccountOpenApplicationApply' })
@@ -80,10 +80,6 @@ function goTeamManagement() {
 }
 
 function acceptInvite(id: string) {
-  if (!isVerified.value) {
-    ElMessage.warning('请先完成球员身份认证')
-    return
-  }
   accountStore.acceptTournamentInvitation(id)
 }
 
@@ -115,7 +111,7 @@ function rejectInvite(id: string) {
       <div class="tournament-stats__item"><strong>{{ stats.joined }}</strong><span>已参加</span></div>
       <div class="tournament-stats__item"><strong>{{ stats.pending }}</strong><span>审核中</span></div>
       <div class="tournament-stats__item"><strong>{{ stats.rejected }}</strong><span>未通过</span></div>
-      <div class="tournament-stats__item"><strong>{{ stats.available }}</strong><span>可报名</span></div>
+      <div class="tournament-stats__item"><strong>{{ tournaments.length }}</strong><span>全部记录</span></div>
     </div>
 
     <AccountPanel v-if="!isVerified" title="先完成球员认证">
@@ -137,7 +133,7 @@ function rejectInvite(id: string) {
             <AccountStatusBadge type="success" text="赛事队长" />
           </div>
           <div class="account-info-list">
-            <div class="account-info-row"><span class="account-info-row__label">球队</span><span>{{ captainTournament?.teamName || 'RNG' }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">球队</span><span>{{ captainTournament?.teamName || '-' }}</span></div>
             <div class="account-info-row"><span class="account-info-row__label">身份</span><span>{{ captainTournament?.role }}</span></div>
             <div class="account-info-row"><span class="account-info-row__label">当前状态</span><span>{{ captainTournament?.statusText }}</span></div>
           </div>
@@ -174,12 +170,7 @@ function rejectInvite(id: string) {
             >
               {{ openAction.label }}
             </button>
-            <button
-              v-else
-              type="button"
-              class="account-btn-secondary"
-              disabled
-            >
+            <button v-else type="button" class="account-btn-secondary" disabled>
               报名已关闭
             </button>
           </div>
@@ -192,8 +183,6 @@ function rejectInvite(id: string) {
             <div class="account-info-row"><span class="account-info-row__label">赛事名称</span><span>{{ item.name }}</span></div>
             <div class="account-info-row"><span class="account-info-row__label">邀请球队</span><span>{{ item.teamName }}</span></div>
             <div class="account-info-row"><span class="account-info-row__label">邀请身份</span><span>{{ item.role }}</span></div>
-            <div class="account-info-row"><span class="account-info-row__label">邀请时间</span><span>{{ item.inviteTime }}</span></div>
-            <div class="account-info-row"><span class="account-info-row__label">有效期至</span><span>{{ item.inviteExpires }}</span></div>
           </div>
           <div class="tournament-invite-card__actions">
             <button type="button" class="account-btn-primary" @click="acceptInvite(item.invitationId || '')">接受邀请</button>
@@ -203,10 +192,11 @@ function rejectInvite(id: string) {
       </AccountPanel>
 
       <AccountPanel title="赛事列表">
+        <div v-if="accountStore.tournamentsLoading" class="account-view__hint">加载赛事列表中...</div>
         <AccountEmptyState
-          v-if="tournaments.filter((item) => item.id !== openTournament.id).length === 0 && openStatus !== 'APPROVED'"
+          v-else-if="!tournaments.length"
           large
-          message="暂无其他参赛记录"
+          message="暂无参赛记录"
           subtitle="完成球员认证并报名后，这里将展示你的赛事参赛状态"
         />
         <div v-else class="platform-table-wrap">
@@ -214,8 +204,7 @@ function rejectInvite(id: string) {
             <thead>
               <tr>
                 <th>赛事名称</th>
-                <th>赛事类型</th>
-                <th>赛季周期</th>
+                <th>赛季</th>
                 <th>当前状态</th>
                 <th>球队</th>
                 <th>身份</th>
@@ -225,22 +214,13 @@ function rejectInvite(id: string) {
             <tbody>
               <tr v-for="item in tournaments" :key="item.id">
                 <td>{{ item.name }}</td>
-                <td>{{ item.type || '-' }}</td>
                 <td>{{ item.period || '-' }}</td>
                 <td>{{ item.statusText }}</td>
                 <td>{{ item.teamName || '-' }}</td>
                 <td>{{ item.role || '-' }}</td>
                 <td>
                   <button
-                    v-if="item.id === openTournament.id"
-                    type="button"
-                    class="account-btn-secondary"
-                    @click="goOpen()"
-                  >
-                    {{ openAction?.label || '查看' }}
-                  </button>
-                  <button
-                    v-else-if="item.id === MOCK_TOURNAMENT_ID && item.role === '赛事队长'"
+                    v-if="item.id === MOCK_TOURNAMENT_ID && item.role === '赛事队长'"
                     type="button"
                     class="account-btn-primary"
                     @click="goTeamManagement"

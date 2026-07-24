@@ -1,45 +1,214 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import PaperTear from '@/components/common/PaperTear.vue'
+import { getPublicDataCenterSeasons } from '@/api/publicDataCenter'
+import {
+  getPublicSeasonPlayerStatPage,
+  getPublicSeasonTeamStatPage,
+} from '@/api/publicSeasonStat'
+import type { PublicPlayerSeasonStatVo, PublicTeamSeasonStatVo } from '@/api/types/public'
+import { displayText, toNumber } from '@/utils/publicDisplay'
 import DataHero from './components/DataHero.vue'
 import DataTypeTabs from './components/DataTypeTabs.vue'
 import DataStatisticsTable from './components/DataStatisticsTable.vue'
 import DataPagination from './components/DataPagination.vue'
-import {
-  DEFAULT_TOURNAMENT_ID,
-  playerStatisticsList,
-  teamStatisticsList,
-  type DataType,
-  type StatisticType,
-} from './mock/dataCenter'
+import type {
+  DataType,
+  PlayerStatistics,
+  StatisticType,
+  TeamStatistics,
+  TournamentGroup,
+} from './types'
 
 const activeDataType = ref<DataType>('team')
 const activeStatisticType = ref<StatisticType>('average')
-const selectedTournamentId = ref(DEFAULT_TOURNAMENT_ID)
+const selectedSeasonId = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
+const total = ref(0)
 
-const sourceRows = computed(() =>
-  activeDataType.value === 'team' ? teamStatisticsList : playerStatisticsList,
-)
+const seasonGroups = ref<TournamentGroup[]>([])
+const seasonLoading = ref(true)
+const seasonError = ref('')
 
-const total = computed(() => sourceRows.value.length)
+const rows = ref<Array<TeamStatistics | PlayerStatistics>>([])
+const tableLoading = ref(false)
+const tableError = ref('')
+let reqId = 0
 
-const pagedRows = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  return sourceRows.value.slice(start, start + pageSize.value)
-})
-
-function resetPage() {
-  currentPage.value = 1
+function toPct(value: unknown): number {
+  const num = toNumber(value, 0)
+  return num <= 1 ? num * 100 : num
 }
 
-watch([activeDataType, activeStatisticType, selectedTournamentId], resetPage)
+function mapTeamRow(item: PublicTeamSeasonStatVo, index: number): TeamStatistics {
+  const name = displayText(item.teamName, '未知球队')
+  const games = toNumber(item.games, 0)
+  return {
+    id: String(item.teamId),
+    rank: (currentPage.value - 1) * pageSize.value + index + 1,
+    teamId: String(item.teamId),
+    teamName: name,
+    teamAbbr: name.slice(0, 6),
+    logoUrl: item.teamLogoUrl?.trim() || '',
+    logoColor: '#333',
+    games,
+    wins: toNumber(item.wins, 0),
+    losses: toNumber(item.losses, 0),
+    winRate: toPct(item.winRate),
+    averagePoints: toNumber(item.avgPoints, 0),
+    averageRebounds: toNumber(item.avgRebounds, 0),
+    averageAssists: toNumber(item.avgAssists, 0),
+    averageSteals: toNumber(item.avgSteals, 0),
+    averageBlocks: toNumber(item.avgBlocks, 0),
+    averageTurnovers: toNumber(item.avgTurnovers, 0),
+    totalPoints: toNumber(item.pointsFor, 0),
+    totalRebounds: Math.round(toNumber(item.avgRebounds, 0) * games),
+    totalAssists: Math.round(toNumber(item.avgAssists, 0) * games),
+    totalSteals: Math.round(toNumber(item.avgSteals, 0) * games),
+    totalBlocks: Math.round(toNumber(item.avgBlocks, 0) * games),
+    totalTurnovers: Math.round(toNumber(item.avgTurnovers, 0) * games),
+    fieldGoalPct: toPct(item.fieldGoalPct),
+    threePointPct: toPct(item.threePointPct),
+    freeThrowPct: toPct(item.freeThrowPct),
+  }
+}
+
+function mapPlayerRow(item: PublicPlayerSeasonStatVo, index: number): PlayerStatistics {
+  const teamName = displayText(item.teamName, '--')
+  return {
+    id: String(item.playerId),
+    playerId: String(item.playerId),
+    rank: (currentPage.value - 1) * pageSize.value + index + 1,
+    playerName: displayText(item.playerName, '未知球员'),
+    teamId: String(item.teamId || ''),
+    teamName,
+    teamAbbr: teamName.slice(0, 6),
+    teamLogoUrl: '',
+    logoColor: '#333',
+    position: '--',
+    games: toNumber(item.games, 0),
+    averagePoints: toNumber(item.avgPoints, 0),
+    averageRebounds: toNumber(item.avgRebounds, 0),
+    averageAssists: toNumber(item.avgAssists, 0),
+    averageSteals: toNumber(item.avgSteals, 0),
+    averageBlocks: toNumber(item.avgBlocks, 0),
+    averageTurnovers: 0,
+    totalPoints: toNumber(item.points, 0),
+    totalRebounds: toNumber(item.rebounds, 0),
+    totalAssists: toNumber(item.assists, 0),
+    totalSteals: toNumber(item.steals, 0),
+    totalBlocks: toNumber(item.blocks, 0),
+    totalTurnovers: 0,
+    fieldGoalPct: toPct(item.fieldGoalPct),
+    threePointPct: toPct(item.threePointPct),
+    freeThrowPct: toPct(item.freeThrowPct),
+  }
+}
+
+async function loadSeasons() {
+  seasonLoading.value = true
+  seasonError.value = ''
+  try {
+    const res = await getPublicDataCenterSeasons()
+    const list = res.data ?? []
+    const groupMap = new Map<string, TournamentGroup>()
+    for (const item of list) {
+      const seasonKey = displayText(item.seasonYear || item.tournamentName, '赛季')
+      if (!groupMap.has(seasonKey)) {
+        groupMap.set(seasonKey, { season: seasonKey, tournaments: [] })
+      }
+      groupMap.get(seasonKey)!.tournaments.push({
+        id: item.seasonId,
+        name: displayText(item.seasonName, item.seasonId),
+        season: seasonKey,
+        label: displayText(
+          item.tournamentName
+            ? `${item.tournamentName} · ${item.seasonName || item.seasonId}`
+            : item.seasonName,
+          item.seasonId,
+        ),
+      })
+    }
+    seasonGroups.value = [...groupMap.values()]
+    if (!selectedSeasonId.value && list[0]) {
+      selectedSeasonId.value = list[0].seasonId
+    }
+  } catch (err) {
+    seasonGroups.value = []
+    seasonError.value = err instanceof Error ? err.message : '加载赛季失败'
+  } finally {
+    seasonLoading.value = false
+  }
+}
+
+async function loadTable() {
+  const seasonId = selectedSeasonId.value
+  const current = ++reqId
+  if (!seasonId) {
+    rows.value = []
+    total.value = 0
+    return
+  }
+  tableLoading.value = true
+  tableError.value = ''
+  try {
+    if (activeDataType.value === 'team') {
+      const res = await getPublicSeasonTeamStatPage(seasonId, {
+        currentPage: currentPage.value,
+        pageSize: pageSize.value,
+        sortField: 'avgPoints',
+        sortOrder: 'desc',
+      })
+      if (current !== reqId) return
+      const records = res.data?.records ?? []
+      rows.value = records.map(mapTeamRow)
+      total.value = Number(res.data?.total ?? 0)
+    } else {
+      const res = await getPublicSeasonPlayerStatPage(seasonId, {
+        currentPage: currentPage.value,
+        pageSize: pageSize.value,
+        sortField: 'avgPoints',
+        sortOrder: 'desc',
+      })
+      if (current !== reqId) return
+      const records = res.data?.records ?? []
+      rows.value = records.map(mapPlayerRow)
+      total.value = Number(res.data?.total ?? 0)
+    }
+  } catch (err) {
+    if (current !== reqId) return
+    rows.value = []
+    total.value = 0
+    tableError.value = err instanceof Error ? err.message : '加载数据失败'
+  } finally {
+    if (current === reqId) tableLoading.value = false
+  }
+}
+
+watch([activeDataType, selectedSeasonId], () => {
+  currentPage.value = 1
+})
+
+watch([activeDataType, selectedSeasonId, currentPage, pageSize], () => {
+  void loadTable()
+})
+
+onMounted(() => {
+  void loadSeasons()
+})
+
+const pagedRows = computed(() => rows.value)
 </script>
 
 <template>
   <div class="data-center-page">
-    <DataHero v-model:tournament-id="selectedTournamentId" />
+    <DataHero
+      v-model:tournament-id="selectedSeasonId"
+      :groups="seasonGroups"
+      :loading="seasonLoading"
+      :error="seasonError"
+    />
 
     <section class="data-center-page__main">
       <div class="site-shell">
@@ -77,6 +246,8 @@ watch([activeDataType, activeStatisticType, selectedTournamentId], resetPage)
                 :data-type="activeDataType"
                 :statistic-type="activeStatisticType"
                 :rows="pagedRows"
+                :loading="tableLoading"
+                :error="tableError"
               />
 
               <DataPagination
@@ -226,10 +397,6 @@ watch([activeDataType, activeStatisticType, selectedTournamentId], resetPage)
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  transition:
-    background-color 0.14s ease,
-    color 0.14s ease,
-    box-shadow 0.14s ease;
 
   & + & {
     margin-left: 8px;
@@ -303,33 +470,6 @@ watch([activeDataType, activeStatisticType, selectedTournamentId], resetPage)
 
   path {
     fill: #e10613;
-  }
-}
-
-@media (max-width: 1199px) {
-  .data-center-panel__body {
-    padding-inline: 12px;
-  }
-}
-
-@media (max-width: 767px) {
-  .data-center-page__main {
-    padding-top: 4px;
-  }
-
-  .data-stat-switch__btn {
-    min-width: 76px;
-    height: 40px;
-    font-size: 14px;
-  }
-
-  .data-center-page__red-tear {
-    height: 10px;
-    margin-top: 28px;
-  }
-
-  .data-center-page__red-tear-svg {
-    height: 10px;
   }
 }
 </style>

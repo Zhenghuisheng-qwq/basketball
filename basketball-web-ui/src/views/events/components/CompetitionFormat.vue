@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import PaperSection from '@/components/common/PaperSection.vue'
-import { competitionStages } from '../mock'
+import { displayText } from '@/utils/publicDisplay'
+import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
 
 type PaperEdge = 'none' | 'top' | 'bottom' | 'both'
+type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
 const props = withDefaults(
   defineProps<{
@@ -18,6 +20,32 @@ const props = withDefaults(
   },
 )
 
+const ctx = inject<SeasonContext | null>('publicSeasonContext', null)
+
+const stages = computed(() => {
+  const season = ctx?.currentSeason.value
+  const overview = ctx?.overview.value
+  const period =
+    season?.seasonStartTime && season?.seasonEndTime
+      ? `${String(season.seasonStartTime).slice(0, 10)} ~ ${String(season.seasonEndTime).slice(0, 10)}`
+      : displayText(season?.seasonYear, '--')
+
+  return [
+    {
+      key: 'regular',
+      index: '01',
+      name: '赛季概览',
+      period,
+      fields: [
+        { label: '参赛战队', value: `${displayText(overview?.teamCount ?? 0, '0')} 支` },
+        { label: '公开赛程', value: `${displayText(overview?.publicMatchCount ?? 0, '0')} 场` },
+        { label: '已结束', value: `${displayText(overview?.finishedMatchCount ?? 0, '0')} 场` },
+        { label: '积分记录', value: `${displayText(overview?.standingCount ?? 0, '0')} 条` },
+      ],
+    },
+  ]
+})
+
 const activeKey = computed(() => props.currentStage || 'regular')
 </script>
 
@@ -31,70 +59,11 @@ const activeKey = computed(() => props.currentStage || 'regular')
         </div>
       </div>
 
-      <div class="stage-steps">
-        <div
-          v-for="(stage, index) in competitionStages"
-          :key="stage.key"
-          class="stage-step"
-          :class="{ active: stage.key === activeKey }"
-        >
-          <span class="step-index">{{ stage.index }}</span>
-          <span class="step-name">{{ stage.name }}</span>
-          <span v-if="index < competitionStages.length - 1" class="stage-line" aria-hidden="true" />
-        </div>
-      </div>
-
-      <div class="stage-cards competition-format__grid">
-        <article
-          v-for="stage in competitionStages"
-          :key="stage.key"
-          class="stage-card"
-          :class="{ active: stage.key === activeKey }"
-        >
-          <header>
-            <h3>
-              <span class="stage-card__index">{{ stage.index }}</span>
-              {{ stage.name }}
-            </h3>
-            <span>{{ stage.period }}</span>
-          </header>
-          <dl>
-            <div v-for="field in stage.fields" :key="field.label" class="field-row">
-              <dt>{{ field.label }}</dt>
-              <dd>{{ field.value }}</dd>
-            </div>
-          </dl>
-        </article>
-      </div>
-    </div>
-  </div>
-
-  <div v-else class="site-shell competition-format-shell">
-    <PaperSection :edge="paperEdge" tone="gray" class="competition-format">
-      <div class="competition-format__inner">
-        <div class="competition-format__header">
-          <div class="section-head-group">
-            <h2 class="cnpa-paper-section__title">赛事详情</h2>
-            <span class="cnpa-paper-section__subtitle">Competition Format</span>
-          </div>
-        </div>
-
-        <div class="stage-steps">
-          <div
-            v-for="(stage, index) in competitionStages"
-            :key="stage.key"
-            class="stage-step"
-            :class="{ active: stage.key === activeKey }"
-          >
-            <span class="step-index">{{ stage.index }}</span>
-            <span class="step-name">{{ stage.name }}</span>
-            <span v-if="index < competitionStages.length - 1" class="stage-line" aria-hidden="true" />
-          </div>
-        </div>
-
+      <div v-if="!ctx?.overview.value" class="competition-format__empty">暂无赛事阶段详情</div>
+      <template v-else>
         <div class="stage-cards competition-format__grid">
           <article
-            v-for="stage in competitionStages"
+            v-for="stage in stages"
             :key="stage.key"
             class="stage-card"
             :class="{ active: stage.key === activeKey }"
@@ -107,27 +76,58 @@ const activeKey = computed(() => props.currentStage || 'regular')
               <span>{{ stage.period }}</span>
             </header>
             <dl>
-              <div v-for="field in stage.fields" :key="field.label" class="field-row">
+              <div v-for="field in stage.fields" :key="field.label">
                 <dt>{{ field.label }}</dt>
                 <dd>{{ field.value }}</dd>
               </div>
             </dl>
           </article>
         </div>
+      </template>
+    </div>
+  </div>
+
+  <div v-else class="site-shell">
+    <PaperSection :edge="paperEdge" tone="gray" class="competition-format">
+      <div class="competition-format__inner">
+        <div class="competition-format__header">
+          <div class="section-head-group">
+            <h2 class="cnpa-paper-section__title">赛事详情</h2>
+            <span class="cnpa-paper-section__subtitle">Competition Format</span>
+          </div>
+        </div>
+
+        <div v-if="!ctx?.overview.value" class="competition-format__empty">暂无赛事阶段详情</div>
+        <template v-else>
+          <div class="stage-cards competition-format__grid">
+            <article
+              v-for="stage in stages"
+              :key="stage.key"
+              class="stage-card"
+              :class="{ active: stage.key === activeKey }"
+            >
+              <header>
+                <h3>
+                  <span class="stage-card__index">{{ stage.index }}</span>
+                  {{ stage.name }}
+                </h3>
+                <span>{{ stage.period }}</span>
+              </header>
+              <dl>
+                <div v-for="field in stage.fields" :key="field.label">
+                  <dt>{{ field.label }}</dt>
+                  <dd>{{ field.value }}</dd>
+                </div>
+              </dl>
+            </article>
+          </div>
+        </template>
       </div>
     </PaperSection>
   </div>
 </template>
 
 <style scoped lang="scss">
-.competition-format-shell {
-  margin-top: 0;
-}
-
-.competition-format {
-  margin-top: 0;
-}
-
 .competition-format__inner {
   padding:
     clamp(28px, 2.4vw, 42px)
@@ -135,166 +135,82 @@ const activeKey = computed(() => props.currentStage || 'regular')
     clamp(32px, 2.8vw, 48px);
 }
 
-.competition-format--embedded .competition-format__inner {
-  padding-top: clamp(20px, 2vw, 28px);
-}
-
 .competition-format__header {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
-.stage-steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 28px;
-}
-
-.stage-step {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 0;
-  color: var(--cnpa-paper-text-muted);
-
-  &.active {
-    color: var(--cnpa-paper-text);
-
-    .step-index {
-      border-color: var(--cnpa-red);
-      color: var(--cnpa-red);
-    }
-
-    .step-line {
-      background: rgba(225, 6, 19, 0.28);
-
-      &::after {
-        border-left-color: var(--cnpa-red);
-      }
-    }
-  }
-}
-
-.step-index {
-  width: 36px;
-  height: 36px;
+.competition-format__empty {
+  min-height: 120px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(17, 17, 17, 0.18);
-  border-radius: 50%;
-  font-size: 13px;
-  font-weight: 900;
+  color: rgba(17, 17, 17, 0.5);
+  font-weight: 700;
 }
 
-.step-name {
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.step-line {
-  position: absolute;
-  right: -6px;
-  top: 50%;
-  width: calc(100% - 120px);
-  max-width: 120px;
-  height: 1px;
-  background: rgba(17, 17, 17, 0.14);
-  transform: translate(100%, -50%);
-
-  &::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
-    border-left: 6px solid rgba(17, 17, 17, 0.28);
-  }
-}
-
-.competition-format__grid,
-.stage-cards {
+.competition-format__grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
 }
 
 .stage-card {
-  padding: 24px;
   border: 1px solid rgba(17, 17, 17, 0.12);
-  border-radius: 6px;
-  background: var(--cnpa-paper-surface);
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-
-  &.active {
-    border-color: rgba(225, 6, 19, 0.42);
-    box-shadow: 0 10px 28px rgba(225, 6, 19, 0.08);
-  }
+  background: #fff;
+  padding: 18px;
 
   header {
-    margin-bottom: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
 
     h3 {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0 0 6px;
-      font-size: 20px;
-      color: var(--cnpa-paper-text);
+      margin: 0;
+      font-size: 16px;
     }
 
     span {
-      font-size: 13px;
-      color: var(--cnpa-paper-text-muted);
+      color: rgba(17, 17, 17, 0.5);
+      font-size: 12px;
+      font-weight: 700;
     }
+  }
+
+  &.active {
+    border-color: #e10613;
   }
 }
 
 .stage-card__index {
-  font-size: 14px;
-  font-weight: 900;
-  color: var(--cnpa-red);
+  margin-right: 8px;
+  color: #e10613;
 }
 
-.field-row {
+dl {
+  margin: 0;
   display: grid;
-  grid-template-columns: 92px 1fr;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(17, 17, 17, 0.08);
+  gap: 10px;
+
+  div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+  }
 
   dt {
-    margin: 0;
-    font-size: 13px;
-    color: var(--cnpa-paper-text-muted);
+    color: rgba(17, 17, 17, 0.55);
   }
 
   dd {
     margin: 0;
-    font-size: 14px;
     font-weight: 700;
-    color: var(--cnpa-paper-text);
   }
 }
 
-@media (max-width: 992px) {
-  .competition-format__grid,
-  .stage-cards,
-  .stage-steps {
-    grid-template-columns: 1fr;
-  }
-
-  .step-line {
-    display: none;
-  }
-}
-
-@media (max-width: 768px) {
+.competition-format--embedded {
   .competition-format__inner {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-top: 8px;
   }
 }
 </style>

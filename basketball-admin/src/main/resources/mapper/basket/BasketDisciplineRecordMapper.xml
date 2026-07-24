@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketDisciplineRecordMapper">
+    <resultMap type="com.zhs.basket.domain.BasketDisciplineRecord" id="BasketDisciplineRecordResult">
+        <id property="id" column="id" />
+        <result property="recordNo" column="record_no" />
+        <result property="seasonId" column="season_id" />
+        <result property="matchId" column="match_id" />
+        <result property="teamId" column="team_id" />
+        <result property="playerId" column="player_id" />
+        <result property="memberId" column="member_id" />
+        <result property="disciplineType" column="discipline_type" />
+        <result property="title" column="title" />
+        <result property="disciplineStatus" column="discipline_status" />
+        <result property="effectiveStartTime" column="effective_start_time" />
+        <result property="effectiveEndTime" column="effective_end_time" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+    <select id="selectActiveBySeasonAndMembers" resultMap="BasketDisciplineRecordResult">
+        select id, record_no, season_id, match_id, team_id, player_id, member_id, discipline_type, title, discipline_status, effective_start_time, effective_end_time, create_time, update_time, is_delete from basket_discipline_record
+        where season_id = #{seasonId} and discipline_status = 1 and is_delete = 0
+          and effective_start_time &lt;= #{now}
+          and (effective_end_time is null or effective_end_time &gt;= #{now})
+          and member_id in
+        <foreach collection="memberIds" item="mid" open="(" separator="," close=")">#{mid}</foreach>
+    </select>
+</mapper>

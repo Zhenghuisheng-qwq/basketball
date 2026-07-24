@@ -2,7 +2,7 @@
 import { useRouter } from 'vue-router'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import PlayerMatchTable from './PlayerMatchTable.vue'
-import type { PlayerDetailData } from '../mock/playerDetail'
+import type { PlayerDetailData } from '../types'
 
 defineProps<{
   detail: PlayerDetailData
@@ -45,47 +45,9 @@ function goAllMatches() {
           <span class="player-detail-honor-card__registered">CNPA REGISTERED PLAYER</span>
         </article>
 
-        <div class="player-detail-overview__stats">
-          <div class="player-detail-stat-cards">
-            <article class="player-detail-stat-card">
-              <span class="player-detail-stat-card__icon">⬡</span>
-              <strong>{{ detail.honorSummary.appearances }}</strong>
-              <span>出场次数</span>
-            </article>
-            <article class="player-detail-stat-card">
-              <span class="player-detail-stat-card__icon">⬡</span>
-              <strong>{{ detail.honorSummary.weeklyBestCount }}</strong>
-              <span>周最佳球员</span>
-            </article>
-            <article class="player-detail-stat-card">
-              <span class="player-detail-stat-card__icon">⬡</span>
-              <strong>{{ detail.honorSummary.allStarCount }}</strong>
-              <span>全明星球员</span>
-            </article>
-            <article class="player-detail-stat-card">
-              <span class="player-detail-stat-card__icon">⬡</span>
-              <strong>{{ detail.honorSummary.bestLineupCount }}</strong>
-              <span>最佳阵容</span>
-            </article>
-          </div>
-
-          <div class="player-detail-medals">
-            <div class="player-detail-medal">
-              <span class="player-detail-medal__icon player-detail-medal__icon--gold">1</span>
-              <strong>{{ detail.honorSummary.championCount }}</strong>
-              <span>冠军</span>
-            </div>
-            <div class="player-detail-medal">
-              <span class="player-detail-medal__icon player-detail-medal__icon--silver">2</span>
-              <strong>{{ detail.honorSummary.runnerUpCount }}</strong>
-              <span>亚军</span>
-            </div>
-            <div class="player-detail-medal">
-              <span class="player-detail-medal__icon player-detail-medal__icon--bronze">3</span>
-              <strong>{{ detail.honorSummary.thirdPlaceCount }}</strong>
-              <span>季军</span>
-            </div>
-          </div>
+        <div class="player-detail-overview__stats player-detail-overview__stats--empty">
+          <p>暂无荣誉数据</p>
+          <span>球员荣誉将在第七轮接入后展示</span>
         </div>
       </div>
     </section>
@@ -117,6 +79,29 @@ function goAllMatches() {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 24px;
+}
+
+.player-detail-overview__stats--empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 180px;
+  padding: 24px;
+  border: 1px dashed rgba(17, 17, 17, 0.16);
+  background: rgba(255, 255, 255, 0.45);
+  color: rgba(17, 17, 17, 0.55);
+
+  p {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 800;
+    color: rgba(17, 17, 17, 0.72);
+  }
+
+  span {
+    font-size: 13px;
+  }
 }
 
 .player-detail-honor-card {

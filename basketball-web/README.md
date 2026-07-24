@@ -18,7 +18,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 # 或在 IDE 中运行 MiniApplication.java
 ```
 
-默认端口：`8081`
+默认端口：`8881`（Admin 后台为 `8080`）
 
 ## 配置文件
 

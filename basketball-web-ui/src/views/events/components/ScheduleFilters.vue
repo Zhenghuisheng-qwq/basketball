@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { seasonOptions, teams } from '../mock'
+import type { Team } from '../types/events'
 import CalendarPanel from './CalendarPanel.vue'
 import TeamSelectorPanel from './TeamSelectorPanel.vue'
 
 const props = defineProps<{
   selectedSeason: string
+  seasonOptions: Array<{ id: string; label: string }>
   selectedDate: string
-  selectedTeamId: number | null
+  selectedTeamId: string | null
+  teams: Team[]
   isCalendarOpen: boolean
   isTeamSelectorOpen: boolean
 }>()
@@ -17,13 +19,13 @@ const emit = defineEmits<{
   toggleCalendar: []
   toggleTeamSelector: []
   selectDate: [value: string]
-  selectTeam: [value: number | null]
+  selectTeam: [value: string | null]
   shiftMonths: [offset: number]
 }>()
 
 const selectedTeamLabel = computed(() => {
   if (props.selectedTeamId === null) return '选择球队'
-  return teams.find((team) => team.id === props.selectedTeamId)?.name || '选择球队'
+  return props.teams.find((team) => team.teamId === props.selectedTeamId)?.name || '选择球队'
 })
 </script>
 
@@ -35,8 +37,8 @@ const selectedTeamLabel = computed(() => {
           :value="selectedSeason"
           @change="emit('update:selectedSeason', ($event.target as HTMLSelectElement).value)"
         >
-          <option v-for="season in seasonOptions" :key="season" :value="season">
-            {{ season }}
+          <option v-for="season in seasonOptions" :key="season.id" :value="season.id">
+            {{ season.label }}
           </option>
         </select>
       </label>
@@ -73,6 +75,7 @@ const selectedTeamLabel = computed(() => {
     <TeamSelectorPanel
       v-if="isTeamSelectorOpen"
       class="schedule-panel"
+      :teams="teams"
       :selected-team-id="selectedTeamId"
       @select="emit('selectTeam', $event)"
     />
@@ -82,57 +85,52 @@ const selectedTeamLabel = computed(() => {
 <style scoped lang="scss">
 .schedule-filters {
   position: relative;
-  z-index: 20;
 }
 
 .filter-row {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
 .filter-item select,
 .filter-btn {
-  min-width: 140px;
-  height: 40px;
+  min-width: 120px;
+  height: 38px;
   padding: 0 14px;
-  border: 1px solid var(--cnpa-paper-border);
-  border-radius: 2px;
-  background: var(--cnpa-paper-surface);
-  color: var(--cnpa-paper-text);
+  border: 1px solid rgba(17, 17, 17, 0.14);
+  border-radius: 4px;
+  background: #fff;
+  color: #111;
   font-size: 13px;
   font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
 }
 
 .filter-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+  cursor: pointer;
 
   &.active {
-    background: var(--cnpa-red);
-    border-color: var(--cnpa-red);
-    color: #fff;
+    border-color: #e10613;
+    color: #e10613;
   }
 }
 
 .arrow {
   font-size: 10px;
-  transition: transform 0.2s ease;
+  transition: transform 0.15s ease;
 
   &.up {
     transform: rotate(180deg);
   }
 }
 
-:deep(.schedule-panel) {
+.schedule-panel {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  z-index: 30;
+  z-index: 20;
 }
 </style>

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import teamBackground from '@/assets/icon/tournament/team_background.png'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
-import type { PlayerProfile } from '../mock/playerDetail'
+import type { PlayerProfile } from '../types'
 
 const props = defineProps<{
   profile: PlayerProfile

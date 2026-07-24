@@ -56,4 +56,16 @@ public class MiniRedisUtil {
     public boolean expire(final MiniCacheKey cacheKey) {
         return redisCache.expire(cacheKey.buildKey(), cacheKey.getExpireTime(), cacheKey.getExpireTimeUnit());
     }
+
+    /**
+     * 自增；首次创建时按 CacheKey 过期时间设置 TTL
+     */
+    public long increment(final MiniCacheKey cacheKey) {
+        Long value = redisCache.increment(cacheKey.buildKey());
+        long current = value == null ? 0L : value;
+        if (current == 1L && cacheKey.getExpireTime() > 0) {
+            redisCache.expire(cacheKey.buildKey(), cacheKey.getExpireTime(), cacheKey.getExpireTimeUnit());
+        }
+        return current;
+    }
 }

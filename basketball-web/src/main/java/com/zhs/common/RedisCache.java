@@ -41,4 +41,8 @@ public class RedisCache {
         Boolean result = redisTemplate.expire(key, timeout, unit);
         return Boolean.TRUE.equals(result);
     }
+
+    public Long increment(String key) {
+        return redisTemplate.opsForValue().increment(key);
+    }
 }

@@ -69,4 +69,4 @@ export {
   isOpenRegistrationDeadlinePassed,
 } from './openRegistrationMock'
 
-export type { MockAuthSession, MockLoginResult } from './auth'
+export type { MockAuthSession } from './auth'

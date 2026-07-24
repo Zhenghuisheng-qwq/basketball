@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import type { PlayerDetailData } from '../mock/playerDetail'
+import type { PlayerDetailData } from '../types'
 
 defineProps<{
   detail: PlayerDetailData
@@ -35,7 +35,9 @@ function openHonor(tournamentId?: string) {
         </div>
       </div>
 
-      <div class="player-detail-career__honor-list">
+      <div v-if="detail.honors.length === 0" class="player-detail-empty-inline">暂无荣誉记录</div>
+
+      <div v-else class="player-detail-career__honor-list">
         <article
           v-for="honor in detail.honors"
           :key="honor.id"
@@ -64,7 +66,9 @@ function openHonor(tournamentId?: string) {
         </div>
       </div>
 
-      <div class="player-detail-timeline player-detail-timeline--horizontal">
+      <div v-if="detail.teamHistory.length === 0" class="player-detail-empty-inline">暂无效力记录</div>
+
+      <div v-else class="player-detail-timeline player-detail-timeline--horizontal">
         <article
           v-for="item in detail.teamHistory"
           :key="item.id"
@@ -218,6 +222,13 @@ function openHonor(tournamentId?: string) {
   margin: 16px 0 0;
   color: var(--cnpa-paper-text-secondary);
   font-size: 12px;
+}
+
+.player-detail-empty-inline {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--cnpa-paper-text-muted);
+  font-size: 14px;
 }
 
 @media (max-width: 991px) {

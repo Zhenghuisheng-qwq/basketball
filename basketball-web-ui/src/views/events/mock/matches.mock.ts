@@ -1,7 +1,36 @@
 import type { Match } from '../types/events'
+import { teams } from './teams.mock'
+
+type MatchSeed = Omit<
+  Match,
+  'matchId' | 'homeTeamKey' | 'awayTeamKey' | 'homeTeamName' | 'awayTeamName' | 'homeTeamLogo' | 'awayTeamLogo'
+>
+
+function teamByNumericId(id: number) {
+  const team = teams.find((item) => item.id === id)
+  if (!team) {
+    throw new Error(`Unknown team id in matches.mock: ${id}`)
+  }
+  return team
+}
+
+function createMatch(seed: MatchSeed): Match {
+  const home = teamByNumericId(seed.homeTeamId)
+  const away = teamByNumericId(seed.awayTeamId)
+  return {
+    ...seed,
+    matchId: String(seed.id),
+    homeTeamKey: home.teamId,
+    awayTeamKey: away.teamId,
+    homeTeamName: home.name,
+    awayTeamName: away.name,
+    homeTeamLogo: home.logo,
+    awayTeamLogo: away.logo,
+  }
+}
 
 export const matches: Match[] = [
-  {
+  createMatch({
     id: 1,
     season: '2026 赛季',
     date: '2026-05-06',
@@ -13,8 +42,8 @@ export const matches: Match[] = [
     venue: '上海 · 星耀体育馆',
     status: 'finished',
     week: 18,
-  },
-  {
+  }),
+  createMatch({
     id: 2,
     season: '2026 赛季',
     date: '2026-05-06',
@@ -26,8 +55,8 @@ export const matches: Match[] = [
     venue: '广州 · 天河体育馆',
     status: 'finished',
     week: 18,
-  },
-  {
+  }),
+  createMatch({
     id: 3,
     season: '2026 赛季',
     date: '2026-05-06',
@@ -37,8 +66,8 @@ export const matches: Match[] = [
     venue: '成都 · 东安湖体育馆',
     status: 'scheduled',
     week: 18,
-  },
-  {
+  }),
+  createMatch({
     id: 4,
     season: '2026 赛季',
     date: '2026-05-06',
@@ -48,8 +77,8 @@ export const matches: Match[] = [
     venue: '北京 · 首钢体育馆',
     status: 'scheduled',
     week: 18,
-  },
-  {
+  }),
+  createMatch({
     id: 5,
     season: '2026 赛季',
     date: '2026-05-06',
@@ -59,8 +88,8 @@ export const matches: Match[] = [
     venue: '深圳 · 湾区体育中心',
     status: 'scheduled',
     week: 18,
-  },
-  {
+  }),
+  createMatch({
     id: 6,
     season: '2026 赛季',
     date: '2026-05-06',
@@ -70,8 +99,8 @@ export const matches: Match[] = [
     venue: '杭州 · 奥体中心体育馆',
     status: 'scheduled',
     week: 18,
-  },
-  {
+  }),
+  createMatch({
     id: 7,
     season: '2026 赛季',
     date: '2026-05-05',
@@ -83,8 +112,8 @@ export const matches: Match[] = [
     venue: '上海 · 星耀体育馆',
     status: 'finished',
     week: 18,
-  },
-  {
+  }),
+  createMatch({
     id: 8,
     season: '2026 赛季',
     date: '2026-05-07',
@@ -94,8 +123,8 @@ export const matches: Match[] = [
     venue: '武汉 · 光谷体育馆',
     status: 'scheduled',
     week: 18,
-  },
-  {
+  }),
+  createMatch({
     id: 9,
     season: '2026 赛季',
     date: '2026-05-04',
@@ -107,8 +136,8 @@ export const matches: Match[] = [
     venue: '南京 · 青奥体育馆',
     status: 'live',
     week: 18,
-  },
-  {
+  }),
+  createMatch({
     id: 10,
     season: '2026 赛季',
     date: '2026-05-08',
@@ -118,8 +147,8 @@ export const matches: Match[] = [
     venue: '重庆 · 龙兴体育馆',
     status: 'cancelled',
     week: 18,
-  },
-  {
+  }),
+  createMatch({
     id: 11,
     season: '2026 赛季',
     date: '2026-05-11',
@@ -129,7 +158,7 @@ export const matches: Match[] = [
     venue: '上海 · 星耀体育馆',
     status: 'scheduled',
     week: 19,
-  },
+  }),
 ]
 
 export const defaultScheduleDate = '2026-05-06'

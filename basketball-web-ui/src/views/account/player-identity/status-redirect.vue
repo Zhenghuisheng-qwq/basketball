@@ -2,7 +2,6 @@
 import { onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAccountStore } from '@/stores/account'
-import { identityQueryToVerificationStatus } from '@/types/account'
 import {
   resolvePlayerIdentityRouteFromQuery,
   resolvePlayerIdentityStatusRedirect,
@@ -13,15 +12,13 @@ const router = useRouter()
 const accountStore = useAccountStore()
 
 onMounted(async () => {
+  try {
+    await accountStore.loadPlayerCertification()
+  } catch {
+    // continue redirect
+  }
   const queryStatus = route.query.status
-  if (import.meta.env.DEV && typeof queryStatus === 'string') {
-    const mapped = identityQueryToVerificationStatus(queryStatus)
-    if (mapped) {
-      await accountStore.loadAccountMock(
-        mapped,
-        queryStatus.replace(/_/g, '-') === 'restricted' || queryStatus.replace(/_/g, '-') === 'limited',
-      )
-    }
+  if (typeof queryStatus === 'string') {
     router.replace(resolvePlayerIdentityRouteFromQuery(queryStatus, accountStore))
     return
   }

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketTournamentStageMapper">
+    <resultMap type="com.zhs.basket.domain.BasketTournamentStage" id="BasketTournamentStageResult">
+        <id property="id" column="id" />
+        <result property="seasonId" column="season_id" />
+        <result property="stageNo" column="stage_no" />
+        <result property="stageName" column="stage_name" />
+        <result property="stageType" column="stage_type" />
+        <result property="formatType" column="format_type" />
+        <result property="startTime" column="start_time" />
+        <result property="endTime" column="end_time" />
+        <result property="sequenceNo" column="sequence_no" />
+        <result property="stageStatus" column="stage_status" />
+        <result property="qualificationRuleText" column="qualification_rule_text" />
+        <result property="publicStatus" column="public_status" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+    <select id="selectList" resultType="com.zhs.basket.vo.StageListVo">
+        select s.id, s.season_id as seasonId, sea.season_name as seasonName, t.tournament_name as tournamentName,
+               s.stage_no as stageNo, s.stage_name as stageName, s.stage_type as stageType, s.format_type as formatType,
+               s.start_time as startTime, s.end_time as endTime, s.sequence_no as sequenceNo, s.stage_status as stageStatus,
+               s.public_status as publicStatus, s.create_time as createTime
+        from basket_tournament_stage s
+        inner join basket_tournament_season sea on s.season_id = sea.id and sea.is_delete = 0
+        inner join basket_tournament t on sea.tournament_id = t.id and t.is_delete = 0
+        where s.is_delete = 0
+        <if test="tournamentId != null">and sea.tournament_id = #{tournamentId}</if>
+        <if test="seasonId != null">and s.season_id = #{seasonId}</if>
+        <if test="stageName != null and stageName != ''">and s.stage_name like concat('%', #{stageName}, '%')</if>
+        <if test="stageType != null and stageType != ''">and s.stage_type = #{stageType}</if>
+        <if test="stageStatus != null">and s.stage_status = #{stageStatus}</if>
+        order by s.sequence_no, s.create_time desc
+    </select>
+    <select id="selectById" resultMap="BasketTournamentStageResult">
+        select id, season_id, stage_no, stage_name, stage_type, format_type, start_time, end_time, sequence_no,
+               stage_status, qualification_rule_text, public_status, create_time, update_time, is_delete
+        from basket_tournament_stage where id = #{id} and is_delete = 0
+    </select>
+    <select id="countBySeasonIdAndStageName" resultType="int">
+        select count(1) from basket_tournament_stage
+        where season_id = #{seasonId} and stage_name = #{stageName} and is_delete = 0
+        <if test="excludeId != null">and id != #{excludeId}</if>
+    </select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_tournament_stage (season_id, stage_no, stage_name, stage_type, format_type, start_time, end_time,
+            sequence_no, stage_status, qualification_rule_text, public_status, create_time, update_time, is_delete)
+        values (#{seasonId}, #{stageNo}, #{stageName}, #{stageType}, #{formatType}, #{startTime}, #{endTime},
+            #{sequenceNo}, #{stageStatus}, #{qualificationRuleText}, #{publicStatus}, #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+    <update id="updateById">
+        update basket_tournament_stage
+        <set>
+            <if test="stageName != null">stage_name = #{stageName},</if>
+            <if test="stageType != null">stage_type = #{stageType},</if>
+            <if test="formatType != null">format_type = #{formatType},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="sequenceNo != null">sequence_no = #{sequenceNo},</if>
+            <if test="qualificationRuleText != null">qualification_rule_text = #{qualificationRuleText},</if>
+            <if test="publicStatus != null">public_status = #{publicStatus},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+    <update id="softDelete">
+        update basket_tournament_stage set is_delete = 1, update_time = now() where id = #{id} and is_delete = 0
+    </update>
+    <update id="updateStatusIfMatch">
+        update basket_tournament_stage set stage_status = #{toStatus}, update_time = now()
+        where id = #{id} and is_delete = 0 and stage_status in
+        <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+    </update>
+</mapper>

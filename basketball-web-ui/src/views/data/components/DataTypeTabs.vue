@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DataType } from '../mock/dataCenter'
+import type { DataType } from '../types'
 
 defineProps<{
   modelValue: DataType
