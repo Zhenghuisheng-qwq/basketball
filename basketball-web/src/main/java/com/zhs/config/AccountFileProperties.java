@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 public class AccountFileProperties {
 
     /** 存储类型：local / cos */
-    private String storageType = "local";
+    private String storageType = "cos";
 
     /** 本地存储根目录 */
     private String localRoot = "./upload";

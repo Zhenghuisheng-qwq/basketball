@@ -18,7 +18,10 @@ import com.zhs.common.core.domain.AjaxResult;
 import com.zhs.common.utils.StringUtils;
 import com.zhs.common.utils.file.FileUploadUtils;
 import com.zhs.common.utils.file.FileUtils;
+import com.zhs.common.utils.file.MimeTypeUtils;
 import com.zhs.framework.config.ServerConfig;
+import com.zhs.framework.cos.TencentCosUploadService;
+import com.zhs.framework.cos.TencentCosUploadService.CosUploadResult;
 
 /**
  * 通用请求处理
@@ -33,6 +36,9 @@ public class CommonController
 
     @Autowired
     private ServerConfig serverConfig;
+
+    @Autowired
+    private TencentCosUploadService tencentCosUploadService;
 
     private static final String FILE_DELIMITER = ",";
 
@@ -76,9 +82,12 @@ public class CommonController
     {
         try
         {
-            // 上传文件路径
+            if (isImageFile(file))
+            {
+                return buildCosUploadResult(tencentCosUploadService.upload(file, "image"));
+            }
+            // 非图片仍走本地磁盘
             String filePath = RuoYiConfig.getUploadPath();
-            // 上传并返回新文件名称
             String fileName = FileUploadUtils.upload(filePath, file);
             String url = serverConfig.getUrl() + fileName;
             AjaxResult ajax = AjaxResult.success();
@@ -102,15 +111,22 @@ public class CommonController
     {
         try
         {
-            // 上传文件路径
-            String filePath = RuoYiConfig.getUploadPath();
             List<String> urls = new ArrayList<String>();
             List<String> fileNames = new ArrayList<String>();
             List<String> newFileNames = new ArrayList<String>();
             List<String> originalFilenames = new ArrayList<String>();
             for (MultipartFile file : files)
             {
-                // 上传并返回新文件名称
+                if (isImageFile(file))
+                {
+                    CosUploadResult result = tencentCosUploadService.upload(file, "image");
+                    urls.add(result.getUrl());
+                    fileNames.add(result.getUrl());
+                    newFileNames.add(result.getFileName());
+                    originalFilenames.add(result.getOriginalFilename());
+                    continue;
+                }
+                String filePath = RuoYiConfig.getUploadPath();
                 String fileName = FileUploadUtils.upload(filePath, file);
                 String url = serverConfig.getUrl() + fileName;
                 urls.add(url);
@@ -129,6 +145,38 @@ public class CommonController
         {
             return AjaxResult.error(e.getMessage());
         }
+    }
+
+    public AjaxResult buildCosUploadResult(CosUploadResult result)
+    {
+        AjaxResult ajax = AjaxResult.success();
+        ajax.put("url", result.getUrl());
+        ajax.put("fileName", result.getUrl());
+        ajax.put("newFileName", result.getFileName());
+        ajax.put("originalFilename", result.getOriginalFilename());
+        ajax.put("bucketName", result.getBucketName());
+        ajax.put("objectKey", result.getObjectKey());
+        ajax.put("fileSize", result.getFileSize());
+        return ajax;
+    }
+
+    private boolean isImageFile(MultipartFile file)
+    {
+        if (file == null || file.isEmpty())
+        {
+            return false;
+        }
+        String contentType = file.getContentType();
+        if (StringUtils.isNotEmpty(contentType) && contentType.toLowerCase().startsWith("image/"))
+        {
+            return true;
+        }
+        String extension = FileUploadUtils.getExtension(file);
+        if (FileUploadUtils.isAllowedExtension(extension, MimeTypeUtils.IMAGE_EXTENSION))
+        {
+            return true;
+        }
+        return "webp".equalsIgnoreCase(extension);
     }
 
     /**

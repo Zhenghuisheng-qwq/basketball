@@ -17,7 +17,7 @@ import java.util.Set;
  * 腾讯云 COS 存储实现。account.file.storage-type=cos 时启用，接管原账户文件上传链路。
  */
 @Service
-@ConditionalOnProperty(prefix = "account.file", name = "storage-type", havingValue = "cos")
+@ConditionalOnProperty(prefix = "account.file", name = "storage-type", havingValue = "cos", matchIfMissing = true)
 public class CosAccountFileStorageServiceImpl implements IAccountFileStorageService {
 
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");

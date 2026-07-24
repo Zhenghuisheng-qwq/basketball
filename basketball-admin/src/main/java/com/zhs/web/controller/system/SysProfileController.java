@@ -20,9 +20,9 @@ import com.zhs.common.enums.BusinessType;
 import com.zhs.common.utils.DateUtils;
 import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
-import com.zhs.common.utils.file.FileUploadUtils;
 import com.zhs.common.utils.file.FileUtils;
-import com.zhs.common.utils.file.MimeTypeUtils;
+import com.zhs.framework.cos.TencentCosUploadService;
+import com.zhs.framework.cos.TencentCosUploadService.CosUploadResult;
 import com.zhs.framework.web.service.TokenService;
 import com.zhs.system.service.ISysUserService;
 
@@ -40,6 +40,9 @@ public class SysProfileController extends BaseController
 
     @Autowired
     private TokenService tokenService;
+
+    @Autowired
+    private TencentCosUploadService tencentCosUploadService;
 
     /**
      * 个人信息
@@ -128,17 +131,17 @@ public class SysProfileController extends BaseController
         if (!file.isEmpty())
         {
             LoginUser loginUser = getLoginUser();
-            String avatar = FileUploadUtils.upload(RuoYiConfig.getAvatarPath(), file, MimeTypeUtils.IMAGE_EXTENSION, true);
+            CosUploadResult uploadResult = tencentCosUploadService.upload(file, "avatar");
+            String avatar = uploadResult.getUrl();
             if (userService.updateUserAvatar(loginUser.getUserId(), avatar))
             {
                 String oldAvatar = loginUser.getUser().getAvatar();
-                if (StringUtils.isNotEmpty(oldAvatar))
+                if (StringUtils.isNotEmpty(oldAvatar) && !oldAvatar.startsWith("http"))
                 {
                     FileUtils.deleteFile(RuoYiConfig.getProfile() + FileUtils.stripPrefix(oldAvatar));
                 }
                 AjaxResult ajax = AjaxResult.success();
                 ajax.put("imgUrl", avatar);
-                // 更新缓存用户头像
                 loginUser.getUser().setAvatar(avatar);
                 tokenService.setLoginUser(loginUser);
                 return ajax;

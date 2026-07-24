@@ -70,7 +70,7 @@
       "type": "java.lang.String",
       "description": "存储类型：local \/ cos",
       "sourceType": "com.zhs.config.AccountFileProperties",
-      "defaultValue": "local"
+      "defaultValue": "cos"
     },
     {
       "name": "member.auth.code-daily-limit",

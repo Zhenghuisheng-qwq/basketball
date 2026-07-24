@@ -31,6 +31,7 @@ import axios from 'axios'
 import { QuillEditor } from "@vueup/vue-quill"
 import "@vueup/vue-quill/dist/vue-quill.snow.css"
 import { getToken } from "@/utils/auth"
+import { isExternal } from "@/utils/validate"
 import type { UploadFileResult } from '@/types/api/common'
 
 const { proxy } = getCurrentInstance()
@@ -154,13 +155,12 @@ function handleBeforeUpload(file: File) {
 function handleUploadSuccess(res: UploadFileResult, file: File) {
   // 如果上传成功
   if (res.code == 200) {
-    // 获取富文本实例
     let quill = toRaw(quillEditorRef.value).getQuill()
-    // 获取光标位置
     let length = quill.selection.savedRange.index
-    // 插入图片，res.url为服务器返回的图片链接地址
-    quill.insertEmbed(length, "image", import.meta.env.VITE_APP_BASE_API + res.fileName)
-    // 调整光标到最后
+    const imageUrl = res.url && (isExternal(res.url) || res.url.startsWith('http'))
+      ? res.url
+      : (res.url || import.meta.env.VITE_APP_BASE_API + res.fileName)
+    quill.insertEmbed(length, "image", imageUrl)
     quill.setSelection(length + 1)
   } else {
     proxy.$modal.msgError("图片插入失败")

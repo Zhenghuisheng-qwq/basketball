@@ -638,7 +638,6 @@ com\zhs\response\BasketTeamJoinApplicationDetailResp.class
 com\zhs\response\BasketTournamentRuleResp.class
 com\zhs\controller\AccountSecurityController.class
 com\zhs\model\BasketMatch.class
-com\zhs\controller\CosFileController.class
 com\zhs\dto\BasketCaptainQualificationDto.class
 com\zhs\dto\BasketPlayerProfileDto.class
 com\zhs\model\BasketHomeBanner.class

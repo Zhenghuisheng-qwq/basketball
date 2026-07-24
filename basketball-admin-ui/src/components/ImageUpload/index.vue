@@ -53,6 +53,16 @@ import { isExternal } from "@/utils/validate"
 import Sortable from 'sortablejs'
 import type { UploadFileResult } from '@/types/api/common'
 
+function resolveUploadUrl(res: UploadFileResult): string {
+  if (res.url && isExternal(res.url)) {
+    return res.url
+  }
+  if (res.url) {
+    return res.url
+  }
+  return res.fileName
+}
+
 interface UploadImageItem {
   uid?: number | string;
   name: string;
@@ -181,7 +191,8 @@ function handleExceed(): void {
 // 上传成功回调
 function handleUploadSuccess(res: UploadFileResult, file: any): void {
   if (res.code === 200) {
-    uploadList.value.push({ name: res.fileName, url: res.fileName })
+    const fileUrl = resolveUploadUrl(res)
+    uploadList.value.push({ name: fileUrl, url: fileUrl })
     uploadedSuccessfully()
   } else {
     number.value--

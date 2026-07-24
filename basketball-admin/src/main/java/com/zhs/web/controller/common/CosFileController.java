@@ -14,9 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 管理端腾讯云 COS 上传接口。
- * <p>
- * 与本地 {@code /common/upload} 并列，密钥配置后即可使用。
+ * 腾讯云 COS 上传接口（与 {@link CommonController} 图片上传逻辑一致，保留兼容路径）。
  */
 @RestController
 @RequestMapping("/common/cos")
@@ -25,30 +23,16 @@ public class CosFileController {
     @Autowired
     private TencentCosUploadService tencentCosUploadService;
 
-    /**
-     * COS 单文件上传
-     *
-     * @param file  文件
-     * @param scope 对象目录作用域，默认 upload
-     */
+    @Autowired
+    private CommonController commonController;
+
     @PostMapping("/upload")
     public AjaxResult upload(@RequestParam("file") MultipartFile file,
                              @RequestParam(value = "scope", required = false, defaultValue = "upload") String scope) {
         CosUploadResult result = tencentCosUploadService.upload(file, scope);
-        AjaxResult ajax = AjaxResult.success();
-        ajax.put("url", result.getUrl());
-        ajax.put("fileName", result.getObjectKey());
-        ajax.put("newFileName", result.getFileName());
-        ajax.put("originalFilename", result.getOriginalFilename());
-        ajax.put("bucketName", result.getBucketName());
-        ajax.put("objectKey", result.getObjectKey());
-        ajax.put("fileSize", result.getFileSize());
-        return ajax;
+        return commonController.buildCosUploadResult(result);
     }
 
-    /**
-     * COS 多文件上传
-     */
     @PostMapping("/uploads")
     public AjaxResult uploads(@RequestParam("files") List<MultipartFile> files,
                               @RequestParam(value = "scope", required = false, defaultValue = "upload") String scope) {
@@ -60,7 +44,7 @@ public class CosFileController {
         for (MultipartFile file : files) {
             CosUploadResult result = tencentCosUploadService.upload(file, scope);
             urls.add(result.getUrl());
-            fileNames.add(result.getObjectKey());
+            fileNames.add(result.getUrl());
             newFileNames.add(result.getFileName());
             originalFilenames.add(result.getOriginalFilename());
             objectKeys.add(result.getObjectKey());

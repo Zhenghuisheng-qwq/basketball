@@ -22,7 +22,7 @@ import java.util.Locale;
 import java.util.Set;
 
 @Service
-@ConditionalOnProperty(prefix = "account.file", name = "storage-type", havingValue = "local", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "account.file", name = "storage-type", havingValue = "local")
 public class LocalAccountFileStorageServiceImpl implements IAccountFileStorageService {
 
     private static final String STORAGE_PROVIDER = "local";
