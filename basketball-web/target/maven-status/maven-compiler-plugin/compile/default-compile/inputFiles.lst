@@ -22,6 +22,8 @@ D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\config
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\config\MemberAuthProperties.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\config\PasswordEncoderConfig.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\config\RedisConfig.java
+D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\config\TencentCosClientHolder.java
+D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\config\TencentCosProperties.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\config\WebMvcConfig.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\config\WxMiniProperties.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\controller\AccountCenterController.java
@@ -92,6 +94,7 @@ D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\contro
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\controller\BasketVenueController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\controller\BasketVerifyCodeRecordController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\controller\CaptainQualificationController.java
+D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\controller\CosFileController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\controller\PlayerCertificationController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\controller\publicapi\BasketPublicAnnouncementController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\controller\publicapi\BasketPublicDataCenterController.java
@@ -887,9 +890,11 @@ D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\servic
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\service\ITeamRegistrationBusinessService.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\service\mail\IMemberMailService.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\service\mail\MemberMailServiceImpl.java
+D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\service\storage\CosAccountFileStorageServiceImpl.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\service\storage\IAccountFileStorageService.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\service\storage\LocalAccountFileStorageServiceImpl.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\service\storage\StoredFileInfo.java
+D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\service\storage\TencentCosUploadService.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\service\support\BasketPublicConstants.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\service\support\BasketPublicHonorSupport.java
 D:\code\dz\basketball\scaffolding-v2\basketball-web\src\main\java\com\zhs\service\support\BasketPublicSupport.java

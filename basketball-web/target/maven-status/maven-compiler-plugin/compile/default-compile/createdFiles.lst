@@ -118,6 +118,7 @@ com\zhs\request\UpdateBasketMemberProfileReq.class
 com\zhs\service\IBasketPublicTeamService.class
 com\zhs\request\UpdateBasketTournamentRegistrationAuditReq.class
 com\zhs\response\auth\WxLoginResp.class
+com\zhs\config\TencentCosClientHolder.class
 com\zhs\response\BasketMessageTaskDetailResp.class
 com\zhs\service\impl\BasketVerifyCodeRecordServiceImpl.class
 com\zhs\request\UpdateBasketTournamentStageReq.class
@@ -403,6 +404,7 @@ com\zhs\response\BasketMessageTaskResp.class
 com\zhs\request\QueryBasketTournamentRegistrationAuditReq.class
 com\zhs\response\account\MessageItemResp.class
 com\zhs\service\impl\BasketTeamMemberServiceImpl.class
+com\zhs\config\TencentCosProperties.class
 com\zhs\response\publicapi\PublicTeamRosterItemVo.class
 com\zhs\controller\BasketMatchPeriodScoreController.class
 com\zhs\dao\BasketTeamCaptainHistoryDao.class
@@ -576,6 +578,7 @@ com\zhs\service\impl\BasketPublicDataCenterServiceImpl.class
 com\zhs\service\IBasketTournamentSeasonService.class
 com\zhs\response\account\PlayerIdentityResp.class
 com\zhs\config\RedisConfig.class
+com\zhs\service\storage\CosAccountFileStorageServiceImpl.class
 com\zhs\enums\TeamAuditStatusEnum.class
 com\zhs\model\BasketFavorite.class
 com\zhs\model\BasketTournamentGroup.class
@@ -635,6 +638,7 @@ com\zhs\response\BasketTeamJoinApplicationDetailResp.class
 com\zhs\response\BasketTournamentRuleResp.class
 com\zhs\controller\AccountSecurityController.class
 com\zhs\model\BasketMatch.class
+com\zhs\controller\CosFileController.class
 com\zhs\dto\BasketCaptainQualificationDto.class
 com\zhs\dto\BasketPlayerProfileDto.class
 com\zhs\model\BasketHomeBanner.class
@@ -897,6 +901,7 @@ com\zhs\request\AddBasketNotificationSettingReq.class
 com\zhs\config\AccountFileProperties.class
 com\zhs\request\QueryBasketPlayerSeasonStatReq.class
 com\zhs\response\BasketAccountSecurityLogDetailResp.class
+com\zhs\service\storage\TencentCosUploadService.class
 com\zhs\request\AddBasketTournamentStageReq.class
 com\zhs\service\impl\BasketMatchTeamServiceImpl.class
 com\zhs\dao\BasketStatChangeRecordDao.class

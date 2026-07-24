@@ -26,6 +26,11 @@
       "type": "javax.sql.DataSource",
       "sourceType": "com.zhs.framework.config.DruidConfig",
       "sourceMethod": "slaveDataSource(com.zhs.framework.config.properties.DruidProperties)"
+    },
+    {
+      "name": "tencent.cos",
+      "type": "com.zhs.framework.config.properties.TencentCosProperties",
+      "sourceType": "com.zhs.framework.config.properties.TencentCosProperties"
     }
   ],
   "properties": [
@@ -67,6 +72,52 @@
       "type": "java.lang.String",
       "description": "版本",
       "sourceType": "com.zhs.common.config.RuoYiConfig"
+    },
+    {
+      "name": "tencent.cos.bucket",
+      "type": "java.lang.String",
+      "description": "存储桶名称",
+      "sourceType": "com.zhs.framework.config.properties.TencentCosProperties",
+      "defaultValue": ""
+    },
+    {
+      "name": "tencent.cos.domain",
+      "type": "java.lang.String",
+      "description": "访问域名（不含协议）",
+      "sourceType": "com.zhs.framework.config.properties.TencentCosProperties",
+      "defaultValue": ""
+    },
+    {
+      "name": "tencent.cos.https",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.zhs.framework.config.properties.TencentCosProperties",
+      "defaultValue": true
+    },
+    {
+      "name": "tencent.cos.key-prefix",
+      "type": "java.lang.String",
+      "description": "对象键前缀",
+      "sourceType": "com.zhs.framework.config.properties.TencentCosProperties",
+      "defaultValue": "basketball"
+    },
+    {
+      "name": "tencent.cos.region",
+      "type": "java.lang.String",
+      "description": "地域，如 ap-shanghai",
+      "sourceType": "com.zhs.framework.config.properties.TencentCosProperties",
+      "defaultValue": "ap-shanghai"
+    },
+    {
+      "name": "tencent.cos.secret-id",
+      "type": "java.lang.String",
+      "sourceType": "com.zhs.framework.config.properties.TencentCosProperties",
+      "defaultValue": ""
+    },
+    {
+      "name": "tencent.cos.secret-key",
+      "type": "java.lang.String",
+      "sourceType": "com.zhs.framework.config.properties.TencentCosProperties",
+      "defaultValue": ""
     }
   ],
   "hints": [],

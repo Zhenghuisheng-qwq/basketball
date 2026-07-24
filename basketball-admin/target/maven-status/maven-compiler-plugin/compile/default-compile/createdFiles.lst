@@ -20,6 +20,7 @@ com\zhs\basket\mapper\BasketVenueMapper.class
 com\zhs\basket\req\CaptainQualificationUpdateReq.class
 com\zhs\common\utils\uuid\Seq.class
 com\zhs\common\exception\UtilException.class
+com\zhs\framework\cos\TencentCosClientHolder.class
 com\zhs\basket\enums\TournamentRuleTypeEnum.class
 com\zhs\basket\req\SeasonUpdateReq.class
 com\zhs\basket\service\impl\BasketPrivateFileServiceImpl.class
@@ -290,6 +291,7 @@ com\zhs\common\config\RuoYiConfig.class
 com\zhs\basket\req\MatchPeriodScoreSaveReq$PeriodScoreItem.class
 com\zhs\basket\enums\RegistrationStatusEnum.class
 com\zhs\basket\req\HonorRecordRevokeReq.class
+com\zhs\web\controller\common\CosFileController.class
 com\zhs\basket\domain\BasketHonorRecord.class
 com\zhs\basket\mapper\BasketMessageReceiverMapper.class
 com\zhs\basket\vo\GroupListVo.class
@@ -420,6 +422,7 @@ com\zhs\basket\vo\MatchPlayerStatVo.class
 com\zhs\system\service\impl\SysDictTypeServiceImpl.class
 com\zhs\basket\vo\MatchPeriodScoreVo.class
 com\zhs\framework\config\KaptchaTextCreator.class
+com\zhs\framework\cos\TencentCosUploadService.class
 com\zhs\web\controller\basket\BasketTeamSeasonStatController.class
 com\zhs\basket\localdemo\support\LocalDemoSeedSupport.class
 com\zhs\common\annotation\DataSource.class
@@ -539,6 +542,7 @@ com\zhs\basket\service\IBasketCaptainQualificationService.class
 com\zhs\framework\aspectj\RateLimiterAspect.class
 com\zhs\framework\web\service\SysLoginService.class
 com\zhs\quartz\service\ISysJobService.class
+com\zhs\framework\config\properties\TencentCosProperties.class
 com\zhs\basket\mapper\BasketHonorCategoryMapper.class
 com\zhs\basket\service\impl\BasketStandingServiceImpl$TeamAgg.class
 com\zhs\common\utils\http\HttpUtils.class
@@ -632,6 +636,7 @@ com\zhs\basket\vo\SettlementRebuildResultVo.class
 com\zhs\system\mapper\SysNoticeReadMapper.class
 com\zhs\basket\mapper\BasketPlayerCertMaterialMapper.class
 com\zhs\basket\service\IBasketMatchStatService.class
+com\zhs\framework\cos\TencentCosUploadService$CosUploadResult.class
 com\zhs\basket\req\GroupTeamAssignReq.class
 com\zhs\basket\vo\StageDetailVo.class
 com\zhs\common\utils\poi\ExcelUtil.class
