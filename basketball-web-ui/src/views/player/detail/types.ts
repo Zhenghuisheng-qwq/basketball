@@ -28,7 +28,7 @@ export interface PlayerHonorSummary {
 }
 
 export interface PlayerHonor {
-  id: number
+  id: string
   seasonName: string
   honorName: string
   honorDate: string

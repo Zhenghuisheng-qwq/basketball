@@ -1,28 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { Announcement } from '../types'
-import { getAnnouncementScopeLabel } from '../mock/announcements'
-import AnnouncementStatusBadge from './AnnouncementStatusBadge.vue'
+import type { AnnouncementListItem } from '../types'
 
-const props = defineProps<{
-  item: Announcement
+defineProps<{
+  item: AnnouncementListItem
 }>()
 
 const emit = defineEmits<{
-  click: [id: number]
+  click: [id: string]
 }>()
 
-const scopeLabel = computed(() => getAnnouncementScopeLabel(props.item))
-
-const displayTitle = computed(() => {
-  if (props.item.subtitle) {
-    return `${props.item.title} ${props.item.subtitle}`
-  }
-  return props.item.title
-})
-
-function handleClick() {
-  emit('click', props.item.id)
+function handleClick(id: string) {
+  emit('click', id)
 }
 </script>
 
@@ -32,8 +20,8 @@ function handleClick() {
     :class="{ 'announcement-list-item--pinned': item.pinned }"
     role="button"
     tabindex="0"
-    @click="handleClick"
-    @keyup.enter="handleClick"
+    @click="handleClick(item.id)"
+    @keyup.enter="handleClick(item.id)"
   >
     <div class="announcement-list-item__tags">
       <span v-if="item.pinned" class="announcement-list-item__pin">置顶</span>
@@ -46,12 +34,8 @@ function handleClick() {
     </div>
 
     <div class="announcement-list-item__content">
-      <h3 class="announcement-list-item__title">{{ displayTitle }}</h3>
-      <p class="announcement-list-item__scope">{{ scopeLabel }}</p>
-    </div>
-
-    <div class="announcement-list-item__status">
-      <AnnouncementStatusBadge :status="item.status" />
+      <h3 class="announcement-list-item__title">{{ item.title }}</h3>
+      <p v-if="item.summary" class="announcement-list-item__scope">{{ item.summary }}</p>
     </div>
 
     <time class="announcement-list-item__date">{{ item.publishDateText }}</time>
@@ -63,7 +47,7 @@ function handleClick() {
 <style scoped lang="scss">
 .announcement-list-item {
   display: grid;
-  grid-template-columns: 100px minmax(0, 1fr) 110px 100px 24px;
+  grid-template-columns: 100px minmax(0, 1fr) 100px 24px;
   gap: 18px 20px;
   align-items: center;
   min-height: 80px;
@@ -137,11 +121,11 @@ function handleClick() {
     background: #111;
   }
 
-  &--penalty {
+  &--notice {
     background: #9a7420;
   }
 
-  &--platform {
+  &--other {
     background: #555;
   }
 }
@@ -167,13 +151,6 @@ function handleClick() {
   line-height: 1.4;
 }
 
-.announcement-list-item__status {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-height: 24px;
-}
-
 .announcement-list-item__date {
   color: #777;
   font-size: 13px;
@@ -186,34 +163,6 @@ function handleClick() {
   line-height: 1;
   text-align: center;
   transition: transform 0.18s ease;
-}
-
-@media (max-width: 1023px) {
-  .announcement-list-item {
-    grid-template-columns: 96px minmax(0, 1fr) auto auto 24px;
-    gap: 10px 14px;
-    padding: 14px 0;
-  }
-
-  .announcement-list-item__content {
-    grid-column: 2 / 5;
-  }
-
-  .announcement-list-item__status {
-    grid-column: 2;
-    grid-row: 2;
-  }
-
-  .announcement-list-item__date {
-    grid-column: 3 / 5;
-    grid-row: 2;
-    justify-self: end;
-  }
-
-  .announcement-list-item__arrow {
-    grid-column: 5;
-    grid-row: 1 / 3;
-  }
 }
 
 @media (max-width: 767px) {
@@ -243,15 +192,9 @@ function handleClick() {
     grid-row: 2;
   }
 
-  .announcement-list-item__status {
-    grid-column: 1;
-    grid-row: 3;
-  }
-
   .announcement-list-item__date {
-    grid-column: 2;
+    grid-column: 1 / -1;
     grid-row: 3;
-    justify-self: end;
   }
 }
 </style>

@@ -1,46 +1,125 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import HallPanelHead from './HallPanelHead.vue'
 import HallSelect from './HallSelect.vue'
 import HallPagination from './HallPagination.vue'
-import { getChampionFilterOptions, queryChampionRecords } from '../mock/hallOfFame'
+import { getPublicHallTournamentHonorPage } from '@/api/publicHallOfFame'
+import type { PublicHonorItemResp } from '@/api/types/public'
+import { displayText, formatDateTime } from '@/utils/publicDisplay'
 
 const props = defineProps<{
   year: string
-  platform: string
-  series: string
   page: number
 }>()
 
 const emit = defineEmits<{
   'update:year': [value: string]
-  'update:platform': [value: string]
-  'update:series': [value: string]
   'update:page': [value: number]
 }>()
 
 const router = useRouter()
 const panelRef = ref<HTMLElement | null>(null)
+const pageSize = 8
 
-const filterOptions = computed(() => getChampionFilterOptions())
-const pageResult = computed(() =>
-  queryChampionRecords(props.year, props.platform, props.series, props.page, 8),
+const allChampions = ref<PublicHonorItemResp[]>([])
+const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
+const errorMessage = ref('')
+let reqId = 0
+
+const yearOptions = computed(() => {
+  const years = new Set<string>()
+  allChampions.value.forEach((item) => {
+    const year = String(item.awardDate || '').slice(0, 4)
+    if (/^\d{4}$/.test(year)) years.add(year)
+  })
+  const sorted = Array.from(years).sort((a, b) => Number(b) - Number(a))
+  return [
+    { value: 'ALL', label: '全部年份' },
+    ...sorted.map((year) => ({ value: year, label: `${year} 年` })),
+  ]
+})
+
+const filtered = computed(() => {
+  if (props.year === 'ALL') return allChampions.value
+  return allChampions.value.filter((item) => String(item.awardDate || '').startsWith(props.year))
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize)))
+
+const pageItems = computed(() => {
+  const start = (props.page - 1) * pageSize
+  return filtered.value.slice(start, start + pageSize)
+})
+
+const groupedByYear = computed(() => {
+  const map = new Map<number, PublicHonorItemResp[]>()
+  pageItems.value.forEach((item) => {
+    const year = Number(String(item.awardDate || '').slice(0, 4)) || 0
+    const list = map.get(year) || []
+    list.push(item)
+    map.set(year, list)
+  })
+  return Array.from(map.entries())
+    .sort((a, b) => b[0] - a[0])
+    .map(([year, items]) => ({ year, items }))
+})
+
+async function loadAll() {
+  const current = ++reqId
+  state.value = 'loading'
+  errorMessage.value = ''
+  try {
+    const collected: PublicHonorItemResp[] = []
+    let page = 1
+    let pages = 1
+    do {
+      const res = await getPublicHallTournamentHonorPage({
+        currentPage: page,
+        pageSize: 100,
+        sortField: 'awardDate',
+        sortOrder: 'desc',
+      })
+      if (current !== reqId) return
+      const data = res.data
+      const records = data?.records ?? []
+      collected.push(...records)
+      pages = Math.max(1, Number(data?.pages || 1))
+      page += 1
+    } while (page <= pages && page <= 10)
+
+    allChampions.value = collected.filter(
+      (item) => (item.honorCode || '').toUpperCase() === 'CHAMPION',
+    )
+    state.value = allChampions.value.length ? 'success' : 'empty'
+  } catch (err) {
+    if (current !== reqId) return
+    allChampions.value = []
+    state.value = 'error'
+    errorMessage.value = err instanceof Error ? err.message : '加载历届冠军失败'
+  }
+}
+
+watch(
+  () => true,
+  () => {
+    void loadAll()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => [props.year, props.page, filtered.value.length, totalPages.value] as const,
+  () => {
+    if (props.page > totalPages.value) {
+      emit('update:page', totalPages.value)
+    }
+  },
 )
 
 function updateYear(value: string | number) {
   emit('update:year', String(value))
-  emit('update:page', 1)
-}
-
-function updatePlatform(value: string | number) {
-  emit('update:platform', String(value))
-  emit('update:page', 1)
-}
-
-function updateSeries(value: string | number) {
-  emit('update:series', String(value))
   emit('update:page', 1)
 }
 
@@ -49,11 +128,13 @@ function updatePage(page: number) {
   panelRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-function openTeam(teamId: string) {
+function openTeam(teamId?: string | null) {
+  if (!teamId) return
   router.push(`/tournament/team/${teamId}/overview`)
 }
 
-function openEventHonor(tournamentId: string, showRoster = false) {
+function openEventHonor(tournamentId?: string | null, showRoster = false) {
+  if (!tournamentId) return
   router.replace({
     path: '/hall-of-fame',
     query: {
@@ -62,6 +143,11 @@ function openEventHonor(tournamentId: string, showRoster = false) {
       ...(showRoster ? { showRoster: '1' } : {}),
     },
   })
+}
+
+function awardDateText(value?: string | null) {
+  const dt = formatDateTime(value)
+  return dt.date === '--' ? '--' : dt.date
 }
 </script>
 
@@ -72,54 +158,56 @@ function openEventHonor(tournamentId: string, showRoster = false) {
         <HallSelect
           width="filter"
           :model-value="year"
-          :options="filterOptions.years"
+          :options="yearOptions"
           @update:model-value="updateYear"
-        />
-        <HallSelect
-          width="filter"
-          :model-value="platform"
-          :options="filterOptions.platforms"
-          @update:model-value="updatePlatform"
-        />
-        <HallSelect
-          width="filter"
-          :model-value="series"
-          :options="filterOptions.series"
-          @update:model-value="updateSeries"
         />
       </template>
     </HallPanelHead>
 
-    <div v-if="pageResult.total === 0" class="hall-empty">
+    <div v-if="state === 'loading'" class="hall-empty">加载中...</div>
+    <div v-else-if="state === 'error'" class="hall-empty">{{ errorMessage }}</div>
+    <div v-else-if="state === 'empty' || filtered.length === 0" class="hall-empty">
       当前筛选条件下暂无冠军记录
     </div>
 
     <template v-else>
-      <div v-for="group in pageResult.groupedByYear" :key="group.year" class="past-champions-group">
-        <h3 class="past-champions-group__year">{{ group.year }}</h3>
+      <div v-for="group in groupedByYear" :key="group.year" class="past-champions-group">
+        <h3 class="past-champions-group__year">{{ group.year || '未知年份' }}</h3>
         <div class="past-champions-grid">
-          <article v-for="record in group.items" :key="record.id" class="past-champion-card hall-card-surface">
+          <article
+            v-for="record in group.items"
+            :key="record.honorId"
+            class="past-champion-card hall-card-surface"
+          >
             <div class="past-champion-card__main">
               <div class="past-champion-card__left">
                 <div class="past-champion-card__meta">
-                  <span class="past-champion-card__series">{{ record.seriesName }}</span>
-                  <span class="past-champion-card__platform">{{ record.platformName }}</span>
+                  <span class="past-champion-card__series">
+                    {{ displayText(record.honorName, '冠军') }}
+                  </span>
                 </div>
-                <p class="past-champion-card__name">{{ record.tournamentName }}</p>
-                <p class="past-champion-card__date">{{ record.championDate }}</p>
+                <p class="past-champion-card__name">
+                  {{ displayText(record.tournamentName, '公开赛事') }}
+                </p>
+                <p class="past-champion-card__date">{{ awardDateText(record.awardDate) }}</p>
               </div>
 
-              <button type="button" class="past-champion-card__team" @click="openTeam(record.teamId)">
+              <button
+                type="button"
+                class="past-champion-card__team"
+                :disabled="!record.teamId"
+                @click="openTeam(record.teamId)"
+              >
                 <TeamLogo
                   :team="{
-                    id: record.teamId,
-                    name: record.teamName,
-                    shortName: record.teamAbbr,
-                    logoUrl: record.teamLogoUrl,
+                    id: String(record.teamId || ''),
+                    name: displayText(record.teamName),
+                    shortName: displayText(record.teamName),
+                    logoUrl: record.teamLogoUrl || '',
                   }"
                   size="xl"
                 />
-                <strong>{{ record.teamName }}</strong>
+                <strong>{{ displayText(record.teamName, '冠军球队') }}</strong>
               </button>
             </div>
 
@@ -139,8 +227,8 @@ function openEventHonor(tournamentId: string, showRoster = false) {
       </div>
 
       <HallPagination
-        :page="pageResult.page"
-        :total-pages="pageResult.totalPages"
+        :page="page"
+        :total-pages="totalPages"
         @update:page="updatePage"
       />
     </template>
@@ -148,25 +236,19 @@ function openEventHonor(tournamentId: string, showRoster = false) {
 </template>
 
 <style scoped lang="scss">
-@use '../styles/hall-shared.scss';
-
 .past-champions-panel {
   width: 100%;
-  scroll-margin-top: calc(var(--site-header-height, 72px) + 16px);
 }
 
 .past-champions-group + .past-champions-group {
-  margin-top: 32px;
+  margin-top: 28px;
 }
 
 .past-champions-group__year {
   margin: 0 0 14px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--hall-red, #e71922);
-  color: var(--hall-red, #e71922);
-  font-size: clamp(38px, 3.2vw, 44px);
+  color: #111;
+  font-size: 22px;
   font-weight: 900;
-  line-height: 1;
 }
 
 .past-champions-grid {
@@ -176,161 +258,100 @@ function openEventHonor(tournamentId: string, showRoster = false) {
 }
 
 .past-champion-card {
-  display: grid;
-  grid-template-rows: 1fr 48px;
-  min-height: 245px;
-  transition: border-color 0.18s ease;
-
-  &:hover {
-    border-color: rgba(231, 25, 34, 0.55);
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 22px;
 }
 
 .past-champion-card__main {
-  display: grid;
-  grid-template-columns: 46% 54%;
-  gap: 16px;
-  min-height: 0;
-  padding: 22px 22px 16px;
-}
-
-.past-champion-card__left {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .past-champion-card__meta {
   display: flex;
-  align-items: center;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 8px;
 }
 
 .past-champion-card__series {
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.past-champion-card__platform {
-  padding: 2px 8px;
-  border: 1px solid rgba(231, 25, 34, 0.65);
-  color: var(--hall-red, #e71922);
-  font-size: 11px;
-  font-weight: 700;
+  color: var(--cnpa-red, #e10613);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .past-champion-card__name {
-  margin: 12px 0 0;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 14px;
-  line-height: 1.5;
+  margin: 10px 0 0;
+  color: #111;
+  font-size: 18px;
+  font-weight: 900;
 }
 
 .past-champion-card__date {
-  margin: 12px 0 0;
-  color: var(--hall-gold, #d2a648);
+  margin: 8px 0 0;
+  color: #666;
   font-size: 13px;
-  font-weight: 700;
 }
 
 .past-champion-card__team {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin: 0;
+  gap: 8px;
+  min-width: 110px;
   padding: 0;
   border: 0;
   background: transparent;
-  color: #fff;
+  color: #111;
+  font: inherit;
   cursor: pointer;
-  text-align: center;
 
-  :deep(.team-logo--xl) {
-    width: 110px;
-    height: 110px;
+  &:disabled {
+    cursor: default;
   }
 
   strong {
-    font-size: 30px;
-    font-weight: 900;
-    line-height: 1.15;
+    font-size: 14px;
+    font-weight: 800;
+    text-align: center;
   }
 }
 
 .past-champion-card__actions {
   display: flex;
-  align-items: stretch;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding-top: 12px;
 
   button {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    min-height: 48px;
-    padding: 0 12px;
+    padding: 0;
     border: 0;
-    background: rgba(255, 255, 255, 0.03);
-    color: rgba(255, 255, 255, 0.88);
+    background: transparent;
+    color: #111;
     font: inherit;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
-    transition: background 0.18s ease, color 0.18s ease;
-
-    span {
-      transition: transform 0.18s ease;
-    }
 
     &:hover {
-      background: rgba(74, 9, 13, 0.88);
-      color: #fff;
-
-      span {
-        transform: translateX(3px);
-      }
+      color: var(--cnpa-red, #e10613);
     }
   }
 }
 
 .past-champion-card__divider {
   width: 1px;
-  background: rgba(255, 255, 255, 0.12);
-  flex-shrink: 0;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.12);
 }
 
-@media (max-width: 1199px) {
+@media (max-width: 1023px) {
   .past-champions-grid {
     grid-template-columns: 1fr;
-  }
-
-  .past-champion-card__main {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (max-width: 767px) {
-  .past-champion-card__main {
-    grid-template-columns: 1fr;
-  }
-
-  .past-champion-card__team {
-    padding-top: 8px;
-  }
-
-  .past-champion-card__actions {
-    flex-direction: column;
-  }
-
-  .past-champion-card__divider {
-    width: 100%;
-    height: 1px;
   }
 }
 </style>

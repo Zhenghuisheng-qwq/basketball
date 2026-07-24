@@ -2,6 +2,7 @@ package com.zhs.controller.publicapi;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.common.NoLoginRequest;
+import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.publicapi.PublicMatchItemVo;
 import com.zhs.response.publicapi.PublicTeamCompareVo;
 import com.zhs.response.publicapi.PublicTeamDetailVo;
@@ -83,5 +84,14 @@ public class BasketPublicTeamController {
             @RequestParam Long rightTeamId,
             @RequestParam(required = false) Long seasonId) {
         return R.ok(publicTeamService.compare(leftTeamId, rightTeamId, seasonId));
+    }
+
+    @ApiOperation("球队已发布荣誉")
+    @GetMapping("/{teamId}/honor")
+    public R<IPage<PublicHonorItemResp>> pageHonors(
+            @PathVariable Long teamId,
+            @RequestParam(defaultValue = "1") Integer currentPage,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        return R.ok(publicTeamService.pageHonors(teamId, currentPage, pageSize));
     }
 }

@@ -2,7 +2,12 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PaperTear from '@/components/common/PaperTear.vue'
-import { getPublicPlayerDetail, getPublicPlayerMatchPage, getPublicPlayerSeasonStat } from '@/api/publicPlayer'
+import {
+  getPublicPlayerDetail,
+  getPublicPlayerHonorPage,
+  getPublicPlayerMatchPage,
+  getPublicPlayerSeasonStat,
+} from '@/api/publicPlayer'
 import PlayerHero from './components/PlayerHero.vue'
 import PlayerTabs from './components/PlayerTabs.vue'
 import PlayerOverview from './components/PlayerOverview.vue'
@@ -11,6 +16,7 @@ import PlayerData from './components/PlayerData.vue'
 import PlayerCareer from './components/PlayerCareer.vue'
 import {
   buildEmptyPlayerDetail,
+  mapPublicPlayerHonors,
   mapPublicPlayerMatch,
   mapPublicPlayerProfile,
   mapPublicPlayerSeasonStats,
@@ -54,10 +60,11 @@ async function loadPlayer() {
   loadState.value = 'loading'
   loadError.value = ''
   try {
-    const [detailRes, matchRes, statRes] = await Promise.all([
+    const [detailRes, matchRes, statRes, honorRes] = await Promise.all([
       getPublicPlayerDetail(id),
       getPublicPlayerMatchPage(id, { currentPage: 1, pageSize: 100 }),
       getPublicPlayerSeasonStat(id),
+      getPublicPlayerHonorPage(id, { currentPage: 1, pageSize: 50 }),
     ])
     if (current !== reqId) return
     const rawDetail = detailRes.data
@@ -75,6 +82,7 @@ async function loadPlayer() {
     detail.allMatches = matches
     detail.careerStats = mapPublicPlayerSeasonStats(statRes.data ?? [])
     detail.seasonStageOptions = mapSeasonStageOptions(statRes.data ?? [])
+    detail.honors = mapPublicPlayerHonors(honorRes.data?.records ?? [])
     playerDetail.value = detail
     loadState.value = 'success'
     document.title = `${profile.displayName} - CNPA 篮球赛事平台`

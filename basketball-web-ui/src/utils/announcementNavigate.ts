@@ -1,10 +1,9 @@
-export const VALID_FILTER_CATEGORIES = ['ALL', 'EVENT', 'RULE', 'PENALTY', 'PLATFORM'] as const
-
-export function normalizeAnnouncementCategory(value: unknown): string {
-  if (typeof value === 'string' && VALID_FILTER_CATEGORIES.includes(value as (typeof VALID_FILTER_CATEGORIES)[number])) {
-    return value
-  }
-  return 'ALL'
+export function normalizeAnnouncementCategory(value: unknown, allowed?: string[]): string {
+  if (typeof value !== 'string' || !value.trim()) return 'ALL'
+  const code = value.trim().toUpperCase()
+  if (code === 'ALL') return 'ALL'
+  if (allowed && allowed.length > 0 && !allowed.includes(code)) return 'ALL'
+  return code
 }
 
 export function parseAnnouncementPage(value: unknown, fallback = 1): number {
@@ -42,17 +41,9 @@ export function buildAnnouncementDetailFromQuery(query: Record<string, unknown>)
   }
 }
 
-export function getTournamentRoute(tournamentId?: string) {
-  if (!tournamentId) return null
-  if (tournamentId.includes('open')) {
-    return { path: '/tournament', query: { tab: 'overview' } }
-  }
-  return { path: '/tournament', query: { tab: 'overview' } }
-}
-
 export function goToAnnouncementDetail(
   router: { push: (location: { path: string; query?: Record<string, string> }) => void },
-  announcementId: number,
+  announcementId: string | number,
   listState?: { category: string; keyword: string; page: number },
 ) {
   const query: Record<string, string> = {}
@@ -109,4 +100,11 @@ export function buildPaginationItems(current: number, totalPages: number): Pagin
 
   items.push(totalPages)
   return items
+}
+
+export function formatAnnouncementDate(value?: string | null): string {
+  if (!value) return '--'
+  const normalized = value.replace('T', ' ').trim()
+  const datePart = normalized.slice(0, 10)
+  return datePart || '--'
 }

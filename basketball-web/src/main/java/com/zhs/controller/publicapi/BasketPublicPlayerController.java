@@ -2,6 +2,7 @@ package com.zhs.controller.publicapi;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.common.NoLoginRequest;
+import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.publicapi.PublicMatchItemVo;
 import com.zhs.response.publicapi.PublicPlayerDetailVo;
 import com.zhs.response.publicapi.PublicPlayerRankItemVo;
@@ -59,5 +60,14 @@ public class BasketPublicPlayerController {
             @RequestParam(required = false) Long seasonId,
             @RequestParam(required = false) String rankType) {
         return R.ok(publicPlayerService.listRanking(playerId, seasonId, rankType));
+    }
+
+    @ApiOperation("球员已发布荣誉（遵守 profile_visible）")
+    @GetMapping("/{playerId}/honor")
+    public R<IPage<PublicHonorItemResp>> pageHonors(
+            @PathVariable Long playerId,
+            @RequestParam(defaultValue = "1") Integer currentPage,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        return R.ok(publicPlayerService.pageHonors(playerId, currentPage, pageSize));
     }
 }

@@ -2,6 +2,7 @@
 import SeasonLeaders from './SeasonLeaders.vue'
 import LeagueTeams from './LeagueTeams.vue'
 import CompetitionFormat from './CompetitionFormat.vue'
+import SeasonPlacement from './SeasonPlacement.vue'
 import LeagueAbout from './LeagueAbout.vue'
 import CommunitySection from './CommunitySection.vue'
 </script>
@@ -11,6 +12,7 @@ import CommunitySection from './CommunitySection.vue'
     <SeasonLeaders />
     <LeagueTeams />
     <CompetitionFormat current-stage="regular" />
+    <SeasonPlacement />
     <LeagueAbout />
     <CommunitySection />
   </div>

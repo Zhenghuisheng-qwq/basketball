@@ -7,13 +7,6 @@ import HallTabs from './components/HallTabs.vue'
 import WeeklyBestPanel from './components/WeeklyBestPanel.vue'
 import EventHonorsPanel from './components/EventHonorsPanel.vue'
 import PastChampionsPanel from './components/PastChampionsPanel.vue'
-import {
-  getDefaultEventTournamentId,
-  getDefaultWeeklyTournamentId,
-  getLatestPublishedWeekNo,
-  resolveTournamentId,
-  resolveWeekNo,
-} from './mock/hallOfFame'
 import type { HallTab } from './types'
 import { normalizeHallTab, parsePositiveInt, parseQueryString } from '@/utils/hallNavigate'
 
@@ -22,30 +15,12 @@ const router = useRouter()
 
 const activeTab = computed<HallTab>(() => normalizeHallTab(route.query.tab))
 
-const weeklyTournamentId = computed(() =>
-  resolveTournamentId(
-    typeof route.query.tournamentId === 'string' ? route.query.tournamentId : undefined,
-    getDefaultWeeklyTournamentId(),
-  ),
-)
-
-const weeklyWeekNo = computed(() => {
-  const week = parsePositiveInt(route.query.week, getLatestPublishedWeekNo(weeklyTournamentId.value))
-  return resolveWeekNo(weeklyTournamentId.value, week)
-})
-
+const playerPage = computed(() => parsePositiveInt(route.query.page, 1))
 const eventTournamentId = computed(() =>
-  resolveTournamentId(
-    typeof route.query.tournamentId === 'string' ? route.query.tournamentId : undefined,
-    getDefaultEventTournamentId(),
-  ),
+  typeof route.query.tournamentId === 'string' ? route.query.tournamentId : '',
 )
-
 const rosterExpanded = computed(() => route.query.showRoster === '1')
-
 const championYear = computed(() => parseQueryString(route.query.year, 'ALL'))
-const championPlatform = computed(() => parseQueryString(route.query.platform, 'ALL'))
-const championSeries = computed(() => parseQueryString(route.query.series, 'ALL'))
 const championPage = computed(() => parsePositiveInt(route.query.page, 1))
 
 function replaceQuery(next: Record<string, string | undefined>) {
@@ -65,18 +40,14 @@ function replaceQuery(next: Record<string, string | undefined>) {
 
 function setTab(tab: HallTab) {
   if (tab === 'weekly') {
-    replaceQuery({
-      tab,
-      tournamentId: weeklyTournamentId.value,
-      week: String(weeklyWeekNo.value),
-    })
+    replaceQuery({ tab, page: '1' })
     return
   }
 
   if (tab === 'event') {
     replaceQuery({
       tab,
-      tournamentId: eventTournamentId.value,
+      tournamentId: eventTournamentId.value || undefined,
       showRoster: rosterExpanded.value ? '1' : undefined,
     })
     return
@@ -85,32 +56,18 @@ function setTab(tab: HallTab) {
   replaceQuery({
     tab,
     year: championYear.value,
-    platform: championPlatform.value,
-    series: championSeries.value,
     page: String(championPage.value),
   })
 }
 
-function updateWeeklyTournamentId(value: string) {
-  replaceQuery({
-    tab: 'weekly',
-    tournamentId: value,
-    week: String(getLatestPublishedWeekNo(value)),
-  })
-}
-
-function updateWeeklyWeekNo(value: number) {
-  replaceQuery({
-    tab: 'weekly',
-    tournamentId: weeklyTournamentId.value,
-    week: String(value),
-  })
+function updatePlayerPage(value: number) {
+  replaceQuery({ tab: 'weekly', page: String(value) })
 }
 
 function updateEventTournamentId(value: string) {
   replaceQuery({
     tab: 'event',
-    tournamentId: value,
+    tournamentId: value || undefined,
     showRoster: undefined,
   })
 }
@@ -118,7 +75,7 @@ function updateEventTournamentId(value: string) {
 function updateRosterExpanded(value: boolean) {
   replaceQuery({
     tab: 'event',
-    tournamentId: eventTournamentId.value,
+    tournamentId: eventTournamentId.value || undefined,
     showRoster: value ? '1' : undefined,
   })
 }
@@ -127,28 +84,6 @@ function updateChampionYear(value: string) {
   replaceQuery({
     tab: 'champions',
     year: value,
-    platform: championPlatform.value,
-    series: championSeries.value,
-    page: '1',
-  })
-}
-
-function updateChampionPlatform(value: string) {
-  replaceQuery({
-    tab: 'champions',
-    year: championYear.value,
-    platform: value,
-    series: championSeries.value,
-    page: '1',
-  })
-}
-
-function updateChampionSeries(value: string) {
-  replaceQuery({
-    tab: 'champions',
-    year: championYear.value,
-    platform: championPlatform.value,
-    series: value,
     page: '1',
   })
 }
@@ -157,8 +92,6 @@ function updateChampionPage(value: number) {
   replaceQuery({
     tab: 'champions',
     year: championYear.value,
-    platform: championPlatform.value,
-    series: championSeries.value,
     page: String(value),
   })
 }
@@ -170,20 +103,12 @@ watch(
 
     const tab = normalizeHallTab(route.query.tab)
     if (route.query.tab !== undefined && route.query.tab !== tab) {
-      replaceQuery({
-        tab: 'weekly',
-        tournamentId: getDefaultWeeklyTournamentId(),
-        week: String(getLatestPublishedWeekNo(getDefaultWeeklyTournamentId())),
-      })
+      replaceQuery({ tab: 'weekly', page: '1' })
       return
     }
 
     if (!route.query.tab) {
-      replaceQuery({
-        tab: 'weekly',
-        tournamentId: getDefaultWeeklyTournamentId(),
-        week: String(getLatestPublishedWeekNo(getDefaultWeeklyTournamentId())),
-      })
+      replaceQuery({ tab: 'weekly', page: '1' })
     }
   },
   { immediate: true },
@@ -203,31 +128,25 @@ watch(
         <div class="cnpa-paper-section cnpa-paper-section--light">
           <PaperTear position="top" tone="light" />
           <div class="cnpa-paper-section__content hall-of-fame-page__paper-inner">
-          <WeeklyBestPanel
-            v-if="activeTab === 'weekly'"
-            :tournament-id="weeklyTournamentId"
-            :week-no="weeklyWeekNo"
-            @update:tournament-id="updateWeeklyTournamentId"
-            @update:week-no="updateWeeklyWeekNo"
-          />
-          <EventHonorsPanel
-            v-else-if="activeTab === 'event'"
-            :tournament-id="eventTournamentId"
-            :roster-expanded="rosterExpanded"
-            @update:tournament-id="updateEventTournamentId"
-            @update:roster-expanded="updateRosterExpanded"
-          />
-          <PastChampionsPanel
-            v-else
-            :year="championYear"
-            :platform="championPlatform"
-            :series="championSeries"
-            :page="championPage"
-            @update:year="updateChampionYear"
-            @update:platform="updateChampionPlatform"
-            @update:series="updateChampionSeries"
-            @update:page="updateChampionPage"
-          />
+            <WeeklyBestPanel
+              v-if="activeTab === 'weekly'"
+              :page="playerPage"
+              @update:page="updatePlayerPage"
+            />
+            <EventHonorsPanel
+              v-else-if="activeTab === 'event'"
+              :tournament-id="eventTournamentId"
+              :roster-expanded="rosterExpanded"
+              @update:tournament-id="updateEventTournamentId"
+              @update:roster-expanded="updateRosterExpanded"
+            />
+            <PastChampionsPanel
+              v-else
+              :year="championYear"
+              :page="championPage"
+              @update:year="updateChampionYear"
+              @update:page="updateChampionPage"
+            />
           </div>
           <PaperTear position="bottom" tone="light" />
         </div>

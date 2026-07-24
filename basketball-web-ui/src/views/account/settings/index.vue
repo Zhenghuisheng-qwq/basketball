@@ -7,7 +7,7 @@ import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import PasswordInput from '@/views/account/components/PasswordInput.vue'
 import { useAccountStore } from '@/stores/account'
-import { validatePasswordRules } from '@/mock/account/security'
+import { validatePasswordRules } from '@/utils/passwordRules'
 import { formatDateTime } from '@/utils/formatDate'
 import type { NotificationSettingDto, PrivacySettingDto } from '@/api/types/accountSetting'
 

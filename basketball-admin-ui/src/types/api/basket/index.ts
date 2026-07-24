@@ -1189,3 +1189,436 @@ export interface PlayerRankListItem {
 export type SeasonSettlementSummaryListResult = AjaxResult<SeasonSettlementSummary[]>
 export type SettlementValidationResultResult = AjaxResult<SettlementValidationResult>
 export type SettlementRebuildResultResult = AjaxResult<SettlementRebuildResult>
+
+/** 荣誉展示状态 */
+export const HONOR_DISPLAY_STATUS_OPTIONS = [
+  { value: 0, label: '草稿' },
+  { value: 1, label: '已发布' },
+  { value: 2, label: '已下线' },
+  { value: 3, label: '已撤销' }
+]
+
+/** 赛季名次状态 */
+export const SEASON_RESULT_STATUS_OPTIONS = [
+  { value: 'DRAFT', label: '未确认' },
+  { value: 'CONFIRMED', label: '已确认未发布' },
+  { value: 'PUBLISHED', label: '已发布' },
+  { value: 'REVOKED', label: '已撤销' }
+]
+
+/** 球队荣誉编码 */
+export const TEAM_HONOR_CODE_OPTIONS = [
+  { value: 'TEAM_HONOR', label: '球队荣誉' },
+  { value: 'CHAMPION', label: '冠军' },
+  { value: 'RUNNER_UP', label: '亚军' },
+  { value: 'THIRD_PLACE', label: '季军' }
+]
+
+/** 球员荣誉编码 / 候选奖项 */
+export const PLAYER_HONOR_CODE_OPTIONS = [
+  { value: 'PLAYER_HONOR', label: '球员荣誉' },
+  { value: 'SCORING_CHAMPION', label: '得分王' },
+  { value: 'REBOUND_CHAMPION', label: '篮板王' },
+  { value: 'ASSIST_CHAMPION', label: '助攻王' },
+  { value: 'STEAL_CHAMPION', label: '抢断王' },
+  { value: 'BLOCK_CHAMPION', label: '盖帽王' }
+]
+
+export const PLAYER_HONOR_AWARD_TYPE_OPTIONS = [
+  { value: 'SCORING', label: '得分王' },
+  { value: 'REBOUND', label: '篮板王' },
+  { value: 'ASSIST', label: '助攻王' },
+  { value: 'STEAL', label: '抢断王' },
+  { value: 'BLOCK', label: '盖帽王' }
+]
+
+/** 公告状态 */
+export const ANNOUNCEMENT_STATUS_OPTIONS = [
+  { value: 0, label: '草稿' },
+  { value: 1, label: '已发布' },
+  { value: 2, label: '已下线' }
+]
+
+export const ANNOUNCEMENT_CATEGORY_OPTIONS = [
+  { value: 'NOTICE', label: '通知公告' },
+  { value: 'RULE', label: '规则说明' },
+  { value: 'EVENT', label: '赛事资讯' },
+  { value: 'OTHER', label: '其他' }
+]
+
+/** 首页横幅状态 */
+export const HOME_BANNER_STATUS_OPTIONS = [
+  { value: 0, label: '草稿' },
+  { value: 1, label: '已发布' },
+  { value: 2, label: '已下线' }
+]
+
+export const HOME_BANNER_TARGET_TYPE_OPTIONS = [
+  { value: 'NONE', label: '无跳转' },
+  { value: 'TOURNAMENT', label: '赛事' },
+  { value: 'ANNOUNCEMENT', label: '公告' },
+  { value: 'TEAM', label: '球队' },
+  { value: 'PLAYER', label: '球员' },
+  { value: 'EXTERNAL', label: '外链' }
+]
+
+export const HOME_BANNER_POSITION_OPTIONS = [
+  { value: 'HOME_TOP', label: '首页顶部' }
+]
+
+/** 合作伙伴状态 */
+export const PARTNER_STATUS_OPTIONS = [
+  { value: 0, label: '草稿' },
+  { value: 1, label: '已发布' },
+  { value: 2, label: '已下线' }
+]
+
+export const PARTNER_TYPE_OPTIONS = [
+  { value: 'SPONSOR', label: '赞助商' },
+  { value: 'MEDIA', label: '媒体' },
+  { value: 'TECH', label: '技术合作' },
+  { value: 'OTHER', label: '其他' }
+]
+
+export interface SeasonResultListItem {
+  seasonId: number
+  seasonNo?: string
+  seasonName?: string
+  seasonYear?: number
+  tournamentId?: number
+  seasonStatus?: number
+  seasonStatusName?: string
+  championTeamId?: number
+  championTeamName?: string
+  runnerUpTeamId?: number
+  runnerUpTeamName?: string
+  resultStatus?: string
+  resultStatusName?: string
+}
+
+export interface SeasonResultDetail {
+  seasonId: number
+  seasonNo?: string
+  seasonName?: string
+  seasonYear?: number
+  tournamentId?: number
+  tournamentName?: string
+  seasonStatus?: number
+  seasonStatusName?: string
+  championTeamId?: number
+  championTeamName?: string
+  runnerUpTeamId?: number
+  runnerUpTeamName?: string
+  thirdPlaceTeamId?: number
+  thirdPlaceTeamName?: string
+  resultStatus?: string
+  resultStatusName?: string
+  confirmedMatchCount?: number
+  unfinishedMatchCount?: number
+  reopenedMatchCount?: number
+  finishedUnconfirmedCount?: number
+  teamSeasonStatCount?: number
+  honors?: HonorRecordListItem[]
+  championLineup?: HonorLineupItem[]
+  updateTime?: string
+}
+
+export interface SeasonEndCheck {
+  seasonId?: number
+  canConfirm?: boolean
+  confirmedMatchCount?: number
+  unfinishedMatchCount?: number
+  reopenedMatchCount?: number
+  finishedUnconfirmedCount?: number
+  teamSeasonStatCount?: number
+  requireConfirmRemark?: boolean
+  blockers?: string[]
+  warnings?: string[]
+}
+
+export interface SeasonCandidateTeam {
+  teamId: number
+  teamName?: string
+  logoUrl?: string
+}
+
+export interface SeasonResultConfirmReq {
+  championTeamId?: number
+  runnerUpTeamId?: number
+  thirdPlaceTeamId?: number
+  confirmRemark?: string
+}
+
+export interface SeasonResultRevokeReq {
+  revokeReason?: string
+}
+
+export interface HonorRecordQuery extends PageDomain {
+  tournamentId?: number
+  seasonId?: number
+  honorCategoryId?: number
+  honorCode?: string
+  honorScope?: string
+  recipientType?: string
+  teamId?: number
+  playerId?: number
+  displayStatus?: number
+  keyword?: string
+}
+
+export interface HonorRecordListItem {
+  id: number
+  tournamentId?: number
+  seasonId?: number
+  seasonName?: string
+  honorCategoryId?: number
+  honorCode?: string
+  honorName?: string
+  honorScope?: string
+  recipientType?: string
+  teamId?: number
+  teamName?: string
+  playerId?: number
+  playerName?: string
+  matchId?: number
+  honorTitle?: string
+  honorSubtitle?: string
+  honorValue?: string
+  awardDate?: string
+  coverFileId?: number
+  coverUrl?: string
+  sourceType?: string
+  sourceId?: number
+  displayStatus?: number
+  displayStatusName?: string
+  displayOrder?: number
+  remark?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface HonorLineupItem {
+  id?: number
+  honorRecordId?: number
+  teamId?: number
+  playerId?: number
+  memberId?: number
+  playerName?: string
+  roleType?: string
+  jerseyNo?: string
+  positionCode?: string
+  sortNo?: number
+  avatarUrl?: string
+}
+
+export interface HonorRecordDetail extends HonorRecordListItem {
+  lineup?: HonorLineupItem[]
+}
+
+export interface HonorRecordAddReq {
+  tournamentId?: number
+  seasonId?: number
+  honorCategoryId?: number
+  honorCode?: string
+  teamId?: number
+  playerId?: number
+  matchId?: number
+  honorTitle?: string
+  honorSubtitle?: string
+  honorValue?: string
+  awardDate?: string
+  coverFileId?: number
+  displayOrder?: number
+  remark?: string
+}
+
+export interface HonorRecordEditReq {
+  honorCategoryId?: number
+  honorCode?: string
+  teamId?: number
+  playerId?: number
+  matchId?: number
+  honorTitle?: string
+  honorSubtitle?: string
+  honorValue?: string
+  awardDate?: string
+  coverFileId?: number
+  displayOrder?: number
+  remark?: string
+}
+
+export interface HonorRecordRevokeReq {
+  reason?: string
+  revokeReason?: string
+}
+
+export interface PlayerHonorCandidateQuery {
+  seasonId?: number
+  stageId?: number
+  awardType?: string
+}
+
+export interface PlayerHonorCandidate {
+  playerId: number
+  playerNo?: string
+  displayName?: string
+  avatarUrl?: string
+  teamId?: number
+  teamName?: string
+  rankNo?: number
+  statValue?: number
+  games?: number
+  rankType?: string
+  awardType?: string
+}
+
+export interface AnnouncementQuery extends PageDomain {
+  categoryCode?: string
+  announcementStatus?: number
+  isTop?: number
+  isImportant?: number
+  keyword?: string
+}
+
+export interface AnnouncementListItem {
+  id: number
+  announcementNo?: string
+  categoryCode?: string
+  categoryName?: string
+  title?: string
+  summary?: string
+  coverFileId?: number
+  coverUrl?: string
+  authorId?: number
+  authorName?: string
+  announcementStatus?: number
+  announcementStatusName?: string
+  publicScope?: string
+  isTop?: number
+  isImportant?: number
+  publishTime?: string
+  offlineTime?: string
+  viewCount?: number
+  createTime?: string
+  updateTime?: string
+}
+
+export interface AnnouncementDetail extends AnnouncementListItem {
+  contentText?: string
+}
+
+export interface AnnouncementAddReq {
+  categoryCode?: string
+  title?: string
+  summary?: string
+  coverFileId?: number
+  contentText?: string
+  publicScope?: string
+  isImportant?: number
+}
+
+export interface AnnouncementEditReq {
+  categoryCode?: string
+  title?: string
+  summary?: string
+  coverFileId?: number
+  contentText?: string
+  publicScope?: string
+  isImportant?: number
+}
+
+export interface HomeBannerQuery extends PageDomain {
+  positionCode?: string
+  bannerStatus?: number
+  keyword?: string
+}
+
+export interface HomeBannerListItem {
+  id: number
+  bannerName?: string
+  title?: string
+  subtitle?: string
+  imageFileId?: number
+  imageUrl?: string
+  positionCode?: string
+  targetType?: string
+  targetValue?: string
+  startTime?: string
+  endTime?: string
+  bannerStatus?: number
+  bannerStatusName?: string
+  sortNo?: number
+  createTime?: string
+  updateTime?: string
+}
+
+export interface HomeBannerAddReq {
+  bannerName?: string
+  title?: string
+  subtitle?: string
+  imageFileId?: number
+  positionCode?: string
+  targetType?: string
+  targetValue?: string
+  startTime?: string
+  endTime?: string
+  sortNo?: number
+}
+
+export interface HomeBannerEditReq {
+  bannerName?: string
+  title?: string
+  subtitle?: string
+  imageFileId?: number
+  positionCode?: string
+  targetType?: string
+  targetValue?: string
+  startTime?: string
+  endTime?: string
+  sortNo?: number
+}
+
+export interface PartnerQuery extends PageDomain {
+  partnerType?: string
+  partnerStatus?: number
+  keyword?: string
+}
+
+export interface PartnerListItem {
+  id: number
+  partnerName?: string
+  logoFileId?: number
+  logoUrl?: string
+  websiteUrl?: string
+  partnerType?: string
+  cooperationStartDate?: string
+  cooperationEndDate?: string
+  partnerStatus?: number
+  partnerStatusName?: string
+  sortNo?: number
+  remark?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface PartnerAddReq {
+  partnerName?: string
+  logoFileId?: number
+  websiteUrl?: string
+  partnerType?: string
+  cooperationStartDate?: string
+  cooperationEndDate?: string
+  sortNo?: number
+  remark?: string
+}
+
+export interface PartnerEditReq {
+  partnerName?: string
+  logoFileId?: number
+  websiteUrl?: string
+  partnerType?: string
+  cooperationStartDate?: string
+  cooperationEndDate?: string
+  sortNo?: number
+  remark?: string
+}

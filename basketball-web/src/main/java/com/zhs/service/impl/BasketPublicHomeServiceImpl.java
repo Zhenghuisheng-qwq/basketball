@@ -11,8 +11,11 @@ import com.zhs.response.publicapi.PublicMatchItemVo;
 import com.zhs.response.publicapi.PublicPlayerRankItemVo;
 import com.zhs.response.publicapi.PublicSeasonSummaryVo;
 import com.zhs.response.publicapi.PublicTeamRankItemVo;
+import com.zhs.service.IBasketPublicAnnouncementService;
+import com.zhs.service.IBasketPublicBannerService;
 import com.zhs.service.IBasketPublicDataCenterService;
 import com.zhs.service.IBasketPublicHomeService;
+import com.zhs.service.IBasketPublicPartnerService;
 import com.zhs.service.IBasketPublicSeasonStatService;
 import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicSupport;
@@ -45,18 +48,41 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
     private IBasketPublicDataCenterService dataCenterService;
     @Resource
     private IBasketPublicSeasonStatService seasonStatService;
+    @Resource
+    private IBasketPublicBannerService bannerService;
+    @Resource
+    private IBasketPublicAnnouncementService announcementService;
+    @Resource
+    private IBasketPublicPartnerService partnerService;
 
     @Override
     public PublicHomeVo getHome() {
         return publicSupport.cacheGetOrLoad("home:aggregate", () -> {
             PublicHomeVo vo = new PublicHomeVo();
-            vo.setRecentMatches(listRecentMatches(BasketPublicConstants.HOME_LIMIT));
-            vo.setTeamRankings(listTeamRanking(BasketPublicConstants.HOME_LIMIT));
-            vo.setPlayerRankings(listPlayerRanking(BasketPublicConstants.HOME_LIMIT));
-            vo.setSeasonSummary(getStatSummary());
+            vo.setRecentMatches(safeList(() -> listRecentMatches(BasketPublicConstants.HOME_LIMIT)));
+            vo.setTeamRankings(safeList(() -> listTeamRanking(BasketPublicConstants.HOME_LIMIT)));
+            vo.setPlayerRankings(safeList(() -> listPlayerRanking(BasketPublicConstants.HOME_LIMIT)));
+            try {
+                vo.setSeasonSummary(getStatSummary());
+            } catch (Exception ignored) {
+                vo.setSeasonSummary(null);
+            }
             vo.setHotTeamSourceNote(HOT_TEAM_SOURCE_NOTE);
+            vo.setBanners(safeList(() -> bannerService.listBanners(null)));
+            vo.setLatestAnnouncements(safeList(() ->
+                    announcementService.listLatest(BasketPublicConstants.HOME_ANNOUNCEMENT_LIMIT)));
+            vo.setPartners(safeList(partnerService::listPartners));
             return vo;
         });
+    }
+
+    private <T> List<T> safeList(java.util.function.Supplier<List<T>> supplier) {
+        try {
+            List<T> list = supplier.get();
+            return list == null ? Collections.emptyList() : list;
+        } catch (Exception ignored) {
+            return Collections.emptyList();
+        }
     }
 
     @Override

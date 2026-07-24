@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import type { AnnouncementFilterCategory } from '../types'
-import { ANNOUNCEMENT_FILTER_TABS } from '../mock/announcements'
+import { computed } from 'vue'
+import type { AnnouncementCategory } from '../types'
 
-defineProps<{
-  modelValue: AnnouncementFilterCategory
+const props = defineProps<{
+  modelValue: string
+  categories: AnnouncementCategory[]
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: AnnouncementFilterCategory]
+  'update:modelValue': [value: string]
 }>()
 
-function selectCategory(code: AnnouncementFilterCategory) {
+const tabs = computed(() => [
+  { code: 'ALL', name: '全部' },
+  ...props.categories,
+])
+
+function selectCategory(code: string) {
   emit('update:modelValue', code)
 }
 </script>
@@ -18,7 +24,7 @@ function selectCategory(code: AnnouncementFilterCategory) {
 <template>
   <div class="announcement-category-tabs" role="tablist" aria-label="公告分类">
     <button
-      v-for="tab in ANNOUNCEMENT_FILTER_TABS"
+      v-for="tab in tabs"
       :key="tab.code"
       type="button"
       role="tab"

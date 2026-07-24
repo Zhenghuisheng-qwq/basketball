@@ -10,7 +10,7 @@ const emit = defineEmits<{
 }>()
 
 const tabs: Array<{ value: HallTab; label: string }> = [
-  { value: 'weekly', label: '周最佳' },
+  { value: 'weekly', label: '球员荣誉' },
   { value: 'event', label: '赛事荣誉' },
   { value: 'champions', label: '历届冠军' },
 ]

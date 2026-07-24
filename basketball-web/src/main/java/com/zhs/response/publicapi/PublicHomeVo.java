@@ -25,4 +25,13 @@ public class PublicHomeVo implements Serializable {
 
     @ApiModelProperty("热门球队说明：无热度字段时取当前公开赛季球队榜 WIN_RATE 前 N")
     private String hotTeamSourceNote;
+
+    @ApiModelProperty("运营位横幅（不替换静态 home_top.png）")
+    private List<PublicHomeBannerResp> banners;
+
+    @ApiModelProperty("最新公告（最多 5 条，不含正文）")
+    private List<PublicAnnouncementItemResp> latestAnnouncements;
+
+    @ApiModelProperty("合作伙伴")
+    private List<PublicPartnerResp> partners;
 }

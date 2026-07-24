@@ -109,12 +109,127 @@ export interface PublicSeasonSummaryVo {
   playerStatCount?: number | null
 }
 
+export interface PublicHomeBannerResp {
+  bannerId: string
+  title?: string | null
+  subtitle?: string | null
+  imageUrl?: string | null
+  positionCode?: string | null
+  targetType?: string | null
+  targetValue?: string | null
+  sortNo?: number | null
+}
+
+export interface PublicAnnouncementCategoryResp {
+  categoryCode: string
+  categoryName?: string | null
+}
+
+export interface PublicAnnouncementItemResp {
+  announcementId: string
+  announcementNo?: string | null
+  categoryCode?: string | null
+  categoryName?: string | null
+  title?: string | null
+  summary?: string | null
+  coverUrl?: string | null
+  authorName?: string | null
+  isTop?: number | null
+  isImportant?: number | null
+  publishTime?: string | null
+  viewCount?: number | string | null
+}
+
+export interface PublicAnnouncementDetailResp extends PublicAnnouncementItemResp {
+  /** 正文纯文本，勿当 HTML 渲染 */
+  contentText?: string | null
+}
+
+export interface PublicAnnouncementAdjacentResp {
+  previous?: PublicAnnouncementItemResp | null
+  next?: PublicAnnouncementItemResp | null
+}
+
+export interface PublicPartnerResp {
+  partnerId: string
+  partnerName?: string | null
+  logoUrl?: string | null
+  websiteUrl?: string | null
+  partnerType?: string | null
+  sortNo?: number | null
+}
+
+export interface PublicHonorLineupItemResp {
+  lineupId?: string | null
+  teamId?: string | null
+  playerId?: string | null
+  playerName?: string | null
+  avatarUrl?: string | null
+  roleType?: string | null
+  jerseyNo?: string | null
+  positionCode?: string | null
+  sortNo?: number | null
+}
+
+export interface PublicHonorItemResp {
+  honorId: string
+  tournamentId?: string | null
+  tournamentName?: string | null
+  seasonId?: string | null
+  seasonName?: string | null
+  honorCode?: string | null
+  honorName?: string | null
+  honorScope?: string | null
+  recipientType?: string | null
+  teamId?: string | null
+  teamName?: string | null
+  teamLogoUrl?: string | null
+  playerId?: string | null
+  playerName?: string | null
+  playerAvatarUrl?: string | null
+  honorTitle?: string | null
+  honorSubtitle?: string | null
+  honorValue?: string | null
+  awardDate?: string | null
+  coverUrl?: string | null
+  displayOrder?: number | null
+}
+
+export interface PublicHonorDetailResp extends PublicHonorItemResp {
+  lineup?: PublicHonorLineupItemResp[] | null
+}
+
+export interface PublicHallOverviewResp {
+  tournamentHonorCount?: number | null
+  playerHonorCount?: number | null
+  teamHonorCount?: number | null
+  latestTournamentHonors?: PublicHonorItemResp[] | null
+  latestPlayerHonors?: PublicHonorItemResp[] | null
+  latestTeamHonors?: PublicHonorItemResp[] | null
+}
+
+export interface PublicSeasonPlacementResp {
+  seasonId: string
+  seasonName?: string | null
+  published?: boolean | null
+  championTeamId?: string | null
+  championTeamName?: string | null
+  championTeamLogoUrl?: string | null
+  runnerUpTeamId?: string | null
+  runnerUpTeamName?: string | null
+  runnerUpTeamLogoUrl?: string | null
+  championHonorId?: string | null
+}
+
 export interface PublicHomeVo {
   recentMatches?: PublicMatchItemVo[] | null
   teamRankings?: PublicTeamRankItemVo[] | null
   playerRankings?: PublicPlayerRankItemVo[] | null
   seasonSummary?: PublicSeasonSummaryVo | null
   hotTeamSourceNote?: string | null
+  banners?: PublicHomeBannerResp[] | null
+  latestAnnouncements?: PublicAnnouncementItemResp[] | null
+  partners?: PublicPartnerResp[] | null
 }
 
 export interface PublicTournamentItemVo {

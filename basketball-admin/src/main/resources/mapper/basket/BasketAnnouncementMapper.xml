@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketAnnouncementMapper">
+    <resultMap type="com.zhs.basket.domain.BasketAnnouncement" id="BasketAnnouncementResult">
+        <id property="id" column="id"/>
+        <result property="announcementNo" column="announcement_no"/>
+        <result property="categoryCode" column="category_code"/>
+        <result property="title" column="title"/>
+        <result property="summary" column="summary"/>
+        <result property="coverFileId" column="cover_file_id"/>
+        <result property="contentText" column="content_text"/>
+        <result property="authorId" column="author_id"/>
+        <result property="authorName" column="author_name"/>
+        <result property="announcementStatus" column="announcement_status"/>
+        <result property="publicScope" column="public_scope"/>
+        <result property="isTop" column="is_top"/>
+        <result property="isImportant" column="is_important"/>
+        <result property="publishTime" column="publish_time"/>
+        <result property="offlineTime" column="offline_time"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="listSelect">
+        select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode, a.title,
+               a.summary, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
+               a.author_id as authorId, a.author_name as authorName,
+               a.announcement_status as announcementStatus, a.public_scope as publicScope,
+               a.is_top as isTop, a.is_important as isImportant, a.publish_time as publishTime,
+               a.offline_time as offlineTime, a.view_count as viewCount,
+               a.create_time as createTime, a.update_time as updateTime
+        from basket_announcement a
+        left join basket_file_asset cf on cf.id = a.cover_file_id and cf.is_delete = 0
+    </sql>
+
+    <select id="selectById" resultMap="BasketAnnouncementResult">
+        select id, announcement_no, category_code, title, summary, cover_file_id, content_text,
+               author_id, author_name, announcement_status, public_scope, is_top, is_important,
+               publish_time, offline_time, view_count, create_time, update_time, is_delete
+        from basket_announcement where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectDetailById" resultType="com.zhs.basket.resp.AnnouncementDetailResp">
+        select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode, a.title,
+               a.summary, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
+               a.content_text as contentText, a.author_id as authorId, a.author_name as authorName,
+               a.announcement_status as announcementStatus, a.public_scope as publicScope,
+               a.is_top as isTop, a.is_important as isImportant, a.publish_time as publishTime,
+               a.offline_time as offlineTime, a.view_count as viewCount,
+               a.create_time as createTime, a.update_time as updateTime
+        from basket_announcement a
+        left join basket_file_asset cf on cf.id = a.cover_file_id and cf.is_delete = 0
+        where a.id = #{id} and a.is_delete = 0
+    </select>
+
+    <select id="selectList" resultType="com.zhs.basket.resp.AnnouncementListResp">
+        <include refid="listSelect"/>
+        where a.is_delete = 0
+        <if test="categoryCode != null and categoryCode != ''">and a.category_code = #{categoryCode}</if>
+        <if test="announcementStatus != null">and a.announcement_status = #{announcementStatus}</if>
+        <if test="isTop != null">and a.is_top = #{isTop}</if>
+        <if test="isImportant != null">and a.is_important = #{isImportant}</if>
+        <if test="keyword != null and keyword != ''">
+            and (a.title like concat('%', #{keyword}, '%')
+                 or a.summary like concat('%', #{keyword}, '%')
+                 or a.announcement_no like concat('%', #{keyword}, '%'))
+        </if>
+        order by a.is_top desc, a.is_important desc, a.publish_time desc, a.id desc
+    </select>
+
+    <select id="countByNoPrefix" resultType="int">
+        select count(1) from basket_announcement where announcement_no like concat(#{prefix}, '%')
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_announcement (
+            announcement_no, category_code, title, summary, cover_file_id, content_text,
+            author_id, author_name, announcement_status, public_scope, is_top, is_important,
+            publish_time, offline_time, view_count, create_time, update_time, is_delete
+        ) values (
+            #{announcementNo}, #{categoryCode}, #{title}, #{summary}, #{coverFileId}, #{contentText},
+            #{authorId}, #{authorName}, #{announcementStatus}, #{publicScope}, #{isTop}, #{isImportant},
+            #{publishTime}, #{offlineTime}, #{viewCount}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_announcement
+        <set>
+            <if test="categoryCode != null">category_code = #{categoryCode},</if>
+            <if test="title != null">title = #{title},</if>
+            <if test="summary != null">summary = #{summary},</if>
+            <if test="coverFileId != null">cover_file_id = #{coverFileId},</if>
+            <if test="contentText != null">content_text = #{contentText},</if>
+            <if test="publicScope != null">public_scope = #{publicScope},</if>
+            <if test="isImportant != null">is_important = #{isImportant},</if>
+            <if test="announcementStatus != null">announcement_status = #{announcementStatus},</if>
+            <if test="isTop != null">is_top = #{isTop},</if>
+            <if test="publishTime != null">publish_time = #{publishTime},</if>
+            <if test="offlineTime != null">offline_time = #{offlineTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="updateStatusIfMatch">
+        update basket_announcement
+        set announcement_status = #{toStatus}, update_time = now()
+        where id = #{id} and is_delete = 0 and announcement_status = #{fromStatus}
+    </update>
+
+    <update id="publishIfMatch">
+        update basket_announcement
+        set announcement_status = 1, publish_time = now(), offline_time = null, update_time = now()
+        where id = #{id} and is_delete = 0 and announcement_status = #{fromStatus}
+    </update>
+
+    <update id="offlineIfMatch">
+        update basket_announcement
+        set announcement_status = 2, offline_time = now(), is_top = 0, update_time = now()
+        where id = #{id} and is_delete = 0 and announcement_status = #{fromStatus}
+    </update>
+
+    <update id="updateTop">
+        update basket_announcement
+        set is_top = #{isTop}, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_announcement set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0 and announcement_status in
+        <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+    </update>
+</mapper>

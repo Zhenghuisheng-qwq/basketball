@@ -66,6 +66,12 @@
           and match_status in (0, 1, 2, 4)
     </select>
 
+    <select id="countFinishedUnconfirmed" resultType="int">
+        select count(1) from basket_match
+        where is_delete = 0 and season_id = #{seasonId}
+          and match_status = 3 and data_status &lt;&gt; 2
+    </select>
+
     <select id="selectTeamStatAgg" resultType="java.util.HashMap">
         select ts.team_id as teamId,
                count(distinct ts.match_id) as games,

@@ -15,12 +15,14 @@ import com.zhs.model.BasketPlayerRank;
 import com.zhs.model.BasketPlayerSeasonStat;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTournamentSeason;
+import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.publicapi.PublicMatchItemVo;
 import com.zhs.response.publicapi.PublicPlayerDetailVo;
 import com.zhs.response.publicapi.PublicPlayerRankItemVo;
 import com.zhs.response.publicapi.PublicPlayerSeasonStatVo;
 import com.zhs.service.IBasketPublicPlayerService;
 import com.zhs.service.support.BasketPublicConstants;
+import com.zhs.service.support.BasketPublicHonorSupport;
 import com.zhs.service.support.BasketPublicSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -47,6 +49,8 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
     private BasketPlayerRankDao playerRankDao;
     @Resource
     private BasketPublicSupport publicSupport;
+    @Resource
+    private BasketPublicHonorSupport honorSupport;
     @Resource
     private BasketPublicMatchServiceImpl matchService;
     @Resource
@@ -179,6 +183,15 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
                 .eq(BasketPlayerRank::getIsDelete, BasketPublicConstants.NOT_DELETED)
                 .orderByAsc(BasketPlayerRank::getRankNo));
         return dataCenterService.toPlayerRankVos(ranks, typeEnum);
+    }
+
+    @Override
+    public IPage<PublicHonorItemResp> pageHonors(Long playerId, Integer currentPage, Integer pageSize) {
+        BasketPlayerProfile player = publicSupport.requirePlayer(playerId);
+        if (!publicSupport.isPlayerPubliclyVisible(player)) {
+            return publicSupport.emptyPage(currentPage, pageSize);
+        }
+        return honorSupport.pageByPlayer(playerId, currentPage, pageSize);
     }
 
     private Date latestSnapshot(Long seasonId, String rankType) {

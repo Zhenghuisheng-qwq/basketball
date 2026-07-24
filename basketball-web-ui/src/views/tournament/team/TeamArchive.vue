@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { TeamArchiveData, TeamHonor, TeamLogoHistoryItem, TeamNameHistoryItem } from '@/types/team'
+import { computed, inject, ref, watch } from 'vue'
+import { getPublicTeamHonorPage } from '@/api/publicTeam'
+import type { TeamHonor, TeamLogoHistoryItem, TeamNameHistoryItem } from '@/types/team'
+import { displayText, formatDateTime } from '@/utils/publicDisplay'
+import {
+  PUBLIC_TEAM_PAGE_KEY,
+  type PublicTeamPageContext,
+} from './composables/usePublicTeamPage'
 
 interface ArchiveBlock {
   key: 'honors' | 'names' | 'logos'
@@ -16,8 +22,8 @@ const archiveBlocks: ArchiveBlock[] = [
     key: 'honors',
     title: '球队荣誉',
     subtitle: 'Team Honors',
-    emptyTitle: '暂无球队荣誉',
-    emptyDesc: '球队获得冠军荣誉后将在此展示',
+    emptyTitle: '暂无荣誉记录',
+    emptyDesc: '球队获得荣誉并发布后将在此展示',
     icon: 'trophy',
   },
   {
@@ -38,16 +44,81 @@ const archiveBlocks: ArchiveBlock[] = [
   },
 ]
 
-const archiveData = computed<TeamArchiveData>(() => ({
-  honors: [],
-  nameHistory: [],
-  logoHistory: [],
-}))
+const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
+const honors = ref<TeamHonor[]>([])
+const honorState = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
+const honorError = ref('')
+let honorReq = 0
+
+const nameHistory = computed<TeamNameHistoryItem[]>(() => {
+  const team = ctx.teamView.value
+  if (!team) return []
+  return [
+    {
+      id: team.id,
+      period: '当前',
+      name: team.name,
+      note: '当前使用名称',
+      isCurrent: true,
+    },
+  ]
+})
+
+const logoHistory = computed<TeamLogoHistoryItem[]>(() => {
+  const team = ctx.teamView.value
+  if (!team) return []
+  return [
+    {
+      id: team.id,
+      period: '当前',
+      label: team.name,
+      logo: team.logoUrl,
+      isCurrent: true,
+    },
+  ]
+})
+
+async function loadHonors(teamId: string) {
+  const current = ++honorReq
+  if (!teamId) {
+    honors.value = []
+    honorState.value = 'empty'
+    return
+  }
+  honorState.value = 'loading'
+  honorError.value = ''
+  try {
+    const res = await getPublicTeamHonorPage(teamId, { currentPage: 1, pageSize: 50 })
+    if (current !== honorReq) return
+    const records = res.data?.records ?? []
+    honors.value = records.map((item, index) => ({
+      id: String(item.honorId),
+      competitionName: displayText(item.tournamentName || item.seasonName, '公开赛事'),
+      honorTitle: displayText(item.honorTitle || item.honorName, '球队荣誉'),
+      date: formatDateTime(item.awardDate).date,
+      isLatest: index === 0,
+    }))
+    honorState.value = honors.value.length ? 'success' : 'empty'
+  } catch (err) {
+    if (current !== honorReq) return
+    honors.value = []
+    honorState.value = 'error'
+    honorError.value = err instanceof Error ? err.message : '加载球队荣誉失败'
+  }
+}
+
+watch(
+  () => ctx.teamId.value,
+  (teamId) => {
+    void loadHonors(teamId)
+  },
+  { immediate: true },
+)
 
 function hasBlockData(key: ArchiveBlock['key']): boolean {
-  if (key === 'honors') return archiveData.value.honors.length > 0
-  if (key === 'names') return archiveData.value.nameHistory.length > 0
-  return archiveData.value.logoHistory.length > 0
+  if (key === 'honors') return honors.value.length > 0
+  if (key === 'names') return nameHistory.value.length > 0
+  return logoHistory.value.length > 0
 }
 
 function getHonorInitial(honor: TeamHonor): string {
@@ -79,7 +150,20 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
         <span class="block-title__en">{{ block.subtitle }}</span>
       </div>
 
-      <div v-if="!hasBlockData(block.key)" class="empty-card">
+      <div
+        v-if="block.key === 'honors' && honorState === 'loading'"
+        class="empty-card"
+      >
+        <h4>加载中...</h4>
+      </div>
+      <div
+        v-else-if="block.key === 'honors' && honorState === 'error'"
+        class="empty-card"
+      >
+        <h4>加载失败</h4>
+        <p>{{ honorError }}</p>
+      </div>
+      <div v-else-if="!hasBlockData(block.key)" class="empty-card">
         <div class="empty-icon" :class="`empty-icon--${block.icon}`" aria-hidden="true" />
         <h4>{{ block.emptyTitle }}</h4>
         <p>{{ block.emptyDesc }}</p>
@@ -87,7 +171,7 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
 
       <div v-else-if="block.key === 'honors'" class="archive-list">
         <article
-          v-for="honor in archiveData.honors"
+          v-for="honor in honors"
           :key="honor.id"
           class="archive-item archive-item--honor"
         >
@@ -102,7 +186,7 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
 
       <div v-else-if="block.key === 'names'" class="archive-list">
         <article
-          v-for="item in archiveData.nameHistory"
+          v-for="item in nameHistory"
           :key="item.id"
           class="archive-item archive-item--name"
         >
@@ -117,7 +201,7 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
 
       <div v-else class="archive-list archive-list--logos">
         <article
-          v-for="item in archiveData.logoHistory"
+          v-for="item in logoHistory"
           :key="item.id"
           class="archive-item archive-item--logo"
         >
@@ -203,226 +287,106 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
 
 .block-title__cn {
   margin: 0;
-  color: var(--cnpa-paper-text);
-  font-size: clamp(22px, 2vw, 24px);
-  line-height: 1;
+  font-size: 22px;
   font-weight: 900;
-  letter-spacing: -0.02em;
 }
 
 .block-title__en {
-  color: var(--cnpa-red);
-  font-size: clamp(12px, 1.1vw, 13px);
-  font-weight: 900;
-  font-style: italic;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
 }
 
 .empty-card {
-  min-height: 168px;
-  padding: 28px 20px;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  background: rgba(25, 25, 25, 0.025);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  border-radius: 3px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
-  box-sizing: border-box;
+  padding: 28px 22px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.28);
+
+  h4 {
+    margin: 0 0 8px;
+    font-size: 16px;
+  }
+
+  p {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 13px;
+  }
 }
 
 .empty-icon {
-  position: relative;
-  width: 54px;
-  height: 50px;
-  margin-bottom: 14px;
-  color: rgba(0, 0, 0, 0.32);
-}
-
-.empty-icon--trophy::before {
-  content: '';
-  position: absolute;
-  left: 18px;
-  top: 3px;
-  width: 20px;
-  height: 24px;
-  border: 4px solid currentColor;
-  border-top-width: 3px;
-  border-radius: 3px 3px 9px 9px;
-}
-
-.empty-icon--trophy::after {
-  content: '';
-  position: absolute;
-  left: 10px;
-  top: 26px;
-  width: 34px;
-  height: 20px;
-  border-bottom: 4px solid currentColor;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-}
-
-.empty-icon--card::before {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 7px;
-  width: 46px;
-  height: 31px;
-  border: 4px solid currentColor;
-  border-radius: 2px;
-}
-
-.empty-icon--card::after {
-  content: '';
-  position: absolute;
-  left: 13px;
-  top: 17px;
-  width: 28px;
-  height: 12px;
-  border-top: 4px solid currentColor;
-  border-bottom: 4px solid currentColor;
-}
-
-.empty-icon--image::before {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 5px;
-  width: 44px;
+  width: 36px;
   height: 36px;
-  border: 4px solid currentColor;
-  border-radius: 2px;
-}
-
-.empty-icon--image::after {
-  content: '';
-  position: absolute;
-  left: 13px;
-  top: 22px;
-  width: 28px;
-  height: 13px;
-  border-left: 4px solid currentColor;
-  border-bottom: 4px solid currentColor;
-  transform: skewX(-26deg) rotate(-8deg);
-}
-
-.empty-card h4 {
-  margin: 0;
-  font-size: 19px;
-  line-height: 1.2;
-  color: var(--cnpa-paper-text);
-  font-weight: 900;
-}
-
-.empty-card p {
-  margin: 11px 0 0;
-  font-size: 13px;
-  color: rgba(0, 0, 0, 0.62);
-  font-weight: 600;
+  margin-bottom: 12px;
+  border-radius: 50%;
+  background: rgba(225, 6, 19, 0.12);
 }
 
 .archive-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.archive-list--logos {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px;
+  gap: 10px;
 }
 
 .archive-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-height: 88px;
-  padding: 16px 18px;
-  border: 1px solid var(--cnpa-paper-border);
-  border-radius: 3px;
-  background: rgba(25, 25, 25, 0.03);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
-  box-sizing: border-box;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .archive-item__badge,
 .archive-item__logo {
-  flex-shrink: 0;
-  width: 52px;
-  height: 52px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 3px;
-  background: linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 100%);
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  background: #111;
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 900;
-  letter-spacing: 0.04em;
-}
+  overflow: hidden;
 
-.archive-item__logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 2px;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 }
 
 .archive-item__content {
-  flex: 1;
   min-width: 0;
+  flex: 1;
 }
 
 .archive-item__title {
   display: block;
-  font-size: 16px;
-  font-weight: 900;
-  color: var(--cnpa-paper-text);
+  color: #111;
+  font-size: 15px;
+  font-weight: 800;
 }
 
 .archive-item__meta {
   display: block;
-  margin-top: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.58);
+  margin-top: 4px;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 12px;
 }
 
 .archive-item__tag {
-  flex-shrink: 0;
-  height: 24px;
-  padding: 0 10px;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid rgba(225, 6, 19, 0.35);
-  border-radius: 2px;
-  background: rgba(225, 6, 19, 0.08);
   color: var(--cnpa-red);
   font-size: 12px;
   font-weight: 800;
 }
 
 .archive-note {
-  margin: 17px 0 0;
-  color: rgba(0, 0, 0, 0.56);
+  margin: 28px 0 0;
+  color: rgba(0, 0, 0, 0.45);
   font-size: 12px;
-  font-weight: 600;
-}
-
-@media (max-width: 768px) {
-  .archive-title {
-    align-items: baseline;
-  }
-
-  .archive-list--logos {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

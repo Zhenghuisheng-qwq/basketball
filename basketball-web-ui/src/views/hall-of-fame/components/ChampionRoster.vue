@@ -18,7 +18,8 @@ const substitutes = computed(() =>
   props.members.filter((item) => item.role !== 'STARTER').sort((a, b) => a.sortOrder - b.sortOrder),
 )
 
-function openPlayer(playerId: number) {
+function openPlayer(playerId: number | string) {
+  if (!playerId && playerId !== 0) return
   goToPlayerDetail(router, playerId, 'overview')
 }
 </script>
@@ -51,7 +52,7 @@ function openPlayer(playerId: number) {
                 {{ member.playerName }}
                 <span v-if="member.captain" class="champion-roster__captain">队长</span>
               </strong>
-              <span>{{ member.position }} · 出场 {{ member.appearances }} 次</span>
+              <span>{{ member.position }}{{ member.appearances > 0 ? ` · 出场 ${member.appearances} 次` : '' }}</span>
             </div>
           </button>
         </div>
@@ -77,7 +78,7 @@ function openPlayer(playerId: number) {
                 {{ member.playerName }}
                 <span v-if="member.captain" class="champion-roster__captain">队长</span>
               </strong>
-              <span>{{ member.position }} · 出场 {{ member.appearances }} 次</span>
+              <span>{{ member.position }}{{ member.appearances > 0 ? ` · 出场 ${member.appearances} 次` : '' }}</span>
             </div>
           </button>
         </div>

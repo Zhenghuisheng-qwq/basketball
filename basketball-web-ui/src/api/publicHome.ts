@@ -1,6 +1,7 @@
 import request from '@/api/request'
 import type { ApiResult } from '@/api/types/common'
 import type {
+  PublicHomeBannerResp,
   PublicHomeVo,
   PublicMatchItemVo,
   PublicPlayerRankItemVo,
@@ -10,6 +11,12 @@ import type {
 
 export function getPublicHome() {
   return request.get<any, ApiResult<PublicHomeVo>>('/basket/public/home')
+}
+
+export function getPublicHomeBanners(positionCode?: string) {
+  return request.get<any, ApiResult<PublicHomeBannerResp[]>>('/basket/public/home/banners', {
+    params: positionCode ? { positionCode } : undefined,
+  })
 }
 
 export function getPublicHomeRecentMatches(limit = 10) {

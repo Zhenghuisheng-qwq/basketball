@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import type { Announcement } from '../types'
-import AnnouncementListItem from './AnnouncementListItem.vue'
+import type { AnnouncementListItem } from '../types'
+import AnnouncementListItemCard from './AnnouncementListItem.vue'
 
 defineProps<{
-  items: Announcement[]
+  items: AnnouncementListItem[]
   emptyText: string
 }>()
 
 const emit = defineEmits<{
-  select: [id: number]
+  select: [id: string]
 }>()
 </script>
 
 <template>
   <div class="announcement-list">
-    <AnnouncementListItem
+    <AnnouncementListItemCard
       v-for="item in items"
       :key="item.id"
       :item="item"

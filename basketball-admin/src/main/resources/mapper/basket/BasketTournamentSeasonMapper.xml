@@ -65,4 +65,46 @@
         where id = #{id} and is_delete = 0 and season_status in
         <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
     </update>
+
+    <select id="selectSeasonResultList" resultType="com.zhs.basket.resp.SeasonResultListResp">
+        select s.id as seasonId, s.season_no as seasonNo, s.season_name as seasonName, s.season_year as seasonYear,
+               s.tournament_id as tournamentId, s.season_status as seasonStatus,
+               s.champion_team_id as championTeamId, ct.team_name as championTeamName,
+               s.runner_up_team_id as runnerUpTeamId, rt.team_name as runnerUpTeamName
+        from basket_tournament_season s
+        left join basket_team ct on ct.id = s.champion_team_id and ct.is_delete = 0
+        left join basket_team rt on rt.id = s.runner_up_team_id and rt.is_delete = 0
+        where s.is_delete = 0
+        <if test="tournamentId != null">and s.tournament_id = #{tournamentId}</if>
+        order by s.season_year desc, s.create_time desc
+    </select>
+
+    <select id="selectChampionFields" resultType="com.zhs.basket.dto.SeasonChampionDto">
+        select s.id as seasonId, s.tournament_id as tournamentId, s.season_name as seasonName, s.season_year as seasonYear,
+               s.season_status as seasonStatus,
+               s.champion_team_id as championTeamId, ct.team_name as championTeamName,
+               s.runner_up_team_id as runnerUpTeamId, rt.team_name as runnerUpTeamName
+        from basket_tournament_season s
+        left join basket_team ct on ct.id = s.champion_team_id and ct.is_delete = 0
+        left join basket_team rt on rt.id = s.runner_up_team_id and rt.is_delete = 0
+        where s.id = #{seasonId} and s.is_delete = 0
+    </select>
+
+    <update id="updateChampionIfAbsent">
+        update basket_tournament_season
+        set champion_team_id = #{championTeamId},
+            runner_up_team_id = #{runnerUpTeamId},
+            update_time = now()
+        where id = #{id} and is_delete = 0 and champion_team_id is null
+    </update>
+
+    <update id="clearChampionIfMatch">
+        update basket_tournament_season
+        set champion_team_id = null,
+            runner_up_team_id = null,
+            update_time = now()
+        where id = #{id} and is_delete = 0
+          and champion_team_id = #{championTeamId}
+          and runner_up_team_id = #{runnerUpTeamId}
+    </update>
 </mapper>

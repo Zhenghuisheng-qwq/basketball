@@ -1,8 +1,14 @@
-import type { PublicMatchItemVo, PublicPlayerDetailVo, PublicPlayerSeasonStatVo } from '@/api/types/public'
+import type {
+  PublicHonorItemResp,
+  PublicMatchItemVo,
+  PublicPlayerDetailVo,
+  PublicPlayerSeasonStatVo,
+} from '@/api/types/public'
 import { displayText, formatDateTime, toNumber } from '@/utils/publicDisplay'
 import type {
   PlayerCareerStatistics,
   PlayerDetailData,
+  PlayerHonor,
   PlayerMatchRecord,
   PlayerProfile,
   PlayerSeasonStageOption,
@@ -129,6 +135,17 @@ export function buildPlayerTeamHistory(profile: PlayerProfile): PlayerTeamHistor
       current: true,
     },
   ]
+}
+
+export function mapPublicPlayerHonors(rows: PublicHonorItemResp[]): PlayerHonor[] {
+  return rows.map((item) => ({
+    id: String(item.honorId),
+    seasonName: displayText(item.seasonName || item.tournamentName, '公开赛季'),
+    honorName: displayText(item.honorTitle || item.honorName, '球员荣誉'),
+    honorDate: formatDateTime(item.awardDate).date,
+    imageUrl: item.coverUrl || item.playerAvatarUrl || '',
+    tournamentId: item.tournamentId ? String(item.tournamentId) : undefined,
+  }))
 }
 
 export function buildEmptyPlayerDetail(profile: PlayerProfile): PlayerDetailData {

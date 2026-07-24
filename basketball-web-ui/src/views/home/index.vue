@@ -5,17 +5,22 @@ import TornEdge from '@/components/home/TornEdge.vue'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import homeTop from '@/assets/icon/home_top.png'
 import {
+  getPublicHome,
   getPublicHomePlayerRanking,
   getPublicHomeRecentMatches,
   getPublicHomeStatSummary,
   getPublicHomeTeamRanking,
 } from '@/api/publicHome'
 import type {
+  PublicAnnouncementItemResp,
+  PublicHomeBannerResp,
   PublicMatchItemVo,
+  PublicPartnerResp,
   PublicPlayerRankItemVo,
   PublicSeasonSummaryVo,
   PublicTeamRankItemVo,
 } from '@/api/types/public'
+import { formatAnnouncementDate } from '@/utils/announcementNavigate'
 import {
   displayText,
   formatDateTime,
@@ -33,18 +38,23 @@ const teams = ref<PublicTeamRankItemVo[]>([])
 const teamRanks = ref<PublicTeamRankItemVo[]>([])
 const playerRanks = ref<PublicPlayerRankItemVo[]>([])
 const summary = ref<PublicSeasonSummaryVo | null>(null)
+const banners = ref<PublicHomeBannerResp[]>([])
+const announcements = ref<PublicAnnouncementItemResp[]>([])
+const partners = ref<PublicPartnerResp[]>([])
 
 const matchState = ref<SectionState>('loading')
 const teamState = ref<SectionState>('loading')
 const rankState = ref<SectionState>('loading')
 const playerState = ref<SectionState>('loading')
 const summaryState = ref<SectionState>('loading')
+const contentState = ref<SectionState>('loading')
 
 const matchError = ref('')
 const teamError = ref('')
 const rankError = ref('')
 const playerError = ref('')
 const summaryError = ref('')
+const contentError = ref('')
 
 const brokenLogos = ref<Record<string, boolean>>({})
 
@@ -156,12 +166,61 @@ async function loadSummary() {
   }
 }
 
+async function loadHomeContent() {
+  contentState.value = 'loading'
+  contentError.value = ''
+  try {
+    const res = await getPublicHome()
+    const data = res.data
+    banners.value = data?.banners ?? []
+    announcements.value = data?.latestAnnouncements ?? []
+    partners.value = data?.partners ?? []
+    contentState.value =
+      banners.value.length || announcements.value.length || partners.value.length
+        ? 'success'
+        : 'empty'
+  } catch (err) {
+    banners.value = []
+    announcements.value = []
+    partners.value = []
+    contentState.value = 'error'
+    contentError.value = err instanceof Error ? err.message : '加载首页运营内容失败'
+  }
+}
+
+function handleBannerClick(banner: PublicHomeBannerResp) {
+  const type = (banner.targetType || '').toUpperCase()
+  const value = (banner.targetValue || '').trim()
+  if (!value) return
+  if (type === 'URL' && /^https?:\/\//i.test(value)) {
+    window.open(value, '_blank', 'noopener,noreferrer')
+    return
+  }
+  if (value.startsWith('/')) {
+    router.push(value)
+  }
+}
+
+function openAnnouncement(id?: string | null) {
+  if (!id) return
+  router.push(`/announcements/${id}`)
+}
+
+function openPartner(partner: PublicPartnerResp) {
+  const url = partner.websiteUrl?.trim()
+  if (!url) return
+  if (/^https?:\/\//i.test(url)) {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+}
+
 onMounted(() => {
   void loadMatches()
   void loadTeams()
   void loadTeamRanks()
   void loadPlayerRanks()
   void loadSummary()
+  void loadHomeContent()
 })
 </script>
 
@@ -170,6 +229,43 @@ onMounted(() => {
     <section class="home-hero-section">
       <div class="site-shell">
         <img class="hero-image" :src="homeTop" alt="CNPA 篮球赛事平台" />
+      </div>
+    </section>
+
+    <section
+      v-if="contentState === 'loading' || banners.length || contentState === 'error'"
+      class="home-ops-section"
+    >
+      <div class="site-shell">
+        <div class="site-shell-inner">
+          <div class="section-head">
+            <h2>运营推荐</h2>
+          </div>
+          <div v-if="contentState === 'loading'" class="home-state home-state--light">加载中...</div>
+          <div v-else-if="contentState === 'error'" class="home-state home-state--error home-state--light">
+            {{ contentError }}
+          </div>
+          <div v-else-if="banners.length" class="home-banner-grid">
+            <button
+              v-for="banner in banners"
+              :key="banner.bannerId"
+              type="button"
+              class="home-banner-card"
+              @click="handleBannerClick(banner)"
+            >
+              <img
+                v-if="showLogo(banner.imageUrl, `b-${banner.bannerId}`)"
+                :src="banner.imageUrl!"
+                :alt="displayText(banner.title, '运营位')"
+                @error="markLogoBroken(`b-${banner.bannerId}`)"
+              />
+              <div class="home-banner-card__text">
+                <strong>{{ displayText(banner.title, '运营推荐') }}</strong>
+                <span v-if="banner.subtitle">{{ banner.subtitle }}</span>
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -304,6 +400,39 @@ onMounted(() => {
       </div>
     </section>
 
+    <section class="home-announce-section">
+      <div class="site-shell">
+        <div class="paper-band paper-band-light">
+          <TornEdge position="top" tone="light" />
+          <div class="site-shell-inner paper-band-inner">
+            <div class="section-head section-head-dark">
+              <h2>最新公告</h2>
+              <button type="button" class="section-more section-more-dark" @click="router.push('/announcements')">
+                查看全部公告
+                <span>›</span>
+              </button>
+            </div>
+            <div v-if="contentState === 'loading'" class="home-state">加载中...</div>
+            <div v-else-if="contentState === 'error'" class="home-state home-state--error">{{ contentError }}</div>
+            <div v-else-if="!announcements.length" class="home-state">暂无公告</div>
+            <div v-else class="home-announce-list">
+              <button
+                v-for="item in announcements"
+                :key="item.announcementId"
+                type="button"
+                class="home-announce-item"
+                @click="openAnnouncement(item.announcementId)"
+              >
+                <span class="home-announce-item__category">{{ displayText(item.categoryName, '公告') }}</span>
+                <strong>{{ displayText(item.title) }}</strong>
+                <time>{{ formatAnnouncementDate(item.publishTime) }}</time>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="ranking" class="ranking-section">
       <div class="site-shell">
         <div class="site-shell-inner">
@@ -386,11 +515,190 @@ onMounted(() => {
         </div>
       </div>
     </section>
+
+    <section class="home-partner-section">
+      <div class="site-shell">
+        <div class="site-shell-inner">
+          <div class="section-head">
+            <h2>合作伙伴</h2>
+          </div>
+          <div v-if="contentState === 'loading'" class="home-state home-state--light">加载中...</div>
+          <div v-else-if="contentState === 'error'" class="home-state home-state--error home-state--light">
+            {{ contentError }}
+          </div>
+          <div v-else-if="!partners.length" class="home-state home-state--light">暂无合作伙伴</div>
+          <div v-else class="home-partner-grid">
+            <button
+              v-for="partner in partners"
+              :key="partner.partnerId"
+              type="button"
+              class="home-partner-card"
+              :disabled="!partner.websiteUrl"
+              @click="openPartner(partner)"
+            >
+              <img
+                v-if="showLogo(partner.logoUrl, `p-${partner.partnerId}`)"
+                :src="partner.logoUrl!"
+                :alt="displayText(partner.partnerName)"
+                @error="markLogoBroken(`p-${partner.partnerId}`)"
+              />
+              <span v-else class="logo-fallback">{{ initials(partner.partnerName) }}</span>
+              <strong>{{ displayText(partner.partnerName) }}</strong>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
 <style scoped lang="scss">
 @use '@/assets/styles/home-page.scss';
+
+.home-ops-section,
+.home-partner-section {
+  padding: 42px 0 28px;
+  background: #050505;
+}
+
+.home-banner-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.home-banner-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 160px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #111;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+
+  img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+  }
+}
+
+.home-banner-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+
+  strong {
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  span {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 13px;
+  }
+}
+
+.home-announce-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.home-announce-item {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 96px;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  padding: 16px 0;
+  border: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: transparent;
+  color: #171717;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover strong {
+    color: var(--cnpa-red, #e10613);
+  }
+}
+
+.home-announce-item__category {
+  color: var(--cnpa-red, #e10613);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.home-announce-item strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.home-announce-item time {
+  color: #777;
+  font-size: 13px;
+  text-align: right;
+}
+
+.home-partner-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.home-partner-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-height: 110px;
+  padding: 16px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #111;
+  color: #fff;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+
+  img,
+  .logo-fallback {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+  }
+
+  strong {
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+  }
+}
+
+@media (max-width: 1023px) {
+  .home-banner-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-partner-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .home-announce-item {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .home-announce-item time {
+    text-align: left;
+  }
+}
 
 .home-state {
   padding: 28px 0;

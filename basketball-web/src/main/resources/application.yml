@@ -77,8 +77,11 @@ member:
     code-max-fail-times: 5
     login-fail-max-times: 5
     login-lock-minutes: 15
+    # 本地开发跳过 SMTP；配好邮箱后设 CNPA_MAIL_DEV_BYPASS=false
+    dev-mail-bypass: ${CNPA_MAIL_DEV_BYPASS:true}
   mail:
     from: ${CNPA_MAIL_FROM:${CNPA_MAIL_USERNAME:}}
+    from-name: ${CNPA_MAIL_FROM_NAME:CNPA赛事平台}
 
 # 球队业务配置
 team:

@@ -3,38 +3,48 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PaperTear from '@/components/common/PaperTear.vue'
 import {
+  getPublicAnnouncementCategories,
+  getPublicAnnouncementPage,
+} from '@/api/publicAnnouncement'
+import type { PublicAnnouncementItemResp } from '@/api/types/public'
+import {
   buildAnnouncementListQuery,
+  formatAnnouncementDate,
   goToAnnouncementDetail,
   normalizeAnnouncementCategory,
   parseAnnouncementKeyword,
   parseAnnouncementPage,
 } from '@/utils/announcementNavigate'
+import { displayText, toNumber } from '@/utils/publicDisplay'
 import AnnouncementHero from './components/AnnouncementHero.vue'
 import AnnouncementCategoryTabs from './components/AnnouncementCategoryTabs.vue'
 import AnnouncementSearch from './components/AnnouncementSearch.vue'
 import AnnouncementList from './components/AnnouncementList.vue'
 import AnnouncementPagination from './components/AnnouncementPagination.vue'
-import { queryAnnouncements } from './mock/announcements'
-import type { AnnouncementFilterCategory } from './types'
+import type { AnnouncementCategory, AnnouncementListItem } from './types'
 
 const route = useRoute()
 const router = useRouter()
 const listHeadRef = ref<HTMLElement | null>(null)
 
-const category = computed(() => normalizeAnnouncementCategory(route.query.category) as AnnouncementFilterCategory)
+const categories = ref<AnnouncementCategory[]>([])
+const items = ref<AnnouncementListItem[]>([])
+const total = ref(0)
+const totalPages = ref(1)
+const listState = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
+const listError = ref('')
+let listReq = 0
+let categoryReq = 0
+
+const allowedCodes = computed(() => categories.value.map((item) => item.code))
+const category = computed(() =>
+  normalizeAnnouncementCategory(route.query.category, allowedCodes.value),
+)
 const keyword = computed(() => parseAnnouncementKeyword(route.query.keyword))
 const page = computed(() => parseAnnouncementPage(route.query.page, 1))
 
-const listResult = computed(() =>
-  queryAnnouncements({
-    category: category.value,
-    keyword: keyword.value,
-    page: page.value,
-    pageSize: 10,
-  }),
-)
-
 const emptyText = computed(() => {
+  if (listState.value === 'error') return listError.value || '加载公告失败'
   if (keyword.value.trim()) {
     return `未找到与“${keyword.value.trim()}”相关的公告`
   }
@@ -43,6 +53,68 @@ const emptyText = computed(() => {
   }
   return '暂无公告'
 })
+
+function mapItem(item: PublicAnnouncementItemResp): AnnouncementListItem {
+  return {
+    id: String(item.announcementId),
+    title: displayText(item.title, '未命名公告'),
+    categoryCode: displayText(item.categoryCode, 'OTHER'),
+    categoryName: displayText(item.categoryName, '其他'),
+    pinned: toNumber(item.isTop, 0) === 1,
+    summary: displayText(item.summary, ''),
+    authorName: displayText(item.authorName, 'CNPA'),
+    publishTime: item.publishTime || '',
+    publishDateText: formatAnnouncementDate(item.publishTime),
+    viewCount: toNumber(item.viewCount, 0),
+  }
+}
+
+async function loadCategories() {
+  const current = ++categoryReq
+  try {
+    const res = await getPublicAnnouncementCategories()
+    if (current !== categoryReq) return
+    categories.value = (res.data ?? []).map((item) => ({
+      code: String(item.categoryCode || '').toUpperCase(),
+      name: displayText(item.categoryName, item.categoryCode),
+    }))
+  } catch {
+    if (current !== categoryReq) return
+    categories.value = []
+  }
+}
+
+async function loadList() {
+  const current = ++listReq
+  listState.value = 'loading'
+  listError.value = ''
+  try {
+    const res = await getPublicAnnouncementPage({
+      currentPage: page.value,
+      pageSize: 10,
+      categoryCode: category.value === 'ALL' ? undefined : category.value,
+      keyword: keyword.value || undefined,
+      sortField: 'publishTime',
+      sortOrder: 'desc',
+    })
+    if (current !== listReq) return
+    const data = res.data
+    items.value = (data?.records ?? []).map(mapItem)
+    total.value = Number(data?.total || 0)
+    totalPages.value = Math.max(1, Number(data?.pages || 1))
+    listState.value = items.value.length ? 'success' : 'empty'
+    if (page.value > totalPages.value) {
+      replaceQuery({ page: totalPages.value })
+    }
+  } catch (err) {
+    if (current !== listReq) return
+    items.value = []
+    total.value = 0
+    totalPages.value = 1
+    listState.value = 'error'
+    listError.value = err instanceof Error ? err.message : '加载公告失败'
+  }
+}
 
 function replaceQuery(next: Partial<{ category: string; keyword: string; page: number }>) {
   router.replace({
@@ -55,7 +127,7 @@ function replaceQuery(next: Partial<{ category: string; keyword: string; page: n
   })
 }
 
-function handleCategoryChange(value: AnnouncementFilterCategory) {
+function handleCategoryChange(value: string) {
   replaceQuery({ category: value, page: 1 })
 }
 
@@ -68,7 +140,7 @@ function handlePageChange(nextPage: number) {
   listHeadRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-function openDetail(id: number) {
+function openDetail(id: string) {
   goToAnnouncementDetail(router, id, {
     category: category.value,
     keyword: keyword.value,
@@ -77,12 +149,17 @@ function openDetail(id: number) {
 }
 
 watch(
+  () => true,
+  () => {
+    void loadCategories()
+  },
+  { immediate: true },
+)
+
+watch(
   () => [route.query.category, route.query.keyword, route.query.page] as const,
   () => {
-    const result = listResult.value
-    if (page.value > result.totalPages) {
-      replaceQuery({ page: result.totalPages })
-    }
+    void loadList()
   },
   { immediate: true },
 )
@@ -103,12 +180,13 @@ watch(
                 <p class="announcement-list-page__subtitle">OFFICIAL NOTICES</p>
                 <p class="announcement-list-page__desc">全站公开公告发布时间持续更新</p>
               </div>
-              <p class="announcement-list-page__count">共 {{ listResult.total }} 条公告</p>
+              <p class="announcement-list-page__count">共 {{ total }} 条公告</p>
             </header>
 
             <div class="announcement-list-page__toolbar">
               <AnnouncementCategoryTabs
                 :model-value="category"
+                :categories="categories"
                 @update:model-value="handleCategoryChange"
               />
               <AnnouncementSearch
@@ -117,15 +195,18 @@ watch(
               />
             </div>
 
+            <div v-if="listState === 'loading'" class="announcement-list-page__state">加载中...</div>
             <AnnouncementList
-              :items="listResult.items"
+              v-else
+              :items="items"
               :empty-text="emptyText"
               @select="openDetail"
             />
 
             <AnnouncementPagination
-              :page="listResult.page"
-              :total-pages="listResult.totalPages"
+              v-if="listState === 'success'"
+              :page="page"
+              :total-pages="totalPages"
               @update:page="handlePageChange"
             />
           </div>
@@ -206,6 +287,14 @@ watch(
   gap: 32px;
   margin-top: 26px;
   margin-bottom: 16px;
+}
+
+.announcement-list-page__state {
+  padding: 48px 0;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .announcement-list-page__paper :deep(.paper-tear) {

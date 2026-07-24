@@ -51,6 +51,14 @@
         where r.season_id = #{seasonId} and r.registration_status = 3 and r.is_delete = 0
         order by t.team_name
     </select>
+    <select id="selectCandidateTeamsBySeasonId" resultType="com.zhs.basket.resp.SeasonCandidateTeamResp">
+        select r.team_id as teamId, t.team_name as teamName, lf.access_url as logoUrl
+        from basket_tournament_registration r
+        inner join basket_team t on r.team_id = t.id and t.is_delete = 0 and t.audit_status = 1
+        left join basket_file_asset lf on lf.id = t.logo_file_id and lf.is_delete = 0
+        where r.season_id = #{seasonId} and r.registration_status = 3 and r.is_delete = 0
+        order by t.team_name
+    </select>
     <update id="updateStatusIfMatch">
         update basket_tournament_registration
         set registration_status = #{toStatus},

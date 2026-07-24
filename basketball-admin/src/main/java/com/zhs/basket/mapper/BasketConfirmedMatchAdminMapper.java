@@ -24,6 +24,9 @@ public interface BasketConfirmedMatchAdminMapper {
 
     int countUnfinished(@Param("seasonId") Long seasonId);
 
+    /** 已结束但未确认：match_status=3 且 data_status!=2 */
+    int countFinishedUnconfirmed(@Param("seasonId") Long seasonId);
+
     List<Map<String, Object>> selectTeamStatAgg(@Param("seasonId") Long seasonId,
                                                 @Param("stageId") Long stageId);
 

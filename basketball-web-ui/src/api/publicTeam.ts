@@ -1,6 +1,7 @@
 import request from '@/api/request'
 import type { ApiResult, PageResult } from '@/api/types/common'
 import type {
+  PublicHonorItemResp,
   PublicMatchItemVo,
   PublicTeamCompareVo,
   PublicTeamDetailVo,
@@ -62,4 +63,14 @@ export function getPublicTeamCompare(params: {
   seasonId?: string | number
 }) {
   return request.get<any, ApiResult<PublicTeamCompareVo>>('/basket/public/team/compare', { params })
+}
+
+export function getPublicTeamHonorPage(
+  teamId: string | number,
+  params?: { currentPage?: number; pageSize?: number },
+) {
+  return request.get<any, ApiResult<PageResult<PublicHonorItemResp>>>(
+    `/basket/public/team/${teamId}/honor`,
+    { params },
+  )
 }

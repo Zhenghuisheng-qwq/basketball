@@ -19,6 +19,7 @@ import com.zhs.model.BasketTeamSeasonProfile;
 import com.zhs.model.BasketTeamSeasonStat;
 import com.zhs.model.BasketTournament;
 import com.zhs.model.BasketTournamentSeason;
+import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.publicapi.PublicMatchItemVo;
 import com.zhs.response.publicapi.PublicTeamCompareVo;
 import com.zhs.response.publicapi.PublicTeamDetailVo;
@@ -28,6 +29,7 @@ import com.zhs.response.publicapi.PublicTeamSeasonHistoryVo;
 import com.zhs.response.publicapi.PublicTeamSeasonStatVo;
 import com.zhs.service.IBasketPublicTeamService;
 import com.zhs.service.support.BasketPublicConstants;
+import com.zhs.service.support.BasketPublicHonorSupport;
 import com.zhs.service.support.BasketPublicSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -58,6 +60,8 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
     private BasketTeamRankDao teamRankDao;
     @Resource
     private BasketPublicSupport publicSupport;
+    @Resource
+    private BasketPublicHonorSupport honorSupport;
     @Resource
     private BasketPublicMatchServiceImpl matchService;
     @Resource
@@ -311,6 +315,12 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
         Set<Long> seasonIds = matches.stream().map(BasketMatch::getSeasonId).filter(Objects::nonNull).collect(Collectors.toSet());
         Set<Long> publicSeasonIds = publicSupport.loadSeasonMap(seasonIds).keySet();
         return matches.stream().filter(m -> publicSeasonIds.contains(m.getSeasonId())).collect(Collectors.toList());
+    }
+
+    @Override
+    public IPage<PublicHonorItemResp> pageHonors(Long teamId, Integer currentPage, Integer pageSize) {
+        publicSupport.requirePublicTeam(teamId);
+        return honorSupport.pageByTeam(teamId, currentPage, pageSize);
     }
 
     private Date latestSnapshot(Long seasonId, String rankType) {

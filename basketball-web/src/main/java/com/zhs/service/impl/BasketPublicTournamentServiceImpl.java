@@ -8,17 +8,22 @@ import com.zhs.dao.BasketStageStandingDao;
 import com.zhs.dao.BasketTeamSeasonProfileDao;
 import com.zhs.dao.BasketTournamentDao;
 import com.zhs.dao.BasketTournamentSeasonDao;
+import com.zhs.model.BasketHonorRecord;
 import com.zhs.model.BasketMatch;
 import com.zhs.model.BasketStageStanding;
+import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamSeasonProfile;
 import com.zhs.model.BasketTournament;
 import com.zhs.model.BasketTournamentSeason;
+import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.publicapi.PublicSeasonItemVo;
 import com.zhs.response.publicapi.PublicSeasonOverviewVo;
+import com.zhs.response.publicapi.PublicSeasonPlacementResp;
 import com.zhs.response.publicapi.PublicTournamentDetailVo;
 import com.zhs.response.publicapi.PublicTournamentItemVo;
 import com.zhs.service.IBasketPublicTournamentService;
 import com.zhs.service.support.BasketPublicConstants;
+import com.zhs.service.support.BasketPublicHonorSupport;
 import com.zhs.service.support.BasketPublicSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -47,6 +52,8 @@ public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamen
     private BasketTeamSeasonProfileDao teamSeasonProfileDao;
     @Resource
     private BasketPublicSupport publicSupport;
+    @Resource
+    private BasketPublicHonorSupport honorSupport;
 
     @Override
     public IPage<PublicTournamentItemVo> pageTournaments(Integer currentPage, Integer pageSize,
@@ -179,6 +186,57 @@ public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamen
         vo.setStandingCount(standingCount == null ? 0 : standingCount.intValue());
         vo.setDescription(season.getDescription());
         return vo;
+    }
+
+    @Override
+    public PublicSeasonPlacementResp getSeasonPlacement(Long seasonId) {
+        BasketTournamentSeason season = publicSupport.requirePublicSeason(seasonId);
+        PublicSeasonPlacementResp resp = new PublicSeasonPlacementResp();
+        resp.setSeasonId(season.getId());
+        resp.setSeasonName(season.getSeasonName());
+        resp.setPublished(false);
+
+        BasketHonorRecord championHonor = honorSupport.findPublishedChampionHonor(seasonId);
+        boolean hasChampionTeam = season.getChampionTeamId() != null;
+        if (!hasChampionTeam || championHonor == null) {
+            return resp;
+        }
+
+        resp.setPublished(true);
+        resp.setChampionHonorId(championHonor.getId());
+        resp.setChampionTeamId(season.getChampionTeamId());
+        resp.setRunnerUpTeamId(season.getRunnerUpTeamId());
+
+        Set<Long> teamIds = new HashSet<>();
+        teamIds.add(season.getChampionTeamId());
+        if (season.getRunnerUpTeamId() != null) {
+            teamIds.add(season.getRunnerUpTeamId());
+        }
+        Map<Long, BasketTeam> teamMap = publicSupport.loadPublicTeamMap(teamIds);
+        Set<Long> fileIds = new HashSet<>();
+        for (BasketTeam team : teamMap.values()) {
+            if (team.getLogoFileId() != null) {
+                fileIds.add(team.getLogoFileId());
+            }
+        }
+        Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(fileIds);
+        BasketTeam champion = teamMap.get(season.getChampionTeamId());
+        if (champion != null) {
+            resp.setChampionTeamName(champion.getTeamName());
+            resp.setChampionTeamLogoUrl(urlMap.get(champion.getLogoFileId()));
+        }
+        BasketTeam runnerUp = teamMap.get(season.getRunnerUpTeamId());
+        if (runnerUp != null) {
+            resp.setRunnerUpTeamName(runnerUp.getTeamName());
+            resp.setRunnerUpTeamLogoUrl(urlMap.get(runnerUp.getLogoFileId()));
+        }
+        return resp;
+    }
+
+    @Override
+    public List<PublicHonorItemResp> listSeasonHonors(Long seasonId) {
+        publicSupport.requirePublicSeason(seasonId);
+        return honorSupport.listBySeason(seasonId);
     }
 
     private PublicSeasonItemVo toSeasonItem(BasketTournamentSeason season, String tournamentName) {

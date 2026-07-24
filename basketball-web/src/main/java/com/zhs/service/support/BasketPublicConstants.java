@@ -17,6 +17,16 @@ public final class BasketPublicConstants {
     public static final int DEFAULT_SIZE = 10;
     public static final int MAX_SIZE = 100;
     public static final int HOME_LIMIT = 10;
+    public static final int HOME_ANNOUNCEMENT_LIMIT = 5;
+
+    /** honor_record.display_status / announcement/banner/partner 已发布 */
+    public static final int PUBLISHED = 1;
+
+    public static final String HONOR_SCOPE_TOURNAMENT = "TOURNAMENT";
+    public static final String HONOR_SCOPE_PLAYER = "PLAYER";
+    public static final String HONOR_SCOPE_TEAM = "TEAM";
+    public static final String HONOR_CODE_CHAMPION = "CHAMPION";
+    public static final String HONOR_CODE_RUNNER_UP = "RUNNER_UP";
 
     private BasketPublicConstants() {
     }

@@ -45,9 +45,23 @@ function goAllMatches() {
           <span class="player-detail-honor-card__registered">CNPA REGISTERED PLAYER</span>
         </article>
 
-        <div class="player-detail-overview__stats player-detail-overview__stats--empty">
-          <p>暂无荣誉数据</p>
-          <span>球员荣誉将在第七轮接入后展示</span>
+        <div
+          v-if="detail.honors.length === 0"
+          class="player-detail-overview__stats player-detail-overview__stats--empty"
+        >
+          <p>暂无荣誉记录</p>
+          <span>球员荣誉发布后将在此展示</span>
+        </div>
+        <div v-else class="player-detail-overview__stats">
+          <article
+            v-for="honor in detail.honors.slice(0, 4)"
+            :key="honor.id"
+            class="player-detail-overview__honor-item"
+          >
+            <strong>{{ honor.honorName }}</strong>
+            <span>{{ honor.seasonName }}</span>
+            <span>{{ honor.honorDate }}</span>
+          </article>
         </div>
       </div>
     </section>
@@ -148,7 +162,28 @@ function goAllMatches() {
 .player-detail-overview__stats {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
+}
+
+.player-detail-overview__honor-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  background: rgba(255, 255, 255, 0.45);
+
+  strong {
+    color: #111;
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  span {
+    color: rgba(17, 17, 17, 0.55);
+    font-size: 12px;
+    font-weight: 600;
+  }
 }
 
 .player-detail-stat-cards {

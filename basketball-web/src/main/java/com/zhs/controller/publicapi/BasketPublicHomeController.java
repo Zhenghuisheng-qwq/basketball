@@ -1,11 +1,13 @@
 package com.zhs.controller.publicapi;
 
 import com.zhs.common.NoLoginRequest;
+import com.zhs.response.publicapi.PublicHomeBannerResp;
 import com.zhs.response.publicapi.PublicHomeVo;
 import com.zhs.response.publicapi.PublicMatchItemVo;
 import com.zhs.response.publicapi.PublicPlayerRankItemVo;
 import com.zhs.response.publicapi.PublicSeasonSummaryVo;
 import com.zhs.response.publicapi.PublicTeamRankItemVo;
+import com.zhs.service.IBasketPublicBannerService;
 import com.zhs.service.IBasketPublicHomeService;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
@@ -26,11 +28,20 @@ public class BasketPublicHomeController {
 
     @Resource
     private IBasketPublicHomeService publicHomeService;
+    @Resource
+    private IBasketPublicBannerService bannerService;
 
     @ApiOperation("首页聚合")
     @GetMapping
     public R<PublicHomeVo> getHome() {
         return R.ok(publicHomeService.getHome());
+    }
+
+    @ApiOperation("运营位横幅（不替换静态 home_top.png）")
+    @GetMapping("/banners")
+    public R<List<PublicHomeBannerResp>> listBanners(
+            @RequestParam(required = false) String positionCode) {
+        return R.ok(bannerService.listBanners(positionCode));
     }
 
     @ApiOperation("近期赛果")

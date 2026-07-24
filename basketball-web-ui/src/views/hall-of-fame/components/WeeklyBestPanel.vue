@@ -1,361 +1,249 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import HallPanelHead from './HallPanelHead.vue'
-import HallSelect from './HallSelect.vue'
+import HallPagination from './HallPagination.vue'
 import HallPlayerSilhouette from './HallPlayerSilhouette.vue'
+import { getPublicHallPlayerHonorPage } from '@/api/publicHallOfFame'
+import type { PublicHonorItemResp } from '@/api/types/public'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
-import {
-  getLatestPublishedWeekNo,
-  getPublishedWeeks,
-  getTournamentById,
-  getWeekByNo,
-  getWeeklyBestRecord,
-  getWeeklyTournaments,
-} from '../mock/hallOfFame'
+import { displayText, formatDateTime } from '@/utils/publicDisplay'
 
 const props = defineProps<{
-  tournamentId: string
-  weekNo: number
+  page: number
 }>()
 
 const emit = defineEmits<{
-  'update:tournamentId': [value: string]
-  'update:weekNo': [value: number]
+  'update:page': [value: number]
 }>()
 
 const router = useRouter()
+const pageSize = 8
 
-const tournaments = computed(() => getWeeklyTournaments())
-const tournamentOptions = computed(() =>
-  tournaments.value.map((item) => ({ value: item.id, label: item.fullName })),
-)
-const currentTournament = computed(() => getTournamentById(props.tournamentId))
-const weeks = computed(() => getPublishedWeeks(props.tournamentId))
-const weekOptions = computed(() =>
-  weeks.value.map((item) => ({
-    value: item.weekNo,
-    label: item.weekName,
-    subLabel: `${item.startDate} - ${item.endDate}`,
-  })),
-)
-const currentWeek = computed(() => getWeekByNo(props.tournamentId, props.weekNo))
-const weeklyBest = computed(() => getWeeklyBestRecord(props.tournamentId, props.weekNo))
+const items = ref<PublicHonorItemResp[]>([])
+const totalPages = ref(1)
+const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
+const errorMessage = ref('')
+let reqId = 0
 
-const canPrev = computed(() => props.weekNo > (weeks.value[0]?.weekNo ?? 1))
-const canNext = computed(() => props.weekNo < (weeks.value[weeks.value.length - 1]?.weekNo ?? props.weekNo))
-
-const teamModel = computed(() => {
-  const record = weeklyBest.value
-  if (!record) return null
-  return {
-    id: record.teamId,
-    name: record.teamName,
-    shortName: record.teamAbbr,
-    logoUrl: record.teamLogoUrl,
-  }
-})
-
-function updateTournament(value: string | number) {
-  const tournamentId = String(value)
-  emit('update:tournamentId', tournamentId)
-  emit('update:weekNo', getLatestPublishedWeekNo(tournamentId))
-}
-
-function updateWeek(value: string | number) {
-  emit('update:weekNo', Number(value))
-}
-
-function shiftWeek(delta: number) {
-  const next = props.weekNo + delta
-  if (weeks.value.some((item) => item.weekNo === next)) {
-    emit('update:weekNo', next)
+async function load(page: number) {
+  const current = ++reqId
+  state.value = 'loading'
+  errorMessage.value = ''
+  try {
+    const res = await getPublicHallPlayerHonorPage({
+      currentPage: page,
+      pageSize,
+      sortField: 'awardDate',
+      sortOrder: 'desc',
+    })
+    if (current !== reqId) return
+    const data = res.data
+    items.value = data?.records ?? []
+    totalPages.value = Math.max(1, Number(data?.pages || 1))
+    state.value = items.value.length ? 'success' : 'empty'
+    if (page > totalPages.value) {
+      emit('update:page', totalPages.value)
+    }
+  } catch (err) {
+    if (current !== reqId) return
+    items.value = []
+    state.value = 'error'
+    errorMessage.value = err instanceof Error ? err.message : '加载球员荣誉失败'
   }
 }
 
-function openPlayer() {
-  if (!weeklyBest.value) return
-  goToPlayerDetail(router, weeklyBest.value.playerId, 'overview')
+watch(
+  () => props.page,
+  (page) => {
+    void load(page)
+  },
+  { immediate: true },
+)
+
+function openPlayer(playerId?: string | null) {
+  if (!playerId) return
+  goToPlayerDetail(router, playerId, 'overview')
 }
 
-function openTeam() {
-  if (!weeklyBest.value) return
-  router.push(`/tournament/team/${weeklyBest.value.teamId}/overview`)
+function openTeam(teamId?: string | null) {
+  if (!teamId) return
+  router.push(`/tournament/team/${teamId}/overview`)
+}
+
+function awardDateText(value?: string | null) {
+  const dt = formatDateTime(value)
+  return dt.date === '--' ? '--' : dt.date
 }
 </script>
 
 <template>
   <section class="weekly-best-panel">
-    <HallPanelHead title="周最佳" subtitle="Weekly Best">
-      <template #filters>
-        <HallSelect
-          :model-value="tournamentId"
-          :options="tournamentOptions"
-          @update:model-value="updateTournament"
-        />
-        <HallSelect
-          :model-value="weekNo"
-          :options="weekOptions"
-          trigger-variant="week"
-          :disabled="!weekOptions.length"
-          @update:model-value="updateWeek"
-        />
-      </template>
-    </HallPanelHead>
+    <HallPanelHead title="球员荣誉" subtitle="Player Honors" />
 
-    <div v-if="!weeklyBest" class="hall-empty">
-      该比赛周的周最佳尚未发布
-    </div>
+    <div v-if="state === 'loading'" class="hall-empty">加载中...</div>
+    <div v-else-if="state === 'error'" class="hall-empty">{{ errorMessage }}</div>
+    <div v-else-if="state === 'empty'" class="hall-empty">暂无球员荣誉记录</div>
 
-    <article v-else class="weekly-best-card hall-card-surface">
-      <div class="weekly-best-card__left">
-        <div class="weekly-best-card__visual">
-          <HallPlayerSilhouette
-            :name="weeklyBest.playerName"
-            :avatar-url="weeklyBest.playerAvatarUrl"
-            size="feature"
-          />
-        </div>
+    <template v-else>
+      <div class="player-honor-grid">
+        <article
+          v-for="item in items"
+          :key="item.honorId"
+          class="weekly-best-card hall-card-surface"
+        >
+          <div class="weekly-best-card__left">
+            <div class="weekly-best-card__visual">
+              <HallPlayerSilhouette
+                :name="displayText(item.playerName, '球员')"
+                :avatar-url="item.playerAvatarUrl || ''"
+                size="feature"
+              />
+            </div>
+          </div>
 
-        <div class="weekly-best-card__info">
-          <p class="weekly-best-card__tag">PLAYER OF THE WEEK</p>
-          <button type="button" class="weekly-best-card__name" @click="openPlayer">
-            {{ weeklyBest.playerName }}
-          </button>
-          <button type="button" class="weekly-best-card__team" @click="openTeam">
-            <span class="weekly-best-card__logo">
-              <TeamLogo v-if="teamModel" :team="teamModel" size="sm" />
-            </span>
-            <span>{{ weeklyBest.teamAbbr || weeklyBest.teamName }}</span>
-          </button>
-          <p class="weekly-best-card__event">{{ currentTournament?.fullName }}</p>
-          <p class="weekly-best-card__range">
-            {{ currentWeek?.startDate }} - {{ currentWeek?.endDate }}
-          </p>
-        </div>
+          <div class="weekly-best-card__body">
+            <p class="weekly-best-card__label">{{ displayText(item.honorName, '球员荣誉') }}</p>
+            <button
+              type="button"
+              class="weekly-best-card__name"
+              :disabled="!item.playerId"
+              @click="openPlayer(item.playerId)"
+            >
+              {{ displayText(item.playerName, '未知球员') }}
+            </button>
+            <button
+              v-if="item.teamId || item.teamName"
+              type="button"
+              class="weekly-best-card__team"
+              @click="openTeam(item.teamId)"
+            >
+              <span class="weekly-best-card__logo">
+                <TeamLogo
+                  :team="{
+                    id: String(item.teamId || ''),
+                    name: displayText(item.teamName),
+                    shortName: displayText(item.teamName),
+                    logoUrl: item.teamLogoUrl || '',
+                  }"
+                  size="sm"
+                />
+              </span>
+              <span>{{ displayText(item.teamName) }}</span>
+            </button>
+            <p class="weekly-best-card__meta">
+              {{ displayText(item.tournamentName, '公开赛事') }}
+              ·
+              {{ displayText(item.seasonName, '赛季') }}
+            </p>
+            <p class="weekly-best-card__date">授予日期 {{ awardDateText(item.awardDate) }}</p>
+            <p v-if="item.honorValue" class="weekly-best-card__value">{{ item.honorValue }}</p>
+          </div>
+        </article>
       </div>
 
-      <div class="weekly-best-card__stats">
-        <div><span>出场</span><strong>{{ weeklyBest.games }}</strong></div>
-        <div><span>场均得分</span><strong>{{ weeklyBest.averagePoints.toFixed(1) }}</strong></div>
-        <div><span>场均篮板</span><strong>{{ weeklyBest.averageRebounds.toFixed(1) }}</strong></div>
-        <div><span>场均助攻</span><strong>{{ weeklyBest.averageAssists.toFixed(1) }}</strong></div>
-        <div><span>场均抢断</span><strong>{{ weeklyBest.averageSteals.toFixed(1) }}</strong></div>
-        <div><span>投篮命中率</span><strong class="is-pct">{{ weeklyBest.fieldGoalPercentage.toFixed(1) }}%</strong></div>
-      </div>
-    </article>
-
-    <div v-if="weeks.length" class="weekly-best-nav">
-      <button type="button" class="weekly-best-nav__btn" :disabled="!canPrev" @click="shiftWeek(-1)">
-        上一周
-      </button>
-      <span class="weekly-best-nav__current">第 {{ weekNo }} 周</span>
-      <button type="button" class="weekly-best-nav__btn" :disabled="!canNext" @click="shiftWeek(1)">
-        下一周
-      </button>
-    </div>
+      <HallPagination
+        :page="page"
+        :total-pages="totalPages"
+        @update:page="emit('update:page', $event)"
+      />
+    </template>
   </section>
 </template>
 
 <style scoped lang="scss">
-@use '../styles/hall-shared.scss';
-
 .weekly-best-panel {
   width: 100%;
 }
 
+.player-honor-grid {
+  display: grid;
+  gap: 18px;
+}
+
 .weekly-best-card {
   display: grid;
-  grid-template-columns: 36% 64%;
-  min-height: 245px;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  padding: 22px 24px;
 }
 
-.weekly-best-card__left {
-  display: grid;
-  grid-template-columns: 42% 58%;
-  gap: 16px;
-  padding: 20px;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.weekly-best-card__visual {
-  min-height: 205px;
-}
-
-.weekly-best-card__info {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-}
-
-.weekly-best-card__tag {
-  margin: 0 0 12px;
-  color: var(--hall-red, #e71922);
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-}
-
-.weekly-best-card__name,
-.weekly-best-card__team {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  font: inherit;
+.weekly-best-card__label {
+  margin: 0 0 8px;
+  color: var(--cnpa-red, #e10613);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .weekly-best-card__name {
   display: block;
-  color: #fff;
-  font-size: clamp(32px, 2.8vw, 38px);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  font-size: clamp(26px, 3vw, 34px);
   font-weight: 900;
-  letter-spacing: 1px;
-  line-height: 1.1;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &:not(:disabled):hover {
+    color: var(--cnpa-red, #e10613);
+  }
 }
 
 .weekly-best-card__team {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  color: var(--hall-gold, #d2a648);
-  font-size: 15px;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #333;
+  font: inherit;
+  font-size: 14px;
   font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--cnpa-red, #e10613);
+  }
 }
 
 .weekly-best-card__logo {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-
-  :deep(.team-logo) {
-    width: 30px;
-    height: 30px;
-  }
+  width: 28px;
+  height: 28px;
 }
 
-.weekly-best-card__event,
-.weekly-best-card__range {
+.weekly-best-card__meta,
+.weekly-best-card__date,
+.weekly-best-card__value {
   margin: 8px 0 0;
-  color: rgba(255, 255, 255, 0.62);
+  color: #666;
   font-size: 13px;
+  font-weight: 600;
 }
 
-.weekly-best-card__stats {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  align-items: stretch;
-
-  div {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 16px 10px;
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
-    text-align: center;
-  }
-
-  span {
-    display: block;
-    color: #b5b5b5;
-    font-size: 13px;
-    white-space: nowrap;
-  }
-
-  strong {
-    display: block;
-    margin-top: 10px;
-    color: var(--hall-red, #e71922);
-    font-size: clamp(28px, 2.2vw, 34px);
-    font-weight: 900;
-    line-height: 1;
-    white-space: nowrap;
-  }
-}
-
-.weekly-best-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  height: 84px;
-  margin-top: 4px;
-}
-
-.weekly-best-nav__btn,
-.weekly-best-nav__current {
-  width: 92px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.weekly-best-nav__btn {
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  background: var(--hall-paper, #e9e7e7);
-  color: #171717;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.42;
-    cursor: not-allowed;
-  }
-}
-
-.weekly-best-nav__current {
-  background: #111;
-  color: #fff;
-}
-
-@media (max-width: 1199px) {
-  .weekly-best-card {
-    grid-template-columns: 1fr;
-  }
-
-  .weekly-best-card__left {
-    border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .weekly-best-card__stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-
-    div:nth-child(n + 4) {
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    div:nth-child(4) {
-      border-left: 0;
-    }
-  }
+.weekly-best-card__value {
+  color: #111;
+  font-size: 15px;
+  font-weight: 800;
 }
 
 @media (max-width: 767px) {
-  .weekly-best-card__left {
+  .weekly-best-card {
     grid-template-columns: 1fr;
-  }
-
-  .weekly-best-card__stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    div:nth-child(n + 3) {
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    div:nth-child(3),
-    div:nth-child(5) {
-      border-left: 0;
-    }
+    padding: 18px 16px;
   }
 }
 </style>

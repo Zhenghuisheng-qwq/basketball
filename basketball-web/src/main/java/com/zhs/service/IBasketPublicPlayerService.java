@@ -1,6 +1,7 @@
 package com.zhs.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.publicapi.PublicMatchItemVo;
 import com.zhs.response.publicapi.PublicPlayerDetailVo;
 import com.zhs.response.publicapi.PublicPlayerRankItemVo;
@@ -17,4 +18,6 @@ public interface IBasketPublicPlayerService {
     IPage<PublicMatchItemVo> pageMatches(Long playerId, Integer currentPage, Integer pageSize, Long seasonId);
 
     List<PublicPlayerRankItemVo> listRanking(Long playerId, Long seasonId, String rankType);
+
+    IPage<PublicHonorItemResp> pageHonors(Long playerId, Integer currentPage, Integer pageSize);
 }

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketHomeBannerMapper">
+    <resultMap type="com.zhs.basket.domain.BasketHomeBanner" id="BasketHomeBannerResult">
+        <id property="id" column="id"/>
+        <result property="bannerName" column="banner_name"/>
+        <result property="title" column="title"/>
+        <result property="subtitle" column="subtitle"/>
+        <result property="imageFileId" column="image_file_id"/>
+        <result property="positionCode" column="position_code"/>
+        <result property="targetType" column="target_type"/>
+        <result property="targetValue" column="target_value"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="bannerStatus" column="banner_status"/>
+        <result property="sortNo" column="sort_no"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="listSelect">
+        select b.id, b.banner_name as bannerName, b.title, b.subtitle, b.image_file_id as imageFileId,
+               img.access_url as imageUrl, b.position_code as positionCode, b.target_type as targetType,
+               b.target_value as targetValue, b.start_time as startTime, b.end_time as endTime,
+               b.banner_status as bannerStatus, b.sort_no as sortNo,
+               b.create_time as createTime, b.update_time as updateTime
+        from basket_home_banner b
+        left join basket_file_asset img on img.id = b.image_file_id and img.is_delete = 0
+    </sql>
+
+    <select id="selectById" resultMap="BasketHomeBannerResult">
+        select id, banner_name, title, subtitle, image_file_id, position_code, target_type, target_value,
+               start_time, end_time, banner_status, sort_no, create_time, update_time, is_delete
+        from basket_home_banner where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectDetailById" resultType="com.zhs.basket.resp.HomeBannerListResp">
+        <include refid="listSelect"/>
+        where b.id = #{id} and b.is_delete = 0
+    </select>
+
+    <select id="selectList" resultType="com.zhs.basket.resp.HomeBannerListResp">
+        <include refid="listSelect"/>
+        where b.is_delete = 0
+        <if test="positionCode != null and positionCode != ''">and b.position_code = #{positionCode}</if>
+        <if test="bannerStatus != null">and b.banner_status = #{bannerStatus}</if>
+        <if test="keyword != null and keyword != ''">
+            and (b.banner_name like concat('%', #{keyword}, '%') or b.title like concat('%', #{keyword}, '%'))
+        </if>
+        order by b.sort_no, b.id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_home_banner (
+            banner_name, title, subtitle, image_file_id, position_code, target_type, target_value,
+            start_time, end_time, banner_status, sort_no, create_time, update_time, is_delete
+        ) values (
+            #{bannerName}, #{title}, #{subtitle}, #{imageFileId}, #{positionCode}, #{targetType}, #{targetValue},
+            #{startTime}, #{endTime}, #{bannerStatus}, #{sortNo}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_home_banner
+        <set>
+            <if test="bannerName != null">banner_name = #{bannerName},</if>
+            <if test="title != null">title = #{title},</if>
+            <if test="subtitle != null">subtitle = #{subtitle},</if>
+            <if test="imageFileId != null">image_file_id = #{imageFileId},</if>
+            <if test="positionCode != null">position_code = #{positionCode},</if>
+            <if test="targetType != null">target_type = #{targetType},</if>
+            <if test="targetValue != null">target_value = #{targetValue},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="sortNo != null">sort_no = #{sortNo},</if>
+            <if test="bannerStatus != null">banner_status = #{bannerStatus},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="updateStatusIfMatch">
+        update basket_home_banner
+        set banner_status = #{toStatus}, update_time = now()
+        where id = #{id} and is_delete = 0 and banner_status = #{fromStatus}
+    </update>
+
+    <update id="softDelete">
+        update basket_home_banner set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0 and banner_status in
+        <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+    </update>
+</mapper>

@@ -2,8 +2,10 @@ package com.zhs.controller.publicapi;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.common.NoLoginRequest;
+import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.publicapi.PublicSeasonItemVo;
 import com.zhs.response.publicapi.PublicSeasonOverviewVo;
+import com.zhs.response.publicapi.PublicSeasonPlacementResp;
 import com.zhs.response.publicapi.PublicTournamentDetailVo;
 import com.zhs.response.publicapi.PublicTournamentItemVo;
 import com.zhs.service.IBasketPublicTournamentService;
@@ -54,5 +56,17 @@ public class BasketPublicTournamentController {
     @GetMapping("/season/{seasonId}/overview")
     public R<PublicSeasonOverviewVo> getSeasonOverview(@PathVariable Long seasonId) {
         return R.ok(publicTournamentService.getSeasonOverview(seasonId));
+    }
+
+    @ApiOperation("赛季名次（冠亚军，需冠军荣誉已发布）")
+    @GetMapping("/season/{seasonId}/placement")
+    public R<PublicSeasonPlacementResp> getSeasonPlacement(@PathVariable Long seasonId) {
+        return R.ok(publicTournamentService.getSeasonPlacement(seasonId));
+    }
+
+    @ApiOperation("赛季已发布荣誉")
+    @GetMapping("/season/{seasonId}/honor")
+    public R<List<PublicHonorItemResp>> listSeasonHonors(@PathVariable Long seasonId) {
+        return R.ok(publicTournamentService.listSeasonHonors(seasonId));
     }
 }

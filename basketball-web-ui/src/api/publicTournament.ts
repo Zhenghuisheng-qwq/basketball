@@ -1,8 +1,10 @@
 import request from '@/api/request'
 import type { ApiResult, PageResult } from '@/api/types/common'
 import type {
+  PublicHonorItemResp,
   PublicSeasonItemVo,
   PublicSeasonOverviewVo,
+  PublicSeasonPlacementResp,
   PublicTournamentDetailVo,
   PublicTournamentItemVo,
 } from '@/api/types/public'
@@ -33,5 +35,17 @@ export function getPublicTournamentSeasons(tournamentId: string | number) {
 export function getPublicSeasonOverview(seasonId: string | number) {
   return request.get<any, ApiResult<PublicSeasonOverviewVo>>(
     `/basket/public/season/${seasonId}/overview`,
+  )
+}
+
+export function getPublicSeasonPlacement(seasonId: string | number) {
+  return request.get<any, ApiResult<PublicSeasonPlacementResp>>(
+    `/basket/public/season/${seasonId}/placement`,
+  )
+}
+
+export function getPublicSeasonHonors(seasonId: string | number) {
+  return request.get<any, ApiResult<PublicHonorItemResp[]>>(
+    `/basket/public/season/${seasonId}/honor`,
   )
 }

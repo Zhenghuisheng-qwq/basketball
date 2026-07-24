@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketHonorRecordMapper">
+    <resultMap type="com.zhs.basket.domain.BasketHonorRecord" id="BasketHonorRecordResult">
+        <id property="id" column="id"/>
+        <result property="tournamentId" column="tournament_id"/>
+        <result property="seasonId" column="season_id"/>
+        <result property="honorCategoryId" column="honor_category_id"/>
+        <result property="teamId" column="team_id"/>
+        <result property="playerId" column="player_id"/>
+        <result property="matchId" column="match_id"/>
+        <result property="honorTitle" column="honor_title"/>
+        <result property="honorSubtitle" column="honor_subtitle"/>
+        <result property="honorValue" column="honor_value"/>
+        <result property="awardDate" column="award_date"/>
+        <result property="coverFileId" column="cover_file_id"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="sourceId" column="source_id"/>
+        <result property="displayStatus" column="display_status"/>
+        <result property="displayOrder" column="display_order"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="listSelect">
+        select h.id, h.tournament_id as tournamentId, h.season_id as seasonId, s.season_name as seasonName,
+               h.honor_category_id as honorCategoryId, c.honor_code as honorCode, c.honor_name as honorName,
+               c.honor_scope as honorScope, c.recipient_type as recipientType,
+               h.team_id as teamId, t.team_name as teamName,
+               h.player_id as playerId, ifnull(nullif(p.game_nickname, ''), p.real_name) as playerName,
+               h.match_id as matchId, h.honor_title as honorTitle, h.honor_subtitle as honorSubtitle,
+               h.honor_value as honorValue, h.award_date as awardDate, h.cover_file_id as coverFileId,
+               cf.access_url as coverUrl, h.source_type as sourceType, h.source_id as sourceId,
+               h.display_status as displayStatus, h.display_order as displayOrder, h.remark,
+               h.create_time as createTime, h.update_time as updateTime
+        from basket_honor_record h
+        left join basket_honor_category c on c.id = h.honor_category_id and c.is_delete = 0
+        left join basket_tournament_season s on s.id = h.season_id and s.is_delete = 0
+        left join basket_team t on t.id = h.team_id and t.is_delete = 0
+        left join basket_player_profile p on p.id = h.player_id and p.is_delete = 0
+        left join basket_file_asset cf on cf.id = h.cover_file_id and cf.is_delete = 0
+    </sql>
+
+    <select id="selectById" resultMap="BasketHonorRecordResult">
+        select id, tournament_id, season_id, honor_category_id, team_id, player_id, match_id,
+               honor_title, honor_subtitle, honor_value, award_date, cover_file_id, source_type, source_id,
+               display_status, display_order, remark, create_time, update_time, is_delete
+        from basket_honor_record where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectDetailById" resultType="com.zhs.basket.resp.HonorRecordListResp">
+        <include refid="listSelect"/>
+        where h.id = #{id} and h.is_delete = 0
+    </select>
+
+    <select id="selectList" resultType="com.zhs.basket.resp.HonorRecordListResp">
+        <include refid="listSelect"/>
+        where h.is_delete = 0
+        <if test="tournamentId != null">and h.tournament_id = #{tournamentId}</if>
+        <if test="seasonId != null">and h.season_id = #{seasonId}</if>
+        <if test="honorCategoryId != null">and h.honor_category_id = #{honorCategoryId}</if>
+        <if test="honorCode != null and honorCode != ''">and c.honor_code = #{honorCode}</if>
+        <if test="honorScope != null and honorScope != ''">and c.honor_scope = #{honorScope}</if>
+        <if test="recipientType != null and recipientType != ''">and c.recipient_type = #{recipientType}</if>
+        <if test="teamId != null">and h.team_id = #{teamId}</if>
+        <if test="playerId != null">and h.player_id = #{playerId}</if>
+        <if test="displayStatus != null">and h.display_status = #{displayStatus}</if>
+        <if test="keyword != null and keyword != ''">
+            and (h.honor_title like concat('%', #{keyword}, '%')
+                 or t.team_name like concat('%', #{keyword}, '%')
+                 or p.real_name like concat('%', #{keyword}, '%')
+                 or p.game_nickname like concat('%', #{keyword}, '%'))
+        </if>
+        order by h.display_order, h.award_date desc, h.id desc
+    </select>
+
+    <select id="selectBySeasonAndSource" resultType="com.zhs.basket.resp.HonorRecordListResp">
+        <include refid="listSelect"/>
+        where h.is_delete = 0 and h.season_id = #{seasonId} and h.source_type = #{sourceType}
+        order by c.display_order, h.id
+    </select>
+
+    <select id="selectActiveUnique" resultMap="BasketHonorRecordResult">
+        select id, tournament_id, season_id, honor_category_id, team_id, player_id, match_id,
+               honor_title, honor_subtitle, honor_value, award_date, cover_file_id, source_type, source_id,
+               display_status, display_order, remark, create_time, update_time, is_delete
+        from basket_honor_record
+        where is_delete = 0 and season_id = #{seasonId} and honor_category_id = #{honorCategoryId}
+          and display_status &lt;&gt; 3
+        <if test="teamId != null">and team_id = #{teamId}</if>
+        <if test="teamId == null">and team_id is null</if>
+        <if test="playerId != null">and player_id = #{playerId}</if>
+        <if test="playerId == null">and player_id is null</if>
+        <if test="excludeId != null">and id &lt;&gt; #{excludeId}</if>
+        limit 1
+    </select>
+
+    <select id="selectBySeasonCategorySource" resultMap="BasketHonorRecordResult">
+        select id, tournament_id, season_id, honor_category_id, team_id, player_id, match_id,
+               honor_title, honor_subtitle, honor_value, award_date, cover_file_id, source_type, source_id,
+               display_status, display_order, remark, create_time, update_time, is_delete
+        from basket_honor_record
+        where is_delete = 0 and season_id = #{seasonId} and honor_category_id = #{honorCategoryId}
+          and source_type = #{sourceType} and display_status &lt;&gt; 3
+        order by id desc limit 1
+    </select>
+
+    <select id="countActiveUnique" resultType="int">
+        select count(1) from basket_honor_record
+        where is_delete = 0 and season_id = #{seasonId} and honor_category_id = #{honorCategoryId}
+          and display_status &lt;&gt; 3
+        <if test="teamId != null">and team_id = #{teamId}</if>
+        <if test="teamId == null">and team_id is null</if>
+        <if test="playerId != null">and player_id = #{playerId}</if>
+        <if test="playerId == null">and player_id is null</if>
+        <if test="excludeId != null">and id &lt;&gt; #{excludeId}</if>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_honor_record (
+            tournament_id, season_id, honor_category_id, team_id, player_id, match_id,
+            honor_title, honor_subtitle, honor_value, award_date, cover_file_id,
+            source_type, source_id, display_status, display_order, remark,
+            create_time, update_time, is_delete
+        ) values (
+            #{tournamentId}, #{seasonId}, #{honorCategoryId}, #{teamId}, #{playerId}, #{matchId},
+            #{honorTitle}, #{honorSubtitle}, #{honorValue}, #{awardDate}, #{coverFileId},
+            #{sourceType}, #{sourceId}, #{displayStatus}, #{displayOrder}, #{remark},
+            #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_honor_record
+        <set>
+            <if test="honorCategoryId != null">honor_category_id = #{honorCategoryId},</if>
+            <if test="teamId != null">team_id = #{teamId},</if>
+            <if test="playerId != null">player_id = #{playerId},</if>
+            <if test="matchId != null">match_id = #{matchId},</if>
+            <if test="honorTitle != null">honor_title = #{honorTitle},</if>
+            <if test="honorSubtitle != null">honor_subtitle = #{honorSubtitle},</if>
+            <if test="honorValue != null">honor_value = #{honorValue},</if>
+            <if test="awardDate != null">award_date = #{awardDate},</if>
+            <if test="coverFileId != null">cover_file_id = #{coverFileId},</if>
+            <if test="displayOrder != null">display_order = #{displayOrder},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="displayStatus != null">display_status = #{displayStatus},</if>
+            <if test="sourceType != null">source_type = #{sourceType},</if>
+            <if test="sourceId != null">source_id = #{sourceId},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="updateDisplayStatusIfMatch">
+        update basket_honor_record
+        set display_status = #{toStatus}, update_time = now()
+        where id = #{id} and is_delete = 0 and display_status = #{fromStatus}
+    </update>
+
+    <update id="updateDisplayStatusBySeasonSource">
+        update basket_honor_record
+        set display_status = #{toStatus}, update_time = now()
+        where season_id = #{seasonId} and source_type = #{sourceType} and is_delete = 0
+          and display_status in
+        <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+    </update>
+
+    <update id="softDelete">
+        update basket_honor_record set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0 and display_status in
+        <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+    </update>
+</mapper>

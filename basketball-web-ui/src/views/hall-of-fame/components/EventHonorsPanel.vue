@@ -1,14 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import HallPanelHead from './HallPanelHead.vue'
 import HallSelect from './HallSelect.vue'
-import HonorLineupCard from './HonorLineupCard.vue'
 import ChampionRoster from './ChampionRoster.vue'
 import HallPlayerSilhouette from './HallPlayerSilhouette.vue'
+import {
+  getPublicHallHonorDetail,
+  getPublicHallTournamentHonorPage,
+} from '@/api/publicHallOfFame'
+import { getPublicTournamentPage } from '@/api/publicTournament'
+import type {
+  PublicHonorDetailResp,
+  PublicHonorItemResp,
+  PublicTournamentItemVo,
+} from '@/api/types/public'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
-import { getEventHonor, getEventTournaments, getTournamentById } from '../mock/hallOfFame'
+import { displayText, formatDateTime } from '@/utils/publicDisplay'
+import type { ChampionRosterMember } from '../types'
 import mrtMidBackground from '@/assets/icon/mrt/mrt_mid.png'
 
 const championCardStyle = {
@@ -27,22 +37,151 @@ const emit = defineEmits<{
 
 const router = useRouter()
 
+const tournaments = ref<PublicTournamentItemVo[]>([])
+const honors = ref<PublicHonorItemResp[]>([])
+const championDetail = ref<PublicHonorDetailResp | null>(null)
+const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
+const errorMessage = ref('')
+let tournamentReq = 0
+let honorReq = 0
+
 const tournamentOptions = computed(() =>
-  getEventTournaments().map((item) => ({ value: item.id, label: item.fullName })),
+  tournaments.value.map((item) => ({
+    value: item.tournamentId,
+    label: displayText(item.tournamentName || item.shortName, '公开赛事'),
+  })),
 )
-const currentTournament = computed(() => getTournamentById(props.tournamentId))
-const honor = computed(() => getEventHonor(props.tournamentId))
+
+const currentTournament = computed(
+  () => tournaments.value.find((item) => item.tournamentId === props.tournamentId) ?? null,
+)
+
+const championHonor = computed(
+  () =>
+    honors.value.find((item) => (item.honorCode || '').toUpperCase() === 'CHAMPION') ??
+    honors.value.find((item) => item.teamId) ??
+    null,
+)
+
+const otherHonors = computed(() =>
+  honors.value.filter((item) => item.honorId !== championHonor.value?.honorId),
+)
 
 const championTeam = computed(() => {
-  const record = honor.value
-  if (!record) return null
+  const record = championDetail.value || championHonor.value
+  if (!record?.teamId && !record?.teamName) return null
   return {
-    id: record.championTeamId,
-    name: record.championTeamName,
-    shortName: record.championTeamAbbr,
-    logoUrl: record.championTeamLogoUrl,
+    id: String(record.teamId || ''),
+    name: displayText(record.teamName),
+    shortName: displayText(record.teamName),
+    logoUrl: record.teamLogoUrl || '',
   }
 })
+
+const rosterMembers = computed<ChampionRosterMember[]>(() => {
+  const detail = championDetail.value
+  if (!detail?.lineup?.length) return []
+  return detail.lineup.map((item, index) => {
+    const roleRaw = (item.roleType || '').toUpperCase()
+    const role = roleRaw.includes('START') ? 'STARTER' : 'SUBSTITUTE'
+    return {
+      id: String(item.lineupId || `${item.playerId || index}`),
+      tournamentId: String(detail.tournamentId || props.tournamentId),
+      teamId: String(item.teamId || detail.teamId || ''),
+      playerId: item.playerId || '',
+      playerName: displayText(item.playerName, '球员'),
+      playerAvatarUrl: item.avatarUrl || '',
+      position: displayText(item.positionCode, '--'),
+      role,
+      captain: roleRaw.includes('CAPTAIN'),
+      appearances: 0,
+      sortOrder: item.sortNo ?? index,
+    }
+  })
+})
+
+async function loadTournaments() {
+  const current = ++tournamentReq
+  try {
+    const res = await getPublicTournamentPage({ currentPage: 1, pageSize: 50 })
+    if (current !== tournamentReq) return
+    const records = res.data?.records ?? []
+    tournaments.value = records
+    if (!records.length) {
+      state.value = 'empty'
+      return
+    }
+    const exists = records.some((item) => item.tournamentId === props.tournamentId)
+    if (!exists) {
+      emit('update:tournamentId', records[0]!.tournamentId)
+    }
+  } catch (err) {
+    if (current !== tournamentReq) return
+    tournaments.value = []
+    state.value = 'error'
+    errorMessage.value = err instanceof Error ? err.message : '加载赛事失败'
+  }
+}
+
+async function loadHonors(tournamentId: string) {
+  const current = ++honorReq
+  if (!tournamentId) {
+    honors.value = []
+    championDetail.value = null
+    state.value = 'empty'
+    return
+  }
+  state.value = 'loading'
+  errorMessage.value = ''
+  championDetail.value = null
+  try {
+    const res = await getPublicHallTournamentHonorPage({
+      currentPage: 1,
+      pageSize: 50,
+      tournamentId,
+      sortField: 'awardDate',
+      sortOrder: 'desc',
+    })
+    if (current !== honorReq) return
+    honors.value = res.data?.records ?? []
+    if (!honors.value.length) {
+      state.value = 'empty'
+      return
+    }
+    state.value = 'success'
+    const champion = honors.value.find((item) => (item.honorCode || '').toUpperCase() === 'CHAMPION')
+    if (champion?.honorId) {
+      try {
+        const detailRes = await getPublicHallHonorDetail(champion.honorId)
+        if (current !== honorReq) return
+        championDetail.value = detailRes.data ?? null
+      } catch {
+        if (current !== honorReq) return
+        championDetail.value = null
+      }
+    }
+  } catch (err) {
+    if (current !== honorReq) return
+    honors.value = []
+    state.value = 'error'
+    errorMessage.value = err instanceof Error ? err.message : '加载赛事荣誉失败'
+  }
+}
+
+watch(
+  () => props.tournamentId,
+  (id) => {
+    void loadHonors(id)
+  },
+)
+
+watch(
+  () => true,
+  () => {
+    void loadTournaments()
+  },
+  { immediate: true },
+)
 
 function updateTournament(value: string | number) {
   emit('update:tournamentId', String(value))
@@ -53,13 +192,19 @@ function toggleRoster() {
   emit('update:rosterExpanded', !props.rosterExpanded)
 }
 
-function openTeam(teamId: string) {
+function openTeam(teamId?: string | null) {
+  if (!teamId) return
   router.push(`/tournament/team/${teamId}/overview`)
 }
 
-function openMvp() {
-  if (!honor.value?.mvp) return
-  goToPlayerDetail(router, honor.value.mvp.playerId, 'overview')
+function openPlayer(playerId?: string | null) {
+  if (!playerId) return
+  goToPlayerDetail(router, playerId, 'overview')
+}
+
+function awardDateText(value?: string | null) {
+  const dt = formatDateTime(value)
+  return dt.date === '--' ? '--' : dt.date
 }
 </script>
 
@@ -68,40 +213,57 @@ function openMvp() {
     <HallPanelHead title="赛事荣誉" subtitle="EVENT HONORS" layout="inline">
       <template #filters>
         <HallSelect
-          :model-value="tournamentId"
+          :model-value="tournamentId || tournamentOptions[0]?.value || ''"
           :options="tournamentOptions"
+          :disabled="!tournamentOptions.length"
           @update:model-value="updateTournament"
         />
       </template>
     </HallPanelHead>
 
-    <div v-if="!honor || !honor.published" class="hall-empty">
-      该赛事荣誉尚未发布
-    </div>
+    <div v-if="state === 'loading'" class="hall-empty">加载中...</div>
+    <div v-else-if="state === 'error'" class="hall-empty">{{ errorMessage }}</div>
+    <div v-else-if="state === 'empty'" class="hall-empty">该赛事暂无已发布荣誉</div>
 
     <template v-else>
-      <article class="event-champion-card" :style="championCardStyle">
+      <article
+        v-if="championHonor"
+        class="event-champion-card"
+        :style="championCardStyle"
+      >
         <button
           type="button"
           class="event-champion-card__team"
-          @click="openTeam(honor.championTeamId)"
+          :disabled="!championHonor.teamId"
+          @click="openTeam(championHonor.teamId)"
         >
-          <p class="event-champion-card__label">赛事冠军</p>
+          <p class="event-champion-card__label">
+            {{ displayText(championHonor.honorName, '赛事冠军') }}
+          </p>
           <span class="event-champion-card__label-en">CHAMPION</span>
           <span class="event-champion-card__logo">
             <TeamLogo v-if="championTeam" :team="championTeam" size="xl" />
           </span>
-          <strong>{{ honor.championTeamName }}</strong>
+          <strong>{{ displayText(championHonor.teamName, '冠军球队') }}</strong>
         </button>
 
         <div class="event-champion-card__info">
-          <p class="event-champion-card__tournament">{{ currentTournament?.fullName }}</p>
-          <p class="event-champion-card__desc">{{ honor.description }}</p>
+          <p class="event-champion-card__tournament">
+            {{ displayText(currentTournament?.tournamentName || championHonor.tournamentName) }}
+          </p>
+          <p class="event-champion-card__desc">
+            {{ displayText(championHonor.honorSubtitle || championHonor.honorTitle, '已发布赛事荣誉') }}
+          </p>
           <div class="event-champion-card__date-block">
-            <span>夺冠日期</span>
-            <strong>{{ honor.championDate }}</strong>
+            <span>授予日期</span>
+            <strong>{{ awardDateText(championHonor.awardDate) }}</strong>
           </div>
-          <button type="button" class="event-champion-card__btn" @click="toggleRoster">
+          <button
+            v-if="rosterMembers.length"
+            type="button"
+            class="event-champion-card__btn"
+            @click="toggleRoster"
+          >
             {{ rosterExpanded ? '收起冠军阵容' : '查看冠军阵容' }}
             <span aria-hidden="true">›</span>
           </button>
@@ -111,582 +273,239 @@ function openMvp() {
       </article>
 
       <ChampionRoster
-        v-if="rosterExpanded && honor.championRoster.length"
-        :members="honor.championRoster"
+        v-if="rosterExpanded && rosterMembers.length"
+        :members="rosterMembers"
       />
 
-      <article v-if="honor.mvp?.published" class="event-mvp-card">
-        <div class="event-mvp-card__visual">
-          <p class="event-mvp-card__label">
-            <span class="event-mvp-card__label-cn">赛事</span>
-            <span class="event-mvp-card__label-en">MVP</span>
-          </p>
-          <HallPlayerSilhouette
-            :name="honor.mvp.playerName"
-            :avatar-url="honor.mvp.playerAvatarUrl"
-            size="mvp"
-          />
-        </div>
-
-        <div class="event-mvp-card__identity">
-          <button type="button" class="event-mvp-card__name" @click="openMvp">
-            {{ honor.mvp.playerName }}
-          </button>
-          <button type="button" class="event-mvp-card__team" @click="openTeam(honor.mvp.teamId)">
-            <span class="event-mvp-card__logo">
+      <div v-if="otherHonors.length" class="event-other-honors">
+        <h3 class="event-other-honors__title">其他赛事荣誉</h3>
+        <div class="event-other-honors__grid">
+          <article
+            v-for="item in otherHonors"
+            :key="item.honorId"
+            class="event-other-honor hall-card-surface"
+          >
+            <div v-if="item.playerId" class="event-other-honor__avatar">
+              <HallPlayerSilhouette
+                :name="displayText(item.playerName, '球员')"
+                :avatar-url="item.playerAvatarUrl || ''"
+                size="roster"
+              />
+            </div>
+            <div v-else-if="item.teamId" class="event-other-honor__logo">
               <TeamLogo
                 :team="{
-                  id: honor.mvp.teamId,
-                  name: honor.mvp.teamName,
-                  shortName: honor.mvp.teamAbbr,
-                  logoUrl: honor.mvp.teamLogoUrl,
+                  id: String(item.teamId),
+                  name: displayText(item.teamName),
+                  shortName: displayText(item.teamName),
+                  logoUrl: item.teamLogoUrl || '',
                 }"
-                size="sm"
+                size="md"
               />
-            </span>
-            <span>{{ honor.mvp.teamAbbr || honor.mvp.teamName }}</span>
-          </button>
-          <p class="event-mvp-card__event">{{ currentTournament?.fullName }}</p>
-          <p class="event-mvp-card__note">赛事全程数据</p>
-        </div>
-
-        <div class="event-mvp-card__stats">
-          <div class="event-mvp-stats__row event-mvp-stats__row--three">
-            <div class="event-mvp-stat">
-              <span class="event-mvp-stat__label">场均得分</span>
-              <strong class="event-mvp-stat__value">{{ honor.mvp.averagePoints.toFixed(1) }}</strong>
             </div>
-            <div class="event-mvp-stat">
-              <span class="event-mvp-stat__label">场均篮板</span>
-              <strong class="event-mvp-stat__value">{{ honor.mvp.averageRebounds.toFixed(1) }}</strong>
+            <div class="event-other-honor__body">
+              <p class="event-other-honor__code">{{ displayText(item.honorName) }}</p>
+              <button
+                v-if="item.playerId"
+                type="button"
+                class="event-other-honor__name"
+                @click="openPlayer(item.playerId)"
+              >
+                {{ displayText(item.playerName) }}
+              </button>
+              <button
+                v-else-if="item.teamId"
+                type="button"
+                class="event-other-honor__name"
+                @click="openTeam(item.teamId)"
+              >
+                {{ displayText(item.teamName) }}
+              </button>
+              <p class="event-other-honor__meta">
+                {{ displayText(item.seasonName, '赛季') }} · {{ awardDateText(item.awardDate) }}
+              </p>
             </div>
-            <div class="event-mvp-stat">
-              <span class="event-mvp-stat__label">场均助攻</span>
-              <strong class="event-mvp-stat__value">{{ honor.mvp.averageAssists.toFixed(1) }}</strong>
-            </div>
-          </div>
-          <div class="event-mvp-stats__row event-mvp-stats__row--two">
-            <div class="event-mvp-stat">
-              <span class="event-mvp-stat__label">场均抢断</span>
-              <strong class="event-mvp-stat__value">{{ honor.mvp.averageSteals.toFixed(1) }}</strong>
-            </div>
-            <div class="event-mvp-stat">
-              <span class="event-mvp-stat__label">投篮命中率</span>
-              <strong class="event-mvp-stat__value">{{ honor.mvp.fieldGoalPercentage.toFixed(1) }}%</strong>
-            </div>
-          </div>
+          </article>
         </div>
-      </article>
-      <div v-else class="hall-empty event-honors-panel__pending">赛事 MVP 尚未公布</div>
-
-      <section class="hall-lineup-section">
-        <div class="hall-section-head hall-lineup-section__header">
-          <h3 class="hall-section-head__title">赛事最佳阵容</h3>
-          <span class="hall-section-head__sub">ALL-TOURNAMENT TEAM</span>
-        </div>
-        <div v-if="honor.allTournamentPublished && honor.allTournamentTeam.length" class="hall-lineup-grid">
-          <HonorLineupCard
-            v-for="player in honor.allTournamentTeam"
-            :key="`${player.playerId}-${player.position}`"
-            :player="player"
-          />
-        </div>
-        <div v-else class="hall-empty event-honors-panel__pending">赛事最佳阵容尚未公布</div>
-      </section>
-
-      <section class="hall-lineup-section">
-        <div class="hall-section-head hall-lineup-section__header">
-          <h3 class="hall-section-head__title">最佳防守阵容</h3>
-          <span class="hall-section-head__sub">ALL-DEFENSIVE TEAM</span>
-        </div>
-        <div v-if="honor.allDefensivePublished && honor.allDefensiveTeam.length" class="hall-lineup-grid">
-          <HonorLineupCard
-            v-for="player in honor.allDefensiveTeam"
-            :key="`${player.playerId}-${player.position}`"
-            :player="player"
-          />
-        </div>
-        <div v-else class="hall-empty event-honors-panel__pending">最佳防守阵容尚未公布</div>
-      </section>
+      </div>
     </template>
   </section>
 </template>
 
 <style scoped lang="scss">
-@use '../styles/hall-shared.scss';
-
 .event-honors-panel {
   width: 100%;
-  padding-bottom: 42px;
-}
-
-.event-honors-panel__pending {
-  padding: 24px;
-  margin-top: 20px;
 }
 
 .event-champion-card {
-  position: relative;
   display: grid;
-  grid-template-columns: 28% 30% 42%;
-  min-height: 320px;
-  overflow: hidden;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: #050505;
+  grid-template-columns: 220px minmax(0, 1fr) 180px;
+  gap: 24px;
+  min-height: 240px;
+  padding: 28px 30px;
+  border-radius: 2px;
   background-size: cover;
   background-position: center right;
-  background-repeat: no-repeat;
+  color: #fff;
 }
 
 .event-champion-card__team {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
   gap: 10px;
-  margin: 0;
-  padding: 28px 24px 28px 30px;
+  padding: 0;
   border: 0;
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
   background: transparent;
-  color: #fff;
-  cursor: pointer;
+  color: inherit;
   text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
 
   strong {
-    margin-top: 4px;
-    font-size: 36px;
+    font-size: 28px;
     font-weight: 900;
-    letter-spacing: 0.04em;
-    line-height: 1.1;
   }
 }
 
 .event-champion-card__label {
   margin: 0;
-  color: var(--hall-red, #e71922);
-  font-size: 22px;
-  font-weight: 900;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .event-champion-card__label-en {
-  display: block;
-  margin-top: -2px;
-  color: #fff;
-  font-size: 18px;
-  font-style: italic;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
 }
 
 .event-champion-card__logo {
-  display: grid;
-  place-items: center;
-  width: 120px;
-  height: 120px;
-  margin-top: 8px;
-
-  :deep(.team-logo--xl) {
-    width: 120px;
-    height: 120px;
-  }
+  width: 88px;
+  height: 88px;
 }
 
 .event-champion-card__info {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-width: 0;
-  padding: 28px 24px;
+  gap: 10px;
 }
 
 .event-champion-card__tournament {
   margin: 0;
-  color: #fff;
-  font-size: clamp(22px, 2vw, 28px);
+  font-size: 18px;
   font-weight: 800;
-  font-style: italic;
-  line-height: 1.2;
 }
 
 .event-champion-card__desc {
-  margin: 10px 0 0;
-  color: rgba(255, 255, 255, 0.72);
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .event-champion-card__date-block {
-  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
 
   span {
-    display: block;
-    color: rgba(255, 255, 255, 0.52);
-    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
   }
 
   strong {
-    display: block;
-    margin-top: 6px;
-    color: #fff;
-    font-size: 20px;
-    font-weight: 800;
+    font-size: 18px;
   }
 }
 
 .event-champion-card__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 22px;
   align-self: flex-start;
-  min-width: 148px;
-  height: 40px;
-  padding: 0 16px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: rgba(0, 0, 0, 0.35);
+  margin-top: 8px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(0, 0, 0, 0.28);
   color: #fff;
   font: inherit;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
   cursor: pointer;
-  transition: background 0.18s ease, border-color 0.18s ease;
-
-  span {
-    transition: transform 0.18s ease;
-  }
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: #fff;
-
-    span {
-      transform: translateX(3px);
-    }
-  }
 }
 
-.event-champion-card__visual {
-  min-height: 100%;
+.event-other-honors {
+  margin-top: 28px;
 }
 
-.event-mvp-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: 38% 24% 38%;
-  min-height: 260px;
-  max-height: 290px;
-  margin-top: 20px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  background:
-    linear-gradient(90deg, #0b0b0b 0%, #080808 42%, #0b0b0b 100%);
-}
-
-.event-mvp-card__visual {
-  position: relative;
-  min-width: 0;
-  min-height: 260px;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 58% 36%, rgba(255, 255, 255, 0.14), transparent 28%),
-    linear-gradient(90deg, #090909 0%, #101010 70%, #080808 100%);
-
-  :deep(.hall-player-visual) {
-    position: absolute;
-    inset: 0;
-  }
-}
-
-.event-mvp-card__visual::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: -1px;
-  bottom: 0;
-  width: 34%;
-  background: linear-gradient(90deg, transparent, rgba(8, 8, 8, 0.9));
-  pointer-events: none;
-  z-index: 2;
-}
-
-.event-mvp-card__label {
-  position: absolute;
-  top: 22px;
-  left: 24px;
-  z-index: 3;
-  margin: 0;
-  font-size: clamp(24px, 2.2vw, 28px);
+.event-other-honors__title {
+  margin: 0 0 14px;
+  color: #111;
+  font-size: 18px;
   font-weight: 900;
-  font-style: italic;
-  line-height: 1;
-  letter-spacing: 0.04em;
 }
 
-.event-mvp-card__label-cn {
-  color: var(--hall-red, #e71922);
+.event-other-honors__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
-.event-mvp-card__label-en {
-  margin-left: 4px;
-  color: #fff;
-}
-
-.event-mvp-card__identity {
+.event-other-honor {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-  padding: 26px 22px;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
 }
 
-.event-mvp-card__name,
-.event-mvp-card__team {
+.event-other-honor__avatar,
+.event-other-honor__logo {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+
+.event-other-honor__code {
   margin: 0;
+  color: var(--cnpa-red, #e10613);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.event-other-honor__name {
+  display: block;
+  margin: 6px 0 0;
   padding: 0;
   border: 0;
   background: transparent;
-  cursor: pointer;
-  text-align: left;
+  color: #111;
   font: inherit;
-}
-
-.event-mvp-card__name {
-  display: block;
-  color: #fff;
-  font-size: clamp(36px, 3.2vw, 48px);
-  font-weight: 900;
-  letter-spacing: 1px;
-  line-height: 1;
-  transition: color 0.18s ease;
-
-  &:hover {
-    color: var(--hall-red, #e71922);
-  }
-}
-
-.event-mvp-card__team {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 16px;
-  color: #fff;
   font-size: 18px;
-  font-weight: 700;
-  transition: color 0.18s ease;
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
 
   &:hover {
-    color: var(--hall-gold, #d2a648);
+    color: var(--cnpa-red, #e10613);
   }
 }
 
-.event-mvp-card__logo {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-
-  :deep(.team-logo) {
-    width: 34px;
-    height: 34px;
-  }
-}
-
-.event-mvp-card__event {
-  margin: 14px 0 0;
-  color: #b8b8b8;
-  font-size: 14px;
-}
-
-.event-mvp-card__note {
-  margin: 8px 0 0;
-  color: #9d9d9d;
+.event-other-honor__meta {
+  margin: 6px 0 0;
+  color: #666;
   font-size: 13px;
 }
 
-.event-mvp-card__stats {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 18px;
-  min-width: 0;
-  padding: 28px 20px;
-}
-
-.event-mvp-stats__row {
-  display: grid;
-  align-items: stretch;
-  min-width: 0;
-}
-
-.event-mvp-stats__row--three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.event-mvp-stats__row--two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  width: 72%;
-  margin-inline: auto;
-}
-
-.event-mvp-stat {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  min-width: 0;
-  padding: 10px 18px;
-  border-left: 1px solid rgba(255, 255, 255, 0.16);
-
-  &:first-child {
-    border-left: 0;
-  }
-}
-
-.event-mvp-stat__label {
-  margin-bottom: 12px;
-  color: #b9b9b9;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.event-mvp-stat__value {
-  color: var(--hall-red, #e71922);
-  font-size: clamp(34px, 2.6vw, 46px);
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.hall-lineup-section {
-  margin-top: 30px;
-  width: 100%;
-}
-
-.hall-lineup-section__header {
-  margin-bottom: 16px;
-}
-
-.hall-lineup-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  width: 100%;
-}
-
-@media (max-width: 1199px) {
+@media (max-width: 1023px) {
   .event-champion-card {
-    grid-template-columns: 1fr 1fr;
-    background-position: 70% center;
-  }
-
-  .event-champion-card__visual {
-    display: none;
-  }
-
-  .event-champion-card__team {
-    border-right: 1px solid rgba(255, 255, 255, 0.12);
-  }
-
-  .event-mvp-card {
-    grid-template-columns: 42% 58%;
-    max-height: none;
-  }
-
-  .event-mvp-card__stats {
-    grid-column: 1 / -1;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 22px 18px;
-  }
-
-  .event-mvp-stats__row--two {
-    width: 80%;
-  }
-
-  .event-mvp-card__identity {
-    border-right: 0;
-  }
-
-  .hall-lineup-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 767px) {
-  .event-champion-card,
-  .event-mvp-card {
     grid-template-columns: 1fr;
   }
 
-  .event-champion-card {
-    min-height: 0;
-    background-position: center top;
-  }
-
-  .event-champion-card__team {
-    border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    padding: 24px 20px;
-  }
-
-  .event-champion-card__info {
-    padding: 24px 20px 28px;
-  }
-
-  .event-mvp-card {
-    max-height: none;
-  }
-
-  .event-mvp-card__visual {
-    min-height: 260px;
-  }
-
-  .event-mvp-card__identity {
-    border-left: 0;
-    border-right: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 22px 18px;
-  }
-
-  .event-mvp-card__name {
-    font-size: 36px;
-  }
-
-  .event-mvp-stats__row--three,
-  .event-mvp-stats__row--two {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-  }
-
-  .event-mvp-stats__row--three .event-mvp-stat:last-child {
-    grid-column: 1 / -1;
-    border-left: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
-    padding-top: 16px;
-  }
-
-  .event-mvp-stats__row--two .event-mvp-stat:first-child {
-    border-left: 0;
-  }
-
-  .event-mvp-stat__value {
-    font-size: 34px;
-  }
-
-  .hall-lineup-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-}
-
-@media (max-width: 479px) {
-  .hall-lineup-grid {
+  .event-other-honors__grid {
     grid-template-columns: 1fr;
   }
 }

@@ -25,8 +25,8 @@ import {
   getDefaultSecurity,
   hashPassword,
   securityStorageKey,
-  validatePasswordRules,
 } from '@/mock/account/security'
+import { validatePasswordRules } from '@/utils/passwordRules'
 import {
   buildPlayerIdentity,
   getDefaultPlatformGameIds,

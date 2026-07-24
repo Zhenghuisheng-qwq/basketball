@@ -3,6 +3,8 @@ com\zhs\response\BasketTournamentGroupResp.class
 com\zhs\common\cachekey\MiniCacheKey.class
 com\zhs\model\BasketTeamSeasonProfile.class
 com\zhs\response\BasketPlayerCertAuditResp.class
+com\zhs\response\publicapi\PublicHomeBannerResp.class
+com\zhs\service\IBasketPublicBannerService.class
 com\zhs\service\IBasketFavoriteService.class
 com\zhs\request\QueryBasketTeamCaptainHistoryReq.class
 com\zhs\service\IBasketTournamentRegistrationAuditService.class
@@ -18,14 +20,17 @@ com\zhs\service\IBasketAccountSecurityLogService.class
 com\zhs\request\team\TeamLogoBindReq.class
 com\zhs\service\impl\BasketAnnouncementAttachmentServiceImpl.class
 com\zhs\enums\PublicTeamSortEnum.class
+com\zhs\service\impl\BasketPublicPartnerServiceImpl.class
 com\zhs\request\team\TeamRegistrationUpdateReq.class
 com\zhs\service\IBasketVenueService.class
 com\zhs\dao\BasketTournamentSeasonDao.class
 com\zhs\dao\BasketFavoriteDao.class
+com\zhs\response\publicapi\PublicAnnouncementItemResp.class
 com\zhs\request\UpdateBasketMatchStatusLogReq.class
 com\zhs\dao\BasketTournamentAwardConfigDao.class
 com\zhs\config\GeneratedCrudAccessInterceptor.class
 com\zhs\response\BasketMessageReceiverDetailResp.class
+com\zhs\response\publicapi\PublicAnnouncementAdjacentResp.class
 com\zhs\service\IBasketPublicMatchService.class
 com\zhs\service\impl\BasketMemberAuthServiceImpl.class
 com\zhs\response\BasketMemberAccountDetailResp.class
@@ -70,6 +75,7 @@ com\zhs\controller\BasketMatchTeamStatController.class
 com\zhs\enums\TeamInvitationStatusEnum.class
 com\zhs\service\impl\BasketStatChangeRecordServiceImpl.class
 com\zhs\response\BasketTeamMemberDetailResp.class
+com\zhs\response\publicapi\PublicSeasonPlacementResp.class
 com\zhs\service\IBasketLoginLogService.class
 com\zhs\response\BasketNotificationSettingDetailResp.class
 com\zhs\common\RedisCache.class
@@ -88,6 +94,7 @@ com\zhs\dao\BasketTeamInvitationDao.class
 com\zhs\request\QueryBasketNotificationSettingReq.class
 com\zhs\response\publicapi\PublicStandingItemVo.class
 com\zhs\request\AddBasketStageStandingReq.class
+com\zhs\enums\PublicAnnouncementCategoryEnum.class
 com\zhs\request\account\NotificationSettingUpdateReq.class
 com\zhs\model\BasketSiteConfig.class
 com\zhs\request\AddBasketStatChangeRecordReq.class
@@ -136,6 +143,7 @@ com\zhs\service\crypto\FieldEncryptServiceImpl.class
 com\zhs\dao\BasketPlayerCertMaterialDao.class
 com\zhs\service\impl\BasketFavoriteServiceImpl.class
 com\zhs\dto\BasketPlayerRankDto.class
+com\zhs\service\impl\BasketPublicHallOfFameServiceImpl.class
 com\zhs\model\BasketStageStanding.class
 com\zhs\request\QueryBasketCaptainQualificationReq.class
 com\zhs\response\BasketTeamDetailResp.class
@@ -169,6 +177,7 @@ com\zhs\model\BasketPlayerCertApplication.class
 com\zhs\request\UpdateBasketPlayerSeasonStatReq.class
 com\zhs\response\publicapi\PublicMatchTeamStatVo.class
 com\zhs\dto\BasketTournamentRegistrationAuditDto.class
+com\zhs\service\IBasketPublicAnnouncementService.class
 com\zhs\response\BasketMatchStatusLogDetailResp.class
 com\zhs\request\QueryBasketTeamSeasonStatReq.class
 com\zhs\service\IBasketCaptainQualificationService.class
@@ -281,12 +290,14 @@ com\zhs\service\IBasketHonorLineupService.class
 com\zhs\service\impl\BasketTournamentServiceImpl.class
 com\zhs\util\ActiveStatusUtil.class
 com\zhs\model\BasketNotificationSetting.class
+com\zhs\response\publicapi\PublicHonorLineupItemResp.class
 com\zhs\service\impl\BasketCaptainQualificationServiceImpl.class
 com\zhs\controller\publicapi\BasketPublicMatchController.class
 com\zhs\response\BasketPlayerRankDetailResp.class
 com\zhs\service\IBasketTournamentGroupService.class
 com\zhs\request\account\PrivacySettingUpdateReq.class
 com\zhs\service\IBasketTeamRankService.class
+com\zhs\service\IBasketPublicHallOfFameService.class
 com\zhs\request\AddBasketTournamentRegistrationAuditReq.class
 com\zhs\response\publicapi\PublicPlayerRankItemVo.class
 com\zhs\service\IBasketMatchRosterService.class
@@ -311,11 +322,13 @@ com\zhs\request\AddBasketTeamJoinApplicationReq.class
 com\zhs\response\BasketVerifyCodeRecordResp.class
 com\zhs\request\QueryBasketMessageReceiverReq.class
 com\zhs\response\auth\MiniLoginResp.class
+com\zhs\controller\publicapi\BasketPublicPartnerController.class
 com\zhs\response\BasketTournamentResp.class
 com\zhs\controller\BasketCaptainQualificationController.class
 com\zhs\request\AddBasketMemberAccountReq.class
 com\zhs\service\impl\BasketTeamCaptainHistoryServiceImpl.class
 com\zhs\model\User.class
+com\zhs\response\publicapi\PublicAnnouncementDetailResp.class
 com\zhs\service\impl\BasketMatchTeamStatServiceImpl.class
 com\zhs\service\impl\BasketVenueServiceImpl.class
 com\zhs\dao\BasketAnnouncementAttachmentDao.class
@@ -343,6 +356,7 @@ com\zhs\dto\BasketTeamDto.class
 com\zhs\controller\BasketHonorCategoryController.class
 com\zhs\enums\TeamJoinApplicationStatusEnum.class
 com\zhs\common\cachekey\member\EmailCodeLimitCacheKey.class
+com\zhs\controller\publicapi\BasketPublicHallOfFameController.class
 com\zhs\service\IBasketAnnouncementAttachmentService.class
 com\zhs\request\UpdateBasketPlayerCertApplicationReq.class
 com\zhs\request\UpdateBasketFileAssetReq.class
@@ -399,6 +413,7 @@ com\zhs\request\QueryBasketMatchTeamReq.class
 com\zhs\service\impl\BasketTeamSeasonStatServiceImpl.class
 com\zhs\service\impl\BusinessMessageServiceImpl.class
 com\zhs\response\BasketTeamRankResp.class
+com\zhs\response\publicapi\PublicAnnouncementCategoryResp.class
 com\zhs\response\BasketMemberProfileDetailResp.class
 com\zhs\request\QueryBasketMemberAccountReq.class
 com\zhs\controller\BasketMessageTaskController.class
@@ -429,6 +444,7 @@ com\zhs\controller\BasketHonorRecordController.class
 com\zhs\response\account\PrivacySettingResp.class
 com\zhs\util\AccountSecurityLogHelper.class
 com\zhs\request\player\PlayerCertDraftReq.class
+com\zhs\service\impl\BasketPublicBannerServiceImpl.class
 com\zhs\model\BasketMemberAccount.class
 com\zhs\model\BasketMatchTeamStat.class
 com\zhs\dto\BasketPlayerCertMaterialDto.class
@@ -468,9 +484,11 @@ com\zhs\request\QueryBasketAccountSecurityLogReq.class
 com\zhs\response\BasketAnnouncementAttachmentResp.class
 com\zhs\request\UpdateBasketVenueReq.class
 com\zhs\response\BasketTeamJoinApplicationResp.class
+com\zhs\enums\PublicHonorSortEnum.class
 com\zhs\dao\BasketPlayerSeasonStatDao.class
 com\zhs\request\QueryBasketTeamSeasonProfileReq.class
 com\zhs\response\BasketFavoriteDetailResp.class
+com\zhs\response\publicapi\PublicPartnerResp.class
 com\zhs\response\publicapi\PublicMatchDetailVo.class
 com\zhs\response\BasketTournamentStageResp.class
 com\zhs\dto\BasketStageStandingDto.class
@@ -514,6 +532,7 @@ com\zhs\mapper\UserMapper.class
 com\zhs\response\BasketMatchPlayerStatResp.class
 com\zhs\response\BasketMemberAgreementRecordDetailResp.class
 com\zhs\dao\BasketPlayerRankDao.class
+com\zhs\enums\PublicAnnouncementSortEnum.class
 com\zhs\request\QueryBasketTournamentRegistrationPlayerReq.class
 com\zhs\util\TokenUtil.class
 com\zhs\dao\BasketCaptainQualificationDao.class
@@ -578,6 +597,7 @@ com\zhs\dto\BasketFileAssetDto.class
 com\zhs\response\BasketSiteConfigResp.class
 com\zhs\model\BasketAnnouncement.class
 com\zhs\response\BasketPlayerCertMaterialDetailResp.class
+com\zhs\service\impl\BasketPublicAnnouncementServiceImpl.class
 com\zhs\service\impl\TeamMemberBusinessServiceImpl.class
 com\zhs\service\storage\LocalAccountFileStorageServiceImpl.class
 com\zhs\service\impl\BasketPlayerCertApplicationServiceImpl.class
@@ -593,6 +613,7 @@ com\zhs\model\BasketTeam.class
 com\zhs\service\IAccountProfileService.class
 com\zhs\request\AddBasketTeamSeasonProfileReq.class
 com\zhs\request\UpdateBasketAnnouncementReq.class
+com\zhs\response\publicapi\PublicHallOverviewResp.class
 com\zhs\response\team\TeamRegistrationDetailResp.class
 com\zhs\dto\BasketTournamentGroupTeamDto.class
 com\zhs\request\UpdateBasketTournamentRegistrationReq.class
@@ -670,6 +691,7 @@ com\zhs\service\IBasketPublicStandingService.class
 com\zhs\dao\BasketDisciplineRecordDao.class
 com\zhs\service\IBasketHonorCategoryService.class
 com\zhs\service\impl\BasketTeamAuditRecordServiceImpl.class
+com\zhs\response\publicapi\PublicHonorItemResp.class
 com\zhs\util\SessionUuidUtil.class
 com\zhs\response\BasketHonorRecordDetailResp.class
 com\zhs\service\impl\BasketNotificationSettingServiceImpl.class
@@ -693,6 +715,7 @@ com\zhs\model\BasketMemberProfile.class
 com\zhs\response\publicapi\PublicTeamSeasonStatVo.class
 com\zhs\controller\BasketLoginLogController.class
 com\zhs\model\BasketPlayerCertAudit.class
+com\zhs\response\publicapi\PublicHonorDetailResp.class
 com\zhs\response\BasketFavoriteResp.class
 com\zhs\config\WxMiniProperties.class
 com\zhs\request\team\TeamJoinApplicationCreateReq.class
@@ -778,6 +801,7 @@ com\zhs\dto\BasketPrivacySettingDto.class
 com\zhs\request\UpdateBasketSiteConfigReq.class
 com\zhs\response\BasketTeamAuditRecordResp.class
 com\zhs\response\BasketMatchDetailResp.class
+com\zhs\controller\publicapi\BasketPublicAnnouncementController.class
 com\zhs\response\member\MemberSummaryResp.class
 com\zhs\response\member\EmailCodeSendResp.class
 com\zhs\response\BasketMatchPlayerStatDetailResp.class
@@ -818,6 +842,7 @@ com\zhs\request\QueryBasketTournamentSeasonReq.class
 com\zhs\model\BasketMatchPeriodScore.class
 com\zhs\dao\BasketAccountSecurityLogDao.class
 com\zhs\response\team\TeamInvitationItemResp.class
+com\zhs\service\IBasketPublicPartnerService.class
 com\zhs\enums\VerifyPurposeEnum.class
 com\zhs\service\impl\BasketDisciplineRecordServiceImpl.class
 com\zhs\common\UserContext.class
@@ -877,6 +902,7 @@ com\zhs\service\impl\BasketMatchTeamServiceImpl.class
 com\zhs\dao\BasketStatChangeRecordDao.class
 com\zhs\request\QueryBasketTournamentRegistrationReq.class
 com\zhs\response\BasketAccountSecurityLogResp.class
+com\zhs\service\support\BasketPublicHonorSupport.class
 com\zhs\dto\BasketMatchRosterDto.class
 com\zhs\request\UpdateBasketMatchTeamStatReq.class
 com\zhs\service\IBasketStatChangeRecordService.class

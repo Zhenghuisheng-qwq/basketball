@@ -2,7 +2,6 @@ package com.zhs.service.impl;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.IdUtil;
-import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zhs.common.cachekey.MiniCacheKey;
@@ -55,6 +54,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.security.SecureRandom;
 import java.util.Date;
 import java.util.UUID;
 
@@ -67,6 +67,8 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
     private static final String LOGIN_TYPE_PASSWORD = "PASSWORD";
     private static final String LOGIN_TYPE_EMAIL_CODE = "EMAIL_CODE";
     private static final String TOKEN_TYPE_BEARER = "Bearer";
+    private static final String SEND_PROVIDER_DEV_BYPASS = "DEV_BYPASS";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Resource
     private BasketMemberAccountDao memberAccountDao;
@@ -120,7 +122,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
             throw new ServiceException("当前网络发送过于频繁，请稍后再试");
         }
 
-        String code = RandomUtil.randomNumbers(6);
+        String code = generateNumericCode(6);
         String bizNo = "VC" + IdUtil.getSnowflakeNextIdStr();
         Date now = new Date();
         Date expireTime = new Date(now.getTime() + authProperties.getCodeExpireSeconds() * 1000L);
@@ -135,27 +137,37 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         record.setVerifyStatus(VerifyStatusEnum.PENDING.getCode());
         record.setExpireTime(expireTime);
         record.setClientIp(clientIp);
-        record.setSendProvider("SMTP");
         record.setIsDelete(0);
 
-        try {
-            memberMailService.sendVerifyCodeMail(
-                    email,
-                    code,
-                    purpose.getLabel(),
-                    Math.max(1, authProperties.getCodeExpireSeconds() / 60));
+        if (isDevMailBypass()) {
+            // 本地开发：不发真实邮件，仅落库成功流水，校验时任意 6 位数字可通过
+            record.setSendProvider(SEND_PROVIDER_DEV_BYPASS);
             record.setSendStatus(VerifySendStatusEnum.SUCCESS.getCode());
+            record.setFailureReason("DEV_MAIL_BYPASS");
             verifyCodeRecordDao.insert(record);
-        } catch (ServiceException e) {
-            record.setSendStatus(VerifySendStatusEnum.FAIL.getCode());
-            record.setFailureReason(trimReason(e.getMessage()));
-            verifyCodeRecordDao.insert(record);
-            throw e;
-        } catch (Exception e) {
-            record.setSendStatus(VerifySendStatusEnum.FAIL.getCode());
-            record.setFailureReason("发送异常");
-            verifyCodeRecordDao.insert(record);
-            throw new ServiceException("验证码发送失败，请稍后重试");
+            log.warn("[member-auth] 开发模式跳过邮件发送 email={} purpose={} bizNo={}",
+                    maskEmail(email), purpose.getCode(), bizNo);
+        } else {
+            record.setSendProvider("SMTP");
+            try {
+                memberMailService.sendVerifyCodeMail(
+                        email,
+                        code,
+                        purpose.getLabel(),
+                        Math.max(1, authProperties.getCodeExpireSeconds() / 60));
+                record.setSendStatus(VerifySendStatusEnum.SUCCESS.getCode());
+                verifyCodeRecordDao.insert(record);
+            } catch (ServiceException e) {
+                record.setSendStatus(VerifySendStatusEnum.FAIL.getCode());
+                record.setFailureReason(trimReason(e.getMessage()));
+                verifyCodeRecordDao.insert(record);
+                throw e;
+            } catch (Exception e) {
+                record.setSendStatus(VerifySendStatusEnum.FAIL.getCode());
+                record.setFailureReason("发送异常");
+                verifyCodeRecordDao.insert(record);
+                throw new ServiceException("验证码发送失败，请稍后重试");
+            }
         }
 
         miniRedisUtil.set(limitKey, "1");
@@ -409,7 +421,9 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
             throw new ServiceException("验证码错误次数过多，请重新获取");
         }
 
-        if (!passwordEncoder.matches(normalizedCode, record.getCodeHash())) {
+        boolean bypassCodeCheck = isDevMailBypass()
+                && SEND_PROVIDER_DEV_BYPASS.equals(record.getSendProvider());
+        if (!bypassCodeCheck && !passwordEncoder.matches(normalizedCode, record.getCodeHash())) {
             miniRedisUtil.increment(failKey);
             throw new ServiceException("验证码错误或已过期");
         }
@@ -706,5 +720,19 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
             return null;
         }
         return userAgent.length() > 1000 ? userAgent.substring(0, 1000) : userAgent;
+    }
+
+    /** 使用 SecureRandom 生成数字验证码，禁止 Math.random / 非安全 RNG。 */
+    private String generateNumericCode(int length) {
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append(SECURE_RANDOM.nextInt(10));
+        }
+        return sb.toString();
+    }
+
+    /** 本地开发跳过 SMTP：配置开关为 true，或显式开关开启。 */
+    private boolean isDevMailBypass() {
+        return authProperties.isDevMailBypass();
     }
 }

@@ -22,31 +22,48 @@ public class MemberMailServiceImpl implements IMemberMailService {
     @Value("${spring.mail.username:}")
     private String mailUsername;
 
+    @Value("${spring.mail.password:}")
+    private String mailPassword;
+
     @Value("${member.mail.from:}")
     private String mailFrom;
+
+    @Value("${member.mail.from-name:CNPA赛事平台}")
+    private String mailFromName;
 
     public MemberMailServiceImpl(ObjectProvider<JavaMailSender> javaMailSenderProvider) {
         this.javaMailSenderProvider = javaMailSenderProvider;
     }
 
     @Override
-    public void sendVerifyCodeMail(String toEmail, String code, String purposeLabel, long expireMinutes) {
-        if (!StringUtils.hasText(mailHost) || !StringUtils.hasText(mailUsername)) {
-            throw new ServiceException("邮件服务未配置");
+    public boolean isConfigured() {
+        if (!StringUtils.hasText(mailHost) || !StringUtils.hasText(mailUsername)
+                || !StringUtils.hasText(mailPassword)) {
+            return false;
         }
-        JavaMailSender mailSender = javaMailSenderProvider.getIfAvailable();
-        if (mailSender == null) {
-            throw new ServiceException("邮件服务未配置");
+        if (javaMailSenderProvider.getIfAvailable() == null) {
+            return false;
         }
         String from = StringUtils.hasText(mailFrom) ? mailFrom : mailUsername;
-        if (!StringUtils.hasText(from)) {
-            throw new ServiceException("邮件服务未配置");
+        return StringUtils.hasText(from);
+    }
+
+    @Override
+    public void sendVerifyCodeMail(String toEmail, String code, String purposeLabel, long expireMinutes) {
+        if (!isConfigured()) {
+            throw new ServiceException("邮箱服务未配置");
         }
+        JavaMailSender mailSender = javaMailSenderProvider.getIfAvailable();
+        String from = StringUtils.hasText(mailFrom) ? mailFrom : mailUsername;
 
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
-            helper.setFrom(from);
+            if (StringUtils.hasText(mailFromName)) {
+                helper.setFrom(from, mailFromName);
+            } else {
+                helper.setFrom(from);
+            }
             helper.setTo(toEmail);
             helper.setSubject("CNPA 邮箱验证码");
             helper.setText(buildText(code, purposeLabel, expireMinutes), false);

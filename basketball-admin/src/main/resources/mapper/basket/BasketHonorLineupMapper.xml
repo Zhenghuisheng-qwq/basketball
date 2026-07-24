@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketHonorLineupMapper">
+    <select id="selectByHonorRecordId" resultType="com.zhs.basket.resp.HonorLineupResp">
+        select l.id, l.honor_record_id as honorRecordId, l.team_id as teamId, l.player_id as playerId,
+               l.member_id as memberId, ifnull(nullif(p.game_nickname, ''), p.real_name) as playerName,
+               l.role_type as roleType, l.jersey_no as jerseyNo, l.position_code as positionCode,
+               l.sort_no as sortNo, af.access_url as avatarUrl
+        from basket_honor_lineup l
+        left join basket_player_profile p on p.id = l.player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = l.member_id and mp.is_delete = 0
+        left join basket_file_asset af on af.id = mp.avatar_file_id and af.is_delete = 0
+        where l.honor_record_id = #{honorRecordId} and l.is_delete = 0
+        order by l.sort_no, l.id
+    </select>
+
+    <update id="softDeleteByHonorRecordId">
+        update basket_honor_lineup
+        set is_delete = 1, update_time = now()
+        where honor_record_id = #{honorRecordId} and is_delete = 0
+    </update>
+
+    <insert id="batchInsert">
+        insert into basket_honor_lineup (
+            honor_record_id, team_id, player_id, member_id, role_type, jersey_no, position_code,
+            sort_no, create_time, update_time, is_delete
+        ) values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.honorRecordId}, #{item.teamId}, #{item.playerId}, #{item.memberId}, #{item.roleType},
+             #{item.jerseyNo}, #{item.positionCode}, #{item.sortNo}, #{item.createTime}, #{item.updateTime}, #{item.isDelete})
+        </foreach>
+    </insert>
+</mapper>
