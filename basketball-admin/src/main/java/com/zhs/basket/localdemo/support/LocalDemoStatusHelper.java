@@ -24,6 +24,8 @@ public class LocalDemoStatusHelper {
         String prefix = BasketLocalDemoConstants.BIZ_PREFIX;
         String marker = properties.getMarker();
         resp.setAccountCount(demoMapper.countAccounts(prefix));
+        resp.setAvatarMissingCount(demoMapper.countDemoMembersMissingAvatar(prefix));
+        resp.setAvatarConfiguredCount(Math.max(0, resp.getAccountCount() - resp.getAvatarMissingCount()));
         resp.setPlayerCount(demoMapper.countPlayers(prefix));
         resp.setCaptainCount(demoMapper.countCaptainQualifications(prefix, marker));
         resp.setTeamCount(demoMapper.countTeams(prefix));
@@ -56,70 +58,84 @@ public class LocalDemoStatusHelper {
         }
     }
 
-    /** 35 项核心校验，用于 status 与 seed 完成后的数据完整性验证。 */
+    /** 核心校验，用于 status 与 seed 完成后的数据完整性验证。 */
     public List<String> evaluateMissing(BasketLocalDemoStatusResp resp) {
         List<String> missing = new ArrayList<>();
-        if (resp.getAccountCount() != 32) {
-            missing.add("1. 账号数量应为32，当前=" + resp.getAccountCount());
+        if (resp.getAccountCount() != BasketLocalDemoConstants.PLAYER_COUNT) {
+            missing.add("1. 账号数量应为" + BasketLocalDemoConstants.PLAYER_COUNT
+                    + "，当前=" + resp.getAccountCount());
         }
-        if (resp.getPlayerCount() != 32) {
-            missing.add("2. 球员数量应为32，当前=" + resp.getPlayerCount());
+        if (resp.getPlayerCount() != BasketLocalDemoConstants.PLAYER_COUNT) {
+            missing.add("2. 球员数量应为" + BasketLocalDemoConstants.PLAYER_COUNT
+                    + "，当前=" + resp.getPlayerCount());
         }
-        if (resp.getCaptainCount() != 4) {
-            missing.add("4. 队长资格数量应为4，当前=" + resp.getCaptainCount());
+        if (resp.getCaptainCount() != BasketLocalDemoConstants.CAPTAIN_COUNT) {
+            missing.add("4. 队长资格数量应为" + BasketLocalDemoConstants.CAPTAIN_COUNT
+                    + "，当前=" + resp.getCaptainCount());
         }
-        if (resp.getTeamCount() != 4) {
-            missing.add("5. 球队数量应为4，当前=" + resp.getTeamCount());
+        if (resp.getTeamCount() != BasketLocalDemoConstants.TEAM_COUNT) {
+            missing.add("5. 球队数量应为" + BasketLocalDemoConstants.TEAM_COUNT
+                    + "，当前=" + resp.getTeamCount());
         }
-        if (resp.getTeamMemberCount() != 32) {
-            missing.add("6. 每队成员合计应为32，当前=" + resp.getTeamMemberCount());
+        if (resp.getTeamMemberCount() != BasketLocalDemoConstants.PLAYER_COUNT) {
+            missing.add("6. 每队成员合计应为" + BasketLocalDemoConstants.PLAYER_COUNT
+                    + "，当前=" + resp.getTeamMemberCount());
         }
-        if (resp.getRegistrationCount() != 4) {
-            missing.add("9. 报名数量应为4，当前=" + resp.getRegistrationCount());
+        if (resp.getRegistrationCount() != BasketLocalDemoConstants.TEAM_COUNT) {
+            missing.add("9. 报名数量应为" + BasketLocalDemoConstants.TEAM_COUNT
+                    + "，当前=" + resp.getRegistrationCount());
         }
-        if (resp.getRegistrationPlayerCount() != 32) {
-            missing.add("10. 每个报名阵容8人合计应为32，当前=" + resp.getRegistrationPlayerCount());
+        if (resp.getRegistrationPlayerCount() != BasketLocalDemoConstants.PLAYER_COUNT) {
+            missing.add("10. 每个报名阵容8人合计应为" + BasketLocalDemoConstants.PLAYER_COUNT
+                    + "，当前=" + resp.getRegistrationPlayerCount());
         }
         if (resp.getStageCount() != 1) {
             missing.add("13. 阶段数量应为1，当前=" + resp.getStageCount());
         }
-        if (resp.getRoundCount() != 3) {
-            missing.add("14. 轮次数量应为3，当前=" + resp.getRoundCount());
+        if (resp.getRoundCount() != BasketLocalDemoConstants.ROUND_COUNT) {
+            missing.add("14. 轮次数量应为" + BasketLocalDemoConstants.ROUND_COUNT
+                    + "，当前=" + resp.getRoundCount());
         }
-        if (resp.getGroupCount() != 1) {
-            missing.add("15. 小组数量应为1，当前=" + resp.getGroupCount());
+        if (resp.getGroupCount() != BasketLocalDemoConstants.GROUP_COUNT) {
+            missing.add("15. 小组数量应为" + BasketLocalDemoConstants.GROUP_COUNT
+                    + "，当前=" + resp.getGroupCount());
         }
-        if (resp.getGroupTeamCount() != 4) {
-            missing.add("16. 小组球队数量应为4，当前=" + resp.getGroupTeamCount());
+        if (resp.getGroupTeamCount() != BasketLocalDemoConstants.TEAM_COUNT) {
+            missing.add("16. 小组球队数量应为" + BasketLocalDemoConstants.TEAM_COUNT
+                    + "，当前=" + resp.getGroupTeamCount());
         }
-        if (resp.getMatchCount() != 6) {
-            missing.add("17. 比赛数量应为6，当前=" + resp.getMatchCount());
+        if (resp.getMatchCount() != BasketLocalDemoConstants.MATCH_COUNT) {
+            missing.add("17. 比赛数量应为" + BasketLocalDemoConstants.MATCH_COUNT
+                    + "，当前=" + resp.getMatchCount());
         }
-        if (resp.getConfirmedMatchCount() != 4) {
-            missing.add("18. 已确认比赛数量应为4，当前=" + resp.getConfirmedMatchCount());
+        if (resp.getConfirmedMatchCount() != BasketLocalDemoConstants.CONFIRMED_MATCH_COUNT) {
+            missing.add("18. 已确认比赛数量应为" + BasketLocalDemoConstants.CONFIRMED_MATCH_COUNT
+                    + "，当前=" + resp.getConfirmedMatchCount());
         }
-        if (resp.getScheduledMatchCount() != 2) {
-            missing.add("19. 已安排比赛数量应为2，当前=" + resp.getScheduledMatchCount());
+        if (resp.getScheduledMatchCount() != BasketLocalDemoConstants.SCHEDULED_MATCH_COUNT) {
+            missing.add("19. 已安排比赛数量应为" + BasketLocalDemoConstants.SCHEDULED_MATCH_COUNT
+                    + "，当前=" + resp.getScheduledMatchCount());
         }
-        if (resp.getLineupCount() < 96) {
+        if (resp.getLineupCount() < BasketLocalDemoConstants.LINEUP_COUNT) {
             missing.add("21. 每场比赛双方各8人名单不足，当前=" + resp.getLineupCount());
         }
-        if (resp.getPeriodScoreCount() < 16) {
+        if (resp.getPeriodScoreCount() < BasketLocalDemoConstants.PERIOD_SCORE_COUNT) {
             missing.add("23. 已确认比赛4节比分不足，当前=" + resp.getPeriodScoreCount());
         }
-        if (resp.getPlayerMatchStatCount() < 64) {
+        if (resp.getPlayerMatchStatCount() < BasketLocalDemoConstants.PLAYER_MATCH_STAT_COUNT) {
             missing.add("25. 球员比赛统计不足，当前=" + resp.getPlayerMatchStatCount());
         }
-        if (resp.getTeamMatchStatCount() < 8) {
+        if (resp.getTeamMatchStatCount() < BasketLocalDemoConstants.TEAM_MATCH_STAT_COUNT) {
             missing.add("26. 球队比赛统计不足，当前=" + resp.getTeamMatchStatCount());
         }
-        if (resp.getStandingCount() < 4) {
-            missing.add("27. 积分榜应包含4支球队，当前=" + resp.getStandingCount());
+        if (resp.getStandingCount() < BasketLocalDemoConstants.STANDING_MIN_COUNT) {
+            missing.add("27. 积分榜应包含" + BasketLocalDemoConstants.STANDING_MIN_COUNT
+                    + "支球队，当前=" + resp.getStandingCount());
         }
-        if (resp.getTeamSeasonStatCount() < 4) {
+        if (resp.getTeamSeasonStatCount() < BasketLocalDemoConstants.TEAM_SEASON_STAT_MIN) {
             missing.add("29. 球队赛季统计不足，当前=" + resp.getTeamSeasonStatCount());
         }
-        if (resp.getPlayerSeasonStatCount() < 32) {
+        if (resp.getPlayerSeasonStatCount() < BasketLocalDemoConstants.PLAYER_SEASON_STAT_MIN) {
             missing.add("30. 球员赛季统计不足，当前=" + resp.getPlayerSeasonStatCount());
         }
         if (resp.getTeamRankCount() < 1) {

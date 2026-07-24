@@ -8,6 +8,7 @@ import com.zhs.config.AccountFileProperties;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketFileAsset;
 import jakarta.annotation.Resource;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,6 +22,7 @@ import java.util.Locale;
 import java.util.Set;
 
 @Service
+@ConditionalOnProperty(prefix = "account.file", name = "storage-type", havingValue = "local", matchIfMissing = true)
 public class LocalAccountFileStorageServiceImpl implements IAccountFileStorageService {
 
     private static final String STORAGE_PROVIDER = "local";

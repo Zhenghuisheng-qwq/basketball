@@ -130,6 +130,13 @@
             <version>${commons.io.version}</version>
         </dependency>
 
+        <!-- 腾讯云 COS -->
+        <dependency>
+            <groupId>com.qcloud</groupId>
+            <artifactId>cos_api</artifactId>
+            <version>5.6.246.3</version>
+        </dependency>
+
         <!-- Apache POI -->
         <dependency>
             <groupId>org.apache.poi</groupId>

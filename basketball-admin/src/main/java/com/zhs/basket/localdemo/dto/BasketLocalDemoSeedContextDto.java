@@ -14,6 +14,10 @@ import java.util.Map;
 public class BasketLocalDemoSeedContextDto {
 
     private Long placeholderFileId;
+    /** 球员头像 file_asset.id，key = 1..PLAYER_AVATAR_COUNT */
+    private final Map<Integer, Long> playerAvatarFileIds = new HashMap<>();
+    /** 球队 Logo file_asset.id，key = 1..TEAM_LOGO_COUNT（资源目录 head） */
+    private final Map<Integer, Long> teamLogoFileIds = new HashMap<>();
     private final Map<Integer, Long> accountIds = new HashMap<>();
     private final Map<Integer, Long> memberProfileIds = new HashMap<>();
     private final Map<Integer, Long> certApplicationIds = new HashMap<>();
@@ -25,7 +29,7 @@ public class BasketLocalDemoSeedContextDto {
     private Long seasonId;
     private Long stageId;
     private final Map<Integer, Long> roundIds = new HashMap<>();
-    private Long groupId;
+    private final Map<String, Long> groupIds = new HashMap<>();
     private final Map<Integer, Long> matchIds = new HashMap<>();
     private final List<Long> announcementIds = new ArrayList<>();
     private final List<Long> bannerIds = new ArrayList<>();

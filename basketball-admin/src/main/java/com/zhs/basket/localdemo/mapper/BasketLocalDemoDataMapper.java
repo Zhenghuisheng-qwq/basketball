@@ -2,6 +2,8 @@ package com.zhs.basket.localdemo.mapper;
 
 import org.apache.ibatis.annotations.Param;
 
+import com.zhs.basket.localdemo.dto.DemoMemberAccountRow;
+
 import java.util.Date;
 import java.util.List;
 
@@ -63,7 +65,15 @@ public interface BasketLocalDemoDataMapper {
 
     int countAccountsIncludingDeleted(@Param("prefix") String prefix);
 
+    int countDemoMembersMissingAvatar(@Param("prefix") String prefix);
+
+    List<DemoMemberAccountRow> selectDemoMemberAccounts(@Param("prefix") String prefix);
+
+    int updateMemberProfileAvatar(@Param("memberId") Long memberId, @Param("avatarFileId") Long avatarFileId);
+
     Long selectSeasonIdBySeasonNoForReset(@Param("seasonNo") String seasonNo);
+
+    List<Long> selectGroupIdsByPrefix(@Param("prefix") String prefix);
 
     Long selectGroupIdByGroupCodeForReset(@Param("groupCode") String groupCode);
 
@@ -123,12 +133,23 @@ public interface BasketLocalDemoDataMapper {
 
     int insertPlaceholderFileAsset(@Param("objectKey") String objectKey, @Param("remark") String remark);
 
+    int insertDemoImageFileAsset(@Param("objectKey") String objectKey, @Param("fileName") String fileName,
+                                 @Param("accessUrl") String accessUrl, @Param("usageType") String usageType,
+                                 @Param("bucketName") String bucketName, @Param("remark") String remark);
+
+    Long selectFileIdByObjectKey(@Param("objectKey") String objectKey);
+
+    Long selectFileIdByObjectKeyAny(@Param("objectKey") String objectKey);
+
+    int restoreFileByObjectKey(@Param("objectKey") String objectKey);
+
     int insertMemberAccount(@Param("accountNo") String accountNo, @Param("passwordHash") String passwordHash,
                             @Param("mobile") String mobile, @Param("email") String email,
                             @Param("username") String username, @Param("registerSource") String registerSource,
                             @Param("registerTerminal") String registerTerminal);
 
-    int insertMemberProfile(@Param("memberId") Long memberId, @Param("nickname") String nickname);
+    int insertMemberProfile(@Param("memberId") Long memberId, @Param("nickname") String nickname,
+                            @Param("avatarFileId") Long avatarFileId);
 
     int insertPrivacySetting(@Param("memberId") Long memberId);
 
@@ -338,6 +359,15 @@ public interface BasketLocalDemoDataMapper {
     int deleteSeasonsByPrefix(@Param("prefix") String prefix);
 
     int deleteTournamentsByPrefix(@Param("prefix") String prefix);
+
+    int deleteHeadAvatarFilesByPrefix(@Param("prefix") String prefix);
+
+    int deletePlayerAvatarFilesByPrefix(@Param("prefix") String prefix);
+
+    int updateTeamLogoFileId(@Param("teamId") Long teamId, @Param("logoFileId") Long logoFileId);
+
+    int updateFileAssetAccessMeta(@Param("fileId") Long fileId, @Param("accessUrl") String accessUrl,
+                                  @Param("usageType") String usageType, @Param("bucketName") String bucketName);
 
     int deletePlaceholderFilesByRemark(@Param("remark") String remark);
 }

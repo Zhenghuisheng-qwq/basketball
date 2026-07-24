@@ -62,6 +62,7 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\bask
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\utils\sql\SqlUtil.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\domain\BasketAccountSecurityLog.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\vo\TournamentDetailVo.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\resp\BasketLocalDemoAvatarSyncResp.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\generator\util\GenUtils.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\system\service\ISysUserOnlineService.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\mapper\BasketAccountSecurityLogMapper.java
@@ -247,6 +248,7 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\syst
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\quartz\config\ScheduleConfig.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\controller\system\SysMenuController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\domain\BasketPartner.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\dto\DemoMemberAccountRow.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\service\IBasketTournamentRoundService.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\controller\basket\BasketTournamentRuleController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\quartz\controller\SysJobController.java

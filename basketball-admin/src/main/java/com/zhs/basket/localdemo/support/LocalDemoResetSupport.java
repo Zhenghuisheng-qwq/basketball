@@ -68,7 +68,7 @@ public class LocalDemoResetSupport {
 
         Long seasonId = demoMapper.selectSeasonIdBySeasonNoForReset(BasketLocalDemoConstants.SEASON_NO);
 
-        Long groupId = demoMapper.selectGroupIdByGroupCodeForReset(BasketLocalDemoConstants.GROUP_CODE);
+        List<Long> groupIds = demoMapper.selectGroupIdsByPrefix(prefix);
 
         List<Long> matchIds = demoMapper.selectMatchIdsByPrefix(prefix);
 
@@ -124,10 +124,8 @@ public class LocalDemoResetSupport {
 
         deleted += demoMapper.deleteMatchesByPrefix(prefix);
 
-        if (groupId != null) {
-
+        for (Long groupId : groupIds) {
             deleted += demoMapper.deleteGroupTeamsByGroupId(groupId);
-
         }
 
         deleted += demoMapper.deleteGroupsByPrefix(prefix);
@@ -191,6 +189,10 @@ public class LocalDemoResetSupport {
         deleted += demoMapper.deleteSeasonsByPrefix(prefix);
 
         deleted += demoMapper.deleteTournamentsByPrefix(prefix);
+
+        deleted += demoMapper.deleteHeadAvatarFilesByPrefix(prefix);
+
+        deleted += demoMapper.deletePlayerAvatarFilesByPrefix(prefix);
 
         deleted += demoMapper.deletePlaceholderFilesByRemark(marker);
 

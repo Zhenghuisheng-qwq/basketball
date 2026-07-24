@@ -74,6 +74,19 @@
         select id from basket_tournament_group where group_code = #{groupCode} and <include refid="notDeleted"/> limit 1
     </select>
 
+    <select id="selectFileIdByObjectKey" resultType="java.lang.Long">
+        select id from basket_file_asset where object_key = #{objectKey} and <include refid="notDeleted"/> limit 1
+    </select>
+
+    <select id="selectFileIdByObjectKeyAny" resultType="java.lang.Long">
+        select id from basket_file_asset where object_key = #{objectKey} limit 1
+    </select>
+
+    <update id="restoreFileByObjectKey">
+        update basket_file_asset set is_delete = 0, update_time = now()
+        where object_key = #{objectKey} and is_delete = 1
+    </update>
+
     <select id="selectPlaceholderFileIdByRemark" resultType="java.lang.Long">
         select id from basket_file_asset where remark = #{remark} and <include refid="notDeleted"/> limit 1
     </select>
@@ -130,6 +143,10 @@
         select id from basket_tournament_season where season_no = #{seasonNo} limit 1
     </select>
 
+    <select id="selectGroupIdsByPrefix" resultType="java.lang.Long">
+        select id from basket_tournament_group where group_code like concat(#{prefix}, '%')
+    </select>
+
     <select id="selectGroupIdByGroupCodeForReset" resultType="java.lang.Long">
         select id from basket_tournament_group where group_code = #{groupCode} limit 1
     </select>
@@ -139,6 +156,32 @@
     <select id="countAccounts" resultType="int">
         select count(1) from basket_member_account where account_no <include refid="demoPrefixLike"/> and <include refid="notDeleted"/>
     </select>
+
+    <select id="countDemoMembersMissingAvatar" resultType="int">
+        select count(1)
+        from basket_member_profile mp
+        inner join basket_member_account a on mp.member_id = a.id and a.is_delete = 0
+        where a.account_no like concat(#{prefix}, 'ACCOUNT-%')
+          and mp.is_delete = 0
+          and (mp.avatar_file_id is null)
+    </select>
+
+    <select id="selectDemoMemberAccounts" resultType="com.zhs.basket.localdemo.dto.DemoMemberAccountRow">
+        select a.id as memberId, a.account_no as accountNo
+        from basket_member_account a
+        where a.account_no like concat(#{prefix}, 'ACCOUNT-%')
+          and a.is_delete = 0
+        order by a.account_no
+    </select>
+
+    <update id="updateMemberProfileAvatar">
+        update basket_member_profile
+        set avatar_file_id = #{avatarFileId},
+            update_time = now()
+        where member_id = #{memberId}
+          and is_delete = 0
+          and (avatar_file_id is null or avatar_file_id &lt;&gt; #{avatarFileId})
+    </update>
 
     <select id="countPlayers" resultType="int">
         select count(1) from basket_player_profile where player_no <include refid="demoPrefixLike"/> and <include refid="notDeleted"/>
@@ -311,6 +354,32 @@
             'image/png', 0, concat('/local-demo/', #{objectKey}), 'LOCAL_DEMO', null, 1, #{remark}, now(), now(), 0)
     </insert>
 
+    <insert id="insertDemoImageFileAsset">
+        insert into basket_file_asset (storage_provider, bucket_name, object_key, file_name, original_name, file_ext,
+            mime_type, file_size, access_url, usage_type, owner_member_id, file_status, remark, create_time, update_time, is_delete)
+        values ('LOCAL', #{bucketName}, #{objectKey}, #{fileName}, #{fileName}, 'png',
+            'image/png', 0, #{accessUrl}, #{usageType}, null, 1, #{remark}, now(), now(), 0)
+    </insert>
+
+    <update id="updateFileAssetAccessMeta">
+        update basket_file_asset
+        set access_url = #{accessUrl},
+            usage_type = #{usageType},
+            bucket_name = #{bucketName},
+            update_time = now()
+        where id = #{fileId}
+          and is_delete = 0
+    </update>
+
+    <update id="updateTeamLogoFileId">
+        update basket_team
+        set logo_file_id = #{logoFileId},
+            update_time = now()
+        where id = #{teamId}
+          and is_delete = 0
+          and (logo_file_id is null or logo_file_id &lt;&gt; #{logoFileId})
+    </update>
+
     <insert id="insertMemberAccount">
         insert into basket_member_account (account_no, username, password_hash, mobile_country_code, mobile, email,
             mobile_verified, email_verified, account_status, register_source, register_terminal, create_time, update_time, is_delete)
@@ -319,8 +388,8 @@
     </insert>
 
     <insert id="insertMemberProfile">
-        insert into basket_member_profile (member_id, nickname, gender, profile_status, create_time, update_time, is_delete)
-        values (#{memberId}, #{nickname}, 0, 1, now(), now(), 0)
+        insert into basket_member_profile (member_id, nickname, avatar_file_id, gender, profile_status, create_time, update_time, is_delete)
+        values (#{memberId}, #{nickname}, #{avatarFileId}, 0, 1, now(), now(), 0)
     </insert>
 
     <insert id="insertPrivacySetting">
@@ -690,6 +759,14 @@
 
     <delete id="deleteTournamentsByPrefix">
         delete from basket_tournament where tournament_no <include refid="demoPrefixLike"/>
+    </delete>
+
+    <delete id="deleteHeadAvatarFilesByPrefix">
+        delete from basket_file_asset where object_key like concat(#{prefix}, 'HEAD-%')
+    </delete>
+
+    <delete id="deletePlayerAvatarFilesByPrefix">
+        delete from basket_file_asset where object_key like concat(#{prefix}, 'PLAYER-%')
     </delete>
 
     <delete id="deletePlaceholderFilesByRemark">

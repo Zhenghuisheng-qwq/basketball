@@ -9,7 +9,7 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-  server: {
+    server: {
     open: false,
     proxy: {
       '/web-api': {
@@ -17,6 +17,14 @@ export default defineConfig({
         target: 'http://localhost:8881',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/web-api/, ''),
+      },
+      '/head': {
+        target: 'http://localhost:8881',
+        changeOrigin: true,
+      },
+      '/player-avatar': {
+        target: 'http://localhost:8881',
+        changeOrigin: true,
       },
     },
   },

@@ -201,6 +201,9 @@ public class AccountFileServiceImpl implements IAccountFileService {
     }
 
     private String buildInitialAccessUrl(FileUsageTypeEnum usage, StoredFileInfo stored) {
+        if (StringUtils.hasText(stored.getAccessUrl())) {
+            return stored.getAccessUrl();
+        }
         if (usage.isPublicAccess()) {
             return resolvePublicUrl(stored.getPublicRelativePath());
         }

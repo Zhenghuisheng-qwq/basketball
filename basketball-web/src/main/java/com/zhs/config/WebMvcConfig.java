@@ -32,7 +32,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/webjars/**",
                         "/doc.html",
                         "/favicon.ico",
-                        "/files/public/**"
+                        "/files/public/**",
+                        "/head/**",
+                        "/player-avatar/**"
                 );
 
         registry.addInterceptor(generatedCrudAccessInterceptor)
@@ -47,6 +49,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
         }
         registry.addResourceHandler("/files/public/**")
                 .addResourceLocations("file:" + root + "public/");
+        registry.addResourceHandler("/head/**")
+                .addResourceLocations("classpath:/head/");
+        registry.addResourceHandler("/player-avatar/**")
+                .addResourceLocations("classpath:/player/");
     }
 
     @Override

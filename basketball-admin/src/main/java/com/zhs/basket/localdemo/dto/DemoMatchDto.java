@@ -10,6 +10,8 @@ public class DemoMatchDto {
     private String matchNo;
     private String homeTeamKey;
     private String awayTeamKey;
+    /** 小组标识：A / B / C / D */
+    private String groupKey;
     private int roundNo;
     private int homeScore;
     private int awayScore;

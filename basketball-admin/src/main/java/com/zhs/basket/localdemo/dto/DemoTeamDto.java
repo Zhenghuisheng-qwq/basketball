@@ -11,4 +11,6 @@ public class DemoTeamDto {
     private String englishName;
     private String shortName;
     private String description;
+    /** 小组标识：A / B / C / D */
+    private String groupKey;
 }

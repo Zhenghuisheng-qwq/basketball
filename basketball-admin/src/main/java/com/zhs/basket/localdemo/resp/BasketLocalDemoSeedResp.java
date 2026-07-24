@@ -35,6 +35,10 @@ public class BasketLocalDemoSeedResp {
     private int playerSeasonStatCount;
     private int announcementCount;
     private int recommendationCount;
+    private int avatarSyncUpdated;
+    private int avatarSyncSkipped;
+    private int avatarMissingBefore;
+    private int avatarMissingAfter;
     private Long startedTime;
     private Long finishedTime;
     private Long durationMillis;

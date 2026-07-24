@@ -48,6 +48,7 @@ com\zhs\basket\mapper\BasketTournamentRuleMapper.class
 com\zhs\basket\req\MatchScheduleReq.class
 com\zhs\web\controller\basket\BasketRankingController.class
 com\zhs\web\controller\system\SysRegisterController.class
+com\zhs\basket\localdemo\dto\DemoMemberAccountRow.class
 com\zhs\web\controller\system\SysConfigController.class
 com\zhs\basket\localdemo\dto\DemoMatchDto$DemoMatchDtoBuilder.class
 com\zhs\basket\domain\BasketTournamentRound.class
@@ -224,6 +225,7 @@ com\zhs\basket\query\StageQuery.class
 com\zhs\basket\enums\TournamentRoundStatusEnum.class
 com\zhs\quartz\mapper\SysJobMapper.class
 com\zhs\common\utils\DesensitizedUtil.class
+com\zhs\basket\localdemo\resp\BasketLocalDemoAvatarSyncResp.class
 com\zhs\basket\mapper\BasketStatChangeRecordMapper.class
 com\zhs\common\annotation\Excels.class
 com\zhs\basket\enums\SeasonResultStatusEnum.class

@@ -41,6 +41,13 @@ public class BasketLocalDemoDataController extends BaseController {
         return success(localDemoDataService.seedLocalDemoData());
     }
 
+    @PreAuthorize("@ss.hasPermi('" + BasketLocalDemoPerms.SEED + "')")
+    @Log(title = "本地演示数据", businessType = BusinessType.UPDATE)
+    @PostMapping("/sync-avatars")
+    public AjaxResult syncAvatars() {
+        return success(localDemoDataService.syncDemoAvatars());
+    }
+
     @PreAuthorize("@ss.hasPermi('" + BasketLocalDemoPerms.RESET + "')")
     @Log(title = "本地演示数据", businessType = BusinessType.DELETE)
     @DeleteMapping("/reset")

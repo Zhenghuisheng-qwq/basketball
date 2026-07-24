@@ -41,6 +41,8 @@ public class BasketLocalDemoStatusResp {
     private int playerRankCount;
     private int announcementCount;
     private int recommendationCount;
+    private int avatarMissingCount;
+    private int avatarConfiguredCount;
     private List<String> missingStages = new ArrayList<>();
     private List<String> warnings = new ArrayList<>();
 }

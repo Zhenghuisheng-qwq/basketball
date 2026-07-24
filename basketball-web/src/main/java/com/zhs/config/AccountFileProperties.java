@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "account.file")
 public class AccountFileProperties {
 
-    /** 存储类型：local / oss 等 */
+    /** 存储类型：local / cos */
     private String storageType = "local";
 
     /** 本地存储根目录 */
