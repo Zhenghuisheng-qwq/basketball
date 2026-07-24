@@ -1,4 +1,5 @@
 @use './variables.scss';
+@use './site-layout.scss';
 @use './components/paper-section';
 
 * {  box-sizing: border-box;
@@ -38,7 +39,8 @@ a {
 }
 
 .page-container {
-  width: var(--site-content-width);
+  width: min(var(--site-width), calc(100% - 2 * var(--site-gutter)));
+  max-width: var(--site-width);
   margin-inline: auto;
   padding: 48px var(--site-inner-padding) 64px;
   box-sizing: border-box;
@@ -68,7 +70,8 @@ a {
 
 .events-inner,
 .site-content {
-  width: var(--site-content-width);
+  width: min(var(--site-width), calc(100% - 2 * var(--site-gutter)));
+  max-width: var(--site-width);
   margin-inline: auto;
   padding-inline: var(--site-inner-padding);
   box-sizing: border-box;

@@ -18,6 +18,7 @@ secrets/
 Thumbs.db
 
 # Build
+target/
 **/target/
 **/dist/
 **/node_modules/
