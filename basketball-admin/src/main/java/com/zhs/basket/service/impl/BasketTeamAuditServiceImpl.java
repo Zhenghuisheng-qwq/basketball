@@ -121,6 +121,7 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
     }
 
     private void writeAudit(BasketTeam team, String action, Integer before, Integer after, String remark) {
+        Date now = new Date();
         BasketTeamAuditRecord record = new BasketTeamAuditRecord();
         record.setTeamId(team.getId());
         record.setAuditType("TEAM_CREATE");
@@ -130,7 +131,9 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         record.setAuditorId(SecurityUtils.getUserId());
         record.setAuditorName(SecurityUtils.getUsername());
         record.setAuditRemark(remark);
-        record.setAuditTime(new Date());
+        record.setAuditTime(now);
+        record.setCreateTime(now);
+        record.setUpdateTime(now);
         record.setIsDelete(NOT_DELETED);
         auditRecordMapper.insert(record);
     }

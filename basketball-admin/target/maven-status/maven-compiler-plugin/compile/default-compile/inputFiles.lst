@@ -1,3 +1,4 @@
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\resp\BasketLocalDemoResetResp.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\quartz\service\impl\SysJobLogServiceImpl.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\generator\util\VelocityUtils.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\exception\user\UserPasswordRetryLimitExceedException.java
@@ -11,6 +12,8 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\bask
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\controller\basket\BasketPlayerCertController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\vo\RegistrationAuditRecordVo.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\system\request\LoginBody.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\mapper\BasketLocalDemoDataMapper.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\support\LocalDemoSeedSupport.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\resp\HomeBannerListResp.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\req\MatchForfeitReq.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\req\TournamentRuleCreateReq.java
@@ -63,6 +66,7 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\gene
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\system\service\ISysUserOnlineService.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\mapper\BasketAccountSecurityLogMapper.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\utils\DateUtils.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\resp\BasketLocalDemoStatusResp.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\utils\PageUtils.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\query\CaptainQualificationQuery.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\req\TournamentUpdateReq.java
@@ -77,6 +81,7 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\fram
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\domain\BasketMatchTeamStat.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\controller\basket\BasketRegistrationAuditController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\system\service\impl\SysNoticeReadServiceImpl.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\constant\BasketLocalDemoPerms.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\mapper\BasketPlayerRankAdminMapper.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\system\model\SysOperLog.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\service\IBasketTournamentRuleService.java
@@ -115,6 +120,7 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\mapper\BasketMessageReceiverMapper.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\mapper\BasketTournamentSeasonMapper.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\framework\config\RedisConfig.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\resp\BasketLocalDemoSeedResp.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\domain\BasketHonorRecord.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\vo\CaptainQualificationListVo.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\mapper\BasketAnnouncementMapper.java
@@ -138,11 +144,13 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\req\HonorRecordAddReq.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\framework\web\service\SysPermissionService.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\framework\config\ServerConfig.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\dto\DemoTeamDto.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\req\PartnerEditReq.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\framework\web\service\SysLoginService.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\enums\OperatorType.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\service\impl\BasketPrivateFileServiceImpl.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\domain\BasketPlayerProfile.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\support\LocalDemoSeedDefinitions.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\vo\CaptainQualificationDetailVo.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\service\IBasketTournamentStageService.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\query\RankingQuery.java
@@ -253,6 +261,7 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\comm
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\system\model\SysNotice.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\core\text\CharsetKit.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\vo\PlayerCertAuditRecordVo.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\controller\basket\BasketLocalDemoDataController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\exception\user\UserNotExistsException.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\system\mapper\SysConfigMapper.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\resp\AnnouncementListResp.java
@@ -352,6 +361,7 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\req\AnnouncementQueryReq.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\service\impl\BasketMatchStatServiceImpl.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\quartz\util\CronUtils.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\constant\BasketLocalDemoConstants.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\resp\PlayerHonorCandidateResp.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\vo\EligibleCaptainVo.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\generator\mapper\GenTableColumnMapper.java
@@ -377,6 +387,7 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\bask
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\system\service\impl\SysRoleServiceImpl.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\support\ConfirmedMatchHelper.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\system\model\LoginUser.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\dto\DemoMatchDto.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\support\ExternalUrlValidator.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\domain\BasketAnnouncement.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\quartz\mapper\SysJobLogMapper.java
@@ -406,8 +417,10 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\bask
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\vo\GroupDetailVo.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\controller\monitor\SysUserOnlineController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\utils\LogUtils.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\support\LocalDemoStatGenerator.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\mapper\BasketPlayerCertMaterialMapper.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\filter\PropertyPreExcludeFilter.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\config\BasketLocalDemoDataProperties.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\mapper\BasketTeamMemberMapper.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\service\impl\BasketCaptainQualificationServiceImpl.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\mapper\BasketTournamentGroupMapper.java
@@ -454,6 +467,7 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\bask
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\generator\controller\GenController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\xss\Xss.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\req\TeamAuditRejectReq.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\support\LocalDemoStatusHelper.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\resp\HonorLineupResp.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\system\mapper\SysDeptMapper.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\controller\system\SysUserController.java
@@ -462,6 +476,7 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\comm
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\system\mapper\SysOperLogMapper.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\enums\TournamentGroupStatusEnum.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\framework\aspectj\LogAspect.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\dto\DemoPlayerDto.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\vo\SettlementRebuildResultVo.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\constant\BasketMatchConstants.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\controller\basket\BasketDataSettlementController.java
@@ -501,6 +516,7 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\mapper\BasketMatchTeamStatMapper.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\framework\aspectj\DataScopeAspect.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\vo\GroupListVo.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\support\LocalDemoResetSupport.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\domain\BasketTournamentRegistrationPlayer.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\controller\monitor\CacheController.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\system\model\SysCache.java
@@ -534,8 +550,11 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\utils\uuid\UUID.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\query\TournamentQuery.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\domain\BasketTeamSeasonStat.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\dto\BasketLocalDemoSeedContextDto.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\enums\PartnerStatusEnum.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\utils\ExceptionUtil.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\service\IBasketLocalDemoDataService.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\service\impl\BasketLocalDemoDataServiceImpl.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\service\impl\BasketMatchScoreServiceImpl.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\annotation\DataSource.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\core\domain\TreeEntity.java
@@ -605,5 +624,6 @@ D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\web\
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\utils\uuid\IdUtils.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\utils\Threads.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\enums\TeamMembershipStatusEnum.java
+D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\localdemo\config\BasketLocalDemoClockConfig.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\basket\support\StageStandingSupport.java
 D:\code\dz\basketball\scaffolding-v2\basketball-admin\src\main\java\com\zhs\common\constant\HttpStatus.java

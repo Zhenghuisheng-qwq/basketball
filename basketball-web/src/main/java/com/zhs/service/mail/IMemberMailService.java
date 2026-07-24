@@ -9,4 +9,7 @@ public interface IMemberMailService {
      * 发送验证码邮件。配置缺失时抛出业务异常，禁止伪造成功。
      */
     void sendVerifyCodeMail(String toEmail, String code, String purposeLabel, long expireMinutes);
+
+    /** SMTP 是否已配置（host/username/password）。 */
+    boolean isConfigured();
 }

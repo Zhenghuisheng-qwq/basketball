@@ -152,6 +152,7 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
     }
 
     private void writeAudit(BasketTournamentRegistration reg, String action, Integer before, Integer after, String remark) {
+        Date now = new Date();
         BasketTournamentRegistrationAudit audit = new BasketTournamentRegistrationAudit();
         audit.setRegistrationId(reg.getId());
         audit.setAuditAction(action);
@@ -160,7 +161,9 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
         audit.setAuditorId(SecurityUtils.getUserId());
         audit.setAuditorName(SecurityUtils.getUsername());
         audit.setAuditRemark(remark);
-        audit.setAuditTime(new Date());
+        audit.setAuditTime(now);
+        audit.setCreateTime(now);
+        audit.setUpdateTime(now);
         audit.setIsDelete(NOT_DELETED);
         registrationAuditMapper.insert(audit);
     }

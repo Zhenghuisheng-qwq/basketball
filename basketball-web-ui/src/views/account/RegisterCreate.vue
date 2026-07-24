@@ -175,7 +175,7 @@ function goLogin() {
         已有账号？
         <button type="button" class="text-link" @click="goLogin">立即登录</button>
       </p>
-      <p class="register-form__hint">创建账号后，我们将向你的邮箱发送 6 位验证码</p>
+      <p class="register-form__hint">创建账号后进入邮箱验证；本地开发未配 SMTP 时可任意输入 6 位数字验证码</p>
     </form>
   </div>
 </template>

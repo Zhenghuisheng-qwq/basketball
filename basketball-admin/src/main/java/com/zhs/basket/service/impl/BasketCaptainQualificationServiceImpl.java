@@ -96,6 +96,8 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
         record.setGrantedTime(now);
         record.setValidFrom(req.getValidFrom());
         record.setValidTo(req.getValidTo());
+        record.setCreateTime(now);
+        record.setUpdateTime(now);
         record.setIsDelete(NOT_DELETED);
         qualificationMapper.insert(record);
         messageService.sendSiteMessage(profile.getMemberId(), SecurityUtils.getUserId(), "CAPTAIN_QUAL", record.getId(),

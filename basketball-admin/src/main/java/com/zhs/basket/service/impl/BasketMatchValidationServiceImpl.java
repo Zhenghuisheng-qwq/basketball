@@ -159,6 +159,8 @@ public class BasketMatchValidationServiceImpl implements IBasketMatchValidationS
         log.setOperatorId(SecurityUtils.getUserId());
         log.setOperatorName(SecurityUtils.getUsername());
         log.setChangeTime(now);
+        log.setCreateTime(now);
+        log.setUpdateTime(now);
         log.setIsDelete(NOT_DELETED);
         statusLogMapper.insert(log);
     }

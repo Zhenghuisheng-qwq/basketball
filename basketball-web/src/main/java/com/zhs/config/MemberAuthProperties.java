@@ -32,4 +32,11 @@ public class MemberAuthProperties {
 
     /** 密码登录锁定分钟数 */
     private long loginLockMinutes = 15;
+
+    /**
+     * 本地开发：跳过真实 SMTP。
+     * true 时不发邮件，注册/登录验证码任意 6 位数字可通过。
+     * 配好邮箱后请设环境变量 CNPA_MAIL_DEV_BYPASS=false。
+     */
+    private boolean devMailBypass = true;
 }

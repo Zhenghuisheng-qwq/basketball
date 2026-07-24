@@ -32,11 +32,29 @@
     </resultMap>
 
     <sql id="listSelectColumns">
-        m.id, m.match_no, m.season_id, s.season_name, m.stage_id, st.stage_name,
-        m.round_id, r.round_name, m.group_id, g.group_name, m.venue_id, v.venue_name,
-        m.home_team_id, ht.team_name as home_team_name, m.away_team_id, at.team_name as away_team_name,
-        m.scheduled_start_time, m.scheduled_end_time, m.match_status, m.home_score, m.away_score,
-        m.data_status, m.sort_no
+        m.id,
+        m.match_no as matchNo,
+        m.season_id as seasonId,
+        s.season_name as seasonName,
+        m.stage_id as stageId,
+        st.stage_name as stageName,
+        m.round_id as roundId,
+        r.round_name as roundName,
+        m.group_id as groupId,
+        g.group_name as groupName,
+        m.venue_id as venueId,
+        v.venue_name as venueName,
+        m.home_team_id as homeTeamId,
+        ht.team_name as homeTeamName,
+        m.away_team_id as awayTeamId,
+        at.team_name as awayTeamName,
+        m.scheduled_start_time as scheduledStartTime,
+        m.scheduled_end_time as scheduledEndTime,
+        m.match_status as matchStatus,
+        m.home_score as homeScore,
+        m.away_score as awayScore,
+        m.data_status as dataStatus,
+        m.sort_no as sortNo
     </sql>
 
     <sql id="listJoins">

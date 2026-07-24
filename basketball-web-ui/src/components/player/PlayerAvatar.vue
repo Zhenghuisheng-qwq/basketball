@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { DEFAULT_AVATAR_THEMES, resolveDefaultAvatarTheme } from '@/utils/defaultAvatarTheme'
 
 const props = withDefaults(
   defineProps<{
     name: string
     avatarUrl?: string
+    playerNo?: string
+    playerId?: string | number
     size?: 'sm' | 'md' | 'lg' | 'hero' | 'card'
     tone?: 'dark' | 'gold'
   }>(),
   {
     avatarUrl: '',
+    playerNo: '',
+    playerId: undefined,
     size: 'md',
     tone: 'dark',
   },
@@ -17,8 +22,9 @@ const props = withDefaults(
 
 const imageError = ref(false)
 
-const initials = computed(() => props.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() || 'CN')
+const initials = computed(() => props.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '').slice(0, 1) || '球')
 const showImage = computed(() => Boolean(props.avatarUrl?.trim()) && !imageError.value)
+const theme = computed(() => DEFAULT_AVATAR_THEMES[resolveDefaultAvatarTheme(props.playerNo, props.playerId)])
 
 function handleError() {
   imageError.value = true
@@ -34,7 +40,11 @@ function handleError() {
       class="player-avatar__img"
       @error="handleError"
     />
-    <span v-else class="player-avatar__placeholder">{{ initials }}</span>
+    <span
+      v-else
+      class="player-avatar__placeholder"
+      :style="{ background: theme.bg, color: theme.fg, borderColor: theme.border }"
+    >{{ initials }}</span>
   </div>
 </template>
 
@@ -67,6 +77,12 @@ function handleError() {
 }
 
 .player-avatar__placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 1px solid;
+  border-radius: 50%;
   font-weight: 800;
   letter-spacing: 0.04em;
 }

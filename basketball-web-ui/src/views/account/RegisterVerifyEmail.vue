@@ -174,7 +174,7 @@ function goLogin() {
     <div class="auth-verify__icon" aria-hidden="true">@</div>
     <p class="auth-verify__desc">验证码已发送至</p>
     <p class="auth-verify__email">{{ maskedEmail }}</p>
-    <p class="auth-verify__timer">验证码 5 分钟内有效</p>
+    <p class="auth-verify__timer">验证码 5 分钟内有效（本地开发可任意输入 6 位数字）</p>
 
     <div class="verify-code" @paste="handlePaste">
       <input

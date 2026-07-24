@@ -2,7 +2,11 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.zhs.basket.mapper.BasketMatchPeriodScoreMapper">
     <select id="selectVoByMatchId" resultType="com.zhs.basket.vo.MatchPeriodScoreVo">
-        select id, period_no, period_type, home_score, away_score
+        select id,
+               period_no as periodNo,
+               period_type as periodType,
+               home_score as homeScore,
+               away_score as awayScore
         from basket_match_period_score
         where match_id = #{matchId} and is_delete = 0
         order by period_no

@@ -157,14 +157,24 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
         profile.setPositionCode(StringUtils.hasText(positionCode) ? positionCode : app.getPositionCode());
         profile.setCertificationStatus(CERT_APPROVED);
         profile.setCertifiedTime(certifiedTime);
+        if (profile.getPlayerStatus() == null) {
+            profile.setPlayerStatus(1);
+        }
+        if (profile.getProfileVisible() == null) {
+            profile.setProfileVisible(1);
+        }
         if (profile.getId() == null) {
+            profile.setCreateTime(certifiedTime);
+            profile.setUpdateTime(certifiedTime);
             profileMapper.insert(profile);
         } else {
+            profile.setUpdateTime(certifiedTime);
             profileMapper.updateById(profile);
         }
     }
 
     private void writeAudit(BasketPlayerCertApplication app, String action, Integer before, Integer after, String remark) {
+        Date now = new Date();
         BasketPlayerCertAudit audit = new BasketPlayerCertAudit();
         audit.setApplicationId(app.getId());
         audit.setAuditAction(action);
@@ -173,7 +183,9 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
         audit.setAuditorId(SecurityUtils.getUserId());
         audit.setAuditorName(SecurityUtils.getUsername());
         audit.setAuditRemark(remark);
-        audit.setAuditTime(new Date());
+        audit.setAuditTime(now);
+        audit.setCreateTime(now);
+        audit.setUpdateTime(now);
         audit.setIsDelete(NOT_DELETED);
         auditMapper.insert(audit);
     }

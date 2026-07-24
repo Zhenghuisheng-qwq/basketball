@@ -64,6 +64,8 @@ public class BasketAdminMessageService {
         task.setSuccessCount(distinctIds.size());
         task.setFailCount(0);
         task.setCreatorId(adminUserId);
+        task.setCreateTime(now);
+        task.setUpdateTime(now);
         task.setIsDelete(NOT_DELETED);
         messageTaskMapper.insert(task);
 
@@ -76,6 +78,8 @@ public class BasketAdminMessageService {
             receiver.setDeliveryStatus(DELIVERY_STATUS_SENT);
             receiver.setReadStatus(READ_STATUS_UNREAD);
             receiver.setSentTime(now);
+            receiver.setCreateTime(now);
+            receiver.setUpdateTime(now);
             receiver.setIsDelete(NOT_DELETED);
             receivers.add(receiver);
         }

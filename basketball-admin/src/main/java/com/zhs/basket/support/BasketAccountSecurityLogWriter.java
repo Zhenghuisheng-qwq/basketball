@@ -28,8 +28,11 @@ public class BasketAccountSecurityLogWriter {
         log.setNewValueMasked(newMasked);
         log.setOperatorType(OPERATOR_ADMIN);
         log.setOperatorId(operatorId);
+        Date now = new Date();
         log.setClientIp(IpUtils.getIpAddr());
-        log.setEventTime(new Date());
+        log.setEventTime(now);
+        log.setCreateTime(now);
+        log.setUpdateTime(now);
         log.setIsDelete(NOT_DELETED);
         securityLogMapper.insert(log);
     }

@@ -71,6 +71,7 @@ public class BasketMatchScoreServiceImpl implements IBasketMatchScoreService {
             throw new ServiceException("分节比分不能为空");
         }
         List<BasketMatchPeriodScore> list = new ArrayList<>();
+        Date now = new Date();
         for (MatchPeriodScoreSaveReq.PeriodScoreItem item : req.getPeriods()) {
             if (item.getPeriodNo() == null || StringUtils.isEmpty(item.getPeriodType())) {
                 throw new ServiceException("节次信息不完整");
@@ -83,6 +84,8 @@ public class BasketMatchScoreServiceImpl implements IBasketMatchScoreService {
             period.setHomeScore(item.getHomeScore() != null ? item.getHomeScore() : 0);
             period.setAwayScore(item.getAwayScore() != null ? item.getAwayScore() : 0);
             period.setPeriodStatus(PERIOD_STATUS_DRAFT);
+            period.setCreateTime(now);
+            period.setUpdateTime(now);
             period.setIsDelete(NOT_DELETED);
             list.add(period);
         }

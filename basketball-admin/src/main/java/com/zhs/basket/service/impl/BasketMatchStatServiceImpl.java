@@ -283,6 +283,9 @@ public class BasketMatchStatServiceImpl implements IBasketMatchStatService {
         stat.setPossessions(item.getPossessions() != null ? item.getPossessions() : BigDecimal.ZERO);
         stat.setEfficiency(item.getEfficiency() != null ? item.getEfficiency() : BigDecimal.ZERO);
         stat.setDataStatus(MatchDataStatusEnum.DRAFT.getCode());
+        Date now = new Date();
+        stat.setCreateTime(now);
+        stat.setUpdateTime(now);
         stat.setIsDelete(NOT_DELETED);
         return stat;
     }
@@ -320,6 +323,9 @@ public class BasketMatchStatServiceImpl implements IBasketMatchStatService {
         stat.setDoubleDouble(0);
         stat.setTripleDouble(0);
         stat.setDataStatus(MatchDataStatusEnum.DRAFT.getCode());
+        Date now = new Date();
+        stat.setCreateTime(now);
+        stat.setUpdateTime(now);
         stat.setIsDelete(NOT_DELETED);
         return stat;
     }
@@ -383,6 +389,7 @@ public class BasketMatchStatServiceImpl implements IBasketMatchStatService {
     }
 
     private void writeStatSummary(BasketMatch match, int beforeStatus, int afterStatus, String reason) {
+        Date now = new Date();
         BasketStatChangeRecord record = new BasketStatChangeRecord();
         record.setBizType(BIZ_TYPE_MATCH);
         record.setBizId(match.getId());
@@ -393,6 +400,8 @@ public class BasketMatchStatServiceImpl implements IBasketMatchStatService {
         record.setOperatorId(SecurityUtils.getUserId());
         record.setOperatorName(SecurityUtils.getUsername());
         record.setApprovalStatus(APPROVAL_NONE);
+        record.setCreateTime(now);
+        record.setUpdateTime(now);
         record.setIsDelete(NOT_DELETED);
         statChangeRecordMapper.insert(record);
     }

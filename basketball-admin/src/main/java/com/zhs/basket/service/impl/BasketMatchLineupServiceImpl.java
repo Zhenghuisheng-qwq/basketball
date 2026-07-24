@@ -76,6 +76,7 @@ public class BasketMatchLineupServiceImpl implements IBasketMatchLineupService {
         Set<String> jerseyNos = new HashSet<>();
         List<Long> memberIds = new ArrayList<>();
         List<BasketMatchRoster> rosterList = new ArrayList<>();
+        Date now = new Date();
 
         for (MatchLineupSaveReq.LineupPlayerItem item : req.getPlayers()) {
             if (item.getRegistrationPlayerId() == null) {
@@ -110,6 +111,8 @@ public class BasketMatchLineupServiceImpl implements IBasketMatchLineupService {
             roster.setPlayStatus(PLAY_STATUS_ACTIVE);
             roster.setCaptainFlag(captain);
             roster.setSortNo(item.getSortNo() != null ? item.getSortNo() : 0);
+            roster.setCreateTime(now);
+            roster.setUpdateTime(now);
             roster.setIsDelete(NOT_DELETED);
             rosterList.add(roster);
             if (regPlayer.getMemberId() != null) {
@@ -117,7 +120,6 @@ public class BasketMatchLineupServiceImpl implements IBasketMatchLineupService {
             }
         }
 
-        Date now = new Date();
         if (!memberIds.isEmpty()) {
             Set<Long> banned = disciplineRecordMapper.selectActiveBySeasonAndMembers(match.getSeasonId(), memberIds, now)
                     .stream().map(BasketDisciplineRecord::getMemberId).collect(Collectors.toSet());
