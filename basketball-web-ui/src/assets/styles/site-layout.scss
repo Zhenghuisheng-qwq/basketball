@@ -1,0 +1,45 @@
+/* 全站统一版心与区块外层：所有页面优先使用 site-section + site-shell */
+
+.site-section {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.site-section--dark {
+  background: var(--cnpa-bg-primary, #050505);
+}
+
+.site-section--hero {
+  background: #000;
+}
+
+.site-shell,
+.site-container {
+  width: calc(100% - 2 * var(--site-gutter));
+  max-width: var(--site-width);
+  margin-inline: auto;
+  box-sizing: border-box;
+  overflow-x: clip;
+}
+
+.site-shell-inner {
+  width: 100%;
+  padding-inline: var(--site-inner-padding);
+  box-sizing: border-box;
+}
+
+.site-content {
+  width: calc(100% - 2 * var(--site-gutter));
+  max-width: var(--site-width);
+  margin-inline: auto;
+  padding-inline: var(--site-inner-padding);
+  box-sizing: border-box;
+}
+
+.page-container {
+  width: calc(100% - 2 * var(--site-gutter));
+  max-width: var(--site-width);
+  margin-inline: auto;
+  padding: 48px var(--site-inner-padding) 64px;
+  box-sizing: border-box;
+}

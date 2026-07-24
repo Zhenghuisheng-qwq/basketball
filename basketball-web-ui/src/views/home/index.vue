@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import TornEdge from '@/components/home/TornEdge.vue'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import homeTop from '@/assets/icon/home_top.png'
+import aboutVisual from '@/assets/icon/tournament_foot.png'
 import {
   getPublicHome,
   getPublicHomePlayerRanking,
@@ -60,12 +61,36 @@ const brokenLogos = ref<Record<string, boolean>>({})
 const stats = computed(() => {
   const s = summary.value
   return [
-    { value: displayText(s?.teamCount ?? 0, '0'), label: '支参赛战队' },
-    { value: displayText(s?.playerStatCount ?? 0, '0'), label: '球员数据记录' },
-    { value: displayText(s?.finishedMatchCount ?? 0, '0'), label: '已结束比赛' },
-    { value: displayText(s?.standingCount ?? 0, '0'), label: '积分榜记录' },
+    { value: displayText(s?.teamCount ?? 0, '0'), label: '支参赛战队', tone: 'hero' as const },
+    { value: displayText(s?.playerStatCount ?? 0, '0'), label: '球员数据记录', tone: 'accent' as const },
+    { value: displayText(s?.finishedMatchCount ?? 0, '0'), label: '已结束比赛', tone: 'plain' as const },
+    { value: displayText(s?.standingCount ?? 0, '0'), label: '积分榜记录', tone: 'plain' as const },
   ]
 })
+
+const featuredAnnouncement = computed(() => announcements.value[0] ?? null)
+const sideAnnouncements = computed(() => announcements.value.slice(1))
+
+function matchCardTone(index: number): 'side' | 'featured' {
+  if (matches.value.length === 1) return 'featured'
+  if (matches.value.length === 2) return index === 0 ? 'featured' : 'side'
+  return index === 1 ? 'featured' : 'side'
+}
+
+function matchCardNo(index: number): string {
+  return String(index + 1).padStart(2, '0')
+}
+
+function teamMark(index: number): string {
+  return String(index + 1).padStart(2, '0')
+}
+
+function winRateWidth(value: unknown): string {
+  const num = Number(value)
+  if (!Number.isFinite(num) || num <= 0) return '8%'
+  if (num > 1) return `${Math.min(num, 100)}%`
+  return `${Math.min(num * 100, 100)}%`
+}
 
 function markLogoBroken(key: string) {
   brokenLogos.value[key] = true
@@ -196,16 +221,16 @@ onMounted(() => {
 
 <template>
   <div class="home-page">
-    <section class="home-hero-section">
+    <section class="site-section home-hero-section">
       <div class="site-shell">
         <img class="hero-image" :src="homeTop" alt="CNPA 篮球赛事平台" />
       </div>
     </section>
 
-    <section id="matches" class="match-section">
+    <section id="matches" class="site-section match-section">
       <div class="site-shell">
         <div class="paper-band paper-band-light">
-          <TornEdge position="top" tone="light" />
+          <TornEdge position="top" tone="light" variant="sharp" />
           <div class="paper-band-inner">
             <div class="section-head section-head-dark">
               <h2>近期赛事</h2>
@@ -218,8 +243,14 @@ onMounted(() => {
             <div v-if="matchState === 'loading'" class="home-state">加载中...</div>
             <div v-else-if="matchState === 'error'" class="home-state home-state--error">{{ matchError }}</div>
             <div v-else-if="matchState === 'empty'" class="home-state">暂无近期赛事</div>
-            <div v-else class="match-grid">
-              <article v-for="match in matches" :key="match.matchId" class="match-card">
+            <div v-else class="match-showcase">
+              <article
+                v-for="(match, index) in matches"
+                :key="match.matchId"
+                class="match-card"
+                :class="`match-card--${matchCardTone(index)}`"
+              >
+                <span class="match-card-no" aria-hidden="true">{{ matchCardNo(index) }}</span>
                 <div class="match-card-header">
                   <span>{{ formatDateTime(match.scheduledStartTime).full }}</span>
                   <span>{{ matchRound(match) }}</span>
@@ -237,7 +268,10 @@ onMounted(() => {
                     </div>
                     <span class="match-team-name">{{ displayText(match.homeTeamName) }}</span>
                   </div>
-                  <div class="match-vs">VS</div>
+                  <div class="match-vs-wrap">
+                    <span class="match-vs-glow" aria-hidden="true" />
+                    <span class="match-vs">VS</span>
+                  </div>
                   <div class="match-team">
                     <div class="match-logo">
                       <img
@@ -252,7 +286,7 @@ onMounted(() => {
                   </div>
                 </div>
                 <button type="button" class="watch-btn" @click="handleWatchMatch(match.matchId)">
-                  查看赛程
+                  <span>查看赛程</span>
                 </button>
               </article>
             </div>
@@ -261,10 +295,10 @@ onMounted(() => {
       </div>
     </section>
 
-    <section id="teams" class="team-section">
+    <section id="teams" class="site-section team-section">
       <div class="site-shell">
         <div class="paper-band paper-band-dark">
-          <TornEdge position="top" tone="dark" />
+          <TornEdge position="top" tone="dark" variant="wave" />
           <div class="paper-band-inner">
             <div class="section-head section-head-light">
               <h2>参赛战队</h2>
@@ -279,13 +313,16 @@ onMounted(() => {
               {{ teamError }}
             </div>
             <div v-else-if="teamState === 'empty'" class="home-state home-state--light">暂无参赛战队</div>
-            <div v-else class="team-grid">
+            <div v-else class="team-strip">
               <article
-                v-for="team in teams"
+                v-for="(team, index) in teams"
                 :key="team.teamId"
-                class="team-card"
+                class="team-slot"
+                :class="{ 'team-slot--lift': index === 1 || index === 4 }"
                 @click="handleTeamClick(team.teamId)"
               >
+                <span class="team-slot-mark" aria-hidden="true">{{ teamMark(index) }}</span>
+                <span class="team-slot-abbr" aria-hidden="true">{{ initials(team.teamName, 3) }}</span>
                 <div class="team-logo">
                   <img
                     v-if="showLogo(team.teamLogoUrl, `t-${team.teamId}`)"
@@ -303,95 +340,116 @@ onMounted(() => {
       </div>
     </section>
 
-    <section class="about-paper-section">
+    <section class="site-section about-paper-section">
       <div class="site-shell">
         <div class="paper-band paper-band-light">
-          <TornEdge position="top" tone="light" />
+          <TornEdge position="top" tone="light" variant="soft" />
           <div class="paper-band-inner about-paper-inner">
-            <div class="about-text">
+            <div class="about-story">
+              <p class="about-kicker">CNPA LEAGUE SYSTEM</p>
               <h2>关于 CNPA <span>联赛体系</span></h2>
               <p>
                 CNPA 中国职业电竞篮球联赛，致力于打造专业、公平、热血的线上篮球竞技舞台。
                 通过全年多级赛事体系，推动电竞篮球运动的发展与普及。
               </p>
+              <ul class="about-tags">
+                <li>职业电竞篮球</li>
+                <li>多级联赛体系</li>
+                <li>公开数据榜单</li>
+              </ul>
             </div>
-            <div v-if="summaryState === 'loading'" class="home-state">加载中...</div>
-            <div v-else-if="summaryState === 'error'" class="home-state home-state--error">{{ summaryError }}</div>
-            <div v-else class="about-stats">
-              <div v-for="item in stats" :key="item.label" class="stat-item">
-                <strong>{{ item.value }}</strong>
-                <span>{{ item.label }}</span>
+
+            <div v-if="summaryState === 'loading'" class="home-state about-story-state">加载中...</div>
+            <div v-else-if="summaryState === 'error'" class="home-state home-state--error about-story-state">
+              {{ summaryError }}
+            </div>
+            <div v-else class="about-stage">
+              <div class="about-visual" aria-hidden="true">
+                <img :src="aboutVisual" alt="" />
+                <span class="about-visual-caption">SEASON STAGE</span>
+              </div>
+              <div class="about-mosaic">
+                <article
+                  v-for="item in stats"
+                  :key="item.label"
+                  class="about-stat"
+                  :class="`about-stat--${item.tone}`"
+                >
+                  <strong>{{ item.value }}</strong>
+                  <span>{{ item.label }}</span>
+                </article>
               </div>
             </div>
           </div>
-          <TornEdge position="bottom" tone="light" />
+          <TornEdge position="bottom" tone="light" variant="sharp" />
         </div>
       </div>
     </section>
 
-    <section id="ranking" class="ranking-section">
+    <section id="ranking" class="site-section site-section--dark ranking-section">
       <div class="site-shell">
         <div class="site-shell-inner">
           <div class="section-head">
             <h2>数据榜单</h2>
           </div>
-          <div class="ranking-panel">
-            <div class="ranking-card">
-              <h3>球队排行</h3>
+          <div class="ranking-stage">
+            <article class="ranking-board ranking-board--teams">
+              <header class="ranking-board-head">
+                <h3>球队排行</h3>
+                <span>WIN RATE</span>
+              </header>
               <div v-if="rankState === 'loading'" class="home-state home-state--light">加载中...</div>
               <div v-else-if="rankState === 'error'" class="home-state home-state--error home-state--light">
                 {{ rankError }}
               </div>
               <div v-else-if="rankState === 'empty'" class="home-state home-state--light">暂无球队排行</div>
-              <table v-else class="rank-table">
-                <thead>
-                  <tr>
-                    <th>排名</th>
-                    <th>战队</th>
-                    <th>胜率</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="row in teamRanks" :key="row.teamId">
-                    <td class="rank-num">{{ displayText(row.rankNo ?? 0, '0') }}</td>
-                    <td>
-                      <span class="team-name-cell">
-                        <span class="tiny-logo">
-                          <img
-                            v-if="showLogo(row.teamLogoUrl, `r-${row.teamId}`)"
-                            :src="row.teamLogoUrl!"
-                            :alt="displayText(row.teamName)"
-                            @error="markLogoBroken(`r-${row.teamId}`)"
-                          />
-                          <span v-else class="tiny-fallback">{{ initials(row.teamName) }}</span>
-                        </span>
-                        <router-link :to="`/tournament/team/${row.teamId}/overview`">
-                          {{ displayText(row.teamName) }}
-                        </router-link>
-                      </span>
-                    </td>
-                    <td>{{ formatPercent(row.statValue) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="ranking-card">
-              <h3>球员得分榜 TOP5</h3>
+              <ul v-else class="team-rank-list">
+                <li
+                  v-for="row in teamRanks"
+                  :key="row.teamId"
+                  class="team-rank-item"
+                  :class="{ 'team-rank-item--lead': row.rankNo === 1 }"
+                >
+                  <span class="rank-badge">{{ displayText(row.rankNo ?? 0, '0') }}</span>
+                  <router-link :to="`/tournament/team/${row.teamId}/overview`" class="team-rank-main">
+                    <span class="tiny-logo">
+                      <img
+                        v-if="showLogo(row.teamLogoUrl, `r-${row.teamId}`)"
+                        :src="row.teamLogoUrl!"
+                        :alt="displayText(row.teamName)"
+                        @error="markLogoBroken(`r-${row.teamId}`)"
+                      />
+                      <span v-else class="tiny-fallback">{{ initials(row.teamName) }}</span>
+                    </span>
+                    <span class="team-rank-name">{{ displayText(row.teamName) }}</span>
+                  </router-link>
+                  <div class="team-rank-meter" aria-hidden="true">
+                    <i :style="{ width: winRateWidth(row.statValue) }" />
+                  </div>
+                  <strong class="team-rank-value">{{ formatPercent(row.statValue) }}</strong>
+                </li>
+              </ul>
+            </article>
+
+            <article class="ranking-board ranking-board--players">
+              <header class="ranking-board-head">
+                <h3>球员得分榜</h3>
+                <span>TOP 5 PPG</span>
+              </header>
               <div v-if="playerState === 'loading'" class="home-state home-state--light">加载中...</div>
               <div v-else-if="playerState === 'error'" class="home-state home-state--error home-state--light">
                 {{ playerError }}
               </div>
               <div v-else-if="playerState === 'empty'" class="home-state home-state--light">暂无球员排行</div>
-              <template v-else>
-                <div class="player-row head">
-                  <span>排名</span>
-                  <span>球员</span>
-                  <span>战队</span>
-                  <span>场均得分 PPG</span>
-                </div>
-                <div v-for="player in playerRanks" :key="player.playerId" class="player-row">
-                  <span class="rank-num">{{ displayText(player.rankNo ?? 0, '0') }}</span>
-                  <span class="player-name">
+              <ul v-else class="player-rank-list">
+                <li
+                  v-for="player in playerRanks"
+                  :key="player.playerId"
+                  class="player-rank-item"
+                  :class="{ 'player-rank-item--podium': (player.rankNo ?? 99) <= 3 }"
+                >
+                  <span class="rank-badge">{{ displayText(player.rankNo ?? 0, '0') }}</span>
+                  <div class="player-rank-main">
                     <i
                       class="avatar"
                       :style="
@@ -400,26 +458,28 @@ onMounted(() => {
                           : undefined
                       "
                     />
-                    <PlayerLink
-                      :player-id="player.playerId"
-                      :player-name="displayText(player.playerName)"
-                      tab="data"
-                    />
-                  </span>
-                  <span>{{ displayText(player.teamName) }}</span>
-                  <span>{{ formatStatValue(player.statValue, 'PPG') }}</span>
-                </div>
-              </template>
-            </div>
+                    <div class="player-rank-copy">
+                      <PlayerLink
+                        :player-id="player.playerId"
+                        :player-name="displayText(player.playerName)"
+                        tab="data"
+                      />
+                      <small>{{ displayText(player.teamName) }}</small>
+                    </div>
+                  </div>
+                  <strong class="player-rank-value">{{ formatStatValue(player.statValue, 'PPG') }}</strong>
+                </li>
+              </ul>
+            </article>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="home-announce-section">
+    <section class="site-section home-announce-section">
       <div class="site-shell">
         <div class="paper-band paper-band-light">
-          <TornEdge position="top" tone="light" />
+          <TornEdge position="top" tone="light" variant="wave" />
           <div class="paper-band-inner">
             <div class="section-head section-head-dark">
               <h2>最新公告</h2>
@@ -431,18 +491,45 @@ onMounted(() => {
             <div v-if="contentState === 'loading'" class="home-state">加载中...</div>
             <div v-else-if="contentState === 'error'" class="home-state home-state--error">{{ contentError }}</div>
             <div v-else-if="!announcements.length" class="home-state">暂无公告</div>
-            <div v-else class="home-announce-list">
+            <div v-else class="announce-board">
               <button
-                v-for="item in announcements"
-                :key="item.announcementId"
+                v-if="featuredAnnouncement"
                 type="button"
-                class="home-announce-item"
-                @click="openAnnouncement(item.announcementId)"
+                class="announce-feature"
+                @click="openAnnouncement(featuredAnnouncement.announcementId)"
               >
-                <span class="home-announce-item__category">{{ displayText(item.categoryName, '公告') }}</span>
-                <strong>{{ displayText(item.title) }}</strong>
-                <time>{{ formatAnnouncementDate(item.publishTime) }}</time>
+                <div class="announce-feature-media">
+                  <img
+                    v-if="showLogo(featuredAnnouncement.coverUrl, `a-${featuredAnnouncement.announcementId}`)"
+                    :src="featuredAnnouncement.coverUrl!"
+                    :alt="displayText(featuredAnnouncement.title)"
+                    @error="markLogoBroken(`a-${featuredAnnouncement.announcementId}`)"
+                  />
+                  <div v-else class="announce-feature-fallback">
+                    <span>{{ displayText(featuredAnnouncement.categoryName, '公告') }}</span>
+                  </div>
+                </div>
+                <div class="announce-feature-body">
+                  <span class="announce-feature-tag">{{ displayText(featuredAnnouncement.categoryName, '公告') }}</span>
+                  <strong>{{ displayText(featuredAnnouncement.title) }}</strong>
+                  <p v-if="featuredAnnouncement.summary">{{ displayText(featuredAnnouncement.summary) }}</p>
+                  <time>{{ formatAnnouncementDate(featuredAnnouncement.publishTime) }}</time>
+                </div>
               </button>
+
+              <div class="announce-feed">
+                <button
+                  v-for="item in sideAnnouncements"
+                  :key="item.announcementId"
+                  type="button"
+                  class="announce-feed-item"
+                  @click="openAnnouncement(item.announcementId)"
+                >
+                  <span class="announce-feed-item__category">{{ displayText(item.categoryName, '公告') }}</span>
+                  <strong>{{ displayText(item.title) }}</strong>
+                  <time>{{ formatAnnouncementDate(item.publishTime) }}</time>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -503,7 +590,9 @@ onMounted(() => {
   }
 }
 
-.team-name-cell a {
+.team-name-cell a,
+.team-rank-main,
+.player-rank-copy :deep(a) {
   color: inherit;
   text-decoration: none;
 
