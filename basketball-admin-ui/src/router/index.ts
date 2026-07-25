@@ -64,9 +64,9 @@ export const constantRoutes = [
     children: [
       {
         path: '/index',
-        component: () => import('@/views/index.vue'),
+        component: () => import('@/views/cnpa/dashboard/index.vue'),
         name: 'Index',
-        meta: { title: '首页', icon: 'dashboard', affix: true }
+        meta: { title: '运营工作台', icon: 'dashboard', affix: true }
       }
     ]
   },

@@ -60,3 +60,18 @@ export function delHallOfFame(id: number): Promise<AjaxResult> {
     method: 'delete'
   })
 }
+
+export function listHallImportCandidates(params?: { tournamentId?: number; seasonId?: number }): Promise<AjaxResult<HonorRecordListItem[]>> {
+  return request({
+    url: '/basket/hall-of-fame/import-candidates',
+    method: 'get',
+    params
+  })
+}
+
+export function importHallFromHonor(honorId: number): Promise<AjaxResult<number>> {
+  return request({
+    url: `/basket/hall-of-fame/import/${honorId}`,
+    method: 'post'
+  })
+}

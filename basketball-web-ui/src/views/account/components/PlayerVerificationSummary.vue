@@ -48,10 +48,6 @@ const initials = computed(() => props.nickname.slice(0, 2).toUpperCase())
         <dt>常用位置</dt>
         <dd>{{ GAME_POSITION_LABELS[data.commonPosition] }}</dd>
       </div>
-      <div v-if="data.backupContact" class="account-field-row">
-        <dt>备用联系方式</dt>
-        <dd>{{ data.backupContact }}</dd>
-      </div>
       <div v-if="submittedAt" class="account-field-row">
         <dt>提交时间</dt>
         <dd>{{ formatDateTime(submittedAt) }}</dd>

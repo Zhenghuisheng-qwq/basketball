@@ -1,6 +1,6 @@
 import request from '@/api/request'
 
-export type EmailCodePurpose = 'REGISTER' | 'LOGIN'
+export type EmailCodePurpose = 'REGISTER' | 'LOGIN' | 'RESET_PASSWORD'
 
 export interface ApiResult<T> {
   code: number
@@ -75,4 +75,14 @@ export function getMemberSession() {
 
 export function logoutMember() {
   return request.post<any, ApiResult<null>>('/basket/member/auth/logout')
+}
+
+export function resetMemberPassword(payload: {
+  email: string
+  verifyBizNo: string
+  verifyCode: string
+  password: string
+  confirmPassword: string
+}) {
+  return request.post<any, ApiResult<null>>('/basket/member/auth/password/reset', payload)
 }

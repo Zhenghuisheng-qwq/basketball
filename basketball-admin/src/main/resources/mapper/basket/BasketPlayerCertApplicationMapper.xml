@@ -9,6 +9,7 @@
         <result property="applicationType" column="application_type" />
         <result property="gameTerminal" column="game_terminal" />
         <result property="gameAccount" column="game_account" />
+        <result property="normalizedGameAccount" column="normalized_game_account" />
         <result property="gameNickname" column="game_nickname" />
         <result property="positionCode" column="position_code" />
         <result property="applicationStatus" column="application_status" />
@@ -58,9 +59,18 @@
 
     <select id="selectById" resultMap="BasketPlayerCertApplicationResult">
         select id, application_no, member_id, player_id, application_type, game_terminal, game_account,
-               game_nickname, position_code, application_status, submitted_time, reviewed_time,
+               normalized_game_account, game_nickname, position_code, application_status, submitted_time, reviewed_time,
                current_auditor_id, review_remark, create_time, update_time, is_delete
         from basket_player_cert_application where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByMemberId" resultMap="BasketPlayerCertApplicationResult">
+        select id, application_no, member_id, player_id, application_type, game_terminal, game_account,
+               normalized_game_account, game_nickname, position_code, application_status, submitted_time, reviewed_time,
+               current_auditor_id, review_remark, create_time, update_time, is_delete
+        from basket_player_cert_application
+        where member_id = #{memberId} and is_delete = 0
+        order by submitted_time desc, create_time desc
     </select>
 
     <update id="updateStatusIfMatch">
@@ -73,5 +83,13 @@
         where id = #{id} and is_delete = 0 and application_status in
         <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
         <if test="auditorId != null">and (current_auditor_id is null or current_auditor_id = #{auditorId})</if>
+    </update>
+
+    <update id="updatePlayerIdAndNormalized">
+        update basket_player_cert_application
+        set player_id = #{playerId},
+            normalized_game_account = #{normalizedGameAccount},
+            update_time = now()
+        where id = #{id} and is_delete = 0
     </update>
 </mapper>

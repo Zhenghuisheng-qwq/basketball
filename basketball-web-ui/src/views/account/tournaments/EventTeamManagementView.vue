@@ -17,6 +17,13 @@ const pendingTasks = computed(() => eventTeamStore.pendingTasks)
 
 const operations = computed(() => [
   {
+    key: 'history',
+    title: '变更历史',
+    desc: '查看阵容变更记录',
+    action: '查看历史',
+    path: teamPath('/roster-history'),
+  },
+  {
     key: 'roster',
     title: '阵容管理',
     desc: `当前阵容 ${eventTeamStore.rosterCount} / ${eventTeam.value.rosterMax}`,

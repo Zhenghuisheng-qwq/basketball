@@ -28,6 +28,7 @@ public class HonorRecordListResp {
     private String coverUrl;
     private String sourceType;
     private Long sourceId;
+    private Long generationBatchId;
     private Integer displayStatus;
     private String displayStatusName;
     private Integer displayOrder;

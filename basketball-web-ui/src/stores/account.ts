@@ -9,45 +9,43 @@ import {
   updateNotificationSetting,
   updatePrivacySetting,
 } from '@/api/accountSetting'
-import { getAccountTournamentPage } from '@/api/accountTournament'
+import { changeAccountPassword } from '@/api/accountSecurity'
+import {
+  addPlatformAccount,
+  changePlatformGameId,
+  getPlatformAccountList,
+  getPlatformChangeHistory,
+  getPlayerEligibilityStatus,
+} from '@/api/playerPlatformAccount'
 import {
   bindPlayerCertificationMaterial,
   getPlayerCertificationCurrent,
   savePlayerCertificationDraft,
   submitPlayerCertification,
+  withdrawPlayerCertification,
 } from '@/api/playerCertification'
+import { getAccountTournamentPage } from '@/api/accountTournament'
+import {
+  createOpenRegistrationDraft,
+  getOpenAvailableSeasonPage,
+  getOpenRegistrationPage,
+  submitOpenRegistration,
+} from '@/api/openRegistration'
 import { isLoggedIn } from '@/utils/auth'
 import {
-  getDefaultTeamRelations,
-  teamRelationsStorageKey,
-} from '@/mock/account/teamRelations'
-import {
-  getDefaultSecurity,
-  hashPassword,
-  securityStorageKey,
-} from '@/mock/account/security'
-import { validatePasswordRules } from '@/utils/passwordRules'
-import {
-  buildPlayerIdentity,
-  getDefaultPlatformGameIds,
-  getDefaultIdentityChangeHistory,
-  platformGameIdsStorageKey,
-} from '@/mock/playerIdentityMock'
-import {
   myTournamentsStorageKey,
-} from '@/mock/tournamentAccountMock'
+  securityStorageKey,
+  teamRelationsStorageKey,
+} from '@/constants/accountStorageKeys'
+import { CLOSED_OPEN_TOURNAMENT } from '@/constants/openRegistrationDefaults'
+import { validatePasswordRules } from '@/utils/passwordRules'
+import { buildPlayerIdentity, mapVerificationPlatform } from '@/utils/playerIdentity'
+import { getDefaultTeamRelations } from '@/utils/teamRelations'
 import {
-  applyDevOpenApplicationOverride,
-  buildOpenApplicationNo,
-  getDefaultOpenApplication,
-  isOpenRegistrationDeadlinePassed,
-  mockOpenTournament,
-  openApplicationStorageKey,
-} from '@/mock/openRegistrationMock'
-import {
-  getDefaultEligibility,
-  eligibilityStorageKey,
-} from '@/mock/playerIdentityMock'
+  isRegistrationDeadlinePassed,
+  mapOpenDetailToApplication,
+  mapOpenSeasonToTournament,
+} from '@/utils/participationMappers'
 import {
   readStorageItem,
   safeParseStorage,
@@ -55,6 +53,10 @@ import {
 } from '@/utils/safeParseStorage'
 import {
   applyOverviewToStoreState,
+  filterApprovedChangeHistory,
+  mapEligibilityStatus,
+  mapPlatformAccountItem,
+  mapPlatformChangeHistoryItem,
   mapPlatformToGameTerminal,
   mapPlayerCertToVerification,
   mapProfileDtoToAccountProfile,
@@ -73,7 +75,6 @@ import type {
   IdentityPlatform,
   MyTournament,
   OpenApplication,
-  OpenApplicationStatus,
   OpenTournament,
   PlatformGameIdRecord,
   PlayerIdentity,
@@ -82,8 +83,7 @@ import type {
   TeamRelationsData,
   AccountSecurityData,
 } from '@/types/account'
-import { IDENTITY_PLATFORM_LABELS, OPEN_APPLICATION_STATUS_LABELS } from '@/types/account'
-import { mapVerificationPlatform } from '@/mock/playerIdentityMock'
+import { IDENTITY_PLATFORM_LABELS } from '@/types/account'
 
 function dataUrlToFile(dataUrl: string, filename = 'game-screenshot.jpg'): File | undefined {
   if (!dataUrl.startsWith('data:')) return undefined
@@ -107,8 +107,25 @@ export const useAccountStore = defineStore('account', () => {
   const identityChangeHistory = ref<IdentityChangeRecord[]>([])
   const eligibility = ref<EligibilityLimit | null>(null)
   const myTournaments = ref<MyTournament[]>([])
-  const openTournament = ref<OpenTournament>({ ...mockOpenTournament })
+  const openTournament = ref<OpenTournament>({
+    id: '',
+    name: '',
+    shortName: '',
+    seasonName: '',
+    type: 'OPEN',
+    platform: '',
+    registrationType: 'INDIVIDUAL',
+    registrationTypeText: '个人报名',
+    registrationDeadline: '',
+    quotaTotal: 0,
+    quotaUsed: 0,
+    quotaLeft: 0,
+    status: 'REGISTRATION_CLOSED',
+    statusText: '报名关闭',
+  })
   const openApplication = ref<OpenApplication | null>(null)
+  const openSeasonId = ref('')
+  const openRegistrationLoading = ref(false)
   const eligibilityLimited = ref(false)
   const loadedUserId = ref<number | null>(null)
 
@@ -153,7 +170,7 @@ export const useAccountStore = defineStore('account', () => {
       avatarUrl: currentAccount.value.avatarUrl,
       identityStatus: 'APPROVED',
       identityStatusText: '认证球员',
-      platform: IDENTITY_PLATFORM_LABELS[platformKey] || mockOpenTournament.platform,
+      platform: IDENTITY_PLATFORM_LABELS[platformKey] || '',
       gameId,
     }
   })
@@ -191,43 +208,144 @@ export const useAccountStore = defineStore('account', () => {
     writeStorageItem(myTournamentsStorageKey(loadedUserId.value), JSON.stringify(myTournaments.value))
   }
 
-  function persistOpenApplication() {
-    if (loadedUserId.value == null || !openApplication.value) return
-    writeStorageItem(openApplicationStorageKey(loadedUserId.value), JSON.stringify(openApplication.value))
-  }
-
-  function loadOutOfScopeMocks(userId: number) {
+  function loadLocalTeamRelations(userId: number) {
     teamRelations.value = safeParseStorage<TeamRelationsData>(
       readStorageItem(teamRelationsStorageKey(userId)),
       getDefaultTeamRelations(userId),
     )
-    platformGameIds.value = safeParseStorage<PlatformGameIdRecord[]>(
-      readStorageItem(platformGameIdsStorageKey(userId)),
-      getDefaultPlatformGameIds(userId),
-    )
-    identityChangeHistory.value = safeParseStorage<IdentityChangeRecord[]>(
-      readStorageItem(`${platformGameIdsStorageKey(userId)}_history`),
-      getDefaultIdentityChangeHistory(userId),
-    )
-    eligibility.value = safeParseStorage<EligibilityLimit>(
-      readStorageItem(eligibilityStorageKey(userId)),
-      getDefaultEligibility(userId),
-    )
-    openTournament.value = { ...mockOpenTournament }
-    openApplication.value = safeParseStorage<OpenApplication | null>(
-      readStorageItem(openApplicationStorageKey(userId)),
-      getDefaultOpenApplication(userId),
-    )
   }
 
-  async function ensureSecurityLoaded(userId: number) {
+  async function loadOpenRegistration(preferredSeasonId?: string) {
+    openRegistrationLoading.value = true
+    try {
+      const [seasonRes, registrationRes] = await Promise.all([
+        getOpenAvailableSeasonPage({ currentPage: 1, pageSize: 20 }),
+        getOpenRegistrationPage({ currentPage: 1, pageSize: 10 }),
+      ])
+      const seasons = seasonRes.data?.records || []
+      const registrations = registrationRes.data?.records || []
+      const selectedSeason = seasons.find(
+        (item) =>
+          item.seasonId === preferredSeasonId
+          || item.tournamentId === preferredSeasonId,
+      ) || seasons[0]
+
+      if (selectedSeason) {
+        openTournament.value = mapOpenSeasonToTournament(selectedSeason)
+        openSeasonId.value = selectedSeason.seasonId
+      } else {
+        openTournament.value = { ...CLOSED_OPEN_TOURNAMENT, statusText: '暂无开放报名' }
+        openSeasonId.value = ''
+      }
+
+      const latestRegistration = registrations[0]
+      if (latestRegistration?.registrationId) {
+        openApplication.value = {
+          ...mapOpenDetailToApplication({
+            registrationId: latestRegistration.registrationId,
+            registrationNo: latestRegistration.registrationNo,
+            seasonId: latestRegistration.seasonId,
+            seasonName: latestRegistration.seasonName,
+            tournamentName: latestRegistration.tournamentName,
+            platform: latestRegistration.platform,
+            displayGameId: latestRegistration.displayGameId,
+            registrationStatus: latestRegistration.registrationStatus,
+            registrationStatusText: latestRegistration.registrationStatusText,
+          }),
+          playerNo: certifiedPlayerForOpen.value?.playerNo || '',
+          nickname: certifiedPlayerForOpen.value?.nickname || '',
+        }
+      } else if (selectedSeason?.hasRegistration && selectedSeason.registrationId) {
+        openApplication.value = {
+          applicationNo: '',
+          tournamentId: selectedSeason.tournamentId || selectedSeason.seasonId,
+          tournamentName: selectedSeason.tournamentName || selectedSeason.seasonName || '',
+          applicationType: 'INDIVIDUAL',
+          applicationTypeText: '个人报名',
+          status: 'NOT_SUBMITTED',
+          statusText: '未提交',
+          playerNo: certifiedPlayerForOpen.value?.playerNo || '',
+          nickname: certifiedPlayerForOpen.value?.nickname || '',
+          platform: certifiedPlayerForOpen.value?.platform || '',
+          gameId: certifiedPlayerForOpen.value?.gameId || '',
+          submitTime: '',
+          reviewTime: '',
+          reviewRemark: '',
+        }
+      } else {
+        openApplication.value = {
+          applicationNo: '',
+          tournamentId: openTournament.value.id,
+          tournamentName: openTournament.value.name,
+          applicationType: 'INDIVIDUAL',
+          applicationTypeText: '个人报名',
+          status: 'NOT_SUBMITTED',
+          statusText: '未提交',
+          playerNo: certifiedPlayerForOpen.value?.playerNo || '',
+          nickname: certifiedPlayerForOpen.value?.nickname || '',
+          platform: certifiedPlayerForOpen.value?.platform || '',
+          gameId: certifiedPlayerForOpen.value?.gameId || '',
+          submitTime: '',
+          reviewTime: '',
+          reviewRemark: '',
+        }
+      }
+    } catch {
+      openTournament.value = { ...CLOSED_OPEN_TOURNAMENT, statusText: '加载失败' }
+      openApplication.value = null
+    } finally {
+      openRegistrationLoading.value = false
+    }
+  }
+
+  async function loadPlayerPlatformState() {
+    const status = verification.value?.status
+    const isApproved = status === 'APPROVED' || status === 'CHANGE_PENDING'
+
+    if (isApproved) {
+      try {
+        const [listRes, historyRes] = await Promise.all([
+          getPlatformAccountList(),
+          getPlatformChangeHistory(),
+        ])
+        platformGameIds.value = (listRes.data || []).map(mapPlatformAccountItem)
+        identityChangeHistory.value = filterApprovedChangeHistory(
+          (historyRes.data || []).map(mapPlatformChangeHistoryItem),
+        )
+      } catch {
+        platformGameIds.value = []
+        identityChangeHistory.value = []
+      }
+    } else {
+      platformGameIds.value = []
+      identityChangeHistory.value = []
+    }
+
+    if (status && status !== 'NOT_APPLIED' && status !== 'WITHDRAWN') {
+      try {
+        const eligRes = await getPlayerEligibilityStatus()
+        eligibility.value = mapEligibilityStatus(eligRes.data)
+        eligibilityLimited.value = eligRes.data.eligible === false
+      } catch {
+        eligibility.value = null
+        eligibilityLimited.value = false
+      }
+    } else {
+      eligibility.value = null
+      eligibilityLimited.value = false
+    }
+  }
+
+  function ensureSecurityLoaded(userId: number) {
     security.value = safeParseStorage<AccountSecurityData | null>(
       readStorageItem(securityStorageKey(userId)),
       null,
-    )
-    if (!security.value) {
-      security.value = await getDefaultSecurity(userId)
-      persistSecurity()
+    ) || {
+      userId,
+      passwordHash: '',
+      passwordUpdatedAt: '',
+      lastLoginAt: currentAccount.value?.lastLoginAt || '',
+      accountStatus: 'NORMAL',
     }
   }
 
@@ -252,8 +370,12 @@ export const useAccountStore = defineStore('account', () => {
       const mapped = applyOverviewToStoreState(res.data, eligibilityLimited.value)
       applyOverviewData(mapped)
       if (loadedUserId.value != null) {
-        loadOutOfScopeMocks(loadedUserId.value)
-        await ensureSecurityLoaded(loadedUserId.value)
+        loadLocalTeamRelations(loadedUserId.value)
+        ensureSecurityLoaded(loadedUserId.value)
+        await Promise.all([
+          loadPlayerPlatformState(),
+          loadOpenRegistration(),
+        ])
         if (currentAccount.value && security.value) {
           currentAccount.value.lastLoginAt = security.value.lastLoginAt || currentAccount.value.lastLoginAt
         }
@@ -436,8 +558,24 @@ export const useAccountStore = defineStore('account', () => {
     identityChangeHistory.value = []
     eligibility.value = null
     myTournaments.value = []
-    openTournament.value = { ...mockOpenTournament }
+    openTournament.value = {
+      id: '',
+      name: '',
+      shortName: '',
+      seasonName: '',
+      type: 'OPEN',
+      platform: '',
+      registrationType: 'INDIVIDUAL',
+      registrationTypeText: '个人报名',
+      registrationDeadline: '',
+      quotaTotal: 0,
+      quotaUsed: 0,
+      quotaLeft: 0,
+      status: 'REGISTRATION_CLOSED',
+      statusText: '报名关闭',
+    }
     openApplication.value = null
+    openSeasonId.value = ''
     eligibilityLimited.value = false
     loadedUserId.value = null
     overviewError.value = ''
@@ -456,13 +594,13 @@ export const useAccountStore = defineStore('account', () => {
     })
   }
 
-  function withdrawPlayerVerification() {
+  async function withdrawPlayerVerification() {
     if (!verification.value || !currentAccount.value) return
-    if (verification.value.status === 'PENDING') {
-      verification.value.status = 'NOT_APPLIED'
-      verification.value.submittedAt = ''
-      currentAccount.value.playerVerificationStatus = 'NOT_APPLIED'
-    }
+    if (verification.value.status !== 'PENDING') return
+    const res = await withdrawPlayerCertification()
+    playerCert.value = res.data
+    verification.value = mapPlayerCertToVerification(res.data, currentAccount.value.userId)
+    currentAccount.value.playerVerificationStatus = verification.value.status
   }
 
   function resubmitPlayerVerification(data: PlayerVerificationSnapshot) {
@@ -473,14 +611,25 @@ export const useAccountStore = defineStore('account', () => {
     return submitPlayerVerification(data)
   }
 
-  function submitPlatformGameId(payload: { platform: IdentityPlatform; gameId: string }) {
-    if (!loadedUserId.value) return
+  async function submitPlatformGameId(payload: {
+    platform: IdentityPlatform
+    gameId: string
+    proofFileId: string
+  }) {
     const record = platformGameIds.value.find((item) => item.platform === payload.platform)
-    if (!record) return
-    record.gameId = payload.gameId
-    record.status = 'PENDING'
-    record.statusText = record.gameId ? '新增审核中' : '修改审核中'
-    record.locked = false
+    if (record?.platformAccountId && record.status === 'EFFECTIVE') {
+      await changePlatformGameId(record.platformAccountId, {
+        newGameId: payload.gameId,
+        proofFileId: payload.proofFileId,
+      })
+    } else {
+      await addPlatformAccount({
+        platform: payload.platform,
+        gameId: payload.gameId,
+        proofFileId: payload.proofFileId,
+      })
+    }
+    await loadPlayerPlatformState()
   }
 
   function acceptTournamentInvitation(invitationId: string) {
@@ -536,16 +685,23 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   async function changePassword(currentPassword: string, newPassword: string): Promise<string> {
-    if (!security.value) return '账号数据未加载'
     const ruleError = validatePasswordRules(newPassword)
     if (ruleError) return ruleError
     if (newPassword === currentPassword) return '新密码不能与当前密码一致'
-    const currentHash = await hashPassword(currentPassword)
-    if (currentHash !== security.value.passwordHash) return '当前密码不正确'
-    security.value.passwordHash = await hashPassword(newPassword)
-    security.value.passwordUpdatedAt = new Date().toISOString()
-    persistSecurity()
-    return ''
+    try {
+      await changeAccountPassword({
+        oldPassword: currentPassword,
+        newPassword,
+        confirmPassword: newPassword,
+      })
+      if (security.value) {
+        security.value.passwordUpdatedAt = new Date().toISOString()
+        persistSecurity()
+      }
+      return ''
+    } catch (error) {
+      return error instanceof Error ? error.message : '密码修改失败'
+    }
   }
 
   function getOpenRegistrationBlockReason(): string {
@@ -554,9 +710,9 @@ export const useAccountStore = defineStore('account', () => {
     if (!certifiedPlayerForOpen.value?.playerNo) return '尚未生成永久球员 ID，无法报名'
     if (!certifiedPlayerForOpen.value.gameId) return '请先绑定并生效对应平台的游戏 ID'
     if (eligibilityLimited.value) return '你在该赛事的参赛资格受限，无法报名'
-    if (openTournament.value.quotaLeft <= 0) return '名额已满，无法提交报名'
+    if (openTournament.value.quotaLeft <= 0 && openTournament.value.quotaTotal > 0) return '名额已满，无法提交报名'
     if (openTournament.value.status === 'REGISTRATION_CLOSED') return '报名已关闭'
-    if (isOpenRegistrationDeadlinePassed(openTournament.value.registrationDeadline)) return '报名已截止'
+    if (isRegistrationDeadlinePassed(openTournament.value.registrationDeadline)) return '报名已截止'
     if (openApplication.value?.status === 'PENDING') return '当前报名审核中，不能重复提交'
     if (openApplication.value?.status === 'APPROVED') return '你已报名并通过审核，不能重复提交'
     if (openApplication.value?.status === 'CANCELLED') return '该赛事报名已取消'
@@ -568,47 +724,23 @@ export const useAccountStore = defineStore('account', () => {
       && (openApplication.value?.status === 'NOT_SUBMITTED' || openApplication.value?.status === 'REJECTED')
   }
 
-  function submitOpenApplication() {
+  async function submitOpenApplication() {
     if (!canSubmitOpenApplication() || !certifiedPlayerForOpen.value || !currentAccount.value) return
-    const now = new Date().toISOString().replace('T', ' ').slice(0, 16)
-    const player = certifiedPlayerForOpen.value
+    if (!openSeasonId.value) throw new Error('当前无可报名 Open 赛季')
+    const platformKey = certifiedPlayerForOpen.value.platform
+    const draft = await createOpenRegistrationDraft({
+      seasonId: openSeasonId.value,
+      platform: platformKey,
+      positionCode: playerCert.value?.positionCode,
+    })
+    const submitted = await submitOpenRegistration(draft.data.registrationId)
     openApplication.value = {
-      applicationNo: buildOpenApplicationNo(currentAccount.value.userId),
-      tournamentId: openTournament.value.id,
-      tournamentName: openTournament.value.name,
-      applicationType: 'INDIVIDUAL',
-      applicationTypeText: '个人报名',
-      status: 'PENDING',
-      statusText: OPEN_APPLICATION_STATUS_LABELS.PENDING,
-      playerNo: player.playerNo,
-      nickname: player.nickname,
-      platform: player.platform,
-      gameId: player.gameId,
-      submitTime: now,
-      reviewTime: '',
-      reviewRemark: '',
+      ...mapOpenDetailToApplication(submitted.data),
+      playerNo: certifiedPlayerForOpen.value.playerNo,
+      nickname: certifiedPlayerForOpen.value.nickname,
+      platform: certifiedPlayerForOpen.value.platform,
+      gameId: certifiedPlayerForOpen.value.gameId,
     }
-    persistOpenApplication()
-  }
-
-  function applyDevOpenStatusOverride(override: OpenApplicationStatus | null) {
-    if (!import.meta.env.DEV || !loadedUserId.value) return
-    if (!override || override === 'NOT_SUBMITTED') {
-      openApplication.value = getDefaultOpenApplication(loadedUserId.value)
-      openTournament.value = { ...mockOpenTournament }
-      persistOpenApplication()
-      return
-    }
-    if (override === 'CLOSED') {
-      openTournament.value = { ...mockOpenTournament, status: 'REGISTRATION_CLOSED', statusText: '报名关闭' }
-      return
-    }
-    openApplication.value = applyDevOpenApplicationOverride(
-      openApplication.value || getDefaultOpenApplication(loadedUserId.value),
-      override,
-      loadedUserId.value,
-    )
-    persistOpenApplication()
   }
 
   function getProfileCompleteness() {
@@ -636,6 +768,8 @@ export const useAccountStore = defineStore('account', () => {
     myTournaments,
     openTournament,
     openApplication,
+    openSeasonId,
+    openRegistrationLoading,
     certifiedPlayerForOpen,
     openRegistrationStats,
     eligibilityLimited,
@@ -674,12 +808,13 @@ export const useAccountStore = defineStore('account', () => {
     rejectTeamInvitation,
     submitTeamCreateRequest,
     submitPlatformGameId,
+    loadPlayerPlatformState,
     acceptTournamentInvitation,
     rejectTournamentInvitation,
+    loadOpenRegistration,
     submitOpenApplication,
     getOpenRegistrationBlockReason,
     canSubmitOpenApplication,
-    applyDevOpenStatusOverride,
     changePassword,
     getProfileCompleteness,
   }

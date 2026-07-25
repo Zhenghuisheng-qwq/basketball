@@ -6,6 +6,8 @@ import type {
   AnnouncementEditReq,
   AnnouncementListItem,
   AnnouncementQuery,
+  AnnouncementRuleSupersedeReq,
+  AnnouncementScheduleReq,
   TableDataInfo
 } from '@/types'
 
@@ -72,5 +74,29 @@ export function delAnnouncement(id: number): Promise<AjaxResult> {
   return request({
     url: `/basket/announcement/${id}`,
     method: 'delete'
+  })
+}
+
+export function getCurrentRuleAnnouncement(seasonId: number): Promise<AjaxResult<AnnouncementDetail>> {
+  return request({
+    url: '/basket/announcement/current-rule',
+    method: 'get',
+    params: { seasonId }
+  })
+}
+
+export function supersedeRuleAnnouncement(id: number, data: AnnouncementRuleSupersedeReq): Promise<AjaxResult> {
+  return request({
+    url: `/basket/announcement/${id}/supersede-rule`,
+    method: 'post',
+    data
+  })
+}
+
+export function scheduleAnnouncement(id: number, data: AnnouncementScheduleReq): Promise<AjaxResult> {
+  return request({
+    url: `/basket/announcement/${id}/schedule`,
+    method: 'post',
+    data
   })
 }

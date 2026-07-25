@@ -1,6 +1,7 @@
 package com.zhs.basket.service.impl;
 
 import com.zhs.basket.domain.*;
+import com.zhs.basket.enums.PlatformAccountStatusEnum;
 import com.zhs.basket.enums.PlayerCertStatusEnum;
 import com.zhs.basket.mapper.*;
 import com.zhs.basket.query.PlayerCertQuery;
@@ -9,6 +10,7 @@ import com.zhs.basket.req.PlayerCertRejectReq;
 import com.zhs.basket.service.IBasketPlayerCertService;
 import com.zhs.basket.support.BasketAccountSecurityLogWriter;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.GameAccountNormalizer;
 import com.zhs.basket.support.PlayerNoGenerator;
 import com.zhs.basket.vo.*;
 import com.zhs.common.exception.ServiceException;
@@ -27,12 +29,14 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
 
     private static final Integer NOT_DELETED = 0;
     private static final int CERT_APPROVED = PlayerCertStatusEnum.APPROVED.getCode();
+    private static final int PRIMARY = 1;
 
     @Autowired private BasketPlayerCertApplicationMapper applicationMapper;
     @Autowired private BasketPlayerCertAuditMapper auditMapper;
     @Autowired private BasketPlayerCertMaterialMapper materialMapper;
     @Autowired private BasketFileAssetMapper fileAssetMapper;
     @Autowired private BasketPlayerProfileMapper profileMapper;
+    @Autowired private BasketPlayerPlatformAccountMapper platformAccountMapper;
     @Autowired private PlayerNoGenerator playerNoGenerator;
     @Autowired private BasketAdminMessageService messageService;
     @Autowired private BasketAccountSecurityLogWriter securityLogWriter;
@@ -109,13 +113,22 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
     @Transactional(rollbackFor = Exception.class)
     public void approve(Long applicationId, PlayerCertApproveReq req) {
         BasketPlayerCertApplication app = requireApplication(applicationId);
+        String normalizedGameAccount = GameAccountNormalizer.normalize(app.getGameAccount());
+        if (!StringUtils.hasText(normalizedGameAccount)) {
+            throw new ServiceException("游戏账号不能为空");
+        }
+        if (platformAccountMapper.countActiveByPlatformAndNormalized(app.getGameTerminal(), normalizedGameAccount) > 0) {
+            throw new ServiceException("该平台游戏ID已被使用");
+        }
         Long auditorId = SecurityUtils.getUserId();
         Date now = new Date();
         int rows = applicationMapper.updateStatusIfMatch(applicationId,
                 Arrays.asList(PlayerCertStatusEnum.SUBMITTED.getCode(), PlayerCertStatusEnum.REVIEWING.getCode()),
                 PlayerCertStatusEnum.APPROVED.getCode(), auditorId, req.getAuditRemark(), now, auditorId);
         assertSingleRow(rows, "审核通过失败，状态已变更");
-        upsertProfile(app, req.getPositionCode(), now);
+        BasketPlayerProfile profile = upsertProfile(app, req.getPositionCode(), now);
+        insertPrimaryPlatformAccountIfAbsent(app, profile, normalizedGameAccount, auditorId, now);
+        applicationMapper.updatePlayerIdAndNormalized(applicationId, profile.getId(), normalizedGameAccount);
         writeAudit(app, "APPROVE", app.getApplicationStatus(), PlayerCertStatusEnum.APPROVED.getCode(), req.getAuditRemark());
         messageService.sendSiteMessage(app.getMemberId(), auditorId, "PLAYER_CERT", applicationId,
                 "球员认证已通过", "您的球员认证申请已通过审核。");
@@ -138,7 +151,7 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
         securityLogWriter.write(app.getMemberId(), "PLAYER_CERT_REJECTED", "球员认证驳回", null, remark, auditorId);
     }
 
-    private void upsertProfile(BasketPlayerCertApplication app, String positionCode, Date certifiedTime) {
+    private BasketPlayerProfile upsertProfile(BasketPlayerCertApplication app, String positionCode, Date certifiedTime) {
         BasketPlayerProfile profile = profileMapper.selectByMemberId(app.getMemberId());
         if (profile == null) {
             profile = new BasketPlayerProfile();
@@ -168,6 +181,30 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
             profile.setUpdateTime(certifiedTime);
             profileMapper.updateById(profile);
         }
+        return profile;
+    }
+
+    private void insertPrimaryPlatformAccountIfAbsent(BasketPlayerCertApplication app, BasketPlayerProfile profile,
+            String normalizedGameAccount, Long auditorId, Date now) {
+        BasketPlayerPlatformAccount existing = platformAccountMapper.selectPrimaryByPlayerId(profile.getId());
+        if (existing != null) {
+            return;
+        }
+        BasketPlayerPlatformAccount account = new BasketPlayerPlatformAccount();
+        account.setPlayerId(profile.getId());
+        account.setPlatform(app.getGameTerminal());
+        account.setDisplayGameId(app.getGameAccount());
+        account.setNormalizedGameId(normalizedGameAccount);
+        account.setAccountStatus(PlatformAccountStatusEnum.ACTIVE.getCode());
+        account.setIsPrimary(PRIMARY);
+        account.setSourceApplicationId(app.getId());
+        account.setApprovedBy(auditorId);
+        account.setApprovedTime(now);
+        account.setEffectiveTime(now);
+        account.setCreateTime(now);
+        account.setUpdateTime(now);
+        account.setIsDelete(NOT_DELETED);
+        platformAccountMapper.insert(account);
     }
 
     private void writeAudit(BasketPlayerCertApplication app, String action, Integer before, Integer after, String remark) {

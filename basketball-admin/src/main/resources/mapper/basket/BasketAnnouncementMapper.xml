@@ -5,6 +5,8 @@
         <id property="id" column="id"/>
         <result property="announcementNo" column="announcement_no"/>
         <result property="categoryCode" column="category_code"/>
+        <result property="tournamentId" column="tournament_id"/>
+        <result property="seasonId" column="season_id"/>
         <result property="title" column="title"/>
         <result property="summary" column="summary"/>
         <result property="coverFileId" column="cover_file_id"/>
@@ -16,7 +18,10 @@
         <result property="isTop" column="is_top"/>
         <result property="isImportant" column="is_important"/>
         <result property="publishTime" column="publish_time"/>
+        <result property="scheduledPublishTime" column="scheduled_publish_time"/>
         <result property="offlineTime" column="offline_time"/>
+        <result property="supersededBy" column="superseded_by"/>
+        <result property="ruleVersion" column="rule_version"/>
         <result property="viewCount" column="view_count"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
@@ -24,34 +29,49 @@
     </resultMap>
 
     <sql id="listSelect">
-        select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode, a.title,
+        select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode,
+               a.tournament_id as tournamentId, a.season_id as seasonId,
+               se.season_name as seasonName, tm.tournament_name as tournamentName,
+               a.title,
                a.summary, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
                a.author_id as authorId, a.author_name as authorName,
                a.announcement_status as announcementStatus, a.public_scope as publicScope,
                a.is_top as isTop, a.is_important as isImportant, a.publish_time as publishTime,
-               a.offline_time as offlineTime, a.view_count as viewCount,
+               a.scheduled_publish_time as scheduledPublishTime,
+               a.offline_time as offlineTime, a.superseded_by as supersededBy,
+               a.rule_version as ruleVersion, a.view_count as viewCount,
                a.create_time as createTime, a.update_time as updateTime
         from basket_announcement a
         left join basket_file_asset cf on cf.id = a.cover_file_id and cf.is_delete = 0
+        left join basket_tournament_season se on se.id = a.season_id and se.is_delete = 0
+        left join basket_tournament tm on tm.id = a.tournament_id and tm.is_delete = 0
     </sql>
 
     <select id="selectById" resultMap="BasketAnnouncementResult">
-        select id, announcement_no, category_code, title, summary, cover_file_id, content_text,
+        select id, announcement_no, category_code, tournament_id, season_id, title, summary, cover_file_id, content_text,
                author_id, author_name, announcement_status, public_scope, is_top, is_important,
-               publish_time, offline_time, view_count, create_time, update_time, is_delete
+               publish_time, scheduled_publish_time, offline_time, superseded_by, rule_version,
+               view_count, create_time, update_time, is_delete
         from basket_announcement where id = #{id} and is_delete = 0
     </select>
 
     <select id="selectDetailById" resultType="com.zhs.basket.resp.AnnouncementDetailResp">
-        select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode, a.title,
+        select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode,
+               a.tournament_id as tournamentId, a.season_id as seasonId,
+               se.season_name as seasonName, tm.tournament_name as tournamentName,
+               a.title,
                a.summary, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
                a.content_text as contentText, a.author_id as authorId, a.author_name as authorName,
                a.announcement_status as announcementStatus, a.public_scope as publicScope,
                a.is_top as isTop, a.is_important as isImportant, a.publish_time as publishTime,
-               a.offline_time as offlineTime, a.view_count as viewCount,
+               a.scheduled_publish_time as scheduledPublishTime,
+               a.offline_time as offlineTime, a.superseded_by as supersededBy,
+               a.rule_version as ruleVersion, a.view_count as viewCount,
                a.create_time as createTime, a.update_time as updateTime
         from basket_announcement a
         left join basket_file_asset cf on cf.id = a.cover_file_id and cf.is_delete = 0
+        left join basket_tournament_season se on se.id = a.season_id and se.is_delete = 0
+        left join basket_tournament tm on tm.id = a.tournament_id and tm.is_delete = 0
         where a.id = #{id} and a.is_delete = 0
     </select>
 
@@ -59,6 +79,8 @@
         <include refid="listSelect"/>
         where a.is_delete = 0
         <if test="categoryCode != null and categoryCode != ''">and a.category_code = #{categoryCode}</if>
+        <if test="seasonId != null">and a.season_id = #{seasonId}</if>
+        <if test="tournamentId != null">and a.tournament_id = #{tournamentId}</if>
         <if test="announcementStatus != null">and a.announcement_status = #{announcementStatus}</if>
         <if test="isTop != null">and a.is_top = #{isTop}</if>
         <if test="isImportant != null">and a.is_important = #{isImportant}</if>
@@ -76,13 +98,15 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_announcement (
-            announcement_no, category_code, title, summary, cover_file_id, content_text,
+            announcement_no, category_code, tournament_id, season_id, title, summary, cover_file_id, content_text,
             author_id, author_name, announcement_status, public_scope, is_top, is_important,
-            publish_time, offline_time, view_count, create_time, update_time, is_delete
+            publish_time, scheduled_publish_time, offline_time, superseded_by, rule_version,
+            view_count, create_time, update_time, is_delete
         ) values (
-            #{announcementNo}, #{categoryCode}, #{title}, #{summary}, #{coverFileId}, #{contentText},
+            #{announcementNo}, #{categoryCode}, #{tournamentId}, #{seasonId}, #{title}, #{summary}, #{coverFileId}, #{contentText},
             #{authorId}, #{authorName}, #{announcementStatus}, #{publicScope}, #{isTop}, #{isImportant},
-            #{publishTime}, #{offlineTime}, #{viewCount}, #{createTime}, #{updateTime}, #{isDelete}
+            #{publishTime}, #{scheduledPublishTime}, #{offlineTime}, #{supersededBy}, #{ruleVersion},
+            #{viewCount}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -90,6 +114,8 @@
         update basket_announcement
         <set>
             <if test="categoryCode != null">category_code = #{categoryCode},</if>
+            <if test="tournamentId != null">tournament_id = #{tournamentId},</if>
+            <if test="seasonId != null">season_id = #{seasonId},</if>
             <if test="title != null">title = #{title},</if>
             <if test="summary != null">summary = #{summary},</if>
             <if test="coverFileId != null">cover_file_id = #{coverFileId},</if>
@@ -99,7 +125,10 @@
             <if test="announcementStatus != null">announcement_status = #{announcementStatus},</if>
             <if test="isTop != null">is_top = #{isTop},</if>
             <if test="publishTime != null">publish_time = #{publishTime},</if>
+            <if test="scheduledPublishTime != null">scheduled_publish_time = #{scheduledPublishTime},</if>
             <if test="offlineTime != null">offline_time = #{offlineTime},</if>
+            <if test="supersededBy != null">superseded_by = #{supersededBy},</if>
+            <if test="ruleVersion != null">rule_version = #{ruleVersion},</if>
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0
@@ -128,6 +157,34 @@
         set is_top = #{isTop}, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
+
+    <update id="updateSupersededBy">
+        update basket_announcement
+        set superseded_by = #{supersededBy}, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <select id="selectCurrentRuleBySeason" resultType="com.zhs.basket.resp.AnnouncementDetailResp">
+        select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode,
+               a.tournament_id as tournamentId, a.season_id as seasonId,
+               se.season_name as seasonName, tm.tournament_name as tournamentName,
+               a.title, a.summary, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
+               a.content_text as contentText, a.author_id as authorId, a.author_name as authorName,
+               a.announcement_status as announcementStatus, a.public_scope as publicScope,
+               a.is_top as isTop, a.is_important as isImportant, a.publish_time as publishTime,
+               a.scheduled_publish_time as scheduledPublishTime,
+               a.offline_time as offlineTime, a.superseded_by as supersededBy,
+               a.rule_version as ruleVersion, a.view_count as viewCount,
+               a.create_time as createTime, a.update_time as updateTime
+        from basket_announcement_rule_link l
+        inner join basket_announcement a on a.id = l.new_announcement_id and a.is_delete = 0
+        left join basket_file_asset cf on cf.id = a.cover_file_id and cf.is_delete = 0
+        left join basket_tournament_season se on se.id = a.season_id and se.is_delete = 0
+        left join basket_tournament tm on tm.id = a.tournament_id and tm.is_delete = 0
+        where l.season_id = #{seasonId} and l.current_flag = 1 and l.is_delete = 0
+          and a.category_code = 'RULE' and a.announcement_status = 1
+        limit 1
+    </select>
 
     <update id="softDelete">
         update basket_announcement set is_delete = 1, update_time = now()

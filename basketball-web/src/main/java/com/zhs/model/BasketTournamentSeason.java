@@ -87,6 +87,41 @@ public class BasketTournamentSeason implements Serializable {
     @ApiModelProperty(value = "最大阵容人数")
     private Integer maxRosterCount;
 
+    @ApiModelProperty(value = "允许球队报名")
+    private Integer allowTeamRegistration;
+
+    @ApiModelProperty(value = "允许 Open 报名")
+    private Integer allowOpenRegistration;
+
+    @ApiModelProperty(value = "允许转会")
+    private Integer transferEnabled;
+
+    @ApiModelProperty(value = "转会窗口开始")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date transferStartTime;
+
+    @ApiModelProperty(value = "转会窗口结束")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date transferEndTime;
+
+    @ApiModelProperty(value = "允许自由球员补员")
+    private Integer freeAgentEnabled;
+
+    @ApiModelProperty(value = "补员窗口开始")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date freeAgentStartTime;
+
+    @ApiModelProperty(value = "补员窗口结束")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date freeAgentEndTime;
+
+    @ApiModelProperty(value = "每队最大补员次数")
+    private Integer maxFreeAgentAddPerTeam;
+
     @ApiModelProperty(value = "赛季状态")
     private Integer seasonStatus;
 

@@ -5,10 +5,12 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.dao.BasketAnnouncementDao;
+import com.zhs.dao.BasketAnnouncementRuleLinkDao;
 import com.zhs.enums.PublicAnnouncementCategoryEnum;
 import com.zhs.enums.PublicAnnouncementSortEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketAnnouncement;
+import com.zhs.model.BasketAnnouncementRuleLink;
 import com.zhs.response.publicapi.PublicAnnouncementAdjacentResp;
 import com.zhs.response.publicapi.PublicAnnouncementCategoryResp;
 import com.zhs.response.publicapi.PublicAnnouncementDetailResp;
@@ -37,6 +39,8 @@ public class BasketPublicAnnouncementServiceImpl implements IBasketPublicAnnounc
 
     @Resource
     private BasketAnnouncementDao announcementDao;
+    @Resource
+    private BasketAnnouncementRuleLinkDao ruleLinkDao;
     @Resource
     private BasketPublicSupport publicSupport;
 
@@ -162,6 +166,22 @@ public class BasketPublicAnnouncementServiceImpl implements IBasketPublicAnnounc
                 .orderByDesc(BasketAnnouncement::getId)
                 .last("limit " + size));
         return toItemList(list);
+    }
+
+    @Override
+    public PublicAnnouncementDetailResp getCurrentRule(Long seasonId) {
+        if (seasonId == null) {
+            throw new ServiceException("赛季主键不能为空");
+        }
+        BasketAnnouncementRuleLink link = ruleLinkDao.selectOne(new LambdaQueryWrapper<BasketAnnouncementRuleLink>()
+                .eq(BasketAnnouncementRuleLink::getSeasonId, seasonId)
+                .eq(BasketAnnouncementRuleLink::getCurrentFlag, 1)
+                .eq(BasketAnnouncementRuleLink::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .last("limit 1"));
+        if (link == null || link.getNewAnnouncementId() == null) {
+            throw new ServiceException("当前赛季暂无有效规则公告");
+        }
+        return getDetail(link.getNewAnnouncementId());
     }
 
     private LambdaQueryWrapper<BasketAnnouncement> publishedWrapper() {

@@ -17,6 +17,8 @@ public interface IBasketMatchStatService {
     void savePlayerStats(Long matchId, MatchPlayerStatSaveReq req);
     void submitPlayerStats(Long matchId);
     void confirmResult(Long matchId);
+
+    void rejectResult(Long matchId, MatchReopenReq req);
     void reopenResult(Long matchId, MatchReopenReq req);
     MatchAuditLogVo selectAuditLog(Long matchId);
 }

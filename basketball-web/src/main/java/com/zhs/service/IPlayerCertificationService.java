@@ -20,4 +20,6 @@ public interface IPlayerCertificationService {
     void deleteMaterial(String materialId);
 
     PlayerCertCurrentResp submit(PlayerCertSubmitReq req, String clientIp);
+
+    PlayerCertCurrentResp withdraw();
 }

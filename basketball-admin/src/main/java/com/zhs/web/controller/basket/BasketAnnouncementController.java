@@ -4,6 +4,8 @@ import com.zhs.basket.constant.BasketContentPerms;
 import com.zhs.basket.req.AnnouncementAddReq;
 import com.zhs.basket.req.AnnouncementEditReq;
 import com.zhs.basket.req.AnnouncementQueryReq;
+import com.zhs.basket.req.AnnouncementRuleSupersedeReq;
+import com.zhs.basket.req.AnnouncementScheduleReq;
 import com.zhs.basket.service.IBasketAnnouncementService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
@@ -78,6 +80,28 @@ public class BasketAnnouncementController extends BaseController {
     @PostMapping("/{id}/untop")
     public AjaxResult untop(@PathVariable Long id) {
         announcementService.untop(id);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketContentPerms.ANNOUNCEMENT_QUERY + "')")
+    @GetMapping("/current-rule")
+    public AjaxResult getCurrentRule(@RequestParam Long seasonId) {
+        return success(announcementService.getCurrentRule(seasonId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketContentPerms.ANNOUNCEMENT_EDIT + "')")
+    @Log(title = "公告管理", businessType = BusinessType.UPDATE)
+    @PostMapping("/{id}/supersede-rule")
+    public AjaxResult supersedeRule(@PathVariable Long id, @RequestBody AnnouncementRuleSupersedeReq req) {
+        announcementService.supersedeRule(id, req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketContentPerms.ANNOUNCEMENT_EDIT + "')")
+    @Log(title = "公告管理", businessType = BusinessType.UPDATE)
+    @PostMapping("/{id}/schedule")
+    public AjaxResult schedule(@PathVariable Long id, @RequestBody AnnouncementScheduleReq req) {
+        announcementService.schedulePublish(id, req);
         return success();
     }
 

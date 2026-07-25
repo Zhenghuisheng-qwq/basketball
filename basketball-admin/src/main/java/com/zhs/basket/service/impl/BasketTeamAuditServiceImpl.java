@@ -1,7 +1,6 @@
 package com.zhs.basket.service.impl;
 
 import com.zhs.basket.domain.*;
-import com.zhs.basket.enums.CaptainQualificationStatusEnum;
 import com.zhs.basket.enums.PlayerCertStatusEnum;
 import com.zhs.basket.enums.TeamAuditStatusEnum;
 import com.zhs.basket.enums.TeamMemberRoleEnum;
@@ -11,6 +10,7 @@ import com.zhs.basket.req.TeamAuditApproveReq;
 import com.zhs.basket.req.TeamAuditRejectReq;
 import com.zhs.basket.service.IBasketTeamAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.TeamNoGenerator;
 import com.zhs.basket.vo.TeamAuditDetailVo;
 import com.zhs.basket.vo.TeamAuditListVo;
 import com.zhs.basket.vo.TeamAuditRecordVo;
@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
 
     private static final Integer NOT_DELETED = 0;
+    private static final String TEAM_NO_PREFIX = "CNPA-T-";
 
     @Autowired private BasketTeamMapper teamMapper;
     @Autowired private BasketTeamAuditRecordMapper auditRecordMapper;
@@ -36,6 +37,7 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
     @Autowired private BasketPlayerProfileMapper profileMapper;
     @Autowired private BasketCaptainQualificationMapper qualificationMapper;
     @Autowired private BasketAdminMessageService messageService;
+    @Autowired private TeamNoGenerator teamNoGenerator;
 
     @Override
     public List<TeamAuditListVo> selectList(TeamAuditQuery query) {
@@ -81,15 +83,19 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
     public void approve(Long teamId, TeamAuditApproveReq req) {
         BasketTeam team = requireTeam(teamId);
         validateCaptainForApprove(team);
-        int rows = teamMapper.updateAuditStatusIfMatch(teamId,
-                Arrays.asList(TeamAuditStatusEnum.PENDING.getCode(), TeamAuditStatusEnum.REVIEWING.getCode()),
-                TeamAuditStatusEnum.APPROVED.getCode(), SecurityUtils.getUserId());
-        assertSingleRow(rows, "审核通过失败");
-        int memberCount = teamMemberMapper.countCurrentMembers(teamId);
-        teamMapper.updateMemberCount(teamId, memberCount);
-        writeAudit(team, "APPROVE", team.getAuditStatus(), TeamAuditStatusEnum.APPROVED.getCode(), req.getAuditRemark());
-        messageService.sendSiteMessage(team.getCaptainMemberId(), SecurityUtils.getUserId(), "TEAM_AUDIT", teamId,
-                "球队审核已通过", "您的球队「" + team.getTeamName() + "」已通过审核。");
+        boolean alreadyApproved = TeamAuditStatusEnum.APPROVED.getCode().equals(team.getAuditStatus());
+        if (!alreadyApproved) {
+            int rows = teamMapper.updateAuditStatusIfMatch(teamId,
+                    Arrays.asList(TeamAuditStatusEnum.PENDING.getCode(), TeamAuditStatusEnum.REVIEWING.getCode()),
+                    TeamAuditStatusEnum.APPROVED.getCode(), SecurityUtils.getUserId());
+            assertSingleRow(rows, "审核通过失败");
+            int memberCount = teamMemberMapper.countCurrentMembers(teamId);
+            teamMapper.updateMemberCount(teamId, memberCount);
+            writeAudit(team, "APPROVE", team.getAuditStatus(), TeamAuditStatusEnum.APPROVED.getCode(), req.getAuditRemark());
+            messageService.sendSiteMessage(team.getCaptainMemberId(), SecurityUtils.getUserId(), "TEAM_AUDIT", teamId,
+                    "球队审核已通过", "您的球队「" + team.getTeamName() + "」已通过审核。");
+        }
+        ensureTeamNo(team);
     }
 
     @Override
@@ -104,6 +110,13 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         writeAudit(team, "REJECT", team.getAuditStatus(), TeamAuditStatusEnum.REJECTED.getCode(), remark);
         messageService.sendSiteMessage(team.getCaptainMemberId(), SecurityUtils.getUserId(), "TEAM_AUDIT", teamId,
                 "球队审核已驳回", remark);
+    }
+
+    private void ensureTeamNo(BasketTeam team) {
+        if (StringUtils.hasText(team.getTeamNo()) && team.getTeamNo().startsWith(TEAM_NO_PREFIX)) {
+            return;
+        }
+        teamMapper.updateTeamNo(team.getId(), teamNoGenerator.generateTeamNo());
     }
 
     private void validateCaptainForApprove(BasketTeam team) {

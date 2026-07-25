@@ -1,20 +1,24 @@
 package com.zhs.basket.service.impl;
 
 import com.zhs.basket.constant.BasketMatchConstants;
-import com.zhs.basket.domain.BasketDisciplineRecord;
 import com.zhs.basket.domain.BasketMatch;
 import com.zhs.basket.domain.BasketMatchRoster;
+import com.zhs.basket.domain.BasketTeamSeasonProfile;
 import com.zhs.basket.domain.BasketTournamentRegistrationPlayer;
+import com.zhs.basket.domain.BasketTournamentSeasonRoster;
 import com.zhs.basket.enums.MatchChangeTypeEnum;
 import com.zhs.basket.enums.MatchStatusEnum;
 import com.zhs.basket.enums.RosterRoleEnum;
-import com.zhs.basket.mapper.BasketDisciplineRecordMapper;
 import com.zhs.basket.mapper.BasketMatchRosterMapper;
 import com.zhs.basket.mapper.BasketTeamMapper;
+import com.zhs.basket.mapper.BasketTeamSeasonProfileMapper;
 import com.zhs.basket.mapper.BasketTournamentRegistrationPlayerMapper;
+import com.zhs.basket.mapper.BasketTournamentSeasonRosterMapper;
 import com.zhs.basket.req.MatchLineupSaveReq;
+import com.zhs.basket.service.IBasketDisciplineService;
 import com.zhs.basket.service.IBasketMatchLineupService;
 import com.zhs.basket.service.IBasketMatchValidationService;
+import com.zhs.basket.support.BasketDisciplineRestrictionSupport;
 import com.zhs.basket.vo.AvailableMatchPlayerVo;
 import com.zhs.basket.vo.MatchLineupPlayerVo;
 import com.zhs.basket.vo.MatchLineupVo;
@@ -37,7 +41,10 @@ public class BasketMatchLineupServiceImpl implements IBasketMatchLineupService {
     @Autowired private IBasketMatchValidationService validationService;
     @Autowired private BasketMatchRosterMapper rosterMapper;
     @Autowired private BasketTournamentRegistrationPlayerMapper registrationPlayerMapper;
-    @Autowired private BasketDisciplineRecordMapper disciplineRecordMapper;
+    @Autowired private BasketTournamentSeasonRosterMapper seasonRosterMapper;
+    @Autowired private BasketTeamSeasonProfileMapper teamSeasonProfileMapper;
+    @Autowired private BasketDisciplineRestrictionSupport disciplineRestrictionSupport;
+    @Autowired private IBasketDisciplineService disciplineService;
     @Autowired private BasketTeamMapper teamMapper;
 
     @Override
@@ -58,7 +65,76 @@ public class BasketMatchLineupServiceImpl implements IBasketMatchLineupService {
     public List<AvailableMatchPlayerVo> selectAvailablePlayers(Long matchId, Long teamId) {
         BasketMatch match = validationService.requireMatch(matchId);
         assertTeamInMatch(match, teamId);
+        BasketTeamSeasonProfile eventTeam = teamSeasonProfileMapper.selectByTeamIdAndSeasonId(teamId, match.getSeasonId());
+        if (eventTeam != null) {
+            List<BasketTournamentSeasonRoster> rosters = seasonRosterMapper.selectActiveByEventTeamId(eventTeam.getId());
+            if (!rosters.isEmpty()) {
+                List<AvailableMatchPlayerVo> list = new ArrayList<>();
+                for (BasketTournamentSeasonRoster sr : rosters) {
+                    AvailableMatchPlayerVo vo = new AvailableMatchPlayerVo();
+                    vo.setRegistrationPlayerId(sr.getRegistrationPlayerId());
+                    vo.setPlayerId(sr.getPlayerId());
+                    vo.setPlayerName(sr.getPlayerNicknameSnapshot());
+                    vo.setRosterRole(sr.getRosterRole());
+                    vo.setIsCaptain(sr.getIsCaptain());
+                    vo.setIsStarting(sr.getIsStarting());
+                    list.add(vo);
+                }
+                return list;
+            }
+        }
         return registrationPlayerMapper.selectAvailableBySeasonAndTeam(match.getSeasonId(), teamId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void generateFromSeasonRoster(Long matchId, Long teamId) {
+        BasketMatch match = validationService.requireMatch(matchId);
+        assertTeamInMatch(match, teamId);
+        if (!MatchStatusEnum.fromCode(match.getMatchStatus()).canEnterLineup()) {
+            throw new ServiceException("当前状态不可生成出场名单");
+        }
+        BasketTeamSeasonProfile eventTeam = teamSeasonProfileMapper.selectByTeamIdAndSeasonId(teamId, match.getSeasonId());
+        if (eventTeam == null) {
+            throw new ServiceException("未找到正式赛事球队，请先完成报名审核");
+        }
+        List<BasketTournamentSeasonRoster> rosters = seasonRosterMapper.selectActiveByEventTeamId(eventTeam.getId());
+        if (CollectionUtils.isEmpty(rosters)) {
+            throw new ServiceException("正式赛事阵容为空");
+        }
+        Date now = new Date();
+        List<BasketMatchRoster> rosterList = new ArrayList<>();
+        int sort = 0;
+        for (BasketTournamentSeasonRoster sr : rosters) {
+            BasketMatchRoster roster = new BasketMatchRoster();
+            roster.setMatchId(matchId);
+            roster.setSeasonId(match.getSeasonId());
+            roster.setTeamId(teamId);
+            roster.setPlayerId(sr.getPlayerId());
+            roster.setRegistrationPlayerId(sr.getRegistrationPlayerId());
+            roster.setSeasonRosterId(sr.getId());
+            roster.setEventTeamId(eventTeam.getId());
+            roster.setPlayerNicknameSnapshot(sr.getPlayerNicknameSnapshot());
+            roster.setPlatformSnapshot(sr.getPlatformSnapshot());
+            roster.setGameIdDisplaySnapshot(sr.getGameIdDisplaySnapshot());
+            roster.setJerseyNo(String.valueOf(100 + sort));
+            roster.setRosterRole(sr.getRosterRole());
+            roster.setIsStarting(sr.getIsStarting());
+            roster.setPositionCode(sr.getPositionSnapshot());
+            roster.setPlayStatus(PLAY_STATUS_ACTIVE);
+            roster.setCaptainFlag(sr.getIsCaptain());
+            roster.setRosterStatus(0);
+            roster.setDataVersion(1);
+            roster.setSortNo(sort++);
+            roster.setCreateTime(now);
+            roster.setUpdateTime(now);
+            roster.setIsDelete(NOT_DELETED);
+            rosterList.add(roster);
+        }
+        rosterMapper.softDeleteByMatchAndTeam(matchId, teamId);
+        rosterMapper.batchInsert(rosterList);
+        validationService.writeStatusLog(match, match.getMatchStatus(), MatchChangeTypeEnum.LINEUP_SAVE,
+                "从正式赛事阵容生成出场名单");
     }
 
     @Override
@@ -121,10 +197,8 @@ public class BasketMatchLineupServiceImpl implements IBasketMatchLineupService {
         }
 
         if (!memberIds.isEmpty()) {
-            Set<Long> banned = disciplineRecordMapper.selectActiveBySeasonAndMembers(match.getSeasonId(), memberIds, now)
-                    .stream().map(BasketDisciplineRecord::getMemberId).collect(Collectors.toSet());
-            if (!banned.isEmpty()) {
-                throw new ServiceException("出场名单包含处于禁赛期的球员");
+            for (Long memberId : memberIds) {
+                disciplineRestrictionSupport.assertAllowLineup(memberId, match.getSeasonId());
             }
         }
 
@@ -144,7 +218,16 @@ public class BasketMatchLineupServiceImpl implements IBasketMatchLineupService {
         if (rosterMapper.countCaptainsByMatchAndTeam(matchId, teamId) != BasketMatchConstants.CAPTAIN_COUNT) {
             throw new ServiceException("须指定1名场上队长");
         }
-        validationService.writeStatusLog(match, match.getMatchStatus(), MatchChangeTypeEnum.LINEUP_CONFIRM, "确认出场名单");
+        if (rosterMapper.lockByMatchAndTeam(matchId, teamId) == 0) {
+            throw new ServiceException("锁定出场名单失败，可能已锁定");
+        }
+        List<Long> memberIds = rosterMapper.selectMemberIdsByMatchAndTeam(matchId, teamId);
+        if (!CollectionUtils.isEmpty(memberIds)) {
+            for (Long memberId : memberIds) {
+                disciplineService.consumeMatchSuspension(matchId, memberId);
+            }
+        }
+        validationService.writeStatusLog(match, match.getMatchStatus(), MatchChangeTypeEnum.LINEUP_CONFIRM, "确认并锁定出场名单");
     }
 
     private void assertTeamInMatch(BasketMatch match, Long teamId) {

@@ -60,6 +60,14 @@ export function confirmMatchResult(matchId: number): Promise<AjaxResult> {
   })
 }
 
+export function rejectMatchResult(matchId: number, data: MatchReopenReq): Promise<AjaxResult> {
+  return request({
+    url: `/basket/match/${matchId}/result/reject`,
+    method: 'post',
+    data
+  })
+}
+
 export function reopenMatchResult(matchId: number, data: MatchReopenReq): Promise<AjaxResult> {
   return request({
     url: `/basket/match/${matchId}/result/reopen`,

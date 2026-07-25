@@ -11,7 +11,59 @@
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
     </resultMap>
+
     <select id="selectById" resultMap="BasketMemberAccountResult">
-        select id, account_no, username, email, account_status, create_time, update_time, is_delete from basket_member_account where id = #{id} and is_delete = 0
+        select id, account_no, username, email, account_status, create_time, update_time, is_delete
+        from basket_member_account where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultType="com.zhs.basket.vo.AccountPlayerListVo">
+        select acc.id as memberId, acc.account_no as accountNo, acc.email as email,
+               mp.nickname as nickname, p.id as playerId, p.player_no as playerNo,
+               p.game_terminal as gameTerminal, p.game_account as gameAccount,
+               p.certification_status as certificationStatus, p.player_status as playerStatus,
+               acc.account_status as accountStatus, p.certified_time as certifiedTime,
+               acc.create_time as createTime
+        from basket_member_account acc
+        left join basket_member_profile mp on mp.member_id = acc.id and mp.is_delete = 0
+        left join basket_player_profile p on p.member_id = acc.id and p.is_delete = 0
+        where acc.is_delete = 0
+        <if test="email != null and email != ''">and acc.email like concat('%', #{email}, '%')</if>
+        <if test="nickname != null and nickname != ''">and mp.nickname like concat('%', #{nickname}, '%')</if>
+        <if test="playerNo != null and playerNo != ''">and p.player_no like concat('%', #{playerNo}, '%')</if>
+        <if test="gameId != null and gameId != ''">
+            and (
+                p.game_account like concat('%', #{gameId}, '%')
+                or exists (
+                    select 1 from basket_player_platform_account pa
+                    where pa.player_id = p.id and pa.is_delete = 0
+                      and (pa.display_game_id like concat('%', #{gameId}, '%')
+                           or pa.normalized_game_id like concat('%', lower(trim(#{gameId})), '%'))
+                )
+            )
+        </if>
+        <if test="statuses != null and statuses.size() > 0">
+            and acc.account_status in
+            <foreach collection="statuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+        </if>
+        <if test="certificationStatus != null">and p.certification_status = #{certificationStatus}</if>
+        <if test="playerStatus != null">and p.player_status = #{playerStatus}</if>
+        order by acc.create_time desc
+    </select>
+
+    <select id="selectDetail" resultType="com.zhs.basket.vo.AccountPlayerDetailVo">
+        select acc.id as memberId, acc.account_no as accountNo, acc.username as username,
+               acc.email as email, acc.account_status as accountStatus,
+               acc.create_time as accountCreateTime, acc.update_time as accountUpdateTime,
+               mp.nickname as nickname, mp.gender as gender, mp.profile_status as profileStatus,
+               p.id as playerId, p.player_no as playerNo, p.game_terminal as gameTerminal,
+               p.game_account as gameAccount, p.game_nickname as gameNickname,
+               p.position_code as positionCode, p.certification_status as certificationStatus,
+               p.player_status as playerStatus, p.certified_time as certifiedTime,
+               p.current_team_id as currentTeamId
+        from basket_member_account acc
+        left join basket_member_profile mp on mp.member_id = acc.id and mp.is_delete = 0
+        left join basket_player_profile p on p.member_id = acc.id and p.is_delete = 0
+        where acc.id = #{memberId} and acc.is_delete = 0
     </select>
 </mapper>

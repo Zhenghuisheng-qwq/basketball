@@ -27,3 +27,7 @@ export function deletePlayerCertificationMaterial(materialId: string) {
 export function submitPlayerCertification(payload: PlayerCertSubmitPayload) {
   return request.post<any, ApiResult<PlayerCertCurrentDto>>('/basket/player/certification/submit', payload)
 }
+
+export function withdrawPlayerCertification() {
+  return request.post<any, ApiResult<PlayerCertCurrentDto>>('/basket/player/certification/withdraw')
+}

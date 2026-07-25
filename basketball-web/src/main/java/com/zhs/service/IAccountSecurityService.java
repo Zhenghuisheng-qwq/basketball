@@ -2,6 +2,7 @@ package com.zhs.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.response.account.LoginLogItemResp;
+import com.zhs.request.account.AccountChangePasswordReq;
 import com.zhs.response.account.SecurityLogItemResp;
 
 /**
@@ -12,4 +13,6 @@ public interface IAccountSecurityService {
     IPage<LoginLogItemResp> pageLoginLogs(Integer currentPage, Integer pageSize);
 
     IPage<SecurityLogItemResp> pageOperationLogs(Integer currentPage, Integer pageSize);
+
+    void changePassword(AccountChangePasswordReq req, String clientIp, String terminalType);
 }

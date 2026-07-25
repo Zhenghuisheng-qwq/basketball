@@ -21,7 +21,7 @@ const form = reactive<PlayerVerificationSnapshot>({
   gameIdScreenshotUrl: props.initial?.gameIdScreenshotUrl || '',
   gamePosition: props.initial?.gamePosition || 'PG',
   commonPosition: props.initial?.commonPosition || 'PG',
-  backupContact: props.initial?.backupContact || '',
+  backupContact: '',
 })
 
 const errors = reactive<Record<string, string>>({})
@@ -107,7 +107,7 @@ function handleSubmit() {
   emit('submit', {
     ...form,
     gameId: form.gameId.trim(),
-    backupContact: form.backupContact.trim(),
+    backupContact: '',
   })
   loading.value = false
 }
@@ -156,12 +156,6 @@ function handleSubmit() {
       <select id="commonPosition" v-model="form.commonPosition">
         <option v-for="[value, label] in positions" :key="value" :value="value">{{ label }}</option>
       </select>
-    </div>
-
-    <div class="verification-form__field">
-      <label for="backupContact">备用联系方式</label>
-      <input id="backupContact" v-model="form.backupContact" type="text" maxlength="64" />
-      <p class="verification-form__hint">选填，不会公开显示，仅用于赛事管理联系</p>
     </div>
 
     <div class="verification-form__actions">

@@ -141,6 +141,7 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
         PlayerIdentityResp identity = new PlayerIdentityResp();
         if (playerProfile != null) {
             identity.setCertificationStatus(playerProfile.getCertificationStatus());
+            identity.setPlayerStatus(playerProfile.getPlayerStatus());
             identity.setPlayerNo(playerProfile.getPlayerNo());
             identity.setGameTerminal(playerProfile.getGameTerminal());
             identity.setGameAccount(playerProfile.getGameAccount());

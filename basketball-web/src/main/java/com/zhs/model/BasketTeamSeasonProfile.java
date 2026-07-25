@@ -44,6 +44,43 @@ public class BasketTeamSeasonProfile implements Serializable {
     @ApiModelProperty(value = "赛事赛季主键")
     private Long seasonId;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "来源报名申请主键")
+    private Long registrationId;
+
+    @ApiModelProperty(value = "赛事球队编号")
+    private String eventTeamNo;
+
+    @ApiModelProperty(value = "球队名称快照")
+    private String teamNameSnapshot;
+
+    @ApiModelProperty(value = "球队简称快照")
+    private String shortNameSnapshot;
+
+    @ApiModelProperty(value = "球队简介快照")
+    private String descriptionSnapshot;
+
+    @ApiModelProperty(value = "比赛平台快照")
+    private String gameTerminal;
+
+    @ApiModelProperty(value = "报名来源")
+    private String registrationSource;
+
+    @ApiModelProperty(value = "参赛状态")
+    private Integer participationStatus;
+
+    @ApiModelProperty(value = "阵容锁定状态")
+    private Integer rosterLockStatus;
+
+    @ApiModelProperty(value = "阵容锁定时间")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date rosterLockedTime;
+
+    @ApiModelProperty(value = "审核通过时间")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date approvedTime;
 
     @ApiModelProperty(value = "赛季展示名称")
     private String displayName;

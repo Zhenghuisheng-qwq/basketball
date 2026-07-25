@@ -16,6 +16,7 @@
         <result property="coverFileId" column="cover_file_id"/>
         <result property="sourceType" column="source_type"/>
         <result property="sourceId" column="source_id"/>
+        <result property="generationBatchId" column="generation_batch_id"/>
         <result property="displayStatus" column="display_status"/>
         <result property="displayOrder" column="display_order"/>
         <result property="remark" column="remark"/>
@@ -33,6 +34,7 @@
                h.match_id as matchId, h.honor_title as honorTitle, h.honor_subtitle as honorSubtitle,
                h.honor_value as honorValue, h.award_date as awardDate, h.cover_file_id as coverFileId,
                cf.access_url as coverUrl, h.source_type as sourceType, h.source_id as sourceId,
+               h.generation_batch_id as generationBatchId,
                h.display_status as displayStatus, h.display_order as displayOrder, h.remark,
                h.create_time as createTime, h.update_time as updateTime
         from basket_honor_record h
@@ -47,7 +49,7 @@
     <select id="selectById" resultMap="BasketHonorRecordResult">
         select id, tournament_id, season_id, honor_category_id, team_id, player_id, match_id,
                honor_title, honor_subtitle, honor_value, award_date, cover_file_id, source_type, source_id,
-               display_status, display_order, remark, create_time, update_time, is_delete
+               generation_batch_id, display_status, display_order, remark, create_time, update_time, is_delete
         from basket_honor_record where id = #{id} and is_delete = 0
     </select>
 
@@ -86,7 +88,7 @@
     <select id="selectActiveUnique" resultMap="BasketHonorRecordResult">
         select id, tournament_id, season_id, honor_category_id, team_id, player_id, match_id,
                honor_title, honor_subtitle, honor_value, award_date, cover_file_id, source_type, source_id,
-               display_status, display_order, remark, create_time, update_time, is_delete
+               generation_batch_id, display_status, display_order, remark, create_time, update_time, is_delete
         from basket_honor_record
         where is_delete = 0 and season_id = #{seasonId} and honor_category_id = #{honorCategoryId}
           and display_status &lt;&gt; 3
@@ -101,7 +103,7 @@
     <select id="selectBySeasonCategorySource" resultMap="BasketHonorRecordResult">
         select id, tournament_id, season_id, honor_category_id, team_id, player_id, match_id,
                honor_title, honor_subtitle, honor_value, award_date, cover_file_id, source_type, source_id,
-               display_status, display_order, remark, create_time, update_time, is_delete
+               generation_batch_id, display_status, display_order, remark, create_time, update_time, is_delete
         from basket_honor_record
         where is_delete = 0 and season_id = #{seasonId} and honor_category_id = #{honorCategoryId}
           and source_type = #{sourceType} and display_status &lt;&gt; 3
@@ -123,12 +125,12 @@
         insert into basket_honor_record (
             tournament_id, season_id, honor_category_id, team_id, player_id, match_id,
             honor_title, honor_subtitle, honor_value, award_date, cover_file_id,
-            source_type, source_id, display_status, display_order, remark,
+            source_type, source_id, generation_batch_id, display_status, display_order, remark,
             create_time, update_time, is_delete
         ) values (
             #{tournamentId}, #{seasonId}, #{honorCategoryId}, #{teamId}, #{playerId}, #{matchId},
             #{honorTitle}, #{honorSubtitle}, #{honorValue}, #{awardDate}, #{coverFileId},
-            #{sourceType}, #{sourceId}, #{displayStatus}, #{displayOrder}, #{remark},
+            #{sourceType}, #{sourceId}, #{generationBatchId}, #{displayStatus}, #{displayOrder}, #{remark},
             #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
@@ -168,6 +170,33 @@
           and display_status in
         <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
     </update>
+
+    <update id="revokeByGenerationBatch">
+        update basket_honor_record
+        set display_status = 3, update_time = now()
+        where generation_batch_id = #{generationBatchId} and is_delete = 0
+          and display_status in (0, 1, 2)
+    </update>
+
+    <select id="countBySourceHonorId" resultType="int">
+        select count(1) from basket_honor_record
+        where is_delete = 0 and source_type = #{sourceType} and source_id = #{sourceId}
+          and display_status &lt;&gt; 3
+    </select>
+
+    <select id="selectImportCandidates" resultType="com.zhs.basket.resp.HonorRecordListResp">
+        <include refid="listSelect"/>
+        where h.is_delete = 0 and h.display_status = 1
+          and h.source_type &lt;&gt; 'HALL_OF_FAME'
+        <if test="seasonId != null">and h.season_id = #{seasonId}</if>
+        <if test="tournamentId != null">and h.tournament_id = #{tournamentId}</if>
+        and not exists (
+            select 1 from basket_honor_record hf
+            where hf.is_delete = 0 and hf.source_type = 'HALL_OF_FAME'
+              and hf.source_id = h.id and hf.display_status &lt;&gt; 3
+        )
+        order by h.award_date desc, h.id desc
+    </select>
 
     <update id="softDelete">
         update basket_honor_record set is_delete = 1, update_time = now()

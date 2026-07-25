@@ -16,6 +16,9 @@ public class PlayerIdentityResp implements Serializable {
     @ApiModelProperty("认证状态")
     private Integer certificationStatus;
 
+    @ApiModelProperty("球员参赛资格状态：1 正常 / 2 受限")
+    private Integer playerStatus;
+
     @ApiModelProperty("永久球员编号")
     private String playerNo;
 

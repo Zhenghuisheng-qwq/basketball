@@ -10,7 +10,7 @@ import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import AccountConfirmDialog from '@/components/account/AccountConfirmDialog.vue'
 import { useAccountStore } from '@/stores/account'
 import { IDENTITY_PLATFORM_LABELS, GAME_PLATFORM_LABELS } from '@/types/account'
-import { mapVerificationPlatform } from '@/mock/playerIdentityMock'
+import { mapVerificationPlatform } from '@/utils/playerIdentity'
 import { formatDateTime } from '@/utils/formatDate'
 
 const router = useRouter()
@@ -32,11 +32,15 @@ const platformLabel = computed(() => {
   return IDENTITY_PLATFORM_LABELS[mapVerificationPlatform(p)] || GAME_PLATFORM_LABELS[p]
 })
 
-function confirmWithdraw() {
-  accountStore.withdrawPlayerVerification()
-  showWithdraw.value = false
-  ElMessage.success('已撤回申请，可修改资料后重新提交')
-  router.push({ name: 'AccountPlayerIdentityApply' })
+async function confirmWithdraw() {
+  try {
+    await accountStore.withdrawPlayerVerification()
+    showWithdraw.value = false
+    ElMessage.success('已撤回申请，可修改资料后重新提交')
+    router.push({ name: 'AccountPlayerIdentityApply' })
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '撤回失败')
+  }
 }
 </script>
 

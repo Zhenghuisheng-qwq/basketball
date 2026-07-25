@@ -57,6 +57,9 @@ public class BasketPlayerCertApplication implements Serializable {
     @ApiModelProperty(value = "游戏账号")
     private String gameAccount;
 
+    @ApiModelProperty(value = "规范化游戏账号")
+    private String normalizedGameAccount;
+
     @ApiModelProperty(value = "游戏昵称")
     private String gameNickname;
 

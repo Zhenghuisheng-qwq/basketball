@@ -10,6 +10,7 @@ public interface IBasketMatchScoreService {
     void savePeriodScores(Long matchId, MatchPeriodScoreSaveReq req);
     void submitScore(Long matchId);
     void confirmScore(Long matchId);
+    void rejectScore(Long matchId, MatchReopenReq req);
     void reopenScore(Long matchId, MatchReopenReq req);
     void forfeit(Long matchId, MatchForfeitReq req);
 }

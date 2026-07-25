@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.common.UserContext;
+import com.zhs.dao.BasketMemberAccountDao;
 import com.zhs.dao.BasketDisciplineRecordDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamDao;
@@ -23,6 +24,7 @@ import com.zhs.enums.TournamentRegistrationStatusEnum;
 import com.zhs.enums.TournamentSeasonStatusEnum;
 import com.zhs.enums.TournamentStatusEnum;
 import com.zhs.exception.ServiceException;
+import com.zhs.model.BasketMemberAccount;
 import com.zhs.model.BasketDisciplineRecord;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
@@ -73,6 +75,7 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
     private static final int IS_STARTING = 1;
     private static final int REQUIRED_STARTING_COUNT = 5;
     private static final int DELETED = 1;
+    private static final int ENABLED = 1;
     private static final String BIZ_TYPE_TEAM_REGISTRATION = "TEAM_REGISTRATION";
 
     @Resource
@@ -94,6 +97,8 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
     @Resource
     private BasketDisciplineRecordDao disciplineRecordDao;
     @Resource
+    private BasketMemberAccountDao memberAccountDao;
+    @Resource
     private ICaptainPermissionService captainPermissionService;
     @Resource
     private IBusinessMessageService businessMessageService;
@@ -108,6 +113,8 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         List<BasketTournamentSeason> seasons = seasonDao.selectList(new LambdaQueryWrapper<BasketTournamentSeason>()
                 .eq(BasketTournamentSeason::getIsDelete, NOT_DELETED)
                 .eq(BasketTournamentSeason::getSeasonStatus, TournamentSeasonStatusEnum.REGISTRATION_OPEN.getCode())
+                .and(w -> w.eq(BasketTournamentSeason::getAllowTeamRegistration, ENABLED)
+                        .or().isNull(BasketTournamentSeason::getAllowTeamRegistration))
                 .le(BasketTournamentSeason::getRegistrationStartTime, now)
                 .ge(BasketTournamentSeason::getRegistrationEndTime, now)
                 .orderByDesc(BasketTournamentSeason::getRegistrationStartTime));
@@ -190,8 +197,8 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         registration.setTeamId(teamPk);
         registration.setCaptainMemberId(memberId);
         registration.setCaptainPlayerId(team.getCaptainPlayerId());
-        registration.setContactName(trimToNull(req.getContactName()));
-        registration.setContactMobile(trimToNull(req.getContactMobile()));
+        registration.setContactName(resolveContactName(trimToNull(req.getContactName()), memberId, team));
+        registration.setContactMobile(resolveContactMobile(trimToNull(req.getContactMobile()), memberId));
         registration.setContactEmail(trimToNull(req.getContactEmail()));
         registration.setRemark(trimToNull(req.getRemark()));
         registration.setRegistrationStatus(TournamentRegistrationStatusEnum.DRAFT.getCode());
@@ -222,13 +229,13 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         BasketTournamentRegistration registration = captainPermissionService.requireRegistrationCaptain(memberId, registrationPk);
         assertEditable(registration);
 
-        registration.setContactName(trimToNull(req.getContactName()));
-        registration.setContactMobile(trimToNull(req.getContactMobile()));
+        BasketTeam team = teamDao.selectById(registration.getTeamId());
+        registration.setContactName(resolveContactName(trimToNull(req.getContactName()), memberId, team));
+        registration.setContactMobile(resolveContactMobile(trimToNull(req.getContactMobile()), memberId));
         registration.setContactEmail(trimToNull(req.getContactEmail()));
         registration.setRemark(trimToNull(req.getRemark()));
         registrationDao.updateById(registration);
 
-        BasketTeam team = teamDao.selectById(registration.getTeamId());
         BasketTournamentSeason season = seasonDao.selectById(registration.getSeasonId());
         return buildDetailResp(registration, season, team);
     }
@@ -443,7 +450,35 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         if (season.getRegistrationEndTime() != null && season.getRegistrationEndTime().before(now)) {
             throw new ServiceException("报名已截止");
         }
+        if (Integer.valueOf(0).equals(season.getAllowTeamRegistration())) {
+            throw new ServiceException("该赛季未开放球队报名");
+        }
         return season;
+    }
+
+    private String resolveContactMobile(String contactMobile, Long memberId) {
+        if (StringUtils.hasText(contactMobile)) {
+            return contactMobile.trim();
+        }
+        BasketMemberAccount account = memberAccountDao.selectById(memberId);
+        if (account != null && StringUtils.hasText(account.getEmail())) {
+            return account.getEmail().trim();
+        }
+        return "";
+    }
+
+    private String resolveContactName(String contactName, Long memberId, BasketTeam team) {
+        if (StringUtils.hasText(contactName)) {
+            return contactName.trim();
+        }
+        if (team != null && StringUtils.hasText(team.getTeamName())) {
+            return team.getTeamName().trim();
+        }
+        BasketMemberAccount account = memberAccountDao.selectById(memberId);
+        if (account != null && StringUtils.hasText(account.getUsername())) {
+            return account.getUsername().trim();
+        }
+        return "联系人";
     }
 
     private void assertEditable(BasketTournamentRegistration registration) {

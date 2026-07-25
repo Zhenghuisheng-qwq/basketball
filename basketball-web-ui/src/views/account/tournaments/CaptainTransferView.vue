@@ -12,7 +12,9 @@ const router = useRouter()
 const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage()
 
 const selectedPlayerId = ref('')
+const applyReason = ref('')
 const confirmed = ref(false)
+const submitting = ref(false)
 
 const captainMember = computed(() =>
   eventTeamStore.roster.find((item) => item.role === 'CAPTAIN'),
@@ -22,7 +24,7 @@ const selectedMember = computed(() =>
   eventTeamStore.captainCandidates.find((item) => item.playerId === selectedPlayerId.value),
 )
 
-function submitTransfer() {
+async function submitTransfer() {
   if (!selectedPlayerId.value) {
     ElMessage.warning('请选择新队长')
     return
@@ -31,9 +33,22 @@ function submitTransfer() {
     ElMessage.warning('请勾选移交确认')
     return
   }
-  if (eventTeamStore.submitCaptainTransfer(selectedPlayerId.value, confirmed.value)) {
-    ElMessage.success('队长移交申请已提交（Mock）')
-    router.push(teamPath())
+  submitting.value = true
+  try {
+    const ok = await eventTeamStore.submitCaptainTransfer(
+      selectedPlayerId.value,
+      applyReason.value.trim() || undefined,
+    )
+    if (ok) {
+      ElMessage.success('队长移交申请已提交')
+      router.push(teamPath())
+    } else {
+      ElMessage.warning('提交失败')
+    }
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '提交失败')
+  } finally {
+    submitting.value = false
   }
 }
 </script>
@@ -69,9 +84,7 @@ function submitTransfer() {
           <div class="account-info-row"><span class="account-info-row__label">永久球员 ID</span><span>{{ captainMember?.playerNo }}</span></div>
           <div class="account-info-row"><span class="account-info-row__label">平台</span><span>{{ captainMember?.platform }}</span></div>
           <div class="account-info-row"><span class="account-info-row__label">游戏 ID</span><span>{{ captainMember?.gameId }}</span></div>
-          <div class="account-info-row"><span class="account-info-row__label">当前状态</span><span>{{ eventTeamStore.eventTeam.captainPermissionText }}</span></div>
         </div>
-        <p class="event-team-muted">审核期间原队长继续管理</p>
       </AccountPanel>
 
       <AccountPanel title="选择新队长">
@@ -84,7 +97,6 @@ function submitTransfer() {
                 <th>位置</th>
                 <th>平台</th>
                 <th>游戏 ID</th>
-                <th>身份</th>
               </tr>
             </thead>
             <tbody>
@@ -96,7 +108,6 @@ function submitTransfer() {
                 <td>{{ member.position }}</td>
                 <td>{{ member.platform }}</td>
                 <td>{{ member.gameId }}</td>
-                <td>{{ member.roleText }}</td>
               </tr>
             </tbody>
           </table>
@@ -105,6 +116,10 @@ function submitTransfer() {
     </div>
 
     <AccountPanel title="移交确认">
+      <label>
+        <span>申请原因</span>
+        <textarea v-model="applyReason" rows="2" class="identity-apply-form__input" />
+      </label>
       <label class="registration-confirm-card__item">
         <input v-model="confirmed" type="checkbox" />
         <span>
@@ -112,18 +127,12 @@ function submitTransfer() {
           {{ selectedMember?.nickname || '所选队员' }}
         </span>
       </label>
-      <ol class="captain-transfer-steps">
-        <li class="captain-transfer-steps__item captain-transfer-steps__item--current">01 本人确认</li>
-        <li class="captain-transfer-steps__item">02 管理员审核</li>
-      </ol>
       <div class="profile-version__actions">
-        <button type="button" class="account-btn-primary" @click="submitTransfer">提交移交申请</button>
+        <button type="button" class="account-btn-primary" :disabled="submitting" @click="submitTransfer">
+          提交移交申请
+        </button>
         <button type="button" class="account-btn-secondary" @click="router.push(teamPath())">返回球队管理</button>
       </div>
-      <p class="event-team-muted">
-        审核通过后，{{ selectedMember?.nickname || '新队长' }} 获得本届赛事管理权限，{{ captainMember?.nickname }} 变为普通队员；阵容、球队和历史关联不改变。
-        原队长失联时由赛事方直接指定。
-      </p>
     </AccountPanel>
   </div>
 </template>
@@ -145,27 +154,6 @@ function submitTransfer() {
     display: grid;
     place-items: center;
     color: #777;
-  }
-}
-
-.captain-transfer-steps {
-  list-style: none;
-  margin: 12px 0;
-  padding: 0;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-
-  &__item {
-    padding: 8px 12px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    font-size: 13px;
-    font-weight: 700;
-
-    &--current {
-      border-color: var(--account-red, #d30910);
-      color: var(--account-red, #d30910);
-    }
   }
 }
 

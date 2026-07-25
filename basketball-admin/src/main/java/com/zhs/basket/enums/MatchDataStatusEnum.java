@@ -6,7 +6,8 @@ public enum MatchDataStatusEnum {
     DRAFT(0, "草稿"),
     SUBMITTED(1, "已提交"),
     CONFIRMED(2, "已确认"),
-    REOPENED(3, "已重开");
+    REOPENED(3, "已重开"),
+    REJECTED(4, "已驳回");
 
     private final int code;
     private final String description;
@@ -19,9 +20,9 @@ public enum MatchDataStatusEnum {
     public int getCode() { return code; }
     public String getDescription() { return description; }
 
-    /** 草稿/已提交/重开均可编辑；已确认锁定。提交后仍允许补充技术统计直至最终确认。 */
+    /** 草稿/已提交/重开/驳回均可编辑；已确认锁定。提交后仍允许补充技术统计直至最终确认。 */
     public boolean canEdit() {
-        return this == DRAFT || this == SUBMITTED || this == REOPENED;
+        return this == DRAFT || this == SUBMITTED || this == REOPENED || this == REJECTED;
     }
 
     public boolean canSubmit() {

@@ -7,7 +7,6 @@ import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import { useAccountStore } from '@/stores/account'
-import { MOCK_TOURNAMENT_ID } from '@/mock/eventTeamMock'
 import type { OpenApplicationStatus } from '@/types/account'
 
 const router = useRouter()
@@ -27,7 +26,7 @@ const openApplication = computed(() => accountStore.openApplication)
 const stats = computed(() => accountStore.openRegistrationStats)
 
 const captainTournament = computed(() =>
-  accountStore.myTournaments.find((item) => item.id === MOCK_TOURNAMENT_ID),
+  accountStore.myTournaments.find((item) => item.role === '赛事队长' || item.role?.includes('队长')),
 )
 
 const showCaptainPanel = computed(
@@ -76,7 +75,8 @@ function goEligibility() {
 }
 
 function goTeamManagement() {
-  router.push(`/account/my-tournaments/${MOCK_TOURNAMENT_ID}/team`)
+  if (!captainTournament.value?.id) return
+  router.push(`/account/my-tournaments/${captainTournament.value.id}/team`)
 }
 
 function acceptInvite(id: string) {
@@ -220,7 +220,7 @@ function rejectInvite(id: string) {
                 <td>{{ item.role || '-' }}</td>
                 <td>
                   <button
-                    v-if="item.id === MOCK_TOURNAMENT_ID && item.role === '赛事队长'"
+                    v-if="item.role === '赛事队长' || item.role?.includes('队长')"
                     type="button"
                     class="account-btn-primary"
                     @click="goTeamManagement"

@@ -8,7 +8,7 @@ import AccountStepper from '@/components/account/AccountStepper.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import { useAccountStore } from '@/stores/account'
 import { IDENTITY_PLATFORM_LABELS } from '@/types/account'
-import { mapVerificationPlatform } from '@/mock/playerIdentityMock'
+import { mapVerificationPlatform } from '@/utils/playerIdentity'
 
 const router = useRouter()
 const accountStore = useAccountStore()

@@ -12,8 +12,8 @@ import { useEventTeamPage } from '@/composables/useEventTeamPage'
 const router = useRouter()
 const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage()
 
-const draftName = ref(eventTeamStore.profileDraftName)
-const draftLogoUrl = ref(eventTeamStore.profileDraftLogoUrl)
+const draftName = ref(eventTeamStore.eventTeam.teamName)
+const draftLogoUrl = ref(eventTeamStore.eventTeam.teamLogoUrl)
 
 function cancelEdit() {
   draftName.value = eventTeamStore.eventTeam.teamName
@@ -22,12 +22,7 @@ function cancelEdit() {
 }
 
 function submitReview() {
-  eventTeamStore.profileDraftName = draftName.value
-  eventTeamStore.profileDraftLogoUrl = draftLogoUrl.value
-  if (eventTeamStore.submitProfileReview()) {
-    ElMessage.success('已提交重新审核（Mock）')
-    router.push(teamPath())
-  }
+  ElMessage.info('本届球队资料修改将在后续版本开放')
 }
 </script>
 
@@ -74,31 +69,24 @@ function submitReview() {
           />
           <label class="identity-apply-form__field">
             <span>本届队名</span>
-            <input v-model="draftName" type="text" class="identity-apply-form__input" />
+            <input v-model="draftName" type="text" class="identity-apply-form__input" disabled />
           </label>
           <label class="account-btn-secondary identity-apply-form__upload-btn">
             上传新 Logo
-            <input type="file" accept="image/*" hidden @change="() => {}" />
+            <input type="file" accept="image/*" hidden disabled />
           </label>
           <label class="identity-apply-form__field">
             <span>比赛平台</span>
             <input :value="eventTeamStore.eventTeam.platform" type="text" class="identity-apply-form__input" disabled />
           </label>
           <div class="profile-version__actions">
-            <button type="button" class="account-btn-secondary" @click="cancelEdit">取消修改</button>
-            <button type="button" class="account-btn-primary" @click="submitReview">提交重新审核</button>
+            <button type="button" class="account-btn-secondary" @click="cancelEdit">返回</button>
+            <button type="button" class="account-btn-primary" disabled @click="submitReview">提交重新审核</button>
           </div>
+          <p class="event-team-muted">球队资料修改 API 尚未接入，当前仅展示本届球队信息。</p>
         </div>
       </AccountPanel>
     </div>
-
-    <AccountPanel title="修改与审核规则">
-      <ul class="event-team-rules">
-        <li>新版本通过前，公开页继续显示当前审核通过版本。</li>
-        <li>审核中必须先撤回修改，才能再次编辑。</li>
-        <li>最终锁定后只能由管理员特殊处理。</li>
-      </ul>
-    </AccountPanel>
   </div>
 </template>
 

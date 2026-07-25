@@ -38,6 +38,17 @@
     <select id="selectByRegistrationId" resultMap="BasketTournamentRegistrationPlayerResult">
         select id, registration_id, season_id, team_id, player_id, member_id, team_member_id, roster_role, jersey_no, is_starting, is_captain, validation_status, reject_reason, sort_no, create_time, update_time, is_delete from basket_tournament_registration_player where registration_id = #{registrationId} and is_delete = 0 order by sort_no
     </select>
+    <select id="selectDetailByRegistrationId" resultType="com.zhs.basket.vo.RegistrationPlayerVo">
+        select rp.id, rp.player_id as playerId, rp.member_id as memberId, rp.roster_role as rosterRole,
+               rp.jersey_no as jerseyNo, rp.is_captain as isCaptain, rp.is_starting as isStarting,
+               rp.validation_status as validationStatus, rp.reject_reason as rejectReason,
+               ifnull(nullif(p.game_nickname, ''), mp.nickname) as playerNickname, p.player_no as playerNo
+        from basket_tournament_registration_player rp
+        left join basket_player_profile p on p.id = rp.player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = rp.member_id and mp.is_delete = 0
+        where rp.registration_id = #{registrationId} and rp.is_delete = 0
+        order by rp.sort_no, rp.id
+    </select>
     <update id="updateValidationStatus">
         update basket_tournament_registration_player
         set validation_status = #{validationStatus}, reject_reason = #{rejectReason}, update_time = now()

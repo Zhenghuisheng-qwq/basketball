@@ -1,24 +1,114 @@
-import type { AccountCenterOverview, AccountSummaryDto, PlayerIdentityDto } from '@/api/types/accountCenter'
+import type { AccountCenterOverview, AccountSummaryDto, PlayerIdentityDto, PendingTaskDto } from '@/api/types/accountCenter'
 import type { AccountProfileDto } from '@/api/types/accountProfile'
 import type { AccountTournamentItemDto } from '@/api/types/accountTournament'
 import type { MessageItemDto } from '@/api/types/accountMessage'
 import type { PlayerCertCurrentDto } from '@/api/types/playerCertification'
 import type {
+  PlatformAccountItemDto,
+  PlatformChangeHistoryItemDto,
+  PlayerEligibilityStatusDto,
+} from '@/api/types/playerPlatformAccount'
+import type {
   AccountProfile,
   AccountRole,
   CurrentAccount,
+  EligibilityLimit,
   GamePlatform,
   GamePosition,
+  IdentityChangeRecord,
+  IdentityPlatform,
   MyTournament,
   MyTournamentStatus,
+  PlatformGameIdRecord,
+  PlatformGameIdStatus,
   PlayerVerification,
   PlayerVerificationStatus,
 } from '@/types/account'
 import type { AccountNotificationItem, AccountNotificationType } from '@/types/accountNotifications'
-import { buildPlayerIdentity } from '@/mock/playerIdentityMock'
+import { buildPlayerIdentity } from '@/utils/playerIdentity'
 
+const PLATFORM_CHANGE_APPROVED = 1
 const PLAYER_CERT_APPROVED = 3
 const PLAYER_CERT_DRAFT = 0
+
+export function normalizePendingTaskPath(task: PendingTaskDto): string {
+  const path = task.actionPath || ''
+  if (!path.includes('/player/certification')) {
+    return path
+  }
+  switch (task.taskType) {
+    case 'CERT_REVIEWING':
+      return '/account/player-identity/pending'
+    case 'CERT_REJECTED':
+      return '/account/player-identity/rejected'
+    case 'CERT_DRAFT':
+    case 'NO_CERT':
+    default:
+      return '/account/player-identity/apply'
+  }
+}
+
+export function mapPlatformAccountItem(item: PlatformAccountItemDto): PlatformGameIdRecord {
+  const platform = (item.platform || 'PC') as IdentityPlatform
+  let status: PlatformGameIdStatus
+  let statusText = item.accountStatusText || '未绑定'
+
+  if (item.pendingChange) {
+    status = 'PENDING'
+    statusText = item.accountStatus == null ? '新增审核中' : '修改审核中'
+  } else if (item.accountStatus == null) {
+    status = 'UNBOUND'
+    statusText = '未绑定'
+  } else if (item.accountStatus === 1) {
+    status = 'EFFECTIVE'
+  } else if (item.accountStatus === 0) {
+    status = 'PENDING'
+  } else {
+    status = 'UNBOUND'
+  }
+
+  return {
+    platform,
+    platformAccountId: item.platformAccountId,
+    gameId: item.displayGameId || '',
+    status,
+    statusText,
+    locked: false,
+    lockText: '',
+  }
+}
+
+export function mapPlatformChangeHistoryItem(item: PlatformChangeHistoryItemDto): IdentityChangeRecord {
+  return {
+    effectiveTime: toIsoDateTime(item.reviewedTime || item.submitTime),
+    platform: (item.platform || 'PC') as IdentityPlatform,
+    oldGameId: item.oldDisplayGameId || '-',
+    newGameId: item.newDisplayGameId || '-',
+    changeType: item.changeType,
+    requestStatus: item.requestStatus,
+    requestStatusText: item.requestStatusText,
+  }
+}
+
+export function mapEligibilityStatus(dto: PlayerEligibilityStatusDto): EligibilityLimit {
+  const limited = dto.eligible === false
+  return {
+    playerNo: dto.playerNo || '',
+    status: limited ? 'LIMITED' : 'OK',
+    statusText: dto.playerStatusText || (limited ? '参赛资格受限' : '参赛资格正常'),
+    tournamentName: '',
+    permanentIdentityStatus: '继续保留',
+    resultTitle: limited ? '参赛资格受限' : '',
+    resultStatus: dto.playerStatusText || '',
+    reason: dto.notice || '',
+    notice: dto.notice || '',
+  }
+}
+
+export function filterApprovedChangeHistory(items: IdentityChangeRecord[]): IdentityChangeRecord[] {
+  return items.filter((item) => item.requestStatus == null || item.requestStatus === PLATFORM_CHANGE_APPROVED)
+}
+
 const PLAYER_CERT_SUBMITTED = 1
 const PLAYER_CERT_REVIEWING = 2
 const PLAYER_CERT_REJECTED = 4
@@ -318,7 +408,10 @@ export function applyOverviewToStoreState(
     : null
 
   const myTournaments = (overview.currentTournaments || []).map(mapTournamentItemToMyTournament)
-  const pendingTasks = overview.pendingTasks || []
+  const pendingTasks = (overview.pendingTasks || []).map((task) => ({
+    ...task,
+    actionPath: normalizePendingTaskPath(task),
+  }))
   const recentMessages = (overview.recentMessages || []).map(mapMessageItemToNotification)
 
   return {

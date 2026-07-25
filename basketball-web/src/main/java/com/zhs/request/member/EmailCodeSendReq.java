@@ -13,6 +13,6 @@ public class EmailCodeSendReq implements Serializable {
     @ApiModelProperty(value = "邮箱", required = true)
     private String email;
 
-    @ApiModelProperty(value = "用途：REGISTER / LOGIN", required = true)
+    @ApiModelProperty(value = "用途：REGISTER / LOGIN / RESET_PASSWORD", required = true)
     private String purpose;
 }

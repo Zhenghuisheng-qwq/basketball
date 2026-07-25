@@ -71,6 +71,14 @@ public class BasketMatchStatController extends BaseController {
         return success();
     }
 
+    @PreAuthorize("@ss.hasPermi('basket:matchStat:confirm')")
+    @Log(title = "比赛技术统计", businessType = BusinessType.UPDATE)
+    @PostMapping("/{matchId}/result/reject")
+    public AjaxResult rejectResult(@PathVariable Long matchId, @RequestBody MatchReopenReq req) {
+        statService.rejectResult(matchId, req);
+        return success();
+    }
+
     @PreAuthorize("@ss.hasPermi('basket:matchStat:reopen')")
     @Log(title = "比赛技术统计", businessType = BusinessType.UPDATE)
     @PostMapping("/{matchId}/result/reopen")

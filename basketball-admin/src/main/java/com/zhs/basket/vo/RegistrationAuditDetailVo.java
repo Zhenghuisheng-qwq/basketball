@@ -1,6 +1,7 @@
 package com.zhs.basket.vo;
 
 import java.util.Date;
+import java.util.List;
 import lombok.Data;
 
 @Data
@@ -18,4 +19,5 @@ public class RegistrationAuditDetailVo {
     private String remark;
     private Date submittedTime;
     private Date auditTime;
+    private List<RegistrationPlayerVo> players;
 }

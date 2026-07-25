@@ -51,14 +51,18 @@ onMounted(() => {
   }
 })
 
-function handleSubmit() {
+async function handleSubmit() {
   if (!canSubmit.value) {
     ElMessage.warning(blockReason.value || '当前无法提交报名')
     return
   }
-  accountStore.submitOpenApplication()
-  ElMessage.success('Open 个人报名已提交')
-  router.push({ name: 'AccountOpenApplicationPending' })
+  try {
+    await accountStore.submitOpenApplication()
+    ElMessage.success('Open 个人报名已提交')
+    router.push({ name: 'AccountOpenApplicationPending' })
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '提交失败')
+  }
 }
 </script>
 

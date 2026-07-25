@@ -36,6 +36,12 @@ public interface BasketMatchMapper {
             @Param("dataStatus") Integer dataStatus, @Param("actualEndTime") Date actualEndTime);
     int updateDataStatus(@Param("id") Long id, @Param("fromStatuses") List<Integer> fromStatuses,
             @Param("toStatus") Integer toStatus);
+    int updateScoreConfirmed(@Param("id") Long id, @Param("fromStatuses") List<Integer> fromStatuses,
+            @Param("scoreConfirmed") Integer scoreConfirmed);
+    int resetScoreConfirmed(@Param("id") Long id);
+    int updateResultMeta(@Param("id") Long id, @Param("resultStatus") Integer resultStatus,
+            @Param("dataVersion") Integer dataVersion, @Param("publicStatus") Integer publicStatus);
+    int incrementDataVersion(@Param("id") Long id, @Param("fromVersion") Integer fromVersion);
     int countTeamScheduleConflict(@Param("excludeMatchId") Long excludeMatchId, @Param("teamId") Long teamId,
             @Param("startTime") Date startTime, @Param("endTime") Date endTime);
     int countVenueScheduleConflict(@Param("excludeMatchId") Long excludeMatchId, @Param("venueId") Long venueId,

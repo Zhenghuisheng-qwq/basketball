@@ -47,6 +47,12 @@ public class BasketPublicAnnouncementController {
                 currentPage, pageSize, categoryCode, keyword, sortField, sortOrder));
     }
 
+    @ApiOperation("当前赛季有效规则公告")
+    @GetMapping("/current-rule")
+    public R<PublicAnnouncementDetailResp> getCurrentRule(@RequestParam Long seasonId) {
+        return R.ok(announcementService.getCurrentRule(seasonId));
+    }
+
     @ApiOperation("公告详情（含纯文本正文，浏览数 +1）")
     @GetMapping("/{id}")
     public R<PublicAnnouncementDetailResp> getDetail(@PathVariable("id") Long id) {

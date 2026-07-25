@@ -76,6 +76,20 @@ public class BasketHallOfFameController extends BaseController {
         return success();
     }
 
+    @PreAuthorize("@ss.hasPermi('" + BasketContentPerms.HALL_OF_FAME_QUERY + "')")
+    @GetMapping("/import-candidates")
+    public AjaxResult listImportCandidates(@RequestParam(required = false) Long tournamentId,
+                                           @RequestParam(required = false) Long seasonId) {
+        return success(honorRecordService.listImportCandidates(tournamentId, seasonId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketContentPerms.HALL_OF_FAME_ADD + "')")
+    @Log(title = "名人堂", businessType = BusinessType.INSERT)
+    @PostMapping("/import/{honorId}")
+    public AjaxResult importFromHonor(@PathVariable Long honorId) {
+        return success(honorRecordService.importFromHonor(honorId, SOURCE_HALL));
+    }
+
     @PreAuthorize("@ss.hasPermi('" + BasketContentPerms.HALL_OF_FAME_REMOVE + "')")
     @Log(title = "名人堂", businessType = BusinessType.DELETE)
     @DeleteMapping("/{id}")

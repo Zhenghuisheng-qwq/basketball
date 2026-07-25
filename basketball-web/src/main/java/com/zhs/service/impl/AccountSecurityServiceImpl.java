@@ -6,17 +6,26 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.common.UserContext;
 import com.zhs.dao.BasketAccountSecurityLogDao;
 import com.zhs.dao.BasketLoginLogDao;
+import com.zhs.dao.BasketMemberAccountDao;
+import com.zhs.enums.MemberAccountStatusEnum;
+import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketAccountSecurityLog;
 import com.zhs.model.BasketLoginLog;
+import com.zhs.model.BasketMemberAccount;
+import com.zhs.request.account.AccountChangePasswordReq;
 import com.zhs.response.account.LoginLogItemResp;
 import com.zhs.response.account.SecurityLogItemResp;
 import com.zhs.service.IAccountSecurityService;
 import com.zhs.util.DataMaskUtil;
 import jakarta.annotation.Resource;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,11 +33,17 @@ import java.util.stream.Collectors;
 public class AccountSecurityServiceImpl implements IAccountSecurityService {
 
     private static final Integer NOT_DELETED = 0;
+    private static final String EVENT_PASSWORD_CHANGE = "PASSWORD_CHANGE";
+    private static final String OPERATOR_MEMBER = "MEMBER";
 
     @Resource
     private BasketLoginLogDao loginLogDao;
     @Resource
     private BasketAccountSecurityLogDao accountSecurityLogDao;
+    @Resource
+    private BasketMemberAccountDao memberAccountDao;
+    @Resource
+    private PasswordEncoder passwordEncoder;
 
     @Override
     public IPage<LoginLogItemResp> pageLoginLogs(Integer currentPage, Integer pageSize) {
@@ -59,6 +74,66 @@ public class AccountSecurityServiceImpl implements IAccountSecurityService {
         Page<SecurityLogItemResp> respPage = new Page<>(logPage.getCurrent(), logPage.getSize(), logPage.getTotal());
         respPage.setRecords(toSecurityLogItems(logPage.getRecords()));
         return respPage;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void changePassword(AccountChangePasswordReq req, String clientIp, String terminalType) {
+        if (req == null) {
+            throw new ServiceException("请求参数不能为空");
+        }
+        if (!StringUtils.hasText(req.getOldPassword())) {
+            throw new ServiceException("请输入当前密码");
+        }
+        validatePasswordPair(req.getNewPassword(), req.getConfirmPassword());
+
+        Long memberId = UserContext.getRequiredUserId();
+        BasketMemberAccount account = memberAccountDao.selectById(memberId);
+        if (account == null || !NOT_DELETED.equals(account.getIsDelete())) {
+            throw new ServiceException("账号不存在");
+        }
+        if (!MemberAccountStatusEnum.isNormal(account.getAccountStatus())) {
+            throw new ServiceException("账号已被禁用");
+        }
+        if (!StringUtils.hasText(account.getPasswordHash())
+                || !passwordEncoder.matches(req.getOldPassword(), account.getPasswordHash())) {
+            throw new ServiceException("当前密码不正确");
+        }
+        if (passwordEncoder.matches(req.getNewPassword(), account.getPasswordHash())) {
+            throw new ServiceException("新密码不能与当前密码相同");
+        }
+
+        Date now = new Date();
+        account.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
+        account.setPasswordUpdateTime(now);
+        memberAccountDao.updateById(account);
+
+        BasketAccountSecurityLog logEntity = new BasketAccountSecurityLog();
+        logEntity.setMemberId(memberId);
+        logEntity.setEventType(EVENT_PASSWORD_CHANGE);
+        logEntity.setEventTitle("修改登录密码");
+        logEntity.setOperatorType(OPERATOR_MEMBER);
+        logEntity.setOperatorId(memberId);
+        logEntity.setClientIp(clientIp);
+        logEntity.setTerminalType(terminalType);
+        logEntity.setEventTime(now);
+        logEntity.setIsDelete(NOT_DELETED);
+        accountSecurityLogDao.insert(logEntity);
+    }
+
+    private void validatePasswordPair(String password, String confirmPassword) {
+        if (!StringUtils.hasText(password)) {
+            throw new ServiceException("密码不能为空");
+        }
+        if (password.length() < 8 || password.length() > 20) {
+            throw new ServiceException("密码长度应为 8 至 20 位");
+        }
+        if (!password.matches(".*[A-Za-z].*") || !password.matches(".*\\d.*")) {
+            throw new ServiceException("密码需同时包含字母和数字");
+        }
+        if (!password.equals(confirmPassword)) {
+            throw new ServiceException("两次输入的密码不一致");
+        }
     }
 
     private List<LoginLogItemResp> toLoginLogItems(List<BasketLoginLog> logs) {

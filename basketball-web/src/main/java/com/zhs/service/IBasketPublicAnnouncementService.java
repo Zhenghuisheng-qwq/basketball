@@ -21,4 +21,6 @@ public interface IBasketPublicAnnouncementService {
     PublicAnnouncementAdjacentResp getPreviousNext(Long announcementId);
 
     List<PublicAnnouncementItemResp> listLatest(int limit);
+
+    PublicAnnouncementDetailResp getCurrentRule(Long seasonId);
 }

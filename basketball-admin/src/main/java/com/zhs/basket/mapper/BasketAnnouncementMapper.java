@@ -31,5 +31,9 @@ public interface BasketAnnouncementMapper {
 
     int updateTop(@Param("id") Long id, @Param("isTop") Integer isTop);
 
+    int updateSupersededBy(@Param("id") Long id, @Param("supersededBy") Long supersededBy);
+
+    AnnouncementDetailResp selectCurrentRuleBySeason(@Param("seasonId") Long seasonId);
+
     int softDelete(@Param("id") Long id, @Param("fromStatuses") List<Integer> fromStatuses);
 }

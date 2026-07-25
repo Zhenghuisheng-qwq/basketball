@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
@@ -8,15 +8,13 @@ import TournamentApplicationStepper from '@/components/account/TournamentApplica
 import OpenApplicationStatusCard from '@/components/account/OpenApplicationStatusCard.vue'
 import OpenPlayerProfileCard from '@/components/account/OpenPlayerProfileCard.vue'
 import { useAccountStore } from '@/stores/account'
-import { isOpenRegistrationDeadlinePassed } from '@/mock/openRegistrationMock'
+import { isRegistrationDeadlinePassed } from '@/utils/participationMappers'
 import type { StepItem } from '@/components/account/AccountStepper.vue'
-import { openStatusQueryToEnum } from '@/types/account'
 
 const props = defineProps<{
   statusMode: 'pending' | 'rejected' | 'approved'
 }>()
 
-const route = useRoute()
 const router = useRouter()
 const accountStore = useAccountStore()
 
@@ -37,18 +35,8 @@ const playerSnapshot = computed(() => {
   }
 })
 
-watch(
-  () => route.query.status,
-  async (queryStatus) => {
-    if (!import.meta.env.DEV || typeof queryStatus !== 'string') return
-    const mapped = openStatusQueryToEnum(queryStatus)
-    if (!mapped) return
-    accountStore.applyDevOpenStatusOverride(mapped)
-  },
-  { immediate: true },
-)
-
-onMounted(() => {
+onMounted(async () => {
+  await accountStore.loadOpenRegistration().catch(() => undefined)
   if (application.value?.status === 'NOT_SUBMITTED') {
     router.replace({ name: 'AccountOpenApplicationApply' })
   }
@@ -104,7 +92,7 @@ const pageConfig = computed(() => {
 })
 
 const deadlinePassed = computed(() =>
-  isOpenRegistrationDeadlinePassed(tournament.value.registrationDeadline),
+  isRegistrationDeadlinePassed(tournament.value.registrationDeadline),
 )
 
 function goMyTournaments() {

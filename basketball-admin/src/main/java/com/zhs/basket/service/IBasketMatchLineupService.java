@@ -10,5 +10,6 @@ public interface IBasketMatchLineupService {
     MatchLineupVo selectLineup(Long matchId, Long teamId);
     List<AvailableMatchPlayerVo> selectAvailablePlayers(Long matchId, Long teamId);
     void saveLineup(Long matchId, Long teamId, MatchLineupSaveReq req);
+    void generateFromSeasonRoster(Long matchId, Long teamId);
     void confirmLineup(Long matchId, Long teamId);
 }

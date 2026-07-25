@@ -37,41 +37,25 @@ sys_user (user_id)
 
 ## 3. 当前库菜单树（页面级）
 
+> **第二批（2026-07-25）** 已重组为五域三级菜单。详见 [`cnpa-admin-route-menu-mapping.md`](./cnpa-admin-route-menu-mapping.md)。
+
 一级目录：`menu_id=2000`，`path=basket`，`menu_name=CNPA赛事管理`
 
-| menu_id | 名称 | path | component | list perms |
-|---------|------|------|-----------|------------|
-| 2001 | 球员认证审核 | player-certification | basket/playerCert/index | basket:playerCert:list |
-| 2002 | 队长资格管理 | captain-qualification | basket/captainQualification/index | basket:captainQualification:list |
-| 2003 | 球队审核 | team-audit | basket/teamAudit/index | basket:teamAudit:list |
-| 2004 | 赛事管理 | tournament | basket/tournament/index | basket:tournament:list |
-| 2005 | 赛季管理 | season | basket/season/index | basket:season:list |
-| 2006 | 赛事规则 | tournament-rule | basket/tournamentRule/index | basket:tournamentRule:list |
-| 2007 | 报名审核 | registration-audit | basket/registrationAudit/index | basket:registrationAudit:list |
-| 2038 | 赛事阶段 | stage | basket/stage/index | basket:stage:list |
-| 2039 | 分组管理 | group | basket/group/index | basket:group:list |
-| 2040 | 比赛管理 | match | basket/match/index | basket:match:list |
-| 2041 | 比赛名单 | match-lineup | basket/matchLineup/index | basket:lineup:list |
-| 2042 | 比分录入 | match-score | basket/matchScore/index | basket:score:query |
-| 2043 | 比赛数据 | match-stat | basket/matchStat/index | basket:matchStat:query |
-| 2080 | 数据结算 | data-settlement | basket/dataSettlement/index | basket:dataSettlement:list |
-| 2081 | 积分榜 | standing | basket/standing/index | basket:standing:list |
-| 2082 | 球队赛季统计 | team-season-stat | basket/teamSeasonStat/index | basket:teamSeasonStat:list |
-| 2083 | 球员赛季统计 | player-season-stat | basket/playerSeasonStat/index | basket:playerSeasonStat:list |
-| 2084 | 排行榜 | ranking | basket/ranking/index | basket:ranking:list |
-| 2101 | 荣誉与内容 | content | （目录 M） | — |
+| menu_id | 二级目录 | path | 说明 |
+|---------|----------|------|------|
+| 2151 | 准入审核 | audit | 4 个审核页 |
+| 2152 | 赛事组织 | competition | 赛事/赛季/规则/阶段/分组 |
+| 2153 | 比赛运营 | match-ops | 赛程/名单/比分/数据 |
+| 2154 | 数据结算 | settlement | 结算/积分/统计/排行/赛季名次 |
+| 2101 | 荣誉与内容 | content | 荣誉/名人堂/公告/Banner/伙伴 |
 
-荣誉与内容子页面（parent=2101）：
+页面 `component` 均已对齐 `views/basket/{域}/.../index.vue`，例如：
 
-| menu_id | 名称 | path | component | list perms |
-|---------|------|------|-----------|------------|
-| 2102 | 赛季名次 | season-result | basket/seasonResult/index | basket:seasonResult:list |
-| 2103 | 球队荣誉 | team-honor | basket/teamHonor/index | basket:teamHonor:list |
-| 2104 | 球员荣誉 | player-honor | basket/playerHonor/index | basket:playerHonor:list |
-| 2105 | 名人堂 | hall-of-fame | basket/hallOfFame/index | basket:hallOfFame:list |
-| 2106 | 公告管理 | announcement | basket/announcement/index | basket:announcement:list |
-| 2107 | 首页内容 | home-content | basket/homeContent/index | basket:homeContent:list |
-| 2108 | 合作伙伴 | partner | basket/partner/index | basket:partner:list |
+- `basket/audit/player-cert/index`
+- `basket/tournament/manage/index`
+- `basket/match/schedule/index`
+- `basket/settlement/data/index`
+- `basket/content/announcement/index`
 
 按钮权限为各页下的 `menu_type=F`，`perms` 与 `BasketMatchPerms` / `BasketSettlementPerms` / `BasketContentPerms` 及第四轮脚本一致（约 `2008~2150`）。
 

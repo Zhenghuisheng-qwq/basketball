@@ -118,6 +118,7 @@ public class BasketMatchScoreServiceImpl implements IBasketMatchScoreService {
         }
         applyFinalScore(match, homeTotal, awayTotal, otCount, null, MatchStatusEnum.FINISHED.getCode(),
                 MatchDataStatusEnum.SUBMITTED.getCode());
+        matchMapper.resetScoreConfirmed(matchId);
         match.setMatchStatus(MatchStatusEnum.FINISHED.getCode());
         match.setDataStatus(MatchDataStatusEnum.SUBMITTED.getCode());
         validationService.writeStatusLog(match, MatchStatusEnum.RUNNING.getCode(), MatchChangeTypeEnum.SCORE_SUBMIT, "提交比分");
@@ -131,7 +132,29 @@ public class BasketMatchScoreServiceImpl implements IBasketMatchScoreService {
         if (match.getDataStatus() == null || match.getDataStatus() != MatchDataStatusEnum.SUBMITTED.getCode()) {
             throw new ServiceException("仅已提交比分可确认");
         }
+        if (matchMapper.updateScoreConfirmed(matchId, Collections.singletonList(MatchDataStatusEnum.SUBMITTED.getCode()), 1) != 1) {
+            throw new ServiceException("确认比分失败，请检查比赛数据状态");
+        }
         validationService.writeStatusLog(match, match.getMatchStatus(), MatchChangeTypeEnum.SCORE_CONFIRM, "确认比分");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void rejectScore(Long matchId, MatchReopenReq req) {
+        if (StringUtils.isEmpty(req.getReason())) {
+            throw new ServiceException("驳回原因不能为空");
+        }
+        BasketMatch match = validationService.requireMatch(matchId);
+        if (match.getDataStatus() == null || match.getDataStatus() != MatchDataStatusEnum.SUBMITTED.getCode()) {
+            throw new ServiceException("仅已提交比分可驳回");
+        }
+        if (matchMapper.updateDataStatus(matchId, Collections.singletonList(MatchDataStatusEnum.SUBMITTED.getCode()),
+                MatchDataStatusEnum.REJECTED.getCode()) != 1) {
+            throw new ServiceException("驳回比分失败");
+        }
+        matchMapper.resetScoreConfirmed(matchId);
+        match.setDataStatus(MatchDataStatusEnum.REJECTED.getCode());
+        validationService.writeStatusLog(match, match.getMatchStatus(), MatchChangeTypeEnum.REOPEN, "驳回比分：" + req.getReason());
     }
 
     @Override

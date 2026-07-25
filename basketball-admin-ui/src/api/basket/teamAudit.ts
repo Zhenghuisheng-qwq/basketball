@@ -6,6 +6,7 @@ import type {
   TeamAuditDetail,
   TeamAuditListItem,
   TeamAuditQuery,
+  TeamAuditRecord,
   TeamAuditRejectReq
 } from '@/types'
 
@@ -20,6 +21,13 @@ export function listTeamAudit(query: TeamAuditQuery): Promise<TableDataInfo<Team
 export function getTeamAudit(teamId: number): Promise<AjaxResult<TeamAuditDetail>> {
   return request({
     url: `/basket/teamAudit/${teamId}`,
+    method: 'get'
+  })
+}
+
+export function listTeamAuditRecords(teamId: number): Promise<AjaxResult<TeamAuditRecord[]>> {
+  return request({
+    url: `/basket/teamAudit/${teamId}/audit-record/list`,
     method: 'get'
   })
 }

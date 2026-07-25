@@ -33,6 +33,12 @@ public class BasketTeamAuditController extends BaseController {
         return success(teamAuditService.selectDetail(teamId));
     }
 
+    @PreAuthorize("@ss.hasPermi('basket:teamAudit:query')")
+    @GetMapping("/{teamId}/audit-record/list")
+    public AjaxResult auditRecords(@PathVariable Long teamId) {
+        return success(teamAuditService.selectAuditRecords(teamId));
+    }
+
     @PreAuthorize("@ss.hasPermi('basket:teamAudit:audit')")
     @Log(title = "球队审核", businessType = BusinessType.UPDATE)
     @PostMapping("/{teamId}/start-review")

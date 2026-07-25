@@ -59,6 +59,15 @@
         where r.season_id = #{seasonId} and r.registration_status = 3 and r.is_delete = 0
         order by t.team_name
     </select>
+    <select id="selectApprovedIdsWithoutEventTeam" resultType="java.lang.Long">
+        select r.id from basket_tournament_registration r
+        where r.is_delete = 0 and r.registration_status = 3
+          and not exists (
+            select 1 from basket_team_season_profile p
+            where p.registration_id = r.id and p.is_delete = 0
+          )
+        order by r.audit_time asc, r.id asc
+    </select>
     <update id="updateStatusIfMatch">
         update basket_tournament_registration
         set registration_status = #{toStatus},

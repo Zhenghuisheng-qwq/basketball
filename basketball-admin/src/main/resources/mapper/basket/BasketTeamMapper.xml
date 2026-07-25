@@ -46,4 +46,16 @@
         update basket_team set current_member_count = #{memberCount}, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
+    <select id="selectMaxTeamNoSequence" resultType="java.lang.Integer">
+        select max(cast(substring(team_no, 8) as unsigned))
+        from basket_team
+        where team_no regexp '^CNPA-T-[0-9]{6}$' and is_delete = 0
+    </select>
+    <select id="countByTeamNo" resultType="int">
+        select count(1) from basket_team where team_no = #{teamNo} and is_delete = 0
+    </select>
+    <update id="updateTeamNo">
+        update basket_team set team_no = #{teamNo}, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
 </mapper>

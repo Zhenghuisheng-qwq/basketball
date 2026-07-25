@@ -8,8 +8,10 @@ import com.zhs.basket.mapper.*;
 import com.zhs.basket.query.RegistrationAuditQuery;
 import com.zhs.basket.req.RegistrationAuditApproveReq;
 import com.zhs.basket.req.RegistrationAuditRejectReq;
+import com.zhs.basket.service.IBasketParticipationGenerationService;
 import com.zhs.basket.service.IBasketRegistrationAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.BasketDisciplineRestrictionSupport;
 import com.zhs.basket.vo.*;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
@@ -35,7 +37,9 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
     @Autowired private BasketTournamentSeasonMapper seasonMapper;
     @Autowired private BasketPlayerProfileMapper profileMapper;
     @Autowired private BasketDisciplineRecordMapper disciplineRecordMapper;
+    @Autowired private BasketDisciplineRestrictionSupport disciplineRestrictionSupport;
     @Autowired private BasketAdminMessageService messageService;
+    @Autowired private IBasketParticipationGenerationService participationGenerationService;
 
     @Override
     public List<RegistrationAuditListVo> selectList(RegistrationAuditQuery query) {
@@ -53,6 +57,7 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
         RegistrationAuditDetailVo vo = new RegistrationAuditDetailVo();
         BeanUtils.copyBeanProp(vo, reg);
         vo.setRegistrationStatusName(RegistrationStatusEnum.fromCode(reg.getRegistrationStatus()).getDescription());
+        vo.setPlayers(registrationPlayerMapper.selectDetailByRegistrationId(id));
         return vo;
     }
 
@@ -65,9 +70,12 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
         List<Long> memberIds = players.stream().map(BasketTournamentRegistrationPlayer::getMemberId).filter(Objects::nonNull).collect(Collectors.toList());
         Set<Long> disciplined = disciplineRecordMapper.selectActiveBySeasonAndMembers(reg.getSeasonId(), memberIds, now)
                 .stream().map(BasketDisciplineRecord::getMemberId).collect(Collectors.toSet());
+        String teamRestriction = reg.getTeamId() != null
+                ? disciplineRestrictionSupport.checkRegistration("PERMANENT_TEAM", reg.getTeamId(), reg.getSeasonId())
+                : null;
         List<RegistrationPlayerVo> result = new ArrayList<>();
         for (BasketTournamentRegistrationPlayer player : players) {
-            String reason = validatePlayer(player, disciplined);
+            String reason = validatePlayer(player, disciplined, reg.getSeasonId(), teamRestriction);
             int status = reason == null ? PASS : FAIL;
             registrationPlayerMapper.updateValidationStatus(player.getId(), status, reason);
             RegistrationPlayerVo vo = new RegistrationPlayerVo();
@@ -113,6 +121,7 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
                 RegistrationStatusEnum.APPROVED.getCode(), SecurityUtils.getUserId(), req.getAuditRemark(), new Date(), SecurityUtils.getUserId());
         assertSingleRow(rows, "审核通过失败");
         writeAudit(reg, "APPROVE", reg.getRegistrationStatus(), RegistrationStatusEnum.APPROVED.getCode(), req.getAuditRemark());
+        participationGenerationService.generateFromTeamRegistration(id, SecurityUtils.getUserId(), req.getAuditRemark());
         messageService.sendSiteMessage(reg.getCaptainMemberId(), SecurityUtils.getUserId(), "REGISTRATION", id,
                 "报名审核已通过", "您的赛事报名已通过审核。");
     }
@@ -140,9 +149,24 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
         }).collect(Collectors.toList());
     }
 
-    private String validatePlayer(BasketTournamentRegistrationPlayer player, Set<Long> disciplined) {
+    private String validatePlayer(BasketTournamentRegistrationPlayer player, Set<Long> disciplined, Long seasonId, String teamRestriction) {
+        if (teamRestriction != null) {
+            return teamRestriction;
+        }
         if (player.getMemberId() != null && disciplined.contains(player.getMemberId())) {
             return "球员处于禁赛期";
+        }
+        if (player.getPlayerId() != null) {
+            String playerRestriction = disciplineRestrictionSupport.checkRegistration("PLAYER", player.getPlayerId(), seasonId);
+            if (playerRestriction != null) {
+                return playerRestriction;
+            }
+        }
+        if (player.getMemberId() != null) {
+            String accountRestriction = disciplineRestrictionSupport.checkRegistration("ACCOUNT", player.getMemberId(), seasonId);
+            if (accountRestriction != null) {
+                return accountRestriction;
+            }
         }
         BasketPlayerProfile profile = profileMapper.selectById(player.getPlayerId());
         if (profile == null || !Objects.equals(profile.getCertificationStatus(), PlayerCertStatusEnum.APPROVED.getCode())) {

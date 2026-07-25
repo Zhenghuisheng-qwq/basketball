@@ -16,4 +16,7 @@ public interface BasketPlayerCertApplicationMapper {
             @Param("toStatus") Integer toStatus, @Param("currentAuditorId") Long currentAuditorId,
             @Param("reviewRemark") String reviewRemark, @Param("reviewedTime") Date reviewedTime,
             @Param("auditorId") Long auditorId);
+    int updatePlayerIdAndNormalized(@Param("id") Long id, @Param("playerId") Long playerId,
+            @Param("normalizedGameAccount") String normalizedGameAccount);
+    List<BasketPlayerCertApplication> selectByMemberId(@Param("memberId") Long memberId);
 }

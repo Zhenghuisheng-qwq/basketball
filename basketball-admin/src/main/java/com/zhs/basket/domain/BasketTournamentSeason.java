@@ -18,6 +18,15 @@ public class BasketTournamentSeason {
     private Integer maxTeamCount;
     private Integer minRosterCount;
     private Integer maxRosterCount;
+    private Integer allowTeamRegistration;
+    private Integer allowOpenRegistration;
+    private Integer transferEnabled;
+    private Date transferStartTime;
+    private Date transferEndTime;
+    private Integer freeAgentEnabled;
+    private Date freeAgentStartTime;
+    private Date freeAgentEndTime;
+    private Integer maxFreeAgentAddPerTeam;
     private Integer seasonStatus;
     private Long currentStageId;
     private Long championTeamId;

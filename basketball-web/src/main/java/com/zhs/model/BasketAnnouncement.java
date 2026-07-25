@@ -41,6 +41,14 @@ public class BasketAnnouncement implements Serializable {
     @ApiModelProperty(value = "公告分类")
     private String categoryCode;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "关联赛事主键")
+    private Long tournamentId;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "关联赛季主键")
+    private Long seasonId;
+
     @ApiModelProperty(value = "公告标题")
     private String title;
 
@@ -80,12 +88,22 @@ public class BasketAnnouncement implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date publishTime;
 
+    @ApiModelProperty(value = "定时发布时间")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date scheduledPublishTime;
 
     @ApiModelProperty(value = "下线时间")
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date offlineTime;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "被替代的新公告主键")
+    private Long supersededBy;
+
+    @ApiModelProperty(value = "规则版本号")
+    private String ruleVersion;
 
     @JsonSerialize(using = ToStringSerializer.class)
     @ApiModelProperty(value = "浏览次数")

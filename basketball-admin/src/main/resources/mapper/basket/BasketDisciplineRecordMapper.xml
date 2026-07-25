@@ -4,26 +4,156 @@
     <resultMap type="com.zhs.basket.domain.BasketDisciplineRecord" id="BasketDisciplineRecordResult">
         <id property="id" column="id" />
         <result property="recordNo" column="record_no" />
+        <result property="targetType" column="target_type" />
         <result property="seasonId" column="season_id" />
         <result property="matchId" column="match_id" />
         <result property="teamId" column="team_id" />
+        <result property="eventTeamId" column="event_team_id" />
         <result property="playerId" column="player_id" />
         <result property="memberId" column="member_id" />
         <result property="disciplineType" column="discipline_type" />
+        <result property="penaltyCode" column="penalty_code" />
         <result property="title" column="title" />
+        <result property="reasonText" column="reason_text" />
+        <result property="penaltyContent" column="penalty_content" />
+        <result property="matchSuspensionCount" column="match_suspension_count" />
+        <result property="matchSuspensionRemaining" column="match_suspension_remaining" />
+        <result property="pointDeduction" column="point_deduction" />
         <result property="disciplineStatus" column="discipline_status" />
+        <result property="recordStatus" column="record_status" />
         <result property="effectiveStartTime" column="effective_start_time" />
         <result property="effectiveEndTime" column="effective_end_time" />
+        <result property="decisionBy" column="decision_by" />
+        <result property="decisionTime" column="decision_time" />
+        <result property="approvedBy" column="approved_by" />
+        <result property="approvedTime" column="approved_time" />
+        <result property="revokedBy" column="revoked_by" />
+        <result property="revokedTime" column="revoked_time" />
+        <result property="revokeReason" column="revoke_reason" />
+        <result property="sourceType" column="source_type" />
+        <result property="idempotencyKey" column="idempotency_key" />
+        <result property="announcementId" column="announcement_id" />
         <result property="createTime" column="create_time" />
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
     </resultMap>
+
+    <sql id="Base_Column_List">
+        id, record_no, target_type, season_id, match_id, team_id, event_team_id, player_id, member_id,
+        discipline_type, penalty_code, title, reason_text, penalty_content, match_suspension_count,
+        match_suspension_remaining, point_deduction, discipline_status, record_status, effective_start_time,
+        effective_end_time, decision_by, decision_time, approved_by, approved_time, revoked_by, revoked_time,
+        revoke_reason, source_type, idempotency_key, announcement_id, create_time, update_time, is_delete
+    </sql>
+
     <select id="selectActiveBySeasonAndMembers" resultMap="BasketDisciplineRecordResult">
-        select id, record_no, season_id, match_id, team_id, player_id, member_id, discipline_type, title, discipline_status, effective_start_time, effective_end_time, create_time, update_time, is_delete from basket_discipline_record
-        where season_id = #{seasonId} and discipline_status = 1 and is_delete = 0
+        select <include refid="Base_Column_List" /> from basket_discipline_record
+        where season_id = #{seasonId} and discipline_status = 1 and record_status = 'ACTIVE' and is_delete = 0
           and effective_start_time &lt;= #{now}
           and (effective_end_time is null or effective_end_time &gt;= #{now})
           and member_id in
         <foreach collection="memberIds" item="mid" open="(" separator="," close=")">#{mid}</foreach>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_discipline_record
+        (record_no, target_type, season_id, match_id, team_id, event_team_id, player_id, member_id,
+         discipline_type, penalty_code, title, reason_text, penalty_content, match_suspension_count,
+         match_suspension_remaining, point_deduction, discipline_status, record_status, effective_start_time,
+         effective_end_time, decision_by, decision_time, source_type, idempotency_key, create_time, update_time, is_delete)
+        values
+        (#{recordNo}, #{targetType}, #{seasonId}, #{matchId}, #{teamId}, #{eventTeamId}, #{playerId}, #{memberId},
+         #{disciplineType}, #{penaltyCode}, #{title}, #{reasonText}, #{penaltyContent}, #{matchSuspensionCount},
+         #{matchSuspensionRemaining}, #{pointDeduction}, #{disciplineStatus}, #{recordStatus}, #{effectiveStartTime},
+         #{effectiveEndTime}, #{decisionBy}, #{decisionTime}, #{sourceType}, #{idempotencyKey}, #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+
+    <select id="selectById" resultMap="BasketDisciplineRecordResult">
+        select <include refid="Base_Column_List" /> from basket_discipline_record
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectDetailById" resultType="com.zhs.basket.vo.DisciplineDetailVo">
+        select d.id, d.record_no as recordNo, d.target_type as targetType, d.season_id as seasonId,
+               s.season_name as seasonName, d.match_id as matchId, d.team_id as teamId, t.team_name as teamName,
+               d.event_team_id as eventTeamId, d.player_id as playerId, p.player_no as playerNo, d.member_id as memberId,
+               d.discipline_type as disciplineType, d.penalty_code as penaltyCode, d.title, d.reason_text as reasonText,
+               d.penalty_content as penaltyContent, d.match_suspension_count as matchSuspensionCount,
+               d.match_suspension_remaining as matchSuspensionRemaining, d.point_deduction as pointDeduction,
+               d.discipline_status as disciplineStatus, d.record_status as recordStatus,
+               d.effective_start_time as effectiveStartTime, d.effective_end_time as effectiveEndTime,
+               d.decision_by as decisionBy, d.decision_time as decisionTime, d.approved_by as approvedBy,
+               d.approved_time as approvedTime, d.revoked_by as revokedBy, d.revoked_time as revokedTime,
+               d.revoke_reason as revokeReason, d.source_type as sourceType, d.idempotency_key as idempotencyKey,
+               d.announcement_id as announcementId, d.create_time as createTime, d.update_time as updateTime, d.is_delete as isDelete
+        from basket_discipline_record d
+        left join basket_tournament_season s on s.id = d.season_id and s.is_delete = 0
+        left join basket_team t on t.id = d.team_id and t.is_delete = 0
+        left join basket_player_profile p on p.id = d.player_id and p.is_delete = 0
+        where d.id = #{id} and d.is_delete = 0
+    </select>
+
+    <select id="selectList" resultType="com.zhs.basket.vo.DisciplineListVo">
+        select d.id, d.record_no as recordNo, d.target_type as targetType, d.season_id as seasonId,
+               s.season_name as seasonName, d.team_id as teamId, t.team_name as teamName,
+               d.player_id as playerId, p.player_no as playerNo, d.member_id as memberId,
+               d.discipline_type as disciplineType, d.penalty_code as penaltyCode, d.title,
+               d.discipline_status as disciplineStatus, d.record_status as recordStatus,
+               d.match_suspension_remaining as matchSuspensionRemaining, d.point_deduction as pointDeduction,
+               d.effective_start_time as effectiveStartTime, d.effective_end_time as effectiveEndTime,
+               d.decision_time as decisionTime, d.create_time as createTime
+        from basket_discipline_record d
+        left join basket_tournament_season s on s.id = d.season_id and s.is_delete = 0
+        left join basket_team t on t.id = d.team_id and t.is_delete = 0
+        left join basket_player_profile p on p.id = d.player_id and p.is_delete = 0
+        where d.is_delete = 0
+        <if test="seasonId != null">and d.season_id = #{seasonId}</if>
+        <if test="tournamentId != null">and s.tournament_id = #{tournamentId}</if>
+        <if test="teamId != null">and d.team_id = #{teamId}</if>
+        <if test="playerId != null">and d.player_id = #{playerId}</if>
+        <if test="memberId != null">and d.member_id = #{memberId}</if>
+        <if test="targetType != null and targetType != ''">and d.target_type = #{targetType}</if>
+        <if test="recordStatus != null and recordStatus != ''">and d.record_status = #{recordStatus}</if>
+        <if test="penaltyCode != null and penaltyCode != ''">and d.penalty_code = #{penaltyCode}</if>
+        <if test="keyword != null and keyword != ''">
+            and (d.record_no like concat('%', #{keyword}, '%') or d.title like concat('%', #{keyword}, '%'))
+        </if>
+        order by d.create_time desc, d.id desc
+    </select>
+
+    <select id="countByIdempotencyKey" resultType="int">
+        select count(*) from basket_discipline_record
+        where idempotency_key = #{idempotencyKey} and is_delete = 0
+    </select>
+
+    <update id="updateRecordStatusIfMatch">
+        update basket_discipline_record
+        set record_status = #{toStatus},
+            discipline_status = #{disciplineStatus},
+            update_time = now()
+        <if test='toStatus != null and toStatus.equals("ACTIVE")'>
+            , approved_by = #{operatorId}, approved_time = now()
+        </if>
+        <if test='toStatus != null and toStatus.equals("REVOKED")'>
+            , revoked_by = #{operatorId}, revoked_time = now(), revoke_reason = #{revokeReason}
+        </if>
+        where id = #{id} and record_status = #{fromStatus} and is_delete = 0
+    </update>
+
+    <update id="updateMatchSuspensionRemaining">
+        update basket_discipline_record
+        set match_suspension_remaining = #{remaining}, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <select id="selectActiveMatchSuspension" resultMap="BasketDisciplineRecordResult">
+        select <include refid="Base_Column_List" /> from basket_discipline_record
+        where season_id = #{seasonId} and member_id = #{memberId}
+          and record_status = 'ACTIVE' and discipline_status = 1 and is_delete = 0
+          and match_suspension_remaining &gt; 0
+          and effective_start_time &lt;= #{now}
+          and (effective_end_time is null or effective_end_time &gt;= #{now})
+        order by decision_time asc, id asc
+        limit 1
     </select>
 </mapper>

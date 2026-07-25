@@ -26,6 +26,11 @@ public class BasketMatch {
     private Long walkoverTeamId;
     private String cancelReason;
     private Integer dataStatus;
+    private Integer resultStatus;
+    private Integer scoreConfirmed;
+    private Integer dataVersion;
+    private Long originMatchId;
+    private Integer settlementLocked;
     private Integer publicStatus;
     private Integer sortNo;
     private Date createTime;

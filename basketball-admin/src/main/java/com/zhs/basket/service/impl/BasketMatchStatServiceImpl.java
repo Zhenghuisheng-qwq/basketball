@@ -1,6 +1,7 @@
 package com.zhs.basket.service.impl;
 
 import com.zhs.basket.domain.BasketMatch;
+import com.zhs.basket.domain.BasketMatchOfficialResult;
 import com.zhs.basket.domain.BasketMatchPlayerStat;
 import com.zhs.basket.domain.BasketMatchTeamStat;
 import com.zhs.basket.domain.BasketStatChangeRecord;
@@ -16,7 +17,9 @@ import com.zhs.basket.req.MatchPlayerStatSaveReq;
 import com.zhs.basket.req.MatchReopenReq;
 import com.zhs.basket.req.MatchTeamStatSaveReq;
 import com.zhs.basket.service.IBasketDataSettlementService;
+import com.zhs.basket.service.IBasketMatchOfficialResultService;
 import com.zhs.basket.service.IBasketMatchStatService;
+import com.zhs.basket.service.IBasketMatchStatSyncService;
 import com.zhs.basket.service.IBasketMatchValidationService;
 import com.zhs.basket.support.BasketMatchMessageHelper;
 import com.zhs.basket.vo.MatchAuditLogVo;
@@ -58,6 +61,8 @@ public class BasketMatchStatServiceImpl implements IBasketMatchStatService {
     @Autowired private BasketMatchStatusLogMapper statusLogMapper;
     @Autowired private BasketStatChangeRecordMapper statChangeRecordMapper;
     @Autowired private BasketMatchMessageHelper messageHelper;
+    @Autowired private IBasketMatchOfficialResultService officialResultService;
+    @Autowired private IBasketMatchStatSyncService statSyncService;
 
     @Override
     public List<MatchTeamStatVo> selectTeamStats(Long matchId) {
@@ -160,6 +165,9 @@ public class BasketMatchStatServiceImpl implements IBasketMatchStatService {
         if (match.getDataStatus() == null || !MatchDataStatusEnum.fromCode(match.getDataStatus()).canConfirm()) {
             throw new ServiceException("当前数据状态不可确认");
         }
+        if (match.getScoreConfirmed() == null || match.getScoreConfirmed() != 1) {
+            throw new ServiceException("请先确认比分后再确认比赛结果");
+        }
         List<MatchTeamStatVo> teamStats = teamStatMapper.selectVoByMatchId(matchId);
         List<MatchPlayerStatVo> playerStats = playerStatMapper.selectVoByMatchId(matchId);
         validateTeamStatsAgainstMatch(match, teamStats);
@@ -183,10 +191,34 @@ public class BasketMatchStatServiceImpl implements IBasketMatchStatService {
         match.setDataStatus(MatchDataStatusEnum.CONFIRMED.getCode());
         validationService.writeStatusLog(match, match.getMatchStatus(), MatchChangeTypeEnum.RESULT_CONFIRM, "确认比赛结果");
         writeStatSummary(match, MatchDataStatusEnum.SUBMITTED.getCode(), MatchDataStatusEnum.CONFIRMED.getCode(), "确认比赛结果");
-        // 同一事务内同步重算；失败则确认回滚
-        dataSettlementService.rebuildMatch(matchId);
+
+        int dataVersion = match.getDataVersion() != null ? match.getDataVersion() : 1;
+        matchMapper.updateResultMeta(matchId, 1, dataVersion, 1);
+        BasketMatchOfficialResult officialResult = officialResultService.publishFromMatch(match, operatorId);
+        if (statSyncService.tryRecordSync(officialResult, "MATCH_CONFIRM")) {
+            dataSettlementService.rebuildMatch(matchId);
+        }
         messageHelper.notifyCaptains(match, operatorId, "比赛结果已确认",
                 "比赛 " + match.getMatchNo() + " 结果已确认。");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void rejectResult(Long matchId, MatchReopenReq req) {
+        if (StringUtils.isEmpty(req.getReason())) {
+            throw new ServiceException("驳回原因不能为空");
+        }
+        BasketMatch match = validationService.requireMatch(matchId);
+        if (match.getDataStatus() == null || match.getDataStatus() != MatchDataStatusEnum.SUBMITTED.getCode()) {
+            throw new ServiceException("仅已提交数据可驳回");
+        }
+        if (matchMapper.updateDataStatus(matchId, Collections.singletonList(MatchDataStatusEnum.SUBMITTED.getCode()),
+                MatchDataStatusEnum.REJECTED.getCode()) != 1) {
+            throw new ServiceException("驳回失败，请检查比赛状态");
+        }
+        match.setDataStatus(MatchDataStatusEnum.REJECTED.getCode());
+        validationService.writeStatusLog(match, match.getMatchStatus(), MatchChangeTypeEnum.REOPEN, "驳回比赛结果：" + req.getReason());
+        writeStatSummary(match, MatchDataStatusEnum.SUBMITTED.getCode(), MatchDataStatusEnum.REJECTED.getCode(), req.getReason());
     }
 
     @Override

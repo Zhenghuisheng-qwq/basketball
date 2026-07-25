@@ -20,6 +20,7 @@ public class BasketHonorRecord {
     private Long coverFileId;
     private String sourceType;
     private Long sourceId;
+    private Long generationBatchId;
     private Integer displayStatus;
     private Integer displayOrder;
     private String remark;

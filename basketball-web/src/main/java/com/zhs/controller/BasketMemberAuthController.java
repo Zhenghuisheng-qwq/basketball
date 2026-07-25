@@ -6,6 +6,7 @@ import com.zhs.common.UserContext;
 import com.zhs.request.member.EmailCodeSendReq;
 import com.zhs.request.member.MemberCodeLoginReq;
 import com.zhs.request.member.MemberPasswordLoginReq;
+import com.zhs.request.member.MemberPasswordResetReq;
 import com.zhs.request.member.MemberRegisterReq;
 import com.zhs.response.member.EmailCodeSendResp;
 import com.zhs.response.member.MemberLoginResp;
@@ -61,6 +62,14 @@ public class BasketMemberAuthController {
     @PostMapping("/login/code")
     public R<MemberLoginResp> loginByCode(@RequestBody MemberCodeLoginReq req, HttpServletRequest request) {
         return R.ok(basketMemberAuthService.loginByCode(req, resolveClientIp(request), request.getHeader("User-Agent")), "登录成功");
+    }
+
+    @NoLoginRequest
+    @ApiOperation("找回密码")
+    @PostMapping("/password/reset")
+    public R<Void> resetPassword(@RequestBody MemberPasswordResetReq req, HttpServletRequest request) {
+        basketMemberAuthService.resetPassword(req, resolveClientIp(request));
+        return R.ok(null, "密码已重置");
     }
 
     @ApiOperation("当前登录会话")

@@ -217,6 +217,207 @@ export interface TeamAuditRejectReq {
   auditRemark?: string
 }
 
+export interface TeamAuditRecord {
+  id?: number
+  auditAction?: string
+  beforeStatus?: number
+  afterStatus?: number
+  auditorName?: string
+  auditRemark?: string
+  auditTime?: string
+}
+
+/** 游戏平台 */
+export const GAME_PLATFORM_OPTIONS = [
+  { value: 'PC', label: 'PC' },
+  { value: 'PS5', label: 'PS5' },
+  { value: 'XBOX', label: 'XBOX' },
+  { value: 'MOBILE', label: '移动端' }
+]
+
+/** 平台账号状态 */
+export const PLATFORM_ACCOUNT_STATUS_OPTIONS = [
+  { value: 0, label: '待审核' },
+  { value: 1, label: '生效' },
+  { value: 2, label: '失效' },
+  { value: 3, label: '驳回' }
+]
+
+/** 平台变更类型 */
+export const PLATFORM_CHANGE_TYPE_OPTIONS = [
+  { value: 'ADD_PLATFORM', label: '新增平台' },
+  { value: 'CHANGE_GAME_ID', label: '变更游戏ID' }
+]
+
+/** 平台变更状态 */
+export const PLATFORM_CHANGE_STATUS_OPTIONS = [
+  { value: 0, label: '待审核' },
+  { value: 1, label: '已通过' },
+  { value: 2, label: '已驳回' },
+  { value: 3, label: '已撤回' }
+]
+
+export interface AccountPlayerQuery extends PageDomain, BaseEntity {
+  email?: string
+  nickname?: string
+  playerNo?: string
+  gameId?: string
+  gameTerminal?: string
+  certificationStatus?: number
+  playerStatus?: number
+}
+
+export interface AccountPlayerListItem {
+  memberId: number
+  accountNo?: string
+  email?: string
+  nickname?: string
+  playerId?: number
+  playerNo?: string
+  gameTerminal?: string
+  gameAccount?: string
+  certificationStatus?: number
+  certificationStatusName?: string
+  playerStatus?: number
+  accountStatus?: number
+  certifiedTime?: string
+  createTime?: string
+}
+
+export interface AccountPlayerAccountSection {
+  memberId?: number
+  accountNo?: string
+  username?: string
+  email?: string
+  accountStatus?: number
+  createTime?: string
+  updateTime?: string
+}
+
+export interface AccountPlayerProfileSection {
+  playerId?: number
+  memberId?: number
+  nickname?: string
+  gender?: number
+  profileStatus?: number
+  playerNo?: string
+  gameTerminal?: string
+  gameAccount?: string
+  gameNickname?: string
+  positionCode?: string
+  certificationStatus?: number
+  certificationStatusName?: string
+  playerStatus?: number
+  certifiedTime?: string
+  currentTeamId?: number
+}
+
+export interface AccountPlayerPlatformAccount {
+  id?: number
+  platform?: string
+  displayGameId?: string
+  normalizedGameId?: string
+  accountStatus?: number
+  accountStatusName?: string
+  isPrimary?: number
+  approvedTime?: string
+  effectiveTime?: string
+  invalidTime?: string
+}
+
+export interface AccountPlayerCertHistory {
+  applicationId?: number
+  applicationNo?: string
+  gameTerminal?: string
+  gameAccount?: string
+  applicationStatus?: number
+  applicationStatusName?: string
+  submittedTime?: string
+  reviewedTime?: string
+  reviewRemark?: string
+}
+
+export interface AccountPlayerCaptainQual {
+  qualificationId?: number
+  qualificationNo?: string
+  qualificationStatus?: number
+  qualificationStatusName?: string
+  isCurrent?: number
+  grantedTime?: string
+  validFrom?: string
+  validTo?: string
+  grantReason?: string
+}
+
+export interface AccountPlayerTeamSummary {
+  teamId?: number
+  teamNo?: string
+  teamName?: string
+  roleType?: string
+  membershipStatus?: number
+  isCurrent?: number
+  joinTime?: string
+  auditStatus?: number
+  auditStatusName?: string
+}
+
+export interface AccountPlayerFullDetail {
+  account?: AccountPlayerAccountSection
+  profile?: AccountPlayerProfileSection
+  platformAccounts?: AccountPlayerPlatformAccount[]
+  certHistory?: AccountPlayerCertHistory[]
+  captainQual?: AccountPlayerCaptainQual
+  teamSummary?: AccountPlayerTeamSummary[]
+}
+
+export interface PlayerPlatformChangeQuery extends PageDomain, BaseEntity {
+  requestNo?: string
+  nickname?: string
+  email?: string
+  playerNo?: string
+  platform?: string
+  changeType?: string
+  requestStatus?: number
+  memberId?: number
+}
+
+export interface PlayerPlatformChangeListItem {
+  id: number
+  requestNo?: string
+  playerId?: number
+  memberId?: number
+  nickname?: string
+  email?: string
+  playerNo?: string
+  changeType?: string
+  changeTypeName?: string
+  platform?: string
+  oldDisplayGameId?: string
+  newDisplayGameId?: string
+  requestStatus?: number
+  requestStatusName?: string
+  submitTime?: string
+  reviewedTime?: string
+}
+
+export interface PlayerPlatformChangeDetail extends PlayerPlatformChangeListItem {
+  platformAccountId?: number
+  newNormalizedGameId?: string
+  proofFileId?: number
+  reviewerId?: number
+  reviewRemark?: string
+  resultPlatformAccountId?: number
+}
+
+export interface PlayerPlatformChangeApproveReq {
+  auditRemark?: string
+}
+
+export interface PlayerPlatformChangeRejectReq {
+  rejectReason: string
+  auditRemark?: string
+}
+
 export interface TournamentQuery extends PageDomain, BaseEntity {
   tournamentNo?: string
   tournamentName?: string
@@ -350,15 +551,19 @@ export interface RegistrationAuditDetail extends RegistrationAuditListItem {
   contactMobile?: string
   remark?: string
   auditTime?: string
+  players?: RegistrationPlayer[]
 }
 
 export interface RegistrationPlayer {
   id?: number
   playerId?: number
   memberId?: number
+  playerNickname?: string
+  playerNo?: string
   rosterRole?: string
   jerseyNo?: string
   isCaptain?: number
+  isStarting?: number
   validationStatus?: number
   rejectReason?: string
 }
@@ -1197,6 +1402,44 @@ export type SeasonSettlementSummaryListResult = AjaxResult<SeasonSettlementSumma
 export type SettlementValidationResultResult = AjaxResult<SettlementValidationResult>
 export type SettlementRebuildResultResult = AjaxResult<SettlementRebuildResult>
 
+export interface HonorGenerationPreviewItem {
+  honorCode?: string
+  honorName?: string
+  honorCategoryId?: number
+  playerId?: number
+  playerName?: string
+  teamId?: number
+  teamName?: string
+  statValue?: number
+  rankNo?: number
+  skipReason?: string
+  selected?: boolean
+}
+
+export interface HonorGenerationBatch {
+  id?: number
+  batchNo?: string
+  seasonId?: number
+  seasonName?: string
+  settlementBatchId?: number
+  batchStatus?: string
+  honorCount?: number
+  operatorId?: number
+  errorMessage?: string
+  currentFlag?: number
+  createTime?: string
+  updateTime?: string
+}
+
+export interface HonorGenerationPreview {
+  seasonId?: number
+  seasonName?: string
+  tournamentId?: number
+  tournamentName?: string
+  currentBatch?: HonorGenerationBatch
+  items?: HonorGenerationPreviewItem[]
+}
+
 /** 荣誉展示状态 */
 export const HONOR_DISPLAY_STATUS_OPTIONS = [
   { value: 0, label: '草稿' },
@@ -1396,6 +1639,7 @@ export interface HonorRecordListItem {
   coverUrl?: string
   sourceType?: string
   sourceId?: number
+  generationBatchId?: number
   displayStatus?: number
   displayStatusName?: string
   displayOrder?: number
@@ -1492,6 +1736,10 @@ export interface AnnouncementListItem {
   announcementNo?: string
   categoryCode?: string
   categoryName?: string
+  tournamentId?: number
+  tournamentName?: string
+  seasonId?: number
+  seasonName?: string
   title?: string
   summary?: string
   coverFileId?: number
@@ -1504,7 +1752,10 @@ export interface AnnouncementListItem {
   isTop?: number
   isImportant?: number
   publishTime?: string
+  scheduledPublishTime?: string
   offlineTime?: string
+  supersededBy?: number
+  ruleVersion?: string
   viewCount?: number
   createTime?: string
   updateTime?: string
@@ -1522,6 +1773,10 @@ export interface AnnouncementAddReq {
   contentText?: string
   publicScope?: string
   isImportant?: number
+  tournamentId?: number
+  seasonId?: number
+  ruleVersion?: string
+  scheduledPublishTime?: string
 }
 
 export interface AnnouncementEditReq {
@@ -1532,6 +1787,21 @@ export interface AnnouncementEditReq {
   contentText?: string
   publicScope?: string
   isImportant?: number
+  tournamentId?: number
+  seasonId?: number
+  ruleVersion?: string
+  scheduledPublishTime?: string
+}
+
+export interface AnnouncementRuleSupersedeReq {
+  oldAnnouncementId: number
+  seasonId?: number
+  tournamentId?: number
+  ruleVersion?: string
+}
+
+export interface AnnouncementScheduleReq {
+  scheduledPublishTime: string
 }
 
 export interface HomeBannerQuery extends PageDomain {
@@ -1628,4 +1898,269 @@ export interface PartnerEditReq {
   cooperationEndDate?: string
   sortNo?: number
   remark?: string
+}
+
+/** Open报名状态（同报名状态） */
+export const OPEN_REGISTRATION_STATUS_OPTIONS = REGISTRATION_STATUS_OPTIONS
+
+/** 参赛状态 */
+export const PARTICIPATION_STATUS_OPTIONS = [
+  { value: 1, label: '参赛中' },
+  { value: 2, label: '已退赛' },
+  { value: 3, label: '取消资格' },
+  { value: 4, label: '已完赛' }
+]
+
+/** 阵容锁定状态 */
+export const ROSTER_LOCK_STATUS_OPTIONS = [
+  { value: 0, label: '未锁定' },
+  { value: 1, label: '已锁定' }
+]
+
+/** 赛季阵容状态 */
+export const SEASON_ROSTER_STATUS_OPTIONS = [
+  { value: 0, label: '未生效' },
+  { value: 1, label: '生效中' },
+  { value: 2, label: '已转出' },
+  { value: 3, label: '已移除' }
+]
+
+/** 阵容变更类型 */
+export const ROSTER_CHANGE_TYPE_OPTIONS = [
+  { value: 'TRANSFER', label: '转会' },
+  { value: 'FREE_AGENT_ADD', label: '自由球员补员' },
+  { value: 'CAPTAIN_TRANSFER', label: '队长变更' }
+]
+
+/** 阵容变更状态 */
+export const ROSTER_CHANGE_STATUS_OPTIONS = [
+  { value: 0, label: '待审核' },
+  { value: 1, label: '已通过' },
+  { value: 2, label: '已驳回' },
+  { value: 3, label: '已撤回' }
+]
+
+/** 阵容操作类型 */
+export const ROSTER_OPERATION_TYPE_OPTIONS = [
+  { value: 'FORCE_REMOVE', label: '强制移除' },
+  { value: 'UPDATE_ROLE', label: '更新角色' }
+]
+
+export interface OpenRegistrationAuditQuery extends PageDomain, BaseEntity {
+  seasonId?: number
+  registrationNo?: string
+  registrationStatus?: number
+}
+
+export interface OpenRegistrationAuditListItem {
+  id: number
+  registrationNo?: string
+  seasonId?: number
+  seasonName?: string
+  memberId?: number
+  playerId?: number
+  playerNickname?: string
+  platform?: string
+  displayGameId?: string
+  registrationStatus?: number
+  registrationStatusName?: string
+  submittedTime?: string
+  auditTime?: string
+}
+
+export interface OpenRegistrationAuditDetail extends OpenRegistrationAuditListItem {
+  playerNo?: string
+  normalizedGameId?: string
+  positionCode?: string
+  remark?: string
+  resultRosterId?: number
+}
+
+export interface OpenRegistrationAuditRecord {
+  id?: number
+  auditAction?: string
+  beforeStatus?: number
+  afterStatus?: number
+  auditorName?: string
+  auditRemark?: string
+  auditTime?: string
+}
+
+export interface OpenRegistrationAuditApproveReq {
+  auditRemark?: string
+}
+
+export interface OpenRegistrationAuditRejectReq {
+  rejectReason: string
+  auditRemark?: string
+}
+
+export interface EventTeamQuery extends PageDomain, BaseEntity {
+  seasonId?: number
+  eventTeamNo?: string
+  teamName?: string
+  participationStatus?: number
+  rosterLockStatus?: number
+}
+
+export interface EventTeamListItem {
+  id: number
+  seasonId?: number
+  seasonName?: string
+  teamId?: number
+  teamNo?: string
+  registrationId?: number
+  eventTeamNo?: string
+  teamNameSnapshot?: string
+  captainPlayerId?: number
+  participationStatus?: number
+  participationStatusName?: string
+  rosterLockStatus?: number
+  rosterLockStatusName?: string
+  approvedTime?: string
+}
+
+export interface EventTeamDetail extends EventTeamListItem {
+  shortNameSnapshot?: string
+  descriptionSnapshot?: string
+  gameTerminal?: string
+  registrationSource?: string
+  displayName?: string
+  logoFileId?: number
+  rosterLockedTime?: string
+}
+
+export interface EventTeamParticipationStatusReq {
+  participationStatus: number
+  reason?: string
+}
+
+export interface SeasonRosterQuery extends PageDomain, BaseEntity {
+  seasonId?: number
+  eventTeamId?: number
+  playerId?: number
+  rosterStatus?: number
+}
+
+export interface SeasonRosterListItem {
+  id: number
+  rosterNo?: string
+  seasonId?: number
+  eventTeamId?: number
+  eventTeamNo?: string
+  eventTeamName?: string
+  teamId?: number
+  playerId?: number
+  memberId?: number
+  playerNicknameSnapshot?: string
+  platformSnapshot?: string
+  gameIdDisplaySnapshot?: string
+  rosterRole?: string
+  isCaptain?: number
+  isStarting?: number
+  isSubstitute?: number
+  sourceType?: string
+  sourceTypeName?: string
+  rosterStatus?: number
+  rosterStatusName?: string
+  lockStatus?: number
+  activeSlot?: string
+  effectiveTime?: string
+  invalidTime?: string
+}
+
+export interface SeasonRosterChangeRecord {
+  id?: number
+  seasonId?: number
+  changeRequestId?: number
+  changeType?: string
+  changeTypeName?: string
+  playerId?: number
+  sourceEventTeamId?: number
+  targetEventTeamId?: number
+  beforeSnapshot?: string
+  afterSnapshot?: string
+  operatorName?: string
+  operateReason?: string
+  effectiveTime?: string
+  createTime?: string
+}
+
+export interface RosterChangeAuditQuery extends PageDomain, BaseEntity {
+  seasonId?: number
+  changeType?: string
+  requestStatus?: number
+}
+
+export interface RosterChangeAuditListItem {
+  id: number
+  requestNo?: string
+  seasonId?: number
+  seasonName?: string
+  changeType?: string
+  changeTypeName?: string
+  requestStatus?: number
+  requestStatusName?: string
+  playerId?: number
+  playerNickname?: string
+  sourceEventTeamId?: number
+  targetEventTeamId?: number
+  submitTime?: string
+  reviewedTime?: string
+}
+
+export interface RosterChangeAuditDetail extends RosterChangeAuditListItem {
+  applicantMemberId?: number
+  sourceRosterId?: number
+  newCaptainPlayerId?: number
+  targetRosterRole?: string
+  targetIsStarting?: number
+  targetIsSubstitute?: number
+  applyReason?: string
+  rejectReason?: string
+  reviewRemark?: string
+  resultRosterId?: number
+}
+
+export interface RosterChangeAuditApproveReq {
+  auditRemark?: string
+}
+
+export interface RosterChangeAuditRejectReq {
+  rejectReason: string
+  auditRemark?: string
+}
+
+export interface RosterOperationLogQuery extends PageDomain, BaseEntity {
+  seasonId?: number
+  eventTeamId?: number
+  operationType?: string
+}
+
+export interface RosterOperationLogItem {
+  id: number
+  seasonId?: number
+  eventTeamId?: number
+  operationType?: string
+  targetRosterId?: number
+  targetPlayerId?: number
+  beforeValue?: string
+  afterValue?: string
+  operateReason?: string
+  effectiveTime?: string
+  operatorName?: string
+  createTime?: string
+}
+
+export interface RosterOperationForceRemoveReq {
+  rosterId: number
+  operateReason: string
+}
+
+export interface RosterOperationUpdateRoleReq {
+  rosterId: number
+  rosterRole?: string
+  isStarting?: number
+  isSubstitute?: number
+  operateReason: string
 }

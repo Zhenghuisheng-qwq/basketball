@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import EventTeamHeroStrip from '@/components/account/tournament/EventTeamHeroStrip.vue'
-import FreeAgentSearchPanel from '@/components/account/tournament/FreeAgentSearchPanel.vue'
-import TransferProgress from '@/components/account/tournament/TransferProgress.vue'
-import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import { useEventTeamPage } from '@/composables/useEventTeamPage'
 
 const router = useRouter()
 const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage()
+
+const playerId = ref('')
+const targetRosterRole = ref('MEMBER')
+const applyReason = ref('')
+const submitting = ref(false)
 
 const inviteDisabled = computed(
   () =>
@@ -20,11 +22,27 @@ const inviteDisabled = computed(
     || !eventTeamStore.tournament.transferWindowOpen,
 )
 
-function handleInvite(playerId: string) {
-  if (eventTeamStore.sendFreeAgentInvitation(playerId)) {
-    ElMessage.success('邀请已发送，等待球员确认（Mock）')
-  } else {
-    ElMessage.warning('当前无法发送邀请')
+async function handleSubmit() {
+  if (!playerId.value.trim()) {
+    ElMessage.warning('请输入待补球员 ID')
+    return
+  }
+  submitting.value = true
+  try {
+    const ok = await eventTeamStore.submitFreeAgentApplication({
+      playerId: playerId.value.trim(),
+      targetRosterRole: targetRosterRole.value,
+      applyReason: applyReason.value.trim() || undefined,
+    })
+    if (ok) {
+      ElMessage.success('自由球员补员申请已提交')
+    } else {
+      ElMessage.warning('当前无法提交补员申请')
+    }
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '提交失败')
+  } finally {
+    submitting.value = false
   }
 }
 </script>
@@ -41,7 +59,7 @@ function handleInvite(playerId: string) {
       :tournament-name="eventTeamStore.tournament.tournamentName"
       :team-code="eventTeamStore.eventTeam.teamCode"
       :description="`${eventTeamStore.tournament.phaseName} · 自由球员补充`"
-      :status-text="`转会窗口开放 · 截止 ${eventTeamStore.tournament.transferWindowEndTime}`"
+      :status-text="eventTeamStore.tournament.transferWindowOpen ? `窗口开放 · 截止 ${eventTeamStore.tournament.transferWindowEndTime}` : '窗口关闭'"
       status-type="warning"
     />
 
@@ -52,30 +70,52 @@ function handleInvite(playerId: string) {
     </div>
 
     <div class="event-team-grid event-team-grid--2">
-      <AccountPanel title="搜索自由球员">
-        <FreeAgentSearchPanel
-          :disabled="inviteDisabled"
-          :search-fn="eventTeamStore.searchFreeAgentPool"
-          @invite="handleInvite"
-        />
+      <AccountPanel title="提交补员申请">
+        <div class="free-agent-form">
+          <label>
+            <span>球员 ID</span>
+            <input v-model="playerId" type="text" class="identity-apply-form__input" :disabled="inviteDisabled" />
+          </label>
+          <label>
+            <span>目标身份</span>
+            <select v-model="targetRosterRole" class="identity-apply-form__input" :disabled="inviteDisabled">
+              <option value="MEMBER">队员</option>
+              <option value="STARTER">首发</option>
+              <option value="SUBSTITUTE">替补</option>
+            </select>
+          </label>
+          <label>
+            <span>申请原因</span>
+            <textarea v-model="applyReason" rows="3" class="identity-apply-form__input" :disabled="inviteDisabled" />
+          </label>
+        </div>
+        <div class="account-panel__action">
+          <button
+            type="button"
+            class="account-btn-primary"
+            :disabled="inviteDisabled || submitting"
+            @click="handleSubmit"
+          >
+            提交补员申请
+          </button>
+        </div>
       </AccountPanel>
 
-      <AccountPanel title="邀请状态">
-        <div class="free-agent-invite">
+      <AccountPanel title="最近申请">
+        <div v-if="eventTeamStore.freeAgentInvite.inviteId" class="free-agent-invite">
           <strong>{{ eventTeamStore.freeAgentInvite.playerName }}</strong>
           <p>位置：{{ eventTeamStore.freeAgentInvite.position }}</p>
-          <AccountStatusBadge type="warning" :text="eventTeamStore.freeAgentInvite.statusText" />
-          <TransferProgress :steps="eventTeamStore.freeAgentInvite.steps" />
+          <p>{{ eventTeamStore.freeAgentInvite.statusText }}</p>
         </div>
+        <p v-else class="event-team-muted">暂无进行中的补员申请</p>
       </AccountPanel>
     </div>
 
     <AccountPanel title="自由球员补充规则">
       <ul class="event-team-rules">
-        <li>仅在常规赛或小组赛转会窗口开放。</li>
-        <li>每支球队每届最多补充 2 名自由球员。</li>
-        <li>非窗口管理员特殊操作仍计入 2 人限额。</li>
-        <li>季后赛、淘汰赛和 Cup 锁定后不能补充。</li>
+        <li>仅在转会窗口开放时可提交补员申请。</li>
+        <li>每支球队每届有自由球员补充配额限制。</li>
+        <li>提交后需等待管理员审核。</li>
       </ul>
       <div class="account-panel__action">
         <button type="button" class="account-btn-secondary" @click="router.push(teamPath('/roster'))">
@@ -88,6 +128,21 @@ function handleInvite(playerId: string) {
 
 <style scoped lang="scss">
 @import '../styles/account-center.scss';
+
+.free-agent-form {
+  display: grid;
+  gap: 12px;
+
+  label {
+    display: grid;
+    gap: 6px;
+
+    span {
+      font-size: 13px;
+      font-weight: 700;
+    }
+  }
+}
 
 .free-agent-invite {
   display: flex;

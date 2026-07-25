@@ -62,4 +62,10 @@
         update basket_captain_qualification set is_current = 0, update_time = now()
         where player_id = #{playerId} and is_current = 1 and is_delete = 0
     </update>
+    <select id="selectCurrentByPlayerId" resultMap="BasketCaptainQualificationResult">
+        select id, qualification_no, member_id, player_id, qualification_status, is_current, payment_confirmed, payment_reference, grant_reason, granted_by, granted_time, valid_from, valid_to, revoked_by, revoked_time, revoke_reason, create_time, update_time, is_delete
+        from basket_captain_qualification
+        where player_id = #{playerId} and is_current = 1 and is_delete = 0
+        order by granted_time desc limit 1
+    </select>
 </mapper>

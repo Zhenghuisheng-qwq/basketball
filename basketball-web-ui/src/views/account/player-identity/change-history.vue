@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
@@ -13,6 +14,14 @@ const accountStore = useAccountStore()
 
 const account = computed(() => accountStore.currentAccount)
 const history = computed(() => accountStore.identityChangeHistory)
+
+onMounted(async () => {
+  try {
+    await accountStore.loadPlayerPlatformState()
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '加载变更记录失败')
+  }
+})
 </script>
 
 <template>

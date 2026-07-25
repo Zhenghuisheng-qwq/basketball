@@ -11,4 +11,8 @@ public class AnnouncementEditReq {
     private String contentText;
     private String publicScope;
     private Integer isImportant;
+    private Long tournamentId;
+    private Long seasonId;
+    private String ruleVersion;
+    private java.util.Date scheduledPublishTime;
 }

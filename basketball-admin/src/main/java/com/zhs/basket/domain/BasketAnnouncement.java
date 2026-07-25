@@ -9,6 +9,8 @@ public class BasketAnnouncement {
     private Long id;
     private String announcementNo;
     private String categoryCode;
+    private Long tournamentId;
+    private Long seasonId;
     private String title;
     private String summary;
     private Long coverFileId;
@@ -20,7 +22,10 @@ public class BasketAnnouncement {
     private Integer isTop;
     private Integer isImportant;
     private Date publishTime;
+    private Date scheduledPublishTime;
     private Date offlineTime;
+    private Long supersededBy;
+    private String ruleVersion;
     private Long viewCount;
     private Date createTime;
     private Date updateTime;

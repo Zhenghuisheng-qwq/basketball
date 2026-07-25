@@ -12,4 +12,5 @@ public interface BasketCaptainQualificationMapper {
     int insert(BasketCaptainQualification record);
     int updateById(BasketCaptainQualification record);
     int clearCurrentByPlayerId(@Param("playerId") Long playerId);
+    BasketCaptainQualification selectCurrentByPlayerId(@Param("playerId") Long playerId);
 }

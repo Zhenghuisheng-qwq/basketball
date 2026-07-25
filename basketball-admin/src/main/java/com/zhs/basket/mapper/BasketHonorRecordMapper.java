@@ -47,4 +47,11 @@ public interface BasketHonorRecordMapper {
                           @Param("teamId") Long teamId,
                           @Param("playerId") Long playerId,
                           @Param("excludeId") Long excludeId);
+
+    int revokeByGenerationBatch(@Param("generationBatchId") Long generationBatchId);
+
+    int countBySourceHonorId(@Param("sourceType") String sourceType, @Param("sourceId") Long sourceId);
+
+    List<HonorRecordListResp> selectImportCandidates(@Param("tournamentId") Long tournamentId,
+                                                     @Param("seasonId") Long seasonId);
 }

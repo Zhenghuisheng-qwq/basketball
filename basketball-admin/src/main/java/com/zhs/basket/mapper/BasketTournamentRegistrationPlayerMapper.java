@@ -2,6 +2,7 @@ package com.zhs.basket.mapper;
 
 import com.zhs.basket.domain.BasketTournamentRegistrationPlayer;
 import com.zhs.basket.vo.AvailableMatchPlayerVo;
+import com.zhs.basket.vo.RegistrationPlayerVo;
 import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
@@ -12,4 +13,5 @@ public interface BasketTournamentRegistrationPlayerMapper {
             @Param("teamId") Long teamId);
     int updateValidationStatus(@Param("id") Long id, @Param("validationStatus") Integer validationStatus,
             @Param("rejectReason") String rejectReason);
+    List<RegistrationPlayerVo> selectDetailByRegistrationId(@Param("registrationId") Long registrationId);
 }

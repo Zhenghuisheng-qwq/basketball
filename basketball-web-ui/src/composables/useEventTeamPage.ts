@@ -3,13 +3,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useEventTeamStore } from '@/stores/eventTeam'
 import { useAccountStore } from '@/stores/account'
-import { isSupportedEventTeamTournament } from '@/mock/eventTeamMock'
 
-export function useEventTeamPage() {
+export function useEventTeamPage(options?: { requireCaptain?: boolean }) {
   const route = useRoute()
   const router = useRouter()
   const eventTeamStore = useEventTeamStore()
   const accountStore = useAccountStore()
+  const requireCaptain = options?.requireCaptain ?? true
 
   const tournamentId = computed(() => String(route.params.tournamentId || ''))
 
@@ -24,37 +24,37 @@ export function useEventTeamPage() {
     { label: '个人中心', to: '/account/overview' },
     { label: '我的赛事', to: '/account/my-events?tab=joined' },
     {
-      label: eventTeamStore.tournament.tournamentName,
+      label: eventTeamStore.tournament.tournamentName || '本届球队',
       to: teamPath(),
     },
   ])
 
-  function ensureAccess() {
+  async function ensureAccess() {
     if (!accountStore.isVerifiedPlayer) {
       ElMessage.warning('请先完成球员身份认证')
       router.replace('/account/player-identity')
       return false
     }
-    if (!isSupportedEventTeamTournament(tournamentId.value)) {
-      ElMessage.warning('当前赛事暂无球队管理入口')
+    const loaded = await eventTeamStore.ensureLoaded(tournamentId.value)
+    if (!loaded) {
+      ElMessage.warning(eventTeamStore.lastError || '当前赛事暂无球队管理入口')
       router.replace('/account/my-events?tab=joined')
       return false
     }
-    eventTeamStore.ensureLoaded(tournamentId.value)
-    if (!eventTeamStore.isCaptain) {
+    if (requireCaptain && !eventTeamStore.isCaptain) {
       ElMessage.warning('仅本届赛事队长可访问球队管理')
-      router.replace('/account/my-events?tab=joined')
+      router.replace(`/account/my-tournaments/${tournamentId.value}/team/roster`)
       return false
     }
     return true
   }
 
   onMounted(() => {
-    ensureAccess()
+    void ensureAccess()
   })
 
   watch(tournamentId, (next) => {
-    if (next) eventTeamStore.ensureLoaded(next)
+    if (next) void eventTeamStore.ensureLoaded(next)
   })
 
   return {

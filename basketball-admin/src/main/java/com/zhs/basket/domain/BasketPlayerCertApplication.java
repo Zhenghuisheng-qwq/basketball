@@ -12,6 +12,7 @@ public class BasketPlayerCertApplication {
     private String applicationType;
     private String gameTerminal;
     private String gameAccount;
+    private String normalizedGameAccount;
     private String gameNickname;
     private String positionCode;
     private Integer applicationStatus;

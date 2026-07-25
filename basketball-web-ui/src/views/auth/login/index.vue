@@ -143,7 +143,7 @@ function goRegister() {
 }
 
 function handleForgotPassword() {
-  ElMessage.info('密码找回功能将在后续开放')
+  router.push('/forgot-password')
 }
 
 onMounted(() => {

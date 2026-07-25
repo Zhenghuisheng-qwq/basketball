@@ -122,11 +122,13 @@ export interface PlayerApplication {
 
 export interface PlatformGameIdRecord {
   platform: IdentityPlatform
+  platformAccountId?: string
   gameId: string
   status: PlatformGameIdStatus
   statusText: string
   locked: boolean
   lockText: string
+  pendingGameId?: string
 }
 
 export interface IdentityChangeRecord {
@@ -134,6 +136,9 @@ export interface IdentityChangeRecord {
   platform: IdentityPlatform
   oldGameId: string
   newGameId: string
+  changeType?: string
+  requestStatus?: number
+  requestStatusText?: string
 }
 
 export interface EligibilityLimit {

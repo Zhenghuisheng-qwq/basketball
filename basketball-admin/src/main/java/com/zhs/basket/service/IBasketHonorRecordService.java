@@ -29,4 +29,8 @@ public interface IBasketHonorRecordService {
     void remove(Long id, String recipientType);
 
     List<PlayerHonorCandidateResp> listPlayerCandidates(PlayerHonorCandidateQueryReq query);
+
+    List<HonorRecordListResp> listImportCandidates(Long tournamentId, Long seasonId);
+
+    Long importFromHonor(Long honorId, String hallSourceType);
 }

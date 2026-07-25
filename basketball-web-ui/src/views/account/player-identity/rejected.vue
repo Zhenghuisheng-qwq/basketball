@@ -7,7 +7,7 @@ import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountStepper from '@/components/account/AccountStepper.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import { useAccountStore } from '@/stores/account'
-import { mockRejectedApplication } from '@/mock/playerIdentityMock'
+import { mapVerificationPlatform } from '@/utils/playerIdentity'
 import { IDENTITY_PLATFORM_LABELS } from '@/types/account'
 import { formatDateTime } from '@/utils/formatDate'
 
@@ -17,12 +17,18 @@ const accountStore = useAccountStore()
 const account = computed(() => accountStore.currentAccount)
 const verification = computed(() => accountStore.verification)
 
-const rejected = computed(() => ({
-  ...mockRejectedApplication,
-  playerName: account.value?.nickname || mockRejectedApplication.playerName,
-  reviewRemark: verification.value?.reviewerComment || mockRejectedApplication.reviewRemark,
-  submitTime: verification.value?.submittedAt ? formatDateTime(verification.value.submittedAt) : mockRejectedApplication.submitTime,
-}))
+const rejected = computed(() => {
+  const v = verification.value
+  return {
+    playerName: account.value?.nickname || '',
+    platform: v?.primaryPlatform ? mapVerificationPlatform(v.primaryPlatform) : 'PC',
+    gameId: v?.gameId || '',
+    position: v?.gamePosition || v?.commonPosition || '',
+    proofCount: v?.gameIdScreenshotUrl ? 1 : 0,
+    reviewRemark: v?.reviewerComment || '请根据管理员备注修改资料后重新提交。',
+    submitTime: v?.submittedAt ? formatDateTime(v.submittedAt) : '',
+  }
+})
 
 const steps = [
   { label: '提交资料', state: 'done' as const },

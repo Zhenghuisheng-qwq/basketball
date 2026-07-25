@@ -13,12 +13,14 @@ import com.zhs.common.cachekey.member.LoginFailCacheKey;
 import com.zhs.common.cachekey.member.MemberTokenCacheKey;
 import com.zhs.config.MemberAuthProperties;
 import com.zhs.dao.BasketAccountSecurityLogDao;
+import com.zhs.dao.BasketCaptainQualificationDao;
 import com.zhs.dao.BasketLoginLogDao;
 import com.zhs.dao.BasketMemberAccountDao;
 import com.zhs.dao.BasketMemberAgreementRecordDao;
 import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketNotificationSettingDao;
 import com.zhs.dao.BasketPrivacySettingDao;
+import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketVerifyCodeRecordDao;
 import com.zhs.enums.LoginResultEnum;
 import com.zhs.enums.MemberAccountStatusEnum;
@@ -28,16 +30,19 @@ import com.zhs.enums.VerifySendStatusEnum;
 import com.zhs.enums.VerifyStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketAccountSecurityLog;
+import com.zhs.model.BasketCaptainQualification;
 import com.zhs.model.BasketLoginLog;
 import com.zhs.model.BasketMemberAccount;
 import com.zhs.model.BasketMemberAgreementRecord;
 import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketNotificationSetting;
+import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketPrivacySetting;
 import com.zhs.model.BasketVerifyCodeRecord;
 import com.zhs.request.member.EmailCodeSendReq;
 import com.zhs.request.member.MemberCodeLoginReq;
 import com.zhs.request.member.MemberPasswordLoginReq;
+import com.zhs.request.member.MemberPasswordResetReq;
 import com.zhs.request.member.MemberRegisterReq;
 import com.zhs.response.member.EmailCodeSendResp;
 import com.zhs.response.member.MemberLoginResp;
@@ -71,10 +76,18 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
     private static final String SEND_PROVIDER_DEV_BYPASS = "DEV_BYPASS";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
+    private static final String EVENT_PASSWORD_RESET = "PASSWORD_RESET";
+    private static final int CURRENT_QUALIFICATION = 1;
+    private static final int ACTIVE_QUALIFICATION_STATUS = 1;
+
     @Resource
     private BasketMemberAccountDao memberAccountDao;
     @Resource
     private BasketMemberProfileDao memberProfileDao;
+    @Resource
+    private BasketPlayerProfileDao playerProfileDao;
+    @Resource
+    private BasketCaptainQualificationDao captainQualificationDao;
     @Resource
     private BasketPrivacySettingDao privacySettingDao;
     @Resource
@@ -340,6 +353,33 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void resetPassword(MemberPasswordResetReq req, String clientIp) {
+        if (req == null) {
+            throw new ServiceException("请求参数不能为空");
+        }
+        String email = normalizeEmail(req.getEmail());
+        validatePasswordPair(req.getPassword(), req.getConfirmPassword());
+        consumeVerifyCode(email, VerifyPurposeEnum.RESET_PASSWORD, req.getVerifyBizNo(), req.getVerifyCode());
+
+        BasketMemberAccount account = findByEmail(email);
+        if (account == null) {
+            throw new ServiceException("账号不存在");
+        }
+        if (!MemberAccountStatusEnum.isNormal(account.getAccountStatus())) {
+            throw new ServiceException("账号已被禁用");
+        }
+
+        Date now = new Date();
+        account.setPasswordHash(passwordEncoder.encode(req.getPassword()));
+        account.setPasswordUpdateTime(now);
+        memberAccountDao.updateById(account);
+
+        writeSecurityLog(account.getId(), EVENT_PASSWORD_RESET, "重置登录密码",
+                null, null, "MEMBER", account.getId(), clientIp, null, now, null);
+    }
+
+    @Override
     public MemberSessionResp getSession(Long memberId, String token) {
         if (memberId == null) {
             throw new ServiceException("未登录", 401);
@@ -362,6 +402,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         fillSummary(resp, account, loadNickname(account.getId(), account.getEmail()));
         resp.setRegisterSource(account.getRegisterSource());
         resp.setRegisterTerminal(account.getRegisterTerminal());
+        fillPlayerSessionFields(resp, memberId);
         return resp;
     }
 
@@ -449,6 +490,30 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         }
         if (purpose == VerifyPurposeEnum.LOGIN && account == null) {
             throw new ServiceException("该邮箱尚未注册");
+        }
+        if (purpose == VerifyPurposeEnum.RESET_PASSWORD && account == null) {
+            throw new ServiceException("该邮箱尚未注册");
+        }
+    }
+
+    private void fillPlayerSessionFields(MemberSessionResp resp, Long memberId) {
+        BasketPlayerProfile playerProfile = playerProfileDao.selectOne(new LambdaQueryWrapper<BasketPlayerProfile>()
+                .eq(BasketPlayerProfile::getMemberId, memberId)
+                .eq(BasketPlayerProfile::getIsDelete, 0)
+                .last("limit 1"));
+        if (playerProfile != null) {
+            resp.setPlayerStatus(playerProfile.getPlayerStatus());
+        }
+
+        BasketCaptainQualification captainQualification = captainQualificationDao.selectOne(
+                new LambdaQueryWrapper<BasketCaptainQualification>()
+                        .eq(BasketCaptainQualification::getMemberId, memberId)
+                        .eq(BasketCaptainQualification::getIsCurrent, CURRENT_QUALIFICATION)
+                        .eq(BasketCaptainQualification::getQualificationStatus, ACTIVE_QUALIFICATION_STATUS)
+                        .eq(BasketCaptainQualification::getIsDelete, 0)
+                        .last("limit 1"));
+        if (captainQualification != null) {
+            resp.setCaptainQualificationStatus(captainQualification.getQualificationStatus());
         }
     }
 

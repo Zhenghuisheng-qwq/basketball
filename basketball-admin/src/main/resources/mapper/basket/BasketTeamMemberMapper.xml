@@ -35,4 +35,13 @@
         select id, membership_no, team_id, member_id, player_id, role_type, roster_type, jersey_no, join_source, membership_status, is_current, join_time, leave_time, leave_reason, remark, create_time, update_time, is_delete from basket_team_member
         where team_id = #{teamId} and role_type = 'CAPTAIN' and is_current = 1 and membership_status = 1 and is_delete = 0 limit 1
     </select>
+    <select id="selectTeamSummaryByMemberId" resultType="com.zhs.basket.vo.AccountPlayerTeamSummaryVo">
+        select t.id as teamId, t.team_no as teamNo, t.team_name as teamName,
+               m.role_type as roleType, m.membership_status as membershipStatus,
+               m.is_current as isCurrent, m.join_time as joinTime, t.audit_status as auditStatus
+        from basket_team_member m
+        inner join basket_team t on t.id = m.team_id and t.is_delete = 0
+        where m.member_id = #{memberId} and m.is_delete = 0
+        order by m.is_current desc, m.join_time desc
+    </select>
 </mapper>

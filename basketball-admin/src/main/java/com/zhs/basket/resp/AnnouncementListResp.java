@@ -10,6 +10,10 @@ public class AnnouncementListResp {
     private String announcementNo;
     private String categoryCode;
     private String categoryName;
+    private Long tournamentId;
+    private String tournamentName;
+    private Long seasonId;
+    private String seasonName;
     private String title;
     private String summary;
     private Long coverFileId;
@@ -22,7 +26,10 @@ public class AnnouncementListResp {
     private Integer isTop;
     private Integer isImportant;
     private Date publishTime;
+    private Date scheduledPublishTime;
     private Date offlineTime;
+    private Long supersededBy;
+    private String ruleVersion;
     private Long viewCount;
     private Date createTime;
     private Date updateTime;

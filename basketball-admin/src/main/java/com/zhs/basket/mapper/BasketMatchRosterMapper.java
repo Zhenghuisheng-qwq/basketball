@@ -12,4 +12,7 @@ public interface BasketMatchRosterMapper {
     int countCaptainsByMatchAndTeam(@Param("matchId") Long matchId, @Param("teamId") Long teamId);
     int softDeleteByMatchAndTeam(@Param("matchId") Long matchId, @Param("teamId") Long teamId);
     int batchInsert(@Param("list") List<BasketMatchRoster> list);
+    int lockByMatchAndTeam(@Param("matchId") Long matchId, @Param("teamId") Long teamId);
+    int countLockedByMatch(@Param("matchId") Long matchId);
+    List<Long> selectMemberIdsByMatchAndTeam(@Param("matchId") Long matchId, @Param("teamId") Long teamId);
 }

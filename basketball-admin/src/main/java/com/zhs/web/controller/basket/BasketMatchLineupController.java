@@ -38,6 +38,14 @@ public class BasketMatchLineupController extends BaseController {
         return success();
     }
 
+    @PreAuthorize("@ss.hasPermi('basket:lineup:edit')")
+    @Log(title = "出场名单", businessType = BusinessType.UPDATE)
+    @PostMapping("/{matchId}/lineup/{teamId}/generate-from-season-roster")
+    public AjaxResult generateFromSeasonRoster(@PathVariable Long matchId, @PathVariable Long teamId) {
+        lineupService.generateFromSeasonRoster(matchId, teamId);
+        return success();
+    }
+
     @PreAuthorize("@ss.hasPermi('basket:lineup:confirm')")
     @Log(title = "出场名单", businessType = BusinessType.UPDATE)
     @PostMapping("/{matchId}/lineup/{teamId}/confirm")

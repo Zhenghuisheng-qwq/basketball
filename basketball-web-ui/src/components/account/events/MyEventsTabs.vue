@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { MyEventsTabKey } from '@/types/accountEvents'
-import { accountEventTabs } from '@/mock/accountEventsMock'
+import { accountEventTabs } from '@/constants/accountEventsUi'
 
 defineProps<{
   activeTab: MyEventsTabKey

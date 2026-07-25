@@ -1,6 +1,7 @@
 package com.zhs.basket.service.impl;
 
 import com.zhs.basket.domain.BasketHonorCategory;
+import com.zhs.basket.domain.BasketHonorLineup;
 import com.zhs.basket.domain.BasketHonorRecord;
 import com.zhs.basket.domain.BasketStatChangeRecord;
 import com.zhs.basket.domain.BasketTournamentSeason;
@@ -20,6 +21,7 @@ import com.zhs.basket.req.HonorRecordEditReq;
 import com.zhs.basket.req.HonorRecordQueryReq;
 import com.zhs.basket.req.HonorRecordRevokeReq;
 import com.zhs.basket.req.PlayerHonorCandidateQueryReq;
+import com.zhs.basket.resp.HonorLineupResp;
 import com.zhs.basket.resp.HonorRecordDetailResp;
 import com.zhs.basket.resp.HonorRecordListResp;
 import com.zhs.basket.resp.PlayerHonorCandidateResp;
@@ -294,6 +296,80 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
             resp.setAwardType(awardType);
             return resp;
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<HonorRecordListResp> listImportCandidates(Long tournamentId, Long seasonId) {
+        List<HonorRecordListResp> list = honorRecordMapper.selectImportCandidates(tournamentId, seasonId);
+        list.forEach(this::fillStatusName);
+        return list;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long importFromHonor(Long honorId, String hallSourceType) {
+        if (honorId == null) {
+            throw new ServiceException("来源荣誉不能为空");
+        }
+        String sourceType = StringUtils.isEmpty(hallSourceType) ? "HALL_OF_FAME" : hallSourceType;
+        HonorRecordListResp source = honorRecordMapper.selectDetailById(honorId);
+        if (source == null) {
+            throw new ServiceException("来源荣誉不存在");
+        }
+        if (!Objects.equals(HonorDisplayStatusEnum.PUBLISHED.getCode(), source.getDisplayStatus())) {
+            throw new ServiceException("仅已发布荣誉可入选名人堂");
+        }
+        if ("HALL_OF_FAME".equalsIgnoreCase(source.getSourceType())) {
+            throw new ServiceException("名人堂记录不能再次导入");
+        }
+        if (honorRecordMapper.countBySourceHonorId(sourceType, honorId) > 0) {
+            throw new ServiceException("该荣誉已入选名人堂");
+        }
+        Date now = new Date();
+        BasketHonorRecord record = new BasketHonorRecord();
+        record.setTournamentId(source.getTournamentId());
+        record.setSeasonId(source.getSeasonId());
+        record.setHonorCategoryId(source.getHonorCategoryId());
+        record.setTeamId(source.getTeamId());
+        record.setPlayerId(source.getPlayerId());
+        record.setMatchId(source.getMatchId());
+        record.setHonorTitle(source.getHonorTitle());
+        record.setHonorSubtitle(source.getHonorSubtitle());
+        record.setHonorValue(source.getHonorValue());
+        record.setAwardDate(source.getAwardDate() == null ? now : source.getAwardDate());
+        record.setCoverFileId(source.getCoverFileId());
+        record.setSourceType(sourceType);
+        record.setSourceId(honorId);
+        record.setDisplayStatus(HonorDisplayStatusEnum.DRAFT.getCode());
+        record.setDisplayOrder(source.getDisplayOrder() == null ? 0 : source.getDisplayOrder());
+        record.setRemark("来源荣誉ID " + honorId);
+        record.setCreateTime(now);
+        record.setUpdateTime(now);
+        record.setIsDelete(NOT_DELETED);
+        honorRecordMapper.insert(record);
+
+        List<HonorLineupResp> lineup = honorLineupMapper.selectByHonorRecordId(honorId);
+        if (lineup != null && !lineup.isEmpty()) {
+            List<BasketHonorLineup> copies = lineup.stream().map(item -> {
+                BasketHonorLineup row = new BasketHonorLineup();
+                row.setHonorRecordId(record.getId());
+                row.setTeamId(item.getTeamId());
+                row.setPlayerId(item.getPlayerId());
+                row.setMemberId(item.getMemberId());
+                row.setRoleType(item.getRoleType());
+                row.setJerseyNo(item.getJerseyNo());
+                row.setPositionCode(item.getPositionCode());
+                row.setSortNo(item.getSortNo());
+                row.setCreateTime(now);
+                row.setUpdateTime(now);
+                row.setIsDelete(NOT_DELETED);
+                return row;
+            }).collect(Collectors.toList());
+            honorLineupMapper.batchInsert(copies);
+        }
+        writeAudit(record.getId(), "source_id", null, String.valueOf(honorId), "从荣誉导入名人堂");
+        publicCacheCleaner.clearAfterCommit();
+        return record.getId();
     }
 
     private String mapAwardTypeToRankType(String awardType) {

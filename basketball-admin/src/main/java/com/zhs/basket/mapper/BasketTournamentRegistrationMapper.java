@@ -19,4 +19,5 @@ public interface BasketTournamentRegistrationMapper {
     List<SeasonCandidateTeamResp> selectCandidateTeamsBySeasonId(@Param("seasonId") Long seasonId);
     BasketTournamentRegistration selectApprovedBySeasonAndTeam(@Param("seasonId") Long seasonId,
             @Param("teamId") Long teamId);
+    List<Long> selectApprovedIdsWithoutEventTeam();
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import { communityLinks } from '../mock/league.mock'
+import { communityLinks } from '@/constants/communityLinks'
 import type { CommunityLink } from '../types/events'
 
 const iconMap: Record<CommunityLink['icon'], string> = {

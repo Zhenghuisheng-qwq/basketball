@@ -11,4 +11,7 @@ public interface BasketTeamMapper {
     int updateAuditStatusIfMatch(@Param("id") Long id, @Param("fromStatuses") List<Integer> fromStatuses,
             @Param("toStatus") Integer toStatus, @Param("auditorId") Long auditorId);
     int updateMemberCount(@Param("id") Long id, @Param("memberCount") Integer memberCount);
+    Integer selectMaxTeamNoSequence();
+    int countByTeamNo(@Param("teamNo") String teamNo);
+    int updateTeamNo(@Param("id") Long id, @Param("teamNo") String teamNo);
 }

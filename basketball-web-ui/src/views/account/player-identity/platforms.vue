@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
+import { uploadAccountFile } from '@/api/accountFile'
 import { useAccountStore } from '@/stores/account'
 import { IDENTITY_PLATFORM_LABELS, type IdentityPlatform } from '@/types/account'
 import { ElMessage } from 'element-plus'
@@ -10,6 +11,8 @@ import { ElMessage } from 'element-plus'
 const accountStore = useAccountStore()
 const showAddDialog = ref(false)
 const showPendingDialog = ref(false)
+const submitting = ref(false)
+const uploadingProof = ref(false)
 
 const account = computed(() => accountStore.currentAccount)
 const records = computed(() => accountStore.platformGameIds)
@@ -17,34 +20,83 @@ const records = computed(() => accountStore.platformGameIds)
 const addForm = reactive({
   platform: 'PC' as IdentityPlatform,
   gameId: '',
-  proofUploaded: false,
+  proofFileId: '',
+  proofFileName: '',
 })
 
 const pendingRecord = computed(() => records.value.find((item) => item.status === 'PENDING'))
 
+const isAddMode = computed(() => {
+  const row = records.value.find((item) => item.platform === addForm.platform)
+  return !row?.platformAccountId || row.status === 'UNBOUND'
+})
+
+onMounted(async () => {
+  try {
+    await accountStore.loadPlayerPlatformState()
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '加载平台数据失败')
+  }
+})
+
 function openAdd(platform: IdentityPlatform) {
   addForm.platform = platform
   addForm.gameId = ''
-  addForm.proofUploaded = false
+  addForm.proofFileId = ''
+  addForm.proofFileName = ''
   showAddDialog.value = true
 }
 
-function submitAdd() {
+async function handleProofUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+    ElMessage.warning('仅支持 JPG、JPEG、PNG')
+    return
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    ElMessage.warning('文件大小不能超过 8MB')
+    return
+  }
+  uploadingProof.value = true
+  try {
+    const res = await uploadAccountFile(file, 'PLAYER_CERT_GAME_SCREENSHOT')
+    addForm.proofFileId = res.data.fileId
+    addForm.proofFileName = res.data.originalName || file.name
+    ElMessage.success('证明材料已上传')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '上传失败')
+  } finally {
+    uploadingProof.value = false
+  }
+}
+
+async function submitAdd() {
   if (!addForm.gameId.trim()) {
     ElMessage.warning('请填写游戏 ID')
     return
   }
-  if (!addForm.proofUploaded) {
+  if (!addForm.proofFileId) {
     ElMessage.warning('请上传证明材料')
     return
   }
-  accountStore.submitPlatformGameId({ platform: addForm.platform, gameId: addForm.gameId.trim() })
-  showAddDialog.value = false
-  ElMessage.success('已提交审核')
-}
-
-function mockUploadProof() {
-  addForm.proofUploaded = true
+  if (submitting.value) return
+  submitting.value = true
+  try {
+    await accountStore.submitPlatformGameId({
+      platform: addForm.platform,
+      gameId: addForm.gameId.trim(),
+      proofFileId: addForm.proofFileId,
+    })
+    showAddDialog.value = false
+    ElMessage.success('已提交审核')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '提交失败')
+  } finally {
+    submitting.value = false
+  }
 }
 
 function viewPending() {
@@ -140,17 +192,23 @@ function viewPending() {
 
     <div v-if="showAddDialog" class="account-dialog-backdrop" @click.self="showAddDialog = false">
       <div class="account-dialog">
-        <h3>{{ addForm.platform === records.find(r => r.status === 'UNBOUND')?.platform ? '新增' : '修改' }}游戏 ID</h3>
+        <h3>{{ isAddMode ? '新增' : '修改' }}游戏 ID</h3>
         <div class="account-info-list">
           <div class="account-info-row"><span class="account-info-row__label">平台</span><span>{{ IDENTITY_PLATFORM_LABELS[addForm.platform] }}</span></div>
         </div>
         <input v-model="addForm.gameId" class="identity-apply-form__input" placeholder="请输入游戏 ID" />
-        <button type="button" class="account-btn-secondary" @click="mockUploadProof">
-          {{ addForm.proofUploaded ? '证明材料已上传' : '上传证明材料' }}
-        </button>
+        <label class="platform-proof-upload">
+          <input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" hidden @change="handleProofUpload" />
+          <button type="button" class="account-btn-secondary" :disabled="uploadingProof">
+            {{ uploadingProof ? '上传中...' : addForm.proofFileId ? '重新上传证明材料' : '上传证明材料' }}
+          </button>
+        </label>
+        <p v-if="addForm.proofFileName" class="platform-proof-name">{{ addForm.proofFileName }}</p>
         <div class="account-dialog__actions">
           <button type="button" class="account-btn-secondary" @click="showAddDialog = false">取消</button>
-          <button type="button" class="account-btn-primary" @click="submitAdd">提交审核</button>
+          <button type="button" class="account-btn-primary" :disabled="submitting" @click="submitAdd">
+            {{ submitting ? '提交中...' : '提交审核' }}
+          </button>
         </div>
       </div>
     </div>
@@ -160,7 +218,7 @@ function viewPending() {
         <h3>审核中详情</h3>
         <div class="account-info-list">
           <div class="account-info-row"><span class="account-info-row__label">平台</span><span>{{ IDENTITY_PLATFORM_LABELS[pendingRecord.platform] }}</span></div>
-          <div class="account-info-row"><span class="account-info-row__label">游戏 ID</span><span>{{ pendingRecord.gameId }}</span></div>
+          <div class="account-info-row"><span class="account-info-row__label">游戏 ID</span><span>{{ pendingRecord.gameId || '待审核' }}</span></div>
           <div class="account-info-row"><span class="account-info-row__label">状态</span><span>{{ pendingRecord.statusText }}</span></div>
         </div>
         <button type="button" class="account-btn-secondary" @click="showPendingDialog = false">关闭</button>
@@ -171,4 +229,15 @@ function viewPending() {
 
 <style scoped lang="scss">
 @import '../styles/account-center.scss';
+
+.platform-proof-upload {
+  display: block;
+  margin-top: 12px;
+}
+
+.platform-proof-name {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #666;
+}
 </style>

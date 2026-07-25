@@ -54,6 +54,12 @@ public class PlayerCertificationController {
         return R.ok(null, "材料删除成功");
     }
 
+    @ApiOperation("撤回球员认证申请")
+    @PostMapping("/withdraw")
+    public R<PlayerCertCurrentResp> withdraw() {
+        return R.ok(playerCertificationService.withdraw(), "申请已撤回");
+    }
+
     @ApiOperation("提交球员认证申请")
     @PostMapping("/submit")
     public R<PlayerCertCurrentResp> submit(@RequestBody PlayerCertSubmitReq req, HttpServletRequest request) {
