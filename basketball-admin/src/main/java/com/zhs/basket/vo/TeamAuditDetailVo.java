@@ -1,5 +1,7 @@
 package com.zhs.basket.vo;
 
+import java.util.Date;
+import java.util.List;
 import lombok.Data;
 
 @Data
@@ -8,12 +10,39 @@ public class TeamAuditDetailVo {
     private String teamNo;
     private String teamName;
     private String shortName;
+    private Long logoFileId;
+    private String logoUrl;
     private String regionName;
     private String gameTerminal;
     private String description;
-    private Long captainMemberId;
-    private Long captainPlayerId;
+    private Integer publicStatus;
+    private String publicStatusName;
+    private Integer teamStatus;
     private Integer auditStatus;
     private String auditStatusName;
     private Integer currentMemberCount;
+    private Integer maxMemberCount;
+    private Date createTime;
+    private Date updateTime;
+
+    private Long captainMemberId;
+    private Long captainPlayerId;
+    private String captainNickname;
+    private String captainEmail;
+    private String captainPlayerNo;
+    private Integer captainCertStatus;
+    private String captainCertStatusName;
+    private Boolean captainQualificationValid;
+
+    private Date submitTime;
+    private Date auditTime;
+    private String auditUserName;
+    private String rejectReason;
+    private String auditRemark;
+
+    private Boolean captainAssigned;
+    private Boolean captainCertified;
+    private Boolean teamActive;
+
+    private List<TeamAuditMemberVo> members;
 }

@@ -55,8 +55,6 @@ const profileForm = reactive({
   teamName: '',
   shortName: '',
   platform: 'PC',
-  regionCode: '',
-  regionName: '',
   description: '',
   publicStatus: 1,
 })
@@ -154,8 +152,6 @@ watch(teamDetail, (detail) => {
   profileForm.teamName = detail.teamName || ''
   profileForm.shortName = detail.shortName || ''
   profileForm.platform = detail.gameTerminal || 'PC'
-  profileForm.regionCode = detail.regionCode || ''
-  profileForm.regionName = detail.regionName || ''
   profileForm.description = detail.description || ''
   profileForm.publicStatus = detail.publicStatus ?? 1
 }, { immediate: true })
@@ -280,8 +276,6 @@ async function submitProfileUpdate() {
       teamName: profileForm.teamName.trim(),
       shortName: profileForm.shortName.trim() || undefined,
       gameTerminal: mapPlatformToGameTerminal(profileForm.platform),
-      regionCode: profileForm.regionCode.trim() || undefined,
-      regionName: profileForm.regionName.trim() || undefined,
       description: profileForm.description.trim() || undefined,
       publicStatus: profileForm.publicStatus,
     })
@@ -776,8 +770,6 @@ const tabLabels: Record<TeamTab, string> = {
                 <option value="MOBILE">移动端</option>
               </select>
             </label>
-            <label>地区编码<input v-model="profileForm.regionCode" type="text" /></label>
-            <label>地区名称<input v-model="profileForm.regionName" type="text" /></label>
             <label>
               公开状态
               <select v-model.number="profileForm.publicStatus">

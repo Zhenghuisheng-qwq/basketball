@@ -46,6 +46,12 @@ export const TEAM_AUDIT_STATUS_OPTIONS = [
   { value: 3, label: '审核中' }
 ]
 
+/** 球队招募状态 */
+export const TEAM_RECRUIT_STATUS_OPTIONS = [
+  { value: 0, label: '不公开招募' },
+  { value: 1, label: '公开招募' }
+]
+
 /** 赛事状态 */
 export const TOURNAMENT_STATUS_OPTIONS = [
   { value: 0, label: '已禁用' },
@@ -224,19 +230,50 @@ export interface TeamAuditListItem {
   id: number
   teamNo?: string
   teamName?: string
+  shortName?: string
+  logoFileId?: number
+  logoUrl?: string
+  gameTerminal?: string
+  publicStatus?: number
+  publicStatusName?: string
   auditStatus?: number
   auditStatusName?: string
   currentMemberCount?: number
   createTime?: string
 }
 
+export interface TeamAuditMemberItem {
+  memberId?: number
+  playerId?: number
+  nickname?: string
+  playerNo?: string
+  roleType?: string
+  roleTypeName?: string
+}
+
 export interface TeamAuditDetail extends TeamAuditListItem {
-  shortName?: string
   regionName?: string
-  gameTerminal?: string
   description?: string
+  teamStatus?: number
+  maxMemberCount?: number
+  updateTime?: string
   captainMemberId?: number
   captainPlayerId?: number
+  captainNickname?: string
+  captainEmail?: string
+  captainPlayerNo?: string
+  captainCertStatus?: number
+  captainCertStatusName?: string
+  captainQualificationValid?: boolean
+  submitTime?: string
+  auditTime?: string
+  auditUserName?: string
+  rejectReason?: string
+  auditRemark?: string
+  captainAssigned?: boolean
+  captainCertified?: boolean
+  teamActive?: boolean
+  members?: TeamAuditMemberItem[]
 }
 
 export interface TeamAuditApproveReq {

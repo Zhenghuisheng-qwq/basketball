@@ -4,6 +4,8 @@ import com.zhs.basket.domain.*;
 import com.zhs.basket.enums.PlayerCertStatusEnum;
 import com.zhs.basket.enums.TeamAuditStatusEnum;
 import com.zhs.basket.enums.TeamMemberRoleEnum;
+import com.zhs.basket.enums.TeamPublicStatusEnum;
+import com.zhs.basket.enums.TeamStatusEnum;
 import com.zhs.basket.mapper.*;
 import com.zhs.basket.query.TeamAuditQuery;
 import com.zhs.basket.req.TeamAuditApproveReq;
@@ -11,8 +13,10 @@ import com.zhs.basket.req.TeamAuditRejectReq;
 import com.zhs.basket.service.IBasketTeamAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
 import com.zhs.basket.support.TeamNoGenerator;
+import com.zhs.basket.vo.AccountPlayerDetailVo;
 import com.zhs.basket.vo.TeamAuditDetailVo;
 import com.zhs.basket.vo.TeamAuditListVo;
+import com.zhs.basket.vo.TeamAuditMemberVo;
 import com.zhs.basket.vo.TeamAuditRecordVo;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
@@ -21,6 +25,7 @@ import com.zhs.common.utils.bean.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -36,17 +41,19 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
     @Autowired private BasketTeamMemberMapper teamMemberMapper;
     @Autowired private BasketPlayerProfileMapper profileMapper;
     @Autowired private BasketCaptainQualificationMapper qualificationMapper;
+    @Autowired private BasketMemberAccountMapper memberAccountMapper;
+    @Autowired private BasketFileAssetMapper fileAssetMapper;
     @Autowired private BasketAdminMessageService messageService;
     @Autowired private TeamNoGenerator teamNoGenerator;
 
     @Override
     public List<TeamAuditListVo> selectList(TeamAuditQuery query) {
-        return teamMapper.selectAuditList(query).stream().map(t -> {
-            TeamAuditListVo vo = new TeamAuditListVo();
-            BeanUtils.copyBeanProp(vo, t);
-            vo.setAuditStatusName(TeamAuditStatusEnum.fromCode(t.getAuditStatus()).getDescription());
-            return vo;
-        }).collect(Collectors.toList());
+        List<BasketTeam> teams = teamMapper.selectAuditList(query);
+        Map<Long, String> logoUrlMap = loadLogoUrlMap(teams.stream()
+                .map(BasketTeam::getLogoFileId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet()));
+        return teams.stream().map(team -> toListVo(team, logoUrlMap)).collect(Collectors.toList());
     }
 
     @Override
@@ -54,7 +61,17 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         BasketTeam team = requireTeam(teamId);
         TeamAuditDetailVo vo = new TeamAuditDetailVo();
         BeanUtils.copyBeanProp(vo, team);
+        vo.setLogoUrl(resolveLogoUrl(team.getLogoFileId(), loadLogoUrlMap(
+                team.getLogoFileId() == null ? Collections.emptySet() : Collections.singleton(team.getLogoFileId()))));
         vo.setAuditStatusName(TeamAuditStatusEnum.fromCode(team.getAuditStatus()).getDescription());
+        vo.setPublicStatusName(resolvePublicStatusName(team.getPublicStatus()));
+        vo.setSubmitTime(team.getCreateTime());
+
+        enrichCaptainInfo(vo, team);
+        enrichAuditInfo(vo, teamId);
+        enrichMembers(vo, teamId);
+        enrichValidationFlags(vo, team);
+
         return vo;
     }
 
@@ -110,6 +127,117 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         writeAudit(team, "REJECT", team.getAuditStatus(), TeamAuditStatusEnum.REJECTED.getCode(), remark);
         messageService.sendSiteMessage(team.getCaptainMemberId(), SecurityUtils.getUserId(), "TEAM_AUDIT", teamId,
                 "球队审核已驳回", remark);
+    }
+
+    private TeamAuditListVo toListVo(BasketTeam team, Map<Long, String> logoUrlMap) {
+        TeamAuditListVo vo = new TeamAuditListVo();
+        BeanUtils.copyBeanProp(vo, team);
+        vo.setLogoUrl(resolveLogoUrl(team.getLogoFileId(), logoUrlMap));
+        vo.setAuditStatusName(TeamAuditStatusEnum.fromCode(team.getAuditStatus()).getDescription());
+        vo.setPublicStatusName(resolvePublicStatusName(team.getPublicStatus()));
+        return vo;
+    }
+
+    private void enrichCaptainInfo(TeamAuditDetailVo vo, BasketTeam team) {
+        if (team.getCaptainMemberId() == null) {
+            return;
+        }
+        AccountPlayerDetailVo captain = memberAccountMapper.selectDetail(team.getCaptainMemberId());
+        if (captain != null) {
+            vo.setCaptainNickname(captain.getNickname());
+            vo.setCaptainEmail(captain.getEmail());
+            if (captain.getPlayerNo() != null) {
+                vo.setCaptainPlayerNo(captain.getPlayerNo());
+            }
+            if (captain.getCertificationStatus() != null) {
+                vo.setCaptainCertStatus(captain.getCertificationStatus());
+                vo.setCaptainCertStatusName(PlayerCertStatusEnum.fromCode(captain.getCertificationStatus()).getDescription());
+            }
+            if (captain.getPlayerId() != null) {
+                vo.setCaptainPlayerId(captain.getPlayerId());
+            }
+        } else if (team.getCaptainPlayerId() != null) {
+            BasketPlayerProfile profile = profileMapper.selectById(team.getCaptainPlayerId());
+            if (profile != null) {
+                vo.setCaptainPlayerNo(profile.getPlayerNo());
+                vo.setCaptainCertStatus(profile.getCertificationStatus());
+                vo.setCaptainCertStatusName(PlayerCertStatusEnum.fromCode(profile.getCertificationStatus()).getDescription());
+            }
+        }
+        Long playerId = vo.getCaptainPlayerId() != null ? vo.getCaptainPlayerId() : team.getCaptainPlayerId();
+        if (playerId != null) {
+            vo.setCaptainQualificationValid(qualificationMapper.countCurrentActiveByPlayerId(playerId) > 0);
+        }
+    }
+
+    private void enrichAuditInfo(TeamAuditDetailVo vo, Long teamId) {
+        List<BasketTeamAuditRecord> records = auditRecordMapper.selectByTeamId(teamId);
+        if (CollectionUtils.isEmpty(records)) {
+            return;
+        }
+        BasketTeamAuditRecord latestDecision = records.stream()
+                .filter(r -> "APPROVE".equals(r.getAuditAction()) || "REJECT".equals(r.getAuditAction()))
+                .findFirst()
+                .orElse(null);
+        if (latestDecision != null) {
+            vo.setAuditTime(latestDecision.getAuditTime());
+            vo.setAuditUserName(latestDecision.getAuditorName());
+            vo.setAuditRemark(latestDecision.getAuditRemark());
+            if ("REJECT".equals(latestDecision.getAuditAction())) {
+                vo.setRejectReason(latestDecision.getAuditRemark());
+            }
+        }
+    }
+
+    private void enrichMembers(TeamAuditDetailVo vo, Long teamId) {
+        List<TeamAuditMemberVo> members = teamMemberMapper.selectCurrentMembersForAudit(teamId);
+        for (TeamAuditMemberVo member : members) {
+            if (TeamMemberRoleEnum.CAPTAIN.getCode().equals(member.getRoleType())) {
+                member.setRoleTypeName("队长");
+            } else if (TeamMemberRoleEnum.MEMBER.getCode().equals(member.getRoleType())) {
+                member.setRoleTypeName("成员");
+            } else {
+                member.setRoleTypeName(member.getRoleType());
+            }
+        }
+        vo.setMembers(members);
+    }
+
+    private void enrichValidationFlags(TeamAuditDetailVo vo, BasketTeam team) {
+        vo.setCaptainAssigned(team.getCaptainMemberId() != null && team.getCaptainPlayerId() != null);
+        vo.setCaptainCertified(vo.getCaptainCertStatus() != null
+                && Objects.equals(PlayerCertStatusEnum.APPROVED.getCode(), vo.getCaptainCertStatus()));
+        vo.setTeamActive(Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())
+                && Objects.equals(NOT_DELETED, team.getIsDelete()));
+    }
+
+    private String resolvePublicStatusName(Integer publicStatus) {
+        if (publicStatus == null) {
+            return "-";
+        }
+        try {
+            return TeamPublicStatusEnum.fromCode(publicStatus).getDescription();
+        } catch (ServiceException ex) {
+            return "-";
+        }
+    }
+
+    private Map<Long, String> loadLogoUrlMap(Set<Long> fileIds) {
+        if (CollectionUtils.isEmpty(fileIds)) {
+            return Collections.emptyMap();
+        }
+        Map<Long, String> map = new HashMap<>();
+        for (Long fileId : fileIds) {
+            BasketFileAsset asset = fileAssetMapper.selectById(fileId);
+            if (asset != null && NOT_DELETED.equals(asset.getIsDelete()) && StringUtils.hasText(asset.getAccessUrl())) {
+                map.put(fileId, asset.getAccessUrl());
+            }
+        }
+        return map;
+    }
+
+    private String resolveLogoUrl(Long logoFileId, Map<Long, String> logoUrlMap) {
+        return logoFileId == null ? null : logoUrlMap.get(logoFileId);
     }
 
     private void ensureTeamNo(BasketTeam team) {
