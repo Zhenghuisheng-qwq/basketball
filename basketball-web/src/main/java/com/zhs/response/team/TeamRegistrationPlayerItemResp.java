@@ -25,6 +25,18 @@ public class TeamRegistrationPlayerItemResp implements Serializable {
     @ApiModelProperty("游戏昵称")
     private String gameNickname;
 
+    @ApiModelProperty("永久球员编号")
+    private String playerNo;
+
+    @ApiModelProperty("场上位置")
+    private String positionCode;
+
+    @ApiModelProperty("阵容角色")
+    private String rosterRole;
+
+    @ApiModelProperty("阵容角色文案")
+    private String rosterRoleText;
+
     @ApiModelProperty("球衣号码")
     private String jerseyNo;
 

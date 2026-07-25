@@ -42,6 +42,33 @@
         <if test="tournamentName != null and tournamentName != ''">and t.tournament_name like concat('%', #{tournamentName}, '%')</if>
         <if test="tournamentStatus != null">and t.tournament_status = #{tournamentStatus}</if>
         <if test="competitionSeasonId != null">and t.competition_season_id = #{competitionSeasonId}</if>
+        <if test="registrationWindowStatus == 'UNCONFIGURED'">
+            and (t.registration_start_time is null or t.registration_end_time is null)
+        </if>
+        <if test="registrationWindowStatus == 'NOT_STARTED'">
+            and t.registration_start_time is not null and t.registration_end_time is not null
+            and now() &lt; t.registration_start_time
+        </if>
+        <if test="registrationWindowStatus == 'OPEN'">
+            and t.registration_start_time is not null and t.registration_end_time is not null
+            and now() &gt;= t.registration_start_time and now() &lt;= t.registration_end_time
+        </if>
+        <if test="registrationWindowStatus == 'CLOSED'">
+            and t.registration_start_time is not null and t.registration_end_time is not null
+            and now() &gt; t.registration_end_time
+        </if>
+        <if test="registrationTimeBegin != null">
+            and t.registration_end_time &gt;= #{registrationTimeBegin}
+        </if>
+        <if test="registrationTimeEnd != null">
+            and t.registration_start_time &lt;= #{registrationTimeEnd}
+        </if>
+        <if test="competitionTimeBegin != null">
+            and t.competition_end_time &gt;= #{competitionTimeBegin}
+        </if>
+        <if test="competitionTimeEnd != null">
+            and t.competition_start_time &lt;= #{competitionTimeEnd}
+        </if>
         order by t.display_order, t.create_time desc
     </select>
 

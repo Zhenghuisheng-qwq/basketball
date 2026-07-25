@@ -46,6 +46,12 @@ public class TeamInvitationItemResp implements Serializable {
     @ApiModelProperty("是否可响应")
     private Boolean canRespond;
 
+    @ApiModelProperty("是否可接受邀请")
+    private Boolean canAccept;
+
+    @ApiModelProperty("不可接受原因")
+    private String cannotAcceptReason;
+
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @ApiModelProperty("过期时间")

@@ -1,7 +1,7 @@
 import type { AccountCenterOverview, AccountSummaryDto, PlayerIdentityDto, PendingTaskDto } from '@/api/types/accountCenter'
 import type { AccountProfileDto } from '@/api/types/accountProfile'
 import type { AccountTournamentItemDto } from '@/api/types/accountTournament'
-import type { MessageItemDto } from '@/api/types/accountMessage'
+import type { MessageItemDto, MessageTeamInviteInfoDto } from '@/api/types/accountMessage'
 import type { PlayerCertCurrentDto } from '@/api/types/playerCertification'
 import type {
   PlatformAccountItemDto,
@@ -24,7 +24,12 @@ import type {
   PlayerVerification,
   PlayerVerificationStatus,
 } from '@/types/account'
-import type { AccountNotificationItem, AccountNotificationType } from '@/types/accountNotifications'
+import type {
+  AccountNotificationItem,
+  AccountNotificationResultStatus,
+  AccountNotificationTeamInvite,
+  AccountNotificationType,
+} from '@/types/accountNotifications'
 import { buildPlayerIdentity } from '@/utils/playerIdentity'
 
 const PLATFORM_CHANGE_APPROVED = 1
@@ -322,7 +327,9 @@ export function mapTournamentItemToMyTournament(item: AccountTournamentItemDto):
   }
 }
 
-function mapMessageType(messageType?: string): AccountNotificationType {
+function mapMessageType(messageType?: string, bizType?: string): AccountNotificationType {
+  const biz = (bizType || '').toUpperCase()
+  if (biz === 'TEAM_INVITE') return 'TEAM_INVITE'
   const normalized = (messageType || '').toUpperCase()
   if (normalized.includes('TEAM')) return 'TEAM_INVITE'
   if (normalized.includes('CERT') || normalized.includes('VERIFY')) return 'PLAYER_VERIFY'
@@ -332,27 +339,88 @@ function mapMessageType(messageType?: string): AccountNotificationType {
   return 'SYSTEM'
 }
 
+function mapTeamInviteDto(invite: MessageTeamInviteInfoDto): AccountNotificationTeamInvite {
+  return {
+    inviteId: invite.inviteId,
+    teamId: invite.teamId,
+    teamName: invite.teamName,
+    teamLogo: invite.teamLogo,
+    inviteStatus: invite.inviteStatus,
+    inviteStatusText: invite.inviteStatusText,
+    canRespond: invite.canRespond,
+    canAccept: invite.canAccept,
+    cannotAcceptReason: invite.cannotAcceptReason,
+    invitationMessage: invite.invitationMessage,
+    inviterName: invite.inviterName,
+    inviteTime: invite.inviteTime,
+    expireTime: invite.expireTime,
+  }
+}
+
+function mapTeamInvitePresentation(invite: AccountNotificationTeamInvite): {
+  resultText: string
+  resultStatus: AccountNotificationResultStatus
+} {
+  const teamName = invite.teamName || '该球队'
+  if (invite.inviteStatus === 1) {
+    return { resultText: `您已加入球队「${teamName}」`, resultStatus: 'SUCCESS' }
+  }
+  if (invite.inviteStatus === 2) {
+    return { resultText: `您已拒绝球队「${teamName}」的邀请`, resultStatus: 'FAILED' }
+  }
+  if (invite.inviteStatus === 3) {
+    return { resultText: '该邀请已过期', resultStatus: 'WARNING' }
+  }
+  if (invite.inviteStatus === 4) {
+    return { resultText: '该邀请已被队长撤销', resultStatus: 'WARNING' }
+  }
+  if (invite.canRespond && invite.canAccept === false && invite.cannotAcceptReason) {
+    return { resultText: invite.cannotAcceptReason, resultStatus: 'WARNING' }
+  }
+  if (invite.canRespond) {
+    return { resultText: '待处理', resultStatus: 'PENDING' }
+  }
+  return { resultText: invite.inviteStatusText || '待处理', resultStatus: 'WARNING' }
+}
+
+function buildTeamInviteMeta(invite: AccountNotificationTeamInvite) {
+  return [
+    { label: '邀请球队', value: invite.teamName || '-' },
+    { label: '邀请说明', value: invite.invitationMessage || '邀请加入球队' },
+    { label: '邀请人', value: invite.inviterName || '-' },
+    { label: '邀请时间', value: toIsoDateTime(invite.inviteTime) || '-' },
+    { label: '过期时间', value: toIsoDateTime(invite.expireTime) || '-' },
+    { label: '邀请状态', value: invite.inviteStatusText || '-' },
+  ]
+}
+
 export function mapMessageItemToNotification(item: MessageItemDto): AccountNotificationItem {
   const unread = item.readStatus !== 1
-  const type = mapMessageType(item.messageType)
+  const type = mapMessageType(item.messageType, item.bizType)
+  const teamInvite = item.teamInvite ? mapTeamInviteDto(item.teamInvite) : undefined
+  const invitePresentation = teamInvite ? mapTeamInvitePresentation(teamInvite) : null
+
   return {
     id: item.receiverId,
     type,
-    typeText: item.messageType || '系统',
+    typeText: type === 'TEAM_INVITE' ? '球队邀请' : (item.messageType || '系统'),
     title: item.title,
     summary: (item.content || '').slice(0, 80),
     status: unread ? 'UNREAD' : 'READ',
     isUnread: unread,
     createdAt: toIsoDateTime(item.sentTime),
     detailTitle: item.title,
-    detailSubtitle: item.content || '',
+    detailSubtitle: teamInvite?.teamName ? `来自球队「${teamInvite.teamName}」的邀请` : (item.content || ''),
     body: item.content ? item.content.split('\n').filter(Boolean) : [],
-    meta: [
-      ...(item.bizType ? [{ label: '业务类型', value: item.bizType }] : []),
-      ...(item.bizId ? [{ label: '关联业务', value: item.bizId }] : []),
-    ],
-    resultText: unread ? '未读' : '已读',
-    resultStatus: unread ? 'PENDING' : 'SUCCESS',
+    meta: teamInvite
+      ? buildTeamInviteMeta(teamInvite)
+      : [
+          ...(item.bizType ? [{ label: '业务类型', value: item.bizType }] : []),
+          ...(item.bizId ? [{ label: '关联业务', value: item.bizId }] : []),
+        ],
+    resultText: invitePresentation?.resultText ?? (unread ? '未读' : '已读'),
+    resultStatus: invitePresentation?.resultStatus ?? (unread ? 'PENDING' : 'SUCCESS'),
+    teamInvite,
   }
 }
 

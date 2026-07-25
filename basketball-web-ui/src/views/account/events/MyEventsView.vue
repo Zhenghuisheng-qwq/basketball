@@ -41,6 +41,7 @@ const loading = ref(false)
 const loadError = ref('')
 const participatingEvents = ref<ParticipatingEvent[]>([])
 const availableEvents = ref<AvailableEvent[]>([])
+const availableEmptyReason = ref('')
 const myApplications = ref<MyApplication[]>([])
 
 const activeTab = computed<MyEventsTabKey>(() => {
@@ -123,19 +124,36 @@ function mapToParticipating(item: AccountTournamentItemDto): ParticipatingEvent 
 async function loadAvailableEvents() {
   loading.value = true
   loadError.value = ''
+  availableEmptyReason.value = ''
   try {
     const isVerified = accountStore.isVerifiedPlayer
-    const [openRes, teamRes] = await Promise.all([
+    const teamId = teamStore.myTeamSummary?.teamId
+    const teamPromise = teamStore.hasTeam && teamStore.isCaptain && teamId
+      ? getAvailableSeasonPage(teamId, { currentPage: 1, pageSize: 20 })
+      : Promise.resolve({ data: { records: [], emptyReason: teamStore.isCaptain ? '' : '只有队长可以代表球队报名赛事' } })
+
+    const [openResult, teamResult] = await Promise.allSettled([
       getOpenAvailableSeasonPage({ currentPage: 1, pageSize: 20 }),
-      teamStore.hasTeam && teamStore.isCaptain && teamStore.myTeamSummary?.teamId
-        ? getAvailableSeasonPage(teamStore.myTeamSummary.teamId, { currentPage: 1, pageSize: 20 })
-        : Promise.resolve({ data: { records: [] } }),
+      teamPromise,
     ])
-    const openEvents = (openRes.data?.records || []).map((item) =>
-      mapOpenSeasonToAvailableEvent(item, isVerified))
-    const teamEvents = (teamRes.data?.records || []).map((item) =>
-      mapTeamSeasonToAvailableEvent(item, Boolean(teamStore.isCaptain)))
+
+    const openEvents = openResult.status === 'fulfilled'
+      ? (openResult.value.data?.records || []).map((item) => mapOpenSeasonToAvailableEvent(item, isVerified))
+      : []
+
+    let teamEvents: AvailableEvent[] = []
+    if (teamResult.status === 'fulfilled') {
+      teamEvents = (teamResult.value.data?.records || []).map((item) =>
+        mapTeamSeasonToAvailableEvent(item, Boolean(teamStore.isCaptain)))
+      availableEmptyReason.value = teamResult.value.data?.emptyReason || ''
+    } else if (teamStore.hasTeam && !teamStore.isCaptain) {
+      availableEmptyReason.value = '只有队长可以代表球队报名赛事'
+    }
+
     availableEvents.value = [...openEvents, ...teamEvents]
+    if (!availableEvents.value.length && !availableEmptyReason.value && openResult.status === 'rejected' && teamResult.status === 'rejected') {
+      loadError.value = '加载失败'
+    }
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
     availableEvents.value = []
@@ -153,7 +171,8 @@ async function loadApplications() {
     let teamApps: MyApplication[] = []
     if (teamStore.myTeamSummary?.teamId) {
       const teamRes = await getTeamRegistrationPage(teamStore.myTeamSummary.teamId, { currentPage: 1, pageSize: 20 })
-      teamApps = (teamRes.data?.records || []).map(mapTeamRegistrationToApplication)
+      teamApps = (teamRes.data?.records || []).map((item) =>
+        mapTeamRegistrationToApplication(item, teamStore.isCaptain))
     }
     myApplications.value = [...openApps, ...teamApps]
   } catch (error) {
@@ -172,7 +191,9 @@ async function loadJoinedTournaments() {
       getAccountTournamentPage({ currentPage: 1, pageSize: 50 }),
       getMyEventTeamList(),
     ])
-    const fromTournaments = (tournamentRes.data?.records || []).map(mapToParticipating)
+    const fromTournaments = (tournamentRes.data?.records || [])
+      .filter((item) => item.registrationStatus === 3)
+      .map(mapToParticipating)
     const fromEventTeams = (eventTeamRes.data || []).map(mapEventTeamSummaryToParticipating)
     participatingEvents.value = [...fromEventTeams, ...fromTournaments]
     await accountStore.loadMyTournaments().catch(() => undefined)
@@ -212,7 +233,8 @@ function handleAvailableAction(event: AvailableEvent) {
     return
   }
   if (event.actionType === 'TEAM_REGISTRATION') {
-    router.push(`/account/my-events/${event.tournamentId}/team-registration`)
+    const seasonKey = event.seasonId || event.tournamentId
+    router.push(`/account/my-events/${seasonKey}/team-registration`)
     return
   }
   if (event.actionType === 'GO_APPLICATIONS') {
@@ -226,6 +248,16 @@ function handleApplicationAction(application: MyApplication) {
   if (application.applicationType === 'INDIVIDUAL') {
     const routeName = getOpenStatusRouteName(application.status as any)
     router.push({ name: routeName })
+    return
+  }
+  if (application.actionType === 'VIEW_APPLICATION_STATUS') {
+    router.push({
+      path: '/account/team',
+      query: {
+        tab: 'registration',
+        registrationId: application.applicationId,
+      },
+    })
     return
   }
   router.push(`/account/my-events/${application.tournamentId}/team-registration`)
@@ -265,7 +297,7 @@ function handleParticipatingAction(event: ParticipatingEvent) {
       <AccountEmptyState
         v-if="!loading && !availableEvents.length"
         message="暂无可参与赛事"
-        subtitle="开放报名赛季上线后将显示在这里"
+        :subtitle="availableEmptyReason || '当前暂无可报名赛事，请确认球队已认证且处于报名期'"
         large
       />
       <AvailableEventTable

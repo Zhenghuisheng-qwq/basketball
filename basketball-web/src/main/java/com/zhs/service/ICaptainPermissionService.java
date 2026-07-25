@@ -22,4 +22,12 @@ public interface ICaptainPermissionService {
     BasketTeam requireManageableTeam(Long accountId, Long teamId);
 
     BasketTournamentRegistration requireRegistrationCaptain(Long accountId, Long registrationId);
+
+    boolean hasCurrentTeamMembership(Long accountId);
+
+    boolean hasValidCaptainQualification(Long accountId);
+
+    String resolveJoinIneligibilityReason(Long accountId);
+
+    void assertEligibleToJoinTeam(Long accountId);
 }

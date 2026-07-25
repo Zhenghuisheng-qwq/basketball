@@ -49,4 +49,7 @@ public class MessageItemResp implements Serializable {
 
     @ApiModelProperty("跳转值")
     private String redirectValue;
+
+    @ApiModelProperty("球队邀请信息（业务类型为 TEAM_INVITE 时返回）")
+    private MessageTeamInviteInfoResp teamInvite;
 }

@@ -6,6 +6,7 @@ import com.zhs.request.team.TeamRegistrationRosterReq;
 import com.zhs.request.team.TeamRegistrationUpdateReq;
 import com.zhs.request.team.TeamRegistrationWithdrawReq;
 import com.zhs.response.team.AvailableSeasonItemResp;
+import com.zhs.response.team.AvailableSeasonPageResp;
 import com.zhs.response.team.TeamRegistrationAuditItemResp;
 import com.zhs.response.team.TeamRegistrationDetailResp;
 import com.zhs.response.team.TeamRegistrationItemResp;
@@ -32,9 +33,9 @@ public class TeamRegistrationBusinessController {
     @Resource
     private ITeamRegistrationBusinessService teamRegistrationBusinessService;
 
-    @ApiOperation("可报名赛季分页")
+    @ApiOperation("可报名赛事分页")
     @GetMapping("/basket/team/{teamId}/registration/available-season/page")
-    public R<IPage<AvailableSeasonItemResp>> pageAvailableSeasons(@PathVariable String teamId,
+    public R<AvailableSeasonPageResp> pageAvailableSeasons(@PathVariable String teamId,
                                                                 @RequestParam(required = false) Integer currentPage,
                                                                 @RequestParam(required = false) Integer pageSize) {
         return R.ok(teamRegistrationBusinessService.pageAvailableSeasons(teamId, currentPage, pageSize));

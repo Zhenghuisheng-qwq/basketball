@@ -162,9 +162,10 @@ export function mapTeamSeasonToAvailableEvent(
   }
 
   return {
-    tournamentId: season.tournamentId || season.seasonId,
+    tournamentId: season.seasonId || season.tournamentId || '',
+    seasonId: season.seasonId,
     tournamentName: season.tournamentName || season.seasonName || '联赛赛事',
-    platform: season.seasonName || '-',
+    platform: season.gameTerminal || season.competitionSeasonName || season.seasonName || '-',
     registrationType: 'TEAM',
     registrationTypeText: '球队报名',
     deadline,
@@ -177,7 +178,10 @@ export function mapTeamSeasonToAvailableEvent(
   }
 }
 
-export function mapTeamRegistrationToApplication(item: TeamRegistrationItemDto): MyApplication {
+export function mapTeamRegistrationToApplication(
+  item: TeamRegistrationItemDto,
+  isCaptain = true,
+): MyApplication {
   const status = String(item.registrationStatus ?? '')
   let actionType: MyApplication['actionType'] = 'VIEW_APPLICATION_STATUS'
   let actionText = '查看状态'
@@ -198,6 +202,7 @@ export function mapTeamRegistrationToApplication(item: TeamRegistrationItemDto):
     actionText,
     actionType,
     pending: item.registrationStatus === 1 || item.registrationStatus === 2,
+    showAction: isCaptain,
   }
 }
 

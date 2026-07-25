@@ -30,4 +30,10 @@ public class CandidatePlayerItemResp implements Serializable {
 
     @ApiModelProperty("场上位置")
     private String positionCode;
+
+    @ApiModelProperty("场上位置中文名")
+    private String positionName;
+
+    @ApiModelProperty("球员认证状态")
+    private Integer certificationStatus;
 }

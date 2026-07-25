@@ -18,6 +18,7 @@ export interface AccountEventTab {
 
 export interface AvailableEvent {
   tournamentId: string
+  seasonId?: string
   tournamentName: string
   platform: string
   registrationType: 'TEAM' | 'INDIVIDUAL'
@@ -53,6 +54,7 @@ export interface MyApplication {
   actionText: string
   actionType: ApplicationActionType
   pending?: boolean
+  showAction?: boolean
 }
 
 export type ParticipatingActionType =

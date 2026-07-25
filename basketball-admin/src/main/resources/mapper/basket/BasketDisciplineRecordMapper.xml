@@ -51,8 +51,15 @@
         where season_id = #{seasonId} and discipline_status = 1 and record_status = 'ACTIVE' and is_delete = 0
           and effective_start_time &lt;= #{now}
           and (effective_end_time is null or effective_end_time &gt;= #{now})
-          and member_id in
-        <foreach collection="memberIds" item="mid" open="(" separator="," close=")">#{mid}</foreach>
+        <choose>
+            <when test="memberIds != null and memberIds.size() &gt; 0">
+                and member_id in
+                <foreach collection="memberIds" item="mid" open="(" separator="," close=")">#{mid}</foreach>
+            </when>
+            <otherwise>
+                and 1 = 0
+            </otherwise>
+        </choose>
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">

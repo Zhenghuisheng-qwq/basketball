@@ -110,4 +110,4 @@ member:
 team:
   invitation:
     expire-days: 7
-  default-max-member-count: 20
+  default-max-member-count: 8

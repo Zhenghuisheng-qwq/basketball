@@ -51,7 +51,7 @@ const stepItems = computed<StepItem[]>(() => {
   const order: FlowStep[] = ['season', 'info', 'roster', 'submit']
   const currentIndex = order.indexOf(currentStep.value)
   return [
-    { label: '选择赛季', state: currentIndex > 0 ? 'done' : currentIndex === 0 ? 'current' : 'upcoming' },
+    { label: '选择赛事', state: currentIndex > 0 ? 'done' : currentIndex === 0 ? 'current' : 'upcoming' },
     { label: '填写信息', state: currentIndex > 1 ? 'done' : currentIndex === 1 ? 'current' : 'upcoming' },
     { label: '选择阵容', state: currentIndex > 2 ? 'done' : currentIndex === 2 ? 'current' : 'upcoming' },
     { label: '提交审核', state: currentIndex === 3 ? 'current' : 'upcoming' },
@@ -269,7 +269,7 @@ onMounted(bootstrap)
     <template v-else>
       <AccountPanel v-if="currentStep === 'season'" title="选择赛季">
         <div v-if="!teamStore.availableSeasons.length" class="team-registration-empty">
-          当前暂无可报名赛季
+          当前暂无可报名赛事
         </div>
         <div v-else class="team-registration-season-list">
           <label

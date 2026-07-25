@@ -31,6 +31,21 @@ public class TeamJoinApplicationItemResp implements Serializable {
     @ApiModelProperty("申请人昵称")
     private String applicantNickname;
 
+    @ApiModelProperty("球员编号")
+    private String playerNo;
+
+    @ApiModelProperty("场上位置")
+    private String positionCode;
+
+    @ApiModelProperty("场上位置中文名")
+    private String positionName;
+
+    @ApiModelProperty("比赛终端")
+    private String gameTerminal;
+
+    @ApiModelProperty("球员认证状态")
+    private Integer certificationStatus;
+
     @ApiModelProperty("申请原因")
     private String applyReason;
 

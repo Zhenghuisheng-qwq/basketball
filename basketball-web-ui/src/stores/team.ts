@@ -96,6 +96,7 @@ export const useTeamStore = defineStore('team', () => {
   const candidatesLoading = ref(false)
 
   const availableSeasons = ref<AvailableSeasonItemDto[]>([])
+  const availableSeasonEmptyReason = ref('')
   const registrations = ref<TeamRegistrationItemDto[]>([])
   const registrationDetail = ref<TeamRegistrationDetailDto | null>(null)
   const registrationAudits = ref<TeamRegistrationAuditItemDto[]>([])
@@ -106,6 +107,8 @@ export const useTeamStore = defineStore('team', () => {
     Boolean(myTeamSummary.value?.isCaptain || teamDetail.value?.isCaptain),
   )
   const canCreateTeam = computed(() => Boolean(captainQualification.value?.canCreateTeam))
+  const hasValidCaptainQualification = computed(() => canCreateTeam.value)
+  const canJoinTeam = computed(() => !hasTeam.value && !canCreateTeam.value)
 
   function setError(error: unknown) {
     lastError.value = error instanceof Error ? error.message : '操作失败'
@@ -491,6 +494,7 @@ export const useTeamStore = defineStore('team', () => {
     try {
       const res = await getAvailableSeasonPage(teamId, { currentPage: 1, pageSize: 20 })
       availableSeasons.value = unwrapPage(res.data).records
+      availableSeasonEmptyReason.value = res.data?.emptyReason || ''
       return availableSeasons.value
     } catch (error) {
       setError(error)
@@ -655,6 +659,7 @@ export const useTeamStore = defineStore('team', () => {
     joinableTeams.value = []
     candidatePlayers.value = []
     availableSeasons.value = []
+    availableSeasonEmptyReason.value = ''
     registrations.value = []
     registrationDetail.value = null
     registrationAudits.value = []
@@ -682,6 +687,7 @@ export const useTeamStore = defineStore('team', () => {
     candidatePlayers,
     candidatesLoading,
     availableSeasons,
+    availableSeasonEmptyReason,
     registrations,
     registrationDetail,
     registrationAudits,
@@ -689,6 +695,8 @@ export const useTeamStore = defineStore('team', () => {
     hasTeam,
     isCaptain,
     canCreateTeam,
+    hasValidCaptainQualification,
+    canJoinTeam,
     loadQualification,
     loadMyTeam,
     loadTeamDetail,

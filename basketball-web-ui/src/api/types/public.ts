@@ -249,6 +249,9 @@ export interface PublicTournamentItemVo {
   competitionSeasonId?: string | null
   competitionSeasonName?: string | null
   competitionSeasonYear?: number | null
+  registrationStartTime?: string | null
+  registrationEndTime?: string | null
+  registrationStatus?: 'NOT_STARTED' | 'OPEN' | 'CLOSED' | 'ENDED' | string | null
 }
 
 export interface PublicTournamentDetailVo {

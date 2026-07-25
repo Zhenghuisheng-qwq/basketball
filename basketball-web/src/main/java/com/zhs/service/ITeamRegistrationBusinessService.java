@@ -6,13 +6,14 @@ import com.zhs.request.team.TeamRegistrationRosterReq;
 import com.zhs.request.team.TeamRegistrationUpdateReq;
 import com.zhs.request.team.TeamRegistrationWithdrawReq;
 import com.zhs.response.team.AvailableSeasonItemResp;
+import com.zhs.response.team.AvailableSeasonPageResp;
 import com.zhs.response.team.TeamRegistrationAuditItemResp;
 import com.zhs.response.team.TeamRegistrationDetailResp;
 import com.zhs.response.team.TeamRegistrationItemResp;
 
 public interface ITeamRegistrationBusinessService {
 
-    IPage<AvailableSeasonItemResp> pageAvailableSeasons(String teamId, Integer currentPage, Integer pageSize);
+    AvailableSeasonPageResp pageAvailableSeasons(String teamId, Integer currentPage, Integer pageSize);
 
     IPage<TeamRegistrationItemResp> pageRegistrations(String teamId, Integer currentPage, Integer pageSize, Integer status);
 

@@ -15,6 +15,22 @@ export interface AccountNotificationMetaItem {
   value: string
 }
 
+export interface AccountNotificationTeamInvite {
+  inviteId: string
+  teamId?: string
+  teamName?: string
+  teamLogo?: string
+  inviteStatus?: number
+  inviteStatusText?: string
+  canRespond?: boolean
+  canAccept?: boolean
+  cannotAcceptReason?: string
+  invitationMessage?: string
+  inviterName?: string
+  inviteTime?: string
+  expireTime?: string
+}
+
 export interface AccountNotificationItem {
   id: string
   type: AccountNotificationType
@@ -30,6 +46,7 @@ export interface AccountNotificationItem {
   meta: AccountNotificationMetaItem[]
   resultText: string
   resultStatus: AccountNotificationResultStatus
+  teamInvite?: AccountNotificationTeamInvite
 }
 
 export interface NotificationSummary {

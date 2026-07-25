@@ -7,12 +7,23 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.common.UserContext;
 import com.zhs.dao.BasketMessageReceiverDao;
 import com.zhs.dao.BasketMessageTaskDao;
+import com.zhs.dao.BasketFileAssetDao;
+import com.zhs.dao.BasketMemberProfileDao;
+import com.zhs.dao.BasketTeamDao;
+import com.zhs.dao.BasketTeamInvitationDao;
 import com.zhs.enums.MessageReadStatusEnum;
+import com.zhs.enums.TeamInvitationStatusEnum;
 import com.zhs.exception.ServiceException;
+import com.zhs.model.BasketFileAsset;
+import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketMessageReceiver;
 import com.zhs.model.BasketMessageTask;
+import com.zhs.model.BasketTeam;
+import com.zhs.model.BasketTeamInvitation;
 import com.zhs.response.account.MessageItemResp;
+import com.zhs.response.account.MessageTeamInviteInfoResp;
 import com.zhs.service.IAccountMessageService;
+import com.zhs.service.ICaptainPermissionService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,11 +43,22 @@ import java.util.stream.Collectors;
 public class AccountMessageServiceImpl implements IAccountMessageService {
 
     private static final Integer NOT_DELETED = 0;
+    private static final String BIZ_TYPE_TEAM_INVITE = "TEAM_INVITE";
 
     @Resource
     private BasketMessageReceiverDao messageReceiverDao;
     @Resource
     private BasketMessageTaskDao messageTaskDao;
+    @Resource
+    private BasketTeamInvitationDao teamInvitationDao;
+    @Resource
+    private BasketTeamDao teamDao;
+    @Resource
+    private BasketMemberProfileDao memberProfileDao;
+    @Resource
+    private BasketFileAssetDao fileAssetDao;
+    @Resource
+    private ICaptainPermissionService captainPermissionService;
 
     @Override
     public IPage<MessageItemResp> pageMessages(Integer currentPage, Integer pageSize, Integer readStatus) {
@@ -73,7 +95,7 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
         Long memberId = UserContext.getRequiredUserId();
         BasketMessageReceiver receiver = requireOwnedReceiver(receiverId, memberId);
         Map<Long, BasketMessageTask> taskMap = loadTaskMap(Collections.singletonList(receiver));
-        return buildMessageItem(receiver, taskMap.get(receiver.getTaskId()));
+        return buildMessageItem(receiver, taskMap.get(receiver.getTaskId()), memberId, true);
     }
 
     @Override
@@ -183,12 +205,13 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
         }
         List<MessageItemResp> items = new ArrayList<>(receivers.size());
         for (BasketMessageReceiver receiver : receivers) {
-            items.add(buildMessageItem(receiver, taskMap.get(receiver.getTaskId())));
+            items.add(buildMessageItem(receiver, taskMap.get(receiver.getTaskId()), null, false));
         }
         return items;
     }
 
-    private MessageItemResp buildMessageItem(BasketMessageReceiver receiver, BasketMessageTask task) {
+    private MessageItemResp buildMessageItem(BasketMessageReceiver receiver, BasketMessageTask task,
+                                               Long memberId, boolean includeTeamInvite) {
         MessageItemResp resp = new MessageItemResp();
         resp.setReceiverId(String.valueOf(receiver.getId()));
         resp.setReadStatus(receiver.getReadStatus());
@@ -202,8 +225,90 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
             resp.setContent(toContentString(task.getContentText()));
             resp.setBizType(task.getBizType());
             resp.setBizId(task.getBizId() == null ? null : String.valueOf(task.getBizId()));
+            if (includeTeamInvite && memberId != null) {
+                resp.setTeamInvite(loadTeamInviteInfo(task, memberId));
+            }
         }
         return resp;
+    }
+
+    private MessageTeamInviteInfoResp loadTeamInviteInfo(BasketMessageTask task, Long memberId) {
+        if (task == null || !BIZ_TYPE_TEAM_INVITE.equals(task.getBizType()) || task.getBizId() == null) {
+            return null;
+        }
+        BasketTeamInvitation invitation = teamInvitationDao.selectById(task.getBizId());
+        if (invitation == null || !NOT_DELETED.equals(invitation.getIsDelete())) {
+            return null;
+        }
+        if (!memberId.equals(invitation.getInviteeMemberId())) {
+            return null;
+        }
+
+        Date now = new Date();
+        Integer displayStatus = invitation.getInvitationStatus();
+        if (Objects.equals(TeamInvitationStatusEnum.PENDING.getCode(), displayStatus)
+                && invitation.getExpireTime() != null
+                && invitation.getExpireTime().before(now)) {
+            displayStatus = TeamInvitationStatusEnum.EXPIRED.getCode();
+        }
+
+        BasketTeam team = teamDao.selectById(invitation.getTeamId());
+        BasketMemberProfile inviterProfile = memberProfileDao.selectOne(new LambdaQueryWrapper<BasketMemberProfile>()
+                .eq(BasketMemberProfile::getMemberId, invitation.getInviterMemberId())
+                .eq(BasketMemberProfile::getIsDelete, NOT_DELETED)
+                .last("limit 1"));
+
+        MessageTeamInviteInfoResp info = new MessageTeamInviteInfoResp();
+        info.setInviteId(String.valueOf(invitation.getId()));
+        info.setTeamId(String.valueOf(invitation.getTeamId()));
+        info.setTeamName(team == null ? null : team.getTeamName());
+        info.setTeamLogo(resolveLogoUrl(team == null ? null : team.getLogoFileId()));
+        info.setInviteStatus(displayStatus);
+        info.setInviteStatusText(resolveInviteStatusText(displayStatus));
+        info.setInvitationMessage(invitation.getInvitationMessage());
+        info.setInviterName(inviterProfile == null ? null : inviterProfile.getNickname());
+        info.setInviteTime(invitation.getCreateTime());
+        info.setExpireTime(invitation.getExpireTime());
+        boolean canRespond = Objects.equals(TeamInvitationStatusEnum.PENDING.getCode(), displayStatus)
+                && (invitation.getExpireTime() == null || invitation.getExpireTime().after(now));
+        info.setCanRespond(canRespond);
+        String joinIneligibilityReason = captainPermissionService.resolveJoinIneligibilityReason(memberId);
+        info.setCanAccept(canRespond && joinIneligibilityReason == null);
+        info.setCannotAcceptReason(canRespond ? joinIneligibilityReason : null);
+        return info;
+    }
+
+    private String resolveLogoUrl(Long logoFileId) {
+        if (logoFileId == null) {
+            return null;
+        }
+        BasketFileAsset asset = fileAssetDao.selectById(logoFileId);
+        if (asset == null || !NOT_DELETED.equals(asset.getIsDelete())) {
+            return null;
+        }
+        return asset.getAccessUrl();
+    }
+
+    private String resolveInviteStatusText(Integer statusCode) {
+        if (statusCode == null) {
+            return "未知";
+        }
+        if (Objects.equals(TeamInvitationStatusEnum.PENDING.getCode(), statusCode)) {
+            return "待处理";
+        }
+        if (Objects.equals(TeamInvitationStatusEnum.ACCEPTED.getCode(), statusCode)) {
+            return "已接受";
+        }
+        if (Objects.equals(TeamInvitationStatusEnum.REJECTED.getCode(), statusCode)) {
+            return "已拒绝";
+        }
+        if (Objects.equals(TeamInvitationStatusEnum.EXPIRED.getCode(), statusCode)) {
+            return "已过期";
+        }
+        if (Objects.equals(TeamInvitationStatusEnum.CANCELLED.getCode(), statusCode)) {
+            return "已撤销";
+        }
+        return TeamInvitationStatusEnum.fromCode(statusCode).getDescription();
     }
 
     private String toContentString(Object contentText) {

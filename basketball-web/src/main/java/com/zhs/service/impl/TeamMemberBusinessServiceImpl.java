@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.common.UserContext;
+import com.zhs.dao.BasketFileAssetDao;
 import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamMemberDao;
@@ -14,6 +15,7 @@ import com.zhs.enums.TeamMembershipStatusEnum;
 import com.zhs.enums.TeamRosterTypeEnum;
 import com.zhs.enums.TournamentRegistrationStatusEnum;
 import com.zhs.exception.ServiceException;
+import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeamMember;
@@ -25,6 +27,7 @@ import com.zhs.response.team.TeamMemberItemResp;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamMemberBusinessService;
 import com.zhs.service.team.TeamMemberJoinHelper;
+import com.zhs.support.PlayerPositionSupport;
 import com.zhs.util.AccountSecurityLogHelper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -57,6 +60,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     private BasketPlayerProfileDao playerProfileDao;
     @Resource
     private BasketMemberProfileDao memberProfileDao;
+    @Resource
+    private BasketFileAssetDao fileAssetDao;
     @Resource
     private BasketTournamentRegistrationDao registrationDao;
     @Resource
@@ -266,12 +271,28 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         BasketPlayerProfile player = maps.playerMap().get(member.getPlayerId());
         if (player != null) {
             resp.setGameNickname(player.getGameNickname());
+            resp.setPlayerNo(player.getPlayerNo());
+            resp.setPositionCode(player.getPositionCode());
+            resp.setPositionName(PlayerPositionSupport.resolveName(player.getPositionCode()));
+            resp.setCertificationStatus(player.getCertificationStatus());
         }
         BasketMemberProfile memberProfile = maps.memberProfileMap().get(member.getMemberId());
         if (memberProfile != null) {
             resp.setNickname(memberProfile.getNickname());
+            resp.setAvatarUrl(resolveAvatarUrl(memberProfile.getAvatarFileId()));
         }
         return resp;
+    }
+
+    private String resolveAvatarUrl(Long avatarFileId) {
+        if (avatarFileId == null) {
+            return null;
+        }
+        BasketFileAsset asset = fileAssetDao.selectById(avatarFileId);
+        if (asset == null || !NOT_DELETED.equals(asset.getIsDelete())) {
+            return null;
+        }
+        return asset.getAccessUrl();
     }
 
     private CandidatePlayerItemResp toCandidateItem(BasketPlayerProfile profile, BasketMemberProfile memberProfile) {
@@ -282,6 +303,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         resp.setGameNickname(profile.getGameNickname());
         resp.setGameTerminal(profile.getGameTerminal());
         resp.setPositionCode(profile.getPositionCode());
+        resp.setPositionName(PlayerPositionSupport.resolveName(profile.getPositionCode()));
+        resp.setCertificationStatus(profile.getCertificationStatus());
         if (memberProfile != null) {
             resp.setNickname(memberProfile.getNickname());
         }

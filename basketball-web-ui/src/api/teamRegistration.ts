@@ -1,7 +1,7 @@
 import request from '@/api/request'
 import type { ApiResult, PageResult } from '@/api/types/common'
 import type {
-  AvailableSeasonItemDto,
+  AvailableSeasonPageDto,
   TeamRegistrationAuditItemDto,
   TeamRegistrationDetailDto,
   TeamRegistrationDraftReq,
@@ -15,7 +15,7 @@ export function getAvailableSeasonPage(
   teamId: string,
   params?: { currentPage?: number; pageSize?: number },
 ) {
-  return request.get<any, ApiResult<PageResult<AvailableSeasonItemDto>>>(
+  return request.get<any, ApiResult<AvailableSeasonPageDto>>(
     `/basket/team/${teamId}/registration/available-season/page`,
     { params },
   )

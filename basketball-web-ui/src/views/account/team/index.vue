@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
@@ -9,7 +9,9 @@ import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import { useTeamStore } from '@/stores/team'
 import { useAccountStore } from '@/stores/account'
-import { mapPlatformToGameTerminal, mapTeamRegistrationStatusText } from '@/utils/accountMappers'
+import { mapPlatformToGameTerminal, mapGameTerminalToPlatform, mapTeamRegistrationStatusText } from '@/utils/accountMappers'
+import { formatPositionLabel, CNPA_REQUIRED_STARTER_COUNT, CNPA_MIN_BENCH_COUNT, CNPA_TEAM_MAX_MEMBER_COUNT } from '@/constants/rosterRules'
+import { GAME_PLATFORM_LABELS } from '@/types/account'
 import { formatDateTime } from '@/utils/formatDate'
 import { uploadAccountFile } from '@/api/accountFile'
 import type { TeamInvitationItemDto } from '@/api/types/teamInvitation'
@@ -17,7 +19,9 @@ import type { TeamMemberItemDto } from '@/api/types/teamMember'
 import type { TeamRegistrationPlayerItemDto } from '@/api/types/teamRegistration'
 
 type TeamTab =
-  | 'discover'
+  | 'pendingInvites'
+  | 'joinableTeams'
+  | 'myApplications'
   | 'create'
   | 'overview'
   | 'profile'
@@ -26,12 +30,54 @@ type TeamTab =
   | 'applications'
   | 'registration'
 
+const TEAM_AUDIT_STATUS: Record<number, string> = {
+  0: '待审核',
+  1: '已通过',
+  2: '已驳回',
+  3: '审核中',
+}
+
+function formatTeamRole(roleType?: string) {
+  if (roleType === 'CAPTAIN') return '队长'
+  if (roleType === 'MEMBER') return '队员'
+  return roleType || '-'
+}
+
+function formatMemberRosterType(rosterType?: string) {
+  if (rosterType === 'OFFICIAL') return '正式'
+  if (rosterType === 'TRIAL') return '试训'
+  return rosterType || '-'
+}
+
+function formatPlayerCertStatus(status?: number) {
+  if (status === 3) return '已认证'
+  return '未认证'
+}
+
+function formatMemberPosition(member: { positionCode?: string; positionName?: string }) {
+  if (!member.positionCode) return '未设置'
+  if (member.positionName) return `${member.positionCode} ${member.positionName}`
+  return formatPositionLabel(member.positionCode)
+}
+
+function formatGameTerminalLabel(terminal?: string) {
+  if (!terminal) return '-'
+  return GAME_PLATFORM_LABELS[mapGameTerminalToPlatform(terminal)]
+}
+
+function formatPositionCell(code?: string, name?: string) {
+  if (!code) return '未设置'
+  return name ? `${code} ${name}` : formatPositionLabel(code)
+}
+
+const teamMemberLimitHint = `${CNPA_TEAM_MAX_MEMBER_COUNT} 人（${CNPA_REQUIRED_STARTER_COUNT} 首发 + ${CNPA_MIN_BENCH_COUNT} 替补）`
+
 const route = useRoute()
 const router = useRouter()
 const teamStore = useTeamStore()
 const accountStore = useAccountStore()
 
-const activeTab = ref<TeamTab>('discover')
+const activeTab = ref<TeamTab>('overview')
 const pageLoading = ref(true)
 const loadError = ref('')
 
@@ -83,6 +129,7 @@ const activeInvitation = ref<TeamInvitationItemDto | null>(null)
 const hasTeam = computed(() => teamStore.hasTeam)
 const isCaptain = computed(() => teamStore.isCaptain)
 const canCreateTeam = computed(() => teamStore.canCreateTeam)
+const canJoinTeam = computed(() => teamStore.canJoinTeam)
 const captainQual = computed(() => teamStore.captainQualification)
 const hasCaptainQualRecord = computed(() => Boolean(captainQual.value?.hasQualification))
 const isCaptainQualExpired = computed(() => {
@@ -91,14 +138,24 @@ const isCaptainQualExpired = computed(() => {
 })
 const teamId = computed(() => teamStore.myTeamSummary?.teamId || '')
 const teamDetail = computed(() => teamStore.teamDetail)
+const isTeamAuditApproved = computed(() => teamDetail.value?.auditStatus === 1)
+const teamAuditStatusText = computed(() => {
+  const status = teamDetail.value?.auditStatus
+  return status != null ? TEAM_AUDIT_STATUS[status] || '未知' : '-'
+})
 
 const availableTabs = computed<TeamTab[]>(() => {
-  if (!hasTeam.value && canCreateTeam.value) return ['create', 'discover']
-  if (!hasTeam.value) return ['discover']
-  if (isCaptain.value) {
-    return ['overview', 'profile', 'members', 'invitations', 'applications', 'registration']
+  if (hasTeam.value) {
+    if (isCaptain.value) {
+      if (isTeamAuditApproved.value) {
+        return ['overview', 'profile', 'members', 'invitations', 'applications', 'registration']
+      }
+      return ['overview', 'profile']
+    }
+    return ['overview']
   }
-  return ['overview', 'members']
+  if (canCreateTeam.value) return ['create']
+  return ['pendingInvites', 'joinableTeams', 'myApplications']
 })
 
 const bannerTitle = computed(() => {
@@ -108,9 +165,12 @@ const bannerTitle = computed(() => {
 })
 
 const bannerDescription = computed(() => {
-  if (hasTeam.value && isCaptain.value) return '管理球队资料、成员、邀请与赛事报名'
-  if (hasTeam.value) return '查看球队信息与成员列表'
-  if (canCreateTeam.value) return '你已拥有队长资格，可以创建并管理自己的球队；也可以加入其他球队'
+  if (hasTeam.value && isCaptain.value) {
+    if (isTeamAuditApproved.value) return '管理球队资料、成员、邀请与赛事报名'
+    return '球队认证审核中，可先查看概览并编辑资料'
+  }
+  if (hasTeam.value) return '查看球队信息'
+  if (canCreateTeam.value) return '你已拥有队长资格，可以创建并管理自己的球队。'
   if (isCaptainQualExpired.value) return '队长资格已过期，请联系运营重新确认队长资格；你仍可申请加入其他球队'
   return '浏览可加入球队、处理邀请或提交加入申请'
 })
@@ -134,8 +194,10 @@ const bannerStatusType = computed(() => {
 watch(
   () => route.query.tab,
   (tab) => {
-    if (typeof tab === 'string' && availableTabs.value.includes(tab as TeamTab)) {
-      activeTab.value = tab as TeamTab
+    if (typeof tab !== 'string') return
+    const normalized = tab === 'discover' ? 'joinableTeams' : tab
+    if (availableTabs.value.includes(normalized as TeamTab)) {
+      activeTab.value = normalized as TeamTab
     }
   },
   { immediate: true },
@@ -161,7 +223,7 @@ async function bootstrap() {
   loadError.value = ''
   try {
     await teamStore.bootstrap()
-    if (!hasTeam.value) {
+    if (canJoinTeam.value) {
       await Promise.all([
         teamStore.loadMyInvitations({ status: 0 }),
         teamStore.loadJoinableTeams(),
@@ -172,6 +234,7 @@ async function bootstrap() {
     loadError.value = error instanceof Error ? error.message : '加载失败'
   } finally {
     pageLoading.value = false
+    await openRegistrationFromQuery().catch(() => undefined)
   }
 }
 
@@ -183,12 +246,16 @@ function setTab(tab: TeamTab) {
 }
 
 async function refreshTabData(tab: TeamTab) {
-  if (tab === 'discover') {
-    await Promise.all([
-      teamStore.loadMyInvitations({ status: 0 }),
-      teamStore.loadJoinableTeams({ keyword: joinKeyword.value || undefined }),
-      teamStore.loadMyJoinApplications(),
-    ])
+  if (tab === 'pendingInvites') {
+    await teamStore.loadMyInvitations({ status: 0 })
+    return
+  }
+  if (tab === 'joinableTeams') {
+    await teamStore.loadJoinableTeams({ keyword: joinKeyword.value || undefined })
+    return
+  }
+  if (tab === 'myApplications') {
+    await teamStore.loadMyJoinApplications()
     return
   }
   if (!teamId.value) return
@@ -330,8 +397,8 @@ async function handleLeaveTeam() {
     await ElMessageBox.confirm('确认退出当前球队？', '离队确认', { type: 'warning' })
     await teamStore.leaveTeamAction(teamId.value)
     ElMessage.success('已退出球队')
-    setTab('discover')
     await bootstrap()
+    setTab(availableTabs.value[0] || 'joinableTeams')
   } catch {
     // cancelled or failed
   }
@@ -459,6 +526,33 @@ async function openRegistrationDetail(registrationId: string) {
   }
 }
 
+async function openRegistrationFromQuery() {
+  const registrationId = route.query.registrationId
+  if (typeof registrationId !== 'string' || !registrationId) return
+  if (!hasTeam.value || !isCaptain.value || !teamId.value) return
+  if (!availableTabs.value.includes('registration')) return
+  if (activeTab.value !== 'registration') {
+    activeTab.value = 'registration'
+  }
+  await refreshTabData('registration')
+  if (selectedRegistrationId.value === registrationId && teamStore.registrationDetail) {
+    await nextTick()
+    document.getElementById('team-registration-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
+  await openRegistrationDetail(registrationId)
+  await nextTick()
+  document.getElementById('team-registration-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+watch(
+  () => route.query.registrationId,
+  () => {
+    if (pageLoading.value) return
+    void openRegistrationFromQuery()
+  },
+)
+
 async function saveRegistrationInfo() {
   if (!selectedRegistrationId.value) return
   try {
@@ -529,7 +623,9 @@ async function deleteRegistrationDraft() {
 }
 
 const tabLabels: Record<TeamTab, string> = {
-  discover: '发现球队',
+  pendingInvites: '待处理邀请',
+  joinableTeams: '可加入球队',
+  myApplications: '我的加入申请',
   create: '创建球队',
   overview: '概览',
   profile: '编辑资料',
@@ -576,24 +672,7 @@ const tabLabels: Record<TeamTab, string> = {
         </button>
       </nav>
 
-      <template v-if="activeTab === 'discover'">
-        <AccountPanel v-if="canCreateTeam" title="创建球队">
-          <p class="team-tip">你已拥有队长资格，可以创建并管理自己的球队。</p>
-          <button type="button" class="account-btn-primary" @click="setTab('create')">创建球队</button>
-        </AccountPanel>
-
-        <AccountPanel v-else-if="isCaptainQualExpired" title="队长资格">
-          <AccountEmptyState message="队长资格已过期，请联系运营重新确认队长资格。" />
-        </AccountPanel>
-
-        <AccountPanel v-else-if="!hasCaptainQualRecord" title="队长资格">
-          <AccountEmptyState message="你尚未获得队长资格，可先申请加入现有球队。" />
-        </AccountPanel>
-
-        <AccountPanel v-else-if="captainQual?.invalidReason" title="队长资格">
-          <AccountEmptyState :message="captainQual.invalidReason" />
-        </AccountPanel>
-
+      <template v-if="activeTab === 'pendingInvites'">
         <AccountPanel title="待处理邀请">
           <div v-if="teamStore.myInvitations.length" class="team-card-list">
             <article v-for="item in teamStore.myInvitations" :key="item.invitationId" class="team-card">
@@ -615,7 +694,9 @@ const tabLabels: Record<TeamTab, string> = {
           </div>
           <AccountEmptyState v-else message="暂无待处理邀请" />
         </AccountPanel>
+      </template>
 
+      <template v-else-if="activeTab === 'joinableTeams'">
         <AccountPanel title="可加入球队">
           <div class="team-search-row">
             <input v-model="joinKeyword" type="search" placeholder="搜索球队名称" />
@@ -653,7 +734,9 @@ const tabLabels: Record<TeamTab, string> = {
             <textarea v-model="applyReason" rows="2" maxlength="200" placeholder="可选，向队长说明加入理由" />
           </label>
         </AccountPanel>
+      </template>
 
+      <template v-else-if="activeTab === 'myApplications'">
         <AccountPanel title="我的加入申请">
           <div v-if="teamStore.myJoinApplications.length" class="team-table-wrap">
             <table class="team-table">
@@ -686,15 +769,11 @@ const tabLabels: Record<TeamTab, string> = {
           </div>
           <AccountEmptyState v-else message="暂无加入申请" />
         </AccountPanel>
-
-        <AccountPanel v-if="canCreateTeam" title="加入球队">
-          <p class="team-tip">你也可以选择加入其他球队。</p>
-        </AccountPanel>
       </template>
 
       <template v-else-if="activeTab === 'create'">
         <AccountPanel title="创建球队">
-          <p class="team-tip">填写球队基础信息并上传 Logo，创建后你将成为队长。</p>
+          <p class="team-tip">你已拥有队长资格，可以创建并管理自己的球队。</p>
           <div class="team-create-logo">
             <img v-if="createForm.logoPreviewUrl" :src="createForm.logoPreviewUrl" alt="球队 Logo 预览" />
             <label class="account-btn-secondary team-logo-upload">
@@ -731,13 +810,23 @@ const tabLabels: Record<TeamTab, string> = {
 
       <template v-else-if="activeTab === 'overview'">
         <AccountPanel title="球队概览">
+          <div
+            v-if="isCaptain && !isTeamAuditApproved"
+            class="team-audit-banner"
+          >
+            <AccountStatusBadge :text="teamAuditStatusText" type="warning" />
+            <p class="team-tip">
+              球队认证{{ teamAuditStatusText }}，审核通过后可使用成员管理、邀请球员、加入申请与赛事报名功能。
+            </p>
+          </div>
           <dl v-if="teamDetail" class="account-info-list">
             <div class="account-field-row"><dt>球队编号</dt><dd>{{ teamDetail.teamNo || '-' }}</dd></div>
             <div class="account-field-row"><dt>球队名称</dt><dd>{{ teamDetail.teamName }}</dd></div>
+            <div v-if="isCaptain" class="account-field-row"><dt>认证状态</dt><dd>{{ teamAuditStatusText }}</dd></div>
             <div class="account-field-row"><dt>简称</dt><dd>{{ teamDetail.shortName || '-' }}</dd></div>
             <div class="account-field-row"><dt>地区</dt><dd>{{ teamDetail.regionName || '-' }}</dd></div>
             <div class="account-field-row"><dt>比赛终端</dt><dd>{{ teamDetail.gameTerminal || '-' }}</dd></div>
-            <div class="account-field-row"><dt>成员</dt><dd>{{ teamDetail.currentMemberCount ?? 0 }}/{{ teamDetail.maxMemberCount ?? '-' }}</dd></div>
+            <div class="account-field-row"><dt>成员</dt><dd>{{ teamDetail.currentMemberCount ?? 0 }}/{{ teamDetail.maxMemberCount ?? CNPA_TEAM_MAX_MEMBER_COUNT }}<span class="team-member-hint"> · 正式阵容 {{ teamMemberLimitHint }}</span></dd></div>
             <div class="account-field-row"><dt>我的角色</dt><dd>{{ teamDetail.myRole || (isCaptain ? '队长' : '队员') }}</dd></div>
             <div class="account-field-row"><dt>创建时间</dt><dd>{{ formatDateTime(teamDetail.createTime) }}</dd></div>
             <div class="account-field-row"><dt>介绍</dt><dd>{{ teamDetail.description || '暂无' }}</dd></div>
@@ -793,8 +882,10 @@ const tabLabels: Record<TeamTab, string> = {
               <thead>
                 <tr>
                   <th>昵称</th>
+                  <th>球员编号</th>
+                  <th>位置</th>
                   <th>角色</th>
-                  <th>阵容</th>
+                  <th>成员状态</th>
                   <th>球衣号</th>
                   <th v-if="isCaptain">操作</th>
                 </tr>
@@ -802,7 +893,16 @@ const tabLabels: Record<TeamTab, string> = {
               <tbody>
                 <tr v-for="member in teamStore.members" :key="member.teamMemberId">
                   <td>{{ member.nickname || member.gameNickname || member.realName || '-' }}</td>
-                  <td>{{ member.roleType || '-' }}</td>
+                  <td>{{ member.playerNo || '-' }}</td>
+                  <td>
+                    <span
+                      class="team-position"
+                      :title="formatMemberPosition(member)"
+                    >
+                      {{ member.positionCode || '未设置' }}
+                    </span>
+                  </td>
+                  <td>{{ formatTeamRole(member.roleType) }}</td>
                   <td>
                     <template v-if="isCaptain">
                       <select v-model="ensureMemberEdit(member).rosterType">
@@ -810,7 +910,7 @@ const tabLabels: Record<TeamTab, string> = {
                         <option value="TRIAL">试训</option>
                       </select>
                     </template>
-                    <template v-else>{{ member.rosterType || '-' }}</template>
+                    <template v-else>{{ formatMemberRosterType(member.rosterType) }}</template>
                   </td>
                   <td>
                     <input
@@ -847,20 +947,51 @@ const tabLabels: Record<TeamTab, string> = {
             <input v-model="inviteKeyword" type="search" placeholder="搜索球员昵称/编号" />
             <button type="button" class="account-btn-secondary" @click="searchCandidates">搜索</button>
           </div>
-          <div class="team-form-grid">
-            <label class="team-form-full">
-              选择球员
-              <select v-model="selectedInvitePlayerId">
-                <option value="">请选择</option>
-                <option
+          <div v-if="teamStore.candidatePlayers.length" class="team-table-wrap">
+            <table class="team-table">
+              <thead>
+                <tr>
+                  <th>昵称</th>
+                  <th>球员编号</th>
+                  <th>位置</th>
+                  <th>比赛终端</th>
+                  <th>认证状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
                   v-for="player in teamStore.candidatePlayers"
                   :key="player.playerId"
-                  :value="player.playerId"
+                  :class="{ 'team-table__row--selected': selectedInvitePlayerId === player.playerId }"
                 >
-                  {{ player.nickname || player.gameNickname || player.playerNo }} ({{ player.playerNo || player.playerId }})
-                </option>
-              </select>
-            </label>
+                  <td>{{ player.nickname || player.gameNickname || '-' }}</td>
+                  <td>{{ player.playerNo || '-' }}</td>
+                  <td>
+                    <span
+                      class="team-position"
+                      :title="formatPositionCell(player.positionCode, player.positionName)"
+                    >
+                      {{ player.positionCode || '未设置' }}
+                    </span>
+                  </td>
+                  <td>{{ formatGameTerminalLabel(player.gameTerminal) }}</td>
+                  <td>{{ formatPlayerCertStatus(player.certificationStatus) }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="account-btn-secondary team-table__btn"
+                      @click="selectedInvitePlayerId = player.playerId"
+                    >
+                      {{ selectedInvitePlayerId === player.playerId ? '已选择' : '选择' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <AccountEmptyState v-else message="暂无可邀请球员，请先搜索" />
+          <div class="team-form-grid">
             <label class="team-form-full">
               邀请说明
               <textarea v-model="inviteMessage" rows="2" maxlength="200" />
@@ -895,31 +1026,57 @@ const tabLabels: Record<TeamTab, string> = {
 
       <template v-else-if="activeTab === 'applications'">
         <AccountPanel title="待处理加入申请">
-          <div v-if="teamStore.teamJoinApplications.length" class="team-card-list">
-            <article v-for="item in teamStore.teamJoinApplications" :key="item.applicationId" class="team-card">
-              <div>
-                <p><strong>申请人</strong> {{ item.applicantNickname }}</p>
-                <p><strong>说明</strong> {{ item.applyReason || '无' }}</p>
-                <p><strong>时间</strong> {{ formatDateTime(item.createTime) }}</p>
-              </div>
-              <div v-if="item.canProcess" class="team-card-actions">
-                <button type="button" class="account-btn-primary" @click="processApplication(item.applicationId, true)">通过</button>
-                <button type="button" class="account-btn-secondary" @click="processApplication(item.applicationId, false)">驳回</button>
-              </div>
-            </article>
+          <div v-if="teamStore.teamJoinApplications.length" class="team-table-wrap">
+            <table class="team-table">
+              <thead>
+                <tr>
+                  <th>昵称</th>
+                  <th>球员编号</th>
+                  <th>位置</th>
+                  <th>比赛终端</th>
+                  <th>认证状态</th>
+                  <th>申请说明</th>
+                  <th>申请时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in teamStore.teamJoinApplications" :key="item.applicationId">
+                  <td>{{ item.applicantNickname || '-' }}</td>
+                  <td>{{ item.playerNo || '-' }}</td>
+                  <td>
+                    <span
+                      class="team-position"
+                      :title="formatPositionCell(item.positionCode, item.positionName)"
+                    >
+                      {{ item.positionCode || '未设置' }}
+                    </span>
+                  </td>
+                  <td>{{ formatGameTerminalLabel(item.gameTerminal) }}</td>
+                  <td>{{ formatPlayerCertStatus(item.certificationStatus) }}</td>
+                  <td>{{ item.applyReason || '无' }}</td>
+                  <td>{{ formatDateTime(item.createTime) }}</td>
+                  <td v-if="item.canProcess" class="team-card-actions">
+                    <button type="button" class="account-btn-primary team-table__btn" @click="processApplication(item.applicationId, true)">通过</button>
+                    <button type="button" class="account-btn-secondary team-table__btn" @click="processApplication(item.applicationId, false)">驳回</button>
+                  </td>
+                  <td v-else>-</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
           <AccountEmptyState v-else message="暂无待处理申请" />
         </AccountPanel>
       </template>
 
       <template v-else-if="activeTab === 'registration'">
-        <AccountPanel title="可报名赛季">
+        <AccountPanel title="可报名赛事">
           <div v-if="teamStore.availableSeasons.length" class="team-table-wrap">
             <table class="team-table">
               <thead>
                 <tr>
                   <th>赛事</th>
-                  <th>赛季</th>
+                  <th>所属赛季</th>
                   <th>报名时间</th>
                   <th>操作</th>
                 </tr>
@@ -951,7 +1108,11 @@ const tabLabels: Record<TeamTab, string> = {
               </tbody>
             </table>
           </div>
-          <AccountEmptyState v-else message="当前没有开放报名的赛季" />
+          <AccountEmptyState
+            v-else
+            message="当前暂无可报名赛事"
+            :subtitle="teamStore.availableSeasonEmptyReason || '请确认球队已认证、终端匹配且赛事处于报名期'"
+          />
         </AccountPanel>
 
         <AccountPanel title="报名记录">
@@ -982,7 +1143,8 @@ const tabLabels: Record<TeamTab, string> = {
           <AccountEmptyState v-else message="暂无报名记录" />
         </AccountPanel>
 
-        <AccountPanel v-if="teamStore.registrationDetail" title="报名详情">
+        <div v-if="teamStore.registrationDetail" id="team-registration-detail">
+        <AccountPanel title="报名详情">
           <dl class="account-info-list">
             <div class="account-field-row"><dt>报名编号</dt><dd>{{ teamStore.registrationDetail.registrationNo }}</dd></div>
             <div class="account-field-row"><dt>状态</dt><dd>{{ teamStore.registrationDetail.registrationStatusText }}</dd></div>
@@ -1053,6 +1215,7 @@ const tabLabels: Record<TeamTab, string> = {
           </div>
           <AccountEmptyState v-else message="暂无审核记录" />
         </AccountPanel>
+        </div>
       </template>
     </template>
 
@@ -1067,8 +1230,16 @@ const tabLabels: Record<TeamTab, string> = {
             <div class="account-field-row"><dt>过期时间</dt><dd>{{ formatDateTime(activeInvitation.expireTime) }}</dd></div>
           </dl>
           <div class="team-dialog__actions">
+            <p v-if="activeInvitation.cannotAcceptReason" class="team-tip">{{ activeInvitation.cannotAcceptReason }}</p>
             <button type="button" class="account-btn-secondary" @click="respondInvitation(false)">拒绝</button>
-            <button type="button" class="account-btn-primary" @click="respondInvitation(true)">接受</button>
+            <button
+              v-if="activeInvitation.canAccept !== false"
+              type="button"
+              class="account-btn-primary"
+              @click="respondInvitation(true)"
+            >
+              接受
+            </button>
           </div>
         </div>
       </div>
@@ -1097,6 +1268,18 @@ const tabLabels: Record<TeamTab, string> = {
   margin: 0;
   color: #696969;
   font-size: 13px;
+}
+
+.team-audit-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid rgba(214, 138, 22, 0.35);
+  border-radius: 4px;
+  background: rgba(214, 138, 22, 0.08);
 }
 
 .team-tabs {
@@ -1146,6 +1329,21 @@ const tabLabels: Record<TeamTab, string> = {
 .team-table__btn {
   min-height: 32px;
   padding-inline: 12px;
+}
+
+.team-table__row--selected {
+  background: rgba(64, 158, 255, 0.08);
+}
+
+.team-position {
+  cursor: default;
+  border-bottom: 1px dotted rgba(20, 20, 20, 0.25);
+}
+
+.team-member-hint {
+  margin-left: 4px;
+  font-size: 12px;
+  color: #696969;
 }
 
 .team-card-list {

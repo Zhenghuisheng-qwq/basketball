@@ -1,6 +1,7 @@
 package com.zhs.response.team;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -10,26 +11,66 @@ import java.io.Serializable;
 import java.util.Date;
 
 @Data
-@ApiModel("可报名赛季项")
+@ApiModel("可报名赛事项")
 public class AvailableSeasonItemResp implements Serializable {
 
-    @ApiModelProperty("赛季主键")
+    @ApiModelProperty("运营赛季主键")
     private String seasonId;
 
-    @ApiModelProperty("赛季编号")
+    @ApiModelProperty("运营赛季编号")
     private String seasonNo;
 
-    @ApiModelProperty("赛季名称")
+    @ApiModelProperty("运营赛季名称")
     private String seasonName;
+
+    @JsonSerialize(using = com.fasterxml.jackson.databind.ser.std.ToStringSerializer.class)
+    @ApiModelProperty("所属顶层赛季主键")
+    private Long competitionSeasonId;
+
+    @ApiModelProperty("所属顶层赛季名称")
+    private String competitionSeasonName;
 
     @ApiModelProperty("赛事主键")
     private String tournamentId;
 
+    @ApiModelProperty("赛事编号")
+    private String tournamentNo;
+
     @ApiModelProperty("赛事名称")
     private String tournamentName;
 
-    @ApiModelProperty("赛季状态")
+    @ApiModelProperty("比赛终端")
+    private String gameTerminal;
+
+    @ApiModelProperty("赛事状态")
+    private Integer tournamentStatus;
+
+    @ApiModelProperty("运营赛季状态")
     private Integer seasonStatus;
+
+    @ApiModelProperty("报名状态：NOT_STARTED/OPEN/CLOSED/ENDED")
+    private String registrationStatus;
+
+    @ApiModelProperty("球队主键")
+    private String teamId;
+
+    @ApiModelProperty("球队名称")
+    private String teamName;
+
+    @ApiModelProperty("球队认证状态")
+    private Integer teamCertificationStatus;
+
+    @ApiModelProperty("是否可报名")
+    private Boolean canRegister;
+
+    @ApiModelProperty("不可报名原因")
+    private String cannotRegisterReason;
+
+    @ApiModelProperty("是否已报名")
+    private Boolean alreadyRegistered;
+
+    @ApiModelProperty("报名审核状态")
+    private Integer auditStatus;
 
     @ApiModelProperty("最小阵容人数")
     private Integer minRosterCount;

@@ -34,7 +34,7 @@ const emit = defineEmits<{
         </p>
         <p v-else-if="item.submitTime" class="my-events-list__extra">提交时间：{{ item.submitTime }}</p>
       </div>
-      <div class="my-events-list__action">
+      <div v-if="item.showAction !== false" class="my-events-list__action">
         <button
           type="button"
           :class="item.pending ? 'account-btn-primary' : 'account-btn-secondary'"

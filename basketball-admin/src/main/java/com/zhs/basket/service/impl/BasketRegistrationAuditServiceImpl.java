@@ -68,8 +68,11 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
         List<BasketTournamentRegistrationPlayer> players = registrationPlayerMapper.selectByRegistrationId(id);
         Date now = new Date();
         List<Long> memberIds = players.stream().map(BasketTournamentRegistrationPlayer::getMemberId).filter(Objects::nonNull).collect(Collectors.toList());
-        Set<Long> disciplined = disciplineRecordMapper.selectActiveBySeasonAndMembers(reg.getSeasonId(), memberIds, now)
-                .stream().map(BasketDisciplineRecord::getMemberId).collect(Collectors.toSet());
+        Set<Long> disciplined = Collections.emptySet();
+        if (!memberIds.isEmpty()) {
+            disciplined = disciplineRecordMapper.selectActiveBySeasonAndMembers(reg.getSeasonId(), memberIds, now)
+                    .stream().map(BasketDisciplineRecord::getMemberId).collect(Collectors.toSet());
+        }
         String teamRestriction = reg.getTeamId() != null
                 ? disciplineRestrictionSupport.checkRegistration("PERMANENT_TEAM", reg.getTeamId(), reg.getSeasonId())
                 : null;

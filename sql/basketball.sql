@@ -354,7 +354,7 @@ CREATE TABLE `basket_team` (
                                `contact_member_id` BIGINT DEFAULT NULL COMMENT '联系人会员主键',
                                `captain_member_id` BIGINT NOT NULL COMMENT '队长会员主键',
                                `captain_player_id` BIGINT NOT NULL COMMENT '队长球员主键',
-                               `max_member_count` INT NOT NULL DEFAULT 20 COMMENT '最大成员数量',
+                               `max_member_count` INT NOT NULL DEFAULT 8 COMMENT '最大成员数量',
                                `current_member_count` INT NOT NULL DEFAULT 0 COMMENT '当前成员数量',
                                `team_status` TINYINT NOT NULL DEFAULT 1 COMMENT '球队状态',
                                `audit_status` TINYINT NOT NULL DEFAULT 0 COMMENT '审核状态',

@@ -18,7 +18,11 @@ public class TournamentListVo {
     private Date registrationEndTime;
     private Date competitionStartTime;
     private Date competitionEndTime;
+    /** 报名窗口状态码：UNCONFIGURED/NOT_STARTED/OPEN/CLOSED */
+    private String registrationWindowStatus;
+    private String registrationWindowStatusName;
     private Long operationalSeasonId;
     private Integer displayOrder;
     private Date createTime;
+    private Date updateTime;
 }

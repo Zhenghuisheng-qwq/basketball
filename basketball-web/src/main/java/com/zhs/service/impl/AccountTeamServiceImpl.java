@@ -107,6 +107,10 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     @Override
     public IPage<TeamSummaryResp> pageJoinable(Integer currentPage, Integer pageSize, String keyword) {
         Long memberId = UserContext.getRequiredUserId();
+        if (captainPermissionService.hasCurrentTeamMembership(memberId)
+                || captainPermissionService.hasValidCaptainQualification(memberId)) {
+            return emptyPage(currentPage, pageSize);
+        }
         Set<Long> joinedTeamIds = loadJoinedTeamIds(memberId);
 
         LambdaQueryWrapper<BasketTeam> wrapper = new LambdaQueryWrapper<BasketTeam>()

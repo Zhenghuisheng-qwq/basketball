@@ -11,7 +11,9 @@ import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamInvitationDao;
+import com.zhs.enums.TeamAuditStatusEnum;
 import com.zhs.enums.TeamInvitationStatusEnum;
+import com.zhs.enums.TeamStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketPlayerProfile;
@@ -113,7 +115,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         businessMessageService.sendSiteMessage(inviteeMemberId, "球队邀请",
                 "您收到来自球队「" + team.getTeamName() + "」的邀请",
                 BIZ_TYPE_TEAM_INVITE, invitation.getId(), "TEAM_INVITATION", String.valueOf(invitation.getId()));
-        return toItemResp(invitation, team, loadMemberProfileMap(Collections.singleton(inviteeMemberId)));
+        return toItemResp(invitation, team, loadMemberProfileMap(Collections.singleton(inviteeMemberId)), inviteeMemberId);
     }
 
     @Override
@@ -138,7 +140,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         Page<TeamInvitationItemResp> respPage = new Page<>(invitationPage.getCurrent(), invitationPage.getSize(), invitationPage.getTotal());
         List<TeamInvitationItemResp> items = new ArrayList<>();
         for (BasketTeamInvitation invitation : invitationPage.getRecords()) {
-            items.add(toItemResp(invitation, team, profileMap));
+            items.add(toItemResp(invitation, team, profileMap, invitation.getInviteeMemberId()));
         }
         respPage.setRecords(items);
         return respPage;
@@ -164,7 +166,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         Page<TeamInvitationItemResp> respPage = new Page<>(invitationPage.getCurrent(), invitationPage.getSize(), invitationPage.getTotal());
         List<TeamInvitationItemResp> items = new ArrayList<>();
         for (BasketTeamInvitation invitation : invitationPage.getRecords()) {
-            items.add(toItemResp(invitation, teamMap.get(invitation.getTeamId()), profileMap));
+            items.add(toItemResp(invitation, teamMap.get(invitation.getTeamId()), profileMap, memberId));
         }
         respPage.setRecords(items);
         return respPage;
@@ -203,12 +205,14 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         invitation = invitationDao.selectById(invitationPk);
         BasketTeam team = teamDao.selectById(invitation.getTeamId());
         if (Boolean.TRUE.equals(accept)) {
+            captainPermissionService.assertEligibleToJoinTeam(memberId);
+            validateTeamJoinable(team);
             BasketPlayerProfile profile = captainPermissionService.requireCertifiedPlayer(memberId);
             teamMemberJoinHelper.addMember(team, memberId, profile.getId(), com.zhs.enums.TeamJoinSourceEnum.INVITE);
         }
 
         Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(Collections.singleton(memberId));
-        return toItemResp(invitation, team, profileMap);
+        return toItemResp(invitation, team, profileMap, memberId);
     }
 
     private Boolean resolveAccept(TeamInvitationRespondReq req) {
@@ -253,6 +257,18 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         return invitation;
     }
 
+    private void validateTeamJoinable(BasketTeam team) {
+        if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
+            throw new ServiceException("球队不存在");
+        }
+        if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
+            throw new ServiceException("球队不可加入");
+        }
+        if (!Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())) {
+            throw new ServiceException("球队尚未通过认证，暂不可加入");
+        }
+    }
+
     private void expireIfNeeded(BasketTeamInvitation invitation) {
         if (!Objects.equals(TeamInvitationStatusEnum.PENDING.getCode(), invitation.getInvitationStatus())) {
             return;
@@ -265,7 +281,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
     }
 
     private TeamInvitationItemResp toItemResp(BasketTeamInvitation invitation, BasketTeam team,
-                                              Map<Long, BasketMemberProfile> profileMap) {
+                                              Map<Long, BasketMemberProfile> profileMap, Long inviteeMemberId) {
         TeamInvitationStatusEnum status = TeamInvitationStatusEnum.fromCode(invitation.getInvitationStatus());
         TeamInvitationItemResp resp = new TeamInvitationItemResp();
         resp.setInvitationId(toStringId(invitation.getId()));
@@ -279,7 +295,14 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         resp.setInvitationMessage(invitation.getInvitationMessage());
         resp.setInvitationStatus(invitation.getInvitationStatus());
         resp.setInvitationStatusText(status.getDescription());
-        resp.setCanRespond(status.canRespond() && (invitation.getExpireTime() == null || invitation.getExpireTime().after(new Date())));
+        boolean canRespond = status.canRespond()
+                && (invitation.getExpireTime() == null || invitation.getExpireTime().after(new Date()));
+        resp.setCanRespond(canRespond);
+        String joinIneligibilityReason = inviteeMemberId == null
+                ? null
+                : captainPermissionService.resolveJoinIneligibilityReason(inviteeMemberId);
+        resp.setCanAccept(canRespond && joinIneligibilityReason == null);
+        resp.setCannotAcceptReason(canRespond ? joinIneligibilityReason : null);
         resp.setExpireTime(invitation.getExpireTime());
         resp.setCreateTime(invitation.getCreateTime());
         return resp;

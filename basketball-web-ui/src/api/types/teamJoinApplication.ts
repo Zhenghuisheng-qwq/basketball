@@ -5,6 +5,11 @@ export interface TeamJoinApplicationItemDto {
   teamName?: string
   applicantMemberId?: string
   applicantNickname?: string
+  playerNo?: string
+  positionCode?: string
+  positionName?: string
+  gameTerminal?: string
+  certificationStatus?: number
   applyReason?: string
   applicationStatus?: number
   applicationStatusText?: string

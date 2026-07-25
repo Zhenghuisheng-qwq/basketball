@@ -1,16 +1,35 @@
+import type { PageResult } from '@/api/types/common'
+
 export interface AvailableSeasonItemDto {
   seasonId: string
   seasonNo?: string
   seasonName?: string
+  competitionSeasonId?: string | number
+  competitionSeasonName?: string
   tournamentId?: string
+  tournamentNo?: string
   tournamentName?: string
+  gameTerminal?: string
+  tournamentStatus?: number
   seasonStatus?: number
+  registrationStatus?: string
+  teamId?: string
+  teamName?: string
+  teamCertificationStatus?: number
+  canRegister?: boolean
+  cannotRegisterReason?: string
+  alreadyRegistered?: boolean
+  auditStatus?: number
   minRosterCount?: number
   maxRosterCount?: number
   registrationStartTime?: string
   registrationEndTime?: string
   hasRegistration?: boolean
   registrationId?: string
+}
+
+export interface AvailableSeasonPageDto extends PageResult<AvailableSeasonItemDto> {
+  emptyReason?: string
 }
 
 export interface TeamRegistrationItemDto {
@@ -34,9 +53,12 @@ export interface TeamRegistrationPlayerItemDto {
   teamMemberId: string
   memberId?: string
   playerId?: string
+  playerNo?: string
   realName?: string
   gameNickname?: string
+  positionCode?: string
   jerseyNo?: string
+  rosterRole?: string
   isStarting?: number
   isCaptain?: number
   validationStatus?: number

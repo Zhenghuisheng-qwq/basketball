@@ -12,6 +12,33 @@
           <el-option v-for="item in TOURNAMENT_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
+      <el-form-item label="报名状态" prop="registrationWindowStatus">
+        <el-select v-model="queryParams.registrationWindowStatus" placeholder="报名状态" clearable style="width: 200px">
+          <el-option v-for="item in TOURNAMENT_REGISTRATION_WINDOW_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="报名时间">
+        <el-date-picker
+          v-model="registrationTimeRange"
+          type="datetimerange"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          range-separator="至"
+          start-placeholder="开始"
+          end-placeholder="结束"
+          style="width: 360px"
+        />
+      </el-form-item>
+      <el-form-item label="比赛时间">
+        <el-date-picker
+          v-model="competitionTimeRange"
+          type="datetimerange"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          range-separator="至"
+          start-placeholder="开始"
+          end-placeholder="结束"
+          style="width: 360px"
+        />
+      </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
         <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -55,7 +82,24 @@
         </template>
       </el-table-column>
       <el-table-column label="比赛终端" prop="gameTerminal" width="100" />
-      <el-table-column label="状态" prop="tournamentStatus" width="100">
+      <el-table-column label="报名时间" min-width="220">
+        <template #default="scope">
+          {{ formatTimeRange(scope.row.registrationStartTime, scope.row.registrationEndTime) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="报名状态" prop="registrationWindowStatus" width="100">
+        <template #default="scope">
+          <el-tag :type="registrationWindowTagType(scope.row.registrationWindowStatus)" size="small">
+            {{ scope.row.registrationWindowStatusName || '-' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="比赛时间" min-width="220">
+        <template #default="scope">
+          {{ formatTimeRange(scope.row.competitionStartTime, scope.row.competitionEndTime) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="赛事状态" prop="tournamentStatus" width="100">
         <template #default="scope">
           <dict-tag :options="TOURNAMENT_STATUS_OPTIONS" :value="scope.row.tournamentStatus" />
         </template>
@@ -64,7 +108,7 @@
       <el-table-column label="创建时间" prop="createTime" width="160">
         <template #default="scope">{{ parseTime(scope.row.createTime) }}</template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="320" class-name="small-padding fixed-width">
+      <el-table-column label="操作" align="center" width="320" class-name="small-padding fixed-width" fixed="right">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:tournament:query']">详情</el-button>
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['basket:tournament:edit']">修改</el-button>
@@ -81,20 +125,27 @@
     <el-drawer v-model="detailOpen" title="赛事详情" size="640px" append-to-body>
       <el-descriptions v-if="detail" :column="2" border>
         <el-descriptions-item label="赛事编号">{{ detail.tournamentNo }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ detail.tournamentStatusName }}</el-descriptions-item>
+        <el-descriptions-item label="赛事状态">{{ detail.tournamentStatusName }}</el-descriptions-item>
         <el-descriptions-item label="赛事名称">{{ detail.tournamentName }}</el-descriptions-item>
         <el-descriptions-item label="所属赛季">{{ detail.competitionSeasonName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="比赛终端">{{ detail.gameTerminal || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="报名状态">
+          <el-tag :type="registrationWindowTagType(detail.registrationWindowStatus)" size="small">
+            {{ detail.registrationWindowStatusName || '-' }}
+          </el-tag>
+        </el-descriptions-item>
         <el-descriptions-item label="简称">{{ detail.shortName }}</el-descriptions-item>
         <el-descriptions-item label="英文名">{{ detail.englishName }}</el-descriptions-item>
         <el-descriptions-item label="类型">{{ detail.tournamentType }}</el-descriptions-item>
-        <el-descriptions-item label="游戏终端">{{ detail.gameTerminal }}</el-descriptions-item>
-        <el-descriptions-item label="报名开始">{{ parseTime(detail.registrationStartTime) }}</el-descriptions-item>
-        <el-descriptions-item label="报名结束">{{ parseTime(detail.registrationEndTime) }}</el-descriptions-item>
-        <el-descriptions-item label="比赛开始">{{ parseTime(detail.competitionStartTime) }}</el-descriptions-item>
-        <el-descriptions-item label="比赛结束">{{ parseTime(detail.competitionEndTime) }}</el-descriptions-item>
         <el-descriptions-item label="赛制">{{ detail.formatCode }}</el-descriptions-item>
+        <el-descriptions-item label="报名开始">{{ parseTime(detail.registrationStartTime) || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="报名结束">{{ parseTime(detail.registrationEndTime) || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="比赛开始">{{ parseTime(detail.competitionStartTime) || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="比赛结束">{{ parseTime(detail.competitionEndTime) || '-' }}</el-descriptions-item>
         <el-descriptions-item label="主办方">{{ detail.organizerName }}</el-descriptions-item>
         <el-descriptions-item label="公开状态">{{ detail.publicStatus === 1 ? '公开' : '不公开' }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ parseTime(detail.createTime) || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="更新时间">{{ parseTime(detail.updateTime) || '-' }}</el-descriptions-item>
         <el-descriptions-item label="简介" :span="2">{{ detail.description || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-drawer>
@@ -218,9 +269,12 @@ import type {
   TournamentListItem,
   TournamentQuery
 } from '@/types'
-import { TOURNAMENT_STATUS_OPTIONS } from '@/types'
+import { TOURNAMENT_REGISTRATION_WINDOW_STATUS_OPTIONS, TOURNAMENT_STATUS_OPTIONS } from '@/types'
 
 const { proxy } = getCurrentInstance()
+
+const registrationTimeRange = ref<[string, string] | undefined>()
+const competitionTimeRange = ref<[string, string] | undefined>()
 
 const dataList = ref<TournamentListItem[]>([])
 const loading = ref(true)
@@ -256,6 +310,33 @@ const rules = {
   competitionEndTime: [{ required: true, message: '请选择比赛结束时间', trigger: 'change' }]
 }
 
+function formatTimeRange(start?: string, end?: string) {
+  if (!start || !end) return '未配置'
+  return `${proxy.parseTime(start, '{y}-{m}-{d} {h}:{i}')} ~ ${proxy.parseTime(end, '{y}-{m}-{d} {h}:{i}')}`
+}
+
+function registrationWindowTagType(status?: string) {
+  switch (status) {
+    case 'OPEN':
+      return 'success'
+    case 'NOT_STARTED':
+      return 'warning'
+    case 'CLOSED':
+      return 'info'
+    case 'UNCONFIGURED':
+      return 'danger'
+    default:
+      return 'info'
+  }
+}
+
+function applyTimeRangeFilters() {
+  queryParams.value.registrationTimeBegin = registrationTimeRange.value?.[0]
+  queryParams.value.registrationTimeEnd = registrationTimeRange.value?.[1]
+  queryParams.value.competitionTimeBegin = competitionTimeRange.value?.[0]
+  queryParams.value.competitionTimeEnd = competitionTimeRange.value?.[1]
+}
+
 async function loadSeasonOptions() {
   seasonOptionsError.value = ''
   try {
@@ -276,6 +357,7 @@ async function loadSeasonOptions() {
 
 function getList() {
   loading.value = true
+  applyTimeRangeFilters()
   listTournament(queryParams.value).then(response => {
     dataList.value = response.rows
     total.value = response.total
@@ -291,6 +373,12 @@ function handleQuery() {
 
 function resetQuery() {
   proxy.resetForm('queryRef')
+  registrationTimeRange.value = undefined
+  competitionTimeRange.value = undefined
+  queryParams.value.registrationTimeBegin = undefined
+  queryParams.value.registrationTimeEnd = undefined
+  queryParams.value.competitionTimeBegin = undefined
+  queryParams.value.competitionTimeEnd = undefined
   handleQuery()
 }
 

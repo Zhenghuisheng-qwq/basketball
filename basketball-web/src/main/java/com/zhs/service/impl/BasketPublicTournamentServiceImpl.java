@@ -22,6 +22,7 @@ import com.zhs.response.publicapi.PublicSeasonOverviewVo;
 import com.zhs.response.publicapi.PublicSeasonPlacementResp;
 import com.zhs.response.publicapi.PublicTournamentDetailVo;
 import com.zhs.response.publicapi.PublicTournamentItemVo;
+import com.zhs.enums.TournamentStatusEnum;
 import com.zhs.service.IBasketPublicTournamentService;
 import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicHonorSupport;
@@ -31,13 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -65,6 +60,9 @@ public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamen
         LambdaQueryWrapper<BasketTournament> wrapper = new LambdaQueryWrapper<BasketTournament>()
                 .eq(BasketTournament::getIsDelete, BasketPublicConstants.NOT_DELETED)
                 .eq(BasketTournament::getPublicStatus, BasketPublicConstants.PUBLIC)
+                .in(BasketTournament::getTournamentStatus,
+                        TournamentStatusEnum.ACTIVE.getCode(),
+                        TournamentStatusEnum.ENDED.getCode())
                 .eq(tournamentStatus != null, BasketTournament::getTournamentStatus, tournamentStatus)
                 .and(StringUtils.hasText(keyword), w -> w
                         .like(BasketTournament::getTournamentName, keyword.trim())
@@ -95,8 +93,10 @@ public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamen
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         Map<Long, BasketCompetitionSeason> competitionSeasonMap = publicSupport.loadCompetitionSeasonMap(competitionSeasonIds);
+        Map<Long, BasketTournamentSeason> operationalSeasonMap = loadOperationalSeasonMap(records);
         Page<PublicTournamentItemVo> result = new Page<>(entityPage.getCurrent(), entityPage.getSize(), entityPage.getTotal());
         List<PublicTournamentItemVo> vos = new ArrayList<>(records.size());
+        Date now = new Date();
         for (BasketTournament item : records) {
             PublicTournamentItemVo vo = new PublicTournamentItemVo();
             vo.setTournamentId(item.getId());
@@ -113,6 +113,7 @@ public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamen
             vo.setDisplayOrder(item.getDisplayOrder());
             vo.setUpdateTime(item.getUpdateTime());
             enrichCompetitionSeason(vo, item, competitionSeasonMap);
+            enrichRegistrationInfo(vo, item, operationalSeasonMap.get(item.getId()), now);
             vos.add(vo);
         }
         result.setRecords(vos);
@@ -280,6 +281,51 @@ public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamen
         vo.setSeasonEndTime(season.getSeasonEndTime());
         vo.setMaxTeamCount(season.getMaxTeamCount());
         return vo;
+    }
+
+    private Map<Long, BasketTournamentSeason> loadOperationalSeasonMap(List<BasketTournament> tournaments) {
+        if (CollectionUtils.isEmpty(tournaments)) {
+            return Collections.emptyMap();
+        }
+        Set<Long> tournamentIds = tournaments.stream().map(BasketTournament::getId).collect(Collectors.toSet());
+        List<BasketTournamentSeason> seasons = seasonDao.selectList(new LambdaQueryWrapper<BasketTournamentSeason>()
+                .in(BasketTournamentSeason::getTournamentId, tournamentIds)
+                .eq(BasketTournamentSeason::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .orderByAsc(BasketTournamentSeason::getId));
+        Map<Long, BasketTournamentSeason> map = new HashMap<>();
+        for (BasketTournamentSeason season : seasons) {
+            map.putIfAbsent(season.getTournamentId(), season);
+        }
+        return map;
+    }
+
+    private void enrichRegistrationInfo(PublicTournamentItemVo vo,
+                                        BasketTournament tournament,
+                                        BasketTournamentSeason season,
+                                        Date now) {
+        if (season == null) {
+            vo.setRegistrationStatus("CLOSED");
+            return;
+        }
+        vo.setRegistrationStartTime(season.getRegistrationStartTime());
+        vo.setRegistrationEndTime(season.getRegistrationEndTime());
+        if (Objects.equals(tournament.getTournamentStatus(), TournamentStatusEnum.ENDED.getCode())) {
+            vo.setRegistrationStatus("ENDED");
+            return;
+        }
+        if (season.getRegistrationStartTime() == null || season.getRegistrationEndTime() == null) {
+            vo.setRegistrationStatus("CLOSED");
+            return;
+        }
+        if (now.before(season.getRegistrationStartTime())) {
+            vo.setRegistrationStatus("NOT_STARTED");
+            return;
+        }
+        if (now.after(season.getRegistrationEndTime())) {
+            vo.setRegistrationStatus("CLOSED");
+            return;
+        }
+        vo.setRegistrationStatus("OPEN");
     }
 
     private void enrichCompetitionSeason(PublicTournamentItemVo vo, BasketTournament tournament,

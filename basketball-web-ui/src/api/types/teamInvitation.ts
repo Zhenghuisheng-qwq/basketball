@@ -10,6 +10,8 @@ export interface TeamInvitationItemDto {
   invitationStatus?: number
   invitationStatusText?: string
   canRespond?: boolean
+  canAccept?: boolean
+  cannotAcceptReason?: string
   expireTime?: string
   createTime?: string
 }

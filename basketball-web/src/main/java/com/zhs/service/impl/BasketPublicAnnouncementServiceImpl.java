@@ -152,7 +152,7 @@ public class BasketPublicAnnouncementServiceImpl implements IBasketPublicAnnounc
 
     @Override
     public List<PublicAnnouncementItemResp> listLatest(int limit) {
-        int size = Math.min(Math.max(limit, 1), BasketPublicConstants.MAX_SIZE);
+        int size = Math.clamp(limit, 1, BasketPublicConstants.MAX_SIZE);
         List<BasketAnnouncement> list = announcementDao.selectList(publishedWrapper()
                 .select(BasketAnnouncement::getId, BasketAnnouncement::getAnnouncementNo,
                         BasketAnnouncement::getCategoryCode, BasketAnnouncement::getTitle,

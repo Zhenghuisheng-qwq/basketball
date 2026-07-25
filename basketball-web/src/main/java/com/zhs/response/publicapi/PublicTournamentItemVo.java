@@ -62,6 +62,19 @@ public class PublicTournamentItemVo implements Serializable {
     @ApiModelProperty("所属顶层赛季年份")
     private Integer competitionSeasonYear;
 
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @ApiModelProperty("报名开始时间")
+    private Date registrationStartTime;
+
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @ApiModelProperty("报名结束时间")
+    private Date registrationEndTime;
+
+    @ApiModelProperty("报名状态：NOT_STARTED/OPEN/CLOSED/ENDED")
+    private String registrationStatus;
+
     @ApiModelProperty("更新时间")
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")

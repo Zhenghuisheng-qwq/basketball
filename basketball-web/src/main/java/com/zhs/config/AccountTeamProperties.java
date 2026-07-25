@@ -11,7 +11,7 @@ public class AccountTeamProperties {
 
     private Invitation invitation = new Invitation();
 
-    private int defaultMaxMemberCount = 20;
+    private int defaultMaxMemberCount = 8;
 
     @Data
     public static class Invitation {

@@ -4,6 +4,7 @@ import com.zhs.basket.domain.BasketCompetitionSeason;
 import com.zhs.basket.domain.BasketTournament;
 import com.zhs.basket.domain.BasketTournamentSeason;
 import com.zhs.basket.enums.SeasonStatusEnum;
+import com.zhs.basket.enums.TournamentRegistrationWindowStatusEnum;
 import com.zhs.basket.enums.TournamentStatusEnum;
 import com.zhs.basket.mapper.BasketCompetitionSeasonMapper;
 import com.zhs.basket.mapper.BasketTournamentMapper;
@@ -15,6 +16,7 @@ import com.zhs.basket.req.TournamentUpdateReq;
 import com.zhs.basket.service.IBasketCompetitionSeasonService;
 import com.zhs.basket.service.IBasketTournamentService;
 import com.zhs.basket.support.PlayerNoGenerator;
+import com.zhs.basket.support.TournamentRegistrationWindowSupport;
 import com.zhs.basket.vo.TournamentDetailVo;
 import com.zhs.basket.vo.TournamentListVo;
 import com.zhs.common.exception.ServiceException;
@@ -116,24 +118,61 @@ public class BasketTournamentServiceImpl implements IBasketTournamentService {
             throw new ServiceException("更新失败");
         }
 
-        BasketTournamentSeason operationalSeason = tournamentSeasonMapper.selectPrimaryByTournamentId(id);
-        if (operationalSeason != null) {
-            operationalSeason.setRegistrationStartTime(req.getRegistrationStartTime());
-            operationalSeason.setRegistrationEndTime(req.getRegistrationEndTime());
-            operationalSeason.setSeasonStartTime(req.getCompetitionStartTime());
-            operationalSeason.setSeasonEndTime(req.getCompetitionEndTime());
-            operationalSeason.setSeasonName(req.getTournamentName());
-            tournamentSeasonMapper.updateById(operationalSeason);
-        }
+        syncOperationalSeason(tournament);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void publish(Long id) {
+        BasketTournament tournament = requireTournament(id);
         int rows = tournamentMapper.updateStatusIfMatch(id,
                 Arrays.asList(TournamentStatusEnum.DRAFT.getCode(), TournamentStatusEnum.DISABLED.getCode()),
                 TournamentStatusEnum.ACTIVE.getCode());
         assertSingleRow(rows, "发布失败");
+        tournament.setTournamentStatus(TournamentStatusEnum.ACTIVE.getCode());
+        syncOperationalSeason(tournament);
+    }
+
+    private void syncOperationalSeason(BasketTournament tournament) {
+        BasketTournamentSeason operationalSeason = tournamentSeasonMapper.selectPrimaryByTournamentId(tournament.getId());
+        if (operationalSeason == null) {
+            return;
+        }
+        operationalSeason.setRegistrationStartTime(tournament.getRegistrationStartTime());
+        operationalSeason.setRegistrationEndTime(tournament.getRegistrationEndTime());
+        operationalSeason.setSeasonStartTime(tournament.getCompetitionStartTime());
+        operationalSeason.setSeasonEndTime(tournament.getCompetitionEndTime());
+        operationalSeason.setSeasonName(tournament.getTournamentName());
+        syncSeasonRegistrationStatus(operationalSeason, tournament.getTournamentStatus());
+        tournamentSeasonMapper.updateById(operationalSeason);
+    }
+
+    private void syncSeasonRegistrationStatus(BasketTournamentSeason season, Integer tournamentStatus) {
+        if (season.getRegistrationStartTime() == null || season.getRegistrationEndTime() == null) {
+            return;
+        }
+        Date now = new Date();
+        if (!Objects.equals(TournamentStatusEnum.ACTIVE.getCode(), tournamentStatus)) {
+            return;
+        }
+        if (now.before(season.getRegistrationStartTime())) {
+            if (Objects.equals(SeasonStatusEnum.REGISTRATION_OPEN.getCode(), season.getSeasonStatus())) {
+                season.setSeasonStatus(SeasonStatusEnum.PREPARE.getCode());
+            }
+            return;
+        }
+        if (now.after(season.getRegistrationEndTime())) {
+            if (Objects.equals(SeasonStatusEnum.REGISTRATION_OPEN.getCode(), season.getSeasonStatus())) {
+                season.setSeasonStatus(SeasonStatusEnum.REGISTRATION_CLOSED.getCode());
+            }
+            return;
+        }
+        season.setSeasonStatus(SeasonStatusEnum.REGISTRATION_OPEN.getCode());
+    }
+
+    private void openOperationalSeasonRegistration(Long tournamentId) {
+        BasketTournament tournament = requireTournament(tournamentId);
+        syncOperationalSeason(tournament);
     }
 
     @Override
@@ -183,6 +222,8 @@ public class BasketTournamentServiceImpl implements IBasketTournamentService {
         season.setMaxTeamCount(16);
         season.setMinRosterCount(5);
         season.setMaxRosterCount(12);
+        season.setAllowTeamRegistration(1);
+        season.setAllowOpenRegistration(0);
         season.setSeasonStatus(SeasonStatusEnum.PREPARE.getCode());
         season.setPublicStatus(tournament.getPublicStatus());
         season.setDescription(tournament.getDescription());
@@ -237,6 +278,10 @@ public class BasketTournamentServiceImpl implements IBasketTournamentService {
 
     private void enrichVo(TournamentListVo vo, BasketTournament tournament) {
         vo.setTournamentStatusName(TournamentStatusEnum.fromCode(tournament.getTournamentStatus()).getDescription());
+        TournamentRegistrationWindowStatusEnum registrationWindowStatus = TournamentRegistrationWindowSupport.resolve(
+                tournament.getRegistrationStartTime(), tournament.getRegistrationEndTime(), new Date());
+        vo.setRegistrationWindowStatus(registrationWindowStatus.getCode());
+        vo.setRegistrationWindowStatusName(registrationWindowStatus.getDescription());
         if (tournament.getCompetitionSeasonId() != null) {
             BasketCompetitionSeason competitionSeason = competitionSeasonMapper.selectById(tournament.getCompetitionSeasonId());
             if (competitionSeason != null) {

@@ -7,12 +7,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.common.UserContext;
 import com.zhs.dao.BasketMemberProfileDao;
+import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketTeamJoinApplicationDao;
 import com.zhs.enums.TeamAuditStatusEnum;
 import com.zhs.enums.TeamJoinApplicationStatusEnum;
 import com.zhs.enums.TeamJoinSourceEnum;
-import com.zhs.enums.TeamMembershipStatusEnum;
 import com.zhs.enums.TeamPublicStatusEnum;
 import com.zhs.enums.TeamStatusEnum;
 import com.zhs.exception.ServiceException;
@@ -28,6 +28,7 @@ import com.zhs.service.IBusinessMessageService;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamJoinApplicationBusinessService;
 import com.zhs.service.team.TeamMemberJoinHelper;
+import com.zhs.support.PlayerPositionSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +49,6 @@ import java.util.stream.Collectors;
 public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicationBusinessService {
 
     private static final Integer NOT_DELETED = 0;
-    private static final int IS_CURRENT = 1;
     private static final String BIZ_TYPE_TEAM_JOIN = "TEAM_JOIN";
 
     @Resource
@@ -58,7 +58,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
     @Resource
     private BasketMemberProfileDao memberProfileDao;
     @Resource
-    private com.zhs.dao.BasketTeamMemberDao teamMemberDao;
+    private BasketPlayerProfileDao playerProfileDao;
     @Resource
     private ICaptainPermissionService captainPermissionService;
     @Resource
@@ -73,7 +73,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         Long memberId = UserContext.getRequiredUserId();
         BasketPlayerProfile profile = captainPermissionService.requireCertifiedPlayer(memberId);
         BasketTeam team = requireJoinableTeam(teamPk);
-        assertNoCurrentMembership(memberId);
+        captainPermissionService.assertEligibleToJoinTeam(memberId);
         assertNoPendingApplication(teamPk, memberId);
 
         BasketTeamJoinApplication application = new BasketTeamJoinApplication();
@@ -89,7 +89,9 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         businessMessageService.sendSiteMessage(team.getCaptainMemberId(), "球队加入申请",
                 "收到新的加入球队申请", BIZ_TYPE_TEAM_JOIN, application.getId(),
                 "TEAM_JOIN_APPLICATION", String.valueOf(application.getId()));
-        return toItemResp(application, team, loadMemberProfileMap(Collections.singleton(memberId)));
+        Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(Collections.singleton(memberId));
+        Map<Long, BasketPlayerProfile> playerProfileMap = loadPlayerProfileMap(Collections.singleton(memberId));
+        return toItemResp(application, team, profileMap, playerProfileMap);
     }
 
     @Override
@@ -108,11 +110,12 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         Map<Long, BasketTeam> teamMap = loadTeamMap(appPage.getRecords().stream()
                 .map(BasketTeamJoinApplication::getTeamId).collect(Collectors.toSet()));
         Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(Collections.singleton(memberId));
+        Map<Long, BasketPlayerProfile> playerProfileMap = loadPlayerProfileMap(Collections.singleton(memberId));
 
         Page<TeamJoinApplicationItemResp> respPage = new Page<>(appPage.getCurrent(), appPage.getSize(), appPage.getTotal());
         List<TeamJoinApplicationItemResp> items = new ArrayList<>();
         for (BasketTeamJoinApplication application : appPage.getRecords()) {
-            items.add(toItemResp(application, teamMap.get(application.getTeamId()), profileMap));
+            items.add(toItemResp(application, teamMap.get(application.getTeamId()), profileMap, playerProfileMap));
         }
         respPage.setRecords(items);
         return respPage;
@@ -152,11 +155,12 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         Set<Long> applicantIds = appPage.getRecords().stream()
                 .map(BasketTeamJoinApplication::getApplicantMemberId).collect(Collectors.toSet());
         Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(applicantIds);
+        Map<Long, BasketPlayerProfile> playerProfileMap = loadPlayerProfileMap(applicantIds);
 
         Page<TeamJoinApplicationItemResp> respPage = new Page<>(appPage.getCurrent(), appPage.getSize(), appPage.getTotal());
         List<TeamJoinApplicationItemResp> items = new ArrayList<>();
         for (BasketTeamJoinApplication application : appPage.getRecords()) {
-            items.add(toItemResp(application, team, profileMap));
+            items.add(toItemResp(application, team, profileMap, playerProfileMap));
         }
         respPage.setRecords(items);
         return respPage;
@@ -207,7 +211,8 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         }
 
         Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(Collections.singleton(application.getApplicantMemberId()));
-        return toItemResp(application, team, profileMap);
+        Map<Long, BasketPlayerProfile> playerProfileMap = loadPlayerProfileMap(Collections.singleton(application.getApplicantMemberId()));
+        return toItemResp(application, team, profileMap, playerProfileMap);
     }
 
     private BasketTeam requireJoinableTeam(Long teamId) {
@@ -229,17 +234,6 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
             throw new ServiceException("球队成员已满");
         }
         return team;
-    }
-
-    private void assertNoCurrentMembership(Long memberId) {
-        Long count = teamMemberDao.selectCount(new LambdaQueryWrapper<BasketTeamMember>()
-                .eq(BasketTeamMember::getMemberId, memberId)
-                .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
-                .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
-                .eq(BasketTeamMember::getIsDelete, NOT_DELETED));
-        if (count != null && count > 0) {
-            throw new ServiceException("您已在其他球队中");
-        }
     }
 
     private void assertNoPendingApplication(Long teamId, Long memberId) {
@@ -265,7 +259,8 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
     }
 
     private TeamJoinApplicationItemResp toItemResp(BasketTeamJoinApplication application, BasketTeam team,
-                                                   Map<Long, BasketMemberProfile> profileMap) {
+                                                   Map<Long, BasketMemberProfile> profileMap,
+                                                   Map<Long, BasketPlayerProfile> playerProfileMap) {
         TeamJoinApplicationStatusEnum status = TeamJoinApplicationStatusEnum.fromCode(application.getApplicationStatus());
         TeamJoinApplicationItemResp resp = new TeamJoinApplicationItemResp();
         resp.setApplicationId(toStringId(application.getId()));
@@ -275,6 +270,14 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         resp.setApplicantMemberId(toStringId(application.getApplicantMemberId()));
         BasketMemberProfile profile = profileMap.get(application.getApplicantMemberId());
         resp.setApplicantNickname(profile == null ? null : profile.getNickname());
+        BasketPlayerProfile playerProfile = playerProfileMap.get(application.getApplicantMemberId());
+        if (playerProfile != null) {
+            resp.setPlayerNo(playerProfile.getPlayerNo());
+            resp.setPositionCode(playerProfile.getPositionCode());
+            resp.setPositionName(PlayerPositionSupport.resolveName(playerProfile.getPositionCode()));
+            resp.setGameTerminal(playerProfile.getGameTerminal());
+            resp.setCertificationStatus(playerProfile.getCertificationStatus());
+        }
         resp.setApplyReason(application.getApplyReason());
         resp.setApplicationStatus(application.getApplicationStatus());
         resp.setApplicationStatusText(status.getDescription());
@@ -306,6 +309,19 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         for (BasketMemberProfile profile : memberProfileDao.selectList(new LambdaQueryWrapper<BasketMemberProfile>()
                 .in(BasketMemberProfile::getMemberId, memberIds)
                 .eq(BasketMemberProfile::getIsDelete, NOT_DELETED))) {
+            map.put(profile.getMemberId(), profile);
+        }
+        return map;
+    }
+
+    private Map<Long, BasketPlayerProfile> loadPlayerProfileMap(Set<Long> memberIds) {
+        if (CollectionUtils.isEmpty(memberIds)) {
+            return Collections.emptyMap();
+        }
+        Map<Long, BasketPlayerProfile> map = new HashMap<>();
+        for (BasketPlayerProfile profile : playerProfileDao.selectList(new LambdaQueryWrapper<BasketPlayerProfile>()
+                .in(BasketPlayerProfile::getMemberId, memberIds)
+                .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED))) {
             map.put(profile.getMemberId(), profile);
         }
         return map;

@@ -1,9 +1,16 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
 import NotificationIcon from './NotificationIcon.vue'
 import type { AccountNotificationItem } from '@/types/accountNotifications'
 
 defineProps<{
   item: AccountNotificationItem
+  actionLoading?: boolean
+}>()
+
+defineEmits<{
+  'accept-invite': []
+  'reject-invite': []
 }>()
 </script>
 
@@ -15,6 +22,24 @@ defineProps<{
         <span>{{ item.typeText }}</span>
       </div>
       <time>{{ item.createdAt }}</time>
+    </div>
+
+    <div v-if="item.teamInvite?.teamLogo || item.teamInvite?.teamName" class="notification-detail-card__team">
+      <img
+        v-if="item.teamInvite.teamLogo"
+        :src="item.teamInvite.teamLogo"
+        :alt="item.teamInvite.teamName || '球队 Logo'"
+        class="notification-detail-card__team-logo"
+      />
+      <div v-else class="notification-detail-card__team-logo notification-detail-card__team-logo--placeholder">
+        {{ (item.teamInvite.teamName || '队').slice(0, 1) }}
+      </div>
+      <div>
+        <p class="notification-detail-card__team-name">{{ item.teamInvite.teamName || '未知球队' }}</p>
+        <p v-if="item.teamInvite.inviterName" class="notification-detail-card__team-sub">
+          邀请人：{{ item.teamInvite.inviterName }}
+        </p>
+      </div>
     </div>
 
     <h2>{{ item.detailTitle }}</h2>
@@ -36,10 +61,45 @@ defineProps<{
     >
       {{ item.resultText }}
     </div>
+
+    <div
+      v-if="item.teamInvite?.canRespond || item.teamInvite?.cannotAcceptReason"
+      class="notification-detail-card__actions"
+    >
+      <p v-if="item.teamInvite?.cannotAcceptReason" class="notification-detail-card__hint">
+        {{ item.teamInvite.cannotAcceptReason }}
+      </p>
+      <button
+        v-if="item.teamInvite?.canAccept"
+        type="button"
+        class="account-btn-primary"
+        :disabled="actionLoading"
+        @click="$emit('accept-invite')"
+      >
+        接受邀请
+      </button>
+      <button
+        v-if="item.teamInvite?.canRespond"
+        type="button"
+        class="account-btn-secondary"
+        :disabled="actionLoading"
+        @click="$emit('reject-invite')"
+      >
+        拒绝邀请
+      </button>
+    </div>
+
+    <div v-else-if="item.teamInvite?.inviteStatus === 1" class="notification-detail-card__actions">
+      <RouterLink to="/account/team" class="account-btn-primary notification-detail-card__link-btn">
+        查看我的球队
+      </RouterLink>
+    </div>
   </article>
 </template>
 
 <style scoped lang="scss">
+@import '@/views/account/styles/account-center.scss';
+
 .notification-detail-card {
   padding: 30px 32px;
   background: rgba(255, 255, 255, 0.34);
@@ -62,6 +122,45 @@ defineProps<{
   }
 
   time {
+    color: #666;
+    font-size: 14px;
+  }
+
+  &__team {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  &__team-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    object-fit: cover;
+
+    &--placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.06);
+      font-size: 22px;
+      font-weight: 800;
+    }
+  }
+
+  &__team-name {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  &__team-sub {
+    margin: 4px 0 0;
     color: #666;
     font-size: 14px;
   }
@@ -139,6 +238,27 @@ defineProps<{
       color: var(--account-danger, #c80a10);
     }
   }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  &__hint {
+    flex: 1 1 100%;
+    margin: 0 0 4px;
+    color: #b56a00;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  &__link-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+  }
 }
 
 @media (max-width: 991px) {
@@ -154,6 +274,16 @@ defineProps<{
 
   .notification-detail-card__meta {
     grid-template-columns: 1fr;
+  }
+
+  .notification-detail-card__actions {
+    flex-direction: column;
+
+    .account-btn-primary,
+    .account-btn-secondary,
+    .notification-detail-card__link-btn {
+      width: 100%;
+    }
   }
 }
 </style>

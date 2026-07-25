@@ -130,6 +130,41 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
     }
 
     @Override
+    public boolean hasCurrentTeamMembership(Long accountId) {
+        Long count = teamMemberDao.selectCount(new LambdaQueryWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getMemberId, accountId)
+                .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
+                .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
+                .eq(BasketTeamMember::getIsDelete, NOT_DELETED));
+        return count != null && count > 0;
+    }
+
+    @Override
+    public boolean hasValidCaptainQualification(Long accountId) {
+        CaptainQualificationDetailResp qualification = getCurrentQualification(accountId);
+        return Boolean.TRUE.equals(qualification.getCanCreateTeam());
+    }
+
+    @Override
+    public String resolveJoinIneligibilityReason(Long accountId) {
+        if (hasCurrentTeamMembership(accountId)) {
+            return "您当前已有球队，不能加入其他球队";
+        }
+        if (hasValidCaptainQualification(accountId)) {
+            return "队长不能加入其他球队";
+        }
+        return null;
+    }
+
+    @Override
+    public void assertEligibleToJoinTeam(Long accountId) {
+        String reason = resolveJoinIneligibilityReason(accountId);
+        if (reason != null) {
+            throw new ServiceException(reason, 403);
+        }
+    }
+
+    @Override
     public BasketTournamentRegistration requireRegistrationCaptain(Long accountId, Long registrationId) {
         BasketTournamentRegistration registration = registrationDao.selectById(registrationId);
         if (registration == null || !NOT_DELETED.equals(registration.getIsDelete())) {

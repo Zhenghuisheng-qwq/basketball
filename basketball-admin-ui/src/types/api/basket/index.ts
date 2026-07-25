@@ -52,6 +52,14 @@ export const TEAM_RECRUIT_STATUS_OPTIONS = [
   { value: 1, label: '公开招募' }
 ]
 
+/** 赛事报名窗口状态（展示辅助） */
+export const TOURNAMENT_REGISTRATION_WINDOW_STATUS_OPTIONS = [
+  { value: 'UNCONFIGURED', label: '未配置' },
+  { value: 'NOT_STARTED', label: '未开始' },
+  { value: 'OPEN', label: '报名中' },
+  { value: 'CLOSED', label: '已截止' }
+]
+
 /** 赛事状态 */
 export const TOURNAMENT_STATUS_OPTIONS = [
   { value: 0, label: '已禁用' },
@@ -515,6 +523,11 @@ export interface TournamentQuery extends PageDomain, BaseEntity {
   tournamentName?: string
   tournamentStatus?: number
   competitionSeasonId?: number
+  registrationWindowStatus?: string
+  registrationTimeBegin?: string
+  registrationTimeEnd?: string
+  competitionTimeBegin?: string
+  competitionTimeEnd?: string
 }
 
 export interface TournamentListItem {
@@ -529,11 +542,14 @@ export interface TournamentListItem {
   gameTerminal?: string
   registrationStartTime?: string
   registrationEndTime?: string
+  registrationWindowStatus?: string
+  registrationWindowStatusName?: string
   competitionStartTime?: string
   competitionEndTime?: string
   operationalSeasonId?: number
   displayOrder?: number
   createTime?: string
+  updateTime?: string
 }
 
 export interface TournamentDetail extends TournamentListItem {
