@@ -113,7 +113,7 @@ public class EventParticipationQueryServiceImpl implements IEventParticipationQu
             resp.setParticipationStatusText(participationStatus.getDescription());
             resp.setRosterLockStatus(lockStatus.getCode());
             resp.setRosterLockStatusText(lockStatus.getDescription());
-            resp.setRosterCount(rosterCountMap.getOrDefault(eventTeam.getId(), 0).intValue());
+            resp.setRosterCount(rosterCountMap.getOrDefault(eventTeam.getId(), 0L).intValue());
             resp.setIsCaptain(Integer.valueOf(IS_CAPTAIN).equals(roster.getIsCaptain()));
             resp.setRosterRole(roster.getRosterRole());
             result.add(resp);

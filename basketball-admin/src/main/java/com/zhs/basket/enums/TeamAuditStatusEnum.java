@@ -8,7 +8,7 @@ public enum TeamAuditStatusEnum {
     REJECTED(2, "已驳回"),
     REVIEWING(3, "审核中");
 
-    private final int code;
+    private final Integer code;
     private final String description;
 
     TeamAuditStatusEnum(int code, String description) {
@@ -16,7 +16,7 @@ public enum TeamAuditStatusEnum {
         this.description = description;
     }
 
-    public int getCode() { return code; }
+    public Integer getCode() { return code; }
     public String getDescription() { return description; }
 
     public static TeamAuditStatusEnum fromCode(Integer code) {

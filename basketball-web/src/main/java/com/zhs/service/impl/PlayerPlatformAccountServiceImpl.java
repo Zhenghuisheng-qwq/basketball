@@ -32,6 +32,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -146,7 +147,7 @@ public class PlayerPlatformAccountServiceImpl implements IPlayerPlatformAccountS
         assertGameIdAvailable(normalizedPlatform, normalizedGameId, profile.getId());
         requireProofFile(proofFileId, memberId);
 
-        if (!PlatformAccountStatusEnum.ACTIVE.getCode().equals(account.getAccountStatus())) {
+        if (!Objects.equals(account.getAccountStatus(), PlatformAccountStatusEnum.ACTIVE.getCode())) {
             throw new ServiceException("当前平台账号不可修改");
         }
 
