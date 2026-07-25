@@ -13,5 +13,10 @@ public class CaptainQualificationListVo {
     private Integer isCurrent;
     private Integer paymentConfirmed;
     private Date grantedTime;
+    private Date validFrom;
     private Date validTo;
+    /** 运行时是否有效（与前台 canCreateTeam 规则一致） */
+    private Integer runtimeValid;
+    /** 运行时无效原因 */
+    private String runtimeInvalidReason;
 }

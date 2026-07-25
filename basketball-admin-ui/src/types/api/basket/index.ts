@@ -10,6 +10,27 @@ export const PLAYER_CERT_STATUS_OPTIONS = [
   { value: 5, label: '已取消' }
 ]
 
+/** 用户认证阶段（用户管理列表展示） */
+export const MEMBER_CERT_STAGE_OPTIONS = [
+  { value: 'NOT_CERTIFIED', label: '未认证' },
+  { value: 'PENDING', label: '待审核' },
+  { value: 'APPROVED', label: '已认证' },
+  { value: 'REJECTED', label: '已驳回' },
+  { value: 'NO_PROFILE', label: '未建档' }
+]
+
+/** 官网会员账号状态 */
+export const MEMBER_ACCOUNT_STATUS_OPTIONS = [
+  { value: 1, label: '正常' },
+  { value: 0, label: '禁用' }
+]
+
+/** 是否选项 */
+export const YES_NO_OPTIONS = [
+  { value: 1, label: '是' },
+  { value: 0, label: '否' }
+]
+
 /** 队长资格状态 */
 export const CAPTAIN_QUALIFICATION_STATUS_OPTIONS = [
   { value: 0, label: '已撤销' },
@@ -31,6 +52,14 @@ export const TOURNAMENT_STATUS_OPTIONS = [
   { value: 1, label: '已发布' },
   { value: 2, label: '已结束' },
   { value: 3, label: '草稿' }
+]
+
+/** 顶层赛季状态 */
+export const COMPETITION_SEASON_STATUS_OPTIONS = [
+  { value: 0, label: '筹备中' },
+  { value: 1, label: '进行中' },
+  { value: 2, label: '已结束' },
+  { value: 3, label: '已归档' }
 ]
 
 /** 赛季状态 */
@@ -123,7 +152,7 @@ export interface PlayerCertApproveReq {
 }
 
 export interface PlayerCertRejectReq {
-  rejectReason: string
+  rejectReason?: string
   auditRemark?: string
 }
 
@@ -143,13 +172,15 @@ export interface CaptainQualificationListItem {
   isCurrent?: number
   paymentConfirmed?: number
   grantedTime?: string
+  validFrom?: string
   validTo?: string
+  runtimeValid?: number
+  runtimeInvalidReason?: string
 }
 
 export interface CaptainQualificationDetail extends CaptainQualificationListItem {
   paymentReference?: string
   grantReason?: string
-  validFrom?: string
   revokeReason?: string
 }
 
@@ -263,23 +294,38 @@ export interface AccountPlayerQuery extends PageDomain, BaseEntity {
   playerNo?: string
   gameId?: string
   gameTerminal?: string
+  accountStatus?: number
+  certStage?: string
+  hasTeam?: number
+  hasCaptainQual?: number
   certificationStatus?: number
   playerStatus?: number
 }
 
 export interface AccountPlayerListItem {
-  memberId: number
+  memberId: string | number
   accountNo?: string
+  username?: string
   email?: string
   nickname?: string
-  playerId?: number
+  avatarUrl?: string
+  emailVerified?: number
+  playerId?: string | number
   playerNo?: string
   gameTerminal?: string
   gameAccount?: string
   certificationStatus?: number
   certificationStatusName?: string
+  latestApplicationStatus?: number
+  certDisplayStatus?: string
+  certDisplayStatusName?: string
   playerStatus?: number
   accountStatus?: number
+  accountStatusName?: string
+  currentTeamId?: string | number
+  currentTeamName?: string
+  hasCaptainQual?: number
+  lastLoginTime?: string
   certifiedTime?: string
   createTime?: string
 }
@@ -289,7 +335,13 @@ export interface AccountPlayerAccountSection {
   accountNo?: string
   username?: string
   email?: string
+  nickname?: string
+  avatarUrl?: string
+  emailVerified?: number
   accountStatus?: number
+  accountStatusName?: string
+  lastLoginTime?: string
+  lastLoginIp?: string
   createTime?: string
   updateTime?: string
 }
@@ -310,6 +362,7 @@ export interface AccountPlayerProfileSection {
   playerStatus?: number
   certifiedTime?: string
   currentTeamId?: number
+  currentTeamName?: string
 }
 
 export interface AccountPlayerPlatformAccount {
@@ -347,6 +400,8 @@ export interface AccountPlayerCaptainQual {
   validFrom?: string
   validTo?: string
   grantReason?: string
+  runtimeValid?: number
+  runtimeInvalidReason?: string
 }
 
 export interface AccountPlayerTeamSummary {
@@ -422,14 +477,24 @@ export interface TournamentQuery extends PageDomain, BaseEntity {
   tournamentNo?: string
   tournamentName?: string
   tournamentStatus?: number
+  competitionSeasonId?: number
 }
 
 export interface TournamentListItem {
   id: number
   tournamentNo?: string
+  competitionSeasonId?: number
+  competitionSeasonName?: string
+  competitionSeasonYear?: number
   tournamentName?: string
   tournamentStatus?: number
   tournamentStatusName?: string
+  gameTerminal?: string
+  registrationStartTime?: string
+  registrationEndTime?: string
+  competitionStartTime?: string
+  competitionEndTime?: string
+  operationalSeasonId?: number
   displayOrder?: number
   createTime?: string
 }
@@ -440,7 +505,6 @@ export interface TournamentDetail extends TournamentListItem {
   logoFileId?: number
   coverFileId?: number
   tournamentType?: string
-  gameTerminal?: string
   formatCode?: string
   organizerName?: string
   description?: string
@@ -448,6 +512,7 @@ export interface TournamentDetail extends TournamentListItem {
 }
 
 export interface TournamentCreateReq {
+  competitionSeasonId: number
   tournamentName: string
   shortName?: string
   englishName?: string
@@ -458,11 +523,51 @@ export interface TournamentCreateReq {
   formatCode?: string
   organizerName?: string
   description?: string
+  registrationStartTime?: string
+  registrationEndTime?: string
+  competitionStartTime?: string
+  competitionEndTime?: string
   publicStatus?: number
   displayOrder?: number
 }
 
 export interface TournamentUpdateReq extends TournamentCreateReq {}
+
+export interface CompetitionSeasonQuery extends PageDomain, BaseEntity {
+  seasonName?: string
+  seasonYear?: number
+  seasonStatus?: number
+}
+
+export interface CompetitionSeasonListItem {
+  id: number
+  seasonNo?: string
+  seasonName?: string
+  seasonYear?: number
+  startTime?: string
+  endTime?: string
+  seasonStatus?: number
+  seasonStatusName?: string
+  publicStatus?: number
+  tournamentCount?: number
+  createTime?: string
+}
+
+export interface CompetitionSeasonDetail extends CompetitionSeasonListItem {
+  description?: string
+}
+
+export interface CompetitionSeasonCreateReq {
+  seasonName: string
+  seasonYear?: number
+  startTime?: string
+  endTime?: string
+  seasonStatus?: number
+  publicStatus?: number
+  description?: string
+}
+
+export interface CompetitionSeasonUpdateReq extends CompetitionSeasonCreateReq {}
 
 export interface SeasonListItem {
   id: number

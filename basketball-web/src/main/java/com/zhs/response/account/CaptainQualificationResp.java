@@ -33,4 +33,13 @@ public class CaptainQualificationResp implements Serializable {
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date validTo;
+
+    @ApiModelProperty("是否可创建球队")
+    private Boolean canCreateTeam;
+
+    @ApiModelProperty("运行时是否有效")
+    private Boolean runtimeValid;
+
+    @ApiModelProperty("无效原因")
+    private String invalidReason;
 }

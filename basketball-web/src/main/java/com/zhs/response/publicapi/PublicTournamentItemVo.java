@@ -52,6 +52,16 @@ public class PublicTournamentItemVo implements Serializable {
     @ApiModelProperty("展示排序")
     private Integer displayOrder;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty("所属顶层赛季主键")
+    private Long competitionSeasonId;
+
+    @ApiModelProperty("所属顶层赛季名称")
+    private String competitionSeasonName;
+
+    @ApiModelProperty("所属顶层赛季年份")
+    private Integer competitionSeasonYear;
+
     @ApiModelProperty("更新时间")
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")

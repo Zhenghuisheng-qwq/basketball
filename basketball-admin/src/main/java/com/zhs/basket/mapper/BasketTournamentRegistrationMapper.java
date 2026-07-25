@@ -15,6 +15,7 @@ public interface BasketTournamentRegistrationMapper {
             @Param("toStatus") Integer toStatus, @Param("currentAuditorId") Long currentAuditorId,
             @Param("remark") String remark, @Param("auditTime") Date auditTime, @Param("auditorId") Long auditorId);
     int countApprovedBySeasonId(@Param("seasonId") Long seasonId);
+    int countByTournamentId(@Param("tournamentId") Long tournamentId);
     List<AvailableTeamVo> selectApprovedTeamsBySeasonId(@Param("seasonId") Long seasonId);
     List<SeasonCandidateTeamResp> selectCandidateTeamsBySeasonId(@Param("seasonId") Long seasonId);
     BasketTournamentRegistration selectApprovedBySeasonAndTeam(@Param("seasonId") Long seasonId,

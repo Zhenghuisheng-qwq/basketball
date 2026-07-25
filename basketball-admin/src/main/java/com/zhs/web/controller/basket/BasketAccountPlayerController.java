@@ -25,7 +25,7 @@ public class BasketAccountPlayerController extends BaseController {
 
     @PreAuthorize("@ss.hasPermi('basket:accountPlayer:query')")
     @GetMapping("/{memberId}")
-    public AjaxResult getInfo(@PathVariable Long memberId) {
-        return success(accountPlayerService.selectDetail(memberId));
+    public AjaxResult getInfo(@PathVariable String memberId) {
+        return success(accountPlayerService.selectDetail(Long.valueOf(memberId)));
     }
 }

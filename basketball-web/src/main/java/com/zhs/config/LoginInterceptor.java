@@ -4,7 +4,6 @@ import com.zhs.common.NoLoginRequest;
 import com.zhs.common.TokenUtil;
 import com.zhs.common.UserContext;
 import com.zhs.common.cachekey.member.MemberTokenCacheKey;
-import com.zhs.common.cachekey.user.TokenCacheKey;
 import com.zhs.util.MiniRedisUtil;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,7 +14,7 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
- * 登录拦截：官网会员 Token 走 member:token；/api 小程序遗留 Token 兼容 mini:token。
+ * 登录拦截：校验官网会员 Token（member:token）。
  */
 @Component
 public class LoginInterceptor implements HandlerInterceptor {
@@ -47,7 +46,7 @@ public class LoginInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        Long memberId = resolveMemberId(token, request.getRequestURI());
+        Long memberId = resolveMemberId(token);
         if (memberId == null) {
             writeUnauthorized(response, "登录已过期");
             return false;
@@ -57,17 +56,9 @@ public class LoginInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    private Long resolveMemberId(String token, String uri) {
+    private Long resolveMemberId(String token) {
         Object cached = miniRedisUtil.get(new MemberTokenCacheKey(token, memberAuthProperties.getTokenExpireDays()));
-        Long memberId = parseId(cached);
-        if (memberId != null) {
-            return memberId;
-        }
-        // 兼容小程序遗留 /api 会话，不与官网会员前缀混用
-        if (uri != null && uri.startsWith("/api/")) {
-            return parseId(miniRedisUtil.get(new TokenCacheKey(token)));
-        }
-        return null;
+        return parseId(cached);
     }
 
     private Long parseId(Object cached) {

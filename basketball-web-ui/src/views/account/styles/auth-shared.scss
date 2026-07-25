@@ -95,17 +95,17 @@
 
 .auth-login__header h1 {
   margin: 0;
-  font-size: clamp(54px, 4.5vw, 78px);
+  font-size: clamp(32px, 2.8vw, 52px);
   font-weight: 900;
-  line-height: 0.98;
-  letter-spacing: -2px;
+  line-height: 1;
+  letter-spacing: -1px;
   color: #080808;
 }
 
 .auth-login__header p {
   margin: 10px 0 0;
   color: #d5080d;
-  font-size: clamp(24px, 2vw, 34px);
+  font-size: clamp(15px, 1.4vw, 24px);
   font-weight: 900;
   font-style: italic;
   line-height: 1;
@@ -122,9 +122,9 @@
 
 .auth-register__title-cn {
   margin: 0;
-  font-size: clamp(48px, 4vw, 70px);
+  font-size: clamp(32px, 2.8vw, 52px);
   font-weight: 900;
-  line-height: 0.98;
+  line-height: 1;
   color: #080808;
 }
 
@@ -132,7 +132,7 @@
   margin: 0;
   padding-bottom: 5px;
   color: #d5080d;
-  font-size: clamp(21px, 1.8vw, 30px);
+  font-size: clamp(15px, 1.4vw, 24px);
   font-weight: 900;
   font-style: italic;
   line-height: 1;
@@ -162,7 +162,7 @@
 
 .auth-input {
   width: 100%;
-  height: clamp(52px, 3.5vw, 60px);
+  height: clamp(48px, 3.2vw, 58px);
   padding: 0 16px;
   border: 1px solid rgba(15, 15, 15, 0.48);
   border-radius: 2px;
@@ -332,7 +332,7 @@
 /* ---------- 按钮 ---------- */
 .auth-primary-button {
   width: 100%;
-  min-height: 60px;
+  min-height: clamp(50px, 3.2vw, 58px);
   margin-top: 22px;
   border: 0;
   border-radius: 2px;
@@ -548,12 +548,17 @@
   }
 
   .auth-login__header h1 {
-    font-size: clamp(40px, 10vw, 54px);
-    letter-spacing: -1px;
+    font-size: clamp(32px, 9vw, 44px);
+    letter-spacing: -0.5px;
   }
 
   .auth-register__title-cn {
-    font-size: clamp(36px, 9vw, 48px);
+    font-size: clamp(32px, 9vw, 44px);
+  }
+
+  .auth-register__title-en {
+    font-size: clamp(16px, 4.5vw, 22px);
+    white-space: normal;
   }
 
   .auth-password-rules {

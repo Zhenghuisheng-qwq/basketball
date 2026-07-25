@@ -30,9 +30,6 @@ export interface AccountNotificationItem {
   meta: AccountNotificationMetaItem[]
   resultText: string
   resultStatus: AccountNotificationResultStatus
-  primaryActionText: string
-  primaryActionRoute: string
-  secondaryActionText: string
 }
 
 export interface NotificationSummary {

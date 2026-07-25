@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilde
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 程序注解配置
@@ -25,6 +26,11 @@ public class ApplicationConfig
     @Bean
     public Jackson2ObjectMapperBuilderCustomizer jacksonObjectMapperCustomization()
     {
-        return jacksonObjectMapperBuilder -> jacksonObjectMapperBuilder.timeZone(TimeZone.getDefault());
+        return jacksonObjectMapperBuilder -> jacksonObjectMapperBuilder
+                .timeZone(TimeZone.getDefault())
+                .simpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                // 雪花 ID 超出 JS Number 安全整数范围，统一序列化为字符串
+                .serializerByType(Long.class, ToStringSerializer.instance)
+                .serializerByType(Long.TYPE, ToStringSerializer.instance);
     }
 }

@@ -22,9 +22,11 @@ import com.zhs.response.account.AccountSummaryResp;
 import com.zhs.response.account.CaptainQualificationResp;
 import com.zhs.response.account.PendingTaskResp;
 import com.zhs.response.account.PlayerIdentityResp;
+import com.zhs.response.team.CaptainQualificationDetailResp;
 import com.zhs.service.IAccountCenterService;
 import com.zhs.service.IAccountMessageService;
 import com.zhs.service.IAccountTournamentService;
+import com.zhs.service.ICaptainPermissionService;
 import com.zhs.util.DataMaskUtil;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -55,6 +57,8 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
     private IAccountMessageService accountMessageService;
     @Resource
     private IAccountTournamentService accountTournamentService;
+    @Resource
+    private ICaptainPermissionService captainPermissionService;
 
     @Override
     public AccountCenterOverviewResp getOverview() {
@@ -64,11 +68,12 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
         BasketPlayerProfile playerProfile = loadPlayerProfile(memberId);
         BasketPlayerCertApplication latestCertApp = loadLatestCertApplication(memberId);
         BasketCaptainQualification captainQualification = loadCaptainQualification(memberId);
+        CaptainQualificationDetailResp captainQualDetail = captainPermissionService.getCurrentQualification(memberId);
 
         AccountCenterOverviewResp resp = new AccountCenterOverviewResp();
         resp.setAccountSummary(buildAccountSummary(account, profile));
         resp.setPlayerIdentity(buildPlayerIdentity(playerProfile, latestCertApp));
-        resp.setCaptainQualification(buildCaptainQualification(captainQualification));
+        resp.setCaptainQualification(buildCaptainQualification(captainQualDetail, captainQualification));
         resp.setCurrentTournaments(accountTournamentService.listRecentTournaments(5));
         resp.setUnreadMessageCount(accountMessageService.countUnread());
         resp.setRecentMessages(accountMessageService.listRecentMessages(5));
@@ -158,16 +163,22 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
         return identity;
     }
 
-    private CaptainQualificationResp buildCaptainQualification(BasketCaptainQualification qualification) {
-        if (qualification == null) {
+    private CaptainQualificationResp buildCaptainQualification(CaptainQualificationDetailResp detail,
+                                                               BasketCaptainQualification qualification) {
+        if (detail == null || !Boolean.TRUE.equals(detail.getHasQualification())) {
             return null;
         }
         CaptainQualificationResp resp = new CaptainQualificationResp();
-        resp.setQualificationNo(qualification.getQualificationNo());
-        resp.setQualificationStatus(qualification.getQualificationStatus());
-        resp.setGrantedTime(qualification.getGrantedTime());
-        resp.setValidFrom(qualification.getValidFrom());
-        resp.setValidTo(qualification.getValidTo());
+        resp.setQualificationNo(detail.getQualificationNo());
+        resp.setQualificationStatus(detail.getStatus());
+        if (qualification != null) {
+            resp.setGrantedTime(qualification.getGrantedTime());
+        }
+        resp.setValidFrom(detail.getValidFrom());
+        resp.setValidTo(detail.getValidTo());
+        resp.setCanCreateTeam(detail.getCanCreateTeam());
+        resp.setRuntimeValid(detail.getRuntimeValid());
+        resp.setInvalidReason(detail.getInvalidReason());
         return resp;
     }
 

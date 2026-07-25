@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
@@ -9,7 +9,6 @@ import { useNotificationCenterStore } from '@/stores/notificationCenter'
 import type { AccountNotificationItem } from '@/types/accountNotifications'
 
 const route = useRoute()
-const router = useRouter()
 const notificationStore = useNotificationCenterStore()
 const loading = ref(false)
 const loadError = ref('')
@@ -26,15 +25,6 @@ function getHeroTitle(item: AccountNotificationItem) {
 
 const heroTitle = computed(() => (notification.value ? getHeroTitle(notification.value) : ''))
 const heroDescription = computed(() => notification.value?.detailSubtitle || '')
-
-function handlePrimary() {
-  if (!notification.value?.primaryActionRoute) return
-  router.push(notification.value.primaryActionRoute)
-}
-
-function handleBack() {
-  router.push('/account/notifications')
-}
 
 async function loadNotification() {
   if (!notificationId.value) return
@@ -89,18 +79,11 @@ onMounted(() => {
         status-type="danger"
       />
 
-      <NotificationDetailCard
-        :item="notification"
-        @primary="handlePrimary"
-        @back="handleBack"
-      />
+      <NotificationDetailCard :item="notification" />
     </template>
 
     <div v-else class="notification-detail-empty">
       <AccountEmptyState message="通知不存在" />
-      <button type="button" class="account-btn-secondary" @click="handleBack">
-        返回通知列表
-      </button>
     </div>
   </div>
 </template>

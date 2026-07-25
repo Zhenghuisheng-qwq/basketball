@@ -230,12 +230,14 @@ if (typeof emailQuery === 'string' && emailQuery.trim()) {
 .auth-login__code-btn {
   flex: 0 0 112px;
   height: 44px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  border: 1px solid rgba(15, 15, 15, 0.35);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.35);
+  color: #151515;
   cursor: pointer;
   font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
 }
 
 .auth-login__code-btn:disabled {

@@ -15,9 +15,9 @@ export function listAccountPlayer(query: AccountPlayerQuery): Promise<TableDataI
   })
 }
 
-export function getAccountPlayer(memberId: number): Promise<AjaxResult<AccountPlayerFullDetail>> {
+export function getAccountPlayer(memberId: string | number): Promise<AjaxResult<AccountPlayerFullDetail>> {
   return request({
-    url: `/basket/accountPlayer/${memberId}`,
+    url: `/basket/accountPlayer/${String(memberId)}`,
     method: 'get'
   })
 }

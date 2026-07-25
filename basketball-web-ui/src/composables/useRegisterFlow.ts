@@ -1,9 +1,10 @@
 const REGISTER_DRAFT_KEY = 'cnpa_register_draft'
 
 export interface RegisterDraft {
-  email: string
+  username: string
   password: string
-  verifyBizNo: string
+  email?: string
+  verifyBizNo?: string
   agreeUserAgreement: boolean
   agreePrivacyPolicy: boolean
 }
@@ -29,11 +30,23 @@ export function getRegisterDraft(): RegisterDraft | null {
   }
 }
 
+export function updateRegisterEmail(email: string, bizNo: string) {
+  const draft = getRegisterDraft()
+  if (!draft) return
+  draft.email = email
+  draft.verifyBizNo = bizNo
+  setRegisterDraft(draft)
+}
+
 export function updateRegisterBizNo(bizNo: string) {
   const draft = getRegisterDraft()
   if (!draft) return
   draft.verifyBizNo = bizNo
   setRegisterDraft(draft)
+}
+
+export function getRegisterUsername(): string {
+  return getRegisterDraft()?.username || ''
 }
 
 export function getRegisterEmail(): string {

@@ -5,7 +5,7 @@ defineProps<{
 
 const steps = [
   { id: 1, num: '01', label: '创建账号' },
-  { id: 2, num: '02', label: '邮箱验证' },
+  { id: 2, num: '02', label: '绑定邮箱' },
   { id: 3, num: '03', label: '完成' },
 ] as const
 </script>

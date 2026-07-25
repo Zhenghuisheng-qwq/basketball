@@ -194,8 +194,17 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
     }
 
     @Override
+    public void assertUsernameAvailable(String username) {
+        String normalized = normalizeUsername(username);
+        if (findByUsername(normalized) != null) {
+            throw new ServiceException("登录账号已被使用");
+        }
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public MemberLoginResp register(MemberRegisterReq req, String clientIp, String userAgent) {
+        String username = normalizeUsername(req.getUsername());
         String email = normalizeEmail(req.getEmail());
         validatePasswordPair(req.getPassword(), req.getConfirmPassword());
         if (!Boolean.TRUE.equals(req.getAgreeUserAgreement()) || !Boolean.TRUE.equals(req.getAgreePrivacyPolicy())) {
@@ -208,10 +217,14 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         if (findByEmail(email) != null) {
             throw new ServiceException("邮箱已注册");
         }
+        if (findByUsername(username) != null) {
+            throw new ServiceException("登录账号已被使用");
+        }
 
         Date now = new Date();
         BasketMemberAccount account = new BasketMemberAccount();
         account.setAccountNo(generateAccountNo());
+        account.setUsername(username);
         account.setPasswordHash(passwordEncoder.encode(req.getPassword()));
         account.setEmail(email);
         account.setEmailVerified(VerifiedFlagEnum.YES.getCode());
@@ -236,6 +249,14 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         profile.setProfileStatus(1);
         profile.setIsDelete(0);
         memberProfileDao.insert(profile);
+
+        BasketPlayerProfile playerProfile = new BasketPlayerProfile();
+        playerProfile.setMemberId(account.getId());
+        playerProfile.setCertificationStatus(0);
+        playerProfile.setPlayerStatus(1);
+        playerProfile.setProfileVisible(1);
+        playerProfile.setIsDelete(0);
+        playerProfileDao.insert(playerProfile);
 
         BasketPrivacySetting privacy = new BasketPrivacySetting();
         privacy.setMemberId(account.getId());
@@ -263,7 +284,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         saveAgreement(account.getId(), "PRIVACY_POLICY", "隐私政策", terminalType, clientIp, userAgent, now);
 
         writeSecurityLog(account.getId(), "REGISTER", "会员注册",
-                null, maskEmail(email), "MEMBER", account.getId(), clientIp, terminalType, now, "官网邮箱注册");
+                null, maskEmail(email), "MEMBER", account.getId(), clientIp, terminalType, now, "官网账号注册");
 
         String token = issueToken(account.getId());
         writeLoginLog(account, LOGIN_TYPE_PASSWORD, LoginResultEnum.SUCCESS, null, clientIp, terminalType, userAgent, now);
@@ -524,10 +545,18 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
                 .last("limit 1"));
     }
 
+    private BasketMemberAccount findByUsername(String username) {
+        return memberAccountDao.selectOne(new LambdaQueryWrapper<BasketMemberAccount>()
+                .eq(BasketMemberAccount::getUsername, username)
+                .eq(BasketMemberAccount::getIsDelete, 0)
+                .last("limit 1"));
+    }
+
     private BasketMemberAccount findByAccount(String account) {
         return memberAccountDao.selectOne(new LambdaQueryWrapper<BasketMemberAccount>()
                 .eq(BasketMemberAccount::getIsDelete, 0)
                 .and(w -> w.eq(BasketMemberAccount::getEmail, account)
+                        .or().eq(BasketMemberAccount::getUsername, account)
                         .or().eq(BasketMemberAccount::getAccountNo, account.toUpperCase())
                         .or().eq(BasketMemberAccount::getAccountNo, account))
                 .last("limit 1"));
@@ -657,10 +686,24 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         if (message.contains("uk_member_email") || message.contains("email")) {
             return new ServiceException("邮箱已注册");
         }
+        if (message.contains("uk_member_username") || message.contains("username")) {
+            return new ServiceException("登录账号已被使用");
+        }
         if (message.contains("uk_member_account_no") || message.contains("account_no")) {
             return new ServiceException("账号编号冲突，请重试");
         }
         return new ServiceException("注册失败，请稍后重试");
+    }
+
+    private String normalizeUsername(String username) {
+        if (!StringUtils.hasText(username)) {
+            throw new ServiceException("登录账号不能为空");
+        }
+        String value = username.trim().toLowerCase();
+        if (!value.matches("^[a-z0-9_]{4,20}$")) {
+            throw new ServiceException("登录账号为 4 至 20 位英文字母、数字或下划线");
+        }
+        return value;
     }
 
     private String normalizeEmail(String email) {

@@ -7,9 +7,7 @@
         </el-select>
       </el-form-item>
       <el-form-item label="所属赛季">
-        <el-select v-model="filterSeasonId" placeholder="请选择赛季" filterable style="width: 200px" @change="handleSeasonChange">
-          <el-option v-for="item in seasonOptions" :key="item.id" :label="item.seasonName" :value="item.id" />
-        </el-select>
+        <el-input :model-value="operationalSeasonLabel" disabled placeholder="请先选择赛事" style="width: 200px" />
       </el-form-item>
       <el-form-item label="所属阶段">
         <el-select v-model="selectedStageId" placeholder="请选择阶段" filterable style="width: 200px" @change="getList">
@@ -112,7 +110,6 @@ import {
   updateGroup
 } from '@/api/basket/tournamentGroup'
 import { listStage } from '@/api/basket/tournamentStage'
-import { listSeasonByTournament } from '@/api/basket/season'
 import { listTournament } from '@/api/basket/tournament'
 import type {
   AvailableTeam,
@@ -120,7 +117,6 @@ import type {
   GroupDetail,
   GroupListItem,
   GroupTeam,
-  SeasonListItem,
   StageListItem,
   TournamentListItem
 } from '@/types'
@@ -131,11 +127,20 @@ const { proxy } = getCurrentInstance()
 const loading = ref(false)
 const dataList = ref<GroupListItem[]>([])
 const tournamentOptions = ref<TournamentListItem[]>([])
-const seasonOptions = ref<SeasonListItem[]>([])
 const stageOptions = ref<StageListItem[]>([])
 const filterTournamentId = ref<number>()
 const filterSeasonId = ref<number>()
 const selectedStageId = ref<number>()
+
+const operationalSeasonLabel = computed(() => {
+  const tournament = tournamentOptions.value.find(item => item.id === filterTournamentId.value)
+  if (!tournament) return ''
+  if (!tournament.operationalSeasonId) return '该赛事尚未初始化运营赛季'
+  const seasonName = tournament.competitionSeasonName || '运营赛季'
+  return tournament.competitionSeasonYear
+    ? `${seasonName} (${tournament.competitionSeasonYear})`
+    : seasonName
+})
 
 const detailOpen = ref(false)
 const detail = ref<GroupDetail>()
@@ -161,6 +166,10 @@ const selectedTeamIds = ref<number[]>([])
 const transferTeams = ref<AvailableTeam[]>([])
 const assignSubmitting = ref(false)
 
+function resolveOperationalSeasonId(tournamentId?: number) {
+  return tournamentOptions.value.find(item => item.id === tournamentId)?.operationalSeasonId
+}
+
 function loadTournaments() {
   listTournament({ pageNum: 1, pageSize: 500 }).then(res => {
     tournamentOptions.value = res.rows
@@ -172,28 +181,11 @@ function loadTournaments() {
 }
 
 function handleTournamentChange() {
-  filterSeasonId.value = undefined
   selectedStageId.value = undefined
   stageOptions.value = []
   dataList.value = []
-  if (!filterTournamentId.value) {
-    seasonOptions.value = []
-    return
-  }
-  listSeasonByTournament(filterTournamentId.value).then(res => {
-    seasonOptions.value = res.data || []
-    if (seasonOptions.value.length > 0) {
-      filterSeasonId.value = seasonOptions.value[0].id
-      handleSeasonChange()
-    }
-  })
-}
-
-function handleSeasonChange() {
-  selectedStageId.value = undefined
-  dataList.value = []
+  filterSeasonId.value = resolveOperationalSeasonId(filterTournamentId.value)
   if (!filterSeasonId.value) {
-    stageOptions.value = []
     return
   }
   listStage({ pageNum: 1, pageSize: 500, seasonId: filterSeasonId.value }).then(res => {

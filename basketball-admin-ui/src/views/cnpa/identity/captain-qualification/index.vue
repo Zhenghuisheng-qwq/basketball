@@ -40,8 +40,13 @@
           <dict-tag :options="CAPTAIN_QUALIFICATION_STATUS_OPTIONS" :value="scope.row.qualificationStatus" />
         </template>
       </el-table-column>
-      <el-table-column label="当前有效" prop="isCurrent" width="90">
-        <template #default="scope">{{ scope.row.isCurrent === 1 ? '是' : '否' }}</template>
+      <el-table-column label="当前有效" prop="runtimeValid" width="100">
+        <template #default="scope">
+          <el-tooltip v-if="scope.row.runtimeValid !== 1 && scope.row.runtimeInvalidReason" :content="scope.row.runtimeInvalidReason" placement="top">
+            <span>{{ scope.row.runtimeValid === 1 ? '是' : '否' }}</span>
+          </el-tooltip>
+          <span v-else>{{ scope.row.runtimeValid === 1 ? '是' : '否' }}</span>
+        </template>
       </el-table-column>
       <el-table-column label="缴费确认" prop="paymentConfirmed" width="90">
         <template #default="scope">{{ scope.row.paymentConfirmed === 1 ? '是' : '否' }}</template>
@@ -50,7 +55,7 @@
         <template #default="scope">{{ parseTime(scope.row.grantedTime) }}</template>
       </el-table-column>
       <el-table-column label="有效期至" prop="validTo" width="160">
-        <template #default="scope">{{ parseTime(scope.row.validTo) }}</template>
+        <template #default="scope">{{ scope.row.validTo ? parseTime(scope.row.validTo) : '永久' }}</template>
       </el-table-column>
       <el-table-column label="操作" align="center" width="220" class-name="small-padding fixed-width">
         <template #default="scope">
@@ -71,11 +76,13 @@
         <el-descriptions-item label="状态">
           <dict-tag :options="CAPTAIN_QUALIFICATION_STATUS_OPTIONS" :value="detail.qualificationStatus" />
         </el-descriptions-item>
+        <el-descriptions-item label="当前有效">{{ detail.runtimeValid === 1 ? '是' : '否' }}</el-descriptions-item>
+        <el-descriptions-item label="无效原因" v-if="detail.runtimeValid !== 1">{{ detail.runtimeInvalidReason || '-' }}</el-descriptions-item>
         <el-descriptions-item label="缴费确认">{{ detail.paymentConfirmed === 1 ? '是' : '否' }}</el-descriptions-item>
         <el-descriptions-item label="缴费参考号">{{ detail.paymentReference || '-' }}</el-descriptions-item>
         <el-descriptions-item label="授予原因">{{ detail.grantReason || '-' }}</el-descriptions-item>
         <el-descriptions-item label="授予时间">{{ parseTime(detail.grantedTime) }}</el-descriptions-item>
-        <el-descriptions-item label="有效期">{{ parseTime(detail.validFrom) }} ~ {{ parseTime(detail.validTo) }}</el-descriptions-item>
+        <el-descriptions-item label="有效期">{{ parseTime(detail.validFrom) || '-' }} ~ {{ detail.validTo ? parseTime(detail.validTo) : '永久' }}</el-descriptions-item>
         <el-descriptions-item label="撤销原因">{{ detail.revokeReason || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-drawer>
@@ -96,11 +103,23 @@
         <el-form-item label="缴费参考号">
           <el-input v-model="grantForm.paymentReference" placeholder="请输入缴费参考号" />
         </el-form-item>
-        <el-form-item label="有效期起">
-          <el-date-picker v-model="grantForm.validFrom" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="选择开始时间" style="width: 100%" />
+        <el-form-item label="有效期">
+          <el-radio-group v-model="validityMode" @change="handleValidityModeChange">
+            <el-radio value="ONE_YEAR">一年</el-radio>
+            <el-radio value="PERMANENT">永久</el-radio>
+            <el-radio value="CUSTOM">自定义</el-radio>
+          </el-radio-group>
         </el-form-item>
-        <el-form-item label="有效期止">
-          <el-date-picker v-model="grantForm.validTo" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="选择结束时间" style="width: 100%" />
+        <template v-if="validityMode === 'CUSTOM'">
+          <el-form-item label="有效期起">
+            <el-date-picker v-model="grantForm.validFrom" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="选择开始时间" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="有效期止">
+            <el-date-picker v-model="grantForm.validTo" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="选择结束时间" style="width: 100%" />
+          </el-form-item>
+        </template>
+        <el-form-item v-else label=" ">
+          <span class="validity-hint">{{ validityHint }}</span>
         </el-form-item>
         <el-form-item label="授予备注">
           <el-input v-model="grantForm.grantRemark" type="textarea" placeholder="请输入授予备注" />
@@ -160,6 +179,9 @@ import type {
   EligibleCaptain
 } from '@/types'
 import { CAPTAIN_QUALIFICATION_STATUS_OPTIONS } from '@/types'
+import { parseTime } from '@/utils/ruoyi'
+
+type ValidityMode = 'ONE_YEAR' | 'PERMANENT' | 'CUSTOM'
 
 const { proxy } = getCurrentInstance()
 
@@ -172,9 +194,21 @@ const detail = ref<CaptainQualificationDetail>()
 const grantOpen = ref(false)
 const grantTitle = ref('授予队长资格')
 const grantForm = ref<CaptainQualificationGrantReq | CaptainQualificationUpdateReq>({ playerId: undefined, paymentConfirmed: 0 })
+const validityMode = ref<ValidityMode>('ONE_YEAR')
 const grantRules = {
   playerId: [{ required: true, message: '请选择球员', trigger: 'change' }]
 }
+const validityHint = computed(() => {
+  if (validityMode.value === 'PERMANENT') {
+    return '永久有效，不设到期时间'
+  }
+  const from = grantForm.value.validFrom
+  const to = grantForm.value.validTo
+  if (from && to) {
+    return `自 ${from} 起，至 ${to} 止`
+  }
+  return '自提交之日起一年有效'
+})
 const eligibleOpen = ref(false)
 const eligibleList = ref<EligibleCaptain[]>([])
 const eligibleLoading = ref(false)
@@ -193,6 +227,67 @@ const queryParams = ref<CaptainQualificationQuery>({
 
 function captainDisplayName(item: EligibleCaptain) {
   return item.gameNickname || item.nickname || item.playerNo || '-'
+}
+
+function formatDateTime(date: Date) {
+  return parseTime(date) || ''
+}
+
+function addYears(date: Date, years: number) {
+  const result = new Date(date)
+  result.setFullYear(result.getFullYear() + years)
+  return result
+}
+
+function applyValidityMode(mode: ValidityMode) {
+  if (mode === 'CUSTOM') {
+    return
+  }
+  const now = new Date()
+  grantForm.value.validFrom = formatDateTime(now)
+  grantForm.value.validTo = mode === 'PERMANENT' ? undefined : formatDateTime(addYears(now, 1))
+}
+
+function resolveValidityMode(validFrom?: string, validTo?: string): ValidityMode {
+  if (!validTo) {
+    return 'PERMANENT'
+  }
+  if (!validFrom) {
+    return 'CUSTOM'
+  }
+  const from = new Date(validFrom.replace(/-/g, '/'))
+  const to = new Date(validTo.replace(/-/g, '/'))
+  const oneYearLater = addYears(from, 1)
+  const diffMs = Math.abs(to.getTime() - oneYearLater.getTime())
+  if (diffMs < 24 * 60 * 60 * 1000) {
+    return 'ONE_YEAR'
+  }
+  return 'CUSTOM'
+}
+
+function resetValidityMode(mode: ValidityMode = 'ONE_YEAR') {
+  validityMode.value = mode
+  applyValidityMode(mode)
+}
+
+function handleValidityModeChange(mode: ValidityMode) {
+  applyValidityMode(mode)
+}
+
+function validateValidityPeriod() {
+  if (validityMode.value === 'CUSTOM') {
+    if (!grantForm.value.validFrom || !grantForm.value.validTo) {
+      proxy.$modal.msgWarning('请选择有效期起止时间')
+      return false
+    }
+    if (new Date(grantForm.value.validTo.replace(/-/g, '/')) <= new Date(grantForm.value.validFrom.replace(/-/g, '/'))) {
+      proxy.$modal.msgWarning('有效期止必须晚于有效期起')
+      return false
+    }
+    return true
+  }
+  applyValidityMode(validityMode.value)
+  return true
 }
 
 function getList() {
@@ -235,6 +330,7 @@ function openGrant() {
   isEdit.value = false
   grantTitle.value = '授予队长资格'
   grantForm.value = { playerId: undefined, paymentConfirmed: 0, paymentReference: '', grantRemark: '' }
+  resetValidityMode('ONE_YEAR')
   loadEligible().then(() => {
     grantOpen.value = true
   })
@@ -249,6 +345,7 @@ function selectEligible(row: EligibleCaptain) {
   isEdit.value = false
   grantTitle.value = '授予队长资格'
   grantForm.value = { playerId: row.playerId, paymentConfirmed: 0, paymentReference: '', grantRemark: '' }
+  resetValidityMode('ONE_YEAR')
   eligibleOpen.value = false
   grantOpen.value = true
 }
@@ -266,11 +363,15 @@ function handleEdit(row: CaptainQualificationListItem) {
       validTo: data.validTo,
       grantRemark: data.grantReason
     }
+    validityMode.value = resolveValidityMode(data.validFrom, data.validTo)
     grantOpen.value = true
   })
 }
 
 function submitGrant() {
+  if (!validateValidityPeriod()) {
+    return
+  }
   if (isEdit.value) {
     if (!currentId.value) return
     updateCaptainQualification(currentId.value, grantForm.value as CaptainQualificationUpdateReq).then(() => {
@@ -311,3 +412,11 @@ function submitRevoke() {
 
 getList()
 </script>
+
+<style scoped>
+.validity-hint {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+</style>

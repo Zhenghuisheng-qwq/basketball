@@ -45,6 +45,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -273,9 +274,13 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     }
 
     private void bindTeamLogoFile(BasketTeam team, Long fileId, Long memberId) {
-        BasketFileAsset asset = accountFileService.requireOwnedImageFile(fileId, memberId);
+        BasketFileAsset asset = accountFileService.requireOwnedFile(fileId, memberId);
         if (!FileUsageTypeEnum.TEAM_LOGO.getCode().equalsIgnoreCase(asset.getUsageType())) {
             throw new ServiceException("文件用途不匹配");
+        }
+        if (!StringUtils.hasText(asset.getMimeType())
+                || !asset.getMimeType().toLowerCase(Locale.ROOT).startsWith("image/")) {
+            throw new ServiceException("文件类型必须为图片");
         }
         team.setLogoFileId(fileId);
     }

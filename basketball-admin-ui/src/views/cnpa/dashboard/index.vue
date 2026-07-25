@@ -41,14 +41,14 @@ const summary = ref<any>({
 })
 
 const cards = computed(() => [
-  { key: 'playerCert', title: '球员认证待审', count: summary.value.pendingPlayerCert, path: '/cnpa/identity/player-certification' },
-  { key: 'teamAudit', title: '球队认证待审', count: summary.value.pendingTeamAudit, path: '/cnpa/identity/team-certification' },
-  { key: 'registration', title: '球队报名待审', count: summary.value.pendingRegistration, path: '/cnpa/participation/team-registration' },
-  { key: 'openRegistration', title: 'Open报名待审', count: summary.value.pendingOpenRegistration, path: '/cnpa/participation/open-registration' },
-  { key: 'rosterChange', title: '阵容变更待审', count: summary.value.pendingRosterChange, path: '/cnpa/participation/transfer-audit' },
-  { key: 'platformChange', title: '平台变更待审', count: summary.value.pendingPlatformChange, path: '/cnpa/identity/platform-change' },
-  { key: 'matchAudit', title: '比赛数据待审', count: summary.value.pendingMatchDataAudit, path: '/cnpa/competition/match-data-audit' },
-  { key: 'matchDispute', title: '数据争议待处理', count: summary.value.pendingMatchDispute, path: '/cnpa/competition/match-dispute' }
+  { key: 'playerCert', title: '球员认证待审', count: summary.value.pendingPlayerCert, path: '/identity/player-certification' },
+  { key: 'teamAudit', title: '球队认证待审', count: summary.value.pendingTeamAudit, path: '/identity/team-certification' },
+  { key: 'registration', title: '球队报名待审', count: summary.value.pendingRegistration, path: '/participation/team-registration' },
+  { key: 'openRegistration', title: 'Open报名待审', count: summary.value.pendingOpenRegistration, path: '/participation/open-registration' },
+  { key: 'rosterChange', title: '阵容变更待审', count: summary.value.pendingRosterChange, path: '/participation/transfer-audit' },
+  { key: 'platformChange', title: '平台变更待审', count: summary.value.pendingPlatformChange, path: '/identity/platform-change' },
+  { key: 'matchAudit', title: '比赛数据待审', count: summary.value.pendingMatchDataAudit, path: '/competition/match-data-audit' },
+  { key: 'matchDispute', title: '数据争议待处理', count: summary.value.pendingMatchDispute, path: '/competition/match-dispute' }
 ])
 
 async function loadSummary() {

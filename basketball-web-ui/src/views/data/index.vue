@@ -114,7 +114,12 @@ async function loadSeasons() {
     const list = res.data ?? []
     const groupMap = new Map<string, TournamentGroup>()
     for (const item of list) {
-      const seasonKey = displayText(item.seasonYear || item.tournamentName, '赛季')
+      const seasonKey = displayText(
+        item.competitionSeasonName
+          ? `${item.competitionSeasonName}${item.competitionSeasonYear ? ` (${item.competitionSeasonYear})` : ''}`
+          : item.seasonYear || item.tournamentName,
+        '赛季',
+      )
       if (!groupMap.has(seasonKey)) {
         groupMap.set(seasonKey, { season: seasonKey, tournaments: [] })
       }

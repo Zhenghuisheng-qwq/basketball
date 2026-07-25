@@ -8,6 +8,7 @@ import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import { useTeamStore } from '@/stores/team'
+import { useAccountStore } from '@/stores/account'
 import { mapPlatformToGameTerminal, mapTeamRegistrationStatusText } from '@/utils/accountMappers'
 import { formatDateTime } from '@/utils/formatDate'
 import { uploadAccountFile } from '@/api/accountFile'
@@ -28,6 +29,7 @@ type TeamTab =
 const route = useRoute()
 const router = useRouter()
 const teamStore = useTeamStore()
+const accountStore = useAccountStore()
 
 const activeTab = ref<TeamTab>('discover')
 const pageLoading = ref(true)
@@ -43,8 +45,6 @@ const createForm = reactive({
   teamName: '',
   shortName: '',
   platform: 'PC',
-  regionCode: '',
-  regionName: '',
   description: '',
   publicStatus: 1,
   logoFileId: '',
@@ -85,6 +85,12 @@ const activeInvitation = ref<TeamInvitationItemDto | null>(null)
 const hasTeam = computed(() => teamStore.hasTeam)
 const isCaptain = computed(() => teamStore.isCaptain)
 const canCreateTeam = computed(() => teamStore.canCreateTeam)
+const captainQual = computed(() => teamStore.captainQualification)
+const hasCaptainQualRecord = computed(() => Boolean(captainQual.value?.hasQualification))
+const isCaptainQualExpired = computed(() => {
+  const reason = captainQual.value?.invalidReason || ''
+  return hasCaptainQualRecord.value && reason.includes('过期')
+})
 const teamId = computed(() => teamStore.myTeamSummary?.teamId || '')
 const teamDetail = computed(() => teamStore.teamDetail)
 
@@ -99,14 +105,15 @@ const availableTabs = computed<TeamTab[]>(() => {
 
 const bannerTitle = computed(() => {
   if (hasTeam.value) return teamStore.myTeamSummary?.teamName || '我的球队'
-  if (canCreateTeam.value) return '创建你的球队'
+  if (canCreateTeam.value) return '我的球队'
   return '加入球队'
 })
 
 const bannerDescription = computed(() => {
   if (hasTeam.value && isCaptain.value) return '管理球队资料、成员、邀请与赛事报名'
   if (hasTeam.value) return '查看球队信息与成员列表'
-  if (canCreateTeam.value) return '你已获得队长资格，可创建并管理球队'
+  if (canCreateTeam.value) return '你已拥有队长资格，可以创建并管理自己的球队；也可以加入其他球队'
+  if (isCaptainQualExpired.value) return '队长资格已过期，请联系运营重新确认队长资格；你仍可申请加入其他球队'
   return '浏览可加入球队、处理邀请或提交加入申请'
 })
 
@@ -114,7 +121,16 @@ const bannerStatusText = computed(() => {
   if (hasTeam.value && isCaptain.value) return '队长'
   if (hasTeam.value) return '队员'
   if (canCreateTeam.value) return '队长资格有效'
-  return '暂无球队'
+  if (isCaptainQualExpired.value) return '队长资格已过期'
+  if (hasCaptainQualRecord.value) return captainQual.value?.invalidReason || '队长资格无效'
+  return '暂无队长资格'
+})
+
+const bannerStatusType = computed(() => {
+  if (hasTeam.value) return 'success'
+  if (canCreateTeam.value) return 'success'
+  if (isCaptainQualExpired.value) return 'warning'
+  return 'info'
 })
 
 watch(
@@ -200,6 +216,12 @@ async function refreshTabData(tab: TeamTab) {
 }
 
 watch(activeTab, (tab) => {
+  if (tab === 'create') {
+    const platform = accountStore.playerIdentity?.primaryPlatform
+    if (platform) {
+      createForm.platform = platform
+    }
+  }
   refreshTabData(tab).catch(() => undefined)
 })
 
@@ -227,13 +249,19 @@ async function submitCreateTeam() {
     ElMessage.warning('请输入球队名称')
     return
   }
+  if (!createForm.shortName.trim()) {
+    ElMessage.warning('请输入球队简称')
+    return
+  }
+  if (!createForm.platform) {
+    ElMessage.warning('请选择比赛终端')
+    return
+  }
   try {
     await teamStore.createTeamAction({
       teamName: createForm.teamName.trim(),
-      shortName: createForm.shortName.trim() || undefined,
+      shortName: createForm.shortName.trim(),
       gameTerminal: mapPlatformToGameTerminal(createForm.platform),
-      regionCode: createForm.regionCode.trim() || undefined,
-      regionName: createForm.regionName.trim() || undefined,
       description: createForm.description.trim() || undefined,
       publicStatus: createForm.publicStatus,
       logoFileId: createForm.logoFileId || undefined,
@@ -534,7 +562,7 @@ const tabLabels: Record<TeamTab, string> = {
       :title="bannerTitle"
       :description="bannerDescription"
       :status-text="bannerStatusText"
-      :status-type="hasTeam ? 'success' : 'info'"
+      :status-type="bannerStatusType"
     />
 
     <p v-if="loadError" class="team-page-error">{{ loadError }}</p>
@@ -555,6 +583,23 @@ const tabLabels: Record<TeamTab, string> = {
       </nav>
 
       <template v-if="activeTab === 'discover'">
+        <AccountPanel v-if="canCreateTeam" title="创建球队">
+          <p class="team-tip">你已拥有队长资格，可以创建并管理自己的球队。</p>
+          <button type="button" class="account-btn-primary" @click="setTab('create')">创建球队</button>
+        </AccountPanel>
+
+        <AccountPanel v-else-if="isCaptainQualExpired" title="队长资格">
+          <AccountEmptyState message="队长资格已过期，请联系运营重新确认队长资格。" />
+        </AccountPanel>
+
+        <AccountPanel v-else-if="!hasCaptainQualRecord" title="队长资格">
+          <AccountEmptyState message="你尚未获得队长资格，可先申请加入现有球队。" />
+        </AccountPanel>
+
+        <AccountPanel v-else-if="captainQual?.invalidReason" title="队长资格">
+          <AccountEmptyState :message="captainQual.invalidReason" />
+        </AccountPanel>
+
         <AccountPanel title="待处理邀请">
           <div v-if="teamStore.myInvitations.length" class="team-card-list">
             <article v-for="item in teamStore.myInvitations" :key="item.invitationId" class="team-card">
@@ -648,10 +693,8 @@ const tabLabels: Record<TeamTab, string> = {
           <AccountEmptyState v-else message="暂无加入申请" />
         </AccountPanel>
 
-        <AccountPanel v-if="!canCreateTeam" title="队长资格">
-          <AccountEmptyState
-            :message="teamStore.captainQualification?.invalidReason || '你尚未获得队长资格，可先申请加入现有球队'"
-          />
+        <AccountPanel v-if="canCreateTeam" title="加入球队">
+          <p class="team-tip">你也可以选择加入其他球队。</p>
         </AccountPanel>
       </template>
 
@@ -666,27 +709,25 @@ const tabLabels: Record<TeamTab, string> = {
             </label>
           </div>
           <div class="team-form-grid">
-            <label>球队名称<input v-model="createForm.teamName" type="text" maxlength="32" /></label>
-            <label>球队简称<input v-model="createForm.shortName" type="text" maxlength="16" /></label>
+            <label>球队名称<input v-model="createForm.teamName" type="text" maxlength="32" required /></label>
+            <label>球队简称<input v-model="createForm.shortName" type="text" maxlength="16" required /></label>
             <label>
               比赛终端
-              <select v-model="createForm.platform">
+              <select v-model="createForm.platform" required>
                 <option value="PC">PC</option>
                 <option value="PS5">PlayStation 5</option>
                 <option value="XBOX">Xbox</option>
                 <option value="MOBILE">移动端</option>
               </select>
             </label>
-            <label>地区编码<input v-model="createForm.regionCode" type="text" /></label>
-            <label>地区名称<input v-model="createForm.regionName" type="text" /></label>
             <label>
-              公开状态
+              招募状态
               <select v-model.number="createForm.publicStatus">
-                <option :value="1">公开</option>
-                <option :value="0">非公开</option>
+                <option :value="1">公开招募</option>
+                <option :value="0">不公开招募</option>
               </select>
             </label>
-            <label class="team-form-full">球队介绍<textarea v-model="createForm.description" rows="3" maxlength="500" /></label>
+            <label class="team-form-full">球队简介<textarea v-model="createForm.description" rows="3" maxlength="500" placeholder="可选，用于展示球队介绍" /></label>
           </div>
           <button type="button" class="account-btn-primary" :disabled="teamStore.actionLoading" @click="submitCreateTeam">
             创建球队

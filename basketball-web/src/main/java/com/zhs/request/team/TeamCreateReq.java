@@ -28,7 +28,7 @@ public class TeamCreateReq implements Serializable {
     @ApiModelProperty("球队介绍")
     private String description;
 
-    @ApiModelProperty("公开状态：0 非公开，1 公开")
+    @ApiModelProperty("招募状态：0 不公开招募，1 公开招募")
     private Integer publicStatus;
 
     @ApiModelProperty("Logo 文件主键")

@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface BasketTournamentSeasonMapper {
     List<BasketTournamentSeason> selectByTournamentId(Long tournamentId);
+    BasketTournamentSeason selectPrimaryByTournamentId(@Param("tournamentId") Long tournamentId);
     BasketTournamentSeason selectById(Long id);
     BasketTournamentSeason selectByIdForUpdate(Long id);
     int insert(BasketTournamentSeason season);

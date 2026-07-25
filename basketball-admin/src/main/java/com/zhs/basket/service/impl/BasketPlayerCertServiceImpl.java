@@ -29,7 +29,9 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
 
     private static final Integer NOT_DELETED = 0;
     private static final int CERT_APPROVED = PlayerCertStatusEnum.APPROVED.getCode();
+    private static final int CERT_REJECTED = PlayerCertStatusEnum.REJECTED.getCode();
     private static final int PRIMARY = 1;
+    private static final String DEFAULT_REJECT_REASON = "认证信息未通过审核";
 
     @Autowired private BasketPlayerCertApplicationMapper applicationMapper;
     @Autowired private BasketPlayerCertAuditMapper auditMapper;
@@ -113,6 +115,9 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
     @Transactional(rollbackFor = Exception.class)
     public void approve(Long applicationId, PlayerCertApproveReq req) {
         BasketPlayerCertApplication app = requireApplication(applicationId);
+        if (req == null) {
+            req = new PlayerCertApproveReq();
+        }
         String normalizedGameAccount = GameAccountNormalizer.normalize(app.getGameAccount());
         if (!StringUtils.hasText(normalizedGameAccount)) {
             throw new ServiceException("游戏账号不能为空");
@@ -140,15 +145,27 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
     public void reject(Long applicationId, PlayerCertRejectReq req) {
         BasketPlayerCertApplication app = requireApplication(applicationId);
         Long auditorId = SecurityUtils.getUserId();
-        String remark = StringUtils.hasText(req.getRejectReason()) ? req.getRejectReason() : req.getAuditRemark();
+        Date now = new Date();
+        String remark = resolveRejectRemark(req);
         int rows = applicationMapper.updateStatusIfMatch(applicationId,
-                Collections.singletonList(PlayerCertStatusEnum.REVIEWING.getCode()),
-                PlayerCertStatusEnum.REJECTED.getCode(), auditorId, remark, new Date(), auditorId);
+                Arrays.asList(PlayerCertStatusEnum.SUBMITTED.getCode(), PlayerCertStatusEnum.REVIEWING.getCode()),
+                PlayerCertStatusEnum.REJECTED.getCode(), auditorId, remark, now, auditorId);
         assertSingleRow(rows, "驳回失败，状态已变更");
+        updateProfileRejected(app, now);
         writeAudit(app, "REJECT", app.getApplicationStatus(), PlayerCertStatusEnum.REJECTED.getCode(), remark);
         messageService.sendSiteMessage(app.getMemberId(), auditorId, "PLAYER_CERT", applicationId,
                 "球员认证已驳回", "您的球员认证申请已被驳回：" + remark);
         securityLogWriter.write(app.getMemberId(), "PLAYER_CERT_REJECTED", "球员认证驳回", null, remark, auditorId);
+    }
+
+    private String resolveRejectRemark(PlayerCertRejectReq req) {
+        if (req != null && StringUtils.hasText(req.getRejectReason())) {
+            return req.getRejectReason();
+        }
+        if (req != null && StringUtils.hasText(req.getAuditRemark())) {
+            return req.getAuditRemark();
+        }
+        return DEFAULT_REJECT_REASON;
     }
 
     private BasketPlayerProfile upsertProfile(BasketPlayerCertApplication app, String positionCode, Date certifiedTime) {
@@ -164,7 +181,11 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
         profile.setGameTerminal(app.getGameTerminal());
         profile.setGameAccount(app.getGameAccount());
         profile.setGameNickname(app.getGameNickname());
-        profile.setPositionCode(StringUtils.hasText(positionCode) ? positionCode : app.getPositionCode());
+        if (StringUtils.hasText(positionCode)) {
+            profile.setPositionCode(positionCode);
+        } else if (StringUtils.hasText(app.getPositionCode())) {
+            profile.setPositionCode(app.getPositionCode());
+        }
         profile.setCertificationStatus(CERT_APPROVED);
         profile.setCertifiedTime(certifiedTime);
         if (profile.getPlayerStatus() == null) {
@@ -182,6 +203,16 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
             profileMapper.updateById(profile);
         }
         return profile;
+    }
+
+    private void updateProfileRejected(BasketPlayerCertApplication app, Date now) {
+        BasketPlayerProfile profile = profileMapper.selectByMemberId(app.getMemberId());
+        if (profile == null) {
+            return;
+        }
+        profile.setCertificationStatus(CERT_REJECTED);
+        profile.setUpdateTime(now);
+        profileMapper.updateById(profile);
     }
 
     private void insertPrimaryPlatformAccountIfAbsent(BasketPlayerCertApplication app, BasketPlayerProfile profile,

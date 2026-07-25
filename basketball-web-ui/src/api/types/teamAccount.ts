@@ -45,6 +45,7 @@ export interface TeamCreateReq {
   regionCode?: string
   regionName?: string
   description?: string
+  /** 招募状态：0 不公开招募，1 公开招募 */
   publicStatus?: number
   logoFileId?: string
 }

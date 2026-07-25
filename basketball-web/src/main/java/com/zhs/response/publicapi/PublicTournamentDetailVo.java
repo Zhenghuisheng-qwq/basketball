@@ -51,4 +51,14 @@ public class PublicTournamentDetailVo implements Serializable {
 
     @ApiModelProperty("封面 URL")
     private String coverUrl;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty("所属顶层赛季主键")
+    private Long competitionSeasonId;
+
+    @ApiModelProperty("所属顶层赛季名称")
+    private String competitionSeasonName;
+
+    @ApiModelProperty("所属顶层赛季年份")
+    private Integer competitionSeasonYear;
 }

@@ -44,6 +44,9 @@ public class CaptainQualificationDetailResp implements Serializable {
     @ApiModelProperty("是否可创建球队")
     private Boolean canCreateTeam;
 
+    @ApiModelProperty("运行时是否有效（与 canCreateTeam 一致）")
+    private Boolean runtimeValid;
+
     @ApiModelProperty("无效原因")
     private String invalidReason;
 }

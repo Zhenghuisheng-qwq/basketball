@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { registerMember, sendEmailCode } from '@/api/memberAuth'
 import {
   clearRegisterDraft,
-  getMaskedRegisterEmail,
   getRegisterDraft,
+  getRegisterUsername,
   updateRegisterBizNo,
+  updateRegisterEmail,
 } from '@/composables/useRegisterFlow'
 import { useUserStore } from '@/stores/user'
 import { useAccountStore } from '@/stores/account'
@@ -17,14 +18,37 @@ const router = useRouter()
 const userStore = useUserStore()
 const accountStore = useAccountStore()
 
-const digits = ref(['', '', '', '', '', ''])
-const inputRefs = ref<Array<HTMLInputElement | null>>([])
-const countdown = ref(60)
-const verifying = ref(false)
+const form = reactive({
+  email: '',
+  verifyCode: '',
+})
+
+const errors = reactive({
+  email: '',
+  verifyCode: '',
+  form: '',
+})
+
+const submitted = ref(false)
 const sending = ref(false)
-const formError = ref('')
-const maskedEmail = computed(() => getMaskedRegisterEmail())
+const submitting = ref(false)
+const countdown = ref(0)
+const verifyBizNo = ref('')
 let timer: ReturnType<typeof setInterval> | null = null
+
+function validateEmail(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return '请输入邮箱地址'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return '邮箱格式不正确'
+  return ''
+}
+
+function validateVerifyCode(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return '请输入验证码'
+  if (!/^\d{6}$/.test(trimmed)) return '验证码为 6 位数字'
+  return ''
+}
 
 function startCountdown(seconds = 60) {
   countdown.value = seconds
@@ -42,80 +66,70 @@ function startCountdown(seconds = 60) {
 
 onMounted(() => {
   const draft = getRegisterDraft()
-  if (!draft?.email || !draft.password || !draft.verifyBizNo) {
+  if (!draft?.username || !draft.password) {
     router.replace('/register')
     return
   }
-  startCountdown()
+  if (draft.email) {
+    form.email = draft.email
+  }
+  if (draft.verifyBizNo) {
+    verifyBizNo.value = draft.verifyBizNo
+  }
 })
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
 })
 
-function setInputRef(el: HTMLInputElement | null, index: number) {
-  inputRefs.value[index] = el
-}
+async function handleSendCode() {
+  errors.email = validateEmail(form.email)
+  errors.form = ''
+  if (errors.email || sending.value || countdown.value > 0) return
 
-function handleDigitInput(index: number, event: Event) {
-  const target = event.target as HTMLInputElement
-  const value = target.value.replace(/\D/g, '').slice(-1)
-  digits.value[index] = value
-  target.value = value
-  if (value && index < digits.value.length - 1) {
-    inputRefs.value[index + 1]?.focus()
+  sending.value = true
+  try {
+    const email = form.email.trim().toLowerCase()
+    const res = await sendEmailCode(email, 'REGISTER')
+    verifyBizNo.value = res.data.bizNo
+    updateRegisterEmail(email, res.data.bizNo)
+    ElMessage.success('验证码已发送，请查收邮箱')
+    startCountdown(res.data.resendSeconds || 60)
+  } catch (error) {
+    errors.form = error instanceof Error ? error.message : '验证码发送失败'
+  } finally {
+    sending.value = false
   }
 }
 
-function handleDigitKeydown(index: number, event: KeyboardEvent) {
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    handleVerify()
+async function handleSubmit() {
+  submitted.value = true
+  errors.email = validateEmail(form.email)
+  errors.verifyCode = validateVerifyCode(form.verifyCode)
+  errors.form = ''
+  if (errors.email || errors.verifyCode || submitting.value) return
+  if (!verifyBizNo.value) {
+    errors.form = '请先发送验证码'
     return
   }
-  if (event.key !== 'Backspace') return
-  if (digits.value[index]) {
-    digits.value[index] = ''
-    return
-  }
-  if (index > 0) {
-    inputRefs.value[index - 1]?.focus()
-    digits.value[index - 1] = ''
-  }
-}
 
-function handlePaste(event: ClipboardEvent) {
-  event.preventDefault()
-  const pasted = event.clipboardData?.getData('text').replace(/\D/g, '').slice(0, 6) ?? ''
-  pasted.split('').forEach((char, index) => {
-    digits.value[index] = char
-  })
-  inputRefs.value[Math.min(pasted.length, 5)]?.focus()
-}
-
-async function handleVerify() {
-  if (verifying.value) return
   const draft = getRegisterDraft()
-  const code = digits.value.join('')
-  if (!draft) {
+  if (!draft?.username || !draft.password) {
     await router.replace('/register')
     return
   }
-  if (!/^\d{6}$/.test(code)) {
-    formError.value = '请输入 6 位验证码'
-    return
-  }
 
-  verifying.value = true
-  formError.value = ''
+  submitting.value = true
   try {
+    const email = form.email.trim().toLowerCase()
     const res = await registerMember({
-      email: draft.email,
+      username: draft.username,
+      email,
       password: draft.password,
       confirmPassword: draft.password,
       terminalType: 'WEB',
-      verifyBizNo: draft.verifyBizNo,
-      verifyCode: code,
+      verifyBizNo: verifyBizNo.value,
+      verifyCode: form.verifyCode.trim(),
       agreeUserAgreement: draft.agreeUserAgreement,
       agreePrivacyPolicy: draft.agreePrivacyPolicy,
     })
@@ -125,35 +139,18 @@ async function handleVerify() {
     ElMessage.success('注册成功')
     await router.push('/register/success')
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : '验证失败'
+    errors.form = error instanceof Error ? error.message : '绑定失败'
   } finally {
-    verifying.value = false
+    submitting.value = false
   }
 }
 
 async function handleResend() {
   if (countdown.value > 0 || sending.value) return
-  const draft = getRegisterDraft()
-  if (!draft?.email) {
-    await router.replace('/register')
-    return
-  }
-  sending.value = true
-  formError.value = ''
-  try {
-    const res = await sendEmailCode(draft.email, 'REGISTER')
-    updateRegisterBizNo(res.data.bizNo)
-    ElMessage.success('验证码已重新发送')
-    startCountdown(res.data.resendSeconds || 60)
-  } catch (error) {
-    formError.value = error instanceof Error ? error.message : '发送失败'
-  } finally {
-    sending.value = false
-  }
+  await handleSendCode()
 }
 
-function handleChangeEmail() {
-  clearRegisterDraft()
+function handleBack() {
   router.push('/register')
 }
 
@@ -166,48 +163,116 @@ function goLogin() {
   <div class="auth-page auth-verify">
     <AuthStepper :current="2" />
     <header class="auth-register__title">
-      <h1 class="auth-register__title-cn">邮箱验证</h1>
-      <p class="auth-register__title-en">VERIFY EMAIL</p>
+      <h1 class="auth-register__title-cn">绑定邮箱</h1>
+      <p class="auth-register__title-en">BIND EMAIL</p>
     </header>
-    <div class="auth-verify__icon" aria-hidden="true">@</div>
-    <p class="auth-verify__desc">验证码已发送至</p>
-    <p class="auth-verify__email">{{ maskedEmail }}</p>
-    <p class="auth-verify__timer">验证码 5 分钟内有效（本地开发可任意输入 6 位数字）</p>
 
-    <div class="verify-code" @paste="handlePaste">
-      <input
-        v-for="(_, index) in digits"
-        :key="index"
-        :ref="(el) => setInputRef(el as HTMLInputElement | null, index)"
-        class="verify-code__input"
-        type="text"
-        inputmode="numeric"
-        maxlength="1"
-        :value="digits[index]"
-        :aria-label="`验证码第 ${index + 1} 位`"
-        @input="handleDigitInput(index, $event)"
-        @keydown="handleDigitKeydown(index, $event)"
-      />
-    </div>
+    <p class="auth-verify__desc">登录账号：<strong>{{ getRegisterUsername() }}</strong></p>
+    <p class="auth-verify__hint">验证码将发送至你的邮箱，请完成验证后继续。</p>
 
-    <p v-if="formError" class="auth-form__error-banner">{{ formError }}</p>
-    <button type="button" class="auth-primary-button" :disabled="verifying" @click="handleVerify">
-      {{ verifying ? '验证中...' : '验证邮箱' }}
-    </button>
-    <div class="auth-verify__actions">
-      <button type="button" class="auth-text-link" :disabled="countdown > 0 || sending" @click="handleResend">
-        {{ countdown > 0 ? `${countdown}s 后重发` : sending ? '发送中...' : '重新发送验证码' }}
+    <form class="auth-form auth-verify__form" @submit.prevent="handleSubmit">
+      <div class="auth-field">
+        <label class="auth-field__label" for="register-email">邮箱地址</label>
+        <input
+          id="register-email"
+          v-model="form.email"
+          type="email"
+          class="auth-input"
+          :class="{ 'auth-input--invalid': submitted && errors.email }"
+          placeholder="请输入常用邮箱"
+          autocomplete="email"
+          @blur="errors.email = validateEmail(form.email)"
+        />
+        <span v-if="submitted && errors.email" class="auth-field__error">{{ errors.email }}</span>
+      </div>
+
+      <div class="auth-field">
+        <label class="auth-field__label" for="register-code">邮箱验证码</label>
+        <div class="auth-verify__code-row">
+          <input
+            id="register-code"
+            v-model="form.verifyCode"
+            type="text"
+            inputmode="numeric"
+            maxlength="6"
+            class="auth-input"
+            :class="{ 'auth-input--invalid': submitted && errors.verifyCode }"
+            placeholder="请输入 6 位验证码"
+            autocomplete="one-time-code"
+            @blur="errors.verifyCode = validateVerifyCode(form.verifyCode)"
+          />
+          <button
+            type="button"
+            class="auth-verify__code-btn"
+            :disabled="sending || countdown > 0"
+            @click="handleSendCode"
+          >
+            {{ countdown > 0 ? `${countdown}s` : sending ? '发送中' : '发送验证码' }}
+          </button>
+        </div>
+        <span v-if="submitted && errors.verifyCode" class="auth-field__error">{{ errors.verifyCode }}</span>
+      </div>
+
+      <p v-if="errors.form" class="auth-form__error-banner">{{ errors.form }}</p>
+
+      <button type="submit" class="auth-primary-button" :disabled="submitting">
+        {{ submitting ? '绑定中...' : '完成绑定' }}
       </button>
-      <button type="button" class="auth-text-link" @click="handleChangeEmail">更换邮箱</button>
-    </div>
-    <p class="auth-form__hint">请检查垃圾邮件或广告邮件文件夹。验证码不会在页面展示。</p>
-    <p class="auth-form__footer-link">
-      已有账号？
-      <button type="button" class="auth-text-link" @click="goLogin">立即登录</button>
-    </p>
+
+      <div class="auth-verify__actions">
+        <button type="button" class="auth-text-link" :disabled="countdown > 0 || sending" @click="handleResend">
+          {{ countdown > 0 ? `${countdown}s 后可重发` : '重新发送验证码' }}
+        </button>
+        <button type="button" class="auth-text-link" @click="handleBack">返回上一步</button>
+      </div>
+
+      <p class="auth-form__hint">请检查垃圾邮件或广告邮件文件夹。验证码不会在页面展示。</p>
+      <p class="auth-form__footer-link">
+        已有账号？
+        <button type="button" class="auth-text-link" @click="goLogin">立即登录</button>
+      </p>
+    </form>
   </div>
 </template>
 
 <style scoped lang="scss">
 @import './styles/auth-shared.scss';
+
+.auth-verify__hint {
+  margin: 0 0 20px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.auth-verify__form {
+  width: 100%;
+}
+
+.auth-verify__code-row {
+  display: flex;
+  gap: 10px;
+}
+
+.auth-verify__code-row .auth-input {
+  flex: 1;
+}
+
+.auth-verify__code-btn {
+  flex: 0 0 112px;
+  height: 44px;
+  border: 1px solid rgba(15, 15, 15, 0.35);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.35);
+  color: #151515;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+}
+
+.auth-verify__code-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 </style>

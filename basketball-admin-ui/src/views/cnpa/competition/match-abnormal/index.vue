@@ -11,7 +11,7 @@
       <el-col :span="8">
         <el-card shadow="never">
           <template #header>赛程调整</template>
-          <el-button type="primary" link @click="go('/cnpa/competition/schedule')">打开赛程管理</el-button>
+          <el-button type="primary" link @click="go('/competition-exec/schedule')">打开赛程管理</el-button>
           <p class="hint">支持延期、取消、重赛关联</p>
         </el-card>
       </el-col>
@@ -45,11 +45,11 @@ function go(path: string) {
 }
 
 function goScore() {
-  router.push({ path: '/cnpa/competition/score', query: { matchId: String(matchId.value) } })
+  router.push({ path: '/competition-exec/score', query: { matchId: String(matchId.value) } })
 }
 
 function goEntry() {
-  router.push({ path: '/cnpa/competition/match-data-entry', query: { matchId: String(matchId.value) } })
+  router.push({ path: '/competition-exec/match-data-entry', query: { matchId: String(matchId.value) } })
 }
 </script>
 

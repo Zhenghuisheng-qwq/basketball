@@ -1,11 +1,18 @@
 package com.zhs.basket.service.impl;
 
+import com.zhs.basket.domain.BasketCompetitionSeason;
 import com.zhs.basket.domain.BasketTournament;
+import com.zhs.basket.domain.BasketTournamentSeason;
+import com.zhs.basket.enums.SeasonStatusEnum;
 import com.zhs.basket.enums.TournamentStatusEnum;
+import com.zhs.basket.mapper.BasketCompetitionSeasonMapper;
 import com.zhs.basket.mapper.BasketTournamentMapper;
+import com.zhs.basket.mapper.BasketTournamentRegistrationMapper;
+import com.zhs.basket.mapper.BasketTournamentSeasonMapper;
 import com.zhs.basket.query.TournamentQuery;
 import com.zhs.basket.req.TournamentCreateReq;
 import com.zhs.basket.req.TournamentUpdateReq;
+import com.zhs.basket.service.IBasketCompetitionSeasonService;
 import com.zhs.basket.service.IBasketTournamentService;
 import com.zhs.basket.support.PlayerNoGenerator;
 import com.zhs.basket.vo.TournamentDetailVo;
@@ -17,7 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,8 +34,18 @@ public class BasketTournamentServiceImpl implements IBasketTournamentService {
 
     private static final Integer NOT_DELETED = 0;
 
-    @Autowired private BasketTournamentMapper tournamentMapper;
-    @Autowired private PlayerNoGenerator playerNoGenerator;
+    @Autowired
+    private BasketTournamentMapper tournamentMapper;
+    @Autowired
+    private BasketCompetitionSeasonMapper competitionSeasonMapper;
+    @Autowired
+    private BasketTournamentSeasonMapper tournamentSeasonMapper;
+    @Autowired
+    private BasketTournamentRegistrationMapper registrationMapper;
+    @Autowired
+    private IBasketCompetitionSeasonService competitionSeasonService;
+    @Autowired
+    private PlayerNoGenerator playerNoGenerator;
 
     @Override
     public List<TournamentListVo> selectList(TournamentQuery query) {
@@ -35,32 +54,76 @@ public class BasketTournamentServiceImpl implements IBasketTournamentService {
 
     @Override
     public TournamentDetailVo selectById(Long id) {
-        BasketTournament t = requireTournament(id);
+        BasketTournament tournament = requireTournament(id);
         TournamentDetailVo vo = new TournamentDetailVo();
-        BeanUtils.copyBeanProp(vo, t);
-        vo.setTournamentStatusName(TournamentStatusEnum.fromCode(t.getTournamentStatus()).getDescription());
+        BeanUtils.copyBeanProp(vo, tournament);
+        enrichVo(vo, tournament);
         return vo;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long create(TournamentCreateReq req) {
-        BasketTournament t = new BasketTournament();
-        BeanUtils.copyBeanProp(t, req);
-        t.setTournamentNo(playerNoGenerator.generateBizNo("TN"));
-        t.setTournamentStatus(TournamentStatusEnum.DRAFT.getCode());
-        t.setIsDelete(NOT_DELETED);
-        tournamentMapper.insert(t);
-        return t.getId();
+        if (req.getCompetitionSeasonId() == null) {
+            throw new ServiceException("请先选择所属赛季");
+        }
+        competitionSeasonService.requireExists(req.getCompetitionSeasonId());
+        validateTournamentTimes(req.getRegistrationStartTime(), req.getRegistrationEndTime(),
+                req.getCompetitionStartTime(), req.getCompetitionEndTime());
+
+        Date now = new Date();
+        BasketTournament tournament = new BasketTournament();
+        BeanUtils.copyBeanProp(tournament, req);
+        tournament.setTournamentNo(playerNoGenerator.generateBizNo("TN"));
+        tournament.setTournamentStatus(TournamentStatusEnum.DRAFT.getCode());
+        tournament.setPublicStatus(req.getPublicStatus() != null ? req.getPublicStatus() : 0);
+        tournament.setDisplayOrder(req.getDisplayOrder() != null ? req.getDisplayOrder() : 0);
+        tournament.setCreateTime(now);
+        tournament.setUpdateTime(now);
+        tournament.setIsDelete(NOT_DELETED);
+        if (tournament.getShortName() == null || tournament.getShortName().isBlank()) {
+            tournament.setShortName(tournament.getTournamentName());
+        }
+        if (tournament.getTournamentType() == null || tournament.getTournamentType().isBlank()) {
+            tournament.setTournamentType("LEAGUE");
+        }
+        if (tournament.getFormatCode() == null || tournament.getFormatCode().isBlank()) {
+            tournament.setFormatCode("5V5");
+        }
+        if (tournament.getGameTerminal() == null || tournament.getGameTerminal().isBlank()) {
+            tournament.setGameTerminal("PC");
+        }
+        tournamentMapper.insert(tournament);
+        createOperationalSeason(tournament, req, now);
+        return tournament.getId();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(Long id, TournamentUpdateReq req) {
-        BasketTournament t = requireTournament(id);
-        BeanUtils.copyBeanProp(t, req);
-        if (tournamentMapper.updateById(t) != 1) {
+        BasketTournament tournament = requireTournament(id);
+        validateTournamentTimes(req.getRegistrationStartTime(), req.getRegistrationEndTime(),
+                req.getCompetitionStartTime(), req.getCompetitionEndTime());
+
+        if (req.getCompetitionSeasonId() != null
+                && !Objects.equals(req.getCompetitionSeasonId(), tournament.getCompetitionSeasonId())) {
+            assertCanChangeCompetitionSeason(tournament);
+            competitionSeasonService.requireExists(req.getCompetitionSeasonId());
+        }
+
+        BeanUtils.copyBeanProp(tournament, req);
+        if (tournamentMapper.updateById(tournament) != 1) {
             throw new ServiceException("更新失败");
+        }
+
+        BasketTournamentSeason operationalSeason = tournamentSeasonMapper.selectPrimaryByTournamentId(id);
+        if (operationalSeason != null) {
+            operationalSeason.setRegistrationStartTime(req.getRegistrationStartTime());
+            operationalSeason.setRegistrationEndTime(req.getRegistrationEndTime());
+            operationalSeason.setSeasonStartTime(req.getCompetitionStartTime());
+            operationalSeason.setSeasonEndTime(req.getCompetitionEndTime());
+            operationalSeason.setSeasonName(req.getTournamentName());
+            tournamentSeasonMapper.updateById(operationalSeason);
         }
     }
 
@@ -94,24 +157,97 @@ public class BasketTournamentServiceImpl implements IBasketTournamentService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
+        BasketTournament tournament = requireTournament(id);
+        if (!Objects.equals(TournamentStatusEnum.DRAFT.getCode(), tournament.getTournamentStatus())) {
+            throw new ServiceException("仅草稿赛事允许删除");
+        }
+        if (registrationMapper.countByTournamentId(id) > 0) {
+            throw new ServiceException("赛事已有报名数据，不能删除");
+        }
         if (tournamentMapper.softDelete(id) != 1) {
             throw new ServiceException("删除失败");
         }
     }
 
-    private BasketTournament requireTournament(Long id) {
-        BasketTournament t = tournamentMapper.selectById(id);
-        if (t == null) {
-            throw new ServiceException("赛事不存在");
-        }
-        return t;
+    private void createOperationalSeason(BasketTournament tournament, TournamentCreateReq req, Date now) {
+        BasketCompetitionSeason competitionSeason = competitionSeasonMapper.selectById(tournament.getCompetitionSeasonId());
+        BasketTournamentSeason season = new BasketTournamentSeason();
+        season.setSeasonNo(playerNoGenerator.generateBizNo("SN"));
+        season.setTournamentId(tournament.getId());
+        season.setSeasonName(tournament.getTournamentName());
+        season.setSeasonYear(competitionSeason != null ? competitionSeason.getSeasonYear() : null);
+        season.setRegistrationStartTime(req.getRegistrationStartTime());
+        season.setRegistrationEndTime(req.getRegistrationEndTime());
+        season.setSeasonStartTime(req.getCompetitionStartTime());
+        season.setSeasonEndTime(req.getCompetitionEndTime());
+        season.setMaxTeamCount(16);
+        season.setMinRosterCount(5);
+        season.setMaxRosterCount(12);
+        season.setSeasonStatus(SeasonStatusEnum.PREPARE.getCode());
+        season.setPublicStatus(tournament.getPublicStatus());
+        season.setDescription(tournament.getDescription());
+        season.setCreateTime(now);
+        season.setUpdateTime(now);
+        season.setIsDelete(NOT_DELETED);
+        tournamentSeasonMapper.insert(season);
     }
 
-    private TournamentListVo toListVo(BasketTournament t) {
+    private void assertCanChangeCompetitionSeason(BasketTournament tournament) {
+        if (Objects.equals(TournamentStatusEnum.ACTIVE.getCode(), tournament.getTournamentStatus())) {
+            throw new ServiceException("已发布赛事不允许修改所属赛季");
+        }
+        if (Objects.equals(TournamentStatusEnum.ENDED.getCode(), tournament.getTournamentStatus())) {
+            throw new ServiceException("已关闭赛事不允许修改所属赛季");
+        }
+        if (registrationMapper.countByTournamentId(tournament.getId()) > 0) {
+            throw new ServiceException("赛事已有报名数据，不允许修改所属赛季");
+        }
+    }
+
+    private void validateTournamentTimes(Date registrationStart, Date registrationEnd,
+                                       Date competitionStart, Date competitionEnd) {
+        if (registrationStart == null || registrationEnd == null || competitionStart == null || competitionEnd == null) {
+            throw new ServiceException("报名和比赛时间不能为空");
+        }
+        if (!registrationStart.before(registrationEnd)) {
+            throw new ServiceException("报名开始时间必须早于报名结束时间");
+        }
+        if (registrationEnd.after(competitionStart)) {
+            throw new ServiceException("报名结束时间不能晚于比赛开始时间");
+        }
+        if (!competitionStart.before(competitionEnd)) {
+            throw new ServiceException("比赛开始时间必须早于比赛结束时间");
+        }
+    }
+
+    private BasketTournament requireTournament(Long id) {
+        BasketTournament tournament = tournamentMapper.selectById(id);
+        if (tournament == null) {
+            throw new ServiceException("赛事不存在");
+        }
+        return tournament;
+    }
+
+    private TournamentListVo toListVo(BasketTournament tournament) {
         TournamentListVo vo = new TournamentListVo();
-        BeanUtils.copyBeanProp(vo, t);
-        vo.setTournamentStatusName(TournamentStatusEnum.fromCode(t.getTournamentStatus()).getDescription());
+        BeanUtils.copyBeanProp(vo, tournament);
+        enrichVo(vo, tournament);
         return vo;
+    }
+
+    private void enrichVo(TournamentListVo vo, BasketTournament tournament) {
+        vo.setTournamentStatusName(TournamentStatusEnum.fromCode(tournament.getTournamentStatus()).getDescription());
+        if (tournament.getCompetitionSeasonId() != null) {
+            BasketCompetitionSeason competitionSeason = competitionSeasonMapper.selectById(tournament.getCompetitionSeasonId());
+            if (competitionSeason != null) {
+                vo.setCompetitionSeasonName(competitionSeason.getSeasonName());
+                vo.setCompetitionSeasonYear(competitionSeason.getSeasonYear());
+            }
+        }
+        BasketTournamentSeason operationalSeason = tournamentSeasonMapper.selectPrimaryByTournamentId(tournament.getId());
+        if (operationalSeason != null) {
+            vo.setOperationalSeasonId(operationalSeason.getId());
+        }
     }
 
     private void assertSingleRow(int rows, String message) {

@@ -8,6 +8,7 @@ import com.zhs.dao.BasketStageStandingDao;
 import com.zhs.dao.BasketTeamSeasonProfileDao;
 import com.zhs.dao.BasketTournamentDao;
 import com.zhs.dao.BasketTournamentSeasonDao;
+import com.zhs.model.BasketCompetitionSeason;
 import com.zhs.model.BasketHonorRecord;
 import com.zhs.model.BasketMatch;
 import com.zhs.model.BasketStageStanding;
@@ -35,7 +36,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamentService {
@@ -87,6 +90,11 @@ public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamen
             }
         }
         Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(fileIds);
+        Set<Long> competitionSeasonIds = records.stream()
+                .map(BasketTournament::getCompetitionSeasonId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, BasketCompetitionSeason> competitionSeasonMap = publicSupport.loadCompetitionSeasonMap(competitionSeasonIds);
         Page<PublicTournamentItemVo> result = new Page<>(entityPage.getCurrent(), entityPage.getSize(), entityPage.getTotal());
         List<PublicTournamentItemVo> vos = new ArrayList<>(records.size());
         for (BasketTournament item : records) {
@@ -104,6 +112,7 @@ public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamen
             vo.setCoverUrl(urlMap.get(item.getCoverFileId()));
             vo.setDisplayOrder(item.getDisplayOrder());
             vo.setUpdateTime(item.getUpdateTime());
+            enrichCompetitionSeason(vo, item, competitionSeasonMap);
             vos.add(vo);
         }
         result.setRecords(vos);
@@ -129,6 +138,9 @@ public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamen
         vo.setTournamentStatus(item.getTournamentStatus());
         vo.setLogoUrl(urlMap.get(item.getLogoFileId()));
         vo.setCoverUrl(urlMap.get(item.getCoverFileId()));
+        Map<Long, BasketCompetitionSeason> competitionSeasonMap = publicSupport.loadCompetitionSeasonMap(
+                item.getCompetitionSeasonId() == null ? Collections.emptySet() : Set.of(item.getCompetitionSeasonId()));
+        enrichCompetitionSeason(vo, item, competitionSeasonMap);
         return vo;
     }
 
@@ -145,9 +157,13 @@ public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamen
             return Collections.emptyList();
         }
         BasketTournament tournament = publicSupport.requirePublicTournament(tournamentId);
+        Map<Long, BasketCompetitionSeason> competitionSeasonMap = publicSupport.loadCompetitionSeasonMap(
+                tournament.getCompetitionSeasonId() == null ? Collections.emptySet() : Set.of(tournament.getCompetitionSeasonId()));
         List<PublicSeasonItemVo> result = new ArrayList<>(seasons.size());
         for (BasketTournamentSeason season : seasons) {
-            result.add(toSeasonItem(season, tournament.getTournamentName()));
+            PublicSeasonItemVo vo = toSeasonItem(season, tournament.getTournamentName());
+            enrichCompetitionSeason(vo, tournament, competitionSeasonMap);
+            result.add(vo);
         }
         return result;
     }
@@ -185,6 +201,16 @@ public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamen
         vo.setPublicMatchCount(publicMatchCount == null ? 0 : publicMatchCount.intValue());
         vo.setStandingCount(standingCount == null ? 0 : standingCount.intValue());
         vo.setDescription(season.getDescription());
+        Map<Long, BasketCompetitionSeason> competitionSeasonMap = publicSupport.loadCompetitionSeasonMap(
+                tournament.getCompetitionSeasonId() == null ? Collections.emptySet() : Set.of(tournament.getCompetitionSeasonId()));
+        if (tournament.getCompetitionSeasonId() != null) {
+            vo.setCompetitionSeasonId(tournament.getCompetitionSeasonId());
+            BasketCompetitionSeason competitionSeason = competitionSeasonMap.get(tournament.getCompetitionSeasonId());
+            if (competitionSeason != null) {
+                vo.setCompetitionSeasonName(competitionSeason.getSeasonName());
+                vo.setCompetitionSeasonYear(competitionSeason.getSeasonYear());
+            }
+        }
         return vo;
     }
 
@@ -254,5 +280,47 @@ public class BasketPublicTournamentServiceImpl implements IBasketPublicTournamen
         vo.setSeasonEndTime(season.getSeasonEndTime());
         vo.setMaxTeamCount(season.getMaxTeamCount());
         return vo;
+    }
+
+    private void enrichCompetitionSeason(PublicTournamentItemVo vo, BasketTournament tournament,
+                                         Map<Long, BasketCompetitionSeason> competitionSeasonMap) {
+        if (tournament.getCompetitionSeasonId() == null) {
+            return;
+        }
+        vo.setCompetitionSeasonId(tournament.getCompetitionSeasonId());
+        BasketCompetitionSeason competitionSeason = competitionSeasonMap.get(tournament.getCompetitionSeasonId());
+        if (competitionSeason == null) {
+            return;
+        }
+        vo.setCompetitionSeasonName(competitionSeason.getSeasonName());
+        vo.setCompetitionSeasonYear(competitionSeason.getSeasonYear());
+    }
+
+    private void enrichCompetitionSeason(PublicTournamentDetailVo vo, BasketTournament tournament,
+                                         Map<Long, BasketCompetitionSeason> competitionSeasonMap) {
+        if (tournament.getCompetitionSeasonId() == null) {
+            return;
+        }
+        vo.setCompetitionSeasonId(tournament.getCompetitionSeasonId());
+        BasketCompetitionSeason competitionSeason = competitionSeasonMap.get(tournament.getCompetitionSeasonId());
+        if (competitionSeason == null) {
+            return;
+        }
+        vo.setCompetitionSeasonName(competitionSeason.getSeasonName());
+        vo.setCompetitionSeasonYear(competitionSeason.getSeasonYear());
+    }
+
+    private void enrichCompetitionSeason(PublicSeasonItemVo vo, BasketTournament tournament,
+                                         Map<Long, BasketCompetitionSeason> competitionSeasonMap) {
+        if (tournament.getCompetitionSeasonId() == null) {
+            return;
+        }
+        vo.setCompetitionSeasonId(tournament.getCompetitionSeasonId());
+        BasketCompetitionSeason competitionSeason = competitionSeasonMap.get(tournament.getCompetitionSeasonId());
+        if (competitionSeason == null) {
+            return;
+        }
+        vo.setCompetitionSeasonName(competitionSeason.getSeasonName());
+        vo.setCompetitionSeasonYear(competitionSeason.getSeasonYear());
     }
 }

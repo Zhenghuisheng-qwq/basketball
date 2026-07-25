@@ -8,11 +8,15 @@ import { initAuthState } from '@/composables/useAuth'
 import '@/assets/styles/index.scss'
 import '@/assets/styles/account-layout.css'
 
-const app = createApp(App)
+async function bootstrap() {
+  const app = createApp(App)
+  const pinia = createPinia()
 
-app.use(createPinia())
-void initAuthState()
-app.use(router)
-app.use(ElementPlus)
+  app.use(pinia)
+  await initAuthState()
+  app.use(router)
+  app.use(ElementPlus)
+  app.mount('#app')
+}
 
-app.mount('#app')
+void bootstrap()

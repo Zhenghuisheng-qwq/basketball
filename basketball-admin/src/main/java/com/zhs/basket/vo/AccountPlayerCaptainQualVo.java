@@ -14,4 +14,6 @@ public class AccountPlayerCaptainQualVo {
     private Date validFrom;
     private Date validTo;
     private String grantReason;
+    private Integer runtimeValid;
+    private String runtimeInvalidReason;
 }

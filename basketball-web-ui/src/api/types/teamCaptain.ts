@@ -8,5 +8,6 @@ export interface CaptainQualificationDto {
   validTo?: string
   isCurrent?: number
   canCreateTeam?: boolean
+  runtimeValid?: boolean
   invalidReason?: string
 }

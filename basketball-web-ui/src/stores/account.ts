@@ -685,9 +685,10 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   async function changePassword(currentPassword: string, newPassword: string): Promise<string> {
+    if (!currentPassword.trim()) return '请输入当前密码'
     const ruleError = validatePasswordRules(newPassword)
     if (ruleError) return ruleError
-    if (newPassword === currentPassword) return '新密码不能与当前密码一致'
+    if (newPassword === currentPassword) return '新密码不能与当前密码相同'
     try {
       await changeAccountPassword({
         oldPassword: currentPassword,

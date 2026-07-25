@@ -9,7 +9,13 @@ public class AccountPlayerAccountVo {
     private String accountNo;
     private String username;
     private String email;
+    private String nickname;
+    private String avatarUrl;
+    private Integer emailVerified;
     private Integer accountStatus;
+    private String accountStatusName;
+    private Date lastLoginTime;
+    private String lastLoginIp;
     private Date createTime;
     private Date updateTime;
 }

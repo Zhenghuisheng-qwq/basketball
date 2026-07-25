@@ -18,6 +18,7 @@ import com.zhs.model.BasketTeamMember;
 import com.zhs.model.BasketTournamentRegistration;
 import com.zhs.response.team.CaptainQualificationDetailResp;
 import com.zhs.service.ICaptainPermissionService;
+import com.zhs.support.CaptainQualificationValiditySupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +30,6 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
 
     private static final Integer NOT_DELETED = 0;
     private static final int IS_CURRENT = 1;
-    private static final int PAYMENT_CONFIRMED = 1;
 
     @Resource
     private BasketCaptainQualificationDao captainQualificationDao;
@@ -49,6 +49,7 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
         if (qualification == null) {
             resp.setHasQualification(false);
             resp.setCanCreateTeam(false);
+            resp.setRuntimeValid(false);
             resp.setInvalidReason("暂无有效队长资格");
             return resp;
         }
@@ -66,34 +67,19 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
         String invalidReason = resolveInvalidReason(accountId, qualification);
         resp.setInvalidReason(invalidReason);
         resp.setCanCreateTeam(invalidReason == null);
+        resp.setRuntimeValid(invalidReason == null);
         return resp;
     }
 
     @Override
     public BasketCaptainQualification requireValidQualification(Long accountId) {
         BasketCaptainQualification qualification = loadCurrentQualification(accountId);
-        if (qualification == null) {
-            throw new ServiceException("暂无有效队长资格", 403);
-        }
-        if (!Integer.valueOf(IS_CURRENT).equals(qualification.getIsCurrent())) {
-            throw new ServiceException("队长资格已失效", 403);
-        }
-        if (!Objects.equals(CaptainQualificationStatusEnum.ACTIVE.getCode(), qualification.getQualificationStatus())) {
-            throw new ServiceException("队长资格状态无效", 403);
-        }
-        if (!Integer.valueOf(PAYMENT_CONFIRMED).equals(qualification.getPaymentConfirmed())) {
-            throw new ServiceException("队长资格缴费未确认", 403);
+        String invalidReason = resolveInvalidReason(accountId, qualification);
+        if (invalidReason != null) {
+            throw new ServiceException(invalidReason, 403);
         }
         if (!accountId.equals(qualification.getMemberId())) {
             throw new ServiceException("无权使用该队长资格", 403);
-        }
-        requireCertifiedPlayer(accountId);
-        Date now = new Date();
-        if (qualification.getValidFrom() != null && qualification.getValidFrom().after(now)) {
-            throw new ServiceException("队长资格尚未生效", 403);
-        }
-        if (qualification.getValidTo() != null && qualification.getValidTo().before(now)) {
-            throw new ServiceException("队长资格已过期", 403);
         }
         return qualification;
     }
@@ -167,25 +153,13 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
     }
 
     private String resolveInvalidReason(Long accountId, BasketCaptainQualification qualification) {
+        Integer playerCertStatus = null;
         try {
-            requireCertifiedPlayer(accountId);
+            playerCertStatus = requireCertifiedPlayer(accountId).getCertificationStatus();
         } catch (ServiceException ex) {
             return ex.getMessage();
         }
-        if (!Objects.equals(CaptainQualificationStatusEnum.ACTIVE.getCode(), qualification.getQualificationStatus())) {
-            return CaptainQualificationStatusEnum.fromCode(qualification.getQualificationStatus()).getDescription();
-        }
-        if (!Integer.valueOf(PAYMENT_CONFIRMED).equals(qualification.getPaymentConfirmed())) {
-            return "缴费未确认";
-        }
-        Date now = new Date();
-        if (qualification.getValidFrom() != null && qualification.getValidFrom().after(now)) {
-            return "资格尚未生效";
-        }
-        if (qualification.getValidTo() != null && qualification.getValidTo().before(now)) {
-            return "资格已过期";
-        }
-        return null;
+        return CaptainQualificationValiditySupport.resolveInvalidReason(qualification, playerCertStatus, new Date());
     }
 
     private BasketTeam requireActiveTeam(Long teamId) {

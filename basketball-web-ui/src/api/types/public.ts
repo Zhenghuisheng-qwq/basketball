@@ -246,6 +246,9 @@ export interface PublicTournamentItemVo {
   coverUrl?: string | null
   displayOrder?: number | null
   updateTime?: string | null
+  competitionSeasonId?: string | null
+  competitionSeasonName?: string | null
+  competitionSeasonYear?: number | null
 }
 
 export interface PublicTournamentDetailVo {
@@ -262,6 +265,9 @@ export interface PublicTournamentDetailVo {
   tournamentStatus?: number | null
   logoUrl?: string | null
   coverUrl?: string | null
+  competitionSeasonId?: string | null
+  competitionSeasonName?: string | null
+  competitionSeasonYear?: number | null
 }
 
 export interface PublicSeasonItemVo {
@@ -277,6 +283,9 @@ export interface PublicSeasonItemVo {
   seasonStartTime?: string | null
   seasonEndTime?: string | null
   maxTeamCount?: number | null
+  competitionSeasonId?: string | null
+  competitionSeasonName?: string | null
+  competitionSeasonYear?: number | null
 }
 
 export interface PublicSeasonOverviewVo {
@@ -290,6 +299,9 @@ export interface PublicSeasonOverviewVo {
   publicMatchCount?: number | null
   standingCount?: number | null
   description?: unknown
+  competitionSeasonId?: string | null
+  competitionSeasonName?: string | null
+  competitionSeasonYear?: number | null
 }
 
 export interface PublicStandingItemVo {

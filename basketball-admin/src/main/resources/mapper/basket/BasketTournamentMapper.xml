@@ -4,6 +4,7 @@
     <resultMap type="com.zhs.basket.domain.BasketTournament" id="BasketTournamentResult">
         <id property="id" column="id" />
         <result property="tournamentNo" column="tournament_no" />
+        <result property="competitionSeasonId" column="competition_season_id" />
         <result property="tournamentName" column="tournament_name" />
         <result property="shortName" column="short_name" />
         <result property="englishName" column="english_name" />
@@ -14,6 +15,10 @@
         <result property="formatCode" column="format_code" />
         <result property="organizerName" column="organizer_name" />
         <result property="description" column="description" />
+        <result property="registrationStartTime" column="registration_start_time" />
+        <result property="registrationEndTime" column="registration_end_time" />
+        <result property="competitionStartTime" column="competition_start_time" />
+        <result property="competitionEndTime" column="competition_end_time" />
         <result property="tournamentStatus" column="tournament_status" />
         <result property="publicStatus" column="public_status" />
         <result property="displayOrder" column="display_order" />
@@ -21,22 +26,48 @@
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
     </resultMap>
+
+    <sql id="selectColumns">
+        t.id, t.tournament_no, t.competition_season_id, t.tournament_name, t.short_name, t.english_name,
+        t.logo_file_id, t.cover_file_id, t.tournament_type, t.game_terminal, t.format_code, t.organizer_name,
+        t.description, t.registration_start_time, t.registration_end_time, t.competition_start_time, t.competition_end_time,
+        t.tournament_status, t.public_status, t.display_order, t.create_time, t.update_time, t.is_delete
+    </sql>
+
     <select id="selectList" resultMap="BasketTournamentResult">
-        select id, tournament_no, tournament_name, short_name, english_name, logo_file_id, cover_file_id, tournament_type, game_terminal, format_code, organizer_name, description, tournament_status, public_status, display_order, create_time, update_time, is_delete from basket_tournament where is_delete = 0
-        <if test="tournamentNo != null and tournamentNo != ''">and tournament_no like concat('%', #{tournamentNo}, '%')</if>
-        <if test="tournamentName != null and tournamentName != ''">and tournament_name like concat('%', #{tournamentName}, '%')</if>
-        <if test="tournamentStatus != null">and tournament_status = #{tournamentStatus}</if>
-        order by display_order, create_time desc
+        select <include refid="selectColumns" />
+        from basket_tournament t
+        where t.is_delete = 0
+        <if test="tournamentNo != null and tournamentNo != ''">and t.tournament_no like concat('%', #{tournamentNo}, '%')</if>
+        <if test="tournamentName != null and tournamentName != ''">and t.tournament_name like concat('%', #{tournamentName}, '%')</if>
+        <if test="tournamentStatus != null">and t.tournament_status = #{tournamentStatus}</if>
+        <if test="competitionSeasonId != null">and t.competition_season_id = #{competitionSeasonId}</if>
+        order by t.display_order, t.create_time desc
     </select>
+
     <select id="selectById" resultMap="BasketTournamentResult">
-        select id, tournament_no, tournament_name, short_name, english_name, logo_file_id, cover_file_id, tournament_type, game_terminal, format_code, organizer_name, description, tournament_status, public_status, display_order, create_time, update_time, is_delete from basket_tournament where id = #{id} and is_delete = 0
+        select <include refid="selectColumns" />
+        from basket_tournament t
+        where t.id = #{id} and t.is_delete = 0
     </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        insert into basket_tournament (tournament_no, tournament_name, short_name, english_name, logo_file_id, cover_file_id, tournament_type, game_terminal, format_code, organizer_name, description, tournament_status, public_status, display_order, create_time, update_time, is_delete) values (#{tournamentNo}, #{tournamentName}, #{shortName}, #{englishName}, #{logoFileId}, #{coverFileId}, #{tournamentType}, #{gameTerminal}, #{formatCode}, #{organizerName}, #{description}, #{tournamentStatus}, #{publicStatus}, #{displayOrder}, #{createTime}, #{updateTime}, #{isDelete})
+        insert into basket_tournament
+        (tournament_no, competition_season_id, tournament_name, short_name, english_name, logo_file_id, cover_file_id,
+         tournament_type, game_terminal, format_code, organizer_name, description,
+         registration_start_time, registration_end_time, competition_start_time, competition_end_time,
+         tournament_status, public_status, display_order, create_time, update_time, is_delete)
+        values
+        (#{tournamentNo}, #{competitionSeasonId}, #{tournamentName}, #{shortName}, #{englishName}, #{logoFileId}, #{coverFileId},
+         #{tournamentType}, #{gameTerminal}, #{formatCode}, #{organizerName}, #{description},
+         #{registrationStartTime}, #{registrationEndTime}, #{competitionStartTime}, #{competitionEndTime},
+         #{tournamentStatus}, #{publicStatus}, #{displayOrder}, #{createTime}, #{updateTime}, #{isDelete})
     </insert>
+
     <update id="updateById">
         update basket_tournament
         <set>
+            <if test="competitionSeasonId != null">competition_season_id = #{competitionSeasonId},</if>
             <if test="tournamentName != null">tournament_name = #{tournamentName},</if>
             <if test="shortName != null">short_name = #{shortName},</if>
             <if test="englishName != null">english_name = #{englishName},</if>
@@ -47,6 +78,10 @@
             <if test="formatCode != null">format_code = #{formatCode},</if>
             <if test="organizerName != null">organizer_name = #{organizerName},</if>
             <if test="description != null">description = #{description},</if>
+            <if test="registrationStartTime != null">registration_start_time = #{registrationStartTime},</if>
+            <if test="registrationEndTime != null">registration_end_time = #{registrationEndTime},</if>
+            <if test="competitionStartTime != null">competition_start_time = #{competitionStartTime},</if>
+            <if test="competitionEndTime != null">competition_end_time = #{competitionEndTime},</if>
             <if test="tournamentStatus != null">tournament_status = #{tournamentStatus},</if>
             <if test="publicStatus != null">public_status = #{publicStatus},</if>
             <if test="displayOrder != null">display_order = #{displayOrder},</if>
@@ -54,9 +89,11 @@
         </set>
         where id = #{id} and is_delete = 0
     </update>
+
     <update id="softDelete">
         update basket_tournament set is_delete = 1, update_time = now() where id = #{id} and is_delete = 0
     </update>
+
     <update id="updateStatusIfMatch">
         update basket_tournament set tournament_status = #{toStatus}, update_time = now()
         where id = #{id} and is_delete = 0 and tournament_status in

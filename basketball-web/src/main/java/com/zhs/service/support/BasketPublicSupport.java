@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.common.cachekey.publicapi.BasketPublicCacheKey;
+import com.zhs.dao.BasketCompetitionSeasonDao;
 import com.zhs.dao.BasketFileAssetDao;
 import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketPlayerProfileDao;
@@ -15,6 +16,7 @@ import com.zhs.dao.BasketTournamentSeasonDao;
 import com.zhs.dao.BasketTournamentStageDao;
 import com.zhs.dao.BasketVenueDao;
 import com.zhs.exception.ServiceException;
+import com.zhs.model.BasketCompetitionSeason;
 import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketPlayerProfile;
@@ -51,6 +53,8 @@ public class BasketPublicSupport {
 
     @Resource
     private BasketTournamentDao tournamentDao;
+    @Resource
+    private BasketCompetitionSeasonDao competitionSeasonDao;
     @Resource
     private BasketTournamentSeasonDao seasonDao;
     @Resource
@@ -394,6 +398,29 @@ public class BasketPublicSupport {
             return map;
         }
         for (BasketTournament item : list) {
+            if (item != null
+                    && Objects.equals(item.getIsDelete(), BasketPublicConstants.NOT_DELETED)
+                    && Objects.equals(item.getPublicStatus(), BasketPublicConstants.PUBLIC)) {
+                map.put(item.getId(), item);
+            }
+        }
+        return map;
+    }
+
+    public Map<Long, BasketCompetitionSeason> loadCompetitionSeasonMap(Collection<Long> competitionSeasonIds) {
+        if (CollectionUtils.isEmpty(competitionSeasonIds)) {
+            return Collections.emptyMap();
+        }
+        Set<Long> ids = competitionSeasonIds.stream().filter(Objects::nonNull).collect(Collectors.toSet());
+        if (ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<BasketCompetitionSeason> list = competitionSeasonDao.selectBatchIds(ids);
+        Map<Long, BasketCompetitionSeason> map = new HashMap<>();
+        if (CollectionUtils.isEmpty(list)) {
+            return map;
+        }
+        for (BasketCompetitionSeason item : list) {
             if (item != null
                     && Objects.equals(item.getIsDelete(), BasketPublicConstants.NOT_DELETED)
                     && Objects.equals(item.getPublicStatus(), BasketPublicConstants.PUBLIC)) {

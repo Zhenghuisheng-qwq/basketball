@@ -4,6 +4,7 @@
 	<resultMap id="result_BasketTournamentMapper.xml" type="com.zhs.model.BasketTournament">
 		<id column="id" property="id" />
 		<result column="tournament_no" property="tournamentNo" />
+		<result column="competition_season_id" property="competitionSeasonId" />
 		<result column="tournament_name" property="tournamentName" />
 		<result column="short_name" property="shortName" />
 		<result column="tournament_type" property="tournamentType" />
@@ -23,7 +24,7 @@
 	</resultMap>
 	<!-- 数据库中表名为:basket_tournament的列名 -->
 	<sql id="basket_tournament_Column">
-		id,tournament_no,tournament_name,short_name,english_name,logo_file_id,cover_file_id,tournament_type,game_terminal,format_code,organizer_name,description,tournament_status,public_status,display_order,create_time,update_time,is_delete
+		id,tournament_no,competition_season_id,tournament_name,short_name,english_name,logo_file_id,cover_file_id,tournament_type,game_terminal,format_code,organizer_name,description,tournament_status,public_status,display_order,create_time,update_time,is_delete
 	</sql>
 
 	<!-- 通过BasketTournament的id获得对应数据库中表的数据对象 -->

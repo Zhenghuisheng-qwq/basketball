@@ -22,7 +22,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(loginInterceptor)
-                .addPathPatterns("/basket/**", "/api/**")
+                .addPathPatterns("/basket/**")
                 .excludePathPatterns(
                         "/error",
                         "/swagger-resources/**",

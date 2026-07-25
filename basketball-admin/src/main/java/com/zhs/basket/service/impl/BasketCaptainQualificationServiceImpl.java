@@ -14,6 +14,7 @@ import com.zhs.basket.req.CaptainQualificationUpdateReq;
 import com.zhs.basket.service.IBasketCaptainQualificationService;
 import com.zhs.basket.support.BasketAdminMessageService;
 import com.zhs.basket.support.PlayerNoGenerator;
+import com.zhs.basket.support.CaptainQualificationValiditySupport;
 import com.zhs.basket.vo.CaptainQualificationDetailVo;
 import com.zhs.basket.vo.CaptainQualificationListVo;
 import com.zhs.basket.vo.EligibleCaptainVo;
@@ -47,9 +48,11 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
 
     @Override
     public List<CaptainQualificationListVo> selectList(CaptainQualificationQuery query) {
+        Date now = new Date();
         return qualificationMapper.selectList(query).stream().map(q -> {
             CaptainQualificationListVo vo = new CaptainQualificationListVo();
             BeanUtils.copyBeanProp(vo, q);
+            enrichRuntimeValidity(vo, q, now);
             return vo;
         }).collect(Collectors.toList());
     }
@@ -59,7 +62,34 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
         BasketCaptainQualification q = requireQualification(qualificationId);
         CaptainQualificationDetailVo vo = new CaptainQualificationDetailVo();
         BeanUtils.copyBeanProp(vo, q);
+        enrichRuntimeValidity(vo, q, new Date());
         return vo;
+    }
+
+    private void enrichRuntimeValidity(CaptainQualificationListVo vo, BasketCaptainQualification q, Date now) {
+        Integer certStatus = null;
+        if (q.getPlayerId() != null) {
+            BasketPlayerProfile profile = profileMapper.selectById(q.getPlayerId());
+            if (profile != null) {
+                certStatus = profile.getCertificationStatus();
+            }
+        }
+        String invalidReason = CaptainQualificationValiditySupport.resolveInvalidReason(q, certStatus, now);
+        vo.setRuntimeValid(invalidReason == null ? 1 : 0);
+        vo.setRuntimeInvalidReason(invalidReason);
+    }
+
+    private void enrichRuntimeValidity(CaptainQualificationDetailVo vo, BasketCaptainQualification q, Date now) {
+        Integer certStatus = null;
+        if (q.getPlayerId() != null) {
+            BasketPlayerProfile profile = profileMapper.selectById(q.getPlayerId());
+            if (profile != null) {
+                certStatus = profile.getCertificationStatus();
+            }
+        }
+        String invalidReason = CaptainQualificationValiditySupport.resolveInvalidReason(q, certStatus, now);
+        vo.setRuntimeValid(invalidReason == null ? 1 : 0);
+        vo.setRuntimeInvalidReason(invalidReason);
     }
 
     @Override

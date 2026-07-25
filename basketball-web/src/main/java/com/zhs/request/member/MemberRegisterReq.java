@@ -10,6 +10,9 @@ import java.io.Serializable;
 @ApiModel("官网会员注册请求")
 public class MemberRegisterReq implements Serializable {
 
+    @ApiModelProperty(value = "登录账号", required = true)
+    private String username;
+
     @ApiModelProperty(value = "邮箱", required = true)
     private String email;
 

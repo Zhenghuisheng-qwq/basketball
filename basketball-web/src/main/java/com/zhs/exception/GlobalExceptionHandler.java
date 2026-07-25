@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * 全局异常处理，统一返回 R（code/msg/data）
@@ -25,7 +26,13 @@ public class GlobalExceptionHandler {
         if (code != null) {
             return ResponseEntity.ok(R.fail(code, e.getMessage()));
         }
-        return ResponseEntity.ok(R.fail(e.getMessage()));
+        return ResponseEntity.ok(R.fail(400, e.getMessage()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<R<?>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e) {
+        log.warn("上传文件超过大小限制: {}", e.getMessage());
+        return ResponseEntity.ok(R.fail("上传文件过大，单张图片不能超过 5MB"));
     }
 
     @ExceptionHandler(Exception.class)

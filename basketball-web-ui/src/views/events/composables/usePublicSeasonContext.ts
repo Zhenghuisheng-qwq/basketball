@@ -165,11 +165,19 @@ export function usePublicSeasonContext() {
       {
         key: 'season' as const,
         icon: 'calendar' as const,
-        title: displayText(ov?.seasonName || season?.seasonName, '赛季'),
+        title: displayText(
+          currentTournament.value?.competitionSeasonName
+            || ov?.competitionSeasonName
+            || ov?.seasonName
+            || season?.seasonName,
+          '赛季',
+        ),
         value: displayText(
-          season?.seasonStartTime && season?.seasonEndTime
-            ? `${String(season.seasonStartTime).slice(0, 10)} ~ ${String(season.seasonEndTime).slice(0, 10)}`
-            : season?.seasonYear,
+          currentTournament.value?.competitionSeasonYear
+            || ov?.competitionSeasonYear
+            || (season?.seasonStartTime && season?.seasonEndTime
+              ? `${String(season.seasonStartTime).slice(0, 10)} ~ ${String(season.seasonEndTime).slice(0, 10)}`
+              : season?.seasonYear),
           '--',
         ),
       },

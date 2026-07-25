@@ -6,10 +6,8 @@
           <el-option v-for="item in tournamentOptions" :key="item.id" :label="item.tournamentName" :value="item.id" />
         </el-select>
       </el-form-item>
-      <el-form-item label="赛季">
-        <el-select v-model="selectedSeasonId" placeholder="请选择赛季" filterable style="width: 260px" @change="getList">
-          <el-option v-for="item in seasonOptions" :key="item.id" :label="item.seasonName" :value="item.id" />
-        </el-select>
+      <el-form-item label="所属赛季">
+        <el-input :model-value="operationalSeasonLabel" disabled placeholder="请先选择赛事" style="width: 260px" />
       </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="getList" :disabled="!selectedSeasonId">查询</el-button>
@@ -72,19 +70,27 @@
 </template>
 
 <script setup lang="ts" name="BasketTournamentRule">
-import { listSeasonByTournament } from '@/api/basket/season'
 import { addTournamentRule, delTournamentRule, listTournamentRule, updateTournamentRule } from '@/api/basket/tournamentRule'
 import { listTournament } from '@/api/basket/tournament'
-import type { SeasonListItem, TournamentListItem, TournamentRule, TournamentRuleCreateReq } from '@/types'
+import type { TournamentListItem, TournamentRule, TournamentRuleCreateReq } from '@/types'
 
 const { proxy } = getCurrentInstance()
 
 const loading = ref(false)
 const dataList = ref<TournamentRule[]>([])
 const tournamentOptions = ref<TournamentListItem[]>([])
-const seasonOptions = ref<SeasonListItem[]>([])
 const selectedTournamentId = ref<number>()
 const selectedSeasonId = ref<number>()
+
+const operationalSeasonLabel = computed(() => {
+  const tournament = tournamentOptions.value.find(item => item.id === selectedTournamentId.value)
+  if (!tournament) return ''
+  if (!tournament.operationalSeasonId) return '该赛事尚未初始化运营赛季'
+  const seasonName = tournament.competitionSeasonName || '运营赛季'
+  return tournament.competitionSeasonYear
+    ? `${seasonName} (${tournament.competitionSeasonYear})`
+    : seasonName
+})
 const dialogOpen = ref(false)
 const dialogTitle = ref('')
 const currentId = ref<number>()
@@ -104,27 +110,19 @@ function loadTournaments() {
     tournamentOptions.value = res.rows
     if (res.rows.length > 0) {
       selectedTournamentId.value = res.rows[0].id
-      loadSeasons()
-    }
-  })
-}
-
-function loadSeasons() {
-  if (!selectedTournamentId.value) return
-  listSeasonByTournament(selectedTournamentId.value).then(res => {
-    seasonOptions.value = res.data || []
-    selectedSeasonId.value = seasonOptions.value[0]?.id
-    if (selectedSeasonId.value) {
-      getList()
-    } else {
-      dataList.value = []
+      handleTournamentChange()
     }
   })
 }
 
 function handleTournamentChange() {
-  selectedSeasonId.value = undefined
-  loadSeasons()
+  const tournament = tournamentOptions.value.find(item => item.id === selectedTournamentId.value)
+  selectedSeasonId.value = tournament?.operationalSeasonId
+  if (selectedSeasonId.value) {
+    getList()
+  } else {
+    dataList.value = []
+  }
 }
 
 function getList() {

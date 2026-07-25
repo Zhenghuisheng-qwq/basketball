@@ -5,11 +5,6 @@ import type { AccountNotificationItem } from '@/types/accountNotifications'
 defineProps<{
   item: AccountNotificationItem
 }>()
-
-const emit = defineEmits<{
-  primary: []
-  back: []
-}>()
 </script>
 
 <template>
@@ -40,15 +35,6 @@ const emit = defineEmits<{
       :class="`notification-detail-card__result--${item.resultStatus.toLowerCase()}`"
     >
       {{ item.resultText }}
-    </div>
-
-    <div class="notification-detail-card__actions">
-      <button type="button" class="account-btn-primary" @click="emit('primary')">
-        {{ item.primaryActionText }}
-      </button>
-      <button type="button" class="account-btn-secondary" @click="emit('back')">
-        {{ item.secondaryActionText }}
-      </button>
     </div>
   </article>
 </template>
@@ -153,23 +139,6 @@ const emit = defineEmits<{
       color: var(--account-danger, #c80a10);
     }
   }
-
-  &__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-
-    :deep(.account-btn-primary) {
-      min-height: 44px;
-      padding: 0 36px;
-      background: linear-gradient(180deg, #e00000, #b30000);
-    }
-
-    :deep(.account-btn-secondary) {
-      min-height: 42px;
-      padding: 0 32px;
-    }
-  }
 }
 
 @media (max-width: 991px) {
@@ -185,14 +154,6 @@ const emit = defineEmits<{
 
   .notification-detail-card__meta {
     grid-template-columns: 1fr;
-  }
-
-  .notification-detail-card__actions {
-    flex-direction: column;
-
-    :deep(button) {
-      width: 100%;
-    }
   }
 }
 </style>

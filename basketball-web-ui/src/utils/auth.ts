@@ -38,11 +38,24 @@ export function isLoggedIn(): boolean {
   return Boolean(getToken())
 }
 
+function normalizeRedirectInput(path: unknown): string {
+  if (typeof path === 'string') return path
+  if (Array.isArray(path) && typeof path[0] === 'string') return path[0]
+  return ''
+}
+
 export function sanitizeRedirect(path: unknown): string {
-  if (typeof path !== 'string' || !path.trim()) return '/account'
-  const value = path.trim()
+  const value = normalizeRedirectInput(path).trim()
+  if (!value) return '/account'
   if (!value.startsWith('/') || value.startsWith('//')) return '/account'
   return value
+}
+
+/** 已登录用户访问 guest 页面（如 /login）时的跳转目标 */
+export function resolveAuthenticatedEntryRedirect(redirect: unknown): string {
+  const value = normalizeRedirectInput(redirect).trim()
+  if (value) return sanitizeRedirect(value)
+  return '/account'
 }
 
 export function toBridgeUserId(memberId: string): number {

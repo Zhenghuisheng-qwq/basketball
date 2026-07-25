@@ -43,7 +43,14 @@ export function sendEmailCode(email: string, purpose: EmailCodePurpose) {
   })
 }
 
+export function checkUsernameAvailable(username: string) {
+  return request.get<any, ApiResult<null>>('/basket/member/auth/username/available', {
+    params: { username },
+  })
+}
+
 export function registerMember(payload: {
+  username: string
   email: string
   password: string
   confirmPassword: string

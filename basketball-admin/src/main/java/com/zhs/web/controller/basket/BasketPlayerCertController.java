@@ -50,16 +50,16 @@ public class BasketPlayerCertController extends BaseController {
     @PreAuthorize("@ss.hasPermi('basket:playerCert:audit')")
     @Log(title = "球员认证审核", businessType = BusinessType.UPDATE)
     @PostMapping("/{applicationId}/approve")
-    public AjaxResult approve(@PathVariable Long applicationId, @RequestBody PlayerCertApproveReq req) {
-        playerCertService.approve(applicationId, req);
+    public AjaxResult approve(@PathVariable Long applicationId, @RequestBody(required = false) PlayerCertApproveReq req) {
+        playerCertService.approve(applicationId, req != null ? req : new PlayerCertApproveReq());
         return success();
     }
 
     @PreAuthorize("@ss.hasPermi('basket:playerCert:audit')")
     @Log(title = "球员认证审核", businessType = BusinessType.UPDATE)
     @PostMapping("/{applicationId}/reject")
-    public AjaxResult reject(@PathVariable Long applicationId, @RequestBody PlayerCertRejectReq req) {
-        playerCertService.reject(applicationId, req);
+    public AjaxResult reject(@PathVariable Long applicationId, @RequestBody(required = false) PlayerCertRejectReq req) {
+        playerCertService.reject(applicationId, req != null ? req : new PlayerCertRejectReq());
         return success();
     }
 }

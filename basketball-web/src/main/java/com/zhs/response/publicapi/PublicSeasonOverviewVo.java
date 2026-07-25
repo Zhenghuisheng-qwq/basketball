@@ -43,4 +43,14 @@ public class PublicSeasonOverviewVo implements Serializable {
 
     @ApiModelProperty("描述")
     private Object description;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty("所属顶层赛季主键")
+    private Long competitionSeasonId;
+
+    @ApiModelProperty("所属顶层赛季名称")
+    private String competitionSeasonName;
+
+    @ApiModelProperty("所属顶层赛季年份")
+    private Integer competitionSeasonYear;
 }

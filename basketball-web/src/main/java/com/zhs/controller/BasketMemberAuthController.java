@@ -44,6 +44,14 @@ public class BasketMemberAuthController {
     }
 
     @NoLoginRequest
+    @ApiOperation("检查登录账号是否可用")
+    @GetMapping("/username/available")
+    public R<Void> checkUsernameAvailable(@org.springframework.web.bind.annotation.RequestParam String username) {
+        basketMemberAuthService.assertUsernameAvailable(username);
+        return R.ok(null, "登录账号可用");
+    }
+
+    @NoLoginRequest
     @ApiOperation("注册官网会员")
     @PostMapping("/register")
     public R<MemberLoginResp> register(@RequestBody MemberRegisterReq req, HttpServletRequest request) {

@@ -7,7 +7,7 @@ import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import PasswordInput from '@/views/account/components/PasswordInput.vue'
 import { useAccountStore } from '@/stores/account'
-import { validatePasswordRules } from '@/utils/passwordRules'
+import { resolvePasswordChangeError, validatePasswordRules } from '@/utils/passwordRules'
 import { formatDateTime } from '@/utils/formatDate'
 import type { NotificationSettingDto, PrivacySettingDto } from '@/api/types/accountSetting'
 
@@ -120,14 +120,26 @@ function cancelForm() {
   resetErrors()
 }
 
+function applyPasswordChangeError(message: string) {
+  resetErrors()
+  const { field, message: text } = resolvePasswordChangeError(message)
+  if (field === 'currentPassword') errors.currentPassword = text
+  else if (field === 'confirmPassword') errors.confirmPassword = text
+  else if (field === 'newPassword') errors.newPassword = text
+  else ElMessage.warning(text)
+}
+
 async function savePassword() {
-  if (loading.value || !validateForm()) return
+  if (loading.value) return
+  if (!validateForm()) {
+    ElMessage.warning('请检查表单填写是否正确')
+    return
+  }
   loading.value = true
   try {
     const error = await accountStore.changePassword(form.currentPassword, form.newPassword)
     if (error) {
-      if (error.includes('密码')) errors.currentPassword = error
-      else errors.newPassword = error
+      applyPasswordChangeError(error)
       return
     }
     ElMessage.success('密码已更新')

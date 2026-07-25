@@ -1,221 +1,233 @@
-.member-auth-layout {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: #050505;
-  color: #fff;
-}
-
-.member-auth-page {
-  --auth-title-size: clamp(46px, 4.2vw, 76px);
-  --auth-subtitle-size: clamp(22px, 1.8vw, 32px);
-  --auth-label-size: clamp(14px, 1vw, 17px);
-  --auth-input-size: clamp(15px, 1vw, 17px);
-  --auth-helper-size: clamp(12px, 0.85vw, 14px);
-  --auth-button-size: clamp(18px, 1.35vw, 23px);
-
-  flex: 1 0 auto;
-  width: 100%;
-  min-width: 0;
-  padding-top: var(--site-header-height);
-  background: #050505;
-  overflow-x: clip;
-  box-sizing: border-box;
-}
-
-.member-auth-page__shell {
-  position: relative;
-  width: 100%;
-  max-width: none;
-  min-width: 0;
-  margin: 0;
-  padding-inline: 0;
-  box-sizing: border-box;
-}
-
-.member-auth-canvas {
-  position: relative;
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  background: #050505;
-}
-
-.member-auth-canvas--fallback {
-  min-height: clamp(520px, 56vw, 760px);
-  background:
-    linear-gradient(
-      90deg,
-      #050505 0%,
-      #050505 50%,
-      #eeeae4 50%,
-      #eeeae4 100%
-    );
-}
-
-.member-auth-canvas__background {
-  position: relative;
-  z-index: 0;
-  display: block;
-  width: 100%;
-  height: auto;
-  max-width: none;
-  object-fit: initial;
-  pointer-events: none;
-  user-select: none;
-}
-
-.member-auth-mobile-visual {
-  display: none;
-}
-
-.member-auth-content {
-  position: absolute;
-  z-index: 2;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 50%;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  padding:
-    clamp(22px, 2.8vw, 50px)
-    clamp(28px, 4vw, 68px);
-  color: #171717;
-}
-
-.member-auth-content__inner {
-  width: 100%;
-  min-width: 0;
-  max-width: min(590px, 100%);
-  margin-inline: auto;
-}
-
-.member-auth-content__inner--login,
-.member-auth-content__inner--complete {
-  max-width: min(560px, 100%);
-}
-
-.member-auth-content__inner--register {
-  max-width: min(590px, 100%);
-}
-
-.member-auth-content__inner--verify {
-  max-width: min(570px, 100%);
-}
-
-.member-auth-footer {
-  flex-shrink: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: #080808;
-}
-
-.member-auth-footer__inner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 56px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
-}
-
-@media (max-width: 1440px) {
-  .member-auth-content {
-    width: min(52%, 640px);
-    padding:
-      clamp(20px, 2.4vw, 42px)
-      clamp(24px, 3.2vw, 52px);
-  }
-}
-
-@media (max-width: 1280px) {
-  .member-auth-content {
-    width: min(54%, 560px);
-    padding:
-      clamp(18px, 2vw, 36px)
-      clamp(20px, 2.6vw, 40px);
-  }
-
-  .member-auth-canvas__background {
-    /* Keep full image width; never cover-crop the left subject */
-    width: 100%;
-    height: auto;
-    object-fit: contain;
-    object-position: left center;
-  }
-}
-
-@media (max-width: 1024px) {
-  .member-auth-page__shell {
-    width: 100%;
-    max-width: none;
-    padding-inline: 0;
-  }
-
-  .member-auth-canvas__background {
-    display: none;
-  }
-
-  .member-auth-canvas {
-    overflow: visible;
-    background: var(--cnpa-paper-bg, #eeeae4);
-  }
-
-  .member-auth-canvas--fallback {
-    min-height: 0;
-    background: var(--cnpa-paper-bg, #eeeae4);
-  }
-
-  .member-auth-mobile-visual {
-    display: block;
-    width: 100%;
-    min-height: clamp(200px, 42vw, 300px);
-    background-color: #050505;
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: left center;
-  }
-
-  .member-auth-content {
-    position: relative;
-    inset: auto;
-    width: 100%;
-    max-width: none;
-    padding: 28px 24px 40px;
-    background: var(--cnpa-paper-bg, #eeeae4);
-  }
-
-  .member-auth-content__inner,
-  .member-auth-content__inner--login,
-  .member-auth-content__inner--register,
-  .member-auth-content__inner--verify,
-  .member-auth-content__inner--complete {
-    max-width: min(560px, 100%);
-    margin-inline: auto;
-  }
-}
-
-@media (max-width: 768px) {
-  .member-auth-content {
-    padding: 24px 16px 36px;
-  }
-
-  .member-auth-mobile-visual {
-    min-height: clamp(180px, 48vw, 260px);
-    background-size: cover;
-    background-position: left center;
-  }
-
-  .member-auth-content__inner,
-  .member-auth-content__inner--login,
-  .member-auth-content__inner--register,
-  .member-auth-content__inner--verify,
-  .member-auth-content__inner--complete {
-    max-width: none;
-  }
-}
+.member-auth-layout {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #050505;
+  color: #fff;
+}
+
+.member-auth-page {
+  --auth-form-width: clamp(360px, 32vw, 480px);
+  --auth-form-max-width: 520px;
+  --auth-form-min-width: 320px;
+  --member-auth-footer-height: 56px;
+  /* 与 login_background.png 右侧纸张区域宽度对齐（约 54%） */
+  --member-auth-form-zone: 54%;
+
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  padding-top: var(--site-header-height);
+  background: #050505;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.member-auth-page__shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 整页背景容器：背景图负责左侧海报 + 撕纸 + 右侧纸张 */
+.member-auth-canvas {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: stretch;
+  overflow: hidden;
+  background-color: #050505;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center center;
+}
+
+.member-auth-canvas--fallback {
+  background-image: none !important;
+
+  .member-auth-form-area {
+    background: var(--cnpa-paper-bg, #eeeae4);
+  }
+}
+
+/* 表单区：透明覆盖在背景图右侧纸张上，不再额外铺灰色底 */
+.member-auth-form-area {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 var(--member-auth-form-zone);
+  width: var(--member-auth-form-zone);
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  padding:
+    clamp(16px, 2.5vh, 40px)
+    clamp(20px, 3vw, 56px);
+  background: transparent;
+  color: #171717;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.member-auth-form-area__inner {
+  width: min(100%, var(--auth-form-width));
+  max-width: var(--auth-form-max-width);
+  min-width: min(100%, var(--auth-form-min-width));
+  margin-inline: auto;
+  flex-shrink: 0;
+}
+
+.member-auth-footer {
+  flex: 0 0 var(--member-auth-footer-height, 56px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #080808;
+}
+
+.member-auth-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+@media (max-width: 1440px) {
+  .member-auth-page {
+    --member-auth-form-zone: 52%;
+  }
+}
+
+@media (max-width: 1280px) {
+  .member-auth-page {
+    --auth-form-width: clamp(340px, 36vw, 480px);
+    --member-auth-form-zone: 50%;
+  }
+
+  .member-auth-form-area {
+    padding-inline: clamp(16px, 2.5vw, 40px);
+  }
+}
+
+@media (max-height: 860px) {
+  .member-auth-form-area {
+    padding-block: clamp(12px, 1.8vh, 28px);
+  }
+
+  .member-auth-page :deep(.auth-stepper),
+  .member-auth-page :deep(.auth-steps) {
+    margin-bottom: 14px;
+  }
+
+  .member-auth-page :deep(.register-page__head),
+  .member-auth-page :deep(.auth-register__title),
+  .member-auth-page :deep(.auth-login__header) {
+    margin-bottom: 12px;
+  }
+
+  .member-auth-page :deep(.register-page__title),
+  .member-auth-page :deep(.auth-register__title-cn),
+  .member-auth-page :deep(.auth-login__header h1) {
+    font-size: clamp(28px, 2.4vw, 40px);
+  }
+
+  .member-auth-page :deep(.register-page__sub),
+  .member-auth-page :deep(.auth-register__title-en),
+  .member-auth-page :deep(.auth-login__header p) {
+    font-size: clamp(14px, 1.2vw, 20px);
+  }
+
+  .member-auth-page :deep(.form-field),
+  .member-auth-page :deep(.auth-field) {
+    margin-bottom: 10px;
+  }
+
+  .member-auth-page :deep(.form-field__input),
+  .member-auth-page :deep(.auth-input) {
+    height: 44px;
+    font-size: 14px;
+  }
+
+  .member-auth-page :deep(.btn-primary),
+  .member-auth-page :deep(.auth-submit-button),
+  .member-auth-page :deep(.auth-primary-button) {
+    min-height: 48px;
+    margin-top: 10px;
+    font-size: 16px;
+  }
+}
+
+@media (max-height: 740px) {
+  .member-auth-page :deep(.register-page__title),
+  .member-auth-page :deep(.auth-register__title-cn),
+  .member-auth-page :deep(.auth-login__header h1) {
+    font-size: clamp(24px, 2vw, 32px);
+  }
+
+  .member-auth-page :deep(.form-field__input),
+  .member-auth-page :deep(.auth-input) {
+    height: 40px;
+  }
+
+  .member-auth-page :deep(.btn-primary),
+  .member-auth-page :deep(.auth-submit-button),
+  .member-auth-page :deep(.auth-primary-button) {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .member-auth-canvas {
+    flex-direction: column;
+    justify-content: flex-end;
+    background-position: 15% top;
+  }
+
+  .member-auth-form-area {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: none;
+    padding: clamp(16px, 3vh, 24px) clamp(16px, 4vw, 28px);
+  }
+
+  .member-auth-form-area__inner {
+    width: min(100%, var(--auth-form-max-width));
+    max-width: var(--auth-form-max-width);
+    min-width: min(100%, var(--auth-form-min-width));
+  }
+}
+
+@media (max-width: 768px) {
+  .member-auth-page {
+    --auth-form-width: min(100%, 480px);
+    --auth-form-min-width: 280px;
+  }
+
+  .member-auth-form-area {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 390px) {
+  .member-auth-page {
+    --auth-form-min-width: 260px;
+  }
+}

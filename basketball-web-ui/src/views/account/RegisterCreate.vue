@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { sendEmailCode } from '@/api/memberAuth'
+import { checkUsernameAvailable } from '@/api/memberAuth'
 import { setRegisterDraft } from '@/composables/useRegisterFlow'
 import RegisterSteps from './components/RegisterSteps.vue'
 import PasswordInput from './components/PasswordInput.vue'
@@ -10,14 +9,14 @@ import PasswordInput from './components/PasswordInput.vue'
 const router = useRouter()
 
 const form = reactive({
-  email: '',
+  username: '',
   password: '',
   confirmPassword: '',
   agreed: false,
 })
 
 const errors = reactive({
-  email: '',
+  username: '',
   password: '',
   confirmPassword: '',
   agreed: '',
@@ -36,9 +35,12 @@ const passwordRules = computed(() => {
   }
 })
 
-function validateEmail(value: string): string {
-  if (!value.trim()) return '请输入邮箱'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return '邮箱格式不正确'
+function validateUsername(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return '请输入登录账号'
+  if (!/^[A-Za-z0-9_]{4,20}$/.test(trimmed)) {
+    return '登录账号为 4 至 20 位英文字母、数字或下划线'
+  }
   return ''
 }
 
@@ -57,11 +59,11 @@ function validateConfirmPassword(value: string): string {
 }
 
 function validateForm(): boolean {
-  errors.email = validateEmail(form.email)
+  errors.username = validateUsername(form.username)
   errors.password = validatePassword(form.password)
   errors.confirmPassword = validateConfirmPassword(form.confirmPassword)
   errors.agreed = form.agreed ? '' : '请先阅读并同意相关协议'
-  return !errors.email && !errors.password && !errors.confirmPassword && !errors.agreed
+  return !errors.username && !errors.password && !errors.confirmPassword && !errors.agreed
 }
 
 async function handleSubmit() {
@@ -71,19 +73,17 @@ async function handleSubmit() {
   loading.value = true
   errors.form = ''
   try {
-    const email = form.email.trim()
-    const res = await sendEmailCode(email, 'REGISTER')
+    const username = form.username.trim()
+    await checkUsernameAvailable(username)
     setRegisterDraft({
-      email,
+      username,
       password: form.password,
-      verifyBizNo: res.data.bizNo,
       agreeUserAgreement: true,
       agreePrivacyPolicy: true,
     })
-    ElMessage.success('验证码已发送，请查收邮箱')
     await router.push('/register/verify-email')
   } catch (error) {
-    errors.form = error instanceof Error ? error.message : '验证码发送失败'
+    errors.form = error instanceof Error ? error.message : '创建账号失败'
   } finally {
     loading.value = false
   }
@@ -105,16 +105,16 @@ function goLogin() {
 
     <form class="register-form" @submit.prevent="handleSubmit">
       <label class="form-field">
-        <span class="form-field__label">邮箱地址</span>
+        <span class="form-field__label">登录账号</span>
         <input
-          v-model="form.email"
-          type="email"
+          v-model="form.username"
+          type="text"
           class="form-field__input"
-          placeholder="请输入常用邮箱"
-          autocomplete="email"
-          @blur="errors.email = validateEmail(form.email)"
+          placeholder="4-20 位英文字母、数字或下划线"
+          autocomplete="username"
+          @blur="errors.username = validateUsername(form.username)"
         />
-        <span v-if="submitted && errors.email" class="form-field__error">{{ errors.email }}</span>
+        <span v-if="submitted && errors.username" class="form-field__error">{{ errors.username }}</span>
       </label>
 
       <label class="form-field">
@@ -153,14 +153,14 @@ function goLogin() {
       <p v-if="errors.form" class="form-field__error">{{ errors.form }}</p>
 
       <button type="submit" class="btn-primary" :disabled="loading">
-        {{ loading ? '发送验证码...' : '创建 CNPA 账号' }}
+        {{ loading ? '校验中...' : '创建 CNPA 账号' }}
       </button>
 
       <p class="register-form__login">
         已有账号？
         <button type="button" class="text-link" @click="goLogin">立即登录</button>
       </p>
-      <p class="register-form__hint">创建账号后，我们将向你的邮箱发送 6 位验证码</p>
+      <p class="register-form__hint">下一步将绑定邮箱，用于接收验证码、找回密码和账号安全验证。</p>
     </form>
   </div>
 </template>

@@ -332,19 +332,9 @@ function mapMessageType(messageType?: string): AccountNotificationType {
   return 'SYSTEM'
 }
 
-function mapRedirectRoute(redirectType?: string, redirectValue?: string): string {
-  if (!redirectType || !redirectValue) return '/account/notifications'
-  const normalized = redirectType.toUpperCase()
-  if (normalized.includes('PLAYER') || normalized.includes('CERT')) return '/account/player-identity'
-  if (normalized.includes('TOURNAMENT')) return `/account/my-tournaments`
-  if (redirectValue.startsWith('/')) return redirectValue
-  return '/account/notifications'
-}
-
 export function mapMessageItemToNotification(item: MessageItemDto): AccountNotificationItem {
   const unread = item.readStatus !== 1
   const type = mapMessageType(item.messageType)
-  const primaryRoute = mapRedirectRoute(item.redirectType, item.redirectValue)
   return {
     id: item.receiverId,
     type,
@@ -363,9 +353,6 @@ export function mapMessageItemToNotification(item: MessageItemDto): AccountNotif
     ],
     resultText: unread ? '未读' : '已读',
     resultStatus: unread ? 'PENDING' : 'SUCCESS',
-    primaryActionText: item.redirectType ? '查看详情' : '返回通知列表',
-    primaryActionRoute: primaryRoute,
-    secondaryActionText: '返回通知列表',
   }
 }
 

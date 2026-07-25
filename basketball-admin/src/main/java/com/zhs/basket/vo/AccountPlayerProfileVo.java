@@ -20,4 +20,5 @@ public class AccountPlayerProfileVo {
     private Integer playerStatus;
     private Date certifiedTime;
     private Long currentTeamId;
+    private String currentTeamName;
 }

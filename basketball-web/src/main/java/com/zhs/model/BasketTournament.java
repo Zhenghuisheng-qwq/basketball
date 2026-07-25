@@ -38,6 +38,10 @@ public class BasketTournament implements Serializable {
     @ApiModelProperty(value = "赛事编号")
     private String tournamentNo;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "所属顶层赛季主键")
+    private Long competitionSeasonId;
+
     @ApiModelProperty(value = "赛事名称")
     private String tournamentName;
 

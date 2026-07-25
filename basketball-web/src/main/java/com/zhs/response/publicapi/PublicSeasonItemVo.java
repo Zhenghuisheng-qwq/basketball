@@ -60,4 +60,14 @@ public class PublicSeasonItemVo implements Serializable {
 
     @ApiModelProperty("最大球队数")
     private Integer maxTeamCount;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty("所属顶层赛季主键")
+    private Long competitionSeasonId;
+
+    @ApiModelProperty("所属顶层赛季名称")
+    private String competitionSeasonName;
+
+    @ApiModelProperty("所属顶层赛季年份")
+    private Integer competitionSeasonYear;
 }

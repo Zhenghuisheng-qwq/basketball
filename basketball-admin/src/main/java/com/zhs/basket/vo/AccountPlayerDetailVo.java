@@ -9,12 +9,17 @@ public class AccountPlayerDetailVo {
     private String accountNo;
     private String username;
     private String email;
+    private Integer emailVerified;
     private Integer accountStatus;
+    private Date lastLoginTime;
+    private String lastLoginIp;
     private Date accountCreateTime;
     private Date accountUpdateTime;
     private String nickname;
+    private String avatarUrl;
     private Integer gender;
     private Integer profileStatus;
+    private String currentTeamName;
     private Long playerId;
     private String playerNo;
     private String gameTerminal;

@@ -10,4 +10,5 @@ public class TournamentQuery extends BaseEntity {
     private String tournamentNo;
     private String tournamentName;
     private Integer tournamentStatus;
+    private Long competitionSeasonId;
 }

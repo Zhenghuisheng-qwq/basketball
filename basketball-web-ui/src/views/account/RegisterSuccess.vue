@@ -34,6 +34,7 @@ function goHome() {
     </div>
     <h2 class="auth-complete__heading">CNPA 账号创建成功</h2>
     <p class="auth-complete__email">绑定邮箱：{{ maskedEmail }}</p>
+    <p class="auth-complete__email">日常登录请使用登录账号和密码</p>
     <button type="button" class="auth-primary-button" @click="goNext">
       {{ alreadyLoggedIn ? '进入个人中心' : '立即登录' }}
     </button>

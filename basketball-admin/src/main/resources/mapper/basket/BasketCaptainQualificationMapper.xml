@@ -35,8 +35,17 @@
         select id, qualification_no, member_id, player_id, qualification_status, is_current, payment_confirmed, payment_reference, grant_reason, granted_by, granted_time, valid_from, valid_to, revoked_by, revoked_time, revoke_reason, create_time, update_time, is_delete from basket_captain_qualification where id = #{id} and is_delete = 0
     </select>
     <select id="countCurrentActiveByPlayerId" resultType="int">
-        select count(1) from basket_captain_qualification
-        where player_id = #{playerId} and is_current = 1 and qualification_status = 1 and is_delete = 0
+        select count(1)
+        from basket_captain_qualification cq
+        inner join basket_player_profile pp on pp.id = cq.player_id and pp.is_delete = 0
+        where cq.player_id = #{playerId}
+          and cq.is_current = 1
+          and cq.qualification_status = 1
+          and cq.payment_confirmed = 1
+          and cq.is_delete = 0
+          and pp.certification_status = 3
+          and (cq.valid_from is null or cq.valid_from &lt;= now())
+          and (cq.valid_to is null or cq.valid_to &gt;= now())
     </select>
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_captain_qualification (qualification_no, member_id, player_id, qualification_status, is_current, payment_confirmed, payment_reference, grant_reason, granted_by, granted_time, valid_from, valid_to, revoked_by, revoked_time, revoke_reason, create_time, update_time, is_delete) values (#{qualificationNo}, #{memberId}, #{playerId}, #{qualificationStatus}, #{isCurrent}, #{paymentConfirmed}, #{paymentReference}, #{grantReason}, #{grantedBy}, #{grantedTime}, #{validFrom}, #{validTo}, #{revokedBy}, #{revokedTime}, #{revokeReason}, #{createTime}, #{updateTime}, #{isDelete})

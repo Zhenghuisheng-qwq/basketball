@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from 'axios'
-import { getToken, removeToken } from '@/utils/auth'
+import { clearAuthSession, getToken, removeToken } from '@/utils/auth'
 
 export interface ApiResult<T = unknown> {
   code: number
@@ -13,6 +13,7 @@ function redirectToLogin() {
   if (handling401 || typeof window === 'undefined') return
   handling401 = true
   removeToken()
+  clearAuthSession()
   const path = window.location.pathname + window.location.search
   if (!path.startsWith('/login')) {
     const redirect = encodeURIComponent(path)

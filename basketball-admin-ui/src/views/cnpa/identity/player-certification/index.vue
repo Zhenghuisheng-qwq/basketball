@@ -60,12 +60,11 @@
           <span>{{ parseTime(scope.row.reviewedTime) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="260" class-name="small-padding fixed-width">
+      <el-table-column label="操作" align="center" width="220" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:playerCert:query']">详情</el-button>
-          <el-button link type="warning" icon="EditPen" @click="handleStartReview(scope.row)" v-hasPermi="['basket:playerCert:audit']" v-if="scope.row.applicationStatus === 1">开始审核</el-button>
-          <el-button link type="success" icon="Check" @click="openApprove(scope.row)" v-hasPermi="['basket:playerCert:audit']" v-if="[1, 2].includes(scope.row.applicationStatus)">通过</el-button>
-          <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:playerCert:audit']" v-if="scope.row.applicationStatus === 2">驳回</el-button>
+          <el-button link type="success" icon="Check" @click="handleApprove(scope.row)" v-hasPermi="['basket:playerCert:audit']" v-if="canAudit(scope.row.applicationStatus)">通过</el-button>
+          <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:playerCert:audit']" v-if="canAudit(scope.row.applicationStatus)">驳回</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -88,10 +87,13 @@
           <el-descriptions-item label="状态">{{ detail.applicationStatusName }}</el-descriptions-item>
           <el-descriptions-item label="游戏平台">{{ detail.gameTerminal || '-' }}</el-descriptions-item>
           <el-descriptions-item label="游戏ID">{{ detail.gameAccount || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="游戏昵称">{{ detail.gameNickname || '-' }}</el-descriptions-item>
           <el-descriptions-item label="常用位置">{{ detail.positionCode || '-' }}</el-descriptions-item>
           <el-descriptions-item label="提交时间">{{ parseTime(detail.submittedTime) }}</el-descriptions-item>
           <el-descriptions-item label="审核时间">{{ parseTime(detail.reviewedTime) }}</el-descriptions-item>
-          <el-descriptions-item label="审核备注" :span="2">{{ detail.reviewRemark || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="审核人">{{ detailAuditorName }}</el-descriptions-item>
+          <el-descriptions-item label="驳回原因" v-if="detail.applicationStatus === 4" :span="2">{{ detail.reviewRemark || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="审核备注" v-else-if="detail.applicationStatus === 3" :span="2">{{ detail.reviewRemark || '-' }}</el-descriptions-item>
         </el-descriptions>
       </template>
 
@@ -127,33 +129,15 @@
       </el-table>
     </el-drawer>
 
-    <el-dialog title="审核通过" v-model="approveOpen" width="480px" append-to-body>
-      <el-form ref="approveRef" :model="approveForm" label-width="88px">
-        <el-form-item label="位置编码">
-          <el-input v-model="approveForm.positionCode" placeholder="可选，覆盖申请位置" />
-        </el-form-item>
-        <el-form-item label="审核备注">
-          <el-input v-model="approveForm.auditRemark" type="textarea" placeholder="请输入审核备注" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="approveOpen = false">取消</el-button>
-        <el-button type="primary" @click="submitApprove">确定</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog title="审核驳回" v-model="rejectOpen" width="480px" append-to-body>
-      <el-form ref="rejectRef" :model="rejectForm" :rules="rejectRules" label-width="88px">
-        <el-form-item label="驳回原因" prop="rejectReason">
-          <el-input v-model="rejectForm.rejectReason" type="textarea" placeholder="请输入驳回原因" />
-        </el-form-item>
-        <el-form-item label="审核备注">
-          <el-input v-model="rejectForm.auditRemark" type="textarea" placeholder="可选" />
+    <el-dialog title="确认驳回认证？" v-model="rejectOpen" width="480px" append-to-body>
+      <el-form ref="rejectRef" :model="rejectForm" label-width="88px">
+        <el-form-item label="驳回原因">
+          <el-input v-model="rejectForm.rejectReason" type="textarea" :rows="3" placeholder="选填，不填将使用默认原因：认证信息未通过审核" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="rejectOpen = false">取消</el-button>
-        <el-button type="primary" @click="submitReject">确定</el-button>
+        <el-button type="danger" @click="submitReject">确认驳回</el-button>
       </template>
     </el-dialog>
   </div>
@@ -165,12 +149,10 @@ import {
   getPlayerCert,
   listPlayerCert,
   listPlayerCertAuditRecords,
-  rejectPlayerCert,
-  startPlayerCertReview
+  rejectPlayerCert
 } from '@/api/basket/playerCert'
 import { previewPrivateFile } from '@/api/basket/privateFile'
 import type {
-  PlayerCertApproveReq,
   PlayerCertAuditRecord,
   PlayerCertDetail,
   PlayerCertListItem,
@@ -192,7 +174,6 @@ const detail = ref<PlayerCertDetail>()
 const materials = ref<PlayerCertMaterial[]>([])
 const auditRecords = ref<PlayerCertAuditRecord[]>([])
 const currentId = ref<number>()
-const approveOpen = ref(false)
 const rejectOpen = ref(false)
 
 const queryParams = ref<PlayerCertQuery>({
@@ -205,13 +186,20 @@ const queryParams = ref<PlayerCertQuery>({
   applicationStatus: undefined
 })
 
-const approveForm = ref<PlayerCertApproveReq>({})
 const rejectForm = ref<PlayerCertRejectReq>({ rejectReason: '' })
-const rejectRules = {
-  rejectReason: [{ required: true, message: '驳回原因不能为空', trigger: 'blur' }]
-}
 
 const proofMaterials = computed(() => materials.value)
+
+const detailAuditorName = computed(() => {
+  const finalRecord = [...auditRecords.value].reverse().find(item =>
+    item.auditAction === 'APPROVE' || item.auditAction === 'REJECT'
+  )
+  return finalRecord?.auditorName || '-'
+})
+
+function canAudit(status?: number) {
+  return status === 1 || status === 2
+}
 
 function isImage(mimeType?: string) {
   return !!mimeType && mimeType.startsWith('image/')
@@ -262,42 +250,40 @@ function handlePreviewFile(fileId?: number) {
   }
 }
 
-function handleStartReview(row: PlayerCertListItem) {
-  proxy.$modal.confirm('确认开始审核该申请？').then(() => startPlayerCertReview(row.id)).then(() => {
-    proxy.$modal.msgSuccess('已开始审核')
-    getList()
-  }).catch(() => {})
-}
-
-function openApprove(row: PlayerCertListItem) {
-  currentId.value = row.id
-  approveForm.value = { auditRemark: '' }
-  approveOpen.value = true
-}
-
-function submitApprove() {
-  if (!currentId.value) return
-  approvePlayerCert(currentId.value, approveForm.value).then(() => {
+function handleApprove(row: PlayerCertListItem) {
+  proxy.$modal.confirm('确认通过认证？通过后该用户将成为已认证球员。').then(() => {
+    return approvePlayerCert(row.id, {})
+  }).then(() => {
     proxy.$modal.msgSuccess('审核通过')
-    approveOpen.value = false
     getList()
-  })
+    if (detailOpen.value && currentId.value === row.id) {
+      handleDetail(row)
+    }
+  }).catch(() => {})
 }
 
 function openReject(row: PlayerCertListItem) {
   currentId.value = row.id
-  rejectForm.value = { rejectReason: '', auditRemark: '' }
+  rejectForm.value = { rejectReason: '' }
   rejectOpen.value = true
 }
 
 function submitReject() {
-  proxy.$refs.rejectRef.validate((valid: boolean) => {
-    if (!valid || !currentId.value) return
-    rejectPlayerCert(currentId.value, rejectForm.value).then(() => {
-      proxy.$modal.msgSuccess('已驳回')
-      rejectOpen.value = false
-      getList()
-    })
+  if (!currentId.value) return
+  const payload: PlayerCertRejectReq = {}
+  if (rejectForm.value.rejectReason?.trim()) {
+    payload.rejectReason = rejectForm.value.rejectReason.trim()
+  }
+  rejectPlayerCert(currentId.value, payload).then(() => {
+    proxy.$modal.msgSuccess('已驳回')
+    rejectOpen.value = false
+    getList()
+    if (detailOpen.value) {
+      const row = dataList.value.find(item => item.id === currentId.value)
+      if (row) {
+        handleDetail(row)
+      }
+    }
   })
 }
 

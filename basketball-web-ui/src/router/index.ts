@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import { sanitizeRedirect } from '@/utils/auth'
+import { resolveAuthenticatedEntryRedirect } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
 
 
@@ -937,8 +937,9 @@ router.beforeEach(async (to) => {
   }
 
   if (guestOnly && loggedIn) {
-    const redirect = sanitizeRedirect(to.query.redirect)
-    return redirect.startsWith('/account') ? { name: 'AccountOverview' } : redirect
+    return {
+      path: resolveAuthenticatedEntryRedirect(to.query.redirect),
+    }
   }
 
   return true

@@ -13,6 +13,7 @@ const showAddDialog = ref(false)
 const showPendingDialog = ref(false)
 const submitting = ref(false)
 const uploadingProof = ref(false)
+const proofInputRef = ref<HTMLInputElement | null>(null)
 
 const account = computed(() => accountStore.currentAccount)
 const records = computed(() => accountStore.platformGameIds)
@@ -45,6 +46,11 @@ function openAdd(platform: IdentityPlatform) {
   addForm.proofFileId = ''
   addForm.proofFileName = ''
   showAddDialog.value = true
+}
+
+function triggerProofUpload() {
+  if (uploadingProof.value) return
+  proofInputRef.value?.click()
 }
 
 async function handleProofUpload(event: Event) {
@@ -197,12 +203,16 @@ function viewPending() {
           <div class="account-info-row"><span class="account-info-row__label">平台</span><span>{{ IDENTITY_PLATFORM_LABELS[addForm.platform] }}</span></div>
         </div>
         <input v-model="addForm.gameId" class="identity-apply-form__input" placeholder="请输入游戏 ID" />
-        <label class="platform-proof-upload">
-          <input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" hidden @change="handleProofUpload" />
-          <button type="button" class="account-btn-secondary" :disabled="uploadingProof">
-            {{ uploadingProof ? '上传中...' : addForm.proofFileId ? '重新上传证明材料' : '上传证明材料' }}
-          </button>
-        </label>
+        <input
+          ref="proofInputRef"
+          type="file"
+          class="platform-proof-upload__input"
+          accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+          @change="handleProofUpload"
+        />
+        <button type="button" class="account-btn-secondary platform-proof-upload" :disabled="uploadingProof" @click="triggerProofUpload">
+          {{ uploadingProof ? '上传中...' : addForm.proofFileId ? '重新上传证明材料' : '上传证明材料' }}
+        </button>
         <p v-if="addForm.proofFileName" class="platform-proof-name">{{ addForm.proofFileName }}</p>
         <div class="account-dialog__actions">
           <button type="button" class="account-btn-secondary" @click="showAddDialog = false">取消</button>
@@ -231,8 +241,16 @@ function viewPending() {
 @import '../styles/account-center.scss';
 
 .platform-proof-upload {
-  display: block;
+  display: inline-block;
   margin-top: 12px;
+}
+
+.platform-proof-upload__input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .platform-proof-name {

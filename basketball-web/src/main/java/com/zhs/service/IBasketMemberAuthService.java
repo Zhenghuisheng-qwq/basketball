@@ -16,6 +16,8 @@ public interface IBasketMemberAuthService {
 
     EmailCodeSendResp sendEmailCode(EmailCodeSendReq req, String clientIp);
 
+    void assertUsernameAvailable(String username);
+
     MemberLoginResp register(MemberRegisterReq req, String clientIp, String userAgent);
 
     MemberLoginResp loginByPassword(MemberPasswordLoginReq req, String clientIp, String userAgent);

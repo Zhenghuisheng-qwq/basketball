@@ -12,25 +12,34 @@
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
-    <select id="selectById" resultMap="BasketMemberAccountResult">
-        select id, account_no, username, email, account_status, create_time, update_time, is_delete
-        from basket_member_account where id = #{id} and is_delete = 0
-    </select>
-
-    <select id="selectList" resultType="com.zhs.basket.vo.AccountPlayerListVo">
-        select acc.id as memberId, acc.account_no as accountNo, acc.email as email,
-               mp.nickname as nickname, p.id as playerId, p.player_no as playerNo,
-               p.game_terminal as gameTerminal, p.game_account as gameAccount,
-               p.certification_status as certificationStatus, p.player_status as playerStatus,
-               acc.account_status as accountStatus, p.certified_time as certifiedTime,
-               acc.create_time as createTime
+    <sql id="memberListFrom">
         from basket_member_account acc
         left join basket_member_profile mp on mp.member_id = acc.id and mp.is_delete = 0
+        left join basket_file_asset af on af.id = mp.avatar_file_id and af.is_delete = 0
         left join basket_player_profile p on p.member_id = acc.id and p.is_delete = 0
+        left join basket_team ct on ct.id = p.current_team_id and ct.is_delete = 0
+        left join (
+            select cq.player_id, max(cq.id) as qual_id
+            from basket_captain_qualification cq
+            inner join basket_player_profile pp on pp.id = cq.player_id and pp.is_delete = 0
+            where cq.is_delete = 0
+              and cq.is_current = 1
+              and cq.qualification_status = 1
+              and cq.payment_confirmed = 1
+              and pp.certification_status = 3
+              and (cq.valid_from is null or cq.valid_from &lt;= now())
+              and (cq.valid_to is null or cq.valid_to &gt;= now())
+            group by cq.player_id
+        ) captain on captain.player_id = p.id
+    </sql>
+
+    <sql id="memberListWhere">
         where acc.is_delete = 0
         <if test="email != null and email != ''">and acc.email like concat('%', #{email}, '%')</if>
         <if test="nickname != null and nickname != ''">and mp.nickname like concat('%', #{nickname}, '%')</if>
         <if test="playerNo != null and playerNo != ''">and p.player_no like concat('%', #{playerNo}, '%')</if>
+        <if test="gameTerminal != null and gameTerminal != ''">and p.game_terminal = #{gameTerminal}</if>
+        <if test="accountStatus != null">and acc.account_status = #{accountStatus}</if>
         <if test="gameId != null and gameId != ''">
             and (
                 p.game_account like concat('%', #{gameId}, '%')
@@ -48,22 +57,93 @@
         </if>
         <if test="certificationStatus != null">and p.certification_status = #{certificationStatus}</if>
         <if test="playerStatus != null">and p.player_status = #{playerStatus}</if>
+        <if test="hasTeam != null and hasTeam == 1">and p.current_team_id is not null</if>
+        <if test="hasTeam != null and hasTeam == 0">and (p.id is null or p.current_team_id is null)</if>
+        <if test="hasCaptainQual != null and hasCaptainQual == 1">and captain.qual_id is not null</if>
+        <if test="hasCaptainQual != null and hasCaptainQual == 0">and (p.id is null or captain.qual_id is null)</if>
+        <if test="certStage != null and certStage != ''">
+            <choose>
+                <when test="certStage == 'NO_PROFILE'">and p.id is null</when>
+                <when test="certStage == 'APPROVED'">and p.certification_status = 3</when>
+                <when test="certStage == 'PENDING'">
+                    and p.certification_status != 3
+                    and exists (
+                        select 1 from basket_player_cert_application ca
+                        where ca.member_id = acc.id and ca.is_delete = 0
+                          and ca.application_status in (1, 2)
+                    )
+                </when>
+                <when test="certStage == 'REJECTED'">
+                    and p.certification_status != 3
+                    and not exists (
+                        select 1 from basket_player_cert_application ca
+                        where ca.member_id = acc.id and ca.is_delete = 0
+                          and ca.application_status in (1, 2)
+                    )
+                    and exists (
+                        select 1 from basket_player_cert_application ca
+                        where ca.member_id = acc.id and ca.is_delete = 0
+                          and ca.application_status = 4
+                    )
+                </when>
+                <when test="certStage == 'NOT_CERTIFIED'">
+                    and p.id is not null
+                    and p.certification_status != 3
+                    and not exists (
+                        select 1 from basket_player_cert_application ca
+                        where ca.member_id = acc.id and ca.is_delete = 0
+                          and ca.application_status in (1, 2, 4)
+                    )
+                </when>
+            </choose>
+        </if>
+    </sql>
+
+    <select id="selectById" resultMap="BasketMemberAccountResult">
+        select id, account_no, username, email, account_status, create_time, update_time, is_delete
+        from basket_member_account where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultType="com.zhs.basket.vo.AccountPlayerListVo">
+        select acc.id as memberId, acc.account_no as accountNo, acc.username as username, acc.email as email,
+               mp.nickname as nickname, af.access_url as avatarUrl, acc.email_verified as emailVerified,
+               p.id as playerId, p.player_no as playerNo,
+               p.game_terminal as gameTerminal, p.game_account as gameAccount,
+               p.certification_status as certificationStatus, p.player_status as playerStatus,
+               acc.account_status as accountStatus, p.certified_time as certifiedTime,
+               acc.create_time as createTime, acc.last_login_time as lastLoginTime,
+               p.current_team_id as currentTeamId, ct.team_name as currentTeamName,
+               case when captain.qual_id is not null then 1 else 0 end as hasCaptainQual,
+               (
+                   select ca.application_status
+                   from basket_player_cert_application ca
+                   where ca.member_id = acc.id and ca.is_delete = 0
+                   order by ca.create_time desc
+                   limit 1
+               ) as latestApplicationStatus
+        <include refid="memberListFrom"/>
+        <include refid="memberListWhere"/>
         order by acc.create_time desc
     </select>
 
     <select id="selectDetail" resultType="com.zhs.basket.vo.AccountPlayerDetailVo">
         select acc.id as memberId, acc.account_no as accountNo, acc.username as username,
-               acc.email as email, acc.account_status as accountStatus,
+               acc.email as email, acc.email_verified as emailVerified,
+               acc.account_status as accountStatus, acc.last_login_time as lastLoginTime,
+               acc.last_login_ip as lastLoginIp,
                acc.create_time as accountCreateTime, acc.update_time as accountUpdateTime,
-               mp.nickname as nickname, mp.gender as gender, mp.profile_status as profileStatus,
+               mp.nickname as nickname, af.access_url as avatarUrl,
+               mp.gender as gender, mp.profile_status as profileStatus,
                p.id as playerId, p.player_no as playerNo, p.game_terminal as gameTerminal,
                p.game_account as gameAccount, p.game_nickname as gameNickname,
                p.position_code as positionCode, p.certification_status as certificationStatus,
                p.player_status as playerStatus, p.certified_time as certifiedTime,
-               p.current_team_id as currentTeamId
+               p.current_team_id as currentTeamId, ct.team_name as currentTeamName
         from basket_member_account acc
         left join basket_member_profile mp on mp.member_id = acc.id and mp.is_delete = 0
+        left join basket_file_asset af on af.id = mp.avatar_file_id and af.is_delete = 0
         left join basket_player_profile p on p.member_id = acc.id and p.is_delete = 0
+        left join basket_team ct on ct.id = p.current_team_id and ct.is_delete = 0
         where acc.id = #{memberId} and acc.is_delete = 0
     </select>
 </mapper>

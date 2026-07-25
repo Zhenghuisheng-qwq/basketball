@@ -18,4 +18,6 @@ public class CaptainQualificationDetailVo {
     private Date validFrom;
     private Date validTo;
     private String revokeReason;
+    private Integer runtimeValid;
+    private String runtimeInvalidReason;
 }

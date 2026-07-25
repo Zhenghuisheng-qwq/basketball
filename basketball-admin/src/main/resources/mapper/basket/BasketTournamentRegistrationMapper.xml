@@ -38,6 +38,12 @@
         select count(1) from basket_tournament_registration
         where season_id = #{seasonId} and registration_status = 3 and is_delete = 0
     </select>
+    <select id="countByTournamentId" resultType="int">
+        select count(1)
+        from basket_tournament_registration r
+        inner join basket_tournament_season s on s.id = r.season_id and s.is_delete = 0
+        where s.tournament_id = #{tournamentId} and r.is_delete = 0
+    </select>
     <select id="selectApprovedBySeasonAndTeam" resultMap="BasketTournamentRegistrationResult">
         select id, registration_no, season_id, team_id, captain_member_id, captain_player_id, contact_name, contact_mobile, contact_email, registration_status, lineup_count, submitted_time, audit_time, withdrawal_time, withdrawal_reason, current_auditor_id, remark, create_time, update_time, is_delete
         from basket_tournament_registration

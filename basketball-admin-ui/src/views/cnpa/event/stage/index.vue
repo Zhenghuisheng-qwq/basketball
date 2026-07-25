@@ -6,10 +6,8 @@
           <el-option v-for="item in tournamentOptions" :key="item.id" :label="item.tournamentName" :value="item.id" />
         </el-select>
       </el-form-item>
-      <el-form-item label="所属赛季" prop="seasonId">
-        <el-select v-model="queryParams.seasonId" placeholder="请选择赛季" filterable clearable style="width: 200px" @change="handleQuery">
-          <el-option v-for="item in seasonOptions" :key="item.id" :label="item.seasonName" :value="item.id" />
-        </el-select>
+      <el-form-item label="所属赛季">
+        <el-input :model-value="operationalSeasonLabel" disabled placeholder="请先选择赛事" style="width: 200px" />
       </el-form-item>
       <el-form-item label="阶段名称" prop="stageName">
         <el-input v-model="queryParams.stageName" placeholder="请输入阶段名称" clearable style="width: 200px" @keyup.enter="handleQuery" />
@@ -24,6 +22,16 @@
         <el-button icon="Refresh" @click="resetQuery">重置</el-button>
       </el-form-item>
     </el-form>
+
+    <el-alert
+      v-if="filterTournamentId && !queryParams.seasonId"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="mb8"
+      title="该赛事尚未初始化运营赛季"
+      description="请先在「赛事列表」中创建或保存该赛事，系统会自动生成运营赛季。"
+    />
 
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
@@ -109,13 +117,6 @@
     <el-dialog :title="dialogTitle" v-model="dialogOpen" width="680px" append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-row>
-          <el-col :span="12" v-if="!currentId">
-            <el-form-item label="所属赛季" prop="seasonId">
-              <el-select v-model="form.seasonId" placeholder="请选择赛季" filterable style="width: 100%">
-                <el-option v-for="item in formSeasonOptions" :key="item.id" :label="item.seasonName" :value="item.id" />
-              </el-select>
-            </el-form-item>
-          </el-col>
           <el-col :span="12">
             <el-form-item label="阶段名称" prop="stageName">
               <el-input v-model="form.stageName" placeholder="请输入阶段名称" />
@@ -217,12 +218,10 @@ import {
   listRoundByStage,
   updateRound
 } from '@/api/basket/tournamentRound'
-import { listSeasonByTournament } from '@/api/basket/season'
 import { listTournament } from '@/api/basket/tournament'
 import type {
   RoundCreateReq,
   RoundListItem,
-  SeasonListItem,
   StageCreateReq,
   StageDetail,
   StageListItem,
@@ -244,8 +243,16 @@ const dialogTitle = ref('')
 const currentId = ref<number>()
 const filterTournamentId = ref<number>()
 const tournamentOptions = ref<TournamentListItem[]>([])
-const seasonOptions = ref<SeasonListItem[]>([])
-const formSeasonOptions = ref<SeasonListItem[]>([])
+
+const operationalSeasonLabel = computed(() => {
+  const tournament = tournamentOptions.value.find(item => item.id === filterTournamentId.value)
+  if (!tournament) return ''
+  if (!tournament.operationalSeasonId) return '该赛事尚未初始化运营赛季'
+  const seasonName = tournament.competitionSeasonName || '运营赛季'
+  return tournament.competitionSeasonYear
+    ? `${seasonName} (${tournament.competitionSeasonYear})`
+    : seasonName
+})
 
 const roundDrawerOpen = ref(false)
 const roundLoading = ref(false)
@@ -282,25 +289,25 @@ const roundRules = {
   roundName: [{ required: true, message: '轮次名称不能为空', trigger: 'blur' }]
 }
 
+function syncOperationalSeason(tournamentId?: number) {
+  const tournament = tournamentOptions.value.find(item => item.id === tournamentId)
+  queryParams.value.seasonId = tournament?.operationalSeasonId
+}
+
 function loadTournaments() {
   listTournament({ pageNum: 1, pageSize: 500 }).then(res => {
     tournamentOptions.value = res.rows
-  })
-}
-
-function loadSeasonOptions(tournamentId?: number) {
-  if (!tournamentId) {
-    seasonOptions.value = []
-    return Promise.resolve()
-  }
-  return listSeasonByTournament(tournamentId).then(res => {
-    seasonOptions.value = res.data || []
+    if (res.rows.length > 0 && !filterTournamentId.value) {
+      filterTournamentId.value = res.rows[0].id
+      handleTournamentFilterChange(filterTournamentId.value)
+    }
   })
 }
 
 function handleTournamentFilterChange(val?: number) {
-  queryParams.value.seasonId = undefined
-  loadSeasonOptions(val).then(() => handleQuery())
+  filterTournamentId.value = val
+  syncOperationalSeason(val)
+  handleQuery()
 }
 
 function getList() {
@@ -320,7 +327,7 @@ function handleQuery() {
 
 function resetQuery() {
   filterTournamentId.value = undefined
-  seasonOptions.value = []
+  queryParams.value.seasonId = undefined
   proxy.resetForm('queryRef')
   handleQuery()
 }
@@ -340,22 +347,15 @@ function resetFormData() {
   proxy.resetForm('formRef')
 }
 
-async function loadFormSeasonOptions() {
-  if (filterTournamentId.value) {
-    const res = await listSeasonByTournament(filterTournamentId.value)
-    formSeasonOptions.value = res.data || []
+function handleAdd() {
+  if (!queryParams.value.seasonId) {
+    proxy.$modal.msgWarning('请先选择已关联赛季的赛事')
     return
   }
-  if (tournamentOptions.value.length === 0) return
-  const res = await listSeasonByTournament(tournamentOptions.value[0].id)
-  formSeasonOptions.value = res.data || []
-}
-
-function handleAdd() {
   resetFormData()
+  form.value.seasonId = queryParams.value.seasonId
   currentId.value = undefined
   dialogTitle.value = '新增赛事阶段'
-  loadFormSeasonOptions()
   dialogOpen.value = true
 }
 

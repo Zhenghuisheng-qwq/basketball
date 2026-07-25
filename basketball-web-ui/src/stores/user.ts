@@ -31,6 +31,7 @@ export const useUserStore = defineStore('user', () => {
   const userInfo = ref<UserInfo | null>(null)
   const initialized = ref(false)
   const loading = ref(false)
+  let sessionRestorePromise: Promise<void> | null = null
 
   const isAuthenticated = computed(() => Boolean(token.value && currentMember.value))
 
@@ -68,46 +69,93 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = null
   }
 
+  function hydrateMemberFromSessionCache(): boolean {
+    const localToken = getToken()
+    const session = getAuthSession()
+    if (!localToken || !session) return false
+    token.value = localToken
+    currentMember.value = {
+      memberId: session.memberId,
+      accountNo: session.accountNo,
+      nickname: session.nickname,
+      avatarUrl: session.avatarUrl || null,
+      emailMasked: session.email,
+      emailVerified: session.emailVerified,
+      accountStatus: session.accountStatus,
+    }
+    userInfo.value = {
+      id: session.memberId,
+      nickname: session.nickname,
+      avatar: session.avatarUrl || undefined,
+    }
+    return true
+  }
+
   async function restoreSession() {
-    if (loading.value) return
-    loading.value = true
-    try {
-      const localToken = getToken()
-      if (!localToken) {
+    if (sessionRestorePromise) {
+      return sessionRestorePromise
+    }
+
+    sessionRestorePromise = (async () => {
+      loading.value = true
+      try {
+        const localToken = getToken()
+        if (!localToken) {
+          clearLocalAuth()
+          return
+        }
+        hydrateMemberFromSessionCache()
+        const res = await getMemberSession()
+        if (!res.data?.memberId) {
+          throw new Error('Invalid session')
+        }
+        currentMember.value = res.data
+        userInfo.value = {
+          id: res.data.memberId,
+          nickname: res.data.nickname,
+          avatar: res.data.avatarUrl || undefined,
+        }
+        const remember = Boolean(localStorage.getItem('cnpa_web_token'))
+        setAuthSession({
+          loggedIn: true,
+          memberId: res.data.memberId,
+          userId: toBridgeUserId(res.data.memberId),
+          email: res.data.emailMasked,
+          nickname: res.data.nickname,
+          avatarUrl: res.data.avatarUrl || '',
+          accountNo: res.data.accountNo,
+          emailVerified: Boolean(res.data.emailVerified),
+          accountStatus: res.data.accountStatus,
+          loginTime: Date.now(),
+        }, remember)
+      } catch {
         clearLocalAuth()
-        return
+      } finally {
+        loading.value = false
+        initialized.value = true
       }
-      token.value = localToken
-      const res = await getMemberSession()
-      currentMember.value = res.data
-      userInfo.value = {
-        id: res.data.memberId,
-        nickname: res.data.nickname,
-        avatar: res.data.avatarUrl || undefined,
-      }
-      const remember = Boolean(localStorage.getItem('cnpa_web_token'))
-      setAuthSession({
-        loggedIn: true,
-        memberId: res.data.memberId,
-        userId: toBridgeUserId(res.data.memberId),
-        email: res.data.emailMasked,
-        nickname: res.data.nickname,
-        avatarUrl: res.data.avatarUrl || '',
-        accountNo: res.data.accountNo,
-        emailVerified: Boolean(res.data.emailVerified),
-        accountStatus: res.data.accountStatus,
-        loginTime: Date.now(),
-      }, remember)
-    } catch {
-      clearLocalAuth()
+    })()
+
+    try {
+      await sessionRestorePromise
     } finally {
-      loading.value = false
-      initialized.value = true
+      sessionRestorePromise = null
     }
   }
 
   async function ensureInitialized() {
-    if (initialized.value) return
+    if (!getToken()) {
+      if (!initialized.value) {
+        await restoreSession()
+      } else if (token.value || currentMember.value) {
+        clearLocalAuth()
+      }
+      return
+    }
+    if (currentMember.value) {
+      if (!initialized.value) initialized.value = true
+      return
+    }
     await restoreSession()
   }
 

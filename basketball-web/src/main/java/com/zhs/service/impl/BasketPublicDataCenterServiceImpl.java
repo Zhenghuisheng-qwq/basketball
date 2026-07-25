@@ -5,6 +5,7 @@ import com.zhs.dao.BasketPlayerRankDao;
 import com.zhs.dao.BasketTeamRankDao;
 import com.zhs.enums.PublicPlayerRankTypeEnum;
 import com.zhs.enums.PublicTeamRankTypeEnum;
+import com.zhs.model.BasketCompetitionSeason;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketPlayerRank;
 import com.zhs.model.BasketTeam;
@@ -55,6 +56,11 @@ public class BasketPublicDataCenterServiceImpl implements IBasketPublicDataCente
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         Map<Long, BasketTournament> tournamentMap = publicSupport.loadTournamentMap(tournamentIds);
+        Set<Long> competitionSeasonIds = tournamentMap.values().stream()
+                .map(BasketTournament::getCompetitionSeasonId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, BasketCompetitionSeason> competitionSeasonMap = publicSupport.loadCompetitionSeasonMap(competitionSeasonIds);
         List<PublicSeasonItemVo> result = new ArrayList<>(seasons.size());
         for (BasketTournamentSeason season : seasons) {
             if (!tournamentMap.containsKey(season.getTournamentId())) {
@@ -74,6 +80,14 @@ public class BasketPublicDataCenterServiceImpl implements IBasketPublicDataCente
             vo.setSeasonStartTime(season.getSeasonStartTime());
             vo.setSeasonEndTime(season.getSeasonEndTime());
             vo.setMaxTeamCount(season.getMaxTeamCount());
+            if (tournament != null && tournament.getCompetitionSeasonId() != null) {
+                vo.setCompetitionSeasonId(tournament.getCompetitionSeasonId());
+                BasketCompetitionSeason competitionSeason = competitionSeasonMap.get(tournament.getCompetitionSeasonId());
+                if (competitionSeason != null) {
+                    vo.setCompetitionSeasonName(competitionSeason.getSeasonName());
+                    vo.setCompetitionSeasonYear(competitionSeason.getSeasonYear());
+                }
+            }
             result.add(vo);
         }
         return result;

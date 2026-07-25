@@ -74,7 +74,7 @@ async function loadList() {
 }
 
 function goEntry(matchId: number) {
-  router.push({ path: '/cnpa/competition/match-data-entry', query: { matchId: String(matchId) } })
+  router.push({ path: '/competition-exec/match-data-entry', query: { matchId: String(matchId) } })
 }
 
 function openReject(row: any) {
