@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketPlayerPlatformChangeRequestMapper">
+    <resultMap type="com.zhs.basket.domain.BasketPlayerPlatformChangeRequest" id="BasketPlayerPlatformChangeRequestResult">
+        <id property="id" column="id" />
+        <result property="requestNo" column="request_no" />
+        <result property="playerId" column="player_id" />
+        <result property="memberId" column="member_id" />
+        <result property="changeType" column="change_type" />
+        <result property="platform" column="platform" />
+        <result property="platformAccountId" column="platform_account_id" />
+        <result property="oldDisplayGameId" column="old_display_game_id" />
+        <result property="newDisplayGameId" column="new_display_game_id" />
+        <result property="newNormalizedGameId" column="new_normalized_game_id" />
+        <result property="proofFileId" column="proof_file_id" />
+        <result property="requestStatus" column="request_status" />
+        <result property="submitTime" column="submit_time" />
+        <result property="reviewedTime" column="reviewed_time" />
+        <result property="reviewerId" column="reviewer_id" />
+        <result property="reviewRemark" column="review_remark" />
+        <result property="resultPlatformAccountId" column="result_platform_account_id" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="memberJoins">
+        left join basket_member_profile mp on mp.member_id = r.member_id and mp.is_delete = 0
+        left join basket_member_account acc on acc.id = r.member_id and acc.is_delete = 0
+        left join basket_player_profile p on p.id = r.player_id and p.is_delete = 0
+    </sql>
+
+    <select id="selectList" resultType="com.zhs.basket.vo.PlayerPlatformChangeListVo">
+        select r.id, r.request_no as requestNo, r.player_id as playerId, r.member_id as memberId,
+               mp.nickname as nickname, acc.email as email, p.player_no as playerNo,
+               r.change_type as changeType, r.platform as platform,
+               r.old_display_game_id as oldDisplayGameId, r.new_display_game_id as newDisplayGameId,
+               r.request_status as requestStatus, r.submit_time as submitTime, r.reviewed_time as reviewedTime
+        from basket_player_platform_change_request r
+        <include refid="memberJoins"/>
+        where r.is_delete = 0
+        <if test="requestNo != null and requestNo != ''">and r.request_no like concat('%', #{requestNo}, '%')</if>
+        <if test="nickname != null and nickname != ''">and mp.nickname like concat('%', #{nickname}, '%')</if>
+        <if test="email != null and email != ''">and acc.email like concat('%', #{email}, '%')</if>
+        <if test="playerNo != null and playerNo != ''">and p.player_no like concat('%', #{playerNo}, '%')</if>
+        <if test="platform != null and platform != ''">and r.platform = #{platform}</if>
+        <if test="changeType != null and changeType != ''">and r.change_type = #{changeType}</if>
+        <if test="requestStatus != null">and r.request_status = #{requestStatus}</if>
+        <if test="memberId != null">and r.member_id = #{memberId}</if>
+        order by r.submit_time desc, r.create_time desc
+    </select>
+
+    <select id="selectDetailVo" resultType="com.zhs.basket.vo.PlayerPlatformChangeDetailVo">
+        select r.id, r.request_no as requestNo, r.player_id as playerId, r.member_id as memberId,
+               mp.nickname as nickname, acc.email as email, p.player_no as playerNo,
+               r.change_type as changeType, r.platform as platform, r.platform_account_id as platformAccountId,
+               r.old_display_game_id as oldDisplayGameId, r.new_display_game_id as newDisplayGameId,
+               r.new_normalized_game_id as newNormalizedGameId, r.proof_file_id as proofFileId,
+               r.request_status as requestStatus, r.submit_time as submitTime,
+               r.reviewed_time as reviewedTime, r.reviewer_id as reviewerId, r.review_remark as reviewRemark,
+               r.result_platform_account_id as resultPlatformAccountId
+        from basket_player_platform_change_request r
+        <include refid="memberJoins"/>
+        where r.id = #{id} and r.is_delete = 0
+    </select>
+
+    <select id="selectById" resultMap="BasketPlayerPlatformChangeRequestResult">
+        select id, request_no, player_id, member_id, change_type, platform, platform_account_id,
+               old_display_game_id, new_display_game_id, new_normalized_game_id, proof_file_id,
+               request_status, submit_time, reviewed_time, reviewer_id, review_remark,
+               result_platform_account_id, create_time, update_time, is_delete
+        from basket_player_platform_change_request where id = #{id} and is_delete = 0
+    </select>
+
+    <update id="updateStatusIfMatch">
+        update basket_player_platform_change_request
+        set request_status = #{toStatus},
+            reviewer_id = #{reviewerId},
+            review_remark = #{reviewRemark},
+            reviewed_time = #{reviewedTime},
+            result_platform_account_id = #{resultPlatformAccountId},
+            update_time = now()
+        where id = #{id} and is_delete = 0 and request_status in
+        <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+    </update>
+</mapper>

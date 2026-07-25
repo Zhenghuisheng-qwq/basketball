@@ -1,0 +1,40 @@
+import request from '@/utils/request'
+
+export function listMatchDispute(query?: Record<string, unknown>) {
+  return request({
+    url: '/basket/matchDispute/list',
+    method: 'get',
+    params: query
+  })
+}
+
+export function getMatchDispute(id: number | string) {
+  return request({
+    url: `/basket/matchDispute/${id}`,
+    method: 'get'
+  })
+}
+
+export function createMatchDispute(data: Record<string, unknown>) {
+  return request({
+    url: '/basket/matchDispute',
+    method: 'post',
+    data
+  })
+}
+
+export function rejectMatchDispute(id: number | string, data: Record<string, unknown>) {
+  return request({
+    url: `/basket/matchDispute/${id}/reject`,
+    method: 'post',
+    data
+  })
+}
+
+export function upholdMatchDispute(id: number | string, data: Record<string, unknown>) {
+  return request({
+    url: `/basket/matchDispute/${id}/uphold`,
+    method: 'post',
+    data
+  })
+}

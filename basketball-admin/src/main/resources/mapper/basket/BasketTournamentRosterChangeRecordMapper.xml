@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketTournamentRosterChangeRecordMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_tournament_roster_change_record (season_id, change_request_id, change_type, player_id,
+            source_event_team_id, target_event_team_id, source_roster_id, target_roster_id, before_snapshot,
+            after_snapshot, operator_id, operator_name, operate_reason, effective_time, create_time, update_time, is_delete)
+        values (#{seasonId}, #{changeRequestId}, #{changeType}, #{playerId}, #{sourceEventTeamId}, #{targetEventTeamId},
+            #{sourceRosterId}, #{targetRosterId}, #{beforeSnapshot}, #{afterSnapshot}, #{operatorId}, #{operatorName},
+            #{operateReason}, #{effectiveTime}, #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+    <select id="selectByPlayerAndSeason" resultType="com.zhs.basket.vo.SeasonRosterChangeRecordVo">
+        select id, season_id as seasonId, change_request_id as changeRequestId, change_type as changeType,
+               player_id as playerId, source_event_team_id as sourceEventTeamId, target_event_team_id as targetEventTeamId,
+               before_snapshot as beforeSnapshot, after_snapshot as afterSnapshot, operator_name as operatorName,
+               operate_reason as operateReason, effective_time as effectiveTime, create_time as createTime
+        from basket_tournament_roster_change_record
+        where season_id = #{seasonId} and player_id = #{playerId} and is_delete = 0
+        order by create_time desc, id desc
+    </select>
+    <select id="selectByEventTeam" resultType="com.zhs.basket.vo.SeasonRosterChangeRecordVo">
+        select id, season_id as seasonId, change_request_id as changeRequestId, change_type as changeType,
+               player_id as playerId, source_event_team_id as sourceEventTeamId, target_event_team_id as targetEventTeamId,
+               before_snapshot as beforeSnapshot, after_snapshot as afterSnapshot, operator_name as operatorName,
+               operate_reason as operateReason, effective_time as effectiveTime, create_time as createTime
+        from basket_tournament_roster_change_record
+        where is_delete = 0 and (source_event_team_id = #{eventTeamId} or target_event_team_id = #{eventTeamId})
+        order by create_time desc, id desc
+    </select>
+</mapper>

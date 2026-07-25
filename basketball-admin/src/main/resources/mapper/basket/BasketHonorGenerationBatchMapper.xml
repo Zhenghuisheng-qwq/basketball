@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketHonorGenerationBatchMapper">
+
+    <resultMap type="com.zhs.basket.domain.BasketHonorGenerationBatch" id="HonorGenBatchResult">
+        <id property="id" column="id"/>
+        <result property="batchNo" column="batch_no"/>
+        <result property="seasonId" column="season_id"/>
+        <result property="settlementBatchId" column="settlement_batch_id"/>
+        <result property="batchStatus" column="batch_status"/>
+        <result property="honorCount" column="honor_count"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="errorMessage" column="error_message"/>
+        <result property="currentFlag" column="current_flag"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="HonorGenBatchResult">
+        select id, batch_no, season_id, settlement_batch_id, batch_status, honor_count,
+               operator_id, error_message, current_flag, create_time, update_time, is_delete
+        from basket_honor_generation_batch
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectCurrentBySeason" resultMap="HonorGenBatchResult">
+        select id, batch_no, season_id, settlement_batch_id, batch_status, honor_count,
+               operator_id, error_message, current_flag, create_time, update_time, is_delete
+        from basket_honor_generation_batch
+        where season_id = #{seasonId} and current_flag = 1 and is_delete = 0
+        order by id desc limit 1
+    </select>
+
+    <select id="selectBySeason" resultType="com.zhs.basket.resp.HonorGenerationBatchResp">
+        select b.id, b.batch_no as batchNo, b.season_id as seasonId, s.season_name as seasonName,
+               b.settlement_batch_id as settlementBatchId, b.batch_status as batchStatus,
+               b.honor_count as honorCount, b.operator_id as operatorId,
+               b.error_message as errorMessage, b.current_flag as currentFlag,
+               b.create_time as createTime, b.update_time as updateTime
+        from basket_honor_generation_batch b
+        left join basket_tournament_season s on s.id = b.season_id and s.is_delete = 0
+        where b.is_delete = 0 and b.season_id = #{seasonId}
+        order by b.id desc
+    </select>
+
+    <select id="countByNoPrefix" resultType="int">
+        select count(1) from basket_honor_generation_batch where batch_no like concat(#{prefix}, '%')
+    </select>
+
+    <update id="clearCurrentBySeason">
+        update basket_honor_generation_batch
+        set current_flag = 0, update_time = now()
+        where season_id = #{seasonId} and current_flag = 1 and is_delete = 0
+    </update>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_honor_generation_batch (
+            batch_no, season_id, settlement_batch_id, batch_status, honor_count,
+            operator_id, error_message, current_flag, create_time, update_time, is_delete
+        ) values (
+            #{batchNo}, #{seasonId}, #{settlementBatchId}, #{batchStatus}, #{honorCount},
+            #{operatorId}, #{errorMessage}, #{currentFlag}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateStatus">
+        update basket_honor_generation_batch
+        <set>
+            <if test="batchStatus != null">batch_status = #{batchStatus},</if>
+            <if test="honorCount != null">honor_count = #{honorCount},</if>
+            <if test="errorMessage != null">error_message = #{errorMessage},</if>
+            <if test="currentFlag != null">current_flag = #{currentFlag},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+</mapper>

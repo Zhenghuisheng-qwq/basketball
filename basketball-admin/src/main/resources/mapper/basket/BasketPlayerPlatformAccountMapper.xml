@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketPlayerPlatformAccountMapper">
+    <resultMap type="com.zhs.basket.domain.BasketPlayerPlatformAccount" id="BasketPlayerPlatformAccountResult">
+        <id property="id" column="id" />
+        <result property="playerId" column="player_id" />
+        <result property="platform" column="platform" />
+        <result property="displayGameId" column="display_game_id" />
+        <result property="normalizedGameId" column="normalized_game_id" />
+        <result property="accountStatus" column="account_status" />
+        <result property="isPrimary" column="is_primary" />
+        <result property="sourceApplicationId" column="source_application_id" />
+        <result property="approvedBy" column="approved_by" />
+        <result property="approvedTime" column="approved_time" />
+        <result property="effectiveTime" column="effective_time" />
+        <result property="invalidTime" column="invalid_time" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="accountColumns">
+        id, player_id, platform, display_game_id, normalized_game_id, account_status, is_primary,
+        source_application_id, approved_by, approved_time, effective_time, invalid_time,
+        create_time, update_time, is_delete
+    </sql>
+
+    <select id="selectById" resultMap="BasketPlayerPlatformAccountResult">
+        select <include refid="accountColumns"/> from basket_player_platform_account
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByPlayerId" resultMap="BasketPlayerPlatformAccountResult">
+        select <include refid="accountColumns"/> from basket_player_platform_account
+        where player_id = #{playerId} and is_delete = 0
+        order by is_primary desc, effective_time desc, id desc
+    </select>
+
+    <select id="selectPrimaryByPlayerId" resultMap="BasketPlayerPlatformAccountResult">
+        select <include refid="accountColumns"/> from basket_player_platform_account
+        where player_id = #{playerId} and is_primary = 1 and is_delete = 0 limit 1
+    </select>
+
+    <select id="countActiveByPlatformAndNormalized" resultType="int">
+        select count(1) from basket_player_platform_account
+        where platform = #{platform} and normalized_game_id = #{normalizedGameId}
+          and account_status = 1 and is_delete = 0
+    </select>
+
+    <select id="countActiveByPlatformAndNormalizedExcludePlayer" resultType="int">
+        select count(1) from basket_player_platform_account
+        where platform = #{platform} and normalized_game_id = #{normalizedGameId}
+          and account_status = 1 and is_delete = 0
+          and player_id != #{excludePlayerId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_player_platform_account (
+            player_id, platform, display_game_id, normalized_game_id, account_status, is_primary,
+            source_application_id, approved_by, approved_time, effective_time, invalid_time,
+            create_time, update_time, is_delete
+        ) values (
+            #{playerId}, #{platform}, #{displayGameId}, #{normalizedGameId}, #{accountStatus}, #{isPrimary},
+            #{sourceApplicationId}, #{approvedBy}, #{approvedTime}, #{effectiveTime}, #{invalidTime},
+            #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_player_platform_account
+        <set>
+            <if test="displayGameId != null">display_game_id = #{displayGameId},</if>
+            <if test="normalizedGameId != null">normalized_game_id = #{normalizedGameId},</if>
+            <if test="accountStatus != null">account_status = #{accountStatus},</if>
+            <if test="isPrimary != null">is_primary = #{isPrimary},</if>
+            <if test="approvedBy != null">approved_by = #{approvedBy},</if>
+            <if test="approvedTime != null">approved_time = #{approvedTime},</if>
+            <if test="effectiveTime != null">effective_time = #{effectiveTime},</if>
+            <if test="invalidTime != null">invalid_time = #{invalidTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+</mapper>

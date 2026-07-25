@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketBusinessAuditMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_business_audit
+        (audit_no, biz_module, tournament_id, season_id, object_type, object_id, biz_no, action_type,
+         action_result, change_summary, action_reason, operator_id, operator_name, operator_role,
+         related_apply_id, related_audit_id, related_discipline_id, related_match_id, object_version,
+         trace_id, create_time, update_time, is_delete)
+        values
+        (#{auditNo}, #{bizModule}, #{tournamentId}, #{seasonId}, #{objectType}, #{objectId}, #{bizNo}, #{actionType},
+         #{actionResult}, #{changeSummary}, #{actionReason}, #{operatorId}, #{operatorName}, #{operatorRole},
+         #{relatedApplyId}, #{relatedAuditId}, #{relatedDisciplineId}, #{relatedMatchId}, #{objectVersion},
+         #{traceId}, #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+
+    <select id="selectList" resultType="com.zhs.basket.vo.BusinessAuditListVo">
+        select id, audit_no as auditNo, biz_module as bizModule, tournament_id as tournamentId,
+               season_id as seasonId, object_type as objectType, object_id as objectId, biz_no as bizNo,
+               action_type as actionType, action_result as actionResult, change_summary as changeSummary,
+               action_reason as actionReason, operator_id as operatorId, operator_name as operatorName,
+               create_time as createTime
+        from basket_business_audit
+        where is_delete = 0
+        <if test="bizModule != null and bizModule != ''">and biz_module = #{bizModule}</if>
+        <if test="tournamentId != null">and tournament_id = #{tournamentId}</if>
+        <if test="seasonId != null">and season_id = #{seasonId}</if>
+        <if test="objectType != null and objectType != ''">and object_type = #{objectType}</if>
+        <if test="objectId != null">and object_id = #{objectId}</if>
+        <if test="actionType != null and actionType != ''">and action_type = #{actionType}</if>
+        <if test="operatorId != null">and operator_id = #{operatorId}</if>
+        <if test="keyword != null and keyword != ''">
+            and (audit_no like concat('%', #{keyword}, '%') or change_summary like concat('%', #{keyword}, '%'))
+        </if>
+        order by create_time desc, id desc
+    </select>
+
+    <select id="selectById" resultType="com.zhs.basket.vo.BusinessAuditDetailVo">
+        select id, audit_no as auditNo, biz_module as bizModule, tournament_id as tournamentId,
+               season_id as seasonId, object_type as objectType, object_id as objectId, biz_no as bizNo,
+               action_type as actionType, action_result as actionResult, change_summary as changeSummary,
+               action_reason as actionReason, operator_id as operatorId, operator_name as operatorName,
+               operator_role as operatorRole, related_discipline_id as relatedDisciplineId,
+               related_match_id as relatedMatchId, create_time as createTime
+        from basket_business_audit
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectFieldsByAuditId" resultType="com.zhs.basket.vo.BusinessAuditFieldVo">
+        select id, field_name as fieldName, field_label as fieldLabel, before_value as beforeValue,
+               after_value as afterValue, data_type as dataType, sensitive_flag as sensitiveFlag
+        from basket_business_audit_field
+        where audit_id = #{auditId} and is_delete = 0
+        order by id asc
+    </select>
+</mapper>

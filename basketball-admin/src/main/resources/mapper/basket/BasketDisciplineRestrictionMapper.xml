@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketDisciplineRestrictionMapper">
+    <resultMap type="com.zhs.basket.domain.BasketDisciplineRestriction" id="BasketDisciplineRestrictionResult">
+        <id property="id" column="id" />
+        <result property="subjectType" column="subject_type" />
+        <result property="subjectId" column="subject_id" />
+        <result property="seasonId" column="season_id" />
+        <result property="allowRegistration" column="allow_registration" />
+        <result property="allowTransfer" column="allow_transfer" />
+        <result property="allowCaptain" column="allow_captain" />
+        <result property="allowLineup" column="allow_lineup" />
+        <result property="allowParticipation" column="allow_participation" />
+        <result property="remainingMatchSuspensions" column="remaining_match_suspensions" />
+        <result property="effectiveDisciplineId" column="effective_discipline_id" />
+        <result property="activeFlag" column="active_flag" />
+        <result property="effectiveStartTime" column="effective_start_time" />
+        <result property="effectiveEndTime" column="effective_end_time" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <select id="selectActiveBySubject" resultMap="BasketDisciplineRestrictionResult">
+        select id, subject_type, subject_id, season_id, allow_registration, allow_transfer, allow_captain,
+               allow_lineup, allow_participation, remaining_match_suspensions, effective_discipline_id,
+               active_flag, effective_start_time, effective_end_time, create_time, update_time, is_delete
+        from basket_discipline_restriction
+        where subject_type = #{subjectType} and subject_id = #{subjectId}
+          and active_flag = 1 and is_delete = 0
+        <choose>
+            <when test="seasonId != null">and season_id = #{seasonId}</when>
+            <otherwise>and season_id is null</otherwise>
+        </choose>
+        limit 1
+    </select>
+
+    <update id="deactivateBySubject">
+        update basket_discipline_restriction
+        set active_flag = 0, update_time = now()
+        where subject_type = #{subjectType} and subject_id = #{subjectId}
+          and active_flag = 1 and is_delete = 0
+        <choose>
+            <when test="seasonId != null">and season_id = #{seasonId}</when>
+            <otherwise>and season_id is null</otherwise>
+        </choose>
+    </update>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_discipline_restriction
+        (subject_type, subject_id, season_id, allow_registration, allow_transfer, allow_captain, allow_lineup,
+         allow_participation, remaining_match_suspensions, effective_discipline_id, active_flag,
+         effective_start_time, effective_end_time, create_time, update_time, is_delete)
+        values
+        (#{subjectType}, #{subjectId}, #{seasonId}, #{allowRegistration}, #{allowTransfer}, #{allowCaptain},
+         #{allowLineup}, #{allowParticipation}, #{remainingMatchSuspensions}, #{effectiveDisciplineId}, #{activeFlag},
+         #{effectiveStartTime}, #{effectiveEndTime}, #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+
+    <update id="updateRemainingSuspensions">
+        update basket_discipline_restriction
+        set remaining_match_suspensions = #{remaining}, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+</mapper>

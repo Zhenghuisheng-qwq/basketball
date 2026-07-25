@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketDisciplineSuspensionLogMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_discipline_suspension_log
+        (discipline_id, match_id, member_id, consume_count, idempotency_key, create_time, update_time, is_delete)
+        values
+        (#{disciplineId}, #{matchId}, #{memberId}, #{consumeCount}, #{idempotencyKey}, #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+
+    <select id="countByIdempotencyKey" resultType="int">
+        select count(*) from basket_discipline_suspension_log
+        where idempotency_key = #{idempotencyKey} and is_delete = 0
+    </select>
+</mapper>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketMatchDataAuditMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_match_data_audit
+        (match_id, data_version, audit_type, submitter_id, submit_time, audit_status, auditor_id, audit_time,
+         audit_remark, reject_reason, prev_audit_id, create_time, update_time, is_delete)
+        values
+        (#{matchId}, #{dataVersion}, #{auditType}, #{submitterId}, #{submitTime}, #{auditStatus}, #{auditorId}, #{auditTime},
+         #{auditRemark}, #{rejectReason}, #{prevAuditId}, #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+
+    <update id="updateAuditResult">
+        update basket_match_data_audit
+        set audit_status = #{toStatus}, auditor_id = #{auditorId}, audit_time = now(),
+            audit_remark = #{auditRemark}, reject_reason = #{rejectReason}, update_time = now()
+        where id = #{id} and audit_status = #{fromStatus} and is_delete = 0
+    </update>
+
+    <select id="selectList" resultType="com.zhs.basket.vo.MatchDataAuditListVo">
+        select m.id as matchId, m.match_no as matchNo, m.season_id as seasonId, s.season_name as seasonName,
+               m.stage_id as stageId, st.stage_name as stageName, m.group_id as groupId, g.group_name as groupName,
+               ht.team_name as homeTeamName, at.team_name as awayTeamName,
+               m.home_score as homeScore, m.away_score as awayScore,
+               m.match_status as matchStatus, m.data_status as dataStatus,
+               m.scheduled_start_time as scheduledStartTime, m.update_time as submitTime
+        from basket_match m
+        left join basket_tournament_season s on s.id = m.season_id and s.is_delete = 0
+        left join basket_tournament_stage st on st.id = m.stage_id and st.is_delete = 0
+        left join basket_tournament_group g on g.id = m.group_id and g.is_delete = 0
+        left join basket_team ht on ht.id = m.home_team_id and ht.is_delete = 0
+        left join basket_team at on at.id = m.away_team_id and at.is_delete = 0
+        where m.is_delete = 0
+        <if test="seasonId != null">and m.season_id = #{seasonId}</if>
+        <if test="stageId != null">and m.stage_id = #{stageId}</if>
+        <if test="groupId != null">and m.group_id = #{groupId}</if>
+        <if test="teamId != null">and (m.home_team_id = #{teamId} or m.away_team_id = #{teamId})</if>
+        <if test="dataStatus != null">and m.data_status = #{dataStatus}</if>
+        order by m.update_time desc, m.id desc
+    </select>
+
+    <select id="selectLatestPendingByMatch" resultType="com.zhs.basket.domain.BasketMatchDataAudit">
+        select * from basket_match_data_audit
+        where match_id = #{matchId} and audit_type = #{auditType}
+          and audit_status = 'PENDING' and is_delete = 0
+        order by id desc limit 1
+    </select>
+</mapper>

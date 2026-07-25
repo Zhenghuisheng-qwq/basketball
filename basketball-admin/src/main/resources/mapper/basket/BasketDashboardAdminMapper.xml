@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketDashboardAdminMapper">
+    <sql id="TournamentFilter">
+        <if test="tournamentIds != null and tournamentIds.size() &gt; 0">
+            and s.tournament_id in
+            <foreach collection="tournamentIds" item="tid" open="(" separator="," close=")">#{tid}</foreach>
+        </if>
+    </sql>
+
+    <select id="countPendingTeamAudit" resultType="int">
+        select count(*) from basket_team
+        where is_delete = 0 and audit_status in (0, 3)
+    </select>
+
+    <select id="countPendingPlayerCert" resultType="int">
+        select count(*) from basket_player_cert_application
+        where is_delete = 0 and application_status in (1, 2)
+    </select>
+
+    <select id="countPendingRegistration" resultType="int">
+        select count(*) from basket_tournament_registration r
+        inner join basket_tournament_season s on s.id = r.season_id and s.is_delete = 0
+        where r.is_delete = 0 and r.registration_status in (1, 2)
+        <include refid="TournamentFilter" />
+    </select>
+
+    <select id="countPendingOpenRegistration" resultType="int">
+        select count(*) from basket_tournament_open_registration r
+        inner join basket_tournament_season s on s.id = r.season_id and s.is_delete = 0
+        where r.is_delete = 0 and r.registration_status in (1, 2)
+        <include refid="TournamentFilter" />
+    </select>
+
+    <select id="countPendingRosterChange" resultType="int">
+        select count(*) from basket_tournament_roster_change_request r
+        inner join basket_tournament_season s on s.id = r.season_id and s.is_delete = 0
+        where r.is_delete = 0 and r.request_status = 0
+        <include refid="TournamentFilter" />
+    </select>
+
+    <select id="countPendingPlatformChange" resultType="int">
+        select count(*) from basket_player_platform_change_request
+        where is_delete = 0 and request_status = 0
+    </select>
+
+    <select id="countPendingMatchDataAudit" resultType="int">
+        select count(*) from basket_match_data_audit a
+        inner join basket_match m on m.id = a.match_id and m.is_delete = 0
+        inner join basket_tournament_season s on s.id = m.season_id and s.is_delete = 0
+        where a.is_delete = 0 and a.audit_status = 'PENDING'
+        <include refid="TournamentFilter" />
+    </select>
+
+    <select id="countPendingMatchDispute" resultType="int">
+        select count(*) from basket_match_data_dispute d
+        inner join basket_match m on m.id = d.match_id and m.is_delete = 0
+        inner join basket_tournament_season s on s.id = m.season_id and s.is_delete = 0
+        where d.is_delete = 0 and d.dispute_status in ('PENDING', 'PROCESSING')
+        <include refid="TournamentFilter" />
+    </select>
+</mapper>

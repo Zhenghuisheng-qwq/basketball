@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketStatSyncRecordMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_stat_sync_record
+        (match_id, official_result_id, sync_type, sync_status, idempotency_key, error_message, create_time, update_time, is_delete)
+        values
+        (#{matchId}, #{officialResultId}, #{syncType}, #{syncStatus}, #{idempotencyKey}, #{errorMessage}, #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+
+    <select id="selectByIdempotencyKey" resultType="com.zhs.basket.domain.BasketStatSyncRecord">
+        select * from basket_stat_sync_record where idempotency_key = #{idempotencyKey} and is_delete = 0 limit 1
+    </select>
+</mapper>
