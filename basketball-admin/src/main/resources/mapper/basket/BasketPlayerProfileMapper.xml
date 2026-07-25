@@ -5,10 +5,6 @@
         <id property="id" column="id" />
         <result property="memberId" column="member_id" />
         <result property="playerNo" column="player_no" />
-        <result property="realName" column="real_name" />
-        <result property="idType" column="id_type" />
-        <result property="idNoCipher" column="id_no_cipher" />
-        <result property="idNoMasked" column="id_no_masked" />
         <result property="gameTerminal" column="game_terminal" />
         <result property="gameAccount" column="game_account" />
         <result property="gameNickname" column="game_nickname" />
@@ -25,17 +21,32 @@
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
     </resultMap>
+
+    <sql id="profileColumns">
+        id, member_id, player_no, game_terminal, game_account, game_nickname, position_code,
+        dominant_hand, height_cm, weight_kg, current_team_id, certification_status, player_status,
+        certified_time, profile_visible, create_time, update_time, is_delete
+    </sql>
+
     <select id="selectByMemberId" resultMap="BasketPlayerProfileResult">
-        select id, member_id, player_no, real_name, id_type, id_no_cipher, id_no_masked, game_terminal, game_account, game_nickname, position_code, dominant_hand, height_cm, weight_kg, current_team_id, certification_status, player_status, certified_time, profile_visible, create_time, update_time, is_delete from basket_player_profile where member_id = #{memberId} and is_delete = 0 limit 1
+        select <include refid="profileColumns"/> from basket_player_profile where member_id = #{memberId} and is_delete = 0 limit 1
     </select>
     <select id="selectById" resultMap="BasketPlayerProfileResult">
-        select id, member_id, player_no, real_name, id_type, id_no_cipher, id_no_masked, game_terminal, game_account, game_nickname, position_code, dominant_hand, height_cm, weight_kg, current_team_id, certification_status, player_status, certified_time, profile_visible, create_time, update_time, is_delete from basket_player_profile where id = #{id} and is_delete = 0
+        select <include refid="profileColumns"/> from basket_player_profile where id = #{id} and is_delete = 0
     </select>
     <select id="countByPlayerNo" resultType="int">
         select count(1) from basket_player_profile where player_no = #{playerNo} and is_delete = 0
     </select>
-    <select id="selectEligibleForCaptain" resultMap="BasketPlayerProfileResult">
-        select id, member_id, player_no, real_name, id_type, id_no_cipher, id_no_masked, game_terminal, game_account, game_nickname, position_code, dominant_hand, height_cm, weight_kg, current_team_id, certification_status, player_status, certified_time, profile_visible, create_time, update_time, is_delete from basket_player_profile p
+    <select id="selectMaxPlayerNoSequence" resultType="java.lang.Integer">
+        select max(cast(substring(player_no, 8) as unsigned))
+        from basket_player_profile
+        where player_no regexp '^CNPA-P-[0-9]{6}$' and is_delete = 0
+    </select>
+    <select id="selectEligibleCaptainList" resultType="com.zhs.basket.vo.EligibleCaptainVo">
+        select p.id as playerId, p.member_id as memberId, p.player_no as playerNo,
+               mp.nickname as nickname, p.game_nickname as gameNickname, p.certification_status as certificationStatus
+        from basket_player_profile p
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
         where p.is_delete = 0 and p.certification_status = 3
           and not exists (
             select 1 from basket_captain_qualification q
@@ -44,17 +55,14 @@
         order by p.certified_time desc
     </select>
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        insert into basket_player_profile (member_id, player_no, real_name, id_type, id_no_cipher, id_no_masked, game_terminal, game_account, game_nickname, position_code, dominant_hand, height_cm, weight_kg, current_team_id, certification_status, player_status, certified_time, profile_visible, create_time, update_time, is_delete) values (#{memberId}, #{playerNo}, #{realName}, #{idType}, #{idNoCipher}, #{idNoMasked}, #{gameTerminal}, #{gameAccount}, #{gameNickname}, #{positionCode}, #{dominantHand}, #{heightCm}, #{weightKg}, #{currentTeamId}, #{certificationStatus}, #{playerStatus}, #{certifiedTime}, #{profileVisible}, #{createTime}, #{updateTime}, #{isDelete})
+        insert into basket_player_profile (member_id, player_no, game_terminal, game_account, game_nickname, position_code, dominant_hand, height_cm, weight_kg, current_team_id, certification_status, player_status, certified_time, profile_visible, create_time, update_time, is_delete)
+        values (#{memberId}, #{playerNo}, #{gameTerminal}, #{gameAccount}, #{gameNickname}, #{positionCode}, #{dominantHand}, #{heightCm}, #{weightKg}, #{currentTeamId}, #{certificationStatus}, #{playerStatus}, #{certifiedTime}, #{profileVisible}, #{createTime}, #{updateTime}, #{isDelete})
     </insert>
     <update id="updateById">
         update basket_player_profile
         <set>
             <if test="memberId != null">member_id = #{memberId},</if>
             <if test="playerNo != null">player_no = #{playerNo},</if>
-            <if test="realName != null">real_name = #{realName},</if>
-            <if test="idType != null">id_type = #{idType},</if>
-            <if test="idNoCipher != null">id_no_cipher = #{idNoCipher},</if>
-            <if test="idNoMasked != null">id_no_masked = #{idNoMasked},</if>
             <if test="gameTerminal != null">game_terminal = #{gameTerminal},</if>
             <if test="gameAccount != null">game_account = #{gameAccount},</if>
             <if test="gameNickname != null">game_nickname = #{gameNickname},</if>

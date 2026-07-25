@@ -7,9 +7,7 @@ export interface AccountSummaryDto {
   nickname: string
   avatarUrl?: string
   emailMasked: string
-  mobileMasked?: string
   emailVerified: boolean
-  mobileVerified?: boolean
   accountStatus: number
   registerTime?: string
   lastLoginTime?: string
@@ -18,7 +16,6 @@ export interface AccountSummaryDto {
 export interface PlayerIdentityDto {
   certificationStatus?: number
   playerNo?: string
-  realName?: string
   gameTerminal?: string
   gameAccount?: string
   positionCode?: string

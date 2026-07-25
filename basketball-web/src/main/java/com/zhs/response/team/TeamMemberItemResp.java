@@ -25,9 +25,6 @@ public class TeamMemberItemResp implements Serializable {
     @ApiModelProperty("昵称")
     private String nickname;
 
-    @ApiModelProperty("认证姓名")
-    private String realName;
-
     @ApiModelProperty("游戏昵称")
     private String gameNickname;
 

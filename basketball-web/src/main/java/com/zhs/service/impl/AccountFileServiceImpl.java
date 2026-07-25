@@ -2,6 +2,7 @@ package com.zhs.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.zhs.common.UserContext;
 import com.zhs.config.AccountFileProperties;
 import com.zhs.dao.BasketFileAssetDao;
@@ -76,19 +77,21 @@ public class AccountFileServiceImpl implements IAccountFileService {
         asset.setOwnerMemberId(ownerMemberId);
         asset.setFileStatus(FILE_STATUS_ACTIVE);
         asset.setIsDelete(NOT_DELETED);
-        asset.setAccessUrl(buildInitialAccessUrl(usage, stored));
+        if (usage.isPublicAccess()) {
+            asset.setAccessUrl(buildInitialAccessUrl(usage, stored));
+            if (!StringUtils.hasText(asset.getAccessUrl())) {
+                throw new ServiceException("公开文件地址生成失败");
+            }
+        } else {
+            asset.setId(IdWorker.getId());
+            asset.setAccessUrl("/basket/account/file/" + asset.getId());
+        }
 
         try {
             fileAssetDao.insert(asset);
         } catch (Exception ex) {
             deleteStoredFileQuietly(stored);
             throw ex;
-        }
-
-        if (!usage.isPublicAccess()) {
-            String privateAccessUrl = "/basket/account/file/" + asset.getId();
-            asset.setAccessUrl(privateAccessUrl);
-            fileAssetDao.updateById(asset);
         }
 
         FileUploadResp resp = new FileUploadResp();

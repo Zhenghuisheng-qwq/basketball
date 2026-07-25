@@ -15,27 +15,25 @@ const accountStore = useAccountStore()
 const submitting = ref(false)
 
 const profile = computed(() => accountStore.profile)
+const account = computed(() => accountStore.currentAccount)
 const cert = computed(() => accountStore.playerCert)
 
 const draft = reactive({
-  realName: '',
-  idType: 'ID_CARD',
+  avatarUrl: '',
   platform: '' as '' | 'PC' | 'PS' | 'XBOX',
   gameAccount: '',
-  gameNickname: '',
   position: '' as '' | 'PG' | 'SG' | 'SF' | 'PF' | 'C',
-  contactMobile: '',
 })
 
 onMounted(async () => {
   try {
+    if (!profile.value) {
+      await accountStore.loadProfile()
+    }
+    draft.avatarUrl = profile.value?.avatarUrl || account.value?.avatarUrl || ''
     await accountStore.loadPlayerCertification()
     if (cert.value) {
-      draft.realName = cert.value.realName || profile.value?.nickname || ''
-      draft.idType = cert.value.idType || 'ID_CARD'
       draft.gameAccount = cert.value.gameAccount || ''
-      draft.gameNickname = cert.value.gameNickname || profile.value?.nickname || ''
-      draft.contactMobile = cert.value.contactMobile || ''
       if (cert.value.positionCode) draft.position = cert.value.positionCode as typeof draft.position
       if (cert.value.gameTerminal) {
         const terminal = cert.value.gameTerminal.toUpperCase()
@@ -50,11 +48,12 @@ onMounted(async () => {
 })
 
 const statusSummary = computed(() => ({
-  realName: draft.realName.trim() || '未填写',
+  nickname: profile.value?.nickname || account.value?.nickname || '未填写',
+  email: profile.value?.maskedEmail || account.value?.maskedEmail || '未填写',
+  avatar: draft.avatarUrl.trim() ? '已设置' : '未上传',
   platform: draft.platform ? IDENTITY_PLATFORM_LABELS[draft.platform] : '未选择',
   gameAccount: draft.gameAccount.trim() || '未填写',
   position: draft.position || '未选择',
-  contact: draft.contactMobile.trim() || '未填写',
 }))
 
 async function handleSubmit(data: PlayerCertFormPayload) {
@@ -62,16 +61,10 @@ async function handleSubmit(data: PlayerCertFormPayload) {
   submitting.value = true
   try {
     await accountStore.submitPlayerVerificationFromForm({
-      realName: data.realName,
-      idType: data.idType,
-      idNo: data.idNo,
       platform: data.platform,
       gameAccount: data.gameAccount,
-      gameNickname: data.gameNickname,
       positionCode: data.position,
-      contactMobile: data.contactMobile,
-      idFrontFile: data.idFrontFile,
-      idBackFile: data.idBackFile,
+      avatarFile: data.avatarFile,
       gameScreenshotFile: data.gameScreenshotFile,
     })
     ElMessage.success('认证申请已提交')
@@ -99,7 +92,7 @@ async function handleSubmit(data: PlayerCertFormPayload) {
 
     <AccountStatusBanner
       title="创建永久球员身份"
-      description="填写认证资料并提交赛事管理员审核"
+      description="填写赛事球员档案资料并提交管理员审核"
       :status-text="cert?.applicationStatusText || '资料未提交'"
       status-type="warning"
     />
@@ -108,13 +101,10 @@ async function handleSubmit(data: PlayerCertFormPayload) {
       <AccountPanel title="认证资料">
         <PlayerIdentityApplyForm
           :initial="{
-            realName: draft.realName,
-            idType: draft.idType,
+            avatarUrl: draft.avatarUrl,
             platform: draft.platform || undefined,
             gameAccount: draft.gameAccount,
-            gameNickname: draft.gameNickname,
             position: draft.position || undefined,
-            contactMobile: draft.contactMobile,
           }"
           @submit="handleSubmit"
         >
@@ -149,11 +139,12 @@ async function handleSubmit(data: PlayerCertFormPayload) {
 
         <AccountPanel title="当前资料状态">
           <div class="account-info-list">
-            <div class="account-info-row"><span class="account-info-row__label">姓名</span><span>{{ statusSummary.realName }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">昵称</span><span>{{ statusSummary.nickname }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">邮箱</span><span>{{ statusSummary.email }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">头像</span><span>{{ statusSummary.avatar }}</span></div>
             <div class="account-info-row"><span class="account-info-row__label">平台</span><span>{{ statusSummary.platform }}</span></div>
-            <div class="account-info-row"><span class="account-info-row__label">游戏账号</span><span>{{ statusSummary.gameAccount }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">游戏 ID</span><span>{{ statusSummary.gameAccount }}</span></div>
             <div class="account-info-row"><span class="account-info-row__label">常用位置</span><span>{{ statusSummary.position }}</span></div>
-            <div class="account-info-row"><span class="account-info-row__label">联系电话</span><span>{{ statusSummary.contact }}</span></div>
           </div>
         </AccountPanel>
       </div>

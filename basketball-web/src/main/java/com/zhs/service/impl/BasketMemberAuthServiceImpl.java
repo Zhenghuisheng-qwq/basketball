@@ -57,6 +57,7 @@ import org.springframework.util.StringUtils;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Slf4j
 @Service
@@ -187,10 +188,6 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         if (!Boolean.TRUE.equals(req.getAgreeUserAgreement()) || !Boolean.TRUE.equals(req.getAgreePrivacyPolicy())) {
             throw new ServiceException("请先阅读并同意用户协议与隐私政策");
         }
-        String nickname = normalizeNickname(req.getNickname());
-        String mobile = normalizeMobile(req.getMobile());
-        String mobileCountryCode = StringUtils.hasText(req.getMobileCountryCode())
-                ? req.getMobileCountryCode().trim() : "+86";
         String terminalType = normalizeTerminal(req.getTerminalType());
 
         consumeVerifyCode(email, VerifyPurposeEnum.REGISTER, req.getVerifyBizNo(), req.getVerifyCode());
@@ -198,18 +195,12 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         if (findByEmail(email) != null) {
             throw new ServiceException("邮箱已注册");
         }
-        if (findByMobile(mobile) != null) {
-            throw new ServiceException("手机号已注册");
-        }
 
         Date now = new Date();
         BasketMemberAccount account = new BasketMemberAccount();
         account.setAccountNo(generateAccountNo());
         account.setPasswordHash(passwordEncoder.encode(req.getPassword()));
-        account.setMobileCountryCode(mobileCountryCode);
-        account.setMobile(mobile);
         account.setEmail(email);
-        account.setMobileVerified(VerifiedFlagEnum.NO.getCode());
         account.setEmailVerified(VerifiedFlagEnum.YES.getCode());
         account.setAccountStatus(MemberAccountStatusEnum.NORMAL.getCode());
         account.setRegisterSource(REGISTER_SOURCE_WEB);
@@ -227,7 +218,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
 
         BasketMemberProfile profile = new BasketMemberProfile();
         profile.setMemberId(account.getId());
-        profile.setNickname(nickname);
+        profile.setNickname(generateDefaultNickname());
         profile.setGender(0);
         profile.setProfileStatus(1);
         profile.setIsDelete(0);
@@ -263,7 +254,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
 
         String token = issueToken(account.getId());
         writeLoginLog(account, LOGIN_TYPE_PASSWORD, LoginResultEnum.SUCCESS, null, clientIp, terminalType, userAgent, now);
-        return buildLoginResp(account, nickname, token);
+        return buildLoginResp(account, profile.getNickname(), token);
     }
 
     @Override
@@ -468,18 +459,10 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
                 .last("limit 1"));
     }
 
-    private BasketMemberAccount findByMobile(String mobile) {
-        return memberAccountDao.selectOne(new LambdaQueryWrapper<BasketMemberAccount>()
-                .eq(BasketMemberAccount::getMobile, mobile)
-                .eq(BasketMemberAccount::getIsDelete, 0)
-                .last("limit 1"));
-    }
-
     private BasketMemberAccount findByAccount(String account) {
         return memberAccountDao.selectOne(new LambdaQueryWrapper<BasketMemberAccount>()
                 .eq(BasketMemberAccount::getIsDelete, 0)
                 .and(w -> w.eq(BasketMemberAccount::getEmail, account)
-                        .or().eq(BasketMemberAccount::getMobile, account)
                         .or().eq(BasketMemberAccount::getAccountNo, account.toUpperCase())
                         .or().eq(BasketMemberAccount::getAccountNo, account))
                 .last("limit 1"));
@@ -518,9 +501,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         target.setNickname(nickname);
         target.setAvatarUrl(null);
         target.setEmailMasked(maskEmail(account.getEmail()));
-        target.setMobileMasked(maskMobile(account.getMobile()));
         target.setEmailVerified(VerifiedFlagEnum.isYes(account.getEmailVerified()));
-        target.setMobileVerified(VerifiedFlagEnum.isYes(account.getMobileVerified()));
         target.setAccountStatus(account.getAccountStatus());
     }
 
@@ -611,9 +592,6 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         if (message.contains("uk_member_email") || message.contains("email")) {
             return new ServiceException("邮箱已注册");
         }
-        if (message.contains("uk_member_mobile") || message.contains("mobile")) {
-            return new ServiceException("手机号已注册");
-        }
         if (message.contains("uk_member_account_no") || message.contains("account_no")) {
             return new ServiceException("账号编号冲突，请重试");
         }
@@ -638,26 +616,9 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         return account.trim().toLowerCase();
     }
 
-    private String normalizeMobile(String mobile) {
-        if (!StringUtils.hasText(mobile)) {
-            throw new ServiceException("手机号不能为空");
-        }
-        String value = mobile.trim();
-        if (!value.matches("^1\\d{10}$")) {
-            throw new ServiceException("手机号格式不正确");
-        }
-        return value;
-    }
-
-    private String normalizeNickname(String nickname) {
-        if (!StringUtils.hasText(nickname)) {
-            throw new ServiceException("昵称不能为空");
-        }
-        String value = nickname.trim();
-        if (value.length() < 2 || value.length() > 20) {
-            throw new ServiceException("昵称长度应为 2 至 20 位");
-        }
-        return value;
+    private String generateDefaultNickname() {
+        int suffix = ThreadLocalRandom.current().nextInt(1000, 1_000_000);
+        return "CNPA用户" + suffix;
     }
 
     private String normalizeTerminal(String terminalType) {
@@ -699,13 +660,6 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         String local = parts[0];
         String visible = local.length() <= 2 ? local.substring(0, 1) + "*" : local.substring(0, 2) + "***";
         return visible + "@" + parts[1];
-    }
-
-    private String maskMobile(String mobile) {
-        if (!StringUtils.hasText(mobile) || mobile.length() < 7) {
-            return "***";
-        }
-        return mobile.substring(0, 3) + "****" + mobile.substring(mobile.length() - 4);
     }
 
     private String trimReason(String reason) {

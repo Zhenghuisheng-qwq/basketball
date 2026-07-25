@@ -5,10 +5,6 @@
 		<id column="id" property="id" />
 		<result column="member_id" property="memberId" />
 		<result column="player_no" property="playerNo" />
-		<result column="real_name" property="realName" />
-		<result column="id_type" property="idType" />
-		<result column="id_no_cipher" property="idNoCipher" />
-		<result column="id_no_masked" property="idNoMasked" />
 		<result column="game_terminal" property="gameTerminal" />
 		<result column="game_account" property="gameAccount" />
 		<result column="game_nickname" property="gameNickname" />
@@ -27,7 +23,7 @@
 	</resultMap>
 	<!-- 数据库中表名为:basket_player_profile的列名 -->
 	<sql id="basket_player_profile_Column">
-		id,member_id,player_no,real_name,id_type,id_no_cipher,id_no_masked,game_terminal,game_account,game_nickname,position_code,dominant_hand,height_cm,weight_kg,current_team_id,certification_status,player_status,certified_time,profile_visible,create_time,update_time,is_delete
+		id,member_id,player_no,game_terminal,game_account,game_nickname,position_code,dominant_hand,height_cm,weight_kg,current_team_id,certification_status,player_status,certified_time,profile_visible,create_time,update_time,is_delete
 	</sql>
 
 	<!-- 通过BasketPlayerProfile的id获得对应数据库中表的数据对象 -->
@@ -45,10 +41,6 @@
 		from basket_player_profile
 		<where>
 		<if test="playerNo != null"> and player_no = #{playerNo}</if>
-		<if test="realName != null"> and real_name = #{realName}</if>
-		<if test="idType != null"> and id_type = #{idType}</if>
-		<if test="idNoCipher != null"> and id_no_cipher = #{idNoCipher}</if>
-		<if test="idNoMasked != null"> and id_no_masked = #{idNoMasked}</if>
 		<if test="gameTerminal != null"> and game_terminal = #{gameTerminal}</if>
 		<if test="gameAccount != null"> and game_account = #{gameAccount}</if>
 		<if test="gameNickname != null"> and game_nickname = #{gameNickname}</if>
@@ -77,10 +69,6 @@
 		from basket_player_profile
 		<where>
 		<if test="playerNo != null"> and player_no = #{playerNo}</if>
-		<if test="realName != null"> and real_name = #{realName}</if>
-		<if test="idType != null"> and id_type = #{idType}</if>
-		<if test="idNoCipher != null"> and id_no_cipher = #{idNoCipher}</if>
-		<if test="idNoMasked != null"> and id_no_masked = #{idNoMasked}</if>
 		<if test="gameTerminal != null"> and game_terminal = #{gameTerminal}</if>
 		<if test="gameAccount != null"> and game_account = #{gameAccount}</if>
 		<if test="gameNickname != null"> and game_nickname = #{gameNickname}</if>
@@ -104,8 +92,8 @@
 	<!-- 将BasketPlayerProfile插入到对应数据库的表中,包括属性值为null的数据 -->
 	<insert id="insertBasketPlayerProfile" parameterType="com.zhs.model.BasketPlayerProfile">
 		insert into 
-		basket_player_profile (id,member_id,player_no,real_name,id_type,id_no_cipher,id_no_masked,game_terminal,game_account,game_nickname,position_code,dominant_hand,height_cm,weight_kg,current_team_id,certification_status,player_status,certified_time,profile_visible,create_time,update_time,is_delete) 
-		values(#{id},#{memberId},#{playerNo},#{realName},#{idType},#{idNoCipher},#{idNoMasked},#{gameTerminal},#{gameAccount},#{gameNickname},#{positionCode},#{dominantHand},#{heightCm},#{weightKg},#{currentTeamId},#{certificationStatus},#{playerStatus},#{certifiedTime},#{profileVisible},#{createTime},#{updateTime},#{isDelete})
+		basket_player_profile (id,member_id,player_no,game_terminal,game_account,game_nickname,position_code,dominant_hand,height_cm,weight_kg,current_team_id,certification_status,player_status,certified_time,profile_visible,create_time,update_time,is_delete) 
+		values(#{id},#{memberId},#{playerNo},#{gameTerminal},#{gameAccount},#{gameNickname},#{positionCode},#{dominantHand},#{heightCm},#{weightKg},#{currentTeamId},#{certificationStatus},#{playerStatus},#{certifiedTime},#{profileVisible},#{createTime},#{updateTime},#{isDelete})
 	</insert>
 
 	<!-- 将BasketPlayerProfile中属性值不为null的数据,插入到对应数据库的表中 -->
@@ -115,10 +103,6 @@
 			<if test="id != null">id,</if>
 			<if test="memberId != null">member_id,</if>
 			<if test="playerNo != null">player_no,</if>
-			<if test="realName != null">real_name,</if>
-			<if test="idType != null">id_type,</if>
-			<if test="idNoCipher != null">id_no_cipher,</if>
-			<if test="idNoMasked != null">id_no_masked,</if>
 			<if test="gameTerminal != null">game_terminal,</if>
 			<if test="gameAccount != null">game_account,</if>
 			<if test="gameNickname != null">game_nickname,</if>
@@ -139,10 +123,6 @@
 			<if test="id != null">#{id},</if>
 			<if test="memberId != null">#{memberId},</if>
 			<if test="playerNo != null">#{playerNo},</if>
-			<if test="realName != null">#{realName},</if>
-			<if test="idType != null">#{idType},</if>
-			<if test="idNoCipher != null">#{idNoCipher},</if>
-			<if test="idNoMasked != null">#{idNoMasked},</if>
 			<if test="gameTerminal != null">#{gameTerminal},</if>
 			<if test="gameAccount != null">#{gameAccount},</if>
 			<if test="gameNickname != null">#{gameNickname},</if>
@@ -163,10 +143,10 @@
 
 	<!-- 将BasketPlayerProfile批量插入到对应数据库的表中 -->
 	<insert id="insertBasketPlayerProfileByBatch" parameterType="ArrayList">
-		insert into basket_player_profile(id,member_id,player_no,real_name,id_type,id_no_cipher,id_no_masked,game_terminal,game_account,game_nickname,position_code,dominant_hand,height_cm,weight_kg,current_team_id,certification_status,player_status,certified_time,profile_visible,create_time,update_time,is_delete) values
+		insert into basket_player_profile(id,member_id,player_no,game_terminal,game_account,game_nickname,position_code,dominant_hand,height_cm,weight_kg,current_team_id,certification_status,player_status,certified_time,profile_visible,create_time,update_time,is_delete) values
 		<foreach collection="list" item="item" index="index"
 			separator=",">
-			(#{id},#{memberId},#{playerNo},#{realName},#{idType},#{idNoCipher},#{idNoMasked},#{gameTerminal},#{gameAccount},#{gameNickname},#{positionCode},#{dominantHand},#{heightCm},#{weightKg},#{currentTeamId},#{certificationStatus},#{playerStatus},#{certifiedTime},#{profileVisible},#{createTime},#{updateTime},#{isDelete})
+			(#{item.id},#{item.memberId},#{item.playerNo},#{item.gameTerminal},#{item.gameAccount},#{item.gameNickname},#{item.positionCode},#{item.dominantHand},#{item.heightCm},#{item.weightKg},#{item.currentTeamId},#{item.certificationStatus},#{item.playerStatus},#{item.certifiedTime},#{item.profileVisible},#{item.createTime},#{item.updateTime},#{item.isDelete})
 		</foreach>
 	</insert>
 	
@@ -184,10 +164,6 @@
 		<set>
 			member_id = #{memberId} , 
 			player_no = #{playerNo} , 
-			real_name = #{realName} , 
-			id_type = #{idType} , 
-			id_no_cipher = #{idNoCipher} , 
-			id_no_masked = #{idNoMasked} , 
 			game_terminal = #{gameTerminal} , 
 			game_account = #{gameAccount} , 
 			game_nickname = #{gameNickname} , 
@@ -213,10 +189,6 @@
 		<set>
 					<if test="memberId != null">member_id = #{memberId},</if>
 					<if test="playerNo != null">player_no = #{playerNo},</if>
-					<if test="realName != null">real_name = #{realName},</if>
-					<if test="idType != null">id_type = #{idType},</if>
-					<if test="idNoCipher != null">id_no_cipher = #{idNoCipher},</if>
-					<if test="idNoMasked != null">id_no_masked = #{idNoMasked},</if>
 					<if test="gameTerminal != null">game_terminal = #{gameTerminal},</if>
 					<if test="gameAccount != null">game_account = #{gameAccount},</if>
 					<if test="gameNickname != null">game_nickname = #{gameNickname},</if>

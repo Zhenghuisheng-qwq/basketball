@@ -5,6 +5,7 @@ export type PlayerVerificationStatus =
   | 'PENDING'
   | 'APPROVED'
   | 'REJECTED'
+  | 'WITHDRAWN'
   | 'CHANGE_PENDING'
 
 /** 球员身份业务状态（与认证状态映射，含赛事资格受限） */
@@ -332,6 +333,7 @@ export const VERIFICATION_STATUS_LABELS: Record<PlayerVerificationStatus, string
   PENDING: '审核中',
   APPROVED: '已生效',
   REJECTED: '需修改',
+  WITHDRAWN: '已撤回',
   CHANGE_PENDING: '变更审核中',
 }
 
@@ -356,7 +358,7 @@ export function verificationToIdentityStatus(
   if (eligibilityLimited && (status === 'APPROVED' || status === 'CHANGE_PENDING')) {
     return 'ELIGIBILITY_LIMITED'
   }
-  if (status === 'NOT_APPLIED') return 'NOT_SUBMITTED'
+  if (status === 'NOT_APPLIED' || status === 'WITHDRAWN') return 'NOT_SUBMITTED'
   if (status === 'CHANGE_PENDING') return 'APPROVED'
   return status
 }

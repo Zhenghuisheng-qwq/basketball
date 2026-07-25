@@ -144,7 +144,7 @@ public interface BasketLocalDemoDataMapper {
     int restoreFileByObjectKey(@Param("objectKey") String objectKey);
 
     int insertMemberAccount(@Param("accountNo") String accountNo, @Param("passwordHash") String passwordHash,
-                            @Param("mobile") String mobile, @Param("email") String email,
+                            @Param("email") String email,
                             @Param("username") String username, @Param("registerSource") String registerSource,
                             @Param("registerTerminal") String registerTerminal);
 
@@ -156,10 +156,8 @@ public interface BasketLocalDemoDataMapper {
     int insertNotificationSetting(@Param("memberId") Long memberId);
 
     int insertCertApplication(@Param("applicationNo") String applicationNo, @Param("memberId") Long memberId,
-                              @Param("realName") String realName, @Param("idNoCipher") String idNoCipher,
-                              @Param("idNoMasked") String idNoMasked, @Param("gameTerminal") String gameTerminal,
-                              @Param("gameAccount") String gameAccount, @Param("gameNickname") String gameNickname,
-                              @Param("positionCode") String positionCode, @Param("contactMobile") String contactMobile,
+                              @Param("gameTerminal") String gameTerminal, @Param("gameAccount") String gameAccount,
+                              @Param("gameNickname") String gameNickname, @Param("positionCode") String positionCode,
                               @Param("applicationStatus") Integer applicationStatus,
                               @Param("submittedTime") Date submittedTime);
 

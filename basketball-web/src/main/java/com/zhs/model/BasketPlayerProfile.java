@@ -43,18 +43,6 @@ public class BasketPlayerProfile implements Serializable {
     @ApiModelProperty(value = "永久球员编号")
     private String playerNo;
 
-    @ApiModelProperty(value = "认证姓名")
-    private String realName;
-
-    @ApiModelProperty(value = "证件类型")
-    private String idType;
-
-    @ApiModelProperty(value = "证件号码密文")
-    private String idNoCipher;
-
-    @ApiModelProperty(value = "证件号码脱敏值")
-    private String idNoMasked;
-
     @ApiModelProperty(value = "比赛终端")
     private String gameTerminal;
 

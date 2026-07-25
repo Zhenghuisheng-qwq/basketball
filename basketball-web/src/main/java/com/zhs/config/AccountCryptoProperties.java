@@ -10,5 +10,5 @@ import org.springframework.stereotype.Component;
 public class AccountCryptoProperties {
 
     /** AES 密钥（Base64 或 UTF-8 原文，16/24/32 字节） */
-    private String aesKey = "";
+    private String aesKey = "CNPA2026DEVKEY01";
 }

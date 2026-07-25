@@ -7,6 +7,7 @@ public class EligibleCaptainVo {
     private Long playerId;
     private Long memberId;
     private String playerNo;
-    private String realName;
+    private String nickname;
+    private String gameNickname;
     private Integer certificationStatus;
 }

@@ -7,15 +7,10 @@
         <result property="memberId" column="member_id" />
         <result property="playerId" column="player_id" />
         <result property="applicationType" column="application_type" />
-        <result property="realName" column="real_name" />
-        <result property="idType" column="id_type" />
-        <result property="idNoCipher" column="id_no_cipher" />
-        <result property="idNoMasked" column="id_no_masked" />
         <result property="gameTerminal" column="game_terminal" />
         <result property="gameAccount" column="game_account" />
         <result property="gameNickname" column="game_nickname" />
         <result property="positionCode" column="position_code" />
-        <result property="contactMobile" column="contact_mobile" />
         <result property="applicationStatus" column="application_status" />
         <result property="submittedTime" column="submitted_time" />
         <result property="reviewedTime" column="reviewed_time" />
@@ -25,18 +20,49 @@
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
     </resultMap>
-    <select id="selectList" resultMap="BasketPlayerCertApplicationResult">
-        select * from basket_player_cert_application a
+
+    <sql id="memberJoins">
+        left join basket_member_profile mp on mp.member_id = a.member_id and mp.is_delete = 0
+        left join basket_member_account acc on acc.id = a.member_id and acc.is_delete = 0
+        left join basket_file_asset af on af.id = mp.avatar_file_id and af.is_delete = 0
+    </sql>
+
+    <select id="selectList" resultType="com.zhs.basket.vo.PlayerCertListVo">
+        select a.id, a.application_no as applicationNo, a.member_id as memberId,
+               mp.nickname as nickname, acc.email as email, af.access_url as avatarUrl,
+               a.game_terminal as gameTerminal, a.game_account as gameAccount, a.position_code as positionCode,
+               a.application_status as applicationStatus, a.submitted_time as submittedTime, a.reviewed_time as reviewedTime
+        from basket_player_cert_application a
+        <include refid="memberJoins"/>
         where a.is_delete = 0
         <if test="applicationNo != null and applicationNo != ''">and a.application_no like concat('%', #{applicationNo}, '%')</if>
-        <if test="realName != null and realName != ''">and a.real_name like concat('%', #{realName}, '%')</if>
+        <if test="nickname != null and nickname != ''">and mp.nickname like concat('%', #{nickname}, '%')</if>
+        <if test="email != null and email != ''">and acc.email like concat('%', #{email}, '%')</if>
+        <if test="gameAccount != null and gameAccount != ''">and a.game_account like concat('%', #{gameAccount}, '%')</if>
         <if test="applicationStatus != null">and a.application_status = #{applicationStatus}</if>
         <if test="memberId != null">and a.member_id = #{memberId}</if>
         order by a.submitted_time desc, a.create_time desc
     </select>
-    <select id="selectById" resultMap="BasketPlayerCertApplicationResult">
-        select * from basket_player_cert_application where id = #{id} and is_delete = 0
+
+    <select id="selectDetailVo" resultType="com.zhs.basket.vo.PlayerCertDetailVo">
+        select a.id, a.id as applicationId, a.application_no as applicationNo, a.member_id as memberId,
+               mp.nickname as nickname, acc.email as email, af.access_url as avatarUrl,
+               a.game_terminal as gameTerminal, a.game_account as gameAccount, a.game_nickname as gameNickname,
+               a.position_code as positionCode, a.application_status as applicationStatus,
+               a.review_remark as reviewRemark, a.submitted_time as submittedTime,
+               a.reviewed_time as reviewedTime, a.current_auditor_id as currentAuditorId
+        from basket_player_cert_application a
+        <include refid="memberJoins"/>
+        where a.id = #{id} and a.is_delete = 0
     </select>
+
+    <select id="selectById" resultMap="BasketPlayerCertApplicationResult">
+        select id, application_no, member_id, player_id, application_type, game_terminal, game_account,
+               game_nickname, position_code, application_status, submitted_time, reviewed_time,
+               current_auditor_id, review_remark, create_time, update_time, is_delete
+        from basket_player_cert_application where id = #{id} and is_delete = 0
+    </select>
+
     <update id="updateStatusIfMatch">
         update basket_player_cert_application
         set application_status = #{toStatus},

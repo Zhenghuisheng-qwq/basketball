@@ -12,6 +12,7 @@ public class PlayerCertMaterialVo {
     private String fileName;
     private String mimeType;
     private Long fileSize;
+    private String accessUrl;
     private Integer sortNo;
     private Date uploadTime;
 }

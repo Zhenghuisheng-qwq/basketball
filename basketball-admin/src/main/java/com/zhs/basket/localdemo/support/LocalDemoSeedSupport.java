@@ -88,8 +88,9 @@ import com.zhs.basket.service.IBasketTeamAuditService;
 
 import com.zhs.common.exception.ServiceException;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
 import org.springframework.stereotype.Component;
 
 
@@ -121,7 +122,8 @@ import java.util.stream.Collectors;
 
 
 @Component
-
+@Profile("local")
+@ConditionalOnProperty(prefix = "cnpa.local-demo", name = "enabled", havingValue = "true")
 public class LocalDemoSeedSupport {
 
 
@@ -694,8 +696,7 @@ public class LocalDemoSeedSupport {
 
             if (memberId == null) {
 
-                demoMapper.insertMemberAccount(accountNo, encoded, BasketLocalDemoConstants.demoMobile(idx),
-
+                demoMapper.insertMemberAccount(accountNo, encoded,
                         BasketLocalDemoConstants.demoEmail(idx),
 
                         BasketLocalDemoConstants.demoUsername(idx),
@@ -742,23 +743,18 @@ public class LocalDemoSeedSupport {
 
             if (applicationId == null) {
 
-                String idNo = BasketLocalDemoConstants.demoIdNo(idx);
+                demoMapper.insertCertApplication(applicationNo, memberId,
 
-                demoMapper.insertCertApplication(applicationNo, memberId, player.getName(), idNo,
-
-                        "LOCALDEMO" + idx, BasketLocalDemoConstants.GAME_TERMINAL,
+                        BasketLocalDemoConstants.GAME_TERMINAL,
 
                         "demo_game_" + idx, player.getName(), player.getPositionCode(),
-
-                        BasketLocalDemoConstants.demoMobile(idx),
 
                         PlayerCertStatusEnum.SUBMITTED.getCode(), now);
 
                 applicationId = demoMapper.selectIdByCertApplicationNo(applicationNo);
 
-                demoMapper.insertCertMaterial(applicationId, ctx.getPlaceholderFileId(), "ID_FRONT", marker);
-
-                demoMapper.insertCertMaterial(applicationId, ctx.getPlaceholderFileId(), "GAME_SCREENSHOT", marker);
+                demoMapper.insertCertMaterial(applicationId, ctx.getPlaceholderFileId(),
+                        "PLAYER_CERT_GAME_SCREENSHOT", marker);
 
             }
 

@@ -65,7 +65,8 @@ account:
     public-base-url: ${CNPA_FILE_PUBLIC_BASE_URL:}
     max-image-size: 5242880
   crypto:
-    aes-key: ${CNPA_FIELD_AES_KEY:}
+    # 本地开发写死 16 字节密钥；生产请设置 CNPA_FIELD_AES_KEY
+    aes-key: ${CNPA_FIELD_AES_KEY:CNPA2026DEVKEY01}
 
 # 腾讯云 COS（密钥稍后填写；未配置时不影响本地上传）
 tencent:

@@ -9,7 +9,6 @@ public class BasketMemberAccount {
     private String accountNo;
     private String username;
     private String email;
-    private String mobile;
     private Integer accountStatus;
     private Date createTime;
     private Date updateTime;

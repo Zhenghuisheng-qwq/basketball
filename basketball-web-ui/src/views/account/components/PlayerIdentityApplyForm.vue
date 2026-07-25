@@ -1,31 +1,24 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { GamePosition, IdentityPlatform } from '@/types/account'
 import { IDENTITY_PLATFORM_LABELS, GAME_POSITION_LABELS } from '@/types/account'
+import ProfileAvatarUploader from './ProfileAvatarUploader.vue'
 
 export interface PlayerCertFormPayload {
-  realName: string
-  idType: string
-  idNo: string
   platform: IdentityPlatform
   gameAccount: string
-  gameNickname: string
   position: GamePosition
-  contactMobile: string
-  idFrontFile?: File
-  idBackFile?: File
+  avatarUrl: string
+  avatarFile?: File
   gameScreenshotFile?: File
 }
 
 const props = defineProps<{
   initial?: Partial<{
-    realName: string
-    idType: string
+    avatarUrl: string
     platform: IdentityPlatform
     gameAccount: string
-    gameNickname: string
     position: GamePosition
-    contactMobile: string
   }>
 }>()
 
@@ -33,66 +26,50 @@ const emit = defineEmits<{
   submit: [data: PlayerCertFormPayload]
 }>()
 
-const realName = ref(props.initial?.realName || '')
-const idType = ref(props.initial?.idType || 'ID_CARD')
+const avatarUrl = ref(props.initial?.avatarUrl || '')
+const avatarFile = ref<File | null>(null)
+const avatarError = ref('')
 const platform = ref<IdentityPlatform>(props.initial?.platform || 'XBOX')
 const gameAccount = ref(props.initial?.gameAccount || '')
-const gameNickname = ref(props.initial?.gameNickname || '')
 const position = ref<GamePosition>(props.initial?.position || 'PG')
-const contactMobile = ref(props.initial?.contactMobile || '')
-const idNo = ref('')
-
-const idFrontFile = ref<File | null>(null)
-const idBackFile = ref<File | null>(null)
 const gameScreenshotFile = ref<File | null>(null)
 
-const idFrontName = computed(() => idFrontFile.value?.name || '')
-const idBackName = computed(() => idBackFile.value?.name || '')
 const screenshotName = computed(() => gameScreenshotFile.value?.name || '')
 
-const errors = reactive<Record<string, string>>({})
+const hasAvatar = computed(() => Boolean(avatarUrl.value.trim()))
 
 const platforms = Object.entries(IDENTITY_PLATFORM_LABELS) as [IdentityPlatform, string][]
 const positions = Object.entries(GAME_POSITION_LABELS) as [GamePosition, string][]
 
 const isComplete = computed(() =>
   Boolean(
-    realName.value.trim()
-    && idType.value
-    && idNo.value.trim()
+    hasAvatar.value
     && platform.value
     && gameAccount.value.trim()
-    && gameNickname.value.trim()
     && position.value
-    && contactMobile.value.trim()
-    && idFrontFile.value
-    && gameScreenshotFile.value
-    && (idType.value !== 'ID_CARD' || idBackFile.value),
+    && gameScreenshotFile.value,
   ),
 )
 
-function pickFile(key: 'idFrontFile' | 'idBackFile' | 'gameScreenshotFile', event: Event) {
+function handleAvatarSelected(file: File) {
+  avatarFile.value = file
+  avatarError.value = ''
+}
+
+function pickScreenshot(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
-  if (key === 'idFrontFile') idFrontFile.value = file
-  if (key === 'idBackFile') idBackFile.value = file
-  if (key === 'gameScreenshotFile') gameScreenshotFile.value = file
-  errors[key] = ''
+  gameScreenshotFile.value = file
 }
 
 function submit() {
   if (!isComplete.value) return
   emit('submit', {
-    realName: realName.value.trim(),
-    idType: idType.value,
-    idNo: idNo.value.trim(),
     platform: platform.value,
     gameAccount: gameAccount.value.trim(),
-    gameNickname: gameNickname.value.trim(),
     position: position.value,
-    contactMobile: contactMobile.value.trim(),
-    idFrontFile: idFrontFile.value || undefined,
-    idBackFile: idBackFile.value || undefined,
+    avatarUrl: avatarUrl.value,
+    avatarFile: avatarFile.value || undefined,
     gameScreenshotFile: gameScreenshotFile.value || undefined,
   })
 }
@@ -101,26 +78,15 @@ function submit() {
 <template>
   <div class="identity-apply-form">
     <div class="identity-apply-form__field">
-      <label>真实姓名</label>
-      <input v-model="realName" type="text" class="identity-apply-form__input" placeholder="与证件一致" />
-    </div>
-
-    <div class="identity-apply-form__field">
-      <label>证件类型</label>
-      <select v-model="idType" class="identity-apply-form__input">
-        <option value="ID_CARD">身份证</option>
-        <option value="PASSPORT">护照</option>
-      </select>
-    </div>
-
-    <div class="identity-apply-form__field">
-      <label>证件号码</label>
-      <input v-model="idNo" type="text" class="identity-apply-form__input" placeholder="请输入证件号码" />
-    </div>
-
-    <div class="identity-apply-form__field">
-      <label>联系电话</label>
-      <input v-model="contactMobile" type="tel" class="identity-apply-form__input" placeholder="用于审核联系" />
+      <label>球员头像</label>
+      <ProfileAvatarUploader
+        v-model="avatarUrl"
+        name="球员头像"
+        @file-selected="handleAvatarSelected"
+        @error="avatarError = $event"
+      />
+      <p v-if="avatarError" class="identity-apply-form__error">{{ avatarError }}</p>
+      <p v-else-if="!hasAvatar" class="identity-apply-form__hint">提交前请先上传球员头像</p>
     </div>
 
     <div class="identity-apply-form__field">
@@ -140,13 +106,8 @@ function submit() {
     </div>
 
     <div class="identity-apply-form__field">
-      <label>游戏账号</label>
-      <input v-model="gameAccount" type="text" class="identity-apply-form__input" placeholder="平台游戏账号" />
-    </div>
-
-    <div class="identity-apply-form__field">
-      <label>游戏昵称</label>
-      <input v-model="gameNickname" type="text" class="identity-apply-form__input" placeholder="游戏内昵称" />
+      <label>游戏 ID</label>
+      <input v-model="gameAccount" type="text" class="identity-apply-form__input" placeholder="平台游戏 ID" />
     </div>
 
     <div class="identity-apply-form__field">
@@ -166,28 +127,12 @@ function submit() {
     </div>
 
     <div class="identity-apply-form__field">
-      <label>证件正面</label>
-      <label class="account-btn-secondary identity-apply-form__upload-btn">
-        {{ idFrontName || '上传证件正面' }}
-        <input type="file" accept="image/*" hidden @change="pickFile('idFrontFile', $event)" />
-      </label>
-    </div>
-
-    <div v-if="idType === 'ID_CARD'" class="identity-apply-form__field">
-      <label>证件反面</label>
-      <label class="account-btn-secondary identity-apply-form__upload-btn">
-        {{ idBackName || '上传证件反面' }}
-        <input type="file" accept="image/*" hidden @change="pickFile('idBackFile', $event)" />
-      </label>
-    </div>
-
-    <div class="identity-apply-form__field">
-      <label>游戏截图证明</label>
+      <label>游戏账号证明</label>
       <div class="identity-apply-form__proof">
-        <p>上传能够清晰显示游戏平台与游戏 ID 的截图</p>
+        <p>请上传能够清晰显示游戏平台与游戏 ID 的证明截图。</p>
         <label class="account-btn-secondary identity-apply-form__upload-btn">
-          {{ screenshotName || '上传游戏截图' }}
-          <input type="file" accept="image/*" hidden @change="pickFile('gameScreenshotFile', $event)" />
+          {{ screenshotName || '上传证明截图' }}
+          <input type="file" accept="image/*" hidden @change="pickScreenshot" />
         </label>
       </div>
     </div>
@@ -200,4 +145,16 @@ function submit() {
 
 <style scoped lang="scss">
 @import '@/views/account/styles/account-center.scss';
+
+.identity-apply-form__error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--account-red);
+}
+
+.identity-apply-form__hint {
+  margin: 0;
+  font-size: 12px;
+  color: #696969;
+}
 </style>

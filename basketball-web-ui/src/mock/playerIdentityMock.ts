@@ -131,6 +131,7 @@ function buildPlayerIdentityFromVerification(
     PENDING: 'PENDING',
     REJECTED: 'REJECTED',
     APPROVED: 'APPROVED',
+    WITHDRAWN: 'NOT_SUBMITTED',
     CHANGE_PENDING: 'APPROVED',
   }
   let status = statusMap[verification.status]

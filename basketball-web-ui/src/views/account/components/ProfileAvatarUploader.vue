@@ -41,16 +41,16 @@ function compressImage(file: File): Promise<string> {
         canvas.height = height
         const ctx = canvas.getContext('2d')
         if (!ctx) {
-          reject(new Error('??????'))
+          reject(new Error('无法处理图片'))
           return
         }
         ctx.drawImage(img, 0, 0, width, height)
         resolve(canvas.toDataURL('image/jpeg', 0.82))
       }
-      img.onerror = () => reject(new Error('??????'))
+      img.onerror = () => reject(new Error('图片加载失败'))
       img.src = reader.result as string
     }
-    reader.onerror = () => reject(new Error('??????'))
+    reader.onerror = () => reject(new Error('读取失败'))
     reader.readAsDataURL(file)
   })
 }
@@ -63,11 +63,11 @@ async function handleChange(event: Event) {
 
   const allowed = ['image/jpeg', 'image/jpg', 'image/png']
   if (!allowed.includes(file.type)) {
-    emit('error', '????JPG?JPEG?PNG ??')
+    emit('error', '仅支持 JPG、JPEG、PNG 格式')
     return
   }
   if (file.size > 5 * 1024 * 1024) {
-    emit('error', '???????? 5MB')
+    emit('error', '头像大小不能超过 5MB')
     return
   }
 
@@ -78,7 +78,7 @@ async function handleChange(event: Event) {
     emit('update:modelValue', dataUrl)
     emit('file-selected', file)
   } catch {
-    emit('error', '??????????')
+    emit('error', '头像上传失败')
   }
 }
 
@@ -93,7 +93,7 @@ function handleImageError() {
       <img
         v-if="showImage"
         :src="previewUrl"
-        alt="????"
+        :alt="name"
         @error="handleImageError"
       />
       <span v-else class="profile-avatar-uploader__placeholder" aria-hidden="true">
@@ -107,9 +107,9 @@ function handleImageError() {
     </div>
     <label class="profile-avatar-uploader__label">
       <input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" @change="handleChange" />
-      ????
+      上传头像
     </label>
-    <p class="profile-avatar-uploader__hint">?? JPG / PNG????5MB??????</p>
+    <p class="profile-avatar-uploader__hint">支持 JPG / PNG，大小不超过 5MB</p>
   </div>
 </template>
 

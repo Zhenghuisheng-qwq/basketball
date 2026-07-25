@@ -51,15 +51,6 @@ public class PlayerCertCurrentResp implements Serializable {
     @ApiModelProperty("驳回原因")
     private String rejectReason;
 
-    @ApiModelProperty("真实姓名")
-    private String realName;
-
-    @ApiModelProperty("证件类型")
-    private String idType;
-
-    @ApiModelProperty("证件号码脱敏值")
-    private String idNoMasked;
-
     @ApiModelProperty("比赛终端")
     private String gameTerminal;
 
@@ -71,9 +62,6 @@ public class PlayerCertCurrentResp implements Serializable {
 
     @ApiModelProperty("场上位置")
     private String positionCode;
-
-    @ApiModelProperty("联系电话")
-    private String contactMobile;
 
     @ApiModelProperty("认证材料列表")
     private List<PlayerCertMaterialResp> materials;

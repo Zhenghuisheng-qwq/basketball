@@ -20,9 +20,7 @@ export interface MemberSummary {
   nickname: string
   avatarUrl?: string | null
   emailMasked: string
-  mobileMasked: string
   emailVerified: boolean
-  mobileVerified: boolean
   accountStatus: number
 }
 
@@ -49,9 +47,6 @@ export function registerMember(payload: {
   email: string
   password: string
   confirmPassword: string
-  nickname: string
-  mobile: string
-  mobileCountryCode?: string
   terminalType?: string
   verifyBizNo: string
   verifyCode: string

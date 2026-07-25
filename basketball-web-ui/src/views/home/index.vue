@@ -227,12 +227,12 @@ onMounted(() => {
       </div>
     </section>
 
-    <section id="matches" class="site-section match-section">
-      <div class="site-shell">
-        <div class="paper-band paper-band-light">
+    <section id="matches" class="site-section home-match-section">
+      <div class="site-container home-match-shell">
+        <div class="home-match-paper paper-band paper-band-light">
           <TornEdge position="top" tone="light" variant="sharp" />
-          <div class="paper-band-inner">
-            <div class="section-head section-head-dark">
+          <div class="home-match-inner">
+            <div class="section-head section-head-dark home-match-header">
               <h2>近期赛事</h2>
               <button type="button" class="section-more section-more-dark" @click="handleMoreMatches">
                 查看更多
@@ -243,99 +243,97 @@ onMounted(() => {
             <div v-if="matchState === 'loading'" class="home-state">加载中...</div>
             <div v-else-if="matchState === 'error'" class="home-state home-state--error">{{ matchError }}</div>
             <div v-else-if="matchState === 'empty'" class="home-state">暂无近期赛事</div>
-            <div v-else class="match-showcase">
-              <article
+            <div v-else class="home-match-grid">
+              <div
                 v-for="(match, index) in matches"
                 :key="match.matchId"
-                class="match-card"
-                :class="`match-card--${matchCardTone(index)}`"
+                class="home-match-column"
               >
-                <span class="match-card-no" aria-hidden="true">{{ matchCardNo(index) }}</span>
-                <div class="match-card-header">
-                  <span>{{ formatDateTime(match.scheduledStartTime).full }}</span>
-                  <span>{{ matchRound(match) }}</span>
-                </div>
-                <div class="match-versus">
-                  <div class="match-team">
-                    <div class="match-logo">
-                      <img
-                        v-if="showLogo(match.homeTeamLogoUrl, `m-h-${match.matchId}`)"
-                        :src="match.homeTeamLogoUrl!"
-                        :alt="displayText(match.homeTeamName)"
-                        @error="markLogoBroken(`m-h-${match.matchId}`)"
-                      />
-                      <span v-else class="logo-fallback">{{ initials(match.homeTeamName) }}</span>
+                <article
+                  class="home-match-card"
+                  :class="`home-match-card--${matchCardTone(index)}`"
+                >
+                  <span class="match-card-no" aria-hidden="true">{{ matchCardNo(index) }}</span>
+                  <div class="match-card-header">
+                    <span>{{ formatDateTime(match.scheduledStartTime).full }}</span>
+                    <span>{{ matchRound(match) }}</span>
+                  </div>
+                  <div class="match-versus">
+                    <div class="match-team">
+                      <div class="match-logo">
+                        <img
+                          v-if="showLogo(match.homeTeamLogoUrl, `m-h-${match.matchId}`)"
+                          :src="match.homeTeamLogoUrl!"
+                          :alt="displayText(match.homeTeamName)"
+                          @error="markLogoBroken(`m-h-${match.matchId}`)"
+                        />
+                        <span v-else class="logo-fallback">{{ initials(match.homeTeamName) }}</span>
+                      </div>
+                      <span class="match-team-name">{{ displayText(match.homeTeamName) }}</span>
                     </div>
-                    <span class="match-team-name">{{ displayText(match.homeTeamName) }}</span>
-                  </div>
-                  <div class="match-vs-wrap">
-                    <span class="match-vs-glow" aria-hidden="true" />
-                    <span class="match-vs">VS</span>
-                  </div>
-                  <div class="match-team">
-                    <div class="match-logo">
-                      <img
-                        v-if="showLogo(match.awayTeamLogoUrl, `m-a-${match.matchId}`)"
-                        :src="match.awayTeamLogoUrl!"
-                        :alt="displayText(match.awayTeamName)"
-                        @error="markLogoBroken(`m-a-${match.matchId}`)"
-                      />
-                      <span v-else class="logo-fallback">{{ initials(match.awayTeamName) }}</span>
+                    <div class="match-vs-wrap">
+                      <span class="match-vs-glow" aria-hidden="true" />
+                      <span class="match-vs">VS</span>
                     </div>
-                    <span class="match-team-name">{{ displayText(match.awayTeamName) }}</span>
+                    <div class="match-team">
+                      <div class="match-logo">
+                        <img
+                          v-if="showLogo(match.awayTeamLogoUrl, `m-a-${match.matchId}`)"
+                          :src="match.awayTeamLogoUrl!"
+                          :alt="displayText(match.awayTeamName)"
+                          @error="markLogoBroken(`m-a-${match.matchId}`)"
+                        />
+                        <span v-else class="logo-fallback">{{ initials(match.awayTeamName) }}</span>
+                      </div>
+                      <span class="match-team-name">{{ displayText(match.awayTeamName) }}</span>
+                    </div>
                   </div>
-                </div>
-                <button type="button" class="watch-btn" @click="handleWatchMatch(match.matchId)">
-                  <span>查看赛程</span>
-                </button>
-              </article>
+                  <button type="button" class="watch-btn" @click="handleWatchMatch(match.matchId)">
+                    <span>查看赛程</span>
+                  </button>
+                </article>
+              </div>
             </div>
           </div>
+          <TornEdge position="bottom" tone="light" variant="sharp" />
         </div>
       </div>
     </section>
 
-    <section id="teams" class="site-section team-section">
-      <div class="site-shell">
-        <div class="paper-band paper-band-dark">
-          <TornEdge position="top" tone="dark" variant="wave" />
-          <div class="paper-band-inner">
-            <div class="section-head section-head-light">
-              <h2>参赛战队</h2>
-              <button type="button" class="section-more section-more-light" @click="handleMoreTeams">
-                查看更多战队
-                <span>›</span>
-              </button>
-            </div>
+    <section id="teams" class="site-section home-team-section">
+      <div class="site-container home-team-container">
+        <div class="section-head section-head-light home-team-header">
+          <h2>参赛战队</h2>
+          <button type="button" class="section-more section-more-light" @click="handleMoreTeams">
+            查看更多战队
+            <span>›</span>
+          </button>
+        </div>
 
-            <div v-if="teamState === 'loading'" class="home-state home-state--light">加载中...</div>
-            <div v-else-if="teamState === 'error'" class="home-state home-state--error home-state--light">
-              {{ teamError }}
+        <div v-if="teamState === 'loading'" class="home-state home-state--light">加载中...</div>
+        <div v-else-if="teamState === 'error'" class="home-state home-state--error home-state--light">
+          {{ teamError }}
+        </div>
+        <div v-else-if="teamState === 'empty'" class="home-state home-state--light">暂无参赛战队</div>
+        <div v-else class="team-showcase-grid">
+          <article
+            v-for="(team, index) in teams"
+            :key="team.teamId"
+            class="team-showcase-item"
+            @click="handleTeamClick(team.teamId)"
+          >
+            <span class="team-showcase-mark" aria-hidden="true">{{ teamMark(index) }}</span>
+            <div class="team-logo-wrap">
+              <img
+                v-if="showLogo(team.teamLogoUrl, `t-${team.teamId}`)"
+                :src="team.teamLogoUrl!"
+                :alt="displayText(team.teamName)"
+                @error="markLogoBroken(`t-${team.teamId}`)"
+              />
+              <span v-else class="logo-fallback">{{ initials(team.teamName) }}</span>
             </div>
-            <div v-else-if="teamState === 'empty'" class="home-state home-state--light">暂无参赛战队</div>
-            <div v-else class="team-strip">
-              <article
-                v-for="(team, index) in teams"
-                :key="team.teamId"
-                class="team-slot"
-                :class="{ 'team-slot--lift': index === 1 || index === 4 }"
-                @click="handleTeamClick(team.teamId)"
-              >
-                <span class="team-slot-mark" aria-hidden="true">{{ teamMark(index) }}</span>
-                <span class="team-slot-abbr" aria-hidden="true">{{ initials(team.teamName, 3) }}</span>
-                <div class="team-logo">
-                  <img
-                    v-if="showLogo(team.teamLogoUrl, `t-${team.teamId}`)"
-                    :src="team.teamLogoUrl!"
-                    :alt="displayText(team.teamName)"
-                    @error="markLogoBroken(`t-${team.teamId}`)"
-                  />
-                  <span v-else class="logo-fallback">{{ initials(team.teamName) }}</span>
-                </div>
-                <span class="team-name">{{ displayText(team.teamName) }}</span>
-              </article>
-            </div>
-          </div>
+            <span class="team-showcase-name">{{ displayText(team.teamName) }}</span>
+          </article>
         </div>
       </div>
     </section>
@@ -558,7 +556,7 @@ onMounted(() => {
 }
 
 .match-logo,
-.team-logo,
+.team-logo-wrap,
 .tiny-logo {
   position: relative;
   overflow: hidden;

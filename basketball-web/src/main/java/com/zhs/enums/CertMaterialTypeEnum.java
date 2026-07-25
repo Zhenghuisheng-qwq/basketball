@@ -7,8 +7,6 @@ import com.zhs.exception.ServiceException;
  */
 public enum CertMaterialTypeEnum {
 
-    ID_FRONT(FileUsageTypeEnum.PLAYER_CERT_ID_FRONT),
-    ID_BACK(FileUsageTypeEnum.PLAYER_CERT_ID_BACK),
     GAME_SCREENSHOT(FileUsageTypeEnum.PLAYER_CERT_GAME_SCREENSHOT),
     OTHER(FileUsageTypeEnum.PLAYER_CERT_OTHER);
 

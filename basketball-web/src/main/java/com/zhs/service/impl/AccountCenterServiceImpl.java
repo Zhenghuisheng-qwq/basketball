@@ -121,9 +121,7 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
         summary.setAccountId(String.valueOf(account.getId()));
         summary.setAccountNo(account.getAccountNo());
         summary.setEmailMasked(DataMaskUtil.maskEmail(account.getEmail()));
-        summary.setMobileMasked(DataMaskUtil.maskMobile(account.getMobile()));
         summary.setEmailVerified(VerifiedFlagEnum.isYes(account.getEmailVerified()));
-        summary.setMobileVerified(VerifiedFlagEnum.isYes(account.getMobileVerified()));
         summary.setAccountStatus(account.getAccountStatus());
         summary.setRegisterTime(account.getCreateTime());
         summary.setLastLoginTime(account.getLastLoginTime());
@@ -144,7 +142,6 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
         if (playerProfile != null) {
             identity.setCertificationStatus(playerProfile.getCertificationStatus());
             identity.setPlayerNo(playerProfile.getPlayerNo());
-            identity.setRealName(playerProfile.getRealName());
             identity.setGameTerminal(playerProfile.getGameTerminal());
             identity.setGameAccount(playerProfile.getGameAccount());
             identity.setPositionCode(playerProfile.getPositionCode());
@@ -181,9 +178,6 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
 
         if (!VerifiedFlagEnum.isYes(account.getEmailVerified())) {
             tasks.add(buildTask("EMAIL_UNVERIFIED", "验证邮箱", "您的邮箱尚未完成验证", "/account/setting"));
-        }
-        if (!VerifiedFlagEnum.isYes(account.getMobileVerified())) {
-            tasks.add(buildTask("MOBILE_UNVERIFIED", "验证手机", "您的手机号尚未完成验证", "/account/setting"));
         }
 
         if (playerProfile == null) {

@@ -252,7 +252,7 @@ public class BasketPublicSupport {
         if (StringUtils.hasText(player.getGameNickname())) {
             return player.getGameNickname();
         }
-        return player.getRealName();
+        return null;
     }
 
     public Map<Long, String> loadAccessUrlMap(Collection<Long> fileIds) {

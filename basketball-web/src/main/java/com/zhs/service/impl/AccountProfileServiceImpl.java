@@ -134,9 +134,7 @@ public class AccountProfileServiceImpl implements IAccountProfileService {
         resp.setNickname(profile.getNickname());
         resp.setAvatarUrl(resolveAvatarUrl(profile.getAvatarFileId()));
         resp.setEmailMasked(DataMaskUtil.maskEmail(account.getEmail()));
-        resp.setMobileMasked(DataMaskUtil.maskMobile(account.getMobile()));
         resp.setEmailVerified(VerifiedFlagEnum.isYes(account.getEmailVerified()));
-        resp.setMobileVerified(VerifiedFlagEnum.isYes(account.getMobileVerified()));
         resp.setGender(profile.getGender());
         resp.setBirthday(formatBirthday(profile.getBirthDate()));
         resp.setProvinceCode(profile.getProvinceCode());

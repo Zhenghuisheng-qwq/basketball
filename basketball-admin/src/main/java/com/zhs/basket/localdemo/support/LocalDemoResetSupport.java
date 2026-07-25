@@ -8,20 +8,17 @@ import com.zhs.basket.localdemo.mapper.BasketLocalDemoDataMapper;
 
 import com.zhs.basket.localdemo.resp.BasketLocalDemoResetResp;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-
-
 import java.util.ArrayList;
-
 import java.util.Collections;
-
 import java.util.List;
 
-
-
 @Component
-
+@Profile("local")
+@ConditionalOnProperty(prefix = "cnpa.local-demo", name = "enabled", havingValue = "true")
 public class LocalDemoResetSupport {
 
 

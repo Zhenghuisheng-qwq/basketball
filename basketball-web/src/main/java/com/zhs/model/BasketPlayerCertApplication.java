@@ -51,18 +51,6 @@ public class BasketPlayerCertApplication implements Serializable {
     @ApiModelProperty(value = "申请类型")
     private String applicationType;
 
-    @ApiModelProperty(value = "真实姓名")
-    private String realName;
-
-    @ApiModelProperty(value = "证件类型")
-    private String idType;
-
-    @ApiModelProperty(value = "证件号码密文")
-    private String idNoCipher;
-
-    @ApiModelProperty(value = "证件号码脱敏值")
-    private String idNoMasked;
-
     @ApiModelProperty(value = "比赛终端")
     private String gameTerminal;
 
@@ -74,9 +62,6 @@ public class BasketPlayerCertApplication implements Serializable {
 
     @ApiModelProperty(value = "场上位置")
     private String positionCode;
-
-    @ApiModelProperty(value = "联系电话")
-    private String contactMobile;
 
     @ApiModelProperty(value = "申请状态")
     private Integer applicationStatus;

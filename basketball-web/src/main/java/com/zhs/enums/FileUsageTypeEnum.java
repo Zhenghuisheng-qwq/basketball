@@ -5,8 +5,6 @@ import com.zhs.exception.ServiceException;
 public enum FileUsageTypeEnum {
 
     ACCOUNT_AVATAR("ACCOUNT_AVATAR", true),
-    PLAYER_CERT_ID_FRONT("PLAYER_CERT_ID_FRONT", false),
-    PLAYER_CERT_ID_BACK("PLAYER_CERT_ID_BACK", false),
     PLAYER_CERT_GAME_SCREENSHOT("PLAYER_CERT_GAME_SCREENSHOT", false),
     PLAYER_CERT_OTHER("PLAYER_CERT_OTHER", false),
     TEAM_LOGO("TEAM_LOGO", true);

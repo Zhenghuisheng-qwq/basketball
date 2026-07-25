@@ -113,8 +113,6 @@ async function handleVerify() {
       email: draft.email,
       password: draft.password,
       confirmPassword: draft.password,
-      nickname: draft.nickname,
-      mobile: draft.mobile,
       terminalType: 'WEB',
       verifyBizNo: draft.verifyBizNo,
       verifyCode: code,

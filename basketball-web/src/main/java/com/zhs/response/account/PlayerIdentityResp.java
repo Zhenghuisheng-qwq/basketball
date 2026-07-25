@@ -19,9 +19,6 @@ public class PlayerIdentityResp implements Serializable {
     @ApiModelProperty("永久球员编号")
     private String playerNo;
 
-    @ApiModelProperty("认证姓名")
-    private String realName;
-
     @ApiModelProperty("比赛终端")
     private String gameTerminal;
 

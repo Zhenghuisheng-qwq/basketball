@@ -24,7 +24,7 @@ public class PublicHonorLineupItemResp implements Serializable {
     @ApiModelProperty("球员主键")
     private Long playerId;
 
-    @ApiModelProperty("展示名（game_nickname / real_name）")
+    @ApiModelProperty("展示名（game_nickname）")
     private String playerName;
 
     @ApiModelProperty("头像 URL")

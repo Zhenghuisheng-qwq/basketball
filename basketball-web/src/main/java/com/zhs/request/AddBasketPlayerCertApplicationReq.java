@@ -37,14 +37,6 @@ public class AddBasketPlayerCertApplicationReq implements Serializable {
 
         private String applicationType;
 
-        private String realName;
-
-        private String idType;
-
-        private String idNoCipher;
-
-        private String idNoMasked;
-
         private String gameTerminal;
 
         private String gameAccount;
@@ -52,8 +44,6 @@ public class AddBasketPlayerCertApplicationReq implements Serializable {
         private String gameNickname;
 
         private String positionCode;
-
-        private String contactMobile;
 
         private Integer applicationStatus;
 

@@ -9,7 +9,6 @@ import com.zhs.basket.req.PlayerCertRejectReq;
 import com.zhs.basket.service.IBasketPlayerCertService;
 import com.zhs.basket.support.BasketAccountSecurityLogWriter;
 import com.zhs.basket.support.BasketAdminMessageService;
-import com.zhs.basket.support.BasketDataMaskUtil;
 import com.zhs.basket.support.PlayerNoGenerator;
 import com.zhs.basket.vo.*;
 import com.zhs.common.exception.ServiceException;
@@ -40,17 +39,18 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
 
     @Override
     public List<PlayerCertListVo> selectList(PlayerCertQuery query) {
-        return applicationMapper.selectList(query).stream().map(this::toListVo).collect(Collectors.toList());
+        return applicationMapper.selectList(query).stream().peek(vo ->
+                vo.setApplicationStatusName(PlayerCertStatusEnum.fromCode(vo.getApplicationStatus()).getDescription())
+        ).collect(Collectors.toList());
     }
 
     @Override
     public PlayerCertDetailVo selectDetail(Long applicationId) {
-        BasketPlayerCertApplication app = requireApplication(applicationId);
-        PlayerCertDetailVo vo = new PlayerCertDetailVo();
-        BeanUtils.copyBeanProp(vo, app);
-        vo.setApplicationId(app.getId());
-        vo.setApplicationStatusName(PlayerCertStatusEnum.fromCode(app.getApplicationStatus()).getDescription());
-        vo.setContactMobileMasked(BasketDataMaskUtil.maskMobile(app.getContactMobile()));
+        PlayerCertDetailVo vo = applicationMapper.selectDetailVo(applicationId);
+        if (vo == null) {
+            throw new ServiceException("认证申请不存在");
+        }
+        vo.setApplicationStatusName(PlayerCertStatusEnum.fromCode(vo.getApplicationStatus()).getDescription());
         vo.setMaterials(loadMaterials(applicationId));
         vo.setAuditRecords(selectAuditRecords(applicationId));
         return vo;
@@ -76,6 +76,7 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
                     item.setFileName(file.getOriginalName() != null ? file.getOriginalName() : file.getFileName());
                     item.setMimeType(file.getMimeType());
                     item.setFileSize(file.getFileSize());
+                    item.setAccessUrl(file.getAccessUrl());
                 }
             }
             result.add(item);
@@ -147,10 +148,6 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
         } else if (!StringUtils.hasText(profile.getPlayerNo())) {
             profile.setPlayerNo(playerNoGenerator.generatePlayerNo());
         }
-        profile.setRealName(app.getRealName());
-        profile.setIdType(app.getIdType());
-        profile.setIdNoCipher(app.getIdNoCipher());
-        profile.setIdNoMasked(app.getIdNoMasked());
         profile.setGameTerminal(app.getGameTerminal());
         profile.setGameAccount(app.getGameAccount());
         profile.setGameNickname(app.getGameNickname());
@@ -196,13 +193,6 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
             throw new ServiceException("认证申请不存在");
         }
         return app;
-    }
-
-    private PlayerCertListVo toListVo(BasketPlayerCertApplication app) {
-        PlayerCertListVo vo = new PlayerCertListVo();
-        BeanUtils.copyBeanProp(vo, app);
-        vo.setApplicationStatusName(PlayerCertStatusEnum.fromCode(app.getApplicationStatus()).getDescription());
-        return vo;
     }
 
     private void assertSingleRow(int rows, String message) {

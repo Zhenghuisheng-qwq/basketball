@@ -54,7 +54,6 @@ export const useUserStore = defineStore('user', () => {
       avatarUrl: result.member.avatarUrl || '',
       accountNo: result.member.accountNo,
       emailVerified: Boolean(result.member.emailVerified),
-      mobileVerified: Boolean(result.member.mobileVerified),
       accountStatus: result.member.accountStatus,
       loginTime: Date.now(),
     }
@@ -96,7 +95,6 @@ export const useUserStore = defineStore('user', () => {
         avatarUrl: res.data.avatarUrl || '',
         accountNo: res.data.accountNo,
         emailVerified: Boolean(res.data.emailVerified),
-        mobileVerified: Boolean(res.data.mobileVerified),
         accountStatus: res.data.accountStatus,
         loginTime: Date.now(),
       }, remember)

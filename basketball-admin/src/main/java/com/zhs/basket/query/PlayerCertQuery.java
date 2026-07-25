@@ -8,7 +8,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class PlayerCertQuery extends BaseEntity {
     private String applicationNo;
-    private String realName;
+    private String nickname;
+    private String email;
+    private String gameAccount;
     private Integer applicationStatus;
     private Long memberId;
 }

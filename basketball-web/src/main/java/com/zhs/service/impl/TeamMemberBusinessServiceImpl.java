@@ -265,7 +265,6 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         resp.setJoinTime(member.getJoinTime());
         BasketPlayerProfile player = maps.playerMap().get(member.getPlayerId());
         if (player != null) {
-            resp.setRealName(player.getRealName());
             resp.setGameNickname(player.getGameNickname());
         }
         BasketMemberProfile memberProfile = maps.memberProfileMap().get(member.getMemberId());

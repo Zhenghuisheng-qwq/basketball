@@ -11,7 +11,6 @@ export interface AuthSession {
   avatarUrl: string
   accountNo: string
   emailVerified: boolean
-  mobileVerified: boolean
   accountStatus: number
   loginTime: number
 }
@@ -71,7 +70,6 @@ export function getAuthSession(): AuthSession | null {
       avatarUrl: typeof data.avatarUrl === 'string' ? data.avatarUrl : '',
       accountNo: typeof data.accountNo === 'string' ? data.accountNo : '',
       emailVerified: Boolean(data.emailVerified),
-      mobileVerified: Boolean(data.mobileVerified),
       accountStatus: typeof data.accountStatus === 'number' ? data.accountStatus : 1,
       loginTime: typeof data.loginTime === 'number' ? data.loginTime : Date.now(),
     }

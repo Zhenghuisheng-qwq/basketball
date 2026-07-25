@@ -5,14 +5,9 @@
 		<id column="id" property="id" />
 		<result column="application_no" property="applicationNo" />
 		<result column="member_id" property="memberId" />
-		<result column="real_name" property="realName" />
-		<result column="id_type" property="idType" />
-		<result column="id_no_cipher" property="idNoCipher" />
-		<result column="id_no_masked" property="idNoMasked" />
 		<result column="game_terminal" property="gameTerminal" />
 		<result column="game_account" property="gameAccount" />
 		<result column="game_nickname" property="gameNickname" />
-		<result column="contact_mobile" property="contactMobile" />
 		<result column="player_id" property="playerId" />
 		<result column="application_type" property="applicationType" />
 		<result column="position_code" property="positionCode" />
@@ -27,7 +22,7 @@
 	</resultMap>
 	<!-- 数据库中表名为:basket_player_cert_application的列名 -->
 	<sql id="basket_player_cert_application_Column">
-		id,application_no,member_id,player_id,application_type,real_name,id_type,id_no_cipher,id_no_masked,game_terminal,game_account,game_nickname,position_code,contact_mobile,application_status,submitted_time,reviewed_time,current_auditor_id,review_remark,create_time,update_time,is_delete
+		id,application_no,member_id,player_id,application_type,game_terminal,game_account,game_nickname,position_code,application_status,submitted_time,reviewed_time,current_auditor_id,review_remark,create_time,update_time,is_delete
 	</sql>
 
 	<!-- 通过BasketPlayerCertApplication的id获得对应数据库中表的数据对象 -->
@@ -57,14 +52,9 @@
 		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
 		<if test="applicationNo != null"> and application_no = #{applicationNo}</if>
 		<if test="memberId != null"> and member_id = #{memberId}</if>
-		<if test="realName != null"> and real_name = #{realName}</if>
-		<if test="idType != null"> and id_type = #{idType}</if>
-		<if test="idNoCipher != null"> and id_no_cipher = #{idNoCipher}</if>
-		<if test="idNoMasked != null"> and id_no_masked = #{idNoMasked}</if>
 		<if test="gameTerminal != null"> and game_terminal = #{gameTerminal}</if>
 		<if test="gameAccount != null"> and game_account = #{gameAccount}</if>
 		<if test="gameNickname != null"> and game_nickname = #{gameNickname}</if>
-		<if test="contactMobile != null"> and contact_mobile = #{contactMobile}</if>
 		<if test="id != null"> and id = #{id} </if>
 		</where>
 		LIMIT 1
@@ -89,14 +79,9 @@
 		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
 		<if test="applicationNo != null"> and application_no = #{applicationNo}</if>
 		<if test="memberId != null"> and member_id = #{memberId}</if>
-		<if test="realName != null"> and real_name = #{realName}</if>
-		<if test="idType != null"> and id_type = #{idType}</if>
-		<if test="idNoCipher != null"> and id_no_cipher = #{idNoCipher}</if>
-		<if test="idNoMasked != null"> and id_no_masked = #{idNoMasked}</if>
 		<if test="gameTerminal != null"> and game_terminal = #{gameTerminal}</if>
 		<if test="gameAccount != null"> and game_account = #{gameAccount}</if>
 		<if test="gameNickname != null"> and game_nickname = #{gameNickname}</if>
-		<if test="contactMobile != null"> and contact_mobile = #{contactMobile}</if>
 		<if test="id != null"> and id = #{id} </if>
 		</where>
 	</select>
@@ -104,8 +89,8 @@
 	<!-- 将BasketPlayerCertApplication插入到对应数据库的表中,包括属性值为null的数据 -->
 	<insert id="insertBasketPlayerCertApplication" parameterType="com.zhs.model.BasketPlayerCertApplication">
 		insert into 
-		basket_player_cert_application (id,application_no,member_id,player_id,application_type,real_name,id_type,id_no_cipher,id_no_masked,game_terminal,game_account,game_nickname,position_code,contact_mobile,application_status,submitted_time,reviewed_time,current_auditor_id,review_remark,create_time,update_time,is_delete) 
-		values(#{id},#{applicationNo},#{memberId},#{playerId},#{applicationType},#{realName},#{idType},#{idNoCipher},#{idNoMasked},#{gameTerminal},#{gameAccount},#{gameNickname},#{positionCode},#{contactMobile},#{applicationStatus},#{submittedTime},#{reviewedTime},#{currentAuditorId},#{reviewRemark},#{createTime},#{updateTime},#{isDelete})
+		basket_player_cert_application (id,application_no,member_id,player_id,application_type,game_terminal,game_account,game_nickname,position_code,application_status,submitted_time,reviewed_time,current_auditor_id,review_remark,create_time,update_time,is_delete) 
+		values(#{id},#{applicationNo},#{memberId},#{playerId},#{applicationType},#{gameTerminal},#{gameAccount},#{gameNickname},#{positionCode},#{applicationStatus},#{submittedTime},#{reviewedTime},#{currentAuditorId},#{reviewRemark},#{createTime},#{updateTime},#{isDelete})
 	</insert>
 
 	<!-- 将BasketPlayerCertApplication中属性值不为null的数据,插入到对应数据库的表中 -->
@@ -117,15 +102,10 @@
 			<if test="memberId != null">member_id,</if>
 			<if test="playerId != null">player_id,</if>
 			<if test="applicationType != null">application_type,</if>
-			<if test="realName != null">real_name,</if>
-			<if test="idType != null">id_type,</if>
-			<if test="idNoCipher != null">id_no_cipher,</if>
-			<if test="idNoMasked != null">id_no_masked,</if>
 			<if test="gameTerminal != null">game_terminal,</if>
 			<if test="gameAccount != null">game_account,</if>
 			<if test="gameNickname != null">game_nickname,</if>
 			<if test="positionCode != null">position_code,</if>
-			<if test="contactMobile != null">contact_mobile,</if>
 			<if test="applicationStatus != null">application_status,</if>
 			<if test="submittedTime != null">submitted_time,</if>
 			<if test="reviewedTime != null">reviewed_time,</if>
@@ -141,15 +121,10 @@
 			<if test="memberId != null">#{memberId},</if>
 			<if test="playerId != null">#{playerId},</if>
 			<if test="applicationType != null">#{applicationType},</if>
-			<if test="realName != null">#{realName},</if>
-			<if test="idType != null">#{idType},</if>
-			<if test="idNoCipher != null">#{idNoCipher},</if>
-			<if test="idNoMasked != null">#{idNoMasked},</if>
 			<if test="gameTerminal != null">#{gameTerminal},</if>
 			<if test="gameAccount != null">#{gameAccount},</if>
 			<if test="gameNickname != null">#{gameNickname},</if>
 			<if test="positionCode != null">#{positionCode},</if>
-			<if test="contactMobile != null">#{contactMobile},</if>
 			<if test="applicationStatus != null">#{applicationStatus},</if>
 			<if test="submittedTime != null">#{submittedTime},</if>
 			<if test="reviewedTime != null">#{reviewedTime},</if>
@@ -163,10 +138,10 @@
 
 	<!-- 将BasketPlayerCertApplication批量插入到对应数据库的表中 -->
 	<insert id="insertBasketPlayerCertApplicationByBatch" parameterType="ArrayList">
-		insert into basket_player_cert_application(id,application_no,member_id,player_id,application_type,real_name,id_type,id_no_cipher,id_no_masked,game_terminal,game_account,game_nickname,position_code,contact_mobile,application_status,submitted_time,reviewed_time,current_auditor_id,review_remark,create_time,update_time,is_delete) values
+		insert into basket_player_cert_application(id,application_no,member_id,player_id,application_type,game_terminal,game_account,game_nickname,position_code,application_status,submitted_time,reviewed_time,current_auditor_id,review_remark,create_time,update_time,is_delete) values
 		<foreach collection="list" item="item" index="index"
 			separator=",">
-			(#{id},#{applicationNo},#{memberId},#{playerId},#{applicationType},#{realName},#{idType},#{idNoCipher},#{idNoMasked},#{gameTerminal},#{gameAccount},#{gameNickname},#{positionCode},#{contactMobile},#{applicationStatus},#{submittedTime},#{reviewedTime},#{currentAuditorId},#{reviewRemark},#{createTime},#{updateTime},#{isDelete})
+			(#{item.id},#{item.applicationNo},#{item.memberId},#{item.playerId},#{item.applicationType},#{item.gameTerminal},#{item.gameAccount},#{item.gameNickname},#{item.positionCode},#{item.applicationStatus},#{item.submittedTime},#{item.reviewedTime},#{item.currentAuditorId},#{item.reviewRemark},#{item.createTime},#{item.updateTime},#{item.isDelete})
 		</foreach>
 	</insert>
 	
@@ -186,15 +161,10 @@
 			member_id = #{memberId} , 
 			player_id = #{playerId} , 
 			application_type = #{applicationType} , 
-			real_name = #{realName} , 
-			id_type = #{idType} , 
-			id_no_cipher = #{idNoCipher} , 
-			id_no_masked = #{idNoMasked} , 
 			game_terminal = #{gameTerminal} , 
 			game_account = #{gameAccount} , 
 			game_nickname = #{gameNickname} , 
 			position_code = #{positionCode} , 
-			contact_mobile = #{contactMobile} , 
 			application_status = #{applicationStatus} , 
 			submitted_time = #{submittedTime} , 
 			reviewed_time = #{reviewedTime} , 
@@ -215,15 +185,10 @@
 					<if test="memberId != null">member_id = #{memberId},</if>
 					<if test="playerId != null">player_id = #{playerId},</if>
 					<if test="applicationType != null">application_type = #{applicationType},</if>
-					<if test="realName != null">real_name = #{realName},</if>
-					<if test="idType != null">id_type = #{idType},</if>
-					<if test="idNoCipher != null">id_no_cipher = #{idNoCipher},</if>
-					<if test="idNoMasked != null">id_no_masked = #{idNoMasked},</if>
 					<if test="gameTerminal != null">game_terminal = #{gameTerminal},</if>
 					<if test="gameAccount != null">game_account = #{gameAccount},</if>
 					<if test="gameNickname != null">game_nickname = #{gameNickname},</if>
 					<if test="positionCode != null">position_code = #{positionCode},</if>
-					<if test="contactMobile != null">contact_mobile = #{contactMobile},</if>
 					<if test="applicationStatus != null">application_status = #{applicationStatus},</if>
 					<if test="submittedTime != null">submitted_time = #{submittedTime},</if>
 					<if test="reviewedTime != null">reviewed_time = #{reviewedTime},</if>

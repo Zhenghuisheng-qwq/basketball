@@ -5,13 +5,12 @@ import { ElMessage } from 'element-plus'
 import { sendEmailCode } from '@/api/memberAuth'
 import { setRegisterDraft } from '@/composables/useRegisterFlow'
 import RegisterSteps from './components/RegisterSteps.vue'
+import PasswordInput from './components/PasswordInput.vue'
 
 const router = useRouter()
 
 const form = reactive({
   email: '',
-  nickname: '',
-  mobile: '',
   password: '',
   confirmPassword: '',
   agreed: false,
@@ -19,8 +18,6 @@ const form = reactive({
 
 const errors = reactive({
   email: '',
-  nickname: '',
-  mobile: '',
   password: '',
   confirmPassword: '',
   agreed: '',
@@ -45,22 +42,9 @@ function validateEmail(value: string): string {
   return ''
 }
 
-function validateNickname(value: string): string {
-  const trimmed = value.trim()
-  if (!trimmed) return '请输入昵称'
-  if (trimmed.length < 2 || trimmed.length > 20) return '昵称长度应为 2 至 20 位'
-  return ''
-}
-
-function validateMobile(value: string): string {
-  if (!value.trim()) return '请输入手机号'
-  if (!/^1\d{10}$/.test(value.trim())) return '手机号格式不正确'
-  return ''
-}
-
 function validatePassword(value: string): string {
   if (!value) return '请输入密码'
-  if (value.length < 8) return '密码至少 8 位'
+  if (value.length < 8 || value.length > 20) return '密码长度为 8 至 20 位'
   if (!/[A-Za-z]/.test(value)) return '密码需包含字母'
   if (!/\d/.test(value)) return '密码需包含数字'
   return ''
@@ -74,12 +58,10 @@ function validateConfirmPassword(value: string): string {
 
 function validateForm(): boolean {
   errors.email = validateEmail(form.email)
-  errors.nickname = validateNickname(form.nickname)
-  errors.mobile = validateMobile(form.mobile)
   errors.password = validatePassword(form.password)
   errors.confirmPassword = validateConfirmPassword(form.confirmPassword)
   errors.agreed = form.agreed ? '' : '请先阅读并同意相关协议'
-  return !errors.email && !errors.nickname && !errors.mobile && !errors.password && !errors.confirmPassword && !errors.agreed
+  return !errors.email && !errors.password && !errors.confirmPassword && !errors.agreed
 }
 
 async function handleSubmit() {
@@ -94,8 +76,6 @@ async function handleSubmit() {
     setRegisterDraft({
       email,
       password: form.password,
-      nickname: form.nickname.trim(),
-      mobile: form.mobile.trim(),
       verifyBizNo: res.data.bizNo,
       agreeUserAgreement: true,
       agreePrivacyPolicy: true,
@@ -125,32 +105,37 @@ function goLogin() {
 
     <form class="register-form" @submit.prevent="handleSubmit">
       <label class="form-field">
-        <span class="form-field__label">邮箱</span>
-        <input v-model="form.email" type="email" class="form-field__input" placeholder="name@example.com" autocomplete="email" @blur="errors.email = validateEmail(form.email)" />
+        <span class="form-field__label">邮箱地址</span>
+        <input
+          v-model="form.email"
+          type="email"
+          class="form-field__input"
+          placeholder="请输入常用邮箱"
+          autocomplete="email"
+          @blur="errors.email = validateEmail(form.email)"
+        />
         <span v-if="submitted && errors.email" class="form-field__error">{{ errors.email }}</span>
       </label>
 
       <label class="form-field">
-        <span class="form-field__label">昵称</span>
-        <input v-model="form.nickname" type="text" class="form-field__input" placeholder="2-20 位昵称" maxlength="20" @blur="errors.nickname = validateNickname(form.nickname)" />
-        <span v-if="submitted && errors.nickname" class="form-field__error">{{ errors.nickname }}</span>
-      </label>
-
-      <label class="form-field">
-        <span class="form-field__label">手机号</span>
-        <input v-model="form.mobile" type="tel" class="form-field__input" placeholder="11 位手机号" maxlength="11" @blur="errors.mobile = validateMobile(form.mobile)" />
-        <span v-if="submitted && errors.mobile" class="form-field__error">{{ errors.mobile }}</span>
-      </label>
-
-      <label class="form-field">
         <span class="form-field__label">设置密码</span>
-        <input v-model="form.password" type="password" class="form-field__input" placeholder="请输入密码" autocomplete="new-password" @blur="errors.password = validatePassword(form.password)" />
+        <PasswordInput
+          v-model="form.password"
+          placeholder="8-20 位字符，包含字母和数字"
+          autocomplete="new-password"
+          @blur="errors.password = validatePassword(form.password)"
+        />
         <span v-if="submitted && errors.password" class="form-field__error">{{ errors.password }}</span>
       </label>
 
       <label class="form-field">
         <span class="form-field__label">确认密码</span>
-        <input v-model="form.confirmPassword" type="password" class="form-field__input" placeholder="请再次输入密码" autocomplete="new-password" @blur="errors.confirmPassword = validateConfirmPassword(form.confirmPassword)" />
+        <PasswordInput
+          v-model="form.confirmPassword"
+          placeholder="请再次输入密码"
+          autocomplete="new-password"
+          @blur="errors.confirmPassword = validateConfirmPassword(form.confirmPassword)"
+        />
         <span v-if="submitted && errors.confirmPassword" class="form-field__error">{{ errors.confirmPassword }}</span>
       </label>
 
@@ -162,7 +147,7 @@ function goLogin() {
 
       <label class="form-agreement">
         <input v-model="form.agreed" type="checkbox" />
-        <span>我已阅读并同意 CNPA 用户协议与隐私政策</span>
+        <span>我已阅读并同意《用户协议》和《隐私政策》</span>
       </label>
       <span v-if="submitted && errors.agreed" class="form-field__error">{{ errors.agreed }}</span>
       <p v-if="errors.form" class="form-field__error">{{ errors.form }}</p>
@@ -175,11 +160,19 @@ function goLogin() {
         已有账号？
         <button type="button" class="text-link" @click="goLogin">立即登录</button>
       </p>
-      <p class="register-form__hint">创建账号后进入邮箱验证；本地开发未配 SMTP 时可任意输入 6 位数字验证码</p>
+      <p class="register-form__hint">创建账号后，我们将向你的邮箱发送 6 位验证码</p>
     </form>
   </div>
 </template>
 
 <style scoped lang="scss">
 @import './styles/account-form.scss';
+
+.form-field :deep(.auth-password-input) {
+  width: 100%;
+}
+
+.form-field :deep(.auth-input) {
+  width: 100%;
+}
 </style>

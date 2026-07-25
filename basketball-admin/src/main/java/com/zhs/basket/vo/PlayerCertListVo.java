@@ -8,7 +8,12 @@ public class PlayerCertListVo {
     private Long id;
     private String applicationNo;
     private Long memberId;
-    private String realName;
+    private String nickname;
+    private String email;
+    private String avatarUrl;
+    private String gameTerminal;
+    private String gameAccount;
+    private String positionCode;
     private Integer applicationStatus;
     private String applicationStatusName;
     private Date submittedTime;

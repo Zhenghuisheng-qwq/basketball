@@ -44,17 +44,8 @@ public class BasketMemberAccount implements Serializable {
     @ApiModelProperty(value = "密码摘要")
     private String passwordHash;
 
-    @ApiModelProperty(value = "手机区号")
-    private String mobileCountryCode;
-
-    @ApiModelProperty(value = "手机号码")
-    private String mobile;
-
     @ApiModelProperty(value = "邮箱地址")
     private String email;
-
-    @ApiModelProperty(value = "手机验证状态")
-    private Integer mobileVerified;
 
     @ApiModelProperty(value = "邮箱验证状态")
     private Integer emailVerified;

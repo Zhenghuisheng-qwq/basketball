@@ -3,8 +3,6 @@ const REGISTER_DRAFT_KEY = 'cnpa_register_draft'
 export interface RegisterDraft {
   email: string
   password: string
-  nickname: string
-  mobile: string
   verifyBizNo: string
   agreeUserAgreement: boolean
   agreePrivacyPolicy: boolean

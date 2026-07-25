@@ -29,7 +29,7 @@
                h.honor_category_id as honorCategoryId, c.honor_code as honorCode, c.honor_name as honorName,
                c.honor_scope as honorScope, c.recipient_type as recipientType,
                h.team_id as teamId, t.team_name as teamName,
-               h.player_id as playerId, ifnull(nullif(p.game_nickname, ''), p.real_name) as playerName,
+               h.player_id as playerId, ifnull(nullif(p.game_nickname, ''), mp.nickname) as playerName,
                h.match_id as matchId, h.honor_title as honorTitle, h.honor_subtitle as honorSubtitle,
                h.honor_value as honorValue, h.award_date as awardDate, h.cover_file_id as coverFileId,
                cf.access_url as coverUrl, h.source_type as sourceType, h.source_id as sourceId,
@@ -40,6 +40,7 @@
         left join basket_tournament_season s on s.id = h.season_id and s.is_delete = 0
         left join basket_team t on t.id = h.team_id and t.is_delete = 0
         left join basket_player_profile p on p.id = h.player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
         left join basket_file_asset cf on cf.id = h.cover_file_id and cf.is_delete = 0
     </sql>
 
@@ -70,7 +71,7 @@
         <if test="keyword != null and keyword != ''">
             and (h.honor_title like concat('%', #{keyword}, '%')
                  or t.team_name like concat('%', #{keyword}, '%')
-                 or p.real_name like concat('%', #{keyword}, '%')
+                 or mp.nickname like concat('%', #{keyword}, '%')
                  or p.game_nickname like concat('%', #{keyword}, '%'))
         </if>
         order by h.display_order, h.award_date desc, h.id desc

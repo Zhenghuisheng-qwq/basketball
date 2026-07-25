@@ -381,9 +381,9 @@
     </update>
 
     <insert id="insertMemberAccount">
-        insert into basket_member_account (account_no, username, password_hash, mobile_country_code, mobile, email,
-            mobile_verified, email_verified, account_status, register_source, register_terminal, create_time, update_time, is_delete)
-        values (#{accountNo}, #{username}, #{passwordHash}, '+86', #{mobile}, #{email}, 1, 1, 1,
+        insert into basket_member_account (account_no, username, password_hash, email,
+            email_verified, account_status, register_source, register_terminal, create_time, update_time, is_delete)
+        values (#{accountNo}, #{username}, #{passwordHash}, #{email}, 1, 1,
             #{registerSource}, #{registerTerminal}, now(), now(), 0)
     </insert>
 
@@ -405,11 +405,11 @@
     </insert>
 
     <insert id="insertCertApplication">
-        insert into basket_player_cert_application (application_no, member_id, application_type, real_name, id_type,
-            id_no_cipher, id_no_masked, game_terminal, game_account, game_nickname, position_code, contact_mobile,
+        insert into basket_player_cert_application (application_no, member_id, application_type,
+            game_terminal, game_account, game_nickname, position_code,
             application_status, submitted_time, create_time, update_time, is_delete)
-        values (#{applicationNo}, #{memberId}, 'INITIAL', #{realName}, 'OTHER', #{idNoCipher}, #{idNoMasked},
-            #{gameTerminal}, #{gameAccount}, #{gameNickname}, #{positionCode}, #{contactMobile},
+        values (#{applicationNo}, #{memberId}, 'INITIAL',
+            #{gameTerminal}, #{gameAccount}, #{gameNickname}, #{positionCode},
             #{applicationStatus}, #{submittedTime}, now(), now(), 0)
     </insert>
 

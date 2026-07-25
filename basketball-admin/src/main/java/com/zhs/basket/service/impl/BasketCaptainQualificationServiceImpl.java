@@ -42,15 +42,7 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
 
     @Override
     public List<EligibleCaptainVo> selectEligibleList() {
-        return profileMapper.selectEligibleForCaptain().stream().map(p -> {
-            EligibleCaptainVo vo = new EligibleCaptainVo();
-            vo.setPlayerId(p.getId());
-            vo.setMemberId(p.getMemberId());
-            vo.setPlayerNo(p.getPlayerNo());
-            vo.setRealName(p.getRealName());
-            vo.setCertificationStatus(p.getCertificationStatus());
-            return vo;
-        }).collect(Collectors.toList());
+        return profileMapper.selectEligibleCaptainList();
     }
 
     @Override

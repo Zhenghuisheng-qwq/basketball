@@ -19,15 +19,6 @@ public class MemberRegisterReq implements Serializable {
     @ApiModelProperty(value = "确认密码", required = true)
     private String confirmPassword;
 
-    @ApiModelProperty(value = "昵称", required = true)
-    private String nickname;
-
-    @ApiModelProperty(value = "手机号（表字段非空）", required = true)
-    private String mobile;
-
-    @ApiModelProperty(value = "手机区号，默认 +86")
-    private String mobileCountryCode;
-
     @ApiModelProperty(value = "终端类型")
     private String terminalType;
 

@@ -9,10 +9,6 @@ public class BasketPlayerProfile {
     private Long id;
     private Long memberId;
     private String playerNo;
-    private String realName;
-    private String idType;
-    private String idNoCipher;
-    private String idNoMasked;
     private String gameTerminal;
     private String gameAccount;
     private String gameNickname;

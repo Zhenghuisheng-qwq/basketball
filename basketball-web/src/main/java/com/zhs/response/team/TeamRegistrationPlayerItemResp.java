@@ -22,9 +22,6 @@ public class TeamRegistrationPlayerItemResp implements Serializable {
     @ApiModelProperty("球员主键")
     private String playerId;
 
-    @ApiModelProperty("认证姓名")
-    private String realName;
-
     @ApiModelProperty("游戏昵称")
     private String gameNickname;
 

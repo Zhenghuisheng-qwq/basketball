@@ -1,6 +1,7 @@
 package com.zhs.basket.mapper;
 
 import com.zhs.basket.domain.BasketPlayerProfile;
+import com.zhs.basket.vo.EligibleCaptainVo;
 import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
@@ -10,5 +11,6 @@ public interface BasketPlayerProfileMapper {
     int insert(BasketPlayerProfile profile);
     int updateById(BasketPlayerProfile profile);
     int countByPlayerNo(@Param("playerNo") String playerNo);
-    List<BasketPlayerProfile> selectEligibleForCaptain();
+    Integer selectMaxPlayerNoSequence();
+    List<EligibleCaptainVo> selectEligibleCaptainList();
 }

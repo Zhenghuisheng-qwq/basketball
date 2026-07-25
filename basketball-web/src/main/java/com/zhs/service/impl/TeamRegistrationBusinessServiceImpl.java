@@ -595,7 +595,6 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
             item.setSortNo(player.getSortNo());
             BasketPlayerProfile profile = playerMap.get(player.getPlayerId());
             if (profile != null) {
-                item.setRealName(profile.getRealName());
                 item.setGameNickname(profile.getGameNickname());
             }
             rosterItems.add(item);

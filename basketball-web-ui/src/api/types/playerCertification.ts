@@ -18,28 +18,20 @@ export interface PlayerCertCurrentDto {
   submittedTime?: string
   reviewedTime?: string
   rejectReason?: string
-  realName?: string
-  idType?: string
-  idNoMasked?: string
   gameTerminal?: string
   gameAccount?: string
   gameNickname?: string
   positionCode?: string
-  contactMobile?: string
   materials?: PlayerCertMaterialDto[]
   canEdit?: boolean
   canSubmit?: boolean
 }
 
 export interface PlayerCertDraftPayload {
-  realName: string
-  idType: string
-  idNo: string
   gameTerminal: string
   gameAccount: string
-  gameNickname: string
+  gameNickname?: string
   positionCode?: string
-  contactMobile: string
 }
 
 export interface PlayerCertMaterialBindPayload {

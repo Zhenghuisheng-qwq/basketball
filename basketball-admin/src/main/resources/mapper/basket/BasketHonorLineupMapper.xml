@@ -3,7 +3,7 @@
 <mapper namespace="com.zhs.basket.mapper.BasketHonorLineupMapper">
     <select id="selectByHonorRecordId" resultType="com.zhs.basket.resp.HonorLineupResp">
         select l.id, l.honor_record_id as honorRecordId, l.team_id as teamId, l.player_id as playerId,
-               l.member_id as memberId, ifnull(nullif(p.game_nickname, ''), p.real_name) as playerName,
+               l.member_id as memberId, ifnull(nullif(p.game_nickname, ''), mp.nickname) as playerName,
                l.role_type as roleType, l.jersey_no as jerseyNo, l.position_code as positionCode,
                l.sort_no as sortNo, af.access_url as avatarUrl
         from basket_honor_lineup l

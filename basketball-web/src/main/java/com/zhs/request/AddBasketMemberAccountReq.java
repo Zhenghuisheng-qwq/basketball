@@ -33,13 +33,7 @@ public class AddBasketMemberAccountReq implements Serializable {
 
         private String passwordHash;
 
-        private String mobileCountryCode;
-
-        private String mobile;
-
         private String email;
-
-        private Integer mobileVerified;
 
         private Integer emailVerified;
 

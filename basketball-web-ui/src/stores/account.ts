@@ -85,6 +85,17 @@ import type {
 import { IDENTITY_PLATFORM_LABELS, OPEN_APPLICATION_STATUS_LABELS } from '@/types/account'
 import { mapVerificationPlatform } from '@/mock/playerIdentityMock'
 
+function dataUrlToFile(dataUrl: string, filename = 'game-screenshot.jpg'): File | undefined {
+  if (!dataUrl.startsWith('data:')) return undefined
+  const [header, base64] = dataUrl.split(',')
+  if (!base64) return undefined
+  const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg'
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return new File([bytes], filename, { type: mime })
+}
+
 export const useAccountStore = defineStore('account', () => {
   const currentAccount = ref<CurrentAccount | null>(null)
   const profile = ref<AccountProfile | null>(null)
@@ -377,44 +388,39 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   async function submitPlayerVerificationFromForm(data: {
-    realName: string
-    idType: string
-    idNo: string
     platform: string
     gameAccount: string
-    gameNickname: string
     positionCode?: string
-    contactMobile: string
-    idFrontFile?: File
-    idBackFile?: File
+    gameNickname?: string
+    avatarFile?: File
     gameScreenshotFile?: File
   }) {
+    const existingAvatar = profile.value?.avatarUrl?.trim() || currentAccount.value?.avatarUrl?.trim()
+    if (data.avatarFile) {
+      await updateProfile({
+        avatarUrl: profile.value?.avatarUrl || '',
+        avatarFile: data.avatarFile,
+      })
+    } else if (!existingAvatar) {
+      throw new Error('请先上传球员头像')
+    }
+
+    if (!data.gameScreenshotFile) {
+      throw new Error('请上传游戏账号证明截图')
+    }
+
     const draftPayload: PlayerCertDraftPayload = {
-      realName: data.realName,
-      idType: data.idType,
-      idNo: data.idNo,
       gameTerminal: mapPlatformToGameTerminal(data.platform),
       gameAccount: data.gameAccount,
-      gameNickname: data.gameNickname,
+      gameNickname: data.gameNickname || currentAccount.value?.nickname || profile.value?.nickname,
       positionCode: data.positionCode,
-      contactMobile: data.contactMobile,
     }
     const draft = await saveCertDraft(draftPayload)
     const applicationId = draft.currentApplicationId
     if (!applicationId) throw new Error('未能创建认证申请')
 
-    if (data.idFrontFile) {
-      const uploaded = await uploadAccountFile(data.idFrontFile, 'PLAYER_CERT_ID_FRONT')
-      await bindCertMaterial(applicationId, uploaded.data.fileId, 'PLAYER_CERT_ID_FRONT')
-    }
-    if (data.idBackFile) {
-      const uploaded = await uploadAccountFile(data.idBackFile, 'PLAYER_CERT_ID_BACK')
-      await bindCertMaterial(applicationId, uploaded.data.fileId, 'PLAYER_CERT_ID_BACK')
-    }
-    if (data.gameScreenshotFile) {
-      const uploaded = await uploadAccountFile(data.gameScreenshotFile, 'PLAYER_CERT_GAME_SCREENSHOT')
-      await bindCertMaterial(applicationId, uploaded.data.fileId, 'PLAYER_CERT_GAME_SCREENSHOT')
-    }
+    const uploaded = await uploadAccountFile(data.gameScreenshotFile, 'PLAYER_CERT_GAME_SCREENSHOT')
+    await bindCertMaterial(applicationId, uploaded.data.fileId, 'PLAYER_CERT_GAME_SCREENSHOT')
 
     return submitCertApplication(applicationId)
   }
@@ -442,15 +448,11 @@ export const useAccountStore = defineStore('account', () => {
 
   function submitPlayerVerification(data: PlayerVerificationSnapshot) {
     return submitPlayerVerificationFromForm({
-      realName: data.backupContact || currentAccount.value?.nickname || '',
-      idType: 'ID_CARD',
-      idNo: '000000000000000000',
-      platform: data.primaryPlatform,
+      platform: mapVerificationPlatform(data.primaryPlatform),
       gameAccount: data.gameId,
-      gameNickname: currentAccount.value?.nickname || '',
       positionCode: data.gamePosition,
-      contactMobile: data.backupContact || '13800000000',
-      gameScreenshotFile: undefined,
+      gameNickname: currentAccount.value?.nickname || profile.value?.nickname,
+      gameScreenshotFile: dataUrlToFile(data.gameIdScreenshotUrl),
     })
   }
 

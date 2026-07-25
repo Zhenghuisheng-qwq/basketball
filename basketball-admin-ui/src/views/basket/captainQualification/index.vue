@@ -84,7 +84,7 @@
       <el-form ref="grantRef" :model="grantForm" :rules="grantRules" label-width="100px">
         <el-form-item label="球员" prop="playerId">
           <el-select v-model="grantForm.playerId" placeholder="请选择球员" filterable style="width: 100%">
-            <el-option v-for="item in eligibleList" :key="item.playerId" :label="`${item.realName} (${item.playerNo})`" :value="item.playerId" />
+            <el-option v-for="item in eligibleList" :key="item.playerId" :label="`${captainDisplayName(item)} (${item.playerNo})`" :value="item.playerId" />
           </el-select>
         </el-form-item>
         <el-form-item label="缴费确认">
@@ -115,7 +115,9 @@
     <el-dialog title="可授予队长资格球员" v-model="eligibleOpen" width="640px" append-to-body>
       <el-table :data="eligibleList" v-loading="eligibleLoading" size="small">
         <el-table-column label="球员编号" prop="playerNo" width="120" />
-        <el-table-column label="姓名" prop="realName" width="100" />
+        <el-table-column label="昵称" min-width="120">
+          <template #default="scope">{{ captainDisplayName(scope.row) }}</template>
+        </el-table-column>
         <el-table-column label="会员ID" prop="memberId" width="100" />
         <el-table-column label="操作" width="100">
           <template #default="scope">
@@ -188,6 +190,10 @@ const queryParams = ref<CaptainQualificationQuery>({
   pageNum: 1,
   pageSize: 10
 })
+
+function captainDisplayName(item: EligibleCaptain) {
+  return item.gameNickname || item.nickname || item.playerNo || '-'
+}
 
 function getList() {
   loading.value = true

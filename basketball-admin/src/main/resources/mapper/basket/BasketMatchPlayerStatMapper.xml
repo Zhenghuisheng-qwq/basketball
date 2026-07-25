@@ -7,7 +7,7 @@
                ps.team_id as teamId,
                t.team_name as teamName,
                ps.player_id as playerId,
-               p.real_name as playerName,
+               ifnull(nullif(p.game_nickname, ''), mp.nickname) as playerName,
                p.player_no as playerNo,
                ps.roster_id as rosterId,
                ps.started_flag as startedFlag,
@@ -38,6 +38,7 @@
         from basket_match_player_stat ps
         left join basket_team t on ps.team_id = t.id and t.is_delete = 0
         left join basket_player_profile p on ps.player_id = p.id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
         where ps.match_id = #{matchId} and ps.is_delete = 0
         order by ps.team_id, ps.points desc
     </select>

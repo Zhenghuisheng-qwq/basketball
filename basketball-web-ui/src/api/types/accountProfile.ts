@@ -4,9 +4,7 @@ export interface AccountProfileDto {
   nickname: string
   avatarUrl?: string
   emailMasked: string
-  mobileMasked?: string
   emailVerified: boolean
-  mobileVerified?: boolean
   gender?: number
   birthday?: string
   provinceCode?: string

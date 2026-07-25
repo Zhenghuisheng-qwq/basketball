@@ -4,12 +4,9 @@
 	<resultMap id="result_BasketMemberAccountMapper.xml" type="com.zhs.model.BasketMemberAccount">
 		<id column="id" property="id" />
 		<result column="account_no" property="accountNo" />
-		<result column="mobile" property="mobile" />
 		<result column="username" property="username" />
 		<result column="password_hash" property="passwordHash" />
-		<result column="mobile_country_code" property="mobileCountryCode" />
 		<result column="email" property="email" />
-		<result column="mobile_verified" property="mobileVerified" />
 		<result column="email_verified" property="emailVerified" />
 		<result column="account_status" property="accountStatus" />
 		<result column="register_source" property="registerSource" />
@@ -24,7 +21,7 @@
 	</resultMap>
 	<!-- 数据库中表名为:basket_member_account的列名 -->
 	<sql id="basket_member_account_Column">
-		id,account_no,username,password_hash,mobile_country_code,mobile,email,mobile_verified,email_verified,account_status,register_source,register_terminal,last_login_time,last_login_ip,password_update_time,lock_expire_time,create_time,update_time,is_delete
+		id,account_no,username,password_hash,email,email_verified,account_status,register_source,register_terminal,last_login_time,last_login_ip,password_update_time,lock_expire_time,create_time,update_time,is_delete
 	</sql>
 
 	<!-- 通过BasketMemberAccount的id获得对应数据库中表的数据对象 -->
@@ -43,9 +40,7 @@
 		<where>
 		<if test="username != null"> and username = #{username}</if>
 		<if test="passwordHash != null"> and password_hash = #{passwordHash}</if>
-		<if test="mobileCountryCode != null"> and mobile_country_code = #{mobileCountryCode}</if>
 		<if test="email != null"> and email = #{email}</if>
-		<if test="mobileVerified != null"> and mobile_verified = #{mobileVerified}</if>
 		<if test="emailVerified != null"> and email_verified = #{emailVerified}</if>
 		<if test="accountStatus != null"> and account_status = #{accountStatus}</if>
 		<if test="registerSource != null"> and register_source = #{registerSource}</if>
@@ -58,7 +53,6 @@
 		<if test="updateTime != null"> and update_time = #{updateTime}</if>
 		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
 		<if test="accountNo != null"> and account_no = #{accountNo}</if>
-		<if test="mobile != null"> and mobile = #{mobile}</if>
 		<if test="id != null"> and id = #{id} </if>
 		</where>
 		LIMIT 1
@@ -72,9 +66,7 @@
 		<where>
 		<if test="username != null"> and username = #{username}</if>
 		<if test="passwordHash != null"> and password_hash = #{passwordHash}</if>
-		<if test="mobileCountryCode != null"> and mobile_country_code = #{mobileCountryCode}</if>
 		<if test="email != null"> and email = #{email}</if>
-		<if test="mobileVerified != null"> and mobile_verified = #{mobileVerified}</if>
 		<if test="emailVerified != null"> and email_verified = #{emailVerified}</if>
 		<if test="accountStatus != null"> and account_status = #{accountStatus}</if>
 		<if test="registerSource != null"> and register_source = #{registerSource}</if>
@@ -87,7 +79,6 @@
 		<if test="updateTime != null"> and update_time = #{updateTime}</if>
 		<if test="isDelete != null"> and is_delete = #{isDelete}</if>
 		<if test="accountNo != null"> and account_no = #{accountNo}</if>
-		<if test="mobile != null"> and mobile = #{mobile}</if>
 		<if test="id != null"> and id = #{id} </if>
 		</where>
 	</select>
@@ -95,8 +86,8 @@
 	<!-- 将BasketMemberAccount插入到对应数据库的表中,包括属性值为null的数据 -->
 	<insert id="insertBasketMemberAccount" parameterType="com.zhs.model.BasketMemberAccount">
 		insert into 
-		basket_member_account (id,account_no,username,password_hash,mobile_country_code,mobile,email,mobile_verified,email_verified,account_status,register_source,register_terminal,last_login_time,last_login_ip,password_update_time,lock_expire_time,create_time,update_time,is_delete) 
-		values(#{id},#{accountNo},#{username},#{passwordHash},#{mobileCountryCode},#{mobile},#{email},#{mobileVerified},#{emailVerified},#{accountStatus},#{registerSource},#{registerTerminal},#{lastLoginTime},#{lastLoginIp},#{passwordUpdateTime},#{lockExpireTime},#{createTime},#{updateTime},#{isDelete})
+		basket_member_account (id,account_no,username,password_hash,email,email_verified,account_status,register_source,register_terminal,last_login_time,last_login_ip,password_update_time,lock_expire_time,create_time,update_time,is_delete) 
+		values(#{id},#{accountNo},#{username},#{passwordHash},#{email},#{emailVerified},#{accountStatus},#{registerSource},#{registerTerminal},#{lastLoginTime},#{lastLoginIp},#{passwordUpdateTime},#{lockExpireTime},#{createTime},#{updateTime},#{isDelete})
 	</insert>
 
 	<!-- 将BasketMemberAccount中属性值不为null的数据,插入到对应数据库的表中 -->
@@ -107,10 +98,7 @@
 			<if test="accountNo != null">account_no,</if>
 			<if test="username != null">username,</if>
 			<if test="passwordHash != null">password_hash,</if>
-			<if test="mobileCountryCode != null">mobile_country_code,</if>
-			<if test="mobile != null">mobile,</if>
 			<if test="email != null">email,</if>
-			<if test="mobileVerified != null">mobile_verified,</if>
 			<if test="emailVerified != null">email_verified,</if>
 			<if test="accountStatus != null">account_status,</if>
 			<if test="registerSource != null">register_source,</if>
@@ -128,10 +116,7 @@
 			<if test="accountNo != null">#{accountNo},</if>
 			<if test="username != null">#{username},</if>
 			<if test="passwordHash != null">#{passwordHash},</if>
-			<if test="mobileCountryCode != null">#{mobileCountryCode},</if>
-			<if test="mobile != null">#{mobile},</if>
 			<if test="email != null">#{email},</if>
-			<if test="mobileVerified != null">#{mobileVerified},</if>
 			<if test="emailVerified != null">#{emailVerified},</if>
 			<if test="accountStatus != null">#{accountStatus},</if>
 			<if test="registerSource != null">#{registerSource},</if>
@@ -148,10 +133,10 @@
 
 	<!-- 将BasketMemberAccount批量插入到对应数据库的表中 -->
 	<insert id="insertBasketMemberAccountByBatch" parameterType="ArrayList">
-		insert into basket_member_account(id,account_no,username,password_hash,mobile_country_code,mobile,email,mobile_verified,email_verified,account_status,register_source,register_terminal,last_login_time,last_login_ip,password_update_time,lock_expire_time,create_time,update_time,is_delete) values
+		insert into basket_member_account(id,account_no,username,password_hash,email,email_verified,account_status,register_source,register_terminal,last_login_time,last_login_ip,password_update_time,lock_expire_time,create_time,update_time,is_delete) values
 		<foreach collection="list" item="item" index="index"
 			separator=",">
-			(#{id},#{accountNo},#{username},#{passwordHash},#{mobileCountryCode},#{mobile},#{email},#{mobileVerified},#{emailVerified},#{accountStatus},#{registerSource},#{registerTerminal},#{lastLoginTime},#{lastLoginIp},#{passwordUpdateTime},#{lockExpireTime},#{createTime},#{updateTime},#{isDelete})
+			(#{id},#{accountNo},#{username},#{passwordHash},#{email},#{emailVerified},#{accountStatus},#{registerSource},#{registerTerminal},#{lastLoginTime},#{lastLoginIp},#{passwordUpdateTime},#{lockExpireTime},#{createTime},#{updateTime},#{isDelete})
 		</foreach>
 	</insert>
 	
@@ -170,10 +155,7 @@
 			account_no = #{accountNo} , 
 			username = #{username} , 
 			password_hash = #{passwordHash} , 
-			mobile_country_code = #{mobileCountryCode} , 
-			mobile = #{mobile} , 
 			email = #{email} , 
-			mobile_verified = #{mobileVerified} , 
 			email_verified = #{emailVerified} , 
 			account_status = #{accountStatus} , 
 			register_source = #{registerSource} , 
@@ -196,10 +178,7 @@
 					<if test="accountNo != null">account_no = #{accountNo},</if>
 					<if test="username != null">username = #{username},</if>
 					<if test="passwordHash != null">password_hash = #{passwordHash},</if>
-					<if test="mobileCountryCode != null">mobile_country_code = #{mobileCountryCode},</if>
-					<if test="mobile != null">mobile = #{mobile},</if>
 					<if test="email != null">email = #{email},</if>
-					<if test="mobileVerified != null">mobile_verified = #{mobileVerified},</if>
 					<if test="emailVerified != null">email_verified = #{emailVerified},</if>
 					<if test="accountStatus != null">account_status = #{accountStatus},</if>
 					<if test="registerSource != null">register_source = #{registerSource},</if>

@@ -64,7 +64,9 @@ export const REGISTRATION_VALIDATION_STATUS_OPTIONS = [
 
 export interface PlayerCertQuery extends PageDomain, BaseEntity {
   applicationNo?: string
-  realName?: string
+  nickname?: string
+  email?: string
+  gameAccount?: string
   applicationStatus?: number
   memberId?: number
 }
@@ -73,7 +75,12 @@ export interface PlayerCertListItem {
   id: number
   applicationNo?: string
   memberId?: number
-  realName?: string
+  nickname?: string
+  email?: string
+  avatarUrl?: string
+  gameTerminal?: string
+  gameAccount?: string
+  positionCode?: string
   applicationStatus?: number
   applicationStatusName?: string
   submittedTime?: string
@@ -81,24 +88,23 @@ export interface PlayerCertListItem {
 }
 
 export interface PlayerCertDetail extends PlayerCertListItem {
-  idType?: string
-  idNoMasked?: string
-  gameTerminal?: string
-  gameAccount?: string
   gameNickname?: string
-  positionCode?: string
-  contactMobile?: string
   reviewRemark?: string
   currentAuditorId?: number
   materials?: PlayerCertMaterial[]
 }
 
 export interface PlayerCertMaterial {
-  id?: number
+  materialId?: number
   materialType?: string
   fileId?: number
   materialName?: string
+  fileName?: string
+  mimeType?: string
+  fileSize?: number
+  accessUrl?: string
   sortNo?: number
+  uploadTime?: string
 }
 
 export interface PlayerCertAuditRecord {
@@ -151,7 +157,8 @@ export interface EligibleCaptain {
   playerId: number
   memberId?: number
   playerNo?: string
-  realName?: string
+  nickname?: string
+  gameNickname?: string
   certificationStatus?: number
 }
 

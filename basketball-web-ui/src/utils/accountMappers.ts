@@ -36,8 +36,11 @@ export function mapCertApplicationStatus(
 ): PlayerVerificationStatus {
   if (certificationStatus === PLAYER_CERT_APPROVED) return 'APPROVED'
   if (applicationStatus == null) return 'NOT_APPLIED'
-  if (applicationStatus === PLAYER_CERT_DRAFT || applicationStatus === PLAYER_CERT_CANCELLED) {
+  if (applicationStatus === PLAYER_CERT_DRAFT) {
     return 'NOT_APPLIED'
+  }
+  if (applicationStatus === PLAYER_CERT_CANCELLED) {
+    return 'WITHDRAWN'
   }
   if (applicationStatus === PLAYER_CERT_SUBMITTED || applicationStatus === PLAYER_CERT_REVIEWING) {
     return 'PENDING'
@@ -125,7 +128,7 @@ export function mapPlayerCertToVerification(
     gameIdScreenshotUrl: screenshot?.accessUrl || '',
     gamePosition: position,
     commonPosition: position,
-    backupContact: cert.contactMobile || '',
+    backupContact: '',
     submittedAt: toIsoDateTime(cert.submittedTime),
     reviewedAt: toIsoDateTime(cert.reviewedTime),
     effectiveAt: cert.certificationStatus === PLAYER_CERT_APPROVED ? toIsoDateTime(cert.reviewedTime) : '',

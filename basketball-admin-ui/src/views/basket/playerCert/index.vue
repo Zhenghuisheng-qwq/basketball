@@ -4,8 +4,14 @@
       <el-form-item label="申请编号" prop="applicationNo">
         <el-input v-model="queryParams.applicationNo" placeholder="请输入申请编号" clearable style="width: 200px" @keyup.enter="handleQuery" />
       </el-form-item>
-      <el-form-item label="真实姓名" prop="realName">
-        <el-input v-model="queryParams.realName" placeholder="请输入真实姓名" clearable style="width: 200px" @keyup.enter="handleQuery" />
+      <el-form-item label="昵称" prop="nickname">
+        <el-input v-model="queryParams.nickname" placeholder="请输入用户昵称" clearable style="width: 200px" @keyup.enter="handleQuery" />
+      </el-form-item>
+      <el-form-item label="邮箱" prop="email">
+        <el-input v-model="queryParams.email" placeholder="请输入用户邮箱" clearable style="width: 200px" @keyup.enter="handleQuery" />
+      </el-form-item>
+      <el-form-item label="游戏账号" prop="gameAccount">
+        <el-input v-model="queryParams.gameAccount" placeholder="请输入游戏账号" clearable style="width: 200px" @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item label="状态" prop="applicationStatus">
         <el-select v-model="queryParams.applicationStatus" placeholder="认证状态" clearable style="width: 200px">
@@ -24,8 +30,21 @@
 
     <el-table v-loading="loading" :data="dataList">
       <el-table-column label="申请编号" prop="applicationNo" min-width="140" :show-overflow-tooltip="true" />
-      <el-table-column label="姓名" prop="realName" width="100" />
-      <el-table-column label="会员ID" prop="memberId" width="100" />
+      <el-table-column label="用户" min-width="180">
+        <template #default="scope">
+          <div class="user-cell">
+            <el-avatar v-if="scope.row.avatarUrl" :src="scope.row.avatarUrl" :size="32" />
+            <el-avatar v-else :size="32">{{ (scope.row.nickname || '?').slice(0, 1) }}</el-avatar>
+            <div class="user-meta">
+              <div>{{ scope.row.nickname || '-' }}</div>
+              <div class="sub-text">{{ scope.row.email || '-' }}</div>
+            </div>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="游戏平台" prop="gameTerminal" width="100" />
+      <el-table-column label="游戏ID" prop="gameAccount" min-width="120" :show-overflow-tooltip="true" />
+      <el-table-column label="位置" prop="positionCode" width="80" />
       <el-table-column label="状态" prop="applicationStatus" width="100">
         <template #default="scope">
           <dict-tag :options="PLAYER_CERT_STATUS_OPTIONS" :value="scope.row.applicationStatus" />
@@ -54,32 +73,48 @@
     <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-drawer v-model="detailOpen" title="球员认证详情" size="720px" append-to-body>
-      <el-descriptions v-if="detail" :column="2" border>
-        <el-descriptions-item label="申请编号">{{ detail.applicationNo }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ detail.applicationStatusName }}</el-descriptions-item>
-        <el-descriptions-item label="姓名">{{ detail.realName }}</el-descriptions-item>
-        <el-descriptions-item label="会员ID">{{ detail.memberId }}</el-descriptions-item>
-        <el-descriptions-item label="证件类型">{{ detail.idType }}</el-descriptions-item>
-        <el-descriptions-item label="证件号码">{{ detail.idNoMasked }}</el-descriptions-item>
-        <el-descriptions-item label="游戏终端">{{ detail.gameTerminal }}</el-descriptions-item>
-        <el-descriptions-item label="游戏账号">{{ detail.gameAccount }}</el-descriptions-item>
-        <el-descriptions-item label="游戏昵称">{{ detail.gameNickname }}</el-descriptions-item>
-        <el-descriptions-item label="位置">{{ detail.positionCode }}</el-descriptions-item>
-        <el-descriptions-item label="联系电话">{{ detail.contactMobile }}</el-descriptions-item>
-        <el-descriptions-item label="审核备注" :span="2">{{ detail.reviewRemark || '-' }}</el-descriptions-item>
-      </el-descriptions>
+      <template v-if="detail">
+        <div class="detail-header">
+          <el-avatar v-if="detail.avatarUrl" :src="detail.avatarUrl" :size="56" />
+          <el-avatar v-else :size="56">{{ (detail.nickname || '?').slice(0, 1) }}</el-avatar>
+          <div>
+            <div class="detail-name">{{ detail.nickname || '-' }}</div>
+            <div class="sub-text">{{ detail.email || '-' }}</div>
+          </div>
+        </div>
 
-      <el-divider content-position="left">认证材料</el-divider>
-      <el-table :data="materials" size="small" v-loading="detailLoading">
-        <el-table-column label="材料类型" prop="materialType" width="120" />
-        <el-table-column label="材料名称" prop="materialName" min-width="160" />
-        <el-table-column label="操作" width="100">
-          <template #default="scope">
-            <el-button link type="primary" @click="handlePreviewFile(scope.row.fileId)" v-if="scope.row.fileId">预览</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-empty v-if="!detailLoading && materials.length === 0" description="暂无认证材料" />
+        <el-descriptions :column="2" border class="detail-desc">
+          <el-descriptions-item label="申请编号">{{ detail.applicationNo }}</el-descriptions-item>
+          <el-descriptions-item label="状态">{{ detail.applicationStatusName }}</el-descriptions-item>
+          <el-descriptions-item label="游戏平台">{{ detail.gameTerminal || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="游戏ID">{{ detail.gameAccount || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="常用位置">{{ detail.positionCode || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="提交时间">{{ parseTime(detail.submittedTime) }}</el-descriptions-item>
+          <el-descriptions-item label="审核时间">{{ parseTime(detail.reviewedTime) }}</el-descriptions-item>
+          <el-descriptions-item label="审核备注" :span="2">{{ detail.reviewRemark || '-' }}</el-descriptions-item>
+        </el-descriptions>
+      </template>
+
+      <el-divider content-position="left">游戏账号证明</el-divider>
+      <div v-loading="detailLoading">
+        <div v-if="proofMaterials.length" class="proof-grid">
+          <div v-for="item in proofMaterials" :key="item.materialId || item.fileId" class="proof-item">
+            <div class="proof-label">{{ item.materialName || item.materialType || '证明材料' }}</div>
+            <el-image
+              v-if="item.accessUrl && isImage(item.mimeType)"
+              :src="item.accessUrl"
+              fit="contain"
+              class="proof-image"
+              :preview-src-list="[item.accessUrl]"
+            />
+            <div v-else class="proof-actions">
+              <el-button link type="primary" @click="handlePreviewFile(item.fileId)" v-if="item.fileId">预览文件</el-button>
+              <span v-else>-</span>
+            </div>
+          </div>
+        </div>
+        <el-empty v-else description="暂无认证材料" />
+      </div>
 
       <el-divider content-position="left">审核记录</el-divider>
       <el-table :data="auditRecords" size="small">
@@ -164,7 +199,9 @@ const queryParams = ref<PlayerCertQuery>({
   pageNum: 1,
   pageSize: 10,
   applicationNo: undefined,
-  realName: undefined,
+  nickname: undefined,
+  email: undefined,
+  gameAccount: undefined,
   applicationStatus: undefined
 })
 
@@ -172,6 +209,12 @@ const approveForm = ref<PlayerCertApproveReq>({})
 const rejectForm = ref<PlayerCertRejectReq>({ rejectReason: '' })
 const rejectRules = {
   rejectReason: [{ required: true, message: '驳回原因不能为空', trigger: 'blur' }]
+}
+
+const proofMaterials = computed(() => materials.value)
+
+function isImage(mimeType?: string) {
+  return !!mimeType && mimeType.startsWith('image/')
 }
 
 function getList() {
@@ -260,3 +303,66 @@ function submitReject() {
 
 getList()
 </script>
+
+<style scoped>
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-meta {
+  min-width: 0;
+}
+
+.sub-text {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.detail-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.detail-desc {
+  margin-bottom: 8px;
+}
+
+.proof-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.proof-item {
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.proof-label {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+
+.proof-image {
+  width: 100%;
+  min-height: 160px;
+  border-radius: 4px;
+}
+
+.proof-actions {
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+}
+</style>

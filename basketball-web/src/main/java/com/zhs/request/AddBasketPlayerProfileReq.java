@@ -32,14 +32,6 @@ public class AddBasketPlayerProfileReq implements Serializable {
 
         private String playerNo;
 
-        private String realName;
-
-        private String idType;
-
-        private String idNoCipher;
-
-        private String idNoMasked;
-
         private String gameTerminal;
 
         private String gameAccount;

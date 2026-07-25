@@ -80,12 +80,20 @@ public class FieldEncryptServiceImpl implements IFieldEncryptService {
         String trimmed = configuredKey.trim();
         try {
             byte[] decoded = Base64.decode(trimmed);
-            if (decoded != null && decoded.length > 0) {
+            if (decoded != null && isValidKeyLength(decoded.length)) {
                 return decoded;
             }
         } catch (Exception ignored) {
             // 非 Base64 时按 UTF-8 原文处理
         }
-        return trimmed.getBytes(StandardCharsets.UTF_8);
+        byte[] utf8Key = trimmed.getBytes(StandardCharsets.UTF_8);
+        if (!isValidKeyLength(utf8Key.length)) {
+            throw new ServiceException("字段加密密钥长度无效");
+        }
+        return utf8Key;
+    }
+
+    private boolean isValidKeyLength(int length) {
+        return length == 16 || length == 24 || length == 32;
     }
 }
