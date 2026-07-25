@@ -28,7 +28,8 @@ const emit = defineEmits<{
           <span>报名类型：{{ item.applicationTypeText }}</span>
           <EventStatusBadge :text="item.statusText" :pending="item.pending" />
         </div>
-        <p v-if="item.invitedTeamCode" class="my-events-list__extra">邀请球队：{{ item.invitedTeamCode }}</p>
+        <p v-if="item.statusHint" class="my-events-list__extra">{{ item.statusHint }}</p>
+        <p v-else-if="item.invitedTeamCode" class="my-events-list__extra">邀请球队：{{ item.invitedTeamCode }}</p>
         <p v-else-if="item.confirmedCount != null" class="my-events-list__extra">
           {{ item.confirmedCount }} / {{ item.rosterMax }} 人已确认
         </p>

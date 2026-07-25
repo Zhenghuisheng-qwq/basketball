@@ -7,11 +7,14 @@ import lombok.Data;
 import java.io.Serializable;
 
 @Data
-@ApiModel("会员摘要信息")
+@ApiModel("用户摘要信息")
 public class MemberSummaryResp implements Serializable {
 
-    @ApiModelProperty("会员 ID")
+    @ApiModelProperty("用户ID")
     private String memberId;
+
+    @ApiModelProperty("用户ID（推荐使用）")
+    private String userId;
 
     @ApiModelProperty("账号编号")
     private String accountNo;

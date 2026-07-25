@@ -1080,7 +1080,7 @@ public class LocalDemoSeedSupport {
 
                         captain.getName(), BasketLocalDemoConstants.demoMobile(captain.getGlobalIndex()),
 
-                        RegistrationStatusEnum.SUBMITTED.getCode(), 8, marker, now);
+                        RegistrationStatusEnum.REVIEWING.getCode(), 8, marker, now);
 
                 registrationId = demoMapper.selectIdByRegistrationNo(registrationNo);
 
@@ -1111,12 +1111,6 @@ public class LocalDemoSeedSupport {
             }
 
             ctx.getRegistrationIds().put(key, registrationId);
-
-
-
-
-
-            registrationAuditService.startReview(registrationId);
 
             RegistrationAuditApproveReq approveReq = new RegistrationAuditApproveReq();
 

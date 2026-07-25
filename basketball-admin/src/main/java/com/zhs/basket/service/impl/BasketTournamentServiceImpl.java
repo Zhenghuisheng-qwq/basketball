@@ -1,5 +1,6 @@
 package com.zhs.basket.service.impl;
 
+import com.zhs.basket.constant.CnpaRosterConstants;
 import com.zhs.basket.domain.BasketCompetitionSeason;
 import com.zhs.basket.domain.BasketTournament;
 import com.zhs.basket.domain.BasketTournamentSeason;
@@ -220,8 +221,8 @@ public class BasketTournamentServiceImpl implements IBasketTournamentService {
         season.setSeasonStartTime(req.getCompetitionStartTime());
         season.setSeasonEndTime(req.getCompetitionEndTime());
         season.setMaxTeamCount(16);
-        season.setMinRosterCount(5);
-        season.setMaxRosterCount(12);
+        season.setMinRosterCount(CnpaRosterConstants.MIN_ROSTER_COUNT);
+        season.setMaxRosterCount(CnpaRosterConstants.MAX_ROSTER_COUNT);
         season.setAllowTeamRegistration(1);
         season.setAllowOpenRegistration(0);
         season.setSeasonStatus(SeasonStatusEnum.PREPARE.getCode());

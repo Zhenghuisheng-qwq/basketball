@@ -2,11 +2,14 @@ package com.zhs.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.request.team.TeamRegistrationDraftReq;
+import com.zhs.request.team.TeamRegistrationRemindReq;
 import com.zhs.request.team.TeamRegistrationRosterReq;
 import com.zhs.request.team.TeamRegistrationUpdateReq;
 import com.zhs.request.team.TeamRegistrationWithdrawReq;
+import com.zhs.response.account.MyEventsContextResp;
 import com.zhs.response.team.AvailableSeasonItemResp;
 import com.zhs.response.team.AvailableSeasonPageResp;
+import com.zhs.response.team.TeamEventRecordItemResp;
 import com.zhs.response.team.TeamRegistrationAuditItemResp;
 import com.zhs.response.team.TeamRegistrationDetailResp;
 import com.zhs.response.team.TeamRegistrationItemResp;
@@ -41,6 +44,36 @@ public class TeamRegistrationBusinessController {
         return R.ok(teamRegistrationBusinessService.pageAvailableSeasons(teamId, currentPage, pageSize));
     }
 
+    @ApiOperation("队员视角-可参与赛事分页")
+    @GetMapping("/basket/team/{teamId}/registration/member/available-season/page")
+    public R<AvailableSeasonPageResp> pageMemberAvailableSeasons(@PathVariable String teamId,
+                                                                 @RequestParam(required = false) Integer currentPage,
+                                                                 @RequestParam(required = false) Integer pageSize) {
+        return R.ok(teamRegistrationBusinessService.pageMemberAvailableSeasons(teamId, currentPage, pageSize));
+    }
+
+    @ApiOperation("队员视角-球队赛事记录分页")
+    @GetMapping("/basket/team/{teamId}/registration/member/event/page")
+    public R<IPage<TeamEventRecordItemResp>> pageMemberTeamEvents(@PathVariable String teamId,
+                                                                  @RequestParam(required = false) Integer currentPage,
+                                                                  @RequestParam(required = false) Integer pageSize) {
+        return R.ok(teamRegistrationBusinessService.pageMemberTeamEvents(teamId, currentPage, pageSize));
+    }
+
+    @ApiOperation("提醒队长报名")
+    @PostMapping("/basket/team/{teamId}/registration/remind-captain")
+    public R<Void> remindCaptainToRegister(@PathVariable String teamId,
+                                           @RequestBody TeamRegistrationRemindReq req) {
+        teamRegistrationBusinessService.remindCaptainToRegister(teamId, req);
+        return R.ok(null, "已提醒队长");
+    }
+
+    @ApiOperation("我的赛事页面身份上下文")
+    @GetMapping("/basket/account/my-events/context")
+    public R<MyEventsContextResp> getMyEventsContext() {
+        return R.ok(teamRegistrationBusinessService.getMyEventsContext());
+    }
+
     @ApiOperation("球队报名分页")
     @GetMapping("/basket/team/{teamId}/registration/page")
     public R<IPage<TeamRegistrationItemResp>> pageRegistrations(@PathVariable String teamId,
@@ -63,6 +96,12 @@ public class TeamRegistrationBusinessController {
         return R.ok(teamRegistrationBusinessService.getDetail(registrationId));
     }
 
+    @ApiOperation("队员只读-报名详情")
+    @GetMapping("/basket/team/registration/{registrationId}/member-view")
+    public R<TeamRegistrationDetailResp> getMemberDetail(@PathVariable String registrationId) {
+        return R.ok(teamRegistrationBusinessService.getMemberDetail(registrationId));
+    }
+
     @ApiOperation("更新报名")
     @PutMapping("/basket/team/registration/{registrationId}")
     public R<TeamRegistrationDetailResp> update(@PathVariable String registrationId,
@@ -80,7 +119,7 @@ public class TeamRegistrationBusinessController {
     @ApiOperation("提交报名")
     @PostMapping("/basket/team/registration/{registrationId}/submit")
     public R<TeamRegistrationDetailResp> submit(@PathVariable String registrationId) {
-        return R.ok(teamRegistrationBusinessService.submit(registrationId), "报名提交成功");
+        return R.ok(teamRegistrationBusinessService.submit(registrationId), "报名已提交，正在等待后台审核");
     }
 
     @ApiOperation("撤回报名")

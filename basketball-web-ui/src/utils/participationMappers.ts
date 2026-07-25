@@ -10,6 +10,7 @@ import type {
 } from '@/types/account'
 import type { AvailableEvent, MyApplication, ParticipatingEvent } from '@/types/accountEvents'
 import type { EventTeam, EventTournament, RosterMember, TransferRecord } from '@/types/eventTeam'
+import { resolveSeasonRosterLimits } from '@/constants/rosterRules'
 import { OPEN_APPLICATION_STATUS_LABELS } from '@/types/account'
 
 export function isRegistrationDeadlinePassed(deadline?: string): boolean {
@@ -170,7 +171,7 @@ export function mapTeamSeasonToAvailableEvent(
     registrationTypeText: '球队报名',
     deadline,
     quotaUsed: 0,
-    quotaTotal: season.maxRosterCount || 0,
+    quotaTotal: resolveSeasonRosterLimits(season.minRosterCount, season.maxRosterCount).maxRosterCount,
     quotaFull: closed,
     eligibilityStatus,
     actionText,
@@ -198,10 +199,13 @@ export function mapTeamRegistrationToApplication(
     applicationTypeText: '球队报名',
     status,
     statusText: item.registrationStatusText || mapTeamRegistrationStatusText(item.registrationStatus),
+    statusHint: item.registrationStatus === 2 || item.registrationStatus === 1
+      ? '报名已提交，正在等待后台审核。'
+      : undefined,
     submitTime: item.submittedTime || item.createTime,
     actionText,
     actionType,
-    pending: item.registrationStatus === 1 || item.registrationStatus === 2,
+    pending: item.registrationStatus === 2 || item.registrationStatus === 1,
     showAction: isCaptain,
   }
 }
@@ -227,7 +231,7 @@ export function mapOpenRegistrationToApplication(item: OpenRegistrationItemDto):
 function mapTeamRegistrationStatusText(status?: number): string {
   switch (status) {
     case 0: return '草稿'
-    case 1: return '已提交'
+    case 1: return '审核中'
     case 2: return '审核中'
     case 3: return '已通过'
     case 4: return '已驳回'
@@ -237,9 +241,28 @@ function mapTeamRegistrationStatusText(status?: number): string {
   }
 }
 
+export function formatParticipationIdentityText(rosterRole?: string | null, isCaptain?: boolean): string {
+  if (isCaptain || rosterRole?.toUpperCase() === 'CAPTAIN') return '队长'
+  if (rosterRole?.toUpperCase() === 'PLAYER') return '球员'
+  return rosterRole || '球员'
+}
+
+/** 合并正式赛事球队与已通过报名，同一赛季只保留 eventTeam 记录 */
+export function mergeParticipatingEvents(
+  eventTeams: ParticipatingEvent[],
+  approvedRegistrations: ParticipatingEvent[],
+): ParticipatingEvent[] {
+  const seasonKeys = new Set(eventTeams.map((item) => String(item.tournamentId)))
+  const fallback = approvedRegistrations.filter(
+    (item) => !seasonKeys.has(String(item.tournamentId)),
+  )
+  return [...eventTeams, ...fallback]
+}
+
 export function mapEventTeamSummaryToParticipating(item: EventTeamSummaryDto): ParticipatingEvent {
   const seasonKey = item.seasonId || item.eventTeamId
   const isCaptain = Boolean(item.isCaptain)
+  const identityText = formatParticipationIdentityText(item.rosterRole, isCaptain)
   return {
     relationId: item.eventTeamId,
     tournamentId: seasonKey,
@@ -247,8 +270,8 @@ export function mapEventTeamSummaryToParticipating(item: EventTeamSummaryDto): P
     platform: item.gameTerminal || '-',
     participationType: 'TEAM',
     participationTypeText: '球队参赛',
-    identityType: item.rosterRole || '球员',
-    identityText: item.rosterRole || (isCaptain ? '队长' : '球员'),
+    identityType: identityText,
+    identityText,
     status: String(item.participationStatus ?? ''),
     statusText: item.participationStatusText || item.rosterLockStatusText || '参赛中',
     actionText: isCaptain ? '管理本届球队' : '查看阵容',
@@ -262,13 +285,14 @@ export function mapEventTeamSummaryToParticipating(item: EventTeamSummaryDto): P
 
 export function mapEventTeamDetailToTournament(detail: EventTeamDetailDto): EventTournament {
   const transferOpen = Boolean(detail.transferEnabled)
+  const rosterLimits = resolveSeasonRosterLimits(detail.minRosterCount, detail.maxRosterCount)
   return {
     tournamentId: detail.seasonId || detail.tournamentId || '',
     tournamentName: detail.tournamentName || detail.seasonName || '',
     phaseName: detail.participationStatusText || '进行中',
     platform: detail.gameTerminal || '-',
-    rosterMin: detail.minRosterCount ?? 5,
-    rosterMax: detail.maxRosterCount ?? 8,
+    rosterMin: rosterLimits.minRosterCount,
+    rosterMax: rosterLimits.maxRosterCount,
     transferWindowOpen: transferOpen,
     transferWindowEndTime: detail.transferEndTime || '',
     freeAgentQuota: detail.freeAgentQuota ?? 0,
@@ -277,6 +301,7 @@ export function mapEventTeamDetailToTournament(detail: EventTeamDetailDto): Even
 }
 
 export function mapEventTeamDetailToEventTeam(detail: EventTeamDetailDto): EventTeam {
+  const rosterLimits = resolveSeasonRosterLimits(detail.minRosterCount, detail.maxRosterCount)
   return {
     eventTeamId: detail.eventTeamId,
     teamId: detail.teamId || '',
@@ -293,8 +318,8 @@ export function mapEventTeamDetailToEventTeam(detail: EventTeamDetailDto): Event
     captainName: detail.captainNickname || '',
     captainPlayerNo: '',
     rosterCount: detail.rosterCount ?? 0,
-    rosterMax: detail.maxRosterCount ?? 8,
-    rosterMin: detail.minRosterCount ?? 5,
+    rosterMax: rosterLimits.maxRosterCount,
+    rosterMin: rosterLimits.minRosterCount,
     stageName: detail.participationStatusText || '',
     rosterStatus: detail.rosterLockStatus === 1 ? 'LOCKED' : 'ACTIVE',
     rosterStatusText: detail.rosterLockStatusText || '生效中',

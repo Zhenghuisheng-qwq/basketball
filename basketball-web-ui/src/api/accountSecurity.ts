@@ -2,6 +2,7 @@ import request from '@/api/request'
 import type { ApiResult, PageResult } from '@/api/types/common'
 import type {
   ChangePasswordPayload,
+  ChangePasswordResultDto,
   LoginLogItemDto,
   SecurityLogItemDto,
 } from '@/api/types/accountSecurity'
@@ -19,5 +20,5 @@ export function getOperationLogPage(params: { currentPage?: number; pageSize?: n
 }
 
 export function changeAccountPassword(payload: ChangePasswordPayload) {
-  return request.post<any, ApiResult<null>>('/basket/account/security/change-password', payload)
+  return request.post<any, ApiResult<ChangePasswordResultDto>>('/basket/account/security/change-password', payload)
 }

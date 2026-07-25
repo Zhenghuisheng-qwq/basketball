@@ -28,3 +28,7 @@ export interface ChangePasswordPayload {
   newPassword: string
   confirmPassword: string
 }
+
+export interface ChangePasswordResultDto {
+  needRelogin?: boolean
+}

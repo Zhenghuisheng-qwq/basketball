@@ -10,7 +10,6 @@ import com.zhs.common.cachekey.member.EmailCodeFailCacheKey;
 import com.zhs.common.cachekey.member.EmailCodeIpLimitCacheKey;
 import com.zhs.common.cachekey.member.EmailCodeLimitCacheKey;
 import com.zhs.common.cachekey.member.LoginFailCacheKey;
-import com.zhs.common.cachekey.member.MemberTokenCacheKey;
 import com.zhs.config.MemberAuthProperties;
 import com.zhs.dao.BasketAccountSecurityLogDao;
 import com.zhs.dao.BasketCaptainQualificationDao;
@@ -50,6 +49,7 @@ import com.zhs.response.member.MemberSessionResp;
 import com.zhs.response.member.MemberSummaryResp;
 import com.zhs.service.IBasketMemberAuthService;
 import com.zhs.service.mail.IMemberMailService;
+import com.zhs.support.MemberSessionSupport;
 import com.zhs.util.MiniRedisUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -108,6 +108,8 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
     private MiniRedisUtil miniRedisUtil;
     @Resource
     private MemberAuthProperties authProperties;
+    @Resource
+    private MemberSessionSupport memberSessionSupport;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -283,10 +285,10 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         saveAgreement(account.getId(), "USER_AGREEMENT", "用户协议", terminalType, clientIp, userAgent, now);
         saveAgreement(account.getId(), "PRIVACY_POLICY", "隐私政策", terminalType, clientIp, userAgent, now);
 
-        writeSecurityLog(account.getId(), "REGISTER", "会员注册",
+        writeSecurityLog(account.getId(), "REGISTER", "用户注册",
                 null, maskEmail(email), "MEMBER", account.getId(), clientIp, terminalType, now, "官网账号注册");
 
-        String token = issueToken(account.getId());
+        String token = issueToken(account);
         writeLoginLog(account, LOGIN_TYPE_PASSWORD, LoginResultEnum.SUCCESS, null, clientIp, terminalType, userAgent, now);
         return buildLoginResp(account, profile.getNickname(), token);
     }
@@ -338,7 +340,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         miniRedisUtil.delete(failKey);
         Date now = new Date();
         touchLogin(account, clientIp, now);
-        String token = issueToken(account.getId());
+        String token = issueToken(account);
         writeLoginLog(account, LOGIN_TYPE_PASSWORD, LoginResultEnum.SUCCESS, null, clientIp, terminalType, userAgent, now);
         writeSecurityLog(account.getId(), "LOGIN_SUCCESS", "密码登录成功",
                 null, null, "MEMBER", account.getId(), clientIp, terminalType, now, null);
@@ -366,7 +368,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
 
         Date now = new Date();
         touchLogin(account, clientIp, now);
-        String token = issueToken(account.getId());
+        String token = issueToken(account);
         writeLoginLog(account, LOGIN_TYPE_EMAIL_CODE, LoginResultEnum.SUCCESS, null, clientIp, terminalType, userAgent, now);
         writeSecurityLog(account.getId(), "LOGIN_SUCCESS", "验证码登录成功",
                 null, null, "MEMBER", account.getId(), clientIp, terminalType, now, null);
@@ -396,6 +398,9 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         account.setPasswordUpdateTime(now);
         memberAccountDao.updateById(account);
 
+        long authVersion = memberSessionSupport.resolveAuthVersion(account);
+        memberSessionSupport.invalidateAllSessions(account.getId(), null, authVersion);
+
         writeSecurityLog(account.getId(), EVENT_PASSWORD_RESET, "重置登录密码",
                 null, null, "MEMBER", account.getId(), clientIp, null, now, null);
     }
@@ -407,16 +412,20 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         }
         BasketMemberAccount account = memberAccountDao.selectById(memberId);
         if (account == null || Integer.valueOf(1).equals(account.getIsDelete())) {
-            if (StringUtils.hasText(token)) {
-                miniRedisUtil.delete(memberTokenKey(token));
-            }
+            memberSessionSupport.revokeToken(token);
             throw new ServiceException("登录已过期", 401);
         }
         if (!MemberAccountStatusEnum.isNormal(account.getAccountStatus())) {
-            if (StringUtils.hasText(token)) {
-                miniRedisUtil.delete(memberTokenKey(token));
-            }
+            memberSessionSupport.revokeToken(token);
             throw new ServiceException("账号已被禁用", 401);
+        }
+        if (StringUtils.hasText(token)) {
+            MemberSessionSupport.ParsedTokenSession session = memberSessionSupport.resolveTokenSession(token);
+            if (session == null || !memberId.equals(session.memberId())
+                    || !memberSessionSupport.isTokenAuthVersionValid(memberId, session.authVersion())) {
+                memberSessionSupport.revokeToken(token);
+                throw new ServiceException("登录已过期", 401);
+            }
         }
 
         MemberSessionResp resp = new MemberSessionResp();
@@ -429,9 +438,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
 
     @Override
     public void logout(String token) {
-        if (StringUtils.hasText(token)) {
-            miniRedisUtil.delete(memberTokenKey(token));
-        }
+        memberSessionSupport.revokeToken(token);
     }
 
     private void consumeVerifyCode(String email, VerifyPurposeEnum purpose, String bizNo, String code) {
@@ -568,14 +575,20 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         memberAccountDao.updateById(account);
     }
 
-    private String issueToken(Long memberId) {
+    private String issueToken(BasketMemberAccount account) {
         String token = UUID.randomUUID().toString().replace("-", "");
-        miniRedisUtil.set(memberTokenKey(token), String.valueOf(memberId));
+        long authVersion = memberSessionSupport.resolveAuthVersion(account);
+        memberSessionSupport.syncAuthVersion(account.getId(), authVersion);
+        memberSessionSupport.storeToken(token, account.getId(), authVersion);
         return token;
     }
 
-    private MemberTokenCacheKey memberTokenKey(String token) {
-        return new MemberTokenCacheKey(token, authProperties.getTokenExpireDays());
+    private String issueToken(Long memberId) {
+        BasketMemberAccount account = memberAccountDao.selectById(memberId);
+        if (account == null) {
+            throw new ServiceException("账号不存在");
+        }
+        return issueToken(account);
     }
 
     private MemberLoginResp buildLoginResp(BasketMemberAccount account, String nickname, String token) {
@@ -591,6 +604,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
 
     private void fillSummary(MemberSummaryResp target, BasketMemberAccount account, String nickname) {
         target.setMemberId(String.valueOf(account.getId()));
+        target.setUserId(String.valueOf(account.getId()));
         target.setAccountNo(account.getAccountNo());
         target.setNickname(nickname);
         target.setAvatarUrl(null);
@@ -754,7 +768,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
 
     private String deriveNicknameFromEmail(String email) {
         if (!StringUtils.hasText(email)) {
-            return "CNPA会员";
+            return "CNPA用户";
         }
         String local = email.split("@")[0];
         return local.length() > 20 ? local.substring(0, 20) : local;

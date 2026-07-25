@@ -283,10 +283,11 @@ export function mapTeamRegistrationStatus(status?: number | null): TeamRegistrat
 
 export function mapTeamRegistrationStatusText(status?: number | null): string {
   if (status == null) return '未知'
+  if (status === 1) return '审核中'
   const mapped = mapTeamRegistrationStatus(status)
   const labels: Record<TeamRegistrationStatusCode, string> = {
     DRAFT: '草稿',
-    SUBMITTED: '已提交',
+    SUBMITTED: '审核中',
     REVIEWING: '审核中',
     APPROVED: '已通过',
     REJECTED: '未通过',
@@ -299,7 +300,7 @@ export function mapTeamRegistrationStatusText(status?: number | null): string {
 function mapRegistrationStatus(status?: number): MyTournamentStatus {
   if (status == null) return 'NOT_JOINED'
   const teamStatus = mapTeamRegistrationStatus(status)
-  if (teamStatus === 'DRAFT' || teamStatus === 'SUBMITTED' || teamStatus === 'REVIEWING') {
+  if (teamStatus === 'DRAFT' || teamStatus === 'REVIEWING' || teamStatus === 'SUBMITTED') {
     return 'WAITING_REGISTRATION'
   }
   if (teamStatus === 'APPROVED') return 'JOINED'

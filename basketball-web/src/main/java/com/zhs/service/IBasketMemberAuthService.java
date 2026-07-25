@@ -10,7 +10,7 @@ import com.zhs.response.member.MemberLoginResp;
 import com.zhs.response.member.MemberSessionResp;
 
 /**
- * 官网会员认证业务
+ * 官网用户认证业务
  */
 public interface IBasketMemberAuthService {
 

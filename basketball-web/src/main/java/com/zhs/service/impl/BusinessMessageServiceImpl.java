@@ -32,6 +32,13 @@ public class BusinessMessageServiceImpl implements IBusinessMessageService {
     @Transactional(rollbackFor = Exception.class)
     public void sendSiteMessage(Long receiverMemberId, String title, String content,
                                 String bizType, Long bizId, String redirectType, String redirectValue) {
+        sendSiteMessageFrom(receiverMemberId, receiverMemberId, title, content, bizType, bizId, redirectType, redirectValue);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void sendSiteMessageFrom(Long senderMemberId, Long receiverMemberId, String title, String content,
+                                    String bizType, Long bizId, String redirectType, String redirectValue) {
         if (receiverMemberId == null) {
             return;
         }
@@ -49,7 +56,7 @@ public class BusinessMessageServiceImpl implements IBusinessMessageService {
         task.setTotalCount(1);
         task.setSuccessCount(1);
         task.setFailCount(0);
-        task.setCreatorId(receiverMemberId);
+        task.setCreatorId(senderMemberId);
         task.setIsDelete(NOT_DELETED);
         messageTaskDao.insert(task);
 
@@ -60,6 +67,8 @@ public class BusinessMessageServiceImpl implements IBusinessMessageService {
         receiver.setDeliveryStatus(DELIVERY_STATUS_SENT);
         receiver.setReadStatus(MessageReadStatusEnum.UNREAD.getCode());
         receiver.setSentTime(now);
+        receiver.setRedirectType(redirectType);
+        receiver.setRedirectValue(redirectValue);
         receiver.setIsDelete(NOT_DELETED);
         messageReceiverDao.insert(receiver);
     }

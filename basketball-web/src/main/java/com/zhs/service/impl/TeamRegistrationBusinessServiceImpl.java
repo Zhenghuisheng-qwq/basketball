@@ -9,6 +9,7 @@ import com.zhs.common.UserContext;
 import com.zhs.dao.*;
 import com.zhs.enums.*;
 import com.zhs.exception.ServiceException;
+import com.zhs.model.BasketMessageTask;
 import com.zhs.model.BasketMemberAccount;
 import com.zhs.model.BasketCompetitionSeason;
 import com.zhs.model.BasketDisciplineRecord;
@@ -25,12 +26,9 @@ import com.zhs.request.team.TeamRegistrationRosterItemReq;
 import com.zhs.request.team.TeamRegistrationRosterReq;
 import com.zhs.request.team.TeamRegistrationUpdateReq;
 import com.zhs.request.team.TeamRegistrationWithdrawReq;
-import com.zhs.response.team.AvailableSeasonItemResp;
-import com.zhs.response.team.AvailableSeasonPageResp;
-import com.zhs.response.team.TeamRegistrationAuditItemResp;
-import com.zhs.response.team.TeamRegistrationDetailResp;
-import com.zhs.response.team.TeamRegistrationItemResp;
-import com.zhs.response.team.TeamRegistrationPlayerItemResp;
+import com.zhs.request.team.TeamRegistrationRemindReq;
+import com.zhs.response.account.MyEventsContextResp;
+import com.zhs.response.team.*;
 import com.zhs.service.IBusinessMessageService;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamRegistrationBusinessService;
@@ -64,6 +62,11 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
     private static final int DELETED = 1;
     private static final int ENABLED = 1;
     private static final String BIZ_TYPE_TEAM_REGISTRATION = "TEAM_REGISTRATION";
+    private static final String BIZ_TYPE_TEAM_REGISTRATION_REMIND = "TEAM_REGISTRATION_REMIND";
+    private static final long REMIND_COOLDOWN_MS = 24L * 60 * 60 * 1000;
+
+    @Resource
+    private BasketMessageTaskDao messageTaskDao;
 
     @Resource
     private BasketTournamentSeasonDao seasonDao;
@@ -177,6 +180,322 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
             page.setEmptyReason(resolveEmptyReason(team, inWindowCount, notStartedCount, terminalMismatchCount, alreadyRegisteredCount, seasons.size()));
         }
         return page;
+    }
+
+    @Override
+    public MyEventsContextResp getMyEventsContext() {
+        Long memberId = UserContext.getRequiredUserId();
+        MyEventsContextResp resp = new MyEventsContextResp();
+        resp.setHasTeam(false);
+        resp.setTeamRole("NONE");
+
+        BasketTeamMember membership = teamMemberDao.selectOne(new LambdaQueryWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getMemberId, memberId)
+                .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
+                .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
+                .eq(BasketTeamMember::getIsDelete, NOT_DELETED)
+                .orderByDesc(BasketTeamMember::getCreateTime)
+                .last("limit 1"));
+        if (membership == null) {
+            return resp;
+        }
+
+        BasketTeam team = teamDao.selectById(membership.getTeamId());
+        if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
+            return resp;
+        }
+
+        resp.setHasTeam(true);
+        resp.setTeamId(toStringId(team.getId()));
+        resp.setTeamName(team.getTeamName());
+        resp.setTeamCertificationStatus(team.getAuditStatus());
+        resp.setGameTerminal(team.getGameTerminal());
+        resp.setTeamRole(memberId.equals(team.getCaptainMemberId()) ? "CAPTAIN" : "MEMBER");
+        return resp;
+    }
+
+    @Override
+    public AvailableSeasonPageResp pageMemberAvailableSeasons(String teamId, Integer currentPage, Integer pageSize) {
+        Long teamPk = parseLongId(teamId, "球队主键");
+        Long memberId = UserContext.getRequiredUserId();
+        BasketTeam team = requireTeamForMemberView(memberId, teamPk);
+        Date now = new Date();
+
+        List<BasketTournamentSeason> seasons = seasonDao.selectList(new LambdaQueryWrapper<BasketTournamentSeason>()
+                .eq(BasketTournamentSeason::getIsDelete, NOT_DELETED)
+                .and(w -> w.eq(BasketTournamentSeason::getAllowTeamRegistration, ENABLED)
+                        .or().isNull(BasketTournamentSeason::getAllowTeamRegistration))
+                .notIn(BasketTournamentSeason::getSeasonStatus,
+                        TournamentSeasonStatusEnum.FINISHED.getCode(),
+                        TournamentSeasonStatusEnum.CLOSED.getCode(),
+                        TournamentSeasonStatusEnum.CANCELLED.getCode())
+                .orderByDesc(BasketTournamentSeason::getRegistrationStartTime));
+
+        Map<Long, BasketTournament> tournamentMap = loadTournamentMap(seasons);
+        Map<Long, BasketCompetitionSeason> competitionSeasonMap = loadCompetitionSeasonMap(tournamentMap.values());
+        Map<Long, BasketTournamentRegistration> existingMap = loadExistingRegistrationMap(teamPk, seasons);
+
+        List<AvailableSeasonItemResp> items = new ArrayList<>();
+        for (BasketTournamentSeason season : seasons) {
+            BasketTournament tournament = tournamentMap.get(season.getTournamentId());
+            if (tournament == null || !Objects.equals(TournamentStatusEnum.ACTIVE.getCode(), tournament.getTournamentStatus())) {
+                continue;
+            }
+            if (!isCompetitionSeasonValid(tournament, competitionSeasonMap)) {
+                continue;
+            }
+
+            String registrationStatus = resolveRegistrationStatus(season, tournament, now);
+            BasketTournamentRegistration existing = existingMap.get(season.getId());
+            AvailableSeasonItemResp resp = buildAvailableSeasonItem(
+                    season, tournament, team, existing, registrationStatus, competitionSeasonMap);
+            resp.setCanRegister(false);
+            fillMemberRemindFields(resp, team, season, tournament, existing, memberId, now);
+            items.add(resp);
+        }
+
+        AvailableSeasonPageResp page = buildAvailablePage(items, currentPage, pageSize);
+        if (items.isEmpty()) {
+            page.setEmptyReason("当前暂无可参与赛事");
+        }
+        return page;
+    }
+
+    @Override
+    public IPage<TeamEventRecordItemResp> pageMemberTeamEvents(String teamId, Integer currentPage, Integer pageSize) {
+        Long teamPk = parseLongId(teamId, "球队主键");
+        Long memberId = UserContext.getRequiredUserId();
+        requireTeamForMemberView(memberId, teamPk);
+
+        List<BasketTournamentRegistration> registrations = registrationDao.selectList(
+                new LambdaQueryWrapper<BasketTournamentRegistration>()
+                        .eq(BasketTournamentRegistration::getTeamId, teamPk)
+                        .eq(BasketTournamentRegistration::getIsDelete, NOT_DELETED)
+                        .orderByDesc(BasketTournamentRegistration::getCreateTime));
+
+        Map<Long, BasketTournamentSeason> seasonMap = loadSeasonMap(registrations);
+        Map<Long, BasketTournament> tournamentMap = loadTournamentMap(seasonMap.values());
+        Map<Long, BasketTournamentRegistrationAudit> latestAuditMap = loadLatestAuditMap(
+                registrations.stream().map(BasketTournamentRegistration::getId).collect(Collectors.toList()));
+
+        List<TeamEventRecordItemResp> items = new ArrayList<>();
+        for (BasketTournamentRegistration registration : registrations) {
+            BasketTournamentSeason season = seasonMap.get(registration.getSeasonId());
+            BasketTournament tournament = season == null ? null : tournamentMap.get(season.getTournamentId());
+            TournamentRegistrationStatusEnum status = TournamentRegistrationStatusEnum.fromCode(registration.getRegistrationStatus());
+            BasketTournamentRegistrationAudit latestAudit = latestAuditMap.get(registration.getId());
+
+            TeamEventRecordItemResp item = new TeamEventRecordItemResp();
+            item.setRegistrationId(toStringId(registration.getId()));
+            item.setSeasonId(toStringId(registration.getSeasonId()));
+            item.setTournamentId(season == null ? null : toStringId(season.getTournamentId()));
+            item.setTournamentName(tournament == null ? null : tournament.getTournamentName());
+            item.setSeasonName(season == null ? null : season.getSeasonName());
+            item.setRegistrationStatus(registration.getRegistrationStatus());
+            item.setRegistrationStatusText(status.getDescription());
+            item.setAuditStatusText(status.getDescription());
+            item.setRosterStatusText(resolveRosterStatusText(registration));
+            item.setParticipationStatusText(resolveParticipationStatusText(registration.getRegistrationStatus()));
+            item.setSubmitTime(registration.getSubmittedTime());
+            item.setAuditTime(latestAudit == null ? null : latestAudit.getAuditTime());
+            if (latestAudit != null && Objects.equals(TournamentRegistrationStatusEnum.REJECTED.getCode(), registration.getRegistrationStatus())) {
+                item.setRejectReason(latestAudit.getAuditRemark());
+            }
+            items.add(item);
+        }
+        return toPage(items, currentPage, pageSize);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void remindCaptainToRegister(String teamId, TeamRegistrationRemindReq req) {
+        if (req == null || !StringUtils.hasText(req.getSeasonId())) {
+            throw new ServiceException("赛季主键不能为空");
+        }
+        Long teamPk = parseLongId(teamId, "球队主键");
+        Long seasonPk = parseLongId(req.getSeasonId(), "赛季主键");
+        Long memberId = UserContext.getRequiredUserId();
+        BasketTeam team = requireTeamForMemberView(memberId, teamPk);
+        if (memberId.equals(team.getCaptainMemberId())) {
+            throw new ServiceException("队长无需提醒自己", 403);
+        }
+        if (team.getCaptainMemberId() == null) {
+            throw new ServiceException("当前球队暂无可提醒队长");
+        }
+        if (!Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())) {
+            throw new ServiceException("球队认证通过后才能报名赛事");
+        }
+
+        BasketTournamentSeason season = seasonDao.selectById(seasonPk);
+        if (season == null || !NOT_DELETED.equals(season.getIsDelete())) {
+            throw new ServiceException("赛季不存在");
+        }
+        BasketTournament tournament = tournamentDao.selectById(season.getTournamentId());
+        if (tournament == null || !NOT_DELETED.equals(tournament.getIsDelete())) {
+            throw new ServiceException("赛事不存在");
+        }
+
+        Date now = new Date();
+        String registrationStatus = resolveRegistrationStatus(season, tournament, now);
+        if (!"OPEN".equals(registrationStatus)) {
+            throw new ServiceException("赛事报名已截止或未开放");
+        }
+
+        BasketTournamentRegistration existing = registrationDao.selectOne(new LambdaQueryWrapper<BasketTournamentRegistration>()
+                .eq(BasketTournamentRegistration::getTeamId, teamPk)
+                .eq(BasketTournamentRegistration::getSeasonId, seasonPk)
+                .eq(BasketTournamentRegistration::getIsDelete, NOT_DELETED)
+                .last("limit 1"));
+        if (existing != null && isBlockingRegistration(existing.getRegistrationStatus())) {
+            throw new ServiceException("球队已报名该赛事");
+        }
+
+        if (hasRecentRemind(memberId, seasonPk)) {
+            throw new ServiceException("24小时内已提醒过队长，请稍后再试");
+        }
+
+        String terminalMismatchReason = resolveTerminalMismatchReason(team, tournament);
+        if (terminalMismatchReason != null) {
+            throw new ServiceException(terminalMismatchReason);
+        }
+
+        String reminderName = resolveMemberNickname(memberId);
+        String tournamentName = tournament.getTournamentName() == null ? season.getSeasonName() : tournament.getTournamentName();
+        String content = String.format("队员「%s」提醒你报名赛事「%s」。", reminderName, tournamentName);
+        String redirectValue = String.format("/account/my-events/%s/team-registration", seasonPk);
+        businessMessageService.sendSiteMessageFrom(
+                memberId,
+                team.getCaptainMemberId(),
+                "赛事报名提醒",
+                content,
+                BIZ_TYPE_TEAM_REGISTRATION_REMIND,
+                seasonPk,
+                "ROUTE",
+                redirectValue);
+    }
+
+    @Override
+    public TeamRegistrationDetailResp getMemberDetail(String registrationId) {
+        Long registrationPk = parseLongId(registrationId, "报名主键");
+        Long memberId = UserContext.getRequiredUserId();
+        BasketTournamentRegistration registration = registrationDao.selectById(registrationPk);
+        if (registration == null || !NOT_DELETED.equals(registration.getIsDelete())) {
+            throw new ServiceException("报名记录不存在");
+        }
+        captainPermissionService.requireTeamMember(memberId, registration.getTeamId());
+        BasketTeam team = teamDao.selectById(registration.getTeamId());
+        BasketTournamentSeason season = seasonDao.selectById(registration.getSeasonId());
+        TeamRegistrationDetailResp resp = buildDetailResp(registration, season, team);
+        resp.setCanEdit(false);
+        resp.setCanSubmit(false);
+        resp.setCanWithdraw(false);
+        resp.setCanDeleteDraft(false);
+        return resp;
+    }
+
+    private BasketTeam requireTeamForMemberView(Long memberId, Long teamPk) {
+        captainPermissionService.requireTeamMember(memberId, teamPk);
+        BasketTeam team = teamDao.selectById(teamPk);
+        if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
+            throw new ServiceException("球队不存在");
+        }
+        if (memberId.equals(team.getCaptainMemberId())) {
+            throw new ServiceException("队长请使用球队报名管理接口", 403);
+        }
+        return team;
+    }
+
+    private void fillMemberRemindFields(AvailableSeasonItemResp resp,
+                                        BasketTeam team,
+                                        BasketTournamentSeason season,
+                                        BasketTournament tournament,
+                                        BasketTournamentRegistration existing,
+                                        Long memberId,
+                                        Date now) {
+        resp.setCanRemindCaptain(false);
+        resp.setRemindedRecently(false);
+        if (existing != null && isBlockingRegistration(existing.getRegistrationStatus())) {
+            resp.setCannotRemindReason("球队已报名该赛事");
+            return;
+        }
+        if (!Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())) {
+            resp.setCannotRemindReason("球队认证通过后才能报名赛事");
+            return;
+        }
+        String registrationStatus = resolveRegistrationStatus(season, tournament, now);
+        if (!"OPEN".equals(registrationStatus)) {
+            resp.setCannotRemindReason("赛事报名已截止或未开放");
+            return;
+        }
+        if (team.getCaptainMemberId() == null) {
+            resp.setCannotRemindReason("当前球队暂无可提醒队长");
+            return;
+        }
+        String terminalMismatchReason = resolveTerminalMismatchReason(team, tournament);
+        if (terminalMismatchReason != null) {
+            resp.setCannotRemindReason(terminalMismatchReason);
+            return;
+        }
+        if (hasRecentRemind(memberId, season.getId())) {
+            resp.setRemindedRecently(true);
+            resp.setCannotRemindReason("24小时内已提醒过队长");
+            return;
+        }
+        resp.setCanRemindCaptain(true);
+        resp.setCannotRemindReason(null);
+    }
+
+    private boolean hasRecentRemind(Long memberId, Long seasonId) {
+        Date threshold = new Date(System.currentTimeMillis() - REMIND_COOLDOWN_MS);
+        Long count = messageTaskDao.selectCount(new LambdaQueryWrapper<BasketMessageTask>()
+                .eq(BasketMessageTask::getBizType, BIZ_TYPE_TEAM_REGISTRATION_REMIND)
+                .eq(BasketMessageTask::getBizId, seasonId)
+                .eq(BasketMessageTask::getCreatorId, memberId)
+                .eq(BasketMessageTask::getIsDelete, NOT_DELETED)
+                .ge(BasketMessageTask::getCreateTime, threshold));
+        return count != null && count > 0;
+    }
+
+    private String resolveMemberNickname(Long memberId) {
+        BasketMemberAccount account = memberAccountDao.selectById(memberId);
+        if (account != null && StringUtils.hasText(account.getUsername())) {
+            return account.getUsername().trim();
+        }
+        return "队员";
+    }
+
+    private String resolveRosterStatusText(BasketTournamentRegistration registration) {
+        Integer count = registration.getLineupCount();
+        if (count == null || count <= 0) {
+            return "未提交阵容";
+        }
+        return count + " 人";
+    }
+
+    private String resolveParticipationStatusText(Integer registrationStatus) {
+        if (Objects.equals(TournamentRegistrationStatusEnum.APPROVED.getCode(), registrationStatus)) {
+            return "已正式参赛";
+        }
+        if (Objects.equals(TournamentRegistrationStatusEnum.SUBMITTED.getCode(), registrationStatus)
+                || Objects.equals(TournamentRegistrationStatusEnum.REVIEWING.getCode(), registrationStatus)) {
+            return "待审核";
+        }
+        return TournamentRegistrationStatusEnum.fromCode(registrationStatus).getDescription();
+    }
+
+    private Map<Long, BasketTournamentRegistrationAudit> loadLatestAuditMap(List<Long> registrationIds) {
+        if (CollectionUtils.isEmpty(registrationIds)) {
+            return Collections.emptyMap();
+        }
+        Map<Long, BasketTournamentRegistrationAudit> map = new HashMap<>();
+        for (BasketTournamentRegistrationAudit audit : registrationAuditDao.selectList(
+                new LambdaQueryWrapper<BasketTournamentRegistrationAudit>()
+                        .in(BasketTournamentRegistrationAudit::getRegistrationId, registrationIds)
+                        .eq(BasketTournamentRegistrationAudit::getIsDelete, NOT_DELETED)
+                        .orderByDesc(BasketTournamentRegistrationAudit::getAuditTime))) {
+            map.putIfAbsent(audit.getRegistrationId(), audit);
+        }
+        return map;
     }
 
     @Override
@@ -360,15 +679,16 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
                 .in(BasketTournamentRegistration::getRegistrationStatus,
                         TournamentRegistrationStatusEnum.DRAFT.getCode(),
                         TournamentRegistrationStatusEnum.REJECTED.getCode())
-                .set(BasketTournamentRegistration::getRegistrationStatus, TournamentRegistrationStatusEnum.SUBMITTED.getCode())
+                .set(BasketTournamentRegistration::getRegistrationStatus, TournamentRegistrationStatusEnum.REVIEWING.getCode())
                 .set(BasketTournamentRegistration::getSubmittedTime, now));
         if (updated == 0) {
             throw new ServiceException("提交失败，报名状态已变更");
         }
+        markRosterValidationPassed(registrationPk);
         registration = registrationDao.selectById(registrationPk);
 
-        businessMessageService.sendSiteMessage(memberId, "赛事报名已提交",
-                "您的赛事报名已提交，请等待审核", BIZ_TYPE_TEAM_REGISTRATION, registration.getId(),
+        businessMessageService.sendSiteMessage(memberId, "赛事报名审核中",
+                "报名已提交，正在等待后台审核", BIZ_TYPE_TEAM_REGISTRATION, registration.getId(),
                 "TEAM_REGISTRATION", String.valueOf(registration.getId()));
 
         return buildDetailResp(registration, season, team);
@@ -394,7 +714,9 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         int updated = registrationDao.update(null, new LambdaUpdateWrapper<BasketTournamentRegistration>()
                 .eq(BasketTournamentRegistration::getId, registrationPk)
                 .eq(BasketTournamentRegistration::getCaptainMemberId, memberId)
-                .eq(BasketTournamentRegistration::getRegistrationStatus, TournamentRegistrationStatusEnum.SUBMITTED.getCode())
+                .in(BasketTournamentRegistration::getRegistrationStatus,
+                        TournamentRegistrationStatusEnum.REVIEWING.getCode(),
+                        TournamentRegistrationStatusEnum.SUBMITTED.getCode())
                 .eq(BasketTournamentRegistration::getIsDelete, NOT_DELETED)
                 .set(BasketTournamentRegistration::getRegistrationStatus, TournamentRegistrationStatusEnum.WITHDRAWN.getCode())
                 .set(BasketTournamentRegistration::getWithdrawalTime, now)
@@ -791,6 +1113,15 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         }
     }
 
+    private void markRosterValidationPassed(Long registrationPk) {
+        registrationPlayerDao.update(null, new LambdaUpdateWrapper<BasketTournamentRegistrationPlayer>()
+                .eq(BasketTournamentRegistrationPlayer::getRegistrationId, registrationPk)
+                .eq(BasketTournamentRegistrationPlayer::getIsDelete, NOT_DELETED)
+                .set(BasketTournamentRegistrationPlayer::getValidationStatus,
+                        RegistrationPlayerValidationStatusEnum.PASS.getCode())
+                .set(BasketTournamentRegistrationPlayer::getRejectReason, null));
+    }
+
     private void assertNoActiveDiscipline(List<BasketTournamentRegistrationPlayer> roster, Long seasonId) {
         Date now = new Date();
         Set<Long> memberIds = roster.stream().map(BasketTournamentRegistrationPlayer::getMemberId).collect(Collectors.toSet());
@@ -836,7 +1167,7 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         resp.setContactMobileMasked(DataMaskUtil.maskMobile(registration.getContactMobile()));
         resp.setContactEmailMasked(DataMaskUtil.maskEmail(registration.getContactEmail()));
         resp.setRegistrationStatus(registration.getRegistrationStatus());
-        resp.setRegistrationStatusText(status.getDescription());
+        resp.setRegistrationStatusText(status.getDisplayDescription());
         resp.setLineupCount(registration.getLineupCount());
         resp.setRemark(registration.getRemark());
         resp.setCanEdit(status.canEdit());
@@ -859,6 +1190,7 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
             item.setRegistrationPlayerId(toStringId(player.getId()));
             item.setTeamMemberId(toStringId(player.getTeamMemberId()));
             item.setMemberId(toStringId(player.getMemberId()));
+            item.setUserId(toStringId(player.getMemberId()));
             item.setPlayerId(toStringId(player.getPlayerId()));
             item.setJerseyNo(player.getJerseyNo());
             item.setIsStarting(player.getIsStarting());
@@ -868,6 +1200,7 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
             BasketPlayerProfile profile = playerMap.get(player.getPlayerId());
             if (profile != null) {
                 item.setGameNickname(profile.getGameNickname());
+                item.setPositionCode(profile.getPositionCode());
             }
             rosterItems.add(item);
         }
@@ -886,7 +1219,7 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         resp.setSeasonName(season == null ? null : season.getSeasonName());
         resp.setTournamentName(tournament == null ? null : tournament.getTournamentName());
         resp.setRegistrationStatus(registration.getRegistrationStatus());
-        resp.setRegistrationStatusText(status.getDescription());
+        resp.setRegistrationStatusText(status.getDisplayDescription());
         resp.setLineupCount(registration.getLineupCount());
         resp.setCanEdit(status.canEdit());
         resp.setCanSubmit(status.canSubmit());

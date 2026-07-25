@@ -2,24 +2,37 @@ package com.zhs.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.request.team.TeamRegistrationDraftReq;
+import com.zhs.request.team.TeamRegistrationRemindReq;
 import com.zhs.request.team.TeamRegistrationRosterReq;
 import com.zhs.request.team.TeamRegistrationUpdateReq;
 import com.zhs.request.team.TeamRegistrationWithdrawReq;
+import com.zhs.response.account.MyEventsContextResp;
 import com.zhs.response.team.AvailableSeasonItemResp;
 import com.zhs.response.team.AvailableSeasonPageResp;
+import com.zhs.response.team.TeamEventRecordItemResp;
 import com.zhs.response.team.TeamRegistrationAuditItemResp;
 import com.zhs.response.team.TeamRegistrationDetailResp;
 import com.zhs.response.team.TeamRegistrationItemResp;
 
 public interface ITeamRegistrationBusinessService {
 
+    MyEventsContextResp getMyEventsContext();
+
     AvailableSeasonPageResp pageAvailableSeasons(String teamId, Integer currentPage, Integer pageSize);
+
+    AvailableSeasonPageResp pageMemberAvailableSeasons(String teamId, Integer currentPage, Integer pageSize);
+
+    IPage<TeamEventRecordItemResp> pageMemberTeamEvents(String teamId, Integer currentPage, Integer pageSize);
+
+    void remindCaptainToRegister(String teamId, TeamRegistrationRemindReq req);
 
     IPage<TeamRegistrationItemResp> pageRegistrations(String teamId, Integer currentPage, Integer pageSize, Integer status);
 
     TeamRegistrationDetailResp createDraft(String teamId, TeamRegistrationDraftReq req);
 
     TeamRegistrationDetailResp getDetail(String registrationId);
+
+    TeamRegistrationDetailResp getMemberDetail(String registrationId);
 
     TeamRegistrationDetailResp update(String registrationId, TeamRegistrationUpdateReq req);
 

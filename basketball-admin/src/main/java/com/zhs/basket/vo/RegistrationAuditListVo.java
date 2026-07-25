@@ -9,6 +9,9 @@ public class RegistrationAuditListVo {
     private String registrationNo;
     private Long seasonId;
     private Long teamId;
+    private String tournamentName;
+    private String teamName;
+    private String captainName;
     private Integer registrationStatus;
     private String registrationStatusName;
     private Integer lineupCount;

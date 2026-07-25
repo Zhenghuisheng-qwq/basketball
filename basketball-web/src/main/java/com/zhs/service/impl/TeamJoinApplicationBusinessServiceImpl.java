@@ -268,6 +268,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         resp.setTeamId(toStringId(application.getTeamId()));
         resp.setTeamName(team == null ? null : team.getTeamName());
         resp.setApplicantMemberId(toStringId(application.getApplicantMemberId()));
+        resp.setApplicantUserId(toStringId(application.getApplicantMemberId()));
         BasketMemberProfile profile = profileMap.get(application.getApplicantMemberId());
         resp.setApplicantNickname(profile == null ? null : profile.getNickname());
         BasketPlayerProfile playerProfile = playerProfileMap.get(application.getApplicantMemberId());

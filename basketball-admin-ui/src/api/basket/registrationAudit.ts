@@ -7,7 +7,6 @@ import type {
   RegistrationAuditQuery,
   RegistrationAuditRecord,
   RegistrationAuditRejectReq,
-  RegistrationPlayerListResult,
   TableDataInfo
 } from '@/types'
 
@@ -26,21 +25,7 @@ export function getRegistrationAudit(id: number): Promise<AjaxResult<Registratio
   })
 }
 
-export function revalidateRegistrationAudit(id: number): Promise<RegistrationPlayerListResult> {
-  return request({
-    url: `/basket/registrationAudit/${id}/revalidate`,
-    method: 'post'
-  })
-}
-
-export function startRegistrationAuditReview(id: number): Promise<AjaxResult> {
-  return request({
-    url: `/basket/registrationAudit/${id}/start-review`,
-    method: 'post'
-  })
-}
-
-export function approveRegistrationAudit(id: number, data: RegistrationAuditApproveReq): Promise<AjaxResult> {
+export function approveRegistrationAudit(id: number, data: RegistrationAuditApproveReq = {}): Promise<AjaxResult> {
   return request({
     url: `/basket/registrationAudit/${id}/approve`,
     method: 'post',

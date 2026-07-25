@@ -223,7 +223,7 @@ public class AccountProfileServiceImpl implements IAccountProfileService {
 
     private String deriveNicknameFromEmail(String email) {
         if (!StringUtils.hasText(email)) {
-            return "CNPA会员";
+            return "CNPA用户";
         }
         String local = email.split("@")[0];
         return local.length() > 20 ? local.substring(0, 20) : local;

@@ -61,7 +61,7 @@
         <el-descriptions-item label="赛季">{{ detail.seasonName || detail.seasonId }}</el-descriptions-item>
         <el-descriptions-item label="变更类型">{{ detail.changeTypeName || detail.changeType }}</el-descriptions-item>
         <el-descriptions-item label="球员">{{ detail.playerNickname || detail.playerId }}</el-descriptions-item>
-        <el-descriptions-item label="申请人会员ID">{{ detail.applicantMemberId || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="申请人用户ID">{{ detail.applicantMemberId || detail.applicantUserId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="源球队ID">{{ detail.sourceEventTeamId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="目标球队ID">{{ detail.targetEventTeamId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="目标角色">{{ detail.targetRosterRole || '-' }}</el-descriptions-item>

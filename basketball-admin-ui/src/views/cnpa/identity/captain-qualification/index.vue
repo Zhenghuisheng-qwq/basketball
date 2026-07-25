@@ -4,11 +4,11 @@
       <el-form-item label="资格编号" prop="qualificationNo">
         <el-input v-model="queryParams.qualificationNo" placeholder="请输入资格编号" clearable style="width: 200px" @keyup.enter="handleQuery" />
       </el-form-item>
-      <el-form-item label="会员ID" prop="memberId">
-        <el-input v-model="queryParams.memberId" placeholder="请输入会员ID" clearable style="width: 200px" @keyup.enter="handleQuery" />
+      <el-form-item label="用户ID" prop="memberId">
+        <el-input v-model="queryParams.memberId" placeholder="请输入用户ID" clearable style="width: 200px" @keyup.enter="handleQuery" />
       </el-form-item>
-      <el-form-item label="球员ID" prop="playerId">
-        <el-input v-model="queryParams.playerId" placeholder="请输入球员ID" clearable style="width: 200px" @keyup.enter="handleQuery" />
+      <el-form-item label="球员档案ID" prop="playerId">
+        <el-input v-model="queryParams.playerId" placeholder="请输入球员档案ID" clearable style="width: 200px" @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item label="状态" prop="qualificationStatus">
         <el-select v-model="queryParams.qualificationStatus" placeholder="资格状态" clearable style="width: 200px">
@@ -33,8 +33,17 @@
 
     <el-table v-loading="loading" :data="dataList">
       <el-table-column label="资格编号" prop="qualificationNo" min-width="140" />
-      <el-table-column label="会员ID" prop="memberId" width="100" />
-      <el-table-column label="球员ID" prop="playerId" width="100" />
+      <el-table-column label="用户信息" min-width="200">
+        <template #default="scope">
+          <div>{{ scope.row.nickname || scope.row.username || '未设置昵称' }}</div>
+          <div class="sub-text">{{ scope.row.username || '-' }}</div>
+          <div class="sub-text">{{ scope.row.email || '-' }}</div>
+        </template>
+      </el-table-column>
+      <el-table-column label="球员编号" prop="playerNo" min-width="120" />
+      <el-table-column label="游戏ID" prop="gameAccount" min-width="120" />
+      <el-table-column label="位置" prop="positionCode" width="80" />
+      <el-table-column label="球员认证" prop="certificationStatusName" width="100" />
       <el-table-column label="状态" prop="qualificationStatus" width="100">
         <template #default="scope">
           <dict-tag :options="CAPTAIN_QUALIFICATION_STATUS_OPTIONS" :value="scope.row.qualificationStatus" />
@@ -71,8 +80,12 @@
     <el-drawer v-model="detailOpen" title="队长资格详情" size="560px" append-to-body>
       <el-descriptions v-if="detail" :column="1" border>
         <el-descriptions-item label="资格编号">{{ detail.qualificationNo }}</el-descriptions-item>
-        <el-descriptions-item label="会员ID">{{ detail.memberId }}</el-descriptions-item>
-        <el-descriptions-item label="球员ID">{{ detail.playerId }}</el-descriptions-item>
+        <el-descriptions-item label="用户ID">{{ detail.userId || detail.memberId }}</el-descriptions-item>
+        <el-descriptions-item label="球员档案ID">{{ detail.playerId }}</el-descriptions-item>
+        <el-descriptions-item label="登录账号">{{ detail.username || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="邮箱">{{ detail.email || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="球员编号">{{ detail.playerNo || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="游戏ID">{{ detail.gameAccount || '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <dict-tag :options="CAPTAIN_QUALIFICATION_STATUS_OPTIONS" :value="detail.qualificationStatus" />
         </el-descriptions-item>
@@ -137,7 +150,9 @@
         <el-table-column label="昵称" min-width="120">
           <template #default="scope">{{ captainDisplayName(scope.row) }}</template>
         </el-table-column>
-        <el-table-column label="会员ID" prop="memberId" width="100" />
+        <el-table-column label="用户ID" prop="userId" width="100">
+          <template #default="scope">{{ scope.row.userId || scope.row.memberId || '-' }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="100">
           <template #default="scope">
             <el-button link type="primary" @click="selectEligible(scope.row)" v-hasPermi="['basket:captainQualification:grant']">授予</el-button>
@@ -414,6 +429,12 @@ getList()
 </script>
 
 <style scoped>
+.sub-text {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .validity-hint {
   color: var(--el-text-color-secondary);
   font-size: 13px;

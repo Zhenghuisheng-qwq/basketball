@@ -70,7 +70,7 @@
               <div class="user-cell__name">{{ scope.row.nickname || '未设置昵称' }}</div>
               <div class="sub-text">账号 {{ scope.row.username || '-' }}</div>
               <div class="sub-text">{{ scope.row.email || '-' }}</div>
-              <div class="sub-text">ID {{ scope.row.memberId }} · {{ scope.row.accountNo || '-' }}</div>
+              <div class="sub-text">用户ID {{ scope.row.userId || scope.row.memberId }} · {{ scope.row.accountNo || '-' }}</div>
             </div>
           </div>
         </template>
@@ -135,7 +135,7 @@
         <template v-if="detail">
           <el-divider content-position="left">账号信息</el-divider>
           <el-descriptions :column="2" border class="detail-desc">
-            <el-descriptions-item label="会员ID">{{ detail.account?.memberId || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="用户ID">{{ detail.account?.userId || detail.account?.memberId || '-' }}</el-descriptions-item>
             <el-descriptions-item label="账号编号">{{ detail.account?.accountNo || '-' }}</el-descriptions-item>
             <el-descriptions-item label="登录账号">{{ detail.account?.username || '-' }}</el-descriptions-item>
             <el-descriptions-item label="昵称">{{ detail.account?.nickname || '-' }}</el-descriptions-item>
@@ -149,7 +149,7 @@
 
           <el-divider content-position="left">球员档案</el-divider>
           <el-descriptions :column="2" border class="detail-desc">
-            <el-descriptions-item label="球员ID">{{ detail.profile?.playerId || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="球员档案ID">{{ detail.profile?.playerId || '-' }}</el-descriptions-item>
             <el-descriptions-item label="球员编号">{{ detail.profile?.playerNo || '-' }}</el-descriptions-item>
             <el-descriptions-item label="认证状态">{{ detail.profile?.certificationStatusName || '未认证' }}</el-descriptions-item>
             <el-descriptions-item label="认证时间">{{ parseTime(detail.profile?.certifiedTime) || '-' }}</el-descriptions-item>

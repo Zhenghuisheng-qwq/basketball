@@ -9,19 +9,29 @@ export interface ApiResult<T = unknown> {
 
 let handling401 = false
 
-function redirectToLogin() {
+async function redirectToLogin() {
   if (handling401 || typeof window === 'undefined') return
   handling401 = true
-  removeToken()
-  clearAuthSession()
-  const path = window.location.pathname + window.location.search
-  if (!path.startsWith('/login')) {
-    const redirect = encodeURIComponent(path)
-    window.location.href = `/login?redirect=${redirect}`
+  try {
+    const { forceRelogin } = await import('@/utils/forceRelogin')
+    const path = window.location.pathname + window.location.search
+    await forceRelogin({
+      redirect: path.startsWith('/login') ? '/account' : path,
+      skipLogoutApi: true,
+    })
+  } catch {
+    removeToken()
+    clearAuthSession()
+    const path = window.location.pathname + window.location.search
+    if (!path.startsWith('/login')) {
+      const redirect = encodeURIComponent(path)
+      window.location.href = `/login?redirect=${redirect}`
+    }
+  } finally {
+    window.setTimeout(() => {
+      handling401 = false
+    }, 1500)
   }
-  window.setTimeout(() => {
-    handling401 = false
-  }, 1500)
 }
 
 const request: AxiosInstance = axios.create({

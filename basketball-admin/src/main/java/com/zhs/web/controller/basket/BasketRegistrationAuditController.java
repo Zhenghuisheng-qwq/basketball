@@ -35,21 +35,6 @@ public class BasketRegistrationAuditController extends BaseController {
 
     @PreAuthorize("@ss.hasPermi('basket:registrationAudit:audit')")
     @Log(title = "报名审核", businessType = BusinessType.UPDATE)
-    @PostMapping("/{id}/revalidate")
-    public AjaxResult revalidate(@PathVariable Long id) {
-        return success(registrationAuditService.revalidate(id));
-    }
-
-    @PreAuthorize("@ss.hasPermi('basket:registrationAudit:audit')")
-    @Log(title = "报名审核", businessType = BusinessType.UPDATE)
-    @PostMapping("/{id}/start-review")
-    public AjaxResult startReview(@PathVariable Long id) {
-        registrationAuditService.startReview(id);
-        return success();
-    }
-
-    @PreAuthorize("@ss.hasPermi('basket:registrationAudit:audit')")
-    @Log(title = "报名审核", businessType = BusinessType.UPDATE)
     @PostMapping("/{id}/approve")
     public AjaxResult approve(@PathVariable Long id, @RequestBody RegistrationAuditApproveReq req) {
         registrationAuditService.approve(id, req);

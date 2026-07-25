@@ -52,4 +52,7 @@ public class MessageItemResp implements Serializable {
 
     @ApiModelProperty("球队邀请信息（业务类型为 TEAM_INVITE 时返回）")
     private MessageTeamInviteInfoResp teamInvite;
+
+    @ApiModelProperty("赛事报名提醒信息（业务类型为 TEAM_REGISTRATION_REMIND 时返回）")
+    private MessageRegistrationRemindInfoResp registrationRemind;
 }

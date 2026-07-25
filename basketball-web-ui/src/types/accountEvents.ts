@@ -47,6 +47,7 @@ export interface MyApplication {
   applicationTypeText: string
   status: string
   statusText: string
+  statusHint?: string
   invitedTeamCode?: string
   confirmedCount?: number
   rosterMax?: number

@@ -665,6 +665,14 @@ export const useTeamStore = defineStore('team', () => {
     registrationAudits.value = []
   }
 
+  function resetState() {
+    captainQualification.value = null
+    myTeamSummary.value = null
+    teamDetail.value = null
+    lastError.value = ''
+    resetTransientLists()
+  }
+
   return {
     captainQualification,
     myTeamSummary,
@@ -730,5 +738,6 @@ export const useTeamStore = defineStore('team', () => {
     deleteRegistrationDraftAction,
     bootstrap,
     resetTransientLists,
+    resetState,
   }
 })

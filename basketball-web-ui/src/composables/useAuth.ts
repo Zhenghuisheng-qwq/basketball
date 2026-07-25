@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useAccountStore } from '@/stores/account'
 import { useNotificationCenterStore } from '@/stores/notificationCenter'
+import { useTeamStore } from '@/stores/team'
 
 export interface AuthLoginResult {
   success: boolean
@@ -89,7 +90,12 @@ export function useAuth() {
 
   async function logout() {
     await userStore.logout()
+    accountStore.clearAccountLocalStorage()
     accountStore.clearAccountState()
+    const teamStore = useTeamStore()
+    const notificationStore = useNotificationCenterStore()
+    teamStore.resetState()
+    notificationStore.resetState()
   }
 
   async function refreshAuth() {

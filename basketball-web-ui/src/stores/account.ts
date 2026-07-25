@@ -548,6 +548,7 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   function clearAccountState() {
+    clearAccountLocalStorage()
     currentAccount.value = null
     profile.value = null
     verification.value = null
@@ -684,24 +685,34 @@ export const useAccountStore = defineStore('account', () => {
     persistTeamRelations()
   }
 
-  async function changePassword(currentPassword: string, newPassword: string): Promise<string> {
-    if (!currentPassword.trim()) return '请输入当前密码'
+  function clearAccountLocalStorage(userId?: number | null) {
+    const id = userId ?? loadedUserId.value
+    if (id == null) return
+    localStorage.removeItem(teamRelationsStorageKey(id))
+    localStorage.removeItem(securityStorageKey(id))
+    localStorage.removeItem(myTournamentsStorageKey(id))
+    sessionStorage.removeItem(teamRelationsStorageKey(id))
+    sessionStorage.removeItem(securityStorageKey(id))
+    sessionStorage.removeItem(myTournamentsStorageKey(id))
+  }
+
+  async function changePassword(currentPassword: string, newPassword: string): Promise<{ error?: string; needRelogin?: boolean }> {
+    if (!currentPassword.trim()) return { error: '请输入当前密码' }
     const ruleError = validatePasswordRules(newPassword)
-    if (ruleError) return ruleError
-    if (newPassword === currentPassword) return '新密码不能与当前密码相同'
+    if (ruleError) return { error: ruleError }
+    if (newPassword === currentPassword) return { error: '新密码不能与当前密码相同' }
     try {
-      await changeAccountPassword({
+      const res = await changeAccountPassword({
         oldPassword: currentPassword,
         newPassword,
         confirmPassword: newPassword,
       })
-      if (security.value) {
-        security.value.passwordUpdatedAt = new Date().toISOString()
-        persistSecurity()
+      if (res.data?.needRelogin !== false) {
+        return { needRelogin: true }
       }
-      return ''
+      return {}
     } catch (error) {
-      return error instanceof Error ? error.message : '密码修改失败'
+      return { error: error instanceof Error ? error.message : '密码修改失败' }
     }
   }
 
@@ -801,6 +812,7 @@ export const useAccountStore = defineStore('account', () => {
     submitCertApplication,
     submitPlayerVerificationFromForm,
     clearAccountState,
+    clearAccountLocalStorage,
     submitPlayerVerification,
     withdrawPlayerVerification,
     resubmitPlayerVerification,

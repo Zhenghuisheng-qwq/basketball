@@ -7,8 +7,17 @@ import lombok.Data;
 public class CaptainQualificationListVo {
     private Long id;
     private String qualificationNo;
+    /** 用户ID（历史字段 memberId） */
     private Long memberId;
+    private Long userId;
     private Long playerId;
+    private String username;
+    private String email;
+    private String nickname;
+    private String playerNo;
+    private String gameAccount;
+    private String positionCode;
+    private String certificationStatusName;
     private Integer qualificationStatus;
     private Integer isCurrent;
     private Integer paymentConfirmed;

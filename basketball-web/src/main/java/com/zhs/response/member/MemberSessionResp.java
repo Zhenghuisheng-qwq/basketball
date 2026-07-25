@@ -7,7 +7,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@ApiModel("当前会话会员信息")
+@ApiModel("当前会话用户信息")
 public class MemberSessionResp extends MemberSummaryResp {
 
     @ApiModelProperty("注册来源")

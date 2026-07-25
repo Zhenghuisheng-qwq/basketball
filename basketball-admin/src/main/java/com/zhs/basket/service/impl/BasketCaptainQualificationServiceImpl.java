@@ -1,10 +1,12 @@
 package com.zhs.basket.service.impl;
 
 import com.zhs.basket.domain.BasketCaptainQualification;
+import com.zhs.basket.domain.BasketMemberAccount;
 import com.zhs.basket.domain.BasketPlayerProfile;
 import com.zhs.basket.enums.CaptainQualificationStatusEnum;
 import com.zhs.basket.enums.PlayerCertStatusEnum;
 import com.zhs.basket.mapper.BasketCaptainQualificationMapper;
+import com.zhs.basket.mapper.BasketMemberAccountMapper;
 import com.zhs.basket.mapper.BasketPlayerProfileMapper;
 import com.zhs.basket.mapper.BasketTeamMemberMapper;
 import com.zhs.basket.query.CaptainQualificationQuery;
@@ -37,13 +39,14 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
 
     @Autowired private BasketCaptainQualificationMapper qualificationMapper;
     @Autowired private BasketPlayerProfileMapper profileMapper;
+    @Autowired private BasketMemberAccountMapper memberAccountMapper;
     @Autowired private BasketTeamMemberMapper teamMemberMapper;
     @Autowired private PlayerNoGenerator playerNoGenerator;
     @Autowired private BasketAdminMessageService messageService;
 
     @Override
     public List<EligibleCaptainVo> selectEligibleList() {
-        return profileMapper.selectEligibleCaptainList();
+        return profileMapper.selectEligibleCaptainList().stream().peek(vo -> vo.setUserId(vo.getMemberId())).collect(Collectors.toList());
     }
 
     @Override
@@ -53,6 +56,7 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
             CaptainQualificationListVo vo = new CaptainQualificationListVo();
             BeanUtils.copyBeanProp(vo, q);
             enrichRuntimeValidity(vo, q, now);
+            enrichAccountPlayerDisplay(vo.getMemberId(), vo.getPlayerId(), vo);
             return vo;
         }).collect(Collectors.toList());
     }
@@ -63,7 +67,56 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
         CaptainQualificationDetailVo vo = new CaptainQualificationDetailVo();
         BeanUtils.copyBeanProp(vo, q);
         enrichRuntimeValidity(vo, q, new Date());
+        enrichAccountPlayerDisplay(vo.getMemberId(), vo.getPlayerId(), vo);
         return vo;
+    }
+
+    private void enrichAccountPlayerDisplay(Long memberId, Long playerId, CaptainQualificationListVo vo) {
+        vo.setUserId(memberId);
+        if (memberId != null) {
+            BasketMemberAccount account = memberAccountMapper.selectById(memberId);
+            if (account != null) {
+                vo.setUsername(account.getUsername());
+                vo.setEmail(account.getEmail());
+            }
+        }
+        if (playerId != null) {
+            BasketPlayerProfile profile = profileMapper.selectById(playerId);
+            if (profile != null) {
+                vo.setPlayerNo(profile.getPlayerNo());
+                vo.setGameAccount(profile.getGameAccount());
+                vo.setPositionCode(profile.getPositionCode());
+                vo.setNickname(profile.getGameNickname());
+                if (profile.getCertificationStatus() != null) {
+                    vo.setCertificationStatusName(
+                            PlayerCertStatusEnum.fromCode(profile.getCertificationStatus()).getDescription());
+                }
+            }
+        }
+    }
+
+    private void enrichAccountPlayerDisplay(Long memberId, Long playerId, CaptainQualificationDetailVo vo) {
+        vo.setUserId(memberId);
+        if (memberId != null) {
+            BasketMemberAccount account = memberAccountMapper.selectById(memberId);
+            if (account != null) {
+                vo.setUsername(account.getUsername());
+                vo.setEmail(account.getEmail());
+            }
+        }
+        if (playerId != null) {
+            BasketPlayerProfile profile = profileMapper.selectById(playerId);
+            if (profile != null) {
+                vo.setPlayerNo(profile.getPlayerNo());
+                vo.setGameAccount(profile.getGameAccount());
+                vo.setPositionCode(profile.getPositionCode());
+                vo.setNickname(profile.getGameNickname());
+                if (profile.getCertificationStatus() != null) {
+                    vo.setCertificationStatusName(
+                            PlayerCertStatusEnum.fromCode(profile.getCertificationStatus()).getDescription());
+                }
+            }
+        }
     }
 
     private void enrichRuntimeValidity(CaptainQualificationListVo vo, BasketCaptainQualification q, Date now) {

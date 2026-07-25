@@ -1,5 +1,6 @@
 package com.zhs.basket.service.impl;
 
+import com.zhs.basket.constant.CnpaRosterConstants;
 import com.zhs.basket.domain.BasketTournamentSeason;
 import com.zhs.basket.enums.SeasonStatusEnum;
 import com.zhs.basket.mapper.BasketTournamentSeasonMapper;
@@ -132,8 +133,11 @@ public class BasketSeasonServiceImpl implements IBasketSeasonService {
         if (!seasonStart.before(seasonEnd)) {
             throw new ServiceException("赛季开始时间必须早于赛季结束时间");
         }
-        if (minRoster == null || minRoster < 5) {
-            throw new ServiceException("最小 roster 人数不能少于 5");
+        if (minRoster == null || minRoster < CnpaRosterConstants.MIN_ROSTER_COUNT) {
+            throw new ServiceException("最小阵容人数不能少于 " + CnpaRosterConstants.MIN_ROSTER_COUNT);
+        }
+        if (maxRoster != null && maxRoster > CnpaRosterConstants.MAX_ROSTER_COUNT) {
+            throw new ServiceException("最大阵容人数不能超过 " + CnpaRosterConstants.MAX_ROSTER_COUNT);
         }
         if (maxRoster != null && maxRoster < minRoster) {
             throw new ServiceException("最大 roster 人数不能小于最小人数");

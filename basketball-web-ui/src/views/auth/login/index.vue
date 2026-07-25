@@ -91,6 +91,9 @@ onMounted(async () => {
   if (redirected) return
 
   authChecking.value = false
+  if (route.query.reason === 'password_changed') {
+    ElMessage.success('密码修改成功，请重新登录')
+  }
   const accountQuery = route.query.account ?? route.query.email
   if (typeof accountQuery === 'string' && accountQuery.trim()) {
     form.account = accountQuery.trim()

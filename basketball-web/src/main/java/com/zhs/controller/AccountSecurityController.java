@@ -1,7 +1,9 @@
 package com.zhs.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.zhs.common.TokenUtil;
 import com.zhs.request.account.AccountChangePasswordReq;
+import com.zhs.response.account.AccountChangePasswordResp;
 import com.zhs.response.account.LoginLogItemResp;
 import com.zhs.response.account.SecurityLogItemResp;
 import com.zhs.service.IAccountSecurityService;
@@ -45,9 +47,10 @@ public class AccountSecurityController {
 
     @ApiOperation("修改登录密码")
     @PostMapping("/change-password")
-    public R<Void> changePassword(@RequestBody AccountChangePasswordReq req, HttpServletRequest request) {
-        accountSecurityService.changePassword(req, resolveClientIp(request), resolveTerminal(request));
-        return R.ok(null, "密码修改成功");
+    public R<AccountChangePasswordResp> changePassword(@RequestBody AccountChangePasswordReq req, HttpServletRequest request) {
+        AccountChangePasswordResp resp = accountSecurityService.changePassword(
+                req, resolveClientIp(request), resolveTerminal(request), TokenUtil.resolveFrom(request));
+        return R.ok(resp, "密码修改成功，请重新登录");
     }
 
     private String resolveClientIp(HttpServletRequest request) {

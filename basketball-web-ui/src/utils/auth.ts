@@ -79,7 +79,7 @@ export function getAuthSession(): AuthSession | null {
       memberId: data.memberId,
       userId: typeof data.userId === 'number' ? data.userId : toBridgeUserId(data.memberId),
       email: typeof data.email === 'string' ? data.email : '',
-      nickname: typeof data.nickname === 'string' ? data.nickname : 'CNPA会员',
+      nickname: typeof data.nickname === 'string' ? data.nickname : 'CNPA用户',
       avatarUrl: typeof data.avatarUrl === 'string' ? data.avatarUrl : '',
       accountNo: typeof data.accountNo === 'string' ? data.accountNo : '',
       emailVerified: Boolean(data.emailVerified),

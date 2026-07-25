@@ -42,6 +42,7 @@
         select rp.id, rp.player_id as playerId, rp.member_id as memberId, rp.roster_role as rosterRole,
                rp.jersey_no as jerseyNo, rp.is_captain as isCaptain, rp.is_starting as isStarting,
                rp.validation_status as validationStatus, rp.reject_reason as rejectReason,
+               p.position_code as positionCode,
                ifnull(nullif(p.game_nickname, ''), mp.nickname) as playerNickname, p.player_no as playerNo
         from basket_tournament_registration_player rp
         left join basket_player_profile p on p.id = rp.player_id and p.is_delete = 0

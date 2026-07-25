@@ -4,12 +4,13 @@ import com.zhs.basket.domain.BasketTournamentRegistration;
 import com.zhs.basket.query.RegistrationAuditQuery;
 import com.zhs.basket.resp.SeasonCandidateTeamResp;
 import com.zhs.basket.vo.AvailableTeamVo;
+import com.zhs.basket.vo.RegistrationAuditListVo;
 import org.apache.ibatis.annotations.Param;
 import java.util.Date;
 import java.util.List;
 
 public interface BasketTournamentRegistrationMapper {
-    List<BasketTournamentRegistration> selectAuditList(RegistrationAuditQuery query);
+    List<RegistrationAuditListVo> selectAuditList(RegistrationAuditQuery query);
     BasketTournamentRegistration selectById(Long id);
     int updateStatusIfMatch(@Param("id") Long id, @Param("fromStatuses") List<Integer> fromStatuses,
             @Param("toStatus") Integer toStatus, @Param("currentAuditorId") Long currentAuditorId,

@@ -23,13 +23,31 @@
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
     </resultMap>
-    <select id="selectAuditList" resultMap="BasketTournamentRegistrationResult">
-        select id, registration_no, season_id, team_id, captain_member_id, captain_player_id, contact_name, contact_mobile, contact_email, registration_status, lineup_count, submitted_time, audit_time, withdrawal_time, withdrawal_reason, current_auditor_id, remark, create_time, update_time, is_delete from basket_tournament_registration where is_delete = 0
-        <if test="registrationNo != null and registrationNo != ''">and registration_no like concat('%', #{registrationNo}, '%')</if>
-        <if test="seasonId != null">and season_id = #{seasonId}</if>
-        <if test="teamId != null">and team_id = #{teamId}</if>
-        <if test="registrationStatus != null">and registration_status = #{registrationStatus}</if>
-        order by submitted_time desc, create_time desc
+    <select id="selectAuditList" resultType="com.zhs.basket.vo.RegistrationAuditListVo">
+        select r.id, r.registration_no as registrationNo, r.season_id as seasonId, r.team_id as teamId,
+               r.registration_status as registrationStatus, r.lineup_count as lineupCount, r.submitted_time as submittedTime,
+               tm.tournament_name as tournamentName, t.team_name as teamName,
+               ifnull(nullif(cp.game_nickname, ''), r.contact_name) as captainName
+        from basket_tournament_registration r
+        left join basket_team t on t.id = r.team_id and t.is_delete = 0
+        left join basket_tournament_season s on s.id = r.season_id and s.is_delete = 0
+        left join basket_tournament tm on tm.id = s.tournament_id and tm.is_delete = 0
+        left join basket_player_profile cp on cp.id = r.captain_player_id and cp.is_delete = 0
+        where r.is_delete = 0 and r.registration_status != 0
+        <if test="registrationNo != null and registrationNo != ''">and r.registration_no like concat('%', #{registrationNo}, '%')</if>
+        <if test="seasonId != null">and r.season_id = #{seasonId}</if>
+        <if test="teamId != null">and r.team_id = #{teamId}</if>
+        <if test="registrationStatus != null">
+            <choose>
+                <when test="registrationStatus == 2">
+                    and r.registration_status in (1, 2)
+                </when>
+                <otherwise>
+                    and r.registration_status = #{registrationStatus}
+                </otherwise>
+            </choose>
+        </if>
+        order by r.submitted_time desc, r.create_time desc
     </select>
     <select id="selectById" resultMap="BasketTournamentRegistrationResult">
         select id, registration_no, season_id, team_id, captain_member_id, captain_player_id, contact_name, contact_mobile, contact_email, registration_status, lineup_count, submitted_time, audit_time, withdrawal_time, withdrawal_reason, current_auditor_id, remark, create_time, update_time, is_delete from basket_tournament_registration where id = #{id} and is_delete = 0

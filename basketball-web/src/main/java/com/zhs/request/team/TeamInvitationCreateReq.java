@@ -13,7 +13,7 @@ public class TeamInvitationCreateReq implements Serializable {
     @ApiModelProperty("被邀请球员主键（优先）")
     private String inviteePlayerId;
 
-    @ApiModelProperty("被邀请会员主键（兼容，优先使用 inviteePlayerId）")
+    @ApiModelProperty("被邀请用户主键（兼容，优先使用 inviteePlayerId）")
     private String inviteeMemberId;
 
     @ApiModelProperty("邀请说明")

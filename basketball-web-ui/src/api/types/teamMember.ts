@@ -1,6 +1,8 @@
 export interface TeamMemberItemDto {
   teamMemberId: string
+  /** 用户ID（历史字段 memberId，登录账号主键） */
   memberId?: string
+  userId?: string
   playerId?: string
   playerNo?: string
   nickname?: string

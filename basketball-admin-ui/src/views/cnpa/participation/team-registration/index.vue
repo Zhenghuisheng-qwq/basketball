@@ -12,7 +12,7 @@
       </el-form-item>
       <el-form-item label="状态" prop="registrationStatus">
         <el-select v-model="queryParams.registrationStatus" placeholder="报名状态" clearable style="width: 200px">
-          <el-option v-for="item in REGISTRATION_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+          <el-option v-for="item in REGISTRATION_AUDIT_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -27,24 +27,23 @@
 
     <el-table v-loading="loading" :data="dataList">
       <el-table-column label="报名编号" prop="registrationNo" min-width="140" />
-      <el-table-column label="赛季ID" prop="seasonId" width="90" />
-      <el-table-column label="球队ID" prop="teamId" width="90" />
-      <el-table-column label="状态" prop="registrationStatus" width="100">
+      <el-table-column label="赛事名称" prop="tournamentName" min-width="140" show-overflow-tooltip />
+      <el-table-column label="球队名称" prop="teamName" min-width="120" show-overflow-tooltip />
+      <el-table-column label="队长" prop="captainName" min-width="100" show-overflow-tooltip />
+      <el-table-column label="阵容人数" prop="lineupCount" width="90" />
+      <el-table-column label="状态" prop="registrationStatusName" width="100">
         <template #default="scope">
-          <dict-tag :options="REGISTRATION_STATUS_OPTIONS" :value="scope.row.registrationStatus" />
+          {{ scope.row.registrationStatusName || formatAuditStatus(scope.row.registrationStatus) }}
         </template>
       </el-table-column>
-      <el-table-column label="阵容人数" prop="lineupCount" width="90" />
       <el-table-column label="提交时间" prop="submittedTime" width="160">
         <template #default="scope">{{ parseTime(scope.row.submittedTime) }}</template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="320" class-name="small-padding fixed-width">
+      <el-table-column label="操作" align="center" width="200" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:registrationAudit:query']">详情</el-button>
-          <el-button link type="info" icon="Refresh" @click="handleRevalidate(scope.row)" v-hasPermi="['basket:registrationAudit:audit']">重新校验</el-button>
-          <el-button link type="warning" icon="EditPen" @click="handleStartReview(scope.row)" v-hasPermi="['basket:registrationAudit:audit']" v-if="scope.row.registrationStatus === 1">开始审核</el-button>
-          <el-button link type="success" icon="Check" @click="openApprove(scope.row)" v-hasPermi="['basket:registrationAudit:audit']" v-if="[1, 2].includes(scope.row.registrationStatus)">通过</el-button>
-          <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:registrationAudit:audit']" v-if="[1, 2].includes(scope.row.registrationStatus)">驳回</el-button>
+          <el-button link type="success" icon="Check" @click="handleApprove(scope.row)" v-hasPermi="['basket:registrationAudit:audit']" v-if="isReviewing(scope.row.registrationStatus)">通过</el-button>
+          <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:registrationAudit:audit']" v-if="isReviewing(scope.row.registrationStatus)">驳回</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -55,36 +54,36 @@
       <el-descriptions v-if="detail" :column="2" border>
         <el-descriptions-item label="报名编号">{{ detail.registrationNo }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ detail.registrationStatusName }}</el-descriptions-item>
-        <el-descriptions-item label="赛季ID">{{ detail.seasonId }}</el-descriptions-item>
-        <el-descriptions-item label="球队ID">{{ detail.teamId }}</el-descriptions-item>
-        <el-descriptions-item label="联系人">{{ detail.contactName }}</el-descriptions-item>
-        <el-descriptions-item label="联系电话">{{ detail.contactMobile }}</el-descriptions-item>
+        <el-descriptions-item label="赛事名称">{{ detail.tournamentName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="球队名称">{{ detail.teamName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="队长">{{ detail.captainName || detail.contactName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="阵容人数">{{ detail.lineupCount }}</el-descriptions-item>
         <el-descriptions-item label="提交时间">{{ parseTime(detail.submittedTime) }}</el-descriptions-item>
-        <el-descriptions-item label="备注" :span="2">{{ detail.remark || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="审核时间">{{ parseTime(detail.auditTime) }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.rejectReason" label="驳回原因" :span="2">{{ detail.rejectReason }}</el-descriptions-item>
       </el-descriptions>
 
-      <div class="mb8 mt16">
-        <el-button type="primary" plain icon="Refresh" @click="loadRoster" v-hasPermi="['basket:registrationAudit:audit']">重新校验阵容</el-button>
-      </div>
-
       <el-divider content-position="left">报名阵容</el-divider>
-      <el-table :data="roster" size="small" v-loading="rosterLoading">
-        <el-table-column label="球员ID" prop="playerId" width="90" />
-        <el-table-column label="会员ID" prop="memberId" width="90" />
-        <el-table-column label="昵称" prop="playerNickname" min-width="100" />
+      <el-table :data="roster" size="small">
+        <el-table-column label="球员昵称" prop="playerNickname" min-width="100" />
         <el-table-column label="球员编号" prop="playerNo" min-width="100" />
-        <el-table-column label="角色" prop="rosterRole" width="90" />
-        <el-table-column label="球衣号" prop="jerseyNo" width="80" />
-        <el-table-column label="队长" prop="isCaptain" width="70">
-          <template #default="scope">{{ scope.row.isCaptain === 1 ? '是' : '否' }}</template>
+        <el-table-column label="位置" prop="positionText" min-width="120">
+          <template #default="scope">
+            {{ scope.row.positionText || formatPosition(scope.row) }}
+          </template>
         </el-table-column>
-        <el-table-column label="校验状态" prop="validationStatus" width="100">
+        <el-table-column label="球衣号" prop="jerseyNo" width="80" />
+        <el-table-column label="球队角色" width="90">
+          <template #default="scope">{{ scope.row.isCaptain === 1 ? '队长' : '队员' }}</template>
+        </el-table-column>
+        <el-table-column label="阵容角色" width="90">
+          <template #default="scope">{{ scope.row.isStarting === 1 ? '首发' : '替补' }}</template>
+        </el-table-column>
+        <el-table-column label="球员状态" prop="validationStatus" width="100">
           <template #default="scope">
             <dict-tag :options="REGISTRATION_VALIDATION_STATUS_OPTIONS" :value="scope.row.validationStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="失败原因" prop="rejectReason" min-width="160" />
       </el-table>
 
       <el-divider content-position="left">审核记录</el-divider>
@@ -97,18 +96,6 @@
         </el-table-column>
       </el-table>
     </el-drawer>
-
-    <el-dialog title="审核通过" v-model="approveOpen" width="480px" append-to-body>
-      <el-form :model="approveForm" label-width="88px">
-        <el-form-item label="审核备注">
-          <el-input v-model="approveForm.auditRemark" type="textarea" placeholder="请输入审核备注" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="approveOpen = false">取消</el-button>
-        <el-button type="primary" @click="submitApprove">确定</el-button>
-      </template>
-    </el-dialog>
 
     <el-dialog title="审核驳回" v-model="rejectOpen" width="480px" append-to-body>
       <el-form ref="rejectRef" :model="rejectForm" :rules="rejectRules" label-width="88px">
@@ -133,12 +120,9 @@ import {
   getRegistrationAudit,
   listRegistrationAudit,
   listRegistrationAuditRecords,
-  rejectRegistrationAudit,
-  revalidateRegistrationAudit,
-  startRegistrationAuditReview
+  rejectRegistrationAudit
 } from '@/api/basket/registrationAudit'
 import type {
-  RegistrationAuditApproveReq,
   RegistrationAuditDetail,
   RegistrationAuditListItem,
   RegistrationAuditQuery,
@@ -146,7 +130,7 @@ import type {
   RegistrationAuditRejectReq,
   RegistrationPlayer
 } from '@/types'
-import { REGISTRATION_STATUS_OPTIONS, REGISTRATION_VALIDATION_STATUS_OPTIONS } from '@/types'
+import { REGISTRATION_AUDIT_STATUS_OPTIONS, REGISTRATION_VALIDATION_STATUS_OPTIONS } from '@/types'
 
 const { proxy } = getCurrentInstance()
 
@@ -157,21 +141,47 @@ const total = ref(0)
 const detailOpen = ref(false)
 const detail = ref<RegistrationAuditDetail>()
 const roster = ref<RegistrationPlayer[]>([])
-const rosterLoading = ref(false)
 const auditRecords = ref<RegistrationAuditRecord[]>([])
 const currentId = ref<number>()
-const approveOpen = ref(false)
 const rejectOpen = ref(false)
-const approveForm = ref<RegistrationAuditApproveReq>({})
 const rejectForm = ref<RegistrationAuditRejectReq>({ rejectReason: '' })
 const rejectRules = {
   rejectReason: [{ required: true, message: '驳回原因不能为空', trigger: 'blur' }]
 }
 
+const DEFAULT_STATUS = 2
+
 const queryParams = ref<RegistrationAuditQuery>({
   pageNum: 1,
-  pageSize: 10
+  pageSize: 10,
+  registrationStatus: DEFAULT_STATUS
 })
+
+function isReviewing(status?: number) {
+  return status === 2 || status === 1
+}
+
+function formatAuditStatus(status?: number) {
+  const item = REGISTRATION_AUDIT_STATUS_OPTIONS.find(option => option.value === status)
+  if (item) return item.label
+  if (status === 1) return '审核中'
+  return status == null ? '-' : `状态 ${status}`
+}
+
+const POSITION_LABELS: Record<string, string> = {
+  PG: '控球后卫',
+  SG: '得分后卫',
+  SF: '小前锋',
+  PF: '大前锋',
+  C: '中锋',
+}
+
+function formatPosition(row: RegistrationPlayer) {
+  const code = row.positionCode?.trim().toUpperCase()
+  if (!code) return '-'
+  const name = row.positionName || POSITION_LABELS[code]
+  return name ? `${code}：${name}` : code
+}
 
 function getList() {
   loading.value = true
@@ -190,18 +200,8 @@ function handleQuery() {
 
 function resetQuery() {
   proxy.resetForm('queryRef')
+  queryParams.value.registrationStatus = DEFAULT_STATUS
   handleQuery()
-}
-
-function loadRoster() {
-  if (!currentId.value) return
-  rosterLoading.value = true
-  revalidateRegistrationAudit(currentId.value).then(res => {
-    roster.value = res.data || []
-    proxy.$modal.msgSuccess('校验完成')
-  }).finally(() => {
-    rosterLoading.value = false
-  })
 }
 
 function handleDetail(row: RegistrationAuditListItem) {
@@ -211,50 +211,22 @@ function handleDetail(row: RegistrationAuditListItem) {
   auditRecords.value = []
   getRegistrationAudit(row.id).then(res => {
     detail.value = res.data
-    if (res.data?.players?.length) {
-      roster.value = res.data.players
-    } else {
-      loadRoster()
-    }
+    roster.value = res.data?.players || []
   })
   listRegistrationAuditRecords(row.id).then(res => {
     auditRecords.value = res.data || []
   })
 }
 
-function handleRevalidate(row: RegistrationAuditListItem) {
+function handleApprove(row: RegistrationAuditListItem) {
   currentId.value = row.id
-  rosterLoading.value = true
-  revalidateRegistrationAudit(row.id).then(res => {
-    roster.value = res.data || []
-    proxy.$modal.msgSuccess('校验完成')
-  }).finally(() => {
-    rosterLoading.value = false
+  approveRegistrationAudit(row.id).then(() => {
+    proxy.$modal.msgSuccess('审核通过成功')
+    getList()
+    if (detailOpen.value && detail.value?.id === row.id) {
+      handleDetail(row)
+    }
   })
-}
-
-function handleStartReview(row: RegistrationAuditListItem) {
-  proxy.$modal.confirm('确认开始审核该报名？').then(() => startRegistrationAuditReview(row.id)).then(() => {
-    proxy.$modal.msgSuccess('已开始审核')
-    getList()
-  }).catch(() => {})
-}
-
-function openApprove(row: RegistrationAuditListItem) {
-  currentId.value = row.id
-  approveForm.value = { auditRemark: '' }
-  approveOpen.value = true
-}
-
-function submitApprove() {
-  if (!currentId.value) return
-  proxy.$modal.confirm('确认通过该报名审核？').then(() =>
-    approveRegistrationAudit(currentId.value!, approveForm.value)
-  ).then(() => {
-    proxy.$modal.msgSuccess('审核通过')
-    approveOpen.value = false
-    getList()
-  }).catch(() => {})
 }
 
 function openReject(row: RegistrationAuditListItem) {
@@ -266,13 +238,17 @@ function openReject(row: RegistrationAuditListItem) {
 function submitReject() {
   proxy.$refs.rejectRef.validate((valid: boolean) => {
     if (!valid || !currentId.value) return
-    proxy.$modal.confirm('确认驳回该报名审核？').then(() =>
-      rejectRegistrationAudit(currentId.value!, rejectForm.value)
-    ).then(() => {
+    rejectRegistrationAudit(currentId.value!, rejectForm.value).then(() => {
       proxy.$modal.msgSuccess('已驳回')
       rejectOpen.value = false
       getList()
-    }).catch(() => {})
+      if (detailOpen.value && detail.value?.id === currentId.value) {
+        getRegistrationAudit(currentId.value!).then(res => {
+          detail.value = res.data
+          roster.value = res.data?.players || []
+        })
+      }
+    })
   })
 }
 
@@ -280,9 +256,6 @@ getList()
 </script>
 
 <style scoped>
-.mt16 {
-  margin-top: 16px;
-}
 .mb8 {
   margin-bottom: 8px;
 }

@@ -19,7 +19,7 @@ export const MEMBER_CERT_STAGE_OPTIONS = [
   { value: 'NO_PROFILE', label: '未建档' }
 ]
 
-/** 官网会员账号状态 */
+/** 官网用户账号状态 */
 export const MEMBER_ACCOUNT_STATUS_OPTIONS = [
   { value: 1, label: '正常' },
   { value: 0, label: '禁用' }
@@ -87,7 +87,7 @@ export const SEASON_STATUS_OPTIONS = [
   { value: 6, label: '已取消' }
 ]
 
-/** 报名状态 */
+/** 报名状态（全量，含草稿） */
 export const REGISTRATION_STATUS_OPTIONS = [
   { value: 0, label: '草稿' },
   { value: 1, label: '已提交' },
@@ -98,9 +98,18 @@ export const REGISTRATION_STATUS_OPTIONS = [
   { value: 6, label: '已取消' }
 ]
 
+/** 后台球队报名审核筛选（不含草稿、已提交） */
+export const REGISTRATION_AUDIT_STATUS_OPTIONS = [
+  { value: 2, label: '审核中' },
+  { value: 3, label: '已通过' },
+  { value: 4, label: '已驳回' },
+  { value: 5, label: '已撤回' },
+  { value: 6, label: '已取消' }
+]
+
 /** 阵容校验状态 */
 export const REGISTRATION_VALIDATION_STATUS_OPTIONS = [
-  { value: 0, label: '未校验' },
+  { value: 0, label: '待校验' },
   { value: 1, label: '通过' },
   { value: 2, label: '未通过' }
 ]
@@ -180,8 +189,17 @@ export interface CaptainQualificationQuery extends PageDomain, BaseEntity {
 export interface CaptainQualificationListItem {
   id: number
   qualificationNo?: string
+  /** 用户ID（接口兼容字段 memberId） */
   memberId?: number
+  userId?: number
   playerId?: number
+  username?: string
+  email?: string
+  nickname?: string
+  playerNo?: string
+  gameAccount?: string
+  positionCode?: string
+  certificationStatusName?: string
   qualificationStatus?: number
   isCurrent?: number
   paymentConfirmed?: number
@@ -201,6 +219,7 @@ export interface CaptainQualificationDetail extends CaptainQualificationListItem
 export interface EligibleCaptain {
   playerId: number
   memberId?: number
+  userId?: number
   playerNo?: string
   nickname?: string
   gameNickname?: string
@@ -348,7 +367,9 @@ export interface AccountPlayerQuery extends PageDomain, BaseEntity {
 }
 
 export interface AccountPlayerListItem {
+  /** 用户ID（兼容字段 memberId） */
   memberId: string | number
+  userId?: string | number
   accountNo?: string
   username?: string
   email?: string
@@ -377,6 +398,7 @@ export interface AccountPlayerListItem {
 
 export interface AccountPlayerAccountSection {
   memberId?: number
+  userId?: number
   accountNo?: string
   username?: string
   email?: string
@@ -697,6 +719,9 @@ export interface RegistrationAuditListItem {
   registrationNo?: string
   seasonId?: number
   teamId?: number
+  tournamentName?: string
+  teamName?: string
+  captainName?: string
   registrationStatus?: number
   registrationStatusName?: string
   lineupCount?: number
@@ -708,6 +733,7 @@ export interface RegistrationAuditDetail extends RegistrationAuditListItem {
   contactName?: string
   contactMobile?: string
   remark?: string
+  rejectReason?: string
   auditTime?: string
   players?: RegistrationPlayer[]
 }
@@ -716,13 +742,18 @@ export interface RegistrationPlayer {
   id?: number
   playerId?: number
   memberId?: number
+  userId?: number
   playerNickname?: string
   playerNo?: string
   rosterRole?: string
+  positionCode?: string
+  positionName?: string
+  positionText?: string
   jerseyNo?: string
   isCaptain?: number
   isStarting?: number
   validationStatus?: number
+  validationStatusName?: string
   rejectReason?: string
 }
 

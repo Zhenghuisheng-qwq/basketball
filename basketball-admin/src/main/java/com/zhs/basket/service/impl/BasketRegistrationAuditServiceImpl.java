@@ -12,6 +12,7 @@ import com.zhs.basket.service.IBasketParticipationGenerationService;
 import com.zhs.basket.service.IBasketRegistrationAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
 import com.zhs.basket.support.BasketDisciplineRestrictionSupport;
+import com.zhs.basket.support.PlayerPositionSupport;
 import com.zhs.basket.vo.*;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
@@ -30,11 +31,16 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
     private static final Integer NOT_DELETED = 0;
     private static final int PASS = RegistrationPlayerValidationStatusEnum.PASS.getCode();
     private static final int FAIL = RegistrationPlayerValidationStatusEnum.FAIL.getCode();
+    private static final List<Integer> REVIEWABLE_STATUSES = Arrays.asList(
+            RegistrationStatusEnum.REVIEWING.getCode(),
+            RegistrationStatusEnum.SUBMITTED.getCode());
 
     @Autowired private BasketTournamentRegistrationMapper registrationMapper;
     @Autowired private BasketTournamentRegistrationPlayerMapper registrationPlayerMapper;
     @Autowired private BasketTournamentRegistrationAuditMapper registrationAuditMapper;
     @Autowired private BasketTournamentSeasonMapper seasonMapper;
+    @Autowired private BasketTournamentMapper tournamentMapper;
+    @Autowired private BasketTeamMapper teamMapper;
     @Autowired private BasketPlayerProfileMapper profileMapper;
     @Autowired private BasketDisciplineRecordMapper disciplineRecordMapper;
     @Autowired private BasketDisciplineRestrictionSupport disciplineRestrictionSupport;
@@ -43,62 +49,29 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
 
     @Override
     public List<RegistrationAuditListVo> selectList(RegistrationAuditQuery query) {
-        return registrationMapper.selectAuditList(query).stream().map(r -> {
-            RegistrationAuditListVo vo = new RegistrationAuditListVo();
-            BeanUtils.copyBeanProp(vo, r);
-            vo.setRegistrationStatusName(RegistrationStatusEnum.fromCode(r.getRegistrationStatus()).getDescription());
-            return vo;
+        return registrationMapper.selectAuditList(query).stream().peek(vo -> {
+            RegistrationStatusEnum status = RegistrationStatusEnum.fromCode(vo.getRegistrationStatus());
+            vo.setRegistrationStatusName(status.getAuditDisplayDescription());
         }).collect(Collectors.toList());
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public RegistrationAuditDetailVo selectDetail(Long id) {
+        revalidate(id);
         BasketTournamentRegistration reg = requireRegistration(id);
         RegistrationAuditDetailVo vo = new RegistrationAuditDetailVo();
         BeanUtils.copyBeanProp(vo, reg);
-        vo.setRegistrationStatusName(RegistrationStatusEnum.fromCode(reg.getRegistrationStatus()).getDescription());
-        vo.setPlayers(registrationPlayerMapper.selectDetailByRegistrationId(id));
+        RegistrationStatusEnum status = RegistrationStatusEnum.fromCode(reg.getRegistrationStatus());
+        vo.setRegistrationStatusName(status.getAuditDisplayDescription());
+        if (Objects.equals(status, RegistrationStatusEnum.REJECTED)) {
+            vo.setRejectReason(reg.getRemark());
+        }
+        enrichRegistrationNames(vo, reg);
+        vo.setPlayers(registrationPlayerMapper.selectDetailByRegistrationId(id).stream()
+                .peek(this::enrichPlayerVo)
+                .collect(Collectors.toList()));
         return vo;
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public List<RegistrationPlayerVo> revalidate(Long id) {
-        BasketTournamentRegistration reg = requireRegistration(id);
-        List<BasketTournamentRegistrationPlayer> players = registrationPlayerMapper.selectByRegistrationId(id);
-        Date now = new Date();
-        List<Long> memberIds = players.stream().map(BasketTournamentRegistrationPlayer::getMemberId).filter(Objects::nonNull).collect(Collectors.toList());
-        Set<Long> disciplined = Collections.emptySet();
-        if (!memberIds.isEmpty()) {
-            disciplined = disciplineRecordMapper.selectActiveBySeasonAndMembers(reg.getSeasonId(), memberIds, now)
-                    .stream().map(BasketDisciplineRecord::getMemberId).collect(Collectors.toSet());
-        }
-        String teamRestriction = reg.getTeamId() != null
-                ? disciplineRestrictionSupport.checkRegistration("PERMANENT_TEAM", reg.getTeamId(), reg.getSeasonId())
-                : null;
-        List<RegistrationPlayerVo> result = new ArrayList<>();
-        for (BasketTournamentRegistrationPlayer player : players) {
-            String reason = validatePlayer(player, disciplined, reg.getSeasonId(), teamRestriction);
-            int status = reason == null ? PASS : FAIL;
-            registrationPlayerMapper.updateValidationStatus(player.getId(), status, reason);
-            RegistrationPlayerVo vo = new RegistrationPlayerVo();
-            BeanUtils.copyBeanProp(vo, player);
-            vo.setValidationStatus(status);
-            vo.setRejectReason(reason);
-            result.add(vo);
-        }
-        return result;
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void startReview(Long id) {
-        BasketTournamentRegistration reg = requireRegistration(id);
-        int rows = registrationMapper.updateStatusIfMatch(id,
-                Collections.singletonList(RegistrationStatusEnum.SUBMITTED.getCode()),
-                RegistrationStatusEnum.REVIEWING.getCode(), SecurityUtils.getUserId(), null, null, null);
-        assertSingleRow(rows, "开始审核失败");
-        writeAudit(reg, "START_REVIEW", reg.getRegistrationStatus(), RegistrationStatusEnum.REVIEWING.getCode(), "开始审核");
     }
 
     @Override
@@ -119,12 +92,13 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
         if (season.getMaxTeamCount() != null && approved >= season.getMaxTeamCount()) {
             throw new ServiceException("该赛季报名队伍已满");
         }
+        String auditRemark = req == null ? null : req.getAuditRemark();
         int rows = registrationMapper.updateStatusIfMatch(id,
-                Arrays.asList(RegistrationStatusEnum.SUBMITTED.getCode(), RegistrationStatusEnum.REVIEWING.getCode()),
-                RegistrationStatusEnum.APPROVED.getCode(), SecurityUtils.getUserId(), req.getAuditRemark(), new Date(), SecurityUtils.getUserId());
+                REVIEWABLE_STATUSES,
+                RegistrationStatusEnum.APPROVED.getCode(), SecurityUtils.getUserId(), auditRemark, new Date(), SecurityUtils.getUserId());
         assertSingleRow(rows, "审核通过失败");
-        writeAudit(reg, "APPROVE", reg.getRegistrationStatus(), RegistrationStatusEnum.APPROVED.getCode(), req.getAuditRemark());
-        participationGenerationService.generateFromTeamRegistration(id, SecurityUtils.getUserId(), req.getAuditRemark());
+        writeAudit(reg, "APPROVE", reg.getRegistrationStatus(), RegistrationStatusEnum.APPROVED.getCode(), auditRemark);
+        participationGenerationService.generateFromTeamRegistration(id, SecurityUtils.getUserId(), auditRemark);
         messageService.sendSiteMessage(reg.getCaptainMemberId(), SecurityUtils.getUserId(), "REGISTRATION", id,
                 "报名审核已通过", "您的赛事报名已通过审核。");
     }
@@ -132,10 +106,16 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void reject(Long id, RegistrationAuditRejectReq req) {
+        if (req == null || !StringUtils.hasText(req.getRejectReason())) {
+            throw new ServiceException("驳回原因不能为空");
+        }
         BasketTournamentRegistration reg = requireRegistration(id);
-        String remark = StringUtils.hasText(req.getRejectReason()) ? req.getRejectReason() : req.getAuditRemark();
+        String remark = req.getRejectReason().trim();
+        if (StringUtils.hasText(req.getAuditRemark())) {
+            remark = remark + "；" + req.getAuditRemark().trim();
+        }
         int rows = registrationMapper.updateStatusIfMatch(id,
-                Arrays.asList(RegistrationStatusEnum.SUBMITTED.getCode(), RegistrationStatusEnum.REVIEWING.getCode()),
+                REVIEWABLE_STATUSES,
                 RegistrationStatusEnum.REJECTED.getCode(), SecurityUtils.getUserId(), remark, new Date(), SecurityUtils.getUserId());
         assertSingleRow(rows, "驳回失败");
         writeAudit(reg, "REJECT", reg.getRegistrationStatus(), RegistrationStatusEnum.REJECTED.getCode(), remark);
@@ -150,6 +130,73 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
             BeanUtils.copyBeanProp(vo, r);
             return vo;
         }).collect(Collectors.toList());
+    }
+
+    private void revalidate(Long id) {
+        BasketTournamentRegistration reg = requireRegistration(id);
+        List<BasketTournamentRegistrationPlayer> players = registrationPlayerMapper.selectByRegistrationId(id);
+        Date now = new Date();
+        List<Long> memberIds = players.stream().map(BasketTournamentRegistrationPlayer::getMemberId).filter(Objects::nonNull).collect(Collectors.toList());
+        Set<Long> disciplined = Collections.emptySet();
+        if (!memberIds.isEmpty()) {
+            disciplined = disciplineRecordMapper.selectActiveBySeasonAndMembers(reg.getSeasonId(), memberIds, now)
+                    .stream().map(BasketDisciplineRecord::getMemberId).collect(Collectors.toSet());
+        }
+        String teamRestriction = reg.getTeamId() != null
+                ? disciplineRestrictionSupport.checkRegistration("PERMANENT_TEAM", reg.getTeamId(), reg.getSeasonId())
+                : null;
+        for (BasketTournamentRegistrationPlayer player : players) {
+            String reason = validatePlayer(player, disciplined, reg.getSeasonId(), teamRestriction);
+            int status = reason == null ? PASS : FAIL;
+            registrationPlayerMapper.updateValidationStatus(player.getId(), status, reason);
+        }
+    }
+
+    private void enrichPlayerVo(RegistrationPlayerVo player) {
+        player.setUserId(player.getMemberId());
+        player.setPositionName(PlayerPositionSupport.resolveName(player.getPositionCode()));
+        player.setPositionText(PlayerPositionSupport.formatText(player.getPositionCode()));
+        player.setValidationStatusName(resolveValidationStatusName(player.getValidationStatus()));
+    }
+
+    private String resolveValidationStatusName(Integer status) {
+        if (status == null) {
+            return "未知";
+        }
+        if (Objects.equals(status, PASS)) {
+            return "通过";
+        }
+        if (Objects.equals(status, FAIL)) {
+            return "未通过";
+        }
+        return "待校验";
+    }
+
+    private void enrichRegistrationNames(RegistrationAuditDetailVo vo, BasketTournamentRegistration reg) {
+        if (reg.getTeamId() != null) {
+            BasketTeam team = teamMapper.selectById(reg.getTeamId());
+            if (team != null) {
+                vo.setTeamName(team.getTeamName());
+            }
+        }
+        if (reg.getSeasonId() != null) {
+            BasketTournamentSeason season = seasonMapper.selectById(reg.getSeasonId());
+            if (season != null && season.getTournamentId() != null) {
+                BasketTournament tournament = tournamentMapper.selectById(season.getTournamentId());
+                if (tournament != null) {
+                    vo.setTournamentName(tournament.getTournamentName());
+                }
+            }
+        }
+        if (reg.getCaptainPlayerId() != null) {
+            BasketPlayerProfile captainProfile = profileMapper.selectById(reg.getCaptainPlayerId());
+            if (captainProfile != null && StringUtils.hasText(captainProfile.getGameNickname())) {
+                vo.setCaptainName(captainProfile.getGameNickname());
+            }
+        }
+        if (!StringUtils.hasText(vo.getCaptainName())) {
+            vo.setCaptainName(reg.getContactName());
+        }
     }
 
     private String validatePlayer(BasketTournamentRegistrationPlayer player, Set<Long> disciplined, Long seasonId, String teamRestriction) {

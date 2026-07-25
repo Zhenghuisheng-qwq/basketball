@@ -5,7 +5,9 @@ import lombok.Data;
 
 @Data
 public class AccountPlayerAccountVo {
+    /** 用户ID（历史字段 memberId） */
     private Long memberId;
+    private Long userId;
     private String accountNo;
     private String username;
     private String email;

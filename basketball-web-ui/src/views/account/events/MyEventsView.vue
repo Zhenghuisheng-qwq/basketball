@@ -20,9 +20,12 @@ import { useTeamStore } from '@/stores/team'
 import {
   mapEventTeamSummaryToParticipating,
   mapOpenRegistrationToApplication,
+  mapOpenRegistrationStatus,
   mapOpenSeasonToAvailableEvent,
   mapTeamRegistrationToApplication,
   mapTeamSeasonToAvailableEvent,
+  mergeParticipatingEvents,
+  formatParticipationIdentityText,
 } from '@/utils/participationMappers'
 import {
   getBannerCopy,
@@ -91,7 +94,7 @@ function setTab(tab: MyEventsTabKey) {
 function registrationStatusText(status?: number): string {
   switch (status) {
     case 0: return '草稿'
-    case 1: return '已提交'
+    case 1: return '审核中'
     case 2: return '审核中'
     case 3: return '已通过'
     case 4: return '已驳回'
@@ -102,7 +105,8 @@ function registrationStatusText(status?: number): string {
 }
 
 function mapToParticipating(item: AccountTournamentItemDto): ParticipatingEvent {
-  const role = item.rosterRole || '球员'
+  const isCaptain = item.rosterRole?.toUpperCase() === 'CAPTAIN' || teamStore.isCaptain
+  const identityText = formatParticipationIdentityText(item.rosterRole, isCaptain)
   const seasonKey = item.seasonId || item.tournamentId || item.registrationId
   return {
     relationId: item.registrationId,
@@ -111,8 +115,8 @@ function mapToParticipating(item: AccountTournamentItemDto): ParticipatingEvent 
     platform: item.seasonName || '-',
     participationType: 'TEAM',
     participationTypeText: item.teamName ? '球队参赛' : '个人参赛',
-    identityType: role,
-    identityText: role,
+    identityType: identityText,
+    identityText,
     status: String(item.registrationStatus ?? ''),
     statusText: registrationStatusText(item.registrationStatus),
     actionText: '查看记录',
@@ -167,12 +171,15 @@ async function loadApplications() {
   loadError.value = ''
   try {
     const openRes = await getOpenRegistrationPage({ currentPage: 1, pageSize: 20 })
-    const openApps = (openRes.data?.records || []).map(mapOpenRegistrationToApplication)
+    const openApps = (openRes.data?.records || [])
+      .filter((item) => mapOpenRegistrationStatus(item.registrationStatus) !== 'APPROVED')
+      .map(mapOpenRegistrationToApplication)
     let teamApps: MyApplication[] = []
     if (teamStore.myTeamSummary?.teamId) {
       const teamRes = await getTeamRegistrationPage(teamStore.myTeamSummary.teamId, { currentPage: 1, pageSize: 20 })
-      teamApps = (teamRes.data?.records || []).map((item) =>
-        mapTeamRegistrationToApplication(item, teamStore.isCaptain))
+      teamApps = (teamRes.data?.records || [])
+        .filter((item) => item.registrationStatus !== 3)
+        .map((item) => mapTeamRegistrationToApplication(item, teamStore.isCaptain))
     }
     myApplications.value = [...openApps, ...teamApps]
   } catch (error) {
@@ -195,7 +202,7 @@ async function loadJoinedTournaments() {
       .filter((item) => item.registrationStatus === 3)
       .map(mapToParticipating)
     const fromEventTeams = (eventTeamRes.data || []).map(mapEventTeamSummaryToParticipating)
-    participatingEvents.value = [...fromEventTeams, ...fromTournaments]
+    participatingEvents.value = mergeParticipatingEvents(fromEventTeams, fromTournaments)
     await accountStore.loadMyTournaments().catch(() => undefined)
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'

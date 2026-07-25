@@ -10,10 +10,13 @@ import java.io.Serializable;
 @ApiModel("候选球员项")
 public class CandidatePlayerItemResp implements Serializable {
 
-    @ApiModelProperty("会员主键")
+    @ApiModelProperty("用户主键")
     private String memberId;
 
-    @ApiModelProperty("球员主键")
+    @ApiModelProperty("用户ID")
+    private String userId;
+
+    @ApiModelProperty("球员档案主键")
     private String playerId;
 
     @ApiModelProperty("球员编号")

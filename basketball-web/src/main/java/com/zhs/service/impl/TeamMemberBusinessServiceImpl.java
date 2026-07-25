@@ -261,6 +261,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         TeamMemberItemResp resp = new TeamMemberItemResp();
         resp.setTeamMemberId(toStringId(member.getId()));
         resp.setMemberId(toStringId(member.getMemberId()));
+        resp.setUserId(toStringId(member.getMemberId()));
         resp.setPlayerId(toStringId(member.getPlayerId()));
         resp.setRoleType(member.getRoleType());
         resp.setRosterType(member.getRosterType());
@@ -298,6 +299,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     private CandidatePlayerItemResp toCandidateItem(BasketPlayerProfile profile, BasketMemberProfile memberProfile) {
         CandidatePlayerItemResp resp = new CandidatePlayerItemResp();
         resp.setMemberId(toStringId(profile.getMemberId()));
+        resp.setUserId(toStringId(profile.getMemberId()));
         resp.setPlayerId(toStringId(profile.getId()));
         resp.setPlayerNo(profile.getPlayerNo());
         resp.setGameNickname(profile.getGameNickname());

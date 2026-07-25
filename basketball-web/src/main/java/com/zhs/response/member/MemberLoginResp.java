@@ -7,7 +7,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 @Data
-@ApiModel("会员登录响应")
+@ApiModel("用户登录响应")
 public class MemberLoginResp implements Serializable {
 
     @ApiModelProperty("UUID Token")
@@ -19,6 +19,6 @@ public class MemberLoginResp implements Serializable {
     @ApiModelProperty("过期秒数")
     private Long expireSeconds;
 
-    @ApiModelProperty("会员摘要")
+    @ApiModelProperty("用户摘要")
     private MemberSummaryResp member;
 }

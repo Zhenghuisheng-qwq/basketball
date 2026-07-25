@@ -8,6 +8,7 @@ import AccountPanel from '@/components/account/AccountPanel.vue'
 import PasswordInput from '@/views/account/components/PasswordInput.vue'
 import { useAccountStore } from '@/stores/account'
 import { resolvePasswordChangeError, validatePasswordRules } from '@/utils/passwordRules'
+import { forceRelogin } from '@/utils/forceRelogin'
 import { formatDateTime } from '@/utils/formatDate'
 import type { NotificationSettingDto, PrivacySettingDto } from '@/api/types/accountSetting'
 
@@ -137,13 +138,17 @@ async function savePassword() {
   }
   loading.value = true
   try {
-    const error = await accountStore.changePassword(form.currentPassword, form.newPassword)
-    if (error) {
-      applyPasswordChangeError(error)
+    const result = await accountStore.changePassword(form.currentPassword, form.newPassword)
+    if (result.error) {
+      applyPasswordChangeError(result.error)
       return
     }
-    ElMessage.success('密码已更新')
-    cancelForm()
+    ElMessage.success('密码修改成功，请重新登录')
+    await forceRelogin({
+      reason: 'password_changed',
+      redirect: '/account/settings',
+      skipLogoutApi: true,
+    })
   } finally {
     loading.value = false
   }

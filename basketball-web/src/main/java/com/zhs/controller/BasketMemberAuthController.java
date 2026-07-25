@@ -25,11 +25,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 官网会员认证入口
+ * 官网用户认证入口
  */
 @RestController
 @RequestMapping("/basket/member/auth")
-@Api(value = "官网会员认证")
+@Api(value = "官网用户认证")
 @Slf4j
 public class BasketMemberAuthController {
 
@@ -52,7 +52,7 @@ public class BasketMemberAuthController {
     }
 
     @NoLoginRequest
-    @ApiOperation("注册官网会员")
+    @ApiOperation("注册官网用户")
     @PostMapping("/register")
     public R<MemberLoginResp> register(@RequestBody MemberRegisterReq req, HttpServletRequest request) {
         return R.ok(basketMemberAuthService.register(req, resolveClientIp(request), request.getHeader("User-Agent")), "注册成功");

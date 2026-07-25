@@ -11,6 +11,9 @@ import com.zhs.dao.BasketFileAssetDao;
 import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketTeamInvitationDao;
+import com.zhs.dao.BasketTournamentDao;
+import com.zhs.dao.BasketTournamentRegistrationDao;
+import com.zhs.dao.BasketTournamentSeasonDao;
 import com.zhs.enums.MessageReadStatusEnum;
 import com.zhs.enums.TeamInvitationStatusEnum;
 import com.zhs.exception.ServiceException;
@@ -20,7 +23,11 @@ import com.zhs.model.BasketMessageReceiver;
 import com.zhs.model.BasketMessageTask;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamInvitation;
+import com.zhs.model.BasketTournament;
+import com.zhs.model.BasketTournamentRegistration;
+import com.zhs.model.BasketTournamentSeason;
 import com.zhs.response.account.MessageItemResp;
+import com.zhs.response.account.MessageRegistrationRemindInfoResp;
 import com.zhs.response.account.MessageTeamInviteInfoResp;
 import com.zhs.service.IAccountMessageService;
 import com.zhs.service.ICaptainPermissionService;
@@ -44,6 +51,7 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
 
     private static final Integer NOT_DELETED = 0;
     private static final String BIZ_TYPE_TEAM_INVITE = "TEAM_INVITE";
+    private static final String BIZ_TYPE_TEAM_REGISTRATION_REMIND = "TEAM_REGISTRATION_REMIND";
 
     @Resource
     private BasketMessageReceiverDao messageReceiverDao;
@@ -57,6 +65,12 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
     private BasketMemberProfileDao memberProfileDao;
     @Resource
     private BasketFileAssetDao fileAssetDao;
+    @Resource
+    private BasketTournamentSeasonDao seasonDao;
+    @Resource
+    private BasketTournamentDao tournamentDao;
+    @Resource
+    private BasketTournamentRegistrationDao registrationDao;
     @Resource
     private ICaptainPermissionService captainPermissionService;
 
@@ -227,6 +241,7 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
             resp.setBizId(task.getBizId() == null ? null : String.valueOf(task.getBizId()));
             if (includeTeamInvite && memberId != null) {
                 resp.setTeamInvite(loadTeamInviteInfo(task, memberId));
+                resp.setRegistrationRemind(loadRegistrationRemindInfo(task, memberId));
             }
         }
         return resp;
@@ -275,6 +290,67 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
         String joinIneligibilityReason = captainPermissionService.resolveJoinIneligibilityReason(memberId);
         info.setCanAccept(canRespond && joinIneligibilityReason == null);
         info.setCannotAcceptReason(canRespond ? joinIneligibilityReason : null);
+        return info;
+    }
+
+    private MessageRegistrationRemindInfoResp loadRegistrationRemindInfo(BasketMessageTask task, Long memberId) {
+        if (task == null || !BIZ_TYPE_TEAM_REGISTRATION_REMIND.equals(task.getBizType()) || task.getBizId() == null) {
+            return null;
+        }
+        BasketTournamentSeason season = seasonDao.selectById(task.getBizId());
+        if (season == null || !NOT_DELETED.equals(season.getIsDelete())) {
+            return null;
+        }
+        BasketTournament tournament = tournamentDao.selectById(season.getTournamentId());
+        BasketTeam team = null;
+        BasketTournamentRegistration registration = null;
+        if (memberId != null) {
+            var context = captainPermissionService;
+            try {
+                var membershipTeams = teamDao.selectList(new LambdaQueryWrapper<BasketTeam>()
+                        .eq(BasketTeam::getCaptainMemberId, memberId)
+                        .eq(BasketTeam::getIsDelete, NOT_DELETED)
+                        .last("limit 1"));
+                if (!membershipTeams.isEmpty()) {
+                    team = membershipTeams.get(0);
+                    registration = registrationDao.selectOne(new LambdaQueryWrapper<BasketTournamentRegistration>()
+                            .eq(BasketTournamentRegistration::getTeamId, team.getId())
+                            .eq(BasketTournamentRegistration::getSeasonId, season.getId())
+                            .eq(BasketTournamentRegistration::getIsDelete, NOT_DELETED)
+                            .last("limit 1"));
+                }
+            } catch (Exception ignored) {
+                // ignore lookup failures
+            }
+        }
+
+        BasketMemberProfile reminderProfile = null;
+        if (task.getCreatorId() != null) {
+            reminderProfile = memberProfileDao.selectOne(new LambdaQueryWrapper<BasketMemberProfile>()
+                    .eq(BasketMemberProfile::getMemberId, task.getCreatorId())
+                    .eq(BasketMemberProfile::getIsDelete, NOT_DELETED)
+                    .last("limit 1"));
+        }
+
+        Date now = new Date();
+        boolean canRegister = season.getRegistrationStartTime() != null
+                && season.getRegistrationEndTime() != null
+                && !now.before(season.getRegistrationStartTime())
+                && !now.after(season.getRegistrationEndTime());
+
+        MessageRegistrationRemindInfoResp info = new MessageRegistrationRemindInfoResp();
+        info.setSeasonId(String.valueOf(season.getId()));
+        info.setSeasonName(season.getSeasonName());
+        info.setTournamentName(tournament == null ? season.getSeasonName() : tournament.getTournamentName());
+        info.setRegistrationEndTime(season.getRegistrationEndTime());
+        info.setCanRegister(canRegister);
+        info.setAlreadyRegistered(registration != null);
+        info.setRegistrationId(registration == null ? null : String.valueOf(registration.getId()));
+        if (team != null) {
+            info.setTeamId(String.valueOf(team.getId()));
+            info.setTeamName(team.getTeamName());
+        }
+        info.setReminderNickname(reminderProfile == null ? "队员" : reminderProfile.getNickname());
         return info;
     }
 

@@ -590,7 +590,7 @@ async function submitRegistration() {
   if (!selectedRegistrationId.value) return
   try {
     await teamStore.submitRegistrationAction(selectedRegistrationId.value)
-    ElMessage.success('报名已提交')
+    ElMessage.success('报名已提交，正在等待后台审核')
     if (teamId.value) await teamStore.loadRegistrations(teamId.value)
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '提交失败')
@@ -1148,6 +1148,12 @@ const tabLabels: Record<TeamTab, string> = {
           <dl class="account-info-list">
             <div class="account-field-row"><dt>报名编号</dt><dd>{{ teamStore.registrationDetail.registrationNo }}</dd></div>
             <div class="account-field-row"><dt>状态</dt><dd>{{ teamStore.registrationDetail.registrationStatusText }}</dd></div>
+            <div v-if="teamStore.registrationDetail.registrationStatus === 2 || teamStore.registrationDetail.registrationStatus === 1" class="account-field-row">
+              <dt>审核说明</dt><dd>报名已提交，正在等待后台审核。</dd>
+            </div>
+            <div v-if="teamStore.registrationDetail.registrationStatus === 4 && teamStore.registrationDetail.remark" class="account-field-row">
+              <dt>驳回原因</dt><dd>{{ teamStore.registrationDetail.remark }}</dd>
+            </div>
             <div class="account-field-row"><dt>截止时间</dt><dd>{{ formatDateTime(teamStore.registrationDetail.registrationEndTime) }}</dd></div>
           </dl>
           <div class="team-form-grid">

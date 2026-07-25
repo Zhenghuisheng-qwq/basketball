@@ -156,7 +156,7 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
     @Transactional(rollbackFor = Exception.class)
     public void consumeMatchSuspension(Long matchId, Long memberId) {
         if (matchId == null || memberId == null) {
-            throw new ServiceException("比赛与会员不能为空");
+            throw new ServiceException("比赛与用户不能为空");
         }
         BasketMatch match = matchMapper.selectById(matchId);
         if (match == null) {

@@ -93,4 +93,13 @@ public class AvailableSeasonItemResp implements Serializable {
 
     @ApiModelProperty("已有报名主键")
     private String registrationId;
+
+    @ApiModelProperty("是否可提醒队长")
+    private Boolean canRemindCaptain;
+
+    @ApiModelProperty("不可提醒原因")
+    private String cannotRemindReason;
+
+    @ApiModelProperty("24小时内是否已提醒")
+    private Boolean remindedRecently;
 }

@@ -25,11 +25,17 @@ public class TeamInvitationItemResp implements Serializable {
     @ApiModelProperty("球队名称")
     private String teamName;
 
-    @ApiModelProperty("邀请人会员主键")
+    @ApiModelProperty("邀请人用户主键")
     private String inviterMemberId;
 
-    @ApiModelProperty("被邀请会员主键")
+    @ApiModelProperty("被邀请用户主键")
     private String inviteeMemberId;
+
+    @ApiModelProperty("邀请人用户ID")
+    private String inviterUserId;
+
+    @ApiModelProperty("被邀请用户ID")
+    private String inviteeUserId;
 
     @ApiModelProperty("被邀请人昵称")
     private String inviteeNickname;

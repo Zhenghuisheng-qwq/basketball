@@ -13,9 +13,11 @@ import com.zhs.model.BasketAccountSecurityLog;
 import com.zhs.model.BasketLoginLog;
 import com.zhs.model.BasketMemberAccount;
 import com.zhs.request.account.AccountChangePasswordReq;
+import com.zhs.response.account.AccountChangePasswordResp;
 import com.zhs.response.account.LoginLogItemResp;
 import com.zhs.response.account.SecurityLogItemResp;
 import com.zhs.service.IAccountSecurityService;
+import com.zhs.support.MemberSessionSupport;
 import com.zhs.util.DataMaskUtil;
 import jakarta.annotation.Resource;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,6 +46,8 @@ public class AccountSecurityServiceImpl implements IAccountSecurityService {
     private BasketMemberAccountDao memberAccountDao;
     @Resource
     private PasswordEncoder passwordEncoder;
+    @Resource
+    private MemberSessionSupport memberSessionSupport;
 
     @Override
     public IPage<LoginLogItemResp> pageLoginLogs(Integer currentPage, Integer pageSize) {
@@ -78,7 +82,7 @@ public class AccountSecurityServiceImpl implements IAccountSecurityService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void changePassword(AccountChangePasswordReq req, String clientIp, String terminalType) {
+    public AccountChangePasswordResp changePassword(AccountChangePasswordReq req, String clientIp, String terminalType, String currentToken) {
         if (req == null) {
             throw new ServiceException("请求参数不能为空");
         }
@@ -119,6 +123,13 @@ public class AccountSecurityServiceImpl implements IAccountSecurityService {
         logEntity.setEventTime(now);
         logEntity.setIsDelete(NOT_DELETED);
         accountSecurityLogDao.insert(logEntity);
+
+        long authVersion = memberSessionSupport.resolveAuthVersion(account);
+        memberSessionSupport.invalidateAllSessions(memberId, currentToken, authVersion);
+
+        AccountChangePasswordResp resp = new AccountChangePasswordResp();
+        resp.setNeedRelogin(true);
+        return resp;
     }
 
     private void validatePasswordPair(String password, String confirmPassword) {

@@ -23,7 +23,7 @@ public class AccountTournamentController {
     @Resource
     private IAccountTournamentService accountTournamentService;
 
-    @ApiOperation("分页查询当前会员赛事报名")
+    @ApiOperation("分页查询当前用户赛事报名")
     @GetMapping("/page")
     public R<IPage<AccountTournamentItemResp>> pageTournaments(
             @RequestParam(defaultValue = "1") Integer currentPage,

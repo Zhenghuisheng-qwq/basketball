@@ -10,6 +10,9 @@ public class RegistrationAuditDetailVo {
     private String registrationNo;
     private Long seasonId;
     private Long teamId;
+    private String tournamentName;
+    private String teamName;
+    private String captainName;
     private Long captainMemberId;
     private String contactName;
     private String contactMobile;
@@ -17,6 +20,7 @@ public class RegistrationAuditDetailVo {
     private String registrationStatusName;
     private Integer lineupCount;
     private String remark;
+    private String rejectReason;
     private Date submittedTime;
     private Date auditTime;
     private List<RegistrationPlayerVo> players;

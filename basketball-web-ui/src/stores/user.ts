@@ -69,6 +69,11 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = null
   }
 
+  function resetLocalAuth() {
+    clearLocalAuth()
+    initialized.value = true
+  }
+
   function hydrateMemberFromSessionCache(): boolean {
     const localToken = getToken()
     const session = getAuthSession()
@@ -186,8 +191,7 @@ export const useUserStore = defineStore('user', () => {
     } catch {
       // 本地清理优先
     }
-    clearLocalAuth()
-    initialized.value = true
+    resetLocalAuth()
   }
 
   function setUserInfo(info: UserInfo | null) {
@@ -221,6 +225,7 @@ export const useUserStore = defineStore('user', () => {
     loginByEmailCode,
     applyLoginResult,
     logout,
+    resetLocalAuth,
     setUserInfo,
     setToken: setTokenCompat,
     clearToken,

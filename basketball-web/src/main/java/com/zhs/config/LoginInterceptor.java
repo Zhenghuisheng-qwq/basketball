@@ -3,8 +3,8 @@ package com.zhs.config;
 import com.zhs.common.NoLoginRequest;
 import com.zhs.common.TokenUtil;
 import com.zhs.common.UserContext;
-import com.zhs.common.cachekey.member.MemberTokenCacheKey;
-import com.zhs.util.MiniRedisUtil;
+import com.zhs.support.MemberSessionSupport;
+import com.zhs.support.MemberSessionSupport.ParsedTokenSession;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,10 +20,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class LoginInterceptor implements HandlerInterceptor {
 
     @Resource
-    private MiniRedisUtil miniRedisUtil;
-
-    @Resource
-    private MemberAuthProperties memberAuthProperties;
+    private MemberSessionSupport memberSessionSupport;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -46,39 +43,19 @@ public class LoginInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        Long memberId = resolveMemberId(token);
-        if (memberId == null) {
+        ParsedTokenSession session = memberSessionSupport.resolveTokenSession(token);
+        if (session == null || session.memberId() == null) {
+            writeUnauthorized(response, "登录已过期");
+            return false;
+        }
+        if (!memberSessionSupport.isTokenAuthVersionValid(session.memberId(), session.authVersion())) {
+            memberSessionSupport.revokeToken(token);
             writeUnauthorized(response, "登录已过期");
             return false;
         }
 
-        UserContext.setUserId(memberId);
+        UserContext.setUserId(session.memberId());
         return true;
-    }
-
-    private Long resolveMemberId(String token) {
-        Object cached = miniRedisUtil.get(new MemberTokenCacheKey(token, memberAuthProperties.getTokenExpireDays()));
-        return parseId(cached);
-    }
-
-    private Long parseId(Object cached) {
-        if (cached == null) {
-            return null;
-        }
-        if (cached instanceof Long value) {
-            return value;
-        }
-        if (cached instanceof Integer value) {
-            return value.longValue();
-        }
-        if (cached instanceof String value && StringUtils.hasText(value)) {
-            try {
-                return Long.parseLong(value.trim());
-            } catch (NumberFormatException ignored) {
-                return null;
-            }
-        }
-        return null;
     }
 
     @Override

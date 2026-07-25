@@ -62,7 +62,7 @@
         <el-descriptions-item label="原队长">{{ detail.playerNickname || detail.playerId }}</el-descriptions-item>
         <el-descriptions-item label="新队长球员ID">{{ detail.newCaptainPlayerId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="球队ID">{{ detail.sourceEventTeamId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="申请人会员ID">{{ detail.applicantMemberId || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="申请人用户ID">{{ detail.applicantMemberId || detail.applicantUserId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="申请原因" :span="2">{{ detail.applyReason || '-' }}</el-descriptions-item>
         <el-descriptions-item label="提交时间">{{ parseTime(detail.submitTime) }}</el-descriptions-item>
         <el-descriptions-item label="审核时间">{{ parseTime(detail.reviewedTime) }}</el-descriptions-item>

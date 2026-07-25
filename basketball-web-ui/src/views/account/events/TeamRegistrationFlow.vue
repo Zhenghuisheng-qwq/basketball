@@ -10,6 +10,7 @@ import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import type { StepItem } from '@/components/account/AccountStepper.vue'
 import { useTeamStore } from '@/stores/team'
 import { mapTeamRegistrationStatusText } from '@/utils/accountMappers'
+import { resolveSeasonRosterLimits } from '@/constants/rosterRules'
 import type { AvailableSeasonItemDto, TeamRegistrationPlayerItemDto } from '@/api/types/teamRegistration'
 
 type FlowStep = 'season' | 'info' | 'roster' | 'submit'
@@ -45,6 +46,9 @@ const teamId = computed(() => teamStore.myTeamSummary?.teamId || '')
 const detail = computed(() => teamStore.registrationDetail)
 const selectedSeason = computed(() =>
   teamStore.availableSeasons.find((item) => item.seasonId === draftForm.seasonId),
+)
+const selectedSeasonRosterLimits = computed(() =>
+  resolveSeasonRosterLimits(selectedSeason.value?.minRosterCount, selectedSeason.value?.maxRosterCount),
 )
 
 const stepItems = computed<StepItem[]>(() => {
@@ -198,7 +202,7 @@ async function submitRegistration() {
   if (!registrationId.value) return
   try {
     await teamStore.submitRegistrationAction(registrationId.value)
-    ElMessage.success('球队报名已提交')
+    ElMessage.success('报名已提交，正在等待后台审核')
     router.push('/account/my-events?tab=applications')
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '提交失败')
@@ -331,12 +335,8 @@ onMounted(bootstrap)
       <AccountPanel v-else-if="currentStep === 'roster'" title="选择阵容">
         <p class="team-registration-hint">
           已选 {{ rosterSelections.length }} 人
-          <template v-if="selectedSeason?.minRosterCount">
-            · 最少 {{ selectedSeason.minRosterCount }} 人
-          </template>
-          <template v-if="selectedSeason?.maxRosterCount">
-            · 最多 {{ selectedSeason.maxRosterCount }} 人
-          </template>
+          · 最少 {{ selectedSeasonRosterLimits.minRosterCount }} 人
+          · 最多 {{ selectedSeasonRosterLimits.maxRosterCount }} 人
         </p>
         <div class="platform-table-wrap">
           <table class="platform-table">

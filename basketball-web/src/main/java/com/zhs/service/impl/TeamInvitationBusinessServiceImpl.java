@@ -87,7 +87,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
             inviteeMemberId = inviteeProfile.getMemberId();
             captainPermissionService.requireCertifiedPlayer(inviteeMemberId);
         } else {
-            inviteeMemberId = parseLongId(req.getInviteeMemberId(), "被邀请会员主键");
+            inviteeMemberId = parseLongId(req.getInviteeMemberId(), "被邀请用户主键");
             inviteeProfile = captainPermissionService.requireCertifiedPlayer(inviteeMemberId);
         }
         if (memberId.equals(inviteeMemberId)) {
@@ -290,6 +290,8 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         resp.setTeamName(team == null ? null : team.getTeamName());
         resp.setInviterMemberId(toStringId(invitation.getInviterMemberId()));
         resp.setInviteeMemberId(toStringId(invitation.getInviteeMemberId()));
+        resp.setInviterUserId(toStringId(invitation.getInviterMemberId()));
+        resp.setInviteeUserId(toStringId(invitation.getInviteeMemberId()));
         BasketMemberProfile profile = profileMap.get(invitation.getInviteeMemberId());
         resp.setInviteeNickname(profile == null ? null : profile.getNickname());
         resp.setInvitationMessage(invitation.getInvitationMessage());

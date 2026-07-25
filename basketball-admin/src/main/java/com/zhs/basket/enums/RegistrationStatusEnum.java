@@ -22,6 +22,14 @@ public enum RegistrationStatusEnum {
     public int getCode() { return code; }
     public String getDescription() { return description; }
 
+    /** 后台审核列表展示文案（历史「已提交」按「审核中」展示） */
+    public String getAuditDisplayDescription() {
+        if (this == SUBMITTED) {
+            return REVIEWING.getDescription();
+        }
+        return description;
+    }
+
     public static RegistrationStatusEnum fromCode(Integer code) {
         if (code == null) throw new ServiceException("未知报名状态");
         for (RegistrationStatusEnum v : values()) {

@@ -16,10 +16,13 @@ public class TeamRegistrationPlayerItemResp implements Serializable {
     @ApiModelProperty("球队成员主键")
     private String teamMemberId;
 
-    @ApiModelProperty("会员主键")
+    @ApiModelProperty("用户主键")
     private String memberId;
 
-    @ApiModelProperty("球员主键")
+    @ApiModelProperty("用户ID")
+    private String userId;
+
+    @ApiModelProperty("球员档案主键")
     private String playerId;
 
     @ApiModelProperty("游戏昵称")

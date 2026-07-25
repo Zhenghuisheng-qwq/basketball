@@ -54,6 +54,7 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
     }
 
     private void enrichListVo(AccountPlayerListVo vo) {
+        vo.setUserId(vo.getMemberId());
         vo.setAccountStatusName(resolveAccountStatusName(vo.getAccountStatus()));
         applyCertDisplay(vo);
         if (vo.getCertificationStatus() != null) {
@@ -106,6 +107,7 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
     private AccountPlayerAccountVo buildAccountSection(AccountPlayerDetailVo base) {
         AccountPlayerAccountVo account = new AccountPlayerAccountVo();
         account.setMemberId(base.getMemberId());
+        account.setUserId(base.getMemberId());
         account.setAccountNo(base.getAccountNo());
         account.setUsername(base.getUsername());
         account.setEmail(base.getEmail());

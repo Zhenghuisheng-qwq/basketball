@@ -7,7 +7,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 @Data
-@ApiModel("官网会员注册请求")
+@ApiModel("官网用户注册请求")
 public class MemberRegisterReq implements Serializable {
 
     @ApiModelProperty(value = "登录账号", required = true)

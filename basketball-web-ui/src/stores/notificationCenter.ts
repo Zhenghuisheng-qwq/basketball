@@ -74,6 +74,14 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
     return items.value.find((item) => item.id === id)
   }
 
+  function resetState() {
+    items.value = []
+    totalCount.value = 0
+    unreadCountValue.value = 0
+    loading.value = false
+    error.value = ''
+  }
+
   return {
     items,
     total,
@@ -85,5 +93,6 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
     markAsRead,
     markAllAsRead,
     getById,
+    resetState,
   }
 })

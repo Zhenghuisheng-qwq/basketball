@@ -37,7 +37,15 @@ public enum TournamentRegistrationStatusEnum {
     }
 
     public boolean canWithdraw() {
-        return this == SUBMITTED;
+        return this == REVIEWING || this == SUBMITTED;
+    }
+
+    /** 用户端展示文案（历史「已提交」按「审核中」展示） */
+    public String getDisplayDescription() {
+        if (this == SUBMITTED) {
+            return REVIEWING.getDescription();
+        }
+        return description;
     }
 
     public boolean canDeleteDraft() {
