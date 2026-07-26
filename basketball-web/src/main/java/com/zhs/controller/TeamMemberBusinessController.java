@@ -2,7 +2,7 @@ package com.zhs.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.request.team.TeamMemberUpdateReq;
-import com.zhs.response.team.CandidatePlayerItemResp;
+import com.zhs.response.team.CandidatePlayerPageResp;
 import com.zhs.response.team.TeamMemberItemResp;
 import com.zhs.service.ITeamMemberBusinessService;
 import com.zhs.util.R;
@@ -64,7 +64,7 @@ public class TeamMemberBusinessController {
 
     @ApiOperation("候选球员分页")
     @GetMapping("/{teamId}/candidate-player/page")
-    public R<IPage<CandidatePlayerItemResp>> pageCandidatePlayers(@PathVariable String teamId,
+    public R<CandidatePlayerPageResp> pageCandidatePlayers(@PathVariable String teamId,
                                                                    @RequestParam(required = false) Integer currentPage,
                                                                    @RequestParam(required = false) Integer pageSize,
                                                                    @RequestParam(required = false) String keyword) {

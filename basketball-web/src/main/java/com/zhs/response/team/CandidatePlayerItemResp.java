@@ -31,6 +31,21 @@ public class CandidatePlayerItemResp implements Serializable {
     @ApiModelProperty("比赛终端")
     private String gameTerminal;
 
+    @ApiModelProperty("游戏账号")
+    private String gameAccount;
+
+    @ApiModelProperty("头像 URL")
+    private String avatar;
+
+    @ApiModelProperty("当前球队主键")
+    private String currentTeamId;
+
+    @ApiModelProperty("是否可邀请")
+    private Boolean canInvite;
+
+    @ApiModelProperty("不可邀请原因")
+    private String cannotInviteReason;
+
     @ApiModelProperty("场上位置")
     private String positionCode;
 

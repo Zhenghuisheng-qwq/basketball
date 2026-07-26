@@ -27,6 +27,11 @@ export interface CandidatePlayerItemDto {
   gameNickname?: string
   nickname?: string
   gameTerminal?: string
+  gameAccount?: string
+  avatar?: string
+  currentTeamId?: string
+  canInvite?: boolean
+  cannotInviteReason?: string
   positionCode?: string
   positionName?: string
   certificationStatus?: number

@@ -27,8 +27,10 @@ import com.zhs.model.BasketTeamMember;
 import com.zhs.request.team.TeamCreateReq;
 import com.zhs.request.team.TeamLogoBindReq;
 import com.zhs.request.team.TeamUpdateReq;
+import com.zhs.response.team.JoinableTeamPageResp;
 import com.zhs.response.team.TeamDetailResp;
 import com.zhs.response.team.TeamSummaryResp;
+import com.zhs.support.GameTerminalSupport;
 import com.zhs.service.IAccountFileService;
 import com.zhs.service.IAccountTeamService;
 import com.zhs.service.ICaptainPermissionService;
@@ -105,12 +107,27 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     }
 
     @Override
-    public IPage<TeamSummaryResp> pageJoinable(Integer currentPage, Integer pageSize, String keyword) {
+    public JoinableTeamPageResp pageJoinable(Integer currentPage, Integer pageSize, String keyword) {
         Long memberId = UserContext.getRequiredUserId();
+        long page = normalizePage(currentPage);
+        long size = normalizeSize(pageSize);
         if (captainPermissionService.hasCurrentTeamMembership(memberId)
                 || captainPermissionService.hasValidCaptainQualification(memberId)) {
-            return emptyPage(currentPage, pageSize);
+            return emptyJoinablePage(page, size, null);
         }
+
+        BasketPlayerProfile playerProfile = playerProfileDao.selectOne(new LambdaQueryWrapper<BasketPlayerProfile>()
+                .eq(BasketPlayerProfile::getMemberId, memberId)
+                .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)
+                .last("limit 1"));
+        if (playerProfile == null) {
+            return emptyJoinablePage(page, size, "请先完成球员认证后再加入球队");
+        }
+        if (!StringUtils.hasText(playerProfile.getGameTerminal())) {
+            return emptyJoinablePage(page, size, "请先完善球员比赛终端");
+        }
+
+        String playerTerminal = playerProfile.getGameTerminal();
         Set<Long> joinedTeamIds = loadJoinedTeamIds(memberId);
 
         LambdaQueryWrapper<BasketTeam> wrapper = new LambdaQueryWrapper<BasketTeam>()
@@ -128,6 +145,8 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         List<BasketTeam> allTeams = teamDao.selectList(wrapper);
         List<BasketTeam> joinable = allTeams.stream()
                 .filter(team -> !joinedTeamIds.contains(team.getId()))
+                .filter(team -> StringUtils.hasText(team.getGameTerminal()))
+                .filter(team -> GameTerminalSupport.matches(playerTerminal, team.getGameTerminal()))
                 .filter(team -> team.getCurrentMemberCount() == null
                         || team.getMaxMemberCount() == null
                         || team.getCurrentMemberCount() < team.getMaxMemberCount())
@@ -135,9 +154,13 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
 
         Map<Long, String> logoUrlMap = loadLogoUrlMap(joinable);
         List<TeamSummaryResp> items = joinable.stream()
-                .map(team -> toSummaryResp(team, null, logoUrlMap.get(team.getLogoFileId())))
+                .map(team -> toJoinableSummaryResp(team, logoUrlMap.get(team.getLogoFileId())))
                 .collect(Collectors.toList());
-        return toPage(items, currentPage, pageSize);
+        JoinableTeamPageResp respPage = toJoinablePage(items, page, size);
+        if (items.isEmpty()) {
+            respPage.setEmptyReason("当前暂无与你比赛终端一致的可加入球队");
+        }
+        return respPage;
     }
 
     @Override
@@ -398,6 +421,32 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     private void updatePlayerCurrentTeam(BasketPlayerProfile profile, Long teamId) {
         profile.setCurrentTeamId(teamId);
         playerProfileDao.updateById(profile);
+    }
+
+    private TeamSummaryResp toJoinableSummaryResp(BasketTeam team, String logoUrl) {
+        TeamSummaryResp resp = toSummaryResp(team, null, logoUrl);
+        resp.setRecruitStatus(team.getPublicStatus());
+        resp.setMemberCount(team.getCurrentMemberCount());
+        resp.setCanApply(true);
+        resp.setCannotApplyReason(null);
+        return resp;
+    }
+
+    private JoinableTeamPageResp emptyJoinablePage(long page, long size, String emptyReason) {
+        JoinableTeamPageResp respPage = new JoinableTeamPageResp(page, size, 0);
+        respPage.setRecords(Collections.emptyList());
+        respPage.setEmptyReason(emptyReason);
+        return respPage;
+    }
+
+    private JoinableTeamPageResp toJoinablePage(List<TeamSummaryResp> items, long page, long size) {
+        long total = items.size();
+        int from = (int) Math.min((page - 1) * size, total);
+        int to = (int) Math.min(from + size, total);
+        List<TeamSummaryResp> records = from >= to ? Collections.emptyList() : items.subList(from, to);
+        JoinableTeamPageResp respPage = new JoinableTeamPageResp(page, size, total);
+        respPage.setRecords(records);
+        return respPage;
     }
 
     private TeamSummaryResp toSummaryResp(BasketTeam team, BasketTeamMember membership, String logoUrl) {

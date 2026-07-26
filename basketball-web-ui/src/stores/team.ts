@@ -90,9 +90,11 @@ export const useTeamStore = defineStore('team', () => {
   const joinApplicationsLoading = ref(false)
 
   const joinableTeams = ref<TeamSummaryDto[]>([])
+  const joinableEmptyReason = ref('')
   const joinableLoading = ref(false)
 
   const candidatePlayers = ref<CandidatePlayerItemDto[]>([])
+  const candidateEmptyReason = ref('')
   const candidatesLoading = ref(false)
 
   const availableSeasons = ref<AvailableSeasonItemDto[]>([])
@@ -372,6 +374,7 @@ export const useTeamStore = defineStore('team', () => {
     try {
       const res = await getJoinableTeamPage({ currentPage: 1, pageSize: 20, ...params })
       joinableTeams.value = unwrapPage(res.data).records
+      joinableEmptyReason.value = res.data?.emptyReason || ''
       return joinableTeams.value
     } catch (error) {
       setError(error)
@@ -479,6 +482,7 @@ export const useTeamStore = defineStore('team', () => {
     try {
       const res = await getCandidatePlayerPage(teamId, { currentPage: 1, pageSize: 20, ...params })
       candidatePlayers.value = unwrapPage(res.data).records
+      candidateEmptyReason.value = res.data?.emptyReason || ''
       return candidatePlayers.value
     } catch (error) {
       setError(error)
@@ -691,8 +695,10 @@ export const useTeamStore = defineStore('team', () => {
     teamJoinApplications,
     joinApplicationsLoading,
     joinableTeams,
+    joinableEmptyReason,
     joinableLoading,
     candidatePlayers,
+    candidateEmptyReason,
     candidatesLoading,
     availableSeasons,
     availableSeasonEmptyReason,

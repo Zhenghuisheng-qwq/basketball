@@ -9,6 +9,7 @@ import com.zhs.dao.BasketMessageReceiverDao;
 import com.zhs.dao.BasketMessageTaskDao;
 import com.zhs.dao.BasketFileAssetDao;
 import com.zhs.dao.BasketMemberProfileDao;
+import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketTeamInvitationDao;
 import com.zhs.dao.BasketTournamentDao;
@@ -21,6 +22,7 @@ import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketMessageReceiver;
 import com.zhs.model.BasketMessageTask;
+import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamInvitation;
 import com.zhs.model.BasketTournament;
@@ -31,6 +33,7 @@ import com.zhs.response.account.MessageRegistrationRemindInfoResp;
 import com.zhs.response.account.MessageTeamInviteInfoResp;
 import com.zhs.service.IAccountMessageService;
 import com.zhs.service.ICaptainPermissionService;
+import com.zhs.support.GameTerminalSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +66,8 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
     private BasketTeamDao teamDao;
     @Resource
     private BasketMemberProfileDao memberProfileDao;
+    @Resource
+    private BasketPlayerProfileDao playerProfileDao;
     @Resource
     private BasketFileAssetDao fileAssetDao;
     @Resource
@@ -288,6 +293,17 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
                 && (invitation.getExpireTime() == null || invitation.getExpireTime().after(now));
         info.setCanRespond(canRespond);
         String joinIneligibilityReason = captainPermissionService.resolveJoinIneligibilityReason(memberId);
+        BasketPlayerProfile playerProfile = playerProfileDao.selectOne(new LambdaQueryWrapper<BasketPlayerProfile>()
+                .eq(BasketPlayerProfile::getMemberId, memberId)
+                .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)
+                .last("limit 1"));
+        String terminalMismatchReason = playerProfile == null || team == null
+                ? null
+                : GameTerminalSupport.buildAcceptMismatchMessage(
+                        playerProfile.getGameTerminal(), team.getGameTerminal());
+        if (terminalMismatchReason != null) {
+            joinIneligibilityReason = terminalMismatchReason;
+        }
         info.setCanAccept(canRespond && joinIneligibilityReason == null);
         info.setCannotAcceptReason(canRespond ? joinIneligibilityReason : null);
         return info;

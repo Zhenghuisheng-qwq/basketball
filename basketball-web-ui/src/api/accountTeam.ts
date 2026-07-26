@@ -7,6 +7,7 @@ import type {
   TeamSummaryDto,
   TeamUpdateReq,
 } from '@/api/types/teamAccount'
+import type { JoinableTeamPageDto } from '@/api/types/teamJoinInvite'
 
 export function getMyTeamPage(params?: { currentPage?: number; pageSize?: number }) {
   return request.get<any, ApiResult<PageResult<TeamSummaryDto>>>('/basket/team/mine', { params })
@@ -17,7 +18,7 @@ export function getJoinableTeamPage(params?: {
   pageSize?: number
   keyword?: string
 }) {
-  return request.get<any, ApiResult<PageResult<TeamSummaryDto>>>('/basket/team/joinable/page', { params })
+  return request.get<any, ApiResult<JoinableTeamPageDto>>('/basket/team/joinable/page', { params })
 }
 
 export function createTeam(body: TeamCreateReq) {

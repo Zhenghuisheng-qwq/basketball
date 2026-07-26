@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.request.team.TeamCreateReq;
 import com.zhs.request.team.TeamLogoBindReq;
 import com.zhs.request.team.TeamUpdateReq;
+import com.zhs.response.team.JoinableTeamPageResp;
 import com.zhs.response.team.TeamDetailResp;
 import com.zhs.response.team.TeamSummaryResp;
 import com.zhs.service.IAccountTeamService;
@@ -40,7 +41,7 @@ public class AccountTeamController {
 
     @ApiOperation("可加入球队分页")
     @GetMapping("/joinable/page")
-    public R<IPage<TeamSummaryResp>> pageJoinable(@RequestParam(required = false) Integer currentPage,
+    public R<JoinableTeamPageResp> pageJoinable(@RequestParam(required = false) Integer currentPage,
                                                   @RequestParam(required = false) Integer pageSize,
                                                   @RequestParam(required = false) String keyword) {
         return R.ok(accountTeamService.pageJoinable(currentPage, pageSize, keyword));

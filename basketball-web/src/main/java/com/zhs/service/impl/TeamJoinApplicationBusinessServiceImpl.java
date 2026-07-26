@@ -28,6 +28,7 @@ import com.zhs.service.IBusinessMessageService;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamJoinApplicationBusinessService;
 import com.zhs.service.team.TeamMemberJoinHelper;
+import com.zhs.support.GameTerminalSupport;
 import com.zhs.support.PlayerPositionSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -74,6 +75,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         BasketPlayerProfile profile = captainPermissionService.requireCertifiedPlayer(memberId);
         BasketTeam team = requireJoinableTeam(teamPk);
         captainPermissionService.assertEligibleToJoinTeam(memberId);
+        assertTerminalMatchForApply(profile, team);
         assertNoPendingApplication(teamPk, memberId);
 
         BasketTeamJoinApplication application = new BasketTeamJoinApplication();
@@ -199,6 +201,8 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         }
         application = joinApplicationDao.selectById(applicationPk);
         if (Boolean.TRUE.equals(approve)) {
+            BasketPlayerProfile applicantProfile = loadApplicantProfile(application.getApplicantPlayerId());
+            assertTerminalMatchForApprove(applicantProfile, team);
             teamMemberJoinHelper.addMember(team, application.getApplicantMemberId(),
                     application.getApplicantPlayerId(), TeamJoinSourceEnum.APPLY);
             businessMessageService.sendSiteMessage(application.getApplicantMemberId(), "加入申请已通过",
@@ -213,6 +217,36 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(Collections.singleton(application.getApplicantMemberId()));
         Map<Long, BasketPlayerProfile> playerProfileMap = loadPlayerProfileMap(Collections.singleton(application.getApplicantMemberId()));
         return toItemResp(application, team, profileMap, playerProfileMap);
+    }
+
+    private void assertTerminalMatchForApply(BasketPlayerProfile profile, BasketTeam team) {
+        String reason = GameTerminalSupport.buildApplyJoinMismatchMessage(
+                profile.getGameTerminal(), team.getGameTerminal());
+        if (reason != null) {
+            throw new ServiceException(reason);
+        }
+    }
+
+    private void assertTerminalMatchForApprove(BasketPlayerProfile profile, BasketTeam team) {
+        if (profile == null) {
+            throw new ServiceException("申请人比赛终端与球队比赛终端不一致，无法加入");
+        }
+        String reason = GameTerminalSupport.buildApproveApplicationMismatchMessage(
+                profile.getGameTerminal(), team.getGameTerminal());
+        if (reason != null) {
+            throw new ServiceException(reason);
+        }
+    }
+
+    private BasketPlayerProfile loadApplicantProfile(Long playerId) {
+        if (playerId == null) {
+            return null;
+        }
+        BasketPlayerProfile profile = playerProfileDao.selectById(playerId);
+        if (profile == null || !NOT_DELETED.equals(profile.getIsDelete())) {
+            return null;
+        }
+        return profile;
     }
 
     private BasketTeam requireJoinableTeam(Long teamId) {

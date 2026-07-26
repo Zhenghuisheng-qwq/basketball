@@ -26,6 +26,7 @@ import com.zhs.service.IBusinessMessageService;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamInvitationBusinessService;
 import com.zhs.service.team.TeamMemberJoinHelper;
+import com.zhs.support.GameTerminalSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -93,6 +94,9 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         if (memberId.equals(inviteeMemberId)) {
             throw new ServiceException("不能邀请自己");
         }
+        captainPermissionService.assertEligibleToJoinTeam(inviteeMemberId);
+        assertTerminalMatchForInvite(inviteeProfile, team);
+        assertTeamHasCapacity(team);
         assertNoPendingInvitation(teamPk, inviteeMemberId);
 
         Date now = new Date();
@@ -208,6 +212,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
             captainPermissionService.assertEligibleToJoinTeam(memberId);
             validateTeamJoinable(team);
             BasketPlayerProfile profile = captainPermissionService.requireCertifiedPlayer(memberId);
+            assertTerminalMatchForAccept(profile, team);
             teamMemberJoinHelper.addMember(team, memberId, profile.getId(), com.zhs.enums.TeamJoinSourceEnum.INVITE);
         }
 
@@ -233,6 +238,43 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
             return false;
         }
         throw new ServiceException("不支持的响应动作");
+    }
+
+    private void assertTerminalMatchForInvite(BasketPlayerProfile inviteeProfile, BasketTeam team) {
+        String reason = GameTerminalSupport.buildInviteMismatchMessage(
+                inviteeProfile.getGameTerminal(), team.getGameTerminal());
+        if (reason != null) {
+            throw new ServiceException(reason);
+        }
+    }
+
+    private void assertTerminalMatchForAccept(BasketPlayerProfile profile, BasketTeam team) {
+        String reason = GameTerminalSupport.buildAcceptMismatchMessage(
+                profile.getGameTerminal(), team.getGameTerminal());
+        if (reason != null) {
+            throw new ServiceException(reason);
+        }
+    }
+
+    private void assertTeamHasCapacity(BasketTeam team) {
+        if (team.getMaxMemberCount() != null && team.getCurrentMemberCount() != null
+                && team.getCurrentMemberCount() >= team.getMaxMemberCount()) {
+            throw new ServiceException("球队成员已满");
+        }
+    }
+
+    private String resolveInviteeTerminalMismatchReason(BasketTeam team, Long inviteeMemberId) {
+        if (team == null || inviteeMemberId == null) {
+            return null;
+        }
+        BasketPlayerProfile profile = playerProfileDao.selectOne(new LambdaQueryWrapper<BasketPlayerProfile>()
+                .eq(BasketPlayerProfile::getMemberId, inviteeMemberId)
+                .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)
+                .last("limit 1"));
+        if (profile == null) {
+            return null;
+        }
+        return GameTerminalSupport.buildAcceptMismatchMessage(profile.getGameTerminal(), team.getGameTerminal());
     }
 
     private void assertNoPendingInvitation(Long teamId, Long inviteeMemberId) {
@@ -303,6 +345,10 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         String joinIneligibilityReason = inviteeMemberId == null
                 ? null
                 : captainPermissionService.resolveJoinIneligibilityReason(inviteeMemberId);
+        String terminalMismatchReason = resolveInviteeTerminalMismatchReason(team, inviteeMemberId);
+        if (terminalMismatchReason != null) {
+            joinIneligibilityReason = terminalMismatchReason;
+        }
         resp.setCanAccept(canRespond && joinIneligibilityReason == null);
         resp.setCannotAcceptReason(canRespond ? joinIneligibilityReason : null);
         resp.setExpireTime(invitation.getExpireTime());

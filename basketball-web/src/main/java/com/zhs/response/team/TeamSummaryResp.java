@@ -49,6 +49,18 @@ public class TeamSummaryResp implements Serializable {
     @ApiModelProperty("公开状态")
     private Integer publicStatus;
 
+    @ApiModelProperty("招募状态（同 publicStatus）")
+    private Integer recruitStatus;
+
+    @ApiModelProperty("成员数量（同 currentMemberCount）")
+    private Integer memberCount;
+
+    @ApiModelProperty("是否可申请加入")
+    private Boolean canApply;
+
+    @ApiModelProperty("不可申请原因")
+    private String cannotApplyReason;
+
     @ApiModelProperty("我的角色")
     private String myRole;
 

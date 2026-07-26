@@ -5,6 +5,7 @@ import type {
   TeamMemberItemDto,
   TeamMemberUpdateReq,
 } from '@/api/types/teamMember'
+import type { CandidatePlayerPageDto } from '@/api/types/teamJoinInvite'
 
 export function getTeamMemberPage(
   teamId: string,
@@ -39,7 +40,7 @@ export function getCandidatePlayerPage(
   teamId: string,
   params?: { currentPage?: number; pageSize?: number; keyword?: string },
 ) {
-  return request.get<any, ApiResult<PageResult<CandidatePlayerItemDto>>>(
+  return request.get<any, ApiResult<CandidatePlayerPageDto>>(
     `/basket/team/${teamId}/candidate-player/page`,
     { params },
   )

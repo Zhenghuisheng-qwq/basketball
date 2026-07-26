@@ -19,6 +19,7 @@ import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamMember;
 import com.zhs.service.IBusinessMessageService;
+import com.zhs.support.GameTerminalSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +51,7 @@ public class TeamMemberJoinHelper {
     public BasketTeamMember addMember(BasketTeam team, Long memberId, Long playerId, TeamJoinSourceEnum joinSource) {
         assertTeamHasCapacity(team);
         assertNoCurrentMembership(memberId);
+        assertPlayerTeamTerminalMatch(team, playerId);
 
         Date now = new Date();
         BasketTeamMember member = new BasketTeamMember();
@@ -86,6 +88,17 @@ public class TeamMemberJoinHelper {
         update.setId(teamId);
         update.setCurrentMemberCount(count == null ? 0 : count.intValue());
         teamDao.updateById(update);
+    }
+
+    private void assertPlayerTeamTerminalMatch(BasketTeam team, Long playerId) {
+        BasketPlayerProfile profile = playerProfileDao.selectById(playerId);
+        if (profile == null || !NOT_DELETED.equals(profile.getIsDelete())) {
+            throw new ServiceException("球员档案不存在");
+        }
+        String reason = GameTerminalSupport.resolvePlayerTeamMismatchReason(profile, team);
+        if (reason != null) {
+            throw new ServiceException(reason);
+        }
     }
 
     private void assertTeamHasCapacity(BasketTeam team) {

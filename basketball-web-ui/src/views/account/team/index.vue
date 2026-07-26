@@ -720,7 +720,13 @@ const tabLabels: Record<TeamTab, string> = {
                   <td>{{ team.gameTerminal || '-' }}</td>
                   <td>{{ team.currentMemberCount ?? 0 }}/{{ team.maxMemberCount ?? '-' }}</td>
                   <td>
-                    <button type="button" class="account-btn-primary team-table__btn" @click="applyJoin(team.teamId)">
+                    <button
+                      type="button"
+                      class="account-btn-primary team-table__btn"
+                      :disabled="team.canApply === false"
+                      :title="team.cannotApplyReason || undefined"
+                      @click="applyJoin(team.teamId)"
+                    >
                       申请加入
                     </button>
                   </td>
@@ -728,7 +734,10 @@ const tabLabels: Record<TeamTab, string> = {
               </tbody>
             </table>
           </div>
-          <AccountEmptyState v-else message="暂无可加入的公开球队" />
+          <AccountEmptyState
+            v-else
+            :message="teamStore.joinableEmptyReason || '当前暂无与你比赛终端一致的可加入球队'"
+          />
           <label class="team-inline-field">
             申请说明
             <textarea v-model="applyReason" rows="2" maxlength="200" placeholder="可选，向队长说明加入理由" />
@@ -990,7 +999,10 @@ const tabLabels: Record<TeamTab, string> = {
               </tbody>
             </table>
           </div>
-          <AccountEmptyState v-else message="暂无可邀请球员，请先搜索" />
+          <AccountEmptyState
+            v-else
+            :message="teamStore.candidateEmptyReason || '当前暂无与球队比赛终端一致的可邀请球员'"
+          />
           <div class="team-form-grid">
             <label class="team-form-full">
               邀请说明

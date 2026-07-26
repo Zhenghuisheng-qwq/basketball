@@ -7,9 +7,13 @@ import com.zhs.common.UserContext;
 import com.zhs.dao.BasketFileAssetDao;
 import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketPlayerProfileDao;
+import com.zhs.dao.BasketTeamDao;
+import com.zhs.dao.BasketTeamInvitationDao;
 import com.zhs.dao.BasketTeamMemberDao;
 import com.zhs.dao.BasketTournamentRegistrationDao;
 import com.zhs.dao.BasketTournamentRegistrationPlayerDao;
+import com.zhs.enums.PlayerStatusEnum;
+import com.zhs.enums.TeamInvitationStatusEnum;
 import com.zhs.enums.TeamMemberRoleEnum;
 import com.zhs.enums.TeamMembershipStatusEnum;
 import com.zhs.enums.TeamRosterTypeEnum;
@@ -18,12 +22,16 @@ import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketPlayerProfile;
+import com.zhs.model.BasketTeam;
+import com.zhs.model.BasketTeamInvitation;
 import com.zhs.model.BasketTeamMember;
 import com.zhs.model.BasketTournamentRegistration;
 import com.zhs.model.BasketTournamentRegistrationPlayer;
 import com.zhs.request.team.TeamMemberUpdateReq;
 import com.zhs.response.team.CandidatePlayerItemResp;
+import com.zhs.response.team.CandidatePlayerPageResp;
 import com.zhs.response.team.TeamMemberItemResp;
+import com.zhs.support.GameTerminalSupport;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamMemberBusinessService;
 import com.zhs.service.team.TeamMemberJoinHelper;
@@ -56,6 +64,10 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
 
     @Resource
     private BasketTeamMemberDao teamMemberDao;
+    @Resource
+    private BasketTeamDao teamDao;
+    @Resource
+    private BasketTeamInvitationDao teamInvitationDao;
     @Resource
     private BasketPlayerProfileDao playerProfileDao;
     @Resource
@@ -157,10 +169,14 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     }
 
     @Override
-    public IPage<CandidatePlayerItemResp> pageCandidatePlayers(String teamId, Integer currentPage, Integer pageSize, String keyword) {
+    public CandidatePlayerPageResp pageCandidatePlayers(String teamId, Integer currentPage, Integer pageSize, String keyword) {
         Long teamPk = parseLongId(teamId, "球队主键");
         Long memberId = UserContext.getRequiredUserId();
-        captainPermissionService.requireTeamCaptain(memberId, teamPk);
+        BasketTeam team = captainPermissionService.requireTeamCaptain(memberId, teamPk);
+        if (!StringUtils.hasText(team.getGameTerminal())) {
+            return emptyCandidatePage(normalizePage(currentPage), normalizeSize(pageSize),
+                    "当前球队比赛终端未设置，无法邀请球员");
+        }
 
         Set<Long> existingMemberIds = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
                         .eq(BasketTeamMember::getTeamId, teamPk)
@@ -168,6 +184,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
                         .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
                         .eq(BasketTeamMember::getIsDelete, NOT_DELETED))
                 .stream().map(BasketTeamMember::getMemberId).collect(Collectors.toSet());
+        Set<Long> pendingInviteeIds = loadPendingInviteeIds(teamPk);
 
         LambdaQueryWrapper<BasketPlayerProfile> wrapper = new LambdaQueryWrapper<BasketPlayerProfile>()
                 .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)
@@ -182,6 +199,11 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         List<BasketPlayerProfile> allProfiles = playerProfileDao.selectList(wrapper).stream()
                 .filter(profile -> !existingMemberIds.contains(profile.getMemberId()))
                 .filter(profile -> profile.getCurrentTeamId() == null || profile.getCurrentTeamId().equals(0L))
+                .filter(profile -> !PlayerStatusEnum.fromCode(profile.getPlayerStatus()).isRestricted())
+                .filter(profile -> !captainPermissionService.hasValidCaptainQualification(profile.getMemberId()))
+                .filter(profile -> !pendingInviteeIds.contains(profile.getMemberId()))
+                .filter(profile -> StringUtils.hasText(profile.getGameTerminal()))
+                .filter(profile -> GameTerminalSupport.matches(team.getGameTerminal(), profile.getGameTerminal()))
                 .collect(Collectors.toList());
 
         Map<Long, BasketMemberProfile> memberProfileMap = loadMemberProfiles(allProfiles.stream()
@@ -189,9 +211,42 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
 
         List<CandidatePlayerItemResp> items = new ArrayList<>();
         for (BasketPlayerProfile profile : allProfiles) {
-            items.add(toCandidateItem(profile, memberProfileMap.get(profile.getMemberId())));
+            items.add(toCandidateItem(profile, memberProfileMap.get(profile.getMemberId()), team));
         }
-        return toPage(items, currentPage, pageSize);
+        CandidatePlayerPageResp respPage = toCandidatePage(items, currentPage, pageSize);
+        if (items.isEmpty()) {
+            respPage.setEmptyReason("当前暂无与球队比赛终端一致的可邀请球员");
+        }
+        return respPage;
+    }
+
+    private Set<Long> loadPendingInviteeIds(Long teamId) {
+        return teamInvitationDao.selectList(new LambdaQueryWrapper<BasketTeamInvitation>()
+                        .eq(BasketTeamInvitation::getTeamId, teamId)
+                        .eq(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.PENDING.getCode())
+                        .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED))
+                .stream()
+                .map(BasketTeamInvitation::getInviteeMemberId)
+                .collect(Collectors.toSet());
+    }
+
+    private CandidatePlayerPageResp emptyCandidatePage(long page, long size, String emptyReason) {
+        CandidatePlayerPageResp respPage = new CandidatePlayerPageResp(page, size, 0);
+        respPage.setRecords(Collections.emptyList());
+        respPage.setEmptyReason(emptyReason);
+        return respPage;
+    }
+
+    private CandidatePlayerPageResp toCandidatePage(List<CandidatePlayerItemResp> items, Integer currentPage, Integer pageSize) {
+        long page = normalizePage(currentPage);
+        long size = normalizeSize(pageSize);
+        long total = items.size();
+        int from = (int) Math.min((page - 1) * size, total);
+        int to = (int) Math.min(from + size, total);
+        List<CandidatePlayerItemResp> records = from >= to ? Collections.emptyList() : items.subList(from, to);
+        CandidatePlayerPageResp respPage = new CandidatePlayerPageResp(page, size, total);
+        respPage.setRecords(records);
+        return respPage;
     }
 
     private void assertNotInActiveRegistration(BasketTeamMember member) {
@@ -296,7 +351,9 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         return asset.getAccessUrl();
     }
 
-    private CandidatePlayerItemResp toCandidateItem(BasketPlayerProfile profile, BasketMemberProfile memberProfile) {
+    private CandidatePlayerItemResp toCandidateItem(BasketPlayerProfile profile,
+                                                    BasketMemberProfile memberProfile,
+                                                    BasketTeam team) {
         CandidatePlayerItemResp resp = new CandidatePlayerItemResp();
         resp.setMemberId(toStringId(profile.getMemberId()));
         resp.setUserId(toStringId(profile.getMemberId()));
@@ -304,12 +361,19 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         resp.setPlayerNo(profile.getPlayerNo());
         resp.setGameNickname(profile.getGameNickname());
         resp.setGameTerminal(profile.getGameTerminal());
+        resp.setGameAccount(profile.getGameAccount());
+        resp.setCurrentTeamId(toStringId(profile.getCurrentTeamId()));
         resp.setPositionCode(profile.getPositionCode());
         resp.setPositionName(PlayerPositionSupport.resolveName(profile.getPositionCode()));
         resp.setCertificationStatus(profile.getCertificationStatus());
         if (memberProfile != null) {
             resp.setNickname(memberProfile.getNickname());
+            resp.setAvatar(resolveAvatarUrl(memberProfile.getAvatarFileId()));
         }
+        String cannotInviteReason = GameTerminalSupport.buildInviteMismatchMessage(
+                profile.getGameTerminal(), team.getGameTerminal());
+        resp.setCanInvite(cannotInviteReason == null);
+        resp.setCannotInviteReason(cannotInviteReason);
         return resp;
     }
 

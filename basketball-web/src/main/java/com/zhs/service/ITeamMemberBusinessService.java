@@ -2,7 +2,7 @@ package com.zhs.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.request.team.TeamMemberUpdateReq;
-import com.zhs.response.team.CandidatePlayerItemResp;
+import com.zhs.response.team.CandidatePlayerPageResp;
 import com.zhs.response.team.TeamMemberItemResp;
 
 public interface ITeamMemberBusinessService {
@@ -15,5 +15,5 @@ public interface ITeamMemberBusinessService {
 
     void leave(String teamId, String clientIp);
 
-    IPage<CandidatePlayerItemResp> pageCandidatePlayers(String teamId, Integer currentPage, Integer pageSize, String keyword);
+    CandidatePlayerPageResp pageCandidatePlayers(String teamId, Integer currentPage, Integer pageSize, String keyword);
 }

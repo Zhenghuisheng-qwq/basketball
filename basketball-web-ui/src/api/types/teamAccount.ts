@@ -11,6 +11,10 @@ export interface TeamSummaryDto {
   teamStatus?: number
   auditStatus?: number
   publicStatus?: number
+  recruitStatus?: number
+  memberCount?: number
+  canApply?: boolean
+  cannotApplyReason?: string
   myRole?: string
   isCaptain?: boolean
   createTime?: string
