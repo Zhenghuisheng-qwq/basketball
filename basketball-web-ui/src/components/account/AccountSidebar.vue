@@ -121,7 +121,7 @@ function handleAvatarError() {
 
     <div class="account-sidebar__content account-sidebar__inner">
       <div class="account-sidebar__profile">
-        <p class="account-sidebar__eyebrow">CNPA MEMBER SYSTEM</p>
+        <p class="account-sidebar__eyebrow">CNPA PLAYER CENTER</p>
 
         <div class="account-sidebar__avatar">
           <img

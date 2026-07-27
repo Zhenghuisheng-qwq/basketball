@@ -15,7 +15,7 @@ import com.zhs.dao.BasketTeamInvitationDao;
 import com.zhs.dao.BasketTournamentDao;
 import com.zhs.dao.BasketTournamentRegistrationDao;
 import com.zhs.dao.BasketTournamentSeasonDao;
-import com.zhs.enums.MessageReadStatusEnum;
+import com.zhs.enums.PlatformIdentityStatusEnum;
 import com.zhs.enums.TeamInvitationStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketFileAsset;
@@ -34,6 +34,7 @@ import com.zhs.response.account.MessageTeamInviteInfoResp;
 import com.zhs.service.IAccountMessageService;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.support.GameTerminalSupport;
+import com.zhs.support.PlatformTeamMembershipSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,6 +79,8 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
     private BasketTournamentRegistrationDao registrationDao;
     @Resource
     private ICaptainPermissionService captainPermissionService;
+    @Resource
+    private PlatformTeamMembershipSupport platformTeamMembershipSupport;
 
     @Override
     public IPage<MessageItemResp> pageMessages(Integer currentPage, Integer pageSize, Integer readStatus) {
@@ -292,7 +295,18 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
         boolean canRespond = Objects.equals(TeamInvitationStatusEnum.PENDING.getCode(), displayStatus)
                 && (invitation.getExpireTime() == null || invitation.getExpireTime().after(now));
         info.setCanRespond(canRespond);
-        String joinIneligibilityReason = captainPermissionService.resolveJoinIneligibilityReason(memberId);
+        String joinIneligibilityReason = team == null
+                ? null
+                : captainPermissionService.resolveJoinIneligibilityReason(memberId,
+                platformTeamMembershipSupport.resolveTeamPlatformCode(team));
+        PlatformIdentityStatusEnum identityStatus = team == null ? null
+                : platformTeamMembershipSupport.resolvePlatformIdentityStatus(memberId,
+                platformTeamMembershipSupport.resolveTeamPlatformCode(team));
+        if (identityStatus != null && identityStatus != PlatformIdentityStatusEnum.ACTIVE) {
+            joinIneligibilityReason = identityStatus == PlatformIdentityStatusEnum.PENDING
+                    ? "该平台游戏 ID 审核中"
+                    : "请先绑定并通过该平台游戏 ID 审核";
+        }
         BasketPlayerProfile playerProfile = playerProfileDao.selectOne(new LambdaQueryWrapper<BasketPlayerProfile>()
                 .eq(BasketPlayerProfile::getMemberId, memberId)
                 .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)

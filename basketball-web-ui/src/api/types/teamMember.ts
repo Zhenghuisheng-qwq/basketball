@@ -28,11 +28,18 @@ export interface TeamMemberItemDto {
 
 export interface CandidatePlayerItemDto {
   memberId: string
+  userId?: string
   playerId: string
   playerNo?: string
   gameNickname?: string
   nickname?: string
   gameTerminal?: string
+  platformCode?: string
+  platformGameId?: string
+  platformIdentityStatus?: string
+  platformIdentityStatusText?: string
+  platformTeamId?: string
+  platformTeamName?: string
   gameAccount?: string
   avatar?: string
   currentTeamId?: string

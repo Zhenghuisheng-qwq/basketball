@@ -9,9 +9,13 @@ import com.zhs.config.AccountTeamProperties;
 import com.zhs.dao.BasketFileAssetDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamDao;
+import com.zhs.dao.BasketTeamJoinApplicationDao;
+import com.zhs.dao.BasketPlayerPlatformAccountDao;
 import com.zhs.dao.BasketTeamMemberDao;
 import com.zhs.enums.FileUsageTypeEnum;
+import com.zhs.enums.PlatformIdentityStatusEnum;
 import com.zhs.enums.TeamAuditStatusEnum;
+import com.zhs.enums.TeamJoinApplicationStatusEnum;
 import com.zhs.enums.TeamJoinSourceEnum;
 import com.zhs.enums.TeamMemberRoleEnum;
 import com.zhs.enums.TeamMembershipStatusEnum;
@@ -21,8 +25,10 @@ import com.zhs.enums.TeamStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketCaptainQualification;
 import com.zhs.model.BasketFileAsset;
+import com.zhs.model.BasketPlayerPlatformAccount;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
+import com.zhs.model.BasketTeamJoinApplication;
 import com.zhs.model.BasketTeamMember;
 import com.zhs.request.team.TeamCreateReq;
 import com.zhs.request.team.TeamLogoBindReq;
@@ -31,6 +37,7 @@ import com.zhs.response.team.JoinableTeamPageResp;
 import com.zhs.response.team.TeamDetailResp;
 import com.zhs.response.team.TeamSummaryResp;
 import com.zhs.support.GameTerminalSupport;
+import com.zhs.support.PlatformTeamMembershipSupport;
 import com.zhs.service.IAccountFileService;
 import com.zhs.service.IAccountTeamService;
 import com.zhs.service.ICaptainPermissionService;
@@ -66,6 +73,12 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     private BasketTeamDao teamDao;
     @Resource
     private BasketTeamMemberDao teamMemberDao;
+    @Resource
+    private BasketTeamJoinApplicationDao joinApplicationDao;
+    @Resource
+    private BasketPlayerPlatformAccountDao platformAccountDao;
+    @Resource
+    private PlatformTeamMembershipSupport platformTeamMembershipSupport;
     @Resource
     private BasketPlayerProfileDao playerProfileDao;
     @Resource
@@ -107,34 +120,25 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     }
 
     @Override
-    public JoinableTeamPageResp pageJoinable(Integer currentPage, Integer pageSize, String keyword) {
+    public JoinableTeamPageResp pageJoinable(Integer currentPage, Integer pageSize, String platformCode, String keyword) {
         Long memberId = UserContext.getRequiredUserId();
         long page = normalizePage(currentPage);
         long size = normalizeSize(pageSize);
-        if (captainPermissionService.hasCurrentTeamMembership(memberId)
-                || captainPermissionService.hasValidCaptainQualification(memberId)) {
-            return emptyJoinablePage(page, size, null);
-        }
+        String normalizedPlatform = platformTeamMembershipSupport.requirePlatformCode(platformCode);
 
-        BasketPlayerProfile playerProfile = playerProfileDao.selectOne(new LambdaQueryWrapper<BasketPlayerProfile>()
-                .eq(BasketPlayerProfile::getMemberId, memberId)
-                .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)
-                .last("limit 1"));
-        if (playerProfile == null) {
-            return emptyJoinablePage(page, size, "请先完成球员认证后再加入球队");
-        }
-        if (!StringUtils.hasText(playerProfile.getGameTerminal())) {
-            return emptyJoinablePage(page, size, "请先完善球员比赛终端");
-        }
+        PlatformIdentityStatusEnum identityStatus = platformTeamMembershipSupport
+                .resolvePlatformIdentityStatus(memberId, normalizedPlatform);
+        BasketTeamMember activeMembership = platformTeamMembershipSupport.findActiveMembership(memberId, normalizedPlatform);
+        BasketTeam currentTeam = activeMembership == null ? null : teamDao.selectById(activeMembership.getTeamId());
+        Integer pendingApplicationStatus = platformTeamMembershipSupport.findPendingApplicationStatus(memberId, normalizedPlatform);
+        boolean hasActiveTeam = activeMembership != null;
+        String pageDisabledReason = resolvePageDisabledReason(identityStatus, hasActiveTeam, pendingApplicationStatus);
 
-        String playerTerminal = playerProfile.getGameTerminal();
-        Set<Long> joinedTeamIds = loadJoinedTeamIds(memberId);
+        captainPermissionService.requireCertifiedPlayer(memberId);
 
         LambdaQueryWrapper<BasketTeam> wrapper = new LambdaQueryWrapper<BasketTeam>()
                 .eq(BasketTeam::getIsDelete, NOT_DELETED)
                 .eq(BasketTeam::getTeamStatus, TeamStatusEnum.ACTIVE.getCode())
-                .eq(BasketTeam::getAuditStatus, TeamAuditStatusEnum.APPROVED.getCode())
-                .eq(BasketTeam::getPublicStatus, TeamPublicStatusEnum.PUBLIC.getCode())
                 .orderByDesc(BasketTeam::getCreateTime)
                 .orderByDesc(BasketTeam::getId);
         if (StringUtils.hasText(keyword)) {
@@ -143,22 +147,32 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         }
 
         List<BasketTeam> allTeams = teamDao.selectList(wrapper);
+        Set<Long> pendingTeamIds = loadPendingApplicationTeamIds(memberId, normalizedPlatform);
         List<BasketTeam> joinable = allTeams.stream()
-                .filter(team -> !joinedTeamIds.contains(team.getId()))
                 .filter(team -> StringUtils.hasText(team.getGameTerminal()))
-                .filter(team -> GameTerminalSupport.matches(playerTerminal, team.getGameTerminal()))
-                .filter(team -> team.getCurrentMemberCount() == null
-                        || team.getMaxMemberCount() == null
-                        || team.getCurrentMemberCount() < team.getMaxMemberCount())
+                .filter(team -> normalizedPlatform.equals(platformTeamMembershipSupport.normalizePlatformCode(team.getGameTerminal())))
+                .filter(team -> activeMembership == null || !activeMembership.getTeamId().equals(team.getId()))
                 .collect(Collectors.toList());
 
         Map<Long, String> logoUrlMap = loadLogoUrlMap(joinable);
         List<TeamSummaryResp> items = joinable.stream()
-                .map(team -> toJoinableSummaryResp(team, logoUrlMap.get(team.getLogoFileId())))
+                .map(team -> toJoinableSummaryResp(team, logoUrlMap.get(team.getLogoFileId()), normalizedPlatform,
+                        identityStatus, hasActiveTeam, pendingApplicationStatus, pendingTeamIds))
                 .collect(Collectors.toList());
+
         JoinableTeamPageResp respPage = toJoinablePage(items, page, size);
+        respPage.setPlatformCode(normalizedPlatform);
+        respPage.setPlatformIdentityStatus(identityStatus.getCode());
+        respPage.setHasActiveTeam(hasActiveTeam);
+        respPage.setCurrentTeamId(currentTeam == null ? null : toStringId(currentTeam.getId()));
+        respPage.setCurrentTeamName(currentTeam == null ? null : currentTeam.getTeamName());
+        respPage.setPendingApplicationStatus(pendingApplicationStatus);
+        respPage.setCanApply(pageDisabledReason == null);
+        respPage.setDisabledReason(pageDisabledReason);
         if (items.isEmpty()) {
-            respPage.setEmptyReason("当前暂无与你比赛终端一致的可加入球队");
+            respPage.setEmptyReason(hasActiveTeam
+                    ? "当前平台已加入球队"
+                    : "当前暂无" + GameTerminalSupport.formatDisplayName(normalizedPlatform) + "平台可加入的公开球队");
         }
         return respPage;
     }
@@ -170,9 +184,12 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         Long memberId = UserContext.getRequiredUserId();
         BasketCaptainQualification qualification = captainPermissionService.requireValidQualification(memberId);
         BasketPlayerProfile playerProfile = captainPermissionService.requireCertifiedPlayer(memberId);
+        String platformCode = platformTeamMembershipSupport.requirePlatformCode(req.getGameTerminal());
+        BasketPlayerPlatformAccount platformIdentity = platformTeamMembershipSupport
+                .requireActivePlatformIdentity(memberId, platformCode);
 
-        assertNoCurrentMembership(memberId);
-        assertNotCaptainOfOtherActiveTeam(memberId);
+        assertNoCurrentMembershipOnPlatform(memberId, platformCode);
+        assertNotCaptainOfOtherActiveTeamOnPlatform(memberId, platformCode);
         assertTeamNameUnique(req.getTeamName().trim());
 
         Date now = new Date();
@@ -181,6 +198,9 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         team.setTeamName(req.getTeamName().trim());
         team.setShortName(trimToNull(req.getShortName()));
         team.setGameTerminal(trimToNull(req.getGameTerminal()));
+        if (!StringUtils.hasText(team.getGameTerminal())) {
+            throw new ServiceException("球队平台不能为空");
+        }
         team.setRegionCode(trimToNull(req.getRegionCode()));
         team.setRegionName(trimToNull(req.getRegionName()));
         team.setDescription(trimToNull(req.getDescription()));
@@ -208,6 +228,9 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         captainMember.setTeamId(team.getId());
         captainMember.setMemberId(memberId);
         captainMember.setPlayerId(playerProfile.getId());
+        captainMember.setPlatformCode(platformCode);
+        captainMember.setPlatformIdentityId(platformIdentity.getId());
+        captainMember.setActivePlatformSlot(platformTeamMembershipSupport.buildActivePlatformSlot(memberId, platformCode));
         captainMember.setRoleType(TeamMemberRoleEnum.CAPTAIN.getCode());
         captainMember.setRosterType(TeamRosterTypeEnum.OFFICIAL.getCode());
         captainMember.setJoinSource(TeamJoinSourceEnum.CREATE.getCode());
@@ -312,25 +335,112 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         team.setLogoFileId(fileId);
     }
 
-    private void assertNoCurrentMembership(Long memberId) {
-        Long count = teamMemberDao.selectCount(new LambdaQueryWrapper<BasketTeamMember>()
-                .eq(BasketTeamMember::getMemberId, memberId)
-                .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
-                .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
-                .eq(BasketTeamMember::getIsDelete, NOT_DELETED));
-        if (count != null && count > 0) {
-            throw new ServiceException("您已在其他球队中，无法创建新球队");
-        }
+    private void assertNoCurrentMembershipOnPlatform(Long memberId, String platformCode) {
+        platformTeamMembershipSupport.assertNoActiveMembershipOnPlatform(memberId, platformCode);
     }
 
-    private void assertNotCaptainOfOtherActiveTeam(Long memberId) {
-        Long count = teamDao.selectCount(new LambdaQueryWrapper<BasketTeam>()
+    private void assertNotCaptainOfOtherActiveTeamOnPlatform(Long memberId, String platformCode) {
+        String normalizedPlatform = platformTeamMembershipSupport.requirePlatformCode(platformCode);
+        List<BasketTeam> captainTeams = teamDao.selectList(new LambdaQueryWrapper<BasketTeam>()
                 .eq(BasketTeam::getCaptainMemberId, memberId)
                 .eq(BasketTeam::getTeamStatus, TeamStatusEnum.ACTIVE.getCode())
                 .eq(BasketTeam::getIsDelete, NOT_DELETED));
-        if (count != null && count > 0) {
-            throw new ServiceException("您已是其他球队的队长，无法创建新球队");
+        for (BasketTeam team : captainTeams) {
+            if (normalizedPlatform.equals(platformTeamMembershipSupport.normalizePlatformCode(team.getGameTerminal()))) {
+                throw new ServiceException("您已是该平台其他球队的队长，无法在同一平台创建新球队");
+            }
         }
+    }
+
+    private String resolvePageDisabledReason(PlatformIdentityStatusEnum identityStatus,
+                                             boolean hasActiveTeam,
+                                             Integer pendingApplicationStatus) {
+        if (hasActiveTeam) {
+            return "当前账号在该平台已加入球队，不能重复加入";
+        }
+        if (identityStatus != PlatformIdentityStatusEnum.ACTIVE) {
+            if (identityStatus == PlatformIdentityStatusEnum.PENDING) {
+                return "请先绑定并通过该平台游戏 ID 审核";
+            }
+            if (identityStatus == PlatformIdentityStatusEnum.REJECTED) {
+                return "该平台游戏 ID 已被驳回，请重新绑定并通过审核";
+            }
+            return "请先绑定并通过该平台游戏 ID 审核";
+        }
+        if (pendingApplicationStatus != null) {
+            return null;
+        }
+        return null;
+    }
+
+    private Set<Long> loadPendingApplicationTeamIds(Long memberId, String platformCode) {
+        Set<Long> teamIds = new HashSet<>();
+        List<BasketTeamJoinApplication> pendingApps = joinApplicationDao.selectList(new LambdaQueryWrapper<BasketTeamJoinApplication>()
+                .eq(BasketTeamJoinApplication::getApplicantMemberId, memberId)
+                .eq(BasketTeamJoinApplication::getApplicationStatus, TeamJoinApplicationStatusEnum.PENDING.getCode())
+                .eq(BasketTeamJoinApplication::getIsDelete, NOT_DELETED));
+        for (BasketTeamJoinApplication application : pendingApps) {
+            BasketTeam team = teamDao.selectById(application.getTeamId());
+            if (team != null && platformCode.equals(platformTeamMembershipSupport.normalizePlatformCode(team.getGameTerminal()))) {
+                teamIds.add(application.getTeamId());
+            }
+        }
+        return teamIds;
+    }
+
+    private TeamSummaryResp toJoinableSummaryResp(BasketTeam team,
+                                                  String logoUrl,
+                                                  String platformCode,
+                                                  PlatformIdentityStatusEnum identityStatus,
+                                                  boolean hasActiveTeam,
+                                                  Integer pendingApplicationStatus,
+                                                  Set<Long> pendingTeamIds) {
+        TeamSummaryResp resp = toSummaryResp(team, null, logoUrl);
+        resp.setPlatformCode(platformCode);
+        resp.setRecruitStatus(team.getPublicStatus());
+        resp.setMemberCount(team.getCurrentMemberCount());
+        String disabledReason = resolveTeamApplyDisabledReason(team, identityStatus, hasActiveTeam,
+                pendingApplicationStatus, pendingTeamIds);
+        resp.setCanApply(disabledReason == null);
+        resp.setCannotApplyReason(disabledReason);
+        resp.setDisabledReason(disabledReason);
+        return resp;
+    }
+
+    private String resolveTeamApplyDisabledReason(BasketTeam team,
+                                                  PlatformIdentityStatusEnum identityStatus,
+                                                  boolean hasActiveTeam,
+                                                  Integer pendingApplicationStatus,
+                                                  Set<Long> pendingTeamIds) {
+        if (hasActiveTeam) {
+            return "当前账号在该平台已加入球队，不能重复加入";
+        }
+        if (identityStatus != PlatformIdentityStatusEnum.ACTIVE) {
+            return "请先绑定并通过该平台游戏 ID 审核";
+        }
+        if (pendingTeamIds.contains(team.getId())) {
+            return "申请审核中";
+        }
+        if (pendingApplicationStatus != null) {
+            return "当前平台已有待审核的加入申请";
+        }
+        if (!Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())) {
+            return "球队认证审核中，暂不可申请";
+        }
+        if (!Objects.equals(TeamPublicStatusEnum.PUBLIC.getCode(), team.getPublicStatus())) {
+            return "球队已停止招募";
+        }
+        if (team.getMaxMemberCount() != null && team.getCurrentMemberCount() != null
+                && team.getCurrentMemberCount() >= team.getMaxMemberCount()) {
+            return "球队已满员";
+        }
+        if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
+            return "球队状态不可用";
+        }
+        if (!StringUtils.hasText(team.getGameTerminal())) {
+            return "球队平台未设置";
+        }
+        return null;
     }
 
     private void assertTeamNameUnique(String teamName) {
@@ -423,15 +533,6 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         playerProfileDao.updateById(profile);
     }
 
-    private TeamSummaryResp toJoinableSummaryResp(BasketTeam team, String logoUrl) {
-        TeamSummaryResp resp = toSummaryResp(team, null, logoUrl);
-        resp.setRecruitStatus(team.getPublicStatus());
-        resp.setMemberCount(team.getCurrentMemberCount());
-        resp.setCanApply(true);
-        resp.setCannotApplyReason(null);
-        return resp;
-    }
-
     private JoinableTeamPageResp emptyJoinablePage(long page, long size, String emptyReason) {
         JoinableTeamPageResp respPage = new JoinableTeamPageResp(page, size, 0);
         respPage.setRecords(Collections.emptyList());
@@ -458,6 +559,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         resp.setLogoUrl(logoUrl);
         resp.setRegionName(team.getRegionName());
         resp.setGameTerminal(team.getGameTerminal());
+        resp.setPlatformCode(platformTeamMembershipSupport.normalizePlatformCode(team.getGameTerminal()));
         resp.setCurrentMemberCount(team.getCurrentMemberCount());
         resp.setMaxMemberCount(team.getMaxMemberCount());
         resp.setTeamStatus(team.getTeamStatus());

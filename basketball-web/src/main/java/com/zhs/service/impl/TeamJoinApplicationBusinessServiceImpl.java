@@ -29,6 +29,7 @@ import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamJoinApplicationBusinessService;
 import com.zhs.service.team.TeamMemberJoinHelper;
 import com.zhs.support.GameTerminalSupport;
+import com.zhs.support.PlatformTeamMembershipSupport;
 import com.zhs.support.PlayerPositionSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -66,6 +67,8 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
     private TeamMemberJoinHelper teamMemberJoinHelper;
     @Resource
     private IBusinessMessageService businessMessageService;
+    @Resource
+    private PlatformTeamMembershipSupport platformTeamMembershipSupport;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -74,7 +77,9 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         Long memberId = UserContext.getRequiredUserId();
         BasketPlayerProfile profile = captainPermissionService.requireCertifiedPlayer(memberId);
         BasketTeam team = requireJoinableTeam(teamPk);
-        captainPermissionService.assertEligibleToJoinTeam(memberId);
+        String platformCode = platformTeamMembershipSupport.resolveTeamPlatformCode(team);
+        captainPermissionService.assertEligibleToJoinTeam(memberId, platformCode);
+        platformTeamMembershipSupport.requireActivePlatformIdentity(memberId, platformCode);
         assertTerminalMatchForApply(profile, team);
         assertNoPendingApplication(teamPk, memberId);
 
@@ -203,6 +208,9 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         if (Boolean.TRUE.equals(approve)) {
             BasketPlayerProfile applicantProfile = loadApplicantProfile(application.getApplicantPlayerId());
             assertTerminalMatchForApprove(applicantProfile, team);
+            String platformCode = platformTeamMembershipSupport.resolveTeamPlatformCode(team);
+            captainPermissionService.assertEligibleToJoinTeam(application.getApplicantMemberId(), platformCode);
+            platformTeamMembershipSupport.requireActivePlatformIdentity(application.getApplicantMemberId(), platformCode);
             teamMemberJoinHelper.addMember(team, application.getApplicantMemberId(),
                     application.getApplicantPlayerId(), TeamJoinSourceEnum.APPLY);
             businessMessageService.sendSiteMessage(application.getApplicantMemberId(), "加入申请已通过",
@@ -254,14 +262,17 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
             throw new ServiceException("球队不存在");
         }
+        if (!StringUtils.hasText(team.getGameTerminal())) {
+            throw new ServiceException("球队平台未设置，无法申请加入");
+        }
         if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
             throw new ServiceException("球队不可加入");
         }
         if (!Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())) {
-            throw new ServiceException("球队尚未审核通过");
+            throw new ServiceException("球队认证审核中，暂不可申请");
         }
         if (!Objects.equals(TeamPublicStatusEnum.PUBLIC.getCode(), team.getPublicStatus())) {
-            throw new ServiceException("球队未公开");
+            throw new ServiceException("球队已停止招募");
         }
         if (team.getMaxMemberCount() != null && team.getCurrentMemberCount() != null
                 && team.getCurrentMemberCount() >= team.getMaxMemberCount()) {

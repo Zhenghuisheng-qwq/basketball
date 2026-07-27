@@ -106,7 +106,7 @@ onMounted(async () => {
   <div v-else class="auth-page auth-login">
     <div class="auth-login__eyebrow">
       <span class="auth-login__eyebrow-bar" aria-hidden="true" />
-      CNPA MEMBER SYSTEM
+      CNPA PLAYER CENTER
     </div>
     <p class="auth-login__welcome">欢迎回来</p>
     <header class="auth-login__header">

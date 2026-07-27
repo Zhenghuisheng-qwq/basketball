@@ -19,6 +19,7 @@ import com.zhs.model.BasketTournamentRegistration;
 import com.zhs.response.team.CaptainQualificationDetailResp;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.support.CaptainQualificationValiditySupport;
+import com.zhs.support.PlatformTeamMembershipSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
@@ -41,6 +42,8 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
     private BasketTeamMemberDao teamMemberDao;
     @Resource
     private BasketTournamentRegistrationDao registrationDao;
+    @Resource
+    private PlatformTeamMembershipSupport platformTeamMembershipSupport;
 
     @Override
     public CaptainQualificationDetailResp getCurrentQualification(Long accountId) {
@@ -140,6 +143,11 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
     }
 
     @Override
+    public boolean hasActiveTeamMembershipOnPlatform(Long accountId, String platformCode) {
+        return platformTeamMembershipSupport.hasActiveTeamMembership(accountId, platformCode);
+    }
+
+    @Override
     public boolean hasValidCaptainQualification(Long accountId) {
         CaptainQualificationDetailResp qualification = getCurrentQualification(accountId);
         return Boolean.TRUE.equals(qualification.getCanCreateTeam());
@@ -147,21 +155,22 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
 
     @Override
     public String resolveJoinIneligibilityReason(Long accountId) {
-        if (hasCurrentTeamMembership(accountId)) {
-            return "您当前已有球队，不能加入其他球队";
+        for (String platformCode : PlatformTeamMembershipSupport.STANDARD_PLATFORMS) {
+            if (resolveJoinIneligibilityReason(accountId, platformCode) == null) {
+                return null;
+            }
         }
-        if (hasValidCaptainQualification(accountId)) {
-            return "队长不能加入其他球队";
-        }
-        return null;
+        return "当前账号在所有平台均已加入球队，不能重复加入";
     }
 
     @Override
-    public void assertEligibleToJoinTeam(Long accountId) {
-        String reason = resolveJoinIneligibilityReason(accountId);
-        if (reason != null) {
-            throw new ServiceException(reason, 403);
-        }
+    public String resolveJoinIneligibilityReason(Long accountId, String platformCode) {
+        return platformTeamMembershipSupport.resolveJoinIneligibilityReason(accountId, platformCode);
+    }
+
+    @Override
+    public void assertEligibleToJoinTeam(Long accountId, String platformCode) {
+        platformTeamMembershipSupport.assertEligibleToJoinTeam(accountId, platformCode);
     }
 
     @Override

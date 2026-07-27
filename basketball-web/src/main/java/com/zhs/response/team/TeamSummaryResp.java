@@ -34,6 +34,9 @@ public class TeamSummaryResp implements Serializable {
     @ApiModelProperty("比赛终端")
     private String gameTerminal;
 
+    @ApiModelProperty("平台代码")
+    private String platformCode;
+
     @ApiModelProperty("当前成员数")
     private Integer currentMemberCount;
 
@@ -60,6 +63,9 @@ public class TeamSummaryResp implements Serializable {
 
     @ApiModelProperty("不可申请原因")
     private String cannotApplyReason;
+
+    @ApiModelProperty("不可申请原因（同 cannotApplyReason）")
+    private String disabledReason;
 
     @ApiModelProperty("我的角色")
     private String myRole;

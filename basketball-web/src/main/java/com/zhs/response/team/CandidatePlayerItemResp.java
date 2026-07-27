@@ -31,6 +31,24 @@ public class CandidatePlayerItemResp implements Serializable {
     @ApiModelProperty("比赛终端")
     private String gameTerminal;
 
+    @ApiModelProperty("平台代码")
+    private String platformCode;
+
+    @ApiModelProperty("平台游戏 ID")
+    private String platformGameId;
+
+    @ApiModelProperty("平台游戏身份状态")
+    private String platformIdentityStatus;
+
+    @ApiModelProperty("平台游戏身份状态文案")
+    private String platformIdentityStatusText;
+
+    @ApiModelProperty("当前平台球队主键")
+    private String platformTeamId;
+
+    @ApiModelProperty("当前平台球队名称")
+    private String platformTeamName;
+
     @ApiModelProperty("游戏账号")
     private String gameAccount;
 

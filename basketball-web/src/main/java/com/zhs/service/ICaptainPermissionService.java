@@ -25,9 +25,13 @@ public interface ICaptainPermissionService {
 
     boolean hasCurrentTeamMembership(Long accountId);
 
+    boolean hasActiveTeamMembershipOnPlatform(Long accountId, String platformCode);
+
     boolean hasValidCaptainQualification(Long accountId);
 
     String resolveJoinIneligibilityReason(Long accountId);
 
-    void assertEligibleToJoinTeam(Long accountId);
+    String resolveJoinIneligibilityReason(Long accountId, String platformCode);
+
+    void assertEligibleToJoinTeam(Long accountId, String platformCode);
 }

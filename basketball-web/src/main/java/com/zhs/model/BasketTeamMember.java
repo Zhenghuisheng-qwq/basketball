@@ -52,6 +52,15 @@ public class BasketTeamMember implements Serializable {
     @ApiModelProperty(value = "球员主键")
     private Long playerId;
 
+    @ApiModelProperty(value = "平台代码")
+    private String platformCode;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "平台游戏身份主键")
+    private Long platformIdentityId;
+
+    @ApiModelProperty(value = "活跃平台槽位")
+    private String activePlatformSlot;
 
     @ApiModelProperty(value = "成员角色")
     private String roleType;

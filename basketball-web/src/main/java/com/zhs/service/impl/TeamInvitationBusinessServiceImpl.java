@@ -11,7 +11,7 @@ import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamInvitationDao;
-import com.zhs.enums.TeamAuditStatusEnum;
+import com.zhs.enums.PlatformIdentityStatusEnum;
 import com.zhs.enums.TeamInvitationStatusEnum;
 import com.zhs.enums.TeamStatusEnum;
 import com.zhs.exception.ServiceException;
@@ -27,6 +27,7 @@ import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamInvitationBusinessService;
 import com.zhs.service.team.TeamMemberJoinHelper;
 import com.zhs.support.GameTerminalSupport;
+import com.zhs.support.PlatformTeamMembershipSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,6 +67,8 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
     private AccountTeamProperties teamProperties;
     @Resource
     private BasketPlayerProfileDao playerProfileDao;
+    @Resource
+    private PlatformTeamMembershipSupport platformTeamMembershipSupport;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -94,7 +97,9 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         if (memberId.equals(inviteeMemberId)) {
             throw new ServiceException("不能邀请自己");
         }
-        captainPermissionService.assertEligibleToJoinTeam(inviteeMemberId);
+        String platformCode = platformTeamMembershipSupport.resolveTeamPlatformCode(team);
+        captainPermissionService.assertEligibleToJoinTeam(inviteeMemberId, platformCode);
+        platformTeamMembershipSupport.requireActivePlatformIdentity(inviteeMemberId, platformCode);
         assertTerminalMatchForInvite(inviteeProfile, team);
         assertTeamHasCapacity(team);
         assertNoPendingInvitation(teamPk, inviteeMemberId);
@@ -209,9 +214,11 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         invitation = invitationDao.selectById(invitationPk);
         BasketTeam team = teamDao.selectById(invitation.getTeamId());
         if (Boolean.TRUE.equals(accept)) {
-            captainPermissionService.assertEligibleToJoinTeam(memberId);
+            String platformCode = platformTeamMembershipSupport.resolveTeamPlatformCode(team);
+            captainPermissionService.assertEligibleToJoinTeam(memberId, platformCode);
             validateTeamJoinable(team);
             BasketPlayerProfile profile = captainPermissionService.requireCertifiedPlayer(memberId);
+            platformTeamMembershipSupport.requireActivePlatformIdentity(memberId, platformCode);
             assertTerminalMatchForAccept(profile, team);
             teamMemberJoinHelper.addMember(team, memberId, profile.getId(), com.zhs.enums.TeamJoinSourceEnum.INVITE);
         }
@@ -261,6 +268,25 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
                 && team.getCurrentMemberCount() >= team.getMaxMemberCount()) {
             throw new ServiceException("球队成员已满");
         }
+    }
+
+    private String resolveInviteePlatformIdentityReason(BasketTeam team, Long inviteeMemberId) {
+        if (team == null || inviteeMemberId == null) {
+            return null;
+        }
+        String platformCode = platformTeamMembershipSupport.resolveTeamPlatformCode(team);
+        PlatformIdentityStatusEnum status = platformTeamMembershipSupport.resolvePlatformIdentityStatus(
+                inviteeMemberId, platformCode);
+        if (status == PlatformIdentityStatusEnum.ACTIVE) {
+            return null;
+        }
+        if (status == PlatformIdentityStatusEnum.PENDING) {
+            return "被邀请用户该平台游戏 ID 审核中";
+        }
+        if (status == PlatformIdentityStatusEnum.REJECTED) {
+            return "被邀请用户该平台游戏 ID 已被驳回";
+        }
+        return "被邀请用户尚未绑定该平台已生效游戏 ID";
     }
 
     private String resolveInviteeTerminalMismatchReason(BasketTeam team, Long inviteeMemberId) {
@@ -342,9 +368,14 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         boolean canRespond = status.canRespond()
                 && (invitation.getExpireTime() == null || invitation.getExpireTime().after(new Date()));
         resp.setCanRespond(canRespond);
-        String joinIneligibilityReason = inviteeMemberId == null
+        String joinIneligibilityReason = inviteeMemberId == null || team == null
                 ? null
-                : captainPermissionService.resolveJoinIneligibilityReason(inviteeMemberId);
+                : captainPermissionService.resolveJoinIneligibilityReason(inviteeMemberId,
+                platformTeamMembershipSupport.resolveTeamPlatformCode(team));
+        String platformIdentityReason = resolveInviteePlatformIdentityReason(team, inviteeMemberId);
+        if (platformIdentityReason != null) {
+            joinIneligibilityReason = platformIdentityReason;
+        }
         String terminalMismatchReason = resolveInviteeTerminalMismatchReason(team, inviteeMemberId);
         if (terminalMismatchReason != null) {
             joinIneligibilityReason = terminalMismatchReason;

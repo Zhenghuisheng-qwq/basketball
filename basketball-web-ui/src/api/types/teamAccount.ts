@@ -6,6 +6,7 @@ export interface TeamSummaryDto {
   logoUrl?: string
   regionName?: string
   gameTerminal?: string
+  platformCode?: string
   currentMemberCount?: number
   maxMemberCount?: number
   teamStatus?: number
@@ -15,6 +16,7 @@ export interface TeamSummaryDto {
   memberCount?: number
   canApply?: boolean
   cannotApplyReason?: string
+  disabledReason?: string
   myRole?: string
   isCaptain?: boolean
   createTime?: string

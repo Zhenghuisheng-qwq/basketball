@@ -8,6 +8,7 @@ import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import TeamMemberList from '@/components/account/team/TeamMemberList.vue'
+import JoinableTeamPanel from '@/components/account/team/JoinableTeamPanel.vue'
 import { useTeamStore } from '@/stores/team'
 import { useAccountStore } from '@/stores/account'
 import { mapPlatformToGameTerminal, mapGameTerminalToPlatform, mapTeamRegistrationStatusText } from '@/utils/accountMappers'
@@ -16,7 +17,7 @@ import { GAME_PLATFORM_LABELS } from '@/types/account'
 import { formatDateTime } from '@/utils/formatDate'
 import { uploadAccountFile } from '@/api/accountFile'
 import type { TeamInvitationItemDto } from '@/api/types/teamInvitation'
-import type { TeamMemberItemDto } from '@/api/types/teamMember'
+import type { CandidatePlayerItemDto, TeamMemberItemDto } from '@/api/types/teamMember'
 import type { TeamRegistrationPlayerItemDto } from '@/api/types/teamRegistration'
 
 type TeamTab =
@@ -64,8 +65,8 @@ const activeTab = ref<TeamTab>('overview')
 const pageLoading = ref(true)
 const loadError = ref('')
 
-const joinKeyword = ref('')
-const applyReason = ref('')
+const joinablePanelRef = ref<InstanceType<typeof JoinableTeamPanel> | null>(null)
+
 const inviteKeyword = ref('')
 const inviteMessage = ref('')
 const selectedInvitePlayerId = ref('')
@@ -127,14 +128,15 @@ const teamAuditStatusText = computed(() => {
 })
 
 const availableTabs = computed<TeamTab[]>(() => {
+  const joinableTabs: TeamTab[] = canJoinTeam.value ? ['joinableTeams'] : []
   if (hasTeam.value) {
     if (isCaptain.value) {
       if (isTeamAuditApproved.value) {
-        return ['overview', 'profile', 'members', 'invitations', 'applications', 'registration']
+        return ['overview', 'profile', 'members', 'invitations', 'applications', 'registration', ...joinableTabs]
       }
-      return ['overview', 'profile']
+      return ['overview', 'profile', ...joinableTabs]
     }
-    return ['overview']
+    return ['overview', ...joinableTabs]
   }
   if (canCreateTeam.value) return ['create']
   return ['pendingInvites', 'joinableTeams', 'myApplications']
@@ -208,7 +210,7 @@ async function bootstrap() {
     if (canJoinTeam.value) {
       await Promise.all([
         teamStore.loadMyInvitations({ status: 0 }),
-        teamStore.loadJoinableTeams(),
+        teamStore.loadJoinableTeams({ platformCode: 'PC' }),
         teamStore.loadMyJoinApplications(),
       ])
     }
@@ -233,7 +235,7 @@ async function refreshTabData(tab: TeamTab) {
     return
   }
   if (tab === 'joinableTeams') {
-    await teamStore.loadJoinableTeams({ keyword: joinKeyword.value || undefined })
+    await joinablePanelRef.value?.loadCurrentPlatform()
     return
   }
   if (tab === 'myApplications') {
@@ -390,21 +392,6 @@ async function respondInvitation(accept: boolean) {
   }
 }
 
-async function searchJoinable() {
-  await teamStore.loadJoinableTeams({ keyword: joinKeyword.value || undefined })
-}
-
-async function applyJoin(teamIdValue: string) {
-  try {
-    await teamStore.applyJoinTeamAction(teamIdValue, applyReason.value.trim() || undefined)
-    ElMessage.success('加入申请已提交')
-    applyReason.value = ''
-    await teamStore.loadMyJoinApplications()
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '申请失败')
-  }
-}
-
 async function cancelApplication(applicationId: string) {
   try {
     await teamStore.cancelJoinApplicationAction(applicationId)
@@ -436,6 +423,11 @@ async function sendInvite() {
 async function searchCandidates() {
   if (!teamId.value) return
   await teamStore.loadCandidatePlayers(teamId.value, { keyword: inviteKeyword.value || undefined })
+}
+
+function selectInvitePlayer(player: CandidatePlayerItemDto) {
+  if (player.canInvite === false) return
+  selectedInvitePlayerId.value = player.playerId
 }
 
 async function processApplication(applicationId: string, approve: boolean) {
@@ -666,52 +658,7 @@ const tabLabels: Record<TeamTab, string> = {
       </template>
 
       <template v-else-if="activeTab === 'joinableTeams'">
-        <AccountPanel title="可加入球队">
-          <div class="team-search-row">
-            <input v-model="joinKeyword" type="search" placeholder="搜索球队名称" />
-            <button type="button" class="account-btn-secondary" @click="searchJoinable">搜索</button>
-          </div>
-          <div v-if="teamStore.joinableTeams.length" class="team-table-wrap">
-            <table class="team-table">
-              <thead>
-                <tr>
-                  <th>球队</th>
-                  <th>地区</th>
-                  <th>终端</th>
-                  <th>人数</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="team in teamStore.joinableTeams" :key="team.teamId">
-                  <td>{{ team.teamName }}</td>
-                  <td>{{ team.regionName || '-' }}</td>
-                  <td>{{ team.gameTerminal || '-' }}</td>
-                  <td>{{ team.currentMemberCount ?? 0 }}/{{ team.maxMemberCount ?? '-' }}</td>
-                  <td>
-                    <button
-                      type="button"
-                      class="account-btn-primary team-table__btn"
-                      :disabled="team.canApply === false"
-                      :title="team.cannotApplyReason || undefined"
-                      @click="applyJoin(team.teamId)"
-                    >
-                      申请加入
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <AccountEmptyState
-            v-else
-            :message="teamStore.joinableEmptyReason || '当前暂无与你比赛终端一致的可加入球队'"
-          />
-          <label class="team-inline-field">
-            申请说明
-            <textarea v-model="applyReason" rows="2" maxlength="200" placeholder="可选，向队长说明加入理由" />
-          </label>
-        </AccountPanel>
+        <JoinableTeamPanel ref="joinablePanelRef" />
       </template>
 
       <template v-else-if="activeTab === 'myApplications'">
@@ -869,7 +816,7 @@ const tabLabels: Record<TeamTab, string> = {
       <template v-else-if="activeTab === 'invitations'">
         <AccountPanel title="邀请候选球员">
           <div class="team-search-row">
-            <input v-model="inviteKeyword" type="search" placeholder="搜索球员昵称/编号" />
+            <input v-model="inviteKeyword" type="search" placeholder="搜索用户账号、球员编号或平台游戏 ID" />
             <button type="button" class="account-btn-secondary" @click="searchCandidates">搜索</button>
           </div>
           <div v-if="teamStore.candidatePlayers.length" class="team-table-wrap">
@@ -879,8 +826,9 @@ const tabLabels: Record<TeamTab, string> = {
                   <th>昵称</th>
                   <th>球员编号</th>
                   <th>位置</th>
-                  <th>比赛终端</th>
-                  <th>认证状态</th>
+                  <th>平台游戏 ID</th>
+                  <th>平台状态</th>
+                  <th>球队状态</th>
                   <th>操作</th>
                 </tr>
               </thead>
@@ -900,13 +848,16 @@ const tabLabels: Record<TeamTab, string> = {
                       {{ player.positionCode || '未设置' }}
                     </span>
                   </td>
-                  <td>{{ formatGameTerminalLabel(player.gameTerminal) }}</td>
-                  <td>{{ formatPlayerCertStatus(player.certificationStatus) }}</td>
+                  <td>{{ player.platformGameId || player.gameAccount || '-' }}</td>
+                  <td>{{ player.platformIdentityStatusText || '-' }}</td>
+                  <td>{{ player.platformTeamName ? `已在 ${player.platformTeamName}` : '未加入球队' }}</td>
                   <td>
                     <button
                       type="button"
                       class="account-btn-secondary team-table__btn"
-                      @click="selectedInvitePlayerId = player.playerId"
+                      :disabled="player.canInvite === false"
+                      :title="player.cannotInviteReason || undefined"
+                      @click="selectInvitePlayer(player)"
                     >
                       {{ selectedInvitePlayerId === player.playerId ? '已选择' : '选择' }}
                     </button>
@@ -917,7 +868,7 @@ const tabLabels: Record<TeamTab, string> = {
           </div>
           <AccountEmptyState
             v-else
-            :message="teamStore.candidateEmptyReason || '当前暂无与球队比赛终端一致的可邀请球员'"
+            :message="teamStore.candidateEmptyReason || '当前暂无符合球队平台的可邀请球员'"
           />
           <div class="team-form-grid">
             <label class="team-form-full">
@@ -925,7 +876,12 @@ const tabLabels: Record<TeamTab, string> = {
               <textarea v-model="inviteMessage" rows="2" maxlength="200" />
             </label>
           </div>
-          <button type="button" class="account-btn-primary" :disabled="teamStore.actionLoading" @click="sendInvite">
+          <button
+            type="button"
+            class="account-btn-primary"
+            :disabled="teamStore.actionLoading || !selectedInvitePlayerId"
+            @click="sendInvite"
+          >
             发送邀请
           </button>
         </AccountPanel>

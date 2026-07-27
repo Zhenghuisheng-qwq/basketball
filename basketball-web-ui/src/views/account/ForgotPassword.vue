@@ -133,7 +133,7 @@ if (typeof emailQuery === 'string' && emailQuery.trim()) {
   <div class="auth-page auth-login">
     <div class="auth-login__eyebrow">
       <span class="auth-login__eyebrow-bar" aria-hidden="true" />
-      CNPA MEMBER SYSTEM
+      CNPA PLAYER CENTER
     </div>
     <p class="auth-login__welcome">找回密码</p>
     <header class="auth-login__header">

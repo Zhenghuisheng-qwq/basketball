@@ -13,9 +13,10 @@ export function getMyTeamPage(params?: { currentPage?: number; pageSize?: number
   return request.get<any, ApiResult<PageResult<TeamSummaryDto>>>('/basket/team/mine', { params })
 }
 
-export function getJoinableTeamPage(params?: {
+export function getJoinableTeamPage(params: {
   currentPage?: number
   pageSize?: number
+  platformCode: string
   keyword?: string
 }) {
   return request.get<any, ApiResult<JoinableTeamPageDto>>('/basket/team/joinable/page', { params })

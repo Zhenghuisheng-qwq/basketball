@@ -43,8 +43,9 @@ public class AccountTeamController {
     @GetMapping("/joinable/page")
     public R<JoinableTeamPageResp> pageJoinable(@RequestParam(required = false) Integer currentPage,
                                                   @RequestParam(required = false) Integer pageSize,
+                                                  @RequestParam String platformCode,
                                                   @RequestParam(required = false) String keyword) {
-        return R.ok(accountTeamService.pageJoinable(currentPage, pageSize, keyword));
+        return R.ok(accountTeamService.pageJoinable(currentPage, pageSize, platformCode, keyword));
     }
 
     @ApiOperation("创建球队")

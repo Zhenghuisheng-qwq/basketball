@@ -12,7 +12,7 @@ public interface IAccountTeamService {
 
     IPage<TeamSummaryResp> pageMine(Integer currentPage, Integer pageSize);
 
-    JoinableTeamPageResp pageJoinable(Integer currentPage, Integer pageSize, String keyword);
+    JoinableTeamPageResp pageJoinable(Integer currentPage, Integer pageSize, String platformCode, String keyword);
 
     TeamDetailResp create(TeamCreateReq req, String clientIp);
 

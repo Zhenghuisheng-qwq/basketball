@@ -4,14 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.common.UserContext;
-import com.zhs.dao.BasketFileAssetDao;
-import com.zhs.dao.BasketMemberProfileDao;
-import com.zhs.dao.BasketPlayerProfileDao;
-import com.zhs.dao.BasketTeamDao;
-import com.zhs.dao.BasketTeamInvitationDao;
-import com.zhs.dao.BasketTeamMemberDao;
-import com.zhs.dao.BasketTournamentRegistrationDao;
-import com.zhs.dao.BasketTournamentRegistrationPlayerDao;
+import com.zhs.dao.*;
 import com.zhs.enums.PlayerStatusEnum;
 import com.zhs.enums.TeamInvitationStatusEnum;
 import com.zhs.enums.TeamMemberRoleEnum;
@@ -20,6 +13,7 @@ import com.zhs.enums.TeamRosterTypeEnum;
 import com.zhs.enums.TournamentRegistrationStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketFileAsset;
+import com.zhs.model.BasketMemberAccount;
 import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
@@ -31,7 +25,10 @@ import com.zhs.request.team.TeamMemberUpdateReq;
 import com.zhs.response.team.CandidatePlayerItemResp;
 import com.zhs.response.team.CandidatePlayerPageResp;
 import com.zhs.response.team.TeamMemberItemResp;
-import com.zhs.support.GameTerminalSupport;
+import com.zhs.enums.PlatformAccountStatusEnum;
+import com.zhs.enums.PlatformIdentityStatusEnum;
+import com.zhs.model.BasketPlayerPlatformAccount;
+import com.zhs.support.PlatformTeamMembershipSupport;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamMemberBusinessService;
 import com.zhs.service.team.TeamMemberJoinHelper;
@@ -48,6 +45,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -73,6 +72,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     @Resource
     private BasketMemberProfileDao memberProfileDao;
     @Resource
+    private BasketMemberAccountDao memberAccountDao;
+    @Resource
     private BasketFileAssetDao fileAssetDao;
     @Resource
     private BasketTournamentRegistrationDao registrationDao;
@@ -84,6 +85,10 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     private TeamMemberJoinHelper teamMemberJoinHelper;
     @Resource
     private AccountSecurityLogHelper securityLogHelper;
+    @Resource
+    private BasketPlayerPlatformAccountDao platformAccountDao;
+    @Resource
+    private PlatformTeamMembershipSupport platformTeamMembershipSupport;
 
     @Override
     public IPage<TeamMemberItemResp> pageMembers(String teamId, Integer currentPage, Integer pageSize) {
@@ -167,6 +172,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         }
         assertNotInActiveRegistration(target);
         markMemberRemoved(target, "被队长移除");
+        teamMemberJoinHelper.clearActivePlatformSlot(target);
         clearPlayerCurrentTeam(target.getPlayerId(), teamPk);
         teamMemberJoinHelper.recalculateCurrentMemberCount(teamPk);
         securityLogHelper.write(memberId, EVENT_TEAM_REMOVE, "移除球队成员",
@@ -184,6 +190,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         }
         assertNotInActiveRegistration(membership);
         markMemberLeft(membership, "主动离队");
+        teamMemberJoinHelper.clearActivePlatformSlot(membership);
         clearPlayerCurrentTeam(membership.getPlayerId(), teamPk);
         teamMemberJoinHelper.recalculateCurrentMemberCount(teamPk);
         securityLogHelper.write(memberId, EVENT_TEAM_LEAVE, "离开球队",
@@ -195,10 +202,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         Long teamPk = parseLongId(teamId, "球队主键");
         Long memberId = UserContext.getRequiredUserId();
         BasketTeam team = captainPermissionService.requireTeamCaptain(memberId, teamPk);
-        if (!StringUtils.hasText(team.getGameTerminal())) {
-            return emptyCandidatePage(normalizePage(currentPage), normalizeSize(pageSize),
-                    "当前球队比赛终端未设置，无法邀请球员");
-        }
+        String platformCode = platformTeamMembershipSupport.resolveTeamPlatformCode(team);
 
         Set<Long> existingMemberIds = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
                         .eq(BasketTeamMember::getTeamId, teamPk)
@@ -207,12 +211,16 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
                         .eq(BasketTeamMember::getIsDelete, NOT_DELETED))
                 .stream().map(BasketTeamMember::getMemberId).collect(Collectors.toSet());
         Set<Long> pendingInviteeIds = loadPendingInviteeIds(teamPk);
+        Set<Long> platformMemberIds = platformTeamMembershipSupport.loadMemberIdsWithActiveMembershipOnPlatform(platformCode);
 
+        Set<Long> keywordPlayerIds = loadKeywordMatchedPlayerIds(keyword, platformCode);
         LambdaQueryWrapper<BasketPlayerProfile> wrapper = new LambdaQueryWrapper<BasketPlayerProfile>()
                 .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)
                 .eq(BasketPlayerProfile::getCertificationStatus, 3)
                 .orderByDesc(BasketPlayerProfile::getCreateTime);
-        if (StringUtils.hasText(keyword)) {
+        if (!CollectionUtils.isEmpty(keywordPlayerIds)) {
+            wrapper.in(BasketPlayerProfile::getId, keywordPlayerIds);
+        } else if (StringUtils.hasText(keyword)) {
             String kw = keyword.trim();
             wrapper.and(w -> w.like(BasketPlayerProfile::getGameNickname, kw)
                     .or().like(BasketPlayerProfile::getPlayerNo, kw));
@@ -220,26 +228,91 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
 
         List<BasketPlayerProfile> allProfiles = playerProfileDao.selectList(wrapper).stream()
                 .filter(profile -> !existingMemberIds.contains(profile.getMemberId()))
-                .filter(profile -> profile.getCurrentTeamId() == null || profile.getCurrentTeamId().equals(0L))
+                .filter(profile -> !platformMemberIds.contains(profile.getMemberId()))
                 .filter(profile -> !PlayerStatusEnum.fromCode(profile.getPlayerStatus()).isRestricted())
-                .filter(profile -> !captainPermissionService.hasValidCaptainQualification(profile.getMemberId()))
                 .filter(profile -> !pendingInviteeIds.contains(profile.getMemberId()))
-                .filter(profile -> StringUtils.hasText(profile.getGameTerminal()))
-                .filter(profile -> GameTerminalSupport.matches(team.getGameTerminal(), profile.getGameTerminal()))
                 .collect(Collectors.toList());
 
         Map<Long, BasketMemberProfile> memberProfileMap = loadMemberProfiles(allProfiles.stream()
                 .map(BasketPlayerProfile::getMemberId).collect(Collectors.toSet()));
+        Map<Long, BasketPlayerPlatformAccount> platformAccountMap = loadPlatformAccounts(allProfiles, platformCode);
 
         List<CandidatePlayerItemResp> items = new ArrayList<>();
         for (BasketPlayerProfile profile : allProfiles) {
-            items.add(toCandidateItem(profile, memberProfileMap.get(profile.getMemberId()), team));
+            items.add(toCandidateItem(profile, memberProfileMap.get(profile.getMemberId()), team, platformCode,
+                    platformAccountMap.get(profile.getId())));
         }
         CandidatePlayerPageResp respPage = toCandidatePage(items, currentPage, pageSize);
         if (items.isEmpty()) {
-            respPage.setEmptyReason("当前暂无与球队比赛终端一致的可邀请球员");
+            respPage.setEmptyReason("当前暂无符合" + platformCode + "平台条件的可邀请球员");
         }
         return respPage;
+    }
+
+    private Set<Long> loadKeywordMatchedPlayerIds(String keyword, String platformCode) {
+        if (!StringUtils.hasText(keyword)) {
+            return Collections.emptySet();
+        }
+        String kw = keyword.trim();
+        Set<Long> playerIds = new HashSet<>();
+        List<BasketPlayerPlatformAccount> platformMatches = platformAccountDao.selectList(
+                new LambdaQueryWrapper<BasketPlayerPlatformAccount>()
+                        .eq(BasketPlayerPlatformAccount::getPlatform, platformCode)
+                        .eq(BasketPlayerPlatformAccount::getIsDelete, NOT_DELETED)
+                        .and(w -> w.like(BasketPlayerPlatformAccount::getDisplayGameId, kw)
+                                .or().like(BasketPlayerPlatformAccount::getNormalizedGameId, kw.toLowerCase(Locale.ROOT))));
+        for (BasketPlayerPlatformAccount account : platformMatches) {
+            playerIds.add(account.getPlayerId());
+        }
+        List<BasketMemberProfile> memberMatches = memberProfileDao.selectList(new LambdaQueryWrapper<BasketMemberProfile>()
+                .eq(BasketMemberProfile::getIsDelete, NOT_DELETED)
+                .like(BasketMemberProfile::getNickname, kw));
+        if (!CollectionUtils.isEmpty(memberMatches)) {
+            Set<Long> memberIds = memberMatches.stream().map(BasketMemberProfile::getMemberId).collect(Collectors.toSet());
+            appendProfilesByMemberIds(playerIds, memberIds);
+        }
+        List<BasketMemberAccount> accountMatches = memberAccountDao.selectList(new LambdaQueryWrapper<BasketMemberAccount>()
+                .eq(BasketMemberAccount::getIsDelete, NOT_DELETED)
+                .and(w -> w.like(BasketMemberAccount::getUsername, kw)
+                        .or().like(BasketMemberAccount::getAccountNo, kw)));
+        if (!CollectionUtils.isEmpty(accountMatches)) {
+            Set<Long> memberIds = accountMatches.stream().map(BasketMemberAccount::getId).collect(Collectors.toSet());
+            appendProfilesByMemberIds(playerIds, memberIds);
+        }
+        List<BasketPlayerProfile> playerNoMatches = playerProfileDao.selectList(new LambdaQueryWrapper<BasketPlayerProfile>()
+                .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)
+                .like(BasketPlayerProfile::getPlayerNo, kw));
+        for (BasketPlayerProfile profile : playerNoMatches) {
+            playerIds.add(profile.getId());
+        }
+        return playerIds;
+    }
+
+    private void appendProfilesByMemberIds(Set<Long> playerIds, Set<Long> memberIds) {
+        if (CollectionUtils.isEmpty(memberIds)) {
+            return;
+        }
+        for (BasketPlayerProfile profile : playerProfileDao.selectList(new LambdaQueryWrapper<BasketPlayerProfile>()
+                .in(BasketPlayerProfile::getMemberId, memberIds)
+                .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED))) {
+            playerIds.add(profile.getId());
+        }
+    }
+
+    private Map<Long, BasketPlayerPlatformAccount> loadPlatformAccounts(List<BasketPlayerProfile> profiles,
+                                                                        String platformCode) {
+        if (CollectionUtils.isEmpty(profiles)) {
+            return Collections.emptyMap();
+        }
+        Set<Long> playerIds = profiles.stream().map(BasketPlayerProfile::getId).collect(Collectors.toSet());
+        Map<Long, BasketPlayerPlatformAccount> map = new HashMap<>();
+        for (BasketPlayerPlatformAccount account : platformAccountDao.selectList(new LambdaQueryWrapper<BasketPlayerPlatformAccount>()
+                .in(BasketPlayerPlatformAccount::getPlayerId, playerIds)
+                .eq(BasketPlayerPlatformAccount::getPlatform, platformCode)
+                .eq(BasketPlayerPlatformAccount::getIsDelete, NOT_DELETED))) {
+            map.putIfAbsent(account.getPlayerId(), account);
+        }
+        return map;
     }
 
     private Set<Long> loadPendingInviteeIds(Long teamId) {
@@ -297,6 +370,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         Date now = new Date();
         member.setMembershipStatus(TeamMembershipStatusEnum.REMOVED.getCode());
         member.setIsCurrent(0);
+        member.setActivePlatformSlot(null);
         member.setLeaveTime(now);
         member.setLeaveReason(reason);
         teamMemberDao.updateById(member);
@@ -306,6 +380,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         Date now = new Date();
         member.setMembershipStatus(TeamMembershipStatusEnum.LEFT.getCode());
         member.setIsCurrent(0);
+        member.setActivePlatformSlot(null);
         member.setLeaveTime(now);
         member.setLeaveReason(reason);
         teamMemberDao.updateById(member);
@@ -392,16 +467,18 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
 
     private CandidatePlayerItemResp toCandidateItem(BasketPlayerProfile profile,
                                                     BasketMemberProfile memberProfile,
-                                                    BasketTeam team) {
+                                                    BasketTeam team,
+                                                    String platformCode,
+                                                    BasketPlayerPlatformAccount platformAccount) {
         CandidatePlayerItemResp resp = new CandidatePlayerItemResp();
         resp.setMemberId(toStringId(profile.getMemberId()));
         resp.setUserId(toStringId(profile.getMemberId()));
         resp.setPlayerId(toStringId(profile.getId()));
         resp.setPlayerNo(profile.getPlayerNo());
         resp.setGameNickname(profile.getGameNickname());
-        resp.setGameTerminal(profile.getGameTerminal());
+        resp.setGameTerminal(team.getGameTerminal());
+        resp.setPlatformCode(platformCode);
         resp.setGameAccount(profile.getGameAccount());
-        resp.setCurrentTeamId(toStringId(profile.getCurrentTeamId()));
         resp.setPositionCode(profile.getPositionCode());
         resp.setPositionName(PlayerPositionSupport.resolveName(profile.getPositionCode()));
         resp.setCertificationStatus(profile.getCertificationStatus());
@@ -409,11 +486,57 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
             resp.setNickname(memberProfile.getNickname());
             resp.setAvatar(resolveAvatarUrl(memberProfile.getAvatarFileId()));
         }
-        String cannotInviteReason = GameTerminalSupport.buildInviteMismatchMessage(
-                profile.getGameTerminal(), team.getGameTerminal());
+        PlatformIdentityStatusEnum identityStatus = platformTeamMembershipSupport.resolvePlatformIdentityStatus(
+                profile.getMemberId(), platformCode);
+        if (platformAccount != null) {
+            resp.setPlatformGameId(platformAccount.getDisplayGameId());
+            PlatformAccountStatusEnum accountStatus = PlatformAccountStatusEnum.fromCode(platformAccount.getAccountStatus());
+            if (Objects.equals(PlatformAccountStatusEnum.ACTIVE.getCode(), platformAccount.getAccountStatus())) {
+                identityStatus = PlatformIdentityStatusEnum.ACTIVE;
+            } else if (Objects.equals(PlatformAccountStatusEnum.REJECTED.getCode(), platformAccount.getAccountStatus())) {
+                identityStatus = PlatformIdentityStatusEnum.REJECTED;
+            } else {
+                identityStatus = PlatformIdentityStatusEnum.PENDING;
+            }
+            resp.setPlatformIdentityStatus(identityStatus.getCode());
+            resp.setPlatformIdentityStatusText(identityStatus.getLabel());
+        } else {
+            resp.setPlatformIdentityStatus(identityStatus.getCode());
+            resp.setPlatformIdentityStatusText(identityStatus.getLabel());
+        }
+        BasketTeamMember activeMembership = platformTeamMembershipSupport.findActiveMembership(
+                profile.getMemberId(), platformCode);
+        if (activeMembership != null) {
+            BasketTeam memberTeam = teamDao.selectById(activeMembership.getTeamId());
+            resp.setPlatformTeamId(toStringId(activeMembership.getTeamId()));
+            resp.setPlatformTeamName(memberTeam == null ? null : memberTeam.getTeamName());
+            resp.setCurrentTeamId(toStringId(activeMembership.getTeamId()));
+        }
+        String cannotInviteReason = resolveCannotInviteReason(profile.getMemberId(), platformCode, identityStatus);
         resp.setCanInvite(cannotInviteReason == null);
         resp.setCannotInviteReason(cannotInviteReason);
         return resp;
+    }
+
+    private String resolveCannotInviteReason(Long memberId, String platformCode,
+                                             PlatformIdentityStatusEnum identityStatus) {
+        if (identityStatus != PlatformIdentityStatusEnum.ACTIVE) {
+            if (identityStatus == PlatformIdentityStatusEnum.PENDING) {
+                return "该平台游戏 ID 审核中";
+            }
+            if (identityStatus == PlatformIdentityStatusEnum.REJECTED) {
+                return "该平台游戏 ID 已被驳回";
+            }
+            return "尚未绑定该平台已生效游戏 ID";
+        }
+        return platformTeamMembershipSupport.resolveJoinIneligibilityReason(memberId, platformCode);
+    }
+
+    private CandidatePlayerItemResp toCandidateItem(BasketPlayerProfile profile,
+                                                    BasketMemberProfile memberProfile,
+                                                    BasketTeam team) {
+        return toCandidateItem(profile, memberProfile, team,
+                platformTeamMembershipSupport.resolveTeamPlatformCode(team), null);
     }
 
     private ProfileMaps loadProfileMaps(List<BasketTeamMember> members) {

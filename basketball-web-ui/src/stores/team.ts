@@ -61,7 +61,17 @@ import type {
   TeamRegistrationUpdateReq,
   TeamRegistrationWithdrawReq,
 } from '@/api/types/teamRegistration'
+import type { JoinableTeamPageDto } from '@/api/types/teamJoinInvite'
 import type { PageResult } from '@/api/types/common'
+
+const JOINABLE_PLATFORMS = ['PC', 'PS', 'XBOX'] as const
+
+function normalizePlatformCode(terminal?: string | null): string | null {
+  if (!terminal) return null
+  const upper = terminal.trim().toUpperCase()
+  if (upper === 'PS5' || upper === 'PSN') return 'PS'
+  return upper
+}
 
 function unwrapPage<T>(data: PageResult<T> | undefined): PageResult<T> {
   return data ?? { records: [], total: 0, size: 10, current: 1, pages: 0 }
@@ -70,6 +80,7 @@ function unwrapPage<T>(data: PageResult<T> | undefined): PageResult<T> {
 export const useTeamStore = defineStore('team', () => {
   const captainQualification = ref<CaptainQualificationDto | null>(null)
   const myTeamSummary = ref<TeamSummaryDto | null>(null)
+  const myTeams = ref<TeamSummaryDto[]>([])
   const teamDetail = ref<TeamDetailDto | null>(null)
 
   const qualificationLoading = ref(false)
@@ -90,6 +101,7 @@ export const useTeamStore = defineStore('team', () => {
   const joinApplicationsLoading = ref(false)
 
   const joinableTeams = ref<TeamSummaryDto[]>([])
+  const joinableContext = ref<JoinableTeamPageDto | null>(null)
   const joinableEmptyReason = ref('')
   const joinableLoading = ref(false)
 
@@ -104,13 +116,26 @@ export const useTeamStore = defineStore('team', () => {
   const registrationAudits = ref<TeamRegistrationAuditItemDto[]>([])
   const registrationLoading = ref(false)
 
-  const hasTeam = computed(() => Boolean(myTeamSummary.value?.teamId))
+  const hasTeam = computed(() => myTeams.value.length > 0 || Boolean(myTeamSummary.value?.teamId))
+  const occupiedPlatforms = computed(() => {
+    const platforms = new Set<string>()
+    for (const team of myTeams.value) {
+      const code = normalizePlatformCode(team.platformCode || team.gameTerminal)
+      if (code) platforms.add(code)
+    }
+    return platforms
+  })
+  const canJoinOtherPlatforms = computed(() =>
+    JOINABLE_PLATFORMS.some((platform) => !occupiedPlatforms.value.has(platform)),
+  )
   const isCaptain = computed(() =>
     Boolean(myTeamSummary.value?.isCaptain || teamDetail.value?.isCaptain),
   )
   const canCreateTeam = computed(() => Boolean(captainQualification.value?.canCreateTeam))
   const hasValidCaptainQualification = computed(() => canCreateTeam.value)
-  const canJoinTeam = computed(() => !hasTeam.value && !canCreateTeam.value)
+  const canJoinTeam = computed(
+    () => canJoinOtherPlatforms.value || (!hasTeam.value && !canCreateTeam.value),
+  )
 
   function setError(error: unknown) {
     lastError.value = error instanceof Error ? error.message : '操作失败'
@@ -135,8 +160,9 @@ export const useTeamStore = defineStore('team', () => {
     myTeamLoading.value = true
     lastError.value = ''
     try {
-      const res = await getMyTeamPage({ currentPage: 1, pageSize: 1 })
+      const res = await getMyTeamPage({ currentPage: 1, pageSize: 20 })
       const page = unwrapPage(res.data)
+      myTeams.value = page.records
       myTeamSummary.value = page.records[0] ?? null
       if (myTeamSummary.value?.teamId) {
         await loadTeamDetail(myTeamSummary.value.teamId)
@@ -368,14 +394,20 @@ export const useTeamStore = defineStore('team', () => {
     }
   }
 
-  async function loadJoinableTeams(params?: { currentPage?: number; pageSize?: number; keyword?: string }) {
+  async function loadJoinableTeams(params: {
+    platformCode: string
+    currentPage?: number
+    pageSize?: number
+    keyword?: string
+  }) {
     joinableLoading.value = true
     lastError.value = ''
     try {
       const res = await getJoinableTeamPage({ currentPage: 1, pageSize: 20, ...params })
       joinableTeams.value = unwrapPage(res.data).records
-      joinableEmptyReason.value = res.data?.emptyReason || ''
-      return joinableTeams.value
+      joinableContext.value = res.data ?? null
+      joinableEmptyReason.value = res.data?.emptyReason || res.data?.disabledReason || ''
+      return res.data
     } catch (error) {
       setError(error)
       throw error
@@ -661,6 +693,7 @@ export const useTeamStore = defineStore('team', () => {
     myJoinApplications.value = []
     teamJoinApplications.value = []
     joinableTeams.value = []
+    joinableContext.value = null
     candidatePlayers.value = []
     availableSeasons.value = []
     availableSeasonEmptyReason.value = ''
@@ -672,6 +705,7 @@ export const useTeamStore = defineStore('team', () => {
   function resetState() {
     captainQualification.value = null
     myTeamSummary.value = null
+    myTeams.value = []
     teamDetail.value = null
     lastError.value = ''
     resetTransientLists()
@@ -695,8 +729,12 @@ export const useTeamStore = defineStore('team', () => {
     teamJoinApplications,
     joinApplicationsLoading,
     joinableTeams,
+    joinableContext,
     joinableEmptyReason,
     joinableLoading,
+    myTeams,
+    canJoinOtherPlatforms,
+    occupiedPlatforms,
     candidatePlayers,
     candidateEmptyReason,
     candidatesLoading,
