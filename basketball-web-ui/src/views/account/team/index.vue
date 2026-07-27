@@ -7,6 +7,7 @@ import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
+import TeamMemberList from '@/components/account/team/TeamMemberList.vue'
 import { useTeamStore } from '@/stores/team'
 import { useAccountStore } from '@/stores/account'
 import { mapPlatformToGameTerminal, mapGameTerminalToPlatform, mapTeamRegistrationStatusText } from '@/utils/accountMappers'
@@ -37,27 +38,9 @@ const TEAM_AUDIT_STATUS: Record<number, string> = {
   3: '审核中',
 }
 
-function formatTeamRole(roleType?: string) {
-  if (roleType === 'CAPTAIN') return '队长'
-  if (roleType === 'MEMBER') return '队员'
-  return roleType || '-'
-}
-
-function formatMemberRosterType(rosterType?: string) {
-  if (rosterType === 'OFFICIAL') return '正式'
-  if (rosterType === 'TRIAL') return '试训'
-  return rosterType || '-'
-}
-
 function formatPlayerCertStatus(status?: number) {
   if (status === 3) return '已认证'
   return '未认证'
-}
-
-function formatMemberPosition(member: { positionCode?: string; positionName?: string }) {
-  if (!member.positionCode) return '未设置'
-  if (member.positionName) return `${member.positionCode} ${member.positionName}`
-  return formatPositionLabel(member.positionCode)
 }
 
 function formatGameTerminalLabel(terminal?: string) {
@@ -105,7 +88,6 @@ const profileForm = reactive({
   publicStatus: 1,
 })
 
-const memberEdits = reactive<Record<string, { jerseyNo: string; rosterType: string; remark: string }>>({})
 const registrationDraftForm = reactive({
   seasonId: '',
   contactName: '',
@@ -352,25 +334,15 @@ async function submitProfileUpdate() {
   }
 }
 
-function ensureMemberEdit(member: TeamMemberItemDto) {
-  if (!memberEdits[member.teamMemberId]) {
-    memberEdits[member.teamMemberId] = {
-      jerseyNo: member.jerseyNo || '',
-      rosterType: member.rosterType || 'OFFICIAL',
-      remark: member.remark || '',
-    }
-  }
-  return memberEdits[member.teamMemberId]
-}
-
-async function saveMember(member: TeamMemberItemDto) {
+async function saveMember(
+  member: TeamMemberItemDto,
+  payload: { jerseyNo: string; rosterType: string },
+) {
   if (!teamId.value) return
-  const edit = ensureMemberEdit(member)
   try {
     await teamStore.updateMemberAction(teamId.value, member.teamMemberId, {
-      jerseyNo: edit.jerseyNo || undefined,
-      rosterType: edit.rosterType || undefined,
-      remark: edit.remark || undefined,
+      jerseyNo: payload.jerseyNo,
+      rosterType: payload.rosterType,
     })
     ElMessage.success('成员信息已更新')
   } catch (error) {
@@ -381,13 +353,10 @@ async function saveMember(member: TeamMemberItemDto) {
 async function removeMember(member: TeamMemberItemDto) {
   if (!teamId.value) return
   try {
-    await ElMessageBox.confirm(`确认移除成员 ${member.nickname || member.realName || ''}？`, '移除成员', {
-      type: 'warning',
-    })
     await teamStore.removeMemberAction(teamId.value, member.teamMemberId)
     ElMessage.success('成员已移除')
-  } catch {
-    // cancelled or failed
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '移除失败')
   }
 }
 
@@ -886,67 +855,14 @@ const tabLabels: Record<TeamTab, string> = {
 
       <template v-else-if="activeTab === 'members'">
         <AccountPanel title="球队成员">
-          <div v-if="teamStore.members.length" class="team-table-wrap">
-            <table class="team-table">
-              <thead>
-                <tr>
-                  <th>昵称</th>
-                  <th>球员编号</th>
-                  <th>位置</th>
-                  <th>角色</th>
-                  <th>成员状态</th>
-                  <th>球衣号</th>
-                  <th v-if="isCaptain">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="member in teamStore.members" :key="member.teamMemberId">
-                  <td>{{ member.nickname || member.gameNickname || member.realName || '-' }}</td>
-                  <td>{{ member.playerNo || '-' }}</td>
-                  <td>
-                    <span
-                      class="team-position"
-                      :title="formatMemberPosition(member)"
-                    >
-                      {{ member.positionCode || '未设置' }}
-                    </span>
-                  </td>
-                  <td>{{ formatTeamRole(member.roleType) }}</td>
-                  <td>
-                    <template v-if="isCaptain">
-                      <select v-model="ensureMemberEdit(member).rosterType">
-                        <option value="OFFICIAL">正式</option>
-                        <option value="TRIAL">试训</option>
-                      </select>
-                    </template>
-                    <template v-else>{{ formatMemberRosterType(member.rosterType) }}</template>
-                  </td>
-                  <td>
-                    <input
-                      v-if="isCaptain"
-                      v-model="ensureMemberEdit(member).jerseyNo"
-                      type="text"
-                      maxlength="3"
-                      class="team-input-inline"
-                    />
-                    <template v-else>{{ member.jerseyNo || '-' }}</template>
-                  </td>
-                  <td v-if="isCaptain">
-                    <button type="button" class="account-btn-secondary team-table__btn" @click="saveMember(member)">保存</button>
-                    <button
-                      v-if="member.roleType !== 'CAPTAIN'"
-                      type="button"
-                      class="account-btn-secondary team-table__btn"
-                      @click="removeMember(member)"
-                    >
-                      移除
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <AccountEmptyState v-else message="暂无成员" />
+          <TeamMemberList
+            :members="teamStore.members"
+            :loading="teamStore.membersLoading"
+            :is-captain="isCaptain"
+            :team-id="teamId"
+            @save="saveMember"
+            @remove="removeMember"
+          />
         </AccountPanel>
       </template>
 

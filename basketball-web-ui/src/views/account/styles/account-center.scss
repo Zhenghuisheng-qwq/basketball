@@ -31,9 +31,10 @@
 }
 
 .account-layout,
-.account-page__shell {
+.account-page__shell,
+.account-shell {
   display: grid;
-  grid-template-columns: var(--account-sidebar-width, clamp(260px, 18vw, 340px)) minmax(0, 1fr);
+  grid-template-columns: var(--account-sidebar-width, clamp(240px, 16vw, 300px)) minmax(0, 1fr);
   align-items: stretch;
   width: 100%;
   max-width: none;
@@ -338,8 +339,8 @@
 .account-content-inner,
 .account-main-inner,
 .account-page-inner {
-  width: 100%;
-  max-width: var(--account-content-max);
+  width: min(100%, var(--account-content-max, 1440px));
+  max-width: var(--account-content-max, 1440px);
   min-width: 0;
   margin: 0 auto;
   padding: 0;
@@ -432,7 +433,7 @@
   background-image: url('@/assets/account/member-center-bg.png');
   background-repeat: no-repeat;
   background-position: center center;
-  background-size: 100% 100%;
+  background-size: cover;
   border: 0;
   box-sizing: border-box;
 
@@ -703,10 +704,8 @@
 .account-security-grid,
 .security-grid {
   display: grid;
-  grid-template-columns:
-    minmax(0, 1.08fr)
-    minmax(360px, 0.92fr);
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 2vw, 32px);
   align-items: stretch;
 }
 
@@ -1060,8 +1059,8 @@
 
 .profile-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 2vw, 32px);
 }
 
 .profile-read {
@@ -1123,8 +1122,8 @@
 
 .verification-layout--split {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.92fr);
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 2vw, 32px);
 }
 
 .verification-intro {
@@ -1485,6 +1484,7 @@
   .account-card-grid,
   .identity-entry-grid,
   .identity-review-grid,
+  .identity-card-grid,
   .identity-apply-grid,
   .security-layout,
   .profile-grid,
@@ -1510,6 +1510,7 @@
   .account-card-grid,
   .identity-entry-grid,
   .identity-review-grid,
+  .identity-card-grid,
   .identity-apply-grid,
   .security-layout,
   .profile-grid,
@@ -1555,7 +1556,8 @@
 
 @media (max-width: 900px) {
   .account-layout,
-  .account-page__shell {
+  .account-page__shell,
+  .account-shell {
     display: block;
     grid-template-columns: 1fr;
   }
@@ -1784,12 +1786,22 @@
 
 .identity-entry-grid,
 .identity-review-grid,
+.identity-card-grid,
 .identity-apply-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--account-card-gap);
+  gap: clamp(20px, 2vw, 32px);
   width: 100%;
   align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+  .identity-entry-grid,
+  .identity-review-grid,
+  .identity-card-grid,
+  .identity-apply-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .identity-entry-grid > .account-panel {

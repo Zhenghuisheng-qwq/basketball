@@ -43,6 +43,24 @@ public class TeamMemberItemResp implements Serializable {
     @ApiModelProperty("头像 URL")
     private String avatarUrl;
 
+    @ApiModelProperty("比赛终端")
+    private String gameTerminal;
+
+    @ApiModelProperty("游戏账号")
+    private String gameAccount;
+
+    @ApiModelProperty("球员状态")
+    private Integer playerStatus;
+
+    @ApiModelProperty("当前球队主键")
+    private String currentTeamId;
+
+    @ApiModelProperty("成员状态文案")
+    private String membershipStatusText;
+
+    @ApiModelProperty("阵容类型文案")
+    private String rosterTypeText;
+
     @ApiModelProperty("游戏昵称")
     private String gameNickname;
 

@@ -9,7 +9,7 @@ import AccountFooter from '@/components/account/AccountFooter.vue'
     <WebHeader />
 
     <div class="account-page">
-      <div class="account-layout account-page__shell">
+      <div class="account-layout account-page__shell account-shell">
         <AccountSidebar class="account-sidebar" />
 
         <main class="account-main">

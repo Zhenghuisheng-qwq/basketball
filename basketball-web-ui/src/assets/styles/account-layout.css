@@ -5,11 +5,12 @@
  */
 
 :root {
-  --account-sidebar-width: clamp(260px, 18vw, 340px);
-  --account-main-padding-x: clamp(32px, 4vw, 72px);
-  --account-main-padding-y: clamp(28px, 3vw, 52px);
+  --account-sidebar-width: clamp(240px, 16vw, 300px);
+  --account-main-padding-x: clamp(24px, 2.5vw, 48px);
+  --account-main-padding-y: clamp(24px, 2.5vw, 48px);
 
-  --account-content-max: 1360px;
+  /* Desktop content cap: fill remaining main area, never exceed 1440px */
+  --account-content-max: 1440px;
   --account-card-gap: clamp(18px, 1.6vw, 28px);
 
   --account-card-padding: clamp(24px, 2vw, 34px);
@@ -46,7 +47,9 @@
 
 .member-account-layout .account-layout,
 .member-account-layout .account-page__shell,
-.account-center-vars .account-page__shell {
+.member-account-layout .account-shell,
+.account-center-vars .account-page__shell,
+.account-center-vars .account-shell {
   display: grid;
   grid-template-columns: var(--account-sidebar-width) minmax(0, 1fr);
   align-items: stretch;
@@ -110,7 +113,7 @@
 .account-center-vars .account-main-inner,
 .account-center-vars .account-page-inner,
 .account-center-vars .account-content-inner {
-  width: 100%;
+  width: min(100%, var(--account-content-max));
   max-width: var(--account-content-max);
   min-width: 0;
   margin: 0 auto;
@@ -284,7 +287,7 @@
   background-image: url('../account/member-center-bg.png');
   background-repeat: no-repeat;
   background-position: center center;
-  background-size: 100% 100%;
+  background-size: cover;
   box-sizing: border-box;
 }
 
@@ -361,51 +364,16 @@
 
 /* ── Responsive tokens & shell ── */
 
-@media (min-width: 1920px) {
-  :root {
-    --account-sidebar-width: 340px;
-    --account-content-max: 1360px;
-    --account-main-padding-x: 72px;
-    --account-main-padding-y: 52px;
-  }
-}
-
-@media (min-width: 1600px) and (max-width: 1919px) {
-  :root {
-    --account-sidebar-width: clamp(280px, 17vw, 320px);
-    --account-content-max: 1280px;
-    --account-main-padding-x: 56px;
-    --account-main-padding-y: 44px;
-  }
-}
-
-@media (max-width: 1440px) {
-  :root {
-    --account-sidebar-width: clamp(260px, 18vw, 300px);
-    --account-content-max: 100%;
-    --account-main-padding-x: clamp(28px, 3vw, 48px);
-    --account-main-padding-y: clamp(28px, 2.6vw, 40px);
-  }
-}
-
-@media (max-width: 1366px) {
-  :root {
-    --account-sidebar-width: 260px;
-    --account-main-padding-x: 32px;
-    --account-main-padding-y: 32px;
-    --account-content-max: 1120px;
-  }
-}
-
 @media (max-width: 1180px) {
   :root {
-    --account-sidebar-width: clamp(240px, 22vw, 260px);
-    --account-content-max: 100%;
+    --account-sidebar-width: clamp(240px, 20vw, 280px);
   }
 
   .member-account-layout .account-layout,
   .member-account-layout .account-page__shell,
-  .account-center-vars .account-page__shell {
+  .member-account-layout .account-shell,
+  .account-center-vars .account-page__shell,
+  .account-center-vars .account-shell {
     grid-template-columns: var(--account-sidebar-width) minmax(0, 1fr);
   }
 
@@ -443,7 +411,9 @@
 
   .member-account-layout .account-layout,
   .member-account-layout .account-page__shell,
-  .account-center-vars .account-page__shell {
+  .member-account-layout .account-shell,
+  .account-center-vars .account-page__shell,
+  .account-center-vars .account-shell {
     display: block;
     grid-template-columns: 1fr;
   }
@@ -467,6 +437,7 @@
   .account-center-vars .account-main-inner,
   .account-center-vars .account-page-inner,
   .account-center-vars .account-content-inner {
+    width: 100%;
     max-width: none;
     margin: 0;
   }

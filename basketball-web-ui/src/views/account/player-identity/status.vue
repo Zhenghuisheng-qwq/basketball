@@ -154,7 +154,7 @@ function goPlatforms() {
 
     <AccountStepper :steps="pageConfig.steps" />
 
-    <div class="identity-review-grid">
+    <div class="identity-review-grid identity-card-grid">
       <AccountPanel :title="pageConfig.leftTitle">
         <div class="identity-review-profile">
           <div

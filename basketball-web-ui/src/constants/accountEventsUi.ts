@@ -13,8 +13,8 @@ export function getTabMeta(tab: string) {
 export function getBannerCopy(tab: string): { title: string; description: string } {
   if (tab === 'applications') {
     return {
-      title: '尚未正式获得参赛资格的报名记录',
-      description: '完成对应操作后进入正式参赛关系',
+      title: '已提交的报名申请记录',
+      description: '包含审核中、已通过、已驳回、已撤回与已取消等全部状态',
     }
   }
   if (tab === 'joined') {
@@ -31,7 +31,7 @@ export function getBannerCopy(tab: string): { title: string; description: string
 
 export function getFooterNote(tab: string): string {
   if (tab === 'applications') {
-    return '正式通过后记录自动移入「已参加赛事」；队员不能主动退出已确认组队关系。'
+    return '报名申请与正式参赛关系分别展示；审核通过后同一赛事可同时出现在「我的报名」与「已参加赛事」。'
   }
   if (tab === 'joined') {
     return '赛事队长权限只绑定具体赛事与赛事球队；历史赛事为只读。'

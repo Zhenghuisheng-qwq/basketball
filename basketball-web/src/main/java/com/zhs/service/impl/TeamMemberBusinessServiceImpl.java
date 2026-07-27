@@ -117,8 +117,10 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         captainPermissionService.requireTeamCaptain(memberId, teamPk);
 
         BasketTeamMember target = requireTeamMemberRecord(teamMemberPk, teamPk);
-        if (StringUtils.hasText(req.getJerseyNo())) {
-            target.setJerseyNo(req.getJerseyNo().trim());
+        if (req.getJerseyNo() != null) {
+            String normalizedJerseyNo = req.getJerseyNo().trim();
+            validateJerseyNo(target, normalizedJerseyNo, teamPk);
+            target.setJerseyNo(normalizedJerseyNo);
         }
         if (StringUtils.hasText(req.getRosterType())) {
             target.setRosterType(TeamRosterTypeEnum.fromCode(req.getRosterType()).getCode());
@@ -126,6 +128,26 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         target.setRemark(trimToNull(req.getRemark()));
         teamMemberDao.updateById(target);
         return toMemberItem(target, loadProfileMaps(Collections.singletonList(target)));
+    }
+
+    private void validateJerseyNo(BasketTeamMember target, String jerseyNo, Long teamPk) {
+        if (!StringUtils.hasText(jerseyNo)) {
+            throw new ServiceException("球衣号不能为空");
+        }
+        String normalized = jerseyNo.trim();
+        if (!normalized.matches("^\\d{1,3}$")) {
+            throw new ServiceException("球衣号格式不正确，请输入1-3位数字");
+        }
+        Long duplicateCount = teamMemberDao.selectCount(new LambdaQueryWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getTeamId, teamPk)
+                .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
+                .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
+                .eq(BasketTeamMember::getJerseyNo, normalized)
+                .ne(BasketTeamMember::getId, target.getId())
+                .eq(BasketTeamMember::getIsDelete, NOT_DELETED));
+        if (duplicateCount != null && duplicateCount > 0) {
+            throw new ServiceException("该球衣号已被队内其他成员使用");
+        }
     }
 
     @Override
@@ -144,7 +166,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
             throw new ServiceException("不能移除队长");
         }
         assertNotInActiveRegistration(target);
-        markMemberLeft(target, "被队长移除");
+        markMemberRemoved(target, "被队长移除");
         clearPlayerCurrentTeam(target.getPlayerId(), teamPk);
         teamMemberJoinHelper.recalculateCurrentMemberCount(teamPk);
         securityLogHelper.write(memberId, EVENT_TEAM_REMOVE, "移除球队成员",
@@ -271,6 +293,15 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         }
     }
 
+    private void markMemberRemoved(BasketTeamMember member, String reason) {
+        Date now = new Date();
+        member.setMembershipStatus(TeamMembershipStatusEnum.REMOVED.getCode());
+        member.setIsCurrent(0);
+        member.setLeaveTime(now);
+        member.setLeaveReason(reason);
+        teamMemberDao.updateById(member);
+    }
+
     private void markMemberLeft(BasketTeamMember member, String reason) {
         Date now = new Date();
         member.setMembershipStatus(TeamMembershipStatusEnum.LEFT.getCode());
@@ -322,6 +353,10 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         resp.setRosterType(member.getRosterType());
         resp.setJerseyNo(member.getJerseyNo());
         resp.setMembershipStatus(member.getMembershipStatus());
+        resp.setMembershipStatusText(resolveMembershipStatusText(member.getMembershipStatus(), member.getRosterType()));
+        if (StringUtils.hasText(member.getRosterType())) {
+            resp.setRosterTypeText(TeamRosterTypeEnum.fromCode(member.getRosterType()).getDescription());
+        }
         resp.setRemark(member.getRemark());
         resp.setJoinTime(member.getJoinTime());
         BasketPlayerProfile player = maps.playerMap().get(member.getPlayerId());
@@ -331,6 +366,10 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
             resp.setPositionCode(player.getPositionCode());
             resp.setPositionName(PlayerPositionSupport.resolveName(player.getPositionCode()));
             resp.setCertificationStatus(player.getCertificationStatus());
+            resp.setGameTerminal(player.getGameTerminal());
+            resp.setGameAccount(player.getGameAccount());
+            resp.setPlayerStatus(player.getPlayerStatus());
+            resp.setCurrentTeamId(toStringId(player.getCurrentTeamId()));
         }
         BasketMemberProfile memberProfile = maps.memberProfileMap().get(member.getMemberId());
         if (memberProfile != null) {
@@ -447,6 +486,22 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
             return null;
         }
         return value.trim();
+    }
+
+    private String resolveMembershipStatusText(Integer membershipStatus, String rosterType) {
+        if (membershipStatus == null) {
+            return null;
+        }
+        if (TeamMembershipStatusEnum.LEFT.getCode() == membershipStatus) {
+            return TeamMembershipStatusEnum.LEFT.getDescription();
+        }
+        if (TeamMembershipStatusEnum.REMOVED.getCode() == membershipStatus) {
+            return TeamMembershipStatusEnum.REMOVED.getDescription();
+        }
+        if (TeamMembershipStatusEnum.ACTIVE.getCode() == membershipStatus && StringUtils.hasText(rosterType)) {
+            return TeamRosterTypeEnum.fromCode(rosterType).getDescription();
+        }
+        return TeamMembershipStatusEnum.ACTIVE.getDescription();
     }
 
     private record ProfileMaps(Map<Long, BasketPlayerProfile> playerMap, Map<Long, BasketMemberProfile> memberProfileMap) {

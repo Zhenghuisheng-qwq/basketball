@@ -20,7 +20,6 @@ import { useTeamStore } from '@/stores/team'
 import {
   mapEventTeamSummaryToParticipating,
   mapOpenRegistrationToApplication,
-  mapOpenRegistrationStatus,
   mapOpenSeasonToAvailableEvent,
   mapTeamRegistrationToApplication,
   mapTeamSeasonToAvailableEvent,
@@ -166,22 +165,29 @@ async function loadAvailableEvents() {
   }
 }
 
+function dedupeApplications(apps: MyApplication[]): MyApplication[] {
+  const seen = new Set<string>()
+  return apps.filter((app) => {
+    const key = app.applicationId || `${app.applicationType}-${app.tournamentId}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 async function loadApplications() {
   loading.value = true
   loadError.value = ''
   try {
     const openRes = await getOpenRegistrationPage({ currentPage: 1, pageSize: 20 })
-    const openApps = (openRes.data?.records || [])
-      .filter((item) => mapOpenRegistrationStatus(item.registrationStatus) !== 'APPROVED')
-      .map(mapOpenRegistrationToApplication)
+    const openApps = (openRes.data?.records || []).map(mapOpenRegistrationToApplication)
     let teamApps: MyApplication[] = []
-    if (teamStore.myTeamSummary?.teamId) {
+    if (teamStore.myTeamSummary?.teamId && teamStore.isCaptain) {
       const teamRes = await getTeamRegistrationPage(teamStore.myTeamSummary.teamId, { currentPage: 1, pageSize: 20 })
       teamApps = (teamRes.data?.records || [])
-        .filter((item) => item.registrationStatus !== 3)
         .map((item) => mapTeamRegistrationToApplication(item, teamStore.isCaptain))
     }
-    myApplications.value = [...openApps, ...teamApps]
+    myApplications.value = dedupeApplications([...openApps, ...teamApps])
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
     myApplications.value = []
@@ -318,7 +324,7 @@ function handleParticipatingAction(event: ParticipatingEvent) {
       <AccountEmptyState
         v-if="!loading && !myApplications.length"
         message="暂无报名记录"
-        subtitle="完成个人或球队报名后，记录将显示在这里"
+        subtitle="队长提交赛事报名后，记录将显示在这里"
         large
       />
       <MyApplicationList

@@ -14,6 +14,12 @@ export interface TeamMemberItemDto {
   positionName?: string
   certificationStatus?: number
   avatarUrl?: string
+  gameTerminal?: string
+  gameAccount?: string
+  playerStatus?: number
+  currentTeamId?: string
+  membershipStatusText?: string
+  rosterTypeText?: string
   jerseyNo?: string
   membershipStatus?: number
   remark?: string

@@ -184,11 +184,15 @@ export function mapTeamRegistrationToApplication(
   isCaptain = true,
 ): MyApplication {
   const status = String(item.registrationStatus ?? '')
+  const isApproved = item.registrationStatus === 3
+  const isPending = item.registrationStatus === 2 || item.registrationStatus === 1
   let actionType: MyApplication['actionType'] = 'VIEW_APPLICATION_STATUS'
   let actionText = '查看状态'
   if (item.canEdit) {
     actionType = 'VIEW_TEAM_APPLICATION'
     actionText = '继续报名'
+  } else if (isApproved) {
+    actionText = '查看状态'
   }
   return {
     applicationId: item.registrationId,
@@ -199,19 +203,22 @@ export function mapTeamRegistrationToApplication(
     applicationTypeText: '球队报名',
     status,
     statusText: item.registrationStatusText || mapTeamRegistrationStatusText(item.registrationStatus),
-    statusHint: item.registrationStatus === 2 || item.registrationStatus === 1
+    statusHint: isPending
       ? '报名已提交，正在等待后台审核。'
-      : undefined,
+      : isApproved
+        ? '报名审核已通过，正式参赛关系请查看「已参加赛事」。'
+        : undefined,
     submitTime: item.submittedTime || item.createTime,
     actionText,
     actionType,
-    pending: item.registrationStatus === 2 || item.registrationStatus === 1,
+    pending: isPending,
     showAction: isCaptain,
   }
 }
 
 export function mapOpenRegistrationToApplication(item: OpenRegistrationItemDto): MyApplication {
   const status = mapOpenRegistrationStatus(item.registrationStatus)
+  const isApproved = status === 'APPROVED'
   return {
     applicationId: item.registrationId,
     tournamentId: item.seasonId || item.registrationId,
@@ -221,6 +228,7 @@ export function mapOpenRegistrationToApplication(item: OpenRegistrationItemDto):
     applicationTypeText: '个人报名',
     status,
     statusText: item.registrationStatusText || OPEN_APPLICATION_STATUS_LABELS[status],
+    statusHint: isApproved ? '报名审核已通过，正式参赛关系请查看「已参加赛事」。' : undefined,
     submitTime: item.submittedTime || item.createTime,
     actionText: status === 'REJECTED' ? '重新提交' : '查看状态',
     actionType: status === 'REJECTED' ? 'RESUBMIT' : 'VIEW_APPLICATION_STATUS',
