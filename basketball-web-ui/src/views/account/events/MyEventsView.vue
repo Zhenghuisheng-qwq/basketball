@@ -104,14 +104,18 @@ function registrationStatusText(status?: number): string {
 }
 
 function mapToParticipating(item: AccountTournamentItemDto): ParticipatingEvent {
-  const isCaptain = item.rosterRole?.toUpperCase() === 'CAPTAIN' || teamStore.isCaptain
-  const identityText = formatParticipationIdentityText(item.rosterRole, isCaptain)
+  const isCaptainRole = item.rosterRole?.toUpperCase() === 'CAPTAIN' || teamStore.canManageCurrentTeam
+  const identityText = formatParticipationIdentityText(item.rosterRole, isCaptainRole)
   const seasonKey = item.seasonId || item.tournamentId || item.registrationId
+  const platformLabel = item.platformName || item.platformCode
+  const platformDisplay = platformLabel
+    ? `${item.seasonName || item.tournamentName || '赛事'} / ${platformLabel} 组 / ${registrationStatusText(item.registrationStatus)}`
+    : item.seasonName || '-'
   return {
     relationId: item.registrationId,
     tournamentId: seasonKey,
     tournamentName: item.tournamentName || '未命名赛事',
-    platform: item.seasonName || '-',
+    platform: platformDisplay,
     participationType: 'TEAM',
     participationTypeText: item.teamName ? '球队参赛' : '个人参赛',
     identityType: identityText,
@@ -131,9 +135,9 @@ async function loadAvailableEvents() {
   try {
     const isVerified = accountStore.isVerifiedPlayer
     const teamId = teamStore.myTeamSummary?.teamId
-    const teamPromise = teamStore.hasTeam && teamStore.isCaptain && teamId
+    const teamPromise = teamStore.hasTeam && teamStore.canManageCurrentTeam && teamId
       ? getAvailableSeasonPage(teamId, { currentPage: 1, pageSize: 20 })
-      : Promise.resolve({ data: { records: [], emptyReason: teamStore.isCaptain ? '' : '只有队长可以代表球队报名赛事' } })
+      : Promise.resolve({ data: { records: [], emptyReason: teamStore.canManageCurrentTeam ? '' : '只有具备有效队长权限的用户可以代表球队报名赛事' } })
 
     const [openResult, teamResult] = await Promise.allSettled([
       getOpenAvailableSeasonPage({ currentPage: 1, pageSize: 20 }),
@@ -147,10 +151,10 @@ async function loadAvailableEvents() {
     let teamEvents: AvailableEvent[] = []
     if (teamResult.status === 'fulfilled') {
       teamEvents = (teamResult.value.data?.records || []).map((item) =>
-        mapTeamSeasonToAvailableEvent(item, Boolean(teamStore.isCaptain)))
+        mapTeamSeasonToAvailableEvent(item, Boolean(teamStore.canManageCurrentTeam)))
       availableEmptyReason.value = teamResult.value.data?.emptyReason || ''
-    } else if (teamStore.hasTeam && !teamStore.isCaptain) {
-      availableEmptyReason.value = '只有队长可以代表球队报名赛事'
+    } else if (teamStore.hasTeam && !teamStore.canManageCurrentTeam) {
+      availableEmptyReason.value = '只有具备有效队长权限的用户可以代表球队报名赛事'
     }
 
     availableEvents.value = [...openEvents, ...teamEvents]
@@ -182,10 +186,10 @@ async function loadApplications() {
     const openRes = await getOpenRegistrationPage({ currentPage: 1, pageSize: 20 })
     const openApps = (openRes.data?.records || []).map(mapOpenRegistrationToApplication)
     let teamApps: MyApplication[] = []
-    if (teamStore.myTeamSummary?.teamId && teamStore.isCaptain) {
+    if (teamStore.myTeamSummary?.teamId && teamStore.canManageCurrentTeam) {
       const teamRes = await getTeamRegistrationPage(teamStore.myTeamSummary.teamId, { currentPage: 1, pageSize: 20 })
       teamApps = (teamRes.data?.records || [])
-        .map((item) => mapTeamRegistrationToApplication(item, teamStore.isCaptain))
+        .map((item) => mapTeamRegistrationToApplication(item, teamStore.canManageCurrentTeam))
     }
     myApplications.value = dedupeApplications([...openApps, ...teamApps])
   } catch (error) {
@@ -225,14 +229,16 @@ async function loadActiveTab() {
     return
   }
   if (activeTab.value === 'applications') {
-    await teamStore.loadMyTeam().catch(() => undefined)
+    await teamStore.bootstrap().catch(() => undefined)
     await loadApplications()
     return
   }
+  await teamStore.loadQualification().catch(() => undefined)
   await loadJoinedTournaments()
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await teamStore.bootstrap().catch(() => undefined)
   void loadActiveTab()
 })
 

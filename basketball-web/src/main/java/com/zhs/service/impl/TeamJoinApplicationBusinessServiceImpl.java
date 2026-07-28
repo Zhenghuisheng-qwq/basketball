@@ -77,10 +77,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         Long memberId = UserContext.getRequiredUserId();
         BasketPlayerProfile profile = captainPermissionService.requireCertifiedPlayer(memberId);
         BasketTeam team = requireJoinableTeam(teamPk);
-        String platformCode = platformTeamMembershipSupport.resolveTeamPlatformCode(team);
-        captainPermissionService.assertEligibleToJoinTeam(memberId, platformCode);
-        platformTeamMembershipSupport.requireActivePlatformIdentity(memberId, platformCode);
-        assertTerminalMatchForApply(profile, team);
+        captainPermissionService.assertEligibleToJoinTeam(memberId, null);
         assertNoPendingApplication(teamPk, memberId);
 
         BasketTeamJoinApplication application = new BasketTeamJoinApplication();
@@ -206,11 +203,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         }
         application = joinApplicationDao.selectById(applicationPk);
         if (Boolean.TRUE.equals(approve)) {
-            BasketPlayerProfile applicantProfile = loadApplicantProfile(application.getApplicantPlayerId());
-            assertTerminalMatchForApprove(applicantProfile, team);
-            String platformCode = platformTeamMembershipSupport.resolveTeamPlatformCode(team);
-            captainPermissionService.assertEligibleToJoinTeam(application.getApplicantMemberId(), platformCode);
-            platformTeamMembershipSupport.requireActivePlatformIdentity(application.getApplicantMemberId(), platformCode);
+            captainPermissionService.assertEligibleToJoinTeam(application.getApplicantMemberId(), null);
             teamMemberJoinHelper.addMember(team, application.getApplicantMemberId(),
                     application.getApplicantPlayerId(), TeamJoinSourceEnum.APPLY);
             businessMessageService.sendSiteMessage(application.getApplicantMemberId(), "加入申请已通过",

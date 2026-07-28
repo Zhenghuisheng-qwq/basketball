@@ -1,124 +1,33 @@
 package com.zhs.basket.localdemo.support;
 
 
-
-
-
 import com.zhs.basket.constant.BasketMatchConstants;
-
 import com.zhs.basket.domain.BasketPlayerProfile;
-
-import com.zhs.basket.enums.MatchDataStatusEnum;
-
-import com.zhs.basket.enums.MatchPeriodTypeEnum;
-
-import com.zhs.basket.enums.MatchStatusEnum;
-
-import com.zhs.basket.enums.PlayerCertStatusEnum;
-
-import com.zhs.basket.enums.RegistrationStatusEnum;
-
-import com.zhs.basket.enums.RosterRoleEnum;
-
-import com.zhs.basket.enums.SeasonStatusEnum;
-
-import com.zhs.basket.enums.TeamAuditStatusEnum;
-
-import com.zhs.basket.enums.TeamMemberRoleEnum;
-
-import com.zhs.basket.enums.TournamentRoundStatusEnum;
-
-import com.zhs.basket.enums.TournamentStageStatusEnum;
-
-import com.zhs.basket.enums.TournamentStatusEnum;
-
+import com.zhs.basket.enums.*;
 import com.zhs.basket.localdemo.config.BasketLocalDemoDataProperties;
-
 import com.zhs.basket.localdemo.constant.BasketLocalDemoConstants;
-
-import com.zhs.basket.localdemo.dto.BasketLocalDemoSeedContextDto;
-
-import com.zhs.basket.localdemo.dto.DemoMatchDto;
-
-import com.zhs.basket.localdemo.dto.DemoMemberAccountRow;
-
-import com.zhs.basket.localdemo.dto.DemoPlayerDto;
-
-import com.zhs.basket.localdemo.dto.DemoTeamDto;
-
+import com.zhs.basket.localdemo.dto.*;
 import com.zhs.basket.localdemo.mapper.BasketLocalDemoDataMapper;
-
 import com.zhs.basket.localdemo.resp.BasketLocalDemoAvatarSyncResp;
-
 import com.zhs.basket.mapper.BasketPlayerProfileMapper;
-
-import com.zhs.basket.req.CaptainQualificationGrantReq;
-
-import com.zhs.basket.req.MatchLineupSaveReq;
-
-import com.zhs.basket.req.MatchPeriodScoreSaveReq;
-
-import com.zhs.basket.req.MatchPlayerStatSaveReq;
-
-import com.zhs.basket.req.MatchTeamStatSaveReq;
-
-import com.zhs.basket.req.PlayerCertApproveReq;
-
-import com.zhs.basket.req.RegistrationAuditApproveReq;
-
-import com.zhs.basket.req.TeamAuditApproveReq;
-
-import com.zhs.basket.service.IBasketCaptainQualificationService;
-
-import com.zhs.basket.service.IBasketDataSettlementService;
-
-import com.zhs.basket.service.IBasketMatchLineupService;
-
-import com.zhs.basket.service.IBasketMatchScheduleService;
-
-import com.zhs.basket.service.IBasketMatchScoreService;
-
-import com.zhs.basket.service.IBasketMatchStatService;
-
-import com.zhs.basket.service.IBasketPlayerCertService;
-
-import com.zhs.basket.service.IBasketRegistrationAuditService;
-
-import com.zhs.basket.service.IBasketTeamAuditService;
-
+import com.zhs.basket.req.*;
+import com.zhs.basket.service.*;
 import com.zhs.common.exception.ServiceException;
-
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-
-
-
-
 import java.time.Clock;
-
 import java.time.LocalDate;
-
 import java.time.ZoneId;
-
 import java.util.ArrayList;
-
 import java.util.Calendar;
-
 import java.util.Date;
-
 import java.util.List;
-
 import java.util.regex.Matcher;
-
 import java.util.regex.Pattern;
-
 import java.util.stream.Collectors;
-
-
-
 
 
 @Component
@@ -127,25 +36,19 @@ import java.util.stream.Collectors;
 public class LocalDemoSeedSupport {
 
 
-
-
-
     private static final String PLACEHOLDER_OBJECT_KEY = "LOCAL-DEMO-PLACEHOLDER";
 
     private static final Pattern DEMO_ACCOUNT_INDEX = Pattern.compile("LOCAL-DEMO-ACCOUNT-(\\d+)$");
 
     private static final String STANDING_RULE = """
-
+            
             WIN_POINTS=2
-
+            
             LOSS_POINTS=1
-
+            
             TIE_BREAK=STANDING_POINTS,POINT_DIFF,POINTS_FOR,WINS,TEAM_ID
-
+            
             """;
-
-
-
 
 
     private final Clock clock;
@@ -175,9 +78,6 @@ public class LocalDemoSeedSupport {
     private final IBasketMatchStatService matchStatService;
 
     private final IBasketDataSettlementService dataSettlementService;
-
-
-
 
 
     public LocalDemoSeedSupport(Clock clock, BasketLocalDemoDataProperties properties,
@@ -233,9 +133,6 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
     public void validatePasswordConfigured() {
 
         if (properties.getDefaultPassword() == null || properties.getDefaultPassword().isBlank()) {
@@ -247,9 +144,6 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
     public BasketLocalDemoSeedContextDto executeFullSeed() {
 
         validatePasswordConfigured();
@@ -257,9 +151,6 @@ public class LocalDemoSeedSupport {
         BasketLocalDemoSeedContextDto ctx = new BasketLocalDemoSeedContextDto();
 
         Date now = Date.from(clock.instant());
-
-
-
 
 
         ensurePlaceholderFile(ctx);
@@ -272,6 +163,8 @@ public class LocalDemoSeedSupport {
 
         createAndApprovePlayerCertifications(ctx, now);
 
+        createTournamentAndSeason(ctx, now);
+
         grantCaptainQualifications(ctx, now);
 
         createAndApproveTeams(ctx, now);
@@ -279,8 +172,6 @@ public class LocalDemoSeedSupport {
         assignTeamLogos(ctx);
 
         createTeamMembers(ctx, now);
-
-        createTournamentAndSeason(ctx, now);
 
         createAndApproveRegistrations(ctx, now);
 
@@ -299,18 +190,14 @@ public class LocalDemoSeedSupport {
         createHomeRecommendations(ctx, now);
 
 
-
-
-
         return ctx;
 
     }
 
 
-
-
-
-    /** 为已有演示账号批量补写球员头像，并补写球队 Logo，无需 reset + seed。 */
+    /**
+     * 为已有演示账号批量补写球员头像，并补写球队 Logo，无需 reset + seed。
+     */
 
     public BasketLocalDemoAvatarSyncResp syncDemoAvatars() {
 
@@ -347,9 +234,6 @@ public class LocalDemoSeedSupport {
         }
 
 
-
-
-
         BasketLocalDemoSeedContextDto ctx = new BasketLocalDemoSeedContextDto();
 
         ensurePlayerAvatarFiles(ctx);
@@ -359,9 +243,6 @@ public class LocalDemoSeedSupport {
         resp.setPlayerAvatarFileCount(ctx.getPlayerAvatarFileIds().size());
 
         resp.setTeamLogoFileCount(ctx.getTeamLogoFileIds().size());
-
-
-
 
 
         int updated = 0;
@@ -411,13 +292,9 @@ public class LocalDemoSeedSupport {
         }
 
 
-
-
-
         int teamLogoUpdated = assignTeamLogos(ctx);
 
         resp.setTeamLogoUpdatedCount(teamLogoUpdated);
-
 
 
         resp.setUpdatedCount(updated);
@@ -443,9 +320,6 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
     private int parseAccountIndex(String accountNo) {
 
         Matcher matcher = DEMO_ACCOUNT_INDEX.matcher(accountNo);
@@ -461,10 +335,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤1：创建占位文件，供认证材料与首页横幅引用 */
+    /**
+     * 步骤1：创建占位文件，供认证材料与首页横幅引用
+     */
 
     private void ensurePlaceholderFile(BasketLocalDemoSeedContextDto ctx) {
 
@@ -499,10 +372,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤1b：注册 player 目录默认球员头像，供演示会员 avatar_file_id 引用 */
+    /**
+     * 步骤1b：注册 player 目录默认球员头像，供演示会员 avatar_file_id 引用
+     */
 
     private void ensurePlayerAvatarFiles(BasketLocalDemoSeedContextDto ctx) {
 
@@ -553,8 +425,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-    /** 步骤1c：注册 head 目录球队 Logo，供演示球队 logo_file_id 引用 */
+    /**
+     * 步骤1c：注册 head 目录球队 Logo，供演示球队 logo_file_id 引用
+     */
 
     private void ensureTeamLogoFiles(BasketLocalDemoSeedContextDto ctx) {
 
@@ -605,7 +478,6 @@ public class LocalDemoSeedSupport {
     }
 
 
-
     private Long resolvePlayerAvatarFileId(BasketLocalDemoSeedContextDto ctx, int playerIndex) {
 
         int avatarNo = BasketLocalDemoConstants.resolvePlayerAvatarNo(playerIndex);
@@ -613,7 +485,6 @@ public class LocalDemoSeedSupport {
         return ctx.getPlayerAvatarFileIds().get(avatarNo);
 
     }
-
 
 
     private Long resolveTeamLogoFileId(BasketLocalDemoSeedContextDto ctx, int teamIndex) {
@@ -625,8 +496,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-    /** 按球队定义顺序写入 logo_file_id（head 资源）。 */
+    /**
+     * 按球队定义顺序写入 logo_file_id（head 资源）。
+     */
 
     private int assignTeamLogos(BasketLocalDemoSeedContextDto ctx) {
 
@@ -677,10 +549,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-/** 步骤2：批量创建 128 个官网账号及会员资料 */
+    /**
+     * 步骤2：批量创建 128 个官网账号及会员资料
+     */
 
     private void createAccounts(BasketLocalDemoSeedContextDto ctx) {
 
@@ -722,10 +593,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤3：创建球员认证申请并走 Admin 审核通过链路 */
+    /**
+     * 步骤3：创建球员认证申请并走 Admin 审核通过链路
+     */
 
     private void createAndApprovePlayerCertifications(BasketLocalDemoSeedContextDto ctx, Date now) {
 
@@ -761,9 +631,6 @@ public class LocalDemoSeedSupport {
             ctx.getCertApplicationIds().put(idx, applicationId);
 
 
-
-
-
             playerCertService.startReview(applicationId);
 
             PlayerCertApproveReq approveReq = new PlayerCertApproveReq();
@@ -773,9 +640,6 @@ public class LocalDemoSeedSupport {
             approveReq.setPositionCode(player.getPositionCode());
 
             playerCertService.approve(applicationId, approveReq);
-
-
-
 
 
             BasketPlayerProfile profile = profileMapper.selectByMemberId(memberId);
@@ -795,56 +659,34 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤4：为 16 支球队的队长授予有效队长资格 */
+    /**
+     * 步骤4：为 16 支球队的队长授予有效队长授权（需先创建赛事赛季）
+     */
 
     private void grantCaptainQualifications(BasketLocalDemoSeedContextDto ctx, Date now) {
-
+        if (ctx.getSeasonId() == null) {
+            throw new ServiceException("演示赛季未创建，无法授予队长授权");
+        }
         String marker = properties.getMarker();
-
-        Calendar cal = Calendar.getInstance();
-
-        cal.setTime(now);
-
-        cal.add(Calendar.YEAR, 1);
-
-        Date validTo = cal.getTime();
-
         for (DemoTeamDto team : LocalDemoSeedDefinitions.teams()) {
-
             String key = LocalDemoSeedDefinitions.teamKeyByNo().get(team.getTeamNo());
-
             DemoPlayerDto captain = findCaptain(key);
-
             Long playerId = ctx.getPlayerIds().get(captain.getGlobalIndex());
 
             CaptainQualificationGrantReq req = new CaptainQualificationGrantReq();
-
+            req.setSeasonId(ctx.getSeasonId());
             req.setPlayerId(playerId);
-
             req.setPaymentConfirmed(1);
-
             req.setPaymentReference(marker);
-
-            req.setValidFrom(now);
-
-            req.setValidTo(validTo);
-
             req.setGrantRemark(marker);
-
             captainQualificationService.grant(req);
-
         }
-
     }
 
 
-
-
-
-    /** 步骤5：创建球队并走 Admin 审核通过 */
+    /**
+     * 步骤5：创建球队并走 Admin 审核通过
+     */
 
     private void createAndApproveTeams(BasketLocalDemoSeedContextDto ctx, Date now) {
 
@@ -859,9 +701,6 @@ public class LocalDemoSeedSupport {
             Long captainMemberId = ctx.getAccountIds().get(captain.getGlobalIndex());
 
             Long captainPlayerId = ctx.getPlayerIds().get(captain.getGlobalIndex());
-
-
-
 
 
             Long teamId = demoMapper.selectIdByTeamNo(team.getTeamNo());
@@ -887,9 +726,6 @@ public class LocalDemoSeedSupport {
             ctx.getTeamIds().put(key, teamId);
 
 
-
-
-
             teamAuditService.startReview(teamId);
 
             TeamAuditApproveReq approveReq = new TeamAuditApproveReq();
@@ -905,10 +741,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤6：邀请并入队其余 7 名球员，形成每队 8 人 */
+    /**
+     * 步骤6：邀请并入队其余 7 名球员，形成每队 8 人
+     */
 
     private void createTeamMembers(BasketLocalDemoSeedContextDto ctx, Date now) {
 
@@ -923,9 +758,6 @@ public class LocalDemoSeedSupport {
         Date expireTime = expire.getTime();
 
 
-
-
-
         for (DemoTeamDto team : LocalDemoSeedDefinitions.teams()) {
 
             String key = LocalDemoSeedDefinitions.teamKeyByNo().get(team.getTeamNo());
@@ -935,9 +767,6 @@ public class LocalDemoSeedSupport {
             DemoPlayerDto captain = findCaptain(key);
 
             Long captainMemberId = ctx.getAccountIds().get(captain.getGlobalIndex());
-
-
-
 
 
             List<DemoPlayerDto> members = LocalDemoSeedDefinitions.players().stream()
@@ -951,9 +780,6 @@ public class LocalDemoSeedSupport {
                 Long playerId = ctx.getPlayerIds().get(member.getGlobalIndex());
 
                 String membershipNo = "LOCAL-DEMO-MEM-" + team.getShortName() + "-" + member.getJerseyNo();
-
-
-
 
 
                 String invitationNo = "LOCAL-DEMO-INV-" + team.getShortName() + "-" + member.getJerseyNo();
@@ -987,10 +813,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤7：创建演示赛事、赛季与积分榜规则 */
+    /**
+     * 步骤7：创建演示赛事、赛季与积分榜规则
+     */
 
     private void createTournamentAndSeason(BasketLocalDemoSeedContextDto ctx, Date now) {
 
@@ -1003,9 +828,6 @@ public class LocalDemoSeedSupport {
         Date seasonStart = Date.from(today.minusDays(6).atStartOfDay(ZoneId.systemDefault()).toInstant());
 
         Date seasonEnd = Date.from(today.plusDays(60).atStartOfDay(ZoneId.systemDefault()).toInstant());
-
-
-
 
 
         Long tournamentId = demoMapper.selectIdByTournamentNo(BasketLocalDemoConstants.TOURNAMENT_NO);
@@ -1023,9 +845,6 @@ public class LocalDemoSeedSupport {
         }
 
         ctx.setTournamentId(tournamentId);
-
-
-
 
 
         Long seasonId = demoMapper.selectIdBySeasonNo(BasketLocalDemoConstants.SEASON_NO);
@@ -1051,10 +870,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤8：16 支球队提交报名并审核通过 */
+    /**
+     * 步骤8：16 支球队提交报名并审核通过
+     */
 
     private void createAndApproveRegistrations(BasketLocalDemoSeedContextDto ctx, Date now) {
 
@@ -1083,9 +901,6 @@ public class LocalDemoSeedSupport {
                         RegistrationStatusEnum.REVIEWING.getCode(), 8, marker, now);
 
                 registrationId = demoMapper.selectIdByRegistrationNo(registrationNo);
-
-
-
 
 
                 List<DemoPlayerDto> roster = LocalDemoSeedDefinitions.players().stream()
@@ -1123,10 +938,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤9：创建阶段、轮次、四个小组及球队分组关系 */
+    /**
+     * 步骤9：创建阶段、轮次、四个小组及球队分组关系
+     */
 
     private void createStageRoundsAndGroup(BasketLocalDemoSeedContextDto ctx, Date now) {
 
@@ -1135,9 +949,6 @@ public class LocalDemoSeedSupport {
         Date stageStart = Date.from(today.minusDays(5).atStartOfDay(ZoneId.systemDefault()).toInstant());
 
         Date stageEnd = Date.from(today.plusDays(30).atStartOfDay(ZoneId.systemDefault()).toInstant());
-
-
-
 
 
         Long stageId = demoMapper.selectIdByStageNo(BasketLocalDemoConstants.STAGE_NO);
@@ -1157,9 +968,6 @@ public class LocalDemoSeedSupport {
         ctx.setStageId(stageId);
 
         demoMapper.updateSeasonCurrentStage(ctx.getSeasonId(), stageId);
-
-
-
 
 
         for (int i = 1; i <= BasketLocalDemoConstants.ROUND_COUNT; i++) {
@@ -1183,9 +991,6 @@ public class LocalDemoSeedSupport {
         }
 
 
-
-
-
         for (String groupKey : LocalDemoSeedDefinitions.GROUP_KEYS) {
 
             String groupCode = BasketLocalDemoConstants.groupCode(groupKey);
@@ -1203,9 +1008,6 @@ public class LocalDemoSeedSupport {
             }
 
             ctx.getGroupIds().put(groupKey, groupId);
-
-
-
 
 
             int seed = 1;
@@ -1231,10 +1033,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤10：创建 24 场比赛（16 场已确认 + 8 场未来赛程） */
+    /**
+     * 步骤10：创建 24 场比赛（16 场已确认 + 8 场未来赛程）
+     */
 
     private void createMatches(BasketLocalDemoSeedContextDto ctx) {
 
@@ -1281,10 +1082,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤11：为全部比赛生成出场名单 */
+    /**
+     * 步骤11：为全部比赛生成出场名单
+     */
 
     private void createMatchLineups(BasketLocalDemoSeedContextDto ctx) {
 
@@ -1299,9 +1099,6 @@ public class LocalDemoSeedSupport {
         }
 
     }
-
-
-
 
 
     private void saveTeamLineup(Long matchId, BasketLocalDemoSeedContextDto ctx, String teamKey) {
@@ -1351,10 +1148,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤12：为 16 场已结束比赛录入比分、技术统计并确认结果 */
+    /**
+     * 步骤12：为 16 场已结束比赛录入比分、技术统计并确认结果
+     */
 
     private void createConfirmedMatchData(BasketLocalDemoSeedContextDto ctx) {
 
@@ -1369,13 +1165,7 @@ public class LocalDemoSeedSupport {
             Long matchId = ctx.getMatchIds().get(match.getMatchIndex());
 
 
-
-
-
             matchScheduleService.start(matchId);
-
-
-
 
 
             MatchPeriodScoreSaveReq periodReq = new MatchPeriodScoreSaveReq();
@@ -1409,9 +1199,6 @@ public class LocalDemoSeedSupport {
             matchScoreService.submitScore(matchId);
 
 
-
-
-
             saveMatchStats(matchId, ctx, match);
 
             matchStatService.submitPlayerStats(matchId);
@@ -1423,9 +1210,6 @@ public class LocalDemoSeedSupport {
         }
 
     }
-
-
-
 
 
     private void saveMatchStats(Long matchId, BasketLocalDemoSeedContextDto ctx, DemoMatchDto match) {
@@ -1443,9 +1227,6 @@ public class LocalDemoSeedSupport {
         matchStatService.savePlayerStats(matchId, playerReq);
 
 
-
-
-
         MatchTeamStatSaveReq teamReq = new MatchTeamStatSaveReq();
 
         List<MatchTeamStatSaveReq.TeamStatItem> teamStats = new ArrayList<>();
@@ -1459,9 +1240,6 @@ public class LocalDemoSeedSupport {
         matchStatService.saveTeamStats(matchId, teamReq);
 
     }
-
-
-
 
 
     private List<MatchPlayerStatSaveReq.PlayerStatItem> buildSidePlayerStats(BasketLocalDemoSeedContextDto ctx,
@@ -1485,9 +1263,6 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
     private List<MatchTeamStatSaveReq.TeamStatItem> buildSideTeamStats(BasketLocalDemoSeedContextDto ctx,
 
                                                                        String teamKey, int teamScore, String matchNo) {
@@ -1501,10 +1276,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤13：调用真实数据结算服务生成积分榜、赛季统计与排行榜 */
+    /**
+     * 步骤13：调用真实数据结算服务生成积分榜、赛季统计与排行榜
+     */
 
     private void rebuildSeasonStatistics(BasketLocalDemoSeedContextDto ctx) {
 
@@ -1513,10 +1287,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤14：创建 3 条已发布公告 */
+    /**
+     * 步骤14：创建 3 条已发布公告
+     */
 
     private void createAnnouncements(BasketLocalDemoSeedContextDto ctx, Date now) {
 
@@ -1549,9 +1322,6 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
     private void insertAnnouncement(int index, String title, String summary, String content,
 
                                     LocalDate publishDay, int top, BasketLocalDemoSeedContextDto ctx) {
@@ -1577,10 +1347,9 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
-    /** 步骤15：创建 3 条首页运营推荐横幅 */
+    /**
+     * 步骤15：创建 3 条首页运营推荐横幅
+     */
 
     private void createHomeRecommendations(BasketLocalDemoSeedContextDto ctx, Date now) {
 
@@ -1603,9 +1372,6 @@ public class LocalDemoSeedSupport {
                 "ANNOUNCEMENT", String.valueOf(ann2), 30, start, ctx);
 
     }
-
-
-
 
 
     private void insertBanner(int index, String title, String subtitle, String targetType, String targetValue,
@@ -1631,9 +1397,6 @@ public class LocalDemoSeedSupport {
     }
 
 
-
-
-
     private DemoPlayerDto findCaptain(String teamKey) {
 
         return LocalDemoSeedDefinitions.players().stream()
@@ -1645,9 +1408,6 @@ public class LocalDemoSeedSupport {
                 .orElseThrow(() -> new ServiceException("缺少队长定义：" + teamKey));
 
     }
-
-
-
 
 
     private long stableSeed(String matchNo, int side) {

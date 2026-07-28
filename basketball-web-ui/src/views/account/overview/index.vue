@@ -5,23 +5,26 @@ import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
+import CaptainGrantPanel from '@/components/account/team/CaptainGrantPanel.vue'
 import { useAccountStore } from '@/stores/account'
+import { useTeamStore } from '@/stores/team'
 import { useNotificationCenterStore } from '@/stores/notificationCenter'
 import { formatDateTime } from '@/utils/formatDate'
 import { resolvePlayerIdentityRoute } from '@/utils/playerIdentityNavigate'
 
 const router = useRouter()
 const accountStore = useAccountStore()
+const teamStore = useTeamStore()
 const notificationStore = useNotificationCenterStore()
 
 onMounted(async () => {
+  const tasks: Promise<unknown>[] = []
   if (!accountStore.currentAccount && !accountStore.overviewLoading) {
-    try {
-      await accountStore.loadOverview()
-    } catch {
-      // error shown in template
-    }
+    tasks.push(accountStore.loadOverview().catch(() => undefined))
   }
+  tasks.push(teamStore.loadQualification().catch(() => undefined))
+  tasks.push(teamStore.loadMyTeam().catch(() => undefined))
+  await Promise.all(tasks)
 })
 
 const account = computed(() => accountStore.currentAccount)
@@ -55,11 +58,20 @@ const playerIdText = computed(() =>
   isVerified.value && account.value?.playerNo ? account.value.playerNo : '尚未生成',
 )
 
-const accountStatusText = computed(() => {
-  const status = account.value?.accountRole
-  if (status === 'CAPTAIN') return '队长账号'
-  if (status === 'PLAYER') return '正常'
-  return '正常'
+const accountStatusText = computed(() => '正常')
+
+const captainGrantSummary = computed(() => {
+  const grant = teamStore.captainQualification
+  if (!grant?.hasQualification) return '暂无队长权限'
+  if (grant.grantRevoked) return '队长权限已收回'
+  if (grant.runtimeValid) return grant.teamName ? `有效 · ${grant.teamName}` : '有效 · 未绑定球队'
+  return grant.invalidReason || '队长权限无效'
+})
+
+const teamSummaryText = computed(() => {
+  if (teamStore.myTeamSummary?.teamName) return teamStore.myTeamSummary.teamName
+  if (teamStore.hasTeam) return '已加入球队'
+  return '未加入球队'
 })
 
 const emailStatusText = computed(() =>
@@ -111,6 +123,36 @@ async function retryLoad() {
       />
 
       <div class="account-overview-grid account-grid-2">
+        <CaptainGrantPanel
+          :qualification="teamStore.captainQualification"
+          :loading="teamStore.qualificationLoading"
+        />
+
+        <AccountPanel title="球队与赛事">
+          <div class="account-info-list">
+            <div class="account-info-row">
+              <span class="account-info-row__label">当前球队</span>
+              <span class="account-info-row__value">{{ teamSummaryText }}</span>
+            </div>
+            <div class="account-info-row">
+              <span class="account-info-row__label">队长权限</span>
+              <span class="account-info-row__value">{{ captainGrantSummary }}</span>
+            </div>
+            <div class="account-info-row">
+              <span class="account-info-row__label">已参加赛事</span>
+              <span class="account-info-row__value">{{ joinedCount }}</span>
+            </div>
+          </div>
+          <div class="account-panel__action account-panel__action--split">
+            <button type="button" class="account-btn-secondary" @click="go('/account/team')">
+              我的球队
+            </button>
+            <button type="button" class="account-btn-secondary" @click="go('/account/my-events')">
+              我的赛事
+            </button>
+          </div>
+        </AccountPanel>
+
         <AccountPanel title="账号与身份">
           <div class="account-info-list">
             <div class="account-info-row">
@@ -138,26 +180,6 @@ async function retryLoad() {
           <div class="account-panel__action">
             <button type="button" class="account-btn-secondary" @click="goPlayerIdentity">
               查看球员身份
-            </button>
-          </div>
-        </AccountPanel>
-
-        <AccountPanel title="当前赛事">
-          <div class="account-info-list">
-            <div class="account-info-row">
-              <span class="account-info-row__label">已参加赛事</span>
-              <span class="account-info-row__value">{{ joinedCount }}</span>
-            </div>
-          </div>
-          <p class="account-view__desc">
-            {{ joinedCount ? `已参加 ${joinedCount} 场赛事` : '暂无已参加赛事' }}
-          </p>
-          <p class="account-view__hint">
-            完成球员认证后，可在“我的赛事”查看符合资格的赛事
-          </p>
-          <div class="account-panel__action">
-            <button type="button" class="account-btn-secondary" @click="go('/account/my-tournaments')">
-              查看我的赛事
             </button>
           </div>
         </AccountPanel>
@@ -236,5 +258,11 @@ async function retryLoad() {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.account-panel__action--split {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 </style>

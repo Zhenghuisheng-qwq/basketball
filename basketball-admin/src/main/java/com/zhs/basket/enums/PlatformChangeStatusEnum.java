@@ -8,7 +8,7 @@ public enum PlatformChangeStatusEnum {
     REJECTED(2, "已驳回"),
     WITHDRAWN(3, "已撤回");
 
-    private final int code;
+    private final Integer code;
     private final String description;
 
     PlatformChangeStatusEnum(int code, String description) {
@@ -16,7 +16,7 @@ public enum PlatformChangeStatusEnum {
         this.description = description;
     }
 
-    public int getCode() {
+    public Integer getCode() {
         return code;
     }
 
@@ -29,7 +29,7 @@ public enum PlatformChangeStatusEnum {
             return PENDING;
         }
         for (PlatformChangeStatusEnum value : values()) {
-            if (value.code == code) {
+            if (value.code.equals(code)) {
                 return value;
             }
         }

@@ -48,6 +48,9 @@ export interface CandidatePlayerItemDto {
   positionCode?: string
   positionName?: string
   certificationStatus?: number
+  certificationStatusText?: string
+  currentTeamStatusText?: string
+  platformAccountSummary?: string
 }
 
 export interface TeamMemberUpdateReq {

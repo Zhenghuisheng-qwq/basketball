@@ -1,0 +1,16 @@
+export interface InheritableTeamSummaryDto {
+  teamId: string
+  teamNo?: string
+  teamName?: string
+  shortName?: string
+  logoUrl?: string
+  auditStatus?: number
+  auditStatusText?: string
+  currentMemberCount?: number
+  canInherit?: boolean
+  cannotInheritReason?: string
+}
+
+export interface CaptainGrantBindTeamReq {
+  teamId: string
+}

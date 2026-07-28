@@ -47,6 +47,9 @@ public class BasketTournamentRegistration implements Serializable {
     @ApiModelProperty(value = "报名球队主键")
     private Long teamId;
 
+    @ApiModelProperty(value = "报名平台 PC/PS/XBOX")
+    private String platformCode;
+
 
     @JsonSerialize(using = ToStringSerializer.class)
     @ApiModelProperty(value = "报名队长会员主键")

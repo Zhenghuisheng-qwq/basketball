@@ -198,7 +198,7 @@ export function mapTeamRegistrationToApplication(
     applicationId: item.registrationId,
     tournamentId: item.seasonId || item.registrationId,
     tournamentName: item.tournamentName || item.seasonName || '球队报名',
-    platform: item.seasonName || '-',
+    platform: item.platformName || item.platformCode || '-',
     applicationType: 'TEAM',
     applicationTypeText: '球队报名',
     status,
@@ -213,6 +213,11 @@ export function mapTeamRegistrationToApplication(
     actionType,
     pending: isPending,
     showAction: isCaptain,
+    platformGroupLabel: [
+      item.tournamentName || item.seasonName,
+      item.platformName || item.platformCode ? `${item.platformName || item.platformCode} 组` : null,
+      item.registrationStatusText || mapTeamRegistrationStatusText(item.registrationStatus),
+    ].filter(Boolean).join(' / '),
   }
 }
 

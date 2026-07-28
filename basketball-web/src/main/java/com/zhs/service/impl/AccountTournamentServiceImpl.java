@@ -21,6 +21,7 @@ import com.zhs.model.BasketTournamentRegistrationPlayer;
 import com.zhs.model.BasketTournamentSeason;
 import com.zhs.response.account.AccountTournamentItemResp;
 import com.zhs.service.IAccountTournamentService;
+import com.zhs.support.EventPlatformSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -55,6 +56,8 @@ public class AccountTournamentServiceImpl implements IAccountTournamentService {
     private BasketTeamDao teamDao;
     @Resource
     private BasketFileAssetDao fileAssetDao;
+    @Resource
+    private EventPlatformSupport eventPlatformSupport;
 
     @Override
     public IPage<AccountTournamentItemResp> pageTournaments(Integer currentPage, Integer pageSize,
@@ -262,6 +265,8 @@ public class AccountTournamentServiceImpl implements IAccountTournamentService {
             resp.setRegistrationNo(registration.getRegistrationNo());
             resp.setRegistrationStatus(registration.getRegistrationStatus());
             resp.setSubmittedTime(registration.getSubmittedTime());
+            resp.setPlatformCode(registration.getPlatformCode());
+            resp.setPlatformName(eventPlatformSupport.resolvePlatformName(registration.getPlatformCode()));
         }
 
         BasketTournamentSeason season = context.seasonMap().get(roster.getSeasonId());

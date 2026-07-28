@@ -1,6 +1,8 @@
 import request from '@/utils/request'
 import type {
   AjaxResult,
+  CaptainGrantSeasonOption,
+  CaptainQualificationBindTeamReq,
   CaptainQualificationDetail,
   CaptainQualificationGrantReq,
   CaptainQualificationListItem,
@@ -10,6 +12,13 @@ import type {
   EligibleCaptainListResult,
   TableDataInfo
 } from '@/types'
+
+export function listGrantSeasonOptions(): Promise<AjaxResult<CaptainGrantSeasonOption[]>> {
+  return request({
+    url: '/basket/captainQualification/grant-season-options',
+    method: 'get'
+  })
+}
 
 export function listEligibleCaptains(): Promise<EligibleCaptainListResult> {
   return request({
@@ -52,6 +61,14 @@ export function updateCaptainQualification(qualificationId: number, data: Captai
 export function revokeCaptainQualification(qualificationId: number, data: CaptainQualificationRevokeReq): Promise<AjaxResult> {
   return request({
     url: `/basket/captainQualification/${qualificationId}/revoke`,
+    method: 'post',
+    data
+  })
+}
+
+export function bindCaptainQualificationTeam(qualificationId: number, data: CaptainQualificationBindTeamReq): Promise<AjaxResult> {
+  return request({
+    url: `/basket/captainQualification/${qualificationId}/bind-team`,
     method: 'post',
     data
   })

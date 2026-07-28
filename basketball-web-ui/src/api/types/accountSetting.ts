@@ -3,7 +3,6 @@ export interface PrivacySettingDto {
   allowTeamInvite?: number
   showTeamHistory?: number
   showMatchData?: number
-  showOnlineStatus?: number
 }
 
 export interface NotificationSettingDto {
@@ -12,6 +11,4 @@ export interface NotificationSettingDto {
   tournamentNotice?: number
   teamNotice?: number
   announcementNotice?: number
-  emailNotice?: number
-  smsNotice?: number
 }

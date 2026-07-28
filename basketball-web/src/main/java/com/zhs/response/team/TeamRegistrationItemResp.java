@@ -28,6 +28,12 @@ public class TeamRegistrationItemResp implements Serializable {
     @ApiModelProperty("赛事名称")
     private String tournamentName;
 
+    @ApiModelProperty("报名平台代码")
+    private String platformCode;
+
+    @ApiModelProperty("报名平台展示名称")
+    private String platformName;
+
     @ApiModelProperty("报名状态")
     private Integer registrationStatus;
 

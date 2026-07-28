@@ -56,6 +56,7 @@ export interface MyApplication {
   actionType: ApplicationActionType
   pending?: boolean
   showAction?: boolean
+  platformGroupLabel?: string
 }
 
 export type ParticipatingActionType =

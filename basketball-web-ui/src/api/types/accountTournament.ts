@@ -5,6 +5,8 @@ export interface AccountTournamentItemDto {
   tournamentName: string
   seasonId?: string
   seasonName?: string
+  platformCode?: string
+  platformName?: string
   teamId?: string
   teamName?: string
   teamLogoUrl?: string

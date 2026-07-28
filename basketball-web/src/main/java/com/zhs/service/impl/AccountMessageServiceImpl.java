@@ -2,7 +2,6 @@ package com.zhs.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.common.UserContext;
 import com.zhs.dao.BasketMessageReceiverDao;
@@ -30,6 +29,7 @@ import com.zhs.model.BasketTournament;
 import com.zhs.model.BasketTournamentRegistration;
 import com.zhs.model.BasketTournamentSeason;
 import com.zhs.response.account.MessageItemResp;
+import com.zhs.response.account.MessagePageResp;
 import com.zhs.response.account.MessageRegistrationRemindInfoResp;
 import com.zhs.response.account.MessageTeamInviteInfoResp;
 import com.zhs.service.IAccountMessageService;
@@ -84,7 +84,7 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
     private PlatformTeamMembershipSupport platformTeamMembershipSupport;
 
     @Override
-    public IPage<MessageItemResp> pageMessages(Integer currentPage, Integer pageSize, Integer readStatus) {
+    public MessagePageResp pageMessages(Integer currentPage, Integer pageSize, Integer readStatus) {
         Long memberId = UserContext.getRequiredUserId();
         Page<BasketMessageReceiver> page = new Page<>(normalizePage(currentPage), normalizeSize(pageSize));
 
@@ -95,17 +95,27 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
         wrapper.orderByDesc(BasketMessageReceiver::getSentTime)
                 .orderByDesc(BasketMessageReceiver::getId);
 
-        IPage<BasketMessageReceiver> receiverPage = messageReceiverDao.selectPage(page, wrapper);
+        Page<BasketMessageReceiver> receiverPage = messageReceiverDao.selectPage(page, wrapper);
         Map<Long, BasketMessageTask> taskMap = loadTaskMap(receiverPage.getRecords());
 
-        Page<MessageItemResp> respPage = new Page<>(receiverPage.getCurrent(), receiverPage.getSize(), receiverPage.getTotal());
+        MessagePageResp respPage = new MessagePageResp(
+                receiverPage.getCurrent(), receiverPage.getSize(), receiverPage.getTotal());
         respPage.setRecords(buildMessageItems(receiverPage.getRecords(), taskMap));
+        respPage.setAllCount(countAll(memberId));
+        respPage.setUnreadCount(countUnread(memberId));
         return respPage;
     }
 
     @Override
     public long countUnread() {
-        Long memberId = UserContext.getRequiredUserId();
+        return countUnread(UserContext.getRequiredUserId());
+    }
+
+    private long countAll(Long memberId) {
+        return messageReceiverDao.selectCount(baseReceiverWrapper(memberId));
+    }
+
+    private long countUnread(Long memberId) {
         return messageReceiverDao.selectCount(baseReceiverWrapper(memberId)
                 .eq(BasketMessageReceiver::getReadStatus, MessageReadStatusEnum.UNREAD.getCode()));
     }
@@ -296,29 +306,7 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
         boolean canRespond = Objects.equals(TeamInvitationStatusEnum.PENDING.getCode(), displayStatus)
                 && (invitation.getExpireTime() == null || invitation.getExpireTime().after(now));
         info.setCanRespond(canRespond);
-        String joinIneligibilityReason = team == null
-                ? null
-                : captainPermissionService.resolveJoinIneligibilityReason(memberId,
-                platformTeamMembershipSupport.resolveTeamPlatformCode(team));
-        PlatformIdentityStatusEnum identityStatus = team == null ? null
-                : platformTeamMembershipSupport.resolvePlatformIdentityStatus(memberId,
-                platformTeamMembershipSupport.resolveTeamPlatformCode(team));
-        if (identityStatus != null && identityStatus != PlatformIdentityStatusEnum.ACTIVE) {
-            joinIneligibilityReason = identityStatus == PlatformIdentityStatusEnum.PENDING
-                    ? "该平台游戏 ID 审核中"
-                    : "请先绑定并通过该平台游戏 ID 审核";
-        }
-        BasketPlayerProfile playerProfile = playerProfileDao.selectOne(new LambdaQueryWrapper<BasketPlayerProfile>()
-                .eq(BasketPlayerProfile::getMemberId, memberId)
-                .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)
-                .last("limit 1"));
-        String terminalMismatchReason = playerProfile == null || team == null
-                ? null
-                : GameTerminalSupport.buildAcceptMismatchMessage(
-                        playerProfile.getGameTerminal(), team.getGameTerminal());
-        if (terminalMismatchReason != null) {
-            joinIneligibilityReason = terminalMismatchReason;
-        }
+        String joinIneligibilityReason = captainPermissionService.resolveJoinIneligibilityReason(memberId);
         info.setCanAccept(canRespond && joinIneligibilityReason == null);
         info.setCannotAcceptReason(canRespond ? joinIneligibilityReason : null);
         return info;
@@ -433,6 +421,9 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
     }
 
     private long normalizeSize(Integer pageSize) {
-        return pageSize == null || pageSize < 1 ? 10L : pageSize;
+        if (pageSize == null || pageSize < 1) {
+            return 10L;
+        }
+        return Math.min(pageSize, 50L);
     }
 }

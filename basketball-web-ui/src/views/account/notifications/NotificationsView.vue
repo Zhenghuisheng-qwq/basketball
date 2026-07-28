@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onActivated, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
@@ -15,35 +15,35 @@ const PAGE_SIZE = 10
 const router = useRouter()
 const notificationStore = useNotificationCenterStore()
 
-const activeTab = ref<NotificationTabKey>('ALL')
-const page = ref(1)
-
 onMounted(async () => {
-  await loadPage()
+  await notificationStore.loadPage('ALL')
 })
 
-async function loadPage() {
-  const readStatus = activeTab.value === 'UNREAD' ? 0 : undefined
-  await notificationStore.refresh(page.value, PAGE_SIZE, readStatus)
-}
-
-const filteredItems = computed(() => notificationStore.items)
-
-const totalPages = computed(() => Math.max(1, Math.ceil(notificationStore.total / PAGE_SIZE)))
-
-const pagedItems = computed(() => filteredItems.value)
+onActivated(async () => {
+  if (!notificationStore.loading) {
+    await notificationStore.refresh(
+      notificationStore.pageNum,
+      PAGE_SIZE,
+      notificationStore.activeTab === 'UNREAD' ? 0 : undefined,
+      notificationStore.activeTab,
+    )
+  }
+})
 
 const unreadText = computed(() => `${notificationStore.unreadCount} 条未读`)
 
+const totalPages = computed(() => Math.max(1, Math.ceil(notificationStore.total / PAGE_SIZE)))
+
+const emptyMessage = computed(() =>
+  notificationStore.activeTab === 'UNREAD' ? '暂无未读通知' : '暂无通知',
+)
+
 async function setTab(tab: NotificationTabKey) {
-  activeTab.value = tab
-  page.value = 1
-  await loadPage()
+  await notificationStore.loadPage(tab)
 }
 
 async function handleMarkAllRead() {
   await notificationStore.markAllAsRead()
-  await loadPage()
 }
 
 function handleViewDetail(id: string) {
@@ -51,8 +51,7 @@ function handleViewDetail(id: string) {
 }
 
 async function handlePageChange(nextPage: number) {
-  page.value = nextPage
-  await loadPage()
+  await notificationStore.changePage(nextPage)
 }
 </script>
 
@@ -92,16 +91,19 @@ async function handlePageChange(nextPage: number) {
 
       <template v-else>
         <NotificationTabs
-          :active-tab="activeTab"
-          :total="notificationStore.total"
+          :active-tab="notificationStore.activeTab"
+          :total="notificationStore.allCount"
           :unread="notificationStore.unreadCount"
           @change="setTab"
         />
 
         <NotificationList
-          :items="pagedItems"
-          :page="page"
+          :items="notificationStore.items"
+          :page="notificationStore.pageNum"
+          :total="notificationStore.total"
+          :page-size="PAGE_SIZE"
           :total-pages="totalPages"
+          :empty-message="emptyMessage"
           @view="handleViewDetail"
           @update:page="handlePageChange"
         />
@@ -116,6 +118,11 @@ async function handlePageChange(nextPage: number) {
 .account-view--notifications {
   width: 100%;
   min-width: 0;
+
+  :deep(.account-panel__body) {
+    overflow: visible;
+    max-height: none;
+  }
 }
 
 .notifications-loading {

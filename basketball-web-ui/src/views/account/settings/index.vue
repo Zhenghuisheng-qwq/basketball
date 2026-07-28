@@ -65,7 +65,6 @@ const privacyForm = reactive<PrivacySettingDto>({
   allowTeamInvite: 1,
   showTeamHistory: 1,
   showMatchData: 1,
-  showOnlineStatus: 0,
 })
 
 const notificationForm = reactive<NotificationSettingDto>({
@@ -74,8 +73,6 @@ const notificationForm = reactive<NotificationSettingDto>({
   tournamentNotice: 1,
   teamNotice: 1,
   announcementNotice: 1,
-  emailNotice: 1,
-  smsNotice: 0,
 })
 
 watch(
@@ -278,7 +275,6 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
             ['allowTeamInvite', '允许球队邀请'],
             ['showTeamHistory', '展示球队历史'],
             ['showMatchData', '展示比赛数据'],
-            ['showOnlineStatus', '展示在线状态'],
           ]" :key="item[0]" class="settings-toggle">
             <span>{{ item[1] }}</span>
             <input
@@ -303,8 +299,6 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
             ['tournamentNotice', '赛事通知'],
             ['teamNotice', '球队通知'],
             ['announcementNotice', '公告通知'],
-            ['emailNotice', '邮件通知'],
-            ['smsNotice', '短信通知'],
           ]" :key="item[0]" class="settings-toggle">
             <span>{{ item[1] }}</span>
             <input

@@ -1,7 +1,7 @@
 package com.zhs.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.response.account.MessageItemResp;
+import com.zhs.response.account.MessagePageResp;
 
 import java.util.List;
 
@@ -10,7 +10,7 @@ import java.util.List;
  */
 public interface IAccountMessageService {
 
-    IPage<MessageItemResp> pageMessages(Integer currentPage, Integer pageSize, Integer readStatus);
+    MessagePageResp pageMessages(Integer currentPage, Integer pageSize, Integer readStatus);
 
     long countUnread();
 

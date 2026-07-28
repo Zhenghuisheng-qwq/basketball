@@ -23,6 +23,15 @@ public final class GameTerminalSupport {
         return normalized;
     }
 
+    /** CNPA 普通球队不绑定具体平台，跳过平台/终端一致性校验 */
+    public static boolean isGeneralTeam(String terminal) {
+        return "GENERAL".equals(normalize(terminal));
+    }
+
+    public static boolean isGeneralTeam(BasketTeam team) {
+        return team != null && isGeneralTeam(team.getGameTerminal());
+    }
+
     public static boolean matches(String left, String right) {
         String normalizedLeft = normalize(left);
         String normalizedRight = normalize(right);

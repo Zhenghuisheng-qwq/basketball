@@ -38,6 +38,8 @@ export interface TeamRegistrationItemDto {
   seasonId?: string
   seasonName?: string
   tournamentName?: string
+  platformCode?: string
+  platformName?: string
   registrationStatus?: number
   registrationStatusText?: string
   lineupCount?: number
@@ -73,6 +75,8 @@ export interface TeamRegistrationDetailDto {
   tournamentName?: string
   teamId?: string
   teamName?: string
+  platformCode?: string
+  platformName?: string
   contactName?: string
   contactMobileMasked?: string
   contactEmailMasked?: string
@@ -101,10 +105,35 @@ export interface TeamRegistrationAuditItemDto {
 
 export interface TeamRegistrationDraftReq {
   seasonId: string
+  platformCode?: string
   contactName?: string
   contactMobile?: string
   contactEmail?: string
   remark?: string
+}
+
+export interface SeasonPlatformItemDto {
+  platformCode: string
+  platformName?: string
+  open?: boolean
+  disabledReason?: string
+}
+
+export interface RegistrationRosterCandidateDto {
+  teamMemberId: string
+  playerId?: string
+  playerNo?: string
+  gameNickname?: string
+  nickname?: string
+  positionCode?: string
+  positionName?: string
+  jerseyNo?: string
+  roleType?: string
+  platformGameId?: string
+  platformIdentityStatus?: string
+  platformIdentityStatusText?: string
+  canSelect?: boolean
+  cannotSelectReason?: string
 }
 
 export interface TeamRegistrationUpdateReq {

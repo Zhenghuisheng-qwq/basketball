@@ -9,6 +9,8 @@ public class BasketCaptainQualification {
     private String qualificationNo;
     private Long memberId;
     private Long playerId;
+    private Long seasonId;
+    private Long teamId;
     private Integer qualificationStatus;
     private Integer isCurrent;
     private Integer paymentConfirmed;
@@ -21,6 +23,7 @@ public class BasketCaptainQualification {
     private Long revokedBy;
     private Date revokedTime;
     private String revokeReason;
+    private String remark;
     private Date createTime;
     private Date updateTime;
     private Integer isDelete;

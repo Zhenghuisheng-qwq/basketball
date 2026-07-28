@@ -24,10 +24,4 @@ public class NotificationSettingResp implements Serializable {
 
     @ApiModelProperty("公告通知：0 关闭，1 开启")
     private Integer announcementNotice;
-
-    @ApiModelProperty("邮件通知：0 关闭，1 开启")
-    private Integer emailNotice;
-
-    @ApiModelProperty("短信通知：0 关闭，1 开启")
-    private Integer smsNotice;
 }

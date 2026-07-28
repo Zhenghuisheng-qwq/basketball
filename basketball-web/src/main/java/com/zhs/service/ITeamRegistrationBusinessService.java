@@ -9,10 +9,14 @@ import com.zhs.request.team.TeamRegistrationWithdrawReq;
 import com.zhs.response.account.MyEventsContextResp;
 import com.zhs.response.team.AvailableSeasonItemResp;
 import com.zhs.response.team.AvailableSeasonPageResp;
+import com.zhs.response.team.RegistrationRosterCandidateItemResp;
+import com.zhs.response.team.SeasonPlatformItemResp;
 import com.zhs.response.team.TeamEventRecordItemResp;
 import com.zhs.response.team.TeamRegistrationAuditItemResp;
 import com.zhs.response.team.TeamRegistrationDetailResp;
 import com.zhs.response.team.TeamRegistrationItemResp;
+
+import java.util.List;
 
 public interface ITeamRegistrationBusinessService {
 
@@ -45,4 +49,8 @@ public interface ITeamRegistrationBusinessService {
     void deleteDraft(String registrationId);
 
     IPage<TeamRegistrationAuditItemResp> pageAuditRecords(String registrationId, Integer currentPage, Integer pageSize);
+
+    List<SeasonPlatformItemResp> listSeasonPlatforms(String seasonId);
+
+    List<RegistrationRosterCandidateItemResp> listRosterCandidates(String registrationId);
 }

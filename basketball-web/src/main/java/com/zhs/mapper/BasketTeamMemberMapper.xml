@@ -10,6 +10,7 @@
 		<result column="platform_code" property="platformCode" />
 		<result column="platform_identity_id" property="platformIdentityId" />
 		<result column="active_platform_slot" property="activePlatformSlot" />
+		<result column="active_member_slot" property="activeMemberSlot" />
 		<result column="join_source" property="joinSource" />
 		<result column="join_time" property="joinTime" />
 		<result column="role_type" property="roleType" />
@@ -26,7 +27,7 @@
 	</resultMap>
 	<!-- 数据库中表名为:basket_team_member的列名 -->
 	<sql id="basket_team_member_Column">
-		id,membership_no,team_id,member_id,player_id,platform_code,platform_identity_id,active_platform_slot,role_type,roster_type,jersey_no,join_source,membership_status,is_current,join_time,leave_time,leave_reason,remark,create_time,update_time,is_delete
+		id,membership_no,team_id,member_id,player_id,platform_code,platform_identity_id,active_platform_slot,active_member_slot,role_type,roster_type,jersey_no,join_source,membership_status,is_current,join_time,leave_time,leave_reason,remark,create_time,update_time,is_delete
 	</sql>
 
 	<!-- 通过BasketTeamMember的id获得对应数据库中表的数据对象 -->

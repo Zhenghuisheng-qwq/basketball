@@ -1,13 +1,13 @@
 import request from '@/api/request'
-import type { ApiResult, PageResult } from '@/api/types/common'
-import type { MessageItemDto } from '@/api/types/accountMessage'
+import type { ApiResult } from '@/api/types/common'
+import type { MessageItemDto, MessagePageResult } from '@/api/types/accountMessage'
 
 export function getAccountMessagePage(params: {
   currentPage?: number
   pageSize?: number
   readStatus?: number
 }) {
-  return request.get<any, ApiResult<PageResult<MessageItemDto>>>('/basket/account/message/page', { params })
+  return request.get<any, ApiResult<MessagePageResult>>('/basket/account/message/page', { params })
 }
 
 export function getAccountMessageUnreadCount() {

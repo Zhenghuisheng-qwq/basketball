@@ -329,7 +329,7 @@ export interface AccountSecurityData {
 export const ACCOUNT_ROLE_LABELS: Record<AccountRole, string> = {
   BASIC_USER: '基础用户',
   PLAYER: '认证球员',
-  CAPTAIN: '认证队长',
+  CAPTAIN: '队长权限',
 }
 
 export const VERIFICATION_STATUS_LABELS: Record<PlayerVerificationStatus, string> = {

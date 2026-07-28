@@ -8,7 +8,7 @@ import java.util.Date;
 import java.util.Objects;
 
 /**
- * 队长资格运行时有效性判断，与前台 {@code CaptainPermissionServiceImpl} 保持一致。
+ * 队长授权运行时有效性判断，与前台保持一致。
  */
 public final class CaptainQualificationValiditySupport {
 
@@ -19,35 +19,51 @@ public final class CaptainQualificationValiditySupport {
     }
 
     public static boolean isRuntimeValid(BasketCaptainQualification qualification, Integer playerCertStatus, Date now) {
-        return resolveInvalidReason(qualification, playerCertStatus, now) == null;
+        return resolveInvalidReason(qualification, playerCertStatus, now, null) == null;
     }
 
-    public static boolean isRuntimeValid(BasketCaptainQualification qualification, Date now) {
-        return resolveInvalidReason(qualification, null, now) == null;
+    public static String resolveInvalidReason(BasketCaptainQualification qualification,
+                                              Integer playerCertStatus,
+                                              Date now) {
+        return resolveInvalidReason(qualification, playerCertStatus, now, null);
     }
 
-    public static String resolveInvalidReason(BasketCaptainQualification qualification, Integer playerCertStatus, Date now) {
+    public static String resolveInvalidReason(BasketCaptainQualification qualification,
+                                              Integer playerCertStatus,
+                                              Date now,
+                                              Integer seasonStatus) {
         if (qualification == null) {
-            return "暂无有效队长资格";
+            return "当前暂无有效队长权限，队长权限由平台根据赛事缴费结果后台开通";
         }
         if (!Integer.valueOf(CURRENT).equals(qualification.getIsCurrent())) {
-            return "队长资格已失效";
+            return "队长权限已失效";
+        }
+        CaptainQualificationStatusEnum status = CaptainQualificationStatusEnum.fromCode(qualification.getQualificationStatus());
+        if (status == CaptainQualificationStatusEnum.REVOKED) {
+            return "队长权限已收回";
+        }
+        if (status == CaptainQualificationStatusEnum.EXPIRED) {
+            return "队长权限已过期";
         }
         if (!Objects.equals(CaptainQualificationStatusEnum.ACTIVE.getCode(), qualification.getQualificationStatus())) {
-            return CaptainQualificationStatusEnum.fromCode(qualification.getQualificationStatus()).getDescription();
+            return status.getDescription();
         }
         if (!Integer.valueOf(PAYMENT_CONFIRMED).equals(qualification.getPaymentConfirmed())) {
             return "缴费未确认";
         }
         if (playerCertStatus != null && !Objects.equals(PlayerCertStatusEnum.APPROVED.getCode(), playerCertStatus)) {
-            return "球员认证未通过";
+            return "当前用户尚未完成球员认证，不能授予队长权限";
         }
         Date checkTime = now != null ? now : new Date();
         if (qualification.getValidFrom() != null && qualification.getValidFrom().after(checkTime)) {
-            return "资格尚未生效";
+            return "队长权限尚未生效";
         }
         if (qualification.getValidTo() != null && qualification.getValidTo().before(checkTime)) {
-            return "资格已过期";
+            return "队长权限已过期";
+        }
+        if (qualification.getSeasonId() != null && seasonStatus != null
+                && CaptainGrantSeasonSupport.isSeasonEnded(seasonStatus)) {
+            return "当前赛事已结束，队长权限已失效";
         }
         return null;
     }

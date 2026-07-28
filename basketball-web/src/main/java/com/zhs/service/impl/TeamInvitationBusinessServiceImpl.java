@@ -98,10 +98,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         if (memberId.equals(inviteeMemberId)) {
             throw new ServiceException("不能邀请自己");
         }
-        String platformCode = platformTeamMembershipSupport.resolveTeamPlatformCode(team);
-        captainPermissionService.assertEligibleToJoinTeam(inviteeMemberId, platformCode);
-        platformTeamMembershipSupport.requireActivePlatformIdentity(inviteeMemberId, platformCode);
-        assertTerminalMatchForInvite(inviteeProfile, team);
+        captainPermissionService.assertEligibleToJoinTeam(inviteeMemberId, null);
         assertTeamHasCapacity(team);
         assertNoPendingInvitation(teamPk, inviteeMemberId);
 
@@ -215,12 +212,9 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         invitation = invitationDao.selectById(invitationPk);
         BasketTeam team = teamDao.selectById(invitation.getTeamId());
         if (Boolean.TRUE.equals(accept)) {
-            String platformCode = platformTeamMembershipSupport.resolveTeamPlatformCode(team);
-            captainPermissionService.assertEligibleToJoinTeam(memberId, platformCode);
+            captainPermissionService.assertEligibleToJoinTeam(memberId, null);
             validateTeamJoinable(team);
             BasketPlayerProfile profile = captainPermissionService.requireCertifiedPlayer(memberId);
-            platformTeamMembershipSupport.requireActivePlatformIdentity(memberId, platformCode);
-            assertTerminalMatchForAccept(profile, team);
             teamMemberJoinHelper.addMember(team, memberId, profile.getId(), com.zhs.enums.TeamJoinSourceEnum.INVITE);
         }
 
@@ -249,6 +243,9 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
     }
 
     private void assertTerminalMatchForInvite(BasketPlayerProfile inviteeProfile, BasketTeam team) {
+        if (GameTerminalSupport.isGeneralTeam(team)) {
+            return;
+        }
         String reason = GameTerminalSupport.buildInviteMismatchMessage(
                 inviteeProfile.getGameTerminal(), team.getGameTerminal());
         if (reason != null) {
@@ -257,6 +254,9 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
     }
 
     private void assertTerminalMatchForAccept(BasketPlayerProfile profile, BasketTeam team) {
+        if (GameTerminalSupport.isGeneralTeam(team)) {
+            return;
+        }
         String reason = GameTerminalSupport.buildAcceptMismatchMessage(
                 profile.getGameTerminal(), team.getGameTerminal());
         if (reason != null) {
@@ -272,7 +272,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
     }
 
     private String resolveInviteePlatformIdentityReason(BasketTeam team, Long inviteeMemberId) {
-        if (team == null || inviteeMemberId == null) {
+        if (team == null || inviteeMemberId == null || GameTerminalSupport.isGeneralTeam(team)) {
             return null;
         }
         String platformCode = platformTeamMembershipSupport.resolveTeamPlatformCode(team);
@@ -291,7 +291,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
     }
 
     private String resolveInviteeTerminalMismatchReason(BasketTeam team, Long inviteeMemberId) {
-        if (team == null || inviteeMemberId == null) {
+        if (team == null || inviteeMemberId == null || GameTerminalSupport.isGeneralTeam(team)) {
             return null;
         }
         BasketPlayerProfile profile = playerProfileDao.selectOne(new LambdaQueryWrapper<BasketPlayerProfile>()

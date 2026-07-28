@@ -312,30 +312,52 @@ CREATE TABLE `basket_player_cert_audit` (
 DROP TABLE IF EXISTS `basket_captain_qualification`;
 CREATE TABLE `basket_captain_qualification` (
                                                 `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
-                                                `qualification_no` VARCHAR(64) NOT NULL COMMENT '资格编号',
+                                                `qualification_no` VARCHAR(64) NOT NULL COMMENT '授权编号',
                                                 `member_id` BIGINT NOT NULL COMMENT '会员主键',
                                                 `player_id` BIGINT NOT NULL COMMENT '球员主键',
-                                                `qualification_status` TINYINT NOT NULL DEFAULT 1 COMMENT '资格状态',
+                                                `season_id` BIGINT DEFAULT NULL COMMENT '赛事赛季主键（队长授权所属赛事）',
+                                                `team_id` BIGINT DEFAULT NULL COMMENT '绑定球队主键，未建队前可为空',
+                                                `qualification_status` TINYINT NOT NULL DEFAULT 1 COMMENT '授权状态 0已收回 1有效 2已过期',
                                                 `is_current` TINYINT NOT NULL DEFAULT 1 COMMENT '当前有效标记',
                                                 `payment_confirmed` TINYINT NOT NULL DEFAULT 0 COMMENT '线下缴费确认状态',
                                                 `payment_reference` VARCHAR(128) DEFAULT NULL COMMENT '线下缴费参考号',
-                                                `grant_reason` VARCHAR(500) DEFAULT NULL COMMENT '授予原因',
+                                                `grant_reason` VARCHAR(500) DEFAULT NULL COMMENT '授予备注',
                                                 `granted_by` BIGINT NOT NULL COMMENT '授予人主键',
                                                 `granted_time` DATETIME NOT NULL COMMENT '授予时间',
-                                                `valid_from` DATETIME DEFAULT NULL COMMENT '生效时间',
-                                                `valid_to` DATETIME DEFAULT NULL COMMENT '失效时间',
-                                                `revoked_by` BIGINT DEFAULT NULL COMMENT '取消人主键',
-                                                `revoked_time` DATETIME DEFAULT NULL COMMENT '取消时间',
-                                                `revoke_reason` VARCHAR(500) DEFAULT NULL COMMENT '取消原因',
+                                                `valid_from` DATETIME DEFAULT NULL COMMENT '授权生效时间',
+                                                `valid_to` DATETIME DEFAULT NULL COMMENT '授权失效时间（随赛事结束）',
+                                                `revoked_by` BIGINT DEFAULT NULL COMMENT '收回人主键',
+                                                `revoked_time` DATETIME DEFAULT NULL COMMENT '收回时间',
+                                                `revoke_reason` VARCHAR(500) DEFAULT NULL COMMENT '收回原因',
+                                                `remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+                                                `active_grant_slot` VARCHAR(128) GENERATED ALWAYS AS (
+                                                    CASE
+                                                        WHEN `qualification_status` = 1 AND `is_delete` = 0 AND `season_id` IS NOT NULL
+                                                            THEN CONCAT(`season_id`, ':', `member_id`)
+                                                        ELSE NULL
+                                                    END
+                                                ) STORED COMMENT '有效授权槽位 seasonId:memberId',
+                                                `team_active_grant_slot` VARCHAR(128) GENERATED ALWAYS AS (
+                                                    CASE
+                                                        WHEN `qualification_status` = 1 AND `is_delete` = 0 AND `season_id` IS NOT NULL AND `team_id` IS NOT NULL
+                                                            THEN CONCAT(`season_id`, ':', `team_id`)
+                                                        ELSE NULL
+                                                    END
+                                                ) STORED COMMENT '球队有效授权槽位 seasonId:teamId',
                                                 `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                                 `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                                                 `is_delete` TINYINT NOT NULL DEFAULT 0 COMMENT '删除标记',
                                                 PRIMARY KEY (id),
                                                 UNIQUE KEY uk_captain_qualification_no (qualification_no),
+                                                UNIQUE KEY uk_captain_grant_active_slot (active_grant_slot),
+                                                UNIQUE KEY uk_captain_grant_team_active_slot (team_active_grant_slot),
                                                 KEY idx_captain_member_current (member_id, is_current, qualification_status),
                                                 KEY idx_captain_player_current (player_id, is_current, qualification_status),
-                                                KEY idx_captain_valid_time (valid_from, valid_to)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='队长资格表';
+                                                KEY idx_captain_grant_season_member (season_id, member_id, qualification_status, is_delete),
+                                                KEY idx_captain_grant_season_status (season_id, qualification_status, is_current, is_delete),
+                                                KEY idx_captain_grant_team (team_id, season_id, qualification_status, is_delete),
+                                                KEY idx_captain_grant_valid_to (valid_to, qualification_status, is_delete)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='队长授权表';
 
 -- 三 球队与成员关系
 
@@ -349,7 +371,7 @@ CREATE TABLE `basket_team` (
                                `logo_file_id` BIGINT DEFAULT NULL COMMENT '球队标志文件主键',
                                `region_code` VARCHAR(32) DEFAULT NULL COMMENT '地区编码',
                                `region_name` VARCHAR(64) DEFAULT NULL COMMENT '地区名称',
-                               `game_terminal` VARCHAR(16) NOT NULL COMMENT '比赛终端',
+                               `game_terminal` VARCHAR(16) NOT NULL DEFAULT 'GENERAL' COMMENT '已废弃-历史比赛终端，球队本体不绑定平台',
                                `description` VARCHAR(2000) DEFAULT NULL COMMENT '球队介绍',
                                `contact_member_id` BIGINT DEFAULT NULL COMMENT '联系人会员主键',
                                `captain_member_id` BIGINT NOT NULL COMMENT '队长会员主键',
@@ -399,6 +421,10 @@ CREATE TABLE `basket_team_member` (
                                       `team_id` BIGINT NOT NULL COMMENT '球队主键',
                                       `member_id` BIGINT NOT NULL COMMENT '会员主键',
                                       `player_id` BIGINT NOT NULL COMMENT '球员主键',
+                                      `platform_code` VARCHAR(16) DEFAULT NULL COMMENT '平台代码 PC/PS/XBOX',
+                                      `platform_identity_id` BIGINT DEFAULT NULL COMMENT '平台游戏身份主键',
+                                      `active_platform_slot` VARCHAR(64) DEFAULT NULL COMMENT '活跃平台槽位 memberId:platformCode',
+                                      `active_member_slot` VARCHAR(64) DEFAULT NULL COMMENT '活跃成员槽位 memberId',
                                       `role_type` VARCHAR(32) NOT NULL DEFAULT 'MEMBER' COMMENT '成员角色',
                                       `roster_type` VARCHAR(32) NOT NULL DEFAULT 'OFFICIAL' COMMENT '阵容类型',
                                       `jersey_no` VARCHAR(16) DEFAULT NULL COMMENT '球衣号码',
@@ -417,7 +443,10 @@ CREATE TABLE `basket_team_member` (
                                       KEY idx_team_member_team_current (team_id, is_current, membership_status),
                                       KEY idx_team_member_player_current (player_id, is_current, membership_status),
                                       KEY idx_team_member_member_current (member_id, is_current, membership_status),
-                                      KEY idx_team_member_join_time (join_time)
+                                      KEY idx_team_member_join_time (join_time),
+                                      KEY idx_team_member_platform_active (member_id, platform_code, is_current, membership_status, is_delete),
+                                      UNIQUE KEY uk_team_member_active_platform_slot (active_platform_slot),
+                                      UNIQUE KEY uk_team_member_active_member_slot (active_member_slot)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='球队成员表';
 
 DROP TABLE IF EXISTS `basket_team_join_application`;
@@ -594,6 +623,20 @@ CREATE TABLE `basket_tournament_season` (
                                             KEY idx_season_public (public_status, season_year)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='赛事赛季表';
 
+DROP TABLE IF EXISTS `basket_tournament_season_platform`;
+CREATE TABLE `basket_tournament_season_platform` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `season_id` BIGINT NOT NULL COMMENT '赛事赛季主键',
+    `platform_code` VARCHAR(16) NOT NULL COMMENT '平台代码 PC/PS/XBOX',
+    `platform_status` TINYINT NOT NULL DEFAULT 1 COMMENT '开放状态 1开放 0关闭',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `is_delete` TINYINT NOT NULL DEFAULT 0 COMMENT '删除标记',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_season_platform (season_id, platform_code, is_delete),
+    KEY idx_season_platform_status (season_id, platform_status, is_delete)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='赛事赛季开放平台表';
+
 DROP TABLE IF EXISTS `basket_tournament_stage`;
 CREATE TABLE `basket_tournament_stage` (
                                            `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -720,6 +763,7 @@ CREATE TABLE `basket_tournament_registration` (
                                                   `registration_no` VARCHAR(64) NOT NULL COMMENT '报名编号',
                                                   `season_id` BIGINT NOT NULL COMMENT '赛事赛季主键',
                                                   `team_id` BIGINT NOT NULL COMMENT '报名球队主键',
+                                                  `platform_code` VARCHAR(16) DEFAULT NULL COMMENT '报名平台 PC/PS/XBOX',
                                                   `captain_member_id` BIGINT NOT NULL COMMENT '报名队长会员主键',
                                                   `captain_player_id` BIGINT NOT NULL COMMENT '报名队长球员主键',
                                                   `contact_name` VARCHAR(64) NOT NULL COMMENT '联系人',
@@ -738,7 +782,7 @@ CREATE TABLE `basket_tournament_registration` (
                                                   `is_delete` TINYINT NOT NULL DEFAULT 0 COMMENT '删除标记',
                                                   PRIMARY KEY (id),
                                                   UNIQUE KEY uk_registration_no (registration_no),
-                                                  UNIQUE KEY uk_registration_season_team (season_id, team_id, is_delete),
+                                                  UNIQUE KEY uk_registration_season_team_platform (season_id, team_id, platform_code, is_delete),
                                                   KEY idx_registration_status_time (season_id, registration_status, submitted_time),
                                                   KEY idx_registration_captain (captain_member_id, create_time),
                                                   KEY idx_registration_auditor (current_auditor_id, registration_status)

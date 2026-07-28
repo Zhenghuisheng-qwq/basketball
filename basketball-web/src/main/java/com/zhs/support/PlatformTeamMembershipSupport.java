@@ -29,7 +29,8 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * 按 userId + platformCode 维度的球队成员与平台游戏身份校验。
+ * 按 platformCode 维度的平台游戏身份校验（阵容阶段使用）。
+ * 球队成员关系校验已迁移至 {@link TeamMembershipSupport}，本类中按平台区分球队的逻辑已废弃。
  */
 @Component
 public class PlatformTeamMembershipSupport {

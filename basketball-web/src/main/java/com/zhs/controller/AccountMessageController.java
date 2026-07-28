@@ -1,7 +1,7 @@
 package com.zhs.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.response.account.MessageItemResp;
+import com.zhs.response.account.MessagePageResp;
 import com.zhs.service.IAccountMessageService;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
@@ -26,7 +26,7 @@ public class AccountMessageController {
 
     @ApiOperation("分页查询当前会员消息")
     @GetMapping("/page")
-    public R<IPage<MessageItemResp>> pageMessages(
+    public R<MessagePageResp> pageMessages(
             @RequestParam(defaultValue = "1") Integer currentPage,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) Integer readStatus) {

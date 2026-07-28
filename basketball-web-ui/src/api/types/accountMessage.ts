@@ -28,3 +28,13 @@ export interface MessageItemDto {
   redirectValue?: string
   teamInvite?: MessageTeamInviteInfoDto
 }
+
+export interface MessagePageResult {
+  records: MessageItemDto[]
+  total: number
+  size: number
+  current: number
+  pages: number
+  allCount?: number
+  unreadCount?: number
+}

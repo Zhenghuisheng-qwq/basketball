@@ -31,9 +31,9 @@ export const YES_NO_OPTIONS = [
   { value: 0, label: '否' }
 ]
 
-/** 队长资格状态 */
+/** 队长授权状态 */
 export const CAPTAIN_QUALIFICATION_STATUS_OPTIONS = [
-  { value: 0, label: '已撤销' },
+  { value: 0, label: '已收回' },
   { value: 1, label: '有效' },
   { value: 2, label: '已过期' }
 ]
@@ -183,13 +183,17 @@ export interface CaptainQualificationQuery extends PageDomain, BaseEntity {
   qualificationNo?: string
   memberId?: number
   playerId?: number
+  nickname?: string
+  seasonId?: number
   qualificationStatus?: number
+  paymentReference?: string
+  grantedTimeBegin?: string
+  grantedTimeEnd?: string
 }
 
 export interface CaptainQualificationListItem {
   id: number
   qualificationNo?: string
-  /** 用户ID（接口兼容字段 memberId） */
   memberId?: number
   userId?: number
   playerId?: number
@@ -200,20 +204,41 @@ export interface CaptainQualificationListItem {
   gameAccount?: string
   positionCode?: string
   certificationStatusName?: string
+  seasonId?: number
+  seasonName?: string
+  tournamentName?: string
+  teamId?: number
+  teamName?: string
   qualificationStatus?: number
   isCurrent?: number
   paymentConfirmed?: number
+  paymentReference?: string
   grantedTime?: string
   validFrom?: string
   validTo?: string
+  grantedBy?: number
+  grantedByName?: string
   runtimeValid?: number
   runtimeInvalidReason?: string
 }
 
 export interface CaptainQualificationDetail extends CaptainQualificationListItem {
-  paymentReference?: string
   grantReason?: string
+  revokedTime?: string
+  revokedBy?: number
+  revokedByName?: string
   revokeReason?: string
+}
+
+export interface CaptainGrantSeasonOption {
+  seasonId: number
+  seasonName?: string
+  seasonStatus?: number
+  seasonStatusName?: string
+  tournamentId?: number
+  tournamentName?: string
+  seasonEndTime?: string
+  displayName?: string
 }
 
 export interface EligibleCaptain {
@@ -227,20 +252,21 @@ export interface EligibleCaptain {
 }
 
 export interface CaptainQualificationGrantReq {
+  seasonId: number
   playerId: number
+  teamId?: number
   paymentConfirmed?: number
   paymentReference?: string
-  validFrom?: string
-  validTo?: string
   grantRemark?: string
 }
 
 export interface CaptainQualificationUpdateReq {
-  paymentConfirmed?: number
   paymentReference?: string
-  validFrom?: string
-  validTo?: string
   grantRemark?: string
+}
+
+export interface CaptainQualificationBindTeamReq {
+  teamId: number
 }
 
 export interface CaptainQualificationRevokeReq {

@@ -6,6 +6,8 @@
 		<result column="qualification_no" property="qualificationNo" />
 		<result column="member_id" property="memberId" />
 		<result column="player_id" property="playerId" />
+		<result column="season_id" property="seasonId" />
+		<result column="team_id" property="teamId" />
 		<result column="granted_by" property="grantedBy" />
 		<result column="granted_time" property="grantedTime" />
 		<result column="qualification_status" property="qualificationStatus" />
@@ -18,13 +20,14 @@
 		<result column="revoked_by" property="revokedBy" />
 		<result column="revoked_time" property="revokedTime" />
 		<result column="revoke_reason" property="revokeReason" />
+		<result column="remark" property="remark" />
 		<result column="create_time" property="createTime" />
 		<result column="update_time" property="updateTime" />
 		<result column="is_delete" property="isDelete" />
 	</resultMap>
 	<!-- 数据库中表名为:basket_captain_qualification的列名 -->
 	<sql id="basket_captain_qualification_Column">
-		id,qualification_no,member_id,player_id,qualification_status,is_current,payment_confirmed,payment_reference,grant_reason,granted_by,granted_time,valid_from,valid_to,revoked_by,revoked_time,revoke_reason,create_time,update_time,is_delete
+		id,qualification_no,member_id,player_id,season_id,team_id,qualification_status,is_current,payment_confirmed,payment_reference,grant_reason,granted_by,granted_time,valid_from,valid_to,revoked_by,revoked_time,revoke_reason,remark,create_time,update_time,is_delete
 	</sql>
 
 	<!-- 通过BasketCaptainQualification的id获得对应数据库中表的数据对象 -->

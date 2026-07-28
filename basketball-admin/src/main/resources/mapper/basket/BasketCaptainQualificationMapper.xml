@@ -6,6 +6,8 @@
         <result property="qualificationNo" column="qualification_no" />
         <result property="memberId" column="member_id" />
         <result property="playerId" column="player_id" />
+        <result property="seasonId" column="season_id" />
+        <result property="teamId" column="team_id" />
         <result property="qualificationStatus" column="qualification_status" />
         <result property="isCurrent" column="is_current" />
         <result property="paymentConfirmed" column="payment_confirmed" />
@@ -18,41 +20,104 @@
         <result property="revokedBy" column="revoked_by" />
         <result property="revokedTime" column="revoked_time" />
         <result property="revokeReason" column="revoke_reason" />
+        <result property="remark" column="remark" />
         <result property="createTime" column="create_time" />
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
     </resultMap>
+
+    <sql id="BaseColumns">
+        id, qualification_no, member_id, player_id, season_id, team_id,
+        qualification_status, is_current, payment_confirmed, payment_reference,
+        grant_reason, granted_by, granted_time, valid_from, valid_to,
+        revoked_by, revoked_time, revoke_reason, remark, create_time, update_time, is_delete
+    </sql>
+
     <select id="selectList" resultMap="BasketCaptainQualificationResult">
-        select id, qualification_no, member_id, player_id, qualification_status, is_current, payment_confirmed, payment_reference, grant_reason, granted_by, granted_time, valid_from, valid_to, revoked_by, revoked_time, revoke_reason, create_time, update_time, is_delete from basket_captain_qualification
-        where is_delete = 0
-        <if test="qualificationNo != null and qualificationNo != ''">and qualification_no like concat('%', #{qualificationNo}, '%')</if>
-        <if test="memberId != null">and member_id = #{memberId}</if>
-        <if test="playerId != null">and player_id = #{playerId}</if>
-        <if test="qualificationStatus != null">and qualification_status = #{qualificationStatus}</if>
-        order by granted_time desc
-    </select>
-    <select id="selectById" resultMap="BasketCaptainQualificationResult">
-        select id, qualification_no, member_id, player_id, qualification_status, is_current, payment_confirmed, payment_reference, grant_reason, granted_by, granted_time, valid_from, valid_to, revoked_by, revoked_time, revoke_reason, create_time, update_time, is_delete from basket_captain_qualification where id = #{id} and is_delete = 0
-    </select>
-    <select id="countCurrentActiveByPlayerId" resultType="int">
-        select count(1)
+        select cq.id, cq.qualification_no, cq.member_id, cq.player_id, cq.season_id, cq.team_id,
+               cq.qualification_status, cq.is_current, cq.payment_confirmed, cq.payment_reference,
+               cq.grant_reason, cq.granted_by, cq.granted_time, cq.valid_from, cq.valid_to,
+               cq.revoked_by, cq.revoked_time, cq.revoke_reason, cq.remark, cq.create_time, cq.update_time, cq.is_delete
         from basket_captain_qualification cq
-        inner join basket_player_profile pp on pp.id = cq.player_id and pp.is_delete = 0
-        where cq.player_id = #{playerId}
-          and cq.is_current = 1
-          and cq.qualification_status = 1
-          and cq.payment_confirmed = 1
-          and cq.is_delete = 0
-          and pp.certification_status = 3
-          and (cq.valid_from is null or cq.valid_from &lt;= now())
-          and (cq.valid_to is null or cq.valid_to &gt;= now())
+        left join basket_player_profile pp on pp.id = cq.player_id and pp.is_delete = 0
+        where cq.is_delete = 0
+        <if test="qualificationNo != null and qualificationNo != ''">and cq.qualification_no like concat('%', #{qualificationNo}, '%')</if>
+        <if test="memberId != null">and cq.member_id = #{memberId}</if>
+        <if test="playerId != null">and cq.player_id = #{playerId}</if>
+        <if test="seasonId != null">and cq.season_id = #{seasonId}</if>
+        <if test="qualificationStatus != null">and cq.qualification_status = #{qualificationStatus}</if>
+        <if test="paymentReference != null and paymentReference != ''">and cq.payment_reference like concat('%', #{paymentReference}, '%')</if>
+        <if test="nickname != null and nickname != ''">and pp.game_nickname like concat('%', #{nickname}, '%')</if>
+        <if test="grantedTimeBegin != null">and cq.granted_time &gt;= #{grantedTimeBegin}</if>
+        <if test="grantedTimeEnd != null">and cq.granted_time &lt;= #{grantedTimeEnd}</if>
+        order by cq.granted_time desc
     </select>
+
+    <select id="selectById" resultMap="BasketCaptainQualificationResult">
+        select <include refid="BaseColumns" /> from basket_captain_qualification where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="countActiveByMemberIdAndSeasonId" resultType="int">
+        select count(1)
+        from basket_captain_qualification
+        where member_id = #{memberId}
+          and season_id = #{seasonId}
+          and qualification_status = 1
+          and is_delete = 0
+    </select>
+
+    <select id="countActiveByTeamIdAndSeasonId" resultType="int">
+        select count(1)
+        from basket_captain_qualification
+        where team_id = #{teamId}
+          and season_id = #{seasonId}
+          and qualification_status = 1
+          and is_delete = 0
+    </select>
+
+    <select id="selectActiveBySeasonId" resultMap="BasketCaptainQualificationResult">
+        select <include refid="BaseColumns" />
+        from basket_captain_qualification
+        where season_id = #{seasonId}
+          and qualification_status = 1
+          and is_delete = 0
+    </select>
+
+    <select id="selectGrantableSeasonOptions" resultType="com.zhs.basket.vo.CaptainGrantSeasonOptionVo">
+        select s.id as seasonId,
+               s.season_name as seasonName,
+               s.season_status as seasonStatus,
+               s.season_end_time as seasonEndTime,
+               t.id as tournamentId,
+               t.tournament_name as tournamentName,
+               concat(t.tournament_name, ' / ', s.season_name) as displayName
+        from basket_tournament_season s
+        inner join basket_tournament t on t.id = s.tournament_id and t.is_delete = 0
+        where s.is_delete = 0
+          and s.season_status in (0, 1, 2, 4)
+          and s.season_end_time is not null
+        order by s.season_start_time desc, s.id desc
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        insert into basket_captain_qualification (qualification_no, member_id, player_id, qualification_status, is_current, payment_confirmed, payment_reference, grant_reason, granted_by, granted_time, valid_from, valid_to, revoked_by, revoked_time, revoke_reason, create_time, update_time, is_delete) values (#{qualificationNo}, #{memberId}, #{playerId}, #{qualificationStatus}, #{isCurrent}, #{paymentConfirmed}, #{paymentReference}, #{grantReason}, #{grantedBy}, #{grantedTime}, #{validFrom}, #{validTo}, #{revokedBy}, #{revokedTime}, #{revokeReason}, #{createTime}, #{updateTime}, #{isDelete})
+        insert into basket_captain_qualification (
+            qualification_no, member_id, player_id, season_id, team_id,
+            qualification_status, is_current, payment_confirmed, payment_reference,
+            grant_reason, granted_by, granted_time, valid_from, valid_to,
+            revoke_reason, remark, create_time, update_time, is_delete
+        ) values (
+            #{qualificationNo}, #{memberId}, #{playerId}, #{seasonId}, #{teamId},
+            #{qualificationStatus}, #{isCurrent}, #{paymentConfirmed}, #{paymentReference},
+            #{grantReason}, #{grantedBy}, #{grantedTime}, #{validFrom}, #{validTo},
+            #{revokeReason}, #{remark}, #{createTime}, #{updateTime}, #{isDelete}
+        )
     </insert>
+
     <update id="updateById">
         update basket_captain_qualification
         <set>
+            <if test="seasonId != null">season_id = #{seasonId},</if>
+            <if test="teamId != null">team_id = #{teamId},</if>
             <if test="qualificationStatus != null">qualification_status = #{qualificationStatus},</if>
             <if test="isCurrent != null">is_current = #{isCurrent},</if>
             <if test="paymentConfirmed != null">payment_confirmed = #{paymentConfirmed},</if>
@@ -67,14 +132,30 @@
         </set>
         where id = #{id} and is_delete = 0
     </update>
-    <update id="clearCurrentByPlayerId">
+
+    <update id="clearCurrentByMemberId">
         update basket_captain_qualification set is_current = 0, update_time = now()
-        where player_id = #{playerId} and is_current = 1 and is_delete = 0
+        where member_id = #{memberId} and is_current = 1 and is_delete = 0
     </update>
+
     <select id="selectCurrentByPlayerId" resultMap="BasketCaptainQualificationResult">
-        select id, qualification_no, member_id, player_id, qualification_status, is_current, payment_confirmed, payment_reference, grant_reason, granted_by, granted_time, valid_from, valid_to, revoked_by, revoked_time, revoke_reason, create_time, update_time, is_delete
+        select <include refid="BaseColumns" />
         from basket_captain_qualification
         where player_id = #{playerId} and is_current = 1 and is_delete = 0
         order by granted_time desc limit 1
+    </select>
+
+    <select id="countCurrentActiveByPlayerId" resultType="int">
+        select count(1)
+        from basket_captain_qualification cq
+        inner join basket_player_profile pp on pp.id = cq.player_id and pp.is_delete = 0
+        where cq.player_id = #{playerId}
+          and cq.is_current = 1
+          and cq.qualification_status = 1
+          and cq.payment_confirmed = 1
+          and cq.is_delete = 0
+          and pp.certification_status = 3
+          and (cq.valid_from is null or cq.valid_from &lt;= now())
+          and (cq.valid_to is null or cq.valid_to &gt;= now())
     </select>
 </mapper>

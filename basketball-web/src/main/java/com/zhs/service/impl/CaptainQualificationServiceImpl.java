@@ -15,7 +15,12 @@ public class CaptainQualificationServiceImpl implements ICaptainQualificationSer
 
     @Override
     public CaptainQualificationDetailResp getCurrent() {
+        return getCurrent(null);
+    }
+
+    @Override
+    public CaptainQualificationDetailResp getCurrent(Long seasonId) {
         Long memberId = UserContext.getRequiredUserId();
-        return captainPermissionService.getCurrentQualification(memberId);
+        return captainPermissionService.getCurrentQualification(memberId, seasonId);
     }
 }

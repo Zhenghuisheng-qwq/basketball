@@ -6,6 +6,7 @@ import com.zhs.basket.enums.SeasonStatusEnum;
 import com.zhs.basket.mapper.BasketTournamentSeasonMapper;
 import com.zhs.basket.req.SeasonCreateReq;
 import com.zhs.basket.req.SeasonUpdateReq;
+import com.zhs.basket.service.IBasketCaptainQualificationService;
 import com.zhs.basket.service.IBasketSeasonService;
 import com.zhs.basket.support.PlayerNoGenerator;
 import com.zhs.basket.vo.SeasonDetailVo;
@@ -28,6 +29,7 @@ public class BasketSeasonServiceImpl implements IBasketSeasonService {
 
     @Autowired private BasketTournamentSeasonMapper seasonMapper;
     @Autowired private PlayerNoGenerator playerNoGenerator;
+    @Autowired private IBasketCaptainQualificationService captainQualificationService;
 
     @Override
     public List<SeasonListVo> selectByTournamentId(Long tournamentId) {
@@ -102,6 +104,7 @@ public class BasketSeasonServiceImpl implements IBasketSeasonService {
     public void finish(Long seasonId) {
         changeStatus(seasonId, Arrays.asList(SeasonStatusEnum.IN_PROGRESS.getCode()),
                 SeasonStatusEnum.FINISHED);
+        captainQualificationService.expireBySeasonFinish(seasonId);
     }
 
     @Override

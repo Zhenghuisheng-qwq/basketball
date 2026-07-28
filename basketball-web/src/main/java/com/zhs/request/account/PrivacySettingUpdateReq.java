@@ -21,7 +21,4 @@ public class PrivacySettingUpdateReq implements Serializable {
 
     @ApiModelProperty("展示比赛数据：0 关闭，1 开启")
     private Integer showMatchData;
-
-    @ApiModelProperty("展示在线状态：0 关闭，1 开启")
-    private Integer showOnlineStatus;
 }

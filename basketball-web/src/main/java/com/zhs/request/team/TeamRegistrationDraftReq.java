@@ -13,6 +13,9 @@ public class TeamRegistrationDraftReq implements Serializable {
     @ApiModelProperty("赛季主键")
     private String seasonId;
 
+    @ApiModelProperty("报名平台 PC/PS/XBOX")
+    private String platformCode;
+
     @ApiModelProperty("联系人")
     private String contactName;
 

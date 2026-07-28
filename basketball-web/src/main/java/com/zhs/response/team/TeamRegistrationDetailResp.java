@@ -35,6 +35,12 @@ public class TeamRegistrationDetailResp implements Serializable {
     @ApiModelProperty("球队名称")
     private String teamName;
 
+    @ApiModelProperty("报名平台代码")
+    private String platformCode;
+
+    @ApiModelProperty("报名平台展示名称")
+    private String platformName;
+
     @ApiModelProperty("联系人")
     private String contactName;
 

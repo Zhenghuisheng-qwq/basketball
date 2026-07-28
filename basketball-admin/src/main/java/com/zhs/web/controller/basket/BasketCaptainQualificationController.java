@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket;
 
 import com.zhs.basket.query.CaptainQualificationQuery;
+import com.zhs.basket.req.CaptainQualificationBindTeamReq;
 import com.zhs.basket.req.CaptainQualificationGrantReq;
 import com.zhs.basket.req.CaptainQualificationRevokeReq;
 import com.zhs.basket.req.CaptainQualificationUpdateReq;
@@ -22,6 +23,12 @@ public class BasketCaptainQualificationController extends BaseController {
     private IBasketCaptainQualificationService captainQualificationService;
 
     @PreAuthorize("@ss.hasPermi('basket:captainQualification:list')")
+    @GetMapping("/grant-season-options")
+    public AjaxResult grantSeasonOptions() {
+        return success(captainQualificationService.selectGrantSeasonOptions());
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:captainQualification:list')")
     @GetMapping("/eligible-list")
     public AjaxResult eligibleList() {
         return success(captainQualificationService.selectEligibleList());
@@ -41,26 +48,34 @@ public class BasketCaptainQualificationController extends BaseController {
     }
 
     @PreAuthorize("@ss.hasPermi('basket:captainQualification:grant')")
-    @Log(title = "队长资格", businessType = BusinessType.INSERT)
+    @Log(title = "队长授权", businessType = BusinessType.INSERT)
     @PostMapping("/grant")
     public AjaxResult grant(@RequestBody CaptainQualificationGrantReq req) {
         captainQualificationService.grant(req);
-        return success();
+        return success("授予队长权限成功");
     }
 
     @PreAuthorize("@ss.hasPermi('basket:captainQualification:edit')")
-    @Log(title = "队长资格", businessType = BusinessType.UPDATE)
+    @Log(title = "队长授权", businessType = BusinessType.UPDATE)
     @PutMapping("/{qualificationId}")
     public AjaxResult update(@PathVariable Long qualificationId, @RequestBody CaptainQualificationUpdateReq req) {
         captainQualificationService.update(qualificationId, req);
-        return success();
+        return success("更新成功");
     }
 
     @PreAuthorize("@ss.hasPermi('basket:captainQualification:revoke')")
-    @Log(title = "队长资格", businessType = BusinessType.UPDATE)
+    @Log(title = "队长授权", businessType = BusinessType.UPDATE)
     @PostMapping("/{qualificationId}/revoke")
     public AjaxResult revoke(@PathVariable Long qualificationId, @RequestBody CaptainQualificationRevokeReq req) {
         captainQualificationService.revoke(qualificationId, req);
-        return success();
+        return success("收回队长权限成功");
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:captainQualification:edit')")
+    @Log(title = "队长授权", businessType = BusinessType.UPDATE)
+    @PostMapping("/{qualificationId}/bind-team")
+    public AjaxResult bindTeam(@PathVariable Long qualificationId, @RequestBody CaptainQualificationBindTeamReq req) {
+        captainQualificationService.bindTeam(qualificationId, req);
+        return success("绑定球队成功");
     }
 }

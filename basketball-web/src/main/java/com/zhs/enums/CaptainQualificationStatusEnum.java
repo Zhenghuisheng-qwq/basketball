@@ -5,7 +5,7 @@ import com.zhs.exception.ServiceException;
 public enum CaptainQualificationStatusEnum {
 
     ACTIVE(1, "有效"),
-    REVOKED(0, "已撤销"),
+    REVOKED(0, "已收回"),
     EXPIRED(2, "已过期");
 
     private final int code;

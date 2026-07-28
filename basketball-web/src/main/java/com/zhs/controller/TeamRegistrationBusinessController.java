@@ -143,4 +143,17 @@ public class TeamRegistrationBusinessController {
                                                                     @RequestParam(required = false) Integer pageSize) {
         return R.ok(teamRegistrationBusinessService.pageAuditRecords(registrationId, currentPage, pageSize));
     }
+
+    @ApiOperation("赛事赛季开放平台列表")
+    @GetMapping("/basket/season/{seasonId}/platforms")
+    public R<java.util.List<com.zhs.response.team.SeasonPlatformItemResp>> listSeasonPlatforms(@PathVariable String seasonId) {
+        return R.ok(teamRegistrationBusinessService.listSeasonPlatforms(seasonId));
+    }
+
+    @ApiOperation("报名阵容候选成员")
+    @GetMapping("/basket/team/registration/{registrationId}/roster/candidates")
+    public R<java.util.List<com.zhs.response.team.RegistrationRosterCandidateItemResp>> listRosterCandidates(
+            @PathVariable String registrationId) {
+        return R.ok(teamRegistrationBusinessService.listRosterCandidates(registrationId));
+    }
 }

@@ -105,7 +105,7 @@
             <el-descriptions-item label="队长邮箱">{{ detail.captainEmail || '-' }}</el-descriptions-item>
             <el-descriptions-item label="队长球员编号">{{ detail.captainPlayerNo || '-' }}</el-descriptions-item>
             <el-descriptions-item label="队长认证状态">{{ detail.captainCertStatusName || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="队长资格">
+            <el-descriptions-item label="队长授权">
               {{ detail.captainQualificationValid ? '有效' : '无效或未确认' }}
             </el-descriptions-item>
           </el-descriptions>
@@ -135,11 +135,11 @@
           <el-space direction="vertical" fill style="width: 100%">
             <el-alert :title="validationFlags.captainAssigned ? '已指定队长' : '未指定队长'" :type="validationFlags.captainAssigned ? 'success' : 'error'" :closable="false" />
             <el-alert :title="validationFlags.captainCertified ? '队长已完成球员认证' : '队长未完成球员认证'" :type="validationFlags.captainCertified ? 'success' : 'error'" :closable="false" />
-            <el-alert :title="validationFlags.captainQualificationValid ? '队长具备有效队长资格' : '队长缺少有效队长资格'" :type="validationFlags.captainQualificationValid ? 'success' : 'warning'" :closable="false" />
+            <el-alert :title="validationFlags.captainQualificationValid ? '队长具备有效队长授权' : '队长缺少有效队长授权'" :type="validationFlags.captainQualificationValid ? 'success' : 'warning'" :closable="false" />
             <el-alert :title="validationFlags.hasMembers ? '已有球队成员' : '暂无球队成员'" :type="validationFlags.hasMembers ? 'success' : 'warning'" :closable="false" />
             <el-alert :title="validationFlags.teamActive ? '球队状态正常' : '球队已解散或不可用'" :type="validationFlags.teamActive ? 'success' : 'error'" :closable="false" />
             <el-alert :title="validationFlags.hasLogo ? '已上传球队 Logo' : '未上传球队 Logo'" :type="validationFlags.hasLogo ? 'success' : 'info'" :closable="false" />
-            <el-alert title="审核通过时将校验：球队名称、简称、比赛终端、Logo 合规性，以及队长认证与队长资格" type="info" :closable="false" />
+            <el-alert title="审核通过时将校验：球队名称、简称、比赛终端、Logo 合规性，以及队长认证与队长授权" type="info" :closable="false" />
           </el-space>
 
           <el-divider content-position="left">审核记录</el-divider>

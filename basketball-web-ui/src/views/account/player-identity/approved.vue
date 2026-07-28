@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountStepper from '@/components/account/AccountStepper.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
+import CaptainGrantPanel from '@/components/account/team/CaptainGrantPanel.vue'
 import { useAccountStore } from '@/stores/account'
+import { useTeamStore } from '@/stores/team'
 import { IDENTITY_PLATFORM_LABELS } from '@/types/account'
 import { mapVerificationPlatform } from '@/utils/playerIdentity'
 
 const router = useRouter()
 const accountStore = useAccountStore()
+const teamStore = useTeamStore()
 
 const account = computed(() => accountStore.currentAccount)
 const verification = computed(() => accountStore.verification)
@@ -38,6 +41,10 @@ const position = computed(() => {
   const data = verification.value?.currentEffectiveData || verification.value
   return data?.gamePosition || data?.commonPosition || '-'
 })
+
+onMounted(() => {
+  void teamStore.loadQualification()
+})
 </script>
 
 <template>
@@ -61,6 +68,11 @@ const position = computed(() => {
     />
 
     <AccountStepper :steps="steps" />
+
+    <CaptainGrantPanel
+      :qualification="teamStore.captainQualification"
+      :loading="teamStore.qualificationLoading"
+    />
 
     <div class="identity-review-grid">
       <AccountPanel title="有效认证资料">

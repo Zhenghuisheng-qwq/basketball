@@ -8,11 +8,7 @@ import com.zhs.basket.query.PlayerCertQuery;
 import com.zhs.basket.req.PlayerCertApproveReq;
 import com.zhs.basket.req.PlayerCertRejectReq;
 import com.zhs.basket.service.IBasketPlayerCertService;
-import com.zhs.basket.support.BasketAccountSecurityLogWriter;
-import com.zhs.basket.support.PlatformIdentityHistoryWriter;
-import com.zhs.basket.support.GameAccountNormalizer;
-import com.zhs.basket.support.PlatformIdentityHistoryWriter;
-import com.zhs.basket.support.PlayerNoGenerator;
+import com.zhs.basket.support.*;
 import com.zhs.basket.vo.*;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
@@ -44,7 +40,6 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
     @Autowired private PlayerNoGenerator playerNoGenerator;
     @Autowired private BasketAdminMessageService messageService;
     @Autowired private BasketAccountSecurityLogWriter securityLogWriter;
-    @Autowired private PlatformIdentityHistoryWriter platformIdentityHistoryWriter;
 
     @Override
     public List<PlayerCertListVo> selectList(PlayerCertQuery query) {

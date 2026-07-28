@@ -3,40 +3,74 @@ import { computed, ref } from 'vue'
 import {
   getAccountMessageDetail,
   getAccountMessagePage,
-  getAccountMessageUnreadCount,
   markAccountMessageRead,
   markAllAccountMessagesRead,
 } from '@/api/accountMessage'
 import { mapMessageItemToNotification } from '@/utils/accountMappers'
 import type { AccountNotificationItem } from '@/types/accountNotifications'
+import type { NotificationTabKey } from '@/types/accountNotifications'
 
 export const useNotificationCenterStore = defineStore('notificationCenter', () => {
   const items = ref<AccountNotificationItem[]>([])
-  const totalCount = ref(0)
+  const pageTotal = ref(0)
+  const allCountValue = ref(0)
   const unreadCountValue = ref(0)
+  const pageNum = ref(1)
+  const pageSize = ref(10)
+  const activeTab = ref<NotificationTabKey>('ALL')
   const loading = ref(false)
   const error = ref('')
 
-  const total = computed(() => totalCount.value || items.value.length)
+  const total = computed(() => pageTotal.value)
+  const allCount = computed(() => allCountValue.value)
   const unreadCount = computed(() => unreadCountValue.value)
 
-  async function refresh(page = 1, pageSize = 20, readStatus?: number) {
+  function resolveReadStatus(tab: NotificationTabKey) {
+    return tab === 'UNREAD' ? 0 : undefined
+  }
+
+  async function refresh(
+    page = pageNum.value,
+    size = pageSize.value,
+    readStatus?: number,
+    tab: NotificationTabKey = activeTab.value,
+  ) {
     loading.value = true
     error.value = ''
     try {
-      const [pageRes, countRes] = await Promise.all([
-        getAccountMessagePage({ currentPage: page, pageSize, readStatus }),
-        getAccountMessageUnreadCount(),
-      ])
-      items.value = (pageRes.data.records || []).map(mapMessageItemToNotification)
-      totalCount.value = pageRes.data.total || items.value.length
-      unreadCountValue.value = Number(countRes.data || 0)
+      const pageRes = await getAccountMessagePage({
+        currentPage: page,
+        pageSize: size,
+        readStatus,
+      })
+      const data = pageRes.data
+      items.value = (data.records || []).map(mapMessageItemToNotification)
+      pageTotal.value = data.total || 0
+      allCountValue.value = Number(data.allCount ?? allCountValue.value)
+      unreadCountValue.value = Number(data.unreadCount ?? unreadCountValue.value)
+      pageNum.value = page
+      pageSize.value = size
+      activeTab.value = tab
+
+      if (items.value.length === 0 && pageTotal.value > 0 && page > 1) {
+        const lastPage = Math.max(1, Math.ceil(pageTotal.value / size))
+        await refresh(lastPage, size, readStatus, tab)
+      }
     } catch (err) {
       error.value = err instanceof Error ? err.message : '加载失败'
       throw err
     } finally {
       loading.value = false
     }
+  }
+
+  async function loadPage(tab: NotificationTabKey = activeTab.value) {
+    pageNum.value = 1
+    return refresh(1, pageSize.value, resolveReadStatus(tab), tab)
+  }
+
+  async function changePage(page: number) {
+    return refresh(page, pageSize.value, resolveReadStatus(activeTab.value), activeTab.value)
   }
 
   async function loadDetail(receiverId: string) {
@@ -63,11 +97,8 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
 
   async function markAllAsRead() {
     await markAllAccountMessagesRead()
-    items.value.forEach((item) => {
-      item.isUnread = false
-      item.status = 'READ'
-    })
     unreadCountValue.value = 0
+    await refresh(pageNum.value, pageSize.value, resolveReadStatus(activeTab.value), activeTab.value)
   }
 
   function getById(id: string) {
@@ -76,8 +107,12 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
 
   function resetState() {
     items.value = []
-    totalCount.value = 0
+    pageTotal.value = 0
+    allCountValue.value = 0
     unreadCountValue.value = 0
+    pageNum.value = 1
+    pageSize.value = 10
+    activeTab.value = 'ALL'
     loading.value = false
     error.value = ''
   }
@@ -85,10 +120,16 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   return {
     items,
     total,
+    allCount,
     unreadCount,
+    pageNum,
+    pageSize,
+    activeTab,
     loading,
     error,
     refresh,
+    loadPage,
+    changePage,
     loadDetail,
     markAsRead,
     markAllAsRead,

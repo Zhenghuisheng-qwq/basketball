@@ -11,7 +11,11 @@ public interface ICaptainPermissionService {
 
     CaptainQualificationDetailResp getCurrentQualification(Long accountId);
 
+    CaptainQualificationDetailResp getCurrentQualification(Long accountId, Long seasonId);
+
     BasketCaptainQualification requireValidQualification(Long accountId);
+
+    BasketCaptainQualification requireValidQualification(Long accountId, Long seasonId);
 
     BasketPlayerProfile requireCertifiedPlayer(Long accountId);
 

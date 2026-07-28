@@ -31,6 +31,12 @@ public class AccountTournamentItemResp implements Serializable {
     @ApiModelProperty("赛季名称")
     private String seasonName;
 
+    @ApiModelProperty("报名平台代码")
+    private String platformCode;
+
+    @ApiModelProperty("报名平台展示名称")
+    private String platformName;
+
     @ApiModelProperty("球队主键")
     private String teamId;
 

@@ -47,6 +47,13 @@ public class BasketCaptainQualification implements Serializable {
     @ApiModelProperty(value = "球员主键")
     private Long playerId;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "赛事赛季主键（队长授权所属赛段）")
+    private Long seasonId;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "绑定球队主键，未建队前可为空")
+    private Long teamId;
 
     @ApiModelProperty(value = "资格状态")
     private Integer qualificationStatus;
@@ -99,6 +106,9 @@ public class BasketCaptainQualification implements Serializable {
 
     @ApiModelProperty(value = "取消原因")
     private String revokeReason;
+
+    @ApiModelProperty(value = "备注")
+    private String remark;
 
     @ApiModelProperty(value = "创建时间")
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")

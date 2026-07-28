@@ -1,5 +1,6 @@
 package com.zhs.basket.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.Date;
 import lombok.Data;
 
@@ -7,7 +8,6 @@ import lombok.Data;
 public class CaptainQualificationDetailVo {
     private Long id;
     private String qualificationNo;
-    /** 用户ID（历史字段 memberId） */
     private Long memberId;
     private Long userId;
     private Long playerId;
@@ -18,6 +18,11 @@ public class CaptainQualificationDetailVo {
     private String gameAccount;
     private String positionCode;
     private String certificationStatusName;
+    private Long seasonId;
+    private String seasonName;
+    private String tournamentName;
+    private Long teamId;
+    private String teamName;
     private Integer qualificationStatus;
     private Integer isCurrent;
     private Integer paymentConfirmed;
@@ -26,6 +31,11 @@ public class CaptainQualificationDetailVo {
     private Date grantedTime;
     private Date validFrom;
     private Date validTo;
+    private Long grantedBy;
+    private String grantedByName;
+    private Date revokedTime;
+    private Long revokedBy;
+    private String revokedByName;
     private String revokeReason;
     private Integer runtimeValid;
     private String runtimeInvalidReason;

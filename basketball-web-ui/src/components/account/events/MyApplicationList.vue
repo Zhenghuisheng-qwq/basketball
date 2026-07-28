@@ -22,7 +22,7 @@ const emit = defineEmits<{
       <div class="my-events-list__main">
         <div class="my-events-list__head">
           <strong>{{ item.tournamentName }}</strong>
-          <span>{{ item.platform }}</span>
+          <span>{{ item.platformGroupLabel || (item.platform ? `${item.platform} 组` : '') }}</span>
         </div>
         <div class="my-events-list__meta">
           <span>报名类型：{{ item.applicationTypeText }}</span>

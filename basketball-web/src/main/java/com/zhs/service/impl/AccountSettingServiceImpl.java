@@ -45,7 +45,6 @@ public class AccountSettingServiceImpl implements IAccountSettingService {
         validateToggle(req.getAllowTeamInvite(), "允许球队邀请");
         validateToggle(req.getShowTeamHistory(), "展示球队历史");
         validateToggle(req.getShowMatchData(), "展示比赛数据");
-        validateToggle(req.getShowOnlineStatus(), "展示在线状态");
 
         Long memberId = UserContext.getRequiredUserId();
         BasketPrivacySetting setting = loadOrInitPrivacy(memberId);
@@ -53,7 +52,6 @@ public class AccountSettingServiceImpl implements IAccountSettingService {
         setting.setAllowTeamInvite(req.getAllowTeamInvite());
         setting.setShowTeamHistory(req.getShowTeamHistory());
         setting.setShowMatchData(req.getShowMatchData());
-        setting.setShowOnlineStatus(req.getShowOnlineStatus());
         privacySettingDao.updateById(setting);
         return toPrivacyResp(setting);
     }
@@ -77,8 +75,6 @@ public class AccountSettingServiceImpl implements IAccountSettingService {
         validateToggle(req.getTournamentNotice(), "赛事通知");
         validateToggle(req.getTeamNotice(), "球队通知");
         validateToggle(req.getAnnouncementNotice(), "公告通知");
-        validateToggle(req.getEmailNotice(), "邮件通知");
-        validateToggle(req.getSmsNotice(), "短信通知");
 
         Long memberId = UserContext.getRequiredUserId();
         BasketNotificationSetting setting = loadOrInitNotification(memberId);
@@ -87,8 +83,6 @@ public class AccountSettingServiceImpl implements IAccountSettingService {
         setting.setTournamentNotice(req.getTournamentNotice());
         setting.setTeamNotice(req.getTeamNotice());
         setting.setAnnouncementNotice(req.getAnnouncementNotice());
-        setting.setEmailNotice(req.getEmailNotice());
-        setting.setSmsNotice(req.getSmsNotice());
         notificationSettingDao.updateById(setting);
         return toNotificationResp(setting);
     }
@@ -167,7 +161,6 @@ public class AccountSettingServiceImpl implements IAccountSettingService {
         resp.setAllowTeamInvite(setting.getAllowTeamInvite());
         resp.setShowTeamHistory(setting.getShowTeamHistory());
         resp.setShowMatchData(setting.getShowMatchData());
-        resp.setShowOnlineStatus(setting.getShowOnlineStatus());
         return resp;
     }
 
@@ -178,8 +171,6 @@ public class AccountSettingServiceImpl implements IAccountSettingService {
         resp.setTournamentNotice(setting.getTournamentNotice());
         resp.setTeamNotice(setting.getTeamNotice());
         resp.setAnnouncementNotice(setting.getAnnouncementNotice());
-        resp.setEmailNotice(setting.getEmailNotice());
-        resp.setSmsNotice(setting.getSmsNotice());
         return resp;
     }
 

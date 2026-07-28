@@ -43,9 +43,24 @@ public class AccountTeamController {
     @GetMapping("/joinable/page")
     public R<JoinableTeamPageResp> pageJoinable(@RequestParam(required = false) Integer currentPage,
                                                   @RequestParam(required = false) Integer pageSize,
-                                                  @RequestParam String platformCode,
+                                                  @RequestParam(required = false) String platformCode,
                                                   @RequestParam(required = false) String keyword) {
         return R.ok(accountTeamService.pageJoinable(currentPage, pageSize, platformCode, keyword));
+    }
+
+    @ApiOperation("可继承历史球队列表")
+    @GetMapping("/inheritable/list")
+    public R<java.util.List<com.zhs.response.team.InheritableTeamSummaryResp>> listInheritableTeams() {
+        return R.ok(accountTeamService.listInheritableTeams());
+    }
+
+    @ApiOperation("绑定队长授权到历史球队")
+    @PostMapping("/captain/grant/bind-team")
+    public R<TeamDetailResp> bindGrantToTeam(@RequestBody com.zhs.request.team.CaptainGrantBindTeamReq req) {
+        if (req == null || req.getTeamId() == null || req.getTeamId().isBlank()) {
+            return R.fail("球队主键不能为空");
+        }
+        return R.ok(accountTeamService.bindGrantToTeam(req.getTeamId()), "球队绑定成功");
     }
 
     @ApiOperation("创建球队")

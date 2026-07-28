@@ -58,7 +58,7 @@ public class BasketTeam implements Serializable {
     @ApiModelProperty(value = "地区名称")
     private String regionName;
 
-    @ApiModelProperty(value = "比赛终端")
+    @ApiModelProperty(value = "比赛终端（已废弃，球队本体不绑定平台，保留字段兼容历史数据）")
     private String gameTerminal;
 
     @ApiModelProperty(value = "球队介绍")

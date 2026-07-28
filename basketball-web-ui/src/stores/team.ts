@@ -3,7 +3,9 @@ import { computed, ref } from 'vue'
 import { getCaptainQualificationCurrent } from '@/api/captainQualification'
 import {
   bindTeamLogo,
+  bindCaptainGrantToTeam,
   createTeam,
+  getInheritableTeamList,
   getJoinableTeamPage,
   getMyTeamPage,
   getTeamDetail,
@@ -33,6 +35,8 @@ import {
   createTeamRegistrationDraft,
   deleteTeamRegistrationDraft,
   getAvailableSeasonPage,
+  getRegistrationRosterCandidates,
+  getSeasonPlatforms,
   getTeamRegistrationAuditPage,
   getTeamRegistrationDetail,
   getTeamRegistrationPage,
@@ -42,6 +46,7 @@ import {
   withdrawTeamRegistration,
 } from '@/api/teamRegistration'
 import type { CaptainQualificationDto } from '@/api/types/teamCaptain'
+import type { InheritableTeamSummaryDto } from '@/api/types/teamInherit'
 import type {
   TeamCreateReq,
   TeamDetailDto,
@@ -53,6 +58,8 @@ import type { TeamInvitationCreateReq, TeamInvitationItemDto } from '@/api/types
 import type { TeamJoinApplicationItemDto } from '@/api/types/teamJoinApplication'
 import type {
   AvailableSeasonItemDto,
+  RegistrationRosterCandidateDto,
+  SeasonPlatformItemDto,
   TeamRegistrationAuditItemDto,
   TeamRegistrationDetailDto,
   TeamRegistrationDraftReq,
@@ -63,15 +70,6 @@ import type {
 } from '@/api/types/teamRegistration'
 import type { JoinableTeamPageDto } from '@/api/types/teamJoinInvite'
 import type { PageResult } from '@/api/types/common'
-
-const JOINABLE_PLATFORMS = ['PC', 'PS', 'XBOX'] as const
-
-function normalizePlatformCode(terminal?: string | null): string | null {
-  if (!terminal) return null
-  const upper = terminal.trim().toUpperCase()
-  if (upper === 'PS5' || upper === 'PSN') return 'PS'
-  return upper
-}
 
 function unwrapPage<T>(data: PageResult<T> | undefined): PageResult<T> {
   return data ?? { records: [], total: 0, size: 10, current: 1, pages: 0 }
@@ -115,27 +113,31 @@ export const useTeamStore = defineStore('team', () => {
   const registrationDetail = ref<TeamRegistrationDetailDto | null>(null)
   const registrationAudits = ref<TeamRegistrationAuditItemDto[]>([])
   const registrationLoading = ref(false)
+  const inheritableTeams = ref<InheritableTeamSummaryDto[]>([])
+  const inheritableLoading = ref(false)
+  const seasonPlatforms = ref<SeasonPlatformItemDto[]>([])
+  const rosterCandidates = ref<RegistrationRosterCandidateDto[]>([])
+  const rosterCandidatesLoading = ref(false)
 
   const hasTeam = computed(() => myTeams.value.length > 0 || Boolean(myTeamSummary.value?.teamId))
-  const occupiedPlatforms = computed(() => {
-    const platforms = new Set<string>()
-    for (const team of myTeams.value) {
-      const code = normalizePlatformCode(team.platformCode || team.gameTerminal)
-      if (code) platforms.add(code)
-    }
-    return platforms
-  })
-  const canJoinOtherPlatforms = computed(() =>
-    JOINABLE_PLATFORMS.some((platform) => !occupiedPlatforms.value.has(platform)),
-  )
-  const isCaptain = computed(() =>
+  const isCaptainMember = computed(() =>
     Boolean(myTeamSummary.value?.isCaptain || teamDetail.value?.isCaptain),
   )
+  const canManageCurrentTeam = computed(() => {
+    const grant = captainQualification.value
+    const currentTeamId = myTeamSummary.value?.teamId || teamDetail.value?.teamId
+    return Boolean(
+      grant?.runtimeValid
+      && grant?.canManageTeam
+      && currentTeamId
+      && grant.teamId === currentTeamId,
+    )
+  })
+  const isCaptain = computed(() => canManageCurrentTeam.value || isCaptainMember.value)
   const canCreateTeam = computed(() => Boolean(captainQualification.value?.canCreateTeam))
-  const hasValidCaptainQualification = computed(() => canCreateTeam.value)
-  const canJoinTeam = computed(
-    () => canJoinOtherPlatforms.value || (!hasTeam.value && !canCreateTeam.value),
-  )
+  const canInheritTeam = computed(() => Boolean(captainQualification.value?.canInheritTeam))
+  const hasValidCaptainQualification = computed(() => Boolean(captainQualification.value?.runtimeValid))
+  const canJoinTeam = computed(() => !hasTeam.value)
 
   function setError(error: unknown) {
     lastError.value = error instanceof Error ? error.message : '操作失败'
@@ -211,6 +213,7 @@ export const useTeamStore = defineStore('team', () => {
         isCaptain: res.data.isCaptain,
         myRole: res.data.myRole,
       }
+      await loadQualification()
       return res.data
     } catch (error) {
       setError(error)
@@ -394,8 +397,7 @@ export const useTeamStore = defineStore('team', () => {
     }
   }
 
-  async function loadJoinableTeams(params: {
-    platformCode: string
+  async function loadJoinableTeams(params?: {
     currentPage?: number
     pageSize?: number
     keyword?: string
@@ -502,6 +504,78 @@ export const useTeamStore = defineStore('team', () => {
       throw error
     } finally {
       actionLoading.value = false
+    }
+  }
+
+  async function loadInheritableTeams() {
+    inheritableLoading.value = true
+    lastError.value = ''
+    try {
+      const res = await getInheritableTeamList()
+      inheritableTeams.value = res.data ?? []
+      return inheritableTeams.value
+    } catch (error) {
+      inheritableTeams.value = []
+      setError(error)
+      throw error
+    } finally {
+      inheritableLoading.value = false
+    }
+  }
+
+  async function inheritTeamAction(teamId: string) {
+    actionLoading.value = true
+    lastError.value = ''
+    try {
+      const res = await bindCaptainGrantToTeam({ teamId })
+      teamDetail.value = res.data
+      myTeamSummary.value = {
+        teamId: res.data.teamId,
+        teamName: res.data.teamName,
+        shortName: res.data.shortName,
+        logoUrl: res.data.logoUrl,
+        regionName: res.data.regionName,
+        gameTerminal: res.data.gameTerminal,
+        currentMemberCount: res.data.currentMemberCount,
+        maxMemberCount: res.data.maxMemberCount,
+        isCaptain: true,
+        myRole: res.data.myRole,
+      }
+      await Promise.all([loadQualification(), loadMyTeam(), loadInheritableTeams()])
+      return res.data
+    } catch (error) {
+      setError(error)
+      throw error
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
+  async function loadSeasonPlatforms(seasonId: string) {
+    try {
+      const res = await getSeasonPlatforms(seasonId)
+      seasonPlatforms.value = res.data ?? []
+      return seasonPlatforms.value
+    } catch (error) {
+      seasonPlatforms.value = []
+      setError(error)
+      throw error
+    }
+  }
+
+  async function loadRosterCandidates(registrationId: string) {
+    rosterCandidatesLoading.value = true
+    lastError.value = ''
+    try {
+      const res = await getRegistrationRosterCandidates(registrationId)
+      rosterCandidates.value = res.data ?? []
+      return rosterCandidates.value
+    } catch (error) {
+      rosterCandidates.value = []
+      setError(error)
+      throw error
+    } finally {
+      rosterCandidatesLoading.value = false
     }
   }
 
@@ -733,8 +807,11 @@ export const useTeamStore = defineStore('team', () => {
     joinableEmptyReason,
     joinableLoading,
     myTeams,
-    canJoinOtherPlatforms,
-    occupiedPlatforms,
+    inheritableTeams,
+    inheritableLoading,
+    seasonPlatforms,
+    rosterCandidates,
+    rosterCandidatesLoading,
     candidatePlayers,
     candidateEmptyReason,
     candidatesLoading,
@@ -746,7 +823,10 @@ export const useTeamStore = defineStore('team', () => {
     registrationLoading,
     hasTeam,
     isCaptain,
+    isCaptainMember,
+    canManageCurrentTeam,
     canCreateTeam,
+    canInheritTeam,
     hasValidCaptainQualification,
     canJoinTeam,
     loadQualification,
@@ -769,6 +849,10 @@ export const useTeamStore = defineStore('team', () => {
     applyJoinTeamAction,
     cancelJoinApplicationAction,
     processJoinApplicationAction,
+    loadInheritableTeams,
+    inheritTeamAction,
+    loadSeasonPlatforms,
+    loadRosterCandidates,
     loadCandidatePlayers,
     loadAvailableSeasons,
     loadRegistrations,

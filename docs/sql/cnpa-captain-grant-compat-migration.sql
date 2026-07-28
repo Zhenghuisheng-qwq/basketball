@@ -1,0 +1,16 @@
+-- CNPA 队长授权：历史数据兼容（可选，在 cnpa-captain-grant-migration.sql 之后执行）
+-- 说明：
+-- 1. 不删除已有 basket_captain_qualification 记录
+-- 2. 无 season_id 的 ACTIVE 记录视为历史兼容，Web 仍按 valid_from/valid_to 判断
+-- 3. 新授予必须带 season_id（由后台接口强制）
+
+-- 示例：将测试授权绑定到指定赛季（请替换 ID 后手动执行）
+-- UPDATE basket_captain_qualification cq
+-- INNER JOIN basket_tournament_season s ON s.id = 1001
+-- SET cq.season_id = s.id,
+--     cq.valid_to = s.season_end_time,
+--     cq.update_time = NOW()
+-- WHERE cq.id = 10001
+--   AND cq.season_id IS NULL
+--   AND cq.qualification_status = 1
+--   AND cq.is_delete = 0;

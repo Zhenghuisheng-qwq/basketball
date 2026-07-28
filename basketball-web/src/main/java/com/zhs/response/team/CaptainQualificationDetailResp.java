@@ -49,4 +49,25 @@ public class CaptainQualificationDetailResp implements Serializable {
 
     @ApiModelProperty("无效原因")
     private String invalidReason;
+
+    @ApiModelProperty("授权赛事赛季主键")
+    private String seasonId;
+
+    @ApiModelProperty("授权赛事赛季名称")
+    private String seasonName;
+
+    @ApiModelProperty("绑定球队主键")
+    private String teamId;
+
+    @ApiModelProperty("绑定球队名称")
+    private String teamName;
+
+    @ApiModelProperty("是否可管理已绑定球队")
+    private Boolean canManageTeam;
+
+    @ApiModelProperty("是否可继承历史球队")
+    private Boolean canInheritTeam;
+
+    @ApiModelProperty("授权是否已收回（赛事周期结束等）")
+    private Boolean grantRevoked;
 }

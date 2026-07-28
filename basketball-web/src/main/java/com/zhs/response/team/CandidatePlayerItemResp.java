@@ -72,4 +72,13 @@ public class CandidatePlayerItemResp implements Serializable {
 
     @ApiModelProperty("球员认证状态")
     private Integer certificationStatus;
+
+    @ApiModelProperty("球员认证状态文案")
+    private String certificationStatusText;
+
+    @ApiModelProperty("当前球队状态摘要")
+    private String currentTeamStatusText;
+
+    @ApiModelProperty("已绑定平台游戏 ID 摘要")
+    private String platformAccountSummary;
 }

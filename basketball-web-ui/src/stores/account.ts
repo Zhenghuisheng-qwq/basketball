@@ -848,7 +848,7 @@ export function getAccountRoleLabel(role: AccountRole): string {
   const labels: Record<AccountRole, string> = {
     BASIC_USER: '基础用户',
     PLAYER: '认证球员',
-    CAPTAIN: '认证队长',
+    CAPTAIN: '队长权限',
   }
   return labels[role]
 }

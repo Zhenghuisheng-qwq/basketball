@@ -87,3 +87,15 @@ export function getTeamRegistrationAuditPage(
     { params },
   )
 }
+
+export function getSeasonPlatforms(seasonId: string) {
+  return request.get<any, ApiResult<import('@/api/types/teamRegistration').SeasonPlatformItemDto[]>>(
+    `/basket/season/${seasonId}/platforms`,
+  )
+}
+
+export function getRegistrationRosterCandidates(registrationId: string) {
+  return request.get<any, ApiResult<import('@/api/types/teamRegistration').RegistrationRosterCandidateDto[]>>(
+    `/basket/team/registration/${registrationId}/roster/candidates`,
+  )
+}

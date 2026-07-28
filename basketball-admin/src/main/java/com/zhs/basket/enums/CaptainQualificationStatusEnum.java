@@ -3,7 +3,7 @@ package com.zhs.basket.enums;
 import com.zhs.common.exception.ServiceException;
 
 public enum CaptainQualificationStatusEnum {
-    REVOKED(0, "已撤销"),
+    REVOKED(0, "已收回"),
     ACTIVE(1, "有效"),
     EXPIRED(2, "已过期");
 

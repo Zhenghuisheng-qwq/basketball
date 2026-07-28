@@ -8,18 +8,27 @@ import type {
   TeamUpdateReq,
 } from '@/api/types/teamAccount'
 import type { JoinableTeamPageDto } from '@/api/types/teamJoinInvite'
+import type { CaptainGrantBindTeamReq, InheritableTeamSummaryDto } from '@/api/types/teamInherit'
 
 export function getMyTeamPage(params?: { currentPage?: number; pageSize?: number }) {
   return request.get<any, ApiResult<PageResult<TeamSummaryDto>>>('/basket/team/mine', { params })
 }
 
-export function getJoinableTeamPage(params: {
+export function getJoinableTeamPage(params?: {
   currentPage?: number
   pageSize?: number
-  platformCode: string
+  platformCode?: string
   keyword?: string
 }) {
   return request.get<any, ApiResult<JoinableTeamPageDto>>('/basket/team/joinable/page', { params })
+}
+
+export function getInheritableTeamList() {
+  return request.get<any, ApiResult<InheritableTeamSummaryDto[]>>('/basket/team/inheritable/list')
+}
+
+export function bindCaptainGrantToTeam(body: CaptainGrantBindTeamReq) {
+  return request.post<any, ApiResult<TeamDetailDto>>('/basket/team/captain/grant/bind-team', body)
 }
 
 export function createTeam(body: TeamCreateReq) {
