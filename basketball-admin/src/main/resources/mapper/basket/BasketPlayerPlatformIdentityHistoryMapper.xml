@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketPlayerPlatformIdentityHistoryMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_player_platform_identity_history (
+            user_id, player_id, platform_identity_id, platform_code, change_type,
+            old_game_id, new_game_id, effective_time, audit_record_id, operator_id,
+            initial_bind_slot, create_time, is_delete
+        ) values (
+            #{userId}, #{playerId}, #{platformIdentityId}, #{platformCode}, #{changeType},
+            #{oldGameId}, #{newGameId}, #{effectiveTime}, #{auditRecordId}, #{operatorId},
+            #{initialBindSlot}, #{createTime}, #{isDelete}
+        )
+    </insert>
+
+    <select id="countInitialBind" resultType="int">
+        select count(1) from basket_player_platform_identity_history
+        where player_id = #{playerId}
+          and platform_code = #{platformCode}
+          and change_type = 'INITIAL_BIND'
+          and is_delete = 0
+    </select>
+</mapper>

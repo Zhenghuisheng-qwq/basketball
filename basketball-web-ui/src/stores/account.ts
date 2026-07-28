@@ -53,7 +53,6 @@ import {
 } from '@/utils/safeParseStorage'
 import {
   applyOverviewToStoreState,
-  filterApprovedChangeHistory,
   mapEligibilityStatus,
   mapPlatformAccountItem,
   mapPlatformChangeHistoryItem,
@@ -298,6 +297,18 @@ export const useAccountStore = defineStore('account', () => {
     }
   }
 
+  async function loadIdentityChangeHistory() {
+    const status = verification.value?.status
+    const isApproved = status === 'APPROVED' || status === 'CHANGE_PENDING'
+    if (!isApproved) {
+      identityChangeHistory.value = []
+      return []
+    }
+    const historyRes = await getPlatformChangeHistory()
+    identityChangeHistory.value = (historyRes.data || []).map(mapPlatformChangeHistoryItem)
+    return identityChangeHistory.value
+  }
+
   async function loadPlayerPlatformState() {
     const status = verification.value?.status
     const isApproved = status === 'APPROVED' || status === 'CHANGE_PENDING'
@@ -309,12 +320,11 @@ export const useAccountStore = defineStore('account', () => {
           getPlatformChangeHistory(),
         ])
         platformGameIds.value = (listRes.data || []).map(mapPlatformAccountItem)
-        identityChangeHistory.value = filterApprovedChangeHistory(
-          (historyRes.data || []).map(mapPlatformChangeHistoryItem),
-        )
-      } catch {
+        identityChangeHistory.value = (historyRes.data || []).map(mapPlatformChangeHistoryItem)
+      } catch (error) {
         platformGameIds.value = []
         identityChangeHistory.value = []
+        throw error
       }
     } else {
       platformGameIds.value = []
@@ -822,6 +832,7 @@ export const useAccountStore = defineStore('account', () => {
     submitTeamCreateRequest,
     submitPlatformGameId,
     loadPlayerPlatformState,
+    loadIdentityChangeHistory,
     acceptTournamentInvitation,
     rejectTournamentInvitation,
     loadOpenRegistration,

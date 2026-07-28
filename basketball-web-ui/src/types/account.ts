@@ -134,11 +134,10 @@ export interface PlatformGameIdRecord {
 export interface IdentityChangeRecord {
   effectiveTime: string
   platform: IdentityPlatform
+  changeType?: string
+  changeTypeName?: string
   oldGameId: string
   newGameId: string
-  changeType?: string
-  requestStatus?: number
-  requestStatusText?: string
 }
 
 export interface EligibilityLimit {

@@ -9,8 +9,9 @@ import com.zhs.basket.req.PlayerCertApproveReq;
 import com.zhs.basket.req.PlayerCertRejectReq;
 import com.zhs.basket.service.IBasketPlayerCertService;
 import com.zhs.basket.support.BasketAccountSecurityLogWriter;
-import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.PlatformIdentityHistoryWriter;
 import com.zhs.basket.support.GameAccountNormalizer;
+import com.zhs.basket.support.PlatformIdentityHistoryWriter;
 import com.zhs.basket.support.PlayerNoGenerator;
 import com.zhs.basket.vo.*;
 import com.zhs.common.exception.ServiceException;
@@ -39,9 +40,11 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
     @Autowired private BasketFileAssetMapper fileAssetMapper;
     @Autowired private BasketPlayerProfileMapper profileMapper;
     @Autowired private BasketPlayerPlatformAccountMapper platformAccountMapper;
+    @Autowired private PlatformIdentityHistoryWriter platformIdentityHistoryWriter;
     @Autowired private PlayerNoGenerator playerNoGenerator;
     @Autowired private BasketAdminMessageService messageService;
     @Autowired private BasketAccountSecurityLogWriter securityLogWriter;
+    @Autowired private PlatformIdentityHistoryWriter platformIdentityHistoryWriter;
 
     @Override
     public List<PlayerCertListVo> selectList(PlayerCertQuery query) {
@@ -132,7 +135,12 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
                 PlayerCertStatusEnum.APPROVED.getCode(), auditorId, req.getAuditRemark(), now, auditorId);
         assertSingleRow(rows, "审核通过失败，状态已变更");
         BasketPlayerProfile profile = upsertProfile(app, req.getPositionCode(), now);
-        insertPrimaryPlatformAccountIfAbsent(app, profile, normalizedGameAccount, auditorId, now);
+        BasketPlayerPlatformAccount primaryAccount = insertPrimaryPlatformAccountIfAbsent(
+                app, profile, normalizedGameAccount, auditorId, now);
+        if (primaryAccount != null) {
+            platformIdentityHistoryWriter.writeInitialBind(app.getMemberId(), profile.getId(), primaryAccount,
+                    now, app.getId(), auditorId);
+        }
         applicationMapper.updatePlayerIdAndNormalized(applicationId, profile.getId(), normalizedGameAccount);
         writeAudit(app, "APPROVE", app.getApplicationStatus(), PlayerCertStatusEnum.APPROVED.getCode(), req.getAuditRemark());
         messageService.sendSiteMessage(app.getMemberId(), auditorId, "PLAYER_CERT", applicationId,
@@ -215,15 +223,15 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
         profileMapper.updateById(profile);
     }
 
-    private void insertPrimaryPlatformAccountIfAbsent(BasketPlayerCertApplication app, BasketPlayerProfile profile,
-            String normalizedGameAccount, Long auditorId, Date now) {
+    private BasketPlayerPlatformAccount insertPrimaryPlatformAccountIfAbsent(BasketPlayerCertApplication app,
+            BasketPlayerProfile profile, String normalizedGameAccount, Long auditorId, Date now) {
         BasketPlayerPlatformAccount existing = platformAccountMapper.selectPrimaryByPlayerId(profile.getId());
         if (existing != null) {
-            return;
+            return null;
         }
         BasketPlayerPlatformAccount account = new BasketPlayerPlatformAccount();
         account.setPlayerId(profile.getId());
-        account.setPlatform(app.getGameTerminal());
+        account.setPlatform(normalizePlatformCode(app.getGameTerminal()));
         account.setDisplayGameId(app.getGameAccount());
         account.setNormalizedGameId(normalizedGameAccount);
         account.setAccountStatus(PlatformAccountStatusEnum.ACTIVE.getCode());
@@ -236,6 +244,18 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
         account.setUpdateTime(now);
         account.setIsDelete(NOT_DELETED);
         platformAccountMapper.insert(account);
+        return account;
+    }
+
+    private String normalizePlatformCode(String platform) {
+        if (!StringUtils.hasText(platform)) {
+            return platform;
+        }
+        String normalized = platform.trim().toUpperCase();
+        if ("PS5".equals(normalized) || "PSN".equals(normalized)) {
+            return "PS";
+        }
+        return normalized;
     }
 
     private void writeAudit(BasketPlayerCertApplication app, String action, Integer before, Integer after, String remark) {

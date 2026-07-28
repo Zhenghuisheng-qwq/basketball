@@ -32,7 +32,6 @@ import type {
 } from '@/types/accountNotifications'
 import { buildPlayerIdentity } from '@/utils/playerIdentity'
 
-const PLATFORM_CHANGE_APPROVED = 1
 const PLAYER_CERT_APPROVED = 3
 const PLAYER_CERT_DRAFT = 0
 
@@ -84,15 +83,25 @@ export function mapPlatformAccountItem(item: PlatformAccountItemDto): PlatformGa
 }
 
 export function mapPlatformChangeHistoryItem(item: PlatformChangeHistoryItemDto): IdentityChangeRecord {
+  const platformCode = (item.platformCode || item.platform || 'PC').toUpperCase()
+  const platform = (platformCode === 'PS5' || platformCode === 'PSN' ? 'PS' : platformCode) as IdentityPlatform
+  const oldGameId = item.oldGameId ?? item.oldDisplayGameId
+  const newGameId = item.newGameId ?? item.newDisplayGameId ?? '-'
   return {
-    effectiveTime: toIsoDateTime(item.reviewedTime || item.submitTime),
-    platform: (item.platform || 'PC') as IdentityPlatform,
-    oldGameId: item.oldDisplayGameId || '-',
-    newGameId: item.newDisplayGameId || '-',
+    effectiveTime: toIsoDateTime(item.effectiveTime),
+    platform,
     changeType: item.changeType,
-    requestStatus: item.requestStatus,
-    requestStatusText: item.requestStatusText,
+    changeTypeName: item.changeTypeName || resolveChangeTypeName(item.changeType),
+    oldGameId: oldGameId ? oldGameId : '—',
+    newGameId,
   }
+}
+
+function resolveChangeTypeName(changeType?: string): string {
+  if (changeType === 'INITIAL_BIND') return '首次绑定'
+  if (changeType === 'UPDATE_GAME_ID' || changeType === 'CHANGE_GAME_ID') return '修改游戏 ID'
+  if (changeType === 'ADD_PLATFORM') return '首次绑定'
+  return changeType || '变更'
 }
 
 export function mapEligibilityStatus(dto: PlayerEligibilityStatusDto): EligibilityLimit {
@@ -110,9 +119,6 @@ export function mapEligibilityStatus(dto: PlayerEligibilityStatusDto): Eligibili
   }
 }
 
-export function filterApprovedChangeHistory(items: IdentityChangeRecord[]): IdentityChangeRecord[] {
-  return items.filter((item) => item.requestStatus == null || item.requestStatus === PLATFORM_CHANGE_APPROVED)
-}
 
 const PLAYER_CERT_SUBMITTED = 1
 const PLAYER_CERT_REVIEWING = 2

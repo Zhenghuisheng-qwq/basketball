@@ -9,15 +9,18 @@ export interface PlatformAccountItemDto {
 }
 
 export interface PlatformChangeHistoryItemDto {
-  requestNo?: string
+  historyId?: string
   changeType?: string
+  changeTypeName?: string
+  platformCode?: string
+  platformName?: string
   platform?: string
+  oldGameId?: string
+  newGameId?: string
   oldDisplayGameId?: string
   newDisplayGameId?: string
-  requestStatus?: number
-  requestStatusText?: string
-  submitTime?: string
-  reviewedTime?: string
+  effectiveTime?: string
+  requestNo?: string
 }
 
 export interface PlatformChangeSubmitDto {

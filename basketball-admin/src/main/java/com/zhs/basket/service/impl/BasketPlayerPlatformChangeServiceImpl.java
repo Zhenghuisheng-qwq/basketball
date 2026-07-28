@@ -12,6 +12,7 @@ import com.zhs.basket.req.PlayerPlatformChangeApproveReq;
 import com.zhs.basket.req.PlayerPlatformChangeRejectReq;
 import com.zhs.basket.service.IBasketPlayerPlatformChangeService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.PlatformIdentityHistoryWriter;
 import com.zhs.basket.vo.PlayerPlatformChangeDetailVo;
 import com.zhs.basket.vo.PlayerPlatformChangeListVo;
 import com.zhs.common.exception.ServiceException;
@@ -34,6 +35,7 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
     @Autowired private BasketPlayerPlatformChangeRequestMapper changeRequestMapper;
     @Autowired private BasketPlayerPlatformAccountMapper platformAccountMapper;
     @Autowired private BasketAdminMessageService messageService;
+    @Autowired private PlatformIdentityHistoryWriter platformIdentityHistoryWriter;
 
     @Override
     public List<PlayerPlatformChangeListVo> selectList(PlayerPlatformChangeQuery query) {
@@ -53,11 +55,17 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void approve(Long id, PlayerPlatformChangeApproveReq req) {
-        BasketPlayerPlatformChangeRequest request = requireRequest(id);
+        BasketPlayerPlatformChangeRequest request = requirePendingRequest(id);
         assertGameIdAvailable(request);
         Date now = new Date();
         Long reviewerId = SecurityUtils.getUserId();
+        String oldDisplayGameId = resolveOldDisplayGameId(request);
         Long resultAccountId = applyPlatformChange(request, reviewerId, now);
+        BasketPlayerPlatformAccount account = platformAccountMapper.selectById(resultAccountId);
+        if (account == null) {
+            throw new ServiceException("平台身份更新失败");
+        }
+        platformIdentityHistoryWriter.writeApprovedPlatformChange(request, account, oldDisplayGameId, reviewerId, now);
         int rows = changeRequestMapper.updateStatusIfMatch(id,
                 Collections.singletonList(PlatformChangeStatusEnum.PENDING.getCode()),
                 PlatformChangeStatusEnum.APPROVED.getCode(), reviewerId,
@@ -70,7 +78,7 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void reject(Long id, PlayerPlatformChangeRejectReq req) {
-        BasketPlayerPlatformChangeRequest request = requireRequest(id);
+        BasketPlayerPlatformChangeRequest request = requirePendingRequest(id);
         Long reviewerId = SecurityUtils.getUserId();
         String remark = req != null && StringUtils.hasText(req.getRejectReason())
                 ? req.getRejectReason()
@@ -81,6 +89,18 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
         assertSingleRow(rows, "驳回失败，状态已变更");
         messageService.sendSiteMessage(request.getMemberId(), reviewerId, "PLATFORM_CHANGE", id,
                 "平台游戏ID变更已驳回", "您的平台游戏ID变更申请已被驳回：" + remark);
+    }
+
+    private String resolveOldDisplayGameId(BasketPlayerPlatformChangeRequest request) {
+        PlatformChangeTypeEnum changeType = PlatformChangeTypeEnum.fromCode(request.getChangeType());
+        if (changeType != PlatformChangeTypeEnum.CHANGE_GAME_ID) {
+            return null;
+        }
+        if (StringUtils.hasText(request.getOldDisplayGameId())) {
+            return request.getOldDisplayGameId();
+        }
+        BasketPlayerPlatformAccount existing = platformAccountMapper.selectById(request.getPlatformAccountId());
+        return existing == null ? null : existing.getDisplayGameId();
     }
 
     private Long applyPlatformChange(BasketPlayerPlatformChangeRequest request, Long reviewerId, Date now) {
@@ -107,7 +127,7 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
             int isPrimary) {
         BasketPlayerPlatformAccount account = new BasketPlayerPlatformAccount();
         account.setPlayerId(request.getPlayerId());
-        account.setPlatform(request.getPlatform());
+        account.setPlatform(normalizePlatformCode(request.getPlatform()));
         account.setDisplayGameId(request.getNewDisplayGameId());
         account.setNormalizedGameId(request.getNewNormalizedGameId());
         account.setAccountStatus(PlatformAccountStatusEnum.ACTIVE.getCode());
@@ -124,16 +144,19 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
 
     private void assertGameIdAvailable(BasketPlayerPlatformChangeRequest request) {
         int count = platformAccountMapper.countActiveByPlatformAndNormalizedExcludePlayer(
-                request.getPlatform(), request.getNewNormalizedGameId(), request.getPlayerId());
+                normalizePlatformCode(request.getPlatform()), request.getNewNormalizedGameId(), request.getPlayerId());
         if (count > 0) {
             throw new ServiceException("该平台游戏ID已被其他球员使用");
         }
     }
 
-    private BasketPlayerPlatformChangeRequest requireRequest(Long id) {
+    private BasketPlayerPlatformChangeRequest requirePendingRequest(Long id) {
         BasketPlayerPlatformChangeRequest request = changeRequestMapper.selectById(id);
         if (request == null) {
             throw new ServiceException("平台变更申请不存在");
+        }
+        if (!PlatformChangeStatusEnum.PENDING.getCode().equals(request.getRequestStatus())) {
+            throw new ServiceException("申请状态不可审核");
         }
         return request;
     }
@@ -152,5 +175,16 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
         if (rows != 1) {
             throw new ServiceException(message);
         }
+    }
+
+    private String normalizePlatformCode(String platform) {
+        if (!StringUtils.hasText(platform)) {
+            throw new ServiceException("平台代码不能为空");
+        }
+        String normalized = platform.trim().toUpperCase();
+        if ("PS5".equals(normalized) || "PSN".equals(normalized)) {
+            return "PS";
+        }
+        return normalized;
     }
 }

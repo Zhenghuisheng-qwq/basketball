@@ -4,7 +4,9 @@ import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zhs.dao.BasketPlayerPlatformAccountDao;
 import com.zhs.dao.BasketPlayerPlatformChangeRequestDao;
+import com.zhs.dao.BasketPlayerPlatformIdentityHistoryDao;
 import com.zhs.dao.BasketPlayerProfileDao;
+import com.zhs.enums.PlatformIdentityHistoryChangeTypeEnum;
 import com.zhs.enums.PlatformAccountStatusEnum;
 import com.zhs.enums.PlatformChangeStatusEnum;
 import com.zhs.enums.PlatformChangeTypeEnum;
@@ -13,7 +15,9 @@ import com.zhs.enums.PlayerStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketPlayerPlatformAccount;
 import com.zhs.model.BasketPlayerPlatformChangeRequest;
+import com.zhs.model.BasketPlayerPlatformIdentityHistory;
 import com.zhs.model.BasketPlayerProfile;
+import com.zhs.support.GameTerminalSupport;
 import com.zhs.response.player.PlatformAccountItemResp;
 import com.zhs.response.player.PlatformChangeHistoryItemResp;
 import com.zhs.response.player.PlatformChangeSubmitResp;
@@ -27,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -49,6 +52,8 @@ public class PlayerPlatformAccountServiceImpl implements IPlayerPlatformAccountS
     private BasketPlayerPlatformAccountDao platformAccountDao;
     @Resource
     private BasketPlayerPlatformChangeRequestDao platformChangeRequestDao;
+    @Resource
+    private BasketPlayerPlatformIdentityHistoryDao platformIdentityHistoryDao;
     @Resource
     private IAccountFileService accountFileService;
 
@@ -177,21 +182,14 @@ public class PlayerPlatformAccountServiceImpl implements IPlayerPlatformAccountS
     @Override
     public List<PlatformChangeHistoryItemResp> listChangeHistory(Long memberId) {
         BasketPlayerProfile profile = requireApprovedPlayer(memberId);
-        List<BasketPlayerPlatformChangeRequest> requests = platformChangeRequestDao.selectList(
-                new LambdaQueryWrapper<BasketPlayerPlatformChangeRequest>()
-                        .eq(BasketPlayerPlatformChangeRequest::getPlayerId, profile.getId())
-                        .eq(BasketPlayerPlatformChangeRequest::getIsDelete, NOT_DELETED)
-                        .in(BasketPlayerPlatformChangeRequest::getRequestStatus,
-                                PlatformChangeStatusEnum.APPROVED.getCode(),
-                                PlatformChangeStatusEnum.REJECTED.getCode())
-                        .orderByDesc(BasketPlayerPlatformChangeRequest::getReviewedTime)
-                        .orderByDesc(BasketPlayerPlatformChangeRequest::getSubmitTime));
+        List<BasketPlayerPlatformIdentityHistory> histories = platformIdentityHistoryDao.selectList(
+                new LambdaQueryWrapper<BasketPlayerPlatformIdentityHistory>()
+                        .eq(BasketPlayerPlatformIdentityHistory::getPlayerId, profile.getId())
+                        .eq(BasketPlayerPlatformIdentityHistory::getIsDelete, NOT_DELETED)
+                        .orderByDesc(BasketPlayerPlatformIdentityHistory::getEffectiveTime)
+                        .orderByDesc(BasketPlayerPlatformIdentityHistory::getId));
 
-        return requests.stream()
-                .sorted(Comparator.comparing(BasketPlayerPlatformChangeRequest::getReviewedTime,
-                                Comparator.nullsLast(Comparator.reverseOrder()))
-                        .thenComparing(BasketPlayerPlatformChangeRequest::getSubmitTime,
-                                Comparator.nullsLast(Comparator.reverseOrder())))
+        return histories.stream()
                 .map(this::toHistoryItem)
                 .collect(Collectors.toList());
     }
@@ -312,18 +310,22 @@ public class PlayerPlatformAccountServiceImpl implements IPlayerPlatformAccountS
                 .collect(Collectors.toSet());
     }
 
-    private PlatformChangeHistoryItemResp toHistoryItem(BasketPlayerPlatformChangeRequest request) {
+    private PlatformChangeHistoryItemResp toHistoryItem(BasketPlayerPlatformIdentityHistory history) {
         PlatformChangeHistoryItemResp resp = new PlatformChangeHistoryItemResp();
-        PlatformChangeStatusEnum status = PlatformChangeStatusEnum.fromCode(request.getRequestStatus());
-        resp.setRequestNo(request.getRequestNo());
-        resp.setChangeType(request.getChangeType());
-        resp.setPlatform(normalizePlatform(request.getPlatform()));
-        resp.setOldDisplayGameId(request.getOldDisplayGameId());
-        resp.setNewDisplayGameId(request.getNewDisplayGameId());
-        resp.setRequestStatus(status.getCode());
-        resp.setRequestStatusText(status.getLabel());
-        resp.setSubmitTime(request.getSubmitTime());
-        resp.setReviewedTime(request.getReviewedTime());
+        PlatformIdentityHistoryChangeTypeEnum changeType =
+                PlatformIdentityHistoryChangeTypeEnum.fromCode(history.getChangeType());
+        String platformCode = normalizePlatform(history.getPlatformCode());
+        resp.setHistoryId(String.valueOf(history.getId()));
+        resp.setChangeType(changeType.getCode());
+        resp.setChangeTypeName(changeType.getLabel());
+        resp.setPlatformCode(platformCode);
+        resp.setPlatformName(GameTerminalSupport.formatDisplayName(platformCode));
+        resp.setPlatform(platformCode);
+        resp.setOldGameId(history.getOldGameId());
+        resp.setNewGameId(history.getNewGameId());
+        resp.setOldDisplayGameId(history.getOldGameId());
+        resp.setNewDisplayGameId(history.getNewGameId());
+        resp.setEffectiveTime(history.getEffectiveTime());
         return resp;
     }
 
