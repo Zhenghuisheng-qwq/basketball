@@ -11,4 +11,6 @@ public class RegistrationAuditQuery extends BaseEntity {
     private Long seasonId;
     private Long teamId;
     private Integer registrationStatus;
+    /** 审核筛选阶段：PENDING/APPROVED/REJECTED/CANCELLED */
+    private String auditStage;
 }

@@ -31,7 +31,19 @@
         where is_delete = 0
         <if test="teamNo != null and teamNo != ''">and team_no like concat('%', #{teamNo}, '%')</if>
         <if test="teamName != null and teamName != ''">and team_name like concat('%', #{teamName}, '%')</if>
-        <if test="auditStatus != null">and audit_status = #{auditStatus}</if>
+        <if test="auditStage != null and auditStage != ''">
+            <choose>
+                <when test="auditStage == 'PENDING'">and audit_status in (0, 3)</when>
+                <when test="auditStage == 'APPROVED'">and audit_status = 1</when>
+                <when test="auditStage == 'REJECTED'">and audit_status = 2</when>
+            </choose>
+        </if>
+        <if test="(auditStage == null or auditStage == '') and auditStatus != null">
+            <choose>
+                <when test="auditStatus == 0 or auditStatus == 3">and audit_status in (0, 3)</when>
+                <otherwise>and audit_status = #{auditStatus}</otherwise>
+            </choose>
+        </if>
         order by create_time desc
     </select>
     <select id="selectById" resultMap="BasketTeamResult">

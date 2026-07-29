@@ -17,7 +17,26 @@
         <result property="createTime" column="create_time" />
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
-    </resultMap>    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+    </resultMap>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_account_security_log (member_id, event_type, event_title, old_value_masked, new_value_masked, operator_type, operator_id, client_ip, terminal_type, event_time, remark, create_time, update_time, is_delete) values (#{memberId}, #{eventType}, #{eventTitle}, #{oldValueMasked}, #{newValueMasked}, #{operatorType}, #{operatorId}, #{clientIp}, #{terminalType}, #{eventTime}, #{remark}, #{createTime}, #{updateTime}, #{isDelete})
     </insert>
+
+    <select id="selectByMemberId" resultType="com.zhs.basket.vo.AccountPlayerOperationLogVo">
+        select l.id,
+               l.event_type as eventType,
+               l.event_title as eventTitle,
+               l.operator_type as operatorType,
+               l.operator_id as operatorId,
+               l.event_time as eventTime,
+               l.remark,
+               l.client_ip as clientIp,
+               su.nick_name as operatorName
+        from basket_account_security_log l
+        left join sys_user su on su.user_id = l.operator_id
+        where l.member_id = #{memberId}
+          and l.is_delete = 0
+        order by l.event_time desc, l.id desc
+        limit 50
+    </select>
 </mapper>

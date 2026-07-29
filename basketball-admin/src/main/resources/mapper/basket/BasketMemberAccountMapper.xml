@@ -31,11 +31,15 @@
               and (cq.valid_to is null or cq.valid_to &gt;= now())
             group by cq.player_id
         ) captain on captain.player_id = p.id
+        left join basket_captain_qualification cq_active on cq_active.id = captain.qual_id and cq_active.is_delete = 0
+        left join basket_tournament_season cq_season on cq_season.id = cq_active.season_id and cq_season.is_delete = 0
+        left join basket_tournament cq_tournament on cq_tournament.id = cq_season.tournament_id and cq_tournament.is_delete = 0
     </sql>
 
     <sql id="memberListWhere">
         where acc.is_delete = 0
         <if test="email != null and email != ''">and acc.email like concat('%', #{email}, '%')</if>
+        <if test="username != null and username != ''">and acc.username like concat('%', #{username}, '%')</if>
         <if test="nickname != null and nickname != ''">and mp.nickname like concat('%', #{nickname}, '%')</if>
         <if test="playerNo != null and playerNo != ''">and p.player_no like concat('%', #{playerNo}, '%')</if>
         <if test="gameTerminal != null and gameTerminal != ''">and p.game_terminal = #{gameTerminal}</if>
@@ -59,6 +63,7 @@
         <if test="playerStatus != null">and p.player_status = #{playerStatus}</if>
         <if test="hasTeam != null and hasTeam == 1">and p.current_team_id is not null</if>
         <if test="hasTeam != null and hasTeam == 0">and (p.id is null or p.current_team_id is null)</if>
+        <if test="currentTeamName != null and currentTeamName != ''">and ct.team_name like concat('%', #{currentTeamName}, '%')</if>
         <if test="hasCaptainQual != null and hasCaptainQual == 1">and captain.qual_id is not null</if>
         <if test="hasCaptainQual != null and hasCaptainQual == 0">and (p.id is null or captain.qual_id is null)</if>
         <if test="certStage != null and certStage != ''">
@@ -108,12 +113,12 @@
         select acc.id as memberId, acc.account_no as accountNo, acc.username as username, acc.email as email,
                mp.nickname as nickname, af.access_url as avatarUrl, acc.email_verified as emailVerified,
                p.id as playerId, p.player_no as playerNo,
-               p.game_terminal as gameTerminal, p.game_account as gameAccount,
                p.certification_status as certificationStatus, p.player_status as playerStatus,
                acc.account_status as accountStatus, p.certified_time as certifiedTime,
                acc.create_time as createTime, acc.last_login_time as lastLoginTime,
                p.current_team_id as currentTeamId, ct.team_name as currentTeamName,
                case when captain.qual_id is not null then 1 else 0 end as hasCaptainQual,
+               coalesce(nullif(trim(cq_season.season_name), ''), cq_tournament.tournament_name) as activeCaptainGrantEventName,
                (
                    select ca.application_status
                    from basket_player_cert_application ca

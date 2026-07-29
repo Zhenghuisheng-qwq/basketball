@@ -65,6 +65,12 @@ public class CaptainQualificationDetailResp implements Serializable {
     @ApiModelProperty("是否可管理已绑定球队")
     private Boolean canManageTeam;
 
+    @ApiModelProperty("是否可管理指定球队（传入 teamId 时计算）")
+    private Boolean canManageCurrentTeam;
+
+    @ApiModelProperty("无法管理指定球队的原因")
+    private String cannotManageReason;
+
     @ApiModelProperty("是否可继承历史球队")
     private Boolean canInheritTeam;
 

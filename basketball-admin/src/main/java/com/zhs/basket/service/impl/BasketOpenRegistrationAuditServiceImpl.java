@@ -45,7 +45,7 @@ public class BasketOpenRegistrationAuditServiceImpl implements IBasketOpenRegist
     public OpenRegistrationAuditDetailVo selectDetail(Long id) {
         OpenRegistrationAuditDetailVo vo = openRegistrationMapper.selectDetailVo(id);
         if (vo == null) throw new ServiceException("Open报名记录不存在");
-        vo.setRegistrationStatusName(OpenRegistrationStatusEnum.fromCode(vo.getRegistrationStatus()).getDescription());
+        vo.setRegistrationStatusName(OpenRegistrationStatusEnum.fromCode(vo.getRegistrationStatus()).getAuditDisplayDescription());
         return vo;
     }
 
@@ -163,7 +163,7 @@ public class BasketOpenRegistrationAuditServiceImpl implements IBasketOpenRegist
     }
 
     private void enrichListVo(OpenRegistrationAuditListVo vo) {
-        vo.setRegistrationStatusName(OpenRegistrationStatusEnum.fromCode(vo.getRegistrationStatus()).getDescription());
+        vo.setRegistrationStatusName(OpenRegistrationStatusEnum.fromCode(vo.getRegistrationStatus()).getAuditDisplayDescription());
     }
 
     private void assertSingleRow(int rows, String message) {

@@ -7,9 +7,9 @@
       <el-form-item label="球队名称" prop="teamName">
         <el-input v-model="queryParams.teamName" placeholder="请输入球队名称" clearable style="width: 200px" @keyup.enter="handleQuery" />
       </el-form-item>
-      <el-form-item label="审核状态" prop="auditStatus">
-        <el-select v-model="queryParams.auditStatus" placeholder="审核状态" clearable style="width: 200px">
-          <el-option v-for="item in TEAM_AUDIT_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+      <el-form-item label="审核状态" prop="auditStage">
+        <el-select v-model="queryParams.auditStage" placeholder="审核状态" clearable style="width: 200px">
+          <el-option v-for="item in CNPA_AUDIT_STATUS_FILTER_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -44,9 +44,11 @@
           <dict-tag :options="TEAM_RECRUIT_STATUS_OPTIONS" :value="scope.row.publicStatus" />
         </template>
       </el-table-column>
-      <el-table-column label="审核状态" prop="auditStatus" width="100">
+      <el-table-column label="审核状态" prop="auditStatusName" width="100">
         <template #default="scope">
-          <dict-tag :options="TEAM_AUDIT_STATUS_OPTIONS" :value="scope.row.auditStatus" />
+          <el-tag :type="teamAuditTagType(scope.row.auditStatus)" size="small">
+            {{ scope.row.auditStatusName || '-' }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="成员数" prop="currentMemberCount" width="80" />
@@ -56,9 +58,8 @@
       <el-table-column label="操作" align="center" width="260" class-name="small-padding fixed-width" fixed="right">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:teamAudit:query']">详情</el-button>
-          <el-button link type="warning" icon="EditPen" @click="handleStartReview(scope.row)" v-hasPermi="['basket:teamAudit:audit']" v-if="scope.row.auditStatus === 0">开始审核</el-button>
-          <el-button link type="success" icon="Check" @click="openApprove(scope.row)" v-hasPermi="['basket:teamAudit:audit']" v-if="[0, 3].includes(scope.row.auditStatus)">通过</el-button>
-          <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:teamAudit:audit']" v-if="[0, 3].includes(scope.row.auditStatus)">驳回</el-button>
+          <el-button link type="success" icon="Check" @click="openApprove(scope.row)" v-hasPermi="['basket:teamAudit:audit']" v-if="canTeamAudit(scope.row.auditStatus)">通过</el-button>
+          <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:teamAudit:audit']" v-if="canTeamAudit(scope.row.auditStatus)">驳回</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -192,8 +193,7 @@ import {
   getTeamAudit,
   listTeamAudit,
   listTeamAuditRecords,
-  rejectTeamAudit,
-  startTeamAuditReview
+  rejectTeamAudit
 } from '@/api/basket/teamAudit'
 import type {
   TeamAuditApproveReq,
@@ -203,7 +203,7 @@ import type {
   TeamAuditRecord,
   TeamAuditRejectReq
 } from '@/types'
-import { TEAM_AUDIT_STATUS_OPTIONS, TEAM_RECRUIT_STATUS_OPTIONS } from '@/types'
+import { CNPA_AUDIT_STATUS_FILTER_OPTIONS, TEAM_RECRUIT_STATUS_OPTIONS } from '@/types'
 
 const { proxy } = getCurrentInstance()
 
@@ -237,6 +237,17 @@ const validationFlags = computed(() => ({
   teamActive: detail.value?.teamActive !== false,
   hasLogo: !!detail.value?.logoUrl
 }))
+
+function canTeamAudit(status?: number) {
+  return status === 0 || status === 3
+}
+
+function teamAuditTagType(status?: number) {
+  if (status === 1) return 'success'
+  if (status === 0 || status === 3) return 'warning'
+  if (status === 2) return 'danger'
+  return 'info'
+}
 
 function mapAuditAction(action?: string) {
   if (action === 'START_REVIEW') return '开始审核'
@@ -279,13 +290,6 @@ function handleDetail(row: TeamAuditListItem) {
   }).finally(() => {
     detailLoading.value = false
   })
-}
-
-function handleStartReview(row: TeamAuditListItem) {
-  proxy.$modal.confirm('确认开始审核该球队？').then(() => startTeamAuditReview(row.id)).then(() => {
-    proxy.$modal.msgSuccess('已开始审核')
-    getList()
-  }).catch(() => {})
 }
 
 function openApprove(row: TeamAuditListItem) {

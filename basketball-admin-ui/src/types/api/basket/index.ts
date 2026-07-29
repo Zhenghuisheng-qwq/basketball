@@ -1,10 +1,18 @@
 import type { AjaxResult, BaseEntity, PageDomain } from '../common'
 
-/** 球员认证状态 */
+/** CNPA 后台审核统一筛选项（待审核/已通过/已驳回/已取消） */
+export const CNPA_AUDIT_STATUS_FILTER_OPTIONS = [
+  { value: 'PENDING', label: '待审核' },
+  { value: 'APPROVED', label: '已通过' },
+  { value: 'REJECTED', label: '已驳回' },
+  { value: 'CANCELLED', label: '已取消' }
+]
+
+/** 球员认证状态（列表展示映射） */
 export const PLAYER_CERT_STATUS_OPTIONS = [
   { value: 0, label: '草稿' },
-  { value: 1, label: '已提交' },
-  { value: 2, label: '审核中' },
+  { value: 1, label: '待审核' },
+  { value: 2, label: '待审核' },
   { value: 3, label: '已通过' },
   { value: 4, label: '已驳回' },
   { value: 5, label: '已取消' }
@@ -38,12 +46,12 @@ export const CAPTAIN_QUALIFICATION_STATUS_OPTIONS = [
   { value: 2, label: '已过期' }
 ]
 
-/** 球队审核状态 */
+/** 球队审核状态（列表展示） */
 export const TEAM_AUDIT_STATUS_OPTIONS = [
   { value: 0, label: '待审核' },
   { value: 1, label: '已通过' },
   { value: 2, label: '已驳回' },
-  { value: 3, label: '审核中' }
+  { value: 3, label: '待审核' }
 ]
 
 /** 球队招募状态 */
@@ -98,12 +106,13 @@ export const REGISTRATION_STATUS_OPTIONS = [
   { value: 6, label: '已取消' }
 ]
 
-/** 后台球队报名审核筛选（不含草稿、已提交） */
+/** 报名审核列表展示状态 */
 export const REGISTRATION_AUDIT_STATUS_OPTIONS = [
-  { value: 2, label: '审核中' },
+  { value: 1, label: '待审核' },
+  { value: 2, label: '待审核' },
   { value: 3, label: '已通过' },
   { value: 4, label: '已驳回' },
-  { value: 5, label: '已撤回' },
+  { value: 5, label: '已取消' },
   { value: 6, label: '已取消' }
 ]
 
@@ -120,6 +129,7 @@ export interface PlayerCertQuery extends PageDomain, BaseEntity {
   email?: string
   gameAccount?: string
   applicationStatus?: number
+  auditStage?: string
   memberId?: number
 }
 
@@ -277,6 +287,7 @@ export interface TeamAuditQuery extends PageDomain, BaseEntity {
   teamNo?: string
   teamName?: string
   auditStatus?: number
+  auditStage?: string
 }
 
 export interface TeamAuditListItem {
@@ -375,11 +386,12 @@ export const PLATFORM_CHANGE_STATUS_OPTIONS = [
   { value: 0, label: '待审核' },
   { value: 1, label: '已通过' },
   { value: 2, label: '已驳回' },
-  { value: 3, label: '已撤回' }
+  { value: 3, label: '已取消' }
 ]
 
 export interface AccountPlayerQuery extends PageDomain, BaseEntity {
   email?: string
+  username?: string
   nickname?: string
   playerNo?: string
   gameId?: string
@@ -387,13 +399,13 @@ export interface AccountPlayerQuery extends PageDomain, BaseEntity {
   accountStatus?: number
   certStage?: string
   hasTeam?: number
+  currentTeamName?: string
   hasCaptainQual?: number
   certificationStatus?: number
   playerStatus?: number
 }
 
 export interface AccountPlayerListItem {
-  /** 用户ID（兼容字段 memberId） */
   memberId: string | number
   userId?: string | number
   accountNo?: string
@@ -404,21 +416,18 @@ export interface AccountPlayerListItem {
   emailVerified?: number
   playerId?: string | number
   playerNo?: string
-  gameTerminal?: string
-  gameAccount?: string
   certificationStatus?: number
   certificationStatusName?: string
   latestApplicationStatus?: number
   certDisplayStatus?: string
   certDisplayStatusName?: string
-  playerStatus?: number
   accountStatus?: number
   accountStatusName?: string
   currentTeamId?: string | number
   currentTeamName?: string
   hasCaptainQual?: number
+  activeCaptainGrantEventName?: string
   lastLoginTime?: string
-  certifiedTime?: string
   createTime?: string
 }
 
@@ -443,6 +452,7 @@ export interface AccountPlayerProfileSection {
   playerId?: number
   memberId?: number
   nickname?: string
+  avatarUrl?: string
   gender?: number
   profileStatus?: number
   playerNo?: string
@@ -469,6 +479,7 @@ export interface AccountPlayerPlatformAccount {
   approvedTime?: string
   effectiveTime?: string
   invalidTime?: string
+  updateTime?: string
 }
 
 export interface AccountPlayerCertHistory {
@@ -503,10 +514,67 @@ export interface AccountPlayerTeamSummary {
   teamName?: string
   roleType?: string
   membershipStatus?: number
+  membershipStatusName?: string
   isCurrent?: number
   joinTime?: string
   auditStatus?: number
   auditStatusName?: string
+}
+
+export interface AccountPlayerCaptainGrant {
+  qualificationId?: number
+  qualificationNo?: string
+  qualificationStatus?: number
+  qualificationStatusName?: string
+  seasonName?: string
+  tournamentName?: string
+  eventName?: string
+  teamId?: number
+  teamName?: string
+  paymentConfirmed?: number
+  paymentReference?: string
+  grantedTime?: string
+  validTo?: string
+  grantedBy?: number
+  grantedByName?: string
+  revokedTime?: string
+  revokeReason?: string
+}
+
+export interface AccountPlayerRegistration {
+  registrationId?: number
+  registrationNo?: string
+  tournamentName?: string
+  seasonName?: string
+  eventName?: string
+  platformCode?: string
+  teamName?: string
+  registrationStatus?: number
+  registrationStatusName?: string
+  auditStatusName?: string
+  submittedTime?: string
+}
+
+export interface AccountPlayerNotification {
+  receiverId?: number
+  title?: string
+  messageType?: string
+  bizType?: string
+  readStatus?: number
+  readStatusName?: string
+  createTime?: string
+}
+
+export interface AccountPlayerOperationLog {
+  id?: number
+  eventType?: string
+  eventTitle?: string
+  operatorType?: string
+  operatorId?: number
+  operatorName?: string
+  eventTime?: string
+  remark?: string
+  clientIp?: string
 }
 
 export interface AccountPlayerFullDetail {
@@ -515,7 +583,11 @@ export interface AccountPlayerFullDetail {
   platformAccounts?: AccountPlayerPlatformAccount[]
   certHistory?: AccountPlayerCertHistory[]
   captainQual?: AccountPlayerCaptainQual
+  captainGrants?: AccountPlayerCaptainGrant[]
   teamSummary?: AccountPlayerTeamSummary[]
+  registrations?: AccountPlayerRegistration[]
+  notifications?: AccountPlayerNotification[]
+  operationLogs?: AccountPlayerOperationLog[]
 }
 
 export interface PlayerPlatformChangeQuery extends PageDomain, BaseEntity {
@@ -526,6 +598,7 @@ export interface PlayerPlatformChangeQuery extends PageDomain, BaseEntity {
   platform?: string
   changeType?: string
   requestStatus?: number
+  auditStage?: string
   memberId?: number
 }
 
@@ -738,6 +811,7 @@ export interface RegistrationAuditQuery extends PageDomain, BaseEntity {
   seasonId?: number
   teamId?: number
   registrationStatus?: number
+  auditStage?: string
 }
 
 export interface RegistrationAuditListItem {
@@ -2116,7 +2190,7 @@ export interface PartnerEditReq {
 }
 
 /** Open报名状态（同报名状态） */
-export const OPEN_REGISTRATION_STATUS_OPTIONS = REGISTRATION_STATUS_OPTIONS
+export const OPEN_REGISTRATION_STATUS_OPTIONS = REGISTRATION_AUDIT_STATUS_OPTIONS
 
 /** 参赛状态 */
 export const PARTICIPATION_STATUS_OPTIONS = [
@@ -2165,6 +2239,7 @@ export interface OpenRegistrationAuditQuery extends PageDomain, BaseEntity {
   seasonId?: number
   registrationNo?: string
   registrationStatus?: number
+  auditStage?: string
 }
 
 export interface OpenRegistrationAuditListItem {

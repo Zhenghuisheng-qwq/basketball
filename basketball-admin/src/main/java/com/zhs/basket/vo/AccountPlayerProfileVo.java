@@ -15,6 +15,7 @@ public class AccountPlayerProfileVo {
     private String gameAccount;
     private String gameNickname;
     private String positionCode;
+    private String avatarUrl;
     private Integer certificationStatus;
     private String certificationStatusName;
     private Integer playerStatus;

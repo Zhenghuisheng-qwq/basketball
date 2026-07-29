@@ -45,7 +45,15 @@
         <if test="playerNo != null and playerNo != ''">and p.player_no like concat('%', #{playerNo}, '%')</if>
         <if test="platform != null and platform != ''">and r.platform = #{platform}</if>
         <if test="changeType != null and changeType != ''">and r.change_type = #{changeType}</if>
-        <if test="requestStatus != null">and r.request_status = #{requestStatus}</if>
+        <if test="auditStage != null and auditStage != ''">
+            <choose>
+                <when test="auditStage == 'PENDING'">and r.request_status = 0</when>
+                <when test="auditStage == 'APPROVED'">and r.request_status = 1</when>
+                <when test="auditStage == 'REJECTED'">and r.request_status = 2</when>
+                <when test="auditStage == 'CANCELLED'">and r.request_status = 3</when>
+            </choose>
+        </if>
+        <if test="(auditStage == null or auditStage == '') and requestStatus != null">and r.request_status = #{requestStatus}</if>
         <if test="memberId != null">and r.member_id = #{memberId}</if>
         order by r.submit_time desc, r.create_time desc
     </select>

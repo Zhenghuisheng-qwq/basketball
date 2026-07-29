@@ -9,6 +9,8 @@ export interface CaptainQualificationDto {
   isCurrent?: number
   canCreateTeam?: boolean
   canManageTeam?: boolean
+  canManageCurrentTeam?: boolean
+  cannotManageReason?: string
   canInheritTeam?: boolean
   grantRevoked?: boolean
   runtimeValid?: boolean

@@ -4,7 +4,9 @@ import com.zhs.basket.domain.*;
 import com.zhs.basket.enums.CaptainQualificationStatusEnum;
 import com.zhs.basket.enums.PlatformAccountStatusEnum;
 import com.zhs.basket.enums.PlayerCertStatusEnum;
+import com.zhs.basket.enums.RegistrationStatusEnum;
 import com.zhs.basket.enums.TeamAuditStatusEnum;
+import com.zhs.basket.enums.TeamMembershipStatusEnum;
 import com.zhs.basket.mapper.*;
 import com.zhs.basket.query.AccountPlayerQuery;
 import com.zhs.basket.service.IBasketAccountPlayerService;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +34,9 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
     @Autowired private BasketCaptainQualificationMapper captainQualificationMapper;
     @Autowired private BasketPlayerProfileMapper playerProfileMapper;
     @Autowired private BasketTeamMemberMapper teamMemberMapper;
+    @Autowired private BasketTournamentRegistrationMapper registrationMapper;
+    @Autowired private BasketMessageReceiverMapper messageReceiverMapper;
+    @Autowired private BasketAccountSecurityLogMapper securityLogMapper;
 
     @Override
     public List<AccountPlayerListVo> selectList(AccountPlayerQuery query) {
@@ -49,7 +55,11 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
         detail.setPlatformAccounts(loadPlatformAccounts(base.getPlayerId()));
         detail.setCertHistory(loadCertHistory(memberId));
         detail.setCaptainQual(loadCaptainQual(base.getPlayerId()));
+        detail.setCaptainGrants(loadCaptainGrants(memberId));
         detail.setTeamSummary(loadTeamSummary(memberId));
+        detail.setRegistrations(loadRegistrations(memberId));
+        detail.setNotifications(loadNotifications(memberId));
+        detail.setOperationLogs(loadOperationLogs(memberId));
         return detail;
     }
 
@@ -131,6 +141,7 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
         profile.setGender(base.getGender());
         profile.setProfileStatus(base.getProfileStatus());
         profile.setPlayerNo(base.getPlayerNo());
+        profile.setAvatarUrl(base.getAvatarUrl());
         profile.setGameTerminal(base.getGameTerminal());
         profile.setGameAccount(base.getGameAccount());
         profile.setGameNickname(base.getGameNickname());
@@ -202,11 +213,54 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
         return vo;
     }
 
+    private List<AccountPlayerCaptainGrantVo> loadCaptainGrants(Long memberId) {
+        return captainQualificationMapper.selectGrantHistoryByMemberId(memberId).stream().peek(vo -> {
+            if (vo.getQualificationStatus() != null) {
+                vo.setQualificationStatusName(
+                        CaptainQualificationStatusEnum.fromCode(vo.getQualificationStatus()).getDescription());
+            }
+        }).collect(Collectors.toList());
+    }
+
     private List<AccountPlayerTeamSummaryVo> loadTeamSummary(Long memberId) {
         return teamMemberMapper.selectTeamSummaryByMemberId(memberId).stream().peek(vo -> {
             if (vo.getAuditStatus() != null) {
                 vo.setAuditStatusName(TeamAuditStatusEnum.fromCode(vo.getAuditStatus()).getDescription());
             }
+            vo.setMembershipStatusName(resolveMembershipStatusName(vo.getMembershipStatus()));
         }).collect(Collectors.toList());
+    }
+
+    private List<AccountPlayerRegistrationVo> loadRegistrations(Long memberId) {
+        return registrationMapper.selectSummaryByMemberId(memberId).stream().peek(vo -> {
+            if (vo.getRegistrationStatus() != null) {
+                RegistrationStatusEnum status = RegistrationStatusEnum.fromCode(vo.getRegistrationStatus());
+                vo.setRegistrationStatusName(status.getDescription());
+                vo.setAuditStatusName(status.getAuditDisplayDescription());
+            }
+        }).collect(Collectors.toList());
+    }
+
+    private List<AccountPlayerNotificationVo> loadNotifications(Long memberId) {
+        return messageReceiverMapper.selectAccountNotificationsByMemberId(memberId).stream().peek(vo -> {
+            vo.setReadStatusName(Objects.equals(vo.getReadStatus(), 1) ? "已读" : "未读");
+        }).collect(Collectors.toList());
+    }
+
+    private List<AccountPlayerOperationLogVo> loadOperationLogs(Long memberId) {
+        return securityLogMapper.selectByMemberId(memberId);
+    }
+
+    private String resolveMembershipStatusName(Integer membershipStatus) {
+        if (membershipStatus == null) {
+            return "-";
+        }
+        if (membershipStatus == TeamMembershipStatusEnum.ACTIVE.getCode()) {
+            return "有效";
+        }
+        if (membershipStatus == TeamMembershipStatusEnum.INACTIVE.getCode()) {
+            return "无效";
+        }
+        return String.valueOf(membershipStatus);
     }
 }

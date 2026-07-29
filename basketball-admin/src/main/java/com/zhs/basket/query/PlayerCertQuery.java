@@ -12,5 +12,7 @@ public class PlayerCertQuery extends BaseEntity {
     private String email;
     private String gameAccount;
     private Integer applicationStatus;
+    /** 审核筛选阶段：PENDING/APPROVED/REJECTED/CANCELLED */
+    private String auditStage;
     private Long memberId;
 }

@@ -146,6 +146,7 @@ async function createDraft() {
   try {
     const created = await teamStore.createRegistrationDraftAction(teamId.value, {
       seasonId: draftForm.seasonId,
+      platformCode: selectedSeason.value?.platformCode,
       contactName: draftForm.contactName.trim() || undefined,
       contactMobile: draftForm.contactMobile.trim() || undefined,
       contactEmail: draftForm.contactEmail.trim() || undefined,

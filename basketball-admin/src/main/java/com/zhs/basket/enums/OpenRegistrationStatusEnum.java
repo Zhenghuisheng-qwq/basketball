@@ -22,6 +22,26 @@ public enum OpenRegistrationStatusEnum {
     public int getCode() { return code; }
     public String getDescription() { return description; }
 
+    public String getAuditDisplayDescription() {
+        if (this == SUBMITTED || this == REVIEWING) {
+            return "待审核";
+        }
+        if (this == APPROVED) {
+            return "已通过";
+        }
+        if (this == REJECTED) {
+            return "已驳回";
+        }
+        if (this == WITHDRAWN || this == CANCELLED) {
+            return "已取消";
+        }
+        return description;
+    }
+
+    public boolean isPendingAudit() {
+        return this == SUBMITTED || this == REVIEWING;
+    }
+
     public static OpenRegistrationStatusEnum fromCode(Integer code) {
         if (code == null) throw new ServiceException("未知Open报名状态");
         for (OpenRegistrationStatusEnum v : values()) {

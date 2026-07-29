@@ -26,6 +26,8 @@ export interface AvailableSeasonItemDto {
   registrationEndTime?: string
   hasRegistration?: boolean
   registrationId?: string
+  platformCode?: string
+  platformName?: string
 }
 
 export interface AvailableSeasonPageDto extends PageResult<AvailableSeasonItemDto> {

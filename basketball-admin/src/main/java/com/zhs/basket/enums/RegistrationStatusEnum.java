@@ -22,12 +22,25 @@ public enum RegistrationStatusEnum {
     public int getCode() { return code; }
     public String getDescription() { return description; }
 
-    /** 后台审核列表展示文案（历史「已提交」按「审核中」展示） */
+    /** 后台审核列表展示文案（历史 SUBMITTED/REVIEWING 统一为待审核） */
     public String getAuditDisplayDescription() {
-        if (this == SUBMITTED) {
-            return REVIEWING.getDescription();
+        if (this == SUBMITTED || this == REVIEWING) {
+            return "待审核";
+        }
+        if (this == APPROVED) {
+            return "已通过";
+        }
+        if (this == REJECTED) {
+            return "已驳回";
+        }
+        if (this == WITHDRAWN || this == CANCELLED) {
+            return "已取消";
         }
         return description;
+    }
+
+    public boolean isPendingAudit() {
+        return this == SUBMITTED || this == REVIEWING;
     }
 
     public static RegistrationStatusEnum fromCode(Integer code) {

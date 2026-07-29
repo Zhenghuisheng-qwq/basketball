@@ -23,7 +23,7 @@ import { formatDateTime } from '@/utils/formatDate'
 import { uploadAccountFile } from '@/api/accountFile'
 import type { TeamInvitationItemDto } from '@/api/types/teamInvitation'
 import type { CandidatePlayerItemDto, TeamMemberItemDto } from '@/api/types/teamMember'
-import type { TeamRegistrationPlayerItemDto } from '@/api/types/teamRegistration'
+import type { AvailableSeasonItemDto, TeamRegistrationPlayerItemDto } from '@/api/types/teamRegistration'
 
 type TeamTab =
   | 'pendingInvites'
@@ -113,6 +113,8 @@ const activeInvitation = ref<TeamInvitationItemDto | null>(null)
 const hasTeam = computed(() => teamStore.hasTeam)
 const canManageCurrentTeam = computed(() => teamStore.canManageCurrentTeam)
 const isCaptainMember = computed(() => teamStore.isCaptainMember)
+const isHistoricalCaptain = computed(() => teamStore.isHistoricalCaptain)
+const isRegularMember = computed(() => teamStore.isRegularMember)
 const canCreateTeam = computed(() => teamStore.canCreateTeam)
 const canInheritTeam = computed(() => teamStore.canInheritTeam)
 const canJoinTeam = computed(() => teamStore.canJoinTeam)
@@ -132,12 +134,12 @@ const availableTabs = computed<TeamTab[]>(() => {
   const joinableTabs: TeamTab[] = canJoinTeam.value ? ['joinableTeams'] : []
   if (hasTeam.value) {
     if (canManageCurrentTeam.value) {
-      if (isTeamAuditApproved.value) {
-        return ['overview', 'profile', 'members', 'invitations', 'applications', 'registration', ...joinableTabs]
-      }
-      return ['overview', 'profile', ...joinableTabs]
+      return ['overview', 'profile', 'members', 'invitations', 'applications', 'registration', ...joinableTabs]
     }
-    return ['overview', ...joinableTabs]
+    if (isHistoricalCaptain.value) {
+      return ['overview', 'members', 'registration', ...joinableTabs]
+    }
+    return ['overview', 'members', 'registration', ...joinableTabs]
   }
   const preTeamTabs: TeamTab[] = ['pendingInvites', 'joinableTeams', 'myApplications']
   if (canCreateTeam.value) preTeamTabs.unshift('create')
@@ -154,9 +156,12 @@ const bannerTitle = computed(() => {
 const bannerDescription = computed(() => {
   if (hasTeam.value && canManageCurrentTeam.value) {
     if (isTeamAuditApproved.value) return '管理球队资料、成员、邀请与赛事报名'
-    return '球队认证审核中，可先查看概览并编辑资料'
+    return '球队认证审核中，可先编辑资料并管理成员；赛事报名需审核通过后开放'
   }
-  if (hasTeam.value) return '查看球队信息'
+  if (hasTeam.value && isHistoricalCaptain.value) {
+    return '可查看历史球队与赛事记录，当前暂无有效队长权限'
+  }
+  if (hasTeam.value) return '查看当前球队信息与赛事记录'
   if (canCreateTeam.value) return '你已开通队长权限，可以创建并管理自己的球队。'
   if (canInheritTeam.value && teamStore.inheritableTeams.length) return '你有可继承的历史球队，也可浏览并申请加入其他球队。'
   if (isCaptainQualExpired.value) return '当前赛事周期已结束，队长权限已收回；你仍可申请加入其他球队。'
@@ -266,10 +271,11 @@ async function refreshTabData(tab: TeamTab) {
   }
   if (tab === 'applications') await teamStore.loadTeamJoinApplications(teamId.value, { status: 0 })
   if (tab === 'registration') {
-    await Promise.all([
-      teamStore.loadAvailableSeasons(teamId.value),
-      teamStore.loadRegistrations(teamId.value),
-    ])
+    const tasks: Promise<unknown>[] = [teamStore.loadRegistrations(teamId.value)]
+    if (canManageCurrentTeam.value) {
+      tasks.unshift(teamStore.loadAvailableSeasons(teamId.value))
+    }
+    await Promise.all(tasks)
   }
 }
 
@@ -440,6 +446,33 @@ async function processApplication(applicationId: string, approve: boolean) {
   }
 }
 
+async function startRegistrationForSeason(season: AvailableSeasonItemDto) {
+  if (!teamId.value) return
+  if (!season.platformCode) {
+    await openPlatformPicker(season.seasonId)
+    return
+  }
+  registrationDraftForm.seasonId = season.seasonId
+  registrationDraftForm.platformCode = season.platformCode
+  try {
+    const detail = await teamStore.createRegistrationDraftAction(teamId.value, {
+      seasonId: season.seasonId,
+      platformCode: season.platformCode,
+      contactName: registrationDraftForm.contactName.trim() || undefined,
+      contactMobile: registrationDraftForm.contactMobile.trim() || undefined,
+      contactEmail: registrationDraftForm.contactEmail.trim() || undefined,
+      remark: registrationDraftForm.remark.trim() || undefined,
+    })
+    selectedRegistrationId.value = detail.registrationId
+    await openRegistrationDetail(detail.registrationId)
+    ElMessage.success('报名草稿已创建')
+    await teamStore.loadRegistrations(teamId.value)
+    await teamStore.loadAvailableSeasons(teamId.value)
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '创建失败')
+  }
+}
+
 async function openPlatformPicker(seasonId: string) {
   pendingSeasonId.value = seasonId
   selectedPlatformCode.value = ''
@@ -484,6 +517,7 @@ async function createRegistrationDraft() {
     await openRegistrationDetail(detail.registrationId)
     ElMessage.success('报名草稿已创建')
     await teamStore.loadRegistrations(teamId.value)
+    await teamStore.loadAvailableSeasons(teamId.value)
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '创建失败')
   }
@@ -546,7 +580,7 @@ async function inheritTeam(teamIdToBind: string) {
 async function openRegistrationFromQuery() {
   const registrationId = route.query.registrationId
   if (typeof registrationId !== 'string' || !registrationId) return
-  if (!hasTeam.value || !canManageCurrentTeam.value || !teamId.value) return
+  if (!hasTeam.value || !teamId.value) return
   if (!availableTabs.value.includes('registration')) return
   if (activeTab.value !== 'registration') {
     activeTab.value = 'registration'
@@ -655,18 +689,18 @@ async function deleteRegistrationDraft() {
   }
 }
 
-const tabLabels: Record<TeamTab, string> = {
+const tabLabels = computed<Record<TeamTab, string>>(() => ({
   pendingInvites: '待处理邀请',
   joinableTeams: '可加入球队',
   myApplications: '我的加入申请',
   create: '创建球队',
   overview: '概览',
-  profile: '编辑资料',
-  members: '成员',
-  invitations: '邀请球员',
-  applications: '加入申请',
-  registration: '赛事报名',
-}
+  profile: '球队资料',
+  members: canManageCurrentTeam.value ? '成员管理' : (isHistoricalCaptain.value ? '历史成员' : '成员列表'),
+  invitations: '邀请成员',
+  applications: '加入审核',
+  registration: canManageCurrentTeam.value ? '赛事报名' : (isHistoricalCaptain.value ? '历史赛事' : '赛事记录'),
+}))
 </script>
 
 <template>
@@ -691,6 +725,7 @@ const tabLabels: Record<TeamTab, string> = {
     <CaptainGrantPanel
       :qualification="captainQual"
       :loading="teamStore.qualificationLoading"
+      :current-team-name="teamStore.myTeamSummary?.teamName || teamStore.teamDetail?.teamName"
     />
 
     <p v-if="loadError" class="team-page-error">{{ loadError }}</p>
@@ -834,12 +869,21 @@ const tabLabels: Record<TeamTab, string> = {
       <template v-else-if="activeTab === 'overview'">
         <AccountPanel title="球队概览">
           <div
-            v-if="canManageCurrentTeam && !isTeamAuditApproved"
+            v-if="isHistoricalCaptain"
+            class="team-audit-banner"
+          >
+            <AccountStatusBadge text="历史队长" type="warning" />
+            <p class="team-tip">
+              {{ captainQual?.cannotManageReason || '当前暂无有效队长权限，暂不能管理球队。' }}
+            </p>
+          </div>
+          <div
+            v-else-if="canManageCurrentTeam && !isTeamAuditApproved"
             class="team-audit-banner"
           >
             <AccountStatusBadge :text="teamAuditStatusText" type="warning" />
             <p class="team-tip">
-              球队认证{{ teamAuditStatusText }}，审核通过后可使用成员管理、邀请球员、加入申请与赛事报名功能。
+              球队认证{{ teamAuditStatusText }}，可先管理成员与资料；赛事报名需审核通过后开放。
             </p>
           </div>
           <dl v-if="teamDetail" class="account-info-list">
@@ -894,7 +938,7 @@ const tabLabels: Record<TeamTab, string> = {
       </template>
 
       <template v-else-if="activeTab === 'members'">
-        <AccountPanel title="球队成员">
+        <AccountPanel :title="tabLabels.members">
           <TeamMemberList
             :members="teamStore.members"
             :loading="teamStore.membersLoading"
@@ -1036,38 +1080,31 @@ const tabLabels: Record<TeamTab, string> = {
       </template>
 
       <template v-else-if="activeTab === 'registration'">
-        <AccountPanel title="可报名赛事">
-          <div v-if="teamStore.availableSeasons.length" class="team-table-wrap">
+        <AccountPanel :title="canManageCurrentTeam ? '可报名赛事' : '赛事记录'">
+          <div v-if="canManageCurrentTeam && teamStore.availableSeasons.length" class="team-table-wrap">
             <table class="team-table">
               <thead>
                 <tr>
                   <th>赛事</th>
                   <th>所属赛季</th>
-                  <th>报名时间</th>
+                  <th>参赛端</th>
+                  <th>报名截止</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="season in teamStore.availableSeasons" :key="season.seasonId">
+                <tr v-for="season in teamStore.availableSeasons" :key="`${season.seasonId}-${season.platformCode || 'default'}`">
                   <td>{{ season.tournamentName }}</td>
                   <td>{{ season.seasonName }}</td>
+                  <td>{{ season.platformName || season.platformCode || '-' }}</td>
                   <td>{{ formatDateTime(season.registrationEndTime) }}</td>
                   <td>
                     <button
-                      v-if="season.hasRegistration && season.registrationId"
-                      type="button"
-                      class="account-btn-secondary team-table__btn"
-                      @click="openRegistrationDetail(season.registrationId!)"
-                    >
-                      查看报名
-                    </button>
-                    <button
-                      v-else
                       type="button"
                       class="account-btn-primary team-table__btn"
-                      @click="openPlatformPicker(season.seasonId)"
+                      @click="startRegistrationForSeason(season)"
                     >
-                      选择平台报名
+                      报名
                     </button>
                   </td>
                 </tr>
@@ -1075,9 +1112,9 @@ const tabLabels: Record<TeamTab, string> = {
             </table>
           </div>
           <AccountEmptyState
-            v-else
+            v-else-if="canManageCurrentTeam"
             message="当前暂无可报名赛事"
-            :subtitle="teamStore.availableSeasonEmptyReason || '请确认球队已审核通过且赛事处于报名期'"
+            :subtitle="teamStore.availableSeasonEmptyReason || '请确认队长权限已关联赛事且处于报名期'"
           />
         </AccountPanel>
 
@@ -1103,7 +1140,7 @@ const tabLabels: Record<TeamTab, string> = {
                   <td>{{ formatDateTime(item.submittedTime || item.createTime) }}</td>
                   <td>
                     <button type="button" class="account-btn-secondary team-table__btn" @click="openRegistrationDetail(item.registrationId)">
-                      管理
+                      {{ canManageCurrentTeam ? '管理' : '查看' }}
                     </button>
                   </td>
                 </tr>
@@ -1113,7 +1150,7 @@ const tabLabels: Record<TeamTab, string> = {
           <AccountEmptyState v-else message="暂无报名记录" />
         </AccountPanel>
 
-        <div v-if="teamStore.registrationDetail" id="team-registration-detail">
+        <div v-if="teamStore.registrationDetail && (canManageCurrentTeam || selectedRegistrationId)" id="team-registration-detail">
         <AccountPanel title="报名详情">
           <dl class="account-info-list">
             <div class="account-field-row"><dt>报名编号</dt><dd>{{ teamStore.registrationDetail.registrationNo }}</dd></div>
@@ -1264,8 +1301,8 @@ const tabLabels: Record<TeamTab, string> = {
       <div v-if="showPlatformPicker" class="team-dialog">
         <button type="button" class="team-dialog__backdrop" aria-label="关闭" @click="showPlatformPicker = false" />
         <div class="team-dialog__panel" role="dialog" aria-modal="true">
-          <h3>选择赛事平台组</h3>
-          <p class="team-tip">同一球队同一赛事可按不同平台组分别报名。</p>
+          <h3>选择报名平台</h3>
+          <p class="team-tip">报名赛事时需选择参赛端（PC / PS / Xbox）；同一球队可按不同参赛端分别报名。</p>
           <div class="team-platform-picker">
             <label
               v-for="platform in teamStore.seasonPlatforms"

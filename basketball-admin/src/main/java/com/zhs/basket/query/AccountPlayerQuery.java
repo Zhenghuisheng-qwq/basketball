@@ -9,6 +9,7 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class AccountPlayerQuery extends BaseEntity {
     private String email;
+    private String username;
     private String nickname;
     private String playerNo;
     private String gameId;
@@ -19,7 +20,9 @@ public class AccountPlayerQuery extends BaseEntity {
     private String certStage;
     /** 是否已加入球队：1是 0否 */
     private Integer hasTeam;
-    /** 是否具备有效队长资格：1是 0否 */
+    /** 当前球队名称（模糊） */
+    private String currentTeamName;
+    /** 是否具备有效队长授权：1是 0否 */
     private Integer hasCaptainQual;
     private List<Integer> statuses;
     private Integer certificationStatus;

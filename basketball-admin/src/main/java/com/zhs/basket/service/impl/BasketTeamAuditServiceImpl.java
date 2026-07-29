@@ -63,7 +63,7 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         BeanUtils.copyBeanProp(vo, team);
         vo.setLogoUrl(resolveLogoUrl(team.getLogoFileId(), loadLogoUrlMap(
                 team.getLogoFileId() == null ? Collections.emptySet() : Collections.singleton(team.getLogoFileId()))));
-        vo.setAuditStatusName(TeamAuditStatusEnum.fromCode(team.getAuditStatus()).getDescription());
+        vo.setAuditStatusName(TeamAuditStatusEnum.fromCode(team.getAuditStatus()).getAuditDisplayDescription());
         vo.setPublicStatusName(resolvePublicStatusName(team.getPublicStatus()));
         vo.setSubmitTime(team.getCreateTime());
 
@@ -133,7 +133,7 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         TeamAuditListVo vo = new TeamAuditListVo();
         BeanUtils.copyBeanProp(vo, team);
         vo.setLogoUrl(resolveLogoUrl(team.getLogoFileId(), logoUrlMap));
-        vo.setAuditStatusName(TeamAuditStatusEnum.fromCode(team.getAuditStatus()).getDescription());
+        vo.setAuditStatusName(TeamAuditStatusEnum.fromCode(team.getAuditStatus()).getAuditDisplayDescription());
         vo.setPublicStatusName(resolvePublicStatusName(team.getPublicStatus()));
         return vo;
     }

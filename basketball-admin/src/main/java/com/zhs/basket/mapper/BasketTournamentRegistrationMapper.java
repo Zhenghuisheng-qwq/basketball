@@ -3,6 +3,7 @@ package com.zhs.basket.mapper;
 import com.zhs.basket.domain.BasketTournamentRegistration;
 import com.zhs.basket.query.RegistrationAuditQuery;
 import com.zhs.basket.resp.SeasonCandidateTeamResp;
+import com.zhs.basket.vo.AccountPlayerRegistrationVo;
 import com.zhs.basket.vo.AvailableTeamVo;
 import com.zhs.basket.vo.RegistrationAuditListVo;
 import org.apache.ibatis.annotations.Param;
@@ -22,4 +23,5 @@ public interface BasketTournamentRegistrationMapper {
     BasketTournamentRegistration selectApprovedBySeasonAndTeam(@Param("seasonId") Long seasonId,
             @Param("teamId") Long teamId);
     List<Long> selectApprovedIdsWithoutEventTeam();
+    List<AccountPlayerRegistrationVo> selectSummaryByMemberId(@Param("memberId") Long memberId);
 }

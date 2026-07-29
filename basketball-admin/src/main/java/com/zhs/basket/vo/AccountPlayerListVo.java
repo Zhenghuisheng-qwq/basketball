@@ -28,7 +28,10 @@ public class AccountPlayerListVo {
     private String accountStatusName;
     private Long currentTeamId;
     private String currentTeamName;
+    /** 是否具备有效队长授权：1是 0否 */
     private Integer hasCaptainQual;
+    /** 当前有效队长授权赛事名称 */
+    private String activeCaptainGrantEventName;
     private Date lastLoginTime;
     private Date certifiedTime;
     private Date createTime;

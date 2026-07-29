@@ -33,9 +33,9 @@ INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (2, 2211);
           <el-option v-for="item in PLATFORM_CHANGE_TYPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
-      <el-form-item label="状态" prop="requestStatus">
-        <el-select v-model="queryParams.requestStatus" placeholder="申请状态" clearable style="width: 200px">
-          <el-option v-for="item in PLATFORM_CHANGE_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+      <el-form-item label="审核状态" prop="auditStage">
+        <el-select v-model="queryParams.auditStage" placeholder="审核状态" clearable style="width: 200px">
+          <el-option v-for="item in CNPA_AUDIT_STATUS_FILTER_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -67,9 +67,11 @@ INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (2, 2211);
         <template #default="scope">{{ scope.row.oldDisplayGameId || '-' }}</template>
       </el-table-column>
       <el-table-column label="新游戏ID" prop="newDisplayGameId" min-width="120" :show-overflow-tooltip="true" />
-      <el-table-column label="状态" prop="requestStatus" width="100">
+      <el-table-column label="状态" prop="requestStatusName" width="100">
         <template #default="scope">
-          <dict-tag :options="PLATFORM_CHANGE_STATUS_OPTIONS" :value="scope.row.requestStatus" />
+          <el-tag :type="platformChangeTagType(scope.row.requestStatus)" size="small">
+            {{ scope.row.requestStatusName || '-' }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="提交时间" prop="submitTime" width="160">
@@ -157,7 +159,7 @@ import type {
 } from '@/types'
 import {
   GAME_PLATFORM_OPTIONS,
-  PLATFORM_CHANGE_STATUS_OPTIONS,
+  CNPA_AUDIT_STATUS_FILTER_OPTIONS,
   PLATFORM_CHANGE_TYPE_OPTIONS
 } from '@/types'
 
@@ -176,13 +178,20 @@ const rejectOpen = ref(false)
 const queryParams = ref<PlayerPlatformChangeQuery>({
   pageNum: 1,
   pageSize: 10,
-  requestStatus: 0
+  auditStage: 'PENDING'
 })
 
 const approveForm = ref<PlayerPlatformChangeApproveReq>({})
 const rejectForm = ref<PlayerPlatformChangeRejectReq>({ rejectReason: '' })
 const rejectRules = {
   rejectReason: [{ required: true, message: '驳回原因不能为空', trigger: 'blur' }]
+}
+
+function platformChangeTagType(status?: number) {
+  if (status === 1) return 'success'
+  if (status === 0) return 'warning'
+  if (status === 2) return 'danger'
+  return 'info'
 }
 
 function getList() {
@@ -202,7 +211,7 @@ function handleQuery() {
 
 function resetQuery() {
   proxy.resetForm('queryRef')
-  queryParams.value.requestStatus = undefined
+  queryParams.value.auditStage = undefined
   handleQuery()
 }
 

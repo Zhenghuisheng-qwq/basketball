@@ -44,7 +44,7 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
     @Override
     public List<PlayerCertListVo> selectList(PlayerCertQuery query) {
         return applicationMapper.selectList(query).stream().peek(vo ->
-                vo.setApplicationStatusName(PlayerCertStatusEnum.fromCode(vo.getApplicationStatus()).getDescription())
+                vo.setApplicationStatusName(PlayerCertStatusEnum.fromCode(vo.getApplicationStatus()).getAuditDisplayDescription())
         ).collect(Collectors.toList());
     }
 
@@ -54,7 +54,7 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
         if (vo == null) {
             throw new ServiceException("认证申请不存在");
         }
-        vo.setApplicationStatusName(PlayerCertStatusEnum.fromCode(vo.getApplicationStatus()).getDescription());
+        vo.setApplicationStatusName(PlayerCertStatusEnum.fromCode(vo.getApplicationStatus()).getAuditDisplayDescription());
         vo.setMaterials(loadMaterials(applicationId));
         vo.setAuditRecords(selectAuditRecords(applicationId));
         return vo;

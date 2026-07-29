@@ -24,6 +24,18 @@ public enum PlatformChangeStatusEnum {
         return description;
     }
 
+    /** 后台审核列表/详情统一展示文案 */
+    public String getAuditDisplayDescription() {
+        if (this == WITHDRAWN) {
+            return "已取消";
+        }
+        return description;
+    }
+
+    public boolean isPendingAudit() {
+        return this == PENDING;
+    }
+
     public static PlatformChangeStatusEnum fromCode(Integer code) {
         if (code == null) {
             return PENDING;

@@ -28,4 +28,19 @@
              #{item.sentTime}, #{item.createTime}, #{item.updateTime}, #{item.isDelete})
         </foreach>
     </insert>
+
+    <select id="selectAccountNotificationsByMemberId" resultType="com.zhs.basket.vo.AccountPlayerNotificationVo">
+        select r.id as receiverId,
+               t.title,
+               t.message_type as messageType,
+               t.biz_type as bizType,
+               r.read_status as readStatus,
+               coalesce(r.sent_time, r.create_time, t.create_time) as createTime
+        from basket_message_receiver r
+        inner join basket_message_task t on t.id = r.task_id and t.is_delete = 0
+        where r.member_id = #{memberId}
+          and r.is_delete = 0
+        order by coalesce(r.sent_time, r.create_time, t.create_time) desc, r.id desc
+        limit 50
+    </select>
 </mapper>

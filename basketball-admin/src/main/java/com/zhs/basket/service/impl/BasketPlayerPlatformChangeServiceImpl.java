@@ -163,12 +163,12 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
 
     private void enrichListVo(PlayerPlatformChangeListVo vo) {
         vo.setChangeTypeName(PlatformChangeTypeEnum.fromCode(vo.getChangeType()).getDescription());
-        vo.setRequestStatusName(PlatformChangeStatusEnum.fromCode(vo.getRequestStatus()).getDescription());
+        vo.setRequestStatusName(PlatformChangeStatusEnum.fromCode(vo.getRequestStatus()).getAuditDisplayDescription());
     }
 
     private void enrichDetailVo(PlayerPlatformChangeDetailVo vo) {
         vo.setChangeTypeName(PlatformChangeTypeEnum.fromCode(vo.getChangeType()).getDescription());
-        vo.setRequestStatusName(PlatformChangeStatusEnum.fromCode(vo.getRequestStatus()).getDescription());
+        vo.setRequestStatusName(PlatformChangeStatusEnum.fromCode(vo.getRequestStatus()).getAuditDisplayDescription());
     }
 
     private void assertSingleRow(int rows, String message) {

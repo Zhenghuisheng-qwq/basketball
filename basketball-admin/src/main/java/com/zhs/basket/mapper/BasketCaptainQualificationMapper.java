@@ -3,6 +3,7 @@ package com.zhs.basket.mapper;
 import com.zhs.basket.domain.BasketCaptainQualification;
 import com.zhs.basket.query.CaptainQualificationQuery;
 import com.zhs.basket.vo.CaptainGrantSeasonOptionVo;
+import com.zhs.basket.vo.AccountPlayerCaptainGrantVo;
 import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
@@ -18,4 +19,5 @@ public interface BasketCaptainQualificationMapper {
     List<CaptainGrantSeasonOptionVo> selectGrantableSeasonOptions();
     BasketCaptainQualification selectCurrentByPlayerId(@Param("playerId") Long playerId);
     int countCurrentActiveByPlayerId(@Param("playerId") Long playerId);
+    List<AccountPlayerCaptainGrantVo> selectGrantHistoryByMemberId(@Param("memberId") Long memberId);
 }

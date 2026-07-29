@@ -13,9 +13,9 @@
       <el-form-item label="游戏账号" prop="gameAccount">
         <el-input v-model="queryParams.gameAccount" placeholder="请输入游戏账号" clearable style="width: 200px" @keyup.enter="handleQuery" />
       </el-form-item>
-      <el-form-item label="状态" prop="applicationStatus">
-        <el-select v-model="queryParams.applicationStatus" placeholder="认证状态" clearable style="width: 200px">
-          <el-option v-for="item in PLAYER_CERT_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+      <el-form-item label="状态" prop="auditStage">
+        <el-select v-model="queryParams.auditStage" placeholder="审核状态" clearable style="width: 200px">
+          <el-option v-for="item in CNPA_AUDIT_STATUS_FILTER_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -45,9 +45,11 @@
       <el-table-column label="游戏平台" prop="gameTerminal" width="100" />
       <el-table-column label="游戏ID" prop="gameAccount" min-width="120" :show-overflow-tooltip="true" />
       <el-table-column label="位置" prop="positionCode" width="80" />
-      <el-table-column label="状态" prop="applicationStatus" width="100">
+      <el-table-column label="状态" prop="applicationStatusName" width="100">
         <template #default="scope">
-          <dict-tag :options="PLAYER_CERT_STATUS_OPTIONS" :value="scope.row.applicationStatus" />
+          <el-tag :type="auditStatusTagType(scope.row.applicationStatus)" size="small">
+            {{ scope.row.applicationStatusName || resolvePlayerCertAuditLabel(scope.row.applicationStatus) }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="提交时间" prop="submittedTime" width="160">
@@ -160,7 +162,7 @@ import type {
   PlayerCertQuery,
   PlayerCertRejectReq
 } from '@/types'
-import { PLAYER_CERT_STATUS_OPTIONS } from '@/types'
+import { CNPA_AUDIT_STATUS_FILTER_OPTIONS } from '@/types'
 
 const { proxy } = getCurrentInstance()
 
@@ -199,6 +201,21 @@ const detailAuditorName = computed(() => {
 
 function canAudit(status?: number) {
   return status === 1 || status === 2
+}
+
+function resolvePlayerCertAuditLabel(status?: number) {
+  if (status === 1 || status === 2) return '待审核'
+  if (status === 3) return '已通过'
+  if (status === 4) return '已驳回'
+  if (status === 5) return '已取消'
+  return '-'
+}
+
+function auditStatusTagType(status?: number) {
+  if (status === 3) return 'success'
+  if (status === 1 || status === 2) return 'warning'
+  if (status === 4) return 'danger'
+  return 'info'
 }
 
 function isImage(mimeType?: string) {

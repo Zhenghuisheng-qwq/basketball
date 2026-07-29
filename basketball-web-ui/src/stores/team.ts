@@ -126,14 +126,22 @@ export const useTeamStore = defineStore('team', () => {
   const canManageCurrentTeam = computed(() => {
     const grant = captainQualification.value
     const currentTeamId = myTeamSummary.value?.teamId || teamDetail.value?.teamId
-    return Boolean(
-      grant?.runtimeValid
-      && grant?.canManageTeam
-      && currentTeamId
-      && grant.teamId === currentTeamId,
-    )
+    if (!currentTeamId || !grant?.runtimeValid) return false
+    if (grant.canManageCurrentTeam != null) {
+      return grant.canManageCurrentTeam
+    }
+    if (grant.teamId) {
+      return grant.teamId === currentTeamId
+    }
+    return Boolean(teamDetail.value?.isCaptain || myTeamSummary.value?.isCaptain)
   })
-  const isCaptain = computed(() => canManageCurrentTeam.value || isCaptainMember.value)
+  const isHistoricalCaptain = computed(() =>
+    hasTeam.value && isCaptainMember.value && !canManageCurrentTeam.value,
+  )
+  const isRegularMember = computed(() =>
+    hasTeam.value && !canManageCurrentTeam.value && !isCaptainMember.value,
+  )
+  const isCaptain = computed(() => canManageCurrentTeam.value)
   const canCreateTeam = computed(() => Boolean(captainQualification.value?.canCreateTeam))
   const canInheritTeam = computed(() => Boolean(captainQualification.value?.canInheritTeam))
   const hasValidCaptainQualification = computed(() => Boolean(captainQualification.value?.runtimeValid))
@@ -143,11 +151,13 @@ export const useTeamStore = defineStore('team', () => {
     lastError.value = error instanceof Error ? error.message : '操作失败'
   }
 
-  async function loadQualification() {
+  async function loadQualification(teamId?: string) {
     qualificationLoading.value = true
     lastError.value = ''
     try {
-      const res = await getCaptainQualificationCurrent()
+      const res = await getCaptainQualificationCurrent(
+        teamId ? { teamId } : undefined,
+      )
       captainQualification.value = res.data
       return res.data
     } catch (error) {
@@ -213,7 +223,7 @@ export const useTeamStore = defineStore('team', () => {
         isCaptain: res.data.isCaptain,
         myRole: res.data.myRole,
       }
-      await loadQualification()
+      await loadQualification(res.data.teamId)
       return res.data
     } catch (error) {
       setError(error)
@@ -541,7 +551,11 @@ export const useTeamStore = defineStore('team', () => {
         isCaptain: true,
         myRole: res.data.myRole,
       }
-      await Promise.all([loadQualification(), loadMyTeam(), loadInheritableTeams()])
+      await Promise.all([
+        loadQualification(res.data.teamId),
+        loadMyTeam(),
+        loadInheritableTeams(),
+      ])
       return res.data
     } catch (error) {
       setError(error)
@@ -757,7 +771,12 @@ export const useTeamStore = defineStore('team', () => {
   }
 
   async function bootstrap() {
-    await Promise.all([loadQualification(), loadMyTeam()])
+    await loadQualification()
+    await loadMyTeam()
+    const currentTeamId = myTeamSummary.value?.teamId
+    if (currentTeamId) {
+      await loadQualification(currentTeamId)
+    }
   }
 
   function resetTransientLists() {
@@ -824,6 +843,8 @@ export const useTeamStore = defineStore('team', () => {
     hasTeam,
     isCaptain,
     isCaptainMember,
+    isHistoricalCaptain,
+    isRegularMember,
     canManageCurrentTeam,
     canCreateTeam,
     canInheritTeam,

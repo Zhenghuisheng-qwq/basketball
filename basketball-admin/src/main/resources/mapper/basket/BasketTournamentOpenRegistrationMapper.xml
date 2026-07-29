@@ -29,10 +29,24 @@
         from basket_tournament_open_registration r
         inner join basket_tournament_season s on s.id = r.season_id and s.is_delete = 0
         left join basket_player_profile pp on pp.id = r.player_id and pp.is_delete = 0
-        where r.is_delete = 0
+        where r.is_delete = 0 and r.registration_status != 0
         <if test="registrationNo != null and registrationNo != ''">and r.registration_no like concat('%', #{registrationNo}, '%')</if>
         <if test="seasonId != null">and r.season_id = #{seasonId}</if>
-        <if test="registrationStatus != null">and r.registration_status = #{registrationStatus}</if>
+        <if test="auditStage != null and auditStage != ''">
+            <choose>
+                <when test="auditStage == 'PENDING'">and r.registration_status in (1, 2)</when>
+                <when test="auditStage == 'APPROVED'">and r.registration_status = 3</when>
+                <when test="auditStage == 'REJECTED'">and r.registration_status = 4</when>
+                <when test="auditStage == 'CANCELLED'">and r.registration_status in (5, 6)</when>
+            </choose>
+        </if>
+        <if test="(auditStage == null or auditStage == '') and registrationStatus != null">
+            <choose>
+                <when test="registrationStatus == 1 or registrationStatus == 2">and r.registration_status in (1, 2)</when>
+                <when test="registrationStatus == 5 or registrationStatus == 6">and r.registration_status in (5, 6)</when>
+                <otherwise>and r.registration_status = #{registrationStatus}</otherwise>
+            </choose>
+        </if>
         order by r.submitted_time desc, r.create_time desc
     </select>
     <select id="selectDetailVo" resultType="com.zhs.basket.vo.OpenRegistrationAuditDetailVo">

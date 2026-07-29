@@ -59,6 +59,11 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
 
     @Override
     public CaptainQualificationDetailResp getCurrentQualification(Long accountId, Long seasonId) {
+        return getCurrentQualification(accountId, seasonId, null);
+    }
+
+    @Override
+    public CaptainQualificationDetailResp getCurrentQualification(Long accountId, Long seasonId, Long teamId) {
         BasketCaptainQualification qualification = seasonId != null
                 ? captainGrantSupport.findActiveGrantForSeason(accountId, seasonId)
                 : captainGrantSupport.findCurrentGrant(accountId);
@@ -100,7 +105,45 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
         resp.setCanCreateTeam(runtimeValid && unbound);
         resp.setCanInheritTeam(runtimeValid && unbound);
         resp.setCanManageTeam(runtimeValid && qualification.getTeamId() != null);
+        if (teamId != null) {
+            BasketTeam team = teamDao.selectById(teamId);
+            if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
+                resp.setCanManageCurrentTeam(false);
+                resp.setCannotManageReason("球队不存在");
+            } else if (!runtimeValid) {
+                resp.setCanManageCurrentTeam(false);
+                resp.setCannotManageReason(invalidReason);
+            } else {
+                boolean canManage = canManageTeamByGrant(qualification, team, accountId);
+                resp.setCanManageCurrentTeam(canManage);
+                if (!canManage) {
+                    resp.setCannotManageReason(resolveCannotManageReason(qualification, team, accountId));
+                }
+            }
+        }
         return resp;
+    }
+
+    private boolean canManageTeamByGrant(BasketCaptainQualification grant, BasketTeam team, Long memberId) {
+        try {
+            captainGrantSupport.assertCanManageTeam(grant, team, memberId);
+            return true;
+        } catch (ServiceException ex) {
+            return false;
+        }
+    }
+
+    private String resolveCannotManageReason(BasketCaptainQualification grant, BasketTeam team, Long memberId) {
+        if (grant == null) {
+            return CaptainGrantSupport.NO_ACTIVE_GRANT_MESSAGE;
+        }
+        if (grant.getTeamId() != null && !Objects.equals(grant.getTeamId(), team.getId())) {
+            return "当前队长授权已绑定其他球队，无法管理该球队";
+        }
+        if (grant.getTeamId() == null && !Objects.equals(team.getCaptainMemberId(), memberId)) {
+            return "当前暂无有效队长权限，暂不能管理球队";
+        }
+        return "当前暂无有效队长权限，暂不能管理球队";
     }
 
     @Override

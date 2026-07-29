@@ -19,6 +19,24 @@ public enum TeamAuditStatusEnum {
     public Integer getCode() { return code; }
     public String getDescription() { return description; }
 
+    /** 后台审核列表/详情统一展示文案 */
+    public String getAuditDisplayDescription() {
+        if (this == PENDING || this == REVIEWING) {
+            return "待审核";
+        }
+        if (this == APPROVED) {
+            return "已通过";
+        }
+        if (this == REJECTED) {
+            return "已驳回";
+        }
+        return description;
+    }
+
+    public boolean isPendingAudit() {
+        return this == PENDING || this == REVIEWING;
+    }
+
     public static TeamAuditStatusEnum fromCode(Integer code) {
         if (code == null) throw new ServiceException("未知审核状态");
         for (TeamAuditStatusEnum v : values()) {

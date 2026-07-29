@@ -10,6 +10,7 @@ public class AccountPlayerTeamSummaryVo {
     private String teamName;
     private String roleType;
     private Integer membershipStatus;
+    private String membershipStatusName;
     private Integer isCurrent;
     private Date joinTime;
     private Integer auditStatus;

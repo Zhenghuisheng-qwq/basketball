@@ -7,9 +7,9 @@
       <el-form-item label="赛季ID" prop="seasonId">
         <el-input v-model="queryParams.seasonId" placeholder="请输入赛季ID" clearable style="width: 200px" @keyup.enter="handleQuery" />
       </el-form-item>
-      <el-form-item label="状态" prop="registrationStatus">
-        <el-select v-model="queryParams.registrationStatus" placeholder="报名状态" clearable style="width: 200px">
-          <el-option v-for="item in OPEN_REGISTRATION_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+      <el-form-item label="审核状态" prop="auditStage">
+        <el-select v-model="queryParams.auditStage" placeholder="审核状态" clearable style="width: 200px">
+          <el-option v-for="item in CNPA_AUDIT_STATUS_FILTER_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -38,9 +38,11 @@
       </el-table-column>
       <el-table-column label="平台" prop="platform" width="90" />
       <el-table-column label="游戏ID" prop="displayGameId" min-width="120" :show-overflow-tooltip="true" />
-      <el-table-column label="状态" prop="registrationStatus" width="100">
+      <el-table-column label="状态" prop="registrationStatusName" width="100">
         <template #default="scope">
-          <dict-tag :options="OPEN_REGISTRATION_STATUS_OPTIONS" :value="scope.row.registrationStatus" />
+          <el-tag :type="openRegistrationTagType(scope.row.registrationStatus)" size="small">
+            {{ scope.row.registrationStatusName || '-' }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="提交时间" prop="submittedTime" width="160">
@@ -49,9 +51,8 @@
       <el-table-column label="操作" align="center" width="300" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:openRegistrationAudit:query']">详情</el-button>
-          <el-button link type="warning" icon="EditPen" @click="handleStartReview(scope.row)" v-hasPermi="['basket:openRegistrationAudit:audit']" v-if="scope.row.registrationStatus === 1">开始审核</el-button>
-          <el-button link type="success" icon="Check" @click="openApprove(scope.row)" v-hasPermi="['basket:openRegistrationAudit:audit']" v-if="[1, 2].includes(scope.row.registrationStatus)">通过</el-button>
-          <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:openRegistrationAudit:audit']" v-if="[1, 2].includes(scope.row.registrationStatus)">驳回</el-button>
+          <el-button link type="success" icon="Check" @click="openApprove(scope.row)" v-hasPermi="['basket:openRegistrationAudit:audit']" v-if="canOpenRegistrationAudit(scope.row.registrationStatus)">通过</el-button>
+          <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:openRegistrationAudit:audit']" v-if="canOpenRegistrationAudit(scope.row.registrationStatus)">驳回</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -119,8 +120,7 @@ import {
   getOpenRegistrationAudit,
   listOpenRegistrationAudit,
   listOpenRegistrationAuditRecords,
-  rejectOpenRegistrationAudit,
-  startOpenRegistrationAuditReview
+  rejectOpenRegistrationAudit
 } from '@/api/basket/openRegistrationAudit'
 import type {
   OpenRegistrationAuditApproveReq,
@@ -130,7 +130,7 @@ import type {
   OpenRegistrationAuditRecord,
   OpenRegistrationAuditRejectReq
 } from '@/types'
-import { OPEN_REGISTRATION_STATUS_OPTIONS } from '@/types'
+import { CNPA_AUDIT_STATUS_FILTER_OPTIONS } from '@/types'
 
 const { proxy } = getCurrentInstance()
 
@@ -152,8 +152,21 @@ const rejectRules = {
 
 const queryParams = ref<OpenRegistrationAuditQuery>({
   pageNum: 1,
-  pageSize: 10
+  pageSize: 10,
+  auditStage: 'PENDING'
 })
+
+function canOpenRegistrationAudit(status?: number) {
+  return status === 1 || status === 2
+}
+
+function openRegistrationTagType(status?: number) {
+  if (status === 3) return 'success'
+  if (status === 1 || status === 2) return 'warning'
+  if (status === 4) return 'danger'
+  if (status === 5 || status === 6) return 'info'
+  return 'info'
+}
 
 function getList() {
   loading.value = true
@@ -172,6 +185,7 @@ function handleQuery() {
 
 function resetQuery() {
   proxy.resetForm('queryRef')
+  queryParams.value.auditStage = undefined
   handleQuery()
 }
 
@@ -185,13 +199,6 @@ function handleDetail(row: OpenRegistrationAuditListItem) {
   listOpenRegistrationAuditRecords(row.id).then(res => {
     auditRecords.value = res.data || []
   })
-}
-
-function handleStartReview(row: OpenRegistrationAuditListItem) {
-  proxy.$modal.confirm('确认开始审核该Open报名？').then(() => startOpenRegistrationAuditReview(row.id)).then(() => {
-    proxy.$modal.msgSuccess('已开始审核')
-    getList()
-  }).catch(() => {})
 }
 
 function openApprove(row: OpenRegistrationAuditListItem) {

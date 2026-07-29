@@ -24,7 +24,8 @@ public class CaptainQualificationController {
     @ApiOperation("获取当前队长授权")
     @GetMapping("/current")
     public R<CaptainQualificationDetailResp> getCurrent(
-            @RequestParam(required = false) Long seasonId) {
-        return R.ok(captainQualificationService.getCurrent(seasonId));
+            @RequestParam(required = false) Long seasonId,
+            @RequestParam(required = false) Long teamId) {
+        return R.ok(captainQualificationService.getCurrent(seasonId, teamId));
     }
 }

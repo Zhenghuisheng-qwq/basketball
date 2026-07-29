@@ -10,9 +10,9 @@
       <el-form-item label="球队ID" prop="teamId">
         <el-input v-model="queryParams.teamId" placeholder="请输入球队ID" clearable style="width: 200px" @keyup.enter="handleQuery" />
       </el-form-item>
-      <el-form-item label="状态" prop="registrationStatus">
-        <el-select v-model="queryParams.registrationStatus" placeholder="报名状态" clearable style="width: 200px">
-          <el-option v-for="item in REGISTRATION_AUDIT_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+      <el-form-item label="审核状态" prop="auditStage">
+        <el-select v-model="queryParams.auditStage" placeholder="审核状态" clearable style="width: 200px">
+          <el-option v-for="item in CNPA_AUDIT_STATUS_FILTER_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -33,7 +33,9 @@
       <el-table-column label="阵容人数" prop="lineupCount" width="90" />
       <el-table-column label="状态" prop="registrationStatusName" width="100">
         <template #default="scope">
-          {{ scope.row.registrationStatusName || formatAuditStatus(scope.row.registrationStatus) }}
+          <el-tag :type="registrationAuditTagType(scope.row.registrationStatus)" size="small">
+            {{ scope.row.registrationStatusName || '-' }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="提交时间" prop="submittedTime" width="160">
@@ -42,8 +44,8 @@
       <el-table-column label="操作" align="center" width="200" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:registrationAudit:query']">详情</el-button>
-          <el-button link type="success" icon="Check" @click="handleApprove(scope.row)" v-hasPermi="['basket:registrationAudit:audit']" v-if="isReviewing(scope.row.registrationStatus)">通过</el-button>
-          <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:registrationAudit:audit']" v-if="isReviewing(scope.row.registrationStatus)">驳回</el-button>
+          <el-button link type="success" icon="Check" @click="handleApprove(scope.row)" v-hasPermi="['basket:registrationAudit:audit']" v-if="canRegistrationAudit(scope.row.registrationStatus)">通过</el-button>
+          <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:registrationAudit:audit']" v-if="canRegistrationAudit(scope.row.registrationStatus)">驳回</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -130,7 +132,7 @@ import type {
   RegistrationAuditRejectReq,
   RegistrationPlayer
 } from '@/types'
-import { REGISTRATION_AUDIT_STATUS_OPTIONS, REGISTRATION_VALIDATION_STATUS_OPTIONS } from '@/types'
+import { CNPA_AUDIT_STATUS_FILTER_OPTIONS, REGISTRATION_VALIDATION_STATUS_OPTIONS } from '@/types'
 
 const { proxy } = getCurrentInstance()
 
@@ -149,34 +151,32 @@ const rejectRules = {
   rejectReason: [{ required: true, message: '驳回原因不能为空', trigger: 'blur' }]
 }
 
-const DEFAULT_STATUS = 2
-
 const queryParams = ref<RegistrationAuditQuery>({
   pageNum: 1,
   pageSize: 10,
-  registrationStatus: DEFAULT_STATUS
+  auditStage: 'PENDING'
 })
 
-function isReviewing(status?: number) {
-  return status === 2 || status === 1
+function canRegistrationAudit(status?: number) {
+  return status === 1 || status === 2
 }
 
-function formatAuditStatus(status?: number) {
-  const item = REGISTRATION_AUDIT_STATUS_OPTIONS.find(option => option.value === status)
-  if (item) return item.label
-  if (status === 1) return '审核中'
-  return status == null ? '-' : `状态 ${status}`
-}
-
-const POSITION_LABELS: Record<string, string> = {
-  PG: '控球后卫',
-  SG: '得分后卫',
-  SF: '小前锋',
-  PF: '大前锋',
-  C: '中锋',
+function registrationAuditTagType(status?: number) {
+  if (status === 3) return 'success'
+  if (status === 1 || status === 2) return 'warning'
+  if (status === 4) return 'danger'
+  if (status === 5 || status === 6) return 'info'
+  return 'info'
 }
 
 function formatPosition(row: RegistrationPlayer) {
+  const POSITION_LABELS: Record<string, string> = {
+    PG: '控球后卫',
+    SG: '得分后卫',
+    SF: '小前锋',
+    PF: '大前锋',
+    C: '中锋',
+  }
   const code = row.positionCode?.trim().toUpperCase()
   if (!code) return '-'
   const name = row.positionName || POSITION_LABELS[code]
@@ -200,7 +200,7 @@ function handleQuery() {
 
 function resetQuery() {
   proxy.resetForm('queryRef')
-  queryParams.value.registrationStatus = DEFAULT_STATUS
+  queryParams.value.auditStage = undefined
   handleQuery()
 }
 

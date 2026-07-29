@@ -35,12 +35,25 @@
                a.application_status as applicationStatus, a.submitted_time as submittedTime, a.reviewed_time as reviewedTime
         from basket_player_cert_application a
         <include refid="memberJoins"/>
-        where a.is_delete = 0
+        where a.is_delete = 0 and a.application_status != 0
         <if test="applicationNo != null and applicationNo != ''">and a.application_no like concat('%', #{applicationNo}, '%')</if>
         <if test="nickname != null and nickname != ''">and mp.nickname like concat('%', #{nickname}, '%')</if>
         <if test="email != null and email != ''">and acc.email like concat('%', #{email}, '%')</if>
         <if test="gameAccount != null and gameAccount != ''">and a.game_account like concat('%', #{gameAccount}, '%')</if>
-        <if test="applicationStatus != null">and a.application_status = #{applicationStatus}</if>
+        <if test="auditStage != null and auditStage != ''">
+            <choose>
+                <when test="auditStage == 'PENDING'">and a.application_status in (1, 2)</when>
+                <when test="auditStage == 'APPROVED'">and a.application_status = 3</when>
+                <when test="auditStage == 'REJECTED'">and a.application_status = 4</when>
+                <when test="auditStage == 'CANCELLED'">and a.application_status = 5</when>
+            </choose>
+        </if>
+        <if test="(auditStage == null or auditStage == '') and applicationStatus != null">
+            <choose>
+                <when test="applicationStatus == 1 or applicationStatus == 2">and a.application_status in (1, 2)</when>
+                <otherwise>and a.application_status = #{applicationStatus}</otherwise>
+            </choose>
+        </if>
         <if test="memberId != null">and a.member_id = #{memberId}</if>
         order by a.submitted_time desc, a.create_time desc
     </select>

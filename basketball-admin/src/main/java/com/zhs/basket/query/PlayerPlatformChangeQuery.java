@@ -14,5 +14,7 @@ public class PlayerPlatformChangeQuery extends BaseEntity {
     private String platform;
     private String changeType;
     private Integer requestStatus;
+    /** 审核筛选阶段：PENDING/APPROVED/REJECTED/CANCELLED */
+    private String auditStage;
     private Long memberId;
 }

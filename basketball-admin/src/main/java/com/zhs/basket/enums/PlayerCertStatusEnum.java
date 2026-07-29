@@ -21,6 +21,27 @@ public enum PlayerCertStatusEnum {
     public int getCode() { return code; }
     public String getDescription() { return description; }
 
+    /** 后台审核列表/详情统一展示文案 */
+    public String getAuditDisplayDescription() {
+        if (this == SUBMITTED || this == REVIEWING) {
+            return "待审核";
+        }
+        if (this == APPROVED) {
+            return "已通过";
+        }
+        if (this == REJECTED) {
+            return "已驳回";
+        }
+        if (this == CANCELLED) {
+            return "已取消";
+        }
+        return description;
+    }
+
+    public boolean isPendingAudit() {
+        return this == SUBMITTED || this == REVIEWING;
+    }
+
     public static PlayerCertStatusEnum fromCode(Integer code) {
         if (code == null) return DRAFT;
         for (PlayerCertStatusEnum v : values()) {

@@ -158,4 +158,31 @@
           and (cq.valid_from is null or cq.valid_from &lt;= now())
           and (cq.valid_to is null or cq.valid_to &gt;= now())
     </select>
+
+    <select id="selectGrantHistoryByMemberId" resultType="com.zhs.basket.vo.AccountPlayerCaptainGrantVo">
+        select cq.id as qualificationId,
+               cq.qualification_no as qualificationNo,
+               cq.qualification_status as qualificationStatus,
+               cq.payment_confirmed as paymentConfirmed,
+               cq.payment_reference as paymentReference,
+               cq.granted_time as grantedTime,
+               cq.valid_to as validTo,
+               cq.revoked_time as revokedTime,
+               cq.revoke_reason as revokeReason,
+               cq.granted_by as grantedBy,
+               s.season_name as seasonName,
+               tm.tournament_name as tournamentName,
+               coalesce(nullif(trim(s.season_name), ''), tm.tournament_name) as eventName,
+               t.team_name as teamName,
+               t.id as teamId,
+               su.nick_name as grantedByName
+        from basket_captain_qualification cq
+        left join basket_tournament_season s on s.id = cq.season_id and s.is_delete = 0
+        left join basket_tournament tm on tm.id = s.tournament_id and tm.is_delete = 0
+        left join basket_team t on t.id = cq.team_id and t.is_delete = 0
+        left join sys_user su on su.user_id = cq.granted_by
+        where cq.member_id = #{memberId}
+          and cq.is_delete = 0
+        order by cq.granted_time desc, cq.id desc
+    </select>
 </mapper>

@@ -15,4 +15,5 @@ public class AccountPlayerPlatformAccountVo {
     private Date approvedTime;
     private Date effectiveTime;
     private Date invalidTime;
+    private Date updateTime;
 }
