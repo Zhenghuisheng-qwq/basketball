@@ -68,6 +68,13 @@ public class TeamRegistrationBusinessController {
         return R.ok(null, "已提醒队长");
     }
 
+    @ApiOperation("我的赛事-公开赛事分页")
+    @GetMapping("/basket/account/my-events/season/page")
+    public R<AvailableSeasonPageResp> pageMyEventsSeasons(@RequestParam(required = false) Integer currentPage,
+                                                          @RequestParam(required = false) Integer pageSize) {
+        return R.ok(teamRegistrationBusinessService.pageMyEventsSeasons(currentPage, pageSize));
+    }
+
     @ApiOperation("我的赛事页面身份上下文")
     @GetMapping("/basket/account/my-events/context")
     public R<MyEventsContextResp> getMyEventsContext() {

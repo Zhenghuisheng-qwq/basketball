@@ -179,6 +179,109 @@ export function mapTeamSeasonToAvailableEvent(
   }
 }
 
+export function formatPlatformList(platforms?: string[]) {
+  if (!platforms?.length) return '-'
+  return platforms.join(' / ')
+}
+
+export function formatDateTimeShort(value?: string) {
+  if (!value) return '-'
+  return value.replace('T', ' ').slice(0, 16)
+}
+
+export function mapMyEventsSeasonToAvailableEvent(season: AvailableSeasonItemDto): AvailableEvent {
+  const actionCode = season.actionCode || 'DISABLED'
+  const actionType = resolveMyEventsActionType(actionCode, season.canRegister)
+  const closed = season.registrationStatus === 'CLOSED' || season.registrationStatus === 'ENDED'
+  return {
+    tournamentId: season.tournamentId || season.seasonId || '',
+    seasonId: season.seasonId,
+    tournamentName: season.tournamentName || season.seasonName || '联赛赛事',
+    seasonName: season.seasonName || season.competitionSeasonName,
+    platform: formatPlatformList(season.openedPlatforms) || season.platformName || '-',
+    openedPlatforms: season.openedPlatforms,
+    registrationType: 'TEAM',
+    registrationTypeText: '球队报名',
+    signupStartTime: season.registrationStartTime,
+    deadline: season.registrationEndTime || '',
+    matchStartTime: season.matchStartTime,
+    matchEndTime: season.matchEndTime,
+    quotaUsed: season.registeredPlatforms?.length ?? 0,
+    quotaTotal: season.openedPlatforms?.length ?? 0,
+    quotaFull: closed,
+    eligibilityStatus: season.canRegister ? 'ELIGIBLE' : 'NOT_VERIFIED',
+    actionText: season.actionText || '暂不可报名',
+    actionType,
+    actionCode,
+    disabledReason: season.disabledReason || season.cannotRegisterReason,
+    canRegister: season.canRegister,
+    teamName: season.teamName,
+    teamRegistrationStatusText: season.teamRegistrationStatusText,
+    userRosterStatusText: season.userRosterStatusText,
+    captainGrantStatusText: season.captainGrantStatusText,
+    registrationStatus: season.registrationStatus,
+    eventStatus: season.eventStatus,
+    availableRegisterPlatforms: season.availableRegisterPlatforms,
+    registrationId: season.registrationId,
+    canRemindCaptain: season.canRemindCaptain,
+    remindedRecently: season.remindedRecently,
+  }
+}
+
+function resolveMyEventsActionType(actionCode: string, canRegister?: boolean): AvailableEvent['actionType'] {
+  switch (actionCode) {
+    case 'JOIN_TEAM':
+      return 'JOIN_TEAM'
+    case 'CONTACT_CAPTAIN':
+      return 'CONTACT_CAPTAIN'
+    case 'REMIND_CAPTAIN':
+      return 'REMIND_CAPTAIN'
+    case 'REGISTER':
+      return canRegister ? 'TEAM_REGISTRATION' : 'DISABLED'
+    case 'REGISTERED':
+    case 'VIEW_REGISTRATION':
+    case 'PENDING_REVIEW':
+      return 'VIEW_REGISTRATION'
+    case 'MANAGE_REGISTRATION':
+      return 'MANAGE_REGISTRATION'
+    case 'GRANT_EXPIRED':
+    case 'NO_GRANT':
+    case 'NOT_STARTED':
+    case 'CLOSED':
+    default:
+      return 'DISABLED'
+  }
+}
+
+export function mapTeamEventRecordToApplication(item: import('@/api/types/myEvents').TeamEventRecordItemDto): MyApplication {
+  const status = String(item.registrationStatus ?? '')
+  const isApproved = item.registrationStatus === 3
+  const isPending = item.registrationStatus === 2 || item.registrationStatus === 1
+  return {
+    applicationId: item.registrationId,
+    tournamentId: item.seasonId || item.registrationId,
+    tournamentName: item.tournamentName || item.seasonName || '球队报名',
+    platform: '-',
+    applicationType: 'TEAM',
+    applicationTypeText: '球队报名',
+    status,
+    statusText: item.registrationStatusText || mapTeamRegistrationStatusText(item.registrationStatus),
+    statusHint: isPending
+      ? '报名已提交，正在等待后台审核。'
+      : isApproved
+        ? '报名审核已通过，正式参赛关系请查看「我的阵容」。'
+        : item.rejectReason,
+    submitTime: item.submitTime,
+    actionText: '查看状态',
+    actionType: 'VIEW_APPLICATION_STATUS',
+    pending: isPending,
+    showAction: true,
+    platformGroupLabel: [item.tournamentName || item.seasonName, item.rosterStatusText, item.registrationStatusText]
+      .filter(Boolean)
+      .join(' / '),
+  }
+}
+
 export function mapTeamRegistrationToApplication(
   item: TeamRegistrationItemDto,
   isCaptain = true,

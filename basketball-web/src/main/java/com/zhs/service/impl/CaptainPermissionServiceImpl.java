@@ -167,6 +167,32 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
     }
 
     @Override
+    public BasketCaptainQualification requireValidQualificationForEvent(Long accountId, Long teamId, Long seasonId) {
+        requireCertifiedPlayer(accountId);
+        if (seasonId == null) {
+            throw new ServiceException("赛季主键不能为空");
+        }
+        BasketCaptainQualification qualification = captainGrantSupport.findActiveGrantForEvent(accountId, teamId, seasonId);
+        if (qualification == null) {
+            throw new ServiceException("当前球队暂未获得该赛事报名资格，请联系管理员确认缴费和授权", 403);
+        }
+        String invalidReason = resolveInvalidReason(accountId, qualification);
+        if (invalidReason != null) {
+            throw new ServiceException("当前球队暂未获得该赛事报名资格，请联系管理员确认缴费和授权", 403);
+        }
+        if (!Objects.equals(qualification.getSeasonId(), seasonId)) {
+            throw new ServiceException("当前队长权限与所选赛事不匹配", 403);
+        }
+        if (qualification.getTeamId() != null && teamId != null && !Objects.equals(qualification.getTeamId(), teamId)) {
+            throw new ServiceException("当前球队暂未获得该赛事报名资格，请联系管理员确认缴费和授权", 403);
+        }
+        if (!accountId.equals(qualification.getMemberId())) {
+            throw new ServiceException("无权使用该队长授权", 403);
+        }
+        return qualification;
+    }
+
+    @Override
     public BasketPlayerProfile requireCertifiedPlayer(Long accountId) {
         BasketPlayerProfile profile = playerProfileDao.selectOne(new LambdaQueryWrapper<BasketPlayerProfile>()
                 .eq(BasketPlayerProfile::getMemberId, accountId)
@@ -249,9 +275,9 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
         if (!accountId.equals(registration.getCaptainMemberId())) {
             throw new ServiceException("无权操作该报名", 403);
         }
-        BasketCaptainQualification grant = requireValidQualification(accountId, registration.getSeasonId());
+        BasketCaptainQualification grant = requireValidQualificationForEvent(
+                accountId, registration.getTeamId(), registration.getSeasonId());
         captainGrantSupport.assertGrantBoundToTeam(grant, registration.getTeamId());
-        requireTeamCaptain(accountId, registration.getTeamId());
         return registration;
     }
 

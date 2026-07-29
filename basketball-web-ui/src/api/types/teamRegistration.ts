@@ -28,6 +28,24 @@ export interface AvailableSeasonItemDto {
   registrationId?: string
   platformCode?: string
   platformName?: string
+  openedPlatforms?: string[]
+  registeredPlatforms?: string[]
+  availableRegisterPlatforms?: string[]
+  userRosterStatus?: string
+  userRosterStatusText?: string
+  hasActiveCaptainGrantForEvent?: boolean
+  captainGrantStatusText?: string
+  captainGrantExpireTime?: string
+  teamRegistrationStatusText?: string
+  disabledReason?: string
+  userTeamRole?: string
+  actionCode?: string
+  actionText?: string
+  matchStartTime?: string
+  matchEndTime?: string
+  canRemindCaptain?: boolean
+  cannotRemindReason?: string
+  remindedRecently?: boolean
 }
 
 export interface AvailableSeasonPageDto extends PageResult<AvailableSeasonItemDto> {

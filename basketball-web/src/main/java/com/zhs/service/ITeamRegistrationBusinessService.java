@@ -22,6 +22,8 @@ public interface ITeamRegistrationBusinessService {
 
     MyEventsContextResp getMyEventsContext();
 
+    AvailableSeasonPageResp pageMyEventsSeasons(Integer currentPage, Integer pageSize);
+
     AvailableSeasonPageResp pageAvailableSeasons(String teamId, Integer currentPage, Integer pageSize);
 
     AvailableSeasonPageResp pageMemberAvailableSeasons(String teamId, Integer currentPage, Integer pageSize);

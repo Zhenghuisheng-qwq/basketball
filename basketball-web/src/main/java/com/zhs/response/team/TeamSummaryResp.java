@@ -67,6 +67,18 @@ public class TeamSummaryResp implements Serializable {
     @ApiModelProperty("不可申请原因（同 cannotApplyReason）")
     private String disabledReason;
 
+    @ApiModelProperty("队长昵称")
+    private String captainName;
+
+    @ApiModelProperty("球队简介")
+    private String description;
+
+    @ApiModelProperty("是否已有待审核申请")
+    private Boolean hasPendingApply;
+
+    @ApiModelProperty("是否允许申请（同 canApply）")
+    private Boolean allowApply;
+
     @ApiModelProperty("我的角色")
     private String myRole;
 

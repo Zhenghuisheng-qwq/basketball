@@ -60,7 +60,7 @@ const route = useRoute()
 const router = useRouter()
 const teamStore = useTeamStore()
 
-const activeTab = ref<TeamTab>('overview')
+const activeTab = ref<TeamTab>('joinableTeams')
 const pageLoading = ref(true)
 const loadError = ref('')
 
@@ -130,6 +130,14 @@ const teamAuditStatusText = computed(() => {
   return status != null ? TEAM_AUDIT_STATUS[status] || '未知' : '-'
 })
 
+/** 仅有效队长、当前可管理队长、历史队长展示队长权限卡片 */
+const showCaptainGrantPanel = computed(() => {
+  if (canManageCurrentTeam.value) return true
+  if (isHistoricalCaptain.value) return true
+  if (captainQual.value?.runtimeValid) return true
+  return false
+})
+
 const availableTabs = computed<TeamTab[]>(() => {
   const joinableTabs: TeamTab[] = canJoinTeam.value ? ['joinableTeams'] : []
   if (hasTeam.value) {
@@ -141,7 +149,7 @@ const availableTabs = computed<TeamTab[]>(() => {
     }
     return ['overview', 'members', 'registration', ...joinableTabs]
   }
-  const preTeamTabs: TeamTab[] = ['pendingInvites', 'joinableTeams', 'myApplications']
+  const preTeamTabs: TeamTab[] = ['joinableTeams', 'pendingInvites', 'myApplications']
   if (canCreateTeam.value) preTeamTabs.unshift('create')
   if (canInheritTeam.value && teamStore.inheritableTeams.length) preTeamTabs.unshift('create')
   return preTeamTabs
@@ -172,10 +180,12 @@ const bannerStatusText = computed(() => {
   if (hasTeam.value && canManageCurrentTeam.value) return '队长'
   if (hasTeam.value && isCaptainMember.value) return '历史队长'
   if (hasTeam.value) return '队员'
-  if (captainQual.value?.runtimeValid) return '队长权限有效'
-  if (isCaptainQualExpired.value) return '队长权限已收回'
-  if (isCaptainQualInvalid.value) return captainQual.value?.invalidReason || '队长权限无效'
-  return '暂无队长权限'
+  if (showCaptainGrantPanel.value && captainQual.value?.runtimeValid) return '队长权限有效'
+  if (showCaptainGrantPanel.value && isCaptainQualExpired.value) return '队长权限已收回'
+  if (showCaptainGrantPanel.value && isCaptainQualInvalid.value) {
+    return captainQual.value?.invalidReason || '队长权限无效'
+  }
+  return '球员'
 })
 
 const bannerStatusType = computed(() => {
@@ -201,7 +211,7 @@ watch(availableTabs, (tabs) => {
   if (!tabs.includes(activeTab.value)) {
     activeTab.value = tabs[0]
   }
-})
+}, { immediate: true })
 
 watch(teamDetail, (detail) => {
   if (!detail) return
@@ -230,6 +240,11 @@ async function bootstrap() {
     loadError.value = error instanceof Error ? error.message : '加载失败'
   } finally {
     pageLoading.value = false
+    if (typeof route.query.tab !== 'string' && !hasTeam.value) {
+      activeTab.value = availableTabs.value.includes('joinableTeams')
+        ? 'joinableTeams'
+        : availableTabs.value[0]
+    }
     await openRegistrationFromQuery().catch(() => undefined)
   }
 }
@@ -723,9 +738,9 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
     />
 
     <CaptainGrantPanel
+      v-if="showCaptainGrantPanel"
       :qualification="captainQual"
       :loading="teamStore.qualificationLoading"
-      :current-team-name="teamStore.myTeamSummary?.teamName || teamStore.teamDetail?.teamName"
     />
 
     <p v-if="loadError" class="team-page-error">{{ loadError }}</p>

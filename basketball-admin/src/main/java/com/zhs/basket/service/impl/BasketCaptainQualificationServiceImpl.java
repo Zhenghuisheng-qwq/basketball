@@ -6,9 +6,11 @@ import com.zhs.basket.domain.BasketPlayerProfile;
 import com.zhs.basket.domain.BasketTeam;
 import com.zhs.basket.domain.BasketTournament;
 import com.zhs.basket.domain.BasketTournamentSeason;
+import com.zhs.basket.enums.CaptainGrantLogActionTypeEnum;
 import com.zhs.basket.enums.CaptainQualificationStatusEnum;
 import com.zhs.basket.enums.PlayerCertStatusEnum;
 import com.zhs.basket.enums.SeasonStatusEnum;
+import com.zhs.basket.mapper.BasketCaptainGrantLogMapper;
 import com.zhs.basket.mapper.BasketCaptainQualificationMapper;
 import com.zhs.basket.mapper.BasketMemberAccountMapper;
 import com.zhs.basket.mapper.BasketPlayerProfileMapper;
@@ -22,13 +24,17 @@ import com.zhs.basket.req.CaptainQualificationRevokeReq;
 import com.zhs.basket.req.CaptainQualificationUpdateReq;
 import com.zhs.basket.service.IBasketCaptainQualificationService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.CaptainGrantLogSupport;
 import com.zhs.basket.support.CaptainGrantSeasonSupport;
 import com.zhs.basket.support.CaptainQualificationValiditySupport;
 import com.zhs.basket.support.PlayerNoGenerator;
+import com.zhs.basket.vo.CaptainGrantLogVo;
 import com.zhs.basket.vo.CaptainGrantSeasonOptionVo;
 import com.zhs.basket.vo.CaptainQualificationDetailVo;
 import com.zhs.basket.vo.CaptainQualificationListVo;
 import com.zhs.basket.vo.EligibleCaptainVo;
+import com.zhs.system.mapper.SysUserMapper;
+import com.zhs.system.model.SysUser;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
@@ -57,6 +63,9 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
     @Autowired private BasketTournamentMapper tournamentMapper;
     @Autowired private PlayerNoGenerator playerNoGenerator;
     @Autowired private BasketAdminMessageService messageService;
+    @Autowired private CaptainGrantLogSupport grantLogSupport;
+    @Autowired private BasketCaptainGrantLogMapper grantLogMapper;
+    @Autowired private SysUserMapper sysUserMapper;
 
     @Override
     public List<EligibleCaptainVo> selectEligibleList() {
@@ -94,8 +103,22 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
         BeanUtils.copyBeanProp(vo, q);
         enrichSeasonTeamDisplay(vo, q.getSeasonId(), q.getTeamId());
         enrichAccountPlayerDisplay(vo.getMemberId(), vo.getPlayerId(), vo);
+        enrichOperatorDisplay(vo, q);
         enrichRuntimeValidity(vo, q, new Date());
         return vo;
+    }
+
+    @Override
+    public List<CaptainGrantLogVo> selectGrantLogs(Long qualificationId) {
+        requireQualification(qualificationId);
+        List<CaptainGrantLogVo> logs = grantLogMapper.selectByGrantId(qualificationId);
+        for (CaptainGrantLogVo log : logs) {
+            CaptainGrantLogActionTypeEnum actionType = CaptainGrantLogActionTypeEnum.fromCode(log.getActionType());
+            log.setActionTypeText(actionType == null ? log.getActionType() : actionType.getDescription());
+            log.setBeforeStatusText(CaptainGrantLogSupport.statusText(log.getBeforeStatus()));
+            log.setAfterStatusText(CaptainGrantLogSupport.statusText(log.getAfterStatus()));
+        }
+        return logs;
     }
 
     @Override
@@ -158,10 +181,13 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
         record.setIsDelete(NOT_DELETED);
         qualificationMapper.insert(record);
 
-        String seasonLabel = buildSeasonLabel(season, tournament);
+        grantLogSupport.writeGrantLog(record, CaptainGrantLogActionTypeEnum.GRANT, null,
+                CaptainQualificationStatusEnum.ACTIVE.getCode(), null, req.getGrantRemark(), "ADMIN");
+
+        String eventLabel = buildEventLabel(season, tournament);
         messageService.sendSiteMessage(profile.getMemberId(), SecurityUtils.getUserId(), "CAPTAIN_GRANT", record.getId(),
                 "队长权限已授予",
-                "您已获得「" + seasonLabel + "」的队长权限，有效期至 " + formatMessageTime(expireTime) + "。");
+                "您已获得【" + eventLabel + "】队长权限，可在授权范围内管理球队并报名赛事。");
     }
 
     @Override
@@ -197,9 +223,15 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
         if (qualificationMapper.updateById(record) != 1) {
             throw new ServiceException("收回失败");
         }
+        grantLogSupport.writeGrantLog(record, CaptainGrantLogActionTypeEnum.REVOKE,
+                CaptainQualificationStatusEnum.ACTIVE.getCode(),
+                CaptainQualificationStatusEnum.REVOKED.getCode(),
+                req.getRevokeReason().trim(), null, "ADMIN");
+
+        String eventLabel = buildEventLabel(record.getSeasonId());
         messageService.sendSiteMessage(record.getMemberId(), SecurityUtils.getUserId(), "CAPTAIN_GRANT", record.getId(),
                 "队长权限已收回",
-                "您的当前赛事队长权限已被收回，历史球队和赛事记录仍可查看。原因：" + req.getRevokeReason().trim());
+                "您的【" + eventLabel + "】队长权限已被收回，历史球队和赛事记录仍可查看。");
     }
 
     @Override
@@ -219,10 +251,20 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
         if (qualificationMapper.countActiveByTeamIdAndSeasonId(req.getTeamId(), record.getSeasonId()) > 0) {
             throw new ServiceException("该球队在当前赛事下已存在有效队长授权");
         }
+        BasketTeam team = teamMapper.selectById(req.getTeamId());
         record.setTeamId(req.getTeamId());
         if (qualificationMapper.updateById(record) != 1) {
             throw new ServiceException("绑定球队失败");
         }
+        grantLogSupport.writeGrantLog(record, CaptainGrantLogActionTypeEnum.BIND_TEAM,
+                CaptainQualificationStatusEnum.ACTIVE.getCode(),
+                CaptainQualificationStatusEnum.ACTIVE.getCode(),
+                null, "绑定球队：" + (team == null ? req.getTeamId() : team.getTeamName()), "ADMIN");
+
+        String teamName = team == null ? String.valueOf(req.getTeamId()) : team.getTeamName();
+        messageService.sendSiteMessage(record.getMemberId(), SecurityUtils.getUserId(), "CAPTAIN_GRANT", record.getId(),
+                "队长权限已关联球队",
+                "您的队长权限已关联球队【" + teamName + "】，可在授权赛事内进行报名和管理。");
     }
 
     @Override
@@ -235,14 +277,20 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
         Date now = new Date();
         Long operatorId = SecurityUtils.getUserId();
         for (BasketCaptainQualification grant : activeGrants) {
+            Integer beforeStatus = grant.getQualificationStatus();
             grant.setQualificationStatus(CaptainQualificationStatusEnum.EXPIRED.getCode());
             grant.setIsCurrent(0);
             grant.setRevokedTime(now);
-            grant.setRevokeReason("赛事周期已结束，队长权限自动失效");
+            grant.setRevokeReason("赛事已结束，队长权限自动失效");
             qualificationMapper.updateById(grant);
+            grantLogSupport.writeGrantLog(grant, CaptainGrantLogActionTypeEnum.EXPIRE, beforeStatus,
+                    CaptainQualificationStatusEnum.EXPIRED.getCode(),
+                    "赛事已结束，队长权限自动失效", null, "SYSTEM");
+
+            String eventLabel = buildEventLabel(grant.getSeasonId());
             messageService.sendSiteMessage(grant.getMemberId(), operatorId, "CAPTAIN_GRANT", grant.getId(),
                     "队长权限已失效",
-                    "当前赛事周期已结束，您的队长权限已自动失效，历史球队和赛事记录仍可查看。");
+                    "【" + eventLabel + "】已结束，您的本赛事队长权限已自动失效，历史球队和赛事记录仍可查看。");
         }
     }
 
@@ -407,6 +455,43 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
             return tournament.getTournamentName() + " / " + season.getSeasonName();
         }
         return season.getSeasonName();
+    }
+
+    private String buildEventLabel(Long seasonId) {
+        if (seasonId == null) {
+            return "赛事";
+        }
+        BasketTournamentSeason season = seasonMapper.selectById(seasonId);
+        if (season == null) {
+            return "赛事";
+        }
+        BasketTournament tournament = season.getTournamentId() == null
+                ? null : tournamentMapper.selectById(season.getTournamentId());
+        return buildEventLabel(season, tournament);
+    }
+
+    private String buildEventLabel(BasketTournamentSeason season, BasketTournament tournament) {
+        if (tournament != null && StringUtils.hasText(tournament.getTournamentName())) {
+            return tournament.getTournamentName();
+        }
+        return season.getSeasonName();
+    }
+
+    private void enrichOperatorDisplay(CaptainQualificationDetailVo vo, BasketCaptainQualification q) {
+        if (q.getGrantedBy() != null) {
+            SysUser grantedBy = sysUserMapper.selectUserById(q.getGrantedBy());
+            if (grantedBy != null) {
+                vo.setGrantedByName(StringUtils.isNotEmpty(grantedBy.getNickName())
+                        ? grantedBy.getNickName() : grantedBy.getUserName());
+            }
+        }
+        if (q.getRevokedBy() != null) {
+            SysUser revokedBy = sysUserMapper.selectUserById(q.getRevokedBy());
+            if (revokedBy != null) {
+                vo.setRevokedByName(StringUtils.isNotEmpty(revokedBy.getNickName())
+                        ? revokedBy.getNickName() : revokedBy.getUserName());
+            }
+        }
     }
 
     private String formatMessageTime(Date date) {

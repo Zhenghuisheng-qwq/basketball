@@ -5,6 +5,7 @@ import com.zhs.basket.req.CaptainQualificationBindTeamReq;
 import com.zhs.basket.req.CaptainQualificationGrantReq;
 import com.zhs.basket.req.CaptainQualificationRevokeReq;
 import com.zhs.basket.req.CaptainQualificationUpdateReq;
+import com.zhs.basket.vo.CaptainGrantLogVo;
 import com.zhs.basket.vo.CaptainGrantSeasonOptionVo;
 import com.zhs.basket.vo.CaptainQualificationDetailVo;
 import com.zhs.basket.vo.CaptainQualificationListVo;
@@ -21,4 +22,6 @@ public interface IBasketCaptainQualificationService {
     void revoke(Long qualificationId, CaptainQualificationRevokeReq req);
     void bindTeam(Long qualificationId, CaptainQualificationBindTeamReq req);
     void expireBySeasonFinish(Long seasonId);
+
+    List<CaptainGrantLogVo> selectGrantLogs(Long qualificationId);
 }

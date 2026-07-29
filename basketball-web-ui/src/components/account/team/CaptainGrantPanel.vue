@@ -8,8 +8,6 @@ import { formatDateTime } from '@/utils/formatDate'
 const props = defineProps<{
   qualification: CaptainQualificationDto | null
   loading?: boolean
-  /** 当前页面已加载的球队名称，优先于授权绑定球队展示 */
-  currentTeamName?: string
 }>()
 
 const hasGrant = computed(() => Boolean(props.qualification?.hasQualification))
@@ -34,28 +32,15 @@ const statusTone = computed<StatusTone>(() => {
 
 const subtitle = computed(() => {
   if (isActive.value) {
-    return '当前账号已开通队长权限，可管理球队资料、成员、邀请与赛事报名。'
+    return '当前账号已开通队长权限，可在授权赛事范围内管理球队并报名赛事。'
   }
   if (isRevoked.value) {
-    return '当前赛事周期已结束，队长权限已收回；历史球队和赛事记录仍可查看。'
+    return '您的队长权限已被收回；历史球队和赛事记录仍可查看。'
   }
   if (hasGrant.value) {
-    return props.qualification?.invalidReason || '当前队长权限无效，暂不能管理球队。'
+    return props.qualification?.invalidReason || '当前队长权限无效，暂不能管理球队或报名赛事。'
   }
-  return '队长权限由平台根据赛事缴费结果后台开通。'
-})
-
-const seasonLabel = computed(() => {
-  const name = props.qualification?.seasonName?.trim()
-  return name || '暂未关联赛事'
-})
-
-const teamLabel = computed(() => {
-  const pageTeam = props.currentTeamName?.trim()
-  if (pageTeam) return pageTeam
-  const boundTeam = props.qualification?.teamName?.trim()
-  if (boundTeam) return boundTeam
-  return '暂未绑定球队'
+  return '队长权限由平台根据赛事缴费结果后台授予，用户不能主动申请。'
 })
 
 const validityLabel = computed(() => {
@@ -83,26 +68,6 @@ const showSummaryGrid = computed(() => hasGrant.value || isActive.value)
           <div class="captain-grant__cell-value">
             <AccountStatusBadge :text="statusLabel" :type="statusTone" />
           </div>
-        </div>
-
-        <div class="captain-grant__cell">
-          <span class="captain-grant__cell-label">授权赛事</span>
-          <span
-            class="captain-grant__cell-value"
-            :class="{ 'captain-grant__cell-value--muted': !qualification?.seasonName }"
-          >
-            {{ seasonLabel }}
-          </span>
-        </div>
-
-        <div class="captain-grant__cell">
-          <span class="captain-grant__cell-label">关联球队</span>
-          <span
-            class="captain-grant__cell-value"
-            :class="{ 'captain-grant__cell-value--muted': teamLabel === '暂未绑定球队' }"
-          >
-            {{ teamLabel }}
-          </span>
         </div>
 
         <div class="captain-grant__cell captain-grant__cell--validity">
@@ -140,7 +105,7 @@ const showSummaryGrid = computed(() => hasGrant.value || isActive.value)
 
 .captain-grant__grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 

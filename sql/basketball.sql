@@ -359,6 +359,40 @@ CREATE TABLE `basket_captain_qualification` (
                                                 KEY idx_captain_grant_valid_to (valid_to, qualification_status, is_delete)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='队长授权表';
 
+DROP TABLE IF EXISTS `basket_captain_grant_log`;
+CREATE TABLE `basket_captain_grant_log` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `grant_id` BIGINT NOT NULL COMMENT '队长授权主键',
+    `member_id` BIGINT NOT NULL COMMENT '用户ID',
+    `player_id` BIGINT DEFAULT NULL COMMENT '球员档案ID',
+    `team_id` BIGINT DEFAULT NULL COMMENT '球队ID',
+    `season_id` BIGINT NOT NULL COMMENT '赛事赛季ID',
+    `action_type` VARCHAR(32) NOT NULL COMMENT '操作类型',
+    `before_status` TINYINT DEFAULT NULL COMMENT '操作前状态',
+    `after_status` TINYINT DEFAULT NULL COMMENT '操作后状态',
+    `payment_confirmed` TINYINT DEFAULT NULL COMMENT '缴费是否确认',
+    `payment_reference` VARCHAR(128) DEFAULT NULL COMMENT '缴费参考号',
+    `grant_time` DATETIME DEFAULT NULL COMMENT '授权时间快照',
+    `expire_time` DATETIME DEFAULT NULL COMMENT '失效时间快照',
+    `revoke_time` DATETIME DEFAULT NULL COMMENT '收回时间快照',
+    `operator_id` BIGINT DEFAULT NULL COMMENT '操作人ID',
+    `operator_name` VARCHAR(64) DEFAULT NULL COMMENT '操作人名称',
+    `operator_type` VARCHAR(16) NOT NULL DEFAULT 'ADMIN' COMMENT '操作人类型 ADMIN/SYSTEM',
+    `reason` VARCHAR(500) DEFAULT NULL COMMENT '操作原因',
+    `remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `is_delete` TINYINT NOT NULL DEFAULT 0 COMMENT '删除标记',
+    PRIMARY KEY (`id`),
+    KEY `idx_log_grant` (`grant_id`),
+    KEY `idx_log_user` (`member_id`),
+    KEY `idx_log_event` (`season_id`),
+    KEY `idx_log_time` (`create_time`),
+    KEY `idx_log_action` (`action_type`, `create_time`),
+    KEY `idx_grant_user_event` (`member_id`, `season_id`),
+    KEY `idx_grant_team_event` (`team_id`, `season_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='队长授权历史日志表';
+
 -- 三 球队与成员关系
 
 DROP TABLE IF EXISTS `basket_team`;

@@ -47,6 +47,12 @@ public class BasketCaptainQualificationController extends BaseController {
         return success(captainQualificationService.selectDetail(qualificationId));
     }
 
+    @PreAuthorize("@ss.hasPermi('basket:captainQualification:query')")
+    @GetMapping("/{qualificationId}/logs")
+    public AjaxResult grantLogs(@PathVariable Long qualificationId) {
+        return success(captainQualificationService.selectGrantLogs(qualificationId));
+    }
+
     @PreAuthorize("@ss.hasPermi('basket:captainQualification:grant')")
     @Log(title = "队长授权", businessType = BusinessType.INSERT)
     @PostMapping("/grant")

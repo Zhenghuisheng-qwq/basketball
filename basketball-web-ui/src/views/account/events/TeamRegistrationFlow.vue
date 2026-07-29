@@ -26,6 +26,7 @@ const registrationId = ref('')
 
 const draftForm = reactive({
   seasonId: '',
+  platformCode: '',
   contactName: '',
   contactMobile: '',
   contactEmail: '',
@@ -101,6 +102,10 @@ async function bootstrap() {
       teamStore.loadRegistrations(teamId.value),
     ])
     pickDefaultSeason(teamStore.availableSeasons)
+    const queryPlatform = typeof route.query.platformCode === 'string' ? route.query.platformCode : ''
+    if (queryPlatform) {
+      draftForm.platformCode = queryPlatform
+    }
 
     const existing = teamStore.availableSeasons.find(
       (item) => item.hasRegistration && item.registrationId,
@@ -146,7 +151,7 @@ async function createDraft() {
   try {
     const created = await teamStore.createRegistrationDraftAction(teamId.value, {
       seasonId: draftForm.seasonId,
-      platformCode: selectedSeason.value?.platformCode,
+      platformCode: draftForm.platformCode || selectedSeason.value?.platformCode,
       contactName: draftForm.contactName.trim() || undefined,
       contactMobile: draftForm.contactMobile.trim() || undefined,
       contactEmail: draftForm.contactEmail.trim() || undefined,

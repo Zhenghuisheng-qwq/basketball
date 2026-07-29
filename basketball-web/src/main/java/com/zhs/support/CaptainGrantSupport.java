@@ -10,6 +10,8 @@ import com.zhs.model.BasketTeam;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -38,17 +40,50 @@ public class CaptainGrantSupport {
     }
 
     public BasketCaptainQualification findActiveGrantForSeason(Long memberId, Long seasonId) {
+        return findActiveGrantForEvent(memberId, null, seasonId);
+    }
+
+    /**
+     * 按 userId + teamId + eventId(seasonId) 精确匹配队长授权记录（仅查 ACTIVE，运行时有效性由调用方校验）。
+     */
+    public BasketCaptainQualification findActiveGrantForEvent(Long memberId, Long teamId, Long seasonId) {
         if (memberId == null || seasonId == null) {
             return null;
         }
-        return captainQualificationDao.selectOne(new LambdaQueryWrapper<BasketCaptainQualification>()
+        List<BasketCaptainQualification> candidates = captainQualificationDao.selectList(
+                new LambdaQueryWrapper<BasketCaptainQualification>()
+                        .eq(BasketCaptainQualification::getMemberId, memberId)
+                        .eq(BasketCaptainQualification::getSeasonId, seasonId)
+                        .eq(BasketCaptainQualification::getQualificationStatus, CaptainQualificationStatusEnum.ACTIVE.getCode())
+                        .eq(BasketCaptainQualification::getIsDelete, NOT_DELETED)
+                        .orderByDesc(BasketCaptainQualification::getGrantedTime)
+                        .orderByDesc(BasketCaptainQualification::getId));
+        for (BasketCaptainQualification grant : candidates) {
+            if (teamId != null && grant.getTeamId() != null && !Objects.equals(grant.getTeamId(), teamId)) {
+                continue;
+            }
+            return grant;
+        }
+        return null;
+    }
+
+    /**
+     * 查询会员在指定球队下的全部 ACTIVE 队长授权（teamId 为空表示尚未绑定球队）。
+     */
+    public List<BasketCaptainQualification> findActiveGrantsForMemberAndTeam(Long memberId, Long teamId) {
+        if (memberId == null) {
+            return Collections.emptyList();
+        }
+        LambdaQueryWrapper<BasketCaptainQualification> wrapper = new LambdaQueryWrapper<BasketCaptainQualification>()
                 .eq(BasketCaptainQualification::getMemberId, memberId)
-                .eq(BasketCaptainQualification::getSeasonId, seasonId)
                 .eq(BasketCaptainQualification::getQualificationStatus, CaptainQualificationStatusEnum.ACTIVE.getCode())
                 .eq(BasketCaptainQualification::getIsDelete, NOT_DELETED)
                 .orderByDesc(BasketCaptainQualification::getGrantedTime)
-                .orderByDesc(BasketCaptainQualification::getId)
-                .last("limit 1"));
+                .orderByDesc(BasketCaptainQualification::getId);
+        if (teamId != null) {
+            wrapper.and(w -> w.eq(BasketCaptainQualification::getTeamId, teamId).or().isNull(BasketCaptainQualification::getTeamId));
+        }
+        return captainQualificationDao.selectList(wrapper);
     }
 
     public void assertGrantBoundToTeam(BasketCaptainQualification grant, Long teamId) {

@@ -255,9 +255,6 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
             throw new ServiceException("球队不存在");
         }
-        if (!StringUtils.hasText(team.getGameTerminal())) {
-            throw new ServiceException("球队平台未设置，无法申请加入");
-        }
         if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
             throw new ServiceException("球队不可加入");
         }
@@ -267,9 +264,10 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         if (!Objects.equals(TeamPublicStatusEnum.PUBLIC.getCode(), team.getPublicStatus())) {
             throw new ServiceException("球队已停止招募");
         }
-        if (team.getMaxMemberCount() != null && team.getCurrentMemberCount() != null
-                && team.getCurrentMemberCount() >= team.getMaxMemberCount()) {
-            throw new ServiceException("球队成员已满");
+        int maxMembers = team.getMaxMemberCount() != null ? team.getMaxMemberCount() : 8;
+        int currentMembers = team.getCurrentMemberCount() != null ? team.getCurrentMemberCount() : 0;
+        if (currentMembers >= maxMembers) {
+            throw new ServiceException("当前球队成员已满，暂不能申请加入");
         }
         return team;
     }

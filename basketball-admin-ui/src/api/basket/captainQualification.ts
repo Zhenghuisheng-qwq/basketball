@@ -73,3 +73,10 @@ export function bindCaptainQualificationTeam(qualificationId: number, data: Capt
     data
   })
 }
+
+export function listCaptainGrantLogs(qualificationId: number): Promise<AjaxResult<import('@/types').CaptainGrantLogItem[]>> {
+  return request({
+    url: `/basket/captainQualification/${qualificationId}/logs`,
+    method: 'get'
+  })
+}

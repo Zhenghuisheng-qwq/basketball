@@ -106,5 +106,6 @@ mvn javafx:run
 更多详细文档请参阅 `docs/` 目录：
 
 - [目录指南](docs/directory-guide.md)
+- [CNPA 业务规则（我的赛事 / 队长报名）](docs/CNPA_BUSINESS_RULES.md)
 - [快速上手](docs/getting-started.md)
 - [新建项目指南](docs/new-project-guide.md)

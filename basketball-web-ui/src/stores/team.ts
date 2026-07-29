@@ -102,6 +102,10 @@ export const useTeamStore = defineStore('team', () => {
   const joinableContext = ref<JoinableTeamPageDto | null>(null)
   const joinableEmptyReason = ref('')
   const joinableLoading = ref(false)
+  const joinablePage = ref(1)
+  const joinablePageSize = ref(10)
+  const joinableTotal = ref(0)
+  const joinableTotalPages = ref(0)
 
   const candidatePlayers = ref<CandidatePlayerItemDto[]>([])
   const candidateEmptyReason = ref('')
@@ -415,8 +419,19 @@ export const useTeamStore = defineStore('team', () => {
     joinableLoading.value = true
     lastError.value = ''
     try {
-      const res = await getJoinableTeamPage({ currentPage: 1, pageSize: 20, ...params })
-      joinableTeams.value = unwrapPage(res.data).records
+      const page = params?.currentPage ?? joinablePage.value
+      const size = params?.pageSize ?? joinablePageSize.value
+      const res = await getJoinableTeamPage({
+        currentPage: page,
+        pageSize: size,
+        keyword: params?.keyword,
+      })
+      const pageData = unwrapPage(res.data)
+      joinableTeams.value = pageData.records
+      joinablePage.value = pageData.current || page
+      joinablePageSize.value = pageData.size || size
+      joinableTotal.value = pageData.total ?? 0
+      joinableTotalPages.value = pageData.pages ?? 0
       joinableContext.value = res.data ?? null
       joinableEmptyReason.value = res.data?.emptyReason || res.data?.disabledReason || ''
       return res.data
@@ -825,6 +840,10 @@ export const useTeamStore = defineStore('team', () => {
     joinableContext,
     joinableEmptyReason,
     joinableLoading,
+    joinablePage,
+    joinablePageSize,
+    joinableTotal,
+    joinableTotalPages,
     myTeams,
     inheritableTeams,
     inheritableLoading,

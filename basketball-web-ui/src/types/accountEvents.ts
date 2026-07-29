@@ -8,6 +8,15 @@ export type AvailableActionType =
   | 'DISABLED'
   | 'GO_APPLICATIONS'
   | 'GO_JOINED'
+  | 'JOIN_TEAM'
+  | 'CONTACT_CAPTAIN'
+  | 'REMIND_CAPTAIN'
+  | 'VIEW_REGISTRATION'
+  | 'MANAGE_REGISTRATION'
+  | 'VIEW_EVENT'
+  | 'VIEW_ROSTER'
+  | 'PENDING_REVIEW'
+  | 'GRANT_EXPIRED'
 
 export interface AccountEventTab {
   key: MyEventsTabKey
@@ -20,16 +29,34 @@ export interface AvailableEvent {
   tournamentId: string
   seasonId?: string
   tournamentName: string
+  seasonName?: string
   platform: string
+  openedPlatforms?: string[]
   registrationType: 'TEAM' | 'INDIVIDUAL'
   registrationTypeText: string
   deadline: string
+  signupStartTime?: string
+  matchStartTime?: string
+  matchEndTime?: string
   quotaUsed: number
   quotaTotal: number
   quotaFull: boolean
   eligibilityStatus: AvailableEligibilityStatus
   actionText: string
   actionType: AvailableActionType
+  actionCode?: string
+  disabledReason?: string
+  canRegister?: boolean
+  teamName?: string
+  teamRegistrationStatusText?: string
+  userRosterStatusText?: string
+  captainGrantStatusText?: string
+  registrationStatus?: string
+  canRemindCaptain?: boolean
+  remindedRecently?: boolean
+  availableRegisterPlatforms?: string[]
+  eventStatus?: string
+  registrationId?: string
 }
 
 export type ApplicationActionType =

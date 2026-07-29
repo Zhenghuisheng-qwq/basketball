@@ -9,6 +9,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 @Data
 @ApiModel("可报名赛事项")
@@ -50,6 +51,9 @@ public class AvailableSeasonItemResp implements Serializable {
 
     @ApiModelProperty("报名状态：NOT_STARTED/OPEN/CLOSED/ENDED")
     private String registrationStatus;
+
+    @ApiModelProperty("赛事状态（同 registrationStatus）")
+    private String eventStatus;
 
     @ApiModelProperty("球队主键")
     private String teamId;
@@ -108,4 +112,55 @@ public class AvailableSeasonItemResp implements Serializable {
 
     @ApiModelProperty("24小时内是否已提醒")
     private Boolean remindedRecently;
+
+    @ApiModelProperty("开放参赛端")
+    private List<String> openedPlatforms;
+
+    @ApiModelProperty("已报名参赛端")
+    private List<String> registeredPlatforms;
+
+    @ApiModelProperty("仍可报名参赛端")
+    private List<String> availableRegisterPlatforms;
+
+    @ApiModelProperty("我的阵容状态：SELECTED / NOT_SELECTED / NO_ROSTER")
+    private String userRosterStatus;
+
+    @ApiModelProperty("我的阵容状态文案")
+    private String userRosterStatusText;
+
+    @ApiModelProperty("当前用户是否对该赛事有有效队长授权")
+    private Boolean hasActiveCaptainGrantForEvent;
+
+    @ApiModelProperty("队长授权状态文案")
+    private String captainGrantStatusText;
+
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @ApiModelProperty("队长授权过期时间")
+    private Date captainGrantExpireTime;
+
+    @ApiModelProperty("球队报名状态文案")
+    private String teamRegistrationStatusText;
+
+    @ApiModelProperty("不可操作原因（同 cannotRegisterReason）")
+    private String disabledReason;
+
+    @ApiModelProperty("用户球队角色")
+    private String userTeamRole;
+
+    @ApiModelProperty("操作编码")
+    private String actionCode;
+
+    @ApiModelProperty("操作按钮文案")
+    private String actionText;
+
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @ApiModelProperty("比赛开始时间")
+    private Date matchStartTime;
+
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @ApiModelProperty("比赛结束时间")
+    private Date matchEndTime;
 }

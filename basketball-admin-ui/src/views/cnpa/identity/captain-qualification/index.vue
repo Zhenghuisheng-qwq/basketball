@@ -104,29 +104,54 @@
 
     <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
-    <el-drawer v-model="detailOpen" title="队长授权详情" size="600px" append-to-body>
-      <el-descriptions v-if="detail" :column="1" border>
-        <el-descriptions-item label="授权编号">{{ detail.qualificationNo }}</el-descriptions-item>
-        <el-descriptions-item label="用户账号">{{ detail.username || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="邮箱">{{ detail.email || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="球员编号">{{ detail.playerNo || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="球员昵称">{{ detail.nickname || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="授权赛事">{{ detail.tournamentName ? `${detail.tournamentName} / ${detail.seasonName}` : (detail.seasonName || '-') }}</el-descriptions-item>
-        <el-descriptions-item label="关联球队">{{ detail.teamName || '未绑定' }}</el-descriptions-item>
-        <el-descriptions-item label="授权状态">
-          <dict-tag :options="CAPTAIN_QUALIFICATION_STATUS_OPTIONS" :value="detail.qualificationStatus" />
-        </el-descriptions-item>
-        <el-descriptions-item label="当前有效">{{ detail.runtimeValid === 1 ? '是' : '否' }}</el-descriptions-item>
-        <el-descriptions-item label="无效原因" v-if="detail.runtimeValid !== 1">{{ detail.runtimeInvalidReason || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="缴费确认">{{ detail.paymentConfirmed === 1 ? '是' : '否' }}</el-descriptions-item>
-        <el-descriptions-item label="缴费参考号">{{ detail.paymentReference || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="授权时间">{{ parseTime(detail.grantedTime) }}</el-descriptions-item>
-        <el-descriptions-item label="失效时间">{{ detail.validTo ? parseTime(detail.validTo) : '-' }}</el-descriptions-item>
-        <el-descriptions-item label="授权周期">{{ parseTime(detail.validFrom) || '-' }} ~ {{ detail.validTo ? parseTime(detail.validTo) : '-' }}</el-descriptions-item>
-        <el-descriptions-item label="授予备注">{{ detail.grantReason || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="收回时间">{{ detail.revokedTime ? parseTime(detail.revokedTime) : '-' }}</el-descriptions-item>
-        <el-descriptions-item label="收回原因">{{ detail.revokeReason || '-' }}</el-descriptions-item>
-      </el-descriptions>
+    <el-drawer v-model="detailOpen" title="队长授权详情" size="720px" append-to-body>
+      <el-tabs v-if="detail" v-model="detailTab">
+        <el-tab-pane label="授权详情" name="info">
+          <el-descriptions :column="1" border>
+            <el-descriptions-item label="授权编号">{{ detail.qualificationNo }}</el-descriptions-item>
+            <el-descriptions-item label="用户账号">{{ detail.username || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="邮箱">{{ detail.email || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="球员编号">{{ detail.playerNo || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="球员昵称">{{ detail.nickname || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="授权赛事">{{ detail.tournamentName ? `${detail.tournamentName} / ${detail.seasonName}` : (detail.seasonName || '-') }}</el-descriptions-item>
+            <el-descriptions-item label="关联球队">{{ detail.teamName || '未绑定' }}</el-descriptions-item>
+            <el-descriptions-item label="授权状态">
+              <dict-tag :options="CAPTAIN_QUALIFICATION_STATUS_OPTIONS" :value="detail.qualificationStatus" />
+            </el-descriptions-item>
+            <el-descriptions-item label="当前有效">{{ detail.runtimeValid === 1 ? '是' : '否' }}</el-descriptions-item>
+            <el-descriptions-item label="无效原因" v-if="detail.runtimeValid !== 1">{{ detail.runtimeInvalidReason || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="缴费确认">{{ detail.paymentConfirmed === 1 ? '是' : '否' }}</el-descriptions-item>
+            <el-descriptions-item label="缴费参考号">{{ detail.paymentReference || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="授权时间">{{ parseTime(detail.grantedTime) }}</el-descriptions-item>
+            <el-descriptions-item label="失效时间">{{ detail.validTo ? parseTime(detail.validTo) : '-' }}</el-descriptions-item>
+            <el-descriptions-item label="授权周期">{{ parseTime(detail.validFrom) || '-' }} ~ {{ detail.validTo ? parseTime(detail.validTo) : '-' }}</el-descriptions-item>
+            <el-descriptions-item label="授权人">{{ detail.grantedByName || detail.grantedBy || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="授权备注">{{ detail.grantReason || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="收回时间">{{ detail.revokedTime ? parseTime(detail.revokedTime) : '-' }}</el-descriptions-item>
+            <el-descriptions-item label="收回人">{{ detail.revokedByName || detail.revokedBy || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="收回原因">{{ detail.revokeReason || '-' }}</el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
+        <el-tab-pane label="授权日志" name="logs">
+          <el-table v-loading="logLoading" :data="grantLogs" size="small">
+            <el-table-column label="操作时间" prop="createTime" width="160">
+              <template #default="scope">{{ parseTime(scope.row.createTime) }}</template>
+            </el-table-column>
+            <el-table-column label="操作类型" prop="actionTypeText" width="120" />
+            <el-table-column label="操作人" min-width="100">
+              <template #default="scope">{{ scope.row.operatorName || scope.row.operatorType || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="操作前" prop="beforeStatusText" width="90" />
+            <el-table-column label="操作后" prop="afterStatusText" width="90" />
+            <el-table-column label="赛事" min-width="140">
+              <template #default="scope">{{ scope.row.eventName || scope.row.seasonName || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="球队" prop="teamName" min-width="100" />
+            <el-table-column label="原因" prop="reason" min-width="140" show-overflow-tooltip />
+            <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
+          </el-table>
+        </el-tab-pane>
+      </el-tabs>
       <div class="detail-actions" v-if="detail">
         <el-button v-if="detail.qualificationStatus === 1 && !detail.teamId" type="primary" plain @click="openBindTeam(detail)">绑定球队</el-button>
         <el-button v-if="detail.qualificationStatus === 1" type="danger" plain @click="openRevoke(detail)">收回权限</el-button>
@@ -219,6 +244,7 @@ import {
   bindCaptainQualificationTeam,
   getCaptainQualification,
   grantCaptainQualification,
+  listCaptainGrantLogs,
   listCaptainQualification,
   listEligibleCaptains,
   listGrantSeasonOptions,
@@ -231,6 +257,7 @@ import type {
   CaptainQualificationListItem,
   CaptainQualificationQuery,
   CaptainQualificationRevokeReq,
+  CaptainGrantLogItem,
   EligibleCaptain
 } from '@/types'
 import { CAPTAIN_QUALIFICATION_STATUS_OPTIONS } from '@/types'
@@ -243,7 +270,10 @@ const loading = ref(true)
 const showSearch = ref(true)
 const total = ref(0)
 const detailOpen = ref(false)
+const detailTab = ref('info')
 const detail = ref<CaptainQualificationDetail>()
+const grantLogs = ref<CaptainGrantLogItem[]>([])
+const logLoading = ref(false)
 const grantOpen = ref(false)
 const grantForm = ref<Partial<CaptainQualificationGrantReq>>({ paymentConfirmed: 0 })
 const seasonOptions = ref<CaptainGrantSeasonOption[]>([])
@@ -336,10 +366,23 @@ function resetQuery() {
   handleQuery()
 }
 
+function loadGrantLogs(qualificationId: number) {
+  logLoading.value = true
+  return listCaptainGrantLogs(qualificationId).then(res => {
+    grantLogs.value = res.data || []
+  }).finally(() => {
+    logLoading.value = false
+  })
+}
+
 function handleDetail(row: CaptainQualificationListItem) {
+  detailTab.value = 'info'
   getCaptainQualification(row.id).then(res => {
     detail.value = res.data
     detailOpen.value = true
+    if (row.id) {
+      loadGrantLogs(row.id)
+    }
   })
 }
 

@@ -240,6 +240,29 @@ export interface CaptainQualificationDetail extends CaptainQualificationListItem
   revokeReason?: string
 }
 
+export interface CaptainGrantLogItem {
+  id?: number
+  grantId?: number
+  actionType?: string
+  actionTypeText?: string
+  beforeStatus?: number
+  beforeStatusText?: string
+  afterStatus?: number
+  afterStatusText?: string
+  seasonId?: number
+  seasonName?: string
+  tournamentName?: string
+  eventName?: string
+  teamId?: number
+  teamName?: string
+  operatorId?: number
+  operatorName?: string
+  operatorType?: string
+  reason?: string
+  remark?: string
+  createTime?: string
+}
+
 export interface CaptainGrantSeasonOption {
   seasonId: number
   seasonName?: string

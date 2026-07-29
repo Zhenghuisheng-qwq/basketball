@@ -19,6 +19,11 @@ public interface ICaptainPermissionService {
 
     BasketCaptainQualification requireValidQualification(Long accountId, Long seasonId);
 
+    /**
+     * 按 userId + teamId + eventId(seasonId) 校验有效队长授权，用于赛事报名。
+     */
+    BasketCaptainQualification requireValidQualificationForEvent(Long accountId, Long teamId, Long seasonId);
+
     BasketPlayerProfile requireCertifiedPlayer(Long accountId);
 
     BasketTeam requireTeamCaptain(Long accountId, Long teamId);

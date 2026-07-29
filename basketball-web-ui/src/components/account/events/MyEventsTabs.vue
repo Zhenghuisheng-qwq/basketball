@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { MyEventsTabKey } from '@/types/accountEvents'
-import { accountEventTabs } from '@/constants/accountEventsUi'
+import type { AccountEventTab, MyEventsTabKey } from '@/types/accountEvents'
 
 defineProps<{
   activeTab: MyEventsTabKey
+  tabs: AccountEventTab[]
 }>()
 
 const emit = defineEmits<{
@@ -14,7 +14,7 @@ const emit = defineEmits<{
 <template>
   <nav class="my-events-tabs" aria-label="我的赛事分类">
     <button
-      v-for="tab in accountEventTabs"
+      v-for="tab in tabs"
       :key="tab.key"
       type="button"
       class="my-events-tabs__item"
