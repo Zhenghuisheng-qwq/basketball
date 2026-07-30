@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
   getMemberSession,
-  loginByEmailCode as apiLoginByEmailCode,
   loginByPassword as apiLoginByPassword,
   logoutMember,
   type MemberLoginResult,
@@ -164,20 +163,8 @@ export const useUserStore = defineStore('user', () => {
     await restoreSession()
   }
 
-  async function loginByPassword(account: string, password: string, remember = true) {
-    const res = await apiLoginByPassword({ account, password, terminalType: 'WEB' })
-    applyLoginResult(res.data, remember)
-    initialized.value = true
-    return res.data
-  }
-
-  async function loginByEmailCode(email: string, verifyBizNo: string, verifyCode: string, remember = true) {
-    const res = await apiLoginByEmailCode({
-      email,
-      verifyBizNo,
-      verifyCode,
-      terminalType: 'WEB',
-    })
+  async function loginByPassword(email: string, password: string, remember = true) {
+    const res = await apiLoginByPassword({ email, password, terminalType: 'WEB' })
     applyLoginResult(res.data, remember)
     initialized.value = true
     return res.data
@@ -222,7 +209,6 @@ export const useUserStore = defineStore('user', () => {
     restoreSession,
     ensureInitialized,
     loginByPassword,
-    loginByEmailCode,
     applyLoginResult,
     logout,
     resetLocalAuth,

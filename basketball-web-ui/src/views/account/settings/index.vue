@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import PasswordInput from '@/views/account/components/PasswordInput.vue'
+import { sendChangeEmailCode, changeMemberEmail } from '@/api/memberAuth'
 import { useAccountStore } from '@/stores/account'
 import { resolvePasswordChangeError, validatePasswordRules } from '@/utils/passwordRules'
 import { forceRelogin } from '@/utils/forceRelogin'
@@ -52,6 +53,23 @@ const errors = reactive({
 })
 
 const loading = ref(false)
+const emailLoading = ref(false)
+const emailSending = ref(false)
+const emailCountdown = ref(0)
+const emailVerifyBizNo = ref('')
+const emailDevBypassHint = ref(false)
+let emailTimer: ReturnType<typeof setInterval> | null = null
+
+const emailForm = reactive({
+  newEmail: '',
+  verifyCode: '',
+})
+
+const emailErrors = reactive({
+  newEmail: '',
+  verifyCode: '',
+})
+
 const profile = computed(() => accountStore.profile)
 const security = computed(() => accountStore.security)
 const account = computed(() => accountStore.currentAccount)
@@ -94,6 +112,76 @@ onMounted(async () => {
     settingsLoading.value = false
   }
 })
+
+onUnmounted(() => {
+  if (emailTimer) clearInterval(emailTimer)
+})
+
+function validateNewEmail(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return '请输入新邮箱'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return '邮箱格式不正确'
+  return ''
+}
+
+function startEmailCountdown(seconds = 60) {
+  emailCountdown.value = seconds
+  if (emailTimer) clearInterval(emailTimer)
+  emailTimer = setInterval(() => {
+    if (emailCountdown.value <= 1) {
+      emailCountdown.value = 0
+      if (emailTimer) clearInterval(emailTimer)
+      emailTimer = null
+      return
+    }
+    emailCountdown.value -= 1
+  }, 1000)
+}
+
+async function handleSendChangeEmailCode() {
+  emailErrors.newEmail = validateNewEmail(emailForm.newEmail)
+  if (emailErrors.newEmail || emailSending.value || emailCountdown.value > 0) return
+  emailSending.value = true
+  try {
+    const res = await sendChangeEmailCode(emailForm.newEmail.trim().toLowerCase())
+    emailVerifyBizNo.value = res.data.bizNo
+    emailDevBypassHint.value = Boolean(res.data.devBypass)
+    ElMessage.success(res.data.devBypass ? '开发模式：未发送真实邮件，任意 6 位数字均可' : '验证码已发送，请查收新邮箱')
+    startEmailCountdown(res.data.resendSeconds || 60)
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '验证码发送失败')
+  } finally {
+    emailSending.value = false
+  }
+}
+
+async function saveEmail() {
+  emailErrors.newEmail = validateNewEmail(emailForm.newEmail)
+  emailErrors.verifyCode = emailForm.verifyCode.trim() ? '' : '请输入验证码'
+  if (emailErrors.newEmail || emailErrors.verifyCode || emailLoading.value) return
+  if (!emailVerifyBizNo.value) {
+    ElMessage.warning('请先发送验证码')
+    return
+  }
+  emailLoading.value = true
+  try {
+    await changeMemberEmail({
+      email: emailForm.newEmail.trim().toLowerCase(),
+      verifyBizNo: emailVerifyBizNo.value,
+      verifyCode: emailForm.verifyCode.trim(),
+    })
+    ElMessage.success('邮箱修改成功，请重新登录')
+    await forceRelogin({
+      reason: 'email_changed',
+      redirect: '/account/settings',
+      skipLogoutApi: true,
+    })
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '邮箱修改失败')
+  } finally {
+    emailLoading.value = false
+  }
+}
 
 function resetErrors() {
   errors.currentPassword = ''
@@ -242,7 +330,7 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
           </div>
           <div class="security-form__field">
             <label>注册邮箱</label>
-            <p class="security-form__hint">{{ profile?.maskedEmail || account?.maskedEmail }}</p>
+            <p class="security-form__hint">{{ profile?.maskedEmail || account?.maskedEmail }}（登录凭据）</p>
           </div>
           <div class="security-form__actions">
             <button type="submit" class="account-btn-primary">保存资料</button>
@@ -325,7 +413,7 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
           <div class="security-form__field">
             <label for="new-password">新密码</label>
             <PasswordInput id="new-password" v-model="form.newPassword" autocomplete="new-password" />
-            <p class="security-form__hint">8 至 20 位，需包含字母与数字</p>
+            <p class="security-form__hint">8 至 20 位，需包含字母与数字（登录凭据）</p>
             <p v-if="errors.newPassword" class="security-form__error">{{ errors.newPassword }}</p>
           </div>
           <div class="security-form__field">
@@ -337,6 +425,55 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
             <button type="submit" class="account-btn-primary" :disabled="loading">保存新密码</button>
             <button type="button" class="account-btn-secondary" @click="cancelForm">取消</button>
           </div>
+        </form>
+      </AccountPanel>
+
+      <AccountPanel title="修改登录邮箱">
+        <form class="security-form" @submit.prevent="saveEmail">
+          <div class="security-form__field">
+            <label>当前邮箱</label>
+            <p class="security-form__hint">{{ profile?.maskedEmail || account?.maskedEmail }}</p>
+          </div>
+          <div class="security-form__field">
+            <label for="new-email">新邮箱</label>
+            <input
+              id="new-email"
+              v-model="emailForm.newEmail"
+              class="auth-input"
+              type="email"
+              autocomplete="email"
+              @blur="emailErrors.newEmail = validateNewEmail(emailForm.newEmail)"
+            />
+            <p v-if="emailErrors.newEmail" class="security-form__error">{{ emailErrors.newEmail }}</p>
+          </div>
+          <div class="security-form__field">
+            <label for="change-email-code">新邮箱验证码</label>
+            <div class="settings-code-row">
+              <input
+                id="change-email-code"
+                v-model="emailForm.verifyCode"
+                class="auth-input"
+                type="text"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="one-time-code"
+              />
+              <button
+                type="button"
+                class="account-btn-secondary settings-code-btn"
+                :disabled="emailSending || emailCountdown > 0"
+                @click="handleSendChangeEmailCode"
+              >
+                {{ emailCountdown > 0 ? `${emailCountdown}s` : emailSending ? '发送中' : '发送验证码' }}
+              </button>
+            </div>
+            <p v-if="emailErrors.verifyCode" class="security-form__error">{{ emailErrors.verifyCode }}</p>
+            <p v-if="emailDevBypassHint" class="security-form__dev-hint">开发模式：发送验证码后输入任意 6 位数字即可（如 123456）</p>
+          </div>
+          <div class="security-form__actions">
+            <button type="submit" class="account-btn-primary" :disabled="emailLoading">保存新邮箱</button>
+          </div>
+          <p class="security-form__hint">修改成功后需使用新邮箱与原密码重新登录</p>
         </form>
       </AccountPanel>
 
@@ -425,6 +562,27 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   font-size: 15px;
   font-weight: 700;
+}
+
+.settings-code-row {
+  display: flex;
+  gap: 10px;
+}
+
+.settings-code-row .auth-input {
+  flex: 1;
+}
+
+.settings-code-btn {
+  flex: 0 0 112px;
+  white-space: nowrap;
+}
+
+.security-form__dev-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #b45309;
+  line-height: 1.5;
 }
 
 .security-form {

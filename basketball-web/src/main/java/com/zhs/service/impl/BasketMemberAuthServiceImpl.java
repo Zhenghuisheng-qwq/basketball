@@ -39,18 +39,21 @@ import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketPrivacySetting;
 import com.zhs.model.BasketVerifyCodeRecord;
 import com.zhs.request.member.EmailCodeSendReq;
-import com.zhs.request.member.MemberCodeLoginReq;
 import com.zhs.request.member.MemberPasswordLoginReq;
 import com.zhs.request.member.MemberPasswordResetReq;
 import com.zhs.request.member.MemberRegisterReq;
 import com.zhs.response.member.EmailCodeSendResp;
+import com.zhs.request.account.AccountChangeEmailReq;
+import com.zhs.response.account.AccountChangeEmailResp;
 import com.zhs.response.member.MemberLoginResp;
+import com.zhs.response.member.MemberRegisterResp;
 import com.zhs.response.member.MemberSessionResp;
 import com.zhs.response.member.MemberSummaryResp;
 import com.zhs.service.IBasketMemberAuthService;
 import com.zhs.service.mail.IMemberMailService;
 import com.zhs.support.MemberSessionSupport;
 import com.zhs.util.MiniRedisUtil;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -71,12 +74,13 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
     private static final String CHANNEL_EMAIL = "EMAIL";
     private static final String REGISTER_SOURCE_WEB = "WEB";
     private static final String LOGIN_TYPE_PASSWORD = "PASSWORD";
-    private static final String LOGIN_TYPE_EMAIL_CODE = "EMAIL_CODE";
     private static final String TOKEN_TYPE_BEARER = "Bearer";
     private static final String SEND_PROVIDER_DEV_BYPASS = "DEV_BYPASS";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private static final String EVENT_PASSWORD_RESET = "PASSWORD_RESET";
+    private static final String EVENT_EMAIL_CHANGE = "EMAIL_CHANGE";
+    private static final String FAKE_BIZ_NO_PREFIX = "NOP";
     private static final int CURRENT_QUALIFICATION = 1;
     private static final int ACTIVE_QUALIFICATION_STATUS = 1;
 
@@ -111,12 +115,24 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
     @Resource
     private MemberSessionSupport memberSessionSupport;
 
+    @PostConstruct
+    public void logDevMailBypassState() {
+        if (isDevMailBypass()) {
+            log.warn("[member-auth] 开发模式已开启：未对接真实邮箱，发送验证码后输入任意 6 位数字即可通过。"
+                    + " 上线前请配置 spring.mail 并设置 CNPA_MAIL_DEV_BYPASS=false");
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public EmailCodeSendResp sendEmailCode(EmailCodeSendReq req, String clientIp) {
         String email = normalizeEmail(req.getEmail());
         VerifyPurposeEnum purpose = VerifyPurposeEnum.fromCode(req.getPurpose());
-        assertPurposeAccountState(email, purpose);
+        BasketMemberAccount existingAccount = findByEmail(email);
+        if (purpose == VerifyPurposeEnum.RESET_PASSWORD && existingAccount == null) {
+            return buildFakeEmailCodeResp();
+        }
+        assertPurposeAccountState(email, purpose, existingAccount);
 
         EmailCodeLimitCacheKey limitKey = new EmailCodeLimitCacheKey(
                 purpose.getCode(), email, authProperties.getCodeResendSeconds());
@@ -187,26 +203,12 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         }
 
         miniRedisUtil.set(limitKey, "1");
-
-        EmailCodeSendResp resp = new EmailCodeSendResp();
-        resp.setBizNo(bizNo);
-        resp.setExpireSeconds(authProperties.getCodeExpireSeconds());
-        resp.setResendSeconds(authProperties.getCodeResendSeconds());
-        return resp;
-    }
-
-    @Override
-    public void assertUsernameAvailable(String username) {
-        String normalized = normalizeUsername(username);
-        if (findByUsername(normalized) != null) {
-            throw new ServiceException("登录账号已被使用");
-        }
+        return buildEmailCodeSendResp(bizNo);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public MemberLoginResp register(MemberRegisterReq req, String clientIp, String userAgent) {
-        String username = normalizeUsername(req.getUsername());
+    public MemberRegisterResp register(MemberRegisterReq req, String clientIp, String userAgent) {
         String email = normalizeEmail(req.getEmail());
         validatePasswordPair(req.getPassword(), req.getConfirmPassword());
         if (!Boolean.TRUE.equals(req.getAgreeUserAgreement()) || !Boolean.TRUE.equals(req.getAgreePrivacyPolicy())) {
@@ -214,27 +216,24 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         }
         String terminalType = normalizeTerminal(req.getTerminalType());
 
-        consumeVerifyCode(email, VerifyPurposeEnum.REGISTER, req.getVerifyBizNo(), req.getVerifyCode());
-
         if (findByEmail(email) != null) {
             throw new ServiceException("邮箱已注册");
         }
-        if (findByUsername(username) != null) {
-            throw new ServiceException("登录账号已被使用");
-        }
+
+        consumeVerifyCode(email, VerifyPurposeEnum.REGISTER, req.getVerifyBizNo(), req.getVerifyCode());
 
         Date now = new Date();
+        Long memberId = IdUtil.getSnowflakeNextId();
         BasketMemberAccount account = new BasketMemberAccount();
+        account.setId(memberId);
         account.setAccountNo(generateAccountNo());
-        account.setUsername(username);
+        account.setUsername(generateInternalUsername(memberId));
         account.setPasswordHash(passwordEncoder.encode(req.getPassword()));
         account.setEmail(email);
         account.setEmailVerified(VerifiedFlagEnum.YES.getCode());
         account.setAccountStatus(MemberAccountStatusEnum.NORMAL.getCode());
         account.setRegisterSource(REGISTER_SOURCE_WEB);
         account.setRegisterTerminal(terminalType);
-        account.setLastLoginTime(now);
-        account.setLastLoginIp(clientIp);
         account.setPasswordUpdateTime(now);
         account.setIsDelete(0);
 
@@ -286,23 +285,97 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         saveAgreement(account.getId(), "PRIVACY_POLICY", "隐私政策", terminalType, clientIp, userAgent, now);
 
         writeSecurityLog(account.getId(), "REGISTER", "用户注册",
-                null, maskEmail(email), "MEMBER", account.getId(), clientIp, terminalType, now, "官网账号注册");
+                null, maskEmail(email), "MEMBER", account.getId(), clientIp, terminalType, now, "官网邮箱注册");
 
-        String token = issueToken(account);
-        writeLoginLog(account, LOGIN_TYPE_PASSWORD, LoginResultEnum.SUCCESS, null, clientIp, terminalType, userAgent, now);
-        return buildLoginResp(account, profile.getNickname(), token);
+        MemberRegisterResp resp = new MemberRegisterResp();
+        resp.setEmail(email);
+        return resp;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public EmailCodeSendResp sendChangeEmailCode(String newEmail, Long memberId, String clientIp) {
+        if (memberId == null) {
+            throw new ServiceException("未登录", 401);
+        }
+        String normalizedEmail = normalizeEmail(newEmail);
+        BasketMemberAccount account = memberAccountDao.selectById(memberId);
+        if (account == null || Integer.valueOf(1).equals(account.getIsDelete())) {
+            throw new ServiceException("账号不存在");
+        }
+        if (!MemberAccountStatusEnum.isNormal(account.getAccountStatus())) {
+            throw new ServiceException("账号已被禁用");
+        }
+        if (normalizedEmail.equals(account.getEmail())) {
+            throw new ServiceException("新邮箱不能与当前邮箱相同");
+        }
+        if (findByEmail(normalizedEmail) != null) {
+            throw new ServiceException("新邮箱已被占用");
+        }
+
+        EmailCodeSendReq req = new EmailCodeSendReq();
+        req.setEmail(normalizedEmail);
+        req.setPurpose(VerifyPurposeEnum.CHANGE_EMAIL.getCode());
+        return sendEmailCode(req, clientIp);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AccountChangeEmailResp changeEmail(AccountChangeEmailReq req, Long memberId, String clientIp, String currentToken) {
+        if (req == null) {
+            throw new ServiceException("请求参数不能为空");
+        }
+        if (memberId == null) {
+            throw new ServiceException("未登录", 401);
+        }
+        String newEmail = normalizeEmail(req.getEmail());
+        BasketMemberAccount account = memberAccountDao.selectById(memberId);
+        if (account == null || Integer.valueOf(1).equals(account.getIsDelete())) {
+            throw new ServiceException("账号不存在");
+        }
+        if (!MemberAccountStatusEnum.isNormal(account.getAccountStatus())) {
+            throw new ServiceException("账号已被禁用");
+        }
+        if (newEmail.equals(account.getEmail())) {
+            throw new ServiceException("新邮箱不能与当前邮箱相同");
+        }
+        if (findByEmail(newEmail) != null) {
+            throw new ServiceException("新邮箱已被占用");
+        }
+
+        consumeVerifyCode(newEmail, VerifyPurposeEnum.CHANGE_EMAIL, req.getVerifyBizNo(), req.getVerifyCode());
+
+        String oldMasked = maskEmail(account.getEmail());
+        Date now = new Date();
+        account.setEmail(newEmail);
+        account.setEmailVerified(VerifiedFlagEnum.YES.getCode());
+        try {
+            memberAccountDao.updateById(account);
+        } catch (DuplicateKeyException e) {
+            throw new ServiceException("新邮箱已被占用");
+        }
+
+        long authVersion = memberSessionSupport.resolveAuthVersion(account);
+        memberSessionSupport.invalidateAllSessions(memberId, currentToken, authVersion);
+
+        writeSecurityLog(memberId, EVENT_EMAIL_CHANGE, "修改登录邮箱",
+                oldMasked, maskEmail(newEmail), "MEMBER", memberId, clientIp, null, now, null);
+
+        AccountChangeEmailResp resp = new AccountChangeEmailResp();
+        resp.setNeedRelogin(true);
+        return resp;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public MemberLoginResp loginByPassword(MemberPasswordLoginReq req, String clientIp, String userAgent) {
-        String accountKey = normalizeAccount(req.getAccount());
+        String email = normalizeEmail(req.getEmail());
         String terminalType = normalizeTerminal(req.getTerminalType());
         if (!StringUtils.hasText(req.getPassword())) {
             throw new ServiceException("密码不能为空");
         }
 
-        LoginFailCacheKey failKey = new LoginFailCacheKey(accountKey, authProperties.getLoginLockMinutes());
+        LoginFailCacheKey failKey = new LoginFailCacheKey(email, authProperties.getLoginLockMinutes());
         long failCount = readCounter(failKey);
         if (failCount >= authProperties.getLoginFailMaxTimes()) {
             writeLoginLog(null, LOGIN_TYPE_PASSWORD, LoginResultEnum.FAIL, "账号临时锁定",
@@ -310,12 +383,12 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
             throw new ServiceException("登录失败次数过多，请稍后再试");
         }
 
-        BasketMemberAccount account = findByAccount(accountKey);
+        BasketMemberAccount account = findByEmail(email);
         if (account == null) {
             increaseLoginFail(failKey);
-            writeLoginLog(null, LOGIN_TYPE_PASSWORD, LoginResultEnum.FAIL, "账号或密码错误",
+            writeLoginLog(null, LOGIN_TYPE_PASSWORD, LoginResultEnum.FAIL, "邮箱或密码错误",
                     clientIp, terminalType, userAgent, new Date());
-            throw new ServiceException("账号或密码错误");
+            throw new ServiceException("邮箱或密码错误");
         }
         if (account.getLockExpireTime() != null && account.getLockExpireTime().after(new Date())) {
             writeLoginLog(account, LOGIN_TYPE_PASSWORD, LoginResultEnum.FAIL, "账号已锁定",
@@ -327,14 +400,19 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
                     clientIp, terminalType, userAgent, new Date());
             throw new ServiceException("账号已被禁用");
         }
+        if (!VerifiedFlagEnum.isYes(account.getEmailVerified())) {
+            writeLoginLog(account, LOGIN_TYPE_PASSWORD, LoginResultEnum.FAIL, "邮箱尚未验证",
+                    clientIp, terminalType, userAgent, new Date());
+            throw new ServiceException("邮箱尚未验证");
+        }
         if (!StringUtils.hasText(account.getPasswordHash())
                 || !passwordEncoder.matches(req.getPassword(), account.getPasswordHash())) {
             increaseLoginFail(failKey);
-            writeLoginLog(account, LOGIN_TYPE_PASSWORD, LoginResultEnum.FAIL, "账号或密码错误",
+            writeLoginLog(account, LOGIN_TYPE_PASSWORD, LoginResultEnum.FAIL, "邮箱或密码错误",
                     clientIp, terminalType, userAgent, new Date());
             writeSecurityLog(account.getId(), "LOGIN_FAIL", "密码登录失败",
-                    null, null, "MEMBER", account.getId(), clientIp, terminalType, new Date(), "账号或密码错误");
-            throw new ServiceException("账号或密码错误");
+                    null, null, "MEMBER", account.getId(), clientIp, terminalType, new Date(), "邮箱或密码错误");
+            throw new ServiceException("邮箱或密码错误");
         }
 
         miniRedisUtil.delete(failKey);
@@ -349,34 +427,6 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public MemberLoginResp loginByCode(MemberCodeLoginReq req, String clientIp, String userAgent) {
-        String email = normalizeEmail(req.getEmail());
-        String terminalType = normalizeTerminal(req.getTerminalType());
-        consumeVerifyCode(email, VerifyPurposeEnum.LOGIN, req.getVerifyBizNo(), req.getVerifyCode());
-
-        BasketMemberAccount account = findByEmail(email);
-        if (account == null) {
-            writeLoginLog(null, LOGIN_TYPE_EMAIL_CODE, LoginResultEnum.FAIL, "账号不存在",
-                    clientIp, terminalType, userAgent, new Date());
-            throw new ServiceException("账号不存在");
-        }
-        if (!MemberAccountStatusEnum.isNormal(account.getAccountStatus())) {
-            writeLoginLog(account, LOGIN_TYPE_EMAIL_CODE, LoginResultEnum.FAIL, "账号已禁用",
-                    clientIp, terminalType, userAgent, new Date());
-            throw new ServiceException("账号已被禁用");
-        }
-
-        Date now = new Date();
-        touchLogin(account, clientIp, now);
-        String token = issueToken(account);
-        writeLoginLog(account, LOGIN_TYPE_EMAIL_CODE, LoginResultEnum.SUCCESS, null, clientIp, terminalType, userAgent, now);
-        writeSecurityLog(account.getId(), "LOGIN_SUCCESS", "验证码登录成功",
-                null, null, "MEMBER", account.getId(), clientIp, terminalType, now, null);
-        return buildLoginResp(account, loadNickname(account.getId(), email), token);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
     public void resetPassword(MemberPasswordResetReq req, String clientIp) {
         if (req == null) {
             throw new ServiceException("请求参数不能为空");
@@ -387,7 +437,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
 
         BasketMemberAccount account = findByEmail(email);
         if (account == null) {
-            throw new ServiceException("账号不存在");
+            throw new ServiceException("验证码错误或已过期");
         }
         if (!MemberAccountStatusEnum.isNormal(account.getAccountStatus())) {
             throw new ServiceException("账号已被禁用");
@@ -445,6 +495,9 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         if (!StringUtils.hasText(bizNo)) {
             throw new ServiceException("验证码流水号不能为空");
         }
+        if (bizNo.trim().startsWith(FAKE_BIZ_NO_PREFIX)) {
+            throw new ServiceException("验证码错误或已过期");
+        }
         if (!StringUtils.hasText(code) || !code.trim().matches("^\\d{6}$")) {
             throw new ServiceException("验证码格式不正确");
         }
@@ -481,8 +534,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
             throw new ServiceException("验证码错误次数过多，请重新获取");
         }
 
-        boolean bypassCodeCheck = isDevMailBypass()
-                && SEND_PROVIDER_DEV_BYPASS.equals(record.getSendProvider());
+        boolean bypassCodeCheck = isDevMailBypass();
         if (!bypassCodeCheck && !passwordEncoder.matches(normalizedCode, record.getCodeHash())) {
             miniRedisUtil.increment(failKey);
             throw new ServiceException("验证码错误或已过期");
@@ -511,17 +563,32 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         );
     }
 
-    private void assertPurposeAccountState(String email, VerifyPurposeEnum purpose) {
-        BasketMemberAccount account = findByEmail(email);
+    private void assertPurposeAccountState(String email, VerifyPurposeEnum purpose, BasketMemberAccount account) {
         if (purpose == VerifyPurposeEnum.REGISTER && account != null) {
             throw new ServiceException("邮箱已注册");
         }
-        if (purpose == VerifyPurposeEnum.LOGIN && account == null) {
-            throw new ServiceException("该邮箱尚未注册");
+        if (purpose == VerifyPurposeEnum.CHANGE_EMAIL && account != null) {
+            throw new ServiceException("新邮箱已被占用");
         }
-        if (purpose == VerifyPurposeEnum.RESET_PASSWORD && account == null) {
-            throw new ServiceException("该邮箱尚未注册");
-        }
+    }
+
+    private EmailCodeSendResp buildFakeEmailCodeResp() {
+        EmailCodeSendResp resp = buildEmailCodeSendResp(FAKE_BIZ_NO_PREFIX + IdUtil.getSnowflakeNextIdStr());
+        resp.setDevBypass(false);
+        return resp;
+    }
+
+    private EmailCodeSendResp buildEmailCodeSendResp(String bizNo) {
+        EmailCodeSendResp resp = new EmailCodeSendResp();
+        resp.setBizNo(bizNo);
+        resp.setExpireSeconds(authProperties.getCodeExpireSeconds());
+        resp.setResendSeconds(authProperties.getCodeResendSeconds());
+        resp.setDevBypass(isDevMailBypass());
+        return resp;
+    }
+
+    private String generateInternalUsername(Long memberId) {
+        return "cnpa" + memberId;
     }
 
     private void fillPlayerSessionFields(MemberSessionResp resp, Long memberId) {
@@ -552,23 +619,6 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
                 .last("limit 1"));
     }
 
-    private BasketMemberAccount findByUsername(String username) {
-        return memberAccountDao.selectOne(new LambdaQueryWrapper<BasketMemberAccount>()
-                .eq(BasketMemberAccount::getUsername, username)
-                .eq(BasketMemberAccount::getIsDelete, 0)
-                .last("limit 1"));
-    }
-
-    private BasketMemberAccount findByAccount(String account) {
-        return memberAccountDao.selectOne(new LambdaQueryWrapper<BasketMemberAccount>()
-                .eq(BasketMemberAccount::getIsDelete, 0)
-                .and(w -> w.eq(BasketMemberAccount::getEmail, account)
-                        .or().eq(BasketMemberAccount::getUsername, account)
-                        .or().eq(BasketMemberAccount::getAccountNo, account.toUpperCase())
-                        .or().eq(BasketMemberAccount::getAccountNo, account))
-                .last("limit 1"));
-    }
-
     private void touchLogin(BasketMemberAccount account, String clientIp, Date now) {
         account.setLastLoginTime(now);
         account.setLastLoginIp(clientIp);
@@ -581,14 +631,6 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         memberSessionSupport.syncAuthVersion(account.getId(), authVersion);
         memberSessionSupport.storeToken(token, account.getId(), authVersion);
         return token;
-    }
-
-    private String issueToken(Long memberId) {
-        BasketMemberAccount account = memberAccountDao.selectById(memberId);
-        if (account == null) {
-            throw new ServiceException("账号不存在");
-        }
-        return issueToken(account);
     }
 
     private MemberLoginResp buildLoginResp(BasketMemberAccount account, String nickname, String token) {
@@ -701,23 +743,12 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
             return new ServiceException("邮箱已注册");
         }
         if (message.contains("uk_member_username") || message.contains("username")) {
-            return new ServiceException("登录账号已被使用");
+            return new ServiceException("注册失败，请稍后重试");
         }
         if (message.contains("uk_member_account_no") || message.contains("account_no")) {
             return new ServiceException("账号编号冲突，请重试");
         }
         return new ServiceException("注册失败，请稍后重试");
-    }
-
-    private String normalizeUsername(String username) {
-        if (!StringUtils.hasText(username)) {
-            throw new ServiceException("登录账号不能为空");
-        }
-        String value = username.trim().toLowerCase();
-        if (!value.matches("^[a-z0-9_]{4,20}$")) {
-            throw new ServiceException("登录账号为 4 至 20 位英文字母、数字或下划线");
-        }
-        return value;
     }
 
     private String normalizeEmail(String email) {
@@ -729,13 +760,6 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
             throw new ServiceException("邮箱格式不正确");
         }
         return value;
-    }
-
-    private String normalizeAccount(String account) {
-        if (!StringUtils.hasText(account)) {
-            throw new ServiceException("账号不能为空");
-        }
-        return account.trim().toLowerCase();
     }
 
     private String generateDefaultNickname() {

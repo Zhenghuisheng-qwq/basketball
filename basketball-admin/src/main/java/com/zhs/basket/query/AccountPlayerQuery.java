@@ -8,8 +8,8 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class AccountPlayerQuery extends BaseEntity {
+    private Long memberId;
     private String email;
-    private String username;
     private String nickname;
     private String playerNo;
     private String gameId;

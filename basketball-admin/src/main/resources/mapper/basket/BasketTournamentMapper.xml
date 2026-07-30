@@ -126,4 +126,13 @@
         where id = #{id} and is_delete = 0 and tournament_status in
         <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
     </update>
+
+    <select id="countBySeasonAndName" resultType="int">
+        select count(1)
+        from basket_tournament
+        where competition_season_id = #{competitionSeasonId}
+          and tournament_name = #{tournamentName}
+          and is_delete = 0
+        <if test="excludeId != null">and id != #{excludeId}</if>
+    </select>
 </mapper>

@@ -4,12 +4,12 @@ import com.zhs.common.NoLoginRequest;
 import com.zhs.common.TokenUtil;
 import com.zhs.common.UserContext;
 import com.zhs.request.member.EmailCodeSendReq;
-import com.zhs.request.member.MemberCodeLoginReq;
 import com.zhs.request.member.MemberPasswordLoginReq;
 import com.zhs.request.member.MemberPasswordResetReq;
 import com.zhs.request.member.MemberRegisterReq;
 import com.zhs.response.member.EmailCodeSendResp;
 import com.zhs.response.member.MemberLoginResp;
+import com.zhs.response.member.MemberRegisterResp;
 import com.zhs.response.member.MemberSessionResp;
 import com.zhs.service.IBasketMemberAuthService;
 import com.zhs.util.R;
@@ -44,17 +44,9 @@ public class BasketMemberAuthController {
     }
 
     @NoLoginRequest
-    @ApiOperation("检查登录账号是否可用")
-    @GetMapping("/username/available")
-    public R<Void> checkUsernameAvailable(@org.springframework.web.bind.annotation.RequestParam String username) {
-        basketMemberAuthService.assertUsernameAvailable(username);
-        return R.ok(null, "登录账号可用");
-    }
-
-    @NoLoginRequest
     @ApiOperation("注册官网用户")
     @PostMapping("/register")
-    public R<MemberLoginResp> register(@RequestBody MemberRegisterReq req, HttpServletRequest request) {
+    public R<MemberRegisterResp> register(@RequestBody MemberRegisterReq req, HttpServletRequest request) {
         return R.ok(basketMemberAuthService.register(req, resolveClientIp(request), request.getHeader("User-Agent")), "注册成功");
     }
 
@@ -63,13 +55,6 @@ public class BasketMemberAuthController {
     @PostMapping("/login/password")
     public R<MemberLoginResp> loginByPassword(@RequestBody MemberPasswordLoginReq req, HttpServletRequest request) {
         return R.ok(basketMemberAuthService.loginByPassword(req, resolveClientIp(request), request.getHeader("User-Agent")), "登录成功");
-    }
-
-    @NoLoginRequest
-    @ApiOperation("邮箱验证码登录")
-    @PostMapping("/login/code")
-    public R<MemberLoginResp> loginByCode(@RequestBody MemberCodeLoginReq req, HttpServletRequest request) {
-        return R.ok(basketMemberAuthService.loginByCode(req, resolveClientIp(request), request.getHeader("User-Agent")), "登录成功");
     }
 
     @NoLoginRequest

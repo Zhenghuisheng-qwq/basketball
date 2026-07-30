@@ -2,10 +2,14 @@ package com.zhs.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.common.TokenUtil;
+import com.zhs.common.UserContext;
+import com.zhs.request.account.AccountChangeEmailReq;
 import com.zhs.request.account.AccountChangePasswordReq;
+import com.zhs.response.account.AccountChangeEmailResp;
 import com.zhs.response.account.AccountChangePasswordResp;
 import com.zhs.response.account.LoginLogItemResp;
 import com.zhs.response.account.SecurityLogItemResp;
+import com.zhs.service.IBasketMemberAuthService;
 import com.zhs.service.IAccountSecurityService;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
@@ -28,6 +32,8 @@ public class AccountSecurityController {
 
     @Resource
     private IAccountSecurityService accountSecurityService;
+    @Resource
+    private IBasketMemberAuthService basketMemberAuthService;
 
     @ApiOperation("分页查询登录日志")
     @GetMapping("/login-log/page")
@@ -51,6 +57,23 @@ public class AccountSecurityController {
         AccountChangePasswordResp resp = accountSecurityService.changePassword(
                 req, resolveClientIp(request), resolveTerminal(request), TokenUtil.resolveFrom(request));
         return R.ok(resp, "密码修改成功，请重新登录");
+    }
+
+    @ApiOperation("发送修改邮箱验证码")
+    @PostMapping("/change-email/send-code")
+    public R<com.zhs.response.member.EmailCodeSendResp> sendChangeEmailCode(
+            @RequestBody com.zhs.request.member.EmailCodeSendReq req,
+            HttpServletRequest request) {
+        return R.ok(basketMemberAuthService.sendChangeEmailCode(
+                req.getEmail(), UserContext.getRequiredMemberId(), resolveClientIp(request)), "验证码已发送");
+    }
+
+    @ApiOperation("修改登录邮箱")
+    @PostMapping("/change-email")
+    public R<AccountChangeEmailResp> changeEmail(@RequestBody AccountChangeEmailReq req, HttpServletRequest request) {
+        AccountChangeEmailResp resp = accountSecurityService.changeEmail(
+                req, resolveClientIp(request), TokenUtil.resolveFrom(request));
+        return R.ok(resp, "邮箱修改成功，请重新登录");
     }
 
     private String resolveClientIp(HttpServletRequest request) {

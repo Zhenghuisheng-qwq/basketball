@@ -13,7 +13,7 @@ export interface AuthLoginResult {
 function mapError(error: unknown): AuthLoginResult {
   const message = error instanceof Error ? error.message : '登录失败'
   let errorCode: AuthLoginResult['errorCode'] = 'UNKNOWN'
-  if (message.includes('密码') || message.includes('账号或密码')) {
+  if (message.includes('密码') || message.includes('邮箱或密码')) {
     errorCode = 'INVALID_CREDENTIALS'
   } else if (message.includes('不存在') || message.includes('尚未注册')) {
     errorCode = 'ACCOUNT_NOT_FOUND'
@@ -63,24 +63,9 @@ export function useAuth() {
   })
   const unreadNotificationCount = computed(() => notificationStore.unreadCount)
 
-  async function login(account: string, password: string, remember = true): Promise<AuthLoginResult> {
+  async function login(email: string, password: string, remember = true): Promise<AuthLoginResult> {
     try {
-      await userStore.loginByPassword(account, password, remember)
-      await syncAccountAfterLogin(true)
-      return { success: true }
-    } catch (error) {
-      return mapError(error)
-    }
-  }
-
-  async function loginWithEmailCode(
-    email: string,
-    verifyBizNo: string,
-    verifyCode: string,
-    remember = true,
-  ): Promise<AuthLoginResult> {
-    try {
-      await userStore.loginByEmailCode(email, verifyBizNo, verifyCode, remember)
+      await userStore.loginByPassword(email, password, remember)
       await syncAccountAfterLogin(true)
       return { success: true }
     } catch (error) {
@@ -108,7 +93,6 @@ export function useAuth() {
     currentUser,
     unreadNotificationCount,
     login,
-    loginWithEmailCode,
     logout,
     refreshAuth,
   }

@@ -443,8 +443,8 @@ export const PLATFORM_CHANGE_STATUS_OPTIONS = [
 ]
 
 export interface AccountPlayerQuery extends PageDomain, BaseEntity {
+  memberId?: string | number
   email?: string
-  username?: string
   nickname?: string
   playerNo?: string
   gameId?: string

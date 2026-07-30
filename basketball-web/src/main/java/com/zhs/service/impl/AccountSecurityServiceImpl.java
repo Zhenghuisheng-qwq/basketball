@@ -12,11 +12,14 @@ import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketAccountSecurityLog;
 import com.zhs.model.BasketLoginLog;
 import com.zhs.model.BasketMemberAccount;
+import com.zhs.request.account.AccountChangeEmailReq;
 import com.zhs.request.account.AccountChangePasswordReq;
+import com.zhs.response.account.AccountChangeEmailResp;
 import com.zhs.response.account.AccountChangePasswordResp;
 import com.zhs.response.account.LoginLogItemResp;
 import com.zhs.response.account.SecurityLogItemResp;
 import com.zhs.service.IAccountSecurityService;
+import com.zhs.service.IBasketMemberAuthService;
 import com.zhs.support.MemberSessionSupport;
 import com.zhs.util.DataMaskUtil;
 import jakarta.annotation.Resource;
@@ -48,6 +51,8 @@ public class AccountSecurityServiceImpl implements IAccountSecurityService {
     private PasswordEncoder passwordEncoder;
     @Resource
     private MemberSessionSupport memberSessionSupport;
+    @Resource
+    private IBasketMemberAuthService basketMemberAuthService;
 
     @Override
     public IPage<LoginLogItemResp> pageLoginLogs(Integer currentPage, Integer pageSize) {
@@ -130,6 +135,11 @@ public class AccountSecurityServiceImpl implements IAccountSecurityService {
         AccountChangePasswordResp resp = new AccountChangePasswordResp();
         resp.setNeedRelogin(true);
         return resp;
+    }
+
+    @Override
+    public AccountChangeEmailResp changeEmail(AccountChangeEmailReq req, String clientIp, String currentToken) {
+        return basketMemberAuthService.changeEmail(req, UserContext.getRequiredUserId(), clientIp, currentToken);
     }
 
     private void validatePasswordPair(String password, String confirmPassword) {

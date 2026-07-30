@@ -1,0 +1,4 @@
+wx:
+  mini:
+    appId: wxeef81874092c5a3f
+    appSecret: 28ddf3b81e5d15fdfa7e544ce6041505

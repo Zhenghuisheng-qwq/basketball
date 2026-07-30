@@ -80,7 +80,7 @@ INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (2, 2211);
       <el-table-column label="操作" align="center" width="240" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:playerPlatformChange:query']">详情</el-button>
-          <el-button link type="success" icon="Check" @click="openApprove(scope.row)" v-hasPermi="['basket:playerPlatformChange:audit']" v-if="scope.row.requestStatus === 0">通过</el-button>
+          <el-button link type="success" icon="Check" @click="handleApprove(scope.row)" v-hasPermi="['basket:playerPlatformChange:audit']" v-if="scope.row.requestStatus === 0">通过</el-button>
           <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:playerPlatformChange:audit']" v-if="scope.row.requestStatus === 0">驳回</el-button>
         </template>
       </el-table-column>
@@ -113,25 +113,15 @@ INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (2, 2211);
       </template>
     </el-drawer>
 
-    <el-dialog title="审核通过" v-model="approveOpen" width="480px" append-to-body>
-      <el-form :model="approveForm" label-width="88px">
-        <el-form-item label="审核备注">
-          <el-input v-model="approveForm.auditRemark" type="textarea" placeholder="请输入审核备注" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="approveOpen = false">取消</el-button>
-        <el-button type="primary" @click="submitApprove">确定</el-button>
-      </template>
-    </el-dialog>
-
     <el-dialog title="审核驳回" v-model="rejectOpen" width="480px" append-to-body>
       <el-form ref="rejectRef" :model="rejectForm" :rules="rejectRules" label-width="88px">
         <el-form-item label="驳回原因" prop="rejectReason">
-          <el-input v-model="rejectForm.rejectReason" type="textarea" placeholder="请输入驳回原因" />
-        </el-form-item>
-        <el-form-item label="审核备注">
-          <el-input v-model="rejectForm.auditRemark" type="textarea" placeholder="可选" />
+          <el-input
+            v-model="rejectForm.rejectReason"
+            type="textarea"
+            :rows="4"
+            placeholder="请填写驳回原因，将展示给申请人"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -151,7 +141,6 @@ import {
 } from '@/api/basket/playerPlatformChange'
 import { previewPrivateFile } from '@/api/basket/privateFile'
 import type {
-  PlayerPlatformChangeApproveReq,
   PlayerPlatformChangeDetail,
   PlayerPlatformChangeListItem,
   PlayerPlatformChangeQuery,
@@ -172,7 +161,6 @@ const total = ref(0)
 const detailOpen = ref(false)
 const detail = ref<PlayerPlatformChangeDetail>()
 const currentId = ref<number>()
-const approveOpen = ref(false)
 const rejectOpen = ref(false)
 
 const queryParams = ref<PlayerPlatformChangeQuery>({
@@ -181,10 +169,9 @@ const queryParams = ref<PlayerPlatformChangeQuery>({
   auditStage: 'PENDING'
 })
 
-const approveForm = ref<PlayerPlatformChangeApproveReq>({})
 const rejectForm = ref<PlayerPlatformChangeRejectReq>({ rejectReason: '' })
 const rejectRules = {
-  rejectReason: [{ required: true, message: '驳回原因不能为空', trigger: 'blur' }]
+  rejectReason: [{ required: true, message: '请填写驳回原因，将告知申请人', trigger: 'blur' }]
 }
 
 function platformChangeTagType(status?: number) {
@@ -228,24 +215,16 @@ function handlePreviewFile(fileId?: number) {
   }
 }
 
-function openApprove(row: PlayerPlatformChangeListItem) {
-  currentId.value = row.id
-  approveForm.value = { auditRemark: '' }
-  approveOpen.value = true
-}
-
-function submitApprove() {
-  if (!currentId.value) return
-  approvePlayerPlatformChange(currentId.value, approveForm.value).then(() => {
+function handleApprove(row: PlayerPlatformChangeListItem) {
+  approvePlayerPlatformChange(row.id, {}).then(() => {
     proxy.$modal.msgSuccess('审核通过')
-    approveOpen.value = false
     getList()
   })
 }
 
 function openReject(row: PlayerPlatformChangeListItem) {
   currentId.value = row.id
-  rejectForm.value = { rejectReason: '', auditRemark: '' }
+  rejectForm.value = { rejectReason: '' }
   rejectOpen.value = true
 }
 

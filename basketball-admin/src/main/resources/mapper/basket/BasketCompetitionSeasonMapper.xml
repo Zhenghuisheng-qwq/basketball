@@ -61,4 +61,13 @@
     <select id="countTournamentsById" resultType="int">
         select count(1) from basket_tournament where competition_season_id = #{id} and is_delete = 0
     </select>
+
+    <select id="countByYearAndName" resultType="int">
+        select count(1)
+        from basket_competition_season
+        where season_year = #{seasonYear}
+          and season_name = #{seasonName}
+          and is_delete = 0
+        <if test="excludeId != null">and id != #{excludeId}</if>
+    </select>
 </mapper>

@@ -8,8 +8,8 @@ import com.zhs.exception.ServiceException;
 public enum VerifyPurposeEnum {
 
     REGISTER("REGISTER", "注册"),
-    LOGIN("LOGIN", "登录"),
-    RESET_PASSWORD("RESET_PASSWORD", "重置密码");
+    RESET_PASSWORD("RESET_PASSWORD", "重置密码"),
+    CHANGE_EMAIL("CHANGE_EMAIL", "修改邮箱");
 
     private final String code;
     private final String label;

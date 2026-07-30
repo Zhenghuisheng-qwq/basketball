@@ -38,8 +38,8 @@
 
     <sql id="memberListWhere">
         where acc.is_delete = 0
+        <if test="memberId != null">and acc.id = #{memberId}</if>
         <if test="email != null and email != ''">and acc.email like concat('%', #{email}, '%')</if>
-        <if test="username != null and username != ''">and acc.username like concat('%', #{username}, '%')</if>
         <if test="nickname != null and nickname != ''">and mp.nickname like concat('%', #{nickname}, '%')</if>
         <if test="playerNo != null and playerNo != ''">and p.player_no like concat('%', #{playerNo}, '%')</if>
         <if test="gameTerminal != null and gameTerminal != ''">and p.game_terminal = #{gameTerminal}</if>

@@ -13,4 +13,8 @@ public interface BasketTournamentMapper {
     int softDelete(Long id);
     int updateStatusIfMatch(@Param("id") Long id, @Param("fromStatuses") List<Integer> fromStatuses,
             @Param("toStatus") Integer toStatus);
+
+    int countBySeasonAndName(@Param("competitionSeasonId") Long competitionSeasonId,
+            @Param("tournamentName") String tournamentName,
+            @Param("excludeId") Long excludeId);
 }

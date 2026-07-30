@@ -1,6 +1,6 @@
 import request from '@/api/request'
 
-export type EmailCodePurpose = 'REGISTER' | 'LOGIN' | 'RESET_PASSWORD'
+export type EmailCodePurpose = 'REGISTER' | 'RESET_PASSWORD' | 'CHANGE_EMAIL'
 
 export interface ApiResult<T> {
   code: number
@@ -12,6 +12,8 @@ export interface EmailCodeSendResult {
   bizNo: string
   expireSeconds: number
   resendSeconds: number
+  /** 开发模式：未发真实邮件，任意 6 位数字可通过 */
+  devBypass?: boolean
 }
 
 export interface MemberSummary {
@@ -31,6 +33,10 @@ export interface MemberLoginResult {
   member: MemberSummary
 }
 
+export interface MemberRegisterResult {
+  email: string
+}
+
 export interface MemberSessionResult extends MemberSummary {
   registerSource?: string
   registerTerminal?: string
@@ -43,14 +49,14 @@ export function sendEmailCode(email: string, purpose: EmailCodePurpose) {
   })
 }
 
-export function checkUsernameAvailable(username: string) {
-  return request.get<any, ApiResult<null>>('/basket/member/auth/username/available', {
-    params: { username },
+export function sendChangeEmailCode(email: string) {
+  return request.post<any, ApiResult<EmailCodeSendResult>>('/basket/account/security/change-email/send-code', {
+    email,
+    purpose: 'CHANGE_EMAIL',
   })
 }
 
 export function registerMember(payload: {
-  username: string
   email: string
   password: string
   confirmPassword: string
@@ -60,20 +66,11 @@ export function registerMember(payload: {
   agreeUserAgreement: boolean
   agreePrivacyPolicy: boolean
 }) {
-  return request.post<any, ApiResult<MemberLoginResult>>('/basket/member/auth/register', payload)
+  return request.post<any, ApiResult<MemberRegisterResult>>('/basket/member/auth/register', payload)
 }
 
-export function loginByPassword(payload: { account: string; password: string; terminalType?: string }) {
+export function loginByPassword(payload: { email: string; password: string; terminalType?: string }) {
   return request.post<any, ApiResult<MemberLoginResult>>('/basket/member/auth/login/password', payload)
-}
-
-export function loginByEmailCode(payload: {
-  email: string
-  verifyBizNo: string
-  verifyCode: string
-  terminalType?: string
-}) {
-  return request.post<any, ApiResult<MemberLoginResult>>('/basket/member/auth/login/code', payload)
 }
 
 export function getMemberSession() {
@@ -92,4 +89,12 @@ export function resetMemberPassword(payload: {
   confirmPassword: string
 }) {
   return request.post<any, ApiResult<null>>('/basket/member/auth/password/reset', payload)
+}
+
+export function changeMemberEmail(payload: {
+  email: string
+  verifyBizNo: string
+  verifyCode: string
+}) {
+  return request.post<any, ApiResult<{ needRelogin: boolean }>>('/basket/account/security/change-email', payload)
 }

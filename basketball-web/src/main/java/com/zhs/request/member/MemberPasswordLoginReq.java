@@ -10,8 +10,8 @@ import java.io.Serializable;
 @ApiModel("密码登录请求")
 public class MemberPasswordLoginReq implements Serializable {
 
-    @ApiModelProperty(value = "账号：邮箱 / 手机号 / 账号编号", required = true)
-    private String account;
+    @ApiModelProperty(value = "注册邮箱", required = true)
+    private String email;
 
     @ApiModelProperty(value = "密码", required = true)
     private String password;

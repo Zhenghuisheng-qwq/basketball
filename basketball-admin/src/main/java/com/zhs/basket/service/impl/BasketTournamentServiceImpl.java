@@ -27,6 +27,7 @@ import com.zhs.common.utils.bean.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -78,6 +79,7 @@ public class BasketTournamentServiceImpl implements IBasketTournamentService {
         validateTournamentTimes(req.getRegistrationStartTime(), req.getRegistrationEndTime(),
                 req.getCompetitionStartTime(), req.getCompetitionEndTime());
         GameTerminalSupport.requireTournamentTerminal(req.getGameTerminal());
+        assertUniqueSeasonAndName(req.getCompetitionSeasonId(), req.getTournamentName(), null);
 
         Date now = new Date();
         BasketTournament tournament = new BasketTournament();
@@ -120,6 +122,12 @@ public class BasketTournamentServiceImpl implements IBasketTournamentService {
             assertCanChangeCompetitionSeason(tournament);
             competitionSeasonService.requireExists(req.getCompetitionSeasonId());
         }
+
+        Long targetSeasonId = req.getCompetitionSeasonId() != null
+                ? req.getCompetitionSeasonId() : tournament.getCompetitionSeasonId();
+        String targetName = StringUtils.hasText(req.getTournamentName())
+                ? req.getTournamentName() : tournament.getTournamentName();
+        assertUniqueSeasonAndName(targetSeasonId, targetName, id);
 
         BeanUtils.copyBeanProp(tournament, req);
         if (req.getGameTerminal() != null) {
@@ -311,6 +319,15 @@ public class BasketTournamentServiceImpl implements IBasketTournamentService {
         }
         if (!competitionStart.before(competitionEnd)) {
             throw new ServiceException("比赛开始时间必须早于比赛结束时间");
+        }
+    }
+
+    private void assertUniqueSeasonAndName(Long competitionSeasonId, String tournamentName, Long excludeId) {
+        if (competitionSeasonId == null || !StringUtils.hasText(tournamentName)) {
+            throw new ServiceException("所属赛季和赛事名称不能为空");
+        }
+        if (tournamentMapper.countBySeasonAndName(competitionSeasonId, tournamentName.trim(), excludeId) > 0) {
+            throw new ServiceException("该赛季下已存在同名赛事，请勿重复创建");
         }
     }
 

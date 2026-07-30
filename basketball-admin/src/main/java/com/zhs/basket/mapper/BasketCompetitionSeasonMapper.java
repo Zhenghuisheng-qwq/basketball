@@ -19,4 +19,8 @@ public interface BasketCompetitionSeasonMapper {
     int softDelete(@Param("id") Long id);
 
     int countTournamentsById(@Param("id") Long id);
+
+    int countByYearAndName(@Param("seasonYear") Integer seasonYear,
+            @Param("seasonName") String seasonName,
+            @Param("excludeId") Long excludeId);
 }

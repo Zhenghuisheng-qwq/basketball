@@ -15,6 +15,7 @@ import com.zhs.common.utils.bean.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.Date;
 import java.util.List;
@@ -51,6 +52,7 @@ public class BasketCompetitionSeasonServiceImpl implements IBasketCompetitionSea
     @Transactional(rollbackFor = Exception.class)
     public Long create(CompetitionSeasonCreateReq req) {
         validateTimes(req.getStartTime(), req.getEndTime());
+        assertUniqueYearAndName(req.getSeasonYear(), req.getSeasonName(), null);
         Date now = new Date();
         BasketCompetitionSeason season = new BasketCompetitionSeason();
         BeanUtils.copyBeanProp(season, req);
@@ -73,6 +75,7 @@ public class BasketCompetitionSeasonServiceImpl implements IBasketCompetitionSea
             throw new ServiceException("已归档赛季不允许修改");
         }
         validateTimes(req.getStartTime(), req.getEndTime());
+        assertUniqueYearAndName(req.getSeasonYear(), req.getSeasonName(), id);
         BeanUtils.copyBeanProp(season, req);
         if (competitionSeasonMapper.updateById(season) != 1) {
             throw new ServiceException("更新失败");
@@ -113,6 +116,15 @@ public class BasketCompetitionSeasonServiceImpl implements IBasketCompetitionSea
         }
         if (!startTime.before(endTime)) {
             throw new ServiceException("赛季开始时间必须早于结束时间");
+        }
+    }
+
+    private void assertUniqueYearAndName(Integer seasonYear, String seasonName, Long excludeId) {
+        if (seasonYear == null || !StringUtils.hasText(seasonName)) {
+            throw new ServiceException("赛季年份和赛季名称不能为空");
+        }
+        if (competitionSeasonMapper.countByYearAndName(seasonYear, seasonName.trim(), excludeId) > 0) {
+            throw new ServiceException("同一年份下已存在同名赛季，请勿重复创建");
         }
     }
 

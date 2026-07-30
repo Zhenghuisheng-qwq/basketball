@@ -149,26 +149,6 @@ const router = createRouter({
 
         {
 
-          path: 'verify-email',
-
-          name: 'RegisterVerifyEmail',
-
-          component: () => import('@/views/account/RegisterVerifyEmail.vue'),
-
-          meta: { title: '邮箱验证', authContentVariant: 'verify' },
-
-        },
-
-        {
-
-          path: 'verify',
-
-          redirect: { name: 'RegisterVerifyEmail' },
-
-        },
-
-        {
-
           path: 'success',
 
           name: 'RegisterSuccess',

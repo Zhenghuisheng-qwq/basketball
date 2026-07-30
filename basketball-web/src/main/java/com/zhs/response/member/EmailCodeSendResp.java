@@ -18,4 +18,7 @@ public class EmailCodeSendResp implements Serializable {
 
     @ApiModelProperty("重发间隔秒数")
     private Long resendSeconds;
+
+    @ApiModelProperty("是否为开发模式（任意6位数字验证码可通过，上线前请关闭）")
+    private Boolean devBypass;
 }

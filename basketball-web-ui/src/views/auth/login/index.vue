@@ -14,34 +14,36 @@ const { login } = useAuth()
 
 const authChecking = ref(true)
 const form = reactive({
-  account: '',
+  email: '',
   password: '',
   remember: true,
 })
 const errors = reactive({
-  account: '',
+  email: '',
   password: '',
   form: '',
 })
 const submitted = ref(false)
 const loading = ref(false)
 
-function validateAccount(value: string): string {
-  if (!value.trim()) return '请输入登录账号或绑定邮箱'
+function validateEmail(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return '请输入注册邮箱'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return '邮箱格式不正确'
   return ''
 }
 
 function validatePassword(value: string): string {
-  if (!value) return '请输入登录密码'
+  if (!value) return '请输入密码'
   if (value.length < 8 || value.length > 20) return '密码长度应为 8 至 20 位'
   return ''
 }
 
 function validateForm(): boolean {
   errors.form = ''
-  errors.account = validateAccount(form.account)
+  errors.email = validateEmail(form.email)
   errors.password = validatePassword(form.password)
-  return !errors.account && !errors.password
+  return !errors.email && !errors.password
 }
 
 async function redirectIfAuthenticated() {
@@ -57,7 +59,7 @@ async function handleSubmit() {
   loading.value = true
   errors.form = ''
   try {
-    const result = await login(form.account.trim(), form.password, form.remember)
+    const result = await login(form.email.trim().toLowerCase(), form.password, form.remember)
     if (!result.success) {
       errors.form = result.message || '登录失败'
       if (result.errorCode === 'INVALID_CREDENTIALS') form.password = ''
@@ -75,7 +77,10 @@ function goRegister() {
 }
 
 function handleForgotPassword() {
-  router.push('/forgot-password')
+  router.push({
+    path: '/forgot-password',
+    query: form.email.trim() ? { email: form.email.trim() } : {},
+  })
 }
 
 watch(
@@ -93,10 +98,12 @@ onMounted(async () => {
   authChecking.value = false
   if (route.query.reason === 'password_changed') {
     ElMessage.success('密码修改成功，请重新登录')
+  } else if (route.query.reason === 'email_changed') {
+    ElMessage.success('邮箱修改成功，请重新登录')
   }
-  const accountQuery = route.query.account ?? route.query.email
-  if (typeof accountQuery === 'string' && accountQuery.trim()) {
-    form.account = accountQuery.trim()
+  const emailQuery = route.query.email
+  if (typeof emailQuery === 'string' && emailQuery.trim()) {
+    form.email = emailQuery.trim()
   }
 })
 </script>
@@ -116,26 +123,26 @@ onMounted(async () => {
 
     <form class="auth-form" @submit.prevent="handleSubmit">
       <div class="auth-field">
-        <label class="auth-field__label" for="login-account">登录账号 / 邮箱</label>
+        <label class="auth-field__label" for="login-email">邮箱</label>
         <input
-          id="login-account"
-          v-model="form.account"
-          type="text"
+          id="login-email"
+          v-model="form.email"
+          type="email"
           class="auth-input"
-          :class="{ 'auth-input--invalid': submitted && errors.account }"
-          placeholder="请输入登录账号或绑定邮箱"
+          :class="{ 'auth-input--invalid': submitted && errors.email }"
+          placeholder="请输入注册邮箱"
           autocomplete="username"
-          @blur="errors.account = validateAccount(form.account)"
+          @blur="errors.email = validateEmail(form.email)"
         />
-        <span v-if="submitted && errors.account" class="auth-field__error">{{ errors.account }}</span>
+        <span v-if="submitted && errors.email" class="auth-field__error">{{ errors.email }}</span>
       </div>
 
       <div class="auth-field">
-        <label class="auth-field__label" for="login-password">登录密码</label>
+        <label class="auth-field__label" for="login-password">密码</label>
         <PasswordInput
           id="login-password"
           v-model="form.password"
-          placeholder="请输入登录密码"
+          placeholder="请输入密码"
           autocomplete="current-password"
           :invalid="Boolean(submitted && errors.password)"
           @blur="errors.password = validatePassword(form.password)"
@@ -157,9 +164,8 @@ onMounted(async () => {
       </button>
       <p class="auth-form__footer-link">
         还没有账号？
-        <button type="button" class="auth-text-link" @click="goRegister">立即注册</button>
+        <button type="button" class="auth-text-link" @click="goRegister">注册账号</button>
       </p>
-      <p class="auth-form__hint">日常登录使用账号密码，邮箱验证码仅用于注册绑定与找回密码。</p>
     </form>
   </div>
 </template>

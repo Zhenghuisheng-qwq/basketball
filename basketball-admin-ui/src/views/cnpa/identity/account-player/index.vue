@@ -4,11 +4,11 @@
 <template>
   <div class="app-container account-player-page">
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="96px" class="search-form">
-      <el-form-item label="用户账号" prop="username">
-        <el-input v-model="queryParams.username" placeholder="登录账号" clearable style="width: 160px" @keyup.enter="handleQuery" />
+      <el-form-item label="用户 ID" prop="memberId">
+        <el-input v-model="queryParams.memberId" placeholder="用户 ID" clearable style="width: 160px" @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item label="邮箱" prop="email">
-        <el-input v-model="queryParams.email" placeholder="邮箱" clearable style="width: 180px" @keyup.enter="handleQuery" />
+        <el-input v-model="queryParams.email" placeholder="登录邮箱" clearable style="width: 180px" @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item label="球员编号" prop="playerNo">
         <el-input v-model="queryParams.playerNo" placeholder="CNPA 球员编号" clearable style="width: 160px" @keyup.enter="handleQuery" />
@@ -80,8 +80,7 @@
               {{ avatarFallback(scope.row.nickname || scope.row.username) }}
             </el-avatar>
             <div class="user-cell__meta">
-              <div class="user-cell__name">{{ scope.row.nickname || scope.row.username || '未设置昵称' }}</div>
-              <div class="sub-text">账号 {{ scope.row.username || '-' }}</div>
+              <div class="user-cell__name">{{ scope.row.nickname || '未设置昵称' }}</div>
               <div class="sub-text ellipsis">{{ scope.row.email || '-' }}</div>
               <div class="sub-text user-id-text">用户ID：{{ scope.row.userId || scope.row.memberId }}</div>
             </div>
@@ -150,7 +149,7 @@
             </el-avatar>
             <div class="detail-header__meta">
               <div class="detail-header__name">{{ detail.account?.nickname || detail.account?.username || '未设置昵称' }}</div>
-              <div class="detail-header__sub">{{ detail.account?.email || '-' }} · 账号 {{ detail.account?.username || '-' }}</div>
+              <div class="detail-header__sub">{{ detail.account?.email || '-' }}</div>
               <div class="detail-header__tags">
                 <el-tag :type="detail.account?.accountStatus === 1 ? 'success' : 'danger'" size="small">
                   {{ detail.account?.accountStatusName || '-' }}
@@ -166,8 +165,8 @@
             <el-tab-pane label="基础信息" name="account">
               <el-descriptions :column="2" border size="small">
                 <el-descriptions-item label="用户ID">{{ detail.account?.userId || detail.account?.memberId || '-' }}</el-descriptions-item>
-                <el-descriptions-item label="账号">{{ detail.account?.username || '-' }}</el-descriptions-item>
-                <el-descriptions-item label="邮箱">{{ detail.account?.email || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="内部兼容标识">{{ detail.account?.username || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="登录邮箱">{{ detail.account?.email || '-' }}</el-descriptions-item>
                 <el-descriptions-item label="邮箱验证">{{ detail.account?.emailVerified === 1 ? '已验证' : '未验证' }}</el-descriptions-item>
                 <el-descriptions-item label="账号状态">{{ detail.account?.accountStatusName || '-' }}</el-descriptions-item>
                 <el-descriptions-item label="注册时间">{{ parseTime(detail.account?.createTime) || '-' }}</el-descriptions-item>
@@ -344,7 +343,7 @@ const activeDetailTab = ref('account')
 const queryParams = ref<AccountPlayerQuery>({
   pageNum: 1,
   pageSize: 10,
-  username: undefined,
+  memberId: undefined,
   email: undefined,
   playerNo: undefined,
   certStage: undefined,
