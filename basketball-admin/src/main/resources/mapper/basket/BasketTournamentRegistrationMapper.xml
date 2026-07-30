@@ -67,6 +67,10 @@
         select count(1) from basket_tournament_registration
         where season_id = #{seasonId} and registration_status = 3 and is_delete = 0
     </select>
+    <select id="countPendingAuditBySeasonId" resultType="int">
+        select count(1) from basket_tournament_registration
+        where season_id = #{seasonId} and is_delete = 0 and registration_status in (1, 2)
+    </select>
     <select id="countByTournamentId" resultType="int">
         select count(1)
         from basket_tournament_registration r

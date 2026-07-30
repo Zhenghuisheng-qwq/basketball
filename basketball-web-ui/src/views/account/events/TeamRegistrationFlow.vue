@@ -236,6 +236,10 @@ function toggleMember(teamMemberId: string) {
   }
   const member = teamStore.members.find((item) => item.teamMemberId === teamMemberId)
   if (!member) return
+  if (rosterSelections.value.length >= selectedSeasonRosterLimits.value.maxRosterCount) {
+    ElMessage.warning(`阵容最多 ${selectedSeasonRosterLimits.value.maxRosterCount} 人`)
+    return
+  }
   rosterSelections.value.push({
     teamMemberId: member.teamMemberId,
     realName: member.realName,

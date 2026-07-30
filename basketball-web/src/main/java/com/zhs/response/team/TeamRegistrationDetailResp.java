@@ -96,6 +96,12 @@ public class TeamRegistrationDetailResp implements Serializable {
     @ApiModelProperty("报名截止时间")
     private Date registrationEndTime;
 
+    @ApiModelProperty("最小阵容人数")
+    private Integer minRosterCount;
+
+    @ApiModelProperty("最大阵容人数")
+    private Integer maxRosterCount;
+
     @ApiModelProperty("阵容列表")
     private List<TeamRegistrationPlayerItemResp> rosterItems;
 }

@@ -20,6 +20,8 @@ public interface BasketTournamentRegistrationMapper {
     int countByTournamentId(@Param("tournamentId") Long tournamentId);
     List<AvailableTeamVo> selectApprovedTeamsBySeasonId(@Param("seasonId") Long seasonId);
     List<SeasonCandidateTeamResp> selectCandidateTeamsBySeasonId(@Param("seasonId") Long seasonId);
+    int countPendingAuditBySeasonId(@Param("seasonId") Long seasonId);
+
     BasketTournamentRegistration selectApprovedBySeasonAndTeam(@Param("seasonId") Long seasonId,
             @Param("teamId") Long teamId);
     List<Long> selectApprovedIdsWithoutEventTeam();

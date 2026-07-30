@@ -15,7 +15,8 @@
 
     <select id="selectDetailById" resultType="com.zhs.basket.vo.ScheduleRuleDetailVo">
         select id, rule_name as ruleName, rule_code as ruleCode, rule_version as ruleVersion,
-               event_type as eventType, platform_code as platformCode, enabled, remark
+               event_type as eventType, platform_code as platformCode, enabled,
+               slot_capacity as slotCapacity, allocation_mode as allocationMode, remark
         from basket_schedule_rule
         where id = #{id} and is_delete = 0
     </select>

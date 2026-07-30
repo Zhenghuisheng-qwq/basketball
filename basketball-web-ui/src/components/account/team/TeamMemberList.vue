@@ -12,7 +12,6 @@ import {
   formatTeamMemberPosition,
   formatTeamMemberPositionShort,
   formatTeamMemberRole,
-  formatTeamMemberRosterType,
   isTeamCaptainMember,
   resolveTeamMemberAvatarFallback,
   resolveTeamMemberDisplayName,

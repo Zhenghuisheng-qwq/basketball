@@ -264,4 +264,20 @@
 		where id = #{id}
 	</update>
 
+	<select id="selectByIdForUpdate" parameterType="long" resultMap="result_BasketMatchMapper.xml">
+		select
+		<include refid="basket_match_Column" />
+		from basket_match
+		where id = #{matchId} and is_delete = 0
+		for update
+	</select>
+
+	<update id="updateDataStatusIfAllowed">
+		update basket_match
+		set data_status = #{newStatus}, update_time = now()
+		where id = #{matchId}
+		  and is_delete = #{notDeleted}
+		  and data_status != 2
+	</update>
+
 </mapper>

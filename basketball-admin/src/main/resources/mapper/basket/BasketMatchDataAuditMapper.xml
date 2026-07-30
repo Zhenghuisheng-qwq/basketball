@@ -3,10 +3,12 @@
 <mapper namespace="com.zhs.basket.mapper.BasketMatchDataAuditMapper">
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_match_data_audit
-        (match_id, data_version, audit_type, submitter_id, submit_time, audit_status, auditor_id, audit_time,
+        (match_id, submission_id, data_version, audit_type, audit_action, before_status, after_status,
+         submitter_id, submit_time, audit_status, auditor_id, auditor_name, audit_time,
          audit_remark, reject_reason, prev_audit_id, create_time, update_time, is_delete)
         values
-        (#{matchId}, #{dataVersion}, #{auditType}, #{submitterId}, #{submitTime}, #{auditStatus}, #{auditorId}, #{auditTime},
+        (#{matchId}, #{submissionId}, #{dataVersion}, #{auditType}, #{auditAction}, #{beforeStatus}, #{afterStatus},
+         #{submitterId}, #{submitTime}, #{auditStatus}, #{auditorId}, #{auditorName}, #{auditTime},
          #{auditRemark}, #{rejectReason}, #{prevAuditId}, #{createTime}, #{updateTime}, #{isDelete})
     </insert>
 
@@ -44,5 +46,15 @@
         where match_id = #{matchId} and audit_type = #{auditType}
           and audit_status = 'PENDING' and is_delete = 0
         order by id desc limit 1
+    </select>
+
+    <select id="selectVoBySubmissionId" resultType="com.zhs.basket.vo.MatchDataSubmissionAuditLogVo">
+        select id, submission_id as submissionId, audit_action as auditAction, before_status as beforeStatus,
+               after_status as afterStatus, audit_status as auditStatus, auditor_id as auditorId,
+               auditor_name as auditorName, audit_time as auditTime, audit_remark as auditRemark,
+               reject_reason as rejectReason
+        from basket_match_data_audit
+        where submission_id = #{submissionId} and is_delete = 0
+        order by create_time desc, id desc
     </select>
 </mapper>

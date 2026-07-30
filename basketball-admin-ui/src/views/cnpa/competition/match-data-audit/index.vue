@@ -4,10 +4,11 @@
       <el-form-item label="赛季ID">
         <el-input-number v-model="query.seasonId" :min="1" controls-position="right" style="width: 160px" />
       </el-form-item>
-      <el-form-item label="数据状态">
-        <el-select v-model="query.dataStatus" clearable style="width: 140px">
-          <el-option label="已提交" :value="1" />
-          <el-option label="已驳回" :value="4" />
+      <el-form-item label="提交状态">
+        <el-select v-model="query.submissionStatus" clearable style="width: 140px">
+          <el-option label="审核中" :value="1" />
+          <el-option label="已通过" :value="2" />
+          <el-option label="已驳回" :value="3" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -16,27 +17,87 @@
     </el-form>
 
     <el-table :data="rows" v-loading="loading" border>
+      <el-table-column label="提交编号" prop="submissionNo" min-width="140" />
       <el-table-column label="比赛编号" prop="matchNo" min-width="120" />
-      <el-table-column label="赛季" prop="seasonName" min-width="120" />
-      <el-table-column label="阶段" prop="stageName" width="100" />
-      <el-table-column label="主队" prop="homeTeamName" min-width="120" />
-      <el-table-column label="客队" prop="awayTeamName" min-width="120" />
-      <el-table-column label="比分" width="100">
+      <el-table-column label="版本" prop="versionNo" width="70" />
+      <el-table-column label="主队" prop="homeTeamName" min-width="110" />
+      <el-table-column label="客队" prop="awayTeamName" min-width="110" />
+      <el-table-column label="比分" width="90">
         <template #default="scope">{{ scope.row.homeScore }} - {{ scope.row.awayScore }}</template>
       </el-table-column>
-      <el-table-column label="数据状态" prop="dataStatusName" width="100" />
+      <el-table-column label="提交球队" prop="submitterTeamName" min-width="110" />
+      <el-table-column label="提交人" prop="submitterMemberName" min-width="100" />
+      <el-table-column label="状态" prop="submissionStatusName" width="100" />
       <el-table-column label="提交时间" width="170">
-        <template #default="scope">{{ parseTime(scope.row.submitTime) }}</template>
+        <template #default="scope">{{ parseTime(scope.row.submittedTime) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="220" fixed="right">
+      <el-table-column label="操作" width="200" fixed="right">
         <template #default="scope">
-          <el-button link type="primary" @click="goEntry(scope.row.matchId)">录入/审核</el-button>
-          <el-button link type="danger" @click="openReject(scope.row)" v-hasPermi="['basket:matchAudit:reject']">驳回</el-button>
+          <el-button link type="primary" @click="openDetail(scope.row.submissionId)">详情/审核</el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="rejectOpen" title="驳回比赛数据" width="480px">
+    <pagination v-show="total > 0" :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="loadList" />
+
+    <el-dialog v-model="detailOpen" title="比赛数据提交审核" width="920px" top="5vh">
+      <div v-if="detail" v-loading="detailLoading">
+        <el-descriptions :column="3" border size="small" class="mb8">
+          <el-descriptions-item label="提交编号">{{ detail.submissionNo }}</el-descriptions-item>
+          <el-descriptions-item label="版本">v{{ detail.versionNo }}</el-descriptions-item>
+          <el-descriptions-item label="状态">{{ detail.submissionStatusName }}</el-descriptions-item>
+          <el-descriptions-item label="比赛">{{ detail.homeTeamName }} vs {{ detail.awayTeamName }}</el-descriptions-item>
+          <el-descriptions-item label="比分">{{ detail.homeScore }} - {{ detail.awayScore }}</el-descriptions-item>
+          <el-descriptions-item label="提交人">{{ detail.submitterMemberName }} / {{ detail.submitterTeamName }}</el-descriptions-item>
+        </el-descriptions>
+
+        <el-divider content-position="left">分节比分</el-divider>
+        <el-table :data="detail.periods || []" size="small" border>
+          <el-table-column label="节次" prop="periodNo" width="70" />
+          <el-table-column label="类型" prop="periodType" width="90" />
+          <el-table-column label="主队" prop="homeScore" />
+          <el-table-column label="客队" prop="awayScore" />
+        </el-table>
+
+        <el-divider content-position="left">球队数据</el-divider>
+        <el-table :data="detail.teamStats || []" size="small" border>
+          <el-table-column label="球队ID" prop="teamId" width="90" />
+          <el-table-column label="得分" prop="points" width="70" />
+          <el-table-column label="篮板" prop="rebounds" width="70" />
+          <el-table-column label="助攻" prop="assists" width="70" />
+        </el-table>
+
+        <el-divider content-position="left">球员数据</el-divider>
+        <el-table :data="detail.playerStats || []" size="small" border max-height="240">
+          <el-table-column label="球员ID" prop="playerId" width="90" />
+          <el-table-column label="球队ID" prop="teamId" width="90" />
+          <el-table-column label="得分" prop="points" width="70" />
+          <el-table-column label="篮板" prop="rebounds" width="70" />
+          <el-table-column label="助攻" prop="assists" width="70" />
+        </el-table>
+
+        <el-divider content-position="left">材料</el-divider>
+        <el-table :data="detail.materials || []" size="small" border>
+          <el-table-column label="类型" prop="materialType" width="160" />
+          <el-table-column label="文件ID" prop="fileId" width="100" />
+          <el-table-column label="名称" prop="materialName" />
+        </el-table>
+
+        <el-form v-if="detail.canAudit" class="mt8">
+          <el-form-item label="审核备注">
+            <el-input v-model="auditRemark" type="textarea" :rows="2" />
+          </el-form-item>
+        </el-form>
+        <el-alert v-else-if="detail.cannotAuditReason" :title="detail.cannotAuditReason" type="info" show-icon :closable="false" />
+      </div>
+      <template #footer>
+        <el-button @click="detailOpen = false">关闭</el-button>
+        <el-button type="danger" :disabled="!detail?.canAudit" @click="openReject" v-hasPermi="['basket:matchAudit:reject']">驳回</el-button>
+        <el-button type="success" :disabled="!detail?.canAudit" :loading="approving" @click="submitApprove" v-hasPermi="['basket:matchAudit:approve']">审核通过</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="rejectOpen" title="驳回比赛数据" width="480px" append-to-body>
       <el-input v-model="rejectReason" type="textarea" :rows="4" placeholder="请填写驳回原因" />
       <template #footer>
         <el-button @click="rejectOpen = false">取消</el-button>
@@ -48,37 +109,75 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { listPendingMatchAudit } from '@/api/basket/matchAudit'
-import { rejectMatchResult } from '@/api/basket/matchStat'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  pageSubmissionAudit,
+  getSubmissionDetail,
+  approveSubmission,
+  rejectSubmission
+} from '@/api/basket/matchAudit'
 import { parseTime } from '@/utils/ruoyi'
 
-const router = useRouter()
 const loading = ref(false)
 const rows = ref<any[]>([])
-const query = reactive({ seasonId: undefined as number | undefined, dataStatus: 1 })
+const total = ref(0)
+const query = reactive({
+  seasonId: undefined as number | undefined,
+  submissionStatus: 1 as number | undefined,
+  pageNum: 1,
+  pageSize: 10
+})
+
+const detailOpen = ref(false)
+const detailLoading = ref(false)
+const detail = ref<any>(null)
+const currentSubmissionId = ref<number>()
+const auditRemark = ref('')
+const approving = ref(false)
+
 const rejectOpen = ref(false)
 const rejectReason = ref('')
 const rejecting = ref(false)
-const rejectTarget = ref<any>(null)
 
 async function loadList() {
   loading.value = true
   try {
-    const res = await listPendingMatchAudit({ ...query })
-    rows.value = res.data || []
+    const res = await pageSubmissionAudit({ ...query })
+    rows.value = res.rows || []
+    total.value = res.total || 0
   } finally {
     loading.value = false
   }
 }
 
-function goEntry(matchId: number) {
-  router.push({ path: '/competition-exec/match-data-entry', query: { matchId: String(matchId) } })
+async function openDetail(submissionId: number) {
+  currentSubmissionId.value = submissionId
+  detailOpen.value = true
+  detailLoading.value = true
+  auditRemark.value = ''
+  try {
+    const res = await getSubmissionDetail(submissionId)
+    detail.value = res.data
+  } finally {
+    detailLoading.value = false
+  }
 }
 
-function openReject(row: any) {
-  rejectTarget.value = row
+async function submitApprove() {
+  if (!currentSubmissionId.value) return
+  await ElMessageBox.confirm('确认审核通过并同步正式数据？', '提示', { type: 'warning' })
+  approving.value = true
+  try {
+    await approveSubmission(currentSubmissionId.value, { auditRemark: auditRemark.value || undefined })
+    ElMessage.success('审核通过')
+    detailOpen.value = false
+    loadList()
+  } finally {
+    approving.value = false
+  }
+}
+
+function openReject() {
   rejectReason.value = ''
   rejectOpen.value = true
 }
@@ -88,11 +187,16 @@ async function submitReject() {
     ElMessage.warning('请填写驳回原因')
     return
   }
+  if (!currentSubmissionId.value) return
   rejecting.value = true
   try {
-    await rejectMatchResult(rejectTarget.value.matchId, { reason: rejectReason.value.trim() })
+    await rejectSubmission(currentSubmissionId.value, {
+      rejectReason: rejectReason.value.trim(),
+      auditRemark: auditRemark.value || undefined
+    })
     ElMessage.success('已驳回')
     rejectOpen.value = false
+    detailOpen.value = false
     loadList()
   } finally {
     rejecting.value = false
@@ -104,4 +208,5 @@ onMounted(loadList)
 
 <style scoped>
 .mb8 { margin-bottom: 8px; }
+.mt8 { margin-top: 8px; }
 </style>

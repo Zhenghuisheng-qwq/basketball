@@ -197,11 +197,6 @@ export const useAccountStore = defineStore('account', () => {
     writeStorageItem(teamRelationsStorageKey(teamRelations.value.userId), JSON.stringify(teamRelations.value))
   }
 
-  function persistSecurity() {
-    if (!security.value) return
-    writeStorageItem(securityStorageKey(security.value.userId), JSON.stringify(security.value))
-  }
-
   function persistMyTournaments() {
     if (loadedUserId.value == null) return
     writeStorageItem(myTournamentsStorageKey(loadedUserId.value), JSON.stringify(myTournaments.value))

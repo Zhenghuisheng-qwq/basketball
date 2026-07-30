@@ -1,7 +1,6 @@
 import request from '@/api/request'
 import type { ApiResult, PageResult } from '@/api/types/common'
 import type {
-  CandidatePlayerItemDto,
   TeamMemberItemDto,
   TeamMemberUpdateReq,
 } from '@/api/types/teamMember'

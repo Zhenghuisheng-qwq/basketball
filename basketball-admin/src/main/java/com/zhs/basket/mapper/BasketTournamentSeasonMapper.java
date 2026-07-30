@@ -29,4 +29,7 @@ public interface BasketTournamentSeasonMapper {
     int clearChampionIfMatch(@Param("id") Long id,
                              @Param("championTeamId") Long championTeamId,
                              @Param("runnerUpTeamId") Long runnerUpTeamId);
+
+    /** 报名已截止且未删除的赛季 ID 列表（供自动排赛扫描） */
+    List<Long> selectRegistrationClosedSeasonIds(@Param("now") java.util.Date now);
 }

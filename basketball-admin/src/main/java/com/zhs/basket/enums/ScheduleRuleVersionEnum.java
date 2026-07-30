@@ -3,7 +3,8 @@ package com.zhs.basket.enums;
 import com.zhs.common.exception.ServiceException;
 
 public enum ScheduleRuleVersionEnum {
-    V1("V1");
+    V1("V1"),
+    V2("V2");
 
     private final String code;
 

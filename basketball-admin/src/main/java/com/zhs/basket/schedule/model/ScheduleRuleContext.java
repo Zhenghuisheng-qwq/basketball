@@ -17,4 +17,8 @@ public class ScheduleRuleContext {
     private List<EventTeamScheduleSnapshot> eventTeams;
     private List<Integer> weekdays;
     private List<String> timeSlots;
+    /** 每个时间段最大比赛场次 */
+    private Integer slotCapacity;
+    /** FILL_FIRST / EVEN_SPLIT */
+    private String allocationMode;
 }

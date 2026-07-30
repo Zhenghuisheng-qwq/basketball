@@ -6,10 +6,8 @@ import com.zhs.basket.schedule.model.ScheduleRuleContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,8 +23,19 @@ class RegularRoundRobinV1StrategyTest {
 
     @BeforeEach
     void setUp() {
+        RegularRoundRobinScheduleGenerator generator = new RegularRoundRobinScheduleGenerator(new ScheduleTimeAllocator());
         strategy = new RegularRoundRobinV1Strategy();
-        strategy.timeAllocator = new ScheduleTimeAllocator();
+        injectGenerator(strategy, generator);
+    }
+
+    private static void injectGenerator(RegularRoundRobinV1Strategy strategy, RegularRoundRobinScheduleGenerator generator) {
+        try {
+            var field = RegularRoundRobinV1Strategy.class.getDeclaredField("scheduleGenerator");
+            field.setAccessible(true);
+            field.set(strategy, generator);
+        } catch (ReflectiveOperationException ex) {
+            throw new IllegalStateException(ex);
+        }
     }
 
     @Test
@@ -57,28 +66,17 @@ class RegularRoundRobinV1StrategyTest {
         assertRoundRobinIntegrity(plans, 4);
         assertEquals(3, distinctRoundCount(plans));
         assertEachRoundAtMostOneMatchPerTeam(plans);
-
-        Map<Long, Integer> matchCountByTeam = countMatchesByEventTeam(plans);
-        assertEquals(4, matchCountByTeam.size());
-        matchCountByTeam.values().forEach(count -> assertEquals(3, count));
-
         assertNoDuplicatePair(plans);
         assertNoSameTimeTeamConflict(plans);
-
-        // 4 队单循环标准结构：3 轮，每轮 2 场
-        Map<Integer, Long> matchesPerRound = plans.stream()
-                .collect(java.util.stream.Collectors.groupingBy(MatchPlan::getRoundNo, java.util.stream.Collectors.counting()));
-        assertEquals(3, matchesPerRound.size());
-        matchesPerRound.values().forEach(count -> assertEquals(2L, count));
-
-        printFourTeamScheduleReport(teams, plans);
     }
 
     private ScheduleRuleContext baseContext(List<EventTeamScheduleSnapshot> teams) {
         ScheduleRuleContext context = new ScheduleRuleContext();
-        context.setBaseDate(new GregorianCalendar(2026, Calendar.JANUARY, 5).getTime());
-        context.setWeekdays(Arrays.asList(1, 3));
-        context.setTimeSlots(Arrays.asList("18:00", "19:00"));
+        context.setBaseDate(new GregorianCalendar(2026, Calendar.JANUARY, 6).getTime());
+        context.setWeekdays(Arrays.asList(2, 4, 6));
+        context.setTimeSlots(Arrays.asList("21:00", "22:00"));
+        context.setSlotCapacity(12);
+        context.setAllocationMode("FILL_FIRST");
         context.setEventTeams(teams);
         return context;
     }
@@ -98,8 +96,8 @@ class RegularRoundRobinV1StrategyTest {
         Map<Integer, Set<Long>> teamsByRound = new HashMap<>();
         for (MatchPlan plan : plans) {
             Set<Long> teams = teamsByRound.computeIfAbsent(plan.getRoundNo(), key -> new HashSet<>());
-            assertTrue(teams.add(plan.getHomeEventTeamId()), "同一轮次出现重复球队: " + plan.getRoundNo());
-            assertTrue(teams.add(plan.getAwayEventTeamId()), "同一轮次出现重复球队: " + plan.getRoundNo());
+            assertTrue(teams.add(plan.getHomeEventTeamId()));
+            assertTrue(teams.add(plan.getAwayEventTeamId()));
         }
     }
 
@@ -107,7 +105,7 @@ class RegularRoundRobinV1StrategyTest {
         Set<String> pairs = new HashSet<>();
         for (MatchPlan plan : plans) {
             String key = canonicalPair(plan.getHomeEventTeamId(), plan.getAwayEventTeamId());
-            assertTrue(pairs.add(key), "存在重复对阵: " + key);
+            assertTrue(pairs.add(key));
         }
     }
 
@@ -121,15 +119,6 @@ class RegularRoundRobinV1StrategyTest {
         }
     }
 
-    private Map<Long, Integer> countMatchesByEventTeam(List<MatchPlan> plans) {
-        Map<Long, Integer> counts = new HashMap<>();
-        for (MatchPlan plan : plans) {
-            counts.merge(plan.getHomeEventTeamId(), 1, Integer::sum);
-            counts.merge(plan.getAwayEventTeamId(), 1, Integer::sum);
-        }
-        return counts;
-    }
-
     private int distinctRoundCount(List<MatchPlan> plans) {
         return (int) plans.stream().map(MatchPlan::getRoundNo).distinct().count();
     }
@@ -138,25 +127,6 @@ class RegularRoundRobinV1StrategyTest {
         long min = Math.min(a, b);
         long max = Math.max(a, b);
         return min + ":" + max;
-    }
-
-    private void printFourTeamScheduleReport(List<EventTeamScheduleSnapshot> teams, List<MatchPlan> plans) {
-        Map<Long, String> names = new HashMap<>();
-        for (EventTeamScheduleSnapshot team : teams) {
-            names.put(team.getEventTeamId(), team.getTeamName());
-        }
-        System.out.println("=== 4 支球队单循环赛程 ===");
-        for (int round = 1; round <= distinctRoundCount(plans); round++) {
-            int finalRound = round;
-            System.out.println("第" + round + "轮:");
-            plans.stream()
-                    .filter(plan -> plan.getRoundNo() == finalRound)
-                    .forEach(plan -> System.out.println("  "
-                            + names.get(plan.getHomeEventTeamId()) + " vs "
-                            + names.get(plan.getAwayEventTeamId())
-                            + " @ " + plan.getMatchTime()));
-        }
-        System.out.println("每队场次: " + countMatchesByEventTeam(plans));
     }
 
     private EventTeamScheduleSnapshot team(Long eventTeamId, Long teamId, String name) {

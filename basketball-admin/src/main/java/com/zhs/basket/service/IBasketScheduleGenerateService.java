@@ -19,4 +19,11 @@ public interface IBasketScheduleGenerateService {
     void publish(SchedulePublishReq req);
     void unpublish(SchedulePublishReq req);
     void deleteDraft(Long eventId, String reason);
+
+    /**
+     * 扫描报名已截止且满足条件的赛事，自动生成草稿赛程（不自动发布）。
+     *
+     * @return 成功生成的赛季数量
+     */
+    int autoGenerateEligibleSchedules();
 }

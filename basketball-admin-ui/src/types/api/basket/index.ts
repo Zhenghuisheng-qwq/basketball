@@ -2539,6 +2539,8 @@ export interface ScheduleRuleTimeSlotItem {
 }
 
 export interface ScheduleRuleDetail extends ScheduleRuleListItem {
+  slotCapacity?: number
+  allocationMode?: string
   weekdays?: ScheduleRuleWeekdayItem[]
   timeSlots?: ScheduleRuleTimeSlotItem[]
 }

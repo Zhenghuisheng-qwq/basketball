@@ -17,4 +17,6 @@ public interface BasketMatchDataAuditMapper {
     List<MatchDataAuditListVo> selectList(MatchDataAuditQuery query);
 
     BasketMatchDataAudit selectLatestPendingByMatch(@Param("matchId") Long matchId, @Param("auditType") String auditType);
+
+    List<com.zhs.basket.vo.MatchDataSubmissionAuditLogVo> selectVoBySubmissionId(Long submissionId);
 }

@@ -10,7 +10,11 @@ public final class BasketPublicConstants {
     public static final int MATCH_SCHEDULED = 1;
     public static final int MATCH_FINISHED = 3;
     public static final int PUBLISH_PUBLISHED = 1;
+    public static final int DATA_DRAFT = 0;
+    public static final int DATA_SUBMITTED = 1;
     public static final int DATA_CONFIRMED = 2;
+    public static final int DATA_REOPENED = 3;
+    public static final int DATA_REJECTED = 4;
     public static final int PROFILE_VISIBLE = 1;
     public static final int TEAM_AUDIT_APPROVED = 1;
     public static final int TEAM_STATUS_ACTIVE = 1;

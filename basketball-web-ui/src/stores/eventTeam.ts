@@ -6,6 +6,7 @@ import {
   getEventRosterHistory,
   getMyEventTeamList,
 } from '@/api/eventParticipation'
+import { pageMyMatches, type PlayerMatchTaskItem } from '@/api/matchData'
 import {
   getRosterChangeRequestPage,
   submitRosterChangeCaptainTransfer,
@@ -178,6 +179,20 @@ export const useEventTeamStore = defineStore('eventTeam', () => {
     return rosterHistory.value
   }
 
+  async function loadMatchDataTodoCount() {
+    if (!seasonId.value) {
+      pendingTasks.value.matchDataTodoCount = 0
+      return
+    }
+    try {
+      const res = await pageMyMatches({ seasonId: seasonId.value, pageNum: 1, pageSize: 100 })
+      const records = res.data?.records || []
+      pendingTasks.value.matchDataTodoCount = records.filter((item: PlayerMatchTaskItem) => item.canSubmit).length
+    } catch {
+      pendingTasks.value.matchDataTodoCount = 0
+    }
+  }
+
   async function ensureLoaded(seasonOrTournamentKey: string) {
     if (loadedSeasonKey.value === seasonOrTournamentKey && eventTeamId.value) {
       return true
@@ -203,6 +218,7 @@ export const useEventTeamStore = defineStore('eventTeam', () => {
       await Promise.all([
         loadRosterChangeRequests(),
         loadRosterHistory(seasonId.value),
+        loadMatchDataTodoCount(),
       ])
 
       const latestFreeAgent = rosterChangeRequests.value.find(

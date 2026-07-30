@@ -29,4 +29,11 @@ public class BasketMatchMessageHelper {
         }
         messageService.sendSiteMessages(memberIds, adminUserId, "MATCH", match.getId(), title, content);
     }
+
+    public void notifySubmitterCaptain(BasketMatch match, Long submitterTeamId, Long adminUserId, String title, String content) {
+        BasketTournamentRegistration registration = registrationMapper.selectApprovedBySeasonAndTeam(match.getSeasonId(), submitterTeamId);
+        if (registration != null && registration.getCaptainMemberId() != null) {
+            messageService.sendSiteMessage(registration.getCaptainMemberId(), adminUserId, "MATCH", match.getId(), title, content);
+        }
+    }
 }

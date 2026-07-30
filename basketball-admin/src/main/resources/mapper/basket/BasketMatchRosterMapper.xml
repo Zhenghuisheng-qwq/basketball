@@ -54,4 +54,9 @@
         where ro.match_id = #{matchId} and ro.team_id = #{teamId} and ro.is_delete = 0
           and p.member_id is not null
     </select>
+
+    <select id="countByMatchIdAndPlayerId" resultType="int">
+        select count(1) from basket_match_roster
+        where match_id = #{matchId} and player_id = #{playerId} and is_delete = 0
+    </select>
 </mapper>

@@ -37,6 +37,8 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
     private static final int IS_CAPTAIN = 1;
     private static final int IS_STARTING = 1;
     private static final int REQUIRED_STARTING_COUNT = 5;
+    private static final int DEFAULT_MIN_ROSTER_COUNT = 5;
+    private static final int DEFAULT_MAX_ROSTER_COUNT = 8;
     private static final int DELETED = 1;
     private static final int ENABLED = 1;
     private static final String BIZ_TYPE_TEAM_REGISTRATION = "TEAM_REGISTRATION";
@@ -2055,10 +2057,7 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         Map<Long, Long> map = new HashMap<>();
         for (BasketTournamentRegistration registration : registrationDao.selectList(new LambdaQueryWrapper<BasketTournamentRegistration>()
                 .in(BasketTournamentRegistration::getSeasonId, seasonIds)
-                .in(BasketTournamentRegistration::getRegistrationStatus, Arrays.asList(
-                        TournamentRegistrationStatusEnum.SUBMITTED.getCode(),
-                        TournamentRegistrationStatusEnum.REVIEWING.getCode(),
-                        TournamentRegistrationStatusEnum.APPROVED.getCode()))
+                .eq(BasketTournamentRegistration::getRegistrationStatus, TournamentRegistrationStatusEnum.APPROVED.getCode())
                 .eq(BasketTournamentRegistration::getIsDelete, NOT_DELETED))) {
             map.merge(registration.getSeasonId(), 1L, Long::sum);
         }
@@ -2139,12 +2138,30 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
 
     private void validateRosterSize(List<TeamRegistrationRosterItemReq> items, BasketTournamentSeason season) {
         int size = items.size();
-        if (season.getMinRosterCount() != null && size < season.getMinRosterCount()) {
-            throw new ServiceException("阵容人数不足");
+        int minRoster = resolveMinRosterCount(season);
+        int maxRoster = resolveMaxRosterCount(season);
+        if (size < minRoster) {
+            throw new ServiceException("阵容人数不足，至少需要 " + minRoster + " 人");
         }
-        if (season.getMaxRosterCount() != null && size > season.getMaxRosterCount()) {
-            throw new ServiceException("阵容人数超出上限");
+        if (size > maxRoster) {
+            throw new ServiceException("阵容人数超出上限，最多 " + maxRoster + " 人");
         }
+    }
+
+    private int resolveMinRosterCount(BasketTournamentSeason season) {
+        if (season == null || season.getMinRosterCount() == null) {
+            return DEFAULT_MIN_ROSTER_COUNT;
+        }
+        return Math.max(DEFAULT_MIN_ROSTER_COUNT,
+                Math.min(season.getMinRosterCount(), DEFAULT_MAX_ROSTER_COUNT));
+    }
+
+    private int resolveMaxRosterCount(BasketTournamentSeason season) {
+        if (season == null || season.getMaxRosterCount() == null) {
+            return DEFAULT_MAX_ROSTER_COUNT;
+        }
+        return Math.min(DEFAULT_MAX_ROSTER_COUNT,
+                Math.max(season.getMaxRosterCount(), resolveMinRosterCount(season)));
     }
 
     private Map<Long, BasketTeamMember> loadActiveTeamMembers(Long teamId, Set<Long> teamMemberIds) {
@@ -2266,8 +2283,9 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         applyRegistrationPermissionFields(resp, registration, status);
         resp.setSubmittedTime(registration.getSubmittedTime());
         resp.setRegistrationEndTime(season == null ? null : season.getRegistrationEndTime());
-
         if (season != null) {
+            resp.setMinRosterCount(resolveMinRosterCount(season));
+            resp.setMaxRosterCount(resolveMaxRosterCount(season));
             BasketTournament tournament = tournamentDao.selectById(season.getTournamentId());
             resp.setTournamentName(tournament == null ? null : tournament.getTournamentName());
         }

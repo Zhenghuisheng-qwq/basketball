@@ -18,6 +18,8 @@ public interface BasketMatchMapper {
     List<MatchListVo> selectList(MatchQuery query);
     MatchDetailVo selectDetailById(Long id);
     BasketMatch selectById(Long id);
+
+    BasketMatch selectByIdForUpdate(Long id);
     int insert(BasketMatch match);
     int updateById(BasketMatch match);
     int softDelete(@Param("id") Long id, @Param("fromStatuses") List<Integer> fromStatuses);

@@ -77,9 +77,6 @@ export function validateRegistrationRoster(members: RosterValidationMember[]): R
   if (stats.starterCount !== CNPA_REQUIRED_STARTER_COUNT) {
     errors.push(`首发必须为 ${CNPA_REQUIRED_STARTER_COUNT} 人`)
   }
-  if (stats.benchCount < CNPA_MIN_BENCH_COUNT) {
-    errors.push(`替补至少需要 ${CNPA_MIN_BENCH_COUNT} 人`)
-  }
 
   for (const member of members) {
     if (member.certificationStatus !== APPROVED_CERT_STATUS) {

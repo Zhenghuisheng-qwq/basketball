@@ -44,6 +44,8 @@
         <el-descriptions-item label="时间段">
           {{ (ruleDetail.timeSlots || []).map(t => t.startTime).join('、') || '-' }}
         </el-descriptions-item>
+        <el-descriptions-item label="每槽容量">{{ ruleDetail.slotCapacity ?? 12 }} 场</el-descriptions-item>
+        <el-descriptions-item label="分配策略">{{ ruleDetail.allocationMode || 'FILL_FIRST' }}</el-descriptions-item>
         <el-descriptions-item label="说明" :span="2">{{ ruleDetail.remark || '常规赛单循环，对阵由策略生成，比赛时间来自配置表' }}</el-descriptions-item>
       </el-descriptions>
 

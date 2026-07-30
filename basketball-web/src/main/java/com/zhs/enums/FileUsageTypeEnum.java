@@ -7,7 +7,8 @@ public enum FileUsageTypeEnum {
     ACCOUNT_AVATAR("ACCOUNT_AVATAR", true),
     PLAYER_CERT_GAME_SCREENSHOT("PLAYER_CERT_GAME_SCREENSHOT", false),
     PLAYER_CERT_OTHER("PLAYER_CERT_OTHER", false),
-    TEAM_LOGO("TEAM_LOGO", true);
+    TEAM_LOGO("TEAM_LOGO", true),
+    MATCH_DATA_SCREENSHOT("MATCH_DATA_SCREENSHOT", false);
 
     private final String code;
     private final boolean publicAccess;

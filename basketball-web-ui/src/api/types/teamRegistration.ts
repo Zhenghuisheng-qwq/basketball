@@ -136,6 +136,8 @@ export interface TeamRegistrationDetailDto {
   canRequestRosterChange?: boolean
   submittedTime?: string
   registrationEndTime?: string
+  minRosterCount?: number
+  maxRosterCount?: number
   rosterItems?: TeamRegistrationPlayerItemDto[]
 }
 

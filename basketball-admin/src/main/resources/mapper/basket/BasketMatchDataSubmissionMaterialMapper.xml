@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketMatchDataSubmissionMaterialMapper">
+    <insert id="batchInsert">
+        insert into basket_match_data_submission_material
+        (submission_id, match_id, file_id, material_type, material_name, sort_no, material_status, remark,
+         create_time, update_time, is_delete)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.submissionId}, #{item.matchId}, #{item.fileId}, #{item.materialType}, #{item.materialName},
+             #{item.sortNo}, #{item.materialStatus}, #{item.remark}, #{item.createTime}, #{item.updateTime}, #{item.isDelete})
+        </foreach>
+    </insert>
+
+    <select id="selectBySubmissionId" resultType="com.zhs.basket.domain.BasketMatchDataSubmissionMaterial">
+        select id, submission_id as submissionId, match_id as matchId, file_id as fileId, material_type as materialType,
+               material_name as materialName, sort_no as sortNo, material_status as materialStatus, remark,
+               create_time as createTime, update_time as updateTime, is_delete as isDelete
+        from basket_match_data_submission_material
+        where submission_id = #{submissionId} and is_delete = 0
+        order by sort_no, id
+    </select>
+
+    <select id="selectVoBySubmissionId" resultType="com.zhs.basket.vo.MatchDataSubmissionMaterialVo">
+        select m.id, m.file_id as fileId, m.material_type as materialType, m.material_name as materialName,
+               fa.access_url as fileUrl, m.sort_no as sortNo
+        from basket_match_data_submission_material m
+        left join basket_file_asset fa on fa.id = m.file_id and fa.is_delete = 0
+        where m.submission_id = #{submissionId} and m.is_delete = 0
+        order by m.sort_no, m.id
+    </select>
+</mapper>

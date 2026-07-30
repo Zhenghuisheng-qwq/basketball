@@ -35,8 +35,7 @@ const operations = computed(() => [
     title: '比赛数据',
     desc: `${pendingTasks.value.matchDataTodoCount} 场待提交`,
     action: '查看比赛任务',
-    path: '',
-    mockOnly: true,
+    path: teamPath('/match-data'),
   },
   {
     key: 'transfer',
@@ -105,7 +104,7 @@ function go(path: string, mockOnly?: boolean) {
         <div v-for="item in operations" :key="item.key" class="event-team-op-card">
           <strong>{{ item.title }}</strong>
           <p>{{ item.desc }}</p>
-          <button type="button" class="account-btn-primary" @click="go(item.path, item.mockOnly)">
+          <button type="button" class="account-btn-primary" @click="go(item.path)">
             {{ item.action }}
           </button>
         </div>

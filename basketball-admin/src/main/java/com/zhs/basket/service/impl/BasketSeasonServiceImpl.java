@@ -139,7 +139,7 @@ public class BasketSeasonServiceImpl implements IBasketSeasonService {
         if (minRoster == null || minRoster < CnpaRosterConstants.MIN_ROSTER_COUNT) {
             throw new ServiceException("最小阵容人数不能少于 " + CnpaRosterConstants.MIN_ROSTER_COUNT);
         }
-        if (maxRoster != null && maxRoster > CnpaRosterConstants.MAX_ROSTER_COUNT) {
+        if (maxRoster == null || maxRoster > CnpaRosterConstants.MAX_ROSTER_COUNT) {
             throw new ServiceException("最大阵容人数不能超过 " + CnpaRosterConstants.MAX_ROSTER_COUNT);
         }
         if (maxRoster != null && maxRoster < minRoster) {

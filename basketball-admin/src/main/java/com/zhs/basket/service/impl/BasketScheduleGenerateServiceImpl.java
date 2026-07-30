@@ -21,7 +21,10 @@ import com.zhs.basket.vo.ScheduleGeneratePreviewVo;
 import com.zhs.basket.vo.ScheduleGenerateResultVo;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +40,7 @@ import java.util.stream.Collectors;
 @Service
 public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerateService {
 
+    private static final Logger log = LoggerFactory.getLogger(BasketScheduleGenerateServiceImpl.class);
     private static final Integer NOT_DELETED = 0;
 
     @Autowired private BasketScheduleRuleMapper ruleMapper;
@@ -48,10 +52,13 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
     @Autowired private BasketTournamentMapper tournamentMapper;
     @Autowired private BasketTournamentStageMapper stageMapper;
     @Autowired private BasketTournamentSeasonMapper seasonMapper;
+    @Autowired private BasketTeamSeasonProfileMapper eventTeamMapper;
+    @Autowired private BasketTournamentRegistrationMapper registrationMapper;
     @Autowired private ScheduleRuleStrategyFactory strategyFactory;
     @Autowired private ScheduleEventTeamSupport eventTeamSupport;
     @Autowired private ScheduleAuditSupport auditSupport;
     @Autowired private PlayerNoGenerator playerNoGenerator;
+    @Autowired @Lazy private IBasketScheduleGenerateService scheduleGenerateService;
 
     @Override
     public ScheduleEventContextVo getEventContext(Long eventId) {
@@ -109,8 +116,13 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
     public ScheduleGenerateResultVo generateDraftSchedule(ScheduleGenerateReq req) {
         validateGenerateRequest(req);
         Long eventId = req.getEventId();
+        // 赛事维度悲观锁，防止并发生成重复批次/比赛
+        seasonMapper.selectByIdForUpdate(eventId);
         assertNoPublishedSchedule(eventId);
 
+        if (batchMapper.countByEventId(eventId) > 0 && !Boolean.TRUE.equals(req.getForceRegenerate())) {
+            throw new ServiceException("当前赛事已有赛程生成批次，请先删除草稿后再重新生成");
+        }
         int existingCount = matchMapper.countBySeasonId(eventId);
         if (existingCount > 0) {
             if (!Boolean.TRUE.equals(req.getForceRegenerate())) {
@@ -213,6 +225,62 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         deleteDraftInternal(eventId, reason);
     }
 
+    @Override
+    public int autoGenerateEligibleSchedules() {
+        Date now = new Date();
+        BasketScheduleRule defaultRule = ruleMapper.selectByCodeAndVersion(
+                ScheduleRuleCodeEnum.REGULAR_ROUND_ROBIN.getCode(),
+                ScheduleRuleVersionEnum.V2.getCode());
+        if (defaultRule == null || defaultRule.getEnabled() == null || defaultRule.getEnabled() != 1) {
+            log.warn("未找到启用的 REGULAR_ROUND_ROBIN V2 规则，跳过自动排赛");
+            return 0;
+        }
+        List<Long> seasonIds = seasonMapper.selectRegistrationClosedSeasonIds(now);
+        int success = 0;
+        for (Long seasonId : seasonIds) {
+            if (!shouldAutoGenerate(seasonId, now)) {
+                continue;
+            }
+            try {
+                ScheduleGenerateReq req = new ScheduleGenerateReq();
+                req.setEventId(seasonId);
+                req.setRuleId(defaultRule.getId());
+                req.setRemark("报名截止后自动生成草稿赛程");
+                scheduleGenerateService.generateDraftSchedule(req);
+                success++;
+            } catch (Exception ex) {
+                log.warn("赛季 {} 自动草稿赛程生成失败: {}", seasonId, ex.getMessage());
+            }
+        }
+        return success;
+    }
+
+    private boolean shouldAutoGenerate(Long seasonId, Date now) {
+        BasketTournamentSeason season = seasonMapper.selectById(seasonId);
+        if (season == null || season.getRegistrationEndTime() == null) {
+            return false;
+        }
+        if (season.getRegistrationEndTime().after(now)) {
+            return false;
+        }
+        if (batchMapper.countPublishedByEventId(seasonId) > 0) {
+            return false;
+        }
+        if (batchMapper.countByEventId(seasonId) > 0) {
+            return false;
+        }
+        if (matchMapper.countBySeasonId(seasonId) > 0) {
+            return false;
+        }
+        if (eventTeamMapper.countActiveBySeasonId(seasonId) < 2) {
+            return false;
+        }
+        if (registrationMapper.countPendingAuditBySeasonId(seasonId) > 0) {
+            return false;
+        }
+        return true;
+    }
+
     private void deleteDraftInternal(Long eventId, String reason) {
         matchMapper.softDeleteDraftBySeasonId(eventId);
         batchMapper.softDeleteDraftByEventId(eventId);
@@ -280,6 +348,8 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
                 .map(BasketScheduleRuleWeekday::getWeekday).collect(Collectors.toList()));
         context.setTimeSlots(timeSlotMapper.selectByRuleId(rule.getId()).stream()
                 .map(BasketScheduleRuleTimeSlot::getStartTime).collect(Collectors.toList()));
+        context.setSlotCapacity(rule.getSlotCapacity());
+        context.setAllocationMode(rule.getAllocationMode());
         Date baseDate = req.getBaseDate();
         if (baseDate == null) {
             BasketTournamentSeason season = seasonMapper.selectById(req.getEventId());
@@ -292,6 +362,7 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
     private void validateGeneratedPlans(Long eventId, List<MatchPlan> plans) {
         Set<String> pairKeys = new HashSet<>();
         Map<Long, Set<Long>> teamsByTime = new HashMap<>();
+        Map<Integer, Set<Long>> teamsByRound = new HashMap<>();
         for (MatchPlan plan : plans) {
             if (plan.getHomeEventTeamId().equals(plan.getAwayEventTeamId())) {
                 throw new ServiceException("生成结果存在主客队相同比赛");
@@ -306,6 +377,12 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
             assertNoBatchTimeConflict(teamsByTime, plan);
             assertNoTimeConflict(null, plan.getHomeEventTeamId(), plan.getMatchTime());
             assertNoTimeConflict(null, plan.getAwayEventTeamId(), plan.getMatchTime());
+            if (plan.getRoundNo() != null) {
+                Set<Long> roundTeams = teamsByRound.computeIfAbsent(plan.getRoundNo(), key -> new HashSet<>());
+                if (!roundTeams.add(plan.getHomeEventTeamId()) || !roundTeams.add(plan.getAwayEventTeamId())) {
+                    throw new ServiceException("同一轮次存在重复参赛球队");
+                }
+            }
         }
     }
 

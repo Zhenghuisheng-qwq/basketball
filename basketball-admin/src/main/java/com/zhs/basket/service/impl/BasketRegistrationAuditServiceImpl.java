@@ -1,5 +1,6 @@
 package com.zhs.basket.service.impl;
 
+import com.zhs.basket.constant.CnpaRosterConstants;
 import com.zhs.basket.domain.*;
 import com.zhs.basket.enums.CaptainQualificationStatusEnum;
 import com.zhs.basket.enums.PlayerCertStatusEnum;
@@ -174,6 +175,7 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
         if (players == null || players.isEmpty()) {
             throw new ServiceException("报名阵容不能为空");
         }
+        validateRosterCountForApprove(reg, players);
         BasketCaptainQualification grant = captainQualificationMapper.selectActiveGrantForEvent(
                 reg.getCaptainMemberId(), reg.getTeamId(), reg.getSeasonId());
         if (grant == null || !Objects.equals(grant.getQualificationStatus(), CaptainQualificationStatusEnum.ACTIVE.getCode())) {
@@ -213,6 +215,21 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
             if (seasonRosterMapper.countActiveBySeasonAndPlayer(reg.getSeasonId(), player.getPlayerId()) > 0) {
                 throw new ServiceException("阵容成员已在该赛季其他球队正式参赛：" + player.getPlayerId());
             }
+        }
+    }
+
+    private void validateRosterCountForApprove(BasketTournamentRegistration reg,
+            List<BasketTournamentRegistrationPlayer> players) {
+        BasketTournamentSeason season = seasonMapper.selectById(reg.getSeasonId());
+        int minRoster = season != null && season.getMinRosterCount() != null
+                ? season.getMinRosterCount() : CnpaRosterConstants.MIN_ROSTER_COUNT;
+        int maxRoster = season != null && season.getMaxRosterCount() != null
+                ? season.getMaxRosterCount() : CnpaRosterConstants.MAX_ROSTER_COUNT;
+        minRoster = Math.max(CnpaRosterConstants.MIN_ROSTER_COUNT, Math.min(minRoster, CnpaRosterConstants.MAX_ROSTER_COUNT));
+        maxRoster = Math.min(CnpaRosterConstants.MAX_ROSTER_COUNT, Math.max(maxRoster, minRoster));
+        int size = players.size();
+        if (size < minRoster || size > maxRoster) {
+            throw new ServiceException("阵容人数不符合要求，需 " + minRoster + " 至 " + maxRoster + " 人");
         }
     }
 

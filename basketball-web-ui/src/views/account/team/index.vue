@@ -15,8 +15,9 @@ import { mapTeamRegistrationStatusText } from '@/utils/accountMappers'
 import {
   formatPositionLabel,
   CNPA_REQUIRED_STARTER_COUNT,
-  CNPA_MIN_BENCH_COUNT,
-  CNPA_TEAM_MAX_MEMBER_COUNT,
+  CNPA_MIN_ROSTER_COUNT,
+  CNPA_MAX_ROSTER_COUNT,
+  resolveSeasonRosterLimits,
   STARTING_POSITION_CODES,
 } from '@/constants/rosterRules'
 import { formatDateTime } from '@/utils/formatDate'
@@ -54,7 +55,14 @@ function formatPositionCell(code?: string, name?: string) {
   return name ? `${code} ${name}` : formatPositionLabel(code)
 }
 
-const teamMemberLimitHint = `${CNPA_TEAM_MAX_MEMBER_COUNT} 人（${CNPA_REQUIRED_STARTER_COUNT} 首发 + ${CNPA_MIN_BENCH_COUNT} 替补）`
+const teamMemberLimitHint = `${CNPA_MIN_ROSTER_COUNT}–${CNPA_MAX_ROSTER_COUNT} 人（固定 ${CNPA_REQUIRED_STARTER_COUNT} 首发）`
+
+const registrationRosterLimits = computed(() =>
+  resolveSeasonRosterLimits(
+    teamStore.registrationDetail?.minRosterCount,
+    teamStore.registrationDetail?.maxRosterCount,
+  ),
+)
 
 const route = useRoute()
 const router = useRouter()
@@ -114,7 +122,6 @@ const hasTeam = computed(() => teamStore.hasTeam)
 const canManageCurrentTeam = computed(() => teamStore.canManageCurrentTeam)
 const isCaptainMember = computed(() => teamStore.isCaptainMember)
 const isHistoricalCaptain = computed(() => teamStore.isHistoricalCaptain)
-const isRegularMember = computed(() => teamStore.isRegularMember)
 const canCreateTeam = computed(() => teamStore.canCreateTeam)
 const canInheritTeam = computed(() => teamStore.canInheritTeam)
 const canJoinTeam = computed(() => teamStore.canJoinTeam)
@@ -484,17 +491,6 @@ async function startRegistrationForSeason(season: AvailableSeasonItemDto) {
   }
 }
 
-async function openPlatformPicker(seasonId: string) {
-  pendingSeasonId.value = seasonId
-  selectedPlatformCode.value = ''
-  try {
-    await teamStore.loadSeasonPlatforms(seasonId)
-    showPlatformPicker.value = true
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载赛事平台失败')
-  }
-}
-
 async function confirmPlatformAndCreateDraft() {
   if (!teamId.value || !pendingSeasonId.value || !selectedPlatformCode.value) {
     ElMessage.warning('请选择报名平台')
@@ -558,8 +554,8 @@ function toggleRosterCandidate(candidate: import('@/api/types/teamRegistration')
     rosterSelections.value = rosterSelections.value.filter((item) => item.teamMemberId !== candidate.teamMemberId)
     return
   }
-  if (rosterSelections.value.length >= 8) {
-    ElMessage.warning('阵容最多 8 人')
+  if (rosterSelections.value.length >= registrationRosterLimits.value.maxRosterCount) {
+    ElMessage.warning(`阵容最多 ${registrationRosterLimits.value.maxRosterCount} 人`)
     return
   }
   rosterSelections.value.push({
@@ -629,8 +625,8 @@ async function saveRegistrationInfo() {
 async function saveRegistrationRoster() {
   if (!selectedRegistrationId.value) return
   const missingPositions = resolveRosterMissingPositions()
-  if (rosterSelections.value.length < 5) {
-    ElMessage.warning('阵容至少需要 5 人')
+  if (rosterSelections.value.length < registrationRosterLimits.value.minRosterCount) {
+    ElMessage.warning(`阵容至少需要 ${registrationRosterLimits.value.minRosterCount} 人`)
     return
   }
   if (missingPositions.length) {
@@ -899,7 +895,7 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             <div v-if="canManageCurrentTeam" class="account-field-row"><dt>认证状态</dt><dd>{{ teamAuditStatusText }}</dd></div>
             <div class="account-field-row"><dt>简称</dt><dd>{{ teamDetail.shortName || '-' }}</dd></div>
             <div class="account-field-row"><dt>地区</dt><dd>{{ teamDetail.regionName || '-' }}</dd></div>
-            <div class="account-field-row"><dt>成员</dt><dd>{{ teamDetail.currentMemberCount ?? 0 }}/{{ teamDetail.maxMemberCount ?? CNPA_TEAM_MAX_MEMBER_COUNT }}<span class="team-member-hint"> · 正式阵容 {{ teamMemberLimitHint }}</span></dd></div>
+            <div class="account-field-row"><dt>成员</dt><dd>{{ teamDetail.currentMemberCount ?? 0 }}/{{ teamDetail.maxMemberCount ?? CNPA_MAX_ROSTER_COUNT }}<span class="team-member-hint"> · 正式阵容 {{ teamMemberLimitHint }}</span></dd></div>
             <div class="account-field-row"><dt>我的角色</dt><dd>{{ teamDetail.myRole || (canManageCurrentTeam || isCaptainMember ? '队长' : '队员') }}</dd></div>
             <div class="account-field-row"><dt>创建时间</dt><dd>{{ formatDateTime(teamDetail.createTime) }}</dd></div>
             <div class="account-field-row"><dt>介绍</dt><dd>{{ teamDetail.description || '暂无' }}</dd></div>

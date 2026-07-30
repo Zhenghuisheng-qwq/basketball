@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketMatchDataSubmissionMapper">
+
+    <resultMap id="BasketMatchDataSubmissionResult" type="com.zhs.basket.domain.BasketMatchDataSubmission">
+        <id property="id" column="id"/>
+        <result property="submissionNo" column="submission_no"/>
+        <result property="matchId" column="match_id"/>
+        <result property="seasonId" column="season_id"/>
+        <result property="stageId" column="stage_id"/>
+        <result property="roundId" column="round_id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="platformCode" column="platform_code"/>
+        <result property="homeTeamId" column="home_team_id"/>
+        <result property="awayTeamId" column="away_team_id"/>
+        <result property="submitterTeamId" column="submitter_team_id"/>
+        <result property="submitterMemberId" column="submitter_member_id"/>
+        <result property="submitterPlayerId" column="submitter_player_id"/>
+        <result property="submitterRole" column="submitter_role"/>
+        <result property="versionNo" column="version_no"/>
+        <result property="previousSubmissionId" column="previous_submission_id"/>
+        <result property="homeScore" column="home_score"/>
+        <result property="awayScore" column="away_score"/>
+        <result property="winnerTeamId" column="winner_team_id"/>
+        <result property="submissionStatus" column="submission_status"/>
+        <result property="auditStatus" column="audit_status"/>
+        <result property="submittedTime" column="submitted_time"/>
+        <result property="reviewedTime" column="reviewed_time"/>
+        <result property="reviewedBy" column="reviewed_by"/>
+        <result property="reviewedByName" column="reviewed_by_name"/>
+        <result property="rejectReason" column="reject_reason"/>
+        <result property="auditRemark" column="audit_remark"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="submissionColumns">
+        id, submission_no, match_id, season_id, stage_id, round_id, group_id, platform_code,
+        home_team_id, away_team_id, submitter_team_id, submitter_member_id, submitter_player_id,
+        submitter_role, version_no, previous_submission_id, home_score, away_score, winner_team_id,
+        submission_status, audit_status, submitted_time, reviewed_time, reviewed_by, reviewed_by_name,
+        reject_reason, audit_remark, remark, create_time, update_time, is_delete
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_match_data_submission
+        (submission_no, match_id, season_id, stage_id, round_id, group_id, platform_code,
+         home_team_id, away_team_id, submitter_team_id, submitter_member_id, submitter_player_id,
+         submitter_role, version_no, previous_submission_id, home_score, away_score, winner_team_id,
+         submission_status, audit_status, submitted_time, reviewed_time, reviewed_by, reviewed_by_name,
+         reject_reason, audit_remark, remark, create_time, update_time, is_delete)
+        values
+        (#{submissionNo}, #{matchId}, #{seasonId}, #{stageId}, #{roundId}, #{groupId}, #{platformCode},
+         #{homeTeamId}, #{awayTeamId}, #{submitterTeamId}, #{submitterMemberId}, #{submitterPlayerId},
+         #{submitterRole}, #{versionNo}, #{previousSubmissionId}, #{homeScore}, #{awayScore}, #{winnerTeamId},
+         #{submissionStatus}, #{auditStatus}, #{submittedTime}, #{reviewedTime}, #{reviewedBy}, #{reviewedByName},
+         #{rejectReason}, #{auditRemark}, #{remark}, #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+
+    <select id="selectById" resultMap="BasketMatchDataSubmissionResult">
+        select <include refid="submissionColumns"/>
+        from basket_match_data_submission
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByIdForUpdate" resultMap="BasketMatchDataSubmissionResult">
+        select <include refid="submissionColumns"/>
+        from basket_match_data_submission
+        where id = #{id} and is_delete = 0
+        for update
+    </select>
+
+    <select id="selectLatestByMatchId" resultMap="BasketMatchDataSubmissionResult">
+        select <include refid="submissionColumns"/>
+        from basket_match_data_submission
+        where match_id = #{matchId} and is_delete = 0
+        order by version_no desc, id desc
+        limit 1
+    </select>
+
+    <select id="selectActiveByMatchId" resultMap="BasketMatchDataSubmissionResult">
+        select <include refid="submissionColumns"/>
+        from basket_match_data_submission
+        where match_id = #{matchId} and is_delete = 0
+          and submission_status in (1, 2)
+        order by id desc
+        limit 1
+    </select>
+
+    <select id="selectListForAudit" resultType="com.zhs.basket.vo.MatchDataSubmissionListVo">
+        select s.id as submissionId,
+               s.submission_no as submissionNo,
+               s.match_id as matchId,
+               m.match_no as matchNo,
+               s.season_id as seasonId,
+               sea.season_name as seasonName,
+               s.stage_id as stageId,
+               st.stage_name as stageName,
+               ht.team_name as homeTeamName,
+               at.team_name as awayTeamName,
+               s.home_score as homeScore,
+               s.away_score as awayScore,
+               stt.team_name as submitterTeamName,
+               ifnull(mp.nickname, concat('会员', s.submitter_member_id)) as submitterMemberName,
+               s.version_no as versionNo,
+               s.submission_status as submissionStatus,
+               s.audit_status as auditStatus,
+               s.submitted_time as submittedTime,
+               (select count(1) from basket_match_data_submission_material mat
+                 where mat.submission_id = s.id and mat.is_delete = 0) as materialCount,
+               0 as riskFlag
+        from basket_match_data_submission s
+        inner join basket_match m on m.id = s.match_id and m.is_delete = 0
+        left join basket_tournament_season sea on sea.id = s.season_id and sea.is_delete = 0
+        left join basket_tournament_stage st on st.id = s.stage_id and st.is_delete = 0
+        left join basket_team ht on ht.id = s.home_team_id and ht.is_delete = 0
+        left join basket_team at on at.id = s.away_team_id and at.is_delete = 0
+        left join basket_team stt on stt.id = s.submitter_team_id and stt.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = s.submitter_member_id and mp.is_delete = 0
+        where s.is_delete = 0
+        <if test="seasonId != null">and s.season_id = #{seasonId}</if>
+        <if test="stageId != null">and s.stage_id = #{stageId}</if>
+        <if test="groupId != null">and s.group_id = #{groupId}</if>
+        <if test="teamId != null">and (s.home_team_id = #{teamId} or s.away_team_id = #{teamId})</if>
+        <if test="matchId != null">and s.match_id = #{matchId}</if>
+        <if test="submissionStatus != null">and s.submission_status = #{submissionStatus}</if>
+        <if test="auditStatus != null and auditStatus != ''">and s.audit_status = #{auditStatus}</if>
+        order by s.submitted_time desc, s.id desc
+    </select>
+
+    <select id="countByMatchId" resultType="int">
+        select count(1) from basket_match_data_submission
+        where match_id = #{matchId} and is_delete = 0
+    </select>
+
+    <update id="updateStatusIfMatch">
+        update basket_match_data_submission
+        set submission_status = #{toSubmissionStatus},
+            audit_status = #{toAuditStatus},
+            reviewed_by = #{reviewedBy},
+            reviewed_by_name = #{reviewedByName},
+            reviewed_time = now(),
+            reject_reason = #{rejectReason},
+            audit_remark = #{auditRemark},
+            update_time = now()
+        where id = #{id}
+          and submission_status = #{fromSubmissionStatus}
+          and audit_status = #{fromAuditStatus}
+          and is_delete = 0
+    </update>
+
+    <select id="selectVersionsByMatchId" resultType="com.zhs.basket.vo.MatchDataSubmissionVersionVo">
+        select s.id as submissionId,
+               s.version_no as versionNo,
+               s.submission_status as submissionStatus,
+               s.audit_status as auditStatus,
+               stt.team_name as submitterTeamName,
+               ifnull(mp.nickname, concat('会员', s.submitter_member_id)) as submitterMemberName,
+               s.submitted_time as submittedTime,
+               s.reviewed_time as reviewedTime,
+               s.reject_reason as rejectReason,
+               case when s.submission_status in (1, 2) then 1 else 0 end as isCurrent
+        from basket_match_data_submission s
+        left join basket_team stt on stt.id = s.submitter_team_id and stt.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = s.submitter_member_id and mp.is_delete = 0
+        where s.match_id = #{matchId} and s.is_delete = 0
+        order by s.version_no desc, s.id desc
+    </select>
+</mapper>

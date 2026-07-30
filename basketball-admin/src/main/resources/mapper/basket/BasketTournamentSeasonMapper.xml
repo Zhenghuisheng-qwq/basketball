@@ -114,4 +114,12 @@
           and champion_team_id = #{championTeamId}
           and runner_up_team_id = #{runnerUpTeamId}
     </update>
+
+    <select id="selectRegistrationClosedSeasonIds" resultType="java.lang.Long">
+        select id from basket_tournament_season
+        where is_delete = 0
+          and registration_end_time is not null
+          and registration_end_time &lt;= #{now}
+        order by registration_end_time asc, id asc
+    </select>
 </mapper>

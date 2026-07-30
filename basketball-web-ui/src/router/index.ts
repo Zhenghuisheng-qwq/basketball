@@ -577,6 +577,54 @@ const router = createRouter({
 
         {
 
+          path: 'my-tournaments/:tournamentId/team/match-data',
+
+          name: 'AccountMatchDataList',
+
+          component: () => import('@/views/account/tournaments/MatchDataListView.vue'),
+
+          meta: { title: '我的比赛' },
+
+        },
+
+        {
+
+          path: 'my-tournaments/:tournamentId/team/match-data/:matchId/submit',
+
+          name: 'AccountMatchDataSubmit',
+
+          component: () => import('@/views/account/tournaments/MatchDataSubmitView.vue'),
+
+          meta: { title: '提交比赛数据' },
+
+        },
+
+        {
+
+          path: 'my-tournaments/:tournamentId/team/match-data/:matchId/resubmit',
+
+          name: 'AccountMatchDataResubmit',
+
+          component: () => import('@/views/account/tournaments/MatchDataSubmitView.vue'),
+
+          meta: { title: '重新提交比赛数据' },
+
+        },
+
+        {
+
+          path: 'my-tournaments/:tournamentId/team/match-data/:matchId/status',
+
+          name: 'AccountMatchDataStatus',
+
+          component: () => import('@/views/account/tournaments/MatchDataStatusView.vue'),
+
+          meta: { title: '比赛数据状态' },
+
+        },
+
+        {
+
           path: 'my-tournaments/:tournamentId/team/roster',
 
           name: 'AccountEventTeamRoster',
