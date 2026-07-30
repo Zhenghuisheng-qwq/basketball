@@ -625,6 +625,54 @@ const router = createRouter({
 
         {
 
+          path: 'my-tournaments/:tournamentId/team/match-data/:matchId/dispute',
+
+          name: 'AccountMatchDataDispute',
+
+          component: () => import('@/views/account/tournaments/MatchDataDisputeView.vue'),
+
+          meta: { title: '发起数据争议' },
+
+        },
+
+        {
+
+          path: 'my-tournaments/:tournamentId/team/match-data/:matchId/dispute-status',
+
+          name: 'AccountMatchDataDisputeStatus',
+
+          component: () => import('@/views/account/tournaments/MatchDataDisputeStatusView.vue'),
+
+          meta: { title: '争议状态' },
+
+        },
+
+        {
+
+          path: 'my-tournaments/:tournamentId/team/match-data/:matchId/exception',
+
+          name: 'AccountMatchExceptionSubmit',
+
+          component: () => import('@/views/account/tournaments/MatchExceptionSubmitView.vue'),
+
+          meta: { title: '异常比赛申请' },
+
+        },
+
+        {
+
+          path: 'my-tournaments/:tournamentId/team/match-data/:matchId/exception-status',
+
+          name: 'AccountMatchExceptionStatus',
+
+          component: () => import('@/views/account/tournaments/MatchExceptionStatusView.vue'),
+
+          meta: { title: '异常申请状态' },
+
+        },
+
+        {
+
           path: 'my-tournaments/:tournamentId/team/roster',
 
           name: 'AccountEventTeamRoster',

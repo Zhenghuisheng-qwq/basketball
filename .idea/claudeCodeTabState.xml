@@ -9,8 +9,8 @@
               <option name="provider" value="codex" />
               <option name="sessionId" value="019fb41c-2647-7e63-a11f-40c5600afe15" />
               <option name="cwd" value="D:\code\dz\basketball\scaffolding-v2" />
-              <option name="model" value="gpt-5.6-sol" />
-              <option name="permissionMode" value="default" />
+              <option name="model" value="gpt-5.6-terra" />
+              <option name="permissionMode" value="bypassPermissions" />
             </TabSessionState>
           </value>
         </entry>

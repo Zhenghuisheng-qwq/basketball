@@ -16,6 +16,7 @@ export interface PlayerMatchTaskItem {
   canViewStatus?: boolean
   actionText?: string
   statusText?: string
+  dataStatusText?: string
   rejectReason?: string
   submissionId?: string
 }

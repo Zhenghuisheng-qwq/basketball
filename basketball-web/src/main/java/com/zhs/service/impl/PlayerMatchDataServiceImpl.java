@@ -45,6 +45,7 @@ import com.zhs.service.IAccountFileService;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.IMPlayerMatchDataService;
 import com.zhs.service.support.BasketPublicConstants;
+import com.zhs.service.support.PlayerMatchDisputeExceptionSupport;
 import jakarta.annotation.Resource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -104,6 +105,8 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
     private IAccountFileService accountFileService;
     @Resource
     private ICaptainPermissionService captainPermissionService;
+    @Resource
+    private PlayerMatchDisputeExceptionSupport disputeExceptionSupport;
 
     @Override
     public IPage<PlayerMatchTaskResp> pageMyMatches(Long seasonId, Long stageId, Integer dataStatus,
@@ -490,12 +493,16 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         Map<Long, Set<Long>> rosterPlayerMap = loadRosterPlayerMap(match.getId());
         List<BasketMatchDataSubmissionPlayerStat> playerStats = new ArrayList<>();
         Map<Long, int[]> teamAgg = new HashMap<>();
-        teamAgg.put(match.getHomeTeamId(), new int[7]);
-        teamAgg.put(match.getAwayTeamId(), new int[7]);
+        teamAgg.put(match.getHomeTeamId(), new int[15]);
+        teamAgg.put(match.getAwayTeamId(), new int[15]);
+        Set<Long> playerIds = new HashSet<>();
         int totalPlayerPoints = 0;
         for (PlayerMatchDataSubmitReq.PlayerStatItem item : req.getPlayerStats()) {
             Long teamId = parseLongId(item.getTeamId(), "球队");
             Long playerId = parseLongId(item.getPlayerId(), "球员");
+            if (!playerIds.add(playerId)) {
+                throw new ServiceException("同一球员不能重复录入");
+            }
             if (!teamId.equals(match.getHomeTeamId()) && !teamId.equals(match.getAwayTeamId())) {
                 throw new ServiceException("球员所属球队无效");
             }
@@ -510,15 +517,24 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
             int[] agg = teamAgg.get(teamId);
             agg[0] += nvl(item.getPoints());
             agg[1] += nvl(item.getRebounds());
-            agg[2] += nvl(item.getAssists());
-            agg[3] += nvl(item.getSteals());
-            agg[4] += nvl(item.getBlocks());
-            agg[5] += nvl(item.getTurnovers());
-            agg[6] += nvl(item.getFouls());
+            agg[2] += nvl(item.getOffensiveRebounds());
+            agg[3] += nvl(item.getDefensiveRebounds());
+            agg[4] += nvl(item.getAssists());
+            agg[5] += nvl(item.getSteals());
+            agg[6] += nvl(item.getBlocks());
+            agg[7] += nvl(item.getTurnovers());
+            agg[8] += nvl(item.getFouls());
+            agg[9] += nvl(item.getFieldGoalsMade());
+            agg[10] += nvl(item.getFieldGoalsAttempted());
+            agg[11] += nvl(item.getThreePointsMade());
+            agg[12] += nvl(item.getThreePointsAttempted());
+            agg[13] += nvl(item.getFreeThrowsMade());
+            agg[14] += nvl(item.getFreeThrowsAttempted());
         }
         if (totalPlayerPoints != homeScore + awayScore) {
             throw new ServiceException("球员得分合计须等于比赛总得分");
         }
+        validateTeamPlayerAggregate(teamStatMap, teamAgg);
 
         Long memberId = UserContext.getRequiredMemberId();
         List<BasketMatchDataSubmissionMaterial> materials = new ArrayList<>();
@@ -629,6 +645,27 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         validateThreeWithinFg(item.getFieldGoalsMade(), item.getThreePointsMade(), "三分");
         validateTheoreticalPoints(item.getPoints(), item.getFieldGoalsMade(), item.getThreePointsMade(),
                 item.getFreeThrowsMade(), "球员");
+    }
+
+    private void validateTeamPlayerAggregate(Map<Long, BasketMatchDataSubmissionTeamStat> teamStatMap,
+                                             Map<Long, int[]> teamAgg) {
+        for (Map.Entry<Long, BasketMatchDataSubmissionTeamStat> entry : teamStatMap.entrySet()) {
+            BasketMatchDataSubmissionTeamStat ts = entry.getValue();
+            int[] agg = teamAgg.get(entry.getKey());
+            if (agg == null) {
+                continue;
+            }
+            if (nvl(ts.getPoints()) != agg[0] || nvl(ts.getRebounds()) != agg[1]
+                    || nvl(ts.getOffensiveRebounds()) != agg[2] || nvl(ts.getDefensiveRebounds()) != agg[3]
+                    || nvl(ts.getAssists()) != agg[4] || nvl(ts.getSteals()) != agg[5]
+                    || nvl(ts.getBlocks()) != agg[6] || nvl(ts.getTurnovers()) != agg[7]
+                    || nvl(ts.getFouls()) != agg[8] || nvl(ts.getFieldGoalsMade()) != agg[9]
+                    || nvl(ts.getFieldGoalsAttempted()) != agg[10] || nvl(ts.getThreePointsMade()) != agg[11]
+                    || nvl(ts.getThreePointsAttempted()) != agg[12] || nvl(ts.getFreeThrowsMade()) != agg[13]
+                    || nvl(ts.getFreeThrowsAttempted()) != agg[14]) {
+                throw new ServiceException("球队统计与球员汇总不一致");
+            }
+        }
     }
 
     private void validateShooting(Integer made, Integer attempted, String label) {
@@ -899,12 +936,44 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         resp.setAuditRemark(submission.getAuditRemark());
         resp.setSubmitterTeamId(String.valueOf(submission.getSubmitterTeamId()));
         resp.setSubmitterTeamName(teamNames.get(submission.getSubmitterTeamId()));
+        resp.setHomeTeamName(teamNames.get(match.getHomeTeamId()));
+        resp.setAwayTeamName(teamNames.get(match.getAwayTeamId()));
+        resp.setHomeScore(submission.getHomeScore());
+        resp.setAwayScore(submission.getAwayScore());
 
         boolean isCaptain = isCaptainOfTeam(memberId, submission.getSeasonId(), submission.getSubmitterTeamId());
         boolean rejected = Objects.equals(submission.getSubmissionStatus(), MatchDataSubmissionStatusEnum.REJECTED.getCode());
+        boolean approved = Objects.equals(submission.getSubmissionStatus(), MatchDataSubmissionStatusEnum.APPROVED.getCode());
         resp.setCanResubmit(isCaptain && rejected);
+        resp.setCanViewPublicData(approved || Objects.equals(match.getDataStatus(), BasketPublicConstants.DATA_CONFIRMED));
         resp.setStatusText(MatchDataSubmissionStatusEnum.fromCode(submission.getSubmissionStatus()).getDescription());
+        fillDisputeExceptionFields(resp, match, memberId);
         return resp;
+    }
+
+    private void fillDisputeExceptionFields(PlayerMatchDataStatusResp resp, BasketMatch match, Long memberId) {
+        boolean captain = isCaptainOfTeam(memberId, match.getSeasonId(), match.getHomeTeamId())
+                || isCaptainOfTeam(memberId, match.getSeasonId(), match.getAwayTeamId());
+
+        PlayerMatchDisputeExceptionSupport.DisputeAvailability disputeAvailability =
+                disputeExceptionSupport.evaluateDisputeAvailability(match, captain);
+        resp.setCanDispute(disputeAvailability.getCanDispute());
+        resp.setCannotDisputeReason(disputeAvailability.getCannotReason());
+        resp.setDisputeDeadlineTime(disputeAvailability.getDeadlineTime());
+        resp.setDisputeRemainingSeconds(disputeAvailability.getRemainingSeconds());
+        if (disputeAvailability.getCurrentDisputeId() != null) {
+            resp.setCurrentDisputeId(String.valueOf(disputeAvailability.getCurrentDisputeId()));
+        }
+        resp.setDisputeStatus(disputeAvailability.getCurrentDisputeStatus());
+
+        PlayerMatchDisputeExceptionSupport.ExceptionAvailability exceptionAvailability =
+                disputeExceptionSupport.evaluateExceptionAvailability(match, captain);
+        resp.setCanSubmitException(exceptionAvailability.getCanSubmitException());
+        resp.setCannotExceptionReason(exceptionAvailability.getCannotReason());
+        if (exceptionAvailability.getCurrentExceptionId() != null) {
+            resp.setCurrentExceptionId(String.valueOf(exceptionAvailability.getCurrentExceptionId()));
+        }
+        resp.setExceptionStatus(exceptionAvailability.getCurrentExceptionStatus());
     }
 
     private List<PlayerMatchDataSubmitReq.PeriodScoreItem> defaultRegularPeriods() {

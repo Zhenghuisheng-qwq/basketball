@@ -77,10 +77,34 @@
         </el-table>
 
         <el-divider content-position="left">材料</el-divider>
-        <el-table :data="detail.materials || []" size="small" border>
-          <el-table-column label="类型" prop="materialType" width="160" />
-          <el-table-column label="文件ID" prop="fileId" width="100" />
-          <el-table-column label="名称" prop="materialName" />
+        <div class="material-preview-list">
+          <div v-for="m in detail.materials || []" :key="m.fileId" class="material-preview-item">
+            <p>{{ m.materialType }} · {{ m.materialName || m.fileId }}</p>
+            <el-image
+              v-if="m.fileUrl"
+              :src="m.fileUrl"
+              :preview-src-list="[m.fileUrl]"
+              fit="cover"
+              style="width: 160px; height: 100px"
+            />
+            <span v-else class="text-muted">fileId: {{ m.fileId }}</span>
+          </div>
+        </div>
+
+        <el-divider content-position="left">版本历史</el-divider>
+        <el-table :data="detail.versions || []" size="small" border max-height="160">
+          <el-table-column label="版本" prop="versionNo" width="70" />
+          <el-table-column label="状态" prop="submissionStatus" width="90" />
+          <el-table-column label="提交时间" prop="submittedTime" width="170" />
+          <el-table-column label="驳回原因" prop="rejectReason" />
+        </el-table>
+
+        <el-divider content-position="left">审核记录</el-divider>
+        <el-table :data="detail.auditLogs || []" size="small" border max-height="160">
+          <el-table-column label="动作" prop="auditAction" width="100" />
+          <el-table-column label="状态" prop="auditStatus" width="100" />
+          <el-table-column label="审核人" prop="auditorName" width="120" />
+          <el-table-column label="时间" prop="auditTime" width="170" />
         </el-table>
 
         <el-form v-if="detail.canAudit" class="mt8">
@@ -209,4 +233,7 @@ onMounted(loadList)
 <style scoped>
 .mb8 { margin-bottom: 8px; }
 .mt8 { margin-top: 8px; }
+.material-preview-list { display: flex; flex-wrap: wrap; gap: 12px; }
+.material-preview-item { border: 1px solid #eee; padding: 8px; border-radius: 4px; }
+.text-muted { color: #999; font-size: 12px; }
 </style>

@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket;
 
 import com.zhs.basket.query.MatchDisputeQuery;
+import com.zhs.basket.req.MatchDisputeCorrectionReq;
 import com.zhs.basket.req.MatchDisputeCreateReq;
 import com.zhs.basket.req.MatchDisputeHandleReq;
 import com.zhs.basket.service.IBasketMatchDisputeService;
@@ -20,7 +21,7 @@ public class BasketMatchDisputeController extends BaseController {
     private IBasketMatchDisputeService disputeService;
 
     @PreAuthorize("@ss.hasPermi('basket:matchDispute:list')")
-    @GetMapping("/list")
+    @GetMapping({"/list", "/page"})
     public AjaxResult list(MatchDisputeQuery query) {
         return success(disputeService.list(query));
     }
@@ -28,7 +29,7 @@ public class BasketMatchDisputeController extends BaseController {
     @PreAuthorize("@ss.hasPermi('basket:matchDispute:query')")
     @GetMapping("/{id}")
     public AjaxResult detail(@PathVariable Long id) {
-        return success(disputeService.getById(id));
+        return success(disputeService.getDetail(id));
     }
 
     @PreAuthorize("@ss.hasPermi('basket:matchDispute:add')")
@@ -38,7 +39,7 @@ public class BasketMatchDisputeController extends BaseController {
         return success(disputeService.create(req));
     }
 
-    @PreAuthorize("@ss.hasPermi('basket:matchDispute:handle')")
+    @PreAuthorize("@ss.hasPermi('basket:matchDispute:reject')")
     @Log(title = "比赛数据争议", businessType = BusinessType.UPDATE)
     @PostMapping("/{id}/reject")
     public AjaxResult reject(@PathVariable Long id, @RequestBody MatchDisputeHandleReq req) {
@@ -46,11 +47,19 @@ public class BasketMatchDisputeController extends BaseController {
         return success();
     }
 
-    @PreAuthorize("@ss.hasPermi('basket:matchDispute:handle')")
+    @PreAuthorize("@ss.hasPermi('basket:matchDispute:uphold')")
     @Log(title = "比赛数据争议", businessType = BusinessType.UPDATE)
     @PostMapping("/{id}/uphold")
     public AjaxResult uphold(@PathVariable Long id, @RequestBody MatchDisputeHandleReq req) {
         disputeService.uphold(id, req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:matchDispute:correct')")
+    @Log(title = "比赛数据争议修正", businessType = BusinessType.UPDATE)
+    @PostMapping("/{id}/apply-correction")
+    public AjaxResult applyCorrection(@PathVariable Long id, @RequestBody MatchDisputeCorrectionReq req) {
+        disputeService.upholdAndCorrect(id, req);
         return success();
     }
 }

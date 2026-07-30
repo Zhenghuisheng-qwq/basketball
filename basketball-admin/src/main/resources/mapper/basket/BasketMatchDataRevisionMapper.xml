@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketMatchDataRevisionMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_match_data_revision
+        (revision_no, match_id, from_version, to_version, from_official_result_id, to_official_result_id,
+         revision_reason, revision_source, dispute_id, operator_id, auditor_id, effective_time, revision_status,
+         create_time, update_time, is_delete)
+        values
+        (#{revisionNo}, #{matchId}, #{fromVersion}, #{toVersion}, #{fromOfficialResultId}, #{toOfficialResultId},
+         #{revisionReason}, #{revisionSource}, #{disputeId}, #{operatorId}, #{auditorId}, #{effectiveTime}, #{revisionStatus},
+         #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+
+    <select id="selectById" resultType="com.zhs.basket.domain.BasketMatchDataRevision">
+        select * from basket_match_data_revision where id = #{id} and is_delete = 0
+    </select>
+</mapper>

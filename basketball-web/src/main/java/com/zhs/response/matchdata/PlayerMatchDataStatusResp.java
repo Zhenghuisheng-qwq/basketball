@@ -27,5 +27,22 @@ public class PlayerMatchDataStatusResp implements Serializable {
     private String submitterTeamId;
     private String submitterTeamName;
     private Boolean canResubmit;
+    private Boolean canViewPublicData;
     private String statusText;
+    private Integer homeScore;
+    private Integer awayScore;
+    private String homeTeamName;
+    private String awayTeamName;
+
+    private Boolean canDispute;
+    private String cannotDisputeReason;
+    private Date disputeDeadlineTime;
+    private Long disputeRemainingSeconds;
+    private String currentDisputeId;
+    private String disputeStatus;
+
+    private Boolean canSubmitException;
+    private String cannotExceptionReason;
+    private String currentExceptionId;
+    private String exceptionStatus;
 }

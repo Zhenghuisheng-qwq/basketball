@@ -14,4 +14,10 @@ public interface IBasketMatchDataSubmissionValidationService {
             List<BasketMatchDataSubmissionTeamStat> teamStats,
             List<BasketMatchDataSubmissionPlayerStat> playerStats,
             List<BasketMatchDataSubmissionMaterial> materials);
+
+    /** 正式数据修正校验（不要求材料）。 */
+    void validateCorrectionData(BasketMatchDataSubmission submission,
+            List<BasketMatchDataSubmissionPeriod> periods,
+            List<BasketMatchDataSubmissionTeamStat> teamStats,
+            List<BasketMatchDataSubmissionPlayerStat> playerStats);
 }

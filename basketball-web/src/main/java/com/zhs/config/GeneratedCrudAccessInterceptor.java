@@ -22,6 +22,8 @@ public class GeneratedCrudAccessInterceptor implements HandlerInterceptor {
                 || uri.startsWith("/basket/account/")
                 || uri.startsWith("/basket/player/certification/")
                 || uri.startsWith("/basket/player/match-data/")
+                || uri.startsWith("/basket/player/match-dispute/")
+                || uri.startsWith("/basket/player/match-exception/")
                 || uri.startsWith("/basket/team/")) {
             return true;
         }

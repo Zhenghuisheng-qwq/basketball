@@ -125,28 +125,51 @@ public class BasketMatch implements Serializable {
     @ApiModelProperty(value = "数据状态")
     private Integer dataStatus;
 
+    @ApiModelProperty(value = "结果状态")
+    private Integer resultStatus;
+
+    @ApiModelProperty(value = "比分已确认")
+    private Integer scoreConfirmed;
+
+    @ApiModelProperty(value = "数据版本")
+    private Integer dataVersion;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "来源比赛主键")
+    private Long originMatchId;
+
+    @ApiModelProperty(value = "结算锁定")
+    private Integer settlementLocked;
+
     @ApiModelProperty(value = "公开状态")
     private Integer publicStatus;
 
     @ApiModelProperty(value = "发布状态 0草稿 1已发布 2已下架")
+    @TableField(exist = false)
     private Integer publishStatus;
 
     @ApiModelProperty(value = "轮次号")
+    @TableField(exist = false)
     private Integer roundNo;
 
     @ApiModelProperty(value = "平台编码")
+    @TableField(exist = false)
     private String platformCode;
 
     @ApiModelProperty(value = "主队名称快照")
+    @TableField(exist = false)
     private String homeTeamNameSnapshot;
 
     @ApiModelProperty(value = "客队名称快照")
+    @TableField(exist = false)
     private String awayTeamNameSnapshot;
 
     @ApiModelProperty(value = "主队Logo快照")
+    @TableField(exist = false)
     private String homeTeamLogoSnapshot;
 
     @ApiModelProperty(value = "客队Logo快照")
+    @TableField(exist = false)
     private String awayTeamLogoSnapshot;
 
     @ApiModelProperty(value = "排序号")

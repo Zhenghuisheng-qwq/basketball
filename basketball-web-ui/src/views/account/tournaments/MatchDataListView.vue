@@ -73,11 +73,20 @@ onMounted(async () => {
         <div v-for="item in rows" :key="item.matchId" class="match-data-row">
           <div>
             <strong>{{ item.homeTeamName }} vs {{ item.awayTeamName }}</strong>
-            <p class="event-team-muted">{{ item.scheduledStartTime }} · {{ item.statusText }}</p>
+            <p class="event-team-muted">
+              {{ item.scheduledStartTime }} · {{ item.statusText }}
+              <span v-if="item.dataStatusText"> · {{ item.dataStatusText }}</span>
+            </p>
           </div>
-          <button type="button" class="account-btn-primary" @click="goAction(item)">
+          <button
+            v-if="item.canSubmit || item.canResubmit || item.canViewStatus"
+            type="button"
+            class="account-btn-primary"
+            @click="goAction(item)"
+          >
             {{ item.actionText || '查看' }}
           </button>
+          <span v-else class="event-team-muted">{{ item.actionText || '仅查看' }}</span>
         </div>
       </div>
     </AccountPanel>

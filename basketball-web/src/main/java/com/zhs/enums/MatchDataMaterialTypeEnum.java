@@ -4,7 +4,9 @@ import com.zhs.exception.ServiceException;
 
 public enum MatchDataMaterialTypeEnum {
 
-    RESULT_SCREENSHOT("RESULT_SCREENSHOT", "比赛结果截图");
+    RESULT_SCREENSHOT("RESULT_SCREENSHOT", "比赛结果截图"),
+    DISPUTE_EVIDENCE("DISPUTE_EVIDENCE", "争议证明材料"),
+    EXCEPTION_EVIDENCE("EXCEPTION_EVIDENCE", "异常证明材料");
 
     private final String code;
     private final String description;

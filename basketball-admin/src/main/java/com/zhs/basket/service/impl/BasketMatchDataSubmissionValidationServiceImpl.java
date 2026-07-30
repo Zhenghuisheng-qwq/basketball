@@ -51,6 +51,24 @@ public class BasketMatchDataSubmissionValidationServiceImpl implements IBasketMa
         validateMaterials(materials);
     }
 
+    @Override
+    public void validateCorrectionData(BasketMatchDataSubmission submission,
+            List<BasketMatchDataSubmissionPeriod> periods,
+            List<BasketMatchDataSubmissionTeamStat> teamStats,
+            List<BasketMatchDataSubmissionPlayerStat> playerStats) {
+        if (submission == null) {
+            throw new ServiceException("提交记录不存在");
+        }
+        int homeScore = nvl(submission.getHomeScore());
+        int awayScore = nvl(submission.getAwayScore());
+        if (homeScore < 0 || awayScore < 0) {
+            throw new ServiceException("比分不能为负数");
+        }
+        validatePeriods(submission, periods, homeScore, awayScore);
+        validateTeamStats(submission, teamStats, homeScore, awayScore);
+        validatePlayerStats(submission, playerStats, teamStats, homeScore, awayScore);
+    }
+
     private void validatePeriods(BasketMatchDataSubmission submission, List<BasketMatchDataSubmissionPeriod> periods,
             int homeScore, int awayScore) {
         if (CollectionUtils.isEmpty(periods) || periods.size() < 4) {

@@ -51,6 +51,16 @@
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
+    <!-- 联调库 basket_match 实际列（无 schedule_batch_id / snapshot 等扩展列） -->
+    <sql id="matchBaseColumns">
+        id, match_no, season_id, stage_id, round_id, group_id, venue_id,
+        home_team_id, away_team_id, scheduled_start_time, scheduled_end_time,
+        actual_start_time, actual_end_time, match_status, home_score, away_score,
+        winner_team_id, overtime_count, walkover_team_id, cancel_reason, data_status,
+        result_status, score_confirmed, data_version, origin_match_id, settlement_locked,
+        public_status, sort_no, create_time, update_time, is_delete
+    </sql>
+
     <sql id="listSelectColumns">
         m.id,
         m.match_no as matchNo,
@@ -117,26 +127,12 @@
     </select>
 
     <select id="selectById" resultMap="BasketMatchResult">
-        select id, match_no, schedule_batch_id, season_id, platform_code, rule_id, rule_code, rule_version,
-               stage_id, round_id, round_no, group_id, venue_id, home_team_id, away_team_id,
-               home_event_team_id, away_event_team_id, home_team_name_snapshot, away_team_name_snapshot,
-               home_team_logo_snapshot, away_team_logo_snapshot, scheduled_start_time, scheduled_end_time,
-               actual_start_time, actual_end_time, match_status, home_score, away_score, winner_team_id,
-               winner_event_team_id, overtime_count, walkover_team_id, cancel_reason, schedule_remark,
-               data_status, result_status, score_confirmed, data_version, origin_match_id, settlement_locked,
-               public_status, publish_status, sort_no, create_time, update_time, is_delete
+        select <include refid="matchBaseColumns" />
         from basket_match where id = #{id} and is_delete = 0
     </select>
 
     <select id="selectByIdForUpdate" resultMap="BasketMatchResult">
-        select id, match_no, schedule_batch_id, season_id, platform_code, rule_id, rule_code, rule_version,
-               stage_id, round_id, round_no, group_id, venue_id, home_team_id, away_team_id,
-               home_event_team_id, away_event_team_id, home_team_name_snapshot, away_team_name_snapshot,
-               home_team_logo_snapshot, away_team_logo_snapshot, scheduled_start_time, scheduled_end_time,
-               actual_start_time, actual_end_time, match_status, home_score, away_score, winner_team_id,
-               winner_event_team_id, overtime_count, walkover_team_id, cancel_reason, schedule_remark,
-               data_status, result_status, score_confirmed, data_version, origin_match_id, settlement_locked,
-               public_status, publish_status, sort_no, create_time, update_time, is_delete
+        select <include refid="matchBaseColumns" />
         from basket_match where id = #{id} and is_delete = 0 for update
     </select>
 

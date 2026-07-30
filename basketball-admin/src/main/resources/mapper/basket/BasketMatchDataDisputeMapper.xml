@@ -3,11 +3,13 @@
 <mapper namespace="com.zhs.basket.mapper.BasketMatchDataDisputeMapper">
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_match_data_dispute
-        (dispute_no, match_id, initiator_type, initiator_id, dispute_type, original_value, expected_value,
-         dispute_reason, evidence_file_ids, dispute_status, create_time, update_time, is_delete)
+        (dispute_no, match_id, submission_id, initiator_type, initiator_id, initiator_member_id, initiator_player_id,
+         initiator_team_id, dispute_type, original_value, expected_value, dispute_reason, evidence_file_ids,
+         dispute_status, dispute_deadline_time, create_time, update_time, is_delete)
         values
-        (#{disputeNo}, #{matchId}, #{initiatorType}, #{initiatorId}, #{disputeType}, #{originalValue}, #{expectedValue},
-         #{disputeReason}, #{evidenceFileIds}, #{disputeStatus}, #{createTime}, #{updateTime}, #{isDelete})
+        (#{disputeNo}, #{matchId}, #{submissionId}, #{initiatorType}, #{initiatorId}, #{initiatorMemberId}, #{initiatorPlayerId},
+         #{initiatorTeamId}, #{disputeType}, #{originalValue}, #{expectedValue}, #{disputeReason}, #{evidenceFileIds},
+         #{disputeStatus}, #{disputeDeadlineTime}, #{createTime}, #{updateTime}, #{isDelete})
     </insert>
 
     <select id="countPendingByMatchAndType" resultType="int">
@@ -16,12 +18,24 @@
           and dispute_status in ('PENDING','PROCESSING') and is_delete = 0
     </select>
 
+    <select id="countActiveByMatchId" resultType="int">
+        select count(*) from basket_match_data_dispute
+        where match_id = #{matchId} and dispute_status in ('PENDING','PROCESSING') and is_delete = 0
+    </select>
+
+    <select id="selectActiveByMatchId" resultType="com.zhs.basket.domain.BasketMatchDataDispute">
+        select * from basket_match_data_dispute
+        where match_id = #{matchId} and dispute_status in ('PENDING','PROCESSING') and is_delete = 0
+        order by create_time desc limit 1
+    </select>
+
     <select id="selectList" resultType="com.zhs.basket.vo.MatchDisputeListVo">
         select d.id, d.dispute_no as disputeNo, d.match_id as matchId, m.match_no as matchNo,
                d.dispute_type as disputeType, d.dispute_status as disputeStatus,
                d.initiator_type as initiatorType, d.initiator_id as initiatorId,
-               d.dispute_reason as disputeReason, d.create_time as createTime,
-               d.handle_time as handleTime, d.handle_result as handleResult
+               d.initiator_team_id as initiatorTeamId, d.dispute_reason as disputeReason,
+               d.create_time as createTime, d.handle_time as handleTime, d.handle_result as handleResult,
+               d.dispute_deadline_time as disputeDeadlineTime
         from basket_match_data_dispute d
         join basket_match m on m.id = d.match_id and m.is_delete = 0
         where d.is_delete = 0
@@ -38,9 +52,10 @@
 
     <update id="updateHandle">
         update basket_match_data_dispute
-        set dispute_status = #{toStatus}, handler_id = #{handlerId}, handle_time = now(),
-            handle_result = #{handleResult}, handle_remark = #{handleRemark}, revision_id = #{revisionId},
-            update_time = now()
+        set dispute_status = #{toStatus}, handler_id = #{handlerId}, processed_by = #{handlerId},
+            processed_by_name = #{handlerName}, handle_time = now(), processed_time = now(),
+            handle_result = #{handleResult}, handle_remark = #{handleRemark}, reject_reason = #{rejectReason},
+            revision_id = #{revisionId}, update_time = now()
         where id = #{id} and dispute_status = #{fromStatus} and is_delete = 0
     </update>
 </mapper>
