@@ -82,7 +82,7 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
         BasketMatch match = matchDao.selectById(matchId);
         if (match == null
                 || !Objects.equals(match.getIsDelete(), BasketPublicConstants.NOT_DELETED)
-                || !Objects.equals(match.getPublicStatus(), BasketPublicConstants.PUBLIC)) {
+                || !isPubliclyVisible(match)) {
             throw new ServiceException("比赛不存在或未公开");
         }
         publicSupport.requirePublicSeason(match.getSeasonId());
@@ -134,7 +134,8 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
         LambdaQueryWrapper<BasketMatch> wrapper = new LambdaQueryWrapper<BasketMatch>()
                 .eq(BasketMatch::getSeasonId, seasonId)
                 .eq(BasketMatch::getIsDelete, BasketPublicConstants.NOT_DELETED)
-                .eq(BasketMatch::getPublicStatus, BasketPublicConstants.PUBLIC)
+                .and(w -> w.eq(BasketMatch::getPublishStatus, BasketPublicConstants.PUBLISH_PUBLISHED)
+                        .or(x -> x.eq(BasketMatch::getPublishStatus, 0).eq(BasketMatch::getPublicStatus, BasketPublicConstants.PUBLIC)))
                 .eq(stageId != null, BasketMatch::getStageId, stageId)
                 .eq(groupId != null, BasketMatch::getGroupId, groupId);
         if (teamId != null) {
@@ -199,12 +200,18 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             vo.setActualEndTime(match.getActualEndTime());
 
             BasketTeam home = teamMap.get(match.getHomeTeamId());
-            if (home != null) {
+            if (homeTeamNameFromSnapshot(match) != null) {
+                vo.setHomeTeamName(homeTeamNameFromSnapshot(match));
+                vo.setHomeTeamLogoUrl(homeTeamLogoFromSnapshot(match));
+            } else if (home != null) {
                 vo.setHomeTeamName(home.getTeamName());
                 vo.setHomeTeamLogoUrl(logoMap.get(home.getLogoFileId()));
             }
             BasketTeam away = teamMap.get(match.getAwayTeamId());
-            if (away != null) {
+            if (awayTeamNameFromSnapshot(match) != null) {
+                vo.setAwayTeamName(awayTeamNameFromSnapshot(match));
+                vo.setAwayTeamLogoUrl(awayTeamLogoFromSnapshot(match));
+            } else if (away != null) {
                 vo.setAwayTeamName(away.getTeamName());
                 vo.setAwayTeamLogoUrl(logoMap.get(away.getLogoFileId()));
             }
@@ -223,6 +230,30 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             vos.add(vo);
         }
         return vos;
+    }
+
+    private boolean isPubliclyVisible(BasketMatch match) {
+        if (Objects.equals(match.getPublishStatus(), BasketPublicConstants.PUBLISH_PUBLISHED)) {
+            return true;
+        }
+        return Objects.equals(match.getPublishStatus(), 0)
+                && Objects.equals(match.getPublicStatus(), BasketPublicConstants.PUBLIC);
+    }
+
+    private String homeTeamNameFromSnapshot(BasketMatch match) {
+        return match.getHomeTeamNameSnapshot();
+    }
+
+    private String awayTeamNameFromSnapshot(BasketMatch match) {
+        return match.getAwayTeamNameSnapshot();
+    }
+
+    private String homeTeamLogoFromSnapshot(BasketMatch match) {
+        return match.getHomeTeamLogoSnapshot();
+    }
+
+    private String awayTeamLogoFromSnapshot(BasketMatch match) {
+        return match.getAwayTeamLogoSnapshot();
     }
 
     private List<PublicMatchTeamStatVo> loadTeamStats(BasketMatch match) {

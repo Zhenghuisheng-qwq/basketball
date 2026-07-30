@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketScheduleRuleMapper">
+    <select id="selectEnabledList" resultType="com.zhs.basket.vo.ScheduleRuleListVo">
+        select id, rule_name as ruleName, rule_code as ruleCode, rule_version as ruleVersion,
+               event_type as eventType, platform_code as platformCode, enabled, remark
+        from basket_schedule_rule
+        where is_delete = 0 and enabled = 1
+        order by id
+    </select>
+
+    <select id="selectById" resultType="com.zhs.basket.domain.BasketScheduleRule">
+        select * from basket_schedule_rule where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectDetailById" resultType="com.zhs.basket.vo.ScheduleRuleDetailVo">
+        select id, rule_name as ruleName, rule_code as ruleCode, rule_version as ruleVersion,
+               event_type as eventType, platform_code as platformCode, enabled, remark
+        from basket_schedule_rule
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByCodeAndVersion" resultType="com.zhs.basket.domain.BasketScheduleRule">
+        select * from basket_schedule_rule
+        where rule_code = #{ruleCode} and rule_version = #{ruleVersion} and is_delete = 0
+        limit 1
+    </select>
+</mapper>

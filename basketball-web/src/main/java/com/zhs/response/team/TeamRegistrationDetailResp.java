@@ -74,6 +74,18 @@ public class TeamRegistrationDetailResp implements Serializable {
     @ApiModelProperty("是否可删除草稿")
     private Boolean canDeleteDraft;
 
+    @ApiModelProperty("阵容是否已锁定")
+    private Boolean rosterLocked;
+
+    @ApiModelProperty("阵容锁定状态文案")
+    private String rosterLockStatusText;
+
+    @ApiModelProperty("阵容锁定提示")
+    private String rosterLockedHint;
+
+    @ApiModelProperty("是否可申请阵容变更（预留）")
+    private Boolean canRequestRosterChange;
+
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @ApiModelProperty("提交时间")

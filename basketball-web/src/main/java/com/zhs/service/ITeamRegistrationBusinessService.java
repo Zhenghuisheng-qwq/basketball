@@ -1,11 +1,13 @@
 package com.zhs.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.zhs.request.account.MyEventsSeasonPageQuery;
 import com.zhs.request.team.TeamRegistrationDraftReq;
 import com.zhs.request.team.TeamRegistrationRemindReq;
 import com.zhs.request.team.TeamRegistrationRosterReq;
 import com.zhs.request.team.TeamRegistrationUpdateReq;
 import com.zhs.request.team.TeamRegistrationWithdrawReq;
+import com.zhs.response.account.CompetitionSeasonOptionResp;
 import com.zhs.response.account.MyEventsContextResp;
 import com.zhs.response.team.AvailableSeasonItemResp;
 import com.zhs.response.team.AvailableSeasonPageResp;
@@ -22,7 +24,9 @@ public interface ITeamRegistrationBusinessService {
 
     MyEventsContextResp getMyEventsContext();
 
-    AvailableSeasonPageResp pageMyEventsSeasons(Integer currentPage, Integer pageSize);
+    AvailableSeasonPageResp pageMyEventsSeasons(MyEventsSeasonPageQuery query);
+
+    List<CompetitionSeasonOptionResp> listMyEventsCompetitionSeasonOptions();
 
     AvailableSeasonPageResp pageAvailableSeasons(String teamId, Integer currentPage, Integer pageSize);
 

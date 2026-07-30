@@ -32,7 +32,7 @@ export function getBannerCopy(tab: string, roleMode?: MyEventsRoleMode): { title
   if (roleMode === 'NO_TEAM') {
     return {
       title: '当前开放赛事',
-      description: '你当前还未加入球队。请先加入球队，之后可由队长统一报名赛事。',
+      description: '你可以查看当前公开赛事。报名操作由具备对应赛事资格的队长完成。',
     }
   }
   if (roleMode === 'TEAM_MEMBER') {
@@ -50,7 +50,7 @@ export function getBannerCopy(tab: string, roleMode?: MyEventsRoleMode): { title
     }
     return {
       title: '当前开放赛事',
-      description: '你当前是球队成员，可查看赛事信息、球队报名状态和自己的参赛阵容。赛事报名由队长统一操作。',
+      description: '你当前是球队成员，可查看球队报名状态。赛事报名由队长统一操作。',
     }
   }
   if (roleMode === 'TEAM_CAPTAIN') {
@@ -68,7 +68,7 @@ export function getBannerCopy(tab: string, roleMode?: MyEventsRoleMode): { title
     }
     return {
       title: '当前开放赛事',
-      description: '你当前拥有有效队长权限，可代表球队报名授权赛事并提交阵容。',
+      description: '你可以查看全部赛事，只有已获得报名资格的赛事可以报名。',
     }
   }
   return getBannerCopyLegacy(tab)
@@ -95,7 +95,7 @@ function getBannerCopyLegacy(tab: string): { title: string; description: string 
 
 export function getFooterNote(tab: string, roleMode?: MyEventsRoleMode): string {
   if (roleMode === 'NO_TEAM') {
-    return '加入球队后，赛事报名由队长统一操作。'
+    return '加入球队后，可由队长统一报名赛事。'
   }
   if (roleMode === 'TEAM_MEMBER') {
     if (tab === 'applications') {

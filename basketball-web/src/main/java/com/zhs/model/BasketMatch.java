@@ -128,6 +128,27 @@ public class BasketMatch implements Serializable {
     @ApiModelProperty(value = "公开状态")
     private Integer publicStatus;
 
+    @ApiModelProperty(value = "发布状态 0草稿 1已发布 2已下架")
+    private Integer publishStatus;
+
+    @ApiModelProperty(value = "轮次号")
+    private Integer roundNo;
+
+    @ApiModelProperty(value = "平台编码")
+    private String platformCode;
+
+    @ApiModelProperty(value = "主队名称快照")
+    private String homeTeamNameSnapshot;
+
+    @ApiModelProperty(value = "客队名称快照")
+    private String awayTeamNameSnapshot;
+
+    @ApiModelProperty(value = "主队Logo快照")
+    private String homeTeamLogoSnapshot;
+
+    @ApiModelProperty(value = "客队Logo快照")
+    private String awayTeamLogoSnapshot;
+
     @ApiModelProperty(value = "排序号")
     private Integer sortNo;
 

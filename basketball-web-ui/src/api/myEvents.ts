@@ -1,13 +1,19 @@
 import request from '@/api/request'
 import type { ApiResult } from '@/api/types/common'
 import type { AvailableSeasonPageDto } from '@/api/types/teamRegistration'
-import type { MyEventsContextDto } from '@/api/types/myEvents'
+import type { CompetitionSeasonOptionDto, MyEventsContextDto, MyEventsSeasonPageQuery } from '@/api/types/myEvents'
 
 export function getMyEventsContext() {
   return request.get<any, ApiResult<MyEventsContextDto>>('/basket/account/my-events/context')
 }
 
-export function getMyEventsSeasonPage(params?: { currentPage?: number; pageSize?: number }) {
+export function getMyEventsCompetitionSeasonOptions() {
+  return request.get<any, ApiResult<CompetitionSeasonOptionDto[]>>(
+    '/basket/account/my-events/competition-season/options',
+  )
+}
+
+export function getMyEventsSeasonPage(params?: MyEventsSeasonPageQuery) {
   return request.get<any, ApiResult<AvailableSeasonPageDto>>('/basket/account/my-events/season/page', {
     params,
   })

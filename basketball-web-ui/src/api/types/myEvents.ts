@@ -50,3 +50,29 @@ export type MyEventsActionCode =
   | 'VIEW_REGISTRATION'
   | 'MANAGE_REGISTRATION'
   | 'DISABLED'
+
+export interface CompetitionSeasonOptionDto {
+  seasonId: string | number
+  seasonName: string
+  seasonYear?: number
+}
+
+export interface MyEventsSeasonFilterValues {
+  eventName: string
+  seasonId: string
+  platformCode: string
+  status: string
+  signupTimeRange: [string, string] | null
+}
+
+export interface MyEventsSeasonPageQuery {
+  eventName?: string
+  seasonId?: string | number
+  platformCode?: string
+  status?: string
+  startTime?: string
+  endTime?: string
+  pageNum?: number
+  pageSize?: number
+  currentPage?: number
+}

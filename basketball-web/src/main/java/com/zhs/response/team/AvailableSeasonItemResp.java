@@ -18,11 +18,23 @@ public class AvailableSeasonItemResp implements Serializable {
     @ApiModelProperty("运营赛季主键")
     private String seasonId;
 
+    @ApiModelProperty("运营执行层主键（同 seasonId）")
+    private String operationalSeasonId;
+
     @ApiModelProperty("运营赛季编号")
     private String seasonNo;
 
-    @ApiModelProperty("运营赛季名称")
+    @ApiModelProperty("顶层赛季展示名称，如 2026赛季")
     private String seasonName;
+
+    @ApiModelProperty("运营赛季名称（如常规赛阶段名）")
+    private String operationalSeasonName;
+
+    @ApiModelProperty("赛事类型编码")
+    private String eventType;
+
+    @ApiModelProperty("赛事类型名称")
+    private String eventTypeName;
 
     @JsonSerialize(using = com.fasterxml.jackson.databind.ser.std.ToStringSerializer.class)
     @ApiModelProperty("所属顶层赛季主键")
@@ -52,14 +64,23 @@ public class AvailableSeasonItemResp implements Serializable {
     @ApiModelProperty("报名状态：NOT_STARTED/OPEN/CLOSED/ENDED")
     private String registrationStatus;
 
-    @ApiModelProperty("赛事状态（同 registrationStatus）")
+    @ApiModelProperty("赛事状态编码")
     private String eventStatus;
+
+    @ApiModelProperty("赛事状态展示文案")
+    private String eventStatusName;
 
     @ApiModelProperty("球队主键")
     private String teamId;
 
+    @ApiModelProperty("当前用户所属球队主键")
+    private String userTeamId;
+
     @ApiModelProperty("球队名称")
     private String teamName;
+
+    @ApiModelProperty("当前用户所属球队名称")
+    private String userTeamName;
 
     @ApiModelProperty("球队认证状态")
     private Integer teamCertificationStatus;
@@ -89,8 +110,18 @@ public class AvailableSeasonItemResp implements Serializable {
 
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @ApiModelProperty("报名开始时间（别名 signupStartTime）")
+    private Date signupStartTime;
+
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @ApiModelProperty("报名结束时间")
     private Date registrationEndTime;
+
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @ApiModelProperty("报名结束时间（别名 signupEndTime）")
+    private Date signupEndTime;
 
     @ApiModelProperty("是否已存在报名")
     private Boolean hasRegistration;
@@ -128,8 +159,20 @@ public class AvailableSeasonItemResp implements Serializable {
     @ApiModelProperty("我的阵容状态文案")
     private String userRosterStatusText;
 
+    @ApiModelProperty("我的阵容状态（别名 myRosterStatus）")
+    private String myRosterStatus;
+
+    @ApiModelProperty("我的阵容状态文案（别名 myRosterStatusName）")
+    private String myRosterStatusName;
+
     @ApiModelProperty("当前用户是否对该赛事有有效队长授权")
     private Boolean hasActiveCaptainGrantForEvent;
+
+    @ApiModelProperty("当前用户是否具备该赛事队长授权（别名 hasCaptainGrant）")
+    private Boolean hasCaptainGrant;
+
+    @ApiModelProperty("队长授权状态编码")
+    private String captainGrantStatus;
 
     @ApiModelProperty("队长授权状态文案")
     private String captainGrantStatusText;
@@ -142,17 +185,35 @@ public class AvailableSeasonItemResp implements Serializable {
     @ApiModelProperty("球队报名状态文案")
     private String teamRegistrationStatusText;
 
+    @ApiModelProperty("球队报名状态编码")
+    private String teamRegistrationStatus;
+
+    @ApiModelProperty("球队报名状态文案（别名 teamRegistrationStatusName）")
+    private String teamRegistrationStatusName;
+
+    @ApiModelProperty("当前用户我的状态文案（未加入球队等）")
+    private String userMembershipStatusText;
+
     @ApiModelProperty("不可操作原因（同 cannotRegisterReason）")
     private String disabledReason;
 
     @ApiModelProperty("用户球队角色")
     private String userTeamRole;
 
+    @ApiModelProperty("用户在球队中的角色（别名 userRoleInTeam）")
+    private String userRoleInTeam;
+
+    @ApiModelProperty("当前用户是否为队长")
+    private Boolean isCaptain;
+
     @ApiModelProperty("操作编码")
     private String actionCode;
 
     @ApiModelProperty("操作按钮文案")
     private String actionText;
+
+    @ApiModelProperty("操作类型（别名 operationType）")
+    private String operationType;
 
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")

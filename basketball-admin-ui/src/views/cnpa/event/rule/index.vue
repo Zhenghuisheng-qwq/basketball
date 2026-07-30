@@ -2,8 +2,8 @@
   <div class="app-container">
     <el-form :inline="true" label-width="88px" class="mb8">
       <el-form-item label="所属赛事">
-        <el-select v-model="selectedTournamentId" placeholder="请选择赛事" filterable style="width: 260px" @change="handleTournamentChange">
-          <el-option v-for="item in tournamentOptions" :key="item.id" :label="item.tournamentName" :value="item.id" />
+        <el-select v-model="selectedTournamentId" placeholder="请选择赛事" filterable style="width: 360px" @change="handleTournamentChange">
+          <el-option v-for="item in tournamentOptions" :key="item.id" :label="formatEventOptionLabel(item)" :value="item.id" />
         </el-select>
       </el-form-item>
       <el-form-item label="所属赛季">
@@ -73,6 +73,7 @@
 import { addTournamentRule, delTournamentRule, listTournamentRule, updateTournamentRule } from '@/api/basket/tournamentRule'
 import { listTournament } from '@/api/basket/tournament'
 import type { TournamentListItem, TournamentRule, TournamentRuleCreateReq } from '@/types'
+import { formatEventOptionLabel } from '@/types'
 
 const { proxy } = getCurrentInstance()
 

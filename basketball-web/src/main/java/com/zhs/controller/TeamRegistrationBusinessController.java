@@ -1,11 +1,13 @@
 package com.zhs.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.zhs.request.account.MyEventsSeasonPageQuery;
 import com.zhs.request.team.TeamRegistrationDraftReq;
 import com.zhs.request.team.TeamRegistrationRemindReq;
 import com.zhs.request.team.TeamRegistrationRosterReq;
 import com.zhs.request.team.TeamRegistrationUpdateReq;
 import com.zhs.request.team.TeamRegistrationWithdrawReq;
+import com.zhs.response.account.CompetitionSeasonOptionResp;
 import com.zhs.response.account.MyEventsContextResp;
 import com.zhs.response.team.AvailableSeasonItemResp;
 import com.zhs.response.team.AvailableSeasonPageResp;
@@ -70,9 +72,14 @@ public class TeamRegistrationBusinessController {
 
     @ApiOperation("我的赛事-公开赛事分页")
     @GetMapping("/basket/account/my-events/season/page")
-    public R<AvailableSeasonPageResp> pageMyEventsSeasons(@RequestParam(required = false) Integer currentPage,
-                                                          @RequestParam(required = false) Integer pageSize) {
-        return R.ok(teamRegistrationBusinessService.pageMyEventsSeasons(currentPage, pageSize));
+    public R<AvailableSeasonPageResp> pageMyEventsSeasons(MyEventsSeasonPageQuery query) {
+        return R.ok(teamRegistrationBusinessService.pageMyEventsSeasons(query));
+    }
+
+    @ApiOperation("我的赛事-顶层赛季筛选项")
+    @GetMapping("/basket/account/my-events/competition-season/options")
+    public R<java.util.List<CompetitionSeasonOptionResp>> listMyEventsCompetitionSeasonOptions() {
+        return R.ok(teamRegistrationBusinessService.listMyEventsCompetitionSeasonOptions());
     }
 
     @ApiOperation("我的赛事页面身份上下文")

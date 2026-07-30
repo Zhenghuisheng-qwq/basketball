@@ -2,8 +2,8 @@
   <div class="app-container">
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="88px">
       <el-form-item label="所属赛事">
-        <el-select v-model="filterTournamentId" placeholder="请选择赛事" filterable clearable style="width: 200px" @change="handleTournamentFilterChange">
-          <el-option v-for="item in tournamentOptions" :key="item.id" :label="item.tournamentName" :value="item.id" />
+        <el-select v-model="filterTournamentId" placeholder="请选择赛事" filterable clearable style="width: 280px" @change="handleTournamentFilterChange">
+          <el-option v-for="item in tournamentOptions" :key="item.id" :label="formatEventOptionLabel(item)" :value="item.id" />
         </el-select>
       </el-form-item>
       <el-form-item label="所属赛季">
@@ -228,7 +228,7 @@ import type {
   StageQuery,
   TournamentListItem
 } from '@/types'
-import { ROUND_STATUS_OPTIONS, STAGE_STATUS_OPTIONS } from '@/types'
+import { ROUND_STATUS_OPTIONS, STAGE_STATUS_OPTIONS, formatEventOptionLabel } from '@/types'
 
 const { proxy } = getCurrentInstance()
 

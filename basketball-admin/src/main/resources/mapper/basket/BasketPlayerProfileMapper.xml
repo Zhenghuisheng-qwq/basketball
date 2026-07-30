@@ -54,6 +54,10 @@
           )
         order by p.certified_time desc
     </select>
+    <select id="selectAvatarFileIdByMemberId" resultType="java.lang.Long">
+        select avatar_file_id from basket_member_profile
+        where member_id = #{memberId} and is_delete = 0 limit 1
+    </select>
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_player_profile (member_id, player_no, game_terminal, game_account, game_nickname, position_code, dominant_hand, height_cm, weight_kg, current_team_id, certification_status, player_status, certified_time, profile_visible, create_time, update_time, is_delete)
         values (#{memberId}, #{playerNo}, #{gameTerminal}, #{gameAccount}, #{gameNickname}, #{positionCode}, #{dominantHand}, #{heightCm}, #{weightKg}, #{currentTeamId}, #{certificationStatus}, #{playerStatus}, #{certifiedTime}, #{profileVisible}, #{createTime}, #{updateTime}, #{isDelete})

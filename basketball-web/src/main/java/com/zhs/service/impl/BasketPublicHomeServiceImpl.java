@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -88,21 +89,48 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
     @Override
     public List<PublicMatchItemVo> listRecentMatches(Integer limit) {
         int size = normalizeLimit(limit);
-        List<BasketMatch> matches = matchDao.selectList(new LambdaQueryWrapper<BasketMatch>()
+        Date now = new Date();
+
+        List<BasketMatch> upcoming = matchDao.selectList(new LambdaQueryWrapper<BasketMatch>()
                 .eq(BasketMatch::getIsDelete, BasketPublicConstants.NOT_DELETED)
-                .eq(BasketMatch::getPublicStatus, BasketPublicConstants.PUBLIC)
+                .and(w -> w.eq(BasketMatch::getPublishStatus, BasketPublicConstants.PUBLISH_PUBLISHED)
+                        .or(x -> x.eq(BasketMatch::getPublishStatus, 0).eq(BasketMatch::getPublicStatus, BasketPublicConstants.PUBLIC)))
+                .in(BasketMatch::getMatchStatus, BasketPublicConstants.MATCH_SCHEDULED, 4)
+                .ge(BasketMatch::getScheduledStartTime, now)
+                .orderByAsc(BasketMatch::getScheduledStartTime)
+                .orderByAsc(BasketMatch::getSortNo)
+                .orderByAsc(BasketMatch::getId)
+                .last("limit " + size));
+
+        List<BasketMatch> finished = matchDao.selectList(new LambdaQueryWrapper<BasketMatch>()
+                .eq(BasketMatch::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .and(w -> w.eq(BasketMatch::getPublishStatus, BasketPublicConstants.PUBLISH_PUBLISHED)
+                        .or(x -> x.eq(BasketMatch::getPublishStatus, 0).eq(BasketMatch::getPublicStatus, BasketPublicConstants.PUBLIC)))
                 .eq(BasketMatch::getMatchStatus, BasketPublicConstants.MATCH_FINISHED)
-                .eq(BasketMatch::getDataStatus, BasketPublicConstants.DATA_CONFIRMED)
                 .orderByDesc(BasketMatch::getActualEndTime)
                 .orderByDesc(BasketMatch::getScheduledStartTime)
                 .orderByDesc(BasketMatch::getId)
-                .last("limit " + (size * 3)));
-        if (CollectionUtils.isEmpty(matches)) {
+                .last("limit " + size));
+
+        List<BasketMatch> merged = new java.util.ArrayList<>();
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+        for (BasketMatch match : upcoming) {
+            if (seen.add(match.getId())) {
+                merged.add(match);
+            }
+        }
+        for (BasketMatch match : finished) {
+            if (seen.add(match.getId()) && merged.size() < size) {
+                merged.add(match);
+            }
+        }
+
+        if (CollectionUtils.isEmpty(merged)) {
             return Collections.emptyList();
         }
-        Set<Long> publicSeasonIds = publicSupport.loadSeasonMap(matches.stream()
+        Set<Long> publicSeasonIds = publicSupport.loadSeasonMap(merged.stream()
                 .map(BasketMatch::getSeasonId).filter(Objects::nonNull).collect(Collectors.toSet())).keySet();
-        List<BasketMatch> filtered = matches.stream()
+        List<BasketMatch> filtered = merged.stream()
                 .filter(m -> publicSeasonIds.contains(m.getSeasonId()))
                 .limit(size)
                 .collect(Collectors.toList());

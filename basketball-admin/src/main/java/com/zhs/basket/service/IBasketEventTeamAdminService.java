@@ -11,5 +11,6 @@ public interface IBasketEventTeamAdminService {
     EventTeamDetailVo selectDetail(Long id);
     void lockRoster(Long id);
     void unlockRoster(Long id);
+    void repairRosterLock(Long id);
     void updateParticipationStatus(Long id, EventTeamParticipationStatusReq req);
 }

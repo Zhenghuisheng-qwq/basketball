@@ -23,4 +23,6 @@ public interface BasketTournamentSeasonRosterMapper {
     int clearCaptainByEventTeam(@Param("eventTeamId") Long eventTeamId);
     int updateRoleFields(@Param("id") Long id, @Param("rosterRole") String rosterRole,
             @Param("isStarting") Integer isStarting, @Param("isSubstitute") Integer isSubstitute);
+    int updateLockStatusByEventTeamId(@Param("eventTeamId") Long eventTeamId,
+            @Param("lockStatus") Integer lockStatus, @Param("updateTime") Date updateTime);
 }

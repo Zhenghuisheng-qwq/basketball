@@ -52,6 +52,12 @@ public class TeamRegistrationItemResp implements Serializable {
     @ApiModelProperty("是否可撤回")
     private Boolean canWithdraw;
 
+    @ApiModelProperty("阵容是否已锁定")
+    private Boolean rosterLocked;
+
+    @ApiModelProperty("阵容锁定状态文案")
+    private String rosterLockStatusText;
+
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @ApiModelProperty("提交时间")

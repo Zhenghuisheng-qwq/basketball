@@ -35,6 +35,10 @@ public class BasketEventTeamAdminController extends BaseController {
     public AjaxResult unlockRoster(@PathVariable Long id) { eventTeamAdminService.unlockRoster(id); return success(); }
     @PreAuthorize("@ss.hasPermi('basket:eventTeam:edit')")
     @Log(title = "赛事球队", businessType = BusinessType.UPDATE)
+    @PostMapping("/{id}/repair-roster-lock")
+    public AjaxResult repairRosterLock(@PathVariable Long id) { eventTeamAdminService.repairRosterLock(id); return success(); }
+    @PreAuthorize("@ss.hasPermi('basket:eventTeam:edit')")
+    @Log(title = "赛事球队", businessType = BusinessType.UPDATE)
     @PostMapping("/{id}/participation-status")
     public AjaxResult updateParticipationStatus(@PathVariable Long id, @RequestBody EventTeamParticipationStatusReq req) { eventTeamAdminService.updateParticipationStatus(id, req); return success(); }
 }

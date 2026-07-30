@@ -101,4 +101,9 @@
         set roster_role = #{rosterRole}, is_starting = #{isStarting}, is_substitute = #{isSubstitute}, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
+    <update id="updateLockStatusByEventTeamId">
+        update basket_tournament_season_roster
+        set lock_status = #{lockStatus}, update_time = #{updateTime}
+        where event_team_id = #{eventTeamId} and roster_status = 1 and is_delete = 0
+    </update>
 </mapper>

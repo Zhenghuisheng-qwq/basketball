@@ -4,9 +4,11 @@ import com.zhs.basket.domain.BasketTeamSeasonProfile;
 import com.zhs.basket.enums.ParticipationStatusEnum;
 import com.zhs.basket.enums.RosterLockStatusEnum;
 import com.zhs.basket.mapper.BasketTeamSeasonProfileMapper;
+import com.zhs.basket.mapper.BasketTournamentSeasonRosterMapper;
 import com.zhs.basket.query.EventTeamAdminQuery;
 import com.zhs.basket.req.EventTeamParticipationStatusReq;
 import com.zhs.basket.service.IBasketEventTeamAdminService;
+import com.zhs.basket.service.IBasketParticipationGenerationService;
 import com.zhs.basket.vo.EventTeamDetailVo;
 import com.zhs.basket.vo.EventTeamListVo;
 import com.zhs.common.exception.ServiceException;
@@ -16,12 +18,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
 public class BasketEventTeamAdminServiceImpl implements IBasketEventTeamAdminService {
 
     @Autowired private BasketTeamSeasonProfileMapper teamSeasonProfileMapper;
+    @Autowired private BasketTournamentSeasonRosterMapper seasonRosterMapper;
+    @Autowired private IBasketParticipationGenerationService participationGenerationService;
 
     @Override
     public List<EventTeamListVo> selectList(EventTeamAdminQuery query) {
@@ -39,9 +44,11 @@ public class BasketEventTeamAdminServiceImpl implements IBasketEventTeamAdminSer
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void lockRoster(Long id) {
-        requireProfile(id);
-        int rows = teamSeasonProfileMapper.updateRosterLockStatus(id, RosterLockStatusEnum.LOCKED.getCode(), new Date());
+        BasketTeamSeasonProfile profile = requireProfile(id);
+        Date now = new Date();
+        int rows = teamSeasonProfileMapper.updateRosterLockStatus(id, RosterLockStatusEnum.LOCKED.getCode(), now);
         if (rows != 1) throw new ServiceException("锁定阵容失败");
+        seasonRosterMapper.updateLockStatusByEventTeamId(profile.getId(), RosterLockStatusEnum.LOCKED.getCode(), now);
     }
 
     @Override
@@ -50,6 +57,17 @@ public class BasketEventTeamAdminServiceImpl implements IBasketEventTeamAdminSer
         requireProfile(id);
         int rows = teamSeasonProfileMapper.updateRosterLockStatus(id, RosterLockStatusEnum.UNLOCKED.getCode(), null);
         if (rows != 1) throw new ServiceException("解锁阵容失败");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void repairRosterLock(Long id) {
+        BasketTeamSeasonProfile profile = requireProfile(id);
+        if (profile.getRegistrationId() == null) {
+            throw new ServiceException("该赛事球队未关联报名记录，无法修复阵容锁定");
+        }
+        participationGenerationService.ensureRosterLockedForApprovedRegistration(
+                profile.getRegistrationId(), com.zhs.common.utils.SecurityUtils.getUserId());
     }
 
     @Override
@@ -72,11 +90,34 @@ public class BasketEventTeamAdminServiceImpl implements IBasketEventTeamAdminSer
 
     private void enrichListVo(EventTeamListVo vo) {
         vo.setParticipationStatusName(ParticipationStatusEnum.fromCode(vo.getParticipationStatus()).getDescription());
-        vo.setRosterLockStatusName(RosterLockStatusEnum.fromCode(vo.getRosterLockStatus()).getDescription());
+        boolean effectivelyLocked = isEffectivelyLocked(vo);
+        if (effectivelyLocked) {
+            if (!Objects.equals(RosterLockStatusEnum.LOCKED.getCode(), vo.getRosterLockStatus())) {
+                vo.setRosterLockStatusName("未锁定（需修复）");
+                vo.setRosterLockNeedsRepair(true);
+            } else {
+                vo.setRosterLockStatusName(RosterLockStatusEnum.LOCKED.getDescription());
+                vo.setRosterLockNeedsRepair(false);
+            }
+        } else {
+            vo.setRosterLockStatusName(RosterLockStatusEnum.fromCode(vo.getRosterLockStatus()).getDescription());
+            vo.setRosterLockNeedsRepair(false);
+        }
     }
 
     private void enrichDetailVo(EventTeamDetailVo vo) {
         vo.setParticipationStatusName(ParticipationStatusEnum.fromCode(vo.getParticipationStatus()).getDescription());
-        vo.setRosterLockStatusName(RosterLockStatusEnum.fromCode(vo.getRosterLockStatus()).getDescription());
+        boolean effectivelyLocked = vo.getApprovedTime() != null
+                || Objects.equals(RosterLockStatusEnum.LOCKED.getCode(), vo.getRosterLockStatus());
+        if (effectivelyLocked && !Objects.equals(RosterLockStatusEnum.LOCKED.getCode(), vo.getRosterLockStatus())) {
+            vo.setRosterLockStatusName("未锁定（需修复）");
+        } else {
+            vo.setRosterLockStatusName(RosterLockStatusEnum.fromCode(vo.getRosterLockStatus()).getDescription());
+        }
+    }
+
+    private boolean isEffectivelyLocked(EventTeamListVo vo) {
+        return vo.getApprovedTime() != null
+                || Objects.equals(RosterLockStatusEnum.LOCKED.getCode(), vo.getRosterLockStatus());
     }
 }

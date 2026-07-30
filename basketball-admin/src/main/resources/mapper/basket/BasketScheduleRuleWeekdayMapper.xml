@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketScheduleRuleWeekdayMapper">
+    <select id="selectByRuleId" resultType="com.zhs.basket.domain.BasketScheduleRuleWeekday">
+        select id, rule_id as ruleId, weekday, sort, create_time as createTime, update_time as updateTime, is_delete as isDelete
+        from basket_schedule_rule_weekday
+        where rule_id = #{ruleId} and is_delete = 0
+        order by sort, weekday
+    </select>
+</mapper>

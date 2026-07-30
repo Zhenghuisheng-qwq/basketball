@@ -15,6 +15,10 @@
 		<result column="format_code" property="formatCode" />
 		<result column="organizer_name" property="organizerName" />
 		<result column="description" property="description" />
+		<result column="registration_start_time" property="registrationStartTime" />
+		<result column="registration_end_time" property="registrationEndTime" />
+		<result column="competition_start_time" property="competitionStartTime" />
+		<result column="competition_end_time" property="competitionEndTime" />
 		<result column="tournament_status" property="tournamentStatus" />
 		<result column="public_status" property="publicStatus" />
 		<result column="display_order" property="displayOrder" />
@@ -24,7 +28,7 @@
 	</resultMap>
 	<!-- 数据库中表名为:basket_tournament的列名 -->
 	<sql id="basket_tournament_Column">
-		id,tournament_no,competition_season_id,tournament_name,short_name,english_name,logo_file_id,cover_file_id,tournament_type,game_terminal,format_code,organizer_name,description,tournament_status,public_status,display_order,create_time,update_time,is_delete
+		id,tournament_no,competition_season_id,tournament_name,short_name,english_name,logo_file_id,cover_file_id,tournament_type,game_terminal,format_code,organizer_name,description,registration_start_time,registration_end_time,competition_start_time,competition_end_time,tournament_status,public_status,display_order,create_time,update_time,is_delete
 	</sql>
 
 	<!-- 通过BasketTournament的id获得对应数据库中表的数据对象 -->

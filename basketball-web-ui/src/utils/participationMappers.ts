@@ -189,21 +189,55 @@ export function formatDateTimeShort(value?: string) {
   return value.replace('T', ' ').slice(0, 16)
 }
 
+export function formatEventStandardDisplay(season: {
+  competitionSeasonName?: string
+  seasonName?: string
+  tournamentName?: string
+  platformName?: string
+  platformCode?: string
+  gameTerminal?: string
+}) {
+  const seasonLabel = season.competitionSeasonName || season.seasonName || ''
+  const platformLabel = season.platformName
+    || formatPlatformDisplay(season.platformCode || season.gameTerminal)
+  const tournamentLabel = season.tournamentName || ''
+  return [seasonLabel, platformLabel ? `${platformLabel}端` : '', tournamentLabel]
+    .filter(Boolean)
+    .join(' / ')
+}
+
 export function mapMyEventsSeasonToAvailableEvent(season: AvailableSeasonItemDto): AvailableEvent {
-  const actionCode = season.actionCode || 'DISABLED'
+  const actionCode = season.actionCode || season.operationType || 'DISABLED'
   const actionType = resolveMyEventsActionType(actionCode, season.canRegister)
   const closed = season.registrationStatus === 'CLOSED' || season.registrationStatus === 'ENDED'
+  const platformDisplay = season.platformName
+    || (season.gameTerminal ? formatPlatformDisplay(season.gameTerminal) : '')
+    || formatPlatformList(season.openedPlatforms)
+    || '-'
+  const competitionSeasonName = season.competitionSeasonName || season.seasonName
+  const tournamentName = season.tournamentName || season.eventTypeName || season.operationalSeasonName || '联赛赛事'
   return {
     tournamentId: season.tournamentId || season.seasonId || '',
-    seasonId: season.seasonId,
-    tournamentName: season.tournamentName || season.seasonName || '联赛赛事',
-    seasonName: season.seasonName || season.competitionSeasonName,
-    platform: formatPlatformList(season.openedPlatforms) || season.platformName || '-',
+    seasonId: season.seasonId || season.operationalSeasonId,
+    operationalSeasonId: season.operationalSeasonId || season.seasonId,
+    tournamentName,
+    seasonName: competitionSeasonName,
+    competitionSeasonName,
+    displayTitle: formatEventStandardDisplay({
+      competitionSeasonName,
+      seasonName: season.seasonName,
+      tournamentName,
+      platformName: season.platformName,
+      platformCode: season.platformCode,
+      gameTerminal: season.gameTerminal,
+    }),
+    platform: platformDisplay,
+    platformCode: season.platformCode,
     openedPlatforms: season.openedPlatforms,
     registrationType: 'TEAM',
     registrationTypeText: '球队报名',
-    signupStartTime: season.registrationStartTime,
-    deadline: season.registrationEndTime || '',
+    signupStartTime: season.signupStartTime || season.registrationStartTime,
+    deadline: season.signupEndTime || season.registrationEndTime || '',
     matchStartTime: season.matchStartTime,
     matchEndTime: season.matchEndTime,
     quotaUsed: season.registeredPlatforms?.length ?? 0,
@@ -213,19 +247,32 @@ export function mapMyEventsSeasonToAvailableEvent(season: AvailableSeasonItemDto
     actionText: season.actionText || '暂不可报名',
     actionType,
     actionCode,
+    operationType: season.operationType || actionCode,
     disabledReason: season.disabledReason || season.cannotRegisterReason,
     canRegister: season.canRegister,
-    teamName: season.teamName,
-    teamRegistrationStatusText: season.teamRegistrationStatusText,
-    userRosterStatusText: season.userRosterStatusText,
+    teamName: season.userTeamName || season.teamName,
+    userMembershipStatusText: season.userMembershipStatusText,
+    teamRegistrationStatusText: season.teamRegistrationStatusName || season.teamRegistrationStatusText,
+    userRosterStatusText: season.myRosterStatusName || season.userRosterStatusText,
     captainGrantStatusText: season.captainGrantStatusText,
     registrationStatus: season.registrationStatus,
-    eventStatus: season.eventStatus,
+    eventStatus: season.eventStatusName || season.eventStatus,
+    eventStatusCode: season.eventStatus,
     availableRegisterPlatforms: season.availableRegisterPlatforms,
     registrationId: season.registrationId,
     canRemindCaptain: season.canRemindCaptain,
     remindedRecently: season.remindedRecently,
+    isCaptain: season.isCaptain,
+    hasCaptainGrant: season.hasCaptainGrant ?? season.hasActiveCaptainGrantForEvent,
   }
+}
+
+function formatPlatformDisplay(code?: string) {
+  if (!code) return ''
+  const normalized = code.trim().toUpperCase()
+  if (normalized === 'XBOX') return 'Xbox'
+  if (normalized === 'PS' || normalized === 'PS5') return 'PS'
+  return normalized
 }
 
 function resolveMyEventsActionType(actionCode: string, canRegister?: boolean): AvailableEvent['actionType'] {
@@ -238,12 +285,18 @@ function resolveMyEventsActionType(actionCode: string, canRegister?: boolean): A
       return 'REMIND_CAPTAIN'
     case 'REGISTER':
       return canRegister ? 'TEAM_REGISTRATION' : 'DISABLED'
+    case 'RE_REGISTER':
+      return canRegister ? 'RE_REGISTER' : 'DISABLED'
     case 'REGISTERED':
     case 'VIEW_REGISTRATION':
     case 'PENDING_REVIEW':
       return 'VIEW_REGISTRATION'
     case 'MANAGE_REGISTRATION':
       return 'MANAGE_REGISTRATION'
+    case 'VIEW_ROSTER':
+      return 'VIEW_ROSTER'
+    case 'ROSTER_NOT_SELECTED':
+      return 'ROSTER_NOT_SELECTED'
     case 'GRANT_EXPIRED':
     case 'NO_GRANT':
     case 'NOT_STARTED':
@@ -318,7 +371,7 @@ export function mapTeamRegistrationToApplication(
     showAction: isCaptain,
     platformGroupLabel: [
       item.tournamentName || item.seasonName,
-      item.platformName || item.platformCode ? `${item.platformName || item.platformCode} 组` : null,
+      item.platformName || item.platformCode || null,
       item.registrationStatusText || mapTeamRegistrationStatusText(item.registrationStatus),
     ].filter(Boolean).join(' / '),
   }

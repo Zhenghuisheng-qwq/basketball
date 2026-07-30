@@ -37,6 +37,13 @@ export function unlockEventTeamRoster(id: number): Promise<AjaxResult> {
   })
 }
 
+export function repairEventTeamRosterLock(id: number): Promise<AjaxResult> {
+  return request({
+    url: `/basket/eventTeam/${id}/repair-roster-lock`,
+    method: 'post'
+  })
+}
+
 export function updateEventTeamParticipationStatus(id: number, data: EventTeamParticipationStatusReq): Promise<AjaxResult> {
   return request({
     url: `/basket/eventTeam/${id}/participation-status`,

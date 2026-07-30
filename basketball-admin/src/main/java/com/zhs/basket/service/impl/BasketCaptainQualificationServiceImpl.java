@@ -1,5 +1,6 @@
 package com.zhs.basket.service.impl;
 
+import com.zhs.basket.domain.BasketCompetitionSeason;
 import com.zhs.basket.domain.BasketCaptainQualification;
 import com.zhs.basket.domain.BasketMemberAccount;
 import com.zhs.basket.domain.BasketPlayerProfile;
@@ -10,6 +11,7 @@ import com.zhs.basket.enums.CaptainGrantLogActionTypeEnum;
 import com.zhs.basket.enums.CaptainQualificationStatusEnum;
 import com.zhs.basket.enums.PlayerCertStatusEnum;
 import com.zhs.basket.enums.SeasonStatusEnum;
+import com.zhs.basket.mapper.BasketCompetitionSeasonMapper;
 import com.zhs.basket.mapper.BasketCaptainGrantLogMapper;
 import com.zhs.basket.mapper.BasketCaptainQualificationMapper;
 import com.zhs.basket.mapper.BasketMemberAccountMapper;
@@ -24,6 +26,7 @@ import com.zhs.basket.req.CaptainQualificationRevokeReq;
 import com.zhs.basket.req.CaptainQualificationUpdateReq;
 import com.zhs.basket.service.IBasketCaptainQualificationService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.GameTerminalSupport;
 import com.zhs.basket.support.CaptainGrantLogSupport;
 import com.zhs.basket.support.CaptainGrantSeasonSupport;
 import com.zhs.basket.support.CaptainQualificationValiditySupport;
@@ -61,6 +64,7 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
     @Autowired private BasketTeamMapper teamMapper;
     @Autowired private BasketTournamentSeasonMapper seasonMapper;
     @Autowired private BasketTournamentMapper tournamentMapper;
+    @Autowired private BasketCompetitionSeasonMapper competitionSeasonMapper;
     @Autowired private PlayerNoGenerator playerNoGenerator;
     @Autowired private BasketAdminMessageService messageService;
     @Autowired private CaptainGrantLogSupport grantLogSupport;
@@ -471,10 +475,37 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
     }
 
     private String buildEventLabel(BasketTournamentSeason season, BasketTournament tournament) {
-        if (tournament != null && StringUtils.hasText(tournament.getTournamentName())) {
-            return tournament.getTournamentName();
+        StringBuilder label = new StringBuilder();
+        if (tournament != null && tournament.getCompetitionSeasonId() != null) {
+            BasketCompetitionSeason competitionSeason = competitionSeasonMapper.selectById(tournament.getCompetitionSeasonId());
+            if (competitionSeason != null) {
+                if (competitionSeason.getSeasonName() != null && competitionSeason.getSeasonName().contains("赛季")) {
+                    label.append(competitionSeason.getSeasonName());
+                } else if (competitionSeason.getSeasonYear() != null) {
+                    label.append(competitionSeason.getSeasonYear()).append("赛季");
+                } else if (competitionSeason.getSeasonName() != null) {
+                    label.append(competitionSeason.getSeasonName());
+                }
+            }
         }
-        return season.getSeasonName();
+        if (tournament != null && StringUtils.hasText(tournament.getGameTerminal())) {
+            if (label.length() > 0) {
+                label.append(" / ");
+            }
+            label.append(GameTerminalSupport.formatDisplayName(tournament.getGameTerminal()));
+        }
+        if (tournament != null && StringUtils.hasText(tournament.getTournamentName())) {
+            if (label.length() > 0) {
+                label.append(" / ");
+            }
+            label.append(tournament.getTournamentName());
+        } else if (season != null && StringUtils.hasText(season.getSeasonName())) {
+            if (label.length() > 0) {
+                label.append(" / ");
+            }
+            label.append(season.getSeasonName());
+        }
+        return label.length() > 0 ? label.toString() : "赛事";
     }
 
     private void enrichOperatorDisplay(CaptainQualificationDetailVo vo, BasketCaptainQualification q) {

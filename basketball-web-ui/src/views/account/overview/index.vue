@@ -37,6 +37,31 @@ const joinedCount = computed(
   () => accountStore.myTournaments.filter((item) => item.status === 'JOINED').length,
 )
 
+/** 有效队长授权（含未绑定球队的可创建球队队长） */
+const hasActiveCaptainGrant = computed(() => Boolean(teamStore.captainQualification?.runtimeValid))
+
+/** 当前可管理球队的队长 */
+const isCurrentTeamCaptain = computed(() => teamStore.canManageCurrentTeam)
+
+/** 历史队长：球队内曾为队长，但当前无有效管理权限 */
+const isHistoricalCaptain = computed(() => teamStore.isHistoricalCaptain)
+
+/** 普通球队成员 */
+const isRegularMember = computed(() => teamStore.isRegularMember)
+
+/** 展示完整队长权限卡片（有效授权 / 当前队长） */
+const showActiveCaptainGrantPanel = computed(() => {
+  if (isHistoricalCaptain.value) return false
+  return isCurrentTeamCaptain.value || hasActiveCaptainGrant.value
+})
+
+/** 展示历史队长只读状态 */
+const showHistoricalCaptainPanel = computed(() => isHistoricalCaptain.value)
+
+const showCaptainGrantSection = computed(
+  () => showActiveCaptainGrantPanel.value || showHistoricalCaptainPanel.value,
+)
+
 const bannerStatusText = computed(() => {
   if (isVerified.value) return '认证球员'
   return '球员未认证'
@@ -72,6 +97,28 @@ const teamSummaryText = computed(() => {
   if (teamStore.myTeamSummary?.teamName) return teamStore.myTeamSummary.teamName
   if (teamStore.hasTeam) return '已加入球队'
   return '未加入球队'
+})
+
+/** 球队与赛事面板行：非队长大卡片场景下的摘要信息 */
+const teamEventRows = computed(() => {
+  const rows: Array<{ label: string; value: string }> = [
+    { label: '当前球队', value: teamSummaryText.value },
+  ]
+
+  if (isRegularMember.value) {
+    rows.push({ label: '我的角色', value: '成员' })
+  } else if (isHistoricalCaptain.value) {
+    rows.push({ label: '我的角色', value: '历史队长' })
+  } else if (isCurrentTeamCaptain.value) {
+    rows.push({ label: '我的角色', value: '队长' })
+  } else if (!showCaptainGrantSection.value) {
+    rows.push({ label: '队长权限', value: captainGrantSummary.value })
+  } else if (hasActiveCaptainGrant.value && !teamStore.hasTeam) {
+    rows.push({ label: '队长权限', value: captainGrantSummary.value })
+  }
+
+  rows.push({ label: '已参加赛事', value: String(joinedCount.value) })
+  return rows
 })
 
 const emailStatusText = computed(() =>
@@ -124,23 +171,33 @@ async function retryLoad() {
 
       <div class="account-overview-grid account-grid-2">
         <CaptainGrantPanel
+          v-if="showActiveCaptainGrantPanel"
           :qualification="teamStore.captainQualification"
           :loading="teamStore.qualificationLoading"
         />
 
+        <AccountPanel v-else-if="showHistoricalCaptainPanel" title="队长权限">
+          <p class="account-view__desc">历史队长</p>
+          <p class="account-view__hint">当前暂无有效队长权限。历史球队和赛事记录仍可查看。</p>
+          <div class="account-panel__action account-panel__action--split">
+            <button type="button" class="account-btn-secondary" @click="go('/account/team')">
+              我的球队
+            </button>
+            <button type="button" class="account-btn-secondary" @click="go('/account/my-events')">
+              我的赛事
+            </button>
+          </div>
+        </AccountPanel>
+
         <AccountPanel title="球队与赛事">
           <div class="account-info-list">
-            <div class="account-info-row">
-              <span class="account-info-row__label">当前球队</span>
-              <span class="account-info-row__value">{{ teamSummaryText }}</span>
-            </div>
-            <div class="account-info-row">
-              <span class="account-info-row__label">队长权限</span>
-              <span class="account-info-row__value">{{ captainGrantSummary }}</span>
-            </div>
-            <div class="account-info-row">
-              <span class="account-info-row__label">已参加赛事</span>
-              <span class="account-info-row__value">{{ joinedCount }}</span>
+            <div
+              v-for="row in teamEventRows"
+              :key="row.label"
+              class="account-info-row"
+            >
+              <span class="account-info-row__label">{{ row.label }}</span>
+              <span class="account-info-row__value">{{ row.value }}</span>
             </div>
           </div>
           <div class="account-panel__action account-panel__action--split">

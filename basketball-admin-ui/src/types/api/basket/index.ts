@@ -76,6 +76,36 @@ export const TOURNAMENT_STATUS_OPTIONS = [
   { value: 3, label: '草稿' }
 ]
 
+/** 赛事游戏端/参赛端 */
+export const GAME_TERMINAL_OPTIONS = [
+  { value: 'PC', label: 'PC' },
+  { value: 'PS', label: 'PS' },
+  { value: 'XBOX', label: 'Xbox' }
+]
+
+/** 赛事类型 */
+export const TOURNAMENT_TYPE_OPTIONS = [
+  { value: 'REGULAR_SEASON', label: '常规赛' },
+  { value: 'PLAYOFFS', label: '季后赛' },
+  { value: 'ALL_STAR', label: '全明星赛' }
+]
+
+/** 后台赛事下拉展示：赛季 / 游戏端 / 赛事名称 */
+export function formatEventOptionLabel(item: {
+  id?: number
+  competitionSeasonName?: string
+  competitionSeasonYear?: number
+  gameTerminal?: string
+  tournamentName?: string
+}): string {
+  const seasonLabel = item.competitionSeasonYear
+    ? `${item.competitionSeasonYear}赛季`
+    : (item.competitionSeasonName || '')
+  const terminal = item.gameTerminal || ''
+  const name = item.tournamentName || ''
+  return [seasonLabel, terminal, name].filter(Boolean).join(' / ') || String(item.id ?? '')
+}
+
 /** 顶层赛季状态 */
 export const COMPETITION_SEASON_STATUS_OPTIONS = [
   { value: 0, label: '筹备中' },
@@ -681,6 +711,8 @@ export interface TournamentListItem {
   competitionSeasonName?: string
   competitionSeasonYear?: number
   tournamentName?: string
+  tournamentType?: string
+  tournamentTypeName?: string
   tournamentStatus?: number
   tournamentStatusName?: string
   gameTerminal?: string
@@ -2320,27 +2352,32 @@ export interface EventTeamListItem {
   id: number
   seasonId?: number
   seasonName?: string
+  tournamentName?: string
   teamId?: number
   teamNo?: string
   registrationId?: number
   eventTeamNo?: string
   teamNameSnapshot?: string
+  gameTerminal?: string
   captainPlayerId?: number
+  captainNameSnapshot?: string
   participationStatus?: number
   participationStatusName?: string
   rosterLockStatus?: number
   rosterLockStatusName?: string
+  rosterLockNeedsRepair?: boolean
   approvedTime?: string
 }
 
 export interface EventTeamDetail extends EventTeamListItem {
   shortNameSnapshot?: string
+  teamRegionSnapshot?: string
   descriptionSnapshot?: string
-  gameTerminal?: string
   registrationSource?: string
   displayName?: string
   logoFileId?: number
   rosterLockedTime?: string
+  remark?: string
 }
 
 export interface EventTeamParticipationStatusReq {
@@ -2477,3 +2514,148 @@ export interface RosterOperationUpdateRoleReq {
   isSubstitute?: number
   operateReason: string
 }
+
+/** 赛程规则 V1 */
+export interface ScheduleRuleListItem {
+  id: number
+  ruleName?: string
+  ruleCode?: string
+  ruleVersion?: string
+  eventType?: string
+  platformCode?: string
+  enabled?: number
+  remark?: string
+}
+
+export interface ScheduleRuleWeekdayItem {
+  weekday?: number
+  sort?: number
+  weekdayName?: string
+}
+
+export interface ScheduleRuleTimeSlotItem {
+  startTime?: string
+  sort?: number
+}
+
+export interface ScheduleRuleDetail extends ScheduleRuleListItem {
+  weekdays?: ScheduleRuleWeekdayItem[]
+  timeSlots?: ScheduleRuleTimeSlotItem[]
+}
+
+export interface ScheduleEventContext {
+  eventId?: number
+  seasonId?: number
+  seasonName?: string
+  tournamentName?: string
+  platformCode?: string
+  platformDisplayName?: string
+  eventTeamCount?: number
+  existingMatchCount?: number
+  hasPublishedSchedule?: boolean
+  hasDraftSchedule?: boolean
+  latestBatchId?: number
+  latestBatchPublishStatus?: number
+}
+
+export interface ScheduleGeneratePreview {
+  eventId?: number
+  seasonName?: string
+  tournamentName?: string
+  platformCode?: string
+  eventTeamCount?: number
+  expectedMatchCount?: number
+  ruleName?: string
+  ruleCode?: string
+  ruleVersion?: string
+}
+
+export interface ScheduleGenerateResult {
+  batchId?: number
+  batchNo?: string
+  matchCount?: number
+  eventTeamCount?: number
+}
+
+export interface ScheduleMatchQuery extends PageDomain {
+  seasonId?: number
+  stageId?: number
+  matchStatus?: number
+  publishStatus?: number
+  scheduleBatchId?: number
+}
+
+export interface ScheduleMatchListItem {
+  id: number
+  matchNo?: string
+  scheduleBatchId?: number
+  seasonId?: number
+  seasonName?: string
+  tournamentName?: string
+  platformCode?: string
+  stageId?: number
+  stageName?: string
+  roundNo?: number
+  homeEventTeamId?: number
+  awayEventTeamId?: number
+  homeTeamName?: string
+  awayTeamName?: string
+  homeTeamLogoUrl?: string
+  awayTeamLogoUrl?: string
+  scheduledStartTime?: string
+  matchStatus?: number
+  matchStatusName?: string
+  publishStatus?: number
+  publishStatusName?: string
+  homeScore?: number
+  awayScore?: number
+  ruleCode?: string
+  ruleVersion?: string
+  scheduleRemark?: string
+}
+
+export interface ScheduleGenerateReq {
+  eventId: number
+  ruleId: number
+  stageId?: number
+  baseDate?: string
+  forceRegenerate?: boolean
+  remark?: string
+}
+
+export interface SchedulePublishReq {
+  eventId: number
+  batchId?: number
+  reason?: string
+}
+
+export interface ScheduleMatchCreateReq {
+  eventId: number
+  stageId?: number
+  roundNo?: number
+  homeEventTeamId: number
+  awayEventTeamId: number
+  matchTime?: string
+  matchStatus?: number
+  publishStatus?: number
+  remark?: string
+}
+
+export interface ScheduleMatchUpdateReq {
+  stageId?: number
+  roundNo?: number
+  homeEventTeamId: number
+  awayEventTeamId: number
+  matchTime?: string
+  matchStatus?: number
+  publishStatus?: number
+  remark?: string
+  reason?: string
+}
+
+export interface ScheduleScoreSaveReq {
+  homeScore: number
+  awayScore: number
+  reason?: string
+}
+

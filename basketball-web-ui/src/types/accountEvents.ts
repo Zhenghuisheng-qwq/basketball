@@ -15,6 +15,8 @@ export type AvailableActionType =
   | 'MANAGE_REGISTRATION'
   | 'VIEW_EVENT'
   | 'VIEW_ROSTER'
+  | 'ROSTER_NOT_SELECTED'
+  | 'RE_REGISTER'
   | 'PENDING_REVIEW'
   | 'GRANT_EXPIRED'
 
@@ -28,9 +30,13 @@ export interface AccountEventTab {
 export interface AvailableEvent {
   tournamentId: string
   seasonId?: string
+  operationalSeasonId?: string
   tournamentName: string
   seasonName?: string
+  competitionSeasonName?: string
+  displayTitle?: string
   platform: string
+  platformCode?: string
   openedPlatforms?: string[]
   registrationType: 'TEAM' | 'INDIVIDUAL'
   registrationTypeText: string
@@ -45,9 +51,11 @@ export interface AvailableEvent {
   actionText: string
   actionType: AvailableActionType
   actionCode?: string
+  operationType?: string
   disabledReason?: string
   canRegister?: boolean
   teamName?: string
+  userMembershipStatusText?: string
   teamRegistrationStatusText?: string
   userRosterStatusText?: string
   captainGrantStatusText?: string
@@ -56,7 +64,10 @@ export interface AvailableEvent {
   remindedRecently?: boolean
   availableRegisterPlatforms?: string[]
   eventStatus?: string
+  eventStatusCode?: string
   registrationId?: string
+  isCaptain?: boolean
+  hasCaptainGrant?: boolean
 }
 
 export type ApplicationActionType =

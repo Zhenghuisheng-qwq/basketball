@@ -13,4 +13,6 @@ public interface BasketPlayerProfileMapper {
     int countByPlayerNo(@Param("playerNo") String playerNo);
     Integer selectMaxPlayerNoSequence();
     List<EligibleCaptainVo> selectEligibleCaptainList();
+
+    Long selectAvatarFileIdByMemberId(@Param("memberId") Long memberId);
 }

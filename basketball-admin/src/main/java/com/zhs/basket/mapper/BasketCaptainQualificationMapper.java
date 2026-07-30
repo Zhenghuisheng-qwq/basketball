@@ -20,4 +20,7 @@ public interface BasketCaptainQualificationMapper {
     BasketCaptainQualification selectCurrentByPlayerId(@Param("playerId") Long playerId);
     int countCurrentActiveByPlayerId(@Param("playerId") Long playerId);
     List<AccountPlayerCaptainGrantVo> selectGrantHistoryByMemberId(@Param("memberId") Long memberId);
+
+    BasketCaptainQualification selectActiveGrantForEvent(@Param("memberId") Long memberId,
+            @Param("teamId") Long teamId, @Param("seasonId") Long seasonId);
 }

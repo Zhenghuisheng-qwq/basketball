@@ -10,7 +10,8 @@ public class TournamentListVo {
     private Long competitionSeasonId;
     private String competitionSeasonName;
     private Integer competitionSeasonYear;
-    private String tournamentName;
+    private String tournamentType;
+    private String tournamentTypeName;
     private Integer tournamentStatus;
     private String tournamentStatusName;
     private String gameTerminal;

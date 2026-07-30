@@ -21,4 +21,6 @@ public interface BasketTeamSeasonProfileMapper {
             @Param("rosterLockedTime") Date rosterLockedTime);
     int updateParticipationStatus(@Param("id") Long id, @Param("participationStatus") Integer participationStatus);
     int updateCaptainPlayerId(@Param("id") Long id, @Param("captainPlayerId") Long captainPlayerId);
+    List<BasketTeamSeasonProfile> selectActiveBySeasonId(@Param("seasonId") Long seasonId);
+    int countActiveBySeasonId(@Param("seasonId") Long seasonId);
 }

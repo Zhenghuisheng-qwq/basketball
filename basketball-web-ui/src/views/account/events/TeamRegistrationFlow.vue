@@ -45,6 +45,10 @@ const rosterSelections = ref<TeamRegistrationPlayerItemDto[]>([])
 const tournamentId = computed(() => String(route.params.tournamentId || ''))
 const teamId = computed(() => teamStore.myTeamSummary?.teamId || '')
 const detail = computed(() => teamStore.registrationDetail)
+const isRosterLocked = computed(() => Boolean(detail.value?.rosterLocked || detail.value?.registrationStatus === 3))
+const rosterLockedHint = computed(() =>
+  detail.value?.rosterLockedHint || '报名已审核通过，阵容已锁定。如需调整，请重新提交审核或联系赛事管理员。',
+)
 const selectedSeason = computed(() =>
   teamStore.availableSeasons.find((item) => item.seasonId === draftForm.seasonId),
 )
@@ -80,6 +84,13 @@ function pickDefaultSeason(seasons: AvailableSeasonItemDto[]) {
       || item.tournamentId === tournamentId.value,
   )
   draftForm.seasonId = matched?.seasonId || seasons[0].seasonId
+  syncDraftPlatform(matched || seasons[0])
+}
+
+function syncDraftPlatform(season?: AvailableSeasonItemDto) {
+  if (!season) return
+  const queryPlatform = typeof route.query.platformCode === 'string' ? route.query.platformCode : ''
+  draftForm.platformCode = queryPlatform || season.platformCode || ''
 }
 
 async function bootstrap() {
@@ -105,6 +116,8 @@ async function bootstrap() {
     const queryPlatform = typeof route.query.platformCode === 'string' ? route.query.platformCode : ''
     if (queryPlatform) {
       draftForm.platformCode = queryPlatform
+    } else if (!draftForm.platformCode && selectedSeason.value?.platformCode) {
+      draftForm.platformCode = selectedSeason.value.platformCode
     }
 
     const existing = teamStore.availableSeasons.find(
@@ -113,7 +126,7 @@ async function bootstrap() {
     if (existing?.registrationId) {
       registrationId.value = existing.registrationId
       await loadDetail(existing.registrationId)
-      currentStep.value = detail.value?.canSubmit ? 'submit' : 'info'
+      currentStep.value = detail.value?.rosterLocked ? 'submit' : (detail.value?.canSubmit ? 'submit' : 'info')
     }
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
@@ -242,6 +255,7 @@ watch(
   () => draftForm.seasonId,
   (seasonId) => {
     const season = teamStore.availableSeasons.find((item) => item.seasonId === seasonId)
+    syncDraftPlatform(season)
     if (season?.hasRegistration && season.registrationId) {
       void loadDetail(season.registrationId)
     }
@@ -266,7 +280,7 @@ onMounted(bootstrap)
 
     <AccountStatusBanner
       :title="selectedSeason?.tournamentName || selectedSeason?.seasonName || '球队赛事报名'"
-      description="队长提交球队赛季报名与阵容"
+      :description="isRosterLocked ? rosterLockedHint : '队长提交球队赛季报名与阵容'"
       :status-text="bannerStatus.text"
       :status-type="bannerStatus.type"
     />
@@ -314,32 +328,34 @@ onMounted(bootstrap)
       </AccountPanel>
 
       <AccountPanel v-else-if="currentStep === 'info'" title="报名信息">
+        <p v-if="isRosterLocked" class="team-registration-hint">{{ rosterLockedHint }}</p>
         <div class="team-registration-form">
           <label>
             <span>联系人</span>
-            <input v-model="editForm.contactName" type="text" class="identity-apply-form__input" />
+            <input v-model="editForm.contactName" type="text" class="identity-apply-form__input" :disabled="isRosterLocked" />
           </label>
           <label>
             <span>联系电话</span>
-            <input v-model="editForm.contactMobile" type="text" class="identity-apply-form__input" placeholder="留空则沿用账号资料" />
+            <input v-model="editForm.contactMobile" type="text" class="identity-apply-form__input" placeholder="留空则沿用账号资料" :disabled="isRosterLocked" />
           </label>
           <label>
             <span>联系邮箱</span>
-            <input v-model="editForm.contactEmail" type="email" class="identity-apply-form__input" placeholder="留空则沿用账号资料" />
+            <input v-model="editForm.contactEmail" type="email" class="identity-apply-form__input" placeholder="留空则沿用账号资料" :disabled="isRosterLocked" />
           </label>
           <label>
             <span>备注</span>
-            <textarea v-model="editForm.remark" rows="3" class="identity-apply-form__input" />
+            <textarea v-model="editForm.remark" rows="3" class="identity-apply-form__input" :disabled="isRosterLocked" />
           </label>
         </div>
         <div class="account-panel__action">
           <button type="button" class="account-btn-secondary" @click="currentStep = 'season'">上一步</button>
-          <button type="button" class="account-btn-primary" @click="saveInfo">保存并下一步</button>
+          <button v-if="!isRosterLocked" type="button" class="account-btn-primary" @click="saveInfo">保存并下一步</button>
         </div>
       </AccountPanel>
 
-      <AccountPanel v-else-if="currentStep === 'roster'" title="选择阵容">
-        <p class="team-registration-hint">
+      <AccountPanel v-else-if="currentStep === 'roster'" :title="isRosterLocked ? '查看阵容' : '选择阵容'">
+        <p v-if="isRosterLocked" class="team-registration-hint">{{ rosterLockedHint }}</p>
+        <p v-else class="team-registration-hint">
           已选 {{ rosterSelections.length }} 人
           · 最少 {{ selectedSeasonRosterLimits.minRosterCount }} 人
           · 最多 {{ selectedSeasonRosterLimits.maxRosterCount }} 人
@@ -360,6 +376,7 @@ onMounted(bootstrap)
                   <input
                     type="checkbox"
                     :checked="isMemberSelected(member.teamMemberId)"
+                    :disabled="isRosterLocked"
                     @change="toggleMember(member.teamMemberId)"
                   />
                 </td>
@@ -372,11 +389,13 @@ onMounted(bootstrap)
         </div>
         <div class="account-panel__action">
           <button type="button" class="account-btn-secondary" @click="currentStep = 'info'">上一步</button>
-          <button type="button" class="account-btn-primary" @click="saveRoster">保存并下一步</button>
+          <button v-if="!isRosterLocked" type="button" class="account-btn-primary" @click="saveRoster">保存并下一步</button>
+          <button v-else type="button" class="account-btn-primary" @click="currentStep = 'submit'">查看提交信息</button>
         </div>
       </AccountPanel>
 
-      <AccountPanel v-else title="提交审核">
+      <AccountPanel v-else :title="isRosterLocked ? '报名详情' : '提交审核'">
+        <p v-if="isRosterLocked" class="team-registration-hint">{{ rosterLockedHint }}</p>
         <div class="account-info-list">
           <div class="account-info-row">
             <span class="account-info-row__label">赛季</span>
@@ -396,14 +415,24 @@ onMounted(bootstrap)
           </div>
         </div>
         <div class="account-panel__action">
-          <button type="button" class="account-btn-secondary" @click="currentStep = 'roster'">上一步</button>
+          <button v-if="!isRosterLocked" type="button" class="account-btn-secondary" @click="currentStep = 'roster'">上一步</button>
           <button
+            v-if="!isRosterLocked"
             type="button"
             class="account-btn-primary"
             :disabled="!detail?.canSubmit"
             @click="submitRegistration"
           >
             提交报名
+          </button>
+          <button
+            v-else
+            type="button"
+            class="account-btn-secondary"
+            disabled
+            title="阵容变更审核流程暂未开放，请联系赛事管理员"
+          >
+            申请调整阵容
           </button>
         </div>
       </AccountPanel>

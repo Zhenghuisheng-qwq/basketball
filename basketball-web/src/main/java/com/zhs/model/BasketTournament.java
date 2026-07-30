@@ -76,6 +76,26 @@ public class BasketTournament implements Serializable {
     @ApiModelProperty(value = "赛事介绍")
     private Object description;
 
+    @ApiModelProperty(value = "报名开始时间")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date registrationStartTime;
+
+    @ApiModelProperty(value = "报名结束时间")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date registrationEndTime;
+
+    @ApiModelProperty(value = "比赛开始时间")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date competitionStartTime;
+
+    @ApiModelProperty(value = "比赛结束时间")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date competitionEndTime;
+
     @ApiModelProperty(value = "赛事状态")
     private Integer tournamentStatus;
 

@@ -463,16 +463,12 @@ async function processApplication(applicationId: string, approve: boolean) {
 
 async function startRegistrationForSeason(season: AvailableSeasonItemDto) {
   if (!teamId.value) return
-  if (!season.platformCode) {
-    await openPlatformPicker(season.seasonId)
-    return
-  }
   registrationDraftForm.seasonId = season.seasonId
-  registrationDraftForm.platformCode = season.platformCode
+  registrationDraftForm.platformCode = season.platformCode || ''
   try {
     const detail = await teamStore.createRegistrationDraftAction(teamId.value, {
       seasonId: season.seasonId,
-      platformCode: season.platformCode,
+      platformCode: season.platformCode || undefined,
       contactName: registrationDraftForm.contactName.trim() || undefined,
       contactMobile: registrationDraftForm.contactMobile.trim() || undefined,
       contactEmail: registrationDraftForm.contactEmail.trim() || undefined,
@@ -515,14 +511,10 @@ async function createRegistrationDraft() {
     ElMessage.warning('请选择赛季')
     return
   }
-  if (!registrationDraftForm.platformCode) {
-    ElMessage.warning('请选择报名平台')
-    return
-  }
   try {
     const detail = await teamStore.createRegistrationDraftAction(teamId.value, {
       seasonId: registrationDraftForm.seasonId,
-      platformCode: registrationDraftForm.platformCode,
+      platformCode: registrationDraftForm.platformCode || undefined,
       contactName: registrationDraftForm.contactName.trim() || undefined,
       contactMobile: registrationDraftForm.contactMobile.trim() || undefined,
       contactEmail: registrationDraftForm.contactEmail.trim() || undefined,
@@ -1177,6 +1169,13 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             <div v-if="teamStore.registrationDetail.registrationStatus === 4 && teamStore.registrationDetail.remark" class="account-field-row">
               <dt>驳回原因</dt><dd>{{ teamStore.registrationDetail.remark }}</dd>
             </div>
+            <div v-if="teamStore.registrationDetail.rosterLocked" class="account-field-row team-roster-lock-tip">
+              <dt>阵容状态</dt>
+              <dd>
+                {{ teamStore.registrationDetail.rosterLockStatusText || '已锁定' }}。
+                {{ teamStore.registrationDetail.rosterLockedHint || '报名已审核通过，阵容已锁定。如需调整，请重新提交审核。' }}
+              </dd>
+            </div>
             <div class="account-field-row"><dt>截止时间</dt><dd>{{ formatDateTime(teamStore.registrationDetail.registrationEndTime) }}</dd></div>
           </dl>
           <div class="team-form-grid">
@@ -1190,14 +1189,24 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             <button v-if="teamStore.registrationDetail.canSubmit" type="button" class="account-btn-primary" @click="submitRegistration">提交报名</button>
             <button v-if="teamStore.registrationDetail.canWithdraw" type="button" class="account-btn-secondary" @click="withdrawRegistration">撤回报名</button>
             <button v-if="teamStore.registrationDetail.canDeleteDraft" type="button" class="account-btn-secondary" @click="deleteRegistrationDraft">删除草稿</button>
+            <button
+              v-if="teamStore.registrationDetail.rosterLocked"
+              type="button"
+              class="account-btn-secondary"
+              disabled
+              title="阵容变更审核流程暂未开放，请联系赛事管理员"
+            >申请调整阵容</button>
           </div>
           <label v-if="teamStore.registrationDetail.canWithdraw" class="team-inline-field">
             撤回原因
             <input v-model="withdrawReason" type="text" maxlength="200" />
           </label>
 
-          <h4 class="team-subtitle">阵容候选成员</h4>
-          <p class="team-tip">仅拥有当前报名平台已生效游戏 ID 的成员可选入阵容。</p>
+          <h4 class="team-subtitle">{{ teamStore.registrationDetail.rosterLocked ? '报名阵容（只读）' : '阵容候选成员' }}</h4>
+          <p v-if="teamStore.registrationDetail.rosterLocked" class="team-tip team-roster-lock-tip">
+            报名已审核通过，阵容已锁定。如需调整，请重新提交审核或联系赛事管理员。
+          </p>
+          <p v-else class="team-tip">仅拥有当前报名平台已生效游戏 ID 的成员可选入阵容。</p>
           <div v-if="teamStore.rosterCandidates.length" class="team-table-wrap">
             <table class="team-table">
               <thead>

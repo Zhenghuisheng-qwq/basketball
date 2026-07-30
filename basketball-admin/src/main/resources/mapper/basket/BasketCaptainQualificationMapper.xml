@@ -90,9 +90,23 @@
                s.season_end_time as seasonEndTime,
                t.id as tournamentId,
                t.tournament_name as tournamentName,
-               concat(t.tournament_name, ' / ', s.season_name) as displayName
+               t.game_terminal as gameTerminal,
+               cs.season_name as competitionSeasonName,
+               cs.season_year as competitionSeasonYear,
+               concat(
+                   case
+                       when cs.season_name like '%赛季%' then cs.season_name
+                       when cs.season_year is not null then concat(cs.season_year, '赛季')
+                       else ifnull(cs.season_name, '赛季')
+                   end,
+                   ' / ',
+                   ifnull(t.game_terminal, 'PC'),
+                   ' / ',
+                   t.tournament_name
+               ) as displayName
         from basket_tournament_season s
         inner join basket_tournament t on t.id = s.tournament_id and t.is_delete = 0
+        left join basket_competition_season cs on cs.id = t.competition_season_id and cs.is_delete = 0
         where s.is_delete = 0
           and s.season_status in (0, 1, 2, 4)
           and s.season_end_time is not null
@@ -184,5 +198,17 @@
         where cq.member_id = #{memberId}
           and cq.is_delete = 0
         order by cq.granted_time desc, cq.id desc
+    </select>
+
+    <select id="selectActiveGrantForEvent" resultMap="BasketCaptainQualificationResult">
+        select <include refid="BaseColumns" />
+        from basket_captain_qualification
+        where member_id = #{memberId}
+          and season_id = #{seasonId}
+          and qualification_status = 1
+          and is_delete = 0
+          <if test="teamId != null">and (team_id is null or team_id = #{teamId})</if>
+        order by granted_time desc, id desc
+        limit 1
     </select>
 </mapper>

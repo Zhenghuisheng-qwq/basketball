@@ -50,4 +50,23 @@ public interface BasketMatchMapper {
     int countPeriodScoreByMatchId(Long matchId);
     int countTeamStatByMatchId(Long matchId);
     int countPlayerStatByMatchId(Long matchId);
+
+    int countBySeasonId(@Param("seasonId") Long seasonId);
+    int countPublishedBySeasonId(@Param("seasonId") Long seasonId);
+    int countEventTeamPair(@Param("seasonId") Long seasonId, @Param("homeEventTeamId") Long homeEventTeamId,
+            @Param("awayEventTeamId") Long awayEventTeamId, @Param("excludeMatchId") Long excludeMatchId);
+    int countEventTeamTimeConflict(@Param("excludeMatchId") Long excludeMatchId, @Param("eventTeamId") Long eventTeamId,
+            @Param("matchTime") Date matchTime);
+    int insertScheduleMatch(BasketMatch match);
+    int updateScheduleMatch(BasketMatch match);
+    int updatePublishStatusBySeasonId(@Param("seasonId") Long seasonId, @Param("publishStatus") Integer publishStatus,
+            @Param("publicStatus") Integer publicStatus);
+    int updatePublishStatusByBatchId(@Param("batchId") Long batchId, @Param("publishStatus") Integer publishStatus,
+            @Param("publicStatus") Integer publicStatus);
+    int softDeleteDraftBySeasonId(@Param("seasonId") Long seasonId);
+    int updateScheduleScore(@Param("id") Long id, @Param("homeScore") Integer homeScore, @Param("awayScore") Integer awayScore,
+            @Param("winnerTeamId") Long winnerTeamId, @Param("winnerEventTeamId") Long winnerEventTeamId,
+            @Param("matchStatus") Integer matchStatus, @Param("dataStatus") Integer dataStatus,
+            @Param("actualEndTime") Date actualEndTime);
+    List<com.zhs.basket.vo.ScheduleMatchListVo> selectScheduleList(com.zhs.basket.query.ScheduleMatchQuery query);
 }

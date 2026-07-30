@@ -7,11 +7,15 @@ import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import MyEventsTabs from '@/components/account/events/MyEventsTabs.vue'
 import AvailableEventTable from '@/components/account/events/AvailableEventTable.vue'
+import AvailableEventFilters from '@/components/account/events/AvailableEventFilters.vue'
+import MyEventsPagination from '@/components/account/events/MyEventsPagination.vue'
 import MyApplicationList from '@/components/account/events/MyApplicationList.vue'
 import ParticipatingEventList from '@/components/account/events/ParticipatingEventList.vue'
 import { getAccountTournamentPage } from '@/api/accountTournament'
 import { getMyEventTeamList } from '@/api/eventParticipation'
-import { getMyEventsContext, getMyEventsSeasonPage, getMemberTeamEventPage, remindCaptainToRegister } from '@/api/myEvents'
+import { getMyEventsContext, getMyEventsCompetitionSeasonOptions, getMyEventsSeasonPage, getMemberTeamEventPage, remindCaptainToRegister } from '@/api/myEvents'
+import type { CompetitionSeasonOptionDto } from '@/api/types/myEvents'
+import type { MyEventsSeasonPageQuery } from '@/api/types/myEvents'
 import { getOpenRegistrationPage } from '@/api/openRegistration'
 import { getTeamRegistrationPage } from '@/api/teamRegistration'
 import type { AccountTournamentItemDto } from '@/api/types/accountTournament'
@@ -34,6 +38,7 @@ import {
   getTabsForRole,
 } from '@/constants/accountEventsUi'
 import type { AvailableEvent, MyApplication, MyEventsTabKey, ParticipatingEvent } from '@/types/accountEvents'
+import type { MyEventsSeasonFilterValues } from '@/components/account/events/AvailableEventFilters.vue'
 import { getOpenStatusRouteName } from '@/types/account'
 
 const route = useRoute()
@@ -46,11 +51,18 @@ const eventsContext = ref<MyEventsContextDto | null>(null)
 const participatingEvents = ref<ParticipatingEvent[]>([])
 const availableEvents = ref<AvailableEvent[]>([])
 const availableEmptyReason = ref('')
+const availableTotal = ref(0)
+const availablePage = ref(1)
+const availablePageSize = ref(5)
+const seasonOptions = ref<CompetitionSeasonOptionDto[]>([])
+const availableFilters = ref<MyEventsSeasonFilterValues>({
+  eventName: '',
+  seasonId: '',
+  platformCode: 'ALL',
+  status: '',
+  signupTimeRange: null,
+})
 const myApplications = ref<MyApplication[]>([])
-
-const showPlatformPicker = ref(false)
-const pendingRegisterEvent = ref<AvailableEvent | null>(null)
-const selectedPlatformCode = ref('')
 
 const roleMode = computed<MyEventsRoleMode>(() => eventsContext.value?.currentRoleMode || 'NO_TEAM')
 const visibleTabs = computed(() => getTabsForRole(roleMode.value))
@@ -104,7 +116,7 @@ function mapToParticipating(item: AccountTournamentItemDto): ParticipatingEvent 
   const seasonKey = item.seasonId || item.tournamentId || item.registrationId
   const platformLabel = item.platformName || item.platformCode
   const platformDisplay = platformLabel
-    ? `${item.seasonName || item.tournamentName || '赛事'} / ${platformLabel} 组 / ${registrationStatusText(item.registrationStatus)}`
+    ? `${item.seasonName || item.tournamentName || '赛事'} / ${platformLabel} / ${registrationStatusText(item.registrationStatus)}`
     : item.seasonName || '-'
   return {
     relationId: item.registrationId,
@@ -129,20 +141,73 @@ async function loadContext() {
   await teamStore.bootstrap().catch(() => undefined)
 }
 
+async function loadSeasonOptions() {
+  try {
+    const res = await getMyEventsCompetitionSeasonOptions()
+    seasonOptions.value = res.data || []
+  } catch {
+    seasonOptions.value = []
+  }
+}
+
+function buildAvailableQuery(): MyEventsSeasonPageQuery {
+  const [startTime, endTime] = availableFilters.value.signupTimeRange || []
+  return {
+    eventName: availableFilters.value.eventName.trim() || undefined,
+    seasonId: availableFilters.value.seasonId || undefined,
+    platformCode: availableFilters.value.platformCode || 'ALL',
+    status: availableFilters.value.status || undefined,
+    startTime: startTime || undefined,
+    endTime: endTime || undefined,
+    pageNum: availablePage.value,
+    pageSize: availablePageSize.value,
+  }
+}
+
 async function loadAvailableEvents() {
   loading.value = true
   loadError.value = ''
   availableEmptyReason.value = ''
   try {
-    const res = await getMyEventsSeasonPage({ currentPage: 1, pageSize: 50 })
+    const res = await getMyEventsSeasonPage(buildAvailableQuery())
     availableEvents.value = (res.data?.records || []).map(mapMyEventsSeasonToAvailableEvent)
+    availableTotal.value = res.data?.total ?? availableEvents.value.length
     availableEmptyReason.value = res.data?.emptyReason || ''
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
     availableEvents.value = []
+    availableTotal.value = 0
   } finally {
     loading.value = false
   }
+}
+
+function handleAvailableSearch() {
+  availablePage.value = 1
+  void loadAvailableEvents()
+}
+
+function handleAvailableReset() {
+  availableFilters.value = {
+    eventName: '',
+    seasonId: '',
+    platformCode: 'ALL',
+    status: '',
+    signupTimeRange: null,
+  }
+  availablePage.value = 1
+  void loadAvailableEvents()
+}
+
+function handleAvailablePageChange(page: number) {
+  availablePage.value = page
+  void loadAvailableEvents()
+}
+
+function handleAvailablePageSizeChange(pageSize: number) {
+  availablePageSize.value = pageSize
+  availablePage.value = 1
+  void loadAvailableEvents()
 }
 
 function dedupeApplications(apps: MyApplication[]): MyApplication[] {
@@ -218,13 +283,19 @@ async function loadActiveTab() {
 onMounted(async () => {
   try {
     await loadContext()
+    if (activeTab.value === 'available') {
+      await loadSeasonOptions()
+    }
     await loadActiveTab()
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
   }
 })
 
-watch(activeTab, () => {
+watch(activeTab, (tab) => {
+  if (tab === 'available' && !seasonOptions.value.length) {
+    void loadSeasonOptions()
+  }
   void loadActiveTab()
 })
 
@@ -265,7 +336,15 @@ async function handleAvailableAction(event: AvailableEvent, overrideAction?: Ava
     return
   }
   if (actionType === 'CONTACT_CAPTAIN') {
-    ElMessage.warning('当前用户不是球队队长，请联系队长报名。')
+    ElMessage.warning(event.disabledReason || '当前用户不是球队队长，请联系队长报名。')
+    return
+  }
+  if (actionType === 'ROSTER_NOT_SELECTED') {
+    ElMessage.info('你尚未入选该赛事阵容，请联系队长确认。')
+    return
+  }
+  if (actionType === 'RE_REGISTER') {
+    goTeamRegistration(event, event.platformCode)
     return
   }
   if (actionType === 'REMIND_CAPTAIN') {
@@ -284,19 +363,8 @@ async function handleAvailableAction(event: AvailableEvent, overrideAction?: Ava
     }
     return
   }
-  if (actionType === 'TEAM_REGISTRATION') {
-    const platforms = event.availableRegisterPlatforms || []
-    if (platforms.length > 1) {
-      pendingRegisterEvent.value = event
-      selectedPlatformCode.value = platforms[0]
-      showPlatformPicker.value = true
-      return
-    }
-    goTeamRegistration(event, platforms[0])
-    return
-  }
-  if (actionType === 'VIEW_REGISTRATION' || actionType === 'MANAGE_REGISTRATION') {
-    router.replace('/account/my-events?tab=applications')
+  if (actionType === 'TEAM_REGISTRATION' || actionType === 'MANAGE_REGISTRATION') {
+    goTeamRegistration(event, event.platformCode)
     return
   }
   if (event.disabledReason) {
@@ -312,13 +380,6 @@ function goTeamRegistration(event: AvailableEvent, platformCode?: string) {
     path: `/account/my-events/${seasonKey}/team-registration`,
     query: platformCode ? { platformCode } : {},
   })
-}
-
-function confirmPlatformAndRegister() {
-  if (!pendingRegisterEvent.value || !selectedPlatformCode.value) return
-  showPlatformPicker.value = false
-  goTeamRegistration(pendingRegisterEvent.value, selectedPlatformCode.value)
-  pendingRegisterEvent.value = null
 }
 
 function handleApplicationAction(application: MyApplication) {
@@ -376,18 +437,35 @@ function handleParticipatingAction(event: ParticipatingEvent) {
     <p v-else-if="loading" class="my-events-loading">加载中…</p>
 
     <template v-else-if="activeTab === 'available'">
+      <AvailableEventFilters
+        v-model="availableFilters"
+        :season-options="seasonOptions"
+        :loading="loading"
+        @search="handleAvailableSearch"
+        @reset="handleAvailableReset"
+      />
       <AccountEmptyState
         v-if="!availableEvents.length"
         :message="emptyMessage"
         :subtitle="roleMode === 'NO_TEAM' ? '可先前往「我的球队」申请加入球队' : undefined"
         large
       />
-      <AvailableEventTable
-        v-else
-        :events="availableEvents"
-        :role-mode="roleMode"
-        @action="handleAvailableAction"
-      />
+      <template v-else>
+        <div class="my-events-available-list">
+          <AvailableEventTable
+            :events="availableEvents"
+            :role-mode="roleMode"
+            @action="handleAvailableAction"
+          />
+          <MyEventsPagination
+            :page="availablePage"
+            :page-size="availablePageSize"
+            :total="availableTotal"
+            @update:page="handleAvailablePageChange"
+            @update:page-size="handleAvailablePageSizeChange"
+          />
+        </div>
+      </template>
     </template>
 
     <template v-else-if="activeTab === 'applications'">
@@ -419,30 +497,6 @@ function handleParticipatingAction(event: ParticipatingEvent) {
     </template>
 
     <p class="my-events-footnote">{{ footerNote }}</p>
-
-    <Teleport to="body">
-      <div v-if="showPlatformPicker && pendingRegisterEvent" class="my-events-dialog">
-        <button type="button" class="my-events-dialog__backdrop" aria-label="关闭" @click="showPlatformPicker = false" />
-        <div class="my-events-dialog__panel" role="dialog" aria-modal="true">
-          <h3>选择参赛端</h3>
-          <p class="my-events-dialog__tip">请选择本次球队报名的参赛端，已报名过的参赛端不可重复选择。</p>
-          <div class="my-events-dialog__platforms">
-            <label
-              v-for="code in pendingRegisterEvent.availableRegisterPlatforms"
-              :key="code"
-              class="my-events-dialog__platform"
-            >
-              <input v-model="selectedPlatformCode" type="radio" name="register-platform" :value="code">
-              <span>{{ code }}</span>
-            </label>
-          </div>
-          <div class="my-events-dialog__actions">
-            <button type="button" class="account-btn-secondary" @click="showPlatformPicker = false">取消</button>
-            <button type="button" class="account-btn-primary" @click="confirmPlatformAndRegister">继续报名</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>
 
@@ -471,6 +525,11 @@ function handleParticipatingAction(event: ParticipatingEvent) {
   margin: 0 0 12px;
   color: #696969;
   font-size: 14px;
+}
+
+.my-events-available-list {
+  display: flex;
+  flex-direction: column;
 }
 
 .my-events-dialog {

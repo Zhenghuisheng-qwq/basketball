@@ -2,6 +2,7 @@ import type { PageResult } from '@/api/types/common'
 
 export interface AvailableSeasonItemDto {
   seasonId: string
+  operationalSeasonId?: string
   seasonNo?: string
   seasonName?: string
   competitionSeasonId?: string | number
@@ -10,11 +11,16 @@ export interface AvailableSeasonItemDto {
   tournamentNo?: string
   tournamentName?: string
   gameTerminal?: string
+  eventType?: string
+  eventTypeName?: string
+  operationalSeasonName?: string
   tournamentStatus?: number
   seasonStatus?: number
   registrationStatus?: string
   teamId?: string
+  userTeamId?: string
   teamName?: string
+  userTeamName?: string
   teamCertificationStatus?: number
   canRegister?: boolean
   cannotRegisterReason?: string
@@ -24,6 +30,8 @@ export interface AvailableSeasonItemDto {
   maxRosterCount?: number
   registrationStartTime?: string
   registrationEndTime?: string
+  signupStartTime?: string
+  signupEndTime?: string
   hasRegistration?: boolean
   registrationId?: string
   platformCode?: string
@@ -32,19 +40,31 @@ export interface AvailableSeasonItemDto {
   registeredPlatforms?: string[]
   availableRegisterPlatforms?: string[]
   userRosterStatus?: string
+  myRosterStatus?: string
   userRosterStatusText?: string
+  myRosterStatusName?: string
   hasActiveCaptainGrantForEvent?: boolean
+  hasCaptainGrant?: boolean
+  captainGrantStatus?: string
   captainGrantStatusText?: string
   captainGrantExpireTime?: string
+  teamRegistrationStatus?: string
   teamRegistrationStatusText?: string
+  teamRegistrationStatusName?: string
+  userMembershipStatusText?: string
   disabledReason?: string
   userTeamRole?: string
+  userRoleInTeam?: string
+  isCaptain?: boolean
   actionCode?: string
   actionText?: string
+  operationType?: string
   matchStartTime?: string
   matchEndTime?: string
   canRemindCaptain?: boolean
   cannotRemindReason?: string
+  eventStatus?: string
+  eventStatusName?: string
   remindedRecently?: boolean
 }
 
@@ -66,6 +86,8 @@ export interface TeamRegistrationItemDto {
   canEdit?: boolean
   canSubmit?: boolean
   canWithdraw?: boolean
+  rosterLocked?: boolean
+  rosterLockStatusText?: string
   submittedTime?: string
   createTime?: string
 }
@@ -108,6 +130,10 @@ export interface TeamRegistrationDetailDto {
   canSubmit?: boolean
   canWithdraw?: boolean
   canDeleteDraft?: boolean
+  rosterLocked?: boolean
+  rosterLockStatusText?: string
+  rosterLockedHint?: string
+  canRequestRosterChange?: boolean
   submittedTime?: string
   registrationEndTime?: string
   rosterItems?: TeamRegistrationPlayerItemDto[]

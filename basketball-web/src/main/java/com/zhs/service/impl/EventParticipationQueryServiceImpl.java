@@ -97,7 +97,7 @@ public class EventParticipationQueryServiceImpl implements IEventParticipationQu
             BasketTournamentSeason season = seasonMap.get(eventTeam.getSeasonId());
             BasketTournament tournament = season == null ? null : tournamentMap.get(season.getTournamentId());
             ParticipationStatusEnum participationStatus = ParticipationStatusEnum.fromCode(eventTeam.getParticipationStatus());
-            RosterLockStatusEnum lockStatus = resolveLockStatus(eventTeam.getRosterLockStatus());
+            RosterLockStatusEnum lockStatus = resolveEffectiveLockStatus(eventTeam);
 
             EventTeamSummaryResp resp = new EventTeamSummaryResp();
             resp.setEventTeamId(toStringId(eventTeam.getId()));
@@ -137,7 +137,7 @@ public class EventParticipationQueryServiceImpl implements IEventParticipationQu
         int freeAgentUsed = countFreeAgentUsed(eventTeam.getSeasonId(), eventTeamPk);
 
         ParticipationStatusEnum participationStatus = ParticipationStatusEnum.fromCode(eventTeam.getParticipationStatus());
-        RosterLockStatusEnum lockStatus = resolveLockStatus(eventTeam.getRosterLockStatus());
+        RosterLockStatusEnum lockStatus = resolveEffectiveLockStatus(eventTeam);
 
         EventTeamDetailResp resp = new EventTeamDetailResp();
         resp.setEventTeamId(toStringId(eventTeam.getId()));
@@ -404,6 +404,19 @@ public class EventParticipationQueryServiceImpl implements IEventParticipationQu
         resp.setSourceType(roster.getSourceType());
         resp.setEffectiveTime(roster.getEffectiveTime());
         return resp;
+    }
+
+    private RosterLockStatusEnum resolveEffectiveLockStatus(BasketTeamSeasonProfile eventTeam) {
+        if (eventTeam == null) {
+            return RosterLockStatusEnum.UNLOCKED;
+        }
+        if (Integer.valueOf(RosterLockStatusEnum.LOCKED.getCode()).equals(eventTeam.getRosterLockStatus())) {
+            return RosterLockStatusEnum.LOCKED;
+        }
+        if (eventTeam.getApprovedTime() != null) {
+            return RosterLockStatusEnum.LOCKED;
+        }
+        return RosterLockStatusEnum.UNLOCKED;
     }
 
     private RosterLockStatusEnum resolveLockStatus(Integer code) {

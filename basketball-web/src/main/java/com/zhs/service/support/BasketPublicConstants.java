@@ -7,7 +7,9 @@ public final class BasketPublicConstants {
 
     public static final int NOT_DELETED = 0;
     public static final int PUBLIC = 1;
+    public static final int MATCH_SCHEDULED = 1;
     public static final int MATCH_FINISHED = 3;
+    public static final int PUBLISH_PUBLISHED = 1;
     public static final int DATA_CONFIRMED = 2;
     public static final int PROFILE_VISIBLE = 1;
     public static final int TEAM_AUDIT_APPROVED = 1;

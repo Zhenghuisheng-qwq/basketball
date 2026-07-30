@@ -59,4 +59,9 @@
           and m.is_delete = 0
         order by case when m.role_type = 'CAPTAIN' then 0 else 1 end, m.join_time asc
     </select>
+    <select id="countActiveMemberByTeamAndPlayer" resultType="int">
+        select count(1) from basket_team_member
+        where team_id = #{teamId} and player_id = #{playerId}
+          and is_current = 1 and membership_status = 1 and is_delete = 0
+    </select>
 </mapper>

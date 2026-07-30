@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketScheduleRuleTimeSlotMapper">
+    <select id="selectByRuleId" resultType="com.zhs.basket.domain.BasketScheduleRuleTimeSlot">
+        select id, rule_id as ruleId, start_time as startTime, sort, create_time as createTime, update_time as updateTime, is_delete as isDelete
+        from basket_schedule_rule_time_slot
+        where rule_id = #{ruleId} and is_delete = 0
+        order by sort, start_time
+    </select>
+</mapper>

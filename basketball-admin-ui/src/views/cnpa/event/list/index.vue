@@ -73,15 +73,18 @@
     />
 
     <el-table v-loading="loading" :data="dataList">
-      <el-table-column label="赛事编号" prop="tournamentNo" min-width="140" />
-      <el-table-column label="赛事名称" prop="tournamentName" min-width="160" :show-overflow-tooltip="true" />
-      <el-table-column label="所属赛季" min-width="140">
+      <el-table-column label="赛事名称" prop="tournamentName" min-width="140" :show-overflow-tooltip="true" />
+      <el-table-column label="赛季" min-width="120">
         <template #default="scope">
           {{ scope.row.competitionSeasonName || '-' }}
-          <span v-if="scope.row.competitionSeasonYear" class="sub-text">({{ scope.row.competitionSeasonYear }})</span>
         </template>
       </el-table-column>
-      <el-table-column label="比赛终端" prop="gameTerminal" width="100" />
+      <el-table-column label="游戏端" prop="gameTerminal" width="90" />
+      <el-table-column label="赛事类型" min-width="100">
+        <template #default="scope">
+          {{ scope.row.tournamentTypeName || scope.row.tournamentType || '-' }}
+        </template>
+      </el-table-column>
       <el-table-column label="报名时间" min-width="220">
         <template #default="scope">
           {{ formatTimeRange(scope.row.registrationStartTime, scope.row.registrationEndTime) }}
@@ -128,7 +131,7 @@
         <el-descriptions-item label="赛事状态">{{ detail.tournamentStatusName }}</el-descriptions-item>
         <el-descriptions-item label="赛事名称">{{ detail.tournamentName }}</el-descriptions-item>
         <el-descriptions-item label="所属赛季">{{ detail.competitionSeasonName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="比赛终端">{{ detail.gameTerminal || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="游戏端">{{ detail.gameTerminal || '-' }}</el-descriptions-item>
         <el-descriptions-item label="报名状态">
           <el-tag :type="registrationWindowTagType(detail.registrationWindowStatus)" size="small">
             {{ detail.registrationWindowStatusName || '-' }}
@@ -162,7 +165,7 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="赛事名称" prop="tournamentName">
-              <el-input v-model="form.tournamentName" placeholder="请输入赛事名称" />
+              <el-input v-model="form.tournamentName" placeholder="如：常规赛、季后赛、全明星赛" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -176,13 +179,17 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="赛事类型">
-              <el-input v-model="form.tournamentType" placeholder="请输入赛事类型" />
+            <el-form-item label="赛事类型" prop="tournamentType">
+              <el-select v-model="form.tournamentType" placeholder="请选择赛事类型" style="width: 100%">
+                <el-option v-for="item in TOURNAMENT_TYPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="游戏终端">
-              <el-input v-model="form.gameTerminal" placeholder="请输入游戏终端" />
+            <el-form-item label="游戏端" prop="gameTerminal">
+              <el-select v-model="form.gameTerminal" placeholder="请选择游戏端/参赛端" style="width: 100%">
+                <el-option v-for="item in GAME_TERMINAL_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -269,7 +276,7 @@ import type {
   TournamentListItem,
   TournamentQuery
 } from '@/types'
-import { TOURNAMENT_REGISTRATION_WINDOW_STATUS_OPTIONS, TOURNAMENT_STATUS_OPTIONS } from '@/types'
+import { GAME_TERMINAL_OPTIONS, TOURNAMENT_REGISTRATION_WINDOW_STATUS_OPTIONS, TOURNAMENT_STATUS_OPTIONS, TOURNAMENT_TYPE_OPTIONS } from '@/types'
 
 const { proxy } = getCurrentInstance()
 
@@ -304,6 +311,8 @@ const form = ref<TournamentCreateReq>({
 const rules = {
   competitionSeasonId: [{ required: true, message: '请选择所属赛季', trigger: 'change' }],
   tournamentName: [{ required: true, message: '赛事名称不能为空', trigger: 'blur' }],
+  tournamentType: [{ required: true, message: '请选择赛事类型', trigger: 'change' }],
+  gameTerminal: [{ required: true, message: '请选择游戏端/参赛端', trigger: 'change' }],
   registrationStartTime: [{ required: true, message: '请选择报名开始时间', trigger: 'change' }],
   registrationEndTime: [{ required: true, message: '请选择报名结束时间', trigger: 'change' }],
   competitionStartTime: [{ required: true, message: '请选择比赛开始时间', trigger: 'change' }],
@@ -388,7 +397,7 @@ function resetFormData() {
     tournamentName: '',
     shortName: '',
     englishName: '',
-    tournamentType: 'LEAGUE',
+    tournamentType: 'REGULAR_SEASON',
     gameTerminal: 'PC',
     formatCode: '5V5',
     organizerName: '',
