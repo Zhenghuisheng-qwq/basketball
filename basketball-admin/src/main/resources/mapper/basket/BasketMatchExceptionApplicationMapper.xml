@@ -13,11 +13,33 @@
     </insert>
 
     <select id="selectById" resultType="com.zhs.basket.domain.BasketMatchExceptionApplication">
-        select * from basket_match_exception_application where id = #{id} and is_delete = 0
+        select id, application_no as applicationNo, match_id as matchId, season_id as seasonId, stage_id as stageId,
+               platform_code as platformCode, applicant_member_id as applicantMemberId,
+               applicant_player_id as applicantPlayerId, applicant_team_id as applicantTeamId,
+               opponent_team_id as opponentTeamId, exception_type as exceptionType,
+               exception_reason as exceptionReason, application_status as applicationStatus,
+               decision_type as decisionType, decision_result as decisionResult,
+               decision_score_home as decisionScoreHome, decision_score_away as decisionScoreAway,
+               winner_team_id as winnerTeamId, walkover_team_id as walkoverTeamId,
+               processed_by as processedBy, processed_by_name as processedByName,
+               processed_time as processedTime, remark, create_time as createTime,
+               update_time as updateTime, is_delete as isDelete
+        from basket_match_exception_application where id = #{id} and is_delete = 0
     </select>
 
     <select id="selectActiveByMatchId" resultType="com.zhs.basket.domain.BasketMatchExceptionApplication">
-        select * from basket_match_exception_application
+        select id, application_no as applicationNo, match_id as matchId, season_id as seasonId, stage_id as stageId,
+               platform_code as platformCode, applicant_member_id as applicantMemberId,
+               applicant_player_id as applicantPlayerId, applicant_team_id as applicantTeamId,
+               opponent_team_id as opponentTeamId, exception_type as exceptionType,
+               exception_reason as exceptionReason, application_status as applicationStatus,
+               decision_type as decisionType, decision_result as decisionResult,
+               decision_score_home as decisionScoreHome, decision_score_away as decisionScoreAway,
+               winner_team_id as winnerTeamId, walkover_team_id as walkoverTeamId,
+               processed_by as processedBy, processed_by_name as processedByName,
+               processed_time as processedTime, remark, create_time as createTime,
+               update_time as updateTime, is_delete as isDelete
+        from basket_match_exception_application
         where match_id = #{matchId} and application_status in ('PENDING','PROCESSING') and is_delete = 0
         limit 1
     </select>

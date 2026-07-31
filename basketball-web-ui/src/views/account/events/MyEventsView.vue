@@ -17,6 +17,7 @@ import { getMyEventsContext, getMyEventsCompetitionSeasonOptions, getMyEventsSea
 import type { CompetitionSeasonOptionDto } from '@/api/types/myEvents'
 import type { MyEventsSeasonPageQuery } from '@/api/types/myEvents'
 import { getOpenRegistrationPage } from '@/api/openRegistration'
+import { pageMyMatches, type PlayerMatchTaskItem } from '@/api/matchData'
 import { getTeamRegistrationPage } from '@/api/teamRegistration'
 import type { AccountTournamentItemDto } from '@/api/types/accountTournament'
 import type { MyEventsContextDto, MyEventsRoleMode } from '@/api/types/myEvents'
@@ -29,6 +30,7 @@ import {
   mapTeamRegistrationToApplication,
   mergeParticipatingEvents,
   formatParticipationIdentityText,
+  deriveMatchDataEntry,
 } from '@/utils/participationMappers'
 import {
   getBannerCopy,
@@ -129,10 +131,44 @@ function mapToParticipating(item: AccountTournamentItemDto): ParticipatingEvent 
     identityText,
     status: String(item.registrationStatus ?? ''),
     statusText: registrationStatusText(item.registrationStatus),
-    actionText: '查看记录',
+    actionText: '查看阵容',
     actionType: 'VIEW_EVENT_RELATION',
     actionRoute: `/account/my-tournaments/${seasonKey}/team/roster`,
+    isCaptain: isCaptainRole,
+    rosterLocked: false,
   }
+}
+
+async function loadSeasonMatches(seasonId: string): Promise<PlayerMatchTaskItem[]> {
+  try {
+    const res = await pageMyMatches({ seasonId, pageNum: 1, pageSize: 100 })
+    return res.data?.records || []
+  } catch {
+    return []
+  }
+}
+
+async function enrichParticipatingWithMatchData(events: ParticipatingEvent[]): Promise<ParticipatingEvent[]> {
+  const seasonIds = [...new Set(events.map((item) => item.tournamentId).filter(Boolean))]
+  const matchMap = new Map<string, PlayerMatchTaskItem[]>()
+
+  await Promise.all(seasonIds.map(async (seasonId) => {
+    matchMap.set(seasonId, await loadSeasonMatches(seasonId))
+  }))
+
+  return events.map((event) => {
+    const matches = matchMap.get(event.tournamentId) || []
+    const matchData = deriveMatchDataEntry(
+      event.tournamentId,
+      matches,
+      Boolean(event.isCaptain),
+      Boolean(event.rosterLocked),
+    )
+    return {
+      ...event,
+      ...matchData,
+    }
+  })
 }
 
 async function loadContext() {
@@ -259,7 +295,9 @@ async function loadJoinedTournaments() {
       .filter((item) => item.registrationStatus === 3)
       .map(mapToParticipating)
     const fromEventTeams = (eventTeamRes.data || []).map(mapEventTeamSummaryToParticipating)
-    participatingEvents.value = mergeParticipatingEvents(fromEventTeams, fromTournaments)
+    participatingEvents.value = await enrichParticipatingWithMatchData(
+      mergeParticipatingEvents(fromEventTeams, fromTournaments),
+    )
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
     participatingEvents.value = []
@@ -410,6 +448,12 @@ function handleParticipatingAction(event: ParticipatingEvent) {
     router.push(event.actionRoute)
   }
 }
+
+function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
+  if (event.matchDataActionRoute) {
+    router.push(event.matchDataActionRoute)
+  }
+}
 </script>
 
 <template>
@@ -493,6 +537,7 @@ function handleParticipatingAction(event: ParticipatingEvent) {
         v-else
         :events="participatingEvents"
         @action="handleParticipatingAction"
+        @match-data-action="handleParticipatingMatchDataAction"
       />
     </template>
 

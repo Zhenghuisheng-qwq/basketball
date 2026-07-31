@@ -102,6 +102,11 @@ export type ParticipatingActionType =
   | 'VIEW_EVENT_RELATION'
   | 'VIEW_PUBLIC_RECORD'
 
+export type ParticipatingMatchDataActionType =
+  | 'VIEW_MATCH_DATA_LIST'
+  | 'SUBMIT_MATCH_DATA'
+  | 'VIEW_MATCH_DATA_STATUS'
+
 export interface ParticipatingEvent {
   relationId: string
   tournamentId: string
@@ -119,6 +124,13 @@ export interface ParticipatingEvent {
   actionType: ParticipatingActionType
   actionRoute?: string
   primaryAction?: boolean
+  isCaptain?: boolean
+  rosterLocked?: boolean
+  showMatchDataEntry?: boolean
+  matchDataActionText?: string
+  matchDataActionRoute?: string
+  matchDataActionType?: ParticipatingMatchDataActionType
+  matchDataPrimary?: boolean
 }
 
 export interface MyEventsSummary {

@@ -8,6 +8,7 @@ import type {
   OpenTournament,
   OpenTournamentStatus,
 } from '@/types/account'
+import type { PlayerMatchTaskItem } from '@/api/matchData'
 import type { AvailableEvent, MyApplication, ParticipatingEvent } from '@/types/accountEvents'
 import type { EventTeam, EventTournament, RosterMember, TransferRecord } from '@/types/eventTeam'
 import { resolveSeasonRosterLimits } from '@/constants/rosterRules'
@@ -416,6 +417,115 @@ export function formatParticipationIdentityText(rosterRole?: string | null, isCa
   return rosterRole || '球员'
 }
 
+export const MATCH_STATUS_FINISHED = 3
+export const MATCH_DATA_STATUS = {
+  DRAFT: 0,
+  SUBMITTED: 1,
+  CONFIRMED: 2,
+  REJECTED: 4,
+} as const
+export const SUBMISSION_STATUS_PENDING = 1
+export const SUBMISSION_STATUS_REJECTED = 3
+
+export function buildMatchDataListRoute(seasonId: string) {
+  return `/account/my-tournaments/${seasonId}/team/match-data`
+}
+
+export function buildMatchDataSubmitRoute(seasonId: string, matchId: string, resubmit = false) {
+  const action = resubmit ? 'resubmit' : 'submit'
+  return `/account/my-tournaments/${seasonId}/team/match-data/${matchId}/${action}`
+}
+
+export function isMatchDataEntryEligible(rosterLocked: boolean, matchTotal: number): boolean {
+  return rosterLocked && matchTotal > 0
+}
+
+function countCaptainSubmitTasks(matches: PlayerMatchTaskItem[]) {
+  return matches.filter((item) => item.canSubmit || item.canResubmit).length
+}
+
+function hasPendingReview(matches: PlayerMatchTaskItem[]) {
+  return matches.some((item) =>
+    item.submissionStatus === SUBMISSION_STATUS_PENDING
+    || item.dataStatus === MATCH_DATA_STATUS.SUBMITTED)
+}
+
+function hasConfirmedData(matches: PlayerMatchTaskItem[]) {
+  return matches.some((item) => item.dataStatus === MATCH_DATA_STATUS.CONFIRMED)
+}
+
+function resolveCaptainSubmitRoute(seasonId: string, matches: PlayerMatchTaskItem[]) {
+  const submitTargets = matches.filter((item) => item.canSubmit || item.canResubmit)
+  if (submitTargets.length !== 1 || !submitTargets[0].matchId) {
+    return buildMatchDataListRoute(seasonId)
+  }
+  return buildMatchDataSubmitRoute(seasonId, submitTargets[0].matchId, Boolean(submitTargets[0].canResubmit))
+}
+
+export function deriveMatchDataEntry(
+  seasonId: string,
+  matches: PlayerMatchTaskItem[],
+  isCaptain: boolean,
+  rosterLocked: boolean,
+): Pick<
+  ParticipatingEvent,
+  | 'showMatchDataEntry'
+  | 'matchDataActionText'
+  | 'matchDataActionRoute'
+  | 'matchDataActionType'
+  | 'matchDataPrimary'
+  | 'pendingTaskCount'
+  | 'pendingTaskText'
+> {
+  const matchTotal = matches.length
+  if (!isMatchDataEntryEligible(rosterLocked, matchTotal)) {
+    return { showMatchDataEntry: false }
+  }
+
+  const listRoute = buildMatchDataListRoute(seasonId)
+  const submitCount = countCaptainSubmitTasks(matches)
+
+  if (isCaptain && submitCount > 0) {
+    return {
+      showMatchDataEntry: true,
+      matchDataActionText: submitCount === 1 ? '提交比赛数据' : `提交比赛数据 (${submitCount})`,
+      matchDataActionRoute: resolveCaptainSubmitRoute(seasonId, matches),
+      matchDataActionType: 'SUBMIT_MATCH_DATA',
+      matchDataPrimary: true,
+      pendingTaskCount: submitCount,
+      pendingTaskText: `${submitCount} 场待提交比赛数据`,
+    }
+  }
+
+  if (hasPendingReview(matches)) {
+    return {
+      showMatchDataEntry: true,
+      matchDataActionText: '审核中',
+      matchDataActionRoute: listRoute,
+      matchDataActionType: 'VIEW_MATCH_DATA_STATUS',
+      matchDataPrimary: false,
+    }
+  }
+
+  if (hasConfirmedData(matches)) {
+    return {
+      showMatchDataEntry: true,
+      matchDataActionText: '查看比赛数据',
+      matchDataActionRoute: listRoute,
+      matchDataActionType: 'VIEW_MATCH_DATA_LIST',
+      matchDataPrimary: false,
+    }
+  }
+
+  return {
+    showMatchDataEntry: true,
+    matchDataActionText: '我的比赛',
+    matchDataActionRoute: listRoute,
+    matchDataActionType: 'VIEW_MATCH_DATA_LIST',
+    matchDataPrimary: false,
+  }
+}
+
 /** 合并正式赛事球队与已通过报名，同一赛季只保留 eventTeam 记录 */
 export function mergeParticipatingEvents(
   eventTeams: ParticipatingEvent[],
@@ -449,6 +559,8 @@ export function mapEventTeamSummaryToParticipating(item: EventTeamSummaryDto): P
       ? `/account/my-tournaments/${seasonKey}/team`
       : `/account/my-tournaments/${seasonKey}/team/roster`,
     primaryAction: isCaptain,
+    isCaptain,
+    rosterLocked: item.rosterLockStatus === 1,
   }
 }
 

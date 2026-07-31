@@ -1,5 +1,9 @@
 package com.zhs.basket.req;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.zhs.framework.config.LongStringDeserializer;
 import lombok.Data;
 
 import java.util.List;
@@ -23,6 +27,8 @@ public class MatchOfficialDataCorrectionReq {
 
     @Data
     public static class TeamStatItem {
+        @JsonSerialize(using = ToStringSerializer.class)
+        @JsonDeserialize(using = LongStringDeserializer.class)
         private Long teamId;
         private Integer points;
         private Integer rebounds;
@@ -43,8 +49,14 @@ public class MatchOfficialDataCorrectionReq {
 
     @Data
     public static class PlayerStatItem {
+        @JsonSerialize(using = ToStringSerializer.class)
+        @JsonDeserialize(using = LongStringDeserializer.class)
         private Long teamId;
+        @JsonSerialize(using = ToStringSerializer.class)
+        @JsonDeserialize(using = LongStringDeserializer.class)
         private Long playerId;
+        @JsonSerialize(using = ToStringSerializer.class)
+        @JsonDeserialize(using = LongStringDeserializer.class)
         private Long rosterId;
         private Integer startedFlag;
         private Integer minutesSeconds;

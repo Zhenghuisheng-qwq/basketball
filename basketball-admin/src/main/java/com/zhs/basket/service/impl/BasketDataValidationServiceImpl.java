@@ -103,6 +103,10 @@ public class BasketDataValidationServiceImpl implements IBasketDataValidationSer
         if (!isWinnerConsistent(match)) {
             result.getErrors().add(SettlementValidationErrorVo.of(matchId, matchNo, "比分与胜负不一致"));
         }
+        // 弃赛/判负场次仅写入 20:0 正式结果，不要求完整技术统计
+        if (match.getWalkoverTeamId() != null) {
+            return;
+        }
 
         int teamStatCount = confirmedMatchAdminMapper.countConfirmedTeamStat(matchId);
         if (teamStatCount < 2) {

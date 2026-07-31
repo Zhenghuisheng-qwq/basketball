@@ -298,8 +298,8 @@ public class BasketMatchOfficialDataCorrectionServiceImpl implements IBasketMatc
             row.setFreeThrowsMade(nvl(stat.getFreeThrowsMade()));
             row.setFreeThrowsAttempted(nvl(stat.getFreeThrowsAttempted()));
             row.setFreeThrowPct(stat.getFreeThrowPct());
-            row.setPossessions(stat.getPossessions());
-            row.setEfficiency(stat.getEfficiency());
+            row.setPossessions(stat.getPossessions() != null ? stat.getPossessions() : BigDecimal.ZERO);
+            row.setEfficiency(stat.getEfficiency() != null ? stat.getEfficiency() : BigDecimal.ZERO);
             row.setDataStatus(MatchDataStatusEnum.CONFIRMED.getCode());
             row.setConfirmedBy(operatorId);
             row.setConfirmedTime(now);
@@ -344,7 +344,7 @@ public class BasketMatchOfficialDataCorrectionServiceImpl implements IBasketMatc
             row.setFreeThrowsAttempted(nvl(stat.getFreeThrowsAttempted()));
             row.setFreeThrowPct(stat.getFreeThrowPct());
             row.setPlusMinus(nvl(stat.getPlusMinus()));
-            row.setEfficiency(stat.getEfficiency());
+            row.setEfficiency(stat.getEfficiency() != null ? stat.getEfficiency() : BigDecimal.ZERO);
             row.setDoubleDouble(0);
             row.setTripleDouble(0);
             row.setDataStatus(MatchDataStatusEnum.CONFIRMED.getCode());

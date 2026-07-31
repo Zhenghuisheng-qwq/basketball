@@ -8,6 +8,7 @@ defineProps<{
 
 const emit = defineEmits<{
   action: [event: ParticipatingEvent]
+  matchDataAction: [event: ParticipatingEvent]
 }>()
 </script>
 
@@ -36,8 +37,16 @@ const emit = defineEmits<{
       </div>
       <div class="my-events-list__action">
         <button
+          v-if="item.showMatchDataEntry"
           type="button"
-          :class="item.primaryAction ? 'account-btn-primary' : 'account-btn-secondary'"
+          :class="item.matchDataPrimary ? 'account-btn-primary' : 'account-btn-secondary'"
+          @click="emit('matchDataAction', item)"
+        >
+          {{ item.matchDataActionText }}
+        </button>
+        <button
+          type="button"
+          :class="item.primaryAction && !item.matchDataPrimary ? 'account-btn-primary' : 'account-btn-secondary'"
           @click="emit('action', item)"
         >
           {{ item.actionText }}
@@ -112,15 +121,19 @@ const emit = defineEmits<{
 
   &__action {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
     margin-left: auto;
 
     :deep(.account-btn-primary),
     :deep(.account-btn-secondary) {
-      min-width: 180px;
-      width: 190px;
+      min-width: 140px;
+      width: auto;
       min-height: 44px;
       height: 44px;
+      padding: 0 16px;
       font-size: 16px;
     }
   }

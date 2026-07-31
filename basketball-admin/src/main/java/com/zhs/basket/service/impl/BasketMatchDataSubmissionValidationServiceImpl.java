@@ -156,7 +156,7 @@ public class BasketMatchDataSubmissionValidationServiceImpl implements IBasketMa
                 throw new ServiceException("球员所属球队无效");
             }
             if (rosterMapper.countByMatchIdAndPlayerId(submission.getMatchId(), ps.getPlayerId()) <= 0) {
-                throw new ServiceException("球员须来自本场出场名单");
+                throw new ServiceException("球员须来自本场出场名单：playerId=" + ps.getPlayerId());
             }
             validateNonNegativePlayerStat(ps);
             validationService.validateShooting(ps.getFieldGoalsMade(), ps.getFieldGoalsAttempted(), "投篮");

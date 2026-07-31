@@ -110,25 +110,28 @@ public class MemberSessionSupport {
     }
 
     private String buildTokenValue(Long memberId, long authVersion) {
-        return memberId + TOKEN_VALUE_SEPARATOR + authVersion;
+        return String.valueOf(memberId) + TOKEN_VALUE_SEPARATOR + authVersion;
     }
 
     private Long parseLong(Object value) {
         if (value == null) {
             return null;
         }
-        if (value instanceof Long longValue) {
-            return longValue;
-        }
-        if (value instanceof Integer intValue) {
-            return intValue.longValue();
-        }
-        if (value instanceof String text && StringUtils.hasText(text)) {
+        if (value instanceof String text) {
+            if (!StringUtils.hasText(text)) {
+                return null;
+            }
             try {
                 return Long.parseLong(text.trim());
             } catch (NumberFormatException ignored) {
                 return null;
             }
+        }
+        if (value instanceof Long longValue) {
+            return longValue;
+        }
+        if (value instanceof Integer intValue) {
+            return intValue.longValue();
         }
         return null;
     }
