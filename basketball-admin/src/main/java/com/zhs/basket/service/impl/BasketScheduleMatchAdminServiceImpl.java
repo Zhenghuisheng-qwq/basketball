@@ -90,7 +90,7 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
                 || vo.getMatchStatus() == MatchStatusEnum.FINISHED.getCode());
         vo.setCanEdit(draft && editableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
         vo.setCanDelete(draft && editableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
-        vo.setCanSwap(draft && editableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
+        vo.setCanSwap(canSwapMatch(draft, editableStatus, vo.getDataAbnormal(), vo.getHomeEventTeamId(), vo.getAwayEventTeamId()));
         vo.setCanScore(published && scoreableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
     }
 
@@ -118,8 +118,15 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
                 || vo.getMatchStatus() == MatchStatusEnum.FINISHED.getCode());
         vo.setCanEdit(draft && editableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
         vo.setCanDelete(draft && editableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
-        vo.setCanSwap(draft && editableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
+        vo.setCanSwap(canSwapMatch(draft, editableStatus, vo.getDataAbnormal(), vo.getHomeEventTeamId(), vo.getAwayEventTeamId()));
         vo.setCanScore(published && scoreableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
+    }
+
+    private boolean canSwapMatch(boolean draft, boolean editableStatus, Integer dataAbnormal,
+            Long homeEventTeamId, Long awayEventTeamId) {
+        return draft && editableStatus
+                && (dataAbnormal == null || dataAbnormal == 0)
+                && homeEventTeamId != null && awayEventTeamId != null;
     }
 
     @Override
@@ -239,16 +246,35 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
     public void swapHomeAway(Long matchId, String reason) {
         BasketMatch match = requireMatch(matchId);
         validationSupport.assertDraftEditable(match);
-        ScheduleMatchUpdateReq req = new ScheduleMatchUpdateReq();
-        req.setStageId(match.getStageId());
-        req.setRoundNo(match.getRoundNo());
-        req.setHomeEventTeamId(match.getAwayEventTeamId());
-        req.setAwayEventTeamId(match.getHomeEventTeamId());
-        req.setMatchTime(match.getScheduledStartTime());
-        req.setMatchStatus(match.getMatchStatus());
-        req.setRemark(match.getScheduleRemark());
-        req.setReason(reason != null ? reason : "主客队互换");
-        update(matchId, req);
+        eventTeamSupport.resolveEventTeamBindingIfMissing(match);
+        eventTeamSupport.requireSwappableEventTeams(match);
+
+        Long oldHomeEventTeamId = match.getHomeEventTeamId();
+        Long oldAwayEventTeamId = match.getAwayEventTeamId();
+        Long oldHomeTeamId = match.getHomeTeamId();
+        Long oldAwayTeamId = match.getAwayTeamId();
+        String oldHomeName = match.getHomeTeamNameSnapshot();
+        String oldAwayName = match.getAwayTeamNameSnapshot();
+        String oldHomeLogo = match.getHomeTeamLogoSnapshot();
+        String oldAwayLogo = match.getAwayTeamLogoSnapshot();
+
+        match.setHomeEventTeamId(oldAwayEventTeamId);
+        match.setAwayEventTeamId(oldHomeEventTeamId);
+        match.setHomeTeamId(oldAwayTeamId);
+        match.setAwayTeamId(oldHomeTeamId);
+        match.setHomeTeamNameSnapshot(oldAwayName);
+        match.setAwayTeamNameSnapshot(oldHomeName);
+        match.setHomeTeamLogoSnapshot(oldAwayLogo);
+        match.setAwayTeamLogoSnapshot(oldHomeLogo);
+        matchMapper.updateScheduleMatch(match);
+        matchTeamSupport.replaceMatchTeams(match);
+
+        List<AuditFieldInput> fields = new ArrayList<>();
+        fields.add(auditSupport.field("homeEventTeamId", "主队", oldHomeEventTeamId, oldAwayEventTeamId));
+        fields.add(auditSupport.field("awayEventTeamId", "客队", oldAwayEventTeamId, oldHomeEventTeamId));
+        auditSupport.logMatchAction(matchId, match.getSeasonId(), match.getScheduleBatchId(),
+                ScheduleAuditActionTypeEnum.UPDATE_TEAMS, "主客队互换",
+                reason != null ? reason : "主客队互换", fields);
     }
 
     @Override

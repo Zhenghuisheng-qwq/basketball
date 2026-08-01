@@ -1,6 +1,7 @@
 package com.zhs.basket.support;
 
 import com.zhs.basket.domain.BasketFileAsset;
+import com.zhs.basket.domain.BasketMatch;
 import com.zhs.basket.domain.BasketTeamSeasonProfile;
 import com.zhs.basket.domain.BasketTournament;
 import com.zhs.basket.domain.BasketTournamentSeason;
@@ -77,6 +78,47 @@ public class ScheduleEventTeamSupport {
             snapshots.add(snapshot);
         }
         return snapshots;
+    }
+
+    /**
+     * 草稿比赛若仅有 team_id、缺少 event_team_id，按赛事+球队反查补全绑定与快照。
+     */
+    public void resolveEventTeamBindingIfMissing(BasketMatch match) {
+        if (match == null || match.getSeasonId() == null) {
+            return;
+        }
+        Long eventId = match.getSeasonId();
+        if (match.getHomeEventTeamId() == null && match.getHomeTeamId() != null) {
+            BasketTeamSeasonProfile profile = eventTeamMapper.selectByTeamIdAndSeasonId(match.getHomeTeamId(), eventId);
+            if (profile != null) {
+                match.setHomeEventTeamId(profile.getId());
+                if (match.getHomeTeamNameSnapshot() == null || match.getHomeTeamNameSnapshot().isBlank()) {
+                    EventTeamScheduleSnapshot snapshot = toSnapshot(profile);
+                    match.setHomeTeamNameSnapshot(snapshot.getTeamName());
+                    match.setHomeTeamLogoSnapshot(snapshot.getLogoUrl());
+                }
+            }
+        }
+        if (match.getAwayEventTeamId() == null && match.getAwayTeamId() != null) {
+            BasketTeamSeasonProfile profile = eventTeamMapper.selectByTeamIdAndSeasonId(match.getAwayTeamId(), eventId);
+            if (profile != null) {
+                match.setAwayEventTeamId(profile.getId());
+                if (match.getAwayTeamNameSnapshot() == null || match.getAwayTeamNameSnapshot().isBlank()) {
+                    EventTeamScheduleSnapshot snapshot = toSnapshot(profile);
+                    match.setAwayTeamNameSnapshot(snapshot.getTeamName());
+                    match.setAwayTeamLogoSnapshot(snapshot.getLogoUrl());
+                }
+            }
+        }
+    }
+
+    public void requireSwappableEventTeams(BasketMatch match) {
+        if (match.getHomeEventTeamId() == null || match.getAwayEventTeamId() == null) {
+            throw new ServiceException("比赛缺少主客队赛事球队信息，无法互换主客场");
+        }
+        if (match.getHomeTeamId() == null || match.getAwayTeamId() == null) {
+            throw new ServiceException("比赛缺少主客队信息，无法互换主客场");
+        }
     }
 
     public BasketTeamSeasonProfile requireActiveEventTeam(Long eventTeamId, Long eventId) {

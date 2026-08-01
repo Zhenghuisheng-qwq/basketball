@@ -111,4 +111,9 @@
         where event_team_id = #{eventTeamId} and roster_status = 1 and is_delete = 0
           and (lock_status is null or lock_status != 1)
     </select>
+    <select id="selectActiveMemberIdsBySeasonId" resultType="long">
+        select distinct member_id from basket_tournament_season_roster
+        where season_id = #{seasonId} and roster_status = 1 and is_delete = 0
+          and member_id is not null
+    </select>
 </mapper>

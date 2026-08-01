@@ -39,8 +39,15 @@ public class BasketMatch implements Serializable {
     private String matchNo;
 
     @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "赛程批次主键")
+    private Long scheduleBatchId;
+
+    @JsonSerialize(using = ToStringSerializer.class)
     @ApiModelProperty(value = "赛事赛季主键")
     private Long seasonId;
+
+    @ApiModelProperty(value = "平台编码")
+    private String platformCode;
 
 
     @JsonSerialize(using = ToStringSerializer.class)
@@ -72,6 +79,28 @@ public class BasketMatch implements Serializable {
     @ApiModelProperty(value = "客队主键")
     private Long awayTeamId;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "主队赛事球队主键")
+    private Long homeEventTeamId;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "客队赛事球队主键")
+    private Long awayEventTeamId;
+
+    @ApiModelProperty(value = "主队名称快照")
+    private String homeTeamNameSnapshot;
+
+    @ApiModelProperty(value = "客队名称快照")
+    private String awayTeamNameSnapshot;
+
+    @ApiModelProperty(value = "主队Logo快照")
+    private String homeTeamLogoSnapshot;
+
+    @ApiModelProperty(value = "客队Logo快照")
+    private String awayTeamLogoSnapshot;
+
+    @ApiModelProperty(value = "轮次号")
+    private Integer roundNo;
 
     @ApiModelProperty(value = "计划开始时间")
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -110,6 +139,12 @@ public class BasketMatch implements Serializable {
     @ApiModelProperty(value = "获胜球队主键")
     private Long winnerTeamId;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "获胜赛事球队主键")
+    private Long winnerEventTeamId;
+
+    @ApiModelProperty(value = "赛程备注")
+    private String scheduleRemark;
 
     @ApiModelProperty(value = "加时次数")
     private Integer overtimeCount;
@@ -145,32 +180,7 @@ public class BasketMatch implements Serializable {
     private Integer publicStatus;
 
     @ApiModelProperty(value = "发布状态 0草稿 1已发布 2已下架")
-    @TableField(exist = false)
     private Integer publishStatus;
-
-    @ApiModelProperty(value = "轮次号")
-    @TableField(exist = false)
-    private Integer roundNo;
-
-    @ApiModelProperty(value = "平台编码")
-    @TableField(exist = false)
-    private String platformCode;
-
-    @ApiModelProperty(value = "主队名称快照")
-    @TableField(exist = false)
-    private String homeTeamNameSnapshot;
-
-    @ApiModelProperty(value = "客队名称快照")
-    @TableField(exist = false)
-    private String awayTeamNameSnapshot;
-
-    @ApiModelProperty(value = "主队Logo快照")
-    @TableField(exist = false)
-    private String homeTeamLogoSnapshot;
-
-    @ApiModelProperty(value = "客队Logo快照")
-    @TableField(exist = false)
-    private String awayTeamLogoSnapshot;
 
     @ApiModelProperty(value = "排序号")
     private Integer sortNo;

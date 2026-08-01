@@ -427,7 +427,15 @@ export const MATCH_DATA_STATUS = {
 export const SUBMISSION_STATUS_PENDING = 1
 export const SUBMISSION_STATUS_REJECTED = 3
 
-export function buildMatchDataListRoute(seasonId: string) {
+export function buildMatchDataListRoute(eventTeamId: string) {
+  return `/account/my-events/${eventTeamId}/matches`
+}
+
+export function buildMatchDetailRoute(eventTeamId: string, matchId: string) {
+  return `/account/my-events/${eventTeamId}/matches/${matchId}`
+}
+
+export function buildLegacyMatchDataListRoute(seasonId: string) {
   return `/account/my-tournaments/${seasonId}/team/match-data`
 }
 
@@ -436,8 +444,20 @@ export function buildMatchDataSubmitRoute(seasonId: string, matchId: string, res
   return `/account/my-tournaments/${seasonId}/team/match-data/${matchId}/${action}`
 }
 
-export function isMatchDataEntryEligible(rosterLocked: boolean, matchTotal: number): boolean {
-  return rosterLocked && matchTotal > 0
+export function buildMatchDataStatusRoute(seasonId: string, matchId: string) {
+  return `/account/my-tournaments/${seasonId}/team/match-data/${matchId}/status`
+}
+
+export function buildMatchDataDisputeRoute(seasonId: string, matchId: string) {
+  return `/account/my-tournaments/${seasonId}/team/match-data/${matchId}/dispute`
+}
+
+export function buildMatchDataExceptionRoute(seasonId: string, matchId: string) {
+  return `/account/my-tournaments/${seasonId}/team/match-data/${matchId}/exception`
+}
+
+export function isMatchDataEntryEligible(rosterLocked: boolean, _matchTotal = 0): boolean {
+  return rosterLocked
 }
 
 function countCaptainSubmitTasks(matches: PlayerMatchTaskItem[]) {
@@ -454,15 +474,16 @@ function hasConfirmedData(matches: PlayerMatchTaskItem[]) {
   return matches.some((item) => item.dataStatus === MATCH_DATA_STATUS.CONFIRMED)
 }
 
-function resolveCaptainSubmitRoute(seasonId: string, matches: PlayerMatchTaskItem[]) {
+function resolveCaptainSubmitRoute(eventTeamId: string, seasonId: string, matches: PlayerMatchTaskItem[]) {
   const submitTargets = matches.filter((item) => item.canSubmit || item.canResubmit)
   if (submitTargets.length !== 1 || !submitTargets[0].matchId) {
-    return buildMatchDataListRoute(seasonId)
+    return buildMatchDataListRoute(eventTeamId)
   }
   return buildMatchDataSubmitRoute(seasonId, submitTargets[0].matchId, Boolean(submitTargets[0].canResubmit))
 }
 
 export function deriveMatchDataEntry(
+  eventTeamId: string,
   seasonId: string,
   matches: PlayerMatchTaskItem[],
   isCaptain: boolean,
@@ -482,14 +503,14 @@ export function deriveMatchDataEntry(
     return { showMatchDataEntry: false }
   }
 
-  const listRoute = buildMatchDataListRoute(seasonId)
+  const listRoute = buildMatchDataListRoute(eventTeamId)
   const submitCount = countCaptainSubmitTasks(matches)
 
   if (isCaptain && submitCount > 0) {
     return {
       showMatchDataEntry: true,
       matchDataActionText: submitCount === 1 ? '提交比赛数据' : `提交比赛数据 (${submitCount})`,
-      matchDataActionRoute: resolveCaptainSubmitRoute(seasonId, matches),
+      matchDataActionRoute: resolveCaptainSubmitRoute(eventTeamId, seasonId, matches),
       matchDataActionType: 'SUBMIT_MATCH_DATA',
       matchDataPrimary: true,
       pendingTaskCount: submitCount,
@@ -544,6 +565,7 @@ export function mapEventTeamSummaryToParticipating(item: EventTeamSummaryDto): P
   const identityText = formatParticipationIdentityText(item.rosterRole, isCaptain)
   return {
     relationId: item.eventTeamId,
+    eventTeamId: item.eventTeamId,
     tournamentId: seasonKey,
     tournamentName: item.tournamentName || item.seasonName || '赛事',
     platform: item.gameTerminal || '-',
@@ -617,7 +639,7 @@ export function mapEventRosterMember(item: EventRosterMemberDto): RosterMember {
     playerId: item.playerId,
     playerNo: item.playerNo,
     nickname: item.nickname || item.playerNo || item.playerId,
-    avatarUrl: '',
+    avatarUrl: item.avatarUrl?.trim() || '',
     platform: item.platform || '-',
     gameId: item.gameId || '未绑定',
     position: item.position || '-',

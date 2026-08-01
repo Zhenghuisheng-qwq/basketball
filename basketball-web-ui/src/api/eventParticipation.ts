@@ -1,5 +1,6 @@
 import request from '@/api/request'
 import type { ApiResult } from '@/api/types/common'
+import type { PageResult, PlayerMatchTaskItem } from '@/api/matchData'
 import type {
   EventRosterMemberDto,
   EventTeamDetailDto,
@@ -33,5 +34,18 @@ export function getEventRosterHistory(params: {
   return request.get<any, ApiResult<RosterChangeHistoryItemDto[]>>(
     '/basket/player/event-team/roster-history',
     { params },
+  )
+}
+
+export function getEventTeamMatches(eventTeamId: string, params?: Record<string, unknown>) {
+  return request.get<any, ApiResult<PageResult<PlayerMatchTaskItem>>>(
+    `/basket/player/event-team/${eventTeamId}/matches`,
+    { params },
+  )
+}
+
+export function getEventTeamMatchDetail(eventTeamId: string, matchId: string) {
+  return request.get<any, ApiResult<PlayerMatchTaskItem>>(
+    `/basket/player/event-team/${eventTeamId}/matches/${matchId}`,
   )
 }

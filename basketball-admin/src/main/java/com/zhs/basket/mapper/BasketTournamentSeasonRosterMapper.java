@@ -27,4 +27,6 @@ public interface BasketTournamentSeasonRosterMapper {
             @Param("lockStatus") Integer lockStatus, @Param("updateTime") Date updateTime);
 
     int countUnlockedActiveByEventTeamId(@Param("eventTeamId") Long eventTeamId);
+
+    List<Long> selectActiveMemberIdsBySeasonId(@Param("seasonId") Long seasonId);
 }

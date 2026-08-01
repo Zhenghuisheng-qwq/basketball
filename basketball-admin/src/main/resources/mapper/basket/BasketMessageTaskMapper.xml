@@ -23,4 +23,9 @@
     </resultMap>    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_message_task (task_no, message_type, title, content_text, biz_type, biz_id, send_scope, send_status, scheduled_time, sent_time, total_count, success_count, fail_count, creator_id, create_time, update_time, is_delete) values (#{taskNo}, #{messageType}, #{title}, #{contentText}, #{bizType}, #{bizId}, #{sendScope}, #{sendStatus}, #{scheduledTime}, #{sentTime}, #{totalCount}, #{successCount}, #{failCount}, #{creatorId}, #{createTime}, #{updateTime}, #{isDelete})
     </insert>
+
+    <select id="countByBizTypeAndBizId" resultType="int">
+        select count(1) from basket_message_task
+        where biz_type = #{bizType} and biz_id = #{bizId} and is_delete = 0
+    </select>
 </mapper>

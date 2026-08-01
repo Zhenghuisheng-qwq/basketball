@@ -1,10 +1,14 @@
 package com.zhs.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.zhs.exception.ServiceException;
+import com.zhs.response.matchdata.PlayerMatchTaskResp;
 import com.zhs.response.participation.EventRosterMemberResp;
 import com.zhs.response.participation.EventTeamDetailResp;
 import com.zhs.response.participation.EventTeamSummaryResp;
 import com.zhs.response.participation.RosterChangeHistoryItemResp;
 import com.zhs.service.IEventParticipationQueryService;
+import com.zhs.service.IMPlayerMatchDataService;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -24,6 +28,9 @@ public class EventParticipationQueryController {
 
     @Resource
     private IEventParticipationQueryService eventParticipationQueryService;
+
+    @Resource
+    private IMPlayerMatchDataService playerMatchDataService;
 
     @ApiOperation("我的赛事球队列表")
     @GetMapping("/basket/player/event-team/list")
@@ -49,5 +56,37 @@ public class EventParticipationQueryController {
                                                                  @RequestParam(required = false) String playerId,
                                                                  @RequestParam(required = false) String eventTeamId) {
         return R.ok(eventParticipationQueryService.getRosterHistory(seasonId, playerId, eventTeamId));
+    }
+
+    @ApiOperation("赛事球队比赛详情")
+    @GetMapping("/basket/player/event-team/{eventTeamId}/matches/{matchId}")
+    public R<PlayerMatchTaskResp> getEventTeamMatchDetail(@PathVariable String eventTeamId,
+                                                          @PathVariable String matchId) {
+        return R.ok(playerMatchDataService.getEventTeamMatchDetail(eventTeamId, parseMatchId(matchId)));
+    }
+
+    @ApiOperation("赛事球队已发布比赛列表")
+    @GetMapping("/basket/player/event-team/{eventTeamId}/matches")
+    public R<IPage<PlayerMatchTaskResp>> getEventTeamMatches(@PathVariable String eventTeamId,
+                                                             @RequestParam(required = false) Long stageId,
+                                                             @RequestParam(required = false) Integer dataStatus,
+                                                             @RequestParam(required = false) Integer matchStatus,
+                                                             @RequestParam(required = false) String beginTime,
+                                                             @RequestParam(required = false) String endTime,
+                                                             @RequestParam(required = false) Integer pageNum,
+                                                             @RequestParam(required = false) Integer pageSize) {
+        return R.ok(playerMatchDataService.pageEventTeamMatches(eventTeamId, stageId, dataStatus, matchStatus,
+                beginTime, endTime, pageNum, pageSize));
+    }
+
+    private Long parseMatchId(String matchId) {
+        if (matchId == null || matchId.isBlank()) {
+            throw new ServiceException("比赛主键不能为空");
+        }
+        try {
+            return Long.parseLong(matchId.trim());
+        } catch (NumberFormatException ex) {
+            throw new ServiceException("比赛主键格式不正确");
+        }
     }
 }

@@ -521,6 +521,30 @@ const router = createRouter({
 
         {
 
+          path: 'my-events/:eventTeamId/matches',
+
+          name: 'AccountEventTeamMatches',
+
+          component: () => import('@/views/account/events/MyEventTeamMatchesView.vue'),
+
+          meta: { title: '我的比赛' },
+
+        },
+
+        {
+
+          path: 'my-events/:eventTeamId/matches/:matchId',
+
+          name: 'AccountEventTeamMatchDetail',
+
+          component: () => import('@/views/account/events/MyEventMatchDetailView.vue'),
+
+          meta: { title: '比赛详情' },
+
+        },
+
+        {
+
           path: 'my-events/:tournamentId/team-registration',
 
           name: 'AccountTeamRegistration',

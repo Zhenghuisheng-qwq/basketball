@@ -15,6 +15,7 @@ import com.zhs.basket.support.GameTerminalSupport;
 import com.zhs.basket.support.PlayerNoGenerator;
 import com.zhs.basket.support.ScheduleAuditSupport;
 import com.zhs.basket.support.ScheduleEventTeamSupport;
+import com.zhs.basket.support.BasketScheduleMessageHelper;
 import com.zhs.basket.support.ScheduleMatchTeamSupport;
 import com.zhs.basket.support.ScheduleMatchValidationSupport;
 import com.zhs.basket.vo.ScheduleEventContextVo;
@@ -59,6 +60,7 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
     @Autowired private ScheduleAuditSupport auditSupport;
     @Autowired private ScheduleMatchValidationSupport validationSupport;
     @Autowired private PlayerNoGenerator playerNoGenerator;
+    @Autowired private BasketScheduleMessageHelper scheduleMessageHelper;
     @Autowired @Lazy private IBasketScheduleGenerateService scheduleGenerateService;
 
     @Override
@@ -233,6 +235,8 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         matchMapper.updatePublishStatusByBatchId(batch.getId(), MatchPublishStatusEnum.PUBLISHED.getCode(), 1);
         auditSupport.logBatchAction(batch.getId(), eventId, ScheduleAuditActionTypeEnum.PUBLISH,
                 "发布赛程", req.getReason(), null);
+        Long stageId = matches.isEmpty() ? null : matches.get(0).getStageId();
+        scheduleMessageHelper.notifySchedulePublished(batch, stageId, SecurityUtils.getUserId());
     }
 
     @Override

@@ -12,12 +12,11 @@ import MyEventsPagination from '@/components/account/events/MyEventsPagination.v
 import MyApplicationList from '@/components/account/events/MyApplicationList.vue'
 import ParticipatingEventList from '@/components/account/events/ParticipatingEventList.vue'
 import { getAccountTournamentPage } from '@/api/accountTournament'
-import { getMyEventTeamList } from '@/api/eventParticipation'
+import { getMyEventTeamList, getEventTeamMatches } from '@/api/eventParticipation'
 import { getMyEventsContext, getMyEventsCompetitionSeasonOptions, getMyEventsSeasonPage, getMemberTeamEventPage, remindCaptainToRegister } from '@/api/myEvents'
-import type { CompetitionSeasonOptionDto } from '@/api/types/myEvents'
-import type { MyEventsSeasonPageQuery } from '@/api/types/myEvents'
+import type { CompetitionSeasonOptionDto, MyEventsSeasonPageQuery } from '@/api/types/myEvents'
 import { getOpenRegistrationPage } from '@/api/openRegistration'
-import { pageMyMatches, type PlayerMatchTaskItem } from '@/api/matchData'
+import type { PlayerMatchTaskItem } from '@/api/matchData'
 import { getTeamRegistrationPage } from '@/api/teamRegistration'
 import type { AccountTournamentItemDto } from '@/api/types/accountTournament'
 import type { MyEventsContextDto, MyEventsRoleMode } from '@/api/types/myEvents'
@@ -144,9 +143,9 @@ function mapToParticipating(item: AccountTournamentItemDto): ParticipatingEvent 
   }
 }
 
-async function loadSeasonMatches(seasonId: string): Promise<PlayerMatchTaskItem[]> {
+async function loadEventTeamMatches(eventTeamId: string): Promise<PlayerMatchTaskItem[]> {
   try {
-    const res = await pageMyMatches({ seasonId, pageNum: 1, pageSize: 100 })
+    const res = await getEventTeamMatches(eventTeamId, { pageNum: 1, pageSize: 100 })
     return res.data?.records || []
   } catch {
     return []
@@ -154,16 +153,19 @@ async function loadSeasonMatches(seasonId: string): Promise<PlayerMatchTaskItem[
 }
 
 async function enrichParticipatingWithMatchData(events: ParticipatingEvent[]): Promise<ParticipatingEvent[]> {
-  const seasonIds = [...new Set(events.map((item) => item.tournamentId).filter(Boolean))]
   const matchMap = new Map<string, PlayerMatchTaskItem[]>()
 
-  await Promise.all(seasonIds.map(async (seasonId) => {
-    matchMap.set(seasonId, await loadSeasonMatches(seasonId))
+  await Promise.all(events.map(async (event) => {
+    const eventTeamId = event.eventTeamId || event.relationId
+    if (!eventTeamId) return
+    matchMap.set(eventTeamId, await loadEventTeamMatches(eventTeamId))
   }))
 
   return events.map((event) => {
-    const matches = matchMap.get(event.tournamentId) || []
+    const eventTeamId = event.eventTeamId || event.relationId
+    const matches = eventTeamId ? (matchMap.get(eventTeamId) || []) : []
     const matchData = deriveMatchDataEntry(
+      eventTeamId || event.tournamentId,
       event.tournamentId,
       matches,
       Boolean(event.isCaptain),

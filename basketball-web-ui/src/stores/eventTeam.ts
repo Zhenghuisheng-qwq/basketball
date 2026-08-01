@@ -1,12 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import {
-  getEventTeamDetail,
-  getEventTeamRoster,
-  getEventRosterHistory,
-  getMyEventTeamList,
-} from '@/api/eventParticipation'
-import { pageMyMatches, type PlayerMatchTaskItem } from '@/api/matchData'
+import { getEventTeamDetail, getEventTeamMatches, getEventRosterHistory, getEventTeamRoster, getMyEventTeamList } from '@/api/eventParticipation'
 import {
   getRosterChangeRequestPage,
   submitRosterChangeCaptainTransfer,
@@ -14,6 +8,7 @@ import {
   submitRosterChangeTransfer,
   withdrawRosterChangeRequest,
 } from '@/api/rosterChange'
+import type { PlayerMatchTaskItem } from '@/api/matchData'
 import type { RosterChangeRequestItemDto } from '@/api/types/rosterChange'
 import {
   mapEventRosterMember,
@@ -180,12 +175,12 @@ export const useEventTeamStore = defineStore('eventTeam', () => {
   }
 
   async function loadMatchDataTodoCount() {
-    if (!seasonId.value) {
+    if (!eventTeamId.value) {
       pendingTasks.value.matchDataTodoCount = 0
       return
     }
     try {
-      const res = await pageMyMatches({ seasonId: seasonId.value, pageNum: 1, pageSize: 100 })
+      const res = await getEventTeamMatches(eventTeamId.value, { pageNum: 1, pageSize: 100 })
       const records = res.data?.records || []
       pendingTasks.value.matchDataTodoCount = records.filter((item: PlayerMatchTaskItem) => item.canSubmit).length
     } catch {

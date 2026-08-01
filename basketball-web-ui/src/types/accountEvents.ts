@@ -109,6 +109,7 @@ export type ParticipatingMatchDataActionType =
 
 export interface ParticipatingEvent {
   relationId: string
+  eventTeamId?: string
   tournamentId: string
   tournamentName: string
   platform: string
