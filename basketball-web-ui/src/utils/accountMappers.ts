@@ -292,7 +292,7 @@ export function mapTeamRegistrationStatusText(status?: number | null): string {
   if (status === 1) return '审核中'
   const mapped = mapTeamRegistrationStatus(status)
   const labels: Record<TeamRegistrationStatusCode, string> = {
-    DRAFT: '草稿',
+    DRAFT: '待提交',
     SUBMITTED: '审核中',
     REVIEWING: '审核中',
     APPROVED: '已通过',

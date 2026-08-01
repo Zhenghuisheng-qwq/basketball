@@ -22,8 +22,7 @@ const showPagination = computed(() => teamStore.joinableTotal > teamStore.joinab
 
 function memberCountText(team: TeamSummaryDto) {
   const current = team.memberCount ?? team.currentMemberCount ?? 0
-  const max = team.maxMemberCount ?? 8
-  return `${current}/${max}`
+  return `${current} 人`
 }
 
 function teamLogoInitial(team: TeamSummaryDto) {

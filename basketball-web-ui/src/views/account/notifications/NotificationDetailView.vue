@@ -18,8 +18,11 @@ const actionLoading = ref(false)
 const loadError = ref('')
 
 const notificationId = computed(() => String(route.params.notificationId || ''))
+const detailItem = ref<AccountNotificationItem | null>(null)
 
-const notification = computed(() => notificationStore.getById(notificationId.value))
+const notification = computed(() =>
+  detailItem.value || notificationStore.getById(notificationId.value) || null,
+)
 
 function getHeroTitle(item: AccountNotificationItem) {
   if (item.type === 'TEAM_INVITE') return '球队邀请'
@@ -35,8 +38,16 @@ async function loadNotification() {
   loading.value = true
   loadError.value = ''
   try {
-    await notificationStore.loadDetail(notificationId.value)
-    await notificationStore.markAsRead(notificationId.value)
+    const detail = await notificationStore.loadDetail(notificationId.value)
+    detailItem.value = detail
+    if (detail.isUnread) {
+      await notificationStore.markAsRead(notificationId.value)
+      detailItem.value = {
+        ...detail,
+        isUnread: false,
+        status: 'READ',
+      }
+    }
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
   } finally {
@@ -51,7 +62,8 @@ async function refreshAfterInviteAction(accept: boolean) {
   actionLoading.value = true
   try {
     await teamStore.respondInvitationAction(inviteId, accept)
-    await notificationStore.loadDetail(notificationId.value)
+    const refreshed = await notificationStore.loadDetail(notificationId.value)
+    detailItem.value = refreshed
     ElMessage.success(accept ? '已加入球队' : '已拒绝邀请')
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '操作失败')

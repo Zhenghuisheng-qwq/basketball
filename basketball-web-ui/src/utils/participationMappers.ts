@@ -400,7 +400,7 @@ export function mapOpenRegistrationToApplication(item: OpenRegistrationItemDto):
 
 function mapTeamRegistrationStatusText(status?: number): string {
   switch (status) {
-    case 0: return '草稿'
+    case 0: return '待提交'
     case 1: return '审核中'
     case 2: return '审核中'
     case 3: return '已通过'

@@ -2,7 +2,6 @@ package com.zhs.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.common.UserContext;
 import com.zhs.dao.BasketMessageReceiverDao;
 import com.zhs.dao.BasketMessageTaskDao;
@@ -86,21 +85,33 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
     @Override
     public MessagePageResp pageMessages(Integer currentPage, Integer pageSize, Integer readStatus) {
         Long memberId = UserContext.getRequiredUserId();
-        Page<BasketMessageReceiver> page = new Page<>(normalizePage(currentPage), normalizeSize(pageSize));
+        long page = normalizePage(currentPage);
+        long size = normalizeSize(pageSize);
 
-        LambdaQueryWrapper<BasketMessageReceiver> wrapper = baseReceiverWrapper(memberId);
+        LambdaQueryWrapper<BasketMessageReceiver> countWrapper = baseReceiverWrapper(memberId);
         if (readStatus != null) {
-            wrapper.eq(BasketMessageReceiver::getReadStatus, readStatus);
+            countWrapper.eq(BasketMessageReceiver::getReadStatus, readStatus);
         }
-        wrapper.orderByDesc(BasketMessageReceiver::getSentTime)
-                .orderByDesc(BasketMessageReceiver::getId);
+        long total = messageReceiverDao.selectCount(countWrapper);
 
-        Page<BasketMessageReceiver> receiverPage = messageReceiverDao.selectPage(page, wrapper);
-        Map<Long, BasketMessageTask> taskMap = loadTaskMap(receiverPage.getRecords());
+        List<BasketMessageReceiver> receivers;
+        if (total == 0) {
+            receivers = Collections.emptyList();
+        } else {
+            LambdaQueryWrapper<BasketMessageReceiver> listWrapper = baseReceiverWrapper(memberId);
+            if (readStatus != null) {
+                listWrapper.eq(BasketMessageReceiver::getReadStatus, readStatus);
+            }
+            listWrapper.orderByDesc(BasketMessageReceiver::getSentTime)
+                    .orderByDesc(BasketMessageReceiver::getId)
+                    .last("LIMIT " + (page - 1) * size + ", " + size);
+            receivers = messageReceiverDao.selectList(listWrapper);
+        }
 
-        MessagePageResp respPage = new MessagePageResp(
-                receiverPage.getCurrent(), receiverPage.getSize(), receiverPage.getTotal());
-        respPage.setRecords(buildMessageItems(receiverPage.getRecords(), taskMap));
+        Map<Long, BasketMessageTask> taskMap = loadTaskMap(receivers);
+        MessagePageResp respPage = new MessagePageResp(page, size, total);
+        respPage.setRecords(buildMessageItems(receivers, taskMap));
+        respPage.setPages(total == 0 ? 0 : (total + size - 1) / size);
         respPage.setAllCount(countAll(memberId));
         respPage.setUnreadCount(countUnread(memberId));
         return respPage;

@@ -119,6 +119,7 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
         assertSingleRow(rows, "审核通过失败，可能已被其他管理员处理");
         writeAudit(reg, "APPROVE", reg.getRegistrationStatus(), RegistrationStatusEnum.APPROVED.getCode(), auditRemark);
         Long eventTeamId = participationGenerationService.generateFromTeamRegistration(id, SecurityUtils.getUserId(), auditRemark);
+        participationGenerationService.ensureRosterLockedForApprovedRegistration(id, SecurityUtils.getUserId());
         writeAudit(reg, "AUTO_LOCK_ROSTER", RegistrationStatusEnum.APPROVED.getCode(),
                 RegistrationStatusEnum.APPROVED.getCode(),
                 "审核通过后系统自动锁定阵容；eventTeamId=" + eventTeamId);

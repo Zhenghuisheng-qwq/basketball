@@ -157,7 +157,7 @@ onMounted(() => {
             <div><dt>球衣号</dt><dd>{{ displayOrDash(detail.jerseyNo) }}</dd></div>
             <div><dt>成员身份</dt><dd>{{ displayOrDash(detail.roleInTeamText) }}</dd></div>
             <div><dt>成员状态</dt><dd>{{ displayOrDash(detail.memberStatusText) }}</dd></div>
-            <div><dt>加入来源</dt><dd>{{ displayOrDash(detail.sourceTypeText || detail.sourceType) }}</dd></div>
+            <div><dt>入队方式</dt><dd>{{ displayOrDash(detail.sourceTypeText || detail.sourceType) }}</dd></div>
           </dl>
         </AccountPanel>
 
@@ -194,7 +194,7 @@ onMounted(() => {
               <div><dt>场均助攻</dt><dd>{{ displayOrDash(detail.avgAssists) }}</dd></div>
             </dl>
           </template>
-          <p v-else class="member-detail__empty">暂无比赛数据</p>
+          <p v-else class="member-detail__empty">暂无本队比赛数据</p>
         </AccountPanel>
 
         <AccountPanel title="记录">

@@ -42,6 +42,11 @@ import {
 import type { AvailableEvent, MyApplication, MyEventsTabKey, ParticipatingEvent } from '@/types/accountEvents'
 import type { MyEventsSeasonFilterValues } from '@/components/account/events/AvailableEventFilters.vue'
 import { getOpenStatusRouteName } from '@/types/account'
+import {
+  goToNewTeamRegistration,
+  navigateApplicationAction,
+  navigateAvailableRegistrationAction,
+} from '@/utils/registrationNavigation'
 
 const route = useRoute()
 const router = useRouter()
@@ -101,7 +106,7 @@ function setTab(tab: MyEventsTabKey) {
 
 function registrationStatusText(status?: number): string {
   switch (status) {
-    case 0: return '草稿'
+    case 0: return '待提交'
     case 1: return '审核中'
     case 2: return '审核中'
     case 3: return '已通过'
@@ -352,22 +357,6 @@ function showActionMessage(event: AvailableEvent) {
 async function handleAvailableAction(event: AvailableEvent, overrideAction?: AvailableEvent['actionType']) {
   const actionType = overrideAction || event.actionType
 
-  if (actionType === 'VIEW_EVENT') {
-    router.push(`/events/${event.tournamentId || event.seasonId}`)
-    return
-  }
-  if (actionType === 'VIEW_ROSTER') {
-    setTab('joined')
-    return
-  }
-  if (actionType === 'VIEW_REGISTRATION') {
-    if (roleMode.value === 'TEAM_MEMBER') {
-      setTab('applications')
-      return
-    }
-    router.replace('/account/my-events?tab=applications')
-    return
-  }
   if (actionType === 'JOIN_TEAM') {
     showActionMessage(event)
     router.push('/account/team?tab=joinableTeams')
@@ -379,10 +368,6 @@ async function handleAvailableAction(event: AvailableEvent, overrideAction?: Ava
   }
   if (actionType === 'ROSTER_NOT_SELECTED') {
     ElMessage.info('你尚未入选该赛事阵容，请联系队长确认。')
-    return
-  }
-  if (actionType === 'RE_REGISTER') {
-    goTeamRegistration(event, event.platformCode)
     return
   }
   if (actionType === 'REMIND_CAPTAIN') {
@@ -401,8 +386,19 @@ async function handleAvailableAction(event: AvailableEvent, overrideAction?: Ava
     }
     return
   }
-  if (actionType === 'TEAM_REGISTRATION' || actionType === 'MANAGE_REGISTRATION') {
-    goTeamRegistration(event, event.platformCode)
+  if (
+    actionType === 'VIEW_EVENT'
+    || actionType === 'VIEW_ROSTER'
+    || actionType === 'VIEW_REGISTRATION'
+    || actionType === 'RE_REGISTER'
+    || actionType === 'TEAM_REGISTRATION'
+    || actionType === 'MANAGE_REGISTRATION'
+  ) {
+    if (actionType === 'VIEW_REGISTRATION' && roleMode.value === 'TEAM_MEMBER' && !event.registrationId) {
+      setTab('applications')
+      return
+    }
+    navigateAvailableRegistrationAction(router, event, actionType)
     return
   }
   if (event.disabledReason) {
@@ -412,35 +408,23 @@ async function handleAvailableAction(event: AvailableEvent, overrideAction?: Ava
   ElMessage.warning('当前不可操作')
 }
 
-function goTeamRegistration(event: AvailableEvent, platformCode?: string) {
-  const seasonKey = event.seasonId || event.tournamentId
-  router.push({
-    path: `/account/my-events/${seasonKey}/team-registration`,
-    query: platformCode ? { platformCode } : {},
-  })
-}
-
 function handleApplicationAction(application: MyApplication) {
   if (application.applicationType === 'INDIVIDUAL') {
     const routeName = getOpenStatusRouteName(application.status as any)
     router.push({ name: routeName })
     return
   }
-  if (application.actionType === 'VIEW_APPLICATION_STATUS') {
-    if (roleMode.value === 'TEAM_MEMBER') {
-      ElMessage.info('当前为球队成员只读视图')
-      return
-    }
-    router.push({
-      path: '/account/team',
-      query: {
-        tab: 'registration',
-        registrationId: application.applicationId,
-      },
-    })
+  if (application.actionType === 'VIEW_APPLICATION_STATUS' && roleMode.value === 'TEAM_MEMBER') {
+    ElMessage.info('当前为球队成员只读视图')
     return
   }
-  router.push(`/account/my-events/${application.tournamentId}/team-registration`)
+  if (navigateApplicationAction(router, application)) {
+    return
+  }
+  goToNewTeamRegistration(router, {
+    seasonId: application.tournamentId,
+    tournamentId: application.tournamentId,
+  })
 }
 
 function handleParticipatingAction(event: ParticipatingEvent) {

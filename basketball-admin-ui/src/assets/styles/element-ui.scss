@@ -94,3 +94,46 @@
 .el-dropdown .el-dropdown-link{
   color: var(--el-color-primary) !important;
 }
+
+// CNPA 后台详情类弹窗（大表格/详情展示，不影响确认类小弹窗）
+.cnpa-admin-detail-dialog {
+  max-width: 1280px;
+  min-width: 760px;
+
+  .el-dialog__body {
+    max-height: 72vh;
+    overflow: auto;
+  }
+
+  .el-table {
+    width: 100%;
+  }
+}
+
+.cnpa-detail-table-wrap {
+  overflow-x: auto;
+}
+
+@media (max-width: 900px) {
+  .cnpa-admin-detail-dialog {
+    width: 92vw !important;
+    min-width: auto;
+  }
+}
+
+// el-image 大图预览：挂载到 body 并限制预览尺寸，避免表格内点击 Logo 撑满页面
+.el-image-viewer__wrapper {
+  z-index: 4000 !important;
+}
+
+.el-image-viewer__canvas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.el-image-viewer__img {
+  max-width: min(90vw, 960px) !important;
+  max-height: 85vh !important;
+  object-fit: contain;
+}

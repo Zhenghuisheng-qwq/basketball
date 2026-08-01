@@ -14,7 +14,7 @@ MENU_SQL = [
     VALUES (2221, '正式赛事球队', 2204, 2, 'official-teams', 'cnpa/participation/official-teams/index', 'BasketEventTeamAdmin', 1, 0, 'C', '0', '0', 'basket:eventTeam:list', 'peoples', 'admin', NOW(), 'CNPA正式赛事球队')
     ON DUPLICATE KEY UPDATE menu_name=VALUES(menu_name), component=VALUES(component), perms=VALUES(perms), order_num=VALUES(order_num)""",
     """INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-    VALUES (2222, '赛事阵容管理', 2204, 3, 'event-roster', 'cnpa/participation/event-roster/index', 'BasketSeasonRosterAdmin', 1, 0, 'C', '0', '0', 'basket:seasonRoster:list', 'user', 'admin', NOW(), 'CNPA赛事阵容')
+    VALUES (2222, '正式赛事阵容', 2204, 3, 'event-roster', 'cnpa/participation/event-roster/index', 'BasketSeasonRosterAdmin', 1, 0, 'C', '0', '0', 'basket:seasonRoster:list', 'user', 'admin', NOW(), 'CNPA正式赛事阵容')
     ON DUPLICATE KEY UPDATE menu_name=VALUES(menu_name), component=VALUES(component), perms=VALUES(perms), order_num=VALUES(order_num)""",
     """INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
     VALUES (2223, '转会审核', 2204, 4, 'transfer-audit', 'cnpa/participation/transfer-audit/index', 'BasketTransferAudit', 1, 0, 'C', '0', '0', 'basket:rosterChange:list', 'swap', 'admin', NOW(), 'CNPA转会审核')

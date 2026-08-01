@@ -68,7 +68,7 @@
 
           title="阵容锁定说明"
 
-          description="报名审核通过后会自动生成正式赛事球队（EventTeam）与正式赛事球员（EventPlayer）快照，并自动锁定阵容，无需管理员手动锁定。若历史数据显示“未锁定（需修复）”，可使用一次性修复按钮。"
+          description="报名审核通过后会自动生成正式赛事球队（EventTeam）与正式赛事球员（EventPlayer）快照，并自动锁定阵容，无需管理员手动锁定。若历史数据显示「锁定异常」，可使用「修复锁定」一次性修复。"
 
         />
 
@@ -114,9 +114,9 @@
 
         <template #default="scope">
 
-          <dict-tag :options="ROSTER_LOCK_STATUS_OPTIONS" :value="scope.row.rosterLockStatus" />
+          <el-tag v-if="scope.row.rosterLockNeedsRepair" type="warning">锁定异常</el-tag>
 
-          <div v-if="scope.row.rosterLockNeedsRepair" class="sub-text warn-text">未锁定异常</div>
+          <dict-tag v-else :options="ROSTER_LOCK_STATUS_OPTIONS" :value="scope.row.rosterLockStatus" />
 
         </template>
 
@@ -222,51 +222,60 @@
 
 
 
-    <el-drawer v-model="rosterOpen" :title="`赛事阵容 - ${currentTeamName}`" size="860px" append-to-body>
+    <el-dialog
+      v-model="rosterOpen"
+      :title="`正式赛事阵容 - ${currentTeamName}`"
+      width="80vw"
+      top="6vh"
+      append-to-body
+      destroy-on-close
+      class="cnpa-admin-detail-dialog cnpa-roster-dialog"
+    >
+      <el-descriptions v-if="currentTeam" :column="3" border size="small" class="roster-team-info">
+        <el-descriptions-item label="赛事球队编号">{{ currentTeam.eventTeamNo || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="球队名称">{{ currentTeam.teamNameSnapshot || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="游戏端">{{ currentTeam.gameTerminal || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="赛季">{{ currentTeam.seasonName || currentTeam.seasonId || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="赛事">{{ currentTeam.tournamentName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="参赛状态">{{ currentTeam.participationStatusName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="阵容状态">
+          <el-tag v-if="currentTeam.rosterLockNeedsRepair" type="warning" size="small">锁定异常</el-tag>
+          <span v-else>{{ currentTeam.rosterLockStatusName || '-' }}</span>
+        </el-descriptions-item>
+      </el-descriptions>
 
-      <el-table v-loading="rosterLoading" :data="rosterList" size="small">
+      <div class="cnpa-detail-table-wrap">
+        <el-table v-loading="rosterLoading" :data="rosterList" size="small">
+          <el-table-column label="球员快照" min-width="140" :show-overflow-tooltip="true">
+            <template #default="scope">
+              <div>{{ scope.row.playerNicknameSnapshot || '-' }}</div>
+              <div class="sub-text">ID: {{ scope.row.playerId }}</div>
+            </template>
+          </el-table-column>
 
-        <el-table-column label="球员快照" min-width="140">
+          <el-table-column label="平台/游戏ID" min-width="140" :show-overflow-tooltip="true">
+            <template #default="scope">
+              <div>{{ scope.row.platformSnapshot || '-' }}</div>
+              <div class="sub-text">{{ scope.row.gameIdDisplaySnapshot || '-' }}</div>
+            </template>
+          </el-table-column>
 
-          <template #default="scope">
+          <el-table-column label="角色" prop="rosterRole" min-width="80" />
 
-            <div>{{ scope.row.playerNicknameSnapshot || '-' }}</div>
+          <el-table-column label="队长" min-width="70">
+            <template #default="scope">{{ scope.row.isCaptain === 1 ? '是' : '否' }}</template>
+          </el-table-column>
 
-            <div class="sub-text">ID: {{ scope.row.playerId }}</div>
-
-          </template>
-
-        </el-table-column>
-
-        <el-table-column label="平台/游戏ID" min-width="140">
-
-          <template #default="scope">
-
-            <div>{{ scope.row.platformSnapshot || '-' }}</div>
-
-            <div class="sub-text">{{ scope.row.gameIdDisplaySnapshot || '-' }}</div>
-
-          </template>
-
-        </el-table-column>
-
-        <el-table-column label="角色" prop="rosterRole" width="80" />
-
-        <el-table-column label="队长" width="70">
-
-          <template #default="scope">{{ scope.row.isCaptain === 1 ? '是' : '否' }}</template>
-
-        </el-table-column>
-
-        <el-table-column label="锁定" width="80">
-
-          <template #default="scope">{{ scope.row.lockStatus === 1 ? '已锁定' : '未锁定' }}</template>
-
-        </el-table-column>
-
-      </el-table>
-
-    </el-drawer>
+          <el-table-column label="锁定状态" min-width="90">
+            <template #default="scope">
+              <el-tag :type="scope.row.lockStatus === 1 ? 'success' : 'info'" size="small">
+                {{ scope.row.lockStatusName || (scope.row.lockStatus === 1 ? '已锁定' : '未锁定') }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </el-dialog>
 
 
 
@@ -370,6 +379,8 @@ const rosterLoading = ref(false)
 
 const rosterList = ref<SeasonRosterListItem[]>([])
 
+const currentTeam = ref<EventTeamListItem>()
+
 const currentTeamName = ref('')
 
 const statusRules = {
@@ -445,6 +456,8 @@ function handleDetail(row: EventTeamListItem) {
 
 
 function handleViewRoster(row: EventTeamListItem) {
+
+  currentTeam.value = row
 
   currentTeamName.value = row.teamNameSnapshot || row.eventTeamNo || String(row.id)
 
@@ -535,6 +548,12 @@ getList()
 .warn-text {
 
   color: var(--el-color-warning);
+
+}
+
+.roster-team-info {
+
+  margin-bottom: 16px;
 
 }
 

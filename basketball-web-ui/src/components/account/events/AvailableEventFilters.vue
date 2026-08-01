@@ -120,19 +120,27 @@ function updateSignupTimeRange(part: 'start' | 'end', rawDate: string) {
         <label class="my-events-filter__field my-events-filter__field--range">
           <span class="my-events-filter__label">报名时间</span>
           <div class="my-events-filter__range">
-            <input
-              :value="dateInputValue(modelValue.signupTimeRange?.[0])"
+            <el-date-picker
+              :model-value="dateInputValue(modelValue.signupTimeRange?.[0]) || null"
               type="date"
-              class="my-events-filter__input"
-              @change="updateSignupTimeRange('start', ($event.target as HTMLInputElement).value)"
-            >
+              value-format="YYYY-MM-DD"
+              format="YYYY-MM-DD"
+              placeholder="开始日期"
+              clearable
+              class="my-events-filter__date-picker"
+              @update:model-value="updateSignupTimeRange('start', $event || '')"
+            />
             <span class="my-events-filter__range-sep">至</span>
-            <input
-              :value="dateInputValue(modelValue.signupTimeRange?.[1])"
+            <el-date-picker
+              :model-value="dateInputValue(modelValue.signupTimeRange?.[1]) || null"
               type="date"
-              class="my-events-filter__input"
-              @change="updateSignupTimeRange('end', ($event.target as HTMLInputElement).value)"
-            >
+              value-format="YYYY-MM-DD"
+              format="YYYY-MM-DD"
+              placeholder="结束日期"
+              clearable
+              class="my-events-filter__date-picker"
+              @update:model-value="updateSignupTimeRange('end', $event || '')"
+            />
           </div>
         </label>
       </div>
@@ -200,6 +208,24 @@ function updateSignupTimeRange(part: 'start' | 'end', rawDate: string) {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.my-events-filter__date-picker {
+  flex: 1;
+  min-width: 0;
+
+  :deep(.el-input__wrapper) {
+    min-height: 38px;
+    padding: 0 10px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18) inset;
+    background: #fff;
+  }
+
+  :deep(.el-input__inner) {
+    font-size: 14px;
+    color: #111;
+  }
 }
 
 .my-events-filter__range-sep {

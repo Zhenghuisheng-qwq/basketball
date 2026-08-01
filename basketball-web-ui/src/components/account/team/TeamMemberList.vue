@@ -15,6 +15,8 @@ import {
   isTeamCaptainMember,
   resolveTeamMemberAvatarFallback,
   resolveTeamMemberDisplayName,
+  resolveMemberPlatformGameId,
+  TEAM_MEMBER_PLATFORM_COLUMNS,
 } from '@/utils/teamMemberUi'
 
 const props = defineProps<{
@@ -25,17 +27,16 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  save: [member: TeamMemberItemDto, payload: { jerseyNo: string; rosterType: string }]
+  save: [member: TeamMemberItemDto, payload: { rosterType: string }]
   remove: [member: TeamMemberItemDto]
 }>()
 
 const router = useRouter()
-const memberEdits = reactive<Record<string, { jerseyNo: string; rosterType: string }>>({})
+const memberEdits = reactive<Record<string, { rosterType: string }>>({})
 
 function ensureMemberEdit(member: TeamMemberItemDto) {
   if (!memberEdits[member.teamMemberId]) {
     memberEdits[member.teamMemberId] = {
-      jerseyNo: member.jerseyNo || '',
       rosterType: member.rosterType || 'OFFICIAL',
     }
   }
@@ -92,16 +93,7 @@ async function confirmRemove(member: TeamMemberItemDto) {
 function handleSave(member: TeamMemberItemDto) {
   if (!props.isCaptain) return
   const edit = ensureMemberEdit(member)
-  const jerseyNo = edit.jerseyNo.trim()
-  if (!jerseyNo) {
-    ElMessage.warning('球衣号不能为空')
-    return
-  }
-  if (!/^\d{1,3}$/.test(jerseyNo)) {
-    ElMessage.warning('球衣号格式不正确，请输入 1-3 位数字')
-    return
-  }
-  emit('save', member, { jerseyNo, rosterType: edit.rosterType || 'OFFICIAL' })
+  emit('save', member, { rosterType: edit.rosterType || 'OFFICIAL' })
 }
 </script>
 
@@ -120,10 +112,16 @@ function handleSave(member: TeamMemberItemDto) {
         <div class="team-member-list__head" role="row">
           <div class="team-member-list__cell team-member-list__cell--player" role="columnheader">球员</div>
           <div class="team-member-list__cell team-member-list__cell--position" role="columnheader">位置</div>
-          <div class="team-member-list__cell team-member-list__cell--gameid" role="columnheader">游戏ID</div>
+          <div
+            v-for="platform in TEAM_MEMBER_PLATFORM_COLUMNS"
+            :key="platform"
+            class="team-member-list__cell team-member-list__cell--platform"
+            role="columnheader"
+          >
+            {{ platform === 'XBOX' ? 'Xbox' : platform }}
+          </div>
           <div class="team-member-list__cell team-member-list__cell--role" role="columnheader">球队角色</div>
           <div class="team-member-list__cell team-member-list__cell--status" role="columnheader">成员状态</div>
-          <div class="team-member-list__cell team-member-list__cell--jersey" role="columnheader">球衣号</div>
           <div class="team-member-list__cell team-member-list__cell--join" role="columnheader">加入时间</div>
           <div class="team-member-list__cell team-member-list__cell--actions" role="columnheader">操作</div>
         </div>
@@ -165,9 +163,17 @@ function handleSave(member: TeamMemberItemDto) {
             </span>
           </div>
 
-          <div class="team-member-list__cell team-member-list__cell--gameid" role="cell">
-            <span class="team-member-list__gameid" :title="member.gameIdSummary || '未绑定'">
-              {{ member.gameIdSummary || '未绑定' }}
+          <div
+            v-for="platform in TEAM_MEMBER_PLATFORM_COLUMNS"
+            :key="`${member.teamMemberId}-${platform}`"
+            class="team-member-list__cell team-member-list__cell--platform"
+            role="cell"
+          >
+            <span
+              class="team-member-list__gameid"
+              :title="resolveMemberPlatformGameId(member, platform)"
+            >
+              {{ resolveMemberPlatformGameId(member, platform) }}
             </span>
           </div>
 
@@ -185,19 +191,6 @@ function handleSave(member: TeamMemberItemDto) {
             <template v-else>
               {{ formatTeamMemberMembershipStatus(member.membershipStatus, member.rosterType) }}
             </template>
-          </div>
-
-          <div class="team-member-list__cell team-member-list__cell--jersey" role="cell">
-            <input
-              v-if="isCaptain"
-              v-model="ensureMemberEdit(member).jerseyNo"
-              type="text"
-              maxlength="3"
-              inputmode="numeric"
-              class="team-member-list__jersey-input"
-              placeholder="号码"
-            />
-            <span v-else>{{ member.jerseyNo || '-' }}</span>
           </div>
 
           <div class="team-member-list__cell team-member-list__cell--join" role="cell">
@@ -264,7 +257,13 @@ function handleSave(member: TeamMemberItemDto) {
 
           <dl class="team-member-list__card-meta">
             <div><dt>位置</dt><dd :title="formatTeamMemberPosition(member)">{{ formatTeamMemberPositionShort(member.positionCode) }}</dd></div>
-            <div><dt>游戏ID</dt><dd :title="member.gameIdSummary || '未绑定'">{{ member.gameIdSummary || '未绑定' }}</dd></div>
+            <div
+              v-for="platform in TEAM_MEMBER_PLATFORM_COLUMNS"
+              :key="`card-${member.teamMemberId}-${platform}`"
+            >
+              <dt>{{ platform === 'XBOX' ? 'Xbox' : platform }}</dt>
+              <dd>{{ resolveMemberPlatformGameId(member, platform) }}</dd>
+            </div>
             <div><dt>球队角色</dt><dd>{{ formatTeamMemberRole(member.roleType) }}</dd></div>
             <div>
               <dt>成员状态</dt>
@@ -278,21 +277,6 @@ function handleSave(member: TeamMemberItemDto) {
                   <option value="TRIAL">试训</option>
                 </select>
                 <template v-else>{{ formatTeamMemberMembershipStatus(member.membershipStatus, member.rosterType) }}</template>
-              </dd>
-            </div>
-            <div>
-              <dt>球衣号</dt>
-              <dd>
-                <input
-                  v-if="isCaptain"
-                  v-model="ensureMemberEdit(member).jerseyNo"
-                  type="text"
-                  maxlength="3"
-                  inputmode="numeric"
-                  class="team-member-list__jersey-input"
-                  placeholder="号码"
-                />
-                <template v-else>{{ member.jerseyNo || '-' }}</template>
               </dd>
             </div>
             <div><dt>加入时间</dt><dd>{{ formatTeamMemberJoinTime(member.joinTime) }}</dd></div>
@@ -348,21 +332,23 @@ function handleSave(member: TeamMemberItemDto) {
     border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.36);
-    overflow: hidden;
+    overflow-x: auto;
   }
 
   &__head,
   &__row {
     display: grid;
+    min-width: 900px;
     grid-template-columns:
-      minmax(180px, 1.3fr)
-      minmax(56px, 0.45fr)
-      minmax(120px, 1fr)
-      minmax(72px, 0.55fr)
-      minmax(88px, 0.65fr)
-      minmax(72px, 0.5fr)
-      minmax(88px, 0.65fr)
-      minmax(200px, 1.35fr);
+      minmax(168px, 1.15fr)
+      minmax(52px, 0.38fr)
+      minmax(72px, 0.52fr)
+      minmax(72px, 0.52fr)
+      minmax(72px, 0.52fr)
+      minmax(68px, 0.48fr)
+      minmax(84px, 0.58fr)
+      minmax(84px, 0.58fr)
+      minmax(188px, 1.2fr);
     gap: 12px;
     align-items: center;
     padding: 0 18px;
@@ -403,14 +389,17 @@ function handleSave(member: TeamMemberItemDto) {
   }
 
   &__gameid {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    display: block;
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-size: 13px;
     line-height: 1.4;
     color: #333;
-    word-break: break-all;
+  }
+
+  &__cell--platform {
+    font-size: 13px;
   }
 
   &__player {
@@ -489,8 +478,7 @@ function handleSave(member: TeamMemberItemDto) {
     border-bottom: 1px dotted rgba(20, 20, 20, 0.28);
   }
 
-  &__select,
-  &__jersey-input {
+  &__select {
     width: 100%;
     max-width: 108px;
     min-height: 36px;
@@ -501,11 +489,6 @@ function handleSave(member: TeamMemberItemDto) {
     font: inherit;
     font-size: 15px;
     box-sizing: border-box;
-  }
-
-  &__jersey-input {
-    max-width: 72px;
-    text-align: center;
   }
 
   &__actions {
@@ -562,12 +545,14 @@ function handleSave(member: TeamMemberItemDto) {
   .team-member-list__head,
   .team-member-list__row {
     grid-template-columns:
-      minmax(180px, 1.4fr)
-      minmax(56px, 0.45fr)
-      minmax(72px, 0.55fr)
-      minmax(88px, 0.65fr)
-      minmax(72px, 0.5fr)
-      minmax(200px, 1.3fr);
+      minmax(168px, 1.2fr)
+      minmax(52px, 0.38fr)
+      minmax(68px, 0.48fr)
+      minmax(68px, 0.48fr)
+      minmax(68px, 0.48fr)
+      minmax(68px, 0.48fr)
+      minmax(84px, 0.58fr)
+      minmax(188px, 1.15fr);
   }
 
   .team-member-list__cell--join {

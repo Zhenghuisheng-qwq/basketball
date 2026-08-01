@@ -102,6 +102,39 @@ public class TeamRegistrationDetailResp implements Serializable {
     @ApiModelProperty("最大阵容人数")
     private Integer maxRosterCount;
 
+    @ApiModelProperty("赛制代码，如 3V3 / 4V4 / 5V5")
+    private String formatCode;
+
+    @ApiModelProperty("场上人数（如 5v5 为 5）")
+    private Integer teamPlayCount;
+
+    @ApiModelProperty("首发人数要求")
+    private Integer requiredStartingCount;
+
+    @ApiModelProperty("已认证成员数")
+    private Integer certifiedMemberCount;
+
+    @ApiModelProperty("具备当前平台有效游戏 ID 的成员数")
+    private Integer platformEligibleMemberCount;
+
+    @ApiModelProperty("当前已选阵容人数")
+    private Integer selectedRosterCount;
+
+    @ApiModelProperty("距离最小阵容还差人数")
+    private Integer missingCount;
+
+    @ApiModelProperty("缺少当前平台游戏 ID 的成员数")
+    private Integer missingPlatformGameIdCount;
+
+    @ApiModelProperty("是否可开始/继续填写报名")
+    private Boolean canStartRegistration;
+
+    @ApiModelProperty("是否满足提交条件")
+    private Boolean canSubmitRegistration;
+
+    @ApiModelProperty("不可提交原因")
+    private String cannotReason;
+
     @ApiModelProperty("阵容列表")
     private List<TeamRegistrationPlayerItemResp> rosterItems;
 }

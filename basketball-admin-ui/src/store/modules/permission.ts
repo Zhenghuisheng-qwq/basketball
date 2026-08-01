@@ -39,6 +39,9 @@ const usePermissionStore = defineStore(
             const sdata = JSON.parse(JSON.stringify(res.data))
             const rdata = JSON.parse(JSON.stringify(res.data))
             const defaultData = JSON.parse(JSON.stringify(res.data))
+            applyCnpaMenuTitleOverrides(sdata)
+            applyCnpaMenuTitleOverrides(rdata)
+            applyCnpaMenuTitleOverrides(defaultData)
             const sidebarRoutes = filterAsyncRouter(sdata)
             const rewriteRoutes = filterAsyncRouter(rdata, false, true)
             const defaultRoutes = filterAsyncRouter(defaultData)
@@ -54,6 +57,18 @@ const usePermissionStore = defineStore(
       }
     }
   })
+
+/** 同步后台菜单显示名，避免仅改 sys_menu 才能生效的文案调整。 */
+function applyCnpaMenuTitleOverrides(routes: any[]) {
+  routes.forEach(route => {
+    if (route.meta?.title === '赛事阵容管理') {
+      route.meta.title = '正式赛事阵容'
+    }
+    if (route.children?.length) {
+      applyCnpaMenuTitleOverrides(route.children)
+    }
+  })
+}
 
 // 遍历后台传来的路由字符串，转换为组件对象
 function filterAsyncRouter(asyncRouterMap: any[], lastRouter = false, type = false) {

@@ -10,8 +10,6 @@ import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import { useNotificationCenterStore } from '@/stores/notificationCenter'
 import type { NotificationTabKey } from '@/types/accountNotifications'
 
-const PAGE_SIZE = 10
-
 const router = useRouter()
 const notificationStore = useNotificationCenterStore()
 
@@ -21,18 +19,11 @@ onMounted(async () => {
 
 onActivated(async () => {
   if (!notificationStore.loading) {
-    await notificationStore.refresh(
-      notificationStore.pageNum,
-      PAGE_SIZE,
-      notificationStore.activeTab === 'UNREAD' ? 0 : undefined,
-      notificationStore.activeTab,
-    )
+    await notificationStore.refresh()
   }
 })
 
 const unreadText = computed(() => `${notificationStore.unreadCount} 条未读`)
-
-const totalPages = computed(() => Math.max(1, Math.ceil(notificationStore.total / PAGE_SIZE)))
 
 const emptyMessage = computed(() =>
   notificationStore.activeTab === 'UNREAD' ? '暂无未读通知' : '暂无通知',
@@ -101,8 +92,8 @@ async function handlePageChange(nextPage: number) {
           :items="notificationStore.items"
           :page="notificationStore.pageNum"
           :total="notificationStore.total"
-          :page-size="PAGE_SIZE"
-          :total-pages="totalPages"
+          :page-size="notificationStore.pageSize"
+          :loading="notificationStore.loading"
           :empty-message="emptyMessage"
           @view="handleViewDetail"
           @update:page="handlePageChange"

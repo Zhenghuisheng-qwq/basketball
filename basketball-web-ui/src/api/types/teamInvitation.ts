@@ -6,6 +6,7 @@ export interface TeamInvitationItemDto {
   inviterMemberId?: string
   inviteeMemberId?: string
   inviteeNickname?: string
+  inviteeAvatarUrl?: string
   invitationMessage?: string
   invitationStatus?: number
   invitationStatusText?: string

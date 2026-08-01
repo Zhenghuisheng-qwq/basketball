@@ -40,10 +40,13 @@ public enum TournamentRegistrationStatusEnum {
         return this == REVIEWING || this == SUBMITTED;
     }
 
-    /** 用户端展示文案（历史「已提交」按「审核中」展示） */
+    /** 用户端展示文案（历史「已提交」按「审核中」展示；内部 DRAFT 对用户展示为「待提交」） */
     public String getDisplayDescription() {
         if (this == SUBMITTED) {
             return REVIEWING.getDescription();
+        }
+        if (this == DRAFT) {
+            return "待提交";
         }
         return description;
     }

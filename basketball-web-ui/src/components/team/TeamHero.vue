@@ -47,32 +47,47 @@ const heroBgStyle = computed(() => ({
   backgroundImage: `linear-gradient(90deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.38) 45%, rgba(0, 0, 0, 0.15) 100%), url(${teamBackground})`,
 }))
 
-const infoCards = computed(() => [
-  {
-    key: 'captain',
-    icon: 'captain' as const,
-    label: '队长',
-    value: props.team.captainName,
-  },
-  {
-    key: 'platform',
-    icon: 'gamepad' as const,
-    label: '比赛平台',
-    value: props.team.platform,
-  },
-  {
-    key: 'stage',
-    icon: 'stage' as const,
-    label: '当前阶段',
-    value: stageLabel.value,
-  },
-  {
-    key: 'roster',
-    icon: 'roster' as const,
-    label: '注册阵容',
-    value: `${props.team.rosterCount} 人`,
-  },
-])
+type HeroInfoIcon = 'captain' | 'gamepad' | 'stage' | 'roster'
+
+interface HeroInfoCard {
+  key: string
+  icon: HeroInfoIcon
+  label: string
+  value: string
+}
+
+const infoCards = computed<HeroInfoCard[]>(() => {
+  const cards: HeroInfoCard[] = [
+    {
+      key: 'captain',
+      icon: 'captain' as const,
+      label: '队长',
+      value: props.team.captainName,
+    },
+    {
+      key: 'stage',
+      icon: 'stage' as const,
+      label: '当前阶段',
+      value: stageLabel.value,
+    },
+    {
+      key: 'roster',
+      icon: 'roster' as const,
+      label: '当前成员',
+      value: `${props.team.rosterCount} 人`,
+    },
+  ]
+  const platform = props.team.platform?.trim()
+  if (platform && platform !== '--') {
+    cards.splice(1, 0, {
+      key: 'platform',
+      icon: 'gamepad' as const,
+      label: '比赛平台',
+      value: platform,
+    })
+  }
+  return cards
+})
 </script>
 
 <template>
@@ -364,7 +379,7 @@ const infoCards = computed(() => [
 
 .team-hero__info-panel {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   align-items: stretch;
   width: 100%;
   max-width: 100%;

@@ -22,6 +22,15 @@
     </el-form>
 
     <el-row :gutter="10" class="mb8">
+      <el-col :span="24">
+        <el-alert
+          type="info"
+          :closable="false"
+          show-icon
+          title="正式赛事阵容"
+          description="展示球队报名审核通过后生成的本届赛事球员快照。该阵容用于赛程、比赛数据和历史统计，不用于设置首发、球衣号或比赛上场安排。"
+        />
+      </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
@@ -67,20 +76,30 @@
 
     <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
-    <el-drawer v-model="historyOpen" title="阵容变更历史" size="760px" append-to-body>
-      <el-table :data="changeHistory" size="small" v-loading="historyLoading">
-        <el-table-column label="变更类型" prop="changeTypeName" width="120" />
-        <el-table-column label="源球队ID" prop="sourceEventTeamId" width="100" />
-        <el-table-column label="目标球队ID" prop="targetEventTeamId" width="110" />
-        <el-table-column label="变更前" prop="beforeSnapshot" min-width="140" :show-overflow-tooltip="true" />
-        <el-table-column label="变更后" prop="afterSnapshot" min-width="140" :show-overflow-tooltip="true" />
-        <el-table-column label="操作人" prop="operatorName" width="100" />
-        <el-table-column label="原因" prop="operateReason" min-width="120" :show-overflow-tooltip="true" />
-        <el-table-column label="生效时间" prop="effectiveTime" width="160">
-          <template #default="scope">{{ parseTime(scope.row.effectiveTime) }}</template>
-        </el-table-column>
-      </el-table>
-    </el-drawer>
+    <el-dialog
+      v-model="historyOpen"
+      title="变更历史"
+      width="80vw"
+      top="6vh"
+      append-to-body
+      destroy-on-close
+      class="cnpa-admin-detail-dialog"
+    >
+      <div class="cnpa-detail-table-wrap">
+        <el-table :data="changeHistory" size="small" v-loading="historyLoading">
+          <el-table-column label="变更类型" prop="changeTypeName" min-width="120" />
+          <el-table-column label="源球队ID" prop="sourceEventTeamId" min-width="100" />
+          <el-table-column label="目标球队ID" prop="targetEventTeamId" min-width="110" />
+          <el-table-column label="变更前" prop="beforeSnapshot" min-width="140" :show-overflow-tooltip="true" />
+          <el-table-column label="变更后" prop="afterSnapshot" min-width="140" :show-overflow-tooltip="true" />
+          <el-table-column label="操作人" prop="operatorName" min-width="100" :show-overflow-tooltip="true" />
+          <el-table-column label="原因" prop="operateReason" min-width="120" :show-overflow-tooltip="true" />
+          <el-table-column label="生效时间" prop="effectiveTime" min-width="160">
+            <template #default="scope">{{ parseTime(scope.row.effectiveTime) }}</template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </el-dialog>
   </div>
 </template>
 

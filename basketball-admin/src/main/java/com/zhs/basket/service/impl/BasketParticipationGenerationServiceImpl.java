@@ -56,13 +56,19 @@ public class BasketParticipationGenerationServiceImpl implements IBasketParticip
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void ensureRosterLockedForApprovedRegistration(Long registrationId, Long operatorId) {
-        requireApprovedRegistration(registrationId);
+        BasketTournamentRegistration reg = requireApprovedRegistration(registrationId);
         BasketTeamSeasonProfile profile = teamSeasonProfileMapper.selectByRegistrationId(registrationId);
         if (profile == null) {
             backfillFromApprovedRegistration(registrationId, operatorId, "修复阵容锁定");
             return;
         }
+        boolean needsRepair = !Integer.valueOf(RosterLockStatusEnum.LOCKED.getCode()).equals(profile.getRosterLockStatus())
+                || seasonRosterMapper.countUnlockedActiveByEventTeamId(profile.getId()) > 0;
         lockEventTeamRoster(profile, new Date());
+        if (needsRepair) {
+            writeParticipationAudit(reg, "REPAIR_ROSTER_LOCK", profile.getId(),
+                    "修复正式赛事球队阵容锁定状态；eventTeamId=" + profile.getId());
+        }
     }
 
     private Long doGenerate(Long registrationId, Long operatorId, String remark, boolean backfill) {
@@ -97,11 +103,9 @@ public class BasketParticipationGenerationServiceImpl implements IBasketParticip
         if (profile == null || profile.getId() == null) {
             return;
         }
-        if (!Integer.valueOf(RosterLockStatusEnum.LOCKED.getCode()).equals(profile.getRosterLockStatus())) {
-            teamSeasonProfileMapper.updateRosterLockStatus(profile.getId(), RosterLockStatusEnum.LOCKED.getCode(), now);
-            profile.setRosterLockStatus(RosterLockStatusEnum.LOCKED.getCode());
-            profile.setRosterLockedTime(now);
-        }
+        teamSeasonProfileMapper.updateRosterLockStatus(profile.getId(), RosterLockStatusEnum.LOCKED.getCode(), now);
+        profile.setRosterLockStatus(RosterLockStatusEnum.LOCKED.getCode());
+        profile.setRosterLockedTime(now);
         seasonRosterMapper.updateLockStatusByEventTeamId(profile.getId(), RosterLockStatusEnum.LOCKED.getCode(), now);
     }
 

@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import AccountTeamLogo from '@/components/account/team/AccountTeamLogo.vue'
+
 withDefaults(
   defineProps<{
     title: string
     description: string
     statusText: string
     statusType?: 'default' | 'success' | 'warning' | 'danger' | 'info'
+    logoUrl?: string | null
+    logoShortName?: string | null
+    logoTeamName?: string | null
   }>(),
   {
     statusType: 'default',
@@ -17,6 +22,20 @@ withDefaults(
     <div class="account-welcome-banner__content">
       <h2 class="account-welcome-banner__title account-hero-title">{{ title }}</h2>
       <p class="account-welcome-banner__desc account-hero-desc">{{ description }}</p>
+    </div>
+
+    <div
+      v-if="logoUrl || logoShortName || logoTeamName"
+      class="account-welcome-banner__brand"
+    >
+      <AccountTeamLogo
+        :logo-url="logoUrl"
+        :short-name="logoShortName"
+        :team-name="logoTeamName"
+        size="md"
+        :alt="logoTeamName || title"
+      />
+      <span v-if="logoShortName" class="account-welcome-banner__brand-code">{{ logoShortName }}</span>
     </div>
 
     <div
@@ -36,10 +55,40 @@ withDefaults(
       </span>
       <span>{{ statusText }}</span>
     </div>
-
   </section>
 </template>
 
 <style scoped lang="scss">
 @import '@/views/account/styles/account-center.scss';
+
+.account-welcome-banner__brand {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+  margin-right: 12px;
+}
+
+.account-welcome-banner__brand-code {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+@media (max-width: 767px) {
+  .account-welcome-banner__brand {
+    margin-left: 0;
+    margin-right: 0;
+    order: 3;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
 </style>

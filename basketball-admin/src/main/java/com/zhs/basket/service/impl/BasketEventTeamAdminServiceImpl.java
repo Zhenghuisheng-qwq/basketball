@@ -56,9 +56,11 @@ public class BasketEventTeamAdminServiceImpl implements IBasketEventTeamAdminSer
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void unlockRoster(Long id) {
-        requireProfile(id);
+        BasketTeamSeasonProfile profile = requireProfile(id);
+        Date now = new Date();
         int rows = teamSeasonProfileMapper.updateRosterLockStatus(id, RosterLockStatusEnum.UNLOCKED.getCode(), null);
         if (rows != 1) throw new ServiceException("解锁阵容失败");
+        seasonRosterMapper.updateLockStatusByEventTeamId(profile.getId(), RosterLockStatusEnum.UNLOCKED.getCode(), now);
     }
 
     @Override
@@ -67,6 +69,12 @@ public class BasketEventTeamAdminServiceImpl implements IBasketEventTeamAdminSer
         BasketTeamSeasonProfile profile = requireProfile(id);
         if (profile.getRegistrationId() == null) {
             throw new ServiceException("该赛事球队未关联报名记录，无法修复阵容锁定");
+        }
+        if (profile.getApprovedTime() == null) {
+            throw new ServiceException("该赛事球队尚未审核通过，无法修复阵容锁定");
+        }
+        if (!Objects.equals(ParticipationStatusEnum.ACTIVE.getCode(), profile.getParticipationStatus())) {
+            throw new ServiceException("仅参赛中的正式赛事球队可修复阵容锁定");
         }
         participationGenerationService.ensureRosterLockedForApprovedRegistration(
                 profile.getRegistrationId(), com.zhs.common.utils.SecurityUtils.getUserId());
@@ -95,7 +103,7 @@ public class BasketEventTeamAdminServiceImpl implements IBasketEventTeamAdminSer
         boolean effectivelyLocked = isEffectivelyLocked(vo);
         if (effectivelyLocked) {
             if (!Objects.equals(RosterLockStatusEnum.LOCKED.getCode(), vo.getRosterLockStatus())) {
-                vo.setRosterLockStatusName("未锁定（需修复）");
+                vo.setRosterLockStatusName("锁定异常");
                 vo.setRosterLockNeedsRepair(true);
             } else {
                 vo.setRosterLockStatusName(RosterLockStatusEnum.LOCKED.getDescription());
@@ -112,7 +120,7 @@ public class BasketEventTeamAdminServiceImpl implements IBasketEventTeamAdminSer
         boolean effectivelyLocked = vo.getApprovedTime() != null
                 || Objects.equals(RosterLockStatusEnum.LOCKED.getCode(), vo.getRosterLockStatus());
         if (effectivelyLocked && !Objects.equals(RosterLockStatusEnum.LOCKED.getCode(), vo.getRosterLockStatus())) {
-            vo.setRosterLockStatusName("未锁定（需修复）");
+            vo.setRosterLockStatusName("锁定异常");
         } else {
             vo.setRosterLockStatusName(RosterLockStatusEnum.fromCode(vo.getRosterLockStatus()).getDescription());
         }

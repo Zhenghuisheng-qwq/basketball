@@ -90,6 +90,8 @@ export interface TeamRegistrationItemDto {
   rosterLockStatusText?: string
   submittedTime?: string
   createTime?: string
+  auditTime?: string
+  approvedTime?: string
 }
 
 export interface TeamRegistrationPlayerItemDto {
@@ -138,7 +140,24 @@ export interface TeamRegistrationDetailDto {
   registrationEndTime?: string
   minRosterCount?: number
   maxRosterCount?: number
+  formatCode?: string
+  teamPlayCount?: number
+  requiredStartingCount?: number
+  certifiedMemberCount?: number
+  platformEligibleMemberCount?: number
+  selectedRosterCount?: number
+  missingCount?: number
+  missingPlatformGameIdCount?: number
+  canStartRegistration?: boolean
+  canSubmitRegistration?: boolean
+  cannotReason?: string
   rosterItems?: TeamRegistrationPlayerItemDto[]
+}
+
+export interface TeamRegistrationRemindPlatformResultDto {
+  success?: boolean
+  message?: string
+  lastRemindTime?: string
 }
 
 export interface TeamRegistrationAuditItemDto {

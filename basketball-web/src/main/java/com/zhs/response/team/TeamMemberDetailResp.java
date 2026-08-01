@@ -93,10 +93,10 @@ public class TeamMemberDetailResp implements Serializable {
     @ApiModelProperty("当前阵容/成员状态文案")
     private String currentRosterStatus;
 
-    @ApiModelProperty("加入来源")
+    @ApiModelProperty("入队方式")
     private String sourceType;
 
-    @ApiModelProperty("加入来源文案")
+    @ApiModelProperty("入队方式文案")
     private String sourceTypeText;
 
     @ApiModelProperty("参赛赛事数（本轮可为空）")

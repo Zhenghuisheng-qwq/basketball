@@ -57,7 +57,7 @@ export function usePublicTeamPage() {
       captainName:
         roster.value.find((item) => (item.roleType || '').toUpperCase().includes('CAPTAIN'))
           ?.playerName || '--',
-      platform: displayText(d.gameTerminal, '--'),
+      platform: '',
       currentStage: 'regular',
       rosterCount: toNumber(d.currentMemberCount, roster.value.length),
       verified: toNumber(d.teamStatus, 0) === 1,

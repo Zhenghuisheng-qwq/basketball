@@ -36,6 +36,7 @@ import {
   deleteTeamRegistrationDraft,
   getAvailableSeasonPage,
   getRegistrationRosterCandidates,
+  remindMemberPlatformGameId,
   getSeasonPlatforms,
   getTeamRegistrationAuditPage,
   getTeamRegistrationDetail,
@@ -368,8 +369,9 @@ export const useTeamStore = defineStore('team', () => {
     lastError.value = ''
     try {
       const res = await getTeamInvitationPage(teamId, { currentPage: 1, pageSize: 20, ...params })
-      teamInvitations.value = unwrapPage(res.data).records
-      return teamInvitations.value
+      const pageData = unwrapPage(res.data)
+      teamInvitations.value = pageData.records
+      return pageData
     } catch (error) {
       setError(error)
       throw error
@@ -466,8 +468,9 @@ export const useTeamStore = defineStore('team', () => {
     lastError.value = ''
     try {
       const res = await getTeamJoinApplicationPage(teamId, { currentPage: 1, pageSize: 20, ...params })
-      teamJoinApplications.value = unwrapPage(res.data).records
-      return teamJoinApplications.value
+      const pageData = unwrapPage(res.data)
+      teamJoinApplications.value = pageData.records
+      return pageData
     } catch (error) {
       setError(error)
       throw error
@@ -616,9 +619,10 @@ export const useTeamStore = defineStore('team', () => {
     lastError.value = ''
     try {
       const res = await getCandidatePlayerPage(teamId, { currentPage: 1, pageSize: 20, ...params })
-      candidatePlayers.value = unwrapPage(res.data).records
+      const pageData = unwrapPage(res.data)
+      candidatePlayers.value = pageData.records
       candidateEmptyReason.value = res.data?.emptyReason || ''
-      return candidatePlayers.value
+      return pageData
     } catch (error) {
       setError(error)
       throw error
@@ -627,14 +631,18 @@ export const useTeamStore = defineStore('team', () => {
     }
   }
 
-  async function loadAvailableSeasons(teamId: string) {
+  async function loadAvailableSeasons(
+    teamId: string,
+    params?: { currentPage?: number; pageSize?: number },
+  ) {
     registrationLoading.value = true
     lastError.value = ''
     try {
-      const res = await getAvailableSeasonPage(teamId, { currentPage: 1, pageSize: 20 })
-      availableSeasons.value = unwrapPage(res.data).records
+      const res = await getAvailableSeasonPage(teamId, { currentPage: 1, pageSize: 20, ...params })
+      const pageData = unwrapPage(res.data)
+      availableSeasons.value = pageData.records
       availableSeasonEmptyReason.value = res.data?.emptyReason || ''
-      return availableSeasons.value
+      return pageData
     } catch (error) {
       setError(error)
       throw error
@@ -643,13 +651,17 @@ export const useTeamStore = defineStore('team', () => {
     }
   }
 
-  async function loadRegistrations(teamId: string, status?: number) {
+  async function loadRegistrations(
+    teamId: string,
+    params?: { currentPage?: number; pageSize?: number; status?: number },
+  ) {
     registrationLoading.value = true
     lastError.value = ''
     try {
-      const res = await getTeamRegistrationPage(teamId, { currentPage: 1, pageSize: 20, status })
-      registrations.value = unwrapPage(res.data).records
-      return registrations.value
+      const res = await getTeamRegistrationPage(teamId, { currentPage: 1, pageSize: 20, ...params })
+      const pageData = unwrapPage(res.data)
+      registrations.value = pageData.records
+      return pageData
     } catch (error) {
       setError(error)
       throw error
@@ -757,6 +769,20 @@ export const useTeamStore = defineStore('team', () => {
     try {
       const res = await withdrawTeamRegistration(registrationId, body)
       registrationDetail.value = res.data
+      return res.data
+    } catch (error) {
+      setError(error)
+      throw error
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
+  async function remindMemberPlatformGameIdAction(registrationId: string, teamMemberId: string) {
+    actionLoading.value = true
+    lastError.value = ''
+    try {
+      const res = await remindMemberPlatformGameId(registrationId, teamMemberId)
       return res.data
     } catch (error) {
       setError(error)
@@ -893,6 +919,7 @@ export const useTeamStore = defineStore('team', () => {
     inheritTeamAction,
     loadSeasonPlatforms,
     loadRosterCandidates,
+    remindMemberPlatformGameIdAction,
     loadCandidatePlayers,
     loadAvailableSeasons,
     loadRegistrations,

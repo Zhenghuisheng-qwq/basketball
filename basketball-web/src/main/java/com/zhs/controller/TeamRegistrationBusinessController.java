@@ -9,12 +9,7 @@ import com.zhs.request.team.TeamRegistrationUpdateReq;
 import com.zhs.request.team.TeamRegistrationWithdrawReq;
 import com.zhs.response.account.CompetitionSeasonOptionResp;
 import com.zhs.response.account.MyEventsContextResp;
-import com.zhs.response.team.AvailableSeasonItemResp;
-import com.zhs.response.team.AvailableSeasonPageResp;
-import com.zhs.response.team.TeamEventRecordItemResp;
-import com.zhs.response.team.TeamRegistrationAuditItemResp;
-import com.zhs.response.team.TeamRegistrationDetailResp;
-import com.zhs.response.team.TeamRegistrationItemResp;
+import com.zhs.response.team.*;
 import com.zhs.service.ITeamRegistrationBusinessService;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
@@ -97,11 +92,11 @@ public class TeamRegistrationBusinessController {
         return R.ok(teamRegistrationBusinessService.pageRegistrations(teamId, currentPage, pageSize, status));
     }
 
-    @ApiOperation("创建报名草稿")
+    @ApiOperation("创建报名（待提交）")
     @PostMapping("/basket/team/{teamId}/registration/draft")
     public R<TeamRegistrationDetailResp> createDraft(@PathVariable String teamId,
                                                    @RequestBody TeamRegistrationDraftReq req) {
-        return R.ok(teamRegistrationBusinessService.createDraft(teamId, req), "草稿创建成功");
+        return R.ok(teamRegistrationBusinessService.createDraft(teamId, req), "报名信息已保存");
     }
 
     @ApiOperation("报名详情")
@@ -143,11 +138,19 @@ public class TeamRegistrationBusinessController {
         return R.ok(teamRegistrationBusinessService.withdraw(registrationId, req), "报名撤回成功");
     }
 
-    @ApiOperation("删除报名草稿")
+    @ApiOperation("放弃本次报名填写")
     @DeleteMapping("/basket/team/registration/{registrationId}/draft")
     public R<Void> deleteDraft(@PathVariable String registrationId) {
         teamRegistrationBusinessService.deleteDraft(registrationId);
-        return R.ok(null, "草稿删除成功");
+        return R.ok(null, "已放弃本次报名填写");
+    }
+
+    @ApiOperation("提醒队员补充平台游戏 ID")
+    @PostMapping("/basket/team/registration/{registrationId}/member/{teamMemberId}/remind-platform-game-id")
+    public R<TeamRegistrationRemindPlatformResp> remindMemberPlatformGameId(
+            @PathVariable String registrationId,
+            @PathVariable String teamMemberId) {
+        return R.ok(teamRegistrationBusinessService.remindMemberPlatformGameId(registrationId, teamMemberId));
     }
 
     @ApiOperation("报名审核记录分页")

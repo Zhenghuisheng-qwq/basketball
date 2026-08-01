@@ -21,6 +21,7 @@ import com.zhs.service.ITeamRegistrationBusinessService;
 import com.zhs.support.*;
 import com.zhs.util.DataMaskUtil;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -30,19 +31,19 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBusinessService {
 
     private static final Integer NOT_DELETED = 0;
     private static final int IS_CURRENT = 1;
     private static final int IS_CAPTAIN = 1;
     private static final int IS_STARTING = 1;
-    private static final int REQUIRED_STARTING_COUNT = 5;
-    private static final int DEFAULT_MIN_ROSTER_COUNT = 5;
-    private static final int DEFAULT_MAX_ROSTER_COUNT = 8;
     private static final int DELETED = 1;
     private static final int ENABLED = 1;
     private static final String BIZ_TYPE_TEAM_REGISTRATION = "TEAM_REGISTRATION";
     private static final String BIZ_TYPE_TEAM_REGISTRATION_REMIND = "TEAM_REGISTRATION_REMIND";
+    /** 须 <= basket_message_task.biz_type VARCHAR(32) */
+    private static final String BIZ_TYPE_TEAM_REG_PLATFORM_REMIND = "TEAM_REG_PLATFORM_REMIND";
     private static final String ROSTER_LOCKED_MESSAGE = "当前报名已审核通过，阵容已锁定，不能直接修改。如需调整，请重新提交审核或联系赛事管理员。";
     private static final String ROSTER_LOCKED_HINT = "报名已审核通过，阵容已锁定。如需调整，请重新提交审核或联系赛事管理员。";
     private static final long REMIND_COOLDOWN_MS = 24L * 60 * 60 * 1000;
@@ -101,10 +102,15 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         Long registrationPk = parseLongId(registrationId, "报名主键");
         Long memberId = UserContext.getRequiredUserId();
         BasketTournamentRegistration registration = captainPermissionService.requireRegistrationCaptain(memberId, registrationPk);
+        return buildRosterCandidates(registration);
+    }
+
+    private List<RegistrationRosterCandidateItemResp> buildRosterCandidates(BasketTournamentRegistration registration) {
         String platformCode = registration.getPlatformCode();
         if (!StringUtils.hasText(platformCode)) {
             throw new ServiceException("报名记录缺少平台信息");
         }
+        String platformName = eventPlatformSupport.resolvePlatformName(platformCode);
 
         List<BasketTeamMember> members = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
                 .eq(BasketTeamMember::getTeamId, registration.getTeamId())
@@ -158,21 +164,14 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
                 item.setNickname(memberProfile.getNickname());
             }
             BasketPlayerPlatformAccount platformAccount = platformAccountMap.get(member.getPlayerId());
-            PlatformIdentityStatusEnum identityStatus = platformTeamMembershipSupport.resolvePlatformIdentityStatus(
-                    member.getMemberId(), platformCode);
+            PlatformIdentityStatusEnum identityStatus = resolveMemberPlatformIdentityStatus(
+                    member.getMemberId(), platformCode, platformAccount);
             if (platformAccount != null) {
                 item.setPlatformGameId(platformAccount.getDisplayGameId());
-                if (Objects.equals(PlatformAccountStatusEnum.ACTIVE.getCode(), platformAccount.getAccountStatus())) {
-                    identityStatus = PlatformIdentityStatusEnum.ACTIVE;
-                } else if (Objects.equals(PlatformAccountStatusEnum.REJECTED.getCode(), platformAccount.getAccountStatus())) {
-                    identityStatus = PlatformIdentityStatusEnum.REJECTED;
-                } else {
-                    identityStatus = PlatformIdentityStatusEnum.PENDING;
-                }
             }
             item.setPlatformIdentityStatus(identityStatus.getCode());
-            item.setPlatformIdentityStatusText(identityStatus.getLabel());
-            String cannotSelectReason = resolveRosterCandidateReason(profile, identityStatus);
+            item.setPlatformIdentityStatusText(formatPlatformIdentityLabel(platformName, identityStatus, platformAccount));
+            String cannotSelectReason = resolveRosterCandidateReason(profile, identityStatus, platformName);
             item.setCanSelect(cannotSelectReason == null);
             item.setCannotSelectReason(cannotSelectReason);
             items.add(item);
@@ -180,12 +179,60 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         return items;
     }
 
-    private String resolveRosterCandidateReason(BasketPlayerProfile profile, PlatformIdentityStatusEnum identityStatus) {
+    private PlatformIdentityStatusEnum resolveMemberPlatformIdentityStatus(Long memberId,
+                                                                           String platformCode,
+                                                                           BasketPlayerPlatformAccount platformAccount) {
+        PlatformIdentityStatusEnum identityStatus = platformTeamMembershipSupport.resolvePlatformIdentityStatus(
+                memberId, platformCode);
+        if (platformAccount == null) {
+            return identityStatus == PlatformIdentityStatusEnum.ACTIVE ? PlatformIdentityStatusEnum.UNBOUND : identityStatus;
+        }
+        if (Objects.equals(PlatformAccountStatusEnum.ACTIVE.getCode(), platformAccount.getAccountStatus())) {
+            return PlatformIdentityStatusEnum.ACTIVE;
+        }
+        if (Objects.equals(PlatformAccountStatusEnum.REJECTED.getCode(), platformAccount.getAccountStatus())) {
+            return PlatformIdentityStatusEnum.REJECTED;
+        }
+        return PlatformIdentityStatusEnum.PENDING;
+    }
+
+    private String formatPlatformIdentityLabel(String platformName,
+                                               PlatformIdentityStatusEnum identityStatus,
+                                               BasketPlayerPlatformAccount platformAccount) {
+        String label = StringUtils.hasText(platformName) ? platformName : "平台";
+        if (identityStatus == PlatformIdentityStatusEnum.ACTIVE && platformAccount != null) {
+            return label + "：" + platformAccount.getDisplayGameId();
+        }
+        if (identityStatus == PlatformIdentityStatusEnum.UNBOUND) {
+            return "缺少 " + label + " 游戏 ID";
+        }
+        if (identityStatus == PlatformIdentityStatusEnum.PENDING) {
+            return label + " 游戏 ID 审核中";
+        }
+        if (identityStatus == PlatformIdentityStatusEnum.REJECTED) {
+            return label + " 游戏 ID 未通过";
+        }
+        return identityStatus.getLabel();
+    }
+
+    private String resolveRosterCandidateReason(BasketPlayerProfile profile,
+                                                PlatformIdentityStatusEnum identityStatus,
+                                                String platformName) {
         if (profile == null) {
             return "球员档案不可用";
         }
         if (!Objects.equals(PlayerCertStatusEnum.APPROVED.getCode(), profile.getCertificationStatus())) {
-            return "球员未完成认证";
+            return "球员未认证";
+        }
+        String label = StringUtils.hasText(platformName) ? platformName : "当前平台";
+        if (identityStatus == PlatformIdentityStatusEnum.UNBOUND) {
+            return "缺少 " + label + " 游戏 ID";
+        }
+        if (identityStatus == PlatformIdentityStatusEnum.PENDING) {
+            return label + " 游戏 ID 审核中";
+        }
+        if (identityStatus == PlatformIdentityStatusEnum.REJECTED) {
+            return label + " 游戏 ID 未通过";
         }
         if (identityStatus != PlatformIdentityStatusEnum.ACTIVE) {
             return "该成员未绑定或未通过当前平台游戏 ID，不能加入本平台阵容";
@@ -883,7 +930,7 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         if (primary == null) {
             return "未报名";
         }
-        return TournamentRegistrationStatusEnum.fromCode(primary.getRegistrationStatus()).getDescription();
+        return TournamentRegistrationStatusEnum.fromCode(primary.getRegistrationStatus()).getDisplayDescription();
     }
 
     private String resolveTeamRegistrationStatusCode(List<BasketTournamentRegistration> registrations) {
@@ -1381,6 +1428,118 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
     }
 
     @Override
+    public TeamRegistrationRemindPlatformResp remindMemberPlatformGameId(String registrationId, String teamMemberId) {
+        Long registrationPk = parseLongId(registrationId, "报名主键");
+        Long teamMemberPk = parseLongId(teamMemberId, "球队成员主键");
+        Long captainMemberId = UserContext.getRequiredUserId();
+        BasketTournamentRegistration registration = captainPermissionService.requireRegistrationCaptain(captainMemberId, registrationPk);
+
+        BasketTeamMember teamMember = teamMemberDao.selectById(teamMemberPk);
+        if (teamMember == null || !NOT_DELETED.equals(teamMember.getIsDelete())
+                || !registration.getTeamId().equals(teamMember.getTeamId())
+                || !Integer.valueOf(IS_CURRENT).equals(teamMember.getIsCurrent())
+                || !Objects.equals(TeamMembershipStatusEnum.ACTIVE.getCode(), teamMember.getMembershipStatus())) {
+            throw new ServiceException("只能提醒本队有效成员");
+        }
+
+        String platformCode = registration.getPlatformCode();
+        if (!StringUtils.hasText(platformCode)) {
+            throw new ServiceException("报名记录缺少平台信息");
+        }
+        String platformName = eventPlatformSupport.resolvePlatformName(platformCode);
+
+        BasketPlayerProfile profile = teamMember.getPlayerId() == null ? null : playerProfileDao.selectById(teamMember.getPlayerId());
+        BasketPlayerPlatformAccount platformAccount = teamMember.getPlayerId() == null ? null
+                : platformAccountDao.selectOne(new LambdaQueryWrapper<BasketPlayerPlatformAccount>()
+                .eq(BasketPlayerPlatformAccount::getPlayerId, teamMember.getPlayerId())
+                .eq(BasketPlayerPlatformAccount::getPlatform, platformCode)
+                .eq(BasketPlayerPlatformAccount::getIsDelete, NOT_DELETED)
+                .last("limit 1"));
+        PlatformIdentityStatusEnum identityStatus = resolveMemberPlatformIdentityStatus(
+                teamMember.getMemberId(), platformCode, platformAccount);
+        String ineligibleReason = resolveRosterCandidateReason(profile, identityStatus, platformName);
+        if (ineligibleReason == null) {
+            throw new ServiceException("该成员已具备当前赛事平台游戏 ID，无需提醒");
+        }
+        if (!ineligibleReason.contains("缺少") || !ineligibleReason.contains("游戏 ID")) {
+            throw new ServiceException("只能提醒缺少当前赛事平台游戏 ID 的成员");
+        }
+
+        Long remindBizId = buildPlatformRemindBizId(registrationPk, teamMemberPk, platformCode);
+        if (hasRecentPlatformRemind(captainMemberId, remindBizId)) {
+            TeamRegistrationRemindPlatformResp resp = new TeamRegistrationRemindPlatformResp();
+            resp.setSuccess(false);
+            resp.setMessage("24小时内已提醒过该成员，请稍后再试");
+            Date lastTime = findLastPlatformRemindTime(captainMemberId, remindBizId);
+            resp.setLastRemindTime(lastTime);
+            return resp;
+        }
+
+        BasketTeam team = teamDao.selectById(registration.getTeamId());
+        BasketTournamentSeason season = seasonDao.selectById(registration.getSeasonId());
+        BasketTournament tournament = season == null ? null : tournamentDao.selectById(season.getTournamentId());
+        String teamName = team == null || !StringUtils.hasText(team.getTeamName()) ? "球队" : team.getTeamName();
+        String tournamentName = tournament != null && StringUtils.hasText(tournament.getTournamentName())
+                ? tournament.getTournamentName()
+                : (season != null ? season.getSeasonName() : "赛事");
+        String content = String.format(
+                "队长提醒你为球队「%s」报名赛事「%s」补充 %s 平台游戏 ID。",
+                teamName, tournamentName, platformName);
+        String redirectValue = "/account/player/identity";
+
+        try {
+            businessMessageService.sendSiteMessageFrom(
+                    captainMemberId,
+                    teamMember.getMemberId(),
+                    "补充平台游戏 ID 提醒",
+                    content,
+                    BIZ_TYPE_TEAM_REG_PLATFORM_REMIND,
+                    remindBizId,
+                    "ROUTE",
+                    redirectValue);
+        } catch (Exception ex) {
+            log.warn("remindMemberPlatformGameId send message failed, registrationId={}, teamMemberId={}",
+                    registrationId, teamMemberId, ex);
+            TeamRegistrationRemindPlatformResp resp = new TeamRegistrationRemindPlatformResp();
+            resp.setSuccess(false);
+            resp.setMessage("提醒发送失败，请稍后重试");
+            return resp;
+        }
+
+        TeamRegistrationRemindPlatformResp resp = new TeamRegistrationRemindPlatformResp();
+        resp.setSuccess(true);
+        resp.setMessage("已提醒队员补充平台游戏 ID");
+        resp.setLastRemindTime(new Date());
+        return resp;
+    }
+
+    private long buildPlatformRemindBizId(Long registrationPk, Long teamMemberPk, String platformCode) {
+        return Objects.hash(registrationPk, teamMemberPk, platformCode == null ? "" : platformCode.toUpperCase()) & 0x7FFFFFFFFFFFFFFFL;
+    }
+
+    private boolean hasRecentPlatformRemind(Long captainMemberId, Long bizId) {
+        Date threshold = new Date(System.currentTimeMillis() - REMIND_COOLDOWN_MS);
+        Long count = messageTaskDao.selectCount(new LambdaQueryWrapper<BasketMessageTask>()
+                .eq(BasketMessageTask::getBizType, BIZ_TYPE_TEAM_REG_PLATFORM_REMIND)
+                .eq(BasketMessageTask::getBizId, bizId)
+                .eq(BasketMessageTask::getCreatorId, captainMemberId)
+                .eq(BasketMessageTask::getIsDelete, NOT_DELETED)
+                .ge(BasketMessageTask::getCreateTime, threshold));
+        return count != null && count > 0;
+    }
+
+    private Date findLastPlatformRemindTime(Long captainMemberId, Long bizId) {
+        BasketMessageTask task = messageTaskDao.selectOne(new LambdaQueryWrapper<BasketMessageTask>()
+                .eq(BasketMessageTask::getBizType, BIZ_TYPE_TEAM_REG_PLATFORM_REMIND)
+                .eq(BasketMessageTask::getBizId, bizId)
+                .eq(BasketMessageTask::getCreatorId, captainMemberId)
+                .eq(BasketMessageTask::getIsDelete, NOT_DELETED)
+                .orderByDesc(BasketMessageTask::getCreateTime)
+                .last("limit 1"));
+        return task == null ? null : task.getCreateTime();
+    }
+
+    @Override
     public TeamRegistrationDetailResp getMemberDetail(String registrationId) {
         Long registrationPk = parseLongId(registrationId, "报名主键");
         Long memberId = UserContext.getRequiredUserId();
@@ -1560,7 +1719,7 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         registration.setCaptainPlayerId(team.getCaptainPlayerId());
         registration.setContactName(resolveContactName(trimToNull(req.getContactName()), memberId, team));
         registration.setContactMobile(resolveContactMobile(trimToNull(req.getContactMobile()), memberId));
-        registration.setContactEmail(trimToNull(req.getContactEmail()));
+        registration.setContactEmail(resolveContactEmail(trimToNull(req.getContactEmail()), memberId));
         registration.setRemark(trimToNull(req.getRemark()));
         registration.setRegistrationStatus(TournamentRegistrationStatusEnum.DRAFT.getCode());
         registration.setLineupCount(0);
@@ -1593,7 +1752,7 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         BasketTeam team = teamDao.selectById(registration.getTeamId());
         registration.setContactName(resolveContactName(trimToNull(req.getContactName()), memberId, team));
         registration.setContactMobile(resolveContactMobile(trimToNull(req.getContactMobile()), memberId));
-        registration.setContactEmail(trimToNull(req.getContactEmail()));
+        registration.setContactEmail(resolveContactEmail(trimToNull(req.getContactEmail()), memberId));
         registration.setRemark(trimToNull(req.getRemark()));
         registrationDao.updateById(registration);
 
@@ -1604,7 +1763,7 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TeamRegistrationDetailResp saveRoster(String registrationId, TeamRegistrationRosterReq req) {
-        if (req == null || CollectionUtils.isEmpty(req.getRosterItems())) {
+        if (req == null || req.getRosterItems() == null) {
             throw new ServiceException("阵容不能为空");
         }
         Long registrationPk = parseLongId(registrationId, "报名主键");
@@ -1613,44 +1772,48 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         assertRegistrationEditable(registration);
 
         BasketTournamentSeason season = seasonDao.selectById(registration.getSeasonId());
-        validateRosterSize(req.getRosterItems(), season);
-
-        Set<Long> teamMemberIds = req.getRosterItems().stream()
-                .map(item -> parseLongId(item.getTeamMemberId(), "球队成员主键"))
-                .collect(Collectors.toSet());
-        if (teamMemberIds.size() != req.getRosterItems().size()) {
-            throw new ServiceException("阵容成员不能重复");
-        }
-
-        Map<Long, BasketTeamMember> memberMap = loadActiveTeamMembers(registration.getTeamId(), teamMemberIds);
-        if (memberMap.size() != teamMemberIds.size()) {
-            throw new ServiceException("存在无效的球队成员");
-        }
+        BasketTournament tournament = season == null ? null : tournamentDao.selectById(season.getTournamentId());
+        validateRosterSizeForSave(req.getRosterItems(), season, tournament);
 
         registrationPlayerDao.update(null, new LambdaUpdateWrapper<BasketTournamentRegistrationPlayer>()
                 .eq(BasketTournamentRegistrationPlayer::getRegistrationId, registrationPk)
                 .eq(BasketTournamentRegistrationPlayer::getIsDelete, NOT_DELETED)
                 .set(BasketTournamentRegistrationPlayer::getIsDelete, DELETED));
 
-        int sortNo = 1;
-        for (TeamRegistrationRosterItemReq item : req.getRosterItems()) {
-            Long teamMemberId = parseLongId(item.getTeamMemberId(), "球队成员主键");
-            BasketTeamMember teamMember = memberMap.get(teamMemberId);
-            BasketTournamentRegistrationPlayer player = new BasketTournamentRegistrationPlayer();
-            player.setRegistrationId(registrationPk);
-            player.setSeasonId(registration.getSeasonId());
-            player.setTeamId(registration.getTeamId());
-            player.setPlayerId(teamMember.getPlayerId());
-            player.setMemberId(teamMember.getMemberId());
-            player.setTeamMemberId(teamMemberId);
-            player.setRosterRole(StringUtils.hasText(item.getRosterRole()) ? item.getRosterRole().trim() : "PLAYER");
-            player.setJerseyNo(trimToNull(item.getJerseyNo()));
-            player.setIsStarting(item.getIsStarting() == null ? 0 : item.getIsStarting());
-            player.setIsCaptain(item.getIsCaptain() == null ? 0 : item.getIsCaptain());
-            player.setValidationStatus(RegistrationPlayerValidationStatusEnum.PENDING.getCode());
-            player.setSortNo(item.getSortNo() == null ? sortNo++ : item.getSortNo());
-            player.setIsDelete(NOT_DELETED);
-            registrationPlayerDao.insert(player);
+        if (!CollectionUtils.isEmpty(req.getRosterItems())) {
+            Set<Long> teamMemberIds = req.getRosterItems().stream()
+                    .map(item -> parseLongId(item.getTeamMemberId(), "球队成员主键"))
+                    .collect(Collectors.toSet());
+            if (teamMemberIds.size() != req.getRosterItems().size()) {
+                throw new ServiceException("阵容成员不能重复");
+            }
+
+            Map<Long, BasketTeamMember> memberMap = loadActiveTeamMembers(registration.getTeamId(), teamMemberIds);
+            if (memberMap.size() != teamMemberIds.size()) {
+                throw new ServiceException("存在无效的球队成员");
+            }
+            validateRosterMembersEligibility(registration, memberMap.values());
+
+            int sortNo = 1;
+            for (TeamRegistrationRosterItemReq item : req.getRosterItems()) {
+                Long teamMemberId = parseLongId(item.getTeamMemberId(), "球队成员主键");
+                BasketTeamMember teamMember = memberMap.get(teamMemberId);
+                BasketTournamentRegistrationPlayer player = new BasketTournamentRegistrationPlayer();
+                player.setRegistrationId(registrationPk);
+                player.setSeasonId(registration.getSeasonId());
+                player.setTeamId(registration.getTeamId());
+                player.setPlayerId(teamMember.getPlayerId());
+                player.setMemberId(teamMember.getMemberId());
+                player.setTeamMemberId(teamMemberId);
+                player.setRosterRole("PLAYER");
+                player.setJerseyNo(null);
+                player.setIsStarting(0);
+                player.setIsCaptain(0);
+                player.setValidationStatus(RegistrationPlayerValidationStatusEnum.PENDING.getCode());
+                player.setSortNo(sortNo++);
+                player.setIsDelete(NOT_DELETED);
+                registrationPlayerDao.insert(player);
+            }
         }
 
         registration.setLineupCount(req.getRosterItems().size());
@@ -1675,8 +1838,14 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         BasketTournament tournament = tournamentDao.selectById(season.getTournamentId());
         BasketTeam team = teamDao.selectById(registration.getTeamId());
         assertTeamRegistrationEligible(team, tournament);
+        RegistrationRosterRuleSupport.Rule rosterRule = RegistrationRosterRuleSupport.resolve(season, tournament);
         List<BasketTournamentRegistrationPlayer> roster = loadActiveRoster(registrationPk);
-        validateSubmitRoster(registration, season, roster);
+        if (roster.size() < rosterRule.getMinRosterCount()) {
+            autoFillRegistrationRoster(registrationId, registration, season, tournament, rosterRule);
+            registration = registrationDao.selectById(registrationPk);
+            roster = loadActiveRoster(registrationPk);
+        }
+        validateSubmitRoster(registration, season, tournament, roster);
         assertNoActiveDiscipline(roster, registration.getSeasonId());
 
         Date now = new Date();
@@ -2068,6 +2237,13 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         if (StringUtils.hasText(contactMobile)) {
             return contactMobile.trim();
         }
+        return "";
+    }
+
+    private String resolveContactEmail(String contactEmail, Long memberId) {
+        if (StringUtils.hasText(contactEmail)) {
+            return contactEmail.trim();
+        }
         BasketMemberAccount account = memberAccountDao.selectById(memberId);
         if (account != null && StringUtils.hasText(account.getEmail())) {
             return account.getEmail().trim();
@@ -2136,32 +2312,76 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         resp.setCanSubmit(!rosterLocked && status.canSubmit());
     }
 
-    private void validateRosterSize(List<TeamRegistrationRosterItemReq> items, BasketTournamentSeason season) {
+    private void validateRosterSizeForSave(List<TeamRegistrationRosterItemReq> items,
+                                           BasketTournamentSeason season,
+                                           BasketTournament tournament) {
+        if (CollectionUtils.isEmpty(items)) {
+            return;
+        }
         int size = items.size();
-        int minRoster = resolveMinRosterCount(season);
-        int maxRoster = resolveMaxRosterCount(season);
-        if (size < minRoster) {
-            throw new ServiceException("阵容人数不足，至少需要 " + minRoster + " 人");
-        }
-        if (size > maxRoster) {
-            throw new ServiceException("阵容人数超出上限，最多 " + maxRoster + " 人");
+        RegistrationRosterRuleSupport.Rule rule = RegistrationRosterRuleSupport.resolve(season, tournament);
+        if (size > rule.getMaxRosterCount()) {
+            throw new ServiceException("阵容人数超出上限，最多 " + rule.getMaxRosterCount() + " 人");
         }
     }
 
-    private int resolveMinRosterCount(BasketTournamentSeason season) {
-        if (season == null || season.getMinRosterCount() == null) {
-            return DEFAULT_MIN_ROSTER_COUNT;
+    private void validateRosterSize(List<TeamRegistrationRosterItemReq> items,
+                                    BasketTournamentSeason season,
+                                    BasketTournament tournament) {
+        int size = items.size();
+        RegistrationRosterRuleSupport.Rule rule = RegistrationRosterRuleSupport.resolve(season, tournament);
+        if (size < rule.getMinRosterCount()) {
+            throw new ServiceException("阵容人数不足，至少需要 " + rule.getMinRosterCount() + " 人");
         }
-        return Math.max(DEFAULT_MIN_ROSTER_COUNT,
-                Math.min(season.getMinRosterCount(), DEFAULT_MAX_ROSTER_COUNT));
+        if (size > rule.getMaxRosterCount()) {
+            throw new ServiceException("阵容人数超出上限，最多 " + rule.getMaxRosterCount() + " 人");
+        }
     }
 
-    private int resolveMaxRosterCount(BasketTournamentSeason season) {
-        if (season == null || season.getMaxRosterCount() == null) {
-            return DEFAULT_MAX_ROSTER_COUNT;
+    private int resolveMinRosterCount(BasketTournamentSeason season, BasketTournament tournament) {
+        return RegistrationRosterRuleSupport.resolve(season, tournament).getMinRosterCount();
+    }
+
+    private int resolveMaxRosterCount(BasketTournamentSeason season, BasketTournament tournament) {
+        return RegistrationRosterRuleSupport.resolve(season, tournament).getMaxRosterCount();
+    }
+
+    private void validateRosterMembersEligibility(BasketTournamentRegistration registration,
+                                                  Collection<BasketTeamMember> members) {
+        if (CollectionUtils.isEmpty(members)) {
+            return;
         }
-        return Math.min(DEFAULT_MAX_ROSTER_COUNT,
-                Math.max(season.getMaxRosterCount(), resolveMinRosterCount(season)));
+        String platformCode = registration.getPlatformCode();
+        String platformName = eventPlatformSupport.resolvePlatformName(platformCode);
+        Set<Long> playerIds = members.stream()
+                .map(BasketTeamMember::getPlayerId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, BasketPlayerProfile> playerMap = new HashMap<>();
+        for (BasketPlayerProfile profile : playerProfileDao.selectBatchIds(playerIds)) {
+            if (profile != null && NOT_DELETED.equals(profile.getIsDelete())) {
+                playerMap.put(profile.getId(), profile);
+            }
+        }
+        Map<Long, BasketPlayerPlatformAccount> platformAccountMap = new HashMap<>();
+        for (BasketPlayerPlatformAccount account : platformAccountDao.selectList(new LambdaQueryWrapper<BasketPlayerPlatformAccount>()
+                .in(BasketPlayerPlatformAccount::getPlayerId, playerIds)
+                .eq(BasketPlayerPlatformAccount::getPlatform, platformCode)
+                .eq(BasketPlayerPlatformAccount::getIsDelete, NOT_DELETED))) {
+            platformAccountMap.putIfAbsent(account.getPlayerId(), account);
+        }
+        for (BasketTeamMember member : members) {
+            BasketPlayerProfile profile = playerMap.get(member.getPlayerId());
+            BasketPlayerPlatformAccount platformAccount = platformAccountMap.get(member.getPlayerId());
+            PlatformIdentityStatusEnum identityStatus = resolveMemberPlatformIdentityStatus(
+                    member.getMemberId(), platformCode, platformAccount);
+            String reason = resolveRosterCandidateReason(profile, identityStatus, platformName);
+            if (reason != null) {
+                String nickname = profile != null && StringUtils.hasText(profile.getGameNickname())
+                        ? profile.getGameNickname() : "成员";
+                throw new ServiceException("阵容成员「" + nickname + "」不符合报名条件：" + reason);
+            }
+        }
     }
 
     private Map<Long, BasketTeamMember> loadActiveTeamMembers(Long teamId, Set<Long> teamMemberIds) {
@@ -2186,39 +2406,23 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
 
     private void validateSubmitRoster(BasketTournamentRegistration registration,
                                       BasketTournamentSeason season,
+                                      BasketTournament tournament,
                                       List<BasketTournamentRegistrationPlayer> roster) {
         validateRosterSize(roster.stream().map(r -> {
             TeamRegistrationRosterItemReq req = new TeamRegistrationRosterItemReq();
             req.setTeamMemberId(toStringId(r.getTeamMemberId()));
             return req;
-        }).collect(Collectors.toList()), season);
+        }).collect(Collectors.toList()), season, tournament);
 
-        long captainCount = roster.stream().filter(r -> Integer.valueOf(IS_CAPTAIN).equals(r.getIsCaptain())).count();
-        if (captainCount != 1) {
-            throw new ServiceException("阵容中必须且只能有一名场上队长");
+        Set<Long> teamMemberIds = roster.stream()
+                .map(BasketTournamentRegistrationPlayer::getTeamMemberId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, BasketTeamMember> memberMap = loadActiveTeamMembers(registration.getTeamId(), teamMemberIds);
+        if (memberMap.size() != teamMemberIds.size()) {
+            throw new ServiceException("存在无效的球队成员");
         }
-
-        BasketTeamMember captainMember = teamMemberDao.selectOne(new LambdaQueryWrapper<BasketTeamMember>()
-                .eq(BasketTeamMember::getTeamId, registration.getTeamId())
-                .eq(BasketTeamMember::getMemberId, registration.getCaptainMemberId())
-                .eq(BasketTeamMember::getRoleType, TeamMemberRoleEnum.CAPTAIN.getCode())
-                .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
-                .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
-                .eq(BasketTeamMember::getIsDelete, NOT_DELETED)
-                .last("limit 1"));
-        if (captainMember == null) {
-            throw new ServiceException("队长不在球队中");
-        }
-        boolean captainInRoster = roster.stream().anyMatch(r ->
-                captainMember.getId().equals(r.getTeamMemberId()) && Integer.valueOf(IS_CAPTAIN).equals(r.getIsCaptain()));
-        if (!captainInRoster) {
-            throw new ServiceException("队长必须出现在阵容中并标记为场上队长");
-        }
-
-        long startingCount = roster.stream().filter(r -> Integer.valueOf(IS_STARTING).equals(r.getIsStarting())).count();
-        if (startingCount != REQUIRED_STARTING_COUNT) {
-            throw new ServiceException("5V5 赛制首发人数必须为 5 人");
-        }
+        validateRosterMembersEligibility(registration, memberMap.values());
     }
 
     private void markRosterValidationPassed(Long registrationPk) {
@@ -2283,10 +2487,16 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
         applyRegistrationPermissionFields(resp, registration, status);
         resp.setSubmittedTime(registration.getSubmittedTime());
         resp.setRegistrationEndTime(season == null ? null : season.getRegistrationEndTime());
+        BasketTournament tournament = null;
+        RegistrationRosterRuleSupport.Rule rosterRule = null;
         if (season != null) {
-            resp.setMinRosterCount(resolveMinRosterCount(season));
-            resp.setMaxRosterCount(resolveMaxRosterCount(season));
-            BasketTournament tournament = tournamentDao.selectById(season.getTournamentId());
+            tournament = tournamentDao.selectById(season.getTournamentId());
+            rosterRule = RegistrationRosterRuleSupport.resolve(season, tournament);
+            resp.setMinRosterCount(rosterRule.getMinRosterCount());
+            resp.setMaxRosterCount(rosterRule.getMaxRosterCount());
+            resp.setFormatCode(rosterRule.getFormatCode());
+            resp.setTeamPlayCount(rosterRule.getTeamPlayCount());
+            resp.setRequiredStartingCount(rosterRule.getRequiredStartingCount());
             resp.setTournamentName(tournament == null ? null : tournament.getTournamentName());
         }
 
@@ -2313,7 +2523,98 @@ public class TeamRegistrationBusinessServiceImpl implements ITeamRegistrationBus
             rosterItems.add(item);
         }
         resp.setRosterItems(rosterItems);
+        resp.setSelectedRosterCount(rosterItems.size());
+        applyRegistrationEligibilitySummary(resp, registration, rosterRule, rosterItems.size(), status);
         return resp;
+    }
+
+    private void applyRegistrationEligibilitySummary(TeamRegistrationDetailResp resp,
+                                                     BasketTournamentRegistration registration,
+                                                     RegistrationRosterRuleSupport.Rule rosterRule,
+                                                     int selectedCount,
+                                                     TournamentRegistrationStatusEnum status) {
+        if (rosterRule == null) {
+            return;
+        }
+        List<RegistrationRosterCandidateItemResp> candidates;
+        try {
+            candidates = buildRosterCandidates(registration);
+        } catch (ServiceException ex) {
+            resp.setCanStartRegistration(false);
+            resp.setCanSubmitRegistration(false);
+            resp.setCannotReason(ex.getMessage());
+            return;
+        }
+        int certifiedCount = 0;
+        int platformEligibleCount = 0;
+        int missingPlatformCount = 0;
+        for (RegistrationRosterCandidateItemResp candidate : candidates) {
+            String reason = candidate.getCannotSelectReason();
+            if (reason == null || !reason.contains("未认证")) {
+                if (reason == null || !reason.contains("档案")) {
+                    certifiedCount++;
+                }
+            }
+            if (Boolean.TRUE.equals(candidate.getCanSelect())) {
+                platformEligibleCount++;
+            } else if (reason != null && reason.contains("游戏 ID")) {
+                missingPlatformCount++;
+            }
+        }
+        resp.setCertifiedMemberCount(certifiedCount);
+        resp.setPlatformEligibleMemberCount(platformEligibleCount);
+        resp.setMissingPlatformGameIdCount(missingPlatformCount);
+        int missingForMin = Math.max(0, rosterRule.getMinRosterCount() - platformEligibleCount);
+        resp.setMissingCount(missingForMin);
+        resp.setCanStartRegistration(status.canEdit());
+
+        boolean rosterSizeOk = selectedCount >= rosterRule.getMinRosterCount()
+                && selectedCount <= rosterRule.getMaxRosterCount();
+        boolean autoRosterOk = selectedCount == 0
+                && platformEligibleCount >= rosterRule.getMinRosterCount()
+                && platformEligibleCount <= rosterRule.getMaxRosterCount();
+        boolean eligibleEnough = platformEligibleCount >= rosterRule.getMinRosterCount();
+        boolean canSubmit = status.canSubmit() && eligibleEnough && (rosterSizeOk || autoRosterOk);
+        resp.setCanSubmitRegistration(canSubmit);
+        if (!canSubmit && status.canSubmit()) {
+            if (!rosterSizeOk && !autoRosterOk) {
+                if (selectedCount < rosterRule.getMinRosterCount()) {
+                    String platformName = resp.getPlatformName() != null ? resp.getPlatformName() : "当前平台";
+                    if (platformEligibleCount < rosterRule.getMinRosterCount()) {
+                        resp.setCannotReason(String.format(
+                                "当前具备 %s 游戏 ID 的成员仅 %d 人，报名至少需要 %d 人，请提醒队员补充 %s 游戏 ID。",
+                                platformName, platformEligibleCount, rosterRule.getMinRosterCount(), platformName));
+                    } else {
+                        resp.setCannotReason("阵容人数不足，至少需要 " + rosterRule.getMinRosterCount() + " 人");
+                    }
+                } else if (selectedCount > rosterRule.getMaxRosterCount()) {
+                    resp.setCannotReason("阵容人数超出上限，最多 " + rosterRule.getMaxRosterCount() + " 人");
+                }
+            }
+        }
+    }
+
+    private void autoFillRegistrationRoster(String registrationId,
+                                              BasketTournamentRegistration registration,
+                                              BasketTournamentSeason season,
+                                              BasketTournament tournament,
+                                              RegistrationRosterRuleSupport.Rule rosterRule) {
+        List<RegistrationRosterCandidateItemResp> candidates = buildRosterCandidates(registration);
+        List<TeamRegistrationRosterItemReq> items = candidates.stream()
+                .filter(candidate -> Boolean.TRUE.equals(candidate.getCanSelect()))
+                .limit(rosterRule.getMaxRosterCount())
+                .map(candidate -> {
+                    TeamRegistrationRosterItemReq item = new TeamRegistrationRosterItemReq();
+                    item.setTeamMemberId(candidate.getTeamMemberId());
+                    return item;
+                })
+                .collect(Collectors.toList());
+        if (items.size() < rosterRule.getMinRosterCount()) {
+            return;
+        }
+        TeamRegistrationRosterReq req = new TeamRegistrationRosterReq();
+        req.setRosterItems(items);
+        saveRoster(registrationId, req);
     }
 
     private TeamRegistrationItemResp toItemResp(BasketTournamentRegistration registration,

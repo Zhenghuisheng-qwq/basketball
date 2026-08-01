@@ -394,6 +394,7 @@ async function main() {
     log(`- ${t.teamName}: captain=${t.captain.email}, teamId=${t.teamId}`)
   }
   log('通知由各现成接口自动产生：CAPTAIN_GRANT / TEAM_AUDIT / TEAM_JOIN / TEAM_MEMBER')
+  log('提示：每队应为 1 队长 + 4 队员 = 5 人；若 Admin 成员数仍显示 1，请刷新球队审核列表（会自动校准）')
 }
 
 main().catch((e) => {

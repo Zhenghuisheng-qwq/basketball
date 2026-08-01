@@ -553,7 +553,14 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
             return null;
         }
         try {
-            return TeamJoinSourceEnum.fromCode(source).getDescription();
+            TeamJoinSourceEnum joinSource = TeamJoinSourceEnum.fromCode(source);
+            if (joinSource == TeamJoinSourceEnum.APPLY) {
+                return "申请加入";
+            }
+            if (joinSource == TeamJoinSourceEnum.INVITE) {
+                return "队长邀请";
+            }
+            return joinSource.getDescription();
         } catch (Exception ex) {
             return source;
         }

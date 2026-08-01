@@ -36,8 +36,8 @@
             v-if="scope.row.logoUrl"
             :src="scope.row.logoUrl"
             fit="cover"
-            class="team-logo-thumb"
-            :preview-src-list="[scope.row.logoUrl]"
+            class="team-logo-thumb team-logo-clickable"
+            @click.stop="previewLogo(scope.row.logoUrl)"
           />
           <el-avatar v-else :size="40" shape="square">{{ (scope.row.teamName || '队').slice(0, 1) }}</el-avatar>
         </template>
@@ -45,7 +45,6 @@
       <el-table-column label="球队编号" prop="teamNo" min-width="140" :show-overflow-tooltip="true" />
       <el-table-column label="球队名称" prop="teamName" min-width="140" :show-overflow-tooltip="true" />
       <el-table-column label="球队简称" prop="shortName" min-width="100" :show-overflow-tooltip="true" />
-      <el-table-column label="比赛终端" prop="gameTerminal" width="100" />
       <el-table-column label="招募状态" prop="publicStatus" width="110">
         <template #default="scope">
           <dict-tag :options="TEAM_RECRUIT_STATUS_OPTIONS" :value="scope.row.publicStatus" />
@@ -81,8 +80,8 @@
               v-if="detail.logoUrl"
               :src="detail.logoUrl"
               fit="cover"
-              class="team-logo-large"
-              :preview-src-list="[detail.logoUrl]"
+              class="team-logo-large team-logo-clickable"
+              @click.stop="previewLogo(detail.logoUrl)"
             />
             <el-avatar v-else :size="72" shape="square">{{ (detail.teamName || '队').slice(0, 1) }}</el-avatar>
             <div>
@@ -97,10 +96,9 @@
             <el-descriptions-item label="审核状态">{{ detail.auditStatusName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="球队名称">{{ detail.teamName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="球队简称">{{ detail.shortName || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="比赛终端">{{ detail.gameTerminal || '-' }}</el-descriptions-item>
             <el-descriptions-item label="招募状态">{{ detail.publicStatusName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="地区">{{ detail.regionName || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="成员数">{{ detail.currentMemberCount ?? 0 }}/{{ detail.maxMemberCount ?? '-' }}</el-descriptions-item>
+            <el-descriptions-item label="成员数">{{ detail.currentMemberCount ?? 0 }} 人</el-descriptions-item>
             <el-descriptions-item label="创建时间">{{ parseTime(detail.createTime) }}</el-descriptions-item>
             <el-descriptions-item label="更新时间">{{ parseTime(detail.updateTime) }}</el-descriptions-item>
             <el-descriptions-item label="球队介绍" :span="2">{{ detail.description || '-' }}</el-descriptions-item>
@@ -206,6 +204,12 @@
         <el-button type="primary" @click="submitBatchReject">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="logoPreviewOpen" title="球队 Logo" width="520px" append-to-body destroy-on-close class="team-logo-preview-dialog">
+      <div class="team-logo-preview-wrap">
+        <img v-if="logoPreviewUrl" :src="logoPreviewUrl" alt="球队 Logo" class="team-logo-preview-img" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -245,6 +249,8 @@ const currentId = ref<number>()
 const approveOpen = ref(false)
 const rejectOpen = ref(false)
 const batchRejectOpen = ref(false)
+const logoPreviewOpen = ref(false)
+const logoPreviewUrl = ref('')
 const approveForm = ref<TeamAuditApproveReq>({})
 const rejectForm = ref<TeamAuditRejectReq>({ rejectReason: '' })
 const batchRejectForm = ref<TeamAuditRejectReq>({ rejectReason: '' })
@@ -293,6 +299,12 @@ function mapAuditAction(action?: string) {
   if (action === 'APPROVE') return '通过'
   if (action === 'REJECT') return '驳回'
   return action || '-'
+}
+
+function previewLogo(url?: string) {
+  if (!url) return
+  logoPreviewUrl.value = url
+  logoPreviewOpen.value = true
 }
 
 function getList() {
@@ -426,12 +438,35 @@ getList()
   width: 40px;
   height: 40px;
   border-radius: 6px;
+  overflow: hidden;
+  display: inline-flex;
+  vertical-align: middle;
+
+  :deep(.el-image__inner) {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.team-logo-clickable {
+  cursor: zoom-in;
+
+  :deep(.el-image__inner) {
+    cursor: zoom-in;
+  }
 }
 
 .team-logo-large {
   width: 72px;
   height: 72px;
   border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  :deep(.el-image__inner) {
+    width: 100%;
+    height: 100%;
+  }
 }
 
 .detail-header {
@@ -454,5 +489,21 @@ getList()
 
 .detail-desc {
   margin-bottom: 8px;
+}
+
+.team-logo-preview-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.team-logo-preview-img {
+  display: block;
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
 }
 </style>

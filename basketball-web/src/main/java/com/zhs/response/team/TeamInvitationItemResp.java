@@ -40,6 +40,9 @@ public class TeamInvitationItemResp implements Serializable {
     @ApiModelProperty("被邀请人昵称")
     private String inviteeNickname;
 
+    @ApiModelProperty("被邀请人头像 URL")
+    private String inviteeAvatarUrl;
+
     @ApiModelProperty("邀请说明")
     private String invitationMessage;
 

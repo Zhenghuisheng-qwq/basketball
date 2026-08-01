@@ -99,3 +99,9 @@ export function getRegistrationRosterCandidates(registrationId: string) {
     `/basket/team/registration/${registrationId}/roster/candidates`,
   )
 }
+
+export function remindMemberPlatformGameId(registrationId: string, teamMemberId: string) {
+  return request.post<any, ApiResult<import('@/api/types/teamRegistration').TeamRegistrationRemindPlatformResultDto>>(
+    `/basket/team/registration/${registrationId}/member/${teamMemberId}/remind-platform-game-id`,
+  )
+}

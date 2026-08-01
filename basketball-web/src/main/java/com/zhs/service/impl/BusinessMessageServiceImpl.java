@@ -9,6 +9,7 @@ import com.zhs.model.BasketMessageTask;
 import com.zhs.service.IBusinessMessageService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
@@ -36,7 +37,7 @@ public class BusinessMessageServiceImpl implements IBusinessMessageService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     public void sendSiteMessageFrom(Long senderMemberId, Long receiverMemberId, String title, String content,
                                     String bizType, Long bizId, String redirectType, String redirectValue) {
         if (receiverMemberId == null) {
@@ -57,6 +58,8 @@ public class BusinessMessageServiceImpl implements IBusinessMessageService {
         task.setSuccessCount(1);
         task.setFailCount(0);
         task.setCreatorId(senderMemberId);
+        task.setCreateTime(now);
+        task.setUpdateTime(now);
         task.setIsDelete(NOT_DELETED);
         messageTaskDao.insert(task);
 
@@ -69,6 +72,8 @@ public class BusinessMessageServiceImpl implements IBusinessMessageService {
         receiver.setSentTime(now);
         receiver.setRedirectType(redirectType);
         receiver.setRedirectValue(redirectValue);
+        receiver.setCreateTime(now);
+        receiver.setUpdateTime(now);
         receiver.setIsDelete(NOT_DELETED);
         messageReceiverDao.insert(receiver);
     }

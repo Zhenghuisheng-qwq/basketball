@@ -50,3 +50,41 @@ export function resolveTeamMemberAvatarFallback(member: TeamMemberItemDto): stri
 export function isTeamCaptainMember(member: TeamMemberItemDto): boolean {
   return member.roleType === 'CAPTAIN'
 }
+
+export const TEAM_MEMBER_PLATFORM_COLUMNS = ['PS', 'PC', 'XBOX'] as const
+
+export type TeamMemberPlatformCode = (typeof TEAM_MEMBER_PLATFORM_COLUMNS)[number]
+
+function normalizePlatformCode(code?: string): string {
+  return (code || '').trim().toUpperCase()
+}
+
+function matchesPlatformCode(itemCode: string, target: TeamMemberPlatformCode): boolean {
+  if (target === 'PS') return itemCode === 'PS' || itemCode === 'PS5'
+  if (target === 'XBOX') return itemCode === 'XBOX' || itemCode.startsWith('XBOX')
+  return itemCode === target
+}
+
+export function resolveMemberPlatformGameId(
+  member: Pick<TeamMemberItemDto, 'platformGameIds' | 'gameIdSummary'>,
+  platformCode: TeamMemberPlatformCode,
+): string {
+  const matched = (member.platformGameIds || []).find((item) =>
+    matchesPlatformCode(normalizePlatformCode(item.platformCode), platformCode),
+  )
+  if (matched?.gameId) return matched.gameId
+
+  const summary = member.gameIdSummary?.trim()
+  if (!summary || summary === '未绑定') return '-'
+
+  for (const part of summary.split(/\s*\/\s*/)) {
+    const match = part.trim().match(/^(PS5?|PC|XBOX(?:\sONE)?)\s*[:：]\s*(.+)$/i)
+    if (!match) continue
+    const code = normalizePlatformCode(match[1].replace(/\s+/g, ''))
+    if (matchesPlatformCode(code, platformCode)) {
+      return match[2].trim() || '-'
+    }
+  }
+
+  return '-'
+}

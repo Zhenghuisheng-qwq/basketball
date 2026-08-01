@@ -9,6 +9,7 @@ import com.zhs.common.UserContext;
 import com.zhs.config.AccountTeamProperties;
 import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketTeamDao;
+import com.zhs.dao.BasketFileAssetDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamInvitationDao;
 import com.zhs.enums.PlatformIdentityStatusEnum;
@@ -17,6 +18,7 @@ import com.zhs.enums.TeamInvitationStatusEnum;
 import com.zhs.enums.TeamStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketMemberProfile;
+import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamInvitation;
@@ -58,6 +60,8 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
     private BasketTeamDao teamDao;
     @Resource
     private BasketMemberProfileDao memberProfileDao;
+    @Resource
+    private BasketFileAssetDao fileAssetDao;
     @Resource
     private ICaptainPermissionService captainPermissionService;
     @Resource
@@ -131,22 +135,38 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         Long memberId = UserContext.getRequiredUserId();
         BasketTeam team = captainPermissionService.requireTeamCaptain(memberId, teamPk);
 
-        LambdaQueryWrapper<BasketTeamInvitation> wrapper = new LambdaQueryWrapper<BasketTeamInvitation>()
+        long page = normalizePage(currentPage);
+        long size = normalizeSize(pageSize);
+
+        LambdaQueryWrapper<BasketTeamInvitation> countWrapper = new LambdaQueryWrapper<BasketTeamInvitation>()
                 .eq(BasketTeamInvitation::getTeamId, teamPk)
-                .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED)
-                .orderByDesc(BasketTeamInvitation::getCreateTime);
+                .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED);
         if (status != null) {
-            wrapper.eq(BasketTeamInvitation::getInvitationStatus, status);
+            countWrapper.eq(BasketTeamInvitation::getInvitationStatus, status);
+        }
+        long total = invitationDao.selectCount(countWrapper);
+
+        List<BasketTeamInvitation> invitations;
+        if (total == 0) {
+            invitations = Collections.emptyList();
+        } else {
+            LambdaQueryWrapper<BasketTeamInvitation> listWrapper = new LambdaQueryWrapper<BasketTeamInvitation>()
+                    .eq(BasketTeamInvitation::getTeamId, teamPk)
+                    .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED)
+                    .orderByDesc(BasketTeamInvitation::getCreateTime);
+            if (status != null) {
+                listWrapper.eq(BasketTeamInvitation::getInvitationStatus, status);
+            }
+            listWrapper.last("LIMIT " + (page - 1) * size + ", " + size);
+            invitations = invitationDao.selectList(listWrapper);
         }
 
-        Page<BasketTeamInvitation> page = new Page<>(normalizePage(currentPage), normalizeSize(pageSize));
-        IPage<BasketTeamInvitation> invitationPage = invitationDao.selectPage(page, wrapper);
-        Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(invitationPage.getRecords().stream()
+        Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(invitations.stream()
                 .map(BasketTeamInvitation::getInviteeMemberId).collect(Collectors.toSet()));
 
-        Page<TeamInvitationItemResp> respPage = new Page<>(invitationPage.getCurrent(), invitationPage.getSize(), invitationPage.getTotal());
+        Page<TeamInvitationItemResp> respPage = new Page<>(page, size, total);
         List<TeamInvitationItemResp> items = new ArrayList<>();
-        for (BasketTeamInvitation invitation : invitationPage.getRecords()) {
+        for (BasketTeamInvitation invitation : invitations) {
             items.add(toItemResp(invitation, team, profileMap, invitation.getInviteeMemberId()));
         }
         respPage.setRecords(items);
@@ -362,7 +382,10 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         resp.setInviterUserId(toStringId(invitation.getInviterMemberId()));
         resp.setInviteeUserId(toStringId(invitation.getInviteeMemberId()));
         BasketMemberProfile profile = profileMap.get(invitation.getInviteeMemberId());
-        resp.setInviteeNickname(profile == null ? null : profile.getNickname());
+        if (profile != null) {
+            resp.setInviteeNickname(profile.getNickname());
+            resp.setInviteeAvatarUrl(resolveInviteeAvatarUrl(profile.getAvatarFileId()));
+        }
         resp.setInvitationMessage(invitation.getInvitationMessage());
         resp.setInvitationStatus(invitation.getInvitationStatus());
         resp.setInvitationStatusText(status.getDescription());
@@ -412,6 +435,17 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
             map.put(profile.getMemberId(), profile);
         }
         return map;
+    }
+
+    private String resolveInviteeAvatarUrl(Long avatarFileId) {
+        if (avatarFileId == null) {
+            return com.zhs.support.MemberAvatarSupport.resolve(null);
+        }
+        BasketFileAsset asset = fileAssetDao.selectById(avatarFileId);
+        if (asset == null || !NOT_DELETED.equals(asset.getIsDelete())) {
+            return com.zhs.support.MemberAvatarSupport.resolve(null);
+        }
+        return com.zhs.support.MemberAvatarSupport.resolve(asset.getAccessUrl());
     }
 
     private long normalizePage(Integer currentPage) {

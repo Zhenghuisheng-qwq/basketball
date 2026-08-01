@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
@@ -10,21 +10,24 @@ import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import TeamMemberList from '@/components/account/team/TeamMemberList.vue'
 import JoinableTeamPanel from '@/components/account/team/JoinableTeamPanel.vue'
 import CaptainGrantPanel from '@/components/account/team/CaptainGrantPanel.vue'
+import AccountTeamLogo from '@/components/account/team/AccountTeamLogo.vue'
+import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
+import TeamListPagination from '@/components/account/team/TeamListPagination.vue'
 import { useTeamStore } from '@/stores/team'
+import { useAccountStore } from '@/stores/account'
 import { mapTeamRegistrationStatusText } from '@/utils/accountMappers'
 import {
+  goToEventTeamManagement,
+  goToRegistrationEditFlow,
+} from '@/utils/registrationNavigation'
+import {
   formatPositionLabel,
-  CNPA_REQUIRED_STARTER_COUNT,
-  CNPA_MIN_ROSTER_COUNT,
-  CNPA_MAX_ROSTER_COUNT,
-  resolveSeasonRosterLimits,
-  STARTING_POSITION_CODES,
 } from '@/constants/rosterRules'
 import { formatDateTime } from '@/utils/formatDate'
 import { uploadAccountFile } from '@/api/accountFile'
 import type { TeamInvitationItemDto } from '@/api/types/teamInvitation'
 import type { CandidatePlayerItemDto, TeamMemberItemDto } from '@/api/types/teamMember'
-import type { AvailableSeasonItemDto, TeamRegistrationPlayerItemDto } from '@/api/types/teamRegistration'
+import type { AvailableSeasonItemDto, TeamRegistrationItemDto } from '@/api/types/teamRegistration'
 
 type TeamTab =
   | 'pendingInvites'
@@ -55,18 +58,31 @@ function formatPositionCell(code?: string, name?: string) {
   return name ? `${code} ${name}` : formatPositionLabel(code)
 }
 
-const teamMemberLimitHint = `${CNPA_MIN_ROSTER_COUNT}–${CNPA_MAX_ROSTER_COUNT} 人（固定 ${CNPA_REQUIRED_STARTER_COUNT} 首发）`
+const TEAM_TAB_PAGE_SIZE = 5
 
-const registrationRosterLimits = computed(() =>
-  resolveSeasonRosterLimits(
-    teamStore.registrationDetail?.minRosterCount,
-    teamStore.registrationDetail?.maxRosterCount,
-  ),
-)
+const inviteCandidatePage = reactive({ pageNum: 1, pageSize: TEAM_TAB_PAGE_SIZE, total: 0 })
+const historyInvitePage = reactive({ pageNum: 1, pageSize: TEAM_TAB_PAGE_SIZE, total: 0 })
+const historyInviteKeyword = ref('')
+const historyInviteStatus = ref<number | ''>('')
+const historyInviteClientMode = ref(false)
+const historyInviteClientRecords = ref<TeamInvitationItemDto[]>([])
+const showHistoryInviteDialog = ref(false)
+const HISTORY_INVITE_STATUS_OPTIONS = [
+  { label: '全部', value: '' as const },
+  { label: '待响应', value: 0 },
+  { label: '已接受', value: 1 },
+  { label: '已拒绝', value: 2 },
+  { label: '已失效', value: 3 },
+  { label: '已撤回', value: 4 },
+]
+const joinAuditPage = reactive({ pageNum: 1, pageSize: TEAM_TAB_PAGE_SIZE, total: 0 })
+const availableSeasonPage = reactive({ pageNum: 1, pageSize: TEAM_TAB_PAGE_SIZE, total: 0 })
+const registrationListPage = reactive({ pageNum: 1, pageSize: TEAM_TAB_PAGE_SIZE, total: 0 })
 
 const route = useRoute()
 const router = useRouter()
 const teamStore = useTeamStore()
+const accountStore = useAccountStore()
 
 const activeTab = ref<TeamTab>('joinableTeams')
 const pageLoading = ref(true)
@@ -75,8 +91,10 @@ const loadError = ref('')
 const joinablePanelRef = ref<InstanceType<typeof JoinableTeamPanel> | null>(null)
 
 const inviteKeyword = ref('')
-const inviteMessage = ref('')
-const selectedInvitePlayerId = ref('')
+const showInviteConfirmDialog = ref(false)
+const inviteModalPlayer = ref<CandidatePlayerItemDto | null>(null)
+const inviteModalMessage = ref('')
+const inviteModalError = ref('')
 
 const createForm = reactive({
   teamName: '',
@@ -93,27 +111,20 @@ const profileForm = reactive({
   description: '',
   publicStatus: 1,
 })
+const profileLogoPreviewUrl = ref('')
 
 const registrationDraftForm = reactive({
   seasonId: '',
   platformCode: '',
-  contactName: '',
-  contactMobile: '',
-  contactEmail: '',
   remark: '',
 })
 const showPlatformPicker = ref(false)
 const pendingSeasonId = ref('')
 const selectedPlatformCode = ref('')
-const registrationEditForm = reactive({
-  contactName: '',
-  contactMobile: '',
-  contactEmail: '',
-  remark: '',
-})
 const withdrawReason = ref('')
 const selectedRegistrationId = ref('')
-const rosterSelections = ref<TeamRegistrationPlayerItemDto[]>([])
+const showRegistrationDetailDialog = ref(false)
+const registrationDetailLoading = ref(false)
 
 const showInvitationDialog = ref(false)
 const activeInvitation = ref<TeamInvitationItemDto | null>(null)
@@ -131,10 +142,87 @@ const isCaptainQualExpired = computed(() => Boolean(captainQual.value?.grantRevo
 const isCaptainQualInvalid = computed(() => hasCaptainQualRecord.value && !captainQual.value?.runtimeValid && !isCaptainQualExpired.value)
 const teamId = computed(() => teamStore.myTeamSummary?.teamId || '')
 const teamDetail = computed(() => teamStore.teamDetail)
+const displayTeamLogoUrl = computed(() =>
+  profileLogoPreviewUrl.value
+  || teamDetail.value?.logoUrl
+  || teamStore.myTeamSummary?.logoUrl
+  || '',
+)
+const displayTeamShortName = computed(() =>
+  teamDetail.value?.shortName || teamStore.myTeamSummary?.shortName || '',
+)
+const displayTeamName = computed(() =>
+  teamDetail.value?.teamName || teamStore.myTeamSummary?.teamName || '',
+)
 const isTeamAuditApproved = computed(() => teamDetail.value?.auditStatus === 1)
 const teamAuditStatusText = computed(() => {
   const status = teamDetail.value?.auditStatus
   return status != null ? TEAM_AUDIT_STATUS[status] || '未知' : '-'
+})
+
+const registrationCaptainEmail = computed(() =>
+  accountStore.currentAccount?.maskedEmail
+  || accountStore.profile?.maskedEmail
+  || teamStore.registrationDetail?.contactEmailMasked
+  || '-',
+)
+
+const registrationDetailDialogTitle = computed(() => {
+  const detail = teamStore.registrationDetail
+  if (!detail) return '报名详情'
+  const eventLabel = detail.tournamentName || detail.seasonName || '赛事'
+  const platformLabel = detail.platformName || detail.platformCode || '-'
+  return `报名详情 - ${eventLabel} / ${platformLabel}`
+})
+
+const registrationDetailStatusText = computed(() =>
+  mapTeamRegistrationStatusText(teamStore.registrationDetail?.registrationStatus),
+)
+
+const registrationDetailAuditTime = computed(() => {
+  const audits = teamStore.registrationAudits
+  const lastAudit = audits.length ? audits[audits.length - 1] : undefined
+  return formatDateTime(lastAudit?.auditTime) || '-'
+})
+
+const registrationDetailLastAuditor = computed(() => {
+  const audits = teamStore.registrationAudits
+  if (!audits.length) return '-'
+  return audits[audits.length - 1]?.auditorName || '-'
+})
+
+const registrationDetailRosterRows = computed(() => {
+  const detail = teamStore.registrationDetail
+  if (!detail) return []
+
+  if (detail.rosterLocked || detail.registrationStatus === 3) {
+    return (detail.rosterItems || []).map((item) => ({
+      key: item.teamMemberId,
+      name: item.gameNickname || item.playerNo || '-',
+      position: formatPositionCell(item.positionCode, undefined),
+      platformId: '-',
+      eligibility: '已纳入',
+    }))
+  }
+
+  const selectedCandidates = teamStore.rosterCandidates.filter((candidate) => candidate.canSelect)
+  if (selectedCandidates.length) {
+    return selectedCandidates.map((candidate) => ({
+      key: candidate.teamMemberId,
+      name: candidate.gameNickname || candidate.nickname || candidate.playerNo || '-',
+      position: formatPositionCell(candidate.positionCode, candidate.positionName),
+      platformId: formatCandidatePlatformDisplay(candidate),
+      eligibility: formatCandidateEligibility(candidate),
+    }))
+  }
+
+  return (detail.rosterItems || []).map((item) => ({
+    key: item.teamMemberId,
+    name: item.gameNickname || item.playerNo || '-',
+    position: formatPositionCell(item.positionCode, undefined),
+    platformId: '-',
+    eligibility: '已纳入',
+  }))
 })
 
 /** 仅有效队长、当前可管理队长、历史队长展示队长权限卡片 */
@@ -226,6 +314,7 @@ watch(teamDetail, (detail) => {
   profileForm.shortName = detail.shortName || ''
   profileForm.description = detail.description || ''
   profileForm.publicStatus = detail.publicStatus ?? 1
+  profileLogoPreviewUrl.value = detail.logoUrl || ''
 }, { immediate: true })
 
 async function bootstrap() {
@@ -263,6 +352,178 @@ function setTab(tab: TeamTab) {
   router.replace({ query: tab === availableTabs.value[0] ? {} : { tab } })
 }
 
+async function loadInviteCandidateList(page = inviteCandidatePage.pageNum) {
+  if (!teamId.value) return
+  const pageData = await teamStore.loadCandidatePlayers(teamId.value, {
+    currentPage: page,
+    pageSize: inviteCandidatePage.pageSize,
+    keyword: inviteKeyword.value || undefined,
+  })
+  inviteCandidatePage.pageNum = pageData.current || page
+  inviteCandidatePage.total = pageData.total ?? 0
+}
+
+function matchesHistoryInviteKeyword(item: TeamInvitationItemDto, keyword: string) {
+  const q = keyword.toLowerCase()
+  return (
+    (item.inviteeNickname || '').toLowerCase().includes(q)
+    || (item.invitationNo || '').toLowerCase().includes(q)
+    || (item.invitationMessage || '').toLowerCase().includes(q)
+  )
+}
+
+async function fetchAllTeamInvitations(status?: number) {
+  if (!teamId.value) return [] as TeamInvitationItemDto[]
+  const all: TeamInvitationItemDto[] = []
+  let page = 1
+  const pageSize = 100
+  while (page <= 50) {
+    const pageData = await teamStore.loadTeamInvitations(teamId.value, {
+      currentPage: page,
+      pageSize,
+      status,
+    })
+    all.push(...pageData.records)
+    const total = pageData.total ?? 0
+    if (pageData.records.length === 0) break
+    if (total > 0 && all.length >= total) break
+    if (pageData.records.length < pageSize) break
+    page += 1
+  }
+  return all
+}
+
+async function loadHistoryInviteList(page = historyInvitePage.pageNum) {
+  if (!teamId.value) return
+  const keyword = historyInviteKeyword.value.trim()
+  const status = historyInviteStatus.value === '' ? undefined : Number(historyInviteStatus.value)
+
+  if (keyword) {
+    historyInviteClientMode.value = true
+    const all = await fetchAllTeamInvitations(status)
+    const filtered = all.filter((item) => matchesHistoryInviteKeyword(item, keyword))
+    historyInviteClientRecords.value = filtered
+    historyInvitePage.total = filtered.length
+    const maxPage = Math.max(1, Math.ceil(filtered.length / historyInvitePage.pageSize) || 1)
+    historyInvitePage.pageNum = Math.min(page, maxPage)
+    if (filtered.length === 0) historyInvitePage.pageNum = 1
+    return
+  }
+
+  historyInviteClientMode.value = false
+  historyInviteClientRecords.value = []
+  const pageData = await teamStore.loadTeamInvitations(teamId.value, {
+    currentPage: page,
+    pageSize: historyInvitePage.pageSize,
+    status,
+  })
+  historyInvitePage.pageNum = pageData.current || page
+  historyInvitePage.total = pageData.total ?? 0
+  if (!teamStore.teamInvitations.length && page > 1) {
+    historyInvitePage.pageNum = page - 1
+    await loadHistoryInviteList(page - 1)
+  }
+}
+
+function resetHistoryInviteFilters() {
+  historyInviteKeyword.value = ''
+  historyInviteStatus.value = ''
+  historyInvitePage.pageNum = 1
+  historyInvitePage.total = 0
+  historyInviteClientMode.value = false
+  historyInviteClientRecords.value = []
+}
+
+function openHistoryInviteModal() {
+  resetHistoryInviteFilters()
+  showHistoryInviteDialog.value = true
+  void loadHistoryInviteList(1)
+}
+
+function closeHistoryInviteModal() {
+  showHistoryInviteDialog.value = false
+  resetHistoryInviteFilters()
+}
+
+async function searchHistoryInvites() {
+  historyInvitePage.pageNum = 1
+  await loadHistoryInviteList(1)
+}
+
+async function changeHistoryInviteStatus(value: number | '') {
+  historyInviteStatus.value = value
+  historyInvitePage.pageNum = 1
+  await loadHistoryInviteList(1)
+}
+
+function changeHistoryInvitePage(page: number) {
+  if (page === historyInvitePage.pageNum) return
+  historyInvitePage.pageNum = page
+  if (!historyInviteClientMode.value) {
+    void loadHistoryInviteList(page)
+  }
+}
+
+const historyInvitePagedRecords = computed(() => {
+  if (historyInviteClientMode.value) {
+    const start = (historyInvitePage.pageNum - 1) * historyInvitePage.pageSize
+    return historyInviteClientRecords.value.slice(start, start + historyInvitePage.pageSize)
+  }
+  return teamStore.teamInvitations
+})
+
+const historyInviteHasKeyword = computed(() => historyInviteKeyword.value.trim().length > 0)
+const historyInviteHasFilter = computed(() => historyInviteStatus.value !== '')
+
+const historyInviteEmptyMessage = computed(() => {
+  if (historyInviteHasKeyword.value || historyInviteHasFilter.value) {
+    return '暂无符合条件的邀请记录'
+  }
+  return '暂无邀请记录'
+})
+
+async function loadJoinAuditList(page = joinAuditPage.pageNum) {
+  if (!teamId.value) return
+  const pageData = await teamStore.loadTeamJoinApplications(teamId.value, {
+    currentPage: page,
+    pageSize: joinAuditPage.pageSize,
+    status: 0,
+  })
+  joinAuditPage.pageNum = pageData.current || page
+  joinAuditPage.total = pageData.total ?? 0
+  if (!teamStore.teamJoinApplications.length && page > 1) {
+    joinAuditPage.pageNum = page - 1
+    await loadJoinAuditList(page - 1)
+  }
+}
+
+async function loadAvailableSeasonList(page = availableSeasonPage.pageNum) {
+  if (!teamId.value || !canManageCurrentTeam.value) return
+  const pageData = await teamStore.loadAvailableSeasons(teamId.value, {
+    currentPage: page,
+    pageSize: availableSeasonPage.pageSize,
+  })
+  availableSeasonPage.pageNum = pageData.current || page
+  availableSeasonPage.total = pageData.total ?? 0
+}
+
+async function loadRegistrationList(page = registrationListPage.pageNum) {
+  if (!teamId.value) return
+  const pageData = await teamStore.loadRegistrations(teamId.value, {
+    currentPage: page,
+    pageSize: registrationListPage.pageSize,
+  })
+  registrationListPage.pageNum = pageData.current || page
+  registrationListPage.total = pageData.total ?? 0
+}
+
+async function refreshRegistrationLists() {
+  await Promise.all([
+    loadAvailableSeasonList(availableSeasonPage.pageNum),
+    loadRegistrationList(registrationListPage.pageNum),
+  ])
+}
+
 async function refreshTabData(tab: TeamTab) {
   if (tab === 'pendingInvites') {
     await teamStore.loadMyInvitations({ status: 0 })
@@ -286,18 +547,11 @@ async function refreshTabData(tab: TeamTab) {
   }
   if (tab === 'members') await teamStore.loadMembers(teamId.value)
   if (tab === 'invitations') {
-    await Promise.all([
-      teamStore.loadTeamInvitations(teamId.value),
-      teamStore.loadCandidatePlayers(teamId.value, { keyword: inviteKeyword.value || undefined }),
-    ])
+    await loadInviteCandidateList()
   }
-  if (tab === 'applications') await teamStore.loadTeamJoinApplications(teamId.value, { status: 0 })
+  if (tab === 'applications') await loadJoinAuditList()
   if (tab === 'registration') {
-    const tasks: Promise<unknown>[] = [teamStore.loadRegistrations(teamId.value)]
-    if (canManageCurrentTeam.value) {
-      tasks.unshift(teamStore.loadAvailableSeasons(teamId.value))
-    }
-    await Promise.all(tasks)
+    await refreshRegistrationLists()
   }
 }
 
@@ -316,7 +570,9 @@ async function handleLogoUpload(event: Event, mode: 'create' | 'profile') {
       createForm.logoFileId = res.data.fileId
       createForm.logoPreviewUrl = res.data.accessUrl
     } else if (teamId.value) {
-      await teamStore.bindLogoAction(teamId.value, res.data.fileId)
+      profileLogoPreviewUrl.value = res.data.accessUrl
+      const updated = await teamStore.bindLogoAction(teamId.value, res.data.fileId)
+      profileLogoPreviewUrl.value = updated.logoUrl || res.data.accessUrl
       ElMessage.success('Logo 已更新')
     }
   } catch (error) {
@@ -366,12 +622,11 @@ async function submitProfileUpdate() {
 
 async function saveMember(
   member: TeamMemberItemDto,
-  payload: { jerseyNo: string; rosterType: string },
+  payload: { rosterType: string },
 ) {
   if (!teamId.value) return
   try {
     await teamStore.updateMemberAction(teamId.value, member.teamMemberId, {
-      jerseyNo: payload.jerseyNo,
       rosterType: payload.rosterType,
     })
     ElMessage.success('成员信息已更新')
@@ -429,40 +684,81 @@ async function cancelApplication(applicationId: string) {
   }
 }
 
-async function sendInvite() {
-  if (!teamId.value || !selectedInvitePlayerId.value) {
-    ElMessage.warning('请选择候选球员')
-    return
-  }
+function openInviteConfirmModal(player: CandidatePlayerItemDto) {
+  if (player.canInvite === false) return
+  inviteModalPlayer.value = player
+  inviteModalMessage.value = ''
+  inviteModalError.value = ''
+  showInviteConfirmDialog.value = true
+}
+
+function closeInviteConfirmModal() {
+  showInviteConfirmDialog.value = false
+  inviteModalPlayer.value = null
+  inviteModalMessage.value = ''
+  inviteModalError.value = ''
+}
+
+async function confirmSendInvite() {
+  if (!teamId.value || !inviteModalPlayer.value) return
+  inviteModalError.value = ''
   try {
     await teamStore.sendInvitationAction(teamId.value, {
-      inviteePlayerId: selectedInvitePlayerId.value,
-      invitationMessage: inviteMessage.value.trim() || undefined,
+      inviteePlayerId: inviteModalPlayer.value.playerId,
+      invitationMessage: inviteModalMessage.value.trim() || undefined,
     })
     ElMessage.success('邀请已发送')
-    inviteMessage.value = ''
-    selectedInvitePlayerId.value = ''
-    await teamStore.loadTeamInvitations(teamId.value)
+    closeInviteConfirmModal()
+    const refreshTasks = [loadInviteCandidateList(inviteCandidatePage.pageNum)]
+    if (showHistoryInviteDialog.value) {
+      historyInvitePage.pageNum = 1
+      refreshTasks.push(loadHistoryInviteList(1))
+    }
+    await Promise.all(refreshTasks)
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '邀请失败')
+    inviteModalError.value = error instanceof Error ? error.message : '邀请失败'
   }
 }
 
 async function searchCandidates() {
   if (!teamId.value) return
-  await teamStore.loadCandidatePlayers(teamId.value, { keyword: inviteKeyword.value || undefined })
+  inviteCandidatePage.pageNum = 1
+  await loadInviteCandidateList(1)
 }
 
-function selectInvitePlayer(player: CandidatePlayerItemDto) {
-  if (player.canInvite === false) return
-  selectedInvitePlayerId.value = player.playerId
+function formatInviteModalCanInvite(player: CandidatePlayerItemDto) {
+  return player.canInvite !== false ? '是' : '否'
+}
+
+function formatInviteModalCannotReason(player: CandidatePlayerItemDto) {
+  return player.cannotInviteReason || '-'
+}
+
+function formatInviteModalPosition(player: CandidatePlayerItemDto) {
+  return formatPositionCell(player.positionCode, player.positionName)
+}
+
+function formatCandidateTeamStatus(player: CandidatePlayerItemDto) {
+  return player.currentTeamStatusText || (player.currentTeamId ? '已加入球队' : '未加入球队')
+}
+
+function formatCandidatePlatformId(player: CandidatePlayerItemDto) {
+  return player.platformAccountSummary || player.platformGameId || '-'
+}
+
+function formatCandidateNickname(player: CandidatePlayerItemDto) {
+  return player.nickname || player.gameNickname || '-'
+}
+
+function resolveInvitePlayerAvatarUrl(avatar?: string | null) {
+  return avatar || undefined
 }
 
 async function processApplication(applicationId: string, approve: boolean) {
   try {
     await teamStore.processJoinApplicationAction(applicationId, approve)
     ElMessage.success(approve ? '已通过申请' : '已驳回申请')
-    if (teamId.value) await teamStore.loadTeamJoinApplications(teamId.value, { status: 0 })
+    await loadJoinAuditList(joinAuditPage.pageNum)
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '处理失败')
   }
@@ -476,16 +772,15 @@ async function startRegistrationForSeason(season: AvailableSeasonItemDto) {
     const detail = await teamStore.createRegistrationDraftAction(teamId.value, {
       seasonId: season.seasonId,
       platformCode: season.platformCode || undefined,
-      contactName: registrationDraftForm.contactName.trim() || undefined,
-      contactMobile: registrationDraftForm.contactMobile.trim() || undefined,
-      contactEmail: registrationDraftForm.contactEmail.trim() || undefined,
       remark: registrationDraftForm.remark.trim() || undefined,
     })
-    selectedRegistrationId.value = detail.registrationId
-    await openRegistrationDetail(detail.registrationId)
-    ElMessage.success('报名草稿已创建')
-    await teamStore.loadRegistrations(teamId.value)
-    await teamStore.loadAvailableSeasons(teamId.value)
+    ElMessage.success('报名信息已保存')
+    await refreshRegistrationLists()
+    goToRegistrationEditFlow(router, {
+      registrationId: detail.registrationId,
+      seasonId: detail.seasonId || season.seasonId,
+      platformCode: detail.platformCode || season.platformCode,
+    })
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '创建失败')
   }
@@ -511,62 +806,143 @@ async function createRegistrationDraft() {
     const detail = await teamStore.createRegistrationDraftAction(teamId.value, {
       seasonId: registrationDraftForm.seasonId,
       platformCode: registrationDraftForm.platformCode || undefined,
-      contactName: registrationDraftForm.contactName.trim() || undefined,
-      contactMobile: registrationDraftForm.contactMobile.trim() || undefined,
-      contactEmail: registrationDraftForm.contactEmail.trim() || undefined,
       remark: registrationDraftForm.remark.trim() || undefined,
     })
-    selectedRegistrationId.value = detail.registrationId
-    await openRegistrationDetail(detail.registrationId)
-    ElMessage.success('报名草稿已创建')
-    await teamStore.loadRegistrations(teamId.value)
-    await teamStore.loadAvailableSeasons(teamId.value)
+    ElMessage.success('报名信息已保存')
+    await refreshRegistrationLists()
+    goToRegistrationEditFlow(router, {
+      registrationId: detail.registrationId,
+      seasonId: detail.seasonId || registrationDraftForm.seasonId,
+      platformCode: detail.platformCode || registrationDraftForm.platformCode,
+    })
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '创建失败')
   }
 }
 
-async function openRegistrationDetail(registrationId: string) {
+function closeRegistrationDetailDialog() {
+  showRegistrationDetailDialog.value = false
+  withdrawReason.value = ''
+}
+
+async function viewRegistrationDetail(registrationId: string) {
   selectedRegistrationId.value = registrationId
-  const detail = await teamStore.loadRegistrationDetail(registrationId)
-  registrationEditForm.contactName = detail.contactName || ''
-  registrationEditForm.contactMobile = ''
-  registrationEditForm.contactEmail = ''
-  registrationEditForm.remark = detail.remark || ''
-  rosterSelections.value = (detail.rosterItems || []).map((item) => ({ ...item }))
-  await teamStore.loadRegistrationAudits(registrationId)
-  await teamStore.loadRosterCandidates(registrationId)
+  showRegistrationDetailDialog.value = true
+  registrationDetailLoading.value = true
+  withdrawReason.value = ''
+  try {
+    await teamStore.loadRegistrationDetail(registrationId)
+    await Promise.all([
+      teamStore.loadRegistrationAudits(registrationId),
+      teamStore.loadRosterCandidates(registrationId),
+    ])
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '加载报名详情失败')
+    closeRegistrationDetailDialog()
+  } finally {
+    registrationDetailLoading.value = false
+  }
 }
 
-function resolveRosterMissingPositions() {
-  const selectedPositions = new Set(
-    rosterSelections.value
-      .map((item) => item.positionCode?.trim().toUpperCase())
-      .filter(Boolean),
-  )
-  return STARTING_POSITION_CODES.filter((code) => !selectedPositions.has(code))
+function displayRegistrationStatus(status?: number) {
+  return mapTeamRegistrationStatusText(status)
 }
 
-function toggleRosterCandidate(candidate: import('@/api/types/teamRegistration').RegistrationRosterCandidateDto) {
-  if (candidate.canSelect === false) return
-  const exists = rosterSelections.value.find((item) => item.teamMemberId === candidate.teamMemberId)
-  if (exists) {
-    rosterSelections.value = rosterSelections.value.filter((item) => item.teamMemberId !== candidate.teamMemberId)
-    return
-  }
-  if (rosterSelections.value.length >= registrationRosterLimits.value.maxRosterCount) {
-    ElMessage.warning(`阵容最多 ${registrationRosterLimits.value.maxRosterCount} 人`)
-    return
-  }
-  rosterSelections.value.push({
-    teamMemberId: candidate.teamMemberId,
-    gameNickname: candidate.gameNickname || candidate.nickname,
-    positionCode: candidate.positionCode,
-    jerseyNo: candidate.jerseyNo,
-    isStarting: rosterSelections.value.length < 5 ? 1 : 0,
-    isCaptain: 0,
-    sortNo: rosterSelections.value.length + 1,
+function resolveRegistrationAuditTime(item: TeamRegistrationItemDto) {
+  return formatDateTime(item.auditTime || item.approvedTime) || '-'
+}
+
+function continueRegistration(item: TeamRegistrationItemDto) {
+  goToRegistrationEditFlow(router, {
+    registrationId: item.registrationId,
+    seasonId: item.seasonId,
+    platformCode: item.platformCode,
   })
+}
+
+function resubmitRegistration(item: TeamRegistrationItemDto) {
+  continueRegistration(item)
+}
+
+function manageEventTeam(item: TeamRegistrationItemDto) {
+  goToEventTeamManagement(router, { seasonId: item.seasonId })
+}
+
+type RegistrationListAction = {
+  label: string
+  handler: () => void
+  primary?: boolean
+}
+
+function registrationListActions(item: TeamRegistrationItemDto): RegistrationListAction[] {
+  const status = item.registrationStatus
+  const actions: RegistrationListAction[] = []
+
+  if (status === 0) {
+    if (canManageCurrentTeam.value) {
+      actions.push({ label: '继续报名', handler: () => continueRegistration(item), primary: true })
+      actions.push({ label: '放弃本次报名', handler: () => abandonRegistrationDraft(item) })
+    } else {
+      actions.push({ label: '查看详情', handler: () => viewRegistrationDetail(item.registrationId) })
+    }
+    return actions
+  }
+
+  if (status === 1 || status === 2) {
+    actions.push({ label: '查看详情', handler: () => viewRegistrationDetail(item.registrationId) })
+    if (item.canWithdraw && canManageCurrentTeam.value) {
+      actions.push({ label: '撤回修改', handler: () => viewRegistrationDetail(item.registrationId) })
+    }
+    return actions
+  }
+
+  if (status === 3) {
+    actions.push({ label: '查看详情', handler: () => viewRegistrationDetail(item.registrationId) })
+    if (canManageCurrentTeam.value) {
+      actions.push({ label: '管理本届球队', handler: () => manageEventTeam(item), primary: true })
+    }
+    return actions
+  }
+
+  if (status === 4) {
+    actions.push({ label: '查看详情', handler: () => viewRegistrationDetail(item.registrationId) })
+    if (canManageCurrentTeam.value && item.canEdit !== false) {
+      actions.push({ label: '修改重提', handler: () => resubmitRegistration(item), primary: true })
+    }
+    return actions
+  }
+
+  actions.push({ label: '查看详情', handler: () => viewRegistrationDetail(item.registrationId) })
+  return actions
+}
+
+function formatCandidateEligibility(candidate: import('@/api/types/teamRegistration').RegistrationRosterCandidateDto) {
+  if (candidate.canSelect) {
+    return '已纳入报名'
+  }
+  return candidate.cannotSelectReason || candidate.platformIdentityStatusText || '不可纳入'
+}
+
+function formatCandidatePlatformDisplay(candidate: import('@/api/types/teamRegistration').RegistrationRosterCandidateDto) {
+  if (candidate.platformGameId && candidate.canSelect) {
+    const platform = teamStore.registrationDetail?.platformName || teamStore.registrationDetail?.platformCode || ''
+    return platform ? `${platform}：${candidate.platformGameId}` : candidate.platformGameId
+  }
+  return candidate.platformIdentityStatusText || candidate.platformGameId || '-'
+}
+
+async function abandonRegistrationDraft(item: TeamRegistrationItemDto) {
+  try {
+    await ElMessageBox.confirm('确认放弃本次报名填写？', '放弃报名', { type: 'warning' })
+    await teamStore.deleteRegistrationDraftAction(item.registrationId)
+    if (selectedRegistrationId.value === item.registrationId) {
+      closeRegistrationDetailDialog()
+    }
+    ElMessage.success('已放弃本次报名填写')
+    if (teamId.value) await refreshRegistrationLists()
+  } catch {
+    // cancelled or failed
+  }
 }
 
 async function inheritTeam(teamIdToBind: string) {
@@ -589,14 +965,31 @@ async function openRegistrationFromQuery() {
     activeTab.value = 'registration'
   }
   await refreshTabData('registration')
-  if (selectedRegistrationId.value === registrationId && teamStore.registrationDetail) {
-    await nextTick()
-    document.getElementById('team-registration-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+  const fromList = teamStore.registrations.find((item) => item.registrationId === registrationId)
+  if (fromList && (fromList.registrationStatus === 0 || fromList.registrationStatus === 4)) {
+    goToRegistrationEditFlow(router, {
+      registrationId,
+      seasonId: fromList.seasonId,
+      platformCode: fromList.platformCode,
+    })
     return
   }
-  await openRegistrationDetail(registrationId)
-  await nextTick()
-  document.getElementById('team-registration-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+  try {
+    const detail = await teamStore.loadRegistrationDetail(registrationId)
+    if (detail.registrationStatus === 0 || (detail.registrationStatus === 4 && detail.canEdit)) {
+      goToRegistrationEditFlow(router, {
+        registrationId,
+        seasonId: detail.seasonId,
+        platformCode: detail.platformCode,
+      })
+      return
+    }
+    await viewRegistrationDetail(registrationId)
+  } catch {
+    // ignore invalid registration id in query
+  }
 }
 
 watch(
@@ -607,66 +1000,6 @@ watch(
   },
 )
 
-async function saveRegistrationInfo() {
-  if (!selectedRegistrationId.value) return
-  try {
-    await teamStore.updateRegistrationAction(selectedRegistrationId.value, {
-      contactName: registrationEditForm.contactName.trim() || undefined,
-      contactMobile: registrationEditForm.contactMobile.trim() || undefined,
-      contactEmail: registrationEditForm.contactEmail.trim() || undefined,
-      remark: registrationEditForm.remark.trim() || undefined,
-    })
-    ElMessage.success('报名信息已保存')
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '保存失败')
-  }
-}
-
-async function saveRegistrationRoster() {
-  if (!selectedRegistrationId.value) return
-  const missingPositions = resolveRosterMissingPositions()
-  if (rosterSelections.value.length < registrationRosterLimits.value.minRosterCount) {
-    ElMessage.warning(`阵容至少需要 ${registrationRosterLimits.value.minRosterCount} 人`)
-    return
-  }
-  if (missingPositions.length) {
-    const labels = missingPositions.map((code) => formatPositionLabel(code)).join('、')
-    ElMessage.warning(`当前阵容缺少 ${labels}，无法提交报名阵容`)
-    return
-  }
-  try {
-    await teamStore.saveRegistrationRosterAction(selectedRegistrationId.value, {
-      rosterItems: rosterSelections.value.map((item, index) => ({
-        teamMemberId: item.teamMemberId,
-        jerseyNo: item.jerseyNo,
-        isStarting: item.isStarting ?? 0,
-        isCaptain: item.isCaptain ?? 0,
-        sortNo: item.sortNo ?? index + 1,
-      })),
-    })
-    ElMessage.success('阵容已保存')
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '保存失败')
-  }
-}
-
-async function submitRegistration() {
-  if (!selectedRegistrationId.value) return
-  const missingPositions = resolveRosterMissingPositions()
-  if (missingPositions.length) {
-    const labels = missingPositions.map((code) => formatPositionLabel(code)).join('、')
-    ElMessage.warning(`当前阵容缺少 ${labels}，无法提交报名阵容`)
-    return
-  }
-  try {
-    await teamStore.submitRegistrationAction(selectedRegistrationId.value)
-    ElMessage.success('报名已提交，正在等待后台审核')
-    if (teamId.value) await teamStore.loadRegistrations(teamId.value)
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '提交失败')
-  }
-}
-
 async function withdrawRegistration() {
   if (!selectedRegistrationId.value) return
   try {
@@ -674,7 +1007,8 @@ async function withdrawRegistration() {
       withdrawalReason: withdrawReason.value.trim() || undefined,
     })
     ElMessage.success('报名已撤回')
-    if (teamId.value) await teamStore.loadRegistrations(teamId.value)
+    closeRegistrationDetailDialog()
+    if (teamId.value) await refreshRegistrationLists()
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '撤回失败')
   }
@@ -682,13 +1016,15 @@ async function withdrawRegistration() {
 
 async function deleteRegistrationDraft() {
   if (!selectedRegistrationId.value) return
+  const currentId = selectedRegistrationId.value
   try {
-    await teamStore.deleteRegistrationDraftAction(selectedRegistrationId.value)
-    selectedRegistrationId.value = ''
-    ElMessage.success('草稿已删除')
-    if (teamId.value) await teamStore.loadRegistrations(teamId.value)
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '删除失败')
+    await ElMessageBox.confirm('确认放弃本次报名填写？', '放弃报名', { type: 'warning' })
+    await teamStore.deleteRegistrationDraftAction(currentId)
+    closeRegistrationDetailDialog()
+    ElMessage.success('已放弃本次报名填写')
+    if (teamId.value) await refreshRegistrationLists()
+  } catch {
+    // cancelled or failed
   }
 }
 
@@ -723,6 +1059,9 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
       :description="bannerDescription"
       :status-text="bannerStatusText"
       :status-type="bannerStatusType"
+      :logo-url="hasTeam ? displayTeamLogoUrl : undefined"
+      :logo-short-name="hasTeam ? displayTeamShortName : undefined"
+      :logo-team-name="hasTeam ? displayTeamName : undefined"
     />
 
     <CaptainGrantPanel
@@ -839,7 +1178,12 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             当前暂无有效队长权限，暂不能创建球队。队长权限由平台根据赛事缴费结果后台开通。
           </p>
           <div class="team-create-logo">
-            <img v-if="createForm.logoPreviewUrl" :src="createForm.logoPreviewUrl" alt="球队 Logo 预览" />
+            <AccountTeamLogo
+              :logo-url="createForm.logoPreviewUrl"
+              :short-name="createForm.shortName"
+              :team-name="createForm.teamName"
+              size="md"
+            />
             <label class="account-btn-secondary team-logo-upload">
               上传 Logo
               <input type="file" accept="image/*" hidden @change="handleLogoUpload($event, 'create')" />
@@ -889,13 +1233,29 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
               球队认证{{ teamAuditStatusText }}，可先管理成员与资料；赛事报名需审核通过后开放。
             </p>
           </div>
+          <div v-if="teamDetail" class="team-overview-header">
+            <AccountTeamLogo
+              :logo-url="displayTeamLogoUrl"
+              :short-name="teamDetail.shortName"
+              :team-name="teamDetail.teamName"
+              size="md"
+            />
+            <div class="team-overview-header__info">
+              <h3 class="team-overview-header__name">{{ teamDetail.teamName }}</h3>
+              <p class="team-overview-header__meta">
+                <span>{{ teamDetail.teamNo || '-' }}</span>
+                <span v-if="teamDetail.shortName"> · {{ teamDetail.shortName }}</span>
+                <span v-if="canManageCurrentTeam"> · {{ teamAuditStatusText }}</span>
+              </p>
+            </div>
+          </div>
           <dl v-if="teamDetail" class="account-info-list">
             <div class="account-field-row"><dt>球队编号</dt><dd>{{ teamDetail.teamNo || '-' }}</dd></div>
             <div class="account-field-row"><dt>球队名称</dt><dd>{{ teamDetail.teamName }}</dd></div>
             <div v-if="canManageCurrentTeam" class="account-field-row"><dt>认证状态</dt><dd>{{ teamAuditStatusText }}</dd></div>
             <div class="account-field-row"><dt>简称</dt><dd>{{ teamDetail.shortName || '-' }}</dd></div>
             <div class="account-field-row"><dt>地区</dt><dd>{{ teamDetail.regionName || '-' }}</dd></div>
-            <div class="account-field-row"><dt>成员</dt><dd>{{ teamDetail.currentMemberCount ?? 0 }}/{{ teamDetail.maxMemberCount ?? CNPA_MAX_ROSTER_COUNT }}<span class="team-member-hint"> · 正式阵容 {{ teamMemberLimitHint }}</span></dd></div>
+            <div class="account-field-row"><dt>成员</dt><dd>{{ teamDetail.currentMemberCount ?? 0 }} 人</dd></div>
             <div class="account-field-row"><dt>我的角色</dt><dd>{{ teamDetail.myRole || (canManageCurrentTeam || isCaptainMember ? '队长' : '队员') }}</dd></div>
             <div class="account-field-row"><dt>创建时间</dt><dd>{{ formatDateTime(teamDetail.createTime) }}</dd></div>
             <div class="account-field-row"><dt>介绍</dt><dd>{{ teamDetail.description || '暂无' }}</dd></div>
@@ -909,12 +1269,20 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
 
       <template v-else-if="activeTab === 'profile'">
         <AccountPanel title="编辑球队资料">
-          <div class="team-create-logo">
-            <img v-if="teamDetail?.logoUrl" :src="teamDetail.logoUrl" alt="球队 Logo" />
-            <label class="account-btn-secondary team-logo-upload">
-              更换 Logo
-              <input type="file" accept="image/*" hidden @change="handleLogoUpload($event, 'profile')" />
-            </label>
+          <div class="team-profile-logo">
+            <AccountTeamLogo
+              :logo-url="profileLogoPreviewUrl || teamDetail?.logoUrl"
+              :short-name="profileForm.shortName || teamDetail?.shortName"
+              :team-name="profileForm.teamName || teamDetail?.teamName"
+              size="lg"
+            />
+            <div class="team-profile-logo__actions">
+              <label class="account-btn-secondary team-logo-upload">
+                更换 Logo
+                <input type="file" accept="image/*" hidden @change="handleLogoUpload($event, 'profile')" />
+              </label>
+              <p class="team-tip">支持 JPG / PNG，上传后立即保存并更新预览。</p>
+            </div>
           </div>
           <div class="team-form-grid">
             <label>球队名称<input v-model="profileForm.teamName" type="text" maxlength="32" /></label>
@@ -955,12 +1323,17 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
 
       <template v-else-if="activeTab === 'invitations'">
         <AccountPanel title="邀请候选球员">
+          <template #extra>
+            <button type="button" class="account-btn-secondary team-invite-history-btn" @click="openHistoryInviteModal">
+              历史邀请
+            </button>
+          </template>
           <div class="team-search-row">
             <input v-model="inviteKeyword" type="search" placeholder="搜索用户账号、邮箱、球员编号或昵称" />
             <button type="button" class="account-btn-secondary" @click="searchCandidates">搜索</button>
           </div>
           <div v-if="teamStore.candidatePlayers.length" class="team-table-wrap">
-            <table class="team-table">
+            <table class="team-table team-table--invite">
               <thead>
                 <tr>
                   <th>昵称</th>
@@ -968,74 +1341,57 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
                   <th>认证状态</th>
                   <th>当前球队</th>
                   <th>平台游戏 ID</th>
-                  <th>操作</th>
+                  <th class="team-table__actions-col">操作</th>
                 </tr>
               </thead>
               <tbody>
                 <tr
                   v-for="player in teamStore.candidatePlayers"
                   :key="player.playerId"
-                  :class="{ 'team-table__row--selected': selectedInvitePlayerId === player.playerId }"
+                  :class="{ 'team-table__row--disabled': player.canInvite === false }"
                 >
-                  <td>{{ player.nickname || player.gameNickname || '-' }}</td>
+                  <td>
+                    <div class="team-invite-player-cell">
+                      <PlayerAvatar
+                        :name="formatCandidateNickname(player)"
+                        :avatar-url="resolveInvitePlayerAvatarUrl(player.avatar)"
+                        :player-no="player.playerNo"
+                        :player-id="player.playerId"
+                        size="sm"
+                      />
+                      <span>{{ formatCandidateNickname(player) }}</span>
+                    </div>
+                  </td>
                   <td>{{ player.playerNo || '-' }}</td>
                   <td>{{ player.certificationStatusText || formatPlayerCertStatus(player.certificationStatus) }}</td>
-                  <td>{{ player.currentTeamStatusText || (player.currentTeamId ? '已加入球队' : '未加入球队') }}</td>
-                  <td>{{ player.platformAccountSummary || player.platformGameId || '-' }}</td>
-                  <td>
+                  <td>{{ formatCandidateTeamStatus(player) }}</td>
+                  <td>{{ formatCandidatePlatformId(player) }}</td>
+                  <td class="team-table__actions-col">
                     <button
                       type="button"
-                      class="account-btn-secondary team-table__btn"
+                      class="account-btn-primary team-table__btn team-table__btn--invite"
                       :disabled="player.canInvite === false"
                       :title="player.cannotInviteReason || undefined"
-                      @click="selectInvitePlayer(player)"
+                      @click="openInviteConfirmModal(player)"
                     >
-                      {{ selectedInvitePlayerId === player.playerId ? '已选择' : '选择' }}
+                      邀请
                     </button>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <TeamListPagination
+            :page="inviteCandidatePage.pageNum"
+            :page-size="inviteCandidatePage.pageSize"
+            :total="inviteCandidatePage.total"
+            :loading="teamStore.candidatesLoading"
+            @update:page="(page) => { inviteCandidatePage.pageNum = page; loadInviteCandidateList(page) }"
+          />
           <AccountEmptyState
-            v-else
+            v-if="!teamStore.candidatesLoading && !teamStore.candidatePlayers.length"
             :message="teamStore.candidateEmptyReason || '当前暂无可邀请的已认证球员'"
           />
-          <div class="team-form-grid">
-            <label class="team-form-full">
-              邀请说明
-              <textarea v-model="inviteMessage" rows="2" maxlength="200" />
-            </label>
-          </div>
-          <button
-            type="button"
-            class="account-btn-primary"
-            :disabled="teamStore.actionLoading || !selectedInvitePlayerId"
-            @click="sendInvite"
-          >
-            发送邀请
-          </button>
-        </AccountPanel>
-        <AccountPanel title="已发送邀请">
-          <div v-if="teamStore.teamInvitations.length" class="team-table-wrap">
-            <table class="team-table">
-              <thead>
-                <tr>
-                  <th>被邀请人</th>
-                  <th>状态</th>
-                  <th>发送时间</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in teamStore.teamInvitations" :key="item.invitationId">
-                  <td>{{ item.inviteeNickname || '-' }}</td>
-                  <td>{{ item.invitationStatusText }}</td>
-                  <td>{{ formatDateTime(item.createTime) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <AccountEmptyState v-else message="暂无邀请记录" />
         </AccountPanel>
       </template>
 
@@ -1078,7 +1434,14 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
               </tbody>
             </table>
           </div>
-          <AccountEmptyState v-else message="暂无待处理申请" />
+          <TeamListPagination
+            :page="joinAuditPage.pageNum"
+            :page-size="joinAuditPage.pageSize"
+            :total="joinAuditPage.total"
+            :loading="teamStore.joinApplicationsLoading"
+            @update:page="(page) => { joinAuditPage.pageNum = page; loadJoinAuditList(page) }"
+          />
+          <AccountEmptyState v-if="!teamStore.teamJoinApplications.length" message="暂无加入申请" />
         </AccountPanel>
       </template>
 
@@ -1114,8 +1477,16 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
               </tbody>
             </table>
           </div>
+          <TeamListPagination
+            v-if="canManageCurrentTeam"
+            :page="availableSeasonPage.pageNum"
+            :page-size="availableSeasonPage.pageSize"
+            :total="availableSeasonPage.total"
+            :loading="teamStore.registrationLoading"
+            @update:page="(page) => { availableSeasonPage.pageNum = page; loadAvailableSeasonList(page) }"
+          />
           <AccountEmptyState
-            v-else-if="canManageCurrentTeam"
+            v-if="canManageCurrentTeam && !teamStore.availableSeasons.length"
             message="当前暂无可报名赛事"
             :subtitle="teamStore.availableSeasonEmptyReason || '请确认队长权限已关联赛事且处于报名期'"
           />
@@ -1126,170 +1497,214 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             <table class="team-table">
               <thead>
                 <tr>
-                  <th>赛事</th>
-                  <th>赛季</th>
+                  <th>赛事名称</th>
+                  <th>赛季 / 阶段</th>
                   <th>报名平台</th>
-                  <th>状态</th>
+                  <th>报名状态</th>
                   <th>提交时间</th>
+                  <th>审核时间</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="item in teamStore.registrations" :key="item.registrationId">
-                  <td>{{ item.tournamentName }}</td>
-                  <td>{{ item.seasonName }}</td>
+                  <td>{{ item.tournamentName || '-' }}</td>
+                  <td>{{ item.seasonName || '-' }}</td>
                   <td>{{ item.platformName || item.platformCode || '-' }}</td>
-                  <td>{{ item.registrationStatusText || mapTeamRegistrationStatusText(item.registrationStatus) }}</td>
+                  <td>{{ displayRegistrationStatus(item.registrationStatus) }}</td>
                   <td>{{ formatDateTime(item.submittedTime || item.createTime) }}</td>
+                  <td>{{ resolveRegistrationAuditTime(item) }}</td>
                   <td>
-                    <button type="button" class="account-btn-secondary team-table__btn" @click="openRegistrationDetail(item.registrationId)">
-                      {{ canManageCurrentTeam ? '管理' : '查看' }}
-                    </button>
+                    <div class="team-registration-actions">
+                      <button
+                        v-for="action in registrationListActions(item)"
+                        :key="`${item.registrationId}-${action.label}`"
+                        type="button"
+                        :class="action.primary ? 'account-btn-primary team-table__btn' : 'account-btn-secondary team-table__btn'"
+                        @click="action.handler()"
+                      >
+                        {{ action.label }}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <AccountEmptyState v-else message="暂无报名记录" />
+          <TeamListPagination
+            :page="registrationListPage.pageNum"
+            :page-size="registrationListPage.pageSize"
+            :total="registrationListPage.total"
+            :loading="teamStore.registrationLoading"
+            @update:page="(page) => { registrationListPage.pageNum = page; loadRegistrationList(page) }"
+          />
+          <AccountEmptyState v-if="!teamStore.registrations.length" message="暂无报名记录" />
         </AccountPanel>
-
-        <div v-if="teamStore.registrationDetail && (canManageCurrentTeam || selectedRegistrationId)" id="team-registration-detail">
-        <AccountPanel title="报名详情">
-          <dl class="account-info-list">
-            <div class="account-field-row"><dt>报名编号</dt><dd>{{ teamStore.registrationDetail.registrationNo }}</dd></div>
-            <div class="account-field-row"><dt>报名平台</dt><dd>{{ teamStore.registrationDetail.platformName || teamStore.registrationDetail.platformCode || '-' }}</dd></div>
-            <div class="account-field-row"><dt>状态</dt><dd>{{ teamStore.registrationDetail.registrationStatusText }}</dd></div>
-            <div v-if="teamStore.registrationDetail.registrationStatus === 2 || teamStore.registrationDetail.registrationStatus === 1" class="account-field-row">
-              <dt>审核说明</dt><dd>报名已提交，正在等待后台审核。</dd>
-            </div>
-            <div v-if="teamStore.registrationDetail.registrationStatus === 4 && teamStore.registrationDetail.remark" class="account-field-row">
-              <dt>驳回原因</dt><dd>{{ teamStore.registrationDetail.remark }}</dd>
-            </div>
-            <div v-if="teamStore.registrationDetail.rosterLocked" class="account-field-row team-roster-lock-tip">
-              <dt>阵容状态</dt>
-              <dd>
-                {{ teamStore.registrationDetail.rosterLockStatusText || '已锁定' }}。
-                {{ teamStore.registrationDetail.rosterLockedHint || '报名已审核通过，阵容已锁定。如需调整，请重新提交审核。' }}
-              </dd>
-            </div>
-            <div class="account-field-row"><dt>截止时间</dt><dd>{{ formatDateTime(teamStore.registrationDetail.registrationEndTime) }}</dd></div>
-          </dl>
-          <div class="team-form-grid">
-            <label>联系人<input v-model="registrationEditForm.contactName" type="text" :disabled="!teamStore.registrationDetail.canEdit" /></label>
-            <label>联系电话<input v-model="registrationEditForm.contactMobile" type="text" :disabled="!teamStore.registrationDetail.canEdit" placeholder="留空则保持不变" /></label>
-            <label>联系邮箱<input v-model="registrationEditForm.contactEmail" type="email" :disabled="!teamStore.registrationDetail.canEdit" placeholder="留空则保持不变" /></label>
-            <label class="team-form-full">备注<textarea v-model="registrationEditForm.remark" rows="2" :disabled="!teamStore.registrationDetail.canEdit" /></label>
-          </div>
-          <div class="team-manage-actions">
-            <button v-if="teamStore.registrationDetail.canEdit" type="button" class="account-btn-secondary" @click="saveRegistrationInfo">保存信息</button>
-            <button v-if="teamStore.registrationDetail.canSubmit" type="button" class="account-btn-primary" @click="submitRegistration">提交报名</button>
-            <button v-if="teamStore.registrationDetail.canWithdraw" type="button" class="account-btn-secondary" @click="withdrawRegistration">撤回报名</button>
-            <button v-if="teamStore.registrationDetail.canDeleteDraft" type="button" class="account-btn-secondary" @click="deleteRegistrationDraft">删除草稿</button>
-            <button
-              v-if="teamStore.registrationDetail.rosterLocked"
-              type="button"
-              class="account-btn-secondary"
-              disabled
-              title="阵容变更审核流程暂未开放，请联系赛事管理员"
-            >申请调整阵容</button>
-          </div>
-          <label v-if="teamStore.registrationDetail.canWithdraw" class="team-inline-field">
-            撤回原因
-            <input v-model="withdrawReason" type="text" maxlength="200" />
-          </label>
-
-          <h4 class="team-subtitle">{{ teamStore.registrationDetail.rosterLocked ? '报名阵容（只读）' : '阵容候选成员' }}</h4>
-          <p v-if="teamStore.registrationDetail.rosterLocked" class="team-tip team-roster-lock-tip">
-            报名已审核通过，阵容已锁定。如需调整，请重新提交审核或联系赛事管理员。
-          </p>
-          <p v-else class="team-tip">仅拥有当前报名平台已生效游戏 ID 的成员可选入阵容。</p>
-          <div v-if="teamStore.rosterCandidates.length" class="team-table-wrap">
-            <table class="team-table">
-              <thead>
-                <tr>
-                  <th>球员</th>
-                  <th>位置</th>
-                  <th>平台游戏 ID</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="candidate in teamStore.rosterCandidates"
-                  :key="candidate.teamMemberId"
-                  :class="{ 'team-table__row--disabled': candidate.canSelect === false }"
-                >
-                  <td>{{ candidate.gameNickname || candidate.nickname || candidate.playerNo }}</td>
-                  <td>{{ formatPositionCell(candidate.positionCode, candidate.positionName) }}</td>
-                  <td>{{ candidate.platformGameId || '-' }}</td>
-                  <td>
-                    <button
-                      type="button"
-                      class="account-btn-secondary team-table__btn"
-                      :disabled="candidate.canSelect === false || !teamStore.registrationDetail.canEdit"
-                      :title="candidate.cannotSelectReason || undefined"
-                      @click="toggleRosterCandidate(candidate)"
-                    >
-                      {{ rosterSelections.some((item) => item.teamMemberId === candidate.teamMemberId) ? '已选' : '选择' }}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <AccountEmptyState v-else message="暂无候选成员" />
-
-          <h4 class="team-subtitle">报名阵容</h4>
-          <div v-if="rosterSelections.length" class="team-table-wrap">
-            <table class="team-table">
-              <thead>
-                <tr>
-                  <th>球员</th>
-                  <th>球衣号</th>
-                  <th>首发</th>
-                  <th>场上队长</th>
-                  <th>排序</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in rosterSelections" :key="item.teamMemberId">
-                  <td>{{ item.realName || item.gameNickname || item.teamMemberId }}</td>
-                  <td><input v-model="item.jerseyNo" type="text" maxlength="3" class="team-input-inline" :disabled="!teamStore.registrationDetail.canEdit" /></td>
-                  <td><input v-model.number="item.isStarting" type="checkbox" :true-value="1" :false-value="0" :disabled="!teamStore.registrationDetail.canEdit" /></td>
-                  <td><input v-model.number="item.isCaptain" type="checkbox" :true-value="1" :false-value="0" :disabled="!teamStore.registrationDetail.canEdit" /></td>
-                  <td><input v-model.number="item.sortNo" type="number" min="1" class="team-input-inline" :disabled="!teamStore.registrationDetail.canEdit" /></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <button v-if="teamStore.registrationDetail.canEdit" type="button" class="account-btn-primary" @click="saveRegistrationRoster">保存阵容</button>
-
-          <h4 class="team-subtitle">审核记录</h4>
-          <div v-if="teamStore.registrationAudits.length" class="team-table-wrap">
-            <table class="team-table">
-              <thead>
-                <tr>
-                  <th>动作</th>
-                  <th>审核人</th>
-                  <th>说明</th>
-                  <th>时间</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="audit in teamStore.registrationAudits" :key="audit.auditId">
-                  <td>{{ audit.auditAction }}</td>
-                  <td>{{ audit.auditorName || '-' }}</td>
-                  <td>{{ audit.auditRemark || '-' }}</td>
-                  <td>{{ formatDateTime(audit.auditTime) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <AccountEmptyState v-else message="暂无审核记录" />
-        </AccountPanel>
-        </div>
       </template>
     </template>
+
+    <Teleport to="body">
+      <div v-if="showInviteConfirmDialog && inviteModalPlayer" class="team-dialog">
+        <button type="button" class="team-dialog__backdrop" aria-label="关闭" @click="closeInviteConfirmModal" />
+        <div class="team-dialog__panel team-dialog__panel--invite" role="dialog" aria-modal="true">
+          <h3>确认邀请球员</h3>
+          <p class="team-invite-modal-tip">
+            请确认球员信息无误后发送邀请。邀请发送后，球员将在消息通知中确认是否加入球队。
+          </p>
+          <div class="team-invite-modal-head">
+            <PlayerAvatar
+              :name="formatCandidateNickname(inviteModalPlayer)"
+              :avatar-url="resolveInvitePlayerAvatarUrl(inviteModalPlayer.avatar)"
+              :player-no="inviteModalPlayer.playerNo"
+              :player-id="inviteModalPlayer.playerId"
+              size="lg"
+            />
+            <div class="team-invite-modal-head__info">
+              <strong>{{ formatCandidateNickname(inviteModalPlayer) }}</strong>
+              <span>{{ inviteModalPlayer.playerNo || '-' }}</span>
+            </div>
+          </div>
+          <dl class="account-info-list team-invite-modal-info">
+            <div class="account-field-row">
+              <dt>认证状态</dt>
+              <dd>{{ inviteModalPlayer.certificationStatusText || formatPlayerCertStatus(inviteModalPlayer.certificationStatus) }}</dd>
+            </div>
+            <div class="account-field-row">
+              <dt>当前球队</dt>
+              <dd>{{ formatCandidateTeamStatus(inviteModalPlayer) }}</dd>
+            </div>
+            <div class="account-field-row">
+              <dt>常用位置</dt>
+              <dd>{{ formatInviteModalPosition(inviteModalPlayer) }}</dd>
+            </div>
+            <div class="account-field-row">
+              <dt>平台游戏 ID</dt>
+              <dd>{{ formatCandidatePlatformId(inviteModalPlayer) }}</dd>
+            </div>
+            <div class="account-field-row">
+              <dt>当前是否可邀请</dt>
+              <dd>{{ formatInviteModalCanInvite(inviteModalPlayer) }}</dd>
+            </div>
+            <div v-if="inviteModalPlayer.cannotInviteReason" class="account-field-row">
+              <dt>不可邀请原因</dt>
+              <dd>{{ formatInviteModalCannotReason(inviteModalPlayer) }}</dd>
+            </div>
+          </dl>
+          <label class="team-invite-modal-message">
+            邀请说明
+            <textarea
+              v-model="inviteModalMessage"
+              rows="3"
+              maxlength="200"
+              placeholder="可选，向球员说明邀请原因"
+            />
+          </label>
+          <p v-if="inviteModalError" class="team-invite-modal-error">{{ inviteModalError }}</p>
+          <div class="team-dialog__actions">
+            <button type="button" class="account-btn-secondary" :disabled="teamStore.actionLoading" @click="closeInviteConfirmModal">取消</button>
+            <button
+              type="button"
+              class="account-btn-primary"
+              :disabled="teamStore.actionLoading"
+              @click="confirmSendInvite"
+            >
+              {{ teamStore.actionLoading ? '发送中…' : '确认邀请' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div v-if="showHistoryInviteDialog" class="team-dialog">
+        <button type="button" class="team-dialog__backdrop" aria-label="关闭" @click="closeHistoryInviteModal" />
+        <div class="team-dialog__panel team-dialog__panel--history" role="dialog" aria-modal="true" aria-labelledby="history-invite-title">
+          <h3 id="history-invite-title">历史邀请</h3>
+          <div class="team-history-invite-toolbar">
+            <div class="team-search-row team-history-invite-search">
+              <input
+                v-model="historyInviteKeyword"
+                type="search"
+                placeholder="搜索球员昵称、邀请编号或邀请说明"
+                @keyup.enter="searchHistoryInvites"
+              />
+              <button type="button" class="account-btn-secondary" @click="searchHistoryInvites">搜索</button>
+            </div>
+            <div class="team-history-invite-filters">
+              <button
+                v-for="option in HISTORY_INVITE_STATUS_OPTIONS"
+                :key="String(option.value)"
+                type="button"
+                class="team-history-invite-filter"
+                :class="{ 'team-history-invite-filter--active': historyInviteStatus === option.value }"
+                @click="changeHistoryInviteStatus(option.value)"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+          </div>
+          <div class="team-history-invite-body">
+            <p v-if="teamStore.invitationsLoading" class="team-history-invite-loading">加载中…</p>
+            <div v-else-if="historyInvitePagedRecords.length" class="team-table-wrap team-history-invite-table-wrap">
+              <table class="team-table team-table--history">
+                <thead>
+                  <tr>
+                    <th>被邀请球员</th>
+                    <th>邀请编号</th>
+                    <th>平台游戏 ID</th>
+                    <th>邀请状态</th>
+                    <th>邀请时间</th>
+                    <th>响应时间</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in historyInvitePagedRecords" :key="item.invitationId">
+                    <td>
+                      <div class="team-invite-player-cell">
+                        <PlayerAvatar
+                          :name="item.inviteeNickname || '-'"
+                          :avatar-url="item.inviteeAvatarUrl"
+                          :player-id="item.inviteeMemberId"
+                          size="sm"
+                        />
+                        <span>{{ item.inviteeNickname || '-' }}</span>
+                      </div>
+                    </td>
+                    <td>{{ item.invitationNo || '-' }}</td>
+                    <td>-</td>
+                    <td>
+                      <AccountStatusBadge
+                        :text="item.invitationStatusText || '未知'"
+                        :type="item.invitationStatus === 0 ? 'warning' : 'default'"
+                      />
+                    </td>
+                    <td>{{ formatDateTime(item.createTime) }}</td>
+                    <td>-</td>
+                    <td>-</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <AccountEmptyState
+              v-else
+              :message="historyInviteEmptyMessage"
+            />
+            <TeamListPagination
+              v-if="!teamStore.invitationsLoading && historyInvitePage.total > historyInvitePage.pageSize"
+              :page="historyInvitePage.pageNum"
+              :page-size="historyInvitePage.pageSize"
+              :total="historyInvitePage.total"
+              :loading="teamStore.invitationsLoading"
+              @update:page="changeHistoryInvitePage"
+            />
+          </div>
+          <div class="team-dialog__actions team-dialog__actions--history">
+            <button type="button" class="account-btn-secondary" @click="closeHistoryInviteModal">关闭</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <Teleport to="body">
       <div v-if="showInvitationDialog && activeInvitation" class="team-dialog">
@@ -1343,7 +1758,186 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
           </div>
           <div class="team-dialog__actions">
             <button type="button" class="account-btn-secondary" @click="showPlatformPicker = false">取消</button>
-            <button type="button" class="account-btn-primary" @click="confirmPlatformAndCreateDraft">创建报名草稿</button>
+            <button type="button" class="account-btn-primary" @click="confirmPlatformAndCreateDraft">开始报名</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div v-if="showRegistrationDetailDialog" class="team-dialog">
+        <button type="button" class="team-dialog__backdrop" aria-label="关闭" @click="closeRegistrationDetailDialog" />
+        <div
+          class="team-dialog__panel team-dialog__panel--registration-detail"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="'registration-detail-title'"
+        >
+          <h3 id="registration-detail-title">{{ registrationDetailDialogTitle }}</h3>
+
+          <div class="team-registration-detail-body">
+            <p v-if="registrationDetailLoading" class="team-registration-detail-loading">加载中…</p>
+
+            <template v-else-if="teamStore.registrationDetail">
+              <section class="team-registration-detail-section">
+                <h4 class="team-subtitle">基础信息</h4>
+                <dl class="account-info-list">
+                  <div class="account-field-row"><dt>报名编号</dt><dd>{{ teamStore.registrationDetail.registrationNo || '-' }}</dd></div>
+                  <div class="account-field-row"><dt>赛事名称</dt><dd>{{ teamStore.registrationDetail.tournamentName || '-' }}</dd></div>
+                  <div class="account-field-row"><dt>赛季 / 阶段</dt><dd>{{ teamStore.registrationDetail.seasonName || '-' }}</dd></div>
+                  <div class="account-field-row"><dt>报名平台</dt><dd>{{ teamStore.registrationDetail.platformName || teamStore.registrationDetail.platformCode || '-' }}</dd></div>
+                  <div class="account-field-row"><dt>报名状态</dt><dd>{{ registrationDetailStatusText }}</dd></div>
+                  <div class="account-field-row"><dt>提交时间</dt><dd>{{ formatDateTime(teamStore.registrationDetail.submittedTime) || '-' }}</dd></div>
+                  <div class="account-field-row"><dt>审核时间</dt><dd>{{ registrationDetailAuditTime }}</dd></div>
+                  <div class="account-field-row"><dt>截止时间</dt><dd>{{ formatDateTime(teamStore.registrationDetail.registrationEndTime) || '-' }}</dd></div>
+                  <div class="account-field-row"><dt>联系邮箱</dt><dd>{{ registrationCaptainEmail }}</dd></div>
+                  <div v-if="teamStore.registrationDetail.remark && teamStore.registrationDetail.registrationStatus !== 4" class="account-field-row">
+                    <dt>备注</dt><dd>{{ teamStore.registrationDetail.remark }}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section class="team-registration-detail-section">
+                <h4 class="team-subtitle">报名阵容</h4>
+                <p v-if="teamStore.registrationDetail.rosterLocked" class="team-tip team-roster-lock-tip">
+                  报名已审核通过，阵容已锁定。
+                </p>
+                <div v-if="registrationDetailRosterRows.length" class="team-table-wrap">
+                  <table class="team-table">
+                    <thead>
+                      <tr>
+                        <th>球员</th>
+                        <th>位置</th>
+                        <th>平台游戏 ID</th>
+                        <th>资格状态</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="row in registrationDetailRosterRows" :key="row.key">
+                        <td>{{ row.name }}</td>
+                        <td>{{ row.position }}</td>
+                        <td>{{ row.platformId }}</td>
+                        <td>{{ row.eligibility }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <AccountEmptyState v-else message="暂无报名阵容" />
+              </section>
+
+              <section class="team-registration-detail-section">
+                <h4 class="team-subtitle">审核结果</h4>
+                <dl class="account-info-list">
+                  <div class="account-field-row"><dt>审核状态</dt><dd>{{ registrationDetailStatusText }}</dd></div>
+                  <div class="account-field-row"><dt>审核人</dt><dd>{{ registrationDetailLastAuditor }}</dd></div>
+                  <div class="account-field-row"><dt>审核时间</dt><dd>{{ registrationDetailAuditTime }}</dd></div>
+                  <div
+                    v-if="teamStore.registrationDetail.registrationStatus === 4 && teamStore.registrationDetail.remark"
+                    class="account-field-row"
+                  >
+                    <dt>驳回原因</dt><dd>{{ teamStore.registrationDetail.remark }}</dd>
+                  </div>
+                  <div
+                    v-if="teamStore.registrationDetail.registrationStatus === 3"
+                    class="account-field-row team-roster-lock-tip"
+                  >
+                    <dt>管理员备注</dt>
+                    <dd>{{ teamStore.registrationAudits.at(-1)?.auditRemark || teamStore.registrationDetail.remark || '审核已通过' }}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section class="team-registration-detail-section">
+                <h4 class="team-subtitle">审核记录</h4>
+                <div v-if="teamStore.registrationAudits.length" class="team-table-wrap">
+                  <table class="team-table">
+                    <thead>
+                      <tr>
+                        <th>动作</th>
+                        <th>审核人</th>
+                        <th>说明</th>
+                        <th>时间</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="audit in teamStore.registrationAudits" :key="audit.auditId">
+                        <td>{{ audit.auditAction || '-' }}</td>
+                        <td>{{ audit.auditorName || '-' }}</td>
+                        <td>{{ audit.auditRemark || '-' }}</td>
+                        <td>{{ formatDateTime(audit.auditTime) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <AccountEmptyState v-else message="暂无审核记录" />
+              </section>
+
+              <label
+                v-if="teamStore.registrationDetail.canWithdraw && canManageCurrentTeam"
+                class="team-inline-field team-registration-detail-withdraw"
+              >
+                撤回原因
+                <input v-model="withdrawReason" type="text" maxlength="200" placeholder="可选，填写撤回原因" />
+              </label>
+            </template>
+          </div>
+
+          <div class="team-dialog__actions team-dialog__actions--registration-detail">
+            <button type="button" class="account-btn-secondary" @click="closeRegistrationDetailDialog">关闭</button>
+            <template v-if="teamStore.registrationDetail && canManageCurrentTeam">
+              <button
+                v-if="teamStore.registrationDetail.registrationStatus === 0"
+                type="button"
+                class="account-btn-primary"
+                @click="continueRegistration({
+                  registrationId: teamStore.registrationDetail.registrationId,
+                  seasonId: teamStore.registrationDetail.seasonId,
+                  platformCode: teamStore.registrationDetail.platformCode,
+                })"
+              >
+                继续报名
+              </button>
+              <button
+                v-if="teamStore.registrationDetail.canDeleteDraft"
+                type="button"
+                class="account-btn-secondary"
+                @click="deleteRegistrationDraft"
+              >
+                放弃本次报名
+              </button>
+              <button
+                v-if="teamStore.registrationDetail.canWithdraw"
+                type="button"
+                class="account-btn-secondary"
+                @click="withdrawRegistration"
+              >
+                撤回修改
+              </button>
+              <button
+                v-if="teamStore.registrationDetail.registrationStatus === 4 && teamStore.registrationDetail.canEdit"
+                type="button"
+                class="account-btn-primary"
+                @click="resubmitRegistration({
+                  registrationId: teamStore.registrationDetail.registrationId,
+                  seasonId: teamStore.registrationDetail.seasonId,
+                  platformCode: teamStore.registrationDetail.platformCode,
+                })"
+              >
+                修改重提
+              </button>
+              <button
+                v-if="teamStore.registrationDetail.registrationStatus === 3"
+                type="button"
+                class="account-btn-primary"
+                @click="manageEventTeam({
+                  registrationId: teamStore.registrationDetail.registrationId,
+                  seasonId: teamStore.registrationDetail.seasonId,
+                  platformCode: teamStore.registrationDetail.platformCode,
+                })"
+              >
+                管理本届球队
+              </button>
+            </template>
           </div>
         </div>
       </div>
@@ -1442,12 +2036,6 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
 .team-position {
   cursor: default;
   border-bottom: 1px dotted rgba(20, 20, 20, 0.25);
-}
-
-.team-member-hint {
-  margin-left: 4px;
-  font-size: 12px;
-  color: #696969;
 }
 
 .team-card-list {
@@ -1557,14 +2145,47 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
   align-items: center;
   gap: 12px;
   margin-bottom: 12px;
+}
 
-  img {
-    width: 72px;
-    height: 72px;
-    object-fit: cover;
-    border: 1px solid var(--account-border);
-    border-radius: 3px;
-  }
+.team-profile-logo {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.team-profile-logo__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.team-overview-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.team-overview-header__info {
+  min-width: 0;
+}
+
+.team-overview-header__name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #111;
+}
+
+.team-overview-header__meta {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #696969;
+  line-height: 1.5;
 }
 
 .team-logo-upload {
@@ -1596,8 +2217,9 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
 .team-dialog__backdrop {
   position: absolute;
   inset: 0;
+  z-index: 0;
   border: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.55);
   cursor: pointer;
 }
 
@@ -1613,6 +2235,290 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
   h3 {
     margin: 0 0 8px;
   }
+}
+
+.team-dialog__panel--invite {
+  width: min(600px, 100%);
+}
+
+.team-dialog__panel--registration-detail {
+  width: min(75vw, 1280px);
+  min-width: min(760px, 100%);
+  max-height: 75vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 24px 24px 20px;
+
+  h3 {
+    flex-shrink: 0;
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: 800;
+  }
+}
+
+.team-registration-detail-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.team-registration-detail-section + .team-registration-detail-section {
+  margin-top: 20px;
+}
+
+.team-registration-detail-loading {
+  margin: 0;
+  color: var(--el-text-color-secondary);
+}
+
+.team-registration-detail-withdraw {
+  display: block;
+  margin-top: 16px;
+}
+
+.team-registration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.team-dialog__actions--registration-detail {
+  flex-shrink: 0;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--account-border);
+}
+
+@media (max-width: 900px) {
+  .team-dialog__panel--registration-detail {
+    width: 92vw;
+    min-width: auto;
+  }
+}
+
+.team-dialog__panel--history {
+  width: min(920px, 90vw);
+  max-height: min(85vh, 760px);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 24px 20px;
+  background: #fff;
+  color: #111;
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+
+  h3 {
+    flex-shrink: 0;
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #111;
+  }
+
+  .team-search-row input[type='search'] {
+    color: #111;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+  }
+
+  .team-table {
+    th {
+      color: #333;
+      font-weight: 700;
+    }
+
+    td {
+      color: #222;
+    }
+  }
+
+  .team-invite-player-cell span {
+    color: #222;
+  }
+
+  .team-list-pagination__meta {
+    color: #666;
+  }
+}
+
+.team-history-invite-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.team-history-invite-loading {
+  margin: 0;
+  padding: 28px 0;
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+}
+
+.team-dialog__actions--history {
+  flex-shrink: 0;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.team-invite-history-btn {
+  white-space: nowrap;
+}
+
+.team-history-invite-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.team-history-invite-search {
+  margin-bottom: 0;
+}
+
+.team-history-invite-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.team-history-invite-filter {
+  padding: 6px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  border-radius: 3px;
+  background: #fff;
+  color: #333;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+
+  &--active {
+    border-color: #c41e3a;
+    background: #fff5f5;
+    color: #c41e3a;
+  }
+}
+
+.team-history-invite-table-wrap {
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
+.team-table--history {
+  min-width: 720px;
+}
+
+.team-invite-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.team-table--invite {
+  .team-table__actions-col {
+    width: 108px;
+    min-width: 108px;
+    text-align: center;
+    white-space: nowrap;
+  }
+}
+
+.team-table__btn--invite {
+  min-width: 72px;
+}
+
+.team-invite-modal-tip {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #696969;
+}
+
+.team-invite-player-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+
+  span {
+    min-width: 0;
+    word-break: break-word;
+  }
+}
+
+.team-invite-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--account-border);
+}
+
+.team-invite-modal-head__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+
+  strong {
+    font-size: 16px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  span {
+    font-size: 13px;
+    color: #696969;
+  }
+}
+
+.team-invite-modal-info {
+  margin-bottom: 14px;
+}
+
+.team-invite-modal-message {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+
+  textarea {
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--account-border);
+    border-radius: 3px;
+    font-family: inherit;
+    box-sizing: border-box;
+    resize: vertical;
+    min-height: 84px;
+    max-height: 120px;
+  }
+}
+
+.team-invite-modal-error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #c41e3a;
+  line-height: 1.5;
+}
+
+.team-invite-sent-loading {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #696969;
+  text-align: center;
 }
 
 .team-dialog__actions {
@@ -1649,6 +2555,28 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
     opacity: 0.55;
     cursor: not-allowed;
   }
+}
+
+.team-registration-rule-summary {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--account-border, #d9dee8);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.02);
+
+  p {
+    margin: 0 0 6px;
+    font-size: 13px;
+    line-height: 1.5;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.team-tip--warn {
+  color: #b45309;
 }
 
 .team-table__row--disabled {

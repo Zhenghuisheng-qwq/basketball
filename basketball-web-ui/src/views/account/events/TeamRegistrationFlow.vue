@@ -53,7 +53,11 @@ const selectedSeason = computed(() =>
   teamStore.availableSeasons.find((item) => item.seasonId === draftForm.seasonId),
 )
 const selectedSeasonRosterLimits = computed(() =>
-  resolveSeasonRosterLimits(selectedSeason.value?.minRosterCount, selectedSeason.value?.maxRosterCount),
+  resolveSeasonRosterLimits(
+    selectedSeason.value?.minRosterCount,
+    selectedSeason.value?.maxRosterCount,
+    detail.value?.teamPlayCount,
+  ),
 )
 
 const stepItems = computed<StepItem[]>(() => {
@@ -73,7 +77,7 @@ const bannerStatus = computed(() => {
   if (detail.value?.registrationStatusText) {
     return { text: detail.value.registrationStatusText, type: 'warning' as const }
   }
-  return { text: '草稿', type: 'info' as const }
+  return { text: '待提交', type: 'info' as const }
 })
 
 function pickDefaultSeason(seasons: AvailableSeasonItemDto[]) {
@@ -93,6 +97,15 @@ function syncDraftPlatform(season?: AvailableSeasonItemDto) {
   draftForm.platformCode = queryPlatform || season.platformCode || ''
 }
 
+function resolveStepFromDetail(): FlowStep {
+  if (!detail.value) return 'season'
+  if (detail.value.rosterLocked || detail.value.registrationStatus === 3) return 'submit'
+  if (detail.value.canSubmit) return 'submit'
+  if ((detail.value.rosterItems || []).length) return 'roster'
+  if (detail.value.contactName || detail.value.remark) return 'info'
+  return 'info'
+}
+
 async function bootstrap() {
   pageLoading.value = true
   loadError.value = ''
@@ -107,11 +120,32 @@ async function bootstrap() {
       return
     }
     if (!teamId.value) return
+
+    const queryRegistrationId = typeof route.query.registrationId === 'string'
+      ? route.query.registrationId
+      : ''
+    if (queryRegistrationId) {
+      await loadDetail(queryRegistrationId)
+      currentStep.value = resolveStepFromDetail()
+      return
+    }
+
     await Promise.all([
-      teamStore.loadAvailableSeasons(teamId.value),
-      teamStore.loadMembers(teamId.value),
       teamStore.loadRegistrations(teamId.value),
+      teamStore.loadMembers(teamId.value),
     ])
+
+    const seasonKey = tournamentId.value
+    const existingFromRegistrations = teamStore.registrations.find(
+      (item) => item.seasonId === seasonKey,
+    )
+    if (existingFromRegistrations?.registrationId) {
+      await loadDetail(existingFromRegistrations.registrationId)
+      currentStep.value = resolveStepFromDetail()
+      return
+    }
+
+    await teamStore.loadAvailableSeasons(teamId.value)
     pickDefaultSeason(teamStore.availableSeasons)
     const queryPlatform = typeof route.query.platformCode === 'string' ? route.query.platformCode : ''
     if (queryPlatform) {
@@ -121,12 +155,15 @@ async function bootstrap() {
     }
 
     const existing = teamStore.availableSeasons.find(
-      (item) => item.hasRegistration && item.registrationId,
+      (item) =>
+        (item.seasonId === seasonKey || item.tournamentId === seasonKey)
+        && item.hasRegistration
+        && item.registrationId,
     )
     if (existing?.registrationId) {
-      registrationId.value = existing.registrationId
       await loadDetail(existing.registrationId)
-      currentStep.value = detail.value?.rosterLocked ? 'submit' : (detail.value?.canSubmit ? 'submit' : 'info')
+      currentStep.value = resolveStepFromDetail()
+      return
     }
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
@@ -143,17 +180,35 @@ async function loadDetail(id: string) {
   editForm.contactEmail = ''
   editForm.remark = loaded.remark || ''
   rosterSelections.value = (loaded.rosterItems || []).map((item) => ({ ...item }))
-  if (!rosterSelections.value.length) {
-    rosterSelections.value = teamStore.members.map((member, index) => ({
-      teamMemberId: member.teamMemberId,
-      realName: member.realName,
-      gameNickname: member.gameNickname,
-      jerseyNo: member.jerseyNo,
-      isStarting: index < 5 ? 1 : 0,
-      isCaptain: member.roleType === 'CAPTAIN' ? 1 : 0,
-      sortNo: index + 1,
-    }))
-  }
+  await teamStore.loadRosterCandidates(id)
+  await syncRegistrationRosterFromCandidates()
+}
+
+async function syncRegistrationRosterFromCandidates() {
+  const currentDetail = teamStore.registrationDetail
+  if (!registrationId.value || !currentDetail?.canEdit || currentDetail.rosterLocked) return
+
+  const max = selectedSeasonRosterLimits.value.maxRosterCount
+  const eligible = teamStore.rosterCandidates.filter((candidate) => candidate.canSelect).slice(0, max)
+  const next = eligible.map((candidate) => ({
+    teamMemberId: candidate.teamMemberId,
+    gameNickname: candidate.gameNickname || candidate.nickname,
+    positionCode: candidate.positionCode,
+  }))
+
+  const currentIds = new Set(rosterSelections.value.map((item) => item.teamMemberId))
+  const nextIds = new Set(next.map((item) => item.teamMemberId))
+  const sameSet = currentIds.size === nextIds.size && [...currentIds].every((id) => nextIds.has(id))
+  const needsPersist = !sameSet || (next.length > 0 && (currentDetail.lineupCount ?? 0) === 0)
+  if (!needsPersist) return
+
+  rosterSelections.value = next
+  if (!next.length) return
+
+  const saved = await teamStore.saveRegistrationRosterAction(registrationId.value, {
+    rosterItems: next.map((item) => ({ teamMemberId: item.teamMemberId })),
+  })
+  rosterSelections.value = (saved.rosterItems || []).map((item) => ({ ...item }))
 }
 
 async function createDraft() {
@@ -172,7 +227,7 @@ async function createDraft() {
     })
     await loadDetail(created.registrationId)
     currentStep.value = 'info'
-    ElMessage.success('报名草稿已创建')
+    ElMessage.success('报名信息已保存')
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '创建失败')
   }
@@ -196,21 +251,13 @@ async function saveInfo() {
 
 async function saveRoster() {
   if (!registrationId.value) return
-  if (!rosterSelections.value.length) {
-    ElMessage.warning('请至少选择一名球员')
-    return
-  }
   try {
-    await teamStore.saveRegistrationRosterAction(registrationId.value, {
-      rosterItems: rosterSelections.value.map((item, index) => ({
-        teamMemberId: item.teamMemberId,
-        jerseyNo: item.jerseyNo,
-        isStarting: item.isStarting ?? 0,
-        isCaptain: item.isCaptain ?? 0,
-        sortNo: item.sortNo ?? index + 1,
-      })),
-    })
-    ElMessage.success('阵容已保存')
+    await syncRegistrationRosterFromCandidates()
+    if (rosterSelections.value.length < selectedSeasonRosterLimits.value.minRosterCount) {
+      ElMessage.warning(`阵容至少需要 ${selectedSeasonRosterLimits.value.minRosterCount} 人`)
+      return
+    }
+    ElMessage.success('阵容已确认')
     currentStep.value = 'submit'
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '保存失败')
@@ -220,6 +267,11 @@ async function saveRoster() {
 async function submitRegistration() {
   if (!registrationId.value) return
   try {
+    await syncRegistrationRosterFromCandidates()
+    if (rosterSelections.value.length < selectedSeasonRosterLimits.value.minRosterCount) {
+      ElMessage.warning(`阵容至少需要 ${selectedSeasonRosterLimits.value.minRosterCount} 人`)
+      return
+    }
     await teamStore.submitRegistrationAction(registrationId.value)
     ElMessage.success('报名已提交，正在等待后台审核')
     router.push('/account/my-events?tab=applications')
@@ -228,31 +280,9 @@ async function submitRegistration() {
   }
 }
 
-function toggleMember(teamMemberId: string) {
-  const exists = rosterSelections.value.find((item) => item.teamMemberId === teamMemberId)
-  if (exists) {
-    rosterSelections.value = rosterSelections.value.filter((item) => item.teamMemberId !== teamMemberId)
-    return
-  }
-  const member = teamStore.members.find((item) => item.teamMemberId === teamMemberId)
-  if (!member) return
-  if (rosterSelections.value.length >= selectedSeasonRosterLimits.value.maxRosterCount) {
-    ElMessage.warning(`阵容最多 ${selectedSeasonRosterLimits.value.maxRosterCount} 人`)
-    return
-  }
-  rosterSelections.value.push({
-    teamMemberId: member.teamMemberId,
-    realName: member.realName,
-    gameNickname: member.gameNickname,
-    jerseyNo: member.jerseyNo,
-    isStarting: rosterSelections.value.length < 5 ? 1 : 0,
-    isCaptain: member.roleType === 'CAPTAIN' ? 1 : 0,
-    sortNo: rosterSelections.value.length + 1,
-  })
-}
-
-function isMemberSelected(teamMemberId: string) {
-  return rosterSelections.value.some((item) => item.teamMemberId === teamMemberId)
+function formatCandidateEligibility(candidate: import('@/api/types/teamRegistration').RegistrationRosterCandidateDto) {
+  if (candidate.canSelect) return '已纳入报名'
+  return candidate.cannotSelectReason || candidate.platformIdentityStatusText || '不可纳入'
 }
 
 watch(
@@ -326,7 +356,7 @@ onMounted(bootstrap)
             :disabled="!draftForm.seasonId"
             @click="registrationId ? (currentStep = 'info') : createDraft()"
           >
-            {{ registrationId ? '继续填写' : '创建报名草稿' }}
+            {{ registrationId ? '继续填写' : '开始报名' }}
           </button>
         </div>
       </AccountPanel>
@@ -357,43 +387,34 @@ onMounted(bootstrap)
         </div>
       </AccountPanel>
 
-      <AccountPanel v-else-if="currentStep === 'roster'" :title="isRosterLocked ? '查看阵容' : '选择阵容'">
+      <AccountPanel v-else-if="currentStep === 'roster'" :title="isRosterLocked ? '查看阵容' : '报名阵容'">
         <p v-if="isRosterLocked" class="team-registration-hint">{{ rosterLockedHint }}</p>
         <p v-else class="team-registration-hint">
-          已选 {{ rosterSelections.length }} 人
-          · 最少 {{ selectedSeasonRosterLimits.minRosterCount }} 人
-          · 最多 {{ selectedSeasonRosterLimits.maxRosterCount }} 人
+          具备当前赛事平台已生效游戏 ID 且已认证的队员将自动纳入本次报名阵容。
+          当前报名阵容 {{ rosterSelections.length }} 人
+          · 要求 {{ selectedSeasonRosterLimits.minRosterCount }} - {{ selectedSeasonRosterLimits.maxRosterCount }} 人
         </p>
         <div class="platform-table-wrap">
           <table class="platform-table">
             <thead>
               <tr>
-                <th />
                 <th>球员</th>
-                <th>球衣号</th>
-                <th>身份</th>
+                <th>位置</th>
+                <th>资格状态</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="member in teamStore.members" :key="member.teamMemberId">
-                <td>
-                  <input
-                    type="checkbox"
-                    :checked="isMemberSelected(member.teamMemberId)"
-                    :disabled="isRosterLocked"
-                    @change="toggleMember(member.teamMemberId)"
-                  />
-                </td>
-                <td>{{ member.gameNickname || member.realName || member.teamMemberId }}</td>
-                <td>{{ member.jerseyNo || '-' }}</td>
-                <td>{{ member.roleType === 'CAPTAIN' ? '队长' : '队员' }}</td>
+              <tr v-for="candidate in teamStore.rosterCandidates" :key="candidate.teamMemberId">
+                <td>{{ candidate.gameNickname || candidate.nickname || candidate.playerNo }}</td>
+                <td>{{ candidate.positionName || candidate.positionCode || '-' }}</td>
+                <td>{{ formatCandidateEligibility(candidate) }}</td>
               </tr>
             </tbody>
           </table>
         </div>
         <div class="account-panel__action">
           <button type="button" class="account-btn-secondary" @click="currentStep = 'info'">上一步</button>
-          <button v-if="!isRosterLocked" type="button" class="account-btn-primary" @click="saveRoster">保存并下一步</button>
+          <button v-if="!isRosterLocked" type="button" class="account-btn-primary" @click="saveRoster">下一步</button>
           <button v-else type="button" class="account-btn-primary" @click="currentStep = 'submit'">查看提交信息</button>
         </div>
       </AccountPanel>

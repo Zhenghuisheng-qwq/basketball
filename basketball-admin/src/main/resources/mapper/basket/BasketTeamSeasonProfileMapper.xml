@@ -130,4 +130,13 @@
         where season_id = #{seasonId} and is_delete = 0
           and participation_status = 1 and approved_time is not null
     </select>
+
+    <select id="selectRegistrationIdsWithUnlockedApprovedEventTeam" resultType="java.lang.Long">
+        select p.registration_id from basket_team_season_profile p
+        where p.is_delete = 0
+          and p.registration_id is not null
+          and p.approved_time is not null
+          and (p.roster_lock_status is null or p.roster_lock_status != 1)
+        order by p.approved_time asc, p.id asc
+    </select>
 </mapper>

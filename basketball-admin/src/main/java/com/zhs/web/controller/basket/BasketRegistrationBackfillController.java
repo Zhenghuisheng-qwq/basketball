@@ -33,4 +33,11 @@ public class BasketRegistrationBackfillController extends BaseController {
     public AjaxResult backfillOne(@PathVariable Long registrationId) {
         return success(registrationBackfillService.backfillRegistration(registrationId, SecurityUtils.getUserId()));
     }
+
+    @PreAuthorize("@ss.hasPermi('basket:registrationAudit:audit')")
+    @Log(title = "阵容锁定修复", businessType = BusinessType.UPDATE)
+    @PostMapping("/repair-unlocked-rosters")
+    public AjaxResult repairUnlockedRosters() {
+        return success(registrationBackfillService.repairUnlockedApprovedEventTeamRosters(SecurityUtils.getUserId()));
+    }
 }

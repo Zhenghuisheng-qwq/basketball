@@ -154,6 +154,11 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         vo.setLogoUrl(resolveLogoUrl(team.getLogoFileId(), logoUrlMap));
         vo.setAuditStatusName(TeamAuditStatusEnum.fromCode(team.getAuditStatus()).getAuditDisplayDescription());
         vo.setPublicStatusName(resolvePublicStatusName(team.getPublicStatus()));
+        int memberCount = teamMemberMapper.countCurrentMembers(team.getId());
+        vo.setCurrentMemberCount(memberCount);
+        if (!Objects.equals(team.getCurrentMemberCount(), memberCount)) {
+            teamMapper.updateMemberCount(team.getId(), memberCount);
+        }
         return vo;
     }
 
@@ -220,6 +225,12 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
             }
         }
         vo.setMembers(members);
+        int memberCount = teamMemberMapper.countCurrentMembers(teamId);
+        Integer cachedCount = vo.getCurrentMemberCount();
+        vo.setCurrentMemberCount(memberCount);
+        if (!Objects.equals(cachedCount, memberCount)) {
+            teamMapper.updateMemberCount(teamId, memberCount);
+        }
     }
 
     private void enrichValidationFlags(TeamAuditDetailVo vo, BasketTeam team) {

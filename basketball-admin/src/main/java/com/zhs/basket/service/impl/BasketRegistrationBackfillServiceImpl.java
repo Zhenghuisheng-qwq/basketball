@@ -1,5 +1,6 @@
 package com.zhs.basket.service.impl;
 
+import com.zhs.basket.mapper.BasketTeamSeasonProfileMapper;
 import com.zhs.basket.service.IBasketParticipationGenerationService;
 import com.zhs.basket.service.IBasketRegistrationBackfillService;
 import com.zhs.basket.mapper.BasketTournamentRegistrationMapper;
@@ -16,6 +17,7 @@ public class BasketRegistrationBackfillServiceImpl implements IBasketRegistratio
 
     @Autowired private BasketTournamentRegistrationMapper registrationMapper;
     @Autowired private IBasketParticipationGenerationService participationGenerationService;
+    @Autowired private BasketTeamSeasonProfileMapper teamSeasonProfileMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -39,6 +41,32 @@ public class BasketRegistrationBackfillServiceImpl implements IBasketRegistratio
         result.setScanned(1);
         backfillOne(registrationId, operatorId, result);
         return result;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public RegistrationBackfillResultVo repairUnlockedApprovedEventTeamRosters(Long operatorId) {
+        List<Long> registrationIds = teamSeasonProfileMapper.selectRegistrationIdsWithUnlockedApprovedEventTeam();
+        RegistrationBackfillResultVo result = new RegistrationBackfillResultVo();
+        result.setScanned(registrationIds.size());
+        for (Long registrationId : registrationIds) {
+            repairUnlockedOne(registrationId, operatorId, result);
+        }
+        return result;
+    }
+
+    private void repairUnlockedOne(Long registrationId, Long operatorId, RegistrationBackfillResultVo result) {
+        try {
+            participationGenerationService.ensureRosterLockedForApprovedRegistration(registrationId, operatorId);
+            result.setSucceeded(result.getSucceeded() + 1);
+            result.getMessages().add("报名 " + registrationId + " 阵容锁定修复成功");
+        } catch (ServiceException ex) {
+            result.setFailed(result.getFailed() + 1);
+            result.getMessages().add("报名 " + registrationId + " 阵容锁定修复失败：" + ex.getMessage());
+        } catch (RuntimeException ex) {
+            result.setFailed(result.getFailed() + 1);
+            result.getMessages().add("报名 " + registrationId + " 阵容锁定修复异常：" + ex.getMessage());
+        }
     }
 
     private void backfillOne(Long registrationId, Long operatorId, RegistrationBackfillResultVo result) {
