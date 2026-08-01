@@ -32,6 +32,8 @@
       </el-table-column>
     </el-table>
 
+    <pagination :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="loadList" />
+
     <el-dialog v-model="grantOpen" title="新增赛事授权" width="480px">
       <el-form label-width="96px">
         <el-form-item label="管理员ID"><el-input-number v-model="form.adminUserId" :min="1" controls-position="right" style="width: 100%" /></el-form-item>
@@ -54,6 +56,7 @@ import { parseTime } from '@/utils/ruoyi'
 
 const loading = ref(false)
 const rows = ref<any[]>([])
+const total = ref(0)
 const query = reactive<{ tournamentId?: number; adminUserId?: number }>({})
 const grantOpen = ref(false)
 const form = reactive<any>({ scopeCode: 'MANAGE' })
@@ -62,7 +65,8 @@ async function loadList() {
   loading.value = true
   try {
     const res = await listTournamentScope(query)
-    rows.value = res.data || []
+    rows.value = res.rows || []
+    total.value = res.total ?? 0
   } finally {
     loading.value = false
   }

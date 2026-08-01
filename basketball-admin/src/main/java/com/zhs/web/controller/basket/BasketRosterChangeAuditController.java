@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket;
 
 import com.zhs.basket.query.RosterChangeAuditQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.RosterChangeAuditApproveReq;
 import com.zhs.basket.req.RosterChangeAuditRejectReq;
 import com.zhs.basket.service.IBasketRosterChangeAuditService;
@@ -34,4 +35,14 @@ public class BasketRosterChangeAuditController extends BaseController {
     @Log(title = "阵容变更审核", businessType = BusinessType.UPDATE)
     @PostMapping("/{id}/reject")
     public AjaxResult reject(@PathVariable Long id, @RequestBody RosterChangeAuditRejectReq req) { rosterChangeAuditService.reject(id, req); return success(); }
+
+    @PreAuthorize("@ss.hasPermi('basket:rosterChangeAudit:audit')")
+    @Log(title = "阵容变更审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/batch-approve")
+    public AjaxResult batchApprove(@RequestBody BatchAuditOperationReq req) { return success(rosterChangeAuditService.batchApprove(req)); }
+
+    @PreAuthorize("@ss.hasPermi('basket:rosterChangeAudit:audit')")
+    @Log(title = "阵容变更审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/batch-reject")
+    public AjaxResult batchReject(@RequestBody BatchAuditOperationReq req) { return success(rosterChangeAuditService.batchReject(req)); }
 }

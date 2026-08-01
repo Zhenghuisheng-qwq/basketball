@@ -102,7 +102,7 @@
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-drawer v-model="detailOpen" title="队长授权详情" size="720px" append-to-body>
       <el-tabs v-if="detail" v-model="detailTab">
@@ -168,7 +168,12 @@
         </el-form-item>
         <el-form-item label="球员" prop="playerId">
           <el-select v-model="grantForm.playerId" placeholder="请选择球员" filterable style="width: 100%">
-            <el-option v-for="item in eligibleList" :key="item.playerId" :label="`${captainDisplayName(item)} (${item.playerNo})`" :value="item.playerId" />
+            <el-option
+              v-for="item in eligibleList"
+              :key="item.playerId"
+              :label="eligibleCaptainLabel(item)"
+              :value="item.playerId"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="缴费确认" prop="paymentConfirmed">
@@ -201,6 +206,9 @@
         <el-table-column label="球员编号" prop="playerNo" width="120" />
         <el-table-column label="昵称" min-width="120">
           <template #default="scope">{{ captainDisplayName(scope.row) }}</template>
+        </el-table-column>
+        <el-table-column label="绑定游戏ID" min-width="160" :show-overflow-tooltip="true">
+          <template #default="scope">{{ scope.row.gameIdSummary || '未绑定' }}</template>
         </el-table-column>
         <el-table-column label="用户ID" prop="userId" width="100">
           <template #default="scope">{{ scope.row.userId || scope.row.memberId || '-' }}</template>
@@ -306,6 +314,15 @@ const queryParams = ref<CaptainQualificationQuery>({
 
 function captainDisplayName(item: EligibleCaptain) {
   return item.gameNickname || item.nickname || item.playerNo || '-'
+}
+
+function eligibleCaptainLabel(item: EligibleCaptain) {
+  const name = captainDisplayName(item)
+  const playerNo = item.playerNo || '-'
+  const gameId = item.gameIdSummary && item.gameIdSummary !== '未绑定'
+    ? item.gameIdSummary
+    : '未绑定游戏ID'
+  return `${name}（${playerNo}）｜${gameId}`
 }
 
 function loadSeasonOptions() {
@@ -422,15 +439,16 @@ function submitGrant() {
   }
   proxy.$refs.grantRef.validate((valid: boolean) => {
     if (!valid) return
+    // 雪花 ID 禁止 Number()，否则精度丢失会导致后端查不到球员并误报「未完成认证」
     const payload: CaptainQualificationGrantReq = {
-      seasonId: Number(grantForm.value.seasonId),
-      playerId: Number(grantForm.value.playerId),
+      seasonId: grantForm.value.seasonId as number | string,
+      playerId: String(grantForm.value.playerId),
       paymentConfirmed: 1,
       paymentReference: grantForm.value.paymentReference,
       grantRemark: grantForm.value.grantRemark
     }
     if (grantForm.value.teamId) {
-      payload.teamId = Number(grantForm.value.teamId)
+      payload.teamId = String(grantForm.value.teamId)
     }
     grantCaptainQualification(payload).then(() => {
       proxy.$modal.msgSuccess('授予队长权限成功')

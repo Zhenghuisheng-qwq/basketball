@@ -6,6 +6,8 @@ import type {
   RosterChangeAuditListItem,
   RosterChangeAuditQuery,
   RosterChangeAuditRejectReq,
+  BatchAuditOperationReq,
+  BatchAuditResult,
   TableDataInfo
 } from '@/types'
 
@@ -38,4 +40,12 @@ export function rejectRosterChangeAudit(id: number, data: RosterChangeAuditRejec
     method: 'post',
     data
   })
+}
+
+export function batchApproveRosterChangeAudit(data: BatchAuditOperationReq): Promise<AjaxResult<BatchAuditResult>> {
+  return request({ url: '/basket/rosterChangeAudit/batch-approve', method: 'post', data })
+}
+
+export function batchRejectRosterChangeAudit(data: BatchAuditOperationReq): Promise<AjaxResult<BatchAuditResult>> {
+  return request({ url: '/basket/rosterChangeAudit/batch-reject', method: 'post', data })
 }

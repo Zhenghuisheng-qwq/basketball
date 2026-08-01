@@ -6,8 +6,11 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import com.zhs.response.common.PlatformGameIdItemResp;
+
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 @Data
 @ApiModel("球队成员项")
@@ -48,6 +51,12 @@ public class TeamMemberItemResp implements Serializable {
 
     @ApiModelProperty("游戏账号")
     private String gameAccount;
+
+    @ApiModelProperty("有效平台游戏ID列表")
+    private List<PlatformGameIdItemResp> platformGameIds;
+
+    @ApiModelProperty("游戏ID摘要，如 PC：xxx / PS：yyy")
+    private String gameIdSummary;
 
     @ApiModelProperty("球员状态")
     private Integer playerStatus;

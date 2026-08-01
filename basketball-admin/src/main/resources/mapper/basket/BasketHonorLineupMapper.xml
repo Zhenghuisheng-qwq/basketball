@@ -5,7 +5,7 @@
         select l.id, l.honor_record_id as honorRecordId, l.team_id as teamId, l.player_id as playerId,
                l.member_id as memberId, ifnull(nullif(p.game_nickname, ''), mp.nickname) as playerName,
                l.role_type as roleType, l.jersey_no as jerseyNo, l.position_code as positionCode,
-               l.sort_no as sortNo, af.access_url as avatarUrl
+               l.sort_no as sortNo, IFNULL(af.access_url, 'https://basketball-1453992653.cos.ap-shanghai.myqcloud.com/basketball/public/2026/08/01/b1f4d9a28beb48beb90fed28439e8e4a.png') as avatarUrl
         from basket_honor_lineup l
         left join basket_player_profile p on p.id = l.player_id and p.is_delete = 0
         left join basket_member_profile mp on mp.member_id = l.member_id and mp.is_delete = 0

@@ -42,14 +42,26 @@ function ensureMemberEdit(member: TeamMemberItemDto) {
   return memberEdits[member.teamMemberId]
 }
 
+/** 队内私有资料详情（个人中心，需 token） */
 function openProfile(member: TeamMemberItemDto) {
-  if (!member.playerId) {
-    ElMessage.warning('暂无球员档案')
+  if (!props.teamId) {
+    ElMessage.warning('缺少球队上下文，无法查看队内资料')
     return
   }
-  goToPlayerDetail(router, member.playerId, 'overview')
+  if (!member.teamMemberId) {
+    ElMessage.warning('缺少成员标识')
+    return
+  }
+  router.push({
+    name: 'AccountTeamMemberDetail',
+    params: {
+      teamId: props.teamId,
+      teamMemberId: member.teamMemberId,
+    },
+  })
 }
 
+/** 公开球员生涯数据页（可不依赖 token） */
 function openCareerData(member: TeamMemberItemDto) {
   if (!member.playerId) {
     ElMessage.warning('暂无球员档案')
@@ -108,6 +120,7 @@ function handleSave(member: TeamMemberItemDto) {
         <div class="team-member-list__head" role="row">
           <div class="team-member-list__cell team-member-list__cell--player" role="columnheader">球员</div>
           <div class="team-member-list__cell team-member-list__cell--position" role="columnheader">位置</div>
+          <div class="team-member-list__cell team-member-list__cell--gameid" role="columnheader">游戏ID</div>
           <div class="team-member-list__cell team-member-list__cell--role" role="columnheader">球队角色</div>
           <div class="team-member-list__cell team-member-list__cell--status" role="columnheader">成员状态</div>
           <div class="team-member-list__cell team-member-list__cell--jersey" role="columnheader">球衣号</div>
@@ -152,6 +165,12 @@ function handleSave(member: TeamMemberItemDto) {
             </span>
           </div>
 
+          <div class="team-member-list__cell team-member-list__cell--gameid" role="cell">
+            <span class="team-member-list__gameid" :title="member.gameIdSummary || '未绑定'">
+              {{ member.gameIdSummary || '未绑定' }}
+            </span>
+          </div>
+
           <div class="team-member-list__cell team-member-list__cell--role" role="cell">
             {{ formatTeamMemberRole(member.roleType) }}
           </div>
@@ -190,29 +209,21 @@ function handleSave(member: TeamMemberItemDto) {
               <button
                 v-if="isCaptain"
                 type="button"
-                class="account-btn-secondary team-member-list__btn"
+                class="team-member-list__link"
                 @click="handleSave(member)"
               >
                 保存
               </button>
-              <button
-                type="button"
-                class="account-btn-secondary team-member-list__btn"
-                @click="openProfile(member)"
-              >
+              <button type="button" class="team-member-list__link" @click="openProfile(member)">
                 查看资料
               </button>
-              <button
-                type="button"
-                class="account-btn-secondary team-member-list__btn"
-                @click="openCareerData(member)"
-              >
+              <button type="button" class="team-member-list__link" @click="openCareerData(member)">
                 生涯数据
               </button>
               <button
                 v-if="isCaptain && !isTeamCaptainMember(member)"
                 type="button"
-                class="account-btn-secondary team-member-list__btn team-member-list__btn--danger"
+                class="team-member-list__link team-member-list__link--danger"
                 @click="confirmRemove(member)"
               >
                 移除
@@ -253,6 +264,7 @@ function handleSave(member: TeamMemberItemDto) {
 
           <dl class="team-member-list__card-meta">
             <div><dt>位置</dt><dd :title="formatTeamMemberPosition(member)">{{ formatTeamMemberPositionShort(member.positionCode) }}</dd></div>
+            <div><dt>游戏ID</dt><dd :title="member.gameIdSummary || '未绑定'">{{ member.gameIdSummary || '未绑定' }}</dd></div>
             <div><dt>球队角色</dt><dd>{{ formatTeamMemberRole(member.roleType) }}</dd></div>
             <div>
               <dt>成员状态</dt>
@@ -290,21 +302,21 @@ function handleSave(member: TeamMemberItemDto) {
             <button
               v-if="isCaptain"
               type="button"
-              class="account-btn-secondary team-member-list__btn"
+              class="team-member-list__link"
               @click="handleSave(member)"
             >
               保存
             </button>
-            <button type="button" class="account-btn-secondary team-member-list__btn" @click="openProfile(member)">
+            <button type="button" class="team-member-list__link" @click="openProfile(member)">
               查看资料
             </button>
-            <button type="button" class="account-btn-secondary team-member-list__btn" @click="openCareerData(member)">
+            <button type="button" class="team-member-list__link" @click="openCareerData(member)">
               生涯数据
             </button>
             <button
               v-if="isCaptain && !isTeamCaptainMember(member)"
               type="button"
-              class="account-btn-secondary team-member-list__btn team-member-list__btn--danger"
+              class="team-member-list__link team-member-list__link--danger"
               @click="confirmRemove(member)"
             >
               移除
@@ -343,13 +355,14 @@ function handleSave(member: TeamMemberItemDto) {
   &__row {
     display: grid;
     grid-template-columns:
-      minmax(220px, 1.6fr)
+      minmax(180px, 1.3fr)
+      minmax(56px, 0.45fr)
+      minmax(120px, 1fr)
       minmax(72px, 0.55fr)
       minmax(88px, 0.65fr)
-      minmax(108px, 0.75fr)
-      minmax(88px, 0.6fr)
-      minmax(108px, 0.75fr)
-      minmax(280px, 1.8fr);
+      minmax(72px, 0.5fr)
+      minmax(88px, 0.65fr)
+      minmax(200px, 1.35fr);
     gap: 12px;
     align-items: center;
     padding: 0 18px;
@@ -387,6 +400,17 @@ function handleSave(member: TeamMemberItemDto) {
     font-size: 15px;
     line-height: 1.5;
     color: #111;
+  }
+
+  &__gameid {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #333;
+    word-break: break-all;
   }
 
   &__player {
@@ -486,25 +510,45 @@ function handleSave(member: TeamMemberItemDto) {
 
   &__actions {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: flex-start;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0;
+    min-width: 0;
   }
 
-  &__btn {
-    min-height: 36px;
-    padding: 0 12px;
-    font-size: 14px;
+  &__link {
+    appearance: none;
+    margin: 0;
+    padding: 0 8px;
+    border: 0;
+    border-right: 1px solid rgba(20, 20, 20, 0.16);
+    background: transparent;
+    color: #1f4b99;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.2;
     white-space: nowrap;
+    cursor: pointer;
+
+    &:first-child {
+      padding-left: 0;
+    }
+
+    &:last-child {
+      border-right: 0;
+      padding-right: 0;
+    }
+
+    &:hover {
+      color: #d71920;
+      text-decoration: underline;
+    }
   }
 
-  &__btn--danger {
-    border-color: rgba(200, 10, 16, 0.35);
+  &__link--danger {
     color: #b42318;
 
     &:hover {
-      border-color: rgba(200, 10, 16, 0.55);
-      background: rgba(200, 10, 16, 0.06);
       color: #991b1b;
     }
   }
@@ -518,12 +562,12 @@ function handleSave(member: TeamMemberItemDto) {
   .team-member-list__head,
   .team-member-list__row {
     grid-template-columns:
-      minmax(200px, 1.5fr)
-      minmax(64px, 0.5fr)
-      minmax(80px, 0.6fr)
-      minmax(96px, 0.7fr)
-      minmax(80px, 0.55fr)
-      minmax(240px, 1.4fr);
+      minmax(180px, 1.4fr)
+      minmax(56px, 0.45fr)
+      minmax(72px, 0.55fr)
+      minmax(88px, 0.65fr)
+      minmax(72px, 0.5fr)
+      minmax(200px, 1.3fr);
   }
 
   .team-member-list__cell--join {
@@ -587,12 +631,8 @@ function handleSave(member: TeamMemberItemDto) {
   }
 
   .team-member-list__actions--card {
-    gap: 10px;
-  }
-
-  .team-member-list__btn {
-    flex: 1 1 calc(50% - 5px);
-    min-width: 0;
+    flex-wrap: wrap;
+    gap: 8px 0;
   }
 }
 </style>

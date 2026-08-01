@@ -1,8 +1,10 @@
 package com.zhs.basket.service;
 
 import com.zhs.basket.query.PlayerCertQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.PlayerCertApproveReq;
 import com.zhs.basket.req.PlayerCertRejectReq;
+import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.vo.PlayerCertAuditRecordVo;
 import com.zhs.basket.vo.PlayerCertDetailVo;
 import com.zhs.basket.vo.PlayerCertListVo;
@@ -15,4 +17,6 @@ public interface IBasketPlayerCertService {
     void startReview(Long applicationId);
     void approve(Long applicationId, PlayerCertApproveReq req);
     void reject(Long applicationId, PlayerCertRejectReq req);
+    BatchAuditResultVo batchApprove(BatchAuditOperationReq req);
+    BatchAuditResultVo batchReject(BatchAuditOperationReq req);
 }

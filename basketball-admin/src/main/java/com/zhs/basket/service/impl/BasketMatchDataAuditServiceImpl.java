@@ -6,6 +6,9 @@ import com.zhs.basket.query.MatchDataAuditQuery;
 import com.zhs.basket.req.AdminMatchDataSubmissionApproveReq;
 import com.zhs.basket.req.AdminMatchDataSubmissionPageReq;
 import com.zhs.basket.req.AdminMatchDataSubmissionRejectReq;
+import com.zhs.basket.req.BatchAuditOperationReq;
+import com.zhs.basket.support.BatchAuditSupport;
+import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.service.IBasketMatchDataAuditService;
 import com.zhs.basket.service.IBasketMatchDataSubmissionAuditService;
 import com.zhs.basket.vo.MatchDataAuditListVo;
@@ -59,6 +62,21 @@ public class BasketMatchDataAuditServiceImpl implements IBasketMatchDataAuditSer
     @Override
     public void rejectSubmission(Long submissionId, AdminMatchDataSubmissionRejectReq req) {
         submissionAuditService.reject(submissionId, req);
+    }
+
+    @Override
+    public BatchAuditResultVo batchApproveSubmission(BatchAuditOperationReq req) {
+        AdminMatchDataSubmissionApproveReq approveReq = new AdminMatchDataSubmissionApproveReq();
+        approveReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> approveSubmission(id, approveReq));
+    }
+
+    @Override
+    public BatchAuditResultVo batchRejectSubmission(BatchAuditOperationReq req) {
+        AdminMatchDataSubmissionRejectReq rejectReq = new AdminMatchDataSubmissionRejectReq();
+        rejectReq.setRejectReason(req.getRejectReason());
+        rejectReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> rejectSubmission(id, rejectReq));
     }
 
     @Override

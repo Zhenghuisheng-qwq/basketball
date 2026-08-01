@@ -3,6 +3,7 @@ package com.zhs.basket.service.impl;
 import com.zhs.basket.domain.BasketCompetitionSeason;
 import com.zhs.basket.domain.BasketCaptainQualification;
 import com.zhs.basket.domain.BasketMemberAccount;
+import com.zhs.basket.domain.BasketPlayerPlatformAccount;
 import com.zhs.basket.domain.BasketPlayerProfile;
 import com.zhs.basket.domain.BasketTeam;
 import com.zhs.basket.domain.BasketTournament;
@@ -15,6 +16,7 @@ import com.zhs.basket.mapper.BasketCompetitionSeasonMapper;
 import com.zhs.basket.mapper.BasketCaptainGrantLogMapper;
 import com.zhs.basket.mapper.BasketCaptainQualificationMapper;
 import com.zhs.basket.mapper.BasketMemberAccountMapper;
+import com.zhs.basket.mapper.BasketPlayerPlatformAccountMapper;
 import com.zhs.basket.mapper.BasketPlayerProfileMapper;
 import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.BasketTournamentMapper;
@@ -30,6 +32,7 @@ import com.zhs.basket.support.GameTerminalSupport;
 import com.zhs.basket.support.CaptainGrantLogSupport;
 import com.zhs.basket.support.CaptainGrantSeasonSupport;
 import com.zhs.basket.support.CaptainQualificationValiditySupport;
+import com.zhs.basket.support.PlatformGameIdDisplaySupport;
 import com.zhs.basket.support.PlayerNoGenerator;
 import com.zhs.basket.vo.CaptainGrantLogVo;
 import com.zhs.basket.vo.CaptainGrantSeasonOptionVo;
@@ -39,6 +42,7 @@ import com.zhs.basket.vo.EligibleCaptainVo;
 import com.zhs.system.mapper.SysUserMapper;
 import com.zhs.system.model.SysUser;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.PageListUtils;
 import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
 import com.zhs.common.utils.bean.BeanUtils;
@@ -46,8 +50,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -60,6 +67,7 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
 
     @Autowired private BasketCaptainQualificationMapper qualificationMapper;
     @Autowired private BasketPlayerProfileMapper profileMapper;
+    @Autowired private BasketPlayerPlatformAccountMapper platformAccountMapper;
     @Autowired private BasketMemberAccountMapper memberAccountMapper;
     @Autowired private BasketTeamMapper teamMapper;
     @Autowired private BasketTournamentSeasonMapper seasonMapper;
@@ -73,9 +81,40 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
 
     @Override
     public List<EligibleCaptainVo> selectEligibleList() {
-        return profileMapper.selectEligibleCaptainList().stream()
-                .peek(vo -> vo.setUserId(vo.getMemberId()))
+        List<EligibleCaptainVo> list = profileMapper.selectEligibleCaptainList();
+        List<Long> playerIds = list.stream()
+                .map(EligibleCaptainVo::getPlayerId)
+                .filter(Objects::nonNull)
+                .distinct()
                 .collect(Collectors.toList());
+        Map<Long, List<BasketPlayerPlatformAccount>> accountMap = loadActivePlatformAccounts(playerIds);
+        for (EligibleCaptainVo vo : list) {
+            vo.setUserId(vo.getMemberId());
+            List<BasketPlayerPlatformAccount> accounts = vo.getPlayerId() == null
+                    ? Collections.emptyList()
+                    : accountMap.getOrDefault(vo.getPlayerId(), Collections.emptyList());
+            vo.setPlatformGameIds(PlatformGameIdDisplaySupport.toItems(accounts));
+            vo.setGameIdSummary(PlatformGameIdDisplaySupport.summary(accounts));
+        }
+        return list;
+    }
+
+    private Map<Long, List<BasketPlayerPlatformAccount>> loadActivePlatformAccounts(List<Long> playerIds) {
+        if (playerIds == null || playerIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<BasketPlayerPlatformAccount> rows = platformAccountMapper.selectActiveByPlayerIds(playerIds);
+        if (rows == null || rows.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Long, List<BasketPlayerPlatformAccount>> map = new HashMap<>();
+        for (BasketPlayerPlatformAccount row : rows) {
+            if (row.getPlayerId() == null) {
+                continue;
+            }
+            map.computeIfAbsent(row.getPlayerId(), key -> new java.util.ArrayList<>()).add(row);
+        }
+        return map;
     }
 
     @Override
@@ -90,14 +129,14 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
     @Override
     public List<CaptainQualificationListVo> selectList(CaptainQualificationQuery query) {
         Date now = new Date();
-        return qualificationMapper.selectList(query).stream().map(q -> {
+        return PageListUtils.map(qualificationMapper.selectList(query), q -> {
             CaptainQualificationListVo vo = new CaptainQualificationListVo();
             BeanUtils.copyBeanProp(vo, q);
             enrichSeasonTeamDisplay(vo, q.getSeasonId(), q.getTeamId());
             enrichAccountPlayerDisplay(vo.getMemberId(), vo.getPlayerId(), vo);
             enrichRuntimeValidity(vo, q, now);
             return vo;
-        }).collect(Collectors.toList());
+        });
     }
 
     @Override
@@ -139,7 +178,10 @@ public class BasketCaptainQualificationServiceImpl implements IBasketCaptainQual
         }
 
         BasketPlayerProfile profile = profileMapper.selectById(req.getPlayerId());
-        if (profile == null || profile.getCertificationStatus() == null
+        if (profile == null) {
+            throw new ServiceException("未找到球员档案，请重新选择球员后再授予");
+        }
+        if (profile.getCertificationStatus() == null
                 || profile.getCertificationStatus() != PlayerCertStatusEnum.APPROVED.getCode()) {
             throw new ServiceException("当前用户尚未完成球员认证，不能授予队长权限");
         }

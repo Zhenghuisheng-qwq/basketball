@@ -33,6 +33,8 @@
       </el-table-column>
     </el-table>
 
+    <pagination :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="loadList" />
+
     <el-drawer v-model="detailOpen" title="业务审计详情" size="560px">
       <el-descriptions v-if="detail" :column="1" border class="mb8">
         <el-descriptions-item label="审计编号">{{ detail.auditNo }}</el-descriptions-item>
@@ -57,6 +59,7 @@ import { parseTime } from '@/utils/ruoyi'
 
 const loading = ref(false)
 const rows = ref<any[]>([])
+const total = ref(0)
 const query = reactive<{ businessModule?: string; operationType?: string; keyword?: string }>({})
 const detailOpen = ref(false)
 const detail = ref<any>(null)
@@ -65,7 +68,8 @@ async function loadList() {
   loading.value = true
   try {
     const res = await listBusinessAudit(query)
-    rows.value = res.data || []
+    rows.value = res.rows || []
+    total.value = res.total ?? 0
   } finally {
     loading.value = false
   }

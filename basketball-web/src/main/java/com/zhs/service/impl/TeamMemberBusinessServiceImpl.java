@@ -24,7 +24,9 @@ import com.zhs.model.BasketTournamentRegistrationPlayer;
 import com.zhs.request.team.TeamMemberUpdateReq;
 import com.zhs.response.team.CandidatePlayerItemResp;
 import com.zhs.response.team.CandidatePlayerPageResp;
+import com.zhs.response.team.TeamMemberDetailResp;
 import com.zhs.response.team.TeamMemberItemResp;
+import com.zhs.enums.TeamJoinSourceEnum;
 import com.zhs.enums.PlayerCertStatusEnum;
 import com.zhs.enums.PlatformAccountStatusEnum;
 import com.zhs.enums.PlatformIdentityStatusEnum;
@@ -112,6 +114,69 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         Page<TeamMemberItemResp> respPage = new Page<>(memberPage.getCurrent(), memberPage.getSize(), memberPage.getTotal());
         respPage.setRecords(toMemberItems(memberPage.getRecords()));
         return respPage;
+    }
+
+    @Override
+    public TeamMemberDetailResp getMemberDetail(String teamId, String teamMemberId) {
+        Long teamPk = parseLongId(teamId, "球队主键");
+        Long teamMemberPk = parseLongId(teamMemberId, "球队成员主键");
+        Long viewerId = UserContext.getRequiredUserId();
+
+        BasketTeamMember viewerMembership = captainPermissionService.requireTeamMember(viewerId, teamPk);
+        BasketTeamMember target = requireTeamMemberRecord(teamMemberPk, teamPk);
+        boolean viewerIsCaptain = TeamMemberRoleEnum.CAPTAIN.getCode().equals(viewerMembership.getRoleType());
+        boolean viewingSelf = Objects.equals(viewerId, target.getMemberId());
+        if (!viewerIsCaptain && !viewingSelf) {
+            throw new ServiceException("无权查看该队员资料", 403);
+        }
+
+        BasketTeam team = teamDao.selectById(teamPk);
+        if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
+            throw new ServiceException("球队不存在", 404);
+        }
+
+        ProfileMaps maps = loadProfileMaps(Collections.singletonList(target));
+        List<BasketPlayerPlatformAccount> accounts = null;
+        if (target.getPlayerId() != null) {
+            BasketPlayerProfile profile = maps.playerMap().get(target.getPlayerId());
+            if (profile != null) {
+                accounts = loadAllPlatformAccounts(Collections.singletonList(profile)).get(target.getPlayerId());
+            }
+        }
+        TeamMemberItemResp item = toMemberItem(target, maps, accounts);
+
+        TeamMemberDetailResp detail = new TeamMemberDetailResp();
+        detail.setTeamMemberId(item.getTeamMemberId());
+        detail.setMemberId(item.getMemberId());
+        detail.setUserId(item.getUserId());
+        detail.setPlayerId(item.getPlayerId());
+        detail.setPlayerNo(item.getPlayerNo());
+        detail.setNickname(firstNonBlank(item.getNickname(), item.getGameNickname(), "未设置昵称"));
+        detail.setAvatarUrl(item.getAvatarUrl());
+        detail.setPositionCode(item.getPositionCode());
+        detail.setPositionName(item.getPositionName());
+        detail.setRoleInTeam(item.getRoleType());
+        detail.setRoleInTeamText(resolveRoleText(item.getRoleType()));
+        detail.setMemberStatus(item.getMembershipStatus());
+        detail.setMemberStatusText(item.getMembershipStatusText());
+        detail.setRosterType(item.getRosterType());
+        detail.setRosterTypeText(item.getRosterTypeText());
+        detail.setJoinTime(item.getJoinTime());
+        detail.setJerseyNo(item.getJerseyNo());
+        detail.setPlatformGameIds(item.getPlatformGameIds() == null ? Collections.emptyList() : item.getPlatformGameIds());
+        detail.setGameIdSummary(item.getGameIdSummary());
+        detail.setTeamId(toStringId(team.getId()));
+        detail.setTeamName(team.getTeamName());
+        detail.setIsCaptain(TeamMemberRoleEnum.CAPTAIN.getCode().equals(target.getRoleType()));
+        detail.setCanManage(viewerIsCaptain);
+        detail.setCurrentRosterStatus(firstNonBlank(item.getRosterTypeText(), item.getMembershipStatusText(), "-"));
+        detail.setSourceType(target.getJoinSource());
+        detail.setSourceTypeText(resolveJoinSourceText(target.getJoinSource()));
+        // 参赛/数据摘要本轮不做复杂统计，前端展示「暂无数据」
+        detail.setRecentMatches(Collections.emptyList());
+        detail.setAuditRecords(Collections.emptyList());
+        detail.setPunishmentRecords(Collections.emptyList());
+        return detail;
     }
 
     @Override
@@ -297,13 +362,11 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     }
 
     private String buildPlatformAccountSummary(List<BasketPlayerPlatformAccount> platformAccounts) {
-        if (CollectionUtils.isEmpty(platformAccounts)) {
+        String summary = com.zhs.support.PlatformGameIdDisplaySupport.summary(platformAccounts);
+        if (com.zhs.support.PlatformGameIdDisplaySupport.UNBOUND.equals(summary)) {
             return "暂无平台游戏 ID";
         }
-        return platformAccounts.stream()
-                .filter(account -> Objects.equals(PlatformAccountStatusEnum.ACTIVE.getCode(), account.getAccountStatus()))
-                .map(account -> account.getPlatform() + ":" + account.getDisplayGameId())
-                .collect(Collectors.joining(" / "));
+        return summary;
     }
 
     private String resolveInviteCannotReason(BasketPlayerProfile profile, BasketTeamMember activeMembership) {
@@ -436,42 +499,76 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         Date now = new Date();
         member.setMembershipStatus(TeamMembershipStatusEnum.REMOVED.getCode());
         member.setIsCurrent(0);
-        member.setActiveMemberSlot(null);
-        member.setActivePlatformSlot(null);
         member.setLeaveTime(now);
         member.setLeaveReason(reason);
         teamMemberDao.updateById(member);
+        teamMemberJoinHelper.clearActiveMemberSlot(member);
     }
 
     private void markMemberLeft(BasketTeamMember member, String reason) {
         Date now = new Date();
         member.setMembershipStatus(TeamMembershipStatusEnum.LEFT.getCode());
         member.setIsCurrent(0);
-        member.setActiveMemberSlot(null);
-        member.setActivePlatformSlot(null);
         member.setLeaveTime(now);
         member.setLeaveReason(reason);
         teamMemberDao.updateById(member);
+        // active_*_slot 由 clearActiveMemberSlot 用 UpdateWrapper 置空，避免 MP 忽略 null
     }
 
     private void clearPlayerCurrentTeam(Long playerId, Long teamId) {
-        BasketPlayerProfile profile = playerProfileDao.selectById(playerId);
-        if (profile != null && teamId.equals(profile.getCurrentTeamId())) {
-            profile.setCurrentTeamId(null);
-            playerProfileDao.updateById(profile);
+        if (playerId == null || teamId == null) {
+            return;
         }
+        playerProfileDao.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<BasketPlayerProfile>()
+                .eq(BasketPlayerProfile::getId, playerId)
+                .eq(BasketPlayerProfile::getCurrentTeamId, teamId)
+                .set(BasketPlayerProfile::getCurrentTeamId, null));
     }
 
     private BasketTeamMember requireTeamMemberRecord(Long teamMemberId, Long teamId) {
         BasketTeamMember member = teamMemberDao.selectById(teamMemberId);
         if (member == null || !NOT_DELETED.equals(member.getIsDelete()) || !teamId.equals(member.getTeamId())) {
-            throw new ServiceException("球队成员不存在");
+            throw new ServiceException("球队成员不存在", 404);
         }
         if (!Integer.valueOf(IS_CURRENT).equals(member.getIsCurrent())
                 || !Objects.equals(TeamMembershipStatusEnum.ACTIVE.getCode(), member.getMembershipStatus())) {
-            throw new ServiceException("球队成员状态不可用");
+            throw new ServiceException("球队成员状态不可用", 404);
         }
         return member;
+    }
+
+    private String resolveRoleText(String roleType) {
+        if (!StringUtils.hasText(roleType)) {
+            return "-";
+        }
+        try {
+            return TeamMemberRoleEnum.fromCode(roleType).getDescription();
+        } catch (Exception ex) {
+            return roleType;
+        }
+    }
+
+    private String resolveJoinSourceText(String source) {
+        if (!StringUtils.hasText(source)) {
+            return null;
+        }
+        try {
+            return TeamJoinSourceEnum.fromCode(source).getDescription();
+        } catch (Exception ex) {
+            return source;
+        }
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 
     private List<TeamMemberItemResp> toMemberItems(List<BasketTeamMember> members) {
@@ -479,14 +576,21 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
             return Collections.emptyList();
         }
         ProfileMaps maps = loadProfileMaps(members);
+        List<BasketPlayerProfile> profiles = new ArrayList<>(maps.playerMap().values());
+        Map<Long, List<BasketPlayerPlatformAccount>> platformAccountsMap = loadAllPlatformAccounts(profiles);
         List<TeamMemberItemResp> items = new ArrayList<>(members.size());
         for (BasketTeamMember member : members) {
-            items.add(toMemberItem(member, maps));
+            items.add(toMemberItem(member, maps, platformAccountsMap.get(member.getPlayerId())));
         }
         return items;
     }
 
     private TeamMemberItemResp toMemberItem(BasketTeamMember member, ProfileMaps maps) {
+        return toMemberItem(member, maps, null);
+    }
+
+    private TeamMemberItemResp toMemberItem(BasketTeamMember member, ProfileMaps maps,
+                                            List<BasketPlayerPlatformAccount> platformAccounts) {
         TeamMemberItemResp resp = new TeamMemberItemResp();
         resp.setTeamMemberId(toStringId(member.getId()));
         resp.setMemberId(toStringId(member.getMemberId()));
@@ -519,18 +623,27 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
             resp.setNickname(memberProfile.getNickname());
             resp.setAvatarUrl(resolveAvatarUrl(memberProfile.getAvatarFileId()));
         }
+        List<BasketPlayerPlatformAccount> accounts = platformAccounts;
+        if (accounts == null && member.getPlayerId() != null) {
+            BasketPlayerProfile profile = maps.playerMap().get(member.getPlayerId());
+            if (profile != null) {
+                accounts = loadAllPlatformAccounts(Collections.singletonList(profile)).get(member.getPlayerId());
+            }
+        }
+        resp.setPlatformGameIds(com.zhs.support.PlatformGameIdDisplaySupport.toItems(accounts));
+        resp.setGameIdSummary(com.zhs.support.PlatformGameIdDisplaySupport.summary(accounts));
         return resp;
     }
 
     private String resolveAvatarUrl(Long avatarFileId) {
         if (avatarFileId == null) {
-            return null;
+            return com.zhs.support.MemberAvatarSupport.resolve(null);
         }
         BasketFileAsset asset = fileAssetDao.selectById(avatarFileId);
         if (asset == null || !NOT_DELETED.equals(asset.getIsDelete())) {
-            return null;
+            return com.zhs.support.MemberAvatarSupport.resolve(null);
         }
-        return asset.getAccessUrl();
+        return com.zhs.support.MemberAvatarSupport.resolve(asset.getAccessUrl());
     }
 
     private CandidatePlayerItemResp toCandidateItem(BasketPlayerProfile profile,

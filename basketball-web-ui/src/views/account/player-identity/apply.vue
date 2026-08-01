@@ -130,10 +130,11 @@ async function handleSubmit(data: PlayerCertFormPayload) {
       <div class="identity-apply-side">
         <AccountPanel title="提交说明">
           <ul class="identity-entry-rules">
+            <li>请填写你当前常用的平台游戏ID，方便赛事方确认你在游戏中的身份。认证通过后会生成永久 CNPA 球员ID，后续可继续补充或变更其他平台游戏ID。</li>
             <li>审核通过后生成永久球员 ID，永久球员 ID 不可修改。</li>
             <li>同一平台的游戏 ID 不得被多个球员重复绑定。</li>
             <li>提交后进入管理员审核，审核期间不能重复提交。</li>
-            <li>球员认证与具体球队、赛事报名相互独立。</li>
+            <li>球员认证与具体球队、赛事报名相互独立；游戏平台不代表只能参加该平台赛事。</li>
           </ul>
         </AccountPanel>
 

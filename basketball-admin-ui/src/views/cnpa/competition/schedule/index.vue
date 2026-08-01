@@ -82,7 +82,7 @@
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-drawer v-model="detailOpen" title="赛程详情" size="680px" append-to-body>
       <el-descriptions v-if="detail" :column="2" border>

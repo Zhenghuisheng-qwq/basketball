@@ -11,6 +11,8 @@ import com.zhs.basket.mapper.*;
 import com.zhs.basket.query.AccountPlayerQuery;
 import com.zhs.basket.service.IBasketAccountPlayerService;
 import com.zhs.basket.support.CaptainQualificationValiditySupport;
+import com.zhs.basket.support.MemberAvatarSupport;
+import com.zhs.basket.support.PlatformGameIdDisplaySupport;
 import com.zhs.basket.vo.*;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.bean.BeanUtils;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -40,7 +43,10 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
 
     @Override
     public List<AccountPlayerListVo> selectList(AccountPlayerQuery query) {
-        return memberAccountMapper.selectList(query).stream().peek(this::enrichListVo).collect(Collectors.toList());
+        List<AccountPlayerListVo> list = memberAccountMapper.selectList(query);
+        attachPlatformGameIds(list);
+        list.forEach(this::enrichListVo);
+        return list;
     }
 
     @Override
@@ -65,12 +71,56 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
 
     private void enrichListVo(AccountPlayerListVo vo) {
         vo.setUserId(vo.getMemberId());
+        vo.setAvatarUrl(MemberAvatarSupport.resolve(vo.getAvatarUrl()));
         vo.setAccountStatusName(resolveAccountStatusName(vo.getAccountStatus()));
+        if (vo.getGameIdSummary() == null) {
+            vo.setGameIdSummary(PlatformGameIdDisplaySupport.UNBOUND);
+            vo.setGameIdCompactSummary(PlatformGameIdDisplaySupport.UNBOUND);
+            vo.setPlatformGameIds(Collections.emptyList());
+        }
         applyCertDisplay(vo);
         if (vo.getCertificationStatus() != null) {
             vo.setCertificationStatusName(
                     PlayerCertStatusEnum.fromCode(vo.getCertificationStatus()).getDescription());
         }
+    }
+
+    private void attachPlatformGameIds(List<AccountPlayerListVo> list) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        List<Long> playerIds = list.stream()
+                .map(AccountPlayerListVo::getPlayerId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, List<BasketPlayerPlatformAccount>> accountMap = loadActivePlatformAccounts(playerIds);
+        for (AccountPlayerListVo vo : list) {
+            List<BasketPlayerPlatformAccount> accounts = vo.getPlayerId() == null
+                    ? Collections.emptyList()
+                    : accountMap.getOrDefault(vo.getPlayerId(), Collections.emptyList());
+            vo.setPlatformGameIds(PlatformGameIdDisplaySupport.toItems(accounts));
+            vo.setGameIdSummary(PlatformGameIdDisplaySupport.summary(accounts));
+            vo.setGameIdCompactSummary(PlatformGameIdDisplaySupport.compactSummary(accounts));
+        }
+    }
+
+    private Map<Long, List<BasketPlayerPlatformAccount>> loadActivePlatformAccounts(List<Long> playerIds) {
+        if (playerIds == null || playerIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<BasketPlayerPlatformAccount> rows = platformAccountMapper.selectActiveByPlayerIds(playerIds);
+        if (rows == null || rows.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Long, List<BasketPlayerPlatformAccount>> map = new java.util.HashMap<>();
+        for (BasketPlayerPlatformAccount row : rows) {
+            if (row.getPlayerId() == null) {
+                continue;
+            }
+            map.computeIfAbsent(row.getPlayerId(), key -> new java.util.ArrayList<>()).add(row);
+        }
+        return map;
     }
 
     private void applyCertDisplay(AccountPlayerListVo vo) {
@@ -128,7 +178,7 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
         account.setLastLoginIp(base.getLastLoginIp());
         account.setCreateTime(base.getAccountCreateTime());
         account.setUpdateTime(base.getAccountUpdateTime());
-        account.setAvatarUrl(base.getAvatarUrl());
+        account.setAvatarUrl(MemberAvatarSupport.resolve(base.getAvatarUrl()));
         account.setNickname(base.getNickname());
         return account;
     }
@@ -141,7 +191,7 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
         profile.setGender(base.getGender());
         profile.setProfileStatus(base.getProfileStatus());
         profile.setPlayerNo(base.getPlayerNo());
-        profile.setAvatarUrl(base.getAvatarUrl());
+        profile.setAvatarUrl(MemberAvatarSupport.resolve(base.getAvatarUrl()));
         profile.setGameTerminal(base.getGameTerminal());
         profile.setGameAccount(base.getGameAccount());
         profile.setGameNickname(base.getGameNickname());

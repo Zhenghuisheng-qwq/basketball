@@ -36,6 +36,16 @@
         order by is_primary desc, effective_time desc, id desc
     </select>
 
+    <select id="selectActiveByPlayerIds" resultMap="BasketPlayerPlatformAccountResult">
+        select <include refid="accountColumns"/> from basket_player_platform_account
+        where is_delete = 0 and account_status = 1
+          and player_id in
+        <foreach collection="playerIds" item="playerId" open="(" separator="," close=")">
+            #{playerId}
+        </foreach>
+        order by is_primary desc, effective_time desc, id desc
+    </select>
+
     <select id="selectPrimaryByPlayerId" resultMap="BasketPlayerPlatformAccountResult">
         select <include refid="accountColumns"/> from basket_player_platform_account
         where player_id = #{playerId} and is_primary = 1 and is_delete = 0 limit 1

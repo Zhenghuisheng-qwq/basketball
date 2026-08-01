@@ -3,6 +3,7 @@ package com.zhs.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.request.team.TeamMemberUpdateReq;
 import com.zhs.response.team.CandidatePlayerPageResp;
+import com.zhs.response.team.TeamMemberDetailResp;
 import com.zhs.response.team.TeamMemberItemResp;
 import com.zhs.service.ITeamMemberBusinessService;
 import com.zhs.util.R;
@@ -36,6 +37,13 @@ public class TeamMemberBusinessController {
                                                     @RequestParam(required = false) Integer currentPage,
                                                     @RequestParam(required = false) Integer pageSize) {
         return R.ok(teamMemberBusinessService.pageMembers(teamId, currentPage, pageSize));
+    }
+
+    @ApiOperation("队内成员私有详情（队长可看本队成员，成员仅可看自己）")
+    @GetMapping("/{teamId}/member/{teamMemberId}/detail")
+    public R<TeamMemberDetailResp> getMemberDetail(@PathVariable String teamId,
+                                                   @PathVariable String teamMemberId) {
+        return R.ok(teamMemberBusinessService.getMemberDetail(teamId, teamMemberId));
     }
 
     @ApiOperation("更新球队成员")

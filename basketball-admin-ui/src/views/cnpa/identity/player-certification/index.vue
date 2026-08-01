@@ -24,17 +24,33 @@
       </el-form-item>
     </el-form>
 
+    <el-alert
+      class="mb8"
+      type="info"
+      :closable="false"
+      show-icon
+      title="游戏平台和游戏ID用于确认球员在游戏中的身份，不代表球员只能参加该平台赛事。"
+    />
+
     <el-row :gutter="10" class="mb8">
+      <el-col :span="1.5">
+        <el-button type="success" plain icon="Check" :disabled="batchMultiple" @click="handleBatchApprove" v-hasPermi="['basket:playerCert:audit']">批量通过</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button type="danger" plain icon="Close" :disabled="batchMultiple" @click="openBatchReject" v-hasPermi="['basket:playerCert:audit']">批量驳回</el-button>
+      </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table v-loading="loading" :data="dataList">
+    <el-table ref="tableRef" v-loading="loading" :data="dataList" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="50" align="center" :selectable="rowSelectable" />
       <el-table-column label="申请编号" prop="applicationNo" min-width="140" :show-overflow-tooltip="true" />
       <el-table-column label="用户" min-width="180">
         <template #default="scope">
           <div class="user-cell">
-            <el-avatar v-if="scope.row.avatarUrl" :src="scope.row.avatarUrl" :size="32" />
-            <el-avatar v-else :size="32">{{ (scope.row.nickname || '?').slice(0, 1) }}</el-avatar>
+            <el-avatar :src="resolveMemberAvatarUrl(scope.row.avatarUrl)" :size="32">
+              {{ (scope.row.nickname || '?').slice(0, 1) }}
+            </el-avatar>
             <div class="user-meta">
               <div>{{ scope.row.nickname || '-' }}</div>
               <div class="sub-text">{{ scope.row.email || '-' }}</div>
@@ -42,9 +58,15 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="游戏平台" prop="gameTerminal" width="100" />
-      <el-table-column label="游戏ID" prop="gameAccount" min-width="120" :show-overflow-tooltip="true" />
-      <el-table-column label="位置" prop="positionCode" width="80" />
+      <el-table-column label="游戏平台" prop="gameTerminal" width="100">
+        <template #default="scope">{{ scope.row.gameTerminal || '未选择' }}</template>
+      </el-table-column>
+      <el-table-column label="游戏ID" prop="gameAccount" min-width="120" :show-overflow-tooltip="true">
+        <template #default="scope">{{ scope.row.gameAccount || '未填写' }}</template>
+      </el-table-column>
+      <el-table-column label="位置" prop="positionCode" width="80">
+        <template #default="scope">{{ scope.row.positionCode || '-' }}</template>
+      </el-table-column>
       <el-table-column label="状态" prop="applicationStatusName" width="100">
         <template #default="scope">
           <el-tag :type="auditStatusTagType(scope.row.applicationStatus)" size="small">
@@ -71,13 +93,14 @@
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-drawer v-model="detailOpen" title="球员认证详情" size="720px" append-to-body>
       <template v-if="detail">
         <div class="detail-header">
-          <el-avatar v-if="detail.avatarUrl" :src="detail.avatarUrl" :size="56" />
-          <el-avatar v-else :size="56">{{ (detail.nickname || '?').slice(0, 1) }}</el-avatar>
+          <el-avatar :src="resolveMemberAvatarUrl(detail.avatarUrl)" :size="56">
+            {{ (detail.nickname || '?').slice(0, 1) }}
+          </el-avatar>
           <div>
             <div class="detail-name">{{ detail.nickname || '-' }}</div>
             <div class="sub-text">{{ detail.email || '-' }}</div>
@@ -142,12 +165,25 @@
         <el-button type="danger" @click="submitReject">确认驳回</el-button>
       </template>
     </el-dialog>
+    <el-dialog title="批量驳回认证" v-model="batchRejectOpen" width="480px" append-to-body>
+      <el-form label-width="88px">
+        <el-form-item label="驳回原因">
+          <el-input v-model="batchRejectReason" type="textarea" :rows="3" placeholder="选填，不填将使用默认原因" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="batchRejectOpen = false">取消</el-button>
+        <el-button type="danger" @click="submitBatchReject">确认驳回</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts" name="BasketPlayerCert">
 import {
   approvePlayerCert,
+  batchApprovePlayerCert,
+  batchRejectPlayerCert,
   getPlayerCert,
   listPlayerCert,
   listPlayerCertAuditRecords,
@@ -163,8 +199,12 @@ import type {
   PlayerCertRejectReq
 } from '@/types'
 import { CNPA_AUDIT_STATUS_FILTER_OPTIONS } from '@/types'
+import { applyTablePage } from '@/utils/table'
+import { resolveMemberAvatarUrl } from '@/utils/memberAvatar'
+import { buildBatchAuditPayload, formatBatchAuditMessage, useBatchAuditSelection } from '@/utils/batchAudit'
 
 const { proxy } = getCurrentInstance()
+const tableRef = ref()
 
 const dataList = ref<PlayerCertListItem[]>([])
 const loading = ref(true)
@@ -177,6 +217,19 @@ const materials = ref<PlayerCertMaterial[]>([])
 const auditRecords = ref<PlayerCertAuditRecord[]>([])
 const currentId = ref<number>()
 const rejectOpen = ref(false)
+const batchRejectOpen = ref(false)
+const batchRejectReason = ref('')
+
+const {
+  multiple: batchMultiple,
+  handleSelectionChange,
+  rowSelectable,
+  clearSelection,
+  getAuditableIds
+} = useBatchAuditSelection<PlayerCertListItem>({
+  getRowId: row => row.id,
+  canAudit: row => canAudit(row.applicationStatus)
+})
 
 const queryParams = ref<PlayerCertQuery>({
   pageNum: 1,
@@ -225,8 +278,7 @@ function isImage(mimeType?: string) {
 function getList() {
   loading.value = true
   listPlayerCert(queryParams.value).then(response => {
-    dataList.value = response.rows
-    total.value = response.total
+    applyTablePage(response, dataList, total)
   }).finally(() => {
     loading.value = false
   })
@@ -301,6 +353,48 @@ function submitReject() {
         handleDetail(row)
       }
     }
+  })
+}
+
+function handleBatchApprove() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    proxy.$modal.msgWarning('请选择待审核记录')
+    return
+  }
+  proxy.$modal.confirm(`确认批量通过 ${ids.length} 条认证申请？`).then(() =>
+    batchApprovePlayerCert(buildBatchAuditPayload(ids))
+  ).then(res => {
+    proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
+    clearSelection()
+    tableRef.value?.clearSelection()
+    getList()
+  }).catch(() => {})
+}
+
+function openBatchReject() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    proxy.$modal.msgWarning('请选择待审核记录')
+    return
+  }
+  batchRejectReason.value = ''
+  batchRejectOpen.value = true
+}
+
+function submitBatchReject() {
+  const ids = getAuditableIds()
+  if (!ids.length) return
+  const payload = buildBatchAuditPayload(ids)
+  if (batchRejectReason.value.trim()) {
+    payload.rejectReason = batchRejectReason.value.trim()
+  }
+  batchRejectPlayerCert(payload).then(res => {
+    proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
+    batchRejectOpen.value = false
+    clearSelection()
+    tableRef.value?.clearSelection()
+    getList()
   })
 }
 

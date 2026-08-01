@@ -17,6 +17,7 @@ import com.zhs.model.BasketTournamentSeason;
 import com.zhs.response.publicapi.PublicHonorDetailResp;
 import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.publicapi.PublicHonorLineupItemResp;
+import com.zhs.support.MemberAvatarSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -249,7 +250,7 @@ public class BasketPublicHonorSupport {
             BasketPlayerProfile player = playerMap.get(lineup.getPlayerId());
             if (player != null && publicSupport.isPlayerPubliclyVisible(player)) {
                 vo.setPlayerName(publicSupport.resolveDisplayName(player));
-                vo.setAvatarUrl(avatarMap.get(player.getId()));
+                vo.setAvatarUrl(MemberAvatarSupport.resolve(avatarMap.get(player.getId())));
             } else if (player != null) {
                 // 隐私球员：保留球员主键但不暴露姓名头像
                 vo.setPlayerName(null);
@@ -353,7 +354,7 @@ public class BasketPublicHonorSupport {
             BasketPlayerProfile player = playerMap.get(record.getPlayerId());
             if (player != null && publicSupport.isPlayerPubliclyVisible(player)) {
                 vo.setPlayerName(publicSupport.resolveDisplayName(player));
-                vo.setPlayerAvatarUrl(avatarMap.get(player.getId()));
+                vo.setPlayerAvatarUrl(MemberAvatarSupport.resolve(avatarMap.get(player.getId())));
             }
             result.add(vo);
         }

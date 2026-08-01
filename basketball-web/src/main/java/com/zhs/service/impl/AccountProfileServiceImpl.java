@@ -16,6 +16,7 @@ import com.zhs.request.account.AccountProfileUpdateReq;
 import com.zhs.response.account.AccountProfileResp;
 import com.zhs.service.IAccountFileService;
 import com.zhs.service.IAccountProfileService;
+import com.zhs.support.MemberAvatarSupport;
 import com.zhs.util.DataMaskUtil;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -149,17 +150,17 @@ public class AccountProfileServiceImpl implements IAccountProfileService {
 
     private String resolveAvatarUrl(Long avatarFileId) {
         if (avatarFileId == null) {
-            return null;
+            return MemberAvatarSupport.resolve(null);
         }
         BasketFileAsset asset = fileAssetDao.selectById(avatarFileId);
         if (asset == null || !NOT_DELETED.equals(asset.getIsDelete())) {
-            return null;
+            return MemberAvatarSupport.resolve(null);
         }
         return resolveAvatarUrl(asset);
     }
 
     private String resolveAvatarUrl(BasketFileAsset asset) {
-        return asset == null ? null : asset.getAccessUrl();
+        return MemberAvatarSupport.resolve(asset == null ? null : asset.getAccessUrl());
     }
 
     private void validateProfileUpdate(AccountProfileUpdateReq req) {

@@ -37,7 +37,14 @@ const emit = defineEmits<{
               </div>
             </div>
           </td>
-          <td>{{ member.platform }} / {{ member.gameId }}</td>
+          <td>
+            <template v-if="!member.gameId || member.gameId === '-' || member.gameId === '未绑定'">
+              未绑定
+            </template>
+            <template v-else>
+              {{ member.platform && member.platform !== '-' ? `${member.platform}：${member.gameId}` : member.gameId }}
+            </template>
+          </td>
           <td>{{ member.roleText }}</td>
           <td>{{ member.joinTime }}</td>
           <td>{{ member.statusText }}</td>

@@ -4,8 +4,11 @@ import com.zhs.basket.domain.*;
 import com.zhs.basket.enums.*;
 import com.zhs.basket.mapper.*;
 import com.zhs.basket.query.RosterChangeAuditQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.RosterChangeAuditApproveReq;
 import com.zhs.basket.req.RosterChangeAuditRejectReq;
+import com.zhs.basket.support.BatchAuditSupport;
+import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.service.IBasketRosterChangeAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
 import com.zhs.basket.support.BasketDisciplineRestrictionSupport;
@@ -39,7 +42,9 @@ public class BasketRosterChangeAuditServiceImpl implements IBasketRosterChangeAu
 
     @Override
     public List<RosterChangeAuditListVo> selectList(RosterChangeAuditQuery query) {
-        return changeRequestMapper.selectAuditList(query).stream().peek(this::enrichListVo).collect(Collectors.toList());
+        List<RosterChangeAuditListVo> list = changeRequestMapper.selectAuditList(query);
+        list.forEach(this::enrichListVo);
+        return list;
     }
 
     @Override
@@ -77,6 +82,21 @@ public class BasketRosterChangeAuditServiceImpl implements IBasketRosterChangeAu
         assertSingleRow(rows, "驳回失败");
         messageService.sendSiteMessage(request.getApplicantMemberId(), SecurityUtils.getUserId(), "ROSTER_CHANGE", id,
                 "阵容变更已驳回", remark);
+    }
+
+    @Override
+    public BatchAuditResultVo batchApprove(BatchAuditOperationReq req) {
+        RosterChangeAuditApproveReq approveReq = new RosterChangeAuditApproveReq();
+        approveReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> approve(id, approveReq));
+    }
+
+    @Override
+    public BatchAuditResultVo batchReject(BatchAuditOperationReq req) {
+        RosterChangeAuditRejectReq rejectReq = new RosterChangeAuditRejectReq();
+        rejectReq.setRejectReason(req.getRejectReason());
+        rejectReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> reject(id, rejectReq));
     }
 
     private Long applyChange(BasketTournamentRosterChangeRequest request, Date now) {

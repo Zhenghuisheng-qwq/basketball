@@ -73,7 +73,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
         }
         Map<Long, String> avatarMap = publicSupport.loadPlayerAvatarUrlMap(Collections.singletonList(player));
         vo.setDisplayName(publicSupport.resolveDisplayName(player));
-        vo.setAvatarUrl(avatarMap.get(player.getId()));
+        vo.setAvatarUrl(com.zhs.support.MemberAvatarSupport.resolve(avatarMap.get(player.getId())));
         vo.setPositionCode(player.getPositionCode());
         vo.setDominantHand(player.getDominantHand());
         vo.setHeightCm(player.getHeightCm());

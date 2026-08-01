@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket;
 
 import com.zhs.basket.query.OpenRegistrationAuditQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.OpenRegistrationAuditApproveReq;
 import com.zhs.basket.req.OpenRegistrationAuditRejectReq;
 import com.zhs.basket.service.IBasketOpenRegistrationAuditService;
@@ -41,4 +42,14 @@ public class BasketOpenRegistrationAuditController extends BaseController {
     @PreAuthorize("@ss.hasPermi('basket:openRegistrationAudit:query')")
     @GetMapping("/{id}/audit-record/list")
     public AjaxResult auditRecords(@PathVariable Long id) { return success(openRegistrationAuditService.selectAuditRecords(id)); }
+
+    @PreAuthorize("@ss.hasPermi('basket:openRegistrationAudit:audit')")
+    @Log(title = "Open报名审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/batch-approve")
+    public AjaxResult batchApprove(@RequestBody BatchAuditOperationReq req) { return success(openRegistrationAuditService.batchApprove(req)); }
+
+    @PreAuthorize("@ss.hasPermi('basket:openRegistrationAudit:audit')")
+    @Log(title = "Open报名审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/batch-reject")
+    public AjaxResult batchReject(@RequestBody BatchAuditOperationReq req) { return success(openRegistrationAuditService.batchReject(req)); }
 }

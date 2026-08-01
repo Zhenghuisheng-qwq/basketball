@@ -5,6 +5,7 @@ import com.zhs.basket.service.IBasketTournamentScopeService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
 import com.zhs.common.core.domain.AjaxResult;
+import com.zhs.common.core.page.TableDataInfo;
 import com.zhs.common.enums.BusinessType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,9 +20,10 @@ public class BasketTournamentScopeController extends BaseController {
 
     @PreAuthorize("@ss.hasPermi('basket:tournamentScope:list')")
     @GetMapping("/list")
-    public AjaxResult list(@RequestParam(required = false) Long tournamentId,
-                           @RequestParam(required = false) Long adminUserId) {
-        return success(tournamentScopeService.list(tournamentId, adminUserId));
+    public TableDataInfo list(@RequestParam(required = false) Long tournamentId,
+                              @RequestParam(required = false) Long adminUserId) {
+        startPage();
+        return getDataTable(tournamentScopeService.list(tournamentId, adminUserId));
     }
 
     @PreAuthorize("@ss.hasPermi('basket:tournamentScope:grant')")

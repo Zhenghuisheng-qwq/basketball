@@ -111,7 +111,7 @@
 
     <select id="selectList" resultType="com.zhs.basket.vo.AccountPlayerListVo">
         select acc.id as memberId, acc.account_no as accountNo, acc.username as username, acc.email as email,
-               mp.nickname as nickname, af.access_url as avatarUrl, acc.email_verified as emailVerified,
+               mp.nickname as nickname, IFNULL(af.access_url, 'https://basketball-1453992653.cos.ap-shanghai.myqcloud.com/basketball/public/2026/08/01/b1f4d9a28beb48beb90fed28439e8e4a.png') as avatarUrl, acc.email_verified as emailVerified,
                p.id as playerId, p.player_no as playerNo,
                p.certification_status as certificationStatus, p.player_status as playerStatus,
                acc.account_status as accountStatus, p.certified_time as certifiedTime,
@@ -137,7 +137,7 @@
                acc.account_status as accountStatus, acc.last_login_time as lastLoginTime,
                acc.last_login_ip as lastLoginIp,
                acc.create_time as accountCreateTime, acc.update_time as accountUpdateTime,
-               mp.nickname as nickname, af.access_url as avatarUrl,
+               mp.nickname as nickname, IFNULL(af.access_url, 'https://basketball-1453992653.cos.ap-shanghai.myqcloud.com/basketball/public/2026/08/01/b1f4d9a28beb48beb90fed28439e8e4a.png') as avatarUrl,
                mp.gender as gender, mp.profile_status as profileStatus,
                p.id as playerId, p.player_no as playerNo, p.game_terminal as gameTerminal,
                p.game_account as gameAccount, p.game_nickname as gameNickname,

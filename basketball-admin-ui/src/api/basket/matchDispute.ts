@@ -51,3 +51,7 @@ export function applyDisputeCorrection(id: number | string, data: Record<string,
     data
   })
 }
+
+export function batchRejectMatchDispute(data: { ids: number[]; rejectReason?: string; auditRemark?: string }) {
+  return request({ url: '/basket/matchDispute/batch-reject', method: 'post', data })
+}

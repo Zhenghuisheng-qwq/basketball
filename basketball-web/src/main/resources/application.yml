@@ -106,6 +106,16 @@ member:
   mail:
     from: ${CNPA_MAIL_FROM:${CNPA_MAIL_USERNAME:}}
     from-name: ${CNPA_MAIL_FROM_NAME:CNPA赛事平台}
+  init:
+    enabled: true
+    batch-size: 30
+    password: 111111aa
+    email-domain: qq.com
+    email-start: 111111
+    data-file-path: 测试/测试数据.txt
+    cert-screenshot-resource: classpath:player/5.png
+    # 完整编排（认证审核/授队长/建队/入队）见：
+    # node scripts/seed-cnpa-full-pipeline.mjs
 
 # 球队业务配置
 team:

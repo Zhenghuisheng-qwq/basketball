@@ -8,8 +8,11 @@ import com.zhs.basket.enums.TeamPublicStatusEnum;
 import com.zhs.basket.enums.TeamStatusEnum;
 import com.zhs.basket.mapper.*;
 import com.zhs.basket.query.TeamAuditQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.TeamAuditApproveReq;
 import com.zhs.basket.req.TeamAuditRejectReq;
+import com.zhs.basket.support.BatchAuditSupport;
+import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.service.IBasketTeamAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
 import com.zhs.basket.support.TeamNoGenerator;
@@ -19,6 +22,7 @@ import com.zhs.basket.vo.TeamAuditListVo;
 import com.zhs.basket.vo.TeamAuditMemberVo;
 import com.zhs.basket.vo.TeamAuditRecordVo;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.PageListUtils;
 import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
 import com.zhs.common.utils.bean.BeanUtils;
@@ -53,7 +57,7 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
                 .map(BasketTeam::getLogoFileId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet()));
-        return teams.stream().map(team -> toListVo(team, logoUrlMap)).collect(Collectors.toList());
+        return PageListUtils.map(teams, team -> toListVo(team, logoUrlMap));
     }
 
     @Override
@@ -127,6 +131,21 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         writeAudit(team, "REJECT", team.getAuditStatus(), TeamAuditStatusEnum.REJECTED.getCode(), remark);
         messageService.sendSiteMessage(team.getCaptainMemberId(), SecurityUtils.getUserId(), "TEAM_AUDIT", teamId,
                 "球队审核已驳回", remark);
+    }
+
+    @Override
+    public BatchAuditResultVo batchApprove(BatchAuditOperationReq req) {
+        TeamAuditApproveReq approveReq = new TeamAuditApproveReq();
+        approveReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> approve(id, approveReq));
+    }
+
+    @Override
+    public BatchAuditResultVo batchReject(BatchAuditOperationReq req) {
+        TeamAuditRejectReq rejectReq = new TeamAuditRejectReq();
+        rejectReq.setRejectReason(req.getRejectReason());
+        rejectReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> reject(id, rejectReq));
     }
 
     private TeamAuditListVo toListVo(BasketTeam team, Map<Long, String> logoUrlMap) {

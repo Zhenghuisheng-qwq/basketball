@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket;
 
 import com.zhs.basket.query.TeamAuditQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.TeamAuditApproveReq;
 import com.zhs.basket.req.TeamAuditRejectReq;
 import com.zhs.basket.service.IBasketTeamAuditService;
@@ -12,6 +13,8 @@ import com.zhs.common.enums.BusinessType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/basket/teamAudit")
@@ -61,5 +64,19 @@ public class BasketTeamAuditController extends BaseController {
     public AjaxResult reject(@PathVariable Long teamId, @RequestBody TeamAuditRejectReq req) {
         teamAuditService.reject(teamId, req);
         return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:teamAudit:audit')")
+    @Log(title = "球队审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/batch-approve")
+    public AjaxResult batchApprove(@Valid @RequestBody BatchAuditOperationReq req) {
+        return success(teamAuditService.batchApprove(req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:teamAudit:audit')")
+    @Log(title = "球队审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/batch-reject")
+    public AjaxResult batchReject(@Valid @RequestBody BatchAuditOperationReq req) {
+        return success(teamAuditService.batchReject(req));
     }
 }

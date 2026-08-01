@@ -4,6 +4,7 @@ import com.zhs.basket.query.MatchDataAuditQuery;
 import com.zhs.basket.req.AdminMatchDataSubmissionApproveReq;
 import com.zhs.basket.req.AdminMatchDataSubmissionPageReq;
 import com.zhs.basket.req.AdminMatchDataSubmissionRejectReq;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.service.IBasketMatchDataAuditService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
@@ -67,5 +68,19 @@ public class BasketMatchDataAuditController extends BaseController {
     @GetMapping("/submission/{matchId}/versions")
     public AjaxResult submissionVersions(@PathVariable Long matchId) {
         return success(auditService.listSubmissionVersions(matchId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:matchAudit:approve')")
+    @Log(title = "比赛数据审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/submission/batch-approve")
+    public AjaxResult batchApproveSubmission(@RequestBody BatchAuditOperationReq req) {
+        return success(auditService.batchApproveSubmission(req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:matchAudit:reject')")
+    @Log(title = "比赛数据审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/submission/batch-reject")
+    public AjaxResult batchRejectSubmission(@RequestBody BatchAuditOperationReq req) {
+        return success(auditService.batchRejectSubmission(req));
     }
 }

@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { AjaxResult } from '@/types'
+import type { AjaxResult, TableDataInfo } from '@/types'
 
 export interface DisciplineQuery {
   seasonId?: number
@@ -33,7 +33,7 @@ export interface DisciplineCreateReq {
   idempotencyKey?: string
 }
 
-export function listDiscipline(query: DisciplineQuery): Promise<AjaxResult<any[]>> {
+export function listDiscipline(query: DisciplineQuery & { pageNum?: number; pageSize?: number }): Promise<TableDataInfo<any[]>> {
   return request({ url: '/basket/discipline/list', method: 'get', params: query })
 }
 

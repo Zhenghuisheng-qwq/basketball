@@ -45,3 +45,11 @@ export function listSubmissionVersions(matchId: number) {
     method: 'get'
   })
 }
+
+export function batchApproveSubmission(data: { ids: number[]; auditRemark?: string }) {
+  return request({ url: '/basket/matchAudit/submission/batch-approve', method: 'post', data })
+}
+
+export function batchRejectSubmission(data: { ids: number[]; rejectReason: string; auditRemark?: string }) {
+  return request({ url: '/basket/matchAudit/submission/batch-reject', method: 'post', data })
+}

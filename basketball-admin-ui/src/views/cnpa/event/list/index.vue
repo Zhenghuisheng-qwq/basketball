@@ -123,7 +123,7 @@
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-drawer v-model="detailOpen" title="赛事详情" size="640px" append-to-body>
       <el-descriptions v-if="detail" :column="2" border>
@@ -391,8 +391,8 @@ function resetQuery() {
   handleQuery()
 }
 
-function resetFormData() {
-  form.value = {
+function buildEmptyForm(): TournamentCreateReq {
+  return {
     competitionSeasonId: seasonOptions.value[0]?.id as number,
     tournamentName: '',
     shortName: '',
@@ -409,8 +409,14 @@ function resetFormData() {
     publicStatus: 1,
     displayOrder: 0
   }
+}
+
+function resetFormData() {
+  form.value = buildEmptyForm()
   canEditSeason.value = true
-  proxy.resetForm('formRef')
+  nextTick(() => {
+    proxy.$refs.formRef?.clearValidate?.()
+  })
 }
 
 function handleAdd() {
@@ -422,23 +428,26 @@ function handleAdd() {
   currentId.value = undefined
   dialogTitle.value = '新增赛事'
   dialogOpen.value = true
+  nextTick(() => {
+    proxy.$refs.formRef?.clearValidate?.()
+  })
 }
 
 function handleUpdate(row: TournamentListItem) {
-  resetFormData()
   currentId.value = row.id
   getTournament(row.id).then(res => {
     const data = res.data!
     form.value = {
       competitionSeasonId: data.competitionSeasonId as number,
-      tournamentName: data.tournamentName || '',
-      shortName: data.shortName,
-      englishName: data.englishName,
+      // 详情 VO 曾缺 tournamentName 时接口不返回，这里用列表行兜底
+      tournamentName: data.tournamentName || row.tournamentName || '',
+      shortName: data.shortName || '',
+      englishName: data.englishName || '',
       tournamentType: data.tournamentType,
       gameTerminal: data.gameTerminal,
       formatCode: data.formatCode,
-      organizerName: data.organizerName,
-      description: data.description,
+      organizerName: data.organizerName || '',
+      description: data.description || '',
       registrationStartTime: data.registrationStartTime,
       registrationEndTime: data.registrationEndTime,
       competitionStartTime: data.competitionStartTime,
@@ -449,6 +458,9 @@ function handleUpdate(row: TournamentListItem) {
     canEditSeason.value = data.tournamentStatus === 3
     dialogTitle.value = '修改赛事'
     dialogOpen.value = true
+    nextTick(() => {
+      proxy.$refs.formRef?.clearValidate?.()
+    })
   })
 }
 

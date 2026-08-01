@@ -16,6 +16,7 @@ import com.zhs.basket.support.PlayerNoGenerator;
 import com.zhs.basket.vo.StageDetailVo;
 import com.zhs.basket.vo.StageListVo;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.PageListUtils;
 import com.zhs.common.utils.bean.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,7 @@ public class BasketTournamentStageServiceImpl implements IBasketTournamentStageS
 
     @Override
     public List<StageListVo> selectList(StageQuery query) {
-        return stageMapper.selectList(query).stream().map(this::enrichListVo).collect(Collectors.toList());
+        return PageListUtils.map(stageMapper.selectList(query), this::enrichListVo);
     }
 
     @Override

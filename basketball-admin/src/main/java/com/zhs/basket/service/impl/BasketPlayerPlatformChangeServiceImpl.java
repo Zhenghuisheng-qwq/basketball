@@ -8,8 +8,11 @@ import com.zhs.basket.enums.PlatformChangeTypeEnum;
 import com.zhs.basket.mapper.BasketPlayerPlatformAccountMapper;
 import com.zhs.basket.mapper.BasketPlayerPlatformChangeRequestMapper;
 import com.zhs.basket.query.PlayerPlatformChangeQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.PlayerPlatformChangeApproveReq;
 import com.zhs.basket.req.PlayerPlatformChangeRejectReq;
+import com.zhs.basket.support.BatchAuditSupport;
+import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.service.IBasketPlayerPlatformChangeService;
 import com.zhs.basket.support.BasketAdminMessageService;
 import com.zhs.basket.support.PlatformIdentityHistoryWriter;
@@ -39,7 +42,9 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
 
     @Override
     public List<PlayerPlatformChangeListVo> selectList(PlayerPlatformChangeQuery query) {
-        return changeRequestMapper.selectList(query).stream().peek(vo -> enrichListVo(vo)).collect(Collectors.toList());
+        List<PlayerPlatformChangeListVo> list = changeRequestMapper.selectList(query);
+        list.forEach(this::enrichListVo);
+        return list;
     }
 
     @Override
@@ -89,6 +94,21 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
         assertSingleRow(rows, "驳回失败，状态已变更");
         messageService.sendSiteMessage(request.getMemberId(), reviewerId, "PLATFORM_CHANGE", id,
                 "平台游戏ID变更已驳回", "您的平台游戏ID变更申请已被驳回：" + remark);
+    }
+
+    @Override
+    public BatchAuditResultVo batchApprove(BatchAuditOperationReq req) {
+        PlayerPlatformChangeApproveReq approveReq = new PlayerPlatformChangeApproveReq();
+        approveReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> approve(id, approveReq));
+    }
+
+    @Override
+    public BatchAuditResultVo batchReject(BatchAuditOperationReq req) {
+        PlayerPlatformChangeRejectReq rejectReq = new PlayerPlatformChangeRejectReq();
+        rejectReq.setRejectReason(req.getRejectReason());
+        rejectReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> reject(id, rejectReq));
     }
 
     private String resolveOldDisplayGameId(BasketPlayerPlatformChangeRequest request) {

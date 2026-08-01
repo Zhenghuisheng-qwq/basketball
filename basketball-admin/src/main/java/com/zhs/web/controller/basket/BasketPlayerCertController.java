@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket;
 
 import com.zhs.basket.query.PlayerCertQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.PlayerCertApproveReq;
 import com.zhs.basket.req.PlayerCertRejectReq;
 import com.zhs.basket.service.IBasketPlayerCertService;
@@ -12,6 +13,8 @@ import com.zhs.common.enums.BusinessType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/basket/playerCert")
@@ -61,5 +64,19 @@ public class BasketPlayerCertController extends BaseController {
     public AjaxResult reject(@PathVariable Long applicationId, @RequestBody(required = false) PlayerCertRejectReq req) {
         playerCertService.reject(applicationId, req != null ? req : new PlayerCertRejectReq());
         return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:playerCert:audit')")
+    @Log(title = "球员认证审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/batch-approve")
+    public AjaxResult batchApprove(@Valid @RequestBody BatchAuditOperationReq req) {
+        return success(playerCertService.batchApprove(req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:playerCert:audit')")
+    @Log(title = "球员认证审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/batch-reject")
+    public AjaxResult batchReject(@Valid @RequestBody BatchAuditOperationReq req) {
+        return success(playerCertService.batchReject(req));
     }
 }

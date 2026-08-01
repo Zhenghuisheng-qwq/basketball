@@ -65,7 +65,7 @@
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-drawer v-model="historyOpen" title="阵容变更历史" size="760px" append-to-body>
       <el-table :data="changeHistory" size="small" v-loading="historyLoading">

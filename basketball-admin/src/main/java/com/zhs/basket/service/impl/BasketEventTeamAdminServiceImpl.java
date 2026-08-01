@@ -30,7 +30,9 @@ public class BasketEventTeamAdminServiceImpl implements IBasketEventTeamAdminSer
 
     @Override
     public List<EventTeamListVo> selectList(EventTeamAdminQuery query) {
-        return teamSeasonProfileMapper.selectAdminList(query).stream().peek(this::enrichListVo).collect(Collectors.toList());
+        List<EventTeamListVo> list = teamSeasonProfileMapper.selectAdminList(query);
+        list.forEach(this::enrichListVo);
+        return list;
     }
 
     @Override

@@ -8,6 +8,25 @@ export const CNPA_AUDIT_STATUS_FILTER_OPTIONS = [
   { value: 'CANCELLED', label: '已取消' }
 ]
 
+export interface BatchAuditOperationReq {
+  ids: number[]
+  auditRemark?: string
+  rejectReason?: string
+  positionCode?: string
+  decidePayload?: Record<string, any>
+}
+
+export interface BatchAuditFailure {
+  id: number
+  message: string
+}
+
+export interface BatchAuditResult {
+  successCount: number
+  failCount: number
+  failures: BatchAuditFailure[]
+}
+
 /** 球员认证状态（列表展示映射） */
 export const PLAYER_CERT_STATUS_OPTIONS = [
   { value: 0, label: '草稿' },
@@ -304,20 +323,28 @@ export interface CaptainGrantSeasonOption {
   displayName?: string
 }
 
+export interface PlatformGameIdItem {
+  platformCode?: string
+  gameId?: string
+}
+
 export interface EligibleCaptain {
-  playerId: number
-  memberId?: number
-  userId?: number
+  /** 雪花 ID，接口以字符串返回，避免 JS 精度丢失 */
+  playerId: string | number
+  memberId?: string | number
+  userId?: string | number
   playerNo?: string
   nickname?: string
   gameNickname?: string
   certificationStatus?: number
+  platformGameIds?: PlatformGameIdItem[]
+  gameIdSummary?: string
 }
 
 export interface CaptainQualificationGrantReq {
-  seasonId: number
-  playerId: number
-  teamId?: number
+  seasonId: number | string
+  playerId: number | string
+  teamId?: number | string
   paymentConfirmed?: number
   paymentReference?: string
   grantRemark?: string
@@ -480,6 +507,9 @@ export interface AccountPlayerListItem {
   currentTeamName?: string
   hasCaptainQual?: number
   activeCaptainGrantEventName?: string
+  platformGameIds?: PlatformGameIdItem[]
+  gameIdSummary?: string
+  gameIdCompactSummary?: string
   lastLoginTime?: string
   createTime?: string
 }

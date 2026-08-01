@@ -19,10 +19,17 @@
     </el-form>
 
     <el-row :gutter="10" class="mb8">
+      <el-col :span="1.5">
+        <el-button type="success" plain icon="Check" :disabled="batchMultiple" @click="handleBatchApprove" v-hasPermi="['basket:openRegistrationAudit:audit']">批量通过</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button type="danger" plain icon="Close" :disabled="batchMultiple" @click="openBatchReject" v-hasPermi="['basket:openRegistrationAudit:audit']">批量驳回</el-button>
+      </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table v-loading="loading" :data="dataList">
+    <el-table ref="tableRef" v-loading="loading" :data="dataList" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="50" align="center" :selectable="rowSelectable" />
       <el-table-column label="报名编号" prop="registrationNo" min-width="140" />
       <el-table-column label="赛季" min-width="140">
         <template #default="scope">
@@ -57,7 +64,7 @@
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-drawer v-model="detailOpen" title="Open报名审核详情" size="720px" append-to-body>
       <el-descriptions v-if="detail" :column="2" border>
@@ -111,17 +118,35 @@
         <el-button type="primary" @click="submitReject">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog title="批量驳回Open报名" v-model="batchRejectOpen" width="480px" append-to-body>
+      <el-form ref="batchRejectRef" :model="batchRejectForm" :rules="rejectRules" label-width="88px">
+        <el-form-item label="驳回原因" prop="rejectReason">
+          <el-input v-model="batchRejectForm.rejectReason" type="textarea" placeholder="请输入驳回原因" />
+        </el-form-item>
+        <el-form-item label="审核备注">
+          <el-input v-model="batchRejectForm.auditRemark" type="textarea" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="batchRejectOpen = false">取消</el-button>
+        <el-button type="primary" @click="submitBatchReject">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts" name="BasketOpenRegistrationAudit">
 import {
   approveOpenRegistrationAudit,
+  batchApproveOpenRegistrationAudit,
+  batchRejectOpenRegistrationAudit,
   getOpenRegistrationAudit,
   listOpenRegistrationAudit,
   listOpenRegistrationAuditRecords,
   rejectOpenRegistrationAudit
 } from '@/api/basket/openRegistrationAudit'
+import { buildBatchAuditPayload, formatBatchAuditMessage, useBatchAuditSelection } from '@/utils/batchAudit'
 import type {
   OpenRegistrationAuditApproveReq,
   OpenRegistrationAuditDetail,
@@ -133,6 +158,7 @@ import type {
 import { CNPA_AUDIT_STATUS_FILTER_OPTIONS } from '@/types'
 
 const { proxy } = getCurrentInstance()
+const tableRef = ref()
 
 const dataList = ref<OpenRegistrationAuditListItem[]>([])
 const loading = ref(true)
@@ -144,11 +170,24 @@ const auditRecords = ref<OpenRegistrationAuditRecord[]>([])
 const currentId = ref<number>()
 const approveOpen = ref(false)
 const rejectOpen = ref(false)
+const batchRejectOpen = ref(false)
 const approveForm = ref<OpenRegistrationAuditApproveReq>({})
 const rejectForm = ref<OpenRegistrationAuditRejectReq>({ rejectReason: '' })
+const batchRejectForm = ref<OpenRegistrationAuditRejectReq>({ rejectReason: '' })
 const rejectRules = {
   rejectReason: [{ required: true, message: '驳回原因不能为空', trigger: 'blur' }]
 }
+
+const {
+  multiple: batchMultiple,
+  handleSelectionChange,
+  rowSelectable,
+  clearSelection,
+  getAuditableIds
+} = useBatchAuditSelection<OpenRegistrationAuditListItem>({
+  getRowId: row => row.id,
+  canAudit: row => canOpenRegistrationAudit(row.registrationStatus)
+})
 
 const queryParams = ref<OpenRegistrationAuditQuery>({
   pageNum: 1,
@@ -234,6 +273,50 @@ function submitReject() {
       rejectOpen.value = false
       getList()
     }).catch(() => {})
+  })
+}
+
+function handleBatchApprove() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    proxy.$modal.msgWarning('请选择待审核记录')
+    return
+  }
+  proxy.$modal.confirm(`确认批量通过 ${ids.length} 条Open报名审核？`).then(() =>
+    batchApproveOpenRegistrationAudit(buildBatchAuditPayload(ids))
+  ).then(res => {
+    proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
+    clearSelection()
+    tableRef.value?.clearSelection()
+    getList()
+  }).catch(() => {})
+}
+
+function openBatchReject() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    proxy.$modal.msgWarning('请选择待审核记录')
+    return
+  }
+  batchRejectForm.value = { rejectReason: '', auditRemark: '' }
+  batchRejectOpen.value = true
+}
+
+function submitBatchReject() {
+  proxy.$refs.batchRejectRef.validate((valid: boolean) => {
+    if (!valid) return
+    const ids = getAuditableIds()
+    if (!ids.length) return
+    batchRejectOpenRegistrationAudit(buildBatchAuditPayload(ids, {
+      rejectReason: batchRejectForm.value.rejectReason,
+      auditRemark: batchRejectForm.value.auditRemark || undefined
+    })).then(res => {
+      proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
+      batchRejectOpen.value = false
+      clearSelection()
+      tableRef.value?.clearSelection()
+      getList()
+    })
   })
 }
 

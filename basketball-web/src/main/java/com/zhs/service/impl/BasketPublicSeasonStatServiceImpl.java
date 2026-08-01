@@ -199,7 +199,7 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
             }
             vo.setPlayerId(stat.getPlayerId());
             vo.setPlayerName(publicSupport.resolveDisplayName(player));
-            vo.setAvatarUrl(avatarMap.get(player.getId()));
+            vo.setAvatarUrl(com.zhs.support.MemberAvatarSupport.resolve(avatarMap.get(player.getId())));
             vo.setGames(stat.getGames());
             vo.setStarts(stat.getStarts());
             vo.setPoints(stat.getPoints());

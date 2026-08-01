@@ -30,3 +30,11 @@ export function decideMatchException(applicationId: number | string, data: Recor
     data
   })
 }
+
+export function batchRejectMatchException(data: { ids: number[]; rejectReason?: string; auditRemark?: string }) {
+  return request({ url: '/basket/matchException/batch-reject', method: 'post', data })
+}
+
+export function batchDecideMatchException(data: { ids: number[]; decidePayload: Record<string, unknown> }) {
+  return request({ url: '/basket/matchException/batch-decide', method: 'post', data })
+}

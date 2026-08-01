@@ -241,12 +241,12 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
 
     private String resolveAvatarUrl(Long avatarFileId) {
         if (avatarFileId == null) {
-            return null;
+            return com.zhs.support.MemberAvatarSupport.resolve(null);
         }
         BasketFileAsset asset = fileAssetDao.selectById(avatarFileId);
         if (asset == null || !NOT_DELETED.equals(asset.getIsDelete())) {
-            return null;
+            return com.zhs.support.MemberAvatarSupport.resolve(null);
         }
-        return asset.getAccessUrl();
+        return com.zhs.support.MemberAvatarSupport.resolve(asset.getAccessUrl());
     }
 }

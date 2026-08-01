@@ -16,7 +16,17 @@
       </el-form-item>
     </el-form>
 
-    <el-table :data="rows" v-loading="loading" border>
+    <el-row :gutter="10" class="mb8">
+      <el-col :span="1.5">
+        <el-button type="success" plain icon="Check" :disabled="batchMultiple" @click="handleBatchApprove" v-hasPermi="['basket:matchAudit:approve']">批量通过</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button type="danger" plain icon="Close" :disabled="batchMultiple" @click="openBatchReject" v-hasPermi="['basket:matchAudit:reject']">批量驳回</el-button>
+      </el-col>
+    </el-row>
+
+    <el-table ref="tableRef" :data="rows" v-loading="loading" border @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="50" align="center" :selectable="rowSelectable" />
       <el-table-column label="提交编号" prop="submissionNo" min-width="140" />
       <el-table-column label="比赛编号" prop="matchNo" min-width="120" />
       <el-table-column label="版本" prop="versionNo" width="70" />
@@ -38,7 +48,7 @@
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="loadList" />
+    <pagination :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="loadList" />
 
     <el-dialog v-model="detailOpen" title="比赛数据提交审核" width="920px" top="5vh">
       <div v-if="detail" v-loading="detailLoading">
@@ -128,6 +138,13 @@
         <el-button type="danger" @click="submitReject" :loading="rejecting">确认驳回</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="batchRejectOpen" title="批量驳回比赛数据" width="480px" append-to-body>
+      <el-input v-model="batchRejectReason" type="textarea" :rows="4" placeholder="请填写驳回原因" />
+      <template #footer>
+        <el-button @click="batchRejectOpen = false">取消</el-button>
+        <el-button type="danger" @click="submitBatchReject" :loading="batchRejecting">确认驳回</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -138,10 +155,14 @@ import {
   pageSubmissionAudit,
   getSubmissionDetail,
   approveSubmission,
-  rejectSubmission
+  rejectSubmission,
+  batchApproveSubmission,
+  batchRejectSubmission
 } from '@/api/basket/matchAudit'
 import { parseTime } from '@/utils/ruoyi'
+import { buildBatchAuditPayload, formatBatchAuditMessage, useBatchAuditSelection } from '@/utils/batchAudit'
 
+const tableRef = ref()
 const loading = ref(false)
 const rows = ref<any[]>([])
 const total = ref(0)
@@ -162,6 +183,21 @@ const approving = ref(false)
 const rejectOpen = ref(false)
 const rejectReason = ref('')
 const rejecting = ref(false)
+
+const batchRejectOpen = ref(false)
+const batchRejectReason = ref('')
+const batchRejecting = ref(false)
+
+const {
+  multiple: batchMultiple,
+  handleSelectionChange,
+  rowSelectable,
+  clearSelection,
+  getAuditableIds
+} = useBatchAuditSelection<any>({
+  getRowId: row => row.submissionId,
+  canAudit: row => row.submissionStatus === 1
+})
 
 async function loadList() {
   loading.value = true
@@ -224,6 +260,57 @@ async function submitReject() {
     loadList()
   } finally {
     rejecting.value = false
+  }
+}
+
+async function handleBatchApprove() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    ElMessage.warning('请选择待审核记录')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(`确认批量通过 ${ids.length} 条比赛数据提交？`, '提示', { type: 'warning' })
+    const res = await batchApproveSubmission(buildBatchAuditPayload(ids))
+    ElMessage.success(formatBatchAuditMessage(res.data))
+    clearSelection()
+    tableRef.value?.clearSelection()
+    loadList()
+  } catch {
+    // cancelled or failed
+  }
+}
+
+function openBatchReject() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    ElMessage.warning('请选择待审核记录')
+    return
+  }
+  batchRejectReason.value = ''
+  batchRejectOpen.value = true
+}
+
+async function submitBatchReject() {
+  if (!batchRejectReason.value.trim()) {
+    ElMessage.warning('请填写驳回原因')
+    return
+  }
+  const ids = getAuditableIds()
+  if (!ids.length) return
+  batchRejecting.value = true
+  try {
+    const res = await batchRejectSubmission({
+      ids,
+      rejectReason: batchRejectReason.value.trim()
+    })
+    ElMessage.success(formatBatchAuditMessage(res.data))
+    batchRejectOpen.value = false
+    clearSelection()
+    tableRef.value?.clearSelection()
+    loadList()
+  } finally {
+    batchRejecting.value = false
   }
 }
 

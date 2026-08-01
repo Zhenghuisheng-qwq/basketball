@@ -1,6 +1,7 @@
 import request from '@/api/request'
 import type { ApiResult, PageResult } from '@/api/types/common'
 import type {
+  TeamMemberDetailDto,
   TeamMemberItemDto,
   TeamMemberUpdateReq,
 } from '@/api/types/teamMember'
@@ -13,6 +14,13 @@ export function getTeamMemberPage(
   return request.get<any, ApiResult<PageResult<TeamMemberItemDto>>>(
     `/basket/team/${teamId}/member/page`,
     { params },
+  )
+}
+
+/** 队内成员私有详情（token + 队长/本人） */
+export function getTeamMemberDetail(teamId: string, teamMemberId: string) {
+  return request.get<any, ApiResult<TeamMemberDetailDto>>(
+    `/basket/team/${teamId}/member/${teamMemberId}/detail`,
   )
 }
 

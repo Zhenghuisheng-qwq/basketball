@@ -1,8 +1,10 @@
 package com.zhs.basket.service;
 
 import com.zhs.basket.query.RosterChangeAuditQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.RosterChangeAuditApproveReq;
 import com.zhs.basket.req.RosterChangeAuditRejectReq;
+import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.vo.RosterChangeAuditDetailVo;
 import com.zhs.basket.vo.RosterChangeAuditListVo;
 import java.util.List;
@@ -12,4 +14,6 @@ public interface IBasketRosterChangeAuditService {
     RosterChangeAuditDetailVo selectDetail(Long id);
     void approve(Long id, RosterChangeAuditApproveReq req);
     void reject(Long id, RosterChangeAuditRejectReq req);
+    BatchAuditResultVo batchApprove(BatchAuditOperationReq req);
+    BatchAuditResultVo batchReject(BatchAuditOperationReq req);
 }

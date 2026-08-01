@@ -5,8 +5,11 @@ import com.zhs.basket.enums.PlatformAccountStatusEnum;
 import com.zhs.basket.enums.PlayerCertStatusEnum;
 import com.zhs.basket.mapper.*;
 import com.zhs.basket.query.PlayerCertQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.PlayerCertApproveReq;
 import com.zhs.basket.req.PlayerCertRejectReq;
+import com.zhs.basket.support.BatchAuditSupport;
+import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.service.IBasketPlayerCertService;
 import com.zhs.basket.support.*;
 import com.zhs.basket.vo.*;
@@ -43,9 +46,11 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
 
     @Override
     public List<PlayerCertListVo> selectList(PlayerCertQuery query) {
-        return applicationMapper.selectList(query).stream().peek(vo ->
+        List<PlayerCertListVo> list = applicationMapper.selectList(query);
+        list.forEach(vo ->
                 vo.setApplicationStatusName(PlayerCertStatusEnum.fromCode(vo.getApplicationStatus()).getAuditDisplayDescription())
-        ).collect(Collectors.toList());
+        );
+        return list;
     }
 
     @Override
@@ -159,6 +164,22 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
         messageService.sendSiteMessage(app.getMemberId(), auditorId, "PLAYER_CERT", applicationId,
                 "球员认证已驳回", "您的球员认证申请已被驳回：" + remark);
         securityLogWriter.write(app.getMemberId(), "PLAYER_CERT_REJECTED", "球员认证驳回", null, remark, auditorId);
+    }
+
+    @Override
+    public BatchAuditResultVo batchApprove(BatchAuditOperationReq req) {
+        PlayerCertApproveReq approveReq = new PlayerCertApproveReq();
+        approveReq.setAuditRemark(req.getAuditRemark());
+        approveReq.setPositionCode(req.getPositionCode());
+        return BatchAuditSupport.run(req.getIds(), id -> approve(id, approveReq));
+    }
+
+    @Override
+    public BatchAuditResultVo batchReject(BatchAuditOperationReq req) {
+        PlayerCertRejectReq rejectReq = new PlayerCertRejectReq();
+        rejectReq.setRejectReason(req.getRejectReason());
+        rejectReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> reject(id, rejectReq));
     }
 
     private String resolveRejectRemark(PlayerCertRejectReq req) {

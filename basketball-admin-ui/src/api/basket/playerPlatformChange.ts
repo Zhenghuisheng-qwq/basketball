@@ -6,6 +6,8 @@ import type {
   PlayerPlatformChangeListItem,
   PlayerPlatformChangeQuery,
   PlayerPlatformChangeRejectReq,
+  BatchAuditOperationReq,
+  BatchAuditResult,
   TableDataInfo
 } from '@/types'
 
@@ -38,4 +40,12 @@ export function rejectPlayerPlatformChange(id: number, data: PlayerPlatformChang
     method: 'post',
     data
   })
+}
+
+export function batchApprovePlayerPlatformChange(data: BatchAuditOperationReq): Promise<AjaxResult<BatchAuditResult>> {
+  return request({ url: '/basket/playerPlatformChange/batch-approve', method: 'post', data })
+}
+
+export function batchRejectPlayerPlatformChange(data: BatchAuditOperationReq): Promise<AjaxResult<BatchAuditResult>> {
+  return request({ url: '/basket/playerPlatformChange/batch-reject', method: 'post', data })
 }

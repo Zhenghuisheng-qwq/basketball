@@ -30,7 +30,7 @@
 
     <select id="selectList" resultType="com.zhs.basket.vo.PlayerCertListVo">
         select a.id, a.application_no as applicationNo, a.member_id as memberId,
-               mp.nickname as nickname, acc.email as email, af.access_url as avatarUrl,
+               mp.nickname as nickname, acc.email as email, IFNULL(af.access_url, 'https://basketball-1453992653.cos.ap-shanghai.myqcloud.com/basketball/public/2026/08/01/b1f4d9a28beb48beb90fed28439e8e4a.png') as avatarUrl,
                a.game_terminal as gameTerminal, a.game_account as gameAccount, a.position_code as positionCode,
                a.application_status as applicationStatus, a.submitted_time as submittedTime, a.reviewed_time as reviewedTime
         from basket_player_cert_application a
@@ -60,7 +60,7 @@
 
     <select id="selectDetailVo" resultType="com.zhs.basket.vo.PlayerCertDetailVo">
         select a.id, a.id as applicationId, a.application_no as applicationNo, a.member_id as memberId,
-               mp.nickname as nickname, acc.email as email, af.access_url as avatarUrl,
+               mp.nickname as nickname, acc.email as email, IFNULL(af.access_url, 'https://basketball-1453992653.cos.ap-shanghai.myqcloud.com/basketball/public/2026/08/01/b1f4d9a28beb48beb90fed28439e8e4a.png') as avatarUrl,
                a.game_terminal as gameTerminal, a.game_account as gameAccount, a.game_nickname as gameNickname,
                a.position_code as positionCode, a.application_status as applicationStatus,
                a.review_remark as reviewRemark, a.submitted_time as submittedTime,

@@ -19,6 +19,7 @@ public class GeneratedCrudAccessInterceptor implements HandlerInterceptor {
         }
         // 业务接口白名单
         if (uri.startsWith("/basket/member/auth/")
+                || uri.startsWith("/basket/member/init/")
                 || uri.startsWith("/basket/account/")
                 || uri.startsWith("/basket/player/certification/")
                 || uri.startsWith("/basket/player/match-data/")

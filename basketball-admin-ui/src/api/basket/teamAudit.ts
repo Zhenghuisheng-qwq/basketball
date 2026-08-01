@@ -7,7 +7,9 @@ import type {
   TeamAuditListItem,
   TeamAuditQuery,
   TeamAuditRecord,
-  TeamAuditRejectReq
+  TeamAuditRejectReq,
+  BatchAuditOperationReq,
+  BatchAuditResult
 } from '@/types'
 
 export function listTeamAudit(query: TeamAuditQuery): Promise<TableDataInfo<TeamAuditListItem[]>> {
@@ -53,4 +55,12 @@ export function rejectTeamAudit(teamId: number, data: TeamAuditRejectReq): Promi
     method: 'post',
     data
   })
+}
+
+export function batchApproveTeamAudit(data: BatchAuditOperationReq): Promise<AjaxResult<BatchAuditResult>> {
+  return request({ url: '/basket/teamAudit/batch-approve', method: 'post', data })
+}
+
+export function batchRejectTeamAudit(data: BatchAuditOperationReq): Promise<AjaxResult<BatchAuditResult>> {
+  return request({ url: '/basket/teamAudit/batch-reject', method: 'post', data })
 }

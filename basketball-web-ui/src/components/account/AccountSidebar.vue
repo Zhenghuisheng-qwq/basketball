@@ -5,6 +5,7 @@ import { useAuth } from '@/composables/useAuth'
 import { useAccountStore } from '@/stores/account'
 import { useNotificationCenterStore } from '@/stores/notificationCenter'
 import { resolvePlayerIdentityRoute } from '@/utils/playerIdentityNavigate'
+import { resolveMemberAvatarUrl } from '@/utils/memberAvatar'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,10 +17,9 @@ const drawerOpen = ref(false)
 const imageError = ref(false)
 
 const account = computed(() => accountStore.currentAccount)
+const avatarUrl = computed(() => resolveMemberAvatarUrl(account.value?.avatarUrl))
 
-const showAvatarImage = computed(
-  () => Boolean(account.value?.avatarUrl?.trim()) && !imageError.value,
-)
+const showAvatarImage = computed(() => !imageError.value)
 
 const unreadBadge = computed(() => {
   const count = notificationStore.unreadCount
@@ -126,7 +126,7 @@ function handleAvatarError() {
         <div class="account-sidebar__avatar">
           <img
             v-if="showAvatarImage"
-            :src="account?.avatarUrl"
+            :src="avatarUrl"
             :alt="account?.nickname || '用户头像'"
             @error="handleAvatarError"
           />

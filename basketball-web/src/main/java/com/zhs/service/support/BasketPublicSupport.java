@@ -27,6 +27,7 @@ import com.zhs.model.BasketTournamentGroup;
 import com.zhs.model.BasketTournamentSeason;
 import com.zhs.model.BasketTournamentStage;
 import com.zhs.model.BasketVenue;
+import com.zhs.support.MemberAvatarSupport;
 import com.zhs.util.MiniRedisUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -353,10 +354,12 @@ public class BasketPublicSupport {
         Map<Long, String> urlMap = loadAccessUrlMap(memberAvatarFileMap.values());
         Map<Long, String> playerAvatarMap = new HashMap<>();
         for (BasketPlayerProfile player : players) {
-            Long fileId = memberAvatarFileMap.get(player.getMemberId());
-            if (fileId != null) {
-                playerAvatarMap.put(player.getId(), urlMap.get(fileId));
+            if (player == null || player.getId() == null) {
+                continue;
             }
+            Long fileId = memberAvatarFileMap.get(player.getMemberId());
+            String url = fileId != null ? urlMap.get(fileId) : null;
+            playerAvatarMap.put(player.getId(), MemberAvatarSupport.resolve(url));
         }
         return playerAvatarMap;
     }

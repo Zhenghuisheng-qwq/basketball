@@ -73,22 +73,43 @@
     </el-row>
 
     <el-table v-loading="loading" :data="dataList" class="account-player-table">
-      <el-table-column label="用户信息" min-width="200" fixed>
+      <el-table-column label="用户信息" min-width="180" width="200" fixed>
         <template #default="scope">
           <div class="user-cell">
-            <el-avatar :size="36" :src="scope.row.avatarUrl" class="user-cell__avatar">
+            <el-avatar :size="32" :src="resolveMemberAvatarUrl(scope.row.avatarUrl)" class="user-cell__avatar">
               {{ avatarFallback(scope.row.nickname || scope.row.username) }}
             </el-avatar>
-            <div class="user-cell__meta">
-              <div class="user-cell__name">{{ scope.row.nickname || '未设置昵称' }}</div>
-              <div class="sub-text ellipsis">{{ scope.row.email || '-' }}</div>
-              <div class="sub-text user-id-text">用户ID：{{ scope.row.userId || scope.row.memberId }}</div>
-            </div>
+            <el-tooltip
+              :content="scope.row.nickname || '未设置昵称'"
+              placement="top"
+              :disabled="!scope.row.nickname"
+            >
+              <span class="user-cell__name ellipsis">{{ scope.row.nickname || '未设置昵称' }}</span>
+            </el-tooltip>
           </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="登录邮箱" min-width="180" width="200" :show-overflow-tooltip="true">
+        <template #default="scope">{{ scope.row.email || '-' }}</template>
+      </el-table-column>
+      <el-table-column label="用户ID" min-width="180" width="200" :show-overflow-tooltip="true">
+        <template #default="scope">
+          <span class="user-id-text">{{ scope.row.userId || scope.row.memberId || '-' }}</span>
         </template>
       </el-table-column>
       <el-table-column label="球员编号" prop="playerNo" width="130" :show-overflow-tooltip="true">
         <template #default="scope">{{ scope.row.playerNo || '-' }}</template>
+      </el-table-column>
+      <el-table-column label="绑定游戏ID" min-width="180">
+        <template #default="scope">
+          <el-tooltip
+            :content="scope.row.gameIdSummary || '未绑定'"
+            placement="top"
+            :disabled="!(scope.row.gameIdSummary && scope.row.gameIdSummary !== '未绑定')"
+          >
+            <span class="game-id-cell">{{ scope.row.gameIdCompactSummary || scope.row.gameIdSummary || '未绑定' }}</span>
+          </el-tooltip>
+        </template>
       </el-table-column>
       <el-table-column label="邮箱验证" width="92" align="center">
         <template #default="scope">
@@ -138,13 +159,21 @@
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
-    <el-drawer v-model="detailOpen" title="用户详情" size="780px" append-to-body class="account-player-drawer">
-      <div v-loading="detailLoading">
+    <el-dialog
+      v-model="detailOpen"
+      title="用户详情"
+      width="920px"
+      top="6vh"
+      append-to-body
+      destroy-on-close
+      class="account-player-dialog"
+    >
+      <div v-loading="detailLoading" class="account-player-dialog__body">
         <template v-if="detail">
           <div class="detail-header">
-            <el-avatar :size="52" :src="detail.account?.avatarUrl || detail.profile?.avatarUrl" class="detail-header__avatar">
+            <el-avatar :size="52" :src="resolveMemberAvatarUrl(detail.account?.avatarUrl || detail.profile?.avatarUrl)" class="detail-header__avatar">
               {{ avatarFallback(detail.account?.nickname || detail.account?.username) }}
             </el-avatar>
             <div class="detail-header__meta">
@@ -311,7 +340,10 @@
           </el-tabs>
         </template>
       </div>
-    </el-drawer>
+      <template #footer>
+        <el-button @click="detailOpen = false">关 闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -326,6 +358,8 @@ import {
   PLAYER_CERT_STATUS_OPTIONS,
   YES_NO_OPTIONS
 } from '@/types'
+import { applyTablePage } from '@/utils/table'
+import { resolveMemberAvatarUrl } from '@/utils/memberAvatar'
 
 const router = useRouter()
 const { proxy } = getCurrentInstance()
@@ -397,8 +431,7 @@ function formatRoleType(role?: string) {
 function getList() {
   loading.value = true
   listAccountPlayer(queryParams.value).then(response => {
-    dataList.value = response.rows
-    total.value = response.total
+    applyTablePage(response, dataList, total)
   }).finally(() => {
     loading.value = false
   })
@@ -446,7 +479,8 @@ getList()
 }
 
 .user-id-text {
-  font-size: 11px;
+  font-size: 12px;
+  color: var(--el-text-color-regular);
 }
 
 .ellipsis {
@@ -459,14 +493,12 @@ getList()
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.user-cell__meta {
   min-width: 0;
-  flex: 1;
 }
 
 .user-cell__name {
+  min-width: 0;
+  flex: 1;
   font-weight: 600;
   line-height: 1.4;
 }
@@ -508,6 +540,12 @@ getList()
   margin-top: 4px;
 }
 
+.account-player-dialog__body {
+  max-height: calc(88vh - 140px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
 .section-title {
   margin: 12px 0 8px;
   font-size: 13px;
@@ -524,6 +562,15 @@ getList()
 }
 
 .account-player-table :deep(.el-table__cell) {
-  vertical-align: top;
+  vertical-align: middle;
+}
+
+.game-id-cell {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 </style>

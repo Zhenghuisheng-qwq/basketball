@@ -9,6 +9,8 @@ public interface BasketPlayerPlatformAccountMapper {
     int updateById(BasketPlayerPlatformAccount record);
     BasketPlayerPlatformAccount selectById(Long id);
     List<BasketPlayerPlatformAccount> selectByPlayerId(@Param("playerId") Long playerId);
+
+    List<BasketPlayerPlatformAccount> selectActiveByPlayerIds(@Param("playerIds") List<Long> playerIds);
     int countActiveByPlatformAndNormalized(@Param("platform") String platform,
             @Param("normalizedGameId") String normalizedGameId);
     int countActiveByPlatformAndNormalizedExcludePlayer(@Param("platform") String platform,

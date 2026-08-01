@@ -903,6 +903,18 @@ const router = createRouter({
 
         {
 
+          path: 'team/:teamId/member/:teamMemberId',
+
+          name: 'AccountTeamMemberDetail',
+
+          component: () => import('@/views/account/team/TeamMemberDetailView.vue'),
+
+          meta: { title: '队员资料' },
+
+        },
+
+        {
+
           path: 'team-relations',
 
           redirect: { name: 'AccountMyTeam' },

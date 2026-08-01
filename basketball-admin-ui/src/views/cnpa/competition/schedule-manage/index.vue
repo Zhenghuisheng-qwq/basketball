@@ -103,7 +103,7 @@
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-dialog v-model="generateOpen" title="确认生成草稿赛程" width="520px" append-to-body>
       <el-descriptions v-if="generatePreview" :column="1" border>

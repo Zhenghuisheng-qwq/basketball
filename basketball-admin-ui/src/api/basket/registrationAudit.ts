@@ -7,6 +7,8 @@ import type {
   RegistrationAuditQuery,
   RegistrationAuditRecord,
   RegistrationAuditRejectReq,
+  BatchAuditOperationReq,
+  BatchAuditResult,
   TableDataInfo
 } from '@/types'
 
@@ -46,4 +48,12 @@ export function listRegistrationAuditRecords(id: number): Promise<AjaxResult<Reg
     url: `/basket/registrationAudit/${id}/audit-record/list`,
     method: 'get'
   })
+}
+
+export function batchApproveRegistrationAudit(data: BatchAuditOperationReq): Promise<AjaxResult<BatchAuditResult>> {
+  return request({ url: '/basket/registrationAudit/batch-approve', method: 'post', data })
+}
+
+export function batchRejectRegistrationAudit(data: BatchAuditOperationReq): Promise<AjaxResult<BatchAuditResult>> {
+  return request({ url: '/basket/registrationAudit/batch-reject', method: 'post', data })
 }

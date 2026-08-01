@@ -176,7 +176,7 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
             PublicTeamRosterItemVo vo = new PublicTeamRosterItemVo();
             vo.setPlayerId(player.getId());
             vo.setPlayerName(publicSupport.resolveDisplayName(player));
-            vo.setAvatarUrl(avatarMap.get(player.getId()));
+            vo.setAvatarUrl(com.zhs.support.MemberAvatarSupport.resolve(avatarMap.get(player.getId())));
             vo.setPositionCode(player.getPositionCode());
             vo.setJerseyNo(member.getJerseyNo());
             vo.setRoleType(member.getRoleType());

@@ -19,10 +19,17 @@
     </el-form>
 
     <el-row :gutter="10" class="mb8">
+      <el-col :span="1.5">
+        <el-button type="success" plain icon="Check" :disabled="batchMultiple" @click="handleBatchApprove" v-hasPermi="['basket:teamAudit:audit']">批量通过</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button type="danger" plain icon="Close" :disabled="batchMultiple" @click="openBatchReject" v-hasPermi="['basket:teamAudit:audit']">批量驳回</el-button>
+      </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table v-loading="loading" :data="dataList">
+    <el-table ref="tableRef" v-loading="loading" :data="dataList" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="50" align="center" :selectable="rowSelectable" />
       <el-table-column label="Logo" width="72" align="center">
         <template #default="scope">
           <el-image
@@ -64,7 +71,7 @@
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-drawer v-model="detailOpen" title="球队审核详情" size="720px" append-to-body>
       <div v-loading="detailLoading">
@@ -184,17 +191,35 @@
         <el-button type="primary" @click="submitReject">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog title="批量驳回球队审核" v-model="batchRejectOpen" width="480px" append-to-body>
+      <el-form ref="batchRejectRef" :model="batchRejectForm" :rules="rejectRules" label-width="88px">
+        <el-form-item label="驳回原因" prop="rejectReason">
+          <el-input v-model="batchRejectForm.rejectReason" type="textarea" placeholder="请输入驳回原因" />
+        </el-form-item>
+        <el-form-item label="审核备注">
+          <el-input v-model="batchRejectForm.auditRemark" type="textarea" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="batchRejectOpen = false">取消</el-button>
+        <el-button type="primary" @click="submitBatchReject">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts" name="BasketTeamAudit">
 import {
   approveTeamAudit,
+  batchApproveTeamAudit,
+  batchRejectTeamAudit,
   getTeamAudit,
   listTeamAudit,
   listTeamAuditRecords,
   rejectTeamAudit
 } from '@/api/basket/teamAudit'
+import { buildBatchAuditPayload, formatBatchAuditMessage, useBatchAuditSelection } from '@/utils/batchAudit'
 import type {
   TeamAuditApproveReq,
   TeamAuditDetail,
@@ -206,6 +231,7 @@ import type {
 import { CNPA_AUDIT_STATUS_FILTER_OPTIONS, TEAM_RECRUIT_STATUS_OPTIONS } from '@/types'
 
 const { proxy } = getCurrentInstance()
+const tableRef = ref()
 
 const dataList = ref<TeamAuditListItem[]>([])
 const loading = ref(true)
@@ -218,11 +244,24 @@ const auditRecords = ref<TeamAuditRecord[]>([])
 const currentId = ref<number>()
 const approveOpen = ref(false)
 const rejectOpen = ref(false)
+const batchRejectOpen = ref(false)
 const approveForm = ref<TeamAuditApproveReq>({})
 const rejectForm = ref<TeamAuditRejectReq>({ rejectReason: '' })
+const batchRejectForm = ref<TeamAuditRejectReq>({ rejectReason: '' })
 const rejectRules = {
   rejectReason: [{ required: true, message: '驳回原因不能为空', trigger: 'blur' }]
 }
+
+const {
+  multiple: batchMultiple,
+  handleSelectionChange,
+  rowSelectable,
+  clearSelection,
+  getAuditableIds
+} = useBatchAuditSelection<TeamAuditListItem>({
+  getRowId: row => row.id,
+  canAudit: row => canTeamAudit(row.auditStatus)
+})
 
 const queryParams = ref<TeamAuditQuery>({
   pageNum: 1,
@@ -331,6 +370,51 @@ function submitReject() {
         handleDetail({ id: currentId.value } as TeamAuditListItem)
       }
     }).catch(() => {})
+  })
+}
+
+function handleBatchApprove() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    proxy.$modal.msgWarning('请选择待审核记录')
+    return
+  }
+  proxy.$modal.confirm(`确认批量通过 ${ids.length} 条球队审核？`).then(() =>
+    batchApproveTeamAudit(buildBatchAuditPayload(ids))
+  ).then(res => {
+    proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
+    clearSelection()
+    tableRef.value?.clearSelection()
+    getList()
+  }).catch(() => {})
+}
+
+function openBatchReject() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    proxy.$modal.msgWarning('请选择待审核记录')
+    return
+  }
+  batchRejectForm.value = { rejectReason: '', auditRemark: '' }
+  batchRejectOpen.value = true
+}
+
+function submitBatchReject() {
+  proxy.$refs.batchRejectRef.validate((valid: boolean) => {
+    if (!valid) return
+    const ids = getAuditableIds()
+    if (!ids.length) return
+    const payload = buildBatchAuditPayload(ids, {
+      rejectReason: batchRejectForm.value.rejectReason,
+      auditRemark: batchRejectForm.value.auditRemark || undefined
+    })
+    batchRejectTeamAudit(payload).then(res => {
+      proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
+      batchRejectOpen.value = false
+      clearSelection()
+      tableRef.value?.clearSelection()
+      getList()
+    })
   })
 }
 

@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket;
 
 import com.zhs.basket.query.PlayerPlatformChangeQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.PlayerPlatformChangeApproveReq;
 import com.zhs.basket.req.PlayerPlatformChangeRejectReq;
 import com.zhs.basket.service.IBasketPlayerPlatformChangeService;
@@ -12,6 +13,8 @@ import com.zhs.common.enums.BusinessType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/basket/playerPlatformChange")
@@ -47,5 +50,19 @@ public class BasketPlayerPlatformChangeController extends BaseController {
     public AjaxResult reject(@PathVariable Long id, @RequestBody PlayerPlatformChangeRejectReq req) {
         platformChangeService.reject(id, req);
         return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:playerPlatformChange:audit')")
+    @Log(title = "平台游戏ID变更审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/batch-approve")
+    public AjaxResult batchApprove(@Valid @RequestBody BatchAuditOperationReq req) {
+        return success(platformChangeService.batchApprove(req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:playerPlatformChange:audit')")
+    @Log(title = "平台游戏ID变更审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/batch-reject")
+    public AjaxResult batchReject(@Valid @RequestBody BatchAuditOperationReq req) {
+        return success(platformChangeService.batchReject(req));
     }
 }

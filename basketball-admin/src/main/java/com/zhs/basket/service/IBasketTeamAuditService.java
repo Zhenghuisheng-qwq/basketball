@@ -1,8 +1,10 @@
 package com.zhs.basket.service;
 
 import com.zhs.basket.query.TeamAuditQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.TeamAuditApproveReq;
 import com.zhs.basket.req.TeamAuditRejectReq;
+import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.vo.TeamAuditDetailVo;
 import com.zhs.basket.vo.TeamAuditListVo;
 import com.zhs.basket.vo.TeamAuditRecordVo;
@@ -15,4 +17,6 @@ public interface IBasketTeamAuditService {
     void startReview(Long teamId);
     void approve(Long teamId, TeamAuditApproveReq req);
     void reject(Long teamId, TeamAuditRejectReq req);
+    BatchAuditResultVo batchApprove(BatchAuditOperationReq req);
+    BatchAuditResultVo batchReject(BatchAuditOperationReq req);
 }

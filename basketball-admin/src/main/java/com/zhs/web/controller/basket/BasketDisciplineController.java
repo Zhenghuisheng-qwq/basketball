@@ -7,6 +7,7 @@ import com.zhs.basket.service.IBasketDisciplineService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
 import com.zhs.common.core.domain.AjaxResult;
+import com.zhs.common.core.page.TableDataInfo;
 import com.zhs.common.enums.BusinessType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,8 +22,9 @@ public class BasketDisciplineController extends BaseController {
 
     @PreAuthorize("@ss.hasPermi('basket:discipline:list')")
     @GetMapping("/list")
-    public AjaxResult list(DisciplineQuery query) {
-        return success(disciplineService.list(query));
+    public TableDataInfo list(DisciplineQuery query) {
+        startPage();
+        return getDataTable(disciplineService.list(query));
     }
 
     @PreAuthorize("@ss.hasPermi('basket:discipline:query')")

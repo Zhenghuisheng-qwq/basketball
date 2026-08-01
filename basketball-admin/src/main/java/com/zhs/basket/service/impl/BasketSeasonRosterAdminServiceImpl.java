@@ -23,7 +23,9 @@ public class BasketSeasonRosterAdminServiceImpl implements IBasketSeasonRosterAd
 
     @Override
     public List<SeasonRosterListVo> selectList(SeasonRosterAdminQuery query) {
-        return seasonRosterMapper.selectAdminList(query).stream().peek(this::enrichListVo).collect(Collectors.toList());
+        List<SeasonRosterListVo> list = seasonRosterMapper.selectAdminList(query);
+        list.forEach(this::enrichListVo);
+        return list;
     }
 
     @Override

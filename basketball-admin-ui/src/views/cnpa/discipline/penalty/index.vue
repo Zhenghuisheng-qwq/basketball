@@ -40,6 +40,8 @@
       </el-table-column>
     </el-table>
 
+    <pagination :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="loadList" />
+
     <el-dialog v-model="createOpen" title="新建处罚" width="640px">
       <el-form label-width="108px">
         <el-form-item label="对象类型">
@@ -92,7 +94,11 @@ import { parseTime } from '@/utils/ruoyi'
 
 const loading = ref(false)
 const rows = ref<any[]>([])
-const query = reactive<{ seasonId?: number; recordStatus?: string; keyword?: string }>({})
+const total = ref(0)
+const query = reactive<{ pageNum: number; pageSize: number; seasonId?: number; recordStatus?: string; keyword?: string }>({
+  pageNum: 1,
+  pageSize: 10
+})
 const createOpen = ref(false)
 const detailOpen = ref(false)
 const detail = ref<any>(null)
@@ -103,7 +109,8 @@ async function loadList() {
   loading.value = true
   try {
     const res = await listDiscipline(query)
-    rows.value = res.data || []
+    rows.value = res.rows || []
+    total.value = res.total ?? 0
   } finally {
     loading.value = false
   }

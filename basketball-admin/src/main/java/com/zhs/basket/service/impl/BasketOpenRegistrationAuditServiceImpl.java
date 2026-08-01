@@ -4,8 +4,10 @@ import com.zhs.basket.domain.*;
 import com.zhs.basket.enums.*;
 import com.zhs.basket.mapper.*;
 import com.zhs.basket.query.OpenRegistrationAuditQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.OpenRegistrationAuditApproveReq;
 import com.zhs.basket.req.OpenRegistrationAuditRejectReq;
+import com.zhs.basket.support.BatchAuditSupport;
 import com.zhs.basket.service.IBasketOpenRegistrationAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
 import com.zhs.basket.support.BasketDisciplineRestrictionSupport;
@@ -38,7 +40,9 @@ public class BasketOpenRegistrationAuditServiceImpl implements IBasketOpenRegist
 
     @Override
     public List<OpenRegistrationAuditListVo> selectList(OpenRegistrationAuditQuery query) {
-        return openRegistrationMapper.selectAuditList(query).stream().peek(this::enrichListVo).collect(Collectors.toList());
+        List<OpenRegistrationAuditListVo> list = openRegistrationMapper.selectAuditList(query);
+        list.forEach(this::enrichListVo);
+        return list;
     }
 
     @Override
@@ -99,6 +103,21 @@ public class BasketOpenRegistrationAuditServiceImpl implements IBasketOpenRegist
         writeAudit(reg, "REJECT", reg.getRegistrationStatus(), OpenRegistrationStatusEnum.REJECTED.getCode(), remark);
         messageService.sendSiteMessage(reg.getMemberId(), SecurityUtils.getUserId(), "OPEN_REGISTRATION", id,
                 "Open报名审核已驳回", remark);
+    }
+
+    @Override
+    public BatchAuditResultVo batchApprove(BatchAuditOperationReq req) {
+        OpenRegistrationAuditApproveReq approveReq = new OpenRegistrationAuditApproveReq();
+        approveReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> approve(id, approveReq));
+    }
+
+    @Override
+    public BatchAuditResultVo batchReject(BatchAuditOperationReq req) {
+        OpenRegistrationAuditRejectReq rejectReq = new OpenRegistrationAuditRejectReq();
+        rejectReq.setRejectReason(req.getRejectReason());
+        rejectReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> reject(id, rejectReq));
     }
 
     @Override

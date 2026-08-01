@@ -12,8 +12,8 @@ public class TableDataInfo implements Serializable
 {
     private static final long serialVersionUID = 1L;
 
-    /** 总记录数 */
-    private long total;
+    /** 总记录数（使用 int 避免 Jackson Long 全局转字符串导致前端分页失效） */
+    private int total;
 
     /** 列表数据 */
     private List<?> rows;
@@ -40,17 +40,26 @@ public class TableDataInfo implements Serializable
     public TableDataInfo(List<?> list, long total)
     {
         this.rows = list;
-        this.total = total;
+        this.total = sanitizeTotal(total);
     }
 
-    public long getTotal()
+    public int getTotal()
     {
         return total;
     }
 
     public void setTotal(long total)
     {
-        this.total = total;
+        this.total = sanitizeTotal(total);
+    }
+
+    private static int sanitizeTotal(long total)
+    {
+        if (total <= 0)
+        {
+            return 0;
+        }
+        return total > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) total;
     }
 
     public List<?> getRows()

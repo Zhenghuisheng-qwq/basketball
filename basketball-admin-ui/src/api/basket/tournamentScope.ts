@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { AjaxResult } from '@/types'
+import type { AjaxResult, TableDataInfo } from '@/types'
 
 export interface TournamentScopeGrantReq {
   adminUserId?: number
@@ -8,7 +8,7 @@ export interface TournamentScopeGrantReq {
   expireTime?: string
 }
 
-export function listTournamentScope(params?: { tournamentId?: number; adminUserId?: number }): Promise<AjaxResult<any[]>> {
+export function listTournamentScope(params?: { pageNum?: number; pageSize?: number; tournamentId?: number; adminUserId?: number }): Promise<TableDataInfo<any[]>> {
   return request({ url: '/basket/tournamentScope/list', method: 'get', params })
 }
 

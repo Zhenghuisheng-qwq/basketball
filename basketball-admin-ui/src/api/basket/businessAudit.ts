@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { AjaxResult } from '@/types'
+import type { AjaxResult, TableDataInfo } from '@/types'
 
 export interface BusinessAuditQuery {
   businessModule?: string
@@ -10,7 +10,7 @@ export interface BusinessAuditQuery {
   keyword?: string
 }
 
-export function listBusinessAudit(query: BusinessAuditQuery): Promise<AjaxResult<any[]>> {
+export function listBusinessAudit(query: BusinessAuditQuery & { pageNum?: number; pageSize?: number }): Promise<TableDataInfo<any[]>> {
   return request({ url: '/basket/businessAudit/list', method: 'get', params: query })
 }
 

@@ -69,8 +69,18 @@ public class CaptainGrantLogSupport {
         grantLogMapper.insert(log);
     }
 
+    /**
+     * 授权日志状态文案。首次 GRANT 的 beforeStatus 为 null，展示为 "-"，不能抛异常。
+     */
     public static String statusText(Integer status) {
-        CaptainQualificationStatusEnum statusEnum = CaptainQualificationStatusEnum.fromCode(status);
-        return statusEnum == null ? "-" : statusEnum.getDescription();
+        if (status == null) {
+            return "-";
+        }
+        for (CaptainQualificationStatusEnum value : CaptainQualificationStatusEnum.values()) {
+            if (value.getCode() == status) {
+                return value.getDescription();
+            }
+        }
+        return "未知(" + status + ")";
     }
 }

@@ -87,7 +87,7 @@ function goApply() {
       <AccountPanel title="申请 CNPA 球员认证">
         <ul class="identity-entry-rules">
           <li>审核通过后将获得不可修改的永久球员 ID</li>
-          <li>认证资料用于确认游戏平台、游戏 ID 与球员赛事资格</li>
+          <li>认证资料中的游戏平台与游戏 ID 用于确认你在游戏中的身份，不代表只能参加该平台赛事</li>
           <li>认证长期有效，无需在每届赛事中重复申请</li>
         </ul>
         <p class="identity-entry-hint">

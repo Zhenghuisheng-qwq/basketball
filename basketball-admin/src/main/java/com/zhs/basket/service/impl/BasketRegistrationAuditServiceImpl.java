@@ -9,8 +9,11 @@ import com.zhs.basket.enums.RegistrationStatusEnum;
 import com.zhs.basket.enums.TeamAuditStatusEnum;
 import com.zhs.basket.mapper.*;
 import com.zhs.basket.query.RegistrationAuditQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.RegistrationAuditApproveReq;
 import com.zhs.basket.req.RegistrationAuditRejectReq;
+import com.zhs.basket.support.BatchAuditSupport;
+import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.service.IBasketParticipationGenerationService;
 import com.zhs.basket.service.IBasketRegistrationAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
@@ -57,10 +60,12 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
 
     @Override
     public List<RegistrationAuditListVo> selectList(RegistrationAuditQuery query) {
-        return registrationMapper.selectAuditList(query).stream().peek(vo -> {
+        List<RegistrationAuditListVo> list = registrationMapper.selectAuditList(query);
+        list.forEach(vo -> {
             RegistrationStatusEnum status = RegistrationStatusEnum.fromCode(vo.getRegistrationStatus());
             vo.setRegistrationStatusName(status.getAuditDisplayDescription());
-        }).collect(Collectors.toList());
+        });
+        return list;
     }
 
     @Override
@@ -150,6 +155,21 @@ public class BasketRegistrationAuditServiceImpl implements IBasketRegistrationAu
         writeAudit(reg, "REJECT", reg.getRegistrationStatus(), RegistrationStatusEnum.REJECTED.getCode(), remark);
         messageService.sendSiteMessage(reg.getCaptainMemberId(), SecurityUtils.getUserId(), "REGISTRATION", id,
                 "报名审核已驳回", remark);
+    }
+
+    @Override
+    public BatchAuditResultVo batchApprove(BatchAuditOperationReq req) {
+        RegistrationAuditApproveReq approveReq = new RegistrationAuditApproveReq();
+        approveReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> approve(id, approveReq));
+    }
+
+    @Override
+    public BatchAuditResultVo batchReject(BatchAuditOperationReq req) {
+        RegistrationAuditRejectReq rejectReq = new RegistrationAuditRejectReq();
+        rejectReq.setRejectReason(req.getRejectReason());
+        rejectReq.setAuditRemark(req.getAuditRemark());
+        return BatchAuditSupport.run(req.getIds(), id -> reject(id, rejectReq));
     }
 
     @Override

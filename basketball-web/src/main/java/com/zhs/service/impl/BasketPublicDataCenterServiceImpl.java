@@ -200,7 +200,7 @@ public class BasketPublicDataCenterServiceImpl implements IBasketPublicDataCente
             vo.setRankTypeName(typeEnum.getDescription());
             vo.setPlayerId(rank.getPlayerId());
             vo.setPlayerName(publicSupport.resolveDisplayName(player));
-            vo.setAvatarUrl(avatarMap.get(player.getId()));
+            vo.setAvatarUrl(com.zhs.support.MemberAvatarSupport.resolve(avatarMap.get(player.getId())));
             vo.setTeamId(rank.getTeamId());
             BasketTeam team = teamMap.get(rank.getTeamId());
             if (team != null) {

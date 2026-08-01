@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { DEFAULT_AVATAR_THEMES, resolveDefaultAvatarTheme } from '@/utils/defaultAvatarTheme'
+import { resolveMemberAvatarUrl } from '@/utils/memberAvatar'
 
 const props = withDefaults(
   defineProps<{
@@ -22,8 +23,13 @@ const props = withDefaults(
 
 const imageError = ref(false)
 
+watch(() => props.avatarUrl, () => {
+  imageError.value = false
+})
+
+const effectiveAvatarUrl = computed(() => resolveMemberAvatarUrl(props.avatarUrl))
 const initials = computed(() => props.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '').slice(0, 1) || '球')
-const showImage = computed(() => Boolean(props.avatarUrl?.trim()) && !imageError.value)
+const showImage = computed(() => Boolean(effectiveAvatarUrl.value) && !imageError.value)
 const theme = computed(() => DEFAULT_AVATAR_THEMES[resolveDefaultAvatarTheme(props.playerNo, props.playerId)])
 
 function handleError() {
@@ -35,7 +41,7 @@ function handleError() {
   <div class="player-avatar" :class="[`player-avatar--${size}`, `player-avatar--${tone}`]">
     <img
       v-if="showImage"
-      :src="avatarUrl"
+      :src="effectiveAvatarUrl"
       :alt="name"
       class="player-avatar__img"
       @error="handleError"

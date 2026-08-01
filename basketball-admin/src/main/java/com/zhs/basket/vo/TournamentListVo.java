@@ -10,6 +10,8 @@ public class TournamentListVo {
     private Long competitionSeasonId;
     private String competitionSeasonName;
     private Integer competitionSeasonYear;
+    /** 赛事名称（列表/详情共用，缺失会导致修改弹窗校验为空） */
+    private String tournamentName;
     private String tournamentType;
     private String tournamentTypeName;
     private Integer tournamentStatus;

@@ -313,7 +313,7 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             PublicMatchPlayerStatVo vo = new PublicMatchPlayerStatVo();
             vo.setPlayerId(stat.getPlayerId());
             vo.setPlayerName(publicSupport.resolveDisplayName(player));
-            vo.setAvatarUrl(avatarMap.get(player.getId()));
+            vo.setAvatarUrl(com.zhs.support.MemberAvatarSupport.resolve(avatarMap.get(player.getId())));
             vo.setTeamId(stat.getTeamId());
             BasketTeam team = teamMap.get(stat.getTeamId());
             if (team != null) {

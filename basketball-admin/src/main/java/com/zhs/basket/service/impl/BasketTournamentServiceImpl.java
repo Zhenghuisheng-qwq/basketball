@@ -23,6 +23,7 @@ import com.zhs.basket.support.TournamentRegistrationWindowSupport;
 import com.zhs.basket.vo.TournamentDetailVo;
 import com.zhs.basket.vo.TournamentListVo;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.PageListUtils;
 import com.zhs.common.utils.bean.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -57,7 +58,7 @@ public class BasketTournamentServiceImpl implements IBasketTournamentService {
 
     @Override
     public List<TournamentListVo> selectList(TournamentQuery query) {
-        return tournamentMapper.selectList(query).stream().map(this::toListVo).collect(Collectors.toList());
+        return PageListUtils.map(tournamentMapper.selectList(query), this::toListVo);
     }
 
     @Override

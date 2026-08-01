@@ -14,7 +14,10 @@ import com.zhs.basket.mapper.BasketMatchExceptionMaterialMapper;
 import com.zhs.basket.mapper.BasketMatchMapper;
 import com.zhs.basket.mapper.BasketMatchTeamMapper;
 import com.zhs.basket.query.MatchExceptionQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.MatchExceptionDecideReq;
+import com.zhs.basket.support.BatchAuditSupport;
+import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.req.MatchOfficialDataCorrectionReq;
 import com.zhs.basket.service.IBasketDataSettlementService;
 import com.zhs.basket.service.IBasketMatchExceptionService;
@@ -112,6 +115,21 @@ public class BasketMatchExceptionServiceImpl implements IBasketMatchExceptionSer
             case "ADMIN_DECISION" -> applyAdminDecision(app, match, req, operatorId, operatorName);
             default -> throw new ServiceException("不支持的裁定类型：" + decisionType);
         }
+    }
+
+    @Override
+    public BatchAuditResultVo batchReject(BatchAuditOperationReq req) {
+        return BatchAuditSupport.run(req.getIds(),
+                id -> reject(id, req.getRejectReason(), req.getAuditRemark()));
+    }
+
+    @Override
+    public BatchAuditResultVo batchDecide(BatchAuditOperationReq req) {
+        MatchExceptionDecideReq decideReq = req.getDecidePayload();
+        if (decideReq == null || StringUtils.isEmpty(decideReq.getDecisionType())) {
+            throw new ServiceException("裁定类型不能为空");
+        }
+        return BatchAuditSupport.run(req.getIds(), id -> decide(id, decideReq));
     }
 
     private void applyForfeit(BasketMatchExceptionApplication app, BasketMatch match,

@@ -53,7 +53,7 @@
          </el-table-column>
       </el-table>
 
-      <pagination v-show="total > 0" :total="total" v-model:page="pageNum" v-model:limit="pageSize" />
+      <pagination :total="total" v-model:page="pageNum" v-model:limit="pageSize" />
    </div>
 </template>
 

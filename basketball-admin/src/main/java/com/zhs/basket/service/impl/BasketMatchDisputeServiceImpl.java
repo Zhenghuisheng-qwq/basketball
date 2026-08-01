@@ -10,9 +10,12 @@ import com.zhs.basket.mapper.BasketMatchDataDisputeMaterialMapper;
 import com.zhs.basket.mapper.BasketMatchMapper;
 import com.zhs.basket.mapper.BasketMatchOfficialResultMapper;
 import com.zhs.basket.query.MatchDisputeQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.MatchDisputeCorrectionReq;
 import com.zhs.basket.req.MatchDisputeCreateReq;
 import com.zhs.basket.req.MatchDisputeHandleReq;
+import com.zhs.basket.support.BatchAuditSupport;
+import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.service.IBasketMatchDisputeService;
 import com.zhs.basket.service.IBasketMatchOfficialDataCorrectionService;
 import com.zhs.basket.service.IBasketMatchValidationService;
@@ -146,6 +149,14 @@ public class BasketMatchDisputeServiceImpl implements IBasketMatchDisputeService
                 // 通知失败不回滚
             }
         }
+    }
+
+    @Override
+    public BatchAuditResultVo batchReject(BatchAuditOperationReq req) {
+        MatchDisputeHandleReq handleReq = new MatchDisputeHandleReq();
+        String remark = StringUtils.isNotEmpty(req.getRejectReason()) ? req.getRejectReason() : req.getAuditRemark();
+        handleReq.setHandleRemark(remark);
+        return BatchAuditSupport.run(req.getIds(), id -> reject(id, handleReq));
     }
 
     @Override

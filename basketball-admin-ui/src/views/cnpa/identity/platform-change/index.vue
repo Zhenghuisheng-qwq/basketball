@@ -45,10 +45,17 @@ INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (2, 2211);
     </el-form>
 
     <el-row :gutter="10" class="mb8">
+      <el-col :span="1.5">
+        <el-button type="success" plain icon="Check" :disabled="batchMultiple" @click="handleBatchApprove" v-hasPermi="['basket:playerPlatformChange:audit']">批量通过</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button type="danger" plain icon="Close" :disabled="batchMultiple" @click="openBatchReject" v-hasPermi="['basket:playerPlatformChange:audit']">批量驳回</el-button>
+      </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table v-loading="loading" :data="dataList">
+    <el-table ref="tableRef" v-loading="loading" :data="dataList" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="50" align="center" :selectable="rowSelectable" />
       <el-table-column label="申请编号" prop="requestNo" min-width="140" :show-overflow-tooltip="true" />
       <el-table-column label="用户" min-width="180">
         <template #default="scope">
@@ -86,7 +93,7 @@ INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (2, 2211);
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-drawer v-model="detailOpen" title="平台变更详情" size="640px" append-to-body>
       <template v-if="detail">
@@ -129,17 +136,37 @@ INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (2, 2211);
         <el-button type="primary" @click="submitReject">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog title="批量驳回平台变更" v-model="batchRejectOpen" width="480px" append-to-body>
+      <el-form ref="batchRejectRef" :model="batchRejectForm" :rules="rejectRules" label-width="88px">
+        <el-form-item label="驳回原因" prop="rejectReason">
+          <el-input
+            v-model="batchRejectForm.rejectReason"
+            type="textarea"
+            :rows="4"
+            placeholder="请填写驳回原因，将展示给申请人"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="batchRejectOpen = false">取消</el-button>
+        <el-button type="primary" @click="submitBatchReject">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts" name="BasketPlayerPlatformChange">
 import {
   approvePlayerPlatformChange,
+  batchApprovePlayerPlatformChange,
+  batchRejectPlayerPlatformChange,
   getPlayerPlatformChange,
   listPlayerPlatformChange,
   rejectPlayerPlatformChange
 } from '@/api/basket/playerPlatformChange'
 import { previewPrivateFile } from '@/api/basket/privateFile'
+import { buildBatchAuditPayload, formatBatchAuditMessage, useBatchAuditSelection } from '@/utils/batchAudit'
 import type {
   PlayerPlatformChangeDetail,
   PlayerPlatformChangeListItem,
@@ -153,6 +180,7 @@ import {
 } from '@/types'
 
 const { proxy } = getCurrentInstance()
+const tableRef = ref()
 
 const dataList = ref<PlayerPlatformChangeListItem[]>([])
 const loading = ref(true)
@@ -162,6 +190,7 @@ const detailOpen = ref(false)
 const detail = ref<PlayerPlatformChangeDetail>()
 const currentId = ref<number>()
 const rejectOpen = ref(false)
+const batchRejectOpen = ref(false)
 
 const queryParams = ref<PlayerPlatformChangeQuery>({
   pageNum: 1,
@@ -170,9 +199,21 @@ const queryParams = ref<PlayerPlatformChangeQuery>({
 })
 
 const rejectForm = ref<PlayerPlatformChangeRejectReq>({ rejectReason: '' })
+const batchRejectForm = ref<PlayerPlatformChangeRejectReq>({ rejectReason: '' })
 const rejectRules = {
   rejectReason: [{ required: true, message: '请填写驳回原因，将告知申请人', trigger: 'blur' }]
 }
+
+const {
+  multiple: batchMultiple,
+  handleSelectionChange,
+  rowSelectable,
+  clearSelection,
+  getAuditableIds
+} = useBatchAuditSelection<PlayerPlatformChangeListItem>({
+  getRowId: row => row.id,
+  canAudit: row => row.requestStatus === 0
+})
 
 function platformChangeTagType(status?: number) {
   if (status === 1) return 'success'
@@ -234,6 +275,49 @@ function submitReject() {
     rejectPlayerPlatformChange(currentId.value, rejectForm.value).then(() => {
       proxy.$modal.msgSuccess('已驳回')
       rejectOpen.value = false
+      getList()
+    })
+  })
+}
+
+function handleBatchApprove() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    proxy.$modal.msgWarning('请选择待审核记录')
+    return
+  }
+  proxy.$modal.confirm(`确认批量通过 ${ids.length} 条平台变更申请？`).then(() =>
+    batchApprovePlayerPlatformChange(buildBatchAuditPayload(ids))
+  ).then(res => {
+    proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
+    clearSelection()
+    tableRef.value?.clearSelection()
+    getList()
+  }).catch(() => {})
+}
+
+function openBatchReject() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    proxy.$modal.msgWarning('请选择待审核记录')
+    return
+  }
+  batchRejectForm.value = { rejectReason: '' }
+  batchRejectOpen.value = true
+}
+
+function submitBatchReject() {
+  proxy.$refs.batchRejectRef.validate((valid: boolean) => {
+    if (!valid) return
+    const ids = getAuditableIds()
+    if (!ids.length) return
+    batchRejectPlayerPlatformChange(buildBatchAuditPayload(ids, {
+      rejectReason: batchRejectForm.value.rejectReason
+    })).then(res => {
+      proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
+      batchRejectOpen.value = false
+      clearSelection()
+      tableRef.value?.clearSelection()
       getList()
     })
   })

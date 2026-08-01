@@ -392,8 +392,9 @@ public class EventParticipationQueryServiceImpl implements IEventParticipationQu
         resp.setPlayerId(toStringId(roster.getPlayerId()));
         resp.setPlayerNo(profile == null ? null : profile.getPlayerNo());
         resp.setNickname(firstNonBlank(roster.getPlayerNicknameSnapshot(), profile == null ? null : profile.getGameNickname()));
-        resp.setPlatform(roster.getPlatformSnapshot());
-        resp.setGameId(roster.getGameIdDisplaySnapshot());
+        // 优先使用 EventPlayer/阵容快照；无快照时展示“未绑定”，避免用当前最新游戏ID覆盖历史
+        resp.setPlatform(StringUtils.hasText(roster.getPlatformSnapshot()) ? roster.getPlatformSnapshot() : "-");
+        resp.setGameId(StringUtils.hasText(roster.getGameIdDisplaySnapshot()) ? roster.getGameIdDisplaySnapshot() : "未绑定");
         resp.setPosition(roster.getPositionSnapshot());
         resp.setRosterRole(role.getCode());
         resp.setRosterRoleText(role.getDescription());

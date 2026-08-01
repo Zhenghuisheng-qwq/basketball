@@ -17,7 +17,14 @@
       </el-form-item>
     </el-form>
 
-    <el-table :data="rows" v-loading="loading" border>
+    <el-row :gutter="10" class="mb8">
+      <el-col :span="1.5">
+        <el-button type="danger" plain icon="Close" :disabled="batchMultiple" @click="openBatchReject" v-hasPermi="['basket:matchDispute:reject']">批量驳回</el-button>
+      </el-col>
+    </el-row>
+
+    <el-table ref="tableRef" :data="rows" v-loading="loading" border @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="50" align="center" :selectable="rowSelectable" />
       <el-table-column label="争议编号" prop="disputeNo" min-width="140" />
       <el-table-column label="比赛编号" prop="matchNo" width="120" />
       <el-table-column label="类型" prop="disputeType" width="120" />
@@ -34,6 +41,8 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <pagination :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="loadList" />
 
     <el-dialog v-model="createOpen" title="发起数据争议" width="520px">
       <el-form label-width="96px">
@@ -107,6 +116,14 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="batchRejectOpen" title="批量驳回数据争议" width="480px" append-to-body>
+      <el-input v-model="batchRejectReason" type="textarea" :rows="4" placeholder="请填写驳回原因" />
+      <template #footer>
+        <el-button @click="batchRejectOpen = false">取消</el-button>
+        <el-button type="danger" @click="submitBatchReject" :loading="batchRejecting">确认驳回</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog v-model="correctionOpen" title="采纳争议并修正数据" width="960px" top="5vh" append-to-body>
       <div v-loading="correctionLoading">
         <el-form label-width="96px" class="mb8">
@@ -153,14 +170,18 @@ import {
   createMatchDispute,
   getDisputeDetail,
   rejectMatchDispute,
-  applyDisputeCorrection
+  applyDisputeCorrection,
+  batchRejectMatchDispute
 } from '@/api/basket/matchDispute'
 import { getMatchPlayerStat, getMatchTeamStat } from '@/api/basket/matchStat'
 import { getMatchScore } from '@/api/basket/matchScore'
 import { parseTime } from '@/utils/ruoyi'
+import { formatBatchAuditMessage, useBatchAuditSelection } from '@/utils/batchAudit'
 
+const tableRef = ref()
 const loading = ref(false)
 const rows = ref<any[]>([])
+const total = ref(0)
 const query = reactive<{ matchId?: number; disputeStatus?: string }>({})
 const createOpen = ref(false)
 const form = reactive({ matchId: undefined as number | undefined, disputeType: 'SCORE', disputeReason: '' })
@@ -173,6 +194,21 @@ const currentDisputeId = ref<number>()
 const rejectOpen = ref(false)
 const rejectReason = ref('')
 const rejecting = ref(false)
+
+const batchRejectOpen = ref(false)
+const batchRejectReason = ref('')
+const batchRejecting = ref(false)
+
+const {
+  multiple: batchMultiple,
+  handleSelectionChange,
+  rowSelectable,
+  clearSelection,
+  getAuditableIds
+} = useBatchAuditSelection<any>({
+  getRowId: row => row.id,
+  canAudit: row => row.disputeStatus === 'PENDING'
+})
 
 const correctionOpen = ref(false)
 const correctionLoading = ref(false)
@@ -203,7 +239,8 @@ async function loadList() {
   loading.value = true
   try {
     const res = await listMatchDispute(query)
-    rows.value = res.data || []
+    rows.value = res.rows || []
+    total.value = res.total ?? 0
   } finally {
     loading.value = false
   }
@@ -262,6 +299,40 @@ async function submitReject() {
     loadList()
   } finally {
     rejecting.value = false
+  }
+}
+
+function openBatchReject() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    ElMessage.warning('请选择待处理记录')
+    return
+  }
+  batchRejectReason.value = ''
+  batchRejectOpen.value = true
+}
+
+async function submitBatchReject() {
+  if (!batchRejectReason.value.trim()) {
+    ElMessage.warning('请填写驳回原因')
+    return
+  }
+  const ids = getAuditableIds()
+  if (!ids.length) return
+  batchRejecting.value = true
+  try {
+    const res = await batchRejectMatchDispute({
+      ids,
+      rejectReason: batchRejectReason.value.trim(),
+      auditRemark: batchRejectReason.value.trim()
+    })
+    ElMessage.success(formatBatchAuditMessage(res.data))
+    batchRejectOpen.value = false
+    clearSelection()
+    tableRef.value?.clearSelection()
+    loadList()
+  } finally {
+    batchRejecting.value = false
   }
 }
 

@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket;
 
 import com.zhs.basket.query.RegistrationAuditQuery;
+import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.RegistrationAuditApproveReq;
 import com.zhs.basket.req.RegistrationAuditRejectReq;
 import com.zhs.basket.service.IBasketRegistrationAuditService;
@@ -53,5 +54,19 @@ public class BasketRegistrationAuditController extends BaseController {
     @GetMapping("/{id}/audit-record/list")
     public AjaxResult auditRecords(@PathVariable Long id) {
         return success(registrationAuditService.selectAuditRecords(id));
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:registrationAudit:audit')")
+    @Log(title = "报名审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/batch-approve")
+    public AjaxResult batchApprove(@RequestBody BatchAuditOperationReq req) {
+        return success(registrationAuditService.batchApprove(req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:registrationAudit:audit')")
+    @Log(title = "报名审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/batch-reject")
+    public AjaxResult batchReject(@RequestBody BatchAuditOperationReq req) {
+        return success(registrationAuditService.batchReject(req));
     }
 }

@@ -27,7 +27,17 @@
       </el-form-item>
     </el-form>
 
-    <el-table :data="rows" v-loading="loading" border>
+    <el-row :gutter="10" class="mb8">
+      <el-col :span="1.5">
+        <el-button type="primary" plain icon="Check" :disabled="batchMultiple" @click="openBatchDecide" v-hasPermi="['basket:matchException:decide']">批量裁定</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button type="danger" plain icon="Close" :disabled="batchMultiple" @click="openBatchReject" v-hasPermi="['basket:matchException:reject']">批量驳回</el-button>
+      </el-col>
+    </el-row>
+
+    <el-table ref="tableRef" :data="rows" v-loading="loading" border @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="50" align="center" :selectable="rowSelectable" />
       <el-table-column label="申请编号" prop="applicationNo" min-width="140" />
       <el-table-column label="比赛编号" prop="matchNo" width="120" />
       <el-table-column label="异常类型" prop="exceptionType" width="100" />
@@ -45,6 +55,8 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <pagination :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="loadList" />
 
     <el-dialog v-model="detailOpen" title="异常比赛申请详情" width="920px" top="5vh">
       <div v-if="detail" v-loading="detailLoading">
@@ -104,7 +116,15 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="decideOpen" title="异常比赛裁定" width="560px" append-to-body>
+    <el-dialog v-model="batchRejectOpen" title="批量驳回异常申请" width="480px" append-to-body>
+      <el-input v-model="batchRejectReason" type="textarea" :rows="4" placeholder="请填写驳回原因" />
+      <template #footer>
+        <el-button @click="batchRejectOpen = false">取消</el-button>
+        <el-button type="danger" @click="submitBatchReject" :loading="batchRejecting">确认驳回</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="decideOpen" :title="isBatchDecide ? '批量异常比赛裁定' : '异常比赛裁定'" width="560px" append-to-body>
       <el-form label-width="108px">
         <el-form-item label="裁定类型">
           <el-select v-model="decideForm.decisionType" style="width: 100%">
@@ -147,18 +167,25 @@ import {
   listMatchException,
   getExceptionDetail,
   rejectMatchException,
-  decideMatchException
+  decideMatchException,
+  batchRejectMatchException,
+  batchDecideMatchException
 } from '@/api/basket/matchException'
 import { parseTime } from '@/utils/ruoyi'
+import { formatBatchAuditMessage, useBatchAuditSelection } from '@/utils/batchAudit'
 
+const tableRef = ref()
 const loading = ref(false)
 const rows = ref<any[]>([])
-const query = reactive<{
-  seasonId?: number
-  matchId?: number
-  applicationStatus?: string
-  exceptionType?: string
-}>({ applicationStatus: 'PENDING' })
+const total = ref(0)
+const query = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  seasonId: undefined as number | undefined,
+  matchId: undefined as number | undefined,
+  applicationStatus: 'PENDING' as string | undefined,
+  exceptionType: undefined as string | undefined
+})
 
 const detailOpen = ref(false)
 const detailLoading = ref(false)
@@ -169,8 +196,13 @@ const rejectOpen = ref(false)
 const rejectReason = ref('')
 const rejecting = ref(false)
 
+const batchRejectOpen = ref(false)
+const batchRejectReason = ref('')
+const batchRejecting = ref(false)
+
 const decideOpen = ref(false)
 const deciding = ref(false)
+const isBatchDecide = ref(false)
 const decideForm = reactive({
   decisionType: 'FORFEIT',
   decisionResult: '',
@@ -181,11 +213,46 @@ const decideForm = reactive({
   winnerTeamId: undefined as number | undefined
 })
 
+
+const {
+  multiple: batchMultiple,
+  handleSelectionChange,
+  rowSelectable,
+  clearSelection,
+  getAuditableIds
+} = useBatchAuditSelection<any>({
+  getRowId: row => row.id,
+  canAudit: row => row.applicationStatus === 'PENDING'
+})
+
+function buildDecidePayload(): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    decisionType: decideForm.decisionType,
+    decisionResult: decideForm.decisionResult.trim(),
+    auditRemark: decideForm.auditRemark.trim() || undefined
+  }
+  if (decideForm.decisionType === 'FORFEIT') {
+    payload.walkoverTeamId = decideForm.walkoverTeamId
+  }
+  if (decideForm.decisionType === 'ADMIN_DECISION') {
+    payload.correctionData = {
+      homeScore: decideForm.decisionScoreHome,
+      awayScore: decideForm.decisionScoreAway,
+      periodScores: [],
+      teamStats: [],
+      playerStats: []
+    }
+    payload.winnerTeamId = decideForm.winnerTeamId
+  }
+  return payload
+}
+
 async function loadList() {
   loading.value = true
   try {
     const res = await listMatchException(query)
-    rows.value = res.data || []
+    rows.value = res.rows || []
+    total.value = res.total ?? 0
   } finally {
     loading.value = false
   }
@@ -232,10 +299,28 @@ async function submitReject() {
 
 function openDecide(id: number) {
   currentApplicationId.value = id
+  isBatchDecide.value = false
   decideForm.decisionType = 'FORFEIT'
   decideForm.decisionResult = ''
   decideForm.auditRemark = ''
   decideForm.walkoverTeamId = detail.value?.application?.applicantTeamId
+  decideForm.decisionScoreHome = undefined
+  decideForm.decisionScoreAway = undefined
+  decideForm.winnerTeamId = undefined
+  decideOpen.value = true
+}
+
+function openBatchDecide() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    ElMessage.warning('请选择待处理记录')
+    return
+  }
+  isBatchDecide.value = true
+  decideForm.decisionType = 'FORFEIT'
+  decideForm.decisionResult = ''
+  decideForm.auditRemark = ''
+  decideForm.walkoverTeamId = undefined
   decideForm.decisionScoreHome = undefined
   decideForm.decisionScoreAway = undefined
   decideForm.winnerTeamId = undefined
@@ -247,34 +332,60 @@ async function submitDecide() {
     ElMessage.warning('请填写裁定说明')
     return
   }
-  if (!currentApplicationId.value) return
   deciding.value = true
   try {
-    const payload: Record<string, unknown> = {
-      decisionType: decideForm.decisionType,
-      decisionResult: decideForm.decisionResult.trim(),
-      auditRemark: decideForm.auditRemark.trim() || undefined
+    const decidePayload = buildDecidePayload()
+    if (isBatchDecide.value) {
+      const ids = getAuditableIds()
+      if (!ids.length) return
+      const res = await batchDecideMatchException({ ids, decidePayload })
+      ElMessage.success(formatBatchAuditMessage(res.data))
+      clearSelection()
+      tableRef.value?.clearSelection()
+    } else {
+      if (!currentApplicationId.value) return
+      await decideMatchException(currentApplicationId.value, decidePayload)
+      ElMessage.success('裁定完成')
     }
-    if (decideForm.decisionType === 'FORFEIT') {
-      payload.walkoverTeamId = decideForm.walkoverTeamId
-    }
-    if (decideForm.decisionType === 'ADMIN_DECISION') {
-      payload.correctionData = {
-        homeScore: decideForm.decisionScoreHome,
-        awayScore: decideForm.decisionScoreAway,
-        periodScores: [],
-        teamStats: [],
-        playerStats: []
-      }
-      payload.winnerTeamId = decideForm.winnerTeamId
-    }
-    await decideMatchException(currentApplicationId.value, payload)
-    ElMessage.success('裁定完成')
     decideOpen.value = false
     detailOpen.value = false
     loadList()
   } finally {
     deciding.value = false
+  }
+}
+
+function openBatchReject() {
+  const ids = getAuditableIds()
+  if (!ids.length) {
+    ElMessage.warning('请选择待处理记录')
+    return
+  }
+  batchRejectReason.value = ''
+  batchRejectOpen.value = true
+}
+
+async function submitBatchReject() {
+  if (!batchRejectReason.value.trim()) {
+    ElMessage.warning('请填写驳回原因')
+    return
+  }
+  const ids = getAuditableIds()
+  if (!ids.length) return
+  batchRejecting.value = true
+  try {
+    const res = await batchRejectMatchException({
+      ids,
+      rejectReason: batchRejectReason.value.trim(),
+      auditRemark: batchRejectReason.value.trim()
+    })
+    ElMessage.success(formatBatchAuditMessage(res.data))
+    batchRejectOpen.value = false
+    clearSelection()
+    tableRef.value?.clearSelection()
+    loadList()
+  } finally {
+    batchRejecting.value = false
   }
 }
 

@@ -11,6 +11,16 @@ let downloadLoadingInstance: ReturnType<typeof ElLoading.service>
 // 是否显示重新登录
 export const isRelogin = { show: false }
 
+/** 规范化 TableDataInfo 响应，确保 total 为数字供分页组件使用 */
+function normalizeTableData(data: any) {
+  if (!data || !Array.isArray(data.rows)) {
+    return data
+  }
+  const total = Number(data.total)
+  data.total = Number.isFinite(total) && total >= 0 ? total : data.rows.length
+  return data
+}
+
 axios.defaults.headers['Content-Type'] = 'application/json;charset=utf-8'
 // 创建axios实例
 const service = axios.create({
@@ -105,7 +115,7 @@ service.interceptors.response.use((res: any) => {
       ElNotification.error({ title: msg })
       return Promise.reject('error')
     } else {
-      return  Promise.resolve(res.data)
+      return Promise.resolve(normalizeTableData(res.data))
     }
   },
   (error: any) => {

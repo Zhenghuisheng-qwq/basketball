@@ -1,6 +1,7 @@
 package com.zhs.support;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zhs.dao.BasketTeamJoinApplicationDao;
 import com.zhs.dao.BasketTeamMemberDao;
 import com.zhs.enums.TeamJoinApplicationStatusEnum;
@@ -74,11 +75,11 @@ public class TeamMembershipSupport {
         if (member == null || member.getId() == null) {
             return;
         }
-        BasketTeamMember update = new BasketTeamMember();
-        update.setId(member.getId());
-        update.setActiveMemberSlot(null);
-        update.setActivePlatformSlot(null);
-        teamMemberDao.updateById(update);
+        // updateById 默认忽略 null，必须用 UpdateWrapper 才能释放唯一键槽位
+        teamMemberDao.update(null, new LambdaUpdateWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getId, member.getId())
+                .set(BasketTeamMember::getActiveMemberSlot, null)
+                .set(BasketTeamMember::getActivePlatformSlot, null));
     }
 
     public void insertMember(BasketTeamMember member) {

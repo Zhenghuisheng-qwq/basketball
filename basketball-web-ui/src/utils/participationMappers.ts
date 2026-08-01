@@ -619,7 +619,7 @@ export function mapEventRosterMember(item: EventRosterMemberDto): RosterMember {
     nickname: item.nickname || item.playerNo || item.playerId,
     avatarUrl: '',
     platform: item.platform || '-',
-    gameId: item.gameId || '-',
+    gameId: item.gameId || '未绑定',
     position: item.position || '-',
     role: isCaptain ? 'CAPTAIN' : 'MEMBER',
     roleText: item.rosterRoleText || (isCaptain ? '赛事队长' : '队员'),

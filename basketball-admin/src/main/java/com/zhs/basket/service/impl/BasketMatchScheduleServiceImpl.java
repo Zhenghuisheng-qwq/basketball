@@ -22,6 +22,7 @@ import com.zhs.basket.vo.MatchDetailVo;
 import com.zhs.basket.vo.MatchListVo;
 import com.zhs.basket.vo.VenueSimpleVo;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.PageListUtils;
 import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,9 +51,7 @@ public class BasketMatchScheduleServiceImpl implements IBasketMatchScheduleServi
 
     @Override
     public List<MatchListVo> selectList(MatchQuery query) {
-        return matchMapper.selectList(query).stream()
-                .map(validationService::enrichListVo)
-                .collect(Collectors.toList());
+        return PageListUtils.map(matchMapper.selectList(query), validationService::enrichListVo);
     }
 
     @Override
