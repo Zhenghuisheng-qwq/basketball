@@ -375,7 +375,9 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
 
         TeamAuditStatusEnum auditStatus = TeamAuditStatusEnum.fromCode(team.getAuditStatus());
         if (auditStatus == TeamAuditStatusEnum.APPROVED) {
-            team.setDescription(trimToNull(req.getDescription()));
+            if (hasAuditedFieldChange(req, team)) {
+                throw new ServiceException("已认证球队名称、简称、介绍须提交资料变更审核");
+            }
             team.setRegionCode(trimToNull(req.getRegionCode()));
             team.setRegionName(trimToNull(req.getRegionName()));
             if (req.getPublicStatus() != null) {
@@ -666,6 +668,19 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         resp.setIsCaptain(isCaptain);
         resp.setMyRole(membership == null ? null : membership.getRoleType());
         return resp;
+    }
+
+    private boolean hasAuditedFieldChange(TeamUpdateReq req, BasketTeam team) {
+        if (StringUtils.hasText(req.getTeamName())
+                && !req.getTeamName().trim().equals(team.getTeamName())) {
+            return true;
+        }
+        String newShortName = trimToNull(req.getShortName());
+        if (!Objects.equals(newShortName, trimToNull(team.getShortName()))) {
+            return true;
+        }
+        String newDescription = trimToNull(req.getDescription());
+        return !Objects.equals(newDescription, trimToNull(team.getDescription()));
     }
 
     private void validateCreateReq(TeamCreateReq req) {

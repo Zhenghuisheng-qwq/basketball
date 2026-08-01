@@ -27,6 +27,8 @@ import com.zhs.response.participation.EventTeamDetailResp;
 import com.zhs.response.participation.EventTeamSummaryResp;
 import com.zhs.response.participation.RosterChangeHistoryItemResp;
 import com.zhs.service.IEventParticipationQueryService;
+import com.zhs.service.support.BasketPublicSupport;
+import com.zhs.support.MemberAvatarSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -61,6 +63,8 @@ public class EventParticipationQueryServiceImpl implements IEventParticipationQu
     private BasketTournamentRosterChangeRecordDao rosterChangeRecordDao;
     @Resource
     private BasketTournamentRosterChangeRequestDao rosterChangeRequestDao;
+    @Resource
+    private BasketPublicSupport publicSupport;
 
     @Override
     public List<EventTeamSummaryResp> getMyEventTeams(String seasonId) {
@@ -195,7 +199,23 @@ public class EventParticipationQueryServiceImpl implements IEventParticipationQu
         for (BasketTournamentSeasonRoster roster : rosterList) {
             result.add(toRosterMemberResp(roster, playerMap.get(roster.getPlayerId())));
         }
+        enrichRosterAvatars(result, playerMap);
         return result;
+    }
+
+    private void enrichRosterAvatars(List<EventRosterMemberResp> roster, Map<Long, BasketPlayerProfile> playerMap) {
+        if (roster.isEmpty()) {
+            return;
+        }
+        Map<Long, String> avatarMap = publicSupport.loadPlayerAvatarUrlMap(playerMap.values());
+        for (EventRosterMemberResp member : roster) {
+            if (!StringUtils.hasText(member.getPlayerId())) {
+                member.setAvatarUrl(MemberAvatarSupport.DEFAULT_AVATAR_URL);
+                continue;
+            }
+            Long playerId = parseLongId(member.getPlayerId(), "球员主键");
+            member.setAvatarUrl(MemberAvatarSupport.resolve(avatarMap.get(playerId)));
+        }
     }
 
     @Override

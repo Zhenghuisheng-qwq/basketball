@@ -8,8 +8,11 @@ import RosterTable from '@/components/account/tournament/RosterTable.vue'
 import { useEventTeamPage } from '@/composables/useEventTeamPage'
 
 const router = useRouter()
-const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage({ requireCaptain: false })
+const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage()
 
+const PERMISSION_HINT = '正式阵容成员可查看本页面，球队管理操作仅队长可用。'
+const pageTitle = computed(() => (eventTeamStore.isCaptain ? '阵容管理' : '当前阵容'))
+const pageEnTitle = computed(() => (eventTeamStore.isCaptain ? 'ROSTER MANAGEMENT' : 'CURRENT ROSTER'))
 const rosterCountText = computed(() => {
   const count = eventTeamStore.rosterCount
   const max = eventTeamStore.eventTeam.rosterMax
@@ -23,16 +26,16 @@ const rosterCountText = computed(() => {
 <template>
   <div class="account-view roster-management-view">
     <AccountPageHeader
-      zh-title="阵容管理"
-      en-title="ROSTER MANAGEMENT"
-      :breadcrumb-items="[...breadcrumbRoot, { label: '球队管理', to: teamPath() }, { label: '阵容管理' }]"
+      :zh-title="pageTitle"
+      :en-title="pageEnTitle"
+      :breadcrumb-items="[...breadcrumbRoot, { label: '球队详情', to: teamPath() }, { label: pageTitle }]"
     />
 
     <EventTeamHeroStrip
       :tournament-name="eventTeamStore.tournament.tournamentName"
       :team-code="eventTeamStore.eventTeam.teamCode"
-      description="查看本届赛事当前有效阵容"
-      :status-text="eventTeamStore.tournament.transferWindowOpen ? '转会窗口开放' : '转会窗口关闭'"
+      :description="PERMISSION_HINT"
+      :status-text="`${eventTeamStore.isCaptain ? '赛事队长' : '正式阵容成员'} · ${eventTeamStore.tournament.transferWindowOpen ? '转会窗口开放' : '转会窗口关闭'}`"
       status-type="warning"
     />
 
@@ -71,13 +74,8 @@ const rosterCountText = computed(() => {
         <button type="button" class="account-btn-secondary" @click="router.push(teamPath('/roster-history'))">
           查看变更历史
         </button>
-        <button
-          v-if="eventTeamStore.isCaptain"
-          type="button"
-          class="account-btn-secondary"
-          @click="router.push(teamPath())"
-        >
-          返回球队管理
+        <button type="button" class="account-btn-secondary" @click="router.push(teamPath())">
+          返回球队详情
         </button>
       </div>
     </AccountPanel>

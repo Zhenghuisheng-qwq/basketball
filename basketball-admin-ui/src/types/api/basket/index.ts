@@ -722,6 +722,56 @@ export interface PlayerPlatformChangeRejectReq {
   auditRemark?: string
 }
 
+export interface TeamProfileChangeQuery extends PageDomain {
+  changeNo?: string
+  teamName?: string
+  submitUser?: string
+  auditStatus?: number
+  auditStage?: string
+  beginTime?: string
+  endTime?: string
+}
+
+export interface TeamProfileChangeListItem {
+  id: number
+  changeNo?: string
+  teamId?: number
+  teamName?: string
+  submitUserId?: number
+  submitUserName?: string
+  submitUserEmail?: string
+  changeSummary?: string
+  auditStatus?: number
+  auditStatusName?: string
+  submitTime?: string
+  auditTime?: string
+}
+
+export interface TeamProfileChangeDetail extends TeamProfileChangeListItem {
+  oldTeamName?: string
+  newTeamName?: string
+  oldTeamShortName?: string
+  newTeamShortName?: string
+  oldLogoUrl?: string
+  newLogoUrl?: string
+  oldDescription?: string
+  newDescription?: string
+  oldPublicStatus?: number
+  newPublicStatus?: number
+  changeReason?: string
+  submitPlayerNo?: string
+  auditUserId?: number
+  auditRemark?: string
+}
+
+export interface TeamProfileChangeApproveReq {
+  auditRemark?: string
+}
+
+export interface TeamProfileChangeRejectReq {
+  auditRemark: string
+}
+
 export interface TournamentQuery extends PageDomain, BaseEntity {
   tournamentNo?: string
   tournamentName?: string

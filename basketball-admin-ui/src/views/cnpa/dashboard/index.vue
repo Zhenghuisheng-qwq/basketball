@@ -20,6 +20,8 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <OperationTrendPanel :pending-total="pendingTotal" />
   </div>
 </template>
 
@@ -27,6 +29,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getDashboardSummary } from '@/api/basket/dashboard'
+import OperationTrendPanel from './OperationTrendPanel.vue'
 
 const router = useRouter()
 const summary = ref<any>({
@@ -48,6 +51,8 @@ const cards = computed(() => [
   { key: 'matchAudit', title: '比赛数据待审', count: summary.value.pendingMatchDataAudit, path: '/competition/match-data-audit' },
   { key: 'matchDispute', title: '数据争议待处理', count: summary.value.pendingMatchDispute, path: '/competition/match-dispute' }
 ])
+
+const pendingTotal = computed(() => cards.value.reduce((total, item) => total + (Number(item.count) || 0), 0))
 
 async function loadSummary() {
   const res = await getDashboardSummary()

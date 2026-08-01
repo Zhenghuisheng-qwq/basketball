@@ -23,13 +23,13 @@ onMounted(async () => {
     <AccountPageHeader
       zh-title="阵容变更历史"
       en-title="ROSTER CHANGE HISTORY"
-      :breadcrumb-items="[...breadcrumbRoot, { label: '球队管理', to: teamPath() }, { label: '变更历史' }]"
+      :breadcrumb-items="[...breadcrumbRoot, { label: '球队详情', to: teamPath() }, { label: '变更历史' }]"
     />
 
     <EventTeamHeroStrip
       :tournament-name="eventTeamStore.tournament.tournamentName"
       :team-code="eventTeamStore.eventTeam.teamCode"
-      description="查看本届赛事阵容变更记录"
+      description="正式阵容成员可查看本页面，球队管理操作仅队长可用。"
       status-text="历史记录"
       status-type="info"
     />
@@ -63,7 +63,7 @@ onMounted(async () => {
       </div>
       <div class="account-panel__action">
         <button type="button" class="account-btn-secondary" @click="router.push(teamPath('/roster'))">
-          返回阵容管理
+          返回当前阵容
         </button>
       </div>
     </AccountPanel>

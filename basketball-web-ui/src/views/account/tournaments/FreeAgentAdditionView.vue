@@ -8,7 +8,7 @@ import EventTeamHeroStrip from '@/components/account/tournament/EventTeamHeroStr
 import { useEventTeamPage } from '@/composables/useEventTeamPage'
 
 const router = useRouter()
-const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage()
+const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage({ requireCaptain: true })
 
 const playerId = ref('')
 const targetRosterRole = ref('MEMBER')

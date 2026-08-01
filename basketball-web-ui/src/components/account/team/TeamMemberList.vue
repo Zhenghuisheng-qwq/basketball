@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
+import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import type { TeamMemberItemDto } from '@/api/types/teamMember'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
 import {
@@ -13,7 +14,6 @@ import {
   formatTeamMemberPositionShort,
   formatTeamMemberRole,
   isTeamCaptainMember,
-  resolveTeamMemberAvatarFallback,
   resolveTeamMemberDisplayName,
   resolveMemberPlatformGameId,
   TEAM_MEMBER_PLATFORM_COLUMNS,
@@ -135,13 +135,13 @@ function handleSave(member: TeamMemberItemDto) {
         >
           <div class="team-member-list__cell team-member-list__cell--player" role="cell">
             <div class="team-member-list__player">
-              <div
-                class="team-member-list__avatar"
-                :class="{ 'team-member-list__avatar--image': Boolean(member.avatarUrl) }"
-              >
-                <img v-if="member.avatarUrl" :src="member.avatarUrl" :alt="resolveTeamMemberDisplayName(member)" />
-                <span v-else>{{ resolveTeamMemberAvatarFallback(member) }}</span>
-              </div>
+              <PlayerAvatar
+                :name="resolveTeamMemberDisplayName(member)"
+                :avatar-url="member.avatarUrl"
+                :player-no="member.playerNo"
+                :player-id="member.playerId"
+                size="sm"
+              />
               <div class="team-member-list__player-meta">
                 <div class="team-member-list__player-name">
                   <strong>{{ resolveTeamMemberDisplayName(member) }}</strong>
@@ -234,13 +234,13 @@ function handleSave(member: TeamMemberItemDto) {
           :class="{ 'team-member-list__card--captain': isTeamCaptainMember(member) }"
         >
           <div class="team-member-list__card-head">
-            <div
-              class="team-member-list__avatar team-member-list__avatar--compact"
-              :class="{ 'team-member-list__avatar--image': Boolean(member.avatarUrl) }"
-            >
-              <img v-if="member.avatarUrl" :src="member.avatarUrl" :alt="resolveTeamMemberDisplayName(member)" />
-              <span v-else>{{ resolveTeamMemberAvatarFallback(member) }}</span>
-            </div>
+            <PlayerAvatar
+              :name="resolveTeamMemberDisplayName(member)"
+              :avatar-url="member.avatarUrl"
+              :player-no="member.playerNo"
+              :player-id="member.playerId"
+              size="sm"
+            />
             <div>
               <div class="team-member-list__player-name">
                 <strong>{{ resolveTeamMemberDisplayName(member) }}</strong>

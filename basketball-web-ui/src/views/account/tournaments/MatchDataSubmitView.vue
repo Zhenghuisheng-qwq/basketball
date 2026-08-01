@@ -16,7 +16,7 @@ import { validateMatchDataSubmitForm } from '@/utils/matchDataValidation'
 
 const route = useRoute()
 const router = useRouter()
-const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage()
+const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage({ requireCaptain: true })
 
 const matchId = computed(() => Number(route.params.matchId))
 const isResubmit = computed(() => route.name === 'AccountMatchDataResubmit')

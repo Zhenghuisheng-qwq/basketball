@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import EventTeamHeroStrip from '@/components/account/tournament/EventTeamHeroStrip.vue'
@@ -11,11 +10,21 @@ import { useEventTeamPage } from '@/composables/useEventTeamPage'
 const router = useRouter()
 const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage()
 
+const PERMISSION_HINT = '正式阵容成员可查看本页面，球队管理操作仅队长可用。'
+
 const tournament = computed(() => eventTeamStore.tournament)
 const eventTeam = computed(() => eventTeamStore.eventTeam)
 const pendingTasks = computed(() => eventTeamStore.pendingTasks)
+const isCaptain = computed(() => eventTeamStore.isCaptain)
 
-const operations = computed(() => [
+const viewOperations = computed(() => [
+  {
+    key: 'roster',
+    title: '当前阵容',
+    desc: `当前阵容 ${eventTeamStore.rosterCount} / ${eventTeam.value.rosterMax}`,
+    action: '查看阵容',
+    path: teamPath('/roster'),
+  },
   {
     key: 'history',
     title: '变更历史',
@@ -24,18 +33,23 @@ const operations = computed(() => [
     path: teamPath('/roster-history'),
   },
   {
-    key: 'roster',
+    key: 'match',
+    title: '比赛列表',
+    desc: isCaptain.value
+      ? `${pendingTasks.value.matchDataTodoCount} 场待提交`
+      : '查看本队全部比赛',
+    action: '查看比赛',
+    path: teamPath('/match-data'),
+  },
+])
+
+const manageOperations = computed(() => [
+  {
+    key: 'roster-manage',
     title: '阵容管理',
     desc: `当前阵容 ${eventTeamStore.rosterCount} / ${eventTeam.value.rosterMax}`,
     action: '进入阵容管理',
     path: teamPath('/roster'),
-  },
-  {
-    key: 'match',
-    title: '比赛数据',
-    desc: `${pendingTasks.value.matchDataTodoCount} 场待提交`,
-    action: '查看比赛任务',
-    path: teamPath('/match-data'),
   },
   {
     key: 'transfer',
@@ -55,11 +69,9 @@ const operations = computed(() => [
   },
 ])
 
-function go(path: string, mockOnly?: boolean) {
-  if (mockOnly) {
-    ElMessage.info('比赛数据任务将在后续版本开放')
-    return
-  }
+const operations = computed(() => (isCaptain.value ? manageOperations.value : viewOperations.value))
+
+function go(path: string) {
   router.push(path)
 }
 </script>
@@ -67,16 +79,16 @@ function go(path: string, mockOnly?: boolean) {
 <template>
   <div class="account-view">
     <AccountPageHeader
-      zh-title="本届球队管理"
-      en-title="EVENT TEAM MANAGEMENT"
-      :breadcrumb-items="[...breadcrumbRoot, { label: '球队管理' }]"
+      zh-title="正式赛事球队详情"
+      en-title="EVENT TEAM DETAIL"
+      :breadcrumb-items="[...breadcrumbRoot, { label: '球队详情' }]"
     />
 
     <EventTeamHeroStrip
       :tournament-name="tournament.tournamentName"
       :team-code="eventTeam.teamCode"
-      description="队长权限仅对本届赛事有效"
-      :status-text="`${tournament.phaseName}进行中`"
+      :description="PERMISSION_HINT"
+      :status-text="`${tournament.phaseName}进行中 · ${isCaptain ? '赛事队长' : '正式阵容成员'}`"
       status-type="success"
     />
 
@@ -85,7 +97,7 @@ function go(path: string, mockOnly?: boolean) {
         <EventTeamSummaryCard :event-team="eventTeam" :roster-count="eventTeamStore.rosterCount" />
       </AccountPanel>
 
-      <AccountPanel title="待处理事项">
+      <AccountPanel v-if="isCaptain" title="待处理事项">
         <ul class="event-team-todo-list">
           <li>{{ pendingTasks.transferConfirmCount }} 项转会确认</li>
           <li>{{ pendingTasks.matchDataTodoCount }} 场比赛数据待提交</li>
@@ -97,9 +109,18 @@ function go(path: string, mockOnly?: boolean) {
           </button>
         </div>
       </AccountPanel>
+
+      <AccountPanel v-else title="我的权限">
+        <p class="event-team-muted">{{ PERMISSION_HINT }}</p>
+        <ul class="event-team-todo-list">
+          <li>可查看本届赛事球队详情与当前阵容</li>
+          <li>可查看队友基础信息与比赛记录</li>
+          <li>管理操作需由赛事队长执行</li>
+        </ul>
+      </AccountPanel>
     </div>
 
-    <AccountPanel title="本届球队操作">
+    <AccountPanel :title="isCaptain ? '球队管理' : '球队信息'">
       <div class="event-team-ops-grid">
         <div v-for="item in operations" :key="item.key" class="event-team-op-card">
           <strong>{{ item.title }}</strong>
@@ -109,7 +130,7 @@ function go(path: string, mockOnly?: boolean) {
           </button>
         </div>
       </div>
-      <div class="account-panel__action">
+      <div v-if="isCaptain" class="account-panel__action">
         <button type="button" class="account-btn-secondary" @click="go(teamPath('/profile/edit'))">
           修改本届球队资料
         </button>

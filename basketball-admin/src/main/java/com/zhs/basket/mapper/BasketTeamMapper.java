@@ -14,4 +14,13 @@ public interface BasketTeamMapper {
     Integer selectMaxTeamNoSequence();
     int countByTeamNo(@Param("teamNo") String teamNo);
     int updateTeamNo(@Param("id") Long id, @Param("teamNo") String teamNo);
+
+    int updateProfileFromChange(@Param("id") Long id,
+                                @Param("teamName") String teamName,
+                                @Param("shortName") String shortName,
+                                @Param("logoFileId") Long logoFileId,
+                                @Param("description") String description,
+                                @Param("publicStatus") Integer publicStatus);
+
+    int countByTeamNameExclude(@Param("teamName") String teamName, @Param("excludeTeamId") Long excludeTeamId);
 }

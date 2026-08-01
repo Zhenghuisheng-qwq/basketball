@@ -7,7 +7,7 @@ import TransferCard from '@/components/account/tournament/TransferCard.vue'
 import { useEventTeamPage } from '@/composables/useEventTeamPage'
 
 const router = useRouter()
-const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage()
+const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage({ requireCaptain: true })
 
 function viewTransfer(transferId: string) {
   router.push(teamPath(`/transfers/${transferId}`))

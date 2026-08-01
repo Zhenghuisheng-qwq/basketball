@@ -10,7 +10,7 @@ import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import { useEventTeamPage } from '@/composables/useEventTeamPage'
 
 const router = useRouter()
-const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage()
+const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage({ requireCaptain: true })
 
 const draftName = ref(eventTeamStore.eventTeam.teamName)
 const draftLogoUrl = ref(eventTeamStore.eventTeam.teamLogoUrl)

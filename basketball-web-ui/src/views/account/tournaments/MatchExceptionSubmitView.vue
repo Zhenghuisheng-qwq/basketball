@@ -10,7 +10,7 @@ import { useEventTeamPage } from '@/composables/useEventTeamPage'
 
 const route = useRoute()
 const router = useRouter()
-const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage()
+const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage({ requireCaptain: true })
 
 const matchId = computed(() => route.params.matchId as string)
 const loading = ref(false)

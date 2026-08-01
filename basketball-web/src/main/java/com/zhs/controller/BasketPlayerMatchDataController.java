@@ -3,6 +3,8 @@ package com.zhs.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.request.matchdata.PlayerMatchDataResubmitReq;
 import com.zhs.request.matchdata.PlayerMatchDataSubmitReq;
+import com.zhs.request.matchdata.PlayerMatchTeamPlayerStatsResubmitReq;
+import com.zhs.request.matchdata.PlayerMatchTeamPlayerStatsSubmitReq;
 import com.zhs.response.matchdata.PlayerMatchDataStatusResp;
 import com.zhs.response.matchdata.PlayerMatchDataSubmissionDetailResp;
 import com.zhs.response.matchdata.PlayerMatchDataSubmitResultResp;
@@ -69,5 +71,19 @@ public class BasketPlayerMatchDataController {
     public R<PlayerMatchDataSubmitResultResp> resubmit(@PathVariable Long matchId,
                                                        @RequestBody PlayerMatchDataResubmitReq req) {
         return R.ok(playerMatchDataService.resubmit(matchId, req), "比赛数据已重新提交，正在等待审核");
+    }
+
+    @ApiOperation("提交本队球员比赛数据")
+    @PostMapping("/basket/player/match-data/{matchId}/team-player-stats/submit")
+    public R<PlayerMatchDataSubmitResultResp> submitTeamPlayerStats(@PathVariable Long matchId,
+                                                                    @RequestBody PlayerMatchTeamPlayerStatsSubmitReq req) {
+        return R.ok(playerMatchDataService.submitTeamPlayerStats(matchId, req), "比赛数据已提交，等待管理员审核");
+    }
+
+    @ApiOperation("重新提交本队球员比赛数据")
+    @PostMapping("/basket/player/match-data/{matchId}/team-player-stats/resubmit")
+    public R<PlayerMatchDataSubmitResultResp> resubmitTeamPlayerStats(@PathVariable Long matchId,
+                                                                      @RequestBody PlayerMatchTeamPlayerStatsResubmitReq req) {
+        return R.ok(playerMatchDataService.resubmitTeamPlayerStats(matchId, req), "比赛数据已重新提交，等待管理员审核");
     }
 }

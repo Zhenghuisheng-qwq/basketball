@@ -16,6 +16,7 @@ public class EventRosterMemberResp implements Serializable {
     private String playerId;
     private String playerNo;
     private String nickname;
+    private String avatarUrl;
     private String platform;
     private String gameId;
     private String position;

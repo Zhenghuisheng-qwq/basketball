@@ -54,6 +54,7 @@ export interface EventRosterMemberDto {
   playerId: string
   playerNo?: string
   nickname?: string
+  avatarUrl?: string
   platform?: string
   gameId?: string
   position?: string

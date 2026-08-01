@@ -9,7 +9,7 @@ import EligibilityChecklist from '@/components/account/tournament/EligibilityChe
 import { useEventTeamPage } from '@/composables/useEventTeamPage'
 
 const router = useRouter()
-const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage()
+const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage({ requireCaptain: true })
 
 const sourceEventTeamId = ref('')
 const applyReason = ref('')

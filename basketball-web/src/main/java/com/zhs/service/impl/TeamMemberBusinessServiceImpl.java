@@ -35,6 +35,7 @@ import com.zhs.support.PlatformTeamMembershipSupport;
 import com.zhs.support.TeamMembershipSupport;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamMemberBusinessService;
+import com.zhs.service.support.BasketPublicSupport;
 import com.zhs.service.team.TeamMemberJoinHelper;
 import com.zhs.support.PlayerPositionSupport;
 import com.zhs.util.AccountSecurityLogHelper;
@@ -95,6 +96,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     private PlatformTeamMembershipSupport platformTeamMembershipSupport;
     @Resource
     private TeamMembershipSupport teamMembershipSupport;
+    @Resource
+    private BasketPublicSupport publicSupport;
 
     @Override
     public IPage<TeamMemberItemResp> pageMembers(String teamId, Integer currentPage, Integer pageSize) {
@@ -125,10 +128,6 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         BasketTeamMember viewerMembership = captainPermissionService.requireTeamMember(viewerId, teamPk);
         BasketTeamMember target = requireTeamMemberRecord(teamMemberPk, teamPk);
         boolean viewerIsCaptain = TeamMemberRoleEnum.CAPTAIN.getCode().equals(viewerMembership.getRoleType());
-        boolean viewingSelf = Objects.equals(viewerId, target.getMemberId());
-        if (!viewerIsCaptain && !viewingSelf) {
-            throw new ServiceException("无权查看该队员资料", 403);
-        }
 
         BasketTeam team = teamDao.selectById(teamPk);
         if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
@@ -143,7 +142,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
                 accounts = loadAllPlatformAccounts(Collections.singletonList(profile)).get(target.getPlayerId());
             }
         }
-        TeamMemberItemResp item = toMemberItem(target, maps, accounts);
+        TeamMemberItemResp item = toMemberItem(target, maps, accounts, loadPlayerAvatarMap(maps));
 
         TeamMemberDetailResp detail = new TeamMemberDetailResp();
         detail.setTeamMemberId(item.getTeamMemberId());
@@ -583,21 +582,35 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
             return Collections.emptyList();
         }
         ProfileMaps maps = loadProfileMaps(members);
+        Map<Long, String> playerAvatarMap = loadPlayerAvatarMap(maps);
         List<BasketPlayerProfile> profiles = new ArrayList<>(maps.playerMap().values());
         Map<Long, List<BasketPlayerPlatformAccount>> platformAccountsMap = loadAllPlatformAccounts(profiles);
         List<TeamMemberItemResp> items = new ArrayList<>(members.size());
         for (BasketTeamMember member : members) {
-            items.add(toMemberItem(member, maps, platformAccountsMap.get(member.getPlayerId())));
+            items.add(toMemberItem(member, maps, platformAccountsMap.get(member.getPlayerId()), playerAvatarMap));
         }
         return items;
     }
 
+    private Map<Long, String> loadPlayerAvatarMap(ProfileMaps maps) {
+        if (maps == null || maps.playerMap().isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return publicSupport.loadPlayerAvatarUrlMap(maps.playerMap().values());
+    }
+
     private TeamMemberItemResp toMemberItem(BasketTeamMember member, ProfileMaps maps) {
-        return toMemberItem(member, maps, null);
+        return toMemberItem(member, maps, null, loadPlayerAvatarMap(maps));
     }
 
     private TeamMemberItemResp toMemberItem(BasketTeamMember member, ProfileMaps maps,
                                             List<BasketPlayerPlatformAccount> platformAccounts) {
+        return toMemberItem(member, maps, platformAccounts, loadPlayerAvatarMap(maps));
+    }
+
+    private TeamMemberItemResp toMemberItem(BasketTeamMember member, ProfileMaps maps,
+                                            List<BasketPlayerPlatformAccount> platformAccounts,
+                                            Map<Long, String> playerAvatarMap) {
         TeamMemberItemResp resp = new TeamMemberItemResp();
         resp.setTeamMemberId(toStringId(member.getId()));
         resp.setMemberId(toStringId(member.getMemberId()));
@@ -624,11 +637,14 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
             resp.setGameAccount(player.getGameAccount());
             resp.setPlayerStatus(player.getPlayerStatus());
             resp.setCurrentTeamId(toStringId(player.getCurrentTeamId()));
+            resp.setAvatarUrl(playerAvatarMap.get(player.getId()));
         }
         BasketMemberProfile memberProfile = maps.memberProfileMap().get(member.getMemberId());
         if (memberProfile != null) {
             resp.setNickname(memberProfile.getNickname());
-            resp.setAvatarUrl(resolveAvatarUrl(memberProfile.getAvatarFileId()));
+            if (!StringUtils.hasText(resp.getAvatarUrl())) {
+                resp.setAvatarUrl(resolveAvatarUrl(memberProfile.getAvatarFileId()));
+            }
         }
         List<BasketPlayerPlatformAccount> accounts = platformAccounts;
         if (accounts == null && member.getPlayerId() != null) {
@@ -646,11 +662,9 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         if (avatarFileId == null) {
             return com.zhs.support.MemberAvatarSupport.resolve(null);
         }
-        BasketFileAsset asset = fileAssetDao.selectById(avatarFileId);
-        if (asset == null || !NOT_DELETED.equals(asset.getIsDelete())) {
-            return com.zhs.support.MemberAvatarSupport.resolve(null);
-        }
-        return com.zhs.support.MemberAvatarSupport.resolve(asset.getAccessUrl());
+        Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(Collections.singleton(avatarFileId));
+        String url = urlMap.get(avatarFileId);
+        return com.zhs.support.MemberAvatarSupport.resolve(url);
     }
 
     private CandidatePlayerItemResp toCandidateItem(BasketPlayerProfile profile,

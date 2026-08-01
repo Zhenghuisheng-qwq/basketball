@@ -9,7 +9,7 @@ export function useEventTeamPage(options?: { requireCaptain?: boolean }) {
   const router = useRouter()
   const eventTeamStore = useEventTeamStore()
   const accountStore = useAccountStore()
-  const requireCaptain = options?.requireCaptain ?? true
+  const requireCaptain = options?.requireCaptain ?? false
 
   const tournamentId = computed(() => String(route.params.tournamentId || ''))
 
@@ -42,8 +42,8 @@ export function useEventTeamPage(options?: { requireCaptain?: boolean }) {
       return false
     }
     if (requireCaptain && !eventTeamStore.isCaptain) {
-      ElMessage.warning('仅本届赛事队长可访问球队管理')
-      router.replace(`/account/my-tournaments/${tournamentId.value}/team/roster`)
+      ElMessage.warning('该操作仅赛事队长可用')
+      router.replace(teamPath())
       return false
     }
     return true

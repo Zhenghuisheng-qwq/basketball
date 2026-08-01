@@ -10,7 +10,7 @@ import { useEventTeamPage } from '@/composables/useEventTeamPage'
 
 const route = useRoute()
 const router = useRouter()
-const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage()
+const { breadcrumbRoot, teamPath, eventTeamStore } = useEventTeamPage({ requireCaptain: true })
 
 const transferId = computed(() => String(route.params.transferId || 'tf-001'))
 const transfer = computed(() => eventTeamStore.getTransfer(transferId.value))

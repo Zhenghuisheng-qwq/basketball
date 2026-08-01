@@ -229,8 +229,6 @@ function handleAvatarError() {
         </RouterLink>
       </nav>
 
-      <div class="account-sidebar__spacer" aria-hidden="true" />
-
       <div class="account-sidebar__logout-wrap">
         <button
           type="button"

@@ -11,6 +11,7 @@ import TeamMemberList from '@/components/account/team/TeamMemberList.vue'
 import JoinableTeamPanel from '@/components/account/team/JoinableTeamPanel.vue'
 import CaptainGrantPanel from '@/components/account/team/CaptainGrantPanel.vue'
 import AccountTeamLogo from '@/components/account/team/AccountTeamLogo.vue'
+import TeamProfilePanel from '@/components/account/team/TeamProfilePanel.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import TeamListPagination from '@/components/account/team/TeamListPagination.vue'
 import { useTeamStore } from '@/stores/team'
@@ -559,22 +560,15 @@ watch(activeTab, (tab) => {
   refreshTabData(tab).catch(() => undefined)
 })
 
-async function handleLogoUpload(event: Event, mode: 'create' | 'profile') {
+async function handleLogoUpload(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
   try {
     const res = await uploadAccountFile(file, 'TEAM_LOGO')
-    if (mode === 'create') {
-      createForm.logoFileId = res.data.fileId
-      createForm.logoPreviewUrl = res.data.accessUrl
-    } else if (teamId.value) {
-      profileLogoPreviewUrl.value = res.data.accessUrl
-      const updated = await teamStore.bindLogoAction(teamId.value, res.data.fileId)
-      profileLogoPreviewUrl.value = updated.logoUrl || res.data.accessUrl
-      ElMessage.success('Logo 已更新')
-    }
+    createForm.logoFileId = res.data.fileId
+    createForm.logoPreviewUrl = res.data.accessUrl
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : 'Logo 上传失败')
   }
@@ -602,21 +596,6 @@ async function submitCreateTeam() {
     setTab('overview')
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '创建失败')
-  }
-}
-
-async function submitProfileUpdate() {
-  if (!teamId.value) return
-  try {
-    await teamStore.updateTeamAction(teamId.value, {
-      teamName: profileForm.teamName.trim(),
-      shortName: profileForm.shortName.trim() || undefined,
-      description: profileForm.description.trim() || undefined,
-      publicStatus: profileForm.publicStatus,
-    })
-    ElMessage.success('球队资料已保存')
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '保存失败')
   }
 }
 
@@ -1186,7 +1165,7 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             />
             <label class="account-btn-secondary team-logo-upload">
               上传 Logo
-              <input type="file" accept="image/*" hidden @change="handleLogoUpload($event, 'create')" />
+              <input type="file" accept="image/*" hidden @change="handleLogoUpload" />
             </label>
           </div>
           <div class="team-form-grid">
@@ -1268,44 +1247,14 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
       </template>
 
       <template v-else-if="activeTab === 'profile'">
-        <AccountPanel title="编辑球队资料">
-          <div class="team-profile-logo">
-            <AccountTeamLogo
-              :logo-url="profileLogoPreviewUrl || teamDetail?.logoUrl"
-              :short-name="profileForm.shortName || teamDetail?.shortName"
-              :team-name="profileForm.teamName || teamDetail?.teamName"
-              size="lg"
-            />
-            <div class="team-profile-logo__actions">
-              <label class="account-btn-secondary team-logo-upload">
-                更换 Logo
-                <input type="file" accept="image/*" hidden @change="handleLogoUpload($event, 'profile')" />
-              </label>
-              <p class="team-tip">支持 JPG / PNG，上传后立即保存并更新预览。</p>
-            </div>
-          </div>
-          <div class="team-form-grid">
-            <label>球队名称<input v-model="profileForm.teamName" type="text" maxlength="32" /></label>
-            <label>球队简称<input v-model="profileForm.shortName" type="text" maxlength="16" /></label>
-            <label>
-              公开状态
-              <select v-model.number="profileForm.publicStatus">
-                <option :value="1">公开</option>
-                <option :value="0">非公开</option>
-              </select>
-            </label>
-            <label class="team-form-full">球队介绍<textarea v-model="profileForm.description" rows="3" maxlength="500" /></label>
-          </div>
-          <button
-            type="button"
-            class="account-btn-primary"
-            :disabled="teamStore.actionLoading || !canManageCurrentTeam"
-            @click="submitProfileUpdate"
-          >
-            保存资料
-          </button>
-          <p class="team-tip">队长转让功能后续开放。</p>
-        </AccountPanel>
+        <TeamProfilePanel
+          v-if="teamId"
+          :team-id="teamId"
+          :team-detail="teamDetail"
+          :can-manage="canManageCurrentTeam"
+          :is-approved="isTeamAuditApproved"
+          @refreshed="teamStore.loadTeamDetail(teamId).catch(() => undefined)"
+        />
       </template>
 
       <template v-else-if="activeTab === 'members'">

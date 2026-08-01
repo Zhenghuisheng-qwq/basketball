@@ -30,12 +30,12 @@
   overflow-x: clip;
 }
 
-.account-layout,
-.account-page__shell,
-.account-shell {
-  display: grid;
-  grid-template-columns: var(--account-sidebar-width, clamp(240px, 16vw, 300px)) minmax(0, 1fr);
-  align-items: stretch;
+.member-account-layout .account-layout,
+.member-account-layout .account-page__shell,
+.member-account-layout .account-shell {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
   width: 100%;
   max-width: none;
   min-height: calc(100vh - var(--site-header-height, 72px));
@@ -53,15 +53,17 @@
    strip is clipped by overflow, leaving black/red + natural white tear at the edge. */
 .account-sidebar {
   --account-sidebar-bg-scale-x: 115%;
-  position: relative;
-  z-index: 10;
-  align-self: stretch;
+  position: sticky;
+  top: var(--site-header-height, 72px);
+  z-index: 100;
+  flex: 0 0 var(--account-sidebar-width, clamp(240px, 16vw, 300px));
+  width: var(--account-sidebar-width, clamp(240px, 16vw, 300px));
+  min-width: var(--account-sidebar-width, clamp(240px, 16vw, 300px));
+  max-width: var(--account-sidebar-width, clamp(240px, 16vw, 300px));
   display: flex;
   flex-direction: column;
-  width: 100%;
-  min-width: 0;
-  min-height: calc(100vh - var(--site-header-height, 72px));
-  height: auto;
+  height: calc(100vh - var(--site-header-height, 72px));
+  max-height: calc(100vh - var(--site-header-height, 72px));
   overflow: hidden;
   isolation: isolate;
   color: #fff;
@@ -86,8 +88,9 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: inherit;
+  min-height: 0;
   height: 100%;
+  overflow: hidden;
   padding: clamp(28px, 3vw, 40px) clamp(22px, 2.2vw, 32px) clamp(24px, 2.4vw, 32px);
   padding-right: clamp(32px, 3.2vw, 44px); /* keep text clear of tear edge */
   box-sizing: border-box;
@@ -98,7 +101,8 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  margin-bottom: clamp(28px, 4vh, 40px);
+  flex-shrink: 0;
+  margin-bottom: clamp(20px, 3vh, 32px);
   padding: 0 4px;
   text-align: center;
 }
@@ -189,9 +193,26 @@
 .account-sidebar__nav {
   display: flex;
   flex-direction: column;
+  flex: 1;
   gap: 12px;
+  min-height: 0;
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+.account-sidebar__nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.account-sidebar__nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .account-sidebar__link,
@@ -255,12 +276,12 @@
 }
 
 .account-sidebar__spacer {
-  flex: 1;
-  min-height: 24px;
+  display: none;
 }
 
 .account-sidebar__logout-wrap {
-  margin-top: 24px;
+  flex-shrink: 0;
+  margin-top: 16px;
   padding-top: 0;
   padding-bottom: 4px;
 }
@@ -313,7 +334,10 @@
 .account-main {
   position: relative;
   z-index: 1;
+  flex: 1;
   min-width: 0;
+  width: auto;
+  margin: 0;
   min-height: calc(100vh - var(--site-header-height, 72px) - 56px);
   padding:
     var(--account-main-padding-y, var(--account-page-padding-y))
@@ -342,7 +366,7 @@
   width: min(100%, var(--account-content-max, 1440px));
   max-width: var(--account-content-max, 1440px);
   min-width: 0;
-  margin: 0 auto;
+  margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
@@ -1553,19 +1577,22 @@
 }
 
 @media (max-width: 900px) {
-  .account-layout,
-  .account-page__shell,
-  .account-shell {
+  .member-account-layout .account-layout,
+  .member-account-layout .account-page__shell,
+  .member-account-layout .account-shell {
     display: block;
-    grid-template-columns: 1fr;
   }
 
   .account-sidebar {
     position: relative;
-    top: 0;
+    top: auto;
+    z-index: 10;
+    flex: none;
     width: 100%;
-    flex-basis: auto;
+    min-width: 0;
+    max-width: none;
     height: auto;
+    max-height: none;
     min-height: auto;
     overflow: visible;
     background-image: none;
@@ -1601,6 +1628,7 @@
     z-index: 1500;
     width: min(320px, 88vw);
     height: calc(100vh - var(--site-header-height, 72px));
+    max-height: calc(100vh - var(--site-header-height, 72px));
     padding: 24px 20px;
     box-shadow: 8px 0 24px rgba(0, 0, 0, 0.35);
     overflow: hidden;
@@ -1612,10 +1640,9 @@
   }
 
   .account-sidebar__nav {
-    margin-top: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .account-sidebar--drawer-open .account-sidebar__content,

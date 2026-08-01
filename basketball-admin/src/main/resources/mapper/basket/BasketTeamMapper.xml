@@ -70,4 +70,20 @@
         update basket_team set team_no = #{teamNo}, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
+    <update id="updateProfileFromChange">
+        update basket_team
+        set team_name = #{teamName},
+            short_name = #{shortName},
+            logo_file_id = #{logoFileId},
+            description = #{description},
+            public_status = #{publicStatus},
+            update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+    <select id="countByTeamNameExclude" resultType="int">
+        select count(1) from basket_team
+        where team_name = #{teamName}
+          and is_delete = 0
+          and id != #{excludeTeamId}
+    </select>
 </mapper>

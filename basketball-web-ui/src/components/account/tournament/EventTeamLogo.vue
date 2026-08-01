@@ -4,7 +4,8 @@ import { ref, computed } from 'vue'
 const props = defineProps<{
   logoUrl?: string
   teamCode: string
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
+  variant?: 'default' | 'versus'
 }>()
 
 const imageError = ref(false)
@@ -12,6 +13,13 @@ const imageError = ref(false)
 const showImage = computed(
   () => Boolean(props.logoUrl?.trim()) && !imageError.value,
 )
+
+const displayCode = computed(() => {
+  const code = (props.teamCode || '').trim()
+  if (!code) return '--'
+  if (code.length <= 4) return code.toUpperCase()
+  return code.slice(0, 2).toUpperCase()
+})
 
 function onError() {
   imageError.value = true
@@ -21,7 +29,10 @@ function onError() {
 <template>
   <div
     class="event-team-logo"
-    :class="`event-team-logo--${size || 'md'}`"
+    :class="[
+      `event-team-logo--${size || 'md'}`,
+      variant === 'versus' ? 'event-team-logo--versus' : '',
+    ]"
     :aria-label="`${teamCode} 球队 Logo`"
   >
     <img
@@ -30,7 +41,7 @@ function onError() {
       :alt="`${teamCode} Logo`"
       @error="onError"
     />
-    <span v-else>{{ teamCode.slice(0, 2) }}</span>
+    <span v-else class="event-team-logo__fallback">{{ displayCode }}</span>
   </div>
 </template>
 
@@ -68,6 +79,38 @@ function onError() {
     width: 96px;
     height: 96px;
     font-size: 24px;
+  }
+
+  &--xl {
+    width: 96px;
+    height: 96px;
+    font-size: 28px;
+  }
+
+  &--versus {
+    border-radius: 16px;
+    border: 1px solid rgba(220, 0, 0, 0.35);
+    background: linear-gradient(135deg, #1b0808 0%, #050505 100%);
+    box-shadow:
+      0 12px 30px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+    .event-team-logo__fallback {
+      position: relative;
+      padding-bottom: 6px;
+
+      &::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        bottom: 0;
+        width: 18px;
+        height: 2px;
+        transform: translateX(-50%);
+        background: rgba(225, 6, 19, 0.75);
+        border-radius: 1px;
+      }
+    }
   }
 }
 </style>
