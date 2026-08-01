@@ -7,7 +7,8 @@ import com.zhs.common.exception.ServiceException;
  */
 public enum ScheduleAllocationModeEnum {
     FILL_FIRST("FILL_FIRST", "优先填满靠前时间槽"),
-    EVEN_SPLIT("EVEN_SPLIT", "尽量均分到各时间槽");
+    EVEN_SPLIT("EVEN_SPLIT", "尽量均分到各时间槽"),
+    EVEN_SPLIT_WITH_LATE_EXTRA("EVEN_SPLIT_WITH_LATE_EXTRA", "均分且奇数余量优先晚场");
 
     private final String code;
     private final String description;

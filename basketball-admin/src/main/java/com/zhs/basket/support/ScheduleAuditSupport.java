@@ -14,6 +14,7 @@ public class ScheduleAuditSupport {
     private static final String MODULE = "SCHEDULE";
     private static final String OBJECT_MATCH = "MATCH";
     private static final String OBJECT_BATCH = "SCHEDULE_BATCH";
+    private static final String OBJECT_SEASON = "SEASON";
 
     @Autowired
     private BasketBusinessAuditWriter auditWriter;
@@ -26,7 +27,12 @@ public class ScheduleAuditSupport {
 
     public void logBatchAction(Long batchId, Long eventId, ScheduleAuditActionTypeEnum action,
             String summary, String reason, List<AuditFieldInput> fields) {
-        auditWriter.writeAudit(MODULE, OBJECT_BATCH, batchId, action.getCode(), enrichSummary(eventId, batchId, summary),
+        Long objectId = batchId != null ? batchId : eventId;
+        String objectType = batchId != null ? OBJECT_BATCH : OBJECT_SEASON;
+        if (objectId == null) {
+            return;
+        }
+        auditWriter.writeAudit(MODULE, objectType, objectId, action.getCode(), enrichSummary(eventId, batchId, summary),
                 reason, fields);
     }
 

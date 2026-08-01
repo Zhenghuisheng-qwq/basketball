@@ -22,6 +22,15 @@
     </el-form>
 
     <el-row :gutter="10" class="mb8">
+      <el-col :span="24">
+        <el-alert
+          type="info"
+          :closable="false"
+          show-icon
+          title="球队报名审核"
+          description="用于处理球队报名审核，审核通过后将生成正式赛事球队与正式参赛球员快照。"
+        />
+      </el-col>
       <el-col :span="1.5">
         <el-button type="success" plain icon="Check" :disabled="batchMultiple" @click="handleBatchApprove" v-hasPermi="['basket:registrationAudit:audit']">批量通过</el-button>
       </el-col>
@@ -297,14 +306,12 @@ function handleBatchApprove() {
     proxy.$modal.msgWarning('请选择待审核记录')
     return
   }
-  proxy.$modal.confirm(`确认批量通过 ${ids.length} 条报名审核？`).then(() =>
-    batchApproveRegistrationAudit(buildBatchAuditPayload(ids))
-  ).then(res => {
+  batchApproveRegistrationAudit(buildBatchAuditPayload(ids)).then(res => {
     proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
     clearSelection()
     tableRef.value?.clearSelection()
     getList()
-  }).catch(() => {})
+  })
 }
 
 function openBatchReject() {

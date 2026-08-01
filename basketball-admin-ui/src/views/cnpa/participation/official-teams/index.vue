@@ -66,9 +66,9 @@
 
           show-icon
 
-          title="阵容锁定说明"
+          title="正式赛事球队"
 
-          description="报名审核通过后会自动生成正式赛事球队（EventTeam）与正式赛事球员（EventPlayer）快照，并自动锁定阵容，无需管理员手动锁定。若历史数据显示「锁定异常」，可使用「修复锁定」一次性修复。"
+          description="展示报名审核通过后生成的 EventTeam，本届赛事球队快照。报名审核通过后会自动锁定阵容；若历史数据显示「锁定异常」，可使用「修复锁定」一次性修复。"
 
         />
 
@@ -224,7 +224,7 @@
 
     <el-dialog
       v-model="rosterOpen"
-      :title="`正式赛事阵容 - ${currentTeamName}`"
+      :title="`正式参赛球员 - ${currentTeamName}`"
       width="80vw"
       top="6vh"
       append-to-body

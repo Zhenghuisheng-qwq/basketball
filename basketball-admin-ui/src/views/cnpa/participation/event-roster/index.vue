@@ -27,8 +27,8 @@
           type="info"
           :closable="false"
           show-icon
-          title="正式赛事阵容"
-          description="展示球队报名审核通过后生成的本届赛事球员快照。该阵容用于赛程、比赛数据和历史统计，不用于设置首发、球衣号或比赛上场安排。"
+          title="正式参赛球员"
+          description="展示报名审核通过后生成的 EventPlayer，本届赛事球员参赛快照。"
         />
       </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />

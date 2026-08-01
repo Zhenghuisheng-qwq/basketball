@@ -10,7 +10,11 @@
     </select>
 
     <select id="selectById" resultType="com.zhs.basket.domain.BasketScheduleRule">
-        select * from basket_schedule_rule where id = #{id} and is_delete = 0
+        select id, rule_name as ruleName, rule_code as ruleCode, rule_version as ruleVersion,
+               event_type as eventType, platform_code as platformCode, enabled,
+               slot_capacity as slotCapacity, allocation_mode as allocationMode, remark,
+               create_time as createTime, update_time as updateTime, is_delete as isDelete
+        from basket_schedule_rule where id = #{id} and is_delete = 0
     </select>
 
     <select id="selectDetailById" resultType="com.zhs.basket.vo.ScheduleRuleDetailVo">
@@ -22,7 +26,11 @@
     </select>
 
     <select id="selectByCodeAndVersion" resultType="com.zhs.basket.domain.BasketScheduleRule">
-        select * from basket_schedule_rule
+        select id, rule_name as ruleName, rule_code as ruleCode, rule_version as ruleVersion,
+               event_type as eventType, platform_code as platformCode, enabled,
+               slot_capacity as slotCapacity, allocation_mode as allocationMode, remark,
+               create_time as createTime, update_time as updateTime, is_delete as isDelete
+        from basket_schedule_rule
         where rule_code = #{ruleCode} and rule_version = #{ruleVersion} and is_delete = 0
         limit 1
     </select>

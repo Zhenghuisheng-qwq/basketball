@@ -1,5 +1,13 @@
 <template>
   <div class="app-container">
+    <el-alert
+      type="info"
+      :closable="false"
+      show-icon
+      class="mb8"
+      title="比赛数据录入"
+      description="管理员兜底代录完整比赛数据，包含比分、球队数据与球员数据。常规流程请优先使用比赛数据审核。"
+    />
     <el-form :inline="true" label-width="88px" class="mb8">
       <el-form-item label="比赛ID">
         <el-input-number v-model="matchId" :min="1" controls-position="right" style="width: 160px" />

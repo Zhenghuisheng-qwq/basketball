@@ -64,7 +64,7 @@
       <el-table-column label="操作" align="center" width="260" class-name="small-padding fixed-width" fixed="right">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:teamAudit:query']">详情</el-button>
-          <el-button link type="success" icon="Check" @click="openApprove(scope.row)" v-hasPermi="['basket:teamAudit:audit']" v-if="canTeamAudit(scope.row.auditStatus)">通过</el-button>
+          <el-button link type="success" icon="Check" @click="handleApprove(scope.row)" v-hasPermi="['basket:teamAudit:audit']" v-if="canTeamAudit(scope.row.auditStatus)">通过</el-button>
           <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:teamAudit:audit']" v-if="canTeamAudit(scope.row.auditStatus)">驳回</el-button>
         </template>
       </el-table-column>
@@ -163,18 +163,6 @@
       </div>
     </el-drawer>
 
-    <el-dialog title="审核通过" v-model="approveOpen" width="480px" append-to-body>
-      <el-form :model="approveForm" label-width="88px">
-        <el-form-item label="审核备注">
-          <el-input v-model="approveForm.auditRemark" type="textarea" placeholder="请输入审核备注" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="approveOpen = false">取消</el-button>
-        <el-button type="primary" @click="submitApprove">确定</el-button>
-      </template>
-    </el-dialog>
-
     <el-dialog title="审核驳回" v-model="rejectOpen" width="480px" append-to-body>
       <el-form ref="rejectRef" :model="rejectForm" :rules="rejectRules" label-width="88px">
         <el-form-item label="驳回原因" prop="rejectReason">
@@ -225,7 +213,6 @@ import {
 } from '@/api/basket/teamAudit'
 import { buildBatchAuditPayload, formatBatchAuditMessage, useBatchAuditSelection } from '@/utils/batchAudit'
 import type {
-  TeamAuditApproveReq,
   TeamAuditDetail,
   TeamAuditListItem,
   TeamAuditQuery,
@@ -246,12 +233,10 @@ const detailLoading = ref(false)
 const detail = ref<TeamAuditDetail>()
 const auditRecords = ref<TeamAuditRecord[]>([])
 const currentId = ref<number>()
-const approveOpen = ref(false)
 const rejectOpen = ref(false)
 const batchRejectOpen = ref(false)
 const logoPreviewOpen = ref(false)
 const logoPreviewUrl = ref('')
-const approveForm = ref<TeamAuditApproveReq>({})
 const rejectForm = ref<TeamAuditRejectReq>({ rejectReason: '' })
 const batchRejectForm = ref<TeamAuditRejectReq>({ rejectReason: '' })
 const rejectRules = {
@@ -343,24 +328,14 @@ function handleDetail(row: TeamAuditListItem) {
   })
 }
 
-function openApprove(row: TeamAuditListItem) {
-  currentId.value = row.id
-  approveForm.value = { auditRemark: '' }
-  approveOpen.value = true
-}
-
-function submitApprove() {
-  if (!currentId.value) return
-  proxy.$modal.confirm('确认通过该球队审核？').then(() =>
-    approveTeamAudit(currentId.value!, approveForm.value)
-  ).then(() => {
+function handleApprove(row: TeamAuditListItem) {
+  approveTeamAudit(row.id, {}).then(() => {
     proxy.$modal.msgSuccess('审核通过')
-    approveOpen.value = false
     getList()
-    if (detailOpen.value && detail.value?.id === currentId.value) {
-      handleDetail({ id: currentId.value } as TeamAuditListItem)
+    if (detailOpen.value && detail.value?.id === row.id) {
+      handleDetail(row)
     }
-  }).catch(() => {})
+  })
 }
 
 function openReject(row: TeamAuditListItem) {
@@ -372,16 +347,14 @@ function openReject(row: TeamAuditListItem) {
 function submitReject() {
   proxy.$refs.rejectRef.validate((valid: boolean) => {
     if (!valid || !currentId.value) return
-    proxy.$modal.confirm('确认驳回该球队审核？').then(() =>
-      rejectTeamAudit(currentId.value!, rejectForm.value)
-    ).then(() => {
+    rejectTeamAudit(currentId.value!, rejectForm.value).then(() => {
       proxy.$modal.msgSuccess('已驳回')
       rejectOpen.value = false
       getList()
       if (detailOpen.value && detail.value?.id === currentId.value) {
         handleDetail({ id: currentId.value } as TeamAuditListItem)
       }
-    }).catch(() => {})
+    })
   })
 }
 
@@ -391,14 +364,12 @@ function handleBatchApprove() {
     proxy.$modal.msgWarning('请选择待审核记录')
     return
   }
-  proxy.$modal.confirm(`确认批量通过 ${ids.length} 条球队审核？`).then(() =>
-    batchApproveTeamAudit(buildBatchAuditPayload(ids))
-  ).then(res => {
+  batchApproveTeamAudit(buildBatchAuditPayload(ids)).then(res => {
     proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
     clearSelection()
     tableRef.value?.clearSelection()
     getList()
-  }).catch(() => {})
+  })
 }
 
 function openBatchReject() {

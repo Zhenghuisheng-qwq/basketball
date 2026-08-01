@@ -286,14 +286,12 @@ function handleBatchApprove() {
     proxy.$modal.msgWarning('请选择待审核记录')
     return
   }
-  proxy.$modal.confirm(`确认批量通过 ${ids.length} 条平台变更申请？`).then(() =>
-    batchApprovePlayerPlatformChange(buildBatchAuditPayload(ids))
-  ).then(res => {
+  batchApprovePlayerPlatformChange(buildBatchAuditPayload(ids)).then(res => {
     proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
     clearSelection()
     tableRef.value?.clearSelection()
     getList()
-  }).catch(() => {})
+  })
 }
 
 function openBatchReject() {

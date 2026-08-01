@@ -21,12 +21,16 @@ import com.zhs.basket.support.PlayerNoGenerator;
 import com.zhs.basket.support.ScheduleAuditSupport;
 import com.zhs.basket.support.ScheduleEventTeamSupport;
 import com.zhs.basket.support.ScheduleMatchTeamSupport;
+import com.zhs.basket.support.ScheduleMatchValidationSupport;
+import com.zhs.basket.vo.ScheduleMatchDetailVo;
 import com.zhs.basket.vo.ScheduleMatchListVo;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -39,6 +43,7 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
     @Autowired private BasketTournamentStageMapper stageMapper;
     @Autowired private ScheduleEventTeamSupport eventTeamSupport;
     @Autowired private ScheduleAuditSupport auditSupport;
+    @Autowired private ScheduleMatchValidationSupport validationSupport;
     @Autowired private PlayerNoGenerator playerNoGenerator;
     @Autowired private ScheduleMatchTeamSupport matchTeamSupport;
 
@@ -46,10 +51,75 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
     public List<ScheduleMatchListVo> list(ScheduleMatchQuery query) {
         List<ScheduleMatchListVo> list = matchMapper.selectScheduleList(query != null ? query : new ScheduleMatchQuery());
         for (ScheduleMatchListVo vo : list) {
-            vo.setMatchStatusName(MatchStatusEnum.fromCode(vo.getMatchStatus()).getDescription());
-            vo.setPublishStatusName(MatchPublishStatusEnum.fromCode(vo.getPublishStatus()).getDescription());
+            fillActionFlags(vo);
         }
         return list;
+    }
+
+    @Override
+    public ScheduleMatchDetailVo getDetail(Long matchId) {
+        ScheduleMatchDetailVo vo = matchMapper.selectScheduleDetailById(matchId);
+        if (vo == null) {
+            throw new ServiceException("比赛不存在");
+        }
+        fillActionFlags(vo);
+        return vo;
+    }
+
+    private void fillActionFlags(ScheduleMatchListVo vo) {
+        vo.setMatchStatusName(MatchStatusEnum.fromCode(vo.getMatchStatus()).getDescription());
+        vo.setPublishStatusName(MatchPublishStatusEnum.fromCode(vo.getPublishStatus()).getDescription());
+        if (vo.getDataAbnormal() != null && vo.getDataAbnormal() == 1) {
+            if (vo.getHomeTeamName() == null || vo.getHomeTeamName().isBlank()) {
+                vo.setHomeTeamName("历史数据异常");
+            }
+            if (vo.getAwayTeamName() == null || vo.getAwayTeamName().isBlank()) {
+                vo.setAwayTeamName("历史数据异常");
+            }
+        }
+        boolean draft = vo.getPublishStatus() != null
+                && vo.getPublishStatus() == MatchPublishStatusEnum.DRAFT.getCode();
+        boolean published = vo.getPublishStatus() != null
+                && vo.getPublishStatus() == MatchPublishStatusEnum.PUBLISHED.getCode();
+        boolean editableStatus = vo.getMatchStatus() != null
+                && vo.getMatchStatus() != MatchStatusEnum.FINISHED.getCode()
+                && vo.getMatchStatus() != MatchStatusEnum.CANCELLED.getCode();
+        boolean scoreableStatus = vo.getMatchStatus() != null
+                && (vo.getMatchStatus() == MatchStatusEnum.SCHEDULED.getCode()
+                || vo.getMatchStatus() == MatchStatusEnum.RUNNING.getCode()
+                || vo.getMatchStatus() == MatchStatusEnum.FINISHED.getCode());
+        vo.setCanEdit(draft && editableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
+        vo.setCanDelete(draft && editableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
+        vo.setCanSwap(draft && editableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
+        vo.setCanScore(published && scoreableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
+    }
+
+    private void fillActionFlags(ScheduleMatchDetailVo vo) {
+        vo.setMatchStatusName(MatchStatusEnum.fromCode(vo.getMatchStatus()).getDescription());
+        vo.setPublishStatusName(MatchPublishStatusEnum.fromCode(vo.getPublishStatus()).getDescription());
+        if (vo.getDataAbnormal() != null && vo.getDataAbnormal() == 1) {
+            if (vo.getHomeTeamName() == null || vo.getHomeTeamName().isBlank()) {
+                vo.setHomeTeamName("历史数据异常");
+            }
+            if (vo.getAwayTeamName() == null || vo.getAwayTeamName().isBlank()) {
+                vo.setAwayTeamName("历史数据异常");
+            }
+        }
+        boolean draft = vo.getPublishStatus() != null
+                && vo.getPublishStatus() == MatchPublishStatusEnum.DRAFT.getCode();
+        boolean published = vo.getPublishStatus() != null
+                && vo.getPublishStatus() == MatchPublishStatusEnum.PUBLISHED.getCode();
+        boolean editableStatus = vo.getMatchStatus() != null
+                && vo.getMatchStatus() != MatchStatusEnum.FINISHED.getCode()
+                && vo.getMatchStatus() != MatchStatusEnum.CANCELLED.getCode();
+        boolean scoreableStatus = vo.getMatchStatus() != null
+                && (vo.getMatchStatus() == MatchStatusEnum.SCHEDULED.getCode()
+                || vo.getMatchStatus() == MatchStatusEnum.RUNNING.getCode()
+                || vo.getMatchStatus() == MatchStatusEnum.FINISHED.getCode());
+        vo.setCanEdit(draft && editableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
+        vo.setCanDelete(draft && editableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
+        vo.setCanSwap(draft && editableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
+        vo.setCanScore(published && scoreableStatus && (vo.getDataAbnormal() == null || vo.getDataAbnormal() == 0));
     }
 
     @Override
@@ -64,8 +134,7 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
             throw new ServiceException("主队和客队不能相同");
         }
         assertPairUnique(eventId, home.getId(), away.getId(), null);
-        assertTimeConflict(null, home.getId(), req.getMatchTime());
-        assertTimeConflict(null, away.getId(), req.getMatchTime());
+        assertScheduleConstraints(null, eventId, home.getId(), away.getId(), req.getMatchTime());
 
         Long stageId = resolveStageId(req.getStageId(), eventId);
         EventTeamScheduleSnapshot homeSnapshot = eventTeamSupport.toSnapshot(home);
@@ -87,6 +156,7 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
         match.setHomeTeamLogoSnapshot(homeSnapshot.getLogoUrl());
         match.setAwayTeamLogoSnapshot(awaySnapshot.getLogoUrl());
         match.setScheduledStartTime(req.getMatchTime());
+        validationSupport.assertMatchTimeByRule(match, req.getMatchTime());
         match.setMatchStatus(req.getMatchStatus() != null ? req.getMatchStatus() : MatchStatusEnum.SCHEDULED.getCode());
         match.setPublishStatus(req.getPublishStatus() != null ? req.getPublishStatus() : MatchPublishStatusEnum.DRAFT.getCode());
         match.setPublicStatus(MatchPublishStatusEnum.PUBLISHED.getCode() == match.getPublishStatus() ? 1 : 0);
@@ -111,6 +181,7 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
     @Transactional(rollbackFor = Exception.class)
     public void update(Long matchId, ScheduleMatchUpdateReq req) {
         BasketMatch match = requireMatch(matchId);
+        validationSupport.assertDraftEditable(match);
         Long eventId = match.getSeasonId();
         MatchStatusEnum status = MatchStatusEnum.fromCode(match.getMatchStatus());
         boolean teamsWillChange = teamChanged(match, req);
@@ -124,8 +195,8 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
             throw new ServiceException("主队和客队不能相同");
         }
         assertPairUnique(eventId, home.getId(), away.getId(), matchId);
-        assertTimeConflict(matchId, home.getId(), req.getMatchTime());
-        assertTimeConflict(matchId, away.getId(), req.getMatchTime());
+        assertScheduleConstraints(matchId, eventId, home.getId(), away.getId(), req.getMatchTime());
+        validationSupport.assertMatchTimeByRule(match, req.getMatchTime());
 
         List<AuditFieldInput> fields = new ArrayList<>();
         if (teamsWillChange) {
@@ -153,10 +224,6 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
         if (req.getMatchStatus() != null) {
             match.setMatchStatus(req.getMatchStatus());
         }
-        if (req.getPublishStatus() != null) {
-            match.setPublishStatus(req.getPublishStatus());
-            match.setPublicStatus(MatchPublishStatusEnum.PUBLISHED.getCode() == req.getPublishStatus() ? 1 : 0);
-        }
         match.setScheduleRemark(req.getRemark());
         matchMapper.updateScheduleMatch(match);
         matchTeamSupport.replaceMatchTeams(match);
@@ -169,6 +236,36 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void swapHomeAway(Long matchId, String reason) {
+        BasketMatch match = requireMatch(matchId);
+        validationSupport.assertDraftEditable(match);
+        ScheduleMatchUpdateReq req = new ScheduleMatchUpdateReq();
+        req.setStageId(match.getStageId());
+        req.setRoundNo(match.getRoundNo());
+        req.setHomeEventTeamId(match.getAwayEventTeamId());
+        req.setAwayEventTeamId(match.getHomeEventTeamId());
+        req.setMatchTime(match.getScheduledStartTime());
+        req.setMatchStatus(match.getMatchStatus());
+        req.setRemark(match.getScheduleRemark());
+        req.setReason(reason != null ? reason : "主客队互换");
+        update(matchId, req);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteDraftMatch(Long matchId, String reason) {
+        BasketMatch match = requireMatch(matchId);
+        validationSupport.assertDraftEditable(match);
+        if (matchMapper.softDeleteDraftMatch(matchId) <= 0) {
+            throw new ServiceException("仅草稿比赛可删除");
+        }
+        matchTeamMapper.softDeleteByMatchId(matchId);
+        auditSupport.logMatchAction(matchId, match.getSeasonId(), match.getScheduleBatchId(),
+                ScheduleAuditActionTypeEnum.DELETE_MATCH, "删除草稿比赛", reason, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void saveScore(Long matchId, ScheduleScoreSaveReq req) {
         if (req == null || req.getHomeScore() == null || req.getAwayScore() == null) {
             throw new ServiceException("比分不能为空");
@@ -177,6 +274,17 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
             throw new ServiceException("篮球比赛不允许平局，请确认比分");
         }
         BasketMatch match = requireMatch(matchId);
+        if (match.getPublishStatus() == null
+                || match.getPublishStatus() != MatchPublishStatusEnum.PUBLISHED.getCode()) {
+            throw new ServiceException("草稿赛程不允许录入比分，请先发布赛程");
+        }
+        MatchStatusEnum status = MatchStatusEnum.fromCode(match.getMatchStatus());
+        if (status == MatchStatusEnum.CANCELLED) {
+            throw new ServiceException("已取消比赛不能录入比分");
+        }
+        if (match.getHomeEventTeamId() == null || match.getAwayEventTeamId() == null) {
+            throw new ServiceException("比赛缺少主客队 EventTeam，无法录入比分");
+        }
         Integer beforeHome = match.getHomeScore();
         Integer beforeAway = match.getAwayScore();
 
@@ -238,9 +346,26 @@ public class BasketScheduleMatchAdminServiceImpl implements IBasketScheduleMatch
         }
     }
 
+    private void assertScheduleConstraints(Long excludeMatchId, Long eventId, Long homeEventTeamId,
+            Long awayEventTeamId, Date matchTime) {
+        assertTimeConflict(excludeMatchId, homeEventTeamId, matchTime);
+        assertTimeConflict(excludeMatchId, awayEventTeamId, matchTime);
+        assertDayConflict(excludeMatchId, eventId, homeEventTeamId, matchTime);
+        assertDayConflict(excludeMatchId, eventId, awayEventTeamId, matchTime);
+    }
+
     private void assertTimeConflict(Long excludeMatchId, Long eventTeamId, Date matchTime) {
         if (matchMapper.countEventTeamTimeConflict(excludeMatchId, eventTeamId, matchTime) > 0) {
             throw new ServiceException("同一时间点该球队已有比赛");
+        }
+    }
+
+    private void assertDayConflict(Long excludeMatchId, Long eventId, Long eventTeamId, Date matchTime) {
+        LocalDate day = validationSupport.toLocalDate(matchTime);
+        Date dayStart = Date.from(day.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        Date dayEnd = Date.from(day.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+        if (matchMapper.countEventTeamDayConflict(excludeMatchId, eventTeamId, eventId, dayStart, dayEnd) > 0) {
+            throw new ServiceException("同一球队同一比赛日最多打一场");
         }
     }
 

@@ -1,8 +1,16 @@
 <template>
   <div class="app-container">
+    <el-alert
+      class="mb16"
+      type="warning"
+      :closable="false"
+      show-icon
+      title="特殊阵容调整"
+      description="用于管理员处理异常情况下的阵容修正，操作应谨慎并保留记录。"
+    />
     <el-card shadow="never" class="mb16">
       <template #header>
-        <span>阵容特殊操作</span>
+        <span>特殊阵容调整</span>
       </template>
       <el-row :gutter="24">
         <el-col :span="12">

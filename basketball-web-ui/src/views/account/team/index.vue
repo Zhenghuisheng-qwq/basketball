@@ -2249,12 +2249,19 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
   flex-direction: column;
   overflow: hidden;
   padding: 24px 24px 20px;
+  background: #fff;
+  color: #111;
 
   h3 {
     flex-shrink: 0;
     margin: 0 0 16px;
     font-size: 18px;
     font-weight: 800;
+    color: #111;
+  }
+
+  .team-subtitle {
+    color: #111;
   }
 }
 

@@ -2583,11 +2583,19 @@ export interface ScheduleEventContext {
   platformCode?: string
   platformDisplayName?: string
   eventTeamCount?: number
+  lockedTeamCount?: number
   existingMatchCount?: number
+  deletableDraftMatchCount?: number
+  legacyUnpublishedMatchCount?: number
+  hasLegacyUnpublishedMatches?: boolean
   hasPublishedSchedule?: boolean
   hasDraftSchedule?: boolean
   latestBatchId?: number
   latestBatchPublishStatus?: number
+  expectedRoundCount?: number
+  expectedMatchCount?: number
+  canGenerateSchedule?: boolean
+  scheduleStatusText?: string
 }
 
 export interface ScheduleGeneratePreview {
@@ -2596,7 +2604,9 @@ export interface ScheduleGeneratePreview {
   tournamentName?: string
   platformCode?: string
   eventTeamCount?: number
+  lockedTeamCount?: number
   expectedMatchCount?: number
+  expectedRoundCount?: number
   ruleName?: string
   ruleCode?: string
   ruleVersion?: string
@@ -2612,9 +2622,13 @@ export interface ScheduleGenerateResult {
 export interface ScheduleMatchQuery extends PageDomain {
   seasonId?: number
   stageId?: number
+  platformCode?: string
   matchStatus?: number
   publishStatus?: number
   scheduleBatchId?: number
+  excludeLegacy?: boolean
+  beginTime?: string
+  endTime?: string
 }
 
 export interface ScheduleMatchListItem {
@@ -2644,7 +2658,14 @@ export interface ScheduleMatchListItem {
   ruleCode?: string
   ruleVersion?: string
   scheduleRemark?: string
+  dataAbnormal?: number
+  canEdit?: boolean
+  canDelete?: boolean
+  canSwap?: boolean
+  canScore?: boolean
 }
+
+export interface ScheduleMatchDetailItem extends ScheduleMatchListItem {}
 
 export interface ScheduleGenerateReq {
   eventId: number
@@ -2659,6 +2680,7 @@ export interface SchedulePublishReq {
   eventId: number
   batchId?: number
   reason?: string
+  allowIncomplete?: boolean
 }
 
 export interface ScheduleMatchCreateReq {

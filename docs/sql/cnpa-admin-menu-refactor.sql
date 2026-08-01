@@ -53,7 +53,7 @@ UPDATE sys_menu SET parent_id=2204, order_num=1, menu_name='球队报名审核',
 -- ---------------------------------------------------------------------------
 -- 7. 比赛执行（2153）
 -- ---------------------------------------------------------------------------
-UPDATE sys_menu SET parent_id=2153, order_num=1, menu_name='赛程管理', path='schedule', component='cnpa/competition/schedule/index' WHERE menu_id=2040;
+UPDATE sys_menu SET parent_id=2153, order_num=1, menu_name='赛程管理', path='schedule', component='cnpa/competition/schedule-manage/index', route_name='BasketScheduleManage', perms='basket:schedule:list' WHERE menu_id=2040;
 UPDATE sys_menu SET parent_id=2153, order_num=2, menu_name='比分录入', path='score', component='cnpa/competition/score/index' WHERE menu_id=2042;
 UPDATE sys_menu SET parent_id=2153, order_num=3, menu_name='比赛数据录入', path='match-data-entry', component='cnpa/competition/match-data-entry/index' WHERE menu_id=2043;
 UPDATE sys_menu SET parent_id=2153, order_num=4, menu_name='比赛名单', path='lineup', component='cnpa/competition/lineup/index', visible='0' WHERE menu_id=2041;

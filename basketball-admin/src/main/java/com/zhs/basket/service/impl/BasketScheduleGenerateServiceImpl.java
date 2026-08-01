@@ -16,6 +16,7 @@ import com.zhs.basket.support.PlayerNoGenerator;
 import com.zhs.basket.support.ScheduleAuditSupport;
 import com.zhs.basket.support.ScheduleEventTeamSupport;
 import com.zhs.basket.support.ScheduleMatchTeamSupport;
+import com.zhs.basket.support.ScheduleMatchValidationSupport;
 import com.zhs.basket.vo.ScheduleEventContextVo;
 import com.zhs.basket.vo.ScheduleGeneratePreviewVo;
 import com.zhs.basket.vo.ScheduleGenerateResultVo;
@@ -28,7 +29,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,6 +57,7 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
     @Autowired private ScheduleRuleStrategyFactory strategyFactory;
     @Autowired private ScheduleEventTeamSupport eventTeamSupport;
     @Autowired private ScheduleAuditSupport auditSupport;
+    @Autowired private ScheduleMatchValidationSupport validationSupport;
     @Autowired private PlayerNoGenerator playerNoGenerator;
     @Autowired @Lazy private IBasketScheduleGenerateService scheduleGenerateService;
 
@@ -74,8 +75,19 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         String platformCode = eventTeamSupport.resolvePlatformCode(eventId);
         vo.setPlatformCode(platformCode);
         vo.setPlatformDisplayName(GameTerminalSupport.formatDisplayName(platformCode));
-        vo.setEventTeamCount(eventTeamSupport.loadActiveSnapshots(eventId).size());
+        // 正式参赛口径：参赛中 + 已审核 + 阵容已锁定（与可生成赛程一致）
+        int eligibleCount = eventTeamSupport.countEligibleTeams(eventId);
+        int lockedCount = eventTeamSupport.countLockedActiveTeams(eventId);
+        vo.setEventTeamCount(eligibleCount);
+        vo.setLockedTeamCount(lockedCount);
+        vo.setExpectedMatchCount(calcPairCount(eligibleCount));
+        vo.setExpectedRoundCount(calcRoundCount(eligibleCount));
         vo.setExistingMatchCount(matchMapper.countBySeasonId(eventId));
+        int deletableDraftCount = matchMapper.countDeletableDraftBySeasonId(eventId);
+        int legacyCount = matchMapper.countLegacyUnpublishedBySeasonId(eventId);
+        vo.setDeletableDraftMatchCount(deletableDraftCount);
+        vo.setLegacyUnpublishedMatchCount(legacyCount);
+        vo.setHasLegacyUnpublishedMatches(legacyCount > 0);
         vo.setHasPublishedSchedule(matchMapper.countPublishedBySeasonId(eventId) > 0);
         BasketScheduleGenerateBatch latest = batchMapper.selectLatestByEventId(eventId);
         if (latest != null) {
@@ -83,16 +95,32 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
             vo.setLatestBatchPublishStatus(latest.getPublishStatus());
             vo.setHasDraftSchedule(ScheduleBatchPublishStatusEnum.DRAFT.getCode() == latest.getPublishStatus());
         } else {
-            vo.setHasDraftSchedule(false);
+            vo.setHasDraftSchedule(deletableDraftCount > 0);
         }
+        vo.setCanGenerateSchedule(Boolean.FALSE.equals(vo.getHasPublishedSchedule()) && eligibleCount >= 2);
+        vo.setScheduleStatusText(resolveScheduleStatusText(vo));
         return vo;
+    }
+
+    private String resolveScheduleStatusText(ScheduleEventContextVo vo) {
+        if (Boolean.TRUE.equals(vo.getHasPublishedSchedule())) {
+            return "已发布";
+        }
+        if (Boolean.TRUE.equals(vo.getHasDraftSchedule())
+                || (vo.getDeletableDraftMatchCount() != null && vo.getDeletableDraftMatchCount() > 0)) {
+            return "草稿";
+        }
+        if (Boolean.TRUE.equals(vo.getHasLegacyUnpublishedMatches())) {
+            return "未生成（存在历史脏数据）";
+        }
+        return "未生成";
     }
 
     @Override
     public ScheduleGeneratePreviewVo preview(ScheduleGenerateReq req) {
         validateGenerateRequest(req);
         BasketScheduleRule rule = requireRule(req.getRuleId());
-        List<EventTeamScheduleSnapshot> teams = eventTeamSupport.loadActiveSnapshots(req.getEventId());
+        List<EventTeamScheduleSnapshot> teams = eventTeamSupport.loadEligibleSnapshots(req.getEventId());
         BasketTournamentSeason season = eventTeamSupport.requireSeason(req.getEventId());
         BasketTournament tournament = tournamentMapper.selectById(season.getTournamentId());
 
@@ -104,7 +132,9 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         }
         vo.setPlatformCode(eventTeamSupport.resolvePlatformCode(req.getEventId()));
         vo.setEventTeamCount(teams.size());
+        vo.setLockedTeamCount(eventTeamSupport.countLockedActiveTeams(req.getEventId()));
         vo.setExpectedMatchCount(calcPairCount(teams.size()));
+        vo.setExpectedRoundCount(calcRoundCount(teams.size()));
         vo.setRuleName(rule.getRuleName());
         vo.setRuleCode(rule.getRuleCode());
         vo.setRuleVersion(rule.getRuleVersion());
@@ -120,21 +150,24 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         seasonMapper.selectByIdForUpdate(eventId);
         assertNoPublishedSchedule(eventId);
 
-        if (batchMapper.countByEventId(eventId) > 0 && !Boolean.TRUE.equals(req.getForceRegenerate())) {
-            throw new ServiceException("当前赛事已有赛程生成批次，请先删除草稿后再重新生成");
+        int deletableDraftCount = matchMapper.countDeletableDraftBySeasonId(eventId);
+        boolean hasBatch = batchMapper.countByEventId(eventId) > 0;
+        if ((hasBatch || deletableDraftCount > 0) && !Boolean.TRUE.equals(req.getForceRegenerate())) {
+            throw new ServiceException("当前已存在草稿赛程，请先查看或删除草稿后重新生成");
         }
-        int existingCount = matchMapper.countBySeasonId(eventId);
-        if (existingCount > 0) {
-            if (!Boolean.TRUE.equals(req.getForceRegenerate())) {
-                throw new ServiceException("当前赛事已有赛程记录，请先删除草稿后再重新生成");
-            }
+        if (hasBatch || deletableDraftCount > 0) {
             deleteDraftInternal(eventId, "重新生成前删除旧草稿");
         }
 
         BasketScheduleRule rule = requireRule(req.getRuleId());
-        List<EventTeamScheduleSnapshot> teams = eventTeamSupport.loadActiveSnapshots(eventId);
+        List<EventTeamScheduleSnapshot> teams = eventTeamSupport.loadEligibleSnapshots(eventId);
         if (teams.size() < 2) {
             throw new ServiceException("正式参赛球队不足 2 支，无法生成赛程");
+        }
+        int activeCount = eventTeamMapper.countActiveBySeasonId(eventId);
+        int lockedCount = eventTeamSupport.countLockedActiveTeams(eventId);
+        if (lockedCount < activeCount) {
+            throw new ServiceException("仍有正式赛事球队阵容未锁定，请先完成阵容锁定后再生成赛程");
         }
 
         Long stageId = resolveStageId(req.getStageId(), eventId);
@@ -143,6 +176,7 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         ScheduleRuleStrategy strategy = strategyFactory.getStrategy(rule.getRuleCode(), rule.getRuleVersion());
         List<MatchPlan> plans = strategy.generate(context);
         validateGeneratedPlans(eventId, plans);
+        assertGeneratedMatchTimes(rule, plans);
 
         Date now = new Date();
         BasketScheduleGenerateBatch batch = new BasketScheduleGenerateBatch();
@@ -192,6 +226,8 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         if (ScheduleBatchPublishStatusEnum.PUBLISHED.getCode() == batch.getPublishStatus()) {
             throw new ServiceException("赛程已发布，请勿重复发布");
         }
+        List<BasketMatch> matches = matchMapper.selectByBatchId(batch.getId());
+        validateBeforePublish(eventId, batch, matches, Boolean.TRUE.equals(req.getAllowIncomplete()));
         Date now = new Date();
         batchMapper.updatePublishStatus(batch.getId(), ScheduleBatchPublishStatusEnum.PUBLISHED.getCode(), now);
         matchMapper.updatePublishStatusByBatchId(batch.getId(), MatchPublishStatusEnum.PUBLISHED.getCode(), 1);
@@ -221,6 +257,11 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         eventTeamSupport.requireSeason(eventId);
         if (matchMapper.countPublishedBySeasonId(eventId) > 0) {
             throw new ServiceException("已有已发布赛程，不能删除草稿");
+        }
+        int deletable = matchMapper.countDeletableDraftBySeasonId(eventId);
+        int batchCount = batchMapper.countByEventId(eventId);
+        if (deletable <= 0 && batchCount <= 0) {
+            throw new ServiceException("当前没有可删除的草稿赛程；已结束/已取消的历史比赛不会被删除");
         }
         deleteDraftInternal(eventId, reason);
     }
@@ -269,10 +310,10 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         if (batchMapper.countByEventId(seasonId) > 0) {
             return false;
         }
-        if (matchMapper.countBySeasonId(seasonId) > 0) {
+        if (matchMapper.countDeletableDraftBySeasonId(seasonId) > 0) {
             return false;
         }
-        if (eventTeamMapper.countActiveBySeasonId(seasonId) < 2) {
+        if (eventTeamMapper.countEligibleForScheduleBySeasonId(seasonId) < 2) {
             return false;
         }
         if (registrationMapper.countPendingAuditBySeasonId(seasonId) > 0) {
@@ -299,8 +340,9 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
     }
 
     private void assertNoPublishedSchedule(Long eventId) {
-        if (batchMapper.countPublishedByEventId(eventId) > 0) {
-            throw new ServiceException("当前赛事已有已发布赛程，不允许重新生成覆盖");
+        if (batchMapper.countPublishedByEventId(eventId) > 0
+                || matchMapper.countPublishedBySeasonId(eventId) > 0) {
+            throw new ServiceException("当前赛程已发布，不能重复生成。如需调整，请使用赛程调整功能");
         }
     }
 
@@ -349,7 +391,12 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         context.setTimeSlots(timeSlotMapper.selectByRuleId(rule.getId()).stream()
                 .map(BasketScheduleRuleTimeSlot::getStartTime).collect(Collectors.toList()));
         context.setSlotCapacity(rule.getSlotCapacity());
-        context.setAllocationMode(rule.getAllocationMode());
+        // V2 强制使用晚场多 1 场的均分策略，避免 DB 配置残留 FILL_FIRST
+        if (ScheduleRuleVersionEnum.V2.getCode().equalsIgnoreCase(rule.getRuleVersion())) {
+            context.setAllocationMode(ScheduleAllocationModeEnum.EVEN_SPLIT_WITH_LATE_EXTRA.getCode());
+        } else {
+            context.setAllocationMode(rule.getAllocationMode());
+        }
         Date baseDate = req.getBaseDate();
         if (baseDate == null) {
             BasketTournamentSeason season = seasonMapper.selectById(req.getEventId());
@@ -357,6 +404,57 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         }
         context.setBaseDate(baseDate);
         return context;
+    }
+
+    private void assertGeneratedMatchTimes(BasketScheduleRule rule, List<MatchPlan> plans) {
+        BasketMatch probe = new BasketMatch();
+        probe.setRuleId(rule.getId());
+        probe.setRuleCode(rule.getRuleCode());
+        probe.setRuleVersion(rule.getRuleVersion());
+        for (MatchPlan plan : plans) {
+            validationSupport.assertMatchTimeByRule(probe, plan.getMatchTime());
+        }
+    }
+
+    private void validateBeforePublish(Long eventId, BasketScheduleGenerateBatch batch,
+            List<BasketMatch> matches, boolean allowIncomplete) {
+        if (matches == null || matches.isEmpty()) {
+            throw new ServiceException("当前批次没有可发布的比赛");
+        }
+        Set<Long> eligibleIds = eventTeamSupport.loadEligibleSnapshots(eventId).stream()
+                .map(EventTeamScheduleSnapshot::getEventTeamId).collect(Collectors.toSet());
+        Set<String> pairKeys = new HashSet<>();
+        Map<String, Set<Long>> teamsByDay = new HashMap<>();
+        for (BasketMatch match : matches) {
+            if (match.getHomeEventTeamId() == null || match.getAwayEventTeamId() == null) {
+                throw new ServiceException("存在缺少主队或客队的比赛，无法发布");
+            }
+            if (match.getHomeEventTeamId().equals(match.getAwayEventTeamId())) {
+                throw new ServiceException("存在主队等于客队的比赛，无法发布");
+            }
+            if (!eligibleIds.contains(match.getHomeEventTeamId())
+                    || !eligibleIds.contains(match.getAwayEventTeamId())) {
+                throw new ServiceException("存在非当前赛事正式参赛球队的对阵，无法发布");
+            }
+            String pairKey = canonicalEventTeamPairKey(match.getHomeEventTeamId(), match.getAwayEventTeamId());
+            if (!pairKeys.add(pairKey)) {
+                throw new ServiceException("存在重复对阵，无法发布");
+            }
+            validationSupport.assertMatchTimeByRule(match, match.getScheduledStartTime());
+            if (match.getScheduledStartTime() != null) {
+                String dayKey = validationSupport.toLocalDate(match.getScheduledStartTime()).toString();
+                Set<Long> dayTeams = teamsByDay.computeIfAbsent(dayKey, key -> new HashSet<>());
+                if (!dayTeams.add(match.getHomeEventTeamId()) || !dayTeams.add(match.getAwayEventTeamId())) {
+                    throw new ServiceException("同一球队同一比赛日最多一场，无法发布");
+                }
+            }
+        }
+        int expected = calcPairCount(eligibleIds.size());
+        if (matches.size() != expected && !allowIncomplete) {
+            throw new ServiceException(String.format(
+                    "草稿比赛数量为 %d，预计总场次为 %d。如需不完整发布请勾选允许不完整发布",
+                    matches.size(), expected));
+        }
     }
 
     private void validateGeneratedPlans(Long eventId, List<MatchPlan> plans) {
@@ -462,5 +560,12 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
 
     private int calcPairCount(int teamCount) {
         return teamCount * (teamCount - 1) / 2;
+    }
+
+    private int calcRoundCount(int teamCount) {
+        if (teamCount < 2) {
+            return 0;
+        }
+        return teamCount % 2 == 0 ? teamCount - 1 : teamCount;
     }
 }

@@ -125,10 +125,32 @@
         order by id
     </select>
 
+    <select id="selectEligibleForScheduleBySeasonId" resultMap="BasketTeamSeasonProfileResult">
+        select * from basket_team_season_profile
+        where season_id = #{seasonId} and is_delete = 0
+          and participation_status = 1 and approved_time is not null
+          and roster_lock_status = 1
+        order by id
+    </select>
+
     <select id="countActiveBySeasonId" resultType="int">
         select count(1) from basket_team_season_profile
         where season_id = #{seasonId} and is_delete = 0
           and participation_status = 1 and approved_time is not null
+    </select>
+
+    <select id="countEligibleForScheduleBySeasonId" resultType="int">
+        select count(1) from basket_team_season_profile
+        where season_id = #{seasonId} and is_delete = 0
+          and participation_status = 1 and approved_time is not null
+          and roster_lock_status = 1
+    </select>
+
+    <select id="countLockedActiveBySeasonId" resultType="int">
+        select count(1) from basket_team_season_profile
+        where season_id = #{seasonId} and is_delete = 0
+          and participation_status = 1 and approved_time is not null
+          and roster_lock_status = 1
     </select>
 
     <select id="selectRegistrationIdsWithUnlockedApprovedEventTeam" resultType="java.lang.Long">

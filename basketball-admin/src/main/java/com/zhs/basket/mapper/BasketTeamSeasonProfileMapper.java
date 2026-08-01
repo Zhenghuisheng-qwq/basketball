@@ -22,7 +22,10 @@ public interface BasketTeamSeasonProfileMapper {
     int updateParticipationStatus(@Param("id") Long id, @Param("participationStatus") Integer participationStatus);
     int updateCaptainPlayerId(@Param("id") Long id, @Param("captainPlayerId") Long captainPlayerId);
     List<BasketTeamSeasonProfile> selectActiveBySeasonId(@Param("seasonId") Long seasonId);
+    List<BasketTeamSeasonProfile> selectEligibleForScheduleBySeasonId(@Param("seasonId") Long seasonId);
 
     List<Long> selectRegistrationIdsWithUnlockedApprovedEventTeam();
     int countActiveBySeasonId(@Param("seasonId") Long seasonId);
+    int countEligibleForScheduleBySeasonId(@Param("seasonId") Long seasonId);
+    int countLockedActiveBySeasonId(@Param("seasonId") Long seasonId);
 }

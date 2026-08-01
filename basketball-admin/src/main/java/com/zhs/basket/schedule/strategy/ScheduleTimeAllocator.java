@@ -112,11 +112,21 @@ public class ScheduleTimeAllocator {
                     matchCount, maxTotal, slotCount, slotCapacity));
         }
         int[] counts = new int[slotCount];
-        if (mode == ScheduleAllocationModeEnum.EVEN_SPLIT) {
+        if (mode == ScheduleAllocationModeEnum.EVEN_SPLIT
+                || mode == ScheduleAllocationModeEnum.EVEN_SPLIT_WITH_LATE_EXTRA) {
             int base = matchCount / slotCount;
             int remainder = matchCount % slotCount;
             for (int i = 0; i < slotCount; i++) {
-                counts[i] = base + (i < remainder ? 1 : 0);
+                counts[i] = base;
+            }
+            if (mode == ScheduleAllocationModeEnum.EVEN_SPLIT) {
+                for (int i = 0; i < remainder; i++) {
+                    counts[i]++;
+                }
+            } else {
+                for (int i = slotCount - 1; i >= slotCount - remainder; i--) {
+                    counts[i]++;
+                }
             }
             for (int i = 0; i < slotCount; i++) {
                 if (counts[i] > slotCapacity) {

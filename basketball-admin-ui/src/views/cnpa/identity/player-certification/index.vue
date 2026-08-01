@@ -320,15 +320,13 @@ function handlePreviewFile(fileId?: number) {
 }
 
 function handleApprove(row: PlayerCertListItem) {
-  proxy.$modal.confirm('确认通过认证？通过后该用户将成为已认证球员。').then(() => {
-    return approvePlayerCert(row.id, {})
-  }).then(() => {
+  approvePlayerCert(row.id, {}).then(() => {
     proxy.$modal.msgSuccess('审核通过')
     getList()
     if (detailOpen.value && currentId.value === row.id) {
       handleDetail(row)
     }
-  }).catch(() => {})
+  })
 }
 
 function openReject(row: PlayerCertListItem) {
@@ -362,14 +360,12 @@ function handleBatchApprove() {
     proxy.$modal.msgWarning('请选择待审核记录')
     return
   }
-  proxy.$modal.confirm(`确认批量通过 ${ids.length} 条认证申请？`).then(() =>
-    batchApprovePlayerCert(buildBatchAuditPayload(ids))
-  ).then(res => {
+  batchApprovePlayerCert(buildBatchAuditPayload(ids)).then(res => {
     proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
     clearSelection()
     tableRef.value?.clearSelection()
     getList()
-  }).catch(() => {})
+  })
 }
 
 function openBatchReject() {

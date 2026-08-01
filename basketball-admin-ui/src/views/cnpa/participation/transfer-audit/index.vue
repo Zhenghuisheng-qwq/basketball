@@ -16,6 +16,15 @@
     </el-form>
 
     <el-row :gutter="10" class="mb8">
+      <el-col :span="24">
+        <el-alert
+          type="info"
+          :closable="false"
+          show-icon
+          title="阵容变更审核"
+          description="用于处理赛事阵容锁定后的人员变更申请。"
+        />
+      </el-col>
       <el-col :span="1.5">
         <el-button type="success" plain icon="Check" :disabled="batchMultiple" @click="handleBatchApprove" v-hasPermi="['basket:rosterChangeAudit:audit']">批量通过</el-button>
       </el-col>
@@ -53,7 +62,7 @@
       <el-table-column label="操作" align="center" width="240" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:rosterChangeAudit:query']">详情</el-button>
-          <el-button link type="success" icon="Check" @click="openApprove(scope.row)" v-hasPermi="['basket:rosterChangeAudit:audit']" v-if="scope.row.requestStatus === 0">通过</el-button>
+          <el-button link type="success" icon="Check" @click="handleApprove(scope.row)" v-hasPermi="['basket:rosterChangeAudit:audit']" v-if="scope.row.requestStatus === 0">通过</el-button>
           <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:rosterChangeAudit:audit']" v-if="scope.row.requestStatus === 0">驳回</el-button>
         </template>
       </el-table-column>
@@ -61,7 +70,7 @@
 
     <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
-    <el-drawer v-model="detailOpen" title="转会审核详情" size="720px" append-to-body>
+    <el-drawer v-model="detailOpen" title="阵容变更审核详情" size="720px" append-to-body>
       <el-descriptions v-if="detail" :column="2" border>
         <el-descriptions-item label="申请编号">{{ detail.requestNo }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ detail.requestStatusName }}</el-descriptions-item>
@@ -81,18 +90,6 @@
       </el-descriptions>
     </el-drawer>
 
-    <el-dialog title="审核通过" v-model="approveOpen" width="480px" append-to-body>
-      <el-form :model="approveForm" label-width="88px">
-        <el-form-item label="审核备注">
-          <el-input v-model="approveForm.auditRemark" type="textarea" placeholder="请输入审核备注" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="approveOpen = false">取消</el-button>
-        <el-button type="primary" @click="submitApprove">确定</el-button>
-      </template>
-    </el-dialog>
-
     <el-dialog title="审核驳回" v-model="rejectOpen" width="480px" append-to-body>
       <el-form ref="rejectRef" :model="rejectForm" :rules="rejectRules" label-width="88px">
         <el-form-item label="驳回原因" prop="rejectReason">
@@ -108,7 +105,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog title="批量驳回转会申请" v-model="batchRejectOpen" width="480px" append-to-body>
+    <el-dialog title="批量驳回阵容变更申请" v-model="batchRejectOpen" width="480px" append-to-body>
       <el-form ref="batchRejectRef" :model="batchRejectForm" :rules="rejectRules" label-width="88px">
         <el-form-item label="驳回原因" prop="rejectReason">
           <el-input v-model="batchRejectForm.rejectReason" type="textarea" placeholder="请输入驳回原因" />
@@ -136,7 +133,6 @@ import {
 } from '@/api/basket/rosterChange'
 import { buildBatchAuditPayload, formatBatchAuditMessage, useBatchAuditSelection } from '@/utils/batchAudit'
 import type {
-  RosterChangeAuditApproveReq,
   RosterChangeAuditDetail,
   RosterChangeAuditListItem,
   RosterChangeAuditQuery,
@@ -154,10 +150,8 @@ const total = ref(0)
 const detailOpen = ref(false)
 const detail = ref<RosterChangeAuditDetail>()
 const currentId = ref<number>()
-const approveOpen = ref(false)
 const rejectOpen = ref(false)
 const batchRejectOpen = ref(false)
-const approveForm = ref<RosterChangeAuditApproveReq>({})
 const rejectForm = ref<RosterChangeAuditRejectReq>({ rejectReason: '' })
 const batchRejectForm = ref<RosterChangeAuditRejectReq>({ rejectReason: '' })
 const rejectRules = {
@@ -209,21 +203,11 @@ function handleDetail(row: RosterChangeAuditListItem) {
   })
 }
 
-function openApprove(row: RosterChangeAuditListItem) {
-  currentId.value = row.id
-  approveForm.value = { auditRemark: '' }
-  approveOpen.value = true
-}
-
-function submitApprove() {
-  if (!currentId.value) return
-  proxy.$modal.confirm('确认通过该转会申请？').then(() =>
-    approveRosterChangeAudit(currentId.value!, approveForm.value)
-  ).then(() => {
+function handleApprove(row: RosterChangeAuditListItem) {
+  approveRosterChangeAudit(row.id, {}).then(() => {
     proxy.$modal.msgSuccess('审核通过')
-    approveOpen.value = false
     getList()
-  }).catch(() => {})
+  })
 }
 
 function openReject(row: RosterChangeAuditListItem) {
@@ -235,13 +219,11 @@ function openReject(row: RosterChangeAuditListItem) {
 function submitReject() {
   proxy.$refs.rejectRef.validate((valid: boolean) => {
     if (!valid || !currentId.value) return
-    proxy.$modal.confirm('确认驳回该转会申请？').then(() =>
-      rejectRosterChangeAudit(currentId.value!, rejectForm.value)
-    ).then(() => {
+    rejectRosterChangeAudit(currentId.value!, rejectForm.value).then(() => {
       proxy.$modal.msgSuccess('已驳回')
       rejectOpen.value = false
       getList()
-    }).catch(() => {})
+    })
   })
 }
 
@@ -251,14 +233,12 @@ function handleBatchApprove() {
     proxy.$modal.msgWarning('请选择待审核记录')
     return
   }
-  proxy.$modal.confirm(`确认批量通过 ${ids.length} 条转会申请？`).then(() =>
-    batchApproveRosterChangeAudit(buildBatchAuditPayload(ids))
-  ).then(res => {
+  batchApproveRosterChangeAudit(buildBatchAuditPayload(ids)).then(res => {
     proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
     clearSelection()
     tableRef.value?.clearSelection()
     getList()
-  }).catch(() => {})
+  })
 }
 
 function openBatchReject() {

@@ -55,10 +55,19 @@ public interface BasketMatchMapper {
 
     int countBySeasonId(@Param("seasonId") Long seasonId);
     int countPublishedBySeasonId(@Param("seasonId") Long seasonId);
+    /** 可安全删除的草稿：未发布 + 未开始 + 未录入数据 */
+    int countDeletableDraftBySeasonId(@Param("seasonId") Long seasonId);
+    /** 未发布但不可普通删除的历史脏数据（已结束/已取消/已录入等） */
+    int countLegacyUnpublishedBySeasonId(@Param("seasonId") Long seasonId);
     int countEventTeamPair(@Param("seasonId") Long seasonId, @Param("homeEventTeamId") Long homeEventTeamId,
             @Param("awayEventTeamId") Long awayEventTeamId, @Param("excludeMatchId") Long excludeMatchId);
     int countEventTeamTimeConflict(@Param("excludeMatchId") Long excludeMatchId, @Param("eventTeamId") Long eventTeamId,
             @Param("matchTime") Date matchTime);
+    int countEventTeamDayConflict(@Param("excludeMatchId") Long excludeMatchId, @Param("eventTeamId") Long eventTeamId,
+            @Param("seasonId") Long seasonId, @Param("matchDayStart") Date matchDayStart,
+            @Param("matchDayEnd") Date matchDayEnd);
+    int softDeleteDraftMatch(@Param("id") Long id);
+    com.zhs.basket.vo.ScheduleMatchDetailVo selectScheduleDetailById(@Param("id") Long id);
     int insertScheduleMatch(BasketMatch match);
     int updateScheduleMatch(BasketMatch match);
     int updatePublishStatusBySeasonId(@Param("seasonId") Long seasonId, @Param("publishStatus") Integer publishStatus,
@@ -71,4 +80,5 @@ public interface BasketMatchMapper {
             @Param("matchStatus") Integer matchStatus, @Param("dataStatus") Integer dataStatus,
             @Param("actualEndTime") Date actualEndTime);
     List<com.zhs.basket.vo.ScheduleMatchListVo> selectScheduleList(com.zhs.basket.query.ScheduleMatchQuery query);
+    List<BasketMatch> selectByBatchId(@Param("batchId") Long batchId);
 }

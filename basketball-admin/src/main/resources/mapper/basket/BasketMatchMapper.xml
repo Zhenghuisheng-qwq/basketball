@@ -285,6 +285,31 @@
         select count(1) from basket_match where season_id = #{seasonId} and is_delete = 0 and publish_status = 1
     </select>
 
+    <!-- 未发布 + 未开始(草稿/已编排) + 数据未录入 -->
+    <select id="countDeletableDraftBySeasonId" resultType="int">
+        select count(1) from basket_match
+        where season_id = #{seasonId} and is_delete = 0 and publish_status = 0
+          and match_status in (0, 1)
+          and ifnull(data_status, 0) = 0
+          and ifnull(home_score, 0) = 0 and ifnull(away_score, 0) = 0
+    </select>
+
+    <select id="countLegacyUnpublishedBySeasonId" resultType="int">
+        select count(1) from basket_match
+        where season_id = #{seasonId} and is_delete = 0 and publish_status = 0
+          and not (
+              match_status in (0, 1)
+              and ifnull(data_status, 0) = 0
+              and ifnull(home_score, 0) = 0 and ifnull(away_score, 0) = 0
+          )
+    </select>
+
+    <select id="selectByBatchId" resultMap="BasketMatchResult">
+        select * from basket_match
+        where schedule_batch_id = #{batchId} and is_delete = 0
+        order by round_no asc, sort_no asc, id asc
+    </select>
+
     <select id="countEventTeamPair" resultType="int">
         select count(1) from basket_match
         where season_id = #{seasonId} and is_delete = 0
@@ -298,6 +323,45 @@
         where is_delete = 0 and match_status != 5 and scheduled_start_time = #{matchTime}
           and (home_event_team_id = #{eventTeamId} or away_event_team_id = #{eventTeamId})
         <if test="excludeMatchId != null">and id != #{excludeMatchId}</if>
+    </select>
+
+    <select id="countEventTeamDayConflict" resultType="int">
+        select count(1) from basket_match
+        where is_delete = 0 and match_status != 5 and season_id = #{seasonId}
+          and scheduled_start_time &gt;= #{matchDayStart} and scheduled_start_time &lt; #{matchDayEnd}
+          and (home_event_team_id = #{eventTeamId} or away_event_team_id = #{eventTeamId})
+        <if test="excludeMatchId != null">and id != #{excludeMatchId}</if>
+    </select>
+
+    <update id="softDeleteDraftMatch">
+        update basket_match set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0 and publish_status = 0
+          and match_status in (0, 1)
+          and ifnull(data_status, 0) = 0
+          and ifnull(home_score, 0) = 0 and ifnull(away_score, 0) = 0
+    </update>
+
+    <select id="selectScheduleDetailById" resultType="com.zhs.basket.vo.ScheduleMatchDetailVo">
+        select m.id, m.match_no as matchNo, m.schedule_batch_id as scheduleBatchId, m.season_id as seasonId,
+               s.season_name as seasonName, tm.tournament_name as tournamentName, m.platform_code as platformCode,
+               m.stage_id as stageId, st.stage_name as stageName, m.round_no as roundNo,
+               m.home_event_team_id as homeEventTeamId, m.away_event_team_id as awayEventTeamId,
+               coalesce(nullif(m.home_team_name_snapshot, ''), nullif(hp.display_name, ''), nullif(hp.team_name_snapshot, '')) as homeTeamName,
+               coalesce(nullif(m.away_team_name_snapshot, ''), nullif(ap.display_name, ''), nullif(ap.team_name_snapshot, '')) as awayTeamName,
+               m.scheduled_start_time as scheduledStartTime, m.match_status as matchStatus,
+               m.publish_status as publishStatus, m.home_score as homeScore, m.away_score as awayScore,
+               m.rule_code as ruleCode, m.rule_version as ruleVersion, m.schedule_remark as scheduleRemark,
+               case when m.home_event_team_id is null or m.away_event_team_id is null
+                         or coalesce(nullif(m.home_team_name_snapshot, ''), nullif(hp.display_name, ''), nullif(hp.team_name_snapshot, '')) is null
+                         or coalesce(nullif(m.away_team_name_snapshot, ''), nullif(ap.display_name, ''), nullif(ap.team_name_snapshot, '')) is null
+                    then 1 else 0 end as dataAbnormal
+        from basket_match m
+        left join basket_tournament_season s on m.season_id = s.id and s.is_delete = 0
+        left join basket_tournament tm on s.tournament_id = tm.id and tm.is_delete = 0
+        left join basket_tournament_stage st on m.stage_id = st.id and st.is_delete = 0
+        left join basket_team_season_profile hp on m.home_event_team_id = hp.id and hp.is_delete = 0
+        left join basket_team_season_profile ap on m.away_event_team_id = ap.id and ap.is_delete = 0
+        where m.id = #{id} and m.is_delete = 0
     </select>
 
     <insert id="insertScheduleMatch" useGeneratedKeys="true" keyProperty="id">
@@ -338,9 +402,13 @@
         where schedule_batch_id = #{batchId} and is_delete = 0
     </update>
 
+    <!-- 仅删除可安全清理的草稿，已结束/已取消/已录入数据的历史比赛不会被误删 -->
     <update id="softDeleteDraftBySeasonId">
         update basket_match set is_delete = 1, update_time = now()
         where season_id = #{seasonId} and is_delete = 0 and publish_status = 0
+          and match_status in (0, 1)
+          and ifnull(data_status, 0) = 0
+          and ifnull(home_score, 0) = 0 and ifnull(away_score, 0) = 0
     </update>
 
     <update id="updateScheduleScore">
@@ -356,21 +424,38 @@
                s.season_name as seasonName, tm.tournament_name as tournamentName, m.platform_code as platformCode,
                m.stage_id as stageId, st.stage_name as stageName, m.round_no as roundNo,
                m.home_event_team_id as homeEventTeamId, m.away_event_team_id as awayEventTeamId,
-               m.home_team_name_snapshot as homeTeamName, m.away_team_name_snapshot as awayTeamName,
-               m.home_team_logo_snapshot as homeTeamLogoUrl, m.away_team_logo_snapshot as awayTeamLogoUrl,
+               coalesce(nullif(m.home_team_name_snapshot, ''), nullif(hp.display_name, ''), nullif(hp.team_name_snapshot, '')) as homeTeamName,
+               coalesce(nullif(m.away_team_name_snapshot, ''), nullif(ap.display_name, ''), nullif(ap.team_name_snapshot, '')) as awayTeamName,
+               coalesce(m.home_team_logo_snapshot, '') as homeTeamLogoUrl,
+               coalesce(m.away_team_logo_snapshot, '') as awayTeamLogoUrl,
                m.scheduled_start_time as scheduledStartTime, m.match_status as matchStatus,
                m.publish_status as publishStatus, m.home_score as homeScore, m.away_score as awayScore,
-               m.rule_code as ruleCode, m.rule_version as ruleVersion, m.schedule_remark as scheduleRemark
+               m.rule_code as ruleCode, m.rule_version as ruleVersion, m.schedule_remark as scheduleRemark,
+               case when m.home_event_team_id is null or m.away_event_team_id is null
+                         or coalesce(nullif(m.home_team_name_snapshot, ''), nullif(hp.display_name, ''), nullif(hp.team_name_snapshot, '')) is null
+                         or coalesce(nullif(m.away_team_name_snapshot, ''), nullif(ap.display_name, ''), nullif(ap.team_name_snapshot, '')) is null
+                    then 1 else 0 end as dataAbnormal
         from basket_match m
         left join basket_tournament_season s on m.season_id = s.id and s.is_delete = 0
         left join basket_tournament tm on s.tournament_id = tm.id and tm.is_delete = 0
         left join basket_tournament_stage st on m.stage_id = st.id and st.is_delete = 0
+        left join basket_team_season_profile hp on m.home_event_team_id = hp.id and hp.is_delete = 0
+        left join basket_team_season_profile ap on m.away_event_team_id = ap.id and ap.is_delete = 0
         where m.is_delete = 0
         <if test="seasonId != null">and m.season_id = #{seasonId}</if>
         <if test="stageId != null">and m.stage_id = #{stageId}</if>
+        <if test="platformCode != null and platformCode != ''">and m.platform_code = #{platformCode}</if>
         <if test="matchStatus != null">and m.match_status = #{matchStatus}</if>
         <if test="publishStatus != null">and m.publish_status = #{publishStatus}</if>
         <if test="scheduleBatchId != null">and m.schedule_batch_id = #{scheduleBatchId}</if>
+        <if test="excludeLegacy != null and excludeLegacy == true">
+            and m.schedule_batch_id is not null
+            and m.home_event_team_id is not null
+            and m.away_event_team_id is not null
+            and m.match_status in (0, 1, 2, 4)
+        </if>
+        <if test="beginTime != null and beginTime != ''">and m.scheduled_start_time &gt;= #{beginTime}</if>
+        <if test="endTime != null and endTime != ''">and m.scheduled_start_time &lt;= #{endTime}</if>
         order by m.scheduled_start_time asc, m.sort_no asc, m.id asc
     </select>
 </mapper>

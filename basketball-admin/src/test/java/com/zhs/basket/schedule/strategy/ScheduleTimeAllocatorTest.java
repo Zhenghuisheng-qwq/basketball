@@ -50,6 +50,20 @@ class ScheduleTimeAllocatorTest {
     }
 
     @Test
+    void distribute_evenSplitWithLateExtra_sevenMatches_threeAndFour() {
+        int[] counts = ScheduleTimeAllocator.distributeMatchCounts(
+                7, 2, 12, ScheduleAllocationModeEnum.EVEN_SPLIT_WITH_LATE_EXTRA);
+        assertArrayEquals(new int[]{3, 4}, counts);
+    }
+
+    @Test
+    void distribute_evenSplitWithLateExtra_sixMatches_threeAndThree() {
+        int[] counts = ScheduleTimeAllocator.distributeMatchCounts(
+                6, 2, 12, ScheduleAllocationModeEnum.EVEN_SPLIT_WITH_LATE_EXTRA);
+        assertArrayEquals(new int[]{3, 3}, counts);
+    }
+
+    @Test
     void distribute_exceedsCapacity_shouldThrow() {
         assertThrows(Exception.class, () ->
                 ScheduleTimeAllocator.distributeMatchCounts(25, 2, 12, ScheduleAllocationModeEnum.FILL_FIRST));

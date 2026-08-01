@@ -5,6 +5,7 @@ import com.zhs.basket.domain.BasketTeamSeasonProfile;
 import com.zhs.basket.domain.BasketTournament;
 import com.zhs.basket.domain.BasketTournamentSeason;
 import com.zhs.basket.enums.ParticipationStatusEnum;
+import com.zhs.basket.enums.RosterLockStatusEnum;
 import com.zhs.basket.mapper.BasketFileAssetMapper;
 import com.zhs.basket.mapper.BasketTeamSeasonProfileMapper;
 import com.zhs.basket.mapper.BasketTournamentMapper;
@@ -49,7 +50,22 @@ public class ScheduleEventTeamSupport {
     }
 
     public List<EventTeamScheduleSnapshot> loadActiveSnapshots(Long eventId) {
-        List<BasketTeamSeasonProfile> profiles = eventTeamMapper.selectActiveBySeasonId(eventId);
+        return toSnapshots(eventTeamMapper.selectActiveBySeasonId(eventId));
+    }
+
+    public List<EventTeamScheduleSnapshot> loadEligibleSnapshots(Long eventId) {
+        return toSnapshots(eventTeamMapper.selectEligibleForScheduleBySeasonId(eventId));
+    }
+
+    public int countEligibleTeams(Long eventId) {
+        return eventTeamMapper.countEligibleForScheduleBySeasonId(eventId);
+    }
+
+    public int countLockedActiveTeams(Long eventId) {
+        return eventTeamMapper.countLockedActiveBySeasonId(eventId);
+    }
+
+    private List<EventTeamScheduleSnapshot> toSnapshots(List<BasketTeamSeasonProfile> profiles) {
         Map<Long, String> logoMap = loadLogoUrlMap(profiles);
         List<EventTeamScheduleSnapshot> snapshots = new ArrayList<>(profiles.size());
         for (BasketTeamSeasonProfile profile : profiles) {
@@ -77,6 +93,10 @@ public class ScheduleEventTeamSupport {
         }
         if (profile.getApprovedTime() == null) {
             throw new ServiceException("赛事球队尚未通过报名审核");
+        }
+        if (profile.getRosterLockStatus() == null
+                || profile.getRosterLockStatus() != com.zhs.basket.enums.RosterLockStatusEnum.LOCKED.getCode()) {
+            throw new ServiceException("赛事球队阵容尚未锁定");
         }
         return profile;
     }

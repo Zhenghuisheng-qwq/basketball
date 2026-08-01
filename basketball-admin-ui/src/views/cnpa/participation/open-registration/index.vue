@@ -58,7 +58,7 @@
       <el-table-column label="操作" align="center" width="300" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:openRegistrationAudit:query']">详情</el-button>
-          <el-button link type="success" icon="Check" @click="openApprove(scope.row)" v-hasPermi="['basket:openRegistrationAudit:audit']" v-if="canOpenRegistrationAudit(scope.row.registrationStatus)">通过</el-button>
+          <el-button link type="success" icon="Check" @click="handleApprove(scope.row)" v-hasPermi="['basket:openRegistrationAudit:audit']" v-if="canOpenRegistrationAudit(scope.row.registrationStatus)">通过</el-button>
           <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-hasPermi="['basket:openRegistrationAudit:audit']" v-if="canOpenRegistrationAudit(scope.row.registrationStatus)">驳回</el-button>
         </template>
       </el-table-column>
@@ -91,18 +91,6 @@
         </el-table-column>
       </el-table>
     </el-drawer>
-
-    <el-dialog title="审核通过" v-model="approveOpen" width="480px" append-to-body>
-      <el-form :model="approveForm" label-width="88px">
-        <el-form-item label="审核备注">
-          <el-input v-model="approveForm.auditRemark" type="textarea" placeholder="请输入审核备注" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="approveOpen = false">取消</el-button>
-        <el-button type="primary" @click="submitApprove">确定</el-button>
-      </template>
-    </el-dialog>
 
     <el-dialog title="审核驳回" v-model="rejectOpen" width="480px" append-to-body>
       <el-form ref="rejectRef" :model="rejectForm" :rules="rejectRules" label-width="88px">
@@ -148,7 +136,6 @@ import {
 } from '@/api/basket/openRegistrationAudit'
 import { buildBatchAuditPayload, formatBatchAuditMessage, useBatchAuditSelection } from '@/utils/batchAudit'
 import type {
-  OpenRegistrationAuditApproveReq,
   OpenRegistrationAuditDetail,
   OpenRegistrationAuditListItem,
   OpenRegistrationAuditQuery,
@@ -168,10 +155,8 @@ const detailOpen = ref(false)
 const detail = ref<OpenRegistrationAuditDetail>()
 const auditRecords = ref<OpenRegistrationAuditRecord[]>([])
 const currentId = ref<number>()
-const approveOpen = ref(false)
 const rejectOpen = ref(false)
 const batchRejectOpen = ref(false)
-const approveForm = ref<OpenRegistrationAuditApproveReq>({})
 const rejectForm = ref<OpenRegistrationAuditRejectReq>({ rejectReason: '' })
 const batchRejectForm = ref<OpenRegistrationAuditRejectReq>({ rejectReason: '' })
 const rejectRules = {
@@ -240,21 +225,11 @@ function handleDetail(row: OpenRegistrationAuditListItem) {
   })
 }
 
-function openApprove(row: OpenRegistrationAuditListItem) {
-  currentId.value = row.id
-  approveForm.value = { auditRemark: '' }
-  approveOpen.value = true
-}
-
-function submitApprove() {
-  if (!currentId.value) return
-  proxy.$modal.confirm('确认通过该Open报名审核？').then(() =>
-    approveOpenRegistrationAudit(currentId.value!, approveForm.value)
-  ).then(() => {
+function handleApprove(row: OpenRegistrationAuditListItem) {
+  approveOpenRegistrationAudit(row.id, {}).then(() => {
     proxy.$modal.msgSuccess('审核通过')
-    approveOpen.value = false
     getList()
-  }).catch(() => {})
+  })
 }
 
 function openReject(row: OpenRegistrationAuditListItem) {
@@ -266,13 +241,11 @@ function openReject(row: OpenRegistrationAuditListItem) {
 function submitReject() {
   proxy.$refs.rejectRef.validate((valid: boolean) => {
     if (!valid || !currentId.value) return
-    proxy.$modal.confirm('确认驳回该Open报名审核？').then(() =>
-      rejectOpenRegistrationAudit(currentId.value!, rejectForm.value)
-    ).then(() => {
+    rejectOpenRegistrationAudit(currentId.value!, rejectForm.value).then(() => {
       proxy.$modal.msgSuccess('已驳回')
       rejectOpen.value = false
       getList()
-    }).catch(() => {})
+    })
   })
 }
 
@@ -282,14 +255,12 @@ function handleBatchApprove() {
     proxy.$modal.msgWarning('请选择待审核记录')
     return
   }
-  proxy.$modal.confirm(`确认批量通过 ${ids.length} 条Open报名审核？`).then(() =>
-    batchApproveOpenRegistrationAudit(buildBatchAuditPayload(ids))
-  ).then(res => {
+  batchApproveOpenRegistrationAudit(buildBatchAuditPayload(ids)).then(res => {
     proxy.$modal.msgSuccess(formatBatchAuditMessage(res.data))
     clearSelection()
     tableRef.value?.clearSelection()
     getList()
-  }).catch(() => {})
+  })
 }
 
 function openBatchReject() {

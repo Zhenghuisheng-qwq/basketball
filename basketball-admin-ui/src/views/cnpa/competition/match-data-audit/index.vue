@@ -117,12 +117,7 @@
           <el-table-column label="时间" prop="auditTime" width="170" />
         </el-table>
 
-        <el-form v-if="detail.canAudit" class="mt8">
-          <el-form-item label="审核备注">
-            <el-input v-model="auditRemark" type="textarea" :rows="2" />
-          </el-form-item>
-        </el-form>
-        <el-alert v-else-if="detail.cannotAuditReason" :title="detail.cannotAuditReason" type="info" show-icon :closable="false" />
+        <el-alert v-if="!detail.canAudit && detail.cannotAuditReason" :title="detail.cannotAuditReason" type="info" show-icon :closable="false" />
       </div>
       <template #footer>
         <el-button @click="detailOpen = false">关闭</el-button>
@@ -150,7 +145,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import {
   pageSubmissionAudit,
   getSubmissionDetail,
@@ -177,7 +172,6 @@ const detailOpen = ref(false)
 const detailLoading = ref(false)
 const detail = ref<any>(null)
 const currentSubmissionId = ref<number>()
-const auditRemark = ref('')
 const approving = ref(false)
 
 const rejectOpen = ref(false)
@@ -214,7 +208,6 @@ async function openDetail(submissionId: number) {
   currentSubmissionId.value = submissionId
   detailOpen.value = true
   detailLoading.value = true
-  auditRemark.value = ''
   try {
     const res = await getSubmissionDetail(submissionId)
     detail.value = res.data
@@ -225,10 +218,9 @@ async function openDetail(submissionId: number) {
 
 async function submitApprove() {
   if (!currentSubmissionId.value) return
-  await ElMessageBox.confirm('确认审核通过并同步正式数据？', '提示', { type: 'warning' })
   approving.value = true
   try {
-    await approveSubmission(currentSubmissionId.value, { auditRemark: auditRemark.value || undefined })
+    await approveSubmission(currentSubmissionId.value, {})
     ElMessage.success('审核通过')
     detailOpen.value = false
     loadList()
@@ -251,8 +243,7 @@ async function submitReject() {
   rejecting.value = true
   try {
     await rejectSubmission(currentSubmissionId.value, {
-      rejectReason: rejectReason.value.trim(),
-      auditRemark: auditRemark.value || undefined
+      rejectReason: rejectReason.value.trim()
     })
     ElMessage.success('已驳回')
     rejectOpen.value = false
@@ -269,16 +260,11 @@ async function handleBatchApprove() {
     ElMessage.warning('请选择待审核记录')
     return
   }
-  try {
-    await ElMessageBox.confirm(`确认批量通过 ${ids.length} 条比赛数据提交？`, '提示', { type: 'warning' })
-    const res = await batchApproveSubmission(buildBatchAuditPayload(ids))
-    ElMessage.success(formatBatchAuditMessage(res.data))
-    clearSelection()
-    tableRef.value?.clearSelection()
-    loadList()
-  } catch {
-    // cancelled or failed
-  }
+  const res = await batchApproveSubmission(buildBatchAuditPayload(ids))
+  ElMessage.success(formatBatchAuditMessage(res.data))
+  clearSelection()
+  tableRef.value?.clearSelection()
+  loadList()
 }
 
 function openBatchReject() {

@@ -11,11 +11,21 @@
     </insert>
 
     <select id="selectById" resultType="com.zhs.basket.domain.BasketScheduleGenerateBatch">
-        select * from basket_schedule_generate_batch where id = #{id} and is_delete = 0
+        select id, batch_no as batchNo, event_id as eventId, rule_id as ruleId, rule_code as ruleCode,
+               rule_version as ruleVersion, event_team_count as eventTeamCount, match_count as matchCount,
+               generate_status as generateStatus, publish_status as publishStatus,
+               generated_by as generatedBy, generated_time as generatedTime, publish_time as publishTime,
+               remark, create_time as createTime, update_time as updateTime, is_delete as isDelete
+        from basket_schedule_generate_batch where id = #{id} and is_delete = 0
     </select>
 
     <select id="selectLatestByEventId" resultType="com.zhs.basket.domain.BasketScheduleGenerateBatch">
-        select * from basket_schedule_generate_batch
+        select id, batch_no as batchNo, event_id as eventId, rule_id as ruleId, rule_code as ruleCode,
+               rule_version as ruleVersion, event_team_count as eventTeamCount, match_count as matchCount,
+               generate_status as generateStatus, publish_status as publishStatus,
+               generated_by as generatedBy, generated_time as generatedTime, publish_time as publishTime,
+               remark, create_time as createTime, update_time as updateTime, is_delete as isDelete
+        from basket_schedule_generate_batch
         where event_id = #{eventId} and is_delete = 0
         order by id desc limit 1
     </select>

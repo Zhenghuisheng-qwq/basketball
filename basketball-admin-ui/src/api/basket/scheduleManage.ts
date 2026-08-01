@@ -6,6 +6,7 @@ import type {
   ScheduleGenerateReq,
   ScheduleGenerateResult,
   ScheduleMatchCreateReq,
+  ScheduleMatchDetailItem,
   ScheduleMatchListItem,
   ScheduleMatchQuery,
   ScheduleMatchUpdateReq,
@@ -58,6 +59,18 @@ export function createScheduleMatch(data: ScheduleMatchCreateReq): Promise<AjaxR
 
 export function updateScheduleMatch(matchId: number, data: ScheduleMatchUpdateReq): Promise<AjaxResult> {
   return request({ url: `/basket/schedule/manage/match/${matchId}`, method: 'put', data })
+}
+
+export function getScheduleMatchDetail(matchId: number): Promise<AjaxResult<ScheduleMatchDetailItem>> {
+  return request({ url: `/basket/schedule/manage/match/${matchId}`, method: 'get' })
+}
+
+export function swapScheduleMatch(matchId: number, reason?: string): Promise<AjaxResult> {
+  return request({ url: `/basket/schedule/manage/match/${matchId}/swap`, method: 'post', params: { reason } })
+}
+
+export function deleteScheduleMatch(matchId: number, reason?: string): Promise<AjaxResult> {
+  return request({ url: `/basket/schedule/manage/match/${matchId}`, method: 'delete', params: { reason } })
 }
 
 export function saveScheduleScore(matchId: number, data: ScheduleScoreSaveReq): Promise<AjaxResult> {

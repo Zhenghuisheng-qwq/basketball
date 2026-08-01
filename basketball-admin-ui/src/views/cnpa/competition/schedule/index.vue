@@ -44,6 +44,15 @@
     </el-form>
 
     <el-row :gutter="10" class="mb8">
+      <el-col :span="24">
+        <el-alert
+          type="info"
+          :closable="false"
+          show-icon
+          title="比赛管理"
+          description="查看具体比赛、比赛状态与基础比分，支持编排、延期、开始、取消等比赛生命周期操作。"
+        />
+      </el-col>
       <el-col :span="1.5">
         <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['basket:match:add']">新增</el-button>
       </el-col>

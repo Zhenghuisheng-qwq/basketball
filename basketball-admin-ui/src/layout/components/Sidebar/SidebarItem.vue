@@ -83,6 +83,14 @@ function resolvePath(routePath: string, routeQuery?: string): string | { path: s
   if (isExternal(props.basePath)) {
     return props.basePath
   }
+  if (routePath.startsWith('/')) {
+    const absolutePath = getNormalPath(routePath)
+    if (routeQuery) {
+      const query = JSON.parse(routeQuery)
+      return { path: absolutePath, query: query }
+    }
+    return absolutePath
+  }
   if (routeQuery) {
     const query = JSON.parse(routeQuery)
     return { path: getNormalPath(props.basePath + '/' + routePath), query: query }

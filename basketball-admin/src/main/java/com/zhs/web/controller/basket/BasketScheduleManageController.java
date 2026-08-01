@@ -70,6 +70,12 @@ public class BasketScheduleManageController extends BaseController {
         return getDataTable(matchAdminService.list(query));
     }
 
+    @PreAuthorize("@ss.hasPermi('basket:schedule:query')")
+    @GetMapping("/match/{matchId}")
+    public AjaxResult matchDetail(@PathVariable Long matchId) {
+        return success(matchAdminService.getDetail(matchId));
+    }
+
     @PreAuthorize("@ss.hasPermi('basket:schedule:add')")
     @Log(title = "赛程管理", businessType = BusinessType.INSERT)
     @PostMapping("/match")
@@ -82,6 +88,22 @@ public class BasketScheduleManageController extends BaseController {
     @PutMapping("/match/{matchId}")
     public AjaxResult updateMatch(@PathVariable Long matchId, @RequestBody ScheduleMatchUpdateReq req) {
         matchAdminService.update(matchId, req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:schedule:edit')")
+    @Log(title = "赛程管理", businessType = BusinessType.UPDATE)
+    @PostMapping("/match/{matchId}/swap")
+    public AjaxResult swapMatch(@PathVariable Long matchId, @RequestParam(required = false) String reason) {
+        matchAdminService.swapHomeAway(matchId, reason);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:schedule:delete')")
+    @Log(title = "赛程管理", businessType = BusinessType.DELETE)
+    @DeleteMapping("/match/{matchId}")
+    public AjaxResult deleteMatch(@PathVariable Long matchId, @RequestParam(required = false) String reason) {
+        matchAdminService.deleteDraftMatch(matchId, reason);
         return success();
     }
 

@@ -91,6 +91,24 @@ class RoundRobinScheduleGeneratorTest {
     }
 
     @Test
+    void generate_fifteenTeams_roundRobinWithByeAndLateExtraSlots() {
+        List<MatchPlan> plans = generator.generate(
+                cnpaContext(buildTeams(15), ScheduleAllocationModeEnum.EVEN_SPLIT_WITH_LATE_EXTRA));
+
+        assertEquals(105, plans.size());
+        assertEquals(15, distinctRoundCount(plans));
+        assertRoundMatchesPerRound(plans, 7);
+        assertEachRoundAtMostOneMatchPerTeam(plans);
+        assertEachTeamByeExactlyOnce(plans, 15);
+        assertAllMatchDaysOnWeekdays(plans, 2, 4, 6);
+        Map<Integer, Map<String, Long>> slotCountsByRound = countTimeSlotsByRound(plans);
+        slotCountsByRound.values().forEach(slotCounts -> {
+            assertEquals(3L, slotCounts.getOrDefault("21:00", 0L));
+            assertEquals(4L, slotCounts.getOrDefault("22:00", 0L));
+        });
+    }
+
+    @Test
     void generate_twelveTeams_evenSplitMode() {
         List<MatchPlan> plans = generator.generate(cnpaContext(buildTeams(12), ScheduleAllocationModeEnum.EVEN_SPLIT));
 

@@ -31,4 +31,11 @@ public class ScheduleMatchListVo {
     private String ruleCode;
     private String ruleVersion;
     private String scheduleRemark;
+    /** 1=主客队缺失等历史数据异常 */
+    private Integer dataAbnormal;
+    private Boolean canEdit;
+    private Boolean canDelete;
+    private Boolean canSwap;
+    /** 仅已发布且可执行阶段的比赛允许录入比分 */
+    private Boolean canScore;
 }

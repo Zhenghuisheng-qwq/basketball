@@ -2,6 +2,7 @@ package com.zhs.basket.enums;
 
 public enum ScheduleAuditActionTypeEnum {
     CREATE_MATCH("CREATE_MATCH"),
+    DELETE_MATCH("DELETE_MATCH"),
     GENERATE_DRAFT("GENERATE_DRAFT"),
     DELETE_DRAFT("DELETE_DRAFT"),
     PUBLISH("PUBLISH"),
