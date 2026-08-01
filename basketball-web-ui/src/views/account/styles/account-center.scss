@@ -30,12 +30,12 @@
   overflow-x: clip;
 }
 
-.member-account-layout .account-layout,
-.member-account-layout .account-page__shell,
-.member-account-layout .account-shell {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
+.account-layout,
+.account-page__shell,
+.account-shell {
+  display: grid;
+  grid-template-columns: var(--account-sidebar-width, clamp(240px, 16vw, 300px)) minmax(0, 1fr);
+  align-items: start;
   width: 100%;
   max-width: none;
   min-height: calc(100vh - var(--site-header-height, 72px));
@@ -55,13 +55,13 @@
   --account-sidebar-bg-scale-x: 115%;
   position: sticky;
   top: var(--site-header-height, 72px);
-  z-index: 100;
-  flex: 0 0 var(--account-sidebar-width, clamp(240px, 16vw, 300px));
-  width: var(--account-sidebar-width, clamp(240px, 16vw, 300px));
-  min-width: var(--account-sidebar-width, clamp(240px, 16vw, 300px));
-  max-width: var(--account-sidebar-width, clamp(240px, 16vw, 300px));
+  z-index: 10;
+  align-self: start;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: calc(100vh - var(--site-header-height, 72px));
   height: calc(100vh - var(--site-header-height, 72px));
   max-height: calc(100vh - var(--site-header-height, 72px));
   overflow: hidden;
@@ -102,7 +102,7 @@
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
-  margin-bottom: clamp(20px, 3vh, 32px);
+  margin-bottom: clamp(28px, 4vh, 40px);
   padding: 0 4px;
   text-align: center;
 }
@@ -281,7 +281,7 @@
 
 .account-sidebar__logout-wrap {
   flex-shrink: 0;
-  margin-top: 16px;
+  margin-top: 24px;
   padding-top: 0;
   padding-bottom: 4px;
 }
@@ -334,10 +334,7 @@
 .account-main {
   position: relative;
   z-index: 1;
-  flex: 1;
   min-width: 0;
-  width: auto;
-  margin: 0;
   min-height: calc(100vh - var(--site-header-height, 72px) - 56px);
   padding:
     var(--account-main-padding-y, var(--account-page-padding-y))
@@ -366,7 +363,7 @@
   width: min(100%, var(--account-content-max, 1440px));
   max-width: var(--account-content-max, 1440px);
   min-width: 0;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
   box-sizing: border-box;
 }
@@ -1577,20 +1574,20 @@
 }
 
 @media (max-width: 900px) {
-  .member-account-layout .account-layout,
-  .member-account-layout .account-page__shell,
-  .member-account-layout .account-shell {
+  .account-layout,
+  .account-page__shell,
+  .account-shell {
     display: block;
+    grid-template-columns: 1fr;
   }
 
   .account-sidebar {
     position: relative;
     top: auto;
     z-index: 10;
-    flex: none;
+    align-self: auto;
     width: 100%;
     min-width: 0;
-    max-width: none;
     height: auto;
     max-height: none;
     min-height: auto;

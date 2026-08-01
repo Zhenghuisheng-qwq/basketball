@@ -50,9 +50,9 @@
 .member-account-layout .account-shell,
 .account-center-vars .account-page__shell,
 .account-center-vars .account-shell {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: var(--account-sidebar-width) minmax(0, 1fr);
+  align-items: start;
   width: 100%;
   max-width: none;
   min-height: calc(100vh - var(--site-header-height, 72px));
@@ -68,13 +68,13 @@
   --account-sidebar-bg-scale-x: 115%;
   position: sticky;
   top: var(--site-header-height, 72px);
-  z-index: 100;
-  flex: 0 0 var(--account-sidebar-width);
-  width: var(--account-sidebar-width);
-  min-width: var(--account-sidebar-width);
-  max-width: var(--account-sidebar-width);
+  z-index: 10;
+  align-self: start;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: calc(100vh - var(--site-header-height, 72px));
   height: calc(100vh - var(--site-header-height, 72px));
   max-height: calc(100vh - var(--site-header-height, 72px));
   overflow: hidden;
@@ -134,10 +134,7 @@
 .account-center-vars .account-main {
   position: relative;
   z-index: 1;
-  flex: 1;
   min-width: 0;
-  width: auto;
-  margin: 0;
   min-height: calc(100vh - var(--site-header-height, 72px));
   padding: var(--account-main-padding-y) var(--account-main-padding-x);
   background: var(--account-paper-bg);
@@ -154,7 +151,7 @@
   width: min(100%, var(--account-content-max));
   max-width: var(--account-content-max);
   min-width: 0;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
   box-sizing: border-box;
 }
@@ -452,11 +449,9 @@
     position: relative;
     top: auto;
     z-index: 10;
-    flex: none;
+    align-self: auto;
     width: 100%;
     min-width: 0;
-    max-width: none;
-    flex-basis: auto;
     height: auto;
     max-height: none;
     min-height: auto;
