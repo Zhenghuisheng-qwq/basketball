@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketPartnerSupportRecordMapper">
+    <resultMap type="com.zhs.basket.domain.BasketPartnerSupportRecord" id="SupportRecordResult">
+        <id property="id" column="id"/>
+        <result property="partnerId" column="partner_id"/>
+        <result property="supportType" column="support_type"/>
+        <result property="supportAmount" column="support_amount"/>
+        <result property="supportDate" column="support_date"/>
+        <result property="publicDescription" column="public_description"/>
+        <result property="publishStatus" column="publish_status"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="listSelect">
+        select r.id,
+               r.partner_id as partnerId,
+               p.partner_code as partnerCode,
+               p.partner_name as partnerName,
+               lf.access_url as partnerLogoUrl,
+               r.support_type as supportType,
+               r.support_amount as supportAmount,
+               r.support_date as supportDate,
+               r.public_description as publicDescription,
+               r.publish_status as publishStatus,
+               r.sort_order as sortOrder,
+               r.create_time as createTime,
+               r.update_time as updateTime
+        from basket_partner_support_record r
+        inner join basket_partner p on p.id = r.partner_id and p.is_delete = 0
+        left join basket_file_asset lf on lf.id = p.logo_file_id and lf.is_delete = 0
+    </sql>
+
+    <select id="selectById" resultMap="SupportRecordResult">
+        select id, partner_id, support_type, support_amount, support_date, public_description,
+               publish_status, sort_order, create_by, create_time, update_by, update_time, is_delete
+        from basket_partner_support_record
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectDetailById" resultType="com.zhs.basket.resp.PartnerSupportListResp">
+        <include refid="listSelect"/>
+        where r.id = #{id} and r.is_delete = 0
+    </select>
+
+    <select id="selectList" resultType="com.zhs.basket.resp.PartnerSupportListResp">
+        <include refid="listSelect"/>
+        where r.is_delete = 0
+        <if test="partnerName != null and partnerName != ''">
+            and p.partner_name like concat('%', #{partnerName}, '%')
+        </if>
+        <if test="supportType != null and supportType != ''">
+            and r.support_type = #{supportType}
+        </if>
+        <if test="publishStatus != null">
+            and r.publish_status = #{publishStatus}
+        </if>
+        <if test="supportDateBegin != null">
+            and r.support_date &gt;= #{supportDateBegin}
+        </if>
+        <if test="supportDateEnd != null">
+            and r.support_date &lt;= #{supportDateEnd}
+        </if>
+        order by r.sort_order desc, r.support_date desc, r.create_time desc, r.id desc
+    </select>
+
+    <select id="countActiveByPartnerId" resultType="int">
+        select count(1)
+        from basket_partner_support_record
+        where partner_id = #{partnerId} and is_delete = 0
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_partner_support_record (
+            partner_id, support_type, support_amount, support_date, public_description,
+            publish_status, sort_order, create_by, create_time, update_by, update_time, is_delete
+        ) values (
+            #{partnerId}, #{supportType}, #{supportAmount}, #{supportDate}, #{publicDescription},
+            #{publishStatus}, #{sortOrder}, #{createBy}, #{createTime}, #{updateBy}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_partner_support_record
+        <set>
+            <if test="partnerId != null">partner_id = #{partnerId},</if>
+            <if test="supportType != null">support_type = #{supportType},</if>
+            support_amount = #{supportAmount},
+            <if test="supportDate != null">support_date = #{supportDate},</if>
+            <if test="publicDescription != null">public_description = #{publicDescription},</if>
+            <if test="publishStatus != null">publish_status = #{publishStatus},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="updatePublishStatus">
+        update basket_partner_support_record
+        set publish_status = #{toStatus}, update_time = now()
+        where id = #{id} and is_delete = 0 and publish_status = #{fromStatus}
+    </update>
+
+    <update id="softDelete">
+        update basket_partner_support_record
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+</mapper>

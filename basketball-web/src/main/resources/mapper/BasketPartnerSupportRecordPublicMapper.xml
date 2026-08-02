@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketPartnerSupportRecordPublicDao">
+
+    <sql id="publicWhere">
+        r.is_delete = 0
+        and r.publish_status = 1
+        and p.is_delete = 0
+        and p.partner_status = 1
+    </sql>
+
+    <select id="countPublicRecords" resultType="java.lang.Long">
+        select count(1)
+        from basket_partner_support_record r
+        inner join basket_partner p on p.id = r.partner_id
+        where <include refid="publicWhere"/>
+    </select>
+
+    <select id="sumPublicCashAmount" resultType="java.math.BigDecimal">
+        select ifnull(sum(r.support_amount), 0)
+        from basket_partner_support_record r
+        inner join basket_partner p on p.id = r.partner_id
+        where <include refid="publicWhere"/>
+          and r.support_type = 'CASH'
+          and r.support_amount is not null
+    </select>
+
+    <select id="selectPublicPage" resultType="com.zhs.response.publicapi.PublicPartnerSupportRecordResp">
+        select r.id as recordId,
+               p.id as partnerId,
+               p.partner_name as partnerName,
+               lf.access_url as partnerLogoUrl,
+               p.website_url as websiteUrl,
+               r.support_type as supportType,
+               r.support_amount as supportAmount,
+               date_format(r.support_date, '%Y-%m-%d') as supportDate,
+               r.public_description as publicDescription
+        from basket_partner_support_record r
+        inner join basket_partner p on p.id = r.partner_id
+        left join basket_file_asset lf on lf.id = p.logo_file_id and lf.is_delete = 0
+        where <include refid="publicWhere"/>
+        order by r.sort_order desc, r.support_date desc, r.create_time desc, r.id desc
+        limit #{offset}, #{limit}
+    </select>
+</mapper>
