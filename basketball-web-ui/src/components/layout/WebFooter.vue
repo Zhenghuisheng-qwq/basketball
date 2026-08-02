@@ -54,7 +54,7 @@ const hallLinks = [
           <h4>关于 CNPA</h4>
           <a href="#">关于我们</a>
           <router-link to="/announcements">公告中心</router-link>
-          <a href="#">合作伙伴</a>
+          <router-link to="/partners">合作伙伴</router-link>
           <a href="#">联系我们</a>
         </div>
 

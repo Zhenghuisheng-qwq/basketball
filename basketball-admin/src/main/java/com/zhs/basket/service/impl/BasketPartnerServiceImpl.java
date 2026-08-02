@@ -3,6 +3,7 @@ package com.zhs.basket.service.impl;
 import com.zhs.basket.domain.BasketPartner;
 import com.zhs.basket.enums.PartnerStatusEnum;
 import com.zhs.basket.mapper.BasketPartnerMapper;
+import com.zhs.basket.mapper.BasketPartnerSupportRecordMapper;
 import com.zhs.basket.req.PartnerAddReq;
 import com.zhs.basket.req.PartnerEditReq;
 import com.zhs.basket.req.PartnerQueryReq;
@@ -11,6 +12,7 @@ import com.zhs.basket.service.IBasketPartnerService;
 import com.zhs.basket.support.BasketPublicCacheCleaner;
 import com.zhs.basket.support.ExternalUrlValidator;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class BasketPartnerServiceImpl implements IBasketPartnerService {
     private static final Integer NOT_DELETED = 0;
 
     @Autowired private BasketPartnerMapper partnerMapper;
+    @Autowired private BasketPartnerSupportRecordMapper supportRecordMapper;
     @Autowired private BasketPublicCacheCleaner publicCacheCleaner;
 
     @Override
@@ -57,15 +60,19 @@ public class BasketPartnerServiceImpl implements IBasketPartnerService {
         }
         Date now = new Date();
         BasketPartner partner = new BasketPartner();
+        partner.setPartnerCode(generatePartnerCode());
         partner.setPartnerName(req.getPartnerName().trim());
         partner.setLogoFileId(req.getLogoFileId());
         partner.setWebsiteUrl(req.getWebsiteUrl());
+        partner.setPublicDescription(StringUtils.trim(req.getPublicDescription()));
         partner.setPartnerType(req.getPartnerType());
         partner.setCooperationStartDate(req.getCooperationStartDate());
         partner.setCooperationEndDate(req.getCooperationEndDate());
         partner.setPartnerStatus(PartnerStatusEnum.DRAFT.getCode());
         partner.setSortNo(req.getSortNo() == null ? 0 : req.getSortNo());
         partner.setRemark(req.getRemark());
+        partner.setCreateBy(SecurityUtils.getUsername());
+        partner.setUpdateBy(SecurityUtils.getUsername());
         partner.setCreateTime(now);
         partner.setUpdateTime(now);
         partner.setIsDelete(NOT_DELETED);
@@ -95,6 +102,9 @@ public class BasketPartnerServiceImpl implements IBasketPartnerService {
             ExternalUrlValidator.validateHttpUrl(req.getWebsiteUrl(), "网站地址");
             existing.setWebsiteUrl(req.getWebsiteUrl());
         }
+        if (req.getPublicDescription() != null) {
+            existing.setPublicDescription(StringUtils.trim(req.getPublicDescription()));
+        }
         if (req.getPartnerType() != null) {
             existing.setPartnerType(req.getPartnerType());
         }
@@ -110,6 +120,7 @@ public class BasketPartnerServiceImpl implements IBasketPartnerService {
         if (req.getRemark() != null) {
             existing.setRemark(req.getRemark());
         }
+        existing.setUpdateBy(SecurityUtils.getUsername());
         if (partnerMapper.updateById(existing) != 1) {
             throw new ServiceException("更新失败");
         }
@@ -153,6 +164,9 @@ public class BasketPartnerServiceImpl implements IBasketPartnerService {
         if (status == PartnerStatusEnum.PUBLISHED) {
             throw new ServiceException("已发布合作伙伴不可删除，请先下线");
         }
+        if (supportRecordMapper.countActiveByPartnerId(id) > 0) {
+            throw new ServiceException("该合作伙伴仍有支持记录，请先删除或停用相关记录");
+        }
         if (partnerMapper.softDelete(id, Arrays.asList(
                 PartnerStatusEnum.DRAFT.getCode(), PartnerStatusEnum.OFFLINE.getCode())) != 1) {
             throw new ServiceException("删除失败");
@@ -177,5 +191,11 @@ public class BasketPartnerServiceImpl implements IBasketPartnerService {
         } catch (Exception ignored) {
             // ignore
         }
+    }
+
+    private String generatePartnerCode() {
+        Integer maxSeq = partnerMapper.selectMaxPartnerCodeSequence();
+        int next = maxSeq != null ? maxSeq + 1 : 1;
+        return "CNPA-PT-" + String.format("%06d", next);
     }
 }

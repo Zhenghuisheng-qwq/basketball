@@ -62,4 +62,11 @@ public final class BasketContentPerms {
     public static final String PARTNER_PUBLISH = "basket:partner:publish";
     public static final String PARTNER_OFFLINE = "basket:partner:offline";
     public static final String PARTNER_REMOVE = "basket:partner:remove";
+
+    public static final String PARTNER_SUPPORT_LIST = "basket:partnerSupport:list";
+    public static final String PARTNER_SUPPORT_QUERY = "basket:partnerSupport:query";
+    public static final String PARTNER_SUPPORT_ADD = "basket:partnerSupport:add";
+    public static final String PARTNER_SUPPORT_EDIT = "basket:partnerSupport:edit";
+    public static final String PARTNER_SUPPORT_REMOVE = "basket:partnerSupport:remove";
+    public static final String PARTNER_SUPPORT_STATUS = "basket:partnerSupport:status";
 }

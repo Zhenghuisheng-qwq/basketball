@@ -159,6 +159,35 @@ export interface PublicPartnerResp {
   sortNo?: number | null
 }
 
+export interface PublicPartnerSupportRecordResp {
+  recordId?: string | number | null
+  partnerId?: string | number | null
+  partnerName?: string | null
+  partnerLogoUrl?: string | null
+  websiteUrl?: string | null
+  supportType?: string | null
+  supportTypeText?: string | null
+  supportAmount?: number | string | null
+  supportDisplayText?: string | null
+  supportDate?: string | null
+  publicDescription?: string | null
+}
+
+export interface PublicPartnerSummaryResp {
+  supportRecordCount?: number | string | null
+  totalCashAmount?: number | string | null
+}
+
+export interface PublicPartnerPageResp {
+  total?: number | string | null
+  rows?: PublicPartnerSupportRecordResp[] | null
+}
+
+export interface PublicPartnersResp {
+  summary?: PublicPartnerSummaryResp | null
+  page?: PublicPartnerPageResp | null
+}
+
 export interface PublicHonorLineupItemResp {
   lineupId?: string | null
   teamId?: string | null

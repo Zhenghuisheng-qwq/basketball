@@ -26,6 +26,7 @@ const navItems = [
     to: '/hall-of-fame',
   },
   { label: '公告', to: '/announcements' },
+  { label: '合作伙伴', to: '/partners' },
 ]
 
 const isCompetitionMenuOpen = ref(false)
@@ -60,6 +61,9 @@ const showAccountInitials = computed(() => Boolean(accountInitials.value))
 function isActive(item: (typeof navItems)[number]) {
   if (item.to === '/announcements') {
     return route.path.startsWith('/announcements')
+  }
+  if (item.to === '/partners') {
+    return route.path.startsWith('/partners')
   }
   if (typeof item.to === 'string') return route.path === item.to
   return false

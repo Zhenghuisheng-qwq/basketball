@@ -2295,14 +2295,17 @@ export interface PartnerQuery extends PageDomain {
   partnerType?: string
   partnerStatus?: number
   keyword?: string
+  partnerCode?: string
 }
 
 export interface PartnerListItem {
   id: number
+  partnerCode?: string
   partnerName?: string
   logoFileId?: number
   logoUrl?: string
   websiteUrl?: string
+  publicDescription?: string
   partnerType?: string
   cooperationStartDate?: string
   cooperationEndDate?: string
@@ -2318,6 +2321,7 @@ export interface PartnerAddReq {
   partnerName?: string
   logoFileId?: number
   websiteUrl?: string
+  publicDescription?: string
   partnerType?: string
   cooperationStartDate?: string
   cooperationEndDate?: string
@@ -2329,12 +2333,66 @@ export interface PartnerEditReq {
   partnerName?: string
   logoFileId?: number
   websiteUrl?: string
+  publicDescription?: string
   partnerType?: string
   cooperationStartDate?: string
   cooperationEndDate?: string
   sortNo?: number
   remark?: string
 }
+
+export interface PartnerSupportQuery extends PageDomain {
+  partnerName?: string
+  supportType?: string
+  publishStatus?: number
+  supportDateBegin?: string
+  supportDateEnd?: string
+}
+
+export interface PartnerSupportListItem {
+  id: number
+  partnerId?: number
+  partnerCode?: string
+  partnerName?: string
+  partnerLogoUrl?: string
+  supportType?: string
+  supportTypeName?: string
+  supportAmount?: number
+  supportDate?: string
+  publicDescription?: string
+  publishStatus?: number
+  publishStatusName?: string
+  sortOrder?: number
+  createTime?: string
+  updateTime?: string
+}
+
+export interface PartnerSupportAddReq {
+  partnerId?: number
+  supportType?: string
+  supportAmount?: number
+  supportDate?: string
+  publicDescription?: string
+  publishStatus?: number
+  sortOrder?: number
+}
+
+export interface PartnerSupportEditReq extends PartnerSupportAddReq {}
+
+export const PARTNER_SUPPORT_TYPE_OPTIONS = [
+  { value: 'CASH', label: '现金赞助' },
+  { value: 'GOODS', label: '物资支持' },
+  { value: 'TECHNOLOGY', label: '技术支持' },
+  { value: 'VENUE', label: '场地支持' },
+  { value: 'MEDIA', label: '媒体支持' },
+  { value: 'SERVICE', label: '服务支持' },
+  { value: 'OTHER', label: '其他支持' }
+]
+
+export const PARTNER_SUPPORT_STATUS_OPTIONS = [
+  { value: 1, label: '已公开' },
+  { value: 0, label: '已停用' }
+]
 
 /** Open报名状态（同报名状态） */
 export const OPEN_REGISTRATION_STATUS_OPTIONS = REGISTRATION_AUDIT_STATUS_OPTIONS

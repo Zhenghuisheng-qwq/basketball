@@ -119,6 +119,18 @@ const router = createRouter({
 
     {
 
+      path: '/partners',
+
+      name: 'Partners',
+
+      component: () => import('@/views/partners/index.vue'),
+
+      meta: { title: '合作伙伴' },
+
+    },
+
+    {
+
       path: '/notice',
 
       redirect: '/announcements',

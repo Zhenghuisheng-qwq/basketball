@@ -3,33 +3,37 @@
 <mapper namespace="com.zhs.basket.mapper.BasketPartnerMapper">
     <resultMap type="com.zhs.basket.domain.BasketPartner" id="BasketPartnerResult">
         <id property="id" column="id"/>
+        <result property="partnerCode" column="partner_code"/>
         <result property="partnerName" column="partner_name"/>
         <result property="logoFileId" column="logo_file_id"/>
         <result property="websiteUrl" column="website_url"/>
+        <result property="publicDescription" column="public_description"/>
         <result property="partnerType" column="partner_type"/>
         <result property="cooperationStartDate" column="cooperation_start_date"/>
         <result property="cooperationEndDate" column="cooperation_end_date"/>
         <result property="partnerStatus" column="partner_status"/>
         <result property="sortNo" column="sort_no"/>
         <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateBy" column="update_by"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
         <result property="isDelete" column="is_delete"/>
     </resultMap>
 
     <sql id="listSelect">
-        select p.id, p.partner_name as partnerName, p.logo_file_id as logoFileId, lf.access_url as logoUrl,
-               p.website_url as websiteUrl, p.partner_type as partnerType,
+        select p.id, p.partner_code as partnerCode, p.partner_name as partnerName, p.logo_file_id as logoFileId, lf.access_url as logoUrl,
+               p.website_url as websiteUrl, p.public_description as publicDescription, p.partner_type as partnerType,
                p.cooperation_start_date as cooperationStartDate, p.cooperation_end_date as cooperationEndDate,
-               p.partner_status as partnerStatus, p.sort_no as sortNo, p.remark,
+               p.partner_status as partnerStatus, p.sort_no as sortNo, p.remark, p.public_description as publicDescription,
                p.create_time as createTime, p.update_time as updateTime
         from basket_partner p
         left join basket_file_asset lf on lf.id = p.logo_file_id and lf.is_delete = 0
     </sql>
 
     <select id="selectById" resultMap="BasketPartnerResult">
-        select id, partner_name, logo_file_id, website_url, partner_type, cooperation_start_date,
-               cooperation_end_date, partner_status, sort_no, remark, create_time, update_time, is_delete
+        select id, partner_code, partner_name, logo_file_id, website_url, public_description, partner_type, cooperation_start_date,
+               cooperation_end_date, partner_status, sort_no, remark, create_by, update_by, create_time, update_time, is_delete
         from basket_partner where id = #{id} and is_delete = 0
     </select>
 
@@ -43,10 +47,11 @@
         where p.is_delete = 0
         <if test="partnerType != null and partnerType != ''">and p.partner_type = #{partnerType}</if>
         <if test="partnerStatus != null">and p.partner_status = #{partnerStatus}</if>
+        <if test="partnerCode != null and partnerCode != ''">and p.partner_code like concat('%', #{partnerCode}, '%')</if>
         <if test="keyword != null and keyword != ''">
             and p.partner_name like concat('%', #{keyword}, '%')
         </if>
-        order by p.sort_no, p.id desc
+        order by p.sort_no desc, p.id desc
     </select>
 
     <select id="countByName" resultType="int">
@@ -55,13 +60,19 @@
         <if test="excludeId != null">and id &lt;&gt; #{excludeId}</if>
     </select>
 
+    <select id="selectMaxPartnerCodeSequence" resultType="java.lang.Integer">
+        select max(cast(substring(partner_code, 10) as unsigned))
+        from basket_partner
+        where partner_code like 'CNPA-PT-%' and is_delete = 0
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_partner (
-            partner_name, logo_file_id, website_url, partner_type, cooperation_start_date, cooperation_end_date,
-            partner_status, sort_no, remark, create_time, update_time, is_delete
+            partner_code, partner_name, logo_file_id, website_url, public_description, partner_type, cooperation_start_date, cooperation_end_date,
+            partner_status, sort_no, remark, create_by, update_by, create_time, update_time, is_delete
         ) values (
-            #{partnerName}, #{logoFileId}, #{websiteUrl}, #{partnerType}, #{cooperationStartDate}, #{cooperationEndDate},
-            #{partnerStatus}, #{sortNo}, #{remark}, #{createTime}, #{updateTime}, #{isDelete}
+            #{partnerCode}, #{partnerName}, #{logoFileId}, #{websiteUrl}, #{publicDescription}, #{partnerType}, #{cooperationStartDate}, #{cooperationEndDate},
+            #{partnerStatus}, #{sortNo}, #{remark}, #{createBy}, #{updateBy}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -71,12 +82,14 @@
             <if test="partnerName != null">partner_name = #{partnerName},</if>
             <if test="logoFileId != null">logo_file_id = #{logoFileId},</if>
             <if test="websiteUrl != null">website_url = #{websiteUrl},</if>
+            <if test="publicDescription != null">public_description = #{publicDescription},</if>
             <if test="partnerType != null">partner_type = #{partnerType},</if>
             <if test="cooperationStartDate != null">cooperation_start_date = #{cooperationStartDate},</if>
             <if test="cooperationEndDate != null">cooperation_end_date = #{cooperationEndDate},</if>
             <if test="sortNo != null">sort_no = #{sortNo},</if>
             <if test="remark != null">remark = #{remark},</if>
             <if test="partnerStatus != null">partner_status = #{partnerStatus},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0
