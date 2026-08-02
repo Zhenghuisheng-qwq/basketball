@@ -5,13 +5,14 @@ import type { PublicTournamentItemVo } from '@/api/types/public'
 import type { CompetitionOption } from '../types/competition'
 import type { usePublicSeasonContext } from './usePublicSeasonContext'
 import { displayText } from '@/utils/publicDisplay'
+import { isSamePublicId, normalizePublicId } from '@/utils/publicId'
 
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
 function toOption(item: PublicTournamentItemVo): CompetitionOption {
   return {
-    id: item.tournamentId,
-    code: displayText(item.tournamentNo || item.shortName || item.tournamentId, item.tournamentId),
+    id: normalizePublicId(item.tournamentId),
+    code: displayText(item.tournamentNo || item.shortName || item.tournamentId, String(item.tournamentId)),
     name: displayText(item.tournamentName, '未命名赛事'),
     shortName: displayText(item.shortName || item.tournamentName, '赛事'),
     region: 'domestic',
@@ -49,12 +50,12 @@ export function useCompetitionSelector() {
     if (ctx?.tournamentId.value) return ctx.tournamentId.value
     const queryId = route.query.competition
     if (typeof queryId === 'string' && queryId.trim()) return queryId.trim()
-    return competitionOptions.value[0]?.id ?? ''
+    return normalizePublicId(competitionOptions.value[0]?.id)
   })
 
   const currentCompetition = computed<CompetitionOption | null>(() => {
     return (
-      competitionOptions.value.find((item) => item.id === currentCompetitionId.value) ??
+      competitionOptions.value.find((item) => isSamePublicId(item.id, currentCompetitionId.value)) ??
       competitionOptions.value[0] ??
       null
     )

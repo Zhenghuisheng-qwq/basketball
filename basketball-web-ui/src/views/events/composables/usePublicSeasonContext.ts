@@ -7,6 +7,7 @@ import type {
   PublicTournamentItemVo,
 } from '@/api/types/public'
 import { displayText } from '@/utils/publicDisplay'
+import { isSamePublicId, normalizePublicId } from '@/utils/publicId'
 
 export type LoadState = 'idle' | 'loading' | 'success' | 'empty' | 'error'
 
@@ -27,22 +28,18 @@ export function usePublicSeasonContext() {
   let seasonReq = 0
   let overviewReq = 0
 
-  const tournamentId = computed(() => {
-    const q = route.query.competition
-    return typeof q === 'string' && q.trim() ? q.trim() : ''
-  })
-
-  const seasonId = computed(() => {
-    const q = route.query.seasonId
-    return typeof q === 'string' && q.trim() ? q.trim() : ''
-  })
+  const tournamentId = computed(() => normalizePublicId(route.query.competition))
+  const seasonId = computed(() => normalizePublicId(route.query.seasonId))
 
   const currentTournament = computed(
-    () => tournaments.value.find((item) => item.tournamentId === tournamentId.value) ?? null,
+    () =>
+      tournaments.value.find((item) => isSamePublicId(item.tournamentId, tournamentId.value)) ??
+      null,
   )
 
   const currentSeason = computed(
-    () => seasons.value.find((item) => item.seasonId === seasonId.value) ?? null,
+    () =>
+      seasons.value.find((item) => isSamePublicId(item.seasonId, seasonId.value)) ?? null,
   )
 
   async function loadTournaments() {
@@ -58,13 +55,13 @@ export function usePublicSeasonContext() {
 
       if (!records.length) return
 
-      const exists = records.some((item) => item.tournamentId === tournamentId.value)
+      const exists = records.some((item) => isSamePublicId(item.tournamentId, tournamentId.value))
       if (!exists) {
         await router.replace({
           path: '/tournament',
           query: {
             ...route.query,
-            competition: records[0]!.tournamentId,
+            competition: normalizePublicId(records[0]!.tournamentId),
           },
         })
       }
@@ -81,6 +78,7 @@ export function usePublicSeasonContext() {
     if (!tid) {
       seasons.value = []
       seasonState.value = 'empty'
+      overview.value = null
       return
     }
     seasonState.value = 'loading'
@@ -96,14 +94,14 @@ export function usePublicSeasonContext() {
         return
       }
 
-      const exists = list.some((item) => item.seasonId === seasonId.value)
+      const exists = list.some((item) => isSamePublicId(item.seasonId, seasonId.value))
       if (!exists) {
         await router.replace({
           path: '/tournament',
           query: {
             ...route.query,
             competition: tid,
-            seasonId: list[0]!.seasonId,
+            seasonId: normalizePublicId(list[0]!.seasonId),
           },
         })
       }
@@ -141,18 +139,20 @@ export function usePublicSeasonContext() {
       path: '/tournament',
       query: {
         ...route.query,
-        competition: id,
+        competition: normalizePublicId(id),
         seasonId: undefined,
       },
     })
   }
 
   function selectSeason(id: string) {
+    const normalized = normalizePublicId(id)
+    if (!normalized) return
     router.push({
       path: '/tournament',
       query: {
         ...route.query,
-        seasonId: id,
+        seasonId: normalized,
       },
     })
   }
@@ -166,14 +166,15 @@ export function usePublicSeasonContext() {
         key: 'season' as const,
         icon: 'calendar' as const,
         title: displayText(
-          currentTournament.value?.competitionSeasonName
+          tournament?.competitionSeasonName
             || ov?.competitionSeasonName
             || ov?.seasonName
+            || season?.competitionSeasonName
             || season?.seasonName,
           '赛季',
         ),
         value: displayText(
-          currentTournament.value?.competitionSeasonYear
+          tournament?.competitionSeasonYear
             || ov?.competitionSeasonYear
             || (season?.seasonStartTime && season?.seasonEndTime
               ? `${String(season.seasonStartTime).slice(0, 10)} ~ ${String(season.seasonEndTime).slice(0, 10)}`
@@ -212,13 +213,21 @@ export function usePublicSeasonContext() {
     { immediate: true },
   )
 
-  watch(tournamentId, (tid) => {
-    void loadSeasons(tid)
-  })
+  watch(
+    tournamentId,
+    (tid) => {
+      void loadSeasons(tid)
+    },
+    { immediate: true },
+  )
 
-  watch(seasonId, (sid) => {
-    void loadOverview(sid)
-  })
+  watch(
+    seasonId,
+    (sid) => {
+      void loadOverview(sid)
+    },
+    { immediate: true },
+  )
 
   return {
     tournaments,

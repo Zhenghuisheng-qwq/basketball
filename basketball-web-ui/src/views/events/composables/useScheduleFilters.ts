@@ -32,8 +32,11 @@ export function useScheduleFilters() {
 
   const seasonOptions = computed(() =>
     ctx.seasons.value.map((item) => ({
-      id: item.seasonId,
-      label: item.seasonName || item.seasonId,
+      id: String(item.seasonId),
+      label:
+        item.competitionSeasonName && item.seasonName && item.competitionSeasonName !== item.seasonName
+          ? `${item.competitionSeasonName} · ${item.seasonName}`
+          : item.seasonName || item.competitionSeasonName || String(item.seasonId),
     })),
   )
 
