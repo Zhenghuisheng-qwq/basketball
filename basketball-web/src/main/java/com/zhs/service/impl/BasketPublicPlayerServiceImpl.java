@@ -85,6 +85,10 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             try {
                 BasketTeam team = publicSupport.requirePublicTeam(player.getCurrentTeamId());
                 vo.setCurrentTeamName(team.getTeamName());
+                if (team.getLogoFileId() != null) {
+                    Map<Long, String> logoMap = publicSupport.loadAccessUrlMap(Collections.singleton(team.getLogoFileId()));
+                    vo.setCurrentTeamLogoUrl(logoMap.get(team.getLogoFileId()));
+                }
             } catch (Exception ignored) {
                 // 当前球队未公开时不暴露球队详情
             }

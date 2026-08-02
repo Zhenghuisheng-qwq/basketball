@@ -41,6 +41,7 @@ withDefaults(
 }
 
 .paper-tear :deep(.torn-edge-shadow) {
-  display: none;
+  display: block;
+  opacity: 0.22;
 }
 </style>

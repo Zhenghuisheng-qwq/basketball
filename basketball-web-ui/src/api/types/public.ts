@@ -473,6 +473,7 @@ export interface PublicPlayerDetailVo {
   weightKg?: number | string | null
   currentTeamId?: string | null
   currentTeamName?: string | null
+  currentTeamLogoUrl?: string | null
   certificationStatus?: number | null
   playerStatus?: number | null
   profilePublic?: boolean | null

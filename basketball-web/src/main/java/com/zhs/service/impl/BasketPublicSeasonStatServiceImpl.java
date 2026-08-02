@@ -62,7 +62,8 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
         stageId = normalizeStageId(stageId);
         PublicTeamSortEnum sortEnum = PublicTeamSortEnum.fromCode(sortField);
         boolean asc = publicSupport.isAsc(sortOrder);
-        Page<BasketTeamSeasonStat> page = publicSupport.newPage(currentPage, pageSize);
+        int pageNo = publicSupport.normalizePage(currentPage);
+        int size = publicSupport.normalizeSize(pageSize);
         LambdaQueryWrapper<BasketTeamSeasonStat> wrapper = new LambdaQueryWrapper<BasketTeamSeasonStat>()
                 .eq(BasketTeamSeasonStat::getSeasonId, seasonId)
                 .eq(BasketTeamSeasonStat::getIsDelete, BasketPublicConstants.NOT_DELETED)
@@ -70,14 +71,16 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
         if (!applyTeamKeywordFilter(wrapper, keyword)) {
             return publicSupport.emptyPage(currentPage, pageSize);
         }
-        if (asc) {
-            wrapper.orderByAsc(sortEnum.getColumn()).orderByAsc(BasketTeamSeasonStat::getId);
-        } else {
-            wrapper.orderByDesc(sortEnum.getColumn()).orderByAsc(BasketTeamSeasonStat::getId);
+        long total = teamSeasonStatDao.selectCount(wrapper);
+        if (total <= 0) {
+            return publicSupport.emptyPage(currentPage, pageSize);
         }
-        IPage<BasketTeamSeasonStat> entityPage = teamSeasonStatDao.selectPage(page, wrapper);
-        Page<PublicTeamSeasonStatVo> result = new Page<>(entityPage.getCurrent(), entityPage.getSize(), entityPage.getTotal());
-        result.setRecords(toTeamStatVos(entityPage.getRecords()));
+        applyTeamStatOrder(wrapper, sortEnum, asc);
+        long offset = (long) (pageNo - 1) * size;
+        wrapper.last("LIMIT " + offset + ", " + size);
+        List<BasketTeamSeasonStat> records = teamSeasonStatDao.selectList(wrapper);
+        Page<PublicTeamSeasonStatVo> result = new Page<>(pageNo, size, total);
+        result.setRecords(toTeamStatVos(records));
         return result;
     }
 
@@ -89,7 +92,8 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
         stageId = normalizeStageId(stageId);
         PublicPlayerSortEnum sortEnum = PublicPlayerSortEnum.fromCode(sortField);
         boolean asc = publicSupport.isAsc(sortOrder);
-        Page<BasketPlayerSeasonStat> page = publicSupport.newPage(currentPage, pageSize);
+        int pageNo = publicSupport.normalizePage(currentPage);
+        int size = publicSupport.normalizeSize(pageSize);
         LambdaQueryWrapper<BasketPlayerSeasonStat> wrapper = new LambdaQueryWrapper<BasketPlayerSeasonStat>()
                 .eq(BasketPlayerSeasonStat::getSeasonId, seasonId)
                 .eq(BasketPlayerSeasonStat::getIsDelete, BasketPublicConstants.NOT_DELETED)
@@ -98,14 +102,16 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
         if (!applyPlayerKeywordFilter(wrapper, keyword)) {
             return publicSupport.emptyPage(currentPage, pageSize);
         }
-        if (asc) {
-            wrapper.orderByAsc(sortEnum.getColumn()).orderByAsc(BasketPlayerSeasonStat::getId);
-        } else {
-            wrapper.orderByDesc(sortEnum.getColumn()).orderByAsc(BasketPlayerSeasonStat::getId);
+        long total = playerSeasonStatDao.selectCount(wrapper);
+        if (total <= 0) {
+            return publicSupport.emptyPage(currentPage, pageSize);
         }
-        IPage<BasketPlayerSeasonStat> entityPage = playerSeasonStatDao.selectPage(page, wrapper);
-        Page<PublicPlayerSeasonStatVo> result = new Page<>(entityPage.getCurrent(), entityPage.getSize(), entityPage.getTotal());
-        result.setRecords(toPlayerStatVos(entityPage.getRecords()));
+        applyPlayerStatOrder(wrapper, sortEnum, asc);
+        long offset = (long) (pageNo - 1) * size;
+        wrapper.last("LIMIT " + offset + ", " + size);
+        List<BasketPlayerSeasonStat> records = playerSeasonStatDao.selectList(wrapper);
+        Page<PublicPlayerSeasonStatVo> result = new Page<>(pageNo, size, total);
+        result.setRecords(toPlayerStatVos(records));
         return result;
     }
 
@@ -240,6 +246,24 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
 
     private Long normalizeStageId(Long stageId) {
         return stageId == null || stageId <= 0 ? null : stageId;
+    }
+
+    private void applyTeamStatOrder(LambdaQueryWrapper<BasketTeamSeasonStat> wrapper,
+                                    PublicTeamSortEnum sortEnum, boolean asc) {
+        if (asc) {
+            wrapper.orderByAsc(sortEnum.getColumn()).orderByAsc(BasketTeamSeasonStat::getId);
+        } else {
+            wrapper.orderByDesc(sortEnum.getColumn()).orderByAsc(BasketTeamSeasonStat::getId);
+        }
+    }
+
+    private void applyPlayerStatOrder(LambdaQueryWrapper<BasketPlayerSeasonStat> wrapper,
+                                      PublicPlayerSortEnum sortEnum, boolean asc) {
+        if (asc) {
+            wrapper.orderByAsc(sortEnum.getColumn()).orderByAsc(BasketPlayerSeasonStat::getId);
+        } else {
+            wrapper.orderByDesc(sortEnum.getColumn()).orderByAsc(BasketPlayerSeasonStat::getId);
+        }
     }
 
     private boolean applyTeamKeywordFilter(LambdaQueryWrapper<BasketTeamSeasonStat> wrapper, String keyword) {

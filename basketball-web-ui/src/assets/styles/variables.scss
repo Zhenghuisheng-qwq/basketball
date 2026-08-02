@@ -52,7 +52,7 @@
   --cnpa-paper-gray: var(--cnpa-paper-bg);
   --cnpa-paper-light: var(--cnpa-paper-surface);
   --cnpa-paper-text-muted: var(--cnpa-paper-text-secondary);
-  --cnpa-paper-edge-height: 14px;
+  --cnpa-paper-edge-height: clamp(34px, 2.5vw, 48px);
   --cnpa-paper-texture-opacity: 0.018;
 }
 

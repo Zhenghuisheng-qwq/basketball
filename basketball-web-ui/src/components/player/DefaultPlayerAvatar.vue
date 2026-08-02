@@ -5,6 +5,7 @@ import {
   DEFAULT_AVATAR_THEMES,
   resolveDefaultAvatarTheme,
 } from '@/utils/defaultAvatarTheme'
+import { resolveMemberAvatarUrl } from '@/utils/memberAvatar'
 
 const props = withDefaults(
   defineProps<{
@@ -25,7 +26,9 @@ const props = withDefaults(
 
 const imageError = ref(false)
 
-const showImage = computed(() => Boolean(props.avatarUrl?.trim()) && !imageError.value)
+const effectiveAvatarUrl = computed(() => resolveMemberAvatarUrl(props.avatarUrl))
+
+const showImage = computed(() => Boolean(effectiveAvatarUrl.value) && !imageError.value)
 
 const themeIndex = computed(() => resolveDefaultAvatarTheme(props.playerNo, props.playerId))
 
@@ -46,7 +49,7 @@ const styleVars = computed(() => ({
 <template>
   <img
     v-if="showImage"
-    :src="avatarUrl || ''"
+    :src="effectiveAvatarUrl"
     :alt="playerName || '球员头像'"
     class="default-player-avatar__img"
     :style="{ width: `${size}px`, height: `${size}px` }"

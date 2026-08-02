@@ -114,9 +114,13 @@ function mapPlayerRow(item: PublicPlayerSeasonStatVo, index: number): PlayerStat
 function extractPageResult<T>(data: PageResult<T> | undefined | null) {
   const records = data?.records ?? []
   const totalCount = Number(data?.total ?? 0)
+  const current = Number(data?.current ?? 0)
+  const size = Number(data?.size ?? 0)
   return {
     records,
-    total: totalCount,
+    total: Number.isFinite(totalCount) ? totalCount : records.length,
+    current: Number.isFinite(current) ? current : 1,
+    size: Number.isFinite(size) ? size : records.length,
   }
 }
 
@@ -302,18 +306,18 @@ const pagedRows = computed(() => rows.value)
                 :loading="tableLoading"
                 :error="tableError"
               />
+
+              <DataPagination
+                v-if="!tableLoading && total > 0"
+                v-model:current-page="currentPage"
+                v-model:page-size="pageSize"
+                :total="total"
+                class="data-center-panel__pagination"
+              />
             </div>
 
             <div class="data-center-panel__edge-bottom" aria-hidden="true" />
           </div>
-
-          <DataPagination
-            v-if="!tableLoading && total > 0"
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :total="total"
-            class="data-center-panel__pagination"
-          />
         </div>
       </div>
     </section>
@@ -428,9 +432,8 @@ const pagedRows = computed(() => rows.value)
 }
 
 .data-center-panel__pagination {
-  position: relative;
-  z-index: 2;
-  background: var(--cnpa-paper-bg);
+  margin-top: 8px;
+  padding-bottom: 8px;
 }
 
 .data-center-panel__toolbar {

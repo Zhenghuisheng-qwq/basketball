@@ -25,6 +25,7 @@ public class PublicPlayerDetailVo implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long currentTeamId;
     private String currentTeamName;
+    private String currentTeamLogoUrl;
     private Integer certificationStatus;
     private Integer playerStatus;
 

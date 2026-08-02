@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import TornEdge from '@/components/home/TornEdge.vue'
 import PlayerLink from '@/components/player/PlayerLink.vue'
+import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import homeTop from '@/assets/icon/home_top.png'
 import aboutVisual from '@/assets/icon/tournament_foot.png'
 import {
@@ -448,13 +449,12 @@ onMounted(() => {
                 >
                   <span class="rank-badge">{{ displayText(player.rankNo ?? 0, '0') }}</span>
                   <div class="player-rank-main">
-                    <i
-                      class="avatar"
-                      :style="
-                        showLogo(player.avatarUrl, `p-${player.playerId}`)
-                          ? { backgroundImage: `url(${player.avatarUrl})`, backgroundSize: 'cover' }
-                          : undefined
-                      "
+                    <PlayerAvatar
+                      :name="displayText(player.playerName)"
+                      :avatar-url="player.avatarUrl || ''"
+                      :player-id="player.playerId"
+                      size="sm"
+                      tone="dark"
                     />
                     <div class="player-rank-copy">
                       <PlayerLink

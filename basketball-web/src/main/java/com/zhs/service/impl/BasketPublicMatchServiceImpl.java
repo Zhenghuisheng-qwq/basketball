@@ -26,6 +26,7 @@ import com.zhs.service.support.BasketPublicSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -202,7 +203,7 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             BasketTeam home = teamMap.get(match.getHomeTeamId());
             if (homeTeamNameFromSnapshot(match) != null) {
                 vo.setHomeTeamName(homeTeamNameFromSnapshot(match));
-                vo.setHomeTeamLogoUrl(homeTeamLogoFromSnapshot(match));
+                vo.setHomeTeamLogoUrl(resolveTeamLogoUrl(homeTeamLogoFromSnapshot(match), home, logoMap));
             } else if (home != null) {
                 vo.setHomeTeamName(home.getTeamName());
                 vo.setHomeTeamLogoUrl(logoMap.get(home.getLogoFileId()));
@@ -210,7 +211,7 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             BasketTeam away = teamMap.get(match.getAwayTeamId());
             if (awayTeamNameFromSnapshot(match) != null) {
                 vo.setAwayTeamName(awayTeamNameFromSnapshot(match));
-                vo.setAwayTeamLogoUrl(awayTeamLogoFromSnapshot(match));
+                vo.setAwayTeamLogoUrl(resolveTeamLogoUrl(awayTeamLogoFromSnapshot(match), away, logoMap));
             } else if (away != null) {
                 vo.setAwayTeamName(away.getTeamName());
                 vo.setAwayTeamLogoUrl(logoMap.get(away.getLogoFileId()));
@@ -254,6 +255,16 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
 
     private String awayTeamLogoFromSnapshot(BasketMatch match) {
         return match.getAwayTeamLogoSnapshot();
+    }
+
+    private String resolveTeamLogoUrl(String snapshotLogo, BasketTeam team, Map<Long, String> logoMap) {
+        if (StringUtils.hasText(snapshotLogo)) {
+            return snapshotLogo.trim();
+        }
+        if (team != null && team.getLogoFileId() != null) {
+            return logoMap.get(team.getLogoFileId());
+        }
+        return null;
     }
 
     private List<PublicMatchTeamStatVo> loadTeamStats(BasketMatch match) {
