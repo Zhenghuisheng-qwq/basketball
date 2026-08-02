@@ -6,7 +6,7 @@
       show-icon
       class="mb8"
       title="赛程管理"
-      description="基于正式赛事球队（参赛中且阵容已锁定）生成循环赛草稿赛程，管理员确认发布后前台展示。草稿赛程不可录入比分，前台不展示。"
+      description="基于正式赛事球队（参赛中且阵容已锁定）生成循环赛草稿赛程，管理员确认发布后前台展示。取消发布后可重新生成草稿；已结束或有数据的历史比赛会保留。"
     />
 
     <el-alert
@@ -51,7 +51,7 @@
         <el-descriptions-item label="当前赛程">{{ eventContext.scheduleStatusText || '未生成' }}</el-descriptions-item>
         <el-descriptions-item label="预计轮次">{{ eventContext.expectedRoundCount ?? 0 }}</el-descriptions-item>
         <el-descriptions-item label="预计比赛数">{{ eventContext.expectedMatchCount ?? 0 }}</el-descriptions-item>
-        <el-descriptions-item label="有效草稿">{{ eventContext.deletableDraftMatchCount ?? 0 }}</el-descriptions-item>
+        <el-descriptions-item label="可清理赛程">{{ eventContext.deletableDraftMatchCount ?? 0 }}</el-descriptions-item>
         <el-descriptions-item label="可生成">{{ eventContext.canGenerateSchedule ? '是' : '否' }}</el-descriptions-item>
       </el-descriptions>
 
@@ -62,7 +62,7 @@
           :disabled="!canGenerate"
           @click="openGenerateConfirm"
           v-hasPermi="['basket:schedule:generate']"
-        >生成草稿赛程</el-button>
+        >{{ generateButtonLabel }}</el-button>
         <el-button
           v-if="!eventContext?.hasPublishedSchedule"
           type="success"
@@ -79,7 +79,7 @@
         <el-button
           v-if="!eventContext?.hasPublishedSchedule"
           type="danger"
-          :disabled="!hasDraftContent"
+          :disabled="!canDeleteDraft"
           @click="handleDeleteDraft"
           v-hasPermi="['basket:schedule:remove']"
         >删除草稿</el-button>
@@ -398,12 +398,22 @@ const canGenerate = computed(() =>
   !!selectedEventId.value && !!selectedRuleId.value && !!eventContext.value?.canGenerateSchedule
 )
 
-/** 正式批次草稿或可清理草稿比赛 */
+/** 正式批次草稿/已下架，或可清理的草稿/下架比赛 */
 const hasDraftContent = computed(() => {
   if (!eventContext.value) return false
   if (eventContext.value.hasDraftSchedule) return true
   return (eventContext.value.deletableDraftMatchCount ?? 0) > 0
 })
+
+const canDeleteDraft = computed(() =>
+  !!eventContext.value?.canDeleteRegeneratableDraft || hasDraftContent.value
+)
+
+const isUnpublishedSchedule = computed(() => eventContext.value?.latestBatchPublishStatus === 2)
+
+const generateButtonLabel = computed(() =>
+  isUnpublishedSchedule.value || hasDraftContent.value ? '重新生成草稿赛程' : '生成草稿赛程'
+)
 
 const legacyAlertDescription = computed(() => {
   const count = eventContext.value?.legacyUnpublishedMatchCount ?? 0
@@ -493,9 +503,10 @@ function applyDefaultListScope() {
   listScope.value = 'valid'
   queryParams.excludeLegacy = true
   queryParams.scheduleBatchId = eventContext.value?.latestBatchId
-  // 存在草稿批次时默认看草稿；已发布看已发布；否则不强制发布状态
   if (eventContext.value?.hasPublishedSchedule) {
     queryParams.publishStatus = 1
+  } else if (eventContext.value?.latestBatchPublishStatus === 2) {
+    queryParams.publishStatus = 2
   } else if (eventContext.value?.hasDraftSchedule || (eventContext.value?.deletableDraftMatchCount ?? 0) > 0) {
     queryParams.publishStatus = 0
   } else {
@@ -572,7 +583,9 @@ async function openGenerateConfirm() {
 
 async function confirmGenerate() {
   if (!selectedEventId.value || !selectedRuleId.value) return
-  if (hasDraftContent.value) {
+  if (isUnpublishedSchedule.value || eventContext.value?.scheduleStatusText === '已下架') {
+    await proxy?.$modal.confirm('当前赛程已下架，重新生成将清理可重置的下架赛程并生成新草稿（已结束/有数据的历史比赛会保留），是否继续？')
+  } else if (hasDraftContent.value) {
     await proxy?.$modal.confirm('当前已存在草稿赛程，重新生成将删除可清理草稿后重建（历史已结束/已取消比赛不会删除），是否继续？')
   } else if (eventContext.value?.hasLegacyUnpublishedMatches) {
     await proxy?.$modal.confirm('当前存在未发布历史脏数据，将生成新的正式草稿赛程（不会删除历史脏数据），是否继续？')
@@ -583,7 +596,7 @@ async function confirmGenerate() {
       eventId: selectedEventId.value,
       ruleId: selectedRuleId.value,
       stageId: selectedStageId.value,
-      forceRegenerate: hasDraftContent.value
+      forceRegenerate: hasDraftContent.value || isUnpublishedSchedule.value
     })
     proxy?.$modal.msgSuccess('草稿赛程生成成功')
     generateOpen.value = false

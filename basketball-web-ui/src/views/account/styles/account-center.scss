@@ -53,13 +53,14 @@
    strip is clipped by overflow, leaving black/red + natural white tear at the edge. */
 .account-sidebar {
   --account-sidebar-bg-scale-x: 115%;
-  position: sticky;
+  position: fixed;
+  left: 0;
   top: var(--site-header-height, 72px);
   z-index: 10;
   align-self: start;
   display: flex;
   flex-direction: column;
-  width: 100%;
+  width: var(--account-sidebar-width, clamp(240px, 16vw, 300px));
   min-width: 0;
   min-height: calc(100vh - var(--site-header-height, 72px));
   height: calc(100vh - var(--site-header-height, 72px));
@@ -334,6 +335,7 @@
 .account-main {
   position: relative;
   z-index: 1;
+  grid-column: 2;
   min-width: 0;
   min-height: calc(100vh - var(--site-header-height, 72px) - 56px);
   padding:
@@ -356,14 +358,14 @@
   box-sizing: border-box;
 }
 
-/* Unified content shell: left-aligned within main column (not viewport-centered) */
+/* Unified content shell: width 100% + max-width, fills remaining main area */
 .account-content-inner,
 .account-main-inner,
 .account-page-inner {
-  width: 100%;
+  width: min(100%, var(--account-content-max, 1440px));
   max-width: var(--account-content-max, 1440px);
   min-width: 0;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
   box-sizing: border-box;
 }
@@ -1469,8 +1471,11 @@
 /* ── Footer ── */
 
 .account-footer {
+  width: calc(100% - var(--account-sidebar-width, clamp(240px, 16vw, 300px)));
+  margin-left: var(--account-sidebar-width, clamp(240px, 16vw, 300px));
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   background: #080808;
+  box-sizing: border-box;
 }
 
 .account-footer__inner {
@@ -1583,6 +1588,7 @@
 
   .account-sidebar {
     position: relative;
+    left: auto;
     top: auto;
     z-index: 10;
     align-self: auto;
@@ -1658,8 +1664,14 @@
   }
 
   .account-main {
+    grid-column: auto;
     min-height: auto;
     padding-left: 0;
+  }
+
+  .account-footer {
+    width: 100%;
+    margin-left: 0;
   }
 
   .account-content-inner,

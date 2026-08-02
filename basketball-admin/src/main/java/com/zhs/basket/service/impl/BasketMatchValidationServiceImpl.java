@@ -10,6 +10,7 @@ import com.zhs.basket.domain.BasketTournamentSeason;
 import com.zhs.basket.domain.BasketTournamentStage;
 import com.zhs.basket.enums.MatchChangeTypeEnum;
 import com.zhs.basket.enums.MatchDataStatusEnum;
+import com.zhs.basket.enums.MatchPublishStatusEnum;
 import com.zhs.basket.enums.MatchStatusEnum;
 import com.zhs.basket.mapper.BasketMatchMapper;
 import com.zhs.basket.mapper.BasketMatchStatusLogMapper;
@@ -171,18 +172,7 @@ public class BasketMatchValidationServiceImpl implements IBasketMatchValidationS
         MatchDataStatusEnum dataStatus = MatchDataStatusEnum.fromCode(vo.getDataStatus());
         vo.setMatchStatusName(status.getDescription());
         vo.setDataStatusName(dataStatus.getDescription());
-        boolean hasRoster = vo.getId() != null && matchMapper.countRosterByMatchId(vo.getId()) > 0;
-        boolean hasScoreData = vo.getId() != null && matchMapper.countPeriodScoreByMatchId(vo.getId()) > 0;
-        boolean hasStat = vo.getId() != null && matchMapper.countTeamStatByMatchId(vo.getId()) > 0;
-        vo.setCanEdit(status.canEdit() && dataStatus.canEdit());
-        vo.setCanSchedule(status.canSchedule() && dataStatus.canEdit());
-        vo.setCanStart(status.canStart());
-        vo.setCanPostpone(status.canPostpone());
-        vo.setCanCancel(status.canCancel());
-        vo.setCanDelete(status.canDelete() && !hasRoster && !hasScoreData && !hasStat);
-        vo.setCanEnterLineup(status.canEnterLineup());
-        vo.setCanEnterScore(status.canEnterScore() && dataStatus.canEdit());
-        vo.setCanEnterStat(status.canEnterStat() && dataStatus.canEdit());
+        applyPublishContext(vo, status, dataStatus);
         return vo;
     }
 
@@ -192,21 +182,57 @@ public class BasketMatchValidationServiceImpl implements IBasketMatchValidationS
         MatchDataStatusEnum dataStatus = MatchDataStatusEnum.fromCode(vo.getDataStatus());
         vo.setMatchStatusName(status.getDescription());
         vo.setDataStatusName(dataStatus.getDescription());
-        boolean hasRoster = matchMapper.countRosterByMatchId(vo.getId()) > 0;
-        boolean hasScoreData = matchMapper.countPeriodScoreByMatchId(vo.getId()) > 0;
-        boolean hasStat = matchMapper.countTeamStatByMatchId(vo.getId()) > 0;
-        vo.setCanEdit(status.canEdit() && dataStatus.canEdit());
-        vo.setCanSchedule(status.canSchedule() && dataStatus.canEdit());
-        vo.setCanStart(status.canStart());
-        vo.setCanPostpone(status.canPostpone());
-        vo.setCanCancel(status.canCancel());
-        vo.setCanDelete(status.canDelete() && !hasRoster && !hasScoreData && !hasStat);
-        vo.setCanEnterLineup(status.canEnterLineup());
-        vo.setCanEnterScore(status.canEnterScore() && dataStatus.canEdit());
-        vo.setCanEnterStat(status.canEnterStat() && dataStatus.canEdit());
+        applyPublishContext(vo, status, dataStatus);
         vo.setCanConfirmResult(dataStatus.canConfirm() && status == MatchStatusEnum.FINISHED);
         vo.setCanReopenResult(dataStatus.canReopen());
         return vo;
+    }
+
+    private void applyPublishContext(MatchListVo vo, MatchStatusEnum status, MatchDataStatusEnum dataStatus) {
+        if (vo.getPublishStatus() == null) {
+            vo.setPublishStatusName("-");
+        } else {
+            vo.setPublishStatusName(MatchPublishStatusEnum.fromCode(vo.getPublishStatus()).getDescription());
+        }
+        MatchPublishStatusEnum publishStatus = vo.getPublishStatus() == null
+                ? null
+                : MatchPublishStatusEnum.fromCode(vo.getPublishStatus());
+        vo.setOperationalStatusName(resolveOperationalStatusName(status, publishStatus, status.getDescription()));
+        boolean publishedForOps = isPublishedForOps(vo.getPublishStatus());
+        boolean hasRoster = vo.getId() != null && matchMapper.countRosterByMatchId(vo.getId()) > 0;
+        boolean hasScoreData = vo.getId() != null && matchMapper.countPeriodScoreByMatchId(vo.getId()) > 0;
+        boolean hasStat = vo.getId() != null && matchMapper.countTeamStatByMatchId(vo.getId()) > 0;
+        vo.setCanEdit(publishedForOps && status.canEdit() && dataStatus.canEdit());
+        vo.setCanSchedule(publishedForOps && status.canSchedule() && dataStatus.canEdit());
+        vo.setCanStart(publishedForOps && status.canStart());
+        vo.setCanPostpone(publishedForOps && status.canPostpone());
+        vo.setCanCancel(publishedForOps && status.canCancel());
+        vo.setCanDelete(status.canDelete() && !hasRoster && !hasScoreData && !hasStat);
+        vo.setCanEnterLineup(publishedForOps && status.canEnterLineup());
+        vo.setCanEnterScore(publishedForOps && status.canEnterScore() && dataStatus.canEdit());
+        vo.setCanEnterStat(publishedForOps && status.canEnterStat() && dataStatus.canEdit());
+    }
+
+    private String resolveOperationalStatusName(MatchStatusEnum status, MatchPublishStatusEnum publishStatus,
+            String matchStatusName) {
+        if (status == MatchStatusEnum.CANCELLED) {
+            return MatchStatusEnum.CANCELLED.getDescription();
+        }
+        if (publishStatus == MatchPublishStatusEnum.UNPUBLISHED) {
+            return MatchPublishStatusEnum.UNPUBLISHED.getDescription();
+        }
+        return matchStatusName;
+    }
+
+    private boolean isPublishedForOps(Integer publishStatus) {
+        return publishStatus == null || publishStatus != MatchPublishStatusEnum.UNPUBLISHED.getCode();
+    }
+
+    public void requirePublishedForOps(BasketMatch match) {
+        if (match.getPublishStatus() != null
+                && match.getPublishStatus() == MatchPublishStatusEnum.UNPUBLISHED.getCode()) {
+            throw new ServiceException("赛程已下架，请先重新发布后再操作");
+        }
     }
 
     @Override

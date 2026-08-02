@@ -83,6 +83,7 @@
         m.scheduled_start_time as scheduledStartTime,
         m.scheduled_end_time as scheduledEndTime,
         m.match_status as matchStatus,
+        m.publish_status as publishStatus,
         m.home_score as homeScore,
         m.away_score as awayScore,
         m.data_status as dataStatus,
@@ -113,6 +114,7 @@
         <if test="teamId != null">and (m.home_team_id = #{teamId} or m.away_team_id = #{teamId})</if>
         <if test="matchStatus != null">and m.match_status = #{matchStatus}</if>
         <if test="dataStatus != null">and m.data_status = #{dataStatus}</if>
+        <if test="publishStatus != null">and m.publish_status = #{publishStatus}</if>
         order by m.scheduled_start_time desc, m.sort_no, m.create_time desc
     </select>
 
@@ -122,7 +124,8 @@
                m.home_team_id, ht.team_name as home_team_name, m.away_team_id, at.team_name as away_team_name,
                m.scheduled_start_time, m.scheduled_end_time, m.actual_start_time, m.actual_end_time,
                m.match_status, m.home_score, m.away_score, m.winner_team_id, wt.team_name as winner_team_name,
-               m.overtime_count, m.walkover_team_id, m.cancel_reason, m.data_status, m.public_status, m.sort_no
+               m.overtime_count, m.walkover_team_id, m.cancel_reason, m.data_status, m.public_status,
+               m.publish_status as publishStatus, m.sort_no
         <include refid="listJoins" />
         left join basket_team wt on m.winner_team_id = wt.id and wt.is_delete = 0
         where m.id = #{id} and m.is_delete = 0
@@ -287,13 +290,34 @@
         select count(1) from basket_match where season_id = #{seasonId} and is_delete = 0 and publish_status = 1
     </select>
 
-    <!-- 未发布 + 未开始(草稿/已编排) + 数据未录入 -->
+    <!-- 可重新生成/删除：草稿或未下架且未结束；已下架且未结束/未取消 -->
     <select id="countDeletableDraftBySeasonId" resultType="int">
         select count(1) from basket_match
-        where season_id = #{seasonId} and is_delete = 0 and publish_status = 0
-          and match_status in (0, 1)
-          and ifnull(data_status, 0) = 0
-          and ifnull(home_score, 0) = 0 and ifnull(away_score, 0) = 0
+        where season_id = #{seasonId} and is_delete = 0
+          and (
+            (publish_status = 2 and match_status in (0, 1, 4))
+            or (
+              publish_status = 0
+              and match_status in (0, 1)
+              and ifnull(data_status, 0) = 0
+              and ifnull(home_score, 0) = 0 and ifnull(away_score, 0) = 0
+            )
+          )
+    </select>
+
+    <!-- 当前有效赛程：已发布，或可操作的草稿（不含已下架） -->
+    <select id="countActiveValidScheduleBySeasonId" resultType="int">
+        select count(1) from basket_match
+        where season_id = #{seasonId} and is_delete = 0
+          and publish_status in (0, 1)
+          and schedule_batch_id is not null
+          and match_status in (0, 1, 2, 4)
+    </select>
+
+    <select id="countUnpublishedScheduleBySeasonId" resultType="int">
+        select count(1) from basket_match
+        where season_id = #{seasonId} and is_delete = 0 and publish_status = 2
+          and match_status in (0, 1, 4)
     </select>
 
     <select id="countLegacyUnpublishedBySeasonId" resultType="int">
@@ -404,13 +428,19 @@
         where schedule_batch_id = #{batchId} and is_delete = 0
     </update>
 
-    <!-- 仅删除可安全清理的草稿，已结束/已取消/已录入数据的历史比赛不会被误删 -->
+    <!-- 清理可重新生成的比赛；已结束/已取消/有数据的历史比赛保留 -->
     <update id="softDeleteDraftBySeasonId">
         update basket_match set is_delete = 1, update_time = now()
-        where season_id = #{seasonId} and is_delete = 0 and publish_status = 0
-          and match_status in (0, 1)
-          and ifnull(data_status, 0) = 0
-          and ifnull(home_score, 0) = 0 and ifnull(away_score, 0) = 0
+        where season_id = #{seasonId} and is_delete = 0
+          and (
+            (publish_status = 2 and match_status in (0, 1, 4))
+            or (
+              publish_status = 0
+              and match_status in (0, 1)
+              and ifnull(data_status, 0) = 0
+              and ifnull(home_score, 0) = 0 and ifnull(away_score, 0) = 0
+            )
+          )
     </update>
 
     <update id="updateScheduleScore">

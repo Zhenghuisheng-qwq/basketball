@@ -25,6 +25,10 @@ public class MatchListVo {
     private Date scheduledEndTime;
     private Integer matchStatus;
     private String matchStatusName;
+    private Integer publishStatus;
+    private String publishStatusName;
+    /** 运营展示状态：已取消 / 已下架 / 比赛状态 */
+    private String operationalStatusName;
     private Integer homeScore;
     private Integer awayScore;
     private Integer dataStatus;

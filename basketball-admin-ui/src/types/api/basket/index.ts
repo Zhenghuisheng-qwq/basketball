@@ -1044,6 +1044,13 @@ export const MATCH_STATUS_OPTIONS = [
   { value: 5, label: '已取消' }
 ]
 
+/** 比赛发布状态 */
+export const MATCH_PUBLISH_STATUS_OPTIONS = [
+  { value: 0, label: '草稿' },
+  { value: 1, label: '已发布' },
+  { value: 2, label: '已下架' }
+]
+
 /** 比赛数据状态 */
 export const MATCH_DATA_STATUS_OPTIONS = [
   { value: 0, label: '草稿' },
@@ -1206,6 +1213,7 @@ export interface MatchQuery extends PageDomain, BaseEntity {
   teamKeyword?: string
   matchStatus?: number
   dataStatus?: number
+  publishStatus?: number
 }
 
 export interface MatchListItem {
@@ -1229,6 +1237,9 @@ export interface MatchListItem {
   scheduledEndTime?: string
   matchStatus?: number
   matchStatusName?: string
+  publishStatus?: number
+  publishStatusName?: string
+  operationalStatusName?: string
   homeScore?: number
   awayScore?: number
   dataStatus?: number
@@ -2645,6 +2656,8 @@ export interface ScheduleEventContext {
   expectedRoundCount?: number
   expectedMatchCount?: number
   canGenerateSchedule?: boolean
+  /** 是否可删除/覆盖草稿或下架赛程 */
+  canDeleteRegeneratableDraft?: boolean
   scheduleStatusText?: string
 }
 

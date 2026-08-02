@@ -31,6 +31,11 @@
           <el-option v-for="item in MATCH_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
+      <el-form-item label="发布状态" prop="publishStatus">
+        <el-select v-model="queryParams.publishStatus" placeholder="发布状态" clearable style="width: 140px">
+          <el-option v-for="item in MATCH_PUBLISH_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="球队关键词">
         <el-input v-model="queryParams.teamKeyword" placeholder="主/客队名称" clearable style="width: 160px" @keyup.enter="handleQuery" />
       </el-form-item>
@@ -50,7 +55,7 @@
           :closable="false"
           show-icon
           title="比赛管理"
-          description="查看具体比赛、比赛状态与基础比分，支持编排、延期、开始、取消等比赛生命周期操作。"
+          description="查看具体比赛、比赛状态与基础比分，支持编排、延期、开始、取消等比赛生命周期操作。赛程下架后，比赛状态将显示为「已下架」，需重新发布赛程后再操作。"
         />
       </el-col>
       <el-col :span="1.5">
@@ -73,11 +78,14 @@
       <el-table-column label="计划开始" prop="scheduledStartTime" width="160">
         <template #default="scope">{{ parseTime(scope.row.scheduledStartTime) }}</template>
       </el-table-column>
-      <el-table-column label="状态" prop="matchStatus" width="100">
+      <el-table-column label="状态" prop="operationalStatusName" width="100">
         <template #default="scope">
-          <dict-tag :options="MATCH_STATUS_OPTIONS" :value="scope.row.matchStatus" />
+          <el-tag :type="resolveOperationalTagType(scope.row)" disable-transitions>
+            {{ scope.row.operationalStatusName || scope.row.matchStatusName || '-' }}
+          </el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="发布状态" prop="publishStatusName" width="100" />
       <el-table-column label="操作" align="center" width="420" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:match:query']">详情</el-button>
@@ -96,7 +104,9 @@
     <el-drawer v-model="detailOpen" title="赛程详情" size="680px" append-to-body>
       <el-descriptions v-if="detail" :column="2" border>
         <el-descriptions-item label="比赛编号">{{ detail.matchNo }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ detail.matchStatusName }}</el-descriptions-item>
+        <el-descriptions-item label="运营状态">{{ detail.operationalStatusName || detail.matchStatusName }}</el-descriptions-item>
+        <el-descriptions-item label="发布状态">{{ detail.publishStatusName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="比赛状态">{{ detail.matchStatusName }}</el-descriptions-item>
         <el-descriptions-item label="主队">{{ detail.homeTeamName }}</el-descriptions-item>
         <el-descriptions-item label="客队">{{ detail.awayTeamName }}</el-descriptions-item>
         <el-descriptions-item label="比分">{{ detail.homeScore ?? '-' }} : {{ detail.awayScore ?? '-' }}</el-descriptions-item>
@@ -273,7 +283,7 @@ import type {
   TournamentListItem,
   VenueSimple
 } from '@/types'
-import { MATCH_STATUS_OPTIONS } from '@/types'
+import { MATCH_PUBLISH_STATUS_OPTIONS, MATCH_STATUS_OPTIONS } from '@/types'
 
 const { proxy } = getCurrentInstance()
 const route = useRoute()
@@ -337,6 +347,15 @@ const displayList = computed(() => {
     (row.awayTeamName || '').toLowerCase().includes(keyword)
   )
 })
+
+function resolveOperationalTagType(row: MatchListItem) {
+  const label = row.operationalStatusName || row.matchStatusName
+  if (label === '已下架') return 'warning'
+  if (label === '已取消') return 'info'
+  if (label === '进行中') return 'success'
+  if (label === '已结束') return 'success'
+  return ''
+}
 
 function loadVenues() {
   listMatchVenues().then(res => {

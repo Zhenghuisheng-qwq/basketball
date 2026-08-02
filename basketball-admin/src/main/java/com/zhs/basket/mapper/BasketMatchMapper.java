@@ -55,8 +55,12 @@ public interface BasketMatchMapper {
 
     int countBySeasonId(@Param("seasonId") Long seasonId);
     int countPublishedBySeasonId(@Param("seasonId") Long seasonId);
-    /** 可安全删除的草稿：未发布 + 未开始 + 未录入数据 */
+    /** 可安全删除/重新生成的比赛数（草稿或未下架且未结束） */
     int countDeletableDraftBySeasonId(@Param("seasonId") Long seasonId);
+    /** 当前有效赛程（已发布或草稿，不含已下架） */
+    int countActiveValidScheduleBySeasonId(@Param("seasonId") Long seasonId);
+    /** 已下架且可清理的赛程比赛数 */
+    int countUnpublishedScheduleBySeasonId(@Param("seasonId") Long seasonId);
     /** 未发布但不可普通删除的历史脏数据（已结束/已取消/已录入等） */
     int countLegacyUnpublishedBySeasonId(@Param("seasonId") Long seasonId);
     int countEventTeamPair(@Param("seasonId") Long seasonId, @Param("homeEventTeamId") Long homeEventTeamId,

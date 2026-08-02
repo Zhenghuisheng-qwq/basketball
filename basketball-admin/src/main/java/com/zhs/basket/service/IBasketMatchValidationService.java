@@ -20,6 +20,7 @@ public interface IBasketMatchValidationService {
     void writeStatusLog(BasketMatch match, Integer beforeStatus, MatchChangeTypeEnum changeType, String reason);
     MatchListVo enrichListVo(MatchListVo vo);
     MatchDetailVo enrichDetailVo(MatchDetailVo vo);
+    void requirePublishedForOps(BasketMatch match);
     BigDecimal computePct(Integer made, Integer attempted);
     int computePointsFromShooting(Integer fgm, Integer tpm, Integer ftm);
     void validateShooting(Integer made, Integer attempted, String label);

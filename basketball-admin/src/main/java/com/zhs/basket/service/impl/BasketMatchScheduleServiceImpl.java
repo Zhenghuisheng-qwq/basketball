@@ -107,6 +107,7 @@ public class BasketMatchScheduleServiceImpl implements IBasketMatchScheduleServi
     @Transactional(rollbackFor = Exception.class)
     public void update(Long matchId, MatchUpdateReq req) {
         BasketMatch match = validationService.requireMatch(matchId);
+        validationService.requirePublishedForOps(match);
         MatchStatusEnum status = MatchStatusEnum.fromCode(match.getMatchStatus());
         MatchDataStatusEnum dataStatus = MatchDataStatusEnum.fromCode(match.getDataStatus());
         if (!status.canEdit() || !dataStatus.canEdit()) {
@@ -143,6 +144,7 @@ public class BasketMatchScheduleServiceImpl implements IBasketMatchScheduleServi
     @Transactional(rollbackFor = Exception.class)
     public void schedule(Long matchId, MatchScheduleReq req) {
         BasketMatch match = validationService.requireMatch(matchId);
+        validationService.requirePublishedForOps(match);
         Integer beforeStatus = match.getMatchStatus();
         MatchStatusEnum status = MatchStatusEnum.fromCode(beforeStatus);
         if (!status.canSchedule()) {
@@ -174,6 +176,7 @@ public class BasketMatchScheduleServiceImpl implements IBasketMatchScheduleServi
             throw new ServiceException("新的计划开始时间不能为空");
         }
         BasketMatch match = validationService.requireMatch(matchId);
+        validationService.requirePublishedForOps(match);
         Integer beforeStatus = match.getMatchStatus();
         MatchStatusEnum status = MatchStatusEnum.fromCode(beforeStatus);
         if (!status.canPostpone()) {
@@ -200,6 +203,7 @@ public class BasketMatchScheduleServiceImpl implements IBasketMatchScheduleServi
             throw new ServiceException("取消原因不能为空");
         }
         BasketMatch match = validationService.requireMatch(matchId);
+        validationService.requirePublishedForOps(match);
         Integer beforeStatus = match.getMatchStatus();
         if (!MatchStatusEnum.fromCode(beforeStatus).canCancel()) {
             throw new ServiceException("当前状态不可取消");
@@ -218,6 +222,7 @@ public class BasketMatchScheduleServiceImpl implements IBasketMatchScheduleServi
     @Transactional(rollbackFor = Exception.class)
     public void start(Long matchId) {
         BasketMatch match = validationService.requireMatch(matchId);
+        validationService.requirePublishedForOps(match);
         Integer beforeStatus = match.getMatchStatus();
         if (!MatchStatusEnum.fromCode(beforeStatus).canStart()) {
             throw new ServiceException("仅已编排比赛可开始");

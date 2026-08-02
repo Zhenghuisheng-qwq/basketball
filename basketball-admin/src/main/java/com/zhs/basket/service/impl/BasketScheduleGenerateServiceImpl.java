@@ -87,6 +87,7 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         vo.setExistingMatchCount(matchMapper.countBySeasonId(eventId));
         int deletableDraftCount = matchMapper.countDeletableDraftBySeasonId(eventId);
         int legacyCount = matchMapper.countLegacyUnpublishedBySeasonId(eventId);
+        int batchCount = batchMapper.countByEventId(eventId);
         vo.setDeletableDraftMatchCount(deletableDraftCount);
         vo.setLegacyUnpublishedMatchCount(legacyCount);
         vo.setHasLegacyUnpublishedMatches(legacyCount > 0);
@@ -95,18 +96,34 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         if (latest != null) {
             vo.setLatestBatchId(latest.getId());
             vo.setLatestBatchPublishStatus(latest.getPublishStatus());
-            vo.setHasDraftSchedule(ScheduleBatchPublishStatusEnum.DRAFT.getCode() == latest.getPublishStatus());
+            int ps = latest.getPublishStatus() != null ? latest.getPublishStatus() : ScheduleBatchPublishStatusEnum.DRAFT.getCode();
+            vo.setHasDraftSchedule(ps == ScheduleBatchPublishStatusEnum.DRAFT.getCode()
+                    || ps == ScheduleBatchPublishStatusEnum.UNPUBLISHED.getCode());
         } else {
             vo.setHasDraftSchedule(deletableDraftCount > 0);
         }
+        boolean hasUnpublishedMatches = deletableDraftCount > 0
+                && matchMapper.countUnpublishedScheduleBySeasonId(eventId) > 0;
+        if (!Boolean.TRUE.equals(vo.getHasDraftSchedule()) && hasUnpublishedMatches) {
+            vo.setHasDraftSchedule(true);
+        }
         vo.setCanGenerateSchedule(Boolean.FALSE.equals(vo.getHasPublishedSchedule()) && eligibleCount >= 2);
-        vo.setScheduleStatusText(resolveScheduleStatusText(vo));
+        vo.setCanDeleteRegeneratableDraft(Boolean.FALSE.equals(vo.getHasPublishedSchedule())
+                && (Boolean.TRUE.equals(vo.getHasDraftSchedule()) || deletableDraftCount > 0 || batchCount > 0));
+        vo.setScheduleStatusText(resolveScheduleStatusText(vo, hasUnpublishedMatches));
         return vo;
     }
 
-    private String resolveScheduleStatusText(ScheduleEventContextVo vo) {
+    private String resolveScheduleStatusText(ScheduleEventContextVo vo, boolean hasUnpublishedMatches) {
         if (Boolean.TRUE.equals(vo.getHasPublishedSchedule())) {
             return "已发布";
+        }
+        if (vo.getLatestBatchPublishStatus() != null
+                && vo.getLatestBatchPublishStatus() == ScheduleBatchPublishStatusEnum.UNPUBLISHED.getCode()) {
+            return "已下架";
+        }
+        if (hasUnpublishedMatches) {
+            return "已下架";
         }
         if (Boolean.TRUE.equals(vo.getHasDraftSchedule())
                 || (vo.getDeletableDraftMatchCount() != null && vo.getDeletableDraftMatchCount() > 0)) {
@@ -152,13 +169,19 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         seasonMapper.selectByIdForUpdate(eventId);
         assertNoPublishedSchedule(eventId);
 
+        BasketScheduleGenerateBatch latestBatch = batchMapper.selectLatestByEventId(eventId);
+        boolean hasUnpublishedBatch = latestBatch != null
+                && ScheduleBatchPublishStatusEnum.UNPUBLISHED.getCode() == latestBatch.getPublishStatus();
         int deletableDraftCount = matchMapper.countDeletableDraftBySeasonId(eventId);
-        boolean hasBatch = batchMapper.countByEventId(eventId) > 0;
-        if ((hasBatch || deletableDraftCount > 0) && !Boolean.TRUE.equals(req.getForceRegenerate())) {
+        int batchCount = batchMapper.countByEventId(eventId);
+        int activeValidCount = matchMapper.countActiveValidScheduleBySeasonId(eventId);
+
+        // 仅当存在有效草稿（非下架）且未确认覆盖时才拦截；已下架可直接重新生成
+        if (activeValidCount > 0 && !hasUnpublishedBatch && !Boolean.TRUE.equals(req.getForceRegenerate())) {
             throw new ServiceException("当前已存在草稿赛程，请先查看或删除草稿后重新生成");
         }
-        if (hasBatch || deletableDraftCount > 0) {
-            deleteDraftInternal(eventId, "重新生成前删除旧草稿");
+        if (batchCount > 0 || deletableDraftCount > 0) {
+            deleteDraftInternal(eventId, hasUnpublishedBatch ? "下架后重新生成" : "重新生成前删除旧草稿");
         }
 
         BasketScheduleRule rule = requireRule(req.getRuleId());
@@ -264,7 +287,10 @@ public class BasketScheduleGenerateServiceImpl implements IBasketScheduleGenerat
         }
         int deletable = matchMapper.countDeletableDraftBySeasonId(eventId);
         int batchCount = batchMapper.countByEventId(eventId);
-        if (deletable <= 0 && batchCount <= 0) {
+        BasketScheduleGenerateBatch latest = batchMapper.selectLatestByEventId(eventId);
+        boolean hasUnpublishedBatch = latest != null
+                && ScheduleBatchPublishStatusEnum.UNPUBLISHED.getCode() == latest.getPublishStatus();
+        if (deletable <= 0 && batchCount <= 0 && !hasUnpublishedBatch) {
             throw new ServiceException("当前没有可删除的草稿赛程；已结束/已取消的历史比赛不会被删除");
         }
         deleteDraftInternal(eventId, reason);

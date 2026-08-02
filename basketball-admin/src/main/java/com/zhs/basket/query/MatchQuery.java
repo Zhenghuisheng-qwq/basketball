@@ -13,4 +13,5 @@ public class MatchQuery {
     private Long teamId;
     private Integer matchStatus;
     private Integer dataStatus;
+    private Integer publishStatus;
 }

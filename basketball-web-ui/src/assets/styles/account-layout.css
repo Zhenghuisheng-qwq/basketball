@@ -6,7 +6,7 @@
 
 :root {
   --account-sidebar-width: clamp(240px, 16vw, 300px);
-  --account-main-padding-x: clamp(32px, 2.5vw, 48px);
+  --account-main-padding-x: clamp(24px, 2.5vw, 48px);
   --account-main-padding-y: clamp(24px, 2.5vw, 48px);
 
   /* Desktop content cap: fill remaining main area, never exceed 1440px */
@@ -66,13 +66,14 @@
 .member-account-layout .account-sidebar,
 .account-center-vars .account-sidebar {
   --account-sidebar-bg-scale-x: 115%;
-  position: sticky;
+  position: fixed;
+  left: 0;
   top: var(--site-header-height, 72px);
   z-index: 10;
   align-self: start;
   display: flex;
   flex-direction: column;
-  width: 100%;
+  width: var(--account-sidebar-width);
   min-width: 0;
   min-height: calc(100vh - var(--site-header-height, 72px));
   height: calc(100vh - var(--site-header-height, 72px));
@@ -134,11 +135,18 @@
 .account-center-vars .account-main {
   position: relative;
   z-index: 1;
+  grid-column: 2;
   min-width: 0;
   min-height: calc(100vh - var(--site-header-height, 72px));
   padding: var(--account-main-padding-y) var(--account-main-padding-x);
   background: var(--account-paper-bg);
   color: #111;
+  box-sizing: border-box;
+}
+
+.member-account-layout > .account-footer {
+  width: calc(100% - var(--account-sidebar-width));
+  margin-left: var(--account-sidebar-width);
   box-sizing: border-box;
 }
 
@@ -148,10 +156,10 @@
 .account-center-vars .account-main-inner,
 .account-center-vars .account-page-inner,
 .account-center-vars .account-content-inner {
-  width: 100%;
+  width: min(100%, var(--account-content-max));
   max-width: var(--account-content-max);
   min-width: 0;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
   box-sizing: border-box;
 }
@@ -447,6 +455,7 @@
   .member-account-layout .account-sidebar,
   .account-center-vars .account-sidebar {
     position: relative;
+    left: auto;
     top: auto;
     z-index: 10;
     align-self: auto;
@@ -459,7 +468,13 @@
 
   .member-account-layout .account-main,
   .account-center-vars .account-main {
+    grid-column: auto;
     padding: 24px 18px;
+  }
+
+  .member-account-layout > .account-footer {
+    width: 100%;
+    margin-left: 0;
   }
 
   .member-account-layout .account-main-inner,

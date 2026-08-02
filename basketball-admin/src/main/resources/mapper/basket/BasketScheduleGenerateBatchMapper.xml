@@ -48,6 +48,6 @@
     <update id="softDeleteDraftByEventId">
         update basket_schedule_generate_batch
         set is_delete = 1, update_time = now()
-        where event_id = #{eventId} and is_delete = 0 and publish_status = 0
+        where event_id = #{eventId} and is_delete = 0 and publish_status in (0, 2)
     </update>
 </mapper>
