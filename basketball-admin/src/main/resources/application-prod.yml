@@ -20,7 +20,7 @@ spring:
       enabled: false
   data:
     redis:
-      host: 192.168.31.47
+      host: 106.55.61.223
       port: 6379
       password:
       database: 0
