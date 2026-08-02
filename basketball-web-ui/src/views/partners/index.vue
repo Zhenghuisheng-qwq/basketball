@@ -4,7 +4,7 @@ import PaperTear from '@/components/common/PaperTear.vue'
 import { getPublicPartners } from '@/api/public/partner'
 import type { PublicPartnerSupportRecordResp } from '@/api/types/public'
 import { displayText, toNumber } from '@/utils/publicDisplay'
-import partnersHeroImg from '@/assets/partners/partners-hero.jpg'
+import partnersHeroImg from '@/assets/icon/hzhb/hzhb.png'
 
 const PAGE_SIZE = 8
 
@@ -82,13 +82,13 @@ void loadPartners(1)
 
 <template>
   <div class="partners-page">
-    <section class="partners-hero" aria-label="合作伙伴主题横幅">
+    <section class="partners-hero" aria-label="合作伙伴">
       <div class="site-shell">
         <div class="partners-hero__frame">
           <img
             class="partners-hero__image"
             :src="partnersHeroImg"
-            alt="CNPA 合作伙伴 CNPA PARTNERS"
+            alt="CNPA 合作伙伴"
             draggable="false"
           />
         </div>
@@ -216,18 +216,17 @@ void loadPartners(1)
 
 .partners-hero__frame {
   width: 100%;
-  height: clamp(300px, 28vw, 395px);
   overflow: hidden;
   background: #000;
+  line-height: 0;
 }
 
 .partners-hero__image {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
+  height: auto;
   user-select: none;
+  -webkit-user-drag: none;
 }
 
 .partners-page__content {
