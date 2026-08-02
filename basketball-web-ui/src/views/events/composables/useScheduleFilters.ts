@@ -2,7 +2,13 @@ import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
 import { getPublicSeasonSchedulePage } from '@/api/publicMatch'
 import { getPublicSeasonStanding } from '@/api/publicStanding'
 import type { PublicStandingItemVo } from '@/api/types/public'
-import { getWeekNumber, shiftWeek } from './useCalendar'
+import {
+  formatDateKey,
+  getWeekNumber,
+  isValidDateKey,
+  shiftWeek,
+  toDateKey,
+} from './useCalendar'
 import type { Match } from '../types/events'
 import type { usePublicSeasonContext } from './usePublicSeasonContext'
 import { standingToTeam, toScheduleMatch } from '../utils/mapPublic'
@@ -12,9 +18,9 @@ type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 export function useScheduleFilters() {
   const ctx = inject<SeasonContext>('publicSeasonContext')!
 
-  const selectedDate = ref('')
+  const selectedDate = ref(formatDateKey(new Date()))
   const selectedTeamId = ref<string | null>(null)
-  const currentWeek = ref(1)
+  const currentWeek = ref(getWeekNumber(selectedDate.value))
   const isCalendarOpen = ref(false)
   const isTeamSelectorOpen = ref(false)
 
@@ -46,6 +52,28 @@ export function useScheduleFilters() {
     })
   })
 
+  function resolveCalendarBaseDate(): string {
+    const candidates = [
+      toDateKey(ctx.currentSeason.value?.seasonStartTime),
+      matches.value.find((item) => item.date)?.date,
+      formatDateKey(new Date()),
+    ]
+
+    for (const candidate of candidates) {
+      if (candidate && isValidDateKey(candidate)) {
+        return candidate
+      }
+    }
+
+    return formatDateKey(new Date())
+  }
+
+  function applyCalendarBaseDate(force = false) {
+    if (!force && isValidDateKey(selectedDate.value)) return
+    selectedDate.value = resolveCalendarBaseDate()
+    currentWeek.value = getWeekNumber(selectedDate.value)
+  }
+
   function closePanels() {
     isCalendarOpen.value = false
     isTeamSelectorOpen.value = false
@@ -62,8 +90,9 @@ export function useScheduleFilters() {
   }
 
   function selectDate(date: string) {
+    if (!isValidDateKey(date)) return
     selectedDate.value = date
-    if (date) currentWeek.value = getWeekNumber(date)
+    currentWeek.value = getWeekNumber(date)
     closePanels()
   }
 
@@ -73,17 +102,18 @@ export function useScheduleFilters() {
   }
 
   function selectSeason(seasonId: string) {
+    if (!seasonId) return
     ctx.selectSeason(seasonId)
   }
 
   function goPrevWeek() {
-    if (!selectedDate.value) return
+    if (!isValidDateKey(selectedDate.value)) return
     selectedDate.value = shiftWeek(selectedDate.value, -1)
     currentWeek.value = getWeekNumber(selectedDate.value)
   }
 
   function goNextWeek() {
-    if (!selectedDate.value) return
+    if (!isValidDateKey(selectedDate.value)) return
     selectedDate.value = shiftWeek(selectedDate.value, 1)
     currentWeek.value = getWeekNumber(selectedDate.value)
   }
@@ -99,12 +129,13 @@ export function useScheduleFilters() {
     if (event.key === 'Escape') closePanels()
   }
 
-  async function loadSchedule(seasonId: string) {
+  async function loadSchedule(seasonId: string, options?: { resetDate?: boolean }) {
     const current = ++reqId
     if (!seasonId) {
       matches.value = []
       teams.value = []
       state.value = 'empty'
+      applyCalendarBaseDate(true)
       return
     }
     state.value = 'loading'
@@ -125,13 +156,7 @@ export function useScheduleFilters() {
       )
       teams.value = standingRes.data ?? []
 
-      if (!selectedDate.value && matches.value.length) {
-        const firstDate = matches.value.find((item) => item.date)?.date
-        if (firstDate) {
-          selectedDate.value = firstDate
-          currentWeek.value = getWeekNumber(firstDate)
-        }
-      }
+      applyCalendarBaseDate(Boolean(options?.resetDate))
 
       state.value = matches.value.length ? 'success' : 'empty'
     } catch (err) {
@@ -139,13 +164,16 @@ export function useScheduleFilters() {
       matches.value = []
       state.value = 'error'
       errorMessage.value = err instanceof Error ? err.message : '加载赛程失败'
+      applyCalendarBaseDate(true)
     }
   }
 
   watch(
     () => [ctx.seasonId.value, selectedTeamId.value] as const,
-    ([sid]) => {
-      void loadSchedule(sid)
+    ([sid], prev) => {
+      const prevSid = prev?.[0]
+      const resetDate = prev === undefined || sid !== prevSid
+      void loadSchedule(sid, { resetDate })
     },
     { immediate: true },
   )

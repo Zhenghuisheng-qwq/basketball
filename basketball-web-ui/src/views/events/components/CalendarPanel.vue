@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { useCalendar } from '../composables/useCalendar'
+import { isValidDateKey, useCalendar } from '../composables/useCalendar'
 
 const props = defineProps<{
   selectedDate: string
@@ -15,7 +15,11 @@ const { monthLabel, getThreeMonths, setAnchorFromDate, shiftMonths } = useCalend
 
 watch(
   () => props.selectedDate,
-  (value) => setAnchorFromDate(value),
+  (value) => {
+    if (isValidDateKey(value)) {
+      setAnchorFromDate(value)
+    }
+  },
 )
 
 const months = computed(() => getThreeMonths(props.selectedDate))

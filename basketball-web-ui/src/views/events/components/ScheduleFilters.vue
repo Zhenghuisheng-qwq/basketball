@@ -34,9 +34,10 @@ const selectedTeamLabel = computed(() => {
     <div class="filter-row">
       <label class="filter-item">
         <select
-          :value="selectedSeason"
+          :value="selectedSeason || ''"
           @change="emit('update:selectedSeason', ($event.target as HTMLSelectElement).value)"
         >
+          <option v-if="!selectedSeason" value="" disabled hidden>选择赛季</option>
           <option v-for="season in seasonOptions" :key="season.id" :value="season.id">
             {{ season.label }}
           </option>

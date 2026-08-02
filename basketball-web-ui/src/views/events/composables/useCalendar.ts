@@ -5,13 +5,43 @@ function pad(value: number): string {
   return String(value).padStart(2, '0')
 }
 
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+
+export function isValidDateKey(value: string | null | undefined): value is string {
+  if (!value || !DATE_KEY_PATTERN.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  if (!year || !month || !day) return false
+  const date = new Date(year, month - 1, day)
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  )
+}
+
+/** 从后端日期时间字符串提取 YYYY-MM-DD */
+export function toDateKey(value: string | null | undefined): string | null {
+  if (!value) return null
+  const normalized = value.replace('T', ' ').trim()
+  const datePart = normalized.split(/\s+/)[0] ?? ''
+  return isValidDateKey(datePart) ? datePart : null
+}
+
 export function formatDateKey(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
-export function parseDateKey(value: string): Date {
+export function parseDateKey(value: string): Date | null {
+  if (!isValidDateKey(value)) return null
   const [year, month, day] = value.split('-').map(Number)
   return new Date(year, month - 1, day)
+}
+
+export function resolveDateKey(
+  value: string | null | undefined,
+  fallback: Date = new Date(),
+): Date {
+  return parseDateKey(value ?? '') ?? fallback
 }
 
 function buildMonth(year: number, month: number, selectedDate: string): CalendarMonth {
@@ -51,10 +81,10 @@ function buildMonth(year: number, month: number, selectedDate: string): Calendar
 }
 
 export function useCalendar(initialDate: string) {
-  const anchorDate = ref(parseDateKey(initialDate))
+  const anchorDate = ref(resolveDateKey(initialDate))
 
   function setAnchorFromDate(dateKey: string) {
-    anchorDate.value = parseDateKey(dateKey)
+    anchorDate.value = resolveDateKey(dateKey)
   }
 
   function shiftMonths(offset: number) {
@@ -64,7 +94,8 @@ export function useCalendar(initialDate: string) {
   }
 
   function getThreeMonths(selectedDate: string): CalendarMonth[] {
-    const start = new Date(anchorDate.value.getFullYear(), anchorDate.value.getMonth(), 1)
+    const anchor = anchorDate.value
+    const start = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
     return [0, 1, 2].map((offset) => {
       const monthDate = new Date(start.getFullYear(), start.getMonth() + offset, 1)
       return buildMonth(monthDate.getFullYear(), monthDate.getMonth(), selectedDate)
@@ -73,7 +104,10 @@ export function useCalendar(initialDate: string) {
 
   const monthLabel = computed(() => {
     const months = getThreeMonths(formatDateKey(anchorDate.value))
-    return `${months[0]?.label} - ${months[2]?.label}`
+    const first = months[0]?.label ?? ''
+    const last = months[2]?.label ?? ''
+    if (!first) return ''
+    return first === last ? first : `${first} - ${last}`
   })
 
   return {
@@ -88,7 +122,7 @@ export function useCalendar(initialDate: string) {
 }
 
 export function getWeekDates(baseDate: string, weekNumber: number) {
-  const date = parseDateKey(baseDate)
+  const date = resolveDateKey(baseDate)
   const weekday = date.getDay()
   const sunday = new Date(date)
   sunday.setDate(date.getDate() - weekday)
@@ -107,13 +141,13 @@ export function getWeekDates(baseDate: string, weekNumber: number) {
 }
 
 export function shiftWeek(baseDate: string, direction: -1 | 1): string {
-  const date = parseDateKey(baseDate)
+  const date = resolveDateKey(baseDate)
   date.setDate(date.getDate() + direction * 7)
   return formatDateKey(date)
 }
 
 export function getWeekNumber(dateKey: string): number {
-  const date = parseDateKey(dateKey)
+  const date = resolveDateKey(dateKey)
   const start = new Date(date.getFullYear(), 0, 1)
   const diff = date.getTime() - start.getTime()
   return Math.ceil((diff / 86400000 + start.getDay() + 1) / 7)
