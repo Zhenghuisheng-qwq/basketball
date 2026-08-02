@@ -60,11 +60,22 @@ public class PlayerMatchTaskResp implements Serializable {
     private Boolean isRosterMember;
     private Integer submissionStatus;
     private String submissionStatusText;
+    /** 我方提交状态（与 submissionStatus 一致，便于前端区分） */
+    private Integer mySubmissionStatus;
+    private String mySubmissionStatusText;
+    /** 对方提交状态 */
+    private Integer opponentSubmissionStatus;
+    private String opponentSubmissionStatusText;
     private String submissionId;
     private String submissionNo;
     private Integer versionNo;
     private Boolean canSubmit;
     private Boolean canResubmit;
+    /** 是否可提交/重新提交比赛数据（前端按钮主开关） */
+    private Boolean canSubmitMatchData;
+    private String submitDisabledReason;
+    private Boolean isMatchTimePassed;
+    private Boolean isCurrentUserCaptain;
     private Boolean canViewStatus;
     private Boolean canViewData;
     private Boolean canDispute;

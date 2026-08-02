@@ -182,7 +182,9 @@ export const useEventTeamStore = defineStore('eventTeam', () => {
     try {
       const res = await getEventTeamMatches(eventTeamId.value, { pageNum: 1, pageSize: 100 })
       const records = res.data?.records || []
-      pendingTasks.value.matchDataTodoCount = records.filter((item: PlayerMatchTaskItem) => item.canSubmit).length
+      pendingTasks.value.matchDataTodoCount = records.filter((item: PlayerMatchTaskItem) =>
+        item.canSubmitMatchData || item.canSubmit,
+      ).length
     } catch {
       pendingTasks.value.matchDataTodoCount = 0
     }

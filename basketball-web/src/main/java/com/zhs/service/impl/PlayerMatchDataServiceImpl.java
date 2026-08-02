@@ -68,6 +68,7 @@ import com.zhs.service.account.AccessibleFile;
 import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicSupport;
 import com.zhs.service.support.PlayerMatchDisputeExceptionSupport;
+import com.zhs.service.support.PlayerMatchDataSubmitSupport;
 import com.zhs.support.MemberAvatarSupport;
 import jakarta.annotation.Resource;
 import org.springframework.dao.DuplicateKeyException;
@@ -158,6 +159,8 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
     @Resource
     private PlayerMatchDisputeExceptionSupport disputeExceptionSupport;
     @Resource
+    private PlayerMatchDataSubmitSupport matchDataSubmitSupport;
+    @Resource
     private BasketPublicSupport publicSupport;
 
     @Override
@@ -198,17 +201,56 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
 
         Page<BasketMatch> page = matchDao.selectPage(new Page<>(current, size), wrapper);
         Map<Long, String> teamNameMap = loadTeamNames(page.getRecords());
-        Map<Long, BasketMatchDataSubmission> latestSubmissionMap = loadLatestSubmissions(
-                page.getRecords().stream().map(BasketMatch::getId).collect(Collectors.toList()));
+        List<Long> matchIdList = page.getRecords().stream().map(BasketMatch::getId).collect(Collectors.toList());
+        Map<String, BasketMatchDataSubmission> submissionByTeamMap = loadLatestSubmissionsByTeam(matchIdList);
         Map<Long, Long> captainTeamMap = loadCaptainTeamMap(memberId, page.getRecords());
 
         Page<PlayerMatchTaskResp> respPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         List<PlayerMatchTaskResp> records = new ArrayList<>();
         for (BasketMatch match : page.getRecords()) {
-            records.add(toTaskResp(match, myTeamIds, teamNameMap, latestSubmissionMap.get(match.getId()), captainTeamMap, null));
+            Long myTeamId = resolveMyTeamIdForMatch(match, myTeamIds, null);
+            BasketMatchDataSubmission mySubmission = resolveTeamSubmission(submissionByTeamMap, match.getId(), myTeamId);
+            records.add(toTaskResp(match, myTeamIds, teamNameMap, mySubmission, submissionByTeamMap, captainTeamMap, null));
         }
         respPage.setRecords(records);
         return respPage;
+    }
+
+    @Override
+    public List<PlayerMatchTaskResp> buildTaskItemsForEventTeams(Long memberId, Map<Long, Long> matchIdToEventTeamId) {
+        if (memberId == null || matchIdToEventTeamId == null || matchIdToEventTeamId.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> matchIds = new ArrayList<>(matchIdToEventTeamId.keySet());
+        List<BasketMatch> matches = matchDao.selectList(new LambdaQueryWrapper<BasketMatch>()
+                .in(BasketMatch::getId, matchIds)
+                .eq(BasketMatch::getIsDelete, NOT_DELETED));
+        if (matches.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<Long, BasketMatch> matchMap = matches.stream()
+                .collect(Collectors.toMap(BasketMatch::getId, m -> m, (a, b) -> a));
+        Map<Long, String> teamNameMap = loadTeamNames(matches);
+        Map<String, BasketMatchDataSubmission> submissionByTeamMap = loadLatestSubmissionsByTeam(matchIds);
+        Map<Long, Long> captainTeamMap = loadCaptainTeamMap(memberId, matches);
+
+        List<PlayerMatchTaskResp> records = new ArrayList<>();
+        for (Long matchId : matchIds) {
+            BasketMatch match = matchMap.get(matchId);
+            Long eventTeamId = matchIdToEventTeamId.get(matchId);
+            if (match == null || eventTeamId == null) {
+                continue;
+            }
+            BasketTeamSeasonProfile eventTeam = eventTeamDao.selectById(eventTeamId);
+            List<Long> myTeamIds = eventTeam != null && eventTeam.getTeamId() != null
+                    ? Collections.singletonList(eventTeam.getTeamId())
+                    : Collections.emptyList();
+            Long myTeamId = resolveMyTeamIdForMatch(match, myTeamIds, eventTeamId);
+            BasketMatchDataSubmission mySubmission = resolveTeamSubmission(submissionByTeamMap, matchId, myTeamId);
+            records.add(toTaskResp(match, myTeamIds, teamNameMap, mySubmission, submissionByTeamMap,
+                    captainTeamMap, eventTeamId));
+        }
+        return records;
     }
 
     @Override
@@ -260,11 +302,9 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         }
 
         List<BasketMatch> allMatches = matchDao.selectList(wrapper);
-        Map<Long, BasketMatchDataSubmission> latestSubmissionMap = loadLatestSubmissions(
-                allMatches.stream().map(BasketMatch::getId).collect(Collectors.toList()));
-        boolean finishedOnly = matchStatus != null
-                && Objects.equals(matchStatus, BasketPublicConstants.MATCH_FINISHED);
-        allMatches.sort((left, right) -> compareEventTeamMatchesForList(left, right, latestSubmissionMap, finishedOnly));
+        List<Long> allMatchIds = allMatches.stream().map(BasketMatch::getId).collect(Collectors.toList());
+        Map<String, BasketMatchDataSubmission> submissionByTeamMap = loadLatestSubmissionsByTeam(allMatchIds);
+        allMatches.sort(this::compareEventTeamMatchesChronological);
 
         int fromIndex = (current - 1) * size;
         if (fromIndex >= allMatches.size()) {
@@ -283,7 +323,9 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         Page<PlayerMatchTaskResp> respPage = new Page<>(current, size, total);
         List<PlayerMatchTaskResp> records = new ArrayList<>();
         for (BasketMatch match : pageMatches) {
-            records.add(toTaskResp(match, myTeamIds, teamNameMap, latestSubmissionMap.get(match.getId()), captainTeamMap, eventTeamPk));
+            Long myTeamId = resolveMyTeamIdForMatch(match, myTeamIds, eventTeamPk);
+            BasketMatchDataSubmission mySubmission = resolveTeamSubmission(submissionByTeamMap, match.getId(), myTeamId);
+            records.add(toTaskResp(match, myTeamIds, teamNameMap, mySubmission, submissionByTeamMap, captainTeamMap, eventTeamPk));
         }
         respPage.setRecords(records);
         respPage.setPages((total + size - 1) / size);
@@ -317,11 +359,13 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
 
         List<Long> myTeamIds = Collections.singletonList(eventTeam.getTeamId());
         Map<Long, String> teamNameMap = loadTeamNames(Collections.singletonList(match));
-        Map<Long, BasketMatchDataSubmission> latestSubmissionMap = loadLatestSubmissions(
+        Map<String, BasketMatchDataSubmission> submissionByTeamMap = loadLatestSubmissionsByTeam(
                 Collections.singletonList(match.getId()));
         Map<Long, Long> captainTeamMap = loadCaptainTeamMap(memberId, Collections.singletonList(match));
-        PlayerMatchTaskResp resp = toTaskResp(match, myTeamIds, teamNameMap, latestSubmissionMap.get(match.getId()), captainTeamMap, eventTeamPk);
-        enrichMatchDetail(resp, match, eventTeam, latestSubmissionMap.get(match.getId()));
+        Long myTeamId = resolveMyTeamIdForMatch(match, myTeamIds, eventTeamPk);
+        BasketMatchDataSubmission mySubmission = resolveTeamSubmission(submissionByTeamMap, match.getId(), myTeamId);
+        PlayerMatchTaskResp resp = toTaskResp(match, myTeamIds, teamNameMap, mySubmission, submissionByTeamMap, captainTeamMap, eventTeamPk);
+        enrichMatchDetail(resp, match, eventTeam, mySubmission);
         return resp;
     }
 
@@ -330,7 +374,7 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         Long memberId = UserContext.getRequiredMemberId();
         captainPermissionService.requireCertifiedPlayer(memberId);
         BasketMatch match = requireMatch(matchId);
-        assertMatchFinished(match);
+        matchDataSubmitSupport.assertSubmissionAllowed(match);
         assertMemberInSeason(memberId, match.getSeasonId());
 
         List<Long> captainTeamIds = findCaptainTeamIdsForMatch(memberId, match);
@@ -342,7 +386,7 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         resp.setPeriodScores(defaultRegularPeriods());
         resp.setTeamStats(defaultTeamStats(match));
         resp.setPlayerStats(buildPlayerStatTemplate(match.getId()));
-        fillSubmitAvailability(resp, match);
+        fillSubmitAvailability(resp, match, captainTeamIds.get(0));
         return resp;
     }
 
@@ -359,7 +403,8 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         BasketMatch match = requireMatch(matchId);
         assertMemberCanViewMatch(memberId, match);
 
-        BasketMatchDataSubmission submission = findLatestSubmission(matchId);
+        Long myTeamId = resolveMemberTeamIdInMatch(memberId, match);
+        BasketMatchDataSubmission submission = findLatestSubmission(matchId, myTeamId);
         if (submission == null) {
             throw new ServiceException("该比赛暂无提交记录");
         }
@@ -374,13 +419,14 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         BasketMatch match = requireMatch(matchId);
         assertMemberCanViewMatch(memberId, match);
 
-        BasketMatchDataSubmission submission = findLatestSubmission(matchId);
-        if (submission == null || !Objects.equals(submission.getSubmissionStatus(), MatchDataSubmissionStatusEnum.REJECTED.getCode())) {
+        List<Long> captainTeamIds = findCaptainTeamIdsForMatch(memberId, match);
+        BasketMatchDataSubmission submission = findRejectedSubmissionForTeams(matchId, captainTeamIds);
+        if (submission == null) {
             throw new ServiceException("仅驳回后可重新提交");
         }
         assertCaptainOfTeam(memberId, match.getSeasonId(), submission.getSubmitterTeamId());
 
-        List<Long> captainTeamIds = Collections.singletonList(submission.getSubmitterTeamId());
+        captainTeamIds = Collections.singletonList(submission.getSubmitterTeamId());
         PlayerMatchDataSubmissionDetailResp resp = buildBaseDetailResp(match, captainTeamIds);
         fillSubmissionDetail(resp, submission);
         resp.setCanSubmit(true);
@@ -391,11 +437,13 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PlayerMatchDataSubmitResultResp resubmit(Long matchId, PlayerMatchDataResubmitReq req) {
-        BasketMatchDataSubmission latest = findLatestSubmission(matchId);
-        if (latest == null || !Objects.equals(latest.getSubmissionStatus(), MatchDataSubmissionStatusEnum.REJECTED.getCode())) {
+        Long memberId = UserContext.getRequiredMemberId();
+        BasketMatch match = requireMatch(matchId);
+        List<Long> captainTeamIds = findCaptainTeamIdsForMatch(memberId, match);
+        BasketMatchDataSubmission latest = findRejectedSubmissionForTeams(matchId, captainTeamIds);
+        if (latest == null) {
             throw new ServiceException("仅驳回后可重新提交");
         }
-        Long memberId = UserContext.getRequiredMemberId();
         assertCaptainOfTeam(memberId, latest.getSeasonId(), latest.getSubmitterTeamId());
         return doSubmit(matchId, req, true, latest);
     }
@@ -409,11 +457,13 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PlayerMatchDataSubmitResultResp resubmitTeamPlayerStats(Long matchId, PlayerMatchTeamPlayerStatsResubmitReq req) {
-        BasketMatchDataSubmission latest = findLatestSubmission(matchId);
-        if (latest == null || !Objects.equals(latest.getSubmissionStatus(), MatchDataSubmissionStatusEnum.REJECTED.getCode())) {
+        Long memberId = UserContext.getRequiredMemberId();
+        BasketMatch match = requireMatch(matchId);
+        List<Long> captainTeamIds = findCaptainTeamIdsForMatch(memberId, match);
+        BasketMatchDataSubmission latest = findRejectedSubmissionForTeams(matchId, captainTeamIds);
+        if (latest == null) {
             throw new ServiceException("仅驳回后可重新提交");
         }
-        Long memberId = UserContext.getRequiredMemberId();
         assertCaptainOfTeam(memberId, latest.getSeasonId(), latest.getSubmitterTeamId());
         return doSubmitTeamPlayerStats(matchId, req, true, latest);
     }
@@ -432,14 +482,13 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         if (match == null || !NOT_DELETED.equals(match.getIsDelete())) {
             throw new ServiceException("比赛不存在");
         }
-        assertMatchFinished(match);
+        matchDataSubmitSupport.assertSubmissionAllowed(match);
 
         if (resubmit) {
             if (previous == null || !Objects.equals(previous.getSubmissionStatus(), MatchDataSubmissionStatusEnum.REJECTED.getCode())) {
                 throw new ServiceException("仅驳回后可重新提交");
             }
         } else {
-            assertNoActiveSubmission(matchId);
             Integer currentDataStatus = match.getDataStatus();
             if (currentDataStatus != null && currentDataStatus == BasketPublicConstants.DATA_CONFIRMED) {
                 throw new ServiceException("比赛数据已确认，无法提交");
@@ -466,6 +515,9 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         }
         if (!submitterTeamId.equals(match.getHomeTeamId()) && !submitterTeamId.equals(match.getAwayTeamId())) {
             throw new ServiceException("提交球队须为本场比赛参赛球队");
+        }
+        if (!resubmit) {
+            assertNoActiveSubmission(matchId, submitterTeamId);
         }
         assertCaptainOfTeam(memberId, match.getSeasonId(), submitterTeamId);
 
@@ -511,11 +563,13 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         try {
             submissionDao.insert(submission);
         } catch (DuplicateKeyException ex) {
-            throw new ServiceException("该比赛已有提交中的数据，请勿重复提交");
+            throw new ServiceException("本队已有提交中的数据，请勿重复提交");
         }
 
         insertChildren(submission, match, payload, now);
         insertAuditRecord(match, submission, memberId, now, resubmit ? "RESUBMIT" : "SUBMIT");
+
+        ensureMatchFinishedIfScheduled(match);
 
         if (resubmit) {
             BasketMatchDataSubmission superseded = new BasketMatchDataSubmission();
@@ -549,14 +603,13 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         if (match == null || !NOT_DELETED.equals(match.getIsDelete())) {
             throw new ServiceException("比赛不存在");
         }
-        assertMatchFinished(match);
+        matchDataSubmitSupport.assertSubmissionAllowed(match);
 
         if (resubmit) {
             if (previous == null || !Objects.equals(previous.getSubmissionStatus(), MatchDataSubmissionStatusEnum.REJECTED.getCode())) {
                 throw new ServiceException("仅驳回后可重新提交");
             }
         } else {
-            assertNoActiveSubmission(matchId);
             Integer currentDataStatus = match.getDataStatus();
             if (currentDataStatus != null && currentDataStatus == BasketPublicConstants.DATA_CONFIRMED) {
                 throw new ServiceException("比赛数据已确认，无法提交");
@@ -575,6 +628,9 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
             }
         } else {
             submitterTeamId = captainTeamIds.get(0);
+        }
+        if (!resubmit) {
+            assertNoActiveSubmission(matchId, submitterTeamId);
         }
         assertCaptainOfTeam(memberId, match.getSeasonId(), submitterTeamId);
 
@@ -740,7 +796,7 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
             throw new ServiceException("球队得分须与比赛比分一致");
         }
 
-        Map<Long, Set<Long>> rosterPlayerMap = loadRosterPlayerMap(match.getId());
+        Map<Long, Set<Long>> rosterPlayerMap = loadEffectiveRosterPlayerMap(match);
         List<BasketMatchDataSubmissionPlayerStat> playerStats = new ArrayList<>();
         Map<Long, int[]> teamAgg = new HashMap<>();
         teamAgg.put(match.getHomeTeamId(), new int[15]);
@@ -825,7 +881,7 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
             throw new ServiceException("比赛对手球队信息不完整");
         }
 
-        Map<Long, Set<Long>> rosterPlayerMap = loadRosterPlayerMap(match.getId());
+        Map<Long, Set<Long>> rosterPlayerMap = loadEffectiveRosterPlayerMap(match);
         Set<Long> submitterRoster = rosterPlayerMap.get(submitterTeamId);
         Set<Long> opponentRoster = rosterPlayerMap.getOrDefault(opponentTeamId, Collections.emptySet());
         if (CollectionUtils.isEmpty(submitterRoster)) {
@@ -1352,7 +1408,9 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
     }
 
     private PlayerMatchTaskResp toTaskResp(BasketMatch match, List<Long> myTeamIds, Map<Long, String> teamNameMap,
-                                           BasketMatchDataSubmission submission, Map<Long, Long> captainTeamMap,
+                                           BasketMatchDataSubmission submission,
+                                           Map<String, BasketMatchDataSubmission> submissionByTeamMap,
+                                           Map<Long, Long> captainTeamMap,
                                            Long scopedEventTeamId) {
         Long myTeamId = null;
         Long myEventTeamId = scopedEventTeamId;
@@ -1391,7 +1449,7 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         fillScheduleParts(match.getScheduledStartTime(), resp);
         resp.setScheduledStartTime(match.getScheduledStartTime());
         resp.setMatchStatus(match.getMatchStatus());
-        resp.setMatchStatusText(resolveMatchStatusText(match.getMatchStatus()));
+        resp.setMatchStatusText(resolveEffectiveMatchStatusText(match));
         resp.setPublishStatus(match.getPublishStatus());
         resp.setPublishStatusText(resolvePublishStatusText(match.getPublishStatus()));
         resp.setDataStatus(match.getDataStatus());
@@ -1423,18 +1481,39 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         if (submission != null) {
             resp.setSubmissionStatus(submission.getSubmissionStatus());
             resp.setSubmissionStatusText(MatchDataSubmissionStatusEnum.fromCode(submission.getSubmissionStatus()).getDescription());
+            resp.setMySubmissionStatus(submission.getSubmissionStatus());
+            resp.setMySubmissionStatusText(resp.getSubmissionStatusText());
             resp.setSubmissionId(String.valueOf(submission.getId()));
             resp.setSubmissionNo(submission.getSubmissionNo());
             resp.setVersionNo(submission.getVersionNo());
+        } else {
+            resp.setMySubmissionStatusText("未提交");
         }
 
-        boolean finished = Objects.equals(match.getMatchStatus(), BasketPublicConstants.MATCH_FINISHED);
-        boolean activeSubmission = submission != null && MatchDataSubmissionStatusEnum.fromCode(submission.getSubmissionStatus()).isActive();
-        boolean rejected = submission != null && Objects.equals(submission.getSubmissionStatus(), MatchDataSubmissionStatusEnum.REJECTED.getCode());
+        Long opponentTeamIdForSubmission = myTeamId != null
+                ? (Objects.equals(myTeamId, match.getHomeTeamId()) ? match.getAwayTeamId() : match.getHomeTeamId())
+                : null;
+        if (opponentTeamIdForSubmission != null && submissionByTeamMap != null) {
+            BasketMatchDataSubmission opponentSubmission = resolveTeamSubmission(
+                    submissionByTeamMap, match.getId(), opponentTeamIdForSubmission);
+            if (opponentSubmission != null) {
+                resp.setOpponentSubmissionStatus(opponentSubmission.getSubmissionStatus());
+                resp.setOpponentSubmissionStatusText(
+                        MatchDataSubmissionStatusEnum.fromCode(opponentSubmission.getSubmissionStatus()).getDescription());
+            } else {
+                resp.setOpponentSubmissionStatusText("未提交");
+            }
+        }
+
+        PlayerMatchDataSubmitSupport.MatchDataSubmitAvailability submitAvailability =
+                matchDataSubmitSupport.evaluate(match, isCaptain, myTeamId, submission);
+        resp.setCanSubmit(submitAvailability.isCanSubmit());
+        resp.setCanResubmit(submitAvailability.isCanResubmit());
+        resp.setCanSubmitMatchData(submitAvailability.isCanSubmitMatchData());
+        resp.setSubmitDisabledReason(submitAvailability.getSubmitDisabledReason());
+        resp.setIsMatchTimePassed(submitAvailability.isMatchTimePassed());
+        resp.setIsCurrentUserCaptain(isCaptain);
         boolean confirmed = match.getDataStatus() != null && match.getDataStatus() == BasketPublicConstants.DATA_CONFIRMED;
-        resp.setCanSubmit(isCaptain && finished && !activeSubmission && !confirmed);
-        resp.setCanResubmit(isCaptain && finished && rejected
-                && submission != null && Objects.equals(submission.getSubmitterTeamId(), myTeamId));
         resp.setCanViewStatus(submission != null);
         resp.setCanViewData(confirmed || (submission != null
                 && Objects.equals(submission.getSubmissionStatus(), MatchDataSubmissionStatusEnum.APPROVED.getCode())));
@@ -1454,22 +1533,12 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         return resp;
     }
 
-    private void fillSubmitAvailability(PlayerMatchDataSubmissionDetailResp resp, BasketMatch match) {
-        BasketMatchDataSubmission latest = findLatestSubmission(match.getId());
-        boolean activeSubmission = latest != null
-                && MatchDataSubmissionStatusEnum.fromCode(latest.getSubmissionStatus()).isActive();
-        boolean confirmed = match.getDataStatus() != null
-                && match.getDataStatus() == BasketPublicConstants.DATA_CONFIRMED;
-        if (activeSubmission) {
-            resp.setCanSubmit(false);
-            resp.setCannotSubmitReason("该比赛已有待审核或已通过的数据提交");
-        } else if (confirmed) {
-            resp.setCanSubmit(false);
-            resp.setCannotSubmitReason("比赛数据已确认，无法提交");
-        } else {
-            resp.setCanSubmit(true);
-            resp.setCannotSubmitReason(null);
-        }
+    private void fillSubmitAvailability(PlayerMatchDataSubmissionDetailResp resp, BasketMatch match, Long captainTeamId) {
+        BasketMatchDataSubmission latest = findLatestSubmission(match.getId(), captainTeamId);
+        PlayerMatchDataSubmitSupport.MatchDataSubmitAvailability availability =
+                matchDataSubmitSupport.evaluate(match, true, captainTeamId, latest);
+        resp.setCanSubmit(availability.isCanSubmit() || availability.isCanResubmit());
+        resp.setCannotSubmitReason(availability.getSubmitDisabledReason());
     }
 
     private String buildTaskStatusText(BasketMatch match, BasketMatchDataSubmission submission) {
@@ -1496,7 +1565,7 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
             }
             return "查看详情";
         }
-        if (!Objects.equals(match.getMatchStatus(), BasketPublicConstants.MATCH_FINISHED)) {
+        if (!matchDataSubmitSupport.isMatchTimePassed(match)) {
             return "查看详情";
         }
         return "查看详情";
@@ -1667,6 +1736,45 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         return map;
     }
 
+    /**
+     * 提交校验用出场名单：优先比赛出场名单，缺失时回退赛事阵容快照（与详情页展示一致）。
+     */
+    private Map<Long, Set<Long>> loadEffectiveRosterPlayerMap(BasketMatch match) {
+        Map<Long, Set<Long>> map = loadRosterPlayerMap(match.getId());
+        ensureTeamRosterFromEventSnapshot(match, map, match.getHomeTeamId(), match.getHomeEventTeamId());
+        ensureTeamRosterFromEventSnapshot(match, map, match.getAwayTeamId(), match.getAwayEventTeamId());
+        return map;
+    }
+
+    private void ensureTeamRosterFromEventSnapshot(BasketMatch match, Map<Long, Set<Long>> map,
+                                                     Long teamId, Long eventTeamId) {
+        if (teamId == null) {
+            return;
+        }
+        Set<Long> existing = map.get(teamId);
+        if (!CollectionUtils.isEmpty(existing)) {
+            return;
+        }
+        List<EventRosterMemberResp> roster = loadMatchSideRoster(match, eventTeamId, teamId);
+        if (CollectionUtils.isEmpty(roster)) {
+            return;
+        }
+        Set<Long> playerIds = new HashSet<>();
+        for (EventRosterMemberResp member : roster) {
+            if (!StringUtils.hasText(member.getPlayerId())) {
+                continue;
+            }
+            try {
+                playerIds.add(Long.parseLong(member.getPlayerId().trim()));
+            } catch (NumberFormatException ignored) {
+                // skip invalid player id
+            }
+        }
+        if (!playerIds.isEmpty()) {
+            map.put(teamId, playerIds);
+        }
+    }
+
     private List<Long> findActiveTeamIds(Long memberId, Long seasonId) {
         LambdaQueryWrapper<BasketTournamentSeasonRoster> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BasketTournamentSeasonRoster::getMemberId, memberId)
@@ -1739,21 +1847,26 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         }
     }
 
-    private void assertNoActiveSubmission(Long matchId) {
+    private void assertNoActiveSubmission(Long matchId, Long submitterTeamId) {
         LambdaQueryWrapper<BasketMatchDataSubmission> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BasketMatchDataSubmission::getMatchId, matchId)
+                .eq(BasketMatchDataSubmission::getSubmitterTeamId, submitterTeamId)
                 .eq(BasketMatchDataSubmission::getIsDelete, NOT_DELETED)
                 .in(BasketMatchDataSubmission::getSubmissionStatus,
                         MatchDataSubmissionStatusEnum.PENDING.getCode(),
                         MatchDataSubmissionStatusEnum.APPROVED.getCode());
         if (submissionDao.selectCount(wrapper) > 0) {
-            throw new ServiceException("该比赛已有提交中的数据，请勿重复提交");
+            throw new ServiceException("本队已有提交中的数据，请勿重复提交");
         }
     }
 
-    private BasketMatchDataSubmission findLatestSubmission(Long matchId) {
+    private BasketMatchDataSubmission findLatestSubmission(Long matchId, Long submitterTeamId) {
+        if (matchId == null || submitterTeamId == null) {
+            return null;
+        }
         LambdaQueryWrapper<BasketMatchDataSubmission> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BasketMatchDataSubmission::getMatchId, matchId)
+                .eq(BasketMatchDataSubmission::getSubmitterTeamId, submitterTeamId)
                 .eq(BasketMatchDataSubmission::getIsDelete, NOT_DELETED)
                 .orderByDesc(BasketMatchDataSubmission::getVersionNo)
                 .orderByDesc(BasketMatchDataSubmission::getSubmittedTime)
@@ -1761,7 +1874,7 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         return submissionDao.selectOne(wrapper);
     }
 
-    private Map<Long, BasketMatchDataSubmission> loadLatestSubmissions(List<Long> matchIds) {
+    private Map<String, BasketMatchDataSubmission> loadLatestSubmissionsByTeam(List<Long> matchIds) {
         if (CollectionUtils.isEmpty(matchIds)) {
             return Collections.emptyMap();
         }
@@ -1771,11 +1884,60 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
                 .orderByDesc(BasketMatchDataSubmission::getVersionNo)
                 .orderByDesc(BasketMatchDataSubmission::getSubmittedTime);
         List<BasketMatchDataSubmission> list = submissionDao.selectList(wrapper);
-        Map<Long, BasketMatchDataSubmission> map = new HashMap<>();
+        Map<String, BasketMatchDataSubmission> map = new HashMap<>();
         for (BasketMatchDataSubmission submission : list) {
-            map.putIfAbsent(submission.getMatchId(), submission);
+            map.putIfAbsent(submissionTeamKey(submission.getMatchId(), submission.getSubmitterTeamId()), submission);
         }
         return map;
+    }
+
+    private String submissionTeamKey(Long matchId, Long submitterTeamId) {
+        return matchId + ":" + submitterTeamId;
+    }
+
+    private BasketMatchDataSubmission resolveTeamSubmission(Map<String, BasketMatchDataSubmission> submissionByTeamMap,
+                                                            Long matchId, Long submitterTeamId) {
+        if (submissionByTeamMap == null || matchId == null || submitterTeamId == null) {
+            return null;
+        }
+        return submissionByTeamMap.get(submissionTeamKey(matchId, submitterTeamId));
+    }
+
+    private Long resolveMyTeamIdForMatch(BasketMatch match, List<Long> myTeamIds, Long scopedEventTeamId) {
+        if (scopedEventTeamId != null) {
+            if (Objects.equals(match.getHomeEventTeamId(), scopedEventTeamId)) {
+                return match.getHomeTeamId();
+            }
+            if (Objects.equals(match.getAwayEventTeamId(), scopedEventTeamId)) {
+                return match.getAwayTeamId();
+            }
+        }
+        if (myTeamIds != null && myTeamIds.contains(match.getHomeTeamId())) {
+            return match.getHomeTeamId();
+        }
+        if (myTeamIds != null && myTeamIds.contains(match.getAwayTeamId())) {
+            return match.getAwayTeamId();
+        }
+        return null;
+    }
+
+    private Long resolveMemberTeamIdInMatch(Long memberId, BasketMatch match) {
+        List<Long> myTeamIds = findActiveTeamIds(memberId, match.getSeasonId());
+        return resolveMyTeamIdForMatch(match, myTeamIds, null);
+    }
+
+    private BasketMatchDataSubmission findRejectedSubmissionForTeams(Long matchId, List<Long> teamIds) {
+        if (CollectionUtils.isEmpty(teamIds)) {
+            return null;
+        }
+        for (Long teamId : teamIds) {
+            BasketMatchDataSubmission candidate = findLatestSubmission(matchId, teamId);
+            if (candidate != null
+                    && Objects.equals(candidate.getSubmissionStatus(), MatchDataSubmissionStatusEnum.REJECTED.getCode())) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     private Map<Long, String> loadTeamNames(List<BasketMatch> matches) {
@@ -1895,12 +2057,6 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         return match;
     }
 
-    private void assertMatchFinished(BasketMatch match) {
-        if (!Objects.equals(match.getMatchStatus(), BasketPublicConstants.MATCH_FINISHED)) {
-            throw new ServiceException("比赛未结束，暂不可提交数据");
-        }
-    }
-
     private String generateSubmissionNo() {
         return "MDS-" + System.currentTimeMillis() + "-" + (int) (Math.random() * 1000);
     }
@@ -1934,75 +2090,26 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         return page;
     }
 
-    private int compareEventTeamMatchesForList(BasketMatch left, BasketMatch right,
-                                               Map<Long, BasketMatchDataSubmission> submissionMap,
-                                               boolean finishedOnly) {
-        if (finishedOnly) {
-            int timeCompare = compareScheduledTimeDesc(left, right);
-            if (timeCompare != 0) {
-                return timeCompare;
+    private int compareEventTeamMatchesChronological(BasketMatch left, BasketMatch right) {
+        Integer leftRound = left.getRoundNo();
+        Integer rightRound = right.getRoundNo();
+        if (leftRound != null || rightRound != null) {
+            if (leftRound == null) {
+                return 1;
             }
-            return compareMatchTieBreaker(left, right);
+            if (rightRound == null) {
+                return -1;
+            }
+            int roundCompare = leftRound.compareTo(rightRound);
+            if (roundCompare != 0) {
+                return roundCompare;
+            }
         }
-
-        int groupCompare = Integer.compare(
-                resolveEventTeamMatchSortGroup(left, submissionMap.get(left.getId())),
-                resolveEventTeamMatchSortGroup(right, submissionMap.get(right.getId())));
-        if (groupCompare != 0) {
-            return groupCompare;
-        }
-
-        int group = resolveEventTeamMatchSortGroup(left, submissionMap.get(left.getId()));
-        if (group == 1 || group == 2) {
-            int timeCompare = compareScheduledTimeAsc(left, right);
-            if (timeCompare != 0) {
-                return timeCompare;
-            }
-        } else {
-            int timeCompare = compareScheduledTimeDesc(left, right);
-            if (timeCompare != 0) {
-                return timeCompare;
-            }
+        int timeCompare = compareScheduledTimeAsc(left, right);
+        if (timeCompare != 0) {
+            return timeCompare;
         }
         return compareMatchTieBreaker(left, right);
-    }
-
-    private int resolveEventTeamMatchSortGroup(BasketMatch match, BasketMatchDataSubmission submission) {
-        Integer status = match.getMatchStatus();
-        if (status == null) {
-            return 5;
-        }
-        if (status == 1 || status == 4) {
-            return 1;
-        }
-        if (status == 2) {
-            return 2;
-        }
-        if (status == 5) {
-            return 6;
-        }
-        if (Objects.equals(status, BasketPublicConstants.MATCH_FINISHED)) {
-            if (match.getDataStatus() != null && match.getDataStatus() == BasketPublicConstants.DATA_CONFIRMED) {
-                return 4;
-            }
-            if (submission != null) {
-                Integer submissionStatus = submission.getSubmissionStatus();
-                if (Objects.equals(submissionStatus, MatchDataSubmissionStatusEnum.PENDING.getCode())
-                        || Objects.equals(submissionStatus, MatchDataSubmissionStatusEnum.REJECTED.getCode())) {
-                    return 3;
-                }
-                if (Objects.equals(submissionStatus, MatchDataSubmissionStatusEnum.APPROVED.getCode())) {
-                    return 4;
-                }
-            }
-            if (match.getDataStatus() == null
-                    || match.getDataStatus() == BasketPublicConstants.DATA_DRAFT
-                    || match.getDataStatus() == BasketPublicConstants.DATA_REJECTED) {
-                return 3;
-            }
-            return 4;
-        }
-        return 5;
     }
 
     private int compareScheduledTimeAsc(BasketMatch left, BasketMatch right) {
@@ -2018,10 +2125,6 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
             return -1;
         }
         return leftTime.compareTo(rightTime);
-    }
-
-    private int compareScheduledTimeDesc(BasketMatch left, BasketMatch right) {
-        return -compareScheduledTimeAsc(left, right);
     }
 
     private int compareMatchTieBreaker(BasketMatch left, BasketMatch right) {
@@ -2671,6 +2774,34 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         return id == null ? null : String.valueOf(id);
     }
 
+    private void ensureMatchFinishedIfScheduled(BasketMatch match) {
+        if (match == null || match.getId() == null) {
+            return;
+        }
+        if (!matchDataSubmitSupport.isMatchTimePassed(match)) {
+            return;
+        }
+        if (matchDataSubmitSupport.isMatchCancelled(match) || matchDataSubmitSupport.isMatchPostponed(match)) {
+            return;
+        }
+        if (Objects.equals(match.getMatchStatus(), BasketPublicConstants.MATCH_FINISHED)) {
+            return;
+        }
+        matchDao.finishScheduledMatchIfTimePassed(
+                match.getId(),
+                BasketPublicConstants.MATCH_SCHEDULED,
+                BasketPublicConstants.MATCH_FINISHED,
+                BasketPublicConstants.PUBLISH_PUBLISHED,
+                NOT_DELETED);
+    }
+
+    private String resolveEffectiveMatchStatusText(BasketMatch match) {
+        if (matchDataSubmitSupport.shouldDisplayAsFinished(match)) {
+            return "已结束";
+        }
+        return resolveMatchStatusText(match.getMatchStatus());
+    }
+
     private String resolveMatchStatusText(Integer status) {
         if (status == null) {
             return null;
@@ -2700,17 +2831,7 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
                 default -> submissionStatus.getDescription();
             };
         }
-        if (status == null) {
-            return "未提交";
-        }
-        return switch (status) {
-            case BasketPublicConstants.DATA_DRAFT -> "未提交";
-            case BasketPublicConstants.DATA_SUBMITTED -> "审核中";
-            case BasketPublicConstants.DATA_CONFIRMED -> "已通过";
-            case BasketPublicConstants.DATA_REOPENED -> "已重开";
-            case BasketPublicConstants.DATA_REJECTED -> "已驳回";
-            default -> "未知";
-        };
+        return "未提交";
     }
 
     private String resolveAuditStatusText(String auditStatus) {

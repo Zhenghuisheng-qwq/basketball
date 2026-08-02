@@ -1,4 +1,4 @@
-export type MyEventsTabKey = 'available' | 'applications' | 'joined'
+export type MyEventsTabKey = 'available' | 'applications' | 'joined' | 'schedule'
 
 export type AvailableEligibilityStatus = 'ELIGIBLE' | 'FULL' | 'NOT_VERIFIED' | 'APPLIED' | 'JOINED'
 

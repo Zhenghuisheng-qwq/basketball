@@ -119,13 +119,38 @@
     </select>
 
     <select id="selectDetailById" resultType="com.zhs.basket.vo.MatchDetailVo">
-        select m.id, m.match_no, m.season_id, s.season_name, m.stage_id, st.stage_name,
-               m.round_id, r.round_name, m.group_id, g.group_name, m.venue_id, v.venue_name,
-               m.home_team_id, ht.team_name as home_team_name, m.away_team_id, at.team_name as away_team_name,
-               m.scheduled_start_time, m.scheduled_end_time, m.actual_start_time, m.actual_end_time,
-               m.match_status, m.home_score, m.away_score, m.winner_team_id, wt.team_name as winner_team_name,
-               m.overtime_count, m.walkover_team_id, m.cancel_reason, m.data_status, m.public_status,
-               m.publish_status as publishStatus, m.sort_no
+        select m.id,
+               m.match_no as matchNo,
+               m.season_id as seasonId,
+               s.season_name as seasonName,
+               m.stage_id as stageId,
+               st.stage_name as stageName,
+               m.round_id as roundId,
+               r.round_name as roundName,
+               m.group_id as groupId,
+               g.group_name as groupName,
+               m.venue_id as venueId,
+               v.venue_name as venueName,
+               m.home_team_id as homeTeamId,
+               ht.team_name as homeTeamName,
+               m.away_team_id as awayTeamId,
+               at.team_name as awayTeamName,
+               m.scheduled_start_time as scheduledStartTime,
+               m.scheduled_end_time as scheduledEndTime,
+               m.actual_start_time as actualStartTime,
+               m.actual_end_time as actualEndTime,
+               m.match_status as matchStatus,
+               m.home_score as homeScore,
+               m.away_score as awayScore,
+               m.winner_team_id as winnerTeamId,
+               wt.team_name as winnerTeamName,
+               m.overtime_count as overtimeCount,
+               m.walkover_team_id as walkoverTeamId,
+               m.cancel_reason as cancelReason,
+               m.data_status as dataStatus,
+               m.public_status as publicStatus,
+               m.publish_status as publishStatus,
+               m.sort_no as sortNo
         <include refid="listJoins" />
         left join basket_team wt on m.winner_team_id = wt.id and wt.is_delete = 0
         where m.id = #{id} and m.is_delete = 0
@@ -490,4 +515,34 @@
         <if test="endTime != null and endTime != ''">and m.scheduled_start_time &lt;= #{endTime}</if>
         order by m.scheduled_start_time asc, m.sort_no asc, m.id asc
     </select>
+
+    <select id="selectIdsEligibleForAutoFinish" resultType="long">
+        select m.id
+        from basket_match m
+        where m.is_delete = 0
+          and m.publish_status = 1
+          and m.match_status = 1
+          and m.scheduled_start_time is not null
+          and m.scheduled_start_time &lt;= #{now}
+          and not exists (
+              select 1 from basket_match_exception_application e
+              where e.match_id = m.id and e.is_delete = 0
+                and e.application_status in ('PENDING', 'PROCESSING')
+          )
+        order by m.scheduled_start_time asc, m.id asc
+        limit #{limit}
+    </select>
+
+    <update id="autoFinishBySchedule">
+        update basket_match
+        set match_status = #{finishedStatus},
+            data_status = case when data_status is null then #{draftDataStatus} else data_status end,
+            update_time = #{now}
+        where id = #{id}
+          and is_delete = 0
+          and publish_status = 1
+          and match_status = #{scheduledStatus}
+          and scheduled_start_time is not null
+          and scheduled_start_time &lt;= #{now}
+    </update>
 </mapper>

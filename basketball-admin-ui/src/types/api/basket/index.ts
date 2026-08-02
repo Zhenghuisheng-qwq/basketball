@@ -1053,10 +1053,11 @@ export const MATCH_PUBLISH_STATUS_OPTIONS = [
 
 /** 比赛数据状态 */
 export const MATCH_DATA_STATUS_OPTIONS = [
-  { value: 0, label: '草稿' },
-  { value: 1, label: '已提交' },
-  { value: 2, label: '已确认' },
-  { value: 3, label: '已重开' }
+  { value: 0, label: '未提交' },
+  { value: 1, label: '审核中' },
+  { value: 2, label: '已通过' },
+  { value: 3, label: '已重开' },
+  { value: 4, label: '已驳回' }
 ]
 
 export interface StageQuery extends PageDomain, BaseEntity {

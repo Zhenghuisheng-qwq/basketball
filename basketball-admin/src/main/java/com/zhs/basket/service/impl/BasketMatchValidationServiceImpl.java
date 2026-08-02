@@ -150,6 +150,16 @@ public class BasketMatchValidationServiceImpl implements IBasketMatchValidationS
 
     @Override
     public void writeStatusLog(BasketMatch match, Integer beforeStatus, MatchChangeTypeEnum changeType, String reason) {
+        insertStatusLog(match, beforeStatus, changeType, reason, SecurityUtils.getUserId(), SecurityUtils.getUsername());
+    }
+
+    @Override
+    public void writeSystemStatusLog(BasketMatch match, Integer beforeStatus, MatchChangeTypeEnum changeType, String reason) {
+        insertStatusLog(match, beforeStatus, changeType, reason, null, "SYSTEM");
+    }
+
+    private void insertStatusLog(BasketMatch match, Integer beforeStatus, MatchChangeTypeEnum changeType, String reason,
+                                 Long operatorId, String operatorName) {
         Date now = new Date();
         BasketMatchStatusLog log = new BasketMatchStatusLog();
         log.setMatchId(match.getId());
@@ -157,8 +167,8 @@ public class BasketMatchValidationServiceImpl implements IBasketMatchValidationS
         log.setAfterStatus(match.getMatchStatus());
         log.setChangeType(changeType.getCode());
         log.setChangeReason(reason);
-        log.setOperatorId(SecurityUtils.getUserId());
-        log.setOperatorName(SecurityUtils.getUsername());
+        log.setOperatorId(operatorId);
+        log.setOperatorName(operatorName);
         log.setChangeTime(now);
         log.setCreateTime(now);
         log.setUpdateTime(now);
@@ -169,48 +179,131 @@ public class BasketMatchValidationServiceImpl implements IBasketMatchValidationS
     @Override
     public MatchListVo enrichListVo(MatchListVo vo) {
         MatchStatusEnum status = MatchStatusEnum.fromCode(vo.getMatchStatus());
-        MatchDataStatusEnum dataStatus = MatchDataStatusEnum.fromCode(vo.getDataStatus());
-        vo.setMatchStatusName(status.getDescription());
-        vo.setDataStatusName(dataStatus.getDescription());
-        applyPublishContext(vo, status, dataStatus);
+        MatchDataStatusEnum dataStatus = resolveDataStatus(vo.getDataStatus());
+        MatchStatusEnum displayStatus = resolveDisplayMatchStatus(status, vo.getPublishStatus(), vo.getScheduledStartTime());
+        vo.setMatchStatusName(displayStatus.getDescription());
+        vo.setDataStatusName(resolveDataStatusDisplayName(dataStatus));
+        applyPublishContext(vo, status, dataStatus, displayStatus);
         return vo;
     }
 
     @Override
     public MatchDetailVo enrichDetailVo(MatchDetailVo vo) {
         MatchStatusEnum status = MatchStatusEnum.fromCode(vo.getMatchStatus());
-        MatchDataStatusEnum dataStatus = MatchDataStatusEnum.fromCode(vo.getDataStatus());
-        vo.setMatchStatusName(status.getDescription());
-        vo.setDataStatusName(dataStatus.getDescription());
-        applyPublishContext(vo, status, dataStatus);
+        MatchDataStatusEnum dataStatus = resolveDataStatus(vo.getDataStatus());
+        MatchStatusEnum displayStatus = resolveDisplayMatchStatus(status, vo.getPublishStatus(), vo.getScheduledStartTime());
+        vo.setMatchStatusName(displayStatus.getDescription());
+        vo.setDataStatusName(resolveDataStatusDisplayName(dataStatus));
+        applyPublishContext(vo, status, dataStatus, displayStatus);
         vo.setCanConfirmResult(dataStatus.canConfirm() && status == MatchStatusEnum.FINISHED);
         vo.setCanReopenResult(dataStatus.canReopen());
         return vo;
     }
 
-    private void applyPublishContext(MatchListVo vo, MatchStatusEnum status, MatchDataStatusEnum dataStatus) {
-        if (vo.getPublishStatus() == null) {
-            vo.setPublishStatusName("-");
-        } else {
-            vo.setPublishStatusName(MatchPublishStatusEnum.fromCode(vo.getPublishStatus()).getDescription());
+    private MatchDataStatusEnum resolveDataStatus(Integer code) {
+        if (code == null) {
+            return MatchDataStatusEnum.DRAFT;
         }
-        MatchPublishStatusEnum publishStatus = vo.getPublishStatus() == null
+        return MatchDataStatusEnum.fromCode(code);
+    }
+
+    private MatchStatusEnum resolveDisplayMatchStatus(MatchStatusEnum status, Integer publishStatus, Date scheduledStartTime) {
+        if (status == MatchStatusEnum.CANCELLED || status == MatchStatusEnum.POSTPONED) {
+            return status;
+        }
+        if (publishStatus != null && publishStatus == MatchPublishStatusEnum.UNPUBLISHED.getCode()) {
+            return status;
+        }
+        if (status == MatchStatusEnum.SCHEDULED
+                && scheduledStartTime != null
+                && !scheduledStartTime.after(new Date())) {
+            return MatchStatusEnum.FINISHED;
+        }
+        return status;
+    }
+
+    private String resolveDataStatusDisplayName(MatchDataStatusEnum dataStatus) {
+        return switch (dataStatus) {
+            case DRAFT -> "未提交";
+            case SUBMITTED -> "审核中";
+            case CONFIRMED -> "已通过";
+            case REOPENED -> "已重开";
+            case REJECTED -> "已驳回";
+        };
+    }
+
+    private void applyPublishContext(MatchDetailVo vo, MatchStatusEnum status, MatchDataStatusEnum dataStatus,
+            MatchStatusEnum displayStatus) {
+        applyPublishContextFields(vo.getId(), vo.getPublishStatus(), status, dataStatus, displayStatus, new PublishContextMutator() {
+            @Override public void setPublishStatusName(String v) { vo.setPublishStatusName(v); }
+            @Override public void setOperationalStatusName(String v) { vo.setOperationalStatusName(v); }
+            @Override public void setCanEdit(Boolean v) { vo.setCanEdit(v); }
+            @Override public void setCanSchedule(Boolean v) { vo.setCanSchedule(v); }
+            @Override public void setCanStart(Boolean v) { vo.setCanStart(v); }
+            @Override public void setCanPostpone(Boolean v) { vo.setCanPostpone(v); }
+            @Override public void setCanCancel(Boolean v) { vo.setCanCancel(v); }
+            @Override public void setCanDelete(Boolean v) { vo.setCanDelete(v); }
+            @Override public void setCanEnterLineup(Boolean v) { vo.setCanEnterLineup(v); }
+            @Override public void setCanEnterScore(Boolean v) { vo.setCanEnterScore(v); }
+            @Override public void setCanEnterStat(Boolean v) { vo.setCanEnterStat(v); }
+        });
+    }
+
+    private void applyPublishContext(MatchListVo vo, MatchStatusEnum status, MatchDataStatusEnum dataStatus,
+            MatchStatusEnum displayStatus) {
+        applyPublishContextFields(vo.getId(), vo.getPublishStatus(), status, dataStatus, displayStatus, new PublishContextMutator() {
+            @Override public void setPublishStatusName(String v) { vo.setPublishStatusName(v); }
+            @Override public void setOperationalStatusName(String v) { vo.setOperationalStatusName(v); }
+            @Override public void setCanEdit(Boolean v) { vo.setCanEdit(v); }
+            @Override public void setCanSchedule(Boolean v) { vo.setCanSchedule(v); }
+            @Override public void setCanStart(Boolean v) { vo.setCanStart(v); }
+            @Override public void setCanPostpone(Boolean v) { vo.setCanPostpone(v); }
+            @Override public void setCanCancel(Boolean v) { vo.setCanCancel(v); }
+            @Override public void setCanDelete(Boolean v) { vo.setCanDelete(v); }
+            @Override public void setCanEnterLineup(Boolean v) { vo.setCanEnterLineup(v); }
+            @Override public void setCanEnterScore(Boolean v) { vo.setCanEnterScore(v); }
+            @Override public void setCanEnterStat(Boolean v) { vo.setCanEnterStat(v); }
+        });
+    }
+
+    private interface PublishContextMutator {
+        void setPublishStatusName(String v);
+        void setOperationalStatusName(String v);
+        void setCanEdit(Boolean v);
+        void setCanSchedule(Boolean v);
+        void setCanStart(Boolean v);
+        void setCanPostpone(Boolean v);
+        void setCanCancel(Boolean v);
+        void setCanDelete(Boolean v);
+        void setCanEnterLineup(Boolean v);
+        void setCanEnterScore(Boolean v);
+        void setCanEnterStat(Boolean v);
+    }
+
+    private void applyPublishContextFields(Long matchId, Integer publishStatusCode, MatchStatusEnum status,
+            MatchDataStatusEnum dataStatus, MatchStatusEnum displayStatus, PublishContextMutator mutator) {
+        if (publishStatusCode == null) {
+            mutator.setPublishStatusName("-");
+        } else {
+            mutator.setPublishStatusName(MatchPublishStatusEnum.fromCode(publishStatusCode).getDescription());
+        }
+        MatchPublishStatusEnum publishStatus = publishStatusCode == null
                 ? null
-                : MatchPublishStatusEnum.fromCode(vo.getPublishStatus());
-        vo.setOperationalStatusName(resolveOperationalStatusName(status, publishStatus, status.getDescription()));
-        boolean publishedForOps = isPublishedForOps(vo.getPublishStatus());
-        boolean hasRoster = vo.getId() != null && matchMapper.countRosterByMatchId(vo.getId()) > 0;
-        boolean hasScoreData = vo.getId() != null && matchMapper.countPeriodScoreByMatchId(vo.getId()) > 0;
-        boolean hasStat = vo.getId() != null && matchMapper.countTeamStatByMatchId(vo.getId()) > 0;
-        vo.setCanEdit(publishedForOps && status.canEdit() && dataStatus.canEdit());
-        vo.setCanSchedule(publishedForOps && status.canSchedule() && dataStatus.canEdit());
-        vo.setCanStart(publishedForOps && status.canStart());
-        vo.setCanPostpone(publishedForOps && status.canPostpone());
-        vo.setCanCancel(publishedForOps && status.canCancel());
-        vo.setCanDelete(status.canDelete() && !hasRoster && !hasScoreData && !hasStat);
-        vo.setCanEnterLineup(publishedForOps && status.canEnterLineup());
-        vo.setCanEnterScore(publishedForOps && status.canEnterScore() && dataStatus.canEdit());
-        vo.setCanEnterStat(publishedForOps && status.canEnterStat() && dataStatus.canEdit());
+                : MatchPublishStatusEnum.fromCode(publishStatusCode);
+        mutator.setOperationalStatusName(resolveOperationalStatusName(status, publishStatus, displayStatus.getDescription()));
+        boolean publishedForOps = isPublishedForOps(publishStatusCode);
+        boolean hasRoster = matchId != null && matchMapper.countRosterByMatchId(matchId) > 0;
+        boolean hasScoreData = matchId != null && matchMapper.countPeriodScoreByMatchId(matchId) > 0;
+        boolean hasStat = matchId != null && matchMapper.countTeamStatByMatchId(matchId) > 0;
+        mutator.setCanEdit(publishedForOps && status.canEdit() && dataStatus.canEdit());
+        mutator.setCanSchedule(publishedForOps && status.canSchedule() && dataStatus.canEdit());
+        mutator.setCanStart(publishedForOps && status.canStart());
+        mutator.setCanPostpone(publishedForOps && status.canPostpone());
+        mutator.setCanCancel(publishedForOps && status.canCancel());
+        mutator.setCanDelete(status.canDelete() && !hasRoster && !hasScoreData && !hasStat);
+        mutator.setCanEnterLineup(publishedForOps && status.canEnterLineup());
+        mutator.setCanEnterScore(publishedForOps && status.canEnterScore() && dataStatus.canEdit());
+        mutator.setCanEnterStat(publishedForOps && status.canEnterStat() && dataStatus.canEdit());
     }
 
     private String resolveOperationalStatusName(MatchStatusEnum status, MatchPublishStatusEnum publishStatus,

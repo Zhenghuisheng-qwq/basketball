@@ -80,10 +80,31 @@
         limit 1
     </select>
 
+    <select id="selectLatestByMatchIdAndSubmitterTeamId" resultMap="BasketMatchDataSubmissionResult">
+        select <include refid="submissionColumns"/>
+        from basket_match_data_submission
+        where match_id = #{matchId}
+          and submitter_team_id = #{submitterTeamId}
+          and is_delete = 0
+        order by version_no desc, id desc
+        limit 1
+    </select>
+
     <select id="selectActiveByMatchId" resultMap="BasketMatchDataSubmissionResult">
         select <include refid="submissionColumns"/>
         from basket_match_data_submission
         where match_id = #{matchId} and is_delete = 0
+          and submission_status in (1, 2)
+        order by id desc
+        limit 1
+    </select>
+
+    <select id="selectActiveByMatchIdAndSubmitterTeamId" resultMap="BasketMatchDataSubmissionResult">
+        select <include refid="submissionColumns"/>
+        from basket_match_data_submission
+        where match_id = #{matchId}
+          and submitter_team_id = #{submitterTeamId}
+          and is_delete = 0
           and submission_status in (1, 2)
         order by id desc
         limit 1

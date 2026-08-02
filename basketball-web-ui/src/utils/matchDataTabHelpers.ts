@@ -5,7 +5,6 @@ import type {
 } from '@/api/matchData'
 import {
   MATCH_DATA_STATUS,
-  MATCH_STATUS_FINISHED,
   SUBMISSION_STATUS_PENDING,
   SUBMISSION_STATUS_REJECTED,
 } from '@/utils/participationMappers'
@@ -24,6 +23,64 @@ export interface EditablePlayerStatRow extends MatchDetailPlayerStat {
 
 const STAT_FIELDS = ['points', 'rebounds', 'assists', 'steals', 'blocks', 'turnovers', 'fouls'] as const
 
+const MATCH_STATUS_CANCELLED = 5
+const MATCH_STATUS_POSTPONED = 4
+
+export function resolveScheduledStartTime(match: PlayerMatchTaskItem | null | undefined): Date | null {
+  if (!match) return null
+  if (match.scheduledStartTime) {
+    const parsed = new Date(match.scheduledStartTime)
+    if (!Number.isNaN(parsed.getTime())) return parsed
+  }
+  if (match.matchDate && match.matchTime) {
+    const timePart = match.matchTime.length === 5 ? `${match.matchTime}:00` : match.matchTime
+    const parsed = new Date(`${match.matchDate.replace(/-/g, '/')} ${timePart}`)
+    if (!Number.isNaN(parsed.getTime())) return parsed
+  }
+  if (match.matchDate) {
+    const parsed = new Date(`${match.matchDate.replace(/-/g, '/')} 00:00:00`)
+    if (!Number.isNaN(parsed.getTime())) return parsed
+  }
+  return null
+}
+
+export function isMatchTimePassed(match: PlayerMatchTaskItem | null | undefined): boolean {
+  if (!match) return false
+  if (match.isMatchTimePassed != null) return match.isMatchTimePassed
+  const scheduled = resolveScheduledStartTime(match)
+  if (!scheduled) return false
+  return Date.now() >= scheduled.getTime()
+}
+
+export function isMatchCancelled(match: PlayerMatchTaskItem | null | undefined): boolean {
+  return match?.matchStatus === MATCH_STATUS_CANCELLED
+}
+
+export function isMatchPostponed(match: PlayerMatchTaskItem | null | undefined): boolean {
+  return match?.matchStatus === MATCH_STATUS_POSTPONED
+}
+
+export function shouldDisplayMatchAsFinished(match: PlayerMatchTaskItem | null | undefined): boolean {
+  if (!match || isMatchCancelled(match) || isMatchPostponed(match)) return false
+  if (match.matchStatus === 3) return true
+  return match.matchStatus === 1 && isMatchTimePassed(match)
+}
+
+export function resolveMatchStatusDisplayText(match: PlayerMatchTaskItem | null | undefined): string {
+  if (!match) return '-'
+  if (match.matchStatusText && shouldDisplayMatchAsFinished(match)) {
+    return match.matchStatusText
+  }
+  if (shouldDisplayMatchAsFinished(match)) return '已结束'
+  return match.matchStatusText || '-'
+}
+
+export function formatMatchScheduleText(match: PlayerMatchTaskItem | null | undefined): string {
+  if (!match) return '-'
+  const parts = [match.matchDate, match.weekday, match.matchTime].filter(Boolean)
+  return parts.length ? parts.join(' ') : '-'
+}
+
 export function resolveMyTeamSide(match: PlayerMatchTaskItem | null | undefined): MatchTeamSide | null {
   if (!match?.myEventTeamId) return null
   if (match.myEventTeamId === match.homeEventTeamId) return 'HOME'
@@ -38,38 +95,79 @@ export function resolveMyTeamId(match: PlayerMatchTaskItem | null | undefined): 
   return match?.myTeamId
 }
 
-export function isMatchDataEditable(match: PlayerMatchTaskItem | null | undefined): boolean {
-  if (!match?.isCaptain) return false
-  if (match.matchStatus !== MATCH_STATUS_FINISHED) return false
+export function canSubmitMatchData(match: PlayerMatchTaskItem | null | undefined): boolean {
+  if (!match) return false
+  if (match.canSubmitMatchData != null) return match.canSubmitMatchData
+  if (!match.isCaptain) return false
+  if (!isMatchTimePassed(match)) return false
+  if (isMatchCancelled(match)) return false
+  if (isMatchPostponed(match)) return false
   if (match.canViewData) return false
-  if (match.submissionStatus === SUBMISSION_STATUS_PENDING || match.dataStatus === MATCH_DATA_STATUS.SUBMITTED) {
+  if (match.submissionStatus === SUBMISSION_STATUS_PENDING) {
     return false
   }
+  if (match.dataStatus === MATCH_DATA_STATUS.CONFIRMED) return false
   return Boolean(match.canSubmit || match.canResubmit)
+}
+
+export function isMatchDataEditable(match: PlayerMatchTaskItem | null | undefined): boolean {
+  return canSubmitMatchData(match)
 }
 
 export function isMatchDataReadOnly(match: PlayerMatchTaskItem | null | undefined): boolean {
   if (!match) return true
   if (match.canViewData) return true
-  if (match.submissionStatus === SUBMISSION_STATUS_PENDING || match.dataStatus === MATCH_DATA_STATUS.SUBMITTED) {
+  if (match.submissionStatus === SUBMISSION_STATUS_PENDING) {
     return true
   }
-  return false
+  return !canSubmitMatchData(match)
+}
+
+export function resolveSubmitDisabledReason(match: PlayerMatchTaskItem | null | undefined): string {
+  if (!match) return '-'
+  if (match.submitDisabledReason) return match.submitDisabledReason
+  if (!match.isCaptain) {
+    return '普通队员仅可查看比赛数据，比赛数据由赛事队长提交。'
+  }
+  if (!isMatchTimePassed(match)) {
+    return '比赛开始后开放数据提交。'
+  }
+  if (isMatchCancelled(match)) {
+    return '比赛已取消，不能提交比赛数据。'
+  }
+  if (isMatchPostponed(match)) {
+    return '比赛已延期，按新的比赛时间开放提交。'
+  }
+  if (match.submissionStatus === SUBMISSION_STATUS_PENDING) {
+    return '比赛数据已提交，正在等待管理员审核。'
+  }
+  if (match.canViewData || match.dataStatus === MATCH_DATA_STATUS.CONFIRMED) {
+    return '比赛数据已审核通过，不能再次提交。'
+  }
+  if (match.submissionStatus === SUBMISSION_STATUS_REJECTED || match.dataStatus === MATCH_DATA_STATUS.REJECTED) {
+    return match.canResubmit
+      ? ''
+      : '仅驳回后可重新提交。'
+  }
+  return '当前暂不能提交比赛数据。'
 }
 
 export function resolveMatchDataTabMessage(match: PlayerMatchTaskItem | null | undefined): string {
   if (!match) return '-'
 
-  const finished = match.matchStatus === MATCH_STATUS_FINISHED
+  const timePassed = isMatchTimePassed(match)
   const isCaptain = Boolean(match.isCaptain)
 
-  if (!finished) {
-    return '比赛尚未开始，比赛结束后由赛事队长提交本队球员比赛数据。'
+  if (isMatchCancelled(match)) {
+    return '比赛已取消，不能提交比赛数据。'
+  }
+  if (isMatchPostponed(match)) {
+    return '比赛已延期，按新的比赛时间开放提交。'
   }
   if (match.canViewData) {
     return '比赛数据已审核通过，当前数据已进入正式统计。'
   }
-  if (match.submissionStatus === SUBMISSION_STATUS_PENDING || match.dataStatus === MATCH_DATA_STATUS.SUBMITTED) {
+  if (match.submissionStatus === SUBMISSION_STATUS_PENDING) {
     return '比赛数据已提交，当前由管理员审核中，审核期间不能修改。'
   }
   if (match.submissionStatus === SUBMISSION_STATUS_REJECTED || match.dataStatus === MATCH_DATA_STATUS.REJECTED) {
@@ -77,22 +175,25 @@ export function resolveMatchDataTabMessage(match: PlayerMatchTaskItem | null | u
       ? '比赛数据审核未通过，请根据管理员备注修改后重新提交。'
       : '比赛数据审核未通过，请等待赛事队长重新提交。'
   }
-  if (finished && isCaptain) {
-    return '比赛已结束，请赛事队长录入本队球员数据并提交审核。'
+  if (timePassed && isCaptain) {
+    return '比赛时间已过，赛事队长可提交本队比赛数据。'
   }
-  if (finished) {
+  if (timePassed) {
     return '普通队员仅可查看比赛数据，数据由赛事队长提交。'
   }
-  return '比赛数据尚未提交。'
+  if (isCaptain) {
+    return '比赛开始后开放数据提交。'
+  }
+  return '普通队员仅可查看比赛数据，数据由赛事队长提交。'
 }
 
 export function resolveCaptainPermissionHint(match: PlayerMatchTaskItem | null | undefined): string {
   if (!match) return ''
-  if (match.matchStatus !== MATCH_STATUS_FINISHED) {
-    return '比赛结束后开放数据提交。'
+  if (!isMatchTimePassed(match)) {
+    return '比赛开始后开放数据提交。'
   }
   if (match.isCaptain) {
-    return '你是本队赛事队长，可在比赛结束后提交本队球员数据。'
+    return '比赛时间已过，赛事队长可提交本队比赛数据。'
   }
   return '普通队员仅可查看比赛数据，数据由赛事队长提交。'
 }

@@ -85,6 +85,7 @@
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="数据状态" prop="dataStatusName" width="100" />
       <el-table-column label="发布状态" prop="publishStatusName" width="100" />
       <el-table-column label="操作" align="center" width="420" class-name="small-padding fixed-width">
         <template #default="scope">

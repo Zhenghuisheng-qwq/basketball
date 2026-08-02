@@ -7,9 +7,11 @@ import type { MatchDataAction } from '@/utils/matchDataActions'
 import {
   buildTeamPlayerStatsPayload,
   cloneEditableStats,
+  formatMatchScheduleText,
   isMatchDataEditable,
   resolveCaptainPermissionHint,
   resolveMyTeamSide,
+  resolveSubmitDisabledReason,
   validateEditableStats,
   type EditablePlayerStatRow,
 } from '@/utils/matchDataTabHelpers'
@@ -34,6 +36,11 @@ const draftStats = ref<EditablePlayerStatRow[]>([])
 const myTeamSide = computed(() => resolveMyTeamSide(props.match))
 const canEnterEdit = computed(() => isMatchDataEditable(props.match))
 const permissionHint = computed(() => resolveCaptainPermissionHint(props.match))
+const matchScheduleText = computed(() => formatMatchScheduleText(props.match))
+const submitDisabledReason = computed(() => {
+  if (canEnterEdit.value) return ''
+  return resolveSubmitDisabledReason(props.match)
+})
 
 const editButtonLabel = computed(() => {
   if (props.match.canResubmit) return '编辑本队数据'
@@ -130,6 +137,10 @@ function statCell(value?: number | null) {
         <span class="match-data-panel__label">当前身份</span>
         <span class="account-status-badge account-status-badge--default">{{ identityText }}</span>
       </div>
+      <div class="match-data-panel__status-item">
+        <span class="match-data-panel__label">比赛时间</span>
+        <span class="match-data-panel__time">{{ matchScheduleText }}</span>
+      </div>
       <div
         v-if="match.matchStatus === 3 && match.homeScore != null && match.awayScore != null"
         class="match-data-panel__score"
@@ -141,6 +152,9 @@ function statCell(value?: number | null) {
     <div class="match-data-panel__message-box">
       <p class="match-data-panel__message">{{ message }}</p>
       <p v-if="permissionHint" class="match-data-panel__hint-line">{{ permissionHint }}</p>
+      <p v-if="submitDisabledReason && !canEnterEdit && !editing" class="match-data-panel__hint-line match-data-panel__hint-line--warn">
+        {{ submitDisabledReason }}
+      </p>
       <p v-if="match.rejectReason" class="match-data-panel__reject">
         驳回原因：{{ match.rejectReason }}
       </p>
@@ -262,6 +276,16 @@ function statCell(value?: number | null) {
   font-size: 13px;
   color: #666;
   line-height: 1.6;
+}
+
+.match-data-panel__hint-line--warn {
+  color: #ad6800;
+}
+
+.match-data-panel__time {
+  font-size: 13px;
+  font-weight: 700;
+  color: #222;
 }
 
 .match-data-panel__reject {

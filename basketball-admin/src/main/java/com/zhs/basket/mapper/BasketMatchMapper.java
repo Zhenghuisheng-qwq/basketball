@@ -85,4 +85,10 @@ public interface BasketMatchMapper {
             @Param("actualEndTime") Date actualEndTime);
     List<com.zhs.basket.vo.ScheduleMatchListVo> selectScheduleList(com.zhs.basket.query.ScheduleMatchQuery query);
     List<BasketMatch> selectByBatchId(@Param("batchId") Long batchId);
+
+    List<Long> selectIdsEligibleForAutoFinish(@Param("now") Date now, @Param("limit") int limit);
+
+    int autoFinishBySchedule(@Param("id") Long id, @Param("scheduledStatus") Integer scheduledStatus,
+            @Param("finishedStatus") Integer finishedStatus, @Param("draftDataStatus") Integer draftDataStatus,
+            @Param("now") Date now);
 }

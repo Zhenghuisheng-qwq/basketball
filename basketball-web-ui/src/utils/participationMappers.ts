@@ -461,21 +461,11 @@ export function isMatchDataEntryEligible(rosterLocked: boolean, _matchTotal = 0)
 }
 
 function countCaptainSubmitTasks(matches: PlayerMatchTaskItem[]) {
-  return matches.filter((item) => item.canSubmit || item.canResubmit).length
-}
-
-function hasPendingReview(matches: PlayerMatchTaskItem[]) {
-  return matches.some((item) =>
-    item.submissionStatus === SUBMISSION_STATUS_PENDING
-    || item.dataStatus === MATCH_DATA_STATUS.SUBMITTED)
-}
-
-function hasConfirmedData(matches: PlayerMatchTaskItem[]) {
-  return matches.some((item) => item.dataStatus === MATCH_DATA_STATUS.CONFIRMED)
+  return matches.filter((item) => item.canSubmitMatchData || item.canSubmit || item.canResubmit).length
 }
 
 function resolveCaptainSubmitRoute(eventTeamId: string, seasonId: string, matches: PlayerMatchTaskItem[]) {
-  const submitTargets = matches.filter((item) => item.canSubmit || item.canResubmit)
+  const submitTargets = matches.filter((item) => item.canSubmitMatchData || item.canSubmit || item.canResubmit)
   if (submitTargets.length !== 1 || !submitTargets[0].matchId) {
     return buildMatchDataListRoute(eventTeamId)
   }
@@ -486,7 +476,7 @@ export function deriveMatchDataEntry(
   eventTeamId: string,
   seasonId: string,
   matches: PlayerMatchTaskItem[],
-  isCaptain: boolean,
+  _isCaptain: boolean,
   rosterLocked: boolean,
 ): Pick<
   ParticipatingEvent,
@@ -506,44 +496,16 @@ export function deriveMatchDataEntry(
   const listRoute = buildMatchDataListRoute(eventTeamId)
   const submitCount = countCaptainSubmitTasks(matches)
 
-  if (isCaptain && submitCount > 0) {
-    return {
-      showMatchDataEntry: true,
-      matchDataActionText: submitCount === 1 ? '提交比赛数据' : `提交比赛数据 (${submitCount})`,
-      matchDataActionRoute: resolveCaptainSubmitRoute(eventTeamId, seasonId, matches),
-      matchDataActionType: 'SUBMIT_MATCH_DATA',
-      matchDataPrimary: true,
-      pendingTaskCount: submitCount,
-      pendingTaskText: `${submitCount} 场待提交比赛数据`,
-    }
-  }
-
-  if (hasPendingReview(matches)) {
-    return {
-      showMatchDataEntry: true,
-      matchDataActionText: '审核中',
-      matchDataActionRoute: listRoute,
-      matchDataActionType: 'VIEW_MATCH_DATA_STATUS',
-      matchDataPrimary: false,
-    }
-  }
-
-  if (hasConfirmedData(matches)) {
-    return {
-      showMatchDataEntry: true,
-      matchDataActionText: '查看比赛数据',
-      matchDataActionRoute: listRoute,
-      matchDataActionType: 'VIEW_MATCH_DATA_LIST',
-      matchDataPrimary: false,
-    }
-  }
-
   return {
     showMatchDataEntry: true,
     matchDataActionText: '我的比赛',
-    matchDataActionRoute: listRoute,
-    matchDataActionType: 'VIEW_MATCH_DATA_LIST',
-    matchDataPrimary: false,
+    matchDataActionRoute: submitCount === 1
+      ? resolveCaptainSubmitRoute(eventTeamId, seasonId, matches)
+      : listRoute,
+    matchDataActionType: submitCount > 0 ? 'SUBMIT_MATCH_DATA' : 'VIEW_MATCH_DATA_LIST',
+    matchDataPrimary: submitCount > 0,
+    pendingTaskCount: submitCount > 0 ? submitCount : undefined,
+    pendingTaskText: submitCount > 0 ? `${submitCount} 场待提交比赛数据` : undefined,
   }
 }
 

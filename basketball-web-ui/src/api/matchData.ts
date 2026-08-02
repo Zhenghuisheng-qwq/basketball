@@ -50,8 +50,17 @@ export interface PlayerMatchTaskItem {
   homeScore?: number
   awayScore?: number
   submissionStatus?: number
+  submissionStatusText?: string
+  mySubmissionStatus?: number
+  mySubmissionStatusText?: string
+  opponentSubmissionStatus?: number
+  opponentSubmissionStatusText?: string
   canSubmit?: boolean
   canResubmit?: boolean
+  canSubmitMatchData?: boolean
+  submitDisabledReason?: string
+  isMatchTimePassed?: boolean
+  isCurrentUserCaptain?: boolean
   canViewStatus?: boolean
   canViewData?: boolean
   canDispute?: boolean

@@ -13,6 +13,7 @@ import type { PlayerMatchTaskItem } from '@/api/matchData'
 import { useEventTeamStore } from '@/stores/eventTeam'
 import { useAccountStore } from '@/stores/account'
 import { buildMatchDetailRoute } from '@/utils/participationMappers'
+import { resolveMatchStatusDisplayText, shouldDisplayMatchAsFinished } from '@/utils/matchDataTabHelpers'
 
 const props = defineProps<{
   eventTeamId?: string
@@ -50,8 +51,18 @@ const breadcrumbItems = computed(() => [
   { label: detail.value?.tournamentName || detail.value?.seasonName || '我的比赛' },
 ])
 
+function formatMyDataStatus(row: PlayerMatchTaskItem): string {
+  const myText = row.mySubmissionStatusText || row.submissionStatusText || row.dataStatusText
+  if (myText) return myText
+  return row.statusText || '未提交'
+}
+
+function formatOpponentDataStatus(row: PlayerMatchTaskItem): string {
+  return row.opponentSubmissionStatusText || '-'
+}
+
 function formatScore(row: PlayerMatchTaskItem) {
-  if (row.matchStatus !== 3) return '-'
+  if (!shouldDisplayMatchAsFinished(row)) return '-'
   if (row.homeScore == null || row.awayScore == null) return '-'
   return `${row.homeScore} : ${row.awayScore}`
 }
@@ -228,7 +239,8 @@ watch(() => resolvedEventTeamId.value, () => {
               <th>对手</th>
               <th>比赛状态</th>
               <th>比分</th>
-              <th>数据状态</th>
+              <th>我方数据</th>
+              <th>对方数据</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -241,9 +253,10 @@ watch(() => resolvedEventTeamId.value, () => {
               <td>{{ row.homeTeamNameSnapshot || row.homeTeamName || '-' }}</td>
               <td>{{ row.awayTeamNameSnapshot || row.awayTeamName || '-' }}</td>
               <td>{{ row.opponentTeamNameSnapshot || '-' }}</td>
-              <td>{{ row.matchStatusText || '-' }}</td>
+              <td>{{ resolveMatchStatusDisplayText(row) }}</td>
               <td>{{ formatScore(row) }}</td>
-              <td>{{ row.dataStatusText || row.statusText || '-' }}</td>
+              <td>{{ formatMyDataStatus(row) }}</td>
+              <td>{{ formatOpponentDataStatus(row) }}</td>
               <td>
                 <button
                   type="button"

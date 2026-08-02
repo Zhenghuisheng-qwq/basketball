@@ -34,4 +34,10 @@ public interface IMPlayerMatchDataService {
     PlayerMatchDataSubmitResultResp submitTeamPlayerStats(Long matchId, PlayerMatchTeamPlayerStatsSubmitReq req);
 
     PlayerMatchDataSubmitResultResp resubmitTeamPlayerStats(Long matchId, PlayerMatchTeamPlayerStatsResubmitReq req);
+
+    /**
+     * 按赛事球队视角批量组装比赛列表项（我的赛程聚合查询复用）。
+     */
+    java.util.List<PlayerMatchTaskResp> buildTaskItemsForEventTeams(Long memberId,
+                                                                    java.util.Map<Long, Long> matchIdToEventTeamId);
 }

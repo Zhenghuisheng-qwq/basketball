@@ -7,7 +7,6 @@ import com.zhs.basket.domain.BasketMatchDataSubmissionPeriod;
 import com.zhs.basket.domain.BasketMatchDataSubmissionPlayerStat;
 import com.zhs.basket.domain.BasketMatchDataSubmissionTeamStat;
 import com.zhs.basket.enums.MatchDataAuditActionEnum;
-import com.zhs.basket.enums.MatchDataStatusEnum;
 import com.zhs.basket.enums.MatchDataSubmissionStatusEnum;
 import com.zhs.basket.enums.MatchPeriodTypeEnum;
 import com.zhs.basket.enums.MatchStatusEnum;
@@ -42,7 +41,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -124,9 +122,10 @@ public class BasketMatchDataSubmissionAuditServiceImpl implements IBasketMatchDa
         if (match.getMatchStatus() == null || match.getMatchStatus() != MatchStatusEnum.FINISHED.getCode()) {
             throw new ServiceException("比赛未结束，无法审核通过");
         }
-        BasketMatchDataSubmission active = submissionMapper.selectActiveByMatchId(submission.getMatchId());
+        BasketMatchDataSubmission active = submissionMapper.selectActiveByMatchIdAndSubmitterTeamId(
+                submission.getMatchId(), submission.getSubmitterTeamId());
         if (active != null && !active.getId().equals(submissionId)) {
-            throw new ServiceException("当前比赛已有其他有效提交");
+            throw new ServiceException("当前提交方已有其他有效提交");
         }
 
         List<BasketMatchDataSubmissionPeriod> periods = periodMapper.selectBySubmissionId(submissionId);
@@ -177,12 +176,6 @@ public class BasketMatchDataSubmissionAuditServiceImpl implements IBasketMatchDa
                 MatchDataSubmissionStatusEnum.REJECTED.getCode(), AUDIT_REJECTED,
                 operatorId, operatorName, req.getRejectReason(), req.getAuditRemark()) != 1) {
             throw new ServiceException("审核驳回失败，提交可能已被其他管理员处理");
-        }
-
-        if (matchMapper.updateDataStatus(submission.getMatchId(),
-                Collections.singletonList(MatchDataStatusEnum.SUBMITTED.getCode()),
-                MatchDataStatusEnum.REJECTED.getCode()) != 1) {
-            throw new ServiceException("更新比赛数据状态失败");
         }
 
         writeAuditLog(submission, MatchDataAuditActionEnum.REJECT, beforeStatus,

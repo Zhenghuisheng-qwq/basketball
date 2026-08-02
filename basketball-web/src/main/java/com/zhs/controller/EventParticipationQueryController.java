@@ -7,8 +7,12 @@ import com.zhs.response.participation.EventRosterMemberResp;
 import com.zhs.response.participation.EventTeamDetailResp;
 import com.zhs.response.participation.EventTeamSummaryResp;
 import com.zhs.response.participation.RosterChangeHistoryItemResp;
+import com.zhs.request.matchdata.PlayerMyScheduleQuery;
+import com.zhs.response.matchdata.PlayerMyScheduleEventOptionResp;
+import com.zhs.response.matchdata.PlayerMySchedulePageResp;
 import com.zhs.service.IEventParticipationQueryService;
 import com.zhs.service.IMPlayerMatchDataService;
+import com.zhs.service.IPlayerMyScheduleService;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -30,7 +34,36 @@ public class EventParticipationQueryController {
     private IEventParticipationQueryService eventParticipationQueryService;
 
     @Resource
+    private IPlayerMyScheduleService playerMyScheduleService;
+
+    @Resource
     private IMPlayerMatchDataService playerMatchDataService;
+
+    @ApiOperation("我的赛程（跨赛事聚合）")
+    @GetMapping("/basket/player/my-schedules")
+    public R<PlayerMySchedulePageResp> pageMySchedules(@RequestParam(required = false) Long seasonId,
+                                                       @RequestParam(required = false) String matchStatusGroup,
+                                                       @RequestParam(required = false) String startDate,
+                                                       @RequestParam(required = false) String endDate,
+                                                       @RequestParam(required = false) String sortOrder,
+                                                       @RequestParam(required = false) Integer pageNum,
+                                                       @RequestParam(required = false) Integer pageSize) {
+        PlayerMyScheduleQuery query = new PlayerMyScheduleQuery();
+        query.setSeasonId(seasonId);
+        query.setMatchStatusGroup(matchStatusGroup);
+        query.setStartDate(startDate);
+        query.setEndDate(endDate);
+        query.setSortOrder(sortOrder);
+        query.setPageNum(pageNum);
+        query.setPageSize(pageSize);
+        return R.ok(playerMyScheduleService.pageMySchedules(query));
+    }
+
+    @ApiOperation("我的赛程赛事筛选项")
+    @GetMapping("/basket/player/my-schedules/event-options")
+    public R<List<PlayerMyScheduleEventOptionResp>> listMyScheduleEventOptions() {
+        return R.ok(playerMyScheduleService.listEventOptions());
+    }
 
     @ApiOperation("我的赛事球队列表")
     @GetMapping("/basket/player/event-team/list")

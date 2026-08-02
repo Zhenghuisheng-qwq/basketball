@@ -17,7 +17,13 @@ public interface BasketMatchDataSubmissionMapper {
 
     BasketMatchDataSubmission selectLatestByMatchId(Long matchId);
 
+    BasketMatchDataSubmission selectLatestByMatchIdAndSubmitterTeamId(@Param("matchId") Long matchId,
+            @Param("submitterTeamId") Long submitterTeamId);
+
     BasketMatchDataSubmission selectActiveByMatchId(Long matchId);
+
+    BasketMatchDataSubmission selectActiveByMatchIdAndSubmitterTeamId(@Param("matchId") Long matchId,
+            @Param("submitterTeamId") Long submitterTeamId);
 
     List<MatchDataSubmissionListVo> selectListForAudit(AdminMatchDataSubmissionPageReq query);
 

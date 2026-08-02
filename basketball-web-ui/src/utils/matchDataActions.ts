@@ -1,6 +1,11 @@
 import type { PlayerMatchTaskItem } from '@/api/matchData'
-import { MATCH_STATUS_FINISHED, MATCH_DATA_STATUS, SUBMISSION_STATUS_PENDING } from '@/utils/participationMappers'
-import { resolveMatchDataTabMessage } from '@/utils/matchDataTabHelpers'
+import { SUBMISSION_STATUS_PENDING } from '@/utils/participationMappers'
+import {
+  canSubmitMatchData,
+  isMatchTimePassed,
+  resolveMatchDataTabMessage,
+  resolveSubmitDisabledReason,
+} from '@/utils/matchDataTabHelpers'
 import {
   buildMatchDataDisputeRoute,
   buildMatchDataExceptionRoute,
@@ -60,21 +65,22 @@ export function resolveMatchDataActions(match: PlayerMatchTaskItem | null | unde
   }
 
   if (!isCaptain && !match.canViewData) {
-    if (match.submissionStatus === SUBMISSION_STATUS_PENDING || match.dataStatus === MATCH_DATA_STATUS.SUBMITTED) {
+    if (match.submissionStatus === SUBMISSION_STATUS_PENDING) {
       actions.push({
         key: 'member-pending',
-        label: '审核中',
+        label: '我方数据审核中',
         disabled: true,
       })
     }
   }
 
-  if (isCaptain && match.matchStatus !== MATCH_STATUS_FINISHED && !match.canViewData) {
+  if (isCaptain && !canSubmitMatchData(match) && !match.canViewData) {
     actions.push({
       key: 'submit-disabled',
       label: '提交比赛数据',
       disabled: true,
-      hint: '比赛结束后可提交数据',
+      hint: resolveSubmitDisabledReason(match)
+        || (isMatchTimePassed(match) ? '当前暂不能提交比赛数据' : '比赛开始后开放数据提交'),
     })
   }
 

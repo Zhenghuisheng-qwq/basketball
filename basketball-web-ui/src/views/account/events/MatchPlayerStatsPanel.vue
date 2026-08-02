@@ -310,11 +310,12 @@ function sideBadge(side: MatchTeamSide) {
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 2px;
   background: #fff;
+  width: 100%;
 }
 
 .match-player-stats__table {
   width: 100%;
-  min-width: 780px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 13px;
 
@@ -326,6 +327,28 @@ function sideBadge(side: MatchTeamSide) {
     vertical-align: middle;
     color: #111;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  th:nth-child(1),
+  td:nth-child(1) {
+    width: 18%;
+  }
+
+  th:nth-child(2),
+  td:nth-child(2) {
+    width: 8%;
+  }
+
+  th:nth-child(3),
+  td:nth-child(3) {
+    width: 12%;
+  }
+
+  th:nth-child(n + 4),
+  td:nth-child(n + 4) {
+    width: 8%;
   }
 
   th {

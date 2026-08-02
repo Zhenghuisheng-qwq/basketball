@@ -5,12 +5,14 @@ export const accountEventTabsAll: AccountEventTab[] = [
   { key: 'available', label: '全部赛事', title: '当前开放赛事', subtitle: 'ALL EVENTS' },
   { key: 'applications', label: '球队报名', title: '球队报名记录', subtitle: 'TEAM REGISTRATIONS' },
   { key: 'joined', label: '我的阵容', title: '我的参赛阵容', subtitle: 'MY ROSTER' },
+  { key: 'schedule', label: '我的赛程', title: '我的赛程安排', subtitle: 'MY SCHEDULE' },
 ]
 
 export const accountEventTabsCaptain: AccountEventTab[] = [
   { key: 'available', label: '可报名赛事', title: '当前开放赛事', subtitle: 'AVAILABLE EVENTS' },
   { key: 'applications', label: '我的报名', title: '我的报名', subtitle: 'MY APPLICATIONS' },
   { key: 'joined', label: '已参加赛事', title: '已参加赛事', subtitle: 'PARTICIPATING EVENTS' },
+  { key: 'schedule', label: '我的赛程', title: '我的赛程安排', subtitle: 'MY SCHEDULE' },
 ]
 
 export function getTabsForRole(roleMode?: MyEventsRoleMode): AccountEventTab[] {
@@ -48,6 +50,12 @@ export function getBannerCopy(tab: string, roleMode?: MyEventsRoleMode): { title
         description: '查看自己在已报名赛事中的阵容入选情况。',
       }
     }
+    if (tab === 'schedule') {
+      return {
+        title: '我的赛程安排',
+        description: '聚合查看你在全部已参加赛事中的比赛安排。',
+      }
+    }
     return {
       title: '当前开放赛事',
       description: '你当前是球队成员，可查看球队报名状态。赛事报名由队长统一操作。',
@@ -64,6 +72,12 @@ export function getBannerCopy(tab: string, roleMode?: MyEventsRoleMode): { title
       return {
         title: '正式参赛与历史赛事关系',
         description: '根据本届身份进入对应页面。',
+      }
+    }
+    if (tab === 'schedule') {
+      return {
+        title: '我的赛程安排',
+        description: '跨赛事查看待比赛、已结束等全部赛程，单赛事详情仍可从「已参加赛事」进入。',
       }
     }
     return {
@@ -137,6 +151,9 @@ export function getEmptyMessage(tab: MyEventsTabKey, roleMode?: MyEventsRoleMode
       return '当前球队暂无赛事报名记录，请等待队长报名。'
     }
     return '暂无报名记录'
+  }
+  if (tab === 'schedule') {
+    return '当前筛选条件下暂无比赛'
   }
   return '暂无参赛记录'
 }

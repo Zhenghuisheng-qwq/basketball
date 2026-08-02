@@ -11,6 +11,7 @@ import AvailableEventFilters from '@/components/account/events/AvailableEventFil
 import MyEventsPagination from '@/components/account/events/MyEventsPagination.vue'
 import MyApplicationList from '@/components/account/events/MyApplicationList.vue'
 import ParticipatingEventList from '@/components/account/events/ParticipatingEventList.vue'
+import MySchedulePanel from '@/components/account/events/MySchedulePanel.vue'
 import { getAccountTournamentPage } from '@/api/accountTournament'
 import { getMyEventTeamList, getEventTeamMatches } from '@/api/eventParticipation'
 import { getMyEventsContext, getMyEventsCompetitionSeasonOptions, getMyEventsSeasonPage, getMemberTeamEventPage, remindCaptainToRegister } from '@/api/myEvents'
@@ -322,6 +323,9 @@ async function loadActiveTab() {
     await loadApplications()
     return
   }
+  if (activeTab.value === 'schedule') {
+    return
+  }
   await loadJoinedTournaments()
 }
 
@@ -464,7 +468,7 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
     <MyEventsTabs :active-tab="activeTab" :tabs="visibleTabs" @change="setTab" />
 
     <p v-if="loadError" class="my-events-error">{{ loadError }}</p>
-    <p v-else-if="loading" class="my-events-loading">加载中…</p>
+    <p v-else-if="loading && activeTab !== 'schedule'" class="my-events-loading">加载中…</p>
 
     <template v-else-if="activeTab === 'available'">
       <AvailableEventFilters
@@ -512,7 +516,7 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
       />
     </template>
 
-    <template v-else>
+    <template v-else-if="activeTab === 'joined'">
       <AccountEmptyState
         v-if="!participatingEvents.length"
         :message="emptyMessage"
@@ -526,6 +530,8 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
         @match-data-action="handleParticipatingMatchDataAction"
       />
     </template>
+
+    <MySchedulePanel v-else-if="activeTab === 'schedule'" :active="activeTab === 'schedule'" />
 
     <p class="my-events-footnote">{{ footerNote }}</p>
   </div>

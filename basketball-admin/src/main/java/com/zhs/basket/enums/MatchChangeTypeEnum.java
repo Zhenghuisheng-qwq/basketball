@@ -18,7 +18,8 @@ public enum MatchChangeTypeEnum {
     STAT_SAVE("STAT_SAVE", "保存技术统计"),
     STAT_SUBMIT("STAT_SUBMIT", "提交技术统计"),
     RESULT_CONFIRM("RESULT_CONFIRM", "确认比赛结果"),
-    RESULT_REOPEN("RESULT_REOPEN", "重开比赛结果");
+    RESULT_REOPEN("RESULT_REOPEN", "重开比赛结果"),
+    AUTO_FINISH_BY_SCHEDULE("AUTO_FINISH_BY_SCHEDULE", "计划时间自动结束");
 
     private final String code;
     private final String description;

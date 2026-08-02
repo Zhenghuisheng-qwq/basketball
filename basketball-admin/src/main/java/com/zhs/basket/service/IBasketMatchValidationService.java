@@ -18,6 +18,7 @@ public interface IBasketMatchValidationService {
                                Date startTime, Date endTime);
     Date resolveEndTime(Date startTime, Date endTime);
     void writeStatusLog(BasketMatch match, Integer beforeStatus, MatchChangeTypeEnum changeType, String reason);
+    void writeSystemStatusLog(BasketMatch match, Integer beforeStatus, MatchChangeTypeEnum changeType, String reason);
     MatchListVo enrichListVo(MatchListVo vo);
     MatchDetailVo enrichDetailVo(MatchDetailVo vo);
     void requirePublishedForOps(BasketMatch match);

@@ -43,4 +43,20 @@ public interface BasketMatchDao extends BaseMapper<BasketMatch> {
     int updateDataStatusIfAllowed(@Param("matchId") Long matchId,
                                   @Param("newStatus") Integer newStatus,
                                   @Param("notDeleted") Integer notDeleted);
+
+    @Update("""
+            UPDATE basket_match
+            SET match_status = #{finishedStatus}, update_time = NOW()
+            WHERE id = #{matchId}
+              AND is_delete = #{notDeleted}
+              AND publish_status = #{publishedStatus}
+              AND match_status = #{scheduledStatus}
+              AND scheduled_start_time IS NOT NULL
+              AND scheduled_start_time <= NOW()
+            """)
+    int finishScheduledMatchIfTimePassed(@Param("matchId") Long matchId,
+                                         @Param("scheduledStatus") Integer scheduledStatus,
+                                         @Param("finishedStatus") Integer finishedStatus,
+                                         @Param("publishedStatus") Integer publishedStatus,
+                                         @Param("notDeleted") Integer notDeleted);
 }
