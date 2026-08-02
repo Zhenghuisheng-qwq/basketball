@@ -49,7 +49,8 @@
 }
 
 .league-system-section .paper-band {
-  padding-bottom: clamp(18px, 1.8vw, 28px);
+  padding-top: clamp(10px, 1vw, 14px);
+  padding-bottom: clamp(10px, 1vw, 14px);
 }
 
 .paper-band-light {
@@ -168,94 +169,111 @@
 
 .league-system-section {
   margin: 0;
+  min-height: 0;
+  height: auto;
   color: #111;
+
+  .paper-band-light {
+    background-color: #f1f0ed;
+    background-image: linear-gradient(
+      180deg,
+      #f3f2ef 0%,
+      #f1f0ed 52%,
+      #eeece8 100%
+    );
+  }
 }
 
 .league-system-paper {
   position: relative;
   z-index: 2;
   width: 100%;
-  padding-block: clamp(38px, 4vw, 64px);
+  padding-block: clamp(32px, 3vw, 48px);
   box-sizing: border-box;
 }
 
 .league-system-layout {
   display: grid;
   grid-template-columns:
-    minmax(240px, 0.88fr)
-    minmax(260px, 0.76fr)
-    minmax(320px, 1.22fr);
-  gap: clamp(20px, 2.6vw, 48px);
+    minmax(320px, 0.95fr)
+    minmax(320px, 0.9fr)
+    minmax(420px, 1.15fr);
+  gap: clamp(28px, 3vw, 52px);
   align-items: center;
 }
 
 .league-system-copy {
   min-width: 0;
   align-self: center;
+  padding-left: clamp(0px, 0.8vw, 12px);
+  transform: translateY(-8px);
 }
 
 .league-system-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   margin: 0;
-  font-weight: 950;
-  letter-spacing: -0.06em;
+  font-weight: 900;
+  letter-spacing: -0.03em;
   color: #0d0d0d;
 }
 
 .league-system-title__line {
   display: block;
-  font-size: clamp(28px, 2.2vw, 40px);
-  line-height: 1.08;
+  font-size: clamp(30px, 2.4vw, 42px);
+  line-height: 0.98;
 }
 
 .league-system-title__accent {
   display: block;
-  margin-top: 2px;
   color: #ff321f;
-  font-size: clamp(38px, 3.4vw, 58px);
+  font-size: clamp(36px, 3.2vw, 54px);
   line-height: 0.98;
 }
 
 .league-system-description {
-  margin: clamp(14px, 1.4vw, 18px) 0 0;
-  max-width: 420px;
-  font-size: 13px;
-  line-height: 1.8;
-  font-weight: 600;
-  color: #242424;
+  margin: 18px 0 0;
+  max-width: 440px;
+  font-size: clamp(14px, 1vw, 16px);
+  line-height: 1.75;
+  font-weight: 500;
+  color: #171717;
 }
 
 .league-system-stats {
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: clamp(20px, 2.4vw, 40px);
-  row-gap: clamp(18px, 2.2vw, 34px);
+  column-gap: clamp(28px, 3vw, 52px);
+  row-gap: clamp(22px, 2.2vw, 36px);
   align-content: center;
   justify-items: start;
   min-width: 0;
-  padding-inline: clamp(0px, 1vw, 12px);
+  padding-inline: clamp(0px, 0.6vw, 8px);
 }
 
 .league-stat-item {
   min-width: 0;
+  max-width: 100%;
 
   strong {
     display: block;
-    color: #ff321f;
-    font-size: clamp(40px, 3.8vw, 64px);
+    color: var(--cnpa-red, #e10613);
+    font-size: clamp(36px, 3.4vw, 58px);
     line-height: 0.92;
     font-weight: 900;
-    letter-spacing: -0.05em;
+    letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
   }
 
   span {
     display: block;
-    margin-top: 6px;
-    font-size: clamp(12px, 0.95vw, 14px);
-    font-weight: 700;
-    color: #1a1a1a;
-    line-height: 1.35;
+    margin-top: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #161616;
+    line-height: 1.3;
   }
 }
 
@@ -284,18 +302,26 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  overflow: hidden;
+  transform: translateY(6px);
 }
 
 .league-visual-collage {
   display: block;
-  width: min(100%, 520px);
+  width: min(100%, 560px);
   height: auto;
-  max-height: clamp(240px, 22vw, 320px);
+  aspect-ratio: 1.45 / 1;
+  max-height: clamp(250px, 24vw, 340px);
   margin-left: auto;
   object-fit: contain;
   object-position: center right;
   pointer-events: none;
   user-select: none;
+  transform: translate(-24px, 8px) scale(1.12);
+  transform-origin: center right;
+  background: transparent;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 3%, #000 97%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 3%, #000 97%, transparent 100%);
 }
 
 .ranking-section {
@@ -1085,6 +1111,30 @@
   flex-shrink: 0;
 }
 
+@media (max-width: 1500px) {
+  .league-system-layout {
+    gap: clamp(22px, 2.6vw, 44px);
+    grid-template-columns:
+      minmax(280px, 0.92fr)
+      minmax(280px, 0.88fr)
+      minmax(380px, 1.12fr);
+  }
+
+  .league-system-title__accent {
+    font-size: clamp(32px, 3vw, 48px);
+  }
+
+  .league-stat-item strong {
+    font-size: clamp(34px, 3.2vw, 54px);
+  }
+
+  .league-visual-collage {
+    width: min(100%, 520px);
+    max-height: clamp(230px, 22vw, 300px);
+    transform: translate(-18px, 6px) scale(1.08);
+  }
+}
+
 @media (max-width: 1100px) {
   .league-system-layout {
     grid-template-columns: minmax(260px, 1fr) minmax(280px, 0.92fr);
@@ -1108,10 +1158,12 @@
   }
 
   .league-visual-collage {
-    width: min(100%, 640px);
-    max-height: 300px;
+    width: min(100%, 620px);
+    max-height: 280px;
     margin-inline: auto;
     object-position: center;
+    transform: translate(-8px, 4px) scale(1.02);
+    transform-origin: center;
   }
 
   .team-showcase-grid {
@@ -1187,6 +1239,39 @@
   }
 }
 
+@media (max-width: 1000px) {
+  .league-system-layout {
+    grid-template-columns: minmax(240px, 1fr) minmax(240px, 0.92fr);
+    grid-template-areas:
+      'copy stats'
+      'visual visual';
+    gap: clamp(20px, 3vw, 32px);
+  }
+
+  .league-system-copy {
+    grid-area: copy;
+    transform: none;
+    padding-left: 0;
+  }
+
+  .league-system-stats {
+    grid-area: stats;
+    justify-self: end;
+  }
+
+  .league-system-visual {
+    grid-area: visual;
+    justify-content: center;
+    transform: none;
+  }
+
+  .league-visual-collage {
+    width: min(100%, 560px);
+    max-height: 260px;
+    transform: none;
+  }
+}
+
 @media (max-width: 900px) {
   .league-system-layout {
     grid-template-columns: 1fr;
@@ -1194,11 +1279,12 @@
       'copy'
       'stats'
       'visual';
-    gap: clamp(20px, 4vw, 32px);
+    gap: clamp(20px, 4vw, 28px);
   }
 
   .league-system-stats {
     max-width: 420px;
+    justify-self: start;
   }
 
   .league-system-visual {
@@ -1206,10 +1292,10 @@
   }
 
   .league-visual-collage {
-    width: min(100%, 560px);
-    max-height: 260px;
+    width: min(100%, 520px);
+    max-height: 240px;
     margin-inline: auto;
-    object-position: center;
+    transform: none;
   }
 
   .team-rank-item {
@@ -1223,15 +1309,20 @@
 
 @media (max-width: 768px) {
   .league-system-paper {
-    padding-block: clamp(32px, 6vw, 48px);
+    padding-block: clamp(28px, 5vw, 40px);
+  }
+
+  .league-system-copy {
+    transform: none;
+    padding-left: 0;
   }
 
   .league-system-title__accent {
-    font-size: clamp(34px, 9vw, 44px);
+    font-size: clamp(30px, 8vw, 40px);
   }
 
   .league-stat-item strong {
-    font-size: clamp(34px, 10vw, 48px);
+    font-size: clamp(32px, 9vw, 44px);
   }
 
   .section-head {

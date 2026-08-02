@@ -1,0 +1,101 @@
+# 生产环境配置
+# 启动示例：java -jar xxx.jar --spring.profiles.active=prod,druid
+# 或环境变量：SPRING_PROFILES_ACTIVE=prod,druid
+
+ruoyi:
+  profile: ${RUOYI_UPLOAD_PATH:/home/jsj/uploadPath}
+  addressEnabled: false
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.zhs: info
+    org.springframework: warn
+
+spring:
+  devtools:
+    restart:
+      enabled: false
+  data:
+    redis:
+      host: 192.168.31.47
+      port: 6379
+      password:
+      database: 1
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    druid:
+      master:
+        url: jdbc:mysql://111.229.241.29:3306/basketball?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+        username: root
+        password: zlzcnpa@@qaq
+      slave:
+        enabled: false
+      initialSize: 5
+      minIdle: 10
+      maxActive: 20
+      maxWait: 60000
+      connectTimeout: 30000
+      socketTimeout: 60000
+      timeBetweenEvictionRunsMillis: 60000
+      minEvictableIdleTimeMillis: 300000
+      maxEvictableIdleTimeMillis: 900000
+      validationQuery: SELECT 1 FROM DUAL
+      testWhileIdle: true
+      testOnBorrow: false
+      testOnReturn: false
+      statViewServlet:
+        enabled: false
+      webStatFilter:
+        enabled: false
+      filter:
+        stat:
+          enabled: true
+          log-slow-sql: true
+          slow-sql-millis: 1000
+          merge-sql: true
+        wall:
+          config:
+            multi-statement-allow: true
+
+# token配置
+token:
+  # 令牌自定义标识
+  header: Authorization
+  # 令牌密钥（HS512需要至少64字节/512位）
+  secret: abcdefghijklmnopqrstuvwxyz123456ABCDEFGHIJKLMNOPQRSTUVWXYZ78901234
+  # 令牌有效期（默认30分钟）
+  expireTime: 30
+
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+cnpa:
+  local-demo:
+    enabled: false
+
+# 腾讯云 COS（密钥稍后填写；未配置时不影响本地 /common/upload）
+tencent:
+  cos:
+    secret-id: AKIDhJcr8GD1dFqLixFVehZHrGVYQtATvTr4
+    secret-key: 4xgPytgIh5LZbSXQ9ey61iFZgZUO7iBw
+    region: ap-shanghai
+    bucket: basketball-1453992653
+    # 默认访问域名（不含协议）；后续可换成自定义域名
+    domain: basketball-1453992653.cos.ap-shanghai.myqcloud.com
+    https: true
+    # 对象键前缀，例如 basketball/upload/yyyy/MM/dd/xxx.png
+    key-prefix: basketball
+
+# 防盗链配置
+referer:
+  # 防盗链开关
+  enabled: false
+  # 允许的域名列表
+  allowed-domains: localhost,127.0.0.1,ruoyi.vip,www.ruoyi.vip

@@ -1,0 +1,72 @@
+# 生产环境配置
+# 启动示例：java -jar xxx.jar --spring.profiles.active=prod
+# 或环境变量：SPRING_PROFILES_ACTIVE=prod
+
+server:
+  port: 8881
+
+logging:
+  level:
+    com.zhs: info
+    org.springframework: warn
+
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://111.229.241.29:3306/basketball?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+    username: root
+    password: zlzcnpa@@qaq
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+  data:
+    redis:
+      host: 192.168.31.47
+      port: 6379
+      password:
+      database: 1
+  mail:
+    host: ${CNPA_MAIL_HOST:}
+    port: ${CNPA_MAIL_PORT:465}
+    username: ${CNPA_MAIL_USERNAME:}
+    password: ${CNPA_MAIL_AUTH_CODE:}
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+account:
+  file:
+    storage-type: cos
+    local-root: ${CNPA_FILE_ROOT:/home/jsj/uploadPath}
+    public-base-url: ${CNPA_FILE_PUBLIC_BASE_URL:}
+  crypto:
+    aes-key: ${CNPA_FIELD_AES_KEY:}
+
+# 腾讯云 COS（密钥稍后填写；未配置时不影响本地 /common/upload）
+tencent:
+  cos:
+    secret-id: AKIDhJcr8GD1dFqLixFVehZHrGVYQtATvTr4
+    secret-key: 4xgPytgIh5LZbSXQ9ey61iFZgZUO7iBw
+    region: ap-shanghai
+    bucket: basketball-1453992653
+    # 默认访问域名（不含协议）；后续可换成自定义域名
+    domain: basketball-1453992653.cos.ap-shanghai.myqcloud.com
+    https: true
+    # 对象键前缀，例如 basketball/upload/yyyy/MM/dd/xxx.png
+    key-prefix: basketball
+
+member:
+  auth:
+    dev-mail-bypass: false
+  init:
+    enabled: false
+  mail:
+    from: ${CNPA_MAIL_FROM:${CNPA_MAIL_USERNAME:}}
+    from-name: ${CNPA_MAIL_FROM_NAME:CNPA赛事平台}

@@ -88,6 +88,8 @@ const showStatError = computed(() => props.state === 'error')
                 class="league-visual-collage"
                 :src="leagueCollageImg"
                 alt=""
+                width="560"
+                height="386"
                 loading="lazy"
                 draggable="false"
               />
