@@ -356,14 +356,14 @@
   box-sizing: border-box;
 }
 
-/* Unified content shell: width 100% + max-width, fills remaining main area */
+/* Unified content shell: left-aligned within main column (not viewport-centered) */
 .account-content-inner,
 .account-main-inner,
 .account-page-inner {
-  width: min(100%, var(--account-content-max, 1440px));
+  width: 100%;
   max-width: var(--account-content-max, 1440px);
   min-width: 0;
-  margin: 0 auto;
+  margin: 0;
   padding: 0;
   box-sizing: border-box;
 }

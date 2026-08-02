@@ -6,7 +6,7 @@
 
 :root {
   --account-sidebar-width: clamp(240px, 16vw, 300px);
-  --account-main-padding-x: clamp(24px, 2.5vw, 48px);
+  --account-main-padding-x: clamp(32px, 2.5vw, 48px);
   --account-main-padding-y: clamp(24px, 2.5vw, 48px);
 
   /* Desktop content cap: fill remaining main area, never exceed 1440px */
@@ -148,10 +148,10 @@
 .account-center-vars .account-main-inner,
 .account-center-vars .account-page-inner,
 .account-center-vars .account-content-inner {
-  width: min(100%, var(--account-content-max));
+  width: 100%;
   max-width: var(--account-content-max);
   min-width: 0;
-  margin: 0 auto;
+  margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
