@@ -1,13 +1,17 @@
 package com.zhs.basket.service.impl;
 
+import com.zhs.basket.domain.BasketMatch;
 import com.zhs.basket.domain.BasketMatchDataSubmission;
 import com.zhs.basket.domain.BasketMatchDataSubmissionMaterial;
 import com.zhs.basket.domain.BasketMatchDataSubmissionPeriod;
 import com.zhs.basket.domain.BasketMatchDataSubmissionPlayerStat;
 import com.zhs.basket.domain.BasketMatchDataSubmissionTeamStat;
+import com.zhs.basket.domain.BasketTournamentSeasonRoster;
 import com.zhs.basket.enums.MatchPeriodTypeEnum;
 import com.zhs.basket.mapper.BasketFileAssetMapper;
+import com.zhs.basket.mapper.BasketMatchMapper;
 import com.zhs.basket.mapper.BasketMatchRosterMapper;
+import com.zhs.basket.mapper.BasketTournamentSeasonRosterMapper;
 import com.zhs.basket.service.IBasketMatchValidationService;
 import com.zhs.common.exception.ServiceException;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +28,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,6 +45,10 @@ class BasketMatchDataSubmissionValidationServiceImplTest {
     @Mock
     private BasketMatchRosterMapper rosterMapper;
     @Mock
+    private BasketMatchMapper matchMapper;
+    @Mock
+    private BasketTournamentSeasonRosterMapper seasonRosterMapper;
+    @Mock
     private BasketFileAssetMapper fileAssetMapper;
 
     @InjectMocks
@@ -55,12 +64,22 @@ class BasketMatchDataSubmissionValidationServiceImplTest {
         submission.setAwayTeamId(AWAY_TEAM_ID);
         submission.setHomeScore(100);
         submission.setAwayScore(90);
+
+        BasketMatch match = new BasketMatch();
+        match.setId(MATCH_ID);
+        match.setHomeTeamId(HOME_TEAM_ID);
+        match.setAwayTeamId(AWAY_TEAM_ID);
+        match.setHomeEventTeamId(101L);
+        match.setAwayEventTeamId(102L);
+        when(matchMapper.selectById(MATCH_ID)).thenReturn(match);
+        when(rosterMapper.selectPlayerIdsByMatchAndTeam(eq(MATCH_ID), eq(HOME_TEAM_ID)))
+                .thenReturn(Collections.singletonList(PLAYER_HOME));
+        when(rosterMapper.selectPlayerIdsByMatchAndTeam(eq(MATCH_ID), eq(AWAY_TEAM_ID)))
+                .thenReturn(Collections.singletonList(PLAYER_AWAY));
     }
 
     @Test
     void validateSubmissionData_success() {
-        when(rosterMapper.countByMatchIdAndPlayerId(MATCH_ID, PLAYER_HOME)).thenReturn(1);
-        when(rosterMapper.countByMatchIdAndPlayerId(MATCH_ID, PLAYER_AWAY)).thenReturn(1);
         when(fileAssetMapper.selectById(1001L)).thenReturn(new com.zhs.basket.domain.BasketFileAsset());
 
         assertDoesNotThrow(() -> validationServiceImpl.validateSubmissionData(
@@ -69,6 +88,37 @@ class BasketMatchDataSubmissionValidationServiceImplTest {
                 buildTeamStats(),
                 buildPlayerStats(),
                 buildMaterials()));
+    }
+
+    @Test
+    void validateSubmissionData_allowsEmptyMaterialsForSimplifiedSubmit() {
+        assertDoesNotThrow(() -> validationServiceImpl.validateSubmissionData(
+                submission,
+                buildPeriods(25, 22, 25, 23, 25, 23, 25, 22),
+                buildTeamStats(),
+                buildPlayerStats(),
+                Collections.emptyList()));
+    }
+
+    @Test
+    void validateSubmissionData_fallsBackToSeasonRosterWhenMatchRosterMissing() {
+        when(rosterMapper.selectPlayerIdsByMatchAndTeam(eq(MATCH_ID), eq(HOME_TEAM_ID)))
+                .thenReturn(Collections.emptyList());
+        when(rosterMapper.selectPlayerIdsByMatchAndTeam(eq(MATCH_ID), eq(AWAY_TEAM_ID)))
+                .thenReturn(Collections.emptyList());
+        BasketTournamentSeasonRoster homeRoster = new BasketTournamentSeasonRoster();
+        homeRoster.setPlayerId(PLAYER_HOME);
+        BasketTournamentSeasonRoster awayRoster = new BasketTournamentSeasonRoster();
+        awayRoster.setPlayerId(PLAYER_AWAY);
+        when(seasonRosterMapper.selectActiveByEventTeamId(101L)).thenReturn(Collections.singletonList(homeRoster));
+        when(seasonRosterMapper.selectActiveByEventTeamId(102L)).thenReturn(Collections.singletonList(awayRoster));
+
+        assertDoesNotThrow(() -> validationServiceImpl.validateSubmissionData(
+                submission,
+                buildPeriods(25, 22, 25, 23, 25, 23, 25, 22),
+                buildTeamStats(),
+                buildPlayerStats(),
+                Collections.emptyList()));
     }
 
     @Test
@@ -83,11 +133,66 @@ class BasketMatchDataSubmissionValidationServiceImplTest {
 
     @Test
     void validateSubmissionData_rejectsMissingScreenshot() {
+        BasketMatchDataSubmissionMaterial material = new BasketMatchDataSubmissionMaterial();
+        material.setMaterialType("OTHER");
+        material.setFileId(1001L);
+        when(fileAssetMapper.selectById(1001L)).thenReturn(new com.zhs.basket.domain.BasketFileAsset());
+
         assertThrows(ServiceException.class, () -> validationServiceImpl.validateSubmissionData(
                 submission,
                 buildPeriods(25, 22, 25, 23, 25, 23, 25, 22),
                 buildTeamStats(),
                 buildPlayerStats(),
+                Collections.singletonList(material)));
+    }
+
+    @Test
+    void validateSubmissionData_allowsCaptainOnlyTeamPlayerSubmit() {
+        submission.setSubmitterTeamId(HOME_TEAM_ID);
+        submission.setHomeScore(88);
+        submission.setAwayScore(74);
+
+        BasketMatchDataSubmissionTeamStat home = new BasketMatchDataSubmissionTeamStat();
+        home.setTeamId(HOME_TEAM_ID);
+        home.setPoints(88);
+        home.setRebounds(20);
+        home.setAssists(10);
+        home.setFieldGoalsMade(0);
+        home.setFieldGoalsAttempted(0);
+        home.setThreePointsMade(0);
+        home.setThreePointsAttempted(0);
+        home.setFreeThrowsMade(0);
+        home.setFreeThrowsAttempted(0);
+
+        BasketMatchDataSubmissionTeamStat away = new BasketMatchDataSubmissionTeamStat();
+        away.setTeamId(AWAY_TEAM_ID);
+        away.setPoints(74);
+        away.setRebounds(0);
+        away.setAssists(0);
+        away.setFieldGoalsMade(0);
+        away.setFieldGoalsAttempted(0);
+        away.setThreePointsMade(0);
+        away.setThreePointsAttempted(0);
+        away.setFreeThrowsMade(0);
+        away.setFreeThrowsAttempted(0);
+
+        BasketMatchDataSubmissionPlayerStat homePlayer = new BasketMatchDataSubmissionPlayerStat();
+        homePlayer.setTeamId(HOME_TEAM_ID);
+        homePlayer.setPlayerId(PLAYER_HOME);
+        homePlayer.setPoints(88);
+        homePlayer.setRebounds(20);
+        homePlayer.setAssists(10);
+
+        BasketMatchDataSubmissionPlayerStat awayPlayer = new BasketMatchDataSubmissionPlayerStat();
+        awayPlayer.setTeamId(AWAY_TEAM_ID);
+        awayPlayer.setPlayerId(PLAYER_AWAY);
+        awayPlayer.setPoints(0);
+
+        assertDoesNotThrow(() -> validationServiceImpl.validateSubmissionData(
+                submission,
+                buildPeriods(22, 18, 22, 18, 22, 19, 22, 19),
+                Arrays.asList(home, away),
+                Arrays.asList(homePlayer, awayPlayer),
                 Collections.emptyList()));
     }
 

@@ -1,6 +1,7 @@
 package com.zhs.dao;
 
 import com.zhs.dto.PlayerMyScheduleEventOptionRow;
+import com.zhs.dto.PlayerMySchedulePlatformOptionRow;
 import com.zhs.dto.PlayerMyScheduleRow;
 import com.zhs.request.matchdata.PlayerMyScheduleQuery;
 import org.apache.ibatis.annotations.Mapper;
@@ -30,4 +31,7 @@ public interface PlayerMyScheduleDao {
 
     List<PlayerMyScheduleEventOptionRow> selectEventOptions(@Param("memberId") Long memberId,
                                                             @Param("playerId") Long playerId);
+
+    List<PlayerMySchedulePlatformOptionRow> selectPlatformOptions(@Param("memberId") Long memberId,
+                                                                  @Param("playerId") Long playerId);
 }

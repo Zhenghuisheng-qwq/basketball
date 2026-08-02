@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue'
+import DefaultPlayerAvatar from '@/components/player/DefaultPlayerAvatar.vue'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import {
   formatRate,
@@ -194,7 +195,15 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
             </template>
 
             <template v-else-if="column.key === 'player' && isPlayerRow(row)">
-              <PlayerLink :player-id="row.playerId" :player-name="row.playerName" tab="data" />
+              <div class="data-table__player">
+                <DefaultPlayerAvatar
+                  :avatar-url="row.avatarUrl"
+                  :player-name="row.playerName"
+                  :player-id="row.playerId"
+                  :size="30"
+                />
+                <PlayerLink :player-id="row.playerId" :player-name="row.playerName" tab="data" />
+              </div>
             </template>
 
             <template v-else-if="column.key === 'team' && isPlayerRow(row)">
@@ -316,13 +325,18 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
   }
 }
 
-.data-table__team {
+.data-table__team,
+.data-table__player {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   max-width: 100%;
   min-width: 0;
   color: inherit;
+  text-decoration: none;
+}
+
+.data-table__team {
   text-decoration: none;
 }
 

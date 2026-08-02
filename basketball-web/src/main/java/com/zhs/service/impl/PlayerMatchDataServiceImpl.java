@@ -70,6 +70,8 @@ import com.zhs.service.support.BasketPublicSupport;
 import com.zhs.service.support.PlayerMatchDisputeExceptionSupport;
 import com.zhs.service.support.PlayerMatchDataSubmitSupport;
 import com.zhs.support.MemberAvatarSupport;
+import com.zhs.support.GameTerminalSupport;
+import com.zhs.support.RegistrationRosterRuleSupport;
 import jakarta.annotation.Resource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -247,8 +249,10 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
                     : Collections.emptyList();
             Long myTeamId = resolveMyTeamIdForMatch(match, myTeamIds, eventTeamId);
             BasketMatchDataSubmission mySubmission = resolveTeamSubmission(submissionByTeamMap, matchId, myTeamId);
-            records.add(toTaskResp(match, myTeamIds, teamNameMap, mySubmission, submissionByTeamMap,
-                    captainTeamMap, eventTeamId));
+            PlayerMatchTaskResp taskResp = toTaskResp(match, myTeamIds, teamNameMap, mySubmission, submissionByTeamMap,
+                    captainTeamMap, eventTeamId);
+            enrichScheduleSummary(taskResp, match);
+            records.add(taskResp);
         }
         return records;
     }
@@ -1010,8 +1014,8 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         full.setBlocks(nvl(item.getBlocks()));
         full.setTurnovers(nvl(item.getTurnovers()));
         full.setFouls(nvl(item.getFouls()));
-        full.setFieldGoalsMade(points);
-        full.setFieldGoalsAttempted(points);
+        full.setFieldGoalsMade(0);
+        full.setFieldGoalsAttempted(0);
         full.setThreePointsMade(0);
         full.setThreePointsAttempted(0);
         full.setFreeThrowsMade(0);
@@ -1129,8 +1133,8 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         item.setBlocks(0);
         item.setTurnovers(0);
         item.setFouls(0);
-        item.setFieldGoalsMade(Math.max(teamPoints, 0));
-        item.setFieldGoalsAttempted(Math.max(teamPoints, 0));
+        item.setFieldGoalsMade(0);
+        item.setFieldGoalsAttempted(0);
         item.setThreePointsMade(0);
         item.setThreePointsAttempted(0);
         item.setFreeThrowsMade(0);
@@ -1272,10 +1276,27 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
     }
 
     private void validateTheoreticalPoints(Integer points, Integer fgm, Integer tpm, Integer ftm, String label) {
+        if (!hasShootingPointBreakdown(points, fgm, tpm, ftm)) {
+            return;
+        }
         int theoretical = 2 * (nvl(fgm) - nvl(tpm)) + 3 * nvl(tpm) + nvl(ftm);
         if (nvl(points) != theoretical) {
             throw new ServiceException(label + "得分与投篮数据不一致，理论得分=" + theoretical);
         }
+    }
+
+    private boolean hasShootingPointBreakdown(Integer points, Integer fgm, Integer tpm, Integer ftm) {
+        int p = nvl(points);
+        int fg = nvl(fgm);
+        int tp = nvl(tpm);
+        int ft = nvl(ftm);
+        if (tp > 0 || ft > 0) {
+            return true;
+        }
+        if (fg == 0) {
+            return false;
+        }
+        return fg != p;
     }
 
     private BigDecimal computePct(Integer made, Integer attempted) {
@@ -2147,25 +2168,7 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         if (resp == null || match == null) {
             return;
         }
-        resp.setPlatformCode(match.getPlatformCode());
-        if (match.getStageId() != null) {
-            BasketTournamentStage stage = stageDao.selectById(match.getStageId());
-            if (stage != null && NOT_DELETED.equals(stage.getIsDelete())) {
-                resp.setStageName(stage.getStageName());
-            }
-        }
-        if (match.getSeasonId() != null) {
-            BasketTournamentSeason season = seasonDao.selectById(match.getSeasonId());
-            if (season != null && NOT_DELETED.equals(season.getIsDelete())) {
-                BasketTournament tournament = season.getTournamentId() == null
-                        ? null : tournamentDao.selectById(season.getTournamentId());
-                if (tournament != null && NOT_DELETED.equals(tournament.getIsDelete())) {
-                    resp.setEventName(tournament.getTournamentName());
-                } else if (StringUtils.hasText(season.getSeasonName())) {
-                    resp.setEventName(season.getSeasonName());
-                }
-            }
-        }
+        enrichScheduleSummary(resp, match);
 
         List<EventRosterMemberResp> homeRoster = loadMatchSideRoster(match, match.getHomeEventTeamId(), match.getHomeTeamId());
         List<EventRosterMemberResp> awayRoster = loadMatchSideRoster(match, match.getAwayEventTeamId(), match.getAwayTeamId());
@@ -2198,6 +2201,34 @@ public class PlayerMatchDataServiceImpl implements IMPlayerMatchDataService {
         fillTeamRecords(resp, match);
 
         fillPlayerStatLists(resp, match, homeRoster, awayRoster, submission);
+    }
+
+    private void enrichScheduleSummary(PlayerMatchTaskResp resp, BasketMatch match) {
+        if (resp == null || match == null) {
+            return;
+        }
+        resp.setPlatformCode(match.getPlatformCode());
+        resp.setPlatformName(GameTerminalSupport.formatDisplayName(match.getPlatformCode()));
+        if (match.getStageId() != null) {
+            BasketTournamentStage stage = stageDao.selectById(match.getStageId());
+            if (stage != null && NOT_DELETED.equals(stage.getIsDelete())) {
+                resp.setStageName(stage.getStageName());
+            }
+        }
+        if (match.getSeasonId() != null) {
+            BasketTournamentSeason season = seasonDao.selectById(match.getSeasonId());
+            if (season != null && NOT_DELETED.equals(season.getIsDelete())) {
+                BasketTournament tournament = season.getTournamentId() == null
+                        ? null : tournamentDao.selectById(season.getTournamentId());
+                if (tournament != null && NOT_DELETED.equals(tournament.getIsDelete())) {
+                    resp.setEventName(tournament.getTournamentName());
+                } else if (StringUtils.hasText(season.getSeasonName())) {
+                    resp.setEventName(season.getSeasonName());
+                }
+                RegistrationRosterRuleSupport.Rule rule = RegistrationRosterRuleSupport.resolve(season, tournament);
+                resp.setMatchFormatText(rule.getFormatDisplay());
+            }
+        }
     }
 
     private void fillTeamRecords(PlayerMatchTaskResp resp, BasketMatch match) {

@@ -14,6 +14,7 @@ export function getPublicSeasonTeamStatPage(
     stageId?: string | number
     sortField?: string
     sortOrder?: string
+    keyword?: string
   },
 ) {
   return request.get<any, ApiResult<PageResult<PublicTeamSeasonStatVo>>>(
@@ -31,6 +32,7 @@ export function getPublicSeasonPlayerStatPage(
     teamId?: string | number
     sortField?: string
     sortOrder?: string
+    keyword?: string
   },
 ) {
   return request.get<any, ApiResult<PageResult<PublicPlayerSeasonStatVo>>>(

@@ -6,9 +6,11 @@ import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import MyEventsPagination from '@/components/account/events/MyEventsPagination.vue'
 import {
   getMyScheduleEventOptions,
+  getMySchedulePlatformOptions,
   getMySchedules,
   type MyScheduleEventOption,
   type MyScheduleMatchStatusGroup,
+  type MySchedulePlatformOption,
 } from '@/api/mySchedule'
 import type { PlayerMatchTaskItem } from '@/api/matchData'
 import { useAccountStore } from '@/stores/account'
@@ -35,9 +37,11 @@ const nextMatch = ref<PlayerMatchTaskItem | null>(null)
 const certificationRequired = ref(false)
 const noParticipation = ref(false)
 const eventOptions = ref<MyScheduleEventOption[]>([])
+const platformOptions = ref<MySchedulePlatformOption[]>([])
 
 const matchStatusGroup = ref<MyScheduleMatchStatusGroup>('PENDING')
 const seasonId = ref('')
+const platformCode = ref('')
 const beginDate = ref('')
 const endDate = ref('')
 const sortOrder = ref<'ASC' | 'DESC'>('ASC')
@@ -128,20 +132,43 @@ function eventLabel(option: MyScheduleEventOption): string {
 }
 
 function rowEventLabel(row: PlayerMatchTaskItem): string {
-  const parts = [row.eventName, row.stageName].filter(Boolean)
+  const parts = [
+    row.platformName || row.platformCode,
+    row.matchFormatText,
+    row.eventName,
+    row.stageName,
+  ].filter(Boolean)
   return parts.length ? parts.join(' · ') : '-'
+}
+
+function rowEventOnlyLabel(row: PlayerMatchTaskItem): string {
+  const parts = [row.eventName, row.stageName].filter(Boolean)
+  return parts.length ? parts.join(' · ') : ''
+}
+
+function resolvePlatformLabel(row: PlayerMatchTaskItem): string {
+  const platform = row.platformName || row.platformCode
+  const format = row.matchFormatText
+  if (platform && format) return `${platform} · ${format}`
+  return platform || format || '-'
 }
 
 async function loadEventOptions() {
   if (!isVerified.value) {
     eventOptions.value = []
+    platformOptions.value = []
     return
   }
   try {
-    const res = await getMyScheduleEventOptions()
-    eventOptions.value = res.data || []
+    const [eventRes, platformRes] = await Promise.all([
+      getMyScheduleEventOptions(),
+      getMySchedulePlatformOptions(),
+    ])
+    eventOptions.value = eventRes.data || []
+    platformOptions.value = platformRes.data || []
   } catch {
     eventOptions.value = []
+    platformOptions.value = []
   }
 }
 
@@ -159,6 +186,7 @@ async function loadList() {
   try {
     const res = await getMySchedules({
       seasonId: seasonId.value || undefined,
+      platformCode: platformCode.value || undefined,
       matchStatusGroup: matchStatusGroup.value,
       startDate: beginDate.value || undefined,
       endDate: endDate.value || undefined,
@@ -197,6 +225,7 @@ function handleSearch() {
 function handleReset() {
   matchStatusGroup.value = 'PENDING'
   seasonId.value = ''
+  platformCode.value = ''
   beginDate.value = ''
   endDate.value = ''
   sortOrder.value = 'ASC'
@@ -257,11 +286,20 @@ watch(
   { immediate: true },
 )
 
-watch(matchStatusGroup, (value) => {
+watch(matchStatusGroup, (value, oldValue) => {
   if (value === 'FINISHED') {
     sortOrder.value = 'DESC'
   } else if (value === 'PENDING') {
     sortOrder.value = 'ASC'
+  }
+  if (value === 'ALL' || value === 'FINISHED') {
+    beginDate.value = ''
+    endDate.value = ''
+    quickRange.value = 'ALL'
+  }
+  if (oldValue !== undefined) {
+    pageNum.value = 1
+    void loadList()
   }
 })
 
@@ -292,7 +330,8 @@ onMounted(() => {
           <span class="my-schedule-panel__next-countdown">{{ formatCountdown(nextMatch) }}</span>
         </div>
         <div class="my-schedule-panel__next-meta">
-          {{ rowEventLabel(nextMatch) }}
+          {{ resolvePlatformLabel(nextMatch) }}
+          <template v-if="rowEventOnlyLabel(nextMatch)"> · {{ rowEventOnlyLabel(nextMatch) }}</template>
           <template v-if="nextMatch.roundNo"> · 第 {{ nextMatch.roundNo }} 轮</template>
         </div>
         <div class="my-schedule-panel__next-time">
@@ -325,6 +364,15 @@ onMounted(() => {
           比赛状态
           <select v-model="matchStatusGroup">
             <option v-for="item in statusOptions" :key="item.value" :value="item.value">{{ item.label }}</option>
+          </select>
+        </label>
+        <label>
+          比赛平台
+          <select v-model="platformCode">
+            <option value="">全部平台</option>
+            <option v-for="item in platformOptions" :key="item.platformCode" :value="item.platformCode">
+              {{ item.platformName || item.platformCode }}
+            </option>
           </select>
         </label>
         <label>

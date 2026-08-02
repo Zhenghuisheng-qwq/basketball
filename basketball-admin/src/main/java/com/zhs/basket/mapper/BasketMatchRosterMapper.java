@@ -17,4 +17,6 @@ public interface BasketMatchRosterMapper {
     List<Long> selectMemberIdsByMatchAndTeam(@Param("matchId") Long matchId, @Param("teamId") Long teamId);
 
     int countByMatchIdAndPlayerId(@Param("matchId") Long matchId, @Param("playerId") Long playerId);
+
+    List<Long> selectPlayerIdsByMatchAndTeam(@Param("matchId") Long matchId, @Param("teamId") Long teamId);
 }

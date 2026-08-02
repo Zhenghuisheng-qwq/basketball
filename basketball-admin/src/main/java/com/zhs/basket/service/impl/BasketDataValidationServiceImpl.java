@@ -76,6 +76,35 @@ public class BasketDataValidationServiceImpl implements IBasketDataValidationSer
         return result;
     }
 
+    @Override
+    public SettlementValidationResultVo validateMatch(Long matchId) {
+        if (matchId == null) {
+            throw new ServiceException("比赛ID不能为空");
+        }
+        ConfirmedMatchBriefVo match = confirmedMatchAdminMapper.selectConfirmedMatchById(matchId);
+        if (match == null) {
+            throw new ServiceException("比赛不存在或未确认");
+        }
+        SettlementValidationResultVo result = new SettlementValidationResultVo();
+        result.setSeasonId(match.getSeasonId());
+        result.setConfirmedMatchCount(1);
+        validateConfirmedMatch(match, result);
+        boolean ruleOk = false;
+        if (match.getSeasonId() != null) {
+            try {
+                StandingPointsRuleParser.requireFromRules(ruleMapper.selectBySeasonId(match.getSeasonId()));
+                ruleOk = true;
+            } catch (ServiceException ex) {
+                result.getErrors().add(SettlementValidationErrorVo.of(matchId, match.getMatchNo(),
+                        ex.getMessage() == null ? "积分规则未配置" : ex.getMessage()));
+            }
+        }
+        result.setStandingRuleConfigured(ruleOk);
+        result.setErrorCount(result.getErrors().size());
+        result.setPassed(result.getErrorCount() == 0);
+        return result;
+    }
+
     private void validateMatchStructure(MatchListVo match, SettlementValidationResultVo result) {
         Long matchId = match.getId();
         String matchNo = match.getMatchNo();
@@ -119,9 +148,11 @@ public class BasketDataValidationServiceImpl implements IBasketDataValidationSer
 
         Integer homePlayerPts = confirmedMatchAdminMapper.sumPlayerPointsByMatchTeam(matchId, match.getHomeTeamId());
         Integer awayPlayerPts = confirmedMatchAdminMapper.sumPlayerPointsByMatchTeam(matchId, match.getAwayTeamId());
-        if (!Objects.equals(nvl(homePlayerPts), nvl(match.getHomeScore()))
-                || !Objects.equals(nvl(awayPlayerPts), nvl(match.getAwayScore()))) {
-            result.getErrors().add(SettlementValidationErrorVo.of(matchId, matchNo, "球员得分合计与比赛比分不一致"));
+        if (!isCaptainOnlyPlayerStats(match.getHomeScore(), match.getAwayScore(), homePlayerPts, awayPlayerPts)) {
+            if (!Objects.equals(nvl(homePlayerPts), nvl(match.getHomeScore()))
+                    || !Objects.equals(nvl(awayPlayerPts), nvl(match.getAwayScore()))) {
+                result.getErrors().add(SettlementValidationErrorVo.of(matchId, matchNo, "球员得分合计与比赛比分不一致"));
+            }
         }
 
         Integer homeTeamPts = confirmedMatchAdminMapper.sumTeamPointsByMatchTeam(matchId, match.getHomeTeamId());
@@ -137,6 +168,21 @@ public class BasketDataValidationServiceImpl implements IBasketDataValidationSer
         if (confirmedMatchAdminMapper.countDuplicatePlayerStat(matchId) > 0) {
             result.getErrors().add(SettlementValidationErrorVo.of(matchId, matchNo, "存在重复的球员技术统计"));
         }
+    }
+
+    private boolean isCaptainOnlyPlayerStats(Integer homeScore, Integer awayScore,
+                                             Integer homePlayerPts, Integer awayPlayerPts) {
+        int homePts = nvl(homePlayerPts);
+        int awayPts = nvl(awayPlayerPts);
+        int home = nvl(homeScore);
+        int away = nvl(awayScore);
+        if (homePts > 0 && awayPts == 0) {
+            return homePts == home;
+        }
+        if (awayPts > 0 && homePts == 0) {
+            return awayPts == away;
+        }
+        return false;
     }
 
     private boolean isWinnerConsistent(ConfirmedMatchBriefVo match) {

@@ -5,6 +5,7 @@ import com.zhs.common.UserContext;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.PlayerMyScheduleDao;
 import com.zhs.dto.PlayerMyScheduleEventOptionRow;
+import com.zhs.dto.PlayerMySchedulePlatformOptionRow;
 import com.zhs.dto.PlayerMyScheduleRow;
 import com.zhs.enums.PlayerCertStatusEnum;
 import com.zhs.exception.ServiceException;
@@ -13,9 +14,11 @@ import com.zhs.request.matchdata.PlayerMyScheduleQuery;
 import com.zhs.response.matchdata.PlayerMatchTaskResp;
 import com.zhs.response.matchdata.PlayerMyScheduleEventOptionResp;
 import com.zhs.response.matchdata.PlayerMySchedulePageResp;
+import com.zhs.response.matchdata.PlayerMySchedulePlatformOptionResp;
 import com.zhs.service.IMPlayerMatchDataService;
 import com.zhs.service.IPlayerMyScheduleService;
 import com.zhs.service.support.BasketPublicConstants;
+import com.zhs.support.GameTerminalSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -65,6 +68,7 @@ public class PlayerMyScheduleServiceImpl implements IPlayerMyScheduleService {
 
         PlayerMyScheduleQuery effective = normalizeQuery(query);
         validateSeasonAccess(memberId, profile.getId(), effective.getSeasonId());
+        validatePlatformAccess(memberId, profile.getId(), effective.getPlatformCode());
 
         Date startTime = parseStartDate(effective.getStartDate());
         Date endTimeExclusive = parseEndDateExclusive(effective.getEndDate());
@@ -107,6 +111,18 @@ public class PlayerMyScheduleServiceImpl implements IPlayerMyScheduleService {
     }
 
     @Override
+    public List<PlayerMySchedulePlatformOptionResp> listPlatformOptions() {
+        Long memberId = UserContext.getRequiredMemberId();
+        BasketPlayerProfile profile = findApprovedProfile(memberId);
+        if (profile == null) {
+            return Collections.emptyList();
+        }
+        return scheduleDao.selectPlatformOptions(memberId, profile.getId()).stream()
+                .map(this::toPlatformOption)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<PlayerMyScheduleEventOptionResp> listEventOptions() {
         Long memberId = UserContext.getRequiredMemberId();
         BasketPlayerProfile profile = findApprovedProfile(memberId);
@@ -123,6 +139,7 @@ public class PlayerMyScheduleServiceImpl implements IPlayerMyScheduleService {
                                                      Date startTime, Date endTimeExclusive) {
         PlayerMyScheduleQuery pendingQuery = new PlayerMyScheduleQuery();
         pendingQuery.setSeasonId(query.getSeasonId());
+        pendingQuery.setPlatformCode(query.getPlatformCode());
         pendingQuery.setMatchStatusGroup("PENDING");
         pendingQuery.setStartDate(query.getStartDate());
         pendingQuery.setEndDate(query.getEndDate());
@@ -170,6 +187,9 @@ public class PlayerMyScheduleServiceImpl implements IPlayerMyScheduleService {
             throw new ServiceException("排序方式无效");
         }
         effective.setSortOrder(sortOrder);
+        if (StringUtils.hasText(effective.getPlatformCode())) {
+            effective.setPlatformCode(effective.getPlatformCode().trim().toUpperCase());
+        }
         return effective;
     }
 
@@ -188,6 +208,18 @@ public class PlayerMyScheduleServiceImpl implements IPlayerMyScheduleService {
         boolean allowed = options.stream().anyMatch(item -> Objects.equals(item.getSeasonId(), seasonId));
         if (!allowed) {
             throw new ServiceException("无权查看该赛事赛程", 403);
+        }
+    }
+
+    private void validatePlatformAccess(Long memberId, Long playerId, String platformCode) {
+        if (!StringUtils.hasText(platformCode)) {
+            return;
+        }
+        List<PlayerMySchedulePlatformOptionRow> options = scheduleDao.selectPlatformOptions(memberId, playerId);
+        boolean allowed = options.stream()
+                .anyMatch(item -> platformCode.equalsIgnoreCase(item.getPlatformCode()));
+        if (!allowed) {
+            throw new ServiceException("无权查看该平台赛程", 403);
         }
     }
 
@@ -228,6 +260,13 @@ public class PlayerMyScheduleServiceImpl implements IPlayerMyScheduleService {
         resp.setSeasonName(row.getSeasonName());
         resp.setEventName(StringUtils.hasText(row.getTournamentName()) ? row.getTournamentName() : row.getSeasonName());
         resp.setEventCode(row.getSeasonCode());
+        return resp;
+    }
+
+    private PlayerMySchedulePlatformOptionResp toPlatformOption(PlayerMySchedulePlatformOptionRow row) {
+        PlayerMySchedulePlatformOptionResp resp = new PlayerMySchedulePlatformOptionResp();
+        resp.setPlatformCode(row.getPlatformCode());
+        resp.setPlatformName(GameTerminalSupport.formatDisplayName(row.getPlatformCode()));
         return resp;
     }
 }

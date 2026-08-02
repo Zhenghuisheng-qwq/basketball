@@ -38,7 +38,12 @@
 
     <select id="selectVoBySubmissionId" resultType="com.zhs.basket.vo.MatchDataSubmissionPlayerStatVo">
         select ps.team_id as teamId, t.team_name as teamName, ps.player_id as playerId,
-               ifnull(nullif(p.game_nickname, ''), mp.nickname) as playerName, ps.roster_id as rosterId,
+               ifnull(nullif(sr.player_nickname_snapshot, ''), ifnull(nullif(p.game_nickname, ''), mp.nickname)) as playerName,
+               p.player_no as playerCode,
+               ifnull(nullif(sr.game_id_display_snapshot, ''), p.game_account) as gameId,
+               ifnull(nullif(af.access_url, ''), mpaf.access_url) as avatarUrl,
+               sr.position_snapshot as positionName,
+               ps.roster_id as rosterId,
                ps.started_flag as startedFlag, ps.minutes_seconds as minutesSeconds, ps.points, ps.rebounds,
                ps.offensive_rebounds as offensiveRebounds, ps.defensive_rebounds as defensiveRebounds,
                ps.assists, ps.steals, ps.blocks, ps.turnovers, ps.fouls,
@@ -51,6 +56,9 @@
         left join basket_team t on t.id = ps.team_id and t.is_delete = 0
         left join basket_player_profile p on p.id = ps.player_id and p.is_delete = 0
         left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
+        left join basket_tournament_season_roster sr on sr.id = ps.roster_id and sr.is_delete = 0
+        left join basket_file_asset af on af.id = sr.avatar_file_id_snapshot and af.is_delete = 0
+        left join basket_file_asset mpaf on mpaf.id = mp.avatar_file_id and mpaf.is_delete = 0
         where ps.submission_id = #{submissionId} and ps.is_delete = 0
         order by ps.sort_no, ps.id
     </select>

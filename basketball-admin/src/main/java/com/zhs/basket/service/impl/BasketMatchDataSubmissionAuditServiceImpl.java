@@ -26,6 +26,8 @@ import com.zhs.basket.service.IBasketMatchDataSubmissionValidationService;
 import com.zhs.basket.service.IBasketMatchValidationService;
 import com.zhs.basket.support.BasketMatchDataAuditLogSupport;
 import com.zhs.basket.support.BasketMatchMessageHelper;
+import com.zhs.basket.support.MatchDataSubmissionDetailEnrichSupport;
+import com.zhs.basket.support.MatchDataSubmissionValidationPreviewSupport;
 import com.zhs.basket.vo.MatchDataSubmissionAuditLogVo;
 import com.zhs.basket.vo.MatchDataSubmissionDetailVo;
 import com.zhs.basket.vo.MatchDataSubmissionListVo;
@@ -63,6 +65,8 @@ public class BasketMatchDataSubmissionAuditServiceImpl implements IBasketMatchDa
     @Autowired private IBasketMatchDataSubmissionApplyService applyService;
     @Autowired private BasketMatchDataAuditLogSupport auditLogSupport;
     @Autowired private BasketMatchMessageHelper messageHelper;
+    @Autowired private MatchDataSubmissionDetailEnrichSupport detailEnrichSupport;
+    @Autowired private MatchDataSubmissionValidationPreviewSupport validationPreviewSupport;
 
     @Override
     public List<MatchDataSubmissionListVo> pageSubmissions(AdminMatchDataSubmissionPageReq query) {
@@ -92,13 +96,25 @@ public class BasketMatchDataSubmissionAuditServiceImpl implements IBasketMatchDa
             vo.setHomeTeamName(matchDetail.getHomeTeamName());
             vo.setAwayTeamName(matchDetail.getAwayTeamName());
         }
-        vo.setPeriods(buildPeriodVos(periodMapper.selectBySubmissionId(submissionId)));
+        List<BasketMatchDataSubmissionPeriod> periodEntities = periodMapper.selectBySubmissionId(submissionId);
+        vo.setPeriods(buildPeriodVos(periodEntities));
         vo.setTeamStats(teamStatMapper.selectVoBySubmissionId(submissionId));
         vo.setPlayerStats(playerStatMapper.selectVoBySubmissionId(submissionId));
         vo.setMaterials(materialMapper.selectVoBySubmissionId(submissionId));
         vo.setVersions(submissionMapper.selectVersionsByMatchId(submission.getMatchId()));
-        vo.setAuditLogs(buildAuditLogs(submissionId));
+        vo.setAuditLogs(buildAuditLogs(submissionId, submission.getVersionNo()));
         fillAuditFlags(vo, submission, match);
+        detailEnrichSupport.enrich(vo, submission, match);
+        vo.setValidationSummary(validationPreviewSupport.preview(submission, match, periodEntities,
+                teamStatMapper.selectBySubmissionId(submissionId),
+                playerStatMapper.selectBySubmissionId(submissionId)));
+        vo.setComparisonSummary(detailEnrichSupport.buildComparison(submission, match));
+        if (vo.getSubmitter() != null && StringUtils.isEmpty(vo.getSubmitterMemberName())) {
+            vo.setSubmitterMemberName(vo.getSubmitter().getDisplayName());
+        }
+        if (vo.getSubmitter() != null && StringUtils.isEmpty(vo.getSubmitterTeamName()) && vo.getSubmitter().getTeamName() != null) {
+            vo.setSubmitterTeamName(vo.getSubmitter().getTeamName());
+        }
         return vo;
     }
 
@@ -260,14 +276,44 @@ public class BasketMatchDataSubmissionAuditServiceImpl implements IBasketMatchDa
         }).toList();
     }
 
-    private List<MatchDataSubmissionAuditLogVo> buildAuditLogs(Long submissionId) {
+    private List<MatchDataSubmissionAuditLogVo> buildAuditLogs(Long submissionId, Integer versionNo) {
         List<MatchDataSubmissionAuditLogVo> logs = auditMapper.selectVoBySubmissionId(submissionId);
-        for (MatchDataSubmissionAuditLogVo log : logs) {
-            if (StringUtils.isNotEmpty(log.getAuditAction())) {
-                log.setAuditActionName(MatchDataAuditActionEnum.fromCode(log.getAuditAction()).getCode());
+        for (MatchDataSubmissionAuditLogVo logVo : logs) {
+            if (StringUtils.isNotEmpty(logVo.getAuditAction())) {
+                logVo.setAuditActionName(MatchDataAuditActionEnum.fromCode(logVo.getAuditAction()).getDescription());
+            }
+            logVo.setAuditStatusText(resolveAuditStatusText(logVo.getAuditStatus()));
+            logVo.setBeforeStatusText(resolveSubmissionStatusText(logVo.getBeforeStatus()));
+            logVo.setAfterStatusText(resolveSubmissionStatusText(logVo.getAfterStatus()));
+            logVo.setVersionNo(versionNo);
+            if (StringUtils.isEmpty(logVo.getAuditorName())) {
+                logVo.setAuditorName("系统操作");
             }
         }
         return logs;
+    }
+
+    private String resolveAuditStatusText(String auditStatus) {
+        if (StringUtils.isEmpty(auditStatus)) {
+            return "-";
+        }
+        return switch (auditStatus.trim().toUpperCase()) {
+            case "PENDING" -> "审核中";
+            case "APPROVED" -> "已通过";
+            case "REJECTED" -> "已驳回";
+            default -> auditStatus;
+        };
+    }
+
+    private String resolveSubmissionStatusText(String status) {
+        if (StringUtils.isEmpty(status)) {
+            return "-";
+        }
+        try {
+            return MatchDataSubmissionStatusEnum.fromCode(Integer.parseInt(status.trim())).getDescription();
+        } catch (Exception ex) {
+            return status;
+        }
     }
 
     private void fillAuditFlags(MatchDataSubmissionDetailVo vo, BasketMatchDataSubmission submission, BasketMatch match) {

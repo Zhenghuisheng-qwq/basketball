@@ -360,6 +360,7 @@ export interface PublicPlayerSeasonStatVo {
   stageId?: string | null
   teamId?: string | null
   teamName?: string | null
+  teamLogoUrl?: string | null
   playerId: string
   playerName?: string | null
   avatarUrl?: string | null

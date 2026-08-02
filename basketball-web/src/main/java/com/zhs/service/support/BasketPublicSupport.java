@@ -38,6 +38,7 @@ import org.springframework.util.StringUtils;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -521,5 +522,68 @@ public class BasketPublicSupport {
             }
         }
         return seasons.get(0);
+    }
+
+    public Set<Long> findPublicTeamIdsByKeyword(String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return Collections.emptySet();
+        }
+        String kw = keyword.trim();
+        List<BasketTeam> teams = teamDao.selectList(new LambdaQueryWrapper<BasketTeam>()
+                .eq(BasketTeam::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketTeam::getPublicStatus, BasketPublicConstants.PUBLIC)
+                .eq(BasketTeam::getAuditStatus, BasketPublicConstants.TEAM_AUDIT_APPROVED)
+                .and(w -> w.like(BasketTeam::getTeamName, kw)
+                        .or().like(BasketTeam::getShortName, kw)
+                        .or().like(BasketTeam::getTeamNo, kw)));
+        if (CollectionUtils.isEmpty(teams)) {
+            return Collections.emptySet();
+        }
+        return teams.stream()
+                .map(BasketTeam::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    public Set<Long> findPublicPlayerIdsByKeyword(String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return Collections.emptySet();
+        }
+        String kw = keyword.trim();
+        Set<Long> playerIds = new HashSet<>();
+        List<BasketPlayerProfile> players = playerProfileDao.selectList(new LambdaQueryWrapper<BasketPlayerProfile>()
+                .eq(BasketPlayerProfile::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .and(w -> w.like(BasketPlayerProfile::getGameNickname, kw)
+                        .or().like(BasketPlayerProfile::getPlayerNo, kw)
+                        .or().like(BasketPlayerProfile::getGameAccount, kw)));
+        if (!CollectionUtils.isEmpty(players)) {
+            for (BasketPlayerProfile player : players) {
+                if (player != null && player.getId() != null && isPlayerPubliclyVisible(player)) {
+                    playerIds.add(player.getId());
+                }
+            }
+        }
+        List<BasketMemberProfile> members = memberProfileDao.selectList(new LambdaQueryWrapper<BasketMemberProfile>()
+                .eq(BasketMemberProfile::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .like(BasketMemberProfile::getNickname, kw));
+        if (!CollectionUtils.isEmpty(members)) {
+            Set<Long> memberIds = members.stream()
+                    .map(BasketMemberProfile::getMemberId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            if (!memberIds.isEmpty()) {
+                List<BasketPlayerProfile> linkedPlayers = playerProfileDao.selectList(new LambdaQueryWrapper<BasketPlayerProfile>()
+                        .in(BasketPlayerProfile::getMemberId, memberIds)
+                        .eq(BasketPlayerProfile::getIsDelete, BasketPublicConstants.NOT_DELETED));
+                if (!CollectionUtils.isEmpty(linkedPlayers)) {
+                    for (BasketPlayerProfile player : linkedPlayers) {
+                        if (player != null && player.getId() != null && isPlayerPubliclyVisible(player)) {
+                            playerIds.add(player.getId());
+                        }
+                    }
+                }
+            }
+        }
+        return playerIds;
     }
 }

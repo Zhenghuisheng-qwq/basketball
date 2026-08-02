@@ -33,8 +33,9 @@ public class BasketPublicSeasonStatController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) Long stageId,
             @RequestParam(required = false) String sortField,
-            @RequestParam(required = false, defaultValue = "desc") String sortOrder) {
-        return R.ok(publicSeasonStatService.pageTeamStat(seasonId, currentPage, pageSize, stageId, sortField, sortOrder));
+            @RequestParam(required = false, defaultValue = "desc") String sortOrder,
+            @RequestParam(required = false) String keyword) {
+        return R.ok(publicSeasonStatService.pageTeamStat(seasonId, currentPage, pageSize, stageId, sortField, sortOrder, keyword));
     }
 
     @ApiOperation("球员赛季统计分页（排序字段白名单）")
@@ -46,8 +47,9 @@ public class BasketPublicSeasonStatController {
             @RequestParam(required = false) Long stageId,
             @RequestParam(required = false) Long teamId,
             @RequestParam(required = false) String sortField,
-            @RequestParam(required = false, defaultValue = "desc") String sortOrder) {
-        return R.ok(publicSeasonStatService.pagePlayerStat(seasonId, currentPage, pageSize, stageId, teamId, sortField, sortOrder));
+            @RequestParam(required = false, defaultValue = "desc") String sortOrder,
+            @RequestParam(required = false) String keyword) {
+        return R.ok(publicSeasonStatService.pagePlayerStat(seasonId, currentPage, pageSize, stageId, teamId, sortField, sortOrder, keyword));
     }
 
     @ApiOperation("赛季汇总")

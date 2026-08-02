@@ -10,6 +10,7 @@ import com.zhs.response.participation.RosterChangeHistoryItemResp;
 import com.zhs.request.matchdata.PlayerMyScheduleQuery;
 import com.zhs.response.matchdata.PlayerMyScheduleEventOptionResp;
 import com.zhs.response.matchdata.PlayerMySchedulePageResp;
+import com.zhs.response.matchdata.PlayerMySchedulePlatformOptionResp;
 import com.zhs.service.IEventParticipationQueryService;
 import com.zhs.service.IMPlayerMatchDataService;
 import com.zhs.service.IPlayerMyScheduleService;
@@ -42,6 +43,7 @@ public class EventParticipationQueryController {
     @ApiOperation("我的赛程（跨赛事聚合）")
     @GetMapping("/basket/player/my-schedules")
     public R<PlayerMySchedulePageResp> pageMySchedules(@RequestParam(required = false) Long seasonId,
+                                                       @RequestParam(required = false) String platformCode,
                                                        @RequestParam(required = false) String matchStatusGroup,
                                                        @RequestParam(required = false) String startDate,
                                                        @RequestParam(required = false) String endDate,
@@ -50,6 +52,7 @@ public class EventParticipationQueryController {
                                                        @RequestParam(required = false) Integer pageSize) {
         PlayerMyScheduleQuery query = new PlayerMyScheduleQuery();
         query.setSeasonId(seasonId);
+        query.setPlatformCode(platformCode);
         query.setMatchStatusGroup(matchStatusGroup);
         query.setStartDate(startDate);
         query.setEndDate(endDate);
@@ -63,6 +66,12 @@ public class EventParticipationQueryController {
     @GetMapping("/basket/player/my-schedules/event-options")
     public R<List<PlayerMyScheduleEventOptionResp>> listMyScheduleEventOptions() {
         return R.ok(playerMyScheduleService.listEventOptions());
+    }
+
+    @ApiOperation("我的赛程平台筛选项")
+    @GetMapping("/basket/player/my-schedules/platform-options")
+    public R<List<PlayerMySchedulePlatformOptionResp>> listMySchedulePlatformOptions() {
+        return R.ok(playerMyScheduleService.listPlatformOptions());
     }
 
     @ApiOperation("我的赛事球队列表")

@@ -6,6 +6,7 @@ export type MyScheduleMatchStatusGroup = 'PENDING' | 'RUNNING' | 'FINISHED' | 'C
 
 export interface MyScheduleQuery {
   seasonId?: string
+  platformCode?: string
   matchStatusGroup?: MyScheduleMatchStatusGroup
   startDate?: string
   endDate?: string
@@ -29,10 +30,19 @@ export interface MyScheduleEventOption {
   seasonName?: string
 }
 
+export interface MySchedulePlatformOption {
+  platformCode?: string
+  platformName?: string
+}
+
 export function getMySchedules(params?: MyScheduleQuery) {
   return request.get<any, ApiResult<MySchedulePageResult>>('/basket/player/my-schedules', { params })
 }
 
 export function getMyScheduleEventOptions() {
   return request.get<any, ApiResult<MyScheduleEventOption[]>>('/basket/player/my-schedules/event-options')
+}
+
+export function getMySchedulePlatformOptions() {
+  return request.get<any, ApiResult<MySchedulePlatformOption[]>>('/basket/player/my-schedules/platform-options')
 }

@@ -23,7 +23,8 @@
 
     <select id="selectVoBySubmissionId" resultType="com.zhs.basket.vo.MatchDataSubmissionMaterialVo">
         select m.id, m.file_id as fileId, m.material_type as materialType, m.material_name as materialName,
-               fa.access_url as fileUrl, m.sort_no as sortNo
+               fa.access_url as fileUrl, fa.mime_type as fileType, fa.file_size as fileSize,
+               fa.create_time as uploadTime, m.sort_no as sortNo
         from basket_match_data_submission_material m
         left join basket_file_asset fa on fa.id = m.file_id and fa.is_delete = 0
         where m.submission_id = #{submissionId} and m.is_delete = 0

@@ -59,4 +59,9 @@
         select count(1) from basket_match_roster
         where match_id = #{matchId} and player_id = #{playerId} and is_delete = 0
     </select>
+
+    <select id="selectPlayerIdsByMatchAndTeam" resultType="long">
+        select player_id from basket_match_roster
+        where match_id = #{matchId} and team_id = #{teamId} and is_delete = 0
+    </select>
 </mapper>

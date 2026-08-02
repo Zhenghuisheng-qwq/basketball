@@ -10,6 +10,11 @@ public class MatchDataSubmissionPlayerStatVo {
     private String teamName;
     private Long playerId;
     private String playerName;
+    private String playerCode;
+    private String gameId;
+    private String avatarUrl;
+    private String positionName;
+    private String validationStatus;
     private Long rosterId;
     private Integer startedFlag;
     private Integer minutesSeconds;

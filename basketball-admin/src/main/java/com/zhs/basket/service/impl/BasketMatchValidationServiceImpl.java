@@ -366,10 +366,31 @@ public class BasketMatchValidationServiceImpl implements IBasketMatchValidationS
 
     @Override
     public void validateTheoreticalPoints(Integer points, Integer fgm, Integer tpm, Integer ftm, String label) {
+        if (!hasShootingPointBreakdown(points, fgm, tpm, ftm)) {
+            return;
+        }
         int theoretical = computePointsFromShooting(fgm, tpm, ftm);
         int p = points != null ? points : 0;
         if (p != theoretical) {
             throw new ServiceException(label + "得分与投篮数据不一致，理论得分=" + theoretical);
         }
+    }
+
+    /**
+     * 简化提交仅录入得分/篮板/助攻，不含三分与罚球明细；历史数据曾将得分写入投篮命中数。
+     * 此类记录不参与「得分 vs 投篮」校验。
+     */
+    private boolean hasShootingPointBreakdown(Integer points, Integer fgm, Integer tpm, Integer ftm) {
+        int p = points != null ? points : 0;
+        int fg = fgm != null ? fgm : 0;
+        int tp = tpm != null ? tpm : 0;
+        int ft = ftm != null ? ftm : 0;
+        if (tp > 0 || ft > 0) {
+            return true;
+        }
+        if (fg == 0) {
+            return false;
+        }
+        return fg != p;
     }
 }

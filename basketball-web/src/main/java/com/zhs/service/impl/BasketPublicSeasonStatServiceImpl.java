@@ -29,10 +29,14 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import org.springframework.util.StringUtils;
+
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -53,8 +57,9 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
 
     @Override
     public IPage<PublicTeamSeasonStatVo> pageTeamStat(Long seasonId, Integer currentPage, Integer pageSize,
-                                                      Long stageId, String sortField, String sortOrder) {
+                                                      Long stageId, String sortField, String sortOrder, String keyword) {
         publicSupport.requirePublicSeason(seasonId);
+        stageId = normalizeStageId(stageId);
         PublicTeamSortEnum sortEnum = PublicTeamSortEnum.fromCode(sortField);
         boolean asc = publicSupport.isAsc(sortOrder);
         Page<BasketTeamSeasonStat> page = publicSupport.newPage(currentPage, pageSize);
@@ -62,6 +67,9 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
                 .eq(BasketTeamSeasonStat::getSeasonId, seasonId)
                 .eq(BasketTeamSeasonStat::getIsDelete, BasketPublicConstants.NOT_DELETED)
                 .eq(stageId != null, BasketTeamSeasonStat::getStageId, stageId);
+        if (!applyTeamKeywordFilter(wrapper, keyword)) {
+            return publicSupport.emptyPage(currentPage, pageSize);
+        }
         if (asc) {
             wrapper.orderByAsc(sortEnum.getColumn()).orderByAsc(BasketTeamSeasonStat::getId);
         } else {
@@ -75,8 +83,10 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
 
     @Override
     public IPage<PublicPlayerSeasonStatVo> pagePlayerStat(Long seasonId, Integer currentPage, Integer pageSize,
-                                                          Long stageId, Long teamId, String sortField, String sortOrder) {
+                                                          Long stageId, Long teamId, String sortField, String sortOrder,
+                                                          String keyword) {
         publicSupport.requirePublicSeason(seasonId);
+        stageId = normalizeStageId(stageId);
         PublicPlayerSortEnum sortEnum = PublicPlayerSortEnum.fromCode(sortField);
         boolean asc = publicSupport.isAsc(sortOrder);
         Page<BasketPlayerSeasonStat> page = publicSupport.newPage(currentPage, pageSize);
@@ -85,6 +95,9 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
                 .eq(BasketPlayerSeasonStat::getIsDelete, BasketPublicConstants.NOT_DELETED)
                 .eq(stageId != null, BasketPlayerSeasonStat::getStageId, stageId)
                 .eq(teamId != null, BasketPlayerSeasonStat::getTeamId, teamId);
+        if (!applyPlayerKeywordFilter(wrapper, keyword)) {
+            return publicSupport.emptyPage(currentPage, pageSize);
+        }
         if (asc) {
             wrapper.orderByAsc(sortEnum.getColumn()).orderByAsc(BasketPlayerSeasonStat::getId);
         } else {
@@ -183,6 +196,8 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
         Map<Long, String> avatarMap = publicSupport.loadPlayerAvatarUrlMap(playerMap.values());
         Map<Long, BasketTeam> teamMap = publicSupport.loadPublicTeamMap(stats.stream()
                 .map(BasketPlayerSeasonStat::getTeamId).collect(Collectors.toSet()));
+        Map<Long, String> logoMap = publicSupport.loadAccessUrlMap(teamMap.values().stream()
+                .map(BasketTeam::getLogoFileId).collect(Collectors.toSet()));
         List<PublicPlayerSeasonStatVo> vos = new ArrayList<>();
         for (BasketPlayerSeasonStat stat : stats) {
             BasketPlayerProfile player = playerMap.get(stat.getPlayerId());
@@ -196,6 +211,7 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
             BasketTeam team = teamMap.get(stat.getTeamId());
             if (team != null) {
                 vo.setTeamName(team.getTeamName());
+                vo.setTeamLogoUrl(logoMap.get(team.getLogoFileId()));
             }
             vo.setPlayerId(stat.getPlayerId());
             vo.setPlayerName(publicSupport.resolveDisplayName(player));
@@ -220,5 +236,44 @@ public class BasketPublicSeasonStatServiceImpl implements IBasketPublicSeasonSta
             vos.add(vo);
         }
         return vos;
+    }
+
+    private Long normalizeStageId(Long stageId) {
+        return stageId == null || stageId <= 0 ? null : stageId;
+    }
+
+    private boolean applyTeamKeywordFilter(LambdaQueryWrapper<BasketTeamSeasonStat> wrapper, String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return true;
+        }
+        Set<Long> teamIds = publicSupport.findPublicTeamIdsByKeyword(keyword);
+        if (teamIds.isEmpty()) {
+            return false;
+        }
+        wrapper.in(BasketTeamSeasonStat::getTeamId, teamIds);
+        return true;
+    }
+
+    private boolean applyPlayerKeywordFilter(LambdaQueryWrapper<BasketPlayerSeasonStat> wrapper, String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return true;
+        }
+        Set<Long> teamIds = publicSupport.findPublicTeamIdsByKeyword(keyword);
+        Set<Long> playerIds = publicSupport.findPublicPlayerIdsByKeyword(keyword);
+        if (teamIds.isEmpty() && playerIds.isEmpty()) {
+            return false;
+        }
+        wrapper.and(w -> {
+            if (!teamIds.isEmpty() && !playerIds.isEmpty()) {
+                w.in(BasketPlayerSeasonStat::getTeamId, teamIds)
+                        .or()
+                        .in(BasketPlayerSeasonStat::getPlayerId, playerIds);
+            } else if (!teamIds.isEmpty()) {
+                w.in(BasketPlayerSeasonStat::getTeamId, teamIds);
+            } else {
+                w.in(BasketPlayerSeasonStat::getPlayerId, playerIds);
+            }
+        });
+        return true;
     }
 }

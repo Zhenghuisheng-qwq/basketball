@@ -74,6 +74,8 @@ export interface PlayerMatchTaskItem {
   eventName?: string
   stageName?: string
   platformCode?: string
+  platformName?: string
+  matchFormatText?: string
   homeTeamId?: string
   awayTeamId?: string
   homeEventTeamId?: string

@@ -19,6 +19,7 @@ public class PublicPlayerSeasonStatVo implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long teamId;
     private String teamName;
+    private String teamLogoUrl;
     @JsonSerialize(using = ToStringSerializer.class)
     private Long playerId;
     private String playerName;

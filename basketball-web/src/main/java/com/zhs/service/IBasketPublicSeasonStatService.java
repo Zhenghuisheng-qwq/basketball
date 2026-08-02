@@ -8,10 +8,11 @@ import com.zhs.response.publicapi.PublicTeamSeasonStatVo;
 public interface IBasketPublicSeasonStatService {
 
     IPage<PublicTeamSeasonStatVo> pageTeamStat(Long seasonId, Integer currentPage, Integer pageSize,
-                                               Long stageId, String sortField, String sortOrder);
+                                               Long stageId, String sortField, String sortOrder, String keyword);
 
     IPage<PublicPlayerSeasonStatVo> pagePlayerStat(Long seasonId, Integer currentPage, Integer pageSize,
-                                                   Long stageId, Long teamId, String sortField, String sortOrder);
+                                                   Long stageId, Long teamId, String sortField, String sortOrder,
+                                                   String keyword);
 
     PublicSeasonSummaryVo getSummary(Long seasonId);
 }

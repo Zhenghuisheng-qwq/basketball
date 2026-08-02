@@ -55,6 +55,7 @@ export interface PlayerStatistics {
   playerId: string
   rank: number
   playerName: string
+  avatarUrl: string
   teamId: string
   teamName: string
   teamAbbr: string

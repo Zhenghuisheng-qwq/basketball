@@ -27,6 +27,9 @@
         <if test="query != null and query.seasonId != null">
             and m.season_id = #{query.seasonId}
         </if>
+        <if test="query != null and query.platformCode != null and query.platformCode != ''">
+            and m.platform_code = #{query.platformCode}
+        </if>
         <if test="startTime != null">
             and m.scheduled_start_time &gt;= #{startTime}
         </if>
@@ -128,5 +131,15 @@
                 and (m.home_event_team_id = sr.event_team_id or m.away_event_team_id = sr.event_team_id)
           )
         order by s.id desc
+    </select>
+
+    <select id="selectPlatformOptions" resultType="com.zhs.dto.PlayerMySchedulePlatformOptionRow">
+        select distinct m.platform_code as platformCode
+        from basket_match m
+        <include refid="myEventTeamJoin"/>
+        where <include refid="baseMatchWhere"/>
+          and m.platform_code is not null
+          and m.platform_code != ''
+        order by m.platform_code asc
     </select>
 </mapper>

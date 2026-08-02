@@ -7,7 +7,10 @@ import java.math.BigDecimal;
 @Data
 public class MatchDataSubmissionTeamStatVo {
     private Long teamId;
+    private Long eventTeamId;
     private String teamName;
+    private String logoUrl;
+    private String sideText;
     private Long opponentTeamId;
     private String opponentTeamName;
     private String sideType;

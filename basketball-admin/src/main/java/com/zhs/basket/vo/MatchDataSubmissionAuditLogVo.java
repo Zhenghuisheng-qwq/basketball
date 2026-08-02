@@ -11,8 +11,12 @@ public class MatchDataSubmissionAuditLogVo {
     private String auditAction;
     private String auditActionName;
     private String beforeStatus;
+    private String beforeStatusText;
     private String afterStatus;
+    private String afterStatusText;
     private String auditStatus;
+    private String auditStatusText;
+    private Integer versionNo;
     private Long auditorId;
     private String auditorName;
     private Date auditTime;

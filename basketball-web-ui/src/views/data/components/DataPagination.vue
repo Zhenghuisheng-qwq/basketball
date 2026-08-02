@@ -9,7 +9,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:currentPage': [value: number]
+  'update:pageSize': [value: number]
 }>()
+
+const pageSizeOptions = [10, 20, 50]
 
 const totalPages = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)))
 
@@ -39,11 +42,27 @@ function goTo(page: number) {
   if (page < 1 || page > totalPages.value || page === props.currentPage) return
   emit('update:currentPage', page)
 }
+
+function onPageSizeChange(event: Event) {
+  const next = Number((event.target as HTMLSelectElement).value)
+  if (!next || next === props.pageSize) return
+  emit('update:pageSize', next)
+  emit('update:currentPage', 1)
+}
 </script>
 
 <template>
   <div class="data-pagination">
-    <p class="data-pagination__text">{{ rangeText }}</p>
+    <div class="data-pagination__meta">
+      <p class="data-pagination__text">{{ rangeText }}</p>
+      <label class="data-pagination__size">
+        每页
+        <select :value="pageSize" @change="onPageSizeChange">
+          <option v-for="size in pageSizeOptions" :key="size" :value="size">{{ size }}</option>
+        </select>
+        条
+      </label>
+    </div>
     <div class="data-pagination__controls">
       <button
         type="button"
@@ -105,11 +124,36 @@ function goTo(page: number) {
   padding: 22px 0 32px;
 }
 
+.data-pagination__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
 .data-pagination__text {
   margin: 0;
   color: var(--cnpa-paper-text-secondary);
   font-size: 13px;
   line-height: 1;
+}
+
+.data-pagination__size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cnpa-paper-text-secondary);
+  font-size: 13px;
+
+  select {
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--cnpa-paper-border);
+    border-radius: 3px;
+    background: var(--cnpa-paper-surface);
+    color: var(--cnpa-paper-text);
+  }
 }
 
 .data-pagination__controls {

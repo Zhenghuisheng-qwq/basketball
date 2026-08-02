@@ -266,12 +266,16 @@ export function validateShootingStats(
       errors.push(`${label} 三分命中数不能大于投篮命中数`)
     }
 
-    const theoretical =
-      2 * (nvl(item.fieldGoalsMade) - nvl(item.threePointsMade)) +
-      3 * nvl(item.threePointsMade) +
-      nvl(item.freeThrowsMade)
-    if (nvl(item.points) !== theoretical) {
-      errors.push(`${label} 得分与投篮数据不一致，理论得分=${theoretical}`)
+    const points = nvl(item.points)
+    const fgm = nvl(item.fieldGoalsMade)
+    const tpm = nvl(item.threePointsMade)
+    const ftm = nvl(item.freeThrowsMade)
+    const hasShootingBreakdown = tpm > 0 || ftm > 0 || (fgm > 0 && fgm !== points)
+    if (hasShootingBreakdown) {
+      const theoretical = 2 * (fgm - tpm) + 3 * tpm + ftm
+      if (points !== theoretical) {
+        errors.push(`${label} 得分与投篮数据不一致，理论得分=${theoretical}`)
+      }
     }
   }
   return errors

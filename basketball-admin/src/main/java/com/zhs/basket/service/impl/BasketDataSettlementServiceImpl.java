@@ -177,7 +177,9 @@ public class BasketDataSettlementServiceImpl implements IBasketDataSettlementSer
                                                 SettlementTriggerTypeEnum trigger) {
         boolean autoTrigger = trigger == SettlementTriggerTypeEnum.MATCH_CONFIRM
                 || trigger == SettlementTriggerTypeEnum.MATCH_REOPEN;
-        SettlementValidationResultVo validation = validationService.validateSeason(seasonId);
+        SettlementValidationResultVo validation = matchId != null && autoTrigger
+                ? validationService.validateMatch(matchId)
+                : validationService.validateSeason(seasonId);
         if (!validation.isPassed()) {
             // 自动触发时：仅积分规则缺失不阻断确认/重开，仍重算赛季统计与排行；手工重算必须规则完整
             boolean onlyRuleMissing = validation.getErrorCount() == 1

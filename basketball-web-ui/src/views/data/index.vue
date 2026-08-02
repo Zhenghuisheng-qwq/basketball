@@ -7,11 +7,13 @@ import {
   getPublicSeasonTeamStatPage,
 } from '@/api/publicSeasonStat'
 import type { PublicPlayerSeasonStatVo, PublicTeamSeasonStatVo } from '@/api/types/public'
+import type { PageResult } from '@/api/types/common'
 import { displayText, toNumber } from '@/utils/publicDisplay'
 import DataHero from './components/DataHero.vue'
 import DataTypeTabs from './components/DataTypeTabs.vue'
 import DataStatisticsTable from './components/DataStatisticsTable.vue'
 import DataPagination from './components/DataPagination.vue'
+import DataSearchBar from './components/DataSearchBar.vue'
 import type {
   DataType,
   PlayerStatistics,
@@ -26,6 +28,8 @@ const selectedSeasonId = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const searchKeyword = ref('')
+const appliedKeyword = ref('')
 
 const seasonGroups = ref<TournamentGroup[]>([])
 const seasonLoading = ref(true)
@@ -81,10 +85,11 @@ function mapPlayerRow(item: PublicPlayerSeasonStatVo, index: number): PlayerStat
     playerId: String(item.playerId),
     rank: (currentPage.value - 1) * pageSize.value + index + 1,
     playerName: displayText(item.playerName, '未知球员'),
+    avatarUrl: item.avatarUrl?.trim() || '',
     teamId: String(item.teamId || ''),
     teamName,
     teamAbbr: teamName.slice(0, 6),
-    teamLogoUrl: '',
+    teamLogoUrl: item.teamLogoUrl?.trim() || '',
     logoColor: '#333',
     position: '--',
     games: toNumber(item.games, 0),
@@ -104,6 +109,47 @@ function mapPlayerRow(item: PublicPlayerSeasonStatVo, index: number): PlayerStat
     threePointPct: toPct(item.threePointPct),
     freeThrowPct: toPct(item.freeThrowPct),
   }
+}
+
+function extractPageResult<T>(data: PageResult<T> | undefined | null) {
+  const records = data?.records ?? []
+  const totalCount = Number(data?.total ?? 0)
+  return {
+    records,
+    total: totalCount,
+  }
+}
+
+const sortField = computed(() => {
+  if (activeStatisticType.value === 'total') {
+    return activeDataType.value === 'team' ? 'wins' : 'points'
+  }
+  return 'avgPoints'
+})
+
+function buildQueryParams() {
+  const params: {
+    currentPage: number
+    pageSize: number
+    sortField: string
+    sortOrder: string
+    keyword?: string
+  } = {
+    currentPage: currentPage.value,
+    pageSize: pageSize.value,
+    sortField: sortField.value,
+    sortOrder: 'desc',
+  }
+  const keyword = appliedKeyword.value.trim()
+  if (keyword) {
+    params.keyword = keyword
+  }
+  return params
+}
+
+function onSearch() {
+  appliedKeyword.value = searchKeyword.value.trim()
+  currentPage.value = 1
 }
 
 async function loadSeasons() {
@@ -158,28 +204,19 @@ async function loadTable() {
   tableLoading.value = true
   tableError.value = ''
   try {
+    const params = buildQueryParams()
     if (activeDataType.value === 'team') {
-      const res = await getPublicSeasonTeamStatPage(seasonId, {
-        currentPage: currentPage.value,
-        pageSize: pageSize.value,
-        sortField: 'avgPoints',
-        sortOrder: 'desc',
-      })
+      const res = await getPublicSeasonTeamStatPage(seasonId, params)
       if (current !== reqId) return
-      const records = res.data?.records ?? []
-      rows.value = records.map(mapTeamRow)
-      total.value = Number(res.data?.total ?? 0)
+      const page = extractPageResult(res.data)
+      rows.value = page.records.map(mapTeamRow)
+      total.value = page.total
     } else {
-      const res = await getPublicSeasonPlayerStatPage(seasonId, {
-        currentPage: currentPage.value,
-        pageSize: pageSize.value,
-        sortField: 'avgPoints',
-        sortOrder: 'desc',
-      })
+      const res = await getPublicSeasonPlayerStatPage(seasonId, params)
       if (current !== reqId) return
-      const records = res.data?.records ?? []
-      rows.value = records.map(mapPlayerRow)
-      total.value = Number(res.data?.total ?? 0)
+      const page = extractPageResult(res.data)
+      rows.value = page.records.map(mapPlayerRow)
+      total.value = page.total
     }
   } catch (err) {
     if (current !== reqId) return
@@ -193,9 +230,15 @@ async function loadTable() {
 
 watch([activeDataType, selectedSeasonId], () => {
   currentPage.value = 1
+  searchKeyword.value = ''
+  appliedKeyword.value = ''
 })
 
-watch([activeDataType, selectedSeasonId, currentPage, pageSize], () => {
+watch(activeStatisticType, () => {
+  currentPage.value = 1
+})
+
+watch([activeDataType, selectedSeasonId, currentPage, pageSize, activeStatisticType, appliedKeyword], () => {
   void loadTable()
 })
 
@@ -227,6 +270,11 @@ const pagedRows = computed(() => rows.value)
           <div class="data-center-panel__shell">
             <div class="data-center-panel__body">
               <div class="data-center-panel__toolbar">
+                <DataSearchBar
+                  v-model="searchKeyword"
+                  :placeholder="activeDataType === 'team' ? '搜索战队名称或编号' : '搜索球员昵称或编号'"
+                  @search="onSearch"
+                />
                 <div class="data-stat-switch" role="group" aria-label="统计类型">
                   <button
                     type="button"
@@ -254,16 +302,18 @@ const pagedRows = computed(() => rows.value)
                 :loading="tableLoading"
                 :error="tableError"
               />
-
-              <DataPagination
-                v-model:current-page="currentPage"
-                :page-size="pageSize"
-                :total="total"
-              />
             </div>
 
             <div class="data-center-panel__edge-bottom" aria-hidden="true" />
           </div>
+
+          <DataPagination
+            v-if="!tableLoading && total > 0"
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :total="total"
+            class="data-center-panel__pagination"
+          />
         </div>
       </div>
     </section>
@@ -372,15 +422,23 @@ const pagedRows = computed(() => rows.value)
 .data-center-panel__body {
   position: relative;
   z-index: 1;
-  padding: 20px clamp(14px, 1.8vw, 24px) 0;
+  padding: 20px clamp(14px, 1.8vw, 24px) 12px;
   box-sizing: border-box;
   background: transparent;
 }
 
+.data-center-panel__pagination {
+  position: relative;
+  z-index: 2;
+  background: var(--cnpa-paper-bg);
+}
+
 .data-center-panel__toolbar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 18px;
 }
 

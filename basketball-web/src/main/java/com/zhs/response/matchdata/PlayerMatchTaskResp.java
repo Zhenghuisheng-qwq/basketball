@@ -20,6 +20,9 @@ public class PlayerMatchTaskResp implements Serializable {
     private String stageName;
     private String eventName;
     private String platformCode;
+    private String platformName;
+    /** 赛制展示，如 5v5 */
+    private String matchFormatText;
     private String eventTeamId;
     private String homeTeamId;
     private String homeTeamName;

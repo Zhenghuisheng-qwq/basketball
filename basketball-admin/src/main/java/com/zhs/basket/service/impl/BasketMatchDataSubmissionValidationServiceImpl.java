@@ -1,14 +1,18 @@
 package com.zhs.basket.service.impl;
 
 import com.zhs.basket.domain.BasketFileAsset;
+import com.zhs.basket.domain.BasketMatch;
 import com.zhs.basket.domain.BasketMatchDataSubmission;
 import com.zhs.basket.domain.BasketMatchDataSubmissionMaterial;
 import com.zhs.basket.domain.BasketMatchDataSubmissionPeriod;
 import com.zhs.basket.domain.BasketMatchDataSubmissionPlayerStat;
 import com.zhs.basket.domain.BasketMatchDataSubmissionTeamStat;
+import com.zhs.basket.domain.BasketTournamentSeasonRoster;
 import com.zhs.basket.enums.MatchPeriodTypeEnum;
 import com.zhs.basket.mapper.BasketFileAssetMapper;
+import com.zhs.basket.mapper.BasketMatchMapper;
 import com.zhs.basket.mapper.BasketMatchRosterMapper;
+import com.zhs.basket.mapper.BasketTournamentSeasonRosterMapper;
 import com.zhs.basket.service.IBasketMatchDataSubmissionValidationService;
 import com.zhs.basket.service.IBasketMatchValidationService;
 import com.zhs.common.exception.ServiceException;
@@ -29,6 +33,8 @@ public class BasketMatchDataSubmissionValidationServiceImpl implements IBasketMa
 
     @Autowired private IBasketMatchValidationService validationService;
     @Autowired private BasketMatchRosterMapper rosterMapper;
+    @Autowired private BasketMatchMapper matchMapper;
+    @Autowired private BasketTournamentSeasonRosterMapper seasonRosterMapper;
     @Autowired private BasketFileAssetMapper fileAssetMapper;
 
     @Override
@@ -140,6 +146,7 @@ public class BasketMatchDataSubmissionValidationServiceImpl implements IBasketMa
         if (CollectionUtils.isEmpty(playerStats)) {
             throw new ServiceException("球员技术统计不能为空");
         }
+        Set<Long> effectiveRosterPlayerIds = loadEffectiveRosterPlayerIds(submission.getMatchId());
         Set<Long> playerIds = new HashSet<>();
         Map<Long, int[]> teamAgg = new HashMap<>();
         teamAgg.put(submission.getHomeTeamId(), new int[10]);
@@ -155,7 +162,7 @@ public class BasketMatchDataSubmissionValidationServiceImpl implements IBasketMa
             if (!ps.getTeamId().equals(submission.getHomeTeamId()) && !ps.getTeamId().equals(submission.getAwayTeamId())) {
                 throw new ServiceException("球员所属球队无效");
             }
-            if (rosterMapper.countByMatchIdAndPlayerId(submission.getMatchId(), ps.getPlayerId()) <= 0) {
+            if (!effectiveRosterPlayerIds.contains(ps.getPlayerId())) {
                 throw new ServiceException("球员须来自本场出场名单：playerId=" + ps.getPlayerId());
             }
             validateNonNegativePlayerStat(ps);
@@ -181,12 +188,28 @@ public class BasketMatchDataSubmissionValidationServiceImpl implements IBasketMa
             agg[8] += nvl(ps.getThreePointsMade());
             agg[9] += nvl(ps.getFreeThrowsMade());
         }
-        if (totalPlayerPoints != homeScore + awayScore) {
+        Long submitterTeamId = submission.getSubmitterTeamId();
+        Long opponentTeamId = resolveOpponentTeamId(submission, submitterTeamId);
+        boolean captainOnlySubmit = isCaptainOnlyTeamPlayerSubmit(submitterTeamId, opponentTeamId, teamAgg);
+        if (captainOnlySubmit) {
+            int expectedSubmitterScore = submitterTeamId.equals(submission.getHomeTeamId()) ? homeScore : awayScore;
+            int submitterPlayerPoints = teamAgg.get(submitterTeamId)[0];
+            if (submitterPlayerPoints != expectedSubmitterScore) {
+                throw new ServiceException("提交方球员总得分须与该队比分一致");
+            }
+        } else if (totalPlayerPoints != homeScore + awayScore) {
             throw new ServiceException("球员总得分须等于比赛总得分");
         }
         for (BasketMatchDataSubmissionTeamStat ts : teamStats) {
             int[] agg = teamAgg.get(ts.getTeamId());
             if (agg == null) {
+                continue;
+            }
+            if (captainOnlySubmit && !ts.getTeamId().equals(submitterTeamId)) {
+                int expectedTeamScore = ts.getTeamId().equals(submission.getHomeTeamId()) ? homeScore : awayScore;
+                if (nvl(ts.getPoints()) != expectedTeamScore) {
+                    throw new ServiceException("球队得分须与比赛比分一致");
+                }
                 continue;
             }
             if (nvl(ts.getPoints()) != agg[0] || nvl(ts.getRebounds()) != agg[1]
@@ -199,9 +222,37 @@ public class BasketMatchDataSubmissionValidationServiceImpl implements IBasketMa
         }
     }
 
+    /**
+     * Web 端「本队球员数据」简化提交：仅提交方录入真实数据，对手球员为零分占位。
+     */
+    private boolean isCaptainOnlyTeamPlayerSubmit(Long submitterTeamId, Long opponentTeamId, Map<Long, int[]> teamAgg) {
+        if (submitterTeamId == null || opponentTeamId == null) {
+            return false;
+        }
+        int[] submitterAgg = teamAgg.get(submitterTeamId);
+        int[] opponentAgg = teamAgg.get(opponentTeamId);
+        if (submitterAgg == null || opponentAgg == null) {
+            return false;
+        }
+        return submitterAgg[0] > 0 && opponentAgg[0] == 0;
+    }
+
+    private Long resolveOpponentTeamId(BasketMatchDataSubmission submission, Long submitterTeamId) {
+        if (submitterTeamId == null) {
+            return null;
+        }
+        if (submitterTeamId.equals(submission.getHomeTeamId())) {
+            return submission.getAwayTeamId();
+        }
+        if (submitterTeamId.equals(submission.getAwayTeamId())) {
+            return submission.getHomeTeamId();
+        }
+        return null;
+    }
+
     private void validateMaterials(List<BasketMatchDataSubmissionMaterial> materials) {
         if (CollectionUtils.isEmpty(materials)) {
-            throw new ServiceException("提交材料不能为空");
+            return;
         }
         boolean hasScreenshot = false;
         for (BasketMatchDataSubmissionMaterial material : materials) {
@@ -239,5 +290,42 @@ public class BasketMatchDataSubmissionValidationServiceImpl implements IBasketMa
 
     private Integer nvl(Integer value) {
         return value != null ? value : 0;
+    }
+
+    /**
+     * 与 Web 端提交校验一致：优先比赛出场名单，缺失时回退赛事阵容快照。
+     */
+    private Set<Long> loadEffectiveRosterPlayerIds(Long matchId) {
+        BasketMatch match = matchMapper.selectById(matchId);
+        if (match == null) {
+            throw new ServiceException("比赛不存在");
+        }
+        Set<Long> playerIds = new HashSet<>();
+        addTeamEffectiveRosterPlayers(playerIds, match.getId(), match.getHomeTeamId(), match.getHomeEventTeamId());
+        addTeamEffectiveRosterPlayers(playerIds, match.getId(), match.getAwayTeamId(), match.getAwayEventTeamId());
+        return playerIds;
+    }
+
+    private void addTeamEffectiveRosterPlayers(Set<Long> playerIds, Long matchId, Long teamId, Long eventTeamId) {
+        if (teamId == null) {
+            return;
+        }
+        List<Long> matchRosterPlayerIds = rosterMapper.selectPlayerIdsByMatchAndTeam(matchId, teamId);
+        if (!CollectionUtils.isEmpty(matchRosterPlayerIds)) {
+            playerIds.addAll(matchRosterPlayerIds);
+            return;
+        }
+        if (eventTeamId == null) {
+            return;
+        }
+        List<BasketTournamentSeasonRoster> seasonRosters = seasonRosterMapper.selectActiveByEventTeamId(eventTeamId);
+        if (CollectionUtils.isEmpty(seasonRosters)) {
+            return;
+        }
+        for (BasketTournamentSeasonRoster roster : seasonRosters) {
+            if (roster.getPlayerId() != null) {
+                playerIds.add(roster.getPlayerId());
+            }
+        }
     }
 }
