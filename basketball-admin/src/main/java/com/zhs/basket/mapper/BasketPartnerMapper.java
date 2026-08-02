@@ -16,6 +16,8 @@ public interface BasketPartnerMapper {
 
     int countByName(@Param("partnerName") String partnerName, @Param("excludeId") Long excludeId);
 
+    BasketPartner selectByName(@Param("partnerName") String partnerName);
+
     Integer selectMaxPartnerCodeSequence();
 
     int insert(BasketPartner partner);

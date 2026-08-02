@@ -5,7 +5,7 @@ import TornEdge from '@/components/home/TornEdge.vue'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import homeTop from '@/assets/icon/home_top.png'
-import aboutVisual from '@/assets/icon/tournament_foot.png'
+import LeagueSystem from '@/components/home/LeagueSystem.vue'
 import {
   getPublicHome,
   getPublicHomePlayerRanking,
@@ -58,16 +58,6 @@ const summaryError = ref('')
 const contentError = ref('')
 
 const brokenLogos = ref<Record<string, boolean>>({})
-
-const stats = computed(() => {
-  const s = summary.value
-  return [
-    { value: displayText(s?.teamCount ?? 0, '0'), label: '支参赛战队', tone: 'hero' as const },
-    { value: displayText(s?.playerStatCount ?? 0, '0'), label: '球员数据记录', tone: 'accent' as const },
-    { value: displayText(s?.finishedMatchCount ?? 0, '0'), label: '已结束比赛', tone: 'plain' as const },
-    { value: displayText(s?.standingCount ?? 0, '0'), label: '积分榜记录', tone: 'plain' as const },
-  ]
-})
 
 const featuredAnnouncement = computed(() => announcements.value[0] ?? null)
 const sideAnnouncements = computed(() => announcements.value.slice(1))
@@ -229,7 +219,7 @@ onMounted(() => {
     </section>
 
     <section id="matches" class="site-section home-match-section">
-      <div class="site-container home-match-shell">
+      <div class="site-shell home-match-shell">
         <div class="home-match-paper paper-band paper-band-light">
           <TornEdge position="top" tone="light" variant="sharp" />
           <div class="home-match-inner">
@@ -302,7 +292,7 @@ onMounted(() => {
     </section>
 
     <section id="teams" class="site-section home-team-section">
-      <div class="site-container home-team-container">
+      <div class="site-shell home-team-shell">
         <div class="section-head section-head-light home-team-header">
           <h2>参赛战队</h2>
           <button type="button" class="section-more section-more-light" @click="handleMoreTeams">
@@ -339,51 +329,12 @@ onMounted(() => {
       </div>
     </section>
 
-    <section class="site-section about-paper-section">
-      <div class="site-shell">
-        <div class="paper-band paper-band-light">
-          <TornEdge position="top" tone="light" variant="soft" />
-          <div class="paper-band-inner about-paper-inner">
-            <div class="about-story">
-              <p class="about-kicker">CNPA LEAGUE SYSTEM</p>
-              <h2>关于 CNPA <span>联赛体系</span></h2>
-              <p>
-                CNPA 中国职业电竞篮球联赛，致力于打造专业、公平、热血的线上篮球竞技舞台。
-                通过全年多级赛事体系，推动电竞篮球运动的发展与普及。
-              </p>
-              <ul class="about-tags">
-                <li>职业电竞篮球</li>
-                <li>多级联赛体系</li>
-                <li>公开数据榜单</li>
-              </ul>
-            </div>
-
-            <div v-if="summaryState === 'loading'" class="home-state about-story-state">加载中...</div>
-            <div v-else-if="summaryState === 'error'" class="home-state home-state--error about-story-state">
-              {{ summaryError }}
-            </div>
-            <div v-else class="about-stage">
-              <div class="about-visual" aria-hidden="true">
-                <img :src="aboutVisual" alt="" />
-                <span class="about-visual-caption">SEASON STAGE</span>
-              </div>
-              <div class="about-mosaic">
-                <article
-                  v-for="item in stats"
-                  :key="item.label"
-                  class="about-stat"
-                  :class="`about-stat--${item.tone}`"
-                >
-                  <strong>{{ item.value }}</strong>
-                  <span>{{ item.label }}</span>
-                </article>
-              </div>
-            </div>
-          </div>
-          <TornEdge position="bottom" tone="light" variant="sharp" />
-        </div>
-      </div>
-    </section>
+    <LeagueSystem
+      :summary="summary"
+      :state="summaryState"
+      :error-message="summaryError"
+      @retry="loadSummary"
+    />
 
     <section id="ranking" class="site-section site-section--dark ranking-section">
       <div class="site-shell">
@@ -537,8 +488,6 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
-@use '@/assets/styles/home-page.scss';
-
 .home-state {
   padding: 28px 0;
   text-align: center;

@@ -47,10 +47,7 @@ function formatCount(value: number) {
 }
 
 function supportText(record: PublicPartnerSupportRecordResp) {
-  if (record.supportType === 'CASH') {
-    return displayText(record.supportDisplayText, `¥${formatMoney(toNumber(record.supportAmount, 0))}`)
-  }
-  return displayText(record.supportTypeText, displayText(record.supportDisplayText, '其他支持'))
+  return displayText(record.supportDisplayText, `¥${formatMoney(toNumber(record.supportAmount, 0))}`)
 }
 
 async function loadPartners(nextPage = pageNum.value) {
@@ -158,8 +155,8 @@ void loadPartners(1)
               <div v-else class="partners-table" role="table" aria-label="赞助感谢墙">
                 <div class="partners-table__row partners-table__row--header" role="row">
                   <div role="columnheader">支持伙伴</div>
-                  <div role="columnheader">支持方式</div>
-                  <div role="columnheader">支持日期</div>
+                  <div role="columnheader">赞助金额</div>
+                  <div role="columnheader">赞助日期</div>
                 </div>
                 <div
                   v-for="record in records"
@@ -171,10 +168,8 @@ void loadPartners(1)
                     {{ displayText(record.partnerName) }}
                   </div>
                   <div
-                    class="partners-table__support"
-                    :class="{ 'is-cash': record.supportType === 'CASH' }"
+                    class="partners-table__support is-cash"
                     role="cell"
-                    :title="record.publicDescription || undefined"
                   >
                     {{ supportText(record) }}
                   </div>

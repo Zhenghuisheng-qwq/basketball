@@ -60,6 +60,14 @@
         <if test="excludeId != null">and id &lt;&gt; #{excludeId}</if>
     </select>
 
+    <select id="selectByName" resultMap="BasketPartnerResult">
+        select id, partner_code, partner_name, logo_file_id, website_url, public_description, partner_type, cooperation_start_date,
+               cooperation_end_date, partner_status, sort_no, remark, create_by, update_by, create_time, update_time, is_delete
+        from basket_partner
+        where is_delete = 0 and partner_name = #{partnerName}
+        limit 1
+    </select>
+
     <select id="selectMaxPartnerCodeSequence" resultType="java.lang.Integer">
         select max(cast(substring(partner_code, 10) as unsigned))
         from basket_partner

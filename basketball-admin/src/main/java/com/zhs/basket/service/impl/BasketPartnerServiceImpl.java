@@ -174,6 +174,41 @@ public class BasketPartnerServiceImpl implements IBasketPartnerService {
         publicCacheCleaner.clearAfterCommit();
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long findOrCreatePublishedByName(String partnerName) {
+        if (StringUtils.isEmpty(partnerName)) {
+            throw new ServiceException("合作伙伴名称不能为空");
+        }
+        String name = partnerName.trim();
+        BasketPartner existing = partnerMapper.selectByName(name);
+        if (existing != null) {
+            PartnerStatusEnum status = PartnerStatusEnum.fromCode(existing.getPartnerStatus());
+            if (!status.isPublic()) {
+                if (partnerMapper.updateStatusIfMatch(existing.getId(), existing.getPartnerStatus(),
+                        PartnerStatusEnum.PUBLISHED.getCode()) != 1) {
+                    throw new ServiceException("合作伙伴启用失败");
+                }
+                publicCacheCleaner.clearAfterCommit();
+            }
+            return existing.getId();
+        }
+        Date now = new Date();
+        BasketPartner partner = new BasketPartner();
+        partner.setPartnerCode(generatePartnerCode());
+        partner.setPartnerName(name);
+        partner.setPartnerStatus(PartnerStatusEnum.PUBLISHED.getCode());
+        partner.setSortNo(0);
+        partner.setCreateBy(SecurityUtils.getUsername());
+        partner.setUpdateBy(SecurityUtils.getUsername());
+        partner.setCreateTime(now);
+        partner.setUpdateTime(now);
+        partner.setIsDelete(NOT_DELETED);
+        partnerMapper.insert(partner);
+        publicCacheCleaner.clearAfterCommit();
+        return partner.getId();
+    }
+
     private BasketPartner require(Long id) {
         BasketPartner existing = partnerMapper.selectById(id);
         if (existing == null) {

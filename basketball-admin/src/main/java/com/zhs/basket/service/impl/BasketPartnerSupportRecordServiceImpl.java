@@ -10,6 +10,7 @@ import com.zhs.basket.req.PartnerSupportAddReq;
 import com.zhs.basket.req.PartnerSupportEditReq;
 import com.zhs.basket.req.PartnerSupportQueryReq;
 import com.zhs.basket.resp.PartnerSupportListResp;
+import com.zhs.basket.service.IBasketPartnerService;
 import com.zhs.basket.service.IBasketPartnerSupportRecordService;
 import com.zhs.basket.support.BasketPublicCacheCleaner;
 import com.zhs.common.exception.ServiceException;
@@ -34,6 +35,8 @@ public class BasketPartnerSupportRecordServiceImpl implements IBasketPartnerSupp
     @Autowired
     private BasketPartnerMapper partnerMapper;
     @Autowired
+    private IBasketPartnerService partnerService;
+    @Autowired
     private BasketPublicCacheCleaner publicCacheCleaner;
 
     @Override
@@ -56,11 +59,15 @@ public class BasketPartnerSupportRecordServiceImpl implements IBasketPartnerSupp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long add(PartnerSupportAddReq req) {
-        validateReq(req.getPartnerId(), req.getSupportType(), req.getSupportAmount(), req.getSupportDate());
+        Long partnerId = resolvePartnerId(req.getPartnerId(), req.getPartnerName());
+        String supportType = StringUtils.isEmpty(req.getSupportType())
+                ? PartnerSupportTypeEnum.CASH.getCode()
+                : req.getSupportType();
+        validateReq(partnerId, supportType, req.getSupportAmount(), req.getSupportDate());
         Date now = new Date();
         BasketPartnerSupportRecord record = new BasketPartnerSupportRecord();
-        record.setPartnerId(req.getPartnerId());
-        record.setSupportType(PartnerSupportTypeEnum.fromCode(req.getSupportType()).getCode());
+        record.setPartnerId(partnerId);
+        record.setSupportType(PartnerSupportTypeEnum.fromCode(supportType).getCode());
         record.setSupportAmount(req.getSupportAmount());
         record.setSupportDate(req.getSupportDate());
         record.setPublicDescription(StringUtils.trim(req.getPublicDescription()));
@@ -85,6 +92,8 @@ public class BasketPartnerSupportRecordServiceImpl implements IBasketPartnerSupp
         if (req.getPartnerId() != null) {
             requirePartner(req.getPartnerId());
             existing.setPartnerId(req.getPartnerId());
+        } else if (StringUtils.isNotEmpty(req.getPartnerName())) {
+            existing.setPartnerId(resolvePartnerId(null, req.getPartnerName()));
         }
         if (req.getSupportType() != null) {
             PartnerSupportTypeEnum type = PartnerSupportTypeEnum.fromCode(req.getSupportType());
@@ -148,10 +157,18 @@ public class BasketPartnerSupportRecordServiceImpl implements IBasketPartnerSupp
     private void validateReq(Long partnerId, String supportType, java.math.BigDecimal supportAmount, Date supportDate) {
         requirePartner(partnerId);
         if (supportDate == null) {
-            throw new ServiceException("支持日期不能为空");
+            throw new ServiceException("赞助日期不能为空");
         }
         PartnerSupportTypeEnum type = PartnerSupportTypeEnum.fromCode(supportType);
         PartnerSupportTypeEnum.validateAmount(type.getCode(), supportAmount);
+    }
+
+    private Long resolvePartnerId(Long partnerId, String partnerName) {
+        if (partnerId != null) {
+            requirePartner(partnerId);
+            return partnerId;
+        }
+        return partnerService.findOrCreatePublishedByName(partnerName);
     }
 
     private BasketPartner requirePartner(Long partnerId) {

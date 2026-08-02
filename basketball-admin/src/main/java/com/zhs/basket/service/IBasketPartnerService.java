@@ -21,4 +21,7 @@ public interface IBasketPartnerService {
     void offline(Long id);
 
     void remove(Long id);
+
+    /** 按名称查找合作伙伴；不存在则创建并直接发布，供赞助记录录入使用 */
+    Long findOrCreatePublishedByName(String partnerName);
 }

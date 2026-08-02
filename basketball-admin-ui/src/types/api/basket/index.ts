@@ -2369,6 +2369,7 @@ export interface PartnerSupportListItem {
 
 export interface PartnerSupportAddReq {
   partnerId?: number
+  partnerName?: string
   supportType?: string
   supportAmount?: number
   supportDate?: string
