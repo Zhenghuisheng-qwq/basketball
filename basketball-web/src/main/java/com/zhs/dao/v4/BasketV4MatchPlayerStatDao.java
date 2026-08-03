@@ -1,14 +1,14 @@
 package com.zhs.dao.v4;
 
-import com.zhs.model.v4.BasketMatchPlayerStat;
+import com.zhs.model.v4.BasketV4MatchPlayerStat;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 
 /**
- * CNPA 赛事域 V4 Dao：BasketMatchPlayerStat
+ * CNPA 赛事域 V4 Dao：BasketV4MatchPlayerStat
  */
 @Mapper
 @Repository
-public interface BasketV4MatchPlayerStatDao extends BaseMapper<BasketMatchPlayerStat> {
+public interface BasketV4MatchPlayerStatDao extends BaseMapper<BasketV4MatchPlayerStat> {
 }

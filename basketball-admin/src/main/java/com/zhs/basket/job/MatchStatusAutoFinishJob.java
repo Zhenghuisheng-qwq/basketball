@@ -18,7 +18,14 @@ import org.springframework.stereotype.Component;
  * <p>
  * 可在 Quartz 中配置 invokeTarget = matchStatusAutoFinishJob.runAutoFinish()，
  * cron 建议：0 0/5 * * * ?（每 5 分钟）或 0 0/1 * * * ?（每 1 分钟）。
+ * <p>
+ * CNPA V4 第 1.5 轮：本 Job 会更新旧 basket_match。建议立即在 sys_job 停用；
+ * 同名表切换/清库前必须停用，避免污染新旧结构。第 8 轮删除。
+ * 详见 docs/cnpa-v4-r1_5-legacy-event-domain-retirement-plan.md
+ *
+ * @deprecated 旧赛事域比赛自动结束入口，勿接入 V4 业务。
  */
+@Deprecated
 @Component("matchStatusAutoFinishJob")
 public class MatchStatusAutoFinishJob {
 

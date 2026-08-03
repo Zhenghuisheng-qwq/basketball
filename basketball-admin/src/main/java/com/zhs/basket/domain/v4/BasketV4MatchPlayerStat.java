@@ -5,10 +5,10 @@ import java.util.Date;
 import java.math.BigDecimal;
 
 /**
- * CNPA 赛事域 V4 实体：BasketMatchPlayerStat
+ * CNPA 赛事域 V4 实体：BasketV4MatchPlayerStat
  */
 @Data
-public class BasketMatchPlayerStat {
+public class BasketV4MatchPlayerStat {
     private Long id;
     private Long matchId;
     private Long seasonId;

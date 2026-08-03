@@ -10,18 +10,22 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.math.BigDecimal;
 
 /**
- * CNPA 赛事域 V4 实体：BasketMatch
+ * CNPA 赛事域 V4 实体：BasketV4MatchPlayerStat
  */
 @Data
 @ApiModel
-@TableName("basket_match")
-public class BasketMatch implements Serializable {
+@TableName("basket_match_player_stat")
+public class BasketV4MatchPlayerStat implements Serializable {
 
     @JsonSerialize(using = ToStringSerializer.class)
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long matchId;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long seasonId;
@@ -30,38 +34,31 @@ public class BasketMatch implements Serializable {
     private Long divisionId;
 
     @JsonSerialize(using = ToStringSerializer.class)
-    private Long scheduleBatchId;
-
-    private Integer roundNo;
-
-    private String matchNo;
-
-    private String stageCode;
-
-    private Date matchTime;
+    private Long eventTeamId;
 
     @JsonSerialize(using = ToStringSerializer.class)
-    private Long homeEventTeamId;
+    private Long eventPlayerId;
+
+    private Integer points;
+
+    private Integer score;
+
+    private Integer rebound;
+
+    private Integer assist;
+
+    private Integer steal;
+
+    private Integer block;
+
+    private Integer turnover;
+
+    private Integer foul;
+
+    private BigDecimal minutes;
 
     @JsonSerialize(using = ToStringSerializer.class)
-    private Long awayEventTeamId;
-
-    private Integer homeScore;
-
-    private Integer awayScore;
-
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long winnerEventTeamId;
-
-    private String matchStatus;
-
-    private String publishStatus;
-
-    private String platformCode;
-
-    private String venueText;
-
-    private String remark;
+    private Long sourceSubmissionId;
 
     private Date createTime;
 

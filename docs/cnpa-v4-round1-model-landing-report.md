@@ -3,7 +3,7 @@
 > 日期：2026-08-03  
 > 分支：`basketball-20260803`  
 > 阶段：第 1 轮（DDL / Enum / Entity / Mapper / Seed / 清库说明）  
-> 状态：**已完成，未进入第 2 轮**
+> 状态：**已完成（含 R1 DDL 小补丁），未进入第 2 轮**
 
 ---
 
@@ -56,7 +56,7 @@
 | 文件 | 变更 |
 |------|------|
 | `basketball-admin/.../ApplicationConfig.java` | MapperScan 增加 `com.zhs.basket.mapper.v4` |
-| `basketball-admin/.../application.yml` | typeAliasesPackage 增加 `com.zhs.basket.domain.v4` |
+| `basketball-admin/.../application.yml` | 已移除对 `com.zhs.basket.domain.v4` 的显式 typeAliasesPackage；v4 XML 统一全限定类名 |
 
 ### 2.4 Admin 新增代码包
 
@@ -75,16 +75,21 @@ basketball-web/src/main/java/com/zhs/model/v4/   # 22 个 Model
 basketball-web/src/main/java/com/zhs/dao/v4/     # 22 个 Dao
 ```
 
-### 2.6 同名冲突处理（Bean 名）
+### 2.6 同名冲突处理（Entity + Bean 名）
 
-为避免与旧 Mapper/Dao Spring Bean 名冲突，以下接口已重命名（实体类名仍保持业务语义）：
+为避免与旧实体 MyBatis alias / 旧 Mapper/Dao Spring Bean 名冲突，以下 **实体类与 Mapper/Dao** 均已改为 `BasketV4*`：
 
 | 表 | Entity（v4 包） | Admin Mapper | Web Dao |
 |----|-----------------|--------------|---------|
-| basket_match | BasketMatch | BasketV4MatchMapper | BasketV4MatchDao |
-| basket_match_period_score | BasketMatchPeriodScore | BasketV4MatchPeriodScoreMapper | BasketV4MatchPeriodScoreDao |
-| basket_match_team_stat | BasketMatchTeamStat | BasketV4MatchTeamStatMapper | BasketV4MatchTeamStatDao |
-| basket_match_player_stat | BasketMatchPlayerStat | BasketV4MatchPlayerStatMapper | BasketV4MatchPlayerStatDao |
+| basket_match | BasketV4Match | BasketV4MatchMapper | BasketV4MatchDao |
+| basket_match_period_score | BasketV4MatchPeriodScore | BasketV4MatchPeriodScoreMapper | BasketV4MatchPeriodScoreDao |
+| basket_match_team_stat | BasketV4MatchTeamStat | BasketV4MatchTeamStatMapper | BasketV4MatchTeamStatDao |
+| basket_match_player_stat | BasketV4MatchPlayerStat | BasketV4MatchPlayerStatMapper | BasketV4MatchPlayerStatDao |
+
+说明：
+
+- v4 XML `resultMap type` 全部使用全限定类名（如 `com.zhs.basket.domain.v4.BasketV4Match`）。
+- 其余无同名冲突的 v4 实体仍保留原业务名（如 `BasketSeries`）。
 
 ---
 
@@ -372,11 +377,16 @@ Series: LEAGUE
 ## 9. 编译结果
 
 ```text
+# 初版落地
+basketball-admin : mvn -DskipTests compile  => BUILD SUCCESS
+basketball-web   : mvn -DskipTests compile  => BUILD SUCCESS
+
+# R1 DDL 小补丁后复编（2026-08-03）
 basketball-admin : mvn -DskipTests compile  => BUILD SUCCESS
 basketball-web   : mvn -DskipTests compile  => BUILD SUCCESS
 ```
 
-说明：本轮未连接数据库执行 DDL/Seed；仅保证代码可编译。
+说明：本轮未连接数据库执行 DDL/Seed；仅保证代码可编译。未执行 DROP/TRUNCATE。
 
 ---
 
@@ -388,8 +398,8 @@ basketball-web   : mvn -DskipTests compile  => BUILD SUCCESS
 2. **清库尚未人工确认**  
    候选清单已产出，但未执行。建议开发库备份后，人工确认白名单，再执行 cleanup → ddl → seed。
 
-3. **队长授权唯一约束**  
-   当前 DDL：`uk_active_captain_grant(division_id, team_id, grant_status, is_delete)`，按「一队一区一有效授权」收紧（不含 player_id）。若业务允许一队多名队长，需在后续轮次调整。
+3. **队长授权唯一约束（R1 补丁已改）**  
+   已改为 `active_unique_key` + `uk_captain_grant_active_unique_key`。业务写入时必须维护：ACTIVE=`divisionId_teamId`，REVOKED/EXPIRED/软删除=`NULL`。
 
 4. **旧代码仍在仓库中**  
    第 1 轮未删除旧 Controller / Job / 页面。旧入口删除安排在第 8 轮；当前新旧代码共存，但新模型代码位于 `v4` 包，避免直接混用。
@@ -401,24 +411,75 @@ basketball-web   : mvn -DskipTests compile  => BUILD SUCCESS
    默认保留。若其中有强依赖旧 seasonId/tournamentId 的数据，第 8 轮收口时再评估清理或改造。
 
 7. **数据库尚未落表**  
-   本地/开发库需在确认清库后手动执行三份 SQL，才能真正插入 Series 种子与示例数据。
+   本地/开发库需在确认清库后手动执行三份 SQL，才能真正插入 Series 种子与示例数据。  
+   若已执行过早期 R1 DDL，需按 `cnpa-v4-r1-ddl.sql` 文末增量 ALTER（注释块）补丁。
 
 ---
 
-## 11. 建议的下一步（第 2 轮，本轮不执行）
+## 11. R1 DDL 小补丁记录（验收后追加，未进入第 2 轮）
+
+### 11.1 basket_captain_grant 唯一键
+
+- **问题**：`uk_active_captain_grant(division_id, team_id, grant_status, is_delete)` 会让多条 `REVOKED/EXPIRED` 历史互相冲突。
+- **方案**：新增可空字段 `active_unique_key varchar(128)` + `UNIQUE(active_unique_key)`。
+  - ACTIVE 当前有效授权：写入 `divisionId_teamId`（如 `12_34`）
+  - REVOKED / EXPIRED / 软删除：写 `NULL`（MySQL UNIQUE 允许多个 NULL，历史不冲突）
+- **实体/XML**：admin/web `BasketCaptainGrant` 已加 `activeUniqueKey`；Mapper XML 已映射；软删除同步清空该键。
+
+### 11.2 basket_registration 重提策略（保持唯一键）
+
+同意并冻结如下策略，**不调整** `uk_registration_division_team(division_id, team_id, is_delete)`：
+
+- 同一队伍同一 Division 只允许一条未删除报名主记录；
+- V4 报名撤回/驳回后：**复用同一条 registration** 重新提交（更新状态/阵容/时间等字段）；
+- 历史操作记录进入 `basket_registration_audit`；
+- **不新增**第二条报名主记录。
+
+SQL 表头注释与本报告均已写明。
+
+### 11.3 basket_match_submission 版本唯一约束
+
+新增：
+
+```text
+uk_submission_match_team_version(match_id, submit_event_team_id, version_no, is_delete)
+```
+
+保证同一比赛、同一提交方、同一版本仅一条未删除提交记录。
+
+### 11.4 MyBatis typeAliasesPackage / 同名实体风险
+
+- **检查结果**：v4 XML 原本已全部使用全限定类名；但 admin `typeAliasesPackage` 扫描 `com.zhs.basket.domain` 时会递归扫到 `domain.v4`，与旧实体 `BasketMatch` / `BasketMatchTeamStat` / `BasketMatchPlayerStat` / `BasketMatchPeriodScore` 存在 alias 冲突风险。
+- **处理**：
+  1. 上述 4 个 v4 实体重命名为 `BasketV4Match` / `BasketV4MatchTeamStat` / `BasketV4MatchPlayerStat` / `BasketV4MatchPeriodScore`（admin + web 同步）；
+  2. 对应 Mapper/XML/Dao 引用已更新；
+  3. 移除 application.yml 中对 `com.zhs.basket.domain.v4` 的显式别名包依赖。
+
+### 11.5 本补丁边界
+
+- 未写报名/审核/赛程/提交/结算业务
+- 未改前台/后台页面
+- 未执行 DROP/TRUNCATE
+- 未进入第 2 轮
+
+---
+
+## 12. 建议的下一步（第 2 轮，本轮不执行）
 
 ```text
 1. 人工确认清库白名单并备份
-2. 执行 cleanup → ddl → seed
+2. 执行 cleanup → ddl → seed（含 R1 补丁后的 DDL）
 3. 进入第 2 轮：后台步骤式发布 Season + 多平台生成 Division
 ```
 
 ---
 
-## 12. 一句话结论
+## 13. 一句话结论
 
 ```text
 第 1 轮已完成：V4 新赛事域 22 张 P0 表 DDL、统一字符串枚举、admin/web Entity/Mapper 基础结构、
-Series 种子与示例 Season/Division 脚本、清库草案与本报告均已就绪；两端编译通过；
+Series 种子与示例 Season/Division 脚本、清库草案与本报告均已就绪；
+R1 DDL 小补丁已落地（captain_grant active_unique_key、registration 重提策略注释、
+submission 版本唯一约束、同名实体 BasketV4* 重命名）；两端编译通过；
 未执行破坏性 SQL，未写业务，未进入第 2 轮。
 ```

@@ -101,7 +101,8 @@ token:
 # MyBatis配置
 mybatis:
   # 搜索指定包别名
-  typeAliasesPackage: com.zhs.**.model,com.zhs.common.core.domain,com.zhs.basket.domain,com.zhs.basket.domain.v4
+  # v4 包不再单独注册别名：v4 XML 一律使用全限定类名；同名冲突实体已重命名为 BasketV4*
+  typeAliasesPackage: com.zhs.**.model,com.zhs.common.core.domain,com.zhs.basket.domain
   # 配置mapper的扫描，找到所有的mapper.xml映射文件
   mapperLocations: classpath*:mapper/**/*Mapper.xml
   # 加载全局的配置文件

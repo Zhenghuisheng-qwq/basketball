@@ -12,28 +12,56 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * CNPA 赛事域 V4 实体：BasketMatchPeriodScore
+ * CNPA 赛事域 V4 实体：BasketV4Match
  */
 @Data
 @ApiModel
-@TableName("basket_match_period_score")
-public class BasketMatchPeriodScore implements Serializable {
+@TableName("basket_match")
+public class BasketV4Match implements Serializable {
 
     @JsonSerialize(using = ToStringSerializer.class)
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     @JsonSerialize(using = ToStringSerializer.class)
-    private Long matchId;
+    private Long seasonId;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long divisionId;
 
-    private Integer periodNo;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long scheduleBatchId;
+
+    private Integer roundNo;
+
+    private String matchNo;
+
+    private String stageCode;
+
+    private Date matchTime;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long homeEventTeamId;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long awayEventTeamId;
 
     private Integer homeScore;
 
     private Integer awayScore;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long winnerEventTeamId;
+
+    private String matchStatus;
+
+    private String publishStatus;
+
+    private String platformCode;
+
+    private String venueText;
+
+    private String remark;
 
     private Date createTime;
 

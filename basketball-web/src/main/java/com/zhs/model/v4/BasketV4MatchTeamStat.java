@@ -10,15 +10,14 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
-import java.math.BigDecimal;
 
 /**
- * CNPA 赛事域 V4 实体：BasketMatchPlayerStat
+ * CNPA 赛事域 V4 实体：BasketV4MatchTeamStat
  */
 @Data
 @ApiModel
-@TableName("basket_match_player_stat")
-public class BasketMatchPlayerStat implements Serializable {
+@TableName("basket_match_team_stat")
+public class BasketV4MatchTeamStat implements Serializable {
 
     @JsonSerialize(using = ToStringSerializer.class)
     @TableId(value = "id", type = IdType.AUTO)
@@ -37,11 +36,27 @@ public class BasketMatchPlayerStat implements Serializable {
     private Long eventTeamId;
 
     @JsonSerialize(using = ToStringSerializer.class)
-    private Long eventPlayerId;
+    private Long opponentEventTeamId;
 
-    private Integer points;
+    private Integer isWinner;
 
     private Integer score;
+
+    private Integer pointsFor;
+
+    private Integer pointsAgainst;
+
+    private Integer fieldGoalMade;
+
+    private Integer fieldGoalAttempt;
+
+    private Integer threePointMade;
+
+    private Integer threePointAttempt;
+
+    private Integer freeThrowMade;
+
+    private Integer freeThrowAttempt;
 
     private Integer rebound;
 
@@ -54,8 +69,6 @@ public class BasketMatchPlayerStat implements Serializable {
     private Integer turnover;
 
     private Integer foul;
-
-    private BigDecimal minutes;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long sourceSubmissionId;

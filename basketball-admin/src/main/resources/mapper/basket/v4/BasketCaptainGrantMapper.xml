@@ -10,6 +10,7 @@
         <result property="playerId" column="player_id" />
         <result property="memberId" column="member_id" />
         <result property="grantStatus" column="grant_status" />
+        <result property="activeUniqueKey" column="active_unique_key" />
         <result property="validFrom" column="valid_from" />
         <result property="validTo" column="valid_to" />
         <result property="grantedBy" column="granted_by" />
@@ -19,7 +20,7 @@
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
-    <sql id="BaseColumns">id, division_id, season_id, team_id, player_id, member_id, grant_status, valid_from, valid_to, granted_by, remark, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, division_id, season_id, team_id, player_id, member_id, grant_status, active_unique_key, valid_from, valid_to, granted_by, remark, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketCaptainGrantResult">
         select <include refid="BaseColumns" /> from basket_captain_grant
@@ -34,9 +35,9 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_captain_grant (
-            division_id, season_id, team_id, player_id, member_id, grant_status, valid_from, valid_to, granted_by, remark, create_time, update_time, is_delete
+            division_id, season_id, team_id, player_id, member_id, grant_status, active_unique_key, valid_from, valid_to, granted_by, remark, create_time, update_time, is_delete
         ) values (
-            #{divisionId}, #{seasonId}, #{teamId}, #{playerId}, #{memberId}, #{grantStatus}, #{validFrom}, #{validTo}, #{grantedBy}, #{remark}, #{createTime}, #{updateTime}, #{isDelete}
+            #{divisionId}, #{seasonId}, #{teamId}, #{playerId}, #{memberId}, #{grantStatus}, #{activeUniqueKey}, #{validFrom}, #{validTo}, #{grantedBy}, #{remark}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -49,6 +50,7 @@
             <if test="playerId != null">player_id = #{playerId},</if>
             <if test="memberId != null">member_id = #{memberId},</if>
             <if test="grantStatus != null">grant_status = #{grantStatus},</if>
+            <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
             <if test="validFrom != null">valid_from = #{validFrom},</if>
             <if test="validTo != null">valid_to = #{validTo},</if>
             <if test="grantedBy != null">granted_by = #{grantedBy},</if>
@@ -61,7 +63,7 @@
 
     <update id="softDelete">
         update basket_captain_grant
-        set is_delete = 1, update_time = now()
+        set is_delete = 1, active_unique_key = null, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
 

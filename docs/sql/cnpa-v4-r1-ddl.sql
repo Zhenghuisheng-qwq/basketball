@@ -93,6 +93,13 @@ CREATE TABLE IF NOT EXISTS `basket_division` (
 
 -- ---------------------------------------------------------------------------
 -- 4. basket_captain_grant 队长授权
+-- 唯一约束说明（R1 补丁）：
+--   不再使用 uk(division_id, team_id, grant_status, is_delete)，
+--   避免多条 REVOKED/EXPIRED 历史记录互相冲突。
+--   改用 active_unique_key：
+--     - ACTIVE 且未删除：写入 CONCAT(division_id, '_', team_id)，如 12_34
+--     - REVOKED / EXPIRED / 软删除：写 NULL（MySQL UNIQUE 允许多个 NULL）
+--   业务写入时必须维护该字段，保证一队一区最多一条当前有效授权。
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `basket_captain_grant` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -101,7 +108,8 @@ CREATE TABLE IF NOT EXISTS `basket_captain_grant` (
   `team_id` BIGINT NOT NULL COMMENT '长期球队ID',
   `player_id` BIGINT NOT NULL COMMENT '队长球员ID',
   `member_id` BIGINT NOT NULL COMMENT '账号成员ID',
-  `grant_status` VARCHAR(32) NOT NULL DEFAULT 'ACTIVE' COMMENT '授权状态',
+  `grant_status` VARCHAR(32) NOT NULL DEFAULT 'ACTIVE' COMMENT '授权状态：ACTIVE/REVOKED/EXPIRED',
+  `active_unique_key` VARCHAR(128) DEFAULT NULL COMMENT '仅ACTIVE有效授权写入 divisionId_teamId；REVOKED/EXPIRED/软删除写NULL',
   `valid_from` DATETIME DEFAULT NULL COMMENT '生效时间',
   `valid_to` DATETIME DEFAULT NULL COMMENT '失效时间',
   `granted_by` BIGINT DEFAULT NULL COMMENT '授权管理员ID',
@@ -110,7 +118,7 @@ CREATE TABLE IF NOT EXISTS `basket_captain_grant` (
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_delete` TINYINT NOT NULL DEFAULT 0 COMMENT '删除标记',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_active_captain_grant` (`division_id`, `team_id`, `grant_status`, `is_delete`),
+  UNIQUE KEY `uk_captain_grant_active_unique_key` (`active_unique_key`),
   KEY `idx_captain_player` (`player_id`),
   KEY `idx_captain_team` (`team_id`),
   KEY `idx_captain_division` (`division_id`)
@@ -118,6 +126,12 @@ CREATE TABLE IF NOT EXISTS `basket_captain_grant` (
 
 -- ---------------------------------------------------------------------------
 -- 5. basket_registration 报名主表
+-- 重提策略（R1 明确，保持本唯一键不变）：
+--   uk_registration_division_team(division_id, team_id, is_delete)
+--   表示同一队伍同一 Division 仅允许一条未删除报名主记录。
+--   V4 报名撤回/驳回后：复用同一条 registration 重新提交（改状态/阵容/时间字段）；
+--   历史操作记录写入 basket_registration_audit；
+--   不新增第二条报名主记录。
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `basket_registration` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -329,6 +343,9 @@ CREATE TABLE IF NOT EXISTS `basket_match_period_score` (
 
 -- ---------------------------------------------------------------------------
 -- 13. basket_match_submission 比赛数据提交
+-- 版本唯一约束（R1 补丁）：
+--   uk_submission_match_team_version(match_id, submit_event_team_id, version_no, is_delete)
+--   保证同一比赛同一提交方同一版本仅一条未删除记录。
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `basket_match_submission` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -352,6 +369,7 @@ CREATE TABLE IF NOT EXISTS `basket_match_submission` (
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_delete` TINYINT NOT NULL DEFAULT 0 COMMENT '删除标记',
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_submission_match_team_version` (`match_id`, `submit_event_team_id`, `version_no`, `is_delete`),
   KEY `idx_submission_match_team` (`match_id`, `submit_event_team_id`),
   KEY `idx_submission_division` (`division_id`, `submission_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='V4比赛数据提交';
@@ -591,3 +609,22 @@ CREATE TABLE IF NOT EXISTS `basket_rank` (
   PRIMARY KEY (`id`),
   KEY `idx_rank_division_type` (`division_id`, `rank_type`, `rank_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='V4排行榜';
+
+-- =============================================================================
+-- R1 DDL 小补丁（增量 ALTER）
+-- 适用：若已执行过本文件早期版本建表，可单独执行以下语句；禁止 DROP/TRUNCATE。
+-- 若尚未建表，直接执行上方 CREATE 即可，无需再跑本节。
+-- =============================================================================
+
+-- 4. basket_captain_grant：active_unique_key 方案
+-- ALTER TABLE `basket_captain_grant` DROP INDEX `uk_active_captain_grant`;
+-- ALTER TABLE `basket_captain_grant`
+--   ADD COLUMN `active_unique_key` VARCHAR(128) DEFAULT NULL
+--     COMMENT '仅ACTIVE有效授权写入 divisionId_teamId；REVOKED/EXPIRED/软删除写NULL'
+--     AFTER `grant_status`;
+-- ALTER TABLE `basket_captain_grant`
+--   ADD UNIQUE KEY `uk_captain_grant_active_unique_key` (`active_unique_key`);
+
+-- 13. basket_match_submission：版本唯一约束
+-- ALTER TABLE `basket_match_submission`
+--   ADD UNIQUE KEY `uk_submission_match_team_version` (`match_id`, `submit_event_team_id`, `version_no`, `is_delete`);

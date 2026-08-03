@@ -1,17 +1,17 @@
 package com.zhs.basket.mapper.v4;
 
-import com.zhs.basket.domain.v4.BasketMatchPeriodScore;
+import com.zhs.basket.domain.v4.BasketV4MatchPeriodScore;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
 /**
- * CNPA 赛事域 V4 Mapper：BasketMatchPeriodScore
+ * CNPA 赛事域 V4 Mapper：BasketV4MatchPeriodScore
  */
 public interface BasketV4MatchPeriodScoreMapper {
-    BasketMatchPeriodScore selectById(@Param("id") Long id);
-    List<BasketMatchPeriodScore> selectList(BasketMatchPeriodScore query);
-    int insert(BasketMatchPeriodScore entity);
-    int updateById(BasketMatchPeriodScore entity);
+    BasketV4MatchPeriodScore selectById(@Param("id") Long id);
+    List<BasketV4MatchPeriodScore> selectList(BasketV4MatchPeriodScore query);
+    int insert(BasketV4MatchPeriodScore entity);
+    int updateById(BasketV4MatchPeriodScore entity);
     int softDelete(@Param("id") Long id);
 }

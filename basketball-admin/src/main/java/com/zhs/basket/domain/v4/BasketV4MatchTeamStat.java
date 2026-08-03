@@ -4,10 +4,10 @@ import lombok.Data;
 import java.util.Date;
 
 /**
- * CNPA 赛事域 V4 实体：BasketMatchTeamStat
+ * CNPA 赛事域 V4 实体：BasketV4MatchTeamStat
  */
 @Data
-public class BasketMatchTeamStat {
+public class BasketV4MatchTeamStat {
     private Long id;
     private Long matchId;
     private Long seasonId;
