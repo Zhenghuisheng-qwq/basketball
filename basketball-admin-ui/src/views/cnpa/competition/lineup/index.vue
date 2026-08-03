@@ -1,5 +1,6 @@
 <template>
   <div class="app-container">
+    <el-alert type="warning" title="旧域已废弃" description="旧比赛阵容管理已废弃，R4 起请使用 V4 赛事域。" :closable="false" show-icon class="mb8" />
     <el-form :inline="true" label-width="88px" class="mb8">
       <el-form-item label="比赛ID">
         <el-input-number v-model="matchId" :min="1" controls-position="right" style="width: 160px" />

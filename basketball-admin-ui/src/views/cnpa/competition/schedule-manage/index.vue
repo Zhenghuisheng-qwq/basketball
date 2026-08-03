@@ -1,5 +1,6 @@
 <template>
   <div class="app-container">
+    <el-alert type="warning" title="旧域已废弃" description="请使用 V4 赛程管理（cnpa/event-v4/schedule）。本页面调用旧 Schedule Service，R4 起不再维护。" :closable="false" show-icon class="mb8" />
     <el-alert
       type="info"
       :closable="false"

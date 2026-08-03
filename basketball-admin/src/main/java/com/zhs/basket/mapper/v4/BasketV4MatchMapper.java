@@ -1,17 +1,28 @@
 package com.zhs.basket.mapper.v4;
 
 import com.zhs.basket.domain.v4.BasketV4Match;
+import com.zhs.basket.query.v4.BasketV4MatchQuery;
+import com.zhs.basket.vo.v4.BasketV4MatchListVo;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
-/**
- * CNPA 赛事域 V4 Mapper：BasketV4Match
- */
 public interface BasketV4MatchMapper {
     BasketV4Match selectById(@Param("id") Long id);
+
     List<BasketV4Match> selectList(BasketV4Match query);
+
+    List<BasketV4MatchListVo> selectVoList(BasketV4MatchQuery query);
+
+    int countByBatchId(@Param("scheduleBatchId") Long scheduleBatchId);
+
     int insert(BasketV4Match entity);
+
     int updateById(BasketV4Match entity);
+
     int softDelete(@Param("id") Long id);
+
+    int softDeleteDraftByBatchId(@Param("scheduleBatchId") Long scheduleBatchId);
+
+    int publishByBatchId(@Param("scheduleBatchId") Long scheduleBatchId);
 }

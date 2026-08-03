@@ -41,4 +41,15 @@ public final class BasketEventV4Perms {
     public static final String EVENT_TEAM_QUERY = "basket:v4EventTeam:query";
 
     public static final String EVENT_PLAYER_LIST = "basket:v4EventPlayer:list";
+
+    public static final String SCHEDULE_BATCH_LIST = "basket:v4ScheduleBatch:list";
+    public static final String SCHEDULE_BATCH_QUERY = "basket:v4ScheduleBatch:query";
+    public static final String SCHEDULE_BATCH_GENERATE = "basket:v4ScheduleBatch:generate";
+    public static final String SCHEDULE_BATCH_PUBLISH = "basket:v4ScheduleBatch:publish";
+    public static final String SCHEDULE_BATCH_CANCEL = "basket:v4ScheduleBatch:cancel";
+
+    public static final String MATCH_LIST = "basket:v4Match:list";
+    public static final String MATCH_QUERY = "basket:v4Match:query";
+    public static final String MATCH_EDIT = "basket:v4Match:edit";
+    public static final String MATCH_REMOVE = "basket:v4Match:remove";
 }

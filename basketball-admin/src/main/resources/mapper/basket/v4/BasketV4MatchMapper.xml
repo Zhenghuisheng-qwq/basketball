@@ -26,7 +26,60 @@
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
+    <resultMap type="com.zhs.basket.vo.v4.BasketV4MatchListVo" id="BasketV4MatchListVoResult">
+        <id property="id" column="id" />
+        <result property="seasonId" column="season_id" />
+        <result property="seasonTitle" column="season_title" />
+        <result property="divisionId" column="division_id" />
+        <result property="divisionName" column="division_name" />
+        <result property="platformCode" column="platform_code" />
+        <result property="scheduleBatchId" column="schedule_batch_id" />
+        <result property="roundNo" column="round_no" />
+        <result property="matchNo" column="match_no" />
+        <result property="matchTime" column="match_time" />
+        <result property="homeEventTeamId" column="home_event_team_id" />
+        <result property="homeTeamName" column="home_team_name" />
+        <result property="awayEventTeamId" column="away_event_team_id" />
+        <result property="awayTeamName" column="away_team_name" />
+        <result property="homeScore" column="home_score" />
+        <result property="awayScore" column="away_score" />
+        <result property="matchStatus" column="match_status" />
+        <result property="publishStatus" column="publish_status" />
+        <result property="venueText" column="venue_text" />
+        <result property="remark" column="remark" />
+    </resultMap>
+
     <sql id="BaseColumns">id, season_id, division_id, schedule_batch_id, round_no, match_no, stage_code, match_time, home_event_team_id, away_event_team_id, home_score, away_score, winner_event_team_id, match_status, publish_status, platform_code, venue_text, remark, create_time, update_time, is_delete</sql>
+
+    <sql id="VoSelect">
+        select
+            m.id,
+            m.season_id,
+            se.display_title as season_title,
+            m.division_id,
+            d.division_name,
+            m.platform_code,
+            m.schedule_batch_id,
+            m.round_no,
+            m.match_no,
+            m.match_time,
+            m.home_event_team_id,
+            ht.team_name_snapshot as home_team_name,
+            m.away_event_team_id,
+            at.team_name_snapshot as away_team_name,
+            m.home_score,
+            m.away_score,
+            m.match_status,
+            m.publish_status,
+            m.venue_text,
+            m.remark
+        from basket_match m
+        left join basket_season se on se.id = m.season_id and se.is_delete = 0
+        left join basket_division d on d.id = m.division_id and d.is_delete = 0
+        left join basket_event_team ht on ht.id = m.home_event_team_id and ht.is_delete = 0
+        left join basket_event_team at on at.id = m.away_event_team_id and at.is_delete = 0
+        where m.is_delete = 0
+    </sql>
 
     <select id="selectById" resultMap="BasketV4MatchResult">
         select <include refid="BaseColumns" /> from basket_match
@@ -37,6 +90,26 @@
         select <include refid="BaseColumns" /> from basket_match
         where is_delete = 0
         order by id desc
+    </select>
+
+    <select id="selectVoList" resultMap="BasketV4MatchListVoResult">
+        <include refid="VoSelect" />
+        <if test="id != null">and m.id = #{id}</if>
+        <if test="seasonId != null">and m.season_id = #{seasonId}</if>
+        <if test="divisionId != null">and m.division_id = #{divisionId}</if>
+        <if test="scheduleBatchId != null">and m.schedule_batch_id = #{scheduleBatchId}</if>
+        <if test="roundNo != null">and m.round_no = #{roundNo}</if>
+        <if test="matchStatus != null and matchStatus != ''">and m.match_status = #{matchStatus}</if>
+        <if test="publishStatus != null and publishStatus != ''">and m.publish_status = #{publishStatus}</if>
+        <if test="eventTeamId != null">
+            and (m.home_event_team_id = #{eventTeamId} or m.away_event_team_id = #{eventTeamId})
+        </if>
+        order by m.round_no asc, m.match_time asc, m.id asc
+    </select>
+
+    <select id="countByBatchId" resultType="int">
+        select count(1) from basket_match
+        where schedule_batch_id = #{scheduleBatchId} and is_delete = 0
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -50,24 +123,11 @@
     <update id="updateById">
         update basket_match
         <set>
-            <if test="seasonId != null">season_id = #{seasonId},</if>
-            <if test="divisionId != null">division_id = #{divisionId},</if>
-            <if test="scheduleBatchId != null">schedule_batch_id = #{scheduleBatchId},</if>
-            <if test="roundNo != null">round_no = #{roundNo},</if>
-            <if test="matchNo != null">match_no = #{matchNo},</if>
-            <if test="stageCode != null">stage_code = #{stageCode},</if>
             <if test="matchTime != null">match_time = #{matchTime},</if>
-            <if test="homeEventTeamId != null">home_event_team_id = #{homeEventTeamId},</if>
-            <if test="awayEventTeamId != null">away_event_team_id = #{awayEventTeamId},</if>
-            <if test="homeScore != null">home_score = #{homeScore},</if>
-            <if test="awayScore != null">away_score = #{awayScore},</if>
-            <if test="winnerEventTeamId != null">winner_event_team_id = #{winnerEventTeamId},</if>
-            <if test="matchStatus != null">match_status = #{matchStatus},</if>
-            <if test="publishStatus != null">publish_status = #{publishStatus},</if>
-            <if test="platformCode != null">platform_code = #{platformCode},</if>
             <if test="venueText != null">venue_text = #{venueText},</if>
             <if test="remark != null">remark = #{remark},</if>
-            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="matchStatus != null">match_status = #{matchStatus},</if>
+            <if test="publishStatus != null">publish_status = #{publishStatus},</if>
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0
@@ -77,6 +137,18 @@
         update basket_match
         set is_delete = 1, update_time = now()
         where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDeleteDraftByBatchId">
+        update basket_match
+        set is_delete = 1, update_time = now()
+        where schedule_batch_id = #{scheduleBatchId} and publish_status = 'DRAFT' and is_delete = 0
+    </update>
+
+    <update id="publishByBatchId">
+        update basket_match
+        set publish_status = 'PUBLISHED', update_time = now()
+        where schedule_batch_id = #{scheduleBatchId} and publish_status = 'DRAFT' and is_delete = 0
     </update>
 
 </mapper>

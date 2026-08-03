@@ -91,6 +91,12 @@
         limit 1
     </select>
 
+    <select id="selectActiveByDivisionId" resultMap="BasketEventTeamResult">
+        select <include refid="BaseColumns" /> from basket_event_team
+        where division_id = #{divisionId} and event_team_status = 'ACTIVE' and is_delete = 0
+        order by id asc
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_event_team (
             season_id, division_id, registration_id, source_team_id, team_name_snapshot, team_logo_file_id, team_short_name, captain_player_id, captain_member_id, event_team_no, event_team_status, platform_code, create_time, update_time, is_delete
