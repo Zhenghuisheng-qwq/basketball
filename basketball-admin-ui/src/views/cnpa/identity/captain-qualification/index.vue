@@ -1,5 +1,8 @@
 <template>
   <div class="app-container">
+    <el-alert title="【已废弃】旧队长资格管理" type="warning" :closable="false" show-icon class="mb8">
+      <template #default>请使用 V4 菜单「V4队长授权」。本页基于旧 basket_captain_qualification，计划后续轮次删除。</template>
+    </el-alert>
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="88px">
       <el-form-item label="授权编号" prop="qualificationNo">
         <el-input v-model="queryParams.qualificationNo" placeholder="请输入授权编号" clearable style="width: 180px" @keyup.enter="handleQuery" />

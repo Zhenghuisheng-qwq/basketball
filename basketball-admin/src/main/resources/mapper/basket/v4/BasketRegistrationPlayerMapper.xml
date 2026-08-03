@@ -24,6 +24,17 @@
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
+    <resultMap type="com.zhs.basket.vo.v4.BasketRegistrationPlayerVo" id="BasketRegistrationPlayerVoResult">
+        <result property="playerId" column="player_id" />
+        <result property="playerName" column="player_name_snapshot" />
+        <result property="gameIdSnapshot" column="game_id_snapshot" />
+        <result property="platformCode" column="platform_code" />
+        <result property="position" column="position" />
+        <result property="jerseyNo" column="jersey_no" />
+        <result property="isCaptain" column="is_captain" />
+        <result property="isStarter" column="is_starter" />
+    </resultMap>
+
     <sql id="BaseColumns">id, registration_id, division_id, season_id, team_id, player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, position, jersey_no, is_captain, is_starter, sort_order, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketRegistrationPlayerResult">
@@ -34,8 +45,25 @@
     <select id="selectList" resultMap="BasketRegistrationPlayerResult">
         select <include refid="BaseColumns" /> from basket_registration_player
         where is_delete = 0
-        order by id desc
+        order by sort_order asc, id asc
     </select>
+
+    <select id="selectVoByRegistrationId" resultMap="BasketRegistrationPlayerVoResult">
+        select player_id, player_name_snapshot, game_id_snapshot, platform_code, position, jersey_no, is_captain, is_starter
+        from basket_registration_player
+        where registration_id = #{registrationId} and is_delete = 0
+        order by sort_order asc, id asc
+    </select>
+
+    <select id="selectByRegistrationId" resultMap="BasketRegistrationPlayerResult">
+        select <include refid="BaseColumns" /> from basket_registration_player
+        where registration_id = #{registrationId} and is_delete = 0
+        order by sort_order asc, id asc
+    </select>
+
+    <delete id="deleteByRegistrationId">
+        delete from basket_registration_player where registration_id = #{registrationId}
+    </delete>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_registration_player (
@@ -43,6 +71,15 @@
         ) values (
             #{registrationId}, #{divisionId}, #{seasonId}, #{teamId}, #{playerId}, #{memberId}, #{platformIdentityId}, #{platformCode}, #{gameIdSnapshot}, #{playerNameSnapshot}, #{position}, #{jerseyNo}, #{isCaptain}, #{isStarter}, #{sortOrder}, #{createTime}, #{updateTime}, #{isDelete}
         )
+    </insert>
+
+    <insert id="batchInsert">
+        insert into basket_registration_player (
+            registration_id, division_id, season_id, team_id, player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, position, jersey_no, is_captain, is_starter, sort_order, create_time, update_time, is_delete
+        ) values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.registrationId}, #{item.divisionId}, #{item.seasonId}, #{item.teamId}, #{item.playerId}, #{item.memberId}, #{item.platformIdentityId}, #{item.platformCode}, #{item.gameIdSnapshot}, #{item.playerNameSnapshot}, #{item.position}, #{item.jerseyNo}, #{item.isCaptain}, #{item.isStarter}, #{item.sortOrder}, #{item.createTime}, #{item.updateTime}, #{item.isDelete})
+        </foreach>
     </insert>
 
     <update id="updateById">
@@ -63,15 +100,13 @@
             <if test="isCaptain != null">is_captain = #{isCaptain},</if>
             <if test="isStarter != null">is_starter = #{isStarter},</if>
             <if test="sortOrder != null">sort_order = #{sortOrder},</if>
-            <if test="updateTime != null">update_time = #{updateTime},</if>
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0
     </update>
 
     <update id="softDelete">
-        update basket_registration_player
-        set is_delete = 1, update_time = now()
+        update basket_registration_player set is_delete = 1, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
 

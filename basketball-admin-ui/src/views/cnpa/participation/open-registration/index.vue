@@ -1,5 +1,8 @@
 <template>
   <div class="app-container">
+    <el-alert title="【已废弃】Open 个人报名审核" type="warning" :closable="false" show-icon class="mb8">
+      <template #default>V4 当前不支持 PERSONAL/Open 个人报名。本页基于旧 Open 报名链路，无菜单入口，计划后续轮次删除。</template>
+    </el-alert>
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="88px">
       <el-form-item label="报名编号" prop="registrationNo">
         <el-input v-model="queryParams.registrationNo" placeholder="请输入报名编号" clearable style="width: 200px" @keyup.enter="handleQuery" />

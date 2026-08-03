@@ -1,5 +1,8 @@
 <template>
   <div class="app-container">
+    <el-alert title="【已废弃】旧赛季阵容 / 正式参赛球员" type="warning" :closable="false" show-icon class="mb8">
+      <template #default>请使用 V4 菜单「V4赛事队伍」查看 EventPlayer 快照。本页基于旧 basket_tournament_season_roster，计划后续轮次删除。</template>
+    </el-alert>
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="88px">
       <el-form-item label="赛季ID" prop="seasonId">
         <el-input v-model="queryParams.seasonId" placeholder="请输入赛季ID" clearable style="width: 200px" @keyup.enter="handleQuery" />

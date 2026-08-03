@@ -20,6 +20,25 @@
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
+    <resultMap type="com.zhs.basket.vo.v4.BasketCaptainGrantListVo" id="BasketCaptainGrantListVoResult">
+        <id property="id" column="id" />
+        <result property="seasonId" column="season_id" />
+        <result property="seasonTitle" column="season_title" />
+        <result property="divisionId" column="division_id" />
+        <result property="divisionName" column="division_name" />
+        <result property="platformCode" column="platform_code" />
+        <result property="teamId" column="team_id" />
+        <result property="teamName" column="team_name" />
+        <result property="playerId" column="player_id" />
+        <result property="playerName" column="player_name" />
+        <result property="memberId" column="member_id" />
+        <result property="grantStatus" column="grant_status" />
+        <result property="validFrom" column="valid_from" />
+        <result property="validTo" column="valid_to" />
+        <result property="remark" column="remark" />
+        <result property="createTime" column="create_time" />
+    </resultMap>
+
     <sql id="BaseColumns">id, division_id, season_id, team_id, player_id, member_id, grant_status, active_unique_key, valid_from, valid_to, granted_by, remark, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketCaptainGrantResult">
@@ -31,6 +50,49 @@
         select <include refid="BaseColumns" /> from basket_captain_grant
         where is_delete = 0
         order by id desc
+    </select>
+
+    <select id="selectVoList" resultMap="BasketCaptainGrantListVoResult">
+        select
+            g.id,
+            g.season_id,
+            se.display_title as season_title,
+            g.division_id,
+            d.division_name,
+            d.platform_code,
+            g.team_id,
+            t.team_name,
+            g.player_id,
+            coalesce(p.game_nickname, mp.nickname) as player_name,
+            g.member_id,
+            g.grant_status,
+            g.valid_from,
+            g.valid_to,
+            g.remark,
+            g.create_time
+        from basket_captain_grant g
+        left join basket_season se on se.id = g.season_id and se.is_delete = 0
+        left join basket_division d on d.id = g.division_id and d.is_delete = 0
+        left join basket_team t on t.id = g.team_id and t.is_delete = 0
+        left join basket_player_profile p on p.id = g.player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = g.member_id and mp.is_delete = 0
+        where g.is_delete = 0
+        <if test="seasonId != null">and g.season_id = #{seasonId}</if>
+        <if test="divisionId != null">and g.division_id = #{divisionId}</if>
+        <if test="teamId != null">and g.team_id = #{teamId}</if>
+        <if test="playerId != null">and g.player_id = #{playerId}</if>
+        <if test="grantStatus != null and grantStatus != ''">and g.grant_status = #{grantStatus}</if>
+        order by g.id desc
+    </select>
+
+    <select id="selectActiveByDivisionTeam" resultMap="BasketCaptainGrantResult">
+        select <include refid="BaseColumns" /> from basket_captain_grant
+        where is_delete = 0
+          and division_id = #{divisionId}
+          and team_id = #{teamId}
+          and grant_status = 'ACTIVE'
+          and active_unique_key is not null
+        limit 1
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -55,10 +117,15 @@
             <if test="validTo != null">valid_to = #{validTo},</if>
             <if test="grantedBy != null">granted_by = #{grantedBy},</if>
             <if test="remark != null">remark = #{remark},</if>
-            <if test="updateTime != null">update_time = #{updateTime},</if>
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="revokeById">
+        update basket_captain_grant
+        set grant_status = 'REVOKED', active_unique_key = null, update_time = now()
+        where id = #{id} and is_delete = 0 and grant_status = 'ACTIVE'
     </update>
 
     <update id="softDelete">

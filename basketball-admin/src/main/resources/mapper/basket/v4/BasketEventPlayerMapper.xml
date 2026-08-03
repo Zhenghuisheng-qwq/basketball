@@ -24,6 +24,24 @@
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
+    <resultMap type="com.zhs.basket.vo.v4.BasketEventPlayerListVo" id="BasketEventPlayerListVoResult">
+        <id property="id" column="id" />
+        <result property="seasonId" column="season_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="eventTeamId" column="event_team_id" />
+        <result property="teamNameSnapshot" column="team_name_snapshot" />
+        <result property="sourcePlayerId" column="source_player_id" />
+        <result property="playerNameSnapshot" column="player_name_snapshot" />
+        <result property="gameIdSnapshot" column="game_id_snapshot" />
+        <result property="platformCode" column="platform_code" />
+        <result property="position" column="position" />
+        <result property="jerseyNo" column="jersey_no" />
+        <result property="isCaptain" column="is_captain" />
+        <result property="isStarter" column="is_starter" />
+        <result property="eventPlayerStatus" column="event_player_status" />
+        <result property="createTime" column="create_time" />
+    </resultMap>
+
     <sql id="BaseColumns">id, season_id, division_id, event_team_id, source_player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, avatar_file_id, position, jersey_no, is_captain, is_starter, event_player_status, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketEventPlayerResult">
@@ -37,12 +55,61 @@
         order by id desc
     </select>
 
+    <select id="selectVoList" resultMap="BasketEventPlayerListVoResult">
+        select
+            ep.id,
+            ep.season_id,
+            ep.division_id,
+            ep.event_team_id,
+            et.team_name_snapshot,
+            ep.source_player_id,
+            ep.player_name_snapshot,
+            ep.game_id_snapshot,
+            ep.platform_code,
+            ep.position,
+            ep.jersey_no,
+            ep.is_captain,
+            ep.is_starter,
+            ep.event_player_status,
+            ep.create_time
+        from basket_event_player ep
+        left join basket_event_team et on et.id = ep.event_team_id and et.is_delete = 0
+        where ep.is_delete = 0
+        <if test="seasonId != null">and ep.season_id = #{seasonId}</if>
+        <if test="divisionId != null">and ep.division_id = #{divisionId}</if>
+        <if test="eventTeamId != null">and ep.event_team_id = #{eventTeamId}</if>
+        <if test="sourcePlayerId != null">and ep.source_player_id = #{sourcePlayerId}</if>
+        <if test="playerNameSnapshot != null and playerNameSnapshot != ''">and ep.player_name_snapshot like concat('%', #{playerNameSnapshot}, '%')</if>
+        order by ep.event_team_id asc, ep.is_captain desc, ep.id asc
+    </select>
+
+    <select id="selectByDivisionSourcePlayer" resultMap="BasketEventPlayerResult">
+        select <include refid="BaseColumns" /> from basket_event_player
+        where division_id = #{divisionId} and source_player_id = #{sourcePlayerId} and is_delete = 0
+        limit 1
+    </select>
+
+    <select id="selectByEventTeamId" resultMap="BasketEventPlayerResult">
+        select <include refid="BaseColumns" /> from basket_event_player
+        where event_team_id = #{eventTeamId} and is_delete = 0
+        order by is_captain desc, id asc
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_event_player (
             season_id, division_id, event_team_id, source_player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, avatar_file_id, position, jersey_no, is_captain, is_starter, event_player_status, create_time, update_time, is_delete
         ) values (
             #{seasonId}, #{divisionId}, #{eventTeamId}, #{sourcePlayerId}, #{memberId}, #{platformIdentityId}, #{platformCode}, #{gameIdSnapshot}, #{playerNameSnapshot}, #{avatarFileId}, #{position}, #{jerseyNo}, #{isCaptain}, #{isStarter}, #{eventPlayerStatus}, #{createTime}, #{updateTime}, #{isDelete}
         )
+    </insert>
+
+    <insert id="batchInsert">
+        insert into basket_event_player (
+            season_id, division_id, event_team_id, source_player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, avatar_file_id, position, jersey_no, is_captain, is_starter, event_player_status, create_time, update_time, is_delete
+        ) values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.seasonId}, #{item.divisionId}, #{item.eventTeamId}, #{item.sourcePlayerId}, #{item.memberId}, #{item.platformIdentityId}, #{item.platformCode}, #{item.gameIdSnapshot}, #{item.playerNameSnapshot}, #{item.avatarFileId}, #{item.position}, #{item.jerseyNo}, #{item.isCaptain}, #{item.isStarter}, #{item.eventPlayerStatus}, #{item.createTime}, #{item.updateTime}, #{item.isDelete})
+        </foreach>
     </insert>
 
     <update id="updateById">
@@ -63,15 +130,13 @@
             <if test="isCaptain != null">is_captain = #{isCaptain},</if>
             <if test="isStarter != null">is_starter = #{isStarter},</if>
             <if test="eventPlayerStatus != null">event_player_status = #{eventPlayerStatus},</if>
-            <if test="updateTime != null">update_time = #{updateTime},</if>
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0
     </update>
 
     <update id="softDelete">
-        update basket_event_player
-        set is_delete = 1, update_time = now()
+        update basket_event_player set is_delete = 1, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
 

@@ -1,0 +1,22 @@
+﻿python : Traceback (most recent call last):
+所在位置 C:\Users\Administrator\AppData\Local\Temp\ps-script-e1cc12e7-354a-4d02-9c1e-df0a1c80a6f1.ps1:112 字符: 1
++ python "d:/code/dz/basketball/scaffolding-v2/scripts/smoke_v4_r3_full ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "d:\code\dz\basketball\scaffolding-v2\scripts\smoke_v4_r3_full_acceptance.py", line 679, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "d:\code\dz\basketball\scaffolding-v2\scripts\smoke_v4_r3_full_acceptance.py", line 287, in main
+    st = cur.fetchone()[0]
+         ~~~~~~~~~~~~~~^^^
+TypeError: 'NoneType' object is not subscriptable
+[OK] Admin 登录: admin
+[OK] Web 登录: 111111@qq.com
+[OK] 补数据: 发布 Season: 已是 PUBLISHED
+[OK] 补数据: 开放 Division 报名: 已是 REGISTRATION_OPEN
+[OK] 补数据: 名额测试 Division: 复用 id=5
+[OK] CaptainGrant 创建: grantId=5 status=ACTIVE key=3_2083464934804459521
+[OK] Web 可报名 Division: canRegister=True
+FATAL: 'NoneType' object is not subscriptable

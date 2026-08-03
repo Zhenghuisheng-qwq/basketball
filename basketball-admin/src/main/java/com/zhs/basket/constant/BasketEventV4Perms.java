@@ -1,7 +1,7 @@
 package com.zhs.basket.constant;
 
 /**
- * CNPA 赛事域 V4 后台发布权限。
+ * CNPA 赛事域 V4 后台权限。
  */
 public final class BasketEventV4Perms {
 
@@ -26,4 +26,19 @@ public final class BasketEventV4Perms {
     public static final String DIVISION_OPEN = "basket:v4Division:openRegistration";
     public static final String DIVISION_CLOSE = "basket:v4Division:closeRegistration";
     public static final String DIVISION_REMOVE = "basket:v4Division:remove";
+
+    public static final String CAPTAIN_GRANT_LIST = "basket:v4CaptainGrant:list";
+    public static final String CAPTAIN_GRANT_QUERY = "basket:v4CaptainGrant:query";
+    public static final String CAPTAIN_GRANT_ADD = "basket:v4CaptainGrant:add";
+    public static final String CAPTAIN_GRANT_REVOKE = "basket:v4CaptainGrant:revoke";
+
+    public static final String REGISTRATION_AUDIT_LIST = "basket:v4RegistrationAudit:list";
+    public static final String REGISTRATION_AUDIT_QUERY = "basket:v4RegistrationAudit:query";
+    public static final String REGISTRATION_AUDIT_APPROVE = "basket:v4RegistrationAudit:approve";
+    public static final String REGISTRATION_AUDIT_REJECT = "basket:v4RegistrationAudit:reject";
+
+    public static final String EVENT_TEAM_LIST = "basket:v4EventTeam:list";
+    public static final String EVENT_TEAM_QUERY = "basket:v4EventTeam:query";
+
+    public static final String EVENT_PLAYER_LIST = "basket:v4EventPlayer:list";
 }

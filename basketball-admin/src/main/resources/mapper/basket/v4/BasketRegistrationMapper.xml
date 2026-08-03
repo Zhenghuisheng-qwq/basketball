@@ -23,6 +23,20 @@
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
+    <resultMap type="com.zhs.basket.vo.v4.BasketRegistrationAuditListVo" id="BasketRegistrationAuditListVoResult">
+        <id property="registrationId" column="registration_id" />
+        <result property="seasonTitle" column="season_title" />
+        <result property="divisionName" column="division_name" />
+        <result property="platformCode" column="platform_code" />
+        <result property="teamId" column="team_id" />
+        <result property="teamName" column="team_name" />
+        <result property="captainPlayerId" column="captain_player_id" />
+        <result property="captainPlayerName" column="captain_player_name" />
+        <result property="lineupCount" column="lineup_count" />
+        <result property="registrationStatus" column="registration_status" />
+        <result property="submitTime" column="submit_time" />
+    </resultMap>
+
     <sql id="BaseColumns">id, season_id, division_id, registration_mode, team_id, captain_player_id, captain_member_id, registration_status, lineup_count, submit_time, approve_time, reject_reason, withdraw_time, audit_user_id, audit_remark, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketRegistrationResult">
@@ -34,6 +48,49 @@
         select <include refid="BaseColumns" /> from basket_registration
         where is_delete = 0
         order by id desc
+    </select>
+
+    <select id="selectByDivisionTeam" resultMap="BasketRegistrationResult">
+        select <include refid="BaseColumns" /> from basket_registration
+        where division_id = #{divisionId} and team_id = #{teamId} and is_delete = 0
+        limit 1
+    </select>
+
+    <select id="selectAuditVoList" resultMap="BasketRegistrationAuditListVoResult">
+        select
+            r.id as registration_id,
+            se.display_title as season_title,
+            d.division_name,
+            d.platform_code,
+            r.team_id,
+            t.team_name,
+            r.captain_player_id,
+            coalesce(p.game_nickname, mp.nickname) as captain_player_name,
+            r.lineup_count,
+            r.registration_status,
+            r.submit_time
+        from basket_registration r
+        left join basket_season se on se.id = r.season_id and se.is_delete = 0
+        left join basket_division d on d.id = r.division_id and d.is_delete = 0
+        left join basket_team t on t.id = r.team_id and t.is_delete = 0
+        left join basket_player_profile p on p.id = r.captain_player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = r.captain_member_id and mp.is_delete = 0
+        where r.is_delete = 0
+        <if test="seasonId != null">and r.season_id = #{seasonId}</if>
+        <if test="divisionId != null">and r.division_id = #{divisionId}</if>
+        <if test="registrationStatus != null and registrationStatus != ''">and r.registration_status = #{registrationStatus}</if>
+        <if test="teamName != null and teamName != ''">and t.team_name like concat('%', #{teamName}, '%')</if>
+        <if test="captainPlayerName != null and captainPlayerName != ''">
+            and coalesce(p.game_nickname, mp.nickname) like concat('%', #{captainPlayerName}, '%')
+        </if>
+        order by r.submit_time desc, r.id desc
+    </select>
+
+    <select id="countApprovedByDivisionId" resultType="int">
+        select count(1) from basket_registration
+        where division_id = #{divisionId}
+          and registration_status = 'APPROVED'
+          and is_delete = 0
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -61,7 +118,6 @@
             <if test="withdrawTime != null">withdraw_time = #{withdrawTime},</if>
             <if test="auditUserId != null">audit_user_id = #{auditUserId},</if>
             <if test="auditRemark != null">audit_remark = #{auditRemark},</if>
-            <if test="updateTime != null">update_time = #{updateTime},</if>
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0

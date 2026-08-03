@@ -20,6 +20,17 @@
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
+    <resultMap type="com.zhs.basket.vo.v4.BasketRegistrationAuditLogVo" id="BasketRegistrationAuditLogVoResult">
+        <result property="auditAction" column="audit_action" />
+        <result property="auditResult" column="audit_result" />
+        <result property="beforeStatus" column="before_status" />
+        <result property="afterStatus" column="after_status" />
+        <result property="auditUserId" column="audit_user_id" />
+        <result property="auditUserName" column="audit_user_name" />
+        <result property="auditTime" column="audit_time" />
+        <result property="auditRemark" column="audit_remark" />
+    </resultMap>
+
     <sql id="BaseColumns">id, registration_id, division_id, season_id, audit_action, audit_result, before_status, after_status, audit_user_id, audit_user_name, audit_time, audit_remark, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketRegistrationAuditResult">
@@ -31,6 +42,13 @@
         select <include refid="BaseColumns" /> from basket_registration_audit
         where is_delete = 0
         order by id desc
+    </select>
+
+    <select id="selectVoByRegistrationId" resultMap="BasketRegistrationAuditLogVoResult">
+        select audit_action, audit_result, before_status, after_status, audit_user_id, audit_user_name, audit_time, audit_remark
+        from basket_registration_audit
+        where registration_id = #{registrationId} and is_delete = 0
+        order by audit_time asc, id asc
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -55,15 +73,13 @@
             <if test="auditUserName != null">audit_user_name = #{auditUserName},</if>
             <if test="auditTime != null">audit_time = #{auditTime},</if>
             <if test="auditRemark != null">audit_remark = #{auditRemark},</if>
-            <if test="updateTime != null">update_time = #{updateTime},</if>
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0
     </update>
 
     <update id="softDelete">
-        update basket_registration_audit
-        set is_delete = 1, update_time = now()
+        update basket_registration_audit set is_delete = 1, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
 
