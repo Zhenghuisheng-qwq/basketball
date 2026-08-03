@@ -10,8 +10,14 @@ import java.util.List;
  */
 public interface BasketSeriesMapper {
     BasketSeries selectById(@Param("id") Long id);
-    List<BasketSeries> selectList(BasketSeries query);
+
+    List<BasketSeries> selectList(@Param("enabled") Integer enabled);
+
     int insert(BasketSeries entity);
+
     int updateById(BasketSeries entity);
+
     int softDelete(@Param("id") Long id);
+
+    int updateEnabled(@Param("id") Long id, @Param("enabled") Integer enabled);
 }

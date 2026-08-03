@@ -24,6 +24,30 @@
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
+    <resultMap type="com.zhs.basket.vo.v4.BasketDivisionListVo" id="BasketDivisionListVoResult">
+        <id property="id" column="id" />
+        <result property="seasonId" column="season_id" />
+        <result property="seasonTitle" column="season_title" />
+        <result property="seriesCode" column="series_code" />
+        <result property="seriesName" column="series_name" />
+        <result property="platformCode" column="platform_code" />
+        <result property="divisionName" column="division_name" />
+        <result property="registrationMode" column="registration_mode" />
+        <result property="formatType" column="format_type" />
+        <result property="maxTeamCount" column="max_team_count" />
+        <result property="maxPersonCount" column="max_person_count" />
+        <result property="lineupMinCount" column="lineup_min_count" />
+        <result property="lineupMaxCount" column="lineup_max_count" />
+        <result property="registrationStartTime" column="registration_start_time" />
+        <result property="registrationEndTime" column="registration_end_time" />
+        <result property="matchStartTime" column="match_start_time" />
+        <result property="matchEndTime" column="match_end_time" />
+        <result property="divisionStatus" column="division_status" />
+        <result property="sortOrder" column="sort_order" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
     <sql id="BaseColumns">id, season_id, platform_code, division_name, registration_mode, format_type, max_team_count, max_person_count, lineup_min_count, lineup_max_count, registration_start_time, registration_end_time, match_start_time, match_end_time, division_status, sort_order, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketDivisionResult">
@@ -31,10 +55,60 @@
         where id = #{id} and is_delete = 0
     </select>
 
-    <select id="selectList" resultMap="BasketDivisionResult">
+    <select id="selectBySeasonId" resultMap="BasketDivisionResult">
+        select <include refid="BaseColumns" /> from basket_division
+        where season_id = #{seasonId} and is_delete = 0
+        order by sort_order asc, id asc
+    </select>
+
+    <select id="selectVoList" resultMap="BasketDivisionListVoResult">
+        select
+            d.id,
+            d.season_id,
+            se.display_title as season_title,
+            s.series_code,
+            s.series_name,
+            d.platform_code,
+            d.division_name,
+            d.registration_mode,
+            d.format_type,
+            d.max_team_count,
+            d.max_person_count,
+            d.lineup_min_count,
+            d.lineup_max_count,
+            d.registration_start_time,
+            d.registration_end_time,
+            d.match_start_time,
+            d.match_end_time,
+            d.division_status,
+            d.sort_order,
+            d.create_time,
+            d.update_time
+        from basket_division d
+        left join basket_season se on se.id = d.season_id and se.is_delete = 0
+        left join basket_series s on s.id = se.series_id and s.is_delete = 0
+        where d.is_delete = 0
+        <if test="id != null">and d.id = #{id}</if>
+        <if test="seasonId != null">and d.season_id = #{seasonId}</if>
+        <if test="platformCode != null and platformCode != ''">and d.platform_code = #{platformCode}</if>
+        <if test="registrationMode != null and registrationMode != ''">and d.registration_mode = #{registrationMode}</if>
+        <if test="formatType != null and formatType != ''">and d.format_type = #{formatType}</if>
+        <if test="divisionStatus != null and divisionStatus != ''">and d.division_status = #{divisionStatus}</if>
+        order by d.sort_order asc, d.id desc
+    </select>
+
+    <select id="selectBySeasonPlatform" resultMap="BasketDivisionResult">
         select <include refid="BaseColumns" /> from basket_division
         where is_delete = 0
-        order by id desc
+          and season_id = #{seasonId}
+          and platform_code = #{platformCode}
+        <if test="excludeId != null">and id != #{excludeId}</if>
+        limit 1
+    </select>
+
+    <select id="countBySeasonId" resultType="int">
+        select count(1) from basket_division
+        where season_id = #{seasonId} and is_delete = 0
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -63,7 +137,6 @@
             <if test="matchEndTime != null">match_end_time = #{matchEndTime},</if>
             <if test="divisionStatus != null">division_status = #{divisionStatus},</if>
             <if test="sortOrder != null">sort_order = #{sortOrder},</if>
-            <if test="updateTime != null">update_time = #{updateTime},</if>
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0

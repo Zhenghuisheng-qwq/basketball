@@ -1,5 +1,13 @@
 <template>
   <div class="app-container">
+    <el-alert
+      title="【已废弃】旧赛事阶段入口"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="mb8"
+      description="V4 当前不使用旧 stage 模型，本页面将在后续轮次移除。"
+    />
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="88px">
       <el-form-item label="所属赛事">
         <el-select v-model="filterTournamentId" placeholder="请选择赛事" filterable clearable style="width: 280px" @change="handleTournamentFilterChange">

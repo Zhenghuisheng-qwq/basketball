@@ -1,0 +1,23 @@
+-- =============================================================================
+-- CNPA 赛事域 V4 第 1+2 轮：一键部署（dev 库已验证）
+-- 执行顺序：
+--   1. cnpa-v4-r1-ddl.sql       — 22 张 P0 表（18 张新建 + 4 张同名旧表 IF NOT EXISTS 跳过）
+--   2. cnpa-v4-r1-seed.sql      — Series 种子 + League 2026 S1 示例
+--   3. cnpa-v4-round2-menu.sql  — V4 菜单（menu_id 2280-2295）+ 隐藏旧入口
+--
+-- 注意：
+--   basket_match / basket_match_period_score / basket_match_team_stat /
+--   basket_match_player_stat 若仍为旧结构，须先按 cnpa-v4-r1-cleanup-draft.sql
+--   清理后再重建；本轮发布链路仅依赖 basket_series / basket_season / basket_division。
+-- =============================================================================
+
+-- 以下为 dev 库缺失项核对清单（2026-08-04）：
+-- [缺失] basket_series, basket_season, basket_division 及 P0 其余 15 张新表
+-- [已存在-旧结构] basket_match, basket_match_period_score, basket_match_team_stat, basket_match_player_stat
+-- [缺失] V4 菜单 2280-2295；旧菜单 2004/2005/2006/2038/2039 待隐藏
+-- [冲突已修复] 原 round2 脚本 menu_id 2260-2275 与争议管理按钮 2260-2263 冲突，已改为 2280-2295
+
+-- 请使用 scripts/apply_v4_r1r2_sql.py 依次执行上述三个文件，或手动：
+--   mysql -h HOST -u USER -p basketball < docs/sql/cnpa-v4-r1-ddl.sql
+--   mysql -h HOST -u USER -p basketball < docs/sql/cnpa-v4-r1-seed.sql
+--   mysql -h HOST -u USER -p basketball < docs/sql/cnpa-v4-round2-menu.sql

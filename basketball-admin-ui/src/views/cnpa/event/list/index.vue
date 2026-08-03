@@ -1,5 +1,13 @@
 <template>
   <div class="app-container">
+    <el-alert
+      title="【已废弃】旧赛事发布入口"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="mb8"
+      description="请使用 CNPA 赛事管理 → V4赛事发布（Series → Season → Division）。本页面将在后续轮次移除。"
+    />
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="88px">
       <el-form-item label="赛事编号" prop="tournamentNo">
         <el-input v-model="queryParams.tournamentNo" placeholder="请输入赛事编号" clearable style="width: 200px" @keyup.enter="handleQuery" />

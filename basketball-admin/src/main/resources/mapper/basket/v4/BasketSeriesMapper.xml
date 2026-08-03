@@ -28,7 +28,8 @@
     <select id="selectList" resultMap="BasketSeriesResult">
         select <include refid="BaseColumns" /> from basket_series
         where is_delete = 0
-        order by id desc
+        <if test="enabled != null">and enabled = #{enabled}</if>
+        order by sort_order asc, id asc
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -51,9 +52,14 @@
             <if test="bannerFileId != null">banner_file_id = #{bannerFileId},</if>
             <if test="sortOrder != null">sort_order = #{sortOrder},</if>
             <if test="enabled != null">enabled = #{enabled},</if>
-            <if test="updateTime != null">update_time = #{updateTime},</if>
             update_time = now()
         </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="updateEnabled">
+        update basket_series
+        set enabled = #{enabled}, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
 

@@ -1,5 +1,13 @@
 <template>
   <div class="app-container">
+    <el-alert
+      title="【已废弃】旧赛季发布入口"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="mb8"
+      description="请使用 CNPA 赛事管理 → V4赛事发布。本页面将在后续轮次移除。"
+    />
     <el-form :inline="true" label-width="88px" class="mb8">
       <el-form-item label="赛季名称">
         <el-input v-model="queryParams.seasonName" placeholder="请输入赛季名称" clearable style="width: 200px" @keyup.enter="getList" />

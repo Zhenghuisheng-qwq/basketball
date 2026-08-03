@@ -1,5 +1,13 @@
 <template>
   <div class="app-container">
+    <el-alert
+      title="【已废弃】旧赛事规则入口"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="mb8"
+      description="V4 赛制当前在 Season/Division 维护，本页面将在后续轮次移除。"
+    />
     <el-form :inline="true" label-width="88px" class="mb8">
       <el-form-item label="所属赛事">
         <el-select v-model="selectedTournamentId" placeholder="请选择赛事" filterable style="width: 360px" @change="handleTournamentChange">
