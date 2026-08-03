@@ -13,11 +13,14 @@ import com.zhs.basket.service.IBasketMatchOfficialDataCorrectionService;
 import com.zhs.basket.service.IBasketMatchValidationService;
 import com.zhs.basket.support.BasketMatchMessageHelper;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.SecurityUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Calendar;
@@ -26,7 +29,7 @@ import java.util.Date;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,11 +48,16 @@ class BasketMatchDisputeWindowTest {
     @InjectMocks
     private BasketMatchDisputeServiceImpl disputeService;
 
+    private MockedStatic<SecurityUtils> securityUtils;
     private BasketMatch match;
     private MatchDisputeCreateReq req;
 
     @BeforeEach
     void setUp() {
+        securityUtils = mockStatic(SecurityUtils.class);
+        securityUtils.when(SecurityUtils::getUserId).thenReturn(1L);
+        securityUtils.when(SecurityUtils::getUsername).thenReturn("admin");
+
         match = new BasketMatch();
         match.setId(MATCH_ID);
         match.setDataStatus(MatchDataStatusEnum.CONFIRMED.getCode());
@@ -59,6 +67,13 @@ class BasketMatchDisputeWindowTest {
         req.setMatchId(MATCH_ID);
         req.setDisputeType("PLAYER_STAT");
         req.setDisputeReason("assist count wrong");
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (securityUtils != null) {
+            securityUtils.close();
+        }
     }
 
     @Test

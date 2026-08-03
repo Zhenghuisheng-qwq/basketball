@@ -27,8 +27,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -71,10 +71,11 @@ class BasketMatchDataSubmissionValidationServiceImplTest {
         match.setAwayTeamId(AWAY_TEAM_ID);
         match.setHomeEventTeamId(101L);
         match.setAwayEventTeamId(102L);
-        when(matchMapper.selectById(MATCH_ID)).thenReturn(match);
-        when(rosterMapper.selectPlayerIdsByMatchAndTeam(eq(MATCH_ID), eq(HOME_TEAM_ID)))
+        // 部分用例会在分节校验阶段提前失败，或覆盖阵容 stub，故 setUp 使用 lenient
+        lenient().when(matchMapper.selectById(MATCH_ID)).thenReturn(match);
+        lenient().when(rosterMapper.selectPlayerIdsByMatchAndTeam(eq(MATCH_ID), eq(HOME_TEAM_ID)))
                 .thenReturn(Collections.singletonList(PLAYER_HOME));
-        when(rosterMapper.selectPlayerIdsByMatchAndTeam(eq(MATCH_ID), eq(AWAY_TEAM_ID)))
+        lenient().when(rosterMapper.selectPlayerIdsByMatchAndTeam(eq(MATCH_ID), eq(AWAY_TEAM_ID)))
                 .thenReturn(Collections.singletonList(PLAYER_AWAY));
     }
 

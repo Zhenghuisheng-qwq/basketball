@@ -9,7 +9,7 @@
     <version>3.9.2</version>
     <packaging>jar</packaging>
 
-    <name>jsj-admin</name>
+    <name>basketball-admin</name>
     <description>JSJ管理系统 - 单体版</description>
 
     <properties>

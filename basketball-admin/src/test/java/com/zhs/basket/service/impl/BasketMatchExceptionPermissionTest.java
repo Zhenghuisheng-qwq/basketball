@@ -10,17 +10,22 @@ import com.zhs.basket.req.MatchExceptionDecideReq;
 import com.zhs.basket.service.IBasketMatchOfficialDataCorrectionService;
 import com.zhs.basket.service.IBasketMatchValidationService;
 import com.zhs.basket.support.BasketMatchMessageHelper;
+import com.zhs.basket.domain.BasketMatch;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.SecurityUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,19 +45,32 @@ class BasketMatchExceptionPermissionTest {
     @InjectMocks
     private BasketMatchExceptionServiceImpl exceptionService;
 
+    private MockedStatic<SecurityUtils> securityUtils;
     private MatchExceptionDecideReq req;
 
     @BeforeEach
     void setUp() {
+        securityUtils = mockStatic(SecurityUtils.class);
+        securityUtils.when(SecurityUtils::getUserId).thenReturn(1L);
+        securityUtils.when(SecurityUtils::getUsername).thenReturn("admin");
+
         req = new MatchExceptionDecideReq();
         req.setDecisionType("FORFEIT");
         req.setDecisionResult("home forfeit");
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (securityUtils != null) {
+            securityUtils.close();
+        }
     }
 
     @Test
     void decide_rejectsForfeitWithoutWalkoverTeam() {
         BasketMatchExceptionApplication app = pendingApplication();
         when(applicationMapper.selectById(APPLICATION_ID)).thenReturn(app);
+        when(validationService.requireMatch(app.getMatchId())).thenReturn(new BasketMatch());
 
         ServiceException ex = assertThrows(ServiceException.class, () -> exceptionService.decide(APPLICATION_ID, req));
         assertEquals("弃赛方不能为空", ex.getMessage());
