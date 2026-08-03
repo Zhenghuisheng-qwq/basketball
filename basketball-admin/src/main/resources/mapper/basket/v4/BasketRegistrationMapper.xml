@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketRegistrationMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketRegistration" id="BasketRegistrationResult">
+        <id property="id" column="id" />
+        <result property="seasonId" column="season_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="registrationMode" column="registration_mode" />
+        <result property="teamId" column="team_id" />
+        <result property="captainPlayerId" column="captain_player_id" />
+        <result property="captainMemberId" column="captain_member_id" />
+        <result property="registrationStatus" column="registration_status" />
+        <result property="lineupCount" column="lineup_count" />
+        <result property="submitTime" column="submit_time" />
+        <result property="approveTime" column="approve_time" />
+        <result property="rejectReason" column="reject_reason" />
+        <result property="withdrawTime" column="withdraw_time" />
+        <result property="auditUserId" column="audit_user_id" />
+        <result property="auditRemark" column="audit_remark" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, season_id, division_id, registration_mode, team_id, captain_player_id, captain_member_id, registration_status, lineup_count, submit_time, approve_time, reject_reason, withdraw_time, audit_user_id, audit_remark, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketRegistrationResult">
+        select <include refid="BaseColumns" /> from basket_registration
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultMap="BasketRegistrationResult">
+        select <include refid="BaseColumns" /> from basket_registration
+        where is_delete = 0
+        order by id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_registration (
+            season_id, division_id, registration_mode, team_id, captain_player_id, captain_member_id, registration_status, lineup_count, submit_time, approve_time, reject_reason, withdraw_time, audit_user_id, audit_remark, create_time, update_time, is_delete
+        ) values (
+            #{seasonId}, #{divisionId}, #{registrationMode}, #{teamId}, #{captainPlayerId}, #{captainMemberId}, #{registrationStatus}, #{lineupCount}, #{submitTime}, #{approveTime}, #{rejectReason}, #{withdrawTime}, #{auditUserId}, #{auditRemark}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_registration
+        <set>
+            <if test="seasonId != null">season_id = #{seasonId},</if>
+            <if test="divisionId != null">division_id = #{divisionId},</if>
+            <if test="registrationMode != null">registration_mode = #{registrationMode},</if>
+            <if test="teamId != null">team_id = #{teamId},</if>
+            <if test="captainPlayerId != null">captain_player_id = #{captainPlayerId},</if>
+            <if test="captainMemberId != null">captain_member_id = #{captainMemberId},</if>
+            <if test="registrationStatus != null">registration_status = #{registrationStatus},</if>
+            <if test="lineupCount != null">lineup_count = #{lineupCount},</if>
+            <if test="submitTime != null">submit_time = #{submitTime},</if>
+            <if test="approveTime != null">approve_time = #{approveTime},</if>
+            <if test="rejectReason != null">reject_reason = #{rejectReason},</if>
+            <if test="withdrawTime != null">withdraw_time = #{withdrawTime},</if>
+            <if test="auditUserId != null">audit_user_id = #{auditUserId},</if>
+            <if test="auditRemark != null">audit_remark = #{auditRemark},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_registration
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

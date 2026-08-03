@@ -1,0 +1,151 @@
+-- =============================================================================
+-- CNPA 赛事域 V4 第 1 轮：清库 SQL 草案（禁止自动执行）
+-- 分支：basketball-20260803
+-- 说明：
+--   1. 本文件仅为草案，执行前必须人工确认并完成备份。
+--   2. 本轮禁止自动 DROP / TRUNCATE。
+--   3. 同名冲突表（basket_match 等）必须先清理再建新结构，禁止新旧并存混查。
+--   4. 保留账号 / 球员 / 长期球队 / 权限 / 文件 / 公告 / 合作伙伴等资产。
+-- =============================================================================
+
+-- ---------------------------------------------------------------------------
+-- 0. 执行前备份建议（示例，按环境调整）
+-- ---------------------------------------------------------------------------
+-- mysqldump -u<user> -p <db_name> > backup_cnpa_before_v4_r1_YYYYMMDD.sql
+-- 或至少备份下方「清库候选表」清单中的全部表。
+
+SET NAMES utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- 1. 同名冲突表（最高优先级，必须先清理才能创建 V4 新结构）
+-- ---------------------------------------------------------------------------
+-- DROP TABLE IF EXISTS basket_match_player_stat;
+-- DROP TABLE IF EXISTS basket_match_team_stat;
+-- DROP TABLE IF EXISTS basket_match_period_score;
+-- DROP TABLE IF EXISTS basket_match;
+
+-- ---------------------------------------------------------------------------
+-- 2. 旧赛事域清库候选表（按依赖大致从叶子到根）
+-- ---------------------------------------------------------------------------
+
+-- 比赛数据 / 争议 / 异常 / 结算
+-- DROP TABLE IF EXISTS basket_match_data_dispute_material;
+-- DROP TABLE IF EXISTS basket_match_data_dispute;
+-- DROP TABLE IF EXISTS basket_match_exception_material;
+-- DROP TABLE IF EXISTS basket_match_exception_audit;
+-- DROP TABLE IF EXISTS basket_match_exception_application;
+-- DROP TABLE IF EXISTS basket_match_data_submission_material;
+-- DROP TABLE IF EXISTS basket_match_data_submission_period;
+-- DROP TABLE IF EXISTS basket_match_data_submission_player_stat;
+-- DROP TABLE IF EXISTS basket_match_data_submission_team_stat;
+-- DROP TABLE IF EXISTS basket_match_data_revision;
+-- DROP TABLE IF EXISTS basket_match_data_audit;
+-- DROP TABLE IF EXISTS basket_match_data_submission;
+-- DROP TABLE IF EXISTS basket_match_official_result;
+-- DROP TABLE IF EXISTS basket_match_status_log;
+-- DROP TABLE IF EXISTS basket_match_roster;
+-- DROP TABLE IF EXISTS basket_match_team;
+-- DROP TABLE IF EXISTS basket_data_settlement_batch;
+-- DROP TABLE IF EXISTS basket_stat_sync_record;
+-- DROP TABLE IF EXISTS basket_stat_change_record;
+-- DROP TABLE IF EXISTS basket_point_adjustment;
+
+-- 统计 / 榜单 / 荣誉（赛事相关）
+-- DROP TABLE IF EXISTS basket_honor_lineup;
+-- DROP TABLE IF EXISTS basket_honor_record;
+-- DROP TABLE IF EXISTS basket_honor_generation_batch;
+-- DROP TABLE IF EXISTS basket_honor_category;
+-- DROP TABLE IF EXISTS basket_player_rank;
+-- DROP TABLE IF EXISTS basket_team_rank;
+-- DROP TABLE IF EXISTS basket_player_season_stat;
+-- DROP TABLE IF EXISTS basket_team_season_stat;
+-- DROP TABLE IF EXISTS basket_stage_standing;
+
+-- 赛程规则 / 批次
+-- DROP TABLE IF EXISTS basket_schedule_rule_time_slot;
+-- DROP TABLE IF EXISTS basket_schedule_rule_weekday;
+-- DROP TABLE IF EXISTS basket_schedule_rule;
+-- DROP TABLE IF EXISTS basket_schedule_generate_batch;
+
+-- 报名 / 阵容 / 队长授权（赛事绑定）
+-- DROP TABLE IF EXISTS basket_tournament_roster_operation_log;
+-- DROP TABLE IF EXISTS basket_tournament_roster_change_record;
+-- DROP TABLE IF EXISTS basket_tournament_roster_change_request;
+-- DROP TABLE IF EXISTS basket_tournament_open_registration_audit;
+-- DROP TABLE IF EXISTS basket_tournament_open_registration;
+-- DROP TABLE IF EXISTS basket_tournament_registration_audit;
+-- DROP TABLE IF EXISTS basket_tournament_registration_player;
+-- DROP TABLE IF EXISTS basket_tournament_registration;
+-- DROP TABLE IF EXISTS basket_tournament_season_roster;
+-- DROP TABLE IF EXISTS basket_team_season_profile;
+-- DROP TABLE IF EXISTS basket_captain_grant_log;
+-- DROP TABLE IF EXISTS basket_captain_qualification;
+
+-- 赛事结构容器
+-- DROP TABLE IF EXISTS basket_tournament_admin_scope;
+-- DROP TABLE IF EXISTS basket_tournament_award_config;
+-- DROP TABLE IF EXISTS basket_tournament_rule;
+-- DROP TABLE IF EXISTS basket_tournament_group_team;
+-- DROP TABLE IF EXISTS basket_tournament_group;
+-- DROP TABLE IF EXISTS basket_tournament_round;
+-- DROP TABLE IF EXISTS basket_tournament_stage;
+-- DROP TABLE IF EXISTS basket_tournament_season_platform;
+-- DROP TABLE IF EXISTS basket_tournament_season;
+-- DROP TABLE IF EXISTS basket_tournament;
+-- DROP TABLE IF EXISTS basket_competition_season;
+
+-- 可选：场地若仅服务旧赛事且确认无保留需求，再评估是否清理
+-- DROP TABLE IF EXISTS basket_venue;
+
+-- ---------------------------------------------------------------------------
+-- 3. 明确保留表（禁止出现在清库执行清单）
+-- ---------------------------------------------------------------------------
+-- basket_member_account
+-- basket_member_profile
+-- basket_member_agreement_record
+-- basket_verify_code_record
+-- basket_login_log
+-- basket_account_security_log
+-- basket_privacy_setting
+-- basket_notification_setting
+-- basket_player_profile
+-- basket_player_cert_application
+-- basket_player_cert_material
+-- basket_player_cert_audit
+-- basket_player_platform_account
+-- basket_player_platform_change_request
+-- basket_player_platform_identity_history
+-- basket_team
+-- basket_team_member
+-- basket_team_audit_record
+-- basket_team_join_application
+-- basket_team_invitation
+-- basket_team_captain_history
+-- basket_team_profile_change
+-- basket_file_asset
+-- basket_announcement
+-- basket_announcement_attachment
+-- basket_announcement_rule_link
+-- basket_partner
+-- basket_partner_support_record
+-- basket_home_banner
+-- basket_site_config
+-- basket_message_task
+-- basket_message_receiver
+-- basket_favorite
+-- basket_discipline_record
+-- basket_discipline_restriction
+-- basket_discipline_suspension_log
+-- basket_business_audit
+-- basket_business_audit_field
+-- 以及若依/后台：sys_user / sys_role / sys_menu / sys_dept / sys_dict_* / sys_config / sys_job* / sys_logininfor / sys_oper_log 等
+
+-- ---------------------------------------------------------------------------
+-- 4. 确认后的建议执行顺序
+-- ---------------------------------------------------------------------------
+-- A. 备份全库
+-- B. 取消本文件中目标 DROP 的注释（仅清库候选，不动保留表）
+-- C. 执行清库
+-- D. 执行 cnpa-v4-r1-ddl.sql
+-- E. 执行 cnpa-v4-r1-seed.sql
+-- F. 验证四种 Series + 示例 Season/Division

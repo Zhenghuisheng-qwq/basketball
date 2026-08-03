@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketMatchSubmissionMaterialMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketMatchSubmissionMaterial" id="BasketMatchSubmissionMaterialResult">
+        <id property="id" column="id" />
+        <result property="submissionId" column="submission_id" />
+        <result property="matchId" column="match_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="materialType" column="material_type" />
+        <result property="fileId" column="file_id" />
+        <result property="fileName" column="file_name" />
+        <result property="remark" column="remark" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, submission_id, match_id, division_id, material_type, file_id, file_name, remark, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketMatchSubmissionMaterialResult">
+        select <include refid="BaseColumns" /> from basket_match_submission_material
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultMap="BasketMatchSubmissionMaterialResult">
+        select <include refid="BaseColumns" /> from basket_match_submission_material
+        where is_delete = 0
+        order by id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_match_submission_material (
+            submission_id, match_id, division_id, material_type, file_id, file_name, remark, create_time, update_time, is_delete
+        ) values (
+            #{submissionId}, #{matchId}, #{divisionId}, #{materialType}, #{fileId}, #{fileName}, #{remark}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_match_submission_material
+        <set>
+            <if test="submissionId != null">submission_id = #{submissionId},</if>
+            <if test="matchId != null">match_id = #{matchId},</if>
+            <if test="divisionId != null">division_id = #{divisionId},</if>
+            <if test="materialType != null">material_type = #{materialType},</if>
+            <if test="fileId != null">file_id = #{fileId},</if>
+            <if test="fileName != null">file_name = #{fileName},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_match_submission_material
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

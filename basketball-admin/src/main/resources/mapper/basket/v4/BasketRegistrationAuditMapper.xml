@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketRegistrationAuditMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketRegistrationAudit" id="BasketRegistrationAuditResult">
+        <id property="id" column="id" />
+        <result property="registrationId" column="registration_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="seasonId" column="season_id" />
+        <result property="auditAction" column="audit_action" />
+        <result property="auditResult" column="audit_result" />
+        <result property="beforeStatus" column="before_status" />
+        <result property="afterStatus" column="after_status" />
+        <result property="auditUserId" column="audit_user_id" />
+        <result property="auditUserName" column="audit_user_name" />
+        <result property="auditTime" column="audit_time" />
+        <result property="auditRemark" column="audit_remark" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, registration_id, division_id, season_id, audit_action, audit_result, before_status, after_status, audit_user_id, audit_user_name, audit_time, audit_remark, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketRegistrationAuditResult">
+        select <include refid="BaseColumns" /> from basket_registration_audit
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultMap="BasketRegistrationAuditResult">
+        select <include refid="BaseColumns" /> from basket_registration_audit
+        where is_delete = 0
+        order by id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_registration_audit (
+            registration_id, division_id, season_id, audit_action, audit_result, before_status, after_status, audit_user_id, audit_user_name, audit_time, audit_remark, create_time, update_time, is_delete
+        ) values (
+            #{registrationId}, #{divisionId}, #{seasonId}, #{auditAction}, #{auditResult}, #{beforeStatus}, #{afterStatus}, #{auditUserId}, #{auditUserName}, #{auditTime}, #{auditRemark}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_registration_audit
+        <set>
+            <if test="registrationId != null">registration_id = #{registrationId},</if>
+            <if test="divisionId != null">division_id = #{divisionId},</if>
+            <if test="seasonId != null">season_id = #{seasonId},</if>
+            <if test="auditAction != null">audit_action = #{auditAction},</if>
+            <if test="auditResult != null">audit_result = #{auditResult},</if>
+            <if test="beforeStatus != null">before_status = #{beforeStatus},</if>
+            <if test="afterStatus != null">after_status = #{afterStatus},</if>
+            <if test="auditUserId != null">audit_user_id = #{auditUserId},</if>
+            <if test="auditUserName != null">audit_user_name = #{auditUserName},</if>
+            <if test="auditTime != null">audit_time = #{auditTime},</if>
+            <if test="auditRemark != null">audit_remark = #{auditRemark},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_registration_audit
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

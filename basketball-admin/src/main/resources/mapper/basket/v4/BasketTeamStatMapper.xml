@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketTeamStatMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketTeamStat" id="BasketTeamStatResult">
+        <id property="id" column="id" />
+        <result property="seasonId" column="season_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="eventTeamId" column="event_team_id" />
+        <result property="matchCount" column="match_count" />
+        <result property="winCount" column="win_count" />
+        <result property="loseCount" column="lose_count" />
+        <result property="pointsFor" column="points_for" />
+        <result property="pointsAgainst" column="points_against" />
+        <result property="avgPointsFor" column="avg_points_for" />
+        <result property="avgPointsAgainst" column="avg_points_against" />
+        <result property="rebound" column="rebound" />
+        <result property="assist" column="assist" />
+        <result property="steal" column="steal" />
+        <result property="block" column="block" />
+        <result property="turnover" column="turnover" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, season_id, division_id, event_team_id, match_count, win_count, lose_count, points_for, points_against, avg_points_for, avg_points_against, rebound, assist, steal, block, turnover, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketTeamStatResult">
+        select <include refid="BaseColumns" /> from basket_team_stat
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultMap="BasketTeamStatResult">
+        select <include refid="BaseColumns" /> from basket_team_stat
+        where is_delete = 0
+        order by id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_team_stat (
+            season_id, division_id, event_team_id, match_count, win_count, lose_count, points_for, points_against, avg_points_for, avg_points_against, rebound, assist, steal, block, turnover, create_time, update_time, is_delete
+        ) values (
+            #{seasonId}, #{divisionId}, #{eventTeamId}, #{matchCount}, #{winCount}, #{loseCount}, #{pointsFor}, #{pointsAgainst}, #{avgPointsFor}, #{avgPointsAgainst}, #{rebound}, #{assist}, #{steal}, #{block}, #{turnover}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_team_stat
+        <set>
+            <if test="seasonId != null">season_id = #{seasonId},</if>
+            <if test="divisionId != null">division_id = #{divisionId},</if>
+            <if test="eventTeamId != null">event_team_id = #{eventTeamId},</if>
+            <if test="matchCount != null">match_count = #{matchCount},</if>
+            <if test="winCount != null">win_count = #{winCount},</if>
+            <if test="loseCount != null">lose_count = #{loseCount},</if>
+            <if test="pointsFor != null">points_for = #{pointsFor},</if>
+            <if test="pointsAgainst != null">points_against = #{pointsAgainst},</if>
+            <if test="avgPointsFor != null">avg_points_for = #{avgPointsFor},</if>
+            <if test="avgPointsAgainst != null">avg_points_against = #{avgPointsAgainst},</if>
+            <if test="rebound != null">rebound = #{rebound},</if>
+            <if test="assist != null">assist = #{assist},</if>
+            <if test="steal != null">steal = #{steal},</if>
+            <if test="block != null">block = #{block},</if>
+            <if test="turnover != null">turnover = #{turnover},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_team_stat
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

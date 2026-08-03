@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketRankMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketRank" id="BasketRankResult">
+        <id property="id" column="id" />
+        <result property="seasonId" column="season_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="rankType" column="rank_type" />
+        <result property="rankNo" column="rank_no" />
+        <result property="targetType" column="target_type" />
+        <result property="eventTeamId" column="event_team_id" />
+        <result property="eventPlayerId" column="event_player_id" />
+        <result property="rankValue" column="rank_value" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, season_id, division_id, rank_type, rank_no, target_type, event_team_id, event_player_id, rank_value, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketRankResult">
+        select <include refid="BaseColumns" /> from basket_rank
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultMap="BasketRankResult">
+        select <include refid="BaseColumns" /> from basket_rank
+        where is_delete = 0
+        order by id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_rank (
+            season_id, division_id, rank_type, rank_no, target_type, event_team_id, event_player_id, rank_value, create_time, update_time, is_delete
+        ) values (
+            #{seasonId}, #{divisionId}, #{rankType}, #{rankNo}, #{targetType}, #{eventTeamId}, #{eventPlayerId}, #{rankValue}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_rank
+        <set>
+            <if test="seasonId != null">season_id = #{seasonId},</if>
+            <if test="divisionId != null">division_id = #{divisionId},</if>
+            <if test="rankType != null">rank_type = #{rankType},</if>
+            <if test="rankNo != null">rank_no = #{rankNo},</if>
+            <if test="targetType != null">target_type = #{targetType},</if>
+            <if test="eventTeamId != null">event_team_id = #{eventTeamId},</if>
+            <if test="eventPlayerId != null">event_player_id = #{eventPlayerId},</if>
+            <if test="rankValue != null">rank_value = #{rankValue},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_rank
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

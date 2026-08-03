@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketScheduleBatchMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketScheduleBatch" id="BasketScheduleBatchResult">
+        <id property="id" column="id" />
+        <result property="seasonId" column="season_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="batchNo" column="batch_no" />
+        <result property="formatType" column="format_type" />
+        <result property="ruleCode" column="rule_code" />
+        <result property="teamCount" column="team_count" />
+        <result property="matchCount" column="match_count" />
+        <result property="generateType" column="generate_type" />
+        <result property="generateStatus" column="generate_status" />
+        <result property="publishStatus" column="publish_status" />
+        <result property="generateTime" column="generate_time" />
+        <result property="publishTime" column="publish_time" />
+        <result property="generatedBy" column="generated_by" />
+        <result property="publishedBy" column="published_by" />
+        <result property="remark" column="remark" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, season_id, division_id, batch_no, format_type, rule_code, team_count, match_count, generate_type, generate_status, publish_status, generate_time, publish_time, generated_by, published_by, remark, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketScheduleBatchResult">
+        select <include refid="BaseColumns" /> from basket_schedule_batch
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultMap="BasketScheduleBatchResult">
+        select <include refid="BaseColumns" /> from basket_schedule_batch
+        where is_delete = 0
+        order by id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_schedule_batch (
+            season_id, division_id, batch_no, format_type, rule_code, team_count, match_count, generate_type, generate_status, publish_status, generate_time, publish_time, generated_by, published_by, remark, create_time, update_time, is_delete
+        ) values (
+            #{seasonId}, #{divisionId}, #{batchNo}, #{formatType}, #{ruleCode}, #{teamCount}, #{matchCount}, #{generateType}, #{generateStatus}, #{publishStatus}, #{generateTime}, #{publishTime}, #{generatedBy}, #{publishedBy}, #{remark}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_schedule_batch
+        <set>
+            <if test="seasonId != null">season_id = #{seasonId},</if>
+            <if test="divisionId != null">division_id = #{divisionId},</if>
+            <if test="batchNo != null">batch_no = #{batchNo},</if>
+            <if test="formatType != null">format_type = #{formatType},</if>
+            <if test="ruleCode != null">rule_code = #{ruleCode},</if>
+            <if test="teamCount != null">team_count = #{teamCount},</if>
+            <if test="matchCount != null">match_count = #{matchCount},</if>
+            <if test="generateType != null">generate_type = #{generateType},</if>
+            <if test="generateStatus != null">generate_status = #{generateStatus},</if>
+            <if test="publishStatus != null">publish_status = #{publishStatus},</if>
+            <if test="generateTime != null">generate_time = #{generateTime},</if>
+            <if test="publishTime != null">publish_time = #{publishTime},</if>
+            <if test="generatedBy != null">generated_by = #{generatedBy},</if>
+            <if test="publishedBy != null">published_by = #{publishedBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_schedule_batch
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

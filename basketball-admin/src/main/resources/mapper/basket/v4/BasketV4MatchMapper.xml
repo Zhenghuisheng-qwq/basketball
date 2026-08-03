@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketV4MatchMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketMatch" id="BasketMatchResult">
+        <id property="id" column="id" />
+        <result property="seasonId" column="season_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="scheduleBatchId" column="schedule_batch_id" />
+        <result property="roundNo" column="round_no" />
+        <result property="matchNo" column="match_no" />
+        <result property="stageCode" column="stage_code" />
+        <result property="matchTime" column="match_time" />
+        <result property="homeEventTeamId" column="home_event_team_id" />
+        <result property="awayEventTeamId" column="away_event_team_id" />
+        <result property="homeScore" column="home_score" />
+        <result property="awayScore" column="away_score" />
+        <result property="winnerEventTeamId" column="winner_event_team_id" />
+        <result property="matchStatus" column="match_status" />
+        <result property="publishStatus" column="publish_status" />
+        <result property="platformCode" column="platform_code" />
+        <result property="venueText" column="venue_text" />
+        <result property="remark" column="remark" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, season_id, division_id, schedule_batch_id, round_no, match_no, stage_code, match_time, home_event_team_id, away_event_team_id, home_score, away_score, winner_event_team_id, match_status, publish_status, platform_code, venue_text, remark, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketMatchResult">
+        select <include refid="BaseColumns" /> from basket_match
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultMap="BasketMatchResult">
+        select <include refid="BaseColumns" /> from basket_match
+        where is_delete = 0
+        order by id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_match (
+            season_id, division_id, schedule_batch_id, round_no, match_no, stage_code, match_time, home_event_team_id, away_event_team_id, home_score, away_score, winner_event_team_id, match_status, publish_status, platform_code, venue_text, remark, create_time, update_time, is_delete
+        ) values (
+            #{seasonId}, #{divisionId}, #{scheduleBatchId}, #{roundNo}, #{matchNo}, #{stageCode}, #{matchTime}, #{homeEventTeamId}, #{awayEventTeamId}, #{homeScore}, #{awayScore}, #{winnerEventTeamId}, #{matchStatus}, #{publishStatus}, #{platformCode}, #{venueText}, #{remark}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_match
+        <set>
+            <if test="seasonId != null">season_id = #{seasonId},</if>
+            <if test="divisionId != null">division_id = #{divisionId},</if>
+            <if test="scheduleBatchId != null">schedule_batch_id = #{scheduleBatchId},</if>
+            <if test="roundNo != null">round_no = #{roundNo},</if>
+            <if test="matchNo != null">match_no = #{matchNo},</if>
+            <if test="stageCode != null">stage_code = #{stageCode},</if>
+            <if test="matchTime != null">match_time = #{matchTime},</if>
+            <if test="homeEventTeamId != null">home_event_team_id = #{homeEventTeamId},</if>
+            <if test="awayEventTeamId != null">away_event_team_id = #{awayEventTeamId},</if>
+            <if test="homeScore != null">home_score = #{homeScore},</if>
+            <if test="awayScore != null">away_score = #{awayScore},</if>
+            <if test="winnerEventTeamId != null">winner_event_team_id = #{winnerEventTeamId},</if>
+            <if test="matchStatus != null">match_status = #{matchStatus},</if>
+            <if test="publishStatus != null">publish_status = #{publishStatus},</if>
+            <if test="platformCode != null">platform_code = #{platformCode},</if>
+            <if test="venueText != null">venue_text = #{venueText},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_match
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

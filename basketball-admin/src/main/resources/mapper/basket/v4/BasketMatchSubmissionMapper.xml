@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketMatchSubmissionMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketMatchSubmission" id="BasketMatchSubmissionResult">
+        <id property="id" column="id" />
+        <result property="matchId" column="match_id" />
+        <result property="seasonId" column="season_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="submitEventTeamId" column="submit_event_team_id" />
+        <result property="opponentEventTeamId" column="opponent_event_team_id" />
+        <result property="submitEventPlayerId" column="submit_event_player_id" />
+        <result property="submitMemberId" column="submit_member_id" />
+        <result property="submitterRole" column="submitter_role" />
+        <result property="submissionStatus" column="submission_status" />
+        <result property="versionNo" column="version_no" />
+        <result property="submitTime" column="submit_time" />
+        <result property="auditUserId" column="audit_user_id" />
+        <result property="auditUserName" column="audit_user_name" />
+        <result property="auditTime" column="audit_time" />
+        <result property="auditRemark" column="audit_remark" />
+        <result property="rejectReason" column="reject_reason" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, match_id, season_id, division_id, submit_event_team_id, opponent_event_team_id, submit_event_player_id, submit_member_id, submitter_role, submission_status, version_no, submit_time, audit_user_id, audit_user_name, audit_time, audit_remark, reject_reason, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketMatchSubmissionResult">
+        select <include refid="BaseColumns" /> from basket_match_submission
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultMap="BasketMatchSubmissionResult">
+        select <include refid="BaseColumns" /> from basket_match_submission
+        where is_delete = 0
+        order by id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_match_submission (
+            match_id, season_id, division_id, submit_event_team_id, opponent_event_team_id, submit_event_player_id, submit_member_id, submitter_role, submission_status, version_no, submit_time, audit_user_id, audit_user_name, audit_time, audit_remark, reject_reason, create_time, update_time, is_delete
+        ) values (
+            #{matchId}, #{seasonId}, #{divisionId}, #{submitEventTeamId}, #{opponentEventTeamId}, #{submitEventPlayerId}, #{submitMemberId}, #{submitterRole}, #{submissionStatus}, #{versionNo}, #{submitTime}, #{auditUserId}, #{auditUserName}, #{auditTime}, #{auditRemark}, #{rejectReason}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_match_submission
+        <set>
+            <if test="matchId != null">match_id = #{matchId},</if>
+            <if test="seasonId != null">season_id = #{seasonId},</if>
+            <if test="divisionId != null">division_id = #{divisionId},</if>
+            <if test="submitEventTeamId != null">submit_event_team_id = #{submitEventTeamId},</if>
+            <if test="opponentEventTeamId != null">opponent_event_team_id = #{opponentEventTeamId},</if>
+            <if test="submitEventPlayerId != null">submit_event_player_id = #{submitEventPlayerId},</if>
+            <if test="submitMemberId != null">submit_member_id = #{submitMemberId},</if>
+            <if test="submitterRole != null">submitter_role = #{submitterRole},</if>
+            <if test="submissionStatus != null">submission_status = #{submissionStatus},</if>
+            <if test="versionNo != null">version_no = #{versionNo},</if>
+            <if test="submitTime != null">submit_time = #{submitTime},</if>
+            <if test="auditUserId != null">audit_user_id = #{auditUserId},</if>
+            <if test="auditUserName != null">audit_user_name = #{auditUserName},</if>
+            <if test="auditTime != null">audit_time = #{auditTime},</if>
+            <if test="auditRemark != null">audit_remark = #{auditRemark},</if>
+            <if test="rejectReason != null">reject_reason = #{rejectReason},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_match_submission
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

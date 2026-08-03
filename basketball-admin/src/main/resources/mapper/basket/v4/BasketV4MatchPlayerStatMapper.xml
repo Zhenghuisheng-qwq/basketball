@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketV4MatchPlayerStatMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketMatchPlayerStat" id="BasketMatchPlayerStatResult">
+        <id property="id" column="id" />
+        <result property="matchId" column="match_id" />
+        <result property="seasonId" column="season_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="eventTeamId" column="event_team_id" />
+        <result property="eventPlayerId" column="event_player_id" />
+        <result property="points" column="points" />
+        <result property="score" column="score" />
+        <result property="rebound" column="rebound" />
+        <result property="assist" column="assist" />
+        <result property="steal" column="steal" />
+        <result property="block" column="block" />
+        <result property="turnover" column="turnover" />
+        <result property="foul" column="foul" />
+        <result property="minutes" column="minutes" />
+        <result property="sourceSubmissionId" column="source_submission_id" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, match_id, season_id, division_id, event_team_id, event_player_id, points, score, rebound, assist, steal, block, turnover, foul, minutes, source_submission_id, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketMatchPlayerStatResult">
+        select <include refid="BaseColumns" /> from basket_match_player_stat
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultMap="BasketMatchPlayerStatResult">
+        select <include refid="BaseColumns" /> from basket_match_player_stat
+        where is_delete = 0
+        order by id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_match_player_stat (
+            match_id, season_id, division_id, event_team_id, event_player_id, points, score, rebound, assist, steal, block, turnover, foul, minutes, source_submission_id, create_time, update_time, is_delete
+        ) values (
+            #{matchId}, #{seasonId}, #{divisionId}, #{eventTeamId}, #{eventPlayerId}, #{points}, #{score}, #{rebound}, #{assist}, #{steal}, #{block}, #{turnover}, #{foul}, #{minutes}, #{sourceSubmissionId}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_match_player_stat
+        <set>
+            <if test="matchId != null">match_id = #{matchId},</if>
+            <if test="seasonId != null">season_id = #{seasonId},</if>
+            <if test="divisionId != null">division_id = #{divisionId},</if>
+            <if test="eventTeamId != null">event_team_id = #{eventTeamId},</if>
+            <if test="eventPlayerId != null">event_player_id = #{eventPlayerId},</if>
+            <if test="points != null">points = #{points},</if>
+            <if test="score != null">score = #{score},</if>
+            <if test="rebound != null">rebound = #{rebound},</if>
+            <if test="assist != null">assist = #{assist},</if>
+            <if test="steal != null">steal = #{steal},</if>
+            <if test="block != null">block = #{block},</if>
+            <if test="turnover != null">turnover = #{turnover},</if>
+            <if test="foul != null">foul = #{foul},</if>
+            <if test="minutes != null">minutes = #{minutes},</if>
+            <if test="sourceSubmissionId != null">source_submission_id = #{sourceSubmissionId},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_match_player_stat
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

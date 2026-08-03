@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketRegistrationPlayerMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketRegistrationPlayer" id="BasketRegistrationPlayerResult">
+        <id property="id" column="id" />
+        <result property="registrationId" column="registration_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="seasonId" column="season_id" />
+        <result property="teamId" column="team_id" />
+        <result property="playerId" column="player_id" />
+        <result property="memberId" column="member_id" />
+        <result property="platformIdentityId" column="platform_identity_id" />
+        <result property="platformCode" column="platform_code" />
+        <result property="gameIdSnapshot" column="game_id_snapshot" />
+        <result property="playerNameSnapshot" column="player_name_snapshot" />
+        <result property="position" column="position" />
+        <result property="jerseyNo" column="jersey_no" />
+        <result property="isCaptain" column="is_captain" />
+        <result property="isStarter" column="is_starter" />
+        <result property="sortOrder" column="sort_order" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, registration_id, division_id, season_id, team_id, player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, position, jersey_no, is_captain, is_starter, sort_order, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketRegistrationPlayerResult">
+        select <include refid="BaseColumns" /> from basket_registration_player
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultMap="BasketRegistrationPlayerResult">
+        select <include refid="BaseColumns" /> from basket_registration_player
+        where is_delete = 0
+        order by id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_registration_player (
+            registration_id, division_id, season_id, team_id, player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, position, jersey_no, is_captain, is_starter, sort_order, create_time, update_time, is_delete
+        ) values (
+            #{registrationId}, #{divisionId}, #{seasonId}, #{teamId}, #{playerId}, #{memberId}, #{platformIdentityId}, #{platformCode}, #{gameIdSnapshot}, #{playerNameSnapshot}, #{position}, #{jerseyNo}, #{isCaptain}, #{isStarter}, #{sortOrder}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_registration_player
+        <set>
+            <if test="registrationId != null">registration_id = #{registrationId},</if>
+            <if test="divisionId != null">division_id = #{divisionId},</if>
+            <if test="seasonId != null">season_id = #{seasonId},</if>
+            <if test="teamId != null">team_id = #{teamId},</if>
+            <if test="playerId != null">player_id = #{playerId},</if>
+            <if test="memberId != null">member_id = #{memberId},</if>
+            <if test="platformIdentityId != null">platform_identity_id = #{platformIdentityId},</if>
+            <if test="platformCode != null">platform_code = #{platformCode},</if>
+            <if test="gameIdSnapshot != null">game_id_snapshot = #{gameIdSnapshot},</if>
+            <if test="playerNameSnapshot != null">player_name_snapshot = #{playerNameSnapshot},</if>
+            <if test="position != null">position = #{position},</if>
+            <if test="jerseyNo != null">jersey_no = #{jerseyNo},</if>
+            <if test="isCaptain != null">is_captain = #{isCaptain},</if>
+            <if test="isStarter != null">is_starter = #{isStarter},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_registration_player
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

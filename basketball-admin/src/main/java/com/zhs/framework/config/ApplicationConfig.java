@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 // 表示通过aop框架暴露该代理对象,AopContext能够访问
 @EnableAspectJAutoProxy(exposeProxy = true)
 // 指定要扫描的Mapper类的包的路径
-@MapperScan("com.zhs.**.mapper")
+@MapperScan({"com.zhs.**.mapper", "com.zhs.basket.mapper.v4"})
 public class ApplicationConfig
 {
     /**

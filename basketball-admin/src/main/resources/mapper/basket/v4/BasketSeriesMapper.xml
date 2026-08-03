@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketSeriesMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketSeries" id="BasketSeriesResult">
+        <id property="id" column="id" />
+        <result property="seriesCode" column="series_code" />
+        <result property="seriesName" column="series_name" />
+        <result property="seriesDesc" column="series_desc" />
+        <result property="defaultFormatType" column="default_format_type" />
+        <result property="iconFileId" column="icon_file_id" />
+        <result property="coverFileId" column="cover_file_id" />
+        <result property="bannerFileId" column="banner_file_id" />
+        <result property="sortOrder" column="sort_order" />
+        <result property="enabled" column="enabled" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, series_code, series_name, series_desc, default_format_type, icon_file_id, cover_file_id, banner_file_id, sort_order, enabled, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketSeriesResult">
+        select <include refid="BaseColumns" /> from basket_series
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultMap="BasketSeriesResult">
+        select <include refid="BaseColumns" /> from basket_series
+        where is_delete = 0
+        order by id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_series (
+            series_code, series_name, series_desc, default_format_type, icon_file_id, cover_file_id, banner_file_id, sort_order, enabled, create_time, update_time, is_delete
+        ) values (
+            #{seriesCode}, #{seriesName}, #{seriesDesc}, #{defaultFormatType}, #{iconFileId}, #{coverFileId}, #{bannerFileId}, #{sortOrder}, #{enabled}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_series
+        <set>
+            <if test="seriesCode != null">series_code = #{seriesCode},</if>
+            <if test="seriesName != null">series_name = #{seriesName},</if>
+            <if test="seriesDesc != null">series_desc = #{seriesDesc},</if>
+            <if test="defaultFormatType != null">default_format_type = #{defaultFormatType},</if>
+            <if test="iconFileId != null">icon_file_id = #{iconFileId},</if>
+            <if test="coverFileId != null">cover_file_id = #{coverFileId},</if>
+            <if test="bannerFileId != null">banner_file_id = #{bannerFileId},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="enabled != null">enabled = #{enabled},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_series
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>
