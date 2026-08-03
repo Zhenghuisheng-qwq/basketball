@@ -1,0 +1,33 @@
+package com.zhs.service.v4;
+
+import com.zhs.response.v4.publicapi.*;
+
+import java.util.List;
+
+public interface IBasketV4PublicService {
+
+    List<V4PublicSeriesItemResp> listSeries();
+
+    List<V4PublicSeasonItemResp> listSeasons(String seriesCode, Integer seasonYear, String seasonStatus);
+
+    V4PublicSeasonDetailResp getSeasonDetail(Long seasonId);
+
+    V4PublicDivisionDetailResp getDivisionDetail(Long divisionId);
+
+    List<V4PublicEventTeamItemResp> listTeams(Long divisionId);
+
+    V4PublicEventTeamDetailResp getTeamDetail(Long eventTeamId);
+
+    List<V4PublicMatchItemResp> listMatches(Long divisionId, Integer roundNo, String matchStatus,
+                                            Boolean upcomingOnly, Boolean finishedOnly, Long eventTeamId);
+
+    V4PublicMatchDetailResp getMatchDetail(Long matchId);
+
+    List<V4PublicStandingItemResp> listStanding(Long divisionId);
+
+    List<V4PublicTeamStatItemResp> listTeamStat(Long divisionId);
+
+    List<V4PublicPlayerStatItemResp> listPlayerStat(Long divisionId);
+
+    List<V4PublicRankItemResp> listRank(Long divisionId, String rankType);
+}

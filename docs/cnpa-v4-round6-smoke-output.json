@@ -1,0 +1,90 @@
+{
+  "seasonId": 2,
+  "divisionId": 3,
+  "matchSeasonId": 4,
+  "matchDivisionId": 5,
+  "matchId": 1,
+  "eventTeamId": 13,
+  "results": [
+    {
+      "name": "api_series_list",
+      "status": "PASS",
+      "detail": "count=4"
+    },
+    {
+      "name": "api_season_list",
+      "status": "PASS",
+      "detail": "count=2"
+    },
+    {
+      "name": "api_season_list_league",
+      "status": "PASS",
+      "detail": "count=2"
+    },
+    {
+      "name": "api_season_detail",
+      "status": "PASS",
+      "detail": "title=CNPA League 2026 SMOKE S2 edited divisions=1"
+    },
+    {
+      "name": "api_team_roster",
+      "status": "PASS",
+      "detail": "teams=1 players=5"
+    },
+    {
+      "name": "api_match_list",
+      "status": "PASS",
+      "detail": "count=1 finished=1"
+    },
+    {
+      "name": "api_match_detail",
+      "status": "PASS",
+      "detail": "score=88-75 teamStats=2 playerStats=1"
+    },
+    {
+      "name": "api_standing",
+      "status": "PASS",
+      "detail": "count=2"
+    },
+    {
+      "name": "api_team_stat",
+      "status": "PASS",
+      "detail": "count=2"
+    },
+    {
+      "name": "api_player_stat",
+      "status": "PASS",
+      "detail": "count=1"
+    },
+    {
+      "name": "api_rank",
+      "status": "PASS",
+      "detail": "count=1"
+    },
+    {
+      "name": "old_api_still_exists",
+      "status": "PASS",
+      "detail": "legacy endpoint still alive but not used by V4 pages"
+    },
+    {
+      "name": "page_tournament",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "page_season_detail",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "page_match_detail",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "page_data",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    }
+  ]
+}

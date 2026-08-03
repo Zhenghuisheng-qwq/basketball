@@ -1,0 +1,128 @@
+/** V4 赛事域前台展示辅助 */
+
+export function v4SeriesLabel(code: string | null | undefined): string {
+  switch ((code || '').toUpperCase()) {
+    case 'LEAGUE':
+      return 'League'
+    case 'ARENA':
+      return 'Arena'
+    case 'CUP':
+      return 'Cup'
+    case 'OPEN':
+      return 'Open'
+    default:
+      return code || '--'
+  }
+}
+
+export function v4PlatformLabel(code: string | null | undefined): string {
+  switch ((code || '').toUpperCase()) {
+    case 'PC':
+      return 'PC'
+    case 'PS':
+      return 'PS'
+    case 'XBOX':
+      return 'Xbox'
+    default:
+      return code || '--'
+  }
+}
+
+export function v4MatchStatusLabel(status: string | null | undefined): string {
+  switch ((status || '').toUpperCase()) {
+    case 'PLAYING':
+      return '比赛中'
+    case 'FINISHED':
+      return '已结束'
+    case 'CANCELLED':
+      return '已取消'
+    case 'FORFEITED':
+      return '弃权'
+    case 'SCHEDULED':
+      return '待比赛'
+    case 'DRAFT':
+      return '未发布'
+    default:
+      return '未开赛'
+  }
+}
+
+export function v4SeasonStatusLabel(status: string | null | undefined): string {
+  switch ((status || '').toUpperCase()) {
+    case 'REGISTRATION':
+      return '报名中'
+    case 'MATCHING':
+      return '进行中'
+    case 'FINISHED':
+      return '已结束'
+    case 'DRAFT':
+      return '筹备中'
+    default:
+      return status || '--'
+  }
+}
+
+export function v4RegistrationModeLabel(mode: string | null | undefined): string {
+  switch ((mode || '').toUpperCase()) {
+    case 'TEAM':
+      return '球队报名'
+    case 'PERSONAL':
+      return '个人报名'
+    default:
+      return mode || '--'
+  }
+}
+
+export function v4FormatTypeLabel(type: string | null | undefined): string {
+  switch ((type || '').toUpperCase()) {
+    case 'REGULAR_ROUND_ROBIN':
+      return '常规赛循环赛'
+    case 'SINGLE_ELIMINATION':
+      return '单败淘汰'
+    case 'DOUBLE_ELIMINATION':
+      return '双败淘汰'
+    default:
+      return type || '--'
+  }
+}
+
+export function v4RankTypeLabel(type: string | null | undefined): string {
+  switch ((type || '').toUpperCase()) {
+    case 'PLAYER_SCORE':
+    case 'POINTS':
+      return '得分榜'
+    case 'PLAYER_REBOUND':
+    case 'REBOUND':
+      return '篮板榜'
+    case 'PLAYER_ASSIST':
+    case 'ASSIST':
+      return '助攻榜'
+    case 'PLAYER_STEAL':
+    case 'STEAL':
+      return '抢断榜'
+    case 'PLAYER_BLOCK':
+    case 'BLOCK':
+      return '盖帽榜'
+    case 'TEAM_STANDING':
+      return '球队积分榜'
+    default:
+      return type || '排行榜'
+  }
+}
+
+export function formatScore(home?: number | null, away?: number | null, status?: string | null): string {
+  if ((status || '').toUpperCase() === 'FINISHED' || home != null || away != null) {
+    const h = home ?? 0
+    const a = away ?? 0
+    return `${h} - ${a}`
+  }
+  return 'VS'
+}
+
+export const V4_SERIES_FILTERS = [
+  { code: '', label: '全部' },
+  { code: 'LEAGUE', label: 'League' },
+  { code: 'ARENA', label: 'Arena' },
+  { code: 'CUP', label: 'Cup' },
+  { code: 'OPEN', label: 'Open' },
+] as const

@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * @deprecated R6 起公开赛事主入口已迁移至 V4 页面（/tournament、/events/:seasonId）。
+ * 本页保留于 /tournament/legacy，仅供旧 tournament 数据兼容对照。
+ */
 import { provide } from 'vue'
 import { useEventTab } from './composables/useEventTab'
 import { usePublicSeasonContext } from './composables/usePublicSeasonContext'

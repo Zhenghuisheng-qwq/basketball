@@ -37,7 +37,7 @@ const router = createRouter({
 
       name: 'Tournament',
 
-      component: () => import('@/views/events/EventsPage.vue'),
+      component: () => import('@/views/events/v4/V4EventsListPage.vue'),
 
       meta: { title: '赛事' },
 
@@ -59,13 +59,61 @@ const router = createRouter({
 
     {
 
+      path: '/events/:seasonId',
+
+      name: 'V4SeasonDetail',
+
+      component: () => import('@/views/events/v4/V4SeasonDetailPage.vue'),
+
+      meta: { title: '赛事详情' },
+
+    },
+
+    {
+
+      path: '/events/match/:matchId',
+
+      name: 'V4MatchDetail',
+
+      component: () => import('@/views/events/v4/V4MatchDetailPage.vue'),
+
+      meta: { title: '比赛详情' },
+
+    },
+
+    {
+
+      path: '/tournament/legacy',
+
+      name: 'TournamentLegacy',
+
+      component: () => import('@/views/events/EventsPage.vue'),
+
+      meta: { title: '赛事（旧版）' },
+
+    },
+
+    {
+
       path: '/data',
 
       name: 'Data',
 
-      component: () => import('@/views/data/index.vue'),
+      component: () => import('@/views/data/V4DataPage.vue'),
 
       meta: { title: '数据' },
+
+    },
+
+    {
+
+      path: '/data/legacy',
+
+      name: 'DataLegacy',
+
+      component: () => import('@/views/data/index.vue'),
+
+      meta: { title: '数据（旧版）' },
 
     },
 

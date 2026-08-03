@@ -43,7 +43,11 @@ const competitionDropdownRef = ref<InstanceType<typeof CompetitionDropdown> | nu
 let closeTimer: ReturnType<typeof setTimeout> | null = null
 
 const isTournamentRoute = computed(
-  () => route.path === '/tournament' || route.path === '/events',
+  () =>
+    route.path === '/tournament' ||
+    route.path === '/events' ||
+    route.path.startsWith('/events/') ||
+    route.path === '/tournament/legacy',
 )
 
 const searchResults = computed(() => [] as Array<{
