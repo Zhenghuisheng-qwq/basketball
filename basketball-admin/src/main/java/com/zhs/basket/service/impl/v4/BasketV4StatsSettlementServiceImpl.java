@@ -127,6 +127,7 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
             row.setTurnover(nvl(subTeamStat.getTurnover()));
             row.setFoul(nvl(subTeamStat.getFoul()));
         }
+        applyTeamStatDefaults(row);
         row.setSourceSubmissionId(submission.getId());
         row.setUpdateTime(now);
         if (existing == null) {
@@ -162,6 +163,7 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
         row.setPointsFor(oppScore);
         row.setPointsAgainst(teamScore);
         row.setSourceSubmissionId(submission.getId());
+        applyTeamStatDefaults(row);
         row.setUpdateTime(now);
         if (existing == null) {
             row.setCreateTime(now);
@@ -433,6 +435,45 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
 
     private int nvl(Integer v) {
         return v == null ? 0 : v;
+    }
+
+    private void applyTeamStatDefaults(BasketV4MatchTeamStat row) {
+        if (row.getFieldGoalMade() == null) {
+            row.setFieldGoalMade(0);
+        }
+        if (row.getFieldGoalAttempt() == null) {
+            row.setFieldGoalAttempt(0);
+        }
+        if (row.getThreePointMade() == null) {
+            row.setThreePointMade(0);
+        }
+        if (row.getThreePointAttempt() == null) {
+            row.setThreePointAttempt(0);
+        }
+        if (row.getFreeThrowMade() == null) {
+            row.setFreeThrowMade(0);
+        }
+        if (row.getFreeThrowAttempt() == null) {
+            row.setFreeThrowAttempt(0);
+        }
+        if (row.getRebound() == null) {
+            row.setRebound(0);
+        }
+        if (row.getAssist() == null) {
+            row.setAssist(0);
+        }
+        if (row.getSteal() == null) {
+            row.setSteal(0);
+        }
+        if (row.getBlock() == null) {
+            row.setBlock(0);
+        }
+        if (row.getTurnover() == null) {
+            row.setTurnover(0);
+        }
+        if (row.getFoul() == null) {
+            row.setFoul(0);
+        }
     }
 
     private BigDecimal avg(int total, int count) {

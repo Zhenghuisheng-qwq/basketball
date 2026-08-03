@@ -203,40 +203,135 @@ ALTER TABLE basket_match_submission ADD COLUMN submit_remark VARCHAR(512) ...
 
 ---
 
-## 15. API 冒烟测试记录
+## 15. API 冒烟测试记录（初版）
 
-脚本：`scripts/smoke_v4_r5_match_data_stats.py`
-
-| 项 | 结果 | 备注 |
-|----|------|------|
-| Admin 登录 | PASS | |
-| DB patch 三列 | PASS | home_score / away_score / submit_remark 已存在 |
-| 测试 Match 数据 | PASS | division=5, match=1 |
-| Home Web 登录 | PASS | |
-| Web my-matches | **待重启** | 当前运行中 backend 无 R5 路由 → HTTP 500 |
-| 完整提交→审核→结算链路 | **待重启** | 需重启 admin:8080 + web:8881 后重跑脚本 |
-
-**结论：** 代码与 SQL 已就绪；**需重启后端服务**后执行冒烟可达完整 PASS。
+脚本：`scripts/smoke_v4_r5_match_data_stats.py`（初版轻量冒烟，已被 full acceptance 取代）
 
 ---
 
-## 16. 风险与待确认项
+## 16. 第 5 轮真实冒烟补验收记录
 
-1. **服务重启**：R5 Controller/Service 需编译部署后 API 才可用。
-2. **双方先后审核覆盖**：P0 以后通过者覆盖官方比分；若需「双方一致才 FINISHED」需后续规则。
-3. **分节比分**：后置，当前仅总比分。
+**执行时间：** 2026-08-04 02:05+  
+**脚本：** `scripts/smoke_v4_r5_full_acceptance.py`  
+**结果 JSON：** `docs/r5-smoke-results.json`  
+**结果：** **39/39 PASS，0 FAIL**（1 SKIP：无 CANCELLED Match 测试数据）
+
+### 16.1 服务重启
+
+| 服务 | 地址 | 状态 |
+|------|------|------|
+| basketball-admin | `http://127.0.0.1:8080` | ✅ 已 kill 旧进程并用 Maven 重新 `spring-boot:run` 加载 R5 代码 |
+| basketball-web | `http://127.0.0.1:8881` | ✅ 已重启（`MiniApplication`） |
+
+补验收期间修复：`BasketV4StatsSettlementServiceImpl` 对手最小 `match_team_stat` 写入时 `field_goal_made` 等 NOT NULL 字段默认值。
+
+### 16.2 测试数据
+
+| 项 | 值 |
+|----|-----|
+| Division | **5**（R3_QUOTA_TEST_PC） |
+| Match | **1**（V4-5-1-01） |
+| Home EventTeam | **14**（CNPA战队Alpha） |
+| Away EventTeam | **15**（CNPA战队Beta） |
+
+### 16.3 Home 方提交结果
+
+| 步骤 | 结果 |
+|------|------|
+| GET my-matches | PASS，`canSubmit=true`，返回 `mySubmissionStatus` |
+| POST save | submissionId=**10**，DRAFT，homeScore=88/awayScore=75，teamStat/playerStat/material 各 1 条 |
+| save 不写官方 | Match 仍 SCHEDULED、无比分；match_team_stat=0；standing=0 |
+| POST submit | **PENDING_REVIEW**，submitTime 有值 |
+
+### 16.4 Away 方提交结果
+
+| 步骤 | 结果 |
+|------|------|
+| Home PENDING_REVIEW 期间 Away save+submit | submissionId=**11**，**PENDING_REVIEW** ✅ |
+| Match 整体状态 | 仍为 **SCHEDULED**（无整体审核中） ✅ |
+
+### 16.5 A 队审核中 B 队是否可提交
+
+**是。** Home 方 PENDING_REVIEW 时，Away 方独立完成 save + submit，双方 submission 在审核列表中各自为 PENDING_REVIEW。
+
+### 16.6 驳回结果
+
+- Away submissionId=11 → **REJECTED**
+- 驳回后官方 Match 仍无比分（home_score=NULL）
+
+### 16.7 重提 versionNo 结果
+
+- oldSubmissionId=11（v1 REJECTED 保留）
+- resubmit → newSubmissionId=**12**，**versionNo=2**，status=**DRAFT**
+
+### 16.8 审核通过结果
+
+- Home submissionId=10 → **APPROVED**
+
+### 16.9 Match 官方比分写入
+
+| 字段 | 值 |
+|------|-----|
+| home_score | 88 |
+| away_score | 75 |
+| winner_event_team_id | 14（Home） |
+| match_status | FINISHED |
+
+### 16.10 match_team_stat 写入
+
+- 双方各 1 条：`((eventTeamId=14, sourceSubmissionId=10), (eventTeamId=15, sourceSubmissionId=10))`
+
+### 16.11 match_player_stat 写入
+
+- count=1，source_submission_id=10
+
+### 16.12 ~ 16.17 统计重算
+
+| 表 | Division=5 行数 / 类型 |
+|----|------------------------|
+| basket_standing | 2 |
+| basket_team_stat | 2 |
+| basket_player_stat | 1 |
+| basket_rank | 5 行；含 TEAM_STANDING / PLAYER_SCORE / PLAYER_ASSIST / PLAYER_REBOUND |
+
+统计 API（standing / team-stat / player-stat / rank）均返回 division 隔离数据。
+
+### 16.18 拒绝场景测试
+
+| 场景 | 结果 |
+|------|------|
+| 未发布 Match 提交 | PASS |
+| CANCELLED Match | SKIP（无测试数据） |
+| 无效 submitEventTeamId | PASS |
+| 非本队 EventPlayer | PASS |
+| PENDING_REVIEW 覆盖 save | PASS |
+| APPROVED 不可 save | PASS |
+| 非 PENDING 审核通过 | PASS |
+| 非 PENDING 驳回 | PASS |
+
+### 16.19 V4 是否写旧 match_data 表
+
+**否。** `basket_match_data_submission` / `basket_match_data_audit` 行数=0。
+
+### 16.20 是否可以进入第 6 轮
+
+**可以。** R5 主链路已真实跑通，建议进入第 6 轮（前台赛事详情 / 公开榜单展示）。
+
+---
+
+## 17. 风险与待确认项
+
+1. **双方先后审核覆盖**：P0 以后通过者覆盖官方比分；若需「双方一致才 FINISHED」需后续规则。
+2. **分节比分**：后置，当前仅总比分。
+3. **CANCELLED Match 拒绝场景**：补验收库中无 CANCELLED 样本，未实测。
 4. **材料 fileId**：已存储，前台展示依赖第 6/7 轮。
-5. **Web 端口**：冒烟默认 `8881`（与 R3 full acceptance 一致）。
 
 ---
 
-## 17. 是否建议进入第 6 轮
+## 18. 是否建议进入第 6 轮
 
-**建议进入第 6 轮**（前台赛事详情 / 公开榜单展示），前提：
-
-1. 重启 backend 并通过 `smoke_v4_r5_match_data_stats.py` 全绿；
-2. 后台手工验证 V4 比赛数据审核页、V4 统计榜单页各一次。
+**建议进入第 6 轮。** R5 真实冒烟 39/39 PASS，提交→审核→官方结果→统计结算全链路已验证。
 
 ---
 
-*Round 5 完成。Round 6（前台赛事详情 / 榜单）不在本轮范围。*
+*Round 5 完成（含补验收）。Round 6 不在本轮范围。*
