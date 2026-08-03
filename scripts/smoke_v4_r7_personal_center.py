@@ -10,18 +10,24 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
+try:
+    import pymysql
+except ImportError:
+    pymysql = None
+
 WEB_BASE = "http://127.0.0.1:8881"
 UI_BASE = "http://127.0.0.1:5173"
 MEMBER_PASSWORD = "111111aa"
 CAPTAIN_EMAIL = "111111@qq.com"
 AWAY_PLAYER_EMAIL = "111122@qq.com"
+DB_CONN = dict(host="192.168.31.47", user="root", password="123456", database="basketball", charset="utf8mb4")
 
-# From DB / R5 acceptance
 TEST_MEMBER_ID = "2082478335308456000"
 TEST_PLAYER_ID = "2082478335308456000"
 TEST_SEASON_ID = 4
 TEST_DIVISION_ID = 5
 TEST_EVENT_TEAM_ID = 14
+TEST_AWAY_EVENT_TEAM_ID = 15
 TEST_MATCH_ID = 1
 
 RESULTS: list[tuple[str, str, str]] = []
@@ -178,6 +184,32 @@ def main() -> int:
         record("api_my_matches", "PASS", f"count={len(my_matches)} match1={target.get('mySubmissionStatus')}")
     else:
         record("api_my_matches", "PASS" if isinstance(my_matches, list) else "FAIL", f"count={len(my_matches)}")
+
+    # Explicit A pending / B can submit using temporary DB flip
+    if pymysql:
+        conn = pymysql.connect(**DB_CONN)
+        cur = conn.cursor()
+        cur.execute("SELECT submission_status FROM basket_match_submission WHERE match_id=%s AND submit_event_team_id=%s AND version_no=1", (TEST_MATCH_ID, TEST_EVENT_TEAM_ID))
+        row = cur.fetchone()
+        orig_status = row[0] if row else "APPROVED"
+        try:
+            cur.execute("UPDATE basket_match_submission SET submission_status='PENDING_REVIEW' WHERE match_id=%s AND submit_event_team_id=%s AND version_no=1", (TEST_MATCH_ID, TEST_EVENT_TEAM_ID))
+            conn.commit()
+            home_after = http_json("GET", f"/basket/v4/player/match-submission/my-matches?divisionId={TEST_DIVISION_ID}", token=captain_token)[0].get("data") or []
+            away_after = http_json("GET", f"/basket/v4/player/match-submission/my-matches?divisionId={TEST_DIVISION_ID}", token=away_token)[0].get("data") or []
+            ht = next((x for x in home_after if str(x.get("matchId")) == str(TEST_MATCH_ID)), {})
+            at = next((x for x in away_after if str(x.get("matchId")) == str(TEST_MATCH_ID)), {})
+            away_can = at.get("canSubmitData") or at.get("canSubmit")
+            record("ab_home_pending_away_submit", "PASS" if ht.get("mySubmissionStatus") == "PENDING_REVIEW" and away_can else "FAIL",
+                   f"home={ht.get('mySubmissionStatus')} awayCan={away_can}")
+            REPORT["ab_pending_test"] = {"homeStatus": ht.get("mySubmissionStatus"), "awayCanSubmit": away_can}
+        finally:
+            cur.execute("UPDATE basket_match_submission SET submission_status=%s WHERE match_id=%s AND submit_event_team_id=%s AND version_no=1", (orig_status, TEST_MATCH_ID, TEST_EVENT_TEAM_ID))
+            conn.commit()
+            cur.close()
+            conn.close()
+    else:
+        record("ab_home_pending_away_submit", "SKIP", "pymysql unavailable")
 
     # match submission detail
     detail = http_json("GET", f"/basket/v4/player/match-submission/{TEST_MATCH_ID}/detail?submitEventTeamId={TEST_EVENT_TEAM_ID}", token=captain_token, allow_fail=True)

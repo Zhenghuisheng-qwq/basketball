@@ -96,3 +96,14 @@ export interface V4RegistrationSaveReq {
 export interface V4RegistrationIdReq {
   registrationId: string
 }
+
+export interface V4RegistrationPlayerItem {
+  playerId: string
+  playerName?: string
+  isCaptain?: number
+  sortOrder?: number
+}
+
+export interface V4RegistrationDetail extends V4MyRegistration {
+  players?: V4RegistrationPlayerItem[]
+}

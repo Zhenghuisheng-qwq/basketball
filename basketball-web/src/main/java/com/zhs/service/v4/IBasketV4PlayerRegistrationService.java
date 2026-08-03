@@ -4,6 +4,7 @@ import com.zhs.request.v4.V4RegistrationIdReq;
 import com.zhs.request.v4.V4RegistrationSaveReq;
 import com.zhs.response.v4.V4AvailableDivisionResp;
 import com.zhs.response.v4.V4MyRegistrationResp;
+import com.zhs.response.v4.V4RegistrationDetailResp;
 
 import java.util.List;
 
@@ -17,4 +18,6 @@ public interface IBasketV4PlayerRegistrationService {
     void withdrawRegistration(V4RegistrationIdReq req);
 
     List<V4MyRegistrationResp> listMyRegistrations();
+
+    V4RegistrationDetailResp getRegistrationDetail(Long registrationId);
 }

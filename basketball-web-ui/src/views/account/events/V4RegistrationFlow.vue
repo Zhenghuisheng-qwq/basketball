@@ -9,6 +9,7 @@ import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import {
   getV4AvailableDivisions,
   getV4MyRegistrations,
+  getV4RegistrationDetail,
   saveV4Registration,
   submitV4Registration,
   withdrawV4Registration,
@@ -64,13 +65,26 @@ async function bootstrap() {
     }
     const existing = (registrationsRes.data || []).find((item) => item.divisionId === divisionId.value)
     registrationId.value = existing?.registrationId || String(route.query.registrationId || '')
+    if (registrationId.value) {
+      try {
+        const detailRes = await getV4RegistrationDetail(registrationId.value)
+        const players = detailRes.data?.players || []
+        if (players.length) {
+          selectedPlayerIds.value = players.map((p) => String(p.playerId))
+        }
+      } catch {
+        // ignore detail load failure; user can re-select lineup
+      }
+    }
     const teamId = division.value.grantTeamId || teamStore.myTeamSummary?.teamId
     if (teamId) {
       await teamStore.loadTeamDetail(String(teamId))
     }
-    const captainMember = teamStore.members.find((m) => m.roleType === 'CAPTAIN') || teamStore.members[0]
-    if (captainMember?.playerId) {
-      selectedPlayerIds.value = [String(captainMember.playerId)]
+    if (!selectedPlayerIds.value.length) {
+      const captainMember = teamStore.members.find((m) => m.roleType === 'CAPTAIN') || teamStore.members[0]
+      if (captainMember?.playerId) {
+        selectedPlayerIds.value = [String(captainMember.playerId)]
+      }
     }
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'

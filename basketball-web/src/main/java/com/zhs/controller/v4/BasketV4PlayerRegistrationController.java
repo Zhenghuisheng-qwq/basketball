@@ -48,4 +48,10 @@ public class BasketV4PlayerRegistrationController {
     public R myList() {
         return R.ok(playerRegistrationService.listMyRegistrations());
     }
+
+    @ApiOperation("报名详情/阵容")
+    @GetMapping("/{registrationId}/detail")
+    public R detail(@PathVariable Long registrationId) {
+        return R.ok(playerRegistrationService.getRegistrationDetail(registrationId));
+    }
 }

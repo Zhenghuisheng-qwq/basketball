@@ -17,6 +17,10 @@ export function getV4MyRegistrations() {
   return request.get<any, ApiResult<V4MyRegistration[]>>('/basket/v4/player/registration/my-list')
 }
 
+export function getV4RegistrationDetail(registrationId: string) {
+  return request.get<any, ApiResult<V4RegistrationDetail>>(`/basket/v4/player/registration/${registrationId}/detail`)
+}
+
 export function saveV4Registration(data: V4RegistrationSaveReq) {
   return request.post<any, ApiResult<string>>('/basket/v4/player/registration/save', data)
 }

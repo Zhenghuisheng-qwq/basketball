@@ -21,6 +21,8 @@ import com.zhs.request.v4.V4RegistrationIdReq;
 import com.zhs.request.v4.V4RegistrationSaveReq;
 import com.zhs.response.v4.V4AvailableDivisionResp;
 import com.zhs.response.v4.V4MyRegistrationResp;
+import com.zhs.response.v4.V4RegistrationDetailResp;
+import com.zhs.response.v4.V4RegistrationPlayerItemResp;
 import com.zhs.service.v4.IBasketV4PlayerRegistrationService;
 import com.zhs.support.GameTerminalSupport;
 import jakarta.annotation.Resource;
@@ -180,6 +182,44 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
     @Override
     public List<V4MyRegistrationResp> listMyRegistrations() {
         return playerRegistrationMapper.selectMyRegistrations(UserContext.getRequiredMemberId());
+    }
+
+    @Override
+    public V4RegistrationDetailResp getRegistrationDetail(Long registrationId) {
+        BasketRegistration registration = requireCaptainRegistration(registrationId);
+        V4RegistrationDetailResp resp = new V4RegistrationDetailResp();
+        List<V4MyRegistrationResp> mine = playerRegistrationMapper.selectMyRegistrations(registration.getCaptainMemberId());
+        V4MyRegistrationResp base = mine.stream()
+                .filter(r -> registrationId.equals(r.getRegistrationId()))
+                .findFirst()
+                .orElse(null);
+        if (base != null) {
+            org.springframework.beans.BeanUtils.copyProperties(base, resp);
+        } else {
+            resp.setRegistrationId(registration.getId());
+            resp.setSeasonId(registration.getSeasonId());
+            resp.setDivisionId(registration.getDivisionId());
+            resp.setTeamId(registration.getTeamId());
+            resp.setRegistrationStatus(registration.getRegistrationStatus());
+            resp.setLineupCount(registration.getLineupCount());
+            resp.setSubmitTime(registration.getSubmitTime());
+            resp.setApproveTime(registration.getApproveTime());
+            resp.setRejectReason(registration.getRejectReason());
+        }
+        List<V4RegistrationPlayerItemResp> players = new ArrayList<>();
+        for (BasketRegistrationPlayer p : registrationPlayerDao.selectList(new LambdaQueryWrapper<BasketRegistrationPlayer>()
+                .eq(BasketRegistrationPlayer::getRegistrationId, registrationId)
+                .eq(BasketRegistrationPlayer::getIsDelete, NOT_DELETED)
+                .orderByAsc(BasketRegistrationPlayer::getSortOrder))) {
+            V4RegistrationPlayerItemResp item = new V4RegistrationPlayerItemResp();
+            item.setPlayerId(p.getPlayerId());
+            item.setPlayerName(p.getPlayerNameSnapshot());
+            item.setIsCaptain(p.getIsCaptain());
+            item.setSortOrder(p.getSortOrder());
+            players.add(item);
+        }
+        resp.setPlayers(players);
+        return resp;
     }
 
     private void enrichAvailability(V4AvailableDivisionResp row, Long playerId, Date now) {
