@@ -11,6 +11,8 @@ import java.util.List;
 public interface BasketV4MatchTeamStatMapper {
     BasketV4MatchTeamStat selectById(@Param("id") Long id);
     List<BasketV4MatchTeamStat> selectList(BasketV4MatchTeamStat query);
+    BasketV4MatchTeamStat selectByMatchAndEventTeam(@Param("matchId") Long matchId, @Param("eventTeamId") Long eventTeamId);
+    List<BasketV4MatchTeamStat> selectByDivisionId(@Param("divisionId") Long divisionId);
     int insert(BasketV4MatchTeamStat entity);
     int updateById(BasketV4MatchTeamStat entity);
     int softDelete(@Param("id") Long id);

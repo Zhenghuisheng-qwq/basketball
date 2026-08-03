@@ -50,6 +50,10 @@ public class BasketMatchSubmission implements Serializable {
 
     private Integer versionNo;
 
+    private Integer homeScore;
+
+    private Integer awayScore;
+
     private Date submitTime;
 
     @JsonSerialize(using = ToStringSerializer.class)
@@ -62,6 +66,8 @@ public class BasketMatchSubmission implements Serializable {
     private String auditRemark;
 
     private String rejectReason;
+
+    private String submitRemark;
 
     private Date createTime;
 

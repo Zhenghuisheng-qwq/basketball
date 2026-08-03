@@ -25,4 +25,6 @@ public interface BasketV4MatchMapper {
     int softDeleteDraftByBatchId(@Param("scheduleBatchId") Long scheduleBatchId);
 
     int publishByBatchId(@Param("scheduleBatchId") Long scheduleBatchId);
+
+    List<BasketV4Match> selectFinishedPublishedByDivisionId(@Param("divisionId") Long divisionId);
 }

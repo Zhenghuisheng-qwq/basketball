@@ -19,12 +19,15 @@ public class BasketMatchSubmission {
     private String submitterRole;
     private String submissionStatus;
     private Integer versionNo;
+    private Integer homeScore;
+    private Integer awayScore;
     private Date submitTime;
     private Long auditUserId;
     private String auditUserName;
     private Date auditTime;
     private String auditRemark;
     private String rejectReason;
+    private String submitRemark;
     private Date createTime;
     private Date updateTime;
     private Integer isDelete;

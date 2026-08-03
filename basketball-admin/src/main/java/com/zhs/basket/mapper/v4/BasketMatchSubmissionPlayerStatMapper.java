@@ -11,6 +11,8 @@ import java.util.List;
 public interface BasketMatchSubmissionPlayerStatMapper {
     BasketMatchSubmissionPlayerStat selectById(@Param("id") Long id);
     List<BasketMatchSubmissionPlayerStat> selectList(BasketMatchSubmissionPlayerStat query);
+    List<BasketMatchSubmissionPlayerStat> selectBySubmissionId(@Param("submissionId") Long submissionId);
+    int deleteBySubmissionId(@Param("submissionId") Long submissionId);
     int insert(BasketMatchSubmissionPlayerStat entity);
     int updateById(BasketMatchSubmissionPlayerStat entity);
     int softDelete(@Param("id") Long id);

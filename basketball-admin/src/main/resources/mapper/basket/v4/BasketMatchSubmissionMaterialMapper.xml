@@ -59,4 +59,16 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <select id="selectBySubmissionId" resultMap="BasketMatchSubmissionMaterialResult">
+        select <include refid="BaseColumns" /> from basket_match_submission_material
+        where submission_id = #{submissionId} and is_delete = 0
+        order by id asc
+    </select>
+
+    <update id="deleteBySubmissionId">
+        update basket_match_submission_material
+        set is_delete = 1, update_time = now()
+        where submission_id = #{submissionId} and is_delete = 0
+    </update>
+
 </mapper>

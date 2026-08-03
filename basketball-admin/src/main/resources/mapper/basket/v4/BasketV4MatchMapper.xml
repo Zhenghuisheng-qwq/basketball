@@ -126,6 +126,9 @@
             <if test="matchTime != null">match_time = #{matchTime},</if>
             <if test="venueText != null">venue_text = #{venueText},</if>
             <if test="remark != null">remark = #{remark},</if>
+            <if test="homeScore != null">home_score = #{homeScore},</if>
+            <if test="awayScore != null">away_score = #{awayScore},</if>
+            <if test="winnerEventTeamId != null">winner_event_team_id = #{winnerEventTeamId},</if>
             <if test="matchStatus != null">match_status = #{matchStatus},</if>
             <if test="publishStatus != null">publish_status = #{publishStatus},</if>
             update_time = now()
@@ -150,5 +153,11 @@
         set publish_status = 'PUBLISHED', update_time = now()
         where schedule_batch_id = #{scheduleBatchId} and publish_status = 'DRAFT' and is_delete = 0
     </update>
+
+    <select id="selectFinishedPublishedByDivisionId" resultMap="BasketV4MatchResult">
+        select <include refid="BaseColumns" /> from basket_match
+        where division_id = #{divisionId} and match_status = 'FINISHED' and publish_status = 'PUBLISHED' and is_delete = 0
+        order by match_time asc, id asc
+    </select>
 
 </mapper>

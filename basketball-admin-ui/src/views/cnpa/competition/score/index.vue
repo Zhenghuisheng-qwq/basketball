@@ -1,5 +1,6 @@
 <template>
   <div class="app-container">
+    <el-alert title="[已废弃] 旧比分录入入口，请使用 V4 比赛数据提交（Web API /basket/v4/player/match-submission）" type="warning" :closable="false" show-icon class="mb8" />
     <el-form :inline="true" label-width="88px" class="mb8">
       <el-form-item label="比赛ID">
         <el-input-number v-model="matchId" :min="1" controls-position="right" style="width: 160px" />

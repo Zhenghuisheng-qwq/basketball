@@ -14,18 +14,21 @@
         <result property="submitterRole" column="submitter_role" />
         <result property="submissionStatus" column="submission_status" />
         <result property="versionNo" column="version_no" />
+        <result property="homeScore" column="home_score" />
+        <result property="awayScore" column="away_score" />
         <result property="submitTime" column="submit_time" />
         <result property="auditUserId" column="audit_user_id" />
         <result property="auditUserName" column="audit_user_name" />
         <result property="auditTime" column="audit_time" />
         <result property="auditRemark" column="audit_remark" />
         <result property="rejectReason" column="reject_reason" />
+        <result property="submitRemark" column="submit_remark" />
         <result property="createTime" column="create_time" />
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
-    <sql id="BaseColumns">id, match_id, season_id, division_id, submit_event_team_id, opponent_event_team_id, submit_event_player_id, submit_member_id, submitter_role, submission_status, version_no, submit_time, audit_user_id, audit_user_name, audit_time, audit_remark, reject_reason, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, match_id, season_id, division_id, submit_event_team_id, opponent_event_team_id, submit_event_player_id, submit_member_id, submitter_role, submission_status, version_no, home_score, away_score, submit_time, audit_user_id, audit_user_name, audit_time, audit_remark, reject_reason, submit_remark, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketMatchSubmissionResult">
         select <include refid="BaseColumns" /> from basket_match_submission
@@ -40,9 +43,9 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_match_submission (
-            match_id, season_id, division_id, submit_event_team_id, opponent_event_team_id, submit_event_player_id, submit_member_id, submitter_role, submission_status, version_no, submit_time, audit_user_id, audit_user_name, audit_time, audit_remark, reject_reason, create_time, update_time, is_delete
+            match_id, season_id, division_id, submit_event_team_id, opponent_event_team_id, submit_event_player_id, submit_member_id, submitter_role, submission_status, version_no, home_score, away_score, submit_time, audit_user_id, audit_user_name, audit_time, audit_remark, reject_reason, submit_remark, create_time, update_time, is_delete
         ) values (
-            #{matchId}, #{seasonId}, #{divisionId}, #{submitEventTeamId}, #{opponentEventTeamId}, #{submitEventPlayerId}, #{submitMemberId}, #{submitterRole}, #{submissionStatus}, #{versionNo}, #{submitTime}, #{auditUserId}, #{auditUserName}, #{auditTime}, #{auditRemark}, #{rejectReason}, #{createTime}, #{updateTime}, #{isDelete}
+            #{matchId}, #{seasonId}, #{divisionId}, #{submitEventTeamId}, #{opponentEventTeamId}, #{submitEventPlayerId}, #{submitMemberId}, #{submitterRole}, #{submissionStatus}, #{versionNo}, #{homeScore}, #{awayScore}, #{submitTime}, #{auditUserId}, #{auditUserName}, #{auditTime}, #{auditRemark}, #{rejectReason}, #{submitRemark}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -59,12 +62,15 @@
             <if test="submitterRole != null">submitter_role = #{submitterRole},</if>
             <if test="submissionStatus != null">submission_status = #{submissionStatus},</if>
             <if test="versionNo != null">version_no = #{versionNo},</if>
+            <if test="homeScore != null">home_score = #{homeScore},</if>
+            <if test="awayScore != null">away_score = #{awayScore},</if>
             <if test="submitTime != null">submit_time = #{submitTime},</if>
             <if test="auditUserId != null">audit_user_id = #{auditUserId},</if>
             <if test="auditUserName != null">audit_user_name = #{auditUserName},</if>
             <if test="auditTime != null">audit_time = #{auditTime},</if>
             <if test="auditRemark != null">audit_remark = #{auditRemark},</if>
             <if test="rejectReason != null">reject_reason = #{rejectReason},</if>
+            <if test="submitRemark != null">submit_remark = #{submitRemark},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
             update_time = now()
         </set>
@@ -76,5 +82,78 @@
         set is_delete = 1, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
+
+    <select id="selectLatestByMatchAndTeam" resultMap="BasketMatchSubmissionResult">
+        select <include refid="BaseColumns" /> from basket_match_submission
+        where match_id = #{matchId} and submit_event_team_id = #{submitEventTeamId} and is_delete = 0
+        order by version_no desc, id desc
+        limit 1
+    </select>
+
+    <select id="selectMaxVersionNo" resultType="java.lang.Integer">
+        select max(version_no) from basket_match_submission
+        where match_id = #{matchId} and submit_event_team_id = #{submitEventTeamId} and is_delete = 0
+    </select>
+
+    <select id="selectVersionsByMatchAndTeam" resultMap="BasketMatchSubmissionResult">
+        select <include refid="BaseColumns" /> from basket_match_submission
+        where match_id = #{matchId} and submit_event_team_id = #{submitEventTeamId} and is_delete = 0
+        order by version_no desc, id desc
+    </select>
+
+    <resultMap type="com.zhs.basket.vo.v4.BasketMatchSubmissionAuditListVo" id="AuditListVoResult">
+        <id property="submissionId" column="submission_id" />
+        <result property="matchId" column="match_id" />
+        <result property="matchNo" column="match_no" />
+        <result property="roundNo" column="round_no" />
+        <result property="matchTime" column="match_time" />
+        <result property="divisionName" column="division_name" />
+        <result property="platformCode" column="platform_code" />
+        <result property="homeTeamName" column="home_team_name" />
+        <result property="awayTeamName" column="away_team_name" />
+        <result property="submitTeamName" column="submit_team_name" />
+        <result property="submitterName" column="submitter_name" />
+        <result property="submitterRole" column="submitter_role" />
+        <result property="versionNo" column="version_no" />
+        <result property="submissionStatus" column="submission_status" />
+        <result property="submitTime" column="submit_time" />
+        <result property="auditTime" column="audit_time" />
+    </resultMap>
+
+    <select id="selectAuditVoList" resultMap="AuditListVoResult">
+        select
+            s.id as submission_id,
+            s.match_id,
+            m.match_no,
+            m.round_no,
+            m.match_time,
+            d.division_name,
+            m.platform_code,
+            ht.team_name_snapshot as home_team_name,
+            at.team_name_snapshot as away_team_name,
+            st.team_name_snapshot as submit_team_name,
+            ep.player_name_snapshot as submitter_name,
+            s.submitter_role,
+            s.version_no,
+            s.submission_status,
+            s.submit_time,
+            s.audit_time
+        from basket_match_submission s
+        join basket_match m on m.id = s.match_id and m.is_delete = 0
+        left join basket_division d on d.id = s.division_id and d.is_delete = 0
+        left join basket_event_team ht on ht.id = m.home_event_team_id and ht.is_delete = 0
+        left join basket_event_team at on at.id = m.away_event_team_id and at.is_delete = 0
+        left join basket_event_team st on st.id = s.submit_event_team_id and st.is_delete = 0
+        left join basket_event_player ep on ep.id = s.submit_event_player_id and ep.is_delete = 0
+        where s.is_delete = 0
+        <if test="seasonId != null">and s.season_id = #{seasonId}</if>
+        <if test="divisionId != null">and s.division_id = #{divisionId}</if>
+        <if test="matchId != null">and s.match_id = #{matchId}</if>
+        <if test="submitEventTeamId != null">and s.submit_event_team_id = #{submitEventTeamId}</if>
+        <if test="submissionStatus != null and submissionStatus != ''">and s.submission_status = #{submissionStatus}</if>
+        <if test="teamName != null and teamName != ''">and st.team_name_snapshot like concat('%', #{teamName}, '%')</if>
+        <if test="matchNo != null and matchNo != ''">and m.match_no like concat('%', #{matchNo}, '%')</if>
+        order by s.submit_time desc, s.id desc
+    </select>
 
 </mapper>

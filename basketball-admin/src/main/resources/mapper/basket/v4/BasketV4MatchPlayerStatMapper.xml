@@ -75,4 +75,20 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <select id="selectByMatchAndEventPlayer" resultMap="BasketV4MatchPlayerStatResult">
+        select <include refid="BaseColumns" /> from basket_match_player_stat
+        where match_id = #{matchId} and event_player_id = #{eventPlayerId} and is_delete = 0
+        limit 1
+    </select>
+
+    <select id="selectByDivisionId" resultMap="BasketV4MatchPlayerStatResult">
+        select ps.id, ps.match_id, ps.season_id, ps.division_id, ps.event_team_id, ps.event_player_id,
+               ps.points, ps.score, ps.rebound, ps.assist, ps.steal, ps.block, ps.turnover, ps.foul,
+               ps.minutes, ps.source_submission_id, ps.create_time, ps.update_time, ps.is_delete
+        from basket_match_player_stat ps
+        join basket_match m on m.id = ps.match_id and m.is_delete = 0
+        where ps.division_id = #{divisionId} and ps.is_delete = 0
+          and m.match_status = 'FINISHED' and m.publish_status = 'PUBLISHED'
+    </select>
+
 </mapper>

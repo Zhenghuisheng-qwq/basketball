@@ -75,4 +75,15 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <select id="selectByDivisionId" resultMap="BasketTeamStatResult">
+        select <include refid="BaseColumns" /> from basket_team_stat
+        where division_id = #{divisionId} and is_delete = 0
+        order by win_count desc, points_for desc
+    </select>
+
+    <update id="deleteByDivisionId">
+        update basket_team_stat set is_delete = 1, update_time = now()
+        where division_id = #{divisionId} and is_delete = 0
+    </update>
+
 </mapper>

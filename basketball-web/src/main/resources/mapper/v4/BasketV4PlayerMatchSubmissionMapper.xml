@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.mapper.v4.BasketV4PlayerMatchSubmissionMapper">
+
+    <select id="selectMyMatches" resultType="com.zhs.response.v4.V4MyMatchResp">
+        select
+            m.id as matchId,
+            m.season_id as seasonId,
+            se.display_title as seasonTitle,
+            m.division_id as divisionId,
+            d.division_name as divisionName,
+            m.platform_code as platformCode,
+            m.round_no as roundNo,
+            m.match_no as matchNo,
+            m.match_time as matchTime,
+            m.home_event_team_id as homeEventTeamId,
+            ht.team_name_snapshot as homeTeamName,
+            ht.team_logo_file_id as homeTeamLogoFileId,
+            m.away_event_team_id as awayEventTeamId,
+            at.team_name_snapshot as awayTeamName,
+            at.team_logo_file_id as awayTeamLogoFileId,
+            case when ep_home.id is not null then m.home_event_team_id when ep_away.id is not null then m.away_event_team_id else null end as myEventTeamId,
+            case when ep_home.id is not null then m.away_event_team_id when ep_away.id is not null then m.home_event_team_id else null end as opponentEventTeamId,
+            m.match_status as matchStatus,
+            m.publish_status as publishStatus,
+            ls.submission_status as mySubmissionStatus,
+            ls.id as myLatestSubmissionId
+        from basket_match m
+        join basket_season se on se.id = m.season_id and se.is_delete = 0
+        join basket_division d on d.id = m.division_id and d.is_delete = 0
+        left join basket_event_team ht on ht.id = m.home_event_team_id and ht.is_delete = 0
+        left join basket_event_team at on at.id = m.away_event_team_id and at.is_delete = 0
+        left join basket_event_player ep_home on ep_home.event_team_id = m.home_event_team_id and ep_home.is_delete = 0
+            and (ep_home.member_id = #{memberId} or ep_home.source_player_id = #{playerId})
+        left join basket_event_player ep_away on ep_away.event_team_id = m.away_event_team_id and ep_away.is_delete = 0
+            and (ep_away.member_id = #{memberId} or ep_away.source_player_id = #{playerId})
+        left join basket_event_team et_cap_home on et_cap_home.id = m.home_event_team_id and et_cap_home.captain_player_id = #{playerId} and et_cap_home.is_delete = 0
+        left join basket_event_team et_cap_away on et_cap_away.id = m.away_event_team_id and et_cap_away.captain_player_id = #{playerId} and et_cap_away.is_delete = 0
+        left join (
+            select s1.match_id, s1.submit_event_team_id, s1.id, s1.submission_status
+            from basket_match_submission s1
+            join (
+                select match_id, submit_event_team_id, max(version_no) as max_ver
+                from basket_match_submission where is_delete = 0 group by match_id, submit_event_team_id
+            ) lv on lv.match_id = s1.match_id and lv.submit_event_team_id = s1.submit_event_team_id and lv.max_ver = s1.version_no
+            where s1.is_delete = 0
+        ) ls on ls.match_id = m.id
+            and ls.submit_event_team_id = case when ep_home.id is not null or et_cap_home.id is not null then m.home_event_team_id
+                                               when ep_away.id is not null or et_cap_away.id is not null then m.away_event_team_id else null end
+        where m.is_delete = 0
+          and m.publish_status = 'PUBLISHED'
+          and m.match_status != 'CANCELLED'
+          and (ep_home.id is not null or ep_away.id is not null or et_cap_home.id is not null or et_cap_away.id is not null)
+        <if test="seasonId != null">and m.season_id = #{seasonId}</if>
+        <if test="divisionId != null">and m.division_id = #{divisionId}</if>
+        <if test="matchStatus != null and matchStatus != ''">and m.match_status = #{matchStatus}</if>
+        <if test="publishStatus != null and publishStatus != ''">and m.publish_status = #{publishStatus}</if>
+        <if test="submissionStatus != null and submissionStatus != ''">and ls.submission_status = #{submissionStatus}</if>
+        <if test="upcomingOnly != null and upcomingOnly">and m.match_time &gt;= now()</if>
+        order by m.match_time desc, m.id desc
+    </select>
+
+    <select id="selectMySubmissions" resultType="com.zhs.response.v4.V4MySubmissionListResp">
+        select
+            s.id as submissionId,
+            s.match_id as matchId,
+            m.match_no as matchNo,
+            d.division_name as divisionName,
+            s.submit_event_team_id as submitEventTeamId,
+            et.team_name_snapshot as teamName,
+            s.version_no as versionNo,
+            s.submission_status as submissionStatus,
+            s.submit_time as submitTime,
+            s.audit_time as auditTime,
+            s.reject_reason as rejectReason
+        from basket_match_submission s
+        join basket_match m on m.id = s.match_id and m.is_delete = 0
+        left join basket_division d on d.id = s.division_id and d.is_delete = 0
+        left join basket_event_team et on et.id = s.submit_event_team_id and et.is_delete = 0
+        where s.is_delete = 0 and s.submit_member_id = #{memberId}
+        order by s.submit_time desc, s.id desc
+    </select>
+
+</mapper>

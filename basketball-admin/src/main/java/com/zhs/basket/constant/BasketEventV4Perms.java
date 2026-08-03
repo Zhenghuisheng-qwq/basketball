@@ -52,4 +52,11 @@ public final class BasketEventV4Perms {
     public static final String MATCH_QUERY = "basket:v4Match:query";
     public static final String MATCH_EDIT = "basket:v4Match:edit";
     public static final String MATCH_REMOVE = "basket:v4Match:remove";
+
+    public static final String MATCH_SUBMISSION_AUDIT_LIST = "basket:v4MatchSubmissionAudit:list";
+    public static final String MATCH_SUBMISSION_AUDIT_QUERY = "basket:v4MatchSubmissionAudit:query";
+    public static final String MATCH_SUBMISSION_AUDIT_APPROVE = "basket:v4MatchSubmissionAudit:approve";
+    public static final String MATCH_SUBMISSION_AUDIT_REJECT = "basket:v4MatchSubmissionAudit:reject";
+
+    public static final String V4_STATS_QUERY = "basket:v4Stats:query";
 }

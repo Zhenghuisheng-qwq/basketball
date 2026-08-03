@@ -11,6 +11,8 @@ import java.util.List;
 public interface BasketRankMapper {
     BasketRank selectById(@Param("id") Long id);
     List<BasketRank> selectList(BasketRank query);
+    List<BasketRank> selectByDivisionId(@Param("divisionId") Long divisionId);
+    int deleteByDivisionId(@Param("divisionId") Long divisionId);
     int insert(BasketRank entity);
     int updateById(BasketRank entity);
     int softDelete(@Param("id") Long id);
