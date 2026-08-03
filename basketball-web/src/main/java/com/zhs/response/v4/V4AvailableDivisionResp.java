@@ -13,6 +13,10 @@ public class V4AvailableDivisionResp {
     private String platformCode;
     private Date registrationStartTime;
     private Date registrationEndTime;
+    private Date matchStartTime;
+    private Date matchEndTime;
+    private Long grantTeamId;
+    private String grantTeamName;
     private Integer maxTeamCount;
     private Integer approvedTeamCount;
     private Integer remainingTeamCount;

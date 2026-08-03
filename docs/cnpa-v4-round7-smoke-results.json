@@ -1,0 +1,122 @@
+{
+  "report": {
+    "r7_backend_loaded": true,
+    "test_account_captain": "111111@qq.com",
+    "test_account_away_player": "111122@qq.com",
+    "test_player_id": "2082478335308456000",
+    "test_season_id": 4,
+    "test_division_id": 5,
+    "test_event_team_id": 14,
+    "test_match_id": 1,
+    "smoke_time": "2026-08-04 02:34:15",
+    "available_divisions_count": 1,
+    "my_list_count": 2,
+    "my_events_count": 2,
+    "my_schedule_default_count": 0,
+    "my_schedule_all_count": 1,
+    "my_matches_count": 1,
+    "my_match_sample": {
+      "mySubmissionStatus": "APPROVED",
+      "opponentSubmissionStatus": "DRAFT",
+      "canSubmitData": false,
+      "cannotSubmitReason": "本方已通过"
+    }
+  },
+  "results": [
+    [
+      "auth401_available-divisions",
+      "PASS",
+      "401 without login"
+    ],
+    [
+      "auth401_my-schedule",
+      "PASS",
+      "401 without login"
+    ],
+    [
+      "web_login_captain",
+      "PASS",
+      "111111@qq.com"
+    ],
+    [
+      "web_login_away_player",
+      "PASS",
+      "111122@qq.com"
+    ],
+    [
+      "api_available_divisions",
+      "PASS",
+      "count=1 canRegister=0 noGrantReason=1 grantFields=True matchTime=True"
+    ],
+    [
+      "api_my_list",
+      "PASS",
+      "count=2 statuses=['APPROVED']"
+    ],
+    [
+      "api_my_events",
+      "PASS",
+      "count=2 sampleTeam=14"
+    ],
+    [
+      "api_my_schedule_default",
+      "PASS",
+      "count=0"
+    ],
+    [
+      "api_my_schedule_all",
+      "PASS",
+      "count=1 finished=1 scores=True"
+    ],
+    [
+      "r7_backend_loaded",
+      "PASS",
+      "my-schedule reachable with login"
+    ],
+    [
+      "ab_independence",
+      "PASS",
+      "home=APPROVED away=DRAFT awayCan=True (no home pending case)"
+    ],
+    [
+      "api_my_matches",
+      "PASS",
+      "count=1 match1=APPROVED"
+    ],
+    [
+      "api_match_submission_detail",
+      "PASS",
+      "status=APPROVED"
+    ],
+    [
+      "ui__account_my-events",
+      "PASS",
+      "HTTP 200"
+    ],
+    [
+      "ui__account_my-events",
+      "PASS",
+      "HTTP 200"
+    ],
+    [
+      "ui__account_my-events",
+      "PASS",
+      "HTTP 200"
+    ],
+    [
+      "ui__account_my-events",
+      "PASS",
+      "HTTP 200"
+    ],
+    [
+      "ui__account_my-events",
+      "PASS",
+      "HTTP 200"
+    ],
+    [
+      "ui__account_my-events_v4_match-submission_1",
+      "PASS",
+      "HTTP 200"
+    ]
+  ]
+}

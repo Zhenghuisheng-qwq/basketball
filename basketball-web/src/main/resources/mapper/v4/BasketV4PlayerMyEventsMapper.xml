@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.mapper.v4.BasketV4PlayerMyEventsMapper">
+
+    <select id="selectMyEvents" resultType="com.zhs.response.v4.V4MyEventResp">
+        select
+            se.id as seasonId,
+            se.display_title as seasonTitle,
+            s.series_code as seriesCode,
+            s.series_name as seriesName,
+            d.id as divisionId,
+            d.division_name as divisionName,
+            d.platform_code as platformCode,
+            et.id as eventTeamId,
+            et.team_name_snapshot as teamName,
+            et.team_logo_file_id as teamLogoFileId,
+            case when ep.is_captain = 1 then 'CAPTAIN' else 'PLAYER' end as roleInTeam,
+            et.event_team_status as eventTeamStatus,
+            d.division_status as divisionStatus,
+            (select count(1) from basket_match m
+              where m.is_delete = 0 and m.publish_status = 'PUBLISHED'
+                and (m.home_event_team_id = et.id or m.away_event_team_id = et.id)) as matchCount,
+            (select count(1) from basket_match m
+              where m.is_delete = 0 and m.publish_status = 'PUBLISHED'
+                and m.match_status = 'FINISHED'
+                and (m.home_event_team_id = et.id or m.away_event_team_id = et.id)) as finishedMatchCount,
+            (select count(1) from basket_match m
+              left join (
+                select s1.match_id, s1.submit_event_team_id, s1.submission_status
+                from basket_match_submission s1
+                join (
+                    select match_id, submit_event_team_id, max(version_no) as max_ver
+                    from basket_match_submission where is_delete = 0 group by match_id, submit_event_team_id
+                ) lv on lv.match_id = s1.match_id and lv.submit_event_team_id = s1.submit_event_team_id and lv.max_ver = s1.version_no
+                where s1.is_delete = 0
+              ) ps on ps.match_id = m.id and ps.submit_event_team_id = et.id
+              where m.is_delete = 0 and m.publish_status = 'PUBLISHED'
+                and m.match_status != 'CANCELLED'
+                and (m.home_event_team_id = et.id or m.away_event_team_id = et.id)
+                and (ps.submission_status is null or ps.submission_status in ('DRAFT', 'REJECTED'))
+            ) as pendingSubmissionCount
+        from basket_event_player ep
+        inner join basket_event_team et on et.id = ep.event_team_id and et.is_delete = 0
+        inner join basket_division d on d.id = et.division_id and d.is_delete = 0
+        inner join basket_season se on se.id = et.season_id and se.is_delete = 0
+        inner join basket_series s on s.id = se.series_id and s.is_delete = 0
+        where ep.is_delete = 0
+          and (ep.member_id = #{memberId} or ep.source_player_id = #{playerId})
+        group by et.id, ep.is_captain
+        order by se.id desc, d.sort_order asc, et.id desc
+    </select>
+
+</mapper>

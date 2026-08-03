@@ -7,31 +7,22 @@ import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import MyEventsTabs from '@/components/account/events/MyEventsTabs.vue'
 import AvailableEventTable from '@/components/account/events/AvailableEventTable.vue'
-import AvailableEventFilters from '@/components/account/events/AvailableEventFilters.vue'
-import MyEventsPagination from '@/components/account/events/MyEventsPagination.vue'
 import MyApplicationList from '@/components/account/events/MyApplicationList.vue'
 import ParticipatingEventList from '@/components/account/events/ParticipatingEventList.vue'
-import MySchedulePanel from '@/components/account/events/MySchedulePanel.vue'
-import { getAccountTournamentPage } from '@/api/accountTournament'
-import { getMyEventTeamList, getEventTeamMatches } from '@/api/eventParticipation'
-import { getMyEventsContext, getMyEventsCompetitionSeasonOptions, getMyEventsSeasonPage, getMemberTeamEventPage, remindCaptainToRegister } from '@/api/myEvents'
-import type { CompetitionSeasonOptionDto, MyEventsSeasonPageQuery } from '@/api/types/myEvents'
-import { getOpenRegistrationPage } from '@/api/openRegistration'
-import type { PlayerMatchTaskItem } from '@/api/matchData'
-import { getTeamRegistrationPage } from '@/api/teamRegistration'
-import type { AccountTournamentItemDto } from '@/api/types/accountTournament'
-import type { MyEventsContextDto, MyEventsRoleMode } from '@/api/types/myEvents'
-import { useTeamStore } from '@/stores/team'
+import V4MySchedulePanel from '@/components/account/events/V4MySchedulePanel.vue'
 import {
-  mapEventTeamSummaryToParticipating,
-  mapMyEventsSeasonToAvailableEvent,
-  mapOpenRegistrationToApplication,
-  mapTeamEventRecordToApplication,
-  mapTeamRegistrationToApplication,
-  mergeParticipatingEvents,
-  formatParticipationIdentityText,
-  deriveMatchDataEntry,
-} from '@/utils/participationMappers'
+  getV4AvailableDivisions,
+  getV4MyEvents,
+  getV4MyRegistrations,
+} from '@/api/v4PlayerEvents'
+import { useTeamStore } from '@/stores/team'
+import { useAccountStore } from '@/stores/account'
+import type { MyEventsRoleMode } from '@/api/types/myEvents'
+import {
+  mapV4DivisionToAvailableEvent,
+  mapV4EventToParticipating,
+  mapV4RegistrationToApplication,
+} from '@/utils/v4AccountEventsMappers'
 import {
   getBannerCopy,
   getEmptyMessage,
@@ -40,38 +31,25 @@ import {
   getTabsForRole,
 } from '@/constants/accountEventsUi'
 import type { AvailableEvent, MyApplication, MyEventsTabKey, ParticipatingEvent } from '@/types/accountEvents'
-import type { MyEventsSeasonFilterValues } from '@/components/account/events/AvailableEventFilters.vue'
-import { getOpenStatusRouteName } from '@/types/account'
-import {
-  goToNewTeamRegistration,
-  navigateApplicationAction,
-  navigateAvailableRegistrationAction,
-} from '@/utils/registrationNavigation'
 
 const route = useRoute()
 const router = useRouter()
 const teamStore = useTeamStore()
+const accountStore = useAccountStore()
 
 const loading = ref(false)
 const loadError = ref('')
-const eventsContext = ref<MyEventsContextDto | null>(null)
-const participatingEvents = ref<ParticipatingEvent[]>([])
 const availableEvents = ref<AvailableEvent[]>([])
-const availableEmptyReason = ref('')
-const availableTotal = ref(0)
-const availablePage = ref(1)
-const availablePageSize = ref(5)
-const seasonOptions = ref<CompetitionSeasonOptionDto[]>([])
-const availableFilters = ref<MyEventsSeasonFilterValues>({
-  eventName: '',
-  seasonId: '',
-  platformCode: 'ALL',
-  status: '',
-  signupTimeRange: null,
-})
 const myApplications = ref<MyApplication[]>([])
+const participatingEvents = ref<ParticipatingEvent[]>([])
 
-const roleMode = computed<MyEventsRoleMode>(() => eventsContext.value?.currentRoleMode || 'NO_TEAM')
+const roleMode = computed<MyEventsRoleMode>(() => {
+  if (!teamStore.hasTeam) return 'NO_TEAM'
+  if (teamStore.isCaptain) return 'TEAM_CAPTAIN'
+  if (teamStore.hasTeam) return 'TEAM_MEMBER'
+  return 'NO_TEAM'
+})
+
 const visibleTabs = computed(() => getTabsForRole(roleMode.value))
 
 const activeTab = computed<MyEventsTabKey>(() => {
@@ -86,11 +64,12 @@ const activeTab = computed<MyEventsTabKey>(() => {
 const tabMeta = computed(() => getTabMeta(activeTab.value, roleMode.value))
 const bannerCopy = computed(() => getBannerCopy(activeTab.value, roleMode.value))
 const footerNote = computed(() => getFooterNote(activeTab.value, roleMode.value))
-const emptyMessage = computed(() => availableEmptyReason.value || getEmptyMessage(activeTab.value, roleMode.value))
+const emptyMessage = computed(() => getEmptyMessage(activeTab.value, roleMode.value))
 
 const bannerStatus = computed(() => {
   if (loading.value) return { text: '加载中', type: 'info' as const }
   if (loadError.value) return { text: '加载失败', type: 'danger' as const }
+  if (!accountStore.isVerifiedPlayer) return { text: '未认证球员', type: 'warning' as const }
   if (roleMode.value === 'NO_TEAM') return { text: '未加入球队', type: 'info' as const }
   if (roleMode.value === 'TEAM_MEMBER') return { text: '球队成员', type: 'info' as const }
   if (roleMode.value === 'TEAM_CAPTAIN') return { text: '有效队长', type: 'success' as const }
@@ -104,185 +83,26 @@ function setTab(tab: MyEventsTabKey) {
   })
 }
 
-function registrationStatusText(status?: number): string {
-  switch (status) {
-    case 0: return '待提交'
-    case 1: return '审核中'
-    case 2: return '审核中'
-    case 3: return '已通过'
-    case 4: return '已驳回'
-    case 5: return '已撤回'
-    case 6: return '已取消'
-    default: return status == null ? '未知' : `状态 ${status}`
-  }
-}
-
-function mapToParticipating(item: AccountTournamentItemDto): ParticipatingEvent {
-  const isCaptainRole = item.rosterRole?.toUpperCase() === 'CAPTAIN' || teamStore.canManageCurrentTeam
-  const identityText = formatParticipationIdentityText(item.rosterRole, isCaptainRole)
-  const seasonKey = item.seasonId || item.tournamentId || item.registrationId
-  const platformLabel = item.platformName || item.platformCode
-  const platformDisplay = platformLabel
-    ? `${item.seasonName || item.tournamentName || '赛事'} / ${platformLabel} / ${registrationStatusText(item.registrationStatus)}`
-    : item.seasonName || '-'
-  return {
-    relationId: item.registrationId,
-    tournamentId: seasonKey,
-    tournamentName: item.tournamentName || '未命名赛事',
-    platform: platformDisplay,
-    participationType: 'TEAM',
-    participationTypeText: item.teamName ? '球队参赛' : '个人参赛',
-    identityType: identityText,
-    identityText,
-    status: String(item.registrationStatus ?? ''),
-    statusText: registrationStatusText(item.registrationStatus),
-    actionText: '查看阵容',
-    actionType: 'VIEW_EVENT_RELATION',
-    actionRoute: `/account/my-tournaments/${seasonKey}/team/roster`,
-    isCaptain: isCaptainRole,
-    rosterLocked: false,
-  }
-}
-
-async function loadEventTeamMatches(eventTeamId: string): Promise<PlayerMatchTaskItem[]> {
-  try {
-    const res = await getEventTeamMatches(eventTeamId, { pageNum: 1, pageSize: 100 })
-    return res.data?.records || []
-  } catch {
-    return []
-  }
-}
-
-async function enrichParticipatingWithMatchData(events: ParticipatingEvent[]): Promise<ParticipatingEvent[]> {
-  const matchMap = new Map<string, PlayerMatchTaskItem[]>()
-
-  await Promise.all(events.map(async (event) => {
-    const eventTeamId = event.eventTeamId || event.relationId
-    if (!eventTeamId) return
-    matchMap.set(eventTeamId, await loadEventTeamMatches(eventTeamId))
-  }))
-
-  return events.map((event) => {
-    const eventTeamId = event.eventTeamId || event.relationId
-    const matches = eventTeamId ? (matchMap.get(eventTeamId) || []) : []
-    const matchData = deriveMatchDataEntry(
-      eventTeamId || event.tournamentId,
-      event.tournamentId,
-      matches,
-      Boolean(event.isCaptain),
-      Boolean(event.rosterLocked),
-    )
-    return {
-      ...event,
-      ...matchData,
-    }
-  })
-}
-
-async function loadContext() {
-  const res = await getMyEventsContext()
-  eventsContext.value = res.data ?? null
-  await teamStore.bootstrap().catch(() => undefined)
-}
-
-async function loadSeasonOptions() {
-  try {
-    const res = await getMyEventsCompetitionSeasonOptions()
-    seasonOptions.value = res.data || []
-  } catch {
-    seasonOptions.value = []
-  }
-}
-
-function buildAvailableQuery(): MyEventsSeasonPageQuery {
-  const [startTime, endTime] = availableFilters.value.signupTimeRange || []
-  return {
-    eventName: availableFilters.value.eventName.trim() || undefined,
-    seasonId: availableFilters.value.seasonId || undefined,
-    platformCode: availableFilters.value.platformCode || 'ALL',
-    status: availableFilters.value.status || undefined,
-    startTime: startTime || undefined,
-    endTime: endTime || undefined,
-    pageNum: availablePage.value,
-    pageSize: availablePageSize.value,
-  }
-}
-
 async function loadAvailableEvents() {
   loading.value = true
   loadError.value = ''
-  availableEmptyReason.value = ''
   try {
-    const res = await getMyEventsSeasonPage(buildAvailableQuery())
-    availableEvents.value = (res.data?.records || []).map(mapMyEventsSeasonToAvailableEvent)
-    availableTotal.value = res.data?.total ?? availableEvents.value.length
-    availableEmptyReason.value = res.data?.emptyReason || ''
+    const res = await getV4AvailableDivisions()
+    availableEvents.value = (res.data || []).map(mapV4DivisionToAvailableEvent)
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
     availableEvents.value = []
-    availableTotal.value = 0
   } finally {
     loading.value = false
   }
-}
-
-function handleAvailableSearch() {
-  availablePage.value = 1
-  void loadAvailableEvents()
-}
-
-function handleAvailableReset() {
-  availableFilters.value = {
-    eventName: '',
-    seasonId: '',
-    platformCode: 'ALL',
-    status: '',
-    signupTimeRange: null,
-  }
-  availablePage.value = 1
-  void loadAvailableEvents()
-}
-
-function handleAvailablePageChange(page: number) {
-  availablePage.value = page
-  void loadAvailableEvents()
-}
-
-function handleAvailablePageSizeChange(pageSize: number) {
-  availablePageSize.value = pageSize
-  availablePage.value = 1
-  void loadAvailableEvents()
-}
-
-function dedupeApplications(apps: MyApplication[]): MyApplication[] {
-  const seen = new Set<string>()
-  return apps.filter((app) => {
-    const key = app.applicationId || `${app.applicationType}-${app.tournamentId}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
 }
 
 async function loadApplications() {
   loading.value = true
   loadError.value = ''
   try {
-    const openRes = await getOpenRegistrationPage({ currentPage: 1, pageSize: 20 })
-    const openApps = (openRes.data?.records || []).map(mapOpenRegistrationToApplication)
-    let teamApps: MyApplication[] = []
-
-    const teamId = eventsContext.value?.teamId || teamStore.myTeamSummary?.teamId
-    if (teamId && roleMode.value === 'TEAM_CAPTAIN') {
-      const teamRes = await getTeamRegistrationPage(teamId, { currentPage: 1, pageSize: 20 })
-      teamApps = (teamRes.data?.records || []).map((item) =>
-        mapTeamRegistrationToApplication(item, true))
-    } else if (teamId && roleMode.value === 'TEAM_MEMBER') {
-      const teamRes = await getMemberTeamEventPage(teamId, { currentPage: 1, pageSize: 20 })
-      teamApps = (teamRes.data?.records || []).map(mapTeamEventRecordToApplication)
-    }
-
-    myApplications.value = dedupeApplications([...openApps, ...teamApps])
+    const res = await getV4MyRegistrations()
+    myApplications.value = (res.data || []).map(mapV4RegistrationToApplication)
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
     myApplications.value = []
@@ -291,21 +111,12 @@ async function loadApplications() {
   }
 }
 
-async function loadJoinedTournaments() {
+async function loadJoinedEvents() {
   loading.value = true
   loadError.value = ''
   try {
-    const [tournamentRes, eventTeamRes] = await Promise.all([
-      getAccountTournamentPage({ currentPage: 1, pageSize: 50 }),
-      getMyEventTeamList(),
-    ])
-    const fromTournaments = (tournamentRes.data?.records || [])
-      .filter((item) => item.registrationStatus === 3)
-      .map(mapToParticipating)
-    const fromEventTeams = (eventTeamRes.data || []).map(mapEventTeamSummaryToParticipating)
-    participatingEvents.value = await enrichParticipatingWithMatchData(
-      mergeParticipatingEvents(fromEventTeams, fromTournaments),
-    )
+    const res = await getV4MyEvents()
+    participatingEvents.value = (res.data || []).map(mapV4EventToParticipating)
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
     participatingEvents.value = []
@@ -326,25 +137,19 @@ async function loadActiveTab() {
   if (activeTab.value === 'schedule') {
     return
   }
-  await loadJoinedTournaments()
+  await loadJoinedEvents()
 }
 
 onMounted(async () => {
   try {
-    await loadContext()
-    if (activeTab.value === 'available') {
-      await loadSeasonOptions()
-    }
+    await teamStore.bootstrap().catch(() => undefined)
     await loadActiveTab()
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
   }
 })
 
-watch(activeTab, (tab) => {
-  if (tab === 'available' && !seasonOptions.value.length) {
-    void loadSeasonOptions()
-  }
+watch(activeTab, () => {
   void loadActiveTab()
 })
 
@@ -354,82 +159,38 @@ watch(visibleTabs, (tabs) => {
   }
 })
 
-function showActionMessage(event: AvailableEvent) {
+function handleAvailableAction(event: AvailableEvent) {
+  if (event.actionType === 'GO_JOINED') {
+    setTab('joined')
+    return
+  }
+  if (event.actionType === 'TEAM_REGISTRATION' || event.actionType === 'MANAGE_REGISTRATION' || event.actionType === 'RE_REGISTER') {
+    router.push({
+      name: 'AccountV4Registration',
+      params: { divisionId: event.tournamentId },
+    })
+    return
+  }
+  if (event.actionType === 'VIEW_REGISTRATION') {
+    setTab('applications')
+    return
+  }
   if (event.disabledReason) {
     ElMessage.warning(event.disabledReason)
-  }
-}
-
-async function handleAvailableAction(event: AvailableEvent, overrideAction?: AvailableEvent['actionType']) {
-  const actionType = overrideAction || event.actionType
-
-  if (actionType === 'JOIN_TEAM') {
-    showActionMessage(event)
-    router.push('/account/team?tab=joinableTeams')
-    return
-  }
-  if (actionType === 'CONTACT_CAPTAIN') {
-    ElMessage.warning(event.disabledReason || '当前用户不是球队队长，请联系队长报名。')
-    return
-  }
-  if (actionType === 'ROSTER_NOT_SELECTED') {
-    ElMessage.info('你尚未入选该赛事阵容，请联系队长确认。')
-    return
-  }
-  if (actionType === 'REMIND_CAPTAIN') {
-    const teamId = eventsContext.value?.teamId
-    const seasonId = event.seasonId
-    if (!teamId || !seasonId) {
-      ElMessage.warning('暂无法提醒队长')
-      return
-    }
-    try {
-      await remindCaptainToRegister(teamId, { seasonId })
-      ElMessage.success('已提醒队长')
-      await loadAvailableEvents()
-    } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : '提醒失败')
-    }
-    return
-  }
-  if (
-    actionType === 'VIEW_EVENT'
-    || actionType === 'VIEW_ROSTER'
-    || actionType === 'VIEW_REGISTRATION'
-    || actionType === 'RE_REGISTER'
-    || actionType === 'TEAM_REGISTRATION'
-    || actionType === 'MANAGE_REGISTRATION'
-  ) {
-    if (actionType === 'VIEW_REGISTRATION' && roleMode.value === 'TEAM_MEMBER' && !event.registrationId) {
-      setTab('applications')
-      return
-    }
-    navigateAvailableRegistrationAction(router, event, actionType)
-    return
-  }
-  if (event.disabledReason) {
-    showActionMessage(event)
     return
   }
   ElMessage.warning('当前不可操作')
 }
 
 function handleApplicationAction(application: MyApplication) {
-  if (application.applicationType === 'INDIVIDUAL') {
-    const routeName = getOpenStatusRouteName(application.status as any)
-    router.push({ name: routeName })
+  if (application.status === 'APPROVED') {
+    setTab('joined')
     return
   }
-  if (application.actionType === 'VIEW_APPLICATION_STATUS' && roleMode.value === 'TEAM_MEMBER') {
-    ElMessage.info('当前为球队成员只读视图')
-    return
-  }
-  if (navigateApplicationAction(router, application)) {
-    return
-  }
-  goToNewTeamRegistration(router, {
-    seasonId: application.tournamentId,
-    tournamentId: application.tournamentId,
+  router.push({
+    name: 'AccountV4Registration',
+    params: { divisionId: application.tournamentId },
+    query: application.applicationId ? { registrationId: application.applicationId } : undefined,
   })
 }
 
@@ -471,35 +232,18 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
     <p v-else-if="loading && activeTab !== 'schedule'" class="my-events-loading">加载中…</p>
 
     <template v-else-if="activeTab === 'available'">
-      <AvailableEventFilters
-        v-model="availableFilters"
-        :season-options="seasonOptions"
-        :loading="loading"
-        @search="handleAvailableSearch"
-        @reset="handleAvailableReset"
-      />
       <AccountEmptyState
         v-if="!availableEvents.length"
         :message="emptyMessage"
-        :subtitle="roleMode === 'NO_TEAM' ? '可先前往「我的球队」申请加入球队' : undefined"
+        :subtitle="roleMode === 'NO_TEAM' ? '加入球队后，可由队长统一报名赛事' : undefined"
         large
       />
-      <template v-else>
-        <div class="my-events-available-list">
-          <AvailableEventTable
-            :events="availableEvents"
-            :role-mode="roleMode"
-            @action="handleAvailableAction"
-          />
-          <MyEventsPagination
-            :page="availablePage"
-            :page-size="availablePageSize"
-            :total="availableTotal"
-            @update:page="handleAvailablePageChange"
-            @update:page-size="handleAvailablePageSizeChange"
-          />
-        </div>
-      </template>
+      <AvailableEventTable
+        v-else
+        :events="availableEvents"
+        :role-mode="roleMode"
+        @action="handleAvailableAction"
+      />
     </template>
 
     <template v-else-if="activeTab === 'applications'">
@@ -520,7 +264,7 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
       <AccountEmptyState
         v-if="!participatingEvents.length"
         :message="emptyMessage"
-        subtitle="完成球员认证并进入阵容后，记录将显示在这里"
+        subtitle="报名审核通过并进入正式阵容后，记录将显示在这里"
         large
       />
       <ParticipatingEventList
@@ -531,7 +275,7 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
       />
     </template>
 
-    <MySchedulePanel v-else-if="activeTab === 'schedule'" :active="activeTab === 'schedule'" />
+    <V4MySchedulePanel v-else-if="activeTab === 'schedule'" :active="activeTab === 'schedule'" />
 
     <p class="my-events-footnote">{{ footerNote }}</p>
   </div>
@@ -562,68 +306,5 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
   margin: 0 0 12px;
   color: #696969;
   font-size: 14px;
-}
-
-.my-events-available-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.my-events-dialog {
-  position: fixed;
-  inset: 0;
-  z-index: 3000;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-}
-
-.my-events-dialog__backdrop {
-  position: absolute;
-  inset: 0;
-  border: 0;
-  background: rgba(0, 0, 0, 0.5);
-  cursor: pointer;
-}
-
-.my-events-dialog__panel {
-  position: relative;
-  z-index: 1;
-  width: min(420px, 100%);
-  padding: 24px;
-  border: 1px solid var(--account-border);
-  border-radius: 3px;
-  background: var(--cnpa-paper-bg);
-
-  h3 {
-    margin: 0 0 8px;
-  }
-}
-
-.my-events-dialog__tip {
-  margin: 0 0 16px;
-  font-size: 13px;
-  color: #696969;
-}
-
-.my-events-dialog__platforms {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.my-events-dialog__platform {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.my-events-dialog__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
 }
 </style>

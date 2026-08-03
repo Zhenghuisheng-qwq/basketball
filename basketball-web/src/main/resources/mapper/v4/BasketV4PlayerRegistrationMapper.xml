@@ -12,6 +12,8 @@
             d.platform_code as platformCode,
             d.registration_start_time as registrationStartTime,
             d.registration_end_time as registrationEndTime,
+            d.match_start_time as matchStartTime,
+            d.match_end_time as matchEndTime,
             d.max_team_count as maxTeamCount,
             (select count(1) from basket_registration r2
               where r2.division_id = d.id and r2.registration_status = 'APPROVED' and r2.is_delete = 0) as approvedTeamCount,
@@ -20,12 +22,15 @@
                    where r3.division_id = d.id and r3.registration_status = 'APPROVED' and r3.is_delete = 0), 0)
             end as remainingTeamCount,
             cg.grant_status as myGrantStatus,
+            cg.team_id as grantTeamId,
+            gt.team_name as grantTeamName,
             mr.registration_status as myRegistrationStatus
         from basket_division d
         inner join basket_season se on se.id = d.season_id and se.is_delete = 0 and se.publish_status = 'PUBLISHED'
         inner join basket_series s on s.id = se.series_id and s.is_delete = 0
         left join basket_captain_grant cg on cg.division_id = d.id and cg.player_id = #{playerId}
             and cg.grant_status = 'ACTIVE' and cg.active_unique_key is not null and cg.is_delete = 0
+        left join basket_team gt on gt.id = cg.team_id and gt.is_delete = 0
         left join basket_registration mr on mr.division_id = d.id and mr.captain_member_id = #{memberId} and mr.is_delete = 0
         where d.is_delete = 0
           and d.division_status = 'REGISTRATION_OPEN'
@@ -36,6 +41,9 @@
     <select id="selectMyRegistrations" resultType="com.zhs.response.v4.V4MyRegistrationResp">
         select
             r.id as registrationId,
+            r.season_id as seasonId,
+            r.division_id as divisionId,
+            r.team_id as teamId,
             se.display_title as seasonTitle,
             d.division_name as divisionName,
             d.platform_code as platformCode,

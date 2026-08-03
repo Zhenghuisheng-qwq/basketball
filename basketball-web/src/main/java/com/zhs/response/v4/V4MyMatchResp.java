@@ -27,5 +27,12 @@ public class V4MyMatchResp {
     private String mySubmissionStatus;
     private Long myLatestSubmissionId;
     private Boolean canSubmit;
+    private Boolean canSubmitData;
     private String cannotSubmitReason;
+    private String opponentSubmissionStatus;
+    private Integer latestVersionNo;
+    private String latestAuditRemark;
+    private String latestRejectReason;
+    private Integer homeScore;
+    private Integer awayScore;
 }

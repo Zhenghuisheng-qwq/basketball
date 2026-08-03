@@ -222,6 +222,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
 
     private void enrichCanSubmit(V4MyMatchResp row, Long playerId) {
         row.setCanSubmit(false);
+        row.setCanSubmitData(false);
         if (row.getMyEventTeamId() == null) {
             row.setCannotSubmitReason("不属于本场比赛球队");
             return;
@@ -243,6 +244,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
             return;
         }
         row.setCanSubmit(true);
+        row.setCanSubmitData(true);
         row.setCannotSubmitReason(null);
     }
 

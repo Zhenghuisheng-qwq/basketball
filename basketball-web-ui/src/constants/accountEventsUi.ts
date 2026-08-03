@@ -2,18 +2,13 @@ import type { AccountEventTab, MyEventsTabKey } from '@/types/accountEvents'
 import type { MyEventsRoleMode } from '@/api/types/myEvents'
 
 export const accountEventTabsAll: AccountEventTab[] = [
-  { key: 'available', label: '全部赛事', title: '当前开放赛事', subtitle: 'ALL EVENTS' },
-  { key: 'applications', label: '球队报名', title: '球队报名记录', subtitle: 'TEAM REGISTRATIONS' },
-  { key: 'joined', label: '我的阵容', title: '我的参赛阵容', subtitle: 'MY ROSTER' },
-  { key: 'schedule', label: '我的赛程', title: '我的赛程安排', subtitle: 'MY SCHEDULE' },
-]
-
-export const accountEventTabsCaptain: AccountEventTab[] = [
-  { key: 'available', label: '可报名赛事', title: '当前开放赛事', subtitle: 'AVAILABLE EVENTS' },
+  { key: 'available', label: '可参与赛事', title: '可参与赛事', subtitle: 'AVAILABLE EVENTS' },
   { key: 'applications', label: '我的报名', title: '我的报名', subtitle: 'MY APPLICATIONS' },
   { key: 'joined', label: '已参加赛事', title: '已参加赛事', subtitle: 'PARTICIPATING EVENTS' },
   { key: 'schedule', label: '我的赛程', title: '我的赛程安排', subtitle: 'MY SCHEDULE' },
 ]
+
+export const accountEventTabsCaptain: AccountEventTab[] = accountEventTabsAll
 
 export function getTabsForRole(roleMode?: MyEventsRoleMode): AccountEventTab[] {
   if (roleMode === 'TEAM_CAPTAIN') {

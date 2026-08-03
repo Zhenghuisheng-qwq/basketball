@@ -565,51 +565,11 @@ const router = createRouter({
 
         {
 
-          path: 'my-events/2026-open/individual-registration',
+          path: 'my-events/v4/registration/:divisionId',
 
-          redirect: { name: 'AccountOpenApplicationApply' },
+          name: 'AccountV4Registration',
 
-        },
-
-        {
-
-          path: 'my-events/2026-open/application-status',
-
-          redirect: { name: 'AccountOpenApplicationStatusRedirect' },
-
-        },
-
-        {
-
-          path: 'my-events/:eventTeamId/matches',
-
-          name: 'AccountEventTeamMatches',
-
-          component: () => import('@/views/account/events/MyEventTeamMatchesView.vue'),
-
-          meta: { title: '我的比赛' },
-
-        },
-
-        {
-
-          path: 'my-events/:eventTeamId/matches/:matchId',
-
-          name: 'AccountEventTeamMatchDetail',
-
-          component: () => import('@/views/account/events/MyEventMatchDetailView.vue'),
-
-          meta: { title: '比赛详情' },
-
-        },
-
-        {
-
-          path: 'my-events/:tournamentId/team-registration',
-
-          name: 'AccountTeamRegistration',
-
-          component: () => import('@/views/account/events/TeamRegistrationFlow.vue'),
+          component: () => import('@/views/account/events/V4RegistrationFlow.vue'),
 
           meta: { title: '球队报名' },
 
@@ -617,13 +577,64 @@ const router = createRouter({
 
         {
 
+          path: 'my-events/v4/match-submission/:matchId',
+
+          name: 'AccountV4MatchSubmission',
+
+          component: () => import('@/views/account/events/V4MatchSubmissionView.vue'),
+
+          meta: { title: '比赛数据提交' },
+
+        },
+
+        {
+
+          path: 'my-events/2026-open/individual-registration',
+
+          redirect: { name: 'AccountMyEvents', query: { tab: 'available' } },
+
+        },
+
+        {
+
+          path: 'my-events/2026-open/application-status',
+
+          redirect: { name: 'AccountMyEvents', query: { tab: 'available' } },
+
+        },
+
+        {
+
+          path: 'my-events/:eventTeamId/matches',
+
+          redirect: { name: 'AccountMyEvents', query: { tab: 'schedule' } },
+
+        },
+
+        {
+
+          path: 'my-events/:eventTeamId/matches/:matchId',
+
+          redirect: (to) => ({
+            name: 'AccountV4MatchSubmission',
+            params: { matchId: to.params.matchId },
+          }),
+
+        },
+
+        {
+
+          path: 'my-events/:tournamentId/team-registration',
+
+          redirect: { name: 'AccountMyEvents', query: { tab: 'available' } },
+
+        },
+
+        {
+
           path: 'my-events/:tournamentId/team-application',
 
-          name: 'AccountTeamApplicationPlaceholder',
-
-          component: () => import('@/views/account/events/TeamApplicationPlaceholder.vue'),
-
-          meta: { title: '球队报名组队' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'applications' } },
 
         },
 
@@ -639,11 +650,7 @@ const router = createRouter({
 
           path: 'my-tournaments/list',
 
-          name: 'AccountMyTournamentsLegacy',
-
-          component: () => import('@/views/account/my-tournaments/index.vue'),
-
-          meta: { title: '我的赛事' },
+          redirect: { name: 'AccountMyEvents' },
 
         },
 
@@ -651,11 +658,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team',
 
-          name: 'AccountEventTeamManagement',
-
-          component: () => import('@/views/account/tournaments/EventTeamManagementView.vue'),
-
-          meta: { title: '本届球队管理' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'joined' } },
 
         },
 
@@ -663,11 +666,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/match-data',
 
-          name: 'AccountMatchDataList',
-
-          component: () => import('@/views/account/tournaments/MatchDataListView.vue'),
-
-          meta: { title: '我的比赛' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'schedule' } },
 
         },
 
@@ -675,11 +674,10 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/match-data/:matchId/submit',
 
-          name: 'AccountMatchDataSubmit',
-
-          component: () => import('@/views/account/tournaments/MatchDataSubmitView.vue'),
-
-          meta: { title: '提交比赛数据' },
+          redirect: (to) => ({
+            name: 'AccountV4MatchSubmission',
+            params: { matchId: to.params.matchId },
+          }),
 
         },
 
@@ -687,11 +685,10 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/match-data/:matchId/resubmit',
 
-          name: 'AccountMatchDataResubmit',
-
-          component: () => import('@/views/account/tournaments/MatchDataSubmitView.vue'),
-
-          meta: { title: '重新提交比赛数据' },
+          redirect: (to) => ({
+            name: 'AccountV4MatchSubmission',
+            params: { matchId: to.params.matchId },
+          }),
 
         },
 
@@ -699,11 +696,10 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/match-data/:matchId/status',
 
-          name: 'AccountMatchDataStatus',
-
-          component: () => import('@/views/account/tournaments/MatchDataStatusView.vue'),
-
-          meta: { title: '比赛数据状态' },
+          redirect: (to) => ({
+            name: 'AccountV4MatchSubmission',
+            params: { matchId: to.params.matchId },
+          }),
 
         },
 
@@ -711,11 +707,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/match-data/:matchId/dispute',
 
-          name: 'AccountMatchDataDispute',
-
-          component: () => import('@/views/account/tournaments/MatchDataDisputeView.vue'),
-
-          meta: { title: '发起数据争议' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'schedule' } },
 
         },
 
@@ -723,11 +715,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/match-data/:matchId/dispute-status',
 
-          name: 'AccountMatchDataDisputeStatus',
-
-          component: () => import('@/views/account/tournaments/MatchDataDisputeStatusView.vue'),
-
-          meta: { title: '争议状态' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'schedule' } },
 
         },
 
@@ -735,11 +723,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/match-data/:matchId/exception',
 
-          name: 'AccountMatchExceptionSubmit',
-
-          component: () => import('@/views/account/tournaments/MatchExceptionSubmitView.vue'),
-
-          meta: { title: '异常比赛申请' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'schedule' } },
 
         },
 
@@ -747,11 +731,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/match-data/:matchId/exception-status',
 
-          name: 'AccountMatchExceptionStatus',
-
-          component: () => import('@/views/account/tournaments/MatchExceptionStatusView.vue'),
-
-          meta: { title: '异常申请状态' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'schedule' } },
 
         },
 
@@ -759,11 +739,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/roster',
 
-          name: 'AccountEventTeamRoster',
-
-          component: () => import('@/views/account/tournaments/RosterManagementView.vue'),
-
-          meta: { title: '阵容管理' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'joined' } },
 
         },
 
@@ -771,11 +747,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/roster-history',
 
-          name: 'AccountEventTeamRosterHistory',
-
-          component: () => import('@/views/account/tournaments/RosterHistoryView.vue'),
-
-          meta: { title: '阵容变更历史' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'joined' } },
 
         },
 
@@ -783,11 +755,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/profile/edit',
 
-          name: 'AccountEventTeamProfileEdit',
-
-          component: () => import('@/views/account/tournaments/EditEventTeamProfileView.vue'),
-
-          meta: { title: '修改球队资料' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'joined' } },
 
         },
 
@@ -795,11 +763,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/free-agents',
 
-          name: 'AccountEventTeamFreeAgents',
-
-          component: () => import('@/views/account/tournaments/FreeAgentAdditionView.vue'),
-
-          meta: { title: '自由球员补充' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'joined' } },
 
         },
 
@@ -807,11 +771,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/transfers',
 
-          name: 'AccountEventTeamTransfers',
-
-          component: () => import('@/views/account/tournaments/TransferManagementView.vue'),
-
-          meta: { title: '转会管理' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'joined' } },
 
         },
 
@@ -819,11 +779,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/transfers/initiate',
 
-          name: 'AccountEventTeamTransferInitiate',
-
-          component: () => import('@/views/account/tournaments/InitiateTransferView.vue'),
-
-          meta: { title: '发起转会' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'joined' } },
 
         },
 
@@ -831,11 +787,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/transfers/:transferId',
 
-          name: 'AccountEventTeamTransferDetail',
-
-          component: () => import('@/views/account/tournaments/TransferConfirmationView.vue'),
-
-          meta: { title: '转会确认' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'joined' } },
 
         },
 
@@ -843,11 +795,7 @@ const router = createRouter({
 
           path: 'my-tournaments/:tournamentId/team/captain-transfer',
 
-          name: 'AccountEventTeamCaptainTransfer',
-
-          component: () => import('@/views/account/tournaments/CaptainTransferView.vue'),
-
-          meta: { title: '队长移交' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'joined' } },
 
         },
 
@@ -855,9 +803,7 @@ const router = createRouter({
 
           path: 'my-tournaments/open',
 
-          name: 'AccountOpenRegistration',
-
-          redirect: { name: 'AccountOpenApplicationStatusRedirect' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'available' } },
 
         },
 
@@ -865,11 +811,7 @@ const router = createRouter({
 
           path: 'my-tournaments/open/apply',
 
-          name: 'AccountOpenApplicationApply',
-
-          component: () => import('@/views/account/my-tournaments/open/apply.vue'),
-
-          meta: { title: 'Open 个人报名' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'available' } },
 
         },
 
@@ -877,11 +819,7 @@ const router = createRouter({
 
           path: 'my-tournaments/open/status',
 
-          name: 'AccountOpenApplicationStatusRedirect',
-
-          component: () => import('@/views/account/my-tournaments/open/index.vue'),
-
-          meta: { title: 'Open 报名状态' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'available' } },
 
         },
 
@@ -889,13 +827,7 @@ const router = createRouter({
 
           path: 'my-tournaments/open/status/pending',
 
-          name: 'AccountOpenApplicationPending',
-
-          component: () => import('@/views/account/my-tournaments/open/status.vue'),
-
-          props: { statusMode: 'pending' },
-
-          meta: { title: 'Open 报名审核中' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'available' } },
 
         },
 
@@ -903,13 +835,7 @@ const router = createRouter({
 
           path: 'my-tournaments/open/status/rejected',
 
-          name: 'AccountOpenApplicationRejected',
-
-          component: () => import('@/views/account/my-tournaments/open/status.vue'),
-
-          props: { statusMode: 'rejected' },
-
-          meta: { title: 'Open 报名未通过' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'available' } },
 
         },
 
@@ -917,13 +843,7 @@ const router = createRouter({
 
           path: 'my-tournaments/open/status/approved',
 
-          name: 'AccountOpenApplicationApproved',
-
-          component: () => import('@/views/account/my-tournaments/open/status.vue'),
-
-          props: { statusMode: 'approved' },
-
-          meta: { title: 'Open 报名已通过' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'available' } },
 
         },
 

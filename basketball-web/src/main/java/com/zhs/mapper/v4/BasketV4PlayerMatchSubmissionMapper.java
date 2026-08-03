@@ -1,6 +1,7 @@
 package com.zhs.mapper.v4;
 
 import com.zhs.response.v4.V4MyMatchResp;
+import com.zhs.response.v4.V4MyScheduleResp;
 import com.zhs.response.v4.V4MySubmissionListResp;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -21,4 +22,12 @@ public interface BasketV4PlayerMatchSubmissionMapper {
                                          @Param("upcomingOnly") Boolean upcomingOnly);
 
     List<V4MySubmissionListResp> selectMySubmissions(@Param("memberId") Long memberId);
+
+    List<V4MyScheduleResp> selectMySchedule(@Param("memberId") Long memberId,
+                                             @Param("playerId") Long playerId,
+                                             @Param("seasonId") Long seasonId,
+                                             @Param("divisionId") Long divisionId,
+                                             @Param("status") String status,
+                                             @Param("includeFinished") Boolean includeFinished,
+                                             @Param("onlyPendingSubmit") Boolean onlyPendingSubmit);
 }

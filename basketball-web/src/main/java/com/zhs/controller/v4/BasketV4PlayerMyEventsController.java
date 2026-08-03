@@ -1,6 +1,6 @@
 package com.zhs.controller.v4;
 
-import com.zhs.service.v4.IBasketV4PlayerRegistrationService;
+import com.zhs.service.v4.IBasketV4PlayerMyEventsService;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class BasketV4PlayerMyEventsController {
 
     @Resource
-    private IBasketV4PlayerRegistrationService playerRegistrationService;
+    private IBasketV4PlayerMyEventsService myEventsService;
 
-    @ApiOperation("我的报名（基础）")
+    @ApiOperation("已参加赛事（EventTeam/EventPlayer 快照）")
     @GetMapping
     public R myEvents() {
-        return R.ok(playerRegistrationService.listMyRegistrations());
+        return R.ok(myEventsService.listMyEvents());
     }
 }
