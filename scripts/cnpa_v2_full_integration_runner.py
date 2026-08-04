@@ -155,26 +155,23 @@ def scenario_d(admin_base: str, web_base: str, admin_token: str, web_token: str 
     record("scenario_D", "PENDING", "PERSONAL+PS_XBOX+3V3+两队BO1 — 待本地完整执行")
 
 
-def legacy_generate_rejected(admin_base: str, admin_token: str, division_id: str, timeout: int) -> None:
-    if not division_id:
-        record("legacyGenerateRejected", "SKIP", "未配置测试 Division ID")
-        return
+def legacy_generate_removed(admin_base: str, admin_token: str, timeout: int) -> None:
     try:
         http_json(
             admin_base,
             "POST",
-            "/basket/v4/admin/schedule-batch/generate",
-            {"divisionId": int(division_id)},
+            "/basket/v4/schedule-batch/generate",
+            {"divisionId": 1},
             token=admin_token,
             timeout=timeout,
             allow_fail=True,
         )
-        record("legacyGenerateRejected", "FAIL", "新 Division Legacy 生成应被拒绝但返回成功")
+        record("legacyGenerateRemoved", "FAIL", "Legacy 生成入口应已删除但返回成功")
     except RuntimeError as exc:
-        if "动态赛制" in str(exc) or "阶段执行" in str(exc):
-            record("legacyGenerateRejected", "PASS", str(exc))
+        if "404" in str(exc) or "Not Found" in str(exc) or "不存在" in str(exc):
+            record("legacyGenerateRemoved", "PASS", str(exc))
         else:
-            record("legacyGenerateRejected", "FAIL", str(exc))
+            record("legacyGenerateRemoved", "FAIL", str(exc))
 
 
 def unauthorized_admin_api(admin_base: str, timeout: int) -> None:
@@ -261,7 +258,7 @@ def main() -> int:
             web_token = web_login(web_base, captain["email"], captain["password"], timeout)
 
     if args.exception_only or args.permission_only or args.concurrency_only:
-        legacy_generate_rejected(admin_base, admin_token, legacy_test_division, timeout)
+        legacy_generate_removed(admin_base, admin_token, timeout)
         unauthorized_admin_api(admin_base, timeout)
         if args.permission_only:
             record("permission_only", "PENDING", "权限越权检查待本地完整执行")
@@ -288,7 +285,7 @@ def main() -> int:
         else:
             fn(admin_base, admin_token, timeout)
 
-    legacy_generate_rejected(admin_base, admin_token, legacy_test_division, timeout)
+    legacy_generate_removed(admin_base, admin_token, timeout)
     unauthorized_admin_api(admin_base, timeout)
 
     write_output(batch_code)

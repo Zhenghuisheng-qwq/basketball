@@ -2,7 +2,6 @@ package com.zhs.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zhs.common.UserContext;
-import com.zhs.dao.BasketCaptainQualificationDao;
 import com.zhs.dao.BasketFileAssetDao;
 import com.zhs.dao.BasketMemberAccountDao;
 import com.zhs.dao.BasketMemberProfileDao;
@@ -11,7 +10,6 @@ import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.enums.PlayerCertStatusEnum;
 import com.zhs.enums.VerifiedFlagEnum;
 import com.zhs.exception.ServiceException;
-import com.zhs.model.BasketCaptainQualification;
 import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketMemberAccount;
 import com.zhs.model.BasketMemberProfile;
@@ -19,26 +17,32 @@ import com.zhs.model.BasketPlayerCertApplication;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.response.account.AccountCenterOverviewResp;
 import com.zhs.response.account.AccountSummaryResp;
+import com.zhs.response.account.AccountTournamentItemResp;
 import com.zhs.response.account.CaptainQualificationResp;
 import com.zhs.response.account.PendingTaskResp;
 import com.zhs.response.account.PlayerIdentityResp;
 import com.zhs.response.team.CaptainQualificationDetailResp;
+import com.zhs.response.v4.V4MyEventResp;
 import com.zhs.service.IAccountCenterService;
 import com.zhs.service.IAccountMessageService;
 import com.zhs.service.ICaptainPermissionService;
+import com.zhs.service.v4.IBasketV4PlayerMyEventsService;
 import com.zhs.util.DataMaskUtil;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class AccountCenterServiceImpl implements IAccountCenterService {
 
     private static final Integer NOT_DELETED = 0;
-    private static final int CURRENT_QUALIFICATION = 1;
-    private static final int ACTIVE_QUALIFICATION_STATUS = 1;
+    private static final int APPROVED_REGISTRATION_STATUS = 3;
+    private static final int OVERVIEW_TOURNAMENT_LIMIT = 5;
 
     @Resource
     private BasketMemberAccountDao memberAccountDao;
@@ -51,10 +55,11 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
     @Resource
     private BasketPlayerCertApplicationDao certApplicationDao;
     @Resource
-    private BasketCaptainQualificationDao captainQualificationDao;
+    private IAccountMessageService accountMessageService;
     @Resource
-    private IAccountMessageService accountMessageService;    @Resource
     private ICaptainPermissionService captainPermissionService;
+    @Resource
+    private IBasketV4PlayerMyEventsService playerMyEventsService;
 
     @Override
     public AccountCenterOverviewResp getOverview() {
@@ -63,18 +68,66 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
         BasketMemberProfile profile = loadMemberProfile(memberId);
         BasketPlayerProfile playerProfile = loadPlayerProfile(memberId);
         BasketPlayerCertApplication latestCertApp = loadLatestCertApplication(memberId);
-        BasketCaptainQualification captainQualification = loadCaptainQualification(memberId);
         CaptainQualificationDetailResp captainQualDetail = captainPermissionService.getCurrentQualification(memberId);
 
         AccountCenterOverviewResp resp = new AccountCenterOverviewResp();
         resp.setAccountSummary(buildAccountSummary(account, profile));
         resp.setPlayerIdentity(buildPlayerIdentity(playerProfile, latestCertApp));
-        resp.setCaptainQualification(buildCaptainQualification(captainQualDetail, captainQualification));
-        resp.setCurrentTournaments(java.util.Collections.emptyList());
+        resp.setCaptainQualification(buildCaptainQualification(captainQualDetail));
+        resp.setCurrentTournaments(loadCurrentTournaments(memberId, playerProfile));
         resp.setUnreadMessageCount(accountMessageService.countUnread());
         resp.setRecentMessages(accountMessageService.listRecentMessages(5));
         resp.setPendingTasks(buildPendingTasks(account, playerProfile, latestCertApp, resp.getUnreadMessageCount()));
         return resp;
+    }
+
+    private List<AccountTournamentItemResp> loadCurrentTournaments(Long memberId, BasketPlayerProfile playerProfile) {
+        if (playerProfile == null) {
+            return List.of();
+        }
+        try {
+            return playerMyEventsService.listMyEvents().stream()
+                    .limit(OVERVIEW_TOURNAMENT_LIMIT)
+                    .map(this::mapMyEventToAccountTournamentItem)
+                    .collect(Collectors.toList());
+        } catch (ServiceException ex) {
+            return List.of();
+        }
+    }
+
+    private AccountTournamentItemResp mapMyEventToAccountTournamentItem(V4MyEventResp event) {
+        AccountTournamentItemResp item = new AccountTournamentItemResp();
+        item.setRegistrationId(event.getEventTeamId() == null ? null : String.valueOf(event.getEventTeamId()));
+        item.setRegistrationNo(event.getEventTeamId() == null ? null : String.valueOf(event.getEventTeamId()));
+        item.setTournamentId(event.getSeasonId() == null ? null : String.valueOf(event.getSeasonId()));
+        item.setTournamentName(event.getSeriesName() != null ? event.getSeriesName() : event.getSeasonTitle());
+        item.setSeasonId(event.getSeasonId() == null ? null : String.valueOf(event.getSeasonId()));
+        item.setSeasonName(event.getSeasonTitle());
+        item.setPlatformCode(event.getPlatformCode());
+        item.setPlatformName(event.getPlatformName() != null ? event.getPlatformName() : event.getPlatformCode());
+        item.setTeamId(event.getEventTeamId() == null ? null : String.valueOf(event.getEventTeamId()));
+        item.setTeamName(event.getEventTeamName() != null ? event.getEventTeamName() : event.getTeamName());
+        item.setRosterRole(event.getRoleInTeam());
+        item.setRegistrationStatus(APPROVED_REGISTRATION_STATUS);
+        item.setNextMatch(buildNextMatchSummary(event));
+        return item;
+    }
+
+    private Map<String, Object> buildNextMatchSummary(V4MyEventResp event) {
+        if (event.getNextMatchId() == null && event.getNextMatchTime() == null) {
+            return null;
+        }
+        Map<String, Object> nextMatch = new HashMap<>();
+        nextMatch.put("matchId", event.getNextMatchId());
+        nextMatch.put("matchTime", event.getNextMatchTime());
+        nextMatch.put("stageName", event.getCurrentStageName());
+        nextMatch.put("groupName", event.getCurrentGroupName());
+        nextMatch.put("standingRank", event.getStandingRank());
+        nextMatch.put("standingPoints", event.getStandingPoints());
+        nextMatch.put("qualificationStatus", event.getQualificationStatus());
+        nextMatch.put("divisionId", event.getDivisionId());
+        nextMatch.put("divisionName", event.getDivisionName());
+        return nextMatch;
     }
 
     private BasketMemberAccount requireAccount(Long memberId) {
@@ -105,15 +158,6 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
                 .eq(BasketPlayerCertApplication::getIsDelete, NOT_DELETED)
                 .orderByDesc(BasketPlayerCertApplication::getCreateTime)
                 .orderByDesc(BasketPlayerCertApplication::getId)
-                .last("limit 1"));
-    }
-
-    private BasketCaptainQualification loadCaptainQualification(Long memberId) {
-        return captainQualificationDao.selectOne(new LambdaQueryWrapper<BasketCaptainQualification>()
-                .eq(BasketCaptainQualification::getMemberId, memberId)
-                .eq(BasketCaptainQualification::getIsCurrent, CURRENT_QUALIFICATION)
-                .eq(BasketCaptainQualification::getQualificationStatus, ACTIVE_QUALIFICATION_STATUS)
-                .eq(BasketCaptainQualification::getIsDelete, NOT_DELETED)
                 .last("limit 1"));
     }
 
@@ -159,17 +203,13 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
         return identity;
     }
 
-    private CaptainQualificationResp buildCaptainQualification(CaptainQualificationDetailResp detail,
-                                                               BasketCaptainQualification qualification) {
+    private CaptainQualificationResp buildCaptainQualification(CaptainQualificationDetailResp detail) {
         if (detail == null || !Boolean.TRUE.equals(detail.getHasQualification())) {
             return null;
         }
         CaptainQualificationResp resp = new CaptainQualificationResp();
         resp.setQualificationNo(detail.getQualificationNo());
         resp.setQualificationStatus(detail.getStatus());
-        if (qualification != null) {
-            resp.setGrantedTime(qualification.getGrantedTime());
-        }
         resp.setValidFrom(detail.getValidFrom());
         resp.setValidTo(detail.getValidTo());
         resp.setCanCreateTeam(detail.getCanCreateTeam());

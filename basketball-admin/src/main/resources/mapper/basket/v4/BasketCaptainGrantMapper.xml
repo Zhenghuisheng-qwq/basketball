@@ -101,6 +101,64 @@
         limit 1
     </select>
 
+    <select id="selectLatestActiveByMemberId" resultMap="BasketCaptainGrantResult">
+        select <include refid="BaseColumns" /> from basket_captain_grant
+        where member_id = #{memberId}
+          and grant_status = 'ACTIVE'
+          and <include refid="NotDeleted"/>
+        order by create_time desc, id desc
+        limit 1
+    </select>
+
+    <select id="selectLatestActiveByPlayerId" resultMap="BasketCaptainGrantResult">
+        select <include refid="BaseColumns" /> from basket_captain_grant
+        where player_id = #{playerId}
+          and grant_status = 'ACTIVE'
+          and <include refid="NotDeleted"/>
+        order by create_time desc, id desc
+        limit 1
+    </select>
+
+    <select id="countRuntimeActiveByPlayerId" resultType="int">
+        select count(1)
+        from basket_captain_grant g
+        inner join basket_player_profile pp on pp.id = g.player_id and pp.is_delete = 0
+        where g.player_id = #{playerId}
+          and g.grant_status = 'ACTIVE'
+          and g.is_delete = 0
+          and pp.certification_status = 3
+          and (g.valid_from is null or g.valid_from &lt;= now())
+          and (g.valid_to is null or g.valid_to &gt;= now())
+          and (g.team_id is null or g.active_unique_key is not null)
+    </select>
+
+    <select id="selectGrantHistoryByMemberId" resultType="com.zhs.basket.vo.AccountPlayerCaptainGrantVo">
+        select g.id as qualificationId,
+               cast(g.id as char) as qualificationNo,
+               case g.grant_status when 'ACTIVE' then 1 when 'REVOKED' then 2 when 'EXPIRED' then 3 else null end as qualificationStatus,
+               se.display_title as seasonName,
+               s.series_name as tournamentName,
+               coalesce(nullif(trim(se.display_title), ''), s.series_name, d.division_name) as eventName,
+               g.team_id as teamId,
+               t.team_name as teamName,
+               1 as paymentConfirmed,
+               g.create_time as grantedTime,
+               g.valid_to as validTo,
+               g.granted_by as grantedBy,
+               su.nick_name as grantedByName,
+               case when g.grant_status = 'REVOKED' then g.update_time else null end as revokedTime,
+               g.remark as revokeReason
+        from basket_captain_grant g
+        left join basket_season se on se.id = g.season_id and se.is_delete = 0
+        left join basket_series s on s.id = se.series_id and s.is_delete = 0
+        left join basket_division d on d.id = g.division_id and d.is_delete = 0
+        left join basket_team t on t.id = g.team_id and t.is_delete = 0
+        left join sys_user su on su.user_id = g.granted_by
+        where g.member_id = #{memberId}
+          and g.is_delete = 0
+        order by g.create_time desc, g.id desc
+    </select>
+
     <select id="selectBySourceDrawTeamId" resultMap="BasketCaptainGrantResult">
         select <include refid="BaseColumns" /> from basket_captain_grant
         where source_draw_team_id = #{sourceDrawTeamId}

@@ -556,7 +556,7 @@ public class PlayerCertificationServiceImpl implements IPlayerCertificationServi
                 .map(BasketPlayerCertMaterial::getFileId)
                 .distinct()
                 .toList();
-        Map<Long, BasketFileAsset> fileMap = fileAssetDao.selectBatchIds(fileIds).stream()
+        Map<Long, BasketFileAsset> fileMap = fileAssetDao.selectByIds(fileIds).stream()
                 .filter(asset -> Integer.valueOf(NOT_DELETED).equals(asset.getIsDelete()))
                 .collect(Collectors.toMap(BasketFileAsset::getId, asset -> asset, (a, b) -> a));
 

@@ -58,7 +58,7 @@ public class BasketPublicHonorSupport {
         if (CollectionUtils.isEmpty(categoryIds)) {
             return Collections.emptyMap();
         }
-        List<BasketHonorCategory> list = honorCategoryDao.selectBatchIds(categoryIds);
+        List<BasketHonorCategory> list = honorCategoryDao.selectByIds(categoryIds);
         Map<Long, BasketHonorCategory> map = new HashMap<>();
         if (CollectionUtils.isEmpty(list)) {
             return map;

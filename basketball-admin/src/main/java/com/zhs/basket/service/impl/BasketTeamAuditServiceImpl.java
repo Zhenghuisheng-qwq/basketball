@@ -7,6 +7,7 @@ import com.zhs.basket.enums.TeamMemberRoleEnum;
 import com.zhs.basket.enums.TeamPublicStatusEnum;
 import com.zhs.basket.enums.TeamStatusEnum;
 import com.zhs.basket.mapper.*;
+import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
 import com.zhs.basket.query.TeamAuditQuery;
 import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.TeamAuditApproveReq;
@@ -44,7 +45,7 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
     @Autowired private BasketTeamAuditRecordMapper auditRecordMapper;
     @Autowired private BasketTeamMemberMapper teamMemberMapper;
     @Autowired private BasketPlayerProfileMapper profileMapper;
-    @Autowired private BasketCaptainQualificationMapper qualificationMapper;
+    @Autowired private BasketCaptainGrantMapper captainGrantMapper;
     @Autowired private BasketMemberAccountMapper memberAccountMapper;
     @Autowired private BasketFileAssetMapper fileAssetMapper;
     @Autowired private BasketAdminMessageService messageService;
@@ -190,7 +191,7 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         }
         Long playerId = vo.getCaptainPlayerId() != null ? vo.getCaptainPlayerId() : team.getCaptainPlayerId();
         if (playerId != null) {
-            vo.setCaptainQualificationValid(qualificationMapper.countCurrentActiveByPlayerId(playerId) > 0);
+            vo.setCaptainQualificationValid(captainGrantMapper.countRuntimeActiveByPlayerId(playerId) > 0);
         }
     }
 
@@ -286,7 +287,7 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         if (profile == null || !Objects.equals(profile.getCertificationStatus(), PlayerCertStatusEnum.APPROVED.getCode())) {
             throw new ServiceException("队长未完成球员认证");
         }
-        if (qualificationMapper.countCurrentActiveByPlayerId(captain.getPlayerId()) <= 0) {
+        if (captainGrantMapper.countRuntimeActiveByPlayerId(captain.getPlayerId()) <= 0) {
             throw new ServiceException("队长缺少有效队长资格");
         }
     }

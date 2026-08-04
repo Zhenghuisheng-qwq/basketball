@@ -12,7 +12,7 @@ import com.zhs.common.cachekey.member.EmailCodeLimitCacheKey;
 import com.zhs.common.cachekey.member.LoginFailCacheKey;
 import com.zhs.config.MemberAuthProperties;
 import com.zhs.dao.BasketAccountSecurityLogDao;
-import com.zhs.dao.BasketCaptainQualificationDao;
+import com.zhs.dao.v4.BasketCaptainGrantDao;
 import com.zhs.dao.BasketLoginLogDao;
 import com.zhs.dao.BasketMemberAccountDao;
 import com.zhs.dao.BasketMemberAgreementRecordDao;
@@ -29,7 +29,8 @@ import com.zhs.enums.VerifySendStatusEnum;
 import com.zhs.enums.VerifyStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketAccountSecurityLog;
-import com.zhs.model.BasketCaptainQualification;
+import com.zhs.enums.v4.CaptainGrantStatusEnum;
+import com.zhs.model.v4.BasketCaptainGrant;
 import com.zhs.model.BasketLoginLog;
 import com.zhs.model.BasketMemberAccount;
 import com.zhs.model.BasketMemberAgreementRecord;
@@ -91,7 +92,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
     @Resource
     private BasketPlayerProfileDao playerProfileDao;
     @Resource
-    private BasketCaptainQualificationDao captainQualificationDao;
+    private BasketCaptainGrantDao captainGrantDao;
     @Resource
     private BasketPrivacySettingDao privacySettingDao;
     @Resource
@@ -600,15 +601,15 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
             resp.setPlayerStatus(playerProfile.getPlayerStatus());
         }
 
-        BasketCaptainQualification captainQualification = captainQualificationDao.selectOne(
-                new LambdaQueryWrapper<BasketCaptainQualification>()
-                        .eq(BasketCaptainQualification::getMemberId, memberId)
-                        .eq(BasketCaptainQualification::getIsCurrent, CURRENT_QUALIFICATION)
-                        .eq(BasketCaptainQualification::getQualificationStatus, ACTIVE_QUALIFICATION_STATUS)
-                        .eq(BasketCaptainQualification::getIsDelete, 0)
-                        .last("limit 1"));
-        if (captainQualification != null) {
-            resp.setCaptainQualificationStatus(captainQualification.getQualificationStatus());
+        BasketCaptainGrant captainGrant = captainGrantDao.selectOne(new LambdaQueryWrapper<BasketCaptainGrant>()
+                .eq(BasketCaptainGrant::getMemberId, memberId)
+                .eq(BasketCaptainGrant::getGrantStatus, CaptainGrantStatusEnum.ACTIVE.getCode())
+                .eq(BasketCaptainGrant::getIsDelete, 0)
+                .orderByDesc(BasketCaptainGrant::getCreateTime)
+                .orderByDesc(BasketCaptainGrant::getId)
+                .last("limit 1"));
+        if (captainGrant != null) {
+            resp.setCaptainQualificationStatus(1);
         }
     }
 

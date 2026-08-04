@@ -28,6 +28,7 @@ DELETE FROM sys_role_menu WHERE menu_id IN (
        OR perms LIKE 'basket:matchDispute:%'
        OR perms LIKE 'basket:matchException:%'
        OR perms LIKE 'basket:captainQualification:%'
+   OR perms = 'basket:v4ScheduleBatch:generate'
   ) t
 );
 
@@ -51,7 +52,9 @@ WHERE perms LIKE 'basket:tournament:%'
    OR perms LIKE 'basket:rosterOperation:%'
    OR perms LIKE 'basket:matchDispute:%'
    OR perms LIKE 'basket:matchException:%'
-   OR perms LIKE 'basket:captainQualification:%';
+   OR perms LIKE 'basket:captainQualification:%'
+   OR perms = 'basket:v4ScheduleBatch:generate'
+   OR perms = 'basket:v4ScheduleBatch:generate';
 
 -- 确保 V4 主线菜单可见
 UPDATE sys_menu SET visible='0', status='0'

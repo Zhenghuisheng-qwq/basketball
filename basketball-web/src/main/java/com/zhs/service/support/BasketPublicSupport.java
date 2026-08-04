@@ -269,7 +269,7 @@ public class BasketPublicSupport {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketFileAsset> files = fileAssetDao.selectBatchIds(ids);
+        List<BasketFileAsset> files = fileAssetDao.selectByIds(ids);
         Map<Long, String> map = new HashMap<>();
         if (CollectionUtils.isEmpty(files)) {
             return map;
@@ -292,7 +292,7 @@ public class BasketPublicSupport {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketTeam> teams = teamDao.selectBatchIds(ids);
+        List<BasketTeam> teams = teamDao.selectByIds(ids);
         Map<Long, BasketTeam> map = new HashMap<>();
         if (CollectionUtils.isEmpty(teams)) {
             return map;
@@ -316,7 +316,7 @@ public class BasketPublicSupport {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketPlayerProfile> players = playerProfileDao.selectBatchIds(ids);
+        List<BasketPlayerProfile> players = playerProfileDao.selectByIds(ids);
         Map<Long, BasketPlayerProfile> map = new HashMap<>();
         if (CollectionUtils.isEmpty(players)) {
             return map;
@@ -373,7 +373,7 @@ public class BasketPublicSupport {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketTournamentSeason> seasons = seasonDao.selectBatchIds(ids);
+        List<BasketTournamentSeason> seasons = seasonDao.selectByIds(ids);
         Map<Long, BasketTournamentSeason> map = new HashMap<>();
         if (CollectionUtils.isEmpty(seasons)) {
             return map;
@@ -396,7 +396,7 @@ public class BasketPublicSupport {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketTournament> list = tournamentDao.selectBatchIds(ids);
+        List<BasketTournament> list = tournamentDao.selectByIds(ids);
         Map<Long, BasketTournament> map = new HashMap<>();
         if (CollectionUtils.isEmpty(list)) {
             return map;
@@ -419,7 +419,7 @@ public class BasketPublicSupport {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketCompetitionSeason> list = competitionSeasonDao.selectBatchIds(ids);
+        List<BasketCompetitionSeason> list = competitionSeasonDao.selectByIds(ids);
         Map<Long, BasketCompetitionSeason> map = new HashMap<>();
         if (CollectionUtils.isEmpty(list)) {
             return map;
@@ -442,7 +442,7 @@ public class BasketPublicSupport {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketTournamentStage> list = stageDao.selectBatchIds(ids);
+        List<BasketTournamentStage> list = stageDao.selectByIds(ids);
         Map<Long, BasketTournamentStage> map = new HashMap<>();
         if (CollectionUtils.isEmpty(list)) {
             return map;
@@ -463,7 +463,7 @@ public class BasketPublicSupport {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketTournamentGroup> list = groupDao.selectBatchIds(ids);
+        List<BasketTournamentGroup> list = groupDao.selectByIds(ids);
         Map<Long, BasketTournamentGroup> map = new HashMap<>();
         if (CollectionUtils.isEmpty(list)) {
             return map;
@@ -484,7 +484,7 @@ public class BasketPublicSupport {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketVenue> list = venueDao.selectBatchIds(ids);
+        List<BasketVenue> list = venueDao.selectByIds(ids);
         Map<Long, BasketVenue> map = new HashMap<>();
         if (CollectionUtils.isEmpty(list)) {
             return map;

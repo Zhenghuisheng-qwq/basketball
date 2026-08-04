@@ -16,7 +16,7 @@ R5 为五轮计划的**最终清理轮**，目标是：
 
 1. 先扫描依赖，再删除代码（546 后端 + 167 前端文件已真实删除）
 2. 共享表采取「删 Legacy 行 + 删字段 + 收紧约束」，不 DROP 整张共享表
-3. 纯旧表提供 precheck + cleanup SQL，开发库已清理 Legacy 行；DDL/DROP 需本地手工执行 cleanup SQL（MCP 无 DDL 权限）
+3. 纯旧表提供 precheck + cleanup SQL；**代码清理已完成，数据库破坏性 DDL（DROP TABLE / DROP COLUMN）须本地执行 cleanup SQL**
 4. 不删除账号、球员、长期球队、内容运营（公告/合作伙伴/名人堂）模块
 5. 不声称 E2E 测试通过
 
@@ -81,7 +81,7 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 | `basket_tournament_registration_player` | 旧报名阵容 | 65 | 已删 Controller | 同上 |
 | `basket_tournament_season_roster` | 旧赛季阵容 | 73 | 已删 Roster Admin | 同上 |
 | `basket_team_season_profile` | 旧参赛队档案 | 13 | 已删 EventTeam Admin | 同上 |
-| `basket_captain_qualification` | 旧队长资格 | 13 | V4 用 captain_grant | 同上 |
+| `basket_captain_qualification` | 旧队长资格 | 13 | 已迁移至 basket_captain_grant | 同上（代码 0 引用后可 DROP） |
 | `basket_schedule_generate_batch` | Legacy 排赛批次 | 2 | 已删 Job/Service | 同上 |
 | `basket_schedule_rule*` | Legacy 排赛规则 | 0 | 已删 Strategy | 同上 |
 | `basket_stage_standing` | 旧 Division 积分榜 | 0 | V4 用 basket_standing | 同上 |
@@ -91,7 +91,7 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 | `basket_competition_season` | 旧联赛届次 | 0 | 无写入口 | 同上 |
 | 其余 `basket_tournament_*` 子表（group/stage/rule/roster_change 等） | 旧赛事结构 | 0 | 已删全套 Controller | 同上 |
 
-> **执行状态**：开发库 Legacy **行**已通过 MCP 清理；**DROP TABLE** 与 **ALTER DROP COLUMN** 因 MCP 无 DDL 权限，需本地执行 `docs/sql/cnpa-dynamic-format-r5-cleanup.sql`。
+> **执行状态**：开发库 Legacy **行**已通过 MCP 清理；**DROP TABLE / DROP COLUMN** 尚未执行，须本地运行 `docs/sql/cnpa-dynamic-format-r5-cleanup.sql` 完成物理清理。
 
 ## 6. 共享表清理
 
@@ -120,7 +120,7 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 
 **Controller**：`AccountTournamentController`、`TeamRegistrationBusinessController`、`OpenRegistrationBusinessController`、`EventParticipationQueryController`、`RosterChangeBusinessController`、`BasketTeamSeasonProfileController`、`BasketPlayerMatchDataController`、`BasketTournamentRegistration*Controller`、`publicapi/BasketPublicStandingController`、`BasketPublicMatchController`、`BasketPublicSeasonStatController` 等
 
-**保留**：14 个 V4 Controller、`BasketPublicTournamentController`（名人堂只读）、`CaptainPermissionServiceImpl` 已移除旧 `requireRegistrationCaptain`
+**保留**：14 个 V4 Controller、`BasketPublicTournamentController`（名人堂只读）；`CaptainPermissionServiceImpl` 已迁移 `basket_captain_grant`
 
 ## 8. 删除的 Admin 前端（57 文件）
 
@@ -152,9 +152,9 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 ## 11. Legacy 赛程清理
 
 - 删除 `ScheduleAutoGenerateJob`、`BasketScheduleGenerateServiceImpl`、`RegularRoundRobinV1Strategy` 等
-- Admin `event-v4/schedule/index.vue` 移除「历史赛程」Tab 与 `legacyGenerateAllowed`
-- `BasketV4ScheduleBatchServiceImpl` 保留但 `validateDivisionForGenerate` 拒绝有 `formatSnapshotId` 的 Division；无快照 Division 已从 DB 删除
-- Legacy 生成入口 `/basket/v4/admin/schedule-batch/generate` 对新 Division 返回「请使用阶段执行」
+- Admin `event-v4/schedule/index.vue` 仅保留「阶段执行」生成入口
+- **已删除** Legacy 生成入口 `POST /basket/v4/schedule-batch/generate`、对应 Service/DTO/权限 `basket:v4ScheduleBatch:generate`（menu_id=2313）
+- 新版赛程**仅**允许通过 Stage Execution 生成
 
 ## 12. rank_explain_json 清理结果
 
@@ -178,7 +178,7 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 |----|------|
 | `BasketV4FormatSnapshotMigrationRunner` | ✅ 已删除 |
 | `cnpa.v4.format-snapshot-migration.enabled` | ✅ 无配置引用 |
-| `ScheduleAutoGenerateJob` sys_job | ⏳ 需本地确认 sys_job 停用 |
+| `ScheduleAutoGenerateJob` sys_job | ✅ precheck/cleanup SQL 已补充；开发库查询 0 行 |
 | `V4_LEGACY_ROUND_ROBIN_V1` 模板 | cleanup SQL 标记 disabled |
 
 ## 15. 最终 Schema
@@ -216,7 +216,9 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 | `cnpa/event/list` Vue 路由 | 0 文件 ✅ |
 | `cnpa/competition/` Admin 页面 | 0 文件 ✅ |
 | `BasketTournamentRegistration` Web Java | 已删 14 文件 + 接口方法 ✅ |
-| Admin/Web Maven compile | 子任务报告通过（本地未在本轮重跑） |
+| `basket_captain_qualification` 业务代码引用 | 0 引用 ✅（已迁移 basket_captain_grant） |
+| 账号中心「当前参赛赛事」 | ✅ 接入 EventPlayer→EventTeam→Division 新域（最多 5 条） |
+| Legacy `/schedule-batch/generate` | 0 引用 ✅ |
 
 ## 20. 保留的后续扩展结构
 
@@ -237,12 +239,11 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 ## 23. P0/P1/P2 风险
 
 ### P0
-- 开发库 **DROP TABLE / DROP COLUMN** 未通过 MCP 执行，需本地跑 `cnpa-dynamic-format-r5-cleanup.sql`
+- 开发库 **DROP TABLE / DROP COLUMN** 尚未执行，须本地跑 `docs/sql/cnpa-dynamic-format-r5-cleanup.sql`
 - 荣誉/名人堂仍依赖 `basket_tournament` 只读表与 `listTournament` API
 
 ### P1
-- `CaptainPermissionServiceImpl` 仍读 `basket_captain_qualification`（旧表），与 V4 `basket_captain_grant` 并存，需后续统一
-- 账号中心「当前参赛赛事」已改为空列表（旧 AccountTournament 已删）
+- （已收口）队长授权迁移、账号中心参赛列表、Legacy 赛程生成删除、sys_job 清理
 
 ### P2
 - `run_data_check.py` 仍含 `rank_explain_json 历史数据量` 统计项
@@ -250,7 +251,7 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 
 ## 24. R5 当前结论
 
-**新赛事域代码、页面、菜单、权限和数据库结构已完成唯一化清理，最终本地全链路验收待统一执行。**
+**新赛事域代码、页面、菜单、权限已完成唯一化清理；R5 四项阻塞项已收口。数据库物理清理（DROP TABLE / DROP COLUMN）与最终本地全链路验收待统一执行。**
 
 ### 开发库 data-check 实测（MCP，Legacy 行清理后）
 
@@ -260,7 +261,7 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 | check_04_match_no_stage | 0 |
 | check_05_batch_no_stage | 0 |
 | check_06_standing_no_stage | 0 |
-| check_09_rank_explain_json_column | 1（待 cleanup SQL） |
+| check_09_rank_explain_json_column | 1（待本地 cleanup SQL 执行 DROP COLUMN） |
 
 ### 删除规模汇总
 

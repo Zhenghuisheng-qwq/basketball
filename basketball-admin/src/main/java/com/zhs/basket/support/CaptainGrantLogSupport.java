@@ -1,9 +1,9 @@
 package com.zhs.basket.support;
 
 import com.zhs.basket.domain.BasketCaptainGrantLog;
-import com.zhs.basket.domain.BasketCaptainQualification;
+import com.zhs.basket.domain.v4.BasketCaptainGrant;
 import com.zhs.basket.enums.CaptainGrantLogActionTypeEnum;
-import com.zhs.basket.enums.CaptainQualificationStatusEnum;
+import com.zhs.basket.enums.v4.CaptainGrantStatusEnum;
 import com.zhs.basket.mapper.BasketCaptainGrantLogMapper;
 import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
@@ -20,7 +20,7 @@ public class CaptainGrantLogSupport {
     @Autowired
     private BasketCaptainGrantLogMapper grantLogMapper;
 
-    public void writeGrantLog(BasketCaptainQualification grant,
+    public void writeGrantLog(BasketCaptainGrant grant,
                               CaptainGrantLogActionTypeEnum actionType,
                               Integer beforeStatus,
                               Integer afterStatus,
@@ -53,11 +53,9 @@ public class CaptainGrantLogSupport {
         log.setActionType(actionType.getCode());
         log.setBeforeStatus(beforeStatus);
         log.setAfterStatus(afterStatus);
-        log.setPaymentConfirmed(grant.getPaymentConfirmed());
-        log.setPaymentReference(grant.getPaymentReference());
-        log.setGrantTime(grant.getGrantedTime());
+        log.setPaymentConfirmed(1);
+        log.setGrantTime(grant.getCreateTime());
         log.setExpireTime(grant.getValidTo());
-        log.setRevokeTime(grant.getRevokedTime());
         log.setOperatorId(operatorId);
         log.setOperatorName(StringUtils.isNotEmpty(operatorName) ? operatorName : "系统");
         log.setOperatorType(StringUtils.isNotEmpty(operatorType) ? operatorType : "ADMIN");
@@ -69,17 +67,18 @@ public class CaptainGrantLogSupport {
         grantLogMapper.insert(log);
     }
 
-    /**
-     * 授权日志状态文案。首次 GRANT 的 beforeStatus 为 null，展示为 "-"，不能抛异常。
-     */
     public static String statusText(Integer status) {
         if (status == null) {
             return "-";
         }
-        for (CaptainQualificationStatusEnum value : CaptainQualificationStatusEnum.values()) {
-            if (value.getCode() == status) {
-                return value.getDescription();
-            }
+        if (status == 1) {
+            return CaptainGrantStatusEnum.ACTIVE.getDescription();
+        }
+        if (status == 2) {
+            return CaptainGrantStatusEnum.REVOKED.getDescription();
+        }
+        if (status == 3) {
+            return CaptainGrantStatusEnum.EXPIRED.getDescription();
         }
         return "未知(" + status + ")";
     }

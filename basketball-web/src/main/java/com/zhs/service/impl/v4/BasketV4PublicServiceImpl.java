@@ -572,7 +572,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (CollectionUtils.isEmpty(seriesIds)) {
             return Collections.emptyMap();
         }
-        List<BasketSeries> list = seriesDao.selectBatchIds(seriesIds);
+        List<BasketSeries> list = seriesDao.selectByIds(seriesIds);
         Map<Long, BasketSeries> map = new HashMap<>();
         for (BasketSeries item : list) {
             if (item != null && Objects.equals(item.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
@@ -898,7 +898,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketEventTeam> list = eventTeamDao.selectBatchIds(ids);
+        List<BasketEventTeam> list = eventTeamDao.selectByIds(ids);
         Map<Long, BasketEventTeam> map = new HashMap<>();
         for (BasketEventTeam item : list) {
             if (item != null && Objects.equals(item.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
@@ -916,7 +916,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketEventPlayer> list = eventPlayerDao.selectBatchIds(ids);
+        List<BasketEventPlayer> list = eventPlayerDao.selectByIds(ids);
         Map<Long, BasketEventPlayer> map = new HashMap<>();
         for (BasketEventPlayer item : list) {
             if (item != null && Objects.equals(item.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {

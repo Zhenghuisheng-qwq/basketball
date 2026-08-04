@@ -44,7 +44,6 @@ public final class BasketEventV4Perms {
 
     public static final String SCHEDULE_BATCH_LIST = "basket:v4ScheduleBatch:list";
     public static final String SCHEDULE_BATCH_QUERY = "basket:v4ScheduleBatch:query";
-    public static final String SCHEDULE_BATCH_GENERATE = "basket:v4ScheduleBatch:generate";
     public static final String SCHEDULE_BATCH_PUBLISH = "basket:v4ScheduleBatch:publish";
     public static final String SCHEDULE_BATCH_CANCEL = "basket:v4ScheduleBatch:cancel";
 

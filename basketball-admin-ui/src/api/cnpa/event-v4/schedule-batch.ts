@@ -58,21 +58,12 @@ export interface BasketV4MatchListVo {
   remark?: string
 }
 
-export interface BasketScheduleBatchGenerateReq {
-  divisionId: number
-  remark?: string
-}
-
 export function listV4ScheduleBatch(query: BasketScheduleBatchQuery): Promise<TableDataInfo<BasketScheduleBatchListVo[]>> {
   return request({ url: '/basket/v4/schedule-batch/list', method: 'get', params: query })
 }
 
 export function getV4ScheduleBatch(id: number): Promise<AjaxResult<BasketScheduleBatchDetailVo>> {
   return request({ url: `/basket/v4/schedule-batch/${id}`, method: 'get' })
-}
-
-export function generateV4ScheduleBatch(data: BasketScheduleBatchGenerateReq): Promise<AjaxResult<number>> {
-  return request({ url: '/basket/v4/schedule-batch/generate', method: 'post', data })
 }
 
 export function publishV4ScheduleBatch(id: number): Promise<AjaxResult> {

@@ -1,7 +1,6 @@
 package com.zhs.basket.service.impl;
 
 import com.zhs.basket.domain.*;
-import com.zhs.basket.enums.CaptainQualificationStatusEnum;
 import com.zhs.basket.enums.PlatformAccountStatusEnum;
 import com.zhs.basket.enums.PlayerCertStatusEnum;
 import com.zhs.basket.enums.RegistrationStatusEnum;
@@ -10,7 +9,10 @@ import com.zhs.basket.enums.TeamMembershipStatusEnum;
 import com.zhs.basket.mapper.*;
 import com.zhs.basket.query.AccountPlayerQuery;
 import com.zhs.basket.service.IBasketAccountPlayerService;
-import com.zhs.basket.support.CaptainQualificationValiditySupport;
+import com.zhs.basket.domain.v4.BasketCaptainGrant;
+import com.zhs.basket.enums.v4.CaptainGrantStatusEnum;
+import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
+import com.zhs.basket.support.CaptainGrantValiditySupport;
 import com.zhs.basket.support.MemberAvatarSupport;
 import com.zhs.basket.support.PlatformGameIdDisplaySupport;
 import com.zhs.basket.vo.*;
@@ -34,7 +36,7 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
     @Autowired private BasketMemberAccountMapper memberAccountMapper;
     @Autowired private BasketPlayerPlatformAccountMapper platformAccountMapper;
     @Autowired private BasketPlayerCertApplicationMapper certApplicationMapper;
-    @Autowired private BasketCaptainQualificationMapper captainQualificationMapper;
+    @Autowired private BasketCaptainGrantMapper captainGrantMapper;
     @Autowired private BasketPlayerProfileMapper playerProfileMapper;
     @Autowired private BasketTeamMemberMapper teamMemberMapper;    @Autowired private BasketMessageReceiverMapper messageReceiverMapper;
     @Autowired private BasketAccountSecurityLogMapper securityLogMapper;
@@ -238,36 +240,64 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
         if (playerId == null) {
             return null;
         }
-        BasketCaptainQualification qual = captainQualificationMapper.selectCurrentByPlayerId(playerId);
-        if (qual == null) {
+        BasketCaptainGrant grant = captainGrantMapper.selectLatestActiveByPlayerId(playerId);
+        if (grant == null) {
             return null;
         }
         BasketPlayerProfile profile = playerProfileMapper.selectById(playerId);
         Integer certStatus = profile != null ? profile.getCertificationStatus() : null;
-        String invalidReason = CaptainQualificationValiditySupport.resolveInvalidReason(qual, certStatus, new java.util.Date());
+        String invalidReason = CaptainGrantValiditySupport.resolveInvalidReason(grant, certStatus, new java.util.Date(), null);
         AccountPlayerCaptainQualVo vo = new AccountPlayerCaptainQualVo();
-        vo.setQualificationId(qual.getId());
-        vo.setQualificationNo(qual.getQualificationNo());
-        vo.setQualificationStatus(qual.getQualificationStatus());
-        vo.setQualificationStatusName(
-                CaptainQualificationStatusEnum.fromCode(qual.getQualificationStatus()).getDescription());
-        vo.setIsCurrent(qual.getIsCurrent());
-        vo.setGrantedTime(qual.getGrantedTime());
-        vo.setValidFrom(qual.getValidFrom());
-        vo.setValidTo(qual.getValidTo());
-        vo.setGrantReason(qual.getGrantReason());
+        vo.setQualificationId(grant.getId());
+        vo.setQualificationNo(String.valueOf(grant.getId()));
+        vo.setQualificationStatus(mapGrantStatusToLegacyCode(grant.getGrantStatus()));
+        vo.setQualificationStatusName(CaptainGrantStatusEnum.fromCode(grant.getGrantStatus()).getDescription());
+        vo.setIsCurrent(grant.getActiveUniqueKey() != null || grant.getTeamId() == null ? 1 : 0);
+        vo.setGrantedTime(grant.getCreateTime());
+        vo.setValidFrom(grant.getValidFrom());
+        vo.setValidTo(grant.getValidTo());
+        vo.setGrantReason(grant.getRemark());
         vo.setRuntimeValid(invalidReason == null ? 1 : 0);
         vo.setRuntimeInvalidReason(invalidReason);
         return vo;
     }
 
+    private Integer mapGrantStatusToLegacyCode(String grantStatus) {
+        if (CaptainGrantStatusEnum.ACTIVE.getCode().equals(grantStatus)) {
+            return 1;
+        }
+        if (CaptainGrantStatusEnum.REVOKED.getCode().equals(grantStatus)) {
+            return 2;
+        }
+        if (CaptainGrantStatusEnum.EXPIRED.getCode().equals(grantStatus)) {
+            return 3;
+        }
+        return null;
+    }
+
     private List<AccountPlayerCaptainGrantVo> loadCaptainGrants(Long memberId) {
-        return captainQualificationMapper.selectGrantHistoryByMemberId(memberId).stream().peek(vo -> {
+        return captainGrantMapper.selectGrantHistoryByMemberId(memberId).stream().peek(vo -> {
             if (vo.getQualificationStatus() != null) {
                 vo.setQualificationStatusName(
-                        CaptainQualificationStatusEnum.fromCode(vo.getQualificationStatus()).getDescription());
+                        CaptainGrantStatusEnum.fromCode(mapLegacyCodeToGrantStatus(vo.getQualificationStatus())).getDescription());
             }
         }).collect(Collectors.toList());
+    }
+
+    private String mapLegacyCodeToGrantStatus(Integer legacyCode) {
+        if (legacyCode == null) {
+            return null;
+        }
+        if (legacyCode == 1) {
+            return CaptainGrantStatusEnum.ACTIVE.getCode();
+        }
+        if (legacyCode == 2) {
+            return CaptainGrantStatusEnum.REVOKED.getCode();
+        }
+        if (legacyCode == 3) {
+            return CaptainGrantStatusEnum.EXPIRED.getCode();
+        }
+        return null;
     }
 
     private List<AccountPlayerTeamSummaryVo> loadTeamSummary(Long memberId) {

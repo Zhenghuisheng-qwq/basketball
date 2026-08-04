@@ -19,21 +19,20 @@
         left join basket_player_profile p on p.member_id = acc.id and p.is_delete = 0
         left join basket_team ct on ct.id = p.current_team_id and ct.is_delete = 0
         left join (
-            select cq.player_id, max(cq.id) as qual_id
-            from basket_captain_qualification cq
-            inner join basket_player_profile pp on pp.id = cq.player_id and pp.is_delete = 0
-            where cq.is_delete = 0
-              and cq.is_current = 1
-              and cq.qualification_status = 1
-              and cq.payment_confirmed = 1
+            select g.player_id, max(g.id) as grant_id
+            from basket_captain_grant g
+            inner join basket_player_profile pp on pp.id = g.player_id and pp.is_delete = 0
+            where g.is_delete = 0
+              and g.grant_status = 'ACTIVE'
               and pp.certification_status = 3
-              and (cq.valid_from is null or cq.valid_from &lt;= now())
-              and (cq.valid_to is null or cq.valid_to &gt;= now())
-            group by cq.player_id
+              and (g.valid_from is null or g.valid_from &lt;= now())
+              and (g.valid_to is null or g.valid_to &gt;= now())
+              and (g.team_id is null or g.active_unique_key is not null)
+            group by g.player_id
         ) captain on captain.player_id = p.id
-        left join basket_captain_qualification cq_active on cq_active.id = captain.qual_id and cq_active.is_delete = 0
-        left join basket_tournament_season cq_season on cq_season.id = cq_active.season_id and cq_season.is_delete = 0
-        left join basket_tournament cq_tournament on cq_tournament.id = cq_season.tournament_id and cq_tournament.is_delete = 0
+        left join basket_captain_grant cg_active on cg_active.id = captain.grant_id and cg_active.is_delete = 0
+        left join basket_season cg_season on cg_season.id = cg_active.season_id and cg_season.is_delete = 0
+        left join basket_series cg_series on cg_series.id = cg_season.series_id and cg_series.is_delete = 0
     </sql>
 
     <sql id="memberListWhere">
@@ -64,8 +63,8 @@
         <if test="hasTeam != null and hasTeam == 1">and p.current_team_id is not null</if>
         <if test="hasTeam != null and hasTeam == 0">and (p.id is null or p.current_team_id is null)</if>
         <if test="currentTeamName != null and currentTeamName != ''">and ct.team_name like concat('%', #{currentTeamName}, '%')</if>
-        <if test="hasCaptainQual != null and hasCaptainQual == 1">and captain.qual_id is not null</if>
-        <if test="hasCaptainQual != null and hasCaptainQual == 0">and (p.id is null or captain.qual_id is null)</if>
+        <if test="hasCaptainQual != null and hasCaptainQual == 1">and captain.grant_id is not null</if>
+        <if test="hasCaptainQual != null and hasCaptainQual == 0">and (p.id is null or captain.grant_id is null)</if>
         <if test="certStage != null and certStage != ''">
             <choose>
                 <when test="certStage == 'NO_PROFILE'">and p.id is null</when>
@@ -117,8 +116,8 @@
                acc.account_status as accountStatus, p.certified_time as certifiedTime,
                acc.create_time as createTime, acc.last_login_time as lastLoginTime,
                p.current_team_id as currentTeamId, ct.team_name as currentTeamName,
-               case when captain.qual_id is not null then 1 else 0 end as hasCaptainQual,
-               coalesce(nullif(trim(cq_season.season_name), ''), cq_tournament.tournament_name) as activeCaptainGrantEventName,
+               case when captain.grant_id is not null then 1 else 0 end as hasCaptainQual,
+               coalesce(nullif(trim(cg_season.display_title), ''), cg_series.series_name) as activeCaptainGrantEventName,
                (
                    select ca.application_status
                    from basket_player_cert_application ca

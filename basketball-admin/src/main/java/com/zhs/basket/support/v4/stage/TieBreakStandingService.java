@@ -100,7 +100,6 @@ public class TieBreakStandingService {
                 row.setPointAgainst(agg.pointAgainst);
                 row.setPointDiff(agg.pointFor - agg.pointAgainst);
                 row.setStandingPoints(agg.standingPoints);
-                row.setRankExplainJson(null);
                 row.setManualRankPending(manualRuleEnabled && manualPendingTeams.contains(agg.eventTeamId) ? 1 : 0);
                 row.setActiveUniqueKey(buildActiveUniqueKey(divisionId, stageId, groupScopeKey, agg.eventTeamId));
                 row.setCreateTime(now);

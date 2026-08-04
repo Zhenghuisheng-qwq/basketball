@@ -416,7 +416,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
             return Collections.emptyMap();
         }
         Map<Long, BasketTeam> map = new HashMap<>();
-        for (BasketTeam team : teamDao.selectBatchIds(teamIds)) {
+        for (BasketTeam team : teamDao.selectByIds(teamIds)) {
             if (team != null && NOT_DELETED.equals(team.getIsDelete())) {
                 map.put(team.getId(), team);
             }

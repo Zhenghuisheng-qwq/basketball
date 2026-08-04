@@ -1,9 +1,9 @@
 package com.zhs.service;
 
-import com.zhs.model.BasketCaptainQualification;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamMember;
+import com.zhs.model.v4.BasketCaptainGrant;
 import com.zhs.response.team.CaptainQualificationDetailResp;
 
 public interface ICaptainPermissionService {
@@ -14,14 +14,18 @@ public interface ICaptainPermissionService {
 
     CaptainQualificationDetailResp getCurrentQualification(Long accountId, Long seasonId, Long teamId);
 
-    BasketCaptainQualification requireValidQualification(Long accountId);
+    CaptainQualificationDetailResp getCurrentQualificationByDivision(Long accountId, Long divisionId, Long teamId);
 
-    BasketCaptainQualification requireValidQualification(Long accountId, Long seasonId);
+    BasketCaptainGrant requireValidQualification(Long accountId);
+
+    BasketCaptainGrant requireValidQualification(Long accountId, Long seasonId);
+
+    BasketCaptainGrant requireValidQualificationForDivision(Long accountId, Long teamId, Long divisionId);
 
     /**
-     * 按 userId + teamId + eventId(seasonId) 校验有效队长授权，用于赛事报名。
+     * 兼容旧 seasonId 入参的赛事报名校验。
      */
-    BasketCaptainQualification requireValidQualificationForEvent(Long accountId, Long teamId, Long seasonId);
+    BasketCaptainGrant requireValidQualificationForEvent(Long accountId, Long teamId, Long seasonId);
 
     BasketPlayerProfile requireCertifiedPlayer(Long accountId);
 

@@ -10,7 +10,6 @@ import com.zhs.enums.TeamInvitationStatusEnum;
 import com.zhs.enums.TeamMemberRoleEnum;
 import com.zhs.enums.TeamMembershipStatusEnum;
 import com.zhs.enums.TeamRosterTypeEnum;
-import com.zhs.enums.TournamentRegistrationStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketMemberAccount;
@@ -77,7 +76,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     @Resource
     private BasketMemberAccountDao memberAccountDao;
     @Resource
-    private BasketFileAssetDao fileAssetDao;    @Resource
+    private BasketFileAssetDao fileAssetDao;
+    @Resource
     private ICaptainPermissionService captainPermissionService;
     @Resource
     private TeamMemberJoinHelper teamMemberJoinHelper;
@@ -721,7 +721,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         Set<Long> memberIds = members.stream().map(BasketTeamMember::getMemberId).filter(Objects::nonNull).collect(Collectors.toSet());
         Map<Long, BasketPlayerProfile> playerMap = new HashMap<>();
         if (!playerIds.isEmpty()) {
-            for (BasketPlayerProfile profile : playerProfileDao.selectBatchIds(playerIds)) {
+            for (BasketPlayerProfile profile : playerProfileDao.selectByIds(playerIds)) {
                 if (profile != null && NOT_DELETED.equals(profile.getIsDelete())) {
                     playerMap.put(profile.getId(), profile);
                 }

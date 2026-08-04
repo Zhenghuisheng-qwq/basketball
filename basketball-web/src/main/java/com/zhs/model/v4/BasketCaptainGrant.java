@@ -52,6 +52,10 @@ public class BasketCaptainGrant implements Serializable {
 
     private String remark;
 
+    private String grantSource;
+
+    private Long sourceDrawTeamId;
+
     private Date createTime;
 
     private Date updateTime;

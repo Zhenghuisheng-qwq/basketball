@@ -227,7 +227,7 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
         if (taskIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketMessageTask> tasks = messageTaskDao.selectBatchIds(taskIds);
+        List<BasketMessageTask> tasks = messageTaskDao.selectByIds(taskIds);
         if (CollectionUtils.isEmpty(tasks)) {
             return Collections.emptyMap();
         }

@@ -1,7 +1,6 @@
 package com.zhs.web.controller.basket.v4;
 
 import com.zhs.basket.constant.BasketEventV4Perms;
-import com.zhs.basket.dto.v4.BasketScheduleBatchGenerateReq;
 import com.zhs.basket.query.v4.BasketScheduleBatchQuery;
 import com.zhs.basket.service.v4.IBasketV4ScheduleBatchService;
 import com.zhs.common.core.controller.BaseController;
@@ -29,13 +28,6 @@ public class BasketV4ScheduleBatchController extends BaseController {
     @GetMapping("/{id}")
     public AjaxResult getInfo(@PathVariable Long id) {
         return success(scheduleBatchService.selectById(id));
-    }
-
-    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.SCHEDULE_BATCH_GENERATE + "')")
-    @PostMapping("/generate")
-    public AjaxResult generate(@RequestBody BasketScheduleBatchGenerateReq req) {
-        Long batchId = scheduleBatchService.generate(req);
-        return success(batchId);
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.SCHEDULE_BATCH_PUBLISH + "')")

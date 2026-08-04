@@ -24,7 +24,7 @@ import com.zhs.enums.TeamPublicStatusEnum;
 import com.zhs.enums.TeamRosterTypeEnum;
 import com.zhs.enums.TeamStatusEnum;
 import com.zhs.exception.ServiceException;
-import com.zhs.model.BasketCaptainQualification;
+import com.zhs.model.v4.BasketCaptainGrant;
 import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketPlayerPlatformAccount;
 import com.zhs.model.BasketMemberProfile;
@@ -207,7 +207,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     @Override
     public List<InheritableTeamSummaryResp> listInheritableTeams() {
         Long memberId = UserContext.getRequiredUserId();
-        BasketCaptainQualification grant = captainGrantSupport.findCurrentGrant(memberId);
+        BasketCaptainGrant grant = captainGrantSupport.findCurrentGrant(memberId);
         if (grant == null || grant.getTeamId() != null) {
             return Collections.emptyList();
         }
@@ -250,7 +250,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     @Transactional(rollbackFor = Exception.class)
     public TeamDetailResp bindGrantToTeam(String teamId) {
         Long memberId = UserContext.getRequiredUserId();
-        BasketCaptainQualification grant = captainPermissionService.requireValidQualification(memberId);
+        BasketCaptainGrant grant = captainPermissionService.requireValidQualification(memberId);
         if (grant.getTeamId() != null) {
             throw new ServiceException("?????????????????????", 403);
         }
@@ -293,7 +293,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     public TeamDetailResp create(TeamCreateReq req, String clientIp) {
         validateCreateReq(req);
         Long memberId = UserContext.getRequiredUserId();
-        BasketCaptainQualification qualification = captainPermissionService.requireValidQualification(memberId);
+        BasketCaptainGrant qualification = captainPermissionService.requireValidQualification(memberId);
         captainGrantSupport.assertUnboundForCreate(qualification);
         BasketPlayerProfile playerProfile = captainPermissionService.requireCertifiedPlayer(memberId);
         teamMembershipSupport.assertEligibleToJoinTeam(memberId);
@@ -565,7 +565,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         if (CollectionUtils.isEmpty(teamIds)) {
             return Collections.emptyList();
         }
-        return teamDao.selectBatchIds(teamIds).stream()
+        return teamDao.selectByIds(teamIds).stream()
                 .filter(team -> team != null && NOT_DELETED.equals(team.getIsDelete()))
                 .sorted((a, b) -> Long.compare(b.getId(), a.getId()))
                 .collect(Collectors.toList());
@@ -580,7 +580,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
             return Collections.emptyMap();
         }
         Map<Long, String> map = new HashMap<>();
-        for (BasketFileAsset asset : fileAssetDao.selectBatchIds(logoIds)) {
+        for (BasketFileAsset asset : fileAssetDao.selectByIds(logoIds)) {
             if (asset != null && NOT_DELETED.equals(asset.getIsDelete())) {
                 map.put(asset.getId(), asset.getAccessUrl());
             }

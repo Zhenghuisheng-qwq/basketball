@@ -257,7 +257,26 @@ ALTER TABLE basket_standing
   MODIFY COLUMN group_scope_key BIGINT NOT NULL DEFAULT 0 COMMENT '分组范围键';
 
 -- ---------------------------------------------------------------------------
--- 8. 删除 V4_LEGACY 迁移模板种子（若存在）
+-- 9. 停用并删除旧赛事 Quartz Job（类已删除，禁止保留无效 invoke_target）
+-- ---------------------------------------------------------------------------
+UPDATE sys_job SET status = '1', update_time = NOW()
+WHERE invoke_target LIKE '%ScheduleAutoGenerateJob%'
+   OR invoke_target LIKE '%MatchStatusAutoFinishJob%'
+   OR invoke_target LIKE '%BasketV4FormatSnapshotMigrationRunner%';
+
+DELETE FROM sys_job
+WHERE invoke_target LIKE '%ScheduleAutoGenerateJob%'
+   OR invoke_target LIKE '%MatchStatusAutoFinishJob%'
+   OR invoke_target LIKE '%BasketV4FormatSnapshotMigrationRunner%';
+
+-- ---------------------------------------------------------------------------
+-- 10. 删除 Legacy 赛程生成权限按钮（menu_id=2313）
+-- ---------------------------------------------------------------------------
+DELETE FROM sys_role_menu WHERE menu_id = 2313;
+DELETE FROM sys_menu WHERE menu_id = 2313;
+
+-- ---------------------------------------------------------------------------
+-- 11. 删除 V4_LEGACY 迁移模板种子（若存在）
 -- ---------------------------------------------------------------------------
 UPDATE basket_format_template SET is_delete=1, enabled=0
 WHERE template_code='V4_LEGACY_ROUND_ROBIN_V1' AND is_delete=0;

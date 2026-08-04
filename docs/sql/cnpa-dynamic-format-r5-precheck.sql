@@ -94,7 +94,17 @@ WHERE perms IN (
 )
 ORDER BY menu_id;
 
-SELECT '=== 11. PS/XBOX 作为 Division platform_code ===' AS section;
+SELECT '=== 13. 旧赛事 Quartz Job（invoke_target 指向已删除类）===' AS section;
+SELECT job_id, job_name, job_group, invoke_target, status, cron_expression
+FROM sys_job
+WHERE invoke_target LIKE '%ScheduleAutoGenerateJob%'
+   OR invoke_target LIKE '%MatchStatusAutoFinishJob%'
+   OR invoke_target LIKE '%BasketV4FormatSnapshotMigrationRunner%'
+   OR invoke_target LIKE '%basket%Tournament%Job%'
+   OR invoke_target LIKE '%ScheduleGenerate%'
+ORDER BY job_id;
+
+SELECT '=== 14. PS/XBOX 作为 Division platform_code ===' AS section;
 SELECT id, season_id, platform_code, division_name
 FROM basket_division
 WHERE is_delete = 0 AND platform_code IN ('PS', 'XBOX', 'PS5');
