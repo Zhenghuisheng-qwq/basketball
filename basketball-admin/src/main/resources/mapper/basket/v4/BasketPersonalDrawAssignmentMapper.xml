@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketPersonalDrawAssignmentMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketPersonalDrawAssignment" id="BasketPersonalDrawAssignmentResult">
+        <id property="id" column="id" />
+        <result property="drawBatchId" column="draw_batch_id" />
+        <result property="drawTeamId" column="draw_team_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="personalRegistrationId" column="personal_registration_id" />
+        <result property="playerId" column="player_id" />
+        <result property="assignmentRole" column="assignment_role" />
+        <result property="joinStatus" column="join_status" />
+        <result property="sortOrder" column="sort_order" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <resultMap type="com.zhs.basket.vo.v4.BasketPersonalDrawAssignmentVo" id="BasketPersonalDrawAssignmentVoResult">
+        <id property="assignmentId" column="assignment_id" />
+        <result property="personalRegistrationId" column="personal_registration_id" />
+        <result property="playerId" column="player_id" />
+        <result property="playerName" column="player_name" />
+        <result property="assignmentRole" column="assignment_role" />
+        <result property="joinStatus" column="join_status" />
+        <result property="sortOrder" column="sort_order" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, draw_batch_id, draw_team_id, division_id, personal_registration_id, player_id, assignment_role, join_status, sort_order, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketPersonalDrawAssignmentResult">
+        select <include refid="BaseColumns" /> from basket_personal_draw_assignment
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByTeamId" resultMap="BasketPersonalDrawAssignmentResult">
+        select <include refid="BaseColumns" /> from basket_personal_draw_assignment
+        where draw_team_id = #{drawTeamId} and is_delete = 0
+        order by sort_order asc, id asc
+    </select>
+
+    <select id="selectByBatchId" resultMap="BasketPersonalDrawAssignmentResult">
+        select <include refid="BaseColumns" /> from basket_personal_draw_assignment
+        where draw_batch_id = #{drawBatchId} and is_delete = 0
+        order by draw_team_id asc, sort_order asc, id asc
+    </select>
+
+    <select id="selectVoByTeamId" resultMap="BasketPersonalDrawAssignmentVoResult">
+        select
+            a.id as assignment_id,
+            a.personal_registration_id,
+            a.player_id,
+            coalesce(p.game_nickname, mp.nickname) as player_name,
+            a.assignment_role,
+            a.join_status,
+            a.sort_order
+        from basket_personal_draw_assignment a
+        left join basket_player_profile p on p.id = a.player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
+        where a.draw_team_id = #{drawTeamId} and a.is_delete = 0
+        order by a.sort_order asc, a.id asc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_personal_draw_assignment (
+            draw_batch_id, draw_team_id, division_id, personal_registration_id, player_id, assignment_role, join_status, sort_order, create_time, update_time, is_delete
+        ) values (
+            #{drawBatchId}, #{drawTeamId}, #{divisionId}, #{personalRegistrationId}, #{playerId}, #{assignmentRole}, #{joinStatus}, #{sortOrder}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_personal_draw_assignment
+        <set>
+            <if test="drawTeamId != null">draw_team_id = #{drawTeamId},</if>
+            <if test="assignmentRole != null">assignment_role = #{assignmentRole},</if>
+            <if test="joinStatus != null">join_status = #{joinStatus},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_personal_draw_assignment set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDeleteByTeamId">
+        update basket_personal_draw_assignment set is_delete = 1, update_time = now()
+        where draw_team_id = #{drawTeamId} and is_delete = 0
+    </update>
+
+</mapper>

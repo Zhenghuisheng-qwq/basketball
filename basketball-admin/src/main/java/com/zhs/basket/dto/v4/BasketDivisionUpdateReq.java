@@ -7,9 +7,11 @@ import java.util.Date;
 @Data
 public class BasketDivisionUpdateReq {
     private String platformCode;
+    private String gameMode;
     private String divisionName;
     private String registrationMode;
     private String formatType;
+    private Long formatTemplateId;
     private Integer maxTeamCount;
     private Integer maxPersonCount;
     private Integer lineupMinCount;

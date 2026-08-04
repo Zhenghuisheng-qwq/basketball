@@ -28,4 +28,6 @@ public interface BasketDivisionMapper {
     int updateById(BasketDivision entity);
 
     int softDelete(@Param("id") Long id);
+
+    List<BasketDivision> selectWithoutFormatSnapshot();
 }

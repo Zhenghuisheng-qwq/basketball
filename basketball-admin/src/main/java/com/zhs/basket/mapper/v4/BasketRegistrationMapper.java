@@ -18,6 +18,8 @@ public interface BasketRegistrationMapper {
 
     int countApprovedByDivisionId(@Param("divisionId") Long divisionId);
 
+    int countActiveByDivisionId(@Param("divisionId") Long divisionId);
+
     int insert(BasketRegistration entity);
 
     int updateById(BasketRegistration entity);

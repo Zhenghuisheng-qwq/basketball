@@ -110,4 +110,15 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <select id="countActivePlayerInDivision" resultType="int">
+        select count(1)
+        from basket_registration_player rp
+        inner join basket_registration r on r.id = rp.registration_id and r.is_delete = 0
+        where rp.is_delete = 0
+          and rp.division_id = #{divisionId}
+          and rp.player_id = #{playerId}
+          and r.registration_status not in ('WITHDRAWN', 'REJECTED', 'CANCELLED')
+        <if test="excludeRegistrationId != null">and r.id != #{excludeRegistrationId}</if>
+    </select>
+
 </mapper>

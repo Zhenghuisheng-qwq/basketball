@@ -25,10 +25,23 @@ public final class GameTerminalSupport {
         }
         return switch (normalized) {
             case "PC" -> "PC";
-            case "PS" -> "PS";
-            case "XBOX" -> "Xbox";
+            case "PS_XBOX" -> "PS/Xbox";
+            case "PS" -> "PS（历史）";
+            case "XBOX" -> "Xbox（历史）";
             default -> normalized;
         };
+    }
+
+    public static boolean matchesDivisionPlatform(String divisionPlatform, String accountPlatform) {
+        String div = normalize(divisionPlatform);
+        String acc = normalize(accountPlatform);
+        if (div == null || acc == null) {
+            return false;
+        }
+        if ("PS_XBOX".equals(div)) {
+            return "PS".equals(acc) || "XBOX".equals(acc);
+        }
+        return div.equals(acc);
     }
 
     public static boolean isAllowedTournamentTerminal(String terminal) {

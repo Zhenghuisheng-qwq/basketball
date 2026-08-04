@@ -1,0 +1,28 @@
+package com.zhs.basket.vo.v4;
+
+import lombok.Data;
+
+import java.util.Date;
+import java.util.List;
+
+@Data
+public class BasketPersonalRegistrationDetailVo {
+    private Long personalRegistrationId;
+    private Long seasonId;
+    private String seasonTitle;
+    private Long divisionId;
+    private String divisionName;
+    private String platformCode;
+    private Long playerId;
+    private String playerName;
+    private String actualPlatformCode;
+    private String gameAccountId;
+    private String preferredPosition;
+    private String registrationStatus;
+    private Date submitTime;
+    private Date approvedTime;
+    private String rejectReason;
+    private Long assignedDrawTeamId;
+    private Long convertedRegistrationId;
+    private List<BasketPersonalRegistrationAuditVo> audits;
+}

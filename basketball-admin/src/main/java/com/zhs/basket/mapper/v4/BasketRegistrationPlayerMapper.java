@@ -24,4 +24,8 @@ public interface BasketRegistrationPlayerMapper {
     int updateById(BasketRegistrationPlayer entity);
 
     int softDelete(@Param("id") Long id);
+
+    int countActivePlayerInDivision(@Param("divisionId") Long divisionId,
+                                    @Param("playerId") Long playerId,
+                                    @Param("excludeRegistrationId") Long excludeRegistrationId);
 }

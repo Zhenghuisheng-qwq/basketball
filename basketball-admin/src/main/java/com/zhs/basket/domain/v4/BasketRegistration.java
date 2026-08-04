@@ -12,6 +12,9 @@ public class BasketRegistration {
     private Long seasonId;
     private Long divisionId;
     private String registrationMode;
+    private String registrationSource;
+    private Long sourcePersonalDrawTeamId;
+    private Long sourcePersonalDrawBatchId;
     private Long teamId;
     private Long captainPlayerId;
     private Long captainMemberId;

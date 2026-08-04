@@ -7,6 +7,10 @@ export interface V4AvailableDivision {
   seasonTitle?: string
   divisionName?: string
   platformCode?: string
+  registrationMode?: string
+  gameMode?: string
+  lineupMinCount?: number
+  lineupMaxCount?: number
   registrationStartTime?: string
   registrationEndTime?: string
   matchStartTime?: string
@@ -137,4 +141,82 @@ export interface V4RegistrationPlayerItem {
 
 export interface V4RegistrationDetail extends V4MyRegistration {
   players?: V4RegistrationPlayerItem[]
+}
+
+export interface V4PersonalAvailableDivision {
+  seasonId: string
+  divisionId: string
+  seriesName?: string
+  seasonTitle?: string
+  divisionName?: string
+  platformCode?: string
+  registrationMode?: string
+  gameMode?: string
+  lineupMinCount?: number
+  lineupMaxCount?: number
+  maxPersonCount?: number
+  approvedPersonCount?: number
+  remainingPersonCount?: number
+  registrationStartTime?: string
+  registrationEndTime?: string
+  matchStartTime?: string
+  matchEndTime?: string
+  myRegistrationStatus?: string
+  canRegister?: boolean
+  cannotRegisterReason?: string
+}
+
+export interface V4MyPersonalRegistration {
+  personalRegistrationId: string
+  seasonId?: string
+  divisionId?: string
+  seasonTitle?: string
+  divisionName?: string
+  platformCode?: string
+  preferredPosition?: string
+  registrationStatus?: string
+  submitTime?: string
+  approvedTime?: string
+  rejectReason?: string
+  assignedDrawTeamId?: string
+  convertedRegistrationId?: string
+}
+
+export interface V4PersonalRegistrationSaveReq {
+  divisionId: string
+  preferredPosition?: string
+}
+
+export interface V4PersonalRegistrationIdReq {
+  personalRegistrationId: string
+}
+
+export interface V4PersonalFormationMember {
+  personalRegistrationId?: string
+  playerId?: string
+  playerName?: string
+  assignmentRole?: string
+  joinStatus?: string
+}
+
+export interface V4PersonalFormationTask {
+  drawTeamId: string
+  drawBatchId?: string
+  divisionId?: string
+  divisionName?: string
+  temporaryTeamCode?: string
+  temporaryTeamName?: string
+  expectedMemberCount?: number
+  actualMemberCount?: number
+  longTermTeamId?: string
+  longTermTeamName?: string
+  formationStatus?: string
+  convertedRegistrationId?: string
+  confirmedTime?: string
+  members?: V4PersonalFormationMember[]
+}
+
+export interface V4PersonalFormationBindTeamReq {
+  drawTeamId: string
+  longTermTeamId: string
 }

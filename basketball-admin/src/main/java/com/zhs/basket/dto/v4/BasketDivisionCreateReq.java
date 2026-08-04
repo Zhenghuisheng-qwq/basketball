@@ -8,9 +8,11 @@ import java.util.Date;
 public class BasketDivisionCreateReq {
     private Long seasonId;
     private String platformCode;
+    private String gameMode;
     private String divisionName;
     private String registrationMode;
     private String formatType;
+    private Long formatTemplateId;
     private Integer maxTeamCount;
     private Integer maxPersonCount;
     private Integer lineupMinCount;

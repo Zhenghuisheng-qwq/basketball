@@ -1,0 +1,28 @@
+package com.zhs.basket.service.v4;
+
+import com.zhs.basket.dto.v4.BasketDivisionStageOrderReq;
+import com.zhs.basket.dto.v4.BasketDivisionStageSaveReq;
+import com.zhs.basket.dto.v4.BasketDivisionTieBreakRuleSaveReq;
+import com.zhs.basket.vo.v4.BasketDivisionFormatSnapshotVo;
+
+public interface IBasketV4FormatSnapshotService {
+    Long createDraftSnapshot(Long divisionId, Long templateId);
+
+    void rebuildDraftSnapshot(Long divisionId, Long templateId);
+
+    BasketDivisionFormatSnapshotVo getDivisionSnapshot(Long divisionId);
+
+    void validateSnapshotReady(Long divisionId);
+
+    void lockSnapshot(Long divisionId, Long operatorId);
+
+    Long addStage(Long divisionId, BasketDivisionStageSaveReq req);
+
+    void updateStage(Long divisionId, Long stageId, BasketDivisionStageSaveReq req);
+
+    void deleteStage(Long divisionId, Long stageId);
+
+    void reorderStages(Long divisionId, BasketDivisionStageOrderReq req);
+
+    void saveTieBreakRules(Long divisionId, BasketDivisionTieBreakRuleSaveReq req);
+}

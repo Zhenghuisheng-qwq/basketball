@@ -6,9 +6,12 @@
         <id property="id" column="id" />
         <result property="seasonId" column="season_id" />
         <result property="platformCode" column="platform_code" />
+        <result property="gameMode" column="game_mode" />
         <result property="divisionName" column="division_name" />
         <result property="registrationMode" column="registration_mode" />
         <result property="formatType" column="format_type" />
+        <result property="formatTemplateId" column="format_template_id" />
+        <result property="formatSnapshotId" column="format_snapshot_id" />
         <result property="maxTeamCount" column="max_team_count" />
         <result property="maxPersonCount" column="max_person_count" />
         <result property="lineupMinCount" column="lineup_min_count" />
@@ -31,9 +34,14 @@
         <result property="seriesCode" column="series_code" />
         <result property="seriesName" column="series_name" />
         <result property="platformCode" column="platform_code" />
+        <result property="gameMode" column="game_mode" />
         <result property="divisionName" column="division_name" />
         <result property="registrationMode" column="registration_mode" />
         <result property="formatType" column="format_type" />
+        <result property="formatTemplateId" column="format_template_id" />
+        <result property="formatTemplateName" column="format_template_name" />
+        <result property="formatSnapshotId" column="format_snapshot_id" />
+        <result property="formatSnapshotStatus" column="format_snapshot_status" />
         <result property="maxTeamCount" column="max_team_count" />
         <result property="maxPersonCount" column="max_person_count" />
         <result property="lineupMinCount" column="lineup_min_count" />
@@ -48,7 +56,7 @@
         <result property="updateTime" column="update_time" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, platform_code, division_name, registration_mode, format_type, max_team_count, max_person_count, lineup_min_count, lineup_max_count, registration_start_time, registration_end_time, match_start_time, match_end_time, division_status, sort_order, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, platform_code, game_mode, division_name, registration_mode, format_type, format_template_id, format_snapshot_id, max_team_count, max_person_count, lineup_min_count, lineup_max_count, registration_start_time, registration_end_time, match_start_time, match_end_time, division_status, sort_order, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketDivisionResult">
         select <include refid="BaseColumns" /> from basket_division
@@ -69,9 +77,14 @@
             s.series_code,
             s.series_name,
             d.platform_code,
+            d.game_mode,
             d.division_name,
             d.registration_mode,
             d.format_type,
+            d.format_template_id,
+            d.format_snapshot_id,
+            ft.template_name as format_template_name,
+            fs.snapshot_status as format_snapshot_status,
             d.max_team_count,
             d.max_person_count,
             d.lineup_min_count,
@@ -87,6 +100,8 @@
         from basket_division d
         left join basket_season se on se.id = d.season_id and se.is_delete = 0
         left join basket_series s on s.id = se.series_id and s.is_delete = 0
+        left join basket_format_template ft on ft.id = d.format_template_id and ft.is_delete = 0
+        left join basket_division_format_snapshot fs on fs.id = d.format_snapshot_id and fs.is_delete = 0
         where d.is_delete = 0
         <if test="id != null">and d.id = #{id}</if>
         <if test="seasonId != null">and d.season_id = #{seasonId}</if>
@@ -113,9 +128,9 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_division (
-            season_id, platform_code, division_name, registration_mode, format_type, max_team_count, max_person_count, lineup_min_count, lineup_max_count, registration_start_time, registration_end_time, match_start_time, match_end_time, division_status, sort_order, create_time, update_time, is_delete
+            season_id, platform_code, game_mode, division_name, registration_mode, format_type, format_template_id, format_snapshot_id, max_team_count, max_person_count, lineup_min_count, lineup_max_count, registration_start_time, registration_end_time, match_start_time, match_end_time, division_status, sort_order, create_time, update_time, is_delete
         ) values (
-            #{seasonId}, #{platformCode}, #{divisionName}, #{registrationMode}, #{formatType}, #{maxTeamCount}, #{maxPersonCount}, #{lineupMinCount}, #{lineupMaxCount}, #{registrationStartTime}, #{registrationEndTime}, #{matchStartTime}, #{matchEndTime}, #{divisionStatus}, #{sortOrder}, #{createTime}, #{updateTime}, #{isDelete}
+            #{seasonId}, #{platformCode}, #{gameMode}, #{divisionName}, #{registrationMode}, #{formatType}, #{formatTemplateId}, #{formatSnapshotId}, #{maxTeamCount}, #{maxPersonCount}, #{lineupMinCount}, #{lineupMaxCount}, #{registrationStartTime}, #{registrationEndTime}, #{matchStartTime}, #{matchEndTime}, #{divisionStatus}, #{sortOrder}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -124,7 +139,10 @@
         <set>
             <if test="seasonId != null">season_id = #{seasonId},</if>
             <if test="platformCode != null">platform_code = #{platformCode},</if>
+            <if test="gameMode != null">game_mode = #{gameMode},</if>
             <if test="divisionName != null">division_name = #{divisionName},</if>
+            <if test="formatTemplateId != null">format_template_id = #{formatTemplateId},</if>
+            <if test="formatSnapshotId != null">format_snapshot_id = #{formatSnapshotId},</if>
             <if test="registrationMode != null">registration_mode = #{registrationMode},</if>
             <if test="formatType != null">format_type = #{formatType},</if>
             <if test="maxTeamCount != null">max_team_count = #{maxTeamCount},</if>
@@ -147,5 +165,10 @@
         set is_delete = 1, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
+
+    <select id="selectWithoutFormatSnapshot" resultMap="BasketDivisionResult">
+        select <include refid="BaseColumns" /> from basket_division
+        where is_delete = 0 and (format_snapshot_id is null or format_snapshot_id = 0)
+    </select>
 
 </mapper>

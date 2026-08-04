@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketDivisionFormatSnapshotMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketDivisionFormatSnapshot" id="Result">
+        <id property="id" column="id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="sourceTemplateId" column="source_template_id"/>
+        <result property="sourceTemplateCode" column="source_template_code"/>
+        <result property="sourceTemplateName" column="source_template_name"/>
+        <result property="sourceTemplateVersion" column="source_template_version"/>
+        <result property="snapshotVersion" column="snapshot_version"/>
+        <result property="snapshotStatus" column="snapshot_status"/>
+        <result property="isCurrent" column="is_current"/>
+        <result property="activeUniqueKey" column="active_unique_key"/>
+        <result property="supersededSnapshotId" column="superseded_snapshot_id"/>
+        <result property="supersededTime" column="superseded_time"/>
+        <result property="lockedTime" column="locked_time"/>
+        <result property="lockedBy" column="locked_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="Result">
+        select * from basket_division_format_snapshot where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectActiveByDivisionId" resultMap="Result">
+        select * from basket_division_format_snapshot
+        where division_id = #{divisionId} and is_delete = 0 and is_current = 1
+        order by snapshot_version desc
+        limit 1
+    </select>
+
+    <select id="selectMaxVersionByDivisionId" resultType="int">
+        select ifnull(max(snapshot_version), 0)
+        from basket_division_format_snapshot
+        where division_id = #{divisionId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_division_format_snapshot (
+            division_id, source_template_id, source_template_code, source_template_name,
+            source_template_version, snapshot_version, snapshot_status, is_current, active_unique_key,
+            superseded_snapshot_id, superseded_time, locked_time, locked_by,
+            create_time, update_time, is_delete
+        ) values (
+            #{divisionId}, #{sourceTemplateId}, #{sourceTemplateCode}, #{sourceTemplateName},
+            #{sourceTemplateVersion}, #{snapshotVersion}, #{snapshotStatus}, #{isCurrent}, #{activeUniqueKey},
+            #{supersededSnapshotId}, #{supersededTime}, #{lockedTime}, #{lockedBy},
+            #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_division_format_snapshot
+        <set>
+            <if test="snapshotStatus != null">snapshot_status = #{snapshotStatus},</if>
+            <if test="isCurrent != null">is_current = #{isCurrent},</if>
+            <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
+            <if test="activeUniqueKey == null and isCurrent != null and isCurrent == 0">active_unique_key = null,</if>
+            <if test="supersededSnapshotId != null">superseded_snapshot_id = #{supersededSnapshotId},</if>
+            <if test="supersededTime != null">superseded_time = #{supersededTime},</if>
+            <if test="lockedTime != null">locked_time = #{lockedTime},</if>
+            <if test="lockedBy != null">locked_by = #{lockedBy},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="markSuperseded">
+        update basket_division_format_snapshot
+        set is_current = 0,
+            active_unique_key = null,
+            superseded_time = now(),
+            update_time = now()
+        where id = #{id} and is_delete = 0 and is_current = 1
+    </update>
+
+    <update id="clearActiveUniqueKey">
+        update basket_division_format_snapshot
+        set active_unique_key = null, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+</mapper>

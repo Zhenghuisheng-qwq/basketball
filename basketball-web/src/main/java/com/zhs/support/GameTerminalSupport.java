@@ -48,11 +48,25 @@ public final class GameTerminalSupport {
         }
         return switch (normalized) {
             case "PC" -> "PC";
-            case "PS" -> "PS";
+            case "PS_XBOX" -> "PS/Xbox";
+            case "PS" -> "PS（历史）";
             case "MOBILE" -> "手机端";
-            case "XBOX" -> "Xbox";
+            case "XBOX" -> "Xbox（历史）";
             default -> normalized;
         };
+    }
+
+    /** Division 平台与球员平台账号是否匹配（PS_XBOX 兼容 PS / XBOX） */
+    public static boolean matchesDivisionPlatform(String divisionPlatform, String accountPlatform) {
+        String div = normalize(divisionPlatform);
+        String acc = normalize(accountPlatform);
+        if (div == null || acc == null) {
+            return false;
+        }
+        if ("PS_XBOX".equals(div)) {
+            return "PS".equals(acc) || "XBOX".equals(acc);
+        }
+        return div.equals(acc);
     }
 
     public static String resolvePlayerTeamMismatchReason(BasketPlayerProfile player, BasketTeam team) {

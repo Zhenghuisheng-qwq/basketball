@@ -1,11 +1,14 @@
 package com.zhs.basket.service.impl.v4;
 
+import com.zhs.basket.domain.v4.BasketCaptainGrant;
 import com.zhs.basket.domain.v4.BasketDivision;
 import com.zhs.basket.domain.v4.BasketRegistration;
 import com.zhs.basket.domain.v4.BasketRegistrationAudit;
+import com.zhs.basket.domain.v4.BasketRegistrationPlayer;
 import com.zhs.basket.dto.v4.BasketRegistrationAuditRejectReq;
 import com.zhs.basket.enums.v4.AuditResultEnum;
 import com.zhs.basket.enums.v4.RegistrationStatusEnum;
+import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationAuditMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationMapper;
@@ -13,6 +16,7 @@ import com.zhs.basket.mapper.v4.BasketRegistrationPlayerMapper;
 import com.zhs.basket.query.v4.BasketRegistrationAuditQuery;
 import com.zhs.basket.service.v4.IBasketV4EventSnapshotService;
 import com.zhs.basket.service.v4.IBasketV4RegistrationAuditService;
+import com.zhs.basket.support.v4.TeamRegistrationEligibilitySpecification;
 import com.zhs.basket.vo.v4.BasketRegistrationAuditDetailVo;
 import com.zhs.basket.vo.v4.BasketRegistrationAuditListVo;
 import com.zhs.common.exception.ServiceException;
@@ -39,7 +43,11 @@ public class BasketV4RegistrationAuditServiceImpl implements IBasketV4Registrati
     @Autowired
     private BasketDivisionMapper divisionMapper;
     @Autowired
+    private BasketCaptainGrantMapper captainGrantMapper;
+    @Autowired
     private IBasketV4EventSnapshotService eventSnapshotService;
+    @Autowired
+    private TeamRegistrationEligibilitySpecification teamRegistrationEligibilitySpecification;
 
     @Override
     public List<BasketRegistrationAuditListVo> selectList(BasketRegistrationAuditQuery query) {
@@ -89,6 +97,11 @@ public class BasketV4RegistrationAuditServiceImpl implements IBasketV4Registrati
             throw new ServiceException("仅待审核状态可通过");
         }
         BasketDivision division = requireDivision(registration.getDivisionId());
+        List<BasketRegistrationPlayer> players = registrationPlayerMapper.selectByRegistrationId(registrationId);
+        BasketCaptainGrant grant = captainGrantMapper.selectActiveByDivisionTeam(
+                registration.getDivisionId(), registration.getTeamId());
+        teamRegistrationEligibilitySpecification.validateRegistration(division, registration, grant, players);
+
         int approvedCount = registrationMapper.countApprovedByDivisionId(division.getId());
         if (division.getMaxTeamCount() != null && approvedCount >= division.getMaxTeamCount()) {
             throw new ServiceException("该 Division 报名名额已满");

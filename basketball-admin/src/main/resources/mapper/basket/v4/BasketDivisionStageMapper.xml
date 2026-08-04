@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketDivisionStageMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketDivisionStage" id="Result">
+        <id property="id" column="id"/>
+        <result property="snapshotId" column="snapshot_id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="stageCode" column="stage_code"/>
+        <result property="stageName" column="stage_name"/>
+        <result property="stageOrder" column="stage_order"/>
+        <result property="stageType" column="stage_type"/>
+        <result property="competitionFormat" column="competition_format"/>
+        <result property="groupingMode" column="grouping_mode"/>
+        <result property="groupCount" column="group_count"/>
+        <result property="roundRobinCycles" column="round_robin_cycles"/>
+        <result property="bestOf" column="best_of"/>
+        <result property="winPoints" column="win_points"/>
+        <result property="lossPoints" column="loss_points"/>
+        <result property="forfeitWinPoints" column="forfeit_win_points"/>
+        <result property="forfeitLossPoints" column="forfeit_loss_points"/>
+        <result property="advancementType" column="advancement_type"/>
+        <result property="advancementCount" column="advancement_count"/>
+        <result property="pairingRule" column="pairing_rule"/>
+        <result property="nextStageCode" column="next_stage_code"/>
+        <result property="requiresManualConfirmation" column="requires_manual_confirmation"/>
+        <result property="stageStatus" column="stage_status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="Result">
+        select * from basket_division_stage where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectBySnapshotId" resultMap="Result">
+        select * from basket_division_stage
+        where snapshot_id = #{snapshotId} and is_delete = 0
+        order by stage_order asc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_division_stage (
+            snapshot_id, division_id, stage_code, stage_name, stage_order, stage_type,
+            competition_format, grouping_mode, group_count, round_robin_cycles, best_of,
+            win_points, loss_points, forfeit_win_points, forfeit_loss_points,
+            advancement_type, advancement_count, pairing_rule, next_stage_code,
+            requires_manual_confirmation, stage_status, create_time, update_time, is_delete
+        ) values (
+            #{snapshotId}, #{divisionId}, #{stageCode}, #{stageName}, #{stageOrder}, #{stageType},
+            #{competitionFormat}, #{groupingMode}, #{groupCount}, #{roundRobinCycles}, #{bestOf},
+            #{winPoints}, #{lossPoints}, #{forfeitWinPoints}, #{forfeitLossPoints},
+            #{advancementType}, #{advancementCount}, #{pairingRule}, #{nextStageCode},
+            #{requiresManualConfirmation}, #{stageStatus}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_division_stage
+        <set>
+            <if test="stageCode != null">stage_code = #{stageCode},</if>
+            <if test="stageName != null">stage_name = #{stageName},</if>
+            <if test="stageOrder != null">stage_order = #{stageOrder},</if>
+            <if test="stageType != null">stage_type = #{stageType},</if>
+            <if test="competitionFormat != null">competition_format = #{competitionFormat},</if>
+            <if test="groupingMode != null">grouping_mode = #{groupingMode},</if>
+            group_count = #{groupCount},
+            round_robin_cycles = #{roundRobinCycles},
+            <if test="bestOf != null">best_of = #{bestOf},</if>
+            win_points = #{winPoints},
+            loss_points = #{lossPoints},
+            forfeit_win_points = #{forfeitWinPoints},
+            forfeit_loss_points = #{forfeitLossPoints},
+            <if test="advancementType != null">advancement_type = #{advancementType},</if>
+            advancement_count = #{advancementCount},
+            <if test="pairingRule != null">pairing_rule = #{pairingRule},</if>
+            next_stage_code = #{nextStageCode},
+            <if test="requiresManualConfirmation != null">requires_manual_confirmation = #{requiresManualConfirmation},</if>
+            <if test="stageStatus != null">stage_status = #{stageStatus},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="updateStageOrder">
+        update basket_division_stage
+        set stage_order = #{stageOrder}, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDeleteById">
+        update basket_division_stage set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDeleteBySnapshotId">
+        update basket_division_stage set is_delete = 1, update_time = now()
+        where snapshot_id = #{snapshotId} and is_delete = 0
+    </update>
+</mapper>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.mapper.v4.BasketV4PersonalFormationMapper">
+
+    <select id="selectFormationTasksByCaptainUserId" resultType="com.zhs.response.v4.V4PersonalFormationTaskResp">
+        select
+            t.id as drawTeamId,
+            t.draw_batch_id as drawBatchId,
+            t.division_id as divisionId,
+            d.division_name as divisionName,
+            t.temporary_team_code as temporaryTeamCode,
+            t.temporary_team_name as temporaryTeamName,
+            t.actual_member_count as actualMemberCount,
+            t.long_term_team_id as longTermTeamId,
+            lt.team_name as longTermTeamName,
+            t.formation_status as formationStatus,
+            t.converted_registration_id as convertedRegistrationId,
+            t.confirmed_time as confirmedTime
+        from basket_personal_draw_team t
+        join basket_personal_draw_batch b on b.id = t.draw_batch_id and b.is_delete = 0 and b.batch_status = 'CONFIRMED'
+        left join basket_division d on d.id = t.division_id and d.is_delete = 0
+        left join basket_team lt on lt.id = t.long_term_team_id and lt.is_delete = 0
+        where t.is_delete = 0
+          and t.captain_user_id = #{captainUserId}
+          and t.formation_status not in ('CONVERTED', 'CANCELLED')
+        order by t.update_time desc, t.id desc
+    </select>
+
+    <select id="selectFormationDetail" resultType="com.zhs.response.v4.V4PersonalFormationDetailResp">
+        select
+            t.id as drawTeamId,
+            t.draw_batch_id as drawBatchId,
+            t.division_id as divisionId,
+            d.division_name as divisionName,
+            t.temporary_team_code as temporaryTeamCode,
+            t.temporary_team_name as temporaryTeamName,
+            t.expected_member_count as expectedMemberCount,
+            t.actual_member_count as actualMemberCount,
+            t.long_term_team_id as longTermTeamId,
+            lt.team_name as longTermTeamName,
+            t.formation_status as formationStatus,
+            t.converted_registration_id as convertedRegistrationId
+        from basket_personal_draw_team t
+        left join basket_division d on d.id = t.division_id and d.is_delete = 0
+        left join basket_team lt on lt.id = t.long_term_team_id and lt.is_delete = 0
+        where t.id = #{drawTeamId} and t.is_delete = 0
+    </select>
+
+    <select id="selectFormationMembers" resultType="com.zhs.response.v4.V4PersonalFormationMemberResp">
+        select
+            a.id as assignmentId,
+            a.player_id as playerId,
+            coalesce(p.game_nickname, mp.nickname) as playerName,
+            a.assignment_role as assignmentRole,
+            a.join_status as joinStatus,
+            a.sort_order as sortOrder
+        from basket_personal_draw_assignment a
+        left join basket_player_profile p on p.id = a.player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
+        where a.draw_team_id = #{drawTeamId} and a.is_delete = 0
+        order by a.sort_order asc, a.id asc
+    </select>
+
+</mapper>

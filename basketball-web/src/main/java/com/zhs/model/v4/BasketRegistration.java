@@ -31,6 +31,14 @@ public class BasketRegistration implements Serializable {
 
     private String registrationMode;
 
+    private String registrationSource;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long sourcePersonalDrawTeamId;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long sourcePersonalDrawBatchId;
+
     @JsonSerialize(using = ToStringSerializer.class)
     private Long teamId;
 

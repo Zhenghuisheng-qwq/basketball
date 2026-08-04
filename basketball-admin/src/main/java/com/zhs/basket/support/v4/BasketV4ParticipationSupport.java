@@ -5,6 +5,8 @@ import com.zhs.basket.domain.BasketPlayerProfile;
 import com.zhs.basket.domain.BasketTeam;
 import com.zhs.basket.domain.v4.BasketCaptainGrant;
 import com.zhs.basket.domain.v4.BasketDivision;
+import com.zhs.basket.domain.v4.RosterLimit;
+import com.zhs.basket.enums.v4.GameModeEnum;
 import com.zhs.basket.domain.v4.BasketRegistrationPlayer;
 import com.zhs.basket.enums.PlayerCertStatusEnum;
 import com.zhs.basket.enums.TeamAuditStatusEnum;
@@ -78,16 +80,16 @@ public class BasketV4ParticipationSupport {
         }
     }
 
-    public BasketPlayerPlatformAccount requirePlatformIdentity(Long playerId, String platformCode) {
-        String normalized = normalizePlatformCode(platformCode);
+    public BasketPlayerPlatformAccount requirePlatformIdentity(Long playerId, String divisionPlatformCode) {
+        String normalizedDiv = normalizePlatformCode(divisionPlatformCode);
         List<BasketPlayerPlatformAccount> accounts = platformAccountMapper.selectByPlayerId(playerId);
         for (BasketPlayerPlatformAccount account : accounts) {
             if (Integer.valueOf(PLATFORM_ACCOUNT_ACTIVE).equals(account.getAccountStatus())
-                    && normalized.equals(normalizePlatformCode(account.getPlatform()))) {
+                    && GameTerminalSupport.matchesDivisionPlatform(normalizedDiv, account.getPlatform())) {
                 return account;
             }
         }
-        throw new ServiceException("球员缺少对应平台身份：" + normalized);
+        throw new ServiceException("球员缺少对应平台身份：" + GameTerminalSupport.formatDisplayName(normalizedDiv));
     }
 
     public String normalizePlatformCode(String platformCode) {
@@ -114,20 +116,24 @@ public class BasketV4ParticipationSupport {
         return true;
     }
 
-    public void rejectPersonalMode(String registrationMode) {
+    public void rejectPersonalModeDivision(String registrationMode) {
         if (RegistrationModeEnum.PERSONAL.getCode().equals(registrationMode)) {
-            throw new ServiceException("PERSONAL 个人报名暂未开放");
+            throw new ServiceException("该 Division 为个人报名模式，请使用个人报名入口");
         }
     }
 
+    /** @deprecated 球队报名路径请使用 {@link #rejectPersonalModeDivision(String)} */
+    public void rejectPersonalMode(String registrationMode) {
+        rejectPersonalModeDivision(registrationMode);
+    }
+
     public void validateLineupSize(BasketDivision division, int lineupSize) {
-        int min = division.getLineupMinCount() != null ? division.getLineupMinCount() : 5;
-        int max = division.getLineupMaxCount() != null ? division.getLineupMaxCount() : 8;
-        if (lineupSize < min) {
-            throw new ServiceException("阵容人数不能少于 " + min + " 人");
-        }
-        if (lineupSize > max) {
-            throw new ServiceException("阵容人数不能多于 " + max + " 人");
+        String gameModeCode = division.getGameMode() != null ? division.getGameMode() : GameModeEnum.FIVE_V_FIVE.getCode();
+        RosterLimit limit = RosterLimit.resolve(gameModeCode);
+        try {
+            limit.validateLineupSize(lineupSize);
+        } catch (IllegalArgumentException ex) {
+            throw new ServiceException(ex.getMessage());
         }
     }
 
@@ -148,14 +154,13 @@ public class BasketV4ParticipationSupport {
         }
         validateLineupSize(division, playerIds.size());
 
-        String platformCode = normalizePlatformCode(division.getPlatformCode());
         List<BasketRegistrationPlayer> rows = new ArrayList<>();
         Date now = new Date();
         int sort = 0;
         for (Long playerId : playerIds) {
             requireTeamMember(teamId, playerId);
             BasketPlayerProfile profile = requireCertifiedPlayer(playerId);
-            BasketPlayerPlatformAccount account = requirePlatformIdentity(playerId, platformCode);
+            BasketPlayerPlatformAccount account = requirePlatformIdentity(playerId, division.getPlatformCode());
             BasketRegistrationPlayer row = new BasketRegistrationPlayer();
             row.setRegistrationId(registrationId);
             row.setDivisionId(division.getId());
@@ -164,7 +169,7 @@ public class BasketV4ParticipationSupport {
             row.setPlayerId(playerId);
             row.setMemberId(profile.getMemberId());
             row.setPlatformIdentityId(account.getId());
-            row.setPlatformCode(platformCode);
+            row.setPlatformCode(normalizePlatformCode(account.getPlatform()));
             row.setGameIdSnapshot(account.getDisplayGameId());
             row.setPlayerNameSnapshot(profile.getGameNickname());
             row.setPosition(profile.getPositionCode());

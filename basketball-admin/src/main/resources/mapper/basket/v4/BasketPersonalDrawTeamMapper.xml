@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketPersonalDrawTeamMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketPersonalDrawTeam" id="BasketPersonalDrawTeamResult">
+        <id property="id" column="id" />
+        <result property="drawBatchId" column="draw_batch_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="temporaryTeamCode" column="temporary_team_code" />
+        <result property="temporaryTeamName" column="temporary_team_name" />
+        <result property="captainPersonalRegistrationId" column="captain_personal_registration_id" />
+        <result property="captainPlayerId" column="captain_player_id" />
+        <result property="captainUserId" column="captain_user_id" />
+        <result property="expectedMemberCount" column="expected_member_count" />
+        <result property="actualMemberCount" column="actual_member_count" />
+        <result property="longTermTeamId" column="long_term_team_id" />
+        <result property="convertedRegistrationId" column="converted_registration_id" />
+        <result property="formationStatus" column="formation_status" />
+        <result property="confirmedBy" column="confirmed_by" />
+        <result property="confirmedTime" column="confirmed_time" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <resultMap type="com.zhs.basket.vo.v4.BasketPersonalDrawTeamVo" id="BasketPersonalDrawTeamVoResult">
+        <id property="drawTeamId" column="draw_team_id" />
+        <result property="drawBatchId" column="draw_batch_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="temporaryTeamCode" column="temporary_team_code" />
+        <result property="temporaryTeamName" column="temporary_team_name" />
+        <result property="captainPersonalRegistrationId" column="captain_personal_registration_id" />
+        <result property="captainPlayerId" column="captain_player_id" />
+        <result property="captainPlayerName" column="captain_player_name" />
+        <result property="captainUserId" column="captain_user_id" />
+        <result property="expectedMemberCount" column="expected_member_count" />
+        <result property="actualMemberCount" column="actual_member_count" />
+        <result property="longTermTeamId" column="long_term_team_id" />
+        <result property="longTermTeamName" column="long_term_team_name" />
+        <result property="convertedRegistrationId" column="converted_registration_id" />
+        <result property="formationStatus" column="formation_status" />
+        <result property="confirmedTime" column="confirmed_time" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, draw_batch_id, division_id, temporary_team_code, temporary_team_name, captain_personal_registration_id, captain_player_id, captain_user_id, expected_member_count, actual_member_count, long_term_team_id, converted_registration_id, formation_status, confirmed_by, confirmed_time, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketPersonalDrawTeamResult">
+        select <include refid="BaseColumns" /> from basket_personal_draw_team
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByBatchId" resultMap="BasketPersonalDrawTeamResult">
+        select <include refid="BaseColumns" /> from basket_personal_draw_team
+        where draw_batch_id = #{drawBatchId} and is_delete = 0
+        order by temporary_team_code asc, id asc
+    </select>
+
+    <select id="selectVoByBatchId" resultMap="BasketPersonalDrawTeamVoResult">
+        select
+            t.id as draw_team_id,
+            t.draw_batch_id,
+            t.division_id,
+            t.temporary_team_code,
+            t.temporary_team_name,
+            t.captain_personal_registration_id,
+            t.captain_player_id,
+            coalesce(p.game_nickname, mp.nickname) as captain_player_name,
+            t.captain_user_id,
+            t.expected_member_count,
+            t.actual_member_count,
+            t.long_term_team_id,
+            lt.team_name as long_term_team_name,
+            t.converted_registration_id,
+            t.formation_status,
+            t.confirmed_time
+        from basket_personal_draw_team t
+        left join basket_player_profile p on p.id = t.captain_player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
+        left join basket_team lt on lt.id = t.long_term_team_id and lt.is_delete = 0
+        where t.draw_batch_id = #{drawBatchId} and t.is_delete = 0
+        order by t.temporary_team_code asc, t.id asc
+    </select>
+
+    <select id="selectFormationTasksByCaptainUserId" resultMap="BasketPersonalDrawTeamVoResult">
+        select
+            t.id as draw_team_id,
+            t.draw_batch_id,
+            t.division_id,
+            t.temporary_team_code,
+            t.temporary_team_name,
+            t.captain_personal_registration_id,
+            t.captain_player_id,
+            coalesce(p.game_nickname, mp.nickname) as captain_player_name,
+            t.captain_user_id,
+            t.expected_member_count,
+            t.actual_member_count,
+            t.long_term_team_id,
+            lt.team_name as long_term_team_name,
+            t.converted_registration_id,
+            t.formation_status,
+            t.confirmed_time
+        from basket_personal_draw_team t
+        join basket_personal_draw_batch b on b.id = t.draw_batch_id and b.is_delete = 0 and b.batch_status = 'CONFIRMED'
+        left join basket_player_profile p on p.id = t.captain_player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
+        left join basket_team lt on lt.id = t.long_term_team_id and lt.is_delete = 0
+        where t.is_delete = 0
+          and t.captain_user_id = #{captainUserId}
+          and t.formation_status not in ('CONVERTED', 'CANCELLED')
+        order by t.update_time desc, t.id desc
+    </select>
+
+    <select id="selectFormationDetail" resultMap="BasketPersonalDrawTeamVoResult">
+        select
+            t.id as draw_team_id,
+            t.draw_batch_id,
+            t.division_id,
+            t.temporary_team_code,
+            t.temporary_team_name,
+            t.captain_personal_registration_id,
+            t.captain_player_id,
+            coalesce(p.game_nickname, mp.nickname) as captain_player_name,
+            t.captain_user_id,
+            t.expected_member_count,
+            t.actual_member_count,
+            t.long_term_team_id,
+            lt.team_name as long_term_team_name,
+            t.converted_registration_id,
+            t.formation_status,
+            t.confirmed_time
+        from basket_personal_draw_team t
+        left join basket_player_profile p on p.id = t.captain_player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
+        left join basket_team lt on lt.id = t.long_term_team_id and lt.is_delete = 0
+        where t.id = #{drawTeamId} and t.is_delete = 0
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_personal_draw_team (
+            draw_batch_id, division_id, temporary_team_code, temporary_team_name, captain_personal_registration_id, captain_player_id, captain_user_id, expected_member_count, actual_member_count, long_term_team_id, converted_registration_id, formation_status, confirmed_by, confirmed_time, create_time, update_time, is_delete
+        ) values (
+            #{drawBatchId}, #{divisionId}, #{temporaryTeamCode}, #{temporaryTeamName}, #{captainPersonalRegistrationId}, #{captainPlayerId}, #{captainUserId}, #{expectedMemberCount}, #{actualMemberCount}, #{longTermTeamId}, #{convertedRegistrationId}, #{formationStatus}, #{confirmedBy}, #{confirmedTime}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_personal_draw_team
+        <set>
+            <if test="captainPersonalRegistrationId != null">captain_personal_registration_id = #{captainPersonalRegistrationId},</if>
+            <if test="captainPlayerId != null">captain_player_id = #{captainPlayerId},</if>
+            <if test="captainUserId != null">captain_user_id = #{captainUserId},</if>
+            <if test="expectedMemberCount != null">expected_member_count = #{expectedMemberCount},</if>
+            <if test="actualMemberCount != null">actual_member_count = #{actualMemberCount},</if>
+            <if test="longTermTeamId != null">long_term_team_id = #{longTermTeamId},</if>
+            <if test="convertedRegistrationId != null">converted_registration_id = #{convertedRegistrationId},</if>
+            <if test="formationStatus != null">formation_status = #{formationStatus},</if>
+            <if test="confirmedBy != null">confirmed_by = #{confirmedBy},</if>
+            <if test="confirmedTime != null">confirmed_time = #{confirmedTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_personal_draw_team set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="refreshActualMemberCount">
+        update basket_personal_draw_team t
+        set t.actual_member_count = (
+            select count(1) from basket_personal_draw_assignment a
+            where a.draw_team_id = t.id and a.is_delete = 0
+        ), t.update_time = now()
+        where t.id = #{drawTeamId} and t.is_delete = 0
+    </update>
+
+</mapper>

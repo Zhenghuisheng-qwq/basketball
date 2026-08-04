@@ -7,6 +7,9 @@
         <result property="seasonId" column="season_id" />
         <result property="divisionId" column="division_id" />
         <result property="registrationMode" column="registration_mode" />
+        <result property="registrationSource" column="registration_source" />
+        <result property="sourcePersonalDrawTeamId" column="source_personal_draw_team_id" />
+        <result property="sourcePersonalDrawBatchId" column="source_personal_draw_batch_id" />
         <result property="teamId" column="team_id" />
         <result property="captainPlayerId" column="captain_player_id" />
         <result property="captainMemberId" column="captain_member_id" />
@@ -37,7 +40,7 @@
         <result property="submitTime" column="submit_time" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, division_id, registration_mode, team_id, captain_player_id, captain_member_id, registration_status, lineup_count, submit_time, approve_time, reject_reason, withdraw_time, audit_user_id, audit_remark, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, division_id, registration_mode, registration_source, source_personal_draw_team_id, source_personal_draw_batch_id, team_id, captain_player_id, captain_member_id, registration_status, lineup_count, submit_time, approve_time, reject_reason, withdraw_time, audit_user_id, audit_remark, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketRegistrationResult">
         select <include refid="BaseColumns" /> from basket_registration
@@ -93,11 +96,18 @@
           and is_delete = 0
     </select>
 
+    <select id="countActiveByDivisionId" resultType="int">
+        select count(1) from basket_registration
+        where division_id = #{divisionId}
+          and is_delete = 0
+          and registration_status not in ('WITHDRAWN', 'CANCELLED')
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_registration (
-            season_id, division_id, registration_mode, team_id, captain_player_id, captain_member_id, registration_status, lineup_count, submit_time, approve_time, reject_reason, withdraw_time, audit_user_id, audit_remark, create_time, update_time, is_delete
+            season_id, division_id, registration_mode, registration_source, source_personal_draw_team_id, source_personal_draw_batch_id, team_id, captain_player_id, captain_member_id, registration_status, lineup_count, submit_time, approve_time, reject_reason, withdraw_time, audit_user_id, audit_remark, create_time, update_time, is_delete
         ) values (
-            #{seasonId}, #{divisionId}, #{registrationMode}, #{teamId}, #{captainPlayerId}, #{captainMemberId}, #{registrationStatus}, #{lineupCount}, #{submitTime}, #{approveTime}, #{rejectReason}, #{withdrawTime}, #{auditUserId}, #{auditRemark}, #{createTime}, #{updateTime}, #{isDelete}
+            #{seasonId}, #{divisionId}, #{registrationMode}, #{registrationSource}, #{sourcePersonalDrawTeamId}, #{sourcePersonalDrawBatchId}, #{teamId}, #{captainPlayerId}, #{captainMemberId}, #{registrationStatus}, #{lineupCount}, #{submitTime}, #{approveTime}, #{rejectReason}, #{withdrawTime}, #{auditUserId}, #{auditRemark}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -107,6 +117,9 @@
             <if test="seasonId != null">season_id = #{seasonId},</if>
             <if test="divisionId != null">division_id = #{divisionId},</if>
             <if test="registrationMode != null">registration_mode = #{registrationMode},</if>
+            <if test="registrationSource != null">registration_source = #{registrationSource},</if>
+            <if test="sourcePersonalDrawTeamId != null">source_personal_draw_team_id = #{sourcePersonalDrawTeamId},</if>
+            <if test="sourcePersonalDrawBatchId != null">source_personal_draw_batch_id = #{sourcePersonalDrawBatchId},</if>
             <if test="teamId != null">team_id = #{teamId},</if>
             <if test="captainPlayerId != null">captain_player_id = #{captainPlayerId},</if>
             <if test="captainMemberId != null">captain_member_id = #{captainMemberId},</if>

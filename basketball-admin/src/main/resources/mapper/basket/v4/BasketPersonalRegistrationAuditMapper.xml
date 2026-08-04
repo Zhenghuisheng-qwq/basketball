@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketPersonalRegistrationAuditMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketPersonalRegistrationAudit" id="BasketPersonalRegistrationAuditResult">
+        <id property="id" column="id" />
+        <result property="personalRegistrationId" column="personal_registration_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="beforeStatus" column="before_status" />
+        <result property="afterStatus" column="after_status" />
+        <result property="auditAction" column="audit_action" />
+        <result property="auditRemark" column="audit_remark" />
+        <result property="operatorId" column="operator_id" />
+        <result property="operateTime" column="operate_time" />
+        <result property="createTime" column="create_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <resultMap type="com.zhs.basket.vo.v4.BasketPersonalRegistrationAuditVo" id="BasketPersonalRegistrationAuditVoResult">
+        <result property="beforeStatus" column="before_status" />
+        <result property="afterStatus" column="after_status" />
+        <result property="auditAction" column="audit_action" />
+        <result property="auditRemark" column="audit_remark" />
+        <result property="operatorId" column="operator_id" />
+        <result property="operateTime" column="operate_time" />
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_personal_registration_audit (
+            personal_registration_id, division_id, before_status, after_status, audit_action, audit_remark, operator_id, operate_time, create_time, is_delete
+        ) values (
+            #{personalRegistrationId}, #{divisionId}, #{beforeStatus}, #{afterStatus}, #{auditAction}, #{auditRemark}, #{operatorId}, #{operateTime}, #{createTime}, #{isDelete}
+        )
+    </insert>
+
+    <select id="selectVoByPersonalRegistrationId" resultMap="BasketPersonalRegistrationAuditVoResult">
+        select before_status, after_status, audit_action, audit_remark, operator_id, operate_time
+        from basket_personal_registration_audit
+        where personal_registration_id = #{personalRegistrationId} and is_delete = 0
+        order by operate_time asc, id asc
+    </select>
+
+</mapper>

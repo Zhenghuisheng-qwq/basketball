@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketPersonalRegistrationMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketPersonalRegistration" id="BasketPersonalRegistrationResult">
+        <id property="id" column="id" />
+        <result property="divisionId" column="division_id" />
+        <result property="seasonId" column="season_id" />
+        <result property="seriesId" column="series_id" />
+        <result property="userId" column="user_id" />
+        <result property="playerId" column="player_id" />
+        <result property="playerPlatformId" column="player_platform_id" />
+        <result property="actualPlatformCode" column="actual_platform_code" />
+        <result property="gameAccountId" column="game_account_id" />
+        <result property="preferredPosition" column="preferred_position" />
+        <result property="registrationStatus" column="registration_status" />
+        <result property="submitTime" column="submit_time" />
+        <result property="approvedTime" column="approved_time" />
+        <result property="rejectReason" column="reject_reason" />
+        <result property="assignedDrawTeamId" column="assigned_draw_team_id" />
+        <result property="convertedRegistrationId" column="converted_registration_id" />
+        <result property="activeUniqueKey" column="active_unique_key" />
+        <result property="createBy" column="create_by" />
+        <result property="updateBy" column="update_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <resultMap type="com.zhs.basket.vo.v4.BasketPersonalRegistrationListVo" id="BasketPersonalRegistrationListVoResult">
+        <id property="personalRegistrationId" column="personal_registration_id" />
+        <result property="seasonId" column="season_id" />
+        <result property="seasonTitle" column="season_title" />
+        <result property="divisionId" column="division_id" />
+        <result property="divisionName" column="division_name" />
+        <result property="platformCode" column="platform_code" />
+        <result property="playerId" column="player_id" />
+        <result property="playerName" column="player_name" />
+        <result property="actualPlatformCode" column="actual_platform_code" />
+        <result property="preferredPosition" column="preferred_position" />
+        <result property="registrationStatus" column="registration_status" />
+        <result property="submitTime" column="submit_time" />
+        <result property="approvedTime" column="approved_time" />
+        <result property="rejectReason" column="reject_reason" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, division_id, season_id, series_id, user_id, player_id, player_platform_id, actual_platform_code, game_account_id, preferred_position, registration_status, submit_time, approved_time, reject_reason, assigned_draw_team_id, converted_registration_id, active_unique_key, create_by, update_by, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketPersonalRegistrationResult">
+        select <include refid="BaseColumns" /> from basket_personal_registration
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectActiveByDivisionPlayer" resultMap="BasketPersonalRegistrationResult">
+        select <include refid="BaseColumns" /> from basket_personal_registration
+        where division_id = #{divisionId} and player_id = #{playerId}
+          and is_delete = 0 and active_unique_key is not null
+        limit 1
+    </select>
+
+    <select id="selectVoList" resultMap="BasketPersonalRegistrationListVoResult">
+        select
+            pr.id as personal_registration_id,
+            pr.season_id,
+            se.display_title as season_title,
+            pr.division_id,
+            d.division_name,
+            d.platform_code,
+            pr.player_id,
+            coalesce(p.game_nickname, mp.nickname) as player_name,
+            pr.actual_platform_code,
+            pr.preferred_position,
+            pr.registration_status,
+            pr.submit_time,
+            pr.approved_time,
+            pr.reject_reason
+        from basket_personal_registration pr
+        left join basket_season se on se.id = pr.season_id and se.is_delete = 0
+        left join basket_division d on d.id = pr.division_id and d.is_delete = 0
+        left join basket_player_profile p on p.id = pr.player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
+        where pr.is_delete = 0
+        <if test="seasonId != null">and pr.season_id = #{seasonId}</if>
+        <if test="divisionId != null">and pr.division_id = #{divisionId}</if>
+        <if test="registrationStatus != null and registrationStatus != ''">and pr.registration_status = #{registrationStatus}</if>
+        <if test="playerName != null and playerName != ''">
+            and coalesce(p.game_nickname, mp.nickname) like concat('%', #{playerName}, '%')
+        </if>
+        order by case when pr.registration_status = 'PENDING_REVIEW' then 0 else 1 end, pr.submit_time desc, pr.id desc
+    </select>
+
+    <select id="countApprovedByDivisionId" resultType="int">
+        select count(1) from basket_personal_registration
+        where division_id = #{divisionId}
+          and registration_status = 'APPROVED'
+          and is_delete = 0
+    </select>
+
+    <select id="countActiveByDivisionId" resultType="int">
+        select count(1) from basket_personal_registration
+        where division_id = #{divisionId}
+          and is_delete = 0
+          and registration_status not in ('WITHDRAWN', 'REJECTED')
+          and active_unique_key is not null
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_personal_registration (
+            division_id, season_id, series_id, user_id, player_id, player_platform_id, actual_platform_code, game_account_id, preferred_position, registration_status, submit_time, approved_time, reject_reason, assigned_draw_team_id, converted_registration_id, active_unique_key, create_by, update_by, create_time, update_time, is_delete
+        ) values (
+            #{divisionId}, #{seasonId}, #{seriesId}, #{userId}, #{playerId}, #{playerPlatformId}, #{actualPlatformCode}, #{gameAccountId}, #{preferredPosition}, #{registrationStatus}, #{submitTime}, #{approvedTime}, #{rejectReason}, #{assignedDrawTeamId}, #{convertedRegistrationId}, #{activeUniqueKey}, #{createBy}, #{updateBy}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_personal_registration
+        <set>
+            <if test="registrationStatus != null">registration_status = #{registrationStatus},</if>
+            <if test="submitTime != null">submit_time = #{submitTime},</if>
+            <if test="approvedTime != null">approved_time = #{approvedTime},</if>
+            <if test="rejectReason != null">reject_reason = #{rejectReason},</if>
+            <if test="assignedDrawTeamId != null">assigned_draw_team_id = #{assignedDrawTeamId},</if>
+            <if test="convertedRegistrationId != null">converted_registration_id = #{convertedRegistrationId},</if>
+            <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
+            <if test="preferredPosition != null">preferred_position = #{preferredPosition},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_personal_registration set is_delete = 1, active_unique_key = null, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="updateActiveUniqueKey">
+        update basket_personal_registration
+        set active_unique_key = #{activeUniqueKey}, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

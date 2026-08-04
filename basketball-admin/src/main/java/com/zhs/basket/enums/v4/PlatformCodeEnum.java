@@ -2,19 +2,24 @@ package com.zhs.basket.enums.v4;
 
 /**
  * CNPA 赛事域 V4 枚举：PlatformCodeEnum
- * 存储方式：VARCHAR 字符串 code，与旧整型枚举隔离。
+ * 新业务写入仅允许 PC / PS_XBOX；PS / XBOX 仅用于历史数据兼容。
  */
 public enum PlatformCodeEnum {
-    PC("PC", "PC"),
-    PS("PS", "PS"),
-    XBOX("XBOX", "Xbox");
+    PC("PC", "PC", false),
+    PS_XBOX("PS_XBOX", "PS/Xbox", false),
+    /** @deprecated 历史数据只读，禁止新建 Division */
+    PS("PS", "PS（历史）", true),
+    /** @deprecated 历史数据只读，禁止新建 Division */
+    XBOX("XBOX", "Xbox（历史）", true);
 
     private final String code;
     private final String description;
+    private final boolean legacy;
 
-    PlatformCodeEnum(String code, String description) {
+    PlatformCodeEnum(String code, String description, boolean legacy) {
         this.code = code;
         this.description = description;
+        this.legacy = legacy;
     }
 
     public String getCode() {
@@ -23,6 +28,10 @@ public enum PlatformCodeEnum {
 
     public String getDescription() {
         return description;
+    }
+
+    public boolean isLegacy() {
+        return legacy;
     }
 
     public static PlatformCodeEnum fromCode(String code) {
@@ -35,5 +44,19 @@ public enum PlatformCodeEnum {
             }
         }
         throw new IllegalArgumentException("未知PlatformCodeEnum: " + code);
+    }
+
+    public static boolean isWritableCode(String code) {
+        if (code == null || code.isEmpty()) {
+            return false;
+        }
+        PlatformCodeEnum platform = fromCode(code);
+        return !platform.isLegacy();
+    }
+
+    public static void requireWritableCode(String code) {
+        if (!isWritableCode(code)) {
+            throw new IllegalArgumentException("platformCode 仅允许 PC 或 PS_XBOX，历史值 PS/XBOX 不可用于新建或修改");
+        }
     }
 }

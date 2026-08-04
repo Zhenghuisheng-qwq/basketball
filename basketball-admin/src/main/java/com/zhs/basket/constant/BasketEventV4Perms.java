@@ -59,4 +59,19 @@ public final class BasketEventV4Perms {
     public static final String MATCH_SUBMISSION_AUDIT_REJECT = "basket:v4MatchSubmissionAudit:reject";
 
     public static final String V4_STATS_QUERY = "basket:v4Stats:query";
+
+    public static final String FORMAT_RULE_VIEW = "basket:v4FormatRule:view";
+    public static final String FORMAT_RULE_EDIT = "basket:v4FormatRule:edit";
+    public static final String FORMAT_RULE_LOCK = "basket:v4FormatRule:lock";
+
+    public static final String PERSONAL_REG_LIST = "basket:v4PersonalReg:list";
+    public static final String PERSONAL_REG_AUDIT = "basket:v4PersonalReg:audit";
+
+    public static final String PERSONAL_FORMATION_LIST = "basket:v4PersonalFormation:list";
+    public static final String PERSONAL_FORMATION_EDIT = "basket:v4PersonalFormation:edit";
+    public static final String PERSONAL_FORMATION_CONFIRM = "basket:v4PersonalFormation:confirm";
+
+    public static final String GROUPING_LIST = "basket:v4Grouping:list";
+    public static final String GROUPING_EDIT = "basket:v4Grouping:edit";
+    public static final String GROUPING_LOCK = "basket:v4Grouping:lock";
 }

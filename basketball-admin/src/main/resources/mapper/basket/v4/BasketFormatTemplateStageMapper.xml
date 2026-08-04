@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketFormatTemplateStageMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketFormatTemplateStage" id="Result">
+        <id property="id" column="id"/>
+        <result property="templateId" column="template_id"/>
+        <result property="stageCode" column="stage_code"/>
+        <result property="stageName" column="stage_name"/>
+        <result property="stageOrder" column="stage_order"/>
+        <result property="stageType" column="stage_type"/>
+        <result property="competitionFormat" column="competition_format"/>
+        <result property="groupingMode" column="grouping_mode"/>
+        <result property="groupCount" column="group_count"/>
+        <result property="roundRobinCycles" column="round_robin_cycles"/>
+        <result property="bestOf" column="best_of"/>
+        <result property="winPoints" column="win_points"/>
+        <result property="lossPoints" column="loss_points"/>
+        <result property="forfeitWinPoints" column="forfeit_win_points"/>
+        <result property="forfeitLossPoints" column="forfeit_loss_points"/>
+        <result property="advancementType" column="advancement_type"/>
+        <result property="advancementCount" column="advancement_count"/>
+        <result property="pairingRule" column="pairing_rule"/>
+        <result property="nextStageCode" column="next_stage_code"/>
+        <result property="requiresManualConfirmation" column="requires_manual_confirmation"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <select id="selectByTemplateId" resultMap="Result">
+        select * from basket_format_template_stage
+        where template_id = #{templateId} and is_delete = 0
+        order by stage_order asc
+    </select>
+</mapper>

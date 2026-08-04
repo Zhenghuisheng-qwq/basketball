@@ -9,7 +9,7 @@
     >
       <template #default>
         <div>当前使用新版赛事结构：赛事系列 → 赛季 → 平台赛区。</div>
-        <div>当前开放球队报名；个人报名暂未开放。</div>
+        <div>支持球队报名与个人报名；个人报名审核通过后由运营线下抽签组队。</div>
         <div>当前开放常规赛单循环；小组赛/淘汰赛后续开放。</div>
         <div>多平台通过平台赛区分别管理。</div>
       </template>
@@ -119,7 +119,12 @@
       </template>
 
       <el-table v-loading="divisionLoading" :data="divisionList" border>
-        <el-table-column label="平台" prop="platformCode" width="80" />
+        <el-table-column label="平台" prop="platformCode" width="100">
+          <template #default="scope">{{ v4PlatformLabel(scope.row.platformCode) }}</template>
+        </el-table-column>
+        <el-table-column label="比赛模式" prop="gameMode" width="90" align="center">
+          <template #default="scope">{{ v4GameModeLabel(scope.row.gameMode) }}</template>
+        </el-table-column>
         <el-table-column label="赛区名称" prop="divisionName" min-width="140" />
         <el-table-column label="报名方式" prop="registrationMode" width="108" align="center">
           <template #default="scope">
@@ -134,6 +139,10 @@
               {{ v4FormatTypeLabel(scope.row.formatType) }}
             </el-tag>
           </template>
+        </el-table-column>
+        <el-table-column label="赛制模板" prop="formatTemplateName" min-width="130" show-overflow-tooltip />
+        <el-table-column label="规则状态" width="96" align="center">
+          <template #default="scope">{{ v4SnapshotStatusLabel(scope.row.formatSnapshotStatus) }}</template>
         </el-table-column>
         <el-table-column label="队伍上限" prop="maxTeamCount" width="90" align="center" />
         <el-table-column label="阵容人数" width="100" align="center">
@@ -160,7 +169,7 @@
           <template #default="scope">
             <div class="table-actions">
               <el-button link type="primary" @click="handleEditDivision(scope.row)" v-hasPermi="['basket:v4Division:edit']">编辑</el-button>
-              <el-button link type="success" @click="handleOpenDivision(scope.row)" v-hasPermi="['basket:v4Division:openRegistration']" v-if="scope.row.divisionStatus === 'DRAFT'">开放报名</el-button>
+              <el-button link type="success" @click="handleOpenDivision(scope.row)" v-hasPermi="['basket:v4Division:openRegistration']" v-if="scope.row.divisionStatus === 'DRAFT' && scope.row.registrationMode === 'TEAM'">开放报名</el-button>
               <el-button link type="warning" @click="handleCloseDivision(scope.row)" v-hasPermi="['basket:v4Division:closeRegistration']" v-if="scope.row.divisionStatus === 'REGISTRATION_OPEN'">关闭报名</el-button>
               <el-button link type="danger" @click="handleDeleteDivision(scope.row)" v-hasPermi="['basket:v4Division:remove']" v-if="scope.row.divisionStatus === 'DRAFT'">删除</el-button>
             </div>
@@ -200,15 +209,14 @@
         <el-form-item label="报名方式" prop="registrationMode">
           <el-radio-group v-model="seasonForm.registrationMode">
             <el-radio label="TEAM">球队报名</el-radio>
-            <el-radio label="PERSONAL" disabled>个人报名（暂未开放）</el-radio>
+            <el-radio label="PERSONAL">个人报名（默认，Division 暂不可开放）</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="赛制" prop="formatType">
+        <el-form-item label="默认赛制">
           <el-radio-group v-model="seasonForm.formatType">
-            <el-radio label="REGULAR_ROUND_ROBIN">常规赛单循环</el-radio>
-            <el-radio label="GROUP_KNOCKOUT" disabled>小组赛+淘汰赛（暂未开放）</el-radio>
-            <el-radio label="KNOCKOUT" disabled>单败淘汰（暂未开放）</el-radio>
+            <el-radio label="REGULAR_ROUND_ROBIN">常规赛单循环（过渡默认）</el-radio>
           </el-radio-group>
+          <div class="el-form-item__tip">Season 赛制仅作 Division 创建默认值，最终规则以 Division 模板快照为准</div>
         </el-form-item>
         <el-form-item label="报名开始时间" prop="registrationStartTime">
           <el-date-picker v-model="seasonForm.registrationStartTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择报名开始时间" style="width: 100%" />
@@ -256,16 +264,72 @@
           <el-empty v-if="!(seasonDetail?.divisions?.length)" description="尚未创建平台赛区" />
         </el-tab-pane>
         <el-tab-pane label="赛制规则" name="rules">
-          <el-alert type="info" :closable="false" show-icon class="mb8" title="League 动态竞赛流程（常规赛单循环 → 积分排名 → 季后赛）" />
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="常规赛">单循环（{{ seasonDetail?.formatType === 'REGULAR_ROUND_ROBIN' ? '已启用' : '未启用' }}）</el-descriptions-item>
-            <el-descriptions-item label="积分规则">胜/负/弃权积分、同分排序 — 后续开放配置</el-descriptions-item>
-            <el-descriptions-item label="季后赛">开启后排名前 N 晋级 — 后续开放配置</el-descriptions-item>
-            <el-descriptions-item label="对阵规则">单败淘汰 — 后续开放配置</el-descriptions-item>
-            <el-descriptions-item label="系列赛 BO">普通轮次 BO3、总决赛 BO5 — 后续开放配置</el-descriptions-item>
-            <el-descriptions-item label="三四名赛">后续开放配置</el-descriptions-item>
-            <el-descriptions-item label="规则快照">Division 发布时继承赛季规则并固化，避免模板变更影响进行中赛事</el-descriptions-item>
+          <el-form :inline="true" class="mb8">
+            <el-form-item label="平台赛区">
+              <el-select v-model="rulesDivisionId" placeholder="选择赛区" style="width: 260px" @change="loadRulesSnapshot">
+                <el-option v-for="d in seasonDetail?.divisions || []" :key="d.id" :label="`${d.divisionName}（${v4PlatformLabel(d.platformCode)}）`" :value="d.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item v-if="rulesSnapshot?.mutable">
+              <el-button type="primary" plain icon="Plus" @click="openAddStage" v-hasPermi="['basket:v4FormatRule:edit']">新增阶段</el-button>
+              <el-button type="warning" plain @click="openRebuildSnapshot" v-hasPermi="['basket:v4FormatRule:edit']">重建快照</el-button>
+              <el-button type="success" plain @click="handleLockSnapshot" v-hasPermi="['basket:v4FormatRule:lock']" v-if="rulesSnapshot?.lockable">锁定规则</el-button>
+            </el-form-item>
+          </el-form>
+
+          <el-alert v-if="rulesSnapshot && !rulesSnapshot.mutable" type="warning" :closable="false" show-icon class="mb8" title="规则已锁定，不可编辑" />
+
+          <el-descriptions v-if="rulesSnapshot" :column="2" border class="mb8">
+            <el-descriptions-item label="模板">{{ rulesSnapshot.sourceTemplateName }} v{{ rulesSnapshot.sourceTemplateVersion }}</el-descriptions-item>
+            <el-descriptions-item label="快照版本">v{{ rulesSnapshot.snapshotVersion ?? 1 }}</el-descriptions-item>
+            <el-descriptions-item label="快照状态">
+              <el-tag :type="v4SnapshotStatusTagType(rulesSnapshot.snapshotStatus)" size="small">
+                {{ rulesSnapshot.snapshotStatusName || v4SnapshotStatusLabel(rulesSnapshot.snapshotStatus) }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="可编辑">{{ rulesSnapshot.mutable ? '是' : '否' }}</el-descriptions-item>
+            <el-descriptions-item label="已锁定">{{ rulesSnapshot.locked ? '是' : '否' }}</el-descriptions-item>
+            <el-descriptions-item label="规则摘要" :span="2">{{ rulesSnapshot.formatSummary || '-' }}</el-descriptions-item>
           </el-descriptions>
+
+          <div v-if="sortedRuleStages.length" class="stage-card-list">
+            <el-card v-for="(stage, index) in sortedRuleStages" :key="stage.id || stage.stageCode" shadow="hover" class="stage-card">
+              <template #header>
+                <div class="stage-card-header">
+                  <span>{{ stage.stageOrder }}. {{ stage.stageName }}（{{ stage.stageCode }}）</span>
+                  <div v-if="rulesSnapshot?.mutable" class="stage-card-actions">
+                    <el-button link type="primary" @click="openEditStage(stage)">编辑</el-button>
+                    <el-button link type="danger" @click="handleDeleteStage(stage)">删除</el-button>
+                    <el-button link :disabled="index === 0" @click="moveStage(stage, -1)">上移</el-button>
+                    <el-button link :disabled="index === sortedRuleStages.length - 1" @click="moveStage(stage, 1)">下移</el-button>
+                  </div>
+                </div>
+              </template>
+              <el-descriptions :column="2" size="small">
+                <el-descriptions-item label="阶段类型">{{ stage.stageTypeName || v4StageTypeLabel(stage.stageType) }}</el-descriptions-item>
+                <el-descriptions-item label="比赛方式">{{ stage.competitionFormatName || v4CompetitionFormatLabel(stage.competitionFormat) }}</el-descriptions-item>
+                <el-descriptions-item label="分组模式">{{ stage.groupingModeName || v4GroupingModeLabel(stage.groupingMode) }}</el-descriptions-item>
+                <el-descriptions-item label="组数">{{ stage.groupCount ?? '-' }}</el-descriptions-item>
+                <el-descriptions-item label="BO">{{ stage.bestOf ?? '-' }}</el-descriptions-item>
+                <el-descriptions-item label="积分">{{ stage.winPoints != null ? `${stage.winPoints}/${stage.lossPoints}` : '-' }}</el-descriptions-item>
+                <el-descriptions-item label="晋级">{{ stage.advancementTypeName || v4AdvancementTypeLabel(stage.advancementType) }}</el-descriptions-item>
+                <el-descriptions-item label="晋级名额">
+                  <span v-if="isLeagueRegularStage(stage)" class="advancement-highlight">{{ stage.advancementCount ?? '-' }}</span>
+                  <span v-else>{{ stage.advancementCount ?? '-' }}</span>
+                </el-descriptions-item>
+                <el-descriptions-item label="下一阶段">{{ stage.nextStageCode || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="人工确认">{{ stage.requiresManualConfirmation === 1 ? '是' : '否' }}</el-descriptions-item>
+              </el-descriptions>
+              <div v-if="stage.competitionFormat === 'ROUND_ROBIN' && stage.tieBreakRules?.length" class="tie-break-summary">
+                <span class="tie-break-label">同分规则：</span>
+                <el-tag v-for="rule in stage.tieBreakRules" :key="rule.id" size="small" class="mr4" :type="rule.enabled === 1 ? '' : 'info'">
+                  {{ rule.priorityNo }}. {{ rule.ruleCodeName || v4TieBreakRuleLabel(rule.ruleCode) }}
+                </el-tag>
+              </div>
+            </el-card>
+          </div>
+          <el-empty v-else description="请选择赛区或在 Division 创建后查看规则快照" />
+          <div class="el-form-item__tip mt8">草稿状态下可编辑规则；开放报名前请锁定快照。LEAGUE_STANDARD_V1 常规赛阶段可配置晋级名额。</div>
         </el-tab-pane>
         <el-tab-pane label="发布设置" name="publish">
           <el-descriptions v-if="seasonDetail" :column="1" border>
@@ -290,9 +354,14 @@
         <el-form-item label="平台" prop="platformCode">
           <el-select v-model="divisionForm.platformCode" style="width: 100%">
             <el-option label="PC" value="PC" />
-            <el-option label="PS" value="PS" />
-            <el-option label="XBOX" value="XBOX" />
+            <el-option label="PS/Xbox" value="PS_XBOX" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="比赛模式" prop="gameMode">
+          <el-radio-group v-model="divisionForm.gameMode">
+            <el-radio label="FIVE_V_FIVE">5V5</el-radio>
+            <el-radio label="THREE_V_THREE">3V3</el-radio>
+          </el-radio-group>
         </el-form-item>
         <el-form-item label="赛区名称" prop="divisionName">
           <el-input v-model="divisionForm.divisionName" placeholder="如 League 2026 S1 - PS" />
@@ -300,23 +369,26 @@
         <el-form-item label="报名方式" prop="registrationMode">
           <el-radio-group v-model="divisionForm.registrationMode">
             <el-radio label="TEAM">球队报名</el-radio>
-            <el-radio label="PERSONAL" disabled>个人报名（暂未开放）</el-radio>
+            <el-radio label="PERSONAL">个人报名</el-radio>
           </el-radio-group>
+          <div v-if="divisionForm.registrationMode === 'PERSONAL'" class="el-form-item__tip">个人报名需在规则快照锁定后开放；审核通过后由运营线下抽签组队。</div>
         </el-form-item>
-        <el-form-item label="赛制" prop="formatType">
+        <el-form-item label="赛制模板" prop="formatTemplateId">
+          <el-select v-model="divisionForm.formatTemplateId" style="width: 100%" placeholder="请选择赛制模板">
+            <el-option v-for="item in formatTemplateList" :key="item.id" :label="`${item.templateName} (${item.templateCode})`" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="阵容人数规则">
+          <el-input :model-value="v4RosterRuleText(divisionForm.gameMode)" disabled />
+        </el-form-item>
+        <el-form-item label="赛制（过渡）" prop="formatType">
           <el-radio-group v-model="divisionForm.formatType">
             <el-radio label="REGULAR_ROUND_ROBIN">常规赛单循环</el-radio>
-            <el-radio label="KNOCKOUT" disabled>单淘汰（暂未开放）</el-radio>
           </el-radio-group>
+          <div class="el-form-item__tip">过渡字段，实际执行规则以模板快照为准</div>
         </el-form-item>
         <el-form-item label="队伍上限" prop="maxTeamCount">
           <el-input-number v-model="divisionForm.maxTeamCount" :min="1" controls-position="right" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="阵容最少人数" prop="lineupMinCount">
-          <el-input-number v-model="divisionForm.lineupMinCount" :min="5" :max="8" controls-position="right" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="阵容最多人数" prop="lineupMaxCount">
-          <el-input-number v-model="divisionForm.lineupMaxCount" :min="5" :max="8" controls-position="right" style="width: 100%" />
         </el-form-item>
         <el-form-item label="报名开始">
           <el-date-picker v-model="divisionForm.registrationStartTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" />
@@ -340,11 +412,88 @@
         <el-button type="primary" @click="submitDivisionForm">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog :title="stageDialogTitle" v-model="stageDialogOpen" width="720px" append-to-body destroy-on-close>
+      <el-form ref="stageFormRef" :model="stageForm" :rules="stageRules" label-width="120px">
+        <el-form-item label="阶段编码" prop="stageCode">
+          <el-input v-model="stageForm.stageCode" :disabled="!!stageEditingId" placeholder="如 REGULAR" />
+        </el-form-item>
+        <el-form-item label="阶段名称" prop="stageName">
+          <el-input v-model="stageForm.stageName" placeholder="如 常规赛" />
+        </el-form-item>
+        <el-form-item label="阶段类型" prop="stageType">
+          <el-select v-model="stageForm.stageType" style="width: 100%">
+            <el-option v-for="item in STAGE_TYPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="比赛方式" prop="competitionFormat">
+          <el-select v-model="stageForm.competitionFormat" style="width: 100%">
+            <el-option v-for="item in COMPETITION_FORMAT_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="分组模式" prop="groupingMode">
+          <el-select v-model="stageForm.groupingMode" style="width: 100%">
+            <el-option v-for="item in GROUPING_MODE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="组数">
+          <el-input-number v-model="stageForm.groupCount" :min="0" controls-position="right" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="循环轮次">
+          <el-input-number v-model="stageForm.roundRobinCycles" :min="1" controls-position="right" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="BO">
+          <el-input-number v-model="stageForm.bestOf" :min="1" controls-position="right" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="胜/负积分">
+          <el-col :span="11"><el-input-number v-model="stageForm.winPoints" :min="0" controls-position="right" style="width: 100%" /></el-col>
+          <el-col :span="2" class="text-center">/</el-col>
+          <el-col :span="11"><el-input-number v-model="stageForm.lossPoints" :min="0" controls-position="right" style="width: 100%" /></el-col>
+        </el-form-item>
+        <el-form-item label="晋级类型">
+          <el-select v-model="stageForm.advancementType" style="width: 100%">
+            <el-option v-for="item in ADVANCEMENT_TYPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="晋级名额" v-if="needsAdvancementCount">
+          <el-input-number v-model="stageForm.advancementCount" :min="1" controls-position="right" style="width: 100%" />
+          <div v-if="isLeagueRegularForm" class="el-form-item__tip">LEAGUE_STANDARD_V1 常规赛阶段：配置总排名前 N 晋级名额</div>
+        </el-form-item>
+        <el-form-item label="下一阶段编码">
+          <el-input v-model="stageForm.nextStageCode" placeholder="留空表示无下一阶段" />
+        </el-form-item>
+        <el-form-item label="人工确认">
+          <el-switch v-model="stageForm.requiresManualConfirmation" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <template v-if="stageForm.competitionFormat === 'ROUND_ROBIN'">
+          <el-divider content-position="left">同分规则（循环赛）</el-divider>
+          <el-table :data="stageForm.tieBreakRules" size="small" border>
+            <el-table-column label="优先级" width="80">
+              <template #default="scope">
+                <el-input-number v-model="scope.row.priorityNo" :min="1" controls-position="right" size="small" />
+              </template>
+            </el-table-column>
+            <el-table-column label="规则">
+              <template #default="scope">{{ v4TieBreakRuleLabel(scope.row.ruleCode) }}</template>
+            </el-table-column>
+            <el-table-column label="启用" width="80" align="center">
+              <template #default="scope">
+                <el-switch v-model="scope.row.enabled" :active-value="1" :inactive-value="0" />
+              </template>
+            </el-table-column>
+          </el-table>
+        </template>
+      </el-form>
+      <template #footer>
+        <el-button @click="stageDialogOpen = false">取消</el-button>
+        <el-button type="primary" @click="submitStageForm">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { getCurrentInstance, onMounted, reactive, ref } from 'vue'
+import { computed, getCurrentInstance, onMounted, reactive, ref } from 'vue'
 import { listV4Series, type BasketSeriesVo } from '@/api/cnpa/event-v4/series'
 import {
   addV4Season,
@@ -369,19 +518,50 @@ import {
   type BasketDivisionListVo
 } from '@/api/cnpa/event-v4/division'
 import {
+  addFormatStage,
+  deleteFormatStage,
+  getFormatSnapshot,
+  getV4FormatTemplate,
+  listV4FormatTemplates,
+  lockFormatSnapshot,
+  rebuildFormatSnapshot,
+  reorderFormatStages,
+  saveTieBreakRules,
+  updateFormatStage,
+  type BasketDivisionFormatSnapshotVo,
+  type BasketDivisionStageSaveReq,
+  type BasketDivisionStageVo,
+  type BasketFormatTemplateListVo
+} from '@/api/cnpa/event-v4/format-template'
+import {
+  V4_ADVANCEMENT_TYPE_OPTIONS,
+  V4_COMPETITION_FORMAT_OPTIONS,
+  V4_GROUPING_MODE_OPTIONS,
   V4_PUBLISH_STATUS_FILTER_OPTIONS,
+  V4_STAGE_TYPE_OPTIONS,
+  V4_TIE_BREAK_RULE_OPTIONS,
   formatV4CompactRange,
+  v4AdvancementTypeLabel,
+  v4CompetitionFormatLabel,
   v4DivisionStatusLabel,
   v4DivisionStatusTagType,
   v4FormatTypeLabel,
   v4FormatTypeTagType,
+  v4GameModeLabel,
+  v4GroupingModeLabel,
+  v4PlatformLabel,
   v4PublishStatusLabel,
   v4PublishStatusTagType,
   v4RegistrationModeLabel,
   v4RegistrationModeTagType,
+  v4RosterRuleText,
   v4SeriesDisplayLabel,
   v4SeasonStatusLabel,
-  v4SeasonStatusTagType
+  v4SeasonStatusTagType,
+  v4SnapshotStatusLabel,
+  v4SnapshotStatusTagType,
+  v4StageTypeLabel,
+  v4TieBreakRuleLabel
 } from '@/utils/v4AdminDisplay'
 
 const { proxy } = getCurrentInstance()!
@@ -397,6 +577,69 @@ const selectedSeason = ref<BasketSeasonListVo>()
 const divisionList = ref<BasketDivisionListVo[]>([])
 const divisionTotal = ref(0)
 const divisionLoading = ref(false)
+const formatTemplateList = ref<BasketFormatTemplateListVo[]>([])
+const seasonDetailSnapshot = ref<BasketDivisionFormatSnapshotVo>()
+
+const rulesDivisionId = ref<number>()
+const rulesSnapshot = ref<BasketDivisionFormatSnapshotVo>()
+const stageDialogOpen = ref(false)
+const stageDialogTitle = ref('')
+const stageFormRef = ref()
+const stageEditingId = ref<number>()
+const stageForm = reactive<BasketDivisionStageSaveReq & { tieBreakRules?: Array<{ ruleCode: string; priorityNo: number; enabled: number }> }>({
+  stageCode: '',
+  stageName: '',
+  stageType: 'REGULAR',
+  competitionFormat: 'ROUND_ROBIN',
+  groupingMode: 'NONE',
+  groupCount: undefined,
+  roundRobinCycles: 1,
+  bestOf: 1,
+  winPoints: 2,
+  lossPoints: 1,
+  advancementType: 'NONE',
+  advancementCount: undefined,
+  pairingRule: 'NONE',
+  nextStageCode: '',
+  requiresManualConfirmation: 0,
+  tieBreakRules: []
+})
+
+const STAGE_TYPE_OPTIONS = V4_STAGE_TYPE_OPTIONS
+const COMPETITION_FORMAT_OPTIONS = V4_COMPETITION_FORMAT_OPTIONS
+const GROUPING_MODE_OPTIONS = V4_GROUPING_MODE_OPTIONS
+const ADVANCEMENT_TYPE_OPTIONS = V4_ADVANCEMENT_TYPE_OPTIONS
+const TIE_BREAK_DEFAULTS = V4_TIE_BREAK_RULE_OPTIONS.map((item, idx) => ({
+  ruleCode: item.value,
+  priorityNo: idx + 1,
+  enabled: item.value === 'MANUAL' ? 0 : 1
+}))
+
+const stageRules = {
+  stageCode: [{ required: true, message: '请输入阶段编码', trigger: 'blur' }],
+  stageName: [{ required: true, message: '请输入阶段名称', trigger: 'blur' }],
+  stageType: [{ required: true, message: '请选择阶段类型', trigger: 'change' }],
+  competitionFormat: [{ required: true, message: '请选择比赛方式', trigger: 'change' }],
+  groupingMode: [{ required: true, message: '请选择分组模式', trigger: 'change' }]
+}
+
+const sortedRuleStages = computed(() =>
+  [...(rulesSnapshot.value?.stages || [])].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
+)
+
+const needsAdvancementCount = computed(() =>
+  stageForm.advancementType === 'OVERALL_TOP_N' || stageForm.advancementType === 'GROUP_TOP_N'
+)
+
+const isLeagueRegularForm = computed(() =>
+  rulesSnapshot.value?.sourceTemplateCode === 'LEAGUE_STANDARD_V1' && stageForm.stageType === 'REGULAR'
+)
+
+function isLeagueRegularStage(stage: BasketDivisionStageVo) {
+  return rulesSnapshot.value?.sourceTemplateCode === 'LEAGUE_STANDARD_V1'
+    && stage.stageType === 'REGULAR'
+    && stage.advancementType === 'OVERALL_TOP_N'
+}
 
 const seasonQuery = reactive({
   pageNum: 1,
@@ -450,13 +693,13 @@ const divisionDialogTitle = ref('')
 const divisionFormRef = ref()
 const divisionForm = reactive<BasketDivisionCreateReq & { id?: number }>({
   seasonId: undefined,
-  platformCode: 'PS',
+  platformCode: 'PS_XBOX',
+  gameMode: 'FIVE_V_FIVE',
   divisionName: '',
   registrationMode: 'TEAM',
   formatType: 'REGULAR_ROUND_ROBIN',
+  formatTemplateId: undefined,
   maxTeamCount: 16,
-  lineupMinCount: 5,
-  lineupMaxCount: 8,
   registrationStartTime: '',
   registrationEndTime: '',
   matchStartTime: '',
@@ -466,10 +709,11 @@ const divisionForm = reactive<BasketDivisionCreateReq & { id?: number }>({
 
 const divisionRules = {
   platformCode: [{ required: true, message: '请选择平台', trigger: 'change' }],
+  gameMode: [{ required: true, message: '请选择比赛模式', trigger: 'change' }],
   divisionName: [{ required: true, message: '请输入赛区名称', trigger: 'blur' }],
-  maxTeamCount: [{ required: true, message: '请输入队伍上限', trigger: 'blur' }],
-  lineupMinCount: [{ required: true, message: '请输入阵容最少人数', trigger: 'blur' }],
-  lineupMaxCount: [{ required: true, message: '请输入阵容最多人数', trigger: 'blur' }]
+  registrationMode: [{ required: true, message: '请选择报名方式', trigger: 'change' }],
+  formatTemplateId: [{ required: true, message: '请选择赛制模板', trigger: 'change' }],
+  maxTeamCount: [{ required: true, message: '请输入队伍上限', trigger: 'blur' }]
 }
 
 const seasonDetailOpen = ref(false)
@@ -477,6 +721,40 @@ const seasonDetailTab = ref('basic')
 const seasonDetailTitle = ref('')
 const seasonDetailLoading = ref(false)
 const seasonDetail = ref<BasketSeasonDetailVo>()
+
+async function loadFormatTemplates(seriesId?: number) {
+  if (!seriesId) {
+    formatTemplateList.value = []
+    return
+  }
+  const res = await listV4FormatTemplates(seriesId)
+  formatTemplateList.value = res.data || []
+  if (!divisionForm.formatTemplateId && formatTemplateList.value.length) {
+    const def = formatTemplateList.value.find((t) => t.isDefault === 1) || formatTemplateList.value[0]
+    divisionForm.formatTemplateId = def.id
+  }
+}
+
+async function loadSeasonDetailSnapshot(seasonDetailVo?: BasketSeasonDetailVo) {
+  seasonDetailSnapshot.value = undefined
+  const firstDivision = seasonDetailVo?.divisions?.[0]
+  if (firstDivision?.id) {
+    const res = await getV4DivisionFormatSnapshot(firstDivision.id)
+    seasonDetailSnapshot.value = res.data
+  } else if (formatTemplateList.value.length) {
+    const tpl = formatTemplateList.value.find((t) => t.isDefault === 1) || formatTemplateList.value[0]
+    if (tpl?.id) {
+      const detail = await import('@/api/cnpa/event-v4/format-template').then((m) => m.getV4FormatTemplate(tpl.id!))
+      seasonDetailSnapshot.value = {
+        sourceTemplateName: tpl.templateName,
+        sourceTemplateVersion: tpl.versionNo,
+        snapshotStatus: 'DRAFT',
+        snapshotStatusName: '草稿（模板预览）',
+        stages: detail.data?.stages
+      }
+    }
+  }
+}
 
 function resetSeasonForm() {
   Object.assign(seasonForm, {
@@ -574,11 +852,149 @@ async function handleOpenSeasonDetail(row: BasketSeasonListVo) {
   seasonDetailOpen.value = true
   seasonDetailLoading.value = true
   try {
+    await loadFormatTemplates(row.seriesId)
     const res = await getV4Season(row.id!)
     seasonDetail.value = res.data
+    rulesDivisionId.value = res.data?.divisions?.[0]?.id
+    await loadSeasonDetailSnapshot(res.data)
+    if (rulesDivisionId.value) {
+      await loadRulesSnapshot()
+    }
   } finally {
     seasonDetailLoading.value = false
   }
+}
+
+async function loadRulesSnapshot() {
+  if (!rulesDivisionId.value) {
+    rulesSnapshot.value = undefined
+    return
+  }
+  const res = await getFormatSnapshot(rulesDivisionId.value)
+  rulesSnapshot.value = res.data
+}
+
+function resetStageForm() {
+  Object.assign(stageForm, {
+    stageCode: '',
+    stageName: '',
+    stageType: 'REGULAR',
+    competitionFormat: 'ROUND_ROBIN',
+    groupingMode: 'NONE',
+    groupCount: undefined,
+    roundRobinCycles: 1,
+    bestOf: 1,
+    winPoints: 2,
+    lossPoints: 1,
+    advancementType: 'NONE',
+    advancementCount: undefined,
+    pairingRule: 'NONE',
+    nextStageCode: '',
+    requiresManualConfirmation: 0,
+    tieBreakRules: TIE_BREAK_DEFAULTS.map((r) => ({ ...r }))
+  })
+}
+
+function openAddStage() {
+  if (!rulesDivisionId.value) return
+  stageEditingId.value = undefined
+  stageDialogTitle.value = '新增阶段'
+  resetStageForm()
+  stageDialogOpen.value = true
+}
+
+function openEditStage(stage: BasketDivisionStageVo) {
+  stageEditingId.value = stage.id
+  stageDialogTitle.value = `编辑阶段 — ${stage.stageName}`
+  Object.assign(stageForm, {
+    stageCode: stage.stageCode,
+    stageName: stage.stageName,
+    stageType: stage.stageType,
+    competitionFormat: stage.competitionFormat,
+    groupingMode: stage.groupingMode,
+    groupCount: stage.groupCount,
+    roundRobinCycles: stage.roundRobinCycles,
+    bestOf: stage.bestOf,
+    winPoints: stage.winPoints,
+    lossPoints: stage.lossPoints,
+    advancementType: stage.advancementType,
+    advancementCount: stage.advancementCount,
+    pairingRule: stage.pairingRule || 'NONE',
+    nextStageCode: stage.nextStageCode || '',
+    requiresManualConfirmation: stage.requiresManualConfirmation ?? 0,
+    tieBreakRules: (stage.tieBreakRules?.length
+      ? stage.tieBreakRules.map((r) => ({ ruleCode: r.ruleCode!, priorityNo: r.priorityNo!, enabled: r.enabled ?? 1 }))
+      : TIE_BREAK_DEFAULTS.map((r) => ({ ...r })))
+  })
+  stageDialogOpen.value = true
+}
+
+async function submitStageForm() {
+  if (!rulesDivisionId.value) return
+  await stageFormRef.value?.validate()
+  const payload: BasketDivisionStageSaveReq = { ...stageForm }
+  delete (payload as any).tieBreakRules
+  if (stageEditingId.value) {
+    await updateFormatStage(rulesDivisionId.value, stageEditingId.value, payload)
+    if (stageForm.competitionFormat === 'ROUND_ROBIN' && stageEditingId.value) {
+      await saveTieBreakRules(rulesDivisionId.value, {
+        stageId: stageEditingId.value,
+        rules: stageForm.tieBreakRules
+      })
+    }
+    proxy!.$modal.msgSuccess('更新成功')
+  } else {
+    const res = await addFormatStage(rulesDivisionId.value, payload)
+    const newStageId = res.data
+    if (stageForm.competitionFormat === 'ROUND_ROBIN' && newStageId) {
+      await saveTieBreakRules(rulesDivisionId.value, { stageId: newStageId, rules: stageForm.tieBreakRules })
+    }
+    proxy!.$modal.msgSuccess('新增成功')
+  }
+  stageDialogOpen.value = false
+  await loadRulesSnapshot()
+}
+
+async function handleDeleteStage(stage: BasketDivisionStageVo) {
+  if (!rulesDivisionId.value || !stage.id) return
+  await proxy!.$modal.confirm(`确认删除阶段「${stage.stageName}」？`)
+  await deleteFormatStage(rulesDivisionId.value, stage.id)
+  proxy!.$modal.msgSuccess('删除成功')
+  await loadRulesSnapshot()
+}
+
+async function moveStage(stage: BasketDivisionStageVo, delta: number) {
+  if (!rulesDivisionId.value || !stage.id) return
+  const stages = sortedRuleStages.value
+  const index = stages.findIndex((s) => s.id === stage.id)
+  const target = index + delta
+  if (target < 0 || target >= stages.length) return
+  const ids = stages.map((s) => s.id!)
+  ;[ids[index], ids[target]] = [ids[target], ids[index]]
+  await reorderFormatStages(rulesDivisionId.value, ids)
+  await loadRulesSnapshot()
+}
+
+async function openRebuildSnapshot() {
+  if (!rulesDivisionId.value) return
+  const division = seasonDetail.value?.divisions?.find((d) => d.id === rulesDivisionId.value)
+  const templateId = division?.formatTemplateId || formatTemplateList.value[0]?.id
+  if (!templateId) {
+    proxy!.$modal.msgWarning('请先选择赛制模板')
+    return
+  }
+  await proxy!.$modal.confirm('重建将保留历史快照版本，当前草稿规则将被替换。是否继续？')
+  await rebuildFormatSnapshot(rulesDivisionId.value, templateId)
+  proxy!.$modal.msgSuccess('重建成功')
+  await loadRulesSnapshot()
+}
+
+async function handleLockSnapshot() {
+  if (!rulesDivisionId.value) return
+  await proxy!.$modal.confirm('锁定后规则不可再编辑，开放报名前需锁定。是否继续？')
+  await lockFormatSnapshot(rulesDivisionId.value)
+  proxy!.$modal.msgSuccess('锁定成功')
+  await loadRulesSnapshot()
 }
 
 function handleSeasonSelect(row: BasketSeasonListVo | undefined) {
@@ -626,19 +1042,20 @@ function resetDivisionForm() {
   Object.assign(divisionForm, {
     id: undefined,
     seasonId: selectedSeason.value?.id,
-    platformCode: 'PS',
+    platformCode: 'PS_XBOX',
+    gameMode: 'FIVE_V_FIVE',
     divisionName: '',
     registrationMode: 'TEAM',
     formatType: 'REGULAR_ROUND_ROBIN',
+    formatTemplateId: undefined,
     maxTeamCount: 16,
-    lineupMinCount: 5,
-    lineupMaxCount: 8,
     registrationStartTime: '',
     registrationEndTime: '',
     matchStartTime: '',
     matchEndTime: '',
     sortOrder: 0
   })
+  loadFormatTemplates(selectedSeriesId.value)
 }
 
 function handleAddDivision() {
@@ -661,10 +1078,6 @@ function handleEditDivision(row: BasketDivisionListVo) {
 function submitDivisionForm() {
   divisionFormRef.value?.validate(async (valid: boolean) => {
     if (!valid) return
-    if (divisionForm.lineupMinCount! > divisionForm.lineupMaxCount!) {
-      proxy!.$modal.msgError('阵容最少人数不能大于最多人数')
-      return
-    }
     if (divisionForm.id) {
       await updateV4Division(divisionForm.id, divisionForm)
       proxy!.$modal.msgSuccess('更新成功')
@@ -724,5 +1137,40 @@ onMounted(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
+}
+.stage-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.stage-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.stage-card-actions {
+  display: flex;
+  gap: 4px;
+}
+.tie-break-summary {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.tie-break-label {
+  color: var(--el-text-color-secondary);
+  margin-right: 4px;
+}
+.advancement-highlight {
+  color: var(--el-color-primary);
+  font-weight: 600;
+}
+.mr4 {
+  margin-right: 4px;
+}
+.mt8 {
+  margin-top: 8px;
+}
+.text-center {
+  text-align: center;
 }
 </style>

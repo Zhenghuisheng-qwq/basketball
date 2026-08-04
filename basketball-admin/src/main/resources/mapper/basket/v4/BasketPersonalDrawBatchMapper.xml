@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketPersonalDrawBatchMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketPersonalDrawBatch" id="BasketPersonalDrawBatchResult">
+        <id property="id" column="id" />
+        <result property="divisionId" column="division_id" />
+        <result property="batchCode" column="batch_code" />
+        <result property="batchName" column="batch_name" />
+        <result property="batchVersion" column="batch_version" />
+        <result property="batchStatus" column="batch_status" />
+        <result property="activeUniqueKey" column="active_unique_key" />
+        <result property="resultSource" column="result_source" />
+        <result property="resultRemark" column="result_remark" />
+        <result property="unassignedPolicy" column="unassigned_policy" />
+        <result property="unassignedRemark" column="unassigned_remark" />
+        <result property="confirmedBy" column="confirmed_by" />
+        <result property="confirmedTime" column="confirmed_time" />
+        <result property="createBy" column="create_by" />
+        <result property="updateBy" column="update_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <resultMap type="com.zhs.basket.vo.v4.BasketPersonalDrawBatchListVo" id="BasketPersonalDrawBatchListVoResult">
+        <id property="drawBatchId" column="draw_batch_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="divisionName" column="division_name" />
+        <result property="batchCode" column="batch_code" />
+        <result property="batchName" column="batch_name" />
+        <result property="batchVersion" column="batch_version" />
+        <result property="batchStatus" column="batch_status" />
+        <result property="resultSource" column="result_source" />
+        <result property="resultRemark" column="result_remark" />
+        <result property="unassignedPolicy" column="unassigned_policy" />
+        <result property="confirmedTime" column="confirmed_time" />
+        <result property="createTime" column="create_time" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, division_id, batch_code, batch_name, batch_version, batch_status, active_unique_key, result_source, result_remark, unassigned_policy, unassigned_remark, confirmed_by, confirmed_time, create_by, update_by, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketPersonalDrawBatchResult">
+        select <include refid="BaseColumns" /> from basket_personal_draw_batch
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectActiveByDivision" resultMap="BasketPersonalDrawBatchResult">
+        select <include refid="BaseColumns" /> from basket_personal_draw_batch
+        where division_id = #{divisionId} and is_delete = 0 and active_unique_key is not null
+        limit 1
+    </select>
+
+    <select id="selectNextBatchVersion" resultType="int">
+        select coalesce(max(batch_version), 0) + 1 from basket_personal_draw_batch
+        where division_id = #{divisionId}
+    </select>
+
+    <select id="selectVoList" resultMap="BasketPersonalDrawBatchListVoResult">
+        select
+            b.id as draw_batch_id,
+            b.division_id,
+            d.division_name,
+            b.batch_code,
+            b.batch_name,
+            b.batch_version,
+            b.batch_status,
+            b.result_source,
+            b.result_remark,
+            b.unassigned_policy,
+            b.confirmed_time,
+            b.create_time
+        from basket_personal_draw_batch b
+        left join basket_division d on d.id = b.division_id and d.is_delete = 0
+        where b.is_delete = 0
+        <if test="divisionId != null">and b.division_id = #{divisionId}</if>
+        <if test="batchStatus != null and batchStatus != ''">and b.batch_status = #{batchStatus}</if>
+        order by b.batch_version desc, b.id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_personal_draw_batch (
+            division_id, batch_code, batch_name, batch_version, batch_status, active_unique_key, result_source, result_remark, unassigned_policy, unassigned_remark, confirmed_by, confirmed_time, create_by, update_by, create_time, update_time, is_delete
+        ) values (
+            #{divisionId}, #{batchCode}, #{batchName}, #{batchVersion}, #{batchStatus}, #{activeUniqueKey}, #{resultSource}, #{resultRemark}, #{unassignedPolicy}, #{unassignedRemark}, #{confirmedBy}, #{confirmedTime}, #{createBy}, #{updateBy}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_personal_draw_batch
+        <set>
+            <if test="batchStatus != null">batch_status = #{batchStatus},</if>
+            <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
+            <if test="resultSource != null">result_source = #{resultSource},</if>
+            <if test="resultRemark != null">result_remark = #{resultRemark},</if>
+            <if test="unassignedPolicy != null">unassigned_policy = #{unassignedPolicy},</if>
+            <if test="unassignedRemark != null">unassigned_remark = #{unassignedRemark},</if>
+            <if test="confirmedBy != null">confirmed_by = #{confirmedBy},</if>
+            <if test="confirmedTime != null">confirmed_time = #{confirmedTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_personal_draw_batch set is_delete = 1, active_unique_key = null, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

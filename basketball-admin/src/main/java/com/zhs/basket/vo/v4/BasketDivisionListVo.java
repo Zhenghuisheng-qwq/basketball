@@ -12,9 +12,18 @@ public class BasketDivisionListVo {
     private String seriesCode;
     private String seriesName;
     private String platformCode;
+    private String gameMode;
+    private String gameModeName;
+    private String platformName;
     private String divisionName;
     private String registrationMode;
+    private String registrationModeName;
     private String formatType;
+    private Long formatTemplateId;
+    private String formatTemplateName;
+    private Long formatSnapshotId;
+    private String formatSnapshotStatus;
+    private String formatSummary;
     private Integer maxTeamCount;
     private Integer maxPersonCount;
     private Integer lineupMinCount;

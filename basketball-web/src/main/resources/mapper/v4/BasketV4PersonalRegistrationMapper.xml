@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.mapper.v4.BasketV4PersonalRegistrationMapper">
+
+    <select id="selectAvailablePersonalDivisions" resultType="com.zhs.response.v4.V4PersonalAvailableDivisionResp">
+        select
+            d.season_id as seasonId,
+            d.id as divisionId,
+            s.series_name as seriesName,
+            se.display_title as seasonTitle,
+            d.division_name as divisionName,
+            d.platform_code as platformCode,
+            d.registration_mode as registrationMode,
+            d.game_mode as gameMode,
+            d.lineup_min_count as lineupMinCount,
+            d.lineup_max_count as lineupMaxCount,
+            d.max_person_count as maxPersonCount,
+            (select count(1) from basket_personal_registration pr2
+              where pr2.division_id = d.id and pr2.registration_status = 'APPROVED' and pr2.is_delete = 0) as approvedPersonCount,
+            case when d.max_person_count is null then null
+                 else greatest(d.max_person_count - (select count(1) from basket_personal_registration pr3
+                   where pr3.division_id = d.id and pr3.registration_status = 'APPROVED' and pr3.is_delete = 0), 0)
+            end as remainingPersonCount,
+            d.registration_start_time as registrationStartTime,
+            d.registration_end_time as registrationEndTime,
+            d.match_start_time as matchStartTime,
+            d.match_end_time as matchEndTime,
+            mr.registration_status as myRegistrationStatus
+        from basket_division d
+        inner join basket_season se on se.id = d.season_id and se.is_delete = 0 and se.publish_status = 'PUBLISHED'
+        inner join basket_series s on s.id = se.series_id and s.is_delete = 0
+        left join basket_personal_registration mr on mr.division_id = d.id and mr.player_id = #{playerId}
+            and mr.is_delete = 0 and mr.active_unique_key is not null
+        where d.is_delete = 0
+          and d.division_status = 'REGISTRATION_OPEN'
+          and d.registration_mode = 'PERSONAL'
+        order by d.sort_order asc, d.id desc
+    </select>
+
+    <select id="selectMyPersonalRegistrations" resultType="com.zhs.response.v4.V4MyPersonalRegistrationResp">
+        select
+            pr.id as personalRegistrationId,
+            pr.season_id as seasonId,
+            pr.division_id as divisionId,
+            se.display_title as seasonTitle,
+            d.division_name as divisionName,
+            d.platform_code as platformCode,
+            pr.preferred_position as preferredPosition,
+            pr.registration_status as registrationStatus,
+            pr.submit_time as submitTime,
+            pr.approved_time as approvedTime,
+            pr.reject_reason as rejectReason,
+            pr.assigned_draw_team_id as assignedDrawTeamId,
+            pr.converted_registration_id as convertedRegistrationId
+        from basket_personal_registration pr
+        left join basket_season se on se.id = pr.season_id and se.is_delete = 0
+        left join basket_division d on d.id = pr.division_id and d.is_delete = 0
+        where pr.is_delete = 0 and pr.user_id = #{memberId}
+        order by pr.update_time desc, pr.id desc
+    </select>
+
+</mapper>

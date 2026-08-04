@@ -18,6 +18,8 @@ public interface BasketEventTeamMapper {
 
     List<BasketEventTeam> selectActiveByDivisionId(@Param("divisionId") Long divisionId);
 
+    int countActiveByDivisionId(@Param("divisionId") Long divisionId);
+
     int insert(BasketEventTeam entity);
 
     int updateById(BasketEventTeam entity);

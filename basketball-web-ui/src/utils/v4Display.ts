@@ -19,13 +19,35 @@ export function v4PlatformLabel(code: string | null | undefined): string {
   switch ((code || '').toUpperCase()) {
     case 'PC':
       return 'PC'
+    case 'PS_XBOX':
+      return 'PS/Xbox'
     case 'PS':
-      return 'PS'
+      return 'PS（历史）'
     case 'XBOX':
-      return 'Xbox'
+      return 'Xbox（历史）'
     default:
       return code || '--'
   }
+}
+
+export function v4GameModeLabel(code: string | null | undefined): string {
+  switch ((code || '').toUpperCase()) {
+    case 'FIVE_V_FIVE':
+      return '5V5'
+    case 'THREE_V_THREE':
+      return '3V3'
+    default:
+      // 历史数据兼容：未返回 gameMode 时视为 FIVE_V_FIVE
+      if (!code) return '5V5'
+      return code
+  }
+}
+
+export function v4RosterRuleText(min?: number | null, max?: number | null, gameMode?: string | null): string {
+  const mode = (gameMode || 'FIVE_V_FIVE').toUpperCase()
+  const lo = min ?? (mode === 'THREE_V_THREE' ? 3 : 5)
+  const hi = max ?? 8
+  return `阵容 ${lo}～${hi} 人`
 }
 
 export function v4MatchStatusLabel(status: string | null | undefined): string {

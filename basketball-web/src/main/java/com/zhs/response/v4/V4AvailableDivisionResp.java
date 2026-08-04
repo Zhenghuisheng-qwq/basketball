@@ -11,6 +11,10 @@ public class V4AvailableDivisionResp {
     private String seasonTitle;
     private String divisionName;
     private String platformCode;
+    private String registrationMode;
+    private String gameMode;
+    private Integer lineupMinCount;
+    private Integer lineupMaxCount;
     private Date registrationStartTime;
     private Date registrationEndTime;
     private Date matchStartTime;

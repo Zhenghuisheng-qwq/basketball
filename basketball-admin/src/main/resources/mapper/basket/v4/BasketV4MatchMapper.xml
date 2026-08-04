@@ -163,4 +163,14 @@
         order by match_time asc, id asc
     </select>
 
+    <select id="countByDivisionId" resultType="int">
+        select count(1) from basket_match
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
+    <select id="countByDivisionIdAndStageCode" resultType="int">
+        select count(1) from basket_match
+        where division_id = #{divisionId} and stage_code = #{stageCode} and is_delete = 0
+    </select>
+
 </mapper>

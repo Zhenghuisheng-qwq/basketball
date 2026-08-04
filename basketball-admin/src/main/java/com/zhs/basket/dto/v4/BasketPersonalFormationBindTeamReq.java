@@ -1,0 +1,8 @@
+package com.zhs.basket.dto.v4;
+
+import lombok.Data;
+
+@Data
+public class BasketPersonalFormationBindTeamReq {
+    private Long longTermTeamId;
+}

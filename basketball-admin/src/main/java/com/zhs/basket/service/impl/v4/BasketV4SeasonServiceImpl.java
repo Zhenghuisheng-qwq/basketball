@@ -70,8 +70,12 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
 
         BasketSeason entity = new BasketSeason();
         BeanUtils.copyBeanProp(entity, req);
-        entity.setRegistrationMode(RegistrationModeEnum.TEAM.getCode());
-        entity.setFormatType(FormatTypeEnum.REGULAR_ROUND_ROBIN.getCode());
+        if (StringUtils.isEmpty(entity.getRegistrationMode())) {
+            entity.setRegistrationMode(RegistrationModeEnum.TEAM.getCode());
+        }
+        if (StringUtils.isEmpty(entity.getFormatType())) {
+            entity.setFormatType(FormatTypeEnum.REGULAR_ROUND_ROBIN.getCode());
+        }
         entity.setPublishStatus(PublishStatusEnum.DRAFT.getCode());
         entity.setSeasonStatus(SeasonStatusEnum.NOT_STARTED.getCode());
         entity.setCreateTime(new Date());
@@ -236,14 +240,15 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
         if (StringUtils.isEmpty(mode)) {
             return;
         }
-        if (RegistrationModeEnum.PERSONAL.getCode().equals(mode)) {
-            throw new ServiceException("PERSONAL 个人报名暂未开放");
-        }
-        if (!RegistrationModeEnum.TEAM.getCode().equals(mode)) {
-            throw new ServiceException("registrationMode 当前仅支持 TEAM");
+        if (!RegistrationModeEnum.TEAM.getCode().equals(mode)
+                && !RegistrationModeEnum.PERSONAL.getCode().equals(mode)) {
+            throw new ServiceException("registrationMode 仅支持 TEAM 或 PERSONAL");
         }
     }
 
+    /**
+     * Season.format_type 为过渡字段，仅作创建 Division 时的默认参考，不是最终执行规则。
+     */
     private void validateFormatType(String formatType) {
         if (StringUtils.isEmpty(formatType)) {
             return;

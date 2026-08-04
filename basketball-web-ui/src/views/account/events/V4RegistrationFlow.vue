@@ -16,7 +16,7 @@ import {
 } from '@/api/v4PlayerEvents'
 import type { V4AvailableDivision } from '@/api/types/v4PlayerEvents'
 import { useTeamStore } from '@/stores/team'
-import { v4PlatformLabel } from '@/utils/v4Display'
+import { v4PlatformLabel, v4GameModeLabel, v4RosterRuleText } from '@/utils/v4Display'
 import { v4RegistrationStatusLabel } from '@/utils/v4AccountEventsMappers'
 
 const route = useRoute()
@@ -31,7 +31,9 @@ const division = ref<V4AvailableDivision | null>(null)
 const selectedPlayerIds = ref<string[]>([])
 const registrationId = ref('')
 
-const divisionId = computed(() => String(route.params.divisionId || ''))
+const rosterMin = computed(() => division.value?.lineupMinCount ?? (division.value?.gameMode === 'THREE_V_THREE' ? 3 : 5))
+const rosterMax = computed(() => division.value?.lineupMaxCount ?? 8)
+const rosterRuleText = computed(() => v4RosterRuleText(rosterMin.value, rosterMax.value, division.value?.gameMode))
 const isReadonly = computed(() => {
   const status = (division.value?.myRegistrationStatus || '').toUpperCase()
   return status === 'PENDING_REVIEW' || status === 'APPROVED' || status === 'CANCELLED'
@@ -108,8 +110,12 @@ async function handleSave() {
     ElMessage.warning('无有效队长授权')
     return
   }
-  if (selectedPlayerIds.value.length < 5) {
-    ElMessage.warning('阵容至少 5 人')
+  if (selectedPlayerIds.value.length < rosterMin.value) {
+    ElMessage.warning(`阵容至少 ${rosterMin.value} 人`)
+    return
+  }
+  if (selectedPlayerIds.value.length > rosterMax.value) {
+    ElMessage.warning(`阵容最多 ${rosterMax.value} 人`)
     return
   }
   saving.value = true
@@ -187,7 +193,8 @@ onMounted(() => {
     <template v-else-if="division">
       <AccountPanel title="赛事信息">
         <p>{{ division.seriesName }} · {{ division.seasonTitle }}</p>
-        <p>{{ division.divisionName }} · {{ v4PlatformLabel(division.platformCode) }}</p>
+        <p>{{ division.divisionName }} · {{ v4PlatformLabel(division.platformCode) }} · {{ v4GameModeLabel(division.gameMode) }}</p>
+        <p class="v4-reg-hint">{{ rosterRuleText }}</p>
         <p v-if="division.cannotRegisterReason && !division.canRegister" class="v4-reg-hint">{{ division.cannotRegisterReason }}</p>
       </AccountPanel>
 

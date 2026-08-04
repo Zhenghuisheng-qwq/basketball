@@ -42,7 +42,97 @@ const GENERATE_STATUS_LABELS: Record<string, string> = {
 
 const REGISTRATION_MODE_LABELS: Record<string, string> = {
   TEAM: '球队报名',
-  PERSONAL: '个人报名（暂未开放）'
+  PERSONAL: '个人报名'
+}
+
+const PLATFORM_CODE_LABELS: Record<string, string> = {
+  PC: 'PC',
+  PS_XBOX: 'PS/Xbox',
+  PS: 'PS（历史）',
+  XBOX: 'Xbox（历史）'
+}
+
+const GAME_MODE_LABELS: Record<string, string> = {
+  FIVE_V_FIVE: '5V5',
+  THREE_V_THREE: '3V3'
+}
+
+const SNAPSHOT_STATUS_LABELS: Record<string, string> = {
+  DRAFT: '草稿',
+  LOCKED: '已锁定',
+  IN_USE: '使用中',
+  ARCHIVED: '已归档'
+}
+
+const PERSONAL_REGISTRATION_STATUS_LABELS: Record<string, string> = {
+  DRAFT: '草稿',
+  PENDING_REVIEW: '待审核',
+  APPROVED: '已通过',
+  REJECTED: '已驳回',
+  WITHDRAWN: '已撤回',
+  ASSIGNED: '已分配',
+  CONVERTED: '已转换'
+}
+
+const FORMATION_STATUS_LABELS: Record<string, string> = {
+  DRAFT: '草稿',
+  CAPTAIN_ASSIGNED: '已指定队长',
+  TEAM_FORMING: '组队中',
+  READY_TO_CONFIRM: '待确认',
+  CONFIRMED: '已确认',
+  CONVERTED: '已转换',
+  CANCELLED: '已取消'
+}
+
+const DRAW_BATCH_STATUS_LABELS: Record<string, string> = {
+  DRAFT: '草稿',
+  CONFIRMED: '已确认',
+  CANCELLED: '已取消',
+  CONVERTED: '已转换'
+}
+
+const GROUPING_STATUS_LABELS: Record<string, string> = {
+  DRAFT: '草稿',
+  LOCKED: '已锁定',
+  CANCELLED: '已取消'
+}
+
+const STAGE_TYPE_LABELS: Record<string, string> = {
+  REGULAR: '常规赛',
+  GROUP: '小组赛',
+  KNOCKOUT: '淘汰赛',
+  SEMI_FINAL: '半决赛',
+  FINAL: '总决赛',
+  CUSTOM: '自定义'
+}
+
+const COMPETITION_FORMAT_LABELS: Record<string, string> = {
+  ROUND_ROBIN: '循环赛',
+  SINGLE_ELIMINATION: '单败淘汰',
+  MANUAL: '人工安排'
+}
+
+const GROUPING_MODE_LABELS: Record<string, string> = {
+  NONE: '无分组',
+  OFFLINE_RANDOM_RESULT: '线下抽签结果',
+  MANUAL: '人工分组',
+  SEEDED: '种子分组'
+}
+
+const ADVANCEMENT_TYPE_LABELS: Record<string, string> = {
+  NONE: '无晋级',
+  OVERALL_TOP_N: '总排名前N',
+  GROUP_TOP_N: '小组前N',
+  SERIES_WINNER: '系列赛胜者',
+  MANUAL: '人工晋级'
+}
+
+const TIE_BREAK_RULE_LABELS: Record<string, string> = {
+  HEAD_TO_HEAD: '相互战绩',
+  WIN_COUNT: '胜场数',
+  POINT_DIFFERENCE: '净胜分',
+  TOTAL_POINTS: '总得分',
+  MANUAL: '人工裁定'
 }
 
 const FORMAT_TYPE_LABELS: Record<string, string> = {
@@ -131,6 +221,60 @@ export function v4RegistrationModeLabel(mode?: string | null): string {
   return lookup(REGISTRATION_MODE_LABELS, mode)
 }
 
+export function v4PlatformLabel(code?: string | null): string {
+  return lookup(PLATFORM_CODE_LABELS, code, code || '-')
+}
+
+export function v4GameModeLabel(code?: string | null): string {
+  return lookup(GAME_MODE_LABELS, code, code || '-')
+}
+
+export function v4SnapshotStatusLabel(status?: string | null): string {
+  return lookup(SNAPSHOT_STATUS_LABELS, status, status || '-')
+}
+
+export function v4PersonalRegistrationStatusLabel(status?: string | null): string {
+  return lookup(PERSONAL_REGISTRATION_STATUS_LABELS, status)
+}
+
+export function v4FormationStatusLabel(status?: string | null): string {
+  return lookup(FORMATION_STATUS_LABELS, status)
+}
+
+export function v4DrawBatchStatusLabel(status?: string | null): string {
+  return lookup(DRAW_BATCH_STATUS_LABELS, status)
+}
+
+export function v4GroupingStatusLabel(status?: string | null): string {
+  return lookup(GROUPING_STATUS_LABELS, status)
+}
+
+export function v4StageTypeLabel(type?: string | null): string {
+  return lookup(STAGE_TYPE_LABELS, type, type || '-')
+}
+
+export function v4CompetitionFormatLabel(format?: string | null): string {
+  return lookup(COMPETITION_FORMAT_LABELS, format, format || '-')
+}
+
+export function v4GroupingModeLabel(mode?: string | null): string {
+  return lookup(GROUPING_MODE_LABELS, mode, mode || '-')
+}
+
+export function v4AdvancementTypeLabel(type?: string | null): string {
+  return lookup(ADVANCEMENT_TYPE_LABELS, type, type || '-')
+}
+
+export function v4TieBreakRuleLabel(code?: string | null): string {
+  return lookup(TIE_BREAK_RULE_LABELS, code, code || '-')
+}
+
+export function v4RosterRuleText(gameMode?: string | null): string {
+  const mode = (gameMode || 'FIVE_V_FIVE').toUpperCase()
+  if (mode === 'THREE_V_THREE') return '阵容人数 3～8 人'
+  return '阵容人数 5～8 人'
+}
+
 export function v4FormatTypeLabel(type?: string | null): string {
   return lookup(FORMAT_TYPE_LABELS, type)
 }
@@ -209,6 +353,38 @@ export function v4RegistrationStatusTagType(status?: string | null): TagType {
       return 'info'
     case 'DRAFT':
     default: return 'info'
+  }
+}
+
+export function v4PersonalRegistrationStatusTagType(status?: string | null): TagType {
+  switch ((status || '').toUpperCase()) {
+    case 'APPROVED':
+    case 'CONVERTED': return 'success'
+    case 'PENDING_REVIEW': return 'warning'
+    case 'REJECTED': return 'danger'
+    case 'ASSIGNED': return ''
+    case 'WITHDRAWN': return 'info'
+    default: return 'info'
+  }
+}
+
+export function v4FormationStatusTagType(status?: string | null): TagType {
+  switch ((status || '').toUpperCase()) {
+    case 'CONFIRMED':
+    case 'CONVERTED': return 'success'
+    case 'READY_TO_CONFIRM': return 'warning'
+    case 'CANCELLED': return 'info'
+    default: return ''
+  }
+}
+
+export function v4SnapshotStatusTagType(status?: string | null): TagType {
+  switch ((status || '').toUpperCase()) {
+    case 'LOCKED':
+    case 'IN_USE': return 'success'
+    case 'ARCHIVED': return 'info'
+    case 'DRAFT':
+    default: return 'warning'
   }
 }
 
@@ -291,6 +467,67 @@ export const V4_REGISTRATION_STATUS_FILTER_OPTIONS = [
   { label: '已驳回', value: 'REJECTED' },
   { label: '已撤回', value: 'WITHDRAWN' },
   { label: '已取消', value: 'CANCELLED' }
+] as const
+
+export const V4_PERSONAL_REGISTRATION_STATUS_FILTER_OPTIONS = [
+  { label: '草稿', value: 'DRAFT' },
+  { label: '待审核', value: 'PENDING_REVIEW' },
+  { label: '已通过', value: 'APPROVED' },
+  { label: '已驳回', value: 'REJECTED' },
+  { label: '已撤回', value: 'WITHDRAWN' },
+  { label: '已分配', value: 'ASSIGNED' },
+  { label: '已转换', value: 'CONVERTED' }
+] as const
+
+export const V4_DRAW_BATCH_STATUS_FILTER_OPTIONS = [
+  { label: '草稿', value: 'DRAFT' },
+  { label: '已确认', value: 'CONFIRMED' },
+  { label: '已取消', value: 'CANCELLED' },
+  { label: '已转换', value: 'CONVERTED' }
+] as const
+
+export const V4_GROUPING_STATUS_FILTER_OPTIONS = [
+  { label: '草稿', value: 'DRAFT' },
+  { label: '已锁定', value: 'LOCKED' },
+  { label: '已取消', value: 'CANCELLED' }
+] as const
+
+export const V4_STAGE_TYPE_OPTIONS = [
+  { label: '常规赛', value: 'REGULAR' },
+  { label: '小组赛', value: 'GROUP' },
+  { label: '淘汰赛', value: 'KNOCKOUT' },
+  { label: '半决赛', value: 'SEMI_FINAL' },
+  { label: '总决赛', value: 'FINAL' },
+  { label: '自定义', value: 'CUSTOM' }
+] as const
+
+export const V4_COMPETITION_FORMAT_OPTIONS = [
+  { label: '循环赛', value: 'ROUND_ROBIN' },
+  { label: '单败淘汰', value: 'SINGLE_ELIMINATION' },
+  { label: '人工安排', value: 'MANUAL' }
+] as const
+
+export const V4_GROUPING_MODE_OPTIONS = [
+  { label: '无分组', value: 'NONE' },
+  { label: '线下抽签结果', value: 'OFFLINE_RANDOM_RESULT' },
+  { label: '人工分组', value: 'MANUAL' },
+  { label: '种子分组', value: 'SEEDED' }
+] as const
+
+export const V4_ADVANCEMENT_TYPE_OPTIONS = [
+  { label: '无晋级', value: 'NONE' },
+  { label: '总排名前N', value: 'OVERALL_TOP_N' },
+  { label: '小组前N', value: 'GROUP_TOP_N' },
+  { label: '系列赛胜者', value: 'SERIES_WINNER' },
+  { label: '人工晋级', value: 'MANUAL' }
+] as const
+
+export const V4_TIE_BREAK_RULE_OPTIONS = [
+  { label: '相互战绩', value: 'HEAD_TO_HEAD' },
+  { label: '胜场数', value: 'WIN_COUNT' },
+  { label: '净胜分', value: 'POINT_DIFFERENCE' },
+  { label: '总得分', value: 'TOTAL_POINTS' },
+  { label: '人工裁定', value: 'MANUAL' }
 ] as const
 
 export const V4_MATCH_STATUS_FILTER_OPTIONS = [

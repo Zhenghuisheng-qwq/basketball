@@ -18,9 +18,18 @@ export interface BasketDivisionListVo {
   seriesCode?: string
   seriesName?: string
   platformCode?: string
+  platformName?: string
+  gameMode?: string
+  gameModeName?: string
   divisionName?: string
   registrationMode?: string
+  registrationModeName?: string
   formatType?: string
+  formatTemplateId?: number
+  formatTemplateName?: string
+  formatSnapshotId?: number
+  formatSnapshotStatus?: string
+  formatSummary?: string
   maxTeamCount?: number
   maxPersonCount?: number
   lineupMinCount?: number
@@ -38,9 +47,11 @@ export interface BasketDivisionListVo {
 export interface BasketDivisionCreateReq {
   seasonId?: number
   platformCode?: string
+  gameMode?: string
   divisionName?: string
   registrationMode?: string
   formatType?: string
+  formatTemplateId?: number
   maxTeamCount?: number
   maxPersonCount?: number
   lineupMinCount?: number

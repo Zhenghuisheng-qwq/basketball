@@ -130,4 +130,9 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <select id="countActiveByDivisionId" resultType="int">
+        select count(1) from basket_event_team
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
 </mapper>

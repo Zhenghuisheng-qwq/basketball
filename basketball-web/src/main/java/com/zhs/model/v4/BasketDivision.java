@@ -28,11 +28,17 @@ public class BasketDivision implements Serializable {
 
     private String platformCode;
 
+    private String gameMode;
+
     private String divisionName;
 
     private String registrationMode;
 
     private String formatType;
+
+    private Long formatTemplateId;
+
+    private Long formatSnapshotId;
 
     private Integer maxTeamCount;
 

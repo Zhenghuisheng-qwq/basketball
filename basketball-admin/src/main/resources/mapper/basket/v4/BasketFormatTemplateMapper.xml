@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketFormatTemplateMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketFormatTemplate" id="BasketFormatTemplateResult">
+        <id property="id" column="id"/>
+        <result property="seriesId" column="series_id"/>
+        <result property="templateCode" column="template_code"/>
+        <result property="templateName" column="template_name"/>
+        <result property="versionNo" column="version_no"/>
+        <result property="templateDescription" column="template_description"/>
+        <result property="enabled" column="enabled"/>
+        <result property="isDefault" column="is_default"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="BaseColumns">id, series_id, template_code, template_name, version_no, template_description, enabled, is_default, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketFormatTemplateResult">
+        select <include refid="BaseColumns"/> from basket_format_template
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByCodeVersion" resultMap="BasketFormatTemplateResult">
+        select <include refid="BaseColumns"/> from basket_format_template
+        where template_code = #{templateCode} and version_no = #{versionNo} and is_delete = 0
+        limit 1
+    </select>
+
+    <select id="selectEnabledBySeriesId" resultMap="BasketFormatTemplateResult">
+        select <include refid="BaseColumns"/> from basket_format_template
+        where is_delete = 0 and enabled = 1
+          and (series_id is null or series_id = #{seriesId})
+        order by is_default desc, id asc
+    </select>
+
+    <select id="selectDefaultBySeriesId" resultMap="BasketFormatTemplateResult">
+        select <include refid="BaseColumns"/> from basket_format_template
+        where is_delete = 0 and enabled = 1 and is_default = 1 and series_id = #{seriesId}
+        limit 1
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_format_template (
+            series_id, template_code, template_name, version_no, template_description,
+            enabled, is_default, create_time, update_time, is_delete
+        ) values (
+            #{seriesId}, #{templateCode}, #{templateName}, #{versionNo}, #{templateDescription},
+            #{enabled}, #{isDefault}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+</mapper>

@@ -11,9 +11,12 @@ public class BasketDivision {
     private Long id;
     private Long seasonId;
     private String platformCode;
+    private String gameMode;
     private String divisionName;
     private String registrationMode;
     private String formatType;
+    private Long formatTemplateId;
+    private Long formatSnapshotId;
     private Integer maxTeamCount;
     private Integer maxPersonCount;
     private Integer lineupMinCount;
