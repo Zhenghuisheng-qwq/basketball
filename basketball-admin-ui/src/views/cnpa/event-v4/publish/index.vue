@@ -97,6 +97,7 @@
         <el-table-column label="操作" width="300" fixed="right" class-name="small-padding fixed-width">
           <template #default="scope">
             <div class="table-actions">
+              <el-button link type="primary" @click="handleOpenSeasonDetail(scope.row)">赛季详情</el-button>
               <el-button link type="primary" @click="handleEditSeason(scope.row)" v-hasPermi="['basket:v4Season:edit']">编辑</el-button>
               <el-button link type="primary" @click="handleSelectSeason(scope.row)">查看赛区</el-button>
               <el-button link type="success" @click="handlePublishSeason(scope.row)" v-hasPermi="['basket:v4Season:publish']" v-if="scope.row.publishStatus === 'DRAFT'">发布</el-button>
@@ -228,6 +229,59 @@
       </template>
     </el-dialog>
 
+    <el-drawer v-model="seasonDetailOpen" :title="seasonDetailTitle" size="860px" append-to-body destroy-on-close>
+      <el-tabs v-model="seasonDetailTab" v-loading="seasonDetailLoading">
+        <el-tab-pane label="基本信息" name="basic">
+          <el-descriptions v-if="seasonDetail" :column="2" border class="mb8">
+            <el-descriptions-item label="赛事系列">{{ seasonDetail.seriesName }}</el-descriptions-item>
+            <el-descriptions-item label="年份">{{ seasonDetail.seasonYear }}</el-descriptions-item>
+            <el-descriptions-item label="赛季名称">{{ seasonDetail.seasonName }}</el-descriptions-item>
+            <el-descriptions-item label="前台标题">{{ seasonDetail.displayTitle }}</el-descriptions-item>
+            <el-descriptions-item label="报名方式">{{ v4RegistrationModeLabel(seasonDetail.registrationMode) }}</el-descriptions-item>
+            <el-descriptions-item label="基础赛制">{{ v4FormatTypeLabel(seasonDetail.formatType) }}</el-descriptions-item>
+            <el-descriptions-item label="报名时间" :span="2">{{ formatV4CompactRange(seasonDetail.registrationStartTime, seasonDetail.registrationEndTime) }}</el-descriptions-item>
+            <el-descriptions-item label="比赛时间" :span="2">{{ formatV4CompactRange(seasonDetail.matchStartTime, seasonDetail.matchEndTime) }}</el-descriptions-item>
+            <el-descriptions-item label="简介" :span="2">{{ seasonDetail.description || '-' }}</el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
+        <el-tab-pane label="赛区管理" name="division">
+          <el-table :data="seasonDetail?.divisions || []" border size="small">
+            <el-table-column label="平台" prop="platformCode" width="80" />
+            <el-table-column label="赛区名称" prop="divisionName" min-width="140" />
+            <el-table-column label="队伍上限" prop="maxTeamCount" width="90" align="center" />
+            <el-table-column label="状态" prop="divisionStatus" width="110" align="center">
+              <template #default="scope">{{ v4DivisionStatusLabel(scope.row.divisionStatus) }}</template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-if="!(seasonDetail?.divisions?.length)" description="尚未创建平台赛区" />
+        </el-tab-pane>
+        <el-tab-pane label="赛制规则" name="rules">
+          <el-alert type="info" :closable="false" show-icon class="mb8" title="League 动态竞赛流程（常规赛单循环 → 积分排名 → 季后赛）" />
+          <el-descriptions :column="1" border>
+            <el-descriptions-item label="常规赛">单循环（{{ seasonDetail?.formatType === 'REGULAR_ROUND_ROBIN' ? '已启用' : '未启用' }}）</el-descriptions-item>
+            <el-descriptions-item label="积分规则">胜/负/弃权积分、同分排序 — 后续开放配置</el-descriptions-item>
+            <el-descriptions-item label="季后赛">开启后排名前 N 晋级 — 后续开放配置</el-descriptions-item>
+            <el-descriptions-item label="对阵规则">单败淘汰 — 后续开放配置</el-descriptions-item>
+            <el-descriptions-item label="系列赛 BO">普通轮次 BO3、总决赛 BO5 — 后续开放配置</el-descriptions-item>
+            <el-descriptions-item label="三四名赛">后续开放配置</el-descriptions-item>
+            <el-descriptions-item label="规则快照">Division 发布时继承赛季规则并固化，避免模板变更影响进行中赛事</el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
+        <el-tab-pane label="发布设置" name="publish">
+          <el-descriptions v-if="seasonDetail" :column="1" border>
+            <el-descriptions-item label="发布状态">
+              <el-tag :type="v4PublishStatusTagType(seasonDetail.publishStatus)" size="small">{{ v4PublishStatusLabel(seasonDetail.publishStatus) }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="赛季状态">
+              <el-tag :type="v4SeasonStatusTagType(seasonDetail.seasonStatus)" size="small">{{ v4SeasonStatusLabel(seasonDetail.seasonStatus) }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="平台赛区数">{{ seasonDetail.divisionCount ?? seasonDetail.divisions?.length ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="操作提示">发布前请确认至少创建一个平台赛区；详细规则可在「赛制规则」页签查看，完整参数配置后续开放。</el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
+      </el-tabs>
+    </el-drawer>
+
     <el-dialog :title="divisionDialogTitle" v-model="divisionDialogOpen" width="720px" append-to-body>
       <el-form ref="divisionFormRef" :model="divisionForm" :rules="divisionRules" label-width="120px">
         <el-form-item label="赛季">
@@ -295,11 +349,13 @@ import { listV4Series, type BasketSeriesVo } from '@/api/cnpa/event-v4/series'
 import {
   addV4Season,
   delV4Season,
+  getV4Season,
   listV4Season,
   offlineV4Season,
   publishV4Season,
   updateV4Season,
   type BasketSeasonCreateReq,
+  type BasketSeasonDetailVo,
   type BasketSeasonListVo
 } from '@/api/cnpa/event-v4/season'
 import {
@@ -416,6 +472,12 @@ const divisionRules = {
   lineupMaxCount: [{ required: true, message: '请输入阵容最多人数', trigger: 'blur' }]
 }
 
+const seasonDetailOpen = ref(false)
+const seasonDetailTab = ref('basic')
+const seasonDetailTitle = ref('')
+const seasonDetailLoading = ref(false)
+const seasonDetail = ref<BasketSeasonDetailVo>()
+
 function resetSeasonForm() {
   Object.assign(seasonForm, {
     id: undefined,
@@ -504,6 +566,19 @@ function handleSelectSeason(row: BasketSeasonListVo) {
   divisionQuery.seasonId = row.id
   divisionQuery.pageNum = 1
   loadDivisionList()
+}
+
+async function handleOpenSeasonDetail(row: BasketSeasonListVo) {
+  seasonDetailTitle.value = `赛季详情 — ${row.displayTitle || row.seasonName}`
+  seasonDetailTab.value = 'basic'
+  seasonDetailOpen.value = true
+  seasonDetailLoading.value = true
+  try {
+    const res = await getV4Season(row.id!)
+    seasonDetail.value = res.data
+  } finally {
+    seasonDetailLoading.value = false
+  }
 }
 
 function handleSeasonSelect(row: BasketSeasonListVo | undefined) {

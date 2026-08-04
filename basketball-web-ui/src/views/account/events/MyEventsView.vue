@@ -220,6 +220,7 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
     />
 
     <AccountStatusBanner
+      v-if="activeTab !== 'schedule'"
       :title="bannerCopy.title"
       :description="bannerCopy.description"
       :status-text="bannerStatus.text"
@@ -277,7 +278,7 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
 
     <V4MySchedulePanel v-else-if="activeTab === 'schedule'" :active="activeTab === 'schedule'" />
 
-    <p class="my-events-footnote">{{ footerNote }}</p>
+    <p v-if="footerNote && activeTab !== 'schedule'" class="my-events-footnote">{{ footerNote }}</p>
   </div>
 </template>
 

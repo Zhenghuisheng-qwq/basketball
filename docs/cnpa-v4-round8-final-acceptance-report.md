@@ -363,3 +363,44 @@ python scripts/smoke_v4_r7_personal_center.py
 - **正式环境不迁移**这些测试数据
 - 如需清理 dev 数据，请**单独执行备份后清理 SQL**
 - **本轮未自动清理**测试数据
+
+---
+
+## 12. 空父级旧菜单隐藏记录
+
+> 日期：2026-08-04  
+> 问题：R8 隐藏旧子菜单后，部分父级菜单仍 `visible=0`，侧边栏出现空下拉。
+
+### 12.1 处理对象
+
+| 菜单名 | menu_id | 处理方式 | 说明 |
+|--------|---------|----------|------|
+| 报名与阵容 | 2204 | SQL 隐藏 `visible=1` | 子菜单均已 hidden，无可见子项 |
+| 数据统计 | 2154 | SQL 隐藏 `visible=1` | 子菜单均已 hidden，无可见子项 |
+| 阵容变更处理 | — | 前端 permission.ts 修复 | **非 sys_menu 记录**；由 `applyCnpaSidebarMenuStructure` 虚拟拆分生成 |
+
+### 12.2 SQL 脚本
+
+`docs/sql/cnpa-v4-round8-hide-empty-legacy-parent-menu.sql`
+
+- 先查询确认父级及 `visible_child_count`
+- 仅当 `visible_child_count = 0` 时隐藏父级
+- 执行后复核新版赛事管理 8 项菜单仍 `visible=0`
+
+### 12.3 前端补充修复
+
+`basketball-admin-ui/src/store/modules/permission.ts`
+
+- 跳过已 hidden 的「报名与阵容」父级，不再虚拟拆分
+- 拆分时忽略 `hidden` 子菜单
+- 无可见子项时不创建「阵容变更处理」虚拟父级
+- 报名侧无可见子项时将「报名与阵容」标记 hidden
+
+### 12.4 新版赛事管理 8 项菜单
+
+**未受影响**，8 项主菜单仍正常可见（parent_id=2152，visible=0）。
+
+### 12.5 dev 库执行结果
+
+- 隐藏父级：报名与阵容（2204）、数据统计（2154）
+- 阵容变更处理：库中无对应记录；依赖前端修复后不再空展示

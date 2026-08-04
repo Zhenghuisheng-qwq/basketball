@@ -116,7 +116,13 @@ export function getFooterNote(tab: string, roleMode?: MyEventsRoleMode): string 
     if (tab === 'applications') {
       return '报名申请与正式参赛关系分别展示；审核通过后同一赛事可同时出现在「我的报名」与「已参加赛事」。'
     }
+    if (tab === 'schedule') {
+      return '赛程数据来自您正式参加的赛事。比赛数据提交权限以具体赛区、参赛队伍及当前比赛权限为准。'
+    }
     return '队长权限只绑定具体赛事与当前球队；未授权赛事仅可查看不可报名。'
+  }
+  if (tab === 'schedule') {
+    return '赛程数据来自您正式参加的赛事。比赛数据提交权限以具体赛区、参赛队伍及当前比赛权限为准。'
   }
   return getFooterNoteLegacy(tab)
 }

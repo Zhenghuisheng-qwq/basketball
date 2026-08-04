@@ -6,18 +6,25 @@
         select
             m.id as matchId,
             m.season_id as seasonId,
+            se.season_name as seasonCode,
             se.display_title as seasonTitle,
+            s.id as seriesId,
+            s.series_code as seriesCode,
+            s.series_name as seriesName,
             m.division_id as divisionId,
             d.division_name as divisionName,
             m.platform_code as platformCode,
+            m.stage_code as stageCode,
             m.round_no as roundNo,
             m.match_no as matchNo,
             m.match_time as matchTime,
             m.home_event_team_id as homeEventTeamId,
             ht.team_name_snapshot as homeTeamName,
+            ht.team_short_name as homeTeamShortName,
             ht.team_logo_file_id as homeTeamLogoFileId,
             m.away_event_team_id as awayEventTeamId,
             at.team_name_snapshot as awayTeamName,
+            at.team_short_name as awayTeamShortName,
             at.team_logo_file_id as awayTeamLogoFileId,
             case when ep_home.id is not null or et_cap_home.id is not null then m.home_event_team_id
                  when ep_away.id is not null or et_cap_away.id is not null then m.away_event_team_id
@@ -25,6 +32,9 @@
             case when ep_home.id is not null or et_cap_home.id is not null then m.away_event_team_id
                  when ep_away.id is not null or et_cap_away.id is not null then m.home_event_team_id
                  else null end as opponentEventTeamId,
+            case when ep_home.id is not null or et_cap_home.id is not null then 'HOME'
+                 when ep_away.id is not null or et_cap_away.id is not null then 'AWAY'
+                 else null end as currentSide,
             m.match_status as matchStatus,
             m.publish_status as publishStatus,
             m.home_score as homeScore,
@@ -37,6 +47,7 @@
             os.submission_status as opponentSubmissionStatus
         from basket_match m
         join basket_season se on se.id = m.season_id and se.is_delete = 0
+        join basket_series s on s.id = se.series_id and s.is_delete = 0
         join basket_division d on d.id = m.division_id and d.is_delete = 0
         left join basket_event_team ht on ht.id = m.home_event_team_id and ht.is_delete = 0
         left join basket_event_team at on at.id = m.away_event_team_id and at.is_delete = 0

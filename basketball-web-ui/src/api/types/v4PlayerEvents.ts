@@ -57,24 +57,43 @@ export interface V4MyEvent {
   pendingSubmissionCount?: number
 }
 
+export interface V4MyScheduleSummary {
+  upcomingCount?: number
+  pendingSubmitCount?: number
+  reviewingCount?: number
+  finishedCount?: number
+  totalCount?: number
+}
+
 export interface V4MyScheduleItem {
   matchId: string
   seasonId?: string
+  seasonCode?: string
   seasonTitle?: string
+  seriesId?: string
+  seriesCode?: string
+  seriesName?: string
   divisionId?: string
+  divisionCode?: string
   divisionName?: string
   platformCode?: string
+  stageCode?: string
+  stageName?: string
   roundNo?: number
+  roundName?: string
   matchNo?: string
   matchTime?: string
   homeEventTeamId?: string
   homeTeamName?: string
+  homeTeamShortName?: string
   homeTeamLogoFileId?: string
   awayEventTeamId?: string
   awayTeamName?: string
+  awayTeamShortName?: string
   awayTeamLogoFileId?: string
   myEventTeamId?: string
   opponentEventTeamId?: string
+  currentSide?: string
   homeScore?: number
   awayScore?: number
   matchStatus?: string
@@ -84,7 +103,19 @@ export interface V4MyScheduleItem {
   opponentSubmissionStatus?: string
   canSubmit?: boolean
   canSubmitData?: boolean
+  canEditSubmission?: boolean
+  canViewSubmission?: boolean
   cannotSubmitReason?: string
+  userActionType?: string
+  userActionText?: string
+  latestVersionNo?: number
+  latestAuditRemark?: string
+  latestRejectReason?: string
+}
+
+export interface V4MySchedulePage {
+  summary?: V4MyScheduleSummary
+  items?: V4MyScheduleItem[]
 }
 
 export interface V4RegistrationSaveReq {

@@ -4,7 +4,7 @@ import type {
   V4AvailableDivision,
   V4MyEvent,
   V4MyRegistration,
-  V4MyScheduleItem,
+  V4MySchedulePage,
   V4RegistrationIdReq,
   V4RegistrationSaveReq,
 } from '@/api/types/v4PlayerEvents'
@@ -44,5 +44,5 @@ export function getV4MySchedule(params?: {
   includeFinished?: boolean
   onlyPendingSubmit?: boolean
 }) {
-  return request.get<any, ApiResult<V4MyScheduleItem[]>>('/basket/v4/player/my-schedule', { params })
+  return request.get<any, ApiResult<V4MySchedulePage>>('/basket/v4/player/my-schedule', { params })
 }

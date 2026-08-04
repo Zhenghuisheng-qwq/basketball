@@ -1,10 +1,8 @@
 package com.zhs.service.v4;
 
-import com.zhs.response.v4.V4MyScheduleResp;
-
-import java.util.List;
+import com.zhs.response.v4.V4MySchedulePageResp;
 
 public interface IBasketV4PlayerMyScheduleService {
-    List<V4MyScheduleResp> listMySchedule(Long seasonId, Long divisionId, String status,
-                                          Boolean includeFinished, Boolean onlyPendingSubmit);
+    V4MySchedulePageResp listMySchedule(Long seasonId, Long divisionId, String status,
+                                        Boolean includeFinished, Boolean onlyPendingSubmit);
 }

@@ -1,9 +1,20 @@
 <template>
   <div class="app-container partner-manage-page">
-    <SupportRecordPanel />
+    <el-tabs v-model="activeTab">
+      <el-tab-pane label="合作伙伴" name="partner" lazy>
+        <PartnerPanel />
+      </el-tab-pane>
+      <el-tab-pane label="支持记录" name="support" lazy>
+        <SupportRecordPanel />
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
 <script setup lang="ts" name="BasketPartner">
+import { ref } from 'vue'
+import PartnerPanel from './PartnerPanel.vue'
 import SupportRecordPanel from './SupportRecordPanel.vue'
+
+const activeTab = ref('partner')
 </script>
