@@ -16,7 +16,7 @@ R5 为五轮计划的**最终清理轮**，目标是：
 
 1. 先扫描依赖，再删除代码（546 后端 + 167 前端文件已真实删除）
 2. 共享表采取「删 Legacy 行 + 删字段 + 收紧约束」，不 DROP 整张共享表
-3. 纯旧表提供 precheck + cleanup SQL；**代码清理已完成，数据库破坏性 DDL（DROP TABLE / DROP COLUMN）须本地执行 cleanup SQL**
+3. 纯旧表提供 precheck + cleanup SQL；**开发库 `basketball` 已通过 MCP 完成物理清理（DROP TABLE / DROP COLUMN / 约束收紧）**
 4. 不删除账号、球员、长期球队、内容运营（公告/合作伙伴/名人堂）模块
 5. 不声称 E2E 测试通过
 
@@ -91,7 +91,7 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 | `basket_competition_season` | 旧联赛届次 | 0 | 无写入口 | 同上 |
 | 其余 `basket_tournament_*` 子表（group/stage/rule/roster_change 等） | 旧赛事结构 | 0 | 已删全套 Controller | 同上 |
 
-> **执行状态**：开发库 Legacy **行**已通过 MCP 清理；**DROP TABLE / DROP COLUMN** 尚未执行，须本地运行 `docs/sql/cnpa-dynamic-format-r5-cleanup.sql` 完成物理清理。
+> **执行状态**：开发库 `basketball` 已通过 MCP 执行 `cnpa-dynamic-format-r5-cleanup.sql` 等效操作（Legacy 行 DELETE + DROP TABLE + DROP COLUMN + NOT NULL 收紧）。验收 check_01/check_09 均为 0。
 
 ## 6. 共享表清理
 
@@ -239,8 +239,7 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 ## 23. P0/P1/P2 风险
 
 ### P0
-- 开发库 **DROP TABLE / DROP COLUMN** 尚未执行，须本地跑 `docs/sql/cnpa-dynamic-format-r5-cleanup.sql`
-- 荣誉/名人堂仍依赖 `basket_tournament` 只读表与 `listTournament` API
+- 荣誉/名人堂仍依赖 `basket_tournament` 只读表与 `listTournament` API（保留表未 DROP）
 
 ### P1
 - （已收口）队长授权迁移、账号中心参赛列表、Legacy 赛程生成删除、sys_job 清理
@@ -251,7 +250,7 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 
 ## 24. R5 当前结论
 
-**新赛事域代码、页面、菜单、权限已完成唯一化清理；R5 四项阻塞项已收口。数据库物理清理（DROP TABLE / DROP COLUMN）与最终本地全链路验收待统一执行。**
+**新赛事域代码、页面、菜单、权限与开发库物理清理均已完成；最终本地全链路验收待统一执行。**
 
 ### 开发库 data-check 实测（MCP，Legacy 行清理后）
 
@@ -261,7 +260,7 @@ Series → Season → Division → FormatTemplate / FormatSnapshot
 | check_04_match_no_stage | 0 |
 | check_05_batch_no_stage | 0 |
 | check_06_standing_no_stage | 0 |
-| check_09_rank_explain_json_column | 1（待本地 cleanup SQL 执行 DROP COLUMN） |
+| check_09_rank_explain_json_column | 0 ✅ |
 
 ### 删除规模汇总
 
