@@ -281,6 +281,19 @@ DELETE FROM sys_menu WHERE menu_id = 2313;
 UPDATE basket_format_template SET is_delete=1, enabled=0
 WHERE template_code='V4_LEGACY_ROUND_ROBIN_V1' AND is_delete=0;
 
+
+-- ---------------------------------------------------------------------------
+-- 12. 荣誉表 tournament_id 迁移为 series_id（V4 系列）
+-- ---------------------------------------------------------------------------
+ALTER TABLE basket_honor_record CHANGE COLUMN tournament_id series_id BIGINT DEFAULT NULL COMMENT '赛事系列ID';
+
+-- ---------------------------------------------------------------------------
+-- 13. DROP 旧 Tournament 只读域（荣誉/纪律已迁移至 basket_season / basket_series）
+-- ---------------------------------------------------------------------------
+DROP TABLE IF EXISTS basket_tournament_admin_scope;
+DROP TABLE IF EXISTS basket_tournament_season;
+DROP TABLE IF EXISTS basket_tournament;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 SELECT 'cleanup_done' AS step, NOW() AS finished_at;

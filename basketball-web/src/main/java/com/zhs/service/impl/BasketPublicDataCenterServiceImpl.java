@@ -3,21 +3,25 @@ package com.zhs.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zhs.dao.BasketPlayerRankDao;
 import com.zhs.dao.BasketTeamRankDao;
+import com.zhs.dao.v4.BasketEventTeamDao;
+import com.zhs.dao.v4.BasketV4MatchDao;
 import com.zhs.enums.PublicPlayerRankTypeEnum;
 import com.zhs.enums.PublicTeamRankTypeEnum;
-import com.zhs.model.BasketCompetitionSeason;
+import com.zhs.enums.v4.MatchPublishStatusEnum;
+import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketPlayerRank;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamRank;
-import com.zhs.model.BasketTournament;
-import com.zhs.model.BasketTournamentSeason;
+import com.zhs.model.v4.BasketEventTeam;
+import com.zhs.model.v4.BasketSeason;
+import com.zhs.model.v4.BasketSeries;
+import com.zhs.model.v4.BasketV4Match;
 import com.zhs.response.publicapi.PublicPlayerRankItemVo;
 import com.zhs.response.publicapi.PublicSeasonItemVo;
 import com.zhs.response.publicapi.PublicSeasonSummaryVo;
 import com.zhs.response.publicapi.PublicTeamRankItemVo;
 import com.zhs.service.IBasketPublicDataCenterService;
-import com.zhs.service.IBasketPublicSeasonStatService;
 import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicSupport;
 import jakarta.annotation.Resource;
@@ -43,51 +47,38 @@ public class BasketPublicDataCenterServiceImpl implements IBasketPublicDataCente
     @Resource
     private BasketPublicSupport publicSupport;
     @Resource
-    private IBasketPublicSeasonStatService seasonStatService;
+    private BasketV4MatchDao matchDao;
+    @Resource
+    private BasketEventTeamDao eventTeamDao;
 
     @Override
     public List<PublicSeasonItemVo> listSeasons() {
-        List<BasketTournamentSeason> seasons = publicSupport.listPublicSeasons();
+        List<BasketSeason> seasons = publicSupport.listPublicSeasons();
         if (CollectionUtils.isEmpty(seasons)) {
             return Collections.emptyList();
         }
-        Set<Long> tournamentIds = seasons.stream()
-                .map(BasketTournamentSeason::getTournamentId)
+        Set<Long> seriesIds = seasons.stream()
+                .map(BasketSeason::getSeriesId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        Map<Long, BasketTournament> tournamentMap = publicSupport.loadTournamentMap(tournamentIds);
-        Set<Long> competitionSeasonIds = tournamentMap.values().stream()
-                .map(BasketTournament::getCompetitionSeasonId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        Map<Long, BasketCompetitionSeason> competitionSeasonMap = publicSupport.loadCompetitionSeasonMap(competitionSeasonIds);
+        Map<Long, BasketSeries> seriesMap = publicSupport.loadSeriesMap(seriesIds);
         List<PublicSeasonItemVo> result = new ArrayList<>(seasons.size());
-        for (BasketTournamentSeason season : seasons) {
-            if (!tournamentMap.containsKey(season.getTournamentId())) {
+        for (BasketSeason season : seasons) {
+            if (!seriesMap.containsKey(season.getSeriesId())) {
                 continue;
             }
             PublicSeasonItemVo vo = new PublicSeasonItemVo();
             vo.setSeasonId(season.getId());
-            vo.setSeasonNo(season.getSeasonNo());
-            vo.setTournamentId(season.getTournamentId());
-            BasketTournament tournament = tournamentMap.get(season.getTournamentId());
-            vo.setTournamentName(tournament == null ? null : tournament.getTournamentName());
+            vo.setTournamentId(season.getSeriesId());
+            BasketSeries series = seriesMap.get(season.getSeriesId());
+            vo.setTournamentName(series == null ? null : series.getSeriesName());
             vo.setSeasonName(season.getSeasonName());
             vo.setSeasonYear(season.getSeasonYear() == null ? null : String.valueOf(season.getSeasonYear()));
             vo.setSeasonStatus(season.getSeasonStatus());
             vo.setRegistrationStartTime(season.getRegistrationStartTime());
             vo.setRegistrationEndTime(season.getRegistrationEndTime());
-            vo.setSeasonStartTime(season.getSeasonStartTime());
-            vo.setSeasonEndTime(season.getSeasonEndTime());
-            vo.setMaxTeamCount(season.getMaxTeamCount());
-            if (tournament != null && tournament.getCompetitionSeasonId() != null) {
-                vo.setCompetitionSeasonId(tournament.getCompetitionSeasonId());
-                BasketCompetitionSeason competitionSeason = competitionSeasonMap.get(tournament.getCompetitionSeasonId());
-                if (competitionSeason != null) {
-                    vo.setCompetitionSeasonName(competitionSeason.getSeasonName());
-                    vo.setCompetitionSeasonYear(competitionSeason.getSeasonYear());
-                }
-            }
+            vo.setSeasonStartTime(season.getMatchStartTime());
+            vo.setSeasonEndTime(season.getMatchEndTime());
             result.add(vo);
         }
         return result;
@@ -147,7 +138,24 @@ public class BasketPublicDataCenterServiceImpl implements IBasketPublicDataCente
         if (resolvedSeasonId == null) {
             return null;
         }
-        return seasonStatService.getSummary(resolvedSeasonId);
+        PublicSeasonSummaryVo summary = new PublicSeasonSummaryVo();
+        summary.setSeasonId(resolvedSeasonId);
+        long teamCount = eventTeamDao.selectCount(new LambdaQueryWrapper<BasketEventTeam>()
+                .eq(BasketEventTeam::getSeasonId, resolvedSeasonId)
+                .eq(BasketEventTeam::getIsDelete, BasketPublicConstants.NOT_DELETED));
+        long matchCount = matchDao.selectCount(new LambdaQueryWrapper<BasketV4Match>()
+                .eq(BasketV4Match::getSeasonId, resolvedSeasonId)
+                .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketV4Match::getPublishStatus, MatchPublishStatusEnum.PUBLISHED.getCode()));
+        long finishedCount = matchDao.selectCount(new LambdaQueryWrapper<BasketV4Match>()
+                .eq(BasketV4Match::getSeasonId, resolvedSeasonId)
+                .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketV4Match::getPublishStatus, MatchPublishStatusEnum.PUBLISHED.getCode())
+                .eq(BasketV4Match::getMatchStatus, MatchStatusEnum.FINISHED.getCode()));
+        summary.setTeamCount((int) teamCount);
+        summary.setMatchCount((int) matchCount);
+        summary.setFinishedMatchCount((int) finishedCount);
+        return summary;
     }
 
     public List<PublicTeamRankItemVo> toTeamRankVos(List<BasketTeamRank> ranks, PublicTeamRankTypeEnum typeEnum) {
@@ -220,7 +228,7 @@ public class BasketPublicDataCenterServiceImpl implements IBasketPublicDataCente
             publicSupport.requirePublicSeason(seasonId);
             return seasonId;
         }
-        BasketTournamentSeason current = publicSupport.findCurrentPublicSeason();
+        BasketSeason current = publicSupport.findCurrentPublicSeason();
         return current == null ? null : current.getId();
     }
 

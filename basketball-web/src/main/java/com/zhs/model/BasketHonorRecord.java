@@ -36,8 +36,8 @@ public class BasketHonorRecord implements Serializable {
 
 
     @JsonSerialize(using = ToStringSerializer.class)
-    @ApiModelProperty(value = "赛事主键")
-    private Long tournamentId;
+    @ApiModelProperty(value = "赛事系列主键")
+    private Long seriesId;
 
 
     @JsonSerialize(using = ToStringSerializer.class)

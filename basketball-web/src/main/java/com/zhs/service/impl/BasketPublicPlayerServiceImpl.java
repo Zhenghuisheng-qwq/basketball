@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.dao.BasketPlayerRankDao;
-import com.zhs.dao.BasketPlayerSeasonStatDao;
 import com.zhs.dao.v4.BasketEventPlayerDao;
 import com.zhs.dao.v4.BasketSeasonDao;
 import com.zhs.dao.v4.BasketV4MatchDao;
@@ -16,9 +15,7 @@ import com.zhs.enums.v4.PublishStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketPlayerRank;
-import com.zhs.model.BasketPlayerSeasonStat;
 import com.zhs.model.BasketTeam;
-import com.zhs.model.BasketTournamentSeason;
 import com.zhs.model.v4.BasketEventPlayer;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketV4Match;
@@ -48,8 +45,6 @@ import java.util.stream.Collectors;
 public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService {
 
     @Resource
-    private BasketPlayerSeasonStatDao playerSeasonStatDao;
-    @Resource
     private BasketV4MatchPlayerStatDao matchPlayerStatDao;
     @Resource
     private BasketV4MatchDao matchDao;
@@ -65,8 +60,6 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
     private BasketPublicHonorSupport honorSupport;
     @Resource
     private BasketPublicMatchServiceImpl matchService;
-    @Resource
-    private BasketPublicSeasonStatServiceImpl seasonStatService;
     @Resource
     private BasketPublicDataCenterServiceImpl dataCenterService;
 
@@ -117,22 +110,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
         if (seasonId != null) {
             publicSupport.requirePublicSeason(seasonId);
         }
-        LambdaQueryWrapper<BasketPlayerSeasonStat> wrapper = new LambdaQueryWrapper<BasketPlayerSeasonStat>()
-                .eq(BasketPlayerSeasonStat::getPlayerId, playerId)
-                .eq(BasketPlayerSeasonStat::getIsDelete, BasketPublicConstants.NOT_DELETED)
-                .eq(seasonId != null, BasketPlayerSeasonStat::getSeasonId, seasonId)
-                .orderByDesc(BasketPlayerSeasonStat::getSeasonId)
-                .orderByAsc(BasketPlayerSeasonStat::getStageId);
-        List<BasketPlayerSeasonStat> stats = playerSeasonStatDao.selectList(wrapper);
-        if (CollectionUtils.isEmpty(stats)) {
-            return Collections.emptyList();
-        }
-        Set<Long> publicSeasonIds = publicSupport.loadSeasonMap(stats.stream()
-                .map(BasketPlayerSeasonStat::getSeasonId).collect(Collectors.toSet())).keySet();
-        List<BasketPlayerSeasonStat> filtered = stats.stream()
-                .filter(s -> publicSeasonIds.contains(s.getSeasonId()))
-                .collect(Collectors.toList());
-        return seasonStatService.toPlayerStatVos(filtered);
+        return Collections.emptyList();
     }
 
     @Override
@@ -215,7 +193,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
         }
         Long resolvedSeasonId = seasonId;
         if (resolvedSeasonId == null) {
-            BasketTournamentSeason current = publicSupport.findCurrentPublicSeason();
+            BasketSeason current = publicSupport.findCurrentPublicSeason();
             if (current == null) {
                 return Collections.emptyList();
             }

@@ -28,9 +28,9 @@
                l.team_id as teamId,
                t.team_name as teamName,
                l.season_id as seasonId,
-               s.season_name as seasonName,
-               tm.tournament_name as tournamentName,
-               coalesce(nullif(trim(tm.tournament_name), ''), s.season_name) as eventName,
+               coalesce(s.display_title, s.season_name) as seasonName,
+               tm.series_name as tournamentName,
+               coalesce(nullif(trim(tm.series_name), ''), coalesce(s.display_title, s.season_name)) as eventName,
                l.action_type as actionType,
                l.before_status as beforeStatus,
                l.after_status as afterStatus,
@@ -46,8 +46,8 @@
                l.remark,
                l.create_time as createTime
         from basket_captain_grant_log l
-        left join basket_tournament_season s on s.id = l.season_id and s.is_delete = 0
-        left join basket_tournament tm on tm.id = s.tournament_id and tm.is_delete = 0
+        left join basket_season s on s.id = l.season_id and s.is_delete = 0
+        left join basket_series tm on tm.id = s.series_id and tm.is_delete = 0
         left join basket_team t on t.id = l.team_id and t.is_delete = 0
         where l.grant_id = #{grantId}
           and l.is_delete = 0

@@ -94,7 +94,7 @@
                d.revoke_reason as revokeReason, d.source_type as sourceType, d.idempotency_key as idempotencyKey,
                d.announcement_id as announcementId, d.create_time as createTime, d.update_time as updateTime, d.is_delete as isDelete
         from basket_discipline_record d
-        left join basket_tournament_season s on s.id = d.season_id and s.is_delete = 0
+        left join basket_season s on s.id = d.season_id and s.is_delete = 0
         left join basket_team t on t.id = d.team_id and t.is_delete = 0
         left join basket_player_profile p on p.id = d.player_id and p.is_delete = 0
         where d.id = #{id} and d.is_delete = 0
@@ -110,12 +110,12 @@
                d.effective_start_time as effectiveStartTime, d.effective_end_time as effectiveEndTime,
                d.decision_time as decisionTime, d.create_time as createTime
         from basket_discipline_record d
-        left join basket_tournament_season s on s.id = d.season_id and s.is_delete = 0
+        left join basket_season s on s.id = d.season_id and s.is_delete = 0
         left join basket_team t on t.id = d.team_id and t.is_delete = 0
         left join basket_player_profile p on p.id = d.player_id and p.is_delete = 0
         where d.is_delete = 0
         <if test="seasonId != null">and d.season_id = #{seasonId}</if>
-        <if test="tournamentId != null">and s.tournament_id = #{tournamentId}</if>
+        <if test="tournamentId != null">and s.series_id = #{tournamentId}</if>
         <if test="teamId != null">and d.team_id = #{teamId}</if>
         <if test="playerId != null">and d.player_id = #{playerId}</if>
         <if test="memberId != null">and d.member_id = #{memberId}</if>

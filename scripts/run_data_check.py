@@ -16,7 +16,6 @@ OUTPUT_DIR = ROOT / "scripts" / "output"
 
 # Checks that always return rows but are informational (not anomalies)
 STAT_CHECKS = {
-    "rank_explain_json 历史数据量",
     "Legacy Division 数量",
     "Legacy ScheduleBatch 数量",
     "Legacy Match 数量",

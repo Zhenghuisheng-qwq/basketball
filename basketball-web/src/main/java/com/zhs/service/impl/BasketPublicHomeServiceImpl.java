@@ -10,7 +10,6 @@ import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.enums.v4.PublishStatusEnum;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketV4Match;
-import com.zhs.model.BasketTournamentSeason;
 import com.zhs.response.publicapi.PublicHomeVo;
 import com.zhs.response.publicapi.PublicMatchItemVo;
 import com.zhs.response.publicapi.PublicPlayerRankItemVo;
@@ -21,7 +20,6 @@ import com.zhs.service.IBasketPublicBannerService;
 import com.zhs.service.IBasketPublicDataCenterService;
 import com.zhs.service.IBasketPublicHomeService;
 import com.zhs.service.IBasketPublicPartnerService;
-import com.zhs.service.IBasketPublicSeasonStatService;
 import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicSupport;
 import jakarta.annotation.Resource;
@@ -55,8 +53,6 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
     private BasketPublicMatchServiceImpl matchService;
     @Resource
     private IBasketPublicDataCenterService dataCenterService;
-    @Resource
-    private IBasketPublicSeasonStatService seasonStatService;
     @Resource
     private IBasketPublicBannerService bannerService;
     @Resource
@@ -157,11 +153,11 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
 
     @Override
     public PublicSeasonSummaryVo getStatSummary() {
-        BasketTournamentSeason season = publicSupport.findCurrentPublicSeason();
+        BasketSeason season = publicSupport.findCurrentPublicSeason();
         if (season == null) {
             return null;
         }
-        return seasonStatService.getSummary(season.getId());
+        return dataCenterService.getSeasonSummary(season.getId());
     }
 
     private int normalizeLimit(Integer limit) {

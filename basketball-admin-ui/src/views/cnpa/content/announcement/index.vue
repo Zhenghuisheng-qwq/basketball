@@ -177,8 +177,8 @@ import {
   untopAnnouncement,
   updateAnnouncement
 } from '@/api/basket/announcement'
-import { listSeasonByTournament } from '@/api/basket/season'
-import { listTournament } from '@/api/basket/tournament'
+import { listV4Series } from '@/api/cnpa/event-v4/series'
+import { listV4Season } from '@/api/cnpa/event-v4/season'
 import type {
   AnnouncementAddReq,
   AnnouncementDetail,
@@ -187,7 +187,9 @@ import type {
   AnnouncementRuleSupersedeReq,
   SeasonListItem,
   TournamentListItem
-} from '@/types'
+} import { listV4Series } from '@/api/cnpa/event-v4/series'
+import { listV4Season } from '@/api/cnpa/event-v4/season'
+from '@/types'
 import { ANNOUNCEMENT_CATEGORY_OPTIONS, ANNOUNCEMENT_STATUS_OPTIONS } from '@/types'
 
 const { proxy } = getCurrentInstance()
@@ -222,8 +224,8 @@ const form = ref<AnnouncementAddReq>({
 })
 
 function loadTournaments() {
-  listTournament({ pageNum: 1, pageSize: 500 }).then(res => {
-    tournamentOptions.value = res.rows || []
+  listV4Series().then(res => {
+    tournamentOptions.value = (res.data || []).map((s: any) => ({ id: s.id, tournamentName: s.seriesName }))
   })
 }
 
@@ -231,8 +233,8 @@ function loadFormSeasons() {
   form.value.seasonId = undefined
   formSeasonOptions.value = []
   if (!form.value.tournamentId) return
-  listSeasonByTournament(form.value.tournamentId).then(res => {
-    formSeasonOptions.value = res.data || []
+  listV4Season({ seriesId: form.value.tournamentId, pageNum: 1, pageSize: 500 }).then(res => {
+    formSeasonOptions.value = res.rows || []
   })
 }
 

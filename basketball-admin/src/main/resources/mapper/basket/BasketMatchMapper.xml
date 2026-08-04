@@ -67,11 +67,11 @@
         m.id,
         m.match_no as matchNo,
         m.season_id as seasonId,
-        s.season_name as seasonName,
+        coalesce(s.display_title, s.season_name) as seasonName,
         m.stage_id as stageId,
         st.stage_name as stageName,
         m.round_id as roundId,
-        r.round_name as roundName,
+        concat('R', m.round_no) as roundName,
         m.group_id as groupId,
         g.group_name as groupName,
         m.venue_id as venueId,
@@ -92,10 +92,9 @@
 
     <sql id="listJoins">
         from basket_match m
-        left join basket_tournament_season s on m.season_id = s.id and s.is_delete = 0
-        left join basket_tournament_stage st on m.stage_id = st.id and st.is_delete = 0
-        left join basket_tournament_round r on m.round_id = r.id and r.is_delete = 0
-        left join basket_tournament_group g on m.group_id = g.id and g.is_delete = 0
+        left join basket_season s on m.season_id = s.id and s.is_delete = 0
+        left join basket_division_stage st on m.stage_id = st.id and st.is_delete = 0
+        left join basket_division_group g on m.group_id = g.id and g.is_delete = 0
         left join basket_venue v on m.venue_id = v.id and v.is_delete = 0
         left join basket_team ht on m.home_team_id = ht.id and ht.is_delete = 0
         left join basket_team at on m.away_team_id = at.id and at.is_delete = 0
@@ -394,24 +393,24 @@
 
     <select id="selectScheduleDetailById" resultType="com.zhs.basket.vo.ScheduleMatchDetailVo">
         select m.id, m.match_no as matchNo, m.schedule_batch_id as scheduleBatchId, m.season_id as seasonId,
-               s.season_name as seasonName, tm.tournament_name as tournamentName, m.platform_code as platformCode,
+               coalesce(s.display_title, s.season_name) as seasonName, ser.series_name as tournamentName, m.platform_code as platformCode,
                m.stage_id as stageId, st.stage_name as stageName, m.round_no as roundNo,
                m.home_event_team_id as homeEventTeamId, m.away_event_team_id as awayEventTeamId,
-               coalesce(nullif(m.home_team_name_snapshot, ''), nullif(hp.display_name, ''), nullif(hp.team_name_snapshot, '')) as homeTeamName,
-               coalesce(nullif(m.away_team_name_snapshot, ''), nullif(ap.display_name, ''), nullif(ap.team_name_snapshot, '')) as awayTeamName,
+               coalesce(nullif(m.home_team_name_snapshot, ''), hp.event_team_name) as homeTeamName,
+               coalesce(nullif(m.away_team_name_snapshot, ''), ap.event_team_name) as awayTeamName,
                m.scheduled_start_time as scheduledStartTime, m.match_status as matchStatus,
                m.publish_status as publishStatus, m.home_score as homeScore, m.away_score as awayScore,
                m.rule_code as ruleCode, m.rule_version as ruleVersion, m.schedule_remark as scheduleRemark,
                case when m.home_event_team_id is null or m.away_event_team_id is null
-                         or coalesce(nullif(m.home_team_name_snapshot, ''), nullif(hp.display_name, ''), nullif(hp.team_name_snapshot, '')) is null
-                         or coalesce(nullif(m.away_team_name_snapshot, ''), nullif(ap.display_name, ''), nullif(ap.team_name_snapshot, '')) is null
+                         or coalesce(nullif(m.home_team_name_snapshot, ''), hp.event_team_name) is null
+                         or coalesce(nullif(m.away_team_name_snapshot, ''), ap.event_team_name) is null
                     then 1 else 0 end as dataAbnormal
         from basket_match m
-        left join basket_tournament_season s on m.season_id = s.id and s.is_delete = 0
-        left join basket_tournament tm on s.tournament_id = tm.id and tm.is_delete = 0
-        left join basket_tournament_stage st on m.stage_id = st.id and st.is_delete = 0
-        left join basket_team_season_profile hp on m.home_event_team_id = hp.id and hp.is_delete = 0
-        left join basket_team_season_profile ap on m.away_event_team_id = ap.id and ap.is_delete = 0
+        left join basket_season s on m.season_id = s.id and s.is_delete = 0
+        left join basket_series ser on ser.id = s.series_id and ser.is_delete = 0
+        left join basket_division_stage st on m.stage_id = st.id and st.is_delete = 0
+        left join basket_event_team hp on m.home_event_team_id = hp.id and hp.is_delete = 0
+        left join basket_event_team ap on m.away_event_team_id = ap.id and ap.is_delete = 0
         where m.id = #{id} and m.is_delete = 0
     </select>
 
@@ -478,26 +477,26 @@
 
     <select id="selectScheduleList" resultType="com.zhs.basket.vo.ScheduleMatchListVo">
         select m.id, m.match_no as matchNo, m.schedule_batch_id as scheduleBatchId, m.season_id as seasonId,
-               s.season_name as seasonName, tm.tournament_name as tournamentName, m.platform_code as platformCode,
+               coalesce(s.display_title, s.season_name) as seasonName, ser.series_name as tournamentName, m.platform_code as platformCode,
                m.stage_id as stageId, st.stage_name as stageName, m.round_no as roundNo,
                m.home_event_team_id as homeEventTeamId, m.away_event_team_id as awayEventTeamId,
-               coalesce(nullif(m.home_team_name_snapshot, ''), nullif(hp.display_name, ''), nullif(hp.team_name_snapshot, '')) as homeTeamName,
-               coalesce(nullif(m.away_team_name_snapshot, ''), nullif(ap.display_name, ''), nullif(ap.team_name_snapshot, '')) as awayTeamName,
+               coalesce(nullif(m.home_team_name_snapshot, ''), hp.event_team_name) as homeTeamName,
+               coalesce(nullif(m.away_team_name_snapshot, ''), ap.event_team_name) as awayTeamName,
                coalesce(m.home_team_logo_snapshot, '') as homeTeamLogoUrl,
                coalesce(m.away_team_logo_snapshot, '') as awayTeamLogoUrl,
                m.scheduled_start_time as scheduledStartTime, m.match_status as matchStatus,
                m.publish_status as publishStatus, m.home_score as homeScore, m.away_score as awayScore,
                m.rule_code as ruleCode, m.rule_version as ruleVersion, m.schedule_remark as scheduleRemark,
                case when m.home_event_team_id is null or m.away_event_team_id is null
-                         or coalesce(nullif(m.home_team_name_snapshot, ''), nullif(hp.display_name, ''), nullif(hp.team_name_snapshot, '')) is null
-                         or coalesce(nullif(m.away_team_name_snapshot, ''), nullif(ap.display_name, ''), nullif(ap.team_name_snapshot, '')) is null
+                         or coalesce(nullif(m.home_team_name_snapshot, ''), hp.event_team_name) is null
+                         or coalesce(nullif(m.away_team_name_snapshot, ''), ap.event_team_name) is null
                     then 1 else 0 end as dataAbnormal
         from basket_match m
-        left join basket_tournament_season s on m.season_id = s.id and s.is_delete = 0
-        left join basket_tournament tm on s.tournament_id = tm.id and tm.is_delete = 0
-        left join basket_tournament_stage st on m.stage_id = st.id and st.is_delete = 0
-        left join basket_team_season_profile hp on m.home_event_team_id = hp.id and hp.is_delete = 0
-        left join basket_team_season_profile ap on m.away_event_team_id = ap.id and ap.is_delete = 0
+        left join basket_season s on m.season_id = s.id and s.is_delete = 0
+        left join basket_series ser on ser.id = s.series_id and ser.is_delete = 0
+        left join basket_division_stage st on m.stage_id = st.id and st.is_delete = 0
+        left join basket_event_team hp on m.home_event_team_id = hp.id and hp.is_delete = 0
+        left join basket_event_team ap on m.away_event_team_id = ap.id and ap.is_delete = 0
         where m.is_delete = 0
         <if test="seasonId != null">and m.season_id = #{seasonId}</if>
         <if test="stageId != null">and m.stage_id = #{stageId}</if>

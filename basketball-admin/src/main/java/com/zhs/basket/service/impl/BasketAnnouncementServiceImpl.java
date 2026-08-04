@@ -2,12 +2,13 @@ package com.zhs.basket.service.impl;
 
 import com.zhs.basket.domain.BasketAnnouncement;
 import com.zhs.basket.domain.BasketAnnouncementRuleLink;
-import com.zhs.basket.domain.BasketTournamentSeason;
+import com.zhs.basket.domain.v4.BasketSeason;
 import com.zhs.basket.enums.AnnouncementCategoryEnum;
 import com.zhs.basket.enums.AnnouncementStatusEnum;
 import com.zhs.basket.mapper.BasketAnnouncementMapper;
 import com.zhs.basket.mapper.BasketAnnouncementRuleLinkMapper;
-import com.zhs.basket.mapper.BasketTournamentSeasonMapper;
+import com.zhs.basket.mapper.v4.BasketSeasonMapper;
+import com.zhs.basket.domain.v4.BasketSeason;
 import com.zhs.basket.req.AnnouncementAddReq;
 import com.zhs.basket.req.AnnouncementEditReq;
 import com.zhs.basket.req.AnnouncementQueryReq;
@@ -40,7 +41,7 @@ public class BasketAnnouncementServiceImpl implements IBasketAnnouncementService
 
     @Autowired private BasketAnnouncementMapper announcementMapper;
     @Autowired private BasketAnnouncementRuleLinkMapper ruleLinkMapper;
-    @Autowired private BasketTournamentSeasonMapper seasonMapper;
+    @Autowired private BasketSeasonMapper seasonMapper;
     @Autowired private BasketPublicCacheCleaner publicCacheCleaner;
 
     @Override
@@ -202,11 +203,11 @@ public class BasketAnnouncementServiceImpl implements IBasketAnnouncementService
         if (seasonId == null) {
             throw new ServiceException("请指定关联赛季");
         }
-        BasketTournamentSeason season = seasonMapper.selectById(seasonId);
+        BasketSeason season = seasonMapper.selectById(seasonId);
         if (season == null) {
             throw new ServiceException("赛季不存在");
         }
-        Long tournamentId = req.getTournamentId() != null ? req.getTournamentId() : season.getTournamentId();
+        Long tournamentId = req.getTournamentId() != null ? req.getTournamentId() : season.getSeriesId();
         String ruleVersion = StringUtils.isNotEmpty(req.getRuleVersion())
                 ? req.getRuleVersion().trim()
                 : newAnnouncement.getRuleVersion();
@@ -346,12 +347,12 @@ public class BasketAnnouncementServiceImpl implements IBasketAnnouncementService
             return;
         }
         if (seasonId != null) {
-            BasketTournamentSeason season = seasonMapper.selectById(seasonId);
+            BasketSeason season = seasonMapper.selectById(seasonId);
             if (season == null) {
                 throw new ServiceException("赛季不存在");
             }
             announcement.setSeasonId(seasonId);
-            announcement.setTournamentId(tournamentId != null ? tournamentId : season.getTournamentId());
+            announcement.setTournamentId(tournamentId != null ? tournamentId : season.getSeriesId());
         } else if (tournamentId != null) {
             announcement.setTournamentId(tournamentId);
         }

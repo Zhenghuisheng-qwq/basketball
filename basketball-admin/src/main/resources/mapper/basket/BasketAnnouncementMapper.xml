@@ -43,8 +43,8 @@
                a.create_time as createTime, a.update_time as updateTime
         from basket_announcement a
         left join basket_file_asset cf on cf.id = a.cover_file_id and cf.is_delete = 0
-        left join basket_tournament_season se on se.id = a.season_id and se.is_delete = 0
-        left join basket_tournament tm on tm.id = a.tournament_id and tm.is_delete = 0
+        left join basket_season se on se.id = a.season_id and se.is_delete = 0
+        left join basket_series tm on tm.id = a.tournament_id and tm.is_delete = 0
     </sql>
 
     <select id="selectById" resultMap="BasketAnnouncementResult">
@@ -70,8 +70,8 @@
                a.create_time as createTime, a.update_time as updateTime
         from basket_announcement a
         left join basket_file_asset cf on cf.id = a.cover_file_id and cf.is_delete = 0
-        left join basket_tournament_season se on se.id = a.season_id and se.is_delete = 0
-        left join basket_tournament tm on tm.id = a.tournament_id and tm.is_delete = 0
+        left join basket_season se on se.id = a.season_id and se.is_delete = 0
+        left join basket_series tm on tm.id = a.tournament_id and tm.is_delete = 0
         where a.id = #{id} and a.is_delete = 0
     </select>
 
@@ -179,8 +179,8 @@
         from basket_announcement_rule_link l
         inner join basket_announcement a on a.id = l.new_announcement_id and a.is_delete = 0
         left join basket_file_asset cf on cf.id = a.cover_file_id and cf.is_delete = 0
-        left join basket_tournament_season se on se.id = a.season_id and se.is_delete = 0
-        left join basket_tournament tm on tm.id = a.tournament_id and tm.is_delete = 0
+        left join basket_season se on se.id = a.season_id and se.is_delete = 0
+        left join basket_series tm on tm.id = a.tournament_id and tm.is_delete = 0
         where l.season_id = #{seasonId} and l.current_flag = 1 and l.is_delete = 0
           and a.category_code = 'RULE' and a.announcement_status = 1
         limit 1

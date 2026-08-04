@@ -7,7 +7,7 @@ import java.util.Date;
 @Data
 public class BasketHonorRecord {
     private Long id;
-    private Long tournamentId;
+    private Long seriesId;
     private Long seasonId;
     private Long honorCategoryId;
     private Long teamId;

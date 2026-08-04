@@ -39,7 +39,7 @@
                b.error_message as errorMessage, b.current_flag as currentFlag,
                b.create_time as createTime, b.update_time as updateTime
         from basket_honor_generation_batch b
-        left join basket_tournament_season s on s.id = b.season_id and s.is_delete = 0
+        left join basket_season s on s.id = b.season_id and s.is_delete = 0
         where b.is_delete = 0 and b.season_id = #{seasonId}
         order by b.id desc
     </select>

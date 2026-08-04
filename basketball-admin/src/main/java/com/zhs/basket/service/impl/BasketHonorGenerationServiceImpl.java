@@ -3,8 +3,8 @@ package com.zhs.basket.service.impl;
 import com.zhs.basket.domain.BasketHonorCategory;
 import com.zhs.basket.domain.BasketHonorGenerationBatch;
 import com.zhs.basket.domain.BasketHonorRecord;
-import com.zhs.basket.domain.BasketTournament;
-import com.zhs.basket.domain.BasketTournamentSeason;
+import com.zhs.basket.domain.v4.BasketSeason;
+import com.zhs.basket.domain.v4.BasketSeries;
 import com.zhs.basket.enums.HonorCodeEnum;
 import com.zhs.basket.enums.HonorDisplayStatusEnum;
 import com.zhs.basket.enums.PlayerRankTypeEnum;
@@ -12,8 +12,8 @@ import com.zhs.basket.mapper.BasketHonorCategoryMapper;
 import com.zhs.basket.mapper.BasketHonorGenerationBatchMapper;
 import com.zhs.basket.mapper.BasketHonorRecordMapper;
 import com.zhs.basket.mapper.BasketPlayerRankAdminMapper;
-import com.zhs.basket.mapper.BasketTournamentMapper;
-import com.zhs.basket.mapper.BasketTournamentSeasonMapper;
+import com.zhs.basket.mapper.v4.BasketSeasonMapper;
+import com.zhs.basket.mapper.v4.BasketSeriesMapper;
 import com.zhs.basket.query.RankingQuery;
 import com.zhs.basket.req.HonorGenerationConfirmReq;
 import com.zhs.basket.resp.HonorGenerationBatchResp;
@@ -55,21 +55,21 @@ public class BasketHonorGenerationServiceImpl implements IBasketHonorGenerationS
     @Autowired private BasketHonorRecordMapper honorRecordMapper;
     @Autowired private BasketHonorCategoryMapper honorCategoryMapper;
     @Autowired private BasketPlayerRankAdminMapper playerRankAdminMapper;
-    @Autowired private BasketTournamentSeasonMapper seasonMapper;
-    @Autowired private BasketTournamentMapper tournamentMapper;
+    @Autowired private BasketSeasonMapper seasonMapper;
+    @Autowired private BasketSeriesMapper seriesMapper;
     @Autowired private BasketPublicCacheCleaner publicCacheCleaner;
 
     @Override
     public HonorGenerationPreviewResp preview(Long seasonId) {
-        BasketTournamentSeason season = requireSeason(seasonId);
+        BasketSeason season = requireSeason(seasonId);
         HonorGenerationPreviewResp resp = new HonorGenerationPreviewResp();
         resp.setSeasonId(season.getId());
-        resp.setSeasonName(season.getSeasonName());
-        resp.setTournamentId(season.getTournamentId());
-        if (season.getTournamentId() != null) {
-            BasketTournament tournament = tournamentMapper.selectById(season.getTournamentId());
-            if (tournament != null) {
-                resp.setTournamentName(tournament.getTournamentName());
+        resp.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+        resp.setTournamentId(season.getSeriesId());
+        if (season.getSeriesId() != null) {
+            BasketSeries series = seriesMapper.selectById(season.getSeriesId());
+            if (series != null) {
+                resp.setTournamentName(series.getSeriesName());
             }
         }
         BasketHonorGenerationBatch current = generationBatchMapper.selectCurrentBySeason(seasonId);
@@ -99,7 +99,7 @@ public class BasketHonorGenerationServiceImpl implements IBasketHonorGenerationS
             throw new ServiceException("赛季不能为空");
         }
         Long seasonId = req.getSeasonId();
-        BasketTournamentSeason season = requireSeason(seasonId);
+        BasketSeason season = requireSeason(seasonId);
         HonorGenerationPreviewResp preview = preview(seasonId);
         List<HonorGenerationPreviewItemResp> selected = preview.getItems().stream()
                 .filter(HonorGenerationPreviewItemResp::isSelected)
@@ -133,7 +133,7 @@ public class BasketHonorGenerationServiceImpl implements IBasketHonorGenerationS
                 continue;
             }
             BasketHonorRecord record = new BasketHonorRecord();
-            record.setTournamentId(season.getTournamentId());
+            record.setSeriesId(season.getSeriesId());
             record.setSeasonId(seasonId);
             record.setHonorCategoryId(category.getId());
             record.setTeamId(item.getTeamId());
@@ -160,7 +160,7 @@ public class BasketHonorGenerationServiceImpl implements IBasketHonorGenerationS
         resp.setId(batch.getId());
         resp.setBatchNo(batch.getBatchNo());
         resp.setSeasonId(seasonId);
-        resp.setSeasonName(season.getSeasonName());
+        resp.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
         resp.setBatchStatus(BATCH_STATUS_COMPLETED);
         resp.setHonorCount(created);
         resp.setCurrentFlag(1);
@@ -188,7 +188,7 @@ public class BasketHonorGenerationServiceImpl implements IBasketHonorGenerationS
         return generationBatchMapper.selectBySeason(seasonId);
     }
 
-    private HonorGenerationPreviewItemResp buildPreviewItem(BasketTournamentSeason season, HonorCodeEnum honorCode) {
+    private HonorGenerationPreviewItemResp buildPreviewItem(BasketSeason season, HonorCodeEnum honorCode) {
         HonorGenerationPreviewItemResp item = new HonorGenerationPreviewItemResp();
         item.setHonorCode(honorCode.getCode());
         item.setHonorName(honorCode.getName());
@@ -240,8 +240,8 @@ public class BasketHonorGenerationServiceImpl implements IBasketHonorGenerationS
         };
     }
 
-    private BasketTournamentSeason requireSeason(Long seasonId) {
-        BasketTournamentSeason season = seasonMapper.selectById(seasonId);
+    private BasketSeason requireSeason(Long seasonId) {
+        BasketSeason season = seasonMapper.selectById(seasonId);
         if (season == null) {
             throw new ServiceException("赛季不存在");
         }

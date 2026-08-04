@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.zhs.basket.mapper.BasketDashboardAdminMapper">
-    <sql id="TournamentFilter">
+    <sql id="SeriesFilter">
         <if test="tournamentIds != null and tournamentIds.size() &gt; 0">
-            and s.tournament_id in
+            and se.series_id in
             <foreach collection="tournamentIds" item="tid" open="(" separator="," close=")">#{tid}</foreach>
         </if>
     </sql>
@@ -19,24 +19,21 @@
     </select>
 
     <select id="countPendingRegistration" resultType="int">
-        select count(*) from basket_tournament_registration r
-        inner join basket_tournament_season s on s.id = r.season_id and s.is_delete = 0
-        where r.is_delete = 0 and r.registration_status in (1, 2)
-        <include refid="TournamentFilter" />
+        select count(*) from basket_registration r
+        inner join basket_season se on se.id = r.season_id and se.is_delete = 0
+        where r.is_delete = 0 and r.registration_status = 'PENDING_REVIEW'
+        <include refid="SeriesFilter" />
     </select>
 
     <select id="countPendingOpenRegistration" resultType="int">
-        select count(*) from basket_tournament_open_registration r
-        inner join basket_tournament_season s on s.id = r.season_id and s.is_delete = 0
-        where r.is_delete = 0 and r.registration_status in (1, 2)
-        <include refid="TournamentFilter" />
+        select count(*) from basket_personal_registration r
+        inner join basket_season se on se.id = r.season_id and se.is_delete = 0
+        where r.is_delete = 0 and r.registration_status = 'PENDING_REVIEW'
+        <include refid="SeriesFilter" />
     </select>
 
     <select id="countPendingRosterChange" resultType="int">
-        select count(*) from basket_tournament_roster_change_request r
-        inner join basket_tournament_season s on s.id = r.season_id and s.is_delete = 0
-        where r.is_delete = 0 and r.request_status = 0
-        <include refid="TournamentFilter" />
+        select 0
     </select>
 
     <select id="countPendingPlatformChange" resultType="int">
@@ -45,19 +42,14 @@
     </select>
 
     <select id="countPendingMatchDataAudit" resultType="int">
-        select count(*) from basket_match_data_audit a
-        inner join basket_match m on m.id = a.match_id and m.is_delete = 0
-        inner join basket_tournament_season s on s.id = m.season_id and s.is_delete = 0
-        where a.is_delete = 0 and a.audit_status = 'PENDING'
-        <include refid="TournamentFilter" />
+        select count(*) from basket_match_submission s
+        inner join basket_season se on se.id = s.season_id and se.is_delete = 0
+        where s.is_delete = 0 and s.submission_status = 'PENDING_REVIEW'
+        <include refid="SeriesFilter" />
     </select>
 
     <select id="countPendingMatchDispute" resultType="int">
-        select count(*) from basket_match_data_dispute d
-        inner join basket_match m on m.id = d.match_id and m.is_delete = 0
-        inner join basket_tournament_season s on s.id = m.season_id and s.is_delete = 0
-        where d.is_delete = 0 and d.dispute_status in ('PENDING', 'PROCESSING')
-        <include refid="TournamentFilter" />
+        select 0
     </select>
 
     <select id="countPlayerCertDaily" resultType="com.zhs.basket.vo.DashboardDailyCountVo">
@@ -79,21 +71,18 @@
     </select>
 
     <select id="countTeamRegistrationDaily" resultType="com.zhs.basket.vo.DashboardDailyCountVo">
-        select date(coalesce(submitted_time, create_time)) as statDate, count(1) as total
-        from basket_tournament_registration
-        where is_delete = 0
-          and coalesce(submitted_time, create_time) &gt;= #{startTime}
-          and coalesce(submitted_time, create_time) &lt; #{endTime}
-        group by date(coalesce(submitted_time, create_time))
-    </select>
-
-    <select id="countRosterChangeDaily" resultType="com.zhs.basket.vo.DashboardDailyCountVo">
         select date(coalesce(submit_time, create_time)) as statDate, count(1) as total
-        from basket_tournament_roster_change_request
+        from basket_registration
         where is_delete = 0
           and coalesce(submit_time, create_time) &gt;= #{startTime}
           and coalesce(submit_time, create_time) &lt; #{endTime}
         group by date(coalesce(submit_time, create_time))
+    </select>
+
+    <select id="countRosterChangeDaily" resultType="com.zhs.basket.vo.DashboardDailyCountVo">
+        select date(create_time) as statDate, 0 as total
+        from basket_registration
+        where 1 = 0
     </select>
 
     <select id="countPlatformChangeDaily" resultType="com.zhs.basket.vo.DashboardDailyCountVo">
@@ -106,30 +95,24 @@
     </select>
 
     <select id="countMatchDataSubmissionDaily" resultType="com.zhs.basket.vo.DashboardDailyCountVo">
-        select date(coalesce(submitted_time, create_time)) as statDate, count(1) as total
-        from basket_match_data_submission
+        select date(coalesce(submit_time, create_time)) as statDate, count(1) as total
+        from basket_match_submission
         where is_delete = 0
-          and coalesce(submitted_time, create_time) &gt;= #{startTime}
-          and coalesce(submitted_time, create_time) &lt; #{endTime}
-        group by date(coalesce(submitted_time, create_time))
+          and coalesce(submit_time, create_time) &gt;= #{startTime}
+          and coalesce(submit_time, create_time) &lt; #{endTime}
+        group by date(coalesce(submit_time, create_time))
     </select>
 
     <select id="countMatchDisputeDaily" resultType="com.zhs.basket.vo.DashboardDailyCountVo">
-        select date(create_time) as statDate, count(1) as total
-        from basket_match_data_dispute
-        where is_delete = 0
-          and create_time &gt;= #{startTime}
-          and create_time &lt; #{endTime}
-        group by date(create_time)
+        select date(create_time) as statDate, 0 as total
+        from basket_match_submission
+        where 1 = 0
     </select>
 
     <select id="countMatchExceptionDaily" resultType="com.zhs.basket.vo.DashboardDailyCountVo">
-        select date(create_time) as statDate, count(1) as total
-        from basket_match_exception_application
-        where is_delete = 0
-          and create_time &gt;= #{startTime}
-          and create_time &lt; #{endTime}
-        group by date(create_time)
+        select date(create_time) as statDate, 0 as total
+        from basket_match_submission
+        where 1 = 0
     </select>
 
     <select id="countPlayerCertNewBetween" resultType="int">
@@ -147,17 +130,14 @@
     </select>
 
     <select id="countTeamRegistrationNewBetween" resultType="int">
-        select count(1) from basket_tournament_registration
-        where is_delete = 0
-          and coalesce(submitted_time, create_time) &gt;= #{startTime}
-          and coalesce(submitted_time, create_time) &lt; #{endTime}
-    </select>
-
-    <select id="countRosterChangeNewBetween" resultType="int">
-        select count(1) from basket_tournament_roster_change_request
+        select count(1) from basket_registration
         where is_delete = 0
           and coalesce(submit_time, create_time) &gt;= #{startTime}
           and coalesce(submit_time, create_time) &lt; #{endTime}
+    </select>
+
+    <select id="countRosterChangeNewBetween" resultType="int">
+        select 0
     </select>
 
     <select id="countPlatformChangeNewBetween" resultType="int">
@@ -168,24 +148,18 @@
     </select>
 
     <select id="countMatchDataSubmissionNewBetween" resultType="int">
-        select count(1) from basket_match_data_submission
+        select count(1) from basket_match_submission
         where is_delete = 0
-          and coalesce(submitted_time, create_time) &gt;= #{startTime}
-          and coalesce(submitted_time, create_time) &lt; #{endTime}
+          and coalesce(submit_time, create_time) &gt;= #{startTime}
+          and coalesce(submit_time, create_time) &lt; #{endTime}
     </select>
 
     <select id="countMatchDisputeNewBetween" resultType="int">
-        select count(1) from basket_match_data_dispute
-        where is_delete = 0
-          and create_time &gt;= #{startTime}
-          and create_time &lt; #{endTime}
+        select 0
     </select>
 
     <select id="countMatchExceptionNewBetween" resultType="int">
-        select count(1) from basket_match_exception_application
-        where is_delete = 0
-          and create_time &gt;= #{startTime}
-          and create_time &lt; #{endTime}
+        select 0
     </select>
 
     <select id="countPlayerCertHandledBetween" resultType="int">
@@ -204,19 +178,15 @@
     </select>
 
     <select id="countTeamRegistrationHandledBetween" resultType="int">
-        select count(1) from basket_tournament_registration
+        select count(1) from basket_registration
         where is_delete = 0
-          and audit_time &gt;= #{startTime}
-          and audit_time &lt; #{endTime}
-          and registration_status in (3, 4)
+          and approve_time &gt;= #{startTime}
+          and approve_time &lt; #{endTime}
+          and registration_status in ('APPROVED', 'REJECTED')
     </select>
 
     <select id="countRosterChangeHandledBetween" resultType="int">
-        select count(1) from basket_tournament_roster_change_request
-        where is_delete = 0
-          and reviewed_time &gt;= #{startTime}
-          and reviewed_time &lt; #{endTime}
-          and request_status in (1, 2)
+        select 0
     </select>
 
     <select id="countPlatformChangeHandledBetween" resultType="int">
@@ -228,26 +198,18 @@
     </select>
 
     <select id="countMatchDataHandledBetween" resultType="int">
-        select count(1) from basket_match_data_audit
+        select count(1) from basket_match_submission
         where is_delete = 0
           and audit_time &gt;= #{startTime}
           and audit_time &lt; #{endTime}
-          and audit_status in ('APPROVED', 'REJECTED')
+          and submission_status in ('APPROVED', 'REJECTED')
     </select>
 
     <select id="countMatchDisputeHandledBetween" resultType="int">
-        select count(1) from basket_match_data_dispute
-        where is_delete = 0
-          and coalesce(handle_time, processed_time) &gt;= #{startTime}
-          and coalesce(handle_time, processed_time) &lt; #{endTime}
-          and dispute_status in ('UPHELD', 'REJECTED')
+        select 0
     </select>
 
     <select id="countMatchExceptionHandledBetween" resultType="int">
-        select count(1) from basket_match_exception_application
-        where is_delete = 0
-          and processed_time &gt;= #{startTime}
-          and processed_time &lt; #{endTime}
-          and application_status in ('APPROVED', 'REJECTED')
+        select 0
     </select>
 </mapper>

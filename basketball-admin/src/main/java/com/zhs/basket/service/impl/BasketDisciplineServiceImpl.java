@@ -12,7 +12,6 @@ import com.zhs.basket.req.DisciplineCreateReq;
 import com.zhs.basket.req.DisciplineRevokeReq;
 import com.zhs.basket.service.IBasketDisciplineService;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
-import com.zhs.basket.support.BasketTournamentScopeSupport;
 import com.zhs.basket.vo.DisciplineDetailVo;
 import com.zhs.basket.vo.DisciplineListVo;
 import com.zhs.common.exception.ServiceException;
@@ -37,9 +36,8 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
     @Autowired private BasketPointAdjustmentMapper pointAdjustmentMapper;
     @Autowired private BasketDisciplineSuspensionLogMapper suspensionLogMapper;
     @Autowired private BasketMatchMapper matchMapper;
-    @Autowired private BasketTournamentSeasonMapper seasonMapper;
+    @Autowired private com.zhs.basket.mapper.v4.BasketSeasonMapper seasonMapper;
     @Autowired private BasketBusinessAuditWriter auditWriter;
-    @Autowired private BasketTournamentScopeSupport tournamentScopeSupport;
 
     @Override
     public List<DisciplineListVo> list(DisciplineQuery query) {
@@ -64,11 +62,10 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
             throw new ServiceException("重复提交处罚记录");
         }
         if (req.getSeasonId() != null) {
-            BasketTournamentSeason season = seasonMapper.selectById(req.getSeasonId());
+            com.zhs.basket.domain.v4.BasketSeason season = seasonMapper.selectById(req.getSeasonId());
             if (season == null) {
                 throw new ServiceException("赛季不存在");
             }
-            tournamentScopeSupport.assertTournamentAccess(season.getTournamentId());
         }
         Date now = new Date();
         int suspensionCount = req.getMatchSuspensionCount() != null ? req.getMatchSuspensionCount() : 0;

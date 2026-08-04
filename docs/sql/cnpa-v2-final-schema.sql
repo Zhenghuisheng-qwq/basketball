@@ -5,8 +5,7 @@
 --   1. 本文件为赛事域最终结构权威参考，不含 R1~R5 过渡字段
 --   2. 不含 rank_explain_json（已删除，排名解释使用 basket_standing_rank_reason）
 --   3. 不含旧 Tournament 赛事业务表（registration/roster/schedule_generate 等）
---   4. 保留 basket_tournament / basket_tournament_season / basket_tournament_admin_scope
---      仅供荣誉生成与纪律 scope 只读引用，不属于赛事写链路
+--   4. 不含旧 Tournament 赛事业务表（含 basket_tournament / basket_tournament_season）
 --   5. 完整建表语句来源：按序执行
 --      docs/sql/cnpa-v4-r1-ddl.sql
 --      docs/sql/cnpa-dynamic-format-r1-migration.sql

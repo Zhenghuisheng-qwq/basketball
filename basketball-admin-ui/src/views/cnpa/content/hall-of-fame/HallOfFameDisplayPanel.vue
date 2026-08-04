@@ -178,8 +178,6 @@ import {
   publishHallOfFame,
   updateHallOfFame
 } from '@/api/basket/hallOfFame'
-import { listSeasonByTournament } from '@/api/basket/season'
-import { listTournament } from '@/api/basket/tournament'
 import type {
   HonorRecordAddReq,
   HonorRecordDetail,
@@ -187,7 +185,9 @@ import type {
   HonorRecordQuery,
   SeasonListItem,
   TournamentListItem
-} from '@/types'
+} import { listV4Series } from '@/api/cnpa/event-v4/series'
+import { listV4Season } from '@/api/cnpa/event-v4/season'
+from '@/types'
 import { HONOR_DISPLAY_STATUS_OPTIONS } from '@/types'
 
 const { proxy } = getCurrentInstance()

@@ -179,8 +179,6 @@ import {
   revokePlayerHonor,
   updatePlayerHonor
 } from '@/api/basket/playerHonor'
-import { listSeasonByTournament } from '@/api/basket/season'
-import { listTournament } from '@/api/basket/tournament'
 import type {
   HonorRecordAddReq,
   HonorRecordDetail,
@@ -191,7 +189,9 @@ import type {
   PlayerHonorCandidateQuery,
   SeasonListItem,
   TournamentListItem
-} from '@/types'
+} import { listV4Series } from '@/api/cnpa/event-v4/series'
+import { listV4Season } from '@/api/cnpa/event-v4/season'
+from '@/types'
 import {
   HONOR_DISPLAY_STATUS_OPTIONS,
   PLAYER_HONOR_AWARD_TYPE_OPTIONS,
@@ -247,8 +247,8 @@ const revokeRules = {
 }
 
 function loadTournaments() {
-  listTournament({ pageNum: 1, pageSize: 500 }).then(res => {
-    tournamentOptions.value = res.rows || []
+  listV4Series().then(res => {
+    tournamentOptions.value = (res.data || []).map((s: any) => ({ id: s.id, tournamentName: s.seriesName }))
     if (tournamentOptions.value.length > 0) {
       selectedTournamentId.value = tournamentOptions.value[0].id
       queryParams.value.tournamentId = selectedTournamentId.value
@@ -263,12 +263,13 @@ function loadSeasons() {
   seasonOptions.value = []
   queryParams.value.seasonId = undefined
   if (!selectedTournamentId.value) return Promise.resolve()
-  return listSeasonByTournament(selectedTournamentId.value).then(res => {
-    seasonOptions.value = res.data || []
+  return listV4Season({ seriesId: selectedTournamentId.value, pageNum: 1, pageSize: 500 }).then(res => {
+    seasonOptions.value = res.rows || []
     queryParams.value.seasonId = seasonOptions.value[0]?.id
-    candidateQuery.value.seasonId = queryParams.value.seasonId
+    if (typeof candidateQuery !== 'undefined') candidateQuery.value.seasonId = queryParams.value.seasonId
   })
 }
+
 
 function handleTournamentChange() {
   queryParams.value.tournamentId = selectedTournamentId.value

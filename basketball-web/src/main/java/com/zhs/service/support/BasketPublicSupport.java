@@ -4,29 +4,25 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.common.cachekey.publicapi.BasketPublicCacheKey;
-import com.zhs.dao.BasketCompetitionSeasonDao;
 import com.zhs.dao.BasketFileAssetDao;
 import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketPrivacySettingDao;
 import com.zhs.dao.BasketTeamDao;
-import com.zhs.dao.BasketTournamentDao;
-import com.zhs.dao.BasketTournamentGroupDao;
-import com.zhs.dao.BasketTournamentSeasonDao;
-import com.zhs.dao.BasketTournamentStageDao;
 import com.zhs.dao.BasketVenueDao;
+import com.zhs.dao.v4.BasketSeasonDao;
+import com.zhs.dao.v4.BasketSeriesDao;
+import com.zhs.enums.v4.PublishStatusEnum;
+import com.zhs.enums.v4.SeasonStatusEnum;
 import com.zhs.exception.ServiceException;
-import com.zhs.model.BasketCompetitionSeason;
 import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketPrivacySetting;
 import com.zhs.model.BasketTeam;
-import com.zhs.model.BasketTournament;
-import com.zhs.model.BasketTournamentGroup;
-import com.zhs.model.BasketTournamentSeason;
-import com.zhs.model.BasketTournamentStage;
 import com.zhs.model.BasketVenue;
+import com.zhs.model.v4.BasketSeason;
+import com.zhs.model.v4.BasketSeries;
 import com.zhs.support.MemberAvatarSupport;
 import com.zhs.util.MiniRedisUtil;
 import jakarta.annotation.Resource;
@@ -48,21 +44,16 @@ import java.util.stream.Collectors;
 
 /**
  * 官网公开查询公共能力：可见性校验、文件 URL、短缓存、分页规范化。
+ * 赛季/系列仅使用 V4 主线 basket_season / basket_series。
  */
 @Slf4j
 @Component
 public class BasketPublicSupport {
 
     @Resource
-    private BasketTournamentDao tournamentDao;
+    private BasketSeasonDao seasonDao;
     @Resource
-    private BasketCompetitionSeasonDao competitionSeasonDao;
-    @Resource
-    private BasketTournamentSeasonDao seasonDao;
-    @Resource
-    private BasketTournamentStageDao stageDao;
-    @Resource
-    private BasketTournamentGroupDao groupDao;
+    private BasketSeriesDao seriesDao;
     @Resource
     private BasketTeamDao teamDao;
     @Resource
@@ -122,62 +113,23 @@ public class BasketPublicSupport {
         return value;
     }
 
-    public BasketTournament requirePublicTournament(Long tournamentId) {
-        if (tournamentId == null) {
-            throw new ServiceException("赛事主键不能为空");
-        }
-        BasketTournament tournament = tournamentDao.selectById(tournamentId);
-        if (tournament == null
-                || !Objects.equals(tournament.getIsDelete(), BasketPublicConstants.NOT_DELETED)
-                || !Objects.equals(tournament.getPublicStatus(), BasketPublicConstants.PUBLIC)) {
-            throw new ServiceException("赛事不存在或未公开");
-        }
-        return tournament;
-    }
-
-    public BasketTournamentSeason requirePublicSeason(Long seasonId) {
+    public BasketSeason requirePublicSeason(Long seasonId) {
         if (seasonId == null) {
             throw new ServiceException("赛季主键不能为空");
         }
-        BasketTournamentSeason season = seasonDao.selectById(seasonId);
+        BasketSeason season = seasonDao.selectById(seasonId);
         if (season == null
                 || !Objects.equals(season.getIsDelete(), BasketPublicConstants.NOT_DELETED)
-                || !Objects.equals(season.getPublicStatus(), BasketPublicConstants.PUBLIC)) {
+                || !PublishStatusEnum.PUBLISHED.getCode().equals(season.getPublishStatus())) {
             throw new ServiceException("赛季不存在或未公开");
         }
-        BasketTournament tournament = tournamentDao.selectById(season.getTournamentId());
-        if (tournament == null
-                || !Objects.equals(tournament.getIsDelete(), BasketPublicConstants.NOT_DELETED)
-                || !Objects.equals(tournament.getPublicStatus(), BasketPublicConstants.PUBLIC)) {
-            throw new ServiceException("赛季所属赛事未公开");
+        BasketSeries series = seriesDao.selectById(season.getSeriesId());
+        if (series == null
+                || !Objects.equals(series.getIsDelete(), BasketPublicConstants.NOT_DELETED)
+                || !Objects.equals(series.getEnabled(), 1)) {
+            throw new ServiceException("赛季所属系列未公开");
         }
         return season;
-    }
-
-    public BasketTournamentStage requirePublicStage(Long stageId) {
-        if (stageId == null) {
-            throw new ServiceException("阶段主键不能为空");
-        }
-        BasketTournamentStage stage = stageDao.selectById(stageId);
-        if (stage == null
-                || !Objects.equals(stage.getIsDelete(), BasketPublicConstants.NOT_DELETED)
-                || !Objects.equals(stage.getPublicStatus(), BasketPublicConstants.PUBLIC)) {
-            throw new ServiceException("阶段不存在或未公开");
-        }
-        requirePublicSeason(stage.getSeasonId());
-        return stage;
-    }
-
-    public BasketTournamentGroup requirePublicGroup(Long groupId) {
-        if (groupId == null) {
-            throw new ServiceException("分组主键不能为空");
-        }
-        BasketTournamentGroup group = groupDao.selectById(groupId);
-        if (group == null || !Objects.equals(group.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
-            throw new ServiceException("分组不存在");
-        }
-        requirePublicSeason(group.getSeasonId());
-        return group;
     }
 
     public BasketTeam requirePublicTeam(Long teamId) {
@@ -365,7 +317,7 @@ public class BasketPublicSupport {
         return playerAvatarMap;
     }
 
-    public Map<Long, BasketTournamentSeason> loadSeasonMap(Collection<Long> seasonIds) {
+    public Map<Long, BasketSeason> loadSeasonMap(Collection<Long> seasonIds) {
         if (CollectionUtils.isEmpty(seasonIds)) {
             return Collections.emptyMap();
         }
@@ -373,103 +325,38 @@ public class BasketPublicSupport {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketTournamentSeason> seasons = seasonDao.selectByIds(ids);
-        Map<Long, BasketTournamentSeason> map = new HashMap<>();
+        List<BasketSeason> seasons = seasonDao.selectByIds(ids);
+        Map<Long, BasketSeason> map = new HashMap<>();
         if (CollectionUtils.isEmpty(seasons)) {
             return map;
         }
-        for (BasketTournamentSeason season : seasons) {
+        for (BasketSeason season : seasons) {
             if (season != null
                     && Objects.equals(season.getIsDelete(), BasketPublicConstants.NOT_DELETED)
-                    && Objects.equals(season.getPublicStatus(), BasketPublicConstants.PUBLIC)) {
+                    && PublishStatusEnum.PUBLISHED.getCode().equals(season.getPublishStatus())) {
                 map.put(season.getId(), season);
             }
         }
         return map;
     }
 
-    public Map<Long, BasketTournament> loadTournamentMap(Collection<Long> tournamentIds) {
-        if (CollectionUtils.isEmpty(tournamentIds)) {
+    public Map<Long, BasketSeries> loadSeriesMap(Collection<Long> seriesIds) {
+        if (CollectionUtils.isEmpty(seriesIds)) {
             return Collections.emptyMap();
         }
-        Set<Long> ids = tournamentIds.stream().filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> ids = seriesIds.stream().filter(Objects::nonNull).collect(Collectors.toSet());
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BasketTournament> list = tournamentDao.selectByIds(ids);
-        Map<Long, BasketTournament> map = new HashMap<>();
+        List<BasketSeries> list = seriesDao.selectByIds(ids);
+        Map<Long, BasketSeries> map = new HashMap<>();
         if (CollectionUtils.isEmpty(list)) {
             return map;
         }
-        for (BasketTournament item : list) {
+        for (BasketSeries item : list) {
             if (item != null
                     && Objects.equals(item.getIsDelete(), BasketPublicConstants.NOT_DELETED)
-                    && Objects.equals(item.getPublicStatus(), BasketPublicConstants.PUBLIC)) {
-                map.put(item.getId(), item);
-            }
-        }
-        return map;
-    }
-
-    public Map<Long, BasketCompetitionSeason> loadCompetitionSeasonMap(Collection<Long> competitionSeasonIds) {
-        if (CollectionUtils.isEmpty(competitionSeasonIds)) {
-            return Collections.emptyMap();
-        }
-        Set<Long> ids = competitionSeasonIds.stream().filter(Objects::nonNull).collect(Collectors.toSet());
-        if (ids.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        List<BasketCompetitionSeason> list = competitionSeasonDao.selectByIds(ids);
-        Map<Long, BasketCompetitionSeason> map = new HashMap<>();
-        if (CollectionUtils.isEmpty(list)) {
-            return map;
-        }
-        for (BasketCompetitionSeason item : list) {
-            if (item != null
-                    && Objects.equals(item.getIsDelete(), BasketPublicConstants.NOT_DELETED)
-                    && Objects.equals(item.getPublicStatus(), BasketPublicConstants.PUBLIC)) {
-                map.put(item.getId(), item);
-            }
-        }
-        return map;
-    }
-
-    public Map<Long, BasketTournamentStage> loadStageMap(Collection<Long> stageIds) {
-        if (CollectionUtils.isEmpty(stageIds)) {
-            return Collections.emptyMap();
-        }
-        Set<Long> ids = stageIds.stream().filter(Objects::nonNull).collect(Collectors.toSet());
-        if (ids.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        List<BasketTournamentStage> list = stageDao.selectByIds(ids);
-        Map<Long, BasketTournamentStage> map = new HashMap<>();
-        if (CollectionUtils.isEmpty(list)) {
-            return map;
-        }
-        for (BasketTournamentStage item : list) {
-            if (item != null && Objects.equals(item.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
-                map.put(item.getId(), item);
-            }
-        }
-        return map;
-    }
-
-    public Map<Long, BasketTournamentGroup> loadGroupMap(Collection<Long> groupIds) {
-        if (CollectionUtils.isEmpty(groupIds)) {
-            return Collections.emptyMap();
-        }
-        Set<Long> ids = groupIds.stream().filter(Objects::nonNull).collect(Collectors.toSet());
-        if (ids.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        List<BasketTournamentGroup> list = groupDao.selectByIds(ids);
-        Map<Long, BasketTournamentGroup> map = new HashMap<>();
-        if (CollectionUtils.isEmpty(list)) {
-            return map;
-        }
-        for (BasketTournamentGroup item : list) {
-            if (item != null && Objects.equals(item.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                    && Objects.equals(item.getEnabled(), 1)) {
                 map.put(item.getId(), item);
             }
         }
@@ -497,27 +384,27 @@ public class BasketPublicSupport {
         return map;
     }
 
-    public List<BasketTournamentSeason> listPublicSeasons() {
-        return seasonDao.selectList(new LambdaQueryWrapper<BasketTournamentSeason>()
-                .eq(BasketTournamentSeason::getIsDelete, BasketPublicConstants.NOT_DELETED)
-                .eq(BasketTournamentSeason::getPublicStatus, BasketPublicConstants.PUBLIC)
-                .orderByDesc(BasketTournamentSeason::getSeasonStartTime)
-                .orderByDesc(BasketTournamentSeason::getId));
+    public List<BasketSeason> listPublicSeasons() {
+        return seasonDao.selectList(new LambdaQueryWrapper<BasketSeason>()
+                .eq(BasketSeason::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketSeason::getPublishStatus, PublishStatusEnum.PUBLISHED.getCode())
+                .orderByDesc(BasketSeason::getMatchStartTime)
+                .orderByDesc(BasketSeason::getId));
     }
 
-    public BasketTournamentSeason findCurrentPublicSeason() {
-        List<BasketTournamentSeason> seasons = seasonDao.selectList(new LambdaQueryWrapper<BasketTournamentSeason>()
-                .eq(BasketTournamentSeason::getIsDelete, BasketPublicConstants.NOT_DELETED)
-                .eq(BasketTournamentSeason::getPublicStatus, BasketPublicConstants.PUBLIC)
-                .orderByDesc(BasketTournamentSeason::getSeasonStatus)
-                .orderByDesc(BasketTournamentSeason::getSeasonStartTime)
-                .orderByDesc(BasketTournamentSeason::getId)
+    public BasketSeason findCurrentPublicSeason() {
+        List<BasketSeason> seasons = seasonDao.selectList(new LambdaQueryWrapper<BasketSeason>()
+                .eq(BasketSeason::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketSeason::getPublishStatus, PublishStatusEnum.PUBLISHED.getCode())
+                .orderByDesc(BasketSeason::getSeasonStatus)
+                .orderByDesc(BasketSeason::getMatchStartTime)
+                .orderByDesc(BasketSeason::getId)
                 .last("limit 20"));
         if (CollectionUtils.isEmpty(seasons)) {
             return null;
         }
-        for (BasketTournamentSeason season : seasons) {
-            if (Objects.equals(season.getSeasonStatus(), 2)) {
+        for (BasketSeason season : seasons) {
+            if (SeasonStatusEnum.PLAYING.getCode().equals(season.getSeasonStatus())) {
                 return season;
             }
         }

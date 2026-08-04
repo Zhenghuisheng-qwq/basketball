@@ -10,9 +10,8 @@ import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketTeamInvitationDao;
-import com.zhs.dao.BasketTournamentDao;
-
-import com.zhs.dao.BasketTournamentSeasonDao;
+import com.zhs.dao.v4.BasketSeasonDao;
+import com.zhs.dao.v4.BasketSeriesDao;
 import com.zhs.enums.MessageReadStatusEnum;
 import com.zhs.enums.PlatformIdentityStatusEnum;
 import com.zhs.enums.TeamInvitationStatusEnum;
@@ -24,9 +23,8 @@ import com.zhs.model.BasketMessageTask;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamInvitation;
-import com.zhs.model.BasketTournament;
-
-import com.zhs.model.BasketTournamentSeason;
+import com.zhs.model.v4.BasketSeason;
+import com.zhs.model.v4.BasketSeries;
 import com.zhs.response.account.MessageItemResp;
 import com.zhs.response.account.MessagePageResp;
 import com.zhs.response.account.MessageRegistrationRemindInfoResp;
@@ -72,9 +70,9 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
     @Resource
     private BasketFileAssetDao fileAssetDao;
     @Resource
-    private BasketTournamentSeasonDao seasonDao;
+    private BasketSeasonDao seasonDao;
     @Resource
-    private BasketTournamentDao tournamentDao;
+    private BasketSeriesDao seriesDao;
     @Resource
     private ICaptainPermissionService captainPermissionService;
     @Resource
@@ -325,11 +323,11 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
         if (task == null || !BIZ_TYPE_TEAM_REGISTRATION_REMIND.equals(task.getBizType()) || task.getBizId() == null) {
             return null;
         }
-        BasketTournamentSeason season = seasonDao.selectById(task.getBizId());
+        BasketSeason season = seasonDao.selectById(task.getBizId());
         if (season == null || !NOT_DELETED.equals(season.getIsDelete())) {
             return null;
         }
-        BasketTournament tournament = tournamentDao.selectById(season.getTournamentId());
+        BasketSeries series = season.getSeriesId() == null ? null : seriesDao.selectById(season.getSeriesId());
         BasketTeam team = null;
         if (memberId != null) {
             var context = captainPermissionService;
@@ -362,8 +360,8 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
 
         MessageRegistrationRemindInfoResp info = new MessageRegistrationRemindInfoResp();
         info.setSeasonId(String.valueOf(season.getId()));
-        info.setSeasonName(season.getSeasonName());
-        info.setTournamentName(tournament == null ? season.getSeasonName() : tournament.getTournamentName());
+        info.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+        info.setTournamentName(series == null ? season.getSeasonName() : series.getSeriesName());
         info.setRegistrationEndTime(season.getRegistrationEndTime());
         info.setCanRegister(canRegister);
         info.setAlreadyRegistered(false);

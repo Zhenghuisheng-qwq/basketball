@@ -1,10 +1,13 @@
 package com.zhs.basket.service.impl;
 
-import com.zhs.basket.domain.BasketTournament;
+import com.zhs.basket.domain.v4.BasketSeason;
+import com.zhs.basket.domain.v4.BasketSeries;
 import com.zhs.basket.mapper.BasketDashboardAdminMapper;
-import com.zhs.basket.mapper.BasketTournamentMapper;
+import com.zhs.basket.mapper.v4.BasketSeasonMapper;
+import com.zhs.basket.mapper.v4.BasketSeriesMapper;
+import com.zhs.basket.query.v4.BasketSeasonQuery;
+import com.zhs.basket.vo.v4.BasketSeasonListVo;
 import com.zhs.basket.service.IBasketDashboardService;
-import com.zhs.basket.support.BasketTournamentScopeSupport;
 import com.zhs.basket.vo.DashboardDailyCountVo;
 import com.zhs.basket.vo.DashboardSummaryVo;
 import com.zhs.basket.vo.DashboardTrendSeriesVo;
@@ -40,26 +43,21 @@ public class BasketDashboardServiceImpl implements IBasketDashboardService {
     private static final DateTimeFormatter KEY_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @Autowired private BasketDashboardAdminMapper dashboardMapper;
-    @Autowired private BasketTournamentScopeSupport tournamentScopeSupport;
-    @Autowired private BasketTournamentMapper tournamentMapper;
+    @Autowired private BasketSeasonMapper seasonMapper;
+    @Autowired private BasketSeriesMapper seriesMapper;
 
     @Override
     public DashboardSummaryVo getSummary() {
-        List<Long> tournamentIds = tournamentScopeSupport.accessibleTournamentIds();
-        if (!SecurityUtils.isAdmin() && (tournamentIds == null || tournamentIds.isEmpty())) {
-            return emptySummary();
-        }
-        List<Long> scopedIds = SecurityUtils.isAdmin() ? null : tournamentIds;
         DashboardSummaryVo vo = new DashboardSummaryVo();
         vo.setPendingTeamAudit(dashboardMapper.countPendingTeamAudit());
         vo.setPendingPlayerCert(dashboardMapper.countPendingPlayerCert());
-        vo.setPendingRegistration(dashboardMapper.countPendingRegistration(scopedIds));
-        vo.setPendingOpenRegistration(dashboardMapper.countPendingOpenRegistration(scopedIds));
-        vo.setPendingRosterChange(dashboardMapper.countPendingRosterChange(scopedIds));
+        vo.setPendingRegistration(dashboardMapper.countPendingRegistration(null));
+        vo.setPendingOpenRegistration(dashboardMapper.countPendingOpenRegistration(null));
+        vo.setPendingRosterChange(dashboardMapper.countPendingRosterChange(null));
         vo.setPendingPlatformChange(dashboardMapper.countPendingPlatformChange());
-        vo.setPendingMatchDataAudit(dashboardMapper.countPendingMatchDataAudit(scopedIds));
-        vo.setPendingMatchDispute(dashboardMapper.countPendingMatchDispute(scopedIds));
-        fillCurrentTournament(vo, tournamentIds);
+        vo.setPendingMatchDataAudit(dashboardMapper.countPendingMatchDataAudit(null));
+        vo.setPendingMatchDispute(dashboardMapper.countPendingMatchDispute(null));
+        fillCurrentSeason(vo);
         return vo;
     }
 
@@ -295,19 +293,19 @@ public class BasketDashboardServiceImpl implements IBasketDashboardService {
         }
     }
 
-    private void fillCurrentTournament(DashboardSummaryVo vo, List<Long> tournamentIds) {
-        Long tournamentId = null;
-        if (tournamentIds != null && !tournamentIds.isEmpty()) {
-            tournamentId = tournamentIds.get(0);
-        }
-        if (tournamentId == null && SecurityUtils.isAdmin()) {
+    private void fillCurrentSeason(DashboardSummaryVo vo) {
+        BasketSeasonQuery query = new BasketSeasonQuery();
+        List<BasketSeasonListVo> seasons = seasonMapper.selectVoList(query);
+        if (seasons == null || seasons.isEmpty()) {
             return;
         }
-        if (tournamentId != null) {
-            BasketTournament tournament = tournamentMapper.selectById(tournamentId);
-            if (tournament != null) {
-                vo.setCurrentTournamentId(tournament.getId());
-                vo.setCurrentTournamentName(tournament.getTournamentName());
+        BasketSeasonListVo season = seasons.get(0);
+        vo.setCurrentTournamentId(season.getId());
+        vo.setCurrentTournamentName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+        if (season.getSeriesId() != null) {
+            BasketSeries series = seriesMapper.selectById(season.getSeriesId());
+            if (series != null && season.getSeriesName() == null) {
+                vo.setCurrentTournamentName(series.getSeriesName() + " / " + vo.getCurrentTournamentName());
             }
         }
     }

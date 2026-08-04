@@ -3,7 +3,7 @@
 <mapper namespace="com.zhs.basket.mapper.BasketHonorRecordMapper">
     <resultMap type="com.zhs.basket.domain.BasketHonorRecord" id="BasketHonorRecordResult">
         <id property="id" column="id"/>
-        <result property="tournamentId" column="tournament_id"/>
+        <result property="seriesId" column="series_id"/>
         <result property="seasonId" column="season_id"/>
         <result property="honorCategoryId" column="honor_category_id"/>
         <result property="teamId" column="team_id"/>
@@ -26,7 +26,7 @@
     </resultMap>
 
     <sql id="listSelect">
-        select h.id, h.tournament_id as tournamentId, h.season_id as seasonId, s.season_name as seasonName,
+        select h.id, h.series_id as seriesId, h.season_id as seasonId, s.display_title as seasonName,
                h.honor_category_id as honorCategoryId, c.honor_code as honorCode, c.honor_name as honorName,
                c.honor_scope as honorScope, c.recipient_type as recipientType,
                h.team_id as teamId, t.team_name as teamName,
@@ -39,7 +39,7 @@
                h.create_time as createTime, h.update_time as updateTime
         from basket_honor_record h
         left join basket_honor_category c on c.id = h.honor_category_id and c.is_delete = 0
-        left join basket_tournament_season s on s.id = h.season_id and s.is_delete = 0
+        left join basket_season s on s.id = h.season_id and s.is_delete = 0
         left join basket_team t on t.id = h.team_id and t.is_delete = 0
         left join basket_player_profile p on p.id = h.player_id and p.is_delete = 0
         left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
@@ -47,7 +47,7 @@
     </sql>
 
     <select id="selectById" resultMap="BasketHonorRecordResult">
-        select id, tournament_id, season_id, honor_category_id, team_id, player_id, match_id,
+        select id, series_id, season_id, honor_category_id, team_id, player_id, match_id,
                honor_title, honor_subtitle, honor_value, award_date, cover_file_id, source_type, source_id,
                generation_batch_id, display_status, display_order, remark, create_time, update_time, is_delete
         from basket_honor_record where id = #{id} and is_delete = 0
@@ -61,7 +61,8 @@
     <select id="selectList" resultType="com.zhs.basket.resp.HonorRecordListResp">
         <include refid="listSelect"/>
         where h.is_delete = 0
-        <if test="tournamentId != null">and h.tournament_id = #{tournamentId}</if>
+        <if test="seriesId != null">and h.series_id = #{seriesId}</if>
+        <if test="tournamentId != null">and h.series_id = #{tournamentId}</if>
         <if test="seasonId != null">and h.season_id = #{seasonId}</if>
         <if test="honorCategoryId != null">and h.honor_category_id = #{honorCategoryId}</if>
         <if test="honorCode != null and honorCode != ''">and c.honor_code = #{honorCode}</if>
@@ -86,7 +87,7 @@
     </select>
 
     <select id="selectActiveUnique" resultMap="BasketHonorRecordResult">
-        select id, tournament_id, season_id, honor_category_id, team_id, player_id, match_id,
+        select id, series_id, season_id, honor_category_id, team_id, player_id, match_id,
                honor_title, honor_subtitle, honor_value, award_date, cover_file_id, source_type, source_id,
                generation_batch_id, display_status, display_order, remark, create_time, update_time, is_delete
         from basket_honor_record
@@ -101,7 +102,7 @@
     </select>
 
     <select id="selectBySeasonCategorySource" resultMap="BasketHonorRecordResult">
-        select id, tournament_id, season_id, honor_category_id, team_id, player_id, match_id,
+        select id, series_id, season_id, honor_category_id, team_id, player_id, match_id,
                honor_title, honor_subtitle, honor_value, award_date, cover_file_id, source_type, source_id,
                generation_batch_id, display_status, display_order, remark, create_time, update_time, is_delete
         from basket_honor_record
@@ -123,12 +124,12 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_honor_record (
-            tournament_id, season_id, honor_category_id, team_id, player_id, match_id,
+            series_id, season_id, honor_category_id, team_id, player_id, match_id,
             honor_title, honor_subtitle, honor_value, award_date, cover_file_id,
             source_type, source_id, generation_batch_id, display_status, display_order, remark,
             create_time, update_time, is_delete
         ) values (
-            #{tournamentId}, #{seasonId}, #{honorCategoryId}, #{teamId}, #{playerId}, #{matchId},
+            #{seriesId}, #{seasonId}, #{honorCategoryId}, #{teamId}, #{playerId}, #{matchId},
             #{honorTitle}, #{honorSubtitle}, #{honorValue}, #{awardDate}, #{coverFileId},
             #{sourceType}, #{sourceId}, #{generationBatchId}, #{displayStatus}, #{displayOrder}, #{remark},
             #{createTime}, #{updateTime}, #{isDelete}
@@ -189,7 +190,8 @@
         where h.is_delete = 0 and h.display_status = 1
           and h.source_type &lt;&gt; 'HALL_OF_FAME'
         <if test="seasonId != null">and h.season_id = #{seasonId}</if>
-        <if test="tournamentId != null">and h.tournament_id = #{tournamentId}</if>
+        <if test="seriesId != null">and h.series_id = #{seriesId}</if>
+        <if test="tournamentId != null">and h.series_id = #{tournamentId}</if>
         and not exists (
             select 1 from basket_honor_record hf
             where hf.is_delete = 0 and hf.source_type = 'HALL_OF_FAME'

@@ -12,8 +12,8 @@ import com.zhs.model.BasketHonorLineup;
 import com.zhs.model.BasketHonorRecord;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
-import com.zhs.model.BasketTournament;
-import com.zhs.model.BasketTournamentSeason;
+import com.zhs.model.v4.BasketSeason;
+import com.zhs.model.v4.BasketSeries;
 import com.zhs.response.publicapi.PublicHonorDetailResp;
 import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.publicapi.PublicHonorLineupItemResp;
@@ -275,7 +275,7 @@ public class BasketPublicHonorSupport {
             return Collections.emptyList();
         }
         Set<Long> categoryIds = new HashSet<>();
-        Set<Long> tournamentIds = new HashSet<>();
+        Set<Long> seriesIds = new HashSet<>();
         Set<Long> seasonIds = new HashSet<>();
         Set<Long> teamIds = new HashSet<>();
         Set<Long> playerIds = new HashSet<>();
@@ -284,8 +284,8 @@ public class BasketPublicHonorSupport {
             if (record.getHonorCategoryId() != null) {
                 categoryIds.add(record.getHonorCategoryId());
             }
-            if (record.getTournamentId() != null) {
-                tournamentIds.add(record.getTournamentId());
+            if (record.getSeriesId() != null) {
+                seriesIds.add(record.getSeriesId());
             }
             if (record.getSeasonId() != null) {
                 seasonIds.add(record.getSeasonId());
@@ -301,8 +301,8 @@ public class BasketPublicHonorSupport {
             }
         }
         Map<Long, BasketHonorCategory> categoryMap = loadCategoryMap(categoryIds);
-        Map<Long, BasketTournament> tournamentMap = publicSupport.loadTournamentMap(tournamentIds);
-        Map<Long, BasketTournamentSeason> seasonMap = publicSupport.loadSeasonMap(seasonIds);
+        Map<Long, BasketSeries> seriesMap = publicSupport.loadSeriesMap(seriesIds);
+        Map<Long, BasketSeason> seasonMap = publicSupport.loadSeasonMap(seasonIds);
         Map<Long, BasketTeam> teamMap = publicSupport.loadPublicTeamMap(teamIds);
         for (BasketTeam team : teamMap.values()) {
             if (team.getLogoFileId() != null) {
@@ -320,7 +320,7 @@ public class BasketPublicHonorSupport {
         for (BasketHonorRecord record : records) {
             PublicHonorItemResp vo = new PublicHonorItemResp();
             vo.setHonorId(record.getId());
-            vo.setTournamentId(record.getTournamentId());
+            vo.setTournamentId(record.getSeriesId());
             vo.setSeasonId(record.getSeasonId());
             vo.setTeamId(record.getTeamId());
             vo.setPlayerId(record.getPlayerId());
@@ -338,13 +338,13 @@ public class BasketPublicHonorSupport {
                 vo.setHonorScope(category.getHonorScope());
                 vo.setRecipientType(category.getRecipientType());
             }
-            BasketTournament tournament = tournamentMap.get(record.getTournamentId());
-            if (tournament != null) {
-                vo.setTournamentName(tournament.getTournamentName());
+            BasketSeries series = seriesMap.get(record.getSeriesId());
+            if (series != null) {
+                vo.setTournamentName(series.getSeriesName());
             }
-            BasketTournamentSeason season = seasonMap.get(record.getSeasonId());
+            BasketSeason season = seasonMap.get(record.getSeasonId());
             if (season != null) {
-                vo.setSeasonName(season.getSeasonName());
+                vo.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
             }
             BasketTeam team = teamMap.get(record.getTeamId());
             if (team != null) {

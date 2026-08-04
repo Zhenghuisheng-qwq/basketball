@@ -4,7 +4,6 @@ import com.zhs.basket.domain.BasketHonorCategory;
 import com.zhs.basket.domain.BasketHonorLineup;
 import com.zhs.basket.domain.BasketHonorRecord;
 import com.zhs.basket.domain.BasketStatChangeRecord;
-import com.zhs.basket.domain.BasketTournamentSeason;
 import com.zhs.basket.enums.HonorCodeEnum;
 import com.zhs.basket.enums.HonorDisplayStatusEnum;
 import com.zhs.basket.enums.PlayerRankTypeEnum;
@@ -13,7 +12,8 @@ import com.zhs.basket.mapper.BasketHonorLineupMapper;
 import com.zhs.basket.mapper.BasketHonorRecordMapper;
 import com.zhs.basket.mapper.BasketPlayerRankAdminMapper;
 import com.zhs.basket.mapper.BasketStatChangeRecordMapper;
-import com.zhs.basket.mapper.BasketTournamentSeasonMapper;
+import com.zhs.basket.domain.v4.BasketSeason;
+import com.zhs.basket.mapper.v4.BasketSeasonMapper;
 import com.zhs.basket.query.RankingQuery;
 import com.zhs.basket.req.HonorRecordAddReq;
 import com.zhs.basket.req.HonorRecordEditReq;
@@ -54,7 +54,7 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
     @Autowired private BasketHonorRecordMapper honorRecordMapper;
     @Autowired private BasketHonorCategoryMapper honorCategoryMapper;
     @Autowired private BasketHonorLineupMapper honorLineupMapper;
-    @Autowired private BasketTournamentSeasonMapper seasonMapper;
+    @Autowired private BasketSeasonMapper seasonMapper;
     @Autowired private BasketPlayerRankAdminMapper playerRankAdminMapper;
     @Autowired private BasketStatChangeRecordMapper statChangeRecordMapper;
     @Autowired private BasketPublicCacheCleaner publicCacheCleaner;
@@ -95,19 +95,19 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         validateRecipientFields(category, req.getTeamId(), req.getPlayerId());
         validateManualRemark(category, req.getRemark());
         if (req.getSeasonId() != null) {
-            BasketTournamentSeason season = seasonMapper.selectById(req.getSeasonId());
+            BasketSeason season = seasonMapper.selectById(req.getSeasonId());
             if (season == null) {
                 throw new ServiceException("赛季不存在");
             }
             if (req.getTournamentId() == null) {
-                req.setTournamentId(season.getTournamentId());
+                req.setTournamentId(season.getSeriesId());
             }
         }
         ensureUnique(req.getSeasonId(), category.getId(), req.getTeamId(), req.getPlayerId(), null);
 
         Date now = new Date();
         BasketHonorRecord record = new BasketHonorRecord();
-        record.setTournamentId(req.getTournamentId());
+        record.setSeriesId(req.getTournamentId());
         record.setSeasonId(req.getSeasonId());
         record.setHonorCategoryId(category.getId());
         record.setTeamId(req.getTeamId());
@@ -321,7 +321,7 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         }
         Date now = new Date();
         BasketHonorRecord record = new BasketHonorRecord();
-        record.setTournamentId(source.getTournamentId());
+        record.setSeriesId(source.getSeriesId() != null ? source.getSeriesId() : source.getTournamentId());
         record.setSeasonId(source.getSeasonId());
         record.setHonorCategoryId(source.getHonorCategoryId());
         record.setTeamId(source.getTeamId());
