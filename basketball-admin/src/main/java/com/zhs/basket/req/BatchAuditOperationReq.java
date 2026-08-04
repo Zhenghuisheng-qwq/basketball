@@ -12,5 +12,4 @@ public class BatchAuditOperationReq {
     private String auditRemark;
     private String rejectReason;
     private String positionCode;
-    private MatchExceptionDecideReq decidePayload;
 }

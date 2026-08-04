@@ -11,7 +11,7 @@ import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketTeamInvitationDao;
 import com.zhs.dao.BasketTournamentDao;
-import com.zhs.dao.BasketTournamentRegistrationDao;
+
 import com.zhs.dao.BasketTournamentSeasonDao;
 import com.zhs.enums.MessageReadStatusEnum;
 import com.zhs.enums.PlatformIdentityStatusEnum;
@@ -25,7 +25,7 @@ import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamInvitation;
 import com.zhs.model.BasketTournament;
-import com.zhs.model.BasketTournamentRegistration;
+
 import com.zhs.model.BasketTournamentSeason;
 import com.zhs.response.account.MessageItemResp;
 import com.zhs.response.account.MessagePageResp;
@@ -75,8 +75,6 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
     private BasketTournamentSeasonDao seasonDao;
     @Resource
     private BasketTournamentDao tournamentDao;
-    @Resource
-    private BasketTournamentRegistrationDao registrationDao;
     @Resource
     private ICaptainPermissionService captainPermissionService;
     @Resource
@@ -333,7 +331,6 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
         }
         BasketTournament tournament = tournamentDao.selectById(season.getTournamentId());
         BasketTeam team = null;
-        BasketTournamentRegistration registration = null;
         if (memberId != null) {
             var context = captainPermissionService;
             try {
@@ -343,11 +340,6 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
                         .last("limit 1"));
                 if (!membershipTeams.isEmpty()) {
                     team = membershipTeams.get(0);
-                    registration = registrationDao.selectOne(new LambdaQueryWrapper<BasketTournamentRegistration>()
-                            .eq(BasketTournamentRegistration::getTeamId, team.getId())
-                            .eq(BasketTournamentRegistration::getSeasonId, season.getId())
-                            .eq(BasketTournamentRegistration::getIsDelete, NOT_DELETED)
-                            .last("limit 1"));
                 }
             } catch (Exception ignored) {
                 // ignore lookup failures
@@ -374,8 +366,8 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
         info.setTournamentName(tournament == null ? season.getSeasonName() : tournament.getTournamentName());
         info.setRegistrationEndTime(season.getRegistrationEndTime());
         info.setCanRegister(canRegister);
-        info.setAlreadyRegistered(registration != null);
-        info.setRegistrationId(registration == null ? null : String.valueOf(registration.getId()));
+        info.setAlreadyRegistered(false);
+        info.setRegistrationId(null);
         if (team != null) {
             info.setTeamId(String.valueOf(team.getId()));
             info.setTeamName(team.getTeamName());

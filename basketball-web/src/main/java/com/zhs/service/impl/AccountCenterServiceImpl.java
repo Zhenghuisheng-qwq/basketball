@@ -25,7 +25,6 @@ import com.zhs.response.account.PlayerIdentityResp;
 import com.zhs.response.team.CaptainQualificationDetailResp;
 import com.zhs.service.IAccountCenterService;
 import com.zhs.service.IAccountMessageService;
-import com.zhs.service.IAccountTournamentService;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.util.DataMaskUtil;
 import jakarta.annotation.Resource;
@@ -54,10 +53,7 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
     @Resource
     private BasketCaptainQualificationDao captainQualificationDao;
     @Resource
-    private IAccountMessageService accountMessageService;
-    @Resource
-    private IAccountTournamentService accountTournamentService;
-    @Resource
+    private IAccountMessageService accountMessageService;    @Resource
     private ICaptainPermissionService captainPermissionService;
 
     @Override
@@ -74,7 +70,7 @@ public class AccountCenterServiceImpl implements IAccountCenterService {
         resp.setAccountSummary(buildAccountSummary(account, profile));
         resp.setPlayerIdentity(buildPlayerIdentity(playerProfile, latestCertApp));
         resp.setCaptainQualification(buildCaptainQualification(captainQualDetail, captainQualification));
-        resp.setCurrentTournaments(accountTournamentService.listRecentTournaments(5));
+        resp.setCurrentTournaments(java.util.Collections.emptyList());
         resp.setUnreadMessageCount(accountMessageService.countUnread());
         resp.setRecentMessages(accountMessageService.listRecentMessages(5));
         resp.setPendingTasks(buildPendingTasks(account, playerProfile, latestCertApp, resp.getUnreadMessageCount()));

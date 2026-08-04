@@ -24,8 +24,6 @@ public class BasketStanding {
     private Integer pointAgainst;
     private Integer pointDiff;
     private Integer standingPoints;
-    /** @deprecated R4 起停止写入，改用 basket_standing_rank_reason */
-    private String rankExplainJson;
     private Integer manualRankPending;
     private Integer manualRankNo;
     private String manualRankReason;

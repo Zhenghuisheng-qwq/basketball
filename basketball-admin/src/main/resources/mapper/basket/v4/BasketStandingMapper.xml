@@ -18,7 +18,6 @@
         <result property="pointAgainst" column="point_against" />
         <result property="pointDiff" column="point_diff" />
         <result property="standingPoints" column="standing_points" />
-        <result property="rankExplainJson" column="rank_explain_json" />
         <result property="manualRankPending" column="manual_rank_pending" />
         <result property="manualRankNo" column="manual_rank_no" />
         <result property="manualRankReason" column="manual_rank_reason" />
@@ -30,7 +29,7 @@
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, division_id, stage_id, group_id, group_scope_key, event_team_id, rank_no, win_count, lose_count, draw_count, point_for, point_against, point_diff, standing_points, rank_explain_json, manual_rank_pending, manual_rank_no, manual_rank_reason, manual_rank_by, manual_rank_time, active_unique_key, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, division_id, stage_id, group_id, group_scope_key, event_team_id, rank_no, win_count, lose_count, draw_count, point_for, point_against, point_diff, standing_points, manual_rank_pending, manual_rank_no, manual_rank_reason, manual_rank_by, manual_rank_time, active_unique_key, create_time, update_time, is_delete</sql>
 
     <sql id="NotDeleted">is_delete = 0</sql>
 
@@ -87,11 +86,11 @@
         insert into basket_standing (
             season_id, division_id, stage_id, group_id, group_scope_key, event_team_id, rank_no,
             win_count, lose_count, draw_count, point_for, point_against, point_diff, standing_points,
-            rank_explain_json, manual_rank_pending, manual_rank_no, manual_rank_reason, manual_rank_by, manual_rank_time, active_unique_key, create_time, update_time, is_delete
+            manual_rank_pending, manual_rank_no, manual_rank_reason, manual_rank_by, manual_rank_time, active_unique_key, create_time, update_time, is_delete
         ) values (
             #{seasonId}, #{divisionId}, #{stageId}, #{groupId}, #{groupScopeKey}, #{eventTeamId}, #{rankNo},
             #{winCount}, #{loseCount}, #{drawCount}, #{pointFor}, #{pointAgainst}, #{pointDiff}, #{standingPoints},
-            #{rankExplainJson}, #{manualRankPending}, #{manualRankNo}, #{manualRankReason}, #{manualRankBy}, #{manualRankTime}, #{activeUniqueKey}, #{createTime}, #{updateTime}, #{isDelete}
+            #{manualRankPending}, #{manualRankNo}, #{manualRankReason}, #{manualRankBy}, #{manualRankTime}, #{activeUniqueKey}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -112,7 +111,6 @@
             <if test="pointAgainst != null">point_against = #{pointAgainst},</if>
             <if test="pointDiff != null">point_diff = #{pointDiff},</if>
             <if test="standingPoints != null">standing_points = #{standingPoints},</if>
-            <if test="rankExplainJson != null">rank_explain_json = #{rankExplainJson},</if>
             <if test="manualRankPending != null">manual_rank_pending = #{manualRankPending},</if>
             <if test="manualRankNo != null">manual_rank_no = #{manualRankNo},</if>
             <if test="manualRankReason != null">manual_rank_reason = #{manualRankReason},</if>

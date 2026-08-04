@@ -1,0 +1,25 @@
+-- =============================================================================
+-- CNPA 动态赛制重构 R5：回滚说明（非自动完整回滚）
+-- =============================================================================
+-- 1. 代码回滚：使用 Git 回退至 R5 执行前 commit
+--    git log --oneline -20
+--    git checkout <pre-r5-commit> -- basketball-admin basketball-web basketball-admin-ui basketball-web-ui docs/sql
+--
+-- 2. 数据库回滚：
+--    - 执行 cleanup 前必须 mysqldump：
+--      mysqldump -u root -p --databases <db_name> > backup_pre_r5_YYYYMMDD.sql
+--    - 恢复：mysql -u root -p <db_name> < backup_pre_r5_YYYYMMDD.sql
+--
+-- 3. 已 DROP 的纯旧表无法通过本脚本自动恢复，只能从备份还原
+--
+-- 4. rank_explain_json 字段恢复（若仅从备份部分还原）：
+--    ALTER TABLE basket_standing ADD COLUMN rank_explain_json TEXT DEFAULT NULL COMMENT '排名解释JSON' AFTER standing_points;
+--
+-- 5. 菜单权限恢复：重新执行历史脚本
+--    docs/sql/cnpa-v4-round2-menu.sql ~ round11-menu-final.sql
+--    docs/sql/cnpa-dynamic-format-r3-permission.sql
+--    docs/sql/cnpa-dynamic-format-r4-permission.sql
+--
+-- 6. V4_LEGACY 模板恢复：docs/sql/cnpa-dynamic-format-r1-seed.sql 中 V4_LEGACY_ROUND_ROBIN_V1 段
+--
+-- 本文件 intentionally 不含自动 DROP/DELETE/INSERT，避免误执行

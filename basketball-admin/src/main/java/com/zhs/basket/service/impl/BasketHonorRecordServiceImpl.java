@@ -13,7 +13,6 @@ import com.zhs.basket.mapper.BasketHonorLineupMapper;
 import com.zhs.basket.mapper.BasketHonorRecordMapper;
 import com.zhs.basket.mapper.BasketPlayerRankAdminMapper;
 import com.zhs.basket.mapper.BasketStatChangeRecordMapper;
-import com.zhs.basket.mapper.BasketTournamentRegistrationMapper;
 import com.zhs.basket.mapper.BasketTournamentSeasonMapper;
 import com.zhs.basket.query.RankingQuery;
 import com.zhs.basket.req.HonorRecordAddReq;
@@ -56,7 +55,6 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
     @Autowired private BasketHonorCategoryMapper honorCategoryMapper;
     @Autowired private BasketHonorLineupMapper honorLineupMapper;
     @Autowired private BasketTournamentSeasonMapper seasonMapper;
-    @Autowired private BasketTournamentRegistrationMapper registrationMapper;
     @Autowired private BasketPlayerRankAdminMapper playerRankAdminMapper;
     @Autowired private BasketStatChangeRecordMapper statChangeRecordMapper;
     @Autowired private BasketPublicCacheCleaner publicCacheCleaner;
@@ -103,10 +101,6 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
             }
             if (req.getTournamentId() == null) {
                 req.setTournamentId(season.getTournamentId());
-            }
-            if (RECIPIENT_TEAM.equals(category.getRecipientType()) && req.getTeamId() != null
-                    && registrationMapper.selectApprovedBySeasonAndTeam(req.getSeasonId(), req.getTeamId()) == null) {
-                throw new ServiceException("球队未通过当前赛季报名审核");
             }
         }
         ensureUnique(req.getSeasonId(), category.getId(), req.getTeamId(), req.getPlayerId(), null);

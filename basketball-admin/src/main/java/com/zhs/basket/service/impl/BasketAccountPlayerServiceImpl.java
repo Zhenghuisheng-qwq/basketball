@@ -36,9 +36,7 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
     @Autowired private BasketPlayerCertApplicationMapper certApplicationMapper;
     @Autowired private BasketCaptainQualificationMapper captainQualificationMapper;
     @Autowired private BasketPlayerProfileMapper playerProfileMapper;
-    @Autowired private BasketTeamMemberMapper teamMemberMapper;
-    @Autowired private BasketTournamentRegistrationMapper registrationMapper;
-    @Autowired private BasketMessageReceiverMapper messageReceiverMapper;
+    @Autowired private BasketTeamMemberMapper teamMemberMapper;    @Autowired private BasketMessageReceiverMapper messageReceiverMapper;
     @Autowired private BasketAccountSecurityLogMapper securityLogMapper;
 
     @Override
@@ -282,13 +280,7 @@ public class BasketAccountPlayerServiceImpl implements IBasketAccountPlayerServi
     }
 
     private List<AccountPlayerRegistrationVo> loadRegistrations(Long memberId) {
-        return registrationMapper.selectSummaryByMemberId(memberId).stream().peek(vo -> {
-            if (vo.getRegistrationStatus() != null) {
-                RegistrationStatusEnum status = RegistrationStatusEnum.fromCode(vo.getRegistrationStatus());
-                vo.setRegistrationStatusName(status.getDescription());
-                vo.setAuditStatusName(status.getAuditDisplayDescription());
-            }
-        }).collect(Collectors.toList());
+        return java.util.Collections.emptyList();
     }
 
     private List<AccountPlayerNotificationVo> loadNotifications(Long memberId) {

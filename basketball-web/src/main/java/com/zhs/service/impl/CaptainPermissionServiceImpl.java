@@ -5,7 +5,6 @@ import com.zhs.dao.BasketCaptainQualificationDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketTeamMemberDao;
-import com.zhs.dao.BasketTournamentRegistrationDao;
 import com.zhs.dao.BasketTournamentSeasonDao;
 import com.zhs.enums.CaptainQualificationStatusEnum;
 import com.zhs.enums.PlayerCertStatusEnum;
@@ -16,7 +15,6 @@ import com.zhs.model.BasketCaptainQualification;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamMember;
-import com.zhs.model.BasketTournamentRegistration;
 import com.zhs.model.BasketTournamentSeason;
 import com.zhs.response.team.CaptainQualificationDetailResp;
 import com.zhs.service.ICaptainPermissionService;
@@ -43,8 +41,6 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
     private BasketTeamDao teamDao;
     @Resource
     private BasketTeamMemberDao teamMemberDao;
-    @Resource
-    private BasketTournamentRegistrationDao registrationDao;
     @Resource
     private BasketTournamentSeasonDao seasonDao;
     @Resource
@@ -264,21 +260,6 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
     @Override
     public void assertEligibleToJoinTeam(Long accountId, String platformCode) {
         teamMembershipSupport.assertEligibleToJoinTeam(accountId);
-    }
-
-    @Override
-    public BasketTournamentRegistration requireRegistrationCaptain(Long accountId, Long registrationId) {
-        BasketTournamentRegistration registration = registrationDao.selectById(registrationId);
-        if (registration == null || !NOT_DELETED.equals(registration.getIsDelete())) {
-            throw new ServiceException("报名记录不存在");
-        }
-        if (!accountId.equals(registration.getCaptainMemberId())) {
-            throw new ServiceException("无权操作该报名", 403);
-        }
-        BasketCaptainQualification grant = requireValidQualificationForEvent(
-                accountId, registration.getTeamId(), registration.getSeasonId());
-        captainGrantSupport.assertGrantBoundToTeam(grant, registration.getTeamId());
-        return registration;
     }
 
     private String resolveInvalidReason(Long accountId, BasketCaptainQualification qualification) {

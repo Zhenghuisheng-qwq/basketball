@@ -19,8 +19,6 @@ import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamInvitation;
 import com.zhs.model.BasketTeamMember;
-import com.zhs.model.BasketTournamentRegistration;
-import com.zhs.model.BasketTournamentRegistrationPlayer;
 import com.zhs.request.team.TeamMemberUpdateReq;
 import com.zhs.response.team.CandidatePlayerItemResp;
 import com.zhs.response.team.CandidatePlayerPageResp;
@@ -79,12 +77,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     @Resource
     private BasketMemberAccountDao memberAccountDao;
     @Resource
-    private BasketFileAssetDao fileAssetDao;
-    @Resource
-    private BasketTournamentRegistrationDao registrationDao;
-    @Resource
-    private BasketTournamentRegistrationPlayerDao registrationPlayerDao;
-    @Resource
+    private BasketFileAssetDao fileAssetDao;    @Resource
     private ICaptainPermissionService captainPermissionService;
     @Resource
     private TeamMemberJoinHelper teamMemberJoinHelper;
@@ -473,25 +466,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     }
 
     private void assertNotInActiveRegistration(BasketTeamMember member) {
-        List<Integer> activeStatuses = Arrays.asList(
-                TournamentRegistrationStatusEnum.SUBMITTED.getCode(),
-                TournamentRegistrationStatusEnum.REVIEWING.getCode(),
-                TournamentRegistrationStatusEnum.APPROVED.getCode());
-        List<BasketTournamentRegistration> registrations = registrationDao.selectList(new LambdaQueryWrapper<BasketTournamentRegistration>()
-                .eq(BasketTournamentRegistration::getTeamId, member.getTeamId())
-                .in(BasketTournamentRegistration::getRegistrationStatus, activeStatuses)
-                .eq(BasketTournamentRegistration::getIsDelete, NOT_DELETED));
-        if (CollectionUtils.isEmpty(registrations)) {
-            return;
-        }
-        Set<Long> registrationIds = registrations.stream().map(BasketTournamentRegistration::getId).collect(Collectors.toSet());
-        Long count = registrationPlayerDao.selectCount(new LambdaQueryWrapper<BasketTournamentRegistrationPlayer>()
-                .in(BasketTournamentRegistrationPlayer::getRegistrationId, registrationIds)
-                .eq(BasketTournamentRegistrationPlayer::getTeamMemberId, member.getId())
-                .eq(BasketTournamentRegistrationPlayer::getIsDelete, NOT_DELETED));
-        if (count != null && count > 0) {
-            throw new ServiceException("该成员存在进行中的赛事报名，无法离队或移除");
-        }
+        // legacy registration domain removed in R5
     }
 
     private void markMemberRemoved(BasketTeamMember member, String reason) {
