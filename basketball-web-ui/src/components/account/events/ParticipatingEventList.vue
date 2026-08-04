@@ -27,6 +27,9 @@ const emit = defineEmits<{
         <div class="my-events-list__meta">
           <span>参与方式：{{ item.participationTypeText }}</span>
           <span>本届身份：{{ item.identityText }}</span>
+          <span v-if="item.stageSummary">当前阶段：{{ item.stageSummary }}</span>
+          <span v-if="item.rankSummary">{{ item.rankSummary }}</span>
+          <span v-if="item.qualificationSummary">晋级：{{ item.qualificationSummary }}</span>
           <EventStatusBadge
             :text="item.statusText"
             :finished="item.status === 'FINISHED'"
@@ -34,6 +37,10 @@ const emit = defineEmits<{
           />
         </div>
         <p v-if="item.pendingTaskText" class="my-events-list__tag">{{ item.pendingTaskText }}</p>
+        <p v-if="item.nextMatchSummary || item.latestMatchSummary" class="my-events-list__sub">
+          <span v-if="item.nextMatchSummary">{{ item.nextMatchSummary }}</span>
+          <span v-if="item.latestMatchSummary">{{ item.latestMatchSummary }}</span>
+        </p>
       </div>
       <div class="my-events-list__action">
         <button
@@ -117,6 +124,15 @@ const emit = defineEmits<{
     color: var(--account-danger, #c80a10);
     font-size: 13px;
     font-weight: 800;
+  }
+
+  &__sub {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.55);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
   }
 
   &__action {

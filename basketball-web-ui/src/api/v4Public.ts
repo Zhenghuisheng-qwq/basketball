@@ -11,6 +11,8 @@ import type {
   V4PublicSeasonDetail,
   V4PublicSeasonItem,
   V4PublicSeriesItem,
+  V4PublicStageItem,
+  V4PublicStageStandingScope,
   V4PublicStandingItem,
   V4PublicTeamStatItem,
 } from '@/api/types/v4Public'
@@ -64,6 +66,22 @@ export function getV4PublicStanding(divisionId: string) {
   return request.get<any, ApiResult<V4PublicStandingItem[]>>('/basket/v4/public/stats/standing', {
     params: { divisionId },
   })
+}
+
+export function getV4PublicStageList(divisionId: string) {
+  return request.get<any, ApiResult<V4PublicStageItem[]>>('/basket/v4/public/stage/list', {
+    params: { divisionId },
+  })
+}
+
+export function getV4PublicStageStandings(stageId: string) {
+  return request.get<any, ApiResult<V4PublicStageStandingScope[]>>(
+    `/basket/v4/public/stage/${stageId}/standings`,
+  )
+}
+
+export function getV4PublicStageBracket(stageId: string) {
+  return request.get<any, ApiResult<V4PublicMatchItem[]>>(`/basket/v4/public/stage/${stageId}/bracket`)
 }
 
 export function getV4PublicTeamStat(divisionId: string) {

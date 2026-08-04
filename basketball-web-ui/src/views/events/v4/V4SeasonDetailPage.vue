@@ -7,6 +7,9 @@ import {
   getV4PublicRank,
   getV4PublicSeasonDetail,
   getV4PublicStanding,
+  getV4PublicStageList,
+  getV4PublicStageStandings,
+  getV4PublicStageBracket,
   getV4PublicTeamList,
   getV4PublicTeamStat,
 } from '@/api/v4Public'
@@ -17,6 +20,8 @@ import type {
   V4PublicRankItem,
   V4PublicSeasonDetail,
   V4PublicStandingItem,
+  V4PublicStageItem,
+  V4PublicStageStandingScope,
   V4PublicTeamStatItem,
   V4SeasonDetailTab,
 } from '@/api/types/v4Public'
@@ -54,6 +59,10 @@ const season = ref<V4PublicSeasonDetail | null>(null)
 const teams = ref<V4PublicEventTeamItem[]>([])
 const matches = ref<V4PublicMatchItem[]>([])
 const standings = ref<V4PublicStandingItem[]>([])
+const stageList = ref<V4PublicStageItem[]>([])
+const stageStandingScopes = ref<V4PublicStageStandingScope[]>([])
+const activeStandingStageId = ref('')
+const bracketMatches = ref<V4PublicMatchItem[]>([])
 const teamStats = ref<V4PublicTeamStatItem[]>([])
 const playerStats = ref<V4PublicPlayerStatItem[]>([])
 const ranks = ref<V4PublicRankItem[]>([])
@@ -121,8 +130,25 @@ async function loadTabData() {
       const res = await getV4PublicMatchList(params)
       matches.value = res.data ?? []
     } else if (activeTab.value === 'standing') {
-      const res = await getV4PublicStanding(activeDivisionId.value)
-      standings.value = res.data ?? []
+      const stageRes = await getV4PublicStageList(activeDivisionId.value)
+      stageList.value = stageRes.data ?? []
+      if (stageList.value.length) {
+        activeStandingStageId.value = stageList.value.find(s => s.currentStage)?.stageId
+          || stageList.value[0]?.stageId
+          || ''
+        if (activeStandingStageId.value) {
+          const scopeRes = await getV4PublicStageStandings(activeStandingStageId.value)
+          stageStandingScopes.value = scopeRes.data ?? []
+          standings.value = stageStandingScopes.value.flatMap(s => s.rows ?? [])
+        } else {
+          stageStandingScopes.value = []
+          standings.value = []
+        }
+      } else {
+        const res = await getV4PublicStanding(activeDivisionId.value)
+        standings.value = res.data ?? []
+        stageStandingScopes.value = []
+      }
     } else if (activeTab.value === 'stats') {
       if (statsSubTab.value === 'team') {
         const res = await getV4PublicTeamStat(activeDivisionId.value)
@@ -398,6 +424,30 @@ onMounted(() => {
 
         <div v-else-if="activeTab === 'standing'">
           <div v-if="tabLoading" class="v4-state">加载中...</div>
+          <template v-else-if="stageStandingScopes.length">
+            <div v-for="scope in stageStandingScopes" :key="scope.groupScopeKey || 'overall'" class="v4-standing-scope">
+              <h4>{{ scope.groupName || (scope.groupId ? `小组 ${scope.groupId}` : '总积分榜') }}</h4>
+              <div class="v4-table-wrap">
+                <table class="v4-table">
+                  <thead>
+                    <tr>
+                      <th>排名</th><th>队伍</th><th>胜</th><th>负</th><th>净胜分</th><th>积分</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="row in scope.rows || []" :key="row.eventTeamId">
+                      <td>{{ row.rankNo ?? '--' }}</td>
+                      <td>{{ displayText(row.teamName) }}</td>
+                      <td>{{ row.winCount ?? 0 }}</td>
+                      <td>{{ row.loseCount ?? 0 }}</td>
+                      <td>{{ row.pointDiff ?? 0 }}</td>
+                      <td>{{ row.standingPoints ?? 0 }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </template>
           <div v-else-if="!standings.length" class="v4-state">暂无积分榜数据</div>
           <div v-else class="v4-table-wrap">
             <table class="v4-table">

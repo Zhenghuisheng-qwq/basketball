@@ -61,4 +61,21 @@
         order by a.sort_order asc, a.id asc
     </select>
 
+    <select id="selectCandidateTeamsByCaptainMemberId" resultType="com.zhs.response.v4.V4PersonalFormationAvailableTeamResp">
+        select
+            t.id as teamId,
+            t.team_name as teamName,
+            null as logoUrl,
+            t.team_status as teamStatus,
+            (select count(1) from basket_team_member tm
+              where tm.team_id = t.id and tm.is_delete = 0
+                and tm.is_current = 1 and tm.membership_status = 1) as currentMemberCount
+        from basket_team t
+        where t.is_delete = 0
+          and t.audit_status = 1
+          and t.team_status = 1
+          and t.captain_member_id = #{memberId}
+        order by t.update_time desc, t.id desc
+    </select>
+
 </mapper>

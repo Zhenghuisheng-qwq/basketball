@@ -13,6 +13,26 @@
 SET NAMES utf8mb4;
 
 -- ---------------------------------------------------------------------------
+-- A0. 查询无快照 Division（只读）
+-- ---------------------------------------------------------------------------
+-- SELECT d.id, d.division_name, d.division_status, d.format_template_id, d.format_snapshot_id
+-- FROM basket_division d
+-- WHERE d.is_delete = 0 AND (d.format_snapshot_id IS NULL OR d.format_snapshot_id = 0);
+
+-- ---------------------------------------------------------------------------
+-- A1. 查询每个 Division 业务数据概况（只读）
+-- ---------------------------------------------------------------------------
+-- SELECT d.id AS division_id, d.division_name,
+--   (SELECT COUNT(*) FROM basket_registration r WHERE r.division_id = d.id AND r.is_delete = 0) AS registration_cnt,
+--   (SELECT COUNT(*) FROM basket_event_team et WHERE et.division_id = d.id AND et.is_delete = 0) AS event_team_cnt,
+--   (SELECT COUNT(*) FROM basket_schedule_batch sb WHERE sb.division_id = d.id AND sb.is_delete = 0) AS schedule_batch_cnt,
+--   (SELECT COUNT(*) FROM basket_match m WHERE m.division_id = d.id AND m.is_delete = 0) AS match_cnt,
+--   (SELECT COUNT(*) FROM basket_match_submission ms JOIN basket_match m ON m.id = ms.match_id
+--      WHERE m.division_id = d.id AND ms.is_delete = 0) AS submission_cnt
+-- FROM basket_division d
+-- WHERE d.is_delete = 0 AND (d.format_snapshot_id IS NULL OR d.format_snapshot_id = 0);
+
+-- ---------------------------------------------------------------------------
 -- A. 快照版本与 current 标记初始化检查
 -- ---------------------------------------------------------------------------
 -- SELECT d.id, d.format_snapshot_id, s.snapshot_version, s.is_current, s.active_unique_key, s.snapshot_status

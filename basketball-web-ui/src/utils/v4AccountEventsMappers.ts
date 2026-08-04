@@ -262,20 +262,38 @@ export function mapV4RegistrationToApplication(item: V4MyRegistration): MyApplic
 export function mapV4EventToParticipating(item: V4MyEvent): ParticipatingEvent {
   const isCaptain = item.roleInTeam === 'CAPTAIN'
   const pendingCount = item.pendingSubmissionCount ?? 0
+  const stageLabel = item.legacyEvent
+    ? '历史赛事'
+    : [item.currentStageName, item.currentGroupName].filter(Boolean).join(' · ') || undefined
+  const rankLabel = item.standingRank != null
+    ? `排名 ${item.standingRank}${item.standingPoints != null ? ` · ${item.standingPoints} 分` : ''}`
+    : undefined
+  const qualLabel = item.qualificationStatusName && item.qualificationStatusName !== item.qualificationStatus
+    ? item.qualificationStatusName
+    : item.qualificationStatus === 'CONFIRMED'
+      ? '已晋级'
+      : item.qualificationStatus === 'PREVIEW'
+        ? '晋级预览'
+        : undefined
   return {
     relationId: item.eventTeamId,
     eventTeamId: item.eventTeamId,
     divisionId: item.divisionId,
     tournamentName: item.seriesName || item.seasonTitle || '赛事',
-    platform: `${item.seasonTitle || ''} / ${v4PlatformLabel(item.platformCode)} / ${item.divisionName || ''}`.replace(/^ \/ | \/ $/g, ''),
+    platform: `${item.seasonTitle || ''} / ${item.platformName || item.platformCode || ''} / ${item.divisionName || ''}`.replace(/^ \/ | \/ $/g, ''),
     participationType: 'TEAM',
     participationTypeText: '球队参赛',
     identityType: item.roleInTeam || 'PLAYER',
     identityText: isCaptain ? '队长' : '队员',
     status: item.eventTeamStatus || '',
-    statusText: item.divisionStatus || '进行中',
+    statusText: item.legacyEvent ? '历史赛事' : (item.divisionStatus || '进行中'),
     pendingTaskCount: pendingCount,
     pendingTaskText: pendingCount > 0 ? `${pendingCount} 场比赛数据待提交` : undefined,
+    stageSummary: stageLabel,
+    rankSummary: rankLabel,
+    qualificationSummary: qualLabel,
+    nextMatchSummary: item.nextMatchTime ? `下场 ${item.nextMatchTime}` : undefined,
+    latestMatchSummary: item.latestMatchResult ? `最近 ${item.latestMatchResult}` : undefined,
     actionText: '查看赛程',
     actionType: 'VIEW_EVENT_RELATION',
     actionRoute: `/account/my-events?tab=schedule&divisionId=${item.divisionId}`,

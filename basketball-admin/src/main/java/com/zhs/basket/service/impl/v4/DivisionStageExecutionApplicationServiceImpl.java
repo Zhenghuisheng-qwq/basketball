@@ -384,6 +384,13 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
                 BasketStageStandingScopeVo vo = new BasketStageStandingScopeVo();
                 vo.setGroupScopeKey(scopeKey);
                 vo.setGroupId(scopeKey == OVERALL_SCOPE_KEY ? null : scopeKey);
+                if (scopeKey != OVERALL_SCOPE_KEY) {
+                    BasketDivisionGroup group = groupMapper.selectById(scopeKey);
+                    if (group != null) {
+                        vo.setGroupCode(group.getGroupCode());
+                        vo.setGroupName(group.getGroupName());
+                    }
+                }
                 return vo;
             });
             if (Integer.valueOf(1).equals(standing.getManualRankPending())) {
@@ -428,6 +435,12 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             throw new ServiceException("请填写人工排名原因");
         }
         BasketDivisionStage stage = requireStage(req.getStageId());
+        if (StageExecutionStatusEnum.COMPLETED.getCode().equals(stage.getExecutionStatus())) {
+            throw new ServiceException("该阶段已确认晋级，不可再修改人工排名");
+        }
+        if (!isStandingStage(stage)) {
+            throw new ServiceException("仅循环赛/小组赛阶段支持人工排名");
+        }
         Long groupScopeKey = req.getGroupScopeKey() != null ? req.getGroupScopeKey() : OVERALL_SCOPE_KEY;
 
         List<BasketStanding> scopeRows = standingMapper.selectByStageScope(
@@ -813,6 +826,13 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             throw new ServiceException("Division 不存在");
         }
         return division;
+    }
+
+    private boolean isStandingStage(BasketDivisionStage stage) {
+        if (CompetitionFormatEnum.ROUND_ROBIN.getCode().equals(stage.getCompetitionFormat())) {
+            return true;
+        }
+        return StageTypeEnum.GROUP.getCode().equals(stage.getStageType());
     }
 
     private BasketDivisionStage requireStage(Long stageId) {

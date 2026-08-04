@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   bindV4PersonalFormationTeam,
   confirmV4PersonalFormation,
+  getV4PersonalFormationAvailableTeams,
   getV4PersonalFormationTasks,
 } from '@/api/v4PlayerEvents'
-import type { V4PersonalFormationTask } from '@/api/types/v4PlayerEvents'
-import { useTeamStore } from '@/stores/team'
+import type { V4PersonalFormationAvailableTeam, V4PersonalFormationTask } from '@/api/types/v4PlayerEvents'
 
-const teamStore = useTeamStore()
+const router = useRouter()
 const loading = ref(false)
 const tasks = ref<V4PersonalFormationTask[]>([])
-const bindTeamId = ref('')
+const selectedTeamId = ref<Record<string, string>>({})
+const availableTeamsMap = ref<Record<string, V4PersonalFormationAvailableTeam[]>>({})
+const loadingTeamsMap = ref<Record<string, boolean>>({})
 const actingTeamId = ref('')
 
 function formationStatusLabel(status?: string) {
@@ -31,21 +34,54 @@ async function loadTasks() {
   try {
     const res = await getV4PersonalFormationTasks()
     tasks.value = res.data || []
+    for (const task of tasks.value) {
+      if (task.formationStatus !== 'CONVERTED' && task.longTermTeamId) {
+        selectedTeamId.value[task.drawTeamId] = task.longTermTeamId
+      }
+    }
   } finally {
     loading.value = false
   }
 }
 
+async function loadAvailableTeams(task: V4PersonalFormationTask) {
+  if (availableTeamsMap.value[task.drawTeamId]?.length) return
+  loadingTeamsMap.value[task.drawTeamId] = true
+  try {
+    const res = await getV4PersonalFormationAvailableTeams(task.drawTeamId)
+    availableTeamsMap.value[task.drawTeamId] = res.data || []
+    if (task.longTermTeamId) {
+      selectedTeamId.value[task.drawTeamId] = task.longTermTeamId
+    }
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '加载候选球队失败')
+  } finally {
+    loadingTeamsMap.value[task.drawTeamId] = false
+  }
+}
+
+function selectedAvailableTeam(task: V4PersonalFormationTask) {
+  const list = availableTeamsMap.value[task.drawTeamId] || []
+  const id = selectedTeamId.value[task.drawTeamId]
+  return list.find(item => item.teamId === id)
+}
+
 async function handleBind(task: V4PersonalFormationTask) {
-  if (!bindTeamId.value) {
-    ElMessage.warning('请输入要绑定的长期球队 ID')
+  const teamId = selectedTeamId.value[task.drawTeamId]
+  const selected = selectedAvailableTeam(task)
+  if (!teamId || !selected) {
+    ElMessage.warning('请选择要绑定的长期球队')
+    return
+  }
+  if (!selected.canBind) {
+    ElMessage.warning(selected.unavailableReason || '所选球队不可绑定')
     return
   }
   actingTeamId.value = task.drawTeamId
   try {
-    await bindV4PersonalFormationTeam({ drawTeamId: task.drawTeamId, longTermTeamId: bindTeamId.value })
+    await bindV4PersonalFormationTeam({ drawTeamId: task.drawTeamId, longTermTeamId: teamId })
     ElMessage.success('绑定成功')
-    bindTeamId.value = ''
+    availableTeamsMap.value[task.drawTeamId] = []
     await loadTasks()
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '绑定失败')
@@ -67,8 +103,11 @@ async function handleConfirm(task: V4PersonalFormationTask) {
   }
 }
 
+function goCreateTeam() {
+  router.push('/account/teams')
+}
+
 onMounted(async () => {
-  await teamStore.bootstrap().catch(() => undefined)
   await loadTasks()
 })
 </script>
@@ -85,6 +124,7 @@ onMounted(async () => {
       <p class="formation-panel__meta">
         状态：{{ formationStatusLabel(task.formationStatus) }}
         · 成员 {{ task.actualMemberCount ?? 0 }}/{{ task.expectedMemberCount ?? '-' }}
+        <span v-if="task.longTermTeamName"> · 已绑定：{{ task.longTermTeamName }}</span>
       </p>
       <ul v-if="task.members?.length" class="formation-panel__members">
         <li v-for="member in task.members" :key="member.playerId">
@@ -93,11 +133,55 @@ onMounted(async () => {
         </li>
       </ul>
       <div v-if="task.formationStatus !== 'CONVERTED'" class="formation-panel__actions">
-        <input v-model="bindTeamId" class="account-input" placeholder="长期球队 ID" />
-        <button type="button" class="account-btn-secondary" :disabled="actingTeamId === task.drawTeamId" @click="handleBind(task)">
+        <button type="button" class="account-btn-secondary" @click="loadAvailableTeams(task)">
+          {{ loadingTeamsMap[task.drawTeamId] ? '加载中…' : '加载候选球队' }}
+        </button>
+        <template v-if="availableTeamsMap[task.drawTeamId]?.length">
+          <div class="formation-panel__team-list">
+            <label
+              v-for="team in availableTeamsMap[task.drawTeamId]"
+              :key="team.teamId"
+              class="formation-panel__team-option"
+              :class="{ 'is-disabled': !team.canBind }"
+            >
+              <input
+                v-model="selectedTeamId[task.drawTeamId]"
+                type="radio"
+                :value="team.teamId"
+                :disabled="!team.canBind"
+              />
+              <div>
+                <strong>{{ team.teamName }}</strong>
+                <p>
+                  成员 {{ team.currentMemberCount ?? 0 }}
+                  · 已匹配 {{ team.matchedAssignedMemberCount ?? 0 }}
+                  · 缺失 {{ team.missingAssignedMemberCount ?? 0 }}
+                  · 额外 {{ team.extraMemberCount ?? 0 }}
+                </p>
+                <p v-if="team.canBind" class="ok">可绑定</p>
+                <p v-else class="warn">{{ team.unavailableReason || '不可绑定' }}</p>
+              </div>
+            </label>
+          </div>
+        </template>
+        <p v-else-if="availableTeamsMap[task.drawTeamId] && !availableTeamsMap[task.drawTeamId].length" class="formation-panel__empty">
+          暂无可用长期球队，
+          <button type="button" class="link-btn" @click="goCreateTeam">创建长期球队</button>
+        </p>
+        <button
+          type="button"
+          class="account-btn-secondary"
+          :disabled="actingTeamId === task.drawTeamId"
+          @click="handleBind(task)"
+        >
           绑定球队
         </button>
-        <button type="button" class="account-btn-primary" :disabled="actingTeamId === task.drawTeamId" @click="handleConfirm(task)">
+        <button
+          type="button"
+          class="account-btn-primary"
+          :disabled="actingTeamId === task.drawTeamId"
+          @click="handleConfirm(task)"
+        >
           确认成队
         </button>
       </div>
@@ -137,9 +221,46 @@ onMounted(async () => {
   }
   &__actions {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
   }
+  &__team-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  &__team-option {
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
+    cursor: pointer;
+    &.is-disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+    p {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.65);
+    }
+    .ok { color: #067647; }
+    .warn { color: #c80a10; }
+  }
+  &__empty {
+    margin: 0;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.65);
+  }
+}
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--account-primary, #d71920);
+  cursor: pointer;
+  text-decoration: underline;
 }
 </style>

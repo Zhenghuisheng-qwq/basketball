@@ -1,311 +1,428 @@
 # CNPA 动态赛制重构 R4 联调验收总结
 
 **测试批次编码**：`R4_TEST_BATCH_20260805`  
-**文档生成时间**：2026-08-05  
-**本轮结论**：**不通过**
+**文档更新时间**：2026-08-05  
+**本轮结论**：**R4 代码收口与联调资产已完成，真实运行验收待用户本地环境执行。**
 
 ---
 
 ## 1. 本轮目标
 
-R4 为五轮计划中唯一完整联调验收轮，目标包括：
+R4 为五轮计划中唯一完整联调验收轮，本轮在 Cursor 环境无法稳定启动 Maven/Java/Redis/前后端的前提下，完成：
 
-- 真实执行 R1～R3 + R4 数据库脚本
-- 修复 `rank_explain_json`、Standing 唯一键、MANUAL 同分、Legacy 入口收口
-- Admin/Web 页面收口
-- 跑通 TEAM/PERSONAL 链路与 ROUND_ROBIN / GROUP_STAGE / SINGLE_ELIMINATION BO1
-- 异常、幂等、权限、数据一致性验证
-- 修复全部 P0/P1
-- 形成 R5 清理清单
+- R4 剩余前后台业务收口（MANUAL 排名 UI、Web 成队选择器、Stage 数据接入、Legacy 拦截）
+- 数据库检查脚本与 backfill 资产完善
+- HTTP 联调脚本与本地验收清单
+- 静态引用与权限核对
+- **不在 Cursor 环境伪造 HTTP/页面/单元测试通过结果**
 
 ---
 
-## 2. 环境信息
+## 2. 当前执行环境说明
 
-| 项目 | 值 |
-|------|-----|
-| MySQL | `192.168.31.47:3306`，库名 `basketball`，账号 `root`（密码已脱敏） |
-| Redis | 未验证（Admin/Web 服务未启动，未探测） |
-| Admin 服务 | `http://127.0.0.1:8080` — **连接被拒绝，未运行** |
-| Web 服务 | `http://127.0.0.1:8881` — **连接被拒绝，未运行** |
-| Admin UI | 未启动联调 |
-| Web UI | 未启动联调 |
-| Maven | **未安装/不在 PATH**，单元测试未执行 |
-| 测试时间 | 2026-08-05 |
+| 项目 | 说明 |
+|------|------|
+| Cursor 环境 | **未要求** Maven；未启动 Admin/Web/Redis |
+| 用户本地环境 | 用户已确认项目可正常运行 |
+| 真实 HTTP 联调 | **未在 Cursor 执行**；场景 A～D 标记为待本地执行 |
+| 结论定位 | Cursor 环境缺少 Maven **不是**项目代码 P0 |
 
 ---
 
-## 3. SQL 实际执行记录
+## 3. 已完成的数据库迁移
 
-执行工具：`scripts/run_cnpa_migrations.py`（PyMySQL 直连联调库）
+执行工具：`scripts/run_cnpa_migrations.py`
 
-| 文件 | 是否执行 | 结果 | 说明 |
-|------|----------|------|------|
-| `cnpa-dynamic-format-r1-data-check.sql` | 部分 | 只读检查，迁移前未完整归档 | 通过 Python 脚本执行 SELECT |
-| `cnpa-dynamic-format-r1-migration.sql` | 是 | **成功**，10 条语句 | 新建模板/快照/阶段表，扩展 division |
-| `cnpa-dynamic-format-r1-seed.sql` | 是 | **成功**，13 条语句 | 模板种子 2 条 |
-| `cnpa-dynamic-format-r2-migration.sql` | 是 | **成功**，16 条语句 | 快照版本键、个人报名、分组表等 |
-| `cnpa-dynamic-format-r2-backfill.sql` | 否 | 跳过 | 历史无快照 Division，留待 MigrationRunner |
-| `cnpa-dynamic-format-r2-data-check.sql` | 否 | 跳过 | — |
-| `cnpa-dynamic-format-r3-migration.sql` | 是 | **成功**，14 条语句 | stage_team/qualification/match/standing 扩展 |
-| `cnpa-dynamic-format-r3-permission.sql` | 是 | 成功，18 执行 / 6 跳过 | 菜单 2320-2336 部分已存在 |
-| `cnpa-dynamic-format-r3-data-check.sql` | 否 | 跳过 | R3 表已建，无阶段业务数据 |
-| `cnpa-dynamic-format-r4-migration.sql` | 是 | **成功**，9 执行 / 1 跳过 | rank_reason 表、MANUAL 字段、active_unique_key 回填 |
-| `cnpa-dynamic-format-r4-permission.sql` | 是 | **成功**，6 条 | 菜单 2337-2339 |
-| `cnpa-dynamic-format-r4-test-data.sql` | 是 | **成功** | 创建 `basket_r4_test_marker` |
-| `cnpa-dynamic-format-r4-data-check.sql` | 是 | 见第 12 节 | 通过 `scripts/run_data_check.py` |
+| 文件 | 已执行 | 说明 |
+|------|--------|------|
+| `cnpa-dynamic-format-r1-migration.sql` | 是 | 模板/快照/阶段表 |
+| `cnpa-dynamic-format-r1-seed.sql` | 是 | 模板种子 |
+| `cnpa-dynamic-format-r2-migration.sql` | 是 | 个人报名/分组等 |
+| `cnpa-dynamic-format-r3-migration.sql` | 是 | stage_team/qualification 等 |
+| `cnpa-dynamic-format-r3-permission.sql` | 是 | 菜单 2320-2336 |
+| `cnpa-dynamic-format-r4-migration.sql` | 是 | rank_reason、MANUAL 字段 |
+| `cnpa-dynamic-format-r4-permission.sql` | 是 | 菜单 2337-2339 |
+| `cnpa-dynamic-format-r4-test-data.sql` | 是 | marker 表 |
+| `cnpa-dynamic-format-r2-backfill.sql` | 否（只读检查） | 推荐 Java MigrationRunner |
+| `cnpa-dynamic-format-r4-data-check.sql` | 是（检查） | `scripts/run_data_check.py` |
 
-**迁移前数据库状态**：仅有 V4 基础表（series/season/division 等），**未执行** R1/R2/R3 动态赛制 DDL。  
-**迁移后**：`basket_format_template`、`basket_division_format_snapshot`、`basket_division_stage`、`basket_division_stage_team`、`basket_standing_rank_reason` 等均已创建。
+**请勿重复执行**非幂等 DDL。data-check / backfill 查询段落可重复运行。
 
 ---
 
-## 4. 数据库最终结构变化
+## 4. R4 实际代码收口内容
 
-### 4.1 rank reason（R4 新增）
-
-- 表：`basket_standing_rank_reason`
-- 字段：division_id, stage_id, group_id, standing_id, event_team_id, rule_code, priority_no, compare_value, reason_text, is_decisive
-- `rank_explain_json`：**保留字段，应用层停止新写入**（`TieBreakStandingService` 已改）
-
-### 4.2 Standing 唯一键（R4 修正）
-
-- 新格式：`DIVISION:{divisionId}:STAGE:{stageId}:GROUP:GLOBAL|{groupId}:TEAM:{eventTeamId}`
-- 代码：`TieBreakStandingService.buildActiveUniqueKey(divisionId, stageId, groupScopeKey, eventTeamId)`
-- 历史 division 级 standing（无 stage_id）：active_unique_key 置 NULL，共 **2 条**（division_id=5）
-
-### 4.3 MANUAL 同分（R4 新增）
-
-- `basket_standing` 新增：manual_rank_no, manual_rank_reason, manual_rank_by, manual_rank_time
-- API：`POST /basket/v4/admin/stages/{stageId}/manual-rank`
-- 权限：`basket:v4Standing:manualRank`
-
-### 4.4 权限（R4 补充）
-
-- 2337 V4人工排名处理
-- 2338 V4阶段初始化队伍
-- 2339 V4取消晋级确认
+| 模块 | 状态 | 关键路径 |
+|------|------|----------|
+| rank reason 结构化 | 完成 | `TieBreakStandingService`、`basket_standing_rank_reason` |
+| Standing active_unique_key | 完成 | R4 migration + 代码新格式 |
+| MANUAL 排名后端 | 完成 | `POST /basket/v4/admin/stages/{stageId}/manual-rank` |
+| MANUAL 排名 Admin UI | **完成** | `basketball-admin-ui/.../stats/index.vue` |
+| Legacy 赛程拦截 | 完成 | `BasketV4ScheduleBatchServiceImpl` + schedule 页 |
+| Web 成队球队选择器 | **完成** | `V4PersonalFormationPanel.vue` + available-teams API |
+| Web 已参赛 Stage 数据 | **完成** | `BasketV4PlayerMyEventsMapper.xml` |
+| Web 我的赛程 Stage/Group | **完成** | `BasketV4PlayerMatchSubmissionMapper.xml` |
+| Web 公开赛事 Stage | **完成** | `BasketV4PublicStageController` |
+| HTTP 联调脚本 | **完成** | `scripts/r4_integration_runner.py` |
+| 数据检查脚本 | **完成** | `run_data_check.py` + 扩展 data-check SQL |
 
 ---
 
-## 5. 前后台页面收口
+## 5. MANUAL 排名闭环
 
-| 页面 | 状态 | 说明 |
-|------|------|------|
-| 赛事发布 | 静态代码已有（R1/R2） | 本轮未做 UI 联调 |
-| 报名审核 | 静态代码已有 | 未联调 |
-| 个人组队 | 静态代码已有 | 未联调 |
-| 赛事分组 | 静态代码已有 | 未联调 |
-| 阶段执行 | 已有页签 | 未联调 |
-| 赛程 Legacy 收口 | **已改代码** | 历史赛程只读标签；新 Division（有 formatSnapshotId）隐藏生成按钮；后端拒绝 Legacy 生成 |
-| 比赛/数据审核 | 静态代码已有 | 未联调 |
-| 统计榜单 | **已改代码** | 接入阶段维度积分榜、结构化排名依据 |
-| Web 我的赛事/赛程 | 部分（R3） | 未联调 |
-| Web 公开赛事详情 | 部分 | 未联调 |
+**后端**：`DivisionStageExecutionApplicationServiceImpl.applyManualRank`
 
-**修改文件**：
-- `basketball-admin-ui/src/views/cnpa/event-v4/schedule/index.vue`
-- `basketball-admin-ui/src/views/cnpa/event-v4/stats/index.vue`
-- `basketball-admin-ui/src/api/cnpa/event-v4/stage-execution.ts`
-- `basketball-admin-ui/src/api/cnpa/event-v4/options.ts`
+- 校验：同分集合完整覆盖、序号不重复、必须填写原因、已确认晋级（COMPLETED）禁止修改、仅 ROUND_ROBIN/GROUP 阶段
+- 保存后：`qualificationMapper.softDeletePreviewByStageId` 使 PREVIEW 失效
+
+**Admin UI**：`basketball-admin-ui/src/views/cnpa/event-v4/stats/index.vue`
+
+- 入口条件：已选 Division + Stage；积分型阶段；`manualRankPending=true`；权限 `basket:v4Standing:manualRank`；Stage 未 COMPLETED
+- GROUP_STAGE 按 scope（小组）分别显示「人工处理排名」按钮
+- Dialog：展示同分球队、积分、rank reason、人工序号、排序原因；调用 `applyV4StageManualRank`
+
+**权限**：`basket:v4Standing:manualRank`（SQL 2337）
 
 ---
 
-## 6. 场景 A 结果 — TEAM 5V5 四队单循环
+## 6. Web 成队球队选择器
 
-| 项 | 值 |
-|----|-----|
-| 状态 | **未执行** |
-| 阻塞原因 | Admin/Web 服务未启动，无法通过接口/页面创建 Division 并完成 6 场比赛链路 |
-| Division ID | — |
-| Match 数 | — |
-| 是否通过 | **否** |
+**API**：`GET /basket/v4/player/personal-formation/tasks/{drawTeamId}/available-teams`
 
----
+**后端**：
 
-## 7. 场景 B 结果 — TEAM 3V3 五队单循环
+- `BasketV4PersonalFormationController`
+- `BasketV4PersonalFormationServiceImpl.listAvailableTeams`
+- `BasketV4PersonalFormationMapper.selectCandidateTeamsByCaptainMemberId`
 
-| 项 | 值 |
-|----|-----|
-| 状态 | **未执行** |
-| 阻塞原因 | 同上 |
-| 是否通过 | **否** |
+**校验**：队长身份、球队状态、成员匹配、平台身份、人数、任务占用、Division EventTeam 冲突（绑定时 `validateTeamForBind` 复验）
+
+**前端**：`basketball-web-ui/src/components/account/events/V4PersonalFormationPanel.vue` — 候选球队单选、不可绑定原因、创建球队入口
 
 ---
 
-## 8. 场景 C 结果 — 16 队小组赛→8 强淘汰
+## 7. Web 阶段数据收口
 
-| 项 | 值 |
-|----|-----|
-| 状态 | **未执行** |
-| 阻塞原因 | 同上 |
-| 是否通过 | **否** |
+### 已参加赛事
 
----
+- API：`GET /basket/v4/player/my-events`
+- 扩展字段：currentStage、group、standingRank、qualification、next/latest match
+- 历史 Division（无 snapshot）标记 `legacyEvent`
 
-## 9. 场景 D 结果 — PERSONAL 3V3 两队单败淘汰
+### 我的赛程
 
-| 项 | 值 |
-|----|-----|
-| 状态 | **未执行** |
-| 阻塞原因 | 同上 |
-| 是否通过 | **否** |
+- API：`GET /basket/v4/player/my-schedule`
+- SQL 关联：`basket_division_stage`、`basket_division_group`
+- 展示：stageName、groupName、roundName、双方 submission 状态
 
----
+### 公开赛事详情
 
-## 10. 异常与幂等测试结果
-
-| 场景 | 预期 | 实际 | 是否通过 |
-|------|------|------|----------|
-| 全部 20.x 子项 | 接口拒绝/幂等 | **未执行** | **否** |
-| Legacy 新 Division 生成赛程 | 后端拒绝 | 代码已实现，**未接口复验** | 待复验 |
-| MANUAL 未处理禁止确认晋级 | 拒绝 | 代码已有（R3），**未联调** | 待复验 |
+- `GET /basket/v4/public/stage/list`
+- `GET /basket/v4/public/stage/{stageId}/standings`
+- `GET /basket/v4/public/stage/{stageId}/bracket`
+- 页面：`V4SeasonDetailPage.vue` 积分榜按小组 scope 展示
 
 ---
 
-## 11. 权限与越权测试
+## 8. Legacy 入口收口
 
-| 项 | 结果 |
+**后端**：`BasketV4ScheduleBatchServiceImpl.validateDivisionForGenerate` — `formatSnapshotId` 非空时拒绝 Legacy 生成
+
+**Admin UI**：`schedule/index.vue`
+
+- Tab：阶段执行 / 历史赛程（只读）
+- 新 Division（`formatSnapshotId` 非空）隐藏 Legacy「生成草稿」
+
+---
+
+## 9. 历史 Division 快照处理方案
+
+**推荐**：启动 Admin 时一次性执行
+
+```yaml
+cnpa:
+  v4:
+    format-snapshot-migration:
+      enabled: true
+```
+
+类：`basketball-admin/.../BasketV4FormatSnapshotMigrationRunner.java`
+
+**SQL 资产**：`docs/sql/cnpa-dynamic-format-r2-backfill.sql`（A0/A1 只读检查 + 注释模板）
+
+**规则**：已有业务数据 → IN_USE；已开放报名无业务 → LOCKED；DRAFT Division → DRAFT
+
+执行后关闭 enabled，不影响日常启动。
+
+---
+
+## 10. HTTP 联调脚本
+
+**路径**：`scripts/r4_integration_runner.py`
+
+**配置**：`scripts/.env.r4.example` → 复制为 `scripts/.env.r4.local`
+
+```bash
+python scripts/r4_integration_runner.py --dry-run
+python scripts/r4_integration_runner.py --scenario A
+python scripts/r4_integration_runner.py --scenario B
+python scripts/r4_integration_runner.py --scenario C
+python scripts/r4_integration_runner.py --scenario D
+python scripts/r4_integration_runner.py --all
+python scripts/r4_integration_runner.py --exception-only
+```
+
+**输出**：`scripts/output/r4-integration-result.json`
+
+**说明**：场景 A～D 框架与断言清单已准备；完整 TEAM/PERSONAL 链路需本地服务与用户测试账号执行，脚本不会伪造通过。
+
+---
+
+## 11. 数据一致性检查
+
+**SQL**：`docs/sql/cnpa-dynamic-format-r4-data-check.sql`（23 项，含 Legacy 统计）
+
+**运行**：
+
+```bash
+python scripts/run_data_check.py
+python scripts/run_data_check.py --json
+```
+
+**输出**：`scripts/output/r4-data-check-result.json`
+
+**Legacy 隔离**：检查 20～23 为 STAT 统计项，不与新主链路异常混计。
+
+---
+
+## 12. 权限收口
+
+| 编码 | 用途 |
+|------|------|
+| `basket:v4Standing:manualRank` | 人工排名 |
+| `basket:v4Stage:initialize` | 阶段初始化队伍 |
+| `basket:v4Stage:qualificationCancel` | 取消晋级确认 |
+| `basket:v4Stage:*` | 阶段执行全链路 |
+| `basket:v4FormatRule:*` | 规则查看/编辑/锁定 |
+
+Admin 前端 `v-hasPermi` / `checkPermi` 与后端 `@PreAuthorize` 常量 `BasketEventV4Perms` 一致。Web Player 接口不复用 Admin 权限。
+
+---
+
+## 13. 静态引用检查
+
+| 层 | 结论 |
 |----|------|
-| R4 权限 SQL | 已执行，菜单 2337-2339 已插入 |
-| 接口越权实测 | **未执行**（服务未启动） |
-| 前端按钮权限 | **未执行** |
+| 后端 Entity/Mapper/XML | MANUAL 字段、stage_id/group_id、active_unique_key 已对齐 |
+| Admin API ↔ Vue | `stage-execution.ts` manual-rank DTO 与 Controller 一致 |
+| Web API ↔ Vue | available-teams、my-events、my-schedule、public stage 路径已接入 |
+| Legacy 拦截 | 前后端均检查 `formatSnapshotId` |
+
+**未执行**：Maven 编译与运行时类加载验证（待用户本地）。
 
 ---
 
-## 12. 数据一致性检查
+## 14. 用户本地联调执行清单
 
-通过 `scripts/run_data_check.py` 执行 `cnpa-dynamic-format-r4-data-check.sql`：
+### 14.1 数据库
 
-| 检查项 | 异常数 | 处理 |
-|--------|--------|------|
-| rank_explain_json 新写入 | 0 | — |
-| active_unique_key 重复 | 0 | — |
-| 有效记录 active_unique_key 为空 | **2** | division_id=5 历史 standing，无 stage_id，已置 NULL |
-| 历史缺 stage_id | **2** | 同上，legacy division 级积分榜 |
-| Division 无 format_snapshot_id | **5** | 历史 Division 1-5，需 MigrationRunner 或手工创建快照 |
-| 已开放报名但快照非 LOCKED | **2** | division 3、4，历史数据 |
-| Legacy 与新 Division 混用赛程 | 0 | — |
+1. 确认 R1～R4 migration 已执行（见第 3 节）
+2. 运行 `python scripts/run_data_check.py --json`
+3. 历史 Division：启用 MigrationRunner 一次后关闭
+4. backfill 只读检查：打开 `r2-backfill.sql` A0/A1 注释执行
+
+### 14.2 Redis
+
+检查 Admin/Web 配置文件中的 `spring.redis.host/port`；`redis-cli ping` 预期 `PONG`
+
+### 14.3 Admin 启动
+
+- 模块：`basketball-admin`
+- 启动类：项目 Spring Boot 主类（IDEA 运行 admin 模块）
+- Profile：与用户本地一致（如 `dev`）
+- 预期：`http://127.0.0.1:8080` 可访问
+
+### 14.4 Web 启动
+
+- 模块：`basketball-web`
+- 预期：`http://127.0.0.1:8881`
+
+### 14.5 Admin UI
+
+```bash
+cd basketball-admin-ui
+npm install
+npm run dev
+```
+
+配置 API Base URL 指向 Admin 服务
+
+### 14.6 Web UI
+
+```bash
+cd basketball-web-ui
+npm install
+npm run dev
+```
+
+### 14.7 HTTP 联调脚本
+
+见第 10 节；先 `--dry-run`，再分场景执行
+
+### 14.8 数据检查
+
+见第 11 节；新主链路 ANOMALY 应为 0（Legacy 统计项除外）
+
+### 14.9 测试数据清理
+
+`docs/sql/cnpa-dynamic-format-r4-test-data-cleanup.sql` — 仅 `R4_TEST_%`；清理前先 SELECT 预览
 
 ---
 
-## 13. 业务审计验证
+## 15. 场景 A 本地验收项
 
-**未执行**（无业务操作联调）。
+TEAM + PC + 5V5 + 4 队单循环
+
+**状态**：测试资产已准备，待用户本地运行。
+
+断言：EventTeam=4；Match=6；每队 3 场；重复对阵=0
 
 ---
 
-## 14. 实际修复的 Bug
+## 16. 场景 B 本地验收项
 
-### P0
+TEAM + PS_XBOX + 3V3 + 5 队单循环
 
-| 问题 | 根因 | 修改 | 验证 | 关闭 |
-|------|------|------|------|------|
-| 联调库未执行 R1-R3 DDL | 迁移脚本未落地 | `run_cnpa_migrations.py` 执行全套迁移 | SQL 表已创建 | **是** |
-| rank_explain_json 违反 DB 规范 | R3 使用 JSON 存排名解释 | 新增 `basket_standing_rank_reason` + 改 `TieBreakStandingService` | 代码审查；DB 表已建 | **是（代码+DDL）** |
-| active_unique_key 格式不规范 | R3 使用 `{stageId}_{scope}_{teamId}` | R4 migration 回填 + 代码新格式 | data-check 无重复 | **是（代码+DDL）** |
+**状态**：测试资产已准备，待用户本地运行。
+
+---
+
+## 17. 场景 C 本地验收项
+
+16 队小组赛 → 8 强 BO1
+
+**状态**：测试资产已准备，待用户本地运行。
+
+---
+
+## 18. 场景 D 本地验收项
+
+PERSONAL + PS_XBOX + 3V3 + 两队 BO1
+
+**状态**：测试资产已准备，待用户本地运行。
+
+---
+
+## 19. 异常、幂等和权限测试清单
+
+| 项 | 脚本/入口 | 状态 |
+|----|-----------|------|
+| Legacy 新 Division 生成拒绝 | `r4_integration_runner.py --exception-only` | 待本地 |
+| 未授权 Admin API | 同上 | 待本地 |
+| MANUAL 未处理禁止确认晋级 | 阶段执行页 | 待本地 |
+| 重复审核/晋级幂等 | 手工/扩展脚本 | 待本地 |
+
+---
+
+## 20. 已修复问题
+
+### P0（代码）
+
+| 问题 | 修改 |
+|------|------|
+| MANUAL 无 Admin UI | stats 页 Dialog + API 闭环 |
+| Web 成队手填 teamId | available-teams + 选择器 |
+| Web Stage 数据缺失 | my-events/my-schedule/public stage API |
+| Legacy 误入口 | 前后端双拦截（延续 R4 前期） |
 
 ### P1
 
-| 问题 | 修改 | 验证 | 关闭 |
-|------|------|------|------|
-| Legacy 入口可能误操作新 Division | 前后端双拦截 + UI 隐藏 | 未接口复验 | **部分** |
-| MANUAL 排名无处理入口 | 后端 API + DB 字段 | Admin UI 对话框未完整实现 | **部分** |
-| Stats 页仍用 Division legacy API | 接入 stage standings + rank reason 展示 | 未页面复验 | **部分** |
-| Admin options 无法判断新旧 Division | options 增加 formatSnapshotId | 未复验 | **部分** |
+| 问题 | 修改 |
+|------|------|
+| data-check 误报 COUNT | run_data_check.py STAT/ANOMALY 区分 |
+| 无 HTTP 联调 runner | r4_integration_runner.py |
+| backfill 资产不足 | r2-backfill A0/A1 + MigrationRunner 说明 |
 
 ### P2
 
-- MANUAL 排名 Admin 弹窗 UI 未完整实现（仅后端 API）
-- Web 公开赛事阶段维度展示仍待联调
+- 公开页 bracket 可视化待 UI 美化
+- Stats 页球队/球员统计阶段筛选（非阻塞）
 
 ---
 
-## 15. 未完成事项
+## 21. 尚待用户本地验证内容
 
-### 五轮范围内仍应完成
-
-1. 启动 Admin/Web/Redis，执行场景 A-D 全链路
-2. Maven 安装后执行 `RoundRobinStageScheduleStrategyTest`、`GroupStageScheduleStrategyTest`
-3. 异常/幂等/并发/权限实测并记录
-4. 历史 5 个 Division 快照迁移（MigrationRunner 或 backfill）
-5. MANUAL 排名 Admin UI 完整对话框
-6. Web 端我的赛程/公开详情阶段维度联调
-
-### 五轮后专项
-
-- BO3/BO5、MatchSeries、双败等（规格已排除）
-
-### 非阻塞 P2
-
-- Stats 页球队/球员统计阶段筛选
-- Web 排名依据仅展示 decisive reason（后端已支持）
+1. 场景 A～D 真实 HTTP 全链路
+2. 异常/幂等/并发/权限实测
+3. MigrationRunner 对 5 个历史 Division 执行结果
+4. Maven 单元测试（RoundRobin/GroupStage Strategy）
+5. Admin/Web UI 浏览器人工走查
 
 ---
 
-## 16. R4 验收结论
+## 22. R4 当前结论
 
-**不通过**
+**R4 代码收口与联调资产已完成，真实运行验收待用户本地环境执行。**
 
-依据：
-
-- P0 联调项：核心 TEAM/PERSONAL 链路 **未真实运行**
-- 三种基础赛制 **未 E2E 验证**
-- Admin/Web 服务 **未启动**，场景 A-D 全部阻塞
-- Maven 单元测试 **未执行**（仅静态代码存在）
-- 不得将“代码已实现”等同于“联调通过”
+- 不声称 R4 通过/不通过
+- 不声称场景 A～D 通过
+- 不声称 E2E 通过
 
 ---
 
-## 17. R5 清理候选清单
+## 23. 用户本地验收通过标准
 
-| 类别 | 路径/表名 | 读写依赖 | R5 可删 | 前置条件 | 风险 |
-|------|-----------|----------|---------|----------|------|
-| Legacy Schedule Service | `BasketV4ScheduleBatchServiceImpl` Legacy 生成 | 历史 Division 只读 | 部分 | 无 Legacy 批次 | 中 |
-| Legacy Schedule UI | `schedule/index.vue` batch 页签 | 只读查看 | 是 | 历史迁移完成 | 低 |
-| 旧 Tournament Controller | `BasketTournamentScopeController` 等 | 旧菜单已隐藏 | 是 | 确认无读依赖 | 高 |
-| 旧 Tournament Service | `BasketTournamentServiceImpl` 等 | Web legacy 路由 | 是 | `/tournament/legacy` 下线 | 高 |
-| rank_explain_json 字段 | `basket_standing.rank_explain_json` | 已停止写入 | 是 | 确认 rank_reason 全覆盖 | 低 |
-| V2 旧表 | tournament 相关表 | 部分只读 | 是 | 数据归档 | 高 |
-| PS/XBOX 兼容 | `PlatformCodeEnum.legacy` | 历史 Division | 部分 | PS_XBOX 迁移完成 | 中 |
-| MigrationRunner | `BasketV4FormatSnapshotMigrationRunner` | 启动时一次性 | 是 | 全部 Division 有快照 | 低 |
-| 旧 Schedule 菜单 | `cnpa/competition/schedule-manage` | Legacy 赛季 | 是 | 使用量归零 | 中 |
-| Mock/Smoke 脚本 | `scripts/smoke_v4_r3_*.py` | 测试 | 保留至 R5 后 | — | 低 |
+- TEAM / PERSONAL 链路通过
+- ROUND_ROBIN / GROUP_STAGE / BO1 SINGLE_ELIMINATION 通过
+- Submission 审核、Standing、Qualification 通过
+- 权限越权、名额并发通过
+- 新主链路 data-check ANOMALY 为 0
 
 ---
 
-## 18. R5 前置条件
+## 24. R5 前置条件
 
-1. R4 验收结论改为 **通过** 或 **有条件通过**
-2. 场景 A-D 全链路真实通过
-3. 全部 P0/P1 关闭
-4. 历史 Division 快照迁移完成
-5. Legacy 赛程只读访问量归零
-6. `rank_explain_json` 确认零新写入且 rank_reason 覆盖全部 stage standing
-7. 物理删除前完成数据归档与 rollback 演练
+R5 只能在用户本地完成核心链路检查后进入：
+
+1. 场景 A～D 真实通过
+2. 历史 Division 快照补齐
+3. Legacy 只读访问量归零评估
+4. rank_explain_json 零新写入且 rank_reason 覆盖
+5. 数据归档与 rollback 演练
 
 ---
 
-## 附录：本轮代码变更摘要
+## 附录：本轮主要变更文件
 
-### 后端
+### 后端（basketball-admin）
 
-- `BasketStandingRankReason` 实体/Mapper
-- `TieBreakStandingService` — 结构化 rank reason，新 active_unique_key，停止 JSON 写入
-- `DivisionStageExecutionApplicationServiceImpl` — listStandings 聚合 reason；applyManualRank
-- `BasketV4StageExecutionController` — manual-rank 端点
-- `BasketV4ScheduleBatchServiceImpl` — 拒绝 formatSnapshotId 非空 Division Legacy 生成
-- `BasketV4AdminOptionVo` — formatSnapshotId
+- `DivisionStageExecutionApplicationServiceImpl.java`
+- `BasketV4ScheduleBatchServiceImpl.java`（已有 Legacy 拦截）
 
-### SQL
+### 后端（basketball-web）
 
-- `docs/sql/cnpa-dynamic-format-r4-migration.sql`
+- `BasketV4PersonalFormationController/ServiceImpl/Mapper`
+- `BasketV4PlayerMyEventsMapper.xml`、`V4MyEventResp.java`
+- `BasketV4PlayerMatchSubmissionMapper.xml`、`V4MyMatchResp.java`
+- `BasketV4PublicStageController/Mapper/ServiceImpl`
+- `BasketV4Match.java`（stageId/groupId）
+
+### Admin 前端
+
+- `basketball-admin-ui/src/views/cnpa/event-v4/stats/index.vue`
+- `basketball-admin-ui/src/api/cnpa/event-v4/stage-execution.ts`
+
+### Web 前端
+
+- `V4PersonalFormationPanel.vue`
+- `ParticipatingEventList.vue`、`v4AccountEventsMappers.ts`
+- `V4MySchedulePanel.vue`
+- `V4SeasonDetailPage.vue`、`v4Public.ts`
+
+### SQL / 脚本
+
 - `docs/sql/cnpa-dynamic-format-r4-data-check.sql`
-- `docs/sql/cnpa-dynamic-format-r4-permission.sql`
-- `docs/sql/cnpa-dynamic-format-r4-test-data.sql`
-- `docs/sql/cnpa-dynamic-format-r4-test-data-cleanup.sql`
-
-### 工具
-
-- `scripts/run_cnpa_migrations.py`
+- `docs/sql/cnpa-dynamic-format-r2-backfill.sql`
+- `scripts/r4_integration_runner.py`
 - `scripts/run_data_check.py`
+- `scripts/.env.r4.example`

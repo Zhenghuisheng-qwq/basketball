@@ -121,6 +121,11 @@ export interface ParticipatingEvent {
   statusText: string
   pendingTaskCount?: number
   pendingTaskText?: string
+  stageSummary?: string
+  rankSummary?: string
+  qualificationSummary?: string
+  nextMatchSummary?: string
+  latestMatchSummary?: string
   actionText: string
   actionType: ParticipatingActionType
   actionRoute?: string

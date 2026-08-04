@@ -28,6 +28,12 @@ public class BasketV4PersonalFormationController {
         return R.ok(personalFormationService.getFormationDetail(drawTeamId));
     }
 
+    @ApiOperation("可绑定长期球队列表")
+    @GetMapping("/tasks/{drawTeamId}/available-teams")
+    public R listAvailableTeams(@PathVariable Long drawTeamId) {
+        return R.ok(personalFormationService.listAvailableTeams(drawTeamId));
+    }
+
     @ApiOperation("绑定长期球队")
     @PostMapping("/bind-team")
     public R bindTeam(@RequestBody V4PersonalFormationBindTeamReq req) {

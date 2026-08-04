@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.mapper.v4.BasketV4PublicStageMapper">
+
+    <select id="selectStagesByDivisionId" resultType="com.zhs.response.v4.publicapi.V4PublicStageItemResp">
+        select
+            ds.id as stageId,
+            ds.stage_code as stageCode,
+            ds.stage_name as stageName,
+            ds.stage_order as stageOrder,
+            ds.stage_type as stageType,
+            ds.stage_type as stageTypeName,
+            ds.competition_format as competitionFormat,
+            ds.competition_format as competitionFormatName,
+            ds.execution_status as executionStatus,
+            ds.execution_status as executionStatusName,
+            case when ds.execution_status in ('RUNNING', 'RESULT_PENDING_CONFIRM') then 1 else 0 end as currentStage
+        from basket_division_stage ds
+        where ds.division_id = #{divisionId}
+          and ds.is_delete = 0
+        order by ds.stage_order asc, ds.id asc
+    </select>
+
+    <select id="selectGroupScopeKeysByStageId" resultType="java.lang.Long">
+        select distinct coalesce(s.group_scope_key, 0)
+        from basket_standing s
+        where s.stage_id = #{stageId}
+          and s.is_delete = 0
+        order by coalesce(s.group_scope_key, 0) asc
+    </select>
+
+    <select id="selectStandingsByStageScope" resultType="com.zhs.response.v4.publicapi.V4PublicStandingItemResp">
+        select
+            s.rank_no as rankNo,
+            s.event_team_id as eventTeamId,
+            et.team_name_snapshot as teamName,
+            et.team_logo_file_id as teamLogoFileId,
+            s.win_count as winCount,
+            s.lose_count as loseCount,
+            s.point_for as pointFor,
+            s.point_against as pointAgainst,
+            s.point_diff as pointDiff,
+            s.standing_points as standingPoints,
+            s.stage_id as stageId,
+            s.group_scope_key as groupId
+        from basket_standing s
+        join basket_event_team et on et.id = s.event_team_id and et.is_delete = 0
+        where s.stage_id = #{stageId}
+          and s.is_delete = 0
+          and coalesce(s.group_scope_key, 0) = coalesce(#{groupScopeKey}, 0)
+        order by s.rank_no asc, s.id asc
+    </select>
+
+</mapper>

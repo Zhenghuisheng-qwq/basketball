@@ -118,3 +118,65 @@ WHERE sb.is_delete = 0
   AND sb.stage_id IS NULL
   AND sb.generation_strategy IS NULL
   AND d.format_snapshot_id IS NOT NULL;
+
+-- 15. 新 Division 无快照（排除测试）
+SELECT d.id, d.division_name
+FROM basket_division d
+WHERE d.is_delete = 0
+  AND d.format_snapshot_id IS NULL
+  AND d.domain_version = 'V4'
+  AND d.division_name NOT LIKE 'R4_TEST_%';
+
+-- 16. 同一 Division 多个 current Snapshot
+SELECT division_id, COUNT(*) AS cnt
+FROM basket_division_format_snapshot
+WHERE is_delete = 0 AND is_current = 1
+GROUP BY division_id
+HAVING cnt > 1;
+
+-- 17. 新 Match 无 stage_id（动态赛制 Division）
+SELECT m.id, m.division_id, d.format_snapshot_id
+FROM basket_match m
+JOIN basket_division d ON d.id = m.division_id AND d.is_delete = 0
+WHERE m.is_delete = 0
+  AND m.stage_id IS NULL
+  AND d.format_snapshot_id IS NOT NULL
+  AND m.create_time > DATE_SUB(NOW(), INTERVAL 30 DAY)
+LIMIT 100;
+
+-- 18. GROUP_STAGE Match 无 group_id
+SELECT m.id, m.stage_id, m.division_id
+FROM basket_match m
+JOIN basket_division_stage ds ON ds.id = m.stage_id AND ds.is_delete = 0
+WHERE m.is_delete = 0
+  AND ds.stage_type = 'GROUP'
+  AND m.group_id IS NULL
+LIMIT 100;
+
+-- 19. manual_rank_pending 状态异常（无同分待处理但标记 pending）
+SELECT s.id, s.stage_id, s.event_team_id, s.manual_rank_pending, s.rank_no
+FROM basket_standing s
+WHERE s.is_delete = 0
+  AND s.manual_rank_pending = 1
+  AND s.manual_rank_no IS NOT NULL
+LIMIT 100;
+
+-- 20. Legacy Division 数量（统计，非异常）
+SELECT COUNT(*) AS legacy_division_count
+FROM basket_division d
+WHERE d.is_delete = 0 AND d.format_snapshot_id IS NULL;
+
+-- 21. Legacy ScheduleBatch 数量（统计）
+SELECT COUNT(*) AS legacy_batch_count
+FROM basket_schedule_batch sb
+WHERE sb.is_delete = 0 AND sb.stage_id IS NULL AND sb.generation_strategy IS NULL;
+
+-- 22. Legacy Match 数量（统计）
+SELECT COUNT(*) AS legacy_match_count
+FROM basket_match m
+WHERE m.is_delete = 0 AND m.stage_id IS NULL;
+
+-- 23. 无 stage_id Standing 数量（Legacy 统计）
+SELECT COUNT(*) AS legacy_standing_count
+FROM basket_standing s
+WHERE s.is_delete = 0 AND s.stage_id IS NULL;

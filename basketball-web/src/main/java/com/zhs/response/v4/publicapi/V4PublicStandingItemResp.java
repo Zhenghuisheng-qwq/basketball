@@ -30,4 +30,10 @@ public class V4PublicStandingItemResp {
     private Integer pointDiff;
 
     private Integer standingPoints;
+
+    private Long stageId;
+
+    private Long groupId;
+
+    private String qualificationStatus;
 }

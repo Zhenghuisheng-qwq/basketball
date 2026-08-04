@@ -50,12 +50,32 @@ export interface V4MyEvent {
   divisionId: string
   divisionName?: string
   platformCode?: string
+  platformName?: string
+  gameMode?: string
+  gameModeName?: string
+  registrationMode?: string
   eventTeamId: string
+  eventTeamName?: string
   teamName?: string
   teamLogoFileId?: string
   roleInTeam?: string
   eventTeamStatus?: string
   divisionStatus?: string
+  currentStageId?: string
+  currentStageName?: string
+  stageType?: string
+  stageExecutionStatus?: string
+  currentGroupId?: string
+  currentGroupName?: string
+  standingRank?: number
+  standingPoints?: number
+  qualificationStatus?: string
+  qualificationStatusName?: string
+  nextMatchId?: string
+  nextMatchTime?: string
+  latestMatchId?: string
+  latestMatchResult?: string
+  legacyEvent?: boolean
   matchCount?: number
   finishedMatchCount?: number
   pendingSubmissionCount?: number
@@ -82,7 +102,11 @@ export interface V4MyScheduleItem {
   divisionName?: string
   platformCode?: string
   stageCode?: string
+  stageId?: string
   stageName?: string
+  stageType?: string
+  groupId?: string
+  groupName?: string
   roundNo?: number
   roundName?: string
   matchNo?: string
@@ -219,4 +243,18 @@ export interface V4PersonalFormationTask {
 export interface V4PersonalFormationBindTeamReq {
   drawTeamId: string
   longTermTeamId: string
+}
+
+export interface V4PersonalFormationAvailableTeam {
+  teamId: string
+  teamName?: string
+  logoUrl?: string
+  teamStatus?: number
+  currentMemberCount?: number
+  matchedAssignedMemberCount?: number
+  missingAssignedMemberCount?: number
+  extraMemberCount?: number
+  captainMatched?: boolean
+  canBind?: boolean
+  unavailableReason?: string
 }

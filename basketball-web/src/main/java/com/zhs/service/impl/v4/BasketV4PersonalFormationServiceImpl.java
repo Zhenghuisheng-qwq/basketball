@@ -16,6 +16,7 @@ import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamMember;
 import com.zhs.model.v4.*;
 import com.zhs.request.v4.V4PersonalFormationBindTeamReq;
+import com.zhs.response.v4.V4PersonalFormationAvailableTeamResp;
 import com.zhs.response.v4.V4PersonalFormationDetailResp;
 import com.zhs.response.v4.V4PersonalFormationTaskResp;
 import com.zhs.service.v4.IBasketV4PersonalFormationService;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class BasketV4PersonalFormationServiceImpl implements IBasketV4PersonalFormationService {
@@ -104,6 +106,25 @@ public class BasketV4PersonalFormationServiceImpl implements IBasketV4PersonalFo
     }
 
     @Override
+    public List<V4PersonalFormationAvailableTeamResp> listAvailableTeams(Long drawTeamId) {
+        BasketPersonalDrawTeam drawTeam = requireCaptainTeam(drawTeamId);
+        BasketDivision division = requireDivision(drawTeam.getDivisionId());
+        List<BasketPersonalDrawAssignment> assignments = listAssignments(drawTeam.getId());
+        Set<Long> assignedPlayerIds = assignments.stream()
+                .map(BasketPersonalDrawAssignment::getPlayerId)
+                .collect(java.util.stream.Collectors.toSet());
+        Long memberId = UserContext.getRequiredMemberId();
+        List<V4PersonalFormationAvailableTeamResp> candidates =
+                personalFormationMapper.selectCandidateTeamsByCaptainMemberId(memberId);
+        List<V4PersonalFormationAvailableTeamResp> result = new ArrayList<>();
+        for (V4PersonalFormationAvailableTeamResp candidate : candidates) {
+            evaluateTeamCandidate(candidate, drawTeam, division, assignments, assignedPlayerIds);
+            result.add(candidate);
+        }
+        return result;
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void bindLongTermTeam(V4PersonalFormationBindTeamReq req) {
         if (req == null || req.getDrawTeamId() == null || req.getLongTermTeamId() == null) {
@@ -114,10 +135,7 @@ public class BasketV4PersonalFormationServiceImpl implements IBasketV4PersonalFo
             throw new ServiceException("该临时队伍已转换");
         }
         requireConfirmedBatch(team.getDrawBatchId());
-        requireValidTeam(req.getLongTermTeamId());
-        if (team.getCaptainPlayerId() != null) {
-            requireTeamMember(req.getLongTermTeamId(), team.getCaptainPlayerId());
-        }
+        validateTeamForBind(req.getLongTermTeamId(), team, requireDivision(team.getDivisionId()), listAssignments(team.getId()));
 
         Date now = new Date();
         for (BasketPersonalDrawAssignment assignment : listAssignments(team.getId())) {
@@ -423,6 +441,86 @@ public class BasketV4PersonalFormationServiceImpl implements IBasketV4PersonalFo
             }
         }
         throw new ServiceException("球员缺少对应平台身份");
+    }
+
+    private void evaluateTeamCandidate(V4PersonalFormationAvailableTeamResp candidate,
+                                       BasketPersonalDrawTeam drawTeam,
+                                       BasketDivision division,
+                                       List<BasketPersonalDrawAssignment> assignments,
+                                       Set<Long> assignedPlayerIds) {
+        candidate.setCanBind(false);
+        candidate.setMatchedAssignedMemberCount(0);
+        candidate.setMissingAssignedMemberCount(0);
+        candidate.setExtraMemberCount(0);
+        candidate.setCaptainMatched(false);
+        try {
+            validateTeamForBind(candidate.getTeamId(), drawTeam, division, assignments);
+            int matched = 0;
+            for (BasketPersonalDrawAssignment assignment : assignments) {
+                try {
+                    requireTeamMember(candidate.getTeamId(), assignment.getPlayerId());
+                    matched++;
+                } catch (ServiceException ignored) {
+                    // count missing below
+                }
+            }
+            candidate.setMatchedAssignedMemberCount(matched);
+            candidate.setMissingAssignedMemberCount(assignments.size() - matched);
+            List<BasketTeamMember> members = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
+                    .eq(BasketTeamMember::getTeamId, candidate.getTeamId())
+                    .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
+                    .eq(BasketTeamMember::getMembershipStatus, MEMBER_ACTIVE)
+                    .eq(BasketTeamMember::getIsDelete, NOT_DELETED));
+            Set<Long> memberPlayerIds = members.stream().map(BasketTeamMember::getPlayerId).collect(java.util.stream.Collectors.toSet());
+            int extra = 0;
+            for (Long pid : memberPlayerIds) {
+                if (!assignedPlayerIds.contains(pid)) {
+                    extra++;
+                }
+            }
+            candidate.setExtraMemberCount(extra);
+            candidate.setCurrentMemberCount(members.size());
+            if (drawTeam.getCaptainPlayerId() != null) {
+                candidate.setCaptainMatched(memberPlayerIds.contains(drawTeam.getCaptainPlayerId()));
+            }
+            candidate.setCanBind(true);
+            candidate.setUnavailableReason(null);
+        } catch (ServiceException ex) {
+            candidate.setUnavailableReason(ex.getMessage());
+        }
+    }
+
+    private void validateTeamForBind(Long teamId, BasketPersonalDrawTeam drawTeam,
+                                     BasketDivision division, List<BasketPersonalDrawAssignment> assignments) {
+        requireValidTeam(teamId);
+        if (drawTeam.getCaptainPlayerId() != null) {
+            requireTeamMember(teamId, drawTeam.getCaptainPlayerId());
+        }
+        Long occupied = drawTeamDao.selectCount(new LambdaQueryWrapper<BasketPersonalDrawTeam>()
+                .eq(BasketPersonalDrawTeam::getLongTermTeamId, teamId)
+                .ne(BasketPersonalDrawTeam::getId, drawTeam.getId())
+                .notIn(BasketPersonalDrawTeam::getFormationStatus,
+                        FormationStatusEnum.CONVERTED.getCode(), FormationStatusEnum.CANCELLED.getCode())
+                .eq(BasketPersonalDrawTeam::getIsDelete, NOT_DELETED));
+        if (occupied != null && occupied > 0) {
+            throw new ServiceException("该球队已被其他成队任务占用");
+        }
+        Long eventTeamCount = eventTeamDao.selectCount(new LambdaQueryWrapper<BasketEventTeam>()
+                .eq(BasketEventTeam::getDivisionId, division.getId())
+                .eq(BasketEventTeam::getSourceTeamId, teamId)
+                .eq(BasketEventTeam::getIsDelete, NOT_DELETED));
+        if (eventTeamCount != null && eventTeamCount > 0) {
+            throw new ServiceException("该球队已在本赛区生成正式参赛队");
+        }
+        int min = division.getLineupMinCount() != null ? division.getLineupMinCount() : 5;
+        int max = division.getLineupMaxCount() != null ? division.getLineupMaxCount() : 15;
+        if (assignments.size() < min || assignments.size() > max) {
+            throw new ServiceException("抽签成员人数不符合赛区要求");
+        }
+        for (BasketPersonalDrawAssignment assignment : assignments) {
+            requireTeamMember(teamId, assignment.getPlayerId());
+            requirePlatformIdentity(assignment.getPlayerId(), division.getPlatformCode());
+        }
     }
 
     private void writePersonalAudit(BasketPersonalRegistration registration, String beforeStatus,

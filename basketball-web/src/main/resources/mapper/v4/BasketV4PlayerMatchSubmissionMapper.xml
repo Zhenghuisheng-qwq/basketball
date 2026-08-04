@@ -14,7 +14,12 @@
             m.division_id as divisionId,
             d.division_name as divisionName,
             m.platform_code as platformCode,
+            m.stage_id as stageId,
             m.stage_code as stageCode,
+            ds.stage_name as stageName,
+            ds.stage_type as stageType,
+            m.group_id as groupId,
+            dg.group_name as groupName,
             m.round_no as roundNo,
             m.match_no as matchNo,
             m.match_time as matchTime,
@@ -49,6 +54,8 @@
         join basket_season se on se.id = m.season_id and se.is_delete = 0
         join basket_series s on s.id = se.series_id and s.is_delete = 0
         join basket_division d on d.id = m.division_id and d.is_delete = 0
+        left join basket_division_stage ds on ds.id = m.stage_id and ds.is_delete = 0
+        left join basket_division_group dg on dg.id = m.group_id and dg.is_delete = 0
         left join basket_event_team ht on ht.id = m.home_event_team_id and ht.is_delete = 0
         left join basket_event_team at on at.id = m.away_event_team_id and at.is_delete = 0
         left join basket_event_player ep_home on ep_home.event_team_id = m.home_event_team_id and ep_home.is_delete = 0

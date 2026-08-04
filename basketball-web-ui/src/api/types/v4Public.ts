@@ -188,6 +188,32 @@ export interface V4PublicStandingItem {
   pointAgainst?: number
   pointDiff?: number
   standingPoints?: number
+  stageId?: string
+  groupId?: string
+  qualificationStatus?: string
+}
+
+export interface V4PublicStageItem {
+  stageId: string
+  stageCode?: string
+  stageName?: string
+  stageOrder?: number
+  stageType?: string
+  stageTypeName?: string
+  competitionFormat?: string
+  competitionFormatName?: string
+  executionStatus?: string
+  executionStatusName?: string
+  currentStage?: boolean
+}
+
+export interface V4PublicStageStandingScope {
+  groupScopeKey?: string
+  groupId?: string
+  groupCode?: string
+  groupName?: string
+  qualifyCount?: number
+  rows?: V4PublicStandingItem[]
 }
 
 export interface V4PublicTeamStatItem {

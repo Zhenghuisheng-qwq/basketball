@@ -17,7 +17,11 @@ public class V4MyMatchResp {
     private String divisionName;
     private String platformCode;
     private String stageCode;
+    private Long stageId;
     private String stageName;
+    private String stageType;
+    private Long groupId;
+    private String groupName;
     private Integer roundNo;
     private String roundName;
     private String matchNo;

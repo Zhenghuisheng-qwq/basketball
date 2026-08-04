@@ -6,6 +6,7 @@ import type {
   V4MyRegistration,
   V4MySchedulePage,
   V4PersonalAvailableDivision,
+  V4PersonalFormationAvailableTeam,
   V4PersonalFormationBindTeamReq,
   V4PersonalRegistrationIdReq,
   V4PersonalRegistrationSaveReq,
@@ -79,6 +80,10 @@ export function getV4PersonalFormationTasks() {
 
 export function getV4PersonalFormationDetail(drawTeamId: string) {
   return request.get<any, ApiResult<V4PersonalFormationTask>>(`/basket/v4/player/personal-formation/tasks/${drawTeamId}`)
+}
+
+export function getV4PersonalFormationAvailableTeams(drawTeamId: string) {
+  return request.get<any, ApiResult<V4PersonalFormationAvailableTeam[]>>(`/basket/v4/player/personal-formation/tasks/${drawTeamId}/available-teams`)
 }
 
 export function bindV4PersonalFormationTeam(data: V4PersonalFormationBindTeamReq) {

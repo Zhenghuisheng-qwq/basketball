@@ -124,17 +124,20 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
     }
 
     private void enrichDisplayFields(V4MyScheduleResp row) {
-        row.setStageName(resolveStageName(row.getStageCode()));
+        if (row.getStageName() == null || row.getStageName().isEmpty()) {
+            row.setStageName(resolveStageName(row.getStageCode()));
+        }
         row.setRoundName(resolveRoundName(row));
         row.setDivisionCode(row.getPlatformCode());
     }
 
     private String resolveRoundName(V4MyScheduleResp row) {
         if (row.getRoundNo() == null || row.getRoundNo() <= 0) {
-            return null;
+            return row.getGroupName();
         }
+        String stageType = row.getStageType() != null ? row.getStageType().toUpperCase() : "";
         String stage = row.getStageCode() != null ? row.getStageCode().toUpperCase() : "";
-        if ("KNOCKOUT".equals(stage) || "PLAYOFF".equals(stage)) {
+        if ("KNOCKOUT".equals(stage) || "PLAYOFF".equals(stage) || "KNOCKOUT".equals(stageType)) {
             int teamsInRound = 1 << row.getRoundNo();
             if (teamsInRound >= 8) {
                 return switch (teamsInRound) {
@@ -146,8 +149,8 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
             }
             return "淘汰赛第 " + row.getRoundNo() + " 轮";
         }
-        if ("GROUP".equals(stage)) {
-            return "小组赛第 " + row.getRoundNo() + " 轮";
+        if ("GROUP".equals(stage) || "GROUP".equals(stageType)) {
+            return row.getGroupName() != null ? row.getGroupName() + " 第 " + row.getRoundNo() + " 轮" : "小组赛第 " + row.getRoundNo() + " 轮";
         }
         return "循环赛第 " + row.getRoundNo() + " 轮";
     }

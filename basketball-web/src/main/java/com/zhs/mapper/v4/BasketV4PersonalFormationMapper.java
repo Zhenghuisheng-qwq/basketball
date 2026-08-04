@@ -1,5 +1,6 @@
 package com.zhs.mapper.v4;
 
+import com.zhs.response.v4.V4PersonalFormationAvailableTeamResp;
 import com.zhs.response.v4.V4PersonalFormationDetailResp;
 import com.zhs.response.v4.V4PersonalFormationMemberResp;
 import com.zhs.response.v4.V4PersonalFormationTaskResp;
@@ -17,4 +18,6 @@ public interface BasketV4PersonalFormationMapper {
     V4PersonalFormationDetailResp selectFormationDetail(@Param("drawTeamId") Long drawTeamId);
 
     List<V4PersonalFormationMemberResp> selectFormationMembers(@Param("drawTeamId") Long drawTeamId);
+
+    List<V4PersonalFormationAvailableTeamResp> selectCandidateTeamsByCaptainMemberId(@Param("memberId") Long memberId);
 }

@@ -25,6 +25,12 @@ public interface IBasketV4PublicService {
 
     List<V4PublicStandingItemResp> listStanding(Long divisionId);
 
+    List<V4PublicStageItemResp> listStages(Long divisionId);
+
+    List<V4PublicStageStandingScopeResp> listStageStandings(Long stageId);
+
+    List<V4PublicMatchItemResp> listStageBracket(Long stageId);
+
     List<V4PublicTeamStatItemResp> listTeamStat(Long divisionId);
 
     List<V4PublicPlayerStatItemResp> listPlayerStat(Long divisionId);

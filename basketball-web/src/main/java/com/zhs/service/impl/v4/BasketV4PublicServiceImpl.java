@@ -8,6 +8,7 @@ import com.zhs.enums.v4.PublishStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.v4.*;
 import com.zhs.response.v4.publicapi.*;
+import com.zhs.mapper.v4.BasketV4PublicStageMapper;
 import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicSupport;
 import com.zhs.service.v4.IBasketV4PublicService;
@@ -48,6 +49,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     private BasketV4MatchPlayerStatDao matchPlayerStatDao;
     @Resource
     private BasketPublicSupport publicSupport;
+    @Resource
+    private BasketV4PublicStageMapper publicStageMapper;
 
     @Override
     public List<V4PublicSeriesItemResp> listSeries() {
@@ -323,6 +326,111 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             result.add(vo);
         }
         return result;
+    }
+
+    @Override
+    public List<V4PublicStageItemResp> listStages(Long divisionId) {
+        requireDivision(divisionId);
+        List<V4PublicStageItemResp> stages = publicStageMapper.selectStagesByDivisionId(divisionId);
+        if (CollectionUtils.isEmpty(stages)) {
+            return Collections.emptyList();
+        }
+        for (V4PublicStageItemResp stage : stages) {
+            stage.setStageTypeName(resolveStageTypeName(stage.getStageType()));
+            stage.setCompetitionFormatName(resolveCompetitionFormatName(stage.getCompetitionFormat()));
+            stage.setExecutionStatusName(resolveExecutionStatusName(stage.getExecutionStatus()));
+        }
+        return stages;
+    }
+
+    @Override
+    public List<V4PublicStageStandingScopeResp> listStageStandings(Long stageId) {
+        if (stageId == null) {
+            throw new ServiceException("stageId 不能为空");
+        }
+        List<Long> scopeKeys = publicStageMapper.selectGroupScopeKeysByStageId(stageId);
+        if (CollectionUtils.isEmpty(scopeKeys)) {
+            scopeKeys = Collections.singletonList(0L);
+        }
+        List<V4PublicStageStandingScopeResp> scopes = new ArrayList<>();
+        for (Long scopeKey : scopeKeys) {
+            List<V4PublicStandingItemResp> rows = publicStageMapper.selectStandingsByStageScope(stageId, scopeKey);
+            if (CollectionUtils.isEmpty(rows)) {
+                continue;
+            }
+            enrichStandingTeamInfo(rows);
+            V4PublicStageStandingScopeResp scope = new V4PublicStageStandingScopeResp();
+            scope.setGroupScopeKey(scopeKey);
+            scope.setGroupId(scopeKey != null && scopeKey > 0 ? scopeKey : null);
+            if (scopeKey != null && scopeKey > 0) {
+                // group name via first row's groupId lookup omitted for brevity; frontend can show code
+            }
+            scope.setRows(rows);
+            scopes.add(scope);
+        }
+        return scopes;
+    }
+
+    @Override
+    public List<V4PublicMatchItemResp> listStageBracket(Long stageId) {
+        if (stageId == null) {
+            throw new ServiceException("stageId 不能为空");
+        }
+        List<BasketV4Match> matches = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()
+                .eq(BasketV4Match::getStageId, stageId)
+                .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketV4Match::getPublishStatus, MatchPublishStatusEnum.PUBLISHED.getCode())
+                .orderByAsc(BasketV4Match::getRoundNo)
+                .orderByAsc(BasketV4Match::getMatchNo));
+        if (CollectionUtils.isEmpty(matches)) {
+            return Collections.emptyList();
+        }
+        return enrichMatchItems(matches);
+    }
+
+    private void enrichStandingTeamInfo(List<V4PublicStandingItemResp> rows) {
+        Map<Long, BasketEventTeam> teamMap = loadEventTeamMap(
+                rows.stream().map(V4PublicStandingItemResp::getEventTeamId).collect(Collectors.toList()));
+        Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(teamMap.values().stream()
+                .map(BasketEventTeam::getTeamLogoFileId).filter(Objects::nonNull).collect(Collectors.toSet()));
+        for (V4PublicStandingItemResp row : rows) {
+            BasketEventTeam team = teamMap.get(row.getEventTeamId());
+            if (team != null) {
+                row.setTeamName(team.getTeamNameSnapshot());
+                row.setTeamLogoFileId(team.getTeamLogoFileId());
+                row.setTeamLogoUrl(urlMap.get(team.getTeamLogoFileId()));
+            }
+        }
+    }
+
+    private String resolveStageTypeName(String stageType) {
+        if (!StringUtils.hasText(stageType)) return "阶段";
+        return switch (stageType.toUpperCase()) {
+            case "REGULAR" -> "循环赛";
+            case "GROUP" -> "小组赛";
+            case "KNOCKOUT" -> "淘汰赛";
+            default -> stageType;
+        };
+    }
+
+    private String resolveCompetitionFormatName(String format) {
+        if (!StringUtils.hasText(format)) return "";
+        return switch (format.toUpperCase()) {
+            case "ROUND_ROBIN" -> "单循环";
+            case "SINGLE_ELIMINATION" -> "单败淘汰";
+            default -> format;
+        };
+    }
+
+    private String resolveExecutionStatusName(String status) {
+        if (!StringUtils.hasText(status)) return "";
+        return switch (status.toUpperCase()) {
+            case "RUNNING" -> "进行中";
+            case "RESULT_PENDING_CONFIRM" -> "待确认晋级";
+            case "COMPLETED" -> "已完成";
+            case "SCHEDULE_GENERATED" -> "赛程已生成";
+            default -> status;
+        };
     }
 
     @Override

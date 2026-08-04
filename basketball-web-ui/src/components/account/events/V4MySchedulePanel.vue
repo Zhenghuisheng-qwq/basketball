@@ -92,9 +92,10 @@ function resolveSeasonLine(row: V4MyScheduleItem): string {
 }
 
 function resolveRoundLine(row: V4MyScheduleItem): string {
-  if (row.roundName) return row.roundName
+  const parts = [row.stageName, row.groupName, row.roundName].filter(Boolean)
+  if (parts.length) return parts.join(' · ')
   if (row.roundNo) return `常规赛第 ${row.roundNo} 轮`
-  return row.stageName || '常规赛'
+  return '常规赛'
 }
 
 function formatMatchDate(value?: string): string {
