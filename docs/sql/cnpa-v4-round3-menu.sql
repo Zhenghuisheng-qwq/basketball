@@ -4,15 +4,15 @@
 SET @eventParentId = 2152;
 
 INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-SELECT 2296, 'V4队长授权', @eventParentId, 1, 'event-v4-captain-grant', 'cnpa/event-v4/captain-grant/index', 'CnpaEventV4CaptainGrant', 1, 0, 'C', '0', '0', 'basket:v4CaptainGrant:list', 'peoples', 'admin', sysdate(), 'CNPA V4 Division 队长授权'
+SELECT 2296, '队长授权', @eventParentId, 1, 'event-v4-captain-grant', 'cnpa/event-v4/captain-grant/index', 'CnpaEventV4CaptainGrant', 1, 0, 'C', '0', '0', 'basket:v4CaptainGrant:list', 'peoples', 'admin', sysdate(), 'CNPA V4 Division 队长授权'
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = 2296 OR component = 'cnpa/event-v4/captain-grant/index');
 
 INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-SELECT 2301, 'V4报名审核', @eventParentId, 2, 'event-v4-registration-audit', 'cnpa/event-v4/registration-audit/index', 'CnpaEventV4RegistrationAudit', 1, 0, 'C', '0', '0', 'basket:v4RegistrationAudit:list', 'edit', 'admin', sysdate(), 'CNPA V4 球队报名审核'
+SELECT 2301, '报名审核', @eventParentId, 2, 'event-v4-registration-audit', 'cnpa/event-v4/registration-audit/index', 'CnpaEventV4RegistrationAudit', 1, 0, 'C', '0', '0', 'basket:v4RegistrationAudit:list', 'edit', 'admin', sysdate(), 'CNPA V4 球队报名审核'
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = 2301 OR component = 'cnpa/event-v4/registration-audit/index');
 
 INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-SELECT 2306, 'V4赛事队伍', @eventParentId, 3, 'event-v4-event-team', 'cnpa/event-v4/event-team/index', 'CnpaEventV4EventTeam', 1, 0, 'C', '0', '0', 'basket:v4EventTeam:list', 'team', 'admin', sysdate(), 'CNPA V4 EventTeam/EventPlayer 快照只读'
+SELECT 2306, '参赛队伍', @eventParentId, 3, 'event-v4-event-team', 'cnpa/event-v4/event-team/index', 'CnpaEventV4EventTeam', 1, 0, 'C', '0', '0', 'basket:v4EventTeam:list', 'team', 'admin', sysdate(), 'CNPA V4 EventTeam/EventPlayer 快照只读'
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = 2306 OR component = 'cnpa/event-v4/event-team/index');
 
 SET @v4CaptainGrantMenuId = 2296;

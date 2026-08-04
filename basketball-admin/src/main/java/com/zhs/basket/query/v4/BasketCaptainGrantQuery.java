@@ -9,4 +9,6 @@ public class BasketCaptainGrantQuery {
     private Long teamId;
     private Long playerId;
     private String grantStatus;
+    private String teamName;
+    private String playerName;
 }

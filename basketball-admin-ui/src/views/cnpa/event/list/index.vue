@@ -6,7 +6,7 @@
       :closable="false"
       show-icon
       class="mb8"
-      description="请使用 CNPA 赛事管理 → V4赛事发布（Series → Season → Division）。本页面将在后续轮次移除。"
+      description="请使用 CNPA 赛事管理 → 赛事发布（赛事系列 → 赛季 → 平台赛区）。本页面将在后续轮次移除。"
     />
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="88px">
       <el-form-item label="赛事编号" prop="tournamentNo">

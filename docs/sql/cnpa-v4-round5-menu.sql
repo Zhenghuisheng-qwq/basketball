@@ -2,11 +2,11 @@
 SET @eventParentId = 2152;
 
 INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-SELECT 2321, 'V4比赛数据审核', @eventParentId, 6, 'event-v4-match-submission-audit', 'cnpa/event-v4/match-submission-audit/index', 'CnpaEventV4MatchSubmissionAudit', 1, 0, 'C', '0', '0', 'basket:v4MatchSubmissionAudit:list', 'edit', 'admin', sysdate(), 'CNPA V4 比赛数据 submission 级审核'
+SELECT 2321, '数据审核', @eventParentId, 6, 'event-v4-match-submission-audit', 'cnpa/event-v4/match-submission-audit/index', 'CnpaEventV4MatchSubmissionAudit', 1, 0, 'C', '0', '0', 'basket:v4MatchSubmissionAudit:list', 'edit', 'admin', sysdate(), 'CNPA V4 比赛数据 submission 级审核'
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = 2321 OR component = 'cnpa/event-v4/match-submission-audit/index');
 
 INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-SELECT 2326, 'V4统计榜单', @eventParentId, 7, 'event-v4-stats', 'cnpa/event-v4/stats/index', 'CnpaEventV4Stats', 1, 0, 'C', '0', '0', 'basket:v4Stats:query', 'chart', 'admin', sysdate(), 'CNPA V4 Standing/TeamStat/PlayerStat/Rank'
+SELECT 2326, '统计榜单', @eventParentId, 7, 'event-v4-stats', 'cnpa/event-v4/stats/index', 'CnpaEventV4Stats', 1, 0, 'C', '0', '0', 'basket:v4Stats:query', 'chart', 'admin', sysdate(), 'CNPA V4 Standing/TeamStat/PlayerStat/Rank'
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = 2326 OR component = 'cnpa/event-v4/stats/index');
 
 SET @v4AuditMenuId = 2321;

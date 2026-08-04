@@ -1,13 +1,17 @@
 <template>
   <div class="app-container">
-    <el-alert title="V4 报名审核：审核通过后生成 EventTeam / EventPlayer 快照" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="报名审核：审核通过后生成参赛球队与球员快照" type="info" :closable="false" show-icon class="mb8" />
 
     <el-form :model="queryParams" :inline="true" class="mb8">
-      <el-form-item label="Season ID">
-        <el-input-number v-model="queryParams.seasonId" :min="1" controls-position="right" />
+      <el-form-item label="赛季">
+        <el-select v-model="queryParams.seasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onSeasonChange">
+          <el-option v-for="item in seasonOptions" :key="item.id" :label="item.label" :value="item.id" />
+        </el-select>
       </el-form-item>
-      <el-form-item label="Division ID">
-        <el-input-number v-model="queryParams.divisionId" :min="1" controls-position="right" />
+      <el-form-item label="平台赛区">
+        <el-select v-model="queryParams.divisionId" clearable filterable placeholder="选择赛区" style="width: 200px" :disabled="!queryParams.seasonId">
+          <el-option v-for="item in divisionOptions" :key="item.id" :label="formatDivisionLabel(item)" :value="item.id" />
+        </el-select>
       </el-form-item>
       <el-form-item label="状态">
         <el-select v-model="queryParams.registrationStatus" clearable style="width: 160px">
@@ -25,13 +29,19 @@
 
     <el-table v-loading="loading" :data="dataList" border>
       <el-table-column label="报名ID" prop="registrationId" width="90" />
-      <el-table-column label="Season" prop="seasonTitle" min-width="140" />
-      <el-table-column label="Division" prop="divisionName" min-width="120" />
+      <el-table-column label="赛季" prop="seasonTitle" min-width="140" />
+      <el-table-column label="平台赛区" prop="divisionName" min-width="120" />
       <el-table-column label="平台" prop="platformCode" width="80" />
       <el-table-column label="球队" prop="teamName" min-width="120" />
       <el-table-column label="队长" prop="captainPlayerName" min-width="100" />
-      <el-table-column label="人数" prop="lineupCount" width="70" />
-      <el-table-column label="状态" prop="registrationStatus" width="120" />
+      <el-table-column label="阵容人数" prop="lineupCount" width="90" align="center" />
+      <el-table-column label="状态" prop="registrationStatus" width="110" align="center">
+        <template #default="scope">
+          <el-tag :type="v4RegistrationStatusTagType(scope.row.registrationStatus)" size="small" class="nowrap-tag" :title="scope.row.registrationStatus">
+            {{ v4RegistrationStatusLabel(scope.row.registrationStatus) }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="提交时间" prop="submitTime" width="160">
         <template #default="scope">{{ parseTime(scope.row.submitTime) }}</template>
       </el-table-column>
@@ -45,19 +55,22 @@
     </el-table>
     <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
-    <el-drawer v-model="detailOpen" title="V4 报名详情" size="760px" append-to-body>
+    <el-drawer v-model="detailOpen" title="报名审核详情" size="760px" append-to-body>
       <template v-if="detail">
         <el-descriptions :column="2" border>
           <el-descriptions-item label="报名ID">{{ detail.registrationId }}</el-descriptions-item>
-          <el-descriptions-item label="状态">{{ detail.registrationStatus }}</el-descriptions-item>
-          <el-descriptions-item label="Season">{{ detail.seasonTitle }}</el-descriptions-item>
-          <el-descriptions-item label="Division">{{ detail.divisionName }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="v4RegistrationStatusTagType(detail.registrationStatus)" size="small">{{ v4RegistrationStatusLabel(detail.registrationStatus) }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="赛事">{{ detail.seasonTitle }}</el-descriptions-item>
+          <el-descriptions-item label="平台赛区">{{ detail.divisionName }}（{{ detail.platformCode }}）</el-descriptions-item>
           <el-descriptions-item label="球队">{{ detail.teamName }}</el-descriptions-item>
           <el-descriptions-item label="队长">{{ detail.captainPlayerName }}</el-descriptions-item>
           <el-descriptions-item label="阵容人数">{{ detail.lineupCount }}</el-descriptions-item>
           <el-descriptions-item label="提交时间">{{ parseTime(detail.submitTime) }}</el-descriptions-item>
+          <el-descriptions-item v-if="detail.rejectReason" label="驳回原因" :span="2">{{ detail.rejectReason }}</el-descriptions-item>
         </el-descriptions>
-        <el-divider content-position="left">阵容</el-divider>
+        <el-divider content-position="left">阵容列表</el-divider>
         <el-table :data="detail.players || []" size="small" border>
           <el-table-column label="球员" prop="playerName" />
           <el-table-column label="Game ID" prop="gameIdSnapshot" />
@@ -65,13 +78,26 @@
           <el-table-column label="队长" width="70">
             <template #default="scope">{{ scope.row.isCaptain === 1 ? '是' : '否' }}</template>
           </el-table-column>
+          <el-table-column label="ID" min-width="100">
+            <template #default="scope">
+              <span class="meta-id">Player #{{ scope.row.playerId }}</span>
+            </template>
+          </el-table-column>
         </el-table>
         <el-divider content-position="left">审核流水</el-divider>
         <el-table :data="detail.audits || []" size="small" border>
-          <el-table-column label="动作" prop="auditAction" width="100" />
-          <el-table-column label="结果" prop="auditResult" width="100" />
-          <el-table-column label="前状态" prop="beforeStatus" width="120" />
-          <el-table-column label="后状态" prop="afterStatus" width="120" />
+          <el-table-column label="动作" width="100">
+            <template #default="scope">{{ v4AuditActionLabel(scope.row.auditAction) }}</template>
+          </el-table-column>
+          <el-table-column label="结果" width="100">
+            <template #default="scope">{{ v4AuditResultLabel(scope.row.auditResult) }}</template>
+          </el-table-column>
+          <el-table-column label="前状态" width="110">
+            <template #default="scope">{{ v4RegistrationStatusLabel(scope.row.beforeStatus) }}</template>
+          </el-table-column>
+          <el-table-column label="后状态" width="110">
+            <template #default="scope">{{ v4RegistrationStatusLabel(scope.row.afterStatus) }}</template>
+          </el-table-column>
           <el-table-column label="时间" prop="auditTime" width="160">
             <template #default="scope">{{ parseTime(scope.row.auditTime) }}</template>
           </el-table-column>
@@ -95,6 +121,7 @@
 </template>
 
 <script setup lang="ts" name="CnpaEventV4RegistrationAudit">
+import { onMounted, reactive, ref } from 'vue'
 import {
   approveV4RegistrationAudit,
   getV4RegistrationAuditDetail,
@@ -103,6 +130,14 @@ import {
   type BasketRegistrationAuditDetailVo,
   type BasketRegistrationAuditQuery
 } from '@/api/cnpa/event-v4/registration-audit'
+import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
+import {
+  V4_REGISTRATION_STATUS_FILTER_OPTIONS,
+  v4AuditActionLabel,
+  v4AuditResultLabel,
+  v4RegistrationStatusLabel,
+  v4RegistrationStatusTagType
+} from '@/utils/v4AdminDisplay'
 import { parseTime } from '@/utils/ruoyi'
 
 const { proxy } = getCurrentInstance() as any
@@ -114,14 +149,31 @@ const rejectOpen = ref(false)
 const detail = ref<BasketRegistrationAuditDetailVo>()
 const currentId = ref<number>()
 const rejectForm = reactive({ rejectReason: '' })
+const seasonOptions = ref<V4AdminOptionVo[]>([])
+const divisionOptions = ref<V4AdminOptionVo[]>([])
 const queryParams = reactive<BasketRegistrationAuditQuery>({ pageNum: 1, pageSize: 10 })
-const STATUS_OPTIONS = [
-  { label: '草稿', value: 'DRAFT' },
-  { label: '待审核', value: 'PENDING_REVIEW' },
-  { label: '已通过', value: 'APPROVED' },
-  { label: '已驳回', value: 'REJECTED' },
-  { label: '已撤回', value: 'WITHDRAWN' }
-]
+const STATUS_OPTIONS = V4_REGISTRATION_STATUS_FILTER_OPTIONS
+
+function formatDivisionLabel(item: V4AdminOptionVo) {
+  return item.platformCode ? `${item.label}（${item.platformCode}）` : item.label
+}
+
+async function loadSeasonOptions() {
+  const res = await listV4AdminSeasonOptions()
+  seasonOptions.value = res.data || []
+}
+
+async function loadDivisions(seasonId?: number) {
+  divisionOptions.value = []
+  if (!seasonId) return
+  const res = await listV4AdminDivisionOptions(seasonId)
+  divisionOptions.value = res.data || []
+}
+
+function onSeasonChange(seasonId?: number) {
+  queryParams.divisionId = undefined
+  loadDivisions(seasonId)
+}
 
 function getList() {
   loading.value = true
@@ -133,6 +185,7 @@ function getList() {
 
 function resetQuery() {
   Object.assign(queryParams, { pageNum: 1, pageSize: 10, seasonId: undefined, divisionId: undefined, registrationStatus: undefined, teamName: undefined, captainPlayerName: undefined })
+  divisionOptions.value = []
   getList()
 }
 
@@ -168,9 +221,14 @@ function submitReject() {
   })
 }
 
-getList()
+onMounted(async () => {
+  await loadSeasonOptions()
+  getList()
+})
 </script>
 
 <style scoped>
 .mb8 { margin-bottom: 8px; }
+.nowrap-tag { white-space: nowrap; }
+.meta-id { font-size: 12px; color: var(--el-text-color-secondary); }
 </style>

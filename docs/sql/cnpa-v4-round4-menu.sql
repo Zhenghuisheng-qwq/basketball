@@ -2,11 +2,11 @@
 SET @eventParentId = 2152;
 
 INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-SELECT 2311, 'V4赛程管理', @eventParentId, 4, 'event-v4-schedule', 'cnpa/event-v4/schedule/index', 'CnpaEventV4Schedule', 1, 0, 'C', '0', '0', 'basket:v4ScheduleBatch:list', 'date', 'admin', sysdate(), 'CNPA V4 Division 单循环赛程生成'
+SELECT 2311, '赛程管理', @eventParentId, 4, 'event-v4-schedule', 'cnpa/event-v4/schedule/index', 'CnpaEventV4Schedule', 1, 0, 'C', '0', '0', 'basket:v4ScheduleBatch:list', 'date', 'admin', sysdate(), 'CNPA V4 Division 单循环赛程生成'
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = 2311 OR component = 'cnpa/event-v4/schedule/index');
 
 INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-SELECT 2316, 'V4比赛列表', @eventParentId, 5, 'event-v4-match', 'cnpa/event-v4/match/index', 'CnpaEventV4Match', 1, 0, 'C', '0', '0', 'basket:v4Match:list', 'list', 'admin', sysdate(), 'CNPA V4 Match 管理'
+SELECT 2316, '比赛列表', @eventParentId, 5, 'event-v4-match', 'cnpa/event-v4/match/index', 'CnpaEventV4Match', 1, 0, 'C', '0', '0', 'basket:v4Match:list', 'list', 'admin', sysdate(), 'CNPA V4 Match 管理'
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = 2316 OR component = 'cnpa/event-v4/match/index');
 
 SET @v4ScheduleMenuId = 2311;

@@ -153,7 +153,7 @@
         <if test="submissionStatus != null and submissionStatus != ''">and s.submission_status = #{submissionStatus}</if>
         <if test="teamName != null and teamName != ''">and st.team_name_snapshot like concat('%', #{teamName}, '%')</if>
         <if test="matchNo != null and matchNo != ''">and m.match_no like concat('%', #{matchNo}, '%')</if>
-        order by s.submit_time desc, s.id desc
+        order by case when s.submission_status = 'PENDING_REVIEW' then 0 else 1 end, s.submit_time desc, s.id desc
     </select>
 
 </mapper>

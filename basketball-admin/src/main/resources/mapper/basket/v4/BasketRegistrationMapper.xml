@@ -83,7 +83,7 @@
         <if test="captainPlayerName != null and captainPlayerName != ''">
             and coalesce(p.game_nickname, mp.nickname) like concat('%', #{captainPlayerName}, '%')
         </if>
-        order by r.submit_time desc, r.id desc
+        order by case when r.registration_status = 'PENDING_REVIEW' then 0 else 1 end, r.submit_time desc, r.id desc
     </select>
 
     <select id="countApprovedByDivisionId" resultType="int">

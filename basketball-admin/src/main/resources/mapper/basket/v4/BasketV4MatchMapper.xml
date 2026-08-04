@@ -104,6 +104,9 @@
         <if test="eventTeamId != null">
             and (m.home_event_team_id = #{eventTeamId} or m.away_event_team_id = #{eventTeamId})
         </if>
+        <if test="teamName != null and teamName != ''">
+            and (ht.team_name_snapshot like concat('%', #{teamName}, '%') or at.team_name_snapshot like concat('%', #{teamName}, '%'))
+        </if>
         order by m.round_no asc, m.match_time asc, m.id asc
     </select>
 

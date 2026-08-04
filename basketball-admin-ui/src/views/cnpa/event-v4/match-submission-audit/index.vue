@@ -1,18 +1,25 @@
 <template>
   <div class="app-container">
-    <el-alert title="V4 比赛数据审核：submission 级别状态，一方审核中不影响另一方" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="比赛数据审核" description="按每场比赛的每支队伍独立审核；一方审核中不影响另一方提交。" type="info" :closable="false" show-icon class="mb8" />
 
     <el-form :model="queryParams" :inline="true" class="mb8">
-      <el-form-item label="Season ID"><el-input-number v-model="queryParams.seasonId" :min="1" controls-position="right" /></el-form-item>
-      <el-form-item label="Division ID"><el-input-number v-model="queryParams.divisionId" :min="1" controls-position="right" /></el-form-item>
-      <el-form-item label="Match ID"><el-input-number v-model="queryParams.matchId" :min="1" controls-position="right" /></el-form-item>
+      <el-form-item label="赛季">
+        <el-select v-model="queryParams.seasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onSeasonChange">
+          <el-option v-for="item in seasonOptions" :key="item.id" :label="item.label" :value="item.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="平台赛区">
+        <el-select v-model="queryParams.divisionId" clearable filterable placeholder="选择赛区" style="width: 200px" :disabled="!queryParams.seasonId">
+          <el-option v-for="item in divisionOptions" :key="item.id" :label="formatDivisionLabel(item)" :value="item.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="状态">
-        <el-select v-model="queryParams.submissionStatus" clearable style="width: 160px">
+        <el-select v-model="queryParams.submissionStatus" clearable style="width: 180px">
           <el-option v-for="item in STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item label="球队"><el-input v-model="queryParams.teamName" clearable /></el-form-item>
-      <el-form-item label="Match No"><el-input v-model="queryParams.matchNo" clearable /></el-form-item>
+      <el-form-item label="比赛编号"><el-input v-model="queryParams.matchNo" clearable /></el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="getList">搜索</el-button>
         <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -21,16 +28,22 @@
 
     <el-table v-loading="loading" :data="dataList" border>
       <el-table-column label="提交ID" prop="submissionId" width="90" />
-      <el-table-column label="Match" prop="matchNo" width="100" />
-      <el-table-column label="轮次" prop="roundNo" width="70" />
-      <el-table-column label="Division" prop="divisionName" min-width="120" />
+      <el-table-column label="比赛编号" prop="matchNo" width="120" />
+      <el-table-column label="轮次" prop="roundNo" width="70" align="center" />
+      <el-table-column label="平台赛区" prop="divisionName" min-width="120" />
       <el-table-column label="对阵" min-width="180">
         <template #default="scope">{{ scope.row.homeTeamName }} vs {{ scope.row.awayTeamName }}</template>
       </el-table-column>
       <el-table-column label="提交方" prop="submitTeamName" min-width="110" />
       <el-table-column label="提交人" prop="submitterName" width="100" />
-      <el-table-column label="版本" prop="versionNo" width="70" />
-      <el-table-column label="状态" prop="submissionStatus" width="120" />
+      <el-table-column label="版本" prop="versionNo" width="70" align="center" />
+      <el-table-column label="状态" prop="submissionStatus" width="130" align="center">
+        <template #default="scope">
+          <el-tag :type="v4SubmissionStatusTagType(scope.row.submissionStatus)" size="small" class="nowrap-tag" :title="scope.row.submissionStatus">
+            {{ v4SubmissionStatusLabel(scope.row.submissionStatus) }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="提交时间" prop="submitTime" width="160">
         <template #default="scope">{{ parseTime(scope.row.submitTime) }}</template>
       </el-table-column>
@@ -44,19 +57,24 @@
     </el-table>
     <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
-    <el-drawer v-model="detailOpen" title="V4 比赛数据提交详情" size="820px" append-to-body>
+    <el-drawer v-model="detailOpen" title="比赛数据提交详情" size="820px" append-to-body>
       <template v-if="detail">
         <el-descriptions :column="2" border>
           <el-descriptions-item label="提交ID">{{ detail.submissionId }}</el-descriptions-item>
-          <el-descriptions-item label="状态">{{ detail.submissionStatus }}</el-descriptions-item>
-          <el-descriptions-item label="Match">{{ detail.matchNo }} / 第{{ detail.roundNo }}轮</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="v4SubmissionStatusTagType(detail.submissionStatus)" size="small">{{ v4SubmissionStatusLabel(detail.submissionStatus) }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="比赛编号">{{ detail.matchNo }} / 第{{ detail.roundNo }}轮</el-descriptions-item>
           <el-descriptions-item label="版本">v{{ detail.versionNo }}</el-descriptions-item>
-          <el-descriptions-item label="对阵">{{ detail.homeTeamName }} vs {{ detail.awayTeamName }}</el-descriptions-item>
+          <el-descriptions-item label="主队">{{ detail.homeTeamName }}</el-descriptions-item>
+          <el-descriptions-item label="客队">{{ detail.awayTeamName }}</el-descriptions-item>
+          <el-descriptions-item label="比分">{{ formatV4MatchScore(detail.homeScore, detail.awayScore) }}</el-descriptions-item>
           <el-descriptions-item label="提交方">{{ detail.submitTeamName }}</el-descriptions-item>
-          <el-descriptions-item label="比分">{{ detail.homeScore }} : {{ detail.awayScore }}</el-descriptions-item>
-          <el-descriptions-item label="提交人">{{ detail.submitterName }} ({{ detail.submitterRole }})</el-descriptions-item>
+          <el-descriptions-item label="提交人">{{ detail.submitterName }}</el-descriptions-item>
+          <el-descriptions-item label="提交角色">{{ detail.submitterRole }}</el-descriptions-item>
           <el-descriptions-item label="提交时间">{{ parseTime(detail.submitTime) }}</el-descriptions-item>
-          <el-descriptions-item label="备注">{{ detail.submitRemark || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="备注" :span="2">{{ detail.submitRemark || '-' }}</el-descriptions-item>
+          <el-descriptions-item v-if="detail.rejectReason" label="驳回原因" :span="2">{{ detail.rejectReason }}</el-descriptions-item>
         </el-descriptions>
         <el-divider content-position="left">球队统计</el-divider>
         <el-descriptions v-if="detail.teamStat" :column="4" border size="small">
@@ -74,14 +92,18 @@
         </el-table>
         <el-divider content-position="left">材料</el-divider>
         <el-table :data="detail.materials || []" size="small" border>
-          <el-table-column label="fileId" prop="fileId" />
+          <el-table-column label="文件ID" prop="fileId" />
           <el-table-column label="文件名" prop="fileName" />
         </el-table>
-        <el-divider content-position="left">历史版本</el-divider>
+        <el-divider content-position="left">审核记录</el-divider>
         <el-table :data="detail.historyVersions || []" size="small" border>
           <el-table-column label="版本" prop="versionNo" width="70" />
-          <el-table-column label="状态" prop="submissionStatus" width="120" />
-          <el-table-column label="提交时间" prop="submitTime" />
+          <el-table-column label="状态" width="140">
+            <template #default="scope">{{ v4SubmissionStatusLabel(scope.row.submissionStatus) }}</template>
+          </el-table-column>
+          <el-table-column label="提交时间" prop="submitTime">
+            <template #default="scope">{{ parseTime(scope.row.submitTime) }}</template>
+          </el-table-column>
         </el-table>
       </template>
     </el-drawer>
@@ -100,7 +122,7 @@
 </template>
 
 <script setup lang="ts" name="CnpaEventV4MatchSubmissionAudit">
-import { ref, reactive } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   approveV4MatchSubmissionAudit,
@@ -110,13 +132,16 @@ import {
   type V4MatchSubmissionAuditDetailVo,
   type V4MatchSubmissionAuditListVo
 } from '@/api/cnpa/event-v4/match-submission-audit'
+import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
+import {
+  V4_SUBMISSION_STATUS_FILTER_OPTIONS,
+  formatV4MatchScore,
+  v4SubmissionStatusLabel,
+  v4SubmissionStatusTagType
+} from '@/utils/v4AdminDisplay'
+import { parseTime } from '@/utils/ruoyi'
 
-const STATUS_OPTIONS = [
-  { label: '草稿', value: 'DRAFT' },
-  { label: '待审核', value: 'PENDING_REVIEW' },
-  { label: '已通过', value: 'APPROVED' },
-  { label: '已驳回', value: 'REJECTED' }
-]
+const STATUS_OPTIONS = V4_SUBMISSION_STATUS_FILTER_OPTIONS
 
 const loading = ref(false)
 const total = ref(0)
@@ -126,6 +151,29 @@ const detailOpen = ref(false)
 const detail = ref<V4MatchSubmissionAuditDetailVo | null>(null)
 const rejectOpen = ref(false)
 const rejectForm = reactive({ submissionId: 0, rejectReason: '', auditRemark: '' })
+const seasonOptions = ref<V4AdminOptionVo[]>([])
+const divisionOptions = ref<V4AdminOptionVo[]>([])
+
+function formatDivisionLabel(item: V4AdminOptionVo) {
+  return item.platformCode ? `${item.label}（${item.platformCode}）` : item.label
+}
+
+async function loadSeasonOptions() {
+  const res = await listV4AdminSeasonOptions()
+  seasonOptions.value = res.data || []
+}
+
+async function loadDivisions(seasonId?: number) {
+  divisionOptions.value = []
+  if (!seasonId) return
+  const res = await listV4AdminDivisionOptions(seasonId)
+  divisionOptions.value = res.data || []
+}
+
+function onSeasonChange(seasonId?: number) {
+  queryParams.divisionId = undefined
+  loadDivisions(seasonId)
+}
 
 function getList() {
   loading.value = true
@@ -137,6 +185,7 @@ function getList() {
 
 function resetQuery() {
   Object.assign(queryParams, { pageNum: 1, seasonId: undefined, divisionId: undefined, matchId: undefined, submissionStatus: undefined, teamName: undefined, matchNo: undefined })
+  divisionOptions.value = []
   getList()
 }
 
@@ -171,5 +220,13 @@ function submitReject() {
   })
 }
 
-getList()
+onMounted(async () => {
+  await loadSeasonOptions()
+  getList()
+})
 </script>
+
+<style scoped>
+.mb8 { margin-bottom: 8px; }
+.nowrap-tag { white-space: nowrap; }
+</style>

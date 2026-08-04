@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <el-alert title="【已废弃】旧球队报名审核" type="warning" :closable="false" show-icon class="mb8">
-      <template #default>请使用 V4 菜单「V4报名审核」。本页基于旧 basket_tournament_registration，计划后续轮次删除。</template>
+      <template #default>请使用「报名审核」菜单。本页基于旧 basket_tournament_registration，计划后续轮次删除。</template>
     </el-alert>
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="88px">
       <el-form-item label="报名编号" prop="registrationNo">

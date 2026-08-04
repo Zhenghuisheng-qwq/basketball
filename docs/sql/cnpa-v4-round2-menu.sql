@@ -5,7 +5,7 @@ SET @eventParentId = 2152;
 
 -- 菜单 ID 2280-2295：避开已占用的 2260-2263（争议管理按钮权限）
 INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-SELECT 2280, 'V4赛事发布', @eventParentId, 0, 'event-v4-publish', 'cnpa/event-v4/publish/index', 'CnpaEventV4Publish', 1, 0, 'C', '0', '0', 'basket:v4Season:list', 'guide', 'admin', sysdate(), 'CNPA V4 Series/Season/Division 发布'
+SELECT 2280, '赛事发布', @eventParentId, 0, 'event-v4-publish', 'cnpa/event-v4/publish/index', 'CnpaEventV4Publish', 1, 0, 'C', '0', '0', 'basket:v4Season:list', 'guide', 'admin', sysdate(), 'CNPA V4 Series/Season/Division 发布'
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = 2280 OR component = 'cnpa/event-v4/publish/index');
 
 SET @v4PublishMenuId = 2280;

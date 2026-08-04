@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-alert title="[已废弃] 旧比赛数据审核，请使用 V4 比赛数据审核（赛事管理 → V4比赛数据审核）" type="warning" :closable="false" show-icon class="mb8" />
+    <el-alert title="[已废弃] 旧比赛数据审核，请使用「数据审核」菜单" type="warning" :closable="false" show-icon class="mb8" />
     <el-form :inline="true" label-width="88px" class="mb8">
       <el-form-item label="赛季ID">
         <el-input-number v-model="query.seasonId" :min="1" controls-position="right" style="width: 160px" />

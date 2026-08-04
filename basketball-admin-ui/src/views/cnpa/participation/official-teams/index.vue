@@ -2,7 +2,7 @@
 
   <div class="app-container">
     <el-alert title="【已废弃】旧正式赛事球队管理" type="warning" :closable="false" show-icon class="mb8">
-      <template #default>请使用 V4 菜单「V4赛事队伍」。本页基于旧赛事域 EventTeam，计划后续轮次删除。</template>
+      <template #default>请使用「参赛队伍」菜单。本页基于旧赛事域 EventTeam，计划后续轮次删除。</template>
     </el-alert>
 
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="88px">

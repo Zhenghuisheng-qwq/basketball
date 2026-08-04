@@ -9,6 +9,8 @@ export interface BasketCaptainGrantQuery {
   teamId?: number
   playerId?: number
   grantStatus?: string
+  teamName?: string
+  playerName?: string
 }
 
 export interface BasketCaptainGrantListVo {

@@ -229,3 +229,137 @@ python scripts/smoke_v4_r7_personal_center.py
 ### 10.6 业务逻辑
 
 **无业务逻辑变更**：未修改 API 调用、状态流转、权限码或后端 Service；仅前端展示与表单 UX 优化。
+
+---
+
+## 11. 后台赛事管理运营体验优化记录
+
+> 日期：2026-08-04  
+> 范围：Admin 后台 CNPA 赛事域 8 项菜单页面运营体验优化，**不新增 Open/PERSONAL、不改 V4 业务模型、不改数据库主结构**。
+
+### 11.1 菜单名称优化结果
+
+执行 SQL：`docs/sql/cnpa-v4-round9-admin-ux-menu.sql`
+
+| 原菜单名 | 新菜单名 | menu_id |
+|----------|----------|---------|
+| V4赛事发布 | 赛事发布 | 2280 |
+| V4队长授权 | 队长授权 | 2296 |
+| V4报名审核 | 报名审核 | 2301 |
+| V4赛事队伍 | 参赛队伍 | 2306 |
+| V4赛程管理 | 赛程管理 | 2311 |
+| V4比赛列表 | 比赛列表 | 2316 |
+| V4比赛数据审核 | 数据审核 | 2321 |
+| V4统计榜单 | 统计榜单 | 2326 |
+
+说明：仅改 `menu_name` 展示与 `remark` 保留 V4 标记；**未改** path、component、权限标识。
+
+### 11.2 状态中文化结果
+
+新增/完善统一展示工具：`basketball-admin-ui/src/utils/v4AdminDisplay.ts`（`v4Display.ts` 兼容 re-export）。
+
+覆盖枚举：发布状态、赛季/赛区状态、授权状态、报名状态、赛程生成状态、赛制、报名方式、比赛状态、提交状态、审核动作/结果、排行榜类型。
+
+全部 8 个页面表格与详情弹窗主展示使用中文 + `el-tag`；英文 code 保留在 tag `title` 或小字 meta 中供排查。
+
+### 11.3 赛事发布页面优化结果
+
+文件：`basketball-admin-ui/src/views/cnpa/event-v4/publish/index.vue`
+
+- 页面标题/说明去 V4 化，改为「新版赛事管理：赛事系列 → 赛季 → 平台赛区」
+- 赛事系列展示：联赛 League / 竞技场 Arena / 杯赛 Cup / 公开赛 Open
+- Season/Division 表格列名、操作按钮、弹窗字段全面中文化
+- 新建赛季弹窗补充封面/Banner 文件 ID 字段与 placeholder
+- PERSONAL / 非单循环赛制保持禁用并标注「暂未开放」
+
+### 11.4 队长授权选择器优化结果
+
+文件：`basketball-admin-ui/src/views/cnpa/event-v4/captain-grant/index.vue`
+
+- 新增授权改为级联：赛季 → 平台赛区 → 球队 → 队长球员
+- Member ID 自动带出只读；有效期/备注保留
+- 未绑定平台身份前端提示，后端仍兜底校验
+- 主筛选增加赛季/赛区/球队名称/队长昵称/状态；ID 筛选折叠为高级筛选
+
+### 11.5 报名审核页面优化结果
+
+文件：`basketball-admin-ui/src/views/cnpa/event-v4/registration-audit/index.vue`
+
+- 状态/列名中文化；筛选项改为赛季+赛区选择器
+- 待审核优先排序（SQL `PENDING_REVIEW` 置顶）
+- 详情展示赛事、平台赛区、球队、队长、阵容、审核流水、驳回原因
+- Player/Member ID 仅在详情阵容小字展示
+
+### 11.6 赛程管理页面优化结果
+
+文件：`basketball-admin-ui/src/views/cnpa/event-v4/schedule/index.vue`
+
+- 标题/字段中文化；生成状态/发布状态/赛制 tag 展示
+- 生成草稿弹窗改为赛季+赛区选择，展示参赛队伍数与预计场数
+- 队伍数小于 2 时禁用生成并提示原因
+
+### 11.7 比赛列表页面优化结果
+
+文件：`basketball-admin-ui/src/views/cnpa/event-v4/match/index.vue`
+
+- 筛选项：赛季、平台赛区、批次、轮次、发布状态、比赛状态、球队名称
+- 新增比分列：有分数显示 `88 : 75`，否则 `VS`
+- 比赛状态/发布状态中文化
+
+### 11.8 比赛数据审核页面优化结果
+
+文件：`basketball-admin-ui/src/views/cnpa/event-v4/match-submission-audit/index.vue`
+
+- 顶部说明中文化；表格字段/状态中文化
+- 待审核优先排序
+- 详情展示双方队伍、比分、提交方/人/角色、版本、球队/球员统计、材料、审核记录
+
+### 11.9 统计榜单页面优化结果
+
+文件：`basketball-admin-ui/src/views/cnpa/event-v4/stats/index.vue`
+
+- Tab：积分榜 / 球队统计 / 球员统计 / 排行榜
+- Division ID 输入改为赛季 + 平台赛区选择器
+- 各 Tab 表格列名全面中文化
+
+### 11.10 是否新增 options API
+
+**是**，新增轻量只读 options API（不改业务表结构）：
+
+| 端点 | 用途 |
+|------|------|
+| `GET /basket/v4/admin/options/seasons` | 赛季下拉 |
+| `GET /basket/v4/admin/options/divisions?seasonId=` | 平台赛区下拉（含 eventTeamCount） |
+| `GET /basket/v4/admin/options/teams?divisionId=` | 可授权球队下拉 |
+| `GET /basket/v4/admin/options/team-players?teamId=&divisionId=` | 球队成员下拉（含认证/平台身份标记） |
+
+后端：`BasketV4AdminOptionsController` + `BasketV4AdminOptionsMapper`。
+
+### 11.11 是否改动业务逻辑
+
+**否（核心业务流程未改）**。变更限于：
+
+- 前端展示/筛选/选择器 UX
+- 轻量 options 只读查询 API
+- 列表排序优化（待审核置顶）
+- 查询条件扩展（球队名称/队长昵称筛选）
+
+未改：状态流转、授权/审核/赛程生成/统计结算逻辑、权限码、数据库主结构。
+
+### 11.12 是否仍有英文 code 直接展示
+
+主列表/详情/筛选项**已无**英文枚举作为主展示。
+
+仍可能出现在：
+
+- tag `title` 悬停（供技术排查）
+- 详情中小字 ID（Player # / Member #）
+- 后端 ruleCode 等内部字段（赛程批次详情「规则」列，若值为英文 code）
+- 旧废弃页面 redirect 提示（非本 8 项主线）
+
+### 11.13 测试数据处理说明
+
+- 当前 dev 库**存在** SMOKE / R3_QUOTA 等冒烟测试赛季与关联数据
+- **正式环境不迁移**这些测试数据
+- 如需清理 dev 数据，请**单独执行备份后清理 SQL**
+- **本轮未自动清理**测试数据

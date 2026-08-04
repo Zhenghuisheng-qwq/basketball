@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketV4AdminOptionsMapper">
+
+    <select id="selectSeasonOptions" resultType="com.zhs.basket.vo.v4.BasketV4AdminOptionVo">
+        select
+            se.id as id,
+            coalesce(se.display_title, se.season_name) as label,
+            concat(se.season_year, ' · ', se.season_name) as subLabel
+        from basket_season se
+        where se.is_delete = 0
+        order by se.id desc
+    </select>
+
+    <select id="selectDivisionOptions" resultType="com.zhs.basket.vo.v4.BasketV4AdminOptionVo">
+        select
+            d.id as id,
+            d.division_name as label,
+            d.platform_code as platformCode,
+            d.platform_code as subLabel,
+            (
+                select count(1)
+                from basket_event_team et
+                where et.division_id = d.id
+                  and et.event_team_status = 'ACTIVE'
+                  and et.is_delete = 0
+            ) as eventTeamCount
+        from basket_division d
+        where d.is_delete = 0
+          and d.season_id = #{seasonId}
+        order by d.sort_order asc, d.id asc
+    </select>
+
+    <select id="selectGrantableTeamOptions" resultType="com.zhs.basket.vo.v4.BasketV4AdminOptionVo">
+        select
+            t.id as id,
+            t.team_name as label,
+            t.team_no as subLabel
+        from basket_team t
+        where t.is_delete = 0
+          and t.team_status = 1
+          and t.audit_status = 1
+          and not exists (
+              select 1
+              from basket_captain_grant g
+              where g.is_delete = 0
+                and g.division_id = #{divisionId}
+                and g.team_id = t.id
+                and g.grant_status = 'ACTIVE'
+                and g.active_unique_key is not null
+          )
+        order by t.team_name asc, t.id asc
+    </select>
+
+    <select id="selectTeamPlayerOptions" resultType="com.zhs.basket.vo.v4.BasketV4TeamPlayerOptionVo">
+        select
+            m.player_id as playerId,
+            coalesce(p.game_nickname, mp.nickname, concat('球员#', m.player_id)) as playerName,
+            m.member_id as memberId,
+            mp.nickname as memberNickname,
+            (p.certification_status = 3) as certified,
+            exists (
+                select 1
+                from basket_player_platform_account pa
+                where pa.player_id = m.player_id
+                  and pa.is_delete = 0
+                  and pa.account_status = 1
+                  and upper(pa.platform) = upper(#{platformCode})
+            ) as hasPlatformIdentity,
+            m.role_type as roleType
+        from basket_team_member m
+        left join basket_player_profile p on p.id = m.player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = m.member_id and mp.is_delete = 0
+        where m.team_id = #{teamId}
+          and m.is_current = 1
+          and m.membership_status = 1
+          and m.is_delete = 0
+        order by case when m.role_type = 'CAPTAIN' then 0 else 1 end, m.join_time asc, m.id asc
+    </select>
+
+</mapper>
