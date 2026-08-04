@@ -202,6 +202,9 @@ public class BasketV4ScheduleBatchServiceImpl implements IBasketV4ScheduleBatchS
     }
 
     private void validateDivisionForGenerate(BasketDivision division) {
+        if (division.getFormatSnapshotId() != null) {
+            throw new ServiceException("该 Division 已启用动态赛制，请使用「阶段执行」入口生成赛程，Legacy 入口仅保留历史只读");
+        }
         String status = division.getDivisionStatus();
         if (DivisionStatusEnum.PLAYING.getCode().equals(status)
                 || DivisionStatusEnum.FINISHED.getCode().equals(status)

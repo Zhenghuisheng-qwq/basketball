@@ -9,4 +9,5 @@ public class BasketV4AdminOptionVo {
     private String subLabel;
     private String platformCode;
     private Integer eventTeamCount;
+    private Long formatSnapshotId;
 }

@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket.v4;
 
 import com.zhs.basket.constant.BasketEventV4Perms;
+import com.zhs.basket.dto.v4.BasketStageManualRankReq;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
@@ -93,5 +94,14 @@ public class BasketV4StageExecutionController extends BaseController {
     @GetMapping("/{stageId}/standings")
     public AjaxResult listStandings(@PathVariable Long stageId) {
         return success(stageExecutionApplicationService.listStandings(stageId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STANDING_MANUAL_RANK + "')")
+    @Log(title = "V4 ManualRank", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/manual-rank")
+    public AjaxResult applyManualRank(@PathVariable Long stageId, @RequestBody BasketStageManualRankReq req) {
+        req.setStageId(stageId);
+        stageExecutionApplicationService.applyManualRank(req);
+        return success();
     }
 }

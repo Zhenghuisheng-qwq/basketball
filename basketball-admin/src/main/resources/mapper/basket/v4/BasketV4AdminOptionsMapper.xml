@@ -18,6 +18,7 @@
             d.division_name as label,
             d.platform_code as platformCode,
             d.platform_code as subLabel,
+            d.format_snapshot_id as formatSnapshotId,
             (
                 select count(1)
                 from basket_event_team et

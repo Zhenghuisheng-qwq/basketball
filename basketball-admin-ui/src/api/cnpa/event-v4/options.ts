@@ -7,6 +7,7 @@ export interface V4AdminOptionVo {
   subLabel?: string
   platformCode?: string
   eventTeamCount?: number
+  formatSnapshotId?: number
 }
 
 export interface V4AdminTeamPlayerOptionVo {

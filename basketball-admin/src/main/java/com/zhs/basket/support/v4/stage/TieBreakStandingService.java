@@ -1,16 +1,18 @@
 package com.zhs.basket.support.v4.stage;
 
-import com.alibaba.fastjson2.JSON;
 import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketDivisionTieBreakRule;
 import com.zhs.basket.domain.v4.BasketStanding;
+import com.zhs.basket.domain.v4.BasketStandingRankReason;
 import com.zhs.basket.domain.v4.BasketV4Match;
 import com.zhs.basket.enums.v4.GroupingModeEnum;
 import com.zhs.basket.enums.v4.MatchStatusEnum;
 import com.zhs.basket.enums.v4.StageTypeEnum;
+import com.zhs.basket.enums.v4.TieBreakRuleEnum;
 import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionTieBreakRuleMapper;
 import com.zhs.basket.mapper.v4.BasketStandingMapper;
+import com.zhs.basket.mapper.v4.BasketStandingRankReasonMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,13 +48,16 @@ public class TieBreakStandingService {
     @Autowired
     private BasketStandingMapper standingMapper;
     @Autowired
+    private BasketStandingRankReasonMapper rankReasonMapper;
+    @Autowired
     private TieBreakComparatorBuilder comparatorBuilder;
 
     @Transactional(rollbackFor = Exception.class)
     public void rebuildStageStanding(Long stageId) {
         BasketDivisionStage stage = requireStage(stageId);
         List<BasketV4Match> stageMatches = matchMapper.selectFinishedByStageId(stageId).stream()
-                .filter(match -> MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus()))
+                .filter(match -> MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus())
+                        || MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus()))
                 .collect(Collectors.toList());
         if (stageMatches.isEmpty()) {
             return;
@@ -74,9 +79,12 @@ public class TieBreakStandingService {
             Set<Long> manualPendingTeams = comparatorBuilder.findStillTiedTeamIds(sorted, tieBreakRules, matches);
             boolean manualRuleEnabled = comparatorBuilder.hasManualRule(tieBreakRules);
 
+            rankReasonMapper.softDeleteByStageScope(divisionId, stageId, groupScopeKey);
             standingMapper.deleteByStageScope(divisionId, stageId, groupScopeKey);
             int rank = 1;
-            for (StandingAgg agg : sorted) {
+            for (int i = 0; i < sorted.size(); i++) {
+                StandingAgg agg = sorted.get(i);
+                StandingAgg prev = i > 0 ? sorted.get(i - 1) : null;
                 BasketStanding row = new BasketStanding();
                 row.setSeasonId(seasonId);
                 row.setDivisionId(divisionId);
@@ -92,19 +100,162 @@ public class TieBreakStandingService {
                 row.setPointAgainst(agg.pointAgainst);
                 row.setPointDiff(agg.pointFor - agg.pointAgainst);
                 row.setStandingPoints(agg.standingPoints);
-                row.setRankExplainJson(buildRankExplainJson(tieBreakRules, manualPendingTeams.contains(agg.eventTeamId)));
+                row.setRankExplainJson(null);
                 row.setManualRankPending(manualRuleEnabled && manualPendingTeams.contains(agg.eventTeamId) ? 1 : 0);
-                row.setActiveUniqueKey(buildActiveUniqueKey(stageId, groupScopeKey, agg.eventTeamId));
+                row.setActiveUniqueKey(buildActiveUniqueKey(divisionId, stageId, groupScopeKey, agg.eventTeamId));
                 row.setCreateTime(now);
                 row.setUpdateTime(now);
                 row.setIsDelete(NOT_DELETED);
                 standingMapper.insert(row);
+
+                List<BasketStandingRankReason> reasons = buildRankReasons(
+                        divisionId, stageId, groupScopeKey, row, agg, prev, tieBreakRules,
+                        manualPendingTeams.contains(agg.eventTeamId), matches, now);
+                if (!reasons.isEmpty()) {
+                    rankReasonMapper.batchInsert(reasons);
+                }
             }
         }
     }
 
     public boolean hasManualRankPending(Long stageId) {
         return standingMapper.countManualPendingByStageId(stageId) > 0;
+    }
+
+    private List<BasketStandingRankReason> buildRankReasons(Long divisionId,
+                                                            Long stageId,
+                                                            Long groupScopeKey,
+                                                            BasketStanding standing,
+                                                            StandingAgg agg,
+                                                            StandingAgg prev,
+                                                            List<BasketDivisionTieBreakRule> rules,
+                                                            boolean manualPending,
+                                                            List<BasketV4Match> scopeMatches,
+                                                            Date now) {
+        List<BasketStandingRankReason> result = new ArrayList<>();
+        List<BasketDivisionTieBreakRule> enabledRules = sortedEnabledRules(rules);
+        String decisiveRule = findDecisiveRule(agg, prev, enabledRules, scopeMatches);
+        for (BasketDivisionTieBreakRule rule : enabledRules) {
+            TieBreakRuleEnum ruleEnum = TieBreakRuleEnum.fromCode(rule.getRuleCode());
+            if (ruleEnum == TieBreakRuleEnum.MANUAL) {
+                if (manualPending) {
+                    result.add(buildReasonRow(divisionId, stageId, groupScopeKey, standing, agg.eventTeamId,
+                            rule, "待人工裁定", manualPending ? 1 : 0, now));
+                }
+                continue;
+            }
+            String compareValue = compareValueFor(ruleEnum, agg, scopeMatches);
+            String reasonText = ruleEnum.getDescription() + "：" + compareValue;
+            int decisive = rule.getRuleCode().equals(decisiveRule) ? 1 : 0;
+            result.add(buildReasonRow(divisionId, stageId, groupScopeKey, standing, agg.eventTeamId,
+                    rule, compareValue, reasonText, decisive, now));
+        }
+        return result;
+    }
+
+    private BasketStandingRankReason buildReasonRow(Long divisionId,
+                                                    Long stageId,
+                                                    Long groupScopeKey,
+                                                    BasketStanding standing,
+                                                    Long eventTeamId,
+                                                    BasketDivisionTieBreakRule rule,
+                                                    String compareValue,
+                                                    String reasonText,
+                                                    int decisive,
+                                                    Date now) {
+        BasketStandingRankReason reason = new BasketStandingRankReason();
+        reason.setDivisionId(divisionId);
+        reason.setStageId(stageId);
+        reason.setGroupId(groupScopeKey == OVERALL_SCOPE_KEY ? null : groupScopeKey);
+        reason.setStandingId(standing.getId());
+        reason.setEventTeamId(eventTeamId);
+        reason.setRuleCode(rule.getRuleCode());
+        reason.setPriorityNo(rule.getPriorityNo());
+        reason.setCompareValue(compareValue);
+        reason.setReasonText(reasonText);
+        reason.setIsDecisive(decisive);
+        reason.setCreateTime(now);
+        reason.setUpdateTime(now);
+        reason.setIsDelete(NOT_DELETED);
+        return reason;
+    }
+
+    private BasketStandingRankReason buildReasonRow(Long divisionId,
+                                                    Long stageId,
+                                                    Long groupScopeKey,
+                                                    BasketStanding standing,
+                                                    Long eventTeamId,
+                                                    BasketDivisionTieBreakRule rule,
+                                                    String reasonText,
+                                                    int decisive,
+                                                    Date now) {
+        return buildReasonRow(divisionId, stageId, groupScopeKey, standing, eventTeamId,
+                rule, null, reasonText, decisive, now);
+    }
+
+    private String findDecisiveRule(StandingAgg current,
+                                    StandingAgg previous,
+                                    List<BasketDivisionTieBreakRule> rules,
+                                    List<BasketV4Match> scopeMatches) {
+        if (previous == null) {
+            return rules.isEmpty() ? null : rules.get(0).getRuleCode();
+        }
+        for (BasketDivisionTieBreakRule rule : rules) {
+            TieBreakRuleEnum ruleEnum = TieBreakRuleEnum.fromCode(rule.getRuleCode());
+            if (ruleEnum == TieBreakRuleEnum.MANUAL) {
+                continue;
+            }
+            String currentValue = compareValueFor(ruleEnum, current, scopeMatches);
+            String previousValue = compareValueFor(ruleEnum, previous, scopeMatches);
+            if (!currentValue.equals(previousValue)) {
+                return rule.getRuleCode();
+            }
+        }
+        return null;
+    }
+
+    private String compareValueFor(TieBreakRuleEnum ruleEnum,
+                                   StandingAgg agg,
+                                   List<BasketV4Match> scopeMatches) {
+        return switch (ruleEnum) {
+            case WIN_COUNT -> String.valueOf(agg.winCount);
+            case POINT_DIFFERENCE -> String.valueOf(agg.getPointDiff());
+            case TOTAL_POINTS -> String.valueOf(agg.pointFor);
+            case HEAD_TO_HEAD -> String.valueOf(headToHeadWins(agg.eventTeamId, scopeMatches));
+            case MANUAL -> "PENDING";
+        };
+    }
+
+    private int headToHeadWins(Long teamId, List<BasketV4Match> matches) {
+        int wins = 0;
+        if (matches == null) {
+            return wins;
+        }
+        for (BasketV4Match match : matches) {
+            if (match.getHomeScore() == null || match.getAwayScore() == null) {
+                continue;
+            }
+            if (match.getHomeScore().equals(match.getAwayScore())) {
+                continue;
+            }
+            Long winner = match.getHomeScore() > match.getAwayScore()
+                    ? match.getHomeEventTeamId() : match.getAwayEventTeamId();
+            if (teamId.equals(winner)) {
+                wins++;
+            }
+        }
+        return wins;
+    }
+
+    private List<BasketDivisionTieBreakRule> sortedEnabledRules(List<BasketDivisionTieBreakRule> rules) {
+        if (rules == null || rules.isEmpty()) {
+            return List.of();
+        }
+        return rules.stream()
+                .filter(rule -> rule.getEnabled() == null || Integer.valueOf(1).equals(rule.getEnabled()))
+                .sorted(Comparator.comparing(BasketDivisionTieBreakRule::getPriorityNo,
+                        Comparator.nullsLast(Integer::compareTo)))
+                .toList();
     }
 
     private Map<Long, List<BasketV4Match>> groupMatchesByScope(BasketDivisionStage stage, List<BasketV4Match> matches) {
@@ -158,19 +309,6 @@ public class TieBreakStandingService {
         return standings;
     }
 
-    private String buildRankExplainJson(List<BasketDivisionTieBreakRule> rules, boolean manualPending) {
-        Map<String, Object> explain = new HashMap<>();
-        List<String> appliedRules = rules == null ? List.of() : rules.stream()
-                .filter(rule -> rule.getEnabled() == null || Integer.valueOf(1).equals(rule.getEnabled()))
-                .sorted(Comparator.comparing(BasketDivisionTieBreakRule::getPriorityNo,
-                        Comparator.nullsLast(Integer::compareTo)))
-                .map(BasketDivisionTieBreakRule::getRuleCode)
-                .collect(Collectors.toList());
-        explain.put("rules", appliedRules);
-        explain.put("manualPending", manualPending);
-        return JSON.toJSONString(explain);
-    }
-
     private boolean isGroupStage(BasketDivisionStage stage) {
         if (StageTypeEnum.GROUP.getCode().equals(stage.getStageType())) {
             return true;
@@ -183,8 +321,10 @@ public class TieBreakStandingService {
         return configured != null ? configured : fallback;
     }
 
-    public static String buildActiveUniqueKey(Long stageId, Long groupScopeKey, Long eventTeamId) {
-        return stageId + "_" + groupScopeKey + "_" + eventTeamId;
+    public static String buildActiveUniqueKey(Long divisionId, Long stageId, Long groupScopeKey, Long eventTeamId) {
+        String groupPart = groupScopeKey == null || groupScopeKey == OVERALL_SCOPE_KEY
+                ? "GLOBAL" : String.valueOf(groupScopeKey);
+        return "DIVISION:" + divisionId + ":STAGE:" + stageId + ":GROUP:" + groupPart + ":TEAM:" + eventTeamId;
     }
 
     private BasketDivisionStage requireStage(Long stageId) {

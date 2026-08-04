@@ -73,3 +73,11 @@ export function cancelV4StageQualificationConfirm(stageId: number) {
 export function listV4StageStandings(stageId: number) {
   return request({ url: `/basket/v4/admin/stages/${stageId}/standings`, method: 'get' })
 }
+
+export function applyV4StageManualRank(stageId: number, data: {
+  groupScopeKey?: number
+  reason: string
+  items: Array<{ eventTeamId: number; manualRankNo: number }>
+}) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/manual-rank`, method: 'post', data })
+}

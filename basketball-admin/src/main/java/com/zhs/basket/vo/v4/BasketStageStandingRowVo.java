@@ -13,6 +13,9 @@ public class BasketStageStandingRowVo {
     private Integer pointAgainst;
     private Integer pointDiff;
     private Integer standingPoints;
-    private String rankExplainJson;
     private Integer manualRankPending;
+    private Integer manualRankNo;
+    private String manualRankReason;
+    private String decisiveReasonText;
+    private java.util.List<BasketStandingRankReasonVo> rankReasons;
 }

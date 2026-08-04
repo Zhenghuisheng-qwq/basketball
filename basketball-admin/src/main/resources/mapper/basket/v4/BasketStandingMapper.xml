@@ -20,13 +20,17 @@
         <result property="standingPoints" column="standing_points" />
         <result property="rankExplainJson" column="rank_explain_json" />
         <result property="manualRankPending" column="manual_rank_pending" />
+        <result property="manualRankNo" column="manual_rank_no" />
+        <result property="manualRankReason" column="manual_rank_reason" />
+        <result property="manualRankBy" column="manual_rank_by" />
+        <result property="manualRankTime" column="manual_rank_time" />
         <result property="activeUniqueKey" column="active_unique_key" />
         <result property="createTime" column="create_time" />
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, division_id, stage_id, group_id, group_scope_key, event_team_id, rank_no, win_count, lose_count, draw_count, point_for, point_against, point_diff, standing_points, rank_explain_json, manual_rank_pending, active_unique_key, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, division_id, stage_id, group_id, group_scope_key, event_team_id, rank_no, win_count, lose_count, draw_count, point_for, point_against, point_diff, standing_points, rank_explain_json, manual_rank_pending, manual_rank_no, manual_rank_reason, manual_rank_by, manual_rank_time, active_unique_key, create_time, update_time, is_delete</sql>
 
     <sql id="NotDeleted">is_delete = 0</sql>
 
@@ -83,11 +87,11 @@
         insert into basket_standing (
             season_id, division_id, stage_id, group_id, group_scope_key, event_team_id, rank_no,
             win_count, lose_count, draw_count, point_for, point_against, point_diff, standing_points,
-            rank_explain_json, manual_rank_pending, active_unique_key, create_time, update_time, is_delete
+            rank_explain_json, manual_rank_pending, manual_rank_no, manual_rank_reason, manual_rank_by, manual_rank_time, active_unique_key, create_time, update_time, is_delete
         ) values (
             #{seasonId}, #{divisionId}, #{stageId}, #{groupId}, #{groupScopeKey}, #{eventTeamId}, #{rankNo},
             #{winCount}, #{loseCount}, #{drawCount}, #{pointFor}, #{pointAgainst}, #{pointDiff}, #{standingPoints},
-            #{rankExplainJson}, #{manualRankPending}, #{activeUniqueKey}, #{createTime}, #{updateTime}, #{isDelete}
+            #{rankExplainJson}, #{manualRankPending}, #{manualRankNo}, #{manualRankReason}, #{manualRankBy}, #{manualRankTime}, #{activeUniqueKey}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -110,6 +114,10 @@
             <if test="standingPoints != null">standing_points = #{standingPoints},</if>
             <if test="rankExplainJson != null">rank_explain_json = #{rankExplainJson},</if>
             <if test="manualRankPending != null">manual_rank_pending = #{manualRankPending},</if>
+            <if test="manualRankNo != null">manual_rank_no = #{manualRankNo},</if>
+            <if test="manualRankReason != null">manual_rank_reason = #{manualRankReason},</if>
+            <if test="manualRankBy != null">manual_rank_by = #{manualRankBy},</if>
+            <if test="manualRankTime != null">manual_rank_time = #{manualRankTime},</if>
             <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
             update_time = now()

@@ -51,7 +51,8 @@
         </el-table>
       </el-tab-pane>
 
-      <el-tab-pane label="批次列表（Legacy）" name="batch">
+      <el-tab-pane label="历史赛程（只读）" name="batch">
+    <el-alert title="历史旧赛程：仅可查看和作废草稿，新建 Division 请使用「阶段执行」入口" type="warning" :closable="false" show-icon class="mb8" />
     <el-form :model="query" :inline="true" class="mb8">
       <el-form-item label="赛季">
         <el-select v-model="query.seasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onQuerySeasonChange">
@@ -70,7 +71,7 @@
       </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="loadList">搜索</el-button>
-        <el-button type="success" icon="Plus" @click="openGenerate">生成草稿</el-button>
+        <el-button type="success" icon="Plus" v-if="legacyGenerateAllowed" @click="openGenerate">生成草稿</el-button>
       </el-form-item>
     </el-form>
 
@@ -240,10 +241,16 @@ const formDivisionOptions = ref<V4AdminOptionVo[]>([])
 const PUBLISH_OPTIONS = V4_PUBLISH_STATUS_FILTER_OPTIONS
 
 const selectedDivision = computed(() => formDivisionOptions.value.find(d => d.id === generateForm.divisionId))
+const selectedQueryDivision = computed(() => queryDivisionOptions.value.find(d => d.id === query.divisionId))
+const legacyGenerateAllowed = computed(() => {
+  if (query.divisionId && selectedQueryDivision.value?.formatSnapshotId) return false
+  return true
+})
 const selectedDivisionTeamCount = computed(() => selectedDivision.value?.eventTeamCount ?? 0)
 const expectedMatchCount = computed(() => calcRoundRobinMatchCount(selectedDivisionTeamCount.value))
 const generateDisabledReason = computed(() => {
   if (!generateForm.divisionId) return '请选择平台赛区'
+  if (selectedDivision.value?.formatSnapshotId) return '该 Division 已启用动态赛制，请使用阶段执行入口'
   if (selectedDivisionTeamCount.value < 2) return '参赛队伍少于 2 支，无法生成单循环赛程'
   return ''
 })

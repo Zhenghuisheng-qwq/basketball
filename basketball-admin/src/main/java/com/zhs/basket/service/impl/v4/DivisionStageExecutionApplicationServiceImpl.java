@@ -1,6 +1,7 @@
 package com.zhs.basket.service.impl.v4;
 
 import com.zhs.basket.domain.v4.*;
+import com.zhs.basket.dto.v4.BasketStageManualRankReq;
 import com.zhs.basket.enums.v4.*;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
@@ -45,6 +46,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private BasketMatchSubmissionMapper submissionMapper;
     @Autowired
     private BasketStandingMapper standingMapper;
+    @Autowired
+    private BasketStandingRankReasonMapper rankReasonMapper;
     @Autowired
     private BasketDivisionGroupingBatchMapper groupingBatchMapper;
     @Autowired
@@ -366,6 +369,14 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             return List.of();
         }
 
+        Map<Long, String> teamNames = eventTeamMapper.selectActiveByDivisionId(stage.getDivisionId()).stream()
+                .collect(Collectors.toMap(BasketEventTeam::getId,
+                        t -> t.getTeamNameSnapshot() != null ? t.getTeamNameSnapshot() : String.valueOf(t.getId()),
+                        (a, b) -> a));
+        List<Long> standingIds = rows.stream().map(BasketStanding::getId).collect(Collectors.toList());
+        Map<Long, List<BasketStandingRankReason>> reasonMap = rankReasonMapper.selectByStandingIds(standingIds).stream()
+                .collect(Collectors.groupingBy(BasketStandingRankReason::getStandingId));
+
         Map<Long, BasketStageStandingScopeVo> scopes = new LinkedHashMap<>();
         for (BasketStanding standing : rows) {
             Long scopeKey = standing.getGroupScopeKey() != null ? standing.getGroupScopeKey() : OVERALL_SCOPE_KEY;
@@ -380,6 +391,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             }
             BasketStageStandingRowVo rowVo = new BasketStageStandingRowVo();
             rowVo.setEventTeamId(standing.getEventTeamId());
+            rowVo.setTeamName(teamNames.get(standing.getEventTeamId()));
             rowVo.setRankNo(standing.getRankNo());
             rowVo.setWinCount(standing.getWinCount());
             rowVo.setLoseCount(standing.getLoseCount());
@@ -387,11 +399,108 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             rowVo.setPointAgainst(standing.getPointAgainst());
             rowVo.setPointDiff(standing.getPointDiff());
             rowVo.setStandingPoints(standing.getStandingPoints());
-            rowVo.setRankExplainJson(standing.getRankExplainJson());
             rowVo.setManualRankPending(standing.getManualRankPending());
+            rowVo.setManualRankNo(standing.getManualRankNo());
+            rowVo.setManualRankReason(standing.getManualRankReason());
+            List<BasketStandingRankReasonVo> reasonVos = reasonMap.getOrDefault(standing.getId(), List.of()).stream()
+                    .map(this::toRankReasonVo)
+                    .collect(Collectors.toList());
+            rowVo.setRankReasons(reasonVos);
+            reasonVos.stream()
+                    .filter(r -> Integer.valueOf(1).equals(r.getIsDecisive()))
+                    .findFirst()
+                    .ifPresent(r -> rowVo.setDecisiveReasonText(r.getReasonText()));
             scopeVo.getRows().add(rowVo);
         }
         return new ArrayList<>(scopes.values());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void applyManualRank(BasketStageManualRankReq req) {
+        if (req == null || req.getStageId() == null) {
+            throw new ServiceException("stageId 不能为空");
+        }
+        if (req.getItems() == null || req.getItems().isEmpty()) {
+            throw new ServiceException("请提供人工排名明细");
+        }
+        if (req.getReason() == null || req.getReason().trim().isEmpty()) {
+            throw new ServiceException("请填写人工排名原因");
+        }
+        BasketDivisionStage stage = requireStage(req.getStageId());
+        Long groupScopeKey = req.getGroupScopeKey() != null ? req.getGroupScopeKey() : OVERALL_SCOPE_KEY;
+
+        List<BasketStanding> scopeRows = standingMapper.selectByStageScope(
+                stage.getDivisionId(), stage.getId(), groupScopeKey);
+        List<BasketStanding> pendingRows = scopeRows.stream()
+                .filter(row -> Integer.valueOf(1).equals(row.getManualRankPending()))
+                .collect(Collectors.toList());
+        if (pendingRows.isEmpty()) {
+            throw new ServiceException("当前分组无需人工排名");
+        }
+        Set<Long> pendingTeamIds = pendingRows.stream()
+                .map(BasketStanding::getEventTeamId).collect(Collectors.toSet());
+        Set<Long> requestTeamIds = req.getItems().stream()
+                .map(BasketStageManualRankReq.ManualRankItem::getEventTeamId)
+                .collect(Collectors.toSet());
+        if (!pendingTeamIds.equals(requestTeamIds)) {
+            throw new ServiceException("人工排名必须覆盖全部同分待处理球队，且不能包含其他球队");
+        }
+        Set<Integer> rankNos = new HashSet<>();
+        for (BasketStageManualRankReq.ManualRankItem item : req.getItems()) {
+            if (item.getManualRankNo() == null || item.getManualRankNo() <= 0) {
+                throw new ServiceException("人工排名序号无效");
+            }
+            if (!rankNos.add(item.getManualRankNo())) {
+                throw new ServiceException("人工排名序号不能重复");
+            }
+        }
+
+        Date now = new Date();
+        Long operatorId = SecurityUtils.getUserId();
+        Map<Long, Integer> manualRankMap = req.getItems().stream()
+                .collect(Collectors.toMap(BasketStageManualRankReq.ManualRankItem::getEventTeamId,
+                        BasketStageManualRankReq.ManualRankItem::getManualRankNo));
+        for (BasketStanding row : pendingRows) {
+            row.setManualRankNo(manualRankMap.get(row.getEventTeamId()));
+            row.setManualRankReason(req.getReason().trim());
+            row.setManualRankBy(operatorId);
+            row.setManualRankTime(now);
+            row.setManualRankPending(0);
+            row.setUpdateTime(now);
+            standingMapper.updateById(row);
+        }
+
+        List<BasketStanding> resorted = new ArrayList<>(scopeRows);
+        resorted.sort(Comparator
+                .comparing(BasketStanding::getStandingPoints, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(row -> row.getManualRankNo() != null ? row.getManualRankNo() : Integer.MAX_VALUE)
+                .thenComparing(BasketStanding::getWinCount, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(BasketStanding::getPointDiff, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(BasketStanding::getEventTeamId));
+        int rank = 1;
+        for (BasketStanding row : resorted) {
+            row.setRankNo(rank++);
+            row.setUpdateTime(now);
+            standingMapper.updateById(row);
+        }
+
+        qualificationMapper.softDeletePreviewByStageId(stage.getId());
+    }
+
+    private BasketStandingRankReasonVo toRankReasonVo(BasketStandingRankReason reason) {
+        BasketStandingRankReasonVo vo = new BasketStandingRankReasonVo();
+        vo.setRuleCode(reason.getRuleCode());
+        vo.setPriorityNo(reason.getPriorityNo());
+        vo.setCompareValue(reason.getCompareValue());
+        vo.setReasonText(reason.getReasonText());
+        vo.setIsDecisive(reason.getIsDecisive());
+        try {
+            vo.setRuleName(TieBreakRuleEnum.fromCode(reason.getRuleCode()).getDescription());
+        } catch (Exception ignored) {
+            vo.setRuleName(reason.getRuleCode());
+        }
+        return vo;
     }
 
     private List<BasketDivisionStageQualification> buildPreviewQualifications(BasketDivisionStage stage,

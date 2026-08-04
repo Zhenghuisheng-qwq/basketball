@@ -1,5 +1,6 @@
 package com.zhs.basket.service.v4;
 
+import com.zhs.basket.dto.v4.BasketStageManualRankReq;
 import com.zhs.basket.support.v4.stage.StageSchedulePreviewVo;
 import com.zhs.basket.vo.v4.BasketDivisionStageExecutionListVo;
 import com.zhs.basket.vo.v4.BasketStageQualificationPreviewVo;
@@ -33,4 +34,6 @@ public interface IDivisionStageExecutionApplicationService {
     void cancelQualificationConfirm(Long stageId);
 
     List<BasketStageStandingScopeVo> listStandings(Long stageId);
+
+    void applyManualRank(BasketStageManualRankReq req);
 }
