@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketDivisionGroupMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketDivisionGroup" id="BasketDivisionGroupResult">
+        <id property="id" column="id" />
+        <result property="groupingBatchId" column="grouping_batch_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="stageId" column="stage_id" />
+        <result property="groupCode" column="group_code" />
+        <result property="groupName" column="group_name" />
+        <result property="groupOrder" column="group_order" />
+        <result property="qualifyCount" column="qualify_count" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <resultMap type="com.zhs.basket.vo.v4.BasketDivisionGroupVo" id="BasketDivisionGroupVoResult">
+        <id property="groupId" column="group_id" />
+        <result property="groupCode" column="group_code" />
+        <result property="groupName" column="group_name" />
+        <result property="groupOrder" column="group_order" />
+        <result property="qualifyCount" column="qualify_count" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, grouping_batch_id, division_id, stage_id, group_code, group_name, group_order, qualify_count, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketDivisionGroupResult">
+        select <include refid="BaseColumns" /> from basket_division_group
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByBatchId" resultMap="BasketDivisionGroupResult">
+        select <include refid="BaseColumns" /> from basket_division_group
+        where grouping_batch_id = #{groupingBatchId} and is_delete = 0
+        order by group_order asc
+    </select>
+
+    <select id="selectVoByBatchId" resultMap="BasketDivisionGroupVoResult">
+        select
+            id as group_id,
+            group_code,
+            group_name,
+            group_order,
+            qualify_count
+        from basket_division_group
+        where grouping_batch_id = #{groupingBatchId} and is_delete = 0
+        order by group_order asc
+    </select>
+
+    <select id="countByBatchId" resultType="int">
+        select count(1) from basket_division_group
+        where grouping_batch_id = #{groupingBatchId} and is_delete = 0
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_division_group (
+            grouping_batch_id, division_id, stage_id, group_code, group_name, group_order, qualify_count, create_time, update_time, is_delete
+        ) values (
+            #{groupingBatchId}, #{divisionId}, #{stageId}, #{groupCode}, #{groupName}, #{groupOrder}, #{qualifyCount}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_division_group
+        <set>
+            <if test="groupName != null">group_name = #{groupName},</if>
+            <if test="qualifyCount != null">qualify_count = #{qualifyCount},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_division_group set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

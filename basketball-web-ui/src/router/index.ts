@@ -577,6 +577,18 @@ const router = createRouter({
 
         {
 
+          path: 'my-events/v4/personal-registration/:divisionId',
+
+          name: 'AccountV4PersonalRegistration',
+
+          component: () => import('@/views/account/events/V4PersonalRegistrationFlow.vue'),
+
+          meta: { title: '个人报名' },
+
+        },
+
+        {
+
           path: 'my-events/v4/match-submission/:matchId',
 
           name: 'AccountV4MatchSubmission',

@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.zhs.basket.mapper.v4.BasketDivisionGroupingBatchMapper">
+
+
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketDivisionGroupingBatch" id="BasketDivisionGroupingBatchResult">
+
+        <id property="id" column="id" />
+
+        <result property="divisionId" column="division_id" />
+
+        <result property="stageId" column="stage_id" />
+
+        <result property="batchVersion" column="batch_version" />
+
+        <result property="groupingMode" column="grouping_mode" />
+
+        <result property="groupingStatus" column="grouping_status" />
+
+        <result property="activeUniqueKey" column="active_unique_key" />
+
+        <result property="groupCount" column="group_count" />
+
+        <result property="resultSource" column="result_source" />
+
+        <result property="confirmedBy" column="confirmed_by" />
+
+        <result property="confirmedTime" column="confirmed_time" />
+
+        <result property="createBy" column="create_by" />
+
+        <result property="updateBy" column="update_by" />
+
+        <result property="createTime" column="create_time" />
+
+        <result property="updateTime" column="update_time" />
+
+        <result property="isDelete" column="is_delete" />
+
+    </resultMap>
+
+
+
+    <resultMap type="com.zhs.basket.vo.v4.BasketDivisionGroupingBatchListVo" id="BasketDivisionGroupingBatchListVoResult">
+
+        <id property="groupingBatchId" column="grouping_batch_id" />
+
+        <result property="divisionId" column="division_id" />
+
+        <result property="divisionName" column="division_name" />
+
+        <result property="stageId" column="stage_id" />
+
+        <result property="stageCode" column="stage_code" />
+
+        <result property="stageName" column="stage_name" />
+
+        <result property="batchVersion" column="batch_version" />
+
+        <result property="groupingMode" column="grouping_mode" />
+
+        <result property="groupingStatus" column="grouping_status" />
+
+        <result property="groupCount" column="group_count" />
+
+        <result property="resultSource" column="result_source" />
+
+        <result property="confirmedTime" column="confirmed_time" />
+
+        <result property="createTime" column="create_time" />
+
+    </resultMap>
+
+
+
+    <sql id="BaseColumns">id, division_id, stage_id, batch_version, grouping_mode, grouping_status, active_unique_key, group_count, result_source, confirmed_by, confirmed_time, create_by, update_by, create_time, update_time, is_delete</sql>
+
+
+
+    <select id="selectById" resultMap="BasketDivisionGroupingBatchResult">
+
+        select <include refid="BaseColumns" /> from basket_division_grouping_batch
+
+        where id = #{id} and is_delete = 0
+
+    </select>
+
+
+
+    <select id="selectActiveByDivisionAndStage" resultMap="BasketDivisionGroupingBatchResult">
+
+        select <include refid="BaseColumns" /> from basket_division_grouping_batch
+
+        where division_id = #{divisionId} and stage_id = #{stageId} and is_delete = 0 and active_unique_key is not null
+
+        limit 1
+
+    </select>
+
+
+
+    <select id="selectNextBatchVersion" resultType="int">
+
+        select coalesce(max(batch_version), 0) + 1 from basket_division_grouping_batch
+
+        where division_id = #{divisionId} and stage_id = #{stageId}
+
+    </select>
+
+
+
+    <select id="selectVoList" resultMap="BasketDivisionGroupingBatchListVoResult">
+
+        select
+
+            b.id as grouping_batch_id,
+
+            b.division_id,
+
+            d.division_name,
+
+            b.stage_id,
+
+            s.stage_code,
+
+            s.stage_name,
+
+            b.batch_version,
+
+            b.grouping_mode,
+
+            b.grouping_status,
+
+            b.group_count,
+
+            b.result_source,
+
+            b.confirmed_time,
+
+            b.create_time
+
+        from basket_division_grouping_batch b
+
+        left join basket_division d on d.id = b.division_id and d.is_delete = 0
+
+        left join basket_division_stage s on s.id = b.stage_id and s.is_delete = 0
+
+        where b.is_delete = 0
+
+        <if test="divisionId != null">and b.division_id = #{divisionId}</if>
+
+        <if test="stageId != null">and b.stage_id = #{stageId}</if>
+
+        <if test="groupingStatus != null and groupingStatus != ''">and b.grouping_status = #{groupingStatus}</if>
+
+        order by b.batch_version desc, b.id desc
+
+    </select>
+
+
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+
+        insert into basket_division_grouping_batch (
+
+            division_id, stage_id, batch_version, grouping_mode, grouping_status, active_unique_key, group_count, result_source, confirmed_by, confirmed_time, create_by, update_by, create_time, update_time, is_delete
+
+        ) values (
+
+            #{divisionId}, #{stageId}, #{batchVersion}, #{groupingMode}, #{groupingStatus}, #{activeUniqueKey}, #{groupCount}, #{resultSource}, #{confirmedBy}, #{confirmedTime}, #{createBy}, #{updateBy}, #{createTime}, #{updateTime}, #{isDelete}
+
+        )
+
+    </insert>
+
+
+
+    <update id="updateById">
+
+        update basket_division_grouping_batch
+
+        <set>
+
+            <if test="groupingStatus != null">grouping_status = #{groupingStatus},</if>
+
+            <if test='groupingStatus != null and "CANCELLED".equals(groupingStatus)'>active_unique_key = null,</if>
+
+            <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
+
+            <if test="resultSource != null">result_source = #{resultSource},</if>
+
+            <if test="confirmedBy != null">confirmed_by = #{confirmedBy},</if>
+
+            <if test="confirmedTime != null">confirmed_time = #{confirmedTime},</if>
+
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+
+            update_time = now()
+
+        </set>
+
+        where id = #{id} and is_delete = 0
+
+    </update>
+
+
+
+    <update id="softDelete">
+
+        update basket_division_grouping_batch set is_delete = 1, active_unique_key = null, update_time = now()
+
+        where id = #{id} and is_delete = 0
+
+    </update>
+
+
+
+</mapper>
+

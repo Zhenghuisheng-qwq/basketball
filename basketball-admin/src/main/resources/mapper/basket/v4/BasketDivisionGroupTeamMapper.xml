@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketDivisionGroupTeamMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketDivisionGroupTeam" id="BasketDivisionGroupTeamResult">
+        <id property="id" column="id" />
+        <result property="groupingBatchId" column="grouping_batch_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="stageId" column="stage_id" />
+        <result property="groupId" column="group_id" />
+        <result property="eventTeamId" column="event_team_id" />
+        <result property="seedNo" column="seed_no" />
+        <result property="drawOrder" column="draw_order" />
+        <result property="assignmentSource" column="assignment_source" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <resultMap type="com.zhs.basket.vo.v4.BasketDivisionGroupTeamVo" id="BasketDivisionGroupTeamVoResult">
+        <id property="assignmentId" column="assignment_id" />
+        <result property="eventTeamId" column="event_team_id" />
+        <result property="teamNameSnapshot" column="team_name_snapshot" />
+        <result property="eventTeamNo" column="event_team_no" />
+        <result property="seedNo" column="seed_no" />
+        <result property="drawOrder" column="draw_order" />
+        <result property="assignmentSource" column="assignment_source" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, grouping_batch_id, division_id, stage_id, group_id, event_team_id, seed_no, draw_order, assignment_source, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="BasketDivisionGroupTeamResult">
+        select <include refid="BaseColumns" /> from basket_division_group_team
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByBatchId" resultMap="BasketDivisionGroupTeamResult">
+        select <include refid="BaseColumns" /> from basket_division_group_team
+        where grouping_batch_id = #{groupingBatchId} and is_delete = 0
+        order by id asc
+    </select>
+
+    <select id="selectByGroupId" resultMap="BasketDivisionGroupTeamResult">
+        select <include refid="BaseColumns" /> from basket_division_group_team
+        where group_id = #{groupId} and is_delete = 0
+        order by draw_order asc, id asc
+    </select>
+
+    <select id="selectVoByGroupId" resultMap="BasketDivisionGroupTeamVoResult">
+        select
+            gt.id as assignment_id,
+            gt.event_team_id,
+            et.team_name_snapshot,
+            et.event_team_no,
+            gt.seed_no,
+            gt.draw_order,
+            gt.assignment_source
+        from basket_division_group_team gt
+        left join basket_event_team et on et.id = gt.event_team_id and et.is_delete = 0
+        where gt.group_id = #{groupId} and gt.is_delete = 0
+        order by gt.draw_order asc, gt.id asc
+    </select>
+
+    <select id="countByGroupId" resultType="int">
+        select count(1) from basket_division_group_team
+        where group_id = #{groupId} and is_delete = 0
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_division_group_team (
+            grouping_batch_id, division_id, stage_id, group_id, event_team_id, seed_no, draw_order, assignment_source, create_time, update_time, is_delete
+        ) values (
+            #{groupingBatchId}, #{divisionId}, #{stageId}, #{groupId}, #{eventTeamId}, #{seedNo}, #{drawOrder}, #{assignmentSource}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_division_group_team
+        <set>
+            <if test="groupId != null">group_id = #{groupId},</if>
+            <if test="seedNo != null">seed_no = #{seedNo},</if>
+            <if test="drawOrder != null">draw_order = #{drawOrder},</if>
+            <if test="assignmentSource != null">assignment_source = #{assignmentSource},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDelete">
+        update basket_division_group_team set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+</mapper>

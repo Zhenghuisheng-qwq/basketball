@@ -1,4 +1,10 @@
-import type { V4AvailableDivision, V4MyEvent, V4MyRegistration } from '@/api/types/v4PlayerEvents'
+import type {
+  V4AvailableDivision,
+  V4MyEvent,
+  V4MyPersonalRegistration,
+  V4MyRegistration,
+  V4PersonalAvailableDivision,
+} from '@/api/types/v4PlayerEvents'
 import type { AvailableEvent, MyApplication, ParticipatingEvent } from '@/types/accountEvents'
 import { formatDateTimeShort } from '@/utils/participationMappers'
 import { v4PlatformLabel } from '@/utils/v4Display'
@@ -51,6 +57,103 @@ export function v4GrantStatusLabel(status?: string | null): string {
       return '已过期'
     default:
       return status ? '无授权' : '无授权'
+  }
+}
+
+export function v4PersonalRegistrationStatusLabel(status?: string | null): string {
+  switch ((status || '').toUpperCase()) {
+    case 'DRAFT':
+      return '草稿'
+    case 'PENDING_REVIEW':
+      return '待审核'
+    case 'APPROVED':
+      return '已通过'
+    case 'REJECTED':
+      return '已驳回'
+    case 'WITHDRAWN':
+      return '已撤回'
+    case 'ASSIGNED':
+      return '已分配'
+    case 'CONVERTED':
+      return '已转为正式参赛'
+    default:
+      return status || '未知'
+  }
+}
+
+export function mapV4PersonalDivisionToAvailableEvent(item: V4PersonalAvailableDivision): AvailableEvent {
+  const canRegister = Boolean(item.canRegister)
+  const status = (item.myRegistrationStatus || '').toUpperCase()
+  let actionType: AvailableEvent['actionType'] = 'DISABLED'
+  let actionText = '不可报名'
+  if (canRegister) {
+    actionType = 'INDIVIDUAL_REGISTRATION'
+    actionText = '个人报名'
+  } else if (status === 'DRAFT' || status === 'REJECTED' || status === 'WITHDRAWN') {
+    actionType = 'MANAGE_REGISTRATION'
+    actionText = status === 'DRAFT' ? '继续编辑' : '修改重提'
+  } else if (status === 'PENDING_REVIEW') {
+    actionType = 'VIEW_REGISTRATION'
+    actionText = '查看报名'
+  } else if (status === 'APPROVED' || status === 'ASSIGNED') {
+    actionType = 'VIEW_REGISTRATION'
+    actionText = '查看进度'
+  } else if (status === 'CONVERTED') {
+    actionType = 'GO_JOINED'
+    actionText = '进入赛事'
+  }
+  return {
+    divisionId: item.divisionId,
+    seasonId: item.seasonId,
+    tournamentName: item.seriesName || item.seasonTitle || '赛事',
+    seasonName: item.seasonTitle,
+    displayTitle: item.divisionName,
+    platform: v4PlatformLabel(item.platformCode),
+    platformCode: item.platformCode,
+    registrationType: 'INDIVIDUAL',
+    registrationTypeText: '个人报名',
+    deadline: item.registrationEndTime || '',
+    signupStartTime: item.registrationStartTime,
+    matchStartTime: item.matchStartTime,
+    matchEndTime: item.matchEndTime,
+    quotaUsed: item.approvedPersonCount ?? 0,
+    quotaTotal: item.maxPersonCount ?? 0,
+    quotaFull: item.remainingPersonCount != null ? item.remainingPersonCount <= 0 : false,
+    eligibilityStatus: canRegister ? 'ELIGIBLE' : 'APPLIED',
+    actionText,
+    actionType,
+    disabledReason: item.cannotRegisterReason,
+    canRegister,
+    registrationStatus: item.myRegistrationStatus,
+  }
+}
+
+export function mapV4PersonalRegistrationToApplication(item: V4MyPersonalRegistration): MyApplication {
+  const status = (item.registrationStatus || '').toUpperCase()
+  const pending = status === 'PENDING_REVIEW' || status === 'ASSIGNED'
+  let actionText = '查看详情'
+  if (status === 'DRAFT' || status === 'REJECTED' || status === 'WITHDRAWN') {
+    actionText = status === 'DRAFT' ? '继续编辑' : '修改重提'
+  }
+  return {
+    applicationId: item.personalRegistrationId,
+    divisionId: item.divisionId || '',
+    tournamentName: item.seasonTitle || '赛事',
+    platformGroupLabel: item.divisionName,
+    platform: v4PlatformLabel(item.platformCode),
+    applicationType: 'INDIVIDUAL',
+    applicationTypeText: '个人报名',
+    status,
+    statusText: v4PersonalRegistrationStatusLabel(status),
+    pending,
+    actionText,
+    actionType: 'VIEW_APPLICATION_STATUS',
+    submitTime: formatDateTimeShort(item.submitTime),
+    statusHint: status === 'ASSIGNED'
+      ? '已分配临时队伍，请等待队长完成组队'
+      : status === 'APPROVED'
+        ? '审核已通过，将由运营线下抽签组队'
+        : item.rejectReason || undefined,
   }
 }
 

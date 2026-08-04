@@ -10,10 +10,13 @@ import AvailableEventTable from '@/components/account/events/AvailableEventTable
 import MyApplicationList from '@/components/account/events/MyApplicationList.vue'
 import ParticipatingEventList from '@/components/account/events/ParticipatingEventList.vue'
 import V4MySchedulePanel from '@/components/account/events/V4MySchedulePanel.vue'
+import V4PersonalFormationPanel from '@/components/account/events/V4PersonalFormationPanel.vue'
 import {
   getV4AvailableDivisions,
   getV4MyEvents,
+  getV4MyPersonalRegistrations,
   getV4MyRegistrations,
+  getV4PersonalAvailableDivisions,
 } from '@/api/v4PlayerEvents'
 import { useTeamStore } from '@/stores/team'
 import { useAccountStore } from '@/stores/account'
@@ -21,6 +24,8 @@ import type { MyEventsRoleMode } from '@/api/types/myEvents'
 import {
   mapV4DivisionToAvailableEvent,
   mapV4EventToParticipating,
+  mapV4PersonalDivisionToAvailableEvent,
+  mapV4PersonalRegistrationToApplication,
   mapV4RegistrationToApplication,
 } from '@/utils/v4AccountEventsMappers'
 import {
@@ -87,8 +92,13 @@ async function loadAvailableEvents() {
   loading.value = true
   loadError.value = ''
   try {
-    const res = await getV4AvailableDivisions()
-    availableEvents.value = (res.data || []).map(mapV4DivisionToAvailableEvent)
+    const [teamRes, personalRes] = await Promise.all([
+      getV4AvailableDivisions().catch(() => ({ data: [] as any[] })),
+      getV4PersonalAvailableDivisions().catch(() => ({ data: [] as any[] })),
+    ])
+    const teamEvents = (teamRes.data || []).map(mapV4DivisionToAvailableEvent)
+    const personalEvents = (personalRes.data || []).map(mapV4PersonalDivisionToAvailableEvent)
+    availableEvents.value = [...teamEvents, ...personalEvents]
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
     availableEvents.value = []
@@ -101,8 +111,13 @@ async function loadApplications() {
   loading.value = true
   loadError.value = ''
   try {
-    const res = await getV4MyRegistrations()
-    myApplications.value = (res.data || []).map(mapV4RegistrationToApplication)
+    const [teamRes, personalRes] = await Promise.all([
+      getV4MyRegistrations().catch(() => ({ data: [] as any[] })),
+      getV4MyPersonalRegistrations().catch(() => ({ data: [] as any[] })),
+    ])
+    const teamApps = (teamRes.data || []).map(mapV4RegistrationToApplication)
+    const personalApps = (personalRes.data || []).map(mapV4PersonalRegistrationToApplication)
+    myApplications.value = [...teamApps, ...personalApps]
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
     myApplications.value = []
@@ -171,6 +186,13 @@ function handleAvailableAction(event: AvailableEvent) {
     })
     return
   }
+  if (event.actionType === 'INDIVIDUAL_REGISTRATION' || (event.registrationType === 'INDIVIDUAL' && event.actionType === 'MANAGE_REGISTRATION')) {
+    router.push({
+      name: 'AccountV4PersonalRegistration',
+      params: { divisionId: event.divisionId },
+    })
+    return
+  }
   if (event.actionType === 'VIEW_REGISTRATION') {
     setTab('applications')
     return
@@ -185,6 +207,13 @@ function handleAvailableAction(event: AvailableEvent) {
 function handleApplicationAction(application: MyApplication) {
   if (application.status === 'APPROVED') {
     setTab('joined')
+    return
+  }
+  if (application.applicationType === 'INDIVIDUAL') {
+    router.push({
+      name: 'AccountV4PersonalRegistration',
+      params: { divisionId: application.divisionId },
+    })
     return
   }
   router.push({
@@ -248,6 +277,7 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
     </template>
 
     <template v-else-if="activeTab === 'applications'">
+      <V4PersonalFormationPanel />
       <AccountEmptyState
         v-if="!myApplications.length"
         :message="emptyMessage"
