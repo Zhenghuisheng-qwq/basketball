@@ -125,10 +125,31 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
 
     private void enrichDisplayFields(V4MyScheduleResp row) {
         row.setStageName(resolveStageName(row.getStageCode()));
-        if (row.getRoundNo() != null && row.getRoundNo() > 0) {
-            row.setRoundName("常规赛第 " + row.getRoundNo() + " 轮");
-        }
+        row.setRoundName(resolveRoundName(row));
         row.setDivisionCode(row.getPlatformCode());
+    }
+
+    private String resolveRoundName(V4MyScheduleResp row) {
+        if (row.getRoundNo() == null || row.getRoundNo() <= 0) {
+            return null;
+        }
+        String stage = row.getStageCode() != null ? row.getStageCode().toUpperCase() : "";
+        if ("KNOCKOUT".equals(stage) || "PLAYOFF".equals(stage)) {
+            int teamsInRound = 1 << row.getRoundNo();
+            if (teamsInRound >= 8) {
+                return switch (teamsInRound) {
+                    case 8 -> "八强赛";
+                    case 4 -> "半决赛";
+                    case 2 -> "决赛";
+                    default -> "淘汰赛第 " + row.getRoundNo() + " 轮";
+                };
+            }
+            return "淘汰赛第 " + row.getRoundNo() + " 轮";
+        }
+        if ("GROUP".equals(stage)) {
+            return "小组赛第 " + row.getRoundNo() + " 轮";
+        }
+        return "循环赛第 " + row.getRoundNo() + " 轮";
     }
 
     private void enrichActionFields(V4MyScheduleResp row) {
@@ -223,12 +244,14 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
 
     private String resolveStageName(String stageCode) {
         if (stageCode == null || stageCode.isEmpty()) {
-            return "常规赛";
+            return "循环赛";
         }
         return switch (stageCode.toUpperCase()) {
-            case "REGULAR" -> "常规赛";
-            case "PLAYOFF" -> "季后赛";
-            case "FINAL" -> "总决赛";
+            case "REGULAR" -> "循环赛";
+            case "GROUP" -> "小组赛";
+            case "KNOCKOUT", "PLAYOFF" -> "淘汰赛";
+            case "SEMI_FINAL" -> "半决赛";
+            case "FINAL" -> "决赛";
             default -> stageCode;
         };
     }

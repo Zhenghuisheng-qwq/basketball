@@ -11,6 +11,10 @@ public class BasketStanding {
     private Long id;
     private Long seasonId;
     private Long divisionId;
+    private Long stageId;
+    private Long groupId;
+    /** 分组范围键：0=无小组 */
+    private Long groupScopeKey;
     private Long eventTeamId;
     private Integer rankNo;
     private Integer winCount;
@@ -20,6 +24,9 @@ public class BasketStanding {
     private Integer pointAgainst;
     private Integer pointDiff;
     private Integer standingPoints;
+    private String rankExplainJson;
+    private Integer manualRankPending;
+    private String activeUniqueKey;
     private Date createTime;
     private Date updateTime;
     private Integer isDelete;

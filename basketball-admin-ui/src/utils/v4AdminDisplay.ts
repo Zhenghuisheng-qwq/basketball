@@ -106,6 +106,26 @@ const STAGE_TYPE_LABELS: Record<string, string> = {
   CUSTOM: '自定义'
 }
 
+const STAGE_EXECUTION_STATUS_LABELS: Record<string, string> = {
+  DRAFT: '草稿',
+  READY: '就绪',
+  SCHEDULE_GENERATED: '已生成赛程',
+  RUNNING: '进行中',
+  RESULT_PENDING_CONFIRM: '待确认晋级',
+  COMPLETED: '已完成',
+  CANCELLED: '已取消'
+}
+
+const STAGE_EXECUTION_STATUS_TAG: Record<string, string> = {
+  DRAFT: 'info',
+  READY: '',
+  SCHEDULE_GENERATED: 'warning',
+  RUNNING: 'success',
+  RESULT_PENDING_CONFIRM: 'warning',
+  COMPLETED: 'success',
+  CANCELLED: 'info'
+}
+
 const COMPETITION_FORMAT_LABELS: Record<string, string> = {
   ROUND_ROBIN: '循环赛',
   SINGLE_ELIMINATION: '单败淘汰',
@@ -251,6 +271,14 @@ export function v4GroupingStatusLabel(status?: string | null): string {
 
 export function v4StageTypeLabel(type?: string | null): string {
   return lookup(STAGE_TYPE_LABELS, type, type || '-')
+}
+
+export function v4StageExecutionStatusLabel(status?: string | null): string {
+  return lookup(STAGE_EXECUTION_STATUS_LABELS, status, status || '-')
+}
+
+export function v4StageExecutionStatusTagType(status?: string | null): string {
+  return STAGE_EXECUTION_STATUS_TAG[status || ''] || 'info'
 }
 
 export function v4CompetitionFormatLabel(format?: string | null): string {

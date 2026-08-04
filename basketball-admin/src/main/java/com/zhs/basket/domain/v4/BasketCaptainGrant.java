@@ -21,6 +21,8 @@ public class BasketCaptainGrant {
     private Date validTo;
     private Long grantedBy;
     private String remark;
+    private String grantSource;
+    private Long sourceDrawTeamId;
     private Date createTime;
     private Date updateTime;
     private Integer isDelete;

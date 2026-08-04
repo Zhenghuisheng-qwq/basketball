@@ -1,10 +1,12 @@
 package com.zhs.basket.service.impl.v4;
 
 import com.zhs.basket.domain.v4.*;
+import com.zhs.basket.enums.v4.CompetitionFormatEnum;
 import com.zhs.basket.enums.v4.MatchStatusEnum;
 import com.zhs.basket.enums.v4.RankTypeEnum;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IBasketV4StatsSettlementService;
+import com.zhs.basket.support.v4.stage.TieBreakStandingService;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -44,13 +46,45 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
     private BasketPlayerStatMapper playerStatMapper;
     @Autowired
     private BasketRankMapper rankMapper;
+    @Autowired
+    private BasketDivisionStageMapper stageMapper;
+    @Autowired
+    private TieBreakStandingService tieBreakStandingService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void settleBySubmission(Long submissionId) {
         BasketMatchSubmission submission = requireSubmission(submissionId);
-        applyOfficialMatchResult(submission);
-        rebuildDivisionStats(submission.getDivisionId());
+        BasketV4Match match = requireMatch(submission.getMatchId());
+        applyOfficialMatchResult(submission, match);
+        if (match.getStageId() != null) {
+            rebuildStageStats(match.getStageId());
+        } else {
+            rebuildDivisionStats(submission.getDivisionId());
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void rebuildStageStats(Long stageId) {
+        if (stageId == null) {
+            throw new ServiceException("stageId 不能为空");
+        }
+        BasketDivisionStage stage = stageMapper.selectById(stageId);
+        if (stage == null) {
+            throw new ServiceException("阶段不存在");
+        }
+        tieBreakStandingService.rebuildStageStanding(stageId);
+        Long divisionId = stage.getDivisionId();
+        BasketV4Match sample = matchMapper.selectFinishedByStageId(stageId).stream().findFirst().orElse(null);
+        Long seasonId = sample != null ? sample.getSeasonId() : null;
+        if (seasonId == null) {
+            BasketEventTeam team = eventTeamMapper.selectActiveByDivisionId(divisionId).stream().findFirst().orElse(null);
+            seasonId = team != null ? team.getSeasonId() : null;
+        }
+        rebuildTeamStat(divisionId, seasonId);
+        rebuildPlayerStat(divisionId, seasonId);
+        rebuildRank(divisionId, seasonId);
     }
 
     @Override
@@ -71,16 +105,19 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
         rebuildRank(divisionId, seasonId);
     }
 
-    private void applyOfficialMatchResult(BasketMatchSubmission submission) {
-        BasketV4Match match = requireMatch(submission.getMatchId());
+    private void applyOfficialMatchResult(BasketMatchSubmission submission, BasketV4Match match) {
         if (submission.getHomeScore() == null || submission.getAwayScore() == null) {
             throw new ServiceException("提交缺少总比分");
         }
+        rejectDrawForElimination(match, submission.getHomeScore(), submission.getAwayScore());
+
         Date now = new Date();
         match.setHomeScore(submission.getHomeScore());
         match.setAwayScore(submission.getAwayScore());
-        match.setWinnerEventTeamId(resolveWinner(match.getHomeEventTeamId(), match.getAwayEventTeamId(),
-                submission.getHomeScore(), submission.getAwayScore()));
+        Long winnerId = resolveWinner(match.getHomeEventTeamId(), match.getAwayEventTeamId(),
+                submission.getHomeScore(), submission.getAwayScore());
+        match.setWinnerEventTeamId(winnerId);
+        match.setLoserEventTeamId(resolveLoser(match.getHomeEventTeamId(), match.getAwayEventTeamId(), winnerId));
         match.setMatchStatus(MatchStatusEnum.FINISHED.getCode());
         match.setUpdateTime(now);
         if (matchMapper.updateById(match) != 1) {
@@ -206,6 +243,8 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
     private void rebuildStanding(Long divisionId, Long seasonId) {
         List<BasketV4Match> matches = matchMapper.selectFinishedPublishedByDivisionId(divisionId);
         List<BasketEventTeam> teams = eventTeamMapper.selectActiveByDivisionId(divisionId);
+        Map<Long, Integer> winPointsByStage = loadWinPointsByStage(matches);
+        Map<Long, Integer> lossPointsByStage = loadLossPointsByStage(matches);
         Map<Long, StandingAgg> aggMap = new LinkedHashMap<>();
         for (BasketEventTeam team : teams) {
             aggMap.put(team.getId(), new StandingAgg(team.getId(), seasonId, divisionId));
@@ -214,8 +253,10 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
             if (match.getHomeScore() == null || match.getAwayScore() == null) {
                 continue;
             }
+            int winPoints = winPointsByStage.getOrDefault(match.getStageId(), WIN_POINTS);
+            int lossPoints = lossPointsByStage.getOrDefault(match.getStageId(), LOSE_POINTS);
             applyMatchToStanding(aggMap, match.getHomeEventTeamId(), match.getAwayEventTeamId(),
-                    match.getHomeScore(), match.getAwayScore());
+                    match.getHomeScore(), match.getAwayScore(), winPoints, lossPoints);
         }
         List<StandingAgg> sorted = aggMap.values().stream()
                 .sorted(Comparator.comparingInt(StandingAgg::getWinCount).reversed()
@@ -246,7 +287,8 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
         }
     }
 
-    private void applyMatchToStanding(Map<Long, StandingAgg> aggMap, Long homeId, Long awayId, int homeScore, int awayScore) {
+    private void applyMatchToStanding(Map<Long, StandingAgg> aggMap, Long homeId, Long awayId,
+                                      int homeScore, int awayScore, int winPoints, int lossPoints) {
         StandingAgg home = aggMap.computeIfAbsent(homeId, id -> new StandingAgg(id, null, null));
         StandingAgg away = aggMap.computeIfAbsent(awayId, id -> new StandingAgg(id, null, null));
         home.pointFor += homeScore;
@@ -255,15 +297,64 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
         away.pointAgainst += homeScore;
         if (homeScore > awayScore) {
             home.winCount++;
-            home.standingPoints += WIN_POINTS;
+            home.standingPoints += winPoints;
             away.loseCount++;
-            away.standingPoints += LOSE_POINTS;
+            away.standingPoints += lossPoints;
         } else if (awayScore > homeScore) {
             away.winCount++;
-            away.standingPoints += WIN_POINTS;
+            away.standingPoints += winPoints;
             home.loseCount++;
-            home.standingPoints += LOSE_POINTS;
+            home.standingPoints += lossPoints;
         }
+    }
+
+    private Map<Long, Integer> loadWinPointsByStage(List<BasketV4Match> matches) {
+        Map<Long, Integer> result = new HashMap<>();
+        for (BasketV4Match match : matches) {
+            if (match.getStageId() == null || result.containsKey(match.getStageId())) {
+                continue;
+            }
+            BasketDivisionStage stage = stageMapper.selectById(match.getStageId());
+            result.put(match.getStageId(), stage != null && stage.getWinPoints() != null
+                    ? stage.getWinPoints() : WIN_POINTS);
+        }
+        return result;
+    }
+
+    private Map<Long, Integer> loadLossPointsByStage(List<BasketV4Match> matches) {
+        Map<Long, Integer> result = new HashMap<>();
+        for (BasketV4Match match : matches) {
+            if (match.getStageId() == null || result.containsKey(match.getStageId())) {
+                continue;
+            }
+            BasketDivisionStage stage = stageMapper.selectById(match.getStageId());
+            result.put(match.getStageId(), stage != null && stage.getLossPoints() != null
+                    ? stage.getLossPoints() : LOSE_POINTS);
+        }
+        return result;
+    }
+
+    private void rejectDrawForElimination(BasketV4Match match, int homeScore, int awayScore) {
+        if (homeScore == awayScore && match.getStageId() != null) {
+            BasketDivisionStage stage = stageMapper.selectById(match.getStageId());
+            if (stage != null
+                    && CompetitionFormatEnum.SINGLE_ELIMINATION.getCode().equals(stage.getCompetitionFormat())) {
+                throw new ServiceException("淘汰赛不允许平局");
+            }
+        }
+    }
+
+    private Long resolveLoser(Long homeTeamId, Long awayTeamId, Long winnerId) {
+        if (winnerId == null) {
+            return null;
+        }
+        if (winnerId.equals(homeTeamId)) {
+            return awayTeamId;
+        }
+        if (winnerId.equals(awayTeamId)) {
+            return homeTeamId;
+        }
+        return null;
     }
 
     private void rebuildTeamStat(Long divisionId, Long seasonId) {

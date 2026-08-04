@@ -11,11 +11,17 @@ public class BasketScheduleBatch {
     private Long id;
     private Long seasonId;
     private Long divisionId;
+    private Long stageId;
+    private Long groupingBatchId;
     private String batchNo;
     private String formatType;
     private String ruleCode;
+    private String generationStrategy;
     private Integer teamCount;
     private Integer matchCount;
+    private Integer expectedMatchCount;
+    private Integer actualMatchCount;
+    private Integer executionVersion;
     private String generateType;
     private String generateStatus;
     private String publishStatus;

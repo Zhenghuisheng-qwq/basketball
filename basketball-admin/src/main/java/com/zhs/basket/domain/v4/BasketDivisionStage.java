@@ -27,6 +27,16 @@ public class BasketDivisionStage {
     private String nextStageCode;
     private Integer requiresManualConfirmation;
     private String stageStatus;
+    private String executionStatus;
+    private Long scheduleBatchId;
+    private Integer participantCount;
+    private Integer qualifiedCount;
+    private Date startedTime;
+    private Date completedTime;
+    private Date confirmedTime;
+    private Long confirmedBy;
+    private String currentUniqueKey;
+    private Integer executionVersion;
     private Date createTime;
     private Date updateTime;
     private Integer isDelete;

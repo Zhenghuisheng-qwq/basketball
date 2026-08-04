@@ -20,4 +20,6 @@ public interface BasketMatchSubmissionMapper {
     int insert(BasketMatchSubmission entity);
     int updateById(BasketMatchSubmission entity);
     int softDelete(@Param("id") Long id);
+
+    int countByScheduleBatchId(@Param("scheduleBatchId") Long scheduleBatchId);
 }

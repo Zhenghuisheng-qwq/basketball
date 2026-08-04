@@ -13,6 +13,8 @@ import java.util.List;
 public interface BasketDivisionMapper {
     BasketDivision selectById(@Param("id") Long id);
 
+    BasketDivision selectByIdForUpdate(@Param("id") Long id);
+
     List<BasketDivisionListVo> selectVoList(BasketDivisionQuery query);
 
     List<BasketDivision> selectBySeasonId(@Param("seasonId") Long seasonId);

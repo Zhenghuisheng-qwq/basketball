@@ -63,6 +63,12 @@
         where id = #{id} and is_delete = 0
     </select>
 
+    <select id="selectByIdForUpdate" resultMap="BasketDivisionResult">
+        select <include refid="BaseColumns" /> from basket_division
+        where id = #{id} and is_delete = 0
+        for update
+    </select>
+
     <select id="selectBySeasonId" resultMap="BasketDivisionResult">
         select <include refid="BaseColumns" /> from basket_division
         where season_id = #{seasonId} and is_delete = 0

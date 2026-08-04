@@ -74,4 +74,11 @@ public final class BasketEventV4Perms {
     public static final String GROUPING_LIST = "basket:v4Grouping:list";
     public static final String GROUPING_EDIT = "basket:v4Grouping:edit";
     public static final String GROUPING_LOCK = "basket:v4Grouping:lock";
+
+    public static final String STAGE_LIST = "basket:v4Stage:list";
+    public static final String STAGE_GENERATE = "basket:v4Stage:generate";
+    public static final String STAGE_PUBLISH = "basket:v4Stage:publish";
+    public static final String STAGE_QUALIFICATION_PREVIEW = "basket:v4Stage:qualificationPreview";
+    public static final String STAGE_QUALIFICATION_CONFIRM = "basket:v4Stage:qualificationConfirm";
+    public static final String STANDING_VIEW = "basket:v4Standing:view";
 }

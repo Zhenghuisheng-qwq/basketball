@@ -15,6 +15,8 @@
         <result property="validTo" column="valid_to" />
         <result property="grantedBy" column="granted_by" />
         <result property="remark" column="remark" />
+        <result property="grantSource" column="grant_source" />
+        <result property="sourceDrawTeamId" column="source_draw_team_id" />
         <result property="createTime" column="create_time" />
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
@@ -39,7 +41,9 @@
         <result property="createTime" column="create_time" />
     </resultMap>
 
-    <sql id="BaseColumns">id, division_id, season_id, team_id, player_id, member_id, grant_status, active_unique_key, valid_from, valid_to, granted_by, remark, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, division_id, season_id, team_id, player_id, member_id, grant_status, active_unique_key, valid_from, valid_to, granted_by, remark, grant_source, source_draw_team_id, create_time, update_time, is_delete</sql>
+
+    <sql id="NotDeleted">is_delete = 0</sql>
 
     <select id="selectById" resultMap="BasketCaptainGrantResult">
         select <include refid="BaseColumns" /> from basket_captain_grant
@@ -89,7 +93,7 @@
 
     <select id="selectActiveByDivisionTeam" resultMap="BasketCaptainGrantResult">
         select <include refid="BaseColumns" /> from basket_captain_grant
-        where is_delete = 0
+        where <include refid="NotDeleted"/>
           and division_id = #{divisionId}
           and team_id = #{teamId}
           and grant_status = 'ACTIVE'
@@ -97,11 +101,22 @@
         limit 1
     </select>
 
+    <select id="selectBySourceDrawTeamId" resultMap="BasketCaptainGrantResult">
+        select <include refid="BaseColumns" /> from basket_captain_grant
+        where source_draw_team_id = #{sourceDrawTeamId}
+          and <include refid="NotDeleted"/>
+        order by id desc
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_captain_grant (
-            division_id, season_id, team_id, player_id, member_id, grant_status, active_unique_key, valid_from, valid_to, granted_by, remark, create_time, update_time, is_delete
+            division_id, season_id, team_id, player_id, member_id, grant_status, active_unique_key,
+            valid_from, valid_to, granted_by, remark, grant_source, source_draw_team_id,
+            create_time, update_time, is_delete
         ) values (
-            #{divisionId}, #{seasonId}, #{teamId}, #{playerId}, #{memberId}, #{grantStatus}, #{activeUniqueKey}, #{validFrom}, #{validTo}, #{grantedBy}, #{remark}, #{createTime}, #{updateTime}, #{isDelete}
+            #{divisionId}, #{seasonId}, #{teamId}, #{playerId}, #{memberId}, #{grantStatus}, #{activeUniqueKey},
+            #{validFrom}, #{validTo}, #{grantedBy}, #{remark}, #{grantSource}, #{sourceDrawTeamId},
+            #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -127,13 +142,21 @@
     <update id="revokeById">
         update basket_captain_grant
         set grant_status = 'REVOKED', active_unique_key = null, update_time = now()
-        where id = #{id} and is_delete = 0 and grant_status = 'ACTIVE'
+        where id = #{id} and <include refid="NotDeleted"/> and grant_status = 'ACTIVE'
+    </update>
+
+    <update id="revokeBySourceDrawTeamId">
+        update basket_captain_grant
+        set grant_status = 'REVOKED', active_unique_key = null, update_time = now()
+        where source_draw_team_id = #{sourceDrawTeamId}
+          and grant_status = 'ACTIVE'
+          and <include refid="NotDeleted"/>
     </update>
 
     <update id="softDelete">
         update basket_captain_grant
         set is_delete = 1, active_unique_key = null, update_time = now()
-        where id = #{id} and is_delete = 0
+        where id = #{id} and <include refid="NotDeleted"/>
     </update>
 
 </mapper>

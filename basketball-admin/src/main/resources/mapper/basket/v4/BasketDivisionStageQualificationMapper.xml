@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketDivisionStageQualificationMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketDivisionStageQualification" id="Result">
+        <id property="id" column="id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="stageId" column="stage_id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="eventTeamId" column="event_team_id"/>
+        <result property="qualificationType" column="qualification_type"/>
+        <result property="sourceRank" column="source_rank"/>
+        <result property="targetStageId" column="target_stage_id"/>
+        <result property="qualificationStatus" column="qualification_status"/>
+        <result property="confirmedBy" column="confirmed_by"/>
+        <result property="confirmedTime" column="confirmed_time"/>
+        <result property="activeUniqueKey" column="active_unique_key"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="BaseColumns">id, division_id, stage_id, group_id, event_team_id, qualification_type, source_rank, target_stage_id, qualification_status, confirmed_by, confirmed_time, active_unique_key, create_time, update_time, is_delete</sql>
+
+    <sql id="NotDeleted">is_delete = 0</sql>
+
+    <select id="selectPreviewByStageId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_division_stage_qualification
+        where stage_id = #{stageId}
+          and qualification_status = 'PREVIEW'
+          and <include refid="NotDeleted"/>
+        order by source_rank asc, id asc
+    </select>
+
+    <select id="selectConfirmedByStageId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_division_stage_qualification
+        where stage_id = #{stageId}
+          and qualification_status = 'CONFIRMED'
+          and <include refid="NotDeleted"/>
+        order by source_rank asc, id asc
+    </select>
+
+    <select id="countByStageIdAndStatus" resultType="int">
+        select count(1) from basket_division_stage_qualification
+        where stage_id = #{stageId}
+          and qualification_status = #{qualificationStatus}
+          and <include refid="NotDeleted"/>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_division_stage_qualification (
+            division_id, stage_id, group_id, event_team_id, qualification_type, source_rank,
+            target_stage_id, qualification_status, confirmed_by, confirmed_time, active_unique_key,
+            create_time, update_time, is_delete
+        ) values (
+            #{divisionId}, #{stageId}, #{groupId}, #{eventTeamId}, #{qualificationType}, #{sourceRank},
+            #{targetStageId}, #{qualificationStatus}, #{confirmedBy}, #{confirmedTime}, #{activeUniqueKey},
+            #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <insert id="batchInsert">
+        insert into basket_division_stage_qualification (
+            division_id, stage_id, group_id, event_team_id, qualification_type, source_rank,
+            target_stage_id, qualification_status, confirmed_by, confirmed_time, active_unique_key,
+            create_time, update_time, is_delete
+        ) values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.divisionId}, #{item.stageId}, #{item.groupId}, #{item.eventTeamId}, #{item.qualificationType}, #{item.sourceRank},
+            #{item.targetStageId}, #{item.qualificationStatus}, #{item.confirmedBy}, #{item.confirmedTime}, #{item.activeUniqueKey},
+            #{item.createTime}, #{item.updateTime}, #{item.isDelete})
+        </foreach>
+    </insert>
+
+    <update id="updateStatus">
+        update basket_division_stage_qualification
+        <set>
+            <if test="qualificationStatus != null">qualification_status = #{qualificationStatus},</if>
+            <if test='qualificationStatus != null and "CANCELLED".equals(qualificationStatus)'>active_unique_key = null,</if>
+            <if test="confirmedBy != null">confirmed_by = #{confirmedBy},</if>
+            <if test="confirmedTime != null">confirmed_time = #{confirmedTime},</if>
+            <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
+            <if test="targetStageId != null">target_stage_id = #{targetStageId},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and <include refid="NotDeleted"/>
+    </update>
+
+    <update id="softDeletePreviewByStageId">
+        update basket_division_stage_qualification
+        set is_delete = 1, active_unique_key = null, update_time = now()
+        where stage_id = #{stageId}
+          and qualification_status = 'PREVIEW'
+          and <include refid="NotDeleted"/>
+    </update>
+
+    <update id="revertConfirmedToPreviewByStageId">
+        update basket_division_stage_qualification
+        set qualification_status = 'PREVIEW',
+            confirmed_by = null,
+            confirmed_time = null,
+            active_unique_key = concat(stage_id, ':PREVIEW:', event_team_id, ':', ifnull(group_id, 0)),
+            update_time = now()
+        where stage_id = #{stageId}
+          and qualification_status = 'CONFIRMED'
+          and <include refid="NotDeleted"/>
+    </update>
+
+</mapper>

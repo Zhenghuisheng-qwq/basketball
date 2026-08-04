@@ -5,6 +5,7 @@ import com.zhs.basket.domain.v4.BasketPersonalRegistration;
 import com.zhs.basket.enums.v4.DivisionStatusEnum;
 import com.zhs.basket.enums.v4.PersonalRegistrationStatusEnum;
 import com.zhs.basket.enums.v4.RegistrationModeEnum;
+import com.zhs.basket.mapper.BasketTeamMemberMapper;
 import com.zhs.basket.mapper.v4.BasketPersonalRegistrationMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationPlayerMapper;
 import com.zhs.common.exception.ServiceException;
@@ -22,6 +23,8 @@ public class PersonalRegistrationEligibilitySpecification {
     private BasketPersonalRegistrationMapper personalRegistrationMapper;
     @Autowired
     private BasketRegistrationPlayerMapper registrationPlayerMapper;
+    @Autowired
+    private BasketTeamMemberMapper teamMemberMapper;
 
     public void validateForSave(BasketDivision division, Long playerId, BasketPersonalRegistration existing) {
         requirePersonalOpenDivision(division);
@@ -31,6 +34,7 @@ public class PersonalRegistrationEligibilitySpecification {
         participationSupport.requirePlatformIdentity(playerId, division.getPlatformCode());
         assertNoDuplicatePersonal(division.getId(), playerId, existing);
         assertNoTeamRegistrationConflict(division.getId(), playerId);
+        assertNoActiveLongTermTeamMembership(playerId);
     }
 
     public void validateForSubmit(BasketPersonalRegistration registration, BasketDivision division) {
@@ -87,6 +91,12 @@ public class PersonalRegistrationEligibilitySpecification {
     private void assertNoTeamRegistrationConflict(Long divisionId, Long playerId) {
         if (registrationPlayerMapper.countActivePlayerInDivision(divisionId, playerId, null) > 0) {
             throw new ServiceException("您已通过球队报名参与该 Division，不能重复个人报名");
+        }
+    }
+
+    private void assertNoActiveLongTermTeamMembership(Long playerId) {
+        if (teamMemberMapper.countActiveMembershipByPlayer(playerId) > 0) {
+            throw new ServiceException("您已在长期球队中，不能提交个人报名");
         }
     }
 

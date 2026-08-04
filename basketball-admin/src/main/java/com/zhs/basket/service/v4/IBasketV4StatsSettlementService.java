@@ -4,4 +4,6 @@ public interface IBasketV4StatsSettlementService {
     void settleBySubmission(Long submissionId);
 
     void rebuildDivisionStats(Long divisionId);
+
+    void rebuildStageStats(Long stageId);
 }

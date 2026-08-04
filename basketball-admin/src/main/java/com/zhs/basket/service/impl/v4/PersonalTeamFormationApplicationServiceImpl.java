@@ -8,6 +8,7 @@ import com.zhs.basket.query.v4.BasketPersonalDrawBatchQuery;
 import com.zhs.basket.service.v4.IBasketV4EventSnapshotService;
 import com.zhs.basket.service.v4.IPersonalTeamFormationApplicationService;
 import com.zhs.basket.support.v4.PersonalDrawBatchConfirmSpecification;
+import com.zhs.basket.support.v4.PersonalDrawCaptainGrantSupport;
 import com.zhs.basket.support.v4.PersonalFormationRegistrationFactory;
 import com.zhs.basket.support.v4.PersonalRegistrationStatusTransition;
 import com.zhs.basket.support.v4.PersonalTeamFormationConfirmSpecification;
@@ -58,6 +59,8 @@ public class PersonalTeamFormationApplicationServiceImpl implements IPersonalTea
     private IBasketV4EventSnapshotService eventSnapshotService;
     @Autowired
     private BasketV4ParticipationSupport participationSupport;
+    @Autowired
+    private PersonalDrawCaptainGrantSupport captainGrantSupport;
 
     @Override
     public List<BasketPersonalDrawBatchListVo> selectBatchList(BasketPersonalDrawBatchQuery query) {
@@ -291,6 +294,7 @@ public class PersonalTeamFormationApplicationServiceImpl implements IPersonalTea
         if (drawBatchMapper.updateById(batch) != 1) {
             throw new ServiceException("取消抽签批次失败");
         }
+        captainGrantSupport.revokeGrantsOnBatchCancel(drawBatchId);
     }
 
     @Override
@@ -337,6 +341,8 @@ public class PersonalTeamFormationApplicationServiceImpl implements IPersonalTea
         if (drawTeamMapper.updateById(drawTeam) != 1) {
             throw new ServiceException("绑定长期球队失败");
         }
+
+        captainGrantSupport.ensureGrantOnBindTeam(drawTeam, division);
     }
 
     @Override
@@ -351,10 +357,16 @@ public class PersonalTeamFormationApplicationServiceImpl implements IPersonalTea
         BasketDivision division = requirePersonalDivision(drawTeam.getDivisionId());
         formationConfirmSpecification.validate(drawTeam, division);
 
+        division = divisionMapper.selectByIdForUpdate(division.getId());
+        if (division == null) {
+            throw new ServiceException("Division 不存在");
+        }
         int approvedCount = registrationMapper.countApprovedByDivisionId(division.getId());
         if (division.getMaxTeamCount() != null && approvedCount >= division.getMaxTeamCount()) {
             throw new ServiceException("该 Division 球队名额已满");
         }
+
+        captainGrantSupport.ensureGrantOnBindTeam(drawTeam, division);
 
         PersonalFormationRegistrationFactory.FormationRegistrationBundle bundle =
                 formationRegistrationFactory.build(drawTeam, division, batch);

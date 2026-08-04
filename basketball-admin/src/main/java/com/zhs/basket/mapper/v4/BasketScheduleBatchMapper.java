@@ -18,6 +18,10 @@ public interface BasketScheduleBatchMapper {
 
     BasketScheduleBatch selectPublishedByDivisionId(@Param("divisionId") Long divisionId);
 
+    BasketScheduleBatch selectDraftByStageId(@Param("stageId") Long stageId);
+
+    BasketScheduleBatch selectPublishedByStageId(@Param("stageId") Long stageId);
+
     int countByDivisionId(@Param("divisionId") Long divisionId);
 
     int insert(BasketScheduleBatch entity);

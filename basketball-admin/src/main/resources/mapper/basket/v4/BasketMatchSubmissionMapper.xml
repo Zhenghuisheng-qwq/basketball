@@ -156,4 +156,12 @@
         order by case when s.submission_status = 'PENDING_REVIEW' then 0 else 1 end, s.submit_time desc, s.id desc
     </select>
 
+    <select id="countByScheduleBatchId" resultType="int">
+        select count(1)
+        from basket_match_submission s
+        inner join basket_match m on m.id = s.match_id and m.is_delete = 0
+        where s.is_delete = 0
+          and m.schedule_batch_id = #{scheduleBatchId}
+    </select>
+
 </mapper>

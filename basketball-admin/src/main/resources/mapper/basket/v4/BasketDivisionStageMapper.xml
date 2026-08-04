@@ -25,19 +25,52 @@
         <result property="nextStageCode" column="next_stage_code"/>
         <result property="requiresManualConfirmation" column="requires_manual_confirmation"/>
         <result property="stageStatus" column="stage_status"/>
+        <result property="executionStatus" column="execution_status"/>
+        <result property="scheduleBatchId" column="schedule_batch_id"/>
+        <result property="participantCount" column="participant_count"/>
+        <result property="qualifiedCount" column="qualified_count"/>
+        <result property="startedTime" column="started_time"/>
+        <result property="completedTime" column="completed_time"/>
+        <result property="confirmedTime" column="confirmed_time"/>
+        <result property="confirmedBy" column="confirmed_by"/>
+        <result property="currentUniqueKey" column="current_unique_key"/>
+        <result property="executionVersion" column="execution_version"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
         <result property="isDelete" column="is_delete"/>
     </resultMap>
 
+    <sql id="NotDeleted">is_delete = 0</sql>
+
     <select id="selectById" resultMap="Result">
-        select * from basket_division_stage where id = #{id} and is_delete = 0
+        select * from basket_division_stage where id = #{id} and <include refid="NotDeleted"/>
     </select>
 
     <select id="selectBySnapshotId" resultMap="Result">
         select * from basket_division_stage
-        where snapshot_id = #{snapshotId} and is_delete = 0
+        where snapshot_id = #{snapshotId} and <include refid="NotDeleted"/>
         order by stage_order asc
+    </select>
+
+    <select id="selectByDivisionId" resultMap="Result">
+        select * from basket_division_stage
+        where division_id = #{divisionId} and <include refid="NotDeleted"/>
+        order by stage_order asc
+    </select>
+
+    <select id="selectFirstByDivisionId" resultMap="Result">
+        select * from basket_division_stage
+        where division_id = #{divisionId} and <include refid="NotDeleted"/>
+        order by stage_order asc
+        limit 1
+    </select>
+
+    <select id="selectBySnapshotIdAndStageCode" resultMap="Result">
+        select * from basket_division_stage
+        where snapshot_id = #{snapshotId}
+          and stage_code = #{stageCode}
+          and <include refid="NotDeleted"/>
+        limit 1
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -46,13 +79,17 @@
             competition_format, grouping_mode, group_count, round_robin_cycles, best_of,
             win_points, loss_points, forfeit_win_points, forfeit_loss_points,
             advancement_type, advancement_count, pairing_rule, next_stage_code,
-            requires_manual_confirmation, stage_status, create_time, update_time, is_delete
+            requires_manual_confirmation, stage_status, execution_status, schedule_batch_id,
+            participant_count, qualified_count, started_time, completed_time, confirmed_time,
+            confirmed_by, current_unique_key, execution_version, create_time, update_time, is_delete
         ) values (
             #{snapshotId}, #{divisionId}, #{stageCode}, #{stageName}, #{stageOrder}, #{stageType},
             #{competitionFormat}, #{groupingMode}, #{groupCount}, #{roundRobinCycles}, #{bestOf},
             #{winPoints}, #{lossPoints}, #{forfeitWinPoints}, #{forfeitLossPoints},
             #{advancementType}, #{advancementCount}, #{pairingRule}, #{nextStageCode},
-            #{requiresManualConfirmation}, #{stageStatus}, #{createTime}, #{updateTime}, #{isDelete}
+            #{requiresManualConfirmation}, #{stageStatus}, #{executionStatus}, #{scheduleBatchId},
+            #{participantCount}, #{qualifiedCount}, #{startedTime}, #{completedTime}, #{confirmedTime},
+            #{confirmedBy}, #{currentUniqueKey}, #{executionVersion}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -78,24 +115,52 @@
             next_stage_code = #{nextStageCode},
             <if test="requiresManualConfirmation != null">requires_manual_confirmation = #{requiresManualConfirmation},</if>
             <if test="stageStatus != null">stage_status = #{stageStatus},</if>
+            <if test="executionStatus != null">execution_status = #{executionStatus},</if>
+            schedule_batch_id = #{scheduleBatchId},
+            participant_count = #{participantCount},
+            qualified_count = #{qualifiedCount},
+            started_time = #{startedTime},
+            completed_time = #{completedTime},
+            confirmed_time = #{confirmedTime},
+            confirmed_by = #{confirmedBy},
+            current_unique_key = #{currentUniqueKey},
+            execution_version = #{executionVersion},
             update_time = now()
         </set>
-        where id = #{id} and is_delete = 0
+        where id = #{id} and <include refid="NotDeleted"/>
+    </update>
+
+    <update id="updateExecutionStatus">
+        update basket_division_stage
+        <set>
+            <if test="executionStatus != null">execution_status = #{executionStatus},</if>
+            schedule_batch_id = #{scheduleBatchId},
+            participant_count = #{participantCount},
+            qualified_count = #{qualifiedCount},
+            started_time = #{startedTime},
+            completed_time = #{completedTime},
+            confirmed_time = #{confirmedTime},
+            confirmed_by = #{confirmedBy},
+            current_unique_key = #{currentUniqueKey},
+            execution_version = #{executionVersion},
+            update_time = now()
+        </set>
+        where id = #{id} and <include refid="NotDeleted"/>
     </update>
 
     <update id="updateStageOrder">
         update basket_division_stage
         set stage_order = #{stageOrder}, update_time = now()
-        where id = #{id} and is_delete = 0
+        where id = #{id} and <include refid="NotDeleted"/>
     </update>
 
     <update id="softDeleteById">
         update basket_division_stage set is_delete = 1, update_time = now()
-        where id = #{id} and is_delete = 0
+        where id = #{id} and <include refid="NotDeleted"/>
     </update>
 
     <update id="softDeleteBySnapshotId">
         update basket_division_stage set is_delete = 1, update_time = now()
-        where snapshot_id = #{snapshotId} and is_delete = 0
+        where snapshot_id = #{snapshotId} and <include refid="NotDeleted"/>
     </update>
 </mapper>

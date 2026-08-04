@@ -64,4 +64,14 @@
         where team_id = #{teamId} and player_id = #{playerId}
           and is_current = 1 and membership_status = 1 and is_delete = 0
     </select>
+    <select id="countActiveMembershipByPlayer" resultType="int">
+        select count(1)
+        from basket_team_member m
+        inner join basket_team t on t.id = m.team_id and t.is_delete = 0
+        where m.player_id = #{playerId}
+          and m.is_current = 1
+          and m.membership_status = 1
+          and m.is_delete = 0
+          and t.team_status = 1
+    </select>
 </mapper>

@@ -15,4 +15,6 @@ public interface BasketTeamMemberMapper {
     List<TeamAuditMemberVo> selectCurrentMembersForAudit(@Param("teamId") Long teamId);
 
     int countActiveMemberByTeamAndPlayer(@Param("teamId") Long teamId, @Param("playerId") Long playerId);
+
+    int countActiveMembershipByPlayer(@Param("playerId") Long playerId);
 }

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketDivisionStageTeamMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketDivisionStageTeam" id="Result">
+        <id property="id" column="id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="snapshotId" column="snapshot_id"/>
+        <result property="stageId" column="stage_id"/>
+        <result property="eventTeamId" column="event_team_id"/>
+        <result property="sourceStageId" column="source_stage_id"/>
+        <result property="sourceGroupId" column="source_group_id"/>
+        <result property="sourceRank" column="source_rank"/>
+        <result property="seedNo" column="seed_no"/>
+        <result property="entryType" column="entry_type"/>
+        <result property="qualificationStatus" column="qualification_status"/>
+        <result property="activeUniqueKey" column="active_unique_key"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="BaseColumns">id, division_id, snapshot_id, stage_id, event_team_id, source_stage_id, source_group_id, source_rank, seed_no, entry_type, qualification_status, active_unique_key, create_time, update_time, is_delete</sql>
+
+    <sql id="NotDeleted">is_delete = 0</sql>
+
+    <select id="selectByStageId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_division_stage_team
+        where stage_id = #{stageId} and <include refid="NotDeleted"/>
+        order by seed_no asc, id asc
+    </select>
+
+    <select id="selectById" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_division_stage_team
+        where id = #{id} and <include refid="NotDeleted"/>
+    </select>
+
+    <select id="countByStageId" resultType="int">
+        select count(1) from basket_division_stage_team
+        where stage_id = #{stageId} and <include refid="NotDeleted"/>
+    </select>
+
+    <select id="existsByStageAndEventTeam" resultType="boolean">
+        select count(1) > 0 from basket_division_stage_team
+        where stage_id = #{stageId}
+          and event_team_id = #{eventTeamId}
+          and <include refid="NotDeleted"/>
+          and active_unique_key is not null
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_division_stage_team (
+            division_id, snapshot_id, stage_id, event_team_id, source_stage_id, source_group_id,
+            source_rank, seed_no, entry_type, qualification_status, active_unique_key,
+            create_time, update_time, is_delete
+        ) values (
+            #{divisionId}, #{snapshotId}, #{stageId}, #{eventTeamId}, #{sourceStageId}, #{sourceGroupId},
+            #{sourceRank}, #{seedNo}, #{entryType}, #{qualificationStatus}, #{activeUniqueKey},
+            #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <insert id="batchInsert">
+        insert into basket_division_stage_team (
+            division_id, snapshot_id, stage_id, event_team_id, source_stage_id, source_group_id,
+            source_rank, seed_no, entry_type, qualification_status, active_unique_key,
+            create_time, update_time, is_delete
+        ) values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.divisionId}, #{item.snapshotId}, #{item.stageId}, #{item.eventTeamId}, #{item.sourceStageId}, #{item.sourceGroupId},
+            #{item.sourceRank}, #{item.seedNo}, #{item.entryType}, #{item.qualificationStatus}, #{item.activeUniqueKey},
+            #{item.createTime}, #{item.updateTime}, #{item.isDelete})
+        </foreach>
+    </insert>
+
+    <update id="updateById">
+        update basket_division_stage_team
+        <set>
+            <if test="sourceStageId != null">source_stage_id = #{sourceStageId},</if>
+            <if test="sourceGroupId != null">source_group_id = #{sourceGroupId},</if>
+            source_rank = #{sourceRank},
+            seed_no = #{seedNo},
+            <if test="entryType != null">entry_type = #{entryType},</if>
+            <if test="qualificationStatus != null">qualification_status = #{qualificationStatus},</if>
+            <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and <include refid="NotDeleted"/>
+    </update>
+
+    <update id="softDeleteByStageId">
+        update basket_division_stage_team
+        set is_delete = 1, active_unique_key = null, update_time = now()
+        where stage_id = #{stageId} and <include refid="NotDeleted"/>
+    </update>
+
+</mapper>

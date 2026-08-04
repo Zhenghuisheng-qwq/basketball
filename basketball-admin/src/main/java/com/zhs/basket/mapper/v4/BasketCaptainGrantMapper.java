@@ -16,6 +16,10 @@ public interface BasketCaptainGrantMapper {
 
     BasketCaptainGrant selectActiveByDivisionTeam(@Param("divisionId") Long divisionId, @Param("teamId") Long teamId);
 
+    List<BasketCaptainGrant> selectBySourceDrawTeamId(@Param("sourceDrawTeamId") Long sourceDrawTeamId);
+
+    int revokeBySourceDrawTeamId(@Param("sourceDrawTeamId") Long sourceDrawTeamId);
+
     int insert(BasketCaptainGrant entity);
 
     int updateById(BasketCaptainGrant entity);
