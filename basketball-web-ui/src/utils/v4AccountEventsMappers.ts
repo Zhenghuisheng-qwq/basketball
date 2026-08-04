@@ -74,7 +74,7 @@ export function mapV4DivisionToAvailableEvent(item: V4AvailableDivision): Availa
   }
 
   return {
-    tournamentId: item.divisionId,
+    divisionId: item.divisionId,
     seasonId: item.seasonId,
     tournamentName: item.seriesName || item.seasonTitle || '赛事',
     seasonName: item.seasonTitle,
@@ -138,7 +138,7 @@ export function mapV4RegistrationToApplication(item: V4MyRegistration): MyApplic
 
   return {
     applicationId: item.registrationId,
-    tournamentId: item.divisionId || item.seasonId || '',
+    divisionId: item.divisionId || item.seasonId || '',
     tournamentName: item.seasonTitle || '赛事',
     platform: v4PlatformLabel(item.platformCode),
     applicationType: 'TEAM',
@@ -162,7 +162,7 @@ export function mapV4EventToParticipating(item: V4MyEvent): ParticipatingEvent {
   return {
     relationId: item.eventTeamId,
     eventTeamId: item.eventTeamId,
-    tournamentId: item.divisionId,
+    divisionId: item.divisionId,
     tournamentName: item.seriesName || item.seasonTitle || '赛事',
     platform: `${item.seasonTitle || ''} / ${v4PlatformLabel(item.platformCode)} / ${item.divisionName || ''}`.replace(/^ \/ | \/ $/g, ''),
     participationType: 'TEAM',

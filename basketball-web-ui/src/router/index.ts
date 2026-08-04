@@ -483,7 +483,7 @@ const router = createRouter({
 
           path: 'events/open/register',
 
-          redirect: { name: 'AccountOpenApplicationApply' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'available' } },
 
         },
 
@@ -491,7 +491,7 @@ const router = createRouter({
 
           path: 'events/open/status',
 
-          redirect: { name: 'AccountOpenApplicationStatusRedirect' },
+          redirect: { name: 'AccountMyEvents', query: { tab: 'applications' } },
 
         },
 

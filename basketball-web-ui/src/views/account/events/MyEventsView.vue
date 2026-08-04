@@ -167,7 +167,7 @@ function handleAvailableAction(event: AvailableEvent) {
   if (event.actionType === 'TEAM_REGISTRATION' || event.actionType === 'MANAGE_REGISTRATION' || event.actionType === 'RE_REGISTER') {
     router.push({
       name: 'AccountV4Registration',
-      params: { divisionId: event.tournamentId },
+      params: { divisionId: event.divisionId },
     })
     return
   }
@@ -189,7 +189,7 @@ function handleApplicationAction(application: MyApplication) {
   }
   router.push({
     name: 'AccountV4Registration',
-    params: { divisionId: application.tournamentId },
+    params: { divisionId: application.divisionId },
     query: application.applicationId ? { registrationId: application.applicationId } : undefined,
   })
 }

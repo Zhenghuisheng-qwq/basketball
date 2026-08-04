@@ -28,7 +28,7 @@ export interface AccountEventTab {
 }
 
 export interface AvailableEvent {
-  tournamentId: string
+  divisionId: string
   seasonId?: string
   operationalSeasonId?: string
   tournamentName: string
@@ -78,7 +78,7 @@ export type ApplicationActionType =
 
 export interface MyApplication {
   applicationId: string
-  tournamentId: string
+  divisionId: string
   tournamentName: string
   platform: string
   applicationType: string
@@ -110,7 +110,7 @@ export type ParticipatingMatchDataActionType =
 export interface ParticipatingEvent {
   relationId: string
   eventTeamId?: string
-  tournamentId: string
+  divisionId: string
   tournamentName: string
   platform: string
   participationType: string

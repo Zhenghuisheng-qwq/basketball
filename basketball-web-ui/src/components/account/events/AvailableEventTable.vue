@@ -98,7 +98,7 @@ function platformLabel(event: AvailableEvent) {
 
     <div
       v-for="event in events"
-      :key="`${event.operationalSeasonId || event.seasonId || event.tournamentId}`"
+      :key="`${event.operationalSeasonId || event.seasonId || event.divisionId}`"
       class="event-table-row"
       :class="rowClass"
     >

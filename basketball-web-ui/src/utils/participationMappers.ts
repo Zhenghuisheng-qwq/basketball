@@ -124,7 +124,7 @@ export function mapOpenSeasonToAvailableEvent(
   }
 
   return {
-    tournamentId: season.tournamentId || season.seasonId,
+    divisionId: season.tournamentId || season.seasonId,
     tournamentName: season.tournamentName || season.seasonName || 'Open 赛事',
     platform: '个人',
     registrationType: 'INDIVIDUAL',
@@ -164,7 +164,7 @@ export function mapTeamSeasonToAvailableEvent(
   }
 
   return {
-    tournamentId: season.seasonId || season.tournamentId || '',
+    divisionId: season.seasonId || season.tournamentId || '',
     seasonId: season.seasonId,
     tournamentName: season.tournamentName || season.seasonName || '联赛赛事',
     platform: season.gameTerminal || season.competitionSeasonName || season.seasonName || '-',
@@ -218,7 +218,7 @@ export function mapMyEventsSeasonToAvailableEvent(season: AvailableSeasonItemDto
   const competitionSeasonName = season.competitionSeasonName || season.seasonName
   const tournamentName = season.tournamentName || season.eventTypeName || season.operationalSeasonName || '联赛赛事'
   return {
-    tournamentId: season.tournamentId || season.seasonId || '',
+    divisionId: season.tournamentId || season.seasonId || '',
     seasonId: season.seasonId || season.operationalSeasonId,
     operationalSeasonId: season.operationalSeasonId || season.seasonId,
     tournamentName,
@@ -313,7 +313,7 @@ export function mapTeamEventRecordToApplication(item: import('@/api/types/myEven
   const isPending = item.registrationStatus === 2 || item.registrationStatus === 1
   return {
     applicationId: item.registrationId,
-    tournamentId: item.seasonId || item.registrationId,
+    divisionId: item.seasonId || item.registrationId,
     tournamentName: item.tournamentName || item.seasonName || '球队报名',
     platform: '-',
     applicationType: 'TEAM',
@@ -353,7 +353,7 @@ export function mapTeamRegistrationToApplication(
   }
   return {
     applicationId: item.registrationId,
-    tournamentId: item.seasonId || item.registrationId,
+    divisionId: item.seasonId || item.registrationId,
     tournamentName: item.tournamentName || item.seasonName || '球队报名',
     platform: item.platformName || item.platformCode || '-',
     applicationType: 'TEAM',
@@ -383,7 +383,7 @@ export function mapOpenRegistrationToApplication(item: OpenRegistrationItemDto):
   const isApproved = status === 'APPROVED'
   return {
     applicationId: item.registrationId,
-    tournamentId: item.seasonId || item.registrationId,
+    divisionId: item.seasonId || item.registrationId,
     tournamentName: item.tournamentName || item.seasonName || 'Open 个人报名',
     platform: item.platform || '-',
     applicationType: 'INDIVIDUAL',
@@ -514,9 +514,9 @@ export function mergeParticipatingEvents(
   eventTeams: ParticipatingEvent[],
   approvedRegistrations: ParticipatingEvent[],
 ): ParticipatingEvent[] {
-  const seasonKeys = new Set(eventTeams.map((item) => String(item.tournamentId)))
+  const seasonKeys = new Set(eventTeams.map((item) => String(item.divisionId)))
   const fallback = approvedRegistrations.filter(
-    (item) => !seasonKeys.has(String(item.tournamentId)),
+    (item) => !seasonKeys.has(String(item.divisionId)),
   )
   return [...eventTeams, ...fallback]
 }
@@ -528,7 +528,7 @@ export function mapEventTeamSummaryToParticipating(item: EventTeamSummaryDto): P
   return {
     relationId: item.eventTeamId,
     eventTeamId: item.eventTeamId,
-    tournamentId: seasonKey,
+    divisionId: seasonKey,
     tournamentName: item.tournamentName || item.seasonName || '赛事',
     platform: item.gameTerminal || '-',
     participationType: 'TEAM',
