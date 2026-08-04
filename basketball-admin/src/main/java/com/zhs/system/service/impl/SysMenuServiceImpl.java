@@ -550,13 +550,19 @@ public class SysMenuServiceImpl implements ISysMenuService
         {
             SysMenu t = (SysMenu) iterator.next();
             // 一、根据传入的某个父节点ID,遍历该父节点的所有子节点
-            if (t.getParentId() == parentId)
+            if (getMenuParentId(t) == parentId)
             {
                 recursionFn(list, t);
                 returnList.add(t);
             }
         }
         return returnList;
+    }
+
+    private long getMenuParentId(SysMenu menu)
+    {
+        Long parentId = menu.getParentId();
+        return parentId != null ? parentId : MENU_ROOT_ID;
     }
 
     /**
@@ -589,7 +595,7 @@ public class SysMenuServiceImpl implements ISysMenuService
         while (it.hasNext())
         {
             SysMenu n = (SysMenu) it.next();
-            if (n.getParentId().longValue() == t.getMenuId().longValue())
+            if (t.getMenuId() != null && getMenuParentId(n) == t.getMenuId())
             {
                 tlist.add(n);
             }

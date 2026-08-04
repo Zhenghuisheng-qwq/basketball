@@ -1,10 +1,15 @@
 package com.zhs.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.zhs.dao.BasketMatchDao;
+import com.zhs.dao.v4.BasketSeasonDao;
+import com.zhs.dao.v4.BasketV4MatchDao;
 import com.zhs.enums.PublicPlayerRankTypeEnum;
 import com.zhs.enums.PublicTeamRankTypeEnum;
-import com.zhs.model.BasketMatch;
+import com.zhs.enums.v4.MatchPublishStatusEnum;
+import com.zhs.enums.v4.MatchStatusEnum;
+import com.zhs.enums.v4.PublishStatusEnum;
+import com.zhs.model.v4.BasketSeason;
+import com.zhs.model.v4.BasketV4Match;
 import com.zhs.model.BasketTournamentSeason;
 import com.zhs.response.publicapi.PublicHomeVo;
 import com.zhs.response.publicapi.PublicMatchItemVo;
@@ -25,6 +30,7 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -40,7 +46,9 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
             "热门球队来源：当前公开赛季球队排行榜 WIN_RATE 前 N（非热度字段）";
 
     @Resource
-    private BasketMatchDao matchDao;
+    private BasketV4MatchDao matchDao;
+    @Resource
+    private BasketSeasonDao seasonDao;
     @Resource
     private BasketPublicSupport publicSupport;
     @Resource
@@ -90,36 +98,41 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
     public List<PublicMatchItemVo> listRecentMatches(Integer limit) {
         int size = normalizeLimit(limit);
         Date now = new Date();
+        Set<Long> publishedSeasonIds = loadPublishedV4SeasonIds();
+        if (publishedSeasonIds.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        List<BasketMatch> upcoming = matchDao.selectList(new LambdaQueryWrapper<BasketMatch>()
-                .eq(BasketMatch::getIsDelete, BasketPublicConstants.NOT_DELETED)
-                .and(w -> w.eq(BasketMatch::getPublishStatus, BasketPublicConstants.PUBLISH_PUBLISHED)
-                        .or(x -> x.eq(BasketMatch::getPublishStatus, 0).eq(BasketMatch::getPublicStatus, BasketPublicConstants.PUBLIC)))
-                .in(BasketMatch::getMatchStatus, BasketPublicConstants.MATCH_SCHEDULED, 4)
-                .ge(BasketMatch::getScheduledStartTime, now)
-                .orderByAsc(BasketMatch::getScheduledStartTime)
-                .orderByAsc(BasketMatch::getSortNo)
-                .orderByAsc(BasketMatch::getId)
+        List<BasketV4Match> upcoming = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()
+                .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketV4Match::getPublishStatus, MatchPublishStatusEnum.PUBLISHED.getCode())
+                .in(BasketV4Match::getSeasonId, publishedSeasonIds)
+                .in(BasketV4Match::getMatchStatus,
+                        MatchStatusEnum.SCHEDULED.getCode(), MatchStatusEnum.PLAYING.getCode())
+                .ge(BasketV4Match::getMatchTime, now)
+                .orderByAsc(BasketV4Match::getMatchTime)
+                .orderByAsc(BasketV4Match::getRoundNo)
+                .orderByAsc(BasketV4Match::getId)
                 .last("limit " + size));
 
-        List<BasketMatch> finished = matchDao.selectList(new LambdaQueryWrapper<BasketMatch>()
-                .eq(BasketMatch::getIsDelete, BasketPublicConstants.NOT_DELETED)
-                .and(w -> w.eq(BasketMatch::getPublishStatus, BasketPublicConstants.PUBLISH_PUBLISHED)
-                        .or(x -> x.eq(BasketMatch::getPublishStatus, 0).eq(BasketMatch::getPublicStatus, BasketPublicConstants.PUBLIC)))
-                .eq(BasketMatch::getMatchStatus, BasketPublicConstants.MATCH_FINISHED)
-                .orderByDesc(BasketMatch::getActualEndTime)
-                .orderByDesc(BasketMatch::getScheduledStartTime)
-                .orderByDesc(BasketMatch::getId)
+        List<BasketV4Match> finished = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()
+                .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketV4Match::getPublishStatus, MatchPublishStatusEnum.PUBLISHED.getCode())
+                .in(BasketV4Match::getSeasonId, publishedSeasonIds)
+                .eq(BasketV4Match::getMatchStatus, MatchStatusEnum.FINISHED.getCode())
+                .orderByDesc(BasketV4Match::getMatchTime)
+                .orderByDesc(BasketV4Match::getRoundNo)
+                .orderByDesc(BasketV4Match::getId)
                 .last("limit " + size));
 
-        List<BasketMatch> merged = new java.util.ArrayList<>();
-        java.util.Set<Long> seen = new java.util.HashSet<>();
-        for (BasketMatch match : upcoming) {
+        List<BasketV4Match> merged = new java.util.ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+        for (BasketV4Match match : upcoming) {
             if (seen.add(match.getId())) {
                 merged.add(match);
             }
         }
-        for (BasketMatch match : finished) {
+        for (BasketV4Match match : finished) {
             if (seen.add(match.getId()) && merged.size() < size) {
                 merged.add(match);
             }
@@ -128,13 +141,7 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
         if (CollectionUtils.isEmpty(merged)) {
             return Collections.emptyList();
         }
-        Set<Long> publicSeasonIds = publicSupport.loadSeasonMap(merged.stream()
-                .map(BasketMatch::getSeasonId).filter(Objects::nonNull).collect(Collectors.toSet())).keySet();
-        List<BasketMatch> filtered = merged.stream()
-                .filter(m -> publicSeasonIds.contains(m.getSeasonId()))
-                .limit(size)
-                .collect(Collectors.toList());
-        return matchService.enrichMatches(filtered);
+        return matchService.enrichMatches(merged.stream().limit(size).collect(Collectors.toList()));
     }
 
     @Override
@@ -162,5 +169,18 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
             return BasketPublicConstants.HOME_LIMIT;
         }
         return Math.min(limit, BasketPublicConstants.MAX_SIZE);
+    }
+
+    private Set<Long> loadPublishedV4SeasonIds() {
+        List<BasketSeason> seasons = seasonDao.selectList(new LambdaQueryWrapper<BasketSeason>()
+                .eq(BasketSeason::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketSeason::getPublishStatus, PublishStatusEnum.PUBLISHED.getCode()));
+        if (CollectionUtils.isEmpty(seasons)) {
+            return Collections.emptySet();
+        }
+        return seasons.stream()
+                .map(BasketSeason::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
     }
 }

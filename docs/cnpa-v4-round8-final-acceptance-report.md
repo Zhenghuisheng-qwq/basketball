@@ -166,3 +166,66 @@ python scripts/smoke_v4_r7_personal_center.py
 **保留 redirect/legacy**：`/tournament/legacy`、`/data/legacy`、`/my-tournaments/*`、`/account/team` 深链、legacy 源码。
 
 **V4 主入口**：前台四路由 + `/account/my-events` + Admin `cnpa/event-v4/*` 八项。
+
+---
+
+## 10. 后台 V4 赛事发布页面体验优化记录
+
+> 日期：2026-08-04  
+> 范围：仅 Admin 后台 `cnpa/event-v4/publish`（V4 赛事发布）页面运营体验优化，**不新增业务功能、不改 V4 业务模型**。
+
+### 10.1 优化页面
+
+| 页面 | 路径 | 变更 |
+|------|------|------|
+| V4 赛事发布 | `basketball-admin-ui/src/views/cnpa/event-v4/publish/index.vue` | Season / Division 列表展示、新建 Season 弹窗 |
+| 展示辅助 | `basketball-admin-ui/src/utils/v4Display.ts` | 新增纯展示映射（中文化、Tag 类型、时间简化） |
+
+### 10.2 状态中文化
+
+列表与筛选项中的枚举值统一映射为中文标签（API 仍传原始枚举，不改后端）：
+
+| 枚举值 | 中文 |
+|--------|------|
+| DRAFT | 草稿 |
+| PUBLISHED | 已发布 |
+| OFFLINE | 已下线 |
+| NOT_STARTED | 未开始 |
+| REGISTRATION_OPEN | 报名中 |
+| REGISTRATION_CLOSED | 报名结束 |
+| SCHEDULED | 已排赛 |
+| PLAYING | 进行中 |
+| FINISHED | 已结束 |
+| REGULAR_ROUND_ROBIN | 常规赛单循环 |
+| TEAM | 球队报名 |
+
+发布状态、赛季状态、Division 状态、报名方式、赛制列均使用 `el-tag` 展示。
+
+### 10.3 表格与操作列
+
+- 状态类列增加 `nowrap-tag` 样式，避免「已发布」「常规赛单循环」等标签被强制换行。
+- 时间列使用 `formatV4CompactRange`：去掉秒、同年结束时间省略年份（如 `2026-08-04 10:00 ~ 08-10 18:00`）。
+- 操作列使用 `table-actions` 弹性布局，按钮间距加大，Season 列宽 300px、Division 列宽 280px。
+
+### 10.4 新建 / 编辑 Season 弹窗
+
+- 「封面文件ID」→「封面图文件ID」；「Banner文件ID」→「Banner图文件ID」。
+- 文件 ID 输入框增加 placeholder：`暂可填写文件ID，后续接上传组件`。
+- 个人报名、非单循环赛制选项保持禁用，文案统一为「暂未开放」。
+- 四个时间字段增加必填校验与 placeholder 提示。
+
+### 10.5 测试数据说明（dev 库，未自动清理）
+
+本轮**未删除** R2–R7 冒烟脚本产生的测试 Season / Division，供联调与回归使用。当前 dev 库存在如下冒烟测试数据，**正式环境部署前需清理或不要迁移**：
+
+| id | season_name | display_title | publish_status | season_status | 用途 |
+|----|-------------|---------------|----------------|---------------|------|
+| 2 | SMOKE_S2 | CNPA League 2026 SMOKE S2 edited | PUBLISHED | REGISTRATION_OPEN | R2–R7 主链路样本 |
+| 3 | SMOKE_003752 | CNPA League 2026 SMOKE 003752 edited | OFFLINE | NOT_STARTED | R2 冒烟临时数据 |
+| 4 | R3_QUOTA_SEASON | R3_QUOTA | PUBLISHED | NOT_STARTED | R3 名额规则测试 |
+
+关联 Division（如 id=3 SMOKE S2 - PC、id=5 R3_QUOTA_TEST_PC）同理保留于 dev，生产勿迁移。
+
+### 10.6 业务逻辑
+
+**无业务逻辑变更**：未修改 API 调用、状态流转、权限码或后端 Service；仅前端展示与表单 UX 优化。

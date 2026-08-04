@@ -3,14 +3,18 @@ package com.zhs.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.zhs.dao.BasketMatchDao;
 import com.zhs.dao.BasketTeamMemberDao;
 import com.zhs.dao.BasketTeamRankDao;
 import com.zhs.dao.BasketTeamSeasonProfileDao;
 import com.zhs.dao.BasketTeamSeasonStatDao;
+import com.zhs.dao.v4.BasketEventTeamDao;
+import com.zhs.dao.v4.BasketSeasonDao;
+import com.zhs.dao.v4.BasketV4MatchDao;
 import com.zhs.enums.PublicTeamRankTypeEnum;
+import com.zhs.enums.v4.MatchPublishStatusEnum;
+import com.zhs.enums.v4.MatchStatusEnum;
+import com.zhs.enums.v4.PublishStatusEnum;
 import com.zhs.exception.ServiceException;
-import com.zhs.model.BasketMatch;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamMember;
@@ -19,6 +23,9 @@ import com.zhs.model.BasketTeamSeasonProfile;
 import com.zhs.model.BasketTeamSeasonStat;
 import com.zhs.model.BasketTournament;
 import com.zhs.model.BasketTournamentSeason;
+import com.zhs.model.v4.BasketEventTeam;
+import com.zhs.model.v4.BasketSeason;
+import com.zhs.model.v4.BasketV4Match;
 import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.publicapi.PublicMatchItemVo;
 import com.zhs.response.publicapi.PublicTeamCompareVo;
@@ -53,7 +60,11 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
     @Resource
     private BasketTeamSeasonStatDao teamSeasonStatDao;
     @Resource
-    private BasketMatchDao matchDao;
+    private BasketV4MatchDao matchDao;
+    @Resource
+    private BasketEventTeamDao eventTeamDao;
+    @Resource
+    private BasketSeasonDao seasonDao;
     @Resource
     private BasketTeamMemberDao teamMemberDao;
     @Resource
@@ -131,24 +142,31 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
     public IPage<PublicMatchItemVo> pageMatches(Long teamId, Integer currentPage, Integer pageSize, Long seasonId) {
         publicSupport.requirePublicTeam(teamId);
         if (seasonId != null) {
-            publicSupport.requirePublicSeason(seasonId);
+            requirePublishedV4Season(seasonId);
         }
-        Page<BasketMatch> page = publicSupport.newPage(currentPage, pageSize);
-        LambdaQueryWrapper<BasketMatch> wrapper = new LambdaQueryWrapper<BasketMatch>()
-                .eq(BasketMatch::getIsDelete, BasketPublicConstants.NOT_DELETED)
-                .eq(BasketMatch::getPublicStatus, BasketPublicConstants.PUBLIC)
-                .eq(BasketMatch::getMatchStatus, BasketPublicConstants.MATCH_FINISHED)
-                .eq(BasketMatch::getDataStatus, BasketPublicConstants.DATA_CONFIRMED)
-                .eq(seasonId != null, BasketMatch::getSeasonId, seasonId)
-                .and(w -> w.eq(BasketMatch::getHomeTeamId, teamId).or().eq(BasketMatch::getAwayTeamId, teamId))
-                .orderByDesc(BasketMatch::getActualEndTime)
-                .orderByDesc(BasketMatch::getScheduledStartTime)
-                .orderByDesc(BasketMatch::getId);
-        IPage<BasketMatch> entityPage = matchDao.selectPage(page, wrapper);
-        // 仅保留所属赛季公开的比赛
-        List<BasketMatch> filtered = filterPublicSeasonMatches(entityPage.getRecords());
+        Set<Long> eventTeamIds = findEventTeamIdsBySourceTeam(seasonId, teamId);
+        if (eventTeamIds.isEmpty()) {
+            return publicSupport.emptyPage(currentPage, pageSize);
+        }
+        Set<Long> publishedSeasonIds = loadPublishedV4SeasonIds();
+        if (publishedSeasonIds.isEmpty()) {
+            return publicSupport.emptyPage(currentPage, pageSize);
+        }
+        Page<BasketV4Match> page = publicSupport.newPage(currentPage, pageSize);
+        LambdaQueryWrapper<BasketV4Match> wrapper = new LambdaQueryWrapper<BasketV4Match>()
+                .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketV4Match::getPublishStatus, MatchPublishStatusEnum.PUBLISHED.getCode())
+                .eq(BasketV4Match::getMatchStatus, MatchStatusEnum.FINISHED.getCode())
+                .in(BasketV4Match::getSeasonId, publishedSeasonIds)
+                .eq(seasonId != null, BasketV4Match::getSeasonId, seasonId)
+                .and(w -> w.in(BasketV4Match::getHomeEventTeamId, eventTeamIds)
+                        .or().in(BasketV4Match::getAwayEventTeamId, eventTeamIds))
+                .orderByDesc(BasketV4Match::getMatchTime)
+                .orderByDesc(BasketV4Match::getRoundNo)
+                .orderByDesc(BasketV4Match::getId);
+        IPage<BasketV4Match> entityPage = matchDao.selectPage(page, wrapper);
         Page<PublicMatchItemVo> result = new Page<>(entityPage.getCurrent(), entityPage.getSize(), entityPage.getTotal());
-        result.setRecords(matchService.enrichMatches(filtered));
+        result.setRecords(matchService.enrichMatches(entityPage.getRecords()));
         return result;
     }
 
@@ -308,13 +326,40 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
         return vo;
     }
 
-    private List<BasketMatch> filterPublicSeasonMatches(List<BasketMatch> matches) {
-        if (CollectionUtils.isEmpty(matches)) {
-            return Collections.emptyList();
+    private Set<Long> findEventTeamIdsBySourceTeam(Long seasonId, Long sourceTeamId) {
+        LambdaQueryWrapper<BasketEventTeam> wrapper = new LambdaQueryWrapper<BasketEventTeam>()
+                .eq(BasketEventTeam::getSourceTeamId, sourceTeamId)
+                .eq(BasketEventTeam::getIsDelete, BasketPublicConstants.NOT_DELETED);
+        if (seasonId != null) {
+            wrapper.eq(BasketEventTeam::getSeasonId, seasonId);
         }
-        Set<Long> seasonIds = matches.stream().map(BasketMatch::getSeasonId).filter(Objects::nonNull).collect(Collectors.toSet());
-        Set<Long> publicSeasonIds = publicSupport.loadSeasonMap(seasonIds).keySet();
-        return matches.stream().filter(m -> publicSeasonIds.contains(m.getSeasonId())).collect(Collectors.toList());
+        List<BasketEventTeam> teams = eventTeamDao.selectList(wrapper);
+        if (CollectionUtils.isEmpty(teams)) {
+            return Collections.emptySet();
+        }
+        return teams.stream().map(BasketEventTeam::getId).filter(Objects::nonNull).collect(Collectors.toSet());
+    }
+
+    private void requirePublishedV4Season(Long seasonId) {
+        BasketSeason season = seasonDao.selectById(seasonId);
+        if (season == null
+                || !Objects.equals(season.getIsDelete(), BasketPublicConstants.NOT_DELETED)
+                || !PublishStatusEnum.PUBLISHED.getCode().equals(season.getPublishStatus())) {
+            throw new ServiceException("赛季不存在或未公开");
+        }
+    }
+
+    private Set<Long> loadPublishedV4SeasonIds() {
+        List<BasketSeason> seasons = seasonDao.selectList(new LambdaQueryWrapper<BasketSeason>()
+                .eq(BasketSeason::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketSeason::getPublishStatus, PublishStatusEnum.PUBLISHED.getCode()));
+        if (CollectionUtils.isEmpty(seasons)) {
+            return Collections.emptySet();
+        }
+        return seasons.stream()
+                .map(BasketSeason::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
     }
 
     @Override
