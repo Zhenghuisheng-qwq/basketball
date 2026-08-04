@@ -26,7 +26,7 @@
     </resultMap>
 
     <sql id="listSelect">
-        select h.id, h.series_id as seriesId, h.season_id as seasonId, s.display_title as seasonName,
+        select h.id, h.series_id as tournamentId, h.season_id as seasonId, s.display_title as seasonName,
                h.honor_category_id as honorCategoryId, c.honor_code as honorCode, c.honor_name as honorName,
                c.honor_scope as honorScope, c.recipient_type as recipientType,
                h.team_id as teamId, t.team_name as teamName,

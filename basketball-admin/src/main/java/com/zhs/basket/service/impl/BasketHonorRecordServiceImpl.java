@@ -321,7 +321,7 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         }
         Date now = new Date();
         BasketHonorRecord record = new BasketHonorRecord();
-        record.setSeriesId(source.getSeriesId() != null ? source.getSeriesId() : source.getTournamentId());
+        record.setSeriesId(source.getTournamentId());
         record.setSeasonId(source.getSeasonId());
         record.setHonorCategoryId(source.getHonorCategoryId());
         record.setTeamId(source.getTeamId());

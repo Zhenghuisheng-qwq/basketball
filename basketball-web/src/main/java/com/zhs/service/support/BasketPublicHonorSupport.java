@@ -149,7 +149,7 @@ public class BasketPublicHonorSupport {
         Page<BasketHonorRecord> page = publicSupport.newPage(currentPage, pageSize);
         LambdaQueryWrapper<BasketHonorRecord> wrapper = publishedWrapper()
                 .in(BasketHonorRecord::getHonorCategoryId, categoryIds)
-                .eq(tournamentId != null, BasketHonorRecord::getTournamentId, tournamentId)
+                .eq(tournamentId != null, BasketHonorRecord::getSeriesId, tournamentId)
                 .eq(seasonId != null, BasketHonorRecord::getSeasonId, seasonId);
         if (StringUtils.hasText(keyword)) {
             String kw = keyword.trim();
