@@ -1,4 +1,4 @@
-/* 官网公开页统一骨架：Hero → 撕纸 → 暖灰正文 */
+/* 官网公开页：Hero（site-shell 内 icon 背景图）→ PaperTear → 暖灰正文 */
 
 :root {
   --paper-bg: var(--cnpa-paper-bg);
@@ -15,15 +15,8 @@
   flex-direction: column;
   width: 100%;
   min-height: calc(100vh - var(--site-header-height));
-  background: var(--paper-bg);
+  background: #050505;
   overflow-x: clip;
-}
-
-.public-page__main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
 }
 
 .public-page__hero {
@@ -31,206 +24,108 @@
   width: 100%;
 }
 
-.public-paper-content {
+.public-page__main {
   flex: 1;
   width: 100%;
-  background-color: var(--paper-bg);
-  background-image:
-    linear-gradient(
-      180deg,
-      #ebe9e9 0%,
-      var(--paper-bg) 42%,
-      #e7e5e5 100%
-    );
+  padding-top: 8px;
+  background: #050505;
+}
+
+.public-page__panel {
+  --paper-tear-color: var(--cnpa-paper-bg);
   position: relative;
-  isolation: isolate;
+  z-index: 2;
+  width: 100%;
+  color: var(--cnpa-paper-text);
+  overflow: visible;
+}
 
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    opacity: 0.22;
-    background-image:
-      repeating-linear-gradient(
-        0deg,
-        rgba(25, 25, 25, 0.012) 0,
-        rgba(25, 25, 25, 0.012) 1px,
-        transparent 1px,
-        transparent 7px
-      ),
-      repeating-linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0.018) 0,
-        rgba(255, 255, 255, 0.018) 1px,
-        transparent 1px,
-        transparent 9px
-      );
+.public-page__panel-tear {
+  position: relative;
+  z-index: 4;
+  height: 0;
+  pointer-events: none;
+
+  :deep(.paper-tear) {
+    height: 0;
   }
 
-  > .site-shell,
-  > * > .site-shell {
-    position: relative;
-    z-index: 1;
+  :deep(.torn-edge-top) {
+    top: 0;
+    transform: translateY(-48%);
+  }
+
+  :deep(.torn-edge-main) {
+    fill: var(--cnpa-paper-bg) !important;
+  }
+
+  :deep(.torn-edge-shadow) {
+    display: none;
   }
 }
 
-.public-paper-content__inner {
-  padding-block: clamp(32px, 4vw, 64px);
+.public-page__panel-shell {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  background-color: var(--cnpa-paper-bg);
+  background-image: linear-gradient(
+    180deg,
+    #ebe9e9 0%,
+    var(--cnpa-paper-bg) 45%,
+    #e7e5e5 100%
+  );
+  border-radius: 2px 2px 0 0;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
 }
 
-/* 黑红电竞 Hero 基础 */
+.public-page__panel-body {
+  position: relative;
+  z-index: 1;
+  padding: clamp(32px, 4vw, 64px) 0;
+  box-sizing: border-box;
+  background: transparent;
+}
+
+/* Hero 基础：与 master LeagueHero / DataHero 一致 */
 .public-hero {
+  width: 100%;
+  background: #050505;
+  overflow: visible;
+}
+
+.public-hero__shell {
+  position: relative;
+  overflow: visible;
+}
+
+.public-hero__frame {
   position: relative;
   width: 100%;
   overflow: hidden;
-  background: #000;
+  background: #050505;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 2px 2px 0 0;
+  box-sizing: border-box;
 }
 
-.public-hero__bg {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(118deg, rgba(8, 8, 8, 0.94) 0%, rgba(142, 0, 8, 0.72) 42%, rgba(225, 6, 19, 0.58) 100%),
-    repeating-linear-gradient(
-      -32deg,
-      rgba(255, 255, 255, 0.03) 0,
-      rgba(255, 255, 255, 0.03) 1px,
-      transparent 1px,
-      transparent 14px
-    ),
-    radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.08) 0, transparent 36%);
-}
-
-.public-hero__overlay {
-  position: absolute;
-  inset: 0;
-  opacity: 0.35;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.14) 0.6px, transparent 0.6px);
-  background-size: 5px 5px;
-}
-
-.public-hero__inner {
+.public-hero__image {
   position: relative;
-  z-index: 2;
-  padding-block: clamp(42px, 5vw, 82px);
-}
-
-.public-hero__breadcrumb {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 18px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.public-hero__crumb {
-  color: rgba(255, 255, 255, 0.72);
-  text-decoration: none;
-  transition: color 0.2s ease;
-
-  &:hover {
-    color: #fff;
-  }
-
-  &--current {
-    color: #fff;
-  }
-}
-
-.public-hero__crumb-sep {
-  color: rgba(255, 255, 255, 0.36);
-}
-
-.public-hero__eyebrow {
-  margin: 0 0 10px;
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 13px;
-  font-style: italic;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.public-hero__title {
-  margin: 0 0 10px;
-  color: #fff;
-  font-size: clamp(32px, 4.8vw, 52px);
-  font-weight: 900;
-  line-height: 1.08;
-}
-
-.public-hero__desc {
-  margin: 0;
-  max-width: 720px;
-  color: rgba(255, 255, 255, 0.84);
-  font-size: clamp(14px, 1.6vw, 17px);
-  line-height: 1.65;
-}
-
-.public-hero__filters {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(12px, 2vw, 20px);
-  margin-top: clamp(22px, 3vw, 32px);
-  max-width: 720px;
-}
-
-.public-hero__filter-field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-.public-hero__filter-label {
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.public-hero__select {
+  z-index: 0;
+  display: block;
   width: 100%;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(0, 0, 0, 0.32);
-  color: #fff;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
-  appearance: none;
-
-  &:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.48);
-    outline-offset: 2px;
-  }
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-.public-hero__state {
-  margin-top: clamp(18px, 2.4vw, 28px);
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 14px;
-  font-weight: 700;
-
-  &--error {
-    color: #ffb4b4;
-  }
+.public-hero--data .public-hero__frame {
+  overflow: visible;
 }
 
 @media (max-width: 767px) {
-  .public-hero__filters {
-    grid-template-columns: 1fr;
-    max-width: none;
-  }
-
-  .public-hero__inner {
-    padding-bottom: clamp(32px, 6vw, 48px);
+  .public-page__panel-body {
+    padding-block: clamp(24px, 5vw, 40px);
   }
 }

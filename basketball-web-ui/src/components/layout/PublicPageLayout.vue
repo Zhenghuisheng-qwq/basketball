@@ -1,19 +1,27 @@
 <script setup lang="ts">
-import PublicPaperDivider from './PublicPaperDivider.vue'
+import PaperTear from '@/components/common/PaperTear.vue'
 </script>
 
 <template>
   <div class="public-page">
-    <div class="public-page__main">
-      <div v-if="$slots.hero" class="public-page__hero">
-        <slot name="hero" />
-      </div>
-      <PublicPaperDivider v-if="$slots.hero" />
-      <section class="public-paper-content">
-        <div class="public-paper-content__inner">
-          <slot />
-        </div>
-      </section>
+    <div v-if="$slots.hero" class="public-page__hero">
+      <slot name="hero" />
     </div>
+
+    <section class="public-page__main">
+      <div class="site-shell">
+        <div class="public-page__panel">
+          <div v-if="$slots.hero" class="public-page__panel-tear" aria-hidden="true">
+            <PaperTear position="top" tone="light" />
+          </div>
+
+          <div class="public-page__panel-shell">
+            <div class="public-page__panel-body">
+              <slot />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>

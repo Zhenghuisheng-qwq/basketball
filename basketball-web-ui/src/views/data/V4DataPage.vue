@@ -144,7 +144,7 @@ onMounted(async () => {
       />
     </template>
 
-    <div class="site-shell v4-data-page__shell">
+    <div class="v4-data-page__shell">
       <div class="v4-data-page__module">
         <nav class="v4-data-tabs" aria-label="数据分类">
           <button

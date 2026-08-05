@@ -106,7 +106,7 @@ onMounted(() => {
       />
     </template>
 
-    <div class="site-shell v4-events-list-page__shell">
+    <div class="v4-events-list-page__shell">
       <header class="v4-events-list-page__heading">
         <div>
           <h2 class="v4-events-list-page__title">公开赛季</h2>

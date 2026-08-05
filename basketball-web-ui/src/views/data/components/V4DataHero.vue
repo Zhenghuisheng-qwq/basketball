@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PublicHero from '@/components/layout/PublicHero.vue'
 import type { V4PublicDivisionBrief, V4PublicSeasonItem } from '@/api/types/v4Public'
 import { displayText } from '@/utils/publicDisplay'
 import { v4PlatformLabel, v4SeriesLabel } from '@/utils/v4Display'
@@ -19,30 +20,15 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="public-hero v4-data-hero" aria-label="CNPA 赛事数据">
-    <div class="public-hero__bg" aria-hidden="true" />
-    <div class="public-hero__overlay" aria-hidden="true" />
-
-    <div class="site-shell public-hero__inner">
-      <nav class="public-hero__breadcrumb" aria-label="面包屑">
-        <router-link to="/" class="public-hero__crumb">首页</router-link>
-        <span class="public-hero__crumb-sep">/</span>
-        <span class="public-hero__crumb public-hero__crumb--current">数据</span>
-      </nav>
-
-      <p class="public-hero__eyebrow">DATA CENTER</p>
-      <h1 class="public-hero__title">赛事数据</h1>
-      <p class="public-hero__desc">
-        查看各赛事赛区的积分排名、球队数据、球员数据与排行榜。
-      </p>
-
-      <div v-if="loading" class="public-hero__state">加载中...</div>
-      <div v-else-if="error" class="public-hero__state public-hero__state--error">{{ error }}</div>
-      <div v-else class="public-hero__filters">
-        <label class="public-hero__filter-field">
-          <span class="public-hero__filter-label">赛季</span>
+  <PublicHero variant="data" aria-label="CNPA 数据中心">
+    <div class="v4-data-hero__controls">
+      <div v-if="loading" class="v4-data-hero__state">加载中...</div>
+      <div v-else-if="error" class="v4-data-hero__state v4-data-hero__state--error">{{ error }}</div>
+      <template v-else>
+        <label class="v4-data-hero__field">
+          <span class="sr-only">赛季</span>
           <select
-            class="public-hero__select"
+            class="v4-data-hero__select"
             :value="selectedSeasonId"
             @change="emit('update:selectedSeasonId', ($event.target as HTMLSelectElement).value)"
           >
@@ -51,10 +37,10 @@ const emit = defineEmits<{
             </option>
           </select>
         </label>
-        <label class="public-hero__filter-field">
-          <span class="public-hero__filter-label">平台赛区</span>
+        <label class="v4-data-hero__field">
+          <span class="sr-only">平台赛区</span>
           <select
-            class="public-hero__select"
+            class="v4-data-hero__select"
             :value="selectedDivisionId"
             @change="emit('update:selectedDivisionId', ($event.target as HTMLSelectElement).value)"
           >
@@ -63,7 +49,82 @@ const emit = defineEmits<{
             </option>
           </select>
         </label>
-      </div>
+      </template>
     </div>
-  </section>
+  </PublicHero>
 </template>
+
+<style scoped lang="scss">
+.v4-data-hero__controls {
+  position: absolute;
+  top: clamp(18px, 3.2vw, 30px);
+  right: clamp(12px, 2.4vw, 28px);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(100%, 254px);
+}
+
+.v4-data-hero__field {
+  display: block;
+  width: 100%;
+}
+
+.v4-data-hero__select {
+  display: block;
+  width: 100%;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid #4a4a4a;
+  border-radius: 6px;
+  background: rgba(12, 12, 12, 0.92);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.36);
+    outline-offset: 2px;
+  }
+}
+
+.v4-data-hero__state {
+  padding: 10px 14px;
+  border: 1px solid #4a4a4a;
+  border-radius: 6px;
+  background: rgba(12, 12, 12, 0.92);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+  font-weight: 700;
+
+  &--error {
+    color: #ffb4b4;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 767px) {
+  .v4-data-hero__controls {
+    top: 12px;
+    right: 10px;
+    width: min(68%, 220px);
+  }
+}
+</style>
