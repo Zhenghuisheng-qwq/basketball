@@ -29,7 +29,9 @@ public class BasketV4FormatTemplateServiceImpl implements IBasketV4FormatTemplat
 
     @Override
     public List<BasketFormatTemplateListVo> listEnabledTemplates(Long seriesId) {
-        return templateMapper.selectEnabledBySeriesId(seriesId).stream().map(t -> {
+        return templateMapper.selectEnabledBySeriesId(seriesId).stream()
+                .filter(t -> !"LEAGUE_STANDARD_V1".equals(t.getTemplateCode()))
+                .map(t -> {
             BasketFormatTemplateListVo vo = new BasketFormatTemplateListVo();
             BeanUtils.copyBeanProp(vo, t);
             return vo;
@@ -78,13 +80,13 @@ public class BasketV4FormatTemplateServiceImpl implements IBasketV4FormatTemplat
 
     public BasketFormatTemplate resolveDefaultTemplate(Long seriesId) {
         BasketFormatTemplate template = templateMapper.selectDefaultBySeriesId(seriesId);
-        if (template != null) {
+        if (template != null && !"LEAGUE_STANDARD_V1".equals(template.getTemplateCode())) {
             return template;
         }
         List<BasketFormatTemplate> enabled = templateMapper.selectEnabledBySeriesId(seriesId);
-        if (enabled.isEmpty()) {
-            throw new ServiceException("当前系列没有可用的赛制模板");
-        }
-        return enabled.get(0);
+        return enabled.stream()
+                .filter(t -> !"LEAGUE_STANDARD_V1".equals(t.getTemplateCode()))
+                .findFirst()
+                .orElseThrow(() -> new ServiceException("当前系列没有可用的赛制模板"));
     }
 }

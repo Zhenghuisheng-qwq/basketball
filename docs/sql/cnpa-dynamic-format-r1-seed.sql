@@ -81,15 +81,15 @@ WHERE t.template_code = 'V4_LEGACY_ROUND_ROBIN_V1' AND t.version_no = 1 AND t.is
   );
 
 -- ---------------------------------------------------------------------------
--- 2. LEAGUE_STANDARD_V1（League 系列默认模板）
+-- 2. LEAGUE_STANDARD_V1（已禁用：含 BO3/BO5，当前版本不支持）
 -- ---------------------------------------------------------------------------
 INSERT INTO basket_format_template (
   series_id, template_code, template_name, version_no, template_description,
   enabled, is_default, create_time, update_time, is_delete
 )
-SELECT s.id, 'LEAGUE_STANDARD_V1', 'League 标准赛制', 1,
-  '常规赛单循环 → 季后赛单败 BO3 → 总决赛 BO5；晋级人数发布前配置',
-  1, 1, NOW(), NOW(), 0
+SELECT s.id, 'LEAGUE_STANDARD_V1', 'League 标准赛制（已停用）', 1,
+  '已停用：含 BO3/BO5 与 SERIES_WINNER，请使用 ROUND_ROBIN_BASIC_V1 等 BO1 模板',
+  0, 0, NOW(), NOW(), 0
 FROM basket_series s
 WHERE s.series_code = 'LEAGUE' AND s.is_delete = 0
   AND NOT EXISTS (

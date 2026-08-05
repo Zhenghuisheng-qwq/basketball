@@ -15,8 +15,7 @@
 
 .site-shell,
 .site-container {
-  width: calc(100% - 2 * var(--site-gutter));
-  max-width: var(--site-width);
+  width: var(--site-content-width);
   margin-inline: auto;
   box-sizing: border-box;
   overflow-x: clip;
@@ -29,16 +28,14 @@
 }
 
 .site-content {
-  width: calc(100% - 2 * var(--site-gutter));
-  max-width: var(--site-width);
+  width: var(--site-content-width);
   margin-inline: auto;
   padding-inline: var(--site-inner-padding);
   box-sizing: border-box;
 }
 
 .page-container {
-  width: calc(100% - 2 * var(--site-gutter));
-  max-width: var(--site-width);
+  width: var(--site-content-width);
   margin-inline: auto;
   padding: 48px var(--site-inner-padding) 64px;
   box-sizing: border-box;

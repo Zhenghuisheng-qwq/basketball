@@ -17,7 +17,6 @@ import com.zhs.basket.support.v4.V4FormatDisplaySupport;
 import com.zhs.basket.vo.v4.BasketDivisionFormatSnapshotVo;
 import com.zhs.basket.vo.v4.BasketDivisionListVo;
 import com.zhs.common.exception.ServiceException;
-import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
 import com.zhs.common.utils.bean.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -130,9 +129,21 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         if (!isDivisionBasicComplete(division)) {
             throw new ServiceException("Division 基础信息不完整，无法开放报名");
         }
+        validateDivisionTimes(division);
+        if (division.getMaxTeamCount() == null || division.getMaxTeamCount() <= 0) {
+            throw new ServiceException("队伍上限无效，无法开放报名");
+        }
         validateLineupByGameMode(division);
-        formatSnapshotService.validateSnapshotReady(id);
-        formatSnapshotService.lockSnapshot(id, SecurityUtils.getUserId());
+        BasketDivisionFormatSnapshotVo snapshot = formatSnapshotService.getDivisionSnapshot(id);
+        if (snapshot == null) {
+            throw new ServiceException("Division 缺少规则快照，无法开放报名");
+        }
+        if (!SnapshotStatusEnum.LOCKED.getCode().equals(snapshot.getSnapshotStatus()) && !Boolean.TRUE.equals(snapshot.getLocked())) {
+            throw new ServiceException("规则快照未锁定，请先锁定规则后再开放报名");
+        }
+        if (snapshot.getStages() == null || snapshot.getStages().isEmpty()) {
+            throw new ServiceException("规则快照缺少有效阶段，无法开放报名");
+        }
 
         division.setDivisionStatus(DivisionStatusEnum.REGISTRATION_OPEN.getCode());
         division.setUpdateTime(new Date());

@@ -344,6 +344,9 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         CompetitionFormatEnum.fromCode(req.getCompetitionFormat());
         GroupingModeEnum mode = GroupingModeEnum.fromCode(req.getGroupingMode());
         AdvancementTypeEnum adv = AdvancementTypeEnum.fromCode(req.getAdvancementType());
+        if (adv == AdvancementTypeEnum.SERIES_WINNER) {
+            throw new ServiceException("当前版本暂不支持 SERIES_WINNER（系列赛胜者）晋级方式");
+        }
         PairingRuleEnum.fromCode(req.getPairingRule());
         FormatSnapshotReadySpecification.validateBestOf(req.getBestOf());
         if (mode == GroupingModeEnum.NONE) {

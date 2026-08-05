@@ -38,6 +38,8 @@ const useStandaloneChrome = computed(() => isAuthRoute.value || isAccountRoute.v
 
 <style scoped lang="scss">
 .app {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   min-height: 100vh;
   background: #050505;

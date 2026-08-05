@@ -313,6 +313,141 @@ export function v4RosterRuleText(gameMode?: string | null): string {
   return '阵容人数 5～8 人'
 }
 
+export function v4DivisionStageStatusLabel(status?: string | null): string {
+  return lookup(STAGE_EXECUTION_STATUS_LABELS, status, status || '-')
+}
+
+export interface V4DivisionReadinessInput {
+  id?: number
+  platformCode?: string
+  gameMode?: string
+  divisionName?: string
+  registrationMode?: string
+  maxTeamCount?: number
+  formatTemplateId?: number
+  registrationStartTime?: string
+  registrationEndTime?: string
+  matchStartTime?: string
+  matchEndTime?: string
+}
+
+export interface V4DivisionSnapshotReadinessInput {
+  snapshotStatus?: string
+  locked?: boolean
+  stages?: Array<{
+    bestOf?: number
+    advancementType?: string
+    competitionFormat?: string
+    stageStatus?: string
+  }>
+}
+
+export interface V4DivisionReadinessResult {
+  basicComplete: boolean
+  timeValid: boolean
+  teamLimitValid: boolean
+  rosterValid: boolean
+  snapshotLocked: boolean
+  snapshotDraft: boolean
+  hasValidStage: boolean
+  openRegistrationReady: boolean
+  reasons: string[]
+}
+
+function isDivisionTimeRangeValid(div: V4DivisionReadinessInput): boolean {
+  if (!div.registrationStartTime || !div.registrationEndTime
+    || !div.matchStartTime || !div.matchEndTime) {
+    return false
+  }
+  return div.registrationStartTime < div.registrationEndTime
+    && div.matchStartTime < div.matchEndTime
+}
+
+function isStageConfigSupported(stage: NonNullable<V4DivisionSnapshotReadinessInput['stages']>[number]): boolean {
+  const format = (stage.competitionFormat || '').toUpperCase()
+  if (format !== 'ROUND_ROBIN' && format !== 'SINGLE_ELIMINATION') {
+    return false
+  }
+  if (stage.bestOf != null && stage.bestOf !== 1) {
+    return false
+  }
+  if ((stage.advancementType || '').toUpperCase() === 'SERIES_WINNER') {
+    return false
+  }
+  return true
+}
+
+export function assessV4DivisionReadiness(
+  div: V4DivisionReadinessInput,
+  snapshot?: V4DivisionSnapshotReadinessInput | null
+): V4DivisionReadinessResult {
+  const reasons: string[] = []
+  const basicComplete = !!div.id
+    && !!div.platformCode
+    && !!div.gameMode
+    && !!div.divisionName
+    && !!div.registrationMode
+    && !!div.formatTemplateId
+    && div.maxTeamCount != null
+
+  if (!div.id) reasons.push('赛区尚未保存')
+  else if (!div.platformCode) reasons.push('缺少平台')
+  else if (!div.gameMode) reasons.push('缺少比赛模式')
+  else if (!div.divisionName) reasons.push('缺少赛区名称')
+  else if (!div.registrationMode) reasons.push('缺少报名方式')
+  else if (!div.formatTemplateId) reasons.push('缺少赛制模板')
+  else if (div.maxTeamCount == null) reasons.push('缺少队伍上限')
+
+  const timeValid = isDivisionTimeRangeValid(div)
+  if (!timeValid) {
+    if (!div.registrationStartTime || !div.registrationEndTime
+      || !div.matchStartTime || !div.matchEndTime) {
+      reasons.push('时间配置不完整')
+    } else {
+      reasons.push('时间范围不合法（结束时间须晚于开始时间）')
+    }
+  }
+
+  const teamLimitValid = div.maxTeamCount != null && div.maxTeamCount > 0
+  if (!teamLimitValid) reasons.push('队伍上限无效')
+
+  const mode = (div.gameMode || '').toUpperCase()
+  const rosterValid = mode === 'FIVE_V_FIVE' || mode === 'THREE_V_THREE'
+  if (!rosterValid) reasons.push('阵容人数规则与比赛模式不匹配')
+
+  const snapshotStatus = (snapshot?.snapshotStatus || '').toUpperCase()
+  const snapshotLocked = snapshotStatus === 'LOCKED' || snapshot?.locked === true
+  const snapshotDraft = snapshotStatus === 'DRAFT'
+  if (snapshotDraft) reasons.push('规则快照仍为草稿，请先锁定')
+  else if (!snapshot?.snapshotStatus) reasons.push('缺少规则快照')
+
+  const stages = snapshot?.stages || []
+  const hasValidStage = stages.length > 0 && stages.every(isStageConfigSupported)
+  if (!stages.length) reasons.push('至少需要一个有效阶段')
+  else if (!stages.every(isStageConfigSupported)) {
+    reasons.push('存在不支持的阶段配置（仅支持 BO1 单循环/小组赛/单败淘汰）')
+  }
+
+  const openRegistrationReady = basicComplete
+    && timeValid
+    && teamLimitValid
+    && rosterValid
+    && snapshotLocked
+    && hasValidStage
+
+  return {
+    basicComplete,
+    timeValid,
+    teamLimitValid,
+    rosterValid,
+    snapshotLocked,
+    snapshotDraft,
+    hasValidStage,
+    openRegistrationReady,
+    reasons: [...new Set(reasons)]
+  }
+}
+
 export function v4FormatTypeLabel(type?: string | null): string {
   return lookup(FORMAT_TYPE_LABELS, type)
 }
@@ -560,6 +695,14 @@ export const V4_ADVANCEMENT_TYPE_OPTIONS = [
   { label: '系列赛胜者', value: 'SERIES_WINNER' },
   { label: '人工晋级', value: 'MANUAL' }
 ] as const
+
+export const V4_WIZARD_COMPETITION_FORMAT_OPTIONS = V4_COMPETITION_FORMAT_OPTIONS.filter(
+  (item) => item.value !== 'MANUAL'
+)
+
+export const V4_WIZARD_ADVANCEMENT_TYPE_OPTIONS = V4_ADVANCEMENT_TYPE_OPTIONS.filter(
+  (item) => item.value !== 'SERIES_WINNER'
+)
 
 export const V4_TIE_BREAK_RULE_OPTIONS = [
   { label: '相互战绩', value: 'HEAD_TO_HEAD' },

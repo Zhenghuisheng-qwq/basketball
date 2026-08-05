@@ -147,15 +147,36 @@
             <el-form label-width="120px" class="mb8">
               <el-form-item label="赛制模板">
                 <el-select v-model="div.formatTemplateId" style="width: 100%" placeholder="请选择赛制模板" @change="() => handleTemplateChange(div)">
-                  <el-option v-for="item in formatTemplateList" :key="item.id" :label="`${item.templateName} (${item.templateCode})`" :value="item.id" />
+                  <el-option v-for="item in enabledFormatTemplates" :key="item.id" :label="`${item.templateName} (${item.templateCode})`" :value="item.id" />
                 </el-select>
-                <div class="el-form-item__tip">支持单循环、小组赛、BO1 单败淘汰等模板；开放报名前需锁定规则快照。</div>
+                <div class="el-form-item__tip">当前仅支持单循环、小组赛（分组循环）和 BO1 单败淘汰；开放报名前须手动锁定规则快照。</div>
               </el-form-item>
             </el-form>
+
+            <el-alert
+              v-if="div.id"
+              :type="getDivisionReadiness(div).openRegistrationReady ? 'success' : 'warning'"
+              :closable="false"
+              show-icon
+              class="mb8"
+            >
+              <template #title>赛区就绪状态</template>
+              <ul class="readiness-list">
+                <li>基础配置：{{ getDivisionReadiness(div).basicComplete ? '完整' : '未完成' }}</li>
+                <li>时间配置：{{ getDivisionReadiness(div).timeValid ? '合法' : '未完成或不合法' }}</li>
+                <li>Snapshot：{{ v4SnapshotStatusLabel(snapshotMap[div.id!]?.snapshotStatus) }}</li>
+                <li>Stage：{{ sortedStages(div).length ? `${sortedStages(div).length} 个阶段` : '无有效阶段' }}</li>
+                <li>开放报名：{{ getDivisionReadiness(div).openRegistrationReady ? '满足条件' : '未满足' }}</li>
+              </ul>
+              <div v-if="getDivisionReadiness(div).reasons.length" class="readiness-reasons">
+                {{ getDivisionReadiness(div).reasons.join('；') }}
+              </div>
+            </el-alert>
 
             <div v-if="div.id" class="rules-actions mb8">
               <el-button type="warning" plain @click="handleRebuildSnapshot(div)" v-if="currentSnapshot(div)?.mutable">重建快照</el-button>
               <el-button type="success" plain @click="handleLockSnapshot(div)" v-if="currentSnapshot(div)?.lockable">锁定规则</el-button>
+              <span v-if="!currentSnapshot(div)?.mutable && currentSnapshot(div)?.snapshotStatus === 'DRAFT'" class="el-form-item__tip">已有正式业务数据或快照非草稿，不可重建</span>
             </div>
 
             <el-alert v-if="currentSnapshot(div) && !currentSnapshot(div)?.mutable" type="warning" :closable="false" show-icon class="mb8" title="规则已锁定，不可编辑" />
@@ -222,43 +243,73 @@
           <el-descriptions-item label="简介" :span="2">{{ seasonForm.description || '-' }}</el-descriptions-item>
         </el-descriptions>
 
-        <div class="confirm-section-title">平台赛区（{{ divisionDrafts.length }}）</div>
+        <div class="confirm-section-title">平台赛区状态（{{ divisionDrafts.length }}）</div>
         <el-table :data="divisionDrafts" border size="small" class="mb8">
-          <el-table-column label="平台" width="90">
-            <template #default="scope">{{ v4PlatformLabel(scope.row.platformCode) }}</template>
+          <el-table-column label="开放报名" width="88" align="center" fixed="left">
+            <template #default="scope">
+              <el-checkbox
+                v-model="openRegistrationSelection[scope.row.localKey]"
+                :disabled="!getDivisionReadiness(scope.row).openRegistrationReady"
+              />
+            </template>
           </el-table-column>
-          <el-table-column label="模式" width="70">
-            <template #default="scope">{{ v4GameModeLabel(scope.row.gameMode) }}</template>
+          <el-table-column label="赛区" min-width="120">
+            <template #default="scope">
+              <div>{{ scope.row.divisionName || '未命名' }}</div>
+              <div class="cell-sub">{{ v4PlatformLabel(scope.row.platformCode) }} · {{ v4GameModeLabel(scope.row.gameMode) }}</div>
+            </template>
           </el-table-column>
-          <el-table-column label="赛区名称" prop="divisionName" min-width="140" />
-          <el-table-column label="报名方式" width="100">
-            <template #default="scope">{{ v4RegistrationModeLabel(scope.row.registrationMode) }}</template>
+          <el-table-column label="基础配置" width="96" align="center">
+            <template #default="scope">
+              <el-tag :type="getDivisionReadiness(scope.row).basicComplete ? 'success' : 'warning'" size="small">
+                {{ getDivisionReadiness(scope.row).basicComplete ? '完整' : '未完成' }}
+              </el-tag>
+            </template>
           </el-table-column>
-          <el-table-column label="队伍上限" prop="maxTeamCount" width="90" align="center" />
-          <el-table-column label="报名时间" min-width="160">
-            <template #default="scope">{{ formatV4CompactRange(scope.row.registrationStartTime, scope.row.registrationEndTime) }}</template>
+          <el-table-column label="时间配置" width="96" align="center">
+            <template #default="scope">
+              <el-tag :type="getDivisionReadiness(scope.row).timeValid ? 'success' : 'warning'" size="small">
+                {{ getDivisionReadiness(scope.row).timeValid ? '合法' : '未完成' }}
+              </el-tag>
+            </template>
           </el-table-column>
-          <el-table-column label="规则状态" width="96" align="center">
+          <el-table-column label="Snapshot" width="96" align="center">
             <template #default="scope">
               <el-tag :type="v4SnapshotStatusTagType(snapshotMap[scope.row.id!]?.snapshotStatus)" size="small">
                 {{ v4SnapshotStatusLabel(snapshotMap[scope.row.id!]?.snapshotStatus) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="就绪" width="72" align="center">
+          <el-table-column label="Stage" width="96" align="center">
             <template #default="scope">
-              <el-icon v-if="isDivisionReady(scope.row)" color="var(--el-color-success)"><CircleCheck /></el-icon>
-              <el-icon v-else color="var(--el-color-warning)"><Warning /></el-icon>
+              <el-tag :type="getDivisionReadiness(scope.row).hasValidStage ? 'success' : 'warning'" size="small">
+                {{ sortedStages(scope.row).length ? `${sortedStages(scope.row).length} 个` : '无' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="开放报名就绪" width="110" align="center">
+            <template #default="scope">
+              <el-tag :type="getDivisionReadiness(scope.row).openRegistrationReady ? 'success' : 'info'" size="small">
+                {{ getDivisionReadiness(scope.row).openRegistrationReady ? '满足' : '未满足' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="未就绪原因" min-width="220">
+            <template #default="scope">
+              <span v-if="getDivisionReadiness(scope.row).openRegistrationReady" class="text-muted">-</span>
+              <span v-else class="reason-text">{{ getDivisionReadiness(scope.row).reasons.join('；') }}</span>
             </template>
           </el-table-column>
         </el-table>
+
+        <el-alert v-if="publishAndOpenDisabledReason" type="warning" :closable="false" show-icon class="mb8" :title="publishAndOpenDisabledReason" />
 
         <el-alert type="info" :closable="false" show-icon>
           <template #title>发布说明</template>
           <ul class="confirm-tip-list">
             <li>保存草稿：保留当前 Season 与 Division 配置，不发布前台。</li>
-            <li>发布赛季：前台展示赛季内容；无有效赛区时不展示报名入口。</li>
-            <li>发布并开放报名：发布赛季后，对配置完整且规则已锁定的赛区开放报名（以后端校验为准）。</li>
+            <li>发布赛事：仅发布 Season 前台展示，不会自动开放任何 Division 报名。</li>
+            <li>发布并开放报名：发布 Season 后，仅对勾选且配置完整、规则快照已锁定的赛区开放报名。</li>
           </ul>
         </el-alert>
       </div>
@@ -276,7 +327,13 @@
           <el-button v-if="currentStep < 4" type="primary" @click="goNext" :loading="saving">下一步</el-button>
           <template v-if="currentStep === 4">
             <el-button type="primary" @click="handlePublishSeason" :loading="saving" v-hasPermi="['basket:v4Season:publish']">发布赛事</el-button>
-            <el-button type="success" @click="handlePublishAndOpen" :loading="saving" v-hasPermi="['basket:v4Division:openRegistration']">发布并开放报名</el-button>
+            <el-button
+              type="success"
+              @click="handlePublishAndOpen"
+              :loading="saving"
+              :disabled="!canPublishAndOpen"
+              v-hasPermi="['basket:v4Division:openRegistration']"
+            >发布并开放报名</el-button>
           </template>
         </div>
       </div>
@@ -314,7 +371,8 @@
           <el-input-number v-model="stageForm.roundRobinCycles" :min="1" controls-position="right" style="width: 100%" />
         </el-form-item>
         <el-form-item label="BO">
-          <el-input-number v-model="stageForm.bestOf" :min="1" controls-position="right" style="width: 100%" />
+          <el-input-number v-model="stageForm.bestOf" :min="1" :max="1" disabled controls-position="right" style="width: 100%" />
+          <div class="el-form-item__tip">当前版本仅支持 BO1，BO3/BO5 暂未开放</div>
         </el-form-item>
         <el-form-item label="胜/负积分">
           <el-col :span="11"><el-input-number v-model="stageForm.winPoints" :min="0" controls-position="right" style="width: 100%" /></el-col>
@@ -363,7 +421,6 @@
 
 <script setup lang="ts">
 import { computed, getCurrentInstance, reactive, ref, watch } from 'vue'
-import { CircleCheck, Warning } from '@element-plus/icons-vue'
 import type { FormInstance } from 'element-plus'
 import type { BasketSeriesVo } from '@/api/cnpa/event-v4/series'
 import {
@@ -396,11 +453,10 @@ import {
   type BasketFormatTemplateListVo
 } from '@/api/cnpa/event-v4/format-template'
 import {
-  V4_ADVANCEMENT_TYPE_OPTIONS,
-  V4_COMPETITION_FORMAT_OPTIONS,
-  V4_GROUPING_MODE_OPTIONS,
-  V4_STAGE_TYPE_OPTIONS,
   V4_TIE_BREAK_RULE_OPTIONS,
+  V4_WIZARD_ADVANCEMENT_TYPE_OPTIONS,
+  V4_WIZARD_COMPETITION_FORMAT_OPTIONS,
+  assessV4DivisionReadiness,
   formatV4CompactRange,
   v4AdvancementTypeLabel,
   v4CompetitionFormatLabel,
@@ -413,7 +469,9 @@ import {
   v4SnapshotStatusLabel,
   v4SnapshotStatusTagType,
   v4StageTypeLabel,
-  v4TieBreakRuleLabel
+  v4TieBreakRuleLabel,
+  V4_GROUPING_MODE_OPTIONS,
+  V4_STAGE_TYPE_OPTIONS
 } from '@/utils/v4AdminDisplay'
 
 export interface WizardDivisionDraft {
@@ -456,9 +514,9 @@ const WIZARD_STEPS = [
 ]
 
 const STAGE_TYPE_OPTIONS = V4_STAGE_TYPE_OPTIONS
-const COMPETITION_FORMAT_OPTIONS = V4_COMPETITION_FORMAT_OPTIONS
+const COMPETITION_FORMAT_OPTIONS = V4_WIZARD_COMPETITION_FORMAT_OPTIONS
 const GROUPING_MODE_OPTIONS = V4_GROUPING_MODE_OPTIONS
-const ADVANCEMENT_TYPE_OPTIONS = V4_ADVANCEMENT_TYPE_OPTIONS
+const ADVANCEMENT_TYPE_OPTIONS = V4_WIZARD_ADVANCEMENT_TYPE_OPTIONS
 const TIE_BREAK_DEFAULTS = V4_TIE_BREAK_RULE_OPTIONS.map((item, idx) => ({
   ruleCode: item.value,
   priorityNo: idx + 1,
@@ -518,6 +576,30 @@ const timeTabKey = ref('')
 const rulesTabKey = ref('')
 const formatTemplateList = ref<BasketFormatTemplateListVo[]>([])
 const snapshotMap = reactive<Record<number, BasketDivisionFormatSnapshotVo>>({})
+const openRegistrationSelection = reactive<Record<string, boolean>>({})
+
+const enabledFormatTemplates = computed(() =>
+  formatTemplateList.value.filter((item) => item.templateCode !== 'LEAGUE_STANDARD_V1')
+)
+
+const selectedOpenDivisions = computed(() =>
+  divisionDrafts.value.filter((div) => openRegistrationSelection[div.localKey])
+)
+
+const canPublishAndOpen = computed(() =>
+  selectedOpenDivisions.value.length > 0
+  && selectedOpenDivisions.value.every((div) => getDivisionReadiness(div).openRegistrationReady)
+)
+
+const publishAndOpenDisabledReason = computed(() => {
+  if (canPublishAndOpen.value) return ''
+  const draftSelected = selectedOpenDivisions.value.some((div) => getDivisionReadiness(div).snapshotDraft)
+  if (draftSelected) return '已勾选赛区中存在草稿状态 Snapshot，请先锁定规则后再开放报名'
+  const hasReady = divisionDrafts.value.some((div) => getDivisionReadiness(div).openRegistrationReady)
+  if (!hasReady) return '当前没有满足开放报名条件的赛区（需配置完整、Snapshot=LOCKED、至少一个有效 Stage）'
+  if (!selectedOpenDivisions.value.length) return '请勾选至少一个满足开放报名条件的赛区'
+  return '已勾选赛区配置不完整，请查看未就绪原因'
+})
 
 const divisionBasicRules = {
   platformCode: [{ required: true, message: '请选择平台', trigger: 'change' }],
@@ -623,7 +705,7 @@ function setTimeFormRef(key: string, el: unknown) {
 }
 
 function createEmptyDivision(): WizardDivisionDraft {
-  const defaultTemplate = formatTemplateList.value.find((t) => t.isDefault === 1) || formatTemplateList.value[0]
+  const defaultTemplate = enabledFormatTemplates.value.find((t) => t.isDefault === 1) || enabledFormatTemplates.value[0]
   return {
     localKey: nextLocalKey(),
     platformCode: 'PS_XBOX',
@@ -665,14 +747,23 @@ function sortedStages(div: WizardDivisionDraft) {
   return [...(snap?.stages || [])].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
 }
 
+function getDivisionReadiness(div: WizardDivisionDraft) {
+  const snap = div.id ? snapshotMap[div.id] : undefined
+  return assessV4DivisionReadiness(div, snap)
+}
+
+function syncOpenRegistrationSelection() {
+  for (const div of divisionDrafts.value) {
+    if (!(div.localKey in openRegistrationSelection)) {
+      openRegistrationSelection[div.localKey] = getDivisionReadiness(div).openRegistrationReady
+    } else if (!getDivisionReadiness(div).openRegistrationReady) {
+      openRegistrationSelection[div.localKey] = false
+    }
+  }
+}
+
 function isDivisionReady(div: WizardDivisionDraft) {
-  if (!div.id) return false
-  const snap = snapshotMap[div.id]
-  return !!div.registrationStartTime
-    && !!div.registrationEndTime
-    && !!div.matchStartTime
-    && !!div.matchEndTime
-    && (snap?.snapshotStatus === 'LOCKED' || snap?.locked)
+  return getDivisionReadiness(div).openRegistrationReady
 }
 
 function validateUniquePlatforms(): boolean {
@@ -721,6 +812,7 @@ function resetWizardState() {
   completedSteps.value = [false, false, false, false, false]
   dirty.value = false
   Object.keys(snapshotMap).forEach((k) => delete snapshotMap[Number(k)])
+  Object.keys(openRegistrationSelection).forEach((k) => delete openRegistrationSelection[k])
   divisionFormRefs.clear()
   timeFormRefs.clear()
   Object.assign(seasonForm, {
@@ -983,13 +1075,19 @@ async function goNext() {
       await loadAllSnapshots()
     } else if (currentStep.value === 3) {
       await loadAllSnapshots()
-      const unlocked = divisionDrafts.value.filter((d) => d.id && !isDivisionReady(d))
-      if (unlocked.length) {
-        proxy!.$modal.msgWarning('部分赛区规则尚未锁定，可在确认页发布赛季，开放报名需全部赛区规则锁定且配置完整')
+      const notReady = divisionDrafts.value.filter((d) => d.id && !getDivisionReadiness(d).openRegistrationReady)
+      if (notReady.length) {
+        const detail = notReady.map((d) => `「${d.divisionName}」：${getDivisionReadiness(d).reasons.join('；')}`).join('\n')
+        proxy!.$modal.msgWarning(`部分赛区尚未满足开放报名条件：\n${detail}`)
       }
+      syncOpenRegistrationSelection()
       completedSteps.value[3] = true
     }
     currentStep.value += 1
+    if (currentStep.value === 4) {
+      await loadAllSnapshots()
+      syncOpenRegistrationSelection()
+    }
   } catch (e: any) {
     proxy!.$modal.msgError(e?.msg || e?.message || '操作失败')
   } finally {
@@ -1020,6 +1118,10 @@ async function handlePublishSeason() {
 }
 
 async function handlePublishAndOpen() {
+  if (!canPublishAndOpen.value) {
+    proxy!.$modal.msgError(publishAndOpenDisabledReason.value || '请先勾选满足开放报名条件的赛区')
+    return
+  }
   saving.value = true
   try {
     await persistSeason()
@@ -1028,10 +1130,10 @@ async function handlePublishAndOpen() {
     if (!seasonForm.id) throw new Error('赛季未创建')
     await publishV4Season(seasonForm.id)
 
-    const readyDivisions = divisionDrafts.value.filter((d) => d.id)
+    const targets = selectedOpenDivisions.value.filter((div) => div.id && getDivisionReadiness(div).openRegistrationReady)
     const opened: string[] = []
     const failed: string[] = []
-    for (const div of readyDivisions) {
+    for (const div of targets) {
       try {
         await openV4DivisionRegistration(div.id!)
         opened.push(div.divisionName)
@@ -1177,6 +1279,7 @@ async function submitStageForm() {
   const div = stageEditingDivision.value
   if (!div?.id) return
   await stageFormRef.value?.validate()
+  stageForm.bestOf = 1
   const payload: BasketDivisionStageSaveReq = { ...stageForm }
   delete (payload as any).tieBreakRules
   if (stageEditingId.value) {
@@ -1379,6 +1482,31 @@ async function moveStage(div: WizardDivisionDraft, stage: BasketDivisionStageVo,
 .rules-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.readiness-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  line-height: 1.7;
+  font-size: 13px;
+}
+.readiness-reasons {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--el-color-warning);
+}
+.cell-sub {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+.reason-text {
+  font-size: 12px;
+  color: var(--el-color-warning);
+  line-height: 1.5;
+}
+.text-muted {
+  color: var(--el-text-color-secondary);
 }
 
 @media (max-width: 768px) {

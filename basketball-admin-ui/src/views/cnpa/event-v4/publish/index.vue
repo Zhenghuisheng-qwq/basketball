@@ -294,10 +294,7 @@
                 <el-descriptions-item label="BO">{{ stage.bestOf ?? '-' }}</el-descriptions-item>
                 <el-descriptions-item label="积分">{{ stage.winPoints != null ? `${stage.winPoints}/${stage.lossPoints}` : '-' }}</el-descriptions-item>
                 <el-descriptions-item label="晋级">{{ stage.advancementTypeName || v4AdvancementTypeLabel(stage.advancementType) }}</el-descriptions-item>
-                <el-descriptions-item label="晋级名额">
-                  <span v-if="isLeagueRegularStage(stage)" class="advancement-highlight">{{ stage.advancementCount ?? '-' }}</span>
-                  <span v-else>{{ stage.advancementCount ?? '-' }}</span>
-                </el-descriptions-item>
+                <el-descriptions-item label="晋级名额">{{ stage.advancementCount ?? '-' }}</el-descriptions-item>
                 <el-descriptions-item label="下一阶段">{{ stage.nextStageCode || '-' }}</el-descriptions-item>
                 <el-descriptions-item label="人工确认">{{ stage.requiresManualConfirmation === 1 ? '是' : '否' }}</el-descriptions-item>
               </el-descriptions>
@@ -310,7 +307,7 @@
             </el-card>
           </div>
           <el-empty v-else description="请选择赛区或在 Division 创建后查看规则快照" />
-          <div class="el-form-item__tip mt8">草稿状态下可编辑规则；开放报名前请锁定快照。LEAGUE_STANDARD_V1 常规赛阶段可配置晋级名额。</div>
+          <div class="el-form-item__tip mt8">草稿状态下可编辑规则；开放报名前请手动锁定快照。当前仅支持 BO1 单循环、小组赛和单败淘汰。</div>
         </el-tab-pane>
         <el-tab-pane label="发布设置" name="publish">
           <el-descriptions v-if="seasonDetail" :column="1" border>
@@ -431,7 +428,8 @@
           <el-input-number v-model="stageForm.roundRobinCycles" :min="1" controls-position="right" style="width: 100%" />
         </el-form-item>
         <el-form-item label="BO">
-          <el-input-number v-model="stageForm.bestOf" :min="1" controls-position="right" style="width: 100%" />
+          <el-input-number v-model="stageForm.bestOf" :min="1" :max="1" disabled controls-position="right" style="width: 100%" />
+          <div class="el-form-item__tip">当前版本仅支持 BO1，BO3/BO5 暂未开放</div>
         </el-form-item>
         <el-form-item label="胜/负积分">
           <el-col :span="11"><el-input-number v-model="stageForm.winPoints" :min="0" controls-position="right" style="width: 100%" /></el-col>
@@ -445,7 +443,6 @@
         </el-form-item>
         <el-form-item label="晋级名额" v-if="needsAdvancementCount">
           <el-input-number v-model="stageForm.advancementCount" :min="1" controls-position="right" style="width: 100%" />
-          <div v-if="isLeagueRegularForm" class="el-form-item__tip">LEAGUE_STANDARD_V1 常规赛阶段：配置总排名前 N 晋级名额</div>
         </el-form-item>
         <el-form-item label="下一阶段编码">
           <el-input v-model="stageForm.nextStageCode" placeholder="留空表示无下一阶段" />
@@ -523,12 +520,12 @@ import {
   type BasketFormatTemplateListVo
 } from '@/api/cnpa/event-v4/format-template'
 import {
-  V4_ADVANCEMENT_TYPE_OPTIONS,
-  V4_COMPETITION_FORMAT_OPTIONS,
-  V4_GROUPING_MODE_OPTIONS,
   V4_PUBLISH_STATUS_FILTER_OPTIONS,
   V4_STAGE_TYPE_OPTIONS,
   V4_TIE_BREAK_RULE_OPTIONS,
+  V4_WIZARD_ADVANCEMENT_TYPE_OPTIONS,
+  V4_WIZARD_COMPETITION_FORMAT_OPTIONS,
+  V4_GROUPING_MODE_OPTIONS,
   formatV4CompactRange,
   v4AdvancementTypeLabel,
   v4CompetitionFormatLabel,
@@ -595,9 +592,9 @@ const stageForm = reactive<BasketDivisionStageSaveReq & { tieBreakRules?: Array<
 })
 
 const STAGE_TYPE_OPTIONS = V4_STAGE_TYPE_OPTIONS
-const COMPETITION_FORMAT_OPTIONS = V4_COMPETITION_FORMAT_OPTIONS
+const COMPETITION_FORMAT_OPTIONS = V4_WIZARD_COMPETITION_FORMAT_OPTIONS
 const GROUPING_MODE_OPTIONS = V4_GROUPING_MODE_OPTIONS
-const ADVANCEMENT_TYPE_OPTIONS = V4_ADVANCEMENT_TYPE_OPTIONS
+const ADVANCEMENT_TYPE_OPTIONS = V4_WIZARD_ADVANCEMENT_TYPE_OPTIONS
 const TIE_BREAK_DEFAULTS = V4_TIE_BREAK_RULE_OPTIONS.map((item, idx) => ({
   ruleCode: item.value,
   priorityNo: idx + 1,
@@ -619,16 +616,6 @@ const sortedRuleStages = computed(() =>
 const needsAdvancementCount = computed(() =>
   stageForm.advancementType === 'OVERALL_TOP_N' || stageForm.advancementType === 'GROUP_TOP_N'
 )
-
-const isLeagueRegularForm = computed(() =>
-  rulesSnapshot.value?.sourceTemplateCode === 'LEAGUE_STANDARD_V1' && stageForm.stageType === 'REGULAR'
-)
-
-function isLeagueRegularStage(stage: BasketDivisionStageVo) {
-  return rulesSnapshot.value?.sourceTemplateCode === 'LEAGUE_STANDARD_V1'
-    && stage.stageType === 'REGULAR'
-    && stage.advancementType === 'OVERALL_TOP_N'
-}
 
 const seasonQuery = reactive({
   pageNum: 1,
@@ -981,6 +968,7 @@ function openEditStage(stage: BasketDivisionStageVo) {
 async function submitStageForm() {
   if (!rulesDivisionId.value) return
   await stageFormRef.value?.validate()
+  stageForm.bestOf = 1
   const payload: BasketDivisionStageSaveReq = { ...stageForm }
   delete (payload as any).tieBreakRules
   if (stageEditingId.value) {

@@ -1,0 +1,118 @@
+.v4-data-page__shell {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(20px, 2.4vw, 28px);
+}
+
+.v4-data-page__module {
+  width: 100%;
+}
+
+.v4-data-tabs,
+.v4-data-subtabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.v4-data-subtabs {
+  margin-top: 10px;
+}
+
+.v4-data-tabs__btn {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--paper-border);
+  background: rgba(255, 255, 255, 0.52);
+  color: var(--ink-color);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+
+  &:hover {
+    border-color: rgba(217, 21, 30, 0.42);
+    color: var(--brand-red);
+  }
+
+  &.is-active {
+    border-color: var(--brand-red);
+    background: rgba(217, 21, 30, 0.1);
+    color: var(--brand-red);
+    box-shadow: inset 0 -3px 0 rgba(217, 21, 30, 0.28);
+  }
+}
+
+.v4-data-panel {
+  margin-top: clamp(16px, 2vw, 24px);
+  padding: clamp(20px, 2.4vw, 28px);
+  border: 1px solid var(--paper-border);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.06);
+}
+
+.v4-data-panel__loading {
+  min-height: clamp(280px, 36vw, 360px);
+  display: grid;
+  place-items: center;
+  color: var(--muted-color);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.v4-data-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--paper-border);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.v4-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+
+  th,
+  td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid rgba(20, 20, 20, 0.08);
+    color: var(--ink-color);
+    font-size: 14px;
+  }
+
+  th {
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--muted-color);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  tbody tr:hover {
+    background: rgba(217, 21, 30, 0.04);
+  }
+}
+
+@media (max-width: 767px) {
+  .v4-data-tabs,
+  .v4-data-subtabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}

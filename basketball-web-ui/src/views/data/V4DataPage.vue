@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import PaperTear from '@/components/common/PaperTear.vue'
+import PublicPageLayout from '@/components/layout/PublicPageLayout.vue'
+import PublicEmptyState from '@/components/common/PublicEmptyState.vue'
 import {
   getV4PublicPlayerStat,
   getV4PublicRank,
@@ -17,8 +18,9 @@ import type {
   V4PublicTeamStatItem,
 } from '@/api/types/v4Public'
 import { displayText, formatDecimal } from '@/utils/publicDisplay'
-import { v4PlatformLabel, v4RankTypeLabel, v4SeriesLabel } from '@/utils/v4Display'
-import '@/views/events/styles/v4-events.scss'
+import { v4RankTypeLabel } from '@/utils/v4Display'
+import V4DataHero from './components/V4DataHero.vue'
+import './styles/v4-data-page.scss'
 
 type DataPanel = 'standing' | 'team' | 'player' | 'rank'
 
@@ -41,6 +43,35 @@ const currentSeason = computed(() =>
 )
 
 const divisions = computed<V4PublicDivisionBrief[]>(() => currentSeason.value?.divisions ?? [])
+
+const mainTabs = [
+  ['standing', '积分榜'],
+  ['team', '球队统计'],
+  ['player', '球员统计'],
+  ['rank', '排行榜'],
+] as const
+
+const rankTabs = ['PLAYER_SCORE', 'PLAYER_ASSIST', 'PLAYER_REBOUND'] as const
+
+const emptyState = computed(() => {
+  if (activePanel.value === 'standing') {
+    return { title: '暂无积分榜数据', description: '比赛数据审核通过后自动生成' }
+  }
+  if (activePanel.value === 'team') {
+    return { title: '暂无球队统计数据', description: '比赛数据审核通过后自动生成' }
+  }
+  if (activePanel.value === 'player') {
+    return { title: '暂无球员统计数据', description: '比赛数据审核通过后自动生成' }
+  }
+  return { title: '暂无排行榜数据', description: '比赛数据审核通过后自动生成' }
+})
+
+const hasPanelData = computed(() => {
+  if (activePanel.value === 'standing') return standings.value.length > 0
+  if (activePanel.value === 'team') return teamStats.value.length > 0
+  if (activePanel.value === 'player') return playerStats.value.length > 0
+  return ranks.value.length > 0
+})
 
 async function loadSeasons() {
   loading.value = true
@@ -99,205 +130,132 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="data-center-page v4-events-page">
-    <section class="v4-events-hero">
-      <div class="site-shell">
-        <p class="v4-events-hero__eyebrow">数据中心</p>
-        <h1 class="v4-events-hero__title">V4 赛区数据</h1>
-        <p class="v4-events-hero__desc">按 Season + Division 浏览积分榜、球队统计、球员统计与排行榜。</p>
-        <div v-if="loading" class="v4-state">加载中...</div>
-        <div v-else-if="error" class="v4-state v4-state--error">{{ error }}</div>
-        <template v-else>
-          <div class="v4-data-filters">
-            <label>
-              赛季
-              <select v-model="selectedSeasonId" class="v4-select">
-                <option v-for="season in seasons" :key="season.seasonId" :value="season.seasonId">
-                  {{ v4SeriesLabel(season.seriesCode) }} · {{ displayText(season.displayTitle) }}
-                </option>
-              </select>
-            </label>
-            <label>
-              赛区
-              <select v-model="selectedDivisionId" class="v4-select">
-                <option v-for="division in divisions" :key="division.divisionId" :value="division.divisionId">
-                  {{ v4PlatformLabel(division.platformCode) }} · {{ displayText(division.divisionName) }}
-                </option>
-              </select>
-            </label>
-          </div>
-        </template>
-      </div>
-    </section>
+  <PublicPageLayout>
+    <template #hero>
+      <V4DataHero
+        :loading="loading"
+        :error="error"
+        :seasons="seasons"
+        :divisions="divisions"
+        :selected-season-id="selectedSeasonId"
+        :selected-division-id="selectedDivisionId"
+        @update:selected-season-id="selectedSeasonId = $event"
+        @update:selected-division-id="selectedDivisionId = $event"
+      />
+    </template>
 
-    <section class="v4-events-list-section">
-      <div class="site-shell">
-        <div class="v4-stats-subtabs">
+    <div class="site-shell v4-data-page__shell">
+      <div class="v4-data-page__module">
+        <nav class="v4-data-tabs" aria-label="数据分类">
           <button
-            v-for="item in ([['standing', '积分榜'], ['team', '球队统计'], ['player', '球员统计'], ['rank', '排行榜']] as const)"
+            v-for="item in mainTabs"
             :key="item[0]"
             type="button"
-            class="v4-detail-tabs__btn"
-            :class="{ 'v4-detail-tabs__btn--active': activePanel === item[0] }"
+            class="v4-data-tabs__btn"
+            :class="{ 'is-active': activePanel === item[0] }"
             @click="activePanel = item[0]"
           >
             {{ item[1] }}
           </button>
-        </div>
-        <div v-if="activePanel === 'rank'" class="v4-stats-subtabs">
+        </nav>
+
+        <div v-if="activePanel === 'rank'" class="v4-data-subtabs" aria-label="排行榜类型">
           <button
-            v-for="type in ['PLAYER_SCORE', 'PLAYER_ASSIST', 'PLAYER_REBOUND']"
+            v-for="type in rankTabs"
             :key="type"
             type="button"
-            class="v4-detail-tabs__btn"
-            :class="{ 'v4-detail-tabs__btn--active': rankType === type }"
+            class="v4-data-tabs__btn"
+            :class="{ 'is-active': rankType === type }"
             @click="rankType = type"
           >
             {{ v4RankTypeLabel(type) }}
           </button>
         </div>
 
-        <div class="data-center-panel" style="margin-top: 20px">
-          <div class="data-center-panel__tear-top" aria-hidden="true">
-            <PaperTear position="top" tone="light" />
-          </div>
-          <div class="data-center-panel__shell">
-            <div class="data-center-panel__body">
-              <div v-if="panelLoading" class="v4-state">加载中...</div>
-              <template v-else>
-                <div v-if="activePanel === 'standing'">
-                  <div v-if="!standings.length" class="v4-state">暂无积分榜</div>
-                  <div v-else class="v4-table-wrap">
-                    <table class="v4-table">
-                      <thead>
-                        <tr>
-                          <th>排名</th><th>队伍</th><th>胜</th><th>负</th><th>净胜分</th><th>积分</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="row in standings" :key="row.eventTeamId">
-                          <td>{{ row.rankNo ?? '--' }}</td>
-                          <td>{{ displayText(row.teamName) }}</td>
-                          <td>{{ row.winCount ?? 0 }}</td>
-                          <td>{{ row.loseCount ?? 0 }}</td>
-                          <td>{{ row.pointDiff ?? 0 }}</td>
-                          <td>{{ row.standingPoints ?? 0 }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                <div v-else-if="activePanel === 'team'">
-                  <div v-if="!teamStats.length" class="v4-state">暂无球队统计</div>
-                  <div v-else class="v4-table-wrap">
-                    <table class="v4-table">
-                      <thead>
-                        <tr>
-                          <th>队伍</th><th>场次</th><th>场均得分</th><th>篮板</th><th>助攻</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="row in teamStats" :key="row.eventTeamId">
-                          <td>{{ displayText(row.teamName) }}</td>
-                          <td>{{ row.matchCount ?? 0 }}</td>
-                          <td>{{ formatDecimal(row.avgPointsFor) }}</td>
-                          <td>{{ row.rebound ?? 0 }}</td>
-                          <td>{{ row.assist ?? 0 }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                <div v-else-if="activePanel === 'player'">
-                  <div v-if="!playerStats.length" class="v4-state">暂无球员统计</div>
-                  <div v-else class="v4-table-wrap">
-                    <table class="v4-table">
-                      <thead>
-                        <tr>
-                          <th>球员</th><th>球队</th><th>场均得分</th><th>场均篮板</th><th>场均助攻</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="row in playerStats" :key="row.eventPlayerId">
-                          <td>{{ displayText(row.playerName) }}</td>
-                          <td>{{ displayText(row.teamName) }}</td>
-                          <td>{{ formatDecimal(row.avgPoints) }}</td>
-                          <td>{{ formatDecimal(row.avgRebound) }}</td>
-                          <td>{{ formatDecimal(row.avgAssist) }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                <div v-else>
-                  <div v-if="!ranks.length" class="v4-state">暂无排行榜</div>
-                  <div v-else class="v4-table-wrap">
-                    <table class="v4-table">
-                      <thead>
-                        <tr><th>排名</th><th>名称</th><th>数值</th></tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="row in ranks" :key="`${row.rankNo}-${row.eventPlayerId || row.eventTeamId}`">
-                          <td>{{ row.rankNo ?? '--' }}</td>
-                          <td>{{ displayText(row.playerName || row.teamName) }}</td>
-                          <td>{{ formatDecimal(row.rankValue) }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </template>
+        <div class="v4-data-panel">
+          <div v-if="panelLoading" class="v4-data-panel__loading">加载中...</div>
+          <template v-else-if="!hasPanelData">
+            <PublicEmptyState
+              :title="emptyState.title"
+              :description="emptyState.description"
+            />
+          </template>
+          <template v-else>
+            <div v-if="activePanel === 'standing'" class="v4-data-table-wrap">
+              <table class="v4-data-table">
+                <thead>
+                  <tr>
+                    <th>排名</th><th>队伍</th><th>胜</th><th>负</th><th>净胜分</th><th>积分</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in standings" :key="row.eventTeamId">
+                    <td>{{ row.rankNo ?? '--' }}</td>
+                    <td>{{ displayText(row.teamName) }}</td>
+                    <td>{{ row.winCount ?? 0 }}</td>
+                    <td>{{ row.loseCount ?? 0 }}</td>
+                    <td>{{ row.pointDiff ?? 0 }}</td>
+                    <td>{{ row.standingPoints ?? 0 }}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-          </div>
+
+            <div v-else-if="activePanel === 'team'" class="v4-data-table-wrap">
+              <table class="v4-data-table">
+                <thead>
+                  <tr>
+                    <th>队伍</th><th>场次</th><th>场均得分</th><th>篮板</th><th>助攻</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in teamStats" :key="row.eventTeamId">
+                    <td>{{ displayText(row.teamName) }}</td>
+                    <td>{{ row.matchCount ?? 0 }}</td>
+                    <td>{{ formatDecimal(row.avgPointsFor) }}</td>
+                    <td>{{ row.rebound ?? 0 }}</td>
+                    <td>{{ row.assist ?? 0 }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div v-else-if="activePanel === 'player'" class="v4-data-table-wrap">
+              <table class="v4-data-table">
+                <thead>
+                  <tr>
+                    <th>球员</th><th>球队</th><th>场均得分</th><th>场均篮板</th><th>场均助攻</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in playerStats" :key="row.eventPlayerId">
+                    <td>{{ displayText(row.playerName) }}</td>
+                    <td>{{ displayText(row.teamName) }}</td>
+                    <td>{{ formatDecimal(row.avgPoints) }}</td>
+                    <td>{{ formatDecimal(row.avgRebound) }}</td>
+                    <td>{{ formatDecimal(row.avgAssist) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div v-else class="v4-data-table-wrap">
+              <table class="v4-data-table">
+                <thead>
+                  <tr><th>排名</th><th>名称</th><th>数值</th></tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in ranks" :key="`${row.rankNo}-${row.eventPlayerId || row.eventTeamId}`">
+                    <td>{{ row.rankNo ?? '--' }}</td>
+                    <td>{{ displayText(row.playerName || row.teamName) }}</td>
+                    <td>{{ formatDecimal(row.rankValue) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
         </div>
       </div>
-    </section>
-  </div>
+    </div>
+  </PublicPageLayout>
 </template>
-
-<style scoped lang="scss">
-.v4-data-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 16px;
-
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    color: rgba(255, 255, 255, 0.72);
-    font-size: 13px;
-    font-weight: 700;
-  }
-}
-
-.v4-select {
-  min-width: 220px;
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 2px;
-  background: rgba(0, 0, 0, 0.24);
-  color: #fff;
-  font-weight: 700;
-}
-
-.data-center-panel__shell {
-  background: #e9e7e7;
-  padding: 24px 16px 32px;
-}
-
-.data-center-panel__body .v4-state {
-  color: #333;
-}
-
-.data-center-panel__body .v4-table th,
-.data-center-panel__body .v4-table td {
-  color: #171717;
-}
-
-.data-center-panel__body .v4-table th {
-  color: rgba(0, 0, 0, 0.56);
-}
-</style>

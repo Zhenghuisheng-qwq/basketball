@@ -13,20 +13,20 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="v4-events-list-hero" aria-label="CNPA 赛事中心">
-    <div class="v4-events-list-hero__bg" aria-hidden="true" />
-    <div class="v4-events-list-hero__overlay" aria-hidden="true" />
+  <section class="public-hero v4-events-list-hero" aria-label="CNPA 赛事中心">
+    <div class="public-hero__bg" aria-hidden="true" />
+    <div class="public-hero__overlay" aria-hidden="true" />
 
-    <div class="site-shell v4-events-list-hero__shell">
-      <nav class="v4-events-list-hero__breadcrumb" aria-label="面包屑">
-        <router-link to="/" class="v4-events-list-hero__crumb">首页</router-link>
-        <span class="v4-events-list-hero__crumb-sep">/</span>
-        <span class="v4-events-list-hero__crumb v4-events-list-hero__crumb--current">赛事</span>
+    <div class="site-shell public-hero__inner">
+      <nav class="public-hero__breadcrumb" aria-label="面包屑">
+        <router-link to="/" class="public-hero__crumb">首页</router-link>
+        <span class="public-hero__crumb-sep">/</span>
+        <span class="public-hero__crumb public-hero__crumb--current">赛事</span>
       </nav>
 
-      <p class="v4-events-list-hero__eyebrow">COMPETITION CENTER</p>
-      <h1 class="v4-events-list-hero__title">赛事中心</h1>
-      <p class="v4-events-list-hero__desc">
+      <p class="public-hero__eyebrow">COMPETITION CENTER</p>
+      <h1 class="public-hero__title">赛事中心</h1>
+      <p class="public-hero__desc">
         选择你的赛场，参与 CNPA PC 与 PS/Xbox 线上篮球赛事。
       </p>
 
@@ -64,102 +64,10 @@ const emit = defineEmits<{
         </button>
       </div>
     </div>
-
-    <div class="v4-events-list-hero__tear" aria-hidden="true" />
   </section>
 </template>
 
 <style scoped lang="scss">
-.v4-events-list-hero {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-  background: #000;
-}
-
-.v4-events-list-hero__bg {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(118deg, rgba(8, 8, 8, 0.94) 0%, rgba(142, 0, 8, 0.72) 42%, rgba(225, 6, 19, 0.58) 100%),
-    repeating-linear-gradient(
-      -32deg,
-      rgba(255, 255, 255, 0.03) 0,
-      rgba(255, 255, 255, 0.03) 1px,
-      transparent 1px,
-      transparent 14px
-    ),
-    radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.08) 0, transparent 36%);
-}
-
-.v4-events-list-hero__overlay {
-  position: absolute;
-  inset: 0;
-  opacity: 0.35;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.14) 0.6px, transparent 0.6px);
-  background-size: 5px 5px;
-}
-
-.v4-events-list-hero__shell {
-  position: relative;
-  z-index: 2;
-  padding: clamp(28px, 4vw, 52px) 0 clamp(36px, 5vw, 56px);
-}
-
-.v4-events-list-hero__breadcrumb {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 18px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.v4-events-list-hero__crumb {
-  color: rgba(255, 255, 255, 0.72);
-  text-decoration: none;
-  transition: color 0.2s ease;
-
-  &:hover {
-    color: #fff;
-  }
-
-  &--current {
-    color: #fff;
-  }
-}
-
-.v4-events-list-hero__crumb-sep {
-  color: rgba(255, 255, 255, 0.36);
-}
-
-.v4-events-list-hero__eyebrow {
-  margin: 0 0 10px;
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 13px;
-  font-style: italic;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.v4-events-list-hero__title {
-  margin: 0 0 10px;
-  color: #fff;
-  font-size: clamp(32px, 4.8vw, 52px);
-  font-weight: 900;
-  line-height: 1.08;
-}
-
-.v4-events-list-hero__desc {
-  margin: 0;
-  max-width: 720px;
-  color: rgba(255, 255, 255, 0.84);
-  font-size: clamp(14px, 1.6vw, 17px);
-  line-height: 1.65;
-}
-
 .v4-events-list-hero__stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -230,18 +138,6 @@ const emit = defineEmits<{
   }
 }
 
-.v4-events-list-hero__tear {
-  position: relative;
-  z-index: 3;
-  height: clamp(18px, 2vw, 28px);
-  margin-bottom: -1px;
-  background:
-    linear-gradient(175deg, transparent 46%, var(--cnpa-paper-bg, #e9e7e7) 46%),
-    linear-gradient(185deg, transparent 52%, var(--cnpa-paper-bg, #e9e7e7) 52%);
-  background-size: 100% 100%, 100% 100%;
-  filter: drop-shadow(0 -2px 0 rgba(0, 0, 0, 0.12));
-}
-
 @media (max-width: 1023px) {
   .v4-events-list-hero__stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -249,10 +145,6 @@ const emit = defineEmits<{
 }
 
 @media (max-width: 767px) {
-  .v4-events-list-hero__shell {
-    padding-bottom: 28px;
-  }
-
   .v4-events-list-hero__filter {
     flex-wrap: nowrap;
     overflow-x: auto;

@@ -84,6 +84,8 @@ public class FormatSnapshotReadySpecification {
 
             validateBestOf(stage.getBestOf());
 
+            validateSupportedCompetitionFormat(stage);
+
             validateGroupingMode(stage);
 
             validateAdvancement(stage);
@@ -167,6 +169,12 @@ public class FormatSnapshotReadySpecification {
         if (adv == null) {
 
             throw new ServiceException("阶段「" + stage.getStageName() + "」晋级方式无效");
+
+        }
+
+        if (adv == AdvancementTypeEnum.SERIES_WINNER) {
+
+            throw new ServiceException("阶段「" + stage.getStageName() + "」暂不支持系列赛胜者（SERIES_WINNER）晋级方式");
 
         }
 
@@ -254,11 +262,31 @@ public class FormatSnapshotReadySpecification {
 
 
 
+    private void validateSupportedCompetitionFormat(BasketDivisionStage stage) {
+
+        String format = stage.getCompetitionFormat();
+
+        if (CompetitionFormatEnum.ROUND_ROBIN.getCode().equals(format)
+
+                || CompetitionFormatEnum.SINGLE_ELIMINATION.getCode().equals(format)) {
+
+            return;
+
+        }
+
+        throw new ServiceException("阶段「" + stage.getStageName() + "」暂不支持该比赛方式，"
+
+                + "当前仅允许单循环（ROUND_ROBIN）、小组赛（分组循环）和 BO1 单败淘汰（SINGLE_ELIMINATION）");
+
+    }
+
+
+
     public static void validateBestOf(Integer bestOf) {
 
-        if (bestOf == null || bestOf <= 0 || bestOf % 2 == 0) {
+        if (bestOf == null || bestOf != 1) {
 
-            throw new ServiceException("best_of 必须为正奇数");
+            throw new ServiceException("当前版本仅支持 BO1（best_of=1），暂不支持 BO3/BO5 系列赛");
 
         }
 

@@ -1,5 +1,6 @@
 @use './variables.scss';
 @use './site-layout.scss';
+@use './public-page.scss';
 @use './components/paper-section';
 @use './home-page.scss';
 
@@ -62,8 +63,7 @@ a {
 }
 
 .events-inner {
-  width: calc(100% - 2 * var(--site-gutter));
-  max-width: var(--site-width);
+  width: var(--site-content-width);
   margin-inline: auto;
   padding-inline: var(--site-inner-padding);
   box-sizing: border-box;
