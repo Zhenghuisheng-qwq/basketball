@@ -1,7 +1,7 @@
 {
   "batchCode": "SMOKE_V2_20260805_FINAL",
-  "startTime": "2026-08-05T23:04:27+08:00",
-  "endTime": "2026-08-05T23:04:30+08:00",
+  "startTime": "2026-08-06T01:46:24+08:00",
+  "endTime": "2026-08-06T01:46:28+08:00",
   "results": [
     {
       "name": "data_check_pre",
@@ -55,33 +55,58 @@
     },
     {
       "name": "stage_team_sync_1",
-      "status": "PASS",
-      "detail": "reuse prior run inserted=1 db=1 (final db=4)"
+      "status": "FAIL",
+      "detail": "sync={} db=3"
     },
     {
       "name": "stage_team_sync_2",
-      "status": "PASS",
-      "detail": "reuse prior run inserted=3 db=4 (final db=4)"
+      "status": "FAIL",
+      "detail": "sync={} db=3"
     },
     {
       "name": "stage_team_sync_3_idempotent",
+      "status": "FAIL",
+      "detail": "sync={} db=3"
+    },
+    {
+      "name": "schedule_stageTeam4",
+      "status": "FAIL",
+      "detail": "batch=0 matches=6/6 rounds=3/3 nullH=0 nullA=0 dup=0 perTeam={23: 3, 26: 3, 24: 3, 25: 3} perRound={1: 2, 2: 2, 3: 2}"
+    },
+    {
+      "name": "schedule_4team_duplicate_reject",
       "status": "PASS",
-      "detail": "reuse prior run inserted=0 db=4"
+      "detail": "second gen code=500 msg=当前阶段状态不允许生成赛程"
     },
     {
       "name": "stage_team_schedule_publish",
       "status": "FAIL",
-      "detail": "gen=500 pub=500 msg=阶段尚未生成赛程"
+      "detail": "gen=500 pub=500 msg=仅草稿赛程可发布"
     },
     {
       "name": "stage_team_gate_fallback",
       "status": "PASS",
-      "detail": "division14 赛程生成失败，改用 division10/stage5 已发布赛程验证门禁"
+      "detail": "division14 赛程发布失败，改用 division10/stage5 已发布赛程验证门禁"
     },
     {
       "name": "stage_team_post_schedule_gate",
       "status": "PASS",
       "detail": "blocked=True msg=该阶段赛程已发布，新增参赛队伍须先撤销晋级或联系管理员处理"
+    },
+    {
+      "name": "schedule_5team_setup",
+      "status": "FAIL",
+      "detail": "无法创建或复用 5 队 Division"
+    },
+    {
+      "name": "standing_template_patch",
+      "status": "PASS",
+      "detail": "HEAD_TO_HEAD/MANUAL 模板规则已补齐"
+    },
+    {
+      "name": "h2h_snapshot_setup",
+      "status": "FAIL",
+      "detail": "无法创建或复用 H2H Snapshot Division"
     },
     {
       "name": "standing_template_patch",
@@ -102,6 +127,31 @@
       "name": "standing_div10_locked_snapshot",
       "status": "PASS",
       "detail": "division10 补录规则链后 rebuild；decisive={'event_team_id': 17, 'rule_code': 'HEAD_TO_HEAD', 'is_decisive': 1, 'compare_value': '1'} ranks=[{'event_team_id': 17, 'rank_no': 2, 'win_count': 2}, {'event_team_id': 18, 'rank_no': 3, 'win_count': 2}]"
+    },
+    {
+      "name": "web_api_my_events_TEAM",
+      "status": "PASS",
+      "detail": "count=2 divisions=[10, 14] expect=10"
+    },
+    {
+      "name": "web_api_my_schedule_TEAM",
+      "status": "PASS",
+      "detail": "count=6 http=200"
+    },
+    {
+      "name": "web_api_my_events_PERSONAL",
+      "status": "PASS",
+      "detail": "count=2 divisions=[11, 12] expect=12"
+    },
+    {
+      "name": "web_api_my_schedule_PERSONAL",
+      "status": "PASS",
+      "detail": "count=0 http=200"
+    },
+    {
+      "name": "web_api_my_events_unauth",
+      "status": "PASS",
+      "detail": "code=401"
     },
     {
       "name": "web_ui_首页",
@@ -165,13 +215,18 @@
     },
     {
       "name": "web_api/basket/v4/player/my-events",
-      "status": "FAIL",
-      "detail": "GET /basket/v4/player/my-events code=500 msg=系统异常，请稍后重试"
+      "status": "PASS",
+      "detail": "HTTP 200"
     },
     {
-      "name": "web_api/basket/v4/player/my-schedule/list",
-      "status": "FAIL",
-      "detail": "GET /basket/v4/player/my-schedule/list code=500 msg=系统异常，请稍后重试"
+      "name": "web_api/basket/v4/player/my-schedule",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "web_ui_personal_center",
+      "status": "MANUAL_UI_PENDING",
+      "detail": "个人中心/我的赛事/我的赛程需浏览器 Network 回归；接口层已由 test_web_player_apis 覆盖"
     },
     {
       "name": "data_check_post",
@@ -197,6 +252,8 @@
     ],
     "stageTeamTestDivisionId": 14,
     "stageTeamTestStageId": 9,
+    "stageTeam4ScheduleBatchId": null,
+    "stageTeam4MatchCount": 6,
     "standingTestDivisionId": 10,
     "standingTestStageId": 5,
     "standingDivision10Rank17vs18": [
@@ -216,7 +273,19 @@
       "rule_code": "HEAD_TO_HEAD",
       "is_decisive": 1,
       "compare_value": "1"
-    }
+    },
+    "myEventsTEAMCount": 2,
+    "myEventsTEAMDivisions": [
+      10,
+      14
+    ],
+    "myScheduleTEAMCount": 6,
+    "myEventsPERSONALCount": 2,
+    "myEventsPERSONALDivisions": [
+      11,
+      12
+    ],
+    "mySchedulePERSONALCount": 0
   },
   "dataCheckPre": {
     "checks": [
@@ -433,6 +502,43 @@
             "cnt": 0
           }
         ]
+      },
+      {
+        "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+        "sql": "SELECT 'check_18_match_null_teams' AS check_id, COUNT(*) AS cnt\nFROM basket_match\nWHERE is_delete=0 AND (home_event_team_id IS NULL OR away_event_team_id IS NULL)",
+        "count": 0,
+        "status": "OK",
+        "blocking": false,
+        "samples": [
+          {
+            "check_id": "check_18_match_null_teams",
+            "cnt": 0
+          }
+        ]
+      },
+      {
+        "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+        "sql": "SELECT 'check_19_duplicate_match_pair' AS check_id, stage_id, LEAST(home_event_team_id, away_event_team_id) AS team_a,\n       GREATEST(home_event_team_id, away_event_team_id) AS team_b, COUNT(*) AS cn",
+        "count": 0,
+        "status": "OK",
+        "blocking": false,
+        "samples": []
+      },
+      {
+        "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+        "sql": "SELECT 'check_20_duplicate_stage_team' AS check_id, stage_id, event_team_id, COUNT(*) AS cnt\nFROM basket_division_stage_team WHERE is_delete=0\nGROUP BY stage_id, event_team_id HAVING COUNT(*)>1",
+        "count": 0,
+        "status": "OK",
+        "blocking": false,
+        "samples": []
+      },
+      {
+        "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+        "sql": "SELECT 'check_21_duplicate_schedule_batch' AS check_id, stage_id, publish_status, COUNT(*) AS cnt\nFROM basket_schedule_batch WHERE is_delete=0 AND publish_status IN ('DRAFT','PUBLISHED')\nGROUP BY stag",
+        "count": 0,
+        "status": "OK",
+        "blocking": false,
+        "samples": []
       }
     ],
     "exitCode": 0
@@ -652,6 +758,43 @@
             "cnt": 0
           }
         ]
+      },
+      {
+        "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+        "sql": "SELECT 'check_18_match_null_teams' AS check_id, COUNT(*) AS cnt\nFROM basket_match\nWHERE is_delete=0 AND (home_event_team_id IS NULL OR away_event_team_id IS NULL)",
+        "count": 0,
+        "status": "OK",
+        "blocking": false,
+        "samples": [
+          {
+            "check_id": "check_18_match_null_teams",
+            "cnt": 0
+          }
+        ]
+      },
+      {
+        "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+        "sql": "SELECT 'check_19_duplicate_match_pair' AS check_id, stage_id, LEAST(home_event_team_id, away_event_team_id) AS team_a,\n       GREATEST(home_event_team_id, away_event_team_id) AS team_b, COUNT(*) AS cn",
+        "count": 0,
+        "status": "OK",
+        "blocking": false,
+        "samples": []
+      },
+      {
+        "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+        "sql": "SELECT 'check_20_duplicate_stage_team' AS check_id, stage_id, event_team_id, COUNT(*) AS cnt\nFROM basket_division_stage_team WHERE is_delete=0\nGROUP BY stage_id, event_team_id HAVING COUNT(*)>1",
+        "count": 0,
+        "status": "OK",
+        "blocking": false,
+        "samples": []
+      },
+      {
+        "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+        "sql": "SELECT 'check_21_duplicate_schedule_batch' AS check_id, stage_id, publish_status, COUNT(*) AS cnt\nFROM basket_schedule_batch WHERE is_delete=0 AND publish_status IN ('DRAFT','PUBLISHED')\nGROUP BY stag",
+        "count": 0,
+        "status": "OK",
+        "blocking": false,
+        "samples": []
       }
     ],
     "exitCode": 0

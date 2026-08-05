@@ -141,6 +141,38 @@ export function rebuildFormatSnapshot(divisionId: number, templateId: number): P
   return request({ url: `/basket/v4/divisions/${divisionId}/format-snapshot/rebuild`, method: 'post', params: { templateId } })
 }
 
+export interface BasketDivisionFormatPlanApplyReq {
+  planCode: string
+  expectedTeamCount: number
+  groupCount?: number
+  roundRobinLegs?: number
+  qualifiersPerGroup?: number
+  overallAdvanceCount?: number
+  eliminationPairingRule?: string
+  winPoints?: number
+  lossPoints?: number
+}
+
+export interface FormatPlanValidationResultVo {
+  valid: boolean
+  errors?: string[]
+  warnings?: string[]
+  qualifierCount?: number
+  expectedGroupSize?: number
+  expectedGroupMatchCount?: number
+  expectedEliminationMatchCount?: number
+  expectedTotalMatchCount?: number
+  eliminationStartRound?: string
+}
+
+export function applyFormatPlan(divisionId: number, data: BasketDivisionFormatPlanApplyReq): Promise<AjaxResult<BasketDivisionFormatSnapshotVo>> {
+  return request({ url: `/basket/v4/divisions/${divisionId}/format-plan/apply`, method: 'post', data })
+}
+
+export function validateFormatPlan(data: BasketDivisionFormatPlanApplyReq): Promise<AjaxResult<FormatPlanValidationResultVo>> {
+  return request({ url: '/basket/v4/divisions/format-plan/validate', method: 'post', data })
+}
+
 export function lockFormatSnapshot(divisionId: number): Promise<AjaxResult> {
   return request({ url: `/basket/v4/divisions/${divisionId}/format-snapshot/lock`, method: 'post' })
 }

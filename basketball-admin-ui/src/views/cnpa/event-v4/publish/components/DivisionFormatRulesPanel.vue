@@ -32,7 +32,7 @@
         type="success"
         plain
         :loading="locking"
-        :disabled="actionBusy"
+        :disabled="actionBusy || !canLockSnapshot"
         v-if="snapshot?.lockable"
         v-hasPermi="['basket:v4FormatRule:lock']"
         @click="handleLockSnapshot"
@@ -130,7 +130,7 @@
                 </el-select>
               </el-form-item>
               <el-form-item>
-                <el-button type="primary" :loading="applyingScheme" :disabled="actionBusy" @click="applyQuickCreateScheme">应用赛制方案</el-button>
+                <el-button type="primary" :loading="applyingScheme" :disabled="actionBusy || !canApplyScheme" @click="applyQuickCreateScheme">应用赛制方案</el-button>
               </el-form-item>
             </el-form>
           </el-card>
@@ -395,6 +395,7 @@ import { computed, getCurrentInstance, reactive, ref, watch } from 'vue'
 import type { FormInstance } from 'element-plus'
 import {
   addFormatStage,
+  applyFormatPlan,
   deleteFormatStage,
   getFormatSnapshot,
   listV4FormatTemplates,
@@ -404,6 +405,7 @@ import {
   saveTieBreakRules,
   updateFormatStage,
   type BasketDivisionFormatSnapshotVo,
+  type BasketDivisionFormatPlanApplyReq,
   type BasketDivisionStageSaveReq,
   type BasketDivisionStageVo,
   type BasketFormatTemplateListVo
@@ -583,6 +585,13 @@ const quickValidation = computed(() => {
 const stageValidation = computed(() =>
   validateV4StageCombination(sortedStages.value, props.maxTeamCount)
 )
+
+const canApplyScheme = computed(() => {
+  if (!selectedScheme.value || selectedScheme.value === 'CUSTOM') return false
+  return quickValidation.value.valid
+})
+
+const canLockSnapshot = computed(() => stageValidation.value.valid && sortedStages.value.length > 0)
 
 const quickPreviewText = computed(() => {
   if (!selectedScheme.value || selectedScheme.value === 'CUSTOM') return ''
@@ -798,6 +807,37 @@ async function syncStagesFromPayloads(payloads: V4SchemeStagePayload[]) {
   await loadSnapshot()
 }
 
+function buildFormatPlanApplyReq(schemeId: V4FormatSchemeId): BasketDivisionFormatPlanApplyReq | null {
+  if (schemeId === 'GROUP_TO_ELIM') {
+    return {
+      planCode: 'GROUP_TO_ELIM',
+      expectedTeamCount: props.maxTeamCount,
+      groupCount: quickParams.groupCount ?? 4,
+      roundRobinLegs: quickParams.roundRobinCycles ?? 1,
+      qualifiersPerGroup: quickParams.advancePerGroup ?? 2,
+      eliminationPairingRule: quickParams.pairingRule || 'HIGH_VS_LOW',
+      winPoints: 2,
+      lossPoints: 1
+    }
+  }
+  if (schemeId === 'ROUND_ROBIN_TO_ELIM') {
+    return {
+      planCode: 'ROUND_ROBIN_TO_ELIM',
+      expectedTeamCount: props.maxTeamCount,
+      roundRobinLegs: quickParams.roundRobinCycles ?? 1,
+      overallAdvanceCount: quickParams.overallAdvanceCount ?? 4,
+      eliminationPairingRule: quickParams.pairingRule || 'HIGH_VS_LOW',
+      winPoints: 2,
+      lossPoints: 1
+    }
+  }
+  return null
+}
+
+function isComboScheme(schemeId: V4FormatSchemeId): boolean {
+  return schemeId === 'GROUP_TO_ELIM' || schemeId === 'ROUND_ROBIN_TO_ELIM'
+}
+
 async function applyQuickCreateScheme() {
   if (actionBusy.value) return
   const schemeId = selectedScheme.value
@@ -807,31 +847,47 @@ async function applyQuickCreateScheme() {
     proxy!.$modal.msgError(validation.messages.join('\n'))
     return
   }
-  const scheme = getV4FormatSchemeOption(schemeId)
-  if (!scheme?.baseTemplateCode) {
-    proxy!.$modal.msgError('该方案暂不可用')
-    return
-  }
-  const template = formatTemplateList.value.find((t) => t.templateCode === scheme.baseTemplateCode)
-  if (!template?.id) {
-    proxy!.$modal.msgError('找不到对应的赛制模板，请联系管理员')
-    return
-  }
 
   applyingScheme.value = true
   actionBusy.value = true
+  panelLoading.value = true
   try {
-    emit('update:formatTemplateId', template.id)
-    await rebuildFormatSnapshot(props.divisionId, template.id)
-    const payloads = buildV4SchemeStagePayloads(schemeId, quickParams)
-    await syncStagesFromPayloads(payloads)
+    if (isComboScheme(schemeId)) {
+      const planReq = buildFormatPlanApplyReq(schemeId)
+      if (!planReq) {
+        proxy!.$modal.msgError('该组合方案暂不可用')
+        return
+      }
+      const res = await applyFormatPlan(props.divisionId, planReq)
+      snapshot.value = res.data || {}
+      emit('update:formatTemplateId', snapshot.value?.sourceTemplateId)
+      emit('snapshot-change', snapshot.value!)
+      ensureRulesUiState()
+    } else {
+      const scheme = getV4FormatSchemeOption(schemeId)
+      if (!scheme?.baseTemplateCode) {
+        proxy!.$modal.msgError('该方案暂不可用')
+        return
+      }
+      const template = formatTemplateList.value.find((t) => t.templateCode === scheme.baseTemplateCode)
+      if (!template?.id) {
+        proxy!.$modal.msgError('找不到对应的赛制模板，请联系管理员')
+        return
+      }
+      emit('update:formatTemplateId', template.id)
+      await rebuildFormatSnapshot(props.divisionId, template.id)
+      const payloads = buildV4SchemeStagePayloads(schemeId, quickParams)
+      await syncStagesFromPayloads(payloads)
+    }
     rulesMode.value = 'quick'
     rulesSectionTab.value = 'stages'
     emitChange()
     proxy!.$modal.msgSuccess('赛制方案已应用，请在「调整阶段」查看流程预览')
   } catch (e: any) {
+    await loadSnapshot()
     proxy!.$modal.msgError(e?.msg || e?.message || '应用赛制方案失败')
   } finally {
+    panelLoading.value = false
     actionBusy.value = false
     applyingScheme.value = false
   }

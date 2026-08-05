@@ -71,7 +71,8 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
                 Date timeA = a.getMatchTime();
                 Date timeB = b.getMatchTime();
                 if (timeA == null && timeB == null) {
-                    return Long.compare(b.getMatchId(), a.getMatchId());
+                    return Comparator.comparing(V4MyScheduleResp::getMatchId, Comparator.nullsLast(Comparator.reverseOrder()))
+                            .compare(a, b);
                 }
                 if (timeA == null) {
                     return 1;
@@ -83,12 +84,13 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
                 if (timeCompare != 0) {
                     return timeCompare;
                 }
-                return Long.compare(b.getMatchId(), a.getMatchId());
+                return Comparator.comparing(V4MyScheduleResp::getMatchId, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .compare(a, b);
             });
         } else {
             filtered.sort(Comparator
                     .comparing(V4MyScheduleResp::getMatchTime, Comparator.nullsLast(Comparator.naturalOrder()))
-                    .thenComparing(V4MyScheduleResp::getMatchId));
+                    .thenComparing(V4MyScheduleResp::getMatchId, Comparator.nullsLast(Comparator.naturalOrder())));
         }
         return filtered;
     }

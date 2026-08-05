@@ -1,9 +1,11 @@
 package com.zhs.basket.service.v4;
 
+import com.zhs.basket.dto.v4.BasketDivisionFormatPlanApplyReq;
 import com.zhs.basket.dto.v4.BasketDivisionStageOrderReq;
 import com.zhs.basket.dto.v4.BasketDivisionStageSaveReq;
 import com.zhs.basket.dto.v4.BasketDivisionTieBreakRuleSaveReq;
 import com.zhs.basket.vo.v4.BasketDivisionFormatSnapshotVo;
+import com.zhs.basket.vo.v4.FormatPlanValidationResultVo;
 
 public interface IBasketV4FormatSnapshotService {
     Long createDraftSnapshot(Long divisionId, Long templateId);
@@ -25,4 +27,8 @@ public interface IBasketV4FormatSnapshotService {
     void reorderStages(Long divisionId, BasketDivisionStageOrderReq req);
 
     void saveTieBreakRules(Long divisionId, BasketDivisionTieBreakRuleSaveReq req);
+
+    FormatPlanValidationResultVo validateFormatPlan(BasketDivisionFormatPlanApplyReq req);
+
+    BasketDivisionFormatSnapshotVo applyFormatPlan(Long divisionId, BasketDivisionFormatPlanApplyReq req);
 }

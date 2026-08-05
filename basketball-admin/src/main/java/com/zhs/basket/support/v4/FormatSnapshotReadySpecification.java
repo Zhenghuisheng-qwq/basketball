@@ -16,15 +16,15 @@ import com.zhs.common.exception.ServiceException;
 
 
 
+import com.zhs.basket.support.v4.stage.StageCombinationValidator;
+
+import java.util.Comparator;
 import java.util.HashMap;
-
 import java.util.HashSet;
-
 import java.util.List;
-
 import java.util.Map;
-
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 
@@ -47,20 +47,22 @@ public class FormatSnapshotReadySpecification {
 
 
     public void validate(List<BasketDivisionStage> stages, List<BasketDivisionTieBreakRule> tieBreakRules) {
-
         if (stages == null || stages.isEmpty()) {
-
-            throw new ServiceException("规则快照至少需要一个阶段");
-
+            throw new ServiceException("规则快照至少需要一个比赛阶段");
         }
 
+        List<BasketDivisionStage> ordered = stages.stream()
+                .sorted(Comparator.comparing(BasketDivisionStage::getStageOrder))
+                .collect(Collectors.toList());
+
+        validateStageOrderContinuous(ordered);
+        new StageCombinationValidator().validate(ordered);
+
         Set<Integer> orders = new HashSet<>();
-
         Set<String> codes = new HashSet<>();
-
         Map<String, BasketDivisionStage> codeToStage = new HashMap<>();
 
-        for (BasketDivisionStage stage : stages) {
+        for (BasketDivisionStage stage : ordered) {
 
             if (stage.getStageOrder() == null || stage.getStageOrder() <= 0) {
 
@@ -106,30 +108,72 @@ public class FormatSnapshotReadySpecification {
 
         }
 
-        for (BasketDivisionStage stage : stages) {
+        for (int i = 0; i < ordered.size(); i++) {
+            BasketDivisionStage stage = ordered.get(i);
+            boolean isLast = i == ordered.size() - 1;
+            AdvancementTypeEnum adv = AdvancementTypeEnum.fromCode(stage.getAdvancementType());
+            boolean hasAdvancement = adv != null && adv != AdvancementTypeEnum.NONE;
 
-            if (stage.getNextStageCode() != null && !stage.getNextStageCode().isEmpty()) {
-
-                if (!codes.contains(stage.getNextStageCode())) {
-
-                    throw new ServiceException("下一阶段编码不存在：" + stage.getNextStageCode());
-
+            if (isLast) {
+                if (hasAdvancement) {
+                    throw new ServiceException("最后阶段「" + stage.getStageName() + "」不应再配置晋级规则");
                 }
-
+                if (stage.getNextStageCode() != null && !stage.getNextStageCode().isEmpty()) {
+                    throw new ServiceException("最后阶段「" + stage.getStageName() + "」不应再指向下一阶段");
+                }
+            } else {
+                if (!hasAdvancement) {
+                    throw new ServiceException("阶段「" + stage.getStageName() + "」不是最后阶段，请配置晋级规则");
+                }
+                if (stage.getNextStageCode() == null || stage.getNextStageCode().isEmpty()) {
+                    throw new ServiceException("阶段「" + stage.getStageName() + "」需要指定下一比赛阶段");
+                }
+                if (!codes.contains(stage.getNextStageCode())) {
+                    throw new ServiceException("阶段「" + stage.getStageName() + "」的下一阶段配置无效，请重新选择");
+                }
+                BasketDivisionStage next = codeToStage.get(stage.getNextStageCode());
+                if (next != null && next.getStageOrder() != null && stage.getStageOrder() != null
+                        && next.getStageOrder() <= stage.getStageOrder()) {
+                    throw new ServiceException("阶段顺序与晋级关系不一致，请调整阶段顺序");
+                }
             }
-
         }
 
-        detectNextStageCycle(stages);
+        detectNextStageCycle(ordered);
+        validateEliminationAdvancementCount(ordered);
+    }
 
-        BasketDivisionStage last = stages.get(stages.size() - 1);
-
-        if (last.getNextStageCode() != null && !last.getNextStageCode().isEmpty()) {
-
-            throw new ServiceException("最后阶段不应配置下一阶段");
-
+    private void validateStageOrderContinuous(List<BasketDivisionStage> ordered) {
+        for (int i = 0; i < ordered.size(); i++) {
+            if (!Integer.valueOf(i + 1).equals(ordered.get(i).getStageOrder())) {
+                throw new ServiceException("阶段顺序必须为连续正整数");
+            }
         }
+    }
 
+    private void validateEliminationAdvancementCount(List<BasketDivisionStage> ordered) {
+        if (ordered.size() < 2) {
+            return;
+        }
+        BasketDivisionStage first = ordered.get(0);
+        BasketDivisionStage second = ordered.get(1);
+        if (!CompetitionFormatEnum.SINGLE_ELIMINATION.getCode().equals(second.getCompetitionFormat())) {
+            return;
+        }
+        int qualifierCount = 0;
+        AdvancementTypeEnum adv = AdvancementTypeEnum.fromCode(first.getAdvancementType());
+        if (adv == AdvancementTypeEnum.GROUP_TOP_N) {
+            int groupCount = first.getGroupCount() == null ? 0 : first.getGroupCount();
+            int perGroup = first.getAdvancementCount() == null ? 0 : first.getAdvancementCount();
+            qualifierCount = groupCount * perGroup;
+        } else if (adv == AdvancementTypeEnum.OVERALL_TOP_N) {
+            qualifierCount = first.getAdvancementCount() == null ? 0 : first.getAdvancementCount();
+        }
+        if (qualifierCount > 0 && !DivisionFormatPlanValidator.isPowerOfTwo(qualifierCount)) {
+            throw new ServiceException(String.format(
+                    "当前将有 %d 支球队晋级，但系统暂不支持 %d 支球队自动生成单败淘汰赛。请调整为 4 支或 8 支晋级。",
+                    qualifierCount, qualifierCount));
+        }
     }
 
 

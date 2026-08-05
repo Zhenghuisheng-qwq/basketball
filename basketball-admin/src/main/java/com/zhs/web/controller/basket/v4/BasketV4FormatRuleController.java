@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket.v4;
 
 import com.zhs.basket.constant.BasketEventV4Perms;
+import com.zhs.basket.dto.v4.BasketDivisionFormatPlanApplyReq;
 import com.zhs.basket.dto.v4.BasketDivisionStageOrderReq;
 import com.zhs.basket.dto.v4.BasketDivisionStageSaveReq;
 import com.zhs.basket.dto.v4.BasketDivisionTieBreakRuleSaveReq;
@@ -70,6 +71,19 @@ public class BasketV4FormatRuleController extends BaseController {
     public AjaxResult rebuild(@PathVariable Long divisionId, @RequestParam Long templateId) {
         snapshotService.rebuildDraftSnapshot(divisionId, templateId);
         return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_EDIT + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_EDIT + "')")
+    @PostMapping("/{divisionId}/format-plan/apply")
+    public AjaxResult applyFormatPlan(@PathVariable Long divisionId,
+                                      @RequestBody BasketDivisionFormatPlanApplyReq req) {
+        return success(snapshotService.applyFormatPlan(divisionId, req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_VIEW + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_QUERY + "')")
+    @PostMapping("/format-plan/validate")
+    public AjaxResult validateFormatPlan(@RequestBody BasketDivisionFormatPlanApplyReq req) {
+        return success(snapshotService.validateFormatPlan(req));
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_LOCK + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_OPEN + "')")

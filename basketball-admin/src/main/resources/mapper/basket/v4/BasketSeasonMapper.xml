@@ -134,7 +134,7 @@
 
     <update id="softDelete">
         update basket_season
-        set is_delete = 1, update_time = now()
+        set is_delete = id, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
 

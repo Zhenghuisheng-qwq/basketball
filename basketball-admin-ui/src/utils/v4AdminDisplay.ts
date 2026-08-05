@@ -553,10 +553,15 @@ export function assessV4DivisionReadiness(
   else if (!snapshot?.snapshotStatus) reasons.push('尚未配置赛制')
 
   const stages = snapshot?.stages || []
-  const hasValidStage = stages.length > 0 && stages.every(isStageConfigSupported)
+  const stageComboValidation = stages.length
+    ? validateV4StageCombination(stages, div.maxTeamCount)
+    : { valid: false, messages: ['至少需要添加一个比赛阶段'] as string[] }
+  const hasValidStage = stages.length > 0 && stages.every(isStageConfigSupported) && stageComboValidation.valid
   if (!stages.length) reasons.push('至少需要添加一个比赛阶段')
   else if (!stages.every(isStageConfigSupported)) {
     reasons.push('存在暂不支持的赛制配置（当前仅支持 BO1 循环赛/分组赛/单败淘汰）')
+  } else if (!stageComboValidation.valid) {
+    reasons.push(...stageComboValidation.messages)
   }
 
   const openRegistrationReady = basicComplete
@@ -1495,14 +1500,14 @@ export function validateV4QuickCreateParams(
       messages.push('晋级名额不能大于预计参赛队伍数')
     }
     if (!isV4PowerOfTwo(advanceCount)) {
-      messages.push(`当前将有 ${advanceCount} 支球队晋级，但系统暂不支持 ${advanceCount} 支队伍的淘汰赛轮空。请调整为 4 支或 8 支等 2 的幂次方晋级。`)
+      messages.push(`当前将有 ${advanceCount} 支球队晋级，但系统暂不支持 ${advanceCount} 支球队自动生成单败淘汰赛。请调整为 4 支或 8 支晋级。`)
     }
   }
 
   if (schemeId === 'GROUP_TO_ELIM') {
     const advanceTotal = calcV4AdvancementTotal(params, schemeId)
     if (!isV4PowerOfTwo(advanceTotal)) {
-      messages.push(`当前将有 ${advanceTotal} 支球队晋级，但系统暂不支持 ${advanceTotal} 支队伍的淘汰赛轮空。请调整为 4 支或 8 支等 2 的幂次方晋级。`)
+      messages.push(`当前将有 ${advanceTotal} 支球队晋级，但系统暂不支持 ${advanceTotal} 支球队自动生成单败淘汰赛。请调整为 4 支或 8 支晋级。`)
     }
   }
 
@@ -1570,7 +1575,7 @@ export function validateV4StageCombination(
       const nextStage = sorted.find((s) => s.stageCode === stage.nextStageCode)
       if (nextStage && (nextStage.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION') {
         if (!isV4PowerOfTwo(advanceTotal)) {
-          messages.push(`当前将有 ${advanceTotal} 支球队晋级，但系统暂不支持 ${advanceTotal} 支队伍的淘汰赛轮空。请调整为 4 支或 8 支晋级。`)
+          messages.push(`当前将有 ${advanceTotal} 支球队晋级，但系统暂不支持 ${advanceTotal} 支球队自动生成单败淘汰赛。请调整为 4 支或 8 支晋级。`)
         }
       }
     }
@@ -1579,7 +1584,7 @@ export function validateV4StageCombination(
       const nextStage = sorted.find((s) => s.stageCode === stage.nextStageCode)
       if (nextStage && (nextStage.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION') {
         if (!isV4PowerOfTwo(advanceTotal)) {
-          messages.push(`当前将有 ${advanceTotal} 支球队晋级，但系统暂不支持 ${advanceTotal} 支队伍的淘汰赛轮空。请调整为 4 支或 8 支晋级。`)
+          messages.push(`当前将有 ${advanceTotal} 支球队晋级，但系统暂不支持 ${advanceTotal} 支球队自动生成单败淘汰赛。请调整为 4 支或 8 支晋级。`)
         }
       }
     }

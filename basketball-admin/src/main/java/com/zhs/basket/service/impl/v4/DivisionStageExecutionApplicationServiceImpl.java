@@ -10,6 +10,7 @@ import com.zhs.basket.support.v4.stage.DivisionStageScheduleStrategy;
 import com.zhs.basket.support.v4.stage.DivisionStageScheduleStrategyFactory;
 import com.zhs.basket.support.v4.stage.ScheduleGenerationResult;
 import com.zhs.basket.support.v4.stage.StageExecutionContext;
+import com.zhs.basket.support.v4.stage.StageScheduleIntegrityValidator;
 import com.zhs.basket.support.v4.stage.StageSchedulePreviewVo;
 import com.zhs.basket.support.v4.stage.TieBreakStandingService;
 import com.zhs.basket.vo.v4.*;
@@ -176,10 +177,19 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         }
 
         StageExecutionContext context = buildExecutionContext(stage);
+        StageScheduleIntegrityValidator.validateBeforeGenerate(context);
         DivisionStageScheduleStrategy strategy = scheduleStrategyFactory.resolve(stage);
         strategy.validate(context);
 
         ScheduleGenerationResult result = strategy.generate(context);
+        if (CompetitionFormatEnum.ROUND_ROBIN.getCode().equals(stage.getCompetitionFormat())
+                && !isGroupStage(stage)) {
+            List<BasketV4Match> generatedMatches = matchMapper.selectByStageId(stageId).stream()
+                    .filter(match -> result.getBatchId().equals(match.getScheduleBatchId()))
+                    .collect(Collectors.toList());
+            StageScheduleIntegrityValidator.validateAfterRoundRobinGenerate(
+                    context, generatedMatches, result.getExpectedMatchCount());
+        }
         Date now = new Date();
         int executionVersion = stage.getExecutionVersion() != null ? stage.getExecutionVersion() + 1 : 1;
 

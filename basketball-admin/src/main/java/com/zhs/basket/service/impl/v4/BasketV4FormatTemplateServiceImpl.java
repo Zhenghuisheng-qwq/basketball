@@ -102,4 +102,15 @@ public class BasketV4FormatTemplateServiceImpl implements IBasketV4FormatTemplat
                 .findFirst()
                 .orElseThrow(() -> new ServiceException("当前系列没有可用的赛制模板"));
     }
+
+    public BasketFormatTemplate requireEnabledTemplateByCode(Long seriesId, String templateCode) {
+        if (templateCode == null || templateCode.isEmpty()) {
+            throw new ServiceException("赛制模板编码不能为空");
+        }
+        return templateMapper.selectEnabledBySeriesId(seriesId).stream()
+                .filter(this::isWizardAllowedTemplate)
+                .filter(t -> templateCode.equals(t.getTemplateCode()))
+                .findFirst()
+                .orElseThrow(() -> new ServiceException("找不到对应的赛制模板，请联系管理员"));
+    }
 }

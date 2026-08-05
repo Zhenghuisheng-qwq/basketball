@@ -1,12 +1,14 @@
 package com.zhs.basket.service.impl.v4;
 
 import com.zhs.basket.domain.v4.*;
+import com.zhs.basket.dto.v4.BasketDivisionFormatPlanApplyReq;
 import com.zhs.basket.dto.v4.BasketDivisionStageOrderReq;
 import com.zhs.basket.dto.v4.BasketDivisionStageSaveReq;
 import com.zhs.basket.dto.v4.BasketDivisionTieBreakRuleSaveReq;
 import com.zhs.basket.enums.v4.*;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IBasketV4FormatSnapshotService;
+import com.zhs.basket.support.v4.DivisionFormatPlanValidator;
 import com.zhs.basket.support.v4.DivisionFormatSnapshotFactory;
 import com.zhs.basket.support.v4.DivisionRuleMutableSpecification;
 import com.zhs.basket.support.v4.FormatSnapshotReadySpecification;
@@ -14,6 +16,7 @@ import com.zhs.basket.support.v4.V4FormatDisplaySupport;
 import com.zhs.basket.vo.v4.BasketDivisionFormatSnapshotVo;
 import com.zhs.basket.vo.v4.BasketDivisionStageVo;
 import com.zhs.basket.vo.v4.BasketDivisionTieBreakRuleVo;
+import com.zhs.basket.vo.v4.FormatPlanValidationResultVo;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.StringUtils;
 import com.zhs.common.utils.bean.BeanUtils;
@@ -47,6 +50,11 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
     private BasketV4FormatTemplateServiceImpl templateService;
     @Autowired
     private BasketSeasonMapper seasonMapper;
+    @Autowired
+    private DivisionFormatPlanValidator formatPlanValidator;
+
+    private static final List<String> DEFAULT_TIE_BREAK_CODES = List.of(
+            "WIN_COUNT", "HEAD_TO_HEAD", "POINT_DIFFERENCE", "TOTAL_POINTS", "MANUAL");
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -127,6 +135,161 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         List<BasketDivisionTieBreakRule> tieBreakRules = divisionTieBreakRuleMapper.selectBySnapshotId(snapshot.getId());
         new FormatSnapshotReadySpecification().validate(stages, tieBreakRules);
         normalizeStageOrders(stages);
+    }
+
+    @Override
+    public FormatPlanValidationResultVo validateFormatPlan(BasketDivisionFormatPlanApplyReq req) {
+        return formatPlanValidator.validate(req);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BasketDivisionFormatSnapshotVo applyFormatPlan(Long divisionId, BasketDivisionFormatPlanApplyReq req) {
+        FormatPlanValidationResultVo validation = formatPlanValidator.validate(req);
+        if (!validation.isValid()) {
+            throw new ServiceException(String.join("\n", validation.getErrors()));
+        }
+        BasketDivision division = requireDivision(divisionId);
+        FormatPlanCodeEnum planCode = FormatPlanCodeEnum.fromCode(req.getPlanCode());
+        BasketSeason season = requireSeason(division.getSeasonId());
+        BasketFormatTemplate template = templateService.requireEnabledTemplateByCode(
+                season.getSeriesId(), planCode.getBaseTemplateCode());
+        templateService.assertTemplateBelongsToSeries(template, season.getSeriesId());
+
+        BasketDivisionFormatSnapshot existing = snapshotMapper.selectActiveByDivisionId(divisionId);
+        ruleMutableSpecification.assertCanRebuild(division, existing);
+        Long supersededId = null;
+        if (existing != null) {
+            if (SnapshotStatusEnum.fromCode(existing.getSnapshotStatus()).isLockedOrBeyond()) {
+                throw new ServiceException("已锁定规则快照不允许应用赛制方案");
+            }
+            supersededId = existing.getId();
+            snapshotMapper.clearActiveUniqueKey(existing.getId());
+            snapshotMapper.markSuperseded(existing.getId());
+        }
+
+        int nextVersion = snapshotMapper.selectMaxVersionByDivisionId(divisionId) + 1;
+        BasketDivisionFormatSnapshot snapshot = snapshotFactory.buildSnapshotHeader(
+                divisionId, template, nextVersion, supersededId);
+        snapshotMapper.insert(snapshot);
+
+        List<BasketDivisionStage> stages = buildFormatPlanStages(divisionId, snapshot.getId(), planCode, req);
+        Map<String, Long> stageCodeToId = new HashMap<>();
+        for (BasketDivisionStage stage : stages) {
+            divisionStageMapper.insert(stage);
+            stageCodeToId.put(stage.getStageCode(), stage.getId());
+        }
+        insertDefaultTieBreakRules(divisionId, snapshot.getId(), stages, stageCodeToId);
+
+        division.setFormatTemplateId(template.getId());
+        division.setFormatSnapshotId(snapshot.getId());
+        division.setUpdateTime(new Date());
+        divisionMapper.updateById(division);
+
+        validateSnapshotReady(divisionId);
+        return getDivisionSnapshot(divisionId);
+    }
+
+    private List<BasketDivisionStage> buildFormatPlanStages(Long divisionId, Long snapshotId,
+                                                            FormatPlanCodeEnum planCode,
+                                                            BasketDivisionFormatPlanApplyReq req) {
+        Date now = new Date();
+        int winPoints = req.getWinPoints() == null ? 2 : req.getWinPoints();
+        int lossPoints = req.getLossPoints() == null ? 1 : req.getLossPoints();
+        int cycles = req.getRoundRobinLegs() == null ? 1 : req.getRoundRobinLegs();
+        String pairingRule = StringUtils.isEmpty(req.getEliminationPairingRule())
+                ? "HIGH_VS_LOW" : req.getEliminationPairingRule().trim();
+        PairingRuleEnum.fromCode(pairingRule);
+
+        BasketDivisionStage first = new BasketDivisionStage();
+        first.setSnapshotId(snapshotId);
+        first.setDivisionId(divisionId);
+        first.setStageOrder(1);
+        first.setBestOf(1);
+        first.setWinPoints(winPoints);
+        first.setLossPoints(lossPoints);
+        first.setPairingRule("NONE");
+        first.setRequiresManualConfirmation(0);
+        first.setStageStatus(DivisionStageStatusEnum.DRAFT.getCode());
+        first.setExecutionStatus(StageExecutionStatusEnum.DRAFT.getCode());
+        first.setExecutionVersion(0);
+        first.setCreateTime(now);
+        first.setUpdateTime(now);
+        first.setIsDelete(0);
+
+        BasketDivisionStage second = new BasketDivisionStage();
+        second.setSnapshotId(snapshotId);
+        second.setDivisionId(divisionId);
+        second.setStageCode("KNOCKOUT");
+        second.setStageName("淘汰赛");
+        second.setStageOrder(2);
+        second.setStageType(StageTypeEnum.KNOCKOUT.getCode());
+        second.setCompetitionFormat(CompetitionFormatEnum.SINGLE_ELIMINATION.getCode());
+        second.setGroupingMode(GroupingModeEnum.NONE.getCode());
+        second.setBestOf(1);
+        second.setAdvancementType(AdvancementTypeEnum.NONE.getCode());
+        second.setPairingRule(pairingRule);
+        second.setRequiresManualConfirmation(0);
+        second.setStageStatus(DivisionStageStatusEnum.DRAFT.getCode());
+        second.setExecutionStatus(StageExecutionStatusEnum.DRAFT.getCode());
+        second.setExecutionVersion(0);
+        second.setCreateTime(now);
+        second.setUpdateTime(now);
+        second.setIsDelete(0);
+
+        if (planCode == FormatPlanCodeEnum.GROUP_TO_ELIM) {
+            first.setStageCode("GROUP");
+            first.setStageName("小组赛");
+            first.setStageType(StageTypeEnum.GROUP.getCode());
+            first.setCompetitionFormat(CompetitionFormatEnum.ROUND_ROBIN.getCode());
+            first.setGroupingMode(GroupingModeEnum.MANUAL.getCode());
+            first.setGroupCount(req.getGroupCount());
+            first.setRoundRobinCycles(cycles);
+            first.setAdvancementType(AdvancementTypeEnum.GROUP_TOP_N.getCode());
+            first.setAdvancementCount(req.getQualifiersPerGroup());
+            first.setNextStageCode(second.getStageCode());
+        } else {
+            first.setStageCode("REGULAR");
+            first.setStageName("常规赛");
+            first.setStageType(StageTypeEnum.REGULAR.getCode());
+            first.setCompetitionFormat(CompetitionFormatEnum.ROUND_ROBIN.getCode());
+            first.setGroupingMode(GroupingModeEnum.NONE.getCode());
+            first.setRoundRobinCycles(cycles);
+            first.setAdvancementType(AdvancementTypeEnum.OVERALL_TOP_N.getCode());
+            first.setAdvancementCount(req.getOverallAdvanceCount());
+            first.setNextStageCode(second.getStageCode());
+        }
+        return List.of(first, second);
+    }
+
+    private void insertDefaultTieBreakRules(Long divisionId, Long snapshotId,
+                                            List<BasketDivisionStage> stages,
+                                            Map<String, Long> stageCodeToId) {
+        Date now = new Date();
+        for (BasketDivisionStage stage : stages) {
+            if (!CompetitionFormatEnum.ROUND_ROBIN.getCode().equals(stage.getCompetitionFormat())) {
+                continue;
+            }
+            Long stageId = stageCodeToId.get(stage.getStageCode());
+            if (stageId == null) {
+                continue;
+            }
+            int priority = 1;
+            for (String ruleCode : DEFAULT_TIE_BREAK_CODES) {
+                TieBreakRuleEnum.fromCode(ruleCode);
+                BasketDivisionTieBreakRule rule = new BasketDivisionTieBreakRule();
+                rule.setSnapshotId(snapshotId);
+                rule.setDivisionId(divisionId);
+                rule.setStageId(stageId);
+                rule.setRuleCode(ruleCode);
+                rule.setPriorityNo(priority++);
+                rule.setEnabled(1);
+                rule.setCreateTime(now);
+                rule.setUpdateTime(now);
+                rule.setIsDelete(0);
+                divisionTieBreakRuleMapper.insert(rule);
+            }
+        }
     }
 
     @Override
