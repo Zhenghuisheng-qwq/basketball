@@ -22,6 +22,12 @@ STAT_CHECKS = {
     "无 stage_id Standing 数量",
 }
 
+# R5 checks where cnt=0 means OK (column/template should NOT exist)
+ZERO_OK_CHECKS = {
+    "check_09_rank_explain_json_column",
+    "check_17_v4_legacy_template",
+}
+
 
 def load_dotenv(path: Path) -> None:
     if not path.exists():
@@ -73,13 +79,55 @@ def is_stat_check(name: str) -> bool:
     return any(key in name for key in STAT_CHECKS)
 
 
+def is_zero_ok_check(name: str) -> bool:
+    return any(key in name for key in ZERO_OK_CHECKS)
+
+
+def check_rank_explain_json_column(cur) -> dict:
+    """Verify rank_explain_json column is physically removed from basket_standing."""
+    sql = (
+        "SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS "
+        "WHERE TABLE_SCHEMA = DATABASE() "
+        "AND TABLE_NAME = 'basket_standing' "
+        "AND COLUMN_NAME = 'rank_explain_json'"
+    )
+    cur.execute(sql)
+    row = cur.fetchone() or {}
+    cnt = row.get("cnt", row) if isinstance(row, dict) else row
+    cnt = int(cnt)
+    item = {
+        "name": "python_check_rank_explain_json_column",
+        "sql": sql,
+        "count": cnt,
+        "status": "OK" if cnt == 0 else "ANOMALY",
+        "blocking": cnt != 0,
+        "samples": [],
+    }
+    print(f"[{item['status']}] {item['name']}: column_exists={cnt}")
+    return item
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("sql_file", nargs="?", default="cnpa-dynamic-format-r4-data-check.sql")
+    parser.add_argument(
+        "sql_file",
+        nargs="?",
+        default="cnpa-dynamic-format-r5-data-check.sql",
+        help="SQL file under docs/sql/ (default: R5 data-check)",
+    )
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--skip-python-rank-check",
+        action="store_true",
+        help="Skip standalone information_schema rank_explain_json check",
+    )
     args = parser.parse_args()
 
     sql_path = ROOT / "docs" / "sql" / args.sql_file
+    if not sql_path.exists():
+        print(f"SQL file not found: {sql_path}", file=sys.stderr)
+        return 1
+
     content = sql_path.read_text(encoding="utf-8")
     checks = split_checks(content)
     conn = pymysql.connect(**db_config())
@@ -87,6 +135,12 @@ def main() -> int:
     anomaly_count = 0
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cur:
+            if not args.skip_python_rank_check:
+                rank_item = check_rank_explain_json_column(cur)
+                results.append(rank_item)
+                if rank_item["blocking"]:
+                    anomaly_count += 1
+
             for name, sql in checks:
                 if not sql.upper().startswith("SELECT"):
                     continue
@@ -95,8 +149,22 @@ def main() -> int:
                     cur.execute(sql)
                     rows = cur.fetchall()
                     count = len(rows)
+                    # Single-row aggregate checks (check_id, cnt)
+                    if count == 1 and rows and isinstance(rows[0], dict) and "cnt" in rows[0]:
+                        count = int(rows[0]["cnt"])
+                        item["samples"] = [rows[0]]
+                    elif count > 0 and not is_stat_check(name):
+                        item["samples"] = rows[:5]
+
                     item["count"] = count
-                    if count == 0:
+                    if is_zero_ok_check(name):
+                        if count == 0:
+                            item["status"] = "OK"
+                        else:
+                            item["status"] = "ANOMALY"
+                            item["blocking"] = True
+                            anomaly_count += 1
+                    elif count == 0:
                         item["status"] = "OK"
                     elif is_stat_check(name):
                         item["status"] = "STAT"
@@ -106,7 +174,6 @@ def main() -> int:
                         item["status"] = "ANOMALY"
                         item["blocking"] = True
                         anomaly_count += 1
-                        item["samples"] = rows[:5]
                     print(f"[{item['status']}] {name}: rows={count}")
                     for row in item["samples"]:
                         print(f"  {row}")
@@ -122,7 +189,7 @@ def main() -> int:
 
     if args.json:
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        out_path = OUTPUT_DIR / "r4-data-check-result.json"
+        out_path = OUTPUT_DIR / "r5-data-check-result.json"
         out_path.write_text(json.dumps({"checks": results}, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"JSON written: {out_path}")
 

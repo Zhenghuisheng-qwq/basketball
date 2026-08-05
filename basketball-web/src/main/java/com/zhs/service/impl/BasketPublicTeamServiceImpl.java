@@ -101,7 +101,7 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
             vo.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
             vo.setTournamentId(season.getSeriesId());
             vo.setTournamentName(series == null ? null : series.getSeriesName());
-            vo.setDisplayName(eventTeam.getEventTeamName());
+            vo.setDisplayName(eventTeam.getTeamNameSnapshot());
             vos.add(vo);
         }
         return vos;

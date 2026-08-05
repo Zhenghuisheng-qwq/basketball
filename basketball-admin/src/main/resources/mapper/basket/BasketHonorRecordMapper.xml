@@ -61,7 +61,6 @@
     <select id="selectList" resultType="com.zhs.basket.resp.HonorRecordListResp">
         <include refid="listSelect"/>
         where h.is_delete = 0
-        <if test="seriesId != null">and h.series_id = #{seriesId}</if>
         <if test="tournamentId != null">and h.series_id = #{tournamentId}</if>
         <if test="seasonId != null">and h.season_id = #{seasonId}</if>
         <if test="honorCategoryId != null">and h.honor_category_id = #{honorCategoryId}</if>
@@ -190,7 +189,6 @@
         where h.is_delete = 0 and h.display_status = 1
           and h.source_type &lt;&gt; 'HALL_OF_FAME'
         <if test="seasonId != null">and h.season_id = #{seasonId}</if>
-        <if test="seriesId != null">and h.series_id = #{seriesId}</if>
         <if test="tournamentId != null">and h.series_id = #{tournamentId}</if>
         and not exists (
             select 1 from basket_honor_record hf

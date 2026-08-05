@@ -103,6 +103,7 @@ export interface PublicSeasonSummaryVo {
   tournamentName?: string | null
   seasonStatus?: number | null
   teamCount?: number | null
+  matchCount?: number | null
   finishedMatchCount?: number | null
   standingCount?: number | null
   teamStatCount?: number | null

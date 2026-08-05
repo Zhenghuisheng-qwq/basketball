@@ -19,6 +19,7 @@ public class PublicSeasonSummaryVo implements Serializable {
     private String tournamentName;
     private Integer seasonStatus;
     private Integer teamCount;
+    private Integer matchCount;
     private Integer finishedMatchCount;
     private Integer standingCount;
     private Integer teamStatCount;

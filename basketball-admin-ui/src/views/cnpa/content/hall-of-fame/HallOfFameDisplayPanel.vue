@@ -185,10 +185,10 @@ import type {
   HonorRecordQuery,
   SeasonListItem,
   TournamentListItem
-} import { listV4Series } from '@/api/cnpa/event-v4/series'
-import { listV4Season } from '@/api/cnpa/event-v4/season'
-from '@/types'
+} from '@/types'
 import { HONOR_DISPLAY_STATUS_OPTIONS } from '@/types'
+import { listV4Series } from '@/api/cnpa/event-v4/series'
+import { listV4Season } from '@/api/cnpa/event-v4/season'
 
 const { proxy } = getCurrentInstance()
 

@@ -142,7 +142,6 @@
 </template>
 
 <script setup lang="ts" name="BasketTeamHonor">
-import { listSeasonCandidateTeam } from '@/api/basket/seasonResult'
 import {
   addTeamHonor,
   delTeamHonor,
@@ -161,10 +160,11 @@ import type {
   SeasonCandidateTeam,
   SeasonListItem,
   TournamentListItem
-} import { listV4Series } from '@/api/cnpa/event-v4/series'
-import { listV4Season } from '@/api/cnpa/event-v4/season'
-from '@/types'
+} from '@/types'
 import { HONOR_DISPLAY_STATUS_OPTIONS, TEAM_HONOR_CODE_OPTIONS } from '@/types'
+import { listV4EventTeam } from '@/api/cnpa/event-v4/event-team'
+import { listV4Series } from '@/api/cnpa/event-v4/series'
+import { listV4Season } from '@/api/cnpa/event-v4/season'
 
 const { proxy } = getCurrentInstance()
 
@@ -231,7 +231,21 @@ function loadSeasons() {
   return listV4Season({ seriesId: selectedTournamentId.value, pageNum: 1, pageSize: 500 }).then(res => {
     seasonOptions.value = res.rows || []
     queryParams.value.seasonId = seasonOptions.value[0]?.id
-    if (typeof candidateQuery !== 'undefined') candidateQuery.value.seasonId = queryParams.value.seasonId
+  })
+}
+
+function loadCandidateTeams(seasonId?: number) {
+  candidateTeams.value = []
+  if (!seasonId) return Promise.resolve()
+  return listV4EventTeam({ seasonId, pageNum: 1, pageSize: 500 }).then(res => {
+    const seen = new Set<number>()
+    candidateTeams.value = (res.rows || []).reduce<SeasonCandidateTeam[]>((acc, item) => {
+      const teamId = item.sourceTeamId
+      if (!teamId || seen.has(teamId)) return acc
+      seen.add(teamId)
+      acc.push({ teamId, teamName: item.teamNameSnapshot })
+      return acc
+    }, [])
   })
 }
 
@@ -267,18 +281,14 @@ function loadFormSeasons() {
   formSeasonOptions.value = []
   candidateTeams.value = []
   if (!form.value.tournamentId) return
-  listSeasonByTournament(form.value.tournamentId).then(res => {
-    formSeasonOptions.value = res.data || []
+  listV4Season({ seriesId: form.value.tournamentId, pageNum: 1, pageSize: 500 }).then(res => {
+    formSeasonOptions.value = res.rows || []
   })
 }
 
 function loadCandidates() {
-  candidateTeams.value = []
   form.value.teamId = undefined
-  if (!form.value.seasonId) return
-  listSeasonCandidateTeam(form.value.seasonId).then(res => {
-    candidateTeams.value = res.data || []
-  })
+  loadCandidateTeams(form.value.seasonId)
 }
 
 function resetFormData() {
@@ -295,11 +305,10 @@ function resetFormData() {
   }
   coverPreview.value = ''
   formSeasonOptions.value = seasonOptions.value
-  candidateTeams.value = []
   if (form.value.seasonId) {
-    listSeasonCandidateTeam(form.value.seasonId).then(res => {
-      candidateTeams.value = res.data || []
-    })
+    loadCandidateTeams(form.value.seasonId)
+  } else {
+    candidateTeams.value = []
   }
   proxy.resetForm('formRef')
 }
@@ -329,14 +338,12 @@ function handleUpdate(row: HonorRecordListItem) {
     }
     coverPreview.value = data.coverUrl || ''
     if (data.tournamentId) {
-      listSeasonByTournament(data.tournamentId).then(sRes => {
-        formSeasonOptions.value = sRes.data || []
+      listV4Season({ seriesId: data.tournamentId, pageNum: 1, pageSize: 500 }).then(sRes => {
+        formSeasonOptions.value = sRes.rows || []
       })
     }
     if (data.seasonId) {
-      listSeasonCandidateTeam(data.seasonId).then(cRes => {
-        candidateTeams.value = cRes.data || []
-      })
+      loadCandidateTeams(data.seasonId)
     }
     dialogTitle.value = '修改球队荣誉'
     dialogOpen.value = true

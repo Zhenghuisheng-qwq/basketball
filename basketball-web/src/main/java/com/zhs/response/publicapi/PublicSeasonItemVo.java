@@ -36,7 +36,7 @@ public class PublicSeasonItemVo implements Serializable {
     private String seasonYear;
 
     @ApiModelProperty("赛季状态")
-    private Integer seasonStatus;
+    private String seasonStatus;
 
     @ApiModelProperty("报名开始时间")
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
