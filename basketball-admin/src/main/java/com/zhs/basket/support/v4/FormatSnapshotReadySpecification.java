@@ -286,7 +286,7 @@ public class FormatSnapshotReadySpecification {
 
         if (bestOf == null || bestOf != 1) {
 
-            throw new ServiceException("当前版本仅支持 BO1（best_of=1），暂不支持 BO3/BO5 系列赛");
+            throw new ServiceException("当前版本仅支持 BO1，BO3/BO5 尚未开放。");
 
         }
 

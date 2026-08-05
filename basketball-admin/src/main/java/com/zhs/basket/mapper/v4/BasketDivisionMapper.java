@@ -23,6 +23,12 @@ public interface BasketDivisionMapper {
                                           @Param("platformCode") String platformCode,
                                           @Param("excludeId") Long excludeId);
 
+    BasketDivision selectBySeasonCombo(@Param("seasonId") Long seasonId,
+                                       @Param("platformCode") String platformCode,
+                                       @Param("gameMode") String gameMode,
+                                       @Param("registrationMode") String registrationMode,
+                                       @Param("excludeId") Long excludeId);
+
     int countBySeasonId(@Param("seasonId") Long seasonId);
 
     int insert(BasketDivision entity);

@@ -159,6 +159,9 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
     public void publish(Long id) {
         BasketSeason season = requireSeason(id);
         String publishStatus = season.getPublishStatus();
+        if (PublishStatusEnum.PUBLISHED.getCode().equals(publishStatus)) {
+            return;
+        }
         if (!PublishStatusEnum.DRAFT.getCode().equals(publishStatus)
                 && !PublishStatusEnum.OFFLINE.getCode().equals(publishStatus)) {
             throw new ServiceException("仅草稿或已下线 Season 可发布");

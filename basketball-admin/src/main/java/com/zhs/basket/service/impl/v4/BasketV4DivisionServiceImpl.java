@@ -8,6 +8,7 @@ import com.zhs.basket.dto.v4.BasketDivisionCreateReq;
 import com.zhs.basket.dto.v4.BasketDivisionUpdateReq;
 import com.zhs.basket.enums.v4.*;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
+import com.zhs.basket.mapper.v4.BasketEventTeamMapper;
 import com.zhs.basket.mapper.v4.BasketSeasonMapper;
 import com.zhs.basket.query.v4.BasketDivisionQuery;
 import com.zhs.basket.service.v4.IBasketV4DivisionService;
@@ -30,6 +31,7 @@ import java.util.List;
 public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
 
     private static final Integer NOT_DELETED = 0;
+    private static final int MAX_TEAM_COUNT_LIMIT = 512;
 
     @Autowired
     private BasketDivisionMapper divisionMapper;
@@ -41,6 +43,8 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     private BasketV4FormatTemplateServiceImpl formatTemplateService;
     @Autowired
     private DivisionRuleMutableSpecification ruleMutableSpecification;
+    @Autowired
+    private BasketEventTeamMapper eventTeamMapper;
 
     @Override
     public List<BasketDivisionListVo> selectList(BasketDivisionQuery query) {
@@ -72,6 +76,7 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
 
         BasketDivision entity = new BasketDivision();
         BeanUtils.copyBeanProp(entity, req);
+        entity.setDivisionName(req.getDivisionName().trim());
         entity.setRegistrationMode(resolveRegistrationMode(req.getRegistrationMode()));
         entity.setFormatType(StringUtils.isNotEmpty(req.getFormatType())
                 ? req.getFormatType() : FormatTypeEnum.REGULAR_ROUND_ROBIN.getCode());
@@ -84,8 +89,11 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         entity.setCreateTime(new Date());
         entity.setUpdateTime(new Date());
         entity.setIsDelete(NOT_DELETED);
+        normalizeDivisionName(entity);
         validateDivisionTimes(entity);
-        assertUniquePlatform(req.getSeasonId(), req.getPlatformCode(), null);
+        validateDivisionTimesWithinSeason(entity);
+        assertUniqueDivisionCombo(req.getSeasonId(), entity.getPlatformCode(),
+                entity.getGameMode(), entity.getRegistrationMode(), null);
         divisionMapper.insert(entity);
 
         formatSnapshotService.createDraftSnapshot(entity.getId(), templateId);
@@ -105,13 +113,17 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
 
         if (draft) {
             applyDraftUpdate(division, req);
+            normalizeDivisionName(division);
         } else {
             applyLimitedUpdate(division, req);
         }
 
         validateLineupByGameMode(division);
+        validateMaxTeamCount(division);
         validateDivisionTimes(division);
-        assertUniquePlatform(division.getSeasonId(), division.getPlatformCode(), id);
+        validateDivisionTimesWithinSeason(division);
+        assertUniqueDivisionCombo(division.getSeasonId(), division.getPlatformCode(),
+                division.getGameMode(), division.getRegistrationMode(), id);
         division.setUpdateTime(new Date());
         if (divisionMapper.updateById(division) != 1) {
             throw new ServiceException("更新 Division 失败");
@@ -122,6 +134,9 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     @Transactional(rollbackFor = Exception.class)
     public void openRegistration(Long id) {
         BasketDivision division = requireDivision(id);
+        if (DivisionStatusEnum.REGISTRATION_OPEN.getCode().equals(division.getDivisionStatus())) {
+            return;
+        }
         BasketSeason season = requireSeason(division.getSeasonId());
         if (!PublishStatusEnum.PUBLISHED.getCode().equals(season.getPublishStatus())) {
             throw new ServiceException("Season 必须先发布");
@@ -184,7 +199,7 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
             division.setPlatformCode(req.getPlatformCode());
         }
         if (req.getDivisionName() != null) {
-            division.setDivisionName(req.getDivisionName());
+            division.setDivisionName(req.getDivisionName().trim());
         }
         if (req.getRegistrationMode() != null) {
             validateRegistrationModeWritable(req.getRegistrationMode());
@@ -251,7 +266,7 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
             throw new ServiceException("报名开放后不允许修改 lineupMaxCount");
         }
         if (req.getDivisionName() != null) {
-            division.setDivisionName(req.getDivisionName());
+            division.setDivisionName(req.getDivisionName().trim());
         }
         if (req.getMaxTeamCount() != null) {
             division.setMaxTeamCount(req.getMaxTeamCount());
@@ -291,12 +306,20 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         if (StringUtils.isEmpty(req.getDivisionName())) {
             throw new ServiceException("divisionName 不能为空");
         }
+        String trimmedName = req.getDivisionName().trim();
+        if (trimmedName.isEmpty()) {
+            throw new ServiceException("divisionName 不能为空");
+        }
+        validateDivisionName(trimmedName);
         if (StringUtils.isEmpty(req.getRegistrationMode())) {
             throw new ServiceException("registrationMode 不能为空");
         }
         validateRegistrationModeWritable(req.getRegistrationMode());
         if (req.getMaxTeamCount() == null || req.getMaxTeamCount() <= 0) {
-            throw new ServiceException("maxTeamCount 必须大于 0");
+            throw new ServiceException("maxTeamCount 必须为正整数");
+        }
+        if (req.getMaxTeamCount() > MAX_TEAM_COUNT_LIMIT) {
+            throw new ServiceException("maxTeamCount 不能超过 " + MAX_TEAM_COUNT_LIMIT);
         }
     }
 
@@ -339,20 +362,78 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     }
 
     private void validateDivisionTimes(BasketDivision division) {
-        if (division.getRegistrationStartTime() != null && division.getRegistrationEndTime() != null
-                && division.getRegistrationStartTime().after(division.getRegistrationEndTime())) {
-            throw new ServiceException("报名开始时间不得晚于报名结束时间");
+        if (division.getRegistrationStartTime() != null && division.getRegistrationEndTime() != null) {
+            if (!division.getRegistrationStartTime().before(division.getRegistrationEndTime())) {
+                throw new ServiceException("报名开始时间必须早于报名结束时间");
+            }
         }
-        if (division.getMatchStartTime() != null && division.getMatchEndTime() != null
-                && division.getMatchStartTime().after(division.getMatchEndTime())) {
-            throw new ServiceException("比赛开始时间不得晚于比赛结束时间");
+        if (division.getRegistrationEndTime() != null && division.getMatchStartTime() != null) {
+            if (division.getRegistrationEndTime().after(division.getMatchStartTime())) {
+                throw new ServiceException("报名结束时间不得晚于比赛开始时间");
+            }
+        }
+        if (division.getMatchStartTime() != null && division.getMatchEndTime() != null) {
+            if (!division.getMatchStartTime().before(division.getMatchEndTime())) {
+                throw new ServiceException("比赛开始时间必须早于比赛结束时间");
+            }
         }
     }
 
-    private void assertUniquePlatform(Long seasonId, String platformCode, Long excludeId) {
-        BasketDivision existing = divisionMapper.selectBySeasonPlatform(seasonId, platformCode, excludeId);
+    private void validateDivisionTimesWithinSeason(BasketDivision division) {
+        if (division.getSeasonId() == null) {
+            return;
+        }
+        BasketSeason season = seasonMapper.selectById(division.getSeasonId());
+        if (season == null || season.getSeasonStartTime() == null || season.getSeasonEndTime() == null) {
+            return;
+        }
+        Date seasonStart = season.getSeasonStartTime();
+        Date seasonEnd = season.getSeasonEndTime();
+        if (division.getRegistrationStartTime() != null && division.getRegistrationStartTime().before(seasonStart)) {
+            throw new ServiceException("报名开始时间不能早于赛季展示周期开始时间");
+        }
+        if (division.getMatchEndTime() != null && division.getMatchEndTime().after(seasonEnd)) {
+            throw new ServiceException("比赛结束时间不能晚于赛季展示周期结束时间");
+        }
+    }
+
+    private void validateDivisionName(String name) {
+        if (name.matches("^\\d+$")) {
+            throw new ServiceException("赛区名称不能为纯数字");
+        }
+    }
+
+    private void normalizeDivisionName(BasketDivision division) {
+        if (division.getDivisionName() != null) {
+            division.setDivisionName(division.getDivisionName().trim());
+            validateDivisionName(division.getDivisionName());
+        }
+    }
+
+    private void validateMaxTeamCount(BasketDivision division) {
+        if (division.getMaxTeamCount() == null || division.getMaxTeamCount() <= 0) {
+            throw new ServiceException("队伍上限必须为正整数");
+        }
+        if (division.getMaxTeamCount() > MAX_TEAM_COUNT_LIMIT) {
+            throw new ServiceException("队伍上限不能超过 " + MAX_TEAM_COUNT_LIMIT);
+        }
+        if (division.getId() != null) {
+            int existingTeams = eventTeamMapper.countActiveByDivisionId(division.getId());
+            if (division.getMaxTeamCount() < existingTeams) {
+                throw new ServiceException("队伍上限不能小于已有参赛球队数（" + existingTeams + "）");
+            }
+        }
+    }
+
+    private void assertUniqueDivisionCombo(Long seasonId, String platformCode, String gameMode,
+                                           String registrationMode, Long excludeId) {
+        BasketDivision existing = divisionMapper.selectBySeasonCombo(
+                seasonId, platformCode, gameMode, registrationMode, excludeId);
         if (existing != null) {
-            throw new ServiceException("同一 Season 下不能重复创建同平台 Division");
+            throw new ServiceException(String.format("当前赛季已存在 %s · %s · %s 赛区。",
+                    V4FormatDisplaySupport.platformLabel(platformCode),
+                    V4FormatDisplaySupport.gameModeLabel(gameMode),
+                    V4FormatDisplaySupport.registrationModeLabel(registrationMode)));
         }
     }
 

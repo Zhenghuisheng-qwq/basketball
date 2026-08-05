@@ -309,8 +309,121 @@ export function v4TieBreakRuleLabel(code?: string | null): string {
 
 export function v4RosterRuleText(gameMode?: string | null): string {
   const mode = (gameMode || 'FIVE_V_FIVE').toUpperCase()
-  if (mode === 'THREE_V_THREE') return '阵容人数 3～8 人'
-  return '阵容人数 5～8 人'
+  if (mode === 'THREE_V_THREE') return '3～8 人'
+  return '5～8 人'
+}
+
+/** 向导允许的赛制模板（排除 Legacy / BO3/BO5 等） */
+export const V4_WIZARD_DISALLOWED_TEMPLATE_CODES = new Set([
+  'LEAGUE_STANDARD_V1',
+  'V4_LEGACY_ROUND_ROBIN_V1'
+])
+
+export function isV4WizardTemplateAllowed(templateCode?: string | null): boolean {
+  if (!templateCode) return false
+  return !V4_WIZARD_DISALLOWED_TEMPLATE_CODES.has(templateCode.toUpperCase())
+}
+
+const SERIES_DEFAULT_PREFIX: Record<string, string> = {
+  LEAGUE: 'CNPA League',
+  ARENA: 'CNPA Arena',
+  CUP: 'CNPA Cup',
+  OPEN: 'CNPA Open'
+}
+
+export function buildV4SeasonDefaultSeasonName(_seriesCode?: string | null): string {
+  return 'S1'
+}
+
+export function buildV4SeasonDefaultDisplayTitle(seriesCode?: string | null, seasonYear?: number, seasonName?: string): string {
+  const code = (seriesCode || 'LEAGUE').toUpperCase()
+  const prefix = SERIES_DEFAULT_PREFIX[code] || `CNPA ${code.charAt(0)}${code.slice(1).toLowerCase()}`
+  const year = seasonYear ?? new Date().getFullYear()
+  const name = seasonName?.trim() || 'S1'
+  return `${prefix} ${year} ${name}`
+}
+
+export function buildV4DivisionDefaultName(
+  displayTitle?: string | null,
+  platformCode?: string | null,
+  gameMode?: string | null
+): string {
+  const base = displayTitle?.trim() || '赛区'
+  return `${base} - ${v4PlatformLabel(platformCode)} ${v4GameModeLabel(gameMode)}`
+}
+
+export function formatV4DivisionTabLabel(
+  div: { divisionName?: string; platformCode?: string; gameMode?: string; registrationMode?: string },
+  index: number
+): string {
+  const platform = v4PlatformLabel(div.platformCode)
+  const mode = v4GameModeLabel(div.gameMode)
+  const reg = v4RegistrationModeLabel(div.registrationMode)
+  if (div.divisionName?.trim()) {
+    return `${div.divisionName.trim()} · ${platform} · ${mode}`
+  }
+  return `赛区 ${index + 1} · ${platform} · ${mode}`
+}
+
+export function formatV4DivisionComboLabel(
+  platformCode?: string | null,
+  gameMode?: string | null,
+  registrationMode?: string | null
+): string {
+  return `${v4PlatformLabel(platformCode)} · ${v4GameModeLabel(gameMode)} · ${v4RegistrationModeLabel(registrationMode)}`
+}
+
+export type V4DivisionTimeStatus = 'valid' | 'incomplete' | 'invalid'
+
+export interface V4DivisionTimeValidation {
+  status: V4DivisionTimeStatus
+  fieldErrors: Partial<Record<'registrationStartTime' | 'registrationEndTime' | 'matchStartTime' | 'matchEndTime' | 'seasonPeriod', string>>
+  messages: string[]
+}
+
+export function validateV4DivisionTimeRelations(
+  div: V4DivisionReadinessInput,
+  seasonStartTime?: string,
+  seasonEndTime?: string
+): V4DivisionTimeValidation {
+  const fieldErrors: V4DivisionTimeValidation['fieldErrors'] = {}
+  const messages: string[] = []
+
+  if (!div.registrationStartTime || !div.registrationEndTime
+    || !div.matchStartTime || !div.matchEndTime) {
+    if (!div.registrationStartTime) fieldErrors.registrationStartTime = '请选择报名开始时间'
+    if (!div.registrationEndTime) fieldErrors.registrationEndTime = '请选择报名结束时间'
+    if (!div.matchStartTime) fieldErrors.matchStartTime = '请选择比赛开始时间'
+    if (!div.matchEndTime) fieldErrors.matchEndTime = '请选择比赛结束时间'
+    messages.push('时间配置不完整')
+    return { status: 'incomplete', fieldErrors, messages }
+  }
+
+  if (div.registrationStartTime >= div.registrationEndTime) {
+    fieldErrors.registrationEndTime = '报名结束时间必须晚于报名开始时间'
+    messages.push('报名开始时间必须早于报名结束时间')
+  }
+  if (div.registrationEndTime > div.matchStartTime) {
+    fieldErrors.matchStartTime = '比赛开始时间不得早于报名结束时间'
+    messages.push('报名结束时间不得晚于比赛开始时间')
+  }
+  if (div.matchStartTime >= div.matchEndTime) {
+    fieldErrors.matchEndTime = '比赛结束时间必须晚于比赛开始时间'
+    messages.push('比赛开始时间必须早于比赛结束时间')
+  }
+  if (seasonStartTime && div.registrationStartTime < seasonStartTime) {
+    fieldErrors.registrationStartTime = '报名开始时间不能早于赛季展示周期开始时间'
+    messages.push('报名开始时间应处于赛季展示周期内')
+  }
+  if (seasonEndTime && div.matchEndTime > seasonEndTime) {
+    fieldErrors.matchEndTime = '比赛结束时间不能晚于赛季展示周期结束时间'
+    messages.push('比赛结束时间应处于赛季展示周期内')
+  }
+
+  if (Object.keys(fieldErrors).length) {
+    return { status: 'invalid', fieldErrors, messages: [...new Set(messages)] }
+  }
+  return { status: 'valid', fieldErrors, messages: [] }
 }
 
 export function v4DivisionStageStatusLabel(status?: string | null): string {
@@ -355,12 +468,7 @@ export interface V4DivisionReadinessResult {
 }
 
 function isDivisionTimeRangeValid(div: V4DivisionReadinessInput): boolean {
-  if (!div.registrationStartTime || !div.registrationEndTime
-    || !div.matchStartTime || !div.matchEndTime) {
-    return false
-  }
-  return div.registrationStartTime < div.registrationEndTime
-    && div.matchStartTime < div.matchEndTime
+  return validateV4DivisionTimeRelations(div).status === 'valid'
 }
 
 function isStageConfigSupported(stage: NonNullable<V4DivisionSnapshotReadinessInput['stages']>[number]): boolean {
@@ -400,11 +508,11 @@ export function assessV4DivisionReadiness(
 
   const timeValid = isDivisionTimeRangeValid(div)
   if (!timeValid) {
-    if (!div.registrationStartTime || !div.registrationEndTime
-      || !div.matchStartTime || !div.matchEndTime) {
+    const timeCheck = validateV4DivisionTimeRelations(div)
+    if (timeCheck.status === 'incomplete') {
       reasons.push('时间配置不完整')
     } else {
-      reasons.push('时间范围不合法（结束时间须晚于开始时间）')
+      reasons.push(...timeCheck.messages)
     }
   }
 

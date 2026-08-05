@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,10 +28,22 @@ public class BasketV4FormatTemplateServiceImpl implements IBasketV4FormatTemplat
     @Autowired
     private BasketFormatTemplateTieBreakRuleMapper tieBreakRuleMapper;
 
+    private static final Set<String> DISALLOWED_TEMPLATE_CODES = Set.of(
+            "LEAGUE_STANDARD_V1",
+            "V4_LEGACY_ROUND_ROBIN_V1"
+    );
+
+    private boolean isWizardAllowedTemplate(BasketFormatTemplate template) {
+        if (template == null) {
+            return false;
+        }
+        return !DISALLOWED_TEMPLATE_CODES.contains(template.getTemplateCode());
+    }
+
     @Override
     public List<BasketFormatTemplateListVo> listEnabledTemplates(Long seriesId) {
         return templateMapper.selectEnabledBySeriesId(seriesId).stream()
-                .filter(t -> !"LEAGUE_STANDARD_V1".equals(t.getTemplateCode()))
+                .filter(this::isWizardAllowedTemplate)
                 .map(t -> {
             BasketFormatTemplateListVo vo = new BasketFormatTemplateListVo();
             BeanUtils.copyBeanProp(vo, t);
@@ -80,12 +93,12 @@ public class BasketV4FormatTemplateServiceImpl implements IBasketV4FormatTemplat
 
     public BasketFormatTemplate resolveDefaultTemplate(Long seriesId) {
         BasketFormatTemplate template = templateMapper.selectDefaultBySeriesId(seriesId);
-        if (template != null && !"LEAGUE_STANDARD_V1".equals(template.getTemplateCode())) {
+        if (template != null && isWizardAllowedTemplate(template)) {
             return template;
         }
         List<BasketFormatTemplate> enabled = templateMapper.selectEnabledBySeriesId(seriesId);
         return enabled.stream()
-                .filter(t -> !"LEAGUE_STANDARD_V1".equals(t.getTemplateCode()))
+                .filter(this::isWizardAllowedTemplate)
                 .findFirst()
                 .orElseThrow(() -> new ServiceException("当前系列没有可用的赛制模板"));
     }

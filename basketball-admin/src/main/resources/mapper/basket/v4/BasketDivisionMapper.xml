@@ -127,6 +127,17 @@
         limit 1
     </select>
 
+    <select id="selectBySeasonCombo" resultMap="BasketDivisionResult">
+        select <include refid="BaseColumns" /> from basket_division
+        where is_delete = 0
+          and season_id = #{seasonId}
+          and platform_code = #{platformCode}
+          and game_mode = #{gameMode}
+          and registration_mode = #{registrationMode}
+        <if test="excludeId != null">and id != #{excludeId}</if>
+        limit 1
+    </select>
+
     <select id="countBySeasonId" resultType="int">
         select count(1) from basket_division
         where season_id = #{seasonId} and is_delete = 0
