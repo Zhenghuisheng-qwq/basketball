@@ -11,12 +11,8 @@
         <result property="description" column="description" />
         <result property="coverFileId" column="cover_file_id" />
         <result property="bannerFileId" column="banner_file_id" />
-        <result property="registrationMode" column="registration_mode" />
-        <result property="formatType" column="format_type" />
-        <result property="registrationStartTime" column="registration_start_time" />
-        <result property="registrationEndTime" column="registration_end_time" />
-        <result property="matchStartTime" column="match_start_time" />
-        <result property="matchEndTime" column="match_end_time" />
+        <result property="seasonStartTime" column="match_start_time" />
+        <result property="seasonEndTime" column="match_end_time" />
         <result property="publishStatus" column="publish_status" />
         <result property="seasonStatus" column="season_status" />
         <result property="createTime" column="create_time" />
@@ -35,12 +31,10 @@
         <result property="description" column="description" />
         <result property="coverFileId" column="cover_file_id" />
         <result property="bannerFileId" column="banner_file_id" />
-        <result property="registrationMode" column="registration_mode" />
-        <result property="formatType" column="format_type" />
-        <result property="registrationStartTime" column="registration_start_time" />
-        <result property="registrationEndTime" column="registration_end_time" />
-        <result property="matchStartTime" column="match_start_time" />
-        <result property="matchEndTime" column="match_end_time" />
+        <result property="coverUrl" column="cover_url" />
+        <result property="bannerUrl" column="banner_url" />
+        <result property="seasonStartTime" column="match_start_time" />
+        <result property="seasonEndTime" column="match_end_time" />
         <result property="publishStatus" column="publish_status" />
         <result property="seasonStatus" column="season_status" />
         <result property="divisionCount" column="division_count" />
@@ -48,7 +42,7 @@
         <result property="updateTime" column="update_time" />
     </resultMap>
 
-    <sql id="BaseColumns">id, series_id, season_year, season_name, display_title, description, cover_file_id, banner_file_id, registration_mode, format_type, registration_start_time, registration_end_time, match_start_time, match_end_time, publish_status, season_status, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, series_id, season_year, season_name, display_title, description, cover_file_id, banner_file_id, match_start_time, match_end_time, publish_status, season_status, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketSeasonResult">
         select <include refid="BaseColumns" /> from basket_season
@@ -67,10 +61,8 @@
             se.description,
             se.cover_file_id,
             se.banner_file_id,
-            se.registration_mode,
-            se.format_type,
-            se.registration_start_time,
-            se.registration_end_time,
+            cf.access_url as cover_url,
+            bf.access_url as banner_url,
             se.match_start_time,
             se.match_end_time,
             se.publish_status,
@@ -80,6 +72,8 @@
             se.update_time
         from basket_season se
         left join basket_series s on s.id = se.series_id and s.is_delete = 0
+        left join basket_file_asset cf on cf.id = se.cover_file_id and cf.is_delete = 0
+        left join basket_file_asset bf on bf.id = se.banner_file_id and bf.is_delete = 0
         where se.is_delete = 0
         <if test="id != null">and se.id = #{id}</if>
         <if test="seriesId != null">and se.series_id = #{seriesId}</if>
@@ -109,9 +103,13 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_season (
-            series_id, season_year, season_name, display_title, description, cover_file_id, banner_file_id, registration_mode, format_type, registration_start_time, registration_end_time, match_start_time, match_end_time, publish_status, season_status, create_time, update_time, is_delete
+            series_id, season_year, season_name, display_title, description,
+            cover_file_id, banner_file_id, match_start_time, match_end_time,
+            publish_status, season_status, create_time, update_time, is_delete
         ) values (
-            #{seriesId}, #{seasonYear}, #{seasonName}, #{displayTitle}, #{description}, #{coverFileId}, #{bannerFileId}, #{registrationMode}, #{formatType}, #{registrationStartTime}, #{registrationEndTime}, #{matchStartTime}, #{matchEndTime}, #{publishStatus}, #{seasonStatus}, #{createTime}, #{updateTime}, #{isDelete}
+            #{seriesId}, #{seasonYear}, #{seasonName}, #{displayTitle}, #{description},
+            #{coverFileId}, #{bannerFileId}, #{seasonStartTime}, #{seasonEndTime},
+            #{publishStatus}, #{seasonStatus}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -125,12 +123,8 @@
             <if test="description != null">description = #{description},</if>
             <if test="coverFileId != null">cover_file_id = #{coverFileId},</if>
             <if test="bannerFileId != null">banner_file_id = #{bannerFileId},</if>
-            <if test="registrationMode != null">registration_mode = #{registrationMode},</if>
-            <if test="formatType != null">format_type = #{formatType},</if>
-            <if test="registrationStartTime != null">registration_start_time = #{registrationStartTime},</if>
-            <if test="registrationEndTime != null">registration_end_time = #{registrationEndTime},</if>
-            <if test="matchStartTime != null">match_start_time = #{matchStartTime},</if>
-            <if test="matchEndTime != null">match_end_time = #{matchEndTime},</if>
+            <if test="seasonStartTime != null">match_start_time = #{seasonStartTime},</if>
+            <if test="seasonEndTime != null">match_end_time = #{seasonEndTime},</if>
             <if test="publishStatus != null">publish_status = #{publishStatus},</if>
             <if test="seasonStatus != null">season_status = #{seasonStatus},</if>
             update_time = now()

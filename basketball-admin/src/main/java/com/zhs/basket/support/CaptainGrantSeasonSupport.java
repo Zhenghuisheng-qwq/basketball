@@ -51,8 +51,8 @@ public final class CaptainGrantSeasonSupport {
     }
 
     public static Date resolveExpireTime(BasketSeason season, BasketSeries series) {
-        if (season != null && season.getMatchEndTime() != null) {
-            return season.getMatchEndTime();
+        if (season != null && season.getSeasonEndTime() != null) {
+            return season.getSeasonEndTime();
         }
         return null;
     }

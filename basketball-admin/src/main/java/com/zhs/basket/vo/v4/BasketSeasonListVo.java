@@ -16,12 +16,10 @@ public class BasketSeasonListVo {
     private String description;
     private Long coverFileId;
     private Long bannerFileId;
-    private String registrationMode;
-    private String formatType;
-    private Date registrationStartTime;
-    private Date registrationEndTime;
-    private Date matchStartTime;
-    private Date matchEndTime;
+    private String coverUrl;
+    private String bannerUrl;
+    private Date seasonStartTime;
+    private Date seasonEndTime;
     private String publishStatus;
     private String seasonStatus;
     private Integer divisionCount;

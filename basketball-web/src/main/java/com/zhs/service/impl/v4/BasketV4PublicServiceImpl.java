@@ -2,6 +2,7 @@ package com.zhs.service.impl.v4;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zhs.dao.v4.*;
+import com.zhs.enums.v4.DivisionStatusEnum;
 import com.zhs.enums.v4.MatchPublishStatusEnum;
 import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.enums.v4.PublishStatusEnum;
@@ -646,7 +647,50 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         vo.setMatchEndTime(season.getMatchEndTime());
         vo.setSeasonStatus(season.getSeasonStatus());
         vo.setDivisions(toDivisionBriefList(divisions));
+        applyDivisionAggregates(vo, divisions);
         return vo;
+    }
+
+    private void applyDivisionAggregates(V4PublicSeasonItemResp vo, List<BasketDivision> divisions) {
+        if (CollectionUtils.isEmpty(divisions)) {
+            vo.setDivisionCount(0);
+            vo.setPlatformCodes(Collections.emptyList());
+            vo.setGameModes(Collections.emptyList());
+            vo.setRegistrationModes(Collections.emptyList());
+            vo.setRegistrationOpenDivisionCount(0);
+            vo.setNearestRegistrationEndTime(null);
+            return;
+        }
+        vo.setDivisionCount(divisions.size());
+        LinkedHashSet<String> platformCodes = new LinkedHashSet<>();
+        LinkedHashSet<String> gameModes = new LinkedHashSet<>();
+        LinkedHashSet<String> registrationModes = new LinkedHashSet<>();
+        int registrationOpenCount = 0;
+        Date nearestRegistrationEndTime = null;
+        String registrationOpenCode = DivisionStatusEnum.REGISTRATION_OPEN.getCode();
+        for (BasketDivision division : divisions) {
+            if (StringUtils.hasText(division.getPlatformCode())) {
+                platformCodes.add(division.getPlatformCode());
+            }
+            if (StringUtils.hasText(division.getGameMode())) {
+                gameModes.add(division.getGameMode());
+            }
+            if (StringUtils.hasText(division.getRegistrationMode())) {
+                registrationModes.add(division.getRegistrationMode());
+            }
+            if (registrationOpenCode.equals(division.getDivisionStatus())) {
+                registrationOpenCount++;
+                Date endTime = division.getRegistrationEndTime();
+                if (endTime != null && (nearestRegistrationEndTime == null || endTime.before(nearestRegistrationEndTime))) {
+                    nearestRegistrationEndTime = endTime;
+                }
+            }
+        }
+        vo.setPlatformCodes(new ArrayList<>(platformCodes));
+        vo.setGameModes(new ArrayList<>(gameModes));
+        vo.setRegistrationModes(new ArrayList<>(registrationModes));
+        vo.setRegistrationOpenDivisionCount(registrationOpenCount);
+        vo.setNearestRegistrationEndTime(nearestRegistrationEndTime);
     }
 
     private void copySeasonBase(BasketSeason season, BasketSeries series, V4PublicSeasonDetailResp resp,

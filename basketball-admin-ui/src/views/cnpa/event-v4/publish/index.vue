@@ -1,17 +1,20 @@
 <template>
   <div class="app-container">
     <el-alert
-      title="新版赛事管理：赛事系列 → 赛季 → 平台赛区"
+      title="新版赛事结构"
       type="info"
       :closable="false"
       show-icon
-      class="mb8"
+      class="mb8 page-tip-alert"
     >
       <template #default>
-        <div>当前使用新版赛事结构：赛事系列 → 赛季 → 平台赛区。</div>
-        <div>支持球队报名与个人报名；个人报名审核通过后由运营线下抽签组队。</div>
-        <div>当前开放常规赛单循环；小组赛/淘汰赛后续开放。</div>
-        <div>多平台通过平台赛区分别管理。</div>
+        <ul class="page-tip-list">
+          <li>层级：赛事系列 → 赛季 → 平台赛区。</li>
+          <li>同一赛季可创建多个平台赛区，各赛区独立配置平台、比赛模式、报名方式、人数、名额、报名时间和规则模板。</li>
+          <li>当前支持单循环、小组赛和 BO1 单败淘汰。</li>
+          <li>BO3、BO5、双败及淘汰赛轮空暂未开放。</li>
+          <li>个人报名采用后台录入线下抽签组队结果，不是系统在线自动抽签。</li>
+        </ul>
       </template>
     </el-alert>
 
@@ -25,58 +28,37 @@
     </el-card>
 
     <el-card shadow="never" class="mb8">
-      <template #header>
-        <div class="card-header">
-          <span>赛季列表</span>
-          <el-button type="primary" plain icon="Plus" @click="handleAddSeason" v-hasPermi="['basket:v4Season:add']" :disabled="!selectedSeriesId">新建赛季</el-button>
-        </div>
-      </template>
+      <template #header><span>赛季列表</span></template>
 
-      <el-form :model="seasonQuery" :inline="true" class="mb8">
-        <el-form-item label="年份">
-          <el-input-number v-model="seasonQuery.seasonYear" :min="2020" :max="2099" controls-position="right" />
-        </el-form-item>
-        <el-form-item label="赛季名称">
-          <el-input v-model="seasonQuery.seasonName" clearable placeholder="赛季名称" />
-        </el-form-item>
-        <el-form-item label="发布状态">
-          <el-select v-model="seasonQuery.publishStatus" clearable placeholder="发布状态" style="width: 140px">
-            <el-option v-for="item in PUBLISH_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="loadSeasonList">搜索</el-button>
-          <el-button icon="Refresh" @click="resetSeasonQuery">重置</el-button>
-        </el-form-item>
-      </el-form>
+      <div class="season-query-bar">
+        <el-form :model="seasonQuery" class="season-query-form" @submit.prevent>
+          <el-form-item label="年份">
+            <el-input-number v-model="seasonQuery.seasonYear" :min="2020" :max="2099" controls-position="right" class="query-year" />
+          </el-form-item>
+          <el-form-item label="赛季名称">
+            <el-input v-model="seasonQuery.seasonName" clearable placeholder="赛季名称" class="query-name" />
+          </el-form-item>
+          <el-form-item label="发布状态">
+            <el-select v-model="seasonQuery.publishStatus" clearable placeholder="发布状态" class="query-status">
+              <el-option v-for="item in PUBLISH_STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item class="query-actions">
+            <el-button type="primary" icon="Search" @click="loadSeasonList">搜索</el-button>
+            <el-button icon="Refresh" @click="resetSeasonQuery">重置</el-button>
+            <el-button type="primary" icon="Plus" @click="handleCreateEvent" v-hasPermi="['basket:v4Season:add']" :disabled="!selectedSeriesId">新建赛事</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
 
       <el-table v-loading="seasonLoading" :data="seasonList" border highlight-current-row @current-change="handleSeasonSelect">
         <el-table-column label="赛事系列" prop="seriesName" min-width="100" />
         <el-table-column label="年份" prop="seasonYear" width="80" />
         <el-table-column label="赛季名称" prop="seasonName" min-width="120" />
         <el-table-column label="前台标题" prop="displayTitle" min-width="140" />
-        <el-table-column label="报名方式" prop="registrationMode" width="108" align="center">
+        <el-table-column label="赛季周期" min-width="168" show-overflow-tooltip>
           <template #default="scope">
-            <el-tag :type="v4RegistrationModeTagType(scope.row.registrationMode)" size="small" class="nowrap-tag">
-              {{ v4RegistrationModeLabel(scope.row.registrationMode) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="赛制" prop="formatType" width="128" align="center">
-          <template #default="scope">
-            <el-tag :type="v4FormatTypeTagType(scope.row.formatType)" size="small" class="nowrap-tag">
-              {{ v4FormatTypeLabel(scope.row.formatType) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="报名时间" min-width="168" show-overflow-tooltip>
-          <template #default="scope">
-            <span class="time-range">{{ formatV4CompactRange(scope.row.registrationStartTime, scope.row.registrationEndTime) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="比赛时间" min-width="168" show-overflow-tooltip>
-          <template #default="scope">
-            <span class="time-range">{{ formatV4CompactRange(scope.row.matchStartTime, scope.row.matchEndTime) }}</span>
+            <span class="time-range">{{ formatV4CompactRange(scope.row.seasonStartTime, scope.row.seasonEndTime) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="发布状态" prop="publishStatus" width="88" align="center">
@@ -94,13 +76,14 @@
           </template>
         </el-table-column>
         <el-table-column label="平台赛区数" prop="divisionCount" width="100" align="center" />
-        <el-table-column label="操作" width="300" fixed="right" class-name="small-padding fixed-width">
+        <el-table-column label="操作" width="380" fixed="right" class-name="small-padding fixed-width">
           <template #default="scope">
             <div class="table-actions">
               <el-button link type="primary" @click="handleOpenSeasonDetail(scope.row)">赛季详情</el-button>
-              <el-button link type="primary" @click="handleEditSeason(scope.row)" v-hasPermi="['basket:v4Season:edit']">编辑</el-button>
+              <el-button link type="primary" @click="handleContinuePublish(scope.row)" v-if="scope.row.publishStatus === 'DRAFT'">继续发布</el-button>
+              <el-button link type="primary" @click="handleEditSeason(scope.row)" v-hasPermi="['basket:v4Season:edit']" v-if="scope.row.seasonStatus !== 'ARCHIVED'">编辑基础资料</el-button>
               <el-button link type="primary" @click="handleSelectSeason(scope.row)">查看赛区</el-button>
-              <el-button link type="success" @click="handlePublishSeason(scope.row)" v-hasPermi="['basket:v4Season:publish']" v-if="scope.row.publishStatus === 'DRAFT'">发布</el-button>
+              <el-button link type="success" @click="handlePublishSeason(scope.row)" v-hasPermi="['basket:v4Season:publish']" v-if="scope.row.publishStatus === 'DRAFT' || scope.row.publishStatus === 'OFFLINE'">发布</el-button>
               <el-button link type="warning" @click="handleOfflineSeason(scope.row)" v-hasPermi="['basket:v4Season:offline']" v-if="scope.row.publishStatus === 'PUBLISHED'">下线</el-button>
               <el-button link type="danger" @click="handleDeleteSeason(scope.row)" v-hasPermi="['basket:v4Season:remove']" v-if="scope.row.publishStatus === 'DRAFT'">删除</el-button>
             </div>
@@ -169,7 +152,7 @@
           <template #default="scope">
             <div class="table-actions">
               <el-button link type="primary" @click="handleEditDivision(scope.row)" v-hasPermi="['basket:v4Division:edit']">编辑</el-button>
-              <el-button link type="success" @click="handleOpenDivision(scope.row)" v-hasPermi="['basket:v4Division:openRegistration']" v-if="scope.row.divisionStatus === 'DRAFT' && scope.row.registrationMode === 'TEAM'">开放报名</el-button>
+              <el-button link type="success" @click="handleOpenDivision(scope.row)" v-hasPermi="['basket:v4Division:openRegistration']" v-if="scope.row.divisionStatus === 'DRAFT'">开放报名</el-button>
               <el-button link type="warning" @click="handleCloseDivision(scope.row)" v-hasPermi="['basket:v4Division:closeRegistration']" v-if="scope.row.divisionStatus === 'REGISTRATION_OPEN'">关闭报名</el-button>
               <el-button link type="danger" @click="handleDeleteDivision(scope.row)" v-hasPermi="['basket:v4Division:remove']" v-if="scope.row.divisionStatus === 'DRAFT'">删除</el-button>
             </div>
@@ -179,7 +162,7 @@
       <pagination :total="divisionTotal" v-model:page="divisionQuery.pageNum" v-model:limit="divisionQuery.pageSize" @pagination="loadDivisionList" />
     </el-card>
 
-    <el-dialog :title="seasonDialogTitle" v-model="seasonDialogOpen" width="720px" append-to-body>
+    <el-dialog :title="seasonDialogTitle" v-model="seasonDialogOpen" width="760px" append-to-body>
       <el-form ref="seasonFormRef" :model="seasonForm" :rules="seasonRules" label-width="120px">
         <el-form-item label="赛事系列" prop="seriesId">
           <el-select v-model="seasonForm.seriesId" style="width: 100%" :disabled="!!seasonForm.id">
@@ -190,46 +173,40 @@
           <el-input-number v-model="seasonForm.seasonYear" :min="2020" :max="2099" controls-position="right" style="width: 100%" />
         </el-form-item>
         <el-form-item label="赛季名称" prop="seasonName">
-          <el-input v-model="seasonForm.seasonName" placeholder="如 S1" />
+          <el-input v-model="seasonForm.seasonName" placeholder="如 S1、春季赛、2026 第一赛季" maxlength="128" show-word-limit />
         </el-form-item>
         <el-form-item label="前台展示标题" prop="displayTitle">
-          <el-input v-model="seasonForm.displayTitle" placeholder="如 CNPA League 2026 S1" />
+          <el-input v-model="seasonForm.displayTitle" placeholder="如 CNPA League 2026 S1" maxlength="128" show-word-limit />
         </el-form-item>
-        <el-form-item label="赛事简介">
-          <el-input v-model="seasonForm.description" type="textarea" :rows="3" />
+        <el-form-item label="赛季简介">
+          <el-input v-model="seasonForm.description" type="textarea" :rows="3" maxlength="2000" show-word-limit placeholder="可选，用于前台赛季介绍" />
         </el-form-item>
-        <el-form-item label="封面图文件ID">
-          <el-input-number v-model="seasonForm.coverFileId" :min="1" controls-position="right" style="width: 100%" placeholder="暂可填写文件ID，后续接上传组件" />
-          <div class="el-form-item__tip">暂可填写文件ID，后续接上传组件</div>
+        <el-form-item label="赛季周期">
+          <el-date-picker
+            v-model="seasonPeriodRange"
+            type="datetimerange"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            range-separator="至"
+            start-placeholder="赛季开始"
+            end-placeholder="赛季结束"
+            style="width: 100%"
+          />
+          <div class="el-form-item__tip">表示赛季展示周期，不代表各平台赛区的具体比赛时间</div>
         </el-form-item>
-        <el-form-item label="Banner图文件ID">
-          <el-input-number v-model="seasonForm.bannerFileId" :min="1" controls-position="right" style="width: 100%" />
-          <div class="el-form-item__tip">暂可填写文件ID，后续接上传组件</div>
-        </el-form-item>
-        <el-form-item label="报名方式" prop="registrationMode">
-          <el-radio-group v-model="seasonForm.registrationMode">
-            <el-radio label="TEAM">球队报名</el-radio>
-            <el-radio label="PERSONAL">个人报名（默认，Division 暂不可开放）</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="默认赛制">
-          <el-radio-group v-model="seasonForm.formatType">
-            <el-radio label="REGULAR_ROUND_ROBIN">常规赛单循环（过渡默认）</el-radio>
-          </el-radio-group>
-          <div class="el-form-item__tip">Season 赛制仅作 Division 创建默认值，最终规则以 Division 模板快照为准</div>
-        </el-form-item>
-        <el-form-item label="报名开始时间" prop="registrationStartTime">
-          <el-date-picker v-model="seasonForm.registrationStartTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择报名开始时间" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="报名结束时间" prop="registrationEndTime">
-          <el-date-picker v-model="seasonForm.registrationEndTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择报名结束时间" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="比赛开始时间" prop="matchStartTime">
-          <el-date-picker v-model="seasonForm.matchStartTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择比赛开始时间" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="比赛结束时间" prop="matchEndTime">
-          <el-date-picker v-model="seasonForm.matchEndTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择比赛结束时间" style="width: 100%" />
-        </el-form-item>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="封面图">
+              <image-upload v-model="coverPreview" :limit="1" :file-size="5" />
+              <div class="el-form-item__tip">支持上传预览；文件资产 ID 绑定待后续接通</div>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Banner 图">
+              <image-upload v-model="bannerPreview" :limit="1" :file-size="5" />
+              <div class="el-form-item__tip">支持上传预览；文件资产 ID 绑定待后续接通</div>
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
       <template #footer>
         <el-button @click="seasonDialogOpen = false">取消</el-button>
@@ -245,10 +222,14 @@
             <el-descriptions-item label="年份">{{ seasonDetail.seasonYear }}</el-descriptions-item>
             <el-descriptions-item label="赛季名称">{{ seasonDetail.seasonName }}</el-descriptions-item>
             <el-descriptions-item label="前台标题">{{ seasonDetail.displayTitle }}</el-descriptions-item>
-            <el-descriptions-item label="报名方式">{{ v4RegistrationModeLabel(seasonDetail.registrationMode) }}</el-descriptions-item>
-            <el-descriptions-item label="基础赛制">{{ v4FormatTypeLabel(seasonDetail.formatType) }}</el-descriptions-item>
-            <el-descriptions-item label="报名时间" :span="2">{{ formatV4CompactRange(seasonDetail.registrationStartTime, seasonDetail.registrationEndTime) }}</el-descriptions-item>
-            <el-descriptions-item label="比赛时间" :span="2">{{ formatV4CompactRange(seasonDetail.matchStartTime, seasonDetail.matchEndTime) }}</el-descriptions-item>
+            <el-descriptions-item label="发布状态">
+              <el-tag :type="v4PublishStatusTagType(seasonDetail.publishStatus)" size="small">{{ v4PublishStatusLabel(seasonDetail.publishStatus) }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="赛季状态">
+              <el-tag :type="v4SeasonStatusTagType(seasonDetail.seasonStatus)" size="small">{{ v4SeasonStatusLabel(seasonDetail.seasonStatus) }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="赛季周期" :span="2">{{ formatV4CompactRange(seasonDetail.seasonStartTime, seasonDetail.seasonEndTime) }}</el-descriptions-item>
+            <el-descriptions-item label="平台赛区数">{{ seasonDetail.divisionCount ?? seasonDetail.divisions?.length ?? 0 }}</el-descriptions-item>
             <el-descriptions-item label="简介" :span="2">{{ seasonDetail.description || '-' }}</el-descriptions-item>
           </el-descriptions>
         </el-tab-pane>
@@ -340,7 +321,7 @@
               <el-tag :type="v4SeasonStatusTagType(seasonDetail.seasonStatus)" size="small">{{ v4SeasonStatusLabel(seasonDetail.seasonStatus) }}</el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="平台赛区数">{{ seasonDetail.divisionCount ?? seasonDetail.divisions?.length ?? 0 }}</el-descriptions-item>
-            <el-descriptions-item label="操作提示">发布前请确认至少创建一个平台赛区；详细规则可在「赛制规则」页签查看，完整参数配置后续开放。</el-descriptions-item>
+            <el-descriptions-item label="操作提示">可先发布赛季用于内容预告；仅当存在有效平台赛区且赛区开放报名时，前台才展示报名入口。</el-descriptions-item>
           </el-descriptions>
         </el-tab-pane>
       </el-tabs>
@@ -371,7 +352,7 @@
             <el-radio label="TEAM">球队报名</el-radio>
             <el-radio label="PERSONAL">个人报名</el-radio>
           </el-radio-group>
-          <div v-if="divisionForm.registrationMode === 'PERSONAL'" class="el-form-item__tip">个人报名需在规则快照锁定后开放；审核通过后由运营线下抽签组队。</div>
+          <div v-if="divisionForm.registrationMode === 'PERSONAL'" class="el-form-item__tip">个人报名审核通过后，由运营线下抽签组队并录入结果。</div>
         </el-form-item>
         <el-form-item label="赛制模板" prop="formatTemplateId">
           <el-select v-model="divisionForm.formatTemplateId" style="width: 100%" placeholder="请选择赛制模板">
@@ -392,7 +373,6 @@
         </el-form-item>
         <el-form-item label="报名开始">
           <el-date-picker v-model="divisionForm.registrationStartTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" />
-          <div class="el-form-item__tip">留空则继承 Season 时间</div>
         </el-form-item>
         <el-form-item label="报名结束">
           <el-date-picker v-model="divisionForm.registrationEndTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" />
@@ -412,6 +392,14 @@
         <el-button type="primary" @click="submitDivisionForm">确定</el-button>
       </template>
     </el-dialog>
+
+    <PublishWizardDialog
+      v-model="wizardOpen"
+      :series-list="seriesList"
+      :series-id="selectedSeriesId"
+      :season-id="wizardSeasonId"
+      @success="handleWizardSuccess"
+    />
 
     <el-dialog :title="stageDialogTitle" v-model="stageDialogOpen" width="720px" append-to-body destroy-on-close>
       <el-form ref="stageFormRef" :model="stageForm" :rules="stageRules" label-width="120px">
@@ -493,7 +481,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, onMounted, reactive, ref } from 'vue'
+import { computed, getCurrentInstance, onMounted, reactive, ref, watch } from 'vue'
+import PublishWizardDialog from './components/PublishWizardDialog.vue'
 import { listV4Series, type BasketSeriesVo } from '@/api/cnpa/event-v4/series'
 import {
   addV4Season,
@@ -656,9 +645,15 @@ const divisionQuery = reactive({
   seasonId: undefined as number | undefined
 })
 
+const wizardOpen = ref(false)
+const wizardSeasonId = ref<number>()
+
 const seasonDialogOpen = ref(false)
 const seasonDialogTitle = ref('')
 const seasonFormRef = ref()
+const coverPreview = ref('')
+const bannerPreview = ref('')
+const seasonPeriodRange = ref<[string, string] | null>(null)
 const seasonForm = reactive<BasketSeasonCreateReq & { id?: number }>({
   seriesId: undefined,
   seasonYear: new Date().getFullYear(),
@@ -667,26 +662,26 @@ const seasonForm = reactive<BasketSeasonCreateReq & { id?: number }>({
   description: '',
   coverFileId: undefined,
   bannerFileId: undefined,
-  registrationMode: 'TEAM',
-  formatType: 'REGULAR_ROUND_ROBIN',
-  registrationStartTime: '',
-  registrationEndTime: '',
-  matchStartTime: '',
-  matchEndTime: ''
+  seasonStartTime: '',
+  seasonEndTime: ''
 })
 
 const seasonRules = {
   seriesId: [{ required: true, message: '请选择赛事系列', trigger: 'change' }],
   seasonYear: [{ required: true, message: '请输入年份', trigger: 'blur' }],
   seasonName: [{ required: true, message: '请输入赛季名称', trigger: 'blur' }],
-  displayTitle: [{ required: true, message: '请输入前台展示标题', trigger: 'blur' }],
-  registrationMode: [{ required: true, message: '请选择报名方式', trigger: 'change' }],
-  formatType: [{ required: true, message: '请选择赛制', trigger: 'change' }],
-  registrationStartTime: [{ required: true, message: '请选择报名开始时间', trigger: 'change' }],
-  registrationEndTime: [{ required: true, message: '请选择报名结束时间', trigger: 'change' }],
-  matchStartTime: [{ required: true, message: '请选择比赛开始时间', trigger: 'change' }],
-  matchEndTime: [{ required: true, message: '请选择比赛结束时间', trigger: 'change' }]
+  displayTitle: [{ required: true, message: '请输入前台展示标题', trigger: 'blur' }]
 }
+
+watch(seasonPeriodRange, (range) => {
+  if (range && range.length === 2) {
+    seasonForm.seasonStartTime = range[0]
+    seasonForm.seasonEndTime = range[1]
+  } else {
+    seasonForm.seasonStartTime = ''
+    seasonForm.seasonEndTime = ''
+  }
+})
 
 const divisionDialogOpen = ref(false)
 const divisionDialogTitle = ref('')
@@ -766,13 +761,32 @@ function resetSeasonForm() {
     description: '',
     coverFileId: undefined,
     bannerFileId: undefined,
-    registrationMode: 'TEAM',
-    formatType: 'REGULAR_ROUND_ROBIN',
-    registrationStartTime: '',
-    registrationEndTime: '',
-    matchStartTime: '',
-    matchEndTime: ''
+    seasonStartTime: '',
+    seasonEndTime: ''
   })
+  coverPreview.value = ''
+  bannerPreview.value = ''
+  seasonPeriodRange.value = null
+}
+
+function applySeasonFormRow(row: BasketSeasonListVo) {
+  Object.assign(seasonForm, {
+    id: row.id,
+    seriesId: row.seriesId,
+    seasonYear: row.seasonYear,
+    seasonName: row.seasonName,
+    displayTitle: row.displayTitle,
+    description: row.description,
+    coverFileId: row.coverFileId,
+    bannerFileId: row.bannerFileId,
+    seasonStartTime: row.seasonStartTime || '',
+    seasonEndTime: row.seasonEndTime || ''
+  })
+  coverPreview.value = row.coverUrl || ''
+  bannerPreview.value = row.bannerUrl || ''
+  seasonPeriodRange.value = row.seasonStartTime && row.seasonEndTime
+    ? [row.seasonStartTime, row.seasonEndTime]
+    : null
 }
 
 async function loadSeries() {
@@ -787,6 +801,10 @@ async function loadSeries() {
 
 function handleSeriesChange(seriesId: number) {
   seasonQuery.seriesId = seriesId
+  seasonQuery.seasonYear = undefined
+  seasonQuery.seasonName = ''
+  seasonQuery.publishStatus = ''
+  seasonQuery.pageNum = 1
   selectedSeason.value = undefined
   divisionList.value = []
   loadSeasonList()
@@ -811,27 +829,58 @@ function resetSeasonQuery() {
   loadSeasonList()
 }
 
-function handleAddSeason() {
-  resetSeasonForm()
-  seasonDialogTitle.value = '新建赛季'
-  seasonDialogOpen.value = true
+function handleCreateEvent() {
+  if (!selectedSeriesId.value) {
+    proxy!.$modal.msgWarning('请先选择赛事系列')
+    return
+  }
+  wizardSeasonId.value = undefined
+  wizardOpen.value = true
+}
+
+function handleContinuePublish(row: BasketSeasonListVo) {
+  wizardSeasonId.value = row.id
+  wizardOpen.value = true
+}
+
+function handleWizardSuccess() {
+  loadSeasonList()
+  if (selectedSeason.value?.id === wizardSeasonId.value) {
+    loadDivisionList()
+  }
 }
 
 function handleEditSeason(row: BasketSeasonListVo) {
-  Object.assign(seasonForm, row)
-  seasonForm.id = row.id
-  seasonDialogTitle.value = '编辑赛季'
+  resetSeasonForm()
+  applySeasonFormRow(row)
+  seasonDialogTitle.value = '编辑赛季基础资料'
   seasonDialogOpen.value = true
 }
 
 function submitSeasonForm() {
   seasonFormRef.value?.validate(async (valid: boolean) => {
     if (!valid) return
+    if (seasonForm.seasonStartTime && seasonForm.seasonEndTime
+      && seasonForm.seasonStartTime >= seasonForm.seasonEndTime) {
+      proxy!.$modal.msgError('赛季结束时间必须晚于赛季开始时间')
+      return
+    }
+    const payload: BasketSeasonCreateReq = {
+      seriesId: seasonForm.seriesId,
+      seasonYear: seasonForm.seasonYear,
+      seasonName: seasonForm.seasonName,
+      displayTitle: seasonForm.displayTitle,
+      description: seasonForm.description,
+      coverFileId: seasonForm.coverFileId,
+      bannerFileId: seasonForm.bannerFileId,
+      seasonStartTime: seasonForm.seasonStartTime || undefined,
+      seasonEndTime: seasonForm.seasonEndTime || undefined
+    }
     if (seasonForm.id) {
-      await updateV4Season(seasonForm.id, seasonForm)
+      await updateV4Season(seasonForm.id, payload)
       proxy!.$modal.msgSuccess('更新成功')
     } else {
-      await addV4Season(seasonForm)
+      await addV4Season(payload)
       proxy!.$modal.msgSuccess('创建成功')
     }
     seasonDialogOpen.value = false
@@ -1002,7 +1051,11 @@ function handleSeasonSelect(row: BasketSeasonListVo | undefined) {
 }
 
 async function handlePublishSeason(row: BasketSeasonListVo) {
-  await proxy!.$modal.confirm('发布前请确认已创建至少一个平台赛区，且基础信息完整。是否继续？')
+  const hasDivision = (row.divisionCount ?? 0) > 0
+  const tip = hasDivision
+    ? '确认发布该赛季？前台将根据已创建的平台赛区展示内容。'
+    : '当前尚无平台赛区，发布后前台仅展示赛季预告，不展示报名入口。是否继续？'
+  await proxy!.$modal.confirm(tip)
   await publishV4Season(row.id!)
   proxy!.$modal.msgSuccess('发布成功')
   loadSeasonList()
@@ -1122,6 +1175,34 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
 }
+.season-query-bar {
+  margin-bottom: 16px;
+}
+.season-query-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.season-query-form :deep(.el-form-item) {
+  margin-bottom: 0;
+  margin-right: 0;
+}
+.season-query-form :deep(.query-year) {
+  width: 120px;
+}
+.season-query-form :deep(.query-name) {
+  width: 180px;
+}
+.season-query-form :deep(.query-status) {
+  width: 140px;
+}
+.season-query-form :deep(.query-actions .el-form-item__content) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
 .mb8 {
   margin-bottom: 8px;
 }
@@ -1172,5 +1253,17 @@ onMounted(() => {
 }
 .text-center {
   text-align: center;
+}
+.page-tip-alert :deep(.el-alert__content) {
+  padding-top: 0;
+}
+.page-tip-list {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.7;
+  font-size: 13px;
+}
+.page-tip-list li + li {
+  margin-top: 2px;
 }
 </style>

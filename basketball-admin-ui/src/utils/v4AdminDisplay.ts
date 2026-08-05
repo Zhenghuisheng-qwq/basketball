@@ -8,15 +8,25 @@ const PUBLISH_STATUS_LABELS: Record<string, string> = {
   OFFLINE: '已下线'
 }
 
+const SEASON_STATUS_LABELS: Record<string, string> = {
+  NOT_STARTED: '未开始',
+  REGISTRATION_OPEN: '报名中',
+  REGISTRATION_CLOSED: '报名截止',
+  PLAYING: '比赛中',
+  FINISHED: '已结束',
+  ARCHIVED: '已归档'
+}
+
 const SEASON_DIVISION_STATUS_LABELS: Record<string, string> = {
   NOT_STARTED: '未开始',
   REGISTRATION_OPEN: '报名中',
-  REGISTRATION_CLOSED: '报名结束',
+  REGISTRATION_CLOSED: '报名截止',
   SCHEDULED: '已排赛',
-  PLAYING: '进行中',
+  PLAYING: '比赛中',
   FINISHED: '已结束',
   CANCELLED: '已取消',
-  DRAFT: '草稿'
+  DRAFT: '草稿',
+  ARCHIVED: '已归档'
 }
 
 const GRANT_STATUS_LABELS: Record<string, string> = {
@@ -218,7 +228,7 @@ export function v4PublishStatusLabel(status?: string | null): string {
 }
 
 export function v4SeasonStatusLabel(status?: string | null): string {
-  return lookup(SEASON_DIVISION_STATUS_LABELS, status)
+  return lookup(SEASON_STATUS_LABELS, status, lookup(SEASON_DIVISION_STATUS_LABELS, status))
 }
 
 export function v4DivisionStatusLabel(status?: string | null): string {
@@ -352,6 +362,7 @@ export function v4SeasonStatusTagType(status?: string | null): TagType {
     case 'SCHEDULED': return ''
     case 'REGISTRATION_CLOSED': return 'warning'
     case 'FINISHED':
+    case 'ARCHIVED':
     case 'CANCELLED':
       return 'info'
     default: return 'info'

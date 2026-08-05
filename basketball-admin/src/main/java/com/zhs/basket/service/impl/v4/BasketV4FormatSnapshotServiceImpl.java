@@ -170,6 +170,8 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         stage.setDivisionId(divisionId);
         stage.setStageOrder(req.getStageOrder() != null ? req.getStageOrder() : nextOrder);
         stage.setStageStatus(DivisionStageStatusEnum.DRAFT.getCode());
+        stage.setExecutionStatus(StageExecutionStatusEnum.DRAFT.getCode());
+        stage.setExecutionVersion(0);
         stage.setCreateTime(now);
         stage.setUpdateTime(now);
         stage.setIsDelete(0);

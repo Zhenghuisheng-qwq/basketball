@@ -43,6 +43,12 @@ export interface V4PublicSeasonItem {
   matchStartTime?: string
   matchEndTime?: string
   seasonStatus?: string
+  divisionCount?: number
+  platformCodes?: string[]
+  gameModes?: string[]
+  registrationModes?: string[]
+  registrationOpenDivisionCount?: number
+  nearestRegistrationEndTime?: string
   divisions: V4PublicDivisionBrief[]
 }
 

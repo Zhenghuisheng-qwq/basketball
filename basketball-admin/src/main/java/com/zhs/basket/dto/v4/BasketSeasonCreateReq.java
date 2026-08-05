@@ -13,10 +13,6 @@ public class BasketSeasonCreateReq {
     private String description;
     private Long coverFileId;
     private Long bannerFileId;
-    private String registrationMode;
-    private String formatType;
-    private Date registrationStartTime;
-    private Date registrationEndTime;
-    private Date matchStartTime;
-    private Date matchEndTime;
+    private Date seasonStartTime;
+    private Date seasonEndTime;
 }

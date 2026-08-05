@@ -73,14 +73,13 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
 
         BasketDivision entity = new BasketDivision();
         BeanUtils.copyBeanProp(entity, req);
-        entity.setRegistrationMode(resolveRegistrationMode(req.getRegistrationMode(), season));
+        entity.setRegistrationMode(resolveRegistrationMode(req.getRegistrationMode()));
         entity.setFormatType(StringUtils.isNotEmpty(req.getFormatType())
                 ? req.getFormatType() : FormatTypeEnum.REGULAR_ROUND_ROBIN.getCode());
         entity.setGameMode(gameMode.getCode());
         entity.setLineupMinCount(rosterLimit.getMinCount());
         entity.setLineupMaxCount(rosterLimit.getMaxCount());
         entity.setFormatTemplateId(templateId);
-        inheritSeasonTimesIfBlank(entity, season);
         entity.setDivisionStatus(DivisionStatusEnum.DRAFT.getCode());
         entity.setSortOrder(req.getSortOrder() != null ? req.getSortOrder() : 0);
         entity.setCreateTime(new Date());
@@ -303,12 +302,9 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         }
     }
 
-    private String resolveRegistrationMode(String reqMode, BasketSeason season) {
+    private String resolveRegistrationMode(String reqMode) {
         if (StringUtils.isNotEmpty(reqMode)) {
             return reqMode;
-        }
-        if (StringUtils.isNotEmpty(season.getRegistrationMode())) {
-            return season.getRegistrationMode();
         }
         return RegistrationModeEnum.TEAM.getCode();
     }
@@ -339,21 +335,6 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         if (division.getMatchStartTime() != null && division.getMatchEndTime() != null
                 && division.getMatchStartTime().after(division.getMatchEndTime())) {
             throw new ServiceException("比赛开始时间不得晚于比赛结束时间");
-        }
-    }
-
-    private void inheritSeasonTimesIfBlank(BasketDivision division, BasketSeason season) {
-        if (division.getRegistrationStartTime() == null) {
-            division.setRegistrationStartTime(season.getRegistrationStartTime());
-        }
-        if (division.getRegistrationEndTime() == null) {
-            division.setRegistrationEndTime(season.getRegistrationEndTime());
-        }
-        if (division.getMatchStartTime() == null) {
-            division.setMatchStartTime(season.getMatchStartTime());
-        }
-        if (division.getMatchEndTime() == null) {
-            division.setMatchEndTime(season.getMatchEndTime());
         }
     }
 

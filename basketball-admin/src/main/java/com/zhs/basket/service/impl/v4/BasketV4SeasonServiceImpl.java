@@ -5,9 +5,8 @@ import com.zhs.basket.domain.v4.BasketSeason;
 import com.zhs.basket.domain.v4.BasketSeries;
 import com.zhs.basket.dto.v4.BasketSeasonCreateReq;
 import com.zhs.basket.dto.v4.BasketSeasonUpdateReq;
-import com.zhs.basket.enums.v4.FormatTypeEnum;
+import com.zhs.basket.enums.v4.DivisionStatusEnum;
 import com.zhs.basket.enums.v4.PublishStatusEnum;
-import com.zhs.basket.enums.v4.RegistrationModeEnum;
 import com.zhs.basket.enums.v4.SeasonStatusEnum;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketSeasonMapper;
@@ -70,12 +69,6 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
 
         BasketSeason entity = new BasketSeason();
         BeanUtils.copyBeanProp(entity, req);
-        if (StringUtils.isEmpty(entity.getRegistrationMode())) {
-            entity.setRegistrationMode(RegistrationModeEnum.TEAM.getCode());
-        }
-        if (StringUtils.isEmpty(entity.getFormatType())) {
-            entity.setFormatType(FormatTypeEnum.REGULAR_ROUND_ROBIN.getCode());
-        }
         entity.setPublishStatus(PublishStatusEnum.DRAFT.getCode());
         entity.setSeasonStatus(SeasonStatusEnum.NOT_STARTED.getCode());
         entity.setCreateTime(new Date());
@@ -91,13 +84,16 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
         BasketSeason season = requireSeason(id);
         int divisionCount = seasonMapper.countDivisionBySeasonId(id);
         boolean published = PublishStatusEnum.PUBLISHED.getCode().equals(season.getPublishStatus());
+        boolean archived = SeasonStatusEnum.ARCHIVED.getCode().equals(season.getSeasonStatus());
+
+        if (archived) {
+            throw new ServiceException("已归档赛季不可编辑");
+        }
 
         if (divisionCount > 0) {
-            rejectKeyFieldChange(season.getSeriesId(), req.getSeriesId(), "已有 Division，不允许修改 Series");
-            rejectKeyFieldChange(season.getSeasonYear(), req.getSeasonYear(), "已有 Division，不允许修改赛季年份");
-            rejectKeyFieldChange(season.getSeasonName(), req.getSeasonName(), "已有 Division，不允许修改赛季名称");
-            rejectKeyFieldChange(season.getRegistrationMode(), req.getRegistrationMode(), "已有 Division，不允许修改报名方式");
-            rejectKeyFieldChange(season.getFormatType(), req.getFormatType(), "已有 Division，不允许修改赛制");
+            rejectKeyFieldChange(season.getSeriesId(), req.getSeriesId(), "已有平台赛区，不允许修改赛事系列");
+            rejectKeyFieldChange(season.getSeasonYear(), req.getSeasonYear(), "已有平台赛区，不允许修改赛季年份");
+            rejectKeyFieldChange(season.getSeasonName(), req.getSeasonName(), "已有平台赛区，不允许修改赛季名称");
         }
 
         if (published) {
@@ -112,6 +108,12 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
             }
             if (req.getBannerFileId() != null) {
                 season.setBannerFileId(req.getBannerFileId());
+            }
+            if (req.getSeasonStartTime() != null) {
+                season.setSeasonStartTime(req.getSeasonStartTime());
+            }
+            if (req.getSeasonEndTime() != null) {
+                season.setSeasonEndTime(req.getSeasonEndTime());
             }
         } else {
             if (req.getSeriesId() != null) {
@@ -136,30 +138,15 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
             if (req.getBannerFileId() != null) {
                 season.setBannerFileId(req.getBannerFileId());
             }
-            if (req.getRegistrationMode() != null) {
-                validateRegistrationMode(req.getRegistrationMode());
-                season.setRegistrationMode(req.getRegistrationMode());
+            if (req.getSeasonStartTime() != null) {
+                season.setSeasonStartTime(req.getSeasonStartTime());
             }
-            if (req.getFormatType() != null) {
-                validateFormatType(req.getFormatType());
-                season.setFormatType(req.getFormatType());
-            }
-            if (req.getRegistrationStartTime() != null) {
-                season.setRegistrationStartTime(req.getRegistrationStartTime());
-            }
-            if (req.getRegistrationEndTime() != null) {
-                season.setRegistrationEndTime(req.getRegistrationEndTime());
-            }
-            if (req.getMatchStartTime() != null) {
-                season.setMatchStartTime(req.getMatchStartTime());
-            }
-            if (req.getMatchEndTime() != null) {
-                season.setMatchEndTime(req.getMatchEndTime());
+            if (req.getSeasonEndTime() != null) {
+                season.setSeasonEndTime(req.getSeasonEndTime());
             }
         }
 
-        validateSeasonTimes(season.getRegistrationStartTime(), season.getRegistrationEndTime(),
-                season.getMatchStartTime(), season.getMatchEndTime());
+        validateSeasonPeriod(season.getSeasonStartTime(), season.getSeasonEndTime());
         assertUniqueSeason(season.getSeriesId(), season.getSeasonYear(), season.getSeasonName(), id);
         season.setUpdateTime(new Date());
         if (seasonMapper.updateById(season) != 1) {
@@ -171,20 +158,15 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
     @Transactional(rollbackFor = Exception.class)
     public void publish(Long id) {
         BasketSeason season = requireSeason(id);
-        if (!PublishStatusEnum.DRAFT.getCode().equals(season.getPublishStatus())) {
-            throw new ServiceException("仅草稿状态 Season 可发布");
+        String publishStatus = season.getPublishStatus();
+        if (!PublishStatusEnum.DRAFT.getCode().equals(publishStatus)
+                && !PublishStatusEnum.OFFLINE.getCode().equals(publishStatus)) {
+            throw new ServiceException("仅草稿或已下线 Season 可发布");
         }
-        List<BasketDivision> divisions = divisionMapper.selectBySeasonId(id);
-        if (divisions.isEmpty()) {
-            throw new ServiceException("发布 Season 前至少创建一个 Division");
-        }
-        boolean hasComplete = divisions.stream().anyMatch(this::isDivisionBasicComplete);
-        if (!hasComplete) {
-            throw new ServiceException("至少一个 Division 基础信息完整后才能发布 Season");
-        }
+        validatePublishable(season);
 
         season.setPublishStatus(PublishStatusEnum.PUBLISHED.getCode());
-        season.setSeasonStatus(resolveSeasonStatusOnPublish(season));
+        season.setSeasonStatus(resolveSeasonStatusOnPublish(id));
         season.setUpdateTime(new Date());
         if (seasonMapper.updateById(season) != 1) {
             throw new ServiceException("发布 Season 失败");
@@ -195,6 +177,9 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
     @Transactional(rollbackFor = Exception.class)
     public void offline(Long id) {
         BasketSeason season = requireSeason(id);
+        if (!PublishStatusEnum.PUBLISHED.getCode().equals(season.getPublishStatus())) {
+            throw new ServiceException("仅已发布 Season 可下线");
+        }
         season.setPublishStatus(PublishStatusEnum.OFFLINE.getCode());
         season.setUpdateTime(new Date());
         if (seasonMapper.updateById(season) != 1) {
@@ -210,7 +195,7 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
             throw new ServiceException("仅草稿状态 Season 可删除");
         }
         if (seasonMapper.countDivisionBySeasonId(id) > 0) {
-            throw new ServiceException("存在 Division 时不允许删除 Season，请先处理 Division");
+            throw new ServiceException("存在平台赛区时不允许删除 Season，请先处理赛区");
         }
         if (seasonMapper.softDelete(id) != 1) {
             throw new ServiceException("删除 Season 失败");
@@ -224,46 +209,39 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
         if (req.getSeasonYear() == null) {
             throw new ServiceException("seasonYear 不能为空");
         }
+        if (req.getSeasonYear() < 2020 || req.getSeasonYear() > 2099) {
+            throw new ServiceException("seasonYear 需在 2020-2099 范围内");
+        }
         if (StringUtils.isEmpty(req.getSeasonName())) {
             throw new ServiceException("seasonName 不能为空");
+        }
+        if (req.getSeasonName().length() > 128) {
+            throw new ServiceException("seasonName 长度不能超过 128");
         }
         if (StringUtils.isEmpty(req.getDisplayTitle())) {
             throw new ServiceException("displayTitle 不能为空");
         }
-        validateRegistrationMode(req.getRegistrationMode());
-        validateFormatType(req.getFormatType());
-        validateSeasonTimes(req.getRegistrationStartTime(), req.getRegistrationEndTime(),
-                req.getMatchStartTime(), req.getMatchEndTime());
+        if (req.getDisplayTitle().length() > 128) {
+            throw new ServiceException("displayTitle 长度不能超过 128");
+        }
+        if (req.getDescription() != null && req.getDescription().length() > 2000) {
+            throw new ServiceException("description 长度不能超过 2000");
+        }
+        validateSeasonPeriod(req.getSeasonStartTime(), req.getSeasonEndTime());
     }
 
-    private void validateRegistrationMode(String mode) {
-        if (StringUtils.isEmpty(mode)) {
-            return;
+    private void validatePublishable(BasketSeason season) {
+        if (season.getSeriesId() == null || season.getSeasonYear() == null
+                || StringUtils.isEmpty(season.getSeasonName())
+                || StringUtils.isEmpty(season.getDisplayTitle())) {
+            throw new ServiceException("发布前请完善赛季基础资料");
         }
-        if (!RegistrationModeEnum.TEAM.getCode().equals(mode)
-                && !RegistrationModeEnum.PERSONAL.getCode().equals(mode)) {
-            throw new ServiceException("registrationMode 仅支持 TEAM 或 PERSONAL");
-        }
+        validateSeasonPeriod(season.getSeasonStartTime(), season.getSeasonEndTime());
     }
 
-    /**
-     * Season.format_type 为过渡字段，仅作创建 Division 时的默认参考，不是最终执行规则。
-     */
-    private void validateFormatType(String formatType) {
-        if (StringUtils.isEmpty(formatType)) {
-            return;
-        }
-        if (!FormatTypeEnum.REGULAR_ROUND_ROBIN.getCode().equals(formatType)) {
-            throw new ServiceException("formatType 当前仅支持 REGULAR_ROUND_ROBIN");
-        }
-    }
-
-    private void validateSeasonTimes(Date regStart, Date regEnd, Date matchStart, Date matchEnd) {
-        if (regStart != null && regEnd != null && regStart.after(regEnd)) {
-            throw new ServiceException("报名开始时间不得晚于报名结束时间");
-        }
-        if (matchStart != null && matchEnd != null && matchStart.after(matchEnd)) {
-            throw new ServiceException("比赛开始时间不得晚于比赛结束时间");
+    private void validateSeasonPeriod(Date start, Date end) {
+        if (start != null && end != null && start.after(end)) {
+            throw new ServiceException("赛季结束时间必须晚于赛季开始时间");
         }
     }
 
@@ -299,32 +277,37 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
         }
     }
 
-    private String resolveSeasonStatusOnPublish(BasketSeason season) {
-        Date now = new Date();
-        Date regStart = season.getRegistrationStartTime();
-        Date regEnd = season.getRegistrationEndTime();
-        if (regStart != null && regEnd != null && !now.before(regStart) && !now.after(regEnd)) {
+    /**
+     * 赛季业务状态按下属 Division 聚合；无 Division 或未开放报名时保持未开始。
+     */
+    private String resolveSeasonStatusOnPublish(Long seasonId) {
+        List<BasketDivision> divisions = divisionMapper.selectBySeasonId(seasonId);
+        if (divisions.isEmpty()) {
+            return SeasonStatusEnum.NOT_STARTED.getCode();
+        }
+        boolean anyRegistrationOpen = divisions.stream()
+                .anyMatch(d -> DivisionStatusEnum.REGISTRATION_OPEN.getCode().equals(d.getDivisionStatus()));
+        if (anyRegistrationOpen) {
             return SeasonStatusEnum.REGISTRATION_OPEN.getCode();
         }
-        if (regEnd != null && now.after(regEnd)) {
+        boolean anyPlaying = divisions.stream()
+                .anyMatch(d -> DivisionStatusEnum.PLAYING.getCode().equals(d.getDivisionStatus()));
+        if (anyPlaying) {
+            return SeasonStatusEnum.PLAYING.getCode();
+        }
+        boolean allFinished = divisions.stream()
+                .allMatch(d -> DivisionStatusEnum.FINISHED.getCode().equals(d.getDivisionStatus())
+                        || DivisionStatusEnum.ARCHIVED.getCode().equals(d.getDivisionStatus()));
+        if (allFinished) {
+            return SeasonStatusEnum.FINISHED.getCode();
+        }
+        boolean anyRegistrationClosed = divisions.stream()
+                .anyMatch(d -> DivisionStatusEnum.REGISTRATION_CLOSED.getCode().equals(d.getDivisionStatus())
+                        || DivisionStatusEnum.SCHEDULED.getCode().equals(d.getDivisionStatus()));
+        if (anyRegistrationClosed) {
             return SeasonStatusEnum.REGISTRATION_CLOSED.getCode();
         }
         return SeasonStatusEnum.NOT_STARTED.getCode();
-    }
-
-    private boolean isDivisionBasicComplete(BasketDivision division) {
-        return division != null
-                && StringUtils.isNotEmpty(division.getPlatformCode())
-                && StringUtils.isNotEmpty(division.getDivisionName())
-                && StringUtils.isNotEmpty(division.getRegistrationMode())
-                && StringUtils.isNotEmpty(division.getFormatType())
-                && division.getMaxTeamCount() != null && division.getMaxTeamCount() > 0
-                && division.getLineupMinCount() != null
-                && division.getLineupMaxCount() != null
-                && division.getRegistrationStartTime() != null
-                && division.getRegistrationEndTime() != null
-                && division.getMatchStartTime() != null
-                && division.getMatchEndTime() != null;
     }
 
     private void rejectKeyFieldChange(Object oldVal, Object newVal, String message) {

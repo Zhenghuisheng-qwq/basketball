@@ -52,5 +52,23 @@ public class V4PublicSeasonItemResp {
 
     private String seasonStatus;
 
+    /** 已发布赛区数量 */
+    private Integer divisionCount;
+
+    /** 赛区涉及平台（去重） */
+    private List<String> platformCodes;
+
+    /** 赛区涉及比赛模式（去重） */
+    private List<String> gameModes;
+
+    /** 赛区涉及报名方式（去重） */
+    private List<String> registrationModes;
+
+    /** 当前报名中的赛区数量 */
+    private Integer registrationOpenDivisionCount;
+
+    /** 最近一场报名截止时间（报名中赛区） */
+    private Date nearestRegistrationEndTime;
+
     private List<V4PublicDivisionBriefResp> divisions;
 }

@@ -16,12 +16,10 @@ public class BasketSeason {
     private String description;
     private Long coverFileId;
     private Long bannerFileId;
-    private String registrationMode;
-    private String formatType;
-    private Date registrationStartTime;
-    private Date registrationEndTime;
-    private Date matchStartTime;
-    private Date matchEndTime;
+    /** 赛季展示周期开始（DB: match_start_time） */
+    private Date seasonStartTime;
+    /** 赛季展示周期结束（DB: match_end_time） */
+    private Date seasonEndTime;
     private String publishStatus;
     private String seasonStatus;
     private Date createTime;

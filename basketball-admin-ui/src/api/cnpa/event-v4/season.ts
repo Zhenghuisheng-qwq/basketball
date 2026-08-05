@@ -25,12 +25,10 @@ export interface BasketSeasonListVo {
   description?: string
   coverFileId?: number
   bannerFileId?: number
-  registrationMode?: string
-  formatType?: string
-  registrationStartTime?: string
-  registrationEndTime?: string
-  matchStartTime?: string
-  matchEndTime?: string
+  coverUrl?: string
+  bannerUrl?: string
+  seasonStartTime?: string
+  seasonEndTime?: string
   publishStatus?: string
   seasonStatus?: string
   divisionCount?: number
@@ -50,12 +48,8 @@ export interface BasketSeasonCreateReq {
   description?: string
   coverFileId?: number
   bannerFileId?: number
-  registrationMode?: string
-  formatType?: string
-  registrationStartTime?: string
-  registrationEndTime?: string
-  matchStartTime?: string
-  matchEndTime?: string
+  seasonStartTime?: string
+  seasonEndTime?: string
 }
 
 export type BasketSeasonUpdateReq = Partial<BasketSeasonCreateReq>

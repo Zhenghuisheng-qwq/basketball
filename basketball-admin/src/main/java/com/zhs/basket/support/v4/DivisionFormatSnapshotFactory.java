@@ -3,6 +3,7 @@ package com.zhs.basket.support.v4;
 import com.zhs.basket.domain.v4.*;
 import com.zhs.basket.enums.v4.DivisionStageStatusEnum;
 import com.zhs.basket.enums.v4.SnapshotStatusEnum;
+import com.zhs.basket.enums.v4.StageExecutionStatusEnum;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -64,6 +65,8 @@ public class DivisionFormatSnapshotFactory {
             stage.setNextStageCode(ts.getNextStageCode());
             stage.setRequiresManualConfirmation(ts.getRequiresManualConfirmation());
             stage.setStageStatus(DivisionStageStatusEnum.DRAFT.getCode());
+            stage.setExecutionStatus(StageExecutionStatusEnum.DRAFT.getCode());
+            stage.setExecutionVersion(0);
             stage.setCreateTime(now);
             stage.setUpdateTime(now);
             stage.setIsDelete(0);
