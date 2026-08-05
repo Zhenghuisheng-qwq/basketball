@@ -4,6 +4,7 @@ import com.zhs.basket.domain.BasketPlayerProfile;
 import com.zhs.basket.domain.v4.BasketCaptainGrant;
 import com.zhs.basket.domain.v4.BasketDivision;
 import com.zhs.basket.dto.v4.BasketCaptainGrantCreateReq;
+import com.zhs.basket.enums.v4.CaptainGrantSourceEnum;
 import com.zhs.basket.enums.v4.CaptainGrantStatusEnum;
 import com.zhs.basket.enums.v4.RegistrationModeEnum;
 import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
@@ -75,6 +76,7 @@ public class BasketV4CaptainGrantServiceImpl implements IBasketV4CaptainGrantSer
         entity.setValidTo(req.getValidTo());
         entity.setGrantedBy(SecurityUtils.getUserId());
         entity.setRemark(req.getRemark());
+        entity.setGrantSource(CaptainGrantSourceEnum.MANUAL.getCode());
         entity.setCreateTime(now);
         entity.setUpdateTime(now);
         entity.setIsDelete(NOT_DELETED);

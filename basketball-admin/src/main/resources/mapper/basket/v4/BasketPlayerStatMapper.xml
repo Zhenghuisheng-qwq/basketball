@@ -79,9 +79,8 @@
         order by points desc
     </select>
 
-    <update id="deleteByDivisionId">
-        update basket_player_stat set is_delete = 1, update_time = now()
-        where division_id = #{divisionId} and is_delete = 0
-    </update>
+    <delete id="deleteByDivisionId">
+        delete from basket_player_stat where division_id = #{divisionId}
+    </delete>
 
 </mapper>

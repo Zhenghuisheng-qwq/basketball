@@ -28,8 +28,7 @@ public class BasketV4StageExecutionController extends BaseController {
     @Log(title = "V4 StageExecution", businessType = BusinessType.UPDATE)
     @PostMapping("/{stageId}/initialize-teams")
     public AjaxResult initializeTeams(@PathVariable Long stageId) {
-        stageExecutionApplicationService.initializeStageTeams(stageId);
-        return success();
+        return success(stageExecutionApplicationService.initializeStageTeams(stageId));
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")

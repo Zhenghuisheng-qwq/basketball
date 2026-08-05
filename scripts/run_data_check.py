@@ -11,7 +11,8 @@ from pathlib import Path
 import pymysql
 
 ROOT = Path(__file__).resolve().parents[1]
-ENV_LOCAL = ROOT / "scripts" / ".env.r4.local"
+ENV_R4_LOCAL = ROOT / "scripts" / ".env.r4.local"
+ENV_V2_LOCAL = ROOT / "scripts" / ".env.v2.local"
 OUTPUT_DIR = ROOT / "scripts" / "output"
 
 # Checks that always return rows but are informational (not anomalies)
@@ -41,8 +42,9 @@ def load_dotenv(path: Path) -> None:
 
 
 def db_config() -> dict:
-    load_dotenv(ENV_LOCAL)
-    return {
+    load_dotenv(ENV_V2_LOCAL)
+    load_dotenv(ENV_R4_LOCAL)
+    cfg = {
         "host": os.environ.get("CNPA_DB_HOST", "127.0.0.1"),
         "port": int(os.environ.get("CNPA_DB_PORT", "3306")),
         "user": os.environ.get("CNPA_DB_USER", "root"),
@@ -50,6 +52,8 @@ def db_config() -> dict:
         "database": os.environ.get("CNPA_DB_NAME", "basketball"),
         "charset": "utf8mb4",
     }
+    print(f"Target DB: {cfg['host']}:{cfg['port']}/{cfg['database']} (user={cfg['user']})")
+    return cfg
 
 
 def split_checks(content: str) -> list[tuple[str, str]]:

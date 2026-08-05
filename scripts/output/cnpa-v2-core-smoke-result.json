@@ -1,0 +1,92 @@
+{
+  "batchCode": "SMOKE_V2_20260805",
+  "startTime": "2026-08-05T21:15:00+08:00",
+  "endTime": "2026-08-05T21:45:00+08:00",
+  "conclusion": "核心冒烟部分通过",
+  "environment": {
+    "adminBase": "http://127.0.0.1:8080",
+    "webBase": "http://127.0.0.1:8881",
+    "adminUi": "http://127.0.0.1:80",
+    "webUi": "http://127.0.0.1:5173",
+    "mysql": "192.168.31.47:3306/basketball",
+    "redis": "192.168.31.47:6379",
+    "envFile": "scripts/.env.v2.local"
+  },
+  "fixesApplied": [
+    "StageTeam incremental sync + BasketStageTeamSyncResultVo",
+    "GET /basket/v4/public/division/list (route conflict fix)",
+    "Snapshot lock idempotent when LOCKED",
+    "team_stat/player_stat/rank rebuild physical delete",
+    "run_data_check.py .env.v2.local support",
+    "Legacy menu cleanup check_02=0"
+  ],
+  "passed": [
+    {"name": "stage_team_sync_idempotent", "status": "PASS", "detail": "sync inserted=0 existing=4 total=4 x2"},
+    {"name": "public_division_list", "status": "PASS", "detail": "seasonId=9 -> divisionId 10,11 HTTP 200"},
+    {"name": "snapshot_lock_idempotent", "status": "PASS", "detail": "double lock OK, currentSnapshots=1"},
+    {"name": "legacy_menu_check_02", "status": "PASS", "detail": "deleted 26 legacy menus, cnt=0"},
+    {"name": "data_check_pre", "status": "PASS", "detail": "Target DB 192.168.31.47:3306/basketball"},
+    {"name": "data_check_post", "status": "PARTIAL", "detail": "check_02=0; check_10/16 baseline anomaly"},
+    {"name": "standing_6_matches", "status": "PASS", "detail": "finished=6 rows=4 each played=3"},
+    {"name": "standing_idempotent", "status": "PASS", "detail": "rebuild rows=4"},
+    {"name": "qualification_none", "status": "PASS", "detail": "preview empty expected"},
+    {"name": "web_ui_http", "status": "PASS", "detail": "home/events/season/login HTTP 200"},
+    {"name": "web_ui_api_deps", "status": "PASS", "detail": "no core 500 on public APIs"}
+  ],
+  "partial": [
+    {
+      "name": "personal_full_chain",
+      "status": "PARTIAL",
+      "detail": "eventTeam=2 eventPlayer=6 formationReg=2 grants=2; web team create blocked by captain grant, completed via SQL seed + admin bind/confirm"
+    },
+    {
+      "name": "web_ui_interaction",
+      "status": "MANUAL_UI_PENDING",
+      "detail": "HTTP/console OK; form flows not automated"
+    }
+  ],
+  "createdBusinessIds": {
+    "seasonId": 9,
+    "teamDivisionId": 10,
+    "personalDivisionId": 11,
+    "formatSnapshotId": 5,
+    "personalFormatSnapshotId": 6,
+    "stageId": 5,
+    "scheduleBatchId": 2,
+    "registrationIds": [32, 33, 34, 35],
+    "personalRegistrationIds": [2, 3, 4, 5, 6, 7],
+    "personalDrawBatchId": 1,
+    "personalDrawTeamIds": [1, 2],
+    "personalFormationRegistrationIds": [36, 37],
+    "personalEventTeamIds": [20, 21],
+    "teamEventTeamIds": [16, 17, 18, 19],
+    "matchIds": [2, 3, 4, 5, 6, 7],
+    "captainGrantIds": [38, 39, 40, 41, 45, 46],
+    "submissionIds": [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+  },
+  "stageTeamSyncResult": {
+    "first": {"totalEventTeam": 4, "existingStageTeam": 4, "insertedStageTeam": 0, "skippedStageTeam": 0},
+    "second": {"totalEventTeam": 4, "existingStageTeam": 4, "insertedStageTeam": 0, "skippedStageTeam": 0}
+  },
+  "standingResult": {
+    "finishedMatchCount": 6,
+    "standingRowCount": 4,
+    "rows": [
+      {"eventTeamId": 16, "rankNo": 1, "win": 2, "loss": 1, "points": 5},
+      {"eventTeamId": 17, "rankNo": 2, "win": 2, "loss": 1, "points": 5},
+      {"eventTeamId": 18, "rankNo": 3, "win": 2, "loss": 1, "points": 5},
+      {"eventTeamId": 19, "rankNo": 4, "win": 0, "loss": 3, "points": 3}
+    ]
+  },
+  "p0": [],
+  "p1": [
+    {"issue": "PERSONAL web team create requires platform captain grant"},
+    {"issue": "data-check check_10/check_16 baseline anomalies"},
+    {"issue": "data-check check_14 SQL team_id column error"}
+  ],
+  "p2": [
+    {"issue": "Web UI deep interaction MANUAL_UI_PENDING"},
+    {"issue": "Standing test scores same home/away perspective"}
+  ],
+  "canExpandTesting": true
+}

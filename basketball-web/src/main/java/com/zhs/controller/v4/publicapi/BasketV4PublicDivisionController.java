@@ -2,6 +2,7 @@ package com.zhs.controller.v4.publicapi;
 
 import com.zhs.common.NoLoginRequest;
 import com.zhs.response.v4.publicapi.V4PublicDivisionDetailResp;
+import com.zhs.response.v4.publicapi.V4PublicDivisionListItemResp;
 import com.zhs.service.v4.IBasketV4PublicService;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
@@ -10,7 +11,10 @@ import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @NoLoginRequest
 @RestController
@@ -20,6 +24,12 @@ public class BasketV4PublicDivisionController {
 
     @Resource
     private IBasketV4PublicService v4PublicService;
+
+    @ApiOperation("Division 列表")
+    @GetMapping("/list")
+    public R<List<V4PublicDivisionListItemResp>> listDivisions(@RequestParam Long seasonId) {
+        return R.ok(v4PublicService.listDivisions(seasonId));
+    }
 
     @ApiOperation("Division 详情")
     @GetMapping("/{divisionId}")

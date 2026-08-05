@@ -5,6 +5,7 @@ import com.zhs.basket.support.v4.stage.StageSchedulePreviewVo;
 import com.zhs.basket.vo.v4.BasketDivisionStageExecutionListVo;
 import com.zhs.basket.vo.v4.BasketStageQualificationPreviewVo;
 import com.zhs.basket.vo.v4.BasketStageStandingScopeVo;
+import com.zhs.basket.vo.v4.BasketStageTeamSyncResultVo;
 
 import java.util.List;
 
@@ -15,7 +16,7 @@ public interface IDivisionStageExecutionApplicationService {
 
     List<BasketDivisionStageExecutionListVo> listStages(Long divisionId);
 
-    void initializeStageTeams(Long stageId);
+    BasketStageTeamSyncResultVo initializeStageTeams(Long stageId);
 
     StageSchedulePreviewVo previewSchedule(Long stageId);
 

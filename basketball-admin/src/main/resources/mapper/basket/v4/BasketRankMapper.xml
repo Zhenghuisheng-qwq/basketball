@@ -67,9 +67,8 @@
         order by rank_type asc, rank_no asc
     </select>
 
-    <update id="deleteByDivisionId">
-        update basket_rank set is_delete = 1, update_time = now()
-        where division_id = #{divisionId} and is_delete = 0
-    </update>
+    <delete id="deleteByDivisionId">
+        delete from basket_rank where division_id = #{divisionId}
+    </delete>
 
 </mapper>

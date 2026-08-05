@@ -132,8 +132,11 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void lockSnapshot(Long divisionId, Long operatorId) {
-        validateSnapshotReady(divisionId);
         BasketDivisionFormatSnapshot snapshot = requireSnapshot(divisionId);
+        if (SnapshotStatusEnum.fromCode(snapshot.getSnapshotStatus()).isLockedOrBeyond()) {
+            return;
+        }
+        validateSnapshotReady(divisionId);
         if (!SnapshotStatusEnum.DRAFT.getCode().equals(snapshot.getSnapshotStatus())) {
             throw new ServiceException("规则快照已锁定或不可锁定");
         }

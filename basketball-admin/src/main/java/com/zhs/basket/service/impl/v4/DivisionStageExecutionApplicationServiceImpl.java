@@ -72,22 +72,33 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void initializeStageTeams(Long stageId) {
+    public BasketStageTeamSyncResultVo initializeStageTeams(Long stageId) {
         BasketDivisionStage stage = requireStage(stageId);
-        if (stageTeamMapper.countByStageId(stageId) > 0) {
-            return;
-        }
-
         BasketDivision division = requireDivision(stage.getDivisionId());
         Date now = new Date();
+
+        List<BasketDivisionStageTeam> existingStageTeams = stageTeamMapper.selectByStageId(stageId);
+        Set<Long> existingEventTeamIds = existingStageTeams.stream()
+                .map(BasketDivisionStageTeam::getEventTeamId)
+                .collect(Collectors.toSet());
+
         List<BasketDivisionStageTeam> toInsert = new ArrayList<>();
+        int totalSourceCount;
 
         if (isFirstStage(stage)) {
             List<BasketEventTeam> eventTeams = eventTeamMapper.selectActiveByDivisionId(division.getId());
-            int seed = 1;
+            totalSourceCount = eventTeams.size();
+            int nextSeed = existingStageTeams.stream()
+                    .map(BasketDivisionStageTeam::getSeedNo)
+                    .filter(Objects::nonNull)
+                    .max(Integer::compareTo)
+                    .orElse(0) + 1;
             for (BasketEventTeam team : eventTeams) {
+                if (existingEventTeamIds.contains(team.getId())) {
+                    continue;
+                }
                 toInsert.add(buildStageTeam(stage, team.getId(), null, null, null,
-                        seed++, StageTeamEntryTypeEnum.INITIAL.getCode(), now));
+                        nextSeed++, StageTeamEntryTypeEnum.INITIAL.getCode(), now));
             }
         } else {
             BasketDivisionStage previousStage = findPreviousStage(stage);
@@ -96,32 +107,50 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             }
             List<BasketDivisionStageQualification> confirmed =
                     qualificationMapper.selectConfirmedByStageId(previousStage.getId());
-            if (confirmed.isEmpty()) {
+            if (confirmed.isEmpty() && existingStageTeams.isEmpty()) {
                 throw new ServiceException("上一阶段尚无已确认晋级结果");
             }
-            int seed = 1;
+            totalSourceCount = confirmed.size();
+            int nextSeed = existingStageTeams.stream()
+                    .map(BasketDivisionStageTeam::getSeedNo)
+                    .filter(Objects::nonNull)
+                    .max(Integer::compareTo)
+                    .orElse(0) + 1;
             for (BasketDivisionStageQualification qualification : confirmed) {
+                if (existingEventTeamIds.contains(qualification.getEventTeamId())) {
+                    continue;
+                }
                 StageTeamEntryTypeEnum entryType = mapEntryType(qualification.getQualificationType());
                 toInsert.add(buildStageTeam(stage, qualification.getEventTeamId(),
                         previousStage.getId(), qualification.getGroupId(), qualification.getSourceRank(),
-                        seed++, entryType.getCode(), now));
+                        nextSeed++, entryType.getCode(), now));
             }
         }
 
-        if (toInsert.isEmpty()) {
+        if (!toInsert.isEmpty()) {
+            assertCanSyncNewStageTeams(stage);
+            if (stageTeamMapper.batchInsert(toInsert) != toInsert.size()) {
+                throw new ServiceException("初始化阶段参赛队伍失败");
+            }
+        } else if (existingStageTeams.isEmpty()) {
             throw new ServiceException("无可初始化的参赛队伍");
         }
-        if (stageTeamMapper.batchInsert(toInsert) != toInsert.size()) {
-            throw new ServiceException("初始化阶段参赛队伍失败");
-        }
 
-        stage.setParticipantCount(toInsert.size());
+        int finalCount = existingStageTeams.size() + toInsert.size();
+        stage.setParticipantCount(finalCount);
         if (StageExecutionStatusEnum.DRAFT.getCode().equals(stage.getExecutionStatus())
                 || stage.getExecutionStatus() == null) {
             stage.setExecutionStatus(StageExecutionStatusEnum.READY.getCode());
         }
         stage.setUpdateTime(now);
         stageMapper.updateExecutionStatus(stage);
+
+        BasketStageTeamSyncResultVo result = new BasketStageTeamSyncResultVo();
+        result.setTotalEventTeam(totalSourceCount);
+        result.setExistingStageTeam(existingStageTeams.size());
+        result.setInsertedStageTeam(toInsert.size());
+        result.setSkippedStageTeam(Math.max(0, totalSourceCount - existingStageTeams.size() - toInsert.size()));
+        return result;
     }
 
     @Override
@@ -711,6 +740,22 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         team.setUpdateTime(now);
         team.setIsDelete(NOT_DELETED);
         return team;
+    }
+
+    private void assertCanSyncNewStageTeams(BasketDivisionStage stage) {
+        if (scheduleBatchMapper.selectPublishedByStageId(stage.getId()) != null) {
+            throw new ServiceException("该阶段赛程已发布，新增参赛队伍须先撤销晋级或联系管理员处理");
+        }
+        if (scheduleBatchMapper.selectDraftByStageId(stage.getId()) != null) {
+            throw new ServiceException("该阶段已有草稿赛程，请先作废草稿赛程后再同步参赛队伍");
+        }
+        String status = stage.getExecutionStatus();
+        if (StageExecutionStatusEnum.SCHEDULE_GENERATED.getCode().equals(status)
+                || StageExecutionStatusEnum.RUNNING.getCode().equals(status)
+                || StageExecutionStatusEnum.RESULT_PENDING_CONFIRM.getCode().equals(status)
+                || StageExecutionStatusEnum.COMPLETED.getCode().equals(status)) {
+            throw new ServiceException("当前阶段状态不允许同步新增参赛队伍，请先作废草稿赛程或撤销已发布赛程");
+        }
     }
 
     private void validateStageForGenerate(BasketDivisionStage stage) {

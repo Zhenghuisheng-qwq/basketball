@@ -52,6 +52,56 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     private BasketPublicSupport publicSupport;
     @Resource
     private BasketV4PublicStageMapper publicStageMapper;
+    @Resource
+    private BasketDivisionFormatSnapshotDao formatSnapshotDao;
+
+    @Override
+    public List<V4PublicDivisionListItemResp> listDivisions(Long seasonId) {
+        if (seasonId == null || seasonId <= 0) {
+            return Collections.emptyList();
+        }
+        BasketSeason season = seasonDao.selectById(seasonId);
+        if (season == null || !Objects.equals(season.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+            return Collections.emptyList();
+        }
+        if (!PublishStatusEnum.PUBLISHED.getCode().equals(season.getPublishStatus())) {
+            return Collections.emptyList();
+        }
+        List<BasketDivision> divisions = listDivisionsBySeasonId(seasonId);
+        if (CollectionUtils.isEmpty(divisions)) {
+            return Collections.emptyList();
+        }
+        Set<Long> snapshotIds = divisions.stream()
+                .map(BasketDivision::getFormatSnapshotId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, String> snapshotStatusMap = Collections.emptyMap();
+        if (!snapshotIds.isEmpty()) {
+            snapshotStatusMap = formatSnapshotDao.selectList(new LambdaQueryWrapper<BasketDivisionFormatSnapshot>()
+                            .in(BasketDivisionFormatSnapshot::getId, snapshotIds)
+                            .eq(BasketDivisionFormatSnapshot::getIsDelete, BasketPublicConstants.NOT_DELETED))
+                    .stream()
+                    .collect(Collectors.toMap(BasketDivisionFormatSnapshot::getId,
+                            BasketDivisionFormatSnapshot::getSnapshotStatus, (a, b) -> a));
+        }
+        List<V4PublicDivisionListItemResp> result = new ArrayList<>();
+        for (BasketDivision division : divisions) {
+            V4PublicDivisionListItemResp item = new V4PublicDivisionListItemResp();
+            item.setDivisionId(division.getId());
+            item.setDivisionName(division.getDivisionName());
+            item.setPlatformCode(division.getPlatformCode());
+            item.setGameMode(division.getGameMode());
+            item.setRegistrationMode(division.getRegistrationMode());
+            item.setDivisionStatus(division.getDivisionStatus());
+            item.setRegistrationStartTime(division.getRegistrationStartTime());
+            item.setRegistrationEndTime(division.getRegistrationEndTime());
+            if (division.getFormatSnapshotId() != null) {
+                item.setSnapshotStatus(snapshotStatusMap.get(division.getFormatSnapshotId()));
+            }
+            result.add(item);
+        }
+        return result;
+    }
 
     @Override
     public List<V4PublicSeriesItemResp> listSeries() {

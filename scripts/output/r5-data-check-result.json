@@ -1,0 +1,219 @@
+{
+  "checks": [
+    {
+      "name": "python_check_rank_explain_json_column",
+      "sql": "SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'basket_standing' AND COLUMN_NAME = 'rank_explain_json'",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": []
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_01_pure_legacy_tables' AS check_id, COUNT(*) AS cnt\nFROM information_schema.TABLES\nWHERE TABLE_SCHEMA = DATABASE()\n  AND TABLE_NAME IN (\n    'basket_tournament_registration', 'basket_tea",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": [
+        {
+          "check_id": "check_01_pure_legacy_tables",
+          "cnt": 0
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_02_legacy_menus' AS check_id, COUNT(*) AS cnt\nFROM sys_menu\nWHERE component LIKE 'cnpa/event/%'\n   OR component LIKE 'cnpa/competition/%'\n   OR component LIKE 'cnpa/statistics/%'\n   OR c",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": [
+        {
+          "check_id": "check_02_legacy_menus",
+          "cnt": 0
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_03_division_no_snapshot' AS check_id, COUNT(*) AS cnt\nFROM basket_division WHERE is_delete=0 AND format_snapshot_id IS NULL",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": [
+        {
+          "check_id": "check_03_division_no_snapshot",
+          "cnt": 0
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_04_match_no_stage' AS check_id, COUNT(*) AS cnt\nFROM basket_match WHERE is_delete=0 AND (stage_id IS NULL OR stage_id=0)",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": [
+        {
+          "check_id": "check_04_match_no_stage",
+          "cnt": 0
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_05_batch_no_stage' AS check_id, COUNT(*) AS cnt\nFROM basket_schedule_batch WHERE is_delete=0 AND (stage_id IS NULL OR stage_id=0)",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": [
+        {
+          "check_id": "check_05_batch_no_stage",
+          "cnt": 0
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_06_standing_no_stage' AS check_id, COUNT(*) AS cnt\nFROM basket_standing WHERE is_delete=0 AND (stage_id IS NULL OR stage_id=0)",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": [
+        {
+          "check_id": "check_06_standing_no_stage",
+          "cnt": 0
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_07_standing_no_active_key' AS check_id, COUNT(*) AS cnt\nFROM basket_standing WHERE is_delete=0 AND (active_unique_key IS NULL OR active_unique_key='')",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": [
+        {
+          "check_id": "check_07_standing_no_active_key",
+          "cnt": 0
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_08_active_key_duplicate' AS check_id, active_unique_key, COUNT(*) AS cnt\nFROM basket_standing WHERE is_delete=0 AND active_unique_key IS NOT NULL AND active_unique_key<>''\nGROUP BY activ",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": []
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_09_rank_explain_json_column' AS check_id, COUNT(*) AS cnt\nFROM information_schema.COLUMNS\nWHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='basket_standing' AND COLUMN_NAME='rank_explain_j",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": [
+        {
+          "check_id": "check_09_rank_explain_json_column",
+          "cnt": 0
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_10_legacy_write_perms' AS check_id, COUNT(*) AS cnt\nFROM sys_menu\nWHERE perms IN ('basket:tournament:add','basket:match:schedule','basket:standing:rebuild','basket:dataSettlement:list')",
+      "count": 3,
+      "status": "ANOMALY",
+      "blocking": true,
+      "samples": [
+        {
+          "check_id": "check_10_legacy_write_perms",
+          "cnt": 3
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_11_ps_xbox_division_write' AS check_id, COUNT(*) AS cnt\nFROM basket_division WHERE is_delete=0 AND platform_code IN ('PS','XBOX','PS5')",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": [
+        {
+          "check_id": "check_11_ps_xbox_division_write",
+          "cnt": 0
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_12_legacy_registration' AS check_id, COUNT(*) AS cnt\nFROM basket_registration\nWHERE is_delete=0 AND (registration_source IS NULL OR registration_source NOT IN ('TEAM_DIRECT','PERSONAL_FO",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": [
+        {
+          "check_id": "check_12_legacy_registration",
+          "cnt": 0
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_13_duplicate_event_team' AS check_id, division_id, team_id, COUNT(*) AS cnt\nFROM basket_event_team WHERE is_delete=0\nGROUP BY division_id, team_id HAVING COUNT(*)>1",
+      "count": 0,
+      "status": "ERROR",
+      "blocking": true,
+      "samples": [],
+      "detail": "(1054, \"Unknown column 'team_id' in 'field list'\")"
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_14_duplicate_registration' AS check_id, division_id, team_id, COUNT(*) AS cnt\nFROM basket_registration WHERE is_delete=0 AND registration_status='APPROVED'\nGROUP BY division_id, team_id ",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": []
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_15_event_team_no_player' AS check_id, COUNT(*) AS cnt\nFROM basket_event_team et\nWHERE et.is_delete=0 AND NOT EXISTS (\n  SELECT 1 FROM basket_event_player ep WHERE ep.event_team_id=et.id ",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": [
+        {
+          "check_id": "check_15_event_team_no_player",
+          "cnt": 0
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_16_approved_reg_no_event_team' AS check_id, COUNT(*) AS cnt\nFROM basket_registration r\nWHERE r.is_delete=0 AND r.registration_status='APPROVED'\n  AND NOT EXISTS (\n    SELECT 1 FROM baske",
+      "count": 3,
+      "status": "ANOMALY",
+      "blocking": true,
+      "samples": [
+        {
+          "check_id": "check_16_approved_reg_no_event_team",
+          "cnt": 3
+        }
+      ]
+    },
+    {
+      "name": "CNPA 动态赛制重构 R5：清理后只读验收（核心检查项应全部为 0 或空结果集）",
+      "sql": "SELECT 'check_17_v4_legacy_template' AS check_id, COUNT(*) AS cnt\nFROM basket_format_template WHERE template_code='V4_LEGACY_ROUND_ROBIN_V1' AND is_delete=0 AND enabled=1",
+      "count": 0,
+      "status": "OK",
+      "blocking": false,
+      "samples": [
+        {
+          "check_id": "check_17_v4_legacy_template",
+          "cnt": 0
+        }
+      ]
+    }
+  ]
+}
