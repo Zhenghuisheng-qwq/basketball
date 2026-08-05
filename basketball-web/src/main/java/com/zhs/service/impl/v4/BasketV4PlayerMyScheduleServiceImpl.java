@@ -38,7 +38,7 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
         BasketPlayerProfile player = requirePlayerByMemberId(memberId);
 
         List<V4MyScheduleResp> allRows = matchSubmissionMapper.selectMySchedule(
-                memberId, player.getId(), seasonId, divisionId, status, true, onlyPendingSubmit);
+                memberId, player.getId(), seasonId, divisionId, status, includeFinished, onlyPendingSubmit);
         for (V4MyScheduleResp row : allRows) {
             enrichDisplayFields(row);
             enrichActionFields(row);

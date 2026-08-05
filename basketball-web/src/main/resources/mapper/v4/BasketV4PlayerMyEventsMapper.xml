@@ -81,7 +81,8 @@
         inner join basket_season se on se.id = et.season_id and se.is_delete = 0
         inner join basket_series s on s.id = se.series_id and s.is_delete = 0
         left join (
-            select ds.* from basket_division_stage ds
+            select ds.id, ds.division_id, ds.stage_name, ds.stage_type, ds.execution_status
+            from basket_division_stage ds
             inner join (
                 select division_id, max(stage_order) as max_order
                 from basket_division_stage
@@ -94,10 +95,11 @@
         left join basket_standing st on st.is_delete = 0
             and st.stage_id = cs.id
             and st.event_team_id = et.id
-            and st.group_scope_key = (
-                select coalesce(min(st2.group_scope_key), 0)
-                from basket_standing st2
+            and st.id = (
+                select st2.id from basket_standing st2
                 where st2.is_delete = 0 and st2.stage_id = cs.id and st2.event_team_id = et.id
+                order by coalesce(st2.group_scope_key, 0) asc, st2.id asc
+                limit 1
             )
         left join basket_division_group dg on dg.id = st.group_scope_key and dg.is_delete = 0 and st.group_scope_key > 0
         left join basket_division_stage_qualification q on q.is_delete = 0
@@ -105,7 +107,6 @@
             and q.qualification_status in ('PREVIEW', 'CONFIRMED')
         where ep.is_delete = 0
           and (ep.member_id = #{memberId} or ep.source_player_id = #{playerId})
-        group by et.id, ep.is_captain
         order by se.id desc, d.sort_order asc, et.id desc
     </select>
 

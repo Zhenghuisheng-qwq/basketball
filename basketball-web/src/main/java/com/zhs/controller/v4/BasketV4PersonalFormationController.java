@@ -1,11 +1,13 @@
 package com.zhs.controller.v4;
 
+import com.zhs.request.team.TeamCreateReq;
 import com.zhs.request.v4.V4PersonalFormationBindTeamReq;
 import com.zhs.service.v4.IBasketV4PersonalFormationService;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 @Api(tags = "V4 个人组队")
@@ -41,9 +43,28 @@ public class BasketV4PersonalFormationController {
         return R.ok();
     }
 
+    @ApiOperation("个人成队任务创建长期球队")
+    @PostMapping("/tasks/{drawTeamId}/create-team")
+    public R createTeam(@PathVariable Long drawTeamId,
+                        @RequestBody TeamCreateReq req,
+                        HttpServletRequest request) {
+        return R.ok(personalFormationService.createLongTermTeam(drawTeamId, req, resolveClientIp(request)));
+    }
+
     @ApiOperation("确认组队并转换正式报名")
     @PostMapping("/tasks/{drawTeamId}/confirm")
     public R confirm(@PathVariable Long drawTeamId) {
         return R.ok(personalFormationService.confirmFormation(drawTeamId));
+    }
+
+    private static String resolveClientIp(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

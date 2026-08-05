@@ -61,7 +61,18 @@ WHERE t.template_code = 'V4_LEGACY_ROUND_ROBIN_V1' AND t.version_no = 1 AND t.is
 INSERT INTO basket_format_template_tie_break_rule (
   template_id, stage_code, rule_code, priority_no, enabled, create_time, update_time, is_delete
 )
-SELECT t.id, 'REGULAR', 'POINT_DIFFERENCE', 2, 1, NOW(), NOW(), 0
+SELECT t.id, 'REGULAR', 'HEAD_TO_HEAD', 2, 1, NOW(), NOW(), 0
+FROM basket_format_template t
+WHERE t.template_code = 'V4_LEGACY_ROUND_ROBIN_V1' AND t.version_no = 1 AND t.is_delete = 0
+  AND NOT EXISTS (
+    SELECT 1 FROM basket_format_template_tie_break_rule r
+    WHERE r.template_id = t.id AND r.stage_code = 'REGULAR' AND r.rule_code = 'HEAD_TO_HEAD' AND r.is_delete = 0
+  );
+
+INSERT INTO basket_format_template_tie_break_rule (
+  template_id, stage_code, rule_code, priority_no, enabled, create_time, update_time, is_delete
+)
+SELECT t.id, 'REGULAR', 'POINT_DIFFERENCE', 3, 1, NOW(), NOW(), 0
 FROM basket_format_template t
 WHERE t.template_code = 'V4_LEGACY_ROUND_ROBIN_V1' AND t.version_no = 1 AND t.is_delete = 0
   AND NOT EXISTS (
@@ -72,12 +83,23 @@ WHERE t.template_code = 'V4_LEGACY_ROUND_ROBIN_V1' AND t.version_no = 1 AND t.is
 INSERT INTO basket_format_template_tie_break_rule (
   template_id, stage_code, rule_code, priority_no, enabled, create_time, update_time, is_delete
 )
-SELECT t.id, 'REGULAR', 'TOTAL_POINTS', 3, 1, NOW(), NOW(), 0
+SELECT t.id, 'REGULAR', 'TOTAL_POINTS', 4, 1, NOW(), NOW(), 0
 FROM basket_format_template t
 WHERE t.template_code = 'V4_LEGACY_ROUND_ROBIN_V1' AND t.version_no = 1 AND t.is_delete = 0
   AND NOT EXISTS (
     SELECT 1 FROM basket_format_template_tie_break_rule r
     WHERE r.template_id = t.id AND r.stage_code = 'REGULAR' AND r.rule_code = 'TOTAL_POINTS' AND r.is_delete = 0
+  );
+
+INSERT INTO basket_format_template_tie_break_rule (
+  template_id, stage_code, rule_code, priority_no, enabled, create_time, update_time, is_delete
+)
+SELECT t.id, 'REGULAR', 'MANUAL', 5, 1, NOW(), NOW(), 0
+FROM basket_format_template t
+WHERE t.template_code = 'V4_LEGACY_ROUND_ROBIN_V1' AND t.version_no = 1 AND t.is_delete = 0
+  AND NOT EXISTS (
+    SELECT 1 FROM basket_format_template_tie_break_rule r
+    WHERE r.template_id = t.id AND r.stage_code = 'REGULAR' AND r.rule_code = 'MANUAL' AND r.is_delete = 0
   );
 
 -- ---------------------------------------------------------------------------

@@ -13,7 +13,9 @@ import com.zhs.common.exception.ServiceException;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 单循环阶段赛程策略（非小组赛）。
@@ -63,6 +65,7 @@ public class RoundRobinStageScheduleStrategy extends AbstractStageScheduleStrate
         Date startFrom = context.getDivision().getMatchStartTime() != null
                 ? context.getDivision().getMatchStartTime() : new Date();
         TimeSlotAllocator allocator = new TimeSlotAllocator(startFrom);
+        Set<String> seenPairKeys = new HashSet<>();
 
         for (Round round : rounds) {
             int seq = 1;
@@ -72,7 +75,7 @@ public class RoundRobinStageScheduleStrategy extends AbstractStageScheduleStrate
                 match.setMatchTime(allocator.allocate());
                 match.setHomeEventTeamId(pairing.getHomeEventTeamId());
                 match.setAwayEventTeamId(pairing.getAwayEventTeamId());
-                insertMatch(match);
+                validateAndInsertMatch(match, context, round.getRoundNo(), seq, seenPairKeys);
                 seq++;
             }
         }

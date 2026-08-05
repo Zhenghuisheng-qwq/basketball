@@ -24,7 +24,10 @@ import com.zhs.enums.TeamPublicStatusEnum;
 import com.zhs.enums.TeamRosterTypeEnum;
 import com.zhs.enums.TeamStatusEnum;
 import com.zhs.exception.ServiceException;
+import com.zhs.dao.v4.BasketPersonalDrawTeamDao;
+import com.zhs.enums.v4.FormationStatusEnum;
 import com.zhs.model.v4.BasketCaptainGrant;
+import com.zhs.model.v4.BasketPersonalDrawTeam;
 import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketPlayerPlatformAccount;
 import com.zhs.model.BasketMemberProfile;
@@ -102,6 +105,8 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     private AccountSecurityLogHelper securityLogHelper;
     @Resource
     private AccountTeamProperties teamProperties;
+    @Resource
+    private BasketPersonalDrawTeamDao personalDrawTeamDao;
 
     @Override
     public IPage<TeamSummaryResp> pageMine(Integer currentPage, Integer pageSize) {
@@ -350,6 +355,87 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
 
         BasketTeamMember membership = captainMember;
         return toDetailResp(team, membership, resolveLogoUrl(team.getLogoFileId()), true);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public TeamDetailResp createForPersonalFormation(Long drawTeamId, TeamCreateReq req, String clientIp) {
+        validateCreateReq(req);
+        Long memberId = UserContext.getRequiredUserId();
+        BasketPersonalDrawTeam drawTeam = requirePersonalDrawCaptainTeam(drawTeamId, memberId);
+        if (drawTeam.getConvertedRegistrationId() != null) {
+            throw new ServiceException("该临时队伍已转换");
+        }
+        if (FormationStatusEnum.CONVERTED.getCode().equals(drawTeam.getFormationStatus())) {
+            throw new ServiceException("该临时队伍已转换");
+        }
+        BasketPlayerProfile playerProfile = captainPermissionService.requireCertifiedPlayer(memberId);
+        teamMembershipSupport.assertEligibleToJoinTeam(memberId);
+        assertTeamNameUnique(req.getTeamName().trim());
+
+        Date now = new Date();
+        BasketTeam team = new BasketTeam();
+        team.setTeamNo("TM" + IdUtil.getSnowflakeNextIdStr());
+        team.setTeamName(req.getTeamName().trim());
+        team.setShortName(trimToNull(req.getShortName()));
+        team.setGameTerminal("GENERAL");
+        team.setRegionCode(trimToNull(req.getRegionCode()));
+        team.setRegionName(trimToNull(req.getRegionName()));
+        team.setDescription(trimToNull(req.getDescription()));
+        team.setPublicStatus(req.getPublicStatus() == null
+                ? TeamPublicStatusEnum.PRIVATE.getCode() : req.getPublicStatus());
+        team.setCaptainMemberId(memberId);
+        team.setCaptainPlayerId(playerProfile.getId());
+        team.setContactMemberId(memberId);
+        team.setMaxMemberCount(teamProperties.getDefaultMaxMemberCount());
+        team.setCurrentMemberCount(1);
+        team.setTeamStatus(TeamStatusEnum.ACTIVE.getCode());
+        team.setAuditStatus(TeamAuditStatusEnum.APPROVED.getCode());
+        team.setEstablishedDate(now);
+        team.setIsDelete(NOT_DELETED);
+
+        if (StringUtils.hasText(req.getLogoFileId())) {
+            Long logoFileId = parseLongId(req.getLogoFileId(), "Logo ????");
+            bindTeamLogoFile(team, logoFileId, memberId);
+        }
+
+        teamDao.insert(team);
+
+        BasketTeamMember captainMember = new BasketTeamMember();
+        captainMember.setMembershipNo("MB" + IdUtil.getSnowflakeNextIdStr());
+        captainMember.setTeamId(team.getId());
+        captainMember.setMemberId(memberId);
+        captainMember.setPlayerId(playerProfile.getId());
+        teamMembershipSupport.applyActiveMemberSlot(captainMember, memberId);
+        captainMember.setRoleType(TeamMemberRoleEnum.CAPTAIN.getCode());
+        captainMember.setRosterType(TeamRosterTypeEnum.OFFICIAL.getCode());
+        captainMember.setJoinSource(TeamJoinSourceEnum.CREATE.getCode());
+        captainMember.setMembershipStatus(TeamMembershipStatusEnum.ACTIVE.getCode());
+        captainMember.setIsCurrent(IS_CURRENT);
+        captainMember.setJoinTime(now);
+        captainMember.setIsDelete(NOT_DELETED);
+        teamMembershipSupport.insertMember(captainMember);
+        updatePlayerCurrentTeam(playerProfile, team.getId());
+        securityLogHelper.write(memberId, EVENT_TEAM_CREATE, "personal-formation",
+                null, team.getTeamName(), memberId, clientIp);
+        return toDetailResp(team, captainMember, resolveLogoUrl(team.getLogoFileId()), true);
+    }
+
+    private BasketPersonalDrawTeam requirePersonalDrawCaptainTeam(Long drawTeamId, Long memberId) {
+        if (drawTeamId == null) {
+            throw new ServiceException("drawTeamId 不能为空");
+        }
+        BasketPersonalDrawTeam drawTeam = personalDrawTeamDao.selectById(drawTeamId);
+        if (drawTeam == null || !NOT_DELETED.equals(drawTeam.getIsDelete())) {
+            throw new ServiceException("组队任务不存在");
+        }
+        if (!Objects.equals(memberId, drawTeam.getCaptainUserId())) {
+            throw new ServiceException("无权操作该组队任务", 403);
+        }
+        if (drawTeam.getCaptainPlayerId() == null) {
+            throw new ServiceException("临时队伍尚未指定队长");
+        }
+        return drawTeam;
     }
 
     @Override

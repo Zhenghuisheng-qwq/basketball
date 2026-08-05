@@ -216,6 +216,7 @@ def main() -> int:
     parser.add_argument("--exception-only", action="store_true", help="Run exception/idempotency checks only")
     parser.add_argument("--permission-only", action="store_true", help="Run permission boundary checks only")
     parser.add_argument("--core-smoke", action="store_true", help="Run CNPA V2 core smoke test")
+    parser.add_argument("--core-smoke-final", action="store_true", help="Run CNPA V2 core smoke final补齐 test")
     args = parser.parse_args()
 
     admin_base = env("CNPA_ADMIN_BASE_URL", "http://127.0.0.1:8080")
@@ -238,6 +239,11 @@ def main() -> int:
     if not admin_ok or not web_ok:
         write_output(batch_code)
         return 2
+
+    if args.core_smoke_final:
+        import subprocess
+        proc = subprocess.run([sys.executable, str(ROOT / "scripts" / "cnpa_v2_core_smoke_final.py")], cwd=str(ROOT))
+        return proc.returncode
 
     if args.core_smoke:
         import subprocess

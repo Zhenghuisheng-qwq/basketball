@@ -332,7 +332,6 @@ public class PersonalTeamFormationApplicationServiceImpl implements IPersonalTea
 
         BasketDivision division = divisionMapper.selectById(drawTeam.getDivisionId());
         if (joinedCount == assignments.size() && !assignments.isEmpty()) {
-            participationSupport.validateLineupSize(division, assignments.size());
             drawTeam.setFormationStatus(FormationStatusEnum.READY_TO_CONFIRM.getCode());
         } else {
             drawTeam.setFormationStatus(FormationStatusEnum.TEAM_FORMING.getCode());

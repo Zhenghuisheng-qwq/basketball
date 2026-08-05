@@ -46,6 +46,7 @@ public class PersonalDrawCaptainGrantSupport {
         for (BasketCaptainGrant grant : existing) {
             if (CaptainGrantStatusEnum.ACTIVE.getCode().equals(grant.getGrantStatus())
                     && participationSupport.isGrantUsable(grant)) {
+                bindGrantToLongTermTeamIfNeeded(grant, division, drawTeam.getLongTermTeamId());
                 return;
             }
         }
@@ -75,6 +76,20 @@ public class PersonalDrawCaptainGrantSupport {
         grant.setIsDelete(NOT_DELETED);
         if (captainGrantMapper.insert(grant) != 1) {
             throw new ServiceException("创建个人抽签队长授权失败");
+        }
+    }
+
+    private void bindGrantToLongTermTeamIfNeeded(BasketCaptainGrant grant,
+                                                 BasketDivision division,
+                                                 Long longTermTeamId) {
+        if (grant == null || longTermTeamId == null || grant.getTeamId() != null) {
+            return;
+        }
+        grant.setTeamId(longTermTeamId);
+        grant.setActiveUniqueKey(participationSupport.buildActiveUniqueKey(division.getId(), longTermTeamId));
+        grant.setUpdateTime(new Date());
+        if (captainGrantMapper.updateById(grant) != 1) {
+            throw new ServiceException("绑定个人抽签队长授权失败");
         }
     }
 

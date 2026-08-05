@@ -23,6 +23,8 @@ public interface IAccountTeamService {
 
     TeamDetailResp create(TeamCreateReq req, String clientIp);
 
+    TeamDetailResp createForPersonalFormation(Long drawTeamId, TeamCreateReq req, String clientIp);
+
     TeamDetailResp getDetail(String teamId);
 
     TeamDetailResp update(String teamId, TeamUpdateReq req, String clientIp);

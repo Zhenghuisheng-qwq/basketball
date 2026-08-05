@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import logoImg from '@/assets/icon/logo.png'
-import CompetitionDropdown from './CompetitionDropdown.vue'
+import PublicCompetitionMegaMenu from './PublicCompetitionMegaMenu.vue'
+import PublicCompetitionMobileMenu from './PublicCompetitionMobileMenu.vue'
+import { usePublicCompetitionMegaMenu } from '@/composables/usePublicCompetitionMegaMenu'
+import type { MegaMenuType } from '@/constants/publicCompetitionMenu'
 import { useAuth } from '@/composables/useAuth'
-import { useCompetitionSelector } from '@/views/events/composables/useCompetitionSelector'
-import type { CompetitionOption } from '@/views/events/types/competition'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
 import { getAvatarInitials } from '@/utils/accountAvatar'
 
@@ -14,13 +15,21 @@ const router = useRouter()
 const { isAuthenticated, currentUser, unreadNotificationCount } = useAuth()
 
 const {
-  competitionOptions,
-  currentCompetitionId,
-  selectCompetition,
-} = useCompetitionSelector()
+  isOpen: isMegaMenuOpen,
+  openMenu,
+  currentGroups,
+  isEventsNavActive,
+  isDataNavActive,
+  closeMenu,
+  clearCloseTimer,
+  handleMouseEnter,
+  handleMouseLeave,
+  toggleMenu,
+  navigate: navigateMegaMenuEntry,
+  getEntryHighlight,
+} = usePublicCompetitionMegaMenu()
 
 const navItems = [
-  { label: '数据', to: '/data' },
   {
     label: '名人堂',
     to: '/hall-of-fame',
@@ -29,26 +38,40 @@ const navItems = [
   { label: '合作伙伴', to: '/partners' },
 ]
 
-const isCompetitionMenuOpen = ref(false)
 const isMobileMenuOpen = ref(false)
-const isMobileCompetitionOpen = ref(false)
 const isSearchOpen = ref(false)
 const searchQuery = ref('')
 const searchPanelRef = ref<HTMLElement | null>(null)
 const searchInputRef = ref<HTMLInputElement | null>(null)
-const competitionNavRef = ref<HTMLElement | null>(null)
-const competitionTriggerRef = ref<HTMLButtonElement | null>(null)
-const competitionDropdownRef = ref<InstanceType<typeof CompetitionDropdown> | null>(null)
+const megaMenuNavRef = ref<HTMLElement | null>(null)
+const eventsTriggerRef = ref<HTMLButtonElement | null>(null)
+const dataTriggerRef = ref<HTMLButtonElement | null>(null)
+const megaMenuRef = ref<InstanceType<typeof PublicCompetitionMegaMenu> | null>(null)
 
-let closeTimer: ReturnType<typeof setTimeout> | null = null
+const megaMenuAnchorLeft = ref(0)
 
-const isTournamentRoute = computed(
-  () =>
-    route.path === '/tournament' ||
-    route.path === '/events' ||
-    route.path.startsWith('/events/') ||
-    route.path === '/tournament/legacy',
-)
+const megaMenuAriaLabel = computed(() => (
+  openMenu.value === 'event' ? '赛事导航' : '数据导航'
+))
+
+function updateMegaMenuAnchorPosition() {
+  if (!isMegaMenuOpen.value || !openMenu.value || !megaMenuNavRef.value) {
+    return
+  }
+
+  const trigger = openMenu.value === 'event'
+    ? eventsTriggerRef.value
+    : dataTriggerRef.value
+  if (!trigger) return
+
+  const navRect = megaMenuNavRef.value.getBoundingClientRect()
+  const triggerRect = trigger.getBoundingClientRect()
+  megaMenuAnchorLeft.value = Math.max(0, triggerRect.left - navRect.left)
+}
+
+watch([isMegaMenuOpen, openMenu], () => {
+  window.requestAnimationFrame(updateMegaMenuAnchorPosition)
+}, { flush: 'post' })
 
 const searchResults = computed(() => [] as Array<{
   id: string
@@ -73,61 +96,58 @@ function isActive(item: (typeof navItems)[number]) {
   return false
 }
 
-function clearCloseTimer() {
-  if (closeTimer) {
-    clearTimeout(closeTimer)
-    closeTimer = null
+function handleMegaMenuMouseEnter(type: MegaMenuType) {
+  handleMouseEnter(type)
+}
+
+function handleMegaMenuMouseLeave() {
+  handleMouseLeave()
+}
+
+function handleOtherNavMouseEnter() {
+  closeMenu()
+}
+
+function handleMegaMenuToggle(type: MegaMenuType) {
+  toggleMenu(type)
+  if (isMegaMenuOpen.value) {
+    megaMenuRef.value?.focusFirstItem()
   }
 }
 
-function openCompetitionMenu() {
-  clearCloseTimer()
-  isCompetitionMenuOpen.value = true
-}
+function handleMegaMenuTriggerKeyDown(event: KeyboardEvent, type: MegaMenuType) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    handleMegaMenuToggle(type)
+    return
+  }
 
-function closeCompetitionMenu(focusTrigger = false) {
-  clearCloseTimer()
-  isCompetitionMenuOpen.value = false
-  if (focusTrigger) {
-    competitionTriggerRef.value?.focus()
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    if (!isMegaMenuOpen.value) {
+      handleMouseEnter(type)
+    }
+    megaMenuRef.value?.focusFirstItem()
   }
 }
 
-function toggleCompetitionMenu() {
-  if (isCompetitionMenuOpen.value) {
-    closeCompetitionMenu()
-  } else {
-    openCompetitionMenu()
+function closeMegaMenu(focusTrigger: MegaMenuType | false = false) {
+  closeMenu()
+  if (focusTrigger === 'event') {
+    eventsTriggerRef.value?.focus()
+  } else if (focusTrigger === 'data') {
+    dataTriggerRef.value?.focus()
   }
-}
-
-function handleCompetitionMouseEnter() {
-  clearCloseTimer()
-  isCompetitionMenuOpen.value = true
-}
-
-function handleCompetitionMouseLeave() {
-  clearCloseTimer()
-  closeTimer = setTimeout(() => {
-    isCompetitionMenuOpen.value = false
-  }, 150)
-}
-
-function handleSelectCompetition(competition: CompetitionOption) {
-  selectCompetition(competition)
-  closeCompetitionMenu()
-  isMobileCompetitionOpen.value = false
-  isMobileMenuOpen.value = false
 }
 
 function handleDocumentPointerDown(event: PointerEvent) {
   const target = event.target as Node | null
   if (!target) return
 
-  if (isCompetitionMenuOpen.value) {
-    const root = competitionNavRef.value
+  if (isMegaMenuOpen.value) {
+    const root = megaMenuNavRef.value
     if (!root?.contains(target)) {
-      closeCompetitionMenu()
+      closeMegaMenu()
     }
   }
 
@@ -147,47 +167,28 @@ function handleDocumentKeyDown(event: KeyboardEvent) {
       return
     }
 
-    if (isCompetitionMenuOpen.value) {
+    if (isMegaMenuOpen.value) {
       event.preventDefault()
-      closeCompetitionMenu(true)
+      closeMegaMenu(openMenu.value ?? false)
       return
     }
 
     if (isMobileMenuOpen.value) {
       isMobileMenuOpen.value = false
-      isMobileCompetitionOpen.value = false
     }
   }
 }
 
-function handleCompetitionTriggerKeyDown(event: KeyboardEvent) {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    toggleCompetitionMenu()
-    if (isCompetitionMenuOpen.value) {
-      competitionDropdownRef.value?.focusFirstItem()
-    }
-    return
-  }
+function handleEventsTriggerKeyDown(event: KeyboardEvent) {
+  handleMegaMenuTriggerKeyDown(event, 'event')
+}
 
-  if (event.key === 'ArrowDown') {
-    event.preventDefault()
-    if (!isCompetitionMenuOpen.value) {
-      openCompetitionMenu()
-    }
-    competitionDropdownRef.value?.focusFirstItem()
-  }
+function handleDataTriggerKeyDown(event: KeyboardEvent) {
+  handleMegaMenuTriggerKeyDown(event, 'data')
 }
 
 function toggleMobileMenu() {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
-  if (!isMobileMenuOpen.value) {
-    isMobileCompetitionOpen.value = false
-  }
-}
-
-function toggleMobileCompetitionMenu() {
-  isMobileCompetitionOpen.value = !isMobileCompetitionOpen.value
 }
 
 function goHome() {
@@ -208,7 +209,11 @@ function goAccount() {
 
 function closeMobileMenu() {
   isMobileMenuOpen.value = false
-  isMobileCompetitionOpen.value = false
+}
+
+function handleMobileNavigate(entry: Parameters<typeof navigateMegaMenuEntry>[0]) {
+  navigateMegaMenuEntry(entry)
+  closeMobileMenu()
 }
 
 function openSearch() {
@@ -247,6 +252,7 @@ function handleSearchSelect(playerId: string) {
 onMounted(() => {
   handleWindowScroll()
   window.addEventListener('scroll', handleWindowScroll, { passive: true })
+  window.addEventListener('resize', updateMegaMenuAnchorPosition)
   document.addEventListener('pointerdown', handleDocumentPointerDown)
   document.addEventListener('keydown', handleDocumentKeyDown)
 })
@@ -254,6 +260,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   clearCloseTimer()
   window.removeEventListener('scroll', handleWindowScroll)
+  window.removeEventListener('resize', updateMegaMenuAnchorPosition)
   document.removeEventListener('pointerdown', handleDocumentPointerDown)
   document.removeEventListener('keydown', handleDocumentKeyDown)
 })
@@ -280,44 +287,61 @@ onBeforeUnmount(() => {
             active-class=""
             exact-active-class=""
             :class="{ 'nav-link-active': route.path === '/home' && !route.hash }"
+            @mouseenter="handleOtherNavMouseEnter"
           >
             首页
           </router-link>
 
           <div
-            ref="competitionNavRef"
-            class="site-nav__item site-nav__item--competitions"
-            @mouseenter="handleCompetitionMouseEnter"
-            @mouseleave="handleCompetitionMouseLeave"
+            ref="megaMenuNavRef"
+            class="site-nav__mega"
+            @mouseenter="clearCloseTimer()"
+            @mouseleave="handleMegaMenuMouseLeave()"
           >
             <button
-              ref="competitionTriggerRef"
+              ref="eventsTriggerRef"
               type="button"
               class="nav-link nav-link--button"
-              :class="{ 'nav-link-active': isTournamentRoute }"
-              aria-haspopup="menu"
-              :aria-expanded="isCompetitionMenuOpen"
-              @click="toggleCompetitionMenu"
-              @keydown="handleCompetitionTriggerKeyDown"
+              :class="{ 'nav-link-active': isEventsNavActive || (isMegaMenuOpen && openMenu === 'event') }"
+              aria-haspopup="dialog"
+              :aria-expanded="isMegaMenuOpen && openMenu === 'event'"
+              @mouseenter="handleMegaMenuMouseEnter('event')"
+              @click="handleMegaMenuToggle('event')"
+              @keydown="handleEventsTriggerKeyDown"
             >
               赛事
             </button>
 
-            <Transition name="competition-menu">
-              <div
-                v-if="isCompetitionMenuOpen"
-                class="competition-dropdown-anchor"
-                @mouseenter="handleCompetitionMouseEnter"
-                @mouseleave="handleCompetitionMouseLeave"
-              >
-                <CompetitionDropdown
-                  ref="competitionDropdownRef"
-                  :competitions="competitionOptions"
-                  :current-competition-id="currentCompetitionId"
-                  @select="handleSelectCompetition"
-                />
-              </div>
-            </Transition>
+            <button
+              ref="dataTriggerRef"
+              type="button"
+              class="nav-link nav-link--button"
+              :class="{ 'nav-link-active': isDataNavActive || (isMegaMenuOpen && openMenu === 'data') }"
+              aria-haspopup="dialog"
+              :aria-expanded="isMegaMenuOpen && openMenu === 'data'"
+              @mouseenter="handleMegaMenuMouseEnter('data')"
+              @click="handleMegaMenuToggle('data')"
+              @keydown="handleDataTriggerKeyDown"
+            >
+              数据
+            </button>
+
+            <div
+              v-show="isMegaMenuOpen"
+              class="competition-mega-menu-anchor"
+              :style="{ left: `${megaMenuAnchorLeft}px` }"
+              @mouseenter="clearCloseTimer()"
+              @mouseleave="handleMegaMenuMouseLeave()"
+            >
+              <PublicCompetitionMegaMenu
+                ref="megaMenuRef"
+                :type="openMenu ?? 'event'"
+                :ariaLabel="megaMenuAriaLabel"
+                :groups="currentGroups"
+                :get-entry-highlight="getEntryHighlight"
+                @navigate="navigateMegaMenuEntry"
+              />
+            </div>
           </div>
 
           <router-link
@@ -328,6 +352,7 @@ onBeforeUnmount(() => {
             active-class=""
             exact-active-class=""
             :class="{ 'nav-link-active': isActive(item) }"
+            @mouseenter="handleOtherNavMouseEnter"
           >
             {{ item.label }}
           </router-link>
@@ -427,25 +452,13 @@ onBeforeUnmount(() => {
           首页
         </router-link>
 
-        <div class="mobile-nav__group">
-          <button
-            type="button"
-            class="mobile-nav__link mobile-nav__link--toggle"
-            :class="{ 'mobile-nav__link--active': isTournamentRoute }"
-            :aria-expanded="isMobileCompetitionOpen"
-            @click="toggleMobileCompetitionMenu"
-          >
-            赛事
-          </button>
-
-          <CompetitionDropdown
-            v-if="isMobileCompetitionOpen"
-            mobile
-            :competitions="competitionOptions"
-            :current-competition-id="currentCompetitionId"
-            @select="handleSelectCompetition"
-          />
-        </div>
+        <PublicCompetitionMobileMenu
+          :is-events-nav-active="isEventsNavActive"
+          :is-data-nav-active="isDataNavActive"
+          :get-entry-highlight="getEntryHighlight"
+          @navigate="handleMobileNavigate"
+          @close="closeMobileMenu"
+        />
 
         <router-link
           v-for="item in navItems"
@@ -552,6 +565,23 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
+.site-nav__mega {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--site-header-height);
+  gap: clamp(34px, 3.4vw, 72px);
+}
+
+.competition-mega-menu-anchor {
+  position: absolute;
+  top: calc(100% - 6px);
+  left: 0;
+  padding-top: 8px;
+  z-index: 2100;
+  transition: left 160ms ease;
+}
+
 .site-nav__item--competitions {
   position: relative;
   height: var(--site-header-height);
@@ -564,19 +594,6 @@ onBeforeUnmount(() => {
   top: calc(100% + 1px);
   left: 0;
   z-index: 2100;
-}
-
-.competition-menu-enter-active,
-.competition-menu-leave-active {
-  transition:
-    opacity 160ms ease,
-    transform 160ms ease;
-}
-
-.competition-menu-enter-from,
-.competition-menu-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
 }
 
 .nav-link {
@@ -915,6 +932,10 @@ onBeforeUnmount(() => {
   }
 
   .header-nav {
+    display: none;
+  }
+
+  .competition-mega-menu-anchor {
     display: none;
   }
 

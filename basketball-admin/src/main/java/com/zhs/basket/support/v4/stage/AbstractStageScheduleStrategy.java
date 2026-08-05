@@ -21,7 +21,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -66,12 +69,16 @@ abstract class AbstractStageScheduleStrategy implements DivisionStageScheduleStr
     }
 
     protected List<Long> resolveTeamIds(List<BasketDivisionStageTeam> stageTeams) {
-        return stageTeams.stream()
+        List<Long> teamIds = stageTeams.stream()
                 .sorted(Comparator
                         .comparing(BasketDivisionStageTeam::getSeedNo, Comparator.nullsLast(Integer::compareTo))
                         .thenComparing(BasketDivisionStageTeam::getEventTeamId))
                 .map(BasketDivisionStageTeam::getEventTeamId)
                 .collect(Collectors.toCollection(ArrayList::new));
+        if (teamIds.stream().anyMatch(Objects::isNull)) {
+            throw new ServiceException("阶段参赛队伍存在未绑定 eventTeamId 的记录，无法生成赛程");
+        }
+        return teamIds;
     }
 
     protected BasketScheduleBatch createBatch(StageExecutionContext context,
@@ -142,6 +149,65 @@ abstract class AbstractStageScheduleStrategy implements DivisionStageScheduleStr
     protected void insertMatch(BasketV4Match match) {
         if (matchMapper.insert(match) != 1) {
             throw new ServiceException("写入比赛失败: " + match.getMatchNo());
+        }
+    }
+
+    protected void validateAndInsertMatch(BasketV4Match match,
+                                          StageExecutionContext context,
+                                          int roundNo,
+                                          int pairIndex,
+                                          Set<String> seenPairKeys) {
+        validateMatchPair(match, context, roundNo, pairIndex, seenPairKeys);
+        insertMatch(match);
+    }
+
+    protected void validateMatchPair(BasketV4Match match,
+                                     StageExecutionContext context,
+                                     int roundNo,
+                                     int pairIndex,
+                                     Set<String> seenPairKeys) {
+        Long home = match.getHomeEventTeamId();
+        Long away = match.getAwayEventTeamId();
+        if (home == null || away == null) {
+            throw new ServiceException(String.format(
+                    "赛程对阵无效：第 %d 轮第 %d 组主客队不能为空", roundNo, pairIndex));
+        }
+        if (home.equals(away)) {
+            throw new ServiceException(String.format(
+                    "赛程对阵无效：第 %d 轮第 %d 组主客队不能相同", roundNo, pairIndex));
+        }
+        if (match.getStageId() == null || match.getDivisionId() == null) {
+            throw new ServiceException(String.format(
+                    "赛程对阵无效：第 %d 轮第 %d 组缺少 stageId 或 divisionId", roundNo, pairIndex));
+        }
+        if (roundNo <= 0) {
+            throw new ServiceException(String.format(
+                    "赛程对阵无效：第 %d 轮第 %d 组 roundNo 无效", roundNo, pairIndex));
+        }
+
+        Set<Long> stageTeamIds = context.getStageTeams().stream()
+                .map(BasketDivisionStageTeam::getEventTeamId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (!stageTeamIds.contains(home) || !stageTeamIds.contains(away)) {
+            throw new ServiceException(String.format(
+                    "赛程对阵无效：第 %d 轮第 %d 组球队不属于当前阶段", roundNo, pairIndex));
+        }
+
+        Long divisionId = context.getDivision().getId();
+        if (!divisionId.equals(match.getDivisionId())) {
+            throw new ServiceException(String.format(
+                    "赛程对阵无效：第 %d 轮第 %d 组 divisionId 不匹配", roundNo, pairIndex));
+        }
+
+        long low = Math.min(home, away);
+        long high = Math.max(home, away);
+        String pairKey = low + ":" + high;
+        if (seenPairKeys != null) {
+            if (!seenPairKeys.add(pairKey)) {
+                throw new ServiceException(String.format(
+                        "赛程对阵无效：第 %d 轮第 %d 组出现重复对阵", roundNo, pairIndex));
+            }
         }
     }
 

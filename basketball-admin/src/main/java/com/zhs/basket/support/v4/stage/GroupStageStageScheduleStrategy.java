@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -181,6 +182,7 @@ public class GroupStageStageScheduleStrategy extends AbstractStageScheduleStrate
                 ? context.getDivision().getMatchStartTime() : new Date();
         TimeSlotAllocator allocator = new TimeSlotAllocator(startFrom);
 
+        Set<String> seenPairKeys = new HashSet<>();
         int globalSeq = 1;
         for (BasketDivisionGroup group : sortedGroups) {
             List<Long> teamIds = teamsByGroup.get(group.getId()).stream()
@@ -201,7 +203,7 @@ public class GroupStageStageScheduleStrategy extends AbstractStageScheduleStrate
                     match.setMatchTime(allocator.allocate());
                     match.setHomeEventTeamId(pairing.getHomeEventTeamId());
                     match.setAwayEventTeamId(pairing.getAwayEventTeamId());
-                    insertMatch(match);
+                    validateAndInsertMatch(match, context, round.getRoundNo(), seqInRound, seenPairKeys);
                     seqInRound++;
                     globalSeq++;
                 }

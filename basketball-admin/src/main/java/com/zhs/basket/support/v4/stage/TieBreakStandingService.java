@@ -85,6 +85,8 @@ public class TieBreakStandingService {
             for (int i = 0; i < sorted.size(); i++) {
                 StandingAgg agg = sorted.get(i);
                 StandingAgg prev = i > 0 ? sorted.get(i - 1) : null;
+                StandingAgg next = i + 1 < sorted.size() ? sorted.get(i + 1) : null;
+                StandingAgg rankPeer = next != null ? next : prev;
                 BasketStanding row = new BasketStanding();
                 row.setSeasonId(seasonId);
                 row.setDivisionId(divisionId);
@@ -108,7 +110,7 @@ public class TieBreakStandingService {
                 standingMapper.insert(row);
 
                 List<BasketStandingRankReason> reasons = buildRankReasons(
-                        divisionId, stageId, groupScopeKey, row, agg, prev, tieBreakRules,
+                        divisionId, stageId, groupScopeKey, row, agg, rankPeer, tieBreakRules,
                         manualPendingTeams.contains(agg.eventTeamId), matches, now);
                 if (!reasons.isEmpty()) {
                     rankReasonMapper.batchInsert(reasons);
@@ -126,14 +128,14 @@ public class TieBreakStandingService {
                                                             Long groupScopeKey,
                                                             BasketStanding standing,
                                                             StandingAgg agg,
-                                                            StandingAgg prev,
+                                                            StandingAgg rankPeer,
                                                             List<BasketDivisionTieBreakRule> rules,
                                                             boolean manualPending,
                                                             List<BasketV4Match> scopeMatches,
                                                             Date now) {
         List<BasketStandingRankReason> result = new ArrayList<>();
         List<BasketDivisionTieBreakRule> enabledRules = sortedEnabledRules(rules);
-        String decisiveRule = findDecisiveRule(agg, prev, enabledRules, scopeMatches);
+        String decisiveRule = findDecisiveRule(agg, rankPeer, enabledRules, scopeMatches);
         for (BasketDivisionTieBreakRule rule : enabledRules) {
             TieBreakRuleEnum ruleEnum = TieBreakRuleEnum.fromCode(rule.getRuleCode());
             if (ruleEnum == TieBreakRuleEnum.MANUAL) {
@@ -143,7 +145,7 @@ public class TieBreakStandingService {
                 }
                 continue;
             }
-            String compareValue = compareValueFor(ruleEnum, agg, scopeMatches);
+            String compareValue = compareValueFor(ruleEnum, agg, rankPeer, scopeMatches);
             String reasonText = ruleEnum.getDescription() + "：" + compareValue;
             int decisive = rule.getRuleCode().equals(decisiveRule) ? 1 : 0;
             result.add(buildReasonRow(divisionId, stageId, groupScopeKey, standing, agg.eventTeamId,
@@ -204,8 +206,8 @@ public class TieBreakStandingService {
             if (ruleEnum == TieBreakRuleEnum.MANUAL) {
                 continue;
             }
-            String currentValue = compareValueFor(ruleEnum, current, scopeMatches);
-            String previousValue = compareValueFor(ruleEnum, previous, scopeMatches);
+            String currentValue = compareValueFor(ruleEnum, current, previous, scopeMatches);
+            String previousValue = compareValueFor(ruleEnum, previous, current, scopeMatches);
             if (!currentValue.equals(previousValue)) {
                 return rule.getRuleCode();
             }
@@ -215,14 +217,43 @@ public class TieBreakStandingService {
 
     private String compareValueFor(TieBreakRuleEnum ruleEnum,
                                    StandingAgg agg,
+                                   StandingAgg opponent,
                                    List<BasketV4Match> scopeMatches) {
         return switch (ruleEnum) {
             case WIN_COUNT -> String.valueOf(agg.winCount);
             case POINT_DIFFERENCE -> String.valueOf(agg.getPointDiff());
             case TOTAL_POINTS -> String.valueOf(agg.pointFor);
-            case HEAD_TO_HEAD -> String.valueOf(headToHeadWins(agg.eventTeamId, scopeMatches));
+            case HEAD_TO_HEAD -> opponent == null
+                    ? String.valueOf(headToHeadWins(agg.eventTeamId, scopeMatches))
+                    : String.valueOf(headToHeadWinsAgainst(agg.eventTeamId, opponent.eventTeamId, scopeMatches));
             case MANUAL -> "PENDING";
         };
+    }
+
+    private int headToHeadWinsAgainst(Long teamId, Long opponentId, List<BasketV4Match> matches) {
+        if (teamId == null || opponentId == null || matches == null) {
+            return 0;
+        }
+        int wins = 0;
+        for (BasketV4Match match : matches) {
+            if (match.getHomeScore() == null || match.getAwayScore() == null) {
+                continue;
+            }
+            if (match.getHomeScore().equals(match.getAwayScore())) {
+                continue;
+            }
+            boolean involvesBoth = (teamId.equals(match.getHomeEventTeamId()) && opponentId.equals(match.getAwayEventTeamId()))
+                    || (teamId.equals(match.getAwayEventTeamId()) && opponentId.equals(match.getHomeEventTeamId()));
+            if (!involvesBoth) {
+                continue;
+            }
+            Long winner = match.getHomeScore() > match.getAwayScore()
+                    ? match.getHomeEventTeamId() : match.getAwayEventTeamId();
+            if (teamId.equals(winner)) {
+                wins++;
+            }
+        }
+        return wins;
     }
 
     private int headToHeadWins(Long teamId, List<BasketV4Match> matches) {
