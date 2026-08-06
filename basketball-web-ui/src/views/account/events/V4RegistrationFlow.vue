@@ -30,6 +30,7 @@ const submitting = ref(false)
 const division = ref<V4AvailableDivision | null>(null)
 const selectedPlayerIds = ref<string[]>([])
 const registrationId = ref('')
+const divisionId = computed(() => String(route.params.divisionId || ''))
 
 const rosterMin = computed(() => division.value?.lineupMinCount ?? (division.value?.gameMode === 'THREE_V_THREE' ? 3 : 5))
 const rosterMax = computed(() => division.value?.lineupMaxCount ?? 8)
@@ -72,7 +73,7 @@ async function bootstrap() {
         const detailRes = await getV4RegistrationDetail(registrationId.value)
         const players = detailRes.data?.players || []
         if (players.length) {
-          selectedPlayerIds.value = players.map((p) => String(p.playerId))
+          selectedPlayerIds.value = players.map((p: { playerId?: string | number }) => String(p.playerId))
         }
       } catch {
         // ignore detail load failure; user can re-select lineup

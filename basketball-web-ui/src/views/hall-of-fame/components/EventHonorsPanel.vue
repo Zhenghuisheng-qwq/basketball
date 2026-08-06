@@ -10,7 +10,7 @@ import {
   getPublicHallHonorDetail,
   getPublicHallTournamentHonorPage,
 } from '@/api/publicHallOfFame'
-import { getPublicTournamentPage } from '@/api/publicTournament'
+import { getV4PublicSeriesList } from '@/api/v4Public'
 import type {
   PublicHonorDetailResp,
   PublicHonorItemResp,
@@ -103,9 +103,13 @@ const rosterMembers = computed<ChampionRosterMember[]>(() => {
 async function loadTournaments() {
   const current = ++tournamentReq
   try {
-    const res = await getPublicTournamentPage({ currentPage: 1, pageSize: 50 })
+    const res = await getV4PublicSeriesList()
     if (current !== tournamentReq) return
-    const records = res.data?.records ?? []
+    const records: PublicTournamentItemVo[] = (res.data || []).map((item) => ({
+      tournamentId: String(item.seriesId),
+      tournamentName: item.seriesName,
+      shortName: item.seriesCode || item.seriesName,
+    }))
     tournaments.value = records
     if (!records.length) {
       state.value = 'empty'

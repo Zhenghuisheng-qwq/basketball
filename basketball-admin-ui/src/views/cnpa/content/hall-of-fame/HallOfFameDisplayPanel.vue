@@ -228,8 +228,8 @@ const rules = {
 }
 
 function loadTournaments() {
-  listTournament({ pageNum: 1, pageSize: 500 }).then(res => {
-    tournamentOptions.value = res.rows || []
+  listV4Series().then(res => {
+    tournamentOptions.value = (res.data || []).map((s: any) => ({ id: s.id, tournamentName: s.seriesName }))
     getList()
   })
 }
@@ -238,8 +238,8 @@ function handleTournamentChange() {
   seasonOptions.value = []
   queryParams.value.seasonId = undefined
   if (!queryParams.value.tournamentId) return
-  listSeasonByTournament(queryParams.value.tournamentId).then(res => {
-    seasonOptions.value = res.data || []
+  listV4Season({ seriesId: queryParams.value.tournamentId, pageNum: 1, pageSize: 500 }).then(res => {
+    seasonOptions.value = (res.rows || []).map((s: any) => ({ id: s.id, seasonName: s.seasonName || s.displayTitle }))
   })
 }
 
@@ -247,8 +247,8 @@ function loadFormSeasons() {
   form.value.seasonId = undefined
   formSeasonOptions.value = []
   if (!form.value.tournamentId) return
-  listSeasonByTournament(form.value.tournamentId).then(res => {
-    formSeasonOptions.value = res.data || []
+  listV4Season({ seriesId: form.value.tournamentId, pageNum: 1, pageSize: 500 }).then(res => {
+    formSeasonOptions.value = (res.rows || []).map((s: any) => ({ id: s.id, seasonName: s.seasonName || s.displayTitle }))
   })
 }
 
@@ -317,8 +317,8 @@ function handleUpdate(row: HonorRecordListItem) {
     }
     coverPreview.value = data.coverUrl || ''
     if (data.tournamentId) {
-      listSeasonByTournament(data.tournamentId).then(sRes => {
-        formSeasonOptions.value = sRes.data || []
+      listV4Season({ seriesId: data.tournamentId, pageNum: 1, pageSize: 500 }).then(sRes => {
+        formSeasonOptions.value = (sRes.rows || []).map((s: any) => ({ id: s.id, seasonName: s.seasonName || s.displayTitle }))
       })
     }
     dialogTitle.value = '修改名人堂条目'
@@ -387,8 +387,8 @@ function openImportDialog() {
 function loadImportCandidates() {
   importLoading.value = true
   if (importQuery.value.tournamentId && importSeasonOptions.value.length === 0) {
-    listSeasonByTournament(importQuery.value.tournamentId).then(res => {
-      importSeasonOptions.value = res.data || []
+    listV4Season({ seriesId: importQuery.value.tournamentId, pageNum: 1, pageSize: 500 }).then(res => {
+      importSeasonOptions.value = (res.rows || []).map((s: any) => ({ id: s.id, seasonName: s.seasonName || s.displayTitle }))
     })
   }
   listHallImportCandidates(importQuery.value).then(res => {

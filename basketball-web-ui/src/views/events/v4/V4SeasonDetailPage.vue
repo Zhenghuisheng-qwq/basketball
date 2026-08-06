@@ -9,7 +9,6 @@ import {
   getV4PublicStanding,
   getV4PublicStageList,
   getV4PublicStageStandings,
-  getV4PublicStageBracket,
   getV4PublicTeamList,
   getV4PublicTeamStat,
 } from '@/api/v4Public'
@@ -62,7 +61,6 @@ const standings = ref<V4PublicStandingItem[]>([])
 const stageList = ref<V4PublicStageItem[]>([])
 const stageStandingScopes = ref<V4PublicStageStandingScope[]>([])
 const activeStandingStageId = ref('')
-const bracketMatches = ref<V4PublicMatchItem[]>([])
 const teamStats = ref<V4PublicTeamStatItem[]>([])
 const playerStats = ref<V4PublicPlayerStatItem[]>([])
 const ranks = ref<V4PublicRankItem[]>([])
@@ -287,7 +285,7 @@ onMounted(() => {
         <div v-if="activeTab === 'overview'" class="v4-overview-grid">
           <div class="v4-overview-item">
             <dt>报名方式</dt>
-            <dd>{{ v4RegistrationModeLabel(currentDivision?.registrationMode || season.registrationMode) }}</dd>
+            <dd>{{ v4RegistrationModeLabel(season.registrationMode) }}</dd>
           </div>
           <div class="v4-overview-item">
             <dt>赛制</dt>

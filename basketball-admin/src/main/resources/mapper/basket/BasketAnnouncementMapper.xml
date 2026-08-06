@@ -31,7 +31,7 @@
     <sql id="listSelect">
         select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode,
                a.tournament_id as tournamentId, a.season_id as seasonId,
-               se.season_name as seasonName, tm.tournament_name as tournamentName,
+               se.season_name as seasonName, tm.series_name as tournamentName,
                a.title,
                a.summary, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
                a.author_id as authorId, a.author_name as authorName,
@@ -58,7 +58,7 @@
     <select id="selectDetailById" resultType="com.zhs.basket.resp.AnnouncementDetailResp">
         select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode,
                a.tournament_id as tournamentId, a.season_id as seasonId,
-               se.season_name as seasonName, tm.tournament_name as tournamentName,
+               se.season_name as seasonName, tm.series_name as tournamentName,
                a.title,
                a.summary, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
                a.content_text as contentText, a.author_id as authorId, a.author_name as authorName,
@@ -167,7 +167,7 @@
     <select id="selectCurrentRuleBySeason" resultType="com.zhs.basket.resp.AnnouncementDetailResp">
         select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode,
                a.tournament_id as tournamentId, a.season_id as seasonId,
-               se.season_name as seasonName, tm.tournament_name as tournamentName,
+               se.season_name as seasonName, tm.series_name as tournamentName,
                a.title, a.summary, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
                a.content_text as contentText, a.author_id as authorId, a.author_name as authorName,
                a.announcement_status as announcementStatus, a.public_scope as publicScope,

@@ -1,73 +1,61 @@
 <template>
   <div class="app-container">
-    <el-alert title="比赛数据审核" description="按每场比赛的每支队伍独立审核；一方审核中不影响另一方提交。数据争议与弃赛异常在本页页签内处理。" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="比赛数据审核" description="按每场比赛的每支队伍独立审核；一方审核中不影响另一方提交。" type="info" :closable="false" show-icon class="mb8" />
 
-    <el-tabs v-model="activeTab">
-      <el-tab-pane label="待审核" name="audit">
-        <el-form :model="queryParams" :inline="true" class="mb8">
-          <el-form-item label="赛季">
-            <el-select v-model="queryParams.seasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onSeasonChange">
-              <el-option v-for="item in seasonOptions" :key="item.id" :label="item.label" :value="item.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="平台赛区">
-            <el-select v-model="queryParams.divisionId" clearable filterable placeholder="选择赛区" style="width: 200px" :disabled="!queryParams.seasonId">
-              <el-option v-for="item in divisionOptions" :key="item.id" :label="formatDivisionLabel(item)" :value="item.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-select v-model="queryParams.submissionStatus" clearable style="width: 180px">
-              <el-option v-for="item in STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="球队"><el-input v-model="queryParams.teamName" clearable /></el-form-item>
-          <el-form-item label="比赛编号"><el-input v-model="queryParams.matchNo" clearable /></el-form-item>
-          <el-form-item>
-            <el-button type="primary" icon="Search" @click="getList">搜索</el-button>
-            <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-          </el-form-item>
-        </el-form>
+    <el-form :model="queryParams" :inline="true" class="mb8">
+      <el-form-item label="赛季">
+        <el-select v-model="queryParams.seasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onSeasonChange">
+          <el-option v-for="item in seasonOptions" :key="item.id" :label="item.label" :value="item.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="平台赛区">
+        <el-select v-model="queryParams.divisionId" clearable filterable placeholder="选择赛区" style="width: 200px" :disabled="!queryParams.seasonId">
+          <el-option v-for="item in divisionOptions" :key="item.id" :label="formatDivisionLabel(item)" :value="item.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="状态">
+        <el-select v-model="queryParams.submissionStatus" clearable style="width: 180px">
+          <el-option v-for="item in STATUS_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="球队"><el-input v-model="queryParams.teamName" clearable /></el-form-item>
+      <el-form-item label="比赛编号"><el-input v-model="queryParams.matchNo" clearable /></el-form-item>
+      <el-form-item>
+        <el-button type="primary" icon="Search" @click="getList">搜索</el-button>
+        <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+      </el-form-item>
+    </el-form>
 
-        <el-table v-loading="loading" :data="dataList" border>
-          <el-table-column label="提交ID" prop="submissionId" width="90" />
-          <el-table-column label="比赛编号" prop="matchNo" width="120" />
-          <el-table-column label="轮次" prop="roundNo" width="70" align="center" />
-          <el-table-column label="平台赛区" prop="divisionName" min-width="120" />
-          <el-table-column label="对阵" min-width="180">
-            <template #default="scope">{{ scope.row.homeTeamName }} vs {{ scope.row.awayTeamName }}</template>
-          </el-table-column>
-          <el-table-column label="提交方" prop="submitTeamName" min-width="110" />
-          <el-table-column label="提交人" prop="submitterName" width="100" />
-          <el-table-column label="版本" prop="versionNo" width="70" align="center" />
-          <el-table-column label="状态" prop="submissionStatus" width="130" align="center">
-            <template #default="scope">
-              <el-tag :type="v4SubmissionStatusTagType(scope.row.submissionStatus)" size="small" class="nowrap-tag" :title="scope.row.submissionStatus">
-                {{ v4SubmissionStatusLabel(scope.row.submissionStatus) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="提交时间" prop="submitTime" width="160">
-            <template #default="scope">{{ parseTime(scope.row.submitTime) }}</template>
-          </el-table-column>
-          <el-table-column label="操作" width="220" fixed="right">
-            <template #default="scope">
-              <el-button link type="primary" @click="openDetail(scope.row)" v-hasPermi="['basket:v4MatchSubmissionAudit:query']">详情</el-button>
-              <el-button link type="success" @click="handleApprove(scope.row)" v-hasPermi="['basket:v4MatchSubmissionAudit:approve']" v-if="scope.row.submissionStatus === 'PENDING_REVIEW'">通过</el-button>
-              <el-button link type="danger" @click="openReject(scope.row)" v-hasPermi="['basket:v4MatchSubmissionAudit:reject']" v-if="scope.row.submissionStatus === 'PENDING_REVIEW'">驳回</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
-      </el-tab-pane>
-
-      <el-tab-pane label="数据争议" name="dispute" lazy>
-        <MatchDisputePanel />
-      </el-tab-pane>
-
-      <el-tab-pane label="弃赛与异常" name="exception" lazy>
-        <MatchExceptionPanel />
-      </el-tab-pane>
-    </el-tabs>
+    <el-table v-loading="loading" :data="dataList" border>
+      <el-table-column label="提交ID" prop="submissionId" width="90" />
+      <el-table-column label="比赛编号" prop="matchNo" width="120" />
+      <el-table-column label="轮次" prop="roundNo" width="70" align="center" />
+      <el-table-column label="平台赛区" prop="divisionName" min-width="120" />
+      <el-table-column label="对阵" min-width="180">
+        <template #default="scope">{{ scope.row.homeTeamName }} vs {{ scope.row.awayTeamName }}</template>
+      </el-table-column>
+      <el-table-column label="提交方" prop="submitTeamName" min-width="110" />
+      <el-table-column label="提交人" prop="submitterName" width="100" />
+      <el-table-column label="版本" prop="versionNo" width="70" align="center" />
+      <el-table-column label="状态" prop="submissionStatus" width="130" align="center">
+        <template #default="scope">
+          <el-tag :type="v4SubmissionStatusTagType(scope.row.submissionStatus)" size="small" class="nowrap-tag" :title="scope.row.submissionStatus">
+            {{ v4SubmissionStatusLabel(scope.row.submissionStatus) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="提交时间" prop="submitTime" width="160">
+        <template #default="scope">{{ parseTime(scope.row.submitTime) }}</template>
+      </el-table-column>
+      <el-table-column label="操作" width="220" fixed="right">
+        <template #default="scope">
+          <el-button link type="primary" @click="openDetail(scope.row)" v-hasPermi="['basket:v4MatchSubmissionAudit:query']">详情</el-button>
+          <el-button link type="success" @click="handleApprove(scope.row)" v-hasPermi="['basket:v4MatchSubmissionAudit:approve']" v-if="scope.row.submissionStatus === 'PENDING_REVIEW'">通过</el-button>
+          <el-button link type="danger" @click="openReject(scope.row)" v-hasPermi="['basket:v4MatchSubmissionAudit:reject']" v-if="scope.row.submissionStatus === 'PENDING_REVIEW'">驳回</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-drawer v-model="detailOpen" title="比赛数据提交详情" size="820px" append-to-body>
       <template v-if="detail">
@@ -152,11 +140,8 @@ import {
   v4SubmissionStatusTagType
 } from '@/utils/v4AdminDisplay'
 import { parseTime } from '@/utils/ruoyi'
-import MatchDisputePanel from '@/views/cnpa/competition/match-dispute/index.vue'
-import MatchExceptionPanel from '@/views/cnpa/competition/match-exception/index.vue'
 
 const STATUS_OPTIONS = V4_SUBMISSION_STATUS_FILTER_OPTIONS
-const activeTab = ref('audit')
 
 const loading = ref(false)
 const total = ref(0)

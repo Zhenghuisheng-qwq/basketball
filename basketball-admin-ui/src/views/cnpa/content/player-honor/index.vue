@@ -301,8 +301,8 @@ function loadFormSeasons() {
   form.value.seasonId = undefined
   formSeasonOptions.value = []
   if (!form.value.tournamentId) return
-  listSeasonByTournament(form.value.tournamentId).then(res => {
-    formSeasonOptions.value = res.data || []
+  listV4Season({ seriesId: form.value.tournamentId, pageNum: 1, pageSize: 500 }).then(res => {
+    formSeasonOptions.value = (res.rows || []).map((s: any) => ({ id: s.id, seasonName: s.seasonName || s.displayTitle }))
   })
 }
 
@@ -350,8 +350,8 @@ function handleUpdate(row: HonorRecordListItem) {
     }
     coverPreview.value = data.coverUrl || ''
     if (data.tournamentId) {
-      listSeasonByTournament(data.tournamentId).then(sRes => {
-        formSeasonOptions.value = sRes.data || []
+      listV4Season({ seriesId: data.tournamentId, pageNum: 1, pageSize: 500 }).then(sRes => {
+        formSeasonOptions.value = (sRes.rows || []).map((s: any) => ({ id: s.id, seasonName: s.seasonName || s.displayTitle }))
       })
     }
     dialogTitle.value = '修改球员荣誉'

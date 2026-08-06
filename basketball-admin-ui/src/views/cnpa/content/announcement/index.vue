@@ -302,8 +302,8 @@ function handleUpdate(row: AnnouncementListItem) {
       scheduledPublishTime: data.scheduledPublishTime
     }
     if (data.tournamentId) {
-      listSeasonByTournament(data.tournamentId).then(res => {
-        formSeasonOptions.value = res.data || []
+      listV4Season({ seriesId: data.tournamentId, pageNum: 1, pageSize: 500 }).then(res => {
+        formSeasonOptions.value = (res.rows || []).map((s: any) => ({ id: s.id, seasonName: s.seasonName || s.displayTitle }))
       })
     }
     coverPreview.value = data.coverUrl || ''
@@ -387,8 +387,8 @@ function openSupersede(row: AnnouncementListItem) {
     ruleVersion: row.ruleVersion
   }
   if (row.tournamentId) {
-    listSeasonByTournament(row.tournamentId).then(res => {
-      formSeasonOptions.value = res.data || []
+    listV4Season({ seriesId: row.tournamentId, pageNum: 1, pageSize: 500 }).then(res => {
+      formSeasonOptions.value = (res.rows || []).map((s: any) => ({ id: s.id, seasonName: s.seasonName || s.displayTitle }))
     })
   }
   supersedeOpen.value = true

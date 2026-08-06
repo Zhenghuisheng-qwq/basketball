@@ -17,11 +17,11 @@ export function goToRegistrationEditFlow(
   params: {
     registrationId: string
     seasonId?: string
-    tournamentId?: string
+    divisionId?: string
     platformCode?: string
   },
 ) {
-  const seasonKey = params.seasonId || params.tournamentId
+  const seasonKey = params.seasonId || params.divisionId
   if (!seasonKey) {
     goToRegistrationDetail(router, params.registrationId)
     return
@@ -38,19 +38,19 @@ export function goToRegistrationEditFlow(
 /** 已通过报名 → 本届正式赛事球队管理 */
 export function goToEventTeamManagement(
   router: Router,
-  params: { seasonId?: string; tournamentId?: string },
+  params: { seasonId?: string; divisionId?: string },
 ) {
-  const seasonKey = params.seasonId || params.tournamentId
+  const seasonKey = params.seasonId || params.divisionId
   if (!seasonKey) return
-  router.push(`/account/my-tournaments/${seasonKey}/team`)
+  router.push(`/account/my-events?tab=joined`)
 }
 
 export function goToNewTeamRegistration(
   router: Router,
-  event: Pick<AvailableEvent, 'seasonId' | 'tournamentId' | 'platformCode'>,
+  event: Pick<AvailableEvent, 'seasonId' | 'divisionId' | 'platformCode'>,
   platformCode?: string,
 ) {
-  const seasonKey = event.seasonId || event.tournamentId
+  const seasonKey = event.seasonId || event.divisionId
   if (!seasonKey) return
   const resolvedPlatform = platformCode || event.platformCode
   router.push({
@@ -64,11 +64,11 @@ export function goToNewTeamRegistration(
 
 export function goToEventRoster(
   router: Router,
-  event: Pick<AvailableEvent, 'seasonId' | 'tournamentId'>,
+  event: Pick<AvailableEvent, 'seasonId' | 'divisionId'>,
 ) {
-  const seasonKey = event.seasonId || event.tournamentId
+  const seasonKey = event.seasonId || event.divisionId
   if (!seasonKey) return
-  router.push(`/account/my-tournaments/${seasonKey}/team/roster`)
+  router.push(`/account/my-events?tab=joined`)
 }
 
 /** 可报名赛事列表中的操作按钮跳转 */
@@ -81,7 +81,7 @@ export function navigateAvailableRegistrationAction(
   const registrationId = event.registrationId
 
   if (action === 'VIEW_EVENT') {
-    router.push(`/events/${event.tournamentId || event.seasonId}`)
+    router.push(`/events/${event.seasonId || event.divisionId}`)
     return
   }
 
@@ -108,7 +108,7 @@ export function navigateAvailableRegistrationAction(
       goToRegistrationEditFlow(router, {
         registrationId,
         seasonId: event.seasonId,
-        tournamentId: event.tournamentId,
+        divisionId: event.divisionId,
         platformCode: event.platformCode,
       })
       return
@@ -134,10 +134,9 @@ export function navigateApplicationAction(router: Router, application: MyApplica
     }
   }
 
-  if (application.actionType === 'VIEW_TEAM_APPLICATION' && application.tournamentId) {
+  if (application.actionType === 'VIEW_TEAM_APPLICATION' && application.divisionId) {
     goToNewTeamRegistration(router, {
-      seasonId: application.tournamentId,
-      tournamentId: application.tournamentId,
+      divisionId: application.divisionId,
     })
     return true
   }

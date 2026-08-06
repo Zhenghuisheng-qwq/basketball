@@ -14,7 +14,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <PublicHero variant="competition" aria-label="CNPA 赛事中心">
+  <PublicHero variant="competition" ariaLabel="CNPA 赛事中心">
     <nav class="v4-events-hero__breadcrumb" aria-label="面包屑">
       <router-link to="/" class="v4-events-hero__crumb">首页</router-link>
       <span class="v4-events-hero__crumb-sep">/</span>

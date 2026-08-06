@@ -180,13 +180,20 @@ function handleAvailableAction(event: AvailableEvent) {
     return
   }
   if (event.actionType === 'TEAM_REGISTRATION' || event.actionType === 'MANAGE_REGISTRATION' || event.actionType === 'RE_REGISTER') {
+    if (event.registrationType === 'INDIVIDUAL') {
+      router.push({
+        name: 'AccountV4PersonalRegistration',
+        params: { divisionId: event.divisionId },
+      })
+      return
+    }
     router.push({
       name: 'AccountV4Registration',
       params: { divisionId: event.divisionId },
     })
     return
   }
-  if (event.actionType === 'INDIVIDUAL_REGISTRATION' || (event.registrationType === 'INDIVIDUAL' && event.actionType === 'MANAGE_REGISTRATION')) {
+  if (event.actionType === 'INDIVIDUAL_REGISTRATION') {
     router.push({
       name: 'AccountV4PersonalRegistration',
       params: { divisionId: event.divisionId },

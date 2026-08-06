@@ -14,6 +14,7 @@ import type {
   V4RegistrationSaveReq,
   V4MyPersonalRegistration,
   V4PersonalFormationTask,
+  V4RegistrationDetail,
 } from '@/api/types/v4PlayerEvents'
 
 export function getV4AvailableDivisions() {

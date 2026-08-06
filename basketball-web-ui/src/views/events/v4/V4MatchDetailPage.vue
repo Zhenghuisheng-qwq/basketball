@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getV4PublicMatchDetail } from '@/api/v4Public'
 import type { V4PublicMatchDetail } from '@/api/types/v4Public'
 import SafeImage from '@/components/common/SafeImage.vue'
-import { displayText, formatDateTime, formatDecimal, initials } from '@/utils/publicDisplay'
+import { displayText, formatDateTime, initials } from '@/utils/publicDisplay'
 import { formatScore, v4MatchStatusLabel } from '@/utils/v4Display'
 import '../styles/v4-events.scss'
 

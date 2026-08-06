@@ -24,7 +24,6 @@ import {
   submitPlayerCertification,
   withdrawPlayerCertification,
 } from '@/api/playerCertification'
-import { getAccountTournamentPage } from '@/api/accountTournament'
 import {
   createOpenRegistrationDraft,
   getOpenAvailableSeasonPage,
@@ -59,7 +58,6 @@ import {
   mapPlatformToGameTerminal,
   mapPlayerCertToVerification,
   mapProfileDtoToAccountProfile,
-  mapTournamentItemToMyTournament,
 } from '@/utils/accountMappers'
 import type { NotificationSettingDto, PrivacySettingDto } from '@/api/types/accountSetting'
 import type { PlayerCertCurrentDto, PlayerCertDraftPayload } from '@/api/types/playerCertification'
@@ -477,18 +475,6 @@ export const useAccountStore = defineStore('account', () => {
     }
   }
 
-  async function loadMyTournaments(page = 1, pageSize = 50) {
-    tournamentsLoading.value = true
-    try {
-      const res = await getAccountTournamentPage({ currentPage: page, pageSize })
-      myTournaments.value = (res.data.records || []).map(mapTournamentItemToMyTournament)
-      persistMyTournaments()
-      return res.data
-    } finally {
-      tournamentsLoading.value = false
-    }
-  }
-
   async function saveCertDraft(payload: PlayerCertDraftPayload) {
     const res = await savePlayerCertificationDraft(payload)
     playerCert.value = res.data
@@ -811,7 +797,6 @@ export const useAccountStore = defineStore('account', () => {
     loadNotificationSetting,
     updateNotificationSetting: updateNotificationSettingStore,
     loadPlayerCertification,
-    loadMyTournaments,
     saveCertDraft,
     bindCertMaterial,
     submitCertApplication,

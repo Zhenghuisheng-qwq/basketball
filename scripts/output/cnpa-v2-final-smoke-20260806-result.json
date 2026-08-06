@@ -1,7 +1,7 @@
 {
   "batchCode": "CNPA_V2_FINAL_SMOKE_20260806",
-  "startTime": "2026-08-06T01:50:34+08:00",
-  "endTime": "2026-08-06T01:50:38+08:00",
+  "startTime": "2026-08-06T11:51:12+08:00",
+  "endTime": "2026-08-06T11:51:24+08:00",
   "results": [
     {
       "name": "data_check_pre",
@@ -9,19 +9,14 @@
       "detail": "anomaly=?"
     },
     {
-      "name": "schedule_4team",
-      "status": "PASS",
-      "detail": "matches=6/6 rounds=3/3 nullH=0 nullA=0 dup=0 perTeam={27: 3, 30: 3, 28: 3, 29: 3} perRound={1: 2, 2: 2, 3: 2}"
-    },
-    {
-      "name": "4team_publish",
+      "name": "4team_setup",
       "status": "FAIL",
-      "detail": "code=500 msg=仅草稿赛程可发布"
+      "detail": "stageTeam=3 expected 4 sync={'totalEventTeam': 3, 'existingStageTeam': 0, 'insertedStageTeam': 3, 'skippedStageTeam': 0}"
     },
     {
-      "name": "schedule_5team",
-      "status": "PASS",
-      "detail": "matches=10/10 rounds=5/5 nullH=0 nullA=0 dup=0 perTeam={32: 4, 35: 4, 33: 4, 34: 4, 31: 4} perRound={1: 2, 2: 2, 3: 2, 4: 2, 5: 2}"
+      "name": "5team_setup",
+      "status": "FAIL",
+      "detail": "stageTeam=4 expected 5 sync={'totalEventTeam': 4, 'existingStageTeam': 0, 'insertedStageTeam': 4, 'skippedStageTeam': 0}"
     },
     {
       "name": "db_null_home_away",
@@ -36,17 +31,17 @@
     {
       "name": "my_events_TEAM",
       "status": "PASS",
-      "detail": "url=http://127.0.0.1:8881/basket/v4/player/my-events http=200 code=200 count=4 playerId=2082478335308455940"
+      "detail": "url=http://127.0.0.1:8881/basket/v4/player/my-events http=200 code=200 count=0 playerId=2082478335308455940"
     },
     {
       "name": "my_schedule_TEAM",
       "status": "PASS",
-      "detail": "url=http://127.0.0.1:8881/basket/v4/player/my-schedule?includeFinished=true http=200 code=200 count=9"
+      "detail": "url=http://127.0.0.1:8881/basket/v4/player/my-schedule?includeFinished=true http=200 code=200 count=0"
     },
     {
       "name": "my_events_PERSONAL",
       "status": "PASS",
-      "detail": "url=http://127.0.0.1:8881/basket/v4/player/my-events http=200 code=200 count=2 playerId=2084958443138977794"
+      "detail": "url=http://127.0.0.1:8881/basket/v4/player/my-events http=200 code=200 count=0 playerId=2084958443138977794"
     },
     {
       "name": "my_schedule_PERSONAL",
@@ -61,12 +56,12 @@
     {
       "name": "wizard_lock_EAM-RR",
       "status": "PASS",
-      "detail": "divisionId=34 snap=71"
+      "detail": "divisionId=82 snap=134"
     },
     {
       "name": "wizard_lock_NAL-SE",
       "status": "PASS",
-      "detail": "divisionId=35 snap=72"
+      "detail": "divisionId=83 snap=135"
     },
     {
       "name": "wizard_format_rules",
@@ -76,12 +71,12 @@
     {
       "name": "wizard_publish_season",
       "status": "PASS",
-      "detail": "seasonId=29 code=200"
+      "detail": "seasonId=76 code=200"
     },
     {
       "name": "wizard_open_divA",
       "status": "PASS",
-      "detail": "divisionId=34 status=REGISTRATION_OPEN"
+      "detail": "divisionId=82 status=REGISTRATION_OPEN"
     },
     {
       "name": "wizard_open_divB_skip",
@@ -95,13 +90,13 @@
     },
     {
       "name": "ui_web_home",
-      "status": "PASS",
-      "detail": "http://127.0.0.1:5173/ HTTP 200"
+      "status": "FAIL",
+      "detail": "<urlopen error [WinError 10061] 由于目标计算机积极拒绝，无法连接。>"
     },
     {
       "name": "ui_web_my_events",
-      "status": "PASS",
-      "detail": "http://127.0.0.1:5173/account/events HTTP 200"
+      "status": "FAIL",
+      "detail": "<urlopen error [WinError 10061] 由于目标计算机积极拒绝，无法连接。>"
     },
     {
       "name": "ui_admin_publish",
@@ -115,75 +110,22 @@
     }
   ],
   "ids": {
-    "rrSeasonId": 28,
-    "fourTeamDivisionId": 33,
-    "fourTeamStageId": 81,
-    "fourTeamSnapshotId": 70,
-    "4teamMatchIds": [
-      28,
-      29,
-      30,
-      31,
-      32,
-      33
-    ],
-    "4teamMatchCount": 6,
-    "4teamPerTeam": {
-      "27": 3,
-      "30": 3,
-      "28": 3,
-      "29": 3
-    },
-    "4teamPerRound": {
-      "1": 2,
-      "2": 2,
-      "3": 2
-    },
-    "fiveTeamSeasonId": "30",
-    "batch_5": "12",
-    "fiveTeamDivisionId": "36",
-    "fiveTeamStageId": 84,
-    "5teamMatchIds": [
-      34,
-      35,
-      36,
-      37,
-      38,
-      39,
-      40,
-      41,
-      42,
-      43
-    ],
-    "5teamMatchCount": 10,
-    "5teamPerTeam": {
-      "32": 4,
-      "35": 4,
-      "33": 4,
-      "34": 4,
-      "31": 4
-    },
-    "5teamPerRound": {
-      "1": 2,
-      "2": 2,
-      "3": 2,
-      "4": 2,
-      "5": 2
-    },
+    "rrSeasonId": "74",
+    "fiveTeamSeasonId": "75",
     "nullHomeAwayCount": 0,
     "dupPairCount": 0,
     "myEventsTEAM": {
-      "count": 4,
+      "count": 0,
       "http": 200,
       "code": 200
     },
     "myScheduleTEAM": {
-      "count": 9,
+      "count": 0,
       "http": 200,
       "code": 200
     },
     "myEventsPERSONAL": {
-      "count": 2,
+      "count": 0,
       "http": 200,
       "code": 200
     },
@@ -192,15 +134,15 @@
       "http": 200,
       "code": 200
     },
-    "wizardSeasonId": 29,
-    "wizardDivisionAId": 34,
-    "wizardDivisionBId": 35,
-    "wizardSnapshotAId": 71,
-    "wizardSnapshotBId": 72,
-    "wizardStageAId": 82,
-    "wizardStageBId": 83,
-    "uiPass": 3,
-    "uiFail": 0,
+    "wizardSeasonId": "76",
+    "wizardDivisionAId": "82",
+    "wizardDivisionBId": "83",
+    "wizardSnapshotAId": 134,
+    "wizardSnapshotBId": 135,
+    "wizardStageAId": 157,
+    "wizardStageBId": 158,
+    "uiPass": 1,
+    "uiFail": 2,
     "dataCheckAnomaly": null
   }
 }

@@ -1,0 +1,41 @@
+{
+  "fail": 1,
+  "pass": 6,
+  "results": [
+    {
+      "name": "1_admin_login",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "name": "2_web_login",
+      "status": "PASS",
+      "detail": "111111@qq.com"
+    },
+    {
+      "name": "3_create_season",
+      "status": "PASS",
+      "detail": "seasonId=79"
+    },
+    {
+      "name": "4_create_division",
+      "status": "PASS",
+      "detail": "divisionId=85"
+    },
+    {
+      "name": "5_6_apply_lock",
+      "status": "PASS",
+      "detail": "snap={'id': 137, 'snapshot_status': 'LOCKED'}"
+    },
+    {
+      "name": "7_8_publish_open",
+      "status": "PASS",
+      "detail": "season=79 division=85"
+    },
+    {
+      "name": "9_11_register_audit_event",
+      "status": "FAIL",
+      "detail": "POST /basket/v4/player/registration/save code=400 msg=阵容人数不能少于 5 人"
+    }
+  ]
+}

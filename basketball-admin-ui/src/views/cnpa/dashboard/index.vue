@@ -45,11 +45,11 @@ const summary = ref<any>({
 const cards = computed(() => [
   { key: 'playerCert', title: '球员认证待审', count: summary.value.pendingPlayerCert, path: '/identity/player-certification' },
   { key: 'teamAudit', title: '球队认证待审', count: summary.value.pendingTeamAudit, path: '/identity/team-certification' },
-  { key: 'registration', title: '球队报名待审', count: summary.value.pendingRegistration, path: '/participation/team-registration' },
-  { key: 'rosterChange', title: '阵容变更待审', count: summary.value.pendingRosterChange, path: '/participation/transfer-audit' },
+  { key: 'registration', title: '球队报名待审', count: summary.value.pendingRegistration, path: '/event/event-v4-registration-audit' },
+  { key: 'rosterChange', title: '阵容变更待审', count: summary.value.pendingRosterChange, path: '/event/event-v4-event-team' },
   { key: 'platformChange', title: '平台变更待审', count: summary.value.pendingPlatformChange, path: '/identity/platform-change' },
-  { key: 'matchAudit', title: '比赛数据待审', count: summary.value.pendingMatchDataAudit, path: '/competition/match-data-audit' },
-  { key: 'matchDispute', title: '数据争议待处理', count: summary.value.pendingMatchDispute, path: '/competition/match-dispute' }
+  { key: 'matchAudit', title: '比赛数据待审', count: summary.value.pendingMatchDataAudit, path: '/competition-exec/event-v4-match-submission-audit' },
+  { key: 'matchDispute', title: '数据争议待处理', count: summary.value.pendingMatchDispute, path: '/competition-exec/event-v4-match-submission-audit' }
 ])
 
 const pendingTotal = computed(() => cards.value.reduce((total, item) => total + (Number(item.count) || 0), 0))

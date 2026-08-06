@@ -20,7 +20,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <PublicHero variant="data" aria-label="CNPA 数据中心">
+  <PublicHero variant="data" ariaLabel="CNPA 数据中心">
     <div class="v4-data-hero__controls">
       <div v-if="loading" class="v4-data-hero__state">加载中...</div>
       <div v-else-if="error" class="v4-data-hero__state v4-data-hero__state--error">{{ error }}</div>
