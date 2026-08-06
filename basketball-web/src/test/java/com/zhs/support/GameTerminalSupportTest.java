@@ -27,13 +27,13 @@ class GameTerminalSupportTest {
     @Test
     void buildApplyJoinMismatchMessage_returnsDetailedReason() {
         String message = GameTerminalSupport.buildApplyJoinMismatchMessage("PC", "PS");
-        assertEquals("当前球员比赛终端为「PC」，不能申请加入「PS」球队", message);
+        assertEquals("当前球员比赛终端为「PC」，不能申请加入「PS（历史）」球队", message);
     }
 
     @Test
     void buildInviteMismatchMessage_returnsDetailedReason() {
         String message = GameTerminalSupport.buildInviteMismatchMessage("PS", "PC");
-        assertEquals("该球员比赛终端为「PS」，当前球队比赛终端为「PC」，无法邀请", message);
+        assertEquals("该球员比赛终端为「PS（历史）」，当前球队比赛终端为「PC」，无法邀请", message);
     }
 
     @Test

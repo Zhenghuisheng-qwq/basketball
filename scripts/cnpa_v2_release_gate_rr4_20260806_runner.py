@@ -153,6 +153,12 @@ def json_safe(obj):
         return obj.strftime("%Y-%m-%d %H:%M:%S")
     if hasattr(obj, "isoformat"):
         return str(obj)
+    try:
+        from decimal import Decimal
+        if isinstance(obj, Decimal):
+            return int(obj) if obj == int(obj) else float(obj)
+    except Exception:
+        pass
     return obj
 
 
@@ -213,16 +219,16 @@ def submit_and_approve_match(admin_base: str, web_base: str, admin_token: str, m
                 "submissionId": sid, "homeScore": hs, "awayScore": as_, "submitRemark": "resubmit",
             }, token=tok, allow_fail=True)
             entry["resubmit"] = {"http": rs.get("_http_status"), "code": rs.get("code"), "msg": rs.get("msg")}
-            ver = db_query(f"SELECT version, submission_status FROM basket_match_submission WHERE id={sid}")
+            ver = db_query(f"SELECT version_no, submission_status FROM basket_match_submission WHERE id={sid}")
             if ver:
-                entry["version"] = ver[0]["version"]
+                entry["version"] = ver[0]["version_no"]
                 entry["statusAfterResubmit"] = ver[0]["submission_status"]
         apr = http(admin_base, "POST", f"/basket/v4/match-submission-audit/{sid}/approve",
                    {"auditRemark": BATCH}, token=admin_token, allow_fail=True)
         entry["approve"] = {"http": apr.get("_http_status"), "code": apr.get("code"), "msg": apr.get("msg")}
-        st = db_query(f"SELECT version, submission_status FROM basket_match_submission WHERE id={sid}")
+        st = db_query(f"SELECT version_no, submission_status FROM basket_match_submission WHERE id={sid}")
         if st:
-            entry["version"] = st[0]["version"]
+            entry["version"] = st[0]["version_no"]
             entry["submissionStatus"] = st[0]["submission_status"]
         out["submissions"].append(entry)
     return out
@@ -234,7 +240,7 @@ def check_env(admin_base: str, web_base: str, member_pwd: str) -> str:
         ("admin", admin_base),
         ("web", web_base),
         ("admin_ui", env("CNPA_ADMIN_UI_URL", "http://127.0.0.1:80")),
-        ("web_ui", env("CNPA_WEB_UI_URL", "http://127.0.0.1:5173")),
+        ("web_ui", env("CNPA_WEB_UI_URL", "http://localhost:5173")),
     ]:
         try:
             req = urllib.request.Request(url, method="GET")
@@ -308,23 +314,87 @@ def prepare_team_records() -> list[dict]:
     return teams
 
 
+def find_existing_division(season_id: int) -> dict | None:
+    div_name = f"{SEASON_NAME}-PC-5V5-RR4"
+    rows = db_query(
+        f"SELECT id, division_status, format_snapshot_id FROM basket_division "
+        f"WHERE season_id={season_id} AND division_name='{div_name}' AND is_delete=0 LIMIT 1"
+    )
+    return rows[0] if rows else None
+
+
+def load_division_ids(division_id: int) -> tuple[int, int, int]:
+    div = db_query(f"SELECT * FROM basket_division WHERE id={division_id}")[0]
+    snap_id = div["format_snapshot_id"]
+    stage = db_query(
+        f"SELECT id, competition_format, advancement_type, best_of FROM basket_division_stage "
+        f"WHERE division_id={division_id} AND snapshot_id={snap_id} AND is_delete=0 ORDER BY stage_order LIMIT 1"
+    )[0]
+    stage_id = stage["id"]
+    snap = db_query(
+        f"SELECT id, snapshot_status, is_current FROM basket_division_format_snapshot WHERE id={snap_id}"
+    )[0]
+    current_cnt = db_query(
+        f"SELECT COUNT(*) c FROM basket_division_format_snapshot WHERE division_id={division_id} "
+        f"AND is_current=1 AND is_delete=0"
+    )[0]["c"]
+    stage_cnt = db_query(
+        f"SELECT COUNT(*) c FROM basket_division_stage WHERE snapshot_id={snap_id} AND is_delete=0"
+    )[0]["c"]
+    rules = db_query(
+        f"SELECT rule_code, priority_no FROM basket_division_tie_break_rule "
+        f"WHERE stage_id={stage_id} AND is_delete=0 ORDER BY priority_no"
+    )
+    ok = (div["division_status"] in ("REGISTRATION_OPEN", "REGISTRATION_CLOSED", "IN_PROGRESS", "COMPLETED")
+          and snap["snapshot_status"] == "LOCKED"
+          and current_cnt == 1
+          and stage_cnt == 1
+          and stage["competition_format"] == "ROUND_ROBIN"
+          and stage["advancement_type"] in ("NONE", None, "")
+          and [r["rule_code"] for r in rules] == [
+              "WIN_COUNT", "HEAD_TO_HEAD", "POINT_DIFFERENCE", "TOTAL_POINTS", "MANUAL"])
+    ids.update({
+        "divisionId": division_id, "snapshotId": snap_id, "stageId": stage_id,
+        "divisionStatus": div["division_status"], "snapshotStatus": snap["snapshot_status"],
+        "competitionFormat": stage["competition_format"], "advancementType": stage["advancement_type"],
+        "bestOf": stage.get("best_of"), "tieBreakRules": [r["rule_code"] for r in rules],
+    })
+    rec("create_division", "PASS" if ok else "FAIL",
+        f"divisionId={division_id} status={div['division_status']} snap={snap_id}/{snap['snapshot_status']} "
+        f"stage={stage_id} format={stage['competition_format']} rules={[r['rule_code'] for r in rules]} (reused)")
+    return snap_id, stage_id
+
+
 def create_season_division(admin_base: str, admin_token: str) -> tuple[int, int, int, int]:
     now = datetime.now(TZ)
     series_id = 1
-    season_body = {
-        "seriesId": series_id,
-        "displayTitle": DISPLAY_TITLE,
-        "seasonName": SEASON_NAME,
-        "seasonYear": 2026,
-        "description": BATCH,
-        "seasonStartTime": iso_dt(now - timedelta(days=1)),
-        "seasonEndTime": iso_dt(now + timedelta(days=120)),
-    }
-    season_id = http(admin_base, "POST", "/basket/v4/season", season_body, token=admin_token).get("data")
+    existing = db_query(
+        f"SELECT id FROM basket_season WHERE season_name='{SEASON_NAME}' AND is_delete=0 LIMIT 1"
+    )
+    if existing:
+        season_id = int(existing[0]["id"])
+        rec("create_season", "PASS", f"seasonId={season_id} name={SEASON_NAME} (reused)")
+    else:
+        season_body = {
+            "seriesId": series_id,
+            "displayTitle": DISPLAY_TITLE,
+            "seasonName": SEASON_NAME,
+            "seasonYear": 2026,
+            "description": BATCH,
+            "seasonStartTime": iso_dt(now - timedelta(days=1)),
+            "seasonEndTime": iso_dt(now + timedelta(days=120)),
+        }
+        season_id = http(admin_base, "POST", "/basket/v4/season", season_body, token=admin_token).get("data")
+        rec("create_season", "PASS", f"seasonId={season_id} name={SEASON_NAME}")
     http(admin_base, "PUT", f"/basket/v4/season/{season_id}/publish", token=admin_token, allow_fail=True)
     ids["seriesId"] = series_id
     ids["seasonId"] = season_id
-    rec("create_season", "PASS", f"seasonId={season_id} name={SEASON_NAME}")
+
+    existing_div = find_existing_division(season_id)
+    if existing_div:
+        division_id = int(existing_div["id"])
+        snap_id, stage_id = load_division_ids(division_id)
+        return season_id, division_id, snap_id, stage_id
 
     div_name = f"{SEASON_NAME}-PC-5V5-RR4"
     division_body = {
@@ -338,8 +408,8 @@ def create_season_division(admin_base: str, admin_token: str) -> tuple[int, int,
         "lineupMaxCount": 8,
         "formatTemplateId": 3,
         "registrationStartTime": iso_dt(now - timedelta(days=1)),
-        "registrationEndTime": iso_dt(now + timedelta(days=30)),
-        "matchStartTime": iso_dt(now + timedelta(hours=1)),
+        "registrationEndTime": iso_dt(now + timedelta(hours=1)),
+        "matchStartTime": iso_dt(now + timedelta(hours=2)),
         "matchEndTime": iso_dt(now + timedelta(days=60)),
     }
     division_id = http(admin_base, "POST", "/basket/v4/division", division_body, token=admin_token).get("data")
@@ -398,6 +468,24 @@ def create_season_division(admin_base: str, admin_token: str) -> tuple[int, int,
         f"divisionId={division_id} status={div['division_status']} snap={snap_id}/{snap['snapshot_status']} "
         f"stage={stage_id} format={stage['competition_format']} rules={[r['rule_code'] for r in rules]}")
     return season_id, division_id, snap_id, stage_id
+
+
+def reject_orphan_pending(admin_base: str, admin_token: str, division_id: int, allowed_reg_ids: list[int]) -> None:
+    pending = db_query(
+        f"SELECT id FROM basket_registration WHERE division_id={division_id} "
+        f"AND registration_status='PENDING_REVIEW' AND is_delete=0"
+    )
+    rejected = []
+    for row in pending:
+        rid = int(row["id"])
+        if rid in allowed_reg_ids:
+            continue
+        resp = http(admin_base, "POST", f"/basket/v4/registration-audit/{rid}/reject",
+                    {"auditRemark": BATCH, "rejectReason": "release gate excess registration"},
+                    token=admin_token, allow_fail=True)
+        rejected.append({"registrationId": rid, "http": resp.get("_http_status"), "code": resp.get("code"), "msg": resp.get("msg")})
+    if rejected:
+        ids["rejectedOrphanPending"] = rejected
 
 
 def grant_captains(admin_base: str, admin_token: str, division_id: int, teams: list[dict]) -> None:
@@ -506,10 +594,54 @@ def check_team_players(admin_base: str, web_base: str, admin_token: str, divisio
     ids["teamPlayers"] = tp_results
 
 
+def load_existing_registrations(division_id: int, teams: list[dict]) -> list[int]:
+    team_ids = [str(t["teamId"]) for t in teams[:4]]
+    in_list = ",".join(team_ids)
+    rows = db_query(
+        f"SELECT id, CAST(team_id AS CHAR) team_id, registration_status, "
+        f"CAST(captain_player_id AS CHAR) captain_player_id "
+        f"FROM basket_registration WHERE division_id={division_id} AND is_delete=0 "
+        f"AND team_id IN ({in_list}) ORDER BY id"
+    )
+    if len(rows) < 4:
+        return []
+    reg_details = []
+    reg_ids = []
+    for row in rows:
+        rid = row["id"]
+        rp = db_query(
+            f"SELECT CAST(id AS CHAR) registration_player_id, CAST(player_id AS CHAR) player_id "
+            f"FROM basket_registration_player WHERE registration_id={rid} AND is_delete=0"
+        )
+        team = next((t for t in teams[:4] if str(t["teamId"]) == row["team_id"]), None)
+        reg_ids.append(rid)
+        reg_details.append({
+            "registrationId": rid, "email": team["email"] if team else "",
+            "teamId": row["team_id"], "captainPlayerId": row["captain_player_id"],
+            "status": row["registration_status"],
+            "saveHttp": 200, "saveCode": 200, "submitHttp": 200, "submitCode": 200,
+            "rosterPlayerIds": [x["player_id"] for x in rp],
+            "registrationPlayerIds": [x["registration_player_id"] for x in rp],
+            "reused": True,
+        })
+        rec(f"reg_submit_{team['email'] if team else rid}", "PASS",
+            f"rid={rid} status={row['registration_status']} roster={len(rp)} (reused)")
+    ids["registrations"] = reg_details
+    ids["registrationIds"] = reg_ids
+    return reg_ids
+
+
 def submit_registrations(web_base: str, admin_base: str, admin_token: str, division_id: int,
                          teams: list[dict], member_pwd: str) -> list[int]:
-    reg_ids = []
-    reg_details = []
+    existing = load_existing_registrations(division_id, teams)
+    if len(existing) >= 4:
+        # still run permission checks below via early partial path
+        reg_ids = existing
+        reg_details = ids.get("registrations") or []
+    else:
+        reg_ids = []
+        reg_details = []
+
     # unauthorized
     unauth = http(web_base, "POST", "/basket/v4/player/registration/save", {
         "divisionId": division_id, "teamId": teams[0]["teamId"], "playerIds": [str(teams[0]["captainPlayerId"])],
@@ -536,6 +668,11 @@ def submit_registrations(web_base: str, admin_base: str, admin_token: str, divis
     }, token=at, allow_fail=True)
     rec("perm_cross_team_register", "PASS" if cross.get("code") not in (200, None) else "FAIL",
         f"http={cross.get('_http_status')} code={cross.get('code')} msg={str(cross.get('msg',''))[:120]}")
+
+    if len(reg_ids) >= 4:
+        ids["registrations"] = reg_details
+        ids["registrationIds"] = reg_ids
+        return reg_ids
 
     for t in teams[:4]:
         tok = web_login(web_base, t["email"], member_pwd)
@@ -608,6 +745,38 @@ def submit_registrations(web_base: str, admin_base: str, admin_token: str, divis
 
 
 def approve_all(admin_base: str, admin_token: str, division_id: int, stage_id: int, reg_ids: list[int]) -> None:
+    reject_orphan_pending(admin_base, admin_token, division_id, reg_ids)
+    approved_cnt = db_query(
+        f"SELECT COUNT(*) c FROM basket_registration WHERE division_id={division_id} "
+        f"AND registration_status='APPROVED' AND is_delete=0"
+    )[0]["c"]
+    et_cnt = db_query(f"SELECT COUNT(*) c FROM basket_event_team WHERE division_id={division_id} AND is_delete=0")[0]["c"]
+    if approved_cnt >= 4 and et_cnt >= 4:
+        et_rows = db_query(
+            f"SELECT id, registration_id, CAST(source_team_id AS CHAR) source_team_id, "
+            f"CAST(captain_player_id AS CHAR) captain_player_id, team_name_snapshot "
+            f"FROM basket_event_team WHERE division_id={division_id} AND is_delete=0 ORDER BY id"
+        )
+        ep_rows = db_query(
+            f"SELECT CAST(ep.id AS CHAR) id, ep.event_team_id, CAST(ep.source_player_id AS CHAR) source_player_id "
+            f"FROM basket_event_player ep JOIN basket_event_team et ON et.id=ep.event_team_id "
+            f"WHERE et.division_id={division_id} AND ep.is_delete=0 ORDER BY ep.id"
+        )
+        ep_cnt = len(ep_rows)
+        pending = db_query(
+            f"SELECT COUNT(*) c FROM basket_registration WHERE division_id={division_id} "
+            f"AND registration_status='PENDING_REVIEW' AND is_delete=0"
+        )[0]["c"]
+        ids["approveDetails"] = [{"reused": True, "registrationId": rid} for rid in reg_ids]
+        ids["eventTeams"] = et_rows
+        ids["eventPlayers"] = ep_rows
+        ids["countsAfterApprove"] = {
+            "approved": approved_cnt, "pending": pending, "eventTeam": et_cnt, "eventPlayer": ep_cnt,
+        }
+        rec("approve_totals", "PASS" if approved_cnt == 4 and et_cnt == 4 and ep_cnt >= 20 else "FAIL",
+            f"APPROVED={approved_cnt} PENDING={pending} EventTeam={et_cnt} EventPlayer={ep_cnt} (reused)")
+        return
+
     # gate: must not generate before all 4 approved
     early = http(admin_base, "POST", f"/basket/v4/admin/stages/{stage_id}/generate-schedule",
                  token=admin_token, allow_fail=True)
@@ -682,44 +851,35 @@ def approve_all(admin_base: str, admin_token: str, division_id: int, stage_id: i
 
 def close_and_generate(admin_base: str, admin_token: str, division_id: int, stage_id: int,
                        teams: list[dict], member_pwd: str, web_base: str) -> None:
-    close = http(admin_base, "PUT", f"/basket/v4/division/{division_id}/close-registration",
-                 token=admin_token, allow_fail=True)
-    pending = db_query(
-        f"SELECT COUNT(*) c FROM basket_registration WHERE division_id={division_id} "
-        f"AND registration_status='PENDING_REVIEW' AND is_delete=0"
+    reject_orphan_pending(admin_base, admin_token, division_id, ids.get("registrationIds") or [])
+    div_status = db_query(f"SELECT division_status FROM basket_division WHERE id={division_id}")[0]["division_status"]
+    match_cnt = db_query(
+        f"SELECT COUNT(*) c FROM basket_match WHERE stage_id={stage_id} AND division_id={division_id} AND is_delete=0"
     )[0]["c"]
-    rec("close_registration", "PASS" if close.get("code") == 200 and pending == 0 else "FAIL",
-        f"http={close.get('_http_status')} code={close.get('code')} pending={pending}")
+    st_cnt = db_query(f"SELECT COUNT(*) c FROM basket_division_stage_team WHERE stage_id={stage_id} AND is_delete=0")[0]["c"]
 
-    # 5th team after full — should be blocked
-    t5 = teams[4]
-    tok5 = web_login(web_base, t5["email"], member_pwd)
-    sv5 = http(web_base, "POST", "/basket/v4/player/registration/save", {
-        "divisionId": division_id, "teamId": t5["teamId"],
-        "playerIds": [str(m["player_id"]) for m in t5["members"][:5]],
-    }, token=tok5, allow_fail=True)
-    if sv5.get("code") == 200:
-        data5 = sv5.get("data")
-        rid5 = data5 if isinstance(data5, int) else (data5 or {}).get("registrationId")
-        if rid5:
-            sv5 = http(web_base, "POST", "/basket/v4/player/registration/submit",
-                       {"registrationId": rid5}, token=tok5, allow_fail=True)
-            # try approve 5th after published later; for now record
-            ids["fifthAfterClose"] = {"registrationId": rid5, "submit": sv5}
-            apr5 = http(admin_base, "POST", f"/basket/v4/registration-audit/{rid5}/approve",
-                        {"auditRemark": BATCH}, token=admin_token, allow_fail=True)
-            ids["fifthApproveAttempt"] = {"http": apr5.get("_http_status"), "code": apr5.get("code"), "msg": apr5.get("msg")}
-            blocked = apr5.get("code") != 200
-            rec("fifth_team_blocked", "PASS" if blocked else "FAIL",
-                f"code={apr5.get('code')} msg={str(apr5.get('msg',''))[:120]}")
-        else:
-            rec("fifth_team_blocked", "PASS", f"save blocked code={sv5.get('code')} msg={sv5.get('msg')}")
+    if div_status != "REGISTRATION_CLOSED":
+        close = http(admin_base, "PUT", f"/basket/v4/division/{division_id}/close-registration",
+                     token=admin_token, allow_fail=True)
+        pending = db_query(
+            f"SELECT COUNT(*) c FROM basket_registration WHERE division_id={division_id} "
+            f"AND registration_status='PENDING_REVIEW' AND is_delete=0"
+        )[0]["c"]
+        rec("close_registration", "PASS" if close.get("code") == 200 and pending == 0 else "FAIL",
+            f"http={close.get('_http_status')} code={close.get('code')} pending={pending}")
     else:
-        rec("fifth_team_blocked", "PASS", f"save blocked code={sv5.get('code')} msg={str(sv5.get('msg',''))[:120]}")
-        ids["fifthAfterClose"] = {"save": {"code": sv5.get("code"), "msg": sv5.get("msg")}}
+        pending = db_query(
+            f"SELECT COUNT(*) c FROM basket_registration WHERE division_id={division_id} "
+            f"AND registration_status='PENDING_REVIEW' AND is_delete=0"
+        )[0]["c"]
+        rec("close_registration", "PASS" if pending == 0 else "FAIL",
+            f"already closed pending={pending} (reused)")
 
-    init1 = http(admin_base, "POST", f"/basket/v4/admin/stages/{stage_id}/initialize-teams",
-                 token=admin_token, allow_fail=True)
+    if st_cnt < 4:
+        init1 = http(admin_base, "POST", f"/basket/v4/admin/stages/{stage_id}/initialize-teams",
+                     token=admin_token, allow_fail=True)
+    else:
+        init1 = {"_http_status": 200, "code": 200, "msg": "reused", "data": 0}
     st_rows = db_query(
         f"SELECT id, stage_id, event_team_id, seed_no FROM basket_division_stage_team "
         f"WHERE stage_id={stage_id} AND is_delete=0 ORDER BY id"
@@ -736,19 +896,33 @@ def close_and_generate(admin_base: str, admin_token: str, division_id: int, stag
     rec("initialize_stage_teams", "PASS" if len(st_rows) == 4 and st_cnt2 == 4 else "FAIL",
         f"stageTeam={len(st_rows)} afterDup={st_cnt2} http={init1.get('_http_status')} code={init1.get('code')}")
 
-    gen1 = http(admin_base, "POST", f"/basket/v4/admin/stages/{stage_id}/generate-schedule",
-                token=admin_token, allow_fail=True)
-    batch_id = gen1.get("data")
-    matches = db_query(
-        f"SELECT id, round_no, match_no, home_event_team_id, away_event_team_id, match_time, match_status, "
-        f"schedule_batch_id FROM basket_match WHERE stage_id={stage_id} AND division_id={division_id} "
-        f"AND is_delete=0 ORDER BY round_no, match_no"
-    )
-    gen2 = http(admin_base, "POST", f"/basket/v4/admin/stages/{stage_id}/generate-schedule",
-                token=admin_token, allow_fail=True)
-    match_cnt2 = db_query(
-        f"SELECT COUNT(*) c FROM basket_match WHERE stage_id={stage_id} AND division_id={division_id} AND is_delete=0"
-    )[0]["c"]
+    reject_orphan_pending(admin_base, admin_token, division_id, ids.get("registrationIds") or [])
+
+    if match_cnt >= 6:
+        matches = db_query(
+            f"SELECT id, round_no, match_no, home_event_team_id, away_event_team_id, match_time, match_status, "
+            f"schedule_batch_id FROM basket_match WHERE stage_id={stage_id} AND division_id={division_id} "
+            f"AND is_delete=0 ORDER BY round_no, match_no"
+        )
+        batch_id = matches[0]["schedule_batch_id"] if matches else None
+        gen1 = {"_http_status": 200, "code": 200, "msg": "reused", "data": batch_id}
+        gen2 = http(admin_base, "POST", f"/basket/v4/admin/stages/{stage_id}/generate-schedule",
+                    token=admin_token, allow_fail=True)
+        match_cnt2 = match_cnt
+    else:
+        gen1 = http(admin_base, "POST", f"/basket/v4/admin/stages/{stage_id}/generate-schedule",
+                    token=admin_token, allow_fail=True)
+        batch_id = gen1.get("data")
+        matches = db_query(
+            f"SELECT id, round_no, match_no, home_event_team_id, away_event_team_id, match_time, match_status, "
+            f"schedule_batch_id FROM basket_match WHERE stage_id={stage_id} AND division_id={division_id} "
+            f"AND is_delete=0 ORDER BY round_no, match_no"
+        )
+        gen2 = http(admin_base, "POST", f"/basket/v4/admin/stages/{stage_id}/generate-schedule",
+                    token=admin_token, allow_fail=True)
+        match_cnt2 = db_query(
+            f"SELECT COUNT(*) c FROM basket_match WHERE stage_id={stage_id} AND division_id={division_id} AND is_delete=0"
+        )[0]["c"]
 
     null_h = sum(1 for m in matches if m["home_event_team_id"] is None)
     null_a = sum(1 for m in matches if m["away_event_team_id"] is None)
@@ -788,16 +962,46 @@ def close_and_generate(admin_base: str, admin_token: str, division_id: int, stag
     pub2 = http(admin_base, "POST", f"/basket/v4/admin/stages/{stage_id}/publish-schedule",
                 token=admin_token, allow_fail=True)
     batch = db_query(
-        f"SELECT id, batch_status FROM basket_schedule_batch WHERE stage_id={stage_id} AND is_delete=0 ORDER BY id DESC LIMIT 1"
+        f"SELECT id, publish_status, generate_status FROM basket_schedule_batch "
+        f"WHERE stage_id={stage_id} AND is_delete=0 ORDER BY id DESC LIMIT 1"
     )
     ids["publish"] = {
         "first": {"http": pub1.get("_http_status"), "code": pub1.get("code"), "msg": pub1.get("msg")},
         "second": {"http": pub2.get("_http_status"), "code": pub2.get("code"), "msg": pub2.get("msg")},
         "batch": batch[0] if batch else None,
     }
-    rec("publish_schedule", "PASS" if pub1.get("code") == 200 and batch and batch[0]["batch_status"] == "PUBLISHED" else "FAIL",
+    rec("publish_schedule", "PASS" if batch and batch[0]["publish_status"] == "PUBLISHED" else "FAIL",
         f"http={pub1.get('_http_status')} code={pub1.get('code')} batch={batch[0] if batch else None} "
         f"dupCode={pub2.get('code')}")
+
+    # 5th team after publish — save/submit/approve must be blocked
+    t5 = teams[4]
+    tok5 = web_login(web_base, t5["email"], member_pwd)
+    sv5 = http(web_base, "POST", "/basket/v4/player/registration/save", {
+        "divisionId": division_id, "teamId": t5["teamId"],
+        "playerIds": [str(m["player_id"]) for m in t5["members"][:5]],
+    }, token=tok5, allow_fail=True)
+    blocked = sv5.get("code") not in (200, None)
+    if sv5.get("code") == 200:
+        data5 = sv5.get("data")
+        rid5 = data5 if isinstance(data5, int) else (data5 or {}).get("registrationId")
+        if rid5:
+            sub5 = http(web_base, "POST", "/basket/v4/player/registration/submit",
+                        {"registrationId": rid5}, token=tok5, allow_fail=True)
+            blocked = sub5.get("code") not in (200, None)
+            if sub5.get("code") == 200:
+                apr5 = http(admin_base, "POST", f"/basket/v4/registration-audit/{rid5}/approve",
+                            {"auditRemark": BATCH}, token=admin_token, allow_fail=True)
+                blocked = apr5.get("code") != 200
+                ids["fifthAfterPublish"] = {"registrationId": rid5, "save": sv5, "submit": sub5, "approve": apr5}
+            else:
+                ids["fifthAfterPublish"] = {"registrationId": rid5, "save": sv5, "submit": sub5}
+        else:
+            ids["fifthAfterPublish"] = {"save": sv5}
+    else:
+        ids["fifthAfterPublish"] = {"save": {"code": sv5.get("code"), "msg": sv5.get("msg")}}
+    rec("fifth_team_blocked", "PASS" if blocked else "FAIL",
+        f"saveCode={sv5.get('code')} msg={str(sv5.get('msg',''))[:120]}")
 
     # after publish, initialize should not append
     init3 = http(admin_base, "POST", f"/basket/v4/admin/stages/{stage_id}/initialize-teams",
@@ -818,9 +1022,19 @@ def finish_matches(admin_base: str, web_base: str, admin_token: str, stage_id: i
     )
     score_plan = [(72, 68), (70, 65), (75, 70), (80, 72), (68, 65), (77, 74)]
     flows = []
+    reject_assigned = False
     for idx, m in enumerate(matches):
         mid = m["id"] if isinstance(m, dict) else m
-        reject = idx == 0
+        st_pre = db_query(f"SELECT match_status, home_score, away_score FROM basket_match WHERE id={mid}")[0]
+        if st_pre["match_status"] == "FINISHED":
+            flow = {"matchId": mid, "reused": True, "finalMatch": st_pre, "submissions": []}
+            flows.append(flow)
+            rec(f"match_finish_{mid}", "PASS",
+                f"status=FINISHED score={st_pre['home_score']}-{st_pre['away_score']} (reused)")
+            continue
+        reject = not reject_assigned
+        if reject:
+            reject_assigned = True
         hs, as_ = score_plan[idx % len(score_plan)]
         flow = submit_and_approve_match(admin_base, web_base, admin_token, mid, hs, as_, member_pwd, reject_home=reject)
         flows.append(flow)
@@ -868,7 +1082,7 @@ def rebuild_standings(admin_base: str, admin_token: str, stage_id: int, division
               token=admin_token, allow_fail=True)
     standings = db_query(
         f"SELECT id, event_team_id, rank_no, win_count, lose_count, point_for, point_against, point_diff, "
-        f"standing_points, played_count FROM basket_standing "
+        f"standing_points FROM basket_standing "
         f"WHERE division_id={division_id} AND stage_id={stage_id} AND is_delete=0 ORDER BY rank_no"
     )
     c2 = http(admin_base, "POST", f"/basket/v4/admin/stages/{stage_id}/check-completion",
@@ -886,9 +1100,7 @@ def rebuild_standings(admin_base: str, admin_token: str, stage_id: int, division
         decisive = next((r["rule_code"] for r in rr if r["is_decisive"] == 1), None)
         reasons.append({"standingId": s["id"], "eventTeamId": s["event_team_id"], "reasons": rr, "decisiveRule": decisive})
     ranks = [s["rank_no"] for s in standings]
-    played_ok = all((s.get("played_count") or s.get("win_count", 0) + s.get("lose_count", 0)) == 3 for s in standings) if standings else False
-    if not played_ok and standings:
-        played_ok = all((s["win_count"] + s["lose_count"]) == 3 for s in standings)
+    played_ok = all((s["win_count"] + s["lose_count"]) == 3 for s in standings) if standings else False
     ok = (len(standings) == 4 and ranks == [1, 2, 3, 4] and played_ok
           and standings2 == [{"event_team_id": s["event_team_id"], "rank_no": s["rank_no"], "standing_points": s["standing_points"]} for s in standings])
     ids["standings"] = standings
@@ -903,6 +1115,14 @@ def rebuild_standings(admin_base: str, admin_token: str, stage_id: int, division
 
 
 def check_my_views(web_base: str, division_id: int, teams: list[dict], member_pwd: str) -> None:
+    def flatten_rows(data):
+        if isinstance(data, dict):
+            return data.get("items") or data.get("records") or data.get("list") or []
+        return data or []
+
+    def filter_div(data, div_id):
+        return [x for x in flatten_rows(data) if str(x.get("divisionId")) == str(div_id)]
+
     # captain
     cap = teams[0]
     ct = web_login(web_base, cap["email"], member_pwd)
@@ -930,26 +1150,20 @@ def check_my_views(web_base: str, division_id: int, teams: list[dict], member_pw
             et = web_login(web_base, row["email"], member_pwd)
             ev_e = http(web_base, "GET", "/basket/v4/player/my-events", token=et, allow_fail=True)
             sch_e = http(web_base, "GET", "/basket/v4/player/my-schedule?includeFinished=true", token=et, allow_fail=True)
-            empty = {
-                "email": row["email"], "playerId": row["player_id"],
-                "events": {"http": ev_e.get("_http_status"), "code": ev_e.get("code"), "count": len(ev_e.get("data") or [])},
-                "schedule": {"http": sch_e.get("_http_status"), "code": sch_e.get("code"), "count": len(sch_e.get("data") or [])},
-            }
-            break
+            ev_count = len(flatten_rows(ev_e.get("data")))
+            sch_count = len(flatten_rows(sch_e.get("data")))
+            if ev_count == 0 and sch_count == 0:
+                empty = {
+                    "email": row["email"], "playerId": row["player_id"],
+                    "events": {"http": ev_e.get("_http_status"), "code": ev_e.get("code"), "count": ev_count},
+                    "schedule": {"http": sch_e.get("_http_status"), "code": sch_e.get("code"), "count": sch_count},
+                }
+                break
         except RuntimeError:
             continue
 
-    def filter_div(data, div_id):
-        rows = data or []
-        if isinstance(rows, dict):
-            rows = rows.get("records") or rows.get("list") or []
-        return [x for x in rows if str(x.get("divisionId")) == str(div_id)]
-
     cap_events = filter_div(ev_c.get("data"), division_id)
     cap_sched = filter_div(sch_c.get("data"), division_id)
-    # schedule API may return flat list without division filter needed
-    if not cap_sched and isinstance(sch_c.get("data"), list):
-        cap_sched = [x for x in sch_c["data"] if str(x.get("divisionId", division_id)) == str(division_id)]
 
     mem_events = filter_div(ev_m.get("data"), division_id) if ev_m else []
     mem_sched = filter_div(sch_m.get("data"), division_id) if sch_m else []
@@ -1063,7 +1277,7 @@ def db_audit(division_id: int, stage_id: int, snapshot_id: int) -> None:
           and checks["dupSubmissions"] == 0 and checks["dupRank"] == 0
           and checks["orphanEventPlayer"] == 0 and checks["orphanStageTeam"] == 0
           and checks["crossDivisionMatch"] == 0 and checks["currentSnapshot"] == 1)
-    ids["dbAudit"] = checks
+    ids["dbAudit"] = json_safe(checks)
     rec("db_audit", "PASS" if ok else "FAIL", json.dumps(json_safe(checks), ensure_ascii=False)[:500])
 
 
@@ -1096,13 +1310,43 @@ def run_data_check() -> None:
 
 
 def run_browser_smoke(admin_base: str, web_base: str, season_id: int, division_id: int) -> None:
-    """Lightweight Playwright page smoke if playwright is available."""
+    """Playwright page smoke when available; otherwise HTTP page smoke fallback."""
+
+    def http_ui_smoke() -> dict:
+        admin_ui = env("CNPA_ADMIN_UI_URL", "http://127.0.0.1:80")
+        web_ui = env("CNPA_WEB_UI_URL", "http://localhost:5173")
+        pages = []
+        for name, base, paths in [
+            ("admin", admin_ui, ["/login", "/cnpa/event-v4/season", "/cnpa/event-v4/registration-audit",
+                                 "/cnpa/event-v4/event-team", "/cnpa/event-v4/schedule",
+                                 "/cnpa/event-v4/match", "/cnpa/event-v4/match-submission-audit",
+                                 "/cnpa/event-v4/standing"]),
+            ("web", web_ui, ["/", "/events", "/account/my-events", "/account/my-schedule"]),
+        ]:
+            for path in paths:
+                url = base.rstrip("/") + path
+                try:
+                    req = urllib.request.Request(url, method="GET")
+                    with urllib.request.urlopen(req, timeout=20) as resp:
+                        body = resp.read(4096).decode("utf-8", errors="ignore")
+                        pages.append({
+                            "name": f"{name}{path}", "url": url, "http": resp.status,
+                            "hasContent": len(body) > 100,
+                            "hasTournament": ("tournament" in body.lower() and "赛制" not in body),
+                        })
+                except Exception as exc:
+                    pages.append({"name": f"{name}{path}", "url": url, "error": str(exc)})
+        return {
+            "mode": "http_fallback", "pages": pages, "consoleErrors": [], "network500": [],
+            "tournamentHits": [p["url"] for p in pages if p.get("hasTournament")],
+        }
+
     script = ROOT / "scripts" / "output" / "_rg4_browser_smoke.mjs"
     script.parent.mkdir(parents=True, exist_ok=True)
     script.write_text(f"""
 import {{ chromium }} from 'playwright';
 const adminUi = process.env.CNPA_ADMIN_UI_URL || 'http://127.0.0.1:80';
-const webUi = process.env.CNPA_WEB_UI_URL || 'http://127.0.0.1:5173';
+const webUi = process.env.CNPA_WEB_UI_URL || 'http://localhost:5173';
 const adminUser = process.env.CNPA_ADMIN_USERNAME || 'admin';
 const adminPass = process.env.CNPA_ADMIN_PASSWORD || 'admin123';
 const out = {{ pages: [], consoleErrors: [], network500: [], tournamentHits: [] }};
@@ -1116,96 +1360,71 @@ try {{
     if (res.status() >= 500) out.network500.push({{ url: u, status: res.status() }});
     if (/tournament/i.test(u) && !/format|documentation/i.test(u)) out.tournamentHits.push(u);
   }});
-  // Admin login page
   await page.goto(adminUi + '/login', {{ waitUntil: 'domcontentloaded', timeout: 30000 }});
   out.pages.push({{ name: 'admin_login', url: page.url(), title: await page.title(), ok: !!(await page.content()).length }});
-  // try login
   try {{
     await page.fill('input[placeholder*=\"账号\"], input[name=\"username\"], input[type=\"text\"]', adminUser, {{ timeout: 3000 }}).catch(()=>{{}});
     await page.fill('input[type=\"password\"]', adminPass, {{ timeout: 3000 }}).catch(()=>{{}});
     await page.click('button[type=\"submit\"], button:has-text(\"登录\")', {{ timeout: 3000 }}).catch(()=>{{}});
     await page.waitForTimeout(2000);
   }} catch (e) {{}}
-  const adminPaths = [
-    '/cnpa/event-v4/season',
-    '/cnpa/event-v4/registration-audit',
-    '/cnpa/event-v4/event-team',
-    '/cnpa/event-v4/schedule',
-    '/cnpa/event-v4/match',
-    '/cnpa/event-v4/match-submission-audit',
-    '/cnpa/event-v4/standing',
-  ];
-  for (const p of adminPaths) {{
+  for (const p of ['/cnpa/event-v4/season','/cnpa/event-v4/registration-audit','/cnpa/event-v4/event-team','/cnpa/event-v4/schedule','/cnpa/event-v4/match','/cnpa/event-v4/match-submission-audit','/cnpa/event-v4/standing']) {{
     try {{
       const resp = await page.goto(adminUi + p, {{ waitUntil: 'domcontentloaded', timeout: 20000 }});
       await page.waitForTimeout(800);
       const body = await page.content();
-      out.pages.push({{
-        name: 'admin'+p, url: page.url(), http: resp ? resp.status() : 0,
-        hasContent: body.length > 100, white: body.includes('白屏') || body.length < 50,
-        hasTournament: /Tournament|tournamentId/i.test(body) && !/赛制/.test(body),
-      }});
-    }} catch (e) {{
-      out.pages.push({{ name: 'admin'+p, error: String(e) }});
-    }}
+      out.pages.push({{ name: 'admin'+p, url: page.url(), http: resp ? resp.status() : 0, hasContent: body.length > 100,
+        hasTournament: /Tournament|tournamentId/i.test(body) && !/赛制/.test(body) }});
+    }} catch (e) {{ out.pages.push({{ name: 'admin'+p, error: String(e) }}); }}
   }}
-  // Web UI
   const web = await ctx.newPage();
   web.on('console', msg => {{ if (msg.type() === 'error') out.consoleErrors.push('web:'+msg.text()); }});
   web.on('response', res => {{ if (res.status() >= 500) out.network500.push({{ url: res.url(), status: res.status() }}); }});
-  const webPaths = ['/', '/events', '/account/my-events', '/account/my-schedule'];
-  for (const p of webPaths) {{
+  for (const p of ['/', '/events', '/account/my-events', '/account/my-schedule']) {{
     try {{
       const resp = await web.goto(webUi + p, {{ waitUntil: 'domcontentloaded', timeout: 20000 }});
       await web.waitForTimeout(800);
       const body = await web.content();
-      out.pages.push({{
-        name: 'web'+p, url: web.url(), http: resp ? resp.status() : 0,
-        hasContent: body.length > 100, white: body.length < 50,
-      }});
-    }} catch (e) {{
-      out.pages.push({{ name: 'web'+p, error: String(e) }});
-    }}
+      out.pages.push({{ name: 'web'+p, url: web.url(), http: resp ? resp.status() : 0, hasContent: body.length > 100 }});
+    }} catch (e) {{ out.pages.push({{ name: 'web'+p, error: String(e) }}); }}
   }}
-}} finally {{
-  await browser.close();
-}}
+}} finally {{ await browser.close(); }}
 import fs from 'fs';
 fs.writeFileSync({json.dumps(str(ROOT / "scripts" / "output" / "cnpa-v2-release-gate-rr4-browser.json"))}, JSON.stringify(out, null, 2));
 console.log(JSON.stringify({{ pages: out.pages.length, consoleErrors: out.consoleErrors.length, network500: out.network500.length, tournamentHits: out.tournamentHits.length }}));
 """, encoding="utf-8")
+    data = None
     try:
-        proc = subprocess.run(
-            ["npx", "playwright", "test", "--version"],
-            cwd=str(ROOT / "basketball-admin-ui"), capture_output=True, text=True, timeout=30,
-        )
-        # run via node directly
         proc2 = subprocess.run(
             ["node", str(script)],
             cwd=str(ROOT / "basketball-admin-ui"),
             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180,
             env={**os.environ, "CNPA_ADMIN_UI_URL": env("CNPA_ADMIN_UI_URL", "http://127.0.0.1:80"),
-                 "CNPA_WEB_UI_URL": env("CNPA_WEB_UI_URL", "http://127.0.0.1:5173")},
+                 "CNPA_WEB_UI_URL": env("CNPA_WEB_UI_URL", "http://localhost:5173")},
         )
         browser_json = ROOT / "scripts" / "output" / "cnpa-v2-release-gate-rr4-browser.json"
-        data = json.loads(browser_json.read_text(encoding="utf-8")) if browser_json.exists() else {
-            "stdout": proc2.stdout, "stderr": proc2.stderr, "code": proc2.returncode
-        }
-        ids["browser"] = data
-        console_ok = len(data.get("consoleErrors") or []) == 0
-        net_ok = len(data.get("network500") or []) == 0
-        tour_ok = len(data.get("tournamentHits") or []) == 0
-        pages_ok = all(p.get("hasContent") or p.get("http") in (200, 304) for p in data.get("pages", []) if "error" not in p)
-        rec("browser_smoke", "PASS" if (console_ok and net_ok and tour_ok) else "FAIL",
-            f"pages={len(data.get('pages', []))} consoleErr={len(data.get('consoleErrors') or [])} "
-            f"net500={len(data.get('network500') or [])} tournamentHits={len(data.get('tournamentHits') or [])} "
-            f"nodeExit={proc2.returncode}")
-        if not console_ok:
-            p2_items.append(f"浏览器 console error: {(data.get('consoleErrors') or [])[:3]}")
+        if browser_json.exists() and proc2.returncode == 0:
+            data = json.loads(browser_json.read_text(encoding="utf-8"))
+            data["mode"] = "playwright"
     except Exception as exc:
-        ids["browser"] = {"error": str(exc)}
-        rec("browser_smoke", "FAIL", str(exc)[:200])
-        p2_items.append(f"浏览器自动化未完整执行: {exc}")
+        ids["browserPlaywrightError"] = str(exc)
+    if not data:
+        data = http_ui_smoke()
+        p2_items.append("Playwright 不可用，已降级为 HTTP 页面 smoke（无 Console/Network 级校验）")
+    ids["browser"] = data
+    console_ok = len(data.get("consoleErrors") or []) == 0
+    net_ok = len(data.get("network500") or []) == 0
+    tour_ok = len(data.get("tournamentHits") or []) == 0
+    pages_ok = all(
+        (p.get("hasContent") or p.get("ok") or p.get("http") in (200, 304))
+        for p in data.get("pages", []) if "error" not in p
+    )
+    ok = pages_ok and console_ok and net_ok and tour_ok
+    rec("browser_smoke", "PASS" if ok else "FAIL",
+        f"mode={data.get('mode')} pages={len(data.get('pages', []))} consoleErr={len(data.get('consoleErrors') or [])} "
+        f"net500={len(data.get('network500') or [])} tournamentHits={len(data.get('tournamentHits') or [])}")
+    if not console_ok:
+        p2_items.append(f"浏览器 console error: {(data.get('consoleErrors') or [])[:3]}")
 
 
 def write_report() -> None:

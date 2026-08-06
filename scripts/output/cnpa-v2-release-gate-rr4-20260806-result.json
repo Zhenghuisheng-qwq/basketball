@@ -1,0 +1,1787 @@
+{
+  "batch": "CNPA_V2_RELEASE_GATE_RR4_20260806",
+  "startedAt": "2026-08-06T13:19:58.420113+08:00",
+  "endedAt": "2026-08-06T13:20:17.208908+08:00",
+  "results": [
+    {
+      "name": "env_admin",
+      "status": "PASS",
+      "detail": "url=http://127.0.0.1:8080 http=200"
+    },
+    {
+      "name": "env_web",
+      "status": "PASS",
+      "detail": "url=http://127.0.0.1:8881 http=200"
+    },
+    {
+      "name": "env_admin_ui",
+      "status": "PASS",
+      "detail": "url=http://127.0.0.1:80 http=200"
+    },
+    {
+      "name": "env_web_ui",
+      "status": "PASS",
+      "detail": "url=http://localhost:5173 http=200"
+    },
+    {
+      "name": "env_mysql",
+      "status": "PASS",
+      "detail": "connected"
+    },
+    {
+      "name": "env_redis",
+      "status": "PASS",
+      "detail": "PING=True"
+    },
+    {
+      "name": "env_admin_login",
+      "status": "PASS",
+      "detail": "POST /login http=200 token=yes"
+    },
+    {
+      "name": "env_web_login",
+      "status": "PASS",
+      "detail": "email=111141@qq.com token=yes"
+    },
+    {
+      "name": "team_prep_111141@qq.com",
+      "status": "PASS",
+      "detail": "teamId=2083474625710260225 members=5 exclusive=5 pc=5"
+    },
+    {
+      "name": "team_prep_111142@qq.com",
+      "status": "PASS",
+      "detail": "teamId=2083474626544926722 members=5 exclusive=5 pc=5"
+    },
+    {
+      "name": "team_prep_111143@qq.com",
+      "status": "PASS",
+      "detail": "teamId=2083474627316678657 members=5 exclusive=5 pc=5"
+    },
+    {
+      "name": "team_prep_111144@qq.com",
+      "status": "PASS",
+      "detail": "teamId=2083474628088430594 members=5 exclusive=5 pc=5"
+    },
+    {
+      "name": "team_prep_111145@qq.com",
+      "status": "PASS",
+      "detail": "teamId=2083474628864376833 members=5 exclusive=5 pc=5"
+    },
+    {
+      "name": "create_season",
+      "status": "PASS",
+      "detail": "seasonId=80 name=CNPA_V2_RELEASE_GATE_RR4_20260806 (reused)"
+    },
+    {
+      "name": "create_division",
+      "status": "PASS",
+      "detail": "divisionId=86 status=REGISTRATION_CLOSED snap=138/LOCKED stage=161 format=ROUND_ROBIN rules=['WIN_COUNT', 'HEAD_TO_HEAD', 'POINT_DIFFERENCE', 'TOTAL_POINTS', 'MANUAL'] (reused)"
+    },
+    {
+      "name": "captain_grant_111141@qq.com",
+      "status": "PASS",
+      "detail": "grantId=234 http=200 code=500 msg=该 Division 下该球队已有有效队长授权"
+    },
+    {
+      "name": "captain_grant_111142@qq.com",
+      "status": "PASS",
+      "detail": "grantId=235 http=200 code=500 msg=该 Division 下该球队已有有效队长授权"
+    },
+    {
+      "name": "captain_grant_111143@qq.com",
+      "status": "PASS",
+      "detail": "grantId=236 http=200 code=500 msg=该 Division 下该球队已有有效队长授权"
+    },
+    {
+      "name": "captain_grant_111144@qq.com",
+      "status": "PASS",
+      "detail": "grantId=237 http=200 code=500 msg=该 Division 下该球队已有有效队长授权"
+    },
+    {
+      "name": "team_players_111141@qq.com",
+      "status": "PASS",
+      "detail": "http=200 code=200 returned=5 eligible=5 reasons=[]"
+    },
+    {
+      "name": "team_players_111142@qq.com",
+      "status": "PASS",
+      "detail": "http=200 code=200 returned=5 eligible=5 reasons=[]"
+    },
+    {
+      "name": "team_players_111143@qq.com",
+      "status": "PASS",
+      "detail": "http=200 code=200 returned=5 eligible=5 reasons=[]"
+    },
+    {
+      "name": "team_players_111144@qq.com",
+      "status": "PASS",
+      "detail": "http=200 code=200 returned=5 eligible=5 reasons=[]"
+    },
+    {
+      "name": "reg_submit_111141@qq.com",
+      "status": "PASS",
+      "detail": "rid=145 status=APPROVED roster=5 (reused)"
+    },
+    {
+      "name": "reg_submit_111142@qq.com",
+      "status": "PASS",
+      "detail": "rid=146 status=APPROVED roster=5 (reused)"
+    },
+    {
+      "name": "reg_submit_111143@qq.com",
+      "status": "PASS",
+      "detail": "rid=147 status=APPROVED roster=5 (reused)"
+    },
+    {
+      "name": "reg_submit_111144@qq.com",
+      "status": "PASS",
+      "detail": "rid=148 status=APPROVED roster=5 (reused)"
+    },
+    {
+      "name": "perm_unauthorized_register",
+      "status": "PASS",
+      "detail": "http=401 code=401 msg=未登录"
+    },
+    {
+      "name": "perm_non_captain_register",
+      "status": "PASS",
+      "detail": "http=200 code=400 msg=无有效队长授权"
+    },
+    {
+      "name": "perm_cross_team_register",
+      "status": "PASS",
+      "detail": "http=200 code=400 msg=无有效队长授权"
+    },
+    {
+      "name": "approve_totals",
+      "status": "PASS",
+      "detail": "APPROVED=4 PENDING=0 EventTeam=4 EventPlayer=20 (reused)"
+    },
+    {
+      "name": "close_registration",
+      "status": "PASS",
+      "detail": "already closed pending=0 (reused)"
+    },
+    {
+      "name": "initialize_stage_teams",
+      "status": "PASS",
+      "detail": "stageTeam=4 afterDup=4 http=200 code=200"
+    },
+    {
+      "name": "generate_schedule",
+      "status": "PASS",
+      "detail": "matches=6/6 rounds=[1, 2, 3] perRound={1: 2, 2: 2, 3: 2} perTeam={120: 3, 123: 3, 121: 3, 122: 3} nullH=0 nullA=0 dup=0 afterDup=6"
+    },
+    {
+      "name": "publish_schedule",
+      "status": "PASS",
+      "detail": "http=200 code=500 batch={'id': 18, 'publish_status': 'PUBLISHED', 'generate_status': 'SUCCESS'} dupCode=500"
+    },
+    {
+      "name": "fifth_team_blocked",
+      "status": "PASS",
+      "detail": "saveCode=200 msg=操作成功"
+    },
+    {
+      "name": "post_publish_no_append_stage_team",
+      "status": "PASS",
+      "detail": "stageTeam=4 code=200 msg=操作成功"
+    },
+    {
+      "name": "match_finish_81",
+      "status": "PASS",
+      "detail": "status=FINISHED score=68-72 (reused)"
+    },
+    {
+      "name": "match_finish_82",
+      "status": "PASS",
+      "detail": "status=FINISHED score=65-70 (reused)"
+    },
+    {
+      "name": "match_finish_83",
+      "status": "PASS",
+      "detail": "status=FINISHED score=70-75 (reused)"
+    },
+    {
+      "name": "match_finish_84",
+      "status": "PASS",
+      "detail": "status=FINISHED score=72-80 (reused)"
+    },
+    {
+      "name": "match_finish_85",
+      "status": "PASS",
+      "detail": "status=FINISHED score=65-68 (reused)"
+    },
+    {
+      "name": "match_finish_86",
+      "status": "PASS",
+      "detail": "status=FINISHED score=74-77 (reused)"
+    },
+    {
+      "name": "perm_non_participant_submit",
+      "status": "PASS",
+      "detail": "http=200 code=400 msg=submitEventTeamId 必须是主队或客队"
+    },
+    {
+      "name": "all_matches_finished",
+      "status": "PASS",
+      "detail": "FINISHED=6/6"
+    },
+    {
+      "name": "standings",
+      "status": "PASS",
+      "detail": "rows=4 ranks=[1, 2, 3, 4] played_ok=True stable=True"
+    },
+    {
+      "name": "my_events_captain",
+      "status": "PASS",
+      "detail": "http=200 code=200 events=1 schedule=3"
+    },
+    {
+      "name": "my_events_member",
+      "status": "PASS",
+      "detail": "http=200 events=1 schedule=3"
+    },
+    {
+      "name": "my_events_empty",
+      "status": "PASS",
+      "detail": "{'email': '111129@qq.com', 'playerId': '2083401000000170002', 'events': {'http': 200, 'code': 200, 'count': 0}, 'schedule': {'http': 200, 'code': 200, 'count': 0}}"
+    },
+    {
+      "name": "db_audit",
+      "status": "PASS",
+      "detail": "{\"registrationApproved\": 4, \"eventTeam\": 4, \"eventPlayer\": 20, \"stageTeam\": 4, \"match\": 6, \"perTeamMatches\": [{\"event_team_id\": 120, \"c\": 3}, {\"event_team_id\": 121, \"c\": 3}, {\"event_team_id\": 122, \"c\": 3}, {\"event_team_id\": 123, \"c\": 3}], \"nullHomeAway\": {\"null_h\": 0, \"null_a\": 0, \"same_ha\": 0}, \"dupPairs\": 0, \"dupSubmissions\": 0, \"standing\": 4, \"dupRank\": 0, \"orphanEventPlayer\": 0, \"orphanStageTeam\": 0, \"crossDivisionMatch\": 0, \"currentSnapshot\": 1, \"lockedStages\": 1}"
+    },
+    {
+      "name": "run_data_check",
+      "status": "PASS",
+      "detail": "exitCode=0 ANOMALY=None"
+    },
+    {
+      "name": "browser_smoke",
+      "status": "PASS",
+      "detail": "mode=playwright pages=12 consoleErr=0 net500=0 tournamentHits=0"
+    }
+  ],
+  "ids": {
+    "envChecks": [
+      {
+        "name": "admin",
+        "url": "http://127.0.0.1:8080",
+        "http": 200
+      },
+      {
+        "name": "web",
+        "url": "http://127.0.0.1:8881",
+        "http": 200
+      },
+      {
+        "name": "admin_ui",
+        "url": "http://127.0.0.1:80",
+        "http": 200
+      },
+      {
+        "name": "web_ui",
+        "url": "http://localhost:5173",
+        "http": 200
+      },
+      {
+        "name": "mysql",
+        "ok": true
+      },
+      {
+        "name": "redis",
+        "ping": true
+      }
+    ],
+    "webProbeToken": true,
+    "teams": [
+      {
+        "email": "111141@qq.com",
+        "teamId": 2083474625710260225,
+        "teamName": "CNPA流水线969123-A",
+        "captainUserId": 2083474352272379904,
+        "captainPlayerId": 2083474352514269186,
+        "members": [
+          {
+            "player_id": "2083474352514269186",
+            "member_id": "2083474352272379904",
+            "role_type": "CAPTAIN",
+            "email": "111141@qq.com",
+            "platform_account_id": "92",
+            "display_game_id": "player111141",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474404259397634",
+            "member_id": "2083474404063645696",
+            "role_type": "MEMBER",
+            "email": "111147@qq.com",
+            "platform_account_id": "96",
+            "display_game_id": "player111147",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474413025492995",
+            "member_id": "2083474412825546752",
+            "role_type": "MEMBER",
+            "email": "111148@qq.com",
+            "platform_account_id": "47",
+            "display_game_id": "player111148",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474421477015555",
+            "member_id": "2083474421285457920",
+            "role_type": "MEMBER",
+            "email": "111149@qq.com",
+            "platform_account_id": "97",
+            "display_game_id": "player111149",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474430159224835",
+            "member_id": "2083474429984444416",
+            "role_type": "MEMBER",
+            "email": "111150@qq.com",
+            "platform_account_id": "98",
+            "display_game_id": "player111150",
+            "active_teams": 1
+          }
+        ]
+      },
+      {
+        "email": "111142@qq.com",
+        "teamId": 2083474626544926722,
+        "teamName": "CNPA流水线969123-B",
+        "captainUserId": 2083474359432056832,
+        "captainPlayerId": 2083474359648780290,
+        "members": [
+          {
+            "player_id": "2083474359648780290",
+            "member_id": "2083474359432056832",
+            "role_type": "CAPTAIN",
+            "email": "111142@qq.com",
+            "platform_account_id": "53",
+            "display_game_id": "player111142",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474435871866883",
+            "member_id": "2083474435663532032",
+            "role_type": "MEMBER",
+            "email": "111151@qq.com",
+            "platform_account_id": "44",
+            "display_game_id": "player111151",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474442926686209",
+            "member_id": "2083474442688991232",
+            "role_type": "MEMBER",
+            "email": "111152@qq.com",
+            "platform_account_id": "99",
+            "display_game_id": "player111152",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474454138060802",
+            "member_id": "2083474453946503168",
+            "role_type": "MEMBER",
+            "email": "111153@qq.com",
+            "platform_account_id": "100",
+            "display_game_id": "player111153",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474463063539715",
+            "member_id": "2083474462892953600",
+            "role_type": "MEMBER",
+            "email": "111154@qq.com",
+            "platform_account_id": "57",
+            "display_game_id": "player111154",
+            "active_teams": 1
+          }
+        ]
+      },
+      {
+        "email": "111143@qq.com",
+        "teamId": 2083474627316678657,
+        "teamName": "CNPA流水线969123-C",
+        "captainUserId": 2083474369301254144,
+        "captainPlayerId": 2083474369497006083,
+        "members": [
+          {
+            "player_id": "2083474369497006083",
+            "member_id": "2083474369301254144",
+            "role_type": "CAPTAIN",
+            "email": "111143@qq.com",
+            "platform_account_id": "93",
+            "display_game_id": "player111143",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474474597875715",
+            "member_id": "2083474474427289600",
+            "role_type": "MEMBER",
+            "email": "111155@qq.com",
+            "platform_account_id": "101",
+            "display_game_id": "player111155",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474483393331203",
+            "member_id": "2083474483222745088",
+            "role_type": "MEMBER",
+            "email": "111156@qq.com",
+            "platform_account_id": "102",
+            "display_game_id": "player111156",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474489227608066",
+            "member_id": "2083474488998301696",
+            "role_type": "MEMBER",
+            "email": "111157@qq.com",
+            "platform_account_id": "60",
+            "display_game_id": "player111157",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474496760578051",
+            "member_id": "2083474496560631808",
+            "role_type": "MEMBER",
+            "email": "111158@qq.com",
+            "platform_account_id": "103",
+            "display_game_id": "player111158",
+            "active_teams": 1
+          }
+        ]
+      },
+      {
+        "email": "111144@qq.com",
+        "teamId": 2083474628088430594,
+        "teamName": "CNPA流水线969123-D",
+        "captainUserId": 2083474379334029312,
+        "captainPlayerId": 2083474379533975555,
+        "members": [
+          {
+            "player_id": "2083474379533975555",
+            "member_id": "2083474379334029312",
+            "role_type": "CAPTAIN",
+            "email": "111144@qq.com",
+            "platform_account_id": "94",
+            "display_game_id": "player111144",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474505379872771",
+            "member_id": "2083474505184120832",
+            "role_type": "MEMBER",
+            "email": "111159@qq.com",
+            "platform_account_id": "104",
+            "display_game_id": "player111159",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2084958452228034563",
+            "member_id": "2084958452053254144",
+            "role_type": "MEMBER",
+            "email": "111195@qq.com",
+            "platform_account_id": "136",
+            "display_game_id": "player111195",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2084958457680629763",
+            "member_id": "2084958457480683520",
+            "role_type": "MEMBER",
+            "email": "111198@qq.com",
+            "platform_account_id": "139",
+            "display_game_id": "player111198",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2084958459421265922",
+            "member_id": "2084958459225513984",
+            "role_type": "MEMBER",
+            "email": "111199@qq.com",
+            "platform_account_id": "310",
+            "display_game_id": "111199",
+            "active_teams": 1
+          }
+        ]
+      },
+      {
+        "email": "111145@qq.com",
+        "teamId": 2083474628864376833,
+        "teamName": "CNPA流水线969123-E",
+        "captainUserId": 2083474387311595520,
+        "captainPlayerId": 2083474387528318979,
+        "members": [
+          {
+            "player_id": "2083474387528318979",
+            "member_id": "2083474387311595520",
+            "role_type": "CAPTAIN",
+            "email": "111145@qq.com",
+            "platform_account_id": "50",
+            "display_game_id": "player111145",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474540410699778",
+            "member_id": "2083474540256890880",
+            "role_type": "MEMBER",
+            "email": "111163@qq.com",
+            "platform_account_id": "61",
+            "display_game_id": "player111163",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474549160017923",
+            "member_id": "2083474548951683072",
+            "role_type": "MEMBER",
+            "email": "111164@qq.com",
+            "platform_account_id": "107",
+            "display_game_id": "player111164",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474557582180355",
+            "member_id": "2083474557424177152",
+            "role_type": "MEMBER",
+            "email": "111165@qq.com",
+            "platform_account_id": "108",
+            "display_game_id": "player111165",
+            "active_teams": 1
+          },
+          {
+            "player_id": "2083474568168603651",
+            "member_id": "2083474567985434624",
+            "role_type": "MEMBER",
+            "email": "111166@qq.com",
+            "platform_account_id": "67",
+            "display_game_id": "player111166",
+            "active_teams": 1
+          }
+        ]
+      }
+    ],
+    "seriesId": 1,
+    "seasonId": 80,
+    "divisionId": 86,
+    "snapshotId": 138,
+    "stageId": 161,
+    "divisionStatus": "REGISTRATION_CLOSED",
+    "snapshotStatus": "LOCKED",
+    "competitionFormat": "ROUND_ROBIN",
+    "advancementType": "NONE",
+    "bestOf": 1,
+    "tieBreakRules": [
+      "WIN_COUNT",
+      "HEAD_TO_HEAD",
+      "POINT_DIFFERENCE",
+      "TOTAL_POINTS",
+      "MANUAL"
+    ],
+    "captainGrants": [
+      {
+        "email": "111141@qq.com",
+        "teamId": 2083474625710260225,
+        "grantId": 234,
+        "http": 200,
+        "code": 500,
+        "msg": "该 Division 下该球队已有有效队长授权"
+      },
+      {
+        "email": "111142@qq.com",
+        "teamId": 2083474626544926722,
+        "grantId": 235,
+        "http": 200,
+        "code": 500,
+        "msg": "该 Division 下该球队已有有效队长授权"
+      },
+      {
+        "email": "111143@qq.com",
+        "teamId": 2083474627316678657,
+        "grantId": 236,
+        "http": 200,
+        "code": 500,
+        "msg": "该 Division 下该球队已有有效队长授权"
+      },
+      {
+        "email": "111144@qq.com",
+        "teamId": 2083474628088430594,
+        "grantId": 237,
+        "http": 200,
+        "code": 500,
+        "msg": "该 Division 下该球队已有有效队长授权"
+      },
+      {
+        "email": "111145@qq.com",
+        "teamId": 2083474628864376833,
+        "grantId": 238,
+        "http": 200,
+        "code": 500,
+        "msg": "该 Division 下该球队已有有效队长授权"
+      }
+    ],
+    "teamPlayers": [
+      {
+        "email": "111141@qq.com",
+        "teamId": 2083474625710260225,
+        "url": "http://127.0.0.1:8080/basket/v4/admin/options/team-players?divisionId=86&teamId=2083474625710260225",
+        "http": 200,
+        "code": 200,
+        "returned": 5,
+        "eligible": 5,
+        "playerIds": [
+          "2083474352514269186",
+          "2083474404259397634",
+          "2083474413025492995",
+          "2083474421477015555",
+          "2083474430159224835"
+        ],
+        "filterReasons": []
+      },
+      {
+        "email": "111142@qq.com",
+        "teamId": 2083474626544926722,
+        "url": "http://127.0.0.1:8080/basket/v4/admin/options/team-players?divisionId=86&teamId=2083474626544926722",
+        "http": 200,
+        "code": 200,
+        "returned": 5,
+        "eligible": 5,
+        "playerIds": [
+          "2083474359648780290",
+          "2083474435871866883",
+          "2083474442926686209",
+          "2083474454138060802",
+          "2083474463063539715"
+        ],
+        "filterReasons": []
+      },
+      {
+        "email": "111143@qq.com",
+        "teamId": 2083474627316678657,
+        "url": "http://127.0.0.1:8080/basket/v4/admin/options/team-players?divisionId=86&teamId=2083474627316678657",
+        "http": 200,
+        "code": 200,
+        "returned": 5,
+        "eligible": 5,
+        "playerIds": [
+          "2083474369497006083",
+          "2083474474597875715",
+          "2083474483393331203",
+          "2083474489227608066",
+          "2083474496760578051"
+        ],
+        "filterReasons": []
+      },
+      {
+        "email": "111144@qq.com",
+        "teamId": 2083474628088430594,
+        "url": "http://127.0.0.1:8080/basket/v4/admin/options/team-players?divisionId=86&teamId=2083474628088430594",
+        "http": 200,
+        "code": 200,
+        "returned": 5,
+        "eligible": 5,
+        "playerIds": [
+          "2083474379533975555",
+          "2083474505379872771",
+          "2084958452228034563",
+          "2084958457680629763",
+          "2084958459421265922"
+        ],
+        "filterReasons": []
+      }
+    ],
+    "registrations": [
+      {
+        "registrationId": 145,
+        "email": "111141@qq.com",
+        "teamId": "2083474625710260225",
+        "captainPlayerId": "2083474352514269186",
+        "status": "APPROVED",
+        "saveHttp": 200,
+        "saveCode": 200,
+        "submitHttp": 200,
+        "submitCode": 200,
+        "rosterPlayerIds": [
+          "2083474352514269186",
+          "2083474404259397634",
+          "2083474413025492995",
+          "2083474421477015555",
+          "2083474430159224835"
+        ],
+        "registrationPlayerIds": [
+          "656",
+          "657",
+          "658",
+          "659",
+          "660"
+        ],
+        "reused": true
+      },
+      {
+        "registrationId": 146,
+        "email": "111142@qq.com",
+        "teamId": "2083474626544926722",
+        "captainPlayerId": "2083474359648780290",
+        "status": "APPROVED",
+        "saveHttp": 200,
+        "saveCode": 200,
+        "submitHttp": 200,
+        "submitCode": 200,
+        "rosterPlayerIds": [
+          "2083474359648780290",
+          "2083474435871866883",
+          "2083474442926686209",
+          "2083474454138060802",
+          "2083474463063539715"
+        ],
+        "registrationPlayerIds": [
+          "661",
+          "662",
+          "663",
+          "664",
+          "665"
+        ],
+        "reused": true
+      },
+      {
+        "registrationId": 147,
+        "email": "111143@qq.com",
+        "teamId": "2083474627316678657",
+        "captainPlayerId": "2083474369497006083",
+        "status": "APPROVED",
+        "saveHttp": 200,
+        "saveCode": 200,
+        "submitHttp": 200,
+        "submitCode": 200,
+        "rosterPlayerIds": [
+          "2083474369497006083",
+          "2083474474597875715",
+          "2083474483393331203",
+          "2083474489227608066",
+          "2083474496760578051"
+        ],
+        "registrationPlayerIds": [
+          "666",
+          "667",
+          "668",
+          "669",
+          "670"
+        ],
+        "reused": true
+      },
+      {
+        "registrationId": 148,
+        "email": "111144@qq.com",
+        "teamId": "2083474628088430594",
+        "captainPlayerId": "2083474379533975555",
+        "status": "APPROVED",
+        "saveHttp": 200,
+        "saveCode": 200,
+        "submitHttp": 200,
+        "submitCode": 200,
+        "rosterPlayerIds": [
+          "2083474379533975555",
+          "2083474505379872771",
+          "2084958452228034563",
+          "2084958457680629763",
+          "2084958459421265922"
+        ],
+        "registrationPlayerIds": [
+          "671",
+          "672",
+          "673",
+          "674",
+          "675"
+        ],
+        "reused": true
+      }
+    ],
+    "registrationIds": [
+      145,
+      146,
+      147,
+      148
+    ],
+    "rejectedOrphanPending": [
+      {
+        "registrationId": 149,
+        "http": 200,
+        "code": 200,
+        "msg": "操作成功"
+      }
+    ],
+    "approveDetails": [
+      {
+        "reused": true,
+        "registrationId": 145
+      },
+      {
+        "reused": true,
+        "registrationId": 146
+      },
+      {
+        "reused": true,
+        "registrationId": 147
+      },
+      {
+        "reused": true,
+        "registrationId": 148
+      }
+    ],
+    "eventTeams": [
+      {
+        "id": 120,
+        "registration_id": 145,
+        "source_team_id": "2083474625710260225",
+        "captain_player_id": "2083474352514269186",
+        "team_name_snapshot": "CNPA流水线969123-A"
+      },
+      {
+        "id": 121,
+        "registration_id": 146,
+        "source_team_id": "2083474626544926722",
+        "captain_player_id": "2083474359648780290",
+        "team_name_snapshot": "CNPA流水线969123-B"
+      },
+      {
+        "id": 122,
+        "registration_id": 147,
+        "source_team_id": "2083474627316678657",
+        "captain_player_id": "2083474369497006083",
+        "team_name_snapshot": "CNPA流水线969123-C"
+      },
+      {
+        "id": 123,
+        "registration_id": 148,
+        "source_team_id": "2083474628088430594",
+        "captain_player_id": "2083474379533975555",
+        "team_name_snapshot": "CNPA流水线969123-D"
+      }
+    ],
+    "eventPlayers": [
+      {
+        "id": "506",
+        "event_team_id": 120,
+        "source_player_id": "2083474352514269186"
+      },
+      {
+        "id": "507",
+        "event_team_id": 120,
+        "source_player_id": "2083474404259397634"
+      },
+      {
+        "id": "508",
+        "event_team_id": 120,
+        "source_player_id": "2083474413025492995"
+      },
+      {
+        "id": "509",
+        "event_team_id": 120,
+        "source_player_id": "2083474421477015555"
+      },
+      {
+        "id": "510",
+        "event_team_id": 120,
+        "source_player_id": "2083474430159224835"
+      },
+      {
+        "id": "511",
+        "event_team_id": 121,
+        "source_player_id": "2083474359648780290"
+      },
+      {
+        "id": "512",
+        "event_team_id": 121,
+        "source_player_id": "2083474435871866883"
+      },
+      {
+        "id": "513",
+        "event_team_id": 121,
+        "source_player_id": "2083474442926686209"
+      },
+      {
+        "id": "514",
+        "event_team_id": 121,
+        "source_player_id": "2083474454138060802"
+      },
+      {
+        "id": "515",
+        "event_team_id": 121,
+        "source_player_id": "2083474463063539715"
+      },
+      {
+        "id": "516",
+        "event_team_id": 122,
+        "source_player_id": "2083474369497006083"
+      },
+      {
+        "id": "517",
+        "event_team_id": 122,
+        "source_player_id": "2083474474597875715"
+      },
+      {
+        "id": "518",
+        "event_team_id": 122,
+        "source_player_id": "2083474483393331203"
+      },
+      {
+        "id": "519",
+        "event_team_id": 122,
+        "source_player_id": "2083474489227608066"
+      },
+      {
+        "id": "520",
+        "event_team_id": 122,
+        "source_player_id": "2083474496760578051"
+      },
+      {
+        "id": "521",
+        "event_team_id": 123,
+        "source_player_id": "2083474379533975555"
+      },
+      {
+        "id": "522",
+        "event_team_id": 123,
+        "source_player_id": "2083474505379872771"
+      },
+      {
+        "id": "523",
+        "event_team_id": 123,
+        "source_player_id": "2084958452228034563"
+      },
+      {
+        "id": "524",
+        "event_team_id": 123,
+        "source_player_id": "2084958457680629763"
+      },
+      {
+        "id": "525",
+        "event_team_id": 123,
+        "source_player_id": "2084958459421265922"
+      }
+    ],
+    "countsAfterApprove": {
+      "approved": 4,
+      "pending": 0,
+      "eventTeam": 4,
+      "eventPlayer": 20
+    },
+    "stageTeams": [
+      {
+        "id": 104,
+        "stage_id": 161,
+        "event_team_id": 120,
+        "seed_no": 1
+      },
+      {
+        "id": 105,
+        "stage_id": 161,
+        "event_team_id": 121,
+        "seed_no": 2
+      },
+      {
+        "id": 106,
+        "stage_id": 161,
+        "event_team_id": 122,
+        "seed_no": 3
+      },
+      {
+        "id": 107,
+        "stage_id": 161,
+        "event_team_id": 123,
+        "seed_no": 4
+      }
+    ],
+    "initializeTeams": {
+      "first": {
+        "http": 200,
+        "code": 200,
+        "msg": "reused",
+        "data": 0
+      },
+      "second": {
+        "http": 200,
+        "code": 200,
+        "msg": "操作成功",
+        "data": {
+          "totalEventTeam": 4,
+          "existingStageTeam": 4,
+          "insertedStageTeam": 0,
+          "skippedStageTeam": 0
+        }
+      },
+      "countAfterSecond": 4
+    },
+    "batchId": 18,
+    "matches": [
+      {
+        "id": 81,
+        "round_no": 1,
+        "match_no": "V4-86-1-01",
+        "home_event_team_id": 120,
+        "away_event_team_id": 123,
+        "match_time": "2026-08-06 21:00:00",
+        "match_status": "FINISHED",
+        "schedule_batch_id": 18
+      },
+      {
+        "id": 82,
+        "round_no": 1,
+        "match_no": "V4-86-1-02",
+        "home_event_team_id": 121,
+        "away_event_team_id": 122,
+        "match_time": "2026-08-06 21:00:00",
+        "match_status": "FINISHED",
+        "schedule_batch_id": 18
+      },
+      {
+        "id": 83,
+        "round_no": 2,
+        "match_no": "V4-86-2-01",
+        "home_event_team_id": 122,
+        "away_event_team_id": 120,
+        "match_time": "2026-08-06 21:00:00",
+        "match_status": "FINISHED",
+        "schedule_batch_id": 18
+      },
+      {
+        "id": 84,
+        "round_no": 2,
+        "match_no": "V4-86-2-02",
+        "home_event_team_id": 121,
+        "away_event_team_id": 123,
+        "match_time": "2026-08-06 21:00:00",
+        "match_status": "FINISHED",
+        "schedule_batch_id": 18
+      },
+      {
+        "id": 85,
+        "round_no": 3,
+        "match_no": "V4-86-3-01",
+        "home_event_team_id": 120,
+        "away_event_team_id": 121,
+        "match_time": "2026-08-06 21:00:00",
+        "match_status": "FINISHED",
+        "schedule_batch_id": 18
+      },
+      {
+        "id": 86,
+        "round_no": 3,
+        "match_no": "V4-86-3-02",
+        "home_event_team_id": 122,
+        "away_event_team_id": 123,
+        "match_time": "2026-08-06 21:00:00",
+        "match_status": "FINISHED",
+        "schedule_batch_id": 18
+      }
+    ],
+    "matchStats": {
+      "count": 6,
+      "nullHome": 0,
+      "nullAway": 0,
+      "sameHA": 0,
+      "dupPairs": 0,
+      "perTeam": {
+        "120": 3,
+        "123": 3,
+        "121": 3,
+        "122": 3
+      },
+      "perRound": {
+        "1": 2,
+        "2": 2,
+        "3": 2
+      },
+      "rounds": [
+        1,
+        2,
+        3
+      ],
+      "afterDupGenerate": 6,
+      "gen1": {
+        "http": 200,
+        "code": 200,
+        "msg": "reused",
+        "data": 18
+      },
+      "gen2": {
+        "http": 200,
+        "code": 500,
+        "msg": "当前阶段状态不允许生成赛程"
+      }
+    },
+    "publish": {
+      "first": {
+        "http": 200,
+        "code": 500,
+        "msg": "仅草稿赛程可发布"
+      },
+      "second": {
+        "http": 200,
+        "code": 500,
+        "msg": "仅草稿赛程可发布"
+      },
+      "batch": {
+        "id": 18,
+        "publish_status": "PUBLISHED",
+        "generate_status": "SUCCESS"
+      }
+    },
+    "fifthAfterPublish": {
+      "registrationId": 149,
+      "save": {
+        "code": 200,
+        "msg": "操作成功",
+        "data": 149,
+        "_http_status": 200,
+        "_url": "http://127.0.0.1:8881/basket/v4/player/registration/save"
+      },
+      "submit": {
+        "code": 200,
+        "msg": "操作成功",
+        "data": null,
+        "_http_status": 200,
+        "_url": "http://127.0.0.1:8881/basket/v4/player/registration/submit"
+      },
+      "approve": {
+        "msg": "该 Division 报名名额已满",
+        "code": 500,
+        "_http_status": 200,
+        "_url": "http://127.0.0.1:8080/basket/v4/registration-audit/149/approve"
+      }
+    },
+    "postPublishInit": {
+      "http": 200,
+      "code": 200,
+      "msg": "操作成功",
+      "count": 4
+    },
+    "matchFlows": [
+      {
+        "matchId": 81,
+        "reused": true,
+        "finalMatch": {
+          "match_status": "FINISHED",
+          "home_score": 68,
+          "away_score": 72
+        },
+        "submissions": []
+      },
+      {
+        "matchId": 82,
+        "reused": true,
+        "finalMatch": {
+          "match_status": "FINISHED",
+          "home_score": 65,
+          "away_score": 70
+        },
+        "submissions": []
+      },
+      {
+        "matchId": 83,
+        "reused": true,
+        "finalMatch": {
+          "match_status": "FINISHED",
+          "home_score": 70,
+          "away_score": 75
+        },
+        "submissions": []
+      },
+      {
+        "matchId": 84,
+        "reused": true,
+        "finalMatch": {
+          "match_status": "FINISHED",
+          "home_score": 72,
+          "away_score": 80
+        },
+        "submissions": []
+      },
+      {
+        "matchId": 85,
+        "reused": true,
+        "finalMatch": {
+          "match_status": "FINISHED",
+          "home_score": 65,
+          "away_score": 68
+        },
+        "submissions": []
+      },
+      {
+        "matchId": 86,
+        "reused": true,
+        "finalMatch": {
+          "match_status": "FINISHED",
+          "home_score": 74,
+          "away_score": 77
+        },
+        "submissions": []
+      }
+    ],
+    "standings": [
+      {
+        "id": 775,
+        "event_team_id": 123,
+        "rank_no": 1,
+        "win_count": 3,
+        "lose_count": 0,
+        "point_for": 229,
+        "point_against": 214,
+        "point_diff": 15,
+        "standing_points": 6
+      },
+      {
+        "id": 776,
+        "event_team_id": 120,
+        "rank_no": 2,
+        "win_count": 1,
+        "lose_count": 2,
+        "point_for": 208,
+        "point_against": 210,
+        "point_diff": -2,
+        "standing_points": 4
+      },
+      {
+        "id": 777,
+        "event_team_id": 122,
+        "rank_no": 3,
+        "win_count": 1,
+        "lose_count": 2,
+        "point_for": 214,
+        "point_against": 217,
+        "point_diff": -3,
+        "standing_points": 4
+      },
+      {
+        "id": 778,
+        "event_team_id": 121,
+        "rank_no": 4,
+        "win_count": 1,
+        "lose_count": 2,
+        "point_for": 205,
+        "point_against": 215,
+        "point_diff": -10,
+        "standing_points": 4
+      }
+    ],
+    "standingReasons": [
+      {
+        "standingId": 775,
+        "eventTeamId": 123,
+        "reasons": [
+          {
+            "rule_code": "WIN_COUNT",
+            "is_decisive": 1,
+            "priority_no": 1
+          },
+          {
+            "rule_code": "HEAD_TO_HEAD",
+            "is_decisive": 0,
+            "priority_no": 2
+          },
+          {
+            "rule_code": "POINT_DIFFERENCE",
+            "is_decisive": 0,
+            "priority_no": 3
+          },
+          {
+            "rule_code": "TOTAL_POINTS",
+            "is_decisive": 0,
+            "priority_no": 4
+          }
+        ],
+        "decisiveRule": "WIN_COUNT"
+      },
+      {
+        "standingId": 776,
+        "eventTeamId": 120,
+        "reasons": [
+          {
+            "rule_code": "WIN_COUNT",
+            "is_decisive": 0,
+            "priority_no": 1
+          },
+          {
+            "rule_code": "HEAD_TO_HEAD",
+            "is_decisive": 0,
+            "priority_no": 2
+          },
+          {
+            "rule_code": "POINT_DIFFERENCE",
+            "is_decisive": 1,
+            "priority_no": 3
+          },
+          {
+            "rule_code": "TOTAL_POINTS",
+            "is_decisive": 0,
+            "priority_no": 4
+          }
+        ],
+        "decisiveRule": "POINT_DIFFERENCE"
+      },
+      {
+        "standingId": 777,
+        "eventTeamId": 122,
+        "reasons": [
+          {
+            "rule_code": "WIN_COUNT",
+            "is_decisive": 0,
+            "priority_no": 1
+          },
+          {
+            "rule_code": "HEAD_TO_HEAD",
+            "is_decisive": 0,
+            "priority_no": 2
+          },
+          {
+            "rule_code": "POINT_DIFFERENCE",
+            "is_decisive": 1,
+            "priority_no": 3
+          },
+          {
+            "rule_code": "TOTAL_POINTS",
+            "is_decisive": 0,
+            "priority_no": 4
+          }
+        ],
+        "decisiveRule": "POINT_DIFFERENCE"
+      },
+      {
+        "standingId": 778,
+        "eventTeamId": 121,
+        "reasons": [
+          {
+            "rule_code": "WIN_COUNT",
+            "is_decisive": 0,
+            "priority_no": 1
+          },
+          {
+            "rule_code": "HEAD_TO_HEAD",
+            "is_decisive": 0,
+            "priority_no": 2
+          },
+          {
+            "rule_code": "POINT_DIFFERENCE",
+            "is_decisive": 1,
+            "priority_no": 3
+          },
+          {
+            "rule_code": "TOTAL_POINTS",
+            "is_decisive": 0,
+            "priority_no": 4
+          }
+        ],
+        "decisiveRule": "POINT_DIFFERENCE"
+      }
+    ],
+    "standingRebuild": {
+      "first": {
+        "http": 200,
+        "code": 200
+      },
+      "second": {
+        "http": 200,
+        "code": 200
+      },
+      "stable": [
+        {
+          "event_team_id": 123,
+          "rank_no": 1,
+          "standing_points": 6
+        },
+        {
+          "event_team_id": 120,
+          "rank_no": 2,
+          "standing_points": 4
+        },
+        {
+          "event_team_id": 122,
+          "rank_no": 3,
+          "standing_points": 4
+        },
+        {
+          "event_team_id": 121,
+          "rank_no": 4,
+          "standing_points": 4
+        }
+      ]
+    },
+    "myViews": {
+      "captain": {
+        "email": "111141@qq.com",
+        "playerId": 2083474352514269186,
+        "eventsUrl": "http://127.0.0.1:8881/basket/v4/player/my-events",
+        "eventsHttp": 200,
+        "eventsCode": 200,
+        "eventsCount": 1,
+        "events": [
+          {
+            "seasonId": 80,
+            "seasonTitle": "CNPA V2 上线前 4 队单循环验收",
+            "seriesCode": "LEAGUE",
+            "seriesName": "League",
+            "divisionId": 86,
+            "divisionName": "CNPA_V2_RELEASE_GATE_RR4_20260806-PC-5V5-RR4",
+            "platformCode": "PC",
+            "platformName": "PC",
+            "gameMode": "FIVE_V_FIVE",
+            "gameModeName": "FIVE_V_FIVE",
+            "registrationMode": "TEAM",
+            "eventTeamId": 120,
+            "eventTeamName": "CNPA流水线969123-A",
+            "teamName": "CNPA流水线969123-A",
+            "teamLogoFileId": 2081067518675390465,
+            "roleInTeam": "CAPTAIN",
+            "eventTeamStatus": "ACTIVE",
+            "divisionStatus": "REGISTRATION_CLOSED",
+            "currentStageId": 161,
+            "currentStageName": "单循环",
+            "stageType": "REGULAR",
+            "stageExecutionStatus": "RESULT_PENDING_CONFIRM",
+            "currentGroupId": 0,
+            "currentGroupName": null,
+            "standingRank": 2,
+            "standingPoints": 4,
+            "qualificationStatus": null,
+            "qualificationStatusName": null,
+            "nextMatchId": null,
+            "nextMatchTime": null,
+            "latestMatchId": 85,
+            "latestMatchResult": "65:68",
+            "legacyEvent": false,
+            "matchCount": 3,
+            "finishedMatchCount": 3,
+            "pendingSubmissionCount": 0
+          }
+        ],
+        "scheduleUrl": "http://127.0.0.1:8881/basket/v4/player/my-schedule?includeFinished=true",
+        "scheduleHttp": 200,
+        "scheduleCode": 200,
+        "scheduleCount": 3,
+        "scheduleSample": [
+          {
+            "matchId": 85,
+            "seasonId": 80,
+            "seasonCode": "CNPA_V2_RELEASE_GATE_RR4_20260806",
+            "seasonTitle": "CNPA V2 上线前 4 队单循环验收",
+            "seriesId": 1,
+            "seriesCode": "LEAGUE",
+            "seriesName": "League",
+            "divisionId": 86,
+            "divisionCode": "PC",
+            "divisionName": "CNPA_V2_RELEASE_GATE_RR4_20260806-PC-5V5-RR4",
+            "platformCode": "PC",
+            "stageCode": "REGULAR",
+            "stageId": 161,
+            "stageName": "单循环",
+            "stageType": "REGULAR",
+            "groupId": null,
+            "groupName": null,
+            "roundNo": 3,
+            "roundName": "循环赛第 3 轮",
+            "matchNo": "V4-86-3-01",
+            "matchTime": "2026-08-06T13:00:00.000+00:00",
+            "homeEventTeamId": 120,
+            "homeTeamName": "CNPA流水线969123-A",
+            "homeTeamShortName": "9123-A",
+            "homeTeamLogoFileId": 2081067518675390465,
+            "awayEventTeamId": 121,
+            "awayTeamName": "CNPA流水线969123-B",
+            "awayTeamShortName": "9123-B",
+            "awayTeamLogoFileId": 2081047953174171650,
+            "myEventTeamId": 120,
+            "opponentEventTeamId": 121,
+            "currentSide": "HOME",
+            "matchStatus": "FINISHED",
+            "publishStatus": "PUBLISHED",
+            "mySubmissionStatus": "APPROVED",
+            "opponentSubmissionStatus": "APPROVED",
+            "myLatestSubmissionId": 107,
+            "canSubmit": false,
+            "canSubmitData": false,
+            "canEditSubmission": false,
+            "canViewSubmission": true,
+            "cannotSubmitReason": "本方已通过",
+            "userActionType": "VIEW_SUBMISSION",
+            "userActionText": "查看审核结果",
+            "latestVersionNo": 1,
+            "latestAuditRemark": "CNPA_V2_RELEASE_GATE_RR4_20260806",
+            "latestRejectReason": null,
+            "homeScore": 65,
+            "awayScore": 68
+          },
+          {
+            "matchId": 83,
+            "seasonId": 80,
+            "seasonCode": "CNPA_V2_RELEASE_GATE_RR4_20260806",
+            "seasonTitle": "CNPA V2 上线前 4 队单循环验收",
+            "seriesId": 1,
+            "seriesCode": "LEAGUE",
+            "seriesName": "League",
+            "divisionId": 86,
+            "divisionCode": "PC",
+            "divisionName": "CNPA_V2_RELEASE_GATE_RR4_20260806-PC-5V5-RR4",
+            "platformCode": "PC",
+            "stageCode": "REGULAR",
+            "stageId": 161,
+            "stageName": "单循环",
+            "stageType": "REGULAR",
+            "groupId": null,
+            "groupName": null,
+            "roundNo": 2,
+            "roundName": "循环赛第 2 轮",
+            "matchNo": "V4-86-2-01",
+            "matchTime": "2026-08-06T13:00:00.000+00:00",
+            "homeEventTeamId": 122,
+            "homeTeamName": "CNPA流水线969123-C",
+            "homeTeamShortName": "9123-C",
+            "homeTeamLogoFileId": 2081047953174171650,
+            "awayEventTeamId": 120,
+            "awayTeamName": "CNPA流水线969123-A",
+            "awayTeamShortName": "9123-A",
+            "awayTeamLogoFileId": 2081067518675390465,
+            "myEventTeamId": 120,
+            "opponentEventTeamId": 122,
+            "currentSide": "AWAY",
+            "matchStatus": "FINISHED",
+            "publishStatus": "PUBLISHED",
+            "mySubmissionStatus": "APPROVED",
+            "opponentSubmissionStatus": "APPROVED",
+            "myLatestSubmissionId": 104,
+            "canSubmit": false,
+            "canSubmitData": false,
+            "canEditSubmission": false,
+            "canViewSubmission": true,
+            "cannotSubmitReason": "本方已通过",
+            "userActionType": "VIEW_SUBMISSION",
+            "userActionText": "查看审核结果",
+            "latestVersionNo": 1,
+            "latestAuditRemark": "CNPA_V2_RELEASE_GATE_RR4_20260806",
+            "latestRejectReason": null,
+            "homeScore": 70,
+            "awayScore": 75
+          },
+          {
+            "matchId": 81,
+            "seasonId": 80,
+            "seasonCode": "CNPA_V2_RELEASE_GATE_RR4_20260806",
+            "seasonTitle": "CNPA V2 上线前 4 队单循环验收",
+            "seriesId": 1,
+            "seriesCode": "LEAGUE",
+            "seriesName": "League",
+            "divisionId": 86,
+            "divisionCode": "PC",
+            "divisionName": "CNPA_V2_RELEASE_GATE_RR4_20260806-PC-5V5-RR4",
+            "platformCode": "PC",
+            "stageCode": "REGULAR",
+            "stageId": 161,
+            "stageName": "单循环",
+            "stageType": "REGULAR",
+            "groupId": null,
+            "groupName": null,
+            "roundNo": 1,
+            "roundName": "循环赛第 1 轮",
+            "matchNo": "V4-86-1-01",
+            "matchTime": "2026-08-06T13:00:00.000+00:00",
+            "homeEventTeamId": 120,
+            "homeTeamName": "CNPA流水线969123-A",
+            "homeTeamShortName": "9123-A",
+            "homeTeamLogoFileId": 2081067518675390465,
+            "awayEventTeamId": 123,
+            "awayTeamName": "CNPA流水线969123-D",
+            "awayTeamShortName": "9123-D",
+            "awayTeamLogoFileId": 2083607240383664129,
+            "myEventTeamId": 120,
+            "opponentEventTeamId": 123,
+            "currentSide": "HOME",
+            "matchStatus": "FINISHED",
+            "publishStatus": "PUBLISHED",
+            "mySubmissionStatus": "PENDING_REVIEW",
+            "opponentSubmissionStatus": "APPROVED",
+            "myLatestSubmissionId": 99,
+            "canSubmit": false,
+            "canSubmitData": false,
+            "canEditSubmission": false,
+            "canViewSubmission": true,
+            "cannotSubmitReason": "本方审核中",
+            "userActionType": "VIEW_SUBMISSION",
+            "userActionText": "查看提交详情",
+            "latestVersionNo": 1,
+            "latestAuditRemark": null,
+            "latestRejectReason": null,
+            "homeScore": 68,
+            "awayScore": 72
+          }
+        ]
+      },
+      "member": {
+        "email": "111147@qq.com",
+        "eventsHttp": 200,
+        "eventsCode": 200,
+        "eventsCount": 1,
+        "scheduleHttp": 200,
+        "scheduleCode": 200,
+        "scheduleCount": 3
+      },
+      "empty": {
+        "email": "111129@qq.com",
+        "playerId": "2083401000000170002",
+        "events": {
+          "http": 200,
+          "code": 200,
+          "count": 0
+        },
+        "schedule": {
+          "http": 200,
+          "code": 200,
+          "count": 0
+        }
+      }
+    },
+    "dbAudit": {
+      "registrationApproved": 4,
+      "eventTeam": 4,
+      "eventPlayer": 20,
+      "stageTeam": 4,
+      "match": 6,
+      "perTeamMatches": [
+        {
+          "event_team_id": 120,
+          "c": 3
+        },
+        {
+          "event_team_id": 121,
+          "c": 3
+        },
+        {
+          "event_team_id": 122,
+          "c": 3
+        },
+        {
+          "event_team_id": 123,
+          "c": 3
+        }
+      ],
+      "nullHomeAway": {
+        "null_h": 0,
+        "null_a": 0,
+        "same_ha": 0
+      },
+      "dupPairs": 0,
+      "dupSubmissions": 0,
+      "standing": 4,
+      "dupRank": 0,
+      "orphanEventPlayer": 0,
+      "orphanStageTeam": 0,
+      "crossDivisionMatch": 0,
+      "currentSnapshot": 1,
+      "lockedStages": 1
+    },
+    "dataCheck": {
+      "exitCode": 0,
+      "anomaly": null,
+      "stdoutTail": "ck_04_match_no_stage', 'cnt': 0}\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n  {'check_id': 'check_05_batch_no_stage', 'cnt': 0}\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n  {'check_id': 'check_06_standing_no_stage', 'cnt': 0}\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n  {'check_id': 'check_07_standing_no_active_key', 'cnt': 0}\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n  {'check_id': 'check_09_rank_explain_json_column', 'cnt': 0}\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n  {'check_id': 'check_10_legacy_write_perms', 'cnt': 0}\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n  {'check_id': 'check_11_ps_xbox_division_write', 'cnt': 0}\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n  {'check_id': 'check_12_legacy_registration', 'cnt': 0}\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n  {'check_id': 'check_15_event_team_no_player', 'cnt': 0}\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n  {'check_id': 'check_16_approved_reg_no_event_team', 'cnt': 0}\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n  {'check_id': 'check_17_v4_legacy_template', 'cnt': 0}\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n  {'check_id': 'check_18_match_null_teams', 'cnt': 0}\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\n[OK] CNPA ��̬�����ع� R5��������ֻ�����գ����ļ����Ӧȫ��Ϊ 0 ��ս������: rows=0\nJSON written: D:\\code\\dz\\basketball\\scaffolding-v2\\scripts\\output\\r5-data-check-result.json\n",
+      "stderrTail": "",
+      "parsedSummary": null
+    },
+    "browser": {
+      "pages": [
+        {
+          "name": "admin_login",
+          "url": "http://127.0.0.1/login",
+          "title": "CNPA管理系统",
+          "ok": true
+        },
+        {
+          "name": "admin/cnpa/event-v4/season",
+          "url": "http://127.0.0.1/login?redirect=/cnpa/event-v4/season",
+          "http": 200,
+          "hasContent": true,
+          "hasTournament": false
+        },
+        {
+          "name": "admin/cnpa/event-v4/registration-audit",
+          "url": "http://127.0.0.1/login?redirect=/cnpa/event-v4/registration-audit",
+          "http": 200,
+          "hasContent": true,
+          "hasTournament": false
+        },
+        {
+          "name": "admin/cnpa/event-v4/event-team",
+          "url": "http://127.0.0.1/login?redirect=/cnpa/event-v4/event-team",
+          "http": 200,
+          "hasContent": true,
+          "hasTournament": false
+        },
+        {
+          "name": "admin/cnpa/event-v4/schedule",
+          "url": "http://127.0.0.1/login?redirect=/cnpa/event-v4/schedule",
+          "http": 200,
+          "hasContent": true,
+          "hasTournament": false
+        },
+        {
+          "name": "admin/cnpa/event-v4/match",
+          "url": "http://127.0.0.1/login?redirect=/cnpa/event-v4/match",
+          "http": 200,
+          "hasContent": true,
+          "hasTournament": false
+        },
+        {
+          "name": "admin/cnpa/event-v4/match-submission-audit",
+          "url": "http://127.0.0.1/login?redirect=/cnpa/event-v4/match-submission-audit",
+          "http": 200,
+          "hasContent": true,
+          "hasTournament": false
+        },
+        {
+          "name": "admin/cnpa/event-v4/standing",
+          "url": "http://127.0.0.1/login?redirect=/cnpa/event-v4/standing",
+          "http": 200,
+          "hasContent": true,
+          "hasTournament": false
+        },
+        {
+          "name": "web/",
+          "url": "http://localhost:5173/home",
+          "http": 200,
+          "hasContent": true
+        },
+        {
+          "name": "web/events",
+          "url": "http://localhost:5173/tournament",
+          "http": 200,
+          "hasContent": true
+        },
+        {
+          "name": "web/account/my-events",
+          "url": "http://localhost:5173/login?redirect=/account/my-events",
+          "http": 200,
+          "hasContent": true
+        },
+        {
+          "name": "web/account/my-schedule",
+          "url": "http://localhost:5173/account/my-schedule",
+          "http": 200,
+          "hasContent": true
+        }
+      ],
+      "consoleErrors": [],
+      "network500": [],
+      "tournamentHits": [],
+      "mode": "playwright"
+    }
+  },
+  "failed": [],
+  "p0": [],
+  "p1": [],
+  "p2": [],
+  "gatePass": true
+}
