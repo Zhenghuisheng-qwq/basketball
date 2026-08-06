@@ -96,6 +96,13 @@
           and is_delete = 0
     </select>
 
+    <select id="countPendingReviewByDivisionId" resultType="int">
+        select count(1) from basket_personal_registration
+        where division_id = #{divisionId}
+          and registration_status = 'PENDING_REVIEW'
+          and is_delete = 0
+    </select>
+
     <select id="countActiveByDivisionId" resultType="int">
         select count(1) from basket_personal_registration
         where division_id = #{divisionId}

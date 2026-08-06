@@ -11,6 +11,7 @@ import com.zhs.basket.support.v4.stage.DivisionStageScheduleStrategyFactory;
 import com.zhs.basket.support.v4.stage.ScheduleGenerationResult;
 import com.zhs.basket.support.v4.stage.StageExecutionContext;
 import com.zhs.basket.support.v4.stage.StageScheduleIntegrityValidator;
+import com.zhs.basket.support.v4.stage.StageSchedulePrerequisiteValidator;
 import com.zhs.basket.support.v4.stage.StageSchedulePreviewVo;
 import com.zhs.basket.support.v4.stage.TieBreakStandingService;
 import com.zhs.basket.vo.v4.*;
@@ -59,6 +60,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private DivisionStageScheduleStrategyFactory scheduleStrategyFactory;
     @Autowired
     private TieBreakStandingService tieBreakStandingService;
+    @Autowired
+    private StageSchedulePrerequisiteValidator schedulePrerequisiteValidator;
 
     @Override
     public List<BasketDivisionStageExecutionListVo> listStages(Long divisionId) {
@@ -166,7 +169,9 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     @Transactional(rollbackFor = Exception.class)
     public Long generateSchedule(Long stageId) {
         BasketDivisionStage stage = requireStage(stageId);
+        BasketDivision division = requireDivision(stage.getDivisionId());
         validateStageForGenerate(stage);
+        schedulePrerequisiteValidator.validateBeforeGenerateSchedule(division, stage, isFirstStage(stage));
 
         initializeStageTeams(stageId);
         stage = requireStage(stageId);
@@ -207,6 +212,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     @Transactional(rollbackFor = Exception.class)
     public void publishSchedule(Long stageId) {
         BasketDivisionStage stage = requireStage(stageId);
+        BasketDivision division = requireDivision(stage.getDivisionId());
+        schedulePrerequisiteValidator.validateBeforePublishSchedule(division, stage);
         if (stage.getScheduleBatchId() == null) {
             throw new ServiceException("阶段尚未生成赛程");
         }
@@ -754,7 +761,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
 
     private void assertCanSyncNewStageTeams(BasketDivisionStage stage) {
         if (scheduleBatchMapper.selectPublishedByStageId(stage.getId()) != null) {
-            throw new ServiceException("该阶段赛程已发布，新增参赛队伍须先撤销晋级或联系管理员处理");
+            throw schedulePrerequisiteValidator.businessError(StageSchedulePrerequisiteValidator.MSG_PUBLISHED_NO_MORE_TEAMS);
         }
         if (scheduleBatchMapper.selectDraftByStageId(stage.getId()) != null) {
             throw new ServiceException("该阶段已有草稿赛程，请先作废草稿赛程后再同步参赛队伍");
@@ -764,7 +771,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
                 || StageExecutionStatusEnum.RUNNING.getCode().equals(status)
                 || StageExecutionStatusEnum.RESULT_PENDING_CONFIRM.getCode().equals(status)
                 || StageExecutionStatusEnum.COMPLETED.getCode().equals(status)) {
-            throw new ServiceException("当前阶段状态不允许同步新增参赛队伍，请先作废草稿赛程或撤销已发布赛程");
+            throw schedulePrerequisiteValidator.businessError(StageSchedulePrerequisiteValidator.MSG_PUBLISHED_NO_MORE_TEAMS);
         }
     }
 

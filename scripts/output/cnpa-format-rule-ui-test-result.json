@@ -1,0 +1,320 @@
+{
+  "batch": "FORMAT_RULE_UI_20260806",
+  "timestamp": "2026-08-05T18:32:55.267Z",
+  "ids": {
+    "seasonId": 15,
+    "divisionAId": 41,
+    "divisionBId": 42,
+    "divisions": [
+      {
+        "id": 41,
+        "division_name": "FORMAT_RULE_UI_20260806 Division A",
+        "platform_code": "PC",
+        "game_mode": "FIVE_V_FIVE",
+        "registration_mode": "TEAM",
+        "max_team_count": 16
+      },
+      {
+        "id": 42,
+        "division_name": "FORMAT_RULE_UI_20260806 Division B",
+        "platform_code": "PS_XBOX",
+        "game_mode": "THREE_V_THREE",
+        "registration_mode": "PERSONAL",
+        "max_team_count": 8
+      }
+    ],
+    "sceneA_snapshotId": 81,
+    "sceneA_stageIds": [
+      93
+    ],
+    "sceneD_stageIds": [
+      96,
+      97
+    ]
+  },
+  "results": [
+    {
+      "name": "env_admin_backend",
+      "status": "PASS",
+      "detail": "http://127.0.0.1:8080"
+    },
+    {
+      "name": "env_admin_ui",
+      "status": "PASS",
+      "detail": "http://127.0.0.1:80"
+    },
+    {
+      "name": "env_mysql",
+      "status": "PASS",
+      "detail": "192.168.31.47:3306/basketball"
+    },
+    {
+      "name": "env_redis",
+      "status": "PASS",
+      "detail": "PONG"
+    },
+    {
+      "name": "api_admin_login",
+      "status": "PASS",
+      "detail": "HTTP 200 token=eyJhbGciOiJI..."
+    },
+    {
+      "name": "p0_season_soft_delete_uk",
+      "status": "PASS",
+      "detail": "delete=200 recreate=200"
+    },
+    {
+      "name": "ui_login",
+      "status": "PASS",
+      "detail": "url=http://127.0.0.1/index"
+    },
+    {
+      "name": "ui_publish_page",
+      "status": "PASS",
+      "detail": "http://127.0.0.1/event/event-v4-publish"
+    },
+    {
+      "name": "setup_fresh_divisions",
+      "status": "PASS",
+      "detail": "A=41 B=42"
+    },
+    {
+      "name": "ui_continue_publish_step4",
+      "status": "PASS",
+      "detail": "seasonId=15"
+    },
+    {
+      "name": "shared_step4_load",
+      "status": "PASS",
+      "detail": "step4 visible"
+    },
+    {
+      "name": "create_season",
+      "status": "PASS",
+      "detail": "seasonId=15"
+    },
+    {
+      "name": "create_divisions",
+      "status": "PASS",
+      "detail": "A=41 B=42"
+    },
+    {
+      "name": "shared_division_a_selected",
+      "status": "PASS",
+      "detail": "Division A context"
+    },
+    {
+      "name": "scene_a_round_robin_ui",
+      "status": "PASS",
+      "detail": "has120=true stages=true"
+    },
+    {
+      "name": "scene_a_round_robin_db",
+      "status": "PASS",
+      "detail": "snapshotId=81 stages=1"
+    },
+    {
+      "name": "scene_b_group_round_ui",
+      "status": "FAIL",
+      "detail": "preview has 24 matches"
+    },
+    {
+      "name": "scene_b_group_round_db",
+      "status": "PASS",
+      "detail": "group_count=4 stageCount=1"
+    },
+    {
+      "name": "shared_division_b_isolated",
+      "status": "PASS",
+      "detail": "switched to B"
+    },
+    {
+      "name": "scene_c_no_bo35",
+      "status": "PASS",
+      "detail": "no BO3/BO5"
+    },
+    {
+      "name": "scene_c_elim_ui",
+      "status": "PASS",
+      "detail": "8 teams 7 matches"
+    },
+    {
+      "name": "scene_c_elim_db",
+      "status": "PASS",
+      "detail": "snapshotId=83"
+    },
+    {
+      "name": "scene_d_group_to_elim_ui",
+      "status": "PASS",
+      "detail": "flow+matches preview"
+    },
+    {
+      "name": "scene_d_group_to_elim_db",
+      "status": "PASS",
+      "detail": "s1=96 order=1 adv=GROUP_TOP_N/2 next=KNOCKOUT s2=97 fmt=SINGLE_ELIMINATION"
+    },
+    {
+      "name": "scene_d_lock",
+      "status": "PASS",
+      "detail": "locked=true"
+    },
+    {
+      "name": "scene_d_lock_db",
+      "status": "PASS",
+      "detail": "status=LOCKED"
+    },
+    {
+      "name": "scene_e_rr_to_elim",
+      "status": "PASS",
+      "detail": "stages=2 adv=OVERALL_TOP_N/4"
+    },
+    {
+      "name": "scene_f_illegal_6_advance",
+      "status": "PASS",
+      "detail": "error shown=true applyDisabled=true lockDisabled=true"
+    },
+    {
+      "name": "scene_f_api_reject",
+      "status": "PASS",
+      "detail": "POST /basket/v4/divisions/41/format-plan/apply code=500 msg=当前将有 6 支球队晋级，但系统暂不支持 6 支球队自动生成单败淘汰赛。请调整为 4 支或 8 支晋级。"
+    },
+    {
+      "name": "scene_f_api_reject_b",
+      "status": "PASS",
+      "detail": "POST /basket/v4/divisions/42/format-plan/apply code=500 msg=当前将有 6 支球队晋级，但系统暂不支持 6 支球队自动生成单败淘汰赛。请调整为 4 支或 8 支晋级。"
+    },
+    {
+      "name": "scene_f_lock_reject",
+      "status": "PASS",
+      "detail": "POST /basket/v4/divisions/42/format-snapshot/lock code=500 msg=当前将有 6 支球队晋级，但系统暂不支持 6 支球队自动生成单败淘汰赛。请调整为 4 支或 8 支晋级。"
+    },
+    {
+      "name": "custom_mode_keep_stages",
+      "status": "SKIP",
+      "detail": "自定义赛制按钮不可用（可能已锁定）"
+    },
+    {
+      "name": "isolation_a_after_b",
+      "status": "PASS",
+      "detail": "A still group+elim"
+    },
+    {
+      "name": "isolation_snapshot_ids",
+      "status": "PASS",
+      "detail": "A snap=84 B snap=85"
+    },
+    {
+      "name": "step5_summary",
+      "status": "PASS",
+      "detail": "step5 division summary visible"
+    },
+    {
+      "name": "drawer_consistency",
+      "status": "PASS",
+      "detail": "drawer shows locked group+elim"
+    },
+    {
+      "name": "idempotent_lock",
+      "status": "PASS",
+      "detail": "lock1=200 lock2=200 currentSnapshots=1"
+    },
+    {
+      "name": "network_no_500",
+      "status": "PASS",
+      "detail": "none"
+    },
+    {
+      "name": "network_no_legacy_tournament",
+      "status": "PASS",
+      "detail": "none"
+    },
+    {
+      "name": "console_no_vue_warn",
+      "status": "PASS",
+      "detail": "none"
+    }
+  ],
+  "networkIssues": [],
+  "consoleIssues": [
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "Invalid prop: type check failed for prop \"seriesId\". Expected Number with value 1, got String with value \"1\". Proxy(Object) at <PublishWizardDialog>\nat <Index>\nat <KeepAlive>\nat <BaseTransition>\nat <Transition>\nat <RouterView>\nat <AppMain>\nat <Index>\nat <RouterView>\nat <App> [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object]"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "Invalid prop: type check failed for prop \"seriesId\". Expected Number with value 1, got String with value \"1\". Proxy(Object) at <PublishWizardDialog>\nat <Index>\nat <KeepAlive>\nat <BaseTransition>\nat <Transition>\nat <RouterView>\nat <AppMain>\nat <Index>\nat <RouterView>\nat <App> [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object]"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "ElementPlusError: [el-radio] [API] label act as value is about to be deprecated in version 3.0.0, please use value instead.\nFor more detail, please visit: https://element-plus.org/en-US/component/radio.html\n\n    at debugWarn (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:1917:37)\n    at watch.immediate (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8902:9)\n    at callWithErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2342:19)\n    at callWithAsyncErrorHandling (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2349:17)\n    at baseWatchOptions.call (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2964:47)\n    at job (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1063:18)\n    at watch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:1098:7)\n    at doWatch (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2992:23)\n    at watch2 (http://127.0.0.1/node_modules/.vite/deps/chunk-K7WHVQ42.js?v=e4f8fe2f:2925:10)\n    at useDeprecated (http://127.0.0.1/node_modules/.vite/deps/element-plus.js?v=e4f8fe2f:8898:3)"
+    },
+    {
+      "type": "warning",
+      "text": "Invalid prop: type check failed for prop \"seriesId\". Expected Number with value 1, got String with value \"1\". Proxy(Object) at <PublishWizardDialog>\nat <Index>\nat <KeepAlive>\nat <BaseTransition>\nat <Transition>\nat <RouterView>\nat <AppMain>\nat <Index>\nat <RouterView>\nat <App> [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object]"
+    },
+    {
+      "type": "warning",
+      "text": "Invalid prop: type check failed for prop \"seasonId\". Expected Number with value 15, got String with value \"15\". Proxy(Object) at <PublishWizardDialog>\nat <Index>\nat <KeepAlive>\nat <BaseTransition>\nat <Transition>\nat <RouterView>\nat <AppMain>\nat <Index>\nat <RouterView>\nat <App> [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object]"
+    }
+  ]
+}

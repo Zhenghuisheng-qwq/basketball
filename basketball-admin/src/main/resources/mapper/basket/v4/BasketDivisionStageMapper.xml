@@ -53,15 +53,17 @@
     </select>
 
     <select id="selectByDivisionId" resultMap="Result">
-        select * from basket_division_stage
-        where division_id = #{divisionId} and <include refid="NotDeleted"/>
-        order by stage_order asc
+        select s.* from basket_division_stage s
+        inner join basket_division d on d.id = s.division_id and d.format_snapshot_id = s.snapshot_id and d.is_delete = 0
+        where s.division_id = #{divisionId} and s.<include refid="NotDeleted"/>
+        order by s.stage_order asc
     </select>
 
     <select id="selectFirstByDivisionId" resultMap="Result">
-        select * from basket_division_stage
-        where division_id = #{divisionId} and <include refid="NotDeleted"/>
-        order by stage_order asc
+        select s.* from basket_division_stage s
+        inner join basket_division d on d.id = s.division_id and d.format_snapshot_id = s.snapshot_id and d.is_delete = 0
+        where s.division_id = #{divisionId} and s.<include refid="NotDeleted"/>
+        order by s.stage_order asc
         limit 1
     </select>
 

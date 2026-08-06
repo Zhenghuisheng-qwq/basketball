@@ -82,9 +82,7 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
                 throw new ServiceException("已锁定规则快照不允许重建");
             }
             supersededId = existing.getId();
-            // 先释放唯一键，再标记非 current，保留历史记录（不物理删除）
-            snapshotMapper.clearActiveUniqueKey(existing.getId());
-            snapshotMapper.markSuperseded(existing.getId());
+            supersedeSnapshot(existing);
         }
         BasketFormatTemplate template = templateService.requireEnabledTemplate(templateId);
         BasketSeason season = requireSeason(division.getSeasonId());
@@ -164,8 +162,7 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
                 throw new ServiceException("已锁定规则快照不允许应用赛制方案");
             }
             supersededId = existing.getId();
-            snapshotMapper.clearActiveUniqueKey(existing.getId());
-            snapshotMapper.markSuperseded(existing.getId());
+            supersedeSnapshot(existing);
         }
 
         int nextVersion = snapshotMapper.selectMaxVersionByDivisionId(divisionId) + 1;
@@ -685,5 +682,12 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
             throw new ServiceException("阶段不存在或不属于当前快照");
         }
         return stage;
+    }
+
+    private void supersedeSnapshot(BasketDivisionFormatSnapshot existing) {
+        snapshotMapper.clearActiveUniqueKey(existing.getId());
+        snapshotMapper.markSuperseded(existing.getId());
+        divisionStageMapper.softDeleteBySnapshotId(existing.getId());
+        divisionTieBreakRuleMapper.softDeleteBySnapshotId(existing.getId());
     }
 }
