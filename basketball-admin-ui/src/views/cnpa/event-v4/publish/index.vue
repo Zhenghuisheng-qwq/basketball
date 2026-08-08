@@ -214,7 +214,15 @@
       </template>
     </el-dialog>
 
-    <el-drawer v-model="seasonDetailOpen" :title="seasonDetailTitle" size="860px" append-to-body destroy-on-close>
+    <el-dialog
+      v-model="seasonDetailOpen"
+      :title="seasonDetailTitle"
+      width="860px"
+      class="season-detail-dialog"
+      append-to-body
+      destroy-on-close
+      align-center
+    >
       <el-tabs v-model="seasonDetailTab" v-loading="seasonDetailLoading">
         <el-tab-pane label="基本信息" name="basic">
           <el-descriptions v-if="seasonDetail" :column="2" border class="mb8">
@@ -279,7 +287,7 @@
           </el-descriptions>
         </el-tab-pane>
       </el-tabs>
-    </el-drawer>
+    </el-dialog>
 
     <el-dialog :title="divisionDialogTitle" v-model="divisionDialogOpen" width="720px" append-to-body>
       <el-form ref="divisionFormRef" :model="divisionForm" :rules="divisionRules" label-width="120px">
@@ -935,6 +943,12 @@ onMounted(() => {
 .page-tip-alert :deep(.el-alert__content) {
   padding-top: 0;
 }
+
+.season-detail-dialog :deep(.el-dialog__body) {
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+}
+
 .page-tip-list {
   margin: 0;
   padding-left: 18px;

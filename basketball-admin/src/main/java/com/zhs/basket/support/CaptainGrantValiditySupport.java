@@ -4,6 +4,7 @@ import com.zhs.basket.domain.v4.BasketCaptainGrant;
 import com.zhs.basket.enums.PlayerCertStatusEnum;
 import com.zhs.basket.enums.v4.CaptainGrantStatusEnum;
 import com.zhs.basket.enums.v4.SeasonStatusEnum;
+import com.zhs.basket.support.v4.CaptainGrantActiveKeySupport;
 import com.zhs.common.utils.StringUtils;
 
 import java.util.Arrays;
@@ -46,7 +47,12 @@ public final class CaptainGrantValiditySupport {
         if (!Objects.equals(CaptainGrantStatusEnum.ACTIVE.getCode(), grant.getGrantStatus())) {
             return status.getDescription();
         }
-        if (grant.getTeamId() != null && StringUtils.isEmpty(grant.getActiveUniqueKey())) {
+        if (StringUtils.isEmpty(grant.getActiveUniqueKey())) {
+            return "队长权限已失效";
+        }
+        if (grant.getDivisionId() != null && grant.getPlayerId() != null
+                && !Objects.equals(grant.getActiveUniqueKey(),
+                CaptainGrantActiveKeySupport.buildActiveUniqueKey(grant.getDivisionId(), grant.getPlayerId()))) {
             return "队长权限已失效";
         }
         if (playerCertStatus != null && !Objects.equals(PlayerCertStatusEnum.APPROVED.getCode(), playerCertStatus)) {

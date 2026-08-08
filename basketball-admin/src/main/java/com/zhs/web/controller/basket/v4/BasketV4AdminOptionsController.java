@@ -37,6 +37,12 @@ public class BasketV4AdminOptionsController extends BaseController {
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.CAPTAIN_GRANT_LIST + "')")
+    @GetMapping("/grantable-players")
+    public AjaxResult grantablePlayers(@RequestParam Long divisionId) {
+        return success(optionsService.selectGrantablePlayerOptions(divisionId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.CAPTAIN_GRANT_LIST + "')")
     @GetMapping("/team-players")
     public AjaxResult teamPlayers(@RequestParam Long teamId, @RequestParam Long divisionId) {
         return success(optionsService.selectTeamPlayerOptions(teamId, divisionId));

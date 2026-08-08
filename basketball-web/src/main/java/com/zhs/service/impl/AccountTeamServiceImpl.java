@@ -213,7 +213,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     public List<InheritableTeamSummaryResp> listInheritableTeams() {
         Long memberId = UserContext.getRequiredUserId();
         BasketCaptainGrant grant = captainGrantSupport.findCurrentGrant(memberId);
-        if (grant == null || grant.getTeamId() != null) {
+        if (grant == null) {
             return Collections.emptyList();
         }
         try {
@@ -257,7 +257,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         Long memberId = UserContext.getRequiredUserId();
         BasketCaptainGrant grant = captainPermissionService.requireValidQualification(memberId);
         if (grant.getTeamId() != null) {
-            throw new ServiceException("?????????????????????", 403);
+            throw new ServiceException("当前队长授权已绑定球队，请直接使用已有球队", 403);
         }
         Long teamPk = parseLongId(teamId, "????");
         BasketTeam team = teamDao.selectById(teamPk);
@@ -271,7 +271,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         if (!Objects.equals(memberId, team.getCaptainMemberId())) {
             throw new ServiceException("???????????????", 403);
         }
-        captainGrantSupport.bindGrantToTeam(memberId, teamPk);
+        captainGrantSupport.bindGrantToTeam(grant, teamPk);
         BasketTeamMember membership = loadCurrentMembership(memberId, teamPk);
         return toDetailResp(team, membership, resolveLogoUrl(team.getLogoFileId()), true);
     }
@@ -299,7 +299,6 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         validateCreateReq(req);
         Long memberId = UserContext.getRequiredUserId();
         BasketCaptainGrant qualification = captainPermissionService.requireValidQualification(memberId);
-        captainGrantSupport.assertUnboundForCreate(qualification);
         BasketPlayerProfile playerProfile = captainPermissionService.requireCertifiedPlayer(memberId);
         teamMembershipSupport.assertEligibleToJoinTeam(memberId);
 
@@ -348,7 +347,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         captainMember.setIsDelete(NOT_DELETED);
         teamMembershipSupport.insertMember(captainMember);
 
-        captainGrantSupport.bindGrantToTeam(memberId, team.getId());
+        captainGrantSupport.bindGrantToTeam(qualification, team.getId());
         updatePlayerCurrentTeam(playerProfile, team.getId());
         securityLogHelper.write(memberId, EVENT_TEAM_CREATE, "????",
                 null, team.getTeamName(), memberId, clientIp);

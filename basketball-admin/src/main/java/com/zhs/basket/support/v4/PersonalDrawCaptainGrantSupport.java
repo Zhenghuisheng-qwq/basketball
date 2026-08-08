@@ -8,6 +8,7 @@ import com.zhs.basket.enums.v4.CaptainGrantSourceEnum;
 import com.zhs.basket.enums.v4.CaptainGrantStatusEnum;
 import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
 import com.zhs.basket.mapper.v4.BasketPersonalDrawTeamMapper;
+import com.zhs.basket.support.CaptainGrantSeasonSupport;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,34 +31,33 @@ public class PersonalDrawCaptainGrantSupport {
     private BasketPersonalDrawTeamMapper drawTeamMapper;
     @Autowired
     private BasketV4ParticipationSupport participationSupport;
+    @Autowired
+    private CaptainGrantRuntimeSupport grantRuntimeSupport;
 
     public void ensureGrantOnBindTeam(BasketPersonalDrawTeam drawTeam, BasketDivision division) {
-        if (drawTeam == null || division == null || drawTeam.getLongTermTeamId() == null) {
+        if (drawTeam == null || division == null || drawTeam.getCaptainPlayerId() == null) {
             return;
         }
-        if (drawTeam.getCaptainPlayerId() == null) {
-            return;
-        }
-        participationSupport.requireValidTeam(drawTeam.getLongTermTeamId());
-        participationSupport.requireTeamMember(drawTeam.getLongTermTeamId(), drawTeam.getCaptainPlayerId());
         BasketPlayerProfile player = participationSupport.requireCertifiedPlayer(drawTeam.getCaptainPlayerId());
 
         List<BasketCaptainGrant> existing = captainGrantMapper.selectBySourceDrawTeamId(drawTeam.getId());
         for (BasketCaptainGrant grant : existing) {
             if (CaptainGrantStatusEnum.ACTIVE.getCode().equals(grant.getGrantStatus())
                     && participationSupport.isGrantUsable(grant)) {
-                bindGrantToLongTermTeamIfNeeded(grant, division, drawTeam.getLongTermTeamId());
+                bindGrantToLongTermTeamIfNeeded(grant, drawTeam.getLongTermTeamId());
                 return;
             }
         }
 
-        BasketCaptainGrant active = captainGrantMapper.selectActiveByDivisionTeam(
-                division.getId(), drawTeam.getLongTermTeamId());
+        BasketCaptainGrant active = captainGrantMapper.selectActiveByDivisionPlayer(
+                division.getId(), drawTeam.getCaptainPlayerId());
         if (active != null && participationSupport.isGrantUsable(active)) {
+            bindGrantToLongTermTeamIfNeeded(active, drawTeam.getLongTermTeamId());
             return;
         }
 
         Date now = new Date();
+        Date validTo = grantRuntimeSupport.resolveValidTo(division.getId());
         BasketCaptainGrant grant = new BasketCaptainGrant();
         grant.setDivisionId(division.getId());
         grant.setSeasonId(division.getSeasonId());
@@ -65,8 +65,9 @@ public class PersonalDrawCaptainGrantSupport {
         grant.setPlayerId(drawTeam.getCaptainPlayerId());
         grant.setMemberId(player.getMemberId());
         grant.setGrantStatus(CaptainGrantStatusEnum.ACTIVE.getCode());
-        grant.setActiveUniqueKey(participationSupport.buildActiveUniqueKey(division.getId(), drawTeam.getLongTermTeamId()));
+        grant.setActiveUniqueKey(CaptainGrantActiveKeySupport.buildActiveUniqueKey(division.getId(), drawTeam.getCaptainPlayerId()));
         grant.setValidFrom(now);
+        grant.setValidTo(validTo);
         grant.setGrantedBy(SecurityUtils.getUserId());
         grant.setRemark("个人抽签成队自动授权");
         grant.setGrantSource(CaptainGrantSourceEnum.PERSONAL_DRAW.getCode());
@@ -79,18 +80,11 @@ public class PersonalDrawCaptainGrantSupport {
         }
     }
 
-    private void bindGrantToLongTermTeamIfNeeded(BasketCaptainGrant grant,
-                                                 BasketDivision division,
-                                                 Long longTermTeamId) {
-        if (grant == null || longTermTeamId == null || grant.getTeamId() != null) {
+    private void bindGrantToLongTermTeamIfNeeded(BasketCaptainGrant grant, Long longTermTeamId) {
+        if (grant == null || longTermTeamId == null) {
             return;
         }
-        grant.setTeamId(longTermTeamId);
-        grant.setActiveUniqueKey(participationSupport.buildActiveUniqueKey(division.getId(), longTermTeamId));
-        grant.setUpdateTime(new Date());
-        if (captainGrantMapper.updateById(grant) != 1) {
-            throw new ServiceException("绑定个人抽签队长授权失败");
-        }
+        grantRuntimeSupport.bindTeamIfAbsent(grant, longTermTeamId, "ADMIN");
     }
 
     public void revokeGrantsOnBatchCancel(Long drawBatchId) {

@@ -17,6 +17,12 @@ public interface BasketCaptainGrantMapper {
 
     BasketCaptainGrant selectActiveByDivisionTeam(@Param("divisionId") Long divisionId, @Param("teamId") Long teamId);
 
+    BasketCaptainGrant selectActiveByDivisionPlayer(@Param("divisionId") Long divisionId, @Param("playerId") Long playerId);
+
+    int expireById(@Param("id") Long id);
+
+    int bindTeamById(@Param("id") Long id, @Param("teamId") Long teamId);
+
     BasketCaptainGrant selectLatestActiveByMemberId(@Param("memberId") Long memberId);
 
     BasketCaptainGrant selectLatestActiveByPlayerId(@Param("playerId") Long playerId);

@@ -1,22 +1,5 @@
 <template>
   <div v-loading="panelLoading" class="format-rules-panel">
-    <div class="rules-top-bar mb8">
-      <el-radio-group
-        :model-value="rulesMode"
-        :disabled="!snapshot?.mutable"
-        @change="(val) => handleRulesModeChange(val as RulesMode)"
-      >
-        <el-radio-button label="quick">快速创建</el-radio-button>
-        <el-radio-button label="custom">自定义赛制</el-radio-button>
-      </el-radio-group>
-      <div class="rules-status-wrap">
-        <span class="rules-status-label">赛制状态：</span>
-        <el-tag :type="formatDisplayStatus.tagType" size="small">
-          {{ formatDisplayStatus.label }}
-        </el-tag>
-      </div>
-    </div>
-
     <el-alert
       v-if="snapshot && !snapshot.mutable"
       type="warning"
@@ -24,29 +7,14 @@
       show-icon
       class="mb8"
     >
-      <template #title>赛制已确认并启用，后续报名和比赛将按此赛制执行。</template>
+      <template #title>赛制已确认，后续报名和比赛将按此赛制执行。</template>
     </el-alert>
 
-    <div v-if="snapshot?.mutable" class="rules-actions mb8">
-      <el-button
-        type="success"
-        plain
-        :loading="locking"
-        :disabled="actionBusy || !canLockSnapshot"
-        v-if="snapshot?.lockable"
-        v-hasPermi="['basket:v4FormatRule:lock']"
-        @click="handleLockSnapshot"
-      >
-        确认并启用赛制
-      </el-button>
-    </div>
+    <p class="section-hint bo-capability-hint mb8">单败淘汰赛支持 BO1 / BO3 / BO5；循环积分赛当前仅支持 BO1。</p>
 
-    <el-tabs v-model="rulesSectionTab" type="border-card" class="rules-section-tabs mb8">
-      <el-tab-pane label="快速创建" name="quick" :disabled="rulesMode === 'custom'">
-        <div v-if="rulesMode === 'custom'" class="section-hint mb8">
-          当前为自定义赛制模式。如需使用预设方案，请切换至「快速创建」模式。
-        </div>
-        <template v-else>
+    <el-tabs :model-value="rulesSectionTab" type="border-card" class="rules-section-tabs mb8" @tab-change="handleRulesSectionTabChange">
+      <el-tab-pane label="快速创建" name="quick">
+        <template v-if="rulesSectionTab === 'quick'">
           <div class="scheme-section-title">单阶段赛制</div>
           <div class="scheme-card-grid mb8">
             <el-card
@@ -125,8 +93,12 @@
               </el-form-item>
               <el-form-item v-if="hasEliminationStage(selectedScheme)" label="淘汰赛对阵方式">
                 <el-select v-model="quickParams.pairingRule" style="width: 100%" @change="emitChange">
-                  <el-option label="高排名对低排名" value="HIGH_VS_LOW" />
-                  <el-option label="随机配对" value="RANDOM" />
+                  <el-option
+                    v-for="opt in V4_ELIMINATION_PAIRING_RULE_OPTIONS"
+                    :key="opt.value"
+                    :label="opt.label"
+                    :value="opt.value"
+                  />
                 </el-select>
               </el-form-item>
               <el-form-item>
@@ -153,10 +125,7 @@
         </template>
       </el-tab-pane>
 
-      <el-tab-pane :label="rulesMode === 'custom' ? '自定义赛制' : '调整阶段'" name="stages">
-        <div v-if="rulesMode !== 'custom'" class="section-hint mb8">
-          当前为快速创建模式。阶段配置来自已应用的预设方案；如需逐阶段自定义，请切换至「自定义赛制」。
-        </div>
+      <el-tab-pane label="自定义赛制" name="custom">
         <el-alert
           v-for="(msg, vi) in stageValidation.messages"
           :key="'err-' + vi"
@@ -176,7 +145,7 @@
           :title="msg"
         />
 
-        <div v-if="sortedStages.length && rulesMode === 'custom'" class="stage-flow-list">
+        <div v-if="sortedStages.length && rulesSectionTab === 'custom'" class="stage-flow-list">
           <template v-for="(stage, sIndex) in sortedStages" :key="stage.id || stage.stageCode">
             <el-card shadow="hover" class="stage-config-card">
               <div class="stage-flow-card-head">
@@ -196,7 +165,14 @@
                   <el-button link :disabled="sortedStages.length <= 1" type="danger" @click="handleDeleteStage(stage)">删除</el-button>
                   <el-button link :disabled="sIndex === 0" @click="moveStage(stage, -1)">上移</el-button>
                   <el-button link :disabled="sIndex === sortedStages.length - 1" @click="moveStage(stage, 1)">下移</el-button>
-                  <el-button link type="primary" @click="openTieBreakEditor(stage)">同分规则</el-button>
+                  <el-button
+                    v-if="stage.competitionFormat === 'ROUND_ROBIN'"
+                    link
+                    type="primary"
+                    @click="openTieBreakEditor(stage)"
+                  >
+                    同分规则
+                  </el-button>
                 </div>
               </div>
 
@@ -237,16 +213,14 @@
                     :model-value="stage.bestOf ?? 1"
                     @change="(val: number) => handleBestOfChange(stage, val)"
                   >
-                    <el-radio v-for="opt in V4_BEST_OF_OPTIONS" :key="opt.value" :label="opt.value">{{ opt.label }}</el-radio>
+                    <el-radio
+                      v-for="opt in resolveStageBestOfOptions(stage)"
+                      :key="opt.value"
+                      :label="opt.value"
+                    >
+                      {{ opt.label }}
+                    </el-radio>
                   </el-radio-group>
-                  <el-alert
-                    v-if="(stage.bestOf ?? 1) > 1"
-                    type="info"
-                    :closable="false"
-                    show-icon
-                    class="mt8 bo-hint-alert"
-                    title="BO3 / BO5 可用于赛制设计与锁定；系列赛执行能力将在后续版本开放，在能力启用前该赛区暂不能开放报名。"
-                  />
                 </el-form-item>
 
                 <template v-if="resolveStageOrganizationMode(stage) === 'GROUPED'">
@@ -306,12 +280,16 @@
                 <template v-if="stage.competitionFormat === 'SINGLE_ELIMINATION'">
                   <el-form-item label="对阵规则">
                     <el-select
-                      :model-value="stage.pairingRule || 'HIGH_VS_LOW'"
+                      :model-value="normalizeV4EliminationPairingRule(stage.pairingRule)"
                       style="width: 100%"
                       @change="(val: string) => patchStageField(stage, 'pairingRule', val)"
                     >
-                      <el-option label="高排名对低排名" value="HIGH_VS_LOW" />
-                      <el-option label="随机配对" value="RANDOM" />
+                      <el-option
+                        v-for="opt in V4_ELIMINATION_PAIRING_RULE_OPTIONS"
+                        :key="opt.value"
+                        :label="opt.label"
+                        :value="opt.value"
+                      />
                     </el-select>
                   </el-form-item>
                 </template>
@@ -358,32 +336,9 @@
             </div>
           </template>
         </div>
-        <el-empty v-else-if="rulesMode === 'custom'" description="暂无比赛阶段，请添加阶段 1" />
+        <el-empty v-else-if="rulesSectionTab === 'custom'" description="暂无比赛阶段，请添加阶段 1" />
 
-        <div v-else-if="rulesMode !== 'custom' && sortedStages.length" class="stage-flow-list quick-stage-readonly">
-          <template v-for="(stage, sIndex) in sortedStages" :key="'q-' + (stage.id || stage.stageCode)">
-            <el-card shadow="hover" class="stage-flow-card">
-              <div class="stage-flow-card-head">
-                <span class="stage-flow-title">阶段 {{ stage.stageOrder }}：{{ stage.stageName }}</span>
-              </div>
-              <div class="stage-flow-brief">{{ formatV4StageCardSummary(stage, sortedStages) }}</div>
-              <ul class="stage-summary-list compact">
-                <li><span class="stage-summary-label">参赛来源：</span>{{ formatV4StageParticipantSource(stage, sortedStages) }}</li>
-                <li><span class="stage-summary-label">组织方式：</span>{{ v4OrganizationModeLabel(resolveStageOrganizationMode(stage)) }}</li>
-                <li><span class="stage-summary-label">竞赛方式：</span>{{ formatV4StageCompetitionFormLabel(stage) }}</li>
-                <li><span class="stage-summary-label">BO：</span>{{ formatV4BestOfLabel(stage.bestOf) }}</li>
-                <li><span class="stage-summary-label">晋级安排：</span>{{ formatV4StageAdvancementArrangement(stage, sortedStages) }}</li>
-              </ul>
-            </el-card>
-            <div v-if="formatV4StageAdvanceCountLabel(stage)" class="stage-flow-connector">
-              <span class="stage-flow-arrow-icon">↓</span>
-              <span class="stage-flow-advance">{{ formatV4StageAdvanceCountLabel(stage) }}</span>
-            </div>
-          </template>
-        </div>
-        <el-empty v-else-if="rulesMode !== 'custom'" description="请在「快速创建」应用赛制方案" />
-
-        <div v-if="snapshot?.mutable && rulesMode === 'custom'" class="mt8">
+        <div v-if="snapshot?.mutable && rulesSectionTab === 'custom'" class="mt8">
           <el-button type="primary" plain icon="Plus" v-hasPermi="['basket:v4FormatRule:edit']" @click="handleAddNextStage">+ 添加下一比赛阶段</el-button>
         </div>
 
@@ -411,18 +366,6 @@
           </el-descriptions>
         </el-card>
 
-        <el-card v-if="sortedStages.length && snapshot?.mutable" shadow="never" class="lock-checklist-card mt8">
-          <template #header>锁定前检查</template>
-          <ul class="lock-checklist">
-            <li
-              v-for="(item, li) in lockReadinessItems"
-              :key="li"
-              :class="{ ok: item.ok && !item.warn, warn: item.warn }"
-            >
-              {{ item.warn ? '⚠' : item.ok ? '✓' : '✗' }} {{ item.label }}
-            </li>
-          </ul>
-        </el-card>
       </el-tab-pane>
 
       <el-tab-pane label="高级设置" name="advanced">
@@ -529,8 +472,12 @@
       <template v-if="stageForm.competitionFormat === 'SINGLE_ELIMINATION'">
         <el-form-item label="配对规则">
           <el-select v-model="stageForm.pairingRule" style="width: 100%">
-            <el-option label="高排名对低排名" value="HIGH_VS_LOW" />
-            <el-option label="随机配对" value="RANDOM" />
+            <el-option
+              v-for="opt in V4_ELIMINATION_PAIRING_RULE_OPTIONS"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="人工确认结果">
@@ -541,7 +488,6 @@
       <el-form-item label="对阵方式">
         <div class="readonly-info-line">
           <span class="readonly-info-value">{{ formatV4StagePairingRule(stageForm) }}</span>
-          <span class="readonly-info-tip">BO3、BO5 暂未开放，当前均为 BO1。</span>
         </div>
       </el-form-item>
       <el-form-item label="晋级安排">
@@ -617,7 +563,6 @@ import {
   deleteFormatStage,
   getFormatSnapshot,
   listV4FormatTemplates,
-  lockFormatSnapshot,
   rebuildFormatSnapshot,
   reorderFormatStages,
   saveTieBreakRules,
@@ -633,12 +578,12 @@ import {
   V4_ORGANIZATION_MODE_OPTIONS,
   V4_CUSTOM_COMPETITION_FORMAT_OPTIONS,
   V4_BEST_OF_OPTIONS,
+  V4_ELIMINATION_PAIRING_RULE_OPTIONS,
   V4_GROUPING_MODE_GROUPED_OPTIONS,
   V4_WIZARD_STAGE_PRESET_OPTIONS,
   V4_WIZARD_TIE_BREAK_DEFAULTS,
   V4_WIZARD_GROUPING_MODE_OPTIONS,
   V4_WIZARD_TIE_BREAK_MIDDLE_OPTIONS,
-  assessV4DivisionReadiness,
   buildDefaultV4QuickCreateParams,
   buildV4SchemeStagePayloads,
   buildV4WizardStagePresetForm,
@@ -648,8 +593,6 @@ import {
   createDefaultV4CustomStage,
   formatV4CustomFormatPreview,
   formatV4BestOfLabel,
-  formatV4LockConfirmPreview,
-  formatV4LockReadinessChecklist,
   formatV4QuickCreateNaturalLanguage,
   formatV4StageAdvanceCountLabel,
   formatV4StageAdvancementArrangement,
@@ -666,10 +609,11 @@ import {
   isV4FinalStageIndex,
   isV4GroupCompetitionStage,
   isV4WizardTemplateAllowed,
+  normalizeV4EliminationPairingRule,
   normalizeV4WizardTieBreakRules,
   rebuildV4StageLinearChain,
+  resolveV4StagePairingRuleForSave,
   resolveV4OrganizationMode,
-  resolveV4WizardFormatDisplayStatus,
   validateV4QuickCreateParams,
   validateV4StageCombinationDetailed,
   v4GroupingModeLabel,
@@ -717,8 +661,7 @@ const emit = defineEmits<{
 
 const { proxy } = getCurrentInstance()!
 
-type RulesMode = 'quick' | 'custom'
-type RulesSectionTab = 'quick' | 'stages' | 'advanced'
+type RulesSectionTab = 'quick' | 'custom' | 'advanced'
 
 const STAGE_PRESET_OPTIONS = V4_WIZARD_STAGE_PRESET_OPTIONS
 const STAGE_SHAPE_OPTIONS = V4_WIZARD_STAGE_PRESET_OPTIONS.map((item) => ({ label: item.label, value: item.value }))
@@ -729,14 +672,12 @@ const comboStageSchemes = V4_FORMAT_SCHEME_OPTIONS.filter((s) => s.category === 
 
 const panelLoading = ref(false)
 const actionBusy = ref(false)
-const locking = ref(false)
 const rebuilding = ref(false)
 const applyingScheme = ref(false)
 
 const snapshot = ref<BasketDivisionFormatSnapshotVo>()
 const formatTemplateList = ref<BasketFormatTemplateListVo[]>([])
 
-const rulesMode = ref<RulesMode>('quick')
 const rulesSectionTab = ref<RulesSectionTab>('quick')
 const selectedScheme = ref<V4FormatSchemeId>('GROUP_TO_ELIM')
 const quickParams = reactive<V4QuickCreateParams>(buildDefaultV4QuickCreateParams('GROUP_TO_ELIM', 16))
@@ -782,29 +723,6 @@ const sortedStages = computed(() =>
   [...(snapshot.value?.stages || [])].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
 )
 
-const divisionReadiness = computed(() =>
-  assessV4DivisionReadiness(
-    {
-      id: props.divisionId,
-      maxTeamCount: props.maxTeamCount,
-      formatTemplateId: props.formatTemplateId,
-      platformCode: props.divisionMeta?.platformCode,
-      gameMode: props.divisionMeta?.gameMode,
-      divisionName: props.divisionMeta?.divisionName,
-      registrationMode: props.divisionMeta?.registrationMode,
-      registrationStartTime: props.divisionMeta?.registrationStartTime,
-      registrationEndTime: props.divisionMeta?.registrationEndTime,
-      matchStartTime: props.divisionMeta?.matchStartTime,
-      matchEndTime: props.divisionMeta?.matchEndTime
-    },
-    snapshot.value
-  )
-)
-
-const formatDisplayStatus = computed(() =>
-  resolveV4WizardFormatDisplayStatus(snapshot.value, divisionReadiness.value, sortedStages.value.length)
-)
-
 const quickValidation = computed(() => {
   if (!selectedScheme.value || selectedScheme.value === 'CUSTOM') return { valid: true, messages: [] as string[] }
   return validateV4QuickCreateParams(selectedScheme.value, quickParams)
@@ -818,20 +736,10 @@ const customFormatPreview = computed(() =>
   formatV4CustomFormatPreview(sortedStages.value, props.maxTeamCount)
 )
 
-const hasBoSeriesStage = computed(() =>
-  sortedStages.value.some((s) => (s.bestOf ?? 1) > 1)
-)
-
-const lockReadinessItems = computed(() =>
-  formatV4LockReadinessChecklist(sortedStages.value, props.maxTeamCount)
-)
-
 const canApplyScheme = computed(() => {
   if (!selectedScheme.value || selectedScheme.value === 'CUSTOM') return false
   return quickValidation.value.valid
 })
-
-const canLockSnapshot = computed(() => stageValidation.value.valid && sortedStages.value.length > 0)
 
 const quickPreviewText = computed(() => {
   if (!selectedScheme.value || selectedScheme.value === 'CUSTOM') return ''
@@ -886,6 +794,7 @@ function normalizeStagesForUi() {
     if (!stage.organizationMode) {
       stage.organizationMode = resolveV4OrganizationMode(stage)
     }
+    stage.pairingRule = resolveV4StagePairingRuleForSave(stage)
   }
 }
 
@@ -908,7 +817,7 @@ function buildStageSavePayload(stage: BasketDivisionStageVo): BasketDivisionStag
     lossPoints: chained.lossPoints,
     advancementType: chained.advancementType,
     advancementCount: chained.advancementCount,
-    pairingRule: chained.pairingRule || 'NONE',
+    pairingRule: resolveV4StagePairingRuleForSave(chained),
     nextStageCode: chained.nextStageCode || undefined,
     requiresManualConfirmation: chained.requiresManualConfirmation ?? 0
   }
@@ -934,7 +843,7 @@ async function saveStageInline(stage: BasketDivisionStageVo) {
   if (!stage.id || actionBusy.value) return
   actionBusy.value = true
   try {
-    await updateFormatStage(props.divisionId, stage.id, buildStageSavePayload(stage))
+    // 仅 persistAllStages：避免对同一 stage 连续两次相同 PUT 触发 request 防重复提交
     await persistAllStages()
     emitChange()
   } catch (e: any) {
@@ -952,6 +861,7 @@ async function patchStageField(stage: BasketDivisionStageVo, field: keyof Basket
 }
 
 async function handleOrganizationModeChange(stage: BasketDivisionStageVo, mode: string) {
+  if (resolveStageOrganizationMode(stage) === mode) return
   if (mode === 'GROUPED' && (stage.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION') {
     proxy!.$modal.msgWarning('当前版本暂不支持分组内淘汰赛')
     return
@@ -974,7 +884,9 @@ async function handleCompetitionFormatChange(stage: BasketDivisionStageVo, forma
   }
   stage.competitionFormat = format
   if (format === 'SINGLE_ELIMINATION') {
-    stage.pairingRule = stage.pairingRule && stage.pairingRule !== 'NONE' ? stage.pairingRule : 'HIGH_VS_LOW'
+    stage.pairingRule = normalizeV4EliminationPairingRule(stage.pairingRule)
+  } else {
+    stage.pairingRule = 'NONE'
   }
   await saveStageInline(stage)
 }
@@ -1055,11 +967,46 @@ function hasEliminationStage(schemeId: V4FormatSchemeId): boolean {
 function ensureRulesUiState() {
   const inferred = inferV4FormatSchemeFromStages(sortedStages.value)
   if (inferred === 'CUSTOM' || !inferred) {
-    rulesMode.value = sortedStages.value.length ? 'custom' : 'quick'
+    if (sortedStages.value.length) rulesSectionTab.value = 'custom'
+    else rulesSectionTab.value = 'quick'
   }
   selectedScheme.value = inferred || 'GROUP_TO_ELIM'
   Object.assign(quickParams, buildDefaultV4QuickCreateParams(selectedScheme.value, props.maxTeamCount))
   quickParams.expectedTeamCount = props.maxTeamCount
+}
+
+function resolveStageBestOfOptions(stage: BasketDivisionStageVo) {
+  if ((stage.competitionFormat || '').toUpperCase() === 'ROUND_ROBIN') {
+    return V4_BEST_OF_OPTIONS.filter((opt) => opt.value === 1)
+  }
+  return V4_BEST_OF_OPTIONS
+}
+
+async function handleRulesSectionTabChange(tab: string) {
+  const nextTab = tab as RulesSectionTab
+  const prevTab = rulesSectionTab.value
+  if (nextTab === prevTab) return
+
+  if (nextTab === 'quick' && prevTab === 'custom') {
+    if (snapshot.value?.mutable && sortedStages.value.length) {
+      try {
+        await proxy!.$modal.confirm('切换至快速创建可能覆盖当前未确认的赛制配置，是否继续？')
+      } catch {
+        return
+      }
+    }
+  }
+
+  rulesSectionTab.value = nextTab
+
+  if (nextTab === 'custom') {
+    selectedScheme.value = 'CUSTOM'
+    if (!sortedStages.value.length && snapshot.value?.mutable) {
+      await handleAddNextStage()
+    }
+  }
+
+  emitChange()
 }
 
 function buildStageTieBreakRules() {
@@ -1144,33 +1091,14 @@ async function loadSnapshot() {
   }
 }
 
-async function handleRulesModeChange(mode: RulesMode) {
-  if (mode === rulesMode.value) return
-  if (mode === 'quick' && rulesMode.value === 'custom') {
-    if (snapshot.value?.mutable && sortedStages.value.length) {
-      try {
-        await proxy!.$modal.confirm('重新选择模板会覆盖当前未确认的赛制配置，是否继续？')
-      } catch {
-        return
-      }
-    }
-  }
-  rulesMode.value = mode
-  if (mode === 'custom') {
-    rulesSectionTab.value = 'stages'
+async function handleSelectScheme(schemeId: V4FormatSchemeId) {
+  if (schemeId === 'CUSTOM') {
+    rulesSectionTab.value = 'custom'
     selectedScheme.value = 'CUSTOM'
     if (!sortedStages.value.length && snapshot.value?.mutable) {
       await handleAddNextStage()
     }
-  } else {
-    rulesSectionTab.value = 'quick'
-  }
-  emitChange()
-}
-
-async function handleSelectScheme(schemeId: V4FormatSchemeId) {
-  if (schemeId === 'CUSTOM') {
-    await handleRulesModeChange('custom')
+    emitChange()
     return
   }
   if (selectedScheme.value === schemeId) return
@@ -1224,7 +1152,7 @@ function buildFormatPlanApplyReq(schemeId: V4FormatSchemeId): BasketDivisionForm
       groupCount: quickParams.groupCount ?? 4,
       roundRobinLegs: quickParams.roundRobinCycles ?? 1,
       qualifiersPerGroup: quickParams.advancePerGroup ?? 2,
-      eliminationPairingRule: quickParams.pairingRule || 'HIGH_VS_LOW',
+      eliminationPairingRule: normalizeV4EliminationPairingRule(quickParams.pairingRule),
       winPoints: 2,
       lossPoints: 1
     }
@@ -1235,7 +1163,7 @@ function buildFormatPlanApplyReq(schemeId: V4FormatSchemeId): BasketDivisionForm
       expectedTeamCount: props.maxTeamCount,
       roundRobinLegs: quickParams.roundRobinCycles ?? 1,
       overallAdvanceCount: quickParams.overallAdvanceCount ?? 4,
-      eliminationPairingRule: quickParams.pairingRule || 'HIGH_VS_LOW',
+      eliminationPairingRule: normalizeV4EliminationPairingRule(quickParams.pairingRule),
       winPoints: 2,
       lossPoints: 1
     }
@@ -1288,8 +1216,7 @@ async function applyQuickCreateScheme() {
       const payloads = buildV4SchemeStagePayloads(schemeId, quickParams)
       await syncStagesFromPayloads(payloads)
     }
-    rulesMode.value = 'quick'
-    rulesSectionTab.value = 'stages'
+    rulesSectionTab.value = 'custom'
     emitChange()
     proxy!.$modal.msgSuccess('赛制方案已应用，请在「自定义赛制」查看流程预览')
   } catch (e: any) {
@@ -1339,38 +1266,6 @@ async function handleRebuildSnapshot() {
   } finally {
     actionBusy.value = false
     rebuilding.value = false
-  }
-}
-
-async function handleLockSnapshot() {
-  if (actionBusy.value) return
-  if (!sortedStages.value.length) {
-    proxy!.$modal.msgError('确认前至少需要配置一个比赛阶段')
-    return
-  }
-  const validation = stageValidation.value
-  if (!validation.valid) {
-    proxy!.$modal.msgError(validation.messages.join('\n'))
-    return
-  }
-  const meta = props.divisionMeta || { maxTeamCount: props.maxTeamCount }
-  try {
-    await proxy!.$modal.confirm(formatV4LockConfirmPreview(meta, sortedStages.value))
-  } catch {
-    return
-  }
-  actionBusy.value = true
-  locking.value = true
-  try {
-    await lockFormatSnapshot(props.divisionId)
-    await loadSnapshot()
-    emitChange()
-    proxy!.$modal.msgSuccess('赛制已确认并启用，后续报名和比赛将按此赛制执行。')
-  } catch (e: any) {
-    proxy!.$modal.msgError(e?.msg || e?.message || '锁定失败，请检查规则配置是否完整')
-  } finally {
-    actionBusy.value = false
-    locking.value = false
   }
 }
 
@@ -1673,6 +1568,13 @@ defineExpose({ reload: loadSnapshot })
 .section-hint {
   font-size: 13px;
   color: var(--el-text-color-secondary);
+}
+
+.bo-capability-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
 }
 
 .stage-flow-list {

@@ -185,7 +185,13 @@ public class BasketV4ParticipationSupport {
         return rows;
     }
 
+    /** @deprecated 旧 division+team 键，勿用于队长授权 */
+    @Deprecated
     public String buildActiveUniqueKey(Long divisionId, Long teamId) {
         return divisionId + "_" + teamId;
+    }
+
+    public String buildGrantActiveUniqueKey(Long divisionId, Long playerId) {
+        return CaptainGrantActiveKeySupport.buildActiveUniqueKey(divisionId, playerId);
     }
 }

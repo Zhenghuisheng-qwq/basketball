@@ -454,33 +454,35 @@ export function validateV4DivisionTimeRelations(
 
   if (!div.registrationStartTime || !div.registrationEndTime
     || !div.matchStartTime || !div.matchEndTime) {
-    if (!div.registrationStartTime) fieldErrors.registrationStartTime = '请选择报名开始时间'
-    if (!div.registrationEndTime) fieldErrors.registrationEndTime = '请选择报名结束时间'
-    if (!div.matchStartTime) fieldErrors.matchStartTime = '请选择比赛开始时间'
-    if (!div.matchEndTime) fieldErrors.matchEndTime = '请选择比赛结束时间'
+    if (!div.registrationStartTime || !div.registrationEndTime) {
+      fieldErrors.registrationStartTime = '请选择报名时间'
+    }
+    if (!div.matchStartTime || !div.matchEndTime) {
+      fieldErrors.matchStartTime = '请选择比赛时间'
+    }
     messages.push('时间配置不完整')
     return { status: 'incomplete', fieldErrors, messages }
   }
 
   if (div.registrationStartTime >= div.registrationEndTime) {
-    fieldErrors.registrationEndTime = '报名结束时间必须晚于报名开始时间'
-    messages.push('报名开始时间必须早于报名结束时间')
+    fieldErrors.registrationStartTime = '报名结束时间必须晚于报名开始时间'
+    messages.push('报名结束时间必须晚于报名开始时间')
   }
   if (div.registrationEndTime > div.matchStartTime) {
     fieldErrors.matchStartTime = '比赛开始时间不得早于报名结束时间'
-    messages.push('报名结束时间不得晚于比赛开始时间')
+    messages.push('比赛开始时间不得早于报名结束时间')
   }
   if (div.matchStartTime >= div.matchEndTime) {
-    fieldErrors.matchEndTime = '比赛结束时间必须晚于比赛开始时间'
-    messages.push('比赛开始时间必须早于比赛结束时间')
+    fieldErrors.matchStartTime = '比赛结束时间必须晚于比赛开始时间'
+    messages.push('比赛结束时间必须晚于比赛开始时间')
   }
   if (seasonStartTime && div.registrationStartTime < seasonStartTime) {
-    fieldErrors.registrationStartTime = '报名开始时间不能早于赛季展示周期开始时间'
-    messages.push('报名开始时间应处于赛季展示周期内')
+    fieldErrors.registrationStartTime = '报名时间不能早于赛季展示周期开始时间'
+    messages.push('报名时间应处于赛季展示周期内')
   }
   if (seasonEndTime && div.matchEndTime > seasonEndTime) {
-    fieldErrors.matchEndTime = '比赛结束时间不能晚于赛季展示周期结束时间'
-    messages.push('比赛结束时间应处于赛季展示周期内')
+    fieldErrors.matchStartTime = '比赛结束时间不能晚于赛季展示周期结束时间'
+    messages.push('比赛时间应处于赛季展示周期内')
   }
 
   if (Object.keys(fieldErrors).length) {
@@ -597,7 +599,7 @@ export function assessV4DivisionReadiness(
   const snapshotStatus = (snapshot?.snapshotStatus || '').toUpperCase()
   const snapshotLocked = snapshotStatus === 'LOCKED' || snapshot?.locked === true
   const snapshotDraft = snapshotStatus === 'DRAFT'
-  if (snapshotDraft) reasons.push('请先确认并启用赛制')
+  if (snapshotDraft) reasons.push('赛制规则已配置，发布时将最终确认')
   else if (!snapshot?.snapshotStatus) reasons.push('尚未配置赛制')
 
   const stages = snapshot?.stages || []
@@ -901,6 +903,26 @@ export const V4_BEST_OF_OPTIONS = [
   { label: 'BO3', value: 3 },
   { label: 'BO5', value: 5 }
 ] as const
+
+/** 当前版本淘汰赛仅支持 HIGH_VS_LOW（后端 PairingRuleEnum 无 RANDOM） */
+export const V4_ELIMINATION_PAIRING_RULE_OPTIONS = [
+  { label: '高排名对低排名', value: 'HIGH_VS_LOW' }
+] as const
+
+export function normalizeV4EliminationPairingRule(rule?: string | null): string {
+  const code = (rule || '').trim().toUpperCase()
+  if (code === 'HIGH_VS_LOW') return code
+  // 历史 UI 曾提供 RANDOM，后端未实现，统一回落
+  return 'HIGH_VS_LOW'
+}
+
+export function resolveV4StagePairingRuleForSave(stage: V4StageSummaryInput): string {
+  const format = (stage.competitionFormat || '').toUpperCase()
+  if (format === 'SINGLE_ELIMINATION') {
+    return normalizeV4EliminationPairingRule(stage.pairingRule)
+  }
+  return 'NONE'
+}
 
 export const V4_GROUPING_MODE_OPTIONS = [
   { label: '无分组', value: 'NONE' },
@@ -1282,7 +1304,7 @@ export function formatV4StageAdvancementArrangement(
 
 export function formatV4WizardPrimaryIssue(readiness: V4DivisionReadinessResult): string {
   if (readiness.openRegistrationReady) return '-'
-  if (readiness.snapshotDraft) return '比赛赛制尚未确认，请返回上一步确认并启用赛制。'
+  if (readiness.snapshotDraft) return '赛制规则已配置，发布时将最终确认。'
   if (!readiness.hasValidStage) {
     if (readiness.reasons.some((r) => r.includes('至少需要'))) {
       return '尚未配置比赛阶段，请返回上一步完善赛制。'
@@ -1296,7 +1318,7 @@ export function formatV4WizardPrimaryIssue(readiness: V4DivisionReadinessResult)
 
 export function formatV4WizardRegistrationReadiness(readiness: V4DivisionReadinessResult): string {
   if (readiness.openRegistrationReady) return '可开放报名'
-  if (readiness.snapshotDraft || !readiness.snapshotLocked) return '确认赛制后可开放'
+  if (readiness.snapshotDraft || !readiness.snapshotLocked) return '发布时将确认赛制'
   return '暂不可开放'
 }
 
@@ -1537,7 +1559,7 @@ export function buildV4SchemeStagePayloads(
         groupingMode: 'NONE',
         bestOf: 1,
         advancementType: 'NONE',
-        pairingRule: params.pairingRule || 'HIGH_VS_LOW',
+        pairingRule: normalizeV4EliminationPairingRule(params.pairingRule),
         requiresManualConfirmation: 0
       }
     }]
@@ -1620,7 +1642,7 @@ export function buildV4SchemeStagePayloads(
           groupingMode: 'NONE',
           bestOf: 1,
           advancementType: 'NONE',
-          pairingRule: params.pairingRule || 'HIGH_VS_LOW',
+          pairingRule: normalizeV4EliminationPairingRule(params.pairingRule),
           requiresManualConfirmation: 0
         }
       }
@@ -1663,7 +1685,7 @@ export function buildV4SchemeStagePayloads(
           groupingMode: 'NONE',
           bestOf: 1,
           advancementType: 'NONE',
-          pairingRule: params.pairingRule || 'HIGH_VS_LOW',
+          pairingRule: normalizeV4EliminationPairingRule(params.pairingRule),
           requiresManualConfirmation: 0
         }
       }
@@ -1861,10 +1883,6 @@ export function validateV4StageCombinationDetailed(
     }
   }
 
-  if (sorted.some((s) => (s.bestOf ?? 1) > 1)) {
-    warnings.push('赛制包含 BO3/BO5 阶段：可用于赛制设计与锁定；系列赛执行能力将在后续版本开放，在能力启用前该赛区暂不能开放报名。')
-  }
-
   return { valid: messages.length === 0, messages: [...new Set(messages)], warnings: [...new Set(warnings)] }
 }
 
@@ -2022,36 +2040,30 @@ export function formatV4StageCardSummary(
   stage: V4StageSummaryInput,
   allStages: V4StageSummaryInput[]
 ): string {
-  const parts: string[] = []
   const bo = formatV4BestOfLabel(stage.bestOf)
   const format = (stage.competitionFormat || '').toUpperCase()
+  const sorted = sortV4Stages(allStages)
+  const index = sorted.findIndex((s) => s.stageCode === stage.stageCode)
+  const isFinal = index >= 0 && isV4FinalStageIndex(index, sorted.length)
+
   if (isV4GroupedStage(stage) && format === 'ROUND_ROBIN') {
-    parts.push(`${stage.groupCount ?? 0}组`)
-    parts.push(`组内${(stage.roundRobinCycles ?? 1) > 1 ? '双' : '单'}循环积分`)
-    parts.push(bo)
-    const adv = (stage.advancementType || '').toUpperCase()
-    if (adv === 'GROUP_TOP_N' && stage.advancementCount) {
-      parts.push(`每组前${stage.advancementCount}晋级`)
-    }
-  } else if (format === 'ROUND_ROBIN') {
-    parts.push((stage.roundRobinCycles ?? 1) > 1 ? '双循环积分' : '循环积分')
-    parts.push(bo)
+    const adv = stage.advancementCount
+    const advText = adv ? `每组前${adv}晋级` : '每组前 N 晋级'
+    return `分组循环 · ${bo} · ${advText}`
+  }
+  if (format === 'ROUND_ROBIN') {
     const adv = (stage.advancementType || '').toUpperCase()
     if (adv === 'OVERALL_TOP_N' && stage.advancementCount) {
-      parts.push(`总排名前${stage.advancementCount}晋级`)
+      return `单循环 · ${bo} · 总排名前${stage.advancementCount}晋级`
     }
-  } else if (format === 'SINGLE_ELIMINATION') {
-    parts.push('单败淘汰')
-    parts.push(bo)
-    const sorted = sortV4Stages(allStages)
-    const index = sorted.findIndex((s) => s.stageCode === stage.stageCode)
-    if (index >= 0 && isV4FinalStageIndex(index, sorted.length)) {
-      parts.push('最终阶段')
-    } else {
-      parts.push('胜者晋级')
-    }
+    if (isFinal) return `单循环 · ${bo} · 最终阶段`
+    return `单循环 · ${bo}`
   }
-  return parts.join(' · ') || formatV4StageCompetitionFormLabel(stage)
+  if (format === 'SINGLE_ELIMINATION') {
+    if (isFinal) return `单败淘汰 · ${bo} · 最终阶段`
+    return `单败淘汰 · ${bo} · 胜者晋级`
+  }
+  return formatV4StageCompetitionFormLabel(stage)
 }
 
 export function calcV4StagePlannedParticipants(
@@ -2152,13 +2164,6 @@ export function formatV4LockReadinessChecklist(
     { ok: stages.length > 0, label: '阶段链完整' },
     { ok: detailed.valid, label: '组织方式、竞赛方式与晋级规则校验通过' }
   ]
-  if (hasV4UnsupportedBestOf(stages)) {
-    items.push({
-      ok: false,
-      warn: true,
-      label: '包含 BO3/BO5，当前版本锁定后仍暂不能开放报名'
-    })
-  }
   detailed.warnings.forEach((w) => items.push({ ok: true, warn: true, label: w }))
   return items
 }

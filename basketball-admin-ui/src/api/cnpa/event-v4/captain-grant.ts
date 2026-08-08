@@ -6,10 +6,8 @@ export interface BasketCaptainGrantQuery {
   pageSize?: number
   seasonId?: number
   divisionId?: number
-  teamId?: number
   playerId?: number
   grantStatus?: string
-  teamName?: string
   playerName?: string
 }
 
@@ -22,10 +20,13 @@ export interface BasketCaptainGrantListVo {
   platformCode?: string
   teamId?: number
   teamName?: string
+  teamBoundLabel?: string
   playerId?: number
   playerName?: string
   memberId?: number
+  memberNickname?: string
   grantStatus?: string
+  grantSource?: string
   validFrom?: string
   validTo?: string
   remark?: string
@@ -34,16 +35,18 @@ export interface BasketCaptainGrantListVo {
 
 export interface BasketCaptainGrantCreateReq {
   divisionId?: number
-  teamId?: number
   playerId?: number
   memberId?: number
   validFrom?: string
-  validTo?: string
   remark?: string
 }
 
 export function listV4CaptainGrant(query: BasketCaptainGrantQuery): Promise<TableDataInfo<BasketCaptainGrantListVo[]>> {
   return request({ url: '/basket/v4/captain-grant/list', method: 'get', params: query })
+}
+
+export function resolveV4CaptainGrantValidTo(divisionId: number): Promise<AjaxResult<string>> {
+  return request({ url: '/basket/v4/captain-grant/resolve-valid-to', method: 'get', params: { divisionId } })
 }
 
 export function addV4CaptainGrant(data: BasketCaptainGrantCreateReq): Promise<AjaxResult<number>> {

@@ -79,4 +79,45 @@
         order by case when m.role_type = 'CAPTAIN' then 0 else 1 end, m.join_time asc, m.id asc
     </select>
 
+    <select id="selectGrantablePlayerOptions" resultType="com.zhs.basket.vo.v4.BasketV4GrantablePlayerOptionVo">
+        select
+            p.id as playerId,
+            coalesce(p.game_nickname, mp.nickname, concat('球员#', p.id)) as playerName,
+            p.member_id as memberId,
+            mp.nickname as memberNickname,
+            (p.certification_status = 3) as certified,
+            exists (
+                select 1
+                from basket_player_platform_account pa
+                where pa.player_id = p.id
+                  and pa.is_delete = 0
+                  and pa.account_status = 1
+                  and upper(pa.platform) = upper(#{platformCode})
+            ) as hasPlatformIdentity,
+            exists (
+                select 1
+                from basket_captain_grant g
+                where g.is_delete = 0
+                  and g.division_id = #{divisionId}
+                  and g.player_id = p.id
+                  and g.grant_status = 'ACTIVE'
+                  and g.active_unique_key is not null
+            ) as hasActiveGrant,
+            case
+                when exists (
+                    select 1 from basket_captain_grant g
+                    where g.is_delete = 0 and g.division_id = #{divisionId}
+                      and g.player_id = p.id and g.grant_status = 'ACTIVE'
+                      and g.active_unique_key is not null
+                ) then '该球员在此 Division 已有有效授权'
+                when p.certification_status &lt;&gt; 3 then '未完成球员认证'
+                else null
+            end as cannotSelectReason
+        from basket_player_profile p
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
+        where p.is_delete = 0
+          and p.certification_status = 3
+        order by playerName asc, p.id asc
+    </select>
+
 </mapper>

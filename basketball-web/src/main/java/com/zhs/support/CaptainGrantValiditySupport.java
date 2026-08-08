@@ -51,7 +51,9 @@ public final class CaptainGrantValiditySupport {
         if (!Objects.equals(CaptainGrantStatusEnum.ACTIVE.getCode(), grant.getGrantStatus())) {
             return status != null ? status.getDescription() : "队长权限不可用";
         }
-        if (grant.getTeamId() != null && grant.getActiveUniqueKey() == null) {
+        if (org.springframework.util.StringUtils.hasText(grant.getActiveUniqueKey())
+                && !Objects.equals(grant.getActiveUniqueKey(),
+                CaptainGrantSupport.buildActiveUniqueKey(grant.getDivisionId(), grant.getPlayerId()))) {
             return "队长权限已失效";
         }
         if (playerCertStatus != null && !Objects.equals(PlayerCertStatusEnum.APPROVED.getCode(), playerCertStatus)) {

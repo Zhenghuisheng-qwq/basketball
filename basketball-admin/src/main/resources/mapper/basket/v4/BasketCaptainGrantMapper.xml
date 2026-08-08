@@ -39,6 +39,9 @@
         <result property="validTo" column="valid_to" />
         <result property="remark" column="remark" />
         <result property="createTime" column="create_time" />
+        <result property="grantSource" column="grant_source" />
+        <result property="memberNickname" column="member_nickname" />
+        <result property="teamBoundLabel" column="team_bound_label" />
     </resultMap>
 
     <sql id="BaseColumns">id, division_id, season_id, team_id, player_id, member_id, grant_status, active_unique_key, valid_from, valid_to, granted_by, remark, grant_source, source_draw_team_id, create_time, update_time, is_delete</sql>
@@ -69,10 +72,13 @@
             g.player_id,
             coalesce(p.game_nickname, mp.nickname) as player_name,
             g.member_id,
+            mp.nickname as member_nickname,
             g.grant_status,
             g.valid_from,
             g.valid_to,
             g.remark,
+            g.grant_source,
+            case when g.team_id is null then '尚未绑定球队' else t.team_name end as team_bound_label,
             g.create_time
         from basket_captain_grant g
         left join basket_season se on se.id = g.season_id and se.is_delete = 0
@@ -96,6 +102,16 @@
         where <include refid="NotDeleted"/>
           and division_id = #{divisionId}
           and team_id = #{teamId}
+          and grant_status = 'ACTIVE'
+          and active_unique_key is not null
+        limit 1
+    </select>
+
+    <select id="selectActiveByDivisionPlayer" resultMap="BasketCaptainGrantResult">
+        select <include refid="BaseColumns" /> from basket_captain_grant
+        where <include refid="NotDeleted"/>
+          and division_id = #{divisionId}
+          and player_id = #{playerId}
           and grant_status = 'ACTIVE'
           and active_unique_key is not null
         limit 1
@@ -129,7 +145,6 @@
           and pp.certification_status = 3
           and (g.valid_from is null or g.valid_from &lt;= now())
           and (g.valid_to is null or g.valid_to &gt;= now())
-          and (g.team_id is null or g.active_unique_key is not null)
     </select>
 
     <select id="selectGrantHistoryByMemberId" resultType="com.zhs.basket.vo.AccountPlayerCaptainGrantVo">
@@ -201,6 +216,19 @@
         update basket_captain_grant
         set grant_status = 'REVOKED', active_unique_key = null, update_time = now()
         where id = #{id} and <include refid="NotDeleted"/> and grant_status = 'ACTIVE'
+    </update>
+
+    <update id="expireById">
+        update basket_captain_grant
+        set grant_status = 'EXPIRED', active_unique_key = null, update_time = now()
+        where id = #{id} and <include refid="NotDeleted"/> and grant_status = 'ACTIVE'
+    </update>
+
+    <update id="bindTeamById">
+        update basket_captain_grant
+        set team_id = #{teamId}, update_time = now()
+        where id = #{id} and <include refid="NotDeleted"/> and grant_status = 'ACTIVE'
+          and team_id is null
     </update>
 
     <update id="revokeBySourceDrawTeamId">

@@ -27,6 +27,12 @@ public class BasketV4CaptainGrantController extends BaseController {
         return getDataTable(captainGrantService.selectList(query));
     }
 
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.CAPTAIN_GRANT_LIST + "')")
+    @GetMapping("/resolve-valid-to")
+    public AjaxResult resolveValidTo(@RequestParam Long divisionId) {
+        return success(captainGrantService.resolveValidTo(divisionId));
+    }
+
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.CAPTAIN_GRANT_ADD + "')")
     @Log(title = "V4 CaptainGrant", businessType = BusinessType.INSERT)
     @PostMapping

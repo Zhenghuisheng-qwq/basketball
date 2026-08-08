@@ -20,6 +20,17 @@ export interface V4AdminTeamPlayerOptionVo {
   roleType?: string
 }
 
+export interface V4AdminGrantablePlayerOptionVo {
+  playerId: number
+  playerName: string
+  memberId?: number
+  memberNickname?: string
+  certified: boolean
+  hasPlatformIdentity: boolean
+  hasActiveGrant?: boolean
+  cannotSelectReason?: string
+}
+
 export function listV4AdminSeasonOptions(): Promise<AjaxResult<V4AdminOptionVo[]>> {
   return request({ url: '/basket/v4/admin/options/seasons', method: 'get' })
 }
@@ -32,6 +43,6 @@ export function listV4AdminTeamOptions(divisionId: number): Promise<AjaxResult<V
   return request({ url: '/basket/v4/admin/options/teams', method: 'get', params: { divisionId } })
 }
 
-export function listV4AdminTeamPlayerOptions(teamId: number, divisionId: number): Promise<AjaxResult<V4AdminTeamPlayerOptionVo[]>> {
-  return request({ url: '/basket/v4/admin/options/team-players', method: 'get', params: { teamId, divisionId } })
+export function listV4AdminGrantablePlayerOptions(divisionId: number): Promise<AjaxResult<V4AdminGrantablePlayerOptionVo[]>> {
+  return request({ url: '/basket/v4/admin/options/grantable-players', method: 'get', params: { divisionId } })
 }

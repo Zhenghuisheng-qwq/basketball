@@ -15,7 +15,7 @@ public class BasketCaptainGrant {
     private Long playerId;
     private Long memberId;
     private String grantStatus;
-    /** ACTIVE 时写入 divisionId_teamId；REVOKED/EXPIRED/软删除为 null */
+    /** ACTIVE 时写入 divisionId_playerId；REVOKED/EXPIRED/软删除为 null */
     private String activeUniqueKey;
     private Date validFrom;
     private Date validTo;

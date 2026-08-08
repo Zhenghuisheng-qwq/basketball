@@ -25,6 +25,7 @@ import com.zhs.response.v4.V4MyRegistrationResp;
 import com.zhs.response.v4.V4RegistrationDetailResp;
 import com.zhs.response.v4.V4RegistrationPlayerItemResp;
 import com.zhs.service.v4.IBasketV4PlayerRegistrationService;
+import com.zhs.support.CaptainGrantSupport;
 import com.zhs.support.GameTerminalSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -65,6 +66,8 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
     private BasketPlayerProfileDao playerProfileDao;
     @Resource
     private BasketPlayerPlatformAccountDao platformAccountDao;
+    @Resource
+    private CaptainGrantSupport captainGrantSupport;
 
     @Override
     public List<V4AvailableDivisionResp> listAvailableDivisions() {
@@ -86,10 +89,9 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         BasketPlayerProfile player = requirePlayerByMemberId(memberId);
         BasketDivision division = requireDivision(req.getDivisionId());
         rejectPersonalModeDivision(division.getRegistrationMode());
-        BasketCaptainGrant grant = requireActiveGrant(req.getDivisionId(), req.getTeamId(), player.getId());
-        if (!req.getTeamId().equals(grant.getTeamId())) {
-            throw new ServiceException("teamId 必须与队长授权一致");
-        }
+        requireTeamCaptainAccess(req.getTeamId(), memberId);
+        BasketCaptainGrant grant = requireActiveGrant(req.getDivisionId(), player.getId());
+        captainGrantSupport.assertTeamBindingForRegistration(grant, req.getTeamId());
         requireValidTeam(req.getTeamId());
 
         BasketRegistration registration = findRegistration(req.getDivisionId(), req.getTeamId());
@@ -147,7 +149,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
                 && !RegistrationStatusEnum.WITHDRAWN.getCode().equals(registration.getRegistrationStatus())) {
             throw new ServiceException("当前状态不可提交");
         }
-        requireActiveGrant(registration.getDivisionId(), registration.getTeamId(), registration.getCaptainPlayerId());
+        requireActiveGrant(registration.getDivisionId(), registration.getCaptainPlayerId());
         List<BasketRegistrationPlayer> players = registrationPlayerDao.selectList(new LambdaQueryWrapper<BasketRegistrationPlayer>()
                 .eq(BasketRegistrationPlayer::getRegistrationId, registration.getId())
                 .eq(BasketRegistrationPlayer::getIsDelete, NOT_DELETED));
@@ -258,28 +260,25 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
     }
 
     private BasketCaptainGrant findActiveGrant(Long divisionId, Long playerId) {
-        return captainGrantDao.selectOne(new LambdaQueryWrapper<BasketCaptainGrant>()
-                .eq(BasketCaptainGrant::getDivisionId, divisionId)
-                .eq(BasketCaptainGrant::getPlayerId, playerId)
-                .eq(BasketCaptainGrant::getGrantStatus, CaptainGrantStatusEnum.ACTIVE.getCode())
-                .eq(BasketCaptainGrant::getIsDelete, NOT_DELETED)
-                .isNotNull(BasketCaptainGrant::getActiveUniqueKey)
-                .last("limit 1"));
+        return captainGrantSupport.findActiveGrantByDivisionPlayer(divisionId, playerId);
     }
 
-    private BasketCaptainGrant requireActiveGrant(Long divisionId, Long teamId, Long playerId) {
-        BasketCaptainGrant grant = captainGrantDao.selectOne(new LambdaQueryWrapper<BasketCaptainGrant>()
-                .eq(BasketCaptainGrant::getDivisionId, divisionId)
-                .eq(BasketCaptainGrant::getTeamId, teamId)
-                .eq(BasketCaptainGrant::getPlayerId, playerId)
-                .eq(BasketCaptainGrant::getGrantStatus, CaptainGrantStatusEnum.ACTIVE.getCode())
-                .eq(BasketCaptainGrant::getIsDelete, NOT_DELETED)
-                .isNotNull(BasketCaptainGrant::getActiveUniqueKey)
-                .last("limit 1"));
+    private BasketCaptainGrant requireActiveGrant(Long divisionId, Long playerId) {
+        BasketCaptainGrant grant = captainGrantSupport.findActiveGrantByDivisionPlayer(divisionId, playerId);
         if (!isGrantUsable(grant, new Date())) {
             throw new ServiceException("无有效队长授权");
         }
         return grant;
+    }
+
+    private void requireTeamCaptainAccess(Long teamId, Long memberId) {
+        BasketTeam team = teamDao.selectById(teamId);
+        if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
+            throw new ServiceException("球队不存在");
+        }
+        if (!memberId.equals(team.getCaptainMemberId())) {
+            throw new ServiceException("无权操作该球队");
+        }
     }
 
     private boolean isGrantUsable(BasketCaptainGrant grant, Date now) {

@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-alert title="队长授权：按平台赛区授予球队队长提交报名权限" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="队长授权：按平台赛区授予已认证球员赛事期内队长权限（授权时无需已有球队）" type="info" :closable="false" show-icon class="mb8" />
 
     <el-form :model="queryParams" :inline="true" class="mb8">
       <el-form-item label="赛季">
@@ -13,11 +13,8 @@
           <el-option v-for="item in queryDivisionOptions" :key="item.id" :label="formatDivisionLabel(item)" :value="item.id" />
         </el-select>
       </el-form-item>
-      <el-form-item label="球队名称">
-        <el-input v-model="queryParams.teamName" clearable placeholder="球队名称" />
-      </el-form-item>
-      <el-form-item label="队长昵称">
-        <el-input v-model="queryParams.playerName" clearable placeholder="队长昵称" />
+      <el-form-item label="球员昵称">
+        <el-input v-model="queryParams.playerName" clearable placeholder="球员昵称" />
       </el-form-item>
       <el-form-item label="状态">
         <el-select v-model="queryParams.grantStatus" clearable style="width: 140px">
@@ -33,7 +30,6 @@
     <el-collapse class="mb8">
       <el-collapse-item title="高级筛选（ID）" name="advanced">
         <el-form :model="queryParams" :inline="true">
-          <el-form-item label="Team ID"><el-input-number v-model="queryParams.teamId" :min="1" controls-position="right" /></el-form-item>
           <el-form-item label="Player ID"><el-input-number v-model="queryParams.playerId" :min="1" controls-position="right" /></el-form-item>
         </el-form>
       </el-collapse-item>
@@ -50,8 +46,16 @@
       <el-table-column label="赛季" prop="seasonTitle" min-width="140" />
       <el-table-column label="平台赛区" prop="divisionName" min-width="120" />
       <el-table-column label="平台" prop="platformCode" width="80" />
-      <el-table-column label="球队" prop="teamName" min-width="120" />
-      <el-table-column label="队长球员" prop="playerName" min-width="120" />
+      <el-table-column label="授权球员" prop="playerName" min-width="120" />
+      <el-table-column label="账号" min-width="140">
+        <template #default="scope">
+          {{ scope.row.memberNickname ? `${scope.row.memberNickname}（#${scope.row.memberId}）` : (scope.row.memberId ? `#${scope.row.memberId}` : '-') }}
+        </template>
+      </el-table-column>
+      <el-table-column label="Player ID" prop="playerId" width="100" />
+      <el-table-column label="后续使用球队" min-width="140">
+        <template #default="scope">{{ scope.row.teamBoundLabel || scope.row.teamName || '尚未绑定球队' }}</template>
+      </el-table-column>
       <el-table-column label="状态" prop="grantStatus" width="100" align="center">
         <template #default="scope">
           <el-tag :type="v4GrantStatusTagType(scope.row.grantStatus)" size="small" class="nowrap-tag" :title="scope.row.grantStatus">
@@ -59,6 +63,7 @@
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="来源" prop="grantSource" width="110" />
       <el-table-column label="有效期" min-width="180">
         <template #default="scope">{{ formatRange(scope.row.validFrom, scope.row.validTo) }}</template>
       </el-table-column>
@@ -82,19 +87,14 @@
             <el-option v-for="item in formDivisionOptions" :key="item.id" :label="formatDivisionLabel(item)" :value="item.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="选择球队" prop="teamId">
-          <el-select v-model="form.teamId" filterable placeholder="选择球队" style="width: 100%" :disabled="!form.divisionId" @change="onFormTeamChange">
-            <el-option v-for="item in teamOptions" :key="item.id" :label="item.label" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="队长球员" prop="playerId">
-          <el-select v-model="form.playerId" filterable placeholder="选择已认证球员" style="width: 100%" :disabled="!form.teamId" @change="onFormPlayerChange">
+        <el-form-item label="选择球员" prop="playerId">
+          <el-select v-model="form.playerId" filterable placeholder="选择已认证球员" style="width: 100%" :disabled="!form.divisionId" @change="onFormPlayerChange">
             <el-option
               v-for="item in playerOptions"
               :key="item.playerId"
               :label="playerOptionLabel(item)"
               :value="item.playerId"
-              :disabled="!item.certified"
+              :disabled="Boolean(item.hasActiveGrant) || !item.certified"
             />
           </el-select>
           <div v-if="platformIdentityWarning" class="el-form-item__tip warning-tip">{{ platformIdentityWarning }}</div>
@@ -102,11 +102,15 @@
         <el-form-item label="用户账号 / Member ID">
           <el-input :model-value="memberDisplay" disabled />
         </el-form-item>
+        <el-form-item label="球员 ID">
+          <el-input :model-value="form.playerId ? String(form.playerId) : '-'" disabled />
+        </el-form-item>
         <el-form-item label="生效时间">
           <el-date-picker v-model="form.validFrom" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="留空则立即生效" style="width: 100%" />
         </el-form-item>
         <el-form-item label="失效时间">
-          <el-date-picker v-model="form.validTo" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="留空则长期有效" style="width: 100%" />
+          <el-input :model-value="resolvedValidToDisplay" disabled />
+          <div class="el-form-item__tip">随 Division / 赛季结束时间自动计算</div>
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" />
@@ -122,8 +126,8 @@
 
 <script setup lang="ts" name="CnpaEventV4CaptainGrant">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { addV4CaptainGrant, listV4CaptainGrant, revokeV4CaptainGrant, type BasketCaptainGrantCreateReq, type BasketCaptainGrantQuery } from '@/api/cnpa/event-v4/captain-grant'
-import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, listV4AdminTeamOptions, listV4AdminTeamPlayerOptions, type V4AdminOptionVo, type V4AdminTeamPlayerOptionVo } from '@/api/cnpa/event-v4/options'
+import { addV4CaptainGrant, listV4CaptainGrant, resolveV4CaptainGrantValidTo, revokeV4CaptainGrant, type BasketCaptainGrantCreateReq, type BasketCaptainGrantQuery } from '@/api/cnpa/event-v4/captain-grant'
+import { listV4AdminDivisionOptions, listV4AdminGrantablePlayerOptions, listV4AdminSeasonOptions, type V4AdminGrantablePlayerOptionVo, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
 import { V4_GRANT_STATUS_FILTER_OPTIONS, v4GrantStatusLabel, v4GrantStatusTagType } from '@/utils/v4AdminDisplay'
 import { parseTime } from '@/utils/ruoyi'
 
@@ -136,10 +140,10 @@ const formRef = ref()
 const seasonOptions = ref<V4AdminOptionVo[]>([])
 const queryDivisionOptions = ref<V4AdminOptionVo[]>([])
 const formDivisionOptions = ref<V4AdminOptionVo[]>([])
-const teamOptions = ref<V4AdminOptionVo[]>([])
-const playerOptions = ref<V4AdminTeamPlayerOptionVo[]>([])
+const playerOptions = ref<V4AdminGrantablePlayerOptionVo[]>([])
 const formSeasonId = ref<number>()
-const queryParams = reactive<BasketCaptainGrantQuery & { teamName?: string; playerName?: string }>({ pageNum: 1, pageSize: 10 })
+const resolvedValidTo = ref<string>()
+const queryParams = reactive<BasketCaptainGrantQuery & { playerName?: string }>({ pageNum: 1, pageSize: 10 })
 const form = reactive<BasketCaptainGrantCreateReq & { seasonId?: number }>({})
 const GRANT_STATUS_OPTIONS = V4_GRANT_STATUS_FILTER_OPTIONS
 
@@ -149,18 +153,19 @@ const memberDisplay = computed(() => {
   if (!p?.memberId) return '-'
   return p.memberNickname ? `${p.memberNickname}（Member #${p.memberId}）` : `Member #${p.memberId}`
 })
+const resolvedValidToDisplay = computed(() => parseTime(resolvedValidTo.value) || '-')
 const platformIdentityWarning = computed(() => {
   const p = selectedPlayer.value
   if (!p || !form.divisionId) return ''
   if (!p.certified) return '该球员尚未完成认证，无法授权'
+  if (p.hasActiveGrant) return p.cannotSelectReason || '该球员在此 Division 已有有效授权'
   if (!p.hasPlatformIdentity) return '该球员未绑定当前平台账号，提交时后端将校验拦截'
   return ''
 })
 
 const rules = {
   divisionId: [{ required: true, message: '请选择平台赛区', trigger: 'change' }],
-  teamId: [{ required: true, message: '请选择球队', trigger: 'change' }],
-  playerId: [{ required: true, message: '请选择队长球员', trigger: 'change' }]
+  playerId: [{ required: true, message: '请选择球员', trigger: 'change' }]
 }
 
 function formatDivisionLabel(item: V4AdminOptionVo) {
@@ -172,10 +177,12 @@ function formatRange(start?: string, end?: string) {
   return `${parseTime(start) || '-'} ~ ${parseTime(end) || '-'}`
 }
 
-function playerOptionLabel(item: V4AdminTeamPlayerOptionVo) {
+function playerOptionLabel(item: V4AdminGrantablePlayerOptionVo) {
+  const account = item.memberNickname ? ` / ${item.memberNickname}` : ''
+  if (item.hasActiveGrant) return `${item.playerName}${account}（已授权）`
   if (!item.certified) return `${item.playerName}（未认证）`
-  if (!item.hasPlatformIdentity) return `${item.playerName}（未绑定平台）`
-  return item.playerName
+  if (!item.hasPlatformIdentity) return `${item.playerName}${account}（未绑定平台）`
+  return `${item.playerName}${account} (#${item.playerId})`
 }
 
 async function loadSeasonOptions() {
@@ -197,18 +204,16 @@ async function loadFormDivisions(seasonId?: number) {
   formDivisionOptions.value = res.data || []
 }
 
-async function loadTeams(divisionId?: number) {
-  teamOptions.value = []
-  if (!divisionId) return
-  const res = await listV4AdminTeamOptions(divisionId)
-  teamOptions.value = res.data || []
-}
-
-async function loadPlayers(teamId?: number, divisionId?: number) {
+async function loadPlayers(divisionId?: number) {
   playerOptions.value = []
-  if (!teamId || !divisionId) return
-  const res = await listV4AdminTeamPlayerOptions(teamId, divisionId)
-  playerOptions.value = res.data || []
+  resolvedValidTo.value = undefined
+  if (!divisionId) return
+  const [playersRes, validToRes] = await Promise.all([
+    listV4AdminGrantablePlayerOptions(divisionId),
+    resolveV4CaptainGrantValidTo(divisionId)
+  ])
+  playerOptions.value = playersRes.data || []
+  resolvedValidTo.value = validToRes.data as string
 }
 
 function onQuerySeasonChange(seasonId?: number) {
@@ -218,23 +223,15 @@ function onQuerySeasonChange(seasonId?: number) {
 
 function onFormSeasonChange(seasonId?: number) {
   form.divisionId = undefined
-  form.teamId = undefined
   form.playerId = undefined
   form.memberId = undefined
   loadFormDivisions(seasonId)
 }
 
 function onFormDivisionChange() {
-  form.teamId = undefined
   form.playerId = undefined
   form.memberId = undefined
-  loadTeams(form.divisionId)
-}
-
-function onFormTeamChange() {
-  form.playerId = undefined
-  form.memberId = undefined
-  loadPlayers(form.teamId, form.divisionId)
+  loadPlayers(form.divisionId)
 }
 
 function onFormPlayerChange(playerId?: number) {
@@ -251,17 +248,17 @@ function getList() {
 }
 
 function resetQuery() {
-  Object.assign(queryParams, { pageNum: 1, pageSize: 10, seasonId: undefined, divisionId: undefined, teamId: undefined, playerId: undefined, grantStatus: undefined, teamName: undefined, playerName: undefined })
+  Object.assign(queryParams, { pageNum: 1, pageSize: 10, seasonId: undefined, divisionId: undefined, playerId: undefined, grantStatus: undefined, playerName: undefined })
   queryDivisionOptions.value = []
   getList()
 }
 
 function openAdd() {
   formSeasonId.value = undefined
-  Object.assign(form, { divisionId: undefined, teamId: undefined, playerId: undefined, memberId: undefined, validFrom: undefined, validTo: undefined, remark: undefined })
+  Object.assign(form, { divisionId: undefined, playerId: undefined, memberId: undefined, validFrom: undefined, remark: undefined })
   formDivisionOptions.value = []
-  teamOptions.value = []
   playerOptions.value = []
+  resolvedValidTo.value = undefined
   addOpen.value = true
 }
 
@@ -273,6 +270,10 @@ function submitAdd() {
       proxy.$modal.msgError('请选择已认证球员')
       return
     }
+    if (p?.hasActiveGrant) {
+      proxy.$modal.msgError(p.cannotSelectReason || '该球员已有有效授权')
+      return
+    }
     addV4CaptainGrant(form).then(() => {
       proxy.$modal.msgSuccess('授权成功')
       addOpen.value = false
@@ -282,20 +283,20 @@ function submitAdd() {
 }
 
 function handleRevoke(row: any) {
-  proxy.$modal.confirm(`确认撤销授权 #${row.id}？`).then(() => revokeV4CaptainGrant(row.id)).then(() => {
+  proxy.$modal.confirm(`确认撤销球员「${row.playerName}」在「${row.divisionName}」的队长授权？`).then(() => {
+    return revokeV4CaptainGrant(row.id)
+  }).then(() => {
     proxy.$modal.msgSuccess('已撤销')
     getList()
   }).catch(() => {})
 }
 
-onMounted(async () => {
-  await loadSeasonOptions()
+onMounted(() => {
+  loadSeasonOptions()
   getList()
 })
 </script>
 
 <style scoped>
-.mb8 { margin-bottom: 8px; }
-.nowrap-tag { white-space: nowrap; }
-.warning-tip { color: var(--el-color-warning); }
+.warning-tip { color: var(--el-color-warning); font-size: 12px; margin-top: 4px; }
 </style>

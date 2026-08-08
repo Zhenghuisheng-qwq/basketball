@@ -16,6 +16,7 @@ import com.zhs.basket.mapper.v4.BasketRegistrationPlayerMapper;
 import com.zhs.basket.query.v4.BasketRegistrationAuditQuery;
 import com.zhs.basket.service.v4.IBasketV4EventSnapshotService;
 import com.zhs.basket.service.v4.IBasketV4RegistrationAuditService;
+import com.zhs.basket.support.v4.CaptainGrantRuntimeSupport;
 import com.zhs.basket.support.v4.TeamRegistrationEligibilitySpecification;
 import com.zhs.basket.vo.v4.BasketRegistrationAuditDetailVo;
 import com.zhs.basket.vo.v4.BasketRegistrationAuditListVo;
@@ -48,6 +49,8 @@ public class BasketV4RegistrationAuditServiceImpl implements IBasketV4Registrati
     private IBasketV4EventSnapshotService eventSnapshotService;
     @Autowired
     private TeamRegistrationEligibilitySpecification teamRegistrationEligibilitySpecification;
+    @Autowired
+    private CaptainGrantRuntimeSupport grantRuntimeSupport;
 
     @Override
     public List<BasketRegistrationAuditListVo> selectList(BasketRegistrationAuditQuery query) {
@@ -98,8 +101,11 @@ public class BasketV4RegistrationAuditServiceImpl implements IBasketV4Registrati
         }
         BasketDivision division = requireDivision(registration.getDivisionId());
         List<BasketRegistrationPlayer> players = registrationPlayerMapper.selectByRegistrationId(registrationId);
-        BasketCaptainGrant grant = captainGrantMapper.selectActiveByDivisionTeam(
-                registration.getDivisionId(), registration.getTeamId());
+        BasketCaptainGrant grant = captainGrantMapper.selectActiveByDivisionPlayer(
+                registration.getDivisionId(), registration.getCaptainPlayerId());
+        grantRuntimeSupport.lazyExpireIfNeeded(grant, null);
+        grant = captainGrantMapper.selectActiveByDivisionPlayer(
+                registration.getDivisionId(), registration.getCaptainPlayerId());
         teamRegistrationEligibilitySpecification.validateRegistration(division, registration, grant, players);
 
         int approvedCount = registrationMapper.countApprovedByDivisionId(division.getId());

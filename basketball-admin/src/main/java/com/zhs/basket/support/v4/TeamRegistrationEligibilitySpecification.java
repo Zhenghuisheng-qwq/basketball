@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Component
@@ -21,6 +22,8 @@ public class TeamRegistrationEligibilitySpecification {
 
     @Autowired
     private BasketV4ParticipationSupport participationSupport;
+    @Autowired
+    private CaptainGrantRuntimeSupport grantRuntimeSupport;
     @Autowired
     private BasketRegistrationMapper registrationMapper;
     @Autowired
@@ -47,9 +50,10 @@ public class TeamRegistrationEligibilitySpecification {
         if (grant == null || !participationSupport.isGrantUsable(grant)) {
             throw new ServiceException("无有效队长授权");
         }
-        if (!registration.getTeamId().equals(grant.getTeamId())) {
-            throw new ServiceException("teamId 必须与队长授权一致");
+        if (!Objects.equals(registration.getCaptainPlayerId(), grant.getPlayerId())) {
+            throw new ServiceException("报名队长与授权球员不一致");
         }
+        grantRuntimeSupport.assertTeamBindingForRegistration(grant, registration.getTeamId());
         participationSupport.requireValidTeam(registration.getTeamId());
 
         BasketRegistration existingTeamReg = registrationMapper.selectByDivisionTeam(division.getId(), registration.getTeamId());

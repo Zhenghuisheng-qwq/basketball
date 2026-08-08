@@ -450,8 +450,8 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
     }
 
     private boolean isAuthorizedCaptain(Long divisionId, Long eventTeamId, Long playerId) {
-        if (isEventTeamCaptain(eventTeamId, playerId)) {
-            return true;
+        if (!isEventTeamCaptain(eventTeamId, playerId)) {
+            return false;
         }
         BasketEventTeam eventTeam = eventTeamDao.selectById(eventTeamId);
         if (eventTeam == null || eventTeam.getSourceTeamId() == null) {
@@ -459,13 +459,15 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         }
         BasketCaptainGrant grant = captainGrantDao.selectOne(new LambdaQueryWrapper<BasketCaptainGrant>()
                 .eq(BasketCaptainGrant::getDivisionId, divisionId)
-                .eq(BasketCaptainGrant::getTeamId, eventTeam.getSourceTeamId())
                 .eq(BasketCaptainGrant::getPlayerId, playerId)
                 .eq(BasketCaptainGrant::getGrantStatus, CaptainGrantStatusEnum.ACTIVE.getCode())
                 .eq(BasketCaptainGrant::getIsDelete, NOT_DELETED)
                 .isNotNull(BasketCaptainGrant::getActiveUniqueKey)
                 .last("limit 1"));
-        return grant != null;
+        if (grant == null) {
+            return false;
+        }
+        return grant.getTeamId() == null || Objects.equals(grant.getTeamId(), eventTeam.getSourceTeamId());
     }
 
     private Long findCaptainEventPlayerId(Long eventTeamId, Long playerId) {
