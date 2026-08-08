@@ -7,10 +7,10 @@ import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketDivisionStageTeam;
 import com.zhs.basket.domain.v4.BasketScheduleBatch;
 import com.zhs.basket.domain.v4.BasketV4Match;
-import com.zhs.basket.enums.v4.GroupingModeEnum;
+import com.zhs.basket.enums.v4.CompetitionFormatEnum;
 import com.zhs.basket.enums.v4.GroupingStatusEnum;
 import com.zhs.basket.enums.v4.ScheduleGenerationStrategyEnum;
-import com.zhs.basket.enums.v4.StageTypeEnum;
+import com.zhs.basket.support.v4.StageFormatSpecification;
 import com.zhs.basket.support.v4.BasketV4RoundRobinScheduler;
 import com.zhs.basket.support.v4.BasketV4RoundRobinScheduler.Pairing;
 import com.zhs.basket.support.v4.BasketV4RoundRobinScheduler.Round;
@@ -36,11 +36,8 @@ public class GroupStageStageScheduleStrategy extends AbstractStageScheduleStrate
 
     @Override
     public boolean supports(BasketDivisionStage stage) {
-        if (StageTypeEnum.GROUP.getCode().equals(stage.getStageType())) {
-            return true;
-        }
-        String groupingMode = stage.getGroupingMode();
-        return groupingMode != null && !GroupingModeEnum.NONE.getCode().equals(groupingMode);
+        return CompetitionFormatEnum.ROUND_ROBIN.getCode().equals(stage.getCompetitionFormat())
+                && StageFormatSpecification.isGrouped(stage);
     }
 
     @Override

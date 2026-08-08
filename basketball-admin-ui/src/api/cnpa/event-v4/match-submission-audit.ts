@@ -1,5 +1,6 @@
 import request from '@/utils/request'
 import type { AjaxResult, TableDataInfo } from '@/types'
+import type { BasketMatchSeriesDetailVo } from '@/api/cnpa/event-v4/match-series'
 
 export interface V4MatchSubmissionAuditQuery {
   seasonId?: number
@@ -65,6 +66,7 @@ export interface V4MatchSubmissionAuditDetailVo {
   playerStats?: Array<Record<string, unknown>>
   materials?: Array<{ fileId: number; fileName?: string }>
   historyVersions?: Array<{ submissionId: number; versionNo: number; submissionStatus: string; submitTime: string }>
+  seriesContext?: BasketMatchSeriesDetailVo | null
 }
 
 export interface V4StatsQuery {

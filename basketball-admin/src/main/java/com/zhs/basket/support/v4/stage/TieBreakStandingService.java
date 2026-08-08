@@ -5,9 +5,8 @@ import com.zhs.basket.domain.v4.BasketDivisionTieBreakRule;
 import com.zhs.basket.domain.v4.BasketStanding;
 import com.zhs.basket.domain.v4.BasketStandingRankReason;
 import com.zhs.basket.domain.v4.BasketV4Match;
-import com.zhs.basket.enums.v4.GroupingModeEnum;
+import com.zhs.basket.support.v4.StageFormatSpecification;
 import com.zhs.basket.enums.v4.MatchStatusEnum;
-import com.zhs.basket.enums.v4.StageTypeEnum;
 import com.zhs.basket.enums.v4.TieBreakRuleEnum;
 import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionTieBreakRuleMapper;
@@ -251,11 +250,7 @@ public class TieBreakStandingService {
     }
 
     private boolean isGroupStage(BasketDivisionStage stage) {
-        if (StageTypeEnum.GROUP.getCode().equals(stage.getStageType())) {
-            return true;
-        }
-        String groupingMode = stage.getGroupingMode();
-        return groupingMode != null && !GroupingModeEnum.NONE.getCode().equals(groupingMode);
+        return StageFormatSpecification.isGrouped(stage);
     }
 
     private int defaultPoints(Integer configured, int fallback) {

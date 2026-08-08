@@ -59,6 +59,21 @@
 
     <el-drawer v-model="detailOpen" title="比赛数据提交详情" size="820px" append-to-body>
       <template v-if="detail">
+        <el-alert
+          v-if="detail.seriesContext"
+          type="info"
+          :closable="false"
+          show-icon
+          class="mb8"
+          :title="`系列赛：${detail.seriesContext.homeTeamName} vs ${detail.seriesContext.awayTeamName}`"
+        >
+          <template #default>
+            <div>赛制：BO{{ detail.seriesContext.bestOf }}</div>
+            <div>当前：Game {{ currentSeriesGameNo(detail) }} / {{ detail.seriesContext.bestOf }}</div>
+            <div>当前局分：{{ detail.seriesContext.homeTeamName }} {{ detail.seriesContext.homeWinCount ?? 0 }} : {{ detail.seriesContext.awayWinCount ?? 0 }} {{ detail.seriesContext.awayTeamName }}</div>
+            <div>Series 状态：{{ detail.seriesContext.seriesStatusName }}</div>
+          </template>
+        </el-alert>
         <el-descriptions :column="2" border>
           <el-descriptions-item label="提交ID">{{ detail.submissionId }}</el-descriptions-item>
           <el-descriptions-item label="状态">
@@ -190,10 +205,20 @@ function resetQuery() {
 }
 
 function openDetail(row: V4MatchSubmissionAuditListVo) {
-  getV4MatchSubmissionAuditDetail(row.submissionId).then(res => {
+  loadDetail(row.submissionId)
+}
+
+function loadDetail(submissionId: number) {
+  getV4MatchSubmissionAuditDetail(submissionId).then(res => {
     detail.value = res.data
     detailOpen.value = true
   })
+}
+
+function currentSeriesGameNo(detailVo: V4MatchSubmissionAuditDetailVo): number | string {
+  const games = detailVo.seriesContext?.games || []
+  const current = games.find(g => g.matchId === detailVo.matchId)
+  return current?.seriesGameNo ?? '-'
 }
 
 function handleApprove(row: V4MatchSubmissionAuditListVo) {
@@ -202,6 +227,9 @@ function handleApprove(row: V4MatchSubmissionAuditListVo) {
   }).then(() => {
     ElMessage.success('审核通过')
     getList()
+    if (detailOpen.value && detail.value?.submissionId === row.submissionId) {
+      loadDetail(row.submissionId)
+    }
   })
 }
 

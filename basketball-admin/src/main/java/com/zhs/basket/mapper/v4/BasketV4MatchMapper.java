@@ -41,4 +41,8 @@ public interface BasketV4MatchMapper {
     int countPendingByStageId(@Param("stageId") Long stageId);
 
     List<BasketV4Match> selectFinishedByStageId(@Param("stageId") Long stageId);
+
+    List<BasketV4Match> selectBySeriesId(@Param("seriesId") Long seriesId);
+
+    List<BasketV4Match> selectEffectiveBySeriesId(@Param("seriesId") Long seriesId);
 }

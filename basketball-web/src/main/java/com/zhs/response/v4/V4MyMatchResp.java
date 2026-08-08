@@ -54,4 +54,14 @@ public class V4MyMatchResp {
     private String latestRejectReason;
     private Integer homeScore;
     private Integer awayScore;
+
+    /** BO3/BO5 系列赛 ID（与赛事系列 seriesId 区分） */
+    private Long matchSeriesId;
+    private String matchSeriesCode;
+    private Integer seriesGameNo;
+    private Integer bestOf;
+    private Integer seriesHomeWinCount;
+    private Integer seriesAwayWinCount;
+    private String matchSeriesStatus;
+    private String matchSeriesStatusName;
 }

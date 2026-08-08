@@ -133,6 +133,13 @@ export interface V4PublicMatchItem {
   matchStatus?: string
   publishStatus?: string
   venueText?: string
+  matchSeriesId?: string
+  seriesGameNo?: number
+  bestOf?: number
+  seriesHomeWinCount?: number
+  seriesAwayWinCount?: number
+  seriesStatus?: string
+  seriesStatusName?: string
 }
 
 export interface V4PublicMatchTeamStatItem {
@@ -180,6 +187,42 @@ export interface V4PublicMatchDetail {
   awayTeam?: V4PublicEventTeamDetail
   teamStats: V4PublicMatchTeamStatItem[]
   playerStats: V4PublicMatchPlayerStatItem[]
+  matchSeriesId?: string
+  seriesGameNo?: number
+  bestOf?: number
+  seriesContext?: V4PublicMatchSeriesDetail
+}
+
+export interface V4PublicMatchSeriesGame {
+  matchId?: string
+  matchCode?: string
+  seriesGameNo?: number
+  matchStatus?: string
+  matchStatusName?: string
+  homeScore?: number
+  awayScore?: number
+  scheduledTime?: string
+  skipped?: boolean
+  skippedReason?: string
+  currentGame?: boolean
+}
+
+export interface V4PublicMatchSeriesDetail {
+  id?: string
+  seriesCode?: string
+  stageName?: string
+  homeTeamName?: string
+  awayTeamName?: string
+  bestOf?: number
+  requiredWins?: number
+  homeWinCount?: number
+  awayWinCount?: number
+  seriesStatus?: string
+  seriesStatusName?: string
+  winnerTeamName?: string
+  finalStage?: boolean
+  resultLabel?: string
+  games?: V4PublicMatchSeriesGame[]
 }
 
 export interface V4PublicStandingItem {

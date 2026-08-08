@@ -131,6 +131,20 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
         }
         row.setRoundName(resolveRoundName(row));
         row.setDivisionCode(row.getPlatformCode());
+        if (row.getMatchSeriesStatus() != null) {
+            row.setMatchSeriesStatusName(seriesStatusLabel(row.getMatchSeriesStatus()));
+        }
+    }
+
+    private String seriesStatusLabel(String status) {
+        return switch (status) {
+            case "PENDING" -> "待准备";
+            case "READY" -> "待比赛";
+            case "RUNNING" -> "进行中";
+            case "COMPLETED" -> "已结束";
+            case "CANCELLED" -> "已取消";
+            default -> status;
+        };
     }
 
     private String resolveRoundName(V4MyScheduleResp row) {
@@ -178,6 +192,15 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
             row.setUserActionType("NONE");
             row.setUserActionText("比赛已取消");
             row.setCannotSubmitReason("比赛已取消");
+            return;
+        }
+        if (row.getMatchSeriesId() != null
+                && "COMPLETED".equals(row.getMatchSeriesStatus())
+                && !MatchStatusEnum.FINISHED.getCode().equals(row.getMatchStatus())
+                && !MatchStatusEnum.FORFEITED.getCode().equals(row.getMatchStatus())) {
+            row.setUserActionType("NONE");
+            row.setUserActionText("无需进行");
+            row.setCannotSubmitReason("该系列赛已决出胜负，本局无需进行");
             return;
         }
 

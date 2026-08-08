@@ -38,6 +38,16 @@ export function initializeV4StageTeams(stageId: number) {
   return request({ url: `/basket/v4/admin/stages/${stageId}/initialize-teams`, method: 'post' })
 }
 
+export interface StageTeamItemVo {
+  eventTeamId: number
+  teamName?: string
+  seedNo?: number
+}
+
+export function listV4StageTeams(stageId: number) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/teams`, method: 'get' })
+}
+
 export function previewV4StageSchedule(stageId: number) {
   return request({ url: `/basket/v4/admin/stages/${stageId}/schedule-preview`, method: 'get' })
 }

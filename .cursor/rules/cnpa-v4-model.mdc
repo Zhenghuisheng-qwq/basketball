@@ -1,0 +1,51 @@
+---
+description: V4 赛事域数据模型与权威文档口径
+alwaysApply: true
+---
+
+# V4 赛事域（权威）
+
+## 对象链（唯一写链路）
+
+```
+Series → Season → Division → FormatSnapshot → DivisionStage
+  → Registration/PersonalRegistration → EventTeam/EventPlayer
+  → ScheduleBatch → Match → MatchSubmission → Standing → Qualification
+```
+
+队长授权：`basket_captain_grant`（按 Division，非旧 `basket_captain_qualification`）
+
+## 38 张 V4 核心表
+
+见 `docs/sql/cnpa-v2-final-schema.sql`。建表顺序：r1-ddl → dynamic-format r1~r4 → r5-cleanup
+
+## 数据分层
+
+1. **长期主数据**：`basket_team`、`basket_team_member`、`basket_player_profile`
+2. **赛事快照**：`basket_event_team`、`basket_event_player`（报名审核后）
+3. **Submission 流程**：`basket_match_submission*`（审核前）
+4. **正式结果**：`basket_match_team_stat`、`basket_match_player_stat`、`basket_standing`
+5. **派生统计**：`basket_team_stat`、`basket_player_stat`、`basket_rank`
+
+## 已删除（R5 cleanup，勿引用）
+
+`basket_tournament*`、`basket_captain_qualification`、`basket_match_data_submission*`、`basket_team_season_profile`
+
+## 权威文档 vs 过时文档
+
+| 权威 | 过时（仅历史参考） |
+|------|-------------------|
+| `docs/cnpa-v2-final-business-flow.md` | `docs/cnpa-business-map/08~13` 旧 Tournament 口径 |
+| `docs/sql/cnpa-v2-final-schema.sql` | `21-表结构总索引.md` 99 表清单 |
+| V4 Controller `controller/v4/` | 根 README、旧 `需求/CNPA功能实现梳理.md` |
+
+## 已实现 vs 未实现
+
+已实现：TEAM/PERSONAL 双报名、ROUND_ROBIN/GROUP_STAGE/SINGLE_ELIMINATION BO1、Standing、Qualification
+未实现：BO3/BO5、双败、淘汰赛 Bye、在线自动抽签、M06 争议、M07 弃赛异常
+
+## 测试状态（2026-08-06）
+
+- 4 队单循环发布门禁：52 PASS
+- PERSONAL 成队 smoke：通过
+- 全链路 E2E：未完全通过（赛程发布后增队缺赛）

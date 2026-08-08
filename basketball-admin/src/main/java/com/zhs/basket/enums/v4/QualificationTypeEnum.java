@@ -4,8 +4,10 @@ public enum QualificationTypeEnum {
     OVERALL_TOP_N("OVERALL_TOP_N", "总排名前N"),
     GROUP_TOP_N("GROUP_TOP_N", "小组前N"),
     MATCH_WINNER("MATCH_WINNER", "比赛胜者"),
+    SERIES_WINNER("SERIES_WINNER", "系列赛胜者"),
     CHAMPION("CHAMPION", "冠军"),
-    MANUAL("MANUAL", "人工");
+    BYE_ADVANCE("BYE_ADVANCE", "轮空晋级"),
+    MANUAL("MANUAL", "人工晋级");
 
     private final String code;
     private final String description;

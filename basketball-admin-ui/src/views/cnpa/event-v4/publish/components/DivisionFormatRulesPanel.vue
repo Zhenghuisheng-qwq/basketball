@@ -153,30 +153,226 @@
         </template>
       </el-tab-pane>
 
-      <el-tab-pane label="调整阶段" name="stages">
-        <el-alert v-for="(msg, vi) in stageValidation.messages" :key="vi" type="warning" :closable="false" show-icon class="mb8" :title="msg" />
+      <el-tab-pane :label="rulesMode === 'custom' ? '自定义赛制' : '调整阶段'" name="stages">
+        <div v-if="rulesMode !== 'custom'" class="section-hint mb8">
+          当前为快速创建模式。阶段配置来自已应用的预设方案；如需逐阶段自定义，请切换至「自定义赛制」。
+        </div>
+        <el-alert
+          v-for="(msg, vi) in stageValidation.messages"
+          :key="'err-' + vi"
+          type="error"
+          :closable="false"
+          show-icon
+          class="mb8"
+          :title="msg"
+        />
+        <el-alert
+          v-for="(msg, wi) in stageValidation.warnings"
+          :key="'warn-' + wi"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="mb8"
+          :title="msg"
+        />
 
-        <div v-if="sortedStages.length" class="stage-flow-list">
+        <div v-if="sortedStages.length && rulesMode === 'custom'" class="stage-flow-list">
           <template v-for="(stage, sIndex) in sortedStages" :key="stage.id || stage.stageCode">
-            <el-card shadow="hover" class="stage-flow-card" @click="snapshot?.mutable && openEditStage(stage)">
+            <el-card shadow="hover" class="stage-config-card">
               <div class="stage-flow-card-head">
-                <span class="stage-flow-title">阶段 {{ stage.stageOrder }}：{{ stage.stageName }}</span>
-                <div v-if="snapshot?.mutable" class="stage-card-actions" @click.stop>
-                  <el-button link type="primary" @click="openEditStage(stage)">编辑</el-button>
-                  <el-button link type="danger" @click="handleDeleteStage(stage)">删除</el-button>
+                <div class="stage-flow-title-wrap">
+                  <span class="stage-flow-order">阶段 {{ stage.stageOrder }}</span>
+                  <el-input
+                    v-if="snapshot?.mutable"
+                    v-model="stage.stageName"
+                    class="stage-name-input"
+                    placeholder="阶段名称"
+                    @change="() => saveStageInline(stage)"
+                  />
+                  <span v-else class="stage-flow-title">{{ stage.stageName }}</span>
+                  <el-tag v-if="isFinalStageIndex(sIndex)" type="danger" size="small" class="ml8">最终阶段</el-tag>
+                </div>
+                <div v-if="snapshot?.mutable" class="stage-card-actions">
+                  <el-button link :disabled="sortedStages.length <= 1" type="danger" @click="handleDeleteStage(stage)">删除</el-button>
                   <el-button link :disabled="sIndex === 0" @click="moveStage(stage, -1)">上移</el-button>
                   <el-button link :disabled="sIndex === sortedStages.length - 1" @click="moveStage(stage, 1)">下移</el-button>
+                  <el-button link type="primary" @click="openTieBreakEditor(stage)">同分规则</el-button>
                 </div>
               </div>
-              <div class="stage-flow-brief">{{ formatV4StageFlowCardSummary(stage, sortedStages, maxTeamCount) }}</div>
+
+              <p class="stage-card-summary">{{ formatV4StageCardSummary(stage, sortedStages) }}</p>
+
+              <el-form label-width="120px" class="stage-inline-form" :disabled="!snapshot?.mutable">
+                <el-form-item label="参赛来源">
+                  <span class="readonly-info-value">{{ formatV4StageParticipantSource(stage, sortedStages) }}</span>
+                </el-form-item>
+                <el-form-item label="参赛组织方式">
+                  <el-radio-group
+                    :model-value="resolveStageOrganizationMode(stage)"
+                    @change="(val: string) => handleOrganizationModeChange(stage, val)"
+                  >
+                    <el-radio v-for="opt in V4_ORGANIZATION_MODE_OPTIONS" :key="opt.value" :label="opt.value">{{ opt.label }}</el-radio>
+                  </el-radio-group>
+                </el-form-item>
+                <el-form-item label="竞赛方式">
+                  <el-radio-group
+                    :model-value="stage.competitionFormat"
+                    @change="(val: string) => handleCompetitionFormatChange(stage, val)"
+                  >
+                    <el-radio
+                      v-for="opt in V4_CUSTOM_COMPETITION_FORMAT_OPTIONS"
+                      :key="opt.value"
+                      :label="opt.value"
+                      :disabled="opt.value === 'SINGLE_ELIMINATION' && resolveStageOrganizationMode(stage) === 'GROUPED'"
+                    >
+                      {{ opt.label }}
+                    </el-radio>
+                  </el-radio-group>
+                  <div v-if="resolveStageOrganizationMode(stage) === 'GROUPED'" class="el-form-item__tip">
+                    当前版本暂不支持分组内淘汰赛。
+                  </div>
+                </el-form-item>
+                <el-form-item label="BO 规则">
+                  <el-radio-group
+                    :model-value="stage.bestOf ?? 1"
+                    @change="(val: number) => handleBestOfChange(stage, val)"
+                  >
+                    <el-radio v-for="opt in V4_BEST_OF_OPTIONS" :key="opt.value" :label="opt.value">{{ opt.label }}</el-radio>
+                  </el-radio-group>
+                  <el-alert
+                    v-if="(stage.bestOf ?? 1) > 1"
+                    type="info"
+                    :closable="false"
+                    show-icon
+                    class="mt8 bo-hint-alert"
+                    title="BO3 / BO5 可用于赛制设计与锁定；系列赛执行能力将在后续版本开放，在能力启用前该赛区暂不能开放报名。"
+                  />
+                </el-form-item>
+
+                <template v-if="resolveStageOrganizationMode(stage) === 'GROUPED'">
+                  <el-form-item label="分组数量">
+                    <el-input-number
+                      :model-value="stage.groupCount"
+                      :min="2"
+                      :max="maxTeamCount"
+                      controls-position="right"
+                      @change="(val: number) => patchStageField(stage, 'groupCount', val)"
+                    />
+                  </el-form-item>
+                  <el-form-item label="分组方式">
+                    <el-select
+                      :model-value="stage.groupingMode"
+                      style="width: 100%"
+                      @change="(val: string) => patchStageField(stage, 'groupingMode', val)"
+                    >
+                      <el-option v-for="opt in V4_GROUPING_MODE_GROUPED_OPTIONS" :key="opt.value" :label="opt.label" :value="opt.value" />
+                    </el-select>
+                  </el-form-item>
+                </template>
+
+                <template v-if="stage.competitionFormat === 'ROUND_ROBIN'">
+                  <el-form-item label="循环次数">
+                    <el-input-number
+                      :model-value="stage.roundRobinCycles ?? 1"
+                      :min="1"
+                      controls-position="right"
+                      @change="(val: number) => patchStageField(stage, 'roundRobinCycles', val)"
+                    />
+                    <span class="el-form-item__tip ml8">{{ (stage.roundRobinCycles ?? 1) > 1 ? '双循环' : '单循环' }}</span>
+                  </el-form-item>
+                  <el-form-item label="胜/负积分">
+                    <el-col :span="11">
+                      <el-input-number
+                        :model-value="stage.winPoints ?? 2"
+                        :min="0"
+                        controls-position="right"
+                        style="width: 100%"
+                        @change="(val: number) => patchStageField(stage, 'winPoints', val)"
+                      />
+                    </el-col>
+                    <el-col :span="2" class="text-center">/</el-col>
+                    <el-col :span="11">
+                      <el-input-number
+                        :model-value="stage.lossPoints ?? 1"
+                        :min="0"
+                        controls-position="right"
+                        style="width: 100%"
+                        @change="(val: number) => patchStageField(stage, 'lossPoints', val)"
+                      />
+                    </el-col>
+                  </el-form-item>
+                </template>
+
+                <template v-if="stage.competitionFormat === 'SINGLE_ELIMINATION'">
+                  <el-form-item label="对阵规则">
+                    <el-select
+                      :model-value="stage.pairingRule || 'HIGH_VS_LOW'"
+                      style="width: 100%"
+                      @change="(val: string) => patchStageField(stage, 'pairingRule', val)"
+                    >
+                      <el-option label="高排名对低排名" value="HIGH_VS_LOW" />
+                      <el-option label="随机配对" value="RANDOM" />
+                    </el-select>
+                  </el-form-item>
+                </template>
+
+                <el-form-item v-if="!isFinalStageIndex(sIndex)" label="晋级规则">
+                  <template v-if="stage.competitionFormat === 'SINGLE_ELIMINATION'">
+                    <span class="readonly-info-value">胜者晋级</span>
+                  </template>
+                  <template v-else-if="resolveStageOrganizationMode(stage) === 'GROUPED'">
+                    <span>每组前</span>
+                    <el-input-number
+                      :model-value="stage.advancementCount"
+                      :min="1"
+                      controls-position="right"
+                      class="ml8 mr8"
+                      @change="(val: number) => patchStageField(stage, 'advancementCount', val)"
+                    />
+                    <span>名晋级</span>
+                    <span v-if="stage.groupCount && stage.advancementCount" class="el-form-item__tip ml8">
+                      预计晋级 {{ stage.groupCount * stage.advancementCount }} 支
+                    </span>
+                  </template>
+                  <template v-else>
+                    <span>总排名前</span>
+                    <el-input-number
+                      :model-value="stage.advancementCount"
+                      :min="1"
+                      :max="maxTeamCount"
+                      controls-position="right"
+                      class="ml8 mr8"
+                      @change="(val: number) => patchStageField(stage, 'advancementCount', val)"
+                    />
+                    <span>名晋级</span>
+                  </template>
+                </el-form-item>
+                <el-form-item v-else label="阶段结果">
+                  <span class="readonly-info-value">本阶段结束后决出最终结果，不再晋级下一阶段。</span>
+                </el-form-item>
+              </el-form>
+            </el-card>
+            <div v-if="sIndex < sortedStages.length - 1" class="stage-flow-connector">
+              <span class="stage-flow-arrow-icon">↓</span>
+              <span v-if="formatV4StageAdvanceCountLabel(stage)" class="stage-flow-advance">{{ formatV4StageAdvanceCountLabel(stage) }}</span>
+            </div>
+          </template>
+        </div>
+        <el-empty v-else-if="rulesMode === 'custom'" description="暂无比赛阶段，请添加阶段 1" />
+
+        <div v-else-if="rulesMode !== 'custom' && sortedStages.length" class="stage-flow-list quick-stage-readonly">
+          <template v-for="(stage, sIndex) in sortedStages" :key="'q-' + (stage.id || stage.stageCode)">
+            <el-card shadow="hover" class="stage-flow-card">
+              <div class="stage-flow-card-head">
+                <span class="stage-flow-title">阶段 {{ stage.stageOrder }}：{{ stage.stageName }}</span>
+              </div>
+              <div class="stage-flow-brief">{{ formatV4StageCardSummary(stage, sortedStages) }}</div>
               <ul class="stage-summary-list compact">
                 <li><span class="stage-summary-label">参赛来源：</span>{{ formatV4StageParticipantSource(stage, sortedStages) }}</li>
-                <li><span class="stage-summary-label">比赛形式：</span>{{ formatV4StageCompetitionFormLabel(stage) }}</li>
-                <li><span class="stage-summary-label">积分规则：</span>{{ formatV4StagePointsRule(stage) }}</li>
+                <li><span class="stage-summary-label">组织方式：</span>{{ v4OrganizationModeLabel(resolveStageOrganizationMode(stage)) }}</li>
+                <li><span class="stage-summary-label">竞赛方式：</span>{{ formatV4StageCompetitionFormLabel(stage) }}</li>
+                <li><span class="stage-summary-label">BO：</span>{{ formatV4BestOfLabel(stage.bestOf) }}</li>
                 <li><span class="stage-summary-label">晋级安排：</span>{{ formatV4StageAdvancementArrangement(stage, sortedStages) }}</li>
-                <li v-if="stage.competitionFormat === 'ROUND_ROBIN'">
-                  <span class="stage-summary-label">同分规则：</span>{{ formatV4TieBreakSummaryArrow(stage.tieBreakRules) }}
-                </li>
               </ul>
             </el-card>
             <div v-if="formatV4StageAdvanceCountLabel(stage)" class="stage-flow-connector">
@@ -185,16 +381,25 @@
             </div>
           </template>
         </div>
-        <el-empty v-else description="暂无比赛阶段，请在「快速创建」选择方案或手动添加" />
+        <el-empty v-else-if="rulesMode !== 'custom'" description="请在「快速创建」应用赛制方案" />
 
-        <div v-if="snapshot?.mutable" class="mt8">
-          <el-button type="primary" plain icon="Plus" v-hasPermi="['basket:v4FormatRule:edit']" @click="openAddStage">添加下一比赛阶段</el-button>
+        <div v-if="snapshot?.mutable && rulesMode === 'custom'" class="mt8">
+          <el-button type="primary" plain icon="Plus" v-hasPermi="['basket:v4FormatRule:edit']" @click="handleAddNextStage">+ 添加下一比赛阶段</el-button>
         </div>
 
         <el-card v-if="sortedStages.length" shadow="never" class="preview-card mt8">
           <template #header>完整赛制预览</template>
-          <p class="preview-nl">{{ formatV4FormatNaturalLanguageFromStages(sortedStages, maxTeamCount) }}</p>
-          <p class="preview-flow">{{ formatV4FormatFlowFromStages(sortedStages) }}</p>
+          <div class="custom-preview-chain">
+            <template v-for="(item, pi) in customFormatPreview" :key="pi">
+              <div class="custom-preview-step">
+                <div class="custom-preview-title">{{ item.title }}</div>
+                <div class="custom-preview-summary">{{ item.summary }}</div>
+                <div v-if="item.advance" class="custom-preview-advance">{{ item.advance }}</div>
+                <el-tag v-if="item.isFinal" type="danger" size="small">最终阶段</el-tag>
+              </div>
+              <div v-if="pi < customFormatPreview.length - 1" class="custom-preview-arrow">↓</div>
+            </template>
+          </div>
           <el-descriptions :column="2" border size="small" class="mt8">
             <el-descriptions-item v-if="stageEstimate.groupCount" label="小组数量">{{ stageEstimate.groupCount }} 组</el-descriptions-item>
             <el-descriptions-item v-if="stageEstimate.teamsPerGroup" label="每组预计队伍">{{ stageEstimate.teamsPerGroup }} 支</el-descriptions-item>
@@ -204,6 +409,19 @@
             <el-descriptions-item v-if="stageEstimate.eliminationMatches" label="淘汰赛预计场次">{{ stageEstimate.eliminationMatches }} 场</el-descriptions-item>
             <el-descriptions-item v-if="stageEstimate.totalMatches" label="总预计场次" :span="2">{{ stageEstimate.totalMatches }} 场（最终以实际审核队伍数为准）</el-descriptions-item>
           </el-descriptions>
+        </el-card>
+
+        <el-card v-if="sortedStages.length && snapshot?.mutable" shadow="never" class="lock-checklist-card mt8">
+          <template #header>锁定前检查</template>
+          <ul class="lock-checklist">
+            <li
+              v-for="(item, li) in lockReadinessItems"
+              :key="li"
+              :class="{ ok: item.ok && !item.warn, warn: item.warn }"
+            >
+              {{ item.warn ? '⚠' : item.ok ? '✓' : '✗' }} {{ item.label }}
+            </li>
+          </ul>
         </el-card>
       </el-tab-pane>
 
@@ -412,6 +630,10 @@ import {
 } from '@/api/cnpa/event-v4/format-template'
 import {
   V4_FORMAT_SCHEME_OPTIONS,
+  V4_ORGANIZATION_MODE_OPTIONS,
+  V4_CUSTOM_COMPETITION_FORMAT_OPTIONS,
+  V4_BEST_OF_OPTIONS,
+  V4_GROUPING_MODE_GROUPED_OPTIONS,
   V4_WIZARD_STAGE_PRESET_OPTIONS,
   V4_WIZARD_TIE_BREAK_DEFAULTS,
   V4_WIZARD_GROUPING_MODE_OPTIONS,
@@ -423,15 +645,16 @@ import {
   calcV4AdvancementTotal,
   calcV4FormatEstimateFromQuickParams,
   calcV4FormatEstimateFromStages,
-  formatV4FormatFlowFromStages,
-  formatV4FormatNaturalLanguageFromStages,
+  createDefaultV4CustomStage,
+  formatV4CustomFormatPreview,
+  formatV4BestOfLabel,
   formatV4LockConfirmPreview,
+  formatV4LockReadinessChecklist,
   formatV4QuickCreateNaturalLanguage,
   formatV4StageAdvanceCountLabel,
   formatV4StageAdvancementArrangement,
+  formatV4StageCardSummary,
   formatV4StageCompetitionFormLabel,
-  formatV4StageFlowCardSummary,
-  formatV4StagePairingRule,
   formatV4StageParticipantSource,
   formatV4StagePointsRule,
   formatV4TieBreakPreview,
@@ -440,19 +663,24 @@ import {
   getV4FormatSchemeOption,
   inferV4FormatSchemeFromStages,
   inferV4StageCodePreset,
+  isV4FinalStageIndex,
   isV4GroupCompetitionStage,
   isV4WizardTemplateAllowed,
   normalizeV4WizardTieBreakRules,
+  rebuildV4StageLinearChain,
+  resolveV4OrganizationMode,
   resolveV4WizardFormatDisplayStatus,
   validateV4QuickCreateParams,
-  validateV4StageCombination,
+  validateV4StageCombinationDetailed,
   v4GroupingModeLabel,
+  v4OrganizationModeLabel,
   v4TieBreakRuleLabel,
   v4WizardAdvancementMode,
   v4WizardAdvancementTypeOptions,
   type V4FormatSchemeId,
   type V4QuickCreateParams,
   type V4SchemeStagePayload,
+  type V4StageSummaryInput,
   type V4WizardStagePreset
 } from '@/utils/v4AdminDisplay'
 
@@ -583,7 +811,19 @@ const quickValidation = computed(() => {
 })
 
 const stageValidation = computed(() =>
-  validateV4StageCombination(sortedStages.value, props.maxTeamCount)
+  validateV4StageCombinationDetailed(sortedStages.value, props.maxTeamCount)
+)
+
+const customFormatPreview = computed(() =>
+  formatV4CustomFormatPreview(sortedStages.value, props.maxTeamCount)
+)
+
+const hasBoSeriesStage = computed(() =>
+  sortedStages.value.some((s) => (s.bestOf ?? 1) > 1)
+)
+
+const lockReadinessItems = computed(() =>
+  formatV4LockReadinessChecklist(sortedStages.value, props.maxTeamCount)
 )
 
 const canApplyScheme = computed(() => {
@@ -630,6 +870,173 @@ const stageParticipantSourcePreview = computed(() => {
     stages
   )
 })
+
+function isFinalStageIndex(index: number): boolean {
+  return isV4FinalStageIndex(index, sortedStages.value.length)
+}
+
+function resolveStageOrganizationMode(stage: BasketDivisionStageVo): string {
+  return resolveV4OrganizationMode(stage)
+}
+
+function normalizeStagesForUi() {
+  const stages = snapshot.value?.stages
+  if (!stages?.length) return
+  for (const stage of stages) {
+    if (!stage.organizationMode) {
+      stage.organizationMode = resolveV4OrganizationMode(stage)
+    }
+  }
+}
+
+function buildStageSavePayload(stage: BasketDivisionStageVo): BasketDivisionStageSaveReq {
+  const chain = rebuildV4StageLinearChain(sortedStages.value)
+  const chained = chain.find((s) => s.stageCode === stage.stageCode) || stage
+  const orgMode = resolveV4OrganizationMode(chained)
+  const payload: BasketDivisionStageSaveReq = {
+    stageCode: chained.stageCode,
+    stageName: chained.stageName,
+    stageOrder: chained.stageOrder,
+    stageType: 'CUSTOM',
+    organizationMode: orgMode,
+    competitionFormat: chained.competitionFormat,
+    groupingMode: orgMode === 'GROUPED' ? (chained.groupingMode || 'MANUAL') : 'NONE',
+    groupCount: orgMode === 'GROUPED' ? chained.groupCount : undefined,
+    roundRobinCycles: chained.roundRobinCycles,
+    bestOf: chained.bestOf ?? 1,
+    winPoints: chained.winPoints,
+    lossPoints: chained.lossPoints,
+    advancementType: chained.advancementType,
+    advancementCount: chained.advancementCount,
+    pairingRule: chained.pairingRule || 'NONE',
+    nextStageCode: chained.nextStageCode || undefined,
+    requiresManualConfirmation: chained.requiresManualConfirmation ?? 0
+  }
+  return payload
+}
+
+async function persistAllStages() {
+  const chain = rebuildV4StageLinearChain(sortedStages.value)
+  for (const chained of chain) {
+    const existing = sortedStages.value.find((s) => s.stageCode === chained.stageCode)
+    if (!existing?.id) continue
+    const payload = buildStageSavePayload(existing)
+    payload.stageOrder = chained.stageOrder
+    payload.nextStageCode = chained.nextStageCode
+    payload.advancementType = chained.advancementType
+    payload.advancementCount = chained.advancementCount
+    await updateFormatStage(props.divisionId, existing.id, payload)
+  }
+  await loadSnapshot()
+}
+
+async function saveStageInline(stage: BasketDivisionStageVo) {
+  if (!stage.id || actionBusy.value) return
+  actionBusy.value = true
+  try {
+    await updateFormatStage(props.divisionId, stage.id, buildStageSavePayload(stage))
+    await persistAllStages()
+    emitChange()
+  } catch (e: any) {
+    proxy!.$modal.msgError(e?.msg || e?.message || '保存失败')
+    await loadSnapshot()
+  } finally {
+    actionBusy.value = false
+  }
+}
+
+async function patchStageField(stage: BasketDivisionStageVo, field: keyof BasketDivisionStageVo, value: unknown) {
+  if (!stage.id) return
+  ;(stage as any)[field] = value
+  await saveStageInline(stage)
+}
+
+async function handleOrganizationModeChange(stage: BasketDivisionStageVo, mode: string) {
+  if (mode === 'GROUPED' && (stage.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION') {
+    proxy!.$modal.msgWarning('当前版本暂不支持分组内淘汰赛')
+    return
+  }
+  stage.organizationMode = mode
+  if (mode === 'UNGROUPED') {
+    stage.groupingMode = 'NONE'
+    stage.groupCount = undefined
+  } else {
+    stage.groupingMode = stage.groupingMode && stage.groupingMode !== 'NONE' ? stage.groupingMode : 'MANUAL'
+    stage.groupCount = stage.groupCount || 4
+  }
+  await saveStageInline(stage)
+}
+
+async function handleCompetitionFormatChange(stage: BasketDivisionStageVo, format: string) {
+  if (format === 'SINGLE_ELIMINATION' && resolveStageOrganizationMode(stage) === 'GROUPED') {
+    proxy!.$modal.msgWarning('当前版本暂不支持分组内淘汰赛')
+    return
+  }
+  stage.competitionFormat = format
+  if (format === 'SINGLE_ELIMINATION') {
+    stage.pairingRule = stage.pairingRule && stage.pairingRule !== 'NONE' ? stage.pairingRule : 'HIGH_VS_LOW'
+  }
+  await saveStageInline(stage)
+}
+
+async function handleBestOfChange(stage: BasketDivisionStageVo, bestOf: number) {
+  stage.bestOf = bestOf
+  await saveStageInline(stage)
+}
+
+function openTieBreakEditor(stage: BasketDivisionStageVo) {
+  if ((stage.competitionFormat || '').toUpperCase() !== 'ROUND_ROBIN') {
+    proxy!.$modal.msgWarning('仅循环积分赛阶段可配置同分规则')
+    return
+  }
+  openEditStage(stage)
+}
+
+async function handleAddNextStage() {
+  if (actionBusy.value) return
+  actionBusy.value = true
+  try {
+    const existingCodes = sortedStages.value.map((s) => s.stageCode || '').filter(Boolean)
+    const order = sortedStages.value.length + 1
+    const draft = createDefaultV4CustomStage(order, existingCodes)
+    const chain = rebuildV4StageLinearChain([
+      ...sortedStages.value,
+      draft as V4StageSummaryInput
+    ])
+    const newStage = chain[chain.length - 1]
+    const payload: BasketDivisionStageSaveReq = {
+      stageCode: newStage.stageCode,
+      stageName: newStage.stageName,
+      stageOrder: newStage.stageOrder,
+      stageType: 'CUSTOM',
+      organizationMode: newStage.organizationMode,
+      competitionFormat: newStage.competitionFormat,
+      groupingMode: newStage.groupingMode,
+      roundRobinCycles: newStage.roundRobinCycles,
+      bestOf: newStage.bestOf,
+      winPoints: newStage.winPoints,
+      lossPoints: newStage.lossPoints,
+      advancementType: 'NONE',
+      pairingRule: newStage.pairingRule,
+      requiresManualConfirmation: 0
+    }
+    const res = await addFormatStage(props.divisionId, payload)
+    if (res.data) {
+      await saveTieBreakRules(props.divisionId, {
+        stageId: res.data,
+        rules: TIE_BREAK_DEFAULTS.map((r) => ({ ...r }))
+      })
+    }
+    await persistAllStages()
+    emitChange()
+    proxy!.$modal.msgSuccess('已添加比赛阶段')
+  } catch (e: any) {
+    proxy!.$modal.msgError(e?.msg || e?.message || '添加阶段失败')
+    await loadSnapshot()
+  } finally {
+    actionBusy.value = false
+  }
+}
 
 function emitChange() {
   emit('change')
@@ -729,6 +1136,7 @@ async function loadSnapshot() {
   try {
     const res = await getFormatSnapshot(props.divisionId)
     snapshot.value = res.data || {}
+    normalizeStagesForUi()
     emit('snapshot-change', snapshot.value!)
     ensureRulesUiState()
   } finally {
@@ -750,8 +1158,9 @@ async function handleRulesModeChange(mode: RulesMode) {
   rulesMode.value = mode
   if (mode === 'custom') {
     rulesSectionTab.value = 'stages'
-    if (selectedScheme.value !== 'CUSTOM') {
-      selectedScheme.value = 'CUSTOM'
+    selectedScheme.value = 'CUSTOM'
+    if (!sortedStages.value.length && snapshot.value?.mutable) {
+      await handleAddNextStage()
     }
   } else {
     rulesSectionTab.value = 'quick'
@@ -882,7 +1291,7 @@ async function applyQuickCreateScheme() {
     rulesMode.value = 'quick'
     rulesSectionTab.value = 'stages'
     emitChange()
-    proxy!.$modal.msgSuccess('赛制方案已应用，请在「调整阶段」查看流程预览')
+    proxy!.$modal.msgSuccess('赛制方案已应用，请在「自定义赛制」查看流程预览')
   } catch (e: any) {
     await loadSnapshot()
     proxy!.$modal.msgError(e?.msg || e?.message || '应用赛制方案失败')
@@ -1014,7 +1423,8 @@ function openEditStage(stage: BasketDivisionStageVo) {
   Object.assign(stageForm, {
     stageCode: stage.stageCode,
     stageName: stage.stageName,
-    stageType: stage.stageType,
+    stageType: stage.stageType || 'CUSTOM',
+    organizationMode: resolveV4OrganizationMode(stage),
     competitionFormat: stage.competitionFormat,
     groupingMode: stage.groupingMode,
     groupCount: stage.groupCount,
@@ -1040,7 +1450,6 @@ async function submitStageForm() {
   actionBusy.value = true
   try {
     await stageFormRef.value?.validate()
-    stageForm.bestOf = 1
     if (stageAdvancementMode.value === 'FINAL') {
       stageForm.advancementType = 'NONE'
       stageForm.advancementCount = undefined
@@ -1055,7 +1464,11 @@ async function submitStageForm() {
       stageForm.stageCode = generateV4StageCode(preset, existingCodes)
     }
     stageForm.tieBreakRules = buildStageTieBreakRules()
-    const payload: BasketDivisionStageSaveReq = { ...stageForm }
+    const payload: BasketDivisionStageSaveReq = {
+      ...stageForm,
+      stageType: 'CUSTOM',
+      organizationMode: stageForm.organizationMode || resolveV4OrganizationMode(stageForm)
+    }
     delete (payload as any).tieBreakRules
     if (stageEditingId.value) {
       await updateFormatStage(props.divisionId, stageEditingId.value, payload)
@@ -1081,24 +1494,59 @@ async function submitStageForm() {
 
 async function handleDeleteStage(stage: BasketDivisionStageVo) {
   if (!stage.id) return
+  if (sortedStages.value.length <= 1) {
+    proxy!.$modal.msgWarning('至少需要保留一个比赛阶段')
+    return
+  }
   await proxy!.$modal.confirm(`确认删除阶段「${stage.stageName}」？`)
-  await deleteFormatStage(props.divisionId, stage.id)
-  await loadSnapshot()
-  emitChange()
-  proxy!.$modal.msgSuccess('删除成功')
+  actionBusy.value = true
+  try {
+    const remaining = sortedStages.value.filter((s) => s.id !== stage.id)
+    const chain = rebuildV4StageLinearChain(remaining)
+    for (let i = 0; i < remaining.length; i += 1) {
+      const existing = remaining[i]
+      if (!existing.id) continue
+      const chained = chain[i]
+      const payload = buildStageSavePayload(existing)
+      payload.stageOrder = chained.stageOrder
+      payload.nextStageCode = chained.nextStageCode
+      payload.advancementType = chained.advancementType
+      payload.advancementCount = chained.advancementCount
+      await updateFormatStage(props.divisionId, existing.id, payload)
+    }
+    await deleteFormatStage(props.divisionId, stage.id)
+    await loadSnapshot()
+    emitChange()
+    proxy!.$modal.msgSuccess('删除成功')
+  } catch (e: any) {
+    proxy!.$modal.msgError(e?.msg || e?.message || '删除失败')
+    await loadSnapshot()
+  } finally {
+    actionBusy.value = false
+  }
 }
 
 async function moveStage(stage: BasketDivisionStageVo, delta: number) {
-  if (!stage.id) return
+  if (!stage.id || actionBusy.value) return
   const stages = sortedStages.value
   const index = stages.findIndex((s) => s.id === stage.id)
   const target = index + delta
   if (target < 0 || target >= stages.length) return
-  const ids = stages.map((s) => s.id!)
-  ;[ids[index], ids[target]] = [ids[target], ids[index]]
-  await reorderFormatStages(props.divisionId, ids)
-  await loadSnapshot()
-  emitChange()
+  actionBusy.value = true
+  try {
+    const reordered = [...stages]
+    const [moved] = reordered.splice(index, 1)
+    reordered.splice(target, 0, moved)
+    await reorderFormatStages(props.divisionId, reordered.map((s) => s.id!))
+    await loadSnapshot()
+    await persistAllStages()
+    emitChange()
+  } catch (e: any) {
+    proxy!.$modal.msgError(e?.msg || e?.message || '移动失败')
+    await loadSnapshot()
+  } finally {
+    actionBusy.value = false
+  }
 }
 
 watch(
@@ -1235,6 +1683,103 @@ defineExpose({ reload: loadSnapshot })
 
 .stage-flow-card {
   cursor: pointer;
+}
+
+.stage-config-card {
+  border-left: 3px solid #c41e3a;
+}
+
+.stage-config-card :deep(.el-card__body) {
+  padding: 16px 20px;
+}
+
+.stage-flow-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stage-flow-order {
+  font-weight: 700;
+  color: #c41e3a;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.stage-name-input {
+  max-width: 220px;
+}
+
+.stage-card-summary {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--el-color-primary);
+  line-height: 1.6;
+}
+
+.stage-inline-form {
+  margin-top: 8px;
+}
+
+.bo-hint-alert :deep(.el-alert__title) {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.custom-preview-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.custom-preview-step {
+  width: 100%;
+  max-width: 520px;
+  padding: 12px 16px;
+  background: var(--el-fill-color-light);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.custom-preview-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.custom-preview-summary {
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+
+.custom-preview-advance {
+  font-size: 12px;
+  color: var(--el-color-primary);
+  margin-top: 4px;
+}
+
+.custom-preview-arrow {
+  font-size: 18px;
+  color: var(--el-text-color-placeholder);
+  padding: 4px 0;
+}
+
+.lock-checklist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: 2;
+}
+
+.lock-checklist li.ok {
+  color: var(--el-color-success);
+}
+
+.lock-checklist li.warn {
+  color: var(--el-color-warning);
 }
 
 .stage-flow-card-head {
@@ -1387,5 +1932,105 @@ defineExpose({ reload: loadSnapshot })
 
 .text-center {
   text-align: center;
+}
+
+.stage-config-card {
+  border: 1px solid var(--el-border-color-light);
+  background: linear-gradient(180deg, #1a1a1a 0%, #242424 48px, #fff 48px);
+}
+
+.stage-config-card :deep(.el-card__body) {
+  padding-top: 12px;
+}
+
+.stage-flow-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stage-flow-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: #c41e3a;
+  border-radius: 4px;
+}
+
+.stage-name-input {
+  width: 200px;
+}
+
+.stage-card-summary {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--el-color-primary);
+}
+
+.stage-inline-form {
+  margin-top: 4px;
+}
+
+.custom-preview-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.custom-preview-step {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+  background: var(--el-fill-color-blank);
+}
+
+.custom-preview-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.custom-preview-summary {
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+
+.custom-preview-advance {
+  font-size: 12px;
+  color: var(--el-color-primary);
+  margin-top: 4px;
+}
+
+.custom-preview-arrow {
+  font-size: 18px;
+  color: var(--el-text-color-secondary);
+  padding: 4px 0;
+}
+
+.lock-checklist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: 2;
+}
+
+.lock-checklist li.ok {
+  color: var(--el-color-success);
+}
+
+.lock-checklist li.warn {
+  color: var(--el-color-warning);
+}
+
+.bo-hint-alert {
+  margin-top: 8px;
 }
 </style>

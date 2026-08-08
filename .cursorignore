@@ -1,0 +1,19 @@
+﻿# 构建产物与依赖（占项目 86%+ 文件，排除可显著减轻 IDE 索引压力）
+**/node_modules/
+**/target/
+**/dist/
+**/.git/
+
+# 本地上传与临时文件
+**/upload/
+**/uploads/
+*.log
+*.tmp
+
+# 大型 SQL 备份与脚本输出（只读归档，无需索引）
+docs/sql/backups/
+scripts/output/
+
+# 静态资源与原型（非核心代码）
+image/
+ui/

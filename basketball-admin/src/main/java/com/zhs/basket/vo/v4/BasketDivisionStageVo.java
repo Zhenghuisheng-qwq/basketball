@@ -12,6 +12,8 @@ public class BasketDivisionStageVo {
     private Integer stageOrder;
     private String stageType;
     private String stageTypeName;
+    private String organizationMode;
+    private String organizationModeName;
     private String competitionFormat;
     private String competitionFormatName;
     private String groupingMode;

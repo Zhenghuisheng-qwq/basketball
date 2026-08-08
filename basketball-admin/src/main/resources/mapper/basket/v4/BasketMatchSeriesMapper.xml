@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketMatchSeriesMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketMatchSeries" id="Result">
+        <id property="id" column="id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="stageId" column="stage_id"/>
+        <result property="scheduleBatchId" column="schedule_batch_id"/>
+        <result property="seriesCode" column="series_code"/>
+        <result property="roundNo" column="round_no"/>
+        <result property="bracketSlot" column="bracket_slot"/>
+        <result property="homeEventTeamId" column="home_event_team_id"/>
+        <result property="awayEventTeamId" column="away_event_team_id"/>
+        <result property="bestOf" column="best_of"/>
+        <result property="homeWinCount" column="home_win_count"/>
+        <result property="awayWinCount" column="away_win_count"/>
+        <result property="winnerEventTeamId" column="winner_event_team_id"/>
+        <result property="seriesStatus" column="series_status"/>
+        <result property="resolutionType" column="resolution_type"/>
+        <result property="resolutionReason" column="resolution_reason"/>
+        <result property="resolvedTime" column="resolved_time"/>
+        <result property="resolvedBy" column="resolved_by"/>
+        <result property="sourceSeriesIdHome" column="source_series_id_home"/>
+        <result property="sourceSeriesIdAway" column="source_series_id_away"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, division_id, stage_id, schedule_batch_id, series_code, round_no, bracket_slot,
+        home_event_team_id, away_event_team_id, best_of, home_win_count, away_win_count,
+        winner_event_team_id, series_status, resolution_type, resolution_reason, resolved_time, resolved_by,
+        source_series_id_home, source_series_id_away,
+        create_time, update_time, is_delete
+    </sql>
+
+    <sql id="NotDeleted">is_delete = 0</sql>
+
+    <select id="selectById" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_match_series
+        where id = #{id} and <include refid="NotDeleted"/>
+    </select>
+
+    <select id="selectByIdForUpdate" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_match_series
+        where id = #{id} and <include refid="NotDeleted"/>
+        for update
+    </select>
+
+    <select id="selectByStageId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_match_series
+        where stage_id = #{stageId} and <include refid="NotDeleted"/>
+        order by round_no asc, bracket_slot asc, id asc
+    </select>
+
+    <select id="selectByScheduleBatchId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_match_series
+        where schedule_batch_id = #{scheduleBatchId} and <include refid="NotDeleted"/>
+        order by round_no asc, bracket_slot asc, id asc
+    </select>
+
+    <select id="selectCompletedByStageId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_match_series
+        where stage_id = #{stageId}
+          and series_status = 'COMPLETED'
+          and <include refid="NotDeleted"/>
+        order by round_no asc, bracket_slot asc, id asc
+    </select>
+
+    <select id="countIncompleteByStageId" resultType="int">
+        select count(1) from basket_match_series
+        where stage_id = #{stageId}
+          and series_status not in ('COMPLETED', 'CANCELLED')
+          and <include refid="NotDeleted"/>
+    </select>
+
+    <select id="selectBySourceSeriesId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_match_series
+        where <include refid="NotDeleted"/>
+          and (source_series_id_home = #{sourceSeriesId} or source_series_id_away = #{sourceSeriesId})
+        order by round_no asc, bracket_slot asc, id asc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_match_series (
+            division_id, stage_id, schedule_batch_id, series_code, round_no, bracket_slot,
+            home_event_team_id, away_event_team_id, best_of, home_win_count, away_win_count,
+            winner_event_team_id, series_status, source_series_id_home, source_series_id_away,
+            create_time, update_time, is_delete
+        ) values (
+            #{divisionId}, #{stageId}, #{scheduleBatchId}, #{seriesCode}, #{roundNo}, #{bracketSlot},
+            #{homeEventTeamId}, #{awayEventTeamId}, #{bestOf}, #{homeWinCount}, #{awayWinCount},
+            #{winnerEventTeamId}, #{seriesStatus}, #{sourceSeriesIdHome}, #{sourceSeriesIdAway},
+            #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_match_series
+        <set>
+            <if test="scheduleBatchId != null">schedule_batch_id = #{scheduleBatchId},</if>
+            <if test="roundNo != null">round_no = #{roundNo},</if>
+            <if test="bracketSlot != null">bracket_slot = #{bracketSlot},</if>
+            <if test="homeEventTeamId != null">home_event_team_id = #{homeEventTeamId},</if>
+            <if test="awayEventTeamId != null">away_event_team_id = #{awayEventTeamId},</if>
+            <if test="bestOf != null">best_of = #{bestOf},</if>
+            <if test="seriesStatus != null">series_status = #{seriesStatus},</if>
+            source_series_id_home = #{sourceSeriesIdHome},
+            source_series_id_away = #{sourceSeriesIdAway},
+            update_time = now()
+        </set>
+        where id = #{id} and <include refid="NotDeleted"/>
+    </update>
+
+    <update id="updateResult">
+        update basket_match_series
+        set home_win_count = #{homeWinCount},
+            away_win_count = #{awayWinCount},
+            winner_event_team_id = #{winnerEventTeamId},
+            series_status = #{seriesStatus},
+            update_time = now()
+        where id = #{id} and <include refid="NotDeleted"/>
+          and (resolution_type is null or resolution_type = 'NORMAL')
+    </update>
+
+    <update id="updateResolution">
+        update basket_match_series
+        set winner_event_team_id = #{winnerEventTeamId},
+            series_status = #{seriesStatus},
+            resolution_type = #{resolutionType},
+            resolution_reason = #{resolutionReason},
+            resolved_time = #{resolvedTime},
+            resolved_by = #{resolvedBy},
+            update_time = now()
+        where id = #{id} and <include refid="NotDeleted"/>
+    </update>
+
+    <update id="clearResolution">
+        update basket_match_series
+        set resolution_type = 'NORMAL',
+            resolution_reason = null,
+            resolved_time = null,
+            resolved_by = null,
+            winner_event_team_id = null,
+            series_status = 'RUNNING',
+            update_time = now()
+        where id = #{id} and <include refid="NotDeleted"/>
+          and resolution_type in ('FORFEIT', 'MANUAL')
+    </update>
+
+    <update id="softDelete">
+        update basket_match_series
+        set is_delete = id, bracket_slot = id, update_time = now()
+        where id = #{id} and <include refid="NotDeleted"/>
+    </update>
+
+    <update id="softDeleteDraftByBatchId">
+        update basket_match_series
+        set is_delete = id, bracket_slot = id, update_time = now()
+        where schedule_batch_id = #{scheduleBatchId} and <include refid="NotDeleted"/>
+    </update>
+
+    <select id="countByStageId" resultType="int">
+        select count(1) from basket_match_series
+        where stage_id = #{stageId} and <include refid="NotDeleted"/>
+    </select>
+
+</mapper>

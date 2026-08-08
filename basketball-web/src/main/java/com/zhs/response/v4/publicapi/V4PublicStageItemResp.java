@@ -15,9 +15,14 @@ public class V4PublicStageItemResp {
     private Integer stageOrder;
     private String stageType;
     private String stageTypeName;
+    private String organizationMode;
+    private String organizationModeName;
     private String competitionFormat;
     private String competitionFormatName;
     private String executionStatus;
     private String executionStatusName;
     private Boolean currentStage;
+    private String nextStageCode;
+    private String advancementType;
+    private Integer bestOf;
 }

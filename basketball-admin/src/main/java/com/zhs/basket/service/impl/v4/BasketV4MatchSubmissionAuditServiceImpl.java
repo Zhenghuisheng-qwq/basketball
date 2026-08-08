@@ -6,6 +6,7 @@ import com.zhs.basket.enums.v4.SubmissionStatusEnum;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.query.v4.BasketMatchSubmissionAuditQuery;
 import com.zhs.basket.query.v4.BasketV4MatchQuery;
+import com.zhs.basket.service.v4.IBasketMatchSeriesDisplayService;
 import com.zhs.basket.service.v4.IBasketV4MatchSubmissionAuditService;
 import com.zhs.basket.service.v4.IBasketV4StatsSettlementService;
 import com.zhs.basket.vo.v4.*;
@@ -40,6 +41,8 @@ public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSu
     private BasketEventPlayerMapper eventPlayerMapper;
     @Autowired
     private IBasketV4StatsSettlementService statsSettlementService;
+    @Autowired
+    private IBasketMatchSeriesDisplayService matchSeriesDisplayService;
 
     @Override
     public List<BasketMatchSubmissionAuditListVo> selectList(BasketMatchSubmissionAuditQuery query) {
@@ -120,6 +123,7 @@ public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSu
             versions.add(v);
         }
         vo.setHistoryVersions(versions);
+        vo.setSeriesContext(matchSeriesDisplayService.getContextByMatchId(submission.getMatchId()));
         return vo;
     }
 

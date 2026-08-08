@@ -1,6 +1,7 @@
 package com.zhs.basket.service.impl.v4;
 
 import com.zhs.basket.domain.v4.BasketDivision;
+import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketFormatTemplate;
 import com.zhs.basket.domain.v4.BasketSeason;
 import com.zhs.basket.domain.v4.RosterLimit;
@@ -8,11 +9,13 @@ import com.zhs.basket.dto.v4.BasketDivisionCreateReq;
 import com.zhs.basket.dto.v4.BasketDivisionUpdateReq;
 import com.zhs.basket.enums.v4.*;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
+import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketEventTeamMapper;
 import com.zhs.basket.mapper.v4.BasketSeasonMapper;
 import com.zhs.basket.query.v4.BasketDivisionQuery;
 import com.zhs.basket.service.v4.IBasketV4DivisionService;
 import com.zhs.basket.service.v4.IBasketV4FormatSnapshotService;
+import com.zhs.basket.support.v4.BestOfCapabilityGate;
 import com.zhs.basket.support.v4.DivisionRuleMutableSpecification;
 import com.zhs.basket.support.v4.V4FormatDisplaySupport;
 import com.zhs.basket.vo.v4.BasketDivisionFormatSnapshotVo;
@@ -45,6 +48,8 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     private DivisionRuleMutableSpecification ruleMutableSpecification;
     @Autowired
     private BasketEventTeamMapper eventTeamMapper;
+    @Autowired
+    private BasketDivisionStageMapper stageMapper;
 
     @Override
     public List<BasketDivisionListVo> selectList(BasketDivisionQuery query) {
@@ -159,6 +164,7 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         if (snapshot.getStages() == null || snapshot.getStages().isEmpty()) {
             throw new ServiceException("规则快照缺少有效阶段，无法开放报名");
         }
+        BestOfCapabilityGate.assertCanOpenRegistration(stageMapper.selectByDivisionId(id));
 
         division.setDivisionStatus(DivisionStatusEnum.REGISTRATION_OPEN.getCode());
         division.setUpdateTime(new Date());

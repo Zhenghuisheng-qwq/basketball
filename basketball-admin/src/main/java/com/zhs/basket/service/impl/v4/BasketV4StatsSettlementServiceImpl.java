@@ -5,6 +5,7 @@ import com.zhs.basket.enums.v4.CompetitionFormatEnum;
 import com.zhs.basket.enums.v4.MatchStatusEnum;
 import com.zhs.basket.enums.v4.RankTypeEnum;
 import com.zhs.basket.mapper.v4.*;
+import com.zhs.basket.service.v4.IBasketMatchSeriesService;
 import com.zhs.basket.service.v4.IBasketV4StatsSettlementService;
 import com.zhs.basket.support.v4.stage.TieBreakStandingService;
 import com.zhs.common.exception.ServiceException;
@@ -50,6 +51,8 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
     private BasketDivisionStageMapper stageMapper;
     @Autowired
     private TieBreakStandingService tieBreakStandingService;
+    @Autowired
+    private IBasketMatchSeriesService matchSeriesService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -57,6 +60,9 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
         BasketMatchSubmission submission = requireSubmission(submissionId);
         BasketV4Match match = requireMatch(submission.getMatchId());
         applyOfficialMatchResult(submission, match);
+        if (match.getSeriesId() != null) {
+            matchSeriesService.rebuildSeriesResult(match.getSeriesId());
+        }
         if (match.getStageId() != null) {
             rebuildStageStats(match.getStageId());
         } else {

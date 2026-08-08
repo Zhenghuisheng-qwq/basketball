@@ -28,6 +28,8 @@ export interface BasketDivisionStageVo {
   stageOrder?: number
   stageType?: string
   stageTypeName?: string
+  organizationMode?: string
+  organizationModeName?: string
   competitionFormat?: string
   competitionFormatName?: string
   groupingMode?: string
@@ -79,6 +81,7 @@ export interface BasketDivisionStageSaveReq {
   stageName?: string
   stageOrder?: number
   stageType?: string
+  organizationMode?: string
   competitionFormat?: string
   groupingMode?: string
   groupCount?: number

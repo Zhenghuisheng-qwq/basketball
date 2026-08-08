@@ -4,6 +4,7 @@ import com.zhs.basket.domain.v4.*;
 import com.zhs.basket.enums.v4.CompetitionFormatEnum;
 import com.zhs.basket.enums.v4.GroupingModeEnum;
 import com.zhs.basket.enums.v4.GroupingStatusEnum;
+import com.zhs.basket.enums.v4.OrganizationModeEnum;
 import com.zhs.basket.enums.v4.StageTypeEnum;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +39,7 @@ class GroupStageScheduleStrategyTest {
         stage.setId(20L);
         stage.setDivisionId(200L);
         stage.setStageType(StageTypeEnum.GROUP.getCode());
+        stage.setOrganizationMode(OrganizationModeEnum.GROUPED.getCode());
         stage.setCompetitionFormat(CompetitionFormatEnum.ROUND_ROBIN.getCode());
         stage.setGroupingMode(GroupingModeEnum.MANUAL.getCode());
         stage.setGroupCount(groupCount);

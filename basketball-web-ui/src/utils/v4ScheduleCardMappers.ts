@@ -131,6 +131,13 @@ function buildDivisionLine(row: V4MyScheduleItem): string {
 }
 
 function buildRoundLine(row: V4MyScheduleItem): string {
+  if (row.matchSeriesId && row.bestOf && row.bestOf > 1) {
+    const gamePart = row.seriesGameNo ? `Game ${row.seriesGameNo}/${row.bestOf}` : `BO${row.bestOf}`
+    const setScore = row.seriesHomeWinCount != null && row.seriesAwayWinCount != null
+      ? ` · 局分 ${row.seriesHomeWinCount}:${row.seriesAwayWinCount}`
+      : ''
+    return `${gamePart}${setScore}`
+  }
   if (row.roundNo) return `第 ${row.roundNo} 轮`
   return '轮次待定'
 }

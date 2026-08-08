@@ -3,6 +3,12 @@
     <el-alert title="比赛列表：查询/编辑草稿比赛时间、场地、备注" type="info" :closable="false" show-icon class="mb8" />
 
     <el-form :model="query" :inline="true" class="mb8">
+      <el-form-item label="视图">
+        <el-radio-group v-model="viewMode">
+          <el-radio-button value="match">单场列表</el-radio-button>
+          <el-radio-button value="series">系列赛</el-radio-button>
+        </el-radio-group>
+      </el-form-item>
       <el-form-item label="赛季">
         <el-select v-model="query.seasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onSeasonChange">
           <el-option v-for="item in seasonOptions" :key="item.id" :label="item.label" :value="item.id" />
@@ -32,12 +38,24 @@
       <el-form-item label="球队名称">
         <el-input v-model="query.teamName" clearable placeholder="主/客队名称" />
       </el-form-item>
+      <el-form-item v-if="viewMode === 'series'" label="阶段">
+        <el-select v-model="seriesStageId" clearable filterable placeholder="选择阶段" style="width: 200px" :disabled="!query.divisionId">
+          <el-option v-for="item in stageOptions" :key="item.id" :label="item.stageName" :value="item.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="loadList">搜索</el-button>
       </el-form-item>
     </el-form>
 
-    <el-table v-loading="loading" :data="list" border>
+    <MatchSeriesPanel
+      v-if="viewMode === 'series'"
+      ref="seriesPanelRef"
+      :stage-id="seriesStageId"
+      @open-match="openEditById"
+    />
+
+    <el-table v-if="viewMode === 'match'" v-loading="loading" :data="list" border>
       <el-table-column label="比赛ID" prop="id" width="80" />
       <el-table-column label="轮次" prop="roundNo" width="60" align="center" />
       <el-table-column label="比赛编号" prop="matchNo" min-width="130" />
@@ -62,14 +80,41 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column label="操作" width="220" fixed="right">
         <template #default="scope">
           <el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button>
+          <el-button
+            link
+            type="warning"
+            v-if="scope.row.matchStatus === 'SCHEDULED' || scope.row.matchStatus === 'PLAYING'"
+            v-hasPermi="['basket:v4Stage:exception']"
+            @click="openForfeit(scope.row)"
+          >判负</el-button>
           <el-button link type="danger" v-if="scope.row.publishStatus === 'DRAFT'" @click="handleDelete(scope.row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
-    <pagination :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="loadList" />
+    <pagination v-if="viewMode === 'match'" :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="loadList" />
+
+    <el-dialog v-model="forfeitVisible" title="判定本局弃赛/判负" width="480px">
+      <el-alert type="warning" :closable="false" show-icon class="mb8"
+        :title="`将对 ${forfeitRow?.homeTeamName} vs ${forfeitRow?.awayTeamName} 执行判负，胜者为对方球队。`" />
+      <el-form label-width="100px">
+        <el-form-item label="判负球队" required>
+          <el-radio-group v-model="forfeitLoserId">
+            <el-radio :value="forfeitRow?.homeEventTeamId">{{ forfeitRow?.homeTeamName }}</el-radio>
+            <el-radio :value="forfeitRow?.awayEventTeamId">{{ forfeitRow?.awayTeamName }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="原因" required>
+          <el-input v-model="forfeitReason" type="textarea" rows="3" placeholder="必填" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="forfeitVisible = false">取消</el-button>
+        <el-button type="danger" @click="submitForfeit">确认判负</el-button>
+      </template>
+    </el-dialog>
 
     <el-dialog v-model="editVisible" title="编辑草稿比赛" width="480px">
       <el-form :model="editForm" label-width="90px">
@@ -86,10 +131,13 @@
 </template>
 
 <script setup lang="ts" name="CnpaEventV4Match">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { deleteV4Match, listV4Match, updateV4Match } from '@/api/cnpa/event-v4/schedule-batch'
+import { forfeitV4Match } from '@/api/cnpa/event-v4/stage-exception'
+import { deleteV4Match, getV4Match, listV4Match, updateV4Match } from '@/api/cnpa/event-v4/schedule-batch'
+import { listV4StageExecution } from '@/api/cnpa/event-v4/stage-execution'
 import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
+import MatchSeriesPanel from './MatchSeriesPanel.vue'
 import {
   V4_MATCH_STATUS_FILTER_OPTIONS,
   V4_PUBLISH_STATUS_FILTER_OPTIONS,
@@ -111,6 +159,25 @@ const seasonOptions = ref<V4AdminOptionVo[]>([])
 const divisionOptions = ref<V4AdminOptionVo[]>([])
 const PUBLISH_OPTIONS = V4_PUBLISH_STATUS_FILTER_OPTIONS
 const MATCH_STATUS_OPTIONS = V4_MATCH_STATUS_FILTER_OPTIONS
+const viewMode = ref<'match' | 'series'>('match')
+const seriesStageId = ref<number>()
+const stageOptions = ref<Array<{ id: number; stageName: string }>>([])
+const seriesPanelRef = ref<InstanceType<typeof MatchSeriesPanel>>()
+const forfeitVisible = ref(false)
+const forfeitRow = ref<any>()
+const forfeitLoserId = ref<number>()
+const forfeitReason = ref('')
+
+watch(() => query.divisionId, async (divisionId) => {
+  seriesStageId.value = undefined
+  stageOptions.value = []
+  if (!divisionId) return
+  const res = await listV4StageExecution(divisionId)
+  stageOptions.value = (res.data || []).map((s: any) => ({ id: s.id, stageName: s.stageName }))
+  if (stageOptions.value.length === 1) {
+    seriesStageId.value = stageOptions.value[0].id
+  }
+})
 
 function formatDivisionLabel(item: V4AdminOptionVo) {
   return item.platformCode ? `${item.label}（${item.platformCode}）` : item.label
@@ -134,11 +201,22 @@ function onSeasonChange(seasonId?: number) {
 }
 
 function loadList() {
+  if (viewMode.value === 'series') {
+    seriesPanelRef.value?.reload()
+    return
+  }
   loading.value = true
   listV4Match(query).then(res => {
     list.value = res.rows || []
     total.value = res.total || 0
   }).finally(() => { loading.value = false })
+}
+
+function openEditById(matchId?: number) {
+  if (!matchId) return
+  getV4Match(matchId).then(res => {
+    if (res.data) openEdit(res.data)
+  })
 }
 
 function openEdit(row: any) {
@@ -162,6 +240,31 @@ function handleDelete(row: any) {
   ElMessageBox.confirm('确认删除该草稿比赛？', '提示', { type: 'warning' }).then(() => {
     deleteV4Match(row.id).then(() => {
       ElMessage.success('已删除')
+      loadList()
+    })
+  })
+}
+
+function openForfeit(row: any) {
+  forfeitRow.value = row
+  forfeitLoserId.value = row.awayEventTeamId
+  forfeitReason.value = ''
+  forfeitVisible.value = true
+}
+
+function submitForfeit() {
+  if (!forfeitRow.value?.id || !forfeitLoserId.value || !forfeitReason.value?.trim()) {
+    ElMessage.warning('请选择判负球队并填写原因')
+    return
+  }
+  ElMessageBox.confirm('确认执行判负？此操作将记录审计日志。', '二次确认', { type: 'warning' }).then(() => {
+    forfeitV4Match({
+      matchId: forfeitRow.value.id,
+      loserEventTeamId: forfeitLoserId.value!,
+      reason: forfeitReason.value.trim()
+    }).then(() => {
+      ElMessage.success('已判定弃赛/判负')
+      forfeitVisible.value = false
       loadList()
     })
   })

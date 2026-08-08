@@ -82,6 +82,8 @@ public final class BasketEventV4Perms {
     public static final String STANDING_VIEW = "basket:v4Standing:view";
     public static final String STANDING_MANUAL_RANK = "basket:v4Standing:manualRank";
 
+    public static final String STAGE_EXCEPTION = "basket:v4Stage:exception";
+
     public static final String STAGE_INITIALIZE = "basket:v4Stage:initialize";
     public static final String STAGE_QUALIFICATION_CANCEL = "basket:v4Stage:qualificationCancel";
 }

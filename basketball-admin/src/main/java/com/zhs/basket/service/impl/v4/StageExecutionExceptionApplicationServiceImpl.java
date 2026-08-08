@@ -1,0 +1,388 @@
+package com.zhs.basket.service.impl.v4;
+
+import com.zhs.basket.domain.v4.BasketDivisionStage;
+import com.zhs.basket.domain.v4.BasketDivisionStageQualification;
+import com.zhs.basket.domain.v4.BasketDivisionStageTeam;
+import com.zhs.basket.domain.v4.BasketMatchSeries;
+import com.zhs.basket.domain.v4.BasketScheduleBatch;
+import com.zhs.basket.domain.v4.BasketV4Match;
+import com.zhs.basket.dto.v4.BasketManualAdvanceReq;
+import com.zhs.basket.dto.v4.BasketMatchForfeitReq;
+import com.zhs.basket.dto.v4.BasketPairingAdjustReq;
+import com.zhs.basket.dto.v4.BasketPairingSlotReq;
+import com.zhs.basket.dto.v4.BasketSeriesForfeitReq;
+import com.zhs.basket.dto.v4.BasketSeriesRevokeResolutionReq;
+import com.zhs.basket.enums.v4.MatchSeriesStatusEnum;
+import com.zhs.basket.enums.v4.MatchStatusEnum;
+import com.zhs.basket.enums.v4.PublishStatusEnum;
+import com.zhs.basket.enums.v4.QualificationRecordStatusEnum;
+import com.zhs.basket.enums.v4.QualificationTypeEnum;
+import com.zhs.basket.enums.v4.SeriesResolutionTypeEnum;
+import com.zhs.basket.enums.v4.StageExecutionStatusEnum;
+import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
+import com.zhs.basket.mapper.v4.BasketDivisionStageQualificationMapper;
+import com.zhs.basket.mapper.v4.BasketDivisionStageTeamMapper;
+import com.zhs.basket.mapper.v4.BasketMatchSeriesMapper;
+import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
+import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
+import com.zhs.basket.service.v4.IBasketMatchSeriesService;
+import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
+import com.zhs.basket.service.v4.IStageExecutionExceptionApplicationService;
+import com.zhs.basket.support.BasketBusinessAuditWriter;
+import com.zhs.basket.support.v4.ByeQualificationService;
+import com.zhs.basket.support.v4.MatchSeriesExecutionCapability;
+import com.zhs.basket.support.v4.MatchSeriesQualificationSyncService;
+import com.zhs.basket.support.v4.MatchSeriesResultSnapshot;
+import com.zhs.basket.support.v4.stage.EliminationStageSupport;
+import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.SecurityUtils;
+import com.zhs.common.utils.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+
+@Service
+public class StageExecutionExceptionApplicationServiceImpl implements IStageExecutionExceptionApplicationService {
+
+    private static final int NOT_DELETED = 0;
+
+    @Autowired
+    private BasketV4MatchMapper matchMapper;
+    @Autowired
+    private BasketMatchSeriesMapper seriesMapper;
+    @Autowired
+    private BasketDivisionStageMapper stageMapper;
+    @Autowired
+    private BasketDivisionStageTeamMapper stageTeamMapper;
+    @Autowired
+    private BasketDivisionStageQualificationMapper qualificationMapper;
+    @Autowired
+    private BasketScheduleBatchMapper scheduleBatchMapper;
+    @Autowired
+    private MatchSeriesQualificationSyncService qualificationSyncService;
+    @Autowired
+    private IBasketMatchSeriesService matchSeriesService;
+    @Autowired
+    private IDivisionStageExecutionApplicationService stageExecutionService;
+    @Autowired
+    private BasketBusinessAuditWriter auditWriter;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void forfeitMatch(BasketMatchForfeitReq req) {
+        requireReason(req.getReason());
+        BasketV4Match match = requireMatch(req.getMatchId());
+        if (MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus())
+                || MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus())) {
+            throw new ServiceException("比赛已有正式结果，无法重复判负");
+        }
+        Long loser = req.getLoserEventTeamId();
+        if (loser == null || (!loser.equals(match.getHomeEventTeamId()) && !loser.equals(match.getAwayEventTeamId()))) {
+            throw new ServiceException("判负球队必须是比赛双方之一");
+        }
+        Long winner = loser.equals(match.getHomeEventTeamId()) ? match.getAwayEventTeamId() : match.getHomeEventTeamId();
+        Date now = new Date();
+        match.setMatchStatus(MatchStatusEnum.FORFEITED.getCode());
+        match.setWinnerEventTeamId(winner);
+        match.setLoserEventTeamId(loser);
+        match.setHomeScore(null);
+        match.setAwayScore(null);
+        match.setUpdateTime(now);
+        if (matchMapper.updateById(match) != 1) {
+            throw new ServiceException("更新比赛判负结果失败");
+        }
+        if (match.getSeriesId() != null) {
+            matchSeriesService.rebuildSeriesResult(match.getSeriesId());
+        } else if (match.getStageId() != null) {
+            stageExecutionService.checkStageCompletion(match.getStageId());
+        }
+        auditWriter.writeAudit("V4_STAGE", "MATCH", match.getId(), "FORFEIT",
+                "比赛判负/弃赛", req.getReason(), null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void forfeitSeries(BasketSeriesForfeitReq req) {
+        requireReason(req.getReason());
+        BasketMatchSeries series = requireSeries(req.getSeriesId());
+        if (SeriesResolutionTypeEnum.FORFEIT.getCode().equals(series.getResolutionType())) {
+            if (req.getForfeitEventTeamId().equals(series.getHomeEventTeamId())
+                    || req.getForfeitEventTeamId().equals(series.getAwayEventTeamId())) {
+                return;
+            }
+            throw new ServiceException("系列赛已判定弃赛，无法变更弃赛方");
+        }
+        if (!MatchSeriesStatusEnum.COMPLETED.getCode().equals(series.getSeriesStatus())
+                && !MatchSeriesStatusEnum.RUNNING.getCode().equals(series.getSeriesStatus())
+                && !MatchSeriesStatusEnum.READY.getCode().equals(series.getSeriesStatus())) {
+            throw new ServiceException("当前系列赛状态不允许判定弃赛");
+        }
+        Long forfeitTeam = req.getForfeitEventTeamId();
+        if (forfeitTeam == null
+                || (!forfeitTeam.equals(series.getHomeEventTeamId()) && !forfeitTeam.equals(series.getAwayEventTeamId()))) {
+            throw new ServiceException("弃赛球队必须是系列赛双方之一");
+        }
+        BasketDivisionStage stage = requireStage(series.getStageId());
+        qualificationSyncService.assertCanModifyDownstream(stage);
+
+        Long winner = forfeitTeam.equals(series.getHomeEventTeamId())
+                ? series.getAwayEventTeamId() : series.getHomeEventTeamId();
+        Date now = new Date();
+        Long operatorId = SecurityUtils.getUserId();
+        series.setWinnerEventTeamId(winner);
+        series.setSeriesStatus(MatchSeriesStatusEnum.COMPLETED.getCode());
+        series.setResolutionType(SeriesResolutionTypeEnum.FORFEIT.getCode());
+        series.setResolutionReason(req.getReason().trim());
+        series.setResolvedTime(now);
+        series.setResolvedBy(operatorId);
+        series.setUpdateTime(now);
+        if (seriesMapper.updateResolution(series) != 1) {
+            throw new ServiceException("更新系列赛弃赛结果失败");
+        }
+
+        MatchSeriesResultSnapshot snapshot = new MatchSeriesResultSnapshot();
+        snapshot.setHomeWinCount(series.getHomeWinCount() != null ? series.getHomeWinCount() : 0);
+        snapshot.setAwayWinCount(series.getAwayWinCount() != null ? series.getAwayWinCount() : 0);
+        snapshot.setWinnerEventTeamId(winner);
+        snapshot.setCompleted(true);
+        qualificationSyncService.syncAfterSeriesRebuild(series,
+                MatchSeriesStatusEnum.RUNNING.getCode(), null, snapshot);
+        stageExecutionService.checkStageCompletion(series.getStageId());
+        auditWriter.writeAudit("V4_STAGE", "MATCH_SERIES", series.getId(), "SERIES_FORFEIT",
+                "系列赛弃赛", req.getReason(), null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void manualAdvance(BasketManualAdvanceReq req) {
+        requireReason(req.getReason());
+        BasketDivisionStage stage = requireStage(req.getStageId());
+        qualificationSyncService.assertCanModifyDownstream(stage);
+        if (!EliminationStageSupport.isWinnerAdvanceNonFinalStage(stage)
+                && !EliminationStageSupport.isSingleRoundNonFinalStage(stage)) {
+            throw new ServiceException("当前阶段不支持人工直接晋级");
+        }
+        if (!stageTeamMapper.existsByStageAndEventTeam(stage.getId(), req.getEventTeamId())) {
+            throw new ServiceException("球队不在当前阶段参赛名单中");
+        }
+        BasketDivisionStageQualification existing = qualificationMapper.selectActiveByStageAndTeamAndType(
+                stage.getId(), req.getEventTeamId(), QualificationTypeEnum.MANUAL.getCode());
+        if (existing != null) {
+            return;
+        }
+        Long targetStageId = resolveTargetStageId(stage);
+        Date now = new Date();
+        BasketDivisionStageQualification row = new BasketDivisionStageQualification();
+        row.setDivisionId(stage.getDivisionId());
+        row.setStageId(stage.getId());
+        row.setEventTeamId(req.getEventTeamId());
+        row.setQualificationType(QualificationTypeEnum.MANUAL.getCode());
+        row.setTargetStageId(targetStageId);
+        row.setQualificationStatus(QualificationRecordStatusEnum.PREVIEW.getCode());
+        row.setRemark(req.getReason().trim());
+        row.setActiveUniqueKey(stage.getId() + ":MANUAL:PREVIEW:" + req.getEventTeamId());
+        row.setCreateTime(now);
+        row.setUpdateTime(now);
+        row.setIsDelete(NOT_DELETED);
+        if (qualificationMapper.insert(row) != 1) {
+            throw new ServiceException("写入人工晋级预览失败");
+        }
+        auditWriter.writeAudit("V4_STAGE", "STAGE", stage.getId(), "MANUAL_ADVANCE",
+                "人工直接晋级", req.getReason(), null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void adjustPairing(BasketPairingAdjustReq req) {
+        requireReason(req.getReason());
+        BasketDivisionStage stage = requireStage(req.getStageId());
+        if (stage.getScheduleBatchId() == null) {
+            throw new ServiceException("阶段尚未生成赛程，请先预览后生成");
+        }
+        BasketScheduleBatch batch = scheduleBatchMapper.selectById(stage.getScheduleBatchId());
+        if (batch == null || !PublishStatusEnum.DRAFT.getCode().equals(batch.getPublishStatus())) {
+            throw new ServiceException("仅草稿赛程可调整对阵，已发布请作废后重新生成");
+        }
+        if (!StageExecutionStatusEnum.SCHEDULE_GENERATED.getCode().equals(stage.getExecutionStatus())) {
+            throw new ServiceException("当前阶段状态不允许调整对阵");
+        }
+        List<BasketPairingSlotReq> slots = req.getSlots();
+        if (slots == null || slots.isEmpty()) {
+            throw new ServiceException("请提供对阵明细");
+        }
+        List<BasketDivisionStageTeam> stageTeams = stageTeamMapper.selectByStageId(stage.getId());
+        Set<Long> teamIds = new HashSet<>();
+        for (BasketDivisionStageTeam t : stageTeams) {
+            teamIds.add(t.getEventTeamId());
+        }
+        Set<Long> used = new HashSet<>();
+        for (BasketPairingSlotReq slot : slots) {
+            if (slot.getHomeEventTeamId() == null || slot.getAwayEventTeamId() == null) {
+                throw new ServiceException("对阵双方不能为空");
+            }
+            if (slot.getHomeEventTeamId().equals(slot.getAwayEventTeamId())) {
+                throw new ServiceException("对阵双方不能相同");
+            }
+            if (!teamIds.contains(slot.getHomeEventTeamId()) || !teamIds.contains(slot.getAwayEventTeamId())) {
+                throw new ServiceException("对阵球队必须来自当前阶段参赛名单");
+            }
+            if (!used.add(slot.getHomeEventTeamId()) || !used.add(slot.getAwayEventTeamId())) {
+                throw new ServiceException("每支球队只能出现一次（轮空队除外）");
+            }
+        }
+        matchMapper.softDeleteDraftByBatchId(batch.getId());
+        seriesMapper.softDeleteDraftByBatchId(batch.getId());
+        qualificationMapper.softDeletePreviewByStageId(stage.getId());
+
+        boolean seriesStage = MatchSeriesExecutionCapability.supportsScheduleGeneration(stage);
+        Date now = new Date();
+        if (seriesStage) {
+            regenerateSeriesPairing(stage, batch, slots, now);
+        } else {
+            regenerateBo1Pairing(stage, batch, slots, now);
+        }
+        auditWriter.writeAudit("V4_STAGE", "STAGE", stage.getId(), "PAIRING_ADJUST",
+                "人工调整对阵", req.getReason(), null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void revokeSeriesResolution(BasketSeriesRevokeResolutionReq req) {
+        requireReason(req.getReason());
+        BasketMatchSeries series = requireSeries(req.getSeriesId());
+        if (!SeriesResolutionTypeEnum.FORFEIT.getCode().equals(series.getResolutionType())
+                && !SeriesResolutionTypeEnum.MANUAL.getCode().equals(series.getResolutionType())) {
+            throw new ServiceException("当前系列赛无异常判定，无需撤销");
+        }
+        BasketDivisionStage stage = requireStage(series.getStageId());
+        qualificationSyncService.assertCanModifyDownstream(stage);
+
+        qualificationMapper.softDeleteActiveBySourceSeriesId(series.getId());
+        if (seriesMapper.clearResolution(series.getId()) != 1) {
+            throw new ServiceException("撤销系列赛异常判定失败");
+        }
+        matchSeriesService.rebuildSeriesResult(series.getId());
+        stageExecutionService.checkStageCompletion(series.getStageId());
+        auditWriter.writeAudit("V4_STAGE", "MATCH_SERIES", series.getId(), "REVOKE_SERIES_RESOLUTION",
+                "撤销系列赛异常判定", req.getReason(), null);
+    }
+
+    private void regenerateBo1Pairing(BasketDivisionStage stage, BasketScheduleBatch batch,
+                                        List<BasketPairingSlotReq> slots, Date now) {
+        for (BasketPairingSlotReq slot : slots) {
+            BasketV4Match match = new BasketV4Match();
+            match.setSeasonId(batch.getSeasonId());
+            match.setDivisionId(stage.getDivisionId());
+            match.setStageId(stage.getId());
+            match.setScheduleBatchId(batch.getId());
+            match.setRoundNo(1);
+            match.setBracketSlot(slot.getBracketSlot());
+            match.setHomeEventTeamId(slot.getHomeEventTeamId());
+            match.setAwayEventTeamId(slot.getAwayEventTeamId());
+            match.setMatchStatus(MatchStatusEnum.SCHEDULED.getCode());
+            match.setCreateTime(now);
+            match.setUpdateTime(now);
+            match.setIsDelete(NOT_DELETED);
+            matchMapper.insert(match);
+        }
+    }
+
+    private void regenerateSeriesPairing(BasketDivisionStage stage, BasketScheduleBatch batch,
+                                         List<BasketPairingSlotReq> slots, Date now) {
+        int bestOf = stage.getBestOf();
+        for (BasketPairingSlotReq slot : slots) {
+            BasketMatchSeries series = new BasketMatchSeries();
+            series.setDivisionId(stage.getDivisionId());
+            series.setStageId(stage.getId());
+            series.setScheduleBatchId(batch.getId());
+            series.setSeriesCode(com.zhs.basket.support.v4.stage.MatchSeriesEliminationScheduleGenerator
+                    .buildSeriesCode(stage.getDivisionId(), stage.getId(), 1, slot.getBracketSlot()));
+            series.setRoundNo(1);
+            series.setBracketSlot(slot.getBracketSlot());
+            series.setHomeEventTeamId(slot.getHomeEventTeamId());
+            series.setAwayEventTeamId(slot.getAwayEventTeamId());
+            series.setBestOf(bestOf);
+            series.setHomeWinCount(0);
+            series.setAwayWinCount(0);
+            series.setSeriesStatus(MatchSeriesStatusEnum.READY.getCode());
+            series.setCreateTime(now);
+            series.setUpdateTime(now);
+            series.setIsDelete(NOT_DELETED);
+            seriesMapper.insert(series);
+            for (int gameNo = 1; gameNo <= bestOf; gameNo++) {
+                BasketV4Match match = new BasketV4Match();
+                match.setSeasonId(batch.getSeasonId());
+                match.setDivisionId(stage.getDivisionId());
+                match.setStageId(stage.getId());
+                match.setScheduleBatchId(batch.getId());
+                match.setSeriesId(series.getId());
+                match.setSeriesGameNo(gameNo);
+                match.setRoundNo(1);
+                match.setBracketSlot(slot.getBracketSlot());
+                match.setHomeEventTeamId(slot.getHomeEventTeamId());
+                match.setAwayEventTeamId(slot.getAwayEventTeamId());
+                match.setMatchStatus(MatchStatusEnum.SCHEDULED.getCode());
+                match.setCreateTime(now);
+                match.setUpdateTime(now);
+                match.setIsDelete(NOT_DELETED);
+                matchMapper.insert(match);
+            }
+        }
+    }
+
+    private void requireReason(String reason) {
+        if (StringUtils.isEmpty(reason) || reason.trim().length() < 2) {
+            throw new ServiceException("请填写操作原因");
+        }
+    }
+
+    private BasketV4Match requireMatch(Long id) {
+        if (id == null) {
+            throw new ServiceException("matchId 不能为空");
+        }
+        BasketV4Match match = matchMapper.selectById(id);
+        if (match == null) {
+            throw new ServiceException("比赛不存在");
+        }
+        return match;
+    }
+
+    private BasketMatchSeries requireSeries(Long id) {
+        if (id == null) {
+            throw new ServiceException("seriesId 不能为空");
+        }
+        BasketMatchSeries series = seriesMapper.selectById(id);
+        if (series == null) {
+            throw new ServiceException("系列赛不存在");
+        }
+        return series;
+    }
+
+    private BasketDivisionStage requireStage(Long id) {
+        if (id == null) {
+            throw new ServiceException("stageId 不能为空");
+        }
+        BasketDivisionStage stage = stageMapper.selectById(id);
+        if (stage == null) {
+            throw new ServiceException("阶段不存在");
+        }
+        return stage;
+    }
+
+    private Long resolveTargetStageId(BasketDivisionStage stage) {
+        if (stage.getNextStageCode() == null || stage.getNextStageCode().isEmpty()) {
+            return null;
+        }
+        return stageMapper.selectByDivisionId(stage.getDivisionId()).stream()
+                .filter(s -> stage.getNextStageCode().equals(s.getStageCode()))
+                .map(BasketDivisionStage::getId)
+                .findFirst()
+                .orElse(null);
+    }
+}

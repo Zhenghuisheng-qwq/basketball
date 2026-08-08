@@ -6,6 +6,7 @@ import com.zhs.basket.enums.v4.DivisionStatusEnum;
 import com.zhs.basket.enums.v4.MatchPublishStatusEnum;
 import com.zhs.basket.enums.v4.PublishStatusEnum;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
+import com.zhs.basket.mapper.v4.BasketMatchSeriesMapper;
 import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.query.v4.BasketScheduleBatchQuery;
@@ -30,6 +31,8 @@ public class BasketV4ScheduleBatchServiceImpl implements IBasketV4ScheduleBatchS
     private BasketScheduleBatchMapper scheduleBatchMapper;
     @Autowired
     private BasketV4MatchMapper matchMapper;
+    @Autowired
+    private BasketMatchSeriesMapper matchSeriesMapper;
     @Autowired
     private BasketDivisionMapper divisionMapper;
 
@@ -93,6 +96,7 @@ public class BasketV4ScheduleBatchServiceImpl implements IBasketV4ScheduleBatchS
             throw new ServiceException("仅草稿批次可作废");
         }
         matchMapper.softDeleteDraftByBatchId(id);
+        matchSeriesMapper.softDeleteDraftByBatchId(id);
         if (scheduleBatchMapper.softDelete(id) != 1) {
             throw new ServiceException("作废赛程批次失败");
         }

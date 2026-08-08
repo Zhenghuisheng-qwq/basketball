@@ -41,4 +41,6 @@ public class BasketMatchSubmissionAuditDetailVo {
     private List<BasketMatchSubmissionPlayerStatVo> playerStats;
     private List<BasketMatchSubmissionMaterialVo> materials;
     private List<BasketMatchSubmissionVersionVo> historyVersions;
+    /** BO3/BO5 系列赛上下文（series_id 非空时） */
+    private BasketMatchSeriesDetailVo seriesContext;
 }

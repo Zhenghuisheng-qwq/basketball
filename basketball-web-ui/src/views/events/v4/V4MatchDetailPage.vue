@@ -5,7 +5,7 @@ import { getV4PublicMatchDetail } from '@/api/v4Public'
 import type { V4PublicMatchDetail } from '@/api/types/v4Public'
 import SafeImage from '@/components/common/SafeImage.vue'
 import { displayText, formatDateTime, initials } from '@/utils/publicDisplay'
-import { formatScore, v4MatchStatusLabel } from '@/utils/v4Display'
+import { formatScore, v4BestOfLabel, v4MatchSeriesStatusLabel, v4MatchStatusLabel } from '@/utils/v4Display'
 import '../styles/v4-events.scss'
 
 const route = useRoute()
@@ -51,6 +51,12 @@ onMounted(() => {
         <div v-if="loading" class="v4-state">加载中...</div>
         <div v-else-if="error" class="v4-state v4-state--error">{{ error }}</div>
         <template v-else-if="match">
+          <div v-if="match.seriesContext" class="v4-series-context">
+            <span>{{ v4BestOfLabel(match.bestOf) }}</span>
+            <span>Game {{ match.seriesGameNo }} / {{ match.seriesContext.bestOf }}</span>
+            <span>局分 {{ match.seriesContext.homeWinCount ?? 0 }} : {{ match.seriesContext.awayWinCount ?? 0 }}</span>
+            <span>{{ match.seriesContext.seriesStatusName || v4MatchSeriesStatusLabel(match.seriesContext.seriesStatus) }}</span>
+          </div>
           <p class="v4-events-hero__eyebrow">第 {{ match.roundNo ?? '--' }} 轮 · {{ formatDateTime(match.matchTime).full }}</p>
           <div class="v4-match-row" style="cursor: default; margin-top: 20px">
             <div class="v4-match-row__team">
@@ -85,6 +91,21 @@ onMounted(() => {
 
     <section v-if="match && !loading" class="v4-events-list-section">
       <div class="site-shell">
+        <div v-if="match.seriesContext?.games?.length" class="v4-series-games-panel">
+          <h2 class="v4-schedule-round__title">系列赛各局</h2>
+          <div
+            v-for="game in match.seriesContext.games"
+            :key="game.matchId"
+            class="v4-match-row"
+            :class="{ 'v4-match-row--active': game.currentGame }"
+            @click="game.matchId && game.matchId !== match.matchId && router.push(`/events/match/${game.matchId}`)"
+          >
+            <span>Game {{ game.seriesGameNo }}</span>
+            <span v-if="game.skipped">{{ game.skippedReason || '无需进行' }}</span>
+            <span v-else>{{ formatScore(game.homeScore, game.awayScore, game.matchStatus) }}</span>
+            <span>{{ game.matchStatusName || v4MatchStatusLabel(game.matchStatus) }}</span>
+          </div>
+        </div>
         <h2 class="v4-schedule-round__title">单场球队数据</h2>
         <div v-if="!match.teamStats?.length" class="v4-state">暂无数据</div>
         <div v-else class="v4-table-wrap">

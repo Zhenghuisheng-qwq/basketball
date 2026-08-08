@@ -14,9 +14,11 @@ public class BasketDivisionStageQualification {
     private String qualificationType;
     private Integer sourceRank;
     private Long targetStageId;
+    private Long sourceSeriesId;
     private String qualificationStatus;
     private Long confirmedBy;
     private Date confirmedTime;
+    private String remark;
     private String activeUniqueKey;
     private Date createTime;
     private Date updateTime;

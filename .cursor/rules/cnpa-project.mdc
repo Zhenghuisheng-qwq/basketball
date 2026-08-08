@@ -1,0 +1,50 @@
+---
+description: CNPA 篮球赛事平台项目地图与开发约定
+alwaysApply: true
+---
+
+# CNPA 项目索引
+
+## 四模块架构
+
+| 模块 | 端口 | 入口 | 职责 |
+|------|------|------|------|
+| `basketball-web` | 8881 | `com.zhs.MiniApplication` | 官网/会员 API |
+| `basketball-web-ui` | Vite dev | `src/main.ts` | 官网前端，代理 `/web-api` → 8881 |
+| `basketball-admin` | 8080 | `com.zhs.RuoYiApplication` | 管理后台 API（若依） |
+| `basketball-admin-ui` | Vite dev | `src/main.ts` | 管理后台前端 |
+
+共享 MySQL 库 `basketball` + Redis + 腾讯云 COS。根 `README.md` 已过时（仍写 jsj-*），以 `basketball-*` 为准。
+
+## 业务主链路
+
+账号 → 球员认证 → 平台账号 → 队长授权 → 长期球队 → 入队 → 赛事报名 → 阵容快照 → 赛程 → 比赛数据提交/审核 → 公开统计
+
+## 代码落点
+
+- Web Controller：`basketball-web/src/main/java/com/zhs/controller/`（`publicapi/` 公开、`v4/` 赛事 V4）
+- Admin Controller：`basketball-admin/.../web/controller/basket/`（`v4/` 赛事运营）
+- Admin UI 业务页：`basketball-admin-ui/src/views/cnpa/`
+- Web UI 业务页：`basketball-web-ui/src/views/`（`account/`、`events/v4/`、`data/`）
+- SQL 迁移：`docs/sql/`；基础 DDL：`sql/`
+
+## 权威文档（改业务前先查）
+
+| 优先级 | 文档 | 用途 |
+|--------|------|------|
+| P0 | `docs/cnpa-v2-final-business-flow.md` | V4 唯一权威业务流程（30 章） |
+| P0 | `docs/sql/cnpa-v2-final-schema.sql` | V4 表结构权威索引 |
+| P1 | `docs/cnpa-business-map/00-业务总览.md` | 四模块总览、分批记录 |
+| P1 | `docs/cnpa-business-map/20-当前待测试总清单.md` | P0/P1/P2 测试 backlog |
+| P1 | `docs/cnpa-business-map/22-接口与页面总索引.md` | API ↔ 页面对照 |
+| P2 | `docs/cnpa-business-map/02~19` | 模块级代码审计（部分基于旧模型） |
+| 归档 | `需求/赛事系列重构方案/` | V4 重构设计与评审 |
+| 元指令 | `核心业务/核心实现.md` | 生成 business-map 的提示词，非实现文档 |
+
+## 开发约定
+
+- 业务写操作走专用 Controller/Service，不用遗留 `Basket*Controller` 生成式 CRUD
+- 公开 API 必须 `@NoLoginRequest`，只返回已发布/已确认数据
+- 队长/会员接口必须在服务端校验授权与对象归属，不靠前端隐藏
+- 长期球队（`basket_team`）与赛事快照（EventTeam/SeasonRoster）严格分离
+- 改动数据库须同步 `docs/sql/` 迁移脚本

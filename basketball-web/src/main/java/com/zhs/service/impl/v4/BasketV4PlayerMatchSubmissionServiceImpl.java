@@ -52,6 +52,8 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
     private BasketMatchSubmissionMaterialDao submissionMaterialDao;
     @Resource
     private BasketPlayerProfileDao playerProfileDao;
+    @Resource
+    private BasketMatchSeriesDao matchSeriesDao;
 
     @Override
     public List<V4MyMatchResp> listMyMatches(Long seasonId, Long divisionId, String matchStatus,
@@ -498,7 +500,25 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         if (MatchStatusEnum.CANCELLED.getCode().equals(match.getMatchStatus())) {
             throw new ServiceException("已取消比赛不可提交");
         }
+        assertSeriesAllowsNewSubmission(match);
         return match;
+    }
+
+    private void assertSeriesAllowsNewSubmission(BasketV4Match match) {
+        if (match.getSeriesId() == null) {
+            return;
+        }
+        if (MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus())
+                || MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus())) {
+            return;
+        }
+        BasketMatchSeries series = matchSeriesDao.selectById(match.getSeriesId());
+        if (series == null || !NOT_DELETED.equals(series.getIsDelete())) {
+            return;
+        }
+        if ("COMPLETED".equals(series.getSeriesStatus())) {
+            throw new ServiceException("该系列赛已决出胜负，后续对局无需继续提交");
+        }
     }
 
     private BasketPlayerProfile requirePlayerByMemberId(Long memberId) {

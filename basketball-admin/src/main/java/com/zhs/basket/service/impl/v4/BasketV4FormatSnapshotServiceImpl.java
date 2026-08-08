@@ -12,6 +12,7 @@ import com.zhs.basket.support.v4.DivisionFormatPlanValidator;
 import com.zhs.basket.support.v4.DivisionFormatSnapshotFactory;
 import com.zhs.basket.support.v4.DivisionRuleMutableSpecification;
 import com.zhs.basket.support.v4.FormatSnapshotReadySpecification;
+import com.zhs.basket.support.v4.StageFormatSpecification;
 import com.zhs.basket.support.v4.V4FormatDisplaySupport;
 import com.zhs.basket.vo.v4.BasketDivisionFormatSnapshotVo;
 import com.zhs.basket.vo.v4.BasketDivisionStageVo;
@@ -221,6 +222,7 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         second.setStageName("淘汰赛");
         second.setStageOrder(2);
         second.setStageType(StageTypeEnum.KNOCKOUT.getCode());
+        second.setOrganizationMode(OrganizationModeEnum.UNGROUPED.getCode());
         second.setCompetitionFormat(CompetitionFormatEnum.SINGLE_ELIMINATION.getCode());
         second.setGroupingMode(GroupingModeEnum.NONE.getCode());
         second.setBestOf(1);
@@ -238,6 +240,7 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
             first.setStageCode("GROUP");
             first.setStageName("小组赛");
             first.setStageType(StageTypeEnum.GROUP.getCode());
+            first.setOrganizationMode(OrganizationModeEnum.GROUPED.getCode());
             first.setCompetitionFormat(CompetitionFormatEnum.ROUND_ROBIN.getCode());
             first.setGroupingMode(GroupingModeEnum.MANUAL.getCode());
             first.setGroupCount(req.getGroupCount());
@@ -249,6 +252,7 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
             first.setStageCode("REGULAR");
             first.setStageName("常规赛");
             first.setStageType(StageTypeEnum.REGULAR.getCode());
+            first.setOrganizationMode(OrganizationModeEnum.UNGROUPED.getCode());
             first.setCompetitionFormat(CompetitionFormatEnum.ROUND_ROBIN.getCode());
             first.setGroupingMode(GroupingModeEnum.NONE.getCode());
             first.setRoundRobinCycles(cycles);
@@ -329,6 +333,7 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         Date now = new Date();
         BasketDivisionStage stage = new BasketDivisionStage();
         applyStageReq(stage, req);
+        stage.setStageType(StageTypeEnum.CUSTOM.getCode());
         stage.setSnapshotId(snapshot.getId());
         stage.setDivisionId(divisionId);
         stage.setStageOrder(req.getStageOrder() != null ? req.getStageOrder() : nextOrder);
@@ -354,7 +359,11 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         List<BasketDivisionStage> stages = divisionStageMapper.selectBySnapshotId(snapshot.getId());
         assertStageCodeUnique(stages, req.getStageCode(), stageId);
         applyStageReq(stage, req);
-        if (req.getStageOrder() != null) {
+        boolean orderChanged = req.getStageOrder() != null && !req.getStageOrder().equals(stage.getStageOrder());
+        if (orderChanged) {
+            for (BasketDivisionStage s : stages) {
+                divisionStageMapper.updateStageOrder(s.getId(), 100000 + s.getId().intValue());
+            }
             stage.setStageOrder(req.getStageOrder());
         }
         stage.setUpdateTime(new Date());
@@ -362,8 +371,8 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
             throw new ServiceException("更新阶段失败");
         }
         renumberStageOrders(snapshot.getId());
-        // 编辑过程中仅校验 nextStage 引用与循环，完整锁定校验交给 validateSnapshotReady
-        assertNextStageLinks(snapshot.getId());
+        // 编辑过程中仅校验 nextStage 引用存在；完整链路与循环检测交给 validateSnapshotReady
+        assertNextStageReferencesExist(snapshot.getId());
     }
 
     @Override
@@ -503,26 +512,53 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         if (StringUtils.isEmpty(req.getStageCode()) || StringUtils.isEmpty(req.getStageName())) {
             throw new ServiceException("阶段编码和名称不能为空");
         }
+        StageFormatSpecification.requireExplicitOrganizationMode(req.getOrganizationMode());
+        OrganizationModeEnum.fromCode(req.getOrganizationMode());
         StageTypeEnum.fromCode(req.getStageType());
-        CompetitionFormatEnum.fromCode(req.getCompetitionFormat());
+        CompetitionFormatEnum format = CompetitionFormatEnum.fromCode(req.getCompetitionFormat());
+        if (format == CompetitionFormatEnum.MANUAL) {
+            throw new ServiceException("当前版本自定义赛制不支持 MANUAL 比赛方式");
+        }
         GroupingModeEnum mode = GroupingModeEnum.fromCode(req.getGroupingMode());
         AdvancementTypeEnum adv = AdvancementTypeEnum.fromCode(req.getAdvancementType());
         if (adv == AdvancementTypeEnum.SERIES_WINNER) {
-            throw new ServiceException("当前版本暂不支持 SERIES_WINNER（系列赛胜者）晋级方式");
+            throw new ServiceException("当前版本暂不支持 SERIES_WINNER（系列赛胜者）晋级方式，请使用 WINNER_ADVANCE");
         }
         PairingRuleEnum.fromCode(req.getPairingRule());
-        FormatSnapshotReadySpecification.validateBestOf(req.getBestOf());
-        if (mode == GroupingModeEnum.NONE) {
-            if (req.getGroupCount() != null && req.getGroupCount() > 0) {
-                throw new ServiceException("无分组时 groupCount 必须为空或0");
+        FormatSnapshotReadySpecification.validateBestOfForSave(req.getBestOf());
+
+        BasketDivisionStage probe = new BasketDivisionStage();
+        probe.setStageName(req.getStageName());
+        probe.setOrganizationMode(req.getOrganizationMode());
+        probe.setGroupingMode(req.getGroupingMode());
+        probe.setGroupCount(req.getGroupCount());
+        probe.setCompetitionFormat(req.getCompetitionFormat());
+        probe.setAdvancementType(req.getAdvancementType());
+        probe.setAdvancementCount(req.getAdvancementCount());
+        probe.setRoundRobinCycles(req.getRoundRobinCycles());
+        probe.setWinPoints(req.getWinPoints());
+        probe.setLossPoints(req.getLossPoints());
+        StageFormatSpecification.validateOrganizationAndGrouping(probe);
+        StageFormatSpecification.validateCompetitionFormat(probe, true);
+        StageFormatSpecification.validateAllowedCombination(probe);
+        StageFormatSpecification.validateAdvancementCount(probe);
+        boolean isLastForReq = StringUtils.isEmpty(req.getNextStageCode());
+        StageFormatSpecification.validateChainAdvancement(probe, isLastForReq);
+        StageFormatSpecification.validateRoundRobinRules(probe, isLastForReq);
+        StageFormatSpecification.validateEliminationRules(probe, isLastForReq);
+
+        if (CompetitionFormatEnum.ROUND_ROBIN.getCode().equals(req.getCompetitionFormat())) {
+            if (req.getRoundRobinCycles() == null || req.getRoundRobinCycles() <= 0) {
+                throw new ServiceException("循环赛必须配置 roundRobinCycles");
             }
-            req.setGroupCount(null);
-        } else if (req.getGroupCount() == null || req.getGroupCount() <= 0) {
-            throw new ServiceException("分组模式下 groupCount 必须大于0");
+            if (req.getWinPoints() == null || req.getLossPoints() == null) {
+                throw new ServiceException("循环赛必须配置胜负积分");
+            }
         }
-        if (CompetitionFormatEnum.ROUND_ROBIN.getCode().equals(req.getCompetitionFormat())
-                && (req.getRoundRobinCycles() == null || req.getRoundRobinCycles() <= 0)) {
-            throw new ServiceException("循环赛必须配置 roundRobinCycles");
+        if (CompetitionFormatEnum.SINGLE_ELIMINATION.getCode().equals(req.getCompetitionFormat())
+                && adv == AdvancementTypeEnum.WINNER_ADVANCE
+                && req.getAdvancementCount() != null && req.getAdvancementCount() > 0) {
+            throw new ServiceException("WINNER_ADVANCE 不需要配置 advancementCount");
         }
         if (adv == AdvancementTypeEnum.NONE) {
             if (req.getAdvancementCount() != null && req.getAdvancementCount() > 0) {
@@ -533,16 +569,13 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
                 && (req.getAdvancementCount() == null || req.getAdvancementCount() <= 0)) {
             throw new ServiceException("当前晋级类型必须配置 advancementCount");
         }
-        if (StageTypeEnum.FINAL.getCode().equals(req.getStageType())
-                && StringUtils.isNotEmpty(req.getNextStageCode())) {
-            throw new ServiceException("总决赛阶段不能配置下一阶段");
-        }
     }
 
     private void applyStageReq(BasketDivisionStage stage, BasketDivisionStageSaveReq req) {
         stage.setStageCode(req.getStageCode().trim());
         stage.setStageName(req.getStageName().trim());
         stage.setStageType(req.getStageType());
+        stage.setOrganizationMode(req.getOrganizationMode());
         stage.setCompetitionFormat(req.getCompetitionFormat());
         stage.setGroupingMode(req.getGroupingMode());
         stage.setGroupCount(req.getGroupCount());
@@ -584,6 +617,16 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         for (int i = 0; i < stages.size(); i++) {
             if (!Integer.valueOf(i + 1).equals(stages.get(i).getStageOrder())) {
                 throw new ServiceException("阶段顺序必须为连续正整数");
+            }
+        }
+    }
+
+    private void assertNextStageReferencesExist(Long snapshotId) {
+        List<BasketDivisionStage> stages = divisionStageMapper.selectBySnapshotId(snapshotId);
+        Set<String> codes = stages.stream().map(BasketDivisionStage::getStageCode).collect(Collectors.toSet());
+        for (BasketDivisionStage stage : stages) {
+            if (StringUtils.isNotEmpty(stage.getNextStageCode()) && !codes.contains(stage.getNextStageCode())) {
+                throw new ServiceException("下一阶段编码不存在：" + stage.getNextStageCode());
             }
         }
     }

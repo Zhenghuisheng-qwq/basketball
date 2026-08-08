@@ -38,12 +38,17 @@ public class StageSchedulePrerequisiteValidator {
         }
     }
 
-    public void validateBeforePublishSchedule(BasketDivision division, BasketDivisionStage stage) {
+    public void validateBeforePublishSchedule(BasketDivision division, BasketDivisionStage stage, boolean firstStage) {
         assertRegistrationReady(division);
-        int eventTeamCount = eventTeamMapper.countActiveByDivisionId(division.getId());
         int stageTeamCount = stageTeamMapper.countByStageId(stage.getId());
-        if (eventTeamCount != stageTeamCount) {
+        if (stageTeamCount < 2) {
             throw businessError(MSG_REGISTRATION_NOT_READY);
+        }
+        if (firstStage) {
+            int eventTeamCount = eventTeamMapper.countActiveByDivisionId(division.getId());
+            if (eventTeamCount != stageTeamCount) {
+                throw businessError(MSG_REGISTRATION_NOT_READY);
+            }
         }
     }
 
@@ -62,10 +67,6 @@ public class StageSchedulePrerequisiteValidator {
     private void assertEventTeamsConfirmed(BasketDivision division, BasketDivisionStage stage) {
         int eventTeamCount = eventTeamMapper.countActiveByDivisionId(division.getId());
         if (eventTeamCount < 2) {
-            throw businessError(MSG_REGISTRATION_NOT_READY);
-        }
-        Integer maxTeamCount = division.getMaxTeamCount();
-        if (maxTeamCount != null && maxTeamCount > 0 && eventTeamCount < maxTeamCount) {
             throw businessError(MSG_REGISTRATION_NOT_READY);
         }
         int approvedCount = registrationMapper.countApprovedByDivisionId(division.getId());

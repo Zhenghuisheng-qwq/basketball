@@ -12,6 +12,7 @@ import com.zhs.response.v4.publicapi.*;
 import com.zhs.mapper.v4.BasketV4PublicStageMapper;
 import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicSupport;
+import com.zhs.service.support.V4MatchSeriesDisplaySupport;
 import com.zhs.service.v4.IBasketV4PublicService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -54,6 +55,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     private BasketV4PublicStageMapper publicStageMapper;
     @Resource
     private BasketDivisionFormatSnapshotDao formatSnapshotDao;
+    @Resource
+    private V4MatchSeriesDisplaySupport matchSeriesDisplaySupport;
 
     @Override
     public List<V4PublicDivisionListItemResp> listDivisions(Long seasonId) {
@@ -340,6 +343,15 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
         resp.setTeamStats(listMatchTeamStats(matchId, teamMap));
         resp.setPlayerStats(listMatchPlayerStats(matchId, teamMap));
+        if (match.getSeriesId() != null) {
+            resp.setMatchSeriesId(match.getSeriesId());
+            resp.setSeriesGameNo(match.getSeriesGameNo());
+            V4PublicMatchSeriesDetailResp seriesContext = matchSeriesDisplaySupport.buildDetail(match.getSeriesId(), matchId);
+            if (seriesContext != null) {
+                resp.setBestOf(seriesContext.getBestOf());
+                resp.setSeriesContext(seriesContext);
+            }
+        }
         return resp;
     }
 
@@ -388,6 +400,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         }
         for (V4PublicStageItemResp stage : stages) {
             stage.setStageTypeName(resolveStageTypeName(stage.getStageType()));
+            stage.setOrganizationModeName(resolveOrganizationModeName(stage.getOrganizationMode()));
             stage.setCompetitionFormatName(resolveCompetitionFormatName(stage.getCompetitionFormat()));
             stage.setExecutionStatusName(resolveExecutionStatusName(stage.getExecutionStatus()));
         }
@@ -439,6 +452,26 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         return enrichMatchItems(matches);
     }
 
+    @Override
+    public List<V4PublicMatchSeriesDetailResp> listStageSeries(Long stageId) {
+        if (stageId == null) {
+            throw new ServiceException("stageId 不能为空");
+        }
+        return matchSeriesDisplaySupport.listByStageId(stageId);
+    }
+
+    @Override
+    public V4PublicMatchSeriesDetailResp getMatchSeriesDetail(Long seriesId) {
+        if (seriesId == null) {
+            throw new ServiceException("seriesId 不能为空");
+        }
+        V4PublicMatchSeriesDetailResp detail = matchSeriesDisplaySupport.buildDetail(seriesId, null);
+        if (detail == null) {
+            throw new ServiceException("系列赛不存在");
+        }
+        return detail;
+    }
+
     private void enrichStandingTeamInfo(List<V4PublicStandingItemResp> rows) {
         Map<Long, BasketEventTeam> teamMap = loadEventTeamMap(
                 rows.stream().map(V4PublicStandingItemResp::getEventTeamId).collect(Collectors.toList()));
@@ -461,6 +494,17 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             case "GROUP" -> "小组赛";
             case "KNOCKOUT" -> "淘汰赛";
             default -> stageType;
+        };
+    }
+
+    private String resolveOrganizationModeName(String organizationMode) {
+        if (!StringUtils.hasText(organizationMode)) {
+            return "不分组";
+        }
+        return switch (organizationMode.toUpperCase()) {
+            case "GROUPED" -> "分组";
+            case "UNGROUPED" -> "不分组";
+            default -> organizationMode;
         };
     }
 
@@ -950,6 +994,11 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         Map<Long, BasketEventTeam> teamMap = loadEventTeamMap(new ArrayList<>(teamIds));
         Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(teamMap.values().stream()
                 .map(BasketEventTeam::getTeamLogoFileId).filter(Objects::nonNull).collect(Collectors.toSet()));
+        Set<Long> matchSeriesIds = matches.stream()
+                .map(BasketV4Match::getSeriesId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, BasketMatchSeries> seriesMap = matchSeriesDisplaySupport.loadSeriesMap(matchSeriesIds);
         List<V4PublicMatchItemResp> result = new ArrayList<>();
         for (BasketV4Match match : matches) {
             V4PublicMatchItemResp vo = new V4PublicMatchItemResp();
@@ -967,6 +1016,18 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             vo.setMatchStatus(match.getMatchStatus());
             vo.setPublishStatus(match.getPublishStatus());
             vo.setVenueText(match.getVenueText());
+            if (match.getSeriesId() != null) {
+                vo.setMatchSeriesId(match.getSeriesId());
+                vo.setSeriesGameNo(match.getSeriesGameNo());
+                BasketMatchSeries ms = seriesMap.get(match.getSeriesId());
+                if (ms != null) {
+                    vo.setBestOf(ms.getBestOf());
+                    vo.setSeriesHomeWinCount(ms.getHomeWinCount());
+                    vo.setSeriesAwayWinCount(ms.getAwayWinCount());
+                    vo.setSeriesStatus(ms.getSeriesStatus());
+                    vo.setSeriesStatusName(seriesStatusLabel(ms.getSeriesStatus()));
+                }
+            }
             BasketEventTeam home = teamMap.get(match.getHomeEventTeamId());
             BasketEventTeam away = teamMap.get(match.getAwayEventTeamId());
             if (home != null) {
@@ -1082,5 +1143,19 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             result.add(vo);
         }
         return result;
+    }
+
+    private String seriesStatusLabel(String status) {
+        if (status == null) {
+            return "--";
+        }
+        return switch (status) {
+            case "PENDING" -> "待准备";
+            case "READY" -> "待比赛";
+            case "RUNNING" -> "进行中";
+            case "COMPLETED" -> "已结束";
+            case "CANCELLED" -> "已取消";
+            default -> status;
+        };
     }
 }

@@ -6,12 +6,12 @@ import com.zhs.basket.domain.v4.BasketDivisionStageTeam;
 import com.zhs.basket.domain.v4.BasketScheduleBatch;
 import com.zhs.basket.domain.v4.BasketV4Match;
 import com.zhs.basket.enums.v4.GenerateStatusEnum;
-import com.zhs.basket.enums.v4.GroupingModeEnum;
 import com.zhs.basket.enums.v4.MatchPublishStatusEnum;
 import com.zhs.basket.enums.v4.MatchStatusEnum;
 import com.zhs.basket.enums.v4.PublishStatusEnum;
 import com.zhs.basket.enums.v4.ScheduleGenerationStrategyEnum;
-import com.zhs.basket.enums.v4.StageTypeEnum;
+import com.zhs.basket.support.v4.BestOfCapabilityGate;
+import com.zhs.basket.support.v4.StageFormatSpecification;
 import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.common.exception.ServiceException;
@@ -41,11 +41,7 @@ abstract class AbstractStageScheduleStrategy implements DivisionStageScheduleStr
     protected BasketV4MatchMapper matchMapper;
 
     protected static boolean isGroupStage(BasketDivisionStage stage) {
-        if (StageTypeEnum.GROUP.getCode().equals(stage.getStageType())) {
-            return true;
-        }
-        String groupingMode = stage.getGroupingMode();
-        return groupingMode != null && !GroupingModeEnum.NONE.getCode().equals(groupingMode);
+        return StageFormatSpecification.isGrouped(stage);
     }
 
     protected void requireContext(StageExecutionContext context) {
@@ -55,10 +51,7 @@ abstract class AbstractStageScheduleStrategy implements DivisionStageScheduleStr
     }
 
     protected void validateBestOfOne(BasketDivisionStage stage) {
-        Integer bestOf = stage.getBestOf();
-        if (bestOf == null || bestOf != 1) {
-            throw new ServiceException("当前版本暂不支持 BO3/BO5 系列赛执行，请将 best_of 设为 1");
-        }
+        BestOfCapabilityGate.assertCanGenerateSchedule(stage);
     }
 
     protected void validateTeamsPresent(StageExecutionContext context) {
@@ -109,7 +102,11 @@ abstract class AbstractStageScheduleStrategy implements DivisionStageScheduleStr
         batch.setGenerateStatus(GenerateStatusEnum.SUCCESS.getCode());
         batch.setPublishStatus(PublishStatusEnum.DRAFT.getCode());
         batch.setGenerateTime(now);
-        batch.setGeneratedBy(SecurityUtils.getUserId());
+        try {
+            batch.setGeneratedBy(SecurityUtils.getUserId());
+        } catch (Exception ex) {
+            batch.setGeneratedBy(0L);
+        }
         batch.setCreateTime(now);
         batch.setUpdateTime(now);
         batch.setIsDelete(NOT_DELETED);

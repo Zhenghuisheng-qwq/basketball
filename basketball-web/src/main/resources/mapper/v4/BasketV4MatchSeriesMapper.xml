@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.mapper.v4.BasketV4MatchSeriesMapper">
+
+    <resultMap type="com.zhs.model.v4.BasketMatchSeries" id="BasketMatchSeriesResult">
+        <id property="id" column="id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="stageId" column="stage_id"/>
+        <result property="scheduleBatchId" column="schedule_batch_id"/>
+        <result property="seriesCode" column="series_code"/>
+        <result property="roundNo" column="round_no"/>
+        <result property="bracketSlot" column="bracket_slot"/>
+        <result property="homeEventTeamId" column="home_event_team_id"/>
+        <result property="awayEventTeamId" column="away_event_team_id"/>
+        <result property="bestOf" column="best_of"/>
+        <result property="homeWinCount" column="home_win_count"/>
+        <result property="awayWinCount" column="away_win_count"/>
+        <result property="winnerEventTeamId" column="winner_event_team_id"/>
+        <result property="seriesStatus" column="series_status"/>
+        <result property="resolutionType" column="resolution_type"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, division_id, stage_id, schedule_batch_id, series_code, round_no, bracket_slot,
+        home_event_team_id, away_event_team_id, best_of, home_win_count, away_win_count,
+        winner_event_team_id, series_status, resolution_type, is_delete
+    </sql>
+
+    <select id="selectById" resultMap="BasketMatchSeriesResult">
+        select <include refid="BaseColumns"/> from basket_match_series
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByStageId" resultMap="BasketMatchSeriesResult">
+        select <include refid="BaseColumns"/> from basket_match_series
+        where stage_id = #{stageId} and is_delete = 0
+        order by round_no asc, bracket_slot asc, id asc
+    </select>
+</mapper>

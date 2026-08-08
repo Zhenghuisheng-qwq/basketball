@@ -5,6 +5,7 @@ import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketDivisionStageTeam;
 import com.zhs.basket.enums.v4.CompetitionFormatEnum;
 import com.zhs.basket.enums.v4.GroupingModeEnum;
+import com.zhs.basket.enums.v4.OrganizationModeEnum;
 import com.zhs.basket.enums.v4.StageTypeEnum;
 import com.zhs.common.exception.ServiceException;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,6 +68,7 @@ class RoundRobinStageScheduleStrategyTest {
         SingleEliminationStageScheduleStrategy eliminationStrategy = new SingleEliminationStageScheduleStrategy();
         StageExecutionContext context = buildContext(6, 1);
         context.getStage().setCompetitionFormat(CompetitionFormatEnum.SINGLE_ELIMINATION.getCode());
+        context.getStage().setOrganizationMode(OrganizationModeEnum.UNGROUPED.getCode());
         context.getStage().setStageType(StageTypeEnum.KNOCKOUT.getCode());
 
         ServiceException ex = assertThrows(ServiceException.class, () -> eliminationStrategy.validate(context));
@@ -114,6 +116,7 @@ class RoundRobinStageScheduleStrategyTest {
         stage.setStageCode("REGULAR");
         stage.setStageName("常规赛");
         stage.setStageType(StageTypeEnum.REGULAR.getCode());
+        stage.setOrganizationMode(OrganizationModeEnum.UNGROUPED.getCode());
         stage.setCompetitionFormat(CompetitionFormatEnum.ROUND_ROBIN.getCode());
         stage.setGroupingMode(GroupingModeEnum.NONE.getCode());
         stage.setRoundRobinCycles(1);

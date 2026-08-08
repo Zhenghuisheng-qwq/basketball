@@ -21,4 +21,12 @@ public interface BasketDivisionStageQualificationMapper {
     int countByStageIdAndStatus(@Param("stageId") Long stageId, @Param("qualificationStatus") String qualificationStatus);
 
     int revertConfirmedToPreviewByStageId(@Param("stageId") Long stageId);
+
+    BasketDivisionStageQualification selectActiveBySourceSeriesId(@Param("sourceSeriesId") Long sourceSeriesId);
+
+    BasketDivisionStageQualification selectActiveByStageAndTeamAndType(@Param("stageId") Long stageId,
+                                                                        @Param("eventTeamId") Long eventTeamId,
+                                                                        @Param("qualificationType") String qualificationType);
+
+    int softDeleteActiveBySourceSeriesId(@Param("sourceSeriesId") Long sourceSeriesId);
 }

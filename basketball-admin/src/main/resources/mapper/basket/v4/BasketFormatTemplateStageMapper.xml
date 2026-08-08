@@ -9,6 +9,7 @@
         <result property="stageName" column="stage_name"/>
         <result property="stageOrder" column="stage_order"/>
         <result property="stageType" column="stage_type"/>
+        <result property="organizationMode" column="organization_mode"/>
         <result property="competitionFormat" column="competition_format"/>
         <result property="groupingMode" column="grouping_mode"/>
         <result property="groupCount" column="group_count"/>

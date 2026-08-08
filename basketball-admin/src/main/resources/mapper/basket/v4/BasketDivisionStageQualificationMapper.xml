@@ -11,16 +11,18 @@
         <result property="qualificationType" column="qualification_type"/>
         <result property="sourceRank" column="source_rank"/>
         <result property="targetStageId" column="target_stage_id"/>
+        <result property="sourceSeriesId" column="source_series_id"/>
         <result property="qualificationStatus" column="qualification_status"/>
         <result property="confirmedBy" column="confirmed_by"/>
         <result property="confirmedTime" column="confirmed_time"/>
+        <result property="remark" column="remark"/>
         <result property="activeUniqueKey" column="active_unique_key"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
         <result property="isDelete" column="is_delete"/>
     </resultMap>
 
-    <sql id="BaseColumns">id, division_id, stage_id, group_id, event_team_id, qualification_type, source_rank, target_stage_id, qualification_status, confirmed_by, confirmed_time, active_unique_key, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, division_id, stage_id, group_id, event_team_id, qualification_type, source_rank, target_stage_id, source_series_id, qualification_status, confirmed_by, confirmed_time, remark, active_unique_key, create_time, update_time, is_delete</sql>
 
     <sql id="NotDeleted">is_delete = 0</sql>
 
@@ -50,11 +52,11 @@
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_division_stage_qualification (
             division_id, stage_id, group_id, event_team_id, qualification_type, source_rank,
-            target_stage_id, qualification_status, confirmed_by, confirmed_time, active_unique_key,
+            target_stage_id, source_series_id, qualification_status, confirmed_by, confirmed_time, remark, active_unique_key,
             create_time, update_time, is_delete
         ) values (
             #{divisionId}, #{stageId}, #{groupId}, #{eventTeamId}, #{qualificationType}, #{sourceRank},
-            #{targetStageId}, #{qualificationStatus}, #{confirmedBy}, #{confirmedTime}, #{activeUniqueKey},
+            #{targetStageId}, #{sourceSeriesId}, #{qualificationStatus}, #{confirmedBy}, #{confirmedTime}, #{remark}, #{activeUniqueKey},
             #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
@@ -62,12 +64,12 @@
     <insert id="batchInsert">
         insert into basket_division_stage_qualification (
             division_id, stage_id, group_id, event_team_id, qualification_type, source_rank,
-            target_stage_id, qualification_status, confirmed_by, confirmed_time, active_unique_key,
+            target_stage_id, source_series_id, qualification_status, confirmed_by, confirmed_time, active_unique_key,
             create_time, update_time, is_delete
         ) values
         <foreach collection="list" item="item" separator=",">
             (#{item.divisionId}, #{item.stageId}, #{item.groupId}, #{item.eventTeamId}, #{item.qualificationType}, #{item.sourceRank},
-            #{item.targetStageId}, #{item.qualificationStatus}, #{item.confirmedBy}, #{item.confirmedTime}, #{item.activeUniqueKey},
+            #{item.targetStageId}, #{item.sourceSeriesId}, #{item.qualificationStatus}, #{item.confirmedBy}, #{item.confirmedTime}, #{item.activeUniqueKey},
             #{item.createTime}, #{item.updateTime}, #{item.isDelete})
         </foreach>
     </insert>
@@ -103,6 +105,32 @@
             update_time = now()
         where stage_id = #{stageId}
           and qualification_status = 'CONFIRMED'
+          and <include refid="NotDeleted"/>
+    </update>
+
+    <select id="selectActiveBySourceSeriesId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_division_stage_qualification
+        where source_series_id = #{sourceSeriesId}
+          and qualification_status in ('PREVIEW', 'CONFIRMED')
+          and <include refid="NotDeleted"/>
+        limit 1
+    </select>
+
+    <select id="selectActiveByStageAndTeamAndType" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_division_stage_qualification
+        where stage_id = #{stageId}
+          and event_team_id = #{eventTeamId}
+          and qualification_type = #{qualificationType}
+          and qualification_status in ('PREVIEW', 'CONFIRMED')
+          and <include refid="NotDeleted"/>
+        limit 1
+    </select>
+
+    <update id="softDeleteActiveBySourceSeriesId">
+        update basket_division_stage_qualification
+        set is_delete = id, active_unique_key = null, update_time = now()
+        where source_series_id = #{sourceSeriesId}
+          and qualification_status in ('PREVIEW', 'CONFIRMED')
           and <include refid="NotDeleted"/>
     </update>
 

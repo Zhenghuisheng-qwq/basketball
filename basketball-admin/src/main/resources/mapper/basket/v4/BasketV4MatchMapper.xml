@@ -11,6 +11,8 @@
         <result property="matchNo" column="match_no" />
         <result property="stageCode" column="stage_code" />
         <result property="stageId" column="stage_id" />
+        <result property="seriesId" column="series_id" />
+        <result property="seriesGameNo" column="series_game_no" />
         <result property="groupId" column="group_id" />
         <result property="bracketSlot" column="bracket_slot" />
         <result property="matchTime" column="match_time" />
@@ -55,7 +57,7 @@
         <result property="remark" column="remark" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, division_id, schedule_batch_id, round_no, match_no, stage_code, stage_id, group_id, bracket_slot, match_time, home_event_team_id, away_event_team_id, home_score, away_score, winner_event_team_id, source_match_id_home, source_match_id_away, loser_event_team_id, match_status, publish_status, platform_code, venue_text, remark, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, division_id, schedule_batch_id, round_no, match_no, stage_code, stage_id, series_id, series_game_no, group_id, bracket_slot, match_time, home_event_team_id, away_event_team_id, home_score, away_score, winner_event_team_id, source_match_id_home, source_match_id_away, loser_event_team_id, match_status, publish_status, platform_code, venue_text, remark, create_time, update_time, is_delete</sql>
 
     <sql id="NotDeleted">is_delete = 0</sql>
 
@@ -125,12 +127,12 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_match (
-            season_id, division_id, schedule_batch_id, round_no, match_no, stage_code, stage_id, group_id, bracket_slot,
+            season_id, division_id, schedule_batch_id, round_no, match_no, stage_code, stage_id, series_id, series_game_no, group_id, bracket_slot,
             match_time, home_event_team_id, away_event_team_id, home_score, away_score, winner_event_team_id,
             source_match_id_home, source_match_id_away, loser_event_team_id, match_status, publish_status,
             platform_code, venue_text, remark, create_time, update_time, is_delete
         ) values (
-            #{seasonId}, #{divisionId}, #{scheduleBatchId}, #{roundNo}, #{matchNo}, #{stageCode}, #{stageId}, #{groupId}, #{bracketSlot},
+            #{seasonId}, #{divisionId}, #{scheduleBatchId}, #{roundNo}, #{matchNo}, #{stageCode}, #{stageId}, #{seriesId}, #{seriesGameNo}, #{groupId}, #{bracketSlot},
             #{matchTime}, #{homeEventTeamId}, #{awayEventTeamId}, #{homeScore}, #{awayScore}, #{winnerEventTeamId},
             #{sourceMatchIdHome}, #{sourceMatchIdAway}, #{loserEventTeamId}, #{matchStatus}, #{publishStatus},
             #{platformCode}, #{venueText}, #{remark}, #{createTime}, #{updateTime}, #{isDelete}
@@ -161,13 +163,17 @@
 
     <update id="softDelete">
         update basket_match
-        set is_delete = 1, update_time = now()
+        set is_delete = id,
+            series_game_no = CASE WHEN series_id IS NOT NULL THEN id ELSE series_game_no END,
+            update_time = now()
         where id = #{id} and is_delete = 0
     </update>
 
     <update id="softDeleteDraftByBatchId">
         update basket_match
-        set is_delete = 1, update_time = now()
+        set is_delete = id,
+            series_game_no = CASE WHEN series_id IS NOT NULL THEN id ELSE series_game_no END,
+            update_time = now()
         where schedule_batch_id = #{scheduleBatchId} and publish_status = 'DRAFT' and is_delete = 0
     </update>
 
@@ -227,6 +233,20 @@
           and match_status in ('FINISHED', 'FORFEITED')
           and <include refid="NotDeleted"/>
         order by round_no asc, match_time asc, id asc
+    </select>
+
+    <select id="selectBySeriesId" resultMap="BasketV4MatchResult">
+        select <include refid="BaseColumns" /> from basket_match
+        where series_id = #{seriesId} and <include refid="NotDeleted"/>
+        order by series_game_no asc, id asc
+    </select>
+
+    <select id="selectEffectiveBySeriesId" resultMap="BasketV4MatchResult">
+        select <include refid="BaseColumns" /> from basket_match
+        where series_id = #{seriesId}
+          and match_status in ('FINISHED', 'FORFEITED')
+          and <include refid="NotDeleted"/>
+        order by series_game_no asc, id asc
     </select>
 
 </mapper>

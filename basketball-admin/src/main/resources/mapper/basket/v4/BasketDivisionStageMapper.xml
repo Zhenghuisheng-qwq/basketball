@@ -10,6 +10,7 @@
         <result property="stageName" column="stage_name"/>
         <result property="stageOrder" column="stage_order"/>
         <result property="stageType" column="stage_type"/>
+        <result property="organizationMode" column="organization_mode"/>
         <result property="competitionFormat" column="competition_format"/>
         <result property="groupingMode" column="grouping_mode"/>
         <result property="groupCount" column="group_count"/>
@@ -77,7 +78,7 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_division_stage (
-            snapshot_id, division_id, stage_code, stage_name, stage_order, stage_type,
+            snapshot_id, division_id, stage_code, stage_name, stage_order, stage_type, organization_mode,
             competition_format, grouping_mode, group_count, round_robin_cycles, best_of,
             win_points, loss_points, forfeit_win_points, forfeit_loss_points,
             advancement_type, advancement_count, pairing_rule, next_stage_code,
@@ -85,7 +86,7 @@
             participant_count, qualified_count, started_time, completed_time, confirmed_time,
             confirmed_by, current_unique_key, execution_version, create_time, update_time, is_delete
         ) values (
-            #{snapshotId}, #{divisionId}, #{stageCode}, #{stageName}, #{stageOrder}, #{stageType},
+            #{snapshotId}, #{divisionId}, #{stageCode}, #{stageName}, #{stageOrder}, #{stageType}, #{organizationMode},
             #{competitionFormat}, #{groupingMode}, #{groupCount}, #{roundRobinCycles}, #{bestOf},
             #{winPoints}, #{lossPoints}, #{forfeitWinPoints}, #{forfeitLossPoints},
             #{advancementType}, #{advancementCount}, #{pairingRule}, #{nextStageCode},
@@ -102,6 +103,7 @@
             <if test="stageName != null">stage_name = #{stageName},</if>
             <if test="stageOrder != null">stage_order = #{stageOrder},</if>
             <if test="stageType != null">stage_type = #{stageType},</if>
+            <if test="organizationMode != null">organization_mode = #{organizationMode},</if>
             <if test="competitionFormat != null">competition_format = #{competitionFormat},</if>
             <if test="groupingMode != null">grouping_mode = #{groupingMode},</if>
             group_count = #{groupCount},
@@ -157,12 +159,12 @@
     </update>
 
     <update id="softDeleteById">
-        update basket_division_stage set is_delete = 1, update_time = now()
+        update basket_division_stage set is_delete = 1, stage_order = id, update_time = now()
         where id = #{id} and <include refid="NotDeleted"/>
     </update>
 
     <update id="softDeleteBySnapshotId">
-        update basket_division_stage set is_delete = 1, update_time = now()
+        update basket_division_stage set is_delete = 1, stage_order = id, update_time = now()
         where snapshot_id = #{snapshotId} and <include refid="NotDeleted"/>
     </update>
 </mapper>

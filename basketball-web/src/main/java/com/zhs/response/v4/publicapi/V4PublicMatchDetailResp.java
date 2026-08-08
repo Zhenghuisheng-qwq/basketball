@@ -46,4 +46,13 @@ public class V4PublicMatchDetailResp {
     private List<V4PublicMatchTeamStatItemResp> teamStats;
 
     private List<V4PublicMatchPlayerStatItemResp> playerStats;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long matchSeriesId;
+
+    private Integer seriesGameNo;
+
+    private Integer bestOf;
+
+    private V4PublicMatchSeriesDetailResp seriesContext;
 }

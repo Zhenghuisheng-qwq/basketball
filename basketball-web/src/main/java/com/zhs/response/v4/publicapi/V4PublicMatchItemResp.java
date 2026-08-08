@@ -56,4 +56,19 @@ public class V4PublicMatchItemResp {
     private String publishStatus;
 
     private String venueText;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long matchSeriesId;
+
+    private Integer seriesGameNo;
+
+    private Integer bestOf;
+
+    private Integer seriesHomeWinCount;
+
+    private Integer seriesAwayWinCount;
+
+    private String seriesStatus;
+
+    private String seriesStatusName;
 }

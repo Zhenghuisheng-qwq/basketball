@@ -36,6 +36,11 @@ public class BasketV4Match implements Serializable {
     private Long stageId;
 
     @JsonSerialize(using = ToStringSerializer.class)
+    private Long seriesId;
+
+    private Integer seriesGameNo;
+
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long groupId;
 
     private Integer roundNo;

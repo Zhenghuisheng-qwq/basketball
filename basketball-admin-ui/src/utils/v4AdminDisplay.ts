@@ -144,9 +144,14 @@ const COMPETITION_FORMAT_LABELS: Record<string, string> = {
 
 const GROUPING_MODE_LABELS: Record<string, string> = {
   NONE: '无分组',
-  OFFLINE_RANDOM_RESULT: '导入线下分组结果',
+  OFFLINE_RANDOM_RESULT: '线下抽签结果',
   MANUAL: '人工分组',
   SEEDED: '种子分组'
+}
+
+const ORGANIZATION_MODE_LABELS: Record<string, string> = {
+  GROUPED: '分组',
+  UNGROUPED: '不分组'
 }
 
 /** 向导/运营页赛制状态（隐藏 DRAFT/LOCKED 等英文枚举） */
@@ -161,6 +166,7 @@ const ADVANCEMENT_TYPE_LABELS: Record<string, string> = {
   NONE: '无晋级',
   OVERALL_TOP_N: '总排名前N',
   GROUP_TOP_N: '小组前N',
+  WINNER_ADVANCE: '胜者晋级',
   SERIES_WINNER: '系列赛胜者',
   MANUAL: '人工晋级'
 }
@@ -184,7 +190,32 @@ const MATCH_STATUS_LABELS: Record<string, string> = {
   SCHEDULED: '已排赛',
   PLAYING: '进行中',
   FINISHED: '已结束',
+  CANCELLED: '已取消',
+  FORFEITED: '判负'
+}
+
+const MATCH_SERIES_STATUS_LABELS: Record<string, string> = {
+  PENDING: '待准备',
+  READY: '待比赛',
+  RUNNING: '进行中',
+  COMPLETED: '已结束',
   CANCELLED: '已取消'
+}
+
+const SERIES_RESOLUTION_LABELS: Record<string, string> = {
+  NORMAL: '正常结束',
+  FORFEIT: '系列赛弃赛',
+  MANUAL: '人工裁定'
+}
+
+const QUALIFICATION_TYPE_LABELS: Record<string, string> = {
+  OVERALL_TOP_N: '总排名前N',
+  GROUP_TOP_N: '小组前N',
+  MATCH_WINNER: '比赛胜者',
+  SERIES_WINNER: '系列赛胜者',
+  CHAMPION: '冠军',
+  BYE_ADVANCE: '轮空晋级',
+  MANUAL: '人工晋级'
 }
 
 const SUBMISSION_STATUS_LABELS: Record<string, string> = {
@@ -324,6 +355,15 @@ export function v4GroupingModeLabel(mode?: string | null): string {
 
 export function v4AdvancementTypeLabel(type?: string | null): string {
   return lookup(ADVANCEMENT_TYPE_LABELS, type, type || '-')
+}
+
+export function v4OrganizationModeLabel(mode?: string | null): string {
+  return lookup(ORGANIZATION_MODE_LABELS, mode, mode || '-')
+}
+
+export function formatV4BestOfLabel(bestOf?: number | null): string {
+  const n = bestOf ?? 1
+  return `BO${n}`
 }
 
 export function v4TieBreakRuleLabel(code?: string | null): string {
@@ -499,13 +539,21 @@ function isStageConfigSupported(stage: NonNullable<V4DivisionSnapshotReadinessIn
   if (format !== 'ROUND_ROBIN' && format !== 'SINGLE_ELIMINATION') {
     return false
   }
-  if (stage.bestOf != null && stage.bestOf !== 1) {
+  const bestOf = stage.bestOf ?? 1
+  if (![1, 3, 5].includes(bestOf)) {
     return false
   }
   if ((stage.advancementType || '').toUpperCase() === 'SERIES_WINNER') {
     return false
   }
+  if (isV4GroupedEliminationForbidden(stage as V4StageSummaryInput)) {
+    return false
+  }
   return true
+}
+
+export function hasV4UnsupportedBestOf(stages?: V4StageSummaryInput[] | null): boolean {
+  return (stages || []).some((s) => (s.bestOf ?? 1) > 1)
 }
 
 export function assessV4DivisionReadiness(
@@ -559,7 +607,7 @@ export function assessV4DivisionReadiness(
   const hasValidStage = stages.length > 0 && stages.every(isStageConfigSupported) && stageComboValidation.valid
   if (!stages.length) reasons.push('至少需要添加一个比赛阶段')
   else if (!stages.every(isStageConfigSupported)) {
-    reasons.push('存在暂不支持的赛制配置（当前仅支持 BO1 循环赛/分组赛/单败淘汰）')
+    reasons.push('存在暂不支持的赛制组合（如分组内淘汰赛）')
   } else if (!stageComboValidation.valid) {
     reasons.push(...stageComboValidation.messages)
   }
@@ -590,6 +638,33 @@ export function v4FormatTypeLabel(type?: string | null): string {
 
 export function v4MatchStatusLabel(status?: string | null): string {
   return lookup(MATCH_STATUS_LABELS, status)
+}
+
+export function v4SeriesStatusLabel(status?: string | null): string {
+  return lookup(MATCH_SERIES_STATUS_LABELS, status)
+}
+
+export function v4SeriesResolutionLabel(type?: string | null): string {
+  return lookup(SERIES_RESOLUTION_LABELS, type, type || '')
+}
+
+export function v4QualificationTypeLabel(type?: string | null): string {
+  return lookup(QUALIFICATION_TYPE_LABELS, type, type || '-')
+}
+
+export function v4SeriesStatusTagType(status?: string | null): 'success' | 'warning' | 'info' | 'danger' | '' {
+  switch (status) {
+    case 'COMPLETED': return 'success'
+    case 'RUNNING': return 'warning'
+    case 'READY': return 'info'
+    case 'CANCELLED': return 'danger'
+    default: return ''
+  }
+}
+
+export function v4BestOfLabel(bestOf?: number | null): string {
+  if (bestOf == null || bestOf <= 1) return 'BO1'
+  return `BO${bestOf}`
 }
 
 export function v4SubmissionStatusLabel(status?: string | null): string {
@@ -811,23 +886,44 @@ export const V4_STAGE_TYPE_OPTIONS = [
   { label: '自定义', value: 'CUSTOM' }
 ] as const
 
+export const V4_ORGANIZATION_MODE_OPTIONS = [
+  { label: '不分组', value: 'UNGROUPED' },
+  { label: '分组', value: 'GROUPED' }
+] as const
+
+export const V4_CUSTOM_COMPETITION_FORMAT_OPTIONS = [
+  { label: '循环积分赛', value: 'ROUND_ROBIN' },
+  { label: '单败淘汰赛', value: 'SINGLE_ELIMINATION' }
+] as const
+
+export const V4_BEST_OF_OPTIONS = [
+  { label: 'BO1', value: 1 },
+  { label: 'BO3', value: 3 },
+  { label: 'BO5', value: 5 }
+] as const
+
+export const V4_GROUPING_MODE_OPTIONS = [
+  { label: '无分组', value: 'NONE' },
+  { label: '线下抽签结果', value: 'OFFLINE_RANDOM_RESULT' },
+  { label: '人工分组', value: 'MANUAL' },
+  { label: '种子分组', value: 'SEEDED' }
+] as const
+
+export const V4_GROUPING_MODE_GROUPED_OPTIONS = V4_GROUPING_MODE_OPTIONS.filter(
+  (item) => item.value !== 'NONE'
+)
+
 export const V4_COMPETITION_FORMAT_OPTIONS = [
   { label: '循环赛', value: 'ROUND_ROBIN' },
   { label: '单败淘汰', value: 'SINGLE_ELIMINATION' },
   { label: '人工安排', value: 'MANUAL' }
 ] as const
 
-export const V4_GROUPING_MODE_OPTIONS = [
-  { label: '无分组', value: 'NONE' },
-  { label: '导入线下分组结果', value: 'OFFLINE_RANDOM_RESULT' },
-  { label: '人工分组', value: 'MANUAL' },
-  { label: '种子分组', value: 'SEEDED' }
-] as const
-
 export const V4_ADVANCEMENT_TYPE_OPTIONS = [
   { label: '无晋级', value: 'NONE' },
   { label: '总排名前N', value: 'OVERALL_TOP_N' },
   { label: '小组前N', value: 'GROUP_TOP_N' },
+  { label: '胜者晋级', value: 'WINNER_ADVANCE' },
   { label: '系列赛胜者', value: 'SERIES_WINNER' },
   { label: '人工晋级', value: 'MANUAL' }
 ] as const
@@ -889,14 +985,13 @@ export function generateV4StageCode(
 
 export function inferV4StageCodePreset(stage: {
   competitionFormat?: string | null
+  organizationMode?: string | null
   groupingMode?: string | null
   stageType?: string | null
 }): 'REGULAR' | 'GROUP' | 'KNOCKOUT' | 'STAGE' {
   const format = (stage.competitionFormat || '').toUpperCase()
-  const grouping = (stage.groupingMode || '').toUpperCase()
   if (format === 'SINGLE_ELIMINATION') return 'KNOCKOUT'
-  if (grouping !== 'NONE' && grouping) return 'GROUP'
-  if ((stage.stageType || '').toUpperCase() === 'GROUP') return 'GROUP'
+  if (isV4GroupedStage(stage)) return 'GROUP'
   if (format === 'ROUND_ROBIN') return 'REGULAR'
   return 'STAGE'
 }
@@ -906,6 +1001,7 @@ export function buildV4WizardStagePresetForm(preset: V4WizardStagePreset) {
     return {
       stageName: '分组赛',
       stageType: 'GROUP',
+      organizationMode: 'GROUPED',
       competitionFormat: 'ROUND_ROBIN',
       groupingMode: 'MANUAL',
       groupCount: 4,
@@ -923,6 +1019,7 @@ export function buildV4WizardStagePresetForm(preset: V4WizardStagePreset) {
     return {
       stageName: '淘汰赛',
       stageType: 'KNOCKOUT',
+      organizationMode: 'UNGROUPED',
       competitionFormat: 'SINGLE_ELIMINATION',
       groupingMode: 'NONE',
       groupCount: undefined,
@@ -939,6 +1036,7 @@ export function buildV4WizardStagePresetForm(preset: V4WizardStagePreset) {
   return {
     stageName: '循环赛',
     stageType: 'REGULAR',
+    organizationMode: 'UNGROUPED',
     competitionFormat: 'ROUND_ROBIN',
     groupingMode: 'NONE',
     groupCount: undefined,
@@ -953,14 +1051,43 @@ export function buildV4WizardStagePresetForm(preset: V4WizardStagePreset) {
   }
 }
 
-export function isV4GroupCompetitionStage(stage: {
-  competitionFormat?: string | null
+export function resolveV4OrganizationMode(stage: {
+  organizationMode?: string | null
   groupingMode?: string | null
-}): boolean {
+  stageType?: string | null
+}): 'GROUPED' | 'UNGROUPED' {
+  const mode = (stage.organizationMode || '').toUpperCase()
+  if (mode === 'GROUPED' || mode === 'UNGROUPED') return mode
   const grouping = (stage.groupingMode || '').toUpperCase()
+  if (grouping && grouping !== 'NONE') return 'GROUPED'
+  if ((stage.stageType || '').toUpperCase() === 'GROUP') return 'GROUPED'
+  return 'UNGROUPED'
+}
+
+export function isV4GroupedStage(stage: {
+  organizationMode?: string | null
+  groupingMode?: string | null
+  stageType?: string | null
+}): boolean {
+  return resolveV4OrganizationMode(stage) === 'GROUPED'
+}
+
+export function isV4GroupCompetitionStage(stage: {
+  organizationMode?: string | null
+  groupingMode?: string | null
+  stageType?: string | null
+  competitionFormat?: string | null
+}): boolean {
   return (stage.competitionFormat || '').toUpperCase() === 'ROUND_ROBIN'
-    && grouping !== 'NONE'
-    && !!grouping
+    && isV4GroupedStage(stage)
+}
+
+export function isV4GroupedEliminationForbidden(stage: {
+  organizationMode?: string | null
+  competitionFormat?: string | null
+}): boolean {
+  return isV4GroupedStage(stage)
+    && (stage.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION'
 }
 
 export function normalizeV4WizardTieBreakRules(
@@ -1022,26 +1149,92 @@ export interface V4StageSummaryInput {
   stageName?: string
   stageOrder?: number
   stageType?: string
+  organizationMode?: string
   competitionFormat?: string
   groupingMode?: string
   groupCount?: number
   roundRobinCycles?: number
+  bestOf?: number
   winPoints?: number
   lossPoints?: number
   advancementType?: string
   advancementCount?: number
   nextStageCode?: string
+  pairingRule?: string
   tieBreakRules?: Array<{ ruleCode?: string; priorityNo?: number; enabled?: number }>
+}
+
+export function sortV4Stages<T extends V4StageSummaryInput>(stages: T[]): T[] {
+  return [...stages].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
+}
+
+export function isV4FinalStageIndex(index: number, total: number): boolean {
+  return total > 0 && index === total - 1
+}
+
+export function inferV4AdvancementTypeForNonFinal(stage: V4StageSummaryInput): string {
+  const format = (stage.competitionFormat || '').toUpperCase()
+  if (format === 'SINGLE_ELIMINATION') return 'WINNER_ADVANCE'
+  if (isV4GroupedStage(stage)) return 'GROUP_TOP_N'
+  return 'OVERALL_TOP_N'
+}
+
+/** 重算线性链：stageOrder、nextStageCode、末阶段 NONE / 非末阶段晋级类型 */
+export function rebuildV4StageLinearChain<T extends V4StageSummaryInput>(stages: T[]): T[] {
+  const sorted = sortV4Stages(stages)
+  return sorted.map((stage, index) => {
+    const next = sorted[index + 1]
+    const isFinal = isV4FinalStageIndex(index, sorted.length)
+    const copy = { ...stage, stageOrder: index + 1 }
+    if (isFinal) {
+      copy.nextStageCode = undefined
+      copy.advancementType = 'NONE'
+      copy.advancementCount = undefined
+      return copy
+    }
+    copy.nextStageCode = next?.stageCode
+    const adv = (copy.advancementType || '').toUpperCase()
+    const format = (copy.competitionFormat || '').toUpperCase()
+    if (format === 'SINGLE_ELIMINATION') {
+      copy.advancementType = 'WINNER_ADVANCE'
+      copy.advancementCount = undefined
+    } else if (adv === 'NONE' || adv === 'WINNER_ADVANCE') {
+      copy.advancementType = inferV4AdvancementTypeForNonFinal(copy)
+    }
+    return copy
+  })
+}
+
+export function createDefaultV4CustomStage(
+  order: number,
+  existingCodes: string[]
+): V4StageSummaryInput {
+  const code = generateV4StageCode('STAGE', existingCodes)
+  return {
+    stageCode: code,
+    stageName: order === 1 ? '阶段 1' : `阶段 ${order}`,
+    stageOrder: order,
+    stageType: 'CUSTOM',
+    organizationMode: 'UNGROUPED',
+    competitionFormat: 'ROUND_ROBIN',
+    groupingMode: 'NONE',
+    roundRobinCycles: 1,
+    bestOf: 1,
+    winPoints: 2,
+    lossPoints: 1,
+    advancementType: 'NONE',
+    pairingRule: 'NONE'
+  }
 }
 
 export function formatV4StageCompetitionFormLabel(stage: V4StageSummaryInput): string {
   const format = (stage.competitionFormat || '').toUpperCase()
-  if (format === 'SINGLE_ELIMINATION') return '单败淘汰'
-  if (isV4GroupCompetitionStage(stage)) {
-    return stage.groupCount ? `分组循环（${stage.groupCount} 组）` : '分组循环'
+  if (format === 'SINGLE_ELIMINATION') return '单败淘汰赛'
+  if (isV4GroupedStage(stage) && format === 'ROUND_ROBIN') {
+    return stage.groupCount ? `小组循环积分赛（${stage.groupCount} 组）` : '小组循环积分赛'
   }
   const cycles = stage.roundRobinCycles ?? 1
-  return cycles > 1 ? `单循环（${cycles} 轮）` : '单循环'
+  return cycles > 1 ? `循环积分赛（${cycles} 轮）` : '循环积分赛'
 }
 
 export function formatV4StageParticipantSource(stage: V4StageSummaryInput, allStages: V4StageSummaryInput[]): string {
@@ -1071,14 +1264,19 @@ export function formatV4StageAdvancementArrangement(
   stage: V4StageSummaryInput,
   allStages: V4StageSummaryInput[]
 ): string {
+  const sorted = sortV4Stages(allStages)
+  const index = sorted.findIndex((s) => s.stageCode === stage.stageCode)
+  const isFinal = index >= 0 && isV4FinalStageIndex(index, sorted.length)
+  if (isFinal) return '本阶段为最终阶段，不再晋级'
   const adv = (stage.advancementType || 'NONE').toUpperCase()
-  if (adv === 'NONE' || !adv) return '本阶段为最终阶段'
-  const nextStage = allStages.find((s) => s.stageCode === stage.nextStageCode)
+  const nextStage = sorted[index + 1]
   const nextLabel = nextStage?.stageName || '下一比赛阶段'
   const count = stage.advancementCount
-  if (adv === 'GROUP_TOP_N') return count ? `每组前 ${count} 名晋级至「${nextLabel}」` : `每组晋级至「${nextLabel}」`
-  if (adv === 'OVERALL_TOP_N') return count ? `总排名前 ${count} 名晋级至「${nextLabel}」` : `总排名晋级至「${nextLabel}」`
+  if (adv === 'WINNER_ADVANCE') return `胜者晋级至「${nextLabel}」`
+  if (adv === 'GROUP_TOP_N') return count ? `每组前 ${count} 名晋级至「${nextLabel}」` : `请设置每组晋级人数`
+  if (adv === 'OVERALL_TOP_N') return count ? `总排名前 ${count} 名晋级至「${nextLabel}」` : `请设置晋级名额`
   if (adv === 'MANUAL') return `人工确认晋级至「${nextLabel}」`
+  if (adv === 'NONE') return '请配置晋级规则'
   return v4AdvancementTypeLabel(stage.advancementType)
 }
 
@@ -1231,6 +1429,7 @@ export interface V4SchemeStagePayload {
     stageName: string
     stageOrder: number
     stageType: string
+    organizationMode?: string
     competitionFormat: string
     groupingMode: string
     groupCount?: number
@@ -1333,6 +1532,7 @@ export function buildV4SchemeStagePayloads(
         stageName: '淘汰赛',
         stageOrder: 1,
         stageType: 'KNOCKOUT',
+        organizationMode: 'UNGROUPED',
         competitionFormat: 'SINGLE_ELIMINATION',
         groupingMode: 'NONE',
         bestOf: 1,
@@ -1349,6 +1549,7 @@ export function buildV4SchemeStagePayloads(
         stageName: '循环赛',
         stageOrder: 1,
         stageType: 'REGULAR',
+        organizationMode: 'UNGROUPED',
         competitionFormat: 'ROUND_ROBIN',
         groupingMode: 'NONE',
         roundRobinCycles: params.roundRobinCycles ?? 1,
@@ -1369,6 +1570,7 @@ export function buildV4SchemeStagePayloads(
         stageName: '小组赛',
         stageOrder: 1,
         stageType: 'GROUP',
+        organizationMode: 'GROUPED',
         competitionFormat: 'ROUND_ROBIN',
         groupingMode: params.groupingMode || 'MANUAL',
         groupCount: params.groupCount ?? 4,
@@ -1392,6 +1594,7 @@ export function buildV4SchemeStagePayloads(
           stageName: '循环赛',
           stageOrder: 1,
           stageType: 'REGULAR',
+          organizationMode: 'UNGROUPED',
           competitionFormat: 'ROUND_ROBIN',
           groupingMode: 'NONE',
           roundRobinCycles: params.roundRobinCycles ?? 1,
@@ -1412,6 +1615,7 @@ export function buildV4SchemeStagePayloads(
           stageName: '淘汰赛',
           stageOrder: 2,
           stageType: 'KNOCKOUT',
+          organizationMode: 'UNGROUPED',
           competitionFormat: 'SINGLE_ELIMINATION',
           groupingMode: 'NONE',
           bestOf: 1,
@@ -1432,6 +1636,7 @@ export function buildV4SchemeStagePayloads(
           stageName: '小组赛',
           stageOrder: 1,
           stageType: 'GROUP',
+          organizationMode: 'GROUPED',
           competitionFormat: 'ROUND_ROBIN',
           groupingMode: params.groupingMode || 'MANUAL',
           groupCount,
@@ -1453,6 +1658,7 @@ export function buildV4SchemeStagePayloads(
           stageName: '淘汰赛',
           stageOrder: 2,
           stageType: 'KNOCKOUT',
+          organizationMode: 'UNGROUPED',
           competitionFormat: 'SINGLE_ELIMINATION',
           groupingMode: 'NONE',
           bestOf: 1,
@@ -1520,85 +1726,146 @@ export function validateV4QuickCreateParams(
   return { valid: messages.length === 0, messages }
 }
 
+export function formatV4StageFlowCardSummary(
+  stage: V4StageSummaryInput,
+  allStages: V4StageSummaryInput[],
+  _expectedTeamCount?: number
+): string {
+  return formatV4StageCardSummary(stage, allStages)
+}
+
+export interface V4StageValidationDetailed extends V4FormatValidationResult {
+  warnings: string[]
+}
+
 export function validateV4StageCombination(
   stages: V4StageSummaryInput[],
   maxTeamCount?: number
 ): V4FormatValidationResult {
+  return validateV4StageCombinationDetailed(stages, maxTeamCount)
+}
+
+export function validateV4StageCombinationDetailed(
+  stages: V4StageSummaryInput[],
+  maxTeamCount?: number
+): V4StageValidationDetailed {
   const messages: string[] = []
+  const warnings: string[] = []
   if (!stages.length) {
     messages.push('至少需要添加一个比赛阶段')
-    return { valid: false, messages }
+    return { valid: false, messages, warnings }
   }
-  const sorted = [...stages].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
-  const codeSet = new Set(sorted.map((s) => s.stageCode))
+  const sorted = rebuildV4StageLinearChain(stages)
+  const codeSet = new Set(sorted.map((s) => s.stageCode).filter(Boolean))
 
   for (let i = 0; i < sorted.length; i += 1) {
     const stage = sorted[i]
-    const isLast = i === sorted.length - 1
+    const isFinal = isV4FinalStageIndex(i, sorted.length)
+    const name = stage.stageName || `阶段 ${i + 1}`
+    const orgMode = resolveV4OrganizationMode(stage)
+    const format = (stage.competitionFormat || '').toUpperCase()
     const adv = (stage.advancementType || 'NONE').toUpperCase()
-    const hasNext = adv !== 'NONE' && !!adv
+    const bestOf = stage.bestOf ?? 1
 
-    if (isLast && stage.nextStageCode) {
-      messages.push(`「${stage.stageName}」为最后阶段，不应再指向下一阶段`)
+    if (!stage.stageCode) messages.push(`「${name}」缺少阶段编码`)
+    if (!stage.stageName?.trim()) messages.push(`阶段 ${i + 1} 缺少阶段名称`)
+    if (![1, 3, 5].includes(bestOf)) messages.push(`「${name}」BO 规则无效`)
+    if (isV4GroupedEliminationForbidden(stage)) {
+      messages.push(`「${name}」当前版本暂不支持分组内淘汰赛`)
     }
-    if (!isLast && !hasNext) {
-      messages.push(`「${stage.stageName}」不是最后阶段，请配置晋级规则`)
+
+    if (orgMode === 'UNGROUPED' && (stage.groupingMode || '').toUpperCase() !== 'NONE') {
+      messages.push(`「${name}」不分组时分组方式必须为无分组`)
     }
-    if (hasNext && stage.nextStageCode && !codeSet.has(stage.nextStageCode)) {
-      messages.push(`「${stage.stageName}」的下一阶段配置无效，请重新选择`)
+    if (orgMode === 'GROUPED') {
+      const groupCount = stage.groupCount ?? 0
+      const grouping = (stage.groupingMode || '').toUpperCase()
+      if (groupCount <= 0) messages.push(`「${name}」请设置分组数量`)
+      if (!grouping || grouping === 'NONE') messages.push(`「${name}」请选择分组方式`)
+      if (maxTeamCount && groupCount > maxTeamCount) {
+        messages.push(`「${name}」分组数量不能大于参赛队伍上限`)
+      }
     }
-    if (hasNext && stage.nextStageCode) {
-      const next = sorted.find((s) => s.stageCode === stage.nextStageCode)
-      if (next && (next.stageOrder || 0) <= (stage.stageOrder || 0)) {
+
+    if (format === 'ROUND_ROBIN') {
+      if (!(stage.roundRobinCycles && stage.roundRobinCycles > 0)) {
+        messages.push(`「${name}」请设置循环次数`)
+      }
+      if (stage.winPoints == null || stage.lossPoints == null) {
+        messages.push(`「${name}」请设置胜/负积分`)
+      }
+    }
+
+    if (isFinal) {
+      if (stage.nextStageCode) messages.push(`「${name}」为最终阶段，不应指向下一阶段`)
+      if (adv !== 'NONE') messages.push(`「${name}」为最终阶段，晋级类型应为无晋级`)
+    } else {
+      if (!stage.nextStageCode) messages.push(`「${name}」缺少下一阶段关联`)
+      if (stage.nextStageCode && !codeSet.has(stage.nextStageCode)) {
+        messages.push(`「${name}」的下一阶段配置无效`)
+      }
+      const next = sorted[i + 1]
+      if (next && stage.nextStageCode !== next.stageCode) {
         messages.push('阶段顺序与晋级关系不一致，请调整阶段顺序')
       }
-    }
-
-    if (isV4GroupCompetitionStage(stage)) {
-      const groupCount = stage.groupCount ?? 0
-      const teamsPerGroup = calcV4TeamsPerGroup(maxTeamCount || 0, groupCount)
-      if (groupCount <= 1) messages.push(`「${stage.stageName}」分组数量必须大于 1`)
-      if (maxTeamCount && groupCount > maxTeamCount) {
-        messages.push(`「${stage.stageName}」分组数量不能大于参赛队伍上限`)
+      if (format === 'SINGLE_ELIMINATION' && adv !== 'WINNER_ADVANCE' && adv !== 'SERIES_WINNER') {
+        messages.push(`「${name}」淘汰阶段非最终阶段必须配置胜者晋级`)
       }
-      if (adv === 'GROUP_TOP_N') {
+      if (isV4GroupedStage(stage) && format === 'ROUND_ROBIN') {
+        if (adv !== 'GROUP_TOP_N') messages.push(`「${name}」分组循环赛请配置每组前 N 名晋级`)
         const count = stage.advancementCount ?? 0
-        if (count <= 0) messages.push(`「${stage.stageName}」每组晋级数必须大于 0`)
+        if (count <= 0) messages.push(`「${name}」请设置每组晋级人数`)
+        const teamsPerGroup = calcV4TeamsPerGroup(maxTeamCount || 0, stage.groupCount || 0)
         if (count > teamsPerGroup) {
-          messages.push(`「${stage.stageName}」每组晋级数不能大于预计每组队伍数（约 ${teamsPerGroup} 支）`)
+          messages.push(`「${name}」每组晋级数不能大于预计每组队伍数（约 ${teamsPerGroup} 支）`)
+        }
+      }
+      if (!isV4GroupedStage(stage) && format === 'ROUND_ROBIN') {
+        if (adv !== 'OVERALL_TOP_N') messages.push(`「${name}」循环赛请配置总排名前 N 名晋级`)
+        if (!(stage.advancementCount && stage.advancementCount > 0)) {
+          messages.push(`「${name}」请设置晋级名额`)
         }
       }
     }
 
-    if (adv === 'GROUP_TOP_N' && stage.groupCount) {
+    if (!isFinal && adv === 'GROUP_TOP_N' && stage.groupCount) {
       const advanceTotal = stage.groupCount * (stage.advancementCount || 0)
-      const nextStage = sorted.find((s) => s.stageCode === stage.nextStageCode)
+      const nextStage = sorted[i + 1]
       if (nextStage && (nextStage.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION') {
         if (!isV4PowerOfTwo(advanceTotal)) {
-          messages.push(`当前将有 ${advanceTotal} 支球队晋级，但系统暂不支持 ${advanceTotal} 支球队自动生成单败淘汰赛。请调整为 4 支或 8 支晋级。`)
+          warnings.push(`「${name}」预计 ${advanceTotal} 支球队晋级淘汰赛，人数不是完整淘汰位，实际执行时可能需要轮空或人工调整。`)
         }
       }
     }
-    if (adv === 'OVERALL_TOP_N') {
+    if (!isFinal && adv === 'OVERALL_TOP_N') {
       const advanceTotal = stage.advancementCount || 0
-      const nextStage = sorted.find((s) => s.stageCode === stage.nextStageCode)
+      const nextStage = sorted[i + 1]
       if (nextStage && (nextStage.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION') {
         if (!isV4PowerOfTwo(advanceTotal)) {
-          messages.push(`当前将有 ${advanceTotal} 支球队晋级，但系统暂不支持 ${advanceTotal} 支球队自动生成单败淘汰赛。请调整为 4 支或 8 支晋级。`)
+          warnings.push(`「${name}」预计 ${advanceTotal} 支球队晋级淘汰赛，人数不是完整淘汰位，实际执行时可能需要轮空或人工调整。`)
         }
+      }
+    }
+    if (format === 'SINGLE_ELIMINATION' && isFinal && sorted.length === 1) {
+      const teamCount = maxTeamCount || 0
+      if (teamCount >= 2 && !isV4PowerOfTwo(teamCount)) {
+        warnings.push(`预计 ${teamCount} 支队伍直接淘汰赛，人数不是完整淘汰位，实际执行时可能需要轮空或人工调整。`)
+      }
+    }
+    if (!isFinal && format === 'SINGLE_ELIMINATION') {
+      const participants = calcV4StagePlannedParticipants(sorted, maxTeamCount || 0)
+      const planned = participants[i]?.planned
+      if (planned && planned >= 2 && !isV4PowerOfTwo(planned)) {
+        warnings.push(`「${name}」预计参赛 ${planned} 支队伍，人数不是完整淘汰位，实际执行时可能需要轮空或人工调整。`)
       }
     }
   }
 
-  const lastStage = sorted[sorted.length - 1]
-  if ((lastStage.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION' && sorted.length === 1) {
-    const teamCount = maxTeamCount || 0
-    if (teamCount >= 2 && !isV4PowerOfTwo(teamCount)) {
-      messages.push(`预计 ${teamCount} 支队伍直接淘汰赛，但系统暂不支持需要轮空的队伍规模。请调整队伍上限为 4、8、16 等 2 的幂次方。`)
-    }
+  if (sorted.some((s) => (s.bestOf ?? 1) > 1)) {
+    warnings.push('赛制包含 BO3/BO5 阶段：可用于赛制设计与锁定；系列赛执行能力将在后续版本开放，在能力启用前该赛区暂不能开放报名。')
   }
 
-  return { valid: messages.length === 0, messages: [...new Set(messages)] }
+  return { valid: messages.length === 0, messages: [...new Set(messages)], warnings: [...new Set(warnings)] }
 }
 
 export interface V4FormatEstimate {
@@ -1686,13 +1953,38 @@ export function formatV4QuickCreateNaturalLanguage(
   return ''
 }
 
+export function formatV4CustomFormatPreview(
+  stages: V4StageSummaryInput[],
+  maxTeamCount: number
+): Array<{ title: string; summary: string; advance?: string; isFinal: boolean }> {
+  const sorted = rebuildV4StageLinearChain(stages)
+  const participants = calcV4StagePlannedParticipants(sorted, maxTeamCount)
+  return sorted.map((stage, index) => {
+    const isFinal = isV4FinalStageIndex(index, sorted.length)
+    const part = participants[index]
+    let advance: string | undefined
+    if (!isFinal && part?.advance) {
+      advance = `预计晋级 ${part.advance} 支`
+    } else if (!isFinal && part?.note) {
+      advance = part.note
+    }
+    return {
+      title: `阶段 ${stage.stageOrder}：${stage.stageName}`,
+      summary: formatV4StageCardSummary(stage, sorted),
+      advance,
+      isFinal
+    }
+  })
+}
+
 export function formatV4FormatFlowFromStages(stages: V4StageSummaryInput[]): string {
   if (!stages.length) return '-'
-  const sorted = [...stages].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
+  const sorted = sortV4Stages(stages)
   return sorted.map((s) => {
-    if ((s.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION') return 'BO1 单败淘汰赛'
-    if (isV4GroupCompetitionStage(s)) return '小组循环赛'
-    if ((s.competitionFormat || '').toUpperCase() === 'ROUND_ROBIN') return '单循环赛'
+    const bo = formatV4BestOfLabel(s.bestOf)
+    if ((s.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION') return `${bo} 单败淘汰`
+    if (isV4GroupedStage(s)) return `小组循环 · ${bo}`
+    if ((s.competitionFormat || '').toUpperCase() === 'ROUND_ROBIN') return `循环积分 · ${bo}`
     return s.stageName || '比赛阶段'
   }).join(' → ')
 }
@@ -1726,33 +2018,77 @@ export function formatV4FormatNaturalLanguageFromStages(
   return `${expectedTeamCount} 支队伍进行单循环，总排名前 ${adv} 名晋级，共 ${adv} 支队伍进入 BO1 单败淘汰赛。`
 }
 
-export function formatV4StageFlowCardSummary(
+export function formatV4StageCardSummary(
   stage: V4StageSummaryInput,
-  allStages: V4StageSummaryInput[],
-  expectedTeamCount: number
+  allStages: V4StageSummaryInput[]
 ): string {
   const parts: string[] = []
-  if (isV4GroupCompetitionStage(stage)) {
-    parts.push(`${stage.groupCount ?? 0} 组 · 每组单循环`)
-    if ((stage.advancementType || '').toUpperCase() === 'GROUP_TOP_N') {
-      parts.push(`每组前 ${stage.advancementCount ?? 0} 名晋级`)
+  const bo = formatV4BestOfLabel(stage.bestOf)
+  const format = (stage.competitionFormat || '').toUpperCase()
+  if (isV4GroupedStage(stage) && format === 'ROUND_ROBIN') {
+    parts.push(`${stage.groupCount ?? 0}组`)
+    parts.push(`组内${(stage.roundRobinCycles ?? 1) > 1 ? '双' : '单'}循环积分`)
+    parts.push(bo)
+    const adv = (stage.advancementType || '').toUpperCase()
+    if (adv === 'GROUP_TOP_N' && stage.advancementCount) {
+      parts.push(`每组前${stage.advancementCount}晋级`)
     }
-  } else if ((stage.competitionFormat || '').toUpperCase() === 'ROUND_ROBIN') {
-    parts.push('全部队伍单循环')
-    if ((stage.advancementType || '').toUpperCase() === 'OVERALL_TOP_N') {
-      parts.push(`总排名前 ${stage.advancementCount ?? 0} 名晋级`)
+  } else if (format === 'ROUND_ROBIN') {
+    parts.push((stage.roundRobinCycles ?? 1) > 1 ? '双循环积分' : '循环积分')
+    parts.push(bo)
+    const adv = (stage.advancementType || '').toUpperCase()
+    if (adv === 'OVERALL_TOP_N' && stage.advancementCount) {
+      parts.push(`总排名前${stage.advancementCount}晋级`)
     }
-  } else if ((stage.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION') {
-    const prev = allStages.find((s) => s.nextStageCode === stage.stageCode)
-    let teamCount = expectedTeamCount
-    if (prev && (prev.advancementType || '').toUpperCase() === 'GROUP_TOP_N') {
-      teamCount = (prev.groupCount || 0) * (prev.advancementCount || 0)
-    } else if (prev && (prev.advancementType || '').toUpperCase() === 'OVERALL_TOP_N') {
-      teamCount = prev.advancementCount || 0
+  } else if (format === 'SINGLE_ELIMINATION') {
+    parts.push('单败淘汰')
+    parts.push(bo)
+    const sorted = sortV4Stages(allStages)
+    const index = sorted.findIndex((s) => s.stageCode === stage.stageCode)
+    if (index >= 0 && isV4FinalStageIndex(index, sorted.length)) {
+      parts.push('最终阶段')
+    } else {
+      parts.push('胜者晋级')
     }
-    parts.push(`${formatV4EliminationRoundLabel(teamCount)}开始 · 决出冠军`)
   }
   return parts.join(' · ') || formatV4StageCompetitionFormLabel(stage)
+}
+
+export function calcV4StagePlannedParticipants(
+  stages: V4StageSummaryInput[],
+  maxTeamCount: number
+): Array<{ order: number; planned?: number; advance?: number; note?: string }> {
+  const sorted = sortV4Stages(stages)
+  const result: Array<{ order: number; planned?: number; advance?: number; note?: string }> = []
+  let current = maxTeamCount
+  for (let i = 0; i < sorted.length; i += 1) {
+    const stage = sorted[i]
+    const entry: { order: number; planned?: number; advance?: number; note?: string } = {
+      order: stage.stageOrder || i + 1,
+      planned: current > 0 ? current : undefined
+    }
+    const isFinal = isV4FinalStageIndex(i, sorted.length)
+    if (isFinal) {
+      result.push(entry)
+      break
+    }
+    const adv = (stage.advancementType || '').toUpperCase()
+    const format = (stage.competitionFormat || '').toUpperCase()
+    if (adv === 'GROUP_TOP_N' && stage.groupCount && stage.advancementCount) {
+      entry.advance = stage.groupCount * stage.advancementCount
+      current = entry.advance
+    } else if (adv === 'OVERALL_TOP_N' && stage.advancementCount) {
+      entry.advance = stage.advancementCount
+      current = stage.advancementCount
+    } else if (format === 'SINGLE_ELIMINATION' && current >= 2) {
+      entry.advance = Math.floor(current / 2)
+      current = entry.advance
+    } else {
+      entry.note = '根据上一阶段实际晋级结果确定'
+    }
+    result.push(entry)
+  }
+  return result
 }
 
 export function formatV4StageAdvanceCountLabel(
@@ -1805,6 +2141,26 @@ export function inferV4FormatSchemeFromStages(stages: V4StageSummaryInput[]): V4
     }
   }
   return 'CUSTOM'
+}
+
+export function formatV4LockReadinessChecklist(
+  stages: V4StageSummaryInput[],
+  maxTeamCount?: number
+): Array<{ ok: boolean; warn?: boolean; label: string }> {
+  const detailed = validateV4StageCombinationDetailed(stages, maxTeamCount)
+  const items: Array<{ ok: boolean; warn?: boolean; label: string }> = [
+    { ok: stages.length > 0, label: '阶段链完整' },
+    { ok: detailed.valid, label: '组织方式、竞赛方式与晋级规则校验通过' }
+  ]
+  if (hasV4UnsupportedBestOf(stages)) {
+    items.push({
+      ok: false,
+      warn: true,
+      label: '包含 BO3/BO5，当前版本锁定后仍暂不能开放报名'
+    })
+  }
+  detailed.warnings.forEach((w) => items.push({ ok: true, warn: true, label: w }))
+  return items
 }
 
 export function formatV4LockConfirmPreview(

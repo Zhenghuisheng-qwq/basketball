@@ -5,7 +5,12 @@ import com.zhs.basket.dto.v4.BasketStageManualRankReq;
 import com.zhs.basket.enums.v4.*;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
+import com.zhs.basket.support.v4.ByeQualificationService;
+import com.zhs.basket.support.v4.BestOfCapabilityGate;
+import com.zhs.basket.support.v4.MatchSeriesQualificationSyncService;
+import com.zhs.basket.support.v4.StageFormatSpecification;
 import com.zhs.basket.support.v4.V4FormatDisplaySupport;
+import com.zhs.basket.support.v4.stage.EliminationStageSupport;
 import com.zhs.basket.support.v4.stage.DivisionStageScheduleStrategy;
 import com.zhs.basket.support.v4.stage.DivisionStageScheduleStrategyFactory;
 import com.zhs.basket.support.v4.stage.ScheduleGenerationResult;
@@ -45,6 +50,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     @Autowired
     private BasketV4MatchMapper matchMapper;
     @Autowired
+    private BasketMatchSeriesMapper matchSeriesMapper;
+    @Autowired
     private BasketMatchSubmissionMapper submissionMapper;
     @Autowired
     private BasketStandingMapper standingMapper;
@@ -62,6 +69,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private TieBreakStandingService tieBreakStandingService;
     @Autowired
     private StageSchedulePrerequisiteValidator schedulePrerequisiteValidator;
+    @Autowired
+    private ByeQualificationService byeQualificationService;
 
     @Override
     public List<BasketDivisionStageExecutionListVo> listStages(Long divisionId) {
@@ -158,6 +167,27 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     }
 
     @Override
+    public List<BasketStageTeamItemVo> listStageTeams(Long stageId) {
+        requireStage(stageId);
+        List<BasketDivisionStageTeam> teams = stageTeamMapper.selectByStageId(stageId);
+        List<BasketStageTeamItemVo> result = new ArrayList<>();
+        for (BasketDivisionStageTeam team : teams) {
+            BasketStageTeamItemVo vo = new BasketStageTeamItemVo();
+            vo.setEventTeamId(team.getEventTeamId());
+            vo.setSeedNo(team.getSeedNo());
+            BasketEventTeam eventTeam = eventTeamMapper.selectById(team.getEventTeamId());
+            if (eventTeam != null) {
+                vo.setTeamName(eventTeam.getTeamNameSnapshot());
+            }
+            result.add(vo);
+        }
+        result.sort(Comparator
+                .comparing(BasketStageTeamItemVo::getSeedNo, Comparator.nullsLast(Integer::compareTo))
+                .thenComparing(BasketStageTeamItemVo::getEventTeamId, Comparator.nullsLast(Long::compareTo)));
+        return result;
+    }
+
+    @Override
     public StageSchedulePreviewVo previewSchedule(Long stageId) {
         BasketDivisionStage stage = requireStage(stageId);
         StageExecutionContext context = buildExecutionContext(stage);
@@ -171,6 +201,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         BasketDivisionStage stage = requireStage(stageId);
         BasketDivision division = requireDivision(stage.getDivisionId());
         validateStageForGenerate(stage);
+        BestOfCapabilityGate.assertCanGenerateSchedule(stage);
         schedulePrerequisiteValidator.validateBeforeGenerateSchedule(division, stage, isFirstStage(stage));
 
         initializeStageTeams(stageId);
@@ -213,7 +244,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     public void publishSchedule(Long stageId) {
         BasketDivisionStage stage = requireStage(stageId);
         BasketDivision division = requireDivision(stage.getDivisionId());
-        schedulePrerequisiteValidator.validateBeforePublishSchedule(division, stage);
+        schedulePrerequisiteValidator.validateBeforePublishSchedule(division, stage, isFirstStage(stage));
         if (stage.getScheduleBatchId() == null) {
             throw new ServiceException("阶段尚未生成赛程");
         }
@@ -260,6 +291,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         }
 
         matchMapper.softDeleteDraftByBatchId(batch.getId());
+        matchSeriesMapper.softDeleteDraftByBatchId(batch.getId());
         if (scheduleBatchMapper.softDelete(batch.getId()) != 1) {
             throw new ServiceException("作废赛程批次失败");
         }
@@ -277,13 +309,19 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         if (!StageExecutionStatusEnum.RUNNING.getCode().equals(stage.getExecutionStatus())) {
             return;
         }
-        int pending = matchMapper.countPendingByStageId(stageId);
-        if (pending > 0) {
-            return;
-        }
-        int finished = matchMapper.countFinishedByStageId(stageId);
-        if (finished <= 0) {
-            return;
+        if (matchSeriesMapper.countByStageId(stageId) > 0) {
+            if (matchSeriesMapper.countIncompleteByStageId(stageId) > 0) {
+                return;
+            }
+        } else {
+            int pending = matchMapper.countPendingByStageId(stageId);
+            if (pending > 0) {
+                return;
+            }
+            int finished = matchMapper.countFinishedByStageId(stageId);
+            if (finished <= 0) {
+                return;
+            }
         }
 
         if (supportsStanding(stage)) {
@@ -306,7 +344,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             throw new ServiceException("阶段尚未进入可预览晋级状态");
         }
 
-        if (supportsStanding(stage)) {
+        if (supportsStanding(stage)
+                && StageExecutionStatusEnum.RUNNING.getCode().equals(stage.getExecutionStatus())) {
             tieBreakStandingService.rebuildStageStanding(stageId);
         }
 
@@ -618,23 +657,46 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
                                                                            BasketDivisionStage nextStage,
                                                                            Long targetStageId,
                                                                            Date now) {
-        List<BasketV4Match> finished = matchMapper.selectFinishedByStageId(stage.getId());
+        AdvancementTypeEnum adv = AdvancementTypeEnum.fromCode(stage.getAdvancementType());
+        if (nextStage != null && adv != AdvancementTypeEnum.WINNER_ADVANCE
+                && adv != AdvancementTypeEnum.SERIES_WINNER) {
+            throw new ServiceException("淘汰赛非最终阶段晋级方式必须为 WINNER_ADVANCE");
+        }
+
+        if (matchSeriesMapper.countByStageId(stage.getId()) > 0) {
+            return buildSeriesEliminationPreview(stage, nextStage, targetStageId, now);
+        }
+
+        List<BasketV4Match> finished;
+        if (EliminationStageSupport.isSingleRoundNonFinalStage(stage)) {
+            finished = matchMapper.selectByStageAndRound(stage.getId(), 1).stream()
+                    .filter(m -> m.getWinnerEventTeamId() != null
+                            && (MatchStatusEnum.FINISHED.getCode().equals(m.getMatchStatus())
+                            || MatchStatusEnum.FORFEITED.getCode().equals(m.getMatchStatus())))
+                    .collect(Collectors.toList());
+        } else {
+            finished = matchMapper.selectFinishedByStageId(stage.getId());
+            if (finished.isEmpty()) {
+                throw new ServiceException("阶段尚无已结束比赛，无法预览晋级");
+            }
+            int maxRound = finished.stream()
+                    .map(BasketV4Match::getRoundNo)
+                    .filter(Objects::nonNull)
+                    .max(Integer::compareTo)
+                    .orElse(0);
+            finished = finished.stream()
+                    .filter(match -> Objects.equals(match.getRoundNo(), maxRound))
+                    .filter(match -> match.getWinnerEventTeamId() != null)
+                    .collect(Collectors.toList());
+        }
+
         if (finished.isEmpty()) {
             throw new ServiceException("阶段尚无已结束比赛，无法预览晋级");
         }
-        int maxRound = finished.stream()
-                .map(BasketV4Match::getRoundNo)
-                .filter(Objects::nonNull)
-                .max(Integer::compareTo)
-                .orElse(0);
-        List<BasketV4Match> finalRound = finished.stream()
-                .filter(match -> Objects.equals(match.getRoundNo(), maxRound))
-                .filter(match -> match.getWinnerEventTeamId() != null)
-                .collect(Collectors.toList());
 
         List<BasketDivisionStageQualification> result = new ArrayList<>();
         int rank = 1;
-        for (BasketV4Match match : finalRound) {
+        for (BasketV4Match match : finished) {
             QualificationTypeEnum type = nextStage == null
                     ? QualificationTypeEnum.CHAMPION : QualificationTypeEnum.MATCH_WINNER;
             BasketDivisionStageQualification row = new BasketDivisionStageQualification();
@@ -651,6 +713,46 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             row.setIsDelete(NOT_DELETED);
             result.add(row);
         }
+        byeQualificationService.appendByePreviewIfNeeded(stage, stageTeamMapper.selectByStageId(stage.getId()), result, now);
+        return result;
+    }
+
+    private List<BasketDivisionStageQualification> buildSeriesEliminationPreview(BasketDivisionStage stage,
+                                                                                 BasketDivisionStage nextStage,
+                                                                                 Long targetStageId,
+                                                                                 Date now) {
+        List<BasketMatchSeries> completed = matchSeriesMapper.selectCompletedByStageId(stage.getId());
+        if (completed.isEmpty()) {
+            throw new ServiceException("阶段尚无已结束系列赛，无法预览晋级");
+        }
+        List<BasketDivisionStageQualification> result = new ArrayList<>();
+        int rank = 1;
+        for (BasketMatchSeries series : completed) {
+            if (series.getWinnerEventTeamId() == null) {
+                continue;
+            }
+            QualificationTypeEnum type = nextStage == null
+                    ? QualificationTypeEnum.CHAMPION : QualificationTypeEnum.SERIES_WINNER;
+            BasketDivisionStageQualification row = new BasketDivisionStageQualification();
+            row.setDivisionId(stage.getDivisionId());
+            row.setStageId(stage.getId());
+            row.setEventTeamId(series.getWinnerEventTeamId());
+            row.setQualificationType(type.getCode());
+            row.setSourceRank(rank++);
+            row.setTargetStageId(targetStageId);
+            row.setSourceSeriesId(series.getId());
+            row.setQualificationStatus(QualificationRecordStatusEnum.PREVIEW.getCode());
+            row.setActiveUniqueKey(MatchSeriesQualificationSyncService.buildSeriesQualificationKey(
+                    series.getId(), QualificationRecordStatusEnum.PREVIEW.getCode()));
+            row.setCreateTime(now);
+            row.setUpdateTime(now);
+            row.setIsDelete(NOT_DELETED);
+            result.add(row);
+        }
+        if (result.isEmpty()) {
+            throw new ServiceException("阶段尚无已结束系列赛，无法预览晋级");
+        }
+        byeQualificationService.appendByePreviewIfNeeded(stage, stageTeamMapper.selectByStageId(stage.getId()), result, now);
         return result;
     }
 
@@ -794,11 +896,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     }
 
     private boolean isGroupStage(BasketDivisionStage stage) {
-        if (StageTypeEnum.GROUP.getCode().equals(stage.getStageType())) {
-            return true;
-        }
-        String groupingMode = stage.getGroupingMode();
-        return groupingMode != null && !GroupingModeEnum.NONE.getCode().equals(groupingMode);
+        return StageFormatSpecification.isGrouped(stage);
     }
 
     private boolean isFirstStage(BasketDivisionStage stage) {
@@ -840,6 +938,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             case OVERALL_TOP_N -> StageTeamEntryTypeEnum.OVERALL_RANK;
             case GROUP_TOP_N -> StageTeamEntryTypeEnum.GROUP_RANK;
             case MATCH_WINNER, CHAMPION -> StageTeamEntryTypeEnum.MATCH_WINNER;
+            case SERIES_WINNER -> StageTeamEntryTypeEnum.SERIES_WINNER;
+            case BYE_ADVANCE -> StageTeamEntryTypeEnum.BYE_ADVANCE;
             case MANUAL -> StageTeamEntryTypeEnum.MANUAL;
         };
     }
@@ -891,10 +991,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     }
 
     private boolean isStandingStage(BasketDivisionStage stage) {
-        if (CompetitionFormatEnum.ROUND_ROBIN.getCode().equals(stage.getCompetitionFormat())) {
-            return true;
-        }
-        return StageTypeEnum.GROUP.getCode().equals(stage.getStageType());
+        return CompetitionFormatEnum.ROUND_ROBIN.getCode().equals(stage.getCompetitionFormat());
     }
 
     private BasketDivisionStage requireStage(Long stageId) {

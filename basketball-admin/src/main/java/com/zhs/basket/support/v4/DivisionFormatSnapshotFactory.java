@@ -50,6 +50,7 @@ public class DivisionFormatSnapshotFactory {
             stage.setStageName(ts.getStageName());
             stage.setStageOrder(ts.getStageOrder());
             stage.setStageType(ts.getStageType());
+            stage.setOrganizationMode(ts.getOrganizationMode());
             stage.setCompetitionFormat(ts.getCompetitionFormat());
             stage.setGroupingMode(ts.getGroupingMode());
             stage.setGroupCount(ts.getGroupCount());

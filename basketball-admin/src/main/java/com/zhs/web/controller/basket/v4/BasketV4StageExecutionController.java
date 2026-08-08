@@ -31,6 +31,12 @@ public class BasketV4StageExecutionController extends BaseController {
         return success(stageExecutionApplicationService.initializeStageTeams(stageId));
     }
 
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_LIST + "')")
+    @GetMapping("/{stageId}/teams")
+    public AjaxResult listStageTeams(@PathVariable Long stageId) {
+        return success(stageExecutionApplicationService.listStageTeams(stageId));
+    }
+
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
     @GetMapping("/{stageId}/schedule-preview")
     public AjaxResult previewSchedule(@PathVariable Long stageId) {

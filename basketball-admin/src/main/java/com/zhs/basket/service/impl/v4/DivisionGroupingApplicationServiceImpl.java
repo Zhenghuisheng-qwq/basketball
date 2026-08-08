@@ -24,6 +24,7 @@ import com.zhs.basket.query.v4.BasketDivisionGroupingBatchQuery;
 import com.zhs.basket.service.v4.IDivisionGroupingApplicationService;
 
 import com.zhs.basket.support.v4.DivisionGroupingLockSpecification;
+import com.zhs.basket.support.v4.GroupDistributionSupport;
 
 import com.zhs.basket.vo.v4.BasketDivisionGroupVo;
 
@@ -88,6 +89,10 @@ public class DivisionGroupingApplicationServiceImpl implements IDivisionGrouping
     @Autowired
 
     private BasketV4MatchMapper matchMapper;
+
+    @Autowired
+
+    private BasketDivisionStageTeamMapper stageTeamMapper;
 
     @Autowired
 
@@ -455,6 +460,8 @@ public class DivisionGroupingApplicationServiceImpl implements IDivisionGrouping
 
         BasketDivisionStage stage = requireStage(batch.getStageId());
 
+        autoAssignSeededIfNeeded(batch, stage);
+
         lockSpecification.validate(batch, stage);
 
 
@@ -522,6 +529,51 @@ public class DivisionGroupingApplicationServiceImpl implements IDivisionGrouping
     }
 
 
+
+    private void autoAssignSeededIfNeeded(BasketDivisionGroupingBatch batch, BasketDivisionStage stage) {
+        GroupingModeEnum mode = GroupingModeEnum.fromCode(stage.getGroupingMode());
+        if (mode != GroupingModeEnum.SEEDED) {
+            return;
+        }
+        if (!groupTeamMapper.selectByBatchId(batch.getId()).isEmpty()) {
+            return;
+        }
+        List<BasketDivisionStageTeam> teams = stageTeamMapper.selectByStageId(stage.getId()).stream()
+                .sorted(java.util.Comparator
+                        .comparing(BasketDivisionStageTeam::getSeedNo, java.util.Comparator.nullsLast(Integer::compareTo))
+                        .thenComparing(BasketDivisionStageTeam::getEventTeamId))
+                .toList();
+        if (teams.isEmpty()) {
+            throw new ServiceException("阶段尚无参赛队伍，无法自动种子分组");
+        }
+        List<BasketDivisionGroup> groups = groupMapper.selectByBatchId(batch.getId()).stream()
+                .sorted(java.util.Comparator.comparing(BasketDivisionGroup::getGroupOrder))
+                .toList();
+        List<Integer> sizes = GroupDistributionSupport.evenGroupSizes(teams.size(), groups.size());
+        Date now = new Date();
+        int teamIndex = 0;
+        for (int g = 0; g < groups.size(); g++) {
+            BasketDivisionGroup group = groups.get(g);
+            int size = sizes.get(g);
+            for (int i = 0; i < size; i++) {
+                BasketDivisionStageTeam team = teams.get(teamIndex++);
+                BasketDivisionGroupTeam assignment = new BasketDivisionGroupTeam();
+                assignment.setGroupingBatchId(batch.getId());
+                assignment.setDivisionId(batch.getDivisionId());
+                assignment.setStageId(batch.getStageId());
+                assignment.setGroupId(group.getId());
+                assignment.setEventTeamId(team.getEventTeamId());
+                assignment.setSeedNo(team.getSeedNo());
+                assignment.setAssignmentSource(GroupingModeEnum.SEEDED.getCode());
+                assignment.setCreateTime(now);
+                assignment.setUpdateTime(now);
+                assignment.setIsDelete(NOT_DELETED);
+                if (groupTeamMapper.insert(assignment) != 1) {
+                    throw new ServiceException("自动种子分组失败");
+                }
+            }
+        }
+    }
 
     private void createDefaultGroups(BasketDivisionGroupingBatch batch, BasketDivisionStage stage, Date now) {
 

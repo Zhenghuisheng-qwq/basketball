@@ -30,6 +30,8 @@ import {
   formatScore,
   v4FormatTypeLabel,
   v4MatchStatusLabel,
+  v4BestOfLabel,
+  v4MatchSeriesStatusLabel,
   v4PlatformLabel,
   v4RankTypeLabel,
   v4RegistrationModeLabel,
@@ -91,6 +93,50 @@ const matchesByRound = computed(() => {
   }
   return Array.from(map.entries()).sort((a, b) => a[0] - b[0])
 })
+
+type ScheduleSeriesGroup = {
+  key: string
+  matchSeriesId: string
+  bestOf?: number
+  homeTeamName?: string
+  awayTeamName?: string
+  seriesHomeWinCount?: number
+  seriesAwayWinCount?: number
+  seriesStatusName?: string
+  games: V4PublicMatchItem[]
+}
+
+function groupRoundMatches(roundMatches: V4PublicMatchItem[]): Array<ScheduleSeriesGroup | V4PublicMatchItem> {
+  const seriesMap = new Map<string, ScheduleSeriesGroup>()
+  const singles: V4PublicMatchItem[] = []
+  for (const match of roundMatches) {
+    if (match.matchSeriesId) {
+      const key = match.matchSeriesId
+      let group = seriesMap.get(key)
+      if (!group) {
+        group = {
+          key,
+          matchSeriesId: key,
+          bestOf: match.bestOf,
+          homeTeamName: match.homeTeamName,
+          awayTeamName: match.awayTeamName,
+          seriesHomeWinCount: match.seriesHomeWinCount,
+          seriesAwayWinCount: match.seriesAwayWinCount,
+          seriesStatusName: match.seriesStatusName,
+          games: [],
+        }
+        seriesMap.set(key, group)
+      }
+      group.games.push(match)
+    } else {
+      singles.push(match)
+    }
+  }
+  for (const group of seriesMap.values()) {
+    group.games.sort((a, b) => (a.seriesGameNo ?? 0) - (b.seriesGameNo ?? 0))
+  }
+  return [...seriesMap.values(), ...singles]
+}
 
 async function loadSeason() {
   loading.value = true
@@ -384,38 +430,62 @@ onMounted(() => {
           <div v-else>
             <section v-for="[round, roundMatches] in matchesByRound" :key="round" class="v4-schedule-round">
               <h3 class="v4-schedule-round__title">第 {{ round }} 轮</h3>
-              <div
-                v-for="match in roundMatches"
-                :key="match.matchId"
-                class="v4-match-row"
-                @click="goMatch(match.matchId)"
-              >
+              <template v-for="item in groupRoundMatches(roundMatches)" :key="'games' in item ? item.key : item.matchId">
+                <div v-if="'games' in item" class="v4-series-card">
+                  <div class="v4-series-card__header">
+                    <strong>{{ displayText(item.homeTeamName) }} vs {{ displayText(item.awayTeamName) }}</strong>
+                    <span>{{ v4BestOfLabel(item.bestOf) }}</span>
+                  </div>
+                  <div class="v4-series-card__set-score">
+                    局分 {{ item.seriesHomeWinCount ?? 0 }} : {{ item.seriesAwayWinCount ?? 0 }}
+                    · {{ item.seriesStatusName || v4MatchSeriesStatusLabel(item.games[0]?.seriesStatus) }}
+                  </div>
+                  <div
+                    v-for="game in item.games"
+                    :key="game.matchId"
+                    class="v4-match-row v4-match-row--nested"
+                    @click="goMatch(game.matchId)"
+                  >
+                    <div class="v4-match-row__team"><span>Game {{ game.seriesGameNo }}</span></div>
+                    <div class="v4-match-row__center">
+                      <div class="v4-match-row__score">{{ formatScore(game.homeScore, game.awayScore, game.matchStatus) }}</div>
+                      <div class="v4-match-row__status">{{ v4MatchStatusLabel(game.matchStatus) }}</div>
+                    </div>
+                    <div class="v4-match-row__team v4-match-row__team--away"><span>{{ displayText(game.awayTeamName) }}</span></div>
+                  </div>
+                </div>
+                <div
+                  v-else
+                  class="v4-match-row"
+                  @click="goMatch(item.matchId)"
+                >
                 <div class="v4-match-row__team">
                   <SafeImage
-                    :src="match.homeTeamLogoUrl"
-                    :alt="match.homeTeamName"
-                    :initials="initials(match.homeTeamName, 2)"
+                    :src="item.homeTeamLogoUrl"
+                    :alt="item.homeTeamName"
+                    :initials="initials(item.homeTeamName, 2)"
                     :size="36"
                   />
-                  <span>{{ displayText(match.homeTeamName) }}</span>
+                  <span>{{ displayText(item.homeTeamName) }}</span>
                 </div>
                 <div class="v4-match-row__center">
                   <div class="v4-match-row__score">
-                    {{ formatScore(match.homeScore, match.awayScore, match.matchStatus) }}
+                    {{ formatScore(item.homeScore, item.awayScore, item.matchStatus) }}
                   </div>
-                  <div class="v4-match-row__status">{{ v4MatchStatusLabel(match.matchStatus) }}</div>
-                  <div class="v4-match-row__status">{{ formatDateTime(match.matchTime).full }}</div>
+                  <div class="v4-match-row__status">{{ v4MatchStatusLabel(item.matchStatus) }}</div>
+                  <div class="v4-match-row__status">{{ formatDateTime(item.matchTime).full }}</div>
                 </div>
                 <div class="v4-match-row__team v4-match-row__team--away">
-                  <span>{{ displayText(match.awayTeamName) }}</span>
+                  <span>{{ displayText(item.awayTeamName) }}</span>
                   <SafeImage
-                    :src="match.awayTeamLogoUrl"
-                    :alt="match.awayTeamName"
-                    :initials="initials(match.awayTeamName, 2)"
+                    :src="item.awayTeamLogoUrl"
+                    :alt="item.awayTeamName"
+                    :initials="initials(item.awayTeamName, 2)"
                     :size="36"
                   />
                 </div>
-              </div>
+                </div>
+              </template>
             </section>
           </div>
         </div>

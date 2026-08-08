@@ -58,6 +58,17 @@ public final class V4FormatDisplaySupport {
         }
     }
 
+    public static String organizationModeLabel(String code) {
+        if (code == null || code.isEmpty()) {
+            return "--";
+        }
+        try {
+            return OrganizationModeEnum.fromCode(code).getDescription();
+        } catch (Exception ex) {
+            return code;
+        }
+    }
+
     public static String competitionFormatLabel(String code) {
         try {
             return CompetitionFormatEnum.fromCode(code).getDescription();
@@ -111,6 +122,9 @@ public final class V4FormatDisplaySupport {
 
     public static void enrichTemplateStageVo(BasketFormatTemplateStageVo vo) {
         vo.setStageTypeName(stageTypeLabel(vo.getStageType()));
+        vo.setOrganizationModeName(organizationModeLabel(
+                vo.getOrganizationMode() != null ? vo.getOrganizationMode()
+                        : OrganizationModeSupport.resolveFromGroupingMode(vo.getGroupingMode())));
         vo.setCompetitionFormatName(competitionFormatLabel(vo.getCompetitionFormat()));
         vo.setGroupingModeName(groupingModeLabel(vo.getGroupingMode()));
         vo.setAdvancementTypeName(advancementTypeLabel(vo.getAdvancementType()));
@@ -119,6 +133,9 @@ public final class V4FormatDisplaySupport {
 
     public static void enrichDivisionStageVo(BasketDivisionStageVo vo) {
         vo.setStageTypeName(stageTypeLabel(vo.getStageType()));
+        vo.setOrganizationModeName(organizationModeLabel(
+                vo.getOrganizationMode() != null ? vo.getOrganizationMode()
+                        : OrganizationModeSupport.resolveFromGroupingMode(vo.getGroupingMode())));
         vo.setCompetitionFormatName(competitionFormatLabel(vo.getCompetitionFormat()));
         vo.setGroupingModeName(groupingModeLabel(vo.getGroupingMode()));
         vo.setAdvancementTypeName(advancementTypeLabel(vo.getAdvancementType()));

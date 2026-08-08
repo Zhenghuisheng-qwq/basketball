@@ -139,6 +139,14 @@ export interface V4MyScheduleItem {
   latestVersionNo?: number
   latestAuditRemark?: string
   latestRejectReason?: string
+  matchSeriesId?: string
+  matchSeriesCode?: string
+  seriesGameNo?: number
+  bestOf?: number
+  seriesHomeWinCount?: number
+  seriesAwayWinCount?: number
+  matchSeriesStatus?: string
+  matchSeriesStatusName?: string
 }
 
 export interface V4MySchedulePage {

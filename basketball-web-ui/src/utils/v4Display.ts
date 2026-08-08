@@ -111,6 +111,57 @@ export function v4MatchStatusLabel(status: string | null | undefined): string {
   }
 }
 
+export function v4MatchSeriesStatusLabel(status: string | null | undefined): string {
+  switch ((status || '').toUpperCase()) {
+    case 'PENDING':
+      return '待准备'
+    case 'READY':
+      return '待比赛'
+    case 'RUNNING':
+      return '进行中'
+    case 'COMPLETED':
+      return '已结束'
+    case 'CANCELLED':
+      return '已取消'
+    default:
+      return status || '--'
+  }
+}
+
+export function v4BestOfLabel(bestOf?: number | null): string {
+  if (bestOf == null || bestOf <= 1) return 'BO1'
+  return `BO${bestOf}`
+}
+
+export function v4QualificationTypeLabel(type?: string | null): string {
+  switch ((type || '').toUpperCase()) {
+    case 'MATCH_WINNER':
+    case 'SERIES_WINNER':
+    case 'CHAMPION':
+      return '胜者晋级'
+    case 'BYE_ADVANCE':
+      return '轮空晋级'
+    case 'MANUAL':
+      return '直接晋级'
+    case 'OVERALL_TOP_N':
+    case 'GROUP_TOP_N':
+      return '排名晋级'
+    default:
+      return type || '--'
+  }
+}
+
+export function v4SeriesResolutionLabel(type?: string | null): string {
+  switch ((type || '').toUpperCase()) {
+    case 'FORFEIT':
+      return '系列赛弃赛'
+    case 'MANUAL':
+      return '人工裁定'
+    default:
+      return ''
+  }
+}
+
 export function v4SeasonStatusLabel(status: string | null | undefined): string {
   return lookup(SEASON_STATUS_LABELS, status)
 }

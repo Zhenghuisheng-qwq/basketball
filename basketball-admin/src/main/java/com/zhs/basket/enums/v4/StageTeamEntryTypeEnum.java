@@ -5,7 +5,9 @@ public enum StageTeamEntryTypeEnum {
     OVERALL_RANK("OVERALL_RANK", "总排名"),
     GROUP_RANK("GROUP_RANK", "小组排名"),
     MATCH_WINNER("MATCH_WINNER", "比赛胜者"),
-    MANUAL("MANUAL", "人工");
+    SERIES_WINNER("SERIES_WINNER", "系列赛胜者"),
+    BYE_ADVANCE("BYE_ADVANCE", "轮空晋级"),
+    MANUAL("MANUAL", "人工晋级");
 
     private final String code;
     private final String description;

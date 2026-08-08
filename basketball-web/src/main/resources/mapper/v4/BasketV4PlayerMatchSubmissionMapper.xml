@@ -44,6 +44,13 @@
             m.publish_status as publishStatus,
             m.home_score as homeScore,
             m.away_score as awayScore,
+            ms.id as matchSeriesId,
+            ms.series_code as matchSeriesCode,
+            m.series_game_no as seriesGameNo,
+            ms.best_of as bestOf,
+            ms.home_win_count as seriesHomeWinCount,
+            ms.away_win_count as seriesAwayWinCount,
+            ms.series_status as matchSeriesStatus,
             ls.submission_status as mySubmissionStatus,
             ls.id as myLatestSubmissionId,
             ls.version_no as latestVersionNo,
@@ -58,6 +65,7 @@
         left join basket_division_group dg on dg.id = m.group_id and dg.is_delete = 0
         left join basket_event_team ht on ht.id = m.home_event_team_id and ht.is_delete = 0
         left join basket_event_team at on at.id = m.away_event_team_id and at.is_delete = 0
+        left join basket_match_series ms on ms.id = m.series_id and ms.is_delete = 0
         left join basket_event_player ep_home on ep_home.event_team_id = m.home_event_team_id and ep_home.is_delete = 0
             and (ep_home.member_id = #{memberId} or ep_home.source_player_id = #{playerId})
         left join basket_event_player ep_away on ep_away.event_team_id = m.away_event_team_id and ep_away.is_delete = 0

@@ -4,6 +4,10 @@ public enum AdvancementTypeEnum {
     NONE("NONE", "无晋级"),
     OVERALL_TOP_N("OVERALL_TOP_N", "总排名前N"),
     GROUP_TOP_N("GROUP_TOP_N", "小组前N"),
+    /** 非最终淘汰阶段：对阵胜者晋级（BO1/BO3/BO5 配置层统一语义，R1-2 执行） */
+    WINNER_ADVANCE("WINNER_ADVANCE", "胜者晋级"),
+    /** @deprecated 历史兼容，新业务禁止写入；由 WINNER_ADVANCE + best_of 表达 */
+    @Deprecated
     SERIES_WINNER("SERIES_WINNER", "系列赛胜者"),
     MANUAL("MANUAL", "人工晋级");
 

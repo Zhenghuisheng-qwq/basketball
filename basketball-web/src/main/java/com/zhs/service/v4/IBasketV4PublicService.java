@@ -33,6 +33,10 @@ public interface IBasketV4PublicService {
 
     List<V4PublicMatchItemResp> listStageBracket(Long stageId);
 
+    List<V4PublicMatchSeriesDetailResp> listStageSeries(Long stageId);
+
+    V4PublicMatchSeriesDetailResp getMatchSeriesDetail(Long seriesId);
+
     List<V4PublicTeamStatItemResp> listTeamStat(Long divisionId);
 
     List<V4PublicPlayerStatItemResp> listPlayerStat(Long divisionId);

@@ -17,6 +17,8 @@ public class BasketV4Match {
     private String matchNo;
     private String stageCode;
     private Long stageId;
+    private Long seriesId;
+    private Integer seriesGameNo;
     private Long groupId;
     private Date matchTime;
     private Long homeEventTeamId;
