@@ -68,16 +68,17 @@ export interface PlayerMatchRecord {
   blocks: number
   turnovers: number
   fouls: number
-  fieldGoalsMade: number
-  fieldGoalsAttempted: number
-  threePointsMade: number
-  threePointsAttempted: number
-  freeThrowsMade: number
-  freeThrowsAttempted: number
+  fieldGoalsMade: number | null
+  fieldGoalsAttempted: number | null
+  threePointsMade: number | null
+  threePointsAttempted: number | null
+  freeThrowsMade: number | null
+  freeThrowsAttempted: number | null
 }
 
 export interface PlayerCareerStatistics {
   seasonId: string
+  divisionId: string
   tournamentName: string
   teamId: string
   teamName: string
@@ -91,9 +92,10 @@ export interface PlayerCareerStatistics {
   blocks: number
   turnovers: number
   fouls: number
-  fieldGoalPercentage: number
-  threePointPercentage: number
-  freeThrowPercentage: number
+  /** null = 无投篮数据源，页面显示 --；0 = 真实 0% */
+  fieldGoalPercentage: number | null
+  threePointPercentage: number | null
+  freeThrowPercentage: number | null
 }
 
 export interface PlayerSeasonStageOption {

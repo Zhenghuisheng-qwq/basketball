@@ -315,15 +315,18 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         resp.setMatchId(match.getId());
         resp.setSeasonId(match.getSeasonId());
         resp.setDivisionId(match.getDivisionId());
+        resp.setStageId(match.getStageId());
         resp.setRoundNo(match.getRoundNo());
         resp.setMatchNo(match.getMatchNo());
         resp.setMatchTime(match.getMatchTime());
         resp.setMatchStatus(match.getMatchStatus());
+        resp.setMatchStatusName(resolveMatchStatusName(match.getMatchStatus()));
         resp.setPublishStatus(match.getPublishStatus());
         resp.setVenueText(match.getVenueText());
         resp.setHomeScore(match.getHomeScore());
         resp.setAwayScore(match.getAwayScore());
         resp.setWinnerEventTeamId(match.getWinnerEventTeamId());
+        fillMatchContextNames(resp, match);
 
         Map<Long, String> captainMap = loadCaptainNameMap(new ArrayList<>(teamMap.values()));
         BasketEventTeam home = teamMap.get(match.getHomeEventTeamId());
@@ -599,6 +602,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             vo.setTurnover(row.getTurnover());
             BasketEventPlayer player = playerMap.get(row.getEventPlayerId());
             if (player != null) {
+                vo.setSourcePlayerId(player.getSourcePlayerId());
                 vo.setPlayerName(player.getPlayerNameSnapshot());
             }
             BasketEventTeam team = teamMap.get(row.getEventTeamId());
@@ -646,6 +650,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             if (row.getEventPlayerId() != null) {
                 BasketEventPlayer player = playerMap.get(row.getEventPlayerId());
                 if (player != null) {
+                    vo.setSourcePlayerId(player.getSourcePlayerId());
                     vo.setPlayerName(player.getPlayerNameSnapshot());
                 }
             }
@@ -1096,11 +1101,18 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             vo.setScore(row.getScore());
             vo.setPointsFor(row.getPointsFor());
             vo.setPointsAgainst(row.getPointsAgainst());
+            vo.setFieldGoalMade(row.getFieldGoalMade());
+            vo.setFieldGoalAttempt(row.getFieldGoalAttempt());
+            vo.setThreePointMade(row.getThreePointMade());
+            vo.setThreePointAttempt(row.getThreePointAttempt());
+            vo.setFreeThrowMade(row.getFreeThrowMade());
+            vo.setFreeThrowAttempt(row.getFreeThrowAttempt());
             vo.setRebound(row.getRebound());
             vo.setAssist(row.getAssist());
             vo.setSteal(row.getSteal());
             vo.setBlock(row.getBlock());
             vo.setTurnover(row.getTurnover());
+            vo.setFoul(row.getFoul());
             BasketEventTeam team = teamMap.get(row.getEventTeamId());
             if (team != null) {
                 vo.setTeamName(team.getTeamNameSnapshot());
@@ -1131,9 +1143,11 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             vo.setSteal(row.getSteal());
             vo.setBlock(row.getBlock());
             vo.setTurnover(row.getTurnover());
+            vo.setFoul(row.getFoul());
             vo.setMinutes(row.getMinutes());
             BasketEventPlayer player = playerMap.get(row.getEventPlayerId());
             if (player != null) {
+                vo.setSourcePlayerId(player.getSourcePlayerId());
                 vo.setPlayerName(player.getPlayerNameSnapshot());
             }
             BasketEventTeam team = teamMap.get(row.getEventTeamId());
@@ -1143,6 +1157,56 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             result.add(vo);
         }
         return result;
+    }
+
+    /**
+     * 正式赛事上下文：仅读 Season / Division / Series / Stage 主数据，不读 pending / Team ACTIVE。
+     */
+    private void fillMatchContextNames(V4PublicMatchDetailResp resp, BasketV4Match match) {
+        BasketSeason season = seasonDao.selectById(match.getSeasonId());
+        if (season != null && Objects.equals(season.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+            resp.setSeasonName(StringUtils.hasText(season.getDisplayTitle()) ? season.getDisplayTitle() : season.getSeasonName());
+            resp.setSeriesId(season.getSeriesId());
+            if (season.getSeriesId() != null) {
+                BasketSeries series = seriesDao.selectById(season.getSeriesId());
+                if (series != null && Objects.equals(series.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                    resp.setSeriesName(series.getSeriesName());
+                }
+            }
+        }
+        BasketDivision division = divisionDao.selectById(match.getDivisionId());
+        if (division != null && Objects.equals(division.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+            resp.setDivisionName(division.getDivisionName());
+        }
+        if (match.getStageId() != null) {
+            List<V4PublicStageItemResp> stages = publicStageMapper.selectStagesByDivisionId(match.getDivisionId());
+            if (!CollectionUtils.isEmpty(stages)) {
+                for (V4PublicStageItemResp stage : stages) {
+                    if (Objects.equals(stage.getStageId(), match.getStageId())) {
+                        resp.setStageName(stage.getStageName());
+                        resp.setStageType(stage.getStageType());
+                        break;
+                    }
+                }
+            }
+        }
+        if (!StringUtils.hasText(resp.getStageName()) && StringUtils.hasText(match.getStageCode())) {
+            resp.setStageName(match.getStageCode());
+        }
+    }
+
+    private String resolveMatchStatusName(String matchStatus) {
+        if (!StringUtils.hasText(matchStatus)) {
+            return "未开始";
+        }
+        return switch (matchStatus.toUpperCase()) {
+            case "PLAYING" -> "进行中";
+            case "FINISHED" -> "已结束";
+            case "CANCELLED" -> "取消";
+            case "FORFEITED", "FORFEIT" -> "弃权";
+            case "SCHEDULED", "DRAFT" -> "未开始";
+            default -> matchStatus;
+        };
     }
 
     private String seriesStatusLabel(String status) {

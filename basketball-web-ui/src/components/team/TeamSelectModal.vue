@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { getPublicDataCenterSeasons, getPublicDataCenterTeamRanking } from '@/api/publicDataCenter'
-import { getPublicSeasonStanding } from '@/api/publicStanding'
+import {
+  getV4PublicSeasonList,
+  getV4PublicStanding,
+  getV4PublicTeamList,
+  getV4PublicTeamStat,
+} from '@/api/v4Public'
+import type { V4PublicDivisionBrief, V4PublicSeasonItem } from '@/api/types/v4Public'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import { displayText } from '@/utils/publicDisplay'
-import {
-  mapRankToTeamBase,
-  mapStandingToTeamBase,
-} from '@/utils/publicTeamMap'
+import { v4PlatformLabel } from '@/utils/v4Display'
 import type { TeamBase } from '@/types/team'
+import {
+  mapV4EventTeamToBase,
+  mapV4StandingToTeamBase,
+} from '@/views/tournament/team/utils/mapV4PublicTeam'
 
 const props = withDefaults(
   defineProps<{
@@ -21,6 +27,10 @@ const props = withDefaults(
     sideText?: string
     teams?: TeamBase[]
     teamsState?: 'loading' | 'success' | 'empty' | 'error'
+    seasons?: V4PublicSeasonItem[]
+    selectedSeasonId?: string
+    selectedDivisionId?: string
+    showScopeSelectors?: boolean
   }>(),
   {
     title: '选择球队',
@@ -31,17 +41,54 @@ const props = withDefaults(
     sideText: '正在选择对比球队',
     teams: undefined,
     teamsState: 'success',
+    seasons: undefined,
+    selectedSeasonId: '',
+    selectedDivisionId: '',
+    showScopeSelectors: true,
   },
 )
 
 const emit = defineEmits<{
   close: []
   select: [teamId: string]
+  'update:selectedSeasonId': [seasonId: string]
+  'update:selectedDivisionId': [divisionId: string]
 }>()
 
 const fetchedTeams = ref<TeamBase[]>([])
+const fetchedSeasons = ref<V4PublicSeasonItem[]>([])
+const internalSeasonId = ref('')
+const internalDivisionId = ref('')
 const fetchState = ref<'idle' | 'loading' | 'success' | 'empty' | 'error'>('idle')
 let reqId = 0
+
+const resolvedSeasons = computed(() => props.seasons ?? fetchedSeasons.value)
+const activeSeasonId = computed({
+  get: () => props.selectedSeasonId || internalSeasonId.value,
+  set: (value: string) => {
+    internalSeasonId.value = value
+    emit('update:selectedSeasonId', value)
+  },
+})
+const activeDivisionId = computed({
+  get: () => props.selectedDivisionId || internalDivisionId.value,
+  set: (value: string) => {
+    internalDivisionId.value = value
+    emit('update:selectedDivisionId', value)
+  },
+})
+
+const selectedSeason = computed(() =>
+  resolvedSeasons.value.find((item) => String(item.seasonId) === activeSeasonId.value),
+)
+
+const divisionOptions = computed<V4PublicDivisionBrief[]>(
+  () => selectedSeason.value?.divisions ?? [],
+)
+
+const selectedDivision = computed(() =>
+  divisionOptions.value.find((item) => String(item.divisionId) === activeDivisionId.value),
+)
 
 const resolvedTeams = computed(() => props.teams ?? fetchedTeams.value)
 
@@ -53,12 +100,24 @@ const listState = computed(() => {
 const disabledSet = computed(() => new Set(props.disabledTeamIds))
 const selectedSet = computed(() => new Set(props.selectedTeamIds))
 
+const showTeamScopeHint = computed(() =>
+  resolvedTeams.value.some((team, index, list) =>
+    list.some((other, otherIndex) => otherIndex !== index && other.name === team.name),
+  ),
+)
+
 function isDisabled(teamId: string): boolean {
   return disabledSet.value.has(teamId)
 }
 
 function isSelected(teamId: string): boolean {
   return selectedSet.value.has(teamId)
+}
+
+function teamScopeLabel(team: TeamBase): string {
+  if (!showTeamScopeHint.value) return ''
+  const parts = [team.platform, team.seasonName].filter(Boolean)
+  return parts.join(' · ')
 }
 
 function handleSelect(team: TeamBase) {
@@ -72,31 +131,77 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
+async function ensureSeasonsLoaded() {
+  if (props.seasons?.length || fetchedSeasons.value.length) return
+  const res = await getV4PublicSeasonList()
+  fetchedSeasons.value = res.data ?? []
+  if (!activeSeasonId.value && fetchedSeasons.value[0]?.seasonId) {
+    activeSeasonId.value = String(fetchedSeasons.value[0].seasonId)
+  }
+}
+
 async function loadTeams() {
   if (props.teams) return
   const current = ++reqId
   fetchState.value = 'loading'
   try {
-    const seasonsRes = await getPublicDataCenterSeasons()
+    await ensureSeasonsLoaded()
     if (current !== reqId) return
-    const season = seasonsRes.data?.[0]
-    if (!season?.seasonId) {
+
+    const season = selectedSeason.value
+    if (!activeSeasonId.value && season?.seasonId) {
+      activeSeasonId.value = String(season.seasonId)
+    }
+    if (!activeDivisionId.value) {
+      activeDivisionId.value = String(season?.divisions?.[0]?.divisionId || '')
+    }
+
+    const divisionId = activeDivisionId.value
+    if (!divisionId) {
       fetchedTeams.value = []
       fetchState.value = 'empty'
       return
     }
 
-    let teams: TeamBase[] = []
-    try {
-      const standingRes = await getPublicSeasonStanding(season.seasonId)
-      if (current !== reqId) return
+    const divisionLabel = selectedDivision.value
+      ? `${v4PlatformLabel(selectedDivision.value.platformCode)} · ${displayText(selectedDivision.value.divisionName)}`
+      : ''
+    const seasonName = displayText(season?.displayTitle, '')
+
+    const [teamRes, standingRes, statRes] = await Promise.all([
+      getV4PublicTeamList(divisionId),
+      getV4PublicStanding(divisionId).catch(() => ({ data: [] })),
+      getV4PublicTeamStat(divisionId).catch(() => ({ data: [] })),
+    ])
+    if (current !== reqId) return
+
+    const standingMap = new Map(
+      (standingRes.data ?? []).map((row) => [String(row.eventTeamId), row]),
+    )
+    const statMap = new Map(
+      (statRes.data ?? []).map((row) => [String(row.eventTeamId), row]),
+    )
+
+    let teams: TeamBase[] = (teamRes.data ?? []).map((team) => {
+      const standing = standingMap.get(String(team.eventTeamId))
+      const stat = statMap.get(String(team.eventTeamId))
+      return mapV4EventTeamToBase(team, {
+        wins: stat?.winCount ?? standing?.winCount,
+        losses: stat?.loseCount ?? standing?.loseCount,
+        ranking: standing?.rankNo,
+        seasonName,
+        divisionLabel,
+      })
+    })
+
+    if (!teams.length) {
       teams = (standingRes.data ?? []).map((row) =>
-        mapStandingToTeamBase(row, season.seasonName),
+        mapV4StandingToTeamBase(row, {
+          seasonName,
+          divisionLabel,
+          platformCode: selectedDivision.value?.platformCode,
+        }),
       )
-    } catch {
-      const rankingRes = await getPublicDataCenterTeamRanking({ seasonId: season.seasonId })
-      if (current !== reqId) return
-      teams = (rankingRes.data ?? []).map((row) => mapRankToTeamBase(row, season.seasonName))
     }
 
     fetchedTeams.value = teams
@@ -107,6 +212,20 @@ async function loadTeams() {
     fetchState.value = 'error'
   }
 }
+
+watch(activeSeasonId, (seasonId) => {
+  const season = resolvedSeasons.value.find((item) => String(item.seasonId) === seasonId)
+  const nextDivisionId = String(season?.divisions?.[0]?.divisionId || '')
+  if (nextDivisionId && nextDivisionId !== activeDivisionId.value) {
+    activeDivisionId.value = nextDivisionId
+  }
+})
+
+watch(activeDivisionId, () => {
+  if (!props.teams && props.visible) {
+    void loadTeams()
+  }
+})
 
 watch(
   () => props.visible,
@@ -161,6 +280,33 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <div v-if="showScopeSelectors && teams == null" class="team-select-modal__filters">
+          <label class="team-select-modal__filter">
+            <span>赛季</span>
+            <select v-model="activeSeasonId">
+              <option
+                v-for="season in resolvedSeasons"
+                :key="season.seasonId"
+                :value="String(season.seasonId)"
+              >
+                {{ displayText(season.displayTitle) }}
+              </option>
+            </select>
+          </label>
+          <label class="team-select-modal__filter">
+            <span>组别</span>
+            <select v-model="activeDivisionId">
+              <option
+                v-for="division in divisionOptions"
+                :key="division.divisionId"
+                :value="String(division.divisionId)"
+              >
+                {{ v4PlatformLabel(division.platformCode) }} · {{ displayText(division.divisionName) }}
+              </option>
+            </select>
+          </label>
+        </div>
+
         <div v-if="listState === 'loading'" class="team-select-modal__state">加载中...</div>
         <div v-else-if="listState === 'error'" class="team-select-modal__state is-error">
           加载球队列表失败
@@ -184,7 +330,11 @@ onUnmounted(() => {
           >
             <TeamLogo :team="team" size="selector" class="team-select-card__logo" />
             <span class="team-select-card__name">{{ displayText(team.name) }}</span>
+            <span v-if="teamScopeLabel(team)" class="team-select-card__scope">
+              {{ teamScopeLabel(team) }}
+            </span>
             <span v-if="isSelected(team.id)" class="team-select-card__badge">已在对比</span>
+            <span v-else-if="isDisabled(team.id)" class="team-select-card__badge">已在对比</span>
           </button>
         </div>
       </div>
@@ -228,6 +378,35 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 24px;
+}
+
+.team-select-modal__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.team-select-modal__filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cnpa-paper-text-muted);
+
+  select {
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid rgba(0, 0, 0, 0.14);
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.35);
+    color: var(--cnpa-paper-text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+  }
 }
 
 .team-select-modal__title {
@@ -345,6 +524,14 @@ onUnmounted(() => {
   font-weight: 900;
   text-align: center;
   line-height: 1.2;
+}
+
+.team-select-card__scope {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cnpa-paper-text-muted);
+  text-align: center;
+  line-height: 1.3;
 }
 
 .team-select-card__badge {

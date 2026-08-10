@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { getPublicDataCenterSeasons, getPublicDataCenterTeamRanking } from '@/api/publicDataCenter'
-import { getPublicSeasonStanding } from '@/api/publicStanding'
+import {
+  getV4PublicSeasonList,
+  getV4PublicStanding,
+  getV4PublicTeamList,
+  getV4PublicTeamStat,
+} from '@/api/v4Public'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import { displayText } from '@/utils/publicDisplay'
+import { v4PlatformLabel } from '@/utils/v4Display'
 import {
-  mapRankToTeamBase,
-  mapStandingToTeamBase,
-} from '@/utils/publicTeamMap'
+  mapV4EventTeamToBase,
+  mapV4StandingToTeamBase,
+} from '@/views/tournament/team/utils/mapV4PublicTeam'
 import type { TeamBase, TeamStage } from '@/types/team'
 
 const props = withDefaults(
@@ -68,26 +73,56 @@ async function loadTeams() {
   const current = ++reqId
   fetchState.value = 'loading'
   try {
-    const seasonsRes = await getPublicDataCenterSeasons()
+    const seasonsRes = await getV4PublicSeasonList()
     if (current !== reqId) return
     const season = seasonsRes.data?.[0]
-    if (!season?.seasonId) {
+    const divisionId = season?.divisions?.[0]?.divisionId
+    if (!divisionId) {
       fetchedTeams.value = []
       fetchState.value = 'empty'
       return
     }
 
-    let teams: TeamBase[] = []
-    try {
-      const standingRes = await getPublicSeasonStanding(season.seasonId)
-      if (current !== reqId) return
+    const division = season?.divisions?.[0]
+    const divisionLabel = division
+      ? `${v4PlatformLabel(division.platformCode)} · ${displayText(division.divisionName)}`
+      : ''
+    const seasonName = displayText(season?.displayTitle, '')
+
+    const [teamRes, standingRes, statRes] = await Promise.all([
+      getV4PublicTeamList(String(divisionId)),
+      getV4PublicStanding(String(divisionId)).catch(() => ({ data: [] })),
+      getV4PublicTeamStat(String(divisionId)).catch(() => ({ data: [] })),
+    ])
+    if (current !== reqId) return
+
+    const standingMap = new Map(
+      (standingRes.data ?? []).map((row) => [String(row.eventTeamId), row]),
+    )
+    const statMap = new Map(
+      (statRes.data ?? []).map((row) => [String(row.eventTeamId), row]),
+    )
+
+    let teams: TeamBase[] = (teamRes.data ?? []).map((team) => {
+      const standing = standingMap.get(String(team.eventTeamId))
+      const stat = statMap.get(String(team.eventTeamId))
+      return mapV4EventTeamToBase(team, {
+        wins: stat?.winCount ?? standing?.winCount,
+        losses: stat?.loseCount ?? standing?.loseCount,
+        ranking: standing?.rankNo,
+        seasonName,
+        divisionLabel,
+      })
+    })
+
+    if (!teams.length) {
       teams = (standingRes.data ?? []).map((row) =>
-        mapStandingToTeamBase(row, season.seasonName),
+        mapV4StandingToTeamBase(row, {
+          seasonName,
+          divisionLabel,
+          platformCode: division?.platformCode,
+        }),
       )
-    } catch {
-      const rankingRes = await getPublicDataCenterTeamRanking({ seasonId: season.seasonId })
-      if (current !== reqId) return
-      teams = (rankingRes.data ?? []).map((row) => mapRankToTeamBase(row, season.seasonName))
     }
 
     fetchedTeams.value = teams

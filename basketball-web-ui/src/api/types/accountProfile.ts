@@ -1,3 +1,18 @@
+export interface AccountProfileChangeDto {
+  changeId: string
+  changeNo?: string
+  oldNickname?: string
+  newNickname?: string
+  oldAvatarUrl?: string
+  newAvatarUrl?: string
+  changeSummary?: string
+  auditStatus?: number
+  auditStatusName?: string
+  auditRemark?: string
+  submitTime?: string
+  auditTime?: string
+}
+
 export interface AccountProfileDto {
   accountId: string
   accountNo: string
@@ -14,6 +29,9 @@ export interface AccountProfileDto {
   bio?: string
   registerTime?: string
   lastLoginTime?: string
+  hasPendingChange?: boolean
+  pendingChange?: AccountProfileChangeDto | null
+  latestRejectedChange?: AccountProfileChangeDto | null
 }
 
 export interface AccountProfileUpdatePayload {
@@ -25,4 +43,9 @@ export interface AccountProfileUpdatePayload {
   cityCode?: string
   cityName?: string
   bio?: string
+}
+
+export interface AccountProfileChangeSubmitPayload {
+  nickname?: string
+  avatarFileId?: string
 }

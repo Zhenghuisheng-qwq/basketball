@@ -68,7 +68,10 @@ public class BasketPartnerServiceImpl implements IBasketPartnerService {
         partner.setPartnerType(req.getPartnerType());
         partner.setCooperationStartDate(req.getCooperationStartDate());
         partner.setCooperationEndDate(req.getCooperationEndDate());
-        partner.setPartnerStatus(PartnerStatusEnum.DRAFT.getCode());
+        Integer statusCode = req.getPartnerStatus() == null
+                ? PartnerStatusEnum.PUBLISHED.getCode()
+                : PartnerStatusEnum.fromCode(req.getPartnerStatus()).getCode();
+        partner.setPartnerStatus(statusCode);
         partner.setSortNo(req.getSortNo() == null ? 0 : req.getSortNo());
         partner.setRemark(req.getRemark());
         partner.setCreateBy(SecurityUtils.getUsername());
@@ -77,6 +80,9 @@ public class BasketPartnerServiceImpl implements IBasketPartnerService {
         partner.setUpdateTime(now);
         partner.setIsDelete(NOT_DELETED);
         partnerMapper.insert(partner);
+        if (PartnerStatusEnum.PUBLISHED.getCode() == statusCode) {
+            publicCacheCleaner.clearAfterCommit();
+        }
         return partner.getId();
     }
 
@@ -162,10 +168,10 @@ public class BasketPartnerServiceImpl implements IBasketPartnerService {
         BasketPartner existing = require(id);
         PartnerStatusEnum status = PartnerStatusEnum.fromCode(existing.getPartnerStatus());
         if (status == PartnerStatusEnum.PUBLISHED) {
-            throw new ServiceException("已发布合作伙伴不可删除，请先下线");
+            throw new ServiceException("展示中的合作伙伴不可删除，请先改为「不展示」");
         }
         if (supportRecordMapper.countActiveByPartnerId(id) > 0) {
-            throw new ServiceException("该合作伙伴仍有支持记录，请先删除或停用相关记录");
+            throw new ServiceException("该合作伙伴已有赞助记录，不可删除，请改为「不展示」");
         }
         if (partnerMapper.softDelete(id, Arrays.asList(
                 PartnerStatusEnum.DRAFT.getCode(), PartnerStatusEnum.OFFLINE.getCode())) != 1) {

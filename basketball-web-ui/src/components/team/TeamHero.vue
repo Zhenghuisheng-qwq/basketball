@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import teamBackground from '@/assets/icon/tournament/team_background.png'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import TeamSelectModal from '@/components/team/TeamSelectModal.vue'
 import type { TeamBase, TeamStage } from '@/types/team'
+import {
+  PUBLIC_TEAM_PAGE_KEY,
+} from '@/views/tournament/team/composables/usePublicTeamPage'
 
 const props = defineProps<{
   team: TeamBase
@@ -13,6 +16,7 @@ const props = defineProps<{
 
 const router = useRouter()
 const compareModalVisible = ref(false)
+const teamPageCtx = inject(PUBLIC_TEAM_PAGE_KEY, null)
 
 const stageLabels: Record<TeamStage, string> = {
   regular: '常规赛',
@@ -22,8 +26,6 @@ const stageLabels: Record<TeamStage, string> = {
 const stageLabel = computed(() => stageLabels[props.team.currentStage])
 
 const recordText = computed(() => `${props.team.wins}胜${props.team.losses}负`)
-
-const eventContextText = computed(() => props.team.seasonName || '赛事信息暂无')
 
 const compareCompetitionText = computed(
   () => `${props.team.seasonName} · ${stageLabels[props.team.currentStage]}`,
@@ -41,6 +43,8 @@ function handleSelectCompareTeam(targetTeamId: string) {
     query: {
       left: props.teamId,
       right: targetTeamId,
+      ...(teamPageCtx?.seasonId.value ? { seasonId: teamPageCtx.seasonId.value } : {}),
+      ...(teamPageCtx?.divisionId.value ? { divisionId: teamPageCtx.divisionId.value } : {}),
     },
   })
 }
@@ -58,40 +62,33 @@ interface HeroInfoCard {
   value: string
 }
 
-const infoCards = computed<HeroInfoCard[]>(() => {
-  const cards: HeroInfoCard[] = [
-    {
-      key: 'captain',
-      icon: 'captain' as const,
-      label: '队长',
-      value: props.team.captainName,
-    },
-    {
-      key: 'stage',
-      icon: 'stage' as const,
-      label: '当前阶段',
-      value: stageLabel.value,
-    },
-    {
-      key: 'roster',
-      icon: 'roster' as const,
-      label: '当前成员',
-      value: `${props.team.rosterCount} 人`,
-    },
-  ]
-  const platform = props.team.platform?.trim()
-  if (platform && platform !== '--') {
-    cards.splice(1, 0, {
-      key: 'platform',
-      icon: 'gamepad' as const,
-      label: '比赛平台',
-      value: platform,
-    })
-  }
-  return cards
-})
+const infoCards = computed<HeroInfoCard[]>(() => [
+  {
+    key: 'captain',
+    icon: 'captain' as const,
+    label: '队长',
+    value: props.team.captainName,
+  },
+  {
+    key: 'platform',
+    icon: 'gamepad' as const,
+    label: '比赛平台',
+    value: props.team.platform?.trim() || '--',
+  },
+  {
+    key: 'stage',
+    icon: 'stage' as const,
+    label: '当前阶段',
+    value: stageLabel.value,
+  },
+  {
+    key: 'roster',
+    icon: 'roster' as const,
+    label: '注册阵容',
+    value: `${props.team.rosterCount} 人`,
+  },
+])
 </script>
-
 <template>
   <section class="team-hero" aria-label="球队详情头部">
     <div class="team-hero__bg" :style="heroBgStyle" aria-hidden="true" />
@@ -115,7 +112,6 @@ const infoCards = computed<HeroInfoCard[]>(() => {
             <h1 class="team-hero__name">{{ team.name }}</h1>
             <span v-if="team.verified" class="team-hero__badge">已认证</span>
           </div>
-          <p class="team-hero__event-context">{{ eventContextText }}</p>
 
           <p class="team-hero__desc">{{ team.description }}</p>
 
@@ -205,7 +201,6 @@ const infoCards = computed<HeroInfoCard[]>(() => {
     @select="handleSelectCompareTeam"
   />
 </template>
-
 <style scoped lang="scss">
 .team-hero {
   --team-hero-content-offset: clamp(36px, 4vw, 86px);
@@ -331,13 +326,6 @@ const infoCards = computed<HeroInfoCard[]>(() => {
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
-}
-
-.team-hero__event-context {
-  margin: 6px 0 12px;
-  font-size: 14px;
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.72);
 }
 
 .team-hero__desc {

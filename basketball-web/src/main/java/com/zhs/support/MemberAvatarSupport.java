@@ -16,4 +16,11 @@ public final class MemberAvatarSupport {
     public static String resolve(String avatarUrl) {
         return StringUtils.hasText(avatarUrl) ? avatarUrl.trim() : DEFAULT_AVATAR_URL;
     }
+
+    /**
+     * Session / Summary 用：仅返回正式 accessUrl；无文件时返回 null，不回落默认图。
+     */
+    public static String accessUrlOrNull(String avatarUrl) {
+        return StringUtils.hasText(avatarUrl) ? avatarUrl.trim() : null;
+    }
 }

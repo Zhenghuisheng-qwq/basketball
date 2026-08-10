@@ -1,25 +1,25 @@
-import type { PublicTeamCompareVo, PublicTeamSeasonStatVo } from '@/api/types/public'
+import type { V4PublicTeamStatItem } from '@/api/types/v4Public'
 import { toNumber } from '@/utils/publicDisplay'
 import type { TeamCompareBarStat, TeamCompareData } from '@/types/team'
 
-function normalizeWinRate(value: unknown): number {
-  const num = toNumber(value, 0)
-  return num <= 1 ? num * 100 : num
+function normalizeWinRate(wins: number, games: number): number {
+  if (games <= 0) return 0
+  return (wins / games) * 100
 }
 
-function normalizePct(value: unknown): number {
-  const num = toNumber(value, 0)
-  return num <= 1 ? num * 100 : num
-}
-
-function statOverview(stat?: PublicTeamSeasonStatVo | null) {
-  const avgPoints = toNumber(stat?.avgPoints, 0)
+function statOverview(stat?: V4PublicTeamStatItem | null) {
+  const games = toNumber(stat?.matchCount, 0)
+  const wins = toNumber(stat?.winCount, 0)
+  const avgPoints = toNumber(stat?.avgPointsFor, 0)
   const avgPointsAgainst = toNumber(stat?.avgPointsAgainst, 0)
   return {
-    winRate: normalizeWinRate(stat?.winRate),
+    winRate: normalizeWinRate(wins, games),
     avgPoints,
     avgPointsAgainst,
     avgPointDiff: avgPoints - avgPointsAgainst,
+    games,
+    wins,
+    losses: toNumber(stat?.loseCount, 0),
   }
 }
 
@@ -33,9 +33,17 @@ function createBarStat(
   return { key, label, left, right, higherIsBetter }
 }
 
-export function mapPublicTeamCompareVo(vo: PublicTeamCompareVo): TeamCompareData {
-  const left = vo.leftStat
-  const right = vo.rightStat
+function avgPerGame(total: unknown, games: number): number {
+  if (games <= 0) return 0
+  return toNumber(total, 0) / games
+}
+
+export function buildTeamCompareFromV4Stats(
+  left?: V4PublicTeamStatItem | null,
+  right?: V4PublicTeamStatItem | null,
+): TeamCompareData {
+  const leftGames = toNumber(left?.matchCount, 0)
+  const rightGames = toNumber(right?.matchCount, 0)
 
   return {
     overview: statOverview(left),
@@ -43,69 +51,116 @@ export function mapPublicTeamCompareVo(vo: PublicTeamCompareVo): TeamCompareData
       createBarStat(
         'rebounds',
         '场均篮板',
-        toNumber(left?.avgRebounds, 0),
-        toNumber(right?.avgRebounds, 0),
+        avgPerGame(left?.rebound, leftGames),
+        avgPerGame(right?.rebound, rightGames),
         true,
       ),
       createBarStat(
         'assists',
         '场均助攻',
-        toNumber(left?.avgAssists, 0),
-        toNumber(right?.avgAssists, 0),
+        avgPerGame(left?.assist, leftGames),
+        avgPerGame(right?.assist, rightGames),
         true,
       ),
       createBarStat(
         'steals',
         '场均抢断',
-        toNumber(left?.avgSteals, 0),
-        toNumber(right?.avgSteals, 0),
+        avgPerGame(left?.steal, leftGames),
+        avgPerGame(right?.steal, rightGames),
         true,
       ),
       createBarStat(
         'blocks',
         '场均盖帽',
-        toNumber(left?.avgBlocks, 0),
-        toNumber(right?.avgBlocks, 0),
+        avgPerGame(left?.block, leftGames),
+        avgPerGame(right?.block, rightGames),
         true,
       ),
       createBarStat(
         'turnovers',
         '场均失误',
-        toNumber(left?.avgTurnovers, 0),
-        toNumber(right?.avgTurnovers, 0),
+        avgPerGame(left?.turnover, leftGames),
+        avgPerGame(right?.turnover, rightGames),
         false,
       ),
       createBarStat('fouls', '场均犯规', 0, 0, false),
     ],
     shooting: [
-      createBarStat(
-        'fgPct',
-        '投篮命中率',
-        normalizePct(left?.fieldGoalPct),
-        normalizePct(right?.fieldGoalPct),
-        true,
-      ),
-      createBarStat(
-        'tpPct',
-        '三分命中率',
-        normalizePct(left?.threePointPct),
-        normalizePct(right?.threePointPct),
-        true,
-      ),
-      createBarStat(
-        'ftPct',
-        '罚球命中率',
-        normalizePct(left?.freeThrowPct),
-        normalizePct(right?.freeThrowPct),
-        true,
-      ),
+      createBarStat('fgPct', '投篮命中率', 0, 0, true),
+      createBarStat('tpPct', '三分命中率', 0, 0, true),
+      createBarStat('ftPct', '罚球命中率', 0, 0, true),
     ],
   }
 }
 
-export function compareOverviewValues(vo: PublicTeamCompareVo) {
+export function compareOverviewValuesFromV4Stats(
+  left?: V4PublicTeamStatItem | null,
+  right?: V4PublicTeamStatItem | null,
+) {
   return {
-    left: statOverview(vo.leftStat),
-    right: statOverview(vo.rightStat),
+    left: statOverview(left),
+    right: statOverview(right),
+  }
+}
+
+/** @deprecated use buildTeamCompareFromV4Stats */
+export function mapPublicTeamCompareVo(vo: {
+  leftStat?: { avgPoints?: unknown; avgPointsAgainst?: unknown; winRate?: unknown; avgRebounds?: unknown; avgAssists?: unknown; avgSteals?: unknown; avgBlocks?: unknown; avgTurnovers?: unknown; fieldGoalPct?: unknown; threePointPct?: unknown; freeThrowPct?: unknown } | null
+  rightStat?: { avgPoints?: unknown; avgPointsAgainst?: unknown; winRate?: unknown; avgRebounds?: unknown; avgAssists?: unknown; avgSteals?: unknown; avgBlocks?: unknown; avgTurnovers?: unknown; fieldGoalPct?: unknown; threePointPct?: unknown; freeThrowPct?: unknown } | null
+}): TeamCompareData {
+  const left = vo.leftStat
+  const right = vo.rightStat
+  return {
+    overview: {
+      winRate: toNumber(left?.winRate, 0) <= 1 ? toNumber(left?.winRate, 0) * 100 : toNumber(left?.winRate, 0),
+      avgPoints: toNumber(left?.avgPoints, 0),
+      avgPointsAgainst: toNumber(left?.avgPointsAgainst, 0),
+      avgPointDiff: toNumber(left?.avgPoints, 0) - toNumber(left?.avgPointsAgainst, 0),
+    },
+    basics: [
+      createBarStat('rebounds', '场均篮板', toNumber(left?.avgRebounds, 0), toNumber(right?.avgRebounds, 0), true),
+      createBarStat('assists', '场均助攻', toNumber(left?.avgAssists, 0), toNumber(right?.avgAssists, 0), true),
+      createBarStat('steals', '场均抢断', toNumber(left?.avgSteals, 0), toNumber(right?.avgSteals, 0), true),
+      createBarStat('blocks', '场均盖帽', toNumber(left?.avgBlocks, 0), toNumber(right?.avgBlocks, 0), true),
+      createBarStat('turnovers', '场均失误', toNumber(left?.avgTurnovers, 0), toNumber(right?.avgTurnovers, 0), false),
+      createBarStat('fouls', '场均犯规', 0, 0, false),
+    ],
+    shooting: [
+      createBarStat('fgPct', '投篮命中率', 0, 0, true),
+      createBarStat('tpPct', '三分命中率', 0, 0, true),
+      createBarStat('ftPct', '罚球命中率', 0, 0, true),
+    ],
+  }
+}
+
+/** @deprecated use compareOverviewValuesFromV4Stats */
+export function compareOverviewValues(vo: {
+  leftStat?: { avgPoints?: unknown; avgPointsAgainst?: unknown; winRate?: unknown } | null
+  rightStat?: { avgPoints?: unknown; avgPointsAgainst?: unknown; winRate?: unknown } | null
+}) {
+  const left = vo.leftStat
+  const right = vo.rightStat
+  return {
+    left: {
+      winRate: toNumber(left?.winRate, 0) <= 1 ? toNumber(left?.winRate, 0) * 100 : toNumber(left?.winRate, 0),
+      avgPoints: toNumber(left?.avgPoints, 0),
+      avgPointsAgainst: toNumber(left?.avgPointsAgainst, 0),
+      avgPointDiff: toNumber(left?.avgPoints, 0) - toNumber(left?.avgPointsAgainst, 0),
+    },
+    right: {
+      winRate: toNumber(right?.winRate, 0) <= 1 ? toNumber(right?.winRate, 0) * 100 : toNumber(right?.winRate, 0),
+      avgPoints: toNumber(right?.avgPoints, 0),
+      avgPointsAgainst: toNumber(right?.avgPointsAgainst, 0),
+      avgPointDiff: toNumber(right?.avgPoints, 0) - toNumber(right?.avgPointsAgainst, 0),
+    },
+  }
+}
+
+export function v4CompareSideMeta(stat?: V4PublicTeamStatItem | null) {
+  const overview = statOverview(stat)
+  return {
+    games: overview.games,
+    wins: overview.wins,
+    losses: overview.losses,
   }
 }

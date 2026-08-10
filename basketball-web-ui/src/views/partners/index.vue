@@ -50,6 +50,11 @@ function supportText(record: PublicPartnerSupportRecordResp) {
   return displayText(record.supportDisplayText, `¥${formatMoney(toNumber(record.supportAmount, 0))}`)
 }
 
+function partnerInitial(name?: string | null) {
+  const text = displayText(name, '合').trim()
+  return text.charAt(0).toUpperCase()
+}
+
 async function loadPartners(nextPage = pageNum.value) {
   const current = ++requestSeq
   loading.value = true
@@ -150,33 +155,33 @@ void loadPartners(1)
                 <button type="button" class="partners-retry" @click="loadPartners(pageNum)">重新加载</button>
               </div>
               <div v-else-if="pageState === 'empty'" class="partners-empty">
-                暂无公开的合作伙伴支持记录
+                暂无公开的合作伙伴
               </div>
-              <div v-else class="partners-table" role="table" aria-label="赞助感谢墙">
-                <div class="partners-table__row partners-table__row--header" role="row">
-                  <div role="columnheader">支持伙伴</div>
-                  <div role="columnheader">赞助金额</div>
-                  <div role="columnheader">赞助日期</div>
-                </div>
-                <div
+              <div v-else class="partners-wall__grid" aria-label="赞助感谢墙">
+                <component
+                  :is="record.websiteUrl ? 'a' : 'article'"
                   v-for="record in records"
-                  :key="String(record.recordId)"
-                  class="partners-table__row"
-                  role="row"
+                  :key="String(record.partnerId || record.recordId)"
+                  class="partners-card"
+                  :href="record.websiteUrl || undefined"
+                  :target="record.websiteUrl ? '_blank' : undefined"
+                  :rel="record.websiteUrl ? 'noopener noreferrer' : undefined"
                 >
-                  <div class="partners-table__name" role="cell" :title="displayText(record.partnerName)">
+                  <div class="partners-card__logo">
+                    <img
+                      v-if="record.partnerLogoUrl"
+                      :src="record.partnerLogoUrl"
+                      :alt="displayText(record.partnerName)"
+                      loading="lazy"
+                    />
+                    <span v-else class="partners-card__fallback">{{ partnerInitial(record.partnerName) }}</span>
+                  </div>
+                  <div class="partners-card__name" :title="displayText(record.partnerName)">
                     {{ displayText(record.partnerName) }}
                   </div>
-                  <div
-                    class="partners-table__support is-cash"
-                    role="cell"
-                  >
-                    {{ supportText(record) }}
-                  </div>
-                  <div class="partners-table__date" role="cell">
-                    {{ displayText(record.supportDate, '-') }}
-                  </div>
-                </div>
+                  <div class="partners-card__label">累计赞助</div>
+                  <div class="partners-card__amount">{{ supportText(record) }}</div>
+                </component>
               </div>
 
               <nav v-if="showPagination" class="partners-pagination" aria-label="分页">
@@ -393,56 +398,82 @@ void loadPartners(1)
   scroll-margin-top: calc(var(--site-header-height) + 16px);
 }
 
-.partners-table {
+.partners-wall__grid {
   margin-top: clamp(24px, 2.2vw, 30px);
-  border: 1px solid rgba(30, 30, 30, 0.37);
-  border-radius: 8px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.26);
-}
-
-.partners-table__row {
   display: grid;
-  grid-template-columns: 2fr 1.5fr 1.5fr;
-  min-height: 56px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(14px, 1.6vw, 20px);
+}
+
+.partners-card {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 0 clamp(16px, 2vw, 22px);
-  font-size: 16px;
-  color: #1a1a1a;
-  border-top: 1px solid rgba(30, 30, 30, 0.12);
+  text-align: center;
+  min-height: 190px;
+  padding: 22px 16px 20px;
+  border: 1px solid rgba(30, 30, 30, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.34);
+  color: inherit;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 
-  &:first-child {
-    border-top: 0;
-  }
-
-  &--header {
-    min-height: 60px;
-    font-size: 18px;
-    font-weight: 900;
-    background: rgba(255, 255, 255, 0.23);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
   }
 }
 
-.partners-table__name {
-  font-weight: 700;
+.partners-card__logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(30, 30, 30, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+.partners-card__fallback {
+  font-size: 28px;
+  font-weight: 800;
+  color: #333;
+}
+
+.partners-card__name {
+  margin-top: 14px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #121212;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.partners-table__support {
+.partners-card__label {
+  margin-top: 10px;
+  font-size: 12px;
   font-weight: 700;
-  text-align: center;
-
-  &.is-cash {
-    color: #c90911;
-  }
+  letter-spacing: 0.5px;
+  color: #666;
 }
 
-.partners-table__date {
-  text-align: right;
-  font-weight: 600;
-  white-space: nowrap;
+.partners-card__amount {
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #c90911;
 }
 
 .partners-pagination {
@@ -518,20 +549,19 @@ void loadPartners(1)
   cursor: pointer;
 }
 
+@media (max-width: 1100px) {
+  .partners-wall__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .partners-summary__grid {
     grid-template-columns: 1fr;
   }
 
-  .partners-table__row {
-    grid-template-columns: 1fr;
-    gap: 6px;
-    padding: 14px 16px;
-  }
-
-  .partners-table__support,
-  .partners-table__date {
-    text-align: left;
+  .partners-wall__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

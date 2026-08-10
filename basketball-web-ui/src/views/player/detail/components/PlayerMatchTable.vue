@@ -26,7 +26,14 @@ function formatLine(row: PlayerMatchRecord): string {
   return `${row.points}分 ${row.rebounds}板 ${row.assists}助`
 }
 
-function formatShot(made: number, attempted: number): string {
+function formatShot(made: number | null | undefined, attempted: number | null | undefined): string {
+  if (made === null || attempted === null || made === undefined || attempted === undefined) {
+    return '--'
+  }
+  // 无出手记录时不展示假 0/0
+  if (Number(attempted) === 0 && Number(made) === 0) {
+    return '--'
+  }
   return `${made}/${attempted}`
 }
 

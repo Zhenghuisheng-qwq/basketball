@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketMemberProfileChangeMapper">
+
+    <resultMap type="com.zhs.basket.domain.BasketMemberProfileChange" id="BasketMemberProfileChangeResult">
+        <id property="id" column="id"/>
+        <result property="changeNo" column="change_no"/>
+        <result property="memberId" column="member_id"/>
+        <result property="playerId" column="player_id"/>
+        <result property="oldNickname" column="old_nickname"/>
+        <result property="newNickname" column="new_nickname"/>
+        <result property="oldAvatarFileId" column="old_avatar_file_id"/>
+        <result property="newAvatarFileId" column="new_avatar_file_id"/>
+        <result property="oldAvatarUrl" column="old_avatar_url"/>
+        <result property="newAvatarUrl" column="new_avatar_url"/>
+        <result property="changeSummary" column="change_summary"/>
+        <result property="auditStatus" column="audit_status"/>
+        <result property="auditUserId" column="audit_user_id"/>
+        <result property="auditTime" column="audit_time"/>
+        <result property="auditRemark" column="audit_remark"/>
+        <result property="activeFlag" column="active_flag"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="joins">
+        left join basket_member_account acc on acc.id = c.member_id and acc.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = c.member_id and mp.is_delete = 0
+        left join basket_player_profile p on p.id = c.player_id and p.is_delete = 0
+    </sql>
+
+    <select id="selectList" resultType="com.zhs.basket.vo.MemberProfileChangeListVo">
+        select c.id, c.change_no as changeNo, c.member_id as memberId, acc.account_no as accountNo,
+               c.player_id as playerId, p.player_no as playerNo,
+               mp.nickname as submitUserName, acc.email as submitUserEmail,
+               c.old_nickname as oldNickname, c.new_nickname as newNickname,
+               c.old_avatar_url as oldAvatarUrl, c.new_avatar_url as newAvatarUrl,
+               c.change_summary as changeSummary, c.audit_status as auditStatus,
+               c.create_time as submitTime, c.audit_time as auditTime
+        from basket_member_profile_change c
+        <include refid="joins"/>
+        where c.is_delete = 0
+        <if test="changeNo != null and changeNo != ''">and c.change_no like concat('%', #{changeNo}, '%')</if>
+        <if test="nickname != null and nickname != ''">
+            and (c.old_nickname like concat('%', #{nickname}, '%') or c.new_nickname like concat('%', #{nickname}, '%'))
+        </if>
+        <if test="submitUser != null and submitUser != ''">
+            and (mp.nickname like concat('%', #{submitUser}, '%') or acc.email like concat('%', #{submitUser}, '%')
+                 or acc.account_no like concat('%', #{submitUser}, '%') or p.player_no like concat('%', #{submitUser}, '%'))
+        </if>
+        <if test="auditStage != null and auditStage != ''">
+            <choose>
+                <when test="auditStage == 'PENDING'">and c.audit_status = 1</when>
+                <when test="auditStage == 'APPROVED'">and c.audit_status = 3</when>
+                <when test="auditStage == 'REJECTED'">and c.audit_status = 4</when>
+                <when test="auditStage == 'CANCELLED'">and c.audit_status = 5</when>
+            </choose>
+        </if>
+        <if test="(auditStage == null or auditStage == '') and auditStatus != null">and c.audit_status = #{auditStatus}</if>
+        <if test="beginTime != null and beginTime != ''">and c.create_time &gt;= #{beginTime}</if>
+        <if test="endTime != null and endTime != ''">and c.create_time &lt;= #{endTime}</if>
+        order by c.create_time desc, c.id desc
+    </select>
+
+    <select id="selectDetailVo" resultType="com.zhs.basket.vo.MemberProfileChangeDetailVo">
+        select c.id, c.change_no as changeNo, c.member_id as memberId, acc.account_no as accountNo,
+               c.player_id as playerId, p.player_no as playerNo,
+               mp.nickname as submitUserName, acc.email as submitUserEmail,
+               c.old_nickname as oldNickname, c.new_nickname as newNickname,
+               c.old_avatar_file_id as oldAvatarFileId, c.new_avatar_file_id as newAvatarFileId,
+               c.old_avatar_url as oldAvatarUrl, c.new_avatar_url as newAvatarUrl,
+               c.change_summary as changeSummary, c.audit_status as auditStatus,
+               c.create_time as submitTime, c.audit_time as auditTime,
+               c.audit_user_id as auditUserId, c.audit_remark as auditRemark
+        from basket_member_profile_change c
+        <include refid="joins"/>
+        where c.id = #{id} and c.is_delete = 0
+    </select>
+
+    <select id="selectById" resultMap="BasketMemberProfileChangeResult">
+        select * from basket_member_profile_change where id = #{id} and is_delete = 0
+    </select>
+
+    <update id="updateStatusIfMatch">
+        update basket_member_profile_change
+        set audit_status = #{toStatus},
+            audit_user_id = #{auditUserId},
+            audit_remark = #{auditRemark},
+            audit_time = #{auditTime},
+            active_flag = #{activeFlag},
+            update_time = now()
+        where id = #{id}
+          and is_delete = 0
+          and active_flag = 1
+          and audit_status in
+        <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+    </update>
+
+    <update id="updateMemberOfficialProfile">
+        update basket_member_profile
+        set nickname = #{nickname},
+            avatar_file_id = #{avatarFileId},
+            update_time = now()
+        where member_id = #{memberId}
+          and is_delete = 0
+    </update>
+</mapper>

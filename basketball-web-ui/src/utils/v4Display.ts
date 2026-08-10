@@ -95,19 +95,19 @@ export function v4RosterRuleText(min?: number | null, max?: number | null, gameM
 export function v4MatchStatusLabel(status: string | null | undefined): string {
   switch ((status || '').toUpperCase()) {
     case 'PLAYING':
-      return '比赛中'
+      return '进行中'
     case 'FINISHED':
       return '已结束'
     case 'CANCELLED':
-      return '已取消'
+      return '取消'
     case 'FORFEITED':
+    case 'FORFEIT':
       return '弃权'
     case 'SCHEDULED':
-      return '待比赛'
     case 'DRAFT':
-      return '未发布'
+      return '未开始'
     default:
-      return '未开赛'
+      return status ? status : '未开始'
   }
 }
 

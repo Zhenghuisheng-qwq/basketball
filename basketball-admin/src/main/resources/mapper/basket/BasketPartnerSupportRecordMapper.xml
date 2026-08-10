@@ -51,6 +51,9 @@
     <select id="selectList" resultType="com.zhs.basket.resp.PartnerSupportListResp">
         <include refid="listSelect"/>
         where r.is_delete = 0
+        <if test="partnerId != null">
+            and r.partner_id = #{partnerId}
+        </if>
         <if test="partnerName != null and partnerName != ''">
             and p.partner_name like concat('%', #{partnerName}, '%')
         </if>

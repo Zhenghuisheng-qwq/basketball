@@ -59,28 +59,16 @@ export const competitionMenuGroups: Record<MegaMenuType, PublicMenuGroup[]> = {
       title: '数据分类',
       entries: [
         {
-          id: 'data-standing',
-          label: '积分榜',
-          abbrev: '积',
-          to: { path: '/data', query: { tab: 'standing' } },
-        },
-        {
           id: 'data-team',
-          label: '球队统计',
+          label: '球队数据',
           abbrev: '队',
           to: { path: '/data', query: { tab: 'team' } },
         },
         {
           id: 'data-player',
-          label: '球员统计',
+          label: '个人数据',
           abbrev: '员',
           to: { path: '/data', query: { tab: 'player' } },
-        },
-        {
-          id: 'data-rank',
-          label: '排行榜',
-          abbrev: '榜',
-          to: { path: '/data', query: { tab: 'rank' } },
         },
       ],
     },
@@ -91,6 +79,6 @@ export const competitionMenuGroups: Record<MegaMenuType, PublicMenuGroup[]> = {
   ],
 }
 
-export const DATA_TAB_VALUES = ['standing', 'team', 'player', 'rank'] as const
+export const DATA_TAB_VALUES = ['team', 'player'] as const
 
 export type DataTabValue = (typeof DATA_TAB_VALUES)[number]

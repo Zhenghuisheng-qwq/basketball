@@ -43,7 +43,6 @@ const infoItems = computed(() => [
   { label: '当前阶段', value: props.profile.currentStage },
 ])
 </script>
-
 <template>
   <section class="player-detail-hero" aria-label="球员详情头部">
     <div class="player-detail-hero__bg" :style="heroBgStyle" aria-hidden="true" />
@@ -72,7 +71,7 @@ const infoItems = computed(() => [
             </div>
             <p class="player-detail-hero__registration">{{ profile.registrationText }}</p>
             <div class="player-detail-hero__meta">
-              <span>当前参赛球队 {{ currentTeamsText }}</span>
+              <span>所属战队 {{ profile.currentTeamName }}</span>
               <span class="player-detail-hero__meta-sep">·</span>
               <span>主要位置 {{ profile.position }}</span>
             </div>
@@ -101,7 +100,6 @@ const infoItems = computed(() => [
     </div>
   </section>
 </template>
-
 <style scoped lang="scss">
 .player-detail-hero {
   position: relative;

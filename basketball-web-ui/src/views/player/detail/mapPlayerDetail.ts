@@ -5,6 +5,7 @@ import type {
   PublicPlayerSeasonStatVo,
 } from '@/api/types/public'
 import { displayText, formatDateTime, toNumber } from '@/utils/publicDisplay'
+import { v4GameModeLabel, v4PlatformLabel } from '@/utils/v4Display'
 import type {
   PlayerCareerStatistics,
   PlayerDetailData,
@@ -93,47 +94,66 @@ export function mapPublicPlayerMatch(
     blocks: 0,
     turnovers: 0,
     fouls: 0,
-    fieldGoalsMade: 0,
-    fieldGoalsAttempted: 0,
-    threePointsMade: 0,
-    threePointsAttempted: 0,
-    freeThrowsMade: 0,
-    freeThrowsAttempted: 0,
+    // 比赛级球员投篮字段当前无正式数据源
+    fieldGoalsMade: null,
+    fieldGoalsAttempted: null,
+    threePointsMade: null,
+    threePointsAttempted: null,
+    freeThrowsMade: null,
+    freeThrowsAttempted: null,
   }
+}
+
+function nullablePct(value: number | string | null | undefined): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+function buildSeasonLabel(row: PublicPlayerSeasonStatVo): string {
+  const season = displayText(row.seasonName || row.seriesName, '公开赛季')
+  const platform = v4PlatformLabel(row.platformCode)
+  const mode = v4GameModeLabel(row.gameMode)
+  return [season, platform, mode].filter((part) => part && part !== '--').join(' · ')
 }
 
 export function mapPublicPlayerSeasonStats(
   rows: PublicPlayerSeasonStatVo[],
 ): PlayerCareerStatistics[] {
   return rows.map((row) => ({
-    seasonId: String(row.seasonId || ''),
-    tournamentName: displayText(row.teamName ? `赛季 ${row.seasonId}` : row.seasonId, '公开赛季'),
-    teamId: String(row.teamId || ''),
+    // 用 divisionId 作为赛季选择主键，避免同 Season 多 Division 合并
+    seasonId: String(row.divisionId || row.seasonId || ''),
+    divisionId: String(row.divisionId || ''),
+    tournamentName: buildSeasonLabel(row),
+    teamId: String(row.eventTeamId || row.teamId || ''),
     teamName: displayText(row.teamName, '--'),
     teamLogoUrl: row.teamLogoUrl?.trim() || '',
-    platform: '--',
+    platform: v4PlatformLabel(row.platformCode),
     games: toNumber(row.games, 0),
     points: toNumber(row.avgPoints ?? row.points, 0),
     rebounds: toNumber(row.avgRebounds ?? row.rebounds, 0),
     assists: toNumber(row.avgAssists ?? row.assists, 0),
     steals: toNumber(row.avgSteals ?? row.steals, 0),
     blocks: toNumber(row.avgBlocks ?? row.blocks, 0),
-    turnovers: 0,
-    fouls: 0,
-    fieldGoalPercentage: toNumber(row.fieldGoalPct, 0),
-    threePointPercentage: toNumber(row.threePointPct, 0),
-    freeThrowPercentage: toNumber(row.freeThrowPct, 0),
+    turnovers: toNumber(row.avgTurnovers ?? row.turnovers, 0),
+    fouls: toNumber(row.fouls, 0),
+    fieldGoalPercentage: nullablePct(row.fieldGoalPct),
+    threePointPercentage: nullablePct(row.threePointPct),
+    freeThrowPercentage: nullablePct(row.freeThrowPct),
   }))
 }
 
 export function mapSeasonStageOptions(rows: PublicPlayerSeasonStatVo[]): PlayerSeasonStageOption[] {
-  return rows.map((row, index) => ({
-    id: String(row.seasonId || row.stageId || index),
-    label: displayText(row.teamName ? `${row.teamName} · 赛季 ${row.seasonId}` : `赛季 ${row.seasonId}`, '公开赛季'),
-    tournamentName: displayText(row.teamName, '公开赛季'),
-    stageLabel: displayText(row.stageId ? `阶段 ${row.stageId}` : '常规赛', '常规赛'),
-    games: toNumber(row.games, 0),
-  }))
+  return rows.map((row, index) => {
+    const label = buildSeasonLabel(row)
+    return {
+      id: String(row.divisionId || row.seasonId || row.stageId || index),
+      label,
+      tournamentName: label,
+      stageLabel: displayText(row.divisionName, '常规赛'),
+      games: toNumber(row.games, 0),
+    }
+  })
 }
 
 export function buildPlayerTeamHistory(profile: PlayerProfile): PlayerTeamHistory[] {

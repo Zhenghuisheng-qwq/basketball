@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getPublicTeamMatchPage } from '@/api/publicTeam'
+import { getV4PublicMatchList } from '@/api/v4Public'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
 import { displayText, initials } from '@/utils/publicDisplay'
@@ -11,7 +11,7 @@ import {
   PUBLIC_TEAM_PAGE_KEY,
   type PublicTeamPageContext,
 } from './composables/usePublicTeamPage'
-import { mapPublicMatchToTeamRecord, opponentAsTeam } from './utils/mapTeamMatch'
+import { mapV4MatchToTeamRecord, opponentAsTeam } from './utils/mapTeamMatch'
 
 const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
 const router = useRouter()
@@ -47,9 +47,9 @@ const visibleRoster = computed(() => {
   return roster.value.slice(start, start + rosterPageSize)
 })
 
-async function loadMatches(teamId: string) {
+async function loadMatches(teamId: string, divisionId: string) {
   const reqId = ++matchReqId
-  if (!teamId) {
+  if (!teamId || !divisionId) {
     matchRecords.value = []
     matchState.value = 'empty'
     return
@@ -57,10 +57,10 @@ async function loadMatches(teamId: string) {
   matchState.value = 'loading'
   matchError.value = ''
   try {
-    const res = await getPublicTeamMatchPage(teamId, { currentPage: 1, pageSize: 100 })
+    const res = await getV4PublicMatchList({ divisionId, eventTeamId: teamId })
     if (reqId !== matchReqId) return
-    const rows = res.data?.records ?? []
-    matchRecords.value = rows.map((item) => mapPublicMatchToTeamRecord(item, teamId))
+    const rows = res.data ?? []
+    matchRecords.value = rows.map((item) => mapV4MatchToTeamRecord(item, teamId))
     matchState.value = matchRecords.value.length ? 'success' : 'empty'
     matchCurrentPage.value = 1
   } catch (err) {
@@ -72,9 +72,9 @@ async function loadMatches(teamId: string) {
 }
 
 watch(
-  () => ctx.teamId.value,
-  (teamId) => {
-    void loadMatches(teamId)
+  () => [ctx.teamId.value, ctx.divisionId.value] as const,
+  ([teamId, divisionId]) => {
+    void loadMatches(teamId, divisionId)
   },
   { immediate: true },
 )
@@ -127,6 +127,7 @@ function isCaptain(player: PublicTeamRosterItemVo): boolean {
 }
 
 function openPlayerDetail(player: PublicTeamRosterItemVo) {
+  if (!player.playerId) return
   goToPlayerDetail(router, player.playerId, 'overview')
 }
 

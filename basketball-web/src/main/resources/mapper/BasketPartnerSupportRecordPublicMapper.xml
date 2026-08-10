@@ -2,44 +2,57 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.zhs.dao.BasketPartnerSupportRecordPublicDao">
 
-    <sql id="publicWhere">
-        r.is_delete = 0
-        and r.publish_status = 1
-        and p.is_delete = 0
+    <!-- 公开展示的合作伙伴 -->
+    <sql id="publicPartnerWhere">
+        p.is_delete = 0
         and p.partner_status = 1
+    </sql>
+
+    <!-- 计入公开累计金额的赞助记录 -->
+    <sql id="publicRecordJoin">
+        left join basket_partner_support_record r
+          on r.partner_id = p.id
+         and r.is_delete = 0
+         and r.publish_status = 1
+         and r.support_type = 'CASH'
+         and r.support_amount is not null
     </sql>
 
     <select id="countPublicRecords" resultType="java.lang.Long">
         select count(1)
-        from basket_partner_support_record r
-        inner join basket_partner p on p.id = r.partner_id
-        where <include refid="publicWhere"/>
+        from basket_partner p
+        where <include refid="publicPartnerWhere"/>
     </select>
 
     <select id="sumPublicCashAmount" resultType="java.math.BigDecimal">
         select ifnull(sum(r.support_amount), 0)
         from basket_partner_support_record r
         inner join basket_partner p on p.id = r.partner_id
-        where <include refid="publicWhere"/>
+        where r.is_delete = 0
+          and r.publish_status = 1
           and r.support_type = 'CASH'
           and r.support_amount is not null
+          and p.is_delete = 0
+          and p.partner_status = 1
     </select>
 
+    <!-- 感谢墙按合作伙伴聚合：Logo / 名称 / 累计金额 / 最近赞助日期 -->
     <select id="selectPublicPage" resultType="com.zhs.response.publicapi.PublicPartnerSupportRecordResp">
-        select r.id as recordId,
+        select p.id as recordId,
                p.id as partnerId,
                p.partner_name as partnerName,
                lf.access_url as partnerLogoUrl,
                p.website_url as websiteUrl,
-               r.support_type as supportType,
-               r.support_amount as supportAmount,
-               date_format(r.support_date, '%Y-%m-%d') as supportDate,
-               r.public_description as publicDescription
-        from basket_partner_support_record r
-        inner join basket_partner p on p.id = r.partner_id
+               'CASH' as supportType,
+               ifnull(sum(r.support_amount), 0) as supportAmount,
+               date_format(max(r.support_date), '%Y-%m-%d') as supportDate,
+               null as publicDescription
+        from basket_partner p
         left join basket_file_asset lf on lf.id = p.logo_file_id and lf.is_delete = 0
-        where <include refid="publicWhere"/>
-        order by r.sort_order desc, r.support_date desc, r.create_time desc, r.id desc
+        <include refid="publicRecordJoin"/>
+        where <include refid="publicPartnerWhere"/>
+        group by p.id, p.partner_name, lf.access_url, p.website_url, p.sort_no
+        order by supportAmount desc, p.sort_no desc, p.id desc
         limit #{offset}, #{limit}
     </select>
 </mapper>

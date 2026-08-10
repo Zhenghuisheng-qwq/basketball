@@ -90,7 +90,7 @@ export function usePublicCompetitionMegaMenu() {
     if (typeof raw === 'string' && (DATA_TAB_VALUES as readonly string[]).includes(raw)) {
       return raw
     }
-    return 'standing'
+    return 'team'
   }
 
   function isEventsListRoute(): boolean {
@@ -116,10 +116,8 @@ export function usePublicCompetitionMegaMenu() {
       }
 
       const tabByEntry: Record<string, string> = {
-        'data-standing': 'standing',
         'data-team': 'team',
         'data-player': 'player',
-        'data-rank': 'rank',
       }
       const tab = tabByEntry[entry.id]
       if (tab && normalizeDataTab() === tab) return 'primary'

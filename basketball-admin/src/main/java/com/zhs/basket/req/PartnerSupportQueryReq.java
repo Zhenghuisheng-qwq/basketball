@@ -6,6 +6,7 @@ import java.util.Date;
 
 @Data
 public class PartnerSupportQueryReq {
+    private Long partnerId;
     private String partnerName;
     private String supportType;
     private Integer publishStatus;

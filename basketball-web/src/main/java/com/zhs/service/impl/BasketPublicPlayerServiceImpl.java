@@ -8,6 +8,8 @@ import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketTeamMemberDao;
 import com.zhs.dao.v4.BasketDivisionDao;
 import com.zhs.dao.v4.BasketEventPlayerDao;
+import com.zhs.dao.v4.BasketEventTeamDao;
+import com.zhs.dao.v4.BasketPlayerStatDao;
 import com.zhs.dao.v4.BasketSeasonDao;
 import com.zhs.dao.v4.BasketSeriesDao;
 import com.zhs.dao.v4.BasketV4MatchDao;
@@ -26,6 +28,8 @@ import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamMember;
 import com.zhs.model.v4.BasketDivision;
 import com.zhs.model.v4.BasketEventPlayer;
+import com.zhs.model.v4.BasketEventTeam;
+import com.zhs.model.v4.BasketPlayerStat;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketSeries;
 import com.zhs.model.v4.BasketV4Match;
@@ -44,8 +48,11 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -63,6 +70,10 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
     private BasketV4MatchDao matchDao;
     @Resource
     private BasketEventPlayerDao eventPlayerDao;
+    @Resource
+    private BasketEventTeamDao eventTeamDao;
+    @Resource
+    private BasketPlayerStatDao playerStatDao;
     @Resource
     private BasketSeasonDao seasonDao;
     @Resource
@@ -215,9 +226,162 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             return Collections.emptyList();
         }
         if (seasonId != null) {
-            publicSupport.requirePublicSeason(seasonId);
+            requirePublishedV4Season(seasonId);
         }
-        return Collections.emptyList();
+
+        // sourcePlayerId → EventPlayer → PlayerStat（按 division 一行，含历史 FINISHED）
+        List<BasketEventPlayer> eventPlayers = eventPlayerDao.selectList(new LambdaQueryWrapper<BasketEventPlayer>()
+                .eq(BasketEventPlayer::getSourcePlayerId, playerId)
+                .eq(BasketEventPlayer::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(seasonId != null, BasketEventPlayer::getSeasonId, seasonId));
+        if (CollectionUtils.isEmpty(eventPlayers)) {
+            return Collections.emptyList();
+        }
+
+        Set<Long> eventPlayerIds = eventPlayers.stream()
+                .map(BasketEventPlayer::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        List<BasketPlayerStat> stats = playerStatDao.selectList(new LambdaQueryWrapper<BasketPlayerStat>()
+                .in(BasketPlayerStat::getEventPlayerId, eventPlayerIds)
+                .eq(BasketPlayerStat::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(seasonId != null, BasketPlayerStat::getSeasonId, seasonId));
+        if (CollectionUtils.isEmpty(stats)) {
+            return Collections.emptyList();
+        }
+
+        Map<Long, BasketEventPlayer> eventPlayerMap = eventPlayers.stream()
+                .filter(item -> item.getId() != null)
+                .collect(Collectors.toMap(BasketEventPlayer::getId, item -> item, (a, b) -> a));
+
+        Set<Long> eventTeamIds = stats.stream().map(BasketPlayerStat::getEventTeamId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketEventTeam> eventTeamMap = new HashMap<>();
+        if (!eventTeamIds.isEmpty()) {
+            for (BasketEventTeam team : eventTeamDao.selectByIds(eventTeamIds)) {
+                if (team != null && Objects.equals(team.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                    eventTeamMap.put(team.getId(), team);
+                }
+            }
+        }
+
+        Set<Long> divisionIds = stats.stream().map(BasketPlayerStat::getDivisionId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketDivision> divisionMap = new HashMap<>();
+        if (!divisionIds.isEmpty()) {
+            for (BasketDivision division : divisionDao.selectByIds(divisionIds)) {
+                if (division != null && Objects.equals(division.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                    divisionMap.put(division.getId(), division);
+                }
+            }
+        }
+
+        Set<Long> seasonIds = stats.stream().map(BasketPlayerStat::getSeasonId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketSeason> seasonMap = publicSupport.loadSeasonMap(seasonIds);
+        Set<Long> seriesIds = seasonMap.values().stream().map(BasketSeason::getSeriesId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketSeries> seriesMap = publicSupport.loadSeriesMap(seriesIds);
+
+        Set<Long> logoIds = eventTeamMap.values().stream().map(BasketEventTeam::getTeamLogoFileId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> avatarIds = eventPlayers.stream().map(BasketEventPlayer::getAvatarFileId).filter(Objects::nonNull).collect(Collectors.toSet());
+        logoIds.addAll(avatarIds);
+        Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(logoIds);
+
+        Map<Long, String> profileAvatarMap = publicSupport.loadPlayerAvatarUrlMap(Collections.singletonList(player));
+
+        List<PublicPlayerSeasonStatVo> rows = new ArrayList<>();
+        for (BasketPlayerStat stat : stats) {
+            BasketEventPlayer eventPlayer = eventPlayerMap.get(stat.getEventPlayerId());
+            if (eventPlayer == null) {
+                continue;
+            }
+            BasketSeason season = seasonMap.get(stat.getSeasonId());
+            // 仅公开已发布赛季；历史 FINISHED 仍可返回
+            if (season == null || !PublishStatusEnum.PUBLISHED.getCode().equals(season.getPublishStatus())) {
+                continue;
+            }
+            BasketDivision division = divisionMap.get(stat.getDivisionId());
+            BasketEventTeam eventTeam = eventTeamMap.get(stat.getEventTeamId());
+            BasketSeries series = season.getSeriesId() != null ? seriesMap.get(season.getSeriesId()) : null;
+
+            PublicPlayerSeasonStatVo vo = new PublicPlayerSeasonStatVo();
+            if (series != null) {
+                vo.setSeriesId(series.getId());
+                vo.setSeriesName(series.getSeriesName());
+            }
+            vo.setSeasonId(season.getId());
+            vo.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+            if (division != null) {
+                vo.setDivisionId(division.getId());
+                vo.setDivisionName(division.getDivisionName());
+                vo.setPlatformCode(division.getPlatformCode());
+                vo.setGameMode(division.getGameMode());
+            } else {
+                vo.setDivisionId(stat.getDivisionId());
+            }
+            vo.setEventTeamId(stat.getEventTeamId());
+            vo.setTeamId(stat.getEventTeamId());
+            if (eventTeam != null) {
+                vo.setTeamName(eventTeam.getTeamNameSnapshot());
+                vo.setTeamLogoUrl(urlMap.get(eventTeam.getTeamLogoFileId()));
+            }
+            vo.setPlayerId(playerId);
+            vo.setSourcePlayerId(playerId);
+            vo.setEventPlayerId(eventPlayer.getId());
+            vo.setPlayerName(eventPlayer.getPlayerNameSnapshot() != null
+                    ? eventPlayer.getPlayerNameSnapshot()
+                    : publicSupport.resolveDisplayName(player));
+            String avatar = urlMap.get(eventPlayer.getAvatarFileId());
+            if (avatar == null) {
+                avatar = com.zhs.support.MemberAvatarSupport.resolve(profileAvatarMap.get(player.getId()));
+            }
+            vo.setAvatarUrl(avatar);
+
+            int games = stat.getMatchCount() == null ? 0 : stat.getMatchCount();
+            vo.setGames(games);
+            vo.setPoints(stat.getPoints());
+            vo.setRebounds(stat.getRebound());
+            vo.setAssists(stat.getAssist());
+            vo.setSteals(stat.getSteal());
+            vo.setBlocks(stat.getBlock());
+            vo.setTurnovers(stat.getTurnover());
+
+            vo.setAvgPoints(stat.getAvgPoints() != null ? stat.getAvgPoints() : avgOf(stat.getPoints(), games));
+            vo.setAvgRebounds(stat.getAvgRebound() != null ? stat.getAvgRebound() : avgOf(stat.getRebound(), games));
+            vo.setAvgAssists(stat.getAvgAssist() != null ? stat.getAvgAssist() : avgOf(stat.getAssist(), games));
+            vo.setAvgSteals(avgOf(stat.getSteal(), games));
+            vo.setAvgBlocks(avgOf(stat.getBlock(), games));
+            vo.setAvgTurnovers(avgOf(stat.getTurnover(), games));
+
+            // 球员级 FG/3P/FT：正式表无字段，保持 null（前端显示 --）
+            vo.setFieldGoalMade(null);
+            vo.setFieldGoalAttempt(null);
+            vo.setFieldGoalPct(null);
+            vo.setThreePointMade(null);
+            vo.setThreePointAttempt(null);
+            vo.setThreePointPct(null);
+            vo.setFreeThrowMade(null);
+            vo.setFreeThrowAttempt(null);
+            vo.setFreeThrowPct(null);
+
+            rows.add(vo);
+        }
+
+        rows.sort(Comparator
+                .comparing((PublicPlayerSeasonStatVo item) -> {
+                    BasketSeason season = seasonMap.get(item.getSeasonId());
+                    Date t = season == null ? null : (season.getMatchStartTime() != null
+                            ? season.getMatchStartTime()
+                            : season.getCreateTime());
+                    return t == null ? 0L : t.getTime();
+                })
+                .reversed()
+                .thenComparing(item -> item.getDivisionId() == null ? 0L : item.getDivisionId(), Comparator.reverseOrder()));
+        return rows;
+    }
+
+    private BigDecimal avgOf(Integer total, int games) {
+        if (total == null || games <= 0) {
+            return null;
+        }
+        return BigDecimal.valueOf(total).divide(BigDecimal.valueOf(games), 2, RoundingMode.HALF_UP);
     }
 
     @Override

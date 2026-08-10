@@ -15,10 +15,26 @@ public class V4PublicMatchDetailResp {
     private Long matchId;
 
     @JsonSerialize(using = ToStringSerializer.class)
+    private Long seriesId;
+
+    private String seriesName;
+
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long seasonId;
+
+    private String seasonName;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long divisionId;
+
+    private String divisionName;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long stageId;
+
+    private String stageName;
+
+    private String stageType;
 
     private Integer roundNo;
 
@@ -27,6 +43,8 @@ public class V4PublicMatchDetailResp {
     private Date matchTime;
 
     private String matchStatus;
+
+    private String matchStatusName;
 
     private String publishStatus;
 

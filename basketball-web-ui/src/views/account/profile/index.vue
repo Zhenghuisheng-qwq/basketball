@@ -8,12 +8,10 @@ import AccountPanel from '@/components/account/AccountPanel.vue'
 import ProfileCompleteness from '../components/ProfileCompleteness.vue'
 import ProfileAvatarUploader from '../components/ProfileAvatarUploader.vue'
 import { useAccountStore } from '@/stores/account'
-import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
 const accountStore = useAccountStore()
-const userStore = useUserStore()
 
 const isEditing = ref(route.query.mode === 'edit')
 const avatarError = ref('')
@@ -97,17 +95,19 @@ async function saveProfile() {
       avatarUrl: editForm.avatarUrl,
       avatarFile: avatarFile.value || undefined,
     })
-    userStore.setUserInfo({
-      id: profile.value?.userId,
-      nickname: editForm.nickname.trim(),
-      avatar: editForm.avatarUrl || undefined,
-    })
-    snapshot.nickname = editForm.nickname.trim()
-    snapshot.avatarUrl = editForm.avatarUrl
+    // loadProfile 已同步正式资料；禁止把待审昵称/头像写入 Header
+    snapshot.nickname = profile.value?.nickname || editForm.nickname.trim()
+    snapshot.avatarUrl = profile.value?.avatarUrl || ''
+    editForm.nickname = snapshot.nickname
+    editForm.avatarUrl = snapshot.avatarUrl
     avatarFile.value = null
     isEditing.value = false
     router.replace({ query: {} })
-    ElMessage.success('资料已保存')
+    ElMessage.success(
+      accountStore.profile?.hasPendingChange
+        ? '资料修改申请已提交，请等待管理员审核'
+        : '资料已保存',
+    )
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '保存失败')
   } finally {

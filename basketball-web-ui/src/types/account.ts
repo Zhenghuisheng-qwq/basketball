@@ -40,6 +40,21 @@ export interface CurrentAccount {
   lastLoginAt: string
 }
 
+export interface AccountProfileChangeInfo {
+  changeId: string
+  changeNo?: string
+  oldNickname?: string
+  newNickname?: string
+  oldAvatarUrl?: string
+  newAvatarUrl?: string
+  changeSummary?: string
+  auditStatus?: number
+  auditStatusName?: string
+  auditRemark?: string
+  submitTime?: string
+  auditTime?: string
+}
+
 export interface AccountProfile {
   userId: number
   nickname: string
@@ -49,6 +64,9 @@ export interface AccountProfile {
   avatarUrl: string
   emailVerified: boolean
   createdAt: string
+  hasPendingChange?: boolean
+  pendingChange?: AccountProfileChangeInfo | null
+  latestRejectedChange?: AccountProfileChangeInfo | null
 }
 
 export interface PlayerVerificationSnapshot {

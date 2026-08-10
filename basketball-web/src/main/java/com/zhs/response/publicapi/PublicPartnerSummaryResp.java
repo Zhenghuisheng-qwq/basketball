@@ -11,9 +11,9 @@ import java.math.BigDecimal;
 @ApiModel("合作伙伴公开汇总")
 public class PublicPartnerSummaryResp implements Serializable {
 
-    @ApiModelProperty("公开支持记录总数")
+    @ApiModelProperty("公开展示的合作伙伴总数")
     private Long supportRecordCount;
 
-    @ApiModelProperty("累计现金赞助金额")
+    @ApiModelProperty("公开合作伙伴累计现金赞助金额")
     private BigDecimal totalCashAmount;
 }

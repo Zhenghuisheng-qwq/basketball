@@ -37,7 +37,7 @@ const router = createRouter({
 
       name: 'Tournament',
 
-      component: () => import('@/views/events/v4/V4EventsListPage.vue'),
+      component: () => import('@/views/events/EventsPage.vue'),
 
       meta: { title: '赛事' },
 
@@ -63,7 +63,7 @@ const router = createRouter({
 
       name: 'V4SeasonDetail',
 
-      component: () => import('@/views/events/v4/V4SeasonDetailPage.vue'),
+      component: () => import('@/views/events/EventsPage.vue'),
 
       meta: { title: '赛事详情' },
 
@@ -87,7 +87,7 @@ const router = createRouter({
 
       name: 'Data',
 
-      component: () => import('@/views/data/V4DataPage.vue'),
+      component: () => import('@/views/data/index.vue'),
 
       meta: { title: '数据' },
 

@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, ref, watch } from 'vue'
-import { getPublicTeamHonorPage } from '@/api/publicTeam'
-import type { TeamHonor, TeamLogoHistoryItem, TeamNameHistoryItem } from '@/types/team'
-import { displayText, formatDateTime } from '@/utils/publicDisplay'
+import { inject, ref } from 'vue'
 import {
   PUBLIC_TEAM_PAGE_KEY,
   type PublicTeamPageContext,
@@ -17,12 +14,36 @@ interface ArchiveBlock {
   icon: 'trophy' | 'card' | 'image'
 }
 
+interface TeamHonorItem {
+  id: string
+  honorTitle: string
+  competitionName: string
+  date: string
+  isLatest?: boolean
+}
+
+interface TeamNameHistoryItem {
+  id: string
+  name: string
+  period: string
+  note: string
+  isCurrent?: boolean
+}
+
+interface TeamLogoHistoryItem {
+  id: string
+  label: string
+  period: string
+  logo?: string
+  isCurrent?: boolean
+}
+
 const archiveBlocks: ArchiveBlock[] = [
   {
     key: 'honors',
     title: '球队荣誉',
     subtitle: 'Team Honors',
-    emptyTitle: '暂无荣誉记录',
+    emptyTitle: '暂无球队荣誉',
     emptyDesc: '球队获得荣誉并发布后将在此展示',
     icon: 'trophy',
   },
@@ -44,76 +65,13 @@ const archiveBlocks: ArchiveBlock[] = [
   },
 ]
 
-const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
-const honors = ref<TeamHonor[]>([])
-const honorState = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
+inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
+
+const honorState = ref<'loading' | 'success' | 'empty' | 'error'>('empty')
 const honorError = ref('')
-let honorReq = 0
-
-const nameHistory = computed<TeamNameHistoryItem[]>(() => {
-  const team = ctx.teamView.value
-  if (!team) return []
-  return [
-    {
-      id: team.id,
-      period: '当前',
-      name: team.name,
-      note: '当前使用名称',
-      isCurrent: true,
-    },
-  ]
-})
-
-const logoHistory = computed<TeamLogoHistoryItem[]>(() => {
-  const team = ctx.teamView.value
-  if (!team) return []
-  return [
-    {
-      id: team.id,
-      period: '当前',
-      label: team.name,
-      logo: team.logoUrl,
-      isCurrent: true,
-    },
-  ]
-})
-
-async function loadHonors(teamId: string) {
-  const current = ++honorReq
-  if (!teamId) {
-    honors.value = []
-    honorState.value = 'empty'
-    return
-  }
-  honorState.value = 'loading'
-  honorError.value = ''
-  try {
-    const res = await getPublicTeamHonorPage(teamId, { currentPage: 1, pageSize: 50 })
-    if (current !== honorReq) return
-    const records = res.data?.records ?? []
-    honors.value = records.map((item, index) => ({
-      id: String(item.honorId),
-      competitionName: displayText(item.tournamentName || item.seasonName, '公开赛事'),
-      honorTitle: displayText(item.honorTitle || item.honorName, '球队荣誉'),
-      date: formatDateTime(item.awardDate).date,
-      isLatest: index === 0,
-    }))
-    honorState.value = honors.value.length ? 'success' : 'empty'
-  } catch (err) {
-    if (current !== honorReq) return
-    honors.value = []
-    honorState.value = 'error'
-    honorError.value = err instanceof Error ? err.message : '加载球队荣誉失败'
-  }
-}
-
-watch(
-  () => ctx.teamId.value,
-  (teamId) => {
-    void loadHonors(teamId)
-  },
-  { immediate: true },
-)
+const honors = ref<TeamHonorItem[]>([])
+const nameHistory = ref<TeamNameHistoryItem[]>([])
+const logoHistory = ref<TeamLogoHistoryItem[]>([])
 
 function hasBlockData(key: ArchiveBlock['key']): boolean {
   if (key === 'honors') return honors.value.length > 0
@@ -121,19 +79,18 @@ function hasBlockData(key: ArchiveBlock['key']): boolean {
   return logoHistory.value.length > 0
 }
 
-function getHonorInitial(honor: TeamHonor): string {
-  return honor.honorTitle.slice(0, 1).toUpperCase() || 'H'
+function getHonorInitial(honor: TeamHonorItem): string {
+  return honor.honorTitle.trim().slice(0, 1) || '荣'
 }
 
 function getNameInitial(item: TeamNameHistoryItem): string {
-  return item.name.slice(0, 2).toUpperCase()
+  return item.name.trim().slice(0, 1) || '名'
 }
 
 function getLogoInitial(item: TeamLogoHistoryItem): string {
-  return item.label.slice(0, 2).toUpperCase() || 'LG'
+  return item.label.trim().slice(0, 1) || 'L'
 }
 </script>
-
 <template>
   <div class="team-archive">
     <header class="archive-header">
@@ -221,7 +178,6 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
     <p class="archive-note">ⓘ 仅展示赛事审核通过并实际使用过的球队历史记录</p>
   </div>
 </template>
-
 <style scoped lang="scss">
 .team-archive {
   background: transparent;

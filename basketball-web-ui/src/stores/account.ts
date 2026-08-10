@@ -1,7 +1,12 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { getAccountCenterOverview } from '@/api/accountCenter'
-import { bindAccountAvatar, getAccountProfile, updateAccountProfile } from '@/api/accountProfile'
+import {
+  bindAccountAvatar,
+  getAccountProfile,
+  submitAccountProfileChange,
+  updateAccountProfile,
+} from '@/api/accountProfile'
 import { uploadAccountFile } from '@/api/accountFile'
 import {
   getNotificationSetting,
@@ -31,6 +36,7 @@ import {
   submitOpenRegistration,
 } from '@/api/openRegistration'
 import { isLoggedIn } from '@/utils/auth'
+import { useUserStore } from '@/stores/user'
 import {
   myTournamentsStorageKey,
   securityStorageKey,
@@ -404,6 +410,8 @@ export const useAccountStore = defineStore('account', () => {
         currentAccount.value.emailVerified = Boolean(res.data.emailVerified)
         currentAccount.value.lastLoginAt = res.data.lastLoginTime || currentAccount.value.lastLoginAt
       }
+      // Header / Sidebar 只展示正式资料；PENDING 值不得写入登录缓存
+      useUserStore().syncOfficialProfile(res.data.nickname, res.data.avatarUrl || '')
     } finally {
       profileLoading.value = false
     }
@@ -414,22 +422,50 @@ export const useAccountStore = defineStore('account', () => {
   }) {
     if (!profile.value || !currentAccount.value) return
 
+    // 昵称/头像不得直接写入正式资料，统一走审核提交
+    if (payload.nickname !== undefined || payload.avatarFile || payload.avatarUrl !== undefined) {
+      return submitPublicProfileChange({
+        nickname: payload.nickname,
+        avatarFile: payload.avatarFile,
+      })
+    }
+
+    const res = await updateAccountProfile({})
+    profile.value = mapProfileDtoToAccountProfile(res.data)
+  }
+
+  async function submitPublicProfileChange(payload: {
+    nickname?: string
+    avatarFile?: File
+  }) {
+    if (!profile.value || !currentAccount.value) {
+      throw new Error('资料未加载')
+    }
+    if (profile.value.hasPendingChange) {
+      throw new Error('你已有资料修改申请正在审核，请等待审核完成。')
+    }
+
+    const nickname = (payload.nickname ?? profile.value.nickname).trim()
+    let avatarFileId: string | undefined
+
     if (payload.avatarFile) {
       const uploadRes = await uploadAccountFile(payload.avatarFile, 'ACCOUNT_AVATAR')
       await bindAccountAvatar(uploadRes.data.fileId)
-      payload.avatarUrl = uploadRes.data.accessUrl
+      avatarFileId = uploadRes.data.fileId
     }
 
-    if (payload.nickname !== undefined) {
-      const res = await updateAccountProfile({ nickname: payload.nickname.trim() })
-      profile.value = mapProfileDtoToAccountProfile(res.data)
-      currentAccount.value.nickname = res.data.nickname
+    const formalNickname = profile.value.nickname.trim()
+    const nicknameChanged = nickname !== formalNickname
+    const avatarChanged = Boolean(avatarFileId)
+    if (!nicknameChanged && !avatarChanged) {
+      throw new Error('资料没有发生变化')
     }
 
-    if (payload.avatarUrl !== undefined) {
-      profile.value.avatarUrl = payload.avatarUrl
-      currentAccount.value.avatarUrl = payload.avatarUrl
-    }
+    await submitAccountProfileChange({
+      nickname: nicknameChanged ? nickname : undefined,
+      avatarFileId,
+    })
+    await loadProfile()
   }
 
   async function loadPrivacy() {
@@ -510,12 +546,10 @@ export const useAccountStore = defineStore('account', () => {
   }) {
     const existingAvatar = profile.value?.avatarUrl?.trim() || currentAccount.value?.avatarUrl?.trim()
     if (data.avatarFile) {
-      await updateProfile({
-        avatarUrl: profile.value?.avatarUrl || '',
-        avatarFile: data.avatarFile,
-      })
+      // 头像变更需审核，不在认证流程中立即生效
+      await submitPublicProfileChange({ avatarFile: data.avatarFile })
     } else if (!existingAvatar) {
-      throw new Error('请先上传球员头像')
+      throw new Error('请先在账号资料中设置头像（审核通过后生效）')
     }
 
     if (!data.gameScreenshotFile) {
@@ -792,6 +826,7 @@ export const useAccountStore = defineStore('account', () => {
     loadOverview,
     loadProfile,
     updateProfile,
+    submitPublicProfileChange,
     loadPrivacy,
     updatePrivacy,
     loadNotificationSetting,

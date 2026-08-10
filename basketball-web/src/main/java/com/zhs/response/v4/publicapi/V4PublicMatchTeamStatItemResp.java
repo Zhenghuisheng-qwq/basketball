@@ -20,6 +20,18 @@ public class V4PublicMatchTeamStatItemResp {
 
     private Integer pointsAgainst;
 
+    private Integer fieldGoalMade;
+
+    private Integer fieldGoalAttempt;
+
+    private Integer threePointMade;
+
+    private Integer threePointAttempt;
+
+    private Integer freeThrowMade;
+
+    private Integer freeThrowAttempt;
+
     private Integer rebound;
 
     private Integer assist;
@@ -29,4 +41,6 @@ public class V4PublicMatchTeamStatItemResp {
     private Integer block;
 
     private Integer turnover;
+
+    private Integer foul;
 }

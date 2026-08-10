@@ -149,35 +149,52 @@ export interface V4PublicMatchTeamStatItem {
   score?: number
   pointsFor?: number
   pointsAgainst?: number
-  rebound?: number
-  assist?: number
-  steal?: number
-  block?: number
-  turnover?: number
+  fieldGoalMade?: number | null
+  fieldGoalAttempt?: number | null
+  threePointMade?: number | null
+  threePointAttempt?: number | null
+  freeThrowMade?: number | null
+  freeThrowAttempt?: number | null
+  rebound?: number | null
+  assist?: number | null
+  steal?: number | null
+  block?: number | null
+  turnover?: number | null
+  foul?: number | null
 }
 
 export interface V4PublicMatchPlayerStatItem {
   eventPlayerId: string
+  sourcePlayerId?: string
   playerName?: string
   eventTeamId?: string
   teamName?: string
-  points?: number
-  rebound?: number
-  assist?: number
-  steal?: number
-  block?: number
-  turnover?: number
-  minutes?: number
+  points?: number | null
+  rebound?: number | null
+  assist?: number | null
+  steal?: number | null
+  block?: number | null
+  turnover?: number | null
+  foul?: number | null
+  minutes?: number | null
 }
 
 export interface V4PublicMatchDetail {
   matchId: string
+  seriesId?: string
+  seriesName?: string
   seasonId: string
+  seasonName?: string
   divisionId: string
+  divisionName?: string
+  stageId?: string
+  stageName?: string
+  stageType?: string
   roundNo?: number
   matchNo?: string
   matchTime?: string
   matchStatus?: string
+  matchStatusName?: string
   publishStatus?: string
   venueText?: string
   homeScore?: number
@@ -286,6 +303,7 @@ export interface V4PublicTeamStatItem {
 
 export interface V4PublicPlayerStatItem {
   eventPlayerId: string
+  sourcePlayerId?: string
   playerName?: string
   teamName?: string
   matchCount?: number
@@ -306,6 +324,7 @@ export interface V4PublicRankItem {
   targetType?: string
   eventTeamId?: string
   eventPlayerId?: string
+  sourcePlayerId?: string
   teamName?: string
   playerName?: string
   rankValue?: number

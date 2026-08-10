@@ -16,7 +16,6 @@ const tabs: Array<{ value: PlayerDetailTab; label: string }> = [
   { value: 'career', label: '生涯' },
 ]
 </script>
-
 <template>
   <div class="player-detail-tabs" role="tablist" aria-label="球员详情页签">
     <button
@@ -33,7 +32,6 @@ const tabs: Array<{ value: PlayerDetailTab; label: string }> = [
     </button>
   </div>
 </template>
-
 <style scoped lang="scss">
 .player-detail-tabs {
   display: flex;

@@ -386,12 +386,22 @@ export interface PublicTeamSeasonStatVo {
 }
 
 export interface PublicPlayerSeasonStatVo {
+  seriesId?: string | null
+  seriesName?: string | null
   seasonId?: string | null
+  seasonName?: string | null
+  divisionId?: string | null
+  divisionName?: string | null
+  platformCode?: string | null
+  gameMode?: string | null
   stageId?: string | null
   teamId?: string | null
+  eventTeamId?: string | null
   teamName?: string | null
   teamLogoUrl?: string | null
   playerId: string
+  eventPlayerId?: string | null
+  sourcePlayerId?: string | null
   playerName?: string | null
   avatarUrl?: string | null
   games?: number | null
@@ -401,14 +411,23 @@ export interface PublicPlayerSeasonStatVo {
   assists?: number | null
   steals?: number | null
   blocks?: number | null
+  turnovers?: number | null
+  fouls?: number | null
   avgMinutes?: number | string | null
   avgPoints?: number | string | null
   avgRebounds?: number | string | null
   avgAssists?: number | string | null
   avgSteals?: number | string | null
   avgBlocks?: number | string | null
+  avgTurnovers?: number | string | null
+  fieldGoalMade?: number | null
+  fieldGoalAttempt?: number | null
   fieldGoalPct?: number | string | null
+  threePointMade?: number | null
+  threePointAttempt?: number | null
   threePointPct?: number | string | null
+  freeThrowMade?: number | null
+  freeThrowAttempt?: number | null
   freeThrowPct?: number | string | null
   avgEfficiency?: number | string | null
 }
@@ -442,7 +461,10 @@ export interface PublicTeamDetailVo {
 }
 
 export interface PublicTeamRosterItemVo {
+  /** 永久球员 ID，用于 /player/{id} */
   playerId: string
+  /** 赛事球员快照 ID，仅用于赛事内关联，不可用于公开球员路由 */
+  eventPlayerId?: string | null
   playerName?: string | null
   avatarUrl?: string | null
   positionCode?: string | null

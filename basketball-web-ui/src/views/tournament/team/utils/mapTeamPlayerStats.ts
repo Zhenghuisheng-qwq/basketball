@@ -1,9 +1,4 @@
-import type {
-  PublicMatchDetailVo,
-  PublicMatchPlayerStatVo,
-  PublicMatchTeamStatVo,
-  PublicPlayerSeasonStatVo,
-} from '@/api/types/public'
+import type { V4PublicMatchDetail, V4PublicPlayerStatItem } from '@/api/types/v4Public'
 import { displayText, formatDateTime, toNumber } from '@/utils/publicDisplay'
 import type {
   TeamPlayerAverageStat,
@@ -13,112 +8,105 @@ import type {
   TeamSingleMatchTotal,
 } from '@/types/team'
 
-function normalizePct(value: unknown): number {
-  const num = toNumber(value, 0)
-  return num <= 1 ? num * 100 : num
+function publicPlayerRouteId(item: { sourcePlayerId?: string | null; eventPlayerId?: string | null }): string {
+  return String(item.sourcePlayerId || '').trim()
 }
 
-function formatShootingPct(value: unknown): string {
-  const pct = normalizePct(value)
-  return `${pct.toFixed(1)}%`
-}
-
-export function mapPublicPlayerSeasonStatToAverage(
-  item: PublicPlayerSeasonStatVo,
-): TeamPlayerAverageStat {
+export function mapV4PlayerStatToAverage(item: V4PublicPlayerStatItem): TeamPlayerAverageStat {
   return {
-    playerId: String(item.playerId),
+    playerId: publicPlayerRouteId(item),
     nickname: displayText(item.playerName, '未知球员'),
-    avatar: item.avatarUrl?.trim() || '',
-    games: toNumber(item.games, 0),
+    avatar: '',
+    games: toNumber(item.matchCount, 0),
     points: toNumber(item.avgPoints, 0),
-    rebounds: toNumber(item.avgRebounds, 0),
-    assists: toNumber(item.avgAssists, 0),
-    steals: toNumber(item.avgSteals, 0),
-    blocks: toNumber(item.avgBlocks, 0),
+    rebounds: toNumber(item.avgRebound, 0),
+    assists: toNumber(item.avgAssist, 0),
+    steals: toNumber(item.steal, 0),
+    blocks: toNumber(item.block, 0),
     fouls: 0,
-    turnovers: 0,
-    fgPct: normalizePct(item.fieldGoalPct),
-    tpPct: normalizePct(item.threePointPct),
-    ftPct: normalizePct(item.freeThrowPct),
+    turnovers: toNumber(item.turnover, 0),
+    // 球员级 FG/3P/FT 正式数据源不存在
+    fgPct: null,
+    tpPct: null,
+    ftPct: null,
   }
 }
 
-export function mapPublicPlayerSeasonStatToTotal(
-  item: PublicPlayerSeasonStatVo,
-): TeamPlayerTotalStat {
+export function mapV4PlayerStatToTotal(item: V4PublicPlayerStatItem): TeamPlayerTotalStat {
   return {
-    playerId: String(item.playerId),
+    playerId: publicPlayerRouteId(item),
     nickname: displayText(item.playerName, '未知球员'),
-    avatar: item.avatarUrl?.trim() || '',
-    games: toNumber(item.games, 0),
+    avatar: '',
+    games: toNumber(item.matchCount, 0),
     points: toNumber(item.points, 0),
-    rebounds: toNumber(item.rebounds, 0),
-    assists: toNumber(item.assists, 0),
-    steals: toNumber(item.steals, 0),
-    blocks: toNumber(item.blocks, 0),
+    rebounds: toNumber(item.rebound, 0),
+    assists: toNumber(item.assist, 0),
+    steals: toNumber(item.steal, 0),
+    blocks: toNumber(item.block, 0),
     fouls: 0,
-    turnovers: 0,
-    fgPct: normalizePct(item.fieldGoalPct),
-    tpPct: normalizePct(item.threePointPct),
-    ftPct: normalizePct(item.freeThrowPct),
+    turnovers: toNumber(item.turnover, 0),
+    fgPct: null,
+    tpPct: null,
+    ftPct: null,
   }
 }
 
-function mapMatchPlayerStat(item: PublicMatchPlayerStatVo): TeamSingleMatchPlayerStat {
+function mapV4MatchPlayerStat(item: V4PublicMatchDetail['playerStats'][number]): TeamSingleMatchPlayerStat {
   return {
-    playerId: String(item.playerId || ''),
+    playerId: publicPlayerRouteId(item),
     nickname: displayText(item.playerName, '未知球员'),
-    avatar: item.avatarUrl?.trim() || '',
-    grade: displayText(item.efficiency, '--'),
-    points: toNumber(item.points, 0),
-    rebounds: toNumber(item.rebounds, 0),
-    assists: toNumber(item.assists, 0),
-    steals: toNumber(item.steals, 0),
-    blocks: toNumber(item.blocks, 0),
-    fouls: toNumber(item.fouls, 0),
-    turnovers: toNumber(item.turnovers, 0),
-    fg: formatShootingPct(item.fieldGoalPct),
-    tp: formatShootingPct(item.threePointPct),
-    ft: formatShootingPct(item.freeThrowPct),
-  }
-}
-
-function mapMatchTeamTotal(item: PublicMatchTeamStatVo): TeamSingleMatchTotal {
-  return {
+    avatar: '',
     grade: '--',
     points: toNumber(item.points, 0),
-    rebounds: toNumber(item.rebounds, 0),
-    assists: toNumber(item.assists, 0),
-    steals: toNumber(item.steals, 0),
-    blocks: toNumber(item.blocks, 0),
-    fouls: toNumber(item.fouls, 0),
-    turnovers: toNumber(item.turnovers, 0),
-    fg: formatShootingPct(item.fieldGoalPct),
-    tp: formatShootingPct(item.threePointPct),
-    ft: formatShootingPct(item.freeThrowPct),
+    rebounds: toNumber(item.rebound, 0),
+    assists: toNumber(item.assist, 0),
+    steals: toNumber(item.steal, 0),
+    blocks: toNumber(item.block, 0),
+    fouls: 0,
+    turnovers: toNumber(item.turnover, 0),
+    fg: '--',
+    tp: '--',
+    ft: '--',
   }
 }
 
-export function mapPublicMatchDetailToSingleMatchStats(
-  detail: PublicMatchDetailVo,
-  teamId: string,
-): TeamSingleMatchStats | null {
-  if (!detail.statsAvailable) return null
+function mapV4MatchTeamTotal(item: V4PublicMatchDetail['teamStats'][number]): TeamSingleMatchTotal {
+  return {
+    grade: '--',
+    points: toNumber(item.pointsFor ?? item.score, 0),
+    rebounds: toNumber(item.rebound, 0),
+    assists: toNumber(item.assist, 0),
+    steals: toNumber(item.steal, 0),
+    blocks: toNumber(item.block, 0),
+    fouls: 0,
+    turnovers: toNumber(item.turnover, 0),
+    fg: '--',
+    tp: '--',
+    ft: '--',
+  }
+}
 
+export function mapV4MatchDetailToSingleMatchStats(
+  detail: V4PublicMatchDetail,
+  eventTeamId: string,
+): TeamSingleMatchStats | null {
   const players = (detail.playerStats ?? [])
-    .filter((item) => String(item.teamId || '') === String(teamId))
-    .map(mapMatchPlayerStat)
+    .filter((item) => String(item.eventTeamId || '') === String(eventTeamId))
+    .map(mapV4MatchPlayerStat)
 
   if (!players.length) return null
 
   const teamStat = (detail.teamStats ?? []).find(
-    (item) => String(item.teamId || '') === String(teamId),
+    (item) => String(item.eventTeamId || '') === String(eventTeamId),
   )
-  const teamTotal = teamStat ? mapMatchTeamTotal(teamStat) : mapMatchTeamTotal({})
+  const teamTotal = teamStat ? mapV4MatchTeamTotal(teamStat) : mapV4MatchTeamTotal({
+    eventTeamId,
+    score: 0,
+    pointsFor: 0,
+  })
 
-  const dt = formatDateTime(detail.scheduledStartTime)
-  const label = displayText(detail.stageName || dt.full, '单场数据')
+  const dt = formatDateTime(detail.matchTime)
+  const label = displayText(dt.full, '单场数据')
 
   return {
     matchId: String(detail.matchId),
@@ -126,4 +114,22 @@ export function mapPublicMatchDetailToSingleMatchStats(
     players,
     teamTotal,
   }
+}
+
+/** @deprecated use mapV4MatchDetailToSingleMatchStats */
+export function mapPublicMatchDetailToSingleMatchStats(
+  detail: V4PublicMatchDetail,
+  teamId: string,
+): TeamSingleMatchStats | null {
+  return mapV4MatchDetailToSingleMatchStats(detail, teamId)
+}
+
+/** @deprecated use mapV4PlayerStatToAverage */
+export function mapPublicPlayerSeasonStatToAverage(item: V4PublicPlayerStatItem): TeamPlayerAverageStat {
+  return mapV4PlayerStatToAverage(item)
+}
+
+/** @deprecated use mapV4PlayerStatToTotal */
+export function mapPublicPlayerSeasonStatToTotal(item: V4PublicPlayerStatItem): TeamPlayerTotalStat {
+  return mapV4PlayerStatToTotal(item)
 }

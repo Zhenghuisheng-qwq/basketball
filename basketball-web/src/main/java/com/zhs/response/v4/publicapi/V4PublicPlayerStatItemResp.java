@@ -12,6 +12,10 @@ public class V4PublicPlayerStatItemResp {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long eventPlayerId;
 
+    /** 永久球员 ID，公开 /player/{id} 路由必须使用此字段 */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long sourcePlayerId;
+
     private String playerName;
 
     private String teamName;

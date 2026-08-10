@@ -772,6 +772,51 @@ export interface TeamProfileChangeRejectReq {
   auditRemark: string
 }
 
+export interface MemberProfileChangeQuery extends PageDomain {
+  changeNo?: string
+  nickname?: string
+  submitUser?: string
+  auditStatus?: number
+  auditStage?: string
+  beginTime?: string
+  endTime?: string
+}
+
+export interface MemberProfileChangeListItem {
+  id: number
+  changeNo?: string
+  memberId?: number
+  accountNo?: string
+  playerId?: number
+  playerNo?: string
+  submitUserName?: string
+  submitUserEmail?: string
+  oldNickname?: string
+  newNickname?: string
+  oldAvatarUrl?: string
+  newAvatarUrl?: string
+  changeSummary?: string
+  auditStatus?: number
+  auditStatusName?: string
+  submitTime?: string
+  auditTime?: string
+}
+
+export interface MemberProfileChangeDetail extends MemberProfileChangeListItem {
+  oldAvatarFileId?: number
+  newAvatarFileId?: number
+  auditUserId?: number
+  auditRemark?: string
+}
+
+export interface MemberProfileChangeApproveReq {
+  auditRemark?: string
+}
+
+export interface MemberProfileChangeRejectReq {
+  auditRemark: string
+}
+
 export interface TournamentQuery extends PageDomain, BaseEntity {
   tournamentNo?: string
   tournamentName?: string
@@ -1501,8 +1546,8 @@ export const HOME_BANNER_POSITION_OPTIONS = [
 /** 合作伙伴状态 */
 export const PARTNER_STATUS_OPTIONS = [
   { value: 0, label: '草稿' },
-  { value: 1, label: '已发布' },
-  { value: 2, label: '已下线' }
+  { value: 1, label: '展示中' },
+  { value: 2, label: '不展示' }
 ]
 
 export const PARTNER_TYPE_OPTIONS = [
@@ -1861,6 +1906,9 @@ export interface PartnerListItem {
   remark?: string
   createTime?: string
   updateTime?: string
+  totalSupportAmount?: number
+  supportCount?: number
+  latestSupportTime?: string
 }
 
 export interface PartnerAddReq {
@@ -1871,6 +1919,7 @@ export interface PartnerAddReq {
   partnerType?: string
   cooperationStartDate?: string
   cooperationEndDate?: string
+  partnerStatus?: number
   sortNo?: number
   remark?: string
 }
@@ -1888,6 +1937,7 @@ export interface PartnerEditReq {
 }
 
 export interface PartnerSupportQuery extends PageDomain {
+  partnerId?: number
   partnerName?: string
   supportType?: string
   publishStatus?: number

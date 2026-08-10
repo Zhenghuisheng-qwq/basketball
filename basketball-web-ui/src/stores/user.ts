@@ -185,6 +185,35 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = info
   }
 
+  /** 仅同步正式审核通过后的昵称/头像（不得写入 pending 值） */
+  function syncOfficialProfile(nickname: string, avatarUrl?: string | null) {
+    const nextNickname = nickname?.trim() || ''
+    const nextAvatar = avatarUrl?.trim() || ''
+    if (currentMember.value) {
+      currentMember.value = {
+        ...currentMember.value,
+        nickname: nextNickname || currentMember.value.nickname,
+        avatarUrl: nextAvatar || null,
+      }
+    }
+    if (userInfo.value) {
+      userInfo.value = {
+        ...userInfo.value,
+        nickname: nextNickname || userInfo.value.nickname,
+        avatar: nextAvatar || undefined,
+      }
+    }
+    const session = getAuthSession()
+    if (session) {
+      const remember = Boolean(localStorage.getItem('cnpa_web_token'))
+      setAuthSession({
+        ...session,
+        nickname: nextNickname || session.nickname,
+        avatarUrl: nextAvatar || session.avatarUrl || '',
+      }, remember)
+    }
+  }
+
   function setTokenState(value: string) {
     token.value = value
   }
@@ -213,6 +242,7 @@ export const useUserStore = defineStore('user', () => {
     logout,
     resetLocalAuth,
     setUserInfo,
+    syncOfficialProfile,
     setToken: setTokenCompat,
     clearToken,
   }

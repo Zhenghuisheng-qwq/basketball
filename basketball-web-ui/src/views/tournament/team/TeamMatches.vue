@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getPublicTeamMatchPage } from '@/api/publicTeam'
+import { getV4PublicMatchList } from '@/api/v4Public'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import type { TeamMatchRecord, TeamMatchStatus, TeamStage } from '@/types/team'
 import {
   PUBLIC_TEAM_PAGE_KEY,
   type PublicTeamPageContext,
 } from './composables/usePublicTeamPage'
-import { mapPublicMatchToTeamRecord, opponentAsTeam } from './utils/mapTeamMatch'
+import { mapV4MatchToTeamRecord, opponentAsTeam } from './utils/mapTeamMatch'
 
 type StatusFilter = 'all' | TeamMatchStatus
 type StageFilter = 'all' | TeamStage
@@ -85,10 +85,13 @@ const paginatedMatches = computed(() => {
   return filteredMatches.value.slice(start, start + pageSize)
 })
 
+const divisionId = computed(() => ctx.divisionId.value)
+
 async function loadMatches() {
   const id = teamId.value
+  const divId = divisionId.value
   const current = ++reqId
-  if (!id) {
+  if (!id || !divId) {
     allMatches.value = []
     loadState.value = 'empty'
     return
@@ -96,10 +99,10 @@ async function loadMatches() {
   loadState.value = 'loading'
   errorMessage.value = ''
   try {
-    const res = await getPublicTeamMatchPage(id, { currentPage: 1, pageSize: 200 })
+    const res = await getV4PublicMatchList({ divisionId: divId, eventTeamId: id })
     if (current !== reqId) return
-    const records = res.data?.records ?? []
-    allMatches.value = records.map((item) => mapPublicMatchToTeamRecord(item, id))
+    const records = res.data ?? []
+    allMatches.value = records.map((item) => mapV4MatchToTeamRecord(item, id))
     loadState.value = allMatches.value.length ? 'success' : 'empty'
   } catch (err) {
     if (current !== reqId) return
@@ -109,7 +112,7 @@ async function loadMatches() {
   }
 }
 
-watch(teamId, () => {
+watch([teamId, divisionId], () => {
   void loadMatches()
 }, { immediate: true })
 

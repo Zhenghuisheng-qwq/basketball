@@ -26,9 +26,21 @@
                p.website_url as websiteUrl, p.public_description as publicDescription, p.partner_type as partnerType,
                p.cooperation_start_date as cooperationStartDate, p.cooperation_end_date as cooperationEndDate,
                p.partner_status as partnerStatus, p.sort_no as sortNo, p.remark, p.public_description as publicDescription,
-               p.create_time as createTime, p.update_time as updateTime
+               p.create_time as createTime, p.update_time as updateTime,
+               ifnull(agg.total_support_amount, 0) as totalSupportAmount,
+               ifnull(agg.support_count, 0) as supportCount,
+               agg.latest_support_time as latestSupportTime
         from basket_partner p
         left join basket_file_asset lf on lf.id = p.logo_file_id and lf.is_delete = 0
+        left join (
+            select partner_id,
+                   sum(case when support_type = 'CASH' then support_amount else 0 end) as total_support_amount,
+                   count(1) as support_count,
+                   max(support_date) as latest_support_time
+            from basket_partner_support_record
+            where is_delete = 0
+            group by partner_id
+        ) agg on agg.partner_id = p.id
     </sql>
 
     <select id="selectById" resultMap="BasketPartnerResult">

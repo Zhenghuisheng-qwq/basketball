@@ -209,6 +209,9 @@ export function mapProfileDtoToAccountProfile(dto: AccountProfileDto): AccountPr
     avatarUrl: dto.avatarUrl || '',
     emailVerified: Boolean(dto.emailVerified),
     createdAt: toIsoDateTime(dto.registerTime),
+    hasPendingChange: Boolean(dto.hasPendingChange),
+    pendingChange: dto.pendingChange || null,
+    latestRejectedChange: dto.latestRejectedChange || null,
   }
 }
 

@@ -51,6 +51,7 @@ interface MenuItem {
 const mainMenus = computed<MenuItem[]>(() => [
   { key: 'overview', label: '概览', routeName: 'AccountOverview' },
   { key: 'identity', label: '球员身份', to: identityRoute.value },
+  { key: 'team', label: '我的球队', routeName: 'AccountMyTeam' },
   { key: 'tournaments', label: '我的赛事', routeName: 'AccountMyEvents' },
   { key: 'notifications', label: '消息通知', routeName: 'AccountNotifications', badge: true },
   { key: 'settings', label: '账号设置', routeName: 'AccountSettings' },

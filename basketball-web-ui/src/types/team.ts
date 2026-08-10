@@ -104,9 +104,10 @@ export interface TeamPlayerAverageStat {
   blocks: number
   fouls: number
   turnovers: number
-  fgPct: number
-  tpPct: number
-  ftPct: number
+  /** null = 无投篮数据源 */
+  fgPct: number | null
+  tpPct: number | null
+  ftPct: number | null
 }
 
 export interface TeamPlayerTotalStat extends Omit<TeamPlayerAverageStat, 'games'> {

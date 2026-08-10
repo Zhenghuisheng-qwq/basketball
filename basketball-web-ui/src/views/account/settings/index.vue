@@ -6,8 +6,10 @@ import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import PasswordInput from '@/views/account/components/PasswordInput.vue'
+import ProfileAvatarUploader from '@/views/account/components/ProfileAvatarUploader.vue'
 import { sendChangeEmailCode, changeMemberEmail } from '@/api/memberAuth'
 import { useAccountStore } from '@/stores/account'
+import { resolveMemberAvatarUrl } from '@/utils/memberAvatar'
 import { resolvePasswordChangeError, validatePasswordRules } from '@/utils/passwordRules'
 import { forceRelogin } from '@/utils/forceRelogin'
 import { formatDateTime } from '@/utils/formatDate'
@@ -76,7 +78,11 @@ const account = computed(() => accountStore.currentAccount)
 
 const profileForm = reactive({
   nickname: accountStore.profile?.nickname || accountStore.currentAccount?.nickname || '',
+  avatarUrl: accountStore.profile?.avatarUrl || accountStore.currentAccount?.avatarUrl || '',
 })
+const avatarFile = ref<File | null>(null)
+const avatarError = ref('')
+const profileSaving = ref(false)
 
 const privacyForm = reactive<PrivacySettingDto>({
   profileVisible: 1,
@@ -93,10 +99,22 @@ const notificationForm = reactive<NotificationSettingDto>({
   announcementNotice: 1,
 })
 
+const hasPendingChange = computed(() => Boolean(profile.value?.hasPendingChange && profile.value.pendingChange))
+const pendingChange = computed(() => profile.value?.pendingChange || null)
+const latestRejectedChange = computed(() => {
+  if (hasPendingChange.value) return null
+  return profile.value?.latestRejectedChange || null
+})
+const formalAvatarUrl = computed(() => resolveMemberAvatarUrl(profile.value?.avatarUrl || profileForm.avatarUrl))
+const canEditPublicProfile = computed(() => !hasPendingChange.value)
+
 watch(
-  () => accountStore.profile?.nickname,
-  (v) => {
-    if (v) profileForm.nickname = v
+  () => [accountStore.profile?.nickname, accountStore.profile?.avatarUrl] as const,
+  ([nickname, avatarUrl]) => {
+    if (nickname) profileForm.nickname = nickname
+    profileForm.avatarUrl = avatarUrl || ''
+    avatarFile.value = null
+    avatarError.value = ''
   },
 )
 
@@ -239,17 +257,55 @@ async function savePassword() {
   }
 }
 
+function validateNickname(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return '请输入昵称'
+  if (trimmed.length < 2 || trimmed.length > 20) return '昵称长度应为 2 至 20 个字符'
+  if (!/^[\u4e00-\u9fa5a-zA-Z0-9_]+$/.test(trimmed)) {
+    return '昵称仅支持中文、英文、数字和下划线'
+  }
+  return ''
+}
+
+function handleAvatarSelected(file: File) {
+  avatarFile.value = file
+  avatarError.value = ''
+}
+
 async function saveProfile() {
-  const nickname = profileForm.nickname.trim()
-  if (!nickname) {
-    ElMessage.warning('请输入昵称')
+  if (profileSaving.value) return
+  if (hasPendingChange.value) {
+    ElMessage.warning('你已有资料修改申请正在审核，请等待审核完成。')
     return
   }
+
+  const nickname = profileForm.nickname.trim()
+  const nicknameError = validateNickname(nickname)
+  if (nicknameError) {
+    ElMessage.warning(nicknameError)
+    return
+  }
+
+  const formalNickname = (profile.value?.nickname || '').trim()
+  const nicknameChanged = nickname !== formalNickname
+  const avatarChanged = Boolean(avatarFile.value)
+  if (!nicknameChanged && !avatarChanged) {
+    ElMessage.warning('资料没有发生变化')
+    return
+  }
+
+  profileSaving.value = true
   try {
-    await accountStore.updateProfile({ nickname })
-    ElMessage.success('资料已保存')
+    await accountStore.updateProfile({
+      nickname,
+      avatarFile: avatarFile.value || undefined,
+    })
+    avatarFile.value = null
+    ElMessage.success('资料修改申请已提交，请等待管理员审核')
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '保存失败')
+    ElMessage.error(error instanceof Error ? error.message : '提交失败')
+  } finally {
+    profileSaving.value = false
   }
 }
 
@@ -322,37 +378,124 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
     <div v-if="settingsLoading" class="settings-loading">加载设置中...</div>
 
     <div v-else-if="activeTab === 'profile'" class="account-grid-2">
-      <AccountPanel title="基本资料">
+      <AccountPanel title="账号资料">
         <form class="security-form" @submit.prevent="saveProfile">
           <div class="security-form__field">
-            <label for="settings-nickname">昵称</label>
-            <input id="settings-nickname" v-model="profileForm.nickname" class="auth-input" type="text" />
+            <label>头像</label>
+            <ProfileAvatarUploader
+              v-model="profileForm.avatarUrl"
+              :name="profile?.nickname || profileForm.nickname || 'CN'"
+              action-label="更换头像"
+              :disabled="!canEditPublicProfile"
+              hint="新头像审核通过后才会公开展示"
+              @error="avatarError = $event"
+              @file-selected="handleAvatarSelected"
+            />
+            <p v-if="avatarError" class="security-form__error">{{ avatarError }}</p>
           </div>
+
+          <div class="security-form__field">
+            <label for="settings-nickname">昵称</label>
+            <input
+              id="settings-nickname"
+              v-model="profileForm.nickname"
+              class="auth-input"
+              type="text"
+              maxlength="20"
+              autocomplete="nickname"
+              :disabled="!canEditPublicProfile"
+            />
+            <p class="security-form__hint">昵称修改后需审核通过才会公开展示</p>
+          </div>
+
           <div class="security-form__field">
             <label>注册邮箱</label>
-            <p class="security-form__hint">{{ profile?.maskedEmail || account?.maskedEmail }}（登录凭据）</p>
+            <p class="security-form__hint">{{ profile?.maskedEmail || account?.maskedEmail }}（登录凭据，只读）</p>
           </div>
+
           <div class="security-form__actions">
-            <button type="submit" class="account-btn-primary">保存资料</button>
+            <button
+              type="submit"
+              class="account-btn-primary"
+              :disabled="profileSaving || !canEditPublicProfile"
+            >
+              {{ profileSaving ? '提交中...' : '保存资料' }}
+            </button>
           </div>
         </form>
       </AccountPanel>
 
-      <AccountPanel title="账号概览">
-        <dl class="account-info-list">
-          <div class="account-field-row"><dt>账号状态</dt><dd class="account-status-text--success">正常</dd></div>
-          <div class="account-field-row">
-            <dt>邮箱状态</dt>
-            <dd :class="profile?.emailVerified ? 'account-status-text--success' : ''">
-              {{ profile?.emailVerified ? '已验证' : '未验证' }}
-            </dd>
-          </div>
-          <div class="account-field-row">
-            <dt>最近登录</dt>
-            <dd>{{ formatDateTime(security?.lastLoginAt || account?.lastLoginAt || '') }}</dd>
-          </div>
-        </dl>
-      </AccountPanel>
+      <div class="settings-profile-side">
+        <AccountPanel v-if="hasPendingChange && pendingChange" title="资料修改审核中">
+          <dl class="account-info-list settings-audit-list">
+            <div class="account-field-row">
+              <dt>状态</dt>
+              <dd class="account-status-text--warning">{{ pendingChange.auditStatusName || '审核中' }}</dd>
+            </div>
+            <div class="account-field-row">
+              <dt>提交时间</dt>
+              <dd>{{ formatDateTime(pendingChange.submitTime || '') }}</dd>
+            </div>
+            <div class="account-field-row settings-audit-list__compare">
+              <dt>昵称</dt>
+              <dd>
+                <span>当前：{{ pendingChange.oldNickname || profile?.nickname || '-' }}</span>
+                <span>申请：{{ pendingChange.newNickname || '-' }}</span>
+              </dd>
+            </div>
+            <div class="account-field-row settings-audit-list__avatars">
+              <dt>头像</dt>
+              <dd>
+                <div class="settings-avatar-compare">
+                  <figure>
+                    <img :src="resolveMemberAvatarUrl(pendingChange.oldAvatarUrl || formalAvatarUrl)" alt="当前头像" />
+                    <figcaption>当前</figcaption>
+                  </figure>
+                  <figure>
+                    <img :src="resolveMemberAvatarUrl(pendingChange.newAvatarUrl || formalAvatarUrl)" alt="申请头像" />
+                    <figcaption>申请</figcaption>
+                  </figure>
+                </div>
+              </dd>
+            </div>
+          </dl>
+          <p class="security-form__hint">审核完成前不可再次提交修改。</p>
+        </AccountPanel>
+
+        <AccountPanel v-else-if="latestRejectedChange" title="资料修改未通过审核">
+          <dl class="account-info-list">
+            <div class="account-field-row">
+              <dt>状态</dt>
+              <dd class="account-status-text--danger">{{ latestRejectedChange.auditStatusName || '已驳回' }}</dd>
+            </div>
+            <div class="account-field-row">
+              <dt>审核原因</dt>
+              <dd>{{ latestRejectedChange.auditRemark || '未填写' }}</dd>
+            </div>
+            <div class="account-field-row">
+              <dt>审核时间</dt>
+              <dd>{{ formatDateTime(latestRejectedChange.auditTime || '') }}</dd>
+            </div>
+          </dl>
+          <p class="security-form__hint">正式昵称 / 头像未变更，可修改后重新提交。</p>
+        </AccountPanel>
+
+        <AccountPanel title="账号概览">
+          <dl class="account-info-list">
+            <div class="account-field-row"><dt>账号状态</dt><dd class="account-status-text--success">正常</dd></div>
+            <div class="account-field-row">
+              <dt>邮箱状态</dt>
+              <dd :class="profile?.emailVerified ? 'account-status-text--success' : ''">
+                {{ profile?.emailVerified ? '已验证' : '未验证' }}
+              </dd>
+            </div>
+            <div class="account-field-row">
+              <dt>最近登录</dt>
+              <dd>{{ formatDateTime(security?.lastLoginAt || account?.lastLoginAt || '') }}</dd>
+            </div>
+          </dl>
+        </AccountPanel>
+      </div>
     </div>
 
     <div v-else-if="activeTab === 'privacy'" class="account-grid-2">
@@ -576,6 +719,62 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
 .settings-code-btn {
   flex: 0 0 112px;
   white-space: nowrap;
+}
+
+.settings-profile-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings-audit-list__compare dd,
+.settings-audit-list__avatars dd {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-avatar-compare {
+  display: flex;
+  gap: 16px;
+
+  figure {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  img {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: #e8e8e8;
+  }
+
+  figcaption {
+    font-size: 12px;
+    color: #666;
+  }
+}
+
+.account-status-text--warning {
+  color: #b45309;
+  font-weight: 700;
+}
+
+.account-status-text--danger {
+  color: var(--account-danger, #c62828);
+  font-weight: 700;
+}
+
+.security-form__field input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background: rgba(245, 245, 245, 0.9);
 }
 
 .security-form__dev-hint {

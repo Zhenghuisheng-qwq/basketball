@@ -12,6 +12,10 @@ public class V4PublicMatchPlayerStatItemResp {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long eventPlayerId;
 
+    /** 永久球员 ID，公开 /player/{id} 路由必须使用此字段 */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long sourcePlayerId;
+
     private String playerName;
 
     @JsonSerialize(using = ToStringSerializer.class)
@@ -30,6 +34,8 @@ public class V4PublicMatchPlayerStatItemResp {
     private Integer block;
 
     private Integer turnover;
+
+    private Integer foul;
 
     private BigDecimal minutes;
 }

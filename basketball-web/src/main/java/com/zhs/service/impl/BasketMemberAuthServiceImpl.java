@@ -14,6 +14,7 @@ import com.zhs.config.MemberAuthProperties;
 import com.zhs.dao.BasketAccountSecurityLogDao;
 import com.zhs.dao.v4.BasketCaptainGrantDao;
 import com.zhs.dao.BasketLoginLogDao;
+import com.zhs.dao.BasketFileAssetDao;
 import com.zhs.dao.BasketMemberAccountDao;
 import com.zhs.dao.BasketMemberAgreementRecordDao;
 import com.zhs.dao.BasketMemberProfileDao;
@@ -31,6 +32,7 @@ import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketAccountSecurityLog;
 import com.zhs.enums.v4.CaptainGrantStatusEnum;
 import com.zhs.model.v4.BasketCaptainGrant;
+import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketLoginLog;
 import com.zhs.model.BasketMemberAccount;
 import com.zhs.model.BasketMemberAgreementRecord;
@@ -52,6 +54,7 @@ import com.zhs.response.member.MemberSessionResp;
 import com.zhs.response.member.MemberSummaryResp;
 import com.zhs.service.IBasketMemberAuthService;
 import com.zhs.service.mail.IMemberMailService;
+import com.zhs.support.MemberAvatarSupport;
 import com.zhs.support.MemberSessionSupport;
 import com.zhs.util.MiniRedisUtil;
 import jakarta.annotation.PostConstruct;
@@ -89,6 +92,8 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
     private BasketMemberAccountDao memberAccountDao;
     @Resource
     private BasketMemberProfileDao memberProfileDao;
+    @Resource
+    private BasketFileAssetDao fileAssetDao;
     @Resource
     private BasketPlayerProfileDao playerProfileDao;
     @Resource
@@ -423,7 +428,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         writeLoginLog(account, LOGIN_TYPE_PASSWORD, LoginResultEnum.SUCCESS, null, clientIp, terminalType, userAgent, now);
         writeSecurityLog(account.getId(), "LOGIN_SUCCESS", "密码登录成功",
                 null, null, "MEMBER", account.getId(), clientIp, terminalType, now, null);
-        return buildLoginResp(account, loadNickname(account.getId(), account.getEmail()), token);
+        return buildLoginResp(account, token);
     }
 
     @Override
@@ -480,7 +485,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         }
 
         MemberSessionResp resp = new MemberSessionResp();
-        fillSummary(resp, account, loadNickname(account.getId(), account.getEmail()));
+        fillSummary(resp, account, loadOfficialProfileSummary(account.getId(), account.getEmail()));
         resp.setRegisterSource(account.getRegisterSource());
         resp.setRegisterTerminal(account.getRegisterTerminal());
         fillPlayerSessionFields(resp, memberId);
@@ -634,37 +639,52 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         return token;
     }
 
-    private MemberLoginResp buildLoginResp(BasketMemberAccount account, String nickname, String token) {
+    private MemberLoginResp buildLoginResp(BasketMemberAccount account, String token) {
         MemberLoginResp resp = new MemberLoginResp();
         resp.setToken(token);
         resp.setTokenType(TOKEN_TYPE_BEARER);
         resp.setExpireSeconds(authProperties.getTokenExpireDays() * 24 * 3600);
         MemberSummaryResp member = new MemberSummaryResp();
-        fillSummary(member, account, nickname);
+        fillSummary(member, account, loadOfficialProfileSummary(account.getId(), account.getEmail()));
         resp.setMember(member);
         return resp;
     }
 
-    private void fillSummary(MemberSummaryResp target, BasketMemberAccount account, String nickname) {
+    private void fillSummary(MemberSummaryResp target, BasketMemberAccount account, OfficialProfileSummary profile) {
         target.setMemberId(String.valueOf(account.getId()));
         target.setUserId(String.valueOf(account.getId()));
         target.setAccountNo(account.getAccountNo());
-        target.setNickname(nickname);
-        target.setAvatarUrl(null);
+        target.setNickname(profile.nickname());
+        // 正式头像；无 avatar_file_id 时保持 null，前端 Placeholder。绝不读 pending change。
+        target.setAvatarUrl(profile.avatarUrl());
         target.setEmailMasked(maskEmail(account.getEmail()));
         target.setEmailVerified(VerifiedFlagEnum.isYes(account.getEmailVerified()));
         target.setAccountStatus(account.getAccountStatus());
     }
 
-    private String loadNickname(Long memberId, String email) {
+    /**
+     * 一次查询正式资料（basket_member_profile），供 login / session 共用。
+     * 不读 basket_member_profile_change。
+     */
+    private OfficialProfileSummary loadOfficialProfileSummary(Long memberId, String email) {
         BasketMemberProfile profile = memberProfileDao.selectOne(new LambdaQueryWrapper<BasketMemberProfile>()
                 .eq(BasketMemberProfile::getMemberId, memberId)
                 .eq(BasketMemberProfile::getIsDelete, 0)
                 .last("limit 1"));
-        if (profile != null && StringUtils.hasText(profile.getNickname())) {
-            return profile.getNickname();
+        String nickname = profile != null && StringUtils.hasText(profile.getNickname())
+                ? profile.getNickname()
+                : deriveNicknameFromEmail(email);
+        String avatarUrl = null;
+        if (profile != null && profile.getAvatarFileId() != null) {
+            BasketFileAsset asset = fileAssetDao.selectById(profile.getAvatarFileId());
+            if (asset != null && Integer.valueOf(0).equals(asset.getIsDelete())) {
+                avatarUrl = MemberAvatarSupport.accessUrlOrNull(asset.getAccessUrl());
+            }
         }
-        return deriveNicknameFromEmail(email);
+        return new OfficialProfileSummary(nickname, avatarUrl);
+    }
+
+    private record OfficialProfileSummary(String nickname, String avatarUrl) {
     }
 
     private void saveAgreement(Long memberId, String type, String title, String terminalType,

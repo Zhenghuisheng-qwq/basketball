@@ -38,9 +38,21 @@ const careerAverageRow = computed(() => {
   if (rows.length === 0) return null
   const totalGames = rows.reduce((sum, row) => sum + row.games, 0)
   const avg = (key: keyof PlayerCareerStatistics) =>
-    rows.reduce((sum, row) => sum + Number(row[key]), 0) / rows.length
+    rows.reduce((sum, row) => sum + Number(row[key] ?? 0), 0) / rows.length
+  const avgPct = (key: 'fieldGoalPercentage' | 'threePointPercentage' | 'freeThrowPercentage') => {
+    const values = rows
+      .map((row) => row[key])
+      .filter((value): value is number => value !== null && value !== undefined && Number.isFinite(Number(value)))
+      .map(Number)
+    if (!values.length) return null
+    return values.reduce((sum, value) => sum + value, 0) / values.length
+  }
   return {
+    seasonId: '',
+    divisionId: '',
     tournamentName: '生涯平均',
+    teamId: '',
+    teamLogoUrl: '',
     teamName: '-',
     platform: '-',
     games: totalGames,
@@ -51,9 +63,9 @@ const careerAverageRow = computed(() => {
     blocks: avg('blocks'),
     turnovers: avg('turnovers'),
     fouls: avg('fouls'),
-    fieldGoalPercentage: avg('fieldGoalPercentage'),
-    threePointPercentage: avg('threePointPercentage'),
-    freeThrowPercentage: avg('freeThrowPercentage'),
+    fieldGoalPercentage: avgPct('fieldGoalPercentage'),
+    threePointPercentage: avgPct('threePointPercentage'),
+    freeThrowPercentage: avgPct('freeThrowPercentage'),
   }
 })
 
@@ -62,10 +74,18 @@ const seasonStatRows = computed(() => {
   return props.detail.careerStats.filter((row) => row.seasonId === selectedStage.value.id)
 })
 
-function formatStat(value: number, isPct = false): string {
-  if (isPct) return `${value.toFixed(1)}%`
-  if (statMode.value === 'average') return Number.isInteger(value) ? String(value) : value.toFixed(1)
-  return String(Math.round(value))
+function formatStat(value: number | null | undefined, isPct = false): string {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return '--'
+  }
+  const num = Number(value)
+  if (isPct) {
+    // 后端可能返回 0~1 或 0~100
+    const pct = num <= 1 ? num * 100 : num
+    return `${pct.toFixed(1)}%`
+  }
+  if (statMode.value === 'average') return Number.isInteger(num) ? String(num) : num.toFixed(1)
+  return String(Math.round(num))
 }
 
 function setDataMode(mode: PlayerDataMode) {

@@ -18,13 +18,14 @@ import type {
   V4PublicStandingItem,
   V4PublicTeamStatItem,
 } from '@/api/types/v4Public'
-import { DATA_TAB_VALUES, type DataTabValue } from '@/constants/publicCompetitionMenu'
 import { displayText, formatDecimal } from '@/utils/publicDisplay'
 import { v4RankTypeLabel } from '@/utils/v4Display'
 import V4DataHero from './components/V4DataHero.vue'
 import './styles/v4-data-page.scss'
 
-type DataPanel = DataTabValue
+/** 遗留页（路由已切到 data/index）；保留本地 tab 类型避免污染公开菜单约定 */
+const DATA_TAB_VALUES = ['standing', 'team', 'player', 'rank'] as const
+type DataPanel = (typeof DATA_TAB_VALUES)[number]
 
 const route = useRoute()
 const router = useRouter()

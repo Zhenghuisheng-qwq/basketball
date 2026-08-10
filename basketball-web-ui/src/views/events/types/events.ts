@@ -6,6 +6,7 @@ export type MatchStatus = 'scheduled' | 'live' | 'finished' | 'cancelled'
 
 export interface Team {
   id: number
+  /** V2 EventTeam 主键 */
   teamId: string
   code: string
   name: string
@@ -18,25 +19,25 @@ export interface Team {
 
 export interface PlayerLeader {
   id: number
-  playerId: number
   title: string
   value: number
   unit: 'PPG' | 'APG' | 'RPG'
   playerName: string
-  teamId: number
+  teamId: string
+  teamName?: string
+  teamLogo?: string
   portrait: string
 }
 
 export interface Match {
   id: number
-  /** 后端比赛主键（字符串 Long） */
   matchId: string
   season: string
   date: string
   startTime: string
-  /** @deprecated 兼容旧 mock 数字 id，真实数据请用 homeTeamKey */
+  /** @deprecated 兼容原型数字 id */
   homeTeamId: number
-  /** @deprecated 兼容旧 mock 数字 id，真实数据请用 awayTeamKey */
+  /** @deprecated 兼容原型数字 id */
   awayTeamId: number
   homeTeamKey: string
   awayTeamKey: string
@@ -55,7 +56,9 @@ export interface Match {
 
 export interface Standing {
   rank: number
-  teamId: number
+  teamId: string
+  teamName: string
+  teamLogo: string
   wins: number
   losses: number
   winRate: number
@@ -78,11 +81,17 @@ export interface PlayoffSeries {
   id: string
   round: 'quarterfinal' | 'semifinal' | 'final'
   side: 'left' | 'right' | 'center'
-  topTeamId: number
-  bottomTeamId: number
+  topTeamId: string
+  bottomTeamId: string
+  topTeamName: string
+  bottomTeamName: string
+  topTeamLogo: string
+  bottomTeamLogo: string
   topScore: number
   bottomScore: number
-  winnerTeamId: number
+  winnerTeamId: string
+  topSeed?: number | string
+  bottomSeed?: number | string
 }
 
 export interface LeagueInfo {

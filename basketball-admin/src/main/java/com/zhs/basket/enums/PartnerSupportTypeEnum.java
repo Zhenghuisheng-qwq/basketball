@@ -47,8 +47,8 @@ public enum PartnerSupportTypeEnum {
             if (amount == null) {
                 throw new ServiceException("现金赞助金额不能为空");
             }
-            if (amount.compareTo(BigDecimal.ZERO) < 0) {
-                throw new ServiceException("现金赞助金额不能小于 0");
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ServiceException("现金赞助金额必须大于 0");
             }
         }
     }

@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPublicMatchDetail } from '@/api/publicMatch'
-import { getPublicSeasonPlayerStatPage } from '@/api/publicSeasonStat'
-import { getPublicTeamStat } from '@/api/publicTeam'
+import { getV4PublicMatchDetail, getV4PublicPlayerStat, getV4PublicTeamStat } from '@/api/v4Public'
 import type {
   PlayerStatsMode,
   PlayoffStatsMode,
@@ -22,9 +20,9 @@ import {
   type PublicTeamPageContext,
 } from './composables/usePublicTeamPage'
 import {
-  mapPublicMatchDetailToSingleMatchStats,
-  mapPublicPlayerSeasonStatToAverage,
-  mapPublicPlayerSeasonStatToTotal,
+  mapV4MatchDetailToSingleMatchStats,
+  mapV4PlayerStatToAverage,
+  mapV4PlayerStatToTotal,
 } from './utils/mapTeamPlayerStats'
 
 type NumericColumn =
@@ -78,7 +76,7 @@ const singleMatchErrorMessage = ref('')
 const seasonStatsList = ref(ctx.stats.value)
 const averagePlayerStats = ref<TeamPlayerAverageStat[]>([])
 const totalPlayerStats = ref<TeamPlayerTotalStat[]>([])
-const singleMatchStats = ref<ReturnType<typeof mapPublicMatchDetailToSingleMatchStats>>(null)
+const singleMatchStats = ref<ReturnType<typeof mapV4MatchDetailToSingleMatchStats>>(null)
 
 let seasonReqId = 0
 let playerReqId = 0
@@ -90,14 +88,14 @@ const activeSeasonStat = computed(() => {
   return stats[0]
 })
 
-const seasonId = computed(() => activeSeasonStat.value?.seasonId || '')
-
 const seasonStats = computed<TeamSeasonAverages | null>(() =>
   mapTeamSeasonAverages(activeSeasonStat.value),
 )
 
+const divisionId = computed(() => ctx.divisionId.value)
+
 const competitionOptions = computed(() => {
-  const name = displayText(activeSeasonStat.value?.seasonId ? `赛季 ${activeSeasonStat.value.seasonId}` : '', '')
+  const name = displayText(ctx.teamView.value?.seasonName, '')
   return name ? [name] : []
 })
 
@@ -147,8 +145,9 @@ const singleMaxMap = computed(() => {
 
 async function loadSeasonStats() {
   const id = teamId.value
+  const divId = divisionId.value
   const current = ++seasonReqId
-  if (!id) {
+  if (!id || !divId) {
     seasonStatsList.value = []
     seasonStatState.value = 'empty'
     return
@@ -163,9 +162,28 @@ async function loadSeasonStats() {
   seasonStatState.value = 'loading'
   seasonErrorMessage.value = ''
   try {
-    const res = await getPublicTeamStat(id)
+    const res = await getV4PublicTeamStat(divId)
     if (current !== seasonReqId) return
-    seasonStatsList.value = res.data ?? []
+    const row = (res.data ?? []).find((item) => String(item.eventTeamId) === String(id))
+    seasonStatsList.value = row
+      ? [{
+          seasonId: ctx.seasonId.value,
+          teamId: id,
+          teamName: row.teamName,
+          teamLogoUrl: row.teamLogoUrl,
+          games: row.matchCount,
+          wins: row.winCount,
+          losses: row.loseCount,
+          avgPoints: row.avgPointsFor,
+          avgPointsAgainst: row.avgPointsAgainst,
+          avgRebounds: row.matchCount ? (row.rebound ?? 0) / (row.matchCount || 1) : 0,
+          avgAssists: row.matchCount ? (row.assist ?? 0) / (row.matchCount || 1) : 0,
+          avgSteals: row.matchCount ? (row.steal ?? 0) / (row.matchCount || 1) : 0,
+          avgBlocks: row.matchCount ? (row.block ?? 0) / (row.matchCount || 1) : 0,
+          avgTurnovers: row.matchCount ? (row.turnover ?? 0) / (row.matchCount || 1) : 0,
+          winRate: row.matchCount ? (row.winCount ?? 0) / (row.matchCount || 1) : 0,
+        }]
+      : []
     seasonStatState.value = seasonStatsList.value.length ? 'success' : 'empty'
   } catch (err) {
     if (current !== seasonReqId) return
@@ -176,11 +194,11 @@ async function loadSeasonStats() {
 }
 
 async function loadPlayerStats() {
-  const sid = seasonId.value
+  const divId = divisionId.value
   const tid = teamId.value
   const current = ++playerReqId
 
-  if (!sid || !tid) {
+  if (!divId || !tid) {
     averagePlayerStats.value = []
     totalPlayerStats.value = []
     playerStatState.value = 'empty'
@@ -190,15 +208,20 @@ async function loadPlayerStats() {
   playerStatState.value = 'loading'
   playerErrorMessage.value = ''
   try {
-    const res = await getPublicSeasonPlayerStatPage(sid, {
-      teamId: tid,
-      currentPage: 1,
-      pageSize: 100,
-    })
+    const res = await getV4PublicPlayerStat(divId)
     if (current !== playerReqId) return
-    const records = res.data?.records ?? []
-    averagePlayerStats.value = records.map(mapPublicPlayerSeasonStatToAverage)
-    totalPlayerStats.value = records.map(mapPublicPlayerSeasonStatToTotal)
+    const rosterEventPlayerIds = new Set(
+      ctx.roster.value
+        .map((item) => String(item.eventPlayerId || '').trim())
+        .filter(Boolean),
+    )
+    const teamName = displayText(ctx.teamView.value?.name, '')
+    const records = (res.data ?? []).filter((item) => {
+      if (rosterEventPlayerIds.has(String(item.eventPlayerId))) return true
+      return displayText(item.teamName, '') === teamName
+    })
+    averagePlayerStats.value = records.map(mapV4PlayerStatToAverage)
+    totalPlayerStats.value = records.map(mapV4PlayerStatToTotal)
     playerStatState.value = records.length ? 'success' : 'empty'
   } catch (err) {
     if (current !== playerReqId) return
@@ -223,10 +246,10 @@ async function loadSingleMatchStats() {
   singleMatchState.value = 'loading'
   singleMatchErrorMessage.value = ''
   try {
-    const res = await getPublicMatchDetail(mid)
+    const res = await getV4PublicMatchDetail(mid)
     if (current !== singleReqId) return
     singleMatchStats.value = res.data
-      ? mapPublicMatchDetailToSingleMatchStats(res.data, tid)
+      ? mapV4MatchDetailToSingleMatchStats(res.data, tid)
       : null
     singleMatchState.value = singleMatchStats.value ? 'success' : 'empty'
   } catch (err) {
@@ -237,7 +260,7 @@ async function loadSingleMatchStats() {
   }
 }
 
-watch(teamId, () => {
+watch([teamId, divisionId], () => {
   void loadSeasonStats()
 }, { immediate: true })
 
@@ -251,7 +274,7 @@ watch(
   },
 )
 
-watch([seasonId, teamId, stageFilter, playerStatsMode, playoffStatsMode], () => {
+watch([divisionId, teamId, stageFilter, playerStatsMode, playoffStatsMode], () => {
   void loadPlayerStats()
 }, { immediate: true })
 
@@ -259,14 +282,16 @@ watch([matchId, teamId, stageFilter, playoffStatsMode], () => {
   void loadSingleMatchStats()
 }, { immediate: true })
 
-function normalizeSummaryValue(value: number, col: NumericColumn, mode: PlayerStatsMode): number {
+function normalizeSummaryValue(value: number | null | undefined, col: NumericColumn, mode: PlayerStatsMode): number | null {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return null
+  const num = Number(value)
   if (col === 'fgPct' || col === 'tpPct' || col === 'ftPct') {
-    return Number(value.toFixed(1))
+    return Number(num.toFixed(1))
   }
   if (mode === 'average') {
-    return Number(value.toFixed(1))
+    return Number(num.toFixed(1))
   }
-  return Math.round(value)
+  return Math.round(num)
 }
 
 function buildMaxMap(
@@ -277,7 +302,12 @@ function buildMaxMap(
   if (!rows.length) return maxes
 
   for (const col of numericColumns) {
-    maxes[col] = Math.max(...rows.map((row) => normalizeSummaryValue(row[col], col, mode)))
+    const values = rows
+      .map((row) => normalizeSummaryValue(row[col], col, mode))
+      .filter((value): value is number => value !== null)
+    if (values.length) {
+      maxes[col] = Math.max(...values)
+    }
   }
   return maxes
 }
@@ -316,8 +346,11 @@ function formatCount(value: number, mode: PlayerStatsMode): string {
   return mode === 'average' ? value.toFixed(1) : String(Math.round(value))
 }
 
-function formatPct(value: number): string {
-  return `${value.toFixed(1)}%`
+function formatPct(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '--'
+  const num = Number(value)
+  const pct = num <= 1 ? num * 100 : num
+  return `${pct.toFixed(1)}%`
 }
 
 function handlePlayerDetailClick(playerId: string) {

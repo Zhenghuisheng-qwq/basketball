@@ -7,8 +7,8 @@ import com.zhs.common.exception.ServiceException;
  */
 public enum PartnerStatusEnum {
     DRAFT(0, "草稿"),
-    PUBLISHED(1, "已发布"),
-    OFFLINE(2, "已下线");
+    PUBLISHED(1, "展示中"),
+    OFFLINE(2, "不展示");
 
     private final int code;
     private final String description;

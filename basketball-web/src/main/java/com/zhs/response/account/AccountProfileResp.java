@@ -61,4 +61,13 @@ public class AccountProfileResp implements Serializable {
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date lastLoginTime;
+
+    @ApiModelProperty("是否存在待审核的公开资料变更")
+    private Boolean hasPendingChange;
+
+    @ApiModelProperty("待审核资料变更")
+    private AccountProfileChangeResp pendingChange;
+
+    @ApiModelProperty("最近一次驳回的资料变更（无待审核时返回）")
+    private AccountProfileChangeResp latestRejectedChange;
 }

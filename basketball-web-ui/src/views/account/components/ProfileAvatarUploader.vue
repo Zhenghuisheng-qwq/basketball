@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: string
   name: string
-}>()
+  actionLabel?: string
+  disabled?: boolean
+  hint?: string
+}>(), {
+  actionLabel: '上传头像',
+  disabled: false,
+  hint: '支持 JPG / PNG，大小不超过 5MB',
+})
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -59,7 +66,7 @@ async function handleChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
-  if (!file) return
+  if (!file || props.disabled) return
 
   const allowed = ['image/jpeg', 'image/jpg', 'image/png']
   if (!allowed.includes(file.type)) {
@@ -88,7 +95,7 @@ function handleImageError() {
 </script>
 
 <template>
-  <div class="profile-avatar-uploader">
+  <div class="profile-avatar-uploader" :class="{ 'profile-avatar-uploader--disabled': disabled }">
     <div class="profile-avatar-uploader__preview">
       <img
         v-if="showImage"
@@ -105,11 +112,16 @@ function handleImageError() {
         </svg>
       </span>
     </div>
-    <label class="profile-avatar-uploader__label">
-      <input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" @change="handleChange" />
-      上传头像
+    <label class="profile-avatar-uploader__label" :class="{ 'is-disabled': disabled }">
+      <input
+        type="file"
+        accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+        :disabled="disabled"
+        @change="handleChange"
+      />
+      {{ actionLabel }}
     </label>
-    <p class="profile-avatar-uploader__hint">支持 JPG / PNG，大小不超过 5MB</p>
+    <p class="profile-avatar-uploader__hint">{{ hint }}</p>
   </div>
 </template>
 
@@ -153,6 +165,15 @@ function handleImageError() {
   input {
     display: none;
   }
+
+  &.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.profile-avatar-uploader--disabled {
+  opacity: 0.92;
 }
 
 .profile-avatar-uploader__hint {
