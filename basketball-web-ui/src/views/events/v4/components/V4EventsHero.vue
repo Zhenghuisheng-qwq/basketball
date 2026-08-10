@@ -14,21 +14,8 @@ const emit = defineEmits<{
 </script>
 
 <template>
+  <!-- master LeagueHero：左侧介绍在 banner 图内，右侧磨砂 meta + 底部系列 tabs -->
   <PublicHero variant="competition" ariaLabel="CNPA 赛事中心">
-    <nav class="v4-events-hero__breadcrumb" aria-label="面包屑">
-      <router-link to="/" class="v4-events-hero__crumb">首页</router-link>
-      <span class="v4-events-hero__crumb-sep">/</span>
-      <span class="v4-events-hero__crumb v4-events-hero__crumb--current">赛事</span>
-    </nav>
-
-    <div class="v4-events-hero__intro">
-      <p class="v4-events-hero__eyebrow">COMPETITION CENTER</p>
-      <h1 class="v4-events-hero__title">赛事中心</h1>
-      <p class="v4-events-hero__desc">
-        选择你的赛场，参与 CNPA PC 与 PS/Xbox 线上篮球赛事。
-      </p>
-    </div>
-
     <ul class="v4-events-hero__meta" aria-label="赛事概览">
       <li class="v4-events-hero__meta-item">
         <div class="v4-events-hero__meta-text">
@@ -76,73 +63,6 @@ const emit = defineEmits<{
 </template>
 
 <style scoped lang="scss">
-.v4-events-hero__breadcrumb {
-  position: absolute;
-  top: clamp(18px, 2.4vw, 28px);
-  left: 0;
-  z-index: 3;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.v4-events-hero__crumb {
-  color: rgba(255, 255, 255, 0.72);
-  text-decoration: none;
-  transition: color 0.2s ease;
-
-  &:hover {
-    color: #fff;
-  }
-
-  &--current {
-    color: #fff;
-  }
-}
-
-.v4-events-hero__crumb-sep {
-  color: rgba(255, 255, 255, 0.36);
-}
-
-.v4-events-hero__intro {
-  position: absolute;
-  top: clamp(52px, 6vw, 88px);
-  left: 0;
-  z-index: 3;
-  max-width: min(100%, 560px);
-}
-
-.v4-events-hero__eyebrow {
-  margin: 0 0 8px;
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 13px;
-  font-style: italic;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.v4-events-hero__title {
-  margin: 0 0 10px;
-  color: #fff;
-  font-size: clamp(32px, 4.8vw, 52px);
-  font-weight: 900;
-  line-height: 1.08;
-  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
-}
-
-.v4-events-hero__desc {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.84);
-  font-size: clamp(14px, 1.6vw, 17px);
-  line-height: 1.65;
-  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.42);
-}
-
 /* 磨砂统计卡片：复用 master LeagueHeroMeta 质感 */
 .v4-events-hero__meta {
   --hero-meta-right: 3.8%;
@@ -285,27 +205,13 @@ const emit = defineEmits<{
 }
 
 @media (max-width: 767px) {
-  .v4-events-hero__breadcrumb {
-    position: relative;
-    top: auto;
-    left: auto;
-    padding-top: 12px;
-  }
-
-  .v4-events-hero__intro {
-    position: relative;
-    top: auto;
-    left: auto;
-    max-width: none;
-    padding: 18px 0 12px;
-  }
-
   .v4-events-hero__meta {
     position: relative;
     right: auto;
     bottom: auto;
     width: 100%;
-    margin-top: 8px;
+    margin: 12px 0;
+    padding: 0 4px;
   }
 
   .v4-events-hero__tabs {

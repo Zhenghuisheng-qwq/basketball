@@ -53,23 +53,6 @@ export const competitionMenuGroups: Record<MegaMenuType, PublicMenuGroup[]> = {
       title: '赛事系列',
       entries: SERIES_ITEMS.map((item) => eventsSeriesEntry(item.code, item.label, item.abbrev)),
     },
-    {
-      title: '快捷入口',
-      entries: [
-        {
-          id: 'events-all',
-          label: '全部赛事',
-          abbrev: '全',
-          to: { path: '/tournament' },
-        },
-        {
-          id: 'events-registration',
-          label: '报名中赛事',
-          abbrev: '报',
-          to: { path: '/tournament', query: { registrationOpen: '1' } },
-        },
-      ],
-    },
   ],
   data: [
     {

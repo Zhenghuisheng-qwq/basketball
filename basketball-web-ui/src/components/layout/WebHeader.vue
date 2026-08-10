@@ -326,22 +326,24 @@ onBeforeUnmount(() => {
               数据
             </button>
 
-            <div
-              v-show="isMegaMenuOpen"
-              class="competition-mega-menu-anchor"
-              :style="{ left: `${megaMenuAnchorLeft}px` }"
-              @mouseenter="clearCloseTimer()"
-              @mouseleave="handleMegaMenuMouseLeave()"
-            >
-              <PublicCompetitionMegaMenu
-                ref="megaMenuRef"
-                :type="openMenu ?? 'event'"
-                :ariaLabel="megaMenuAriaLabel"
-                :groups="currentGroups"
-                :get-entry-highlight="getEntryHighlight"
-                @navigate="navigateMegaMenuEntry"
-              />
-            </div>
+            <Transition name="mega-menu">
+              <div
+                v-if="isMegaMenuOpen"
+                class="competition-mega-menu-anchor"
+                :style="{ left: `${megaMenuAnchorLeft}px` }"
+                @mouseenter="clearCloseTimer()"
+                @mouseleave="handleMegaMenuMouseLeave()"
+              >
+                <PublicCompetitionMegaMenu
+                  ref="megaMenuRef"
+                  :type="openMenu ?? 'event'"
+                  :ariaLabel="megaMenuAriaLabel"
+                  :groups="currentGroups"
+                  :get-entry-highlight="getEntryHighlight"
+                  @navigate="navigateMegaMenuEntry"
+                />
+              </div>
+            </Transition>
           </div>
 
           <router-link
@@ -575,9 +577,8 @@ onBeforeUnmount(() => {
 
 .competition-mega-menu-anchor {
   position: absolute;
-  top: calc(100% - 6px);
+  top: calc(100% + 1px);
   left: 0;
-  padding-top: 8px;
   z-index: 2100;
   transition: left 160ms ease;
 }
@@ -888,6 +889,19 @@ onBeforeUnmount(() => {
 
 .mobile-nav__group {
   width: 100%;
+}
+
+.mega-menu-enter-active,
+.mega-menu-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.mega-menu-enter-from,
+.mega-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .mobile-nav-enter-active,

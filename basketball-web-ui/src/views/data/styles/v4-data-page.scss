@@ -1,83 +1,102 @@
 .v4-data-page__shell {
   display: flex;
   flex-direction: column;
-  gap: clamp(20px, 2.4vw, 28px);
+  gap: 0;
 }
 
-.v4-data-page__module {
-  width: 100%;
-}
-
-.v4-data-tabs,
-.v4-data-subtabs {
+/* master DataTypeTabs：纸面外大号白字 + 红下划线 */
+.v4-data-type-tabs {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
+  align-items: flex-end;
+  gap: 40px;
+  width: 100%;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.v4-data-subtabs {
-  margin-top: 10px;
-}
-
-.v4-data-tabs__btn {
-  flex: 0 0 auto;
-  min-height: 42px;
-  padding: 0 18px;
-  border: 1px solid var(--paper-border);
-  background: rgba(255, 255, 255, 0.52);
-  color: var(--ink-color);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
+.v4-data-type-tabs__item {
+  position: relative;
+  margin: 0;
+  padding: 0 2px 14px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 23px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease,
-    box-shadow 0.18s ease;
+  font-family: inherit;
+  transition: color 0.16s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 3px;
+    background: transparent;
+  }
 
   &:hover {
-    border-color: rgba(217, 21, 30, 0.42);
-    color: var(--brand-red);
+    color: rgba(255, 255, 255, 0.72);
   }
 
   &.is-active {
-    border-color: var(--brand-red);
-    background: rgba(217, 21, 30, 0.1);
-    color: var(--brand-red);
-    box-shadow: inset 0 -3px 0 rgba(217, 21, 30, 0.28);
+    color: #ff1717;
+
+    &::after {
+      background: #ff1717;
+    }
+  }
+}
+
+.v4-data-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.v4-data-subtabs__btn {
+  min-width: 86px;
+  height: 40px;
+  margin: 0;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--cnpa-paper-surface, #f1efef);
+  color: var(--cnpa-paper-text-secondary, #666);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+
+  &.is-active {
+    background: #ff1717;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(255, 23, 23, 0.18);
   }
 }
 
 .v4-data-panel {
-  margin-top: clamp(16px, 2vw, 24px);
-  padding: clamp(20px, 2.4vw, 28px);
-  border: 1px solid var(--paper-border);
-  background: rgba(255, 255, 255, 0.58);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.06);
+  width: 100%;
 }
 
 .v4-data-panel__loading {
   min-height: clamp(280px, 36vw, 360px);
   display: grid;
   place-items: center;
-  color: var(--muted-color);
+  color: var(--muted-color, #666);
   font-size: 14px;
   font-weight: 700;
 }
 
 .v4-data-table-wrap {
   overflow-x: auto;
-  border: 1px solid var(--paper-border);
+  border: 1px solid rgba(25, 25, 25, 0.1);
   background: rgba(255, 255, 255, 0.72);
 }
 
@@ -88,16 +107,16 @@
 
   th,
   td {
-    padding: 12px 14px;
+    padding: 14px 16px;
     text-align: left;
     border-bottom: 1px solid rgba(20, 20, 20, 0.08);
-    color: var(--ink-color);
+    color: var(--ink-color, #171717);
     font-size: 14px;
   }
 
   th {
-    background: rgba(255, 255, 255, 0.72);
-    color: var(--muted-color);
+    background: rgba(255, 255, 255, 0.78);
+    color: var(--muted-color, #666);
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.04em;
@@ -105,14 +124,29 @@
   }
 
   tbody tr:hover {
-    background: rgba(217, 21, 30, 0.04);
+    background: rgba(255, 23, 23, 0.04);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
   }
 }
 
 @media (max-width: 767px) {
-  .v4-data-tabs,
-  .v4-data-subtabs {
-    flex-wrap: wrap;
-    overflow-x: visible;
+  .v4-data-type-tabs {
+    gap: 24px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .v4-data-type-tabs__item {
+    flex: 0 0 auto;
+    font-size: 18px;
+    padding-bottom: 12px;
   }
 }

@@ -121,60 +121,64 @@ defineExpose({
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(43, 43, 46, 0.98) 0%, rgba(30, 30, 34, 0.98) 100%),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 3px,
-      rgba(255, 255, 255, 0.012) 3px,
-      rgba(255, 255, 255, 0.012) 4px
-    );
+  background: rgba(52, 52, 52, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-top: 4px solid var(--cnpa-red, #e10613);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0 0 6px 6px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.42);
+  border-radius: 0 0 3px 3px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.36);
   box-sizing: border-box;
+
+  /* 赛事：贴近 master CompetitionDropdown 紧凑列表 */
+  &[data-menu-type='event'] {
+    --mega-menu-width: clamp(220px, 16vw, 260px);
+  }
 }
 
 .competition-mega-menu__body {
   flex: 1;
   min-height: 0;
-  padding: 16px 12px 16px;
+  padding: 8px 0 10px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
+.competition-mega-menu[data-menu-type='data'] .competition-mega-menu__body {
+  padding: 14px 12px 16px;
+}
+
 .menu-section + .menu-section {
-  margin-top: 16px;
+  margin-top: 14px;
 }
 
 .menu-section__title {
   margin-bottom: 8px;
   padding: 8px 12px;
-  border-radius: 7px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 14px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
 
+.competition-mega-menu[data-menu-type='event'] .menu-section__title {
+  display: none;
+}
+
 .menu-entry {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  column-gap: 10px;
   width: 100%;
-  min-height: 46px;
+  min-height: 44px;
   margin: 0;
-  padding: 6px 10px 6px 8px;
+  padding: 6px 20px;
   border: 0;
-  border-radius: 4px;
+  border-radius: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(255, 255, 255, 0.82);
   text-align: left;
   cursor: pointer;
   font-family: inherit;
@@ -182,28 +186,34 @@ defineExpose({
     background 0.16s ease,
     color 0.16s ease;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
-  }
-
+  &:hover,
   &:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.28);
-    outline-offset: -2px;
+    background: rgba(139, 0, 0, 0.55);
+    color: #fff;
+    outline: none;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--cnpa-red, #e10613);
+    }
   }
 
   &--active {
-    background: rgba(142, 0, 8, 0.72);
+    background: rgba(139, 0, 0, 0.72);
     color: #fff;
 
     &::before {
       content: '';
       position: absolute;
       left: 0;
-      top: 6px;
-      bottom: 6px;
+      top: 0;
+      bottom: 0;
       width: 3px;
-      border-radius: 0 2px 2px 0;
       background: var(--cnpa-red, #e10613);
     }
   }
@@ -211,16 +221,23 @@ defineExpose({
   &--secondary {
     background: rgba(255, 255, 255, 0.05);
     color: rgba(255, 255, 255, 0.92);
+  }
+}
 
+.competition-mega-menu[data-menu-type='data'] .menu-entry {
+  display: flex;
+  gap: 12px;
+  min-height: 46px;
+  padding: 6px 10px 6px 8px;
+  border-radius: 4px;
+
+  &:hover,
+  &:focus-visible,
+  &--active {
     &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 10px;
-      bottom: 10px;
-      width: 2px;
+      top: 6px;
+      bottom: 6px;
       border-radius: 0 2px 2px 0;
-      background: rgba(225, 6, 19, 0.55);
     }
   }
 }
@@ -229,9 +246,9 @@ defineExpose({
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
+  width: 30px;
+  height: 30px;
+  border-radius: 3px;
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.9);
   font-size: 11px;
@@ -242,7 +259,7 @@ defineExpose({
 .menu-entry__name {
   flex: 1;
   min-width: 0;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;

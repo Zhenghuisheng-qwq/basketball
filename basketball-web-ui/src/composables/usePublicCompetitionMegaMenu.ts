@@ -93,17 +93,6 @@ export function usePublicCompetitionMegaMenu() {
     return 'standing'
   }
 
-  function isRegistrationFilter(): boolean {
-    const open = route.query.registrationOpen
-    const status = route.query.registrationStatus
-    if (open === '1' || open === 'true') return true
-    if (typeof status === 'string') {
-      const upper = status.toUpperCase()
-      return upper === 'OPEN' || upper === 'REGISTRATION_OPEN'
-    }
-    return false
-  }
-
   function isEventsListRoute(): boolean {
     return route.path === '/tournament' || route.path === '/events'
   }
@@ -114,17 +103,7 @@ export function usePublicCompetitionMegaMenu() {
 
       if (entry.id.startsWith('events-series-')) {
         const code = entry.id.slice('events-series-'.length)
-        if (normalizeSeries() === code && !isRegistrationFilter()) return 'primary'
-        return null
-      }
-
-      if (entry.id === 'events-all') {
-        if (!normalizeSeries() && !isRegistrationFilter()) return 'primary'
-        return null
-      }
-
-      if (entry.id === 'events-registration') {
-        if (isRegistrationFilter()) return 'primary'
+        if (normalizeSeries() === code) return 'primary'
         return null
       }
     }
