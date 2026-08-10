@@ -24,6 +24,7 @@ export interface TeamMemberItemDto {
   rosterTypeText?: string
   jerseyNo?: string
   membershipStatus?: number
+  leaveReason?: string
   remark?: string
   joinTime?: string
 }

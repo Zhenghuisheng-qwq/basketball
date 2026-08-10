@@ -45,6 +45,12 @@
       <el-table-column label="球队编号" prop="teamNo" min-width="140" :show-overflow-tooltip="true" />
       <el-table-column label="球队名称" prop="teamName" min-width="140" :show-overflow-tooltip="true" />
       <el-table-column label="球队简称" prop="shortName" min-width="100" :show-overflow-tooltip="true" />
+      <el-table-column label="赛事系列" prop="seriesName" min-width="120" :show-overflow-tooltip="true" />
+      <el-table-column label="赛季" prop="seasonName" min-width="120" :show-overflow-tooltip="true" />
+      <el-table-column label="Division" prop="divisionName" min-width="120" :show-overflow-tooltip="true" />
+      <el-table-column label="平台" prop="platformCode" width="80" />
+      <el-table-column label="模式" prop="gameMode" width="80" />
+      <el-table-column label="球队状态" prop="teamStatusName" width="110" :show-overflow-tooltip="true" />
       <el-table-column label="招募状态" prop="publicStatus" width="110">
         <template #default="scope">
           <dict-tag :options="TEAM_RECRUIT_STATUS_OPTIONS" :value="scope.row.publicStatus" />
@@ -96,6 +102,11 @@
             <el-descriptions-item label="审核状态">{{ detail.auditStatusName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="球队名称">{{ detail.teamName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="球队简称">{{ detail.shortName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="赛事系列">{{ detail.seriesName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="赛季">{{ detail.seasonName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="Division">{{ detail.divisionName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="平台 / 模式">{{ [detail.platformCode, detail.gameMode].filter(Boolean).join(' · ') || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="球队状态">{{ detail.teamStatusName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="招募状态">{{ detail.publicStatusName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="地区">{{ detail.regionName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="成员数">{{ detail.currentMemberCount ?? 0 }} 人</el-descriptions-item>
@@ -143,7 +154,7 @@
             <el-alert :title="validationFlags.captainCertified ? '队长已完成球员认证' : '队长未完成球员认证'" :type="validationFlags.captainCertified ? 'success' : 'error'" :closable="false" />
             <el-alert :title="validationFlags.captainQualificationValid ? '队长具备有效队长授权' : '队长缺少有效队长授权'" :type="validationFlags.captainQualificationValid ? 'success' : 'warning'" :closable="false" />
             <el-alert :title="validationFlags.hasMembers ? '已有球队成员' : '暂无球队成员'" :type="validationFlags.hasMembers ? 'success' : 'warning'" :closable="false" />
-            <el-alert :title="validationFlags.teamActive ? '球队状态正常' : '球队已解散或不可用'" :type="validationFlags.teamActive ? 'success' : 'error'" :closable="false" />
+            <el-alert :title="validationFlags.teamActive ? '球队状态正常（当前赛事有效）' : (detail.teamStatusName || '球队不可用于当前赛事')" :type="validationFlags.teamActive ? 'success' : 'error'" :closable="false" />
             <el-alert :title="validationFlags.hasLogo ? '已上传球队 Logo' : '未上传球队 Logo'" :type="validationFlags.hasLogo ? 'success' : 'info'" :closable="false" />
             <el-alert title="审核通过时将校验：球队名称、简称、比赛终端、Logo 合规性，以及队长认证与队长授权" type="info" :closable="false" />
           </el-space>

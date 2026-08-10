@@ -18,8 +18,22 @@ import { EMPTY_HONOR_SUMMARY } from './types'
 
 export function mapPublicPlayerProfile(detail: PublicPlayerDetailVo): PlayerProfile {
   const displayName = displayText(detail.displayName, '未知球员')
-  const teamName = displayText(detail.currentTeamName, '--')
-  const verified = toNumber(detail.certificationStatus, 0) === 1
+  const currentTeams = (detail.currentTeams || []).map((item) => {
+    const teamName = displayText(item.teamName, '--')
+    const eventContext = [item.seriesName, item.seasonName, item.divisionName, item.platformCode, item.gameMode]
+      .filter(Boolean)
+      .join(' · ')
+    return {
+      teamId: String(item.teamId || ''),
+      teamName,
+      shortName: displayText(item.shortName, teamName).slice(0, 8),
+      logoUrl: item.logoUrl?.trim() || '',
+      eventContext: eventContext || '当前赛事球队',
+    }
+  })
+  const primary = currentTeams[0]
+  const teamName = primary?.teamName || displayText(detail.currentTeamName, '--')
+  const verified = toNumber(detail.certificationStatus, 0) === 3 || toNumber(detail.certificationStatus, 0) === 1
   return {
     id: String(detail.playerId),
     playerName: displayName,
@@ -28,11 +42,12 @@ export function mapPublicPlayerProfile(detail: PublicPlayerDetailVo): PlayerProf
     badgeUrl: '',
     verified,
     registrationText: verified ? 'CNPA REGISTERED PLAYER' : 'CNPA PLAYER',
-    currentTeamId: String(detail.currentTeamId || ''),
+    currentTeamId: primary?.teamId || String(detail.currentTeamId || ''),
     currentTeamName: teamName,
-    currentTeamAbbr: teamName.length > 4 ? teamName.slice(0, 4) : teamName,
-    currentTeamLogoUrl: detail.currentTeamLogoUrl?.trim() || '',
-    teamKey: String(detail.currentTeamId || ''),
+    currentTeamAbbr: (primary?.shortName || teamName).slice(0, 8),
+    currentTeamLogoUrl: primary?.logoUrl || detail.currentTeamLogoUrl?.trim() || '',
+    currentTeams,
+    teamKey: primary?.teamId || String(detail.currentTeamId || ''),
     logoColor: '#c9a360',
     position: displayText(detail.positionCode, '--'),
     platform: '--',

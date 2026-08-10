@@ -41,6 +41,7 @@
         where t.is_delete = 0
           and t.team_status = 1
           and t.audit_status = 1
+          and t.division_id = #{divisionId}
           and not exists (
               select 1
               from basket_captain_grant g

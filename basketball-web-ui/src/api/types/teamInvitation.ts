@@ -3,6 +3,12 @@ export interface TeamInvitationItemDto {
   invitationNo?: string
   teamId?: string
   teamName?: string
+  divisionId?: string
+  divisionName?: string
+  seasonName?: string
+  seriesName?: string
+  platformCode?: string
+  gameMode?: string
   inviterMemberId?: string
   inviteeMemberId?: string
   inviteeNickname?: string

@@ -105,21 +105,25 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
         vo.setMatchId(match.getId());
         vo.setMatchNo(match.getMatchNo());
         vo.setSeasonId(match.getSeasonId());
-        vo.setHomeTeamId(match.getHomeEventTeamId());
-        vo.setAwayTeamId(match.getAwayEventTeamId());
-        vo.setHomeScore(match.getHomeScore());
-        vo.setAwayScore(match.getAwayScore());
-        vo.setWinnerTeamId(match.getWinnerEventTeamId());
-        vo.setScheduledStartTime(match.getMatchTime());
-        if (MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus())) {
-            vo.setActualEndTime(match.getMatchTime());
-        }
         if (base != null) {
+            vo.setHomeTeamId(base.getHomeTeamId());
+            vo.setAwayTeamId(base.getAwayTeamId());
             vo.setHomeTeamName(base.getHomeTeamName());
             vo.setHomeTeamLogoUrl(base.getHomeTeamLogoUrl());
             vo.setAwayTeamName(base.getAwayTeamName());
             vo.setAwayTeamLogoUrl(base.getAwayTeamLogoUrl());
             vo.setVenueName(base.getVenueName());
+        } else {
+            vo.setHomeTeamId(match.getHomeEventTeamId());
+            vo.setAwayTeamId(match.getAwayEventTeamId());
+        }
+        vo.setHomeScore(match.getHomeScore());
+        vo.setAwayScore(match.getAwayScore());
+        // winner 保留 eventTeamId 语义，前端胜负判断以比分/名称主路径为准
+        vo.setWinnerTeamId(match.getWinnerEventTeamId());
+        vo.setScheduledStartTime(match.getMatchTime());
+        if (MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus())) {
+            vo.setActualEndTime(match.getMatchTime());
         }
         vo.setSeasonName(resolveSeasonName(season));
 
@@ -186,8 +190,13 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             vo.setMatchId(match.getId());
             vo.setMatchNo(match.getMatchNo());
             vo.setSeasonId(match.getSeasonId());
-            vo.setHomeTeamId(match.getHomeEventTeamId());
-            vo.setAwayTeamId(match.getAwayEventTeamId());
+            // 公开页路由/对比使用 basket_team.id，优先回填 EventTeam.source_team_id
+            BasketEventTeam home = teamMap.get(match.getHomeEventTeamId());
+            BasketEventTeam away = teamMap.get(match.getAwayEventTeamId());
+            vo.setHomeTeamId(home != null && home.getSourceTeamId() != null
+                    ? home.getSourceTeamId() : match.getHomeEventTeamId());
+            vo.setAwayTeamId(away != null && away.getSourceTeamId() != null
+                    ? away.getSourceTeamId() : match.getAwayEventTeamId());
             vo.setHomeScore(match.getHomeScore());
             vo.setAwayScore(match.getAwayScore());
             vo.setScheduledStartTime(match.getMatchTime());
@@ -196,12 +205,10 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             }
             vo.setVenueName(match.getVenueText());
 
-            BasketEventTeam home = teamMap.get(match.getHomeEventTeamId());
             if (home != null) {
                 vo.setHomeTeamName(home.getTeamNameSnapshot());
                 vo.setHomeTeamLogoUrl(logoMap.get(home.getTeamLogoFileId()));
             }
-            BasketEventTeam away = teamMap.get(match.getAwayEventTeamId());
             if (away != null) {
                 vo.setAwayTeamName(away.getTeamNameSnapshot());
                 vo.setAwayTeamLogoUrl(logoMap.get(away.getTeamLogoFileId()));

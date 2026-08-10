@@ -24,12 +24,13 @@
           <el-table-column label="赛季" prop="seasonTitle" min-width="140" />
           <el-table-column label="平台赛区" prop="divisionName" min-width="120" />
           <el-table-column label="平台" prop="platformCode" width="80" />
-          <el-table-column label="球队" prop="teamNameSnapshot" min-width="140" />
+          <el-table-column label="正式参赛队（快照）" prop="teamNameSnapshot" min-width="140" />
+          <el-table-column label="来源赛事球队" prop="sourceTeamId" width="120" />
           <el-table-column label="队长" prop="captainPlayerName" min-width="100" />
           <el-table-column label="编号" prop="eventTeamNo" width="120" />
           <el-table-column label="状态" prop="eventTeamStatus" width="100" align="center">
             <template #default="scope">
-              <el-tag size="small" class="nowrap-tag">{{ scope.row.eventTeamStatus === 'ACTIVE' ? '有效' : scope.row.eventTeamStatus }}</el-tag>
+              <el-tag size="small" class="nowrap-tag">{{ scope.row.eventTeamStatus === 'ACTIVE' ? '有效' : (scope.row.eventTeamStatus === 'INACTIVE' ? '无效' : scope.row.eventTeamStatus) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="100">

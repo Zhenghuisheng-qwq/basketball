@@ -1,3 +1,11 @@
+export interface PlayerCurrentTeam {
+  teamId: string
+  teamName: string
+  shortName: string
+  logoUrl: string
+  eventContext: string
+}
+
 export interface PlayerProfile {
   id: string
   playerName: string
@@ -10,6 +18,7 @@ export interface PlayerProfile {
   currentTeamName: string
   currentTeamAbbr: string
   currentTeamLogoUrl: string
+  currentTeams: PlayerCurrentTeam[]
   teamKey: string
   logoColor: string
   position: string

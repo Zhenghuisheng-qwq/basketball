@@ -21,8 +21,23 @@ const teamForLogo = computed(() => ({
   code: props.profile.currentTeamAbbr,
 }))
 
+const currentTeamsText = computed(() => {
+  if (props.profile.currentTeams?.length) {
+    return props.profile.currentTeams
+      .map((team) => `${team.teamName}${team.eventContext ? `（${team.eventContext}）` : ''}`)
+      .join(' / ')
+  }
+  return props.profile.currentTeamName || '--'
+})
+
 const infoItems = computed(() => [
-  { label: '所属战队', value: props.profile.currentTeamName, link: `/tournament/team/${props.profile.currentTeamId}/overview` },
+  {
+    label: '当前参赛球队',
+    value: currentTeamsText.value,
+    link: props.profile.currentTeamId
+      ? `/tournament/team/${props.profile.currentTeamId}/overview`
+      : undefined,
+  },
   { label: '比赛平台', value: props.profile.platform },
   { label: '主要位置', value: props.profile.position },
   { label: '当前阶段', value: props.profile.currentStage },
@@ -57,7 +72,7 @@ const infoItems = computed(() => [
             </div>
             <p class="player-detail-hero__registration">{{ profile.registrationText }}</p>
             <div class="player-detail-hero__meta">
-              <span>所属战队 {{ profile.currentTeamName }}</span>
+              <span>当前参赛球队 {{ currentTeamsText }}</span>
               <span class="player-detail-hero__meta-sep">·</span>
               <span>主要位置 {{ profile.position }}</span>
             </div>

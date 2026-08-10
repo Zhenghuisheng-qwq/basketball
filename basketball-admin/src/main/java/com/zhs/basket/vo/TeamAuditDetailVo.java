@@ -18,6 +18,14 @@ public class TeamAuditDetailVo {
     private Integer publicStatus;
     private String publicStatusName;
     private Integer teamStatus;
+    private String teamStatusName;
+    private Long divisionId;
+    private String divisionName;
+    private String platformCode;
+    private String gameMode;
+    private Long seasonId;
+    private String seasonName;
+    private String seriesName;
     private Integer auditStatus;
     private String auditStatusName;
     private Integer currentMemberCount;

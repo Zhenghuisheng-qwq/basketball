@@ -12,6 +12,15 @@ public class TeamAuditListVo {
     private Long logoFileId;
     private String logoUrl;
     private String gameTerminal;
+    private Long divisionId;
+    private String divisionName;
+    private String platformCode;
+    private String gameMode;
+    private Long seasonId;
+    private String seasonName;
+    private String seriesName;
+    private Integer teamStatus;
+    private String teamStatusName;
     private Integer publicStatus;
     private String publicStatusName;
     private Integer auditStatus;

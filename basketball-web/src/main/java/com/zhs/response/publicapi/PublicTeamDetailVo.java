@@ -26,7 +26,27 @@ public class PublicTeamDetailVo implements Serializable {
     private String gameTerminal;
     private Object description;
     private Integer teamStatus;
+    private String teamStatusText;
+    private Integer auditStatus;
     private Integer currentMemberCount;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long divisionId;
+    private String divisionName;
+    private String divisionStatus;
+    private String platformCode;
+    private String gameMode;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long seasonId;
+    private String seasonName;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long seriesId;
+    private String seriesName;
+
+    private Boolean legacyTeam;
+
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
     private Date establishedDate;

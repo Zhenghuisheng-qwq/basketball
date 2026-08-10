@@ -5,10 +5,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.dao.BasketTeamMemberDao;
 import com.zhs.dao.BasketTeamRankDao;
+import com.zhs.dao.v4.BasketDivisionDao;
 import com.zhs.dao.v4.BasketEventTeamDao;
 import com.zhs.dao.v4.BasketSeasonDao;
 import com.zhs.dao.v4.BasketV4MatchDao;
 import com.zhs.enums.PublicTeamRankTypeEnum;
+import com.zhs.enums.TeamStatusEnum;
 import com.zhs.enums.v4.MatchPublishStatusEnum;
 import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.enums.v4.PublishStatusEnum;
@@ -17,6 +19,7 @@ import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamMember;
 import com.zhs.model.BasketTeamRank;
+import com.zhs.model.v4.BasketDivision;
 import com.zhs.model.v4.BasketEventTeam;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketSeries;
@@ -56,6 +59,8 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
     private BasketV4MatchDao matchDao;
     @Resource
     private BasketSeasonDao seasonDao;
+    @Resource
+    private BasketDivisionDao divisionDao;
     @Resource
     private BasketTeamMemberDao teamMemberDao;
     @Resource
@@ -141,13 +146,18 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
 
     @Override
     public List<PublicTeamRosterItemVo> listRoster(Long teamId) {
-        publicSupport.requirePublicTeam(teamId);
-        List<BasketTeamMember> members = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
+        BasketTeam team = publicSupport.requirePublicTeam(teamId);
+        boolean historyRoster = !Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())
+                || team.getDivisionId() == null;
+        LambdaQueryWrapper<BasketTeamMember> wrapper = new LambdaQueryWrapper<BasketTeamMember>()
                 .eq(BasketTeamMember::getTeamId, teamId)
                 .eq(BasketTeamMember::getIsDelete, BasketPublicConstants.NOT_DELETED)
-                .eq(BasketTeamMember::getIsCurrent, BasketPublicConstants.MEMBERSHIP_CURRENT)
                 .orderByAsc(BasketTeamMember::getJerseyNo)
-                .orderByAsc(BasketTeamMember::getId));
+                .orderByAsc(BasketTeamMember::getId);
+        if (!historyRoster) {
+            wrapper.eq(BasketTeamMember::getIsCurrent, BasketPublicConstants.MEMBERSHIP_CURRENT);
+        }
+        List<BasketTeamMember> members = teamMemberDao.selectList(wrapper);
         if (CollectionUtils.isEmpty(members)) {
             return Collections.emptyList();
         }
@@ -255,9 +265,66 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
         vo.setGameTerminal(team.getGameTerminal());
         vo.setDescription(team.getDescription());
         vo.setTeamStatus(team.getTeamStatus());
+        vo.setAuditStatus(team.getAuditStatus());
+        vo.setTeamStatusText(resolveTeamStatusText(team));
         vo.setCurrentMemberCount(team.getCurrentMemberCount());
         vo.setEstablishedDate(team.getEstablishedDate());
+        vo.setLegacyTeam(team.getDivisionId() == null);
+        vo.setDivisionId(team.getDivisionId());
+        if (team.getDivisionId() != null) {
+            BasketDivision division = divisionDao.selectById(team.getDivisionId());
+            if (division != null && Objects.equals(division.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                vo.setDivisionName(division.getDivisionName());
+                vo.setDivisionStatus(division.getDivisionStatus());
+                vo.setPlatformCode(division.getPlatformCode());
+                vo.setGameMode(division.getGameMode());
+                if (division.getSeasonId() != null) {
+                    BasketSeason season = seasonDao.selectById(division.getSeasonId());
+                    if (season != null) {
+                        vo.setSeasonId(season.getId());
+                        vo.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+                        if (season.getSeriesId() != null) {
+                            Map<Long, BasketSeries> seriesMap = publicSupport.loadSeriesMap(Collections.singleton(season.getSeriesId()));
+                            BasketSeries series = seriesMap.get(season.getSeriesId());
+                            if (series != null) {
+                                vo.setSeriesId(series.getId());
+                                vo.setSeriesName(series.getSeriesName());
+                            }
+                        }
+                    }
+                }
+            } else {
+                vo.setDivisionName("赛事信息不可用");
+            }
+        } else {
+            vo.setSeriesName("赛事信息暂无");
+            vo.setSeasonName("历史球队");
+        }
         return vo;
+    }
+
+    private String resolveTeamStatusText(BasketTeam team) {
+        if (team.getDivisionId() == null) {
+            return "历史球队";
+        }
+        try {
+            TeamStatusEnum status = TeamStatusEnum.fromCode(team.getTeamStatus());
+            if (status == TeamStatusEnum.ACTIVE) {
+                return "当前赛事球队";
+            }
+            if (status == TeamStatusEnum.ARCHIVED) {
+                return "赛事已结束";
+            }
+            if (status == TeamStatusEnum.DISSOLVED) {
+                return "提前解散";
+            }
+            if (status == TeamStatusEnum.DISABLED) {
+                return "已停用";
+            }
+            return status.getDescription();
+        } catch (Exception ex) {
+            return "未知";
+        }
     }
 
     private Set<Long> findEventTeamIdsBySourceTeam(Long seasonId, Long sourceTeamId) {

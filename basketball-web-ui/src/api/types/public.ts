@@ -425,7 +425,19 @@ export interface PublicTeamDetailVo {
   gameTerminal?: string | null
   description?: unknown
   teamStatus?: number | null
+  teamStatusText?: string | null
+  auditStatus?: number | null
   currentMemberCount?: number | null
+  divisionId?: string | null
+  divisionName?: string | null
+  divisionStatus?: string | null
+  platformCode?: string | null
+  gameMode?: string | null
+  seasonId?: string | null
+  seasonName?: string | null
+  seriesId?: string | null
+  seriesName?: string | null
+  legacyTeam?: boolean | null
   establishedDate?: string | null
 }
 
@@ -463,6 +475,21 @@ export interface PublicTeamCompareVo {
   seasonName?: string | null
 }
 
+export interface PublicPlayerCurrentTeamVo {
+  teamId?: string | null
+  teamName?: string | null
+  shortName?: string | null
+  logoUrl?: string | null
+  divisionId?: string | null
+  divisionName?: string | null
+  platformCode?: string | null
+  gameMode?: string | null
+  seasonId?: string | null
+  seasonName?: string | null
+  seriesName?: string | null
+  myRole?: string | null
+}
+
 export interface PublicPlayerDetailVo {
   playerId: string
   playerNo?: string | null
@@ -472,9 +499,13 @@ export interface PublicPlayerDetailVo {
   dominantHand?: string | null
   heightCm?: number | string | null
   weightKg?: number | string | null
+  /** @deprecated 兼容字段；请用 currentTeams */
   currentTeamId?: string | null
+  /** @deprecated 兼容字段；请用 currentTeams */
   currentTeamName?: string | null
+  /** @deprecated 兼容字段；请用 currentTeams */
   currentTeamLogoUrl?: string | null
+  currentTeams?: PublicPlayerCurrentTeamVo[] | null
   certificationStatus?: number | null
   playerStatus?: number | null
   profilePublic?: boolean | null

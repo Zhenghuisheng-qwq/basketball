@@ -76,7 +76,7 @@
         <el-form-item label="处罚对象类型">
           <el-select v-model="form.targetType" style="width: 100%">
             <el-option label="球员" value="PLAYER" />
-            <el-option label="永久球队" value="PERMANENT_TEAM" />
+            <el-option label="历史球队" value="PERMANENT_TEAM" />
             <el-option label="赛事球队" value="EVENT_TEAM" />
           </el-select>
         </el-form-item>
@@ -150,7 +150,7 @@ const displayTotal = computed(() => {
 function formatTargetType(value?: string) {
   const map: Record<string, string> = {
     PLAYER: '球员',
-    PERMANENT_TEAM: '永久球队',
+    PERMANENT_TEAM: '历史球队',
     EVENT_TEAM: '赛事球队'
   }
   return map[value || ''] || value || '-'

@@ -4,11 +4,18 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.dao.BasketPlayerRankDao;
+import com.zhs.dao.BasketTeamDao;
+import com.zhs.dao.BasketTeamMemberDao;
+import com.zhs.dao.v4.BasketDivisionDao;
 import com.zhs.dao.v4.BasketEventPlayerDao;
 import com.zhs.dao.v4.BasketSeasonDao;
+import com.zhs.dao.v4.BasketSeriesDao;
 import com.zhs.dao.v4.BasketV4MatchDao;
 import com.zhs.dao.v4.BasketV4MatchPlayerStatDao;
 import com.zhs.enums.PublicPlayerRankTypeEnum;
+import com.zhs.enums.TeamMembershipStatusEnum;
+import com.zhs.enums.TeamStatusEnum;
+import com.zhs.enums.v4.DivisionStatusEnum;
 import com.zhs.enums.v4.MatchPublishStatusEnum;
 import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.enums.v4.PublishStatusEnum;
@@ -16,12 +23,16 @@ import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketPlayerRank;
 import com.zhs.model.BasketTeam;
+import com.zhs.model.BasketTeamMember;
+import com.zhs.model.v4.BasketDivision;
 import com.zhs.model.v4.BasketEventPlayer;
 import com.zhs.model.v4.BasketSeason;
+import com.zhs.model.v4.BasketSeries;
 import com.zhs.model.v4.BasketV4Match;
 import com.zhs.model.v4.BasketV4MatchPlayerStat;
 import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.publicapi.PublicMatchItemVo;
+import com.zhs.response.publicapi.PublicPlayerCurrentTeamVo;
 import com.zhs.response.publicapi.PublicPlayerDetailVo;
 import com.zhs.response.publicapi.PublicPlayerRankItemVo;
 import com.zhs.response.publicapi.PublicPlayerSeasonStatVo;
@@ -33,8 +44,10 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -54,6 +67,14 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
     private BasketSeasonDao seasonDao;
     @Resource
     private BasketPlayerRankDao playerRankDao;
+    @Resource
+    private BasketTeamMemberDao teamMemberDao;
+    @Resource
+    private BasketTeamDao teamDao;
+    @Resource
+    private BasketDivisionDao divisionDao;
+    @Resource
+    private BasketSeriesDao seriesDao;
     @Resource
     private BasketPublicSupport publicSupport;
     @Resource
@@ -83,10 +104,18 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
         vo.setDominantHand(player.getDominantHand());
         vo.setHeightCm(player.getHeightCm());
         vo.setWeightKg(player.getWeightKg());
-        vo.setCurrentTeamId(player.getCurrentTeamId());
         vo.setCertificationStatus(player.getCertificationStatus());
         vo.setPlayerStatus(player.getPlayerStatus());
-        if (player.getCurrentTeamId() != null) {
+        List<PublicPlayerCurrentTeamVo> currentTeams = loadCurrentTeams(player);
+        vo.setCurrentTeams(currentTeams);
+        if (!currentTeams.isEmpty()) {
+            PublicPlayerCurrentTeamVo primary = currentTeams.get(0);
+            vo.setCurrentTeamId(primary.getTeamId());
+            vo.setCurrentTeamName(primary.getTeamName());
+            vo.setCurrentTeamLogoUrl(primary.getLogoUrl());
+        } else if (player.getCurrentTeamId() != null) {
+            // 兼容遗留 current_team_id：仅作降级展示，不代表唯一所属
+            vo.setCurrentTeamId(player.getCurrentTeamId());
             try {
                 BasketTeam team = publicSupport.requirePublicTeam(player.getCurrentTeamId());
                 vo.setCurrentTeamName(team.getTeamName());
@@ -99,6 +128,84 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             }
         }
         return vo;
+    }
+
+    private List<PublicPlayerCurrentTeamVo> loadCurrentTeams(BasketPlayerProfile player) {
+        if (player == null || player.getId() == null) {
+            return Collections.emptyList();
+        }
+        List<BasketTeamMember> memberships = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getPlayerId, player.getId())
+                .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
+                .eq(BasketTeamMember::getIsCurrent, 1)
+                .eq(BasketTeamMember::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .orderByDesc(BasketTeamMember::getJoinTime)
+                .orderByDesc(BasketTeamMember::getId));
+        if (CollectionUtils.isEmpty(memberships)) {
+            return Collections.emptyList();
+        }
+        Set<Long> teamIds = memberships.stream().map(BasketTeamMember::getTeamId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketTeam> teamMap = new HashMap<>();
+        if (!teamIds.isEmpty()) {
+            for (BasketTeam team : teamDao.selectByIds(teamIds)) {
+                if (team != null && Objects.equals(team.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                    teamMap.put(team.getId(), team);
+                }
+            }
+        }
+        Set<Long> divisionIds = teamMap.values().stream().map(BasketTeam::getDivisionId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketDivision> divisionMap = new HashMap<>();
+        if (!divisionIds.isEmpty()) {
+            for (BasketDivision division : divisionDao.selectByIds(divisionIds)) {
+                if (division != null && Objects.equals(division.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                    divisionMap.put(division.getId(), division);
+                }
+            }
+        }
+        Set<Long> seasonIds = divisionMap.values().stream().map(BasketDivision::getSeasonId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketSeason> seasonMap = publicSupport.loadSeasonMap(seasonIds);
+        Set<Long> seriesIds = seasonMap.values().stream().map(BasketSeason::getSeriesId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketSeries> seriesMap = publicSupport.loadSeriesMap(seriesIds);
+        Set<Long> logoIds = teamMap.values().stream().map(BasketTeam::getLogoFileId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, String> logoMap = publicSupport.loadAccessUrlMap(logoIds);
+
+        List<PublicPlayerCurrentTeamVo> rows = new ArrayList<>();
+        for (BasketTeamMember membership : memberships) {
+            BasketTeam team = teamMap.get(membership.getTeamId());
+            if (team == null || !Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
+                continue;
+            }
+            if (team.getDivisionId() == null) {
+                continue;
+            }
+            BasketDivision division = divisionMap.get(team.getDivisionId());
+            if (division == null
+                    || DivisionStatusEnum.FINISHED.getCode().equals(division.getDivisionStatus())
+                    || DivisionStatusEnum.ARCHIVED.getCode().equals(division.getDivisionStatus())) {
+                continue;
+            }
+            PublicPlayerCurrentTeamVo item = new PublicPlayerCurrentTeamVo();
+            item.setTeamId(team.getId());
+            item.setTeamName(team.getTeamName());
+            item.setShortName(team.getShortName());
+            item.setLogoUrl(logoMap.get(team.getLogoFileId()));
+            item.setDivisionId(division.getId());
+            item.setDivisionName(division.getDivisionName());
+            item.setPlatformCode(division.getPlatformCode());
+            item.setGameMode(division.getGameMode());
+            item.setMyRole(membership.getRoleType());
+            BasketSeason season = seasonMap.get(division.getSeasonId());
+            if (season != null) {
+                item.setSeasonId(season.getId());
+                item.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+                BasketSeries series = seriesMap.get(season.getSeriesId());
+                if (series != null) {
+                    item.setSeriesName(series.getSeriesName());
+                }
+            }
+            rows.add(item);
+        }
+        return rows;
     }
 
     @Override

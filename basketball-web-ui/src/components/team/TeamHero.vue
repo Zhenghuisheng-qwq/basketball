@@ -23,6 +23,8 @@ const stageLabel = computed(() => stageLabels[props.team.currentStage])
 
 const recordText = computed(() => `${props.team.wins}胜${props.team.losses}负`)
 
+const eventContextText = computed(() => props.team.seasonName || '赛事信息暂无')
+
 const compareCompetitionText = computed(
   () => `${props.team.seasonName} · ${stageLabels[props.team.currentStage]}`,
 )
@@ -113,6 +115,7 @@ const infoCards = computed<HeroInfoCard[]>(() => {
             <h1 class="team-hero__name">{{ team.name }}</h1>
             <span v-if="team.verified" class="team-hero__badge">已认证</span>
           </div>
+          <p class="team-hero__event-context">{{ eventContextText }}</p>
 
           <p class="team-hero__desc">{{ team.description }}</p>
 
@@ -328,6 +331,13 @@ const infoCards = computed<HeroInfoCard[]>(() => {
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
+}
+
+.team-hero__event-context {
+  margin: 6px 0 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .team-hero__desc {

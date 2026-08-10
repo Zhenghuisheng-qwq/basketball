@@ -3,6 +3,12 @@ export interface TeamJoinApplicationItemDto {
   applicationNo?: string
   teamId?: string
   teamName?: string
+  divisionId?: string
+  divisionName?: string
+  seasonName?: string
+  seriesName?: string
+  platformCode?: string
+  gameMode?: string
   applicantMemberId?: string
   applicantNickname?: string
   playerNo?: string

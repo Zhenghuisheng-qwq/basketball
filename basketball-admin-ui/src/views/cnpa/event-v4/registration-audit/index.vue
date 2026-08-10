@@ -311,7 +311,7 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="绑定球队" prop="longTermTeamName" min-width="120" />
+          <el-table-column label="绑定本届球队" prop="longTermTeamName" min-width="120" />
           <el-table-column label="操作" width="260" fixed="right">
             <template #default="scope">
               <el-button link type="primary" @click="openAddAssignment(scope.row)" v-hasPermi="['basket:v4PersonalFormation:edit']" v-if="drawDetail.batchStatus === 'DRAFT'">添加成员</el-button>
@@ -439,7 +439,7 @@
     </el-dialog>
 
     <!-- 绑定球队 -->
-    <el-dialog v-model="bindTeamOpen" title="绑定长期球队" width="520px" append-to-body>
+    <el-dialog v-model="bindTeamOpen" title="绑定本届赛事球队" width="520px" append-to-body>
       <el-form :model="bindTeamForm" label-width="100px">
         <el-form-item label="球队" required>
           <el-select v-model="bindTeamForm.longTermTeamId" filterable placeholder="选择球队" style="width: 100%">

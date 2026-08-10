@@ -29,10 +29,18 @@ function teamLogoInitial(team: TeamSummaryDto) {
   return (team.shortName || team.teamName || '?').slice(0, 1)
 }
 
+function formatEventContext(team: TeamSummaryDto) {
+  const parts = [
+    team.seriesName,
+    team.seasonName,
+    team.divisionName,
+    team.divisionPlatformCode || team.platformCode,
+    team.gameMode,
+  ].filter(Boolean)
+  return parts.join(' · ') || '赛事信息暂无'
+}
+
 function resolveTeamStatus(team: TeamSummaryDto): { text: string; type: 'success' | 'warning' | 'danger' | 'default' } {
-  if (teamStore.joinableContext?.hasActiveTeam) {
-    return { text: '不可申请', type: 'default' }
-  }
   if (team.hasPendingApply || team.disabledReason === '申请审核中') {
     return { text: '已申请', type: 'warning' }
   }
@@ -46,31 +54,23 @@ function resolveTeamStatus(team: TeamSummaryDto): { text: string; type: 'success
 }
 
 function resolveApplyButtonText(team: TeamSummaryDto) {
-  if (teamStore.joinableContext?.hasActiveTeam) {
-    return '已加入球队'
-  }
   if (team.hasPendingApply || team.disabledReason === '申请审核中') {
     return '申请中'
   }
   if (team.disabledReason === '球队已满') {
     return '球队已满'
   }
+  if (team.canApply === false) {
+    return '不可申请'
+  }
   return '申请加入'
 }
 
 function isApplyDisabled(team: TeamSummaryDto) {
-  if (teamStore.joinableContext?.hasActiveTeam) return true
-  if (teamStore.joinableContext?.canApply === false) return true
   return team.canApply === false
 }
 
 function applyTooltip(team: TeamSummaryDto) {
-  if (teamStore.joinableContext?.hasActiveTeam) {
-    return '当前账号已加入球队，不能重复加入'
-  }
-  if (teamStore.joinableContext?.disabledReason) {
-    return teamStore.joinableContext.disabledReason
-  }
   return team.disabledReason || team.cannotApplyReason || undefined
 }
 
@@ -146,12 +146,7 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
 
 <template>
   <AccountPanel title="可加入球队">
-    <p v-if="teamStore.joinableContext?.hasActiveTeam" class="joinable-hint">
-      当前账号已加入球队，不能重复加入。
-    </p>
-    <p v-else-if="teamStore.joinableContext?.disabledReason" class="joinable-hint joinable-hint--warn">
-      {{ teamStore.joinableContext.disabledReason }}
-    </p>
+    <p class="joinable-hint">仅展示当前未结束赛事中开放招募的球队；同一 Division 只能加入一支。</p>
 
     <section class="joinable-toolbar" aria-label="搜索可加入球队">
       <input
@@ -190,9 +185,8 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
             <thead>
               <tr>
                 <th>球队名称</th>
-                <th>球队编号</th>
+                <th>所属赛事</th>
                 <th>简称</th>
-                <th>地区</th>
                 <th>队长</th>
                 <th>当前人数</th>
                 <th>状态</th>
@@ -219,9 +213,8 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
                     <span class="joinable-table__team-name">{{ team.teamName }}</span>
                   </div>
                 </td>
-                <td>{{ team.teamNo || '-' }}</td>
+                <td>{{ formatEventContext(team) }}</td>
                 <td>{{ team.shortName || '-' }}</td>
-                <td>{{ team.regionName || '-' }}</td>
                 <td>{{ team.captainName || '-' }}</td>
                 <td>{{ memberCountText(team) }}</td>
                 <td>

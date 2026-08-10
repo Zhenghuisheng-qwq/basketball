@@ -28,11 +28,18 @@ export function mapPublicTeamToBase(
     logoUrl: detail.logoUrl?.trim() || '',
     largeLogoUrl: detail.logoUrl?.trim() || '',
     captainName: '--',
-    platform: displayText(detail.gameTerminal, '--'),
+    platform: displayText(detail.platformCode || detail.gameTerminal, '--'),
     currentStage: 'regular',
     rosterCount: toNumber(detail.currentMemberCount, 0),
-    verified: detail.teamStatus === 1,
-    seasonName: displayText(extras?.seasonName, '当前赛季'),
+    // 认证态用 auditStatus，勿把 ACTIVE 当“有效俱乐部”
+    verified: detail.auditStatus === 1,
+    seasonName: displayText(
+      extras?.seasonName
+        || [detail.seriesName, detail.seasonName, detail.divisionName, detail.platformCode, detail.gameMode]
+          .filter(Boolean)
+          .join(' · '),
+      detail.legacyTeam ? '历史球队' : '当前赛事',
+    ),
     seasonYear: new Date().getFullYear(),
     description: descriptionToText(detail.description) || '暂无球队简介',
     wins: toNumber(extras?.wins, 0),

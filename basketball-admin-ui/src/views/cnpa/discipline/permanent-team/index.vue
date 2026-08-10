@@ -5,8 +5,8 @@
       :closable="false"
       show-icon
       class="mb8"
-      title="永久球队档案"
-      description="查看长期球队档案、当前成员、历史队长、历史成员、历史参赛、荣誉记录、处罚记录、改名记录和 Logo 变更记录。该页面用于长期球队队史追溯，不等同于某个赛事中的正式赛事球队（EventTeam），也不处理球队报名审核或赛事阵容操作。"
+      title="历史球队档案"
+      description="查看某届赛事球队（含 ARCHIVED / DISSOLVED / Legacy）的历史资料、成员与处罚荣誉记录。该页只读，不代表永久俱乐部，也不能把旧球队复活到新赛事。"
     />
 
     <el-form :inline="true" class="mb8">
@@ -18,13 +18,13 @@
       </el-form-item>
     </el-form>
 
-    <el-empty v-if="searched && !archive" description="未找到该球队的永久档案，请确认球队 ID 是否正确" />
+    <el-empty v-if="searched && !archive" description="未找到该历史球队档案，请确认球队 ID 是否正确" />
 
     <template v-if="archive">
       <el-card class="mb8">
         <template #header>球队基础资料</template>
         <el-descriptions :column="2" border>
-          <el-descriptions-item label="永久球队编号">{{ archive.team?.teamNo ?? '-' }}</el-descriptions-item>
+          <el-descriptions-item label="球队编号">{{ archive.team?.teamNo ?? '-' }}</el-descriptions-item>
           <el-descriptions-item label="球队名称">{{ archive.team?.teamName ?? '-' }}</el-descriptions-item>
           <el-descriptions-item label="球队简称">{{ archive.team?.teamShortName ?? '-' }}</el-descriptions-item>
           <el-descriptions-item label="认证状态">{{ archive.team?.auditStatus ?? '-' }}</el-descriptions-item>
@@ -65,7 +65,7 @@
       </el-card>
     </template>
 
-    <el-empty v-else-if="!searched" description="请输入球队 ID 后查看永久档案" />
+    <el-empty v-else-if="!searched" description="请输入球队 ID 后查看历史球队档案" />
   </div>
 </template>
 

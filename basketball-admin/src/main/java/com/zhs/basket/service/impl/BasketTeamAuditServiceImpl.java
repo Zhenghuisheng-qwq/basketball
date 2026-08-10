@@ -6,8 +6,14 @@ import com.zhs.basket.enums.TeamAuditStatusEnum;
 import com.zhs.basket.enums.TeamMemberRoleEnum;
 import com.zhs.basket.enums.TeamPublicStatusEnum;
 import com.zhs.basket.enums.TeamStatusEnum;
+import com.zhs.basket.domain.v4.BasketDivision;
+import com.zhs.basket.domain.v4.BasketSeason;
+import com.zhs.basket.domain.v4.BasketSeries;
 import com.zhs.basket.mapper.*;
 import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
+import com.zhs.basket.mapper.v4.BasketDivisionMapper;
+import com.zhs.basket.mapper.v4.BasketSeasonMapper;
+import com.zhs.basket.mapper.v4.BasketSeriesMapper;
 import com.zhs.basket.query.TeamAuditQuery;
 import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.TeamAuditApproveReq;
@@ -48,6 +54,9 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
     @Autowired private BasketCaptainGrantMapper captainGrantMapper;
     @Autowired private BasketMemberAccountMapper memberAccountMapper;
     @Autowired private BasketFileAssetMapper fileAssetMapper;
+    @Autowired private BasketDivisionMapper divisionMapper;
+    @Autowired private BasketSeasonMapper seasonMapper;
+    @Autowired private BasketSeriesMapper seriesMapper;
     @Autowired private BasketAdminMessageService messageService;
     @Autowired private TeamNoGenerator teamNoGenerator;
 
@@ -58,7 +67,8 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
                 .map(BasketTeam::getLogoFileId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet()));
-        return PageListUtils.map(teams, team -> toListVo(team, logoUrlMap));
+        EventContextMaps ctx = loadEventContextMaps(teams);
+        return PageListUtils.map(teams, team -> toListVo(team, logoUrlMap, ctx));
     }
 
     @Override
@@ -70,7 +80,9 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
                 team.getLogoFileId() == null ? Collections.emptySet() : Collections.singleton(team.getLogoFileId()))));
         vo.setAuditStatusName(TeamAuditStatusEnum.fromCode(team.getAuditStatus()).getAuditDisplayDescription());
         vo.setPublicStatusName(resolvePublicStatusName(team.getPublicStatus()));
+        vo.setTeamStatusName(resolveTeamStatusName(team));
         vo.setSubmitTime(team.getCreateTime());
+        fillDetailEventContext(vo, team);
 
         enrichCaptainInfo(vo, team);
         enrichAuditInfo(vo, teamId);
@@ -149,18 +161,136 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         return BatchAuditSupport.run(req.getIds(), id -> reject(id, rejectReq));
     }
 
-    private TeamAuditListVo toListVo(BasketTeam team, Map<Long, String> logoUrlMap) {
+    private TeamAuditListVo toListVo(BasketTeam team, Map<Long, String> logoUrlMap, EventContextMaps ctx) {
         TeamAuditListVo vo = new TeamAuditListVo();
         BeanUtils.copyBeanProp(vo, team);
         vo.setLogoUrl(resolveLogoUrl(team.getLogoFileId(), logoUrlMap));
         vo.setAuditStatusName(TeamAuditStatusEnum.fromCode(team.getAuditStatus()).getAuditDisplayDescription());
         vo.setPublicStatusName(resolvePublicStatusName(team.getPublicStatus()));
+        vo.setTeamStatusName(resolveTeamStatusName(team));
+        fillListEventContext(vo, team, ctx);
         int memberCount = teamMemberMapper.countCurrentMembers(team.getId());
         vo.setCurrentMemberCount(memberCount);
         if (!Objects.equals(team.getCurrentMemberCount(), memberCount)) {
             teamMapper.updateMemberCount(team.getId(), memberCount);
         }
         return vo;
+    }
+
+    private void fillListEventContext(TeamAuditListVo vo, BasketTeam team, EventContextMaps ctx) {
+        if (team.getDivisionId() == null) {
+            vo.setDivisionName("历史球队");
+            vo.setSeasonName("赛事信息暂无");
+            return;
+        }
+        BasketDivision division = ctx.divisionMap.get(team.getDivisionId());
+        if (division == null) {
+            vo.setDivisionName("赛事信息不可用");
+            return;
+        }
+        vo.setDivisionId(division.getId());
+        vo.setDivisionName(division.getDivisionName());
+        vo.setPlatformCode(division.getPlatformCode());
+        vo.setGameMode(division.getGameMode());
+        BasketSeason season = division.getSeasonId() == null ? null : ctx.seasonMap.get(division.getSeasonId());
+        if (season != null) {
+            vo.setSeasonId(season.getId());
+            vo.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+            BasketSeries series = season.getSeriesId() == null ? null : ctx.seriesMap.get(season.getSeriesId());
+            if (series != null) {
+                vo.setSeriesName(series.getSeriesName());
+            }
+        }
+    }
+
+    private void fillDetailEventContext(TeamAuditDetailVo vo, BasketTeam team) {
+        if (team.getDivisionId() == null) {
+            vo.setDivisionName("历史球队");
+            vo.setSeasonName("赛事信息暂无");
+            return;
+        }
+        BasketDivision division = divisionMapper.selectById(team.getDivisionId());
+        if (division == null || !Objects.equals(NOT_DELETED, division.getIsDelete())) {
+            vo.setDivisionName("赛事信息不可用");
+            return;
+        }
+        vo.setDivisionId(division.getId());
+        vo.setDivisionName(division.getDivisionName());
+        vo.setPlatformCode(division.getPlatformCode());
+        vo.setGameMode(division.getGameMode());
+        if (division.getSeasonId() == null) {
+            return;
+        }
+        BasketSeason season = seasonMapper.selectById(division.getSeasonId());
+        if (season == null) {
+            return;
+        }
+        vo.setSeasonId(season.getId());
+        vo.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+        if (season.getSeriesId() == null) {
+            return;
+        }
+        BasketSeries series = seriesMapper.selectById(season.getSeriesId());
+        if (series != null) {
+            vo.setSeriesName(series.getSeriesName());
+        }
+    }
+
+    private String resolveTeamStatusName(BasketTeam team) {
+        if (team.getDivisionId() == null) {
+            return "历史球队";
+        }
+        try {
+            TeamStatusEnum status = TeamStatusEnum.fromCode(team.getTeamStatus());
+            if (status == TeamStatusEnum.ACTIVE) {
+                return "当前赛事球队";
+            }
+            if (status == TeamStatusEnum.ARCHIVED) {
+                return "赛事已结束";
+            }
+            if (status == TeamStatusEnum.DISSOLVED) {
+                return "提前解散";
+            }
+            if (status == TeamStatusEnum.DISABLED) {
+                return "已停用";
+            }
+            return status.getDescription();
+        } catch (Exception ex) {
+            return "未知";
+        }
+    }
+
+    private EventContextMaps loadEventContextMaps(List<BasketTeam> teams) {
+        Set<Long> divisionIds = teams.stream().map(BasketTeam::getDivisionId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketDivision> divisionMap = new HashMap<>();
+        for (Long divisionId : divisionIds) {
+            BasketDivision division = divisionMapper.selectById(divisionId);
+            if (division != null && Objects.equals(NOT_DELETED, division.getIsDelete())) {
+                divisionMap.put(division.getId(), division);
+            }
+        }
+        Set<Long> seasonIds = divisionMap.values().stream().map(BasketDivision::getSeasonId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketSeason> seasonMap = new HashMap<>();
+        for (Long seasonId : seasonIds) {
+            BasketSeason season = seasonMapper.selectById(seasonId);
+            if (season != null) {
+                seasonMap.put(season.getId(), season);
+            }
+        }
+        Set<Long> seriesIds = seasonMap.values().stream().map(BasketSeason::getSeriesId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketSeries> seriesMap = new HashMap<>();
+        for (Long seriesId : seriesIds) {
+            BasketSeries series = seriesMapper.selectById(seriesId);
+            if (series != null) {
+                seriesMap.put(series.getId(), series);
+            }
+        }
+        return new EventContextMaps(divisionMap, seasonMap, seriesMap);
+    }
+
+    private record EventContextMaps(Map<Long, BasketDivision> divisionMap,
+                                    Map<Long, BasketSeason> seasonMap,
+                                    Map<Long, BasketSeries> seriesMap) {
     }
 
     private void enrichCaptainInfo(TeamAuditDetailVo vo, BasketTeam team) {
