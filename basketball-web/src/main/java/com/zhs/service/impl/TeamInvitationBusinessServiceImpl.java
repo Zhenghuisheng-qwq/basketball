@@ -12,6 +12,9 @@ import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketFileAssetDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamInvitationDao;
+import com.zhs.dao.v4.BasketDivisionDao;
+import com.zhs.dao.v4.BasketSeasonDao;
+import com.zhs.dao.v4.BasketSeriesDao;
 import com.zhs.enums.PlatformIdentityStatusEnum;
 import com.zhs.enums.TeamAuditStatusEnum;
 import com.zhs.enums.TeamInvitationStatusEnum;
@@ -22,6 +25,9 @@ import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamInvitation;
+import com.zhs.model.v4.BasketDivision;
+import com.zhs.model.v4.BasketSeason;
+import com.zhs.model.v4.BasketSeries;
 import com.zhs.request.team.TeamInvitationCreateReq;
 import com.zhs.request.team.TeamInvitationRespondReq;
 import com.zhs.response.team.TeamInvitationItemResp;
@@ -31,6 +37,8 @@ import com.zhs.service.ITeamInvitationBusinessService;
 import com.zhs.service.team.TeamMemberJoinHelper;
 import com.zhs.support.GameTerminalSupport;
 import com.zhs.support.PlatformTeamMembershipSupport;
+import com.zhs.support.TeamMembershipSupport;
+import com.zhs.support.TeamWritableSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,6 +82,16 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
     private BasketPlayerProfileDao playerProfileDao;
     @Resource
     private PlatformTeamMembershipSupport platformTeamMembershipSupport;
+    @Resource
+    private TeamMembershipSupport teamMembershipSupport;
+    @Resource
+    private BasketDivisionDao divisionDao;
+    @Resource
+    private BasketSeasonDao seasonDao;
+    @Resource
+    private BasketSeriesDao seriesDao;
+    @Resource
+    private TeamWritableSupport teamWritableSupport;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -84,6 +102,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         Long teamPk = parseLongId(teamId, "球队主键");
         Long memberId = UserContext.getRequiredUserId();
         BasketTeam team = captainPermissionService.requireTeamCaptain(memberId, teamPk);
+        teamWritableSupport.assertTeamWritable(team);
 
         BasketPlayerProfile inviteeProfile;
         Long inviteeMemberId;
@@ -102,7 +121,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         if (memberId.equals(inviteeMemberId)) {
             throw new ServiceException("不能邀请自己");
         }
-        captainPermissionService.assertEligibleToJoinTeam(inviteeMemberId, null);
+        teamMembershipSupport.assertEligibleToJoinTeam(inviteeMemberId, team.getDivisionId());
         assertTeamHasCapacity(team);
         assertNoPendingInvitation(teamPk, inviteeMemberId);
 
@@ -232,8 +251,8 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         invitation = invitationDao.selectById(invitationPk);
         BasketTeam team = teamDao.selectById(invitation.getTeamId());
         if (Boolean.TRUE.equals(accept)) {
-            captainPermissionService.assertEligibleToJoinTeam(memberId, null);
             validateTeamJoinable(team);
+            teamMembershipSupport.assertEligibleToJoinTeam(memberId, team.getDivisionId());
             BasketPlayerProfile profile = captainPermissionService.requireCertifiedPlayer(memberId);
             teamMemberJoinHelper.addMember(team, memberId, profile.getId(), com.zhs.enums.TeamJoinSourceEnum.INVITE);
         }
@@ -350,9 +369,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
             throw new ServiceException("球队不存在");
         }
-        if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
-            throw new ServiceException("球队不可加入");
-        }
+        teamWritableSupport.assertTeamWritable(team);
         if (!Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())) {
             throw new ServiceException("球队尚未通过认证，暂不可加入");
         }
@@ -377,6 +394,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         resp.setInvitationNo(invitation.getInvitationNo());
         resp.setTeamId(toStringId(invitation.getTeamId()));
         resp.setTeamName(team == null ? null : team.getTeamName());
+        fillInvitationEventContext(resp, team);
         resp.setInviterMemberId(toStringId(invitation.getInviterMemberId()));
         resp.setInviteeMemberId(toStringId(invitation.getInviteeMemberId()));
         resp.setInviterUserId(toStringId(invitation.getInviterMemberId()));
@@ -409,6 +427,36 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         resp.setExpireTime(invitation.getExpireTime());
         resp.setCreateTime(invitation.getCreateTime());
         return resp;
+    }
+
+    private void fillInvitationEventContext(TeamInvitationItemResp resp, BasketTeam team) {
+        if (resp == null || team == null || team.getDivisionId() == null) {
+            return;
+        }
+        resp.setDivisionId(toStringId(team.getDivisionId()));
+        BasketDivision division = divisionDao.selectById(team.getDivisionId());
+        if (division == null || !Objects.equals(NOT_DELETED, division.getIsDelete())) {
+            resp.setDivisionName("赛事信息不可用");
+            return;
+        }
+        resp.setDivisionName(division.getDivisionName());
+        resp.setPlatformCode(division.getPlatformCode());
+        resp.setGameMode(division.getGameMode());
+        if (division.getSeasonId() == null) {
+            return;
+        }
+        BasketSeason season = seasonDao.selectById(division.getSeasonId());
+        if (season == null) {
+            return;
+        }
+        resp.setSeasonName(StringUtils.hasText(season.getDisplayTitle()) ? season.getDisplayTitle() : season.getSeasonName());
+        if (season.getSeriesId() == null) {
+            return;
+        }
+        BasketSeries series = seriesDao.selectById(season.getSeriesId());
+        if (series != null) {
+            resp.setSeriesName(series.getSeriesName());
+        }
     }
 
     private Map<Long, BasketTeam> loadTeamMap(Set<Long> teamIds) {

@@ -13,6 +13,7 @@ import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketEventTeamMapper;
 import com.zhs.basket.mapper.v4.BasketSeasonMapper;
 import com.zhs.basket.query.v4.BasketDivisionQuery;
+import com.zhs.basket.service.v4.IBasketV4DivisionClosingService;
 import com.zhs.basket.service.v4.IBasketV4DivisionService;
 import com.zhs.basket.service.v4.IBasketV4FormatSnapshotService;
 import com.zhs.basket.support.v4.BestOfCapabilityGate;
@@ -50,6 +51,8 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     private BasketEventTeamMapper eventTeamMapper;
     @Autowired
     private BasketDivisionStageMapper stageMapper;
+    @Autowired
+    private IBasketV4DivisionClosingService divisionClosingService;
 
     @Override
     public List<BasketDivisionListVo> selectList(BasketDivisionQuery query) {
@@ -185,6 +188,12 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         if (divisionMapper.updateById(division) != 1) {
             throw new ServiceException("关闭 Division 报名失败");
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void finish(Long id, String reason) {
+        divisionClosingService.finishDivision(id, reason);
     }
 
     @Override

@@ -94,8 +94,9 @@ const captainGrantSummary = computed(() => {
 })
 
 const teamSummaryText = computed(() => {
+  if (teamStore.currentTeams.length > 1) return `当前 ${teamStore.currentTeams.length} 支赛事球队`
   if (teamStore.myTeamSummary?.teamName) return teamStore.myTeamSummary.teamName
-  if (teamStore.hasTeam) return '已加入球队'
+  if (teamStore.hasTeam) return '已有当前赛事球队'
   return '未加入球队'
 })
 

@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketTeamMemberDao;
+import com.zhs.dao.v4.BasketDivisionDao;
 import com.zhs.dao.v4.BasketSeasonDao;
+import com.zhs.dao.v4.BasketSeriesDao;
 import com.zhs.enums.PlayerCertStatusEnum;
 import com.zhs.enums.TeamMembershipStatusEnum;
 import com.zhs.enums.TeamStatusEnum;
@@ -14,15 +16,19 @@ import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamMember;
 import com.zhs.model.v4.BasketCaptainGrant;
+import com.zhs.model.v4.BasketDivision;
 import com.zhs.model.v4.BasketSeason;
+import com.zhs.model.v4.BasketSeries;
 import com.zhs.response.team.CaptainQualificationDetailResp;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.support.CaptainGrantSupport;
 import com.zhs.support.CaptainGrantValiditySupport;
 import com.zhs.support.TeamMembershipSupport;
+import com.zhs.support.TeamWritableSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -43,9 +49,15 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
     @Resource
     private BasketSeasonDao seasonDao;
     @Resource
+    private BasketDivisionDao divisionDao;
+    @Resource
+    private BasketSeriesDao seriesDao;
+    @Resource
     private TeamMembershipSupport teamMembershipSupport;
     @Resource
     private CaptainGrantSupport captainGrantSupport;
+    @Resource
+    private TeamWritableSupport teamWritableSupport;
 
     @Override
     public CaptainQualificationDetailResp getCurrentQualification(Long accountId) {
@@ -73,6 +85,16 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
         return buildQualificationDetail(accountId, grant, teamId);
     }
 
+    @Override
+    public List<CaptainQualificationDetailResp> listActiveQualifications(Long accountId) {
+        List<BasketCaptainGrant> grants = captainGrantSupport.findActiveGrantsForMember(accountId);
+        List<CaptainQualificationDetailResp> rows = new ArrayList<>();
+        for (BasketCaptainGrant grant : grants) {
+            rows.add(buildQualificationDetail(accountId, grant, grant.getTeamId()));
+        }
+        return rows;
+    }
+
     private CaptainQualificationDetailResp buildQualificationDetail(Long accountId, BasketCaptainGrant grant, Long teamId) {
         CaptainQualificationDetailResp resp = new CaptainQualificationDetailResp();
         if (grant == null) {
@@ -92,10 +114,27 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
         resp.setValidFrom(grant.getValidFrom());
         resp.setValidTo(grant.getValidTo());
         resp.setIsCurrent(grant.getActiveUniqueKey() != null ? IS_CURRENT : 0);
+        if (grant.getDivisionId() != null) {
+            resp.setDivisionId(String.valueOf(grant.getDivisionId()));
+            BasketDivision division = divisionDao.selectById(grant.getDivisionId());
+            if (division != null && Objects.equals(NOT_DELETED, division.getIsDelete())) {
+                resp.setDivisionName(division.getDivisionName());
+                resp.setPlatformCode(division.getPlatformCode());
+                resp.setGameMode(division.getGameMode());
+            }
+        }
         if (grant.getSeasonId() != null) {
             resp.setSeasonId(String.valueOf(grant.getSeasonId()));
             BasketSeason season = seasonDao.selectById(grant.getSeasonId());
-            resp.setSeasonName(season == null ? null : season.getDisplayTitle());
+            if (season != null) {
+                resp.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+                if (season.getSeriesId() != null) {
+                    BasketSeries series = seriesDao.selectById(season.getSeriesId());
+                    if (series != null) {
+                        resp.setSeriesName(series.getSeriesName());
+                    }
+                }
+            }
         }
         if (grant.getTeamId() != null) {
             resp.setTeamId(String.valueOf(grant.getTeamId()));
@@ -108,10 +147,14 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
         boolean runtimeValid = invalidReason == null;
         resp.setRuntimeValid(runtimeValid);
         resp.setGrantRevoked(!runtimeValid && CaptainGrantStatusEnum.REVOKED.getCode().equals(grant.getGrantStatus()));
-        boolean canCreateByGrant = runtimeValid && !hasActiveLongTermTeam(accountId);
+        boolean canCreateByGrant = runtimeValid
+                && grant.getTeamId() == null
+                && grant.getDivisionId() != null
+                && !teamMembershipSupport.hasActiveTeamMembership(accountId, grant.getDivisionId());
         resp.setCanCreateTeam(canCreateByGrant);
-        resp.setCanInheritTeam(runtimeValid && grant.getTeamId() == null && hasApprovedCaptainTeam(accountId));
-        resp.setCanManageTeam(runtimeValid);
+        // 历史球队复活已废弃
+        resp.setCanInheritTeam(false);
+        resp.setCanManageTeam(runtimeValid && grant.getTeamId() != null);
         if (teamId != null) {
             BasketTeam team = teamDao.selectById(teamId);
             if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
@@ -129,28 +172,6 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
             }
         }
         return resp;
-    }
-
-    private boolean hasActiveLongTermTeam(Long memberId) {
-        Long count = teamMemberDao.selectCount(new LambdaQueryWrapper<BasketTeamMember>()
-                .eq(BasketTeamMember::getMemberId, memberId)
-                .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
-                .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
-                .eq(BasketTeamMember::getIsDelete, NOT_DELETED));
-        return count != null && count > 0;
-    }
-
-    private boolean hasApprovedCaptainTeam(Long memberId) {
-        List<BasketTeam> teams = teamDao.selectList(new LambdaQueryWrapper<BasketTeam>()
-                .eq(BasketTeam::getCaptainMemberId, memberId)
-                .eq(BasketTeam::getIsDelete, NOT_DELETED));
-        for (BasketTeam team : teams) {
-            if (Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())
-                    && Objects.equals(1, team.getAuditStatus())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private Integer mapGrantStatusToLegacyCode(String grantStatus) {
@@ -260,8 +281,12 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
 
     @Override
     public BasketTeam requireTeamCaptain(Long accountId, Long teamId) {
-        BasketCaptainGrant grant = requireValidQualification(accountId);
         BasketTeam team = requireActiveTeam(teamId);
+        teamWritableSupport.assertTeamWritable(team);
+        BasketPlayerProfile player = requireCertifiedPlayer(accountId);
+        BasketCaptainGrant grant = captainGrantSupport.findActiveGrantForDivision(
+                accountId, team.getDivisionId(), player.getId());
+        requireRuntimeValidGrant(accountId, grant);
         captainGrantSupport.assertCanManageTeam(grant, team, accountId);
         return team;
     }
@@ -279,6 +304,41 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
             throw new ServiceException("您不是该球队成员", 403);
         }
         return member;
+    }
+
+    @Override
+    public BasketTeamMember requireAnyTeamMembership(Long accountId, Long teamId) {
+        BasketTeamMember active = teamMemberDao.selectOne(new LambdaQueryWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getTeamId, teamId)
+                .eq(BasketTeamMember::getMemberId, accountId)
+                .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
+                .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
+                .eq(BasketTeamMember::getIsDelete, NOT_DELETED)
+                .last("limit 1"));
+        if (active != null) {
+            return active;
+        }
+        BasketTeamMember any = teamMemberDao.selectOne(new LambdaQueryWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getTeamId, teamId)
+                .eq(BasketTeamMember::getMemberId, accountId)
+                .eq(BasketTeamMember::getIsDelete, NOT_DELETED)
+                .orderByDesc(BasketTeamMember::getJoinTime)
+                .orderByDesc(BasketTeamMember::getId)
+                .last("limit 1"));
+        if (any == null) {
+            throw new ServiceException("您不是该球队成员", 403);
+        }
+        return any;
+    }
+
+    @Override
+    public boolean canManageTeam(Long accountId, Long teamId) {
+        try {
+            requireTeamCaptain(accountId, teamId);
+            return true;
+        } catch (ServiceException ex) {
+            return false;
+        }
     }
 
     @Override
@@ -314,7 +374,11 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
 
     @Override
     public void assertEligibleToJoinTeam(Long accountId, String platformCode) {
-        teamMembershipSupport.assertEligibleToJoinTeam(accountId);
+        throw new ServiceException("请按具体赛事 Division 校验入队资格", 400);
+    }
+
+    public void assertEligibleToJoinTeamInDivision(Long accountId, Long divisionId) {
+        teamMembershipSupport.assertEligibleToJoinTeam(accountId, divisionId);
     }
 
     private String resolveInvalidReason(Long accountId, BasketCaptainGrant grant) {
@@ -349,6 +413,9 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
         }
         if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
             throw new ServiceException("球队状态不可用");
+        }
+        if (team.getDivisionId() == null) {
+            throw new ServiceException(TeamWritableSupport.LEGACY_TEAM_READONLY_MESSAGE, 403);
         }
         return team;
     }

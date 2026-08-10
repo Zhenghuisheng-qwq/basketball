@@ -18,7 +18,7 @@ import com.alibaba.fastjson2.JSONObject;
 
 
 /**
- * 球队表
+ * 赛事球队（Division 级；divisionId 为空表示 Legacy 历史球队）
  *
  * @author 
  * @since 2026-07-24
@@ -77,6 +77,10 @@ public class BasketTeam implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     @ApiModelProperty(value = "队长球员主键")
     private Long captainPlayerId;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "所属赛事 Division ID，NULL 表示 Legacy 历史球队")
+    private Long divisionId;
 
 
     @ApiModelProperty(value = "最大成员数量")

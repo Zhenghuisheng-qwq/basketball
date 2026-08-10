@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { getCaptainQualificationCurrent } from '@/api/captainQualification'
+import {
+  getCaptainQualificationCurrent,
+  getCaptainQualificationList,
+} from '@/api/captainQualification'
 import {
   bindTeamLogo,
   bindCaptainGrantToTeam,
@@ -78,8 +81,15 @@ function unwrapPage<T>(data: PageResult<T> | undefined): PageResult<T> {
 
 export const useTeamStore = defineStore('team', () => {
   const captainQualification = ref<CaptainQualificationDto | null>(null)
+  const captainQualifications = ref<CaptainQualificationDto[]>([])
+  const currentTeams = ref<TeamSummaryDto[]>([])
+  const historyTeams = ref<TeamSummaryDto[]>([])
+  const currentLoading = ref(false)
+  const historyLoading = ref(false)
+  /** @deprecated Legacy compatibility only — 取 currentTeams[0]，新页面勿再依赖 */
   const myTeamSummary = ref<TeamSummaryDto | null>(null)
-  const myTeams = ref<TeamSummaryDto[]>([])
+  /** @deprecated 兼容旧引用，等同 currentTeams */
+  const myTeams = computed(() => currentTeams.value)
   const teamDetail = ref<TeamDetailDto | null>(null)
 
   const qualificationLoading = ref(false)
@@ -124,47 +134,62 @@ export const useTeamStore = defineStore('team', () => {
   const rosterCandidates = ref<RegistrationRosterCandidateDto[]>([])
   const rosterCandidatesLoading = ref(false)
 
-  const hasTeam = computed(() => myTeams.value.length > 0 || Boolean(myTeamSummary.value?.teamId))
+  const hasTeam = computed(() => currentTeams.value.length > 0 || Boolean(myTeamSummary.value?.teamId))
   const isCaptainMember = computed(() =>
-    Boolean(myTeamSummary.value?.isCaptain || teamDetail.value?.isCaptain),
+    Boolean(teamDetail.value?.isCaptain || myTeamSummary.value?.isCaptain),
   )
   const canManageCurrentTeam = computed(() => {
-    const grant = captainQualification.value
-    const currentTeamId = myTeamSummary.value?.teamId || teamDetail.value?.teamId
-    if (!currentTeamId || !grant?.runtimeValid) return false
-    if (grant.canManageCurrentTeam != null) {
-      return grant.canManageCurrentTeam
+    if (teamDetail.value?.canManage != null) {
+      return Boolean(teamDetail.value.canManage)
     }
-    if (grant.teamId) {
-      return grant.teamId === currentTeamId
+    const selected = currentTeams.value.find((item) => item.teamId === teamDetail.value?.teamId)
+      || currentTeams.value.find((item) => item.teamId === myTeamSummary.value?.teamId)
+    if (selected?.canManage != null) {
+      return Boolean(selected.canManage)
     }
-    return Boolean(teamDetail.value?.isCaptain || myTeamSummary.value?.isCaptain)
+    return false
   })
   const isHistoricalCaptain = computed(() =>
-    hasTeam.value && isCaptainMember.value && !canManageCurrentTeam.value,
+    Boolean(teamDetail.value?.isHistorical || teamDetail.value?.isCaptain) && !canManageCurrentTeam.value,
   )
   const isRegularMember = computed(() =>
     hasTeam.value && !canManageCurrentTeam.value && !isCaptainMember.value,
   )
   const isCaptain = computed(() => canManageCurrentTeam.value)
-  const canCreateTeam = computed(() => Boolean(captainQualification.value?.canCreateTeam))
-  const canInheritTeam = computed(() => Boolean(captainQualification.value?.canInheritTeam))
-  const hasValidCaptainQualification = computed(() => Boolean(captainQualification.value?.runtimeValid))
-  const canJoinTeam = computed(() => !hasTeam.value)
+  const creatableQualifications = computed(() =>
+    captainQualifications.value.filter((item) => item.canCreateTeam),
+  )
+  const canCreateTeam = computed(
+    () =>
+      creatableQualifications.value.length > 0 ||
+      Boolean(captainQualification.value?.canCreateTeam),
+  )
+  const canInheritTeam = computed(() => false)
+  const hasValidCaptainQualification = computed(() =>
+    captainQualifications.value.some((item) => item.runtimeValid) ||
+    Boolean(captainQualification.value?.runtimeValid),
+  )
+  // 同 Division 一人一队由 joinable / 后端门禁判断，不再用全局 hasTeam 阻断
+  const canJoinTeam = computed(() => true)
 
   function setError(error: unknown) {
     lastError.value = error instanceof Error ? error.message : '操作失败'
   }
 
-  async function loadQualification(teamId?: string) {
+  async function loadQualification(teamId?: string, divisionId?: string) {
     qualificationLoading.value = true
     lastError.value = ''
     try {
-      const res = await getCaptainQualificationCurrent(
-        teamId ? { teamId } : undefined,
-      )
-      captainQualification.value = res.data
-      return res.data
+      const [currentRes, listRes] = await Promise.all([
+        getCaptainQualificationCurrent({
+          teamId,
+          divisionId,
+        }),
+        getCaptainQualificationList().catch(() => ({ data: [] as CaptainQualificationDto[] })),
+      ])
+      captainQualification.value = currentRes.data
+      captainQualifications.value = listRes.data ?? []
+      return currentRes.data
     } catch (error) {
       setError(error)
       throw error
@@ -173,26 +198,61 @@ export const useTeamStore = defineStore('team', () => {
     }
   }
 
-  async function loadMyTeam() {
+  async function loadCurrentTeams(params?: { currentPage?: number; pageSize?: number }) {
+    currentLoading.value = true
     myTeamLoading.value = true
     lastError.value = ''
     try {
-      const res = await getMyTeamPage({ currentPage: 1, pageSize: 20 })
+      const res = await getMyTeamPage({ currentPage: 1, pageSize: 50, scope: 'current', ...params })
       const page = unwrapPage(res.data)
-      myTeams.value = page.records
-      myTeamSummary.value = page.records[0] ?? null
-      if (myTeamSummary.value?.teamId) {
-        await loadTeamDetail(myTeamSummary.value.teamId)
-      } else {
-        teamDetail.value = null
-      }
-      return myTeamSummary.value
+      currentTeams.value = page.records
+      const preferredId = myTeamSummary.value?.teamId || teamDetail.value?.teamId
+      myTeamSummary.value =
+        (preferredId ? page.records.find((item) => item.teamId === preferredId) : undefined) ??
+        page.records[0] ??
+        null
+      return currentTeams.value
     } catch (error) {
       setError(error)
       throw error
     } finally {
+      currentLoading.value = false
       myTeamLoading.value = false
     }
+  }
+
+  async function loadHistoryTeams(params?: { currentPage?: number; pageSize?: number }) {
+    historyLoading.value = true
+    lastError.value = ''
+    try {
+      const res = await getMyTeamPage({ currentPage: 1, pageSize: 20, scope: 'history', ...params })
+      const page = unwrapPage(res.data)
+      historyTeams.value = page.records
+      return historyTeams.value
+    } catch (error) {
+      setError(error)
+      throw error
+    } finally {
+      historyLoading.value = false
+    }
+  }
+
+  /** @deprecated Legacy compatibility only — 加载当前球队列表 */
+  async function loadMyTeam() {
+    await loadCurrentTeams()
+    if (myTeamSummary.value?.teamId) {
+      await loadTeamDetail(myTeamSummary.value.teamId)
+    } else {
+      teamDetail.value = null
+    }
+    return myTeamSummary.value
+  }
+
+  async function selectTeam(teamId: string) {
+    const fromCurrent = currentTeams.value.find((item) => item.teamId === teamId)
+    const fromHistory = historyTeams.value.find((item) => item.teamId === teamId)
+    myTeamSummary.value = fromCurrent || fromHistory || myTeamSummary.value
+    return loadTeamDetail(teamId)
   }
 
   async function loadTeamDetail(teamId: string) {
@@ -216,19 +276,25 @@ export const useTeamStore = defineStore('team', () => {
     try {
       const res = await createTeam(body)
       teamDetail.value = res.data
-      myTeamSummary.value = {
-        teamId: res.data.teamId,
-        teamName: res.data.teamName,
-        shortName: res.data.shortName,
-        logoUrl: res.data.logoUrl,
-        regionName: res.data.regionName,
-        gameTerminal: res.data.gameTerminal,
-        currentMemberCount: res.data.currentMemberCount,
-        maxMemberCount: res.data.maxMemberCount,
-        isCaptain: res.data.isCaptain,
-        myRole: res.data.myRole,
-      }
-      await loadQualification(res.data.teamId)
+      await Promise.all([
+        loadQualification(res.data.teamId, res.data.divisionId),
+        loadCurrentTeams(),
+      ])
+      myTeamSummary.value =
+        currentTeams.value.find((item) => item.teamId === res.data.teamId) ?? {
+          teamId: res.data.teamId,
+          divisionId: res.data.divisionId,
+          teamName: res.data.teamName,
+          shortName: res.data.shortName,
+          logoUrl: res.data.logoUrl,
+          regionName: res.data.regionName,
+          gameTerminal: res.data.gameTerminal,
+          currentMemberCount: res.data.currentMemberCount,
+          maxMemberCount: res.data.maxMemberCount,
+          isCaptain: res.data.isCaptain,
+          myRole: res.data.myRole,
+          canManage: res.data.canManage,
+        }
       return res.data
     } catch (error) {
       setError(error)
@@ -281,11 +347,21 @@ export const useTeamStore = defineStore('team', () => {
     }
   }
 
-  async function loadMembers(teamId: string, params?: { currentPage?: number; pageSize?: number }) {
+  async function loadMembers(
+    teamId: string,
+    params?: { currentPage?: number; pageSize?: number; includeHistory?: boolean },
+  ) {
     membersLoading.value = true
     lastError.value = ''
     try {
-      const res = await getTeamMemberPage(teamId, { currentPage: 1, pageSize: 50, ...params })
+      const historical = Boolean(teamDetail.value?.isHistorical)
+        || Boolean(historyTeams.value.some((item) => item.teamId === teamId))
+      const res = await getTeamMemberPage(teamId, {
+        currentPage: 1,
+        pageSize: 50,
+        includeHistory: historical || params?.includeHistory,
+        ...params,
+      })
       members.value = unwrapPage(res.data).records
       return members.value
     } catch (error) {
@@ -338,6 +414,7 @@ export const useTeamStore = defineStore('team', () => {
       myTeamSummary.value = null
       teamDetail.value = null
       members.value = []
+      await Promise.all([loadCurrentTeams(), loadHistoryTeams().catch(() => undefined)])
     } catch (error) {
       setError(error)
       throw error
@@ -813,10 +890,15 @@ export const useTeamStore = defineStore('team', () => {
 
   async function bootstrap() {
     await loadQualification()
-    await loadMyTeam()
+    await loadCurrentTeams()
     const currentTeamId = myTeamSummary.value?.teamId
     if (currentTeamId) {
-      await loadQualification(currentTeamId)
+      await Promise.all([
+        loadTeamDetail(currentTeamId),
+        loadQualification(currentTeamId, myTeamSummary.value?.divisionId),
+      ])
+    } else {
+      teamDetail.value = null
     }
   }
 
@@ -839,7 +921,8 @@ export const useTeamStore = defineStore('team', () => {
   function resetState() {
     captainQualification.value = null
     myTeamSummary.value = null
-    myTeams.value = []
+    currentTeams.value = []
+    historyTeams.value = []
     teamDetail.value = null
     lastError.value = ''
     resetTransientLists()
@@ -847,7 +930,14 @@ export const useTeamStore = defineStore('team', () => {
 
   return {
     captainQualification,
+    captainQualifications,
+    creatableQualifications,
+    currentTeams,
+    historyTeams,
+    currentLoading,
+    historyLoading,
     myTeamSummary,
+    myTeams,
     teamDetail,
     qualificationLoading,
     myTeamLoading,
@@ -870,7 +960,6 @@ export const useTeamStore = defineStore('team', () => {
     joinablePageSize,
     joinableTotal,
     joinableTotalPages,
-    myTeams,
     inheritableTeams,
     inheritableLoading,
     seasonPlatforms,
@@ -896,7 +985,10 @@ export const useTeamStore = defineStore('team', () => {
     hasValidCaptainQualification,
     canJoinTeam,
     loadQualification,
+    loadCurrentTeams,
+    loadHistoryTeams,
     loadMyTeam,
+    selectTeam,
     loadTeamDetail,
     createTeamAction,
     updateTeamAction,

@@ -15,6 +15,11 @@ public interface IAccountTeamService {
 
     IPage<TeamSummaryResp> pageMine(Integer currentPage, Integer pageSize);
 
+    /**
+     * @param scope current | history；空则默认 current（兼容旧调用）
+     */
+    IPage<TeamSummaryResp> pageMine(Integer currentPage, Integer pageSize, String scope);
+
     JoinableTeamPageResp pageJoinable(Integer currentPage, Integer pageSize, String platformCode, String keyword);
 
     List<InheritableTeamSummaryResp> listInheritableTeams();

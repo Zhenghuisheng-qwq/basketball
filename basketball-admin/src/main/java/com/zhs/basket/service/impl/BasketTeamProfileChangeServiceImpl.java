@@ -61,7 +61,7 @@ public class BasketTeamProfileChangeServiceImpl implements IBasketTeamProfileCha
     public void approve(Long id, TeamProfileChangeApproveReq req) {
         BasketTeamProfileChange change = requirePendingChange(id);
         BasketTeam team = requireTeam(change.getTeamId());
-        assertTeamNameAvailable(change.getNewTeamName(), team.getId());
+        assertTeamNameAvailable(team, change.getNewTeamName());
         assertLogoExists(change.getNewLogoFileId());
 
         int profileRows = teamMapper.updateProfileFromChange(
@@ -131,12 +131,15 @@ public class BasketTeamProfileChangeServiceImpl implements IBasketTeamProfileCha
         return team;
     }
 
-    private void assertTeamNameAvailable(String teamName, Long excludeTeamId) {
+    private void assertTeamNameAvailable(BasketTeam team, String teamName) {
         if (!StringUtils.hasText(teamName)) {
             throw new ServiceException("新球队名称不能为空");
         }
-        if (teamMapper.countByTeamNameExclude(teamName.trim(), excludeTeamId) > 0) {
-            throw new ServiceException("球队名称已存在");
+        if (team == null || team.getDivisionId() == null) {
+            throw new ServiceException("历史球队不能修改资料");
+        }
+        if (teamMapper.countByTeamNameExclude(team.getDivisionId(), teamName.trim(), team.getId()) > 0) {
+            throw new ServiceException("该赛事下球队名称已存在");
         }
     }
 

@@ -46,7 +46,7 @@
     {
       "name": "env_mysql",
       "status": "PASS",
-      "detail": "192.168.31.47:3306/basketball"
+      "detail": "192.168.31.48:3306/basketball"
     },
     {
       "name": "env_redis",

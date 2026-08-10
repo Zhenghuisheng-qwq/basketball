@@ -32,6 +32,7 @@ import com.zhs.service.IAccountTeamService;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.IAccountFileService;
 import com.zhs.service.ITeamProfileChangeService;
+import com.zhs.support.TeamWritableSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,6 +75,8 @@ public class TeamProfileChangeServiceImpl implements ITeamProfileChangeService {
     private IAccountFileService accountFileService;
     @Resource
     private IAccountTeamService accountTeamService;
+    @Resource
+    private TeamWritableSupport teamWritableSupport;
 
     @Override
     public TeamProfileEditResp getProfileEditData(String teamId) {
@@ -122,7 +125,7 @@ public class TeamProfileChangeServiceImpl implements ITeamProfileChangeService {
             throw new ServiceException("资料未发生变化");
         }
 
-        assertTeamNameUnique(newTeamName, teamPk);
+        assertTeamNameUnique(team, newTeamName, teamPk);
 
         Date now = new Date();
         BasketTeamProfileChange pending = profileChangeDao.selectActiveByTeamId(teamPk);
@@ -304,10 +307,19 @@ public class TeamProfileChangeServiceImpl implements ITeamProfileChangeService {
     }
 
     private boolean isTeamEligibleForChange(BasketTeam team) {
-        return team != null
-                && NOT_DELETED.equals(team.getIsDelete())
-                && Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())
-                && Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus());
+        if (team == null
+                || !NOT_DELETED.equals(team.getIsDelete())
+                || !Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())
+                || !Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())
+                || team.getDivisionId() == null) {
+            return false;
+        }
+        try {
+            teamWritableSupport.assertTeamWritable(team);
+            return true;
+        } catch (ServiceException ex) {
+            return false;
+        }
     }
 
     private void validateSubmitFields(String teamName, String shortName, String description) {
@@ -345,13 +357,17 @@ public class TeamProfileChangeServiceImpl implements ITeamProfileChangeService {
         return fileId;
     }
 
-    private void assertTeamNameUnique(String teamName, Long excludeTeamId) {
+    private void assertTeamNameUnique(BasketTeam team, String teamName, Long excludeTeamId) {
+        if (team == null || team.getDivisionId() == null) {
+            throw new ServiceException("历史球队不能修改资料报名新赛事，请在当前赛事重新创建球队", 403);
+        }
         Long count = teamDao.selectCount(new LambdaQueryWrapper<BasketTeam>()
+                .eq(BasketTeam::getDivisionId, team.getDivisionId())
                 .eq(BasketTeam::getTeamName, teamName)
                 .eq(BasketTeam::getIsDelete, NOT_DELETED)
                 .ne(BasketTeam::getId, excludeTeamId));
         if (count != null && count > 0) {
-            throw new ServiceException("球队名称已存在");
+            throw new ServiceException("该赛事下球队名称已存在");
         }
     }
 

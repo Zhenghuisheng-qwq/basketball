@@ -86,4 +86,14 @@
         </set>
         where id = #{id} and is_delete = 0
     </update>
+    <update id="clearCurrentTeamIdByTeamIds">
+        update basket_player_profile
+        set current_team_id = null,
+            update_time = now()
+        where is_delete = 0
+          and current_team_id in
+        <foreach collection="teamIds" item="tid" open="(" separator="," close=")">
+            #{tid}
+        </foreach>
+    </update>
 </mapper>

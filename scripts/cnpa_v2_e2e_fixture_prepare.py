@@ -35,7 +35,7 @@ def env(k: str, default: str = "") -> str:
 def db_query(sql: str) -> list:
     import pymysql
     conn = pymysql.connect(
-        host=env("CNPA_DB_HOST", "192.168.31.47"),
+        host=env("CNPA_DB_HOST", "192.168.31.48"),
         port=int(env("CNPA_DB_PORT", "3306")),
         user=env("CNPA_DB_USER", "root"),
         password=env("CNPA_DB_PASSWORD", "123456"),

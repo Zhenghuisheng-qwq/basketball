@@ -109,21 +109,53 @@ public class CaptainGrantSupport {
                 .orderByDesc(BasketCaptainGrant::getId));
     }
 
+    public static final String GRANT_BIND_RACE_MESSAGE = "该队长权限已被其他建队请求占用，请刷新后重试";
+    public static final String GRANT_DIVISION_MISMATCH_MESSAGE = "队长授权与球队所属赛事不一致";
+    public static final String GRANT_ALREADY_BOUND_MESSAGE = "该赛事队长资格已创建过球队，不能再次创建";
+
     public void assertCanManageTeam(BasketCaptainGrant grant, BasketTeam team, Long memberId) {
         if (grant == null) {
             throw new ServiceException(NO_ACTIVE_GRANT_MESSAGE, 403);
         }
-        if (!Objects.equals(team.getCaptainMemberId(), memberId)) {
+        if (team == null || team.getDivisionId() == null) {
+            throw new ServiceException(TeamWritableSupport.LEGACY_TEAM_READONLY_MESSAGE, 403);
+        }
+        if (!Objects.equals(grant.getDivisionId(), team.getDivisionId())) {
+            throw new ServiceException(GRANT_DIVISION_MISMATCH_MESSAGE, 403);
+        }
+        if (!Objects.equals(team.getCaptainMemberId(), memberId)
+                && !Objects.equals(grant.getMemberId(), memberId)) {
             throw new ServiceException("无权操作该球队", 403);
         }
-        if (grant.getTeamId() != null && !Objects.equals(grant.getTeamId(), team.getId())) {
+        if (grant.getTeamId() == null || !Objects.equals(grant.getTeamId(), team.getId())) {
             throw new ServiceException(GRANT_BOUND_OTHER_TEAM_MESSAGE, 403);
+        }
+    }
+
+    public void assertGrantUnbound(BasketCaptainGrant grant) {
+        if (grant == null) {
+            throw new ServiceException(NO_ACTIVE_GRANT_MESSAGE, 403);
+        }
+        if (grant.getTeamId() != null) {
+            throw new ServiceException(GRANT_ALREADY_BOUND_MESSAGE, 403);
+        }
+    }
+
+    public void assertGrantTeamDivisionMatch(BasketCaptainGrant grant, BasketTeam team) {
+        if (grant == null || team == null) {
+            throw new ServiceException("无有效队长授权或球队");
+        }
+        if (team.getDivisionId() == null) {
+            throw new ServiceException(TeamWritableSupport.LEGACY_TEAM_READONLY_MESSAGE, 403);
+        }
+        if (!Objects.equals(grant.getDivisionId(), team.getDivisionId())) {
+            throw new ServiceException(GRANT_DIVISION_MISMATCH_MESSAGE, 403);
         }
     }
 
     public void bindGrantToTeam(BasketCaptainGrant grant, Long teamId) {
         if (grant == null || teamId == null) {
-            return;
+            throw new ServiceException("无有效队长授权");
         }
         if (grant.getTeamId() != null) {
             if (!Objects.equals(grant.getTeamId(), teamId)) {
@@ -131,19 +163,50 @@ public class CaptainGrantSupport {
             }
             return;
         }
-        captainGrantDao.update(null, new LambdaUpdateWrapper<BasketCaptainGrant>()
+        int updated = captainGrantDao.update(null, new LambdaUpdateWrapper<BasketCaptainGrant>()
                 .eq(BasketCaptainGrant::getId, grant.getId())
                 .eq(BasketCaptainGrant::getIsDelete, NOT_DELETED)
+                .eq(BasketCaptainGrant::getGrantStatus, GRANT_STATUS_ACTIVE)
                 .isNull(BasketCaptainGrant::getTeamId)
                 .set(BasketCaptainGrant::getTeamId, teamId));
+        assertBindUpdatedRows(updated);
         grant.setTeamId(teamId);
     }
 
+    /** CAS：bind 更新行数必须为 1，否则视为并发占用并回滚建队事务 */
+    public void assertBindUpdatedRows(int updated) {
+        if (updated != 1) {
+            throw new ServiceException(GRANT_BIND_RACE_MESSAGE, 409);
+        }
+    }
+
+    public void assertTeamBindingForRegistration(BasketCaptainGrant grant, BasketTeam team) {
+        if (grant == null || team == null || team.getId() == null) {
+            throw new ServiceException("无有效队长授权");
+        }
+        assertGrantTeamDivisionMatch(grant, team);
+        if (grant.getTeamId() == null) {
+            bindGrantToTeam(grant, team.getId());
+            return;
+        }
+        if (!Objects.equals(grant.getTeamId(), team.getId())) {
+            throw new ServiceException(GRANT_BOUND_OTHER_TEAM_MESSAGE, 403);
+        }
+    }
+
+    /** @deprecated 请使用 {@link #assertTeamBindingForRegistration(BasketCaptainGrant, BasketTeam)} */
+    @Deprecated
     public void assertTeamBindingForRegistration(BasketCaptainGrant grant, Long teamId) {
         if (grant == null || teamId == null) {
             throw new ServiceException("无有效队长授权");
         }
-        bindGrantToTeam(grant, teamId);
+        if (grant.getTeamId() == null) {
+            bindGrantToTeam(grant, teamId);
+            return;
+        }
+        if (!Objects.equals(grant.getTeamId(), teamId)) {
+            throw new ServiceException(GRANT_BOUND_OTHER_TEAM_MESSAGE, 403);
+        }
     }
 
     public static String buildActiveUniqueKey(Long divisionId, Long playerId) {

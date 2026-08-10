@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/basket/team/captain/qualification")
 @Api(value = "队长授权")
@@ -21,11 +23,21 @@ public class CaptainQualificationController {
     @Resource
     private ICaptainQualificationService captainQualificationService;
 
-    @ApiOperation("获取当前队长授权")
+    @ApiOperation("获取当前队长授权（可按 divisionId 精确查询）")
     @GetMapping("/current")
     public R<CaptainQualificationDetailResp> getCurrent(
+            @RequestParam(required = false) Long divisionId,
             @RequestParam(required = false) Long seasonId,
             @RequestParam(required = false) Long teamId) {
+        if (divisionId != null) {
+            return R.ok(captainQualificationService.getCurrentByDivision(divisionId, teamId));
+        }
         return R.ok(captainQualificationService.getCurrent(seasonId, teamId));
+    }
+
+    @ApiOperation("列出当前用户所有有效 Division 队长授权")
+    @GetMapping("/list")
+    public R<List<CaptainQualificationDetailResp>> listActive() {
+        return R.ok(captainQualificationService.listActive());
     }
 }

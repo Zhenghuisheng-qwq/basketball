@@ -22,5 +22,14 @@ public interface BasketTeamMapper {
                                 @Param("description") String description,
                                 @Param("publicStatus") Integer publicStatus);
 
-    int countByTeamNameExclude(@Param("teamName") String teamName, @Param("excludeTeamId") Long excludeTeamId);
+    int countByTeamNameExclude(@Param("divisionId") Long divisionId,
+                               @Param("teamName") String teamName,
+                               @Param("excludeTeamId") Long excludeTeamId);
+
+    List<Long> selectIdsByDivisionId(@Param("divisionId") Long divisionId);
+
+    int archiveActiveByDivisionId(@Param("divisionId") Long divisionId,
+                                  @Param("fromStatus") Integer fromStatus,
+                                  @Param("toStatus") Integer toStatus,
+                                  @Param("finishTime") java.util.Date finishTime);
 }

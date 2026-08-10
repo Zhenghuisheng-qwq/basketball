@@ -5,7 +5,8 @@ import com.zhs.common.exception.ServiceException;
 public enum TeamStatusEnum {
     DISABLED(0, "已禁用"),
     ACTIVE(1, "正常"),
-    DISSOLVED(2, "已解散");
+    DISSOLVED(2, "已解散"),
+    ARCHIVED(3, "已归档");
 
     private final int code;
     private final String description;

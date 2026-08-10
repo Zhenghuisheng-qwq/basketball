@@ -6,7 +6,7 @@ import sys
 
 import pymysql
 
-HOST = os.environ.get("BASKETBALL_DB_HOST", "192.168.31.47")
+HOST = os.environ.get("BASKETBALL_DB_HOST", "192.168.31.48")
 PORT = int(os.environ.get("BASKETBALL_DB_PORT", "3306"))
 USER = os.environ.get("BASKETBALL_DB_USER", "root")
 PASSWORD = os.environ.get("BASKETBALL_DB_PASSWORD", "123456")

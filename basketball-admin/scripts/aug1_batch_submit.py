@@ -7,7 +7,7 @@ import urllib.request
 
 import pymysql
 
-JDBC = dict(host="192.168.31.47", user="root", password="123456", database="basketball", charset="utf8mb4")
+JDBC = dict(host="192.168.31.48", user="root", password="123456", database="basketball", charset="utf8mb4")
 WEB_BASE = "http://127.0.0.1:8881"
 MATCH_DATE = "2026-08-01"
 PASSWORD = "Test1234"

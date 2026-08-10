@@ -148,12 +148,20 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right" class-name="small-padding fixed-width">
+        <el-table-column label="操作" width="360" fixed="right" class-name="small-padding fixed-width">
           <template #default="scope">
             <div class="table-actions">
               <el-button link type="primary" @click="handleEditDivision(scope.row)" v-hasPermi="['basket:v4Division:edit']">编辑</el-button>
               <el-button link type="success" @click="handleOpenDivision(scope.row)" v-hasPermi="['basket:v4Division:openRegistration']" v-if="scope.row.divisionStatus === 'DRAFT'">开放报名</el-button>
               <el-button link type="warning" @click="handleCloseDivision(scope.row)" v-hasPermi="['basket:v4Division:closeRegistration']" v-if="scope.row.divisionStatus === 'REGISTRATION_OPEN'">关闭报名</el-button>
+              <el-button
+                link
+                type="danger"
+                @click="handleFinishDivision(scope.row)"
+                v-hasPermi="['basket:v4Division:edit']"
+                v-if="['REGISTRATION_CLOSED', 'SCHEDULED', 'PLAYING'].includes(scope.row.divisionStatus || '')"
+              >结束赛事</el-button>
+              <el-tag v-if="scope.row.divisionStatus === 'FINISHED'" type="info" size="small">已结束</el-tag>
               <el-button link type="danger" @click="handleDeleteDivision(scope.row)" v-hasPermi="['basket:v4Division:remove']" v-if="scope.row.divisionStatus === 'DRAFT'">删除</el-button>
             </div>
           </template>
@@ -386,6 +394,7 @@ import {
 import {
   addV4Division,
   closeV4DivisionRegistration,
+  finishV4Division,
   delV4Division,
   listV4Division,
   openV4DivisionRegistration,
@@ -829,6 +838,16 @@ async function handleOpenDivision(row: BasketDivisionListVo) {
 async function handleCloseDivision(row: BasketDivisionListVo) {
   await closeV4DivisionRegistration(row.id!)
   proxy!.$modal.msgSuccess('已关闭报名')
+  loadDivisionList()
+}
+
+async function handleFinishDivision(row: BasketDivisionListVo) {
+  await proxy!.$modal.confirm(
+    `确定结束该赛事赛区「${row.divisionName || row.id}」吗？\n\n结束后：\n- 队长权限将失效\n- 当前球队将归档为历史球队\n- 当前球队成员关系将结束\n- 未处理的邀请/申请将失效\n- 该操作不会删除历史比赛和统计数据`,
+    '结束赛事确认',
+  )
+  await finishV4Division(row.id!, { reason: '赛事正常结束' })
+  proxy!.$modal.msgSuccess('赛事已结束')
   loadDivisionList()
 }
 

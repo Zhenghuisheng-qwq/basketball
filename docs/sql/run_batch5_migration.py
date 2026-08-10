@@ -2,7 +2,7 @@
 """Run CNPA batch5 migration on local dev DB."""
 import pymysql
 
-HOST = "192.168.31.47"
+HOST = "192.168.31.48"
 USER = "root"
 PASSWORD = "123456"
 DATABASE = "basketball"

@@ -410,9 +410,10 @@ CREATE TABLE `basket_team` (
                                `contact_member_id` BIGINT DEFAULT NULL COMMENT '联系人会员主键',
                                `captain_member_id` BIGINT NOT NULL COMMENT '队长会员主键',
                                `captain_player_id` BIGINT NOT NULL COMMENT '队长球员主键',
+                               `division_id` BIGINT DEFAULT NULL COMMENT '所属赛事Division ID，NULL表示Legacy历史球队',
                                `max_member_count` INT NOT NULL DEFAULT 8 COMMENT '最大成员数量',
                                `current_member_count` INT NOT NULL DEFAULT 0 COMMENT '当前成员数量',
-                               `team_status` TINYINT NOT NULL DEFAULT 1 COMMENT '球队状态',
+                               `team_status` TINYINT NOT NULL DEFAULT 1 COMMENT '球队状态：0DISABLED/1ACTIVE/2DISSOLVED/3ARCHIVED',
                                `audit_status` TINYINT NOT NULL DEFAULT 0 COMMENT '审核状态',
                                `public_status` TINYINT NOT NULL DEFAULT 1 COMMENT '公开状态',
                                `established_date` DATE DEFAULT NULL COMMENT '成立日期',
@@ -422,11 +423,12 @@ CREATE TABLE `basket_team` (
                                `is_delete` TINYINT NOT NULL DEFAULT 0 COMMENT '删除标记',
                                PRIMARY KEY (id),
                                UNIQUE KEY uk_team_no (team_no),
-                               UNIQUE KEY uk_team_name_delete (team_name, is_delete),
+                               UNIQUE KEY uk_team_division_name_delete (division_id, team_name, is_delete),
+                               KEY idx_team_division_id (division_id),
                                KEY idx_team_captain (captain_member_id, team_status),
                                KEY idx_team_terminal_status (game_terminal, team_status, audit_status),
                                KEY idx_team_region (region_code, team_status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='球队表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='赛事球队表（Division级；division_id为空表示Legacy历史球队）';
 
 DROP TABLE IF EXISTS `basket_team_audit_record`;
 CREATE TABLE `basket_team_audit_record` (
@@ -453,6 +455,7 @@ CREATE TABLE `basket_team_member` (
                                       `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
                                       `membership_no` VARCHAR(64) NOT NULL COMMENT '成员关系编号',
                                       `team_id` BIGINT NOT NULL COMMENT '球队主键',
+                                      `division_id` BIGINT DEFAULT NULL COMMENT '所属赛事Division ID，NULL表示Legacy历史成员关系',
                                       `member_id` BIGINT NOT NULL COMMENT '会员主键',
                                       `player_id` BIGINT NOT NULL COMMENT '球员主键',
                                       `platform_code` VARCHAR(16) DEFAULT NULL COMMENT '平台代码 PC/PS/XBOX',
@@ -475,6 +478,7 @@ CREATE TABLE `basket_team_member` (
                                       PRIMARY KEY (id),
                                       UNIQUE KEY uk_team_membership_no (membership_no),
                                       KEY idx_team_member_team_current (team_id, is_current, membership_status),
+                                      KEY idx_team_member_division_id (division_id),
                                       KEY idx_team_member_player_current (player_id, is_current, membership_status),
                                       KEY idx_team_member_member_current (member_id, is_current, membership_status),
                                       KEY idx_team_member_join_time (join_time),

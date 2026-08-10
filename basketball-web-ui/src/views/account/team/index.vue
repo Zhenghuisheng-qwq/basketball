@@ -30,6 +30,8 @@ import type { TeamInvitationItemDto } from '@/api/types/teamInvitation'
 import type { CandidatePlayerItemDto, TeamMemberItemDto } from '@/api/types/teamMember'
 import type { AvailableSeasonItemDto, TeamRegistrationItemDto } from '@/api/types/teamRegistration'
 
+type TeamListScope = 'current' | 'history'
+
 type TeamTab =
   | 'pendingInvites'
   | 'joinableTeams'
@@ -41,6 +43,31 @@ type TeamTab =
   | 'invitations'
   | 'applications'
   | 'registration'
+
+function formatEventContext(item?: {
+  seriesName?: string
+  seasonName?: string
+  divisionName?: string
+  platformCode?: string
+  divisionPlatformCode?: string
+  gameMode?: string
+}) {
+  if (!item) return '赛事信息暂无'
+  const seriesOrSeason = [item.seriesName, item.seasonName].filter(Boolean).join(' · ')
+  const divisionBits = [
+    item.divisionName,
+    item.platformCode || item.divisionPlatformCode,
+    item.gameMode,
+  ].filter(Boolean).join(' · ')
+  const text = [seriesOrSeason, divisionBits].filter(Boolean).join(' / ')
+  return text || '赛事信息暂无'
+}
+
+function roleLabel(role?: string, isCaptain?: boolean) {
+  if (isCaptain || role === 'CAPTAIN') return '队长'
+  if (role === 'MEMBER' || role) return '成员'
+  return '-'
+}
 
 const TEAM_AUDIT_STATUS: Record<number, string> = {
   0: '待审核',
@@ -85,9 +112,11 @@ const router = useRouter()
 const teamStore = useTeamStore()
 const accountStore = useAccountStore()
 
+const listScope = ref<TeamListScope>('current')
 const activeTab = ref<TeamTab>('joinableTeams')
 const pageLoading = ref(true)
 const loadError = ref('')
+const historyLoaded = ref(false)
 
 const joinablePanelRef = ref<InstanceType<typeof JoinableTeamPanel> | null>(null)
 
@@ -98,6 +127,7 @@ const inviteModalMessage = ref('')
 const inviteModalError = ref('')
 
 const createForm = reactive({
+  divisionId: '',
   teamName: '',
   shortName: '',
   description: '',
@@ -105,6 +135,18 @@ const createForm = reactive({
   logoFileId: '',
   logoPreviewUrl: '',
 })
+
+const creatableGrants = computed(() => teamStore.creatableQualifications)
+
+watch(
+  creatableGrants,
+  (grants) => {
+    if (!createForm.divisionId && grants.length === 1 && grants[0]?.divisionId) {
+      createForm.divisionId = grants[0].divisionId
+    }
+  },
+  { immediate: true },
+)
 
 const profileForm = reactive({
   teamName: '',
@@ -130,19 +172,30 @@ const registrationDetailLoading = ref(false)
 const showInvitationDialog = ref(false)
 const activeInvitation = ref<TeamInvitationItemDto | null>(null)
 
-const hasTeam = computed(() => teamStore.hasTeam)
-const canManageCurrentTeam = computed(() => teamStore.canManageCurrentTeam)
+const currentTeams = computed(() => teamStore.currentTeams)
+const historyTeams = computed(() => teamStore.historyTeams)
+const selectedTeam = computed(() => teamStore.teamDetail || teamStore.myTeamSummary)
+const hasSelectedTeam = computed(() => Boolean(selectedTeam.value?.teamId))
+const viewingHistory = computed(() =>
+  listScope.value === 'history'
+  || Boolean(teamStore.teamDetail?.isHistorical)
+  || Boolean(teamStore.myTeamSummary?.isHistorical),
+)
+const canManageCurrentTeam = computed(() =>
+  !viewingHistory.value && teamStore.canManageCurrentTeam,
+)
 const isCaptainMember = computed(() => teamStore.isCaptainMember)
-const isHistoricalCaptain = computed(() => teamStore.isHistoricalCaptain)
+const isHistoricalCaptain = computed(() =>
+  Boolean(teamStore.teamDetail?.isCaptain || teamStore.myTeamSummary?.isCaptain)
+  && !canManageCurrentTeam.value,
+)
 const canCreateTeam = computed(() => teamStore.canCreateTeam)
-const canInheritTeam = computed(() => teamStore.canInheritTeam)
 const canJoinTeam = computed(() => teamStore.canJoinTeam)
+const allGrants = computed(() => teamStore.captainQualifications)
 const captainQual = computed(() => teamStore.captainQualification)
-const hasCaptainQualRecord = computed(() => Boolean(captainQual.value?.hasQualification))
-const isCaptainQualExpired = computed(() => Boolean(captainQual.value?.grantRevoked))
-const isCaptainQualInvalid = computed(() => hasCaptainQualRecord.value && !captainQual.value?.runtimeValid && !isCaptainQualExpired.value)
-const teamId = computed(() => teamStore.myTeamSummary?.teamId || '')
+const teamId = computed(() => selectedTeam.value?.teamId || '')
 const teamDetail = computed(() => teamStore.teamDetail)
+const hasTeam = computed(() => hasSelectedTeam.value)
 const displayTeamLogoUrl = computed(() =>
   profileLogoPreviewUrl.value
   || teamDetail.value?.logoUrl
@@ -235,59 +288,58 @@ const showCaptainGrantPanel = computed(() => {
 })
 
 const availableTabs = computed<TeamTab[]>(() => {
-  const joinableTabs: TeamTab[] = canJoinTeam.value ? ['joinableTeams'] : []
-  if (hasTeam.value) {
-    if (canManageCurrentTeam.value) {
-      return ['overview', 'profile', 'members', 'invitations', 'applications', 'registration', ...joinableTabs]
+  const joinableTabs: TeamTab[] = listScope.value === 'current' && canJoinTeam.value ? ['joinableTeams'] : []
+  if (listScope.value === 'history') {
+    if (hasSelectedTeam.value) {
+      return ['overview', 'members']
     }
-    if (isHistoricalCaptain.value) {
-      return ['overview', 'members', 'registration', ...joinableTabs]
-    }
-    return ['overview', 'members', 'registration', ...joinableTabs]
+    return []
   }
-  const preTeamTabs: TeamTab[] = ['joinableTeams', 'pendingInvites', 'myApplications']
-  if (canCreateTeam.value) preTeamTabs.unshift('create')
-  if (canInheritTeam.value && teamStore.inheritableTeams.length) preTeamTabs.unshift('create')
+  if (hasSelectedTeam.value && !viewingHistory.value) {
+    if (canManageCurrentTeam.value) {
+      return ['overview', 'profile', 'members', 'invitations', 'applications', 'registration', ...joinableTabs, 'create', 'pendingInvites', 'myApplications']
+    }
+    return ['overview', 'members', 'registration', ...joinableTabs, 'create', 'pendingInvites', 'myApplications']
+  }
+  const preTeamTabs: TeamTab[] = ['joinableTeams', 'pendingInvites', 'myApplications', 'create']
   return preTeamTabs
 })
 
 const bannerTitle = computed(() => {
-  if (hasTeam.value) return teamStore.myTeamSummary?.teamName || '我的球队'
-  if (canCreateTeam.value) return '我的球队'
-  return '加入球队'
+  if (hasSelectedTeam.value) return selectedTeam.value?.teamName || '我的球队'
+  return listScope.value === 'history' ? '历史球队' : '我的球队'
 })
 
 const bannerDescription = computed(() => {
-  if (hasTeam.value && canManageCurrentTeam.value) {
-    if (isTeamAuditApproved.value) return '管理球队资料、成员、邀请与赛事报名'
-    return '球队认证审核中，可先编辑资料并管理成员；赛事报名需审核通过后开放'
+  if (hasSelectedTeam.value && canManageCurrentTeam.value) {
+    if (isTeamAuditApproved.value) return '管理当前赛事球队资料、成员与邀请'
+    return '球队认证审核中，可先编辑资料并管理成员'
   }
-  if (hasTeam.value && isHistoricalCaptain.value) {
-    return '可查看历史球队与赛事记录，当前暂无有效队长权限'
+  if (hasSelectedTeam.value && viewingHistory.value) {
+    return '只读查看历史赛事球队与成员记录'
   }
-  if (hasTeam.value) return '查看当前球队信息与赛事记录'
-  if (canCreateTeam.value) return '你已开通队长权限，可以创建并管理自己的球队。'
-  if (canInheritTeam.value && teamStore.inheritableTeams.length) return '你有可继承的历史球队，也可浏览并申请加入其他球队。'
-  if (isCaptainQualExpired.value) return '当前赛事周期已结束，队长权限已收回；你仍可申请加入其他球队。'
-  return '浏览可加入球队、处理邀请或提交加入申请'
+  if (hasSelectedTeam.value) return '查看当前赛事球队信息'
+  if (listScope.value === 'history') {
+    return '赛事结束或你退出球队后，相关记录会保留在这里'
+  }
+  if (canCreateTeam.value) return '获得赛事队长权限后可创建本届球队，也可接受邀请或申请加入'
+  return '当前暂无参赛球队时，可浏览可加入球队、处理邀请或申请加入'
 })
 
 const bannerStatusText = computed(() => {
-  if (hasTeam.value && canManageCurrentTeam.value) return '队长'
-  if (hasTeam.value && isCaptainMember.value) return '历史队长'
-  if (hasTeam.value) return '队员'
-  if (showCaptainGrantPanel.value && captainQual.value?.runtimeValid) return '队长权限有效'
-  if (showCaptainGrantPanel.value && isCaptainQualExpired.value) return '队长权限已收回'
-  if (showCaptainGrantPanel.value && isCaptainQualInvalid.value) {
-    return captainQual.value?.invalidReason || '队长权限无效'
-  }
+  if (hasSelectedTeam.value && canManageCurrentTeam.value) return '队长'
+  if (hasSelectedTeam.value && isHistoricalCaptain.value) return '历史队长'
+  if (hasSelectedTeam.value && isCaptainMember.value) return '队长'
+  if (hasSelectedTeam.value) return '成员'
+  if (currentTeams.value.length) return `当前 ${currentTeams.value.length} 支`
+  if (canCreateTeam.value) return '可创建球队'
   return '球员'
 })
 
 const bannerStatusType = computed(() => {
-  if (hasTeam.value) return 'success'
+  if (hasSelectedTeam.value && viewingHistory.value) return 'warning'
+  if (hasSelectedTeam.value) return 'success'
   if (canCreateTeam.value) return 'success'
-  if (isCaptainQualExpired.value) return 'warning'
   return 'info'
 })
 
@@ -295,6 +347,10 @@ watch(
   () => route.query.tab,
   (tab) => {
     if (typeof tab !== 'string') return
+    if (tab === 'history' || tab === 'current') {
+      listScope.value = tab
+      return
+    }
     const normalized = tab === 'discover' ? 'joinableTeams' : tab
     if (availableTabs.value.includes(normalized as TeamTab)) {
       activeTab.value = normalized as TeamTab
@@ -303,7 +359,18 @@ watch(
   { immediate: true },
 )
 
+watch(
+  () => route.query.scope,
+  (scope) => {
+    if (scope === 'history' || scope === 'current') {
+      listScope.value = scope
+    }
+  },
+  { immediate: true },
+)
+
 watch(availableTabs, (tabs) => {
+  if (!tabs.length) return
   if (!tabs.includes(activeTab.value)) {
     activeTab.value = tabs[0]
   }
@@ -323,26 +390,72 @@ async function bootstrap() {
   loadError.value = ''
   try {
     await teamStore.bootstrap()
-    if (canInheritTeam.value) {
-      await teamStore.loadInheritableTeams().catch(() => undefined)
+    if (listScope.value === 'history') {
+      await ensureHistoryLoaded()
     }
-    if (canJoinTeam.value || !hasTeam.value) {
+    if (listScope.value === 'current') {
       await Promise.all([
-        teamStore.loadMyInvitations({ status: 0 }),
-        teamStore.loadJoinableTeams(),
-        teamStore.loadMyJoinApplications(),
+        teamStore.loadMyInvitations({ status: 0 }).catch(() => undefined),
+        teamStore.loadJoinableTeams().catch(() => undefined),
+        teamStore.loadMyJoinApplications().catch(() => undefined),
       ])
     }
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
   } finally {
     pageLoading.value = false
-    if (typeof route.query.tab !== 'string' && !hasTeam.value) {
+    if (typeof route.query.tab !== 'string' && !hasSelectedTeam.value) {
       activeTab.value = availableTabs.value.includes('joinableTeams')
         ? 'joinableTeams'
-        : availableTabs.value[0]
+        : (availableTabs.value[0] || 'create')
     }
     await openRegistrationFromQuery().catch(() => undefined)
+  }
+}
+
+async function ensureHistoryLoaded() {
+  if (historyLoaded.value && teamStore.historyTeams.length) return
+  await teamStore.loadHistoryTeams()
+  historyLoaded.value = true
+}
+
+async function setListScope(scope: TeamListScope) {
+  listScope.value = scope
+  await router.replace({
+    query: {
+      ...route.query,
+      scope,
+      tab: undefined,
+    },
+  })
+  if (scope === 'history') {
+    await ensureHistoryLoaded()
+    teamStore.teamDetail = null
+    teamStore.myTeamSummary = null
+    activeTab.value = 'overview'
+    return
+  }
+  await teamStore.loadCurrentTeams()
+  if (teamStore.myTeamSummary?.teamId) {
+    await teamStore.selectTeam(teamStore.myTeamSummary.teamId)
+    activeTab.value = 'overview'
+  } else {
+    teamStore.teamDetail = null
+    activeTab.value = availableTabs.value[0] || 'joinableTeams'
+  }
+}
+
+async function openTeamCard(team: { teamId: string; isHistorical?: boolean }) {
+  const historical = Boolean(team.isHistorical) || listScope.value === 'history'
+  if (historical && listScope.value !== 'history') {
+    listScope.value = 'history'
+    await ensureHistoryLoaded()
+  }
+  await teamStore.selectTeam(team.teamId)
+  activeTab.value = 'overview'
+  await refreshTabData('overview')
+  if (historical) {
+    await teamStore.loadMembers(team.teamId, { includeHistory: true }).catch(() => undefined)
   }
 }
 
@@ -350,7 +463,13 @@ onMounted(bootstrap)
 
 function setTab(tab: TeamTab) {
   activeTab.value = tab
-  router.replace({ query: tab === availableTabs.value[0] ? {} : { tab } })
+  router.replace({
+    query: {
+      ...route.query,
+      scope: listScope.value,
+      tab: tab === availableTabs.value[0] ? undefined : tab,
+    },
+  })
 }
 
 async function loadInviteCandidateList(page = inviteCandidatePage.pageNum) {
@@ -538,15 +657,13 @@ async function refreshTabData(tab: TeamTab) {
     await teamStore.loadMyJoinApplications()
     return
   }
-  if (tab === 'create' && canInheritTeam.value) {
-    await teamStore.loadInheritableTeams().catch(() => undefined)
-    return
-  }
   if (!teamId.value) return
   if (tab === 'overview' || tab === 'profile') {
     await teamStore.loadTeamDetail(teamId.value)
   }
-  if (tab === 'members') await teamStore.loadMembers(teamId.value)
+  if (tab === 'members') {
+    await teamStore.loadMembers(teamId.value, { includeHistory: viewingHistory.value })
+  }
   if (tab === 'invitations') {
     await loadInviteCandidateList()
   }
@@ -575,6 +692,10 @@ async function handleLogoUpload(event: Event) {
 }
 
 async function submitCreateTeam() {
+  if (!createForm.divisionId) {
+    ElMessage.warning('请选择要创建球队的赛事 Division')
+    return
+  }
   if (!createForm.teamName.trim()) {
     ElMessage.warning('请输入球队名称')
     return
@@ -585,6 +706,7 @@ async function submitCreateTeam() {
   }
   try {
     await teamStore.createTeamAction({
+      divisionId: createForm.divisionId,
       teamName: createForm.teamName.trim(),
       shortName: createForm.shortName.trim(),
       description: createForm.description.trim() || undefined,
@@ -592,7 +714,18 @@ async function submitCreateTeam() {
       logoFileId: createForm.logoFileId || undefined,
     })
     ElMessage.success('球队创建成功，等待审核')
-    await bootstrap()
+    createForm.divisionId = ''
+    createForm.teamName = ''
+    createForm.shortName = ''
+    createForm.description = ''
+    createForm.logoFileId = ''
+    createForm.logoPreviewUrl = ''
+    listScope.value = 'current'
+    await teamStore.loadQualification()
+    await teamStore.loadCurrentTeams()
+    if (teamStore.myTeamSummary?.teamId) {
+      await teamStore.selectTeam(teamStore.myTeamSummary.teamId)
+    }
     setTab('overview')
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '创建失败')
@@ -924,17 +1057,6 @@ async function abandonRegistrationDraft(item: TeamRegistrationItemDto) {
   }
 }
 
-async function inheritTeam(teamIdToBind: string) {
-  try {
-    await teamStore.inheritTeamAction(teamIdToBind)
-    ElMessage.success('历史球队继承成功')
-    await bootstrap()
-    setTab('overview')
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '继承失败')
-  }
-}
-
 async function openRegistrationFromQuery() {
   const registrationId = route.query.registrationId
   if (typeof registrationId !== 'string' || !registrationId) return
@@ -1038,13 +1160,13 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
       :description="bannerDescription"
       :status-text="bannerStatusText"
       :status-type="bannerStatusType"
-      :logo-url="hasTeam ? displayTeamLogoUrl : undefined"
-      :logo-short-name="hasTeam ? displayTeamShortName : undefined"
-      :logo-team-name="hasTeam ? displayTeamName : undefined"
+      :logo-url="hasSelectedTeam ? displayTeamLogoUrl : undefined"
+      :logo-short-name="hasSelectedTeam ? displayTeamShortName : undefined"
+      :logo-team-name="hasSelectedTeam ? displayTeamName : undefined"
     />
 
     <CaptainGrantPanel
-      v-if="showCaptainGrantPanel"
+      v-if="showCaptainGrantPanel && listScope === 'current'"
       :qualification="captainQual"
       :loading="teamStore.qualificationLoading"
     />
@@ -1053,7 +1175,97 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
     <p v-else-if="pageLoading" class="team-page-loading">加载中…</p>
 
     <template v-else>
-      <nav class="team-tabs" aria-label="球队功能">
+      <nav class="team-tabs" aria-label="当前与历史球队">
+        <button
+          type="button"
+          class="team-tabs__item"
+          :class="{ 'team-tabs__item--active': listScope === 'current' }"
+          @click="setListScope('current')"
+        >
+          当前球队
+        </button>
+        <button
+          type="button"
+          class="team-tabs__item"
+          :class="{ 'team-tabs__item--active': listScope === 'history' }"
+          @click="setListScope('history')"
+        >
+          历史球队
+        </button>
+      </nav>
+
+      <AccountPanel v-if="listScope === 'current'" title="当前参赛球队">
+        <div v-if="teamStore.currentLoading" class="team-page-loading">加载中…</div>
+        <div v-else-if="currentTeams.length" class="team-card-list">
+          <article
+            v-for="team in currentTeams"
+            :key="team.teamId"
+            class="team-card"
+            :class="{ 'team-card--active': team.teamId === teamId }"
+          >
+            <div>
+              <p><strong>{{ team.teamName }}</strong>
+                <span v-if="team.shortName"> · {{ team.shortName }}</span>
+              </p>
+              <p>{{ formatEventContext(team) }}</p>
+              <p>
+                我的身份：{{ roleLabel(team.myRole, team.isCaptain) }}
+                · {{ team.displayStatusText || '当前球队' }}
+              </p>
+            </div>
+            <div class="team-manage-actions">
+              <button type="button" class="account-btn-secondary" @click="openTeamCard(team)">
+                查看球队
+              </button>
+              <router-link
+                v-if="team.divisionId"
+                class="account-btn-primary"
+                :to="{ path: '/account/events' }"
+              >
+                进入我的赛事
+              </router-link>
+            </div>
+          </article>
+        </div>
+        <AccountEmptyState
+          v-else
+          message="当前暂无参赛球队"
+          subtitle="获得赛事队长权限后可创建本届球队，也可以接受队长邀请或申请加入当前赛事球队。"
+        />
+      </AccountPanel>
+
+      <AccountPanel v-else title="历史球队">
+        <div v-if="teamStore.historyLoading" class="team-page-loading">加载中…</div>
+        <div v-else-if="historyTeams.length" class="team-card-list">
+          <article
+            v-for="team in historyTeams"
+            :key="team.teamId"
+            class="team-card"
+            :class="{ 'team-card--active': team.teamId === teamId }"
+          >
+            <div>
+              <p><strong>{{ team.teamName }}</strong>
+                <span v-if="team.shortName"> · {{ team.shortName }}</span>
+              </p>
+              <p>{{ formatEventContext(team) }}</p>
+              <p>
+                我的身份：{{ roleLabel(team.myRole, team.isCaptain) }}
+                · {{ team.displayStatusText || '历史球队' }}
+              </p>
+            </div>
+            <button type="button" class="account-btn-secondary" @click="openTeamCard(team)">
+              查看详情
+            </button>
+          </article>
+        </div>
+        <AccountEmptyState
+          v-else
+          message="暂无历史球队"
+          subtitle="赛事结束或你退出球队后，相关球队记录会保留在这里。"
+        />
+      </AccountPanel>
+
+      <nav v-if="availableTabs.length" class="team-tabs" aria-label="球队功能">
         <button
           v-for="tab in availableTabs"
           :key="tab"
@@ -1072,6 +1284,7 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             <article v-for="item in teamStore.myInvitations" :key="item.invitationId" class="team-card">
               <div>
                 <p><strong>球队</strong> {{ item.teamName }}</p>
+                <p><strong>赛事</strong> {{ formatEventContext(item) }}</p>
                 <p><strong>说明</strong> {{ item.invitationMessage || '邀请加入球队' }}</p>
                 <p><strong>过期时间</strong> {{ formatDateTime(item.expireTime) }}</p>
                 <AccountStatusBadge :text="item.invitationStatusText || '待响应'" type="warning" />
@@ -1108,7 +1321,10 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
               </thead>
               <tbody>
                 <tr v-for="item in teamStore.myJoinApplications" :key="item.applicationId">
-                  <td>{{ item.teamName }}</td>
+                  <td>
+                    <div>{{ item.teamName }}</div>
+                    <div class="team-tip">{{ formatEventContext(item) }}</div>
+                  </td>
                   <td>{{ item.applicationStatusText }}</td>
                   <td>{{ formatDateTime(item.createTime) }}</td>
                   <td>
@@ -1130,31 +1346,52 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
       </template>
 
       <template v-else-if="activeTab === 'create'">
-        <AccountPanel v-if="canInheritTeam && teamStore.inheritableTeams.length" title="继承历史球队">
-          <p class="team-tip">你有可继承的历史球队，可将当前队长权限绑定到历史球队继续管理。</p>
-          <div class="team-card-list">
-            <article v-for="team in teamStore.inheritableTeams" :key="team.teamId" class="team-card">
+        <AccountPanel title="可创建球队的赛事">
+          <p v-if="!allGrants.length" class="team-tip">
+            当前暂无可用于创建球队的赛事队长权限。队长权限由管理员线下缴费后开通。
+          </p>
+          <div v-else class="team-card-list">
+            <article
+              v-for="grant in allGrants"
+              :key="grant.divisionId || grant.qualificationNo"
+              class="team-card"
+            >
               <div>
-                <p><strong>{{ team.teamName }}</strong></p>
-                <p>成员 {{ team.currentMemberCount ?? 0 }} 人 · {{ team.auditStatusText || '审核状态未知' }}</p>
-                <p v-if="team.cannotInheritReason" class="team-tip">{{ team.cannotInheritReason }}</p>
+                <p><strong>{{ grant.seriesName || grant.seasonName || '赛事' }}</strong>
+                  <span v-if="grant.seasonName && grant.seriesName"> · {{ grant.seasonName }}</span>
+                </p>
+                <p>
+                  {{ [grant.divisionName, grant.platformCode, grant.gameMode].filter(Boolean).join(' · ') || 'Division' }}
+                </p>
+                <p>
+                  队长权限：{{ grant.canCreateTeam ? '有效' : (grant.teamId ? '已创建球队' : (grant.runtimeValid ? '有效' : '已过期/无效')) }}
+                </p>
               </div>
               <button
+                v-if="grant.canCreateTeam && grant.divisionId"
                 type="button"
                 class="account-btn-primary"
-                :disabled="team.canInherit === false || teamStore.actionLoading"
-                @click="inheritTeam(team.teamId)"
+                @click="createForm.divisionId = grant.divisionId || ''"
               >
-                继承球队
+                选择并创建
               </button>
+              <button
+                v-else-if="grant.teamId"
+                type="button"
+                class="account-btn-secondary"
+                @click="openTeamCard({ teamId: grant.teamId })"
+              >
+                查看球队
+              </button>
+              <AccountStatusBadge v-else text="不可创建" type="default" />
             </article>
           </div>
         </AccountPanel>
 
         <AccountPanel title="创建球队">
-          <p v-if="canCreateTeam" class="team-tip">你已开通队长权限，可以创建新的球队本体。</p>
+          <p v-if="canCreateTeam" class="team-tip">请基于上方已选赛事权限创建本届球队，divisionId 来自队长授权。</p>
           <p v-else class="team-tip">
-            当前暂无有效队长权限，暂不能创建球队。队长权限由平台根据赛事缴费结果后台开通。
+            当前暂无可用于创建球队的赛事队长权限。队长权限由管理员线下缴费后开通。
           </p>
           <div class="team-create-logo">
             <AccountTeamLogo
@@ -1169,6 +1406,19 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             </label>
           </div>
           <div class="team-form-grid">
+            <label class="team-form-full">
+              所属赛事
+              <select v-model="createForm.divisionId" required>
+                <option value="" disabled>请选择 Division</option>
+                <option
+                  v-for="grant in creatableGrants"
+                  :key="grant.divisionId || grant.qualificationNo"
+                  :value="grant.divisionId"
+                >
+                  {{ [grant.seriesName || grant.seasonName, grant.platformCode, grant.gameMode].filter(Boolean).join(' · ') }}
+                </option>
+              </select>
+            </label>
             <label>球队名称<input v-model="createForm.teamName" type="text" maxlength="32" required /></label>
             <label>球队简称<input v-model="createForm.shortName" type="text" maxlength="16" required /></label>
             <label>
@@ -1183,8 +1433,8 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
           <button
             type="button"
             class="account-btn-primary"
-            :disabled="teamStore.actionLoading || !canCreateTeam"
-            :title="canCreateTeam ? undefined : '当前暂无有效队长权限，暂不能创建球队'"
+            :disabled="teamStore.actionLoading || !canCreateTeam || !createForm.divisionId"
+            :title="canCreateTeam ? undefined : '当前暂无可创建球队的赛事权限'"
             @click="submitCreateTeam"
           >
             创建球队
@@ -1231,16 +1481,18 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
           <dl v-if="teamDetail" class="account-info-list">
             <div class="account-field-row"><dt>球队编号</dt><dd>{{ teamDetail.teamNo || '-' }}</dd></div>
             <div class="account-field-row"><dt>球队名称</dt><dd>{{ teamDetail.teamName }}</dd></div>
+            <div class="account-field-row"><dt>赛事</dt><dd>{{ formatEventContext(teamDetail) }}</dd></div>
+            <div class="account-field-row"><dt>状态</dt><dd>{{ teamDetail.displayStatusText || (viewingHistory ? '历史球队' : '当前球队') }}</dd></div>
             <div v-if="canManageCurrentTeam" class="account-field-row"><dt>认证状态</dt><dd>{{ teamAuditStatusText }}</dd></div>
             <div class="account-field-row"><dt>简称</dt><dd>{{ teamDetail.shortName || '-' }}</dd></div>
             <div class="account-field-row"><dt>地区</dt><dd>{{ teamDetail.regionName || '-' }}</dd></div>
             <div class="account-field-row"><dt>成员</dt><dd>{{ teamDetail.currentMemberCount ?? 0 }} 人</dd></div>
-            <div class="account-field-row"><dt>我的角色</dt><dd>{{ teamDetail.myRole || (canManageCurrentTeam || isCaptainMember ? '队长' : '队员') }}</dd></div>
+            <div class="account-field-row"><dt>我的身份</dt><dd>{{ roleLabel(teamDetail.myRole, teamDetail.isCaptain) }}</dd></div>
             <div class="account-field-row"><dt>创建时间</dt><dd>{{ formatDateTime(teamDetail.createTime) }}</dd></div>
             <div class="account-field-row"><dt>介绍</dt><dd>{{ teamDetail.description || '暂无' }}</dd></div>
           </dl>
           <AccountEmptyState v-else message="球队信息加载中" />
-          <div v-if="!canManageCurrentTeam" class="team-manage-actions">
+          <div v-if="!canManageCurrentTeam && !viewingHistory" class="team-manage-actions">
             <button type="button" class="account-btn-secondary" @click="handleLeaveTeam">退出球队</button>
           </div>
         </AccountPanel>
@@ -1991,6 +2243,11 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.team-card--active {
+  border-color: #c41e3a;
+  box-shadow: 0 0 0 1px rgba(196, 30, 58, 0.25);
 }
 
 .team-card {

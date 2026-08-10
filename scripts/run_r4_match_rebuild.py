@@ -6,7 +6,7 @@ from pathlib import Path
 import pymysql
 
 SQL_FILE = Path(__file__).resolve().parents[1] / "docs/sql/cnpa-v4-round4-match-rebuild.sql"
-CONN = dict(host="192.168.31.47", user="root", password="123456", database="basketball", charset="utf8mb4")
+CONN = dict(host="192.168.31.48", user="root", password="123456", database="basketball", charset="utf8mb4")
 
 
 def strip_comments(text: str) -> str:

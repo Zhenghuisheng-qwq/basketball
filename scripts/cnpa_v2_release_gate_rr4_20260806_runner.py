@@ -121,7 +121,7 @@ def admin_login(base: str) -> str:
 def db_query(sql: str) -> list:
     import pymysql
     conn = pymysql.connect(
-        host=env("CNPA_DB_HOST", "192.168.31.47"),
+        host=env("CNPA_DB_HOST", "192.168.31.48"),
         port=int(env("CNPA_DB_PORT", "3306")),
         user=env("CNPA_DB_USER", "root"),
         password=env("CNPA_DB_PASSWORD", "123456"),
@@ -259,7 +259,7 @@ def check_env(admin_base: str, web_base: str, member_pwd: str) -> str:
         checks.append({"name": "mysql", "ok": False, "error": str(exc)})
     try:
         import redis
-        r = redis.Redis(host=env("CNPA_REDIS_HOST", "192.168.31.47"), port=int(env("CNPA_REDIS_PORT", "6379")),
+        r = redis.Redis(host=env("CNPA_REDIS_HOST", "192.168.31.48"), port=int(env("CNPA_REDIS_PORT", "6379")),
                         password=env("CNPA_REDIS_PASSWORD", "Q86KDiDoZULykMfz"), decode_responses=True)
         pong = r.ping()
         rec("env_redis", "PASS" if pong else "FAIL", f"PING={pong}")

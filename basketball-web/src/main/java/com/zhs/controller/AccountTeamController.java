@@ -32,11 +32,12 @@ public class AccountTeamController {
     @Resource
     private IAccountTeamService accountTeamService;
 
-    @ApiOperation("我的球队列表")
+    @ApiOperation("我的球队列表（scope=current|history，默认 current）")
     @GetMapping("/mine")
     public R<IPage<TeamSummaryResp>> pageMine(@RequestParam(required = false) Integer currentPage,
-                                              @RequestParam(required = false) Integer pageSize) {
-        return R.ok(accountTeamService.pageMine(currentPage, pageSize));
+                                              @RequestParam(required = false) Integer pageSize,
+                                              @RequestParam(required = false) String scope) {
+        return R.ok(accountTeamService.pageMine(currentPage, pageSize, scope));
     }
 
     @ApiOperation("可加入球队分页")

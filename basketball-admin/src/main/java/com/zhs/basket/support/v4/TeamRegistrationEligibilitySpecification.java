@@ -53,8 +53,15 @@ public class TeamRegistrationEligibilitySpecification {
         if (!Objects.equals(registration.getCaptainPlayerId(), grant.getPlayerId())) {
             throw new ServiceException("报名队长与授权球员不一致");
         }
-        grantRuntimeSupport.assertTeamBindingForRegistration(grant, registration.getTeamId());
-        participationSupport.requireValidTeam(registration.getTeamId());
+        com.zhs.basket.domain.BasketTeam team = participationSupport.requireValidTeam(registration.getTeamId());
+        if (team.getDivisionId() == null) {
+            throw new ServiceException("历史球队不能直接报名新赛事，请在当前赛事重新创建球队");
+        }
+        if (!Objects.equals(team.getDivisionId(), division.getId())
+                || !Objects.equals(team.getDivisionId(), registration.getDivisionId())) {
+            throw new ServiceException("球队所属赛事与报名 Division 不一致");
+        }
+        grantRuntimeSupport.assertTeamBindingForRegistration(grant, team);
 
         BasketRegistration existingTeamReg = registrationMapper.selectByDivisionTeam(division.getId(), registration.getTeamId());
         if (existingTeamReg != null

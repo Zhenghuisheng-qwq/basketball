@@ -24,10 +24,22 @@ import com.zhs.enums.TeamPublicStatusEnum;
 import com.zhs.enums.TeamRosterTypeEnum;
 import com.zhs.enums.TeamStatusEnum;
 import com.zhs.exception.ServiceException;
+import com.zhs.dao.v4.BasketDivisionDao;
+import com.zhs.dao.v4.BasketEventTeamDao;
 import com.zhs.dao.v4.BasketPersonalDrawTeamDao;
+import com.zhs.dao.v4.BasketRegistrationDao;
+import com.zhs.dao.v4.BasketSeasonDao;
+import com.zhs.dao.v4.BasketSeriesDao;
+import com.zhs.enums.v4.DivisionStatusEnum;
 import com.zhs.enums.v4.FormationStatusEnum;
+import com.zhs.enums.v4.RegistrationStatusEnum;
 import com.zhs.model.v4.BasketCaptainGrant;
+import com.zhs.model.v4.BasketDivision;
+import com.zhs.model.v4.BasketEventTeam;
 import com.zhs.model.v4.BasketPersonalDrawTeam;
+import com.zhs.model.v4.BasketRegistration;
+import com.zhs.model.v4.BasketSeason;
+import com.zhs.model.v4.BasketSeries;
 import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketPlayerPlatformAccount;
 import com.zhs.model.BasketMemberProfile;
@@ -46,6 +58,7 @@ import com.zhs.support.CaptainGrantSupport;
 import com.zhs.support.GameTerminalSupport;
 import com.zhs.support.PlatformTeamMembershipSupport;
 import com.zhs.support.TeamMembershipSupport;
+import com.zhs.support.TeamWritableSupport;
 import com.zhs.service.IAccountFileService;
 import com.zhs.service.IAccountTeamService;
 import com.zhs.service.ICaptainPermissionService;
@@ -92,6 +105,8 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     @Resource
     private CaptainGrantSupport captainGrantSupport;
     @Resource
+    private TeamWritableSupport teamWritableSupport;
+    @Resource
     private BasketPlayerProfileDao playerProfileDao;
     @Resource
     private BasketMemberProfileDao memberProfileDao;
@@ -107,30 +122,72 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     private AccountTeamProperties teamProperties;
     @Resource
     private BasketPersonalDrawTeamDao personalDrawTeamDao;
+    @Resource
+    private BasketDivisionDao divisionDao;
+    @Resource
+    private BasketSeasonDao seasonDao;
+    @Resource
+    private BasketSeriesDao seriesDao;
+    @Resource
+    private BasketRegistrationDao registrationDao;
+    @Resource
+    private BasketEventTeamDao eventTeamDao;
 
     @Override
     public IPage<TeamSummaryResp> pageMine(Integer currentPage, Integer pageSize) {
+        return pageMine(currentPage, pageSize, "current");
+    }
+
+    @Override
+    public IPage<TeamSummaryResp> pageMine(Integer currentPage, Integer pageSize, String scope) {
         Long memberId = UserContext.getRequiredUserId();
-        List<BasketTeamMember> memberships = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
+        boolean history = scope != null && "history".equalsIgnoreCase(scope.trim());
+        // scope 为空或非法时默认 current，兼容旧调用
+
+        List<BasketTeamMember> allMemberships = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
                 .eq(BasketTeamMember::getMemberId, memberId)
-                .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
-                .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
                 .eq(BasketTeamMember::getIsDelete, NOT_DELETED)
                 .orderByDesc(BasketTeamMember::getJoinTime)
                 .orderByDesc(BasketTeamMember::getId));
-        if (CollectionUtils.isEmpty(memberships)) {
+        if (CollectionUtils.isEmpty(allMemberships)) {
             return emptyPage(currentPage, pageSize);
         }
 
-        Map<Long, BasketTeamMember> membershipMap = memberships.stream()
-                .collect(Collectors.toMap(BasketTeamMember::getTeamId, m -> m, (a, b) -> a));
-        List<BasketTeam> teams = loadTeams(membershipMap.keySet());
+        // 每个 team_id 只取最新一条成员记录，避免重复卡片
+        Map<Long, BasketTeamMember> latestByTeam = new HashMap<>();
+        for (BasketTeamMember membership : allMemberships) {
+            latestByTeam.putIfAbsent(membership.getTeamId(), membership);
+        }
+        List<BasketTeam> teams = loadTeams(latestByTeam.keySet());
+        Map<Long, BasketTeam> teamMap = teams.stream()
+                .collect(Collectors.toMap(BasketTeam::getId, t -> t, (a, b) -> a));
+        EventContextMaps ctx = loadEventContextMaps(teams);
         Map<Long, String> logoUrlMap = loadLogoUrlMap(teams);
+        Map<Long, String> registrationStatusMap = loadRegistrationStatusMap(teams);
 
         List<TeamSummaryResp> items = new ArrayList<>();
-        for (BasketTeam team : teams) {
-            BasketTeamMember membership = membershipMap.get(team.getId());
-            items.add(toSummaryResp(team, membership, logoUrlMap.get(team.getLogoFileId())));
+        for (Map.Entry<Long, BasketTeamMember> entry : latestByTeam.entrySet()) {
+            BasketTeam team = teamMap.get(entry.getKey());
+            if (team == null) {
+                continue;
+            }
+            boolean isCurrentTeam = isCurrentTeamForUser(team, entry.getValue(), ctx.divisionMap);
+            if (history == isCurrentTeam) {
+                continue;
+            }
+            TeamSummaryResp resp = toSummaryResp(team, entry.getValue(), logoUrlMap.get(team.getLogoFileId()));
+            enrichTeamSummary(resp, team, entry.getValue(), memberId, ctx, registrationStatusMap.get(team.getId()), !isCurrentTeam);
+            items.add(resp);
+        }
+        if (history) {
+            items.sort((a, b) -> {
+                Date at = a.getCreateTime();
+                Date bt = b.getCreateTime();
+                if (at == null && bt == null) return 0;
+                if (at == null) return 1;
+                if (bt == null) return -1;
+                return bt.compareTo(at);
+            });
         }
         return toPage(items, currentPage, pageSize);
     }
@@ -141,11 +198,18 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         long page = normalizePage(currentPage);
         long size = normalizeSize(pageSize);
 
-        BasketTeamMember activeMembership = teamMembershipSupport.findActiveMembership(memberId);
-        BasketTeam currentTeam = activeMembership == null ? null : teamDao.selectById(activeMembership.getTeamId());
+        List<BasketTeamMember> activeMemberships = teamMembershipSupport.listActiveMemberships(memberId);
+        Set<Long> joinedTeamIds = activeMemberships.stream()
+                .map(BasketTeamMember::getTeamId)
+                .collect(Collectors.toSet());
+        Set<Long> joinedDivisionIds = activeMemberships.stream()
+                .map(BasketTeamMember::getDivisionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        BasketTeamMember firstMembership = CollectionUtils.isEmpty(activeMemberships) ? null : activeMemberships.get(0);
+        BasketTeam currentTeam = firstMembership == null ? null : teamDao.selectById(firstMembership.getTeamId());
         Integer pendingApplicationStatus = teamMembershipSupport.findPendingApplicationStatus(memberId);
-        boolean hasActiveTeam = activeMembership != null;
-        String pageDisabledReason = resolvePageDisabledReason(hasActiveTeam);
+        boolean hasActiveTeam = !CollectionUtils.isEmpty(activeMemberships);
 
         captainPermissionService.requireCertifiedPlayer(memberId);
 
@@ -154,6 +218,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
                 .eq(BasketTeam::getTeamStatus, TeamStatusEnum.ACTIVE.getCode())
                 .eq(BasketTeam::getAuditStatus, TeamAuditStatusEnum.APPROVED.getCode())
                 .eq(BasketTeam::getPublicStatus, TeamPublicStatusEnum.PUBLIC.getCode())
+                .isNotNull(BasketTeam::getDivisionId)
                 .orderByDesc(BasketTeam::getCreateTime)
                 .orderByDesc(BasketTeam::getId);
         if (StringUtils.hasText(keyword)) {
@@ -164,15 +229,24 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         List<BasketTeam> allTeams = teamDao.selectList(wrapper);
         Set<Long> pendingTeamIds = loadPendingApplicationTeamIds(memberId);
         List<BasketTeam> joinable = allTeams.stream()
-                .filter(team -> activeMembership == null || !activeMembership.getTeamId().equals(team.getId()))
+                .filter(team -> !joinedTeamIds.contains(team.getId()))
                 .collect(Collectors.toList());
 
-        Map<Long, String> logoUrlMap = loadLogoUrlMap(joinable);
-        Map<Long, String> captainNameMap = loadCaptainNameMap(joinable);
-        List<TeamSummaryResp> items = joinable.stream()
-                .map(team -> toJoinableSummaryResp(team, logoUrlMap.get(team.getLogoFileId()),
-                        captainNameMap.get(team.getCaptainMemberId()),
-                        hasActiveTeam, pendingApplicationStatus, pendingTeamIds))
+        EventContextMaps ctx = loadEventContextMaps(joinable);
+        List<BasketTeam> openJoinable = joinable.stream()
+                .filter(team -> isDivisionOpenForCurrent(team.getDivisionId(), ctx.divisionMap))
+                .collect(Collectors.toList());
+        Map<Long, String> logoUrlMap = loadLogoUrlMap(openJoinable);
+        Map<Long, String> captainNameMap = loadCaptainNameMap(openJoinable);
+        List<TeamSummaryResp> items = openJoinable.stream()
+                .map(team -> {
+                    TeamSummaryResp resp = toJoinableSummaryResp(team, logoUrlMap.get(team.getLogoFileId()),
+                            captainNameMap.get(team.getCaptainMemberId()),
+                            joinedDivisionIds.contains(team.getDivisionId()),
+                            pendingApplicationStatus, pendingTeamIds);
+                    fillEventContext(resp, team, ctx);
+                    return resp;
+                })
                 .collect(Collectors.toList());
 
         JoinableTeamPageResp respPage = toJoinablePage(items, page, size);
@@ -182,10 +256,10 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         respPage.setCurrentTeamId(currentTeam == null ? null : toStringId(currentTeam.getId()));
         respPage.setCurrentTeamName(currentTeam == null ? null : currentTeam.getTeamName());
         respPage.setPendingApplicationStatus(pendingApplicationStatus);
-        respPage.setCanApply(pageDisabledReason == null);
-        respPage.setDisabledReason(pageDisabledReason);
+        respPage.setCanApply(true);
+        respPage.setDisabledReason(null);
         if (items.isEmpty()) {
-            respPage.setEmptyReason(hasActiveTeam ? "?????????" : "????????????");
+            respPage.setEmptyReason("暂无可加入的赛事球队");
         }
         return respPage;
     }
@@ -211,86 +285,14 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
 
     @Override
     public List<InheritableTeamSummaryResp> listInheritableTeams() {
-        Long memberId = UserContext.getRequiredUserId();
-        BasketCaptainGrant grant = captainGrantSupport.findCurrentGrant(memberId);
-        if (grant == null) {
-            return Collections.emptyList();
-        }
-        try {
-            captainPermissionService.requireValidQualification(memberId);
-        } catch (ServiceException ex) {
-            return Collections.emptyList();
-        }
-
-        List<BasketTeam> historicalTeams = teamDao.selectList(new LambdaQueryWrapper<BasketTeam>()
-                .eq(BasketTeam::getCaptainMemberId, memberId)
-                .eq(BasketTeam::getIsDelete, NOT_DELETED)
-                .orderByDesc(BasketTeam::getCreateTime)
-                .orderByDesc(BasketTeam::getId));
-        if (CollectionUtils.isEmpty(historicalTeams)) {
-            return Collections.emptyList();
-        }
-
-        Map<Long, String> logoUrlMap = loadLogoUrlMap(historicalTeams);
-        List<InheritableTeamSummaryResp> items = new ArrayList<>();
-        for (BasketTeam team : historicalTeams) {
-            InheritableTeamSummaryResp resp = new InheritableTeamSummaryResp();
-            resp.setTeamId(toStringId(team.getId()));
-            resp.setTeamNo(team.getTeamNo());
-            resp.setTeamName(team.getTeamName());
-            resp.setShortName(team.getShortName());
-            resp.setLogoUrl(logoUrlMap.get(team.getLogoFileId()));
-            resp.setAuditStatus(team.getAuditStatus());
-            resp.setAuditStatusText(TeamAuditStatusEnum.fromCode(team.getAuditStatus()).getDescription());
-            resp.setCurrentMemberCount(team.getCurrentMemberCount());
-            String cannotInheritReason = resolveCannotInheritReason(team);
-            resp.setCanInherit(cannotInheritReason == null);
-            resp.setCannotInheritReason(cannotInheritReason);
-            items.add(resp);
-        }
-        return items;
+        // 历史球队复活已废弃：始终返回空列表，兼容旧前端
+        return Collections.emptyList();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TeamDetailResp bindGrantToTeam(String teamId) {
-        Long memberId = UserContext.getRequiredUserId();
-        BasketCaptainGrant grant = captainPermissionService.requireValidQualification(memberId);
-        if (grant.getTeamId() != null) {
-            throw new ServiceException("当前队长授权已绑定球队，请直接使用已有球队", 403);
-        }
-        Long teamPk = parseLongId(teamId, "????");
-        BasketTeam team = teamDao.selectById(teamPk);
-        if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
-            throw new ServiceException("?????");
-        }
-        String cannotInheritReason = resolveCannotInheritReason(team);
-        if (cannotInheritReason != null) {
-            throw new ServiceException(cannotInheritReason, 403);
-        }
-        if (!Objects.equals(memberId, team.getCaptainMemberId())) {
-            throw new ServiceException("???????????????", 403);
-        }
-        captainGrantSupport.bindGrantToTeam(grant, teamPk);
-        BasketTeamMember membership = loadCurrentMembership(memberId, teamPk);
-        return toDetailResp(team, membership, resolveLogoUrl(team.getLogoFileId()), true);
-    }
-
-    private String resolveCannotInheritReason(BasketTeam team) {
-        if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
-            return "??????????????";
-        }
-        TeamAuditStatusEnum auditStatus = TeamAuditStatusEnum.fromCode(team.getAuditStatus());
-        if (auditStatus == TeamAuditStatusEnum.PENDING || auditStatus == TeamAuditStatusEnum.REVIEWING) {
-            return "???????????";
-        }
-        if (auditStatus == TeamAuditStatusEnum.REJECTED) {
-            return "????????????";
-        }
-        if (auditStatus != TeamAuditStatusEnum.APPROVED) {
-            return "????????????";
-        }
-        return null;
+        throw new ServiceException("不再支持将队长授权绑定到历史球队，请在当前赛事重新创建球队", 403);
     }
 
     @Override
@@ -298,11 +300,17 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     public TeamDetailResp create(TeamCreateReq req, String clientIp) {
         validateCreateReq(req);
         Long memberId = UserContext.getRequiredUserId();
-        BasketCaptainGrant qualification = captainPermissionService.requireValidQualification(memberId);
+        Long divisionId = req.getDivisionId();
+        BasketDivision division = teamWritableSupport.requireDivisionForTeamCreate(divisionId);
         BasketPlayerProfile playerProfile = captainPermissionService.requireCertifiedPlayer(memberId);
-        teamMembershipSupport.assertEligibleToJoinTeam(memberId);
-
-        assertTeamNameUnique(req.getTeamName().trim());
+        BasketCaptainGrant grant = captainPermissionService.requireValidQualificationForDivision(
+                memberId, null, division.getId());
+        captainGrantSupport.assertGrantUnbound(grant);
+        if (!Objects.equals(grant.getDivisionId(), division.getId())) {
+            throw new ServiceException(CaptainGrantSupport.GRANT_DIVISION_MISMATCH_MESSAGE, 403);
+        }
+        teamMembershipSupport.assertEligibleToJoinTeam(memberId, division.getId());
+        assertTeamNameUnique(division.getId(), req.getTeamName().trim(), null);
 
         Date now = new Date();
         BasketTeam team = new BasketTeam();
@@ -318,6 +326,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         team.setCaptainMemberId(memberId);
         team.setCaptainPlayerId(playerProfile.getId());
         team.setContactMemberId(memberId);
+        team.setDivisionId(division.getId());
         team.setMaxMemberCount(teamProperties.getDefaultMaxMemberCount());
         team.setCurrentMemberCount(1);
         team.setTeamStatus(TeamStatusEnum.ACTIVE.getCode());
@@ -326,7 +335,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         team.setIsDelete(NOT_DELETED);
 
         if (StringUtils.hasText(req.getLogoFileId())) {
-            Long logoFileId = parseLongId(req.getLogoFileId(), "Logo ????");
+            Long logoFileId = parseLongId(req.getLogoFileId(), "Logo 文件主键");
             bindTeamLogoFile(team, logoFileId, memberId);
         }
 
@@ -337,7 +346,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         captainMember.setTeamId(team.getId());
         captainMember.setMemberId(memberId);
         captainMember.setPlayerId(playerProfile.getId());
-        teamMembershipSupport.applyActiveMemberSlot(captainMember, memberId);
+        teamMembershipSupport.applyActiveMemberSlot(captainMember, division.getId(), memberId);
         captainMember.setRoleType(TeamMemberRoleEnum.CAPTAIN.getCode());
         captainMember.setRosterType(TeamRosterTypeEnum.OFFICIAL.getCode());
         captainMember.setJoinSource(TeamJoinSourceEnum.CREATE.getCode());
@@ -347,19 +356,19 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         captainMember.setIsDelete(NOT_DELETED);
         teamMembershipSupport.insertMember(captainMember);
 
-        captainGrantSupport.bindGrantToTeam(qualification, team.getId());
+        captainGrantSupport.assertGrantTeamDivisionMatch(grant, team);
+        captainGrantSupport.bindGrantToTeam(grant, team.getId());
+        // current_team_id 仅作最近展示兼容字段，不作为成员关系事实来源
         updatePlayerCurrentTeam(playerProfile, team.getId());
-        securityLogHelper.write(memberId, EVENT_TEAM_CREATE, "????",
+        securityLogHelper.write(memberId, EVENT_TEAM_CREATE, "TEAM_CREATE",
                 null, team.getTeamName(), memberId, clientIp);
 
-        BasketTeamMember membership = captainMember;
-        return toDetailResp(team, membership, resolveLogoUrl(team.getLogoFileId()), true);
+        return toDetailResp(team, captainMember, resolveLogoUrl(team.getLogoFileId()), true);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TeamDetailResp createForPersonalFormation(Long drawTeamId, TeamCreateReq req, String clientIp) {
-        validateCreateReq(req);
         Long memberId = UserContext.getRequiredUserId();
         BasketPersonalDrawTeam drawTeam = requirePersonalDrawCaptainTeam(drawTeamId, memberId);
         if (drawTeam.getConvertedRegistrationId() != null) {
@@ -368,9 +377,15 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         if (FormationStatusEnum.CONVERTED.getCode().equals(drawTeam.getFormationStatus())) {
             throw new ServiceException("该临时队伍已转换");
         }
+        if (req != null && req.getDivisionId() == null) {
+            req.setDivisionId(drawTeam.getDivisionId());
+        }
+        validateCreateReq(req);
+        Long divisionId = req.getDivisionId();
+        BasketDivision division = teamWritableSupport.requireDivisionForTeamCreate(divisionId);
         BasketPlayerProfile playerProfile = captainPermissionService.requireCertifiedPlayer(memberId);
-        teamMembershipSupport.assertEligibleToJoinTeam(memberId);
-        assertTeamNameUnique(req.getTeamName().trim());
+        teamMembershipSupport.assertEligibleToJoinTeam(memberId, division.getId());
+        assertTeamNameUnique(division.getId(), req.getTeamName().trim(), null);
 
         Date now = new Date();
         BasketTeam team = new BasketTeam();
@@ -386,6 +401,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         team.setCaptainMemberId(memberId);
         team.setCaptainPlayerId(playerProfile.getId());
         team.setContactMemberId(memberId);
+        team.setDivisionId(division.getId());
         team.setMaxMemberCount(teamProperties.getDefaultMaxMemberCount());
         team.setCurrentMemberCount(1);
         team.setTeamStatus(TeamStatusEnum.ACTIVE.getCode());
@@ -394,7 +410,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         team.setIsDelete(NOT_DELETED);
 
         if (StringUtils.hasText(req.getLogoFileId())) {
-            Long logoFileId = parseLongId(req.getLogoFileId(), "Logo ????");
+            Long logoFileId = parseLongId(req.getLogoFileId(), "Logo 文件主键");
             bindTeamLogoFile(team, logoFileId, memberId);
         }
 
@@ -405,7 +421,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         captainMember.setTeamId(team.getId());
         captainMember.setMemberId(memberId);
         captainMember.setPlayerId(playerProfile.getId());
-        teamMembershipSupport.applyActiveMemberSlot(captainMember, memberId);
+        teamMembershipSupport.applyActiveMemberSlot(captainMember, division.getId(), memberId);
         captainMember.setRoleType(TeamMemberRoleEnum.CAPTAIN.getCode());
         captainMember.setRosterType(TeamRosterTypeEnum.OFFICIAL.getCode());
         captainMember.setJoinSource(TeamJoinSourceEnum.CREATE.getCode());
@@ -439,23 +455,29 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
 
     @Override
     public TeamDetailResp getDetail(String teamId) {
-        Long teamPk = parseLongId(teamId, "????");
+        Long teamPk = parseLongId(teamId, "球队主键");
         Long memberId = UserContext.getRequiredUserId();
         BasketTeam team = requireReadableTeam(teamPk, memberId);
-        BasketTeamMember membership = loadCurrentMembership(memberId, teamPk);
-        return toDetailResp(team, membership, resolveLogoUrl(team.getLogoFileId()),
-                membership != null && TeamMemberRoleEnum.CAPTAIN.getCode().equals(membership.getRoleType()));
+        BasketTeamMember membership = loadAnyMembership(memberId, teamPk);
+        EventContextMaps ctx = loadEventContextMaps(Collections.singletonList(team));
+        boolean isCurrent = isCurrentTeamForUser(team, membership, ctx.divisionMap);
+        boolean isCaptain = membership != null
+                && TeamMemberRoleEnum.CAPTAIN.getCode().equals(membership.getRoleType());
+        TeamDetailResp resp = toDetailResp(team, membership, resolveLogoUrl(team.getLogoFileId()), isCaptain);
+        enrichTeamDetail(resp, team, membership, memberId, ctx, loadRegistrationStatusMap(Collections.singletonList(team)).get(team.getId()), !isCurrent);
+        return resp;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TeamDetailResp update(String teamId, TeamUpdateReq req, String clientIp) {
         if (req == null) {
-            throw new ServiceException("????????");
+            throw new ServiceException("请求不能为空");
         }
-        Long teamPk = parseLongId(teamId, "????");
+        Long teamPk = parseLongId(teamId, "球队主键");
         Long memberId = UserContext.getRequiredUserId();
         BasketTeam team = captainPermissionService.requireTeamCaptain(memberId, teamPk);
+        teamWritableSupport.assertTeamWritable(team);
         String oldName = team.getTeamName();
 
         TeamAuditStatusEnum auditStatus = TeamAuditStatusEnum.fromCode(team.getAuditStatus());
@@ -470,7 +492,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
             }
         } else {
             if (StringUtils.hasText(req.getTeamName()) && !req.getTeamName().trim().equals(team.getTeamName())) {
-                assertTeamNameUnique(req.getTeamName().trim());
+                assertTeamNameUnique(team.getDivisionId(), req.getTeamName().trim(), team.getId());
                 team.setTeamName(req.getTeamName().trim());
             }
             team.setShortName(trimToNull(req.getShortName()));
@@ -500,8 +522,9 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         Long teamPk = parseLongId(teamId, "????");
         Long memberId = UserContext.getRequiredUserId();
         BasketTeam team = captainPermissionService.requireTeamCaptain(memberId, teamPk);
+        teamWritableSupport.assertTeamWritable(team);
         if (Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())) {
-            throw new ServiceException("???????????? Logo");
+            throw new ServiceException("已认证球队须通过资料变更审核修改 Logo");
         }
 
         Long fileId = parseLongId(req.getFileId(), "????");
@@ -570,58 +593,67 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     }
 
     private String resolveTeamApplyDisabledReason(BasketTeam team,
-                                                  boolean hasActiveTeam,
+                                                  boolean hasActiveInSameDivision,
                                                   Integer pendingApplicationStatus,
                                                   Set<Long> pendingTeamIds) {
-        if (hasActiveTeam) {
-            return "????????????????";
+        if (team.getDivisionId() == null) {
+            return TeamWritableSupport.LEGACY_TEAM_READONLY_MESSAGE;
+        }
+        if (hasActiveInSameDivision) {
+            return "当前账号已在该赛事加入球队，不能重复加入";
         }
         if (pendingTeamIds.contains(team.getId())) {
-            return "?????";
-        }
-        if (pendingApplicationStatus != null) {
-            return "????????????";
+            return "已提交申请，请等待审核";
         }
         if (!Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())) {
-            return "?????????????";
+            return "球队尚未通过认证审核";
         }
         if (!Objects.equals(TeamPublicStatusEnum.PUBLIC.getCode(), team.getPublicStatus())) {
-            return "???????";
+            return "球队未开放招募";
         }
         int maxMembers = team.getMaxMemberCount() != null ? team.getMaxMemberCount() : 8;
         int currentMembers = team.getCurrentMemberCount() != null ? team.getCurrentMemberCount() : 0;
         if (currentMembers >= maxMembers) {
-            return "????";
+            return "球队人数已满";
         }
         if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
-            return "???????";
+            return "球队当前不可加入";
         }
         return null;
     }
 
-    private void assertTeamNameUnique(String teamName) {
-        Long count = teamDao.selectCount(new LambdaQueryWrapper<BasketTeam>()
+    private void assertTeamNameUnique(Long divisionId, String teamName, Long excludeTeamId) {
+        if (divisionId == null) {
+            throw new ServiceException(TeamWritableSupport.LEGACY_TEAM_READONLY_MESSAGE, 403);
+        }
+        LambdaQueryWrapper<BasketTeam> wrapper = new LambdaQueryWrapper<BasketTeam>()
+                .eq(BasketTeam::getDivisionId, divisionId)
                 .eq(BasketTeam::getTeamName, teamName)
-                .eq(BasketTeam::getIsDelete, NOT_DELETED));
+                .eq(BasketTeam::getIsDelete, NOT_DELETED);
+        if (excludeTeamId != null) {
+            wrapper.ne(BasketTeam::getId, excludeTeamId);
+        }
+        Long count = teamDao.selectCount(wrapper);
         if (count != null && count > 0) {
-            throw new ServiceException("???????");
+            throw new ServiceException("该赛事下球队名称已存在");
         }
     }
 
     private BasketTeam requireReadableTeam(Long teamId, Long memberId) {
         BasketTeam team = teamDao.selectById(teamId);
         if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
-            throw new ServiceException("?????");
+            throw new ServiceException("球队不存在");
         }
-        BasketTeamMember membership = loadCurrentMembership(memberId, teamId);
+        BasketTeamMember membership = loadAnyMembership(memberId, teamId);
         if (membership != null) {
             return team;
         }
         if (Objects.equals(TeamPublicStatusEnum.PUBLIC.getCode(), team.getPublicStatus())
-                && Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
+                && Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())
+                && team.getDivisionId() != null) {
             return team;
         }
-        throw new ServiceException("???????", 403);
+        throw new ServiceException("无权查看该球队", 403);
     }
 
     private BasketTeamMember loadCurrentMembership(Long memberId, Long teamId) {
@@ -631,6 +663,16 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
                 .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
                 .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
                 .eq(BasketTeamMember::getIsDelete, NOT_DELETED)
+                .last("limit 1"));
+    }
+
+    private BasketTeamMember loadAnyMembership(Long memberId, Long teamId) {
+        return teamMemberDao.selectOne(new LambdaQueryWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getTeamId, teamId)
+                .eq(BasketTeamMember::getMemberId, memberId)
+                .eq(BasketTeamMember::getIsDelete, NOT_DELETED)
+                .orderByDesc(BasketTeamMember::getJoinTime)
+                .orderByDesc(BasketTeamMember::getId)
                 .last("limit 1"));
     }
 
@@ -709,6 +751,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     private TeamSummaryResp toSummaryResp(BasketTeam team, BasketTeamMember membership, String logoUrl) {
         TeamSummaryResp resp = new TeamSummaryResp();
         resp.setTeamId(toStringId(team.getId()));
+        resp.setDivisionId(team.getDivisionId() == null ? null : toStringId(team.getDivisionId()));
         resp.setTeamNo(team.getTeamNo());
         resp.setTeamName(team.getTeamName());
         resp.setShortName(team.getShortName());
@@ -725,6 +768,8 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         if (membership != null) {
             resp.setMyRole(membership.getRoleType());
             resp.setIsCaptain(TeamMemberRoleEnum.CAPTAIN.getCode().equals(membership.getRoleType()));
+            resp.setMembershipStatus(membership.getMembershipStatus());
+            resp.setLeaveReason(membership.getLeaveReason());
         } else {
             resp.setIsCaptain(false);
         }
@@ -734,6 +779,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     private TeamDetailResp toDetailResp(BasketTeam team, BasketTeamMember membership, String logoUrl, boolean isCaptain) {
         TeamDetailResp resp = new TeamDetailResp();
         resp.setTeamId(toStringId(team.getId()));
+        resp.setDivisionId(team.getDivisionId() == null ? null : toStringId(team.getDivisionId()));
         resp.setTeamNo(team.getTeamNo());
         resp.setTeamName(team.getTeamName());
         resp.setShortName(team.getShortName());
@@ -752,7 +798,263 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         resp.setCreateTime(team.getCreateTime());
         resp.setIsCaptain(isCaptain);
         resp.setMyRole(membership == null ? null : membership.getRoleType());
+        if (membership != null) {
+            resp.setMembershipStatus(membership.getMembershipStatus());
+            resp.setLeaveReason(membership.getLeaveReason());
+        }
         return resp;
+    }
+
+    private void enrichTeamSummary(TeamSummaryResp resp,
+                                   BasketTeam team,
+                                   BasketTeamMember membership,
+                                   Long memberId,
+                                   EventContextMaps ctx,
+                                   String registrationStatus,
+                                   boolean historical) {
+        fillEventContext(resp, team, ctx);
+        resp.setRegistrationStatus(registrationStatus);
+        resp.setIsHistorical(historical);
+        resp.setCanManage(!historical && captainPermissionService.canManageTeam(memberId, team.getId()));
+        resp.setDisplayStatusText(resolveDisplayStatusText(team, membership, ctx.divisionMap.get(team.getDivisionId()),
+                registrationStatus, historical, ctx.eventTeamSourceIds.contains(team.getId())));
+    }
+
+    private void enrichTeamDetail(TeamDetailResp resp,
+                                  BasketTeam team,
+                                  BasketTeamMember membership,
+                                  Long memberId,
+                                  EventContextMaps ctx,
+                                  String registrationStatus,
+                                  boolean historical) {
+        BasketDivision division = team.getDivisionId() == null ? null : ctx.divisionMap.get(team.getDivisionId());
+        if (division != null) {
+            resp.setDivisionName(division.getDivisionName());
+            resp.setDivisionStatus(division.getDivisionStatus());
+            resp.setDivisionPlatformCode(division.getPlatformCode());
+            resp.setGameMode(division.getGameMode());
+            BasketSeason season = division.getSeasonId() == null ? null : ctx.seasonMap.get(division.getSeasonId());
+            if (season != null) {
+                resp.setSeasonId(toStringId(season.getId()));
+                resp.setSeasonName(firstNonBlank(season.getDisplayTitle(), season.getSeasonName()));
+                BasketSeries series = season.getSeriesId() == null ? null : ctx.seriesMap.get(season.getSeriesId());
+                if (series != null) {
+                    resp.setSeriesId(toStringId(series.getId()));
+                    resp.setSeriesName(series.getSeriesName());
+                }
+            }
+        } else if (team.getDivisionId() != null) {
+            resp.setDivisionName("赛事信息不可用");
+        } else {
+            resp.setDivisionName("历史球队");
+            resp.setSeriesName("赛事信息暂无");
+        }
+        resp.setRegistrationStatus(registrationStatus);
+        resp.setIsHistorical(historical);
+        resp.setCanManage(!historical && captainPermissionService.canManageTeam(memberId, team.getId()));
+        resp.setDisplayStatusText(resolveDisplayStatusText(team, membership, division,
+                registrationStatus, historical, ctx.eventTeamSourceIds.contains(team.getId())));
+    }
+
+    private void fillEventContext(TeamSummaryResp resp, BasketTeam team, EventContextMaps ctx) {
+        BasketDivision division = team.getDivisionId() == null ? null : ctx.divisionMap.get(team.getDivisionId());
+        if (division != null) {
+            resp.setDivisionName(division.getDivisionName());
+            resp.setDivisionStatus(division.getDivisionStatus());
+            resp.setDivisionPlatformCode(division.getPlatformCode());
+            resp.setGameMode(division.getGameMode());
+            BasketSeason season = division.getSeasonId() == null ? null : ctx.seasonMap.get(division.getSeasonId());
+            if (season != null) {
+                resp.setSeasonId(toStringId(season.getId()));
+                resp.setSeasonName(firstNonBlank(season.getDisplayTitle(), season.getSeasonName()));
+                BasketSeries series = season.getSeriesId() == null ? null : ctx.seriesMap.get(season.getSeriesId());
+                if (series != null) {
+                    resp.setSeriesId(toStringId(series.getId()));
+                    resp.setSeriesName(series.getSeriesName());
+                }
+            }
+        } else if (team.getDivisionId() != null) {
+            resp.setDivisionName("赛事信息不可用");
+        } else {
+            resp.setDivisionName("历史球队");
+            resp.setSeriesName("赛事信息暂无");
+        }
+    }
+
+    private boolean isCurrentTeamForUser(BasketTeam team,
+                                         BasketTeamMember membership,
+                                         Map<Long, BasketDivision> divisionMap) {
+        if (team == null || membership == null) {
+            return false;
+        }
+        if (team.getDivisionId() == null || membership.getDivisionId() == null) {
+            return false;
+        }
+        if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
+            return false;
+        }
+        if (!Objects.equals(TeamMembershipStatusEnum.ACTIVE.getCode(), membership.getMembershipStatus())
+                || !Objects.equals(IS_CURRENT, membership.getIsCurrent())) {
+            return false;
+        }
+        return isDivisionOpenForCurrent(team.getDivisionId(), divisionMap);
+    }
+
+    private boolean isDivisionOpenForCurrent(Long divisionId, Map<Long, BasketDivision> divisionMap) {
+        if (divisionId == null) {
+            return false;
+        }
+        BasketDivision division = divisionMap.get(divisionId);
+        if (division == null || !Objects.equals(NOT_DELETED, division.getIsDelete())) {
+            return false;
+        }
+        String status = division.getDivisionStatus();
+        return !DivisionStatusEnum.FINISHED.getCode().equals(status)
+                && !DivisionStatusEnum.ARCHIVED.getCode().equals(status);
+    }
+
+    private EventContextMaps loadEventContextMaps(List<BasketTeam> teams) {
+        Set<Long> divisionIds = teams.stream()
+                .map(BasketTeam::getDivisionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, BasketDivision> divisionMap = new HashMap<>();
+        if (!divisionIds.isEmpty()) {
+            for (BasketDivision division : divisionDao.selectByIds(divisionIds)) {
+                if (division != null && Objects.equals(NOT_DELETED, division.getIsDelete())) {
+                    divisionMap.put(division.getId(), division);
+                }
+            }
+        }
+        Set<Long> seasonIds = divisionMap.values().stream()
+                .map(BasketDivision::getSeasonId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, BasketSeason> seasonMap = new HashMap<>();
+        if (!seasonIds.isEmpty()) {
+            for (BasketSeason season : seasonDao.selectByIds(seasonIds)) {
+                if (season != null && Objects.equals(NOT_DELETED, season.getIsDelete())) {
+                    seasonMap.put(season.getId(), season);
+                }
+            }
+        }
+        Set<Long> seriesIds = seasonMap.values().stream()
+                .map(BasketSeason::getSeriesId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, BasketSeries> seriesMap = new HashMap<>();
+        if (!seriesIds.isEmpty()) {
+            for (BasketSeries series : seriesDao.selectByIds(seriesIds)) {
+                if (series != null && Objects.equals(NOT_DELETED, series.getIsDelete())) {
+                    seriesMap.put(series.getId(), series);
+                }
+            }
+        }
+        Set<Long> teamIds = teams.stream().map(BasketTeam::getId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> eventTeamSourceIds = new HashSet<>();
+        if (!teamIds.isEmpty()) {
+            List<BasketEventTeam> eventTeams = eventTeamDao.selectList(new LambdaQueryWrapper<BasketEventTeam>()
+                    .in(BasketEventTeam::getSourceTeamId, teamIds)
+                    .eq(BasketEventTeam::getIsDelete, NOT_DELETED));
+            for (BasketEventTeam eventTeam : eventTeams) {
+                if (eventTeam.getSourceTeamId() != null) {
+                    eventTeamSourceIds.add(eventTeam.getSourceTeamId());
+                }
+            }
+        }
+        return new EventContextMaps(divisionMap, seasonMap, seriesMap, eventTeamSourceIds);
+    }
+
+    private Map<Long, String> loadRegistrationStatusMap(List<BasketTeam> teams) {
+        Set<Long> teamIds = teams.stream().map(BasketTeam::getId).filter(Objects::nonNull).collect(Collectors.toSet());
+        if (teamIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<BasketRegistration> registrations = registrationDao.selectList(new LambdaQueryWrapper<BasketRegistration>()
+                .in(BasketRegistration::getTeamId, teamIds)
+                .eq(BasketRegistration::getIsDelete, NOT_DELETED)
+                .orderByDesc(BasketRegistration::getUpdateTime)
+                .orderByDesc(BasketRegistration::getId));
+        Map<Long, String> map = new HashMap<>();
+        for (BasketRegistration registration : registrations) {
+            if (registration.getTeamId() != null) {
+                map.putIfAbsent(registration.getTeamId(), registration.getRegistrationStatus());
+            }
+        }
+        return map;
+    }
+
+    private String resolveDisplayStatusText(BasketTeam team,
+                                            BasketTeamMember membership,
+                                            BasketDivision division,
+                                            String registrationStatus,
+                                            boolean historical,
+                                            boolean hasEventTeam) {
+        if (historical) {
+            if (team.getDivisionId() == null) {
+                return "历史球队";
+            }
+            if (Objects.equals(TeamStatusEnum.DISSOLVED.getCode(), team.getTeamStatus())) {
+                return "提前解散";
+            }
+            if (Objects.equals(TeamStatusEnum.DISABLED.getCode(), team.getTeamStatus())) {
+                return "已停用";
+            }
+            if (membership != null && "DIVISION_FINISHED".equalsIgnoreCase(membership.getLeaveReason())) {
+                return "赛事已结束";
+            }
+            if (Objects.equals(TeamStatusEnum.ARCHIVED.getCode(), team.getTeamStatus())
+                    || (division != null && (DivisionStatusEnum.FINISHED.getCode().equals(division.getDivisionStatus())
+                    || DivisionStatusEnum.ARCHIVED.getCode().equals(division.getDivisionStatus())))) {
+                return "赛事已结束";
+            }
+            if (membership != null
+                    && Objects.equals(TeamMembershipStatusEnum.REMOVED.getCode(), membership.getMembershipStatus())) {
+                return "已离队";
+            }
+            if (membership != null
+                    && !Objects.equals(TeamMembershipStatusEnum.ACTIVE.getCode(), membership.getMembershipStatus())) {
+                return "已离队";
+            }
+            return "历史球队";
+        }
+        if (division != null && DivisionStatusEnum.PLAYING.getCode().equals(division.getDivisionStatus()) && hasEventTeam) {
+            return "赛事进行中";
+        }
+        if (RegistrationStatusEnum.APPROVED.getCode().equals(registrationStatus) && hasEventTeam) {
+            return "正式参赛";
+        }
+        if (RegistrationStatusEnum.APPROVED.getCode().equals(registrationStatus)) {
+            return "正式参赛";
+        }
+        if (RegistrationStatusEnum.PENDING_REVIEW.getCode().equals(registrationStatus)) {
+            return "报名审核中";
+        }
+        if (RegistrationStatusEnum.REJECTED.getCode().equals(registrationStatus)) {
+            return "报名被驳回";
+        }
+        if (RegistrationStatusEnum.DRAFT.getCode().equals(registrationStatus)) {
+            return "报名准备中";
+        }
+        return "组队中";
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    private record EventContextMaps(Map<Long, BasketDivision> divisionMap,
+                                    Map<Long, BasketSeason> seasonMap,
+                                    Map<Long, BasketSeries> seriesMap,
+                                    Set<Long> eventTeamSourceIds) {
     }
 
     private boolean hasAuditedFieldChange(TeamUpdateReq req, BasketTeam team) {
@@ -770,10 +1072,13 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
 
     private void validateCreateReq(TeamCreateReq req) {
         if (req == null || !StringUtils.hasText(req.getTeamName())) {
-            throw new ServiceException("????????");
+            throw new ServiceException("球队名称不能为空");
+        }
+        if (req.getDivisionId() == null) {
+            throw new ServiceException("divisionId 不能为空");
         }
         if (req.getTeamName().trim().length() > 50) {
-            throw new ServiceException("??????");
+            throw new ServiceException("球队名称过长");
         }
     }
 

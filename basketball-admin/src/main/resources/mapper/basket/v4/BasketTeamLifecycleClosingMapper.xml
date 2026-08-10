@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketTeamLifecycleClosingMapper">
+
+    <update id="casFinishDivision">
+        update basket_division
+        set division_status = 'FINISHED',
+            update_time = #{finishTime}
+        where id = #{divisionId}
+          and is_delete = 0
+          and division_status in
+        <foreach collection="fromStatuses" item="st" open="(" separator="," close=")">
+            #{st}
+        </foreach>
+    </update>
+
+    <update id="expirePendingInvitationsByTeamIds">
+        update basket_team_invitation
+        set invitation_status = #{toStatus},
+            responded_time = #{finishTime},
+            response_remark = 'DIVISION_FINISHED',
+            update_time = #{finishTime}
+        where is_delete = 0
+          and invitation_status = #{fromStatus}
+          and team_id in
+        <foreach collection="teamIds" item="tid" open="(" separator="," close=")">
+            #{tid}
+        </foreach>
+    </update>
+
+    <update id="cancelPendingApplicationsByTeamIds">
+        update basket_team_join_application
+        set application_status = #{toStatus},
+            processed_time = #{finishTime},
+            process_remark = 'DIVISION_FINISHED',
+            update_time = #{finishTime}
+        where is_delete = 0
+          and application_status = #{fromStatus}
+          and team_id in
+        <foreach collection="teamIds" item="tid" open="(" separator="," close=")">
+            #{tid}
+        </foreach>
+    </update>
+
+</mapper>

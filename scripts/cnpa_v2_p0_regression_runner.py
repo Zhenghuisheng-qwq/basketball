@@ -74,7 +74,7 @@ def admin_login(base: str, user: str, pwd: str) -> str:
 def db_query(sql: str) -> list:
     import pymysql
     conn = pymysql.connect(
-        host=os.environ.get("CNPA_DB_HOST", "192.168.31.47"),
+        host=os.environ.get("CNPA_DB_HOST", "192.168.31.48"),
         port=int(os.environ.get("CNPA_DB_PORT", "3306")),
         user=os.environ.get("CNPA_DB_USER", "root"),
         password=os.environ.get("CNPA_DB_PASSWORD", "123456"),

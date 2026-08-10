@@ -1,7 +1,7 @@
 """执行合作伙伴支持记录表 migration（幂等）。"""
 import pymysql
 
-HOST = "192.168.31.47"
+HOST = "192.168.31.48"
 PORT = 3306
 USER = "root"
 PASSWORD = "123456"

@@ -10,6 +10,8 @@ public interface ITeamMemberBusinessService {
 
     IPage<TeamMemberItemResp> pageMembers(String teamId, Integer currentPage, Integer pageSize);
 
+    IPage<TeamMemberItemResp> pageMembers(String teamId, Integer currentPage, Integer pageSize, Boolean includeHistory);
+
     /**
      * 队内成员私有详情：队长可看本队成员，普通成员仅可看自己。
      */

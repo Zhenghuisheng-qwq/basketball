@@ -4,13 +4,18 @@ import type {
   TeamCreateReq,
   TeamDetailDto,
   TeamLogoBindReq,
+  TeamMineScope,
   TeamSummaryDto,
   TeamUpdateReq,
 } from '@/api/types/teamAccount'
 import type { JoinableTeamPageDto } from '@/api/types/teamJoinInvite'
 import type { CaptainGrantBindTeamReq, InheritableTeamSummaryDto } from '@/api/types/teamInherit'
 
-export function getMyTeamPage(params?: { currentPage?: number; pageSize?: number }) {
+export function getMyTeamPage(params?: {
+  currentPage?: number
+  pageSize?: number
+  scope?: TeamMineScope
+}) {
   return request.get<any, ApiResult<PageResult<TeamSummaryDto>>>('/basket/team/mine', { params })
 }
 

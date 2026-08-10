@@ -19,7 +19,7 @@ statements = [
     "ALTER TABLE basket_team_member ADD COLUMN active_member_slot VARCHAR(64) NULL COMMENT 'member slot' AFTER active_platform_slot",
 ]
 
-conn = pymysql.connect(host='192.168.31.47', user='root', password='123456', database='basketball', charset='utf8mb4')
+conn = pymysql.connect(host='192.168.31.48', user='root', password='123456', database='basketball', charset='utf8mb4')
 cur = conn.cursor()
 
 for stmt in statements:

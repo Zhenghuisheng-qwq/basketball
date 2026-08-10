@@ -89,6 +89,10 @@ export function closeV4DivisionRegistration(id: number): Promise<AjaxResult> {
   return request({ url: `/basket/v4/division/${id}/close-registration`, method: 'put' })
 }
 
+export function finishV4Division(id: number, data?: { reason?: string }): Promise<AjaxResult> {
+  return request({ url: `/basket/v4/division/${id}/finish`, method: 'post', data: data || {} })
+}
+
 export function delV4Division(id: number): Promise<AjaxResult> {
   return request({ url: `/basket/v4/division/${id}`, method: 'delete' })
 }

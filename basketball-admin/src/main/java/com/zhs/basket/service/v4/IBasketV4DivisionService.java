@@ -24,5 +24,8 @@ public interface IBasketV4DivisionService {
 
     void closeRegistration(Long id);
 
+    /** 结束赛事并触发球队生命周期收尾（幂等） */
+    void finish(Long id, String reason);
+
     void delete(Long id);
 }

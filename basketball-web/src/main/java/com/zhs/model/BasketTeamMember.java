@@ -42,6 +42,10 @@ public class BasketTeamMember implements Serializable {
     @ApiModelProperty(value = "球队主键")
     private Long teamId;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "所属赛事 Division ID，NULL 表示 Legacy 历史成员关系")
+    private Long divisionId;
+
 
     @JsonSerialize(using = ToStringSerializer.class)
     @ApiModelProperty(value = "会员主键")

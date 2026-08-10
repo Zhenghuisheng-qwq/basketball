@@ -16,6 +16,51 @@ public class TeamSummaryResp implements Serializable {
     @ApiModelProperty("球队主键")
     private String teamId;
 
+    @ApiModelProperty("所属赛事 Division ID")
+    private String divisionId;
+
+    @ApiModelProperty("Division 名称")
+    private String divisionName;
+
+    @ApiModelProperty("Division 状态")
+    private String divisionStatus;
+
+    @ApiModelProperty("平台代码")
+    private String divisionPlatformCode;
+
+    @ApiModelProperty("比赛模式")
+    private String gameMode;
+
+    @ApiModelProperty("赛季主键")
+    private String seasonId;
+
+    @ApiModelProperty("赛季名称")
+    private String seasonName;
+
+    @ApiModelProperty("系列主键")
+    private String seriesId;
+
+    @ApiModelProperty("系列名称")
+    private String seriesName;
+
+    @ApiModelProperty("成员关系状态")
+    private Integer membershipStatus;
+
+    @ApiModelProperty("离队原因")
+    private String leaveReason;
+
+    @ApiModelProperty("是否可管理（写权限）")
+    private Boolean canManage;
+
+    @ApiModelProperty("是否历史球队（对当前用户）")
+    private Boolean isHistorical;
+
+    @ApiModelProperty("展示用业务状态文案")
+    private String displayStatusText;
+
+    @ApiModelProperty("报名状态（如有）")
+    private String registrationStatus;
+
     @ApiModelProperty("球队编号")
     private String teamNo;
 

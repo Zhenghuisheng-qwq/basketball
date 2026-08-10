@@ -15,6 +15,7 @@
         <result property="contactMemberId" column="contact_member_id" />
         <result property="captainMemberId" column="captain_member_id" />
         <result property="captainPlayerId" column="captain_player_id" />
+        <result property="divisionId" column="division_id" />
         <result property="maxMemberCount" column="max_member_count" />
         <result property="currentMemberCount" column="current_member_count" />
         <result property="teamStatus" column="team_status" />
@@ -27,7 +28,7 @@
         <result property="isDelete" column="is_delete" />
     </resultMap>
     <select id="selectAuditList" resultMap="BasketTeamResult">
-        select id, team_no, team_name, short_name, english_name, logo_file_id, region_code, region_name, game_terminal, description, contact_member_id, captain_member_id, captain_player_id, max_member_count, current_member_count, team_status, audit_status, public_status, established_date, dissolved_time, create_time, update_time, is_delete from basket_team
+        select id, team_no, team_name, short_name, english_name, logo_file_id, region_code, region_name, game_terminal, description, contact_member_id, captain_member_id, captain_player_id, division_id, max_member_count, current_member_count, team_status, audit_status, public_status, established_date, dissolved_time, create_time, update_time, is_delete from basket_team
         where is_delete = 0
         <if test="teamNo != null and teamNo != ''">and team_no like concat('%', #{teamNo}, '%')</if>
         <if test="teamName != null and teamName != ''">and team_name like concat('%', #{teamName}, '%')</if>
@@ -47,7 +48,7 @@
         order by create_time desc
     </select>
     <select id="selectById" resultMap="BasketTeamResult">
-        select id, team_no, team_name, short_name, english_name, logo_file_id, region_code, region_name, game_terminal, description, contact_member_id, captain_member_id, captain_player_id, max_member_count, current_member_count, team_status, audit_status, public_status, established_date, dissolved_time, create_time, update_time, is_delete from basket_team where id = #{id} and is_delete = 0
+        select id, team_no, team_name, short_name, english_name, logo_file_id, region_code, region_name, game_terminal, description, contact_member_id, captain_member_id, captain_player_id, division_id, max_member_count, current_member_count, team_status, audit_status, public_status, established_date, dissolved_time, create_time, update_time, is_delete from basket_team where id = #{id} and is_delete = 0
     </select>
     <update id="updateAuditStatusIfMatch">
         update basket_team set audit_status = #{toStatus}, update_time = now()
@@ -85,5 +86,19 @@
         where team_name = #{teamName}
           and is_delete = 0
           and id != #{excludeTeamId}
+          and division_id = #{divisionId}
     </select>
+    <select id="selectIdsByDivisionId" resultType="long">
+        select id from basket_team
+        where division_id = #{divisionId}
+          and is_delete = 0
+    </select>
+    <update id="archiveActiveByDivisionId">
+        update basket_team
+        set team_status = #{toStatus},
+            update_time = #{finishTime}
+        where division_id = #{divisionId}
+          and is_delete = 0
+          and team_status = #{fromStatus}
+    </update>
 </mapper>

@@ -17,7 +17,7 @@ SQL_FILES = [
 ]
 
 CONN = dict(
-    host="192.168.31.47",
+    host="192.168.31.48",
     user="root",
     password="123456",
     database="basketball",

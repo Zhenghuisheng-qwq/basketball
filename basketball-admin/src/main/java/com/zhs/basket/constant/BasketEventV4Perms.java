@@ -25,6 +25,8 @@ public final class BasketEventV4Perms {
     public static final String DIVISION_EDIT = "basket:v4Division:edit";
     public static final String DIVISION_OPEN = "basket:v4Division:openRegistration";
     public static final String DIVISION_CLOSE = "basket:v4Division:closeRegistration";
+    /** 结束赛事：复用 edit 权限，避免新增菜单节点 */
+    public static final String DIVISION_FINISH = "basket:v4Division:edit";
     public static final String DIVISION_REMOVE = "basket:v4Division:remove";
 
     public static final String CAPTAIN_GRANT_LIST = "basket:v4CaptainGrant:list";

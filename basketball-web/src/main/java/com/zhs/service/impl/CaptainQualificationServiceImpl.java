@@ -7,6 +7,8 @@ import com.zhs.service.ICaptainQualificationService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class CaptainQualificationServiceImpl implements ICaptainQualificationService {
 
@@ -27,5 +29,17 @@ public class CaptainQualificationServiceImpl implements ICaptainQualificationSer
     public CaptainQualificationDetailResp getCurrent(Long seasonId, Long teamId) {
         Long memberId = UserContext.getRequiredUserId();
         return captainPermissionService.getCurrentQualification(memberId, seasonId, teamId);
+    }
+
+    @Override
+    public CaptainQualificationDetailResp getCurrentByDivision(Long divisionId, Long teamId) {
+        Long memberId = UserContext.getRequiredUserId();
+        return captainPermissionService.getCurrentQualificationByDivision(memberId, divisionId, teamId);
+    }
+
+    @Override
+    public List<CaptainQualificationDetailResp> listActive() {
+        Long memberId = UserContext.getRequiredUserId();
+        return captainPermissionService.listActiveQualifications(memberId);
     }
 }

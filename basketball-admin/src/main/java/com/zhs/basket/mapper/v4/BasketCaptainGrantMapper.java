@@ -21,6 +21,13 @@ public interface BasketCaptainGrantMapper {
 
     int expireById(@Param("id") Long id);
 
+    List<BasketCaptainGrant> selectActiveByDivisionId(@Param("divisionId") Long divisionId);
+
+    /**
+     * Division Closing：ACTIVE → EXPIRED，释放 active_unique_key，并截断未到期的 valid_to。
+     */
+    int expireActiveByDivisionId(@Param("divisionId") Long divisionId, @Param("finishTime") java.util.Date finishTime);
+
     int bindTeamById(@Param("id") Long id, @Param("teamId") Long teamId);
 
     BasketCaptainGrant selectLatestActiveByMemberId(@Param("memberId") Long memberId);

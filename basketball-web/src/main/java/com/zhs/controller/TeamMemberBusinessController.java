@@ -31,12 +31,13 @@ public class TeamMemberBusinessController {
     @Resource
     private ITeamMemberBusinessService teamMemberBusinessService;
 
-    @ApiOperation("球队成员分页")
+    @ApiOperation("球队成员分页（历史球队自动含 LEFT；includeHistory=true 强制含历史）")
     @GetMapping("/{teamId}/member/page")
     public R<IPage<TeamMemberItemResp>> pageMembers(@PathVariable String teamId,
                                                     @RequestParam(required = false) Integer currentPage,
-                                                    @RequestParam(required = false) Integer pageSize) {
-        return R.ok(teamMemberBusinessService.pageMembers(teamId, currentPage, pageSize));
+                                                    @RequestParam(required = false) Integer pageSize,
+                                                    @RequestParam(required = false) Boolean includeHistory) {
+        return R.ok(teamMemberBusinessService.pageMembers(teamId, currentPage, pageSize, includeHistory));
     }
 
     @ApiOperation("队内成员私有详情（队长可看本队成员，成员仅可看自己）")

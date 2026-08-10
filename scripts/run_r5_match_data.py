@@ -9,7 +9,7 @@ from pathlib import Path
 import pymysql
 
 ROOT = Path(__file__).resolve().parents[1]
-CONN = dict(host="192.168.31.47", user="root", password="123456", database="basketball", charset="utf8mb4")
+CONN = dict(host="192.168.31.48", user="root", password="123456", database="basketball", charset="utf8mb4")
 PATCH_STATEMENTS = [
     "ALTER TABLE basket_match_submission ADD COLUMN home_score INT DEFAULT NULL COMMENT 'home' AFTER version_no",
     "ALTER TABLE basket_match_submission ADD COLUMN away_score INT DEFAULT NULL COMMENT 'away' AFTER home_score",

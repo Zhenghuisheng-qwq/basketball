@@ -15,4 +15,6 @@ public interface BasketPlayerProfileMapper {
     List<EligibleCaptainVo> selectEligibleCaptainList();
 
     Long selectAvatarFileIdByMemberId(@Param("memberId") Long memberId);
+
+    int clearCurrentTeamIdByTeamIds(@Param("teamIds") java.util.List<Long> teamIds);
 }

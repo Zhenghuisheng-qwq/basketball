@@ -115,7 +115,7 @@ def admin_login() -> str:
 def clear_login_locks() -> None:
     try:
         import redis
-        r = redis.Redis(host="192.168.31.47", port=6379, db=0)
+        r = redis.Redis(host="192.168.31.48", port=6379, db=0)
         for email in SMOKE_EMAILS:
             k = f"member:login:fail:{email}"
             if r.exists(k):

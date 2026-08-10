@@ -17,4 +17,10 @@ public interface BasketTeamMemberMapper {
     int countActiveMemberByTeamAndPlayer(@Param("teamId") Long teamId, @Param("playerId") Long playerId);
 
     int countActiveMembershipByPlayer(@Param("playerId") Long playerId);
+
+    int historicalizeActiveByDivisionId(@Param("divisionId") Long divisionId,
+                                        @Param("fromStatus") Integer fromStatus,
+                                        @Param("toStatus") Integer toStatus,
+                                        @Param("leaveTime") java.util.Date leaveTime,
+                                        @Param("leaveReason") String leaveReason);
 }

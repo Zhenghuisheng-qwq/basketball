@@ -50,6 +50,21 @@ public class CaptainQualificationDetailResp implements Serializable {
     @ApiModelProperty("无效原因")
     private String invalidReason;
 
+    @ApiModelProperty("授权 Division 主键")
+    private String divisionId;
+
+    @ApiModelProperty("Division 名称")
+    private String divisionName;
+
+    @ApiModelProperty("平台代码")
+    private String platformCode;
+
+    @ApiModelProperty("比赛模式")
+    private String gameMode;
+
+    @ApiModelProperty("系列名称")
+    private String seriesName;
+
     @ApiModelProperty("授权赛事赛季主键")
     private String seasonId;
 

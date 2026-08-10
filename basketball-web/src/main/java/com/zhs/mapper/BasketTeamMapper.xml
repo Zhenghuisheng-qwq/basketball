@@ -9,6 +9,7 @@
 		<result column="game_terminal" property="gameTerminal" />
 		<result column="captain_member_id" property="captainMemberId" />
 		<result column="captain_player_id" property="captainPlayerId" />
+		<result column="division_id" property="divisionId" />
 		<result column="english_name" property="englishName" />
 		<result column="logo_file_id" property="logoFileId" />
 		<result column="region_code" property="regionCode" />
@@ -28,7 +29,7 @@
 	</resultMap>
 	<!-- 数据库中表名为:basket_team的列名 -->
 	<sql id="basket_team_Column">
-		id,team_no,team_name,short_name,english_name,logo_file_id,region_code,region_name,game_terminal,description,contact_member_id,captain_member_id,captain_player_id,max_member_count,current_member_count,team_status,audit_status,public_status,established_date,dissolved_time,create_time,update_time,is_delete
+		id,team_no,team_name,short_name,english_name,logo_file_id,region_code,region_name,game_terminal,description,contact_member_id,captain_member_id,captain_player_id,division_id,max_member_count,current_member_count,team_status,audit_status,public_status,established_date,dissolved_time,create_time,update_time,is_delete
 	</sql>
 
 	<!-- 通过BasketTeam的id获得对应数据库中表的数据对象 -->
@@ -107,8 +108,8 @@
 	<!-- 将BasketTeam插入到对应数据库的表中,包括属性值为null的数据 -->
 	<insert id="insertBasketTeam" parameterType="com.zhs.model.BasketTeam">
 		insert into 
-		basket_team (id,team_no,team_name,short_name,english_name,logo_file_id,region_code,region_name,game_terminal,description,contact_member_id,captain_member_id,captain_player_id,max_member_count,current_member_count,team_status,audit_status,public_status,established_date,dissolved_time,create_time,update_time,is_delete) 
-		values(#{id},#{teamNo},#{teamName},#{shortName},#{englishName},#{logoFileId},#{regionCode},#{regionName},#{gameTerminal},#{description},#{contactMemberId},#{captainMemberId},#{captainPlayerId},#{maxMemberCount},#{currentMemberCount},#{teamStatus},#{auditStatus},#{publicStatus},#{establishedDate},#{dissolvedTime},#{createTime},#{updateTime},#{isDelete})
+		basket_team (id,team_no,team_name,short_name,english_name,logo_file_id,region_code,region_name,game_terminal,description,contact_member_id,captain_member_id,captain_player_id,division_id,max_member_count,current_member_count,team_status,audit_status,public_status,established_date,dissolved_time,create_time,update_time,is_delete) 
+		values(#{id},#{teamNo},#{teamName},#{shortName},#{englishName},#{logoFileId},#{regionCode},#{regionName},#{gameTerminal},#{description},#{contactMemberId},#{captainMemberId},#{captainPlayerId},#{divisionId},#{maxMemberCount},#{currentMemberCount},#{teamStatus},#{auditStatus},#{publicStatus},#{establishedDate},#{dissolvedTime},#{createTime},#{updateTime},#{isDelete})
 	</insert>
 
 	<!-- 将BasketTeam中属性值不为null的数据,插入到对应数据库的表中 -->
@@ -128,6 +129,7 @@
 			<if test="contactMemberId != null">contact_member_id,</if>
 			<if test="captainMemberId != null">captain_member_id,</if>
 			<if test="captainPlayerId != null">captain_player_id,</if>
+			<if test="divisionId != null">division_id,</if>
 			<if test="maxMemberCount != null">max_member_count,</if>
 			<if test="currentMemberCount != null">current_member_count,</if>
 			<if test="teamStatus != null">team_status,</if>
@@ -153,6 +155,7 @@
 			<if test="contactMemberId != null">#{contactMemberId},</if>
 			<if test="captainMemberId != null">#{captainMemberId},</if>
 			<if test="captainPlayerId != null">#{captainPlayerId},</if>
+			<if test="divisionId != null">#{divisionId},</if>
 			<if test="maxMemberCount != null">#{maxMemberCount},</if>
 			<if test="currentMemberCount != null">#{currentMemberCount},</if>
 			<if test="teamStatus != null">#{teamStatus},</if>
@@ -168,10 +171,10 @@
 
 	<!-- 将BasketTeam批量插入到对应数据库的表中 -->
 	<insert id="insertBasketTeamByBatch" parameterType="ArrayList">
-		insert into basket_team(id,team_no,team_name,short_name,english_name,logo_file_id,region_code,region_name,game_terminal,description,contact_member_id,captain_member_id,captain_player_id,max_member_count,current_member_count,team_status,audit_status,public_status,established_date,dissolved_time,create_time,update_time,is_delete) values
+		insert into basket_team(id,team_no,team_name,short_name,english_name,logo_file_id,region_code,region_name,game_terminal,description,contact_member_id,captain_member_id,captain_player_id,division_id,max_member_count,current_member_count,team_status,audit_status,public_status,established_date,dissolved_time,create_time,update_time,is_delete) values
 		<foreach collection="list" item="item" index="index"
 			separator=",">
-			(#{id},#{teamNo},#{teamName},#{shortName},#{englishName},#{logoFileId},#{regionCode},#{regionName},#{gameTerminal},#{description},#{contactMemberId},#{captainMemberId},#{captainPlayerId},#{maxMemberCount},#{currentMemberCount},#{teamStatus},#{auditStatus},#{publicStatus},#{establishedDate},#{dissolvedTime},#{createTime},#{updateTime},#{isDelete})
+			(#{id},#{teamNo},#{teamName},#{shortName},#{englishName},#{logoFileId},#{regionCode},#{regionName},#{gameTerminal},#{description},#{contactMemberId},#{captainMemberId},#{captainPlayerId},#{divisionId},#{maxMemberCount},#{currentMemberCount},#{teamStatus},#{auditStatus},#{publicStatus},#{establishedDate},#{dissolvedTime},#{createTime},#{updateTime},#{isDelete})
 		</foreach>
 	</insert>
 	
@@ -199,6 +202,7 @@
 			contact_member_id = #{contactMemberId} , 
 			captain_member_id = #{captainMemberId} , 
 			captain_player_id = #{captainPlayerId} , 
+			division_id = #{divisionId} , 
 			max_member_count = #{maxMemberCount} , 
 			current_member_count = #{currentMemberCount} , 
 			team_status = #{teamStatus} , 
@@ -229,6 +233,7 @@
 					<if test="contactMemberId != null">contact_member_id = #{contactMemberId},</if>
 					<if test="captainMemberId != null">captain_member_id = #{captainMemberId},</if>
 					<if test="captainPlayerId != null">captain_player_id = #{captainPlayerId},</if>
+					<if test="divisionId != null">division_id = #{divisionId},</if>
 					<if test="maxMemberCount != null">max_member_count = #{maxMemberCount},</if>
 					<if test="currentMemberCount != null">current_member_count = #{currentMemberCount},</if>
 					<if test="teamStatus != null">team_status = #{teamStatus},</if>

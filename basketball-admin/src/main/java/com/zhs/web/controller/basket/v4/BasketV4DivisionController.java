@@ -2,6 +2,7 @@ package com.zhs.web.controller.basket.v4;
 
 import com.zhs.basket.constant.BasketEventV4Perms;
 import com.zhs.basket.dto.v4.BasketDivisionCreateReq;
+import com.zhs.basket.dto.v4.BasketDivisionFinishReq;
 import com.zhs.basket.dto.v4.BasketDivisionUpdateReq;
 import com.zhs.basket.query.v4.BasketDivisionQuery;
 import com.zhs.basket.service.v4.IBasketV4DivisionService;
@@ -62,6 +63,14 @@ public class BasketV4DivisionController extends BaseController {
     @PutMapping("/{id}/close-registration")
     public AjaxResult closeRegistration(@PathVariable Long id) {
         divisionService.closeRegistration(id);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.DIVISION_FINISH + "')")
+    @Log(title = "V4 Division 结束赛事", businessType = BusinessType.UPDATE)
+    @PostMapping("/{id}/finish")
+    public AjaxResult finish(@PathVariable Long id, @RequestBody(required = false) BasketDivisionFinishReq req) {
+        divisionService.finish(id, req == null ? null : req.getReason());
         return success();
     }
 

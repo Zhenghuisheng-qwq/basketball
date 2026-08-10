@@ -51,6 +51,9 @@ public class BasketV4ParticipationSupport {
         if (team == null) {
             throw new ServiceException("球队不存在");
         }
+        if (team.getDivisionId() == null) {
+            throw new ServiceException("历史球队不能直接报名新赛事，请在当前赛事重新创建球队");
+        }
         if (!Integer.valueOf(TEAM_STATUS_ACTIVE).equals(team.getTeamStatus())) {
             throw new ServiceException("球队状态无效");
         }

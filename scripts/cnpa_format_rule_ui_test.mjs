@@ -33,7 +33,7 @@ function dbQuery(sql) {
     fs.writeFileSync(helper, `import pymysql, json, sys
 import io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-conn = pymysql.connect(host='192.168.31.47', port=3306, user='root', password='123456', database='basketball', charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+conn = pymysql.connect(host='192.168.31.48', port=3306, user='root', password='123456', database='basketball', charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 try:
     with conn.cursor() as cur:
         cur.execute(sys.argv[1])
@@ -368,9 +368,9 @@ function loadTestIdsFromDb() {
 async function runTests() {
   rec('env_admin_backend', 'PASS', ADMIN_BASE)
   rec('env_admin_ui', 'PASS', UI_BASE)
-  rec('env_mysql', dbQuery('SELECT 1 ok')[0]?.ok === 1 ? 'PASS' : 'FAIL', '192.168.31.47:3306/basketball')
+  rec('env_mysql', dbQuery('SELECT 1 ok')[0]?.ok === 1 ? 'PASS' : 'FAIL', '192.168.31.48:3306/basketball')
   try {
-    execSync(`python -c "import redis; r=redis.Redis(host='192.168.31.47',port=6379,password='Q86KDiDoZULykMfz',db=0,socket_connect_timeout=5); print(r.ping())"`, { encoding: 'utf-8' })
+    execSync(`python -c "import redis; r=redis.Redis(host='192.168.31.48',port=6379,password='Q86KDiDoZULykMfz',db=0,socket_connect_timeout=5); print(r.ping())"`, { encoding: 'utf-8' })
     rec('env_redis', 'PASS', 'PONG')
   } catch (e) {
     rec('env_redis', 'FAIL', String(e.message || e))

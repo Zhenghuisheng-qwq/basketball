@@ -224,6 +224,27 @@
         where id = #{id} and <include refid="NotDeleted"/> and grant_status = 'ACTIVE'
     </update>
 
+    <select id="selectActiveByDivisionId" resultMap="BasketCaptainGrantResult">
+        select <include refid="BaseColumns" /> from basket_captain_grant
+        where <include refid="NotDeleted"/>
+          and division_id = #{divisionId}
+          and grant_status = 'ACTIVE'
+    </select>
+
+    <update id="expireActiveByDivisionId">
+        update basket_captain_grant
+        set grant_status = 'EXPIRED',
+            active_unique_key = null,
+            valid_to = case
+                when valid_to is null or valid_to &gt; #{finishTime} then #{finishTime}
+                else valid_to
+            end,
+            update_time = #{finishTime}
+        where <include refid="NotDeleted"/>
+          and division_id = #{divisionId}
+          and grant_status = 'ACTIVE'
+    </update>
+
     <update id="bindTeamById">
         update basket_captain_grant
         set team_id = #{teamId}, update_time = now()

@@ -24,6 +24,7 @@ import com.zhs.response.team.CandidatePlayerPageResp;
 import com.zhs.response.team.TeamMemberDetailResp;
 import com.zhs.response.team.TeamMemberItemResp;
 import com.zhs.enums.TeamJoinSourceEnum;
+import com.zhs.enums.TeamStatusEnum;
 import com.zhs.enums.PlayerCertStatusEnum;
 import com.zhs.enums.PlatformAccountStatusEnum;
 import com.zhs.enums.PlatformIdentityStatusEnum;
@@ -94,18 +95,34 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
 
     @Override
     public IPage<TeamMemberItemResp> pageMembers(String teamId, Integer currentPage, Integer pageSize) {
+        return pageMembers(teamId, currentPage, pageSize, null);
+    }
+
+    @Override
+    public IPage<TeamMemberItemResp> pageMembers(String teamId, Integer currentPage, Integer pageSize, Boolean includeHistory) {
         Long teamPk = parseLongId(teamId, "球队主键");
         Long memberId = UserContext.getRequiredUserId();
-        captainPermissionService.requireTeamMember(memberId, teamPk);
+        captainPermissionService.requireAnyTeamMembership(memberId, teamPk);
+
+        BasketTeam team = teamDao.selectById(teamPk);
+        if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
+            throw new ServiceException("球队不存在", 404);
+        }
+        boolean historyView = Boolean.TRUE.equals(includeHistory)
+                || !Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())
+                || team.getDivisionId() == null;
 
         Page<BasketTeamMember> page = new Page<>(normalizePage(currentPage), normalizeSize(pageSize));
-        IPage<BasketTeamMember> memberPage = teamMemberDao.selectPage(page, new LambdaQueryWrapper<BasketTeamMember>()
+        LambdaQueryWrapper<BasketTeamMember> wrapper = new LambdaQueryWrapper<BasketTeamMember>()
                 .eq(BasketTeamMember::getTeamId, teamPk)
-                .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
-                .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
                 .eq(BasketTeamMember::getIsDelete, NOT_DELETED)
                 .orderByAsc(BasketTeamMember::getRoleType)
-                .orderByAsc(BasketTeamMember::getJoinTime));
+                .orderByAsc(BasketTeamMember::getJoinTime);
+        if (!historyView) {
+            wrapper.eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
+                    .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode());
+        }
+        IPage<BasketTeamMember> memberPage = teamMemberDao.selectPage(page, wrapper);
 
         Page<TeamMemberItemResp> respPage = new Page<>(memberPage.getCurrent(), memberPage.getSize(), memberPage.getTotal());
         respPage.setRecords(toMemberItems(memberPage.getRecords()));
@@ -118,10 +135,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         Long teamMemberPk = parseLongId(teamMemberId, "球队成员主键");
         Long viewerId = UserContext.getRequiredUserId();
 
-        BasketTeamMember viewerMembership = captainPermissionService.requireTeamMember(viewerId, teamPk);
+        captainPermissionService.requireAnyTeamMembership(viewerId, teamPk);
         BasketTeamMember target = requireTeamMemberRecord(teamMemberPk, teamPk);
-        boolean viewerIsCaptain = TeamMemberRoleEnum.CAPTAIN.getCode().equals(viewerMembership.getRoleType());
-
         BasketTeam team = teamDao.selectById(teamPk);
         if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
             throw new ServiceException("球队不存在", 404);
@@ -160,7 +175,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         detail.setTeamId(toStringId(team.getId()));
         detail.setTeamName(team.getTeamName());
         detail.setIsCaptain(TeamMemberRoleEnum.CAPTAIN.getCode().equals(target.getRoleType()));
-        detail.setCanManage(viewerIsCaptain);
+        detail.setCanManage(captainPermissionService.canManageTeam(viewerId, teamPk));
         detail.setCurrentRosterStatus(firstNonBlank(item.getRosterTypeText(), item.getMembershipStatusText(), "-"));
         detail.setSourceType(target.getJoinSource());
         detail.setSourceTypeText(resolveJoinSourceText(target.getJoinSource()));
@@ -595,7 +610,9 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         resp.setRosterType(member.getRosterType());
         resp.setJerseyNo(member.getJerseyNo());
         resp.setMembershipStatus(member.getMembershipStatus());
-        resp.setMembershipStatusText(resolveMembershipStatusText(member.getMembershipStatus(), member.getRosterType()));
+        resp.setLeaveReason(member.getLeaveReason());
+        resp.setMembershipStatusText(resolveMembershipStatusText(
+                member.getMembershipStatus(), member.getRosterType(), member.getLeaveReason()));
         if (StringUtils.hasText(member.getRosterType())) {
             resp.setRosterTypeText(TeamRosterTypeEnum.fromCode(member.getRosterType()).getDescription());
         }
@@ -788,15 +805,18 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         return value.trim();
     }
 
-    private String resolveMembershipStatusText(Integer membershipStatus, String rosterType) {
+    private String resolveMembershipStatusText(Integer membershipStatus, String rosterType, String leaveReason) {
         if (membershipStatus == null) {
             return null;
         }
         if (TeamMembershipStatusEnum.LEFT.getCode() == membershipStatus) {
+            if ("DIVISION_FINISHED".equalsIgnoreCase(leaveReason)) {
+                return "随赛事结束归档";
+            }
             return TeamMembershipStatusEnum.LEFT.getDescription();
         }
         if (TeamMembershipStatusEnum.REMOVED.getCode() == membershipStatus) {
-            return TeamMembershipStatusEnum.REMOVED.getDescription();
+            return "已移除";
         }
         if (TeamMembershipStatusEnum.ACTIVE.getCode() == membershipStatus && StringUtils.hasText(rosterType)) {
             return TeamRosterTypeEnum.fromCode(rosterType).getDescription();

@@ -14,6 +14,7 @@ import com.zhs.enums.TeamJoinSourceEnum;
 import com.zhs.enums.TeamMemberRoleEnum;
 import com.zhs.enums.TeamMembershipStatusEnum;
 import com.zhs.enums.TeamRosterTypeEnum;
+import com.zhs.enums.TeamStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 @Component
 public class TeamMemberJoinHelper {
@@ -54,9 +56,15 @@ public class TeamMemberJoinHelper {
 
     @Transactional(rollbackFor = Exception.class)
     public BasketTeamMember addMember(BasketTeam team, Long memberId, Long playerId, TeamJoinSourceEnum joinSource) {
+        if (team == null || team.getDivisionId() == null) {
+            throw new ServiceException("历史球队不能加入新成员，请在当前赛事重新创建球队", 403);
+        }
+        if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
+            throw new ServiceException("当前球队不可加入", 403);
+        }
         assertTeamHasCapacity(team);
         captainPermissionService.requireCertifiedPlayer(memberId);
-        teamMembershipSupport.assertEligibleToJoinTeam(memberId);
+        teamMembershipSupport.assertEligibleToJoinTeam(memberId, team.getDivisionId());
 
         Date now = new Date();
         BasketTeamMember member = new BasketTeamMember();
@@ -71,10 +79,11 @@ public class TeamMemberJoinHelper {
         member.setIsCurrent(IS_CURRENT);
         member.setJoinTime(now);
         member.setIsDelete(NOT_DELETED);
-        teamMembershipSupport.applyActiveMemberSlot(member, memberId);
+        teamMembershipSupport.applyActiveMemberSlot(member, team.getDivisionId(), memberId);
         teamMembershipSupport.insertMember(member);
 
         recalculateCurrentMemberCount(team.getId());
+        // current_team_id 仅作最近展示兼容字段
         updatePlayerCurrentTeam(playerId, team.getId());
         closePendingInvitesAndApplications(memberId, team.getId());
         businessMessageService.sendSiteMessage(memberId, "加入球队成功",
@@ -109,6 +118,8 @@ public class TeamMemberJoinHelper {
     }
 
     private void closePendingInvitesAndApplications(Long memberId, Long teamId) {
+        BasketTeam joinedTeam = teamDao.selectById(teamId);
+        Long divisionId = joinedTeam == null ? null : joinedTeam.getDivisionId();
         Date now = new Date();
         List<com.zhs.model.BasketTeamInvitation> pendingInvites = invitationDao.selectList(
                 new LambdaQueryWrapper<com.zhs.model.BasketTeamInvitation>()
@@ -117,6 +128,10 @@ public class TeamMemberJoinHelper {
                         .eq(com.zhs.model.BasketTeamInvitation::getIsDelete, NOT_DELETED));
         for (com.zhs.model.BasketTeamInvitation invitation : pendingInvites) {
             if (teamId.equals(invitation.getTeamId())) {
+                continue;
+            }
+            // 仅关闭同 Division 的待处理邀请，跨 Division 邀请保留
+            if (!isSameDivisionTeam(invitation.getTeamId(), divisionId)) {
                 continue;
             }
             invitationDao.update(null, new LambdaUpdateWrapper<com.zhs.model.BasketTeamInvitation>()
@@ -134,11 +149,22 @@ public class TeamMemberJoinHelper {
             if (teamId.equals(application.getTeamId())) {
                 continue;
             }
+            if (!isSameDivisionTeam(application.getTeamId(), divisionId)) {
+                continue;
+            }
             joinApplicationDao.update(null, new LambdaUpdateWrapper<com.zhs.model.BasketTeamJoinApplication>()
                     .eq(com.zhs.model.BasketTeamJoinApplication::getId, application.getId())
                     .set(com.zhs.model.BasketTeamJoinApplication::getApplicationStatus, TeamJoinApplicationStatusEnum.CANCELLED.getCode())
                     .set(com.zhs.model.BasketTeamJoinApplication::getProcessedTime, now));
         }
+    }
+
+    private boolean isSameDivisionTeam(Long otherTeamId, Long divisionId) {
+        if (otherTeamId == null || divisionId == null) {
+            return false;
+        }
+        BasketTeam other = teamDao.selectById(otherTeamId);
+        return other != null && Objects.equals(other.getDivisionId(), divisionId);
     }
 
     private void assertTeamHasCapacity(BasketTeam team) {

@@ -18,6 +18,8 @@ public class BasketTeam {
     private Long contactMemberId;
     private Long captainMemberId;
     private Long captainPlayerId;
+    /** 所属赛事 Division ID；NULL 表示 Legacy 历史球队 */
+    private Long divisionId;
     private Integer maxMemberCount;
     private Integer currentMemberCount;
     private Integer teamStatus;

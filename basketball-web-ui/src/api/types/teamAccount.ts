@@ -1,5 +1,20 @@
 export interface TeamSummaryDto {
   teamId: string
+  divisionId?: string
+  divisionName?: string
+  divisionStatus?: string
+  divisionPlatformCode?: string
+  gameMode?: string
+  seasonId?: string
+  seasonName?: string
+  seriesId?: string
+  seriesName?: string
+  membershipStatus?: number
+  leaveReason?: string
+  canManage?: boolean
+  isHistorical?: boolean
+  displayStatusText?: string
+  registrationStatus?: string
   teamNo?: string
   teamName: string
   shortName?: string
@@ -28,6 +43,21 @@ export interface TeamSummaryDto {
 
 export interface TeamDetailDto {
   teamId: string
+  divisionId?: string
+  divisionName?: string
+  divisionStatus?: string
+  divisionPlatformCode?: string
+  gameMode?: string
+  seasonId?: string
+  seasonName?: string
+  seriesId?: string
+  seriesName?: string
+  membershipStatus?: number
+  leaveReason?: string
+  canManage?: boolean
+  isHistorical?: boolean
+  displayStatusText?: string
+  registrationStatus?: string
   teamNo?: string
   teamName: string
   shortName?: string
@@ -49,6 +79,7 @@ export interface TeamDetailDto {
 }
 
 export interface TeamCreateReq {
+  divisionId: string
   teamName: string
   shortName?: string
   gameTerminal?: string
@@ -73,3 +104,5 @@ export interface TeamUpdateReq {
 export interface TeamLogoBindReq {
   fileId: string
 }
+
+export type TeamMineScope = 'current' | 'history'

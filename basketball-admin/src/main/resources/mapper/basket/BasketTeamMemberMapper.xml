@@ -5,6 +5,7 @@
         <id property="id" column="id" />
         <result property="membershipNo" column="membership_no" />
         <result property="teamId" column="team_id" />
+        <result property="divisionId" column="division_id" />
         <result property="memberId" column="member_id" />
         <result property="playerId" column="player_id" />
         <result property="roleType" column="role_type" />
@@ -32,7 +33,7 @@
         where team_id = #{teamId} and is_current = 1 and membership_status = 1 and is_delete = 0
     </select>
     <select id="selectCaptainMember" resultMap="BasketTeamMemberResult">
-        select id, membership_no, team_id, member_id, player_id, role_type, roster_type, jersey_no, join_source, membership_status, is_current, join_time, leave_time, leave_reason, remark, create_time, update_time, is_delete from basket_team_member
+        select id, membership_no, team_id, division_id, member_id, player_id, role_type, roster_type, jersey_no, join_source, membership_status, is_current, join_time, leave_time, leave_reason, remark, create_time, update_time, is_delete from basket_team_member
         where team_id = #{teamId} and role_type = 'CAPTAIN' and is_current = 1 and membership_status = 1 and is_delete = 0 limit 1
     </select>
     <select id="selectTeamSummaryByMemberId" resultType="com.zhs.basket.vo.AccountPlayerTeamSummaryVo">
@@ -74,4 +75,18 @@
           and m.is_delete = 0
           and t.team_status = 1
     </select>
+    <update id="historicalizeActiveByDivisionId">
+        update basket_team_member
+        set membership_status = #{toStatus},
+            is_current = 0,
+            active_member_slot = null,
+            active_platform_slot = null,
+            leave_time = #{leaveTime},
+            leave_reason = #{leaveReason},
+            update_time = #{leaveTime}
+        where division_id = #{divisionId}
+          and is_delete = 0
+          and membership_status = #{fromStatus}
+          and is_current = 1
+    </update>
 </mapper>

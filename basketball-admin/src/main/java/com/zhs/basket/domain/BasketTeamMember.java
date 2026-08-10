@@ -8,6 +8,8 @@ public class BasketTeamMember {
     private Long id;
     private String membershipNo;
     private Long teamId;
+    /** 所属赛事 Division ID；NULL 表示 Legacy 历史成员关系 */
+    private Long divisionId;
     private Long memberId;
     private Long playerId;
     private String roleType;

@@ -85,6 +85,9 @@ public class TeamMemberItemResp implements Serializable {
     @ApiModelProperty("成员状态")
     private Integer membershipStatus;
 
+    @ApiModelProperty("离队原因")
+    private String leaveReason;
+
     @ApiModelProperty("备注")
     private String remark;
 

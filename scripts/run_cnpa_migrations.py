@@ -9,7 +9,7 @@ from pathlib import Path
 import pymysql
 
 ROOT = Path(__file__).resolve().parents[1]
-CONN = dict(host="192.168.31.47", user="root", password="123456", database="basketball", charset="utf8mb4")
+CONN = dict(host="192.168.31.48", user="root", password="123456", database="basketball", charset="utf8mb4")
 
 SKIP_ERRORS = (
     "Duplicate column name",

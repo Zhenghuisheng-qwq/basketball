@@ -1,10 +1,13 @@
 package com.zhs.basket.support.v4;
 
+import com.zhs.basket.domain.BasketTeam;
 import com.zhs.basket.domain.v4.BasketCaptainGrant;
 import com.zhs.basket.domain.v4.BasketDivision;
 import com.zhs.basket.domain.v4.BasketSeason;
 import com.zhs.basket.enums.CaptainGrantLogActionTypeEnum;
+import com.zhs.basket.enums.TeamStatusEnum;
 import com.zhs.basket.enums.v4.CaptainGrantStatusEnum;
+import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketSeasonMapper;
@@ -33,6 +36,8 @@ public class CaptainGrantRuntimeSupport {
     private BasketDivisionMapper divisionMapper;
     @Autowired
     private BasketSeasonMapper seasonMapper;
+    @Autowired
+    private BasketTeamMapper teamMapper;
     @Autowired
     private CaptainGrantLogSupport grantLogSupport;
 
@@ -90,6 +95,19 @@ public class CaptainGrantRuntimeSupport {
         if (grant == null || teamId == null) {
             return;
         }
+        BasketTeam team = teamMapper.selectById(teamId);
+        if (team == null) {
+            throw new ServiceException("球队不存在");
+        }
+        if (team.getDivisionId() == null) {
+            throw new ServiceException("历史球队不能直接报名新赛事，请在当前赛事重新创建球队");
+        }
+        if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
+            throw new ServiceException("仅当前赛事有效球队可绑定队长授权");
+        }
+        if (!Objects.equals(grant.getDivisionId(), team.getDivisionId())) {
+            throw new ServiceException("队长授权与球队所属赛事不一致");
+        }
         if (grant.getTeamId() != null) {
             if (!Objects.equals(grant.getTeamId(), teamId)) {
                 throw new ServiceException("该赛事队长授权已用于其他球队");
@@ -97,13 +115,37 @@ public class CaptainGrantRuntimeSupport {
             return;
         }
         if (captainGrantMapper.bindTeamById(grant.getId(), teamId) != 1) {
-            throw new ServiceException("绑定队长授权球队失败");
+            throw new ServiceException("该队长权限已被其他建队请求占用");
         }
         grant.setTeamId(teamId);
         grantLogSupport.writeGrantLog(grant, CaptainGrantLogActionTypeEnum.BIND_TEAM,
                 LEGACY_ACTIVE, LEGACY_ACTIVE, null, "后绑定球队", operatorType);
     }
 
+    public void assertTeamBindingForRegistration(BasketCaptainGrant grant, BasketTeam team) {
+        if (grant == null || team == null || team.getId() == null) {
+            throw new ServiceException("无有效队长授权");
+        }
+        if (team.getDivisionId() == null) {
+            throw new ServiceException("历史球队不能直接报名新赛事，请在当前赛事重新创建球队");
+        }
+        if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
+            throw new ServiceException("历史或已结束球队不能用于当前赛事报名");
+        }
+        if (!Objects.equals(grant.getDivisionId(), team.getDivisionId())) {
+            throw new ServiceException("队长授权与球队所属赛事不一致");
+        }
+        if (grant.getTeamId() == null) {
+            bindTeamIfAbsent(grant, team.getId(), "MEMBER");
+            return;
+        }
+        if (!Objects.equals(grant.getTeamId(), team.getId())) {
+            throw new ServiceException("该赛事队长授权已用于其他球队");
+        }
+    }
+
+    /** @deprecated 请使用 {@link #assertTeamBindingForRegistration(BasketCaptainGrant, BasketTeam)} */
+    @Deprecated
     public void assertTeamBindingForRegistration(BasketCaptainGrant grant, Long teamId) {
         if (grant == null || teamId == null) {
             throw new ServiceException("无有效队长授权");

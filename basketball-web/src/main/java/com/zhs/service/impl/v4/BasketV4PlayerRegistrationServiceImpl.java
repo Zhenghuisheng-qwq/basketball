@@ -89,10 +89,13 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         BasketPlayerProfile player = requirePlayerByMemberId(memberId);
         BasketDivision division = requireDivision(req.getDivisionId());
         rejectPersonalModeDivision(division.getRegistrationMode());
-        requireTeamCaptainAccess(req.getTeamId(), memberId);
+        BasketTeam team = requireValidTeamEntity(req.getTeamId());
+        if (!Objects.equals(team.getDivisionId(), req.getDivisionId())) {
+            throw new ServiceException("球队所属赛事与报名 Division 不一致");
+        }
+        requireTeamCaptainAccess(team, memberId);
         BasketCaptainGrant grant = requireActiveGrant(req.getDivisionId(), player.getId());
-        captainGrantSupport.assertTeamBindingForRegistration(grant, req.getTeamId());
-        requireValidTeam(req.getTeamId());
+        captainGrantSupport.assertTeamBindingForRegistration(grant, team);
 
         BasketRegistration registration = findRegistration(req.getDivisionId(), req.getTeamId());
         if (registration != null && RegistrationStatusEnum.APPROVED.getCode().equals(registration.getRegistrationStatus())) {
@@ -271,8 +274,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         return grant;
     }
 
-    private void requireTeamCaptainAccess(Long teamId, Long memberId) {
-        BasketTeam team = teamDao.selectById(teamId);
+    private void requireTeamCaptainAccess(BasketTeam team, Long memberId) {
         if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
             throw new ServiceException("球队不存在");
         }
@@ -404,10 +406,13 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         return division;
     }
 
-    private void requireValidTeam(Long teamId) {
+    private BasketTeam requireValidTeamEntity(Long teamId) {
         BasketTeam team = teamDao.selectById(teamId);
         if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
             throw new ServiceException("球队不存在");
+        }
+        if (team.getDivisionId() == null) {
+            throw new ServiceException("历史球队不能直接报名新赛事，请在当前赛事重新创建球队");
         }
         if (!Integer.valueOf(TEAM_STATUS_ACTIVE).equals(team.getTeamStatus())) {
             throw new ServiceException("球队状态无效");
@@ -415,6 +420,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         if (!Integer.valueOf(TEAM_AUDIT_APPROVED).equals(team.getAuditStatus())) {
             throw new ServiceException("球队尚未审核通过");
         }
+        return team;
     }
 
     private BasketPlayerProfile requireCertifiedPlayer(Long playerId) {

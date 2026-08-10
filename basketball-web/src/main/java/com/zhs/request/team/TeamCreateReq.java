@@ -10,6 +10,9 @@ import java.io.Serializable;
 @ApiModel("创建球队请求")
 public class TeamCreateReq implements Serializable {
 
+    @ApiModelProperty(value = "所属赛事 Division ID", required = true)
+    private Long divisionId;
+
     @ApiModelProperty("球队名称")
     private String teamName;
 

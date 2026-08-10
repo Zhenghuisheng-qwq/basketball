@@ -15,6 +15,11 @@ export interface CaptainQualificationDto {
   grantRevoked?: boolean
   runtimeValid?: boolean
   invalidReason?: string
+  divisionId?: string
+  divisionName?: string
+  platformCode?: string
+  gameMode?: string
+  seriesName?: string
   seasonId?: string
   seasonName?: string
   teamId?: string
