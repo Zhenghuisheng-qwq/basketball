@@ -213,32 +213,44 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
 
         captainPermissionService.requireCertifiedPlayer(memberId);
 
+        List<BasketDivision> openDivisions = divisionDao.selectList(new LambdaQueryWrapper<BasketDivision>()
+                .eq(BasketDivision::getIsDelete, NOT_DELETED)
+                .notIn(BasketDivision::getDivisionStatus,
+                        DivisionStatusEnum.FINISHED.getCode(),
+                        DivisionStatusEnum.ARCHIVED.getCode()));
+        if (CollectionUtils.isEmpty(openDivisions)) {
+            return fillJoinablePageMeta(
+                    emptyJoinablePage(page, size, "暂无可加入的赛事球队"),
+                    hasActiveTeam, currentTeam, pendingApplicationStatus);
+        }
+        Set<Long> openDivisionIds = openDivisions.stream()
+                .map(BasketDivision::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
         LambdaQueryWrapper<BasketTeam> wrapper = new LambdaQueryWrapper<BasketTeam>()
                 .eq(BasketTeam::getIsDelete, NOT_DELETED)
                 .eq(BasketTeam::getTeamStatus, TeamStatusEnum.ACTIVE.getCode())
                 .eq(BasketTeam::getAuditStatus, TeamAuditStatusEnum.APPROVED.getCode())
                 .eq(BasketTeam::getPublicStatus, TeamPublicStatusEnum.PUBLIC.getCode())
-                .isNotNull(BasketTeam::getDivisionId)
+                .in(BasketTeam::getDivisionId, openDivisionIds)
                 .orderByDesc(BasketTeam::getCreateTime)
                 .orderByDesc(BasketTeam::getId);
+        if (!joinedTeamIds.isEmpty()) {
+            wrapper.notIn(BasketTeam::getId, joinedTeamIds);
+        }
         if (StringUtils.hasText(keyword)) {
             String kw = keyword.trim();
             wrapper.and(w -> w.like(BasketTeam::getTeamName, kw).or().like(BasketTeam::getShortName, kw));
         }
 
-        List<BasketTeam> allTeams = teamDao.selectList(wrapper);
+        IPage<BasketTeam> teamPage = teamDao.selectPage(new Page<>(page, size), wrapper);
+        List<BasketTeam> pageTeams = teamPage.getRecords() == null ? Collections.emptyList() : teamPage.getRecords();
         Set<Long> pendingTeamIds = loadPendingApplicationTeamIds(memberId);
-        List<BasketTeam> joinable = allTeams.stream()
-                .filter(team -> !joinedTeamIds.contains(team.getId()))
-                .collect(Collectors.toList());
-
-        EventContextMaps ctx = loadEventContextMaps(joinable);
-        List<BasketTeam> openJoinable = joinable.stream()
-                .filter(team -> isDivisionOpenForCurrent(team.getDivisionId(), ctx.divisionMap))
-                .collect(Collectors.toList());
-        Map<Long, String> logoUrlMap = loadLogoUrlMap(openJoinable);
-        Map<Long, String> captainNameMap = loadCaptainNameMap(openJoinable);
-        List<TeamSummaryResp> items = openJoinable.stream()
+        EventContextMaps ctx = loadEventContextMaps(pageTeams);
+        Map<Long, String> logoUrlMap = loadLogoUrlMap(pageTeams);
+        Map<Long, String> captainNameMap = loadCaptainNameMap(pageTeams);
+        List<TeamSummaryResp> items = pageTeams.stream()
                 .map(team -> {
                     TeamSummaryResp resp = toJoinableSummaryResp(team, logoUrlMap.get(team.getLogoFileId()),
                             captainNameMap.get(team.getCaptainMemberId()),
@@ -249,7 +261,18 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
                 })
                 .collect(Collectors.toList());
 
-        JoinableTeamPageResp respPage = toJoinablePage(items, page, size);
+        JoinableTeamPageResp respPage = new JoinableTeamPageResp(teamPage.getCurrent(), teamPage.getSize(), teamPage.getTotal());
+        respPage.setRecords(items);
+        if (teamPage.getTotal() <= 0) {
+            respPage.setEmptyReason("暂无可加入的赛事球队");
+        }
+        return fillJoinablePageMeta(respPage, hasActiveTeam, currentTeam, pendingApplicationStatus);
+    }
+
+    private JoinableTeamPageResp fillJoinablePageMeta(JoinableTeamPageResp respPage,
+                                                      boolean hasActiveTeam,
+                                                      BasketTeam currentTeam,
+                                                      Integer pendingApplicationStatus) {
         respPage.setPlatformCode(null);
         respPage.setPlatformIdentityStatus(null);
         respPage.setHasActiveTeam(hasActiveTeam);
@@ -258,9 +281,6 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         respPage.setPendingApplicationStatus(pendingApplicationStatus);
         respPage.setCanApply(true);
         respPage.setDisabledReason(null);
-        if (items.isEmpty()) {
-            respPage.setEmptyReason("暂无可加入的赛事球队");
-        }
         return respPage;
     }
 

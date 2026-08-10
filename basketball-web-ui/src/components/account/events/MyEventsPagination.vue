@@ -1,22 +1,30 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   page: number
   pageSize: number
   total: number
-}>()
+  metaText?: string
+  pageSizeOptions?: number[]
+  disabled?: boolean
+  ariaLabel?: string
+}>(), {
+  pageSizeOptions: () => [5, 10, 20],
+  disabled: false,
+  ariaLabel: '列表分页',
+})
 
 const emit = defineEmits<{
   'update:page': [page: number]
   'update:pageSize': [pageSize: number]
 }>()
 
-const pageSizeOptions = [5, 10, 20]
-
 const totalPages = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)))
+const resolvedMeta = computed(() => props.metaText || `共 ${props.total} 条`)
 
 function handlePageSizeChange(event: Event) {
+  if (props.disabled) return
   const next = Number((event.target as HTMLSelectElement).value)
   if (!Number.isNaN(next) && next > 0) {
     emit('update:pageSize', next)
@@ -25,13 +33,14 @@ function handlePageSizeChange(event: Event) {
 </script>
 
 <template>
-  <nav v-if="total > 0" class="my-events-pagination" aria-label="赛事列表分页">
-    <span class="my-events-pagination__meta">共 {{ total }} 条</span>
+  <nav v-if="total > 0" class="my-events-pagination" :aria-label="ariaLabel">
+    <span class="my-events-pagination__meta">{{ resolvedMeta }}</span>
     <label class="my-events-pagination__size">
       每页
       <select
         class="my-events-pagination__size-select"
         :value="pageSize"
+        :disabled="disabled"
         @change="handlePageSizeChange"
       >
         <option v-for="size in pageSizeOptions" :key="size" :value="size">{{ size }}</option>
@@ -41,7 +50,7 @@ function handlePageSizeChange(event: Event) {
     <button
       type="button"
       class="account-btn-secondary my-events-pagination__btn"
-      :disabled="page <= 1"
+      :disabled="disabled || page <= 1"
       @click="emit('update:page', page - 1)"
     >
       上一页
@@ -50,7 +59,7 @@ function handlePageSizeChange(event: Event) {
     <button
       type="button"
       class="account-btn-secondary my-events-pagination__btn"
-      :disabled="page >= totalPages"
+      :disabled="disabled || page >= totalPages"
       @click="emit('update:page', page + 1)"
     >
       下一页

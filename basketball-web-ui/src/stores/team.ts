@@ -495,22 +495,42 @@ export const useTeamStore = defineStore('team', () => {
     pageSize?: number
     keyword?: string
   }) {
+    if (joinableLoading.value) {
+      return joinableContext.value
+    }
     joinableLoading.value = true
     lastError.value = ''
     try {
-      const page = params?.currentPage ?? joinablePage.value
+      let page = params?.currentPage ?? joinablePage.value
       const size = params?.pageSize ?? joinablePageSize.value
+      if (page < 1) page = 1
+
       const res = await getJoinableTeamPage({
         currentPage: page,
         pageSize: size,
         keyword: params?.keyword,
       })
       const pageData = unwrapPage(res.data)
-      joinableTeams.value = pageData.records
-      joinablePage.value = pageData.current || page
-      joinablePageSize.value = pageData.size || size
-      joinableTotal.value = pageData.total ?? 0
-      joinableTotalPages.value = pageData.pages ?? 0
+      const total = Number(pageData.total ?? 0)
+      const resolvedSize = Number(pageData.size || size) || 10
+      const totalPages = Math.max(0, Math.ceil(total / resolvedSize) || Number(pageData.pages ?? 0))
+      let current = Number(pageData.current || page) || 1
+
+      // 操作后当前页被抽空时，回退到合法页再查一次
+      if (total > 0 && current > totalPages) {
+        joinableLoading.value = false
+        return loadJoinableTeams({
+          currentPage: totalPages,
+          pageSize: resolvedSize,
+          keyword: params?.keyword,
+        })
+      }
+
+      joinableTeams.value = pageData.records ?? []
+      joinablePage.value = current
+      joinablePageSize.value = resolvedSize
+      joinableTotal.value = total
+      joinableTotalPages.value = totalPages
       joinableContext.value = res.data ?? null
       joinableEmptyReason.value = res.data?.emptyReason || res.data?.disabledReason || ''
       return res.data

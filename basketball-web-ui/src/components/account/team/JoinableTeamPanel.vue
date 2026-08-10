@@ -5,8 +5,10 @@ import { ElMessage } from 'element-plus'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
+import MyEventsPagination from '@/components/account/events/MyEventsPagination.vue'
 import { useTeamStore } from '@/stores/team'
 import type { TeamSummaryDto } from '@/api/types/teamAccount'
+import { v4GameModeLabel, v4PlatformLabel } from '@/utils/v4Display'
 
 const teamStore = useTeamStore()
 const router = useRouter()
@@ -18,7 +20,8 @@ const applyingTeam = ref<TeamSummaryDto | null>(null)
 const applyReason = ref('')
 const submitting = ref(false)
 
-const showPagination = computed(() => teamStore.joinableTotal > teamStore.joinablePageSize)
+const pageSizeOptions = [10, 20, 50]
+const paginationMeta = computed(() => `共 ${teamStore.joinableTotal} 支可加入球队`)
 
 function memberCountText(team: TeamSummaryDto) {
   const current = team.memberCount ?? team.currentMemberCount ?? 0
@@ -30,12 +33,13 @@ function teamLogoInitial(team: TeamSummaryDto) {
 }
 
 function formatEventContext(team: TeamSummaryDto) {
+  const platform = team.divisionPlatformCode || team.platformCode
   const parts = [
     team.seriesName,
     team.seasonName,
     team.divisionName,
-    team.divisionPlatformCode || team.platformCode,
-    team.gameMode,
+    platform ? v4PlatformLabel(platform) : '',
+    team.gameMode ? v4GameModeLabel(team.gameMode) : '',
   ].filter(Boolean)
   return parts.join(' · ') || '赛事信息暂无'
 }
@@ -83,21 +87,34 @@ async function loadJoinableTeams(page = teamStore.joinablePage) {
 }
 
 async function searchJoinable() {
+  if (teamStore.joinableLoading) return
   appliedKeyword.value = searchKeyword.value.trim()
   await loadJoinableTeams(1)
 }
 
 async function resetSearch() {
+  if (teamStore.joinableLoading) return
   searchKeyword.value = ''
   appliedKeyword.value = ''
   await loadJoinableTeams(1)
 }
 
 async function changePage(page: number) {
+  if (teamStore.joinableLoading) return
   if (page < 1 || (teamStore.joinableTotalPages > 0 && page > teamStore.joinableTotalPages)) {
     return
   }
   await loadJoinableTeams(page)
+}
+
+async function changePageSize(size: number) {
+  if (teamStore.joinableLoading) return
+  if (![10, 20, 50].includes(size)) return
+  await teamStore.loadJoinableTeams({
+    currentPage: 1,
+    pageSize: size,
+    keyword: appliedKeyword.value.trim() || undefined,
+  })
 }
 
 function viewTeamDetail(teamId: string) {
@@ -246,40 +263,17 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
           </table>
         </div>
 
-        <nav v-if="showPagination" class="joinable-pagination" aria-label="可加入球队分页">
-          <span class="joinable-pagination__meta">
-            共 {{ teamStore.joinableTotal }} 条，第 {{ teamStore.joinablePage }} / {{ teamStore.joinableTotalPages || 1 }} 页
-          </span>
-          <div class="joinable-pagination__controls">
-            <button
-              type="button"
-              class="account-btn-secondary"
-              :disabled="teamStore.joinablePage <= 1 || teamStore.joinableLoading"
-              @click="changePage(teamStore.joinablePage - 1)"
-            >
-              上一页
-            </button>
-            <button
-              v-for="p in teamStore.joinableTotalPages"
-              :key="p"
-              type="button"
-              class="joinable-pagination__page"
-              :class="{ 'joinable-pagination__page--active': p === teamStore.joinablePage }"
-              :disabled="teamStore.joinableLoading"
-              @click="changePage(p)"
-            >
-              {{ p }}
-            </button>
-            <button
-              type="button"
-              class="account-btn-secondary"
-              :disabled="teamStore.joinablePage >= teamStore.joinableTotalPages || teamStore.joinableLoading"
-              @click="changePage(teamStore.joinablePage + 1)"
-            >
-              下一页
-            </button>
-          </div>
-        </nav>
+        <MyEventsPagination
+          :page="teamStore.joinablePage"
+          :page-size="teamStore.joinablePageSize"
+          :total="teamStore.joinableTotal"
+          :page-size-options="pageSizeOptions"
+          :meta-text="paginationMeta"
+          :disabled="teamStore.joinableLoading"
+          aria-label="可加入球队分页"
+          @update:page="changePage"
+          @update:page-size="changePageSize"
+        />
       </template>
 
       <AccountEmptyState
@@ -429,57 +423,13 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
 .joinable-table__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   white-space: nowrap;
 }
 
-.joinable-pagination {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(20, 20, 20, 0.1);
-}
-
-.joinable-pagination__meta {
-  font-size: 14px;
-  color: #696969;
-}
-
-.joinable-pagination__controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-.joinable-pagination__page {
-  min-width: 40px;
-  height: 40px;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  background: transparent;
-  color: #111;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-
-  &--active {
-    border-color: var(--account-red, #d90000);
-    color: var(--account-red, #d90000);
-  }
-
-  &:hover:not(&--active):not(:disabled) {
-    border-color: rgba(217, 0, 0, 0.45);
-    color: var(--account-red, #d90000);
-  }
-
-  &:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
+.joinable-table tbody td {
+  vertical-align: middle;
 }
 
 .joinable-apply-field {
@@ -597,15 +547,6 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
   .joinable-table__actions {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .joinable-pagination {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .joinable-pagination__controls {
-    justify-content: center;
   }
 }
 </style>
