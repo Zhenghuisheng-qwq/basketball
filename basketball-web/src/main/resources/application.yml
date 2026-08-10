@@ -100,8 +100,10 @@ member:
     code-max-fail-times: 5
     login-fail-max-times: 5
     login-lock-minutes: 15
-    # 未对接真实邮箱时保持 true：不发邮件，任意 6 位数字验证码可通过
-    # 上线前：配置 spring.mail.* 并设置 CNPA_MAIL_DEV_BYPASS=false
+    # 邮箱验证码 Dev Bypass（仅绕过 SMTP 投递/验证码比对，不绕过注册业务）
+    # 本地默认 true；公网测试/老板验收也可通过环境变量设 true
+    # 正式真实用户开放前必须：CNPA_MAIL_DEV_BYPASS=false + 真实邮箱验证码 Smoke
+    # 环境变量优先于 profile；勿在 Java 写死
     dev-mail-bypass: ${CNPA_MAIL_DEV_BYPASS:true}
   mail:
     from: ${CNPA_MAIL_FROM:${CNPA_MAIL_USERNAME:}}

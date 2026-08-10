@@ -276,16 +276,20 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
     private void regenerateBo1Pairing(BasketDivisionStage stage, BasketScheduleBatch batch,
                                         List<BasketPairingSlotReq> slots, Date now) {
         for (BasketPairingSlotReq slot : slots) {
+            int bracketSlot = slot.getBracketSlot() == null ? 0 : slot.getBracketSlot();
             BasketV4Match match = new BasketV4Match();
             match.setSeasonId(batch.getSeasonId());
             match.setDivisionId(stage.getDivisionId());
             match.setStageId(stage.getId());
+            match.setStageCode(stage.getStageCode());
             match.setScheduleBatchId(batch.getId());
             match.setRoundNo(1);
-            match.setBracketSlot(slot.getBracketSlot());
+            match.setBracketSlot(bracketSlot);
+            match.setMatchNo(buildAdjustedMatchNo(stage, bracketSlot, 1));
             match.setHomeEventTeamId(slot.getHomeEventTeamId());
             match.setAwayEventTeamId(slot.getAwayEventTeamId());
             match.setMatchStatus(MatchStatusEnum.SCHEDULED.getCode());
+            match.setPublishStatus(PublishStatusEnum.DRAFT.getCode());
             match.setCreateTime(now);
             match.setUpdateTime(now);
             match.setIsDelete(NOT_DELETED);
@@ -297,14 +301,15 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
                                          List<BasketPairingSlotReq> slots, Date now) {
         int bestOf = stage.getBestOf();
         for (BasketPairingSlotReq slot : slots) {
+            int bracketSlot = slot.getBracketSlot() == null ? 0 : slot.getBracketSlot();
             BasketMatchSeries series = new BasketMatchSeries();
             series.setDivisionId(stage.getDivisionId());
             series.setStageId(stage.getId());
             series.setScheduleBatchId(batch.getId());
             series.setSeriesCode(com.zhs.basket.support.v4.stage.MatchSeriesEliminationScheduleGenerator
-                    .buildSeriesCode(stage.getDivisionId(), stage.getId(), 1, slot.getBracketSlot()));
+                    .buildSeriesCode(stage.getDivisionId(), stage.getId(), 1, bracketSlot));
             series.setRoundNo(1);
-            series.setBracketSlot(slot.getBracketSlot());
+            series.setBracketSlot(bracketSlot);
             series.setHomeEventTeamId(slot.getHomeEventTeamId());
             series.setAwayEventTeamId(slot.getAwayEventTeamId());
             series.setBestOf(bestOf);
@@ -320,20 +325,28 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
                 match.setSeasonId(batch.getSeasonId());
                 match.setDivisionId(stage.getDivisionId());
                 match.setStageId(stage.getId());
+                match.setStageCode(stage.getStageCode());
                 match.setScheduleBatchId(batch.getId());
                 match.setSeriesId(series.getId());
                 match.setSeriesGameNo(gameNo);
                 match.setRoundNo(1);
-                match.setBracketSlot(slot.getBracketSlot());
+                match.setBracketSlot(bracketSlot);
+                match.setMatchNo(buildAdjustedMatchNo(stage, bracketSlot, gameNo));
                 match.setHomeEventTeamId(slot.getHomeEventTeamId());
                 match.setAwayEventTeamId(slot.getAwayEventTeamId());
                 match.setMatchStatus(MatchStatusEnum.SCHEDULED.getCode());
+                match.setPublishStatus(PublishStatusEnum.DRAFT.getCode());
                 match.setCreateTime(now);
                 match.setUpdateTime(now);
                 match.setIsDelete(NOT_DELETED);
                 matchMapper.insert(match);
             }
         }
+    }
+
+    private static String buildAdjustedMatchNo(BasketDivisionStage stage, int bracketSlot, int gameNo) {
+        return "V4-" + stage.getDivisionId() + "-ADJ-" + stage.getId()
+                + "-S" + bracketSlot + "-G" + gameNo + "-" + System.currentTimeMillis();
     }
 
     private void requireReason(String reason) {

@@ -1,0 +1,592 @@
+{
+  "created_at": "2026-08-11T01:57:24",
+  "smokes": {
+    "A_MAIN": {
+      "smoke": "A_MAIN",
+      "attempts": [
+        {
+          "n": 15,
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "n": 1,
+          "status": "FAIL",
+          "detail": "seed/platform/logo/grant/invite/reject/schedule issues"
+        },
+        {
+          "n": 2,
+          "status": "PASS",
+          "detail": "resumed finish BO5+finish"
+        }
+      ],
+      "cases": [
+        {
+          "name": "bo5_3_2",
+          "expected": "3-2 champion",
+          "actual": "winnerEventTeamId=149",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "finish_division",
+          "expected": "200",
+          "actual": "200",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "division_status",
+          "expected": "FINISHED",
+          "actual": "FINISHED",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "grants_expired",
+          "expected": "EXPIRED/null key",
+          "actual": "8",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "teams_archived",
+          "expected": "ARCHIVED(3)",
+          "actual": "8",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "members_left",
+          "expected": "DIVISION_FINISHED",
+          "actual": "40",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "finish_idempotent",
+          "expected": "no 500",
+          "actual": "code=200 http=200",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "archived_write_protect",
+          "expected": "REJECT",
+          "actual": "球队状态不可用",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "public_history",
+          "expected": "history visible",
+          "actual": "1",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "public_series",
+          "expected": "queryable",
+          "actual": "200",
+          "evidence": "",
+          "result": "PASS"
+        }
+      ],
+      "ids": {
+        "seasonId": "107",
+        "divisionId": "142",
+        "championEventTeamId": "149",
+        "championName": "FS_CHARLIE",
+        "finalSeriesId": "10",
+        "finalMatchId": "201",
+        "stage1Id": "549",
+        "stage2Id": "550",
+        "stage3Id": "551",
+        "teamIds": [
+          "2086875000714924034",
+          "2086875001927077890",
+          "2086875170361937922",
+          "2086875172668805121",
+          "2086875174992449537",
+          "2086875177337065473",
+          "2086875179690070018",
+          "2086875181913051137"
+        ],
+        "teamSummaries": [
+          {
+            "teamId": "2086875000714924034",
+            "name": "FS_ALPHA",
+            "captainEmail": "fs_main_alp01@cnpa.smoke",
+            "captainPlayerId": "2099110811001010000"
+          },
+          {
+            "teamId": "2086875001927077890",
+            "name": "FS_BRAVO",
+            "captainEmail": "fs_main_bra01@cnpa.smoke",
+            "captainPlayerId": "2099110811001010100"
+          },
+          {
+            "teamId": "2086875170361937922",
+            "name": "FS_CHARLIE",
+            "captainEmail": "fs_main_chr01@cnpa.smoke",
+            "captainPlayerId": "2099110811001010200"
+          },
+          {
+            "teamId": "2086875172668805121",
+            "name": "FS_DELTA",
+            "captainEmail": "fs_main_del01@cnpa.smoke",
+            "captainPlayerId": "2099110811001010300"
+          },
+          {
+            "teamId": "2086875174992449537",
+            "name": "FS_ECHO",
+            "captainEmail": "fs_main_ech01@cnpa.smoke",
+            "captainPlayerId": "2099110811001010400"
+          },
+          {
+            "teamId": "2086875177337065473",
+            "name": "FS_FOXTROT",
+            "captainEmail": "fs_main_fox01@cnpa.smoke",
+            "captainPlayerId": "2099110811001010500"
+          },
+          {
+            "teamId": "2086875179690070018",
+            "name": "FS_GOLF",
+            "captainEmail": "fs_main_glf01@cnpa.smoke",
+            "captainPlayerId": "2099110811001010600"
+          },
+          {
+            "teamId": "2086875181913051137",
+            "name": "FS_HOTEL",
+            "captainEmail": "fs_main_htl01@cnpa.smoke",
+            "captainPlayerId": "2099110811001010700"
+          }
+        ],
+        "sourcePlayerId": "2099110811001010200",
+        "eventTeamIds": [
+          "144",
+          "145",
+          "146",
+          "147",
+          "148",
+          "149",
+          "150",
+          "151"
+        ]
+      },
+      "fixes": [],
+      "pass": 10,
+      "fail": 0,
+      "skip": 0
+    },
+    "B_GROUP": {
+      "smoke": "B_GROUP",
+      "attempts": [
+        {
+          "n": 1,
+          "status": "PASS",
+          "detail": "group RR + playoff champion"
+        }
+      ],
+      "cases": [
+        {
+          "name": "grouping_batch",
+          "expected": "locked 4+4",
+          "actual": "batch=10 teams=8",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "group_rr_no_cross",
+          "expected": "no cross-group",
+          "actual": "matches=12 cross=0",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "group_rr_count",
+          "expected": "12 matches",
+          "actual": "12",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "group_to_champion",
+          "expected": "BO5 champion",
+          "actual": "FSG_CENTRAL",
+          "evidence": "series=13 et=155",
+          "result": "PASS"
+        },
+        {
+          "name": "group_finish",
+          "expected": "FINISHED",
+          "actual": "FINISHED",
+          "evidence": "200",
+          "result": "PASS"
+        }
+      ],
+      "ids": {
+        "seasonId": "108",
+        "divisionId": "143",
+        "st1": "553",
+        "st2": "554",
+        "st3": "555",
+        "advancementType": "GROUP_TOP_N",
+        "groupingBatchId": "10",
+        "championEventTeamId": "155",
+        "finalMatchId": "224",
+        "finalSeriesId": "13",
+        "championName": "FSG_CENTRAL"
+      },
+      "fixes": [],
+      "pass": 5,
+      "fail": 0,
+      "skip": 0
+    },
+    "C_ADVANCED": {
+      "smoke": "C_ADVANCED",
+      "attempts": [
+        {
+          "n": 2,
+          "status": "FAIL",
+          "detail": ""
+        },
+        {
+          "n": 5,
+          "status": "FAIL",
+          "detail": "V5 5-team BO1/BYE/forfeit/random"
+        },
+        {
+          "n": 6,
+          "status": "FAIL",
+          "detail": "V6 careful path"
+        },
+        {
+          "n": 7,
+          "status": "FAIL",
+          "detail": "V7 loserEventTeamId + full chain"
+        },
+        {
+          "n": 8,
+          "status": "FAIL",
+          "detail": "V8 check-completion then confirm"
+        },
+        {
+          "n": 10,
+          "status": "FAIL",
+          "detail": "RAND continue confirm+gen"
+        },
+        {
+          "n": 11,
+          "status": "FAIL",
+          "detail": "preview then confirm"
+        },
+        {
+          "n": 12,
+          "status": "FAIL",
+          "detail": "pairing adjust before publish"
+        },
+        {
+          "n": 13,
+          "status": "FAIL",
+          "detail": "pairing after is_delete fix"
+        },
+        {
+          "n": 14,
+          "status": "FAIL",
+          "detail": "pairing with bracketSlot"
+        },
+        {
+          "n": 14,
+          "status": "PASS",
+          "detail": "pairing with bracketSlot"
+        },
+        {
+          "n": 15,
+          "status": "PASS",
+          "detail": "pairing adjust after match_no fix + restart"
+        }
+      ],
+      "cases": [
+        {
+          "name": "BO1",
+          "expected": "PASS",
+          "actual": "matches=2",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "BYE",
+          "expected": "PASS",
+          "actual": "bye=[{'event_team_id': 193, 'seed_no': 1}]",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "Forfeit",
+          "expected": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "HIGH_VS_LOW",
+          "expected": "PASS",
+          "actual": "HIGH_VS_LOW",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "DIVISION_FINISH",
+          "expected": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "RANDOM_DRAW_STABLE",
+          "expected": "PASS",
+          "actual": "n=1 stable=True snap=[[\"198\", \"199\"]]",
+          "evidence": "randDiv=151",
+          "result": "PASS"
+        },
+        {
+          "name": "RANDOM_DRAW_UNIQUE",
+          "expected": "PASS",
+          "actual": "['198', '199']",
+          "evidence": "randDiv=151",
+          "result": "PASS"
+        },
+        {
+          "name": "ManualAdvance",
+          "expected": "manual advance works OR documented product limitation",
+          "actual": "code=500 msg=当前阶段不支持人工直接晋级",
+          "evidence": "KNOWN_LIMITATION: stage rejects manual advance",
+          "result": "KNOWN_LIMITATION"
+        },
+        {
+          "name": "PairingAdjustment",
+          "expected": "draft adjust persist",
+          "actual": "code=200 before=[('215', '214', 0)] after=[('214', '215', 0)] pub=[('FSY_A04_85684', 'FSY_A03_85684')] msg=操作成功",
+          "evidence": "pairDiv=156",
+          "result": "PASS"
+        }
+      ],
+      "ids": {
+        "seasonId": "115",
+        "divisionId": "150",
+        "st1": "575",
+        "st2": "579",
+        "bo1MatchIds": [
+          "244",
+          "245"
+        ],
+        "byeEventTeamIds": [
+          "193"
+        ],
+        "seriesSt2": [
+          "14"
+        ],
+        "randDivisionId": "151",
+        "randSeasonId": "116",
+        "pairDivisionId": "156",
+        "pairSeriesId": "15"
+      },
+      "pass": 8,
+      "fail": 0,
+      "skip": 1,
+      "fixes": [
+        {
+          "issue": "MatchForfeitReq.loserEventTeamId",
+          "note": "not forfeitEventTeamId"
+        },
+        {
+          "issue": "bestOf=1 uses Match not MatchSeries",
+          "note": "documented"
+        },
+        {
+          "issue": "pairing-adjust only in draft before publish",
+          "note": "documented"
+        },
+        {
+          "id": "P0-1",
+          "issue": "softDelete is_delete=id overflows TINYINT",
+          "files": [
+            "BasketV4MatchMapper.xml",
+            "BasketMatchSeriesMapper.xml"
+          ],
+          "retest": "PASS"
+        }
+      ]
+    },
+    "D_LIFECYCLE": {
+      "smoke": "D_LIFECYCLE",
+      "attempts": [
+        {
+          "n": 1,
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "n": 2,
+          "status": "PASS",
+          "detail": "members_rejoin retry"
+        }
+      ],
+      "cases": [
+        {
+          "name": "same_name_new_team",
+          "expected": "new teamId",
+          "actual": "old=2086875000714924034 new=2086877746243407873",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "old_team_archived",
+          "expected": "ARCHIVED(3)",
+          "actual": "3",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "history_old_team",
+          "expected": "visible",
+          "actual": "1",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "members_rejoin",
+          "expected": ">=1 rejoin + active slot",
+          "actual": "rejoined=2 active=3 err=[]",
+          "evidence": "newTeamId=2086877746243407873",
+          "result": "PASS"
+        }
+      ],
+      "ids": {
+        "seasonId": "118",
+        "divisionId": "153",
+        "priorDivisionId": "142",
+        "priorTeamId": "2086875000714924034",
+        "newTeamId": "2086877746243407873"
+      },
+      "fixes": [],
+      "pass": 4,
+      "fail": 0,
+      "skip": 0
+    },
+    "E_EXTRA": {
+      "smoke": "E_EXTRA",
+      "attempts": [
+        {
+          "n": 1,
+          "status": "FAIL",
+          "detail": ""
+        },
+        {
+          "n": 2,
+          "status": "FAIL",
+          "detail": "avatar+joinable path fix"
+        },
+        {
+          "n": 3,
+          "status": "PASS",
+          "detail": "session path /basket/member/auth/session"
+        }
+      ],
+      "cases": [
+        {
+          "name": "avatar_upload",
+          "expected": "200 ACCOUNT_AVATAR",
+          "actual": "code=200 fileId=2086879393833127937",
+          "evidence": "usageType=ACCOUNT_AVATAR",
+          "result": "PASS"
+        },
+        {
+          "name": "profile_pending_unique",
+          "expected": "REJECT second pending",
+          "actual": "first=200 second=400 msg=你已有一条资料变更申请正在审核，请等待审核完成后再次修改",
+          "evidence": "changeId=12",
+          "result": "PASS"
+        },
+        {
+          "name": "profile_reject",
+          "expected": "200",
+          "actual": "200",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "profile_approve_idempotent",
+          "expected": "first ok second reject/no-op",
+          "actual": "1=200 2=500",
+          "evidence": "changeId=13",
+          "result": "PASS"
+        },
+        {
+          "name": "session_nickname",
+          "expected": "FS_E_0811_OK",
+          "actual": "FS_E_0811_OK",
+          "evidence": "/basket/member/auth/session code=200",
+          "result": "PASS"
+        },
+        {
+          "name": "event_player_snapshot_unchanged",
+          "expected": "0 rows with new nickname",
+          "actual": "0",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "joinable_teams",
+          "expected": "200",
+          "actual": "code=200 total=12",
+          "evidence": "/basket/team/joinable/page",
+          "result": "PASS"
+        },
+        {
+          "name": "pagination_my_events",
+          "expected": "200",
+          "actual": "200",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "division_isolation",
+          "expected": "distinct event teams",
+          "actual": "[('142', 8), ('143', 8), ('150', 5), ('153', 0)]",
+          "evidence": "",
+          "result": "PASS"
+        },
+        {
+          "name": "event_player_snapshot",
+          "expected": "source distinct from id",
+          "actual": "bad=0",
+          "evidence": "",
+          "result": "PASS"
+        }
+      ],
+      "ids": {
+        "profileChangeId": "13",
+        "avatarFileId": "2086879393833127937"
+      },
+      "pass": 10,
+      "fail": 0,
+      "skip": 0,
+      "fixes": [
+        {
+          "id": "E-1",
+          "issue": "avatar usageType ACCOUNT_AVATAR",
+          "retest": "PASS"
+        },
+        {
+          "id": "E-2",
+          "issue": "joinable path /basket/team/joinable/page",
+          "retest": "PASS"
+        }
+      ]
+    }
+  },
+  "baseline": {},
+  "build": {}
+}

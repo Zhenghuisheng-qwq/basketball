@@ -1,0 +1,211 @@
+{
+  "executed": true,
+  "results": [
+    {
+      "route": "/",
+      "finalUrl": "http://127.0.0.1:5173/home",
+      "status": "PASS",
+      "notes": [],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 近期赛事 查看更多 › 01 08.21 周五 00:00 公开赛事 FS FSG_CENTRAL VS FS FSG_RIVER 查看赛程 02 08.21 周五 00:00 公开赛事 FS FSAR_FOUR VS FS FSAR_THREE 查看赛程 03 08.21 周五 00:00 公开赛事 F"
+    },
+    {
+      "route": "/tournament",
+      "finalUrl": "http://127.0.0.1:5173/tournament?series=LEAGUE&seasonId=121&divisionId=156",
+      "status": "PASS",
+      "notes": [],
+      "console": [
+        {
+          "type": "warning",
+          "text": "[Vue warn]: Failed to resolve component: TeamEntryLink\nIf this is a native custom element, make sure to exclude it from component resolution via compilerOptions.isCustomElement. \n  at <SeasonLeaders> \n  at <LeagueOverview key=0 > \n  at <Eve"
+        },
+        {
+          "type": "warning",
+          "text": "[Vue warn]: Failed to resolve component: TeamEntryLink\nIf this is a native custom element, make sure to exclude it from component resolution via compilerOptions.isCustomElement. \n  at <SeasonLeaders> \n  at <LeagueOverview key=0 > \n  at <Eve"
+        }
+      ],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 赛季 FULL_SMOKE_20260811_PAIR2_85684 赛季 战队数 4 战队 当前阶段 已结束 阶段 比赛平台 PC 平台 总览 赛程 赛段 高光选手 SEASON LEADERS 联赛战队 LEAGUE TEAMS FULL_SMOKE_20260811_PAIR2_85684 FULL"
+    },
+    {
+      "route": "/events/107?divisionId=142",
+      "finalUrl": "http://127.0.0.1:5173/events/107?divisionId=142",
+      "status": "PASS",
+      "notes": [],
+      "console": [
+        {
+          "type": "warning",
+          "text": "[Vue warn]: Failed to resolve component: TeamEntryLink\nIf this is a native custom element, make sure to exclude it from component resolution via compilerOptions.isCustomElement. \n  at <SeasonLeaders> \n  at <LeagueOverview key=0 > \n  at <Eve"
+        },
+        {
+          "type": "warning",
+          "text": "[Vue warn]: Failed to resolve component: TeamEntryLink\nIf this is a native custom element, make sure to exclude it from component resolution via compilerOptions.isCustomElement. \n  at <SeasonLeaders> \n  at <LeagueOverview key=0 > \n  at <Eve"
+        },
+        {
+          "type": "warning",
+          "text": "[Vue warn]: Failed to resolve component: TeamEntryLink\nIf this is a native custom element, make sure to exclude it from component resolution via compilerOptions.isCustomElement. \n  at <SeasonLeaders> \n  at <LeagueOverview key=0 > \n  at <Eve"
+        }
+      ],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 赛季 FULL_SMOKE_20260811_MAIN Season 赛季 战队数 8 战队 当前阶段 已结束 阶段 比赛平台 PC 平台 总览 赛程 赛段 高光选手 SEASON LEADERS 联赛战队 LEAGUE TEAMS FULL_SMOKE_20260811_PAIR2_85684 FULL"
+    },
+    {
+      "route": "/events/107?divisionId=142&tab=schedule",
+      "finalUrl": "http://127.0.0.1:5173/events/107?divisionId=142&tab=schedule",
+      "status": "PASS",
+      "notes": [],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 赛季 FULL_SMOKE_20260811_MAIN Season 赛季 战队数 8 战队 当前阶段 已结束 阶段 比赛平台 PC 平台 总览 赛程 赛段 赛程 SCHEDULE 121 120 119 118 117 116 115 114 113 112 111 110 109 108 107 日期"
+    },
+    {
+      "route": "/events/107?divisionId=142&tab=stage",
+      "finalUrl": "http://127.0.0.1:5173/events/107?divisionId=142&tab=stage",
+      "status": "PASS",
+      "notes": [],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 赛季 FULL_SMOKE_20260811_MAIN Season 赛季 战队数 8 战队 当前阶段 已结束 阶段 比赛平台 PC 平台 总览 赛程 赛段 赛事进度 STAGE PROGRESS 选择阶段 01 RR Top4 02 Semi BO3 03 Final BO5 CNPA LEAGUE 季"
+    },
+    {
+      "route": "/tournament/team/149",
+      "finalUrl": "http://127.0.0.1:5173/tournament/team/149/overview",
+      "status": "PASS",
+      "notes": [],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 赛事 / CNPA League / FS_CHARLIE CH FS_CHARLIE 已认证  暂无球队简介  常规赛 8胜7负 | 排名第1 球队对比 队长 CHR_C 比赛平台 PC 当前阶段 常规赛 注册阵容 5 人 总览 比赛 数据 动态 本赛季阵容 CURRENT ROSTER ‹ CHR_C"
+    },
+    {
+      "route": "/tournament/team/compare",
+      "finalUrl": "http://127.0.0.1:5173/tournament/team/compare",
+      "status": "PASS",
+      "notes": [],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 赛事 / CNPA League / 球队对比 -- 加载中 0胜0负 ? 请选择对比球队 点击更换球队或从弹窗中选择 更换球队 FULL_SMOKE_20260811_PAIR2_85684 · PC · FULL_SMOKE_20260811_PAIR2_85684_PC_5V5 · 常规赛 更换球队"
+    },
+    {
+      "route": "/player/2099110811001010200",
+      "finalUrl": "http://127.0.0.1:5173/player/2099110811001010200",
+      "status": "PASS",
+      "notes": [],
+      "console": [
+        {
+          "type": "warning",
+          "text": "[Vue Router warn]: No match found for location with path \"/tournament/team//overview\""
+        },
+        {
+          "type": "warning",
+          "text": "[Vue Router warn]: No match found for location with path \"/tournament/team//overview\""
+        },
+        {
+          "type": "warning",
+          "text": "[Vue Router warn]: No match found for location with path \"/tournament/team//overview\""
+        },
+        {
+          "type": "warning",
+          "text": "[Vue Router warn]: No match found for location with path \"/tournament/team//overview\""
+        },
+        {
+          "type": "warning",
+          "text": "[Vue Router warn]: No match found for location with path \"/tournament/team//overview\""
+        }
+      ],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 赛事 / CNPA League / -- / CHR_C CHR_C 已认证  CNPA REGISTERED PLAYER  所属战队 --·主要位置 PG -- 当前参赛球队 -- 比赛平台 -- 主要位置 PG 当前阶段 常规赛 总览 比赛 数据 生涯 球员荣誉 PLAYER HONORS  记录"
+    },
+    {
+      "route": "/data",
+      "finalUrl": "http://127.0.0.1:5173/data",
+      "status": "PASS",
+      "notes": [],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 League · FULL_SMOKE_20260811_PAIR2_85684 · PC 球队数据 个人数据 场均 总计 排名\t战队\t场次\t胜/负\t胜率\t场均得分\t场均篮板\t场均助攻\t场均抢断\t场均盖帽\t场均失误\t投篮%\t三分%\t罚球% 1\t FS FSY_A04_85684 \t1\t1/0\t100.0%"
+    },
+    {
+      "route": "/events/match/201",
+      "finalUrl": "http://127.0.0.1:5173/events/match/201",
+      "status": "PASS",
+      "notes": [],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 ← 返回赛程 BO5Game 1 / 5局分 3 : 2已结束  LEAGUE · FULL_SMOKE_20260811_MAIN SEASON · FULL_SMOKE_20260811_MAIN_PC_5V5 · FINAL BO5  第 1 轮 · 08.20 周四 16:00  FS FS_CH"
+    },
+    {
+      "route": "/hall-of-fame",
+      "finalUrl": "http://127.0.0.1:5173/hall-of-fame?tab=weekly&page=1",
+      "status": "PASS",
+      "notes": [],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 球员荣誉 赛事荣誉 历届冠军 球员荣誉 Player Honors 暂无球员荣誉记录  CNPA 中国职业电竞篮球联赛，汇聚全国顶尖战队，打造专业、公平、开放的赛事平台。  W B D 赛事 CNPA League CNPA Arena CNPA Cup CNPA Open 数据 球员数据 战队数据 赛事"
+    },
+    {
+      "route": "/announcements",
+      "finalUrl": "http://127.0.0.1:5173/announcements",
+      "status": "PASS",
+      "notes": [],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 官方公告  OFFICIAL NOTICES  全站公开公告发布时间持续更新  共 0 条公告  全部 通知公告 规则说明 赛事资讯 其他 搜索 暂无公告  CNPA 中国职业电竞篮球联赛，汇聚全国顶尖战队，打造专业、公平、开放的赛事平台。  W B D 赛事 CNPA League CNPA Arena"
+    },
+    {
+      "route": "/partners",
+      "finalUrl": "http://127.0.0.1:5173/partners",
+      "status": "PASS",
+      "notes": [],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 感谢支持 SUPPORT SUMMARY 支持伙伴总数 0 累计赞助金额 ¥ 0.00 赞助感谢墙 SPONSOR WALL 暂无公开的合作伙伴  CNPA 中国职业电竞篮球联赛，汇聚全国顶尖战队，打造专业、公平、开放的赛事平台。  W B D 赛事 CNPA League CNPA Arena CNPA"
+    },
+    {
+      "route": "/account/team",
+      "finalUrl": "http://127.0.0.1:5173/login?redirect=/account/team",
+      "status": "PASS",
+      "notes": [
+        "login_wall"
+      ],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 CNPA PLAYER CENTER  欢迎回来  账号登录  ACCOUNT LOGIN  邮箱 密码 记住登录状态 忘记密码？ 登录 CNPA  还没有账号？ 注册账号  CNPA 中国职业电竞篮球联赛 © 2026 CNPA. All rights reserved."
+    },
+    {
+      "route": "/account/my-events",
+      "finalUrl": "http://127.0.0.1:5173/login?redirect=/account/my-events",
+      "status": "PASS",
+      "notes": [
+        "login_wall"
+      ],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 CNPA PLAYER CENTER  欢迎回来  账号登录  ACCOUNT LOGIN  邮箱 密码 记住登录状态 忘记密码？ 登录 CNPA  还没有账号？ 注册账号  CNPA 中国职业电竞篮球联赛 © 2026 CNPA. All rights reserved."
+    },
+    {
+      "route": "/account/notifications",
+      "finalUrl": "http://127.0.0.1:5173/login?redirect=/account/notifications",
+      "status": "PASS",
+      "notes": [
+        "login_wall"
+      ],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 CNPA PLAYER CENTER  欢迎回来  账号登录  ACCOUNT LOGIN  邮箱 密码 记住登录状态 忘记密码？ 登录 CNPA  还没有账号？ 注册账号  CNPA 中国职业电竞篮球联赛 © 2026 CNPA. All rights reserved."
+    },
+    {
+      "route": "/account/settings",
+      "finalUrl": "http://127.0.0.1:5173/login?redirect=/account/settings",
+      "status": "PASS",
+      "notes": [
+        "login_wall"
+      ],
+      "console": [],
+      "api500": [],
+      "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 CNPA PLAYER CENTER  欢迎回来  账号登录  ACCOUNT LOGIN  邮箱 密码 记住登录状态 忘记密码？ 登录 CNPA  还没有账号？ 注册账号  CNPA 中国职业电竞篮球联赛 © 2026 CNPA. All rights reserved."
+    }
+  ],
+  "pass": 17,
+  "fail": 0
+}

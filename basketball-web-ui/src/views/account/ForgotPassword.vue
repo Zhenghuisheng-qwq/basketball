@@ -29,7 +29,6 @@ const loading = ref(false)
 const sendingCode = ref(false)
 const countdown = ref(0)
 const resetBizNo = ref('')
-const devBypassHint = ref(false)
 let countdownTimer: ReturnType<typeof setInterval> | null = null
 
 function validateEmail(value: string): string {
@@ -82,12 +81,7 @@ async function handleSendCode() {
   try {
     const res = await sendEmailCode(form.email.trim().toLowerCase(), 'RESET_PASSWORD')
     resetBizNo.value = res.data.bizNo
-    devBypassHint.value = Boolean(res.data.devBypass)
-    ElMessage.success(
-      res.data.devBypass
-        ? '开发模式：未发送真实邮件，任意 6 位数字均可'
-        : '如果邮箱已注册，验证码将发送至该邮箱',
-    )
+    ElMessage.success('如果邮箱已注册，验证码将发送至该邮箱')
     startCountdown(res.data.resendSeconds || 60)
   } catch (error) {
     errors.form = error instanceof Error ? error.message : '验证码发送失败'
@@ -182,7 +176,6 @@ if (typeof emailQuery === 'string' && emailQuery.trim()) {
           </button>
         </div>
         <span v-if="submitted && errors.code" class="auth-field__error">{{ errors.code }}</span>
-        <p v-if="devBypassHint" class="auth-form__dev-hint">开发模式：点击获取验证码后，输入任意 6 位数字即可（如 123456）</p>
       </div>
 
       <div class="auth-field">
@@ -250,12 +243,5 @@ if (typeof emailQuery === 'string' && emailQuery.trim()) {
 .auth-login__code-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-.auth-form__dev-hint {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: #b45309;
-  line-height: 1.5;
 }
 </style>

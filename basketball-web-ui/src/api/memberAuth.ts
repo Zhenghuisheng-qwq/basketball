@@ -12,8 +12,8 @@ export interface EmailCodeSendResult {
   bizNo: string
   expireSeconds: number
   resendSeconds: number
-  /** 开发模式：未发真实邮件，任意 6 位数字可通过 */
-  devBypass?: boolean
+  /** 兼容字段：服务端不再向客户端暴露 bypass 状态 */
+  devBypass?: boolean | null
 }
 
 export interface MemberSummary {

@@ -29,7 +29,6 @@ const loading = ref(false)
 const sending = ref(false)
 const countdown = ref(0)
 const verifyBizNo = ref('')
-const devBypassHint = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 
 const passwordRules = computed(() => {
@@ -106,8 +105,7 @@ async function handleSendCode() {
     const email = form.email.trim().toLowerCase()
     const res = await sendEmailCode(email, 'REGISTER')
     verifyBizNo.value = res.data.bizNo
-    devBypassHint.value = Boolean(res.data.devBypass)
-    ElMessage.success(res.data.devBypass ? '开发模式：未发送真实邮件，任意 6 位数字均可' : '验证码已发送，请查收邮箱')
+    ElMessage.success('验证码已发送，请查收邮箱')
     startCountdown(res.data.resendSeconds || 60)
   } catch (error) {
     errors.form = error instanceof Error ? error.message : '验证码发送失败'
@@ -199,7 +197,6 @@ function goLogin() {
           </button>
         </div>
         <span v-if="submitted && errors.verifyCode" class="form-field__error">{{ errors.verifyCode }}</span>
-        <p v-if="devBypassHint" class="register-form__dev-hint">开发模式：点击发送验证码后，输入任意 6 位数字即可（如 123456）</p>
       </label>
 
       <label class="form-field">
@@ -285,12 +282,5 @@ function goLogin() {
 .register-form__code-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-.register-form__dev-hint {
-  margin: 6px 0 0;
-  font-size: 13px;
-  color: #b45309;
-  line-height: 1.5;
 }
 </style>

@@ -1,6 +1,10 @@
-# 生产环境配置
+# 生产 / 公网部署配置
 # 启动示例：java -jar xxx.jar --spring.profiles.active=prod
 # 或环境变量：SPRING_PROFILES_ACTIVE=prod
+#
+# 注意：当前公网服务器可能仍处于「内部测试 / 老板验收」阶段，不等于正式开放真实用户。
+# 邮箱验证码以环境变量 CNPA_MAIL_DEV_BYPASS 为准（见 member.auth.dev-mail-bypass）。
+# 正式真实用户开放前必须：CNPA_MAIL_DEV_BYPASS=false + 真实邮箱验证码 Smoke。
 
 server:
   port: 8881
@@ -64,7 +68,11 @@ tencent:
 
 member:
   auth:
-    dev-mail-bypass: false
+    # 环境变量 CNPA_MAIL_DEV_BYPASS 优先；勿因 profile=prod 写死导致验收环境无法开启 bypass。
+    # 当前公网测试/老板验收：部署时设 CNPA_MAIL_DEV_BYPASS=true
+    # 正式真实用户开放前：必须 CNPA_MAIL_DEV_BYPASS=false，并用 QQ/163/Outlook 至少一个真实邮箱完成注册验证
+    # 未设置环境变量时 prod 默认 false（安全默认）
+    dev-mail-bypass: ${CNPA_MAIL_DEV_BYPASS:false}
   init:
     enabled: false
   mail:

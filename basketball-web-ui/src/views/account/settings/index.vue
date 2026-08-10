@@ -59,7 +59,6 @@ const emailLoading = ref(false)
 const emailSending = ref(false)
 const emailCountdown = ref(0)
 const emailVerifyBizNo = ref('')
-const emailDevBypassHint = ref(false)
 let emailTimer: ReturnType<typeof setInterval> | null = null
 
 const emailForm = reactive({
@@ -163,8 +162,7 @@ async function handleSendChangeEmailCode() {
   try {
     const res = await sendChangeEmailCode(emailForm.newEmail.trim().toLowerCase())
     emailVerifyBizNo.value = res.data.bizNo
-    emailDevBypassHint.value = Boolean(res.data.devBypass)
-    ElMessage.success(res.data.devBypass ? '开发模式：未发送真实邮件，任意 6 位数字均可' : '验证码已发送，请查收新邮箱')
+    ElMessage.success('验证码已发送，请查收新邮箱')
     startEmailCountdown(res.data.resendSeconds || 60)
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '验证码发送失败')
@@ -611,7 +609,6 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
               </button>
             </div>
             <p v-if="emailErrors.verifyCode" class="security-form__error">{{ emailErrors.verifyCode }}</p>
-            <p v-if="emailDevBypassHint" class="security-form__dev-hint">开发模式：发送验证码后输入任意 6 位数字即可（如 123456）</p>
           </div>
           <div class="security-form__actions">
             <button type="submit" class="account-btn-primary" :disabled="emailLoading">保存新邮箱</button>
@@ -775,13 +772,6 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
   opacity: 0.65;
   cursor: not-allowed;
   background: rgba(245, 245, 245, 0.9);
-}
-
-.security-form__dev-hint {
-  margin: 0;
-  font-size: 13px;
-  color: #b45309;
-  line-height: 1.5;
 }
 
 .security-form {

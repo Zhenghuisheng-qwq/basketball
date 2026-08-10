@@ -34,9 +34,10 @@ public class MemberAuthProperties {
     private long loginLockMinutes = 15;
 
     /**
-     * 本地开发：跳过真实 SMTP。
-     * true 时不发邮件，注册/登录验证码任意 6 位数字可通过。
-     * 配好邮箱后请设环境变量 CNPA_MAIL_DEV_BYPASS=false。
+     * 邮箱验证码 Dev Bypass（由环境变量 CNPA_MAIL_DEV_BYPASS / application 配置控制，禁止业务代码写死）。
+     * true：跳过真实 SMTP；任意合法 6 位数字可通过验证码校验；注册/登录仍走正式 Service。
+     * false：生成验证码 → SMTP 发送 → 校验真实 codeHash。
+     * 公网测试/老板验收可设 true；正式真实用户开放前必须设 false。
      */
     private boolean devMailBypass = true;
 }

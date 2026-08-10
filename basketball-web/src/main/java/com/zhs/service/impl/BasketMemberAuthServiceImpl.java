@@ -124,8 +124,8 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
     @PostConstruct
     public void logDevMailBypassState() {
         if (isDevMailBypass()) {
-            log.warn("[member-auth] 开发模式已开启：未对接真实邮箱，发送验证码后输入任意 6 位数字即可通过。"
-                    + " 上线前请配置 spring.mail 并设置 CNPA_MAIL_DEV_BYPASS=false");
+            log.warn("[member-auth] Mail verification dev bypass enabled (devBypass=true)."
+                    + " Set CNPA_MAIL_DEV_BYPASS=false before opening to real users");
         }
     }
 
@@ -178,12 +178,12 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         record.setIsDelete(0);
 
         if (isDevMailBypass()) {
-            // 本地开发：不发真实邮件，仅落库成功流水，校验时任意 6 位数字可通过
+            // Dev Bypass：不发真实邮件，仅落库成功流水；校验时任意合法 6 位数字可通过（不绕过注册业务）
             record.setSendProvider(SEND_PROVIDER_DEV_BYPASS);
             record.setSendStatus(VerifySendStatusEnum.SUCCESS.getCode());
             record.setFailureReason("DEV_MAIL_BYPASS");
             verifyCodeRecordDao.insert(record);
-            log.warn("[member-auth] 开发模式跳过邮件发送 email={} purpose={} bizNo={}",
+            log.warn("[member-auth] Mail verification dev bypass enabled, skip SMTP email={} purpose={} bizNo={}",
                     maskEmail(email), purpose.getCode(), bizNo);
         } else {
             record.setSendProvider("SMTP");
@@ -579,9 +579,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
     }
 
     private EmailCodeSendResp buildFakeEmailCodeResp() {
-        EmailCodeSendResp resp = buildEmailCodeSendResp(FAKE_BIZ_NO_PREFIX + IdUtil.getSnowflakeNextIdStr());
-        resp.setDevBypass(false);
-        return resp;
+        return buildEmailCodeSendResp(FAKE_BIZ_NO_PREFIX + IdUtil.getSnowflakeNextIdStr());
     }
 
     private EmailCodeSendResp buildEmailCodeSendResp(String bizNo) {
@@ -589,7 +587,8 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         resp.setBizNo(bizNo);
         resp.setExpireSeconds(authProperties.getCodeExpireSeconds());
         resp.setResendSeconds(authProperties.getCodeResendSeconds());
-        resp.setDevBypass(isDevMailBypass());
+        // 不对前台/普通用户暴露 Dev Bypass 状态；仅服务端日志记录
+        resp.setDevBypass(null);
         return resp;
     }
 

@@ -161,9 +161,11 @@
         where id = #{id} and <include refid="NotDeleted"/>
     </update>
 
+    <!-- is_delete is TINYINT: cannot store snowflake/large id. Use 1 + uniquify UK columns. -->
     <update id="softDelete">
         update basket_match
-        set is_delete = id,
+        set is_delete = 1,
+            match_no = concat(match_no, '#', id),
             series_game_no = CASE WHEN series_id IS NOT NULL THEN id ELSE series_game_no END,
             update_time = now()
         where id = #{id} and is_delete = 0
@@ -171,7 +173,8 @@
 
     <update id="softDeleteDraftByBatchId">
         update basket_match
-        set is_delete = id,
+        set is_delete = 1,
+            match_no = concat(match_no, '#', id),
             series_game_no = CASE WHEN series_id IS NOT NULL THEN id ELSE series_game_no END,
             update_time = now()
         where schedule_batch_id = #{scheduleBatchId} and publish_status = 'DRAFT' and is_delete = 0

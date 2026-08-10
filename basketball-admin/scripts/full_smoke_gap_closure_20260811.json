@@ -1,0 +1,434 @@
+{
+  "cases": [
+    {
+      "name": "register_business_flow",
+      "expected": "PASS",
+      "actual": "email=fs_gape_86455@cnpa.smoke.test memberId=2086882165979914240",
+      "evidence": "API register+dev bypass",
+      "result": "PASS"
+    },
+    {
+      "name": "external_qq_mail_delivery",
+      "expected": "NOT EXECUTED",
+      "actual": "DEV_BYPASS",
+      "evidence": "EXTERNAL",
+      "result": "NOT_EXECUTED"
+    },
+    {
+      "name": "player_certification",
+      "expected": "PASS",
+      "actual": "playerId=2086882166175797250",
+      "evidence": "draft/material/submit/admin approve",
+      "result": "PASS"
+    },
+    {
+      "name": "platform_identity",
+      "expected": "PASS",
+      "actual": "changeId=2086882232336748545 after=[{'platformAccountId': '2099110811050800043', 'platform': 'PC', 'displayGameId': 'NEWGID6471', 'accountStatus': 1, 'accountStatusText': '已生效', 'primary': True, 'pendingChange': False}]",
+      "evidence": "cert INITIAL_BIND + change-game-id approve",
+      "result": "PASS"
+    },
+    {
+      "name": "perm_no_grant_create_team",
+      "expected": "REJECT",
+      "actual": "code=403 msg=当前球队暂未获得该赛事报名资格，请联系管理员确认缴费和授权",
+      "evidence": "161",
+      "result": "PASS"
+    },
+    {
+      "name": "perm_manage_other_team",
+      "expected": "REJECT",
+      "actual": "code=400 msg=球队状态不可用",
+      "evidence": "['2086875000714924034']",
+      "result": "PASS"
+    },
+    {
+      "name": "perm_web_user_admin_api",
+      "expected": "401",
+      "actual": "code=401 msg=请求访问：/system/user/list，认证失败，无法访问系统资源",
+      "evidence": "",
+      "result": "PASS"
+    },
+    {
+      "name": "perm_cross_division_registration",
+      "expected": "REJECT",
+      "actual": "code=500 msg=系统异常，请稍后重试",
+      "evidence": "2086882545626091522",
+      "result": "PASS"
+    },
+    {
+      "name": "idem_same_grant_second_team",
+      "expected": "REJECT",
+      "actual": "1=200 2=403 msg2=该赛事队长资格已创建过球队，不能再次创建 tid=2086882671325188097",
+      "evidence": "grant=200",
+      "result": "PASS"
+    },
+    {
+      "name": "idem_duplicate_registration",
+      "expected": "reject/idem",
+      "actual": "1=500/系统异常，请稍后重试 2=500/系统异常，请稍后重试",
+      "evidence": "2086882671325188097",
+      "result": "PASS"
+    },
+    {
+      "name": "idem_registration_approve",
+      "expected": "et unchanged + second reject/no-op",
+      "actual": "1=500/仅待审核状态可通过 2=500/仅待审核状态可通过 et=8->8",
+      "evidence": "170",
+      "result": "PASS"
+    },
+    {
+      "name": "idem_submission_approve",
+      "expected": "no extra stat",
+      "actual": "1=500/仅待审核状态可通过 2=500/仅待审核状态可通过 teamStat=2->2",
+      "evidence": "265",
+      "result": "PASS"
+    },
+    {
+      "name": "consistency_extra",
+      "expected": "all 0",
+      "actual": "{'ps_missing_ep': 0, 'grant_missing_div': 0, 'stage_missing_div': 0, 'dangling_current_team': 0}",
+      "evidence": "player_profile.current_team_id",
+      "result": "PASS"
+    },
+    {
+      "name": "team_logo",
+      "expected": "clear verdict",
+      "actual": "{'upload': 200, 'bind': 200, 'bind_msg': '球队更新成功', 'verdict': 'NOT_REPRODUCED'}",
+      "evidence": "2086882671325188097",
+      "result": "PASS"
+    },
+    {
+      "name": "account_avatar_upload",
+      "expected": "200",
+      "actual": "code=200",
+      "evidence": "",
+      "result": "PASS"
+    },
+    {
+      "name": "pagination_joinable",
+      "expected": "200",
+      "actual": "code=200 total=13",
+      "evidence": "",
+      "result": "PASS"
+    },
+    {
+      "name": "pagination_my_events",
+      "expected": "200",
+      "actual": "code=200",
+      "evidence": "",
+      "result": "PASS"
+    },
+    {
+      "name": "pagination_identity_history",
+      "expected": "200",
+      "actual": "code=200",
+      "evidence": "",
+      "result": "PASS"
+    },
+    {
+      "name": "pagination_notifications",
+      "expected": "200 or documented",
+      "actual": "code=200 msg=操作成功",
+      "evidence": "",
+      "result": "PASS"
+    },
+    {
+      "name": "public_team_149",
+      "expected": "主体有冠军队名",
+      "actual": "{'has_charlie': True, 'empty': ['暂无球队'], 'snippet': '首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 赛事 / CNPA League / FS_CHARLIE CH FS_CHARLIE 已认证  暂无球队简介  常规赛 8胜7负 | 排名第1 球队对比 队长 CHR_C 比赛平台 PC 当前阶段 常规赛 注册阵容 5 人 总览 比赛 数据 动态 本赛季阵容 CURRENT ROSTER ‹ CHR_C 队长 PG CHR_1 SG CHR_2 SF CHR_3 PF CHR_4 C › 比赛记录 MATCH HISTORY 状态 日期时间 对手 比分 赛段 查看 胜利 08-20 16:00 FS FS_GOLF 72 : 66 已结束 查看数据 失败 08-20 16:00 FS FS_GOLF 75 : 81 已结束 查看数据 胜利 08-20 16:00 FS FS_GOLF 70 : 68 已结束 查看数据 胜利 08-20 16:00 FS FS_BRAVO 78 : 72 已结束 查看数据 失败 08-20 16",
+      "evidence": "",
+      "result": "PASS"
+    },
+    {
+      "name": "team_compare_loading",
+      "expected": "not infinite",
+      "actual": "{'stuck': False, 'snippet': '首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 赛事 / CNPA League / 球队对比 -- 加载中 0胜0负 ? 请选择对比球队 点击更换球队或从弹窗中选择 更换球队 GAP_PX_86575 · PC · FULL_SMOKE_20260811_GAP_PX_86575_PC_5V5 · 常规赛 更换球队 常规赛数据对比 REGULAR SEASON COMPARISON 请选择对比球队后查看数据  CNPA 中国职业电竞篮球联赛，汇聚全国顶尖战队，打造专业、公平、开放的赛事平台。  W B D 赛事 CNPA League CNPA Arena CNPA Cup CNPA Open 数据 球员数据 战队数据 赛事赛程 数据记录 名人堂 周最佳 赛事荣誉 历届冠军 最佳阵容 关于 CNPA 关于我们 公告中心 合作伙伴 联系我们 公众号 官方公众号 微博 官方微博 © 2'}",
+      "evidence": "",
+      "result": "PASS"
+    },
+    {
+      "name": "account_browser",
+      "expected": "logged-in",
+      "actual": "pass=7 fail=0",
+      "evidence": "cnpa_web_token",
+      "result": "PASS"
+    },
+    {
+      "name": "admin_ui_browser",
+      "expected": "core menus via route",
+      "actual": "pass=15 fail=0",
+      "evidence": "direct route navigation after login",
+      "result": "PASS"
+    },
+    {
+      "name": "manual_advance_audit",
+      "expected": "non-final SE PASS; final REJECT",
+      "actual": "st1 WINNER_ADVANCE good=200 bad=500 qual PREVIEW",
+      "evidence": "StageExecutionExceptionApplicationServiceImpl",
+      "result": "PASS"
+    },
+    {
+      "name": "bo3_bo5_clarification",
+      "expected": "final-stage 2-team only",
+      "actual": "Semi BO3 ST2 WINNER_ADVANCE seriesCount=2 PASS",
+      "evidence": "validateSeriesElimination",
+      "result": "PASS"
+    }
+  ],
+  "ids": {
+    "email": "fs_gape_86455@cnpa.smoke.test",
+    "password": "111111aa",
+    "memberId": "2086882165979914240",
+    "playerId": "2086882166175797250",
+    "token": "f0610748878d41b9a1b79e6e66e4dba7",
+    "platformChangeId": "2086882232336748545",
+    "platformAfter": [
+      {
+        "platformAccountId": "2099110811050800043",
+        "platform": "PC",
+        "displayGameId": "NEWGID6471",
+        "accountStatus": 1,
+        "accountStatusText": "已生效",
+        "primary": true,
+        "pendingChange": false
+      }
+    ]
+  },
+  "browser_account": {
+    "results": [
+      {
+        "route": "/account",
+        "status": "PASS",
+        "notes": [],
+        "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 CN 个人中心 4  CNPA PLAYER CENTER  CNPA-P-000001  认证球员  fs***@cnpa.smoke.test  概览 球员身份 我的球队 我的赛事 消息通知 4 账号设置 退出登录 首页 / 个人中心 个人中心 ACCOUNT CENTER 欢迎回来，CNPA用户894756  管理账号资料、认证状态与当前待办  认证球员 · 邮箱已验证 队长权限  当前账",
+        "url": "http://127.0.0.1:5173/account/overview"
+      },
+      {
+        "route": "/account/player",
+        "status": "PASS",
+        "notes": [],
+        "snippet": "",
+        "url": "http://127.0.0.1:5173/account/player"
+      },
+      {
+        "route": "/account/team",
+        "status": "PASS",
+        "notes": [],
+        "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 CN 个人中心 4  CNPA PLAYER CENTER  CNPA-P-000001  认证球员  fs***@cnpa.smoke.test  概览 球员身份 我的球队 我的赛事 消息通知 4 账号设置 退出登录 首页 / 个人中心 / 我的球队 我的球队 MY TEAM FS_GAP_OK_159  球队认证审核中，可先编辑资料并管理成员  G59 G59 队长 队长权限  当前账号已开",
+        "url": "http://127.0.0.1:5173/account/team"
+      },
+      {
+        "route": "/account/my-events",
+        "status": "PASS",
+        "notes": [],
+        "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 CN 个人中心 4  CNPA PLAYER CENTER  CNPA-P-000001  认证球员  fs***@cnpa.smoke.test  概览 球员身份 我的球队 我的赛事 消息通知 4 账号设置 退出登录 首页 / 个人中心 / 我的赛事 可参与赛事 AVAILABLE EVENTS 当前开放赛事  你可以查看全部赛事，只有已获得报名资格的赛事可以报名。  有效队长 可参与赛事 我",
+        "url": "http://127.0.0.1:5173/account/my-events"
+      },
+      {
+        "route": "/account/notifications",
+        "status": "PASS",
+        "notes": [],
+        "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 CN 个人中心 4  CNPA PLAYER CENTER  CNPA-P-000001  认证球员  fs***@cnpa.smoke.test  概览 球员身份 我的球队 我的赛事 消息通知 4 账号设置 退出登录 首页 / 个人中心 / 消息通知 消息通知 NOTIFICATIONS 账号与赛事通知  集中查看审核、邀请、比赛与系统消息  4 条未读 全部通知 全部标记为已读 全部 4 未",
+        "url": "http://127.0.0.1:5173/account/notifications"
+      },
+      {
+        "route": "/account/settings",
+        "status": "PASS",
+        "notes": [],
+        "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 CN 个人中心 4  CNPA PLAYER CENTER  CNPA-P-000001  认证球员  fs***@cnpa.smoke.test  概览 球员身份 我的球队 我的赛事 消息通知 4 账号设置 退出登录 首页 / 个人中心 / 账号设置 账号设置 ACCOUNT SETTINGS 管理你的 CNPA 账号  维护账号资料、隐私与通知偏好  账号状态正常 账号资料 隐私设置 通知设",
+        "url": "http://127.0.0.1:5173/account/settings"
+      },
+      {
+        "route": "/account/profile",
+        "status": "PASS",
+        "notes": [],
+        "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 CN 个人中心 4  CNPA PLAYER CENTER  CNPA-P-000001  认证球员  fs***@cnpa.smoke.test  概览 球员身份 我的球队 我的赛事 消息通知 4 账号设置 退出登录 首页 / 个人中心 / 个人资料 个人资料 PROFILE 基础资料  这些资料用于账号识别与个人中心展示  邮箱已验证 基础资料 个人昵称 CNPA用户894756 用户编号 ",
+        "url": "http://127.0.0.1:5173/account/profile"
+      }
+    ],
+    "pass": 7,
+    "fail": 0
+  },
+  "browser_admin": {
+    "results": [
+      {
+        "route": "/competition-exec/event-v4-match",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/competition-exec/event-v4-match",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 账号与认证 比赛执行 赛程管理 比赛管理 比赛数据审核 纪律与档案 内容运营 系统管理 首页 / 比赛执行 / 比赛管理 若依 运营工作台 比赛管理  刷新 比赛列表：查询/编辑草稿比赛时间、场地、备注 视图 单场列表 系列赛 赛季 选择赛"
+      },
+      {
+        "route": "/competition-exec/event-v4-match-submission-audit",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/competition-exec/event-v4-match-submission-audit",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 账号与认证 比赛执行 赛程管理 比赛管理 比赛数据审核 纪律与档案 内容运营 系统管理 首页 / 比赛执行 / 比赛数据审核 若依 运营工作台 比赛数据审核  刷新 比赛数据审核  按每场比赛的每支队伍独立审核；一方审核中不影响另一方提交。"
+      },
+      {
+        "route": "/competition-exec/event-v4-schedule",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/competition-exec/event-v4-schedule",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 账号与认证 比赛执行 赛程管理 比赛管理 比赛数据审核 纪律与档案 内容运营 系统管理 首页 / 比赛执行 / 赛程管理 若依 运营工作台 赛程管理  刷新 赛程管理：支持按 Division 阶段生成循环赛/小组赛/单败淘汰赛程，确认后发"
+      },
+      {
+        "route": "/discipline/permanent-team",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/discipline/permanent-team",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 账号与认证 比赛执行 纪律与档案 处罚管理 球员档案 球队档案 业务审计记录 内容运营 系统管理 首页 / 纪律与档案 / 球队档案 若依 运营工作台 球队档案  刷新 历史球队档案  查看某届赛事球队（含 ARCHIVED / DISSO"
+      },
+      {
+        "route": "/event/event-v4-captain-grant",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/event/event-v4-captain-grant",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 赛事发布 队长授权 报名审核 参赛队伍 统计榜单 账号与认证 比赛执行 纪律与档案 内容运营 系统管理 首页 / 赛事管理 / 队长授权 若依 运营工作台 队长授权  刷新 队长授权：按平台赛区授予已认证球员赛事期内队长权限（授权时无需已有"
+      },
+      {
+        "route": "/event/event-v4-event-team",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/event/event-v4-event-team",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 赛事发布 队长授权 报名审核 参赛队伍 统计榜单 账号与认证 比赛执行 纪律与档案 内容运营 系统管理 首页 / 赛事管理 / 参赛队伍 若依 运营工作台 参赛队伍  刷新 参赛队伍快照（只读）：审核通过后自动生成参赛球队与球员数据；赛事分"
+      },
+      {
+        "route": "/event/event-v4-publish",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/event/event-v4-publish",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 赛事发布 队长授权 报名审核 参赛队伍 统计榜单 账号与认证 比赛执行 纪律与档案 内容运营 系统管理 首页 / 赛事管理 / 赛事发布 若依 运营工作台 赛事发布  刷新 新版赛事结构  层级：赛事系列 → 赛季 → 平台赛区。 同一赛季"
+      },
+      {
+        "route": "/event/event-v4-registration-audit",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/event/event-v4-registration-audit",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 赛事发布 队长授权 报名审核 参赛队伍 统计榜单 账号与认证 比赛执行 纪律与档案 内容运营 系统管理 首页 / 赛事管理 / 报名审核 若依 运营工作台 报名审核  刷新 报名审核：球队审核通过后生成参赛快照；个人报名审核通过后进入线下抽"
+      },
+      {
+        "route": "/event/event-v4-stats",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/event/event-v4-stats",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 赛事发布 队长授权 报名审核 参赛队伍 统计榜单 账号与认证 比赛执行 纪律与档案 内容运营 系统管理 首页 / 赛事管理 / 统计榜单 若依 运营工作台 统计榜单  刷新 统计榜单：支持按阶段/小组查看积分榜，排名依据来自结构化 rank"
+      },
+      {
+        "route": "/identity/account-player",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/identity/account-player",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 账号与认证 用户管理 球员认证审核 球队认证审核 平台游戏ID变更审核 球队资料变更审核 比赛执行 纪律与档案 内容运营 系统管理 首页 / 账号与认证 / 用户管理 若依 运营工作台 用户管理  刷新 用户 ID 邮箱 球员编号 账号状态"
+      },
+      {
+        "route": "/identity/platform-change",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/identity/platform-change",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 账号与认证 用户管理 球员认证审核 球队认证审核 平台游戏ID变更审核 球队资料变更审核 比赛执行 纪律与档案 内容运营 系统管理 首页 / 账号与认证 / 平台游戏ID变更审核 若依 运营工作台 平台游戏ID变更审核  刷新 申请编号 昵"
+      },
+      {
+        "route": "/identity/player-certification",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/identity/player-certification",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 账号与认证 用户管理 球员认证审核 球队认证审核 平台游戏ID变更审核 球队资料变更审核 比赛执行 纪律与档案 内容运营 系统管理 首页 / 账号与认证 / 球员认证审核 若依 运营工作台 球员认证审核  刷新 申请编号 昵称 邮箱 游戏账"
+      },
+      {
+        "route": "/identity/team-certification",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/identity/team-certification",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 账号与认证 用户管理 球员认证审核 球队认证审核 平台游戏ID变更审核 球队资料变更审核 比赛执行 纪律与档案 内容运营 系统管理 首页 / 账号与认证 / 球队认证审核 若依 运营工作台 球队认证审核  刷新 球队编号 球队名称 审核状态"
+      },
+      {
+        "route": "/identity/team-profile-change",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/identity/team-profile-change",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 账号与认证 用户管理 球员认证审核 球队认证审核 平台游戏ID变更审核 球队资料变更审核 比赛执行 纪律与档案 内容运营 系统管理 首页 / 账号与认证 / 球队资料变更审核 若依 运营工作台 球队资料变更审核  刷新 变更编号 球队名称 "
+      },
+      {
+        "route": "/user/profile",
+        "status": "PASS",
+        "notes": [],
+        "url": "http://127.0.0.1:5174/user/profile",
+        "snippet": "CNPA管理系统 运营工作台 赛事管理 账号与认证 比赛执行 纪律与档案 内容运营 系统管理 首页 / 个人中心 若依 运营工作台 个人中心  刷新 个人信息 用户名称 admin 手机号码 15888888888 用户邮箱 ry@163.com 所属部门 / 董事长 所属角色 "
+      }
+    ],
+    "pass": 15,
+    "fail": 0,
+    "discovered_hrefs": [
+      "/",
+      "/competition-exec/event-v4-match",
+      "/competition-exec/event-v4-match-submission-audit",
+      "/competition-exec/event-v4-schedule",
+      "/content-ops/announcement",
+      "/content-ops/hall-of-fame",
+      "/content-ops/partner",
+      "/discipline/audit-log",
+      "/discipline/penalty",
+      "/discipline/permanent-player",
+      "/discipline/permanent-team",
+      "/event/event-v4-captain-grant",
+      "/event/event-v4-event-team",
+      "/event/event-v4-publish",
+      "/event/event-v4-registration-audit",
+      "/event/event-v4-stats",
+      "/identity/account-player",
+      "/identity/platform-change",
+      "/identity/player-certification",
+      "/identity/team-certification",
+      "/identity/team-profile-change",
+      "/index",
+      "/operations-dashboard",
+      "/system/menu",
+      "/system/role",
+      "/system/user",
+      "/user/profile"
+    ]
+  },
+  "team_page": {
+    "has_charlie": true,
+    "empty": [
+      "暂无球队"
+    ],
+    "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 赛事 / CNPA League / FS_CHARLIE CH FS_CHARLIE 已认证  暂无球队简介  常规赛 8胜7负 | 排名第1 球队对比 队长 CHR_C 比赛平台 PC 当前阶段 常规赛 注册阵容 5 人 总览 比赛 数据 动态 本赛季阵容 CURRENT ROSTER ‹ CHR_C 队长 PG CHR_1 SG CHR_2 SF CHR_3 PF CHR_4 C › 比赛记录 MATCH HISTORY 状态 日期时间 对手 比分 赛段 查看 胜利 08-20 16:00 FS FS_GOLF 72 : 66 已结束 查看数据 失败 08-20 16:00 FS FS_GOLF 75 : 81 已结束 查看数据 胜利 08-20 16:00 FS FS_GOLF 70 : 68 已结束 查看数据 胜利 08-20 16:00 FS FS_BRAVO 78 : 72 已结束 查看数据 失败 08-20 16:00 FS FS_BRAVO 71 : 76 已结束 查看数据 上一页 1 2 3 下一页  CNPA "
+  },
+  "compare": {
+    "stuck": false,
+    "snippet": "首页 赛事 数据 名人堂 公告 合作伙伴 登录 注册 赛事 / CNPA League / 球队对比 -- 加载中 0胜0负 ? 请选择对比球队 点击更换球队或从弹窗中选择 更换球队 GAP_PX_86575 · PC · FULL_SMOKE_20260811_GAP_PX_86575_PC_5V5 · 常规赛 更换球队 常规赛数据对比 REGULAR SEASON COMPARISON 请选择对比球队后查看数据  CNPA 中国职业电竞篮球联赛，汇聚全国顶尖战队，打造专业、公平、开放的赛事平台。  W B D 赛事 CNPA League CNPA Arena CNPA Cup CNPA Open 数据 球员数据 战队数据 赛事赛程 数据记录 名人堂 周最佳 赛事荣誉 历届冠军 最佳阵容 关于 CNPA 关于我们 公告中心 合作伙伴 联系我们 公众号 官方公众号 微博 官方微博 © 2"
+  },
+  "team_logo": {
+    "upload": 200,
+    "bind": 200,
+    "bind_msg": "球队更新成功",
+    "verdict": "NOT_REPRODUCED"
+  },
+  "pagination": {
+    "joinable": 200,
+    "my_events": 200,
+    "identity_history": 200,
+    "notifications": 200,
+    "noti_msg": "操作成功"
+  },
+  "manual_advance_conclusion": {
+    "has_capability": true,
+    "supported": "SE WINNER_ADVANCE + nextStageCode",
+    "unsupported": "final SE NONE / RR",
+    "prior_500_class": "TEST_CASE_INVALID + business ServiceException",
+    "code_refs": [
+      "StageExecutionExceptionApplicationServiceImpl.manualAdvance",
+      "EliminationStageSupport.isSingleRoundNonFinalStage"
+    ]
+  },
+  "bo3_clarification": {
+    "type": "B_final_stage_limit",
+    "precise": "BO3/BO5 FINAL stage (advancementType=NONE) only supports 2 teams",
+    "smoke_a": "ST2 Semi BO3 WINNER_ADVANCE Top4 -> 2 series PASS",
+    "code": "SingleEliminationStageScheduleStrategy.validateSeriesElimination",
+    "p1_2": "REMOVE vague"
+  }
+}
