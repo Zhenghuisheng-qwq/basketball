@@ -904,15 +904,16 @@ export const V4_BEST_OF_OPTIONS = [
   { label: 'BO5', value: 5 }
 ] as const
 
-/** 当前版本淘汰赛仅支持 HIGH_VS_LOW（后端 PairingRuleEnum 无 RANDOM） */
 export const V4_ELIMINATION_PAIRING_RULE_OPTIONS = [
-  { label: '高排名对低排名', value: 'HIGH_VS_LOW' }
+  { label: '高排名对低排名', value: 'HIGH_VS_LOW' },
+  { label: '随机抽签', value: 'RANDOM_DRAW' }
 ] as const
 
 export function normalizeV4EliminationPairingRule(rule?: string | null): string {
   const code = (rule || '').trim().toUpperCase()
-  if (code === 'HIGH_VS_LOW') return code
-  // 历史 UI 曾提供 RANDOM，后端未实现，统一回落
+  if (code === 'HIGH_VS_LOW' || code === 'RANDOM_DRAW') return code
+  // 历史 UI 曾写 RANDOM；统一映射到 RANDOM_DRAW。其余缺省回落高排名对低排名
+  if (code === 'RANDOM') return 'RANDOM_DRAW'
   return 'HIGH_VS_LOW'
 }
 
@@ -2060,8 +2061,10 @@ export function formatV4StageCardSummary(
     return `单循环 · ${bo}`
   }
   if (format === 'SINGLE_ELIMINATION') {
-    if (isFinal) return `单败淘汰 · ${bo} · 最终阶段`
-    return `单败淘汰 · ${bo} · 胜者晋级`
+    const pairing = normalizeV4EliminationPairingRule(stage.pairingRule)
+    const pairingLabel = pairing === 'RANDOM_DRAW' ? '随机抽签' : '高排名对低排名'
+    if (isFinal) return `单败淘汰 · ${bo} · ${pairingLabel} · 最终阶段`
+    return `单败淘汰 · ${bo} · ${pairingLabel} · 胜者晋级`
   }
   return formatV4StageCompetitionFormLabel(stage)
 }

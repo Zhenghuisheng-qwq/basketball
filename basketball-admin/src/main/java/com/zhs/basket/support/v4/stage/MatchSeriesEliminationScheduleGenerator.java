@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 /**
@@ -39,6 +40,9 @@ public class MatchSeriesEliminationScheduleGenerator {
     @Autowired
     private ByeQualificationService byeQualificationService;
 
+    /** 仅测试注入固定种子；生产默认 null（使用无种子 shuffle）。 */
+    Random random;
+
     ScheduleGenerationResult generate(StageExecutionContext context) {
         StageScheduleSupport.requireContext(context);
         BasketDivisionStage stage = context.getStage();
@@ -49,12 +53,13 @@ public class MatchSeriesEliminationScheduleGenerator {
             throw new ServiceException("该阶段已存在系列赛，无法重复生成赛程");
         }
 
-        List<BasketDivisionStageTeam> sortedTeams = EliminationByeSupport.sortTeams(context.getStageTeams());
-        int teamCount = sortedTeams.size();
+        List<BasketDivisionStageTeam> orderedTeams = EliminationByeSupport.orderTeamsForPairing(
+                context.getStageTeams(), stage.getPairingRule(), random);
+        int teamCount = orderedTeams.size();
         Long byeTeamId = EliminationByeSupport.allowsBye(stage, teamCount)
-                ? EliminationByeSupport.resolveByeEventTeamId(sortedTeams) : null;
+                ? EliminationByeSupport.resolveByeEventTeamId(orderedTeams) : null;
         List<BasketDivisionStageTeam> pairingTeams = byeTeamId != null
-                ? EliminationByeSupport.pairingTeams(sortedTeams, byeTeamId) : sortedTeams;
+                ? EliminationByeSupport.pairingTeams(orderedTeams, byeTeamId) : orderedTeams;
         int seriesCount = EliminationByeSupport.pairingSlotCount(teamCount);
         int expectedMatchCount = seriesCount * bestOf;
         int roundNo = 1;
@@ -101,7 +106,7 @@ public class MatchSeriesEliminationScheduleGenerator {
         }
 
         if (byeTeamId != null) {
-            byeQualificationService.upsertByePreview(stage, sortedTeams);
+            byeQualificationService.upsertByePreview(stage, orderedTeams);
         }
 
         return new ScheduleGenerationResult(batch.getId(), expectedMatchCount, expectedMatchCount, roundNo);

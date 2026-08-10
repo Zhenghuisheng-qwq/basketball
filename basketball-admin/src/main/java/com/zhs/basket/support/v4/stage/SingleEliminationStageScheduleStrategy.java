@@ -15,9 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 /**
@@ -32,6 +32,9 @@ public class SingleEliminationStageScheduleStrategy extends AbstractStageSchedul
     private MatchSeriesEliminationScheduleGenerator seriesScheduleGenerator;
     @Autowired
     private ByeQualificationService byeQualificationService;
+
+    /** 仅测试注入固定种子；生产默认 null（使用无种子 shuffle）。 */
+    Random random;
 
     @Override
     public boolean supports(BasketDivisionStage stage) {
@@ -105,30 +108,30 @@ public class SingleEliminationStageScheduleStrategy extends AbstractStageSchedul
     public ScheduleGenerationResult generate(StageExecutionContext context) {
         validate(context);
         if (isSeriesElimination(context.getStage())) {
+            seriesScheduleGenerator.random = random;
             return seriesScheduleGenerator.generate(context);
         }
         return generateBo1(context);
     }
 
     private ScheduleGenerationResult generateBo1(StageExecutionContext context) {
-        List<BasketDivisionStageTeam> seededTeams = sortTeams(context.getStageTeams());
+        List<BasketDivisionStageTeam> orderedTeams = orderTeamsForPairing(context);
         BasketDivisionStage stage = context.getStage();
-        int teamCount = seededTeams.size();
+        int teamCount = orderedTeams.size();
 
         if (EliminationStageSupport.isSingleRoundNonFinalStage(stage)) {
-            return generateSingleRoundBo1(context, seededTeams, teamCount);
+            return generateSingleRoundBo1(context, orderedTeams, teamCount);
         }
-        return generateFullBracketBo1(context, seededTeams, teamCount);
+        return generateFullBracketBo1(context, orderedTeams, teamCount);
     }
 
     private ScheduleGenerationResult generateSingleRoundBo1(StageExecutionContext context,
-                                                              List<BasketDivisionStageTeam> seededTeams,
+                                                              List<BasketDivisionStageTeam> orderedTeams,
                                                               int teamCount) {
-        List<BasketDivisionStageTeam> sorted = EliminationByeSupport.sortTeams(seededTeams);
         Long byeTeamId = EliminationByeSupport.allowsBye(context.getStage(), teamCount)
-                ? EliminationByeSupport.resolveByeEventTeamId(sorted) : null;
+                ? EliminationByeSupport.resolveByeEventTeamId(orderedTeams) : null;
         List<BasketDivisionStageTeam> pairingTeams = byeTeamId != null
-                ? EliminationByeSupport.pairingTeams(sorted, byeTeamId) : sorted;
+                ? EliminationByeSupport.pairingTeams(orderedTeams, byeTeamId) : orderedTeams;
         int seriesCount = EliminationByeSupport.pairingSlotCount(teamCount);
 
         BasketScheduleBatch batch = createBatch(context,
@@ -151,13 +154,13 @@ public class SingleEliminationStageScheduleStrategy extends AbstractStageSchedul
             insertMatch(match);
         }
         if (byeTeamId != null) {
-            byeQualificationService.upsertByePreview(context.getStage(), sorted);
+            byeQualificationService.upsertByePreview(context.getStage(), orderedTeams);
         }
         return new ScheduleGenerationResult(batch.getId(), seriesCount, seriesCount, 1);
     }
 
     private ScheduleGenerationResult generateFullBracketBo1(StageExecutionContext context,
-                                                          List<BasketDivisionStageTeam> seededTeams,
+                                                          List<BasketDivisionStageTeam> orderedTeams,
                                                           int teamCount) {
         int roundCount = StageScheduleMathSupport.eliminationRoundCount(teamCount);
         int expectedMatchCount = StageScheduleMathSupport.eliminationMatchCount(teamCount);
@@ -183,8 +186,8 @@ public class SingleEliminationStageScheduleStrategy extends AbstractStageSchedul
 
         List<BasketV4Match> firstRound = roundMatches.get(0);
         for (int slot = 0; slot < firstRound.size(); slot++) {
-            BasketDivisionStageTeam home = seededTeams.get(slot);
-            BasketDivisionStageTeam away = seededTeams.get(teamCount - 1 - slot);
+            BasketDivisionStageTeam home = orderedTeams.get(slot);
+            BasketDivisionStageTeam away = orderedTeams.get(teamCount - 1 - slot);
             BasketV4Match match = firstRound.get(slot);
             match.setHomeEventTeamId(home.getEventTeamId());
             match.setAwayEventTeamId(away.getEventTeamId());
@@ -205,12 +208,9 @@ public class SingleEliminationStageScheduleStrategy extends AbstractStageSchedul
         return new ScheduleGenerationResult(batch.getId(), expectedMatchCount, expectedMatchCount, roundCount);
     }
 
-    private List<BasketDivisionStageTeam> sortTeams(List<BasketDivisionStageTeam> teams) {
-        return teams.stream()
-                .sorted(Comparator
-                        .comparing(BasketDivisionStageTeam::getSeedNo, Comparator.nullsLast(Integer::compareTo))
-                        .thenComparing(BasketDivisionStageTeam::getEventTeamId))
-                .toList();
+    private List<BasketDivisionStageTeam> orderTeamsForPairing(StageExecutionContext context) {
+        return EliminationByeSupport.orderTeamsForPairing(
+                context.getStageTeams(), context.getStage().getPairingRule(), random);
     }
 
     private void validateBo1Elimination(StageExecutionContext context) {
@@ -242,11 +242,13 @@ public class SingleEliminationStageScheduleStrategy extends AbstractStageSchedul
 
     private void validatePairingRule(BasketDivisionStage stage) {
         String pairingRule = stage.getPairingRule();
-        if (pairingRule != null
-                && !PairingRuleEnum.NONE.getCode().equals(pairingRule)
-                && !PairingRuleEnum.HIGH_VS_LOW.getCode().equals(pairingRule)) {
-            throw new ServiceException("当前版本单败淘汰仅支持 HIGH_VS_LOW 对阵规则");
+        if (pairingRule == null
+                || PairingRuleEnum.NONE.getCode().equals(pairingRule)
+                || PairingRuleEnum.HIGH_VS_LOW.getCode().equals(pairingRule)
+                || PairingRuleEnum.RANDOM_DRAW.getCode().equals(pairingRule)) {
+            return;
         }
+        throw new ServiceException("当前版本单败淘汰仅支持 HIGH_VS_LOW / RANDOM_DRAW 对阵规则");
     }
 
     static boolean isSeriesElimination(BasketDivisionStage stage) {

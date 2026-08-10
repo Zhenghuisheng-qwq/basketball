@@ -2,14 +2,18 @@ package com.zhs.basket.support.v4.stage;
 
 import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketDivisionStageTeam;
+import com.zhs.basket.enums.v4.PairingRuleEnum;
 import com.zhs.basket.support.v4.MatchSeriesExecutionCapability;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 
 /**
- * 单轮非最终淘汰阶段奇数队轮空（BYE）规则：最高 seed 轮空，确定性 HIGH_VS_LOW 配对。
+ * 单轮非最终淘汰阶段奇数队轮空（BYE）规则：排序后首位轮空，再按首尾配对。
+ * HIGH_VS_LOW 按 seed 排序；RANDOM_DRAW 先随机打乱顺序再复用同一配对/BYE 逻辑。
  */
 public final class EliminationByeSupport {
 
@@ -25,6 +29,30 @@ public final class EliminationByeSupport {
         }
         return EliminationStageSupport.isSingleRoundNonFinalStage(stage)
                 || MatchSeriesExecutionCapability.supportsScheduleGeneration(stage);
+    }
+
+    /**
+     * 按对阵规则确定进入 bracket/pairing 的队伍顺序。
+     * RANDOM_DRAW：复制后 shuffle（不修改入参）；其余（含空/历史缺省）按 seed 排序。
+     */
+    public static List<BasketDivisionStageTeam> orderTeamsForPairing(List<BasketDivisionStageTeam> teams,
+                                                                     String pairingRule) {
+        return orderTeamsForPairing(teams, pairingRule, null);
+    }
+
+    public static List<BasketDivisionStageTeam> orderTeamsForPairing(List<BasketDivisionStageTeam> teams,
+                                                                     String pairingRule,
+                                                                     Random random) {
+        if (PairingRuleEnum.RANDOM_DRAW.getCode().equals(pairingRule)) {
+            List<BasketDivisionStageTeam> shuffled = new ArrayList<>(teams);
+            if (random != null) {
+                Collections.shuffle(shuffled, random);
+            } else {
+                Collections.shuffle(shuffled);
+            }
+            return shuffled;
+        }
+        return sortTeams(teams);
     }
 
     public static List<BasketDivisionStageTeam> sortTeams(List<BasketDivisionStageTeam> teams) {

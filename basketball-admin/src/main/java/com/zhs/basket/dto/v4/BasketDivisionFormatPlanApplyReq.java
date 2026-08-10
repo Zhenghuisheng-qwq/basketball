@@ -19,7 +19,7 @@ public class BasketDivisionFormatPlanApplyReq {
     private Integer qualifiersPerGroup;
     /** 总排名前 N 晋级（ROUND_ROBIN_TO_ELIM） */
     private Integer overallAdvanceCount;
-    /** 淘汰赛对阵方式：HIGH_VS_LOW / RANDOM */
+    /** 淘汰赛对阵方式：HIGH_VS_LOW / RANDOM_DRAW */
     private String eliminationPairingRule;
     private Integer winPoints;
     private Integer lossPoints;
