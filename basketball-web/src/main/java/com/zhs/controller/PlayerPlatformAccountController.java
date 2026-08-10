@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -66,8 +67,13 @@ public class PlayerPlatformAccountController {
 
     @ApiOperation("平台变更历史")
     @GetMapping("/change-history")
-    public R<List<PlatformChangeHistoryItemResp>> changeHistory() {
-        return R.ok(playerPlatformAccountService.listChangeHistory(UserContext.getRequiredMemberId()));
+    public R changeHistory(@RequestParam(required = false) Integer currentPage,
+                           @RequestParam(required = false) Integer pageSize) {
+        Long memberId = UserContext.getRequiredMemberId();
+        if (currentPage == null && pageSize == null) {
+            return R.ok(playerPlatformAccountService.listChangeHistory(memberId));
+        }
+        return R.ok(playerPlatformAccountService.pageChangeHistory(memberId, currentPage, pageSize));
     }
 
     @ApiOperation("参赛资格状态")

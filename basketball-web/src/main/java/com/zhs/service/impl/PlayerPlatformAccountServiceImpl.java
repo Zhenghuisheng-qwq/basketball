@@ -2,6 +2,8 @@ package com.zhs.service.impl;
 
 import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.dao.BasketPlayerPlatformAccountDao;
 import com.zhs.dao.BasketPlayerPlatformChangeRequestDao;
 import com.zhs.dao.BasketPlayerPlatformIdentityHistoryDao;
@@ -31,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -192,6 +195,40 @@ public class PlayerPlatformAccountServiceImpl implements IPlayerPlatformAccountS
         return histories.stream()
                 .map(this::toHistoryItem)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public IPage<PlatformChangeHistoryItemResp> pageChangeHistory(Long memberId, Integer currentPage, Integer pageSize) {
+        BasketPlayerProfile profile = requireApprovedPlayer(memberId);
+        long page = currentPage == null || currentPage < 1 ? 1L : currentPage;
+        long size = pageSize == null || pageSize < 1 ? 10L : Math.min(pageSize, 50L);
+
+        LambdaQueryWrapper<BasketPlayerPlatformIdentityHistory> countWrapper =
+                new LambdaQueryWrapper<BasketPlayerPlatformIdentityHistory>()
+                        .eq(BasketPlayerPlatformIdentityHistory::getPlayerId, profile.getId())
+                        .eq(BasketPlayerPlatformIdentityHistory::getIsDelete, NOT_DELETED);
+        long total = platformIdentityHistoryDao.selectCount(countWrapper);
+
+        List<BasketPlayerPlatformIdentityHistory> histories;
+        if (total == 0) {
+            histories = Collections.emptyList();
+        } else {
+            long maxPage = Math.max(1L, (total + size - 1) / size);
+            if (page > maxPage) {
+                page = maxPage;
+            }
+            histories = platformIdentityHistoryDao.selectList(
+                    new LambdaQueryWrapper<BasketPlayerPlatformIdentityHistory>()
+                            .eq(BasketPlayerPlatformIdentityHistory::getPlayerId, profile.getId())
+                            .eq(BasketPlayerPlatformIdentityHistory::getIsDelete, NOT_DELETED)
+                            .orderByDesc(BasketPlayerPlatformIdentityHistory::getEffectiveTime)
+                            .orderByDesc(BasketPlayerPlatformIdentityHistory::getId)
+                            .last("LIMIT " + (page - 1) * size + ", " + size));
+        }
+
+        Page<PlatformChangeHistoryItemResp> respPage = new Page<>(page, size, total);
+        respPage.setRecords(histories.stream().map(this::toHistoryItem).collect(Collectors.toList()));
+        return respPage;
     }
 
     @Override

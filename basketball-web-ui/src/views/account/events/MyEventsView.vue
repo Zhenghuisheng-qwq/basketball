@@ -9,15 +9,16 @@ import MyEventsTabs from '@/components/account/events/MyEventsTabs.vue'
 import AvailableEventTable from '@/components/account/events/AvailableEventTable.vue'
 import MyApplicationList from '@/components/account/events/MyApplicationList.vue'
 import ParticipatingEventList from '@/components/account/events/ParticipatingEventList.vue'
+import MyEventsPagination from '@/components/account/events/MyEventsPagination.vue'
 import V4MySchedulePanel from '@/components/account/events/V4MySchedulePanel.vue'
 import V4PersonalFormationPanel from '@/components/account/events/V4PersonalFormationPanel.vue'
 import {
-  getV4AvailableDivisions,
+  getV4MyAvailableEventsPage,
   getV4MyEvents,
   getV4MyPersonalRegistrations,
   getV4MyRegistrations,
-  getV4PersonalAvailableDivisions,
 } from '@/api/v4PlayerEvents'
+import type { PageResult } from '@/api/types/common'
 import { useTeamStore } from '@/stores/team'
 import { useAccountStore } from '@/stores/account'
 import type { MyEventsRoleMode } from '@/api/types/myEvents'
@@ -47,6 +48,16 @@ const loadError = ref('')
 const availableEvents = ref<AvailableEvent[]>([])
 const myApplications = ref<MyApplication[]>([])
 const participatingEvents = ref<ParticipatingEvent[]>([])
+
+const availablePage = ref(1)
+const availablePageSize = ref(10)
+const availableTotal = ref(0)
+
+const joinedPage = ref(1)
+const joinedPageSize = ref(10)
+const joinedTotal = ref(0)
+
+const pageSizeOptions = [10, 20, 50]
 
 const roleMode = computed<MyEventsRoleMode>(() => {
   if (!teamStore.hasTeam) return 'NO_TEAM'
@@ -88,26 +99,48 @@ function setTab(tab: MyEventsTabKey) {
   })
 }
 
-async function loadAvailableEvents() {
+function unwrapPage<T>(data: PageResult<T> | T[] | undefined | null): PageResult<T> {
+  if (Array.isArray(data)) {
+    return { records: data, total: data.length, size: data.length || 10, current: 1, pages: 1 }
+  }
+  return data ?? { records: [], total: 0, size: 10, current: 1, pages: 0 }
+}
+
+async function loadAvailableEvents(page = availablePage.value, pageSize = availablePageSize.value) {
+  if (loading.value) return
   loading.value = true
   loadError.value = ''
   try {
-    const [teamRes, personalRes] = await Promise.all([
-      getV4AvailableDivisions().catch(() => ({ data: [] as any[] })),
-      getV4PersonalAvailableDivisions().catch(() => ({ data: [] as any[] })),
-    ])
-    const teamEvents = (teamRes.data || []).map(mapV4DivisionToAvailableEvent)
-    const personalEvents = (personalRes.data || []).map(mapV4PersonalDivisionToAvailableEvent)
-    availableEvents.value = [...teamEvents, ...personalEvents]
+    const res = await getV4MyAvailableEventsPage({ currentPage: page, pageSize })
+    const pageData = unwrapPage(res.data)
+    const total = Number(pageData.total ?? 0)
+    const size = Number(pageData.size || pageSize) || 10
+    const totalPages = Math.max(0, Math.ceil(total / size))
+    let current = Number(pageData.current || page) || 1
+    if (total > 0 && current > totalPages) {
+      loading.value = false
+      return loadAvailableEvents(totalPages, size)
+    }
+    availableEvents.value = (pageData.records || []).map((row) => {
+      if ((row.source || '').toUpperCase() === 'PERSONAL' && row.personalItem) {
+        return mapV4PersonalDivisionToAvailableEvent(row.personalItem)
+      }
+      return mapV4DivisionToAvailableEvent(row.teamItem as any)
+    })
+    availablePage.value = current
+    availablePageSize.value = size
+    availableTotal.value = total
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
     availableEvents.value = []
+    availableTotal.value = 0
   } finally {
     loading.value = false
   }
 }
 
 async function loadApplications() {
+  if (loading.value) return
   loading.value = true
   loadError.value = ''
   try {
@@ -126,15 +159,29 @@ async function loadApplications() {
   }
 }
 
-async function loadJoinedEvents() {
+async function loadJoinedEvents(page = joinedPage.value, pageSize = joinedPageSize.value) {
+  if (loading.value) return
   loading.value = true
   loadError.value = ''
   try {
-    const res = await getV4MyEvents()
-    participatingEvents.value = (res.data || []).map(mapV4EventToParticipating)
+    const res = await getV4MyEvents({ currentPage: page, pageSize })
+    const pageData = unwrapPage(res.data as any)
+    const total = Number(pageData.total ?? 0)
+    const size = Number(pageData.size || pageSize) || 10
+    const totalPages = Math.max(0, Math.ceil(total / size))
+    let current = Number(pageData.current || page) || 1
+    if (total > 0 && current > totalPages) {
+      loading.value = false
+      return loadJoinedEvents(totalPages, size)
+    }
+    participatingEvents.value = ((pageData.records || []) as any[]).map(mapV4EventToParticipating)
+    joinedPage.value = current
+    joinedPageSize.value = size
+    joinedTotal.value = total
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载失败'
     participatingEvents.value = []
+    joinedTotal.value = 0
   } finally {
     loading.value = false
   }
@@ -142,7 +189,7 @@ async function loadJoinedEvents() {
 
 async function loadActiveTab() {
   if (activeTab.value === 'available') {
-    await loadAvailableEvents()
+    await loadAvailableEvents(1, availablePageSize.value)
     return
   }
   if (activeTab.value === 'applications') {
@@ -152,7 +199,7 @@ async function loadActiveTab() {
   if (activeTab.value === 'schedule') {
     return
   }
-  await loadJoinedEvents()
+  await loadJoinedEvents(1, joinedPageSize.value)
 }
 
 onMounted(async () => {
@@ -275,12 +322,24 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
         :subtitle="roleMode === 'NO_TEAM' ? '加入球队后，可由队长统一报名赛事' : undefined"
         large
       />
-      <AvailableEventTable
-        v-else
-        :events="availableEvents"
-        :role-mode="roleMode"
-        @action="handleAvailableAction"
-      />
+      <template v-else>
+        <AvailableEventTable
+          :events="availableEvents"
+          :role-mode="roleMode"
+          @action="handleAvailableAction"
+        />
+        <MyEventsPagination
+          :page="availablePage"
+          :page-size="availablePageSize"
+          :total="availableTotal"
+          :page-size-options="pageSizeOptions"
+          :meta-text="`共 ${availableTotal} 条可参与赛事`"
+          :disabled="loading"
+          aria-label="可参与赛事分页"
+          @update:page="(p) => loadAvailableEvents(p, availablePageSize)"
+          @update:page-size="(s) => loadAvailableEvents(1, s)"
+        />
+      </template>
     </template>
 
     <template v-else-if="activeTab === 'applications'">
@@ -305,12 +364,24 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
         subtitle="报名审核通过并进入正式阵容后，记录将显示在这里"
         large
       />
-      <ParticipatingEventList
-        v-else
-        :events="participatingEvents"
-        @action="handleParticipatingAction"
-        @match-data-action="handleParticipatingMatchDataAction"
-      />
+      <template v-else>
+        <ParticipatingEventList
+          :events="participatingEvents"
+          @action="handleParticipatingAction"
+          @match-data-action="handleParticipatingMatchDataAction"
+        />
+        <MyEventsPagination
+          :page="joinedPage"
+          :page-size="joinedPageSize"
+          :total="joinedTotal"
+          :page-size-options="pageSizeOptions"
+          :meta-text="`共 ${joinedTotal} 条已参与赛事`"
+          :disabled="loading"
+          aria-label="已参与赛事分页"
+          @update:page="(p) => loadJoinedEvents(p, joinedPageSize)"
+          @update:page-size="(s) => loadJoinedEvents(1, s)"
+        />
+      </template>
     </template>
 
     <V4MySchedulePanel v-else-if="activeTab === 'schedule'" :active="activeTab === 'schedule'" />

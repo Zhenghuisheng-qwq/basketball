@@ -1,5 +1,6 @@
 package com.zhs.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.response.player.PlatformAccountItemResp;
 import com.zhs.response.player.PlatformChangeHistoryItemResp;
 import com.zhs.response.player.PlatformChangeSubmitResp;
@@ -19,6 +20,8 @@ public interface IPlayerPlatformAccountService {
     PlatformChangeSubmitResp submitChangeGameId(Long memberId, Long platformAccountId, String newGameId, Long proofFileId);
 
     List<PlatformChangeHistoryItemResp> listChangeHistory(Long memberId);
+
+    IPage<PlatformChangeHistoryItemResp> pageChangeHistory(Long memberId, Integer currentPage, Integer pageSize);
 
     PlayerEligibilityStatusResp getEligibilityStatus(Long memberId);
 

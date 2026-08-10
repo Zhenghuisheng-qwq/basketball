@@ -118,6 +118,18 @@ export const useTeamStore = defineStore('team', () => {
   const joinableTotal = ref(0)
   const joinableTotalPages = ref(0)
 
+  const historyPage = ref(1)
+  const historyPageSize = ref(10)
+  const historyTotal = ref(0)
+
+  const invitePage = ref(1)
+  const invitePageSize = ref(10)
+  const inviteTotal = ref(0)
+
+  const myApplicationPage = ref(1)
+  const myApplicationPageSize = ref(10)
+  const myApplicationTotal = ref(0)
+
   const candidatePlayers = ref<CandidatePlayerItemDto[]>([])
   const candidateEmptyReason = ref('')
   const candidatesLoading = ref(false)
@@ -225,9 +237,23 @@ export const useTeamStore = defineStore('team', () => {
     historyLoading.value = true
     lastError.value = ''
     try {
-      const res = await getMyTeamPage({ currentPage: 1, pageSize: 20, scope: 'history', ...params })
+      let pageNum = params?.currentPage ?? historyPage.value
+      const size = params?.pageSize ?? historyPageSize.value
+      if (pageNum < 1) pageNum = 1
+      const res = await getMyTeamPage({ currentPage: pageNum, pageSize: size, scope: 'history' })
       const page = unwrapPage(res.data)
-      historyTeams.value = page.records
+      const total = Number(page.total ?? 0)
+      const resolvedSize = Number(page.size || size) || 10
+      const totalPages = Math.max(0, Math.ceil(total / resolvedSize))
+      let current = Number(page.current || pageNum) || 1
+      if (total > 0 && current > totalPages) {
+        historyLoading.value = false
+        return loadHistoryTeams({ currentPage: totalPages, pageSize: resolvedSize })
+      }
+      historyTeams.value = page.records ?? []
+      historyPage.value = current
+      historyPageSize.value = resolvedSize
+      historyTotal.value = total
       return historyTeams.value
     } catch (error) {
       setError(error)
@@ -427,8 +453,27 @@ export const useTeamStore = defineStore('team', () => {
     invitationsLoading.value = true
     lastError.value = ''
     try {
-      const res = await getMyTeamInvitationPage({ currentPage: 1, pageSize: 20, ...params })
-      myInvitations.value = unwrapPage(res.data).records
+      let pageNum = params?.currentPage ?? invitePage.value
+      const size = params?.pageSize ?? invitePageSize.value
+      if (pageNum < 1) pageNum = 1
+      const res = await getMyTeamInvitationPage({
+        currentPage: pageNum,
+        pageSize: size,
+        status: params?.status,
+      })
+      const pageData = unwrapPage(res.data)
+      const total = Number(pageData.total ?? 0)
+      const resolvedSize = Number(pageData.size || size) || 10
+      const totalPages = Math.max(0, Math.ceil(total / resolvedSize))
+      let current = Number(pageData.current || pageNum) || 1
+      if (total > 0 && current > totalPages) {
+        invitationsLoading.value = false
+        return loadMyInvitations({ currentPage: totalPages, pageSize: resolvedSize, status: params?.status })
+      }
+      myInvitations.value = pageData.records ?? []
+      invitePage.value = current
+      invitePageSize.value = resolvedSize
+      inviteTotal.value = total
       return myInvitations.value
     } catch (error) {
       setError(error)
@@ -480,8 +525,14 @@ export const useTeamStore = defineStore('team', () => {
         accept,
         responseRemark,
       })
-      myInvitations.value = myInvitations.value.filter((item) => item.invitationId !== invitationId)
-      await loadMyTeam()
+      await Promise.all([
+        loadMyInvitations({
+          currentPage: invitePage.value,
+          pageSize: invitePageSize.value,
+          status: 0,
+        }),
+        loadMyTeam(),
+      ])
     } catch (error) {
       setError(error)
       throw error
@@ -546,8 +597,31 @@ export const useTeamStore = defineStore('team', () => {
     joinApplicationsLoading.value = true
     lastError.value = ''
     try {
-      const res = await getMyTeamJoinApplicationPage({ currentPage: 1, pageSize: 20, ...params })
-      myJoinApplications.value = unwrapPage(res.data).records
+      let pageNum = params?.currentPage ?? myApplicationPage.value
+      const size = params?.pageSize ?? myApplicationPageSize.value
+      if (pageNum < 1) pageNum = 1
+      const res = await getMyTeamJoinApplicationPage({
+        currentPage: pageNum,
+        pageSize: size,
+        status: params?.status,
+      })
+      const pageData = unwrapPage(res.data)
+      const total = Number(pageData.total ?? 0)
+      const resolvedSize = Number(pageData.size || size) || 10
+      const totalPages = Math.max(0, Math.ceil(total / resolvedSize))
+      let current = Number(pageData.current || pageNum) || 1
+      if (total > 0 && current > totalPages) {
+        joinApplicationsLoading.value = false
+        return loadMyJoinApplications({
+          currentPage: totalPages,
+          pageSize: resolvedSize,
+          status: params?.status,
+        })
+      }
+      myJoinApplications.value = pageData.records ?? []
+      myApplicationPage.value = current
+      myApplicationPageSize.value = resolvedSize
+      myApplicationTotal.value = total
       return myJoinApplications.value
     } catch (error) {
       setError(error)
@@ -595,9 +669,10 @@ export const useTeamStore = defineStore('team', () => {
     lastError.value = ''
     try {
       await cancelTeamJoinApplication(applicationId)
-      myJoinApplications.value = myJoinApplications.value.filter(
-        (item) => item.applicationId !== applicationId,
-      )
+      await loadMyJoinApplications({
+        currentPage: myApplicationPage.value,
+        pageSize: myApplicationPageSize.value,
+      })
     } catch (error) {
       setError(error)
       throw error
@@ -980,6 +1055,15 @@ export const useTeamStore = defineStore('team', () => {
     joinablePageSize,
     joinableTotal,
     joinableTotalPages,
+    historyPage,
+    historyPageSize,
+    historyTotal,
+    invitePage,
+    invitePageSize,
+    inviteTotal,
+    myApplicationPage,
+    myApplicationPageSize,
+    myApplicationTotal,
     inheritableTeams,
     inheritableLoading,
     seasonPlatforms,

@@ -228,24 +228,30 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        LambdaQueryWrapper<BasketTeam> wrapper = new LambdaQueryWrapper<BasketTeam>()
-                .eq(BasketTeam::getIsDelete, NOT_DELETED)
-                .eq(BasketTeam::getTeamStatus, TeamStatusEnum.ACTIVE.getCode())
-                .eq(BasketTeam::getAuditStatus, TeamAuditStatusEnum.APPROVED.getCode())
-                .eq(BasketTeam::getPublicStatus, TeamPublicStatusEnum.PUBLIC.getCode())
-                .in(BasketTeam::getDivisionId, openDivisionIds)
-                .orderByDesc(BasketTeam::getCreateTime)
-                .orderByDesc(BasketTeam::getId);
-        if (!joinedTeamIds.isEmpty()) {
-            wrapper.notIn(BasketTeam::getId, joinedTeamIds);
-        }
-        if (StringUtils.hasText(keyword)) {
-            String kw = keyword.trim();
-            wrapper.and(w -> w.like(BasketTeam::getTeamName, kw).or().like(BasketTeam::getShortName, kw));
+        LambdaQueryWrapper<BasketTeam> countWrapper = buildJoinableTeamWrapper(openDivisionIds, joinedTeamIds, keyword);
+        Long totalCount = teamDao.selectCount(countWrapper);
+        long total = totalCount == null ? 0L : totalCount;
+        if (total <= 0) {
+            return fillJoinablePageMeta(
+                    emptyJoinablePage(page, size, "暂无可加入的赛事球队"),
+                    hasActiveTeam, currentTeam, pendingApplicationStatus);
         }
 
-        IPage<BasketTeam> teamPage = teamDao.selectPage(new Page<>(page, size), wrapper);
-        List<BasketTeam> pageTeams = teamPage.getRecords() == null ? Collections.emptyList() : teamPage.getRecords();
+        long maxPage = Math.max(1L, (total + size - 1) / size);
+        if (page > maxPage) {
+            page = maxPage;
+        }
+        long offset = (page - 1) * size;
+        LambdaQueryWrapper<BasketTeam> pageWrapper = buildJoinableTeamWrapper(openDivisionIds, joinedTeamIds, keyword)
+                .orderByDesc(BasketTeam::getCreateTime)
+                .orderByDesc(BasketTeam::getId)
+                // 项目未启用 MyBatis-Plus 分页插件，显式 LIMIT 做后端分页
+                .last("LIMIT " + offset + "," + size);
+        List<BasketTeam> pageTeams = teamDao.selectList(pageWrapper);
+        if (pageTeams == null) {
+            pageTeams = Collections.emptyList();
+        }
+
         Set<Long> pendingTeamIds = loadPendingApplicationTeamIds(memberId);
         EventContextMaps ctx = loadEventContextMaps(pageTeams);
         Map<Long, String> logoUrlMap = loadLogoUrlMap(pageTeams);
@@ -261,12 +267,28 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
                 })
                 .collect(Collectors.toList());
 
-        JoinableTeamPageResp respPage = new JoinableTeamPageResp(teamPage.getCurrent(), teamPage.getSize(), teamPage.getTotal());
+        JoinableTeamPageResp respPage = new JoinableTeamPageResp(page, size, total);
         respPage.setRecords(items);
-        if (teamPage.getTotal() <= 0) {
-            respPage.setEmptyReason("暂无可加入的赛事球队");
-        }
         return fillJoinablePageMeta(respPage, hasActiveTeam, currentTeam, pendingApplicationStatus);
+    }
+
+    private LambdaQueryWrapper<BasketTeam> buildJoinableTeamWrapper(Set<Long> openDivisionIds,
+                                                                   Set<Long> joinedTeamIds,
+                                                                   String keyword) {
+        LambdaQueryWrapper<BasketTeam> wrapper = new LambdaQueryWrapper<BasketTeam>()
+                .eq(BasketTeam::getIsDelete, NOT_DELETED)
+                .eq(BasketTeam::getTeamStatus, TeamStatusEnum.ACTIVE.getCode())
+                .eq(BasketTeam::getAuditStatus, TeamAuditStatusEnum.APPROVED.getCode())
+                .eq(BasketTeam::getPublicStatus, TeamPublicStatusEnum.PUBLIC.getCode())
+                .in(BasketTeam::getDivisionId, openDivisionIds);
+        if (!joinedTeamIds.isEmpty()) {
+            wrapper.notIn(BasketTeam::getId, joinedTeamIds);
+        }
+        if (StringUtils.hasText(keyword)) {
+            String kw = keyword.trim();
+            wrapper.and(w -> w.like(BasketTeam::getTeamName, kw).or().like(BasketTeam::getShortName, kw));
+        }
+        return wrapper;
     }
 
     private JoinableTeamPageResp fillJoinablePageMeta(JoinableTeamPageResp respPage,

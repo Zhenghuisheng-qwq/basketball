@@ -296,15 +296,35 @@ export const useAccountStore = defineStore('account', () => {
     }
   }
 
-  async function loadIdentityChangeHistory() {
+  const identityChangePage = ref(1)
+  const identityChangePageSize = ref(10)
+  const identityChangeTotal = ref(0)
+
+  async function loadIdentityChangeHistory(params?: { currentPage?: number; pageSize?: number }) {
     const status = verification.value?.status
     const isApproved = status === 'APPROVED' || status === 'CHANGE_PENDING'
     if (!isApproved) {
       identityChangeHistory.value = []
+      identityChangeTotal.value = 0
+      identityChangePage.value = 1
       return []
     }
-    const historyRes = await getPlatformChangeHistory()
-    identityChangeHistory.value = (historyRes.data || []).map(mapPlatformChangeHistoryItem)
+    const page = params?.currentPage ?? identityChangePage.value
+    const size = params?.pageSize ?? identityChangePageSize.value
+    const historyRes = await getPlatformChangeHistory({ currentPage: page, pageSize: size })
+    const data = historyRes.data as any
+    const records = Array.isArray(data) ? data : (data?.records || [])
+    const total = Array.isArray(data) ? records.length : Number(data?.total ?? 0)
+    const resolvedSize = Array.isArray(data) ? size : Number(data?.size || size) || 10
+    const totalPages = Math.max(0, Math.ceil(total / resolvedSize))
+    let current = Array.isArray(data) ? 1 : Number(data?.current || page) || 1
+    if (total > 0 && current > totalPages) {
+      return loadIdentityChangeHistory({ currentPage: totalPages, pageSize: resolvedSize })
+    }
+    identityChangeHistory.value = records.map(mapPlatformChangeHistoryItem)
+    identityChangePage.value = current
+    identityChangePageSize.value = resolvedSize
+    identityChangeTotal.value = total
     return identityChangeHistory.value
   }
 
@@ -319,7 +339,9 @@ export const useAccountStore = defineStore('account', () => {
           getPlatformChangeHistory(),
         ])
         platformGameIds.value = (listRes.data || []).map(mapPlatformAccountItem)
-        identityChangeHistory.value = (historyRes.data || []).map(mapPlatformChangeHistoryItem)
+        const historyData = historyRes.data as any
+        const historyRows = Array.isArray(historyData) ? historyData : (historyData?.records || [])
+        identityChangeHistory.value = historyRows.map(mapPlatformChangeHistoryItem)
       } catch (error) {
         platformGameIds.value = []
         identityChangeHistory.value = []
@@ -801,6 +823,9 @@ export const useAccountStore = defineStore('account', () => {
     playerIdentity,
     platformGameIds,
     identityChangeHistory,
+    identityChangePage,
+    identityChangePageSize,
+    identityChangeTotal,
     eligibility,
     myTournaments,
     openTournament,

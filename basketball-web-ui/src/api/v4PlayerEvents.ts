@@ -1,5 +1,5 @@
 import request from '@/api/request'
-import type { ApiResult } from '@/api/types/common'
+import type { ApiResult, PageResult } from '@/api/types/common'
 import type {
   V4AvailableDivision,
   V4MyEvent,
@@ -16,6 +16,12 @@ import type {
   V4PersonalFormationTask,
   V4RegistrationDetail,
 } from '@/api/types/v4PlayerEvents'
+
+export interface V4MyAvailableEventItem {
+  source?: 'TEAM' | 'PERSONAL' | string
+  teamItem?: V4AvailableDivision | null
+  personalItem?: V4PersonalAvailableDivision | null
+}
 
 export function getV4AvailableDivisions() {
   return request.get<any, ApiResult<V4AvailableDivision[]>>('/basket/v4/player/registration/available-divisions')
@@ -41,8 +47,18 @@ export function withdrawV4Registration(data: V4RegistrationIdReq) {
   return request.post<any, ApiResult<void>>('/basket/v4/player/registration/withdraw', data)
 }
 
-export function getV4MyEvents() {
+export function getV4MyEvents(params?: { currentPage?: number; pageSize?: number }) {
+  if (params?.currentPage != null || params?.pageSize != null) {
+    return request.get<any, ApiResult<PageResult<V4MyEvent>>>('/basket/v4/player/my-events', { params })
+  }
   return request.get<any, ApiResult<V4MyEvent[]>>('/basket/v4/player/my-events')
+}
+
+export function getV4MyAvailableEventsPage(params?: { currentPage?: number; pageSize?: number }) {
+  return request.get<any, ApiResult<PageResult<V4MyAvailableEventItem>>>(
+    '/basket/v4/player/my-events/available',
+    { params: { currentPage: params?.currentPage ?? 1, pageSize: params?.pageSize ?? 10 } },
+  )
 }
 
 export function getV4MySchedule(params?: {

@@ -10,7 +10,7 @@ import { mapMessageItemToNotification } from '@/utils/accountMappers'
 import type { AccountNotificationItem } from '@/types/accountNotifications'
 import type { NotificationTabKey } from '@/types/accountNotifications'
 
-export const NOTIFICATION_PAGE_SIZE = 5
+export const NOTIFICATION_PAGE_SIZE = 10
 
 export const useNotificationCenterStore = defineStore('notificationCenter', () => {
   const items = ref<AccountNotificationItem[]>([])

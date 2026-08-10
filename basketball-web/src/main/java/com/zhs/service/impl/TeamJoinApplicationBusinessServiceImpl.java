@@ -119,24 +119,44 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
     @Override
     public IPage<TeamJoinApplicationItemResp> pageMyApplications(Integer currentPage, Integer pageSize, Integer status) {
         Long memberId = UserContext.getRequiredUserId();
-        LambdaQueryWrapper<BasketTeamJoinApplication> wrapper = new LambdaQueryWrapper<BasketTeamJoinApplication>()
+        long page = normalizePage(currentPage);
+        long size = normalizeSize(pageSize);
+
+        LambdaQueryWrapper<BasketTeamJoinApplication> countWrapper = new LambdaQueryWrapper<BasketTeamJoinApplication>()
                 .eq(BasketTeamJoinApplication::getApplicantMemberId, memberId)
-                .eq(BasketTeamJoinApplication::getIsDelete, NOT_DELETED)
-                .orderByDesc(BasketTeamJoinApplication::getCreateTime);
+                .eq(BasketTeamJoinApplication::getIsDelete, NOT_DELETED);
         if (status != null) {
-            wrapper.eq(BasketTeamJoinApplication::getApplicationStatus, status);
+            countWrapper.eq(BasketTeamJoinApplication::getApplicationStatus, status);
+        }
+        long total = joinApplicationDao.selectCount(countWrapper);
+
+        List<BasketTeamJoinApplication> applications;
+        if (total == 0) {
+            applications = Collections.emptyList();
+        } else {
+            long maxPage = Math.max(1L, (total + size - 1) / size);
+            if (page > maxPage) {
+                page = maxPage;
+            }
+            LambdaQueryWrapper<BasketTeamJoinApplication> listWrapper = new LambdaQueryWrapper<BasketTeamJoinApplication>()
+                    .eq(BasketTeamJoinApplication::getApplicantMemberId, memberId)
+                    .eq(BasketTeamJoinApplication::getIsDelete, NOT_DELETED)
+                    .orderByDesc(BasketTeamJoinApplication::getCreateTime);
+            if (status != null) {
+                listWrapper.eq(BasketTeamJoinApplication::getApplicationStatus, status);
+            }
+            listWrapper.last("LIMIT " + (page - 1) * size + ", " + size);
+            applications = joinApplicationDao.selectList(listWrapper);
         }
 
-        Page<BasketTeamJoinApplication> page = new Page<>(normalizePage(currentPage), normalizeSize(pageSize));
-        IPage<BasketTeamJoinApplication> appPage = joinApplicationDao.selectPage(page, wrapper);
-        Map<Long, BasketTeam> teamMap = loadTeamMap(appPage.getRecords().stream()
+        Map<Long, BasketTeam> teamMap = loadTeamMap(applications.stream()
                 .map(BasketTeamJoinApplication::getTeamId).collect(Collectors.toSet()));
         Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(Collections.singleton(memberId));
         Map<Long, BasketPlayerProfile> playerProfileMap = loadPlayerProfileMap(Collections.singleton(memberId));
 
-        Page<TeamJoinApplicationItemResp> respPage = new Page<>(appPage.getCurrent(), appPage.getSize(), appPage.getTotal());
+        Page<TeamJoinApplicationItemResp> respPage = new Page<>(page, size, total);
         List<TeamJoinApplicationItemResp> items = new ArrayList<>();
-        for (BasketTeamJoinApplication application : appPage.getRecords()) {
+        for (BasketTeamJoinApplication application : applications) {
             items.add(toItemResp(application, teamMap.get(application.getTeamId()), profileMap, playerProfileMap));
         }
         respPage.setRecords(items);

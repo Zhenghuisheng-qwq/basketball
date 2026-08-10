@@ -195,23 +195,43 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
     @Override
     public IPage<TeamInvitationItemResp> pageMyInvitations(Integer currentPage, Integer pageSize, Integer status) {
         Long memberId = UserContext.getRequiredUserId();
-        LambdaQueryWrapper<BasketTeamInvitation> wrapper = new LambdaQueryWrapper<BasketTeamInvitation>()
+        long page = normalizePage(currentPage);
+        long size = normalizeSize(pageSize);
+
+        LambdaQueryWrapper<BasketTeamInvitation> countWrapper = new LambdaQueryWrapper<BasketTeamInvitation>()
                 .eq(BasketTeamInvitation::getInviteeMemberId, memberId)
-                .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED)
-                .orderByDesc(BasketTeamInvitation::getCreateTime);
+                .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED);
         if (status != null) {
-            wrapper.eq(BasketTeamInvitation::getInvitationStatus, status);
+            countWrapper.eq(BasketTeamInvitation::getInvitationStatus, status);
+        }
+        long total = invitationDao.selectCount(countWrapper);
+
+        List<BasketTeamInvitation> invitations;
+        if (total == 0) {
+            invitations = Collections.emptyList();
+        } else {
+            long maxPage = Math.max(1L, (total + size - 1) / size);
+            if (page > maxPage) {
+                page = maxPage;
+            }
+            LambdaQueryWrapper<BasketTeamInvitation> listWrapper = new LambdaQueryWrapper<BasketTeamInvitation>()
+                    .eq(BasketTeamInvitation::getInviteeMemberId, memberId)
+                    .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED)
+                    .orderByDesc(BasketTeamInvitation::getCreateTime);
+            if (status != null) {
+                listWrapper.eq(BasketTeamInvitation::getInvitationStatus, status);
+            }
+            listWrapper.last("LIMIT " + (page - 1) * size + ", " + size);
+            invitations = invitationDao.selectList(listWrapper);
         }
 
-        Page<BasketTeamInvitation> page = new Page<>(normalizePage(currentPage), normalizeSize(pageSize));
-        IPage<BasketTeamInvitation> invitationPage = invitationDao.selectPage(page, wrapper);
-        Map<Long, BasketTeam> teamMap = loadTeamMap(invitationPage.getRecords().stream()
+        Map<Long, BasketTeam> teamMap = loadTeamMap(invitations.stream()
                 .map(BasketTeamInvitation::getTeamId).collect(Collectors.toSet()));
         Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(Collections.singleton(memberId));
 
-        Page<TeamInvitationItemResp> respPage = new Page<>(invitationPage.getCurrent(), invitationPage.getSize(), invitationPage.getTotal());
+        Page<TeamInvitationItemResp> respPage = new Page<>(page, size, total);
         List<TeamInvitationItemResp> items = new ArrayList<>();
-        for (BasketTeamInvitation invitation : invitationPage.getRecords()) {
+        for (BasketTeamInvitation invitation : invitations) {
             items.add(toItemResp(invitation, teamMap.get(invitation.getTeamId()), profileMap, memberId));
         }
         respPage.setRecords(items);

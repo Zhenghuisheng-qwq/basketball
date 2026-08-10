@@ -1,5 +1,5 @@
 import request from '@/api/request'
-import type { ApiResult } from '@/api/types/common'
+import type { ApiResult, PageResult } from '@/api/types/common'
 import type {
   PlatformAccountAddPayload,
   PlatformAccountChangeGameIdPayload,
@@ -24,7 +24,13 @@ export function changePlatformGameId(platformAccountId: string, payload: Platfor
   )
 }
 
-export function getPlatformChangeHistory() {
+export function getPlatformChangeHistory(params?: { currentPage?: number; pageSize?: number }) {
+  if (params?.currentPage != null || params?.pageSize != null) {
+    return request.get<any, ApiResult<PageResult<PlatformChangeHistoryItemDto>>>(
+      '/basket/player/platform-account/change-history',
+      { params },
+    )
+  }
   return request.get<any, ApiResult<PlatformChangeHistoryItemDto[]>>('/basket/player/platform-account/change-history')
 }
 

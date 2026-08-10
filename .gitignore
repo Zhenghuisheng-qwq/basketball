@@ -28,3 +28,12 @@ target/
 # 本地上传目录
 **/upload/
 **/uploads/
+
+# 本地数据库备份 / dump（禁止提交）
+*.sql
+!docs/sql/**
+!sql/**
+backup/
+dump/
+**/backup/
+**/dump/

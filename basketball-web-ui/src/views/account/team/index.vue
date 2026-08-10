@@ -14,8 +14,10 @@ import AccountTeamLogo from '@/components/account/team/AccountTeamLogo.vue'
 import TeamProfilePanel from '@/components/account/team/TeamProfilePanel.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import TeamListPagination from '@/components/account/team/TeamListPagination.vue'
+import MyEventsPagination from '@/components/account/events/MyEventsPagination.vue'
 import { useTeamStore } from '@/stores/team'
 import { useAccountStore } from '@/stores/account'
+import { v4GameModeLabel, v4PlatformLabel } from '@/utils/v4Display'
 import { mapTeamRegistrationStatusText } from '@/utils/accountMappers'
 import {
   goToEventTeamManagement,
@@ -53,15 +55,18 @@ function formatEventContext(item?: {
   gameMode?: string
 }) {
   if (!item) return '赛事信息暂无'
+  const platform = item.platformCode || item.divisionPlatformCode
   const seriesOrSeason = [item.seriesName, item.seasonName].filter(Boolean).join(' · ')
   const divisionBits = [
     item.divisionName,
-    item.platformCode || item.divisionPlatformCode,
-    item.gameMode,
+    platform ? v4PlatformLabel(platform) : '',
+    item.gameMode ? v4GameModeLabel(item.gameMode) : '',
   ].filter(Boolean).join(' · ')
   const text = [seriesOrSeason, divisionBits].filter(Boolean).join(' / ')
   return text || '赛事信息暂无'
 }
+
+const listPageSizeOptions = [10, 20, 50]
 
 function roleLabel(role?: string, isCaptain?: boolean) {
   if (isCaptain || role === 'CAPTAIN') return '队长'
@@ -395,9 +400,9 @@ async function bootstrap() {
     }
     if (listScope.value === 'current') {
       await Promise.all([
-        teamStore.loadMyInvitations({ status: 0 }).catch(() => undefined),
+        teamStore.loadMyInvitations({ currentPage: 1, pageSize: 10, status: 0 }).catch(() => undefined),
         teamStore.loadJoinableTeams().catch(() => undefined),
-        teamStore.loadMyJoinApplications().catch(() => undefined),
+        teamStore.loadMyJoinApplications({ currentPage: 1, pageSize: 10 }).catch(() => undefined),
       ])
     }
   } catch (error) {
@@ -413,9 +418,25 @@ async function bootstrap() {
   }
 }
 
-async function ensureHistoryLoaded() {
-  if (historyLoaded.value && teamStore.historyTeams.length) return
-  await teamStore.loadHistoryTeams()
+async function ensureHistoryLoaded(force = false) {
+  if (!force && historyLoaded.value && teamStore.historyTeams.length) return
+  await teamStore.loadHistoryTeams({
+    currentPage: teamStore.historyPage || 1,
+    pageSize: teamStore.historyPageSize || 10,
+  })
+  historyLoaded.value = true
+}
+
+async function changeHistoryPage(page: number) {
+  await teamStore.loadHistoryTeams({
+    currentPage: page,
+    pageSize: teamStore.historyPageSize,
+  })
+  historyLoaded.value = true
+}
+
+async function changeHistoryPageSize(size: number) {
+  await teamStore.loadHistoryTeams({ currentPage: 1, pageSize: size })
   historyLoaded.value = true
 }
 
@@ -646,7 +667,11 @@ async function refreshRegistrationLists() {
 
 async function refreshTabData(tab: TeamTab) {
   if (tab === 'pendingInvites') {
-    await teamStore.loadMyInvitations({ status: 0 })
+    await teamStore.loadMyInvitations({
+      currentPage: teamStore.invitePage || 1,
+      pageSize: teamStore.invitePageSize || 10,
+      status: 0,
+    })
     return
   }
   if (tab === 'joinableTeams') {
@@ -654,7 +679,10 @@ async function refreshTabData(tab: TeamTab) {
     return
   }
   if (tab === 'myApplications') {
-    await teamStore.loadMyJoinApplications()
+    await teamStore.loadMyJoinApplications({
+      currentPage: teamStore.myApplicationPage || 1,
+      pageSize: teamStore.myApplicationPageSize || 10,
+    })
     return
   }
   if (!teamId.value) return
@@ -1236,28 +1264,41 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
 
       <AccountPanel v-else title="历史球队">
         <div v-if="teamStore.historyLoading" class="team-page-loading">加载中…</div>
-        <div v-else-if="historyTeams.length" class="team-card-list">
-          <article
-            v-for="team in historyTeams"
-            :key="team.teamId"
-            class="team-card"
-            :class="{ 'team-card--active': team.teamId === teamId }"
-          >
-            <div>
-              <p><strong>{{ team.teamName }}</strong>
-                <span v-if="team.shortName"> · {{ team.shortName }}</span>
-              </p>
-              <p>{{ formatEventContext(team) }}</p>
-              <p>
-                我的身份：{{ roleLabel(team.myRole, team.isCaptain) }}
-                · {{ team.displayStatusText || '历史球队' }}
-              </p>
-            </div>
-            <button type="button" class="account-btn-secondary" @click="openTeamCard(team)">
-              查看详情
-            </button>
-          </article>
-        </div>
+        <template v-else-if="historyTeams.length">
+          <div class="team-card-list">
+            <article
+              v-for="team in historyTeams"
+              :key="team.teamId"
+              class="team-card"
+              :class="{ 'team-card--active': team.teamId === teamId }"
+            >
+              <div>
+                <p><strong>{{ team.teamName }}</strong>
+                  <span v-if="team.shortName"> · {{ team.shortName }}</span>
+                </p>
+                <p>{{ formatEventContext(team) }}</p>
+                <p>
+                  我的身份：{{ roleLabel(team.myRole, team.isCaptain) }}
+                  · {{ team.displayStatusText || '历史球队' }}
+                </p>
+              </div>
+              <button type="button" class="account-btn-secondary" @click="openTeamCard(team)">
+                查看详情
+              </button>
+            </article>
+          </div>
+          <MyEventsPagination
+            :page="teamStore.historyPage"
+            :page-size="teamStore.historyPageSize"
+            :total="teamStore.historyTotal"
+            :page-size-options="listPageSizeOptions"
+            :meta-text="`共 ${teamStore.historyTotal} 支历史球队`"
+            :disabled="teamStore.historyLoading"
+            aria-label="历史球队分页"
+            @update:page="changeHistoryPage"
+            @update:page-size="changeHistoryPageSize"
+          />
+        </template>
         <AccountEmptyState
           v-else
           message="暂无历史球队"
@@ -1280,25 +1321,38 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
 
       <template v-if="activeTab === 'pendingInvites'">
         <AccountPanel title="待处理邀请">
-          <div v-if="teamStore.myInvitations.length" class="team-card-list">
-            <article v-for="item in teamStore.myInvitations" :key="item.invitationId" class="team-card">
-              <div>
-                <p><strong>球队</strong> {{ item.teamName }}</p>
-                <p><strong>赛事</strong> {{ formatEventContext(item) }}</p>
-                <p><strong>说明</strong> {{ item.invitationMessage || '邀请加入球队' }}</p>
-                <p><strong>过期时间</strong> {{ formatDateTime(item.expireTime) }}</p>
-                <AccountStatusBadge :text="item.invitationStatusText || '待响应'" type="warning" />
-              </div>
-              <button
-                v-if="item.canRespond"
-                type="button"
-                class="account-btn-primary"
-                @click="openInvitation(item)"
-              >
-                处理邀请
-              </button>
-            </article>
-          </div>
+          <template v-if="teamStore.myInvitations.length">
+            <div class="team-card-list">
+              <article v-for="item in teamStore.myInvitations" :key="item.invitationId" class="team-card">
+                <div>
+                  <p><strong>球队</strong> {{ item.teamName }}</p>
+                  <p><strong>赛事</strong> {{ formatEventContext(item) }}</p>
+                  <p><strong>说明</strong> {{ item.invitationMessage || '邀请加入球队' }}</p>
+                  <p><strong>过期时间</strong> {{ formatDateTime(item.expireTime) }}</p>
+                  <AccountStatusBadge :text="item.invitationStatusText || '待响应'" type="warning" />
+                </div>
+                <button
+                  v-if="item.canRespond"
+                  type="button"
+                  class="account-btn-primary"
+                  @click="openInvitation(item)"
+                >
+                  处理邀请
+                </button>
+              </article>
+            </div>
+            <MyEventsPagination
+              :page="teamStore.invitePage"
+              :page-size="teamStore.invitePageSize"
+              :total="teamStore.inviteTotal"
+              :page-size-options="listPageSizeOptions"
+              :meta-text="`共 ${teamStore.inviteTotal} 条待处理邀请`"
+              :disabled="teamStore.invitationsLoading"
+              aria-label="待处理邀请分页"
+              @update:page="(p) => teamStore.loadMyInvitations({ currentPage: p, pageSize: teamStore.invitePageSize, status: 0 })"
+              @update:page-size="(s) => teamStore.loadMyInvitations({ currentPage: 1, pageSize: s, status: 0 })"
+            />
+          </template>
           <AccountEmptyState v-else message="暂无待处理邀请" />
         </AccountPanel>
       </template>
@@ -1309,38 +1363,51 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
 
       <template v-else-if="activeTab === 'myApplications'">
         <AccountPanel title="我的加入申请">
-          <div v-if="teamStore.myJoinApplications.length" class="team-table-wrap">
-            <table class="team-table">
-              <thead>
-                <tr>
-                  <th>球队</th>
-                  <th>状态</th>
-                  <th>申请时间</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in teamStore.myJoinApplications" :key="item.applicationId">
-                  <td>
-                    <div>{{ item.teamName }}</div>
-                    <div class="team-tip">{{ formatEventContext(item) }}</div>
-                  </td>
-                  <td>{{ item.applicationStatusText }}</td>
-                  <td>{{ formatDateTime(item.createTime) }}</td>
-                  <td>
-                    <button
-                      v-if="item.canCancel"
-                      type="button"
-                      class="account-btn-secondary team-table__btn"
-                      @click="cancelApplication(item.applicationId)"
-                    >
-                      取消
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <template v-if="teamStore.myJoinApplications.length">
+            <div class="team-table-wrap">
+              <table class="team-table">
+                <thead>
+                  <tr>
+                    <th>球队</th>
+                    <th>状态</th>
+                    <th>申请时间</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in teamStore.myJoinApplications" :key="item.applicationId">
+                    <td>
+                      <div>{{ item.teamName }}</div>
+                      <div class="team-tip">{{ formatEventContext(item) }}</div>
+                    </td>
+                    <td>{{ item.applicationStatusText }}</td>
+                    <td>{{ formatDateTime(item.createTime) }}</td>
+                    <td>
+                      <button
+                        v-if="item.canCancel"
+                        type="button"
+                        class="account-btn-secondary team-table__btn"
+                        @click="cancelApplication(item.applicationId)"
+                      >
+                        取消
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <MyEventsPagination
+              :page="teamStore.myApplicationPage"
+              :page-size="teamStore.myApplicationPageSize"
+              :total="teamStore.myApplicationTotal"
+              :page-size-options="listPageSizeOptions"
+              :meta-text="`共 ${teamStore.myApplicationTotal} 条加入申请`"
+              :disabled="teamStore.joinApplicationsLoading"
+              aria-label="我的加入申请分页"
+              @update:page="(p) => teamStore.loadMyJoinApplications({ currentPage: p, pageSize: teamStore.myApplicationPageSize })"
+              @update:page-size="(s) => teamStore.loadMyJoinApplications({ currentPage: 1, pageSize: s })"
+            />
+          </template>
           <AccountEmptyState v-else message="暂无加入申请" />
         </AccountPanel>
       </template>

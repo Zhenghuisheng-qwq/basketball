@@ -6,33 +6,48 @@ import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
+import MyEventsPagination from '@/components/account/events/MyEventsPagination.vue'
 import { useAccountStore } from '@/stores/account'
 import { IDENTITY_PLATFORM_LABELS } from '@/types/account'
 import { formatDateTime } from '@/utils/formatDate'
+import { v4PlatformLabel } from '@/utils/v4Display'
 
 const router = useRouter()
 const accountStore = useAccountStore()
 
 const loading = ref(true)
 const loadError = ref('')
+const pageSizeOptions = [10, 20, 50]
 
 const account = computed(() => accountStore.currentAccount)
 const history = computed(() => accountStore.identityChangeHistory)
+const showPager = computed(() => accountStore.identityChangeTotal > accountStore.identityChangePageSize)
 
-onMounted(async () => {
+function platformLabel(platform?: string) {
+  if (!platform) return '—'
+  return IDENTITY_PLATFORM_LABELS[platform as keyof typeof IDENTITY_PLATFORM_LABELS]
+    || v4PlatformLabel(platform)
+    || platform
+}
+
+async function loadHistory(page = accountStore.identityChangePage, pageSize = accountStore.identityChangePageSize) {
   loading.value = true
   loadError.value = ''
   try {
     if (!accountStore.verification) {
       await accountStore.loadOverview()
     }
-    await accountStore.loadIdentityChangeHistory()
+    await accountStore.loadIdentityChangeHistory({ currentPage: page, pageSize })
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '加载变更记录失败'
     ElMessage.error(loadError.value)
   } finally {
     loading.value = false
   }
+}
+
+onMounted(() => {
+  void loadHistory(1)
 })
 </script>
 
@@ -65,28 +80,42 @@ onMounted(async () => {
         message="暂无变更记录"
         subtitle="已生效的平台与游戏 ID 变更将在此展示"
       />
-      <div v-else class="platform-table-wrap">
-        <table class="platform-table">
-          <thead>
-            <tr>
-              <th>生效时间</th>
-              <th>平台</th>
-              <th>变更类型</th>
-              <th>原游戏 ID</th>
-              <th>新游戏 ID</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, index) in history" :key="`${row.effectiveTime}-${row.platform}-${index}`">
-              <td>{{ formatDateTime(row.effectiveTime) || row.effectiveTime }}</td>
-              <td>{{ IDENTITY_PLATFORM_LABELS[row.platform] || row.platform }}</td>
-              <td>{{ row.changeTypeName || '—' }}</td>
-              <td>{{ row.oldGameId }}</td>
-              <td>{{ row.newGameId }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <template v-else>
+        <div class="platform-table-wrap">
+          <table class="platform-table">
+            <thead>
+              <tr>
+                <th>生效时间</th>
+                <th>平台</th>
+                <th>变更类型</th>
+                <th>原游戏 ID</th>
+                <th>新游戏 ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in history" :key="`${row.effectiveTime}-${row.platform}-${index}`">
+                <td>{{ formatDateTime(row.effectiveTime) || row.effectiveTime }}</td>
+                <td>{{ platformLabel(row.platform) }}</td>
+                <td>{{ row.changeTypeName || '—' }}</td>
+                <td>{{ row.oldGameId }}</td>
+                <td>{{ row.newGameId }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <MyEventsPagination
+          v-if="showPager"
+          :page="accountStore.identityChangePage"
+          :page-size="accountStore.identityChangePageSize"
+          :total="accountStore.identityChangeTotal"
+          :page-size-options="pageSizeOptions"
+          :meta-text="`共 ${accountStore.identityChangeTotal} 条变更记录`"
+          :disabled="loading"
+          aria-label="资料变更记录分页"
+          @update:page="(p) => loadHistory(p, accountStore.identityChangePageSize)"
+          @update:page-size="(s) => loadHistory(1, s)"
+        />
+      </template>
       <p class="identity-footnote">历史赛事继续显示当届平台与游戏 ID 快照；审核中的修改不会作为已生效记录展示。</p>
       <div class="account-panel__action account-panel__action--right">
         <button type="button" class="account-btn-secondary" @click="router.push('/account/player-identity/platforms')">
