@@ -15,12 +15,33 @@
             ds.execution_status as executionStatusName,
             ds.next_stage_code as nextStageCode,
             ds.advancement_type as advancementType,
+            ds.advancement_count as advancementCount,
             ds.best_of as bestOf,
             case when ds.execution_status in ('RUNNING', 'RESULT_PENDING_CONFIRM') then 1 else 0 end as currentStage
         from basket_division_stage ds
         where ds.division_id = #{divisionId}
           and ds.is_delete = 0
         order by ds.stage_order asc, ds.id asc
+    </select>
+
+    <select id="selectStageById" resultType="com.zhs.response.v4.publicapi.V4PublicStageItemResp">
+        select
+            ds.id as stageId,
+            ds.stage_code as stageCode,
+            ds.stage_name as stageName,
+            ds.stage_order as stageOrder,
+            ds.stage_type as stageType,
+            ds.organization_mode as organizationMode,
+            ds.competition_format as competitionFormat,
+            ds.execution_status as executionStatus,
+            ds.next_stage_code as nextStageCode,
+            ds.advancement_type as advancementType,
+            ds.advancement_count as advancementCount,
+            ds.best_of as bestOf
+        from basket_division_stage ds
+        where ds.id = #{stageId}
+          and ds.is_delete = 0
+        limit 1
     </select>
 
     <select id="selectGroupScopeKeysByStageId" resultType="java.lang.Long">

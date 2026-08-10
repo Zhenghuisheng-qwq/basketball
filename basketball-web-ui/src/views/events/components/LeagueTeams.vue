@@ -19,7 +19,12 @@ const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const errorMessage = ref('')
 let reqId = 0
 
-const seasonOptions = computed(() => ctx.seasons.value.map((item) => String(item.seasonId)))
+const seasonOptions = computed(() =>
+  ctx.seasons.value.map((item) => ({
+    value: String(item.seasonId),
+    label: item.seasonName || item.competitionSeasonName || `赛季 ${item.seasonId}`,
+  })),
+)
 
 const selectedSeason = computed({
   get: () => ctx.seasonId.value,
@@ -114,8 +119,8 @@ function goPage(index: number) {
         <div class="head-actions">
           <label class="season-select">
             <select v-model="selectedSeason">
-              <option v-for="season in seasonOptions" :key="season" :value="season">
-                {{ season }}
+              <option v-for="season in seasonOptions" :key="season.value" :value="season.value">
+                {{ season.label }}
               </option>
             </select>
           </label>

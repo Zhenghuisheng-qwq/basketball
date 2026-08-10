@@ -1,32 +1,105 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import PaperSection from '@/components/common/PaperSection.vue'
-import type { StageType } from '../types/events'
+import { getV4PublicStageList } from '@/api/v4Public'
+import type { V4PublicStageItem } from '@/api/types/v4Public'
+import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
 import RegularStandings from './RegularStandings.vue'
 import PlayoffBracket from './PlayoffBracket.vue'
 import CompetitionFormat from './CompetitionFormat.vue'
 import LeagueAbout from './LeagueAbout.vue'
 import StageProgressHeader from './StageProgressHeader.vue'
 
-const selectedStage = ref<StageType>('regular')
+type SeasonContext = ReturnType<typeof usePublicSeasonContext>
+const ctx = inject<SeasonContext>('publicSeasonContext')!
+
+const stages = ref<V4PublicStageItem[]>([])
+const selectedStageId = ref('')
+const stagesLoading = ref(false)
+
+function isEliminationStage(stage?: V4PublicStageItem | null): boolean {
+  if (!stage) return false
+  const type = `${stage.competitionFormat || ''} ${stage.stageType || ''}`.toUpperCase()
+  return type.includes('ELIM') || type.includes('KNOCK') || type.includes('PLAYOFF') || type.includes('FINAL')
+}
+
+function isGroupedStage(stage?: V4PublicStageItem | null): boolean {
+  if (!stage) return false
+  const mode = (stage.organizationMode || '').toUpperCase()
+  const type = `${stage.competitionFormat || ''} ${stage.stageType || ''}`.toUpperCase()
+  return mode === 'GROUPED' || type.includes('GROUP')
+}
+
+const selectedStage = computed(() =>
+  stages.value.find((item) => item.stageId === selectedStageId.value) || null,
+)
+
+const showBracket = computed(() => isEliminationStage(selectedStage.value))
+
+const stageOptions = computed(() =>
+  stages.value.map((stage, index) => ({
+    value: stage.stageId,
+    label: `${String(index + 1).padStart(2, '0')} ${stage.stageName || stage.stageTypeName || '阶段'}`,
+  })),
+)
+
+const formatCurrentStage = computed(() => (showBracket.value ? 'playoffs' : 'regular'))
+
+async function loadStages(divisionId: string) {
+  if (!divisionId) {
+    stages.value = []
+    selectedStageId.value = ''
+    return
+  }
+  stagesLoading.value = true
+  try {
+    const res = await getV4PublicStageList(divisionId)
+    const list = [...(res.data ?? [])].sort(
+      (a, b) => (a.stageOrder ?? 0) - (b.stageOrder ?? 0) || String(a.stageId).localeCompare(String(b.stageId)),
+    )
+    stages.value = list
+    const current = list.find((item) => item.currentStage) || list[0]
+    selectedStageId.value = current?.stageId || ''
+  } catch {
+    stages.value = []
+    selectedStageId.value = ''
+  } finally {
+    stagesLoading.value = false
+  }
+}
+
+watch(
+  () => ctx.divisionId.value,
+  (divisionId) => {
+    void loadStages(divisionId)
+  },
+  { immediate: true },
+)
 </script>
 <template>
   <div class="league-stage">
-    <template v-if="selectedStage === 'regular'">
+    <template v-if="!showBracket">
       <div class="site-shell">
         <section class="events-section-dark stage-main">
           <div class="site-shell-inner">
             <StageProgressHeader
-              :selected-stage="selectedStage"
+              v-if="stageOptions.length"
+              v-model="selectedStageId"
+              :options="stageOptions"
               variant="dark"
-              @update:selected-stage="selectedStage = $event"
             />
-            <RegularStandings />
+            <p v-if="stagesLoading" class="stage-state">加载阶段...</p>
+            <RegularStandings
+              v-else
+              :stage-id="selectedStageId"
+              :grouped="isGroupedStage(selectedStage)"
+              :stage-name="selectedStage?.stageName"
+            />
           </div>
         </section>
       </div>
 
-      <CompetitionFormat current-stage="regular" />
+      <CompetitionFormat :current-stage="formatCurrentStage" />
     </template>
 
     <template v-else>
@@ -34,17 +107,18 @@ const selectedStage = ref<StageType>('regular')
         <PaperSection edge="top" tone="gray" class="stage-progress-section">
           <div class="stage-progress-section__inner">
             <StageProgressHeader
-              :selected-stage="selectedStage"
+              v-if="stageOptions.length"
+              v-model="selectedStageId"
+              :options="stageOptions"
               variant="paper"
-              @update:selected-stage="selectedStage = $event"
             />
-            <PlayoffBracket />
+            <PlayoffBracket :focus-stage-id="selectedStageId" />
           </div>
         </PaperSection>
 
         <PaperSection edge="bottom" tone="gray" class="competition-format-section">
           <div class="stage-section-divider" aria-hidden="true" />
-          <CompetitionFormat embedded current-stage="playoffs" />
+          <CompetitionFormat embedded :current-stage="formatCurrentStage" />
         </PaperSection>
       </div>
     </template>
@@ -55,6 +129,12 @@ const selectedStage = ref<StageType>('regular')
 <style scoped lang="scss">
 .stage-main {
   padding: 48px 0 24px;
+}
+
+.stage-state {
+  margin: 0;
+  padding: 24px 0;
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .stage-playoffs-shell {

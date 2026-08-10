@@ -5,7 +5,14 @@ const hallLinks = [
   { label: '周最佳', query: { tab: 'weekly' } },
   { label: '赛事荣誉', query: { tab: 'event' } },
   { label: '历届冠军', query: { tab: 'champions' } },
-  { label: '最佳阵容', query: { tab: 'event', tournamentId: '2026-league-s1' } },
+  { label: '最佳阵容', query: { tab: 'event' } },
+]
+
+const seriesLinks = [
+  { label: 'CNPA League', to: { path: '/tournament', query: { series: 'LEAGUE' } } },
+  { label: 'CNPA Arena', to: { path: '/tournament', query: { series: 'ARENA' } } },
+  { label: 'CNPA Cup', to: { path: '/tournament', query: { series: 'CUP' } } },
+  { label: 'CNPA Open', to: { path: '/tournament', query: { series: 'OPEN' } } },
 ]
 </script>
 
@@ -25,10 +32,13 @@ const hallLinks = [
 
         <div class="footer-col">
           <h4>赛事</h4>
-          <a href="#">CNPA League</a>
-          <a href="#">CNPA Arena</a>
-          <a href="#">CNPA Cup</a>
-          <a href="#">CNPA Open</a>
+          <router-link
+            v-for="item in seriesLinks"
+            :key="item.label"
+            :to="item.to"
+          >
+            {{ item.label }}
+          </router-link>
         </div>
 
         <div class="footer-col">
@@ -52,10 +62,10 @@ const hallLinks = [
 
         <div class="footer-col">
           <h4>关于 CNPA</h4>
-          <a href="#">关于我们</a>
+          <span class="footer-plain">关于我们</span>
           <router-link to="/announcements">公告中心</router-link>
           <router-link to="/partners">合作伙伴</router-link>
-          <a href="#">联系我们</a>
+          <span class="footer-plain">联系我们</span>
         </div>
 
         <div class="footer-qrcodes">
@@ -73,8 +83,8 @@ const hallLinks = [
       <div class="footer-bottom">
         <span>© 2026 CNPA 中国职业电竞篮球联赛，保留所有权利。</span>
         <div class="footer-links">
-          <a href="#">隐私政策</a>
-          <a href="#">服务条款</a>
+          <span class="footer-plain">隐私政策</span>
+          <span class="footer-plain">服务条款</span>
         </div>
       </div>
     </div>
@@ -151,6 +161,12 @@ const hallLinks = [
   }
 }
 
+.footer-plain {
+  font-size: 13px;
+  color: var(--cnpa-text-secondary);
+  cursor: default;
+}
+
 .footer-qrcodes {
   display: flex;
   gap: 16px;
@@ -190,10 +206,6 @@ const hallLinks = [
 .footer-links {
   display: flex;
   gap: 18px;
-
-  a:hover {
-    color: #fff;
-  }
 }
 
 @media (max-width: 1200px) {

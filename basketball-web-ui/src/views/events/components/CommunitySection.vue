@@ -10,11 +10,13 @@ const iconMap: Record<CommunityLink['icon'], string> = {
   douyin: 'D',
 }
 
-function handleClick(link: CommunityLink, event: Event) {
+function handleClick(link: CommunityLink, event?: Event) {
+  event?.preventDefault()
   if (!link.url || link.url === '#') {
-    event.preventDefault()
     ElMessage.info('社区入口暂未开放')
+    return
   }
+  window.open(link.url, '_blank', 'noopener,noreferrer')
 }
 </script>
 <template>
@@ -31,10 +33,10 @@ function handleClick(link: CommunityLink, event: Event) {
       <p class="community-desc">关注赛事动态、参与互动，和观众一起加入 CNPA 社区。</p>
 
       <div class="community-grid">
-        <a
+        <button
           v-for="link in communityLinks"
           :key="link.id"
-          href="#"
+          type="button"
           class="community-card"
           @click="handleClick(link, $event)"
         >
@@ -44,7 +46,7 @@ function handleClick(link: CommunityLink, event: Event) {
             <small>{{ link.description }}</small>
           </span>
           <span class="community-arrow">→</span>
-        </a>
+        </button>
       </div>
       </div>
     </section>
@@ -68,6 +70,7 @@ function handleClick(link: CommunityLink, event: Event) {
 
 .community-card {
   display: grid;
+  width: 100%;
   grid-template-columns: 44px 1fr auto;
   gap: 12px;
   align-items: center;
@@ -75,7 +78,9 @@ function handleClick(link: CommunityLink, event: Event) {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(8, 8, 8, 0.82);
   color: #fff;
-  text-decoration: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
   transition: transform 0.2s ease, border-color 0.2s ease;
 
   &:hover {

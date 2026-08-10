@@ -79,6 +79,11 @@ export interface CompetitionStage {
 
 export interface PlayoffSeries {
   id: string
+  /** MatchSeries 主键；无系列时为空 */
+  matchSeriesId?: string
+  /** 代表场 Match 主键（跳转详情用，勿把 seriesId 当 matchId） */
+  matchId?: string
+  bestOf?: number
   round: 'quarterfinal' | 'semifinal' | 'final'
   side: 'left' | 'right' | 'center'
   topTeamId: string

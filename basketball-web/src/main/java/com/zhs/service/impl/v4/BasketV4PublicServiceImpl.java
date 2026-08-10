@@ -415,6 +415,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (stageId == null) {
             throw new ServiceException("stageId 不能为空");
         }
+        V4PublicStageItemResp stage = publicStageMapper.selectStageById(stageId);
+        Integer qualifyCount = resolveStageQualifyCount(stage);
         List<Long> scopeKeys = publicStageMapper.selectGroupScopeKeysByStageId(stageId);
         if (CollectionUtils.isEmpty(scopeKeys)) {
             scopeKeys = Collections.singletonList(0L);
@@ -432,10 +434,22 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             if (scopeKey != null && scopeKey > 0) {
                 // group name via first row's groupId lookup omitted for brevity; frontend can show code
             }
+            scope.setQualifyCount(qualifyCount);
             scope.setRows(rows);
             scopes.add(scope);
         }
         return scopes;
+    }
+
+    private Integer resolveStageQualifyCount(V4PublicStageItemResp stage) {
+        if (stage == null || stage.getAdvancementCount() == null || stage.getAdvancementCount() <= 0) {
+            return null;
+        }
+        String type = stage.getAdvancementType() == null ? "" : stage.getAdvancementType().trim().toUpperCase();
+        if ("OVERALL_TOP_N".equals(type) || "GROUP_TOP_N".equals(type) || "TOP_N".equals(type)) {
+            return stage.getAdvancementCount();
+        }
+        return null;
     }
 
     @Override

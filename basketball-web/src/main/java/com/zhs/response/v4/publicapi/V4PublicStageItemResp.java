@@ -24,5 +24,6 @@ public class V4PublicStageItemResp {
     private Boolean currentStage;
     private String nextStageCode;
     private String advancementType;
+    private Integer advancementCount;
     private Integer bestOf;
 }

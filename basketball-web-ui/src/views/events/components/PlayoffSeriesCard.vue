@@ -111,9 +111,18 @@ function showLogoImage(teamId: string, logo?: string) {
       <strong class="playoff-series-card__score">{{ teamRow.score }}</strong>
     </div>
 
-    <div v-if="variant === 'final'" class="playoff-series-card__champion">
+    <div v-if="variant === 'final' && series.winnerTeamId" class="playoff-series-card__champion">
       <span aria-hidden="true" />
-      <strong>总冠军</strong>
+      <strong>
+        总冠军
+        {{
+          series.winnerTeamId === series.topTeamId
+            ? series.topTeamName
+            : series.winnerTeamId === series.bottomTeamId
+              ? series.bottomTeamName
+              : ''
+        }}
+      </strong>
       <span aria-hidden="true" />
     </div>
   </article>

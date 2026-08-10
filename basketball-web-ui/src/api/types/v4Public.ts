@@ -266,11 +266,17 @@ export interface V4PublicStageItem {
   stageOrder?: number
   stageType?: string
   stageTypeName?: string
+  organizationMode?: string
+  organizationModeName?: string
   competitionFormat?: string
   competitionFormatName?: string
   executionStatus?: string
   executionStatusName?: string
   currentStage?: boolean
+  advancementType?: string
+  advancementCount?: number
+  bestOf?: number
+  nextStageCode?: string
 }
 
 export interface V4PublicStageStandingScope {

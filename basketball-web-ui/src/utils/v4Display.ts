@@ -10,13 +10,28 @@ const SERIES_CODE_LABELS: Record<string, string> = {
 const SEASON_STATUS_LABELS: Record<string, string> = {
   NOT_STARTED: '未开始',
   REGISTRATION_OPEN: '报名中',
-  REGISTRATION_CLOSED: '报名截止',
-  PLAYING: '比赛中',
+  REGISTRATION_CLOSED: '报名已截止',
+  PLAYING: '进行中',
+  SCHEDULED: '已排赛',
   FINISHED: '已结束',
   ARCHIVED: '已归档',
   REGISTRATION: '报名中',
   MATCHING: '进行中',
   DRAFT: '筹备中',
+  ACTIVE: '进行中',
+  PENDING: '待审核',
+  APPROVED: '已通过',
+  REJECTED: '已驳回',
+}
+
+/** Division 运营状态（与 Season 文案对齐，供 Hero / 列表复用） */
+const DIVISION_STATUS_LABELS: Record<string, string> = {
+  ...SEASON_STATUS_LABELS,
+  READY: '已就绪',
+  RUNNING: '进行中',
+  RESULT_PENDING_CONFIRM: '待确认晋级',
+  COMPLETED: '已完成',
+  CANCELLED: '已取消',
 }
 
 const PUBLISH_STATUS_LABELS: Record<string, string> = {
@@ -81,7 +96,7 @@ export function v4GameModeLabel(code: string | null | undefined): string {
       return '3V3'
     default:
       if (!code) return '5V5'
-      return code
+      return '--'
   }
 }
 
@@ -107,7 +122,7 @@ export function v4MatchStatusLabel(status: string | null | undefined): string {
     case 'DRAFT':
       return '未开始'
     default:
-      return status ? status : '未开始'
+      return '未开始'
   }
 }
 
@@ -124,7 +139,7 @@ export function v4MatchSeriesStatusLabel(status: string | null | undefined): str
     case 'CANCELLED':
       return '已取消'
     default:
-      return status || '--'
+      return '--'
   }
 }
 
@@ -166,6 +181,43 @@ export function v4SeasonStatusLabel(status: string | null | undefined): string {
   return lookup(SEASON_STATUS_LABELS, status)
 }
 
+export function v4DivisionStatusLabel(status: string | null | undefined): string {
+  return lookup(DIVISION_STATUS_LABELS, status)
+}
+
+/** 公开页状态展示：优先 Division，其次 Season */
+export function v4PublicLifecycleLabel(
+  divisionStatus?: string | null,
+  seasonStatus?: string | null,
+  fallback = '常规赛',
+): string {
+  const raw = (divisionStatus || seasonStatus || '').trim()
+  if (!raw) return fallback
+  const label = v4DivisionStatusLabel(raw)
+  // lookup 未命中时会回落原 code，避免把裸 enum 直接给老板看
+  if (label === raw.toUpperCase() || label === raw) {
+    return fallback
+  }
+  return label
+}
+
+export function v4CompetitionFormatLabel(format?: string | null, stageName?: string | null): string {
+  const name = (stageName || '').trim()
+  if (name) return name
+  switch ((format || '').toUpperCase()) {
+    case 'ROUND_ROBIN':
+      return '单循环'
+    case 'GROUP_STAGE':
+      return '小组赛'
+    case 'SINGLE_ELIMINATION':
+      return '单败淘汰'
+    case 'DOUBLE_ELIMINATION':
+      return '双败淘汰'
+    default:
+      return format ? v4FormatTypeLabel(format) : '--'
+  }
+}
+
 export function v4PublishStatusLabel(status: string | null | undefined): string {
   return lookup(PUBLISH_STATUS_LABELS, status)
 }
@@ -184,17 +236,19 @@ export function v4RegistrationModeLabel(mode: string | null | undefined): string
 export function v4FormatTypeLabel(type: string | null | undefined): string {
   switch ((type || '').toUpperCase()) {
     case 'REGULAR_ROUND_ROBIN':
-      return '常规赛循环赛'
+    case 'ROUND_ROBIN':
+      return '单循环'
+    case 'GROUP_STAGE':
+      return '小组赛'
     case 'GROUP_KNOCKOUT':
       return '小组赛+淘汰赛'
     case 'KNOCKOUT':
-      return '单败淘汰'
     case 'SINGLE_ELIMINATION':
       return '单败淘汰'
     case 'DOUBLE_ELIMINATION':
       return '双败淘汰'
     default:
-      return type || '--'
+      return type ? '--' : '--'
   }
 }
 

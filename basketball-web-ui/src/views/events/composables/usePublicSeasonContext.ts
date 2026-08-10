@@ -15,7 +15,7 @@ import type {
 } from '@/api/types/v4Public'
 import type { PublicSeasonItemVo, PublicSeasonOverviewVo, PublicTournamentItemVo } from '@/api/types/public'
 import { displayText } from '@/utils/publicDisplay'
-import { v4PlatformLabel, v4SeriesLabel } from '@/utils/v4Display'
+import { v4PlatformLabel, v4PublicLifecycleLabel, v4SeriesLabel } from '@/utils/v4Display'
 import type { LeagueHeroMetaItem } from '../types/events'
 
 export type LoadState = 'idle' | 'loading' | 'success' | 'empty' | 'error'
@@ -138,7 +138,7 @@ export function usePublicSeasonContext() {
         key: 'stage',
         icon: 'stage',
         title: '当前阶段',
-        value: displayText(divisionDetail.value?.divisionStatus || season?.seasonStatus || '常规赛', '常规赛'),
+        value: v4PublicLifecycleLabel(divisionDetail.value?.divisionStatus, season?.seasonStatus, '常规赛'),
       },
       {
         key: 'platform',

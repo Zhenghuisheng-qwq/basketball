@@ -91,52 +91,104 @@ export const V4_LEADER_RANK_TYPE: Record<string, string> = {
   AVG_REBOUNDS: 'PLAYER_REBOUND',
 }
 
-/** 将 V4 淘汰赛 Match 列表映射为原型 PlayoffSeries 树所需序列 */
-export function v4BracketToPlayoffSeries(matches: V4PublicMatchItem[]): import('../types/events').PlayoffSeries[] {
+export type BracketStageBucket = {
+  stageId: string
+  stageOrder?: number
+  stageName?: string
+  matches: V4PublicMatchItem[]
+}
+
+/** 按 MatchSeries 去重：BO3/BO5 多场 Match 只生成一张 SeriesCard */
+function dedupeMatchesToSeries(matches: V4PublicMatchItem[]): V4PublicMatchItem[] {
+  const bySeries = new Map<string, V4PublicMatchItem>()
   const sorted = [...matches].sort((a, b) => {
-    const ra = toNumber(a.roundNo, 0) - toNumber(b.roundNo, 0)
-    if (ra !== 0) return ra
-    return String(a.matchNo || a.matchId).localeCompare(String(b.matchNo || b.matchId))
+    const ga = toNumber(a.seriesGameNo, 0) - toNumber(b.seriesGameNo, 0)
+    if (ga !== 0) return ga
+    return String(a.matchId).localeCompare(String(b.matchId))
   })
+  for (const item of sorted) {
+    const key = String(item.matchSeriesId || '').trim() || `match:${item.matchId}`
+    const prev = bySeries.get(key)
+    if (!prev) {
+      bySeries.set(key, item)
+      continue
+    }
+    // 优先保留已完结 / 有胜者的代表场次
+    const prevDone = String(prev.seriesStatus || '').toUpperCase() === 'COMPLETED' || Boolean(prev.winnerEventTeamId)
+    const nextDone = String(item.seriesStatus || '').toUpperCase() === 'COMPLETED' || Boolean(item.winnerEventTeamId)
+    if (!prevDone && nextDone) bySeries.set(key, item)
+  }
+  return [...bySeries.values()]
+}
 
-  const total = sorted.length
-  if (!total) return []
+/**
+ * 将多 Stage 淘汰赛 Match 映射为历史 PlayoffSeries。
+ * round 按 stageOrder：最后一阶段=决赛，倒数第二=半决赛，其余=四分之一决赛。
+ */
+export function v4BracketToPlayoffSeries(
+  matchesOrBuckets: V4PublicMatchItem[] | BracketStageBucket[],
+): import('../types/events').PlayoffSeries[] {
+  const buckets: BracketStageBucket[] = Array.isArray(matchesOrBuckets) && matchesOrBuckets.length
+    && typeof (matchesOrBuckets[0] as BracketStageBucket).matches !== 'undefined'
+    ? [...(matchesOrBuckets as BracketStageBucket[])].sort(
+        (a, b) => toNumber(a.stageOrder, 0) - toNumber(b.stageOrder, 0),
+      )
+    : [{ stageId: 'single', matches: matchesOrBuckets as V4PublicMatchItem[] }]
 
-  // 简单启发式：末场=决赛，倒数 2 场=半决赛，其余=首轮；左右交替
+  const elimBuckets = buckets.filter((b) => (b.matches?.length || 0) > 0)
+  if (!elimBuckets.length) return []
+
   const result: import('../types/events').PlayoffSeries[] = []
-  sorted.forEach((item, index) => {
-    const fromEnd = total - 1 - index
+  elimBuckets.forEach((bucket, bucketIndex) => {
+    const seriesList = dedupeMatchesToSeries(bucket.matches).sort((a, b) => {
+      const ra = toNumber(a.roundNo, 0) - toNumber(b.roundNo, 0)
+      if (ra !== 0) return ra
+      return String(a.matchNo || a.matchSeriesId || a.matchId).localeCompare(
+        String(b.matchNo || b.matchSeriesId || b.matchId),
+      )
+    })
+    const fromEnd = elimBuckets.length - 1 - bucketIndex
     let round: 'quarterfinal' | 'semifinal' | 'final' = 'quarterfinal'
-    let side: 'left' | 'right' | 'center' = index % 2 === 0 ? 'left' : 'right'
-    if (fromEnd === 0) {
+    if (fromEnd === 0 || (seriesList.length === 1 && elimBuckets.length === 1)) {
       round = 'final'
-      side = 'center'
-    } else if (fromEnd <= 2 && total >= 3) {
+    } else if (fromEnd === 1 || (elimBuckets.length === 1 && seriesList.length <= 2)) {
       round = 'semifinal'
-      side = fromEnd === 2 ? 'left' : 'right'
     }
 
-    const homeScore = toNumber(item.seriesHomeWinCount ?? item.homeScore, 0)
-    const awayScore = toNumber(item.seriesAwayWinCount ?? item.awayScore, 0)
-    const homeId = String(item.homeEventTeamId || '')
-    const awayId = String(item.awayEventTeamId || '')
-    const winnerTeamId = String(item.winnerEventTeamId || '')
+    seriesList.forEach((item, index) => {
+      let side: 'left' | 'right' | 'center' = index % 2 === 0 ? 'left' : 'right'
+      if (round === 'final') side = 'center'
 
-    result.push({
-      id: item.matchId,
-      round,
-      side,
-      topTeamId: homeId,
-      bottomTeamId: awayId,
-      topTeamName: item.homeTeamName || '',
-      bottomTeamName: item.awayTeamName || '',
-      topTeamLogo: item.homeTeamLogoUrl || '',
-      bottomTeamLogo: item.awayTeamLogoUrl || '',
-      topScore: homeScore,
-      bottomScore: awayScore,
-      winnerTeamId,
-      topSeed: '-',
-      bottomSeed: '-',
+      const homeId = String(item.homeEventTeamId || '')
+      const awayId = String(item.awayEventTeamId || '')
+      // Series 局分优先；无系列分时才回落单场比分
+      const topScore = item.seriesHomeWinCount != null
+        ? toNumber(item.seriesHomeWinCount, 0)
+        : toNumber(item.homeScore, 0)
+      const bottomScore = item.seriesAwayWinCount != null
+        ? toNumber(item.seriesAwayWinCount, 0)
+        : toNumber(item.awayScore, 0)
+      const winnerTeamId = String(item.winnerEventTeamId || '')
+
+      result.push({
+        id: String(item.matchSeriesId || item.matchId),
+        matchSeriesId: item.matchSeriesId,
+        matchId: item.matchId,
+        bestOf: item.bestOf,
+        round,
+        side,
+        topTeamId: homeId,
+        bottomTeamId: awayId,
+        topTeamName: item.homeTeamName || (homeId ? '' : 'BYE'),
+        bottomTeamName: item.awayTeamName || (awayId ? '' : 'BYE'),
+        topTeamLogo: item.homeTeamLogoUrl || '',
+        bottomTeamLogo: item.awayTeamLogoUrl || '',
+        topScore,
+        bottomScore,
+        winnerTeamId,
+        topSeed: '-',
+        bottomSeed: '-',
+      })
     })
   })
   return result

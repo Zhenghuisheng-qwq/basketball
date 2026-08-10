@@ -1,23 +1,22 @@
 <script setup lang="ts">
-import type { StageType } from '../types/events'
+export type StageOption = {
+  value: string
+  label: string
+}
 
-defineProps<{
-  selectedStage: StageType
+const props = defineProps<{
+  modelValue: string
+  options: StageOption[]
   variant?: 'dark' | 'paper'
 }>()
 
 const emit = defineEmits<{
-  'update:selectedStage': [value: StageType]
+  'update:modelValue': [value: string]
 }>()
 
-const stageOptions: Array<{ key: StageType; label: string }> = [
-  { key: 'regular', label: '常规赛' },
-  { key: 'playoffs', label: '季后赛' },
-]
-
 function onStageChange(event: Event) {
-  const value = (event.target as HTMLSelectElement).value as StageType
-  emit('update:selectedStage', value)
+  const value = (event.target as HTMLSelectElement).value
+  emit('update:modelValue', value)
 }
 </script>
 <template>
@@ -35,10 +34,10 @@ function onStageChange(event: Event) {
       <select
         id="stage-progress-select"
         class="stage-progress-header__select"
-        :value="selectedStage"
+        :value="modelValue"
         @change="onStageChange"
       >
-        <option v-for="option in stageOptions" :key="option.key" :value="option.key">
+        <option v-for="option in props.options" :key="option.value" :value="option.value">
           {{ option.label }}
         </option>
       </select>
@@ -95,7 +94,7 @@ function onStageChange(event: Event) {
 }
 
 .stage-progress-header__select {
-  width: clamp(140px, 12vw, 160px);
+  width: clamp(160px, 14vw, 220px);
   height: 46px;
   padding: 0 36px 0 14px;
   border: 1px solid rgba(255, 255, 255, 0.16);

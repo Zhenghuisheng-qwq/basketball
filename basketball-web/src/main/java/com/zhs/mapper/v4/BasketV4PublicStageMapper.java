@@ -14,6 +14,8 @@ public interface BasketV4PublicStageMapper {
 
     List<V4PublicStageItemResp> selectStagesByDivisionId(@Param("divisionId") Long divisionId);
 
+    V4PublicStageItemResp selectStageById(@Param("stageId") Long stageId);
+
     List<V4PublicStandingItemResp> selectStandingsByStageScope(@Param("stageId") Long stageId,
                                                                  @Param("groupScopeKey") Long groupScopeKey);
 

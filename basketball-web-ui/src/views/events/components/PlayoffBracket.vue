@@ -4,12 +4,17 @@ import { getV4PublicStageBracket, getV4PublicStageList } from '@/api/v4Public'
 import type { V4PublicStageItem } from '@/api/types/v4Public'
 import type { PlayoffSeries } from '../types/events'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
-import { v4BracketToPlayoffSeries } from '../utils/v4PublicAdapters'
+import { v4BracketToPlayoffSeries, type BracketStageBucket } from '../utils/v4PublicAdapters'
 import BracketLineConnector from './BracketLineConnector.vue'
 import BracketMergeConnector from './BracketMergeConnector.vue'
 import PlayoffSeriesCard from './PlayoffSeriesCard.vue'
 
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
+
+defineProps<{
+  /** 当前选中的淘汰阶段；用于标题提示，Bracket 仍合并全部淘汰 Stage */
+  focusStageId?: string
+}>()
 
 const ctx = inject<SeasonContext>('publicSeasonContext')!
 
@@ -18,12 +23,9 @@ const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const errorMessage = ref('')
 let reqId = 0
 
-function findEliminationStage(stages: V4PublicStageItem[]): V4PublicStageItem | null {
-  const elimination = stages.find((stage) => {
-    const type = (stage.competitionFormat || stage.stageType || '').toUpperCase()
-    return type.includes('ELIM') || type.includes('KNOCK') || type.includes('PLAYOFF')
-  })
-  return elimination || stages[stages.length - 1] || null
+function isEliminationStage(stage: V4PublicStageItem): boolean {
+  const type = `${stage.competitionFormat || ''} ${stage.stageType || ''}`.toUpperCase()
+  return type.includes('ELIM') || type.includes('KNOCK') || type.includes('PLAYOFF') || type.includes('FINAL')
 }
 
 async function load(divisionId: string) {
@@ -37,17 +39,28 @@ async function load(divisionId: string) {
   errorMessage.value = ''
   try {
     const stageRes = await getV4PublicStageList(divisionId)
-    const stages = stageRes.data ?? []
-    const eliminationStage = findEliminationStage(stages)
-    if (!eliminationStage?.stageId) {
+    const stages = [...(stageRes.data ?? [])]
+      .filter(isEliminationStage)
+      .sort((a, b) => (a.stageOrder ?? 0) - (b.stageOrder ?? 0))
+    if (!stages.length) {
       if (current !== reqId) return
       playoffSeries.value = []
       state.value = 'empty'
       return
     }
-    const bracketRes = await getV4PublicStageBracket(eliminationStage.stageId)
+    const buckets: BracketStageBucket[] = await Promise.all(
+      stages.map(async (stage) => {
+        const bracketRes = await getV4PublicStageBracket(stage.stageId)
+        return {
+          stageId: stage.stageId,
+          stageOrder: stage.stageOrder,
+          stageName: stage.stageName,
+          matches: bracketRes.data ?? [],
+        }
+      }),
+    )
     if (current !== reqId) return
-    playoffSeries.value = v4BracketToPlayoffSeries(bracketRes.data ?? [])
+    playoffSeries.value = v4BracketToPlayoffSeries(buckets)
     state.value = playoffSeries.value.length ? 'success' : 'empty'
   } catch (err) {
     if (current !== reqId) return
@@ -90,9 +103,12 @@ const finalSeries = computed(() => playoffSeries.value.find((item) => item.round
       </h3>
     </div>
 
-    <p class="playoff-bracket__scroll-hint">左右滑动查看完整对阵</p>
+    <p v-if="state === 'loading'" class="playoff-bracket__scroll-hint" style="display: block">加载对阵图...</p>
+    <p v-else-if="state === 'error'" class="playoff-bracket__scroll-hint" style="display: block">{{ errorMessage }}</p>
+    <p v-else-if="state === 'empty'" class="playoff-bracket__scroll-hint" style="display: block">暂无淘汰赛对阵</p>
+    <p v-else class="playoff-bracket__scroll-hint">左右滑动查看完整对阵</p>
 
-    <div class="playoff-bracket__viewport">
+    <div v-if="state === 'success'" class="playoff-bracket__viewport">
       <div class="playoff-bracket__board">
         <div class="playoff-bracket__round playoff-bracket__round--quarter">
           <div v-if="leftQuarter[0]" class="bracket-match bracket-match--row-top">

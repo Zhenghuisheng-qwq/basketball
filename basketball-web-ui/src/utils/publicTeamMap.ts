@@ -7,6 +7,7 @@ import type {
   PublicTeamSeasonStatVo,
 } from '@/api/types/public'
 import { descriptionToText, displayText, formatDateTime, mapMatchStatus, toNumber } from '@/utils/publicDisplay'
+import { v4GameModeLabel, v4PlatformLabel } from '@/utils/v4Display'
 import type { TeamBase, TeamMatchRecord, TeamRosterPlayer, TeamSeasonAverages } from '@/types/team'
 
 export function mapPublicTeamToBase(
@@ -28,14 +29,20 @@ export function mapPublicTeamToBase(
     logoUrl: detail.logoUrl?.trim() || '',
     largeLogoUrl: detail.logoUrl?.trim() || '',
     captainName: '--',
-    platform: displayText(detail.platformCode || detail.gameTerminal, '--'),
+    platform: v4PlatformLabel(detail.platformCode || detail.gameTerminal),
     currentStage: 'regular',
     rosterCount: toNumber(detail.currentMemberCount, 0),
     // 认证态用 auditStatus，勿把 ACTIVE 当“有效俱乐部”
     verified: detail.auditStatus === 1,
     seasonName: displayText(
       extras?.seasonName
-        || [detail.seriesName, detail.seasonName, detail.divisionName, detail.platformCode, detail.gameMode]
+        || [
+          detail.seriesName,
+          detail.seasonName,
+          detail.divisionName,
+          detail.platformCode ? v4PlatformLabel(detail.platformCode) : '',
+          detail.gameMode ? v4GameModeLabel(detail.gameMode) : '',
+        ]
           .filter(Boolean)
           .join(' · '),
       detail.legacyTeam ? '历史球队' : '当前赛事',
