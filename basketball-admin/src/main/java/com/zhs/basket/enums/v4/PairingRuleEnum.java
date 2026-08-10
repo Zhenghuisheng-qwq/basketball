@@ -3,6 +3,7 @@ package com.zhs.basket.enums.v4;
 public enum PairingRuleEnum {
     NONE("NONE", "无"),
     HIGH_VS_LOW("HIGH_VS_LOW", "高排名对低排名"),
+    RANDOM_DRAW("RANDOM_DRAW", "随机抽签"),
     GROUP_CROSS("GROUP_CROSS", "小组交叉"),
     MANUAL("MANUAL", "人工对阵");
 
