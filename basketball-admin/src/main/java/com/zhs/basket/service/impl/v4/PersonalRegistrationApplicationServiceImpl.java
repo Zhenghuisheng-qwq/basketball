@@ -10,11 +10,13 @@ import com.zhs.basket.mapper.v4.BasketPersonalRegistrationAuditMapper;
 import com.zhs.basket.mapper.v4.BasketPersonalRegistrationMapper;
 import com.zhs.basket.query.v4.BasketPersonalRegistrationQuery;
 import com.zhs.basket.service.v4.IPersonalRegistrationApplicationService;
+import com.zhs.basket.support.BasketAdminMessageService;
 import com.zhs.basket.support.v4.PersonalRegistrationEligibilitySpecification;
 import com.zhs.basket.support.v4.PersonalRegistrationStatusTransition;
 import com.zhs.basket.vo.v4.BasketPersonalRegistrationDetailVo;
 import com.zhs.basket.vo.v4.BasketPersonalRegistrationListVo;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,8 @@ public class PersonalRegistrationApplicationServiceImpl implements IPersonalRegi
     private PersonalRegistrationEligibilitySpecification eligibilitySpecification;
     @Autowired
     private PersonalRegistrationStatusTransition statusTransition;
+    @Autowired
+    private BasketAdminMessageService messageService;
 
     @Override
     public List<BasketPersonalRegistrationListVo> selectList(BasketPersonalRegistrationQuery query) {
@@ -101,9 +105,28 @@ public class PersonalRegistrationApplicationServiceImpl implements IPersonalRegi
         if (!PersonalRegistrationStatusEnum.PENDING_REVIEW.getCode().equals(registration.getRegistrationStatus())) {
             throw new ServiceException("仅待审核状态可驳回");
         }
-        registration.setRejectReason(req.getRejectReason().trim());
+        String rejectReason = req.getRejectReason().trim();
+        registration.setRejectReason(rejectReason);
         statusTransition.transition(registration, PersonalRegistrationStatusEnum.REJECTED,
                 PersonalAuditActionEnum.REJECT, req.getAuditRemark());
+        notifyPersonalRegistrationRejected(registration, rejectReason);
+    }
+
+    private void notifyPersonalRegistrationRejected(BasketPersonalRegistration registration, String rejectReason) {
+        Long memberId = registration.getUserId();
+        if (memberId == null) {
+            return;
+        }
+        BasketDivision division = divisionMapper.selectById(registration.getDivisionId());
+        String divisionLabel = division != null && StringUtils.isNotEmpty(division.getDivisionName())
+                ? division.getDivisionName() : "当前赛区";
+        messageService.sendSiteMessage(
+                memberId,
+                SecurityUtils.getUserId(),
+                "PERSONAL_REGISTRATION",
+                registration.getId(),
+                "个人报名已驳回",
+                "您在「" + divisionLabel + "」的个人报名未通过审核，原因：" + rejectReason);
     }
 
     private BasketPersonalRegistration requireRegistration(Long id) {

@@ -1,5 +1,6 @@
 package com.zhs.basket.service.impl.v4;
 
+import com.zhs.basket.domain.BasketTeam;
 import com.zhs.basket.domain.v4.BasketCaptainGrant;
 import com.zhs.basket.domain.v4.BasketDivision;
 import com.zhs.basket.domain.v4.BasketRegistration;
@@ -8,6 +9,7 @@ import com.zhs.basket.domain.v4.BasketRegistrationPlayer;
 import com.zhs.basket.dto.v4.BasketRegistrationAuditRejectReq;
 import com.zhs.basket.enums.v4.AuditResultEnum;
 import com.zhs.basket.enums.v4.RegistrationStatusEnum;
+import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationAuditMapper;
@@ -16,6 +18,7 @@ import com.zhs.basket.mapper.v4.BasketRegistrationPlayerMapper;
 import com.zhs.basket.query.v4.BasketRegistrationAuditQuery;
 import com.zhs.basket.service.v4.IBasketV4EventSnapshotService;
 import com.zhs.basket.service.v4.IBasketV4RegistrationAuditService;
+import com.zhs.basket.support.BasketAdminMessageService;
 import com.zhs.basket.support.v4.CaptainGrantRuntimeSupport;
 import com.zhs.basket.support.v4.TeamRegistrationEligibilitySpecification;
 import com.zhs.basket.vo.v4.BasketRegistrationAuditDetailVo;
@@ -51,6 +54,10 @@ public class BasketV4RegistrationAuditServiceImpl implements IBasketV4Registrati
     private TeamRegistrationEligibilitySpecification teamRegistrationEligibilitySpecification;
     @Autowired
     private CaptainGrantRuntimeSupport grantRuntimeSupport;
+    @Autowired
+    private BasketAdminMessageService messageService;
+    @Autowired
+    private BasketTeamMapper teamMapper;
 
     @Override
     public List<BasketRegistrationAuditListVo> selectList(BasketRegistrationAuditQuery query) {
@@ -153,6 +160,31 @@ public class BasketV4RegistrationAuditServiceImpl implements IBasketV4Registrati
 
         writeAudit(registration, "REJECT", beforeStatus, RegistrationStatusEnum.REJECTED.getCode(),
                 AuditResultEnum.REJECTED.getCode(), req.getRejectReason());
+        notifyTeamRegistrationRejected(registration, req.getRejectReason().trim());
+    }
+
+    private void notifyTeamRegistrationRejected(BasketRegistration registration, String rejectReason) {
+        if (registration.getCaptainMemberId() == null) {
+            return;
+        }
+        String teamName = null;
+        if (registration.getTeamId() != null) {
+            BasketTeam team = teamMapper.selectById(registration.getTeamId());
+            if (team != null) {
+                teamName = team.getTeamName();
+            }
+        }
+        BasketDivision division = divisionMapper.selectById(registration.getDivisionId());
+        String divisionLabel = division != null && StringUtils.isNotEmpty(division.getDivisionName())
+                ? division.getDivisionName() : "当前赛区";
+        String subject = StringUtils.isNotEmpty(teamName) ? ("球队「" + teamName + "」") : "您的球队";
+        messageService.sendSiteMessage(
+                registration.getCaptainMemberId(),
+                SecurityUtils.getUserId(),
+                "TEAM_REGISTRATION",
+                registration.getId(),
+                "球队报名已驳回",
+                subject + "在「" + divisionLabel + "」的报名未通过审核，原因：" + rejectReason);
     }
 
     private void writeAudit(BasketRegistration registration, String action, String beforeStatus, String afterStatus,
