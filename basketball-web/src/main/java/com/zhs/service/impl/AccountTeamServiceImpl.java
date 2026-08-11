@@ -9,6 +9,7 @@ import com.zhs.config.AccountTeamProperties;
 import com.zhs.dao.BasketFileAssetDao;
 import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketPlayerProfileDao;
+import com.zhs.dao.BasketTeamAuditRecordDao;
 import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketTeamJoinApplicationDao;
 import com.zhs.dao.BasketPlayerPlatformAccountDao;
@@ -45,6 +46,7 @@ import com.zhs.model.BasketPlayerPlatformAccount;
 import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
+import com.zhs.model.BasketTeamAuditRecord;
 import com.zhs.model.BasketTeamJoinApplication;
 import com.zhs.model.BasketTeamMember;
 import com.zhs.request.team.TeamCreateReq;
@@ -92,6 +94,8 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
 
     @Resource
     private BasketTeamDao teamDao;
+    @Resource
+    private BasketTeamAuditRecordDao teamAuditRecordDao;
     @Resource
     private BasketTeamMemberDao teamMemberDao;
     @Resource
@@ -545,6 +549,8 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
             if (req.getPublicStatus() != null) {
                 team.setPublicStatus(req.getPublicStatus());
             }
+            // 驳回后改资料：回到待审核，后台认证页可继续审（同一球队，非新申请行）
+            markRejectedTeamResubmitted(team, memberId, "队长修改球队资料后重新提交审核");
         }
 
         teamDao.updateById(team);
@@ -571,6 +577,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
 
         Long fileId = parseLongId(req.getFileId(), "????");
         bindTeamLogoFile(team, fileId, memberId);
+        markRejectedTeamResubmitted(team, memberId, "队长更新球队 Logo 后重新提交审核");
         teamDao.updateById(team);
         securityLogHelper.write(memberId, EVENT_TEAM_LOGO, "???? Logo",
                 null, team.getTeamName(), memberId, clientIp);
@@ -1110,6 +1117,35 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         }
         String newDescription = trimToNull(req.getDescription());
         return !Objects.equals(newDescription, trimToNull(team.getDescription()));
+    }
+
+    /**
+     * 球队认证被驳回后，队长修改资料/Logo 时回到 PENDING，供 Admin「球队认证审核」继续处理。
+     * 注意：认证挂在球队主记录上，不会新增第二行申请；列表中同一球队状态会变为「待审核」。
+     */
+    private void markRejectedTeamResubmitted(BasketTeam team, Long operatorMemberId, String remark) {
+        if (!Objects.equals(TeamAuditStatusEnum.REJECTED.getCode(), team.getAuditStatus())) {
+            return;
+        }
+        Integer before = team.getAuditStatus();
+        Integer after = TeamAuditStatusEnum.PENDING.getCode();
+        team.setAuditStatus(after);
+
+        Date now = new Date();
+        BasketTeamAuditRecord record = new BasketTeamAuditRecord();
+        record.setTeamId(team.getId());
+        record.setAuditType("TEAM_CREATE");
+        record.setAuditAction("RESUBMIT");
+        record.setBeforeStatus(before);
+        record.setAfterStatus(after);
+        record.setAuditorId(operatorMemberId);
+        record.setAuditorName("队长");
+        record.setAuditRemark(remark);
+        record.setAuditTime(now);
+        record.setCreateTime(now);
+        record.setUpdateTime(now);
+        record.setIsDelete(NOT_DELETED);
+        teamAuditRecordDao.insert(record);
     }
 
     private void validateCreateReq(TeamCreateReq req) {

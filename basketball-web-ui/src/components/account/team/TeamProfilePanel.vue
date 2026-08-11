@@ -250,13 +250,14 @@ async function savePublicStatusIfNeeded() {
 
 async function submitDirectProfile() {
   if (!props.teamId) return
+  const wasRejected = props.teamDetail?.auditStatus === 2
   await updateTeam(props.teamId, {
     teamName: profileForm.teamName.trim(),
     shortName: profileForm.shortName.trim() || undefined,
     description: profileForm.description.trim() || undefined,
     publicStatus: profileForm.publicStatus,
   })
-  ElMessage.success('球队资料已保存')
+  ElMessage.success(wasRejected ? '资料已保存，已重新提交球队认证审核' : '球队资料已保存')
   showEditDialog.value = false
   emit('refreshed')
 }
