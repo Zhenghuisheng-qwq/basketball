@@ -2,6 +2,7 @@ package com.zhs.basket.service.impl;
 
 import com.zhs.basket.domain.BasketTeam;
 import com.zhs.basket.domain.BasketTeamProfileChange;
+import com.zhs.basket.enums.TeamAuditStatusEnum;
 import com.zhs.basket.enums.TeamProfileChangeAuditStatusEnum;
 import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.BasketTeamProfileChangeMapper;
@@ -61,6 +62,9 @@ public class BasketTeamProfileChangeServiceImpl implements IBasketTeamProfileCha
     public void approve(Long id, TeamProfileChangeApproveReq req) {
         BasketTeamProfileChange change = requirePendingChange(id);
         BasketTeam team = requireTeam(change.getTeamId());
+        if (!Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())) {
+            throw new ServiceException("仅已认证通过的球队可审核资料变更");
+        }
         assertTeamNameAvailable(team, change.getNewTeamName());
         assertLogoExists(change.getNewLogoFileId());
 

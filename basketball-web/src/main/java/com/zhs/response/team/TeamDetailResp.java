@@ -100,6 +100,12 @@ public class TeamDetailResp implements Serializable {
     @ApiModelProperty("审核状态")
     private Integer auditStatus;
 
+    @ApiModelProperty("认证审核状态文案")
+    private String auditStatusText;
+
+    @ApiModelProperty("最近一次球队认证驳回意见（仅认证 REJECTED 时有值）")
+    private String certificationRejectRemark;
+
     @ApiModelProperty("公开状态")
     private Integer publicStatus;
 

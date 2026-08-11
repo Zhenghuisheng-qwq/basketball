@@ -51,3 +51,7 @@ export function updateTeam(teamId: string, body: TeamUpdateReq) {
 export function bindTeamLogo(teamId: string, body: TeamLogoBindReq) {
   return request.post<any, ApiResult<TeamDetailDto>>(`/basket/team/${teamId}/logo`, body)
 }
+
+export function submitTeamCertification(teamId: string) {
+  return request.post<any, ApiResult<TeamDetailDto>>(`/basket/team/${teamId}/submit-certification`)
+}

@@ -6,7 +6,9 @@ public enum TeamAuditStatusEnum {
     PENDING(0, "待审核"),
     APPROVED(1, "已通过"),
     REJECTED(2, "已驳回"),
-    REVIEWING(3, "审核中");
+    REVIEWING(3, "审核中"),
+    /** 已创建未提交认证；tinyint 可表达，无需 DDL */
+    DRAFT(4, "草稿");
 
     private final Integer code;
     private final String description;
@@ -30,11 +32,18 @@ public enum TeamAuditStatusEnum {
         if (this == REJECTED) {
             return "已驳回";
         }
+        if (this == DRAFT) {
+            return "草稿（未提交）";
+        }
         return description;
     }
 
     public boolean isPendingAudit() {
         return this == PENDING || this == REVIEWING;
+    }
+
+    public boolean isApproved() {
+        return this == APPROVED;
     }
 
     public static TeamAuditStatusEnum fromCode(Integer code) {

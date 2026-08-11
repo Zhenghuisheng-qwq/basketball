@@ -92,6 +92,12 @@ public class AccountTeamController {
         return R.ok(accountTeamService.bindLogo(teamId, req, resolveClientIp(request)), "Logo 绑定成功");
     }
 
+    @ApiOperation("提交/重新提交球队认证")
+    @PostMapping("/{teamId}/submit-certification")
+    public R<TeamDetailResp> submitCertification(@PathVariable String teamId, HttpServletRequest request) {
+        return R.ok(accountTeamService.submitCertification(teamId, resolveClientIp(request)), "已提交球队认证审核");
+    }
+
     private String resolveClientIp(HttpServletRequest request) {
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {

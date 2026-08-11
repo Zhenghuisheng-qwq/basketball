@@ -71,6 +71,8 @@ export interface TeamDetailDto {
   maxMemberCount?: number
   teamStatus?: number
   auditStatus?: number
+  auditStatusText?: string
+  certificationRejectRemark?: string
   publicStatus?: number
   isCaptain?: boolean
   myRole?: string

@@ -6,7 +6,7 @@ import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import AccountTeamLogo from '@/components/account/team/AccountTeamLogo.vue'
 import MyEventsPagination from '@/components/account/events/MyEventsPagination.vue'
 import { uploadAccountFile } from '@/api/accountFile'
-import { updateTeam } from '@/api/accountTeam'
+import { submitTeamCertification, updateTeam } from '@/api/accountTeam'
 import {
   cancelTeamProfileChange,
   getTeamProfileChangeDetail,
@@ -78,7 +78,21 @@ const detailLoading = ref(false)
 const changeDetail = ref<TeamProfileChangeDetailDto>()
 
 const officialProfile = computed(() => props.teamDetail)
-const useAuditFlow = computed(() => props.isApproved && props.canManage)
+const certStatus = computed(() => props.teamDetail?.auditStatus)
+const isCertDraft = computed(() => certStatus.value === 4)
+const isCertPending = computed(() => certStatus.value === 0 || certStatus.value === 3)
+const isCertRejected = computed(() => certStatus.value === 2)
+const isCertApproved = computed(() => certStatus.value === 1 || props.isApproved)
+/** 仅已认证球队走资料变更审核 */
+const useAuditFlow = computed(() => isCertApproved.value && props.canManage)
+/** 未认证草稿/驳回：可直接改待认证资料 */
+const canEditCertDraft = computed(() =>
+  props.canManage && (isCertDraft.value || isCertRejected.value),
+)
+const canSubmitCertification = computed(() => canEditCertDraft.value)
+const certificationRejectRemark = computed(() =>
+  props.teamDetail?.certificationRejectRemark || '',
+)
 
 const displayAuditStatusText = computed(() => {
   if (hasPendingChange.value) {
@@ -102,17 +116,19 @@ const displayAuditStatusType = computed(() => {
 })
 
 const showPendingHint = computed(() =>
-  hasPendingChange.value
+  useAuditFlow.value
+  && hasPendingChange.value
   && (pendingChange.value?.auditStatus === 1 || pendingChange.value?.auditStatus === 2),
 )
 
 const latestRejectedRemark = computed(() => {
-  if (pendingChange.value?.auditStatus === 4) return pendingChange.value.auditRemark
-  return recentHistory.value.find(item => item.auditStatus === 4)?.auditRemark
+  if (!useAuditFlow.value) return ''
+  if (pendingChange.value?.auditStatus === 4) return pendingChange.value.auditRemark || ''
+  return recentHistory.value.find(item => item.auditStatus === 4)?.auditRemark || ''
 })
 
 const showRejectedHint = computed(() =>
-  !hasPendingChange.value && Boolean(latestRejectedRemark.value),
+  useAuditFlow.value && !hasPendingChange.value && Boolean(latestRejectedRemark.value),
 )
 
 const historyHasFilter = computed(() =>
@@ -124,8 +140,15 @@ const historyEmptyText = computed(() =>
 )
 
 const submitButtonText = computed(() => {
-  if (!useAuditFlow.value) return '保存资料'
-  return hasPendingChange.value ? '保存修改并继续待审' : '提交审核'
+  if (useAuditFlow.value) return '提交资料变更审核'
+  return '保存资料'
+})
+
+const canOpenEditDialog = computed(() => {
+  if (!props.canManage) return false
+  if (isCertPending.value) return false
+  if (useAuditFlow.value) return !showPendingHint.value
+  return canEditCertDraft.value
 })
 
 function historyStatusType(status?: number): 'success' | 'warning' | 'danger' | 'default' {
@@ -212,13 +235,21 @@ async function prepareEditForm() {
 }
 
 async function openEditDialog() {
-  if (!props.canManage) return
+  if (!canOpenEditDialog.value) {
+    if (isCertPending.value) {
+      ElMessage.warning('球队认证审核中，审核完成前暂不可修改球队认证资料')
+    } else if (showPendingHint.value) {
+      ElMessage.warning('当前已有待审核的资料变更，请等待审核完成或先取消后再提交')
+    }
+    return
+  }
   showEditDialog.value = true
   await prepareEditForm()
 }
 
 function openPendingEdit() {
-  openEditDialog().catch(() => undefined)
+  if (!pendingChange.value?.changeId) return
+  openDetail(pendingChange.value.changeId).catch(() => undefined)
 }
 
 async function handleLogoUpload(event: Event) {
@@ -250,14 +281,15 @@ async function savePublicStatusIfNeeded() {
 
 async function submitDirectProfile() {
   if (!props.teamId) return
-  const wasRejected = props.teamDetail?.auditStatus === 2
   await updateTeam(props.teamId, {
     teamName: profileForm.teamName.trim(),
     shortName: profileForm.shortName.trim() || undefined,
     description: profileForm.description.trim() || undefined,
     publicStatus: profileForm.publicStatus,
   })
-  ElMessage.success(wasRejected ? '资料已保存，已重新提交球队认证审核' : '球队资料已保存')
+  ElMessage.success(isCertRejected.value
+    ? '待认证资料已保存，请点击「重新提交认证」'
+    : '资料已保存，请点击「提交认证」进入审核')
   showEditDialog.value = false
   emit('refreshed')
 }
@@ -274,13 +306,29 @@ async function submitAuditProfile() {
       description: profileForm.description.trim() || undefined,
       changeReason: profileForm.changeReason.trim() || undefined,
     })
-    ElMessage.success(hasPendingChange.value ? '变更申请已更新' : '变更申请已提交，等待审核')
+    ElMessage.success('变更申请已提交，等待审核')
     showEditDialog.value = false
     profileLogoFileId.value = ''
     await loadProfileEditData()
     emit('refreshed')
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '提交失败')
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+async function handleSubmitCertification() {
+  if (!props.teamId || !canSubmitCertification.value) return
+  actionLoading.value = true
+  try {
+    await submitTeamCertification(props.teamId)
+    ElMessage.success(isCertRejected.value
+      ? '已重新提交球队认证，请等待审核'
+      : '已提交球队认证，请等待审核')
+    emit('refreshed')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '提交认证失败')
   } finally {
     actionLoading.value = false
   }
@@ -294,7 +342,7 @@ async function handleSubmit() {
   }
   if (useAuditFlow.value) {
     await submitAuditProfile()
-  } else {
+  } else if (canEditCertDraft.value) {
     actionLoading.value = true
     try {
       await submitDirectProfile()
@@ -410,17 +458,33 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
 
 <template>
   <div class="team-profile-panel" v-loading="loading">
-    <AccountPanel title="当前正式资料">
+    <AccountPanel :title="isCertApproved ? '当前正式资料' : '球队资料'">
       <template v-if="canManage" #extra>
         <div class="team-profile-panel__actions">
-          <button type="button" class="account-btn-secondary" @click="openEditDialog">编辑资料</button>
+          <button
+            v-if="canOpenEditDialog"
+            type="button"
+            class="account-btn-secondary"
+            @click="openEditDialog"
+          >
+            {{ isCertRejected ? '修改球队资料' : '编辑资料' }}
+          </button>
+          <button
+            v-if="canSubmitCertification"
+            type="button"
+            class="account-btn-primary"
+            :disabled="actionLoading"
+            @click="handleSubmitCertification"
+          >
+            {{ isCertRejected ? '重新提交认证' : '提交认证' }}
+          </button>
           <button
             v-if="useAuditFlow"
             type="button"
             class="account-btn-secondary"
             @click="openHistoryDialog"
           >
-            审核历史
+            资料变更历史
           </button>
         </div>
       </template>
@@ -452,13 +516,34 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
         </dl>
       </div>
 
+      <!-- 首次认证状态（未 APPROVED 时只展示认证语义，绝不混用资料变更文案） -->
+      <div v-if="canManage && !isCertApproved" class="team-profile-status-bar">
+        <div class="team-profile-status-bar__main">
+          <p v-if="isCertPending" class="team-profile-status-bar__text">
+            球队认证审核中。审核完成前暂不可修改球队认证资料。
+          </p>
+          <p v-else-if="isCertRejected" class="team-profile-status-bar__text team-profile-status-bar__text--danger">
+            球队认证未通过{{ certificationRejectRemark ? `：${certificationRejectRemark}` : '' }}。
+            请修改资料后重新提交认证。
+          </p>
+          <p v-else-if="isCertDraft" class="team-profile-status-bar__text">
+            请完善球队资料后提交认证，提交后将进入「球队认证审核」。
+          </p>
+        </div>
+        <AccountStatusBadge
+          :text="isCertPending ? '认证审核中' : (isCertRejected ? '认证未通过' : '待提交认证')"
+          :type="isCertRejected ? 'danger' : 'warning'"
+        />
+      </div>
+
       <div v-if="useAuditFlow" class="team-profile-status-bar">
         <div class="team-profile-status-bar__main">
           <p v-if="showPendingHint" class="team-profile-status-bar__text">
             当前存在待审核的球队资料变更，审核通过前不会影响正式资料。
           </p>
           <p v-else-if="showRejectedHint" class="team-profile-status-bar__text team-profile-status-bar__text--danger">
-            最近一次变更被驳回{{ latestRejectedRemark ? `：${latestRejectedRemark}` : '' }}。
+            上次球队资料修改未通过{{ latestRejectedRemark ? `：${latestRejectedRemark}` : '' }}。
+            可重新提交新的资料变更。
           </p>
           <p v-else class="team-profile-status-bar__text team-profile-status-bar__text--muted">
             资料变更需提交审核，通过后才会更新正式展示内容。
@@ -488,11 +573,15 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
       destroy-on-close
     >
       <div v-loading="editDialogLoading" class="team-profile-edit">
-        <p v-if="showPendingHint" class="team-profile-edit__hint">
-          当前已有待审核申请，本次修改将更新同一条待审核记录，不会新增重复申请。
+        <p v-if="isCertRejected && !useAuditFlow" class="team-profile-edit__hint team-profile-edit__hint--danger">
+          认证未通过{{ certificationRejectRemark ? `：${certificationRejectRemark}` : '' }}。
+          修改后请保存，再点击「重新提交认证」。
+        </p>
+        <p v-else-if="isCertDraft && !useAuditFlow" class="team-profile-edit__hint">
+          当前为待认证草稿，保存后请提交球队认证。
         </p>
         <p v-else-if="showRejectedHint" class="team-profile-edit__hint team-profile-edit__hint--danger">
-          上次变更被驳回，请修改后重新提交{{ latestRejectedRemark ? `（原因：${latestRejectedRemark}）` : '' }}。
+          上次资料变更被驳回，请修改后重新提交{{ latestRejectedRemark ? `（原因：${latestRejectedRemark}）` : '' }}。
         </p>
 
         <div class="team-profile-edit__logo">
@@ -508,7 +597,7 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
               <input type="file" accept="image/*" hidden @change="handleLogoUpload" />
             </label>
             <p class="team-tip">
-              {{ useAuditFlow ? '上传后需提交审核，通过后才会更新正式 Logo。' : '支持 JPG / PNG，上传后立即保存。' }}
+              {{ useAuditFlow ? '上传后需提交审核，通过后才会更新正式 Logo。' : '支持 JPG / PNG，上传后立即保存到待认证资料。' }}
             </p>
           </div>
         </div>
@@ -538,11 +627,6 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
 
       <template #footer>
         <div class="team-profile-edit__footer">
-          <div v-if="useAuditFlow && showPendingHint" class="team-profile-edit__footer-left">
-            <button type="button" class="team-profile-link-btn team-profile-link-btn--danger" @click="handleCancelPending">
-              取消申请
-            </button>
-          </div>
           <div class="team-profile-edit__footer-right">
             <button type="button" class="account-btn-secondary" @click="showEditDialog = false">取消</button>
             <button

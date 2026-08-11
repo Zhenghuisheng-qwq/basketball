@@ -376,7 +376,8 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         team.setMaxMemberCount(teamProperties.getDefaultMaxMemberCount());
         team.setCurrentMemberCount(1);
         team.setTeamStatus(TeamStatusEnum.ACTIVE.getCode());
-        team.setAuditStatus(TeamAuditStatusEnum.PENDING.getCode());
+        // 创建后为草稿，须显式提交认证后才进入 Admin「球队认证审核」
+        team.setAuditStatus(TeamAuditStatusEnum.DRAFT.getCode());
         team.setEstablishedDate(now);
         team.setIsDelete(NOT_DELETED);
 
@@ -527,7 +528,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         String oldName = team.getTeamName();
 
         TeamAuditStatusEnum auditStatus = TeamAuditStatusEnum.fromCode(team.getAuditStatus());
-        if (auditStatus == TeamAuditStatusEnum.APPROVED) {
+        if (auditStatus.isApproved()) {
             if (hasAuditedFieldChange(req, team)) {
                 throw new ServiceException("已认证球队名称、简称、介绍须提交资料变更审核");
             }
@@ -536,7 +537,10 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
             if (req.getPublicStatus() != null) {
                 team.setPublicStatus(req.getPublicStatus());
             }
-        } else {
+        } else if (auditStatus.isPendingAudit()) {
+            throw new ServiceException("球队认证审核中，审核完成前暂不可修改球队认证资料");
+        } else if (auditStatus.allowsDirectProfileEdit()) {
+            // DRAFT / REJECTED：直接改待认证资料，不产生 ProfileChange，也不自动重提认证
             if (StringUtils.hasText(req.getTeamName()) && !req.getTeamName().trim().equals(team.getTeamName())) {
                 assertTeamNameUnique(team.getDivisionId(), req.getTeamName().trim(), team.getId());
                 team.setTeamName(req.getTeamName().trim());
@@ -549,12 +553,12 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
             if (req.getPublicStatus() != null) {
                 team.setPublicStatus(req.getPublicStatus());
             }
-            // 驳回后改资料：回到待审核，后台认证页可继续审（同一球队，非新申请行）
-            markRejectedTeamResubmitted(team, memberId, "队长修改球队资料后重新提交审核");
+        } else {
+            throw new ServiceException("当前认证状态不允许修改球队资料");
         }
 
         teamDao.updateById(team);
-        securityLogHelper.write(memberId, EVENT_TEAM_UPDATE, "??????",
+        securityLogHelper.write(memberId, EVENT_TEAM_UPDATE, "TEAM_UPDATE",
                 oldName, team.getTeamName(), memberId, clientIp);
 
         BasketTeamMember membership = loadCurrentMembership(memberId, teamPk);
@@ -565,21 +569,64 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     @Transactional(rollbackFor = Exception.class)
     public TeamDetailResp bindLogo(String teamId, TeamLogoBindReq req, String clientIp) {
         if (req == null || !StringUtils.hasText(req.getFileId())) {
-            throw new ServiceException("????????");
+            throw new ServiceException("Logo 文件主键不能为空");
         }
-        Long teamPk = parseLongId(teamId, "????");
+        Long teamPk = parseLongId(teamId, "球队主键");
         Long memberId = UserContext.getRequiredUserId();
         BasketTeam team = captainPermissionService.requireTeamCaptain(memberId, teamPk);
         teamWritableSupport.assertTeamWritable(team);
-        if (Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())) {
+        TeamAuditStatusEnum auditStatus = TeamAuditStatusEnum.fromCode(team.getAuditStatus());
+        if (auditStatus.isApproved()) {
             throw new ServiceException("已认证球队须通过资料变更审核修改 Logo");
         }
+        if (auditStatus.isPendingAudit()) {
+            throw new ServiceException("球队认证审核中，审核完成前暂不可修改球队认证资料");
+        }
+        if (!auditStatus.allowsDirectProfileEdit()) {
+            throw new ServiceException("当前认证状态不允许修改球队 Logo");
+        }
 
-        Long fileId = parseLongId(req.getFileId(), "????");
+        Long fileId = parseLongId(req.getFileId(), "Logo 文件主键");
         bindTeamLogoFile(team, fileId, memberId);
-        markRejectedTeamResubmitted(team, memberId, "队长更新球队 Logo 后重新提交审核");
         teamDao.updateById(team);
-        securityLogHelper.write(memberId, EVENT_TEAM_LOGO, "???? Logo",
+        securityLogHelper.write(memberId, EVENT_TEAM_LOGO, "TEAM_LOGO",
+                null, team.getTeamName(), memberId, clientIp);
+
+        BasketTeamMember membership = loadCurrentMembership(memberId, teamPk);
+        return toDetailResp(team, membership, resolveLogoUrl(team.getLogoFileId()), true);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public TeamDetailResp submitCertification(String teamId, String clientIp) {
+        Long teamPk = parseLongId(teamId, "球队主键");
+        Long memberId = UserContext.getRequiredUserId();
+        BasketTeam team = captainPermissionService.requireTeamCaptain(memberId, teamPk);
+        teamWritableSupport.assertTeamWritable(team);
+
+        TeamAuditStatusEnum auditStatus = TeamAuditStatusEnum.fromCode(team.getAuditStatus());
+        if (auditStatus.isApproved()) {
+            throw new ServiceException("球队已完成认证，后续资料修改请提交资料变更审核");
+        }
+        if (auditStatus.isPendingAudit()) {
+            throw new ServiceException("球队认证审核中，请勿重复提交");
+        }
+        if (!auditStatus.canSubmitCertification()) {
+            throw new ServiceException("当前认证状态不允许提交认证");
+        }
+        if (!StringUtils.hasText(team.getTeamName())) {
+            throw new ServiceException("请先填写球队名称后再提交认证");
+        }
+
+        boolean resubmit = auditStatus == TeamAuditStatusEnum.REJECTED;
+        Integer before = team.getAuditStatus();
+        Integer after = TeamAuditStatusEnum.PENDING.getCode();
+        team.setAuditStatus(after);
+        teamDao.updateById(team);
+
+        writeCertificationSubmitRecord(team, memberId, before, after, resubmit);
+        securityLogHelper.write(memberId, EVENT_TEAM_UPDATE,
+                resubmit ? "TEAM_CERT_RESUBMIT" : "TEAM_CERT_SUBMIT",
                 null, team.getTeamName(), memberId, clientIp);
 
         BasketTeamMember membership = loadCurrentMembership(memberId, teamPk);
@@ -842,6 +889,11 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         resp.setMaxMemberCount(team.getMaxMemberCount());
         resp.setTeamStatus(team.getTeamStatus());
         resp.setAuditStatus(team.getAuditStatus());
+        TeamAuditStatusEnum auditStatus = safeAuditStatus(team.getAuditStatus());
+        resp.setAuditStatusText(auditStatus == null ? null : auditStatus.getDescription());
+        if (auditStatus == TeamAuditStatusEnum.REJECTED) {
+            resp.setCertificationRejectRemark(loadLatestCertificationRejectRemark(team.getId()));
+        }
         resp.setPublicStatus(team.getPublicStatus());
         resp.setEstablishedDate(team.getEstablishedDate());
         resp.setCreateTime(team.getCreateTime());
@@ -1120,32 +1172,51 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     }
 
     /**
-     * 球队认证被驳回后，队长修改资料/Logo 时回到 PENDING，供 Admin「球队认证审核」继续处理。
-     * 注意：认证挂在球队主记录上，不会新增第二行申请；列表中同一球队状态会变为「待审核」。
+     * 提交 / 重提认证留痕。认证挂在球队主记录上，不新增第二行申请；
+     * Admin「球队认证审核」按 audit_status=PENDING/REVIEWING 查询，重提后即可看到。
      */
-    private void markRejectedTeamResubmitted(BasketTeam team, Long operatorMemberId, String remark) {
-        if (!Objects.equals(TeamAuditStatusEnum.REJECTED.getCode(), team.getAuditStatus())) {
-            return;
-        }
-        Integer before = team.getAuditStatus();
-        Integer after = TeamAuditStatusEnum.PENDING.getCode();
-        team.setAuditStatus(after);
-
+    private void writeCertificationSubmitRecord(BasketTeam team, Long operatorMemberId,
+                                                Integer before, Integer after, boolean resubmit) {
         Date now = new Date();
         BasketTeamAuditRecord record = new BasketTeamAuditRecord();
         record.setTeamId(team.getId());
         record.setAuditType("TEAM_CREATE");
-        record.setAuditAction("RESUBMIT");
+        record.setAuditAction(resubmit ? "RESUBMIT" : "SUBMIT");
         record.setBeforeStatus(before);
         record.setAfterStatus(after);
         record.setAuditorId(operatorMemberId);
         record.setAuditorName("队长");
-        record.setAuditRemark(remark);
+        record.setAuditRemark(resubmit ? "队长修改资料后重新提交球队认证" : "队长提交球队认证");
         record.setAuditTime(now);
         record.setCreateTime(now);
         record.setUpdateTime(now);
         record.setIsDelete(NOT_DELETED);
         teamAuditRecordDao.insert(record);
+    }
+
+    private String loadLatestCertificationRejectRemark(Long teamId) {
+        if (teamId == null) {
+            return null;
+        }
+        BasketTeamAuditRecord record = teamAuditRecordDao.selectOne(new LambdaQueryWrapper<BasketTeamAuditRecord>()
+                .eq(BasketTeamAuditRecord::getTeamId, teamId)
+                .eq(BasketTeamAuditRecord::getAuditAction, "REJECT")
+                .eq(BasketTeamAuditRecord::getIsDelete, NOT_DELETED)
+                .orderByDesc(BasketTeamAuditRecord::getAuditTime)
+                .orderByDesc(BasketTeamAuditRecord::getId)
+                .last("limit 1"));
+        return record == null ? null : trimToNull(record.getAuditRemark());
+    }
+
+    private TeamAuditStatusEnum safeAuditStatus(Integer code) {
+        if (code == null) {
+            return null;
+        }
+        try {
+            return TeamAuditStatusEnum.fromCode(code);
+        } catch (ServiceException ex) {
+            return null;
+        }
     }
 
     private void validateCreateReq(TeamCreateReq req) {

@@ -109,11 +109,18 @@ public class TeamProfileChangeServiceImpl implements ITeamProfileChangeService {
         Long memberId = UserContext.getRequiredUserId();
         BasketPlayerProfile player = captainPermissionService.requireCertifiedPlayer(memberId);
         BasketTeam team = captainPermissionService.requireTeamCaptain(memberId, teamPk);
-        assertTeamEligibleForChange(team);
 
-        if (!Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())) {
-            throw new ServiceException("球队尚未认证通过，请直接在资料页保存");
+        TeamAuditStatusEnum certStatus = TeamAuditStatusEnum.fromCode(team.getAuditStatus());
+        if (!certStatus.isApproved()) {
+            if (certStatus.isPendingAudit()) {
+                throw new ServiceException("球队认证审核中，不能提交资料变更");
+            }
+            if (certStatus.allowsDirectProfileEdit()) {
+                throw new ServiceException("球队尚未认证通过，请直接编辑待认证资料并提交球队认证");
+            }
+            throw new ServiceException("当前球队未完成认证，不能提交资料变更");
         }
+        assertTeamEligibleForChange(team);
 
         String newTeamName = normalizeRequiredName(req.getTeamName());
         String newShortName = trimToNull(req.getTeamShortName());
@@ -130,18 +137,8 @@ public class TeamProfileChangeServiceImpl implements ITeamProfileChangeService {
         Date now = new Date();
         BasketTeamProfileChange pending = profileChangeDao.selectActiveByTeamId(teamPk);
         if (pending != null && TeamProfileChangeAuditStatusEnum.isPending(pending.getAuditStatus())) {
-            if (isSameAsPending(pending, newTeamName, newShortName, newDescription, newLogoFileId)) {
-                throw new ServiceException("资料未发生变化");
-            }
-            pending.setNewTeamName(newTeamName);
-            pending.setNewTeamShortName(newShortName);
-            pending.setNewDescription(newDescription);
-            pending.setNewLogoFileId(newLogoFileId);
-            pending.setNewLogoUrl(resolveLogoUrl(newLogoFileId));
-            pending.setChangeReason(trimToNull(req.getChangeReason()));
-            pending.setUpdateTime(now);
-            profileChangeDao.updateById(pending);
-            return toSubmitResp(pending);
+            // 同一球队仅允许一条有效 PENDING，禁止覆盖更新或再开第二条
+            throw new ServiceException("当前已有待审核的资料变更，请等待审核完成或先取消后再提交");
         }
 
         BasketTeamProfileChange change = new BasketTeamProfileChange();
@@ -377,14 +374,6 @@ public class TeamProfileChangeServiceImpl implements ITeamProfileChangeService {
                 && Objects.equals(trimToNull(team.getShortName()), shortName)
                 && Objects.equals(trimToNull(team.getDescription()), description)
                 && Objects.equals(team.getLogoFileId(), logoFileId);
-    }
-
-    private boolean isSameAsPending(BasketTeamProfileChange pending, String teamName, String shortName,
-                                    String description, Long logoFileId) {
-        return Objects.equals(pending.getNewTeamName(), teamName)
-                && Objects.equals(trimToNull(pending.getNewTeamShortName()), shortName)
-                && Objects.equals(trimToNull(pending.getNewDescription()), description)
-                && Objects.equals(pending.getNewLogoFileId(), logoFileId);
     }
 
     private TeamProfileChangeSubmitResp toSubmitResp(BasketTeamProfileChange change) {

@@ -294,6 +294,8 @@ function mapAuditAction(action?: string) {
   if (action === 'START_REVIEW') return '开始审核'
   if (action === 'APPROVE') return '通过'
   if (action === 'REJECT') return '驳回'
+  if (action === 'SUBMIT') return '提交认证'
+  if (action === 'RESUBMIT') return '重新提交认证'
   return action || '-'
 }
 

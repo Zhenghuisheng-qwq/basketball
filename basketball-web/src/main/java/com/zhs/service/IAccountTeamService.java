@@ -35,4 +35,10 @@ public interface IAccountTeamService {
     TeamDetailResp update(String teamId, TeamUpdateReq req, String clientIp);
 
     TeamDetailResp bindLogo(String teamId, TeamLogoBindReq req, String clientIp);
+
+    /**
+     * 提交 / 重新提交球队认证：DRAFT|REJECTED → PENDING。
+     * 已认证球队请走资料变更审核，不可调用本接口。
+     */
+    TeamDetailResp submitCertification(String teamId, String clientIp);
 }

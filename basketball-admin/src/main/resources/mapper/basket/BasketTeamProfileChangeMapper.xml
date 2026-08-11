@@ -51,6 +51,7 @@
         from basket_team_profile_change c
         <include refid="joins"/>
         where c.is_delete = 0
+          and t.audit_status = 1
         <if test="changeNo != null and changeNo != ''">and c.change_no like concat('%', #{changeNo}, '%')</if>
         <if test="teamName != null and teamName != ''">and t.team_name like concat('%', #{teamName}, '%')</if>
         <if test="submitUser != null and submitUser != ''">

@@ -79,6 +79,7 @@ const TEAM_AUDIT_STATUS: Record<number, string> = {
   1: '已通过',
   2: '已驳回',
   3: '审核中',
+  4: '草稿',
 }
 
 function formatPlayerCertStatus(status?: number) {
@@ -214,10 +215,19 @@ const displayTeamName = computed(() =>
   teamDetail.value?.teamName || teamStore.myTeamSummary?.teamName || '',
 )
 const isTeamAuditApproved = computed(() => teamDetail.value?.auditStatus === 1)
+const isTeamCertPending = computed(() => {
+  const status = teamDetail.value?.auditStatus
+  return status === 0 || status === 3
+})
+const isTeamCertRejected = computed(() => teamDetail.value?.auditStatus === 2)
+const isTeamCertDraft = computed(() => teamDetail.value?.auditStatus === 4)
 const teamAuditStatusText = computed(() => {
   const status = teamDetail.value?.auditStatus
   return status != null ? TEAM_AUDIT_STATUS[status] || '未知' : '-'
 })
+const certificationRejectRemark = computed(() =>
+  teamDetail.value?.certificationRejectRemark || '',
+)
 
 const registrationCaptainEmail = computed(() =>
   accountStore.currentAccount?.maskedEmail
@@ -318,7 +328,10 @@ const bannerTitle = computed(() => {
 const bannerDescription = computed(() => {
   if (hasSelectedTeam.value && canManageCurrentTeam.value) {
     if (isTeamAuditApproved.value) return '管理当前赛事球队资料、成员与邀请'
-    return '球队认证审核中，可先编辑资料并管理成员'
+    if (isTeamCertPending.value) return '球队认证审核中，审核完成前暂不可修改球队认证资料'
+    if (isTeamCertRejected.value) return '球队认证未通过，请修改资料后重新提交认证'
+    if (isTeamCertDraft.value) return '请完善球队资料并提交认证'
+    return '请完善球队资料并提交认证'
   }
   if (hasSelectedTeam.value && viewingHistory.value) {
     return '只读查看历史赛事球队与成员记录'
@@ -741,7 +754,7 @@ async function submitCreateTeam() {
       publicStatus: createForm.publicStatus,
       logoFileId: createForm.logoFileId || undefined,
     })
-    ElMessage.success('球队创建成功，等待审核')
+    ElMessage.success('球队创建成功，请完善资料后提交认证')
     createForm.divisionId = ''
     createForm.teamName = ''
     createForm.shortName = ''
@@ -1524,9 +1537,19 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             v-else-if="canManageCurrentTeam && !isTeamAuditApproved"
             class="team-audit-banner"
           >
-            <AccountStatusBadge :text="teamAuditStatusText" type="warning" />
-            <p class="team-tip">
-              球队认证{{ teamAuditStatusText }}，可先管理成员与资料；赛事报名需审核通过后开放。
+            <AccountStatusBadge
+              :text="isTeamCertRejected ? '认证未通过' : (isTeamCertPending ? '认证审核中' : teamAuditStatusText)"
+              :type="isTeamCertRejected ? 'danger' : 'warning'"
+            />
+            <p v-if="isTeamCertPending" class="team-tip">
+              球队认证审核中，审核完成前暂不可修改球队认证资料；可先管理成员。赛事报名需认证通过后开放。
+            </p>
+            <p v-else-if="isTeamCertRejected" class="team-tip">
+              球队认证未通过{{ certificationRejectRemark ? `：${certificationRejectRemark}` : '' }}。
+              请到「球队资料」修改后重新提交认证。赛事报名需认证通过后开放。
+            </p>
+            <p v-else class="team-tip">
+              请完善球队资料并提交认证；赛事报名需认证通过后开放。
             </p>
           </div>
           <div v-if="teamDetail" class="team-overview-header">
