@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketDisciplineSelectorMapper">
+
+    <sql id="GameModeLabel">
+        case
+            when d.game_mode = 'FIVE_V_FIVE' then '5V5'
+            when d.game_mode = 'THREE_V_THREE' then '3V3'
+            else coalesce(d.game_mode, '-')
+        end
+    </sql>
+
+    <select id="selectSeasonOptions" resultType="com.zhs.basket.vo.DisciplineSelectorOptionVo">
+        select
+            se.id as id,
+            concat(
+                coalesce(nullif(trim(s.series_name), ''), '赛事'),
+                ' · ',
+                coalesce(nullif(trim(se.display_title), ''), se.season_name)
+            ) as label,
+            (
+                select group_concat(distinct d.division_name order by d.sort_order, d.id separator ' / ')
+                from basket_division d
+                where d.season_id = se.id and d.is_delete = 0
+            ) as secondaryLabel,
+            se.season_status as status
+        from basket_season se
+        left join basket_series s on s.id = se.series_id and s.is_delete = 0
+        where se.is_delete = 0
+        <if test="keyword != null and keyword != ''">
+            and (
+                se.season_name like concat('%', #{keyword}, '%')
+                or se.display_title like concat('%', #{keyword}, '%')
+                or s.series_name like concat('%', #{keyword}, '%')
+                or exists (
+                    select 1 from basket_division d
+                    where d.season_id = se.id and d.is_delete = 0
+                      and (
+                          d.division_name like concat('%', #{keyword}, '%')
+                          or d.platform_code like concat('%', #{keyword}, '%')
+                          or d.game_mode like concat('%', #{keyword}, '%')
+                      )
+                )
+            )
+        </if>
+        order by se.id desc
+    </select>
+
+    <select id="selectPlayerOptions" resultType="com.zhs.basket.vo.DisciplineSelectorOptionVo">
+        select
+            p.id as id,
+            concat(
+                coalesce(nullif(trim(p.player_no), ''), concat('球员#', p.id)),
+                ' · ',
+                coalesce(nullif(trim(ep.player_name_snapshot), ''), nullif(trim(p.game_nickname), ''), nullif(trim(mp.nickname), ''), '-')
+            ) as label,
+            concat(
+                coalesce(nullif(trim(ep.game_id_snapshot), ''), nullif(trim(pa.display_game_id), ''), '-'),
+                ' · ',
+                coalesce(nullif(trim(et.team_name_snapshot), ''), nullif(trim(t.team_name), ''), '未关联球队'),
+                ' · ',
+                coalesce(nullif(trim(d.division_name), ''), '未分赛区'),
+                ' · ',
+                coalesce(nullif(trim(d.platform_code), ''), '-'),
+                '/',
+                <include refid="GameModeLabel" />
+            ) as secondaryLabel,
+            ep.event_player_status as status,
+            p.member_id as memberId,
+            coalesce(et.source_team_id, t.id) as teamId,
+            ep.event_team_id as eventTeamId,
+            ep.id as eventPlayerId,
+            coalesce(nullif(trim(et.team_name_snapshot), ''), nullif(trim(t.team_name), '')) as teamName,
+            p.player_no as playerNo,
+            coalesce(nullif(trim(ep.game_id_snapshot), ''), nullif(trim(pa.display_game_id), '')) as gameId,
+            d.division_name as divisionName,
+            d.platform_code as platformCode,
+            d.game_mode as gameMode
+        from basket_event_player ep
+        inner join basket_player_profile p on p.id = ep.source_player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
+        left join basket_member_account acc on acc.id = p.member_id and acc.is_delete = 0
+        left join basket_event_team et on et.id = ep.event_team_id and et.is_delete = 0
+        left join basket_team t on t.id = coalesce(et.source_team_id, p.current_team_id) and t.is_delete = 0
+        left join basket_division d on d.id = ep.division_id and d.is_delete = 0
+        left join basket_player_platform_account pa on pa.player_id = p.id and pa.is_delete = 0 and pa.is_primary = 1
+        where ep.is_delete = 0
+          and ep.season_id = #{seasonId}
+          and ep.source_player_id is not null
+        <if test="keyword != null and keyword != ''">
+            and (
+                p.player_no like concat('%', #{keyword}, '%')
+                or p.game_nickname like concat('%', #{keyword}, '%')
+                or p.game_account like concat('%', #{keyword}, '%')
+                or mp.nickname like concat('%', #{keyword}, '%')
+                or acc.email like concat('%', #{keyword}, '%')
+                or ep.player_name_snapshot like concat('%', #{keyword}, '%')
+                or ep.game_id_snapshot like concat('%', #{keyword}, '%')
+                or pa.display_game_id like concat('%', #{keyword}, '%')
+                or et.team_name_snapshot like concat('%', #{keyword}, '%')
+                or d.division_name like concat('%', #{keyword}, '%')
+                or d.platform_code like concat('%', #{keyword}, '%')
+            )
+        </if>
+        order by d.sort_order asc, d.id asc, p.player_no asc, ep.id asc
+    </select>
+
+    <select id="selectPermanentTeamOptions" resultType="com.zhs.basket.vo.DisciplineSelectorOptionVo">
+        select
+            t.id as id,
+            concat(
+                coalesce(nullif(trim(t.team_name), ''), concat('球队#', t.id)),
+                case when t.short_name is null or trim(t.short_name) = '' then '' else concat(' · ', t.short_name) end
+            ) as label,
+            concat(
+                coalesce(nullif(trim(s.series_name), ''), '赛事'),
+                ' · ',
+                coalesce(nullif(trim(se.display_title), ''), se.season_name),
+                ' · ',
+                coalesce(nullif(trim(d.division_name), ''), '未分赛区'),
+                ' · ',
+                coalesce(nullif(trim(d.platform_code), ''), '-'),
+                '/',
+                <include refid="GameModeLabel" />
+            ) as secondaryLabel,
+            cast(t.team_status as char) as status,
+            null as memberId,
+            t.id as teamId,
+            null as eventTeamId,
+            null as eventPlayerId,
+            t.team_name as teamName,
+            t.team_no as playerNo,
+            t.short_name as gameId,
+            d.division_name as divisionName,
+            d.platform_code as platformCode,
+            d.game_mode as gameMode
+        from basket_team t
+        inner join basket_division d on d.id = t.division_id and d.is_delete = 0
+        inner join basket_season se on se.id = d.season_id and se.is_delete = 0
+        left join basket_series s on s.id = se.series_id and s.is_delete = 0
+        where t.is_delete = 0
+          and d.season_id = #{seasonId}
+        <if test="keyword != null and keyword != ''">
+            and (
+                t.team_name like concat('%', #{keyword}, '%')
+                or t.short_name like concat('%', #{keyword}, '%')
+                or t.team_no like concat('%', #{keyword}, '%')
+                or t.english_name like concat('%', #{keyword}, '%')
+                or d.division_name like concat('%', #{keyword}, '%')
+                or d.platform_code like concat('%', #{keyword}, '%')
+            )
+        </if>
+        order by d.sort_order asc, d.id asc, t.team_name asc, t.id asc
+    </select>
+
+    <select id="selectEventTeamOptions" resultType="com.zhs.basket.vo.DisciplineSelectorOptionVo">
+        select
+            et.id as id,
+            concat(
+                coalesce(nullif(trim(et.team_name_snapshot), ''), concat('赛事球队#', et.id)),
+                case
+                    when coalesce(nullif(trim(et.team_short_name), ''), nullif(trim(t.short_name), '')) is null then
+                        case when et.event_team_no is null or trim(et.event_team_no) = '' then '' else concat(' · ', et.event_team_no) end
+                    else concat(' · ', coalesce(nullif(trim(et.team_short_name), ''), t.short_name))
+                end
+            ) as label,
+            concat(
+                coalesce(nullif(trim(s.series_name), ''), '赛事'),
+                ' · ',
+                coalesce(nullif(trim(se.display_title), ''), se.season_name),
+                ' · ',
+                coalesce(nullif(trim(d.division_name), ''), '未分赛区'),
+                ' · ',
+                coalesce(nullif(trim(d.platform_code), ''), '-'),
+                '/',
+                <include refid="GameModeLabel" />
+            ) as secondaryLabel,
+            et.event_team_status as status,
+            null as memberId,
+            et.source_team_id as teamId,
+            et.id as eventTeamId,
+            null as eventPlayerId,
+            et.team_name_snapshot as teamName,
+            et.event_team_no as playerNo,
+            coalesce(nullif(trim(et.team_short_name), ''), t.short_name) as gameId,
+            d.division_name as divisionName,
+            d.platform_code as platformCode,
+            d.game_mode as gameMode
+        from basket_event_team et
+        left join basket_team t on t.id = et.source_team_id and t.is_delete = 0
+        left join basket_division d on d.id = et.division_id and d.is_delete = 0
+        left join basket_season se on se.id = et.season_id and se.is_delete = 0
+        left join basket_series s on s.id = se.series_id and s.is_delete = 0
+        where et.is_delete = 0
+          and et.season_id = #{seasonId}
+        <if test="keyword != null and keyword != ''">
+            and (
+                et.team_name_snapshot like concat('%', #{keyword}, '%')
+                or et.event_team_no like concat('%', #{keyword}, '%')
+                or et.team_short_name like concat('%', #{keyword}, '%')
+                or t.team_name like concat('%', #{keyword}, '%')
+                or t.short_name like concat('%', #{keyword}, '%')
+                or d.division_name like concat('%', #{keyword}, '%')
+                or d.platform_code like concat('%', #{keyword}, '%')
+            )
+        </if>
+        order by d.sort_order asc, d.id asc, et.team_name_snapshot asc, et.id asc
+    </select>
+</mapper>

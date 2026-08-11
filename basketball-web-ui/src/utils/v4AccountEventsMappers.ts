@@ -157,28 +157,77 @@ export function mapV4PersonalRegistrationToApplication(item: V4MyPersonalRegistr
   }
 }
 
+function teamRegistrationEntryActionText(reasonCode?: string, reasonMessage?: string) {
+  const code = (reasonCode || '').toUpperCase()
+  switch (code) {
+    case 'NO_CAPTAIN_GRANT':
+      return '未获队长授权'
+    case 'NO_TEAM':
+      return '尚未创建球队'
+    case 'TEAM_NOT_CERTIFIED':
+      return '球队未认证'
+    case 'TEAM_DIVISION_MISMATCH':
+      return '球队赛事不匹配'
+    case 'TEAM_ARCHIVED':
+      return '球队已归档'
+    case 'REGISTRATION_CLOSED':
+      return '报名已截止'
+    case 'NOT_STARTED':
+      return '报名未开始'
+    case 'ALREADY_PENDING':
+    case 'ALREADY_APPROVED':
+      return '查看报名'
+    case 'QUOTA_FULL':
+      return '名额已满'
+    default:
+      return reasonMessage ? '不可报名' : '不可报名'
+  }
+}
+
 export function mapV4DivisionToAvailableEvent(item: V4AvailableDivision): AvailableEvent {
   const canRegister = Boolean(item.canRegister)
+  const canView = Boolean(item.canViewRegistration) || Boolean(item.myRegistrationId || item.myRegistrationStatus)
   const status = (item.myRegistrationStatus || '').toUpperCase()
+  const windowCode = (item.registrationWindowStatus || '').toUpperCase()
+  const windowLabel = item.registrationWindowStatusLabel
+    || (windowCode === 'NOT_STARTED' ? '报名未开始'
+      : windowCode === 'CLOSED' ? '报名已截止'
+        : windowCode === 'OPEN' ? '报名中'
+          : '报名中')
+
   let actionType: AvailableEvent['actionType'] = 'DISABLED'
   let actionText = '不可报名'
   if (canRegister) {
-    actionType = 'TEAM_REGISTRATION'
-    actionText = '去报名'
-  } else if (status === 'DRAFT' || status === 'REJECTED' || status === 'WITHDRAWN') {
-    actionType = 'MANAGE_REGISTRATION'
-    actionText = status === 'DRAFT' ? '继续编辑' : '修改重提'
-  } else if (status === 'PENDING_REVIEW') {
-    actionType = 'VIEW_REGISTRATION'
-    actionText = '查看报名'
+    if (status === 'DRAFT') {
+      actionType = 'MANAGE_REGISTRATION'
+      actionText = '继续编辑'
+    } else if (status === 'REJECTED' || status === 'WITHDRAWN') {
+      actionType = 'MANAGE_REGISTRATION'
+      actionText = '修改重提'
+    } else {
+      actionType = 'TEAM_REGISTRATION'
+      actionText = '去报名'
+    }
   } else if (status === 'APPROVED') {
     actionType = 'GO_JOINED'
     actionText = '进入赛事'
+  } else if (canView || status === 'PENDING_REVIEW' || status === 'DRAFT' || status === 'REJECTED' || status === 'WITHDRAWN') {
+    actionType = 'VIEW_REGISTRATION'
+    actionText = '查看报名'
+  } else {
+    actionText = teamRegistrationEntryActionText(item.cannotRegisterReasonCode, item.cannotRegisterReason)
   }
 
+  const disabledReason = canRegister
+    ? undefined
+    : (item.cannotRegisterReason
+      || (windowCode === 'CLOSED' && item.registrationEndTime
+        ? `报名已于 ${formatDateTimeShort(item.registrationEndTime)} 截止`
+        : undefined))
+
   return {
-    divisionId: item.divisionId,
-    seasonId: item.seasonId,
+    divisionId: String(item.divisionId ?? ''),
+    seasonId: item.seasonId != null ? String(item.seasonId) : undefined,
     tournamentName: item.seriesName || item.seasonTitle || '赛事',
     seasonName: item.seasonTitle,
     platform: v4PlatformLabel(item.platformCode),
@@ -192,16 +241,18 @@ export function mapV4DivisionToAvailableEvent(item: V4AvailableDivision): Availa
     quotaUsed: item.approvedTeamCount ?? 0,
     quotaTotal: item.maxTeamCount ?? 0,
     quotaFull: item.remainingTeamCount != null && item.remainingTeamCount <= 0,
-    eligibilityStatus: canRegister ? 'ELIGIBLE' : 'NOT_VERIFIED',
+    eligibilityStatus: canRegister ? 'ELIGIBLE' : (status === 'APPROVED' ? 'JOINED' : 'NOT_VERIFIED'),
     actionText,
     actionType,
-    disabledReason: item.cannotRegisterReason,
+    disabledReason,
     canRegister,
     teamName: item.grantTeamName,
+    teamRegistrationStatusText: status ? v4RegistrationStatusLabel(status) : '未报名',
     captainGrantStatusText: v4GrantStatusLabel(item.myGrantStatus),
     registrationStatus: item.myRegistrationStatus,
-    eventStatus: '报名中',
-    eventStatusCode: 'REGISTRATION_OPEN',
+    registrationId: item.myRegistrationId != null ? String(item.myRegistrationId) : undefined,
+    eventStatus: windowLabel,
+    eventStatusCode: windowCode || 'OPEN',
     isCaptain: Boolean(item.grantTeamId),
     hasCaptainGrant: item.myGrantStatus === 'ACTIVE',
   }

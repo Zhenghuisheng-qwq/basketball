@@ -27,6 +27,30 @@ public class BasketDisciplineController extends BaseController {
         return getDataTable(disciplineService.list(query));
     }
 
+    @PreAuthorize("@ss.hasPermi('basket:discipline:list')")
+    @GetMapping("/selector/seasons")
+    public TableDataInfo seasonOptions(@RequestParam(required = false) String keyword) {
+        startPage();
+        return getDataTable(disciplineService.selectSeasonOptions(keyword));
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:discipline:list')")
+    @GetMapping("/selector/players")
+    public TableDataInfo playerOptions(@RequestParam Long seasonId,
+                                       @RequestParam(required = false) String keyword) {
+        startPage();
+        return getDataTable(disciplineService.selectPlayerOptions(seasonId, keyword));
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:discipline:list')")
+    @GetMapping("/selector/teams")
+    public TableDataInfo teamOptions(@RequestParam Long seasonId,
+                                     @RequestParam String targetType,
+                                     @RequestParam(required = false) String keyword) {
+        startPage();
+        return getDataTable(disciplineService.selectTeamOptions(seasonId, targetType, keyword));
+    }
+
     @PreAuthorize("@ss.hasPermi('basket:discipline:query')")
     @GetMapping("/{id}")
     public AjaxResult detail(@PathVariable Long id) {

@@ -2,6 +2,7 @@ package com.zhs.service.impl.v4;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zhs.common.UserContext;
+import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketPlayerPlatformAccountDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamDao;
@@ -13,6 +14,7 @@ import com.zhs.enums.v4.RegistrationModeEnum;
 import com.zhs.enums.v4.RegistrationStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.mapper.v4.BasketV4PlayerRegistrationMapper;
+import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketPlayerPlatformAccount;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
@@ -24,6 +26,10 @@ import com.zhs.response.v4.V4AvailableDivisionResp;
 import com.zhs.response.v4.V4MyRegistrationResp;
 import com.zhs.response.v4.V4RegistrationDetailResp;
 import com.zhs.response.v4.V4RegistrationPlayerItemResp;
+import com.zhs.response.v4.V4RegistrationDivisionContextResp;
+import com.zhs.response.v4.V4RegistrationRosterPlayerResp;
+import com.zhs.support.v4.TeamRegistrationEligibility;
+import com.zhs.support.v4.TeamRegistrationEligibilitySupport;
 import com.zhs.service.v4.IBasketV4PlayerRegistrationService;
 import com.zhs.support.CaptainGrantSupport;
 import com.zhs.support.GameTerminalSupport;
@@ -67,7 +73,15 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
     @Resource
     private BasketPlayerPlatformAccountDao platformAccountDao;
     @Resource
+    private BasketMemberProfileDao memberProfileDao;
+    @Resource
     private CaptainGrantSupport captainGrantSupport;
+    @Resource
+    private TeamRegistrationEligibilitySupport eligibilitySupport;
+    @Resource
+    private BasketSeasonDao seasonDao;
+    @Resource
+    private BasketSeriesDao seriesDao;
 
     @Override
     public List<V4AvailableDivisionResp> listAvailableDivisions() {
@@ -79,6 +93,88 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
             enrichAvailability(row, player.getId(), now);
         }
         return rows;
+    }
+
+    @Override
+    public V4RegistrationDivisionContextResp getDivisionContext(Long divisionId) {
+        Long memberId = UserContext.getRequiredMemberId();
+        BasketPlayerProfile player = requirePlayerByMemberId(memberId);
+        V4RegistrationDivisionContextResp resp = new V4RegistrationDivisionContextResp();
+        resp.setDivisionId(divisionId);
+        resp.setDivisionExists(false);
+        resp.setCanRegister(false);
+        resp.setCanViewRegistration(false);
+
+        if (divisionId == null) {
+            resp.setCannotRegisterReasonCode("DIVISION_NOT_FOUND");
+            resp.setCannotRegisterReason("赛事不存在或已失效");
+            resp.setRegistrationWindowStatus("CLOSED");
+            resp.setRegistrationWindowStatusLabel("报名已截止");
+            return resp;
+        }
+
+        BasketDivision division = divisionDao.selectById(divisionId);
+        Date now = new Date();
+        if (division == null || !NOT_DELETED.equals(division.getIsDelete())) {
+            resp.setCannotRegisterReasonCode("DIVISION_NOT_FOUND");
+            resp.setCannotRegisterReason("赛事不存在或已失效");
+            resp.setRegistrationWindowStatus("CLOSED");
+            resp.setRegistrationWindowStatusLabel("报名已截止");
+            return resp;
+        }
+
+        resp.setDivisionExists(true);
+        fillDivisionContextBase(resp, division);
+
+        BasketCaptainGrant grant = findActiveGrant(divisionId, player.getId());
+        BasketTeam team = null;
+        if (grant != null && grant.getTeamId() != null) {
+            team = teamDao.selectById(grant.getTeamId());
+            resp.setGrantTeamId(grant.getTeamId());
+            if (team != null) {
+                resp.setGrantTeamName(team.getTeamName());
+            }
+            resp.setMyGrantStatus(eligibilitySupport.isGrantUsable(grant, now)
+                    ? CaptainGrantStatusEnum.ACTIVE.getCode()
+                    : grant.getGrantStatus());
+        }
+
+        BasketRegistration registration = findRegistrationByDivisionMember(divisionId, memberId);
+        if (registration != null) {
+            resp.setMyRegistrationStatus(registration.getRegistrationStatus());
+            resp.setMyRegistrationId(registration.getId());
+        }
+
+        Integer approved = playerRegistrationMapper.countApprovedByDivisionId(divisionId);
+        resp.setApprovedTeamCount(approved == null ? 0 : approved);
+        if (division.getMaxTeamCount() != null) {
+            resp.setMaxTeamCount(division.getMaxTeamCount());
+            resp.setRemainingTeamCount(Math.max(division.getMaxTeamCount() - resp.getApprovedTeamCount(), 0));
+        }
+
+        if (RegistrationModeEnum.PERSONAL.getCode().equals(division.getRegistrationMode())) {
+            resp.setCanRegister(false);
+            resp.setCanViewRegistration(resp.getMyRegistrationId() != null);
+            resp.setCannotRegisterReasonCode("DIVISION_NOT_OPEN");
+            resp.setCannotRegisterReason("该 Division 为个人报名模式，请使用个人报名入口");
+            resp.setRegistrationWindowStatus(eligibilitySupport.resolveWindowStatus(division, now).getCode());
+            resp.setRegistrationWindowStatusLabel(eligibilitySupport.resolveWindowStatus(division, now).getLabel());
+            resp.setTeamEligible(false);
+            fillRosterContext(resp, division, team, player.getId());
+            return resp;
+        }
+
+        TeamRegistrationEligibility eligibility = eligibilitySupport.evaluate(
+                division, grant, team, resp.getMyRegistrationStatus(), resp.getRemainingTeamCount(), now);
+        applyEligibility(resp, eligibility);
+        resp.setTeamEligible(eligibility.isCanRegister()
+                || (grant != null && team != null
+                && eligibilitySupport.isGrantUsable(grant, now)
+                && Objects.equals(team.getDivisionId(), division.getId())
+                && Objects.equals(TEAM_STATUS_ACTIVE, team.getTeamStatus())
+                && Objects.equals(TEAM_AUDIT_APPROVED, team.getAuditStatus())));
+        fillRosterContext(resp, division, team, player.getId());
+        return resp;
     }
 
     @Override
@@ -97,13 +193,27 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         BasketCaptainGrant grant = requireActiveGrant(req.getDivisionId(), player.getId());
         captainGrantSupport.assertTeamBindingForRegistration(grant, team);
 
-        BasketRegistration registration = findRegistration(req.getDivisionId(), req.getTeamId());
+        Date now = new Date();
+        Integer approved = playerRegistrationMapper.countApprovedByDivisionId(division.getId());
+        Integer remaining = null;
+        if (division.getMaxTeamCount() != null) {
+            remaining = Math.max(division.getMaxTeamCount() - (approved == null ? 0 : approved), 0);
+        }
+        BasketRegistration existingForEligibility = findRegistration(req.getDivisionId(), req.getTeamId());
+        TeamRegistrationEligibility eligibility = eligibilitySupport.evaluate(
+                division, grant, team,
+                existingForEligibility == null ? null : existingForEligibility.getRegistrationStatus(),
+                remaining, now);
+        eligibilitySupport.assertCanMutateRegistration(eligibility);
+
+        BasketRegistration registration = existingForEligibility;
         if (registration != null && RegistrationStatusEnum.APPROVED.getCode().equals(registration.getRegistrationStatus())) {
             throw new ServiceException("报名已审核通过，不可再编辑");
         }
 
-        List<BasketRegistrationPlayer> lineup = buildLineup(division, req.getTeamId(), player.getId(), req.getPlayerIds());
-        Date now = new Date();
+        // 草稿允许不足最低阵容；提交时再校验 min
+        List<BasketRegistrationPlayer> lineup = buildLineup(
+                division, req.getTeamId(), player.getId(), req.getPlayerIds(), false);
         if (registration == null) {
             registration = new BasketRegistration();
             registration.setSeasonId(division.getSeasonId());
@@ -152,13 +262,35 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
                 && !RegistrationStatusEnum.WITHDRAWN.getCode().equals(registration.getRegistrationStatus())) {
             throw new ServiceException("当前状态不可提交");
         }
-        requireActiveGrant(registration.getDivisionId(), registration.getCaptainPlayerId());
+        BasketDivision division = requireDivision(registration.getDivisionId());
+        rejectPersonalModeDivision(division.getRegistrationMode());
+        BasketCaptainGrant grant = requireActiveGrant(registration.getDivisionId(), registration.getCaptainPlayerId());
+        BasketTeam team = requireValidTeamEntity(registration.getTeamId());
+        Date eligibilityNow = new Date();
+        Integer approvedCount = playerRegistrationMapper.countApprovedByDivisionId(division.getId());
+        Integer remainingCount = null;
+        if (division.getMaxTeamCount() != null) {
+            remainingCount = Math.max(division.getMaxTeamCount() - (approvedCount == null ? 0 : approvedCount), 0);
+        }
+        TeamRegistrationEligibility submitEligibility = eligibilitySupport.evaluate(
+                division, grant, team, registration.getRegistrationStatus(), remainingCount, eligibilityNow);
+        // 驳回/草稿重提：窗口关闭后不允许再 mutate（与列表 canRegister 一致）
+        if (!RegistrationStatusEnum.PENDING_REVIEW.getCode().equals(registration.getRegistrationStatus())
+                && !RegistrationStatusEnum.APPROVED.getCode().equals(registration.getRegistrationStatus())) {
+            eligibilitySupport.assertCanMutateRegistration(submitEligibility);
+        }
         List<BasketRegistrationPlayer> players = registrationPlayerDao.selectList(new LambdaQueryWrapper<BasketRegistrationPlayer>()
                 .eq(BasketRegistrationPlayer::getRegistrationId, registration.getId())
                 .eq(BasketRegistrationPlayer::getIsDelete, NOT_DELETED));
         if (players.isEmpty()) {
             throw new ServiceException("请先保存报名阵容");
         }
+        List<Long> playerIds = new ArrayList<>();
+        for (BasketRegistrationPlayer row : players) {
+            playerIds.add(row.getPlayerId());
+        }
+        // 提交前重新执行阵容资格校验（含 min/max、队长、平台身份）
+        buildLineup(division, registration.getTeamId(), registration.getCaptainPlayerId(), playerIds, true);
 
         Date now = new Date();
         String beforeStatus = registration.getRegistrationStatus();
@@ -230,36 +362,84 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
     }
 
     private void enrichAvailability(V4AvailableDivisionResp row, Long playerId, Date now) {
-        row.setCanRegister(false);
-        if (row.getRegistrationStartTime() != null && row.getRegistrationStartTime().after(now)) {
-            row.setCannotRegisterReason("报名尚未开始");
-            return;
-        }
-        if (row.getRegistrationEndTime() != null && row.getRegistrationEndTime().before(now)) {
-            row.setCannotRegisterReason("报名已结束");
-            return;
-        }
-        if (row.getRemainingTeamCount() != null && row.getRemainingTeamCount() <= 0) {
-            row.setCannotRegisterReason("名额已满");
-            return;
-        }
+        BasketDivision division = new BasketDivision();
+        division.setId(row.getDivisionId());
+        division.setSeasonId(row.getSeasonId());
+        division.setDivisionStatus(row.getDivisionStatus());
+        division.setRegistrationStartTime(row.getRegistrationStartTime());
+        division.setRegistrationEndTime(row.getRegistrationEndTime());
+        division.setIsDelete(NOT_DELETED);
+
         BasketCaptainGrant grant = findActiveGrant(row.getDivisionId(), playerId);
-        if (grant == null || !isGrantUsable(grant, now)) {
-            row.setCannotRegisterReason("无有效队长授权");
-            row.setMyGrantStatus(grant == null ? null : grant.getGrantStatus());
-            return;
+        BasketTeam team = null;
+        if (row.getGrantTeamId() != null) {
+            team = teamDao.selectById(row.getGrantTeamId());
+        } else if (grant != null && grant.getTeamId() != null) {
+            team = teamDao.selectById(grant.getTeamId());
+            row.setGrantTeamId(grant.getTeamId());
+            if (team != null) {
+                row.setGrantTeamName(team.getTeamName());
+            }
         }
-        row.setMyGrantStatus(CaptainGrantStatusEnum.ACTIVE.getCode());
-        if (RegistrationStatusEnum.PENDING_REVIEW.getCode().equals(row.getMyRegistrationStatus())) {
-            row.setCannotRegisterReason("已有审核中的报名");
-            return;
+        if (grant != null && eligibilitySupport.isGrantUsable(grant, now)) {
+            row.setMyGrantStatus(CaptainGrantStatusEnum.ACTIVE.getCode());
+        } else if (grant != null) {
+            row.setMyGrantStatus(grant.getGrantStatus());
         }
-        if (RegistrationStatusEnum.APPROVED.getCode().equals(row.getMyRegistrationStatus())) {
-            row.setCannotRegisterReason("已完成报名");
-            return;
+
+        TeamRegistrationEligibility eligibility = eligibilitySupport.evaluate(
+                division, grant, team, row.getMyRegistrationStatus(), row.getRemainingTeamCount(), now);
+        applyEligibility(row, eligibility);
+    }
+
+    private void applyEligibility(V4AvailableDivisionResp row, TeamRegistrationEligibility eligibility) {
+        row.setCanRegister(eligibility.isCanRegister());
+        row.setCanViewRegistration(eligibility.isCanViewRegistration());
+        row.setRegistrationWindowStatus(eligibility.getWindowStatusCode());
+        row.setRegistrationWindowStatusLabel(eligibility.getWindowStatusLabel());
+        row.setCannotRegisterReasonCode(eligibility.getReasonCode());
+        row.setCannotRegisterReason(eligibility.isCanRegister() ? null : eligibility.getReasonMessage());
+    }
+
+    private void applyEligibility(V4RegistrationDivisionContextResp resp, TeamRegistrationEligibility eligibility) {
+        resp.setCanRegister(eligibility.isCanRegister());
+        resp.setCanViewRegistration(eligibility.isCanViewRegistration());
+        resp.setRegistrationWindowStatus(eligibility.getWindowStatusCode());
+        resp.setRegistrationWindowStatusLabel(eligibility.getWindowStatusLabel());
+        resp.setCannotRegisterReasonCode(eligibility.getReasonCode());
+        resp.setCannotRegisterReason(eligibility.isCanRegister() ? null : eligibility.getReasonMessage());
+    }
+
+    private void fillDivisionContextBase(V4RegistrationDivisionContextResp resp, BasketDivision division) {
+        resp.setSeasonId(division.getSeasonId());
+        resp.setDivisionName(division.getDivisionName());
+        resp.setPlatformCode(division.getPlatformCode());
+        resp.setRegistrationMode(division.getRegistrationMode());
+        resp.setGameMode(division.getGameMode());
+        resp.setDivisionStatus(division.getDivisionStatus());
+        resp.setLineupMinCount(division.getLineupMinCount());
+        resp.setLineupMaxCount(division.getLineupMaxCount());
+        resp.setRegistrationStartTime(division.getRegistrationStartTime());
+        resp.setRegistrationEndTime(division.getRegistrationEndTime());
+        resp.setMatchStartTime(division.getMatchStartTime());
+        resp.setMatchEndTime(division.getMatchEndTime());
+        resp.setMaxTeamCount(division.getMaxTeamCount());
+        BasketSeason season = seasonDao.selectById(division.getSeasonId());
+        if (season != null) {
+            resp.setSeasonTitle(season.getDisplayTitle());
+            BasketSeries series = seriesDao.selectById(season.getSeriesId());
+            if (series != null) {
+                resp.setSeriesName(series.getSeriesName());
+            }
         }
-        row.setCanRegister(true);
-        row.setCannotRegisterReason(null);
+    }
+
+    private BasketRegistration findRegistrationByDivisionMember(Long divisionId, Long memberId) {
+        return registrationDao.selectOne(new LambdaQueryWrapper<BasketRegistration>()
+                .eq(BasketRegistration::getDivisionId, divisionId)
+                .eq(BasketRegistration::getCaptainMemberId, memberId)
+                .eq(BasketRegistration::getIsDelete, NOT_DELETED)
+                .last("limit 1"));
     }
 
     private BasketCaptainGrant findActiveGrant(Long divisionId, Long playerId) {
@@ -284,13 +464,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
     }
 
     private boolean isGrantUsable(BasketCaptainGrant grant, Date now) {
-        if (grant == null) {
-            return false;
-        }
-        if (grant.getValidFrom() != null && grant.getValidFrom().after(now)) {
-            return false;
-        }
-        return grant.getValidTo() == null || !grant.getValidTo().before(now);
+        return eligibilitySupport.isGrantUsable(grant, now);
     }
 
     private BasketRegistration findRegistration(Long divisionId, Long teamId) {
@@ -316,7 +490,11 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         return registration;
     }
 
-    private List<BasketRegistrationPlayer> buildLineup(BasketDivision division, Long teamId, Long captainPlayerId, List<Long> playerIds) {
+    private List<BasketRegistrationPlayer> buildLineup(BasketDivision division,
+                                                       Long teamId,
+                                                       Long captainPlayerId,
+                                                       List<Long> playerIds,
+                                                       boolean enforceMinRoster) {
         if (CollectionUtils.isEmpty(playerIds)) {
             throw new ServiceException("阵容不能为空");
         }
@@ -329,7 +507,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         }
         int min = division.getLineupMinCount() != null ? division.getLineupMinCount() : GameModeEnum.FIVE_V_FIVE.getMinRosterCount();
         int max = division.getLineupMaxCount() != null ? division.getLineupMaxCount() : GameModeEnum.FIVE_V_FIVE.getMaxRosterCount();
-        if (playerIds.size() < min) {
+        if (enforceMinRoster && playerIds.size() < min) {
             throw new ServiceException("阵容人数不能少于 " + min + " 人");
         }
         if (playerIds.size() > max) {
@@ -365,6 +543,146 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
             rows.add(row);
         }
         return rows;
+    }
+
+    private void fillRosterContext(V4RegistrationDivisionContextResp resp,
+                                   BasketDivision division,
+                                   BasketTeam team,
+                                   Long captainPlayerId) {
+        int min = division.getLineupMinCount() != null
+                ? division.getLineupMinCount()
+                : GameModeEnum.FIVE_V_FIVE.getMinRosterCount();
+        List<V4RegistrationRosterPlayerResp> eligible = new ArrayList<>();
+        List<V4RegistrationRosterPlayerResp> ineligible = new ArrayList<>();
+        if (team == null) {
+            resp.setTeamMemberCount(0);
+            resp.setEligibleRosterCount(0);
+            resp.setIneligibleRosterCount(0);
+            resp.setEligiblePlayers(eligible);
+            resp.setIneligiblePlayers(ineligible);
+            resp.setCanSubmitRegistration(false);
+            return;
+        }
+
+        List<BasketTeamMember> members = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getTeamId, team.getId())
+                .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
+                .eq(BasketTeamMember::getMembershipStatus, MEMBER_ACTIVE)
+                .eq(BasketTeamMember::getIsDelete, NOT_DELETED)
+                .orderByAsc(BasketTeamMember::getId));
+        for (BasketTeamMember member : members) {
+            V4RegistrationRosterPlayerResp item = evaluateRosterPlayer(division, member, captainPlayerId);
+            if (Boolean.TRUE.equals(item.getEligible())) {
+                eligible.add(item);
+            } else {
+                ineligible.add(item);
+            }
+        }
+        resp.setTeamMemberCount(members.size());
+        resp.setEligibleRosterCount(eligible.size());
+        resp.setIneligibleRosterCount(ineligible.size());
+        resp.setEligiblePlayers(eligible);
+        resp.setIneligiblePlayers(ineligible);
+        resp.setCanSubmitRegistration(Boolean.TRUE.equals(resp.getCanRegister()) && eligible.size() >= min);
+    }
+
+    private V4RegistrationRosterPlayerResp evaluateRosterPlayer(BasketDivision division,
+                                                                BasketTeamMember member,
+                                                                Long captainPlayerId) {
+        V4RegistrationRosterPlayerResp item = new V4RegistrationRosterPlayerResp();
+        item.setTeamMemberId(member.getId());
+        item.setPlayerId(member.getPlayerId());
+        item.setMemberId(member.getMemberId());
+        item.setRoleType(member.getRoleType());
+        item.setRoleTypeText(roleTypeText(member.getRoleType()));
+        item.setCaptain(captainPlayerId != null && captainPlayerId.equals(member.getPlayerId()));
+        item.setPlatformCode(normalizePlatformCode(division.getPlatformCode()));
+        item.setEligible(false);
+
+        if (member.getPlayerId() == null) {
+            item.setReasonCode("PLAYER_MISSING");
+            item.setReasonMessage("成员未关联球员档案");
+            item.setDisplayName("未知球员");
+            return item;
+        }
+
+        BasketPlayerProfile profile = playerProfileDao.selectById(member.getPlayerId());
+        if (profile == null || !NOT_DELETED.equals(profile.getIsDelete())) {
+            item.setReasonCode("PLAYER_NOT_FOUND");
+            item.setReasonMessage("球员档案不存在");
+            item.setDisplayName("未知球员");
+            return item;
+        }
+        item.setPlayerNo(profile.getPlayerNo());
+        item.setDisplayName(resolveDisplayName(profile, member.getMemberId()));
+
+        if (!Integer.valueOf(PLAYER_CERT_APPROVED).equals(profile.getCertificationStatus())) {
+            item.setReasonCode("PLAYER_NOT_CERTIFIED");
+            item.setReasonMessage("球员尚未完成认证");
+            item.setPlatformIdentityStatus("MISSING");
+            return item;
+        }
+
+        BasketPlayerPlatformAccount account = findPlatformIdentity(member.getPlayerId(), division.getPlatformCode());
+        if (account == null) {
+            item.setReasonCode("PLATFORM_IDENTITY_MISSING");
+            item.setReasonMessage("未绑定或未通过 "
+                    + GameTerminalSupport.formatDisplayName(division.getPlatformCode())
+                    + " 游戏身份认证");
+            item.setPlatformIdentityStatus("MISSING");
+            return item;
+        }
+        item.setPlatformGameId(account.getDisplayGameId());
+        item.setPlatformIdentityStatus("ACTIVE");
+        if (!StringUtils.hasText(account.getDisplayGameId())) {
+            item.setReasonCode("GAME_ID_MISSING");
+            item.setReasonMessage("平台游戏 ID 无效");
+            return item;
+        }
+
+        item.setEligible(true);
+        item.setReasonCode(null);
+        item.setReasonMessage(null);
+        return item;
+    }
+
+    private BasketPlayerPlatformAccount findPlatformIdentity(Long playerId, String divisionPlatformCode) {
+        List<BasketPlayerPlatformAccount> accounts = platformAccountDao.selectList(new LambdaQueryWrapper<BasketPlayerPlatformAccount>()
+                .eq(BasketPlayerPlatformAccount::getPlayerId, playerId)
+                .eq(BasketPlayerPlatformAccount::getIsDelete, NOT_DELETED));
+        for (BasketPlayerPlatformAccount account : accounts) {
+            if (Integer.valueOf(PLATFORM_ACCOUNT_ACTIVE).equals(account.getAccountStatus())
+                    && GameTerminalSupport.matchesDivisionPlatform(divisionPlatformCode, account.getPlatform())) {
+                return account;
+            }
+        }
+        return null;
+    }
+
+    private String resolveDisplayName(BasketPlayerProfile profile, Long memberId) {
+        if (StringUtils.hasText(profile.getGameNickname())) {
+            return profile.getGameNickname();
+        }
+        if (memberId != null) {
+            BasketMemberProfile memberProfile = memberProfileDao.selectOne(new LambdaQueryWrapper<BasketMemberProfile>()
+                    .eq(BasketMemberProfile::getMemberId, memberId)
+                    .eq(BasketMemberProfile::getIsDelete, NOT_DELETED)
+                    .last("limit 1"));
+            if (memberProfile != null && StringUtils.hasText(memberProfile.getNickname())) {
+                return memberProfile.getNickname();
+            }
+        }
+        return profile.getPlayerNo();
+    }
+
+    private String roleTypeText(String roleType) {
+        if ("CAPTAIN".equalsIgnoreCase(roleType)) {
+            return "队长";
+        }
+        if ("VICE_CAPTAIN".equalsIgnoreCase(roleType)) {
+            return "副队长";
+        }
+        return "队员";
     }
 
     private void writeAudit(BasketRegistration registration, String action, String beforeStatus, String afterStatus,
@@ -447,16 +765,11 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
     }
 
     private BasketPlayerPlatformAccount requirePlatformIdentity(Long playerId, String divisionPlatformCode) {
-        List<BasketPlayerPlatformAccount> accounts = platformAccountDao.selectList(new LambdaQueryWrapper<BasketPlayerPlatformAccount>()
-                .eq(BasketPlayerPlatformAccount::getPlayerId, playerId)
-                .eq(BasketPlayerPlatformAccount::getIsDelete, NOT_DELETED));
-        for (BasketPlayerPlatformAccount account : accounts) {
-            if (Integer.valueOf(PLATFORM_ACCOUNT_ACTIVE).equals(account.getAccountStatus())
-                    && GameTerminalSupport.matchesDivisionPlatform(divisionPlatformCode, account.getPlatform())) {
-                return account;
-            }
+        BasketPlayerPlatformAccount account = findPlatformIdentity(playerId, divisionPlatformCode);
+        if (account == null) {
+            throw new ServiceException("球员缺少对应平台身份：" + GameTerminalSupport.formatDisplayName(divisionPlatformCode));
         }
-        throw new ServiceException("球员缺少对应平台身份：" + GameTerminalSupport.formatDisplayName(divisionPlatformCode));
+        return account;
     }
 
     private void validateSaveReq(V4RegistrationSaveReq req) {

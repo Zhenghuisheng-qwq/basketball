@@ -9,6 +9,7 @@ export interface V4AvailableDivision {
   platformCode?: string
   registrationMode?: string
   gameMode?: string
+  divisionStatus?: string
   lineupMinCount?: number
   lineupMaxCount?: number
   registrationStartTime?: string
@@ -22,8 +23,42 @@ export interface V4AvailableDivision {
   grantTeamId?: string
   grantTeamName?: string
   myRegistrationStatus?: string
+  myRegistrationId?: string
   canRegister?: boolean
+  canViewRegistration?: boolean
   cannotRegisterReason?: string
+  cannotRegisterReasonCode?: string
+  registrationWindowStatus?: string
+  registrationWindowStatusLabel?: string
+}
+
+export interface V4RegistrationRosterPlayer {
+  teamMemberId?: string
+  playerId?: string
+  memberId?: string
+  playerNo?: string
+  displayName?: string
+  roleType?: string
+  roleTypeText?: string
+  platformCode?: string
+  platformGameId?: string
+  platformIdentityStatus?: string
+  eligible?: boolean
+  reasonCode?: string
+  reasonMessage?: string
+  captain?: boolean
+}
+
+/** 按 divisionId 加载的报名上下文（不依赖 available 列表过滤） */
+export interface V4RegistrationDivisionContext extends V4AvailableDivision {
+  divisionExists?: boolean
+  teamEligible?: boolean
+  teamMemberCount?: number
+  eligibleRosterCount?: number
+  ineligibleRosterCount?: number
+  canSubmitRegistration?: boolean
+  eligiblePlayers?: V4RegistrationRosterPlayer[]
+  ineligiblePlayers?: V4RegistrationRosterPlayer[]
 }
 
 export interface V4MyRegistration {

@@ -139,6 +139,12 @@ function platformLabel(event: AvailableEvent) {
         >
           {{ event.actionText }}
         </button>
+        <span
+          v-if="isPrimaryDisabled(event) && event.disabledReason"
+          class="event-table-row__disabled-reason"
+        >
+          {{ event.disabledReason }}
+        </span>
       </div>
     </div>
   </div>
@@ -263,6 +269,14 @@ function platformLabel(event: AvailableEvent) {
     min-height: 36px;
     padding: 0 10px;
     font-size: 13px;
+  }
+
+  &__disabled-reason {
+    width: 100%;
+    text-align: right;
+    font-size: 12px;
+    color: #b42318;
+    line-height: 1.3;
   }
 }
 

@@ -12,6 +12,7 @@
             d.platform_code as platformCode,
             d.registration_mode as registrationMode,
             d.game_mode as gameMode,
+            d.division_status as divisionStatus,
             d.lineup_min_count as lineupMinCount,
             d.lineup_max_count as lineupMaxCount,
             d.registration_start_time as registrationStartTime,
@@ -28,7 +29,8 @@
             cg.grant_status as myGrantStatus,
             cg.team_id as grantTeamId,
             gt.team_name as grantTeamName,
-            mr.registration_status as myRegistrationStatus
+            mr.registration_status as myRegistrationStatus,
+            mr.id as myRegistrationId
         from basket_division d
         inner join basket_season se on se.id = d.season_id and se.is_delete = 0 and se.publish_status = 'PUBLISHED'
         inner join basket_series s on s.id = se.series_id and s.is_delete = 0

@@ -33,6 +33,23 @@ export interface DisciplineCreateReq {
   idempotencyKey?: string
 }
 
+export interface DisciplineSelectorOption {
+  id: number | string
+  label: string
+  secondaryLabel?: string
+  status?: string
+  memberId?: number | string
+  teamId?: number | string
+  eventTeamId?: number | string
+  eventPlayerId?: number | string
+  teamName?: string
+  playerNo?: string
+  gameId?: string
+  divisionName?: string
+  platformCode?: string
+  gameMode?: string
+}
+
 export function listDiscipline(query: DisciplineQuery & { pageNum?: number; pageSize?: number }): Promise<TableDataInfo<any[]>> {
   return request({ url: '/basket/discipline/list', method: 'get', params: query })
 }
@@ -51,4 +68,22 @@ export function activateDiscipline(id: number): Promise<AjaxResult> {
 
 export function revokeDiscipline(id: number, data: { revokeReason: string }): Promise<AjaxResult> {
   return request({ url: `/basket/discipline/${id}/revoke`, method: 'post', data })
+}
+
+export function searchDisciplineSeasons(params: { keyword?: string; pageNum?: number; pageSize?: number }): Promise<TableDataInfo<DisciplineSelectorOption[]>> {
+  return request({ url: '/basket/discipline/selector/seasons', method: 'get', params })
+}
+
+export function searchDisciplinePlayers(params: { seasonId: number; keyword?: string; pageNum?: number; pageSize?: number }): Promise<TableDataInfo<DisciplineSelectorOption[]>> {
+  return request({ url: '/basket/discipline/selector/players', method: 'get', params })
+}
+
+export function searchDisciplineTeams(params: {
+  seasonId: number
+  targetType: string
+  keyword?: string
+  pageNum?: number
+  pageSize?: number
+}): Promise<TableDataInfo<DisciplineSelectorOption[]>> {
+  return request({ url: '/basket/discipline/selector/teams', method: 'get', params })
 }

@@ -14,6 +14,7 @@ import com.zhs.basket.service.IBasketDisciplineService;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
 import com.zhs.basket.vo.DisciplineDetailVo;
 import com.zhs.basket.vo.DisciplineListVo;
+import com.zhs.basket.vo.DisciplineSelectorOptionVo;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -32,6 +34,7 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
     private static final Integer NOT_DELETED = 0;
 
     @Autowired private BasketDisciplineRecordMapper disciplineRecordMapper;
+    @Autowired private BasketDisciplineSelectorMapper disciplineSelectorMapper;
     @Autowired private BasketDisciplineRestrictionMapper restrictionMapper;
     @Autowired private BasketPointAdjustmentMapper pointAdjustmentMapper;
     @Autowired private BasketDisciplineSuspensionLogMapper suspensionLogMapper;
@@ -57,6 +60,7 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
     @Transactional(rollbackFor = Exception.class)
     public Long create(DisciplineCreateReq req) {
         validateCreateReq(req);
+        sanitizeCreateTargets(req);
         if (StringUtils.isNotEmpty(req.getIdempotencyKey())
                 && disciplineRecordMapper.countByIdempotencyKey(req.getIdempotencyKey()) > 0) {
             throw new ServiceException("重复提交处罚记录");
@@ -68,7 +72,7 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
             }
         }
         Date now = new Date();
-        int suspensionCount = req.getMatchSuspensionCount() != null ? req.getMatchSuspensionCount() : 0;
+        PenaltyParams params = normalizeAndValidatePenaltyParams(req, now);
         BasketDisciplineRecord row = new BasketDisciplineRecord();
         row.setRecordNo("DIS-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
         row.setTargetType(StringUtils.isNotEmpty(req.getTargetType()) ? req.getTargetType() : DisciplineTargetTypeEnum.PLAYER.getCode());
@@ -83,13 +87,13 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         row.setTitle(req.getTitle());
         row.setReasonText(req.getReasonText());
         row.setPenaltyContent(StringUtils.isNotEmpty(req.getPenaltyContent()) ? req.getPenaltyContent() : req.getTitle());
-        row.setMatchSuspensionCount(suspensionCount);
-        row.setMatchSuspensionRemaining(suspensionCount);
-        row.setPointDeduction(req.getPointDeduction() != null ? req.getPointDeduction() : 0);
+        row.setMatchSuspensionCount(params.matchSuspensionCount);
+        row.setMatchSuspensionRemaining(params.matchSuspensionCount);
+        row.setPointDeduction(params.pointDeduction);
         row.setDisciplineStatus(DisciplineStatusEnum.INACTIVE.getCode());
         row.setRecordStatus(DisciplineRecordStatusEnum.DRAFT.name());
-        row.setEffectiveStartTime(req.getEffectiveStartTime() != null ? req.getEffectiveStartTime() : now);
-        row.setEffectiveEndTime(req.getEffectiveEndTime());
+        row.setEffectiveStartTime(params.effectiveStartTime);
+        row.setEffectiveEndTime(params.effectiveEndTime);
         row.setDecisionBy(SecurityUtils.getUserId());
         row.setDecisionTime(now);
         row.setSourceType("ADMIN");
@@ -197,6 +201,122 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         suspensionLogMapper.insert(log);
     }
 
+    @Override
+    public List<DisciplineSelectorOptionVo> selectSeasonOptions(String keyword) {
+        return disciplineSelectorMapper.selectSeasonOptions(StringUtils.trim(keyword));
+    }
+
+    @Override
+    public List<DisciplineSelectorOptionVo> selectPlayerOptions(Long seasonId, String keyword) {
+        if (seasonId == null) {
+            throw new ServiceException("请先选择所属赛季");
+        }
+        return disciplineSelectorMapper.selectPlayerOptions(seasonId, StringUtils.trim(keyword));
+    }
+
+    @Override
+    public List<DisciplineSelectorOptionVo> selectTeamOptions(Long seasonId, String targetType, String keyword) {
+        if (seasonId == null) {
+            throw new ServiceException("请先选择所属赛季");
+        }
+        String type = StringUtils.isNotEmpty(targetType) ? targetType : DisciplineTargetTypeEnum.PERMANENT_TEAM.getCode();
+        if (DisciplineTargetTypeEnum.EVENT_TEAM.getCode().equalsIgnoreCase(type)) {
+            return disciplineSelectorMapper.selectEventTeamOptions(seasonId, StringUtils.trim(keyword));
+        }
+        if (DisciplineTargetTypeEnum.PERMANENT_TEAM.getCode().equalsIgnoreCase(type)) {
+            return disciplineSelectorMapper.selectPermanentTeamOptions(seasonId, StringUtils.trim(keyword));
+        }
+        return Collections.emptyList();
+    }
+
+    private PenaltyParams normalizeAndValidatePenaltyParams(DisciplineCreateReq req, Date now) {
+        DisciplinePenaltyCodeEnum code;
+        try {
+            code = DisciplinePenaltyCodeEnum.valueOf(req.getPenaltyCode());
+        } catch (IllegalArgumentException ex) {
+            throw new ServiceException("未知处罚措施编码");
+        }
+        int suspensionCount = req.getMatchSuspensionCount() != null ? req.getMatchSuspensionCount() : 0;
+        int pointDeduction = req.getPointDeduction() != null ? req.getPointDeduction() : 0;
+        Date start = req.getEffectiveStartTime();
+        Date end = req.getEffectiveEndTime();
+        switch (code) {
+            case WARNING:
+            case REGISTRATION_BAN:
+            case TRANSFER_BAN:
+            case CAPTAIN_BAN:
+            case TEAM_SUSPENSION:
+            case EVENT_DISQUALIFICATION:
+            case PLAYER_QUALIFICATION_SUSPENSION:
+                suspensionCount = 0;
+                pointDeduction = 0;
+                if (start == null) {
+                    start = now;
+                }
+                break;
+            case MATCH_SUSPENSION:
+            case MATCH_ELIGIBILITY_CANCEL:
+                if (suspensionCount < 1) {
+                    throw new ServiceException("禁赛场次至少为 1");
+                }
+                pointDeduction = 0;
+                if (start == null) {
+                    start = now;
+                }
+                break;
+            case POINT_DEDUCTION:
+                if (pointDeduction < 1) {
+                    throw new ServiceException("扣除积分至少为 1");
+                }
+                if (req.getTeamId() == null) {
+                    throw new ServiceException("扣分处罚需要关联球队");
+                }
+                suspensionCount = 0;
+                if (start == null) {
+                    start = now;
+                }
+                break;
+            case DATE_RANGE_SUSPENSION:
+                suspensionCount = 0;
+                pointDeduction = 0;
+                if (start == null || end == null) {
+                    throw new ServiceException("按日期禁赛必须填写生效时间与结束时间");
+                }
+                if (!start.before(end)) {
+                    throw new ServiceException("生效时间必须早于结束时间");
+                }
+                break;
+            default:
+                throw new ServiceException("未知处罚措施编码");
+        }
+        return new PenaltyParams(suspensionCount, pointDeduction, start, end);
+    }
+
+    private void sanitizeCreateTargets(DisciplineCreateReq req) {
+        String targetType = StringUtils.isNotEmpty(req.getTargetType())
+                ? req.getTargetType() : DisciplineTargetTypeEnum.PLAYER.getCode();
+        if (DisciplineTargetTypeEnum.PLAYER.getCode().equalsIgnoreCase(targetType)) {
+            // 球员处罚主键为永久 playerId；teamId/eventTeamId 仅作赛事上下文
+            return;
+        }
+        if (DisciplineTargetTypeEnum.PERMANENT_TEAM.getCode().equalsIgnoreCase(targetType)) {
+            req.setPlayerId(null);
+            req.setMemberId(null);
+            req.setEventTeamId(null);
+            return;
+        }
+        if (DisciplineTargetTypeEnum.EVENT_TEAM.getCode().equalsIgnoreCase(targetType)) {
+            req.setPlayerId(null);
+            req.setMemberId(null);
+            return;
+        }
+        if (DisciplineTargetTypeEnum.ACCOUNT.getCode().equalsIgnoreCase(targetType)) {
+            req.setPlayerId(null);
+            req.setTeamId(null);
+            req.setEventTeamId(null);
+        }
+    }
+
     private void validateCreateReq(DisciplineCreateReq req) {
         if (req == null) {
             throw new ServiceException("请求不能为空");
@@ -207,7 +327,34 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         if (StringUtils.isEmpty(req.getDisciplineType()) || StringUtils.isEmpty(req.getPenaltyCode())) {
             throw new ServiceException("处罚类型与措施编码不能为空");
         }
-        if (req.getPlayerId() == null && req.getMemberId() == null && req.getTeamId() == null) {
+        String targetType = StringUtils.isNotEmpty(req.getTargetType())
+                ? req.getTargetType() : DisciplineTargetTypeEnum.PLAYER.getCode();
+        if (DisciplineTargetTypeEnum.PLAYER.getCode().equalsIgnoreCase(targetType)) {
+            if (req.getPlayerId() == null && req.getMemberId() == null) {
+                throw new ServiceException("请选择处罚球员");
+            }
+            return;
+        }
+        if (DisciplineTargetTypeEnum.PERMANENT_TEAM.getCode().equalsIgnoreCase(targetType)) {
+            if (req.getTeamId() == null) {
+                throw new ServiceException("请选择处罚球队");
+            }
+            return;
+        }
+        if (DisciplineTargetTypeEnum.EVENT_TEAM.getCode().equalsIgnoreCase(targetType)) {
+            if (req.getEventTeamId() == null) {
+                throw new ServiceException("请选择处罚赛事球队");
+            }
+            return;
+        }
+        if (DisciplineTargetTypeEnum.ACCOUNT.getCode().equalsIgnoreCase(targetType)) {
+            if (req.getMemberId() == null) {
+                throw new ServiceException("请选择处罚账号");
+            }
+            return;
+        }
+        if (req.getPlayerId() == null && req.getMemberId() == null
+                && req.getTeamId() == null && req.getEventTeamId() == null) {
             throw new ServiceException("处罚对象不能为空");
         }
     }
@@ -362,6 +509,20 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         private RestrictionSubject(String subjectType, Long subjectId) {
             this.subjectType = subjectType;
             this.subjectId = subjectId;
+        }
+    }
+
+    private static class PenaltyParams {
+        private final int matchSuspensionCount;
+        private final int pointDeduction;
+        private final Date effectiveStartTime;
+        private final Date effectiveEndTime;
+
+        private PenaltyParams(int matchSuspensionCount, int pointDeduction, Date effectiveStartTime, Date effectiveEndTime) {
+            this.matchSuspensionCount = matchSuspensionCount;
+            this.pointDeduction = pointDeduction;
+            this.effectiveStartTime = effectiveStartTime;
+            this.effectiveEndTime = effectiveEndTime;
         }
     }
 }

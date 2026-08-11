@@ -23,6 +23,12 @@ public class BasketV4PlayerRegistrationController {
         return R.ok(playerRegistrationService.listAvailableDivisions());
     }
 
+    @ApiOperation("报名 Division 上下文与资格")
+    @GetMapping("/divisions/{divisionId}/context")
+    public R divisionContext(@PathVariable Long divisionId) {
+        return R.ok(playerRegistrationService.getDivisionContext(divisionId));
+    }
+
     @ApiOperation("保存报名草稿")
     @PostMapping("/save")
     public R save(@RequestBody V4RegistrationSaveReq req) {

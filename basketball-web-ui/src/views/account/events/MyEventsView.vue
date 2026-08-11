@@ -248,6 +248,20 @@ function handleAvailableAction(event: AvailableEvent) {
     return
   }
   if (event.actionType === 'VIEW_REGISTRATION') {
+    if (event.registrationType === 'TEAM' && event.divisionId) {
+      router.push({
+        name: 'AccountV4Registration',
+        params: { divisionId: String(event.divisionId) },
+      })
+      return
+    }
+    if (event.registrationType === 'INDIVIDUAL' && event.divisionId) {
+      router.push({
+        name: 'AccountV4PersonalRegistration',
+        params: { divisionId: String(event.divisionId) },
+      })
+      return
+    }
     setTab('applications')
     return
   }

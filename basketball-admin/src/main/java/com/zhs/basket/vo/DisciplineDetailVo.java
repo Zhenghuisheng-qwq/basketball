@@ -8,6 +8,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class DisciplineDetailVo extends BasketDisciplineRecord {
     private String seasonName;
+    private String seriesName;
     private String teamName;
+    private String eventTeamName;
     private String playerNo;
+    private String playerName;
 }

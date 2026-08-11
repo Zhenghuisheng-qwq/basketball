@@ -15,13 +15,6 @@ export interface EventStatusTagView {
   label: string
 }
 
-function isFutureTime(value?: string) {
-  if (!value) return false
-  const normalized = value.replace(' ', 'T')
-  const ms = Date.parse(`${normalized.includes('T') ? normalized : `${normalized}T00:00:00`}+08:00`)
-  return !Number.isNaN(ms) && ms > Date.now()
-}
-
 export function resolveEventStatusTag(event: AvailableEvent): EventStatusTagView {
   const code = (event.eventStatusCode || '').toUpperCase()
   const label = event.eventStatus || '-'
@@ -41,11 +34,9 @@ export function resolveEventStatusTag(event: AvailableEvent): EventStatusTagView
   if (code === 'CANCELLED' || label.includes('已取消')) {
     return { variant: 'cancelled', label: label === '-' ? '已取消' : label }
   }
-  if (code === 'CLOSED' || label.includes('报名已结束')) {
-    if (isFutureTime(event.matchStartTime)) {
-      return { variant: 'match-not-started', label: '比赛未开始' }
-    }
-    return { variant: 'closed', label: label === '-' ? '报名已结束' : label }
+  if (code === 'CLOSED' || label.includes('报名已截止') || label.includes('报名已结束')) {
+    // 报名窗口关闭与比赛是否开始解耦：列表「赛事状态」优先展示报名窗口语义
+    return { variant: 'closed', label: label === '-' || label.includes('报名已结束') ? '报名已截止' : label }
   }
   if (label.includes('比赛未开始')) {
     return { variant: 'match-not-started', label }

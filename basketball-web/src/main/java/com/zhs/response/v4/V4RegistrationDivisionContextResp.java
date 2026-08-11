@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Data
 public class V4RegistrationDivisionContextResp {
@@ -47,4 +49,14 @@ public class V4RegistrationDivisionContextResp {
     private String registrationWindowStatus;
     private String registrationWindowStatusLabel;
     private Boolean divisionExists;
+
+    /** 球队本身是否满足报名入口条件（grant/team/cert），与阵容人数无关 */
+    private Boolean teamEligible;
+    private Integer teamMemberCount;
+    private Integer eligibleRosterCount;
+    private Integer ineligibleRosterCount;
+    /** 入口资格 + 当前符合资格人数是否已达最低阵容（不含用户勾选） */
+    private Boolean canSubmitRegistration;
+    private List<V4RegistrationRosterPlayerResp> eligiblePlayers = new ArrayList<>();
+    private List<V4RegistrationRosterPlayerResp> ineligiblePlayers = new ArrayList<>();
 }

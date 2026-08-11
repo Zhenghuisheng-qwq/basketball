@@ -15,6 +15,7 @@ import type {
   V4MyPersonalRegistration,
   V4PersonalFormationTask,
   V4RegistrationDetail,
+  V4RegistrationDivisionContext,
 } from '@/api/types/v4PlayerEvents'
 
 export interface V4MyAvailableEventItem {
@@ -25,6 +26,12 @@ export interface V4MyAvailableEventItem {
 
 export function getV4AvailableDivisions() {
   return request.get<any, ApiResult<V4AvailableDivision[]>>('/basket/v4/player/registration/available-divisions')
+}
+
+export function getV4RegistrationDivisionContext(divisionId: string) {
+  return request.get<any, ApiResult<V4RegistrationDivisionContext>>(
+    `/basket/v4/player/registration/divisions/${divisionId}/context`,
+  )
 }
 
 export function getV4MyRegistrations() {

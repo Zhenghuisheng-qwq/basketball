@@ -82,8 +82,13 @@
 
     <select id="selectDetailById" resultType="com.zhs.basket.vo.DisciplineDetailVo">
         select d.id, d.record_no as recordNo, d.target_type as targetType, d.season_id as seasonId,
-               s.season_name as seasonName, d.match_id as matchId, d.team_id as teamId, t.team_name as teamName,
-               d.event_team_id as eventTeamId, d.player_id as playerId, p.player_no as playerNo, d.member_id as memberId,
+               coalesce(nullif(trim(s.display_title), ''), s.season_name) as seasonName,
+               ser.series_name as seriesName,
+               d.match_id as matchId, d.team_id as teamId, t.team_name as teamName,
+               d.event_team_id as eventTeamId, et.team_name_snapshot as eventTeamName,
+               d.player_id as playerId, p.player_no as playerNo,
+               coalesce(nullif(trim(p.game_nickname), ''), nullif(trim(mp.nickname), ''), p.player_no) as playerName,
+               d.member_id as memberId,
                d.discipline_type as disciplineType, d.penalty_code as penaltyCode, d.title, d.reason_text as reasonText,
                d.penalty_content as penaltyContent, d.match_suspension_count as matchSuspensionCount,
                d.match_suspension_remaining as matchSuspensionRemaining, d.point_deduction as pointDeduction,
@@ -95,24 +100,35 @@
                d.announcement_id as announcementId, d.create_time as createTime, d.update_time as updateTime, d.is_delete as isDelete
         from basket_discipline_record d
         left join basket_season s on s.id = d.season_id and s.is_delete = 0
+        left join basket_series ser on ser.id = s.series_id and ser.is_delete = 0
         left join basket_team t on t.id = d.team_id and t.is_delete = 0
+        left join basket_event_team et on et.id = d.event_team_id and et.is_delete = 0
         left join basket_player_profile p on p.id = d.player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = d.member_id and mp.is_delete = 0
         where d.id = #{id} and d.is_delete = 0
     </select>
 
     <select id="selectList" resultType="com.zhs.basket.vo.DisciplineListVo">
         select d.id, d.record_no as recordNo, d.target_type as targetType, d.season_id as seasonId,
-               s.season_name as seasonName, d.team_id as teamId, t.team_name as teamName,
-               d.player_id as playerId, p.player_no as playerNo, d.member_id as memberId,
-               d.discipline_type as disciplineType, d.penalty_code as penaltyCode, d.title,
+               coalesce(nullif(trim(s.display_title), ''), s.season_name) as seasonName,
+               ser.series_name as seriesName,
+               d.team_id as teamId, t.team_name as teamName,
+               d.event_team_id as eventTeamId, et.team_name_snapshot as eventTeamName,
+               d.player_id as playerId, p.player_no as playerNo,
+               coalesce(nullif(trim(p.game_nickname), ''), nullif(trim(mp.nickname), ''), p.player_no) as playerName,
+               d.member_id as memberId,
+               d.discipline_type as disciplineType, d.penalty_code as penaltyCode, d.title, d.reason_text as reasonText,
                d.discipline_status as disciplineStatus, d.record_status as recordStatus,
                d.match_suspension_remaining as matchSuspensionRemaining, d.point_deduction as pointDeduction,
                d.effective_start_time as effectiveStartTime, d.effective_end_time as effectiveEndTime,
                d.decision_time as decisionTime, d.create_time as createTime
         from basket_discipline_record d
         left join basket_season s on s.id = d.season_id and s.is_delete = 0
+        left join basket_series ser on ser.id = s.series_id and ser.is_delete = 0
         left join basket_team t on t.id = d.team_id and t.is_delete = 0
+        left join basket_event_team et on et.id = d.event_team_id and et.is_delete = 0
         left join basket_player_profile p on p.id = d.player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = d.member_id and mp.is_delete = 0
         where d.is_delete = 0
         <if test="seasonId != null">and d.season_id = #{seasonId}</if>
         <if test="tournamentId != null">and s.series_id = #{tournamentId}</if>
