@@ -1,0 +1,102 @@
+{
+  "marker": "ARENA_S2_15P_3T_20260811",
+  "password": "111111aa",
+  "seasonId": "132",
+  "divisionId": "167",
+  "divisionName": "CNPA Arena 2026 S2 - PC 3V3",
+  "series": "Arena",
+  "gameMode": "THREE_V_THREE",
+  "platformCode": "PC",
+  "teams": [
+    {
+      "name": "ARENA ALPHA",
+      "short": "ALP",
+      "teamId": "2087129401455132673",
+      "grantId": null,
+      "captainEmail": "fs_ar2_a0101@cnpa.smoke",
+      "emails": [
+        "fs_ar2_a0101@cnpa.smoke",
+        "fs_ar2_a0102@cnpa.smoke",
+        "fs_ar2_a0103@cnpa.smoke",
+        "fs_ar2_a0104@cnpa.smoke",
+        "fs_ar2_a0105@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099110811008700000",
+        "2099110811008700001",
+        "2099110811008700002",
+        "2099110811008700003",
+        "2099110811008700004"
+      ],
+      "memberIds": [
+        "2099110811007700000",
+        "2099110811007700001",
+        "2099110811007700002",
+        "2099110811007700003",
+        "2099110811007700004"
+      ]
+    },
+    {
+      "name": "ARENA BRAVO",
+      "short": "BRV",
+      "teamId": "2087129565762797570",
+      "grantId": "371",
+      "captainEmail": "fs_ar2_a0201@cnpa.smoke",
+      "emails": [
+        "fs_ar2_a0201@cnpa.smoke",
+        "fs_ar2_a0202@cnpa.smoke",
+        "fs_ar2_a0203@cnpa.smoke",
+        "fs_ar2_a0204@cnpa.smoke",
+        "fs_ar2_a0205@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099110811008700100",
+        "2099110811008700101",
+        "2099110811008700102",
+        "2099110811008700103",
+        "2099110811008700104"
+      ],
+      "memberIds": [
+        "2099110811007700100",
+        "2099110811007700101",
+        "2099110811007700102",
+        "2099110811007700103",
+        "2099110811007700104"
+      ]
+    },
+    {
+      "name": "ARENA CHARLIE",
+      "short": "CHA",
+      "teamId": "2087129572209442817",
+      "grantId": "372",
+      "captainEmail": "fs_ar2_a0301@cnpa.smoke",
+      "emails": [
+        "fs_ar2_a0301@cnpa.smoke",
+        "fs_ar2_a0302@cnpa.smoke",
+        "fs_ar2_a0303@cnpa.smoke",
+        "fs_ar2_a0304@cnpa.smoke",
+        "fs_ar2_a0305@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099110811008700200",
+        "2099110811008700201",
+        "2099110811008700202",
+        "2099110811008700203",
+        "2099110811008700204"
+      ],
+      "memberIds": [
+        "2099110811007700200",
+        "2099110811007700201",
+        "2099110811007700202",
+        "2099110811007700203",
+        "2099110811007700204"
+      ]
+    }
+  ],
+  "approvedRegistrations": 3,
+  "eventCounts": [
+    3,
+    15
+  ],
+  "note": "Caller JSON pointed at divisionId=165 / Arena 3V3, but local DB 165 is League S4 PC 5V5 FINISHED. Created matching Arena S2 PC 3V3 instead."
+}

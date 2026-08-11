@@ -1,0 +1,89 @@
+{
+  "db": "111.229.241.29",
+  "divisionId": 165,
+  "password": "111111aa",
+  "eventTeamCount": 4,
+  "eventPlayerCount": 20,
+  "registrations": [
+    {
+      "id": 252,
+      "registration_status": "APPROVED",
+      "team_id": "2087084991024545794"
+    },
+    {
+      "id": 253,
+      "registration_status": "APPROVED",
+      "team_id": "2087130674674884609"
+    },
+    {
+      "id": 254,
+      "registration_status": "APPROVED",
+      "team_id": "2099220811200000102"
+    },
+    {
+      "id": 255,
+      "registration_status": "APPROVED",
+      "team_id": "2099220811200000103"
+    }
+  ],
+  "eventTeams": [
+    {
+      "id": "226",
+      "team_name_snapshot": "AA006"
+    },
+    {
+      "id": "227",
+      "team_name_snapshot": "PROD ARENA ALPHA"
+    },
+    {
+      "id": "228",
+      "team_name_snapshot": "PROD ARENA BRAVO"
+    },
+    {
+      "id": "229",
+      "team_name_snapshot": "PROD ARENA CHARLIE"
+    }
+  ],
+  "teams": [
+    {
+      "name": "PROD ARENA ALPHA",
+      "teamId": "2087130674674884609",
+      "regId": 253,
+      "eventTeamId": 227,
+      "emails": [
+        "prod_ar2_p0101@cnpa.smoke",
+        "prod_ar2_p0102@cnpa.smoke",
+        "prod_ar2_p0103@cnpa.smoke",
+        "prod_ar2_p0104@cnpa.smoke",
+        "prod_ar2_p0105@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "PROD ARENA BRAVO",
+      "teamId": "2099220811200000102",
+      "regId": 254,
+      "eventTeamId": 228,
+      "emails": [
+        "prod_ar2_p0201@cnpa.smoke",
+        "prod_ar2_p0202@cnpa.smoke",
+        "prod_ar2_p0203@cnpa.smoke",
+        "prod_ar2_p0204@cnpa.smoke",
+        "prod_ar2_p0205@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "PROD ARENA CHARLIE",
+      "teamId": "2099220811200000103",
+      "regId": 255,
+      "eventTeamId": 229,
+      "emails": [
+        "prod_ar2_p0301@cnpa.smoke",
+        "prod_ar2_p0302@cnpa.smoke",
+        "prod_ar2_p0303@cnpa.smoke",
+        "prod_ar2_p0304@cnpa.smoke",
+        "prod_ar2_p0305@cnpa.smoke"
+      ]
+    }
+  ],
+  "marker": "PROD_SQL_SEED_15P3T_20260811"
+}

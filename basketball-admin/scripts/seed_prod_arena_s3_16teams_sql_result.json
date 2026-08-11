@@ -1,0 +1,286 @@
+{
+  "db": "111.229.241.29",
+  "seasonId": 131,
+  "divisionId": 166,
+  "password": "111111aa",
+  "marker": "PROD_SQL_SEED_S3_16T_20260811",
+  "approvedRegistrations": 16,
+  "eventTeamCount": 16,
+  "eventPlayerCount": 80,
+  "eventTeams": [
+    {
+      "id": "230",
+      "team_name_snapshot": "ARENA S3 T01"
+    },
+    {
+      "id": "231",
+      "team_name_snapshot": "ARENA S3 T02"
+    },
+    {
+      "id": "232",
+      "team_name_snapshot": "ARENA S3 T03"
+    },
+    {
+      "id": "233",
+      "team_name_snapshot": "ARENA S3 T04"
+    },
+    {
+      "id": "234",
+      "team_name_snapshot": "ARENA S3 T05"
+    },
+    {
+      "id": "235",
+      "team_name_snapshot": "ARENA S3 T06"
+    },
+    {
+      "id": "236",
+      "team_name_snapshot": "ARENA S3 T07"
+    },
+    {
+      "id": "237",
+      "team_name_snapshot": "ARENA S3 T08"
+    },
+    {
+      "id": "238",
+      "team_name_snapshot": "ARENA S3 T09"
+    },
+    {
+      "id": "239",
+      "team_name_snapshot": "ARENA S3 T10"
+    },
+    {
+      "id": "240",
+      "team_name_snapshot": "ARENA S3 T11"
+    },
+    {
+      "id": "241",
+      "team_name_snapshot": "ARENA S3 T12"
+    },
+    {
+      "id": "242",
+      "team_name_snapshot": "ARENA S3 T13"
+    },
+    {
+      "id": "243",
+      "team_name_snapshot": "ARENA S3 T14"
+    },
+    {
+      "id": "244",
+      "team_name_snapshot": "ARENA S3 T15"
+    },
+    {
+      "id": "245",
+      "team_name_snapshot": "ARENA S3 T16"
+    }
+  ],
+  "teams": [
+    {
+      "name": "ARENA S3 T01",
+      "teamId": "2099330811320000001",
+      "eventTeamId": 230,
+      "captainEmail": "prod_s3_t01p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t01p01@cnpa.smoke",
+        "prod_s3_t01p02@cnpa.smoke",
+        "prod_s3_t01p03@cnpa.smoke",
+        "prod_s3_t01p04@cnpa.smoke",
+        "prod_s3_t01p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T02",
+      "teamId": "2099330811320000002",
+      "eventTeamId": 231,
+      "captainEmail": "prod_s3_t02p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t02p01@cnpa.smoke",
+        "prod_s3_t02p02@cnpa.smoke",
+        "prod_s3_t02p03@cnpa.smoke",
+        "prod_s3_t02p04@cnpa.smoke",
+        "prod_s3_t02p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T03",
+      "teamId": "2099330811320000003",
+      "eventTeamId": 232,
+      "captainEmail": "prod_s3_t03p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t03p01@cnpa.smoke",
+        "prod_s3_t03p02@cnpa.smoke",
+        "prod_s3_t03p03@cnpa.smoke",
+        "prod_s3_t03p04@cnpa.smoke",
+        "prod_s3_t03p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T04",
+      "teamId": "2099330811320000004",
+      "eventTeamId": 233,
+      "captainEmail": "prod_s3_t04p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t04p01@cnpa.smoke",
+        "prod_s3_t04p02@cnpa.smoke",
+        "prod_s3_t04p03@cnpa.smoke",
+        "prod_s3_t04p04@cnpa.smoke",
+        "prod_s3_t04p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T05",
+      "teamId": "2099330811320000005",
+      "eventTeamId": 234,
+      "captainEmail": "prod_s3_t05p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t05p01@cnpa.smoke",
+        "prod_s3_t05p02@cnpa.smoke",
+        "prod_s3_t05p03@cnpa.smoke",
+        "prod_s3_t05p04@cnpa.smoke",
+        "prod_s3_t05p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T06",
+      "teamId": "2099330811320000006",
+      "eventTeamId": 235,
+      "captainEmail": "prod_s3_t06p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t06p01@cnpa.smoke",
+        "prod_s3_t06p02@cnpa.smoke",
+        "prod_s3_t06p03@cnpa.smoke",
+        "prod_s3_t06p04@cnpa.smoke",
+        "prod_s3_t06p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T07",
+      "teamId": "2099330811320000007",
+      "eventTeamId": 236,
+      "captainEmail": "prod_s3_t07p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t07p01@cnpa.smoke",
+        "prod_s3_t07p02@cnpa.smoke",
+        "prod_s3_t07p03@cnpa.smoke",
+        "prod_s3_t07p04@cnpa.smoke",
+        "prod_s3_t07p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T08",
+      "teamId": "2099330811320000008",
+      "eventTeamId": 237,
+      "captainEmail": "prod_s3_t08p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t08p01@cnpa.smoke",
+        "prod_s3_t08p02@cnpa.smoke",
+        "prod_s3_t08p03@cnpa.smoke",
+        "prod_s3_t08p04@cnpa.smoke",
+        "prod_s3_t08p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T09",
+      "teamId": "2099330811320000009",
+      "eventTeamId": 238,
+      "captainEmail": "prod_s3_t09p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t09p01@cnpa.smoke",
+        "prod_s3_t09p02@cnpa.smoke",
+        "prod_s3_t09p03@cnpa.smoke",
+        "prod_s3_t09p04@cnpa.smoke",
+        "prod_s3_t09p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T10",
+      "teamId": "2099330811320000010",
+      "eventTeamId": 239,
+      "captainEmail": "prod_s3_t10p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t10p01@cnpa.smoke",
+        "prod_s3_t10p02@cnpa.smoke",
+        "prod_s3_t10p03@cnpa.smoke",
+        "prod_s3_t10p04@cnpa.smoke",
+        "prod_s3_t10p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T11",
+      "teamId": "2099330811320000011",
+      "eventTeamId": 240,
+      "captainEmail": "prod_s3_t11p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t11p01@cnpa.smoke",
+        "prod_s3_t11p02@cnpa.smoke",
+        "prod_s3_t11p03@cnpa.smoke",
+        "prod_s3_t11p04@cnpa.smoke",
+        "prod_s3_t11p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T12",
+      "teamId": "2099330811320000012",
+      "eventTeamId": 241,
+      "captainEmail": "prod_s3_t12p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t12p01@cnpa.smoke",
+        "prod_s3_t12p02@cnpa.smoke",
+        "prod_s3_t12p03@cnpa.smoke",
+        "prod_s3_t12p04@cnpa.smoke",
+        "prod_s3_t12p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T13",
+      "teamId": "2099330811320000013",
+      "eventTeamId": 242,
+      "captainEmail": "prod_s3_t13p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t13p01@cnpa.smoke",
+        "prod_s3_t13p02@cnpa.smoke",
+        "prod_s3_t13p03@cnpa.smoke",
+        "prod_s3_t13p04@cnpa.smoke",
+        "prod_s3_t13p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T14",
+      "teamId": "2099330811320000014",
+      "eventTeamId": 243,
+      "captainEmail": "prod_s3_t14p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t14p01@cnpa.smoke",
+        "prod_s3_t14p02@cnpa.smoke",
+        "prod_s3_t14p03@cnpa.smoke",
+        "prod_s3_t14p04@cnpa.smoke",
+        "prod_s3_t14p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T15",
+      "teamId": "2099330811320000015",
+      "eventTeamId": 244,
+      "captainEmail": "prod_s3_t15p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t15p01@cnpa.smoke",
+        "prod_s3_t15p02@cnpa.smoke",
+        "prod_s3_t15p03@cnpa.smoke",
+        "prod_s3_t15p04@cnpa.smoke",
+        "prod_s3_t15p05@cnpa.smoke"
+      ]
+    },
+    {
+      "name": "ARENA S3 T16",
+      "teamId": "2099330811320000016",
+      "eventTeamId": 245,
+      "captainEmail": "prod_s3_t16p01@cnpa.smoke",
+      "emails": [
+        "prod_s3_t16p01@cnpa.smoke",
+        "prod_s3_t16p02@cnpa.smoke",
+        "prod_s3_t16p03@cnpa.smoke",
+        "prod_s3_t16p04@cnpa.smoke",
+        "prod_s3_t16p05@cnpa.smoke"
+      ]
+    }
+  ]
+}

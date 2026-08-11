@@ -1,0 +1,76 @@
+{
+  "db": "111.229.241.29",
+  "admin": "http://111.229.241.29:8080",
+  "web": "http://111.229.241.29:8881",
+  "divisionId": "165",
+  "password": "111111aa",
+  "marker": "PROD_ARENA_S2_15P_3T_20260811",
+  "approvedRegistrations": 0,
+  "eventTeamCount": 4,
+  "eventPlayerCount": 20,
+  "teams": [
+    {
+      "name": "PROD ARENA ALPHA",
+      "short": "PAL",
+      "teamId": "2087130674674884609",
+      "grantId": null,
+      "captainEmail": "prod_ar2_p0101@cnpa.smoke",
+      "emails": [
+        "prod_ar2_p0101@cnpa.smoke",
+        "prod_ar2_p0102@cnpa.smoke",
+        "prod_ar2_p0103@cnpa.smoke",
+        "prod_ar2_p0104@cnpa.smoke",
+        "prod_ar2_p0105@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220811009800000",
+        "2099220811009800001",
+        "2099220811009800002",
+        "2099220811009800003",
+        "2099220811009800004"
+      ]
+    },
+    {
+      "name": "PROD ARENA BRAVO",
+      "short": "PBR",
+      "teamId": "2099220811200000102",
+      "grantId": null,
+      "captainEmail": "prod_ar2_p0201@cnpa.smoke",
+      "emails": [
+        "prod_ar2_p0201@cnpa.smoke",
+        "prod_ar2_p0202@cnpa.smoke",
+        "prod_ar2_p0203@cnpa.smoke",
+        "prod_ar2_p0204@cnpa.smoke",
+        "prod_ar2_p0205@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220811009800100",
+        "2099220811009800101",
+        "2099220811009800102",
+        "2099220811009800103",
+        "2099220811009800104"
+      ]
+    },
+    {
+      "name": "PROD ARENA CHARLIE",
+      "short": "PCH",
+      "teamId": "2099220811200000103",
+      "grantId": null,
+      "captainEmail": "prod_ar2_p0301@cnpa.smoke",
+      "emails": [
+        "prod_ar2_p0301@cnpa.smoke",
+        "prod_ar2_p0302@cnpa.smoke",
+        "prod_ar2_p0303@cnpa.smoke",
+        "prod_ar2_p0304@cnpa.smoke",
+        "prod_ar2_p0305@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220811009800200",
+        "2099220811009800201",
+        "2099220811009800202",
+        "2099220811009800203",
+        "2099220811009800204"
+      ]
+    }
+  ]
+}
