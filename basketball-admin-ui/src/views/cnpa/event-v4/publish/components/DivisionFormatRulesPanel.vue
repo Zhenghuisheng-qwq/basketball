@@ -63,6 +63,40 @@
                 <span>{{ maxTeamCount }} 支</span>
                 <span class="el-form-item__tip ml8">取自赛区「队伍上限」</span>
               </el-form-item>
+              <template v-if="selectedScheme === 'PLAYOFF'">
+                <el-form-item label="参赛组织">
+                  <span>不分组</span>
+                </el-form-item>
+                <el-form-item label="种子来源">
+                  <el-select v-model="quickParams.seedSource" style="width: 100%" @change="emitChange">
+                    <el-option
+                      v-for="opt in V4_PLAYOFF_SEED_SOURCE_OPTIONS"
+                      :key="opt.value"
+                      :label="opt.label"
+                      :value="opt.value"
+                      :disabled="opt.value === 'STANDING'"
+                    />
+                  </el-select>
+                  <div class="el-form-item__tip mt4">{{ playoffSeedTip }}</div>
+                </el-form-item>
+                <el-form-item label="首轮对阵">
+                  <span>固定种子对阵（高位对低位象限）</span>
+                </el-form-item>
+                <el-form-item label="轮次 BO">
+                  <div class="playoff-bo-list">
+                    <div v-for="(size, idx) in playoffRoundSizes" :key="size" class="playoff-bo-row">
+                      <span class="playoff-bo-name">{{ formatV4PlayoffStageName(size) }}</span>
+                      <el-select
+                        :model-value="(quickParams.playoffRoundBestOf || [])[idx] || 1"
+                        style="width: 120px"
+                        @change="(val) => updatePlayoffBestOf(idx, val)"
+                      >
+                        <el-option v-for="opt in V4_PLAYOFF_BEST_OF_OPTIONS" :key="opt.value" :label="opt.label" :value="opt.value" />
+                      </el-select>
+                    </div>
+                  </div>
+                </el-form-item>
+              </template>
               <template v-if="isGroupScheme(selectedScheme)">
                 <el-form-item label="分组数量">
                   <el-input-number v-model="quickParams.groupCount" :min="2" :max="maxTeamCount" controls-position="right" @change="emitChange" />
@@ -121,6 +155,11 @@
               <el-descriptions-item v-if="quickEstimate.eliminationMatches" label="淘汰赛预计场次">{{ quickEstimate.eliminationMatches }} 场</el-descriptions-item>
               <el-descriptions-item v-if="quickEstimate.totalMatches" label="总预计场次" :span="2">{{ quickEstimate.totalMatches }} 场（最终以实际审核队伍数为准）</el-descriptions-item>
             </el-descriptions>
+            <div v-if="selectedScheme === 'PLAYOFF' && playoffBracketLines.length" class="playoff-bracket-preview mt8">
+              <div class="scheme-section-title">首轮淘汰树预览</div>
+              <div v-for="(line, li) in playoffBracketLines" :key="li" class="playoff-bracket-line">{{ line }}</div>
+              <div class="el-form-item__tip mt4">Seed1 与 Seed2 分属不同半区，理论上仅在总决赛相遇。</div>
+            </div>
           </el-card>
         </template>
       </el-tab-pane>
@@ -279,7 +318,12 @@
 
                 <template v-if="stage.competitionFormat === 'SINGLE_ELIMINATION'">
                   <el-form-item label="对阵规则">
+                    <template v-if="isPlayoffBracketInheritStage(stage, sIndex)">
+                      <span class="readonly-info-value">继承淘汰树</span>
+                      <div class="el-form-item__tip mt4">后续淘汰阶段严格继承上一轮 Series Winner 路径，不再重新抽签或按排名重排。</div>
+                    </template>
                     <el-select
+                      v-else
                       :model-value="normalizeV4EliminationPairingRule(stage.pairingRule)"
                       style="width: 100%"
                       @change="(val: string) => patchStageField(stage, 'pairingRule', val)"
@@ -579,13 +623,18 @@ import {
   V4_CUSTOM_COMPETITION_FORMAT_OPTIONS,
   V4_BEST_OF_OPTIONS,
   V4_ELIMINATION_PAIRING_RULE_OPTIONS,
+  V4_PLAYOFF_SEED_SOURCE_OPTIONS,
+  V4_PLAYOFF_BEST_OF_OPTIONS,
   V4_GROUPING_MODE_GROUPED_OPTIONS,
   V4_WIZARD_STAGE_PRESET_OPTIONS,
   V4_WIZARD_TIE_BREAK_DEFAULTS,
   V4_WIZARD_GROUPING_MODE_OPTIONS,
   V4_WIZARD_TIE_BREAK_MIDDLE_OPTIONS,
   buildDefaultV4QuickCreateParams,
+  buildV4PlayoffBracketPreviewLines,
+  buildV4PlayoffRoundSizes,
   buildV4SchemeStagePayloads,
+  formatV4PlayoffStageName,
   buildV4WizardStagePresetForm,
   calcV4AdvancementTotal,
   calcV4FormatEstimateFromQuickParams,
@@ -790,11 +839,17 @@ function resolveStageOrganizationMode(stage: BasketDivisionStageVo): string {
 function normalizeStagesForUi() {
   const stages = snapshot.value?.stages
   if (!stages?.length) return
-  for (const stage of stages) {
+  const sorted = [...stages].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
+  for (let i = 0; i < sorted.length; i += 1) {
+    const stage = sorted[i]
     if (!stage.organizationMode) {
       stage.organizationMode = resolveV4OrganizationMode(stage)
     }
     stage.pairingRule = resolveV4StagePairingRuleForSave(stage)
+    // 连续淘汰后续轮强制继承淘汰树
+    if (isPlayoffBracketInheritStage(stage, i) && stage.pairingRule !== 'PLAYOFF_BRACKET') {
+      stage.pairingRule = 'PLAYOFF_BRACKET'
+    }
   }
 }
 
@@ -962,6 +1017,41 @@ function hasEliminationStage(schemeId: V4FormatSchemeId): boolean {
   return schemeId === 'SINGLE_ELIMINATION'
     || schemeId === 'ROUND_ROBIN_TO_ELIM'
     || schemeId === 'GROUP_TO_ELIM'
+}
+
+/** 连续淘汰阶段的后续轮：固定继承淘汰树，禁止再选 HIGH_VS_LOW / RANDOM_DRAW */
+function isPlayoffBracketInheritStage(stage: { competitionFormat?: string }, sIndex: number): boolean {
+  if (sIndex <= 0) return false
+  if ((stage.competitionFormat || '').toUpperCase() !== 'SINGLE_ELIMINATION') return false
+  const prev = sortedStages.value[sIndex - 1]
+  return !!prev && (prev.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION'
+}
+
+const playoffRoundSizes = computed(() => {
+  if (selectedScheme.value !== 'PLAYOFF') return [] as number[]
+  return buildV4PlayoffRoundSizes(quickParams.expectedTeamCount || props.maxTeamCount)
+})
+
+const playoffBracketLines = computed(() => {
+  if (selectedScheme.value !== 'PLAYOFF') return [] as string[]
+  return buildV4PlayoffBracketPreviewLines(quickParams.expectedTeamCount || props.maxTeamCount)
+})
+
+const playoffSeedTip = computed(() => {
+  const hit = V4_PLAYOFF_SEED_SOURCE_OPTIONS.find((o) => o.value === (quickParams.seedSource || 'TEAM_CREATE_TIME'))
+  if ((quickParams.seedSource || '') === 'STANDING') {
+    return '当前无可用积分排名阶段，请使用球队创建时间顺序或其他种子方式。'
+  }
+  return hit?.tip || ''
+})
+
+function updatePlayoffBestOf(idx: number, val: number) {
+  const sizes = playoffRoundSizes.value
+  const list = [...(quickParams.playoffRoundBestOf || sizes.map(() => 1))]
+  while (list.length < sizes.length) list.push(1)
+  list[idx] = val === 3 ? 3 : 1
+  quickParams.playoffRoundBestOf = list
+  emitChange()
 }
 
 function ensureRulesUiState() {
@@ -1935,4 +2025,9 @@ defineExpose({ reload: loadSnapshot })
 .bo-hint-alert {
   margin-top: 8px;
 }
+.playoff-bo-list { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.playoff-bo-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.playoff-bo-name { min-width: 72px; color: var(--el-text-color-regular); }
+.playoff-bracket-preview { padding: 8px 12px; background: var(--el-fill-color-lighter); border-radius: 6px; }
+.playoff-bracket-line { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height: 1.7; }
 </style>

@@ -53,10 +53,12 @@ public class MatchSeriesEliminationScheduleGenerator {
             throw new ServiceException("该阶段已存在系列赛，无法重复生成赛程");
         }
 
-        List<BasketDivisionStageTeam> orderedTeams = EliminationByeSupport.orderTeamsForPairing(
-                context.getStageTeams(), stage.getPairingRule(), random);
+        boolean playoff = PlayoffBracketSupport.isPlayoffBracket(stage.getPairingRule());
+        List<BasketDivisionStageTeam> orderedTeams = playoff
+                ? PlayoffBracketSupport.orderTeams(context.getStageTeams())
+                : EliminationByeSupport.orderTeamsForPairing(context.getStageTeams(), stage.getPairingRule(), random);
         int teamCount = orderedTeams.size();
-        Long byeTeamId = EliminationByeSupport.allowsBye(stage, teamCount)
+        Long byeTeamId = (!playoff && EliminationByeSupport.allowsBye(stage, teamCount))
                 ? EliminationByeSupport.resolveByeEventTeamId(orderedTeams) : null;
         List<BasketDivisionStageTeam> pairingTeams = byeTeamId != null
                 ? EliminationByeSupport.pairingTeams(orderedTeams, byeTeamId) : orderedTeams;
@@ -76,10 +78,19 @@ public class MatchSeriesEliminationScheduleGenerator {
         Date seriesMatchTime = resolveSeriesMatchTime(context.getDivision());
         Set<String> seenPairKeys = new HashSet<>();
         Date now = new Date();
+        BasketDivisionStageTeam[] pair = new BasketDivisionStageTeam[2];
 
         for (int slot = 0; slot < seriesCount; slot++) {
-            BasketDivisionStageTeam home = pairingTeams.get(slot);
-            BasketDivisionStageTeam away = pairingTeams.get(pairingSize - 1 - slot);
+            BasketDivisionStageTeam home;
+            BasketDivisionStageTeam away;
+            if (playoff) {
+                PlayoffBracketSupport.resolveAdjacentPair(pairingTeams, slot, pair);
+                home = pair[0];
+                away = pair[1];
+            } else {
+                home = pairingTeams.get(slot);
+                away = pairingTeams.get(pairingSize - 1 - slot);
+            }
 
             BasketMatchSeries series = buildSeries(context, batch, bestOf, roundNo, slot, home, away, now);
             if (seriesMapper.insert(series) != 1) {

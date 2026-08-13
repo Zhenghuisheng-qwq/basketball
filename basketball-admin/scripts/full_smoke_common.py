@@ -1155,7 +1155,15 @@ def create_teams_flow(admin_token: str, division_id: str, teams: list[dict], log
         if existing:
             tid = as_id(existing[0]["id"])
             t["team_id"] = tid
-            if int(existing[0].get("audit_status") or 0) != 1:
+            audit = int(existing[0].get("audit_status") or 0)
+            if audit != 1:
+                tok = web_login(t["captain_email"])
+                if audit == 4:  # DRAFT
+                    sr = req(f"{WEB}/basket/team/{tid}/submit-certification", "POST", {}, tok)
+                    if sr.get("code") != 200:
+                        msg = str(sr.get("msg") or "")
+                        if "审核中" not in msg and "已完成" not in msg and "已通过" not in msg:
+                            raise RuntimeError(f"submit certification failed existing {t['name']}: {sr}")
                 ar = approve_team(admin_token, tid)
                 if ar.get("code") != 200:
                     raise RuntimeError(f"approve existing team failed {t['name']}: {ar}")
@@ -1173,11 +1181,19 @@ def create_teams_flow(admin_token: str, division_id: str, teams: list[dict], log
         tok = web_login(t["captain_email"])
         # small delay to avoid clock-skew on brand-new grants
         time.sleep(0.3)
-        cr = create_team_via_web(tok, division_id, t["name"], t["short"], None)
+        # logo 需归属队长本人文件资产；冒烟默认不传，避免「无权使用该文件」
+        logo = logos[i % len(logos)] if logos else None
+        cr = create_team_via_web(tok, division_id, t["name"], t["short"], logo)
         if cr.get("code") != 200:
             raise RuntimeError(f"create team failed {t['name']}: {cr}")
         tid = as_id((cr.get("data") or {}).get("teamId") or (cr.get("data") or {}).get("id") or extract_id(cr))
         t["team_id"] = tid
+        # 球队创建后为 DRAFT，需先提交认证再进入 Admin 审核
+        sr = req(f"{WEB}/basket/team/{tid}/submit-certification", "POST", {}, tok)
+        if sr.get("code") != 200:
+            msg = str(sr.get("msg") or "")
+            if "审核中" not in msg and "已完成" not in msg and "已通过" not in msg:
+                raise RuntimeError(f"submit certification failed {t['name']}: {sr}")
         ar = approve_team(admin_token, tid)
         if ar.get("code") != 200:
             raise RuntimeError(f"approve team failed {t['name']}: {ar}")

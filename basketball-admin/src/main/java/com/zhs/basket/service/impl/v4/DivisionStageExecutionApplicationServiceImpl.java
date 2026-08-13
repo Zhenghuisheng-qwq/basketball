@@ -1,10 +1,13 @@
 package com.zhs.basket.service.impl.v4;
 
+import com.zhs.basket.domain.BasketTeam;
 import com.zhs.basket.domain.v4.*;
 import com.zhs.basket.dto.v4.BasketStageManualRankReq;
 import com.zhs.basket.enums.v4.*;
+import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
+import com.zhs.basket.support.v4.stage.PlayoffBracketSupport;
 import com.zhs.basket.support.v4.ByeQualificationService;
 import com.zhs.basket.support.v4.BestOfCapabilityGate;
 import com.zhs.basket.support.v4.MatchSeriesQualificationSyncService;
@@ -71,6 +74,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private StageSchedulePrerequisiteValidator schedulePrerequisiteValidator;
     @Autowired
     private ByeQualificationService byeQualificationService;
+    @Autowired
+    private BasketTeamMapper teamMapper;
 
     @Override
     public List<BasketDivisionStageExecutionListVo> listStages(Long divisionId) {
@@ -100,6 +105,9 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
 
         if (isFirstStage(stage)) {
             List<BasketEventTeam> eventTeams = eventTeamMapper.selectActiveByDivisionId(division.getId());
+            if (PlayoffBracketSupport.isPlayoffBracket(stage.getPairingRule())) {
+                eventTeams = sortEventTeamsBySourceTeamCreateTime(eventTeams);
+            }
             totalSourceCount = eventTeams.size();
             int nextSeed = existingStageTeams.stream()
                     .map(BasketDivisionStageTeam::getSeedNo)
@@ -129,14 +137,21 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
                     .filter(Objects::nonNull)
                     .max(Integer::compareTo)
                     .orElse(0) + 1;
+            boolean playoffInherit = PlayoffBracketSupport.isPlayoffBracket(stage.getPairingRule());
             for (BasketDivisionStageQualification qualification : confirmed) {
                 if (existingEventTeamIds.contains(qualification.getEventTeamId())) {
                     continue;
                 }
                 StageTeamEntryTypeEnum entryType = mapEntryType(qualification.getQualificationType());
+                int seedNo;
+                if (playoffInherit && qualification.getSourceRank() != null) {
+                    seedNo = qualification.getSourceRank();
+                } else {
+                    seedNo = nextSeed++;
+                }
                 toInsert.add(buildStageTeam(stage, qualification.getEventTeamId(),
                         previousStage.getId(), qualification.getGroupId(), qualification.getSourceRank(),
-                        nextSeed++, entryType.getCode(), now));
+                        seedNo, entryType.getCode(), now));
             }
         }
 
@@ -695,7 +710,6 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         }
 
         List<BasketDivisionStageQualification> result = new ArrayList<>();
-        int rank = 1;
         for (BasketV4Match match : finished) {
             QualificationTypeEnum type = nextStage == null
                     ? QualificationTypeEnum.CHAMPION : QualificationTypeEnum.MATCH_WINNER;
@@ -704,7 +718,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             row.setStageId(stage.getId());
             row.setEventTeamId(match.getWinnerEventTeamId());
             row.setQualificationType(type.getCode());
-            row.setSourceRank(rank++);
+            // 固定淘汰树：sourceRank = bracketSlot+1，供下一 Stage 相邻继承，禁止按完赛顺序重排
+            row.setSourceRank(match.getBracketSlot() != null ? match.getBracketSlot() + 1 : null);
             row.setTargetStageId(targetStageId);
             row.setQualificationStatus(QualificationRecordStatusEnum.PREVIEW.getCode());
             row.setActiveUniqueKey(buildQualificationActiveKey(row));
@@ -726,7 +741,6 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             throw new ServiceException("阶段尚无已结束系列赛，无法预览晋级");
         }
         List<BasketDivisionStageQualification> result = new ArrayList<>();
-        int rank = 1;
         for (BasketMatchSeries series : completed) {
             if (series.getWinnerEventTeamId() == null) {
                 continue;
@@ -738,7 +752,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             row.setStageId(stage.getId());
             row.setEventTeamId(series.getWinnerEventTeamId());
             row.setQualificationType(type.getCode());
-            row.setSourceRank(rank++);
+            // 与 MatchSeriesQualificationSyncService 一致：sourceRank = bracketSlot+1
+            row.setSourceRank(series.getBracketSlot() != null ? series.getBracketSlot() + 1 : null);
             row.setTargetStageId(targetStageId);
             row.setSourceSeriesId(series.getId());
             row.setQualificationStatus(QualificationRecordStatusEnum.PREVIEW.getCode());
@@ -833,6 +848,33 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             }
         }
         return context;
+    }
+
+    /**
+     * 季后赛默认种子：EventTeam → sourceTeamId → basket_team.create_time ASC, id ASC。
+     */
+    private List<BasketEventTeam> sortEventTeamsBySourceTeamCreateTime(List<BasketEventTeam> eventTeams) {
+        Map<Long, BasketTeam> teamCache = new HashMap<>();
+        return eventTeams.stream()
+                .sorted(Comparator
+                        .comparing((BasketEventTeam et) -> {
+                            BasketTeam team = resolveSourceTeam(et, teamCache);
+                            return team != null && team.getCreateTime() != null
+                                    ? team.getCreateTime().getTime() : Long.MAX_VALUE;
+                        })
+                        .thenComparing(et -> {
+                            BasketTeam team = resolveSourceTeam(et, teamCache);
+                            return team != null && team.getId() != null ? team.getId() : Long.MAX_VALUE;
+                        })
+                        .thenComparing(BasketEventTeam::getId, Comparator.nullsLast(Long::compareTo)))
+                .collect(Collectors.toList());
+    }
+
+    private BasketTeam resolveSourceTeam(BasketEventTeam eventTeam, Map<Long, BasketTeam> cache) {
+        if (eventTeam == null || eventTeam.getSourceTeamId() == null) {
+            return null;
+        }
+        return cache.computeIfAbsent(eventTeam.getSourceTeamId(), teamMapper::selectById);
     }
 
     private BasketDivisionStageTeam buildStageTeam(BasketDivisionStage stage,

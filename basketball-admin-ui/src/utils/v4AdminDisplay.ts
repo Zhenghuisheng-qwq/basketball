@@ -906,12 +906,61 @@ export const V4_BEST_OF_OPTIONS = [
 
 export const V4_ELIMINATION_PAIRING_RULE_OPTIONS = [
   { label: '高排名对低排名', value: 'HIGH_VS_LOW' },
-  { label: '随机抽签', value: 'RANDOM_DRAW' }
+  { label: '随机抽签', value: 'RANDOM_DRAW' },
+  { label: '继承淘汰树', value: 'PLAYOFF_BRACKET' }
 ] as const
+
+export const V4_PLAYOFF_SEED_SOURCE_OPTIONS = [
+  { label: '按球队创建时间顺序', value: 'TEAM_CREATE_TIME', tip: '默认方式。当前 Division 中越早创建的球队种子越高。' },
+  { label: '按积分赛排名', value: 'STANDING', tip: '按所选前置积分阶段最终排名生成 1~N 号种子。' }
+] as const
+
+export const V4_PLAYOFF_BEST_OF_OPTIONS = [
+  { label: 'BO1', value: 1 },
+  { label: 'BO3', value: 3 }
+] as const
+
+export function isV4PlayoffTeamCount(n: number): boolean {
+  return n === 4 || n === 8 || n === 16
+}
+
+export function buildV4PlayoffRoundSizes(teamCount: number): number[] {
+  if (!isV4PlayoffTeamCount(teamCount)) return []
+  const sizes: number[] = []
+  let n = teamCount
+  while (n >= 2) {
+    sizes.push(n)
+    n = n / 2
+  }
+  return sizes
+}
+
+export function formatV4PlayoffStageName(teamCount: number): string {
+  if (teamCount <= 2) return '总决赛'
+  if (teamCount === 4) return '4强赛'
+  if (teamCount === 8) return '8强赛'
+  if (teamCount === 16) return '16强赛'
+  return `${teamCount}强赛`
+}
+
+export function buildV4PlayoffBracketPreviewLines(teamCount: number): string[] {
+  const orderMap: Record<number, number[]> = {
+    4: [1, 4, 2, 3],
+    8: [1, 8, 4, 5, 2, 7, 3, 6],
+    16: [1, 16, 4, 13, 5, 12, 8, 9, 6, 11, 7, 10, 2, 15, 3, 14]
+  }
+  const order = orderMap[teamCount]
+  if (!order) return []
+  const lines: string[] = []
+  for (let i = 0; i < order.length; i += 2) {
+    lines.push(`Seed${order[i]} vs Seed${order[i + 1]}`)
+  }
+  return lines
+}
 
 export function normalizeV4EliminationPairingRule(rule?: string | null): string {
   const code = (rule || '').trim().toUpperCase()
-  if (code === 'HIGH_VS_LOW' || code === 'RANDOM_DRAW') return code
+  if (code === 'HIGH_VS_LOW' || code === 'RANDOM_DRAW' || code === 'PLAYOFF_BRACKET') return code
   // 历史 UI 曾写 RANDOM；统一映射到 RANDOM_DRAW。其余缺省回落高排名对低排名
   if (code === 'RANDOM') return 'RANDOM_DRAW'
   return 'HIGH_VS_LOW'
@@ -1368,6 +1417,7 @@ export type V4FormatSchemeId =
   | 'SINGLE_ELIMINATION'
   | 'ROUND_ROBIN_TO_ELIM'
   | 'GROUP_TO_ELIM'
+  | 'PLAYOFF'
   | 'CUSTOM'
 
 export interface V4FormatSchemeOption {
@@ -1427,6 +1477,15 @@ export const V4_FORMAT_SCHEME_OPTIONS: V4FormatSchemeOption[] = [
     baseTemplateCode: 'GROUP_STAGE_BASIC_V1'
   },
   {
+    id: 'PLAYOFF',
+    name: '季后赛',
+    summary: '按种子顺序生成完整固定淘汰树。默认 BO1，可按轮次配置 BO1 / BO3。生成后上下半区固定，胜者沿既定路径晋级。',
+    scene: '适合杯赛季后赛：全部队伍进入固定淘汰树直至决出冠军。',
+    flowSteps: ['全部队伍', '淘汰赛', '总决赛', '冠军'],
+    category: 'single',
+    baseTemplateCode: 'SINGLE_ELIM_BO1_V1'
+  },
+  {
     id: 'CUSTOM',
     name: '自定义组合',
     summary: '自行添加、调整多个比赛阶段，并配置晋级关系。',
@@ -1444,6 +1503,8 @@ export interface V4QuickCreateParams {
   advancePerGroup?: number
   overallAdvanceCount?: number
   pairingRule?: string
+  seedSource?: 'TEAM_CREATE_TIME' | 'STANDING'
+  playoffRoundBestOf?: number[]
 }
 
 export interface V4SchemeStagePayload {
@@ -1532,6 +1593,17 @@ export function buildDefaultV4QuickCreateParams(
     roundRobinCycles: 1,
     pairingRule: 'HIGH_VS_LOW'
   }
+  if (schemeId === 'PLAYOFF') {
+    const n = isV4PlayoffTeamCount(expectedTeamCount) ? expectedTeamCount : 16
+    const rounds = buildV4PlayoffRoundSizes(n)
+    return {
+      ...base,
+      expectedTeamCount: n,
+      pairingRule: 'PLAYOFF_BRACKET',
+      seedSource: 'TEAM_CREATE_TIME',
+      playoffRoundBestOf: rounds.map(() => 1)
+    }
+  }
   if (schemeId === 'GROUP_ROUND_ROBIN' || schemeId === 'GROUP_TO_ELIM') {
     const groupCount = expectedTeamCount >= 16 ? 4 : 2
     return { ...base, groupCount, advancePerGroup: 2 }
@@ -1548,6 +1620,38 @@ export function buildV4SchemeStagePayloads(
   params: V4QuickCreateParams
 ): V4SchemeStagePayload[] {
   const tieBreakRules = V4_WIZARD_TIE_BREAK_DEFAULTS.map((r) => ({ ...r }))
+  if (schemeId === 'PLAYOFF') {
+    const teamCount = params.expectedTeamCount
+    if (!isV4PlayoffTeamCount(teamCount)) {
+      return []
+    }
+    const sizes = buildV4PlayoffRoundSizes(teamCount)
+    const bestOfList = params.playoffRoundBestOf && params.playoffRoundBestOf.length === sizes.length
+      ? params.playoffRoundBestOf
+      : sizes.map(() => 1)
+    return sizes.map((size, idx) => {
+      const isFinal = idx === sizes.length - 1
+      const stageCode = isFinal ? 'FINAL' : `STAGE_${idx + 1}`
+      const next = isFinal ? undefined : (idx + 2 === sizes.length ? 'FINAL' : `STAGE_${idx + 2}`)
+      const bo = bestOfList[idx] === 3 ? 3 : 1
+      return {
+        stage: {
+          stageCode,
+          stageName: formatV4PlayoffStageName(size),
+          stageOrder: idx + 1,
+          stageType: isFinal ? 'FINAL' : 'KNOCKOUT',
+          organizationMode: 'UNGROUPED',
+          competitionFormat: 'SINGLE_ELIMINATION',
+          groupingMode: 'NONE',
+          bestOf: bo,
+          advancementType: isFinal ? 'NONE' : 'WINNER_ADVANCE',
+          pairingRule: 'PLAYOFF_BRACKET',
+          nextStageCode: next,
+          requiresManualConfirmation: 0
+        }
+      }
+    })
+  }
   if (schemeId === 'SINGLE_ELIMINATION') {
     return [{
       stage: {
@@ -1743,6 +1847,15 @@ export function validateV4QuickCreateParams(
   if (schemeId === 'SINGLE_ELIMINATION') {
     if (!isV4PowerOfTwo(expectedTeamCount)) {
       messages.push(`预计 ${expectedTeamCount} 支队伍直接淘汰赛，但系统暂不支持需要轮空的队伍规模。请调整队伍上限为 4、8、16 等 2 的幂次方。`)
+    }
+  }
+
+  if (schemeId === 'PLAYOFF') {
+    if (!isV4PlayoffTeamCount(expectedTeamCount)) {
+      messages.push(`当前快速季后赛模板支持 4 / 8 / 16 支队伍，当前队伍上限为 ${expectedTeamCount}。请调整赛区队伍上限，或使用自定义赛制。`)
+    }
+    if ((params.seedSource || 'TEAM_CREATE_TIME') === 'STANDING') {
+      messages.push('当前无可用积分排名阶段，请使用球队创建时间顺序或其他种子方式。')
     }
   }
 
@@ -1959,6 +2072,13 @@ export function formatV4QuickCreateNaturalLanguage(
   if (schemeId === 'SINGLE_ELIMINATION') {
     return `${expectedTeamCount} 支队伍直接进入 BO1 单败淘汰赛，最终决出冠军。`
   }
+  if (schemeId === 'PLAYOFF') {
+    const sizes = buildV4PlayoffRoundSizes(expectedTeamCount)
+    const bos = params.playoffRoundBestOf || sizes.map(() => 1)
+    const rounds = sizes.map((size, idx) => `${formatV4PlayoffStageName(size)}（${size}→${size / 2}，BO${bos[idx] === 3 ? 3 : 1}）`).join(' → ')
+    const seed = (params.seedSource || 'TEAM_CREATE_TIME') === 'STANDING' ? '按积分赛排名' : '按球队创建时间顺序'
+    return `${expectedTeamCount} 支队伍进入季后赛固定淘汰树；种子来源：${seed}；阶段：${rounds}。首轮按固定象限落位，后续轮严格继承上一轮 Series Winner，不再重新抽签或重排种子。`
+  }
   if (schemeId === 'ROUND_ROBIN_TO_ELIM') {
     const adv = params.overallAdvanceCount ?? 8
     return `${expectedTeamCount} 支队伍进行单循环，总排名前 ${adv} 名晋级，共 ${adv} 支球队进入 BO1 单败淘汰赛，最终决出冠军。`
@@ -2142,6 +2262,12 @@ export function resolveV4WizardFormatDisplayStatus(
 export function inferV4FormatSchemeFromStages(stages: V4StageSummaryInput[]): V4FormatSchemeId | null {
   if (!stages.length) return null
   const sorted = [...stages].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
+  const allPlayoffBracket = sorted.length >= 2
+    && sorted.every((s) => (s.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION')
+    && sorted.every((s) => normalizeV4EliminationPairingRule(s.pairingRule) === 'PLAYOFF_BRACKET')
+  if (allPlayoffBracket) {
+    return 'PLAYOFF'
+  }
   if (sorted.length === 1) {
     const s = sorted[0]
     if ((s.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION') return 'SINGLE_ELIMINATION'
