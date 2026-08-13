@@ -60,7 +60,7 @@ const bannerStatus = computed(() => {
   const regStatus = (division.value?.myRegistrationStatus || '').toUpperCase()
   if (regStatus) {
     return {
-      text: v4RegistrationStatusLabel(regStatus),
+      text: v4RegistrationStatusLabel(regStatus, division.value?.participationRole),
       type: regStatus === 'APPROVED' ? 'success' as const : regStatus === 'REJECTED' ? 'danger' as const : 'info' as const,
     }
   }

@@ -11,6 +11,8 @@ import com.zhs.basket.enums.v4.RegistrationStatusEnum;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketEventTeamMapper;
 import com.zhs.basket.service.v4.IBasketV4RosterVersionService;
+import com.zhs.basket.service.v4.IBasketV4RuleVersionService;
+import com.zhs.basket.support.v4.version.RosterWorkflowSupport;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -31,6 +33,8 @@ public class TeamRosterSupport {
     private BasketEventTeamMapper eventTeamMapper;
     @Autowired
     private IBasketV4RosterVersionService rosterVersionService;
+    @Autowired
+    private IBasketV4RuleVersionService ruleVersionService;
 
     public boolean isTeamDirect(BasketRegistration registration) {
         if (registration == null) {
@@ -117,6 +121,8 @@ public class TeamRosterSupport {
 
     public List<BasketEventTeam> selectFormalEventTeams(Long divisionId) {
         BasketDivisionRosterVersion current = rosterVersionService.getCurrentLockedVersion(divisionId);
+        RosterWorkflowSupport.assertStructureRosterReady(ruleVersionService.getCurrent(divisionId), current,
+                divisionId == null ? null : divisionMapper.selectById(divisionId));
         if (current != null) {
             return eventTeamMapper.selectActiveByDivisionAndRosterVersion(divisionId, current.getId());
         }

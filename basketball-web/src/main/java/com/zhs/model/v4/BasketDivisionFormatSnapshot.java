@@ -23,6 +23,8 @@ public class BasketDivisionFormatSnapshot implements Serializable {
 
     private String snapshotStatus;
 
+    private String rosterWorkflowMode;
+
     private Integer isCurrent;
 
     private Date createTime;

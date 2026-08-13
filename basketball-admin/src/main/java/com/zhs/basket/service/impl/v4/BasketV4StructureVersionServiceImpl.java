@@ -1,12 +1,15 @@
 package com.zhs.basket.service.impl.v4;
 
+import com.zhs.basket.domain.v4.BasketDivision;
 import com.zhs.basket.domain.v4.BasketDivisionRosterVersion;
 import com.zhs.basket.domain.v4.BasketScheduleBatch;
+import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.enums.v4.StructureStatusEnum;
 import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
 import com.zhs.basket.service.v4.IBasketV4RosterVersionService;
 import com.zhs.basket.service.v4.IBasketV4RuleVersionService;
 import com.zhs.basket.service.v4.IBasketV4StructureVersionService;
+import com.zhs.basket.support.v4.version.RosterWorkflowSupport;
 import com.zhs.basket.support.v4.version.RuleVersionView;
 import com.zhs.basket.support.v4.version.StructureVersionContext;
 import com.zhs.common.exception.ServiceException;
@@ -23,6 +26,8 @@ public class BasketV4StructureVersionServiceImpl implements IBasketV4StructureVe
     private IBasketV4RuleVersionService ruleVersionService;
     @Autowired
     private IBasketV4RosterVersionService rosterVersionService;
+    @Autowired
+    private BasketDivisionMapper divisionMapper;
 
     @Override
     public StructureVersionContext resolveForGenerate(Long divisionId) {
@@ -34,6 +39,8 @@ public class BasketV4StructureVersionServiceImpl implements IBasketV4StructureVe
             context.setRuleVersionNo(rule.getRuleVersionNo());
         }
         BasketDivisionRosterVersion roster = rosterVersionService.getCurrentLockedVersion(divisionId);
+        BasketDivision division = divisionMapper.selectById(divisionId);
+        RosterWorkflowSupport.assertStructureRosterReady(rule, roster, division);
         if (roster != null) {
             context.setRosterVersionId(roster.getId());
             context.setRosterVersionNo(roster.getVersionNo());

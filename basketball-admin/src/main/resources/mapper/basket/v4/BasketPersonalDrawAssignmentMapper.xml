@@ -92,4 +92,16 @@
         where draw_team_id = #{drawTeamId} and is_delete = 0
     </update>
 
+    <update id="softDeleteByBatchId">
+        update basket_personal_draw_assignment set is_delete = 1, update_time = now()
+        where draw_batch_id = #{drawBatchId} and is_delete = 0
+    </update>
+
+    <select id="selectByPersonalRegistrationId" resultMap="BasketPersonalDrawAssignmentResult">
+        select <include refid="BaseColumns" /> from basket_personal_draw_assignment
+        where personal_registration_id = #{personalRegistrationId} and is_delete = 0
+        order by id desc
+        limit 1
+    </select>
+
 </mapper>

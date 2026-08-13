@@ -9,6 +9,7 @@
         <result property="rosterVersionId" column="roster_version_id" />
         <result property="registrationId" column="registration_id" />
         <result property="sourceTeamId" column="source_team_id" />
+        <result property="sourceDrawTeamId" column="source_draw_team_id" />
         <result property="teamNameSnapshot" column="team_name_snapshot" />
         <result property="teamLogoFileId" column="team_logo_file_id" />
         <result property="teamShortName" column="team_short_name" />
@@ -41,7 +42,7 @@
         <result property="createTime" column="create_time" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, division_id, roster_version_id, registration_id, source_team_id, team_name_snapshot, team_logo_file_id, team_short_name, captain_player_id, captain_member_id, event_team_no, event_team_status, platform_code, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, division_id, roster_version_id, registration_id, source_team_id, source_draw_team_id, team_name_snapshot, team_logo_file_id, team_short_name, captain_player_id, captain_member_id, event_team_no, event_team_status, platform_code, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketEventTeamResult">
         select <include refid="BaseColumns" /> from basket_event_team
@@ -109,9 +110,9 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_event_team (
-            season_id, division_id, roster_version_id, registration_id, source_team_id, team_name_snapshot, team_logo_file_id, team_short_name, captain_player_id, captain_member_id, event_team_no, event_team_status, platform_code, create_time, update_time, is_delete
+            season_id, division_id, roster_version_id, registration_id, source_team_id, source_draw_team_id, team_name_snapshot, team_logo_file_id, team_short_name, captain_player_id, captain_member_id, event_team_no, event_team_status, platform_code, create_time, update_time, is_delete
         ) values (
-            #{seasonId}, #{divisionId}, #{rosterVersionId}, #{registrationId}, #{sourceTeamId}, #{teamNameSnapshot}, #{teamLogoFileId}, #{teamShortName}, #{captainPlayerId}, #{captainMemberId}, #{eventTeamNo}, #{eventTeamStatus}, #{platformCode}, #{createTime}, #{updateTime}, #{isDelete}
+            #{seasonId}, #{divisionId}, #{rosterVersionId}, #{registrationId}, #{sourceTeamId}, #{sourceDrawTeamId}, #{teamNameSnapshot}, #{teamLogoFileId}, #{teamShortName}, #{captainPlayerId}, #{captainMemberId}, #{eventTeamNo}, #{eventTeamStatus}, #{platformCode}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 

@@ -10,14 +10,19 @@
             d.division_name as divisionName,
             t.temporary_team_code as temporaryTeamCode,
             t.temporary_team_name as temporaryTeamName,
+            t.expected_member_count as expectedMemberCount,
             t.actual_member_count as actualMemberCount,
             t.long_term_team_id as longTermTeamId,
             lt.team_name as longTermTeamName,
             t.formation_status as formationStatus,
             t.converted_registration_id as convertedRegistrationId,
-            t.confirmed_time as confirmedTime
+            t.confirmed_time as confirmedTime,
+            b.batch_status as batchStatus,
+            s.roster_workflow_mode as rosterWorkflowMode
         from basket_personal_draw_team t
-        join basket_personal_draw_batch b on b.id = t.draw_batch_id and b.is_delete = 0 and b.batch_status = 'CONFIRMED'
+        join basket_personal_draw_batch b on b.id = t.draw_batch_id and b.is_delete = 0
+            and b.batch_status in ('CONFIRMED', 'GENERATED', 'ADJUSTING', 'LOCKED')
+        left join basket_division_format_snapshot s on s.division_id = t.division_id and s.is_current = 1 and s.is_delete = 0
         left join basket_division d on d.id = t.division_id and d.is_delete = 0
         left join basket_team lt on lt.id = t.long_term_team_id and lt.is_delete = 0
         where t.is_delete = 0

@@ -12,11 +12,19 @@ public interface BasketRegistrationMapper {
 
     List<BasketRegistration> selectList(BasketRegistration query);
 
+    List<BasketRegistration> selectByDivisionId(@Param("divisionId") Long divisionId);
+
     BasketRegistration selectByDivisionTeam(@Param("divisionId") Long divisionId, @Param("teamId") Long teamId);
 
     List<BasketRegistrationAuditListVo> selectAuditVoList(BasketRegistrationAuditQuery query);
 
     int countApprovedByDivisionId(@Param("divisionId") Long divisionId);
+
+    int countApprovedByDivisionAndRole(@Param("divisionId") Long divisionId, @Param("participationRole") String participationRole);
+
+    int selectMaxCandidateOrder(@Param("divisionId") Long divisionId);
+
+    int updateParticipation(BasketRegistration entity);
 
     int countPendingReviewByDivisionId(@Param("divisionId") Long divisionId);
 

@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface BasketMemberAccountMapper {
     BasketMemberAccount selectById(Long id);
+    java.util.List<BasketMemberAccount> selectByIds(@org.apache.ibatis.annotations.Param("ids") java.util.List<Long> ids);
     List<AccountPlayerListVo> selectList(AccountPlayerQuery query);
     AccountPlayerDetailVo selectDetail(Long memberId);
 }

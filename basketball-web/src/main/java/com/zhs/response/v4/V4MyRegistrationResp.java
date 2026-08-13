@@ -14,6 +14,7 @@ public class V4MyRegistrationResp {
     private String platformCode;
     private String teamName;
     private String registrationStatus;
+    private String participationRole;
     private Integer lineupCount;
     private Date submitTime;
     private Date approveTime;

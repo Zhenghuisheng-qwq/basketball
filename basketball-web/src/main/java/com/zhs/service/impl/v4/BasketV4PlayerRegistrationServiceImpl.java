@@ -143,14 +143,15 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         if (registration != null) {
             resp.setMyRegistrationStatus(registration.getRegistrationStatus());
             resp.setMyRegistrationId(registration.getId());
+            resp.setParticipationRole(registration.getParticipationRole());
         }
 
         Integer approved = playerRegistrationMapper.countApprovedByDivisionId(divisionId);
         resp.setApprovedTeamCount(approved == null ? 0 : approved);
         if (division.getMaxTeamCount() != null) {
             resp.setMaxTeamCount(division.getMaxTeamCount());
-            resp.setRemainingTeamCount(Math.max(division.getMaxTeamCount() - resp.getApprovedTeamCount(), 0));
         }
+        resp.setRemainingTeamCount(null);
 
         if (RegistrationModeEnum.PERSONAL.getCode().equals(division.getRegistrationMode())) {
             resp.setCanRegister(false);
@@ -194,11 +195,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         captainGrantSupport.assertTeamBindingForRegistration(grant, team);
 
         Date now = new Date();
-        Integer approved = playerRegistrationMapper.countApprovedByDivisionId(division.getId());
         Integer remaining = null;
-        if (division.getMaxTeamCount() != null) {
-            remaining = Math.max(division.getMaxTeamCount() - (approved == null ? 0 : approved), 0);
-        }
         BasketRegistration existingForEligibility = findRegistration(req.getDivisionId(), req.getTeamId());
         TeamRegistrationEligibility eligibility = eligibilitySupport.evaluate(
                 division, grant, team,
@@ -267,11 +264,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         BasketCaptainGrant grant = requireActiveGrant(registration.getDivisionId(), registration.getCaptainPlayerId());
         BasketTeam team = requireValidTeamEntity(registration.getTeamId());
         Date eligibilityNow = new Date();
-        Integer approvedCount = playerRegistrationMapper.countApprovedByDivisionId(division.getId());
         Integer remainingCount = null;
-        if (division.getMaxTeamCount() != null) {
-            remainingCount = Math.max(division.getMaxTeamCount() - (approvedCount == null ? 0 : approvedCount), 0);
-        }
         TeamRegistrationEligibility submitEligibility = eligibilitySupport.evaluate(
                 division, grant, team, registration.getRegistrationStatus(), remainingCount, eligibilityNow);
         // 驳回/草稿重提：窗口关闭后不允许再 mutate（与列表 canRegister 一致）
@@ -387,8 +380,9 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
             row.setMyGrantStatus(grant.getGrantStatus());
         }
 
+        row.setRemainingTeamCount(null);
         TeamRegistrationEligibility eligibility = eligibilitySupport.evaluate(
-                division, grant, team, row.getMyRegistrationStatus(), row.getRemainingTeamCount(), now);
+                division, grant, team, row.getMyRegistrationStatus(), null, now);
         applyEligibility(row, eligibility);
     }
 

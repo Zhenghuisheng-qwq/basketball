@@ -83,24 +83,35 @@ public class BasketV4PersonalFormationServiceImpl implements IBasketV4PersonalFo
     @Resource
     private BasketPlayerPlatformAccountDao platformAccountDao;
     @Resource
+    private BasketDivisionFormatSnapshotDao formatSnapshotDao;
+    @Resource
     private IAccountTeamService accountTeamService;
     @Resource
     private TeamMemberJoinHelper teamMemberJoinHelper;
 
     @Override
     public TeamDetailResp createLongTermTeam(Long drawTeamId, TeamCreateReq req, String clientIp) {
-        requireCaptainTeam(drawTeamId);
+        BasketPersonalDrawTeam team = requireCaptainTeam(drawTeamId);
+        rejectIfVersioned(team.getDivisionId());
         return accountTeamService.createForPersonalFormation(drawTeamId, req, clientIp);
     }
 
     @Override
     public List<V4PersonalFormationTaskResp> listFormationTasks() {
-        return personalFormationMapper.selectFormationTasksByCaptainUserId(UserContext.getRequiredMemberId());
+        List<V4PersonalFormationTaskResp> tasks =
+                personalFormationMapper.selectFormationTasksByCaptainUserId(UserContext.getRequiredMemberId());
+        for (V4PersonalFormationTaskResp task : tasks) {
+            if (task.getDrawTeamId() != null) {
+                task.setMembers(personalFormationMapper.selectFormationMembers(task.getDrawTeamId()));
+            }
+            task.setNeedsLongTermBind(!isVersionedWorkflow(task.getRosterWorkflowMode()));
+        }
+        return tasks;
     }
 
     @Override
     public V4PersonalFormationTaskResp getFormationDetail(Long drawTeamId) {
-        requireCaptainTeam(drawTeamId);
+        BasketPersonalDrawTeam drawTeam = requireCaptainTeam(drawTeamId);
         V4PersonalFormationDetailResp detail = personalFormationMapper.selectFormationDetail(drawTeamId);
         if (detail == null) {
             throw new ServiceException("组队任务不存在");
@@ -119,12 +130,14 @@ public class BasketV4PersonalFormationServiceImpl implements IBasketV4PersonalFo
         resp.setFormationStatus(detail.getFormationStatus());
         resp.setConvertedRegistrationId(detail.getConvertedRegistrationId());
         resp.setMembers(personalFormationMapper.selectFormationMembers(drawTeamId));
+        resp.setNeedsLongTermBind(!isVersioned(drawTeam.getDivisionId()));
         return resp;
     }
 
     @Override
     public List<V4PersonalFormationAvailableTeamResp> listAvailableTeams(Long drawTeamId) {
         BasketPersonalDrawTeam drawTeam = requireCaptainTeam(drawTeamId);
+        rejectIfVersioned(drawTeam.getDivisionId());
         BasketDivision division = requireDivision(drawTeam.getDivisionId());
         List<BasketPersonalDrawAssignment> assignments = listAssignments(drawTeam.getId());
         Set<Long> assignedPlayerIds = assignments.stream()
@@ -148,6 +161,7 @@ public class BasketV4PersonalFormationServiceImpl implements IBasketV4PersonalFo
             throw new ServiceException("drawTeamId / longTermTeamId 不能为空");
         }
         BasketPersonalDrawTeam team = requireCaptainTeam(req.getDrawTeamId());
+        rejectIfVersioned(team.getDivisionId());
         if (team.getConvertedRegistrationId() != null) {
             throw new ServiceException("该临时队伍已转换");
         }
@@ -197,6 +211,7 @@ public class BasketV4PersonalFormationServiceImpl implements IBasketV4PersonalFo
     @Transactional(rollbackFor = Exception.class)
     public Long confirmFormation(Long drawTeamId) {
         BasketPersonalDrawTeam team = requireCaptainTeam(drawTeamId);
+        rejectIfVersioned(team.getDivisionId());
         if (team.getConvertedRegistrationId() != null) {
             return team.getConvertedRegistrationId();
         }
@@ -480,6 +495,25 @@ public class BasketV4PersonalFormationServiceImpl implements IBasketV4PersonalFo
             throw new ServiceException("Division 不存在");
         }
         return division;
+    }
+
+    private void rejectIfVersioned(Long divisionId) {
+        if (isVersioned(divisionId)) {
+            throw new ServiceException("VERSIONED PERSONAL Division 临时队长无需绑定长期球队，锁定后请使用本队比赛提交");
+        }
+    }
+
+    private boolean isVersioned(Long divisionId) {
+        BasketDivisionFormatSnapshot snapshot = formatSnapshotDao.selectOne(new LambdaQueryWrapper<BasketDivisionFormatSnapshot>()
+                .eq(BasketDivisionFormatSnapshot::getDivisionId, divisionId)
+                .eq(BasketDivisionFormatSnapshot::getIsCurrent, 1)
+                .eq(BasketDivisionFormatSnapshot::getIsDelete, NOT_DELETED)
+                .last("limit 1"));
+        return snapshot != null && isVersionedWorkflow(snapshot.getRosterWorkflowMode());
+    }
+
+    private boolean isVersionedWorkflow(String rosterWorkflowMode) {
+        return "VERSIONED".equals(rosterWorkflowMode);
     }
 
     private void requireValidTeam(Long teamId) {

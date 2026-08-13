@@ -2,6 +2,9 @@ package com.zhs.basket.enums.v4;
 
 public enum DrawBatchStatusEnum {
     DRAFT("DRAFT", "草稿"),
+    GENERATED("GENERATED", "已生成"),
+    ADJUSTING("ADJUSTING", "调整中"),
+    LOCKED("LOCKED", "已锁定"),
     CONFIRMED("CONFIRMED", "已确认"),
     CANCELLED("CANCELLED", "已取消"),
     CONVERTED("CONVERTED", "已转换");
@@ -20,6 +23,14 @@ public enum DrawBatchStatusEnum {
 
     public String getDescription() {
         return description;
+    }
+
+    public boolean isEditable() {
+        return this == DRAFT || this == GENERATED || this == ADJUSTING || this == CONFIRMED;
+    }
+
+    public boolean isLockedOrConverted() {
+        return this == LOCKED || this == CONVERTED;
     }
 
     public static DrawBatchStatusEnum fromCode(String code) {

@@ -8,6 +8,7 @@
         <result property="divisionId" column="division_id"/>
         <result property="registrationId" column="registration_id"/>
         <result property="teamId" column="team_id"/>
+        <result property="eventTeamId" column="event_team_id"/>
         <result property="participationRole" column="participation_role"/>
         <result property="candidateOrder" column="candidate_order"/>
         <result property="createTime" column="create_time"/>
@@ -15,7 +16,7 @@
         <result property="isDelete" column="is_delete"/>
     </resultMap>
 
-    <sql id="BaseColumns">id, roster_version_id, division_id, registration_id, team_id,
+    <sql id="BaseColumns">id, roster_version_id, division_id, registration_id, team_id, event_team_id,
         participation_role, candidate_order, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="Result">
@@ -37,21 +38,21 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_division_roster_entry (
-            roster_version_id, division_id, registration_id, team_id,
+            roster_version_id, division_id, registration_id, team_id, event_team_id,
             participation_role, candidate_order, create_time, update_time, is_delete
         ) values (
-            #{rosterVersionId}, #{divisionId}, #{registrationId}, #{teamId},
+            #{rosterVersionId}, #{divisionId}, #{registrationId}, #{teamId}, #{eventTeamId},
             #{participationRole}, #{candidateOrder}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
     <insert id="batchInsert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_division_roster_entry (
-            roster_version_id, division_id, registration_id, team_id,
+            roster_version_id, division_id, registration_id, team_id, event_team_id,
             participation_role, candidate_order, create_time, update_time, is_delete
         ) values
         <foreach collection="list" item="item" separator=",">
-            (#{item.rosterVersionId}, #{item.divisionId}, #{item.registrationId}, #{item.teamId},
+            (#{item.rosterVersionId}, #{item.divisionId}, #{item.registrationId}, #{item.teamId}, #{item.eventTeamId},
              #{item.participationRole}, #{item.candidateOrder}, #{item.createTime}, #{item.updateTime}, #{item.isDelete})
         </foreach>
     </insert>

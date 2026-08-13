@@ -20,5 +20,8 @@ public class V4PersonalFormationTaskResp {
     private String formationStatus;
     private Long convertedRegistrationId;
     private Date confirmedTime;
+    private String batchStatus;
+    private String rosterWorkflowMode;
+    private Boolean needsLongTermBind;
     private List<V4PersonalFormationMemberResp> members;
 }

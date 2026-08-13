@@ -14,6 +14,8 @@
         <result property="captainPlayerId" column="captain_player_id" />
         <result property="captainMemberId" column="captain_member_id" />
         <result property="registrationStatus" column="registration_status" />
+        <result property="participationRole" column="participation_role" />
+        <result property="candidateOrder" column="candidate_order" />
         <result property="lineupCount" column="lineup_count" />
         <result property="submitTime" column="submit_time" />
         <result property="approveTime" column="approve_time" />
@@ -40,7 +42,7 @@
         <result property="submitTime" column="submit_time" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, division_id, registration_mode, registration_source, source_personal_draw_team_id, source_personal_draw_batch_id, team_id, captain_player_id, captain_member_id, registration_status, lineup_count, submit_time, approve_time, reject_reason, withdraw_time, audit_user_id, audit_remark, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, division_id, registration_mode, registration_source, source_personal_draw_team_id, source_personal_draw_batch_id, team_id, captain_player_id, captain_member_id, registration_status, participation_role, candidate_order, lineup_count, submit_time, approve_time, reject_reason, withdraw_time, audit_user_id, audit_remark, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketRegistrationResult">
         select <include refid="BaseColumns" /> from basket_registration
@@ -52,6 +54,35 @@
         where is_delete = 0
         order by id desc
     </select>
+
+    <select id="selectByDivisionId" resultMap="BasketRegistrationResult">
+        select <include refid="BaseColumns" /> from basket_registration
+        where division_id = #{divisionId} and is_delete = 0
+        order by submit_time asc, id asc
+    </select>
+
+    <select id="countApprovedByDivisionAndRole" resultType="int">
+        select count(1) from basket_registration
+        where division_id = #{divisionId}
+          and registration_status = 'APPROVED'
+          and participation_role = #{participationRole}
+          and is_delete = 0
+    </select>
+
+    <select id="selectMaxCandidateOrder" resultType="int">
+        select ifnull(max(candidate_order), 0) from basket_registration
+        where division_id = #{divisionId}
+          and participation_role = 'CANDIDATE'
+          and is_delete = 0
+    </select>
+
+    <update id="updateParticipation">
+        update basket_registration
+        set participation_role = #{participationRole},
+            candidate_order = #{candidateOrder},
+            update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
 
     <select id="selectByDivisionTeam" resultMap="BasketRegistrationResult">
         select <include refid="BaseColumns" /> from basket_registration
@@ -131,6 +162,8 @@
             <if test="captainPlayerId != null">captain_player_id = #{captainPlayerId},</if>
             <if test="captainMemberId != null">captain_member_id = #{captainMemberId},</if>
             <if test="registrationStatus != null">registration_status = #{registrationStatus},</if>
+            <if test="participationRole != null">participation_role = #{participationRole},</if>
+            <if test="candidateOrder != null">candidate_order = #{candidateOrder},</if>
             <if test="lineupCount != null">lineup_count = #{lineupCount},</if>
             <if test="submitTime != null">submit_time = #{submitTime},</if>
             <if test="approveTime != null">approve_time = #{approveTime},</if>

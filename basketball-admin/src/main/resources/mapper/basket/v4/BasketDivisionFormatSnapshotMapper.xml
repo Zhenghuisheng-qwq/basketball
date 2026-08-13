@@ -11,6 +11,7 @@
         <result property="sourceTemplateVersion" column="source_template_version"/>
         <result property="snapshotVersion" column="snapshot_version"/>
         <result property="snapshotStatus" column="snapshot_status"/>
+        <result property="rosterWorkflowMode" column="roster_workflow_mode"/>
         <result property="isCurrent" column="is_current"/>
         <result property="activeUniqueKey" column="active_unique_key"/>
         <result property="supersededSnapshotId" column="superseded_snapshot_id"/>
@@ -42,12 +43,12 @@
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_division_format_snapshot (
             division_id, source_template_id, source_template_code, source_template_name,
-            source_template_version, snapshot_version, snapshot_status, is_current, active_unique_key,
+            source_template_version, snapshot_version, snapshot_status, roster_workflow_mode, is_current, active_unique_key,
             superseded_snapshot_id, superseded_time, locked_time, locked_by,
             create_time, update_time, is_delete
         ) values (
             #{divisionId}, #{sourceTemplateId}, #{sourceTemplateCode}, #{sourceTemplateName},
-            #{sourceTemplateVersion}, #{snapshotVersion}, #{snapshotStatus}, #{isCurrent}, #{activeUniqueKey},
+            #{sourceTemplateVersion}, #{snapshotVersion}, #{snapshotStatus}, #{rosterWorkflowMode}, #{isCurrent}, #{activeUniqueKey},
             #{supersededSnapshotId}, #{supersededTime}, #{lockedTime}, #{lockedBy},
             #{createTime}, #{updateTime}, #{isDelete}
         )
@@ -57,6 +58,7 @@
         update basket_division_format_snapshot
         <set>
             <if test="snapshotStatus != null">snapshot_status = #{snapshotStatus},</if>
+            <if test="rosterWorkflowMode != null">roster_workflow_mode = #{rosterWorkflowMode},</if>
             <if test="isCurrent != null">is_current = #{isCurrent},</if>
             <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
             <if test="activeUniqueKey == null and isCurrent != null and isCurrent == 0">active_unique_key = null,</if>

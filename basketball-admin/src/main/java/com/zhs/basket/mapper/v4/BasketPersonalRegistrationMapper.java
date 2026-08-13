@@ -16,6 +16,10 @@ public interface BasketPersonalRegistrationMapper {
 
     int countApprovedByDivisionId(@Param("divisionId") Long divisionId);
 
+    java.util.List<BasketPersonalRegistration> selectApprovedByDivisionId(@Param("divisionId") Long divisionId);
+
+    int updateAssignedDrawTeamId(@Param("id") Long id, @Param("assignedDrawTeamId") Long assignedDrawTeamId);
+
     int countPendingReviewByDivisionId(@Param("divisionId") Long divisionId);
 
     int countActiveByDivisionId(@Param("divisionId") Long divisionId);

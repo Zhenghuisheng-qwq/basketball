@@ -6,6 +6,7 @@
         <id property="id" column="id" />
         <result property="seasonId" column="season_id" />
         <result property="divisionId" column="division_id" />
+        <result property="rosterVersionId" column="roster_version_id" />
         <result property="eventTeamId" column="event_team_id" />
         <result property="sourcePlayerId" column="source_player_id" />
         <result property="memberId" column="member_id" />
@@ -42,7 +43,7 @@
         <result property="createTime" column="create_time" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, division_id, event_team_id, source_player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, avatar_file_id, position, jersey_no, is_captain, is_starter, event_player_status, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, division_id, roster_version_id, event_team_id, source_player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, avatar_file_id, position, jersey_no, is_captain, is_starter, event_player_status, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketEventPlayerResult">
         select <include refid="BaseColumns" /> from basket_event_player
@@ -89,6 +90,16 @@
         limit 1
     </select>
 
+    <select id="selectByDivisionRosterSourcePlayer" resultMap="BasketEventPlayerResult">
+        select <include refid="BaseColumns" /> from basket_event_player
+        where division_id = #{divisionId}
+          and source_player_id = #{sourcePlayerId}
+          and is_delete = 0
+          <if test="rosterVersionId == null">and roster_version_id is null</if>
+          <if test="rosterVersionId != null">and roster_version_id = #{rosterVersionId}</if>
+        limit 1
+    </select>
+
     <select id="selectByEventTeamId" resultMap="BasketEventPlayerResult">
         select <include refid="BaseColumns" /> from basket_event_player
         where event_team_id = #{eventTeamId} and is_delete = 0
@@ -97,18 +108,18 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_event_player (
-            season_id, division_id, event_team_id, source_player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, avatar_file_id, position, jersey_no, is_captain, is_starter, event_player_status, create_time, update_time, is_delete
+            season_id, division_id, roster_version_id, event_team_id, source_player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, avatar_file_id, position, jersey_no, is_captain, is_starter, event_player_status, create_time, update_time, is_delete
         ) values (
-            #{seasonId}, #{divisionId}, #{eventTeamId}, #{sourcePlayerId}, #{memberId}, #{platformIdentityId}, #{platformCode}, #{gameIdSnapshot}, #{playerNameSnapshot}, #{avatarFileId}, #{position}, #{jerseyNo}, #{isCaptain}, #{isStarter}, #{eventPlayerStatus}, #{createTime}, #{updateTime}, #{isDelete}
+            #{seasonId}, #{divisionId}, #{rosterVersionId}, #{eventTeamId}, #{sourcePlayerId}, #{memberId}, #{platformIdentityId}, #{platformCode}, #{gameIdSnapshot}, #{playerNameSnapshot}, #{avatarFileId}, #{position}, #{jerseyNo}, #{isCaptain}, #{isStarter}, #{eventPlayerStatus}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
     <insert id="batchInsert">
         insert into basket_event_player (
-            season_id, division_id, event_team_id, source_player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, avatar_file_id, position, jersey_no, is_captain, is_starter, event_player_status, create_time, update_time, is_delete
+            season_id, division_id, roster_version_id, event_team_id, source_player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, avatar_file_id, position, jersey_no, is_captain, is_starter, event_player_status, create_time, update_time, is_delete
         ) values
         <foreach collection="list" item="item" separator=",">
-            (#{item.seasonId}, #{item.divisionId}, #{item.eventTeamId}, #{item.sourcePlayerId}, #{item.memberId}, #{item.platformIdentityId}, #{item.platformCode}, #{item.gameIdSnapshot}, #{item.playerNameSnapshot}, #{item.avatarFileId}, #{item.position}, #{item.jerseyNo}, #{item.isCaptain}, #{item.isStarter}, #{item.eventPlayerStatus}, #{item.createTime}, #{item.updateTime}, #{item.isDelete})
+            (#{item.seasonId}, #{item.divisionId}, #{item.rosterVersionId}, #{item.eventTeamId}, #{item.sourcePlayerId}, #{item.memberId}, #{item.platformIdentityId}, #{item.platformCode}, #{item.gameIdSnapshot}, #{item.playerNameSnapshot}, #{item.avatarFileId}, #{item.position}, #{item.jerseyNo}, #{item.isCaptain}, #{item.isStarter}, #{item.eventPlayerStatus}, #{item.createTime}, #{item.updateTime}, #{item.isDelete})
         </foreach>
     </insert>
 

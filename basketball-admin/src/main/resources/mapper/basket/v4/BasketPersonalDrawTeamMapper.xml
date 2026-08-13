@@ -146,6 +146,7 @@
     <update id="updateById">
         update basket_personal_draw_team
         <set>
+            <if test="temporaryTeamName != null">temporary_team_name = #{temporaryTeamName},</if>
             <if test="captainPersonalRegistrationId != null">captain_personal_registration_id = #{captainPersonalRegistrationId},</if>
             <if test="captainPlayerId != null">captain_player_id = #{captainPlayerId},</if>
             <if test="captainUserId != null">captain_user_id = #{captainUserId},</if>
@@ -163,6 +164,17 @@
 
     <update id="softDelete">
         update basket_personal_draw_team set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="softDeleteByBatchId">
+        update basket_personal_draw_team set is_delete = 1, update_time = now()
+        where draw_batch_id = #{drawBatchId} and is_delete = 0
+    </update>
+
+    <update id="clearCaptain">
+        update basket_personal_draw_team
+        set captain_personal_registration_id = null, captain_player_id = null, captain_user_id = null, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
 

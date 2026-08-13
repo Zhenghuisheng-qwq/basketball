@@ -3,6 +3,8 @@ package com.zhs.basket.service.impl.v4;
 import com.zhs.basket.domain.v4.BasketDivisionRosterVersion;
 import com.zhs.basket.domain.v4.BasketScheduleBatch;
 import com.zhs.basket.enums.v4.StructureStatusEnum;
+import com.zhs.basket.enums.v4.RosterWorkflowModeEnum;
+import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
 import com.zhs.basket.service.v4.IBasketV4RosterVersionService;
 import com.zhs.basket.service.v4.IBasketV4RuleVersionService;
@@ -29,6 +31,7 @@ class BasketV4StructureVersionServiceImplTest {
     @Mock private BasketScheduleBatchMapper scheduleBatchMapper;
     @Mock private IBasketV4RuleVersionService ruleVersionService;
     @Mock private IBasketV4RosterVersionService rosterVersionService;
+    @Mock private BasketDivisionMapper divisionMapper;
 
     @InjectMocks
     private BasketV4StructureVersionServiceImpl service;
@@ -57,12 +60,24 @@ class BasketV4StructureVersionServiceImplTest {
         RuleVersionView rule = new RuleVersionView();
         rule.setRuleVersionId(11L);
         rule.setRuleVersionNo(1);
+        rule.setRosterWorkflowMode(RosterWorkflowModeEnum.LEGACY.getCode());
         when(ruleVersionService.getCurrent(100L)).thenReturn(rule);
         when(rosterVersionService.getCurrentLockedVersion(100L)).thenReturn(null);
 
         StructureVersionContext context = service.resolveForGenerate(100L);
         assertEquals(11L, context.getRuleVersionId());
         assertNull(context.getRosterVersionId());
+    }
+
+    @Test
+    void resolveForGenerate_versionedWithoutRoster_rejected() {
+        RuleVersionView rule = new RuleVersionView();
+        rule.setRuleVersionId(11L);
+        rule.setRosterWorkflowMode(RosterWorkflowModeEnum.VERSIONED.getCode());
+        when(ruleVersionService.getCurrent(100L)).thenReturn(rule);
+        when(rosterVersionService.getCurrentLockedVersion(100L)).thenReturn(null);
+        ServiceException ex = assertThrows(ServiceException.class, () -> service.resolveForGenerate(100L));
+        assertTrue(ex.getMessage().contains("锁定"));
     }
 
     @Test

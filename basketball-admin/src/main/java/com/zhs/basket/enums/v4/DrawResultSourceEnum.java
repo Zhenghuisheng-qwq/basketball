@@ -2,6 +2,7 @@ package com.zhs.basket.enums.v4;
 
 public enum DrawResultSourceEnum {
     OFFLINE_RANDOM("OFFLINE_RANDOM", "线下随机"),
+    BALANCED_RANDOM("BALANCED_RANDOM", "均衡随机"),
     MANUAL_ADJUSTMENT("MANUAL_ADJUSTMENT", "人工调整"),
     IMPORT("IMPORT", "导入");
 

@@ -24,4 +24,8 @@ public interface BasketPersonalDrawTeamMapper {
     int softDelete(@Param("id") Long id);
 
     int refreshActualMemberCount(@Param("drawTeamId") Long drawTeamId);
+
+    int softDeleteByBatchId(@Param("drawBatchId") Long drawBatchId);
+
+    int clearCaptain(@Param("id") Long id);
 }

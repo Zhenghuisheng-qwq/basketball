@@ -16,6 +16,7 @@ import com.zhs.model.v4.*;
 import com.zhs.request.v4.*;
 import com.zhs.response.v4.*;
 import com.zhs.service.v4.IBasketV4PlayerMatchSubmissionService;
+import com.zhs.support.v4.EventTeamCaptainAuthorization;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -54,6 +55,8 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
     private BasketPlayerProfileDao playerProfileDao;
     @Resource
     private BasketMatchSeriesDao matchSeriesDao;
+    @Resource
+    private EventTeamCaptainAuthorization eventTeamCaptainAuthorization;
 
     @Override
     public List<V4MyMatchResp> listMyMatches(Long seasonId, Long divisionId, String matchStatus,
@@ -450,11 +453,8 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
     }
 
     private boolean isAuthorizedCaptain(Long divisionId, Long eventTeamId, Long playerId) {
-        if (!isEventTeamCaptain(eventTeamId, playerId)) {
-            return false;
-        }
         BasketEventTeam eventTeam = eventTeamDao.selectById(eventTeamId);
-        if (eventTeam == null || eventTeam.getSourceTeamId() == null) {
+        if (eventTeam == null) {
             return false;
         }
         BasketCaptainGrant grant = captainGrantDao.selectOne(new LambdaQueryWrapper<BasketCaptainGrant>()
@@ -464,10 +464,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
                 .eq(BasketCaptainGrant::getIsDelete, NOT_DELETED)
                 .isNotNull(BasketCaptainGrant::getActiveUniqueKey)
                 .last("limit 1"));
-        if (grant == null) {
-            return false;
-        }
-        return grant.getTeamId() == null || Objects.equals(grant.getTeamId(), eventTeam.getSourceTeamId());
+        return eventTeamCaptainAuthorization.canSubmitAsCaptain(eventTeam, playerId, grant);
     }
 
     private Long findCaptainEventPlayerId(Long eventTeamId, Long playerId) {

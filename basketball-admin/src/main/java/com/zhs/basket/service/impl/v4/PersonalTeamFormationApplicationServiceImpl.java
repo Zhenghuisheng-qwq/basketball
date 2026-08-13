@@ -6,6 +6,8 @@ import com.zhs.basket.enums.v4.*;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.query.v4.BasketPersonalDrawBatchQuery;
 import com.zhs.basket.service.v4.IBasketV4EventSnapshotService;
+import com.zhs.basket.service.v4.IBasketV4RuleVersionService;
+import com.zhs.basket.support.v4.version.RosterWorkflowSupport;
 import com.zhs.basket.service.v4.IPersonalTeamFormationApplicationService;
 import com.zhs.basket.support.v4.PersonalDrawBatchConfirmSpecification;
 import com.zhs.basket.support.v4.PersonalDrawCaptainGrantSupport;
@@ -61,6 +63,8 @@ public class PersonalTeamFormationApplicationServiceImpl implements IPersonalTea
     private BasketV4ParticipationSupport participationSupport;
     @Autowired
     private PersonalDrawCaptainGrantSupport captainGrantSupport;
+    @Autowired
+    private IBasketV4RuleVersionService ruleVersionService;
 
     @Override
     public List<BasketPersonalDrawBatchListVo> selectBatchList(BasketPersonalDrawBatchQuery query) {
@@ -300,6 +304,8 @@ public class PersonalTeamFormationApplicationServiceImpl implements IPersonalTea
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void bindLongTermTeam(Long drawTeamId, BasketPersonalFormationBindTeamReq req) {
+        BasketPersonalDrawTeam existing = requireTeam(drawTeamId, null);
+        rejectIfVersioned(existing.getDivisionId());
         if (req == null || req.getLongTermTeamId() == null) {
             throw new ServiceException("longTermTeamId 不能为空");
         }
@@ -348,6 +354,7 @@ public class PersonalTeamFormationApplicationServiceImpl implements IPersonalTea
     @Transactional(rollbackFor = Exception.class)
     public Long confirmFormation(Long drawTeamId) {
         BasketPersonalDrawTeam drawTeam = requireTeam(drawTeamId, null);
+        rejectIfVersioned(drawTeam.getDivisionId());
         if (drawTeam.getConvertedRegistrationId() != null) {
             return drawTeam.getConvertedRegistrationId();
         }
@@ -429,6 +436,12 @@ public class PersonalTeamFormationApplicationServiceImpl implements IPersonalTea
         batch.setActiveUniqueKey(null);
         batch.setUpdateTime(new Date());
         drawBatchMapper.updateById(batch);
+    }
+
+    private void rejectIfVersioned(Long divisionId) {
+        if (RosterWorkflowSupport.isVersioned(ruleVersionService.getCurrent(divisionId))) {
+            throw new ServiceException("VERSIONED PERSONAL Division 请使用锁定临时队伍，不再绑定长期球队或直接生成 EventTeam");
+        }
     }
 
     private BasketPersonalDrawBatch requireBatch(Long batchId) {

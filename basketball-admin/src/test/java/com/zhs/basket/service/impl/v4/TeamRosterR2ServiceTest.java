@@ -91,6 +91,7 @@ class TeamRosterR2ServiceTest {
         ReflectionTestUtils.setField(rosterSupport, "divisionMapper", divisionMapper);
         ReflectionTestUtils.setField(rosterSupport, "eventTeamMapper", eventTeamMapper);
         ReflectionTestUtils.setField(rosterSupport, "rosterVersionService", rosterVersionService);
+        ReflectionTestUtils.setField(rosterSupport, "ruleVersionService", ruleVersionService);
 
         RosterAllocationStrategyFactory factory = new RosterAllocationStrategyFactory(List.of(new AutoCapacityAllocationStrategy()));
         ReflectionTestUtils.setField(allocationService, "rosterSupport", rosterSupport);

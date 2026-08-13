@@ -16,6 +16,10 @@ public interface BasketEventPlayerMapper {
 
     BasketEventPlayer selectByDivisionSourcePlayer(@Param("divisionId") Long divisionId, @Param("sourcePlayerId") Long sourcePlayerId);
 
+    BasketEventPlayer selectByDivisionRosterSourcePlayer(@Param("divisionId") Long divisionId,
+                                                         @Param("rosterVersionId") Long rosterVersionId,
+                                                         @Param("sourcePlayerId") Long sourcePlayerId);
+
     List<BasketEventPlayer> selectByEventTeamId(@Param("eventTeamId") Long eventTeamId);
 
     int insert(BasketEventPlayer entity);

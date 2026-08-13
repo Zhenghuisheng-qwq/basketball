@@ -19,4 +19,7 @@ public class V4MyPersonalRegistrationResp {
     private String rejectReason;
     private Long assignedDrawTeamId;
     private Long convertedRegistrationId;
+    private String assignedTemporaryTeamName;
+    private String assignedCaptainName;
+    private Boolean formationLocked;
 }

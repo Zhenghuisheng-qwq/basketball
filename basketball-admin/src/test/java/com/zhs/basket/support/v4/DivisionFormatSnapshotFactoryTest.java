@@ -4,6 +4,7 @@ import com.zhs.basket.domain.v4.BasketFormatTemplate;
 import com.zhs.basket.domain.v4.BasketFormatTemplateStage;
 import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.enums.v4.GroupingModeEnum;
+import com.zhs.basket.enums.v4.RosterWorkflowModeEnum;
 import com.zhs.basket.enums.v4.OrganizationModeEnum;
 import org.junit.jupiter.api.Test;
 
@@ -43,4 +44,16 @@ class DivisionFormatSnapshotFactoryTest {
         assertEquals(OrganizationModeEnum.GROUPED.getCode(), stages.get(0).getOrganizationMode());
         assertEquals("GROUP", stages.get(0).getStageType());
     }
+
+    @Test
+    void buildSnapshotHeader_newSnapshotIsVersioned() {
+        BasketFormatTemplate template = new BasketFormatTemplate();
+        template.setId(1L);
+        template.setTemplateCode("TEST");
+        template.setTemplateName("Test");
+        template.setVersionNo(1);
+        var snapshot = factory.buildSnapshotHeader(100L, template, 1, null);
+        assertEquals(RosterWorkflowModeEnum.VERSIONED.getCode(), snapshot.getRosterWorkflowMode());
+    }
 }
+

@@ -21,4 +21,8 @@ public interface BasketPersonalDrawBatchMapper {
     int updateById(BasketPersonalDrawBatch entity);
 
     int softDelete(@Param("id") Long id);
+
+    int clearActiveUniqueKey(@Param("id") Long id);
+
+    int casLock(@Param("id") Long id, @Param("rosterVersionId") Long rosterVersionId, @Param("operatorId") Long operatorId);
 }

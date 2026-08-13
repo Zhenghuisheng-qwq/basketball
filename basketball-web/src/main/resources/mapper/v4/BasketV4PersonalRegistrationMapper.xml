@@ -51,10 +51,17 @@
             pr.approved_time as approvedTime,
             pr.reject_reason as rejectReason,
             pr.assigned_draw_team_id as assignedDrawTeamId,
-            pr.converted_registration_id as convertedRegistrationId
+            pr.converted_registration_id as convertedRegistrationId,
+            dt.temporary_team_name as assignedTemporaryTeamName,
+            coalesce(cp.game_nickname, mp.nickname) as assignedCaptainName,
+            case when b.batch_status in ('LOCKED', 'CONVERTED') then 1 else 0 end as formationLocked
         from basket_personal_registration pr
         left join basket_season se on se.id = pr.season_id and se.is_delete = 0
         left join basket_division d on d.id = pr.division_id and d.is_delete = 0
+        left join basket_personal_draw_team dt on dt.id = pr.assigned_draw_team_id and dt.is_delete = 0
+        left join basket_personal_draw_batch b on b.id = dt.draw_batch_id and b.is_delete = 0
+        left join basket_player_profile cp on cp.id = dt.captain_player_id and cp.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = dt.captain_user_id and mp.is_delete = 0
         where pr.is_delete = 0 and pr.user_id = #{memberId}
         order by pr.update_time desc, pr.id desc
     </select>

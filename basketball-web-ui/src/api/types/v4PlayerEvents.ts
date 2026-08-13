@@ -23,6 +23,7 @@ export interface V4AvailableDivision {
   grantTeamId?: string
   grantTeamName?: string
   myRegistrationStatus?: string
+  participationRole?: string
   myRegistrationId?: string
   canRegister?: boolean
   canViewRegistration?: boolean
@@ -71,6 +72,7 @@ export interface V4MyRegistration {
   platformCode?: string
   teamName?: string
   registrationStatus?: string
+  participationRole?: string
   lineupCount?: number
   submitTime?: string
   approveTime?: string
@@ -247,6 +249,9 @@ export interface V4MyPersonalRegistration {
   rejectReason?: string
   assignedDrawTeamId?: string
   convertedRegistrationId?: string
+  assignedTemporaryTeamName?: string
+  assignedCaptainName?: string
+  formationLocked?: boolean
 }
 
 export interface V4PersonalRegistrationSaveReq {
@@ -280,6 +285,9 @@ export interface V4PersonalFormationTask {
   formationStatus?: string
   convertedRegistrationId?: string
   confirmedTime?: string
+  batchStatus?: string
+  rosterWorkflowMode?: string
+  needsLongTermBind?: boolean
   members?: V4PersonalFormationMember[]
 }
 

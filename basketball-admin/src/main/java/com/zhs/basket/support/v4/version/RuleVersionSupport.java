@@ -22,6 +22,7 @@ public final class RuleVersionSupport {
         view.setDivisionId(snapshot.getDivisionId());
         view.setIsCurrent(snapshot.getIsCurrent());
         view.setLocked(isLocked(snapshot));
+        view.setRosterWorkflowMode(snapshot.getRosterWorkflowMode());
         return view;
     }
 

@@ -19,6 +19,8 @@ public class BasketRegistration {
     private Long captainPlayerId;
     private Long captainMemberId;
     private String registrationStatus;
+    private String participationRole;
+    private Integer candidateOrder;
     private Integer lineupCount;
     private Date submitTime;
     private Date approveTime;

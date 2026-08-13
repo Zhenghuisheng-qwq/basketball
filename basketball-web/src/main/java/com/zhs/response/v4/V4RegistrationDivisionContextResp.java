@@ -40,6 +40,7 @@ public class V4RegistrationDivisionContextResp {
     private Integer remainingTeamCount;
     private String myGrantStatus;
     private String myRegistrationStatus;
+    private String participationRole;
     @JsonSerialize(using = ToStringSerializer.class)
     private Long myRegistrationId;
     private Boolean canRegister;

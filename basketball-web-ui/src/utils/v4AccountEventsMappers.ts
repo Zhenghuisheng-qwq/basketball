@@ -9,8 +9,16 @@ import type { AvailableEvent, MyApplication, ParticipatingEvent } from '@/types/
 import { formatDateTimeShort } from '@/utils/participationMappers'
 import { v4PlatformLabel } from '@/utils/v4Display'
 
-export function v4RegistrationStatusLabel(status?: string | null): string {
-  switch ((status || '').toUpperCase()) {
+export function v4RegistrationStatusLabel(status?: string | null, participationRole?: string | null): string {
+  const code = (status || '').toUpperCase()
+  const role = (participationRole || '').toUpperCase()
+  if (code === 'APPROVED' && role === 'FORMAL') {
+    return '正式参赛'
+  }
+  if (code === 'APPROVED' && role && role !== 'FORMAL') {
+    return '审核通过 / 等待最终名单'
+  }
+  switch (code) {
     case 'DRAFT':
       return '草稿'
     case 'PENDING_REVIEW':
@@ -67,15 +75,15 @@ export function v4PersonalRegistrationStatusLabel(status?: string | null): strin
     case 'PENDING_REVIEW':
       return '待审核'
     case 'APPROVED':
-      return '已通过'
+      return '审核通过，等待组队'
     case 'REJECTED':
       return '已驳回'
     case 'WITHDRAWN':
       return '已撤回'
     case 'ASSIGNED':
-      return '已分配'
+      return '已分配临时球队'
     case 'CONVERTED':
-      return '已转为正式参赛'
+      return '已锁定临时球队'
     default:
       return status || '未知'
   }
@@ -130,10 +138,28 @@ export function mapV4PersonalDivisionToAvailableEvent(item: V4PersonalAvailableD
 
 export function mapV4PersonalRegistrationToApplication(item: V4MyPersonalRegistration): MyApplication {
   const status = (item.registrationStatus || '').toUpperCase()
+  const assigned = Boolean(item.assignedDrawTeamId)
+  const locked = Boolean(item.formationLocked) || status === 'CONVERTED'
   const pending = status === 'PENDING_REVIEW' || status === 'ASSIGNED'
   let actionText = '查看详情'
   if (status === 'DRAFT' || status === 'REJECTED' || status === 'WITHDRAWN') {
     actionText = status === 'DRAFT' ? '继续编辑' : '修改重提'
+  }
+  let statusText = v4PersonalRegistrationStatusLabel(status)
+  let statusHint = item.rejectReason || undefined
+  if (locked) {
+    statusText = '已锁定临时球队'
+    statusHint = item.assignedTemporaryTeamName
+      ? `临时球队：${item.assignedTemporaryTeamName}${item.assignedCaptainName ? '，队长：' + item.assignedCaptainName : ''}，可进入本队比赛`
+      : '已锁定临时球队，可进入本队比赛'
+  } else if (assigned || status === 'ASSIGNED') {
+    statusText = '已分配临时球队'
+    statusHint = item.assignedTemporaryTeamName
+      ? `已分配临时球队：${item.assignedTemporaryTeamName}`
+      : '已分配临时球队'
+  } else if (status === 'APPROVED') {
+    statusText = '审核通过，等待组队'
+    statusHint = '审核通过，等待组队'
   }
   return {
     applicationId: item.personalRegistrationId,
@@ -144,16 +170,12 @@ export function mapV4PersonalRegistrationToApplication(item: V4MyPersonalRegistr
     applicationType: 'INDIVIDUAL',
     applicationTypeText: '个人报名',
     status,
-    statusText: v4PersonalRegistrationStatusLabel(status),
+    statusText,
     pending,
     actionText,
     actionType: 'VIEW_APPLICATION_STATUS',
     submitTime: formatDateTimeShort(item.submitTime),
-    statusHint: status === 'ASSIGNED'
-      ? '已分配临时队伍，请等待队长完成组队'
-      : status === 'APPROVED'
-        ? '审核已通过，将由运营线下抽签组队'
-        : item.rejectReason || undefined,
+    statusHint,
   }
 }
 
@@ -247,7 +269,7 @@ export function mapV4DivisionToAvailableEvent(item: V4AvailableDivision): Availa
     disabledReason,
     canRegister,
     teamName: item.grantTeamName,
-    teamRegistrationStatusText: status ? v4RegistrationStatusLabel(status) : '未报名',
+    teamRegistrationStatusText: status ? v4RegistrationStatusLabel(status, item.participationRole) : '未报名',
     captainGrantStatusText: v4GrantStatusLabel(item.myGrantStatus),
     registrationStatus: item.myRegistrationStatus,
     registrationId: item.myRegistrationId != null ? String(item.myRegistrationId) : undefined,
@@ -275,7 +297,7 @@ export function mapV4RegistrationToApplication(item: V4MyRegistration): MyApplic
     actionText = '重新提交'
     actionType = 'RESUBMIT'
   } else if (status === 'APPROVED') {
-    actionText = '进入赛事'
+    actionText = item.participationRole === 'FORMAL' ? '进入赛事' : '查看详情'
     actionType = 'VIEW_APPLICATION_STATUS'
   } else if (status === 'PENDING_REVIEW') {
     actionText = '审核中'
@@ -298,7 +320,7 @@ export function mapV4RegistrationToApplication(item: V4MyRegistration): MyApplic
     applicationType: 'TEAM',
     applicationTypeText: '球队报名',
     status,
-    statusText: v4RegistrationStatusLabel(status),
+    statusText: v4RegistrationStatusLabel(status, item.participationRole),
     statusHint,
     submitTime: formatDateTimeShort(item.submitTime),
     actionText,

@@ -89,6 +89,20 @@
         order by case when pr.registration_status = 'PENDING_REVIEW' then 0 else 1 end, pr.submit_time desc, pr.id desc
     </select>
 
+    <select id="selectApprovedByDivisionId" resultMap="BasketPersonalRegistrationResult">
+        select <include refid="BaseColumns" /> from basket_personal_registration
+        where division_id = #{divisionId}
+          and registration_status = 'APPROVED'
+          and is_delete = 0
+        order by id asc
+    </select>
+
+    <update id="updateAssignedDrawTeamId">
+        update basket_personal_registration
+        set assigned_draw_team_id = #{assignedDrawTeamId}, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
     <select id="countApprovedByDivisionId" resultType="int">
         select count(1) from basket_personal_registration
         where division_id = #{divisionId}

@@ -15,6 +15,7 @@ public class BasketEventTeam {
     private Long rosterVersionId;
     private Long registrationId;
     private Long sourceTeamId;
+    private Long sourceDrawTeamId;
     private String teamNameSnapshot;
     private Long teamLogoFileId;
     private String teamShortName;

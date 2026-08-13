@@ -69,6 +69,13 @@ const REGISTRATION_MODE_LABELS: Record<string, string> = {
   PERSONAL: '个人报名'
 }
 
+const PARTICIPATION_ROLE_LABELS: Record<string, string> = {
+  UNALLOCATED: '未分配',
+  FORMAL: '正式参赛',
+  CANDIDATE: '候补球队',
+  EXCLUDED: '本届不参赛'
+}
+
 const PLATFORM_CODE_LABELS: Record<string, string> = {
   PC: 'PC',
   PS_XBOX: 'PS/Xbox',
@@ -110,6 +117,9 @@ const FORMATION_STATUS_LABELS: Record<string, string> = {
 
 const DRAW_BATCH_STATUS_LABELS: Record<string, string> = {
   DRAFT: '草稿',
+  GENERATED: '已生成',
+  ADJUSTING: '调整中',
+  LOCKED: '已锁定',
   CONFIRMED: '已确认',
   CANCELLED: '已取消',
   CONVERTED: '已转换'
@@ -302,6 +312,23 @@ export function v4GenerateStatusLabel(status?: string | null): string {
 
 export function v4RegistrationModeLabel(mode?: string | null): string {
   return lookup(REGISTRATION_MODE_LABELS, mode)
+}
+
+export function v4ParticipationRoleLabel(role?: string | null): string {
+  return lookup(PARTICIPATION_ROLE_LABELS, role, role || '-')
+}
+
+export function v4ParticipationRoleTagType(role?: string | null): 'success' | 'warning' | 'info' | 'danger' {
+  switch ((role || '').toUpperCase()) {
+    case 'FORMAL':
+      return 'success'
+    case 'CANDIDATE':
+      return 'warning'
+    case 'EXCLUDED':
+      return 'info'
+    default:
+      return 'info'
+  }
 }
 
 export function v4PlatformLabel(code?: string | null): string {
@@ -882,6 +909,9 @@ export const V4_PERSONAL_REGISTRATION_STATUS_FILTER_OPTIONS = [
 
 export const V4_DRAW_BATCH_STATUS_FILTER_OPTIONS = [
   { label: '草稿', value: 'DRAFT' },
+  { label: '已生成', value: 'GENERATED' },
+  { label: '调整中', value: 'ADJUSTING' },
+  { label: '已锁定', value: 'LOCKED' },
   { label: '已确认', value: 'CONFIRMED' },
   { label: '已取消', value: 'CANCELLED' },
   { label: '已转换', value: 'CONVERTED' }

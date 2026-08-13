@@ -16,6 +16,7 @@ public class BasketDivisionFormatSnapshot {
     private Integer sourceTemplateVersion;
     private Integer snapshotVersion;
     private String snapshotStatus;
+    private String rosterWorkflowMode;
     private Integer isCurrent;
     private String activeUniqueKey;
     private Long supersededSnapshotId;

@@ -2,6 +2,7 @@ package com.zhs.basket.support.v4;
 
 import com.zhs.basket.domain.v4.*;
 import com.zhs.basket.enums.v4.DivisionStageStatusEnum;
+import com.zhs.basket.enums.v4.RosterWorkflowModeEnum;
 import com.zhs.basket.enums.v4.SnapshotStatusEnum;
 import com.zhs.basket.enums.v4.StageExecutionStatusEnum;
 import org.springframework.stereotype.Component;
@@ -29,6 +30,7 @@ public class DivisionFormatSnapshotFactory {
         snapshot.setSourceTemplateVersion(template.getVersionNo());
         snapshot.setSnapshotVersion(snapshotVersion);
         snapshot.setSnapshotStatus(SnapshotStatusEnum.DRAFT.getCode());
+        snapshot.setRosterWorkflowMode(RosterWorkflowModeEnum.VERSIONED.getCode());
         snapshot.setIsCurrent(1);
         snapshot.setActiveUniqueKey(buildActiveUniqueKey(divisionId));
         snapshot.setSupersededSnapshotId(supersededSnapshotId);

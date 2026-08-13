@@ -11,6 +11,7 @@ public class BasketDivisionRosterEntry {
     private Long divisionId;
     private Long registrationId;
     private Long teamId;
+    private Long eventTeamId;
     private String participationRole;
     private Integer candidateOrder;
     private Date createTime;

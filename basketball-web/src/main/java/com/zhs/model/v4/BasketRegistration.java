@@ -50,6 +50,10 @@ public class BasketRegistration implements Serializable {
 
     private String registrationStatus;
 
+    private String participationRole;
+
+    private Integer candidateOrder;
+
     private Integer lineupCount;
 
     private Date submitTime;

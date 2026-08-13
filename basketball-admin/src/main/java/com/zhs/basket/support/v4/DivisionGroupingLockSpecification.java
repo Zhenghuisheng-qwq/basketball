@@ -6,6 +6,7 @@ import com.zhs.basket.enums.v4.GroupingModeEnum;
 import com.zhs.basket.enums.v4.GroupingStatusEnum;
 import com.zhs.basket.enums.v4.SnapshotStatusEnum;
 import com.zhs.basket.mapper.v4.*;
+import com.zhs.basket.support.v4.roster.TeamRosterSupport;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -29,6 +30,8 @@ public class DivisionGroupingLockSpecification {
     private BasketDivisionStageMapper stageMapper;
     @Autowired
     private BasketV4MatchMapper matchMapper;
+    @Autowired
+    private TeamRosterSupport teamRosterSupport;
 
     public void validate(BasketDivisionGroupingBatch batch, BasketDivisionStage stage) {
         if (batch == null) {
@@ -73,7 +76,7 @@ public class DivisionGroupingLockSpecification {
             throw new ServiceException("该阶段已生成赛程，无法锁定分组");
         }
 
-        List<BasketEventTeam> requiredTeams = eventTeamMapper.selectActiveByDivisionId(batch.getDivisionId());
+        List<BasketEventTeam> requiredTeams = teamRosterSupport.selectFormalEventTeams(batch.getDivisionId());
         List<BasketDivisionGroupTeam> assignments = groupTeamMapper.selectByBatchId(batch.getId());
         Set<Long> assignedEventTeamIds = new HashSet<>();
 

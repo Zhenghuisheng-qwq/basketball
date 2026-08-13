@@ -12,6 +12,8 @@
         <result property="activeUniqueKey" column="active_unique_key" />
         <result property="resultSource" column="result_source" />
         <result property="resultRemark" column="result_remark" />
+        <result property="randomSeed" column="random_seed" />
+        <result property="rosterVersionId" column="roster_version_id" />
         <result property="unassignedPolicy" column="unassigned_policy" />
         <result property="unassignedRemark" column="unassigned_remark" />
         <result property="confirmedBy" column="confirmed_by" />
@@ -38,7 +40,7 @@
         <result property="createTime" column="create_time" />
     </resultMap>
 
-    <sql id="BaseColumns">id, division_id, batch_code, batch_name, batch_version, batch_status, active_unique_key, result_source, result_remark, unassigned_policy, unassigned_remark, confirmed_by, confirmed_time, create_by, update_by, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, division_id, batch_code, batch_name, batch_version, batch_status, active_unique_key, result_source, result_remark, random_seed, roster_version_id, unassigned_policy, unassigned_remark, confirmed_by, confirmed_time, create_by, update_by, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketPersonalDrawBatchResult">
         select <include refid="BaseColumns" /> from basket_personal_draw_batch
@@ -80,9 +82,9 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_personal_draw_batch (
-            division_id, batch_code, batch_name, batch_version, batch_status, active_unique_key, result_source, result_remark, unassigned_policy, unassigned_remark, confirmed_by, confirmed_time, create_by, update_by, create_time, update_time, is_delete
+            division_id, batch_code, batch_name, batch_version, batch_status, active_unique_key, result_source, result_remark, random_seed, roster_version_id, unassigned_policy, unassigned_remark, confirmed_by, confirmed_time, create_by, update_by, create_time, update_time, is_delete
         ) values (
-            #{divisionId}, #{batchCode}, #{batchName}, #{batchVersion}, #{batchStatus}, #{activeUniqueKey}, #{resultSource}, #{resultRemark}, #{unassignedPolicy}, #{unassignedRemark}, #{confirmedBy}, #{confirmedTime}, #{createBy}, #{updateBy}, #{createTime}, #{updateTime}, #{isDelete}
+            #{divisionId}, #{batchCode}, #{batchName}, #{batchVersion}, #{batchStatus}, #{activeUniqueKey}, #{resultSource}, #{resultRemark}, #{randomSeed}, #{rosterVersionId}, #{unassignedPolicy}, #{unassignedRemark}, #{confirmedBy}, #{confirmedTime}, #{createBy}, #{updateBy}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -93,6 +95,8 @@
             <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
             <if test="resultSource != null">result_source = #{resultSource},</if>
             <if test="resultRemark != null">result_remark = #{resultRemark},</if>
+            <if test="randomSeed != null">random_seed = #{randomSeed},</if>
+            <if test="rosterVersionId != null">roster_version_id = #{rosterVersionId},</if>
             <if test="unassignedPolicy != null">unassigned_policy = #{unassignedPolicy},</if>
             <if test="unassignedRemark != null">unassigned_remark = #{unassignedRemark},</if>
             <if test="confirmedBy != null">confirmed_by = #{confirmedBy},</if>
@@ -106,6 +110,20 @@
     <update id="softDelete">
         update basket_personal_draw_batch set is_delete = 1, active_unique_key = null, update_time = now()
         where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="clearActiveUniqueKey">
+        update basket_personal_draw_batch set active_unique_key = null, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="casLock">
+        update basket_personal_draw_batch
+        set batch_status = 'LOCKED', roster_version_id = #{rosterVersionId},
+            confirmed_by = #{operatorId}, confirmed_time = now(), update_by = #{operatorId},
+            update_time = now()
+        where id = #{id} and is_delete = 0
+          and batch_status in ('DRAFT', 'GENERATED', 'ADJUSTING', 'CONFIRMED')
     </update>
 
 </mapper>

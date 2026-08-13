@@ -108,6 +108,14 @@
         from basket_member_account where id = #{id} and is_delete = 0
     </select>
 
+    <select id="selectByIds" resultMap="BasketMemberAccountResult">
+        select id, account_no, username, email, account_status, create_time, update_time, is_delete
+        from basket_member_account
+        where is_delete = 0
+          and id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+
     <select id="selectList" resultType="com.zhs.basket.vo.AccountPlayerListVo">
         select acc.id as memberId, acc.account_no as accountNo, acc.username as username, acc.email as email,
                mp.nickname as nickname, IFNULL(af.access_url, 'https://basketball-1453992653.cos.ap-shanghai.myqcloud.com/basketball/public/2026/08/01/b1f4d9a28beb48beb90fed28439e8e4a.png') as avatarUrl, acc.email_verified as emailVerified,

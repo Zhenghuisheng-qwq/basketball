@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-alert title="报名审核：球队审核通过后生成参赛快照；个人报名审核通过后进入线下抽签组队" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="报名审核：球队审核通过后进入最终名单分配，锁定后才生成正式参赛快照；个人报名审核通过后进入 Formation，锁定临时队伍后才生成正式参赛快照" type="info" :closable="false" show-icon class="mb8" />
 
     <el-tabs v-model="activeTab" @tab-change="onTabChange">
       <!-- 球队报名 -->
@@ -57,6 +57,74 @@
           </el-table-column>
         </el-table>
         <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+      </el-tab-pane>
+
+      <!-- 球队最终名单 -->
+      <el-tab-pane label="最终名单" name="roster">
+        <el-form :inline="true" class="mb8">
+          <el-form-item label="赛季">
+            <el-select v-model="rosterSeasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onRosterSeasonChange">
+              <el-option v-for="item in seasonOptions" :key="item.id" :label="item.label" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="平台赛区">
+            <el-select v-model="rosterDivisionId" clearable filterable placeholder="选择赛区" style="width: 200px" :disabled="!rosterSeasonId" @change="loadRosterWorkspace">
+              <el-option v-for="item in rosterDivisionOptions" :key="item.id" :label="formatDivisionLabel(item)" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" icon="Search" @click="loadRosterWorkspace">刷新</el-button>
+            <el-button type="warning" :disabled="!rosterWorkspace?.canEdit" v-hasPermi="['basket:v4RegistrationAudit:approve']" @click="handleAutoAllocate">自动分配</el-button>
+            <el-button type="success" :disabled="!rosterWorkspace?.canLock" v-hasPermi="['basket:v4Division:edit']" @click="handleLockRoster">锁定最终名单</el-button>
+            <el-button :disabled="rosterWorkspace?.rosterStatus !== 'LOCKED'" v-hasPermi="['basket:v4Division:edit']" @click="openPromote">候补递补</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-descriptions v-if="rosterWorkspace" :column="4" border class="mb8">
+          <el-descriptions-item label="赛区">{{ rosterWorkspace.divisionName }}</el-descriptions-item>
+          <el-descriptions-item label="Rule">{{ rosterWorkspace.ruleVersion?.ruleVersionStatus || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="Roster">{{ rosterWorkspace.rosterStatus }}</el-descriptions-item>
+          <el-descriptions-item label="正式名额">{{ rosterWorkspace.formalCount || 0 }} / {{ rosterWorkspace.formalCap || '-' }}</el-descriptions-item>
+        </el-descriptions>
+
+        <el-tabs v-if="rosterWorkspace" v-model="rosterInnerTab">
+          <el-tab-pane label="全部审核合格" name="approved" />
+          <el-tab-pane label="正式参赛" name="formal" />
+          <el-tab-pane label="候补" name="candidate" />
+          <el-tab-pane label="不参赛" name="excluded" />
+          <el-tab-pane label="审核未通过" name="rejected" />
+        </el-tabs>
+
+        <el-table v-loading="rosterLoading" :data="rosterTableRows" border>
+          <el-table-column label="球队" prop="teamName" min-width="140" />
+          <el-table-column label="报名时间" prop="submitTime" width="170">
+            <template #default="scope">{{ parseTime(scope.row.submitTime) }}</template>
+          </el-table-column>
+          <el-table-column label="审核状态" width="110" align="center">
+            <template #default="scope">
+              <el-tag :type="v4RegistrationStatusTagType(scope.row.auditStatus)" size="small">{{ v4RegistrationStatusLabel(scope.row.auditStatus) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="名单角色" width="120" align="center">
+            <template #default="scope">
+              <el-tag :type="v4ParticipationRoleTagType(scope.row.participationRole)" size="small">{{ v4ParticipationRoleLabel(scope.row.participationRole) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="候补顺序" prop="candidateOrder" width="90" align="center" />
+          <el-table-column label="操作" width="280" fixed="right">
+            <template #default="scope">
+              <template v-if="rosterWorkspace?.canEdit && scope.row.auditStatus === 'APPROVED'">
+                <el-button link type="success" v-hasPermi="['basket:v4RegistrationAudit:approve']" @click="handleAssign(scope.row, 'FORMAL')">设为正式</el-button>
+                <el-button link type="warning" v-hasPermi="['basket:v4RegistrationAudit:approve']" @click="handleAssign(scope.row, 'CANDIDATE')">设为候补</el-button>
+                <el-button link type="info" v-hasPermi="['basket:v4RegistrationAudit:approve']" @click="handleAssign(scope.row, 'EXCLUDED')">设为不参赛</el-button>
+              </template>
+              <template v-if="rosterWorkspace?.canEdit && scope.row.participationRole === 'CANDIDATE'">
+                <el-button link type="primary" v-hasPermi="['basket:v4RegistrationAudit:approve']" @click="handleMoveCandidate(scope.row, 'UP')">上移</el-button>
+                <el-button link type="primary" v-hasPermi="['basket:v4RegistrationAudit:approve']" @click="handleMoveCandidate(scope.row, 'DOWN')">下移</el-button>
+              </template>
+            </template>
+          </el-table-column>
+        </el-table>
       </el-tab-pane>
 
       <!-- 个人报名 -->
@@ -139,6 +207,62 @@
             <el-button type="primary" plain icon="Plus" @click="openCreateDrawBatch" v-hasPermi="['basket:v4PersonalFormation:edit']" :disabled="!drawQuery.divisionId">新建批次</el-button>
           </el-form-item>
         </el-form>
+
+        <div v-if="formationWorkspace" v-loading="formationLoading" class="formation-workspace mb8">
+          <el-descriptions :column="4" border class="mb8">
+            <el-descriptions-item label="赛区">{{ formationWorkspace.divisionName }}</el-descriptions-item>
+            <el-descriptions-item label="Series">{{ formationWorkspace.seriesName || formationWorkspace.seriesCode || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="GameMode">{{ formationWorkspace.gameMode }}</el-descriptions-item>
+            <el-descriptions-item label="报名模式">{{ formationWorkspace.registrationMode }}</el-descriptions-item>
+            <el-descriptions-item label="Rule">{{ formationWorkspace.ruleStatus }}</el-descriptions-item>
+            <el-descriptions-item label="Roster">{{ formationWorkspace.rosterStatus }}{{ formationWorkspace.currentRosterVersionNo ? ' V' + formationWorkspace.currentRosterVersionNo : '' }}</el-descriptions-item>
+            <el-descriptions-item label="Formation">{{ v4DrawBatchStatusLabel(formationWorkspace.formationStatus) }}</el-descriptions-item>
+            <el-descriptions-item label="人数规则">{{ formationWorkspace.minTeamSize }}-{{ formationWorkspace.maxTeamSize }} / 至少 {{ formationWorkspace.minimumValidPersonCount }} 人</el-descriptions-item>
+            <el-descriptions-item label="有效个人">{{ formationWorkspace.validPersonCount || 0 }}</el-descriptions-item>
+            <el-descriptions-item label="临时队">{{ formationWorkspace.temporaryTeamCount || 0 }}</el-descriptions-item>
+            <el-descriptions-item label="未分配">{{ formationWorkspace.unassignedCount || 0 }}</el-descriptions-item>
+            <el-descriptions-item label="批次">{{ formationWorkspace.currentBatchId || '-' }}</el-descriptions-item>
+          </el-descriptions>
+          <div class="mb8">
+            <el-button type="primary" :disabled="!formationWorkspace.canGenerate" v-hasPermi="['basket:v4PersonalFormation:edit']" @click="handleGenerateFormation">自动 Formation</el-button>
+            <el-button :disabled="!formationWorkspace.canGenerate || !formationWorkspace.currentBatchId" v-hasPermi="['basket:v4PersonalFormation:edit']" @click="handleRegenerateFormation">重新生成</el-button>
+            <el-button type="success" :disabled="!formationWorkspace.canLock" v-hasPermi="['basket:v4PersonalFormation:confirm']" @click="handleLockFormation">锁定临时队伍</el-button>
+          </div>
+          <div class="formation-board">
+            <div class="formation-unassigned">
+              <h4>有效个人 / 未分配（{{ formationWorkspace.unassignedCount || 0 }}）</h4>
+              <div v-if="!(formationWorkspace.unassignedList || []).length" class="formation-empty">暂无未分配</div>
+              <div v-for="person in formationWorkspace.unassignedList || []" :key="person.personalRegistrationId" class="formation-person">
+                <span>{{ person.playerName || person.personalRegistrationId }}</span>
+                <el-select v-if="formationWorkspace.canAdjust" size="small" placeholder="分配到" style="width: 140px" @change="(toId) => handleMoveFormationMember(person.personalRegistrationId, null, toId)">
+                  <el-option v-for="team in formationWorkspace.teams || []" :key="team.drawTeamId" :label="team.temporaryTeamName" :value="team.drawTeamId" />
+                </el-select>
+              </div>
+            </div>
+            <div class="formation-teams">
+              <el-card v-for="team in formationWorkspace.teams || []" :key="team.drawTeamId" shadow="never">
+                <template #header>
+                  <div class="formation-team-head">
+                    <strong>{{ team.temporaryTeamName }}</strong>
+                    <span>{{ team.memberCount || 0 }} 人</span>
+                  </div>
+                  <div class="formation-captain">队长：{{ team.captainPlayerName || '-' }}</div>
+                  <el-button v-if="formationWorkspace.canAdjust" link type="primary" @click="handleRenameFormationTeam(team)">改名</el-button>
+                </template>
+                <div v-for="member in team.members || []" :key="member.personalRegistrationId" class="formation-person">
+                  <span>{{ member.playerName || member.personalRegistrationId }}{{ member.assignmentRole === 'CAPTAIN' ? '（队长）' : '' }}</span>
+                  <el-select v-if="formationWorkspace.canAdjust" size="small" placeholder="移动到" style="width: 120px" @change="(toId) => handleMoveFormationMember(member.personalRegistrationId, team.drawTeamId, toId)">
+                    <el-option label="未分配" :value="0" />
+                    <el-option v-for="other in otherFormationTeams(team.drawTeamId)" :key="other.drawTeamId" :label="other.temporaryTeamName" :value="other.drawTeamId" />
+                  </el-select>
+                  <el-select v-if="formationWorkspace.canAdjust" size="small" placeholder="交换" style="width: 120px" @change="(rightId) => handleSwapFormationMember(member.personalRegistrationId, rightId)">
+                    <el-option v-for="other in otherFormationMembers(member.personalRegistrationId)" :key="other.personalRegistrationId" :label="(other.playerName || other.personalRegistrationId) as string" :value="other.personalRegistrationId" />
+                  </el-select>
+                </div>
+              </el-card>
+            </div>
+          </div>
+        </div>
 
         <el-table v-loading="drawLoading" :data="drawList" border>
           <el-table-column label="批次ID" prop="drawBatchId" width="80" />
@@ -452,11 +576,33 @@
         <el-button type="primary" @click="submitBindTeam">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="promoteOpen" title="候补递补" width="520px" append-to-body>
+      <el-form :model="promoteForm" label-width="110px">
+        <el-form-item label="正式球队" required>
+          <el-select v-model="promoteForm.formalRegistrationId" filterable placeholder="选择被替换的正式球队" style="width: 100%">
+            <el-option v-for="item in rosterWorkspace?.formalList || []" :key="item.registrationId" :label="`${item.teamName} (#${item.registrationId})`" :value="item.registrationId!" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="候补球队" required>
+          <el-select v-model="promoteForm.candidateRegistrationId" filterable placeholder="选择递补候补球队" style="width: 100%">
+            <el-option v-for="item in rosterWorkspace?.candidateList || []" :key="item.registrationId" :label="`#${item.candidateOrder} ${item.teamName}`" :value="item.registrationId!" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="原因" required>
+          <el-input v-model="promoteForm.reason" type="textarea" placeholder="例如：正式球队退赛 / 禁赛 / 无法参赛" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="promoteOpen = false">取消</el-button>
+        <el-button type="primary" @click="submitPromote">确定递补</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts" name="CnpaEventV4RegistrationAudit">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
   approveV4RegistrationAudit,
   getV4RegistrationAuditDetail,
@@ -475,6 +621,17 @@ import {
   type BasketPersonalRegistrationQuery
 } from '@/api/cnpa/event-v4/personal-registration'
 import {
+  generateV4PersonalFormation,
+  getV4PersonalFormationWorkspace,
+  lockV4PersonalFormation,
+  moveV4PersonalFormationMember,
+  regenerateV4PersonalFormation,
+  renameV4PersonalFormationTeam,
+  swapV4PersonalFormationMembers,
+  type PersonalFormationTeamCardVo,
+  type PersonalFormationWorkspaceVo
+} from '@/api/cnpa/event-v4/personal-formation'
+import {
   addV4PersonalDrawAssignment,
   bindV4PersonalFormationTeam,
   cancelV4PersonalDrawBatch,
@@ -492,6 +649,16 @@ import {
 } from '@/api/cnpa/event-v4/personal-draw'
 import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, listV4AdminTeamOptions, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
 import {
+  assignV4TeamRoster,
+  autoAllocateV4TeamRoster,
+  getV4TeamRosterWorkspace,
+  lockV4TeamRoster,
+  moveV4TeamRosterCandidate,
+  promoteV4TeamRosterCandidate,
+  type TeamRosterItemVo,
+  type TeamRosterWorkspaceVo
+} from '@/api/cnpa/event-v4/team-roster'
+import {
   V4_DRAW_BATCH_STATUS_FILTER_OPTIONS,
   V4_PERSONAL_REGISTRATION_STATUS_FILTER_OPTIONS,
   V4_REGISTRATION_STATUS_FILTER_OPTIONS,
@@ -502,6 +669,8 @@ import {
   v4FormationStatusTagType,
   v4PersonalRegistrationStatusLabel,
   v4PersonalRegistrationStatusTagType,
+  v4ParticipationRoleLabel,
+  v4ParticipationRoleTagType,
   v4RegistrationStatusLabel,
   v4RegistrationStatusTagType
 } from '@/utils/v4AdminDisplay'
@@ -523,6 +692,28 @@ const seasonOptions = ref<V4AdminOptionVo[]>([])
 const divisionOptions = ref<V4AdminOptionVo[]>([])
 const queryParams = reactive<BasketRegistrationAuditQuery>({ pageNum: 1, pageSize: 10 })
 const STATUS_OPTIONS = V4_REGISTRATION_STATUS_FILTER_OPTIONS
+
+const rosterLoading = ref(false)
+const rosterSeasonId = ref<number>()
+const rosterDivisionId = ref<number>()
+const rosterDivisionOptions = ref<V4AdminOptionVo[]>([])
+const rosterWorkspace = ref<TeamRosterWorkspaceVo>()
+const rosterInnerTab = ref('approved')
+const promoteOpen = ref(false)
+const promoteForm = reactive({
+  formalRegistrationId: undefined as number | undefined,
+  candidateRegistrationId: undefined as number | undefined,
+  reason: ''
+})
+const rosterTableRows = computed<TeamRosterItemVo[]>(() => {
+  const ws = rosterWorkspace.value
+  if (!ws) return []
+  if (rosterInnerTab.value === 'formal') return ws.formalList || []
+  if (rosterInnerTab.value === 'candidate') return ws.candidateList || []
+  if (rosterInnerTab.value === 'excluded') return ws.excludedList || []
+  if (rosterInnerTab.value === 'rejected') return ws.rejectedList || []
+  return ws.approvedList || []
+})
 
 // ---- 个人报名 ----
 const personalLoading = ref(false)
@@ -547,6 +738,8 @@ const drawSeasonId = ref<number>()
 const drawDivisionOptions = ref<V4AdminOptionVo[]>([])
 const drawQuery = reactive<BasketPersonalDrawBatchQuery>({ pageNum: 1, pageSize: 10 })
 const DRAW_STATUS_OPTIONS = V4_DRAW_BATCH_STATUS_FILTER_OPTIONS
+const formationLoading = ref(false)
+const formationWorkspace = ref<PersonalFormationWorkspaceVo>()
 const createDrawOpen = ref(false)
 const createTeamOpen = ref(false)
 const addAssignmentOpen = ref(false)
@@ -568,7 +761,10 @@ function formatDivisionLabel(item: V4AdminOptionVo) {
 function drawBatchTagType(status?: string) {
   switch ((status || '').toUpperCase()) {
     case 'CONFIRMED':
-    case 'CONVERTED': return 'success'
+    case 'CONVERTED':
+    case 'LOCKED': return 'success'
+    case 'GENERATED':
+    case 'ADJUSTING':
     case 'DRAFT': return 'warning'
     case 'CANCELLED': return 'info'
     default: return 'info'
@@ -580,10 +776,11 @@ async function loadSeasonOptions() {
   seasonOptions.value = res.data || []
 }
 
-async function loadDivisions(seasonId?: number, target: 'team' | 'personal' | 'draw' = 'team') {
+async function loadDivisions(seasonId?: number, target: 'team' | 'personal' | 'draw' | 'roster' = 'team') {
   const list = seasonId ? (await listV4AdminDivisionOptions(seasonId)).data || [] : []
   if (target === 'team') divisionOptions.value = list
   else if (target === 'personal') personalDivisionOptions.value = list
+  else if (target === 'roster') rosterDivisionOptions.value = list
   else drawDivisionOptions.value = list
 }
 
@@ -599,8 +796,91 @@ function onPersonalSeasonChange(seasonId?: number) {
 
 function onDrawSeasonChange(seasonId?: number) {
   drawQuery.divisionId = undefined
+  formationWorkspace.value = undefined
   loadDivisions(seasonId, 'draw')
 }
+
+function otherFormationTeams(drawTeamId?: number) {
+  return (formationWorkspace.value?.teams || []).filter(item => item.drawTeamId !== drawTeamId)
+}
+
+function otherFormationMembers(personalRegistrationId?: number) {
+  return (formationWorkspace.value?.teams || [])
+    .flatMap(team => team.members || [])
+    .filter(item => item.personalRegistrationId !== personalRegistrationId)
+}
+
+function loadFormationWorkspace() {
+  if (!drawQuery.divisionId) {
+    formationWorkspace.value = undefined
+    return
+  }
+  formationLoading.value = true
+  getV4PersonalFormationWorkspace(drawQuery.divisionId).then(res => {
+    formationWorkspace.value = res.data
+  }).catch(() => {
+    formationWorkspace.value = undefined
+  }).finally(() => { formationLoading.value = false })
+}
+
+function handleGenerateFormation() {
+  if (!drawQuery.divisionId) return
+  proxy.$modal.confirm('将按当前有效个人自动生成临时队伍，未锁定前可调整。确认生成？').then(() => generateV4PersonalFormation(drawQuery.divisionId!)).then(() => {
+    proxy.$modal.msgSuccess('已生成临时队伍')
+    loadFormationWorkspace()
+    getDrawList()
+  }).catch(() => {})
+}
+
+function handleRegenerateFormation() {
+  if (!drawQuery.divisionId) return
+  proxy.$modal.confirm('重新生成将覆盖当前未锁定的组队结果。确认重新生成？').then(() => regenerateV4PersonalFormation(drawQuery.divisionId!)).then(() => {
+    proxy.$modal.msgSuccess('已重新生成')
+    loadFormationWorkspace()
+    getDrawList()
+  }).catch(() => {})
+}
+
+function handleLockFormation() {
+  if (!drawQuery.divisionId) return
+  proxy.$modal.confirm('锁定后将生成正式临时参赛快照，且当前组队不可再直接修改。确认锁定？').then(() => lockV4PersonalFormation(drawQuery.divisionId!)).then(() => {
+    proxy.$modal.msgSuccess('临时队伍已锁定')
+    loadFormationWorkspace()
+    getDrawList()
+  }).catch(() => {})
+}
+
+function handleRenameFormationTeam(team: PersonalFormationTeamCardVo) {
+  if (!drawQuery.divisionId || !team.drawTeamId) return
+  proxy.$modal.prompt('请输入临时队名', '修改队名', { inputValue: team.temporaryTeamName || '' }).then(({ value }: { value: string }) => {
+    return renameV4PersonalFormationTeam(drawQuery.divisionId!, team.drawTeamId!, value)
+  }).then(() => {
+    proxy.$modal.msgSuccess('已修改队名')
+    loadFormationWorkspace()
+  }).catch(() => {})
+}
+
+function handleMoveFormationMember(personalRegistrationId?: number, fromDrawTeamId?: number | null, toDrawTeamId?: number | null) {
+  if (!drawQuery.divisionId || !personalRegistrationId) return
+  const toId = toDrawTeamId === 0 ? null : toDrawTeamId
+  moveV4PersonalFormationMember(drawQuery.divisionId, {
+    personalRegistrationId,
+    fromDrawTeamId: fromDrawTeamId || undefined,
+    toDrawTeamId: toId
+  }).then(() => loadFormationWorkspace())
+}
+
+function handleSwapFormationMember(leftPersonalRegistrationId?: number, rightPersonalRegistrationId?: number) {
+  if (!drawQuery.divisionId || !leftPersonalRegistrationId || !rightPersonalRegistrationId) return
+  swapV4PersonalFormationMembers(drawQuery.divisionId, {
+    leftPersonalRegistrationId,
+    rightPersonalRegistrationId
+  }).then(() => loadFormationWorkspace())
+}
+
+watch(() => drawQuery.divisionId, () => {
+  loadFormationWorkspace()
+})
 
 function getList() {
   loading.value = true
@@ -873,9 +1153,84 @@ function handleConfirmFormation(team: BasketPersonalDrawTeamVo) {
   }).catch(() => {})
 }
 
+function onRosterSeasonChange(seasonId?: number) {
+  rosterDivisionId.value = undefined
+  rosterWorkspace.value = undefined
+  loadDivisions(seasonId, 'roster')
+}
+
+async function loadRosterWorkspace() {
+  if (!rosterDivisionId.value) {
+    rosterWorkspace.value = undefined
+    return
+  }
+  rosterLoading.value = true
+  try {
+    const res = await getV4TeamRosterWorkspace(rosterDivisionId.value)
+    rosterWorkspace.value = res.data
+  } finally {
+    rosterLoading.value = false
+  }
+}
+
+function handleAssign(row: TeamRosterItemVo, role: string) {
+  if (!rosterDivisionId.value || !row.registrationId) return
+  assignV4TeamRoster(rosterDivisionId.value, { registrationId: row.registrationId, participationRole: role }).then(() => {
+    proxy.$modal.msgSuccess('已调整名单角色')
+    loadRosterWorkspace()
+  })
+}
+
+function handleAutoAllocate() {
+  if (!rosterDivisionId.value) return
+  proxy.$modal.confirm('按报名时间将前 N 支设为正式，其余设为候补？').then(() => autoAllocateV4TeamRoster(rosterDivisionId.value!)).then(() => {
+    proxy.$modal.msgSuccess('已自动分配')
+    loadRosterWorkspace()
+  }).catch(() => {})
+}
+
+function handleMoveCandidate(row: TeamRosterItemVo, direction: string) {
+  if (!rosterDivisionId.value || !row.registrationId) return
+  moveV4TeamRosterCandidate(rosterDivisionId.value, { registrationId: row.registrationId, direction }).then(() => {
+    loadRosterWorkspace()
+  })
+}
+
+function handleLockRoster() {
+  if (!rosterDivisionId.value) return
+  proxy.$modal.confirm('锁定后将生成正式参赛快照，且当前名单不可再直接修改。确认锁定？').then(() => lockV4TeamRoster(rosterDivisionId.value!)).then(() => {
+    proxy.$modal.msgSuccess('最终名单已锁定')
+    loadRosterWorkspace()
+  }).catch(() => {})
+}
+
+function openPromote() {
+  Object.assign(promoteForm, { formalRegistrationId: undefined, candidateRegistrationId: undefined, reason: '' })
+  promoteOpen.value = true
+}
+
+function submitPromote() {
+  if (!rosterDivisionId.value || !promoteForm.formalRegistrationId || !promoteForm.candidateRegistrationId || !promoteForm.reason.trim()) {
+    proxy.$modal.msgError('请选择双方球队并填写递补原因')
+    return
+  }
+  promoteV4TeamRosterCandidate(rosterDivisionId.value, {
+    formalRegistrationId: promoteForm.formalRegistrationId,
+    candidateRegistrationId: promoteForm.candidateRegistrationId,
+    reason: promoteForm.reason.trim()
+  }).then(() => {
+    proxy.$modal.msgSuccess('已递补并生成新名单版本')
+    promoteOpen.value = false
+    loadRosterWorkspace()
+  })
+}
+
 function onTabChange(name: string | number) {
   if (name === 'personal' && !personalList.value.length) getPersonalList()
-  if (name === 'formation' && !drawList.value.length) getDrawList()
+  if (name === 'formation') {
+    if (!drawList.value.length) getDrawList()
+    loadFormationWorkspace()
+  }
 }
 
 onMounted(async () => {
@@ -889,4 +1244,12 @@ onMounted(async () => {
 .nowrap-tag { white-space: nowrap; }
 .drawer-toolbar { display: flex; gap: 8px; }
 .expand-block { padding: 8px 16px; }
+.formation-board { display: flex; gap: 16px; align-items: flex-start; }
+.formation-unassigned { width: 260px; flex-shrink: 0; border: 1px solid var(--el-border-color); border-radius: 4px; padding: 12px; }
+.formation-teams { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.formation-team-head { display: flex; justify-content: space-between; gap: 8px; }
+.formation-captain { margin-top: 4px; color: var(--el-text-color-secondary); font-size: 12px; }
+.formation-person { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.formation-empty { color: var(--el-text-color-secondary); font-size: 13px; }
+.formation-unassigned h4 { margin: 0 0 8px; }
 </style>

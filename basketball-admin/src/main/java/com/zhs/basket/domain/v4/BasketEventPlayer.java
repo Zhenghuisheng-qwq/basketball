@@ -11,6 +11,7 @@ public class BasketEventPlayer {
     private Long id;
     private Long seasonId;
     private Long divisionId;
+    private Long rosterVersionId;
     private Long eventTeamId;
     private Long sourcePlayerId;
     private Long memberId;

@@ -15,6 +15,8 @@ public class BasketPersonalDrawBatch {
     private String activeUniqueKey;
     private String resultSource;
     private String resultRemark;
+    private Long randomSeed;
+    private Long rosterVersionId;
     private String unassignedPolicy;
     private String unassignedRemark;
     private Long confirmedBy;

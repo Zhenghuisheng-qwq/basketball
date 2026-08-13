@@ -18,6 +18,10 @@ const availableTeamsMap = ref<Record<string, V4PersonalFormationAvailableTeam[]>
 const loadingTeamsMap = ref<Record<string, boolean>>({})
 const actingTeamId = ref('')
 
+function isVersionedFormation(task: V4PersonalFormationTask) {
+  return task.rosterWorkflowMode === 'VERSIONED' || task.needsLongTermBind === false
+}
+
 function formationStatusLabel(status?: string) {
   switch ((status || '').toUpperCase()) {
     case 'CAPTAIN_ASSIGNED': return '已指定队长'
@@ -25,6 +29,7 @@ function formationStatusLabel(status?: string) {
     case 'READY_TO_CONFIRM': return '待确认'
     case 'CONFIRMED': return '已确认'
     case 'CONVERTED': return '已转换'
+    case 'DRAFT': return '已分配临时球队'
     default: return status || '进行中'
   }
 }
@@ -132,7 +137,10 @@ onMounted(async () => {
           <span>{{ member.assignmentRole === 'CAPTAIN' ? '（队长）' : '' }}</span>
         </li>
       </ul>
-      <div v-if="task.formationStatus !== 'CONVERTED'" class="formation-panel__actions">
+      <div v-if="isVersionedFormation(task)" class="formation-panel__meta">
+        已分配临时球队，锁定后可进入本队比赛提交。
+      </div>
+      <div v-else-if="task.formationStatus !== 'CONVERTED'" class="formation-panel__actions">
         <button type="button" class="account-btn-secondary" @click="loadAvailableTeams(task)">
           {{ loadingTeamsMap[task.drawTeamId] ? '加载中…' : '加载候选球队' }}
         </button>

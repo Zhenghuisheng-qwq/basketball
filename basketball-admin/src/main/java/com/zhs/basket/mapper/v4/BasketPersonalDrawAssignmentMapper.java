@@ -22,4 +22,8 @@ public interface BasketPersonalDrawAssignmentMapper {
     int softDelete(@Param("id") Long id);
 
     int softDeleteByTeamId(@Param("drawTeamId") Long drawTeamId);
+
+    int softDeleteByBatchId(@Param("drawBatchId") Long drawBatchId);
+
+    BasketPersonalDrawAssignment selectByPersonalRegistrationId(@Param("personalRegistrationId") Long personalRegistrationId);
 }
