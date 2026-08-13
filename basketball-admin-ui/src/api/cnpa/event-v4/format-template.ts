@@ -67,6 +67,9 @@ export interface BasketDivisionFormatSnapshotVo {
   sourceTemplateVersion?: number
   snapshotVersion?: number
   snapshotStatus?: string
+  ruleVersionId?: number
+  ruleVersionNo?: number
+  ruleVersionStatus?: string
   snapshotStatusName?: string
   isCurrent?: number
   mutable?: boolean

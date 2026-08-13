@@ -10,6 +10,8 @@ import com.zhs.basket.enums.v4.MatchPublishStatusEnum;
 import com.zhs.basket.enums.v4.MatchStatusEnum;
 import com.zhs.basket.enums.v4.PublishStatusEnum;
 import com.zhs.basket.enums.v4.ScheduleGenerationStrategyEnum;
+import com.zhs.basket.enums.v4.StructureStatusEnum;
+import com.zhs.basket.support.v4.version.StructureVersionContext;
 import com.zhs.basket.support.v4.BestOfCapabilityGate;
 import com.zhs.basket.support.v4.StageFormatSpecification;
 import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
@@ -98,6 +100,12 @@ abstract class AbstractStageScheduleStrategy implements DivisionStageScheduleStr
         batch.setExpectedMatchCount(expectedMatchCount);
         batch.setActualMatchCount(expectedMatchCount);
         batch.setExecutionVersion(context.getExecutionVersion());
+        StructureVersionContext versionContext = context.getVersionContext();
+        if (versionContext != null) {
+            batch.setRuleVersionId(versionContext.getRuleVersionId());
+            batch.setRosterVersionId(versionContext.getRosterVersionId());
+        }
+        batch.setStructureStatus(StructureStatusEnum.ACTIVE.getCode());
         batch.setGenerateType(GENERATE_TYPE_AUTO);
         batch.setGenerateStatus(GenerateStatusEnum.SUCCESS.getCode());
         batch.setPublishStatus(PublishStatusEnum.DRAFT.getCode());

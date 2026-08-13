@@ -3,6 +3,9 @@ package com.zhs.basket.domain.v4;
 import lombok.Data;
 import java.util.Date;
 
+/**
+ * Division 规则快照。业务语义 = Rule Version，不另建平行 RuleVersion 表。
+ */
 @Data
 public class BasketDivisionFormatSnapshot {
     private Long id;

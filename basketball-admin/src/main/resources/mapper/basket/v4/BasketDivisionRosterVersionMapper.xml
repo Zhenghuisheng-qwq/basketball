@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketDivisionRosterVersionMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketDivisionRosterVersion" id="Result">
+        <id property="id" column="id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="versionNo" column="version_no"/>
+        <result property="registrationMode" column="registration_mode"/>
+        <result property="ruleVersionId" column="rule_version_id"/>
+        <result property="status" column="status"/>
+        <result property="isCurrent" column="is_current"/>
+        <result property="activeUniqueKey" column="active_unique_key"/>
+        <result property="formalCount" column="formal_count"/>
+        <result property="candidateCount" column="candidate_count"/>
+        <result property="excludedCount" column="excluded_count"/>
+        <result property="allocationFingerprint" column="allocation_fingerprint"/>
+        <result property="lockedTime" column="locked_time"/>
+        <result property="lockedBy" column="locked_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="BaseColumns">id, division_id, version_no, registration_mode, rule_version_id, status,
+        is_current, active_unique_key, formal_count, candidate_count, excluded_count,
+        allocation_fingerprint, locked_time, locked_by, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="Result">
+        select <include refid="BaseColumns"/>
+        from basket_division_roster_version
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectCurrentLockedByDivisionId" resultMap="Result">
+        select <include refid="BaseColumns"/>
+        from basket_division_roster_version
+        where division_id = #{divisionId}
+          and is_delete = 0
+          and is_current = 1
+          and status = 'LOCKED'
+        order by version_no desc
+        limit 1
+    </select>
+
+    <select id="selectByDivisionId" resultMap="Result">
+        select <include refid="BaseColumns"/>
+        from basket_division_roster_version
+        where division_id = #{divisionId} and is_delete = 0
+        order by version_no desc
+    </select>
+
+    <select id="selectMaxVersionByDivisionId" resultType="int">
+        select ifnull(max(version_no), 0)
+        from basket_division_roster_version
+        where division_id = #{divisionId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_division_roster_version (
+            division_id, version_no, registration_mode, rule_version_id, status,
+            is_current, active_unique_key, formal_count, candidate_count, excluded_count,
+            allocation_fingerprint, locked_time, locked_by, create_time, update_time, is_delete
+        ) values (
+            #{divisionId}, #{versionNo}, #{registrationMode}, #{ruleVersionId}, #{status},
+            #{isCurrent}, #{activeUniqueKey}, #{formalCount}, #{candidateCount}, #{excludedCount},
+            #{allocationFingerprint}, #{lockedTime}, #{lockedBy}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_division_roster_version
+        <set>
+            <if test="status != null">status = #{status},</if>
+            <if test="isCurrent != null">is_current = #{isCurrent},</if>
+            <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
+            <if test="activeUniqueKey == null and isCurrent != null and isCurrent == 0">active_unique_key = null,</if>
+            <if test="formalCount != null">formal_count = #{formalCount},</if>
+            <if test="candidateCount != null">candidate_count = #{candidateCount},</if>
+            <if test="excludedCount != null">excluded_count = #{excludedCount},</if>
+            <if test="allocationFingerprint != null">allocation_fingerprint = #{allocationFingerprint},</if>
+            <if test="lockedTime != null">locked_time = #{lockedTime},</if>
+            <if test="lockedBy != null">locked_by = #{lockedBy},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="markSuperseded">
+        update basket_division_roster_version
+        set is_current = 0,
+            active_unique_key = null,
+            status = 'INVALID',
+            update_time = now()
+        where id = #{id} and is_delete = 0 and is_current = 1
+    </update>
+
+    <update id="clearActiveUniqueKey">
+        update basket_division_roster_version
+        set active_unique_key = null, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+</mapper>

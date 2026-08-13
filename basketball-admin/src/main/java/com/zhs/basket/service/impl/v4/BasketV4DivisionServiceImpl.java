@@ -209,18 +209,21 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     }
 
     private void applyDraftUpdate(BasketDivision division, BasketDivisionUpdateReq req) {
-        if (req.getPlatformCode() != null) {
+        if (req.getPlatformCode() != null && !req.getPlatformCode().equals(division.getPlatformCode())) {
+            ruleMutableSpecification.assertCanChangeKeyFields(division);
             validateWritablePlatformCode(req.getPlatformCode());
             division.setPlatformCode(req.getPlatformCode());
         }
         if (req.getDivisionName() != null) {
             division.setDivisionName(req.getDivisionName().trim());
         }
-        if (req.getRegistrationMode() != null) {
+        if (req.getRegistrationMode() != null && !req.getRegistrationMode().equals(division.getRegistrationMode())) {
+            ruleMutableSpecification.assertCanChangeKeyFields(division);
             validateRegistrationModeWritable(req.getRegistrationMode());
             division.setRegistrationMode(req.getRegistrationMode());
         }
-        if (req.getFormatType() != null) {
+        if (req.getFormatType() != null && !req.getFormatType().equals(division.getFormatType())) {
+            ruleMutableSpecification.assertCanChangeKeyFields(division);
             division.setFormatType(req.getFormatType());
         }
         if (req.getGameMode() != null && !req.getGameMode().equals(division.getGameMode())) {

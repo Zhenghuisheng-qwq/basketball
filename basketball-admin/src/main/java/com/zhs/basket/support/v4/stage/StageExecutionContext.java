@@ -6,6 +6,7 @@ import com.zhs.basket.domain.v4.BasketDivisionGroupingBatch;
 import com.zhs.basket.domain.v4.BasketDivisionGroupTeam;
 import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketDivisionStageTeam;
+import com.zhs.basket.support.v4.version.StructureVersionContext;
 import lombok.Data;
 
 import java.util.ArrayList;
@@ -24,4 +25,5 @@ public class StageExecutionContext {
     private List<BasketDivisionGroup> groups = new ArrayList<>();
     private List<BasketDivisionGroupTeam> groupTeams = new ArrayList<>();
     private Integer executionVersion;
+    private StructureVersionContext versionContext;
 }

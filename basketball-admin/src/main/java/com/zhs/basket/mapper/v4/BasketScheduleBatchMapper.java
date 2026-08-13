@@ -29,4 +29,10 @@ public interface BasketScheduleBatchMapper {
     int updateById(BasketScheduleBatch entity);
 
     int softDelete(@Param("id") Long id);
+
+    int markStructureStaleById(@Param("id") Long id);
+
+    int markStructureStaleByRuleVersionId(@Param("ruleVersionId") Long ruleVersionId);
+
+    int markStructureStaleByRosterVersionId(@Param("rosterVersionId") Long rosterVersionId);
 }

@@ -13,6 +13,12 @@ public class BasketDivisionFormatSnapshotVo {
     private Integer sourceTemplateVersion;
     private Integer snapshotVersion;
     private String snapshotStatus;
+    /** 兼容字段：Rule Version = snapshotId */
+    private Long ruleVersionId;
+    /** 兼容字段：Rule Version 号 = snapshotVersion */
+    private Integer ruleVersionNo;
+    /** 兼容字段：Rule Version 状态 = snapshotStatus */
+    private String ruleVersionStatus;
     private String snapshotStatusName;
     private Integer isCurrent;
     private Boolean mutable;

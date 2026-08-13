@@ -30,6 +30,9 @@ public class BasketEventTeam implements Serializable {
     private Long divisionId;
 
     @JsonSerialize(using = ToStringSerializer.class)
+    private Long rosterVersionId;
+
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long registrationId;
 
     @JsonSerialize(using = ToStringSerializer.class)

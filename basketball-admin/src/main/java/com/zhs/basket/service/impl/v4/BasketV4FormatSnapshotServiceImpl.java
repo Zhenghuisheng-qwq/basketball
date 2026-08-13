@@ -293,6 +293,9 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         }
     }
 
+    /**
+     * 锁定当前草稿快照。锁定后该 Snapshot 即正式 Rule Version Vn，禁止再改核心规则。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void lockSnapshot(Long divisionId, Long operatorId) {
@@ -681,6 +684,9 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         vo.setSnapshotStatus(snapshot.getSnapshotStatus());
         vo.setSnapshotStatusName(V4FormatDisplaySupport.snapshotStatusLabel(snapshot.getSnapshotStatus()));
         vo.setIsCurrent(snapshot.getIsCurrent());
+        vo.setRuleVersionId(snapshot.getId());
+        vo.setRuleVersionNo(snapshot.getSnapshotVersion());
+        vo.setRuleVersionStatus(snapshot.getSnapshotStatus());
         return vo;
     }
 

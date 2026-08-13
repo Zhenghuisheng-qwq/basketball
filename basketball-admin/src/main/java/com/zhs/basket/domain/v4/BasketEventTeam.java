@@ -11,6 +11,8 @@ public class BasketEventTeam {
     private Long id;
     private Long seasonId;
     private Long divisionId;
+    /** 所属名单版本；NULL 表示 Legacy 未绑定 */
+    private Long rosterVersionId;
     private Long registrationId;
     private Long sourceTeamId;
     private String teamNameSnapshot;

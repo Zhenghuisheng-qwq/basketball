@@ -17,6 +17,9 @@
         <result property="expectedMatchCount" column="expected_match_count" />
         <result property="actualMatchCount" column="actual_match_count" />
         <result property="executionVersion" column="execution_version" />
+        <result property="ruleVersionId" column="rule_version_id" />
+        <result property="rosterVersionId" column="roster_version_id" />
+        <result property="structureStatus" column="structure_status" />
         <result property="generateType" column="generate_type" />
         <result property="generateStatus" column="generate_status" />
         <result property="publishStatus" column="publish_status" />
@@ -48,7 +51,7 @@
         <result property="remark" column="remark" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, division_id, stage_id, grouping_batch_id, batch_no, format_type, rule_code, generation_strategy, team_count, match_count, expected_match_count, actual_match_count, execution_version, generate_type, generate_status, publish_status, generate_time, publish_time, generated_by, published_by, remark, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, division_id, stage_id, grouping_batch_id, batch_no, format_type, rule_code, generation_strategy, team_count, match_count, expected_match_count, actual_match_count, execution_version, rule_version_id, roster_version_id, structure_status, generate_type, generate_status, publish_status, generate_time, publish_time, generated_by, published_by, remark, create_time, update_time, is_delete</sql>
 
     <sql id="NotDeleted">is_delete = 0</sql>
 
@@ -121,10 +124,12 @@
         insert into basket_schedule_batch (
             season_id, division_id, stage_id, grouping_batch_id, batch_no, format_type, rule_code, generation_strategy,
             team_count, match_count, expected_match_count, actual_match_count, execution_version,
+            rule_version_id, roster_version_id, structure_status,
             generate_type, generate_status, publish_status, generate_time, publish_time, generated_by, published_by, remark, create_time, update_time, is_delete
         ) values (
             #{seasonId}, #{divisionId}, #{stageId}, #{groupingBatchId}, #{batchNo}, #{formatType}, #{ruleCode}, #{generationStrategy},
             #{teamCount}, #{matchCount}, #{expectedMatchCount}, #{actualMatchCount}, #{executionVersion},
+            #{ruleVersionId}, #{rosterVersionId}, #{structureStatus},
             #{generateType}, #{generateStatus}, #{publishStatus}, #{generateTime}, #{publishTime}, #{generatedBy}, #{publishedBy}, #{remark}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
@@ -145,6 +150,9 @@
             expected_match_count = #{expectedMatchCount},
             actual_match_count = #{actualMatchCount},
             execution_version = #{executionVersion},
+            <if test="ruleVersionId != null">rule_version_id = #{ruleVersionId},</if>
+            <if test="rosterVersionId != null">roster_version_id = #{rosterVersionId},</if>
+            <if test="structureStatus != null">structure_status = #{structureStatus},</if>
             <if test="generateType != null">generate_type = #{generateType},</if>
             <if test="generateStatus != null">generate_status = #{generateStatus},</if>
             <if test="publishStatus != null">publish_status = #{publishStatus},</if>
@@ -168,5 +176,25 @@
         select count(1) from basket_schedule_batch
         where division_id = #{divisionId} and is_delete = 0
     </select>
+
+    <update id="markStructureStaleById">
+        update basket_schedule_batch
+        set structure_status = 'STALE', update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="markStructureStaleByRuleVersionId">
+        update basket_schedule_batch
+        set structure_status = 'STALE', update_time = now()
+        where rule_version_id = #{ruleVersionId} and is_delete = 0
+          and (structure_status is null or structure_status &lt;&gt; 'STALE')
+    </update>
+
+    <update id="markStructureStaleByRosterVersionId">
+        update basket_schedule_batch
+        set structure_status = 'STALE', update_time = now()
+        where roster_version_id = #{rosterVersionId} and is_delete = 0
+          and (structure_status is null or structure_status &lt;&gt; 'STALE')
+    </update>
 
 </mapper>

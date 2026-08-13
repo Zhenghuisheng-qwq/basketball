@@ -22,6 +22,8 @@ public class DivisionRuleMutableSpecification {
     @Autowired
     private BasketScheduleBatchMapper scheduleBatchMapper;
     @Autowired
+    private BasketDivisionFormatSnapshotMapper snapshotMapper;
+    @Autowired
     private BasketV4MatchMapper matchMapper;
     @Autowired(required = false)
     private BasketPersonalRegistrationMapper personalRegistrationMapper;
@@ -47,12 +49,23 @@ public class DivisionRuleMutableSpecification {
     }
 
     public void assertCanChangeKeyFields(BasketDivision division) {
+        assertCurrentSnapshotNotLocked(division);
         if (DivisionStatusEnum.REGISTRATION_OPEN.getCode().equals(division.getDivisionStatus())
                 || DivisionStatusEnum.REGISTRATION_CLOSED.getCode().equals(division.getDivisionStatus())) {
             throw new ServiceException("报名已开放后不允许修改平台、比赛模式、报名方式或规则模板");
         }
         if (hasActiveRegistration(division.getId()) || hasEventTeam(division.getId())) {
             throw new ServiceException("已有有效报名或参赛快照，不允许修改关键规则字段");
+        }
+    }
+
+    public void assertCurrentSnapshotNotLocked(BasketDivision division) {
+        if (division == null || division.getId() == null) {
+            return;
+        }
+        BasketDivisionFormatSnapshot snapshot = snapshotMapper.selectActiveByDivisionId(division.getId());
+        if (snapshot != null && SnapshotStatusEnum.fromCode(snapshot.getSnapshotStatus()).isLockedOrBeyond()) {
+            throw new ServiceException("规则已锁定，不允许修改平台、比赛模式、报名方式或规则模板");
         }
     }
 

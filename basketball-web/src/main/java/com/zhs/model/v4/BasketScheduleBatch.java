@@ -39,6 +39,14 @@ public class BasketScheduleBatch implements Serializable {
 
     private Integer matchCount;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long ruleVersionId;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long rosterVersionId;
+
+    private String structureStatus;
+
     private String generateType;
 
     private String generateStatus;

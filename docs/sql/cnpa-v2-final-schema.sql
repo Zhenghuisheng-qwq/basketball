@@ -13,6 +13,7 @@
 --      docs/sql/cnpa-dynamic-format-r3-migration.sql
 --      docs/sql/cnpa-dynamic-format-r4-migration.sql
 --      再执行 docs/sql/cnpa-dynamic-format-r5-cleanup.sql 收紧约束
+--      再执行 docs/sql/cnpa-v13-r1-version-skeleton-migration.sql（Rule/Roster/Structure 版本骨架）
 --   6. 不含若依 sys_* 系统表
 -- =============================================================================
 SET NAMES utf8mb4;
@@ -26,6 +27,7 @@ SET NAMES utf8mb4;
 -- 个人：basket_personal_registration, basket_personal_registration_audit,
 --       basket_personal_draw_batch, basket_personal_draw_team, basket_personal_draw_assignment
 -- 参赛：basket_event_team, basket_event_player
+-- 版本骨架：basket_division_roster_version（名单版本头；Rule=FormatSnapshot，Structure=ScheduleBatch）
 -- 分组：basket_division_grouping_batch, basket_division_group, basket_division_group_team
 -- 阶段：basket_division_stage_team, basket_division_stage_qualification
 -- 赛程：basket_schedule_batch, basket_match, basket_match_submission,

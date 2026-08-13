@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketDivisionRosterEntryMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketDivisionRosterEntry" id="Result">
+        <id property="id" column="id"/>
+        <result property="rosterVersionId" column="roster_version_id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="registrationId" column="registration_id"/>
+        <result property="teamId" column="team_id"/>
+        <result property="participationRole" column="participation_role"/>
+        <result property="candidateOrder" column="candidate_order"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="BaseColumns">id, roster_version_id, division_id, registration_id, team_id,
+        participation_role, candidate_order, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="Result">
+        select <include refid="BaseColumns"/>
+        from basket_division_roster_entry
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByRosterVersionId" resultMap="Result">
+        select <include refid="BaseColumns"/>
+        from basket_division_roster_entry
+        where roster_version_id = #{rosterVersionId} and is_delete = 0
+        order by case participation_role
+            when 'FORMAL' then 1
+            when 'CANDIDATE' then 2
+            else 3 end,
+            candidate_order asc, registration_id asc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_division_roster_entry (
+            roster_version_id, division_id, registration_id, team_id,
+            participation_role, candidate_order, create_time, update_time, is_delete
+        ) values (
+            #{rosterVersionId}, #{divisionId}, #{registrationId}, #{teamId},
+            #{participationRole}, #{candidateOrder}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <insert id="batchInsert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_division_roster_entry (
+            roster_version_id, division_id, registration_id, team_id,
+            participation_role, candidate_order, create_time, update_time, is_delete
+        ) values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.rosterVersionId}, #{item.divisionId}, #{item.registrationId}, #{item.teamId},
+             #{item.participationRole}, #{item.candidateOrder}, #{item.createTime}, #{item.updateTime}, #{item.isDelete})
+        </foreach>
+    </insert>
+</mapper>

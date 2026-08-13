@@ -6,6 +6,8 @@ import com.zhs.basket.dto.v4.BasketStageManualRankReq;
 import com.zhs.basket.enums.v4.*;
 import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.v4.*;
+import com.zhs.basket.service.v4.IBasketV4StructureVersionService;
+import com.zhs.basket.support.v4.roster.TeamRosterSupport;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
 import com.zhs.basket.support.v4.stage.PlayoffBracketSupport;
 import com.zhs.basket.support.v4.ByeQualificationService;
@@ -76,6 +78,10 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private ByeQualificationService byeQualificationService;
     @Autowired
     private BasketTeamMapper teamMapper;
+    @Autowired
+    private IBasketV4StructureVersionService structureVersionService;
+    @Autowired
+    private TeamRosterSupport teamRosterSupport;
 
     @Override
     public List<BasketDivisionStageExecutionListVo> listStages(Long divisionId) {
@@ -104,7 +110,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         int totalSourceCount;
 
         if (isFirstStage(stage)) {
-            List<BasketEventTeam> eventTeams = eventTeamMapper.selectActiveByDivisionId(division.getId());
+            List<BasketEventTeam> eventTeams = teamRosterSupport.selectFormalEventTeams(division.getId());
             if (PlayoffBracketSupport.isPlayoffBracket(stage.getPairingRule())) {
                 eventTeams = sortEventTeamsBySourceTeamCreateTime(eventTeams);
             }
@@ -286,6 +292,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             throw new ServiceException("阶段尚未生成赛程");
         }
         BasketScheduleBatch batch = requireBatch(stage.getScheduleBatchId());
+        structureVersionService.assertBoundRuleVersion(batch, stage.getSnapshotId());
         if (!PublishStatusEnum.DRAFT.getCode().equals(batch.getPublishStatus())) {
             throw new ServiceException("仅草稿赛程可发布");
         }
@@ -858,6 +865,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         context.setStage(stage);
         context.setStageTeams(stageTeamMapper.selectByStageId(stage.getId()));
         context.setExecutionVersion(stage.getExecutionVersion() != null ? stage.getExecutionVersion() : 0);
+        context.setVersionContext(structureVersionService.resolveForGenerate(division.getId()));
 
         if (isGroupStage(stage)) {
             BasketDivisionGroupingBatch groupingBatch = groupingBatchMapper.selectActiveByDivisionAndStage(
