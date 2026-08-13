@@ -3,9 +3,9 @@
     <div class="playoff-bracket-meta">
       <span>种子来源：{{ model.seedSourceLabel }}</span>
     </div>
-    <p class="playoff-bracket-hint">首轮根据种子生成固定淘汰树，生成后上下半区固定，后续胜者沿既定路径晋级。</p>
+    <p class="playoff-bracket-hint">首轮按固定种子矩阵生成淘汰树；后续轮严格按相邻 Series Winner 固定路径晋级。</p>
     <div class="playoff-bracket-scroll">
-      <div class="playoff-bracket" :style="{ width: Math.max(model.width, teamCount >= 16 ? 1380 : model.width) + 'px', height: model.height + 'px' }">
+      <div class="playoff-bracket" :style="{ width: model.width + 'px', height: model.height + 'px', minWidth: model.width + 'px' }">
         <div
           v-for="(round, ri) in model.rounds"
           :key="round.size"
@@ -52,7 +52,7 @@
           class="bracket-champion"
           :style="{ left: model.champion.x + 'px', top: model.champion.y + 'px', height: model.matchHeight + 'px' }"
         >
-          <span class="bracket-champion-cup">冠军</span>
+          <span class="bracket-champion-cup">{{ model.champion.label }}</span>
         </div>
       </div>
     </div>
@@ -62,7 +62,7 @@
     type="warning"
     :closable="false"
     show-icon
-    title="当前标准季后赛支持 4 / 8 / 16 支队伍。其它人数后续结合 BYE 处理。"
+    title="当前标准季后赛人数需为 2 的次幂；非标准人数请使用轮空/高级赛制。"
   />
 </template>
 
@@ -134,7 +134,6 @@ function slotSeed(slot: { seedNo?: number; sourceMatchNo?: number; kind: string 
 }
 .playoff-bracket {
   position: relative;
-  min-width: 720px;
 }
 .bracket-round-head {
   position: absolute;
@@ -160,10 +159,10 @@ function slotSeed(slot: { seedNo?: number; sourceMatchNo?: number; kind: string 
   z-index: 1;
 }
 .bracket-connector--h {
-  border-top: 2px solid #c41e3a;
+  border-top: 2px solid #c4e1a3;
 }
 .bracket-connector--v {
-  border-left: 2px solid #c41e3a;
+  border-left: 2px solid #c4e1a3;
 }
 .bracket-match {
   position: absolute;
@@ -220,13 +219,13 @@ function slotSeed(slot: { seedNo?: number; sourceMatchNo?: number; kind: string 
   justify-content: center;
   min-width: 88px;
   padding: 0 12px;
-  border: 1px solid #c41e3a;
+  border: 1px solid #c4e1a3;
   border-radius: 4px;
-  background: #fff5f5;
+  background: #f3ffef;
 }
 .bracket-champion-cup {
   font-size: 13px;
   font-weight: 700;
-  color: #c41e3a;
+  color: #4ce1a3;
 }
 </style>

@@ -152,7 +152,7 @@
               <el-descriptions-item v-if="quickEstimate.groupStageMatches" label="小组赛预计场次">{{ quickEstimate.groupStageMatches }} 场</el-descriptions-item>
               <el-descriptions-item v-if="quickEstimate.advanceTotal" label="晋级队伍数">{{ quickEstimate.advanceTotal }} 支</el-descriptions-item>
               <el-descriptions-item v-if="quickEstimate.eliminationStartRound" label="淘汰赛起始轮次">{{ quickEstimate.eliminationStartRound }}</el-descriptions-item>
-              <el-descriptions-item v-if="quickEstimate.eliminationMatches" label="淘汰赛预计场次">{{ quickEstimate.eliminationMatches }} 场</el-descriptions-item>
+              <el-descriptions-item v-if="quickEstimate.eliminationMatches" label="淘汰赛预计系列数">{{ quickEstimate.eliminationMatches }} 场（N-1）</el-descriptions-item>
               <el-descriptions-item v-if="quickEstimate.totalMatches" label="总预计场次" :span="2">{{ quickEstimate.totalMatches }} 场（最终以实际审核队伍数为准）</el-descriptions-item>
             </el-descriptions>
             <div v-if="selectedScheme === 'PLAYOFF' && playoffRoundSizes.length" class="playoff-bracket-preview mt8">
@@ -206,6 +206,22 @@
                   </el-form-item>
                   <el-form-item label="参赛组织">
                     <span class="readonly-info-value">不分组</span>
+                  </el-form-item>
+                  <el-form-item label="参赛来源">
+                    <span class="readonly-info-value">{{ playoffParticipantSourceLabel }}</span>
+                  </el-form-item>
+                  <el-form-item label="季后赛参赛规模">
+                    <el-select
+                      v-if="playoffSizeEditable"
+                      :model-value="playoffBlock?.teamCount"
+                      style="width: 180px"
+                      :disabled="!snapshot?.mutable"
+                      @change="handlePlayoffTeamCountChange"
+                    >
+                      <el-option v-for="n in PLAYOFF_UI_TEAM_COUNTS" :key="n" :label="`${n} 支`" :value="n" />
+                    </el-select>
+                    <span v-else class="readonly-info-value">{{ playoffBlock?.teamCount }} 支</span>
+                    <div class="el-form-item__tip mt4">{{ playoffSizeTip }}</div>
                   </el-form-item>
                   <el-form-item label="种子来源">
                     <el-select :model-value="playoffSeedSource" style="width: 100%" @change="handlePlayoffSeedSourceChange">
@@ -472,7 +488,7 @@
             <el-descriptions-item v-if="stageEstimate.groupStageMatches" label="小组赛预计场次">{{ stageEstimate.groupStageMatches }} 场</el-descriptions-item>
             <el-descriptions-item v-if="stageEstimate.advanceTotal" label="晋级队伍数">{{ stageEstimate.advanceTotal }} 支</el-descriptions-item>
             <el-descriptions-item v-if="stageEstimate.eliminationStartRound" label="淘汰赛起始轮次">{{ stageEstimate.eliminationStartRound }}</el-descriptions-item>
-            <el-descriptions-item v-if="stageEstimate.eliminationMatches" label="淘汰赛预计场次">{{ stageEstimate.eliminationMatches }} 场</el-descriptions-item>
+            <el-descriptions-item v-if="stageEstimate.eliminationMatches" label="淘汰赛预计系列数">{{ stageEstimate.eliminationMatches }} 场（N-1）</el-descriptions-item>
             <el-descriptions-item v-if="stageEstimate.totalMatches" label="总预计场次" :span="2">{{ stageEstimate.totalMatches }} 场（最终以实际审核队伍数为准）</el-descriptions-item>
           </el-descriptions>
           <div v-if="playoffBlock" class="mt8">
@@ -759,7 +775,9 @@ import {
   inferPlayoffSeedSource,
   isV4PlayoffTeamCount,
   isV4StandingCapableStage,
+  mapPlayoffBestOfByRoundSize,
   normalizeV4PlayoffBestOf,
+  PLAYOFF_UI_TEAM_COUNTS,
   resolvePlayoffInputTeamCount,
   type V4PlayoffSeedSource
 } from '@/utils/v4PlayoffFormat'
@@ -966,9 +984,20 @@ function buildStageSavePayload(stage: BasketDivisionStageVo): BasketDivisionStag
   return payload
 }
 
+function ensureNonFinalAdvancementCount(stage: { advancementType?: string; advancementCount?: number; competitionFormat?: string; groupingMode?: string; organizationMode?: string }) {
+  const adv = (stage.advancementType || '').toUpperCase()
+  if (adv === 'OVERALL_TOP_N' && !(stage.advancementCount && stage.advancementCount > 0)) {
+    stage.advancementCount = props.maxTeamCount
+  }
+  if (adv === 'GROUP_TOP_N' && !(stage.advancementCount && stage.advancementCount > 0)) {
+    stage.advancementCount = 1
+  }
+}
+
 async function persistAllStages() {
   const chain = rebuildV4StageLinearChain(sortedStages.value)
   for (const chained of chain) {
+    ensureNonFinalAdvancementCount(chained)
     const existing = sortedStages.value.find((s) => s.stageCode === chained.stageCode)
     if (!existing?.id) continue
     const payload = buildStageSavePayload(existing)
@@ -976,6 +1005,7 @@ async function persistAllStages() {
     payload.nextStageCode = chained.nextStageCode
     payload.advancementType = chained.advancementType
     payload.advancementCount = chained.advancementCount
+    ensureNonFinalAdvancementCount(payload)
     await updateFormatStage(props.divisionId, existing.id, payload)
   }
   await loadSnapshot()
@@ -1162,6 +1192,24 @@ const playoffBestOfList = computed(() => (playoffBlock.value?.stages || []).map(
 
 const playoffRoundNames = computed(() => (playoffBlock.value?.stages || []).map((s) => s.stageName || ''))
 
+const playoffParticipantSourceLabel = computed(() => {
+  const block = playoffBlock.value
+  if (block && block.startIndex > 0) return '上一阶段晋级球队'
+  return '本赛区正式参赛队伍'
+})
+
+const playoffSizeEditable = computed(() => {
+  const block = playoffBlock.value
+  return !!block && block.startIndex === 0 && !!snapshot.value?.mutable
+})
+
+const playoffSizeTip = computed(() => {
+  if (!playoffSizeEditable.value) {
+    return '由前置阶段晋级人数自动决定，不可手工改为其它规模。'
+  }
+  return '优先与赛区预计正式参赛队伍数量联动；草稿态可调整为 4 / 8 / 16 / 32。'
+})
+
 function isPlayoffBlockStart(sIndex: number): boolean {
   return !!playoffBlock.value && playoffBlock.value.startIndex === sIndex
 }
@@ -1211,7 +1259,7 @@ async function expandPlayoffFromStage(stage: BasketDivisionStageVo) {
   const following = sorted.slice(startIndex + 1)
   const inputCount = resolvePlayoffInputTeamCount(prefix, props.maxTeamCount)
   if (!isV4PlayoffTeamCount(inputCount)) {
-    proxy!.$modal.msgWarning('当前标准季后赛支持 4 / 8 / 16 支队伍。其它人数后续结合 BYE 处理。')
+    proxy!.$modal.msgWarning('当前标准季后赛人数需为 2 的次幂；非标准人数请使用轮空/高级赛制。')
     return
   }
   if (following.some((s) => !isV4PlayoffBracketStageLike(s))) {
@@ -1227,26 +1275,24 @@ async function expandPlayoffFromStage(stage: BasketDivisionStageVo) {
   const existingBos = existingBlock && existingBlock.startIndex === startIndex
     ? existingBlock.stages.map((s) => s.bestOf ?? 1)
     : undefined
+  const bestOfList = mapPlayoffBestOfByRoundSize(inputCount, existingBlock?.teamCount, existingBos)
   const playoffPayloads = buildV4PlayoffStages({
     teamCount: inputCount,
-    bestOfList: existingBos,
+    bestOfList,
     seedSource,
     startOrder: startIndex + 1,
     existingCodes: prefix.map((s) => s.stageCode || '').filter(Boolean)
   })
   const prefixPayloads = prefix.map((s) => stageToSchemePayload(s))
-  if (prefixPayloads.length && playoffPayloads[0]) {
-    const lastPrefix = prefixPayloads[prefixPayloads.length - 1]
-    lastPrefix.stage.nextStageCode = playoffPayloads[0].stage.stageCode
-  }
+  const combined = finalizePlayoffGraphPayloads([...prefixPayloads, ...playoffPayloads], inputCount)
   actionBusy.value = true
   panelLoading.value = true
   try {
-    await syncStagesFromPayloads([...prefixPayloads, ...playoffPayloads])
+    await syncStagesFromPayloads(combined)
     emitChange()
     proxy!.$modal.msgSuccess('已展开季后赛阶段')
   } catch (e: any) {
-    proxy!.$modal.msgError(e?.msg || e?.message || '展开季后赛失败')
+    // axios 拦截器已对 500 弹过一次；此处不再重复 toast
     await loadSnapshot()
   } finally {
     panelLoading.value = false
@@ -1284,16 +1330,13 @@ async function collapsePlayoffBlock(format: string) {
     }
   }
   const prefixPayloads = prefix.map((s) => stageToSchemePayload(s))
-  if (prefixPayloads.length) {
-    prefixPayloads[prefixPayloads.length - 1].stage.nextStageCode = kept.stage.stageCode
-  }
+  const combined = finalizePlayoffGraphPayloads([...prefixPayloads, kept], props.maxTeamCount)
   actionBusy.value = true
   panelLoading.value = true
   try {
-    await syncStagesFromPayloads([...prefixPayloads, kept])
+    await syncStagesFromPayloads(combined)
     emitChange()
-  } catch (e: any) {
-    proxy!.$modal.msgError(e?.msg || e?.message || '切换竞赛方式失败')
+  } catch {
     await loadSnapshot()
   } finally {
     panelLoading.value = false
@@ -1320,16 +1363,57 @@ async function handlePlayoffSeedSourceChange(val: V4PlayoffSeedSource) {
     if (block.stages[i]?.stageName) p.stage.stageName = block.stages[i].stageName as string
   })
   const prefixPayloads = prefix.map((s) => stageToSchemePayload(s))
-  if (prefixPayloads.length && payloads[0]) {
-    prefixPayloads[prefixPayloads.length - 1].stage.nextStageCode = payloads[0].stage.stageCode
-  }
+  const combined = finalizePlayoffGraphPayloads([...prefixPayloads, ...payloads], block.teamCount)
   actionBusy.value = true
   panelLoading.value = true
   try {
-    await syncStagesFromPayloads([...prefixPayloads, ...payloads])
+    await syncStagesFromPayloads(combined)
     emitChange()
-  } catch (e: any) {
-    proxy!.$modal.msgError(e?.msg || e?.message || '更新种子来源失败')
+  } catch {
+    await loadSnapshot()
+  } finally {
+    panelLoading.value = false
+    actionBusy.value = false
+  }
+}
+
+async function handlePlayoffTeamCountChange(val: number | string) {
+  if (actionBusy.value) return
+  const n = Number(val)
+  const block = playoffBlock.value
+  if (!block || block.startIndex !== 0) return
+  if (!isV4PlayoffTeamCount(n)) {
+    proxy!.$modal.msgWarning('当前标准季后赛人数需为 2 的次幂；非标准人数请使用轮空/高级赛制。')
+    return
+  }
+  if (n === block.teamCount) return
+  try {
+    await proxy!.$modal.confirm('修改季后赛参赛规模将重新生成阶段配置（同轮次 BO 尽量保留）。是否继续？')
+  } catch {
+    return
+  }
+  const prefix = sortedStages.value.slice(0, block.startIndex)
+  const bestOfList = mapPlayoffBestOfByRoundSize(
+    n,
+    block.teamCount,
+    block.stages.map((s) => s.bestOf ?? 1)
+  )
+  const payloads = buildV4PlayoffStages({
+    teamCount: n,
+    bestOfList,
+    seedSource: playoffSeedSource.value,
+    startOrder: 1,
+    existingCodes: prefix.map((s) => s.stageCode || '').filter(Boolean)
+  })
+  const prefixPayloads = prefix.map((s) => stageToSchemePayload(s))
+  const combined = finalizePlayoffGraphPayloads([...prefixPayloads, ...payloads], n)
+  actionBusy.value = true
+  panelLoading.value = true
+  try {
+    await syncStagesFromPayloads(combined)
+    emitChange()
+    proxy!.$modal.msgSuccess(`已按 ${n} 支重新生成季后赛`)
+  } catch {
     await loadSnapshot()
   } finally {
     panelLoading.value = false
@@ -1489,39 +1573,120 @@ async function handleSelectScheme(schemeId: V4FormatSchemeId) {
   emitChange()
 }
 
+function readSortedSnapshotStages(): BasketDivisionStageVo[] {
+  return [...(snapshot.value?.stages || [])].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
+}
+
+/**
+ * 一次性构造完整 Stage Graph：前缀不再是 Final，next/qualification 与真实 stageCode 对齐后再写入。
+ */
+function finalizePlayoffGraphPayloads(payloads: V4SchemeStagePayload[], fallbackAdvanceCount: number): V4SchemeStagePayload[] {
+  const chained = rebuildV4StageLinearChain(payloads.map((p) => p.stage))
+  return payloads.map((payload, i) => {
+    const stage = { ...payload.stage, ...chained[i] }
+    const adv = (stage.advancementType || '').toUpperCase()
+    if (adv === 'OVERALL_TOP_N' && !(stage.advancementCount && stage.advancementCount > 0)) {
+      stage.advancementCount = fallbackAdvanceCount
+    }
+    if (adv === 'GROUP_TOP_N' && !(stage.advancementCount && stage.advancementCount > 0)) {
+      stage.advancementCount = 1
+    }
+    if (adv === 'NONE') {
+      stage.nextStageCode = undefined
+      stage.advancementCount = undefined
+    }
+    return { ...payload, stage }
+  })
+}
+
+/** 解除 nextStage 引用，避免 rewrite 过程中校验到尚未写入的编码。 */
+function unlinkStageSaveReq(stage: BasketDivisionStageVo): BasketDivisionStageSaveReq {
+  const orgMode = resolveV4OrganizationMode(stage)
+  const format = (stage.competitionFormat || '').toUpperCase()
+  return {
+    stageCode: stage.stageCode,
+    stageName: stage.stageName,
+    stageOrder: stage.stageOrder,
+    stageType: 'CUSTOM',
+    organizationMode: orgMode,
+    competitionFormat: stage.competitionFormat,
+    groupingMode: orgMode === 'GROUPED' ? (stage.groupingMode || 'MANUAL') : 'NONE',
+    groupCount: orgMode === 'GROUPED' ? stage.groupCount : undefined,
+    roundRobinCycles: format === 'ROUND_ROBIN' ? (stage.roundRobinCycles ?? 1) : stage.roundRobinCycles,
+    bestOf: stage.bestOf ?? 1,
+    winPoints: format === 'ROUND_ROBIN' ? (stage.winPoints ?? 2) : stage.winPoints,
+    lossPoints: format === 'ROUND_ROBIN' ? (stage.lossPoints ?? 1) : stage.lossPoints,
+    advancementType: 'NONE',
+    advancementCount: undefined,
+    pairingRule: resolveV4StagePairingRuleForSave(stage),
+    nextStageCode: '',
+    requiresManualConfirmation: stage.requiresManualConfirmation ?? 0
+  }
+}
+
+function asUnlinkedStagePayload(stage: V4SchemeStagePayload['stage']): BasketDivisionStageSaveReq {
+  return {
+    ...stage,
+    nextStageCode: '',
+    advancementType: 'NONE',
+    advancementCount: undefined
+  }
+}
+
+/**
+ * 两阶段写入：先保证所有 stageCode 都在库里（无悬空 next），再一次性挂上 next 链。
+ * 禁止「先写 Stage1.next=PLAYOFF_8、此时 PLAYOFF_8 还不存在」。
+ */
 async function syncStagesFromPayloads(payloads: V4SchemeStagePayload[]) {
   await loadSnapshot()
-  let stages = [...(snapshot.value?.stages || [])].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
+  let stages = readSortedSnapshotStages()
+
+  for (const existing of stages) {
+    if (!existing.id || !existing.nextStageCode) continue
+    await updateFormatStage(props.divisionId, existing.id, unlinkStageSaveReq(existing))
+  }
+  await loadSnapshot()
+  stages = readSortedSnapshotStages()
 
   while (stages.length > payloads.length) {
     const last = stages[stages.length - 1]
     if (!last?.id) break
     await deleteFormatStage(props.divisionId, last.id)
     await loadSnapshot()
-    stages = [...(snapshot.value?.stages || [])].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
+    stages = readSortedSnapshotStages()
   }
 
   for (let i = 0; i < payloads.length; i += 1) {
     const { stage, tieBreakRules } = payloads[i]
-    const payload = { ...stage }
-    stages = [...(snapshot.value?.stages || [])].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
+    const stub = asUnlinkedStagePayload(stage)
+    if (!stub.stageCode) {
+      const existingCodes = readSortedSnapshotStages().map((s) => s.stageCode || '').filter(Boolean)
+      const preset = inferV4StageCodePreset(stage)
+      stub.stageCode = generateV4StageCode(preset, existingCodes)
+      stage.stageCode = stub.stageCode
+    }
+    stages = readSortedSnapshotStages()
     if (i < stages.length && stages[i]?.id) {
-      await updateFormatStage(props.divisionId, stages[i].id!, payload)
+      await updateFormatStage(props.divisionId, stages[i].id!, stub)
       if (tieBreakRules?.length) {
         await saveTieBreakRules(props.divisionId, { stageId: stages[i].id, rules: tieBreakRules })
       }
     } else {
-      if (!payload.stageCode) {
-        const existingCodes = stages.map((s) => s.stageCode || '').filter(Boolean)
-        const preset = inferV4StageCodePreset(stage)
-        payload.stageCode = generateV4StageCode(preset, existingCodes)
-      }
-      const res = await addFormatStage(props.divisionId, payload)
+      const res = await addFormatStage(props.divisionId, stub)
       if (tieBreakRules?.length && res.data) {
         await saveTieBreakRules(props.divisionId, { stageId: res.data, rules: tieBreakRules })
       }
-      await loadSnapshot()
     }
+    await loadSnapshot()
+  }
+
+  stages = readSortedSnapshotStages()
+  for (let i = 0; i < payloads.length; i += 1) {
+    const existing = stages[i]
+    if (!existing?.id) continue
+    const linked = { ...payloads[i].stage }
+    if (!linked.nextStageCode) linked.nextStageCode = ''
+    await updateFormatStage(props.divisionId, existing.id, linked)
   }
   await loadSnapshot()
 }
@@ -1856,7 +2021,17 @@ watch(
     if (!key || !prev || actionBusy.value || panelLoading.value) return
     const [input, current] = key.split(':').map(Number)
     if (!input || input === current) return
-    if (!isV4PlayoffTeamCount(input)) return
+    if (!isV4PlayoffTeamCount(input)) {
+      proxy!.$modal.msgWarning('当前标准季后赛人数需为 2 的次幂；非标准人数请使用轮空/高级赛制。')
+      return
+    }
+    try {
+      await proxy!.$modal.confirm(
+        `赛区/晋级人数已变为 ${input} 支，当前季后赛为 ${current} 支。是否按 ${input} 支重新生成阶段配置（同轮次 BO 尽量保留）？`
+      )
+    } catch {
+      return
+    }
     const first = playoffBlock.value?.stages[0]
     if (!first) return
     await expandPlayoffFromStage(first as BasketDivisionStageVo)

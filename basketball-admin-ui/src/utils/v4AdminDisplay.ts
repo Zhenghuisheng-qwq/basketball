@@ -1538,11 +1538,9 @@ export function isV4PowerOfTwo(n: number): boolean {
 }
 
 export function formatV4EliminationRoundLabel(teamCount: number): string {
-  if (teamCount <= 2) return '决赛'
-  if (teamCount === 4) return '4 强'
-  if (teamCount === 8) return '8 强'
-  if (teamCount === 16) return '16 强'
-  if (teamCount === 32) return '32 强'
+  if (teamCount <= 2) return '总决赛'
+  if (teamCount === 4) return '半决赛'
+  if (isV4PowerOfTwo(teamCount)) return `${teamCount} 强`
   return `${teamCount} 支队伍`
 }
 
@@ -1593,8 +1591,8 @@ export function buildDefaultV4QuickCreateParams(
     pairingRule: 'HIGH_VS_LOW'
   }
   if (schemeId === 'PLAYOFF') {
-    const n = isV4PlayoffTeamCount(expectedTeamCount) ? expectedTeamCount : 16
-    const rounds = buildV4PlayoffRoundSizes(n)
+    const n = expectedTeamCount
+    const rounds = isV4PlayoffTeamCount(n) ? buildV4PlayoffRoundSizes(n) : []
     return {
       ...base,
       expectedTeamCount: n,
@@ -1812,14 +1810,14 @@ export function validateV4QuickCreateParams(
       messages.push('晋级名额不能大于预计参赛队伍数')
     }
     if (!isV4PowerOfTwo(advanceCount)) {
-      messages.push(`当前将有 ${advanceCount} 支球队晋级，但系统暂不支持 ${advanceCount} 支球队自动生成单败淘汰赛。请调整为 4 支或 8 支晋级。`)
+      messages.push(`当前将有 ${advanceCount} 支球队晋级，但标准季后赛人数需为 2 的次幂；非标准人数请使用轮空/高级赛制。`)
     }
   }
 
   if (schemeId === 'GROUP_TO_ELIM') {
     const advanceTotal = calcV4AdvancementTotal(params, schemeId)
     if (!isV4PowerOfTwo(advanceTotal)) {
-      messages.push(`当前将有 ${advanceTotal} 支球队晋级，但系统暂不支持 ${advanceTotal} 支球队自动生成单败淘汰赛。请调整为 4 支或 8 支晋级。`)
+      messages.push(`当前将有 ${advanceTotal} 支球队晋级，但标准季后赛人数需为 2 的次幂；非标准人数请使用轮空/高级赛制。`)
     }
   }
 
@@ -1831,7 +1829,7 @@ export function validateV4QuickCreateParams(
 
   if (schemeId === 'PLAYOFF') {
     if (!isV4PlayoffTeamCount(expectedTeamCount)) {
-      messages.push(`当前快速季后赛模板支持 4 / 8 / 16 支队伍，当前队伍上限为 ${expectedTeamCount}。请调整赛区队伍上限，或使用自定义赛制。`)
+      messages.push(`当前标准季后赛人数需为 2 的次幂；非标准人数请使用轮空/高级赛制。当前队伍上限为 ${expectedTeamCount}。`)
     }
     if ((params.seedSource || 'TEAM_CREATE_TIME') === 'STANDING') {
       messages.push('当前无可用积分排名阶段，请使用球队创建时间顺序或其他种子方式。')
@@ -2009,8 +2007,21 @@ export function calcV4FormatEstimateFromStages(
   const sorted = [...stages].sort((a, b) => (a.stageOrder || 0) - (b.stageOrder || 0))
   const estimate: V4FormatEstimate = {}
   let total = 0
+  const playoff = findPlayoffBlock(sorted)
+  let skipPlayoffUntil = -1
 
-  for (const stage of sorted) {
+  for (let i = 0; i < sorted.length; i += 1) {
+    const stage = sorted[i]
+    if (playoff && i >= playoff.startIndex && i < playoff.startIndex + playoff.stages.length) {
+      if (i === playoff.startIndex) {
+        // 淘汰赛预计场次 = Series 数 = N-1（BO1 下与系列场次数一致）
+        estimate.eliminationStartRound = formatV4EliminationRoundLabel(playoff.teamCount)
+        estimate.eliminationMatches = calcV4EliminationMatchCount(playoff.teamCount)
+        total += estimate.eliminationMatches
+        skipPlayoffUntil = playoff.startIndex + playoff.stages.length - 1
+      }
+      if (i <= skipPlayoffUntil) continue
+    }
     if (isV4GroupCompetitionStage(stage)) {
       const groupCount = stage.groupCount ?? 0
       estimate.groupCount = groupCount

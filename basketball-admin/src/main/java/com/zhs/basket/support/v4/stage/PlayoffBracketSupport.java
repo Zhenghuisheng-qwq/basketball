@@ -22,25 +22,56 @@ public final class PlayoffBracketSupport {
         return PairingRuleEnum.PLAYOFF_BRACKET.getCode().equals(pairingRule);
     }
 
+    /** CNPA E2E 锁定的 16 队首轮矩阵（不可改）。 */
+    private static final int[] LOCKED_SEED_ORDER_16 = {
+            1, 16, 4, 13, 5, 12, 8, 9, 6, 11, 7, 10, 2, 15, 3, 14
+    };
+
     /**
-     * 4/8/16 首轮 Series 落位顺序（连续两两配对）。
+     * 2 的次幂首轮 Series 落位顺序（连续两两配对）。
+     * 4/8 为标准 mirror 递归；16 使用 E2E 锁定矩阵；32+ 由锁定 16 逐级 expand，保证 16 对阵回归不变。
      * 16: 1/16, 4/13, 5/12, 8/9, 6/11, 7/10, 2/15, 3/14
      */
     public static int[] firstRoundSeedOrder(int teamCount) {
-        if (teamCount == 4) {
-            return new int[]{1, 4, 2, 3};
-        }
-        if (teamCount == 8) {
-            return new int[]{1, 8, 4, 5, 2, 7, 3, 6};
+        if (!supportsTeamCount(teamCount)) {
+            throw new ServiceException("季后赛固定淘汰树仅支持 2 的次幂队伍数（>=2），当前 " + teamCount + " 支");
         }
         if (teamCount == 16) {
-            return new int[]{1, 16, 4, 13, 5, 12, 8, 9, 6, 11, 7, 10, 2, 15, 3, 14};
+            return LOCKED_SEED_ORDER_16.clone();
         }
-        throw new ServiceException("季后赛固定淘汰树当前仅支持 4 / 8 / 16 支队伍，当前 " + teamCount + " 支");
+        if (teamCount < 16) {
+            return buildRecursiveSeedOrder(teamCount);
+        }
+        int[] order = LOCKED_SEED_ORDER_16;
+        while (order.length < teamCount) {
+            order = expandSeedOrder(order);
+        }
+        return order;
+    }
+
+    /** 标准 mirror：每一档 [s] → [s, n+1-s]。 */
+    static int[] expandSeedOrder(int[] prev) {
+        int n = prev.length * 2;
+        int sum = n + 1;
+        int[] out = new int[n];
+        int i = 0;
+        for (int seed : prev) {
+            out[i++] = seed;
+            out[i++] = sum - seed;
+        }
+        return out;
+    }
+
+    static int[] buildRecursiveSeedOrder(int teamCount) {
+        int[] order = new int[]{1};
+        while (order.length < teamCount) {
+            order = expandSeedOrder(order);
+        }
+        return order;
     }
 
     public static boolean supportsTeamCount(int teamCount) {
-        return teamCount == 4 || teamCount == 8 || teamCount == 16;
+        return teamCount >= 2 && (teamCount & (teamCount - 1)) == 0;
     }
 
     /**
@@ -93,7 +124,7 @@ public final class PlayoffBracketSupport {
         }
         int n = sorted.size();
         if (!supportsTeamCount(n)) {
-            throw new ServiceException("季后赛固定淘汰树当前仅支持 4 / 8 / 16 支队伍，当前 " + n + " 支");
+            throw new ServiceException("季后赛固定淘汰树仅支持 2 的次幂队伍数（>=2），当前 " + n + " 支");
         }
         Map<Integer, BasketDivisionStageTeam> bySeed = new HashMap<>();
         for (BasketDivisionStageTeam team : sorted) {

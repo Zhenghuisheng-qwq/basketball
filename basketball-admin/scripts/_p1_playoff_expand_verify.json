@@ -1,0 +1,270 @@
+{
+  "api": {
+    "one_pass_16": {
+      "code": 500,
+      "msg": "下一阶段编码不存在：PLAYOFF_8",
+      "expect_fail": true,
+      "pass": true,
+      "stages": [
+        {
+          "code": "REGULAR",
+          "name": "单循环",
+          "format": "ROUND_ROBIN",
+          "pairing": "NONE",
+          "adv": "NONE",
+          "count": null,
+          "next": null,
+          "order": 1
+        }
+      ]
+    },
+    "two_pass_16": {
+      "errors": [],
+      "stages": [
+        {
+          "code": "PLAYOFF_16",
+          "name": "16强赛",
+          "format": "SINGLE_ELIMINATION",
+          "pairing": "PLAYOFF_BRACKET",
+          "adv": "WINNER_ADVANCE",
+          "count": null,
+          "next": "PLAYOFF_8",
+          "order": 1
+        },
+        {
+          "code": "PLAYOFF_8",
+          "name": "8强赛",
+          "format": "SINGLE_ELIMINATION",
+          "pairing": "PLAYOFF_BRACKET",
+          "adv": "WINNER_ADVANCE",
+          "count": null,
+          "next": "PLAYOFF_4",
+          "order": 2
+        },
+        {
+          "code": "PLAYOFF_4",
+          "name": "4强赛",
+          "format": "SINGLE_ELIMINATION",
+          "pairing": "PLAYOFF_BRACKET",
+          "adv": "WINNER_ADVANCE",
+          "count": null,
+          "next": "PLAYOFF_FINAL",
+          "order": 3
+        },
+        {
+          "code": "PLAYOFF_FINAL",
+          "name": "总决赛",
+          "format": "SINGLE_ELIMINATION",
+          "pairing": "PLAYOFF_BRACKET",
+          "adv": "NONE",
+          "count": null,
+          "next": null,
+          "order": 4
+        }
+      ],
+      "pass": true
+    },
+    "two_pass_rr_top8": {
+      "errors": [],
+      "stages": [
+        {
+          "code": "REGULAR",
+          "name": "单循环",
+          "format": "ROUND_ROBIN",
+          "pairing": "NONE",
+          "adv": "OVERALL_TOP_N",
+          "count": 8,
+          "next": "PLAYOFF_8_STD",
+          "order": 1
+        },
+        {
+          "code": "PLAYOFF_8_STD",
+          "name": "8强赛",
+          "format": "SINGLE_ELIMINATION",
+          "pairing": "PLAYOFF_BRACKET",
+          "adv": "WINNER_ADVANCE",
+          "count": null,
+          "next": "PLAYOFF_4",
+          "order": 2
+        },
+        {
+          "code": "PLAYOFF_4",
+          "name": "4强赛",
+          "format": "SINGLE_ELIMINATION",
+          "pairing": "PLAYOFF_BRACKET",
+          "adv": "WINNER_ADVANCE",
+          "count": null,
+          "next": "PLAYOFF_FINAL",
+          "order": 3
+        },
+        {
+          "code": "PLAYOFF_FINAL",
+          "name": "总决赛",
+          "format": "SINGLE_ELIMINATION",
+          "pairing": "PLAYOFF_BRACKET",
+          "adv": "NONE",
+          "count": null,
+          "next": null,
+          "order": 4
+        }
+      ],
+      "pass": true
+    },
+    "two_pass_4": {
+      "errors": [],
+      "stages": [
+        {
+          "code": "PLAYOFF_4",
+          "name": "4强赛",
+          "format": "SINGLE_ELIMINATION",
+          "pairing": "PLAYOFF_BRACKET",
+          "adv": "WINNER_ADVANCE",
+          "count": null,
+          "next": "PLAYOFF_FINAL",
+          "order": 1
+        },
+        {
+          "code": "PLAYOFF_FINAL",
+          "name": "总决赛",
+          "format": "SINGLE_ELIMINATION",
+          "pairing": "PLAYOFF_BRACKET",
+          "adv": "NONE",
+          "count": null,
+          "next": null,
+          "order": 2
+        }
+      ],
+      "pass": true
+    },
+    "two_pass_8": {
+      "errors": [],
+      "stages": [
+        {
+          "code": "PLAYOFF_8",
+          "name": "8强赛",
+          "format": "SINGLE_ELIMINATION",
+          "pairing": "PLAYOFF_BRACKET",
+          "adv": "WINNER_ADVANCE",
+          "count": null,
+          "next": "PLAYOFF_4",
+          "order": 1
+        },
+        {
+          "code": "PLAYOFF_4",
+          "name": "4强赛",
+          "format": "SINGLE_ELIMINATION",
+          "pairing": "PLAYOFF_BRACKET",
+          "adv": "WINNER_ADVANCE",
+          "count": null,
+          "next": "PLAYOFF_FINAL",
+          "order": 2
+        },
+        {
+          "code": "PLAYOFF_FINAL",
+          "name": "总决赛",
+          "format": "SINGLE_ELIMINATION",
+          "pairing": "PLAYOFF_BRACKET",
+          "adv": "NONE",
+          "count": null,
+          "next": null,
+          "order": 3
+        }
+      ],
+      "pass": true
+    },
+    "season16": "195",
+    "div16": "229",
+    "div8": "230"
+  },
+  "browser": {
+    "cases": {
+      "case1": {
+        "toasts": [],
+        "has_16": true,
+        "has_8": true,
+        "has_4": true,
+        "has_final": true,
+        "has_bracket": true,
+        "playoff_8_toast": false,
+        "toast_count_playoff8": 0,
+        "snippet": "单败淘汰赛支持 BO1 / BO3 / BO5；循环积分赛当前仅支持 BO1。\n\n快速创建\n自定义赛制\n高级设置\n季后赛\n16 支 → 冠军\n竞赛方式\n循环积分赛\n单败淘汰赛\n季后赛\n参赛组织\n不分组\n种子来源\n按球队创建时间顺序\n当前无可用积分排名阶段。默认按球队创建时间顺序排种子。\n首轮对阵\n固定种子对阵\n后续阶段\n固定路径晋级\n阶段配置\n16 → 8\nBO1\n8 → 4\nBO1\n4 → 2\nBO1\n2 → 1\nBO1\n完整赛制预览\n季后赛\n16强赛 16→8 → 8强赛 8→4 → 4强赛 4→2 → 总决赛 2→1\n最终阶段\n淘汰赛起始轮次\t16 强\t淘汰赛预计场次\t15 场\n总预计场次\t60 场（最终以实际审核队伍数为准）\n季后赛对阵预览\n种子来源：按球队创建时间顺序\n\n首轮根据种子生成固定淘汰树，生成后上下半区固定，后续胜者沿既定路径晋级。\n\n16强赛\n16 → 8\nBO1\n8强赛\n8 → 4\nBO1\n4强赛\n4 → 2\nBO1\n总决赛\n2 → 1\nBO1\n1\n1号种子\n16\n16号种子\n4\n4号种子\n13\n13号种子\n5\n5号种子\n12\n12号种子\n8\n8号种子\n9\n9号种子\n6\n6号种子\n11\n11号种子\n7\n7号种子\n10\n10号种子\n2\n2号种子\n15\n15号种子\n3\n3号种子\n14\n14号种子\nW1\n第1场胜者\nW2\n第2场胜者\nW3\n第3场胜者\nW4\n第4场胜者\nW5\n第5场胜者\nW6\n第6场胜者\nW7\n第7场胜者\nW8\n第8场胜者\n上半区\nW1\n第1场胜者\nW2\n第2场胜者\n下半区\nW3\n第3场胜者\nW4\n第4场胜者\nW1\n第1场胜者\nW2\n第2场胜者\n冠军",
+        "save_toasts": [
+          "草稿已保存"
+        ],
+        "save_ok": true,
+        "next_toasts": [],
+        "next_ok": true,
+        "pass": true
+      },
+      "case2": {
+        "toasts": [],
+        "has_8": true,
+        "has_4": true,
+        "has_final": true,
+        "no_16": true,
+        "standing_ui": true,
+        "playoff_8_toast": false,
+        "snippet": "单败淘汰赛支持 BO1 / BO3 / BO5；循环积分赛当前仅支持 BO1。\n\n快速创建\n自定义赛制\n高级设置\n阶段 1\n删除\n上移\n下移\n同分规则\n\n单循环 · BO1 · 总排名前8晋级\n\n参赛来源\n本赛区全部正式参赛队伍\n参赛组织方式\n不分组\n分组\n竞赛方式\n循环积分赛\n单败淘汰赛\n季后赛\nBO 规则\nBO1\n循环次数\n单循环\n胜/负积分\n/\n晋级规则\n总排名前\n名晋级\n↓\n8 支晋级\n季后赛\n8 支 → 冠军\n竞赛方式\n循环积分赛\n单败淘汰赛\n季后赛\n参赛组织\n不分组\n种子来源\n按积分赛排名\n按所选前置积分阶段最终排名生成 1～N 号种子。\n积分来源阶段\n单循环\n首轮对阵\n固定种子对阵\n后续阶段\n固定路径晋级\n阶段配置\n8 → 4\nBO1\n4 → 2\nBO1\n2 → 1\nBO1\n完整赛制预览\n阶段 1：单循环\n单循环 · BO1 · 总排名前8晋级\n预计晋级 8 支\n↓\n季后赛\n8强赛 8→4 → 4强赛 4→2 → 总决赛 2→1\n最终阶段\n晋级队伍数\t8 支\t淘汰赛起始轮次\t8 强\n淘汰赛预计场次\t7 场\t总预计场次\t141 场（最终以实际审核队伍数为准）\n季后赛对阵预览\n种子来源：按积分赛排名\n\n首轮根据种子生成固定淘汰树，生成后上下半区固定，后续胜者沿既定路径晋级。\n\n8强赛\n8 → 4\nBO1\n4强赛\n4 → 2\nBO1\n总决赛\n2 → 1\nBO1\n1\n1号种子\n8\n8号种子\n4\n4号种子\n5\n5号种子\n2\n2号种子\n7\n7号种子\n3\n3号种子\n6\n6号种子\n上半区\nW1\n第1场胜者\nW2\n第2场胜者\n下半区\nW3\n第3场胜者\nW4\n第4场胜者\nW1\n第1场胜者\nW2\n第2场胜者\n冠军",
+        "pass": true
+      },
+      "case3": {
+        "toasts": [],
+        "names_ok": true,
+        "forbid_ok": true,
+        "playoff_8_toast": false,
+        "snippet": "单败淘汰赛支持 BO1 / BO3 / BO5；循环积分赛当前仅支持 BO1。\n\n快速创建\n自定义赛制\n高级设置\n季后赛\n4 支 → 冠军\n竞赛方式\n循环积分赛\n单败淘汰赛\n季后赛\n参赛组织\n不分组\n种子来源\n按球队创建时间顺序\n当前无可用积分排名阶段。默认按球队创建时间顺序排种子。\n首轮对阵\n固定种子对阵\n后续阶段\n固定路径晋级\n阶段配置\n4 → 2\nBO1\n2 → 1\nBO1\n完整赛制预览\n季后赛\n4强赛 4→2 → 总决赛 2→1\n最终阶段\n淘汰赛起始轮次\t4 强\t淘汰赛预计场次\t3 场\n总预计场次\t6 场（最终以实际审核队伍数为准）\n季后赛对阵预览\n种子来源：按球队创建时间顺序\n\n首轮根据种子生成固定淘汰树，生成后上下半区固定，后续胜者沿既定路径晋级。\n\n4强赛\n4 → 2\nBO1\n总决赛\n2 → 1\nBO1\n1\n1号种子\n4\n4号种子\n2\n2号种子\n3\n3号种子\nW1\n第1场胜者\nW2\n第2场胜者\n冠军",
+        "pass": true
+      },
+      "case4": {
+        "toasts": [],
+        "names_ok": true,
+        "forbid_ok": true,
+        "playoff_8_toast": false,
+        "snippet": "单败淘汰赛支持 BO1 / BO3 / BO5；循环积分赛当前仅支持 BO1。\n\n快速创建\n自定义赛制\n高级设置\n季后赛\n8 支 → 冠军\n竞赛方式\n循环积分赛\n单败淘汰赛\n季后赛\n参赛组织\n不分组\n种子来源\n按球队创建时间顺序\n当前无可用积分排名阶段。默认按球队创建时间顺序排种子。\n首轮对阵\n固定种子对阵\n后续阶段\n固定路径晋级\n阶段配置\n8 → 4\nBO1\n4 → 2\nBO1\n2 → 1\nBO1\n完整赛制预览\n季后赛\n8强赛 8→4 → 4强赛 4→2 → 总决赛 2→1\n最终阶段\n淘汰赛起始轮次\t8 强\t淘汰赛预计场次\t7 场\n总预计场次\t21 场（最终以实际审核队伍数为准）\n季后赛对阵预览\n种子来源：按球队创建时间顺序\n\n首轮根据种子生成固定淘汰树，生成后上下半区固定，后续胜者沿既定路径晋级。\n\n8强赛\n8 → 4\nBO1\n4强赛\n4 → 2\nBO1\n总决赛\n2 → 1\nBO1\n1\n1号种子\n8\n8号种子\n4\n4号种子\n5\n5号种子\n2\n2号种子\n7\n7号种子\n3\n3号种子\n6\n6号种子\n上半区\nW1\n第1场胜者\nW2\n第2场胜者\n下半区\nW3\n第3场胜者\nW4\n第4场胜者\nW1\n第1场胜者\nW2\n第2场胜者\n冠军",
+        "pass": true
+      },
+      "case5": {
+        "toasts": [],
+        "names_ok": true,
+        "forbid_ok": true,
+        "playoff_8_toast": false,
+        "snippet": "单败淘汰赛支持 BO1 / BO3 / BO5；循环积分赛当前仅支持 BO1。\n\n快速创建\n自定义赛制\n高级设置\n季后赛\n16 支 → 冠军\n竞赛方式\n循环积分赛\n单败淘汰赛\n季后赛\n参赛组织\n不分组\n种子来源\n按球队创建时间顺序\n当前无可用积分排名阶段。默认按球队创建时间顺序排种子。\n首轮对阵\n固定种子对阵\n后续阶段\n固定路径晋级\n阶段配置\n16 → 8\nBO1\n8 → 4\nBO1\n4 → 2\nBO1\n2 → 1\nBO1\n完整赛制预览\n季后赛\n16强赛 16→8 → 8强赛 8→4 → 4强赛 4→2 → 总决赛 2→1\n最终阶段\n淘汰赛起始轮次\t16 强\t淘汰赛预计场次\t15 场\n总预计场次\t60 场（最终以实际审核队伍数为准）\n季后赛对阵预览\n种子来源：按球队创建时间顺序\n\n首轮根据种子生成固定淘汰树，生成后上下半区固定，后续胜者沿既定路径晋级。\n\n16强赛\n16 → 8\nBO1\n8强赛\n8 → 4\nBO1\n4强赛\n4 → 2\nBO1\n总决赛\n2 → 1\nBO1\n1\n1号种子\n16\n16号种子\n4\n4号种子\n13\n13号种子\n5\n5号种子\n12\n12号种子\n8\n8号种子\n9\n9号种子\n6\n6号种子\n11\n11号种子\n7\n7号种子\n10\n10号种子\n2\n2号种子\n15\n15号种子\n3\n3号种子\n14\n14号种子\nW1\n第1场胜者\nW2\n第2场胜者\nW3\n第3场胜者\nW4\n第4场胜者\nW5\n第5场胜者\nW6\n第6场胜者\nW7\n第7场胜者\nW8\n第8场胜者\n上半区\nW1\n第1场胜者\nW2\n第2场胜者\n下半区\nW3\n第3场胜者\nW4\n第4场胜者\nW1\n第1场胜者\nW2\n第2场胜者\n冠军",
+        "pass": true
+      }
+    },
+    "url": "http://127.0.0.1/event/event-v4-publish"
+  },
+  "publish_path": "/event/event-v4-publish",
+  "seasons": {
+    "case1": {
+      "name": "P1UI16-1786593082",
+      "season_id": "200",
+      "div_id": "234",
+      "max_team": 16
+    },
+    "case2": {
+      "name": "P1UI8RR-1786593082",
+      "season_id": "201",
+      "div_id": "235",
+      "max_team": 16
+    },
+    "case3": {
+      "name": "P1UI4-1786593082",
+      "season_id": "202",
+      "div_id": "236",
+      "max_team": 4
+    },
+    "case4": {
+      "name": "P1UI8-1786593082",
+      "season_id": "203",
+      "div_id": "237",
+      "max_team": 8
+    },
+    "case5": {
+      "name": "P1UI16B-1786593082",
+      "season_id": "204",
+      "div_id": "238",
+      "max_team": 16
+    }
+  }
+}

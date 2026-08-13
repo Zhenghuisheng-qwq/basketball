@@ -3,14 +3,13 @@
  * First-round seed order MUST match PlayoffBracketSupport.firstRoundSeedOrder.
  */
 
-export const PLAYOFF_SUPPORTED_TEAM_COUNTS = [4, 8, 16] as const
+/** UI-facing standard sizes (algorithm supports any power-of-two >= 2). */
+export const PLAYOFF_UI_TEAM_COUNTS = [4, 8, 16, 32] as const
 
-/** Same as PlayoffBracketSupport.firstRoundSeedOrder */
-export const PLAYOFF_FIRST_ROUND_SEED_ORDER: Record<4 | 8 | 16, number[]> = {
-  4: [1, 4, 2, 3],
-  8: [1, 8, 4, 5, 2, 7, 3, 6],
-  16: [1, 16, 4, 13, 5, 12, 8, 9, 6, 11, 7, 10, 2, 15, 3, 14]
-}
+/** CNPA E2E-locked 16-team first-round matrix (do not change). */
+export const PLAYOFF_LOCKED_SEED_ORDER_16: readonly number[] = [
+  1, 16, 4, 13, 5, 12, 8, 9, 6, 11, 7, 10, 2, 15, 3, 14
+]
 
 export type V4PlayoffSeedSource = 'TEAM_CREATE_TIME' | 'STANDING'
 export type V4PlayoffBestOf = 1 | 3 | 5
@@ -58,15 +57,47 @@ export interface V4PlayoffBlock<T extends V4PlayoffStageLike = V4PlayoffStageLik
   teamCount: number
 }
 
-export function isV4PlayoffTeamCount(n: number): boolean {
-  return n === 4 || n === 8 || n === 16
+export function isPowerOfTwo(n: number): boolean {
+  return Number.isInteger(n) && n >= 2 && (n & (n - 1)) === 0
 }
 
-export function playoffFirstRoundSeedOrder(teamCount: number): number[] {
-  if (teamCount === 4 || teamCount === 8 || teamCount === 16) {
-    return PLAYOFF_FIRST_ROUND_SEED_ORDER[teamCount]
+export function isV4PlayoffTeamCount(n: number): boolean {
+  return isPowerOfTwo(n)
+}
+
+/** Mirror expansion used by 2/4/8; larger sizes expand from prior order. */
+export function expandPlayoffSeedOrder(prev: readonly number[]): number[] {
+  const n = prev.length * 2
+  const sum = n + 1
+  const out: number[] = []
+  for (const seed of prev) {
+    out.push(seed, sum - seed)
   }
-  return []
+  return out
+}
+
+export function buildRecursivePlayoffSeedOrder(teamCount: number): number[] {
+  if (!isPowerOfTwo(teamCount)) return []
+  let order = [1]
+  while (order.length < teamCount) {
+    order = expandPlayoffSeedOrder(order)
+  }
+  return order
+}
+
+/**
+ * Same contract as PlayoffBracketSupport.firstRoundSeedOrder.
+ * 16 is E2E-locked; 32+ expands from the locked 16 chain so 16 matchups stay stable.
+ */
+export function playoffFirstRoundSeedOrder(teamCount: number): number[] {
+  if (!isPowerOfTwo(teamCount)) return []
+  if (teamCount === 16) return [...PLAYOFF_LOCKED_SEED_ORDER_16]
+  if (teamCount < 16) return buildRecursivePlayoffSeedOrder(teamCount)
+  let order = [...PLAYOFF_LOCKED_SEED_ORDER_16]
+  while (order.length < teamCount) {
+    order = expandPlayoffSeedOrder(order)
+  }
+  return order
 }
 
 export function buildV4PlayoffRoundSizes(teamCount: number): number[] {
@@ -82,9 +113,7 @@ export function buildV4PlayoffRoundSizes(teamCount: number): number[] {
 
 export function formatV4PlayoffStageName(teamCount: number): string {
   if (teamCount <= 2) return '总决赛'
-  if (teamCount === 4) return '4强赛'
-  if (teamCount === 8) return '8强赛'
-  if (teamCount === 16) return '16强赛'
+  if (teamCount === 4) return '半决赛'
   return `${teamCount}强赛`
 }
 
@@ -149,7 +178,7 @@ export function findPlayoffBlock<T extends V4PlayoffStageLike>(stages: T[]): V4P
     end += 1
   }
   const block = sorted.slice(start, end + 1)
-  if (block.length < 2) return null
+  if (block.length < 1) return null
   const teamCount = 2 ** block.length
   if (!isV4PlayoffTeamCount(teamCount)) return null
   if (buildV4PlayoffRoundSizes(teamCount).length !== block.length) return null
@@ -157,13 +186,13 @@ export function findPlayoffBlock<T extends V4PlayoffStageLike>(stages: T[]): V4P
 }
 
 export function inferPlayoffSeedSource(
-  firstPlayoffStage: V4PlayoffStageLike | undefined,
-  isFirstOverall: boolean
+  firstPlayoffStage?: V4PlayoffStageLike | undefined,
+  isFirstOverall?: boolean
 ): V4PlayoffSeedSource {
   const code = (firstPlayoffStage?.stageCode || '').toUpperCase()
   if (code.includes('_STD')) return 'STANDING'
   if (code.includes('_TCT')) return 'TEAM_CREATE_TIME'
-  if (!isFirstOverall) return 'STANDING'
+  if (isFirstOverall) return 'TEAM_CREATE_TIME'
   return 'TEAM_CREATE_TIME'
 }
 
@@ -171,7 +200,7 @@ export interface BuildV4PlayoffStagesInput {
   teamCount: number
   bestOfList?: number[]
   seedSource?: V4PlayoffSeedSource
-  startOrder?: number
+  startOrder: number
   existingCodes?: string[]
 }
 
@@ -186,6 +215,21 @@ function allocPlayoffStageCode(preferred: string, used: Set<string>): string {
   const next = `${preferred}_${n}`
   used.add(next.toUpperCase())
   return next
+}
+
+/** Preserve BO by round size when resizing (e.g. 16→32 keeps 16/8/4/2 BO). */
+export function mapPlayoffBestOfByRoundSize(
+  targetTeamCount: number,
+  previousTeamCount?: number,
+  previousBestOfList?: number[]
+): number[] {
+  const targetSizes = buildV4PlayoffRoundSizes(targetTeamCount)
+  const prevSizes = previousTeamCount ? buildV4PlayoffRoundSizes(previousTeamCount) : []
+  const bySize = new Map<number, number>()
+  prevSizes.forEach((size, idx) => {
+    bySize.set(size, normalizeV4PlayoffBestOf(previousBestOfList?.[idx]))
+  })
+  return targetSizes.map((size) => bySize.get(size) ?? 1)
 }
 
 export function buildV4PlayoffStages(input: BuildV4PlayoffStagesInput): V4PlayoffStagePayload[] {
@@ -243,11 +287,11 @@ export function validateV4PlayoffExpansion(
   const messages: string[] = []
   const inputCount = resolvePlayoffInputTeamCount(prefixStages, maxTeamCount)
   if (!isV4PlayoffTeamCount(inputCount)) {
-    messages.push('当前标准季后赛支持 4 / 8 / 16 支队伍。其它人数后续结合 BYE 处理。')
+    messages.push('当前标准季后赛人数需为 2 的次幂；非标准人数请使用轮空/高级赛制。')
   }
   const block = findPlayoffBlock([...prefixStages, ...playoffStages])
   if (block && isV4PlayoffTeamCount(inputCount) && block.teamCount !== inputCount) {
-    messages.push(`上一阶段晋级 ${inputCount} 支球队，当前季后赛应使用 ${inputCount} 队结构。`)
+    messages.push(`季后赛规模应为 ${inputCount} 支，当前为 ${block.teamCount} 支，请重新生成。`)
   }
   const first = playoffStages[0] || block?.stages[0]
   const seed = inferPlayoffSeedSource(first, prefixStages.length === 0)
@@ -257,7 +301,7 @@ export function validateV4PlayoffExpansion(
   for (const stage of playoffStages) {
     const bo = stage.bestOf ?? 1
     if (![1, 3, 5].includes(bo)) {
-      messages.push(`「${stage.stageName || '季后赛阶段'}」BO 规则仅支持 BO1 / BO3 / BO5`)
+      messages.push(`「${stage.stageName || '淘汰阶段'}」BO 规则无效，仅支持 BO1 / BO3 / BO5`)
     }
   }
   return { valid: messages.length === 0, messages }
@@ -310,10 +354,10 @@ export interface PlayoffBracketModel {
 
 export const PLAYOFF_BRACKET_LAYOUT = {
   matchHeight: 56,
-  matchWidth: 220,
-  roundGap: 16,
+  matchWidth: 120,
+  roundGap: 1.6,
   columnGap: 80,
-  championWidth: 140,
+  championWidth: 104,
   headerHeight: 68,
   padX: 12,
   padY: 8

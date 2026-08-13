@@ -29,6 +29,35 @@ class PlayoffBracketSupportTest {
     }
 
     @Test
+    void thirtyTwoTeamFirstRoundSeedOrderKeepsSeed1And2InOppositeHalves() {
+        int[] order = PlayoffBracketSupport.firstRoundSeedOrder(32);
+        assertEquals(32, order.length);
+        assertEquals(1, order[0]);
+        assertEquals(32, order[1]);
+        // expand from locked 16: seed2 sits in lower half (index >= 16)
+        int idx2 = -1;
+        for (int i = 0; i < order.length; i++) {
+            if (order[i] == 2) {
+                idx2 = i;
+                break;
+            }
+        }
+        assertEquals(24, idx2);
+        // first-round pairings remain adjacent complements
+        for (int i = 0; i < order.length; i += 2) {
+            assertEquals(33, order[i] + order[i + 1]);
+        }
+    }
+
+    @Test
+    void supportsPowerOfTwoTeamCounts() {
+        assertEquals(true, PlayoffBracketSupport.supportsTeamCount(2));
+        assertEquals(true, PlayoffBracketSupport.supportsTeamCount(32));
+        assertEquals(false, PlayoffBracketSupport.supportsTeamCount(6));
+        assertEquals(false, PlayoffBracketSupport.supportsTeamCount(12));
+    }
+
+    @Test
     void firstRoundOrdersByPlayoffMatrix() {
         List<BasketDivisionStageTeam> teams = seeds(16, false);
         List<BasketDivisionStageTeam> ordered = PlayoffBracketSupport.orderTeams(teams);

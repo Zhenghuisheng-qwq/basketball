@@ -121,15 +121,15 @@ export function getFormatSnapshot(divisionId: number): Promise<AjaxResult<Basket
 }
 
 export function addFormatStage(divisionId: number, data: BasketDivisionStageSaveReq): Promise<AjaxResult<number>> {
-  return request({ url: `/basket/v4/divisions/${divisionId}/format-stages`, method: 'post', data })
+  return request({ url: `/basket/v4/divisions/${divisionId}/format-stages`, method: 'post', data, headers: { repeatSubmit: false } })
 }
 
 export function updateFormatStage(divisionId: number, stageId: number, data: BasketDivisionStageSaveReq): Promise<AjaxResult> {
-  return request({ url: `/basket/v4/divisions/${divisionId}/format-stages/${stageId}`, method: 'put', data })
+  return request({ url: `/basket/v4/divisions/${divisionId}/format-stages/${stageId}`, method: 'put', data, headers: { repeatSubmit: false } })
 }
 
 export function deleteFormatStage(divisionId: number, stageId: number): Promise<AjaxResult> {
-  return request({ url: `/basket/v4/divisions/${divisionId}/format-stages/${stageId}`, method: 'delete' })
+  return request({ url: `/basket/v4/divisions/${divisionId}/format-stages/${stageId}`, method: 'delete', headers: { repeatSubmit: false } })
 }
 
 export function reorderFormatStages(divisionId: number, stageIds: number[]): Promise<AjaxResult> {
