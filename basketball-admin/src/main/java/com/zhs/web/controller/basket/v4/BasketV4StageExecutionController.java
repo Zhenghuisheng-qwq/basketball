@@ -2,11 +2,17 @@ package com.zhs.web.controller.basket.v4;
 
 import com.zhs.basket.constant.BasketEventV4Perms;
 import com.zhs.basket.dto.v4.BasketStageManualRankReq;
+import com.zhs.basket.dto.v4.ScheduleAssignReq;
+import com.zhs.basket.dto.v4.ScheduleBatchAssignReq;
+import com.zhs.basket.dto.v4.ScheduleRecommendApplyReq;
 import com.zhs.basket.dto.v4.StageExternalRankingReq;
 import com.zhs.basket.dto.v4.StageManualSlotReq;
 import com.zhs.basket.dto.v4.StagePairingSeedReq;
+import com.zhs.basket.dto.v4.StageWithdrawReq;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
 import com.zhs.basket.service.v4.IStagePairingExecutionApplicationService;
+import com.zhs.basket.service.v4.IStagePublishApplicationService;
+import com.zhs.basket.service.v4.IStageScheduleApplicationService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
 import com.zhs.common.core.domain.AjaxResult;
@@ -23,6 +29,10 @@ public class BasketV4StageExecutionController extends BaseController {
     private IDivisionStageExecutionApplicationService stageExecutionApplicationService;
     @Autowired
     private IStagePairingExecutionApplicationService pairingExecutionApplicationService;
+    @Autowired
+    private IStageScheduleApplicationService stageScheduleApplicationService;
+    @Autowired
+    private IStagePublishApplicationService stagePublishApplicationService;
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_LIST + "')")
     @GetMapping("/list")
@@ -60,8 +70,7 @@ public class BasketV4StageExecutionController extends BaseController {
     @Log(title = "V4 StageExecution", businessType = BusinessType.UPDATE)
     @PostMapping("/{stageId}/publish-schedule")
     public AjaxResult publishSchedule(@PathVariable Long stageId) {
-        stageExecutionApplicationService.publishSchedule(stageId);
-        return success();
+        return success(stagePublishApplicationService.publish(stageId));
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
@@ -182,5 +191,83 @@ public class BasketV4StageExecutionController extends BaseController {
     @PostMapping("/{stageId}/resolve-placeholders")
     public AjaxResult resolvePlaceholders(@PathVariable Long stageId) {
         return success(pairingExecutionApplicationService.resolvePlaceholders(stageId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_LIST + "')")
+    @GetMapping("/{stageId}/schedule-units")
+    public AjaxResult listScheduleUnits(@PathVariable Long stageId,
+                                        @RequestParam(required = false) String scheduleStatus) {
+        return success(stageScheduleApplicationService.listScheduleUnits(stageId, scheduleStatus));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_LIST + "')")
+    @GetMapping("/{stageId}/schedule-summary")
+    public AjaxResult scheduleSummary(@PathVariable Long stageId) {
+        return success(stageScheduleApplicationService.summary(stageId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 StageSchedule", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/schedule/assign")
+    public AjaxResult assignSchedule(@PathVariable Long stageId, @RequestBody ScheduleAssignReq req) {
+        stageScheduleApplicationService.assign(stageId, req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 StageSchedule", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/schedule/batch-assign")
+    public AjaxResult batchAssignSchedule(@PathVariable Long stageId, @RequestBody ScheduleBatchAssignReq req) {
+        stageScheduleApplicationService.batchAssign(stageId, req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 StageSchedule", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/schedule/clear")
+    public AjaxResult clearSchedule(@PathVariable Long stageId, @RequestBody ScheduleAssignReq req) {
+        stageScheduleApplicationService.clear(stageId, req.getUnitType(), req.getUnitId());
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @GetMapping("/{stageId}/schedule/recommend-preview")
+    public AjaxResult previewRecommend(@PathVariable Long stageId,
+                                       @RequestParam(defaultValue = "false") boolean overwriteScheduled) {
+        return success(stageScheduleApplicationService.previewRecommend(stageId, overwriteScheduled));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 StageSchedule", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/schedule/recommend-apply")
+    public AjaxResult applyRecommend(@PathVariable Long stageId, @RequestBody(required = false) ScheduleRecommendApplyReq req) {
+        stageScheduleApplicationService.applyRecommend(stageId, req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_PUBLISH + "')")
+    @GetMapping("/{stageId}/publish-preview")
+    public AjaxResult publishPreview(@PathVariable Long stageId) {
+        return success(stagePublishApplicationService.preview(stageId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_PUBLISH + "')")
+    @Log(title = "V4 StagePublish", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/withdraw-schedule")
+    public AjaxResult withdrawSchedule(@PathVariable Long stageId, @RequestBody StageWithdrawReq req) {
+        return success(stagePublishApplicationService.withdraw(stageId, req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_PUBLISH + "')")
+    @Log(title = "V4 StagePublish", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/republish-schedule")
+    public AjaxResult republishSchedule(@PathVariable Long stageId) {
+        return success(stagePublishApplicationService.republish(stageId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_LIST + "')")
+    @GetMapping("/{stageId}/publish-records")
+    public AjaxResult publishRecords(@PathVariable Long stageId) {
+        return success(stagePublishApplicationService.listRecords(stageId));
     }
 }

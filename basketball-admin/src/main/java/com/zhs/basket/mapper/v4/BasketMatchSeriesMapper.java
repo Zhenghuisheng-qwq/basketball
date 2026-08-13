@@ -27,6 +27,8 @@ public interface BasketMatchSeriesMapper {
 
     int updateById(BasketMatchSeries entity);
 
+    int updateSchedule(BasketMatchSeries entity);
+
     int updateResult(BasketMatchSeries entity);
 
     int updateResolution(BasketMatchSeries entity);

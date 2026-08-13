@@ -12,6 +12,10 @@ export interface BasketDivisionStageExecutionVo {
   executionStatus: string
   executionStatusName?: string
   scheduleBatchId?: number
+  publishStatus?: string
+  structureStatus?: string
+  executionVersion?: number
+  scheduleRevision?: number
   participantCount?: number
   qualifiedCount?: number
   startedTime?: string
@@ -235,3 +239,143 @@ export function applyV4StageManualRank(stageId: number, data: {
 }) {
   return request({ url: `/basket/v4/admin/stages/${stageId}/manual-rank`, method: 'post', data })
 }
+
+export interface ScheduleUnitView {
+  unitType: string
+  unitId: number
+  divisionId?: number
+  stageId?: number
+  structureBatchId?: number
+  roundNo?: number
+  roundRole?: string
+  matchOrder?: number
+  homeParticipantId?: number
+  awayParticipantId?: number
+  homeParticipantName?: string
+  awayParticipantName?: string
+  homeSourceType?: string
+  awaySourceType?: string
+  homeSourceDisplay?: string
+  awaySourceDisplay?: string
+  bestOf?: number
+  scheduledDate?: string
+  scheduledStartTime?: string
+  scheduleStatus?: string
+  scheduleSource?: string
+  participantResolutionStatus?: string
+  publishStatus?: string
+  canEditSchedule?: boolean
+  required?: boolean
+  matchStatus?: string
+  seriesStatus?: string
+}
+
+export interface StageScheduleSummaryVo {
+  stageId?: number
+  structureBatchId?: number
+  totalUnits?: number
+  scheduledUnits?: number
+  unscheduledUnits?: number
+  resolvedUnits?: number
+  unresolvedUnits?: number
+  publishStatus?: string
+  structureStatus?: string
+  executionVersion?: number
+  scheduleRevision?: number
+  publishNo?: number
+  ruleStatus?: string
+  rosterStatus?: string
+  pairingStatus?: string
+  canRecommend?: boolean
+  recommendationType?: string
+}
+
+export interface StageScheduleBoardVo {
+  summary?: StageScheduleSummaryVo
+  units?: ScheduleUnitView[]
+}
+
+export interface ValidationIssueVo {
+  severity?: string
+  code?: string
+  message?: string
+  unitType?: string
+  unitId?: number
+}
+
+export interface StagePublishPreviewVo {
+  canPublish?: boolean
+  summary?: StageScheduleSummaryVo
+  units?: ScheduleUnitView[]
+  errors?: ValidationIssueVo[]
+  warnings?: ValidationIssueVo[]
+}
+
+export interface ScheduleRecommendationPreviewVo {
+  recommendationType?: string
+  overwriteScheduled?: boolean
+  proposedCount?: number
+  skippedManualCount?: number
+  units?: ScheduleUnitView[]
+}
+
+export interface StagePublishRecordVo {
+  id?: number
+  stageId?: number
+  structureBatchId?: number
+  structureExecutionVersion?: number
+  scheduleRevision?: number
+  publishNo?: number
+  actionType?: string
+  publishStatus?: string
+  scheduleFingerprint?: string
+  operatorId?: number
+  operationTime?: string
+  reason?: string
+  isCurrent?: number
+}
+
+export function listV4StageScheduleUnits(stageId: number, scheduleStatus?: string) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/schedule-units`, method: 'get', params: { scheduleStatus } })
+}
+
+export function getV4StageScheduleSummary(stageId: number) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/schedule-summary`, method: 'get' })
+}
+
+export function assignV4StageSchedule(stageId: number, data: { unitType: string; unitId: number; scheduledDate: string; scheduledStartTime: string }) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/schedule/assign`, method: 'post', data })
+}
+
+export function batchAssignV4StageSchedule(stageId: number, data: { scheduledDate: string; scheduledStartTime: string; roundNo?: number; items?: Array<{ unitType: string; unitId: number }> }) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/schedule/batch-assign`, method: 'post', data })
+}
+
+export function clearV4StageSchedule(stageId: number, data: { unitType: string; unitId: number }) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/schedule/clear`, method: 'post', data })
+}
+
+export function previewV4ScheduleRecommend(stageId: number, overwriteScheduled = false) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/schedule/recommend-preview`, method: 'get', params: { overwriteScheduled } })
+}
+
+export function applyV4ScheduleRecommend(stageId: number, overwriteScheduled = false) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/schedule/recommend-apply`, method: 'post', data: { overwriteScheduled } })
+}
+
+export function previewV4StagePublish(stageId: number) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/publish-preview`, method: 'get' })
+}
+
+export function withdrawV4StageSchedule(stageId: number, reason: string) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/withdraw-schedule`, method: 'post', data: { reason } })
+}
+
+export function republishV4StageSchedule(stageId: number) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/republish-schedule`, method: 'post' })
+}
+
+export function listV4StagePublishRecords(stageId: number) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/publish-records`, method: 'get' })
+}
+

@@ -22,6 +22,7 @@ public class BasketScheduleBatch {
     private Integer expectedMatchCount;
     private Integer actualMatchCount;
     private Integer executionVersion;
+    private Integer scheduleRevision;
     /** Rule Version = FormatSnapshot.id；Legacy 可为 null */
     private Long ruleVersionId;
     /** Roster Version；Legacy 可为 null */

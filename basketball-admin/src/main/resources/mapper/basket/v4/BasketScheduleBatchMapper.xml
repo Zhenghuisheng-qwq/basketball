@@ -17,6 +17,7 @@
         <result property="expectedMatchCount" column="expected_match_count" />
         <result property="actualMatchCount" column="actual_match_count" />
         <result property="executionVersion" column="execution_version" />
+        <result property="scheduleRevision" column="schedule_revision" />
         <result property="ruleVersionId" column="rule_version_id" />
         <result property="rosterVersionId" column="roster_version_id" />
         <result property="pairingExecutionId" column="pairing_execution_id" />
@@ -52,7 +53,7 @@
         <result property="remark" column="remark" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, division_id, stage_id, grouping_batch_id, batch_no, format_type, rule_code, generation_strategy, team_count, match_count, expected_match_count, actual_match_count, execution_version, rule_version_id, roster_version_id, pairing_execution_id, structure_status, generate_type, generate_status, publish_status, generate_time, publish_time, generated_by, published_by, remark, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, division_id, stage_id, grouping_batch_id, batch_no, format_type, rule_code, generation_strategy, team_count, match_count, expected_match_count, actual_match_count, execution_version, schedule_revision, rule_version_id, roster_version_id, pairing_execution_id, structure_status, generate_type, generate_status, publish_status, generate_time, publish_time, generated_by, published_by, remark, create_time, update_time, is_delete</sql>
 
     <sql id="NotDeleted">is_delete = 0</sql>
 
@@ -130,12 +131,12 @@
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_schedule_batch (
             season_id, division_id, stage_id, grouping_batch_id, batch_no, format_type, rule_code, generation_strategy,
-            team_count, match_count, expected_match_count, actual_match_count, execution_version,
+            team_count, match_count, expected_match_count, actual_match_count, execution_version, schedule_revision,
             rule_version_id, roster_version_id, pairing_execution_id, structure_status,
             generate_type, generate_status, publish_status, generate_time, publish_time, generated_by, published_by, remark, create_time, update_time, is_delete
         ) values (
             #{seasonId}, #{divisionId}, #{stageId}, #{groupingBatchId}, #{batchNo}, #{formatType}, #{ruleCode}, #{generationStrategy},
-            #{teamCount}, #{matchCount}, #{expectedMatchCount}, #{actualMatchCount}, #{executionVersion},
+            #{teamCount}, #{matchCount}, #{expectedMatchCount}, #{actualMatchCount}, #{executionVersion}, #{scheduleRevision},
             #{ruleVersionId}, #{rosterVersionId}, #{pairingExecutionId}, #{structureStatus},
             #{generateType}, #{generateStatus}, #{publishStatus}, #{generateTime}, #{publishTime}, #{generatedBy}, #{publishedBy}, #{remark}, #{createTime}, #{updateTime}, #{isDelete}
         )
@@ -157,6 +158,7 @@
             expected_match_count = #{expectedMatchCount},
             actual_match_count = #{actualMatchCount},
             execution_version = #{executionVersion},
+            <if test="scheduleRevision != null">schedule_revision = #{scheduleRevision},</if>
             <if test="ruleVersionId != null">rule_version_id = #{ruleVersionId},</if>
             <if test="rosterVersionId != null">roster_version_id = #{rosterVersionId},</if>
             <if test="pairingExecutionId != null">pairing_execution_id = #{pairingExecutionId},</if>
@@ -196,6 +198,12 @@
         set structure_status = 'STALE', update_time = now()
         where rule_version_id = #{ruleVersionId} and is_delete = 0
           and (structure_status is null or structure_status &lt;&gt; 'STALE')
+    </update>
+
+    <update id="incrementScheduleRevision">
+        update basket_schedule_batch
+        set schedule_revision = ifnull(schedule_revision, 0) + 1, update_time = now()
+        where id = #{id} and is_delete = 0
     </update>
 
     <update id="markStructureStaleByRosterVersionId">

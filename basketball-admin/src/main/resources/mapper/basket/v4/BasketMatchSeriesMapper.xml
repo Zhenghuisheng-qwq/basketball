@@ -17,6 +17,10 @@
         <result property="homeSourceDisplay" column="home_source_display"/>
         <result property="awaySourceDisplay" column="away_source_display"/>
         <result property="bestOf" column="best_of"/>
+        <result property="scheduledDate" column="scheduled_date" jdbcType="DATE"/>
+        <result property="scheduledStartTime" column="scheduled_start_time" jdbcType="TIME"/>
+        <result property="scheduleSource" column="schedule_source"/>
+        <result property="scheduleStatus" column="schedule_status"/>
         <result property="homeWinCount" column="home_win_count"/>
         <result property="awayWinCount" column="away_win_count"/>
         <result property="winnerEventTeamId" column="winner_event_team_id"/>
@@ -35,7 +39,8 @@
     <sql id="BaseColumns">
         id, division_id, stage_id, schedule_batch_id, series_code, round_no, bracket_slot,
         home_event_team_id, away_event_team_id, home_source_type, away_source_type,
-        home_source_display, away_source_display, best_of, home_win_count, away_win_count,
+        home_source_display, away_source_display, best_of, scheduled_date, scheduled_start_time,
+        schedule_source, schedule_status, home_win_count, away_win_count,
         winner_event_team_id, series_status, resolution_type, resolution_reason, resolved_time, resolved_by,
         source_series_id_home, source_series_id_away,
         create_time, update_time, is_delete
@@ -103,6 +108,16 @@
             #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
+
+    <update id="updateSchedule">
+        update basket_match_series
+        set scheduled_date = #{scheduledDate},
+            scheduled_start_time = #{scheduledStartTime},
+            schedule_source = #{scheduleSource},
+            schedule_status = #{scheduleStatus},
+            update_time = now()
+        where id = #{id} and <include refid="NotDeleted"/>
+    </update>
 
     <update id="updateById">
         update basket_match_series

@@ -43,6 +43,8 @@ class StructureVersionBindingTest {
         assertEquals(11L, batch.getRuleVersionId());
         assertEquals(201L, batch.getRosterVersionId());
         assertEquals(StructureStatusEnum.ACTIVE.getCode(), batch.getStructureStatus());
+        assertEquals(0, batch.getScheduleRevision());
+        assertEquals(1, batch.getExecutionVersion());
     }
 
     @Test

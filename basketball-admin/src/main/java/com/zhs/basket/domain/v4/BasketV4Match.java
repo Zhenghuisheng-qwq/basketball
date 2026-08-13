@@ -21,6 +21,8 @@ public class BasketV4Match {
     private Integer seriesGameNo;
     private Long groupId;
     private Date matchTime;
+    private String scheduleSource;
+    private String scheduleStatus;
     private Long homeEventTeamId;
     private Long awayEventTeamId;
     private Integer homeScore;

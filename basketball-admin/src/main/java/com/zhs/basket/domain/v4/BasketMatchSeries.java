@@ -2,6 +2,8 @@ package com.zhs.basket.domain.v4;
 
 import lombok.Data;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Date;
 
 /**
@@ -23,6 +25,10 @@ public class BasketMatchSeries {
     private String homeSourceDisplay;
     private String awaySourceDisplay;
     private Integer bestOf;
+    private LocalDate scheduledDate;
+    private LocalTime scheduledStartTime;
+    private String scheduleSource;
+    private String scheduleStatus;
     private Integer homeWinCount;
     private Integer awayWinCount;
     private Long winnerEventTeamId;

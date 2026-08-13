@@ -11,6 +11,7 @@ import com.zhs.basket.service.v4.IStagePairingExecutionApplicationService;
 import com.zhs.basket.support.v4.bracket.GroupRankPlacementSupport;
 import com.zhs.basket.support.v4.stage.SingleEliminationStageScheduleStrategy;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
+import com.zhs.basket.service.v4.IStagePublishApplicationService;
 import com.zhs.basket.support.v4.stage.PlayoffBracketSupport;
 import com.zhs.basket.support.v4.ByeQualificationService;
 import com.zhs.basket.support.v4.BestOfCapabilityGate;
@@ -77,6 +78,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private TieBreakStandingService tieBreakStandingService;
     @Autowired
     private StageSchedulePrerequisiteValidator schedulePrerequisiteValidator;
+    @Autowired
+    private IStagePublishApplicationService stagePublishApplicationService;
     @Autowired
     private ByeQualificationService byeQualificationService;
     @Autowired
@@ -282,10 +285,12 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         StageExecutionContext context = buildExecutionContext(stage);
         BasketScheduleBatch active = scheduleBatchMapper.selectActiveByStageId(stageId);
         if (active != null && sameStructureBinding(active, context)
-                && PublishStatusEnum.DRAFT.getCode().equals(active.getPublishStatus())) {
+                && (PublishStatusEnum.DRAFT.getCode().equals(active.getPublishStatus())
+                    || PublishStatusEnum.WITHDRAWN.getCode().equals(active.getPublishStatus()))) {
             return active.getId();
         }
-        if (active != null && PublishStatusEnum.DRAFT.getCode().equals(active.getPublishStatus())) {
+        if (active != null && (PublishStatusEnum.DRAFT.getCode().equals(active.getPublishStatus())
+                || PublishStatusEnum.WITHDRAWN.getCode().equals(active.getPublishStatus()))) {
             structureVersionService.markStale(active.getId());
         }
 
@@ -318,42 +323,9 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void publishSchedule(Long stageId) {
-        BasketDivisionStage stage = requireStage(stageId);
-        BasketDivision division = requireDivision(stage.getDivisionId());
-        schedulePrerequisiteValidator.validateBeforePublishSchedule(division, stage, isFirstStage(stage));
-        if (stage.getScheduleBatchId() == null) {
-            throw new ServiceException("阶段尚未生成赛程");
-        }
-        BasketScheduleBatch batch = requireBatch(stage.getScheduleBatchId());
-        structureVersionService.assertBoundRuleVersion(batch, stage.getSnapshotId());
-        if (!PublishStatusEnum.DRAFT.getCode().equals(batch.getPublishStatus())) {
-            throw new ServiceException("仅草稿赛程可发布");
-        }
-        if (matchMapper.countByBatchId(batch.getId()) <= 0) {
-            throw new ServiceException("赛程批次下无比赛，无法发布");
-        }
-
-        Date now = new Date();
-        Long operatorId = SecurityUtils.getUserId();
-        batch.setPublishStatus(PublishStatusEnum.PUBLISHED.getCode());
-        batch.setPublishTime(now);
-        batch.setPublishedBy(operatorId);
-        batch.setUpdateTime(now);
-        if (scheduleBatchMapper.updateById(batch) != 1) {
-            throw new ServiceException("发布赛程批次失败");
-        }
-        matchMapper.publishByBatchId(batch.getId());
-
-        stage.setExecutionStatus(StageExecutionStatusEnum.RUNNING.getCode());
-        if (stage.getStartedTime() == null) {
-            stage.setStartedTime(now);
-        }
-        stage.setUpdateTime(now);
-        stageMapper.updateExecutionStatus(stage);
+        stagePublishApplicationService.publish(stageId);
     }
 
-    @Override
-    @Transactional(rollbackFor = Exception.class)
     public void cancelDraftSchedule(Long stageId) {
         BasketDivisionStage stage = requireStage(stageId);
         if (stage.getScheduleBatchId() == null) {
@@ -1109,6 +1081,13 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             vo.setExecutionStatusName(stage.getExecutionStatus());
         }
         vo.setScheduleBatchId(stage.getScheduleBatchId());
+        BasketScheduleBatch activeBatch = scheduleBatchMapper.selectActiveByStageId(stage.getId());
+        if (activeBatch != null) {
+            vo.setPublishStatus(activeBatch.getPublishStatus());
+            vo.setStructureStatus(activeBatch.getStructureStatus());
+            vo.setExecutionVersion(activeBatch.getExecutionVersion());
+            vo.setScheduleRevision(activeBatch.getScheduleRevision());
+        }
         vo.setParticipantCount(stage.getParticipantCount());
         vo.setQualifiedCount(stage.getQualifiedCount());
         vo.setStartedTime(stage.getStartedTime());

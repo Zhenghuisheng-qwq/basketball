@@ -6,6 +6,7 @@ import com.zhs.basket.domain.v4.BasketMatchSeries;
 import com.zhs.basket.domain.v4.BasketScheduleBatch;
 import com.zhs.basket.domain.v4.BasketV4Match;
 import com.zhs.basket.enums.v4.MatchSeriesStatusEnum;
+import com.zhs.basket.enums.v4.ParticipantSourceTypeEnum;
 import com.zhs.basket.mapper.v4.BasketMatchSeriesMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.support.v4.BestOfValues;
@@ -59,6 +60,14 @@ public class MatchSeriesSupport {
         series.setSeriesStatus(MatchSeriesStatusEnum.READY.getCode());
         series.setSourceSeriesIdHome(sourceSeriesIdHome);
         series.setSourceSeriesIdAway(sourceSeriesIdAway);
+        if (sourceSeriesIdHome != null) {
+            series.setHomeSourceType(ParticipantSourceTypeEnum.WINNER_OF_SERIES.getCode());
+            series.setHomeSourceDisplay("上一轮胜者");
+        }
+        if (sourceSeriesIdAway != null) {
+            series.setAwaySourceType(ParticipantSourceTypeEnum.WINNER_OF_SERIES.getCode());
+            series.setAwaySourceDisplay("上一轮胜者");
+        }
         series.setCreateTime(now);
         series.setUpdateTime(now);
         series.setIsDelete(NOT_DELETED);

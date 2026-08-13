@@ -27,6 +27,8 @@ public class V4PublicMatchSeriesDetailResp {
     private String awayTeamName;
     private String awaySourceType;
     private String awaySourceDisplay;
+    private java.time.LocalDate scheduledDate;
+    private java.time.LocalTime scheduledStartTime;
     private Integer bestOf;
     private Integer requiredWins;
     private Integer homeWinCount;

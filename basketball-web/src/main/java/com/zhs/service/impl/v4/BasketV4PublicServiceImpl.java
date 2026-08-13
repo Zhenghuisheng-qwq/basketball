@@ -57,6 +57,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     private BasketDivisionFormatSnapshotDao formatSnapshotDao;
     @Resource
     private V4MatchSeriesDisplaySupport matchSeriesDisplaySupport;
+    @Resource
+    private BasketScheduleBatchDao scheduleBatchDao;
 
     @Override
     public List<V4PublicDivisionListItemResp> listDivisions(Long seasonId) {
@@ -300,7 +302,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                     .or().eq(BasketV4Match::getAwayEventTeamId, eventTeamId));
         }
         List<BasketV4Match> matches = matchDao.selectList(wrapper);
-        return enrichMatchItems(matches);
+        return enrichMatchItems(filterPublishedStageMatches(matches));
     }
 
     @Override
@@ -466,7 +468,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (CollectionUtils.isEmpty(matches)) {
             return Collections.emptyList();
         }
-        return enrichMatchItems(matches);
+        return enrichMatchItems(filterPublishedStageMatches(matches));
     }
 
     @Override
@@ -908,6 +910,9 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (!MatchPublishStatusEnum.PUBLISHED.getCode().equals(match.getPublishStatus())) {
             throw new ServiceException("比赛未发布");
         }
+        if (!matchSeriesDisplaySupport.isPublishedBatch(match.getScheduleBatchId())) {
+            throw new ServiceException("比赛未发布");
+        }
         return match;
     }
 
@@ -1001,14 +1006,30 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         return result;
     }
 
+    private List<BasketV4Match> filterPublishedStageMatches(List<BasketV4Match> matches) {
+        if (CollectionUtils.isEmpty(matches)) {
+            return matches;
+        }
+        Map<Long, Boolean> published = new HashMap<>();
+        List<BasketV4Match> kept = new ArrayList<>();
+        for (BasketV4Match match : matches) {
+            Long batchId = match.getScheduleBatchId();
+            boolean ok = published.computeIfAbsent(batchId, id -> matchSeriesDisplaySupport.isPublishedBatch(id));
+            if (ok) {
+                kept.add(match);
+            }
+        }
+        return kept;
+    }
+
     private List<V4PublicMatchItemResp> enrichMatchItems(List<BasketV4Match> matches) {
         if (CollectionUtils.isEmpty(matches)) {
             return Collections.emptyList();
         }
         Set<Long> teamIds = new HashSet<>();
         for (BasketV4Match match : matches) {
-            if (match.getHomeEventTeamId() != null) teamIds.add(match.getHomeEventTeamId());
-            if (match.getAwayEventTeamId() != null) teamIds.add(match.getAwayEventTeamId());
+            if (match.getHomeEventTeamId() != null && match.getHomeEventTeamId() > 0) teamIds.add(match.getHomeEventTeamId());
+            if (match.getAwayEventTeamId() != null && match.getAwayEventTeamId() > 0) teamIds.add(match.getAwayEventTeamId());
         }
         Map<Long, BasketEventTeam> teamMap = loadEventTeamMap(new ArrayList<>(teamIds));
         Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(teamMap.values().stream()
@@ -1027,6 +1048,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             vo.setRoundNo(match.getRoundNo());
             vo.setMatchNo(match.getMatchNo());
             vo.setMatchTime(match.getMatchTime());
+            if (match.getHomeEventTeamId() != null && match.getHomeEventTeamId() <= 0) {
+                vo.setHomeEventTeamId(null);
+            }
+            if (match.getAwayEventTeamId() != null && match.getAwayEventTeamId() <= 0) {
+                vo.setAwayEventTeamId(null);
+            }
             vo.setHomeEventTeamId(match.getHomeEventTeamId());
             vo.setAwayEventTeamId(match.getAwayEventTeamId());
             vo.setHomeScore(match.getHomeScore());
@@ -1049,6 +1076,10 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                     vo.setAwaySourceType(ms.getAwaySourceType());
                     vo.setHomeSourceDisplay(ms.getHomeSourceDisplay());
                     vo.setAwaySourceDisplay(ms.getAwaySourceDisplay());
+                    if (vo.getMatchTime() == null && ms.getScheduledDate() != null && ms.getScheduledStartTime() != null) {
+                        vo.setMatchTime(java.util.Date.from(java.time.LocalDateTime.of(ms.getScheduledDate(), ms.getScheduledStartTime())
+                                .atZone(java.time.ZoneId.of("Asia/Shanghai")).toInstant()));
+                    }
                 }
             }
             BasketEventTeam home = teamMap.get(match.getHomeEventTeamId());
@@ -1059,7 +1090,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 vo.setHomeTeamLogoUrl(urlMap.get(home.getTeamLogoFileId()));
             } else if (vo.getHomeSourceDisplay() != null && !vo.getHomeSourceDisplay().isBlank()) {
                 vo.setHomeTeamName(vo.getHomeSourceDisplay());
-            } else if (match.getHomeEventTeamId() == null) {
+            } else {
                 vo.setHomeTeamName("待定");
             }
             if (away != null) {
@@ -1068,7 +1099,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 vo.setAwayTeamLogoUrl(urlMap.get(away.getTeamLogoFileId()));
             } else if (vo.getAwaySourceDisplay() != null && !vo.getAwaySourceDisplay().isBlank()) {
                 vo.setAwayTeamName(vo.getAwaySourceDisplay());
-            } else if (match.getAwayEventTeamId() == null) {
+            } else {
                 vo.setAwayTeamName("待定");
             }
             result.add(vo);

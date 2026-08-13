@@ -66,6 +66,7 @@ final class StageScheduleSupport {
         batch.setExpectedMatchCount(expectedMatchCount);
         batch.setActualMatchCount(expectedMatchCount);
         batch.setExecutionVersion(context.getExecutionVersion());
+        batch.setScheduleRevision(0);
         StructureVersionContext versionContext = context.getVersionContext();
         if (versionContext != null) {
             batch.setRuleVersionId(versionContext.getRuleVersionId());

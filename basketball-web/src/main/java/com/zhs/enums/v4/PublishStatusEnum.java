@@ -7,6 +7,7 @@ package com.zhs.enums.v4;
 public enum PublishStatusEnum {
     DRAFT("DRAFT", "草稿"),
     PUBLISHED("PUBLISHED", "已发布"),
+    WITHDRAWN("WITHDRAWN", "已撤回"),
     OFFLINE("OFFLINE", "已下架");
 
     private final String code;

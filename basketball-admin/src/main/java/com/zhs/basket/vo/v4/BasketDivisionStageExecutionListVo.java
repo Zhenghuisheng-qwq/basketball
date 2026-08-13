@@ -17,6 +17,10 @@ public class BasketDivisionStageExecutionListVo {
     private String executionStatus;
     private String executionStatusName;
     private Long scheduleBatchId;
+    private String publishStatus;
+    private String structureStatus;
+    private Integer executionVersion;
+    private Integer scheduleRevision;
     private Integer participantCount;
     private Integer qualifiedCount;
     private Date startedTime;

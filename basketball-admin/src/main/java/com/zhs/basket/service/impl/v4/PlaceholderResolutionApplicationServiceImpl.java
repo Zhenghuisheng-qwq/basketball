@@ -100,14 +100,8 @@ public class PlaceholderResolutionApplicationServiceImpl implements IPlaceholder
         if (division == null) {
             throw new ServiceException("Division 不存在");
         }
-        BasketScheduleBatch published = scheduleBatchMapper.selectPublishedByStageId(stage.getId());
-        if (published != null && PublishStatusEnum.PUBLISHED.getCode().equals(published.getPublishStatus())) {
-            throw new ServiceException("当前淘汰赛段已发布，需先撤回后调整");
-        }
-        if (matchMapper.countFinishedByStageId(stage.getId()) > 0) {
-            throw new ServiceException("淘汰赛已产生正式结果，禁止重新解析占位");
-        }
-
+        // NATURAL_RESOLUTION: PUBLISHED stages still allow first Qualification resolve.
+        // Already-resolved remapping is rejected by the RESOLVED guard below.
         BasketStagePairingExecution execution = executionMapper.selectCurrentByStageIdForUpdate(stage.getId());
         if (execution == null || !PairingExecutionStatusEnum.CONFIRMED.getCode().equals(execution.getStatus())) {
             throw new ServiceException("需要已确认的 PairingExecution 才能解析占位");

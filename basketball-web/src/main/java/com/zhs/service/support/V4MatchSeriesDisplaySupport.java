@@ -2,11 +2,14 @@ package com.zhs.service.support;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zhs.dao.v4.BasketEventTeamDao;
+import com.zhs.dao.v4.BasketScheduleBatchDao;
 import com.zhs.dao.v4.BasketV4MatchDao;
 import com.zhs.enums.v4.MatchStatusEnum;
+import com.zhs.enums.v4.PublishStatusEnum;
 import com.zhs.mapper.v4.BasketV4MatchSeriesMapper;
 import com.zhs.mapper.v4.BasketV4PublicStageMapper;
 import com.zhs.model.v4.BasketEventTeam;
+import com.zhs.model.v4.BasketScheduleBatch;
 import com.zhs.model.v4.BasketMatchSeries;
 import com.zhs.model.v4.BasketV4Match;
 import com.zhs.response.v4.publicapi.V4PublicMatchSeriesDetailResp;
@@ -29,6 +32,8 @@ public class V4MatchSeriesDisplaySupport {
     private BasketEventTeamDao eventTeamDao;
     @Resource
     private BasketV4PublicStageMapper publicStageMapper;
+    @Resource
+    private BasketScheduleBatchDao scheduleBatchDao;
 
     public V4PublicMatchSeriesDetailResp buildDetail(Long seriesId, Long currentMatchId) {
         if (seriesId == null) {
@@ -36,6 +41,9 @@ public class V4MatchSeriesDisplaySupport {
         }
         BasketMatchSeries series = matchSeriesMapper.selectById(seriesId);
         if (series == null) {
+            return null;
+        }
+        if (!isPublishedBatch(series.getScheduleBatchId())) {
             return null;
         }
         return buildDetail(series, currentMatchId);
@@ -48,6 +56,9 @@ public class V4MatchSeriesDisplaySupport {
         }
         List<V4PublicMatchSeriesDetailResp> result = new ArrayList<>();
         for (BasketMatchSeries series : list) {
+            if (!isPublishedBatch(series.getScheduleBatchId())) {
+                continue;
+            }
             result.add(buildDetail(series, null));
         }
         return result;
@@ -75,6 +86,14 @@ public class V4MatchSeriesDisplaySupport {
         vo.setAwaySourceType(series.getAwaySourceType());
         vo.setHomeSourceDisplay(series.getHomeSourceDisplay());
         vo.setAwaySourceDisplay(series.getAwaySourceDisplay());
+        vo.setScheduledDate(series.getScheduledDate());
+        vo.setScheduledStartTime(series.getScheduledStartTime());
+        if (series.getHomeEventTeamId() != null && series.getHomeEventTeamId() <= 0) {
+            vo.setHomeEventTeamId(null);
+        }
+        if (series.getAwayEventTeamId() != null && series.getAwayEventTeamId() <= 0) {
+            vo.setAwayEventTeamId(null);
+        }
 
         fillStageInfo(vo, series);
         fillTeamNames(vo, series);
@@ -107,8 +126,8 @@ public class V4MatchSeriesDisplaySupport {
 
     private void fillTeamNames(V4PublicMatchSeriesDetailResp vo, BasketMatchSeries series) {
         Set<Long> ids = new HashSet<>();
-        if (series.getHomeEventTeamId() != null) ids.add(series.getHomeEventTeamId());
-        if (series.getAwayEventTeamId() != null) ids.add(series.getAwayEventTeamId());
+        if (series.getHomeEventTeamId() != null && series.getHomeEventTeamId() > 0) ids.add(series.getHomeEventTeamId());
+        if (series.getAwayEventTeamId() != null && series.getAwayEventTeamId() > 0) ids.add(series.getAwayEventTeamId());
         if (series.getWinnerEventTeamId() != null) ids.add(series.getWinnerEventTeamId());
         if (ids.isEmpty()) {
             if (series.getHomeSourceDisplay() != null && !series.getHomeSourceDisplay().isBlank()) {
@@ -135,16 +154,18 @@ public class V4MatchSeriesDisplaySupport {
             vo.setHomeTeamName(home.getTeamNameSnapshot());
         } else if (series.getHomeSourceDisplay() != null && !series.getHomeSourceDisplay().isBlank()) {
             vo.setHomeTeamName(series.getHomeSourceDisplay());
-        } else if (series.getHomeEventTeamId() == null) {
-            vo.setHomeTeamName("待定");
+        } else {
+            vo.setHomeTeamName(series.getHomeSourceDisplay() != null && !series.getHomeSourceDisplay().isBlank()
+                    ? series.getHomeSourceDisplay() : "待定");
         }
         BasketEventTeam away = map.get(series.getAwayEventTeamId());
         if (away != null) {
             vo.setAwayTeamName(away.getTeamNameSnapshot());
         } else if (series.getAwaySourceDisplay() != null && !series.getAwaySourceDisplay().isBlank()) {
             vo.setAwayTeamName(series.getAwaySourceDisplay());
-        } else if (series.getAwayEventTeamId() == null) {
-            vo.setAwayTeamName("待定");
+        } else {
+            vo.setAwayTeamName(series.getAwaySourceDisplay() != null && !series.getAwaySourceDisplay().isBlank()
+                    ? series.getAwaySourceDisplay() : "待定");
         }
         BasketEventTeam winner = map.get(series.getWinnerEventTeamId());
         if (winner != null) {
@@ -173,7 +194,7 @@ public class V4MatchSeriesDisplaySupport {
             game.setHomeScore(match.getHomeScore());
             game.setAwayScore(match.getAwayScore());
             game.setWinnerEventTeamId(match.getWinnerEventTeamId());
-            game.setScheduledTime(match.getMatchTime());
+            game.setScheduledTime(match.getMatchTime() != null ? match.getMatchTime() : inheritSeriesTime(series));
             game.setCurrentGame(currentMatchId != null && currentMatchId.equals(match.getId()));
             if ((seriesCompleted || seriesForfeit) && !isOfficialResult(match)) {
                 game.setSkipped(true);
@@ -197,6 +218,22 @@ public class V4MatchSeriesDisplaySupport {
             }
         }
         return map;
+    }
+
+    public boolean isPublishedBatch(Long batchId) {
+        if (batchId == null) {
+            return false;
+        }
+        BasketScheduleBatch batch = scheduleBatchDao.selectById(batchId);
+        return batch != null && PublishStatusEnum.PUBLISHED.getCode().equals(batch.getPublishStatus());
+    }
+
+    private java.util.Date inheritSeriesTime(BasketMatchSeries series) {
+        if (series == null || series.getScheduledDate() == null || series.getScheduledStartTime() == null) {
+            return null;
+        }
+        return java.util.Date.from(java.time.LocalDateTime.of(series.getScheduledDate(), series.getScheduledStartTime())
+                .atZone(java.time.ZoneId.of("Asia/Shanghai")).toInstant());
     }
 
     private boolean isOfficialResult(BasketV4Match match) {

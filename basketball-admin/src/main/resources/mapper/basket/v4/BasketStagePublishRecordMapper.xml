@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketStagePublishRecordMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketStagePublishRecord" id="Result">
+        <id property="id" column="id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="stageId" column="stage_id"/>
+        <result property="structureBatchId" column="structure_batch_id"/>
+        <result property="structureExecutionVersion" column="structure_execution_version"/>
+        <result property="ruleVersionId" column="rule_version_id"/>
+        <result property="rosterVersionId" column="roster_version_id"/>
+        <result property="pairingExecutionId" column="pairing_execution_id"/>
+        <result property="scheduleRevision" column="schedule_revision"/>
+        <result property="publishNo" column="publish_no"/>
+        <result property="actionType" column="action_type"/>
+        <result property="publishStatus" column="publish_status"/>
+        <result property="scheduleFingerprint" column="schedule_fingerprint"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="operationTime" column="operation_time"/>
+        <result property="reason" column="reason"/>
+        <result property="isCurrent" column="is_current"/>
+        <result property="currentUniqueKey" column="current_unique_key"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, division_id, stage_id, structure_batch_id, structure_execution_version,
+        rule_version_id, roster_version_id, pairing_execution_id, schedule_revision,
+        publish_no, action_type, publish_status, schedule_fingerprint, operator_id, operation_time,
+        reason, is_current, current_unique_key, create_time, update_time, is_delete
+    </sql>
+
+    <select id="selectById" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_stage_publish_record
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectCurrentByStageId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_stage_publish_record
+        where stage_id = #{stageId} and is_current = 1 and is_delete = 0
+        order by id desc limit 1
+    </select>
+
+    <select id="selectByStageId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_stage_publish_record
+        where stage_id = #{stageId} and is_delete = 0
+        order by publish_no desc, id desc
+    </select>
+
+    <select id="selectMaxPublishNo" resultType="int">
+        select max(publish_no) from basket_stage_publish_record
+        where stage_id = #{stageId} and is_delete = 0
+          and action_type in ('PUBLISH', 'REPUBLISH')
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_stage_publish_record (
+            division_id, stage_id, structure_batch_id, structure_execution_version,
+            rule_version_id, roster_version_id, pairing_execution_id, schedule_revision,
+            publish_no, action_type, publish_status, schedule_fingerprint, operator_id, operation_time,
+            reason, is_current, current_unique_key, create_time, update_time, is_delete
+        ) values (
+            #{divisionId}, #{stageId}, #{structureBatchId}, #{structureExecutionVersion},
+            #{ruleVersionId}, #{rosterVersionId}, #{pairingExecutionId}, #{scheduleRevision},
+            #{publishNo}, #{actionType}, #{publishStatus}, #{scheduleFingerprint}, #{operatorId}, #{operationTime},
+            #{reason}, #{isCurrent}, #{currentUniqueKey}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="clearCurrentByStageId">
+        update basket_stage_publish_record
+        set is_current = 0, current_unique_key = null, update_time = now()
+        where stage_id = #{stageId} and is_current = 1 and is_delete = 0
+    </update>
+</mapper>

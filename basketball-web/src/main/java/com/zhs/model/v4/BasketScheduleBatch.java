@@ -51,6 +51,8 @@ public class BasketScheduleBatch implements Serializable {
 
     private String generateStatus;
 
+    private Integer scheduleRevision;
+    private Long stageId;
     private String publishStatus;
 
     private Date generateTime;

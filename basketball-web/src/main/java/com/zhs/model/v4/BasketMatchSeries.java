@@ -26,6 +26,10 @@ public class BasketMatchSeries implements Serializable {
     private String awaySourceType;
     private String homeSourceDisplay;
     private String awaySourceDisplay;
+    private java.time.LocalDate scheduledDate;
+    private java.time.LocalTime scheduledStartTime;
+    private String scheduleSource;
+    private String scheduleStatus;
     private Integer bestOf;
     private Integer homeWinCount;
     private Integer awayWinCount;

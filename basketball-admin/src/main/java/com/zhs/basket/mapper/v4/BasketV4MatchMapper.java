@@ -26,6 +26,10 @@ public interface BasketV4MatchMapper {
 
     int publishByBatchId(@Param("scheduleBatchId") Long scheduleBatchId);
 
+    int unpublishByBatchId(@Param("scheduleBatchId") Long scheduleBatchId);
+
+    int updateSchedule(BasketV4Match entity);
+
     List<BasketV4Match> selectFinishedPublishedByDivisionId(@Param("divisionId") Long divisionId);
 
     int countByDivisionId(@Param("divisionId") Long divisionId);

@@ -50,7 +50,8 @@
               <el-button link type="primary" v-if="needsPairingPrep(scope.row)" @click="openPairingWorkspace(scope.row)">结构准备</el-button>
               <el-button link type="warning" v-if="canResolvePlaceholders(scope.row)" @click="doResolveFromList(scope.row)">解析占位</el-button>
               <el-button link type="success" v-if="canGenerate(scope.row)" @click="handleStageGenerate(scope.row)">生成</el-button>
-              <el-button link type="success" v-if="scope.row.executionStatus === 'SCHEDULE_GENERATED'" @click="handleStagePublish(scope.row)">发布</el-button>
+              <el-button link type="primary" v-if="canOpenSchedule(scope.row)" @click="openScheduleBoard(scope.row)">排期</el-button>
+              <el-button link type="success" v-if="canPublishFromList(scope.row)" @click="openScheduleBoard(scope.row)">发布</el-button>
               <el-button link type="warning" v-if="scope.row.executionStatus === 'SCHEDULE_GENERATED'" @click="handleStageCancel(scope.row)">作废</el-button>
               <el-button
                 link type="warning"
@@ -219,6 +220,8 @@
       </template>
     </el-dialog>
 
+
+    <StageScheduleBoard v-model="scheduleBoardVisible" :stage="scheduleBoardStage" @updated="loadStageList" />
     <el-dialog v-model="groupPanelVisible" title="小组赛状态" width="880px">
       <el-alert class="mb8" type="info" :closable="false" show-icon
         :title="`分组 ${groupPanelStatus || '-'} · 积分榜 ${groupPanelStandingHint}`" />
@@ -251,6 +254,7 @@ import {
   saveV4ManualSlots, type BasketDivisionStageExecutionVo, type BracketSlotView,
   type StagePairingExecutionVo, type StageSchedulePreviewVo, type StageTeamItemVo
 } from '@/api/cnpa/event-v4/stage-execution'
+import StageScheduleBoard from './StageScheduleBoard.vue'
 import { getV4DivisionGroupingBatchDetail, listV4DivisionGroupingBatch } from '@/api/cnpa/event-v4/division-grouping'
 import { adjustV4Pairing, manualAdvanceV4, type PairingSlotReq } from '@/api/cnpa/event-v4/stage-exception'
 import { getV4ScheduleBatch } from '@/api/cnpa/event-v4/schedule-batch'
@@ -322,6 +326,22 @@ function teamOptionLabel(t: StageTeamItemVo) {
 
 function canGenerate(row: BasketDivisionStageExecutionVo) {
   return ['READY', 'DRAFT', 'SCHEDULE_GENERATED'].includes(row.executionStatus || '')
+}
+
+const scheduleBoardVisible = ref(false)
+const scheduleBoardStage = ref<BasketDivisionStageExecutionVo>()
+
+function canOpenSchedule(row: BasketDivisionStageExecutionVo) {
+  return !!row.scheduleBatchId
+}
+
+function canPublishFromList(row: BasketDivisionStageExecutionVo) {
+  return row.publishStatus !== 'PUBLISHED' && ['SCHEDULE_GENERATED', 'RUNNING'].includes(row.executionStatus || '')
+}
+
+function openScheduleBoard(row: BasketDivisionStageExecutionVo) {
+  scheduleBoardStage.value = row
+  scheduleBoardVisible.value = true
 }
 
 function previousGroupStage(row?: BasketDivisionStageExecutionVo | null) {

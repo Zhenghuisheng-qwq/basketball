@@ -12,6 +12,7 @@ import com.zhs.basket.support.v4.MatchSeriesGameInput;
 import com.zhs.basket.support.v4.MatchSeriesQualificationSyncService;
 import com.zhs.basket.support.v4.MatchSeriesResultCalculator;
 import com.zhs.basket.support.v4.MatchSeriesResultSnapshot;
+import com.zhs.basket.support.v4.schedule.WinnerOfSeriesAdvanceSupport;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.uuid.IdUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,8 @@ public class BasketMatchSeriesServiceImpl implements IBasketMatchSeriesService {
     @Autowired
     @Lazy
     private IDivisionStageExecutionApplicationService stageExecutionService;
+    @Autowired
+    private WinnerOfSeriesAdvanceSupport winnerOfSeriesAdvanceSupport;
 
     @Override
     public BasketMatchSeries getById(Long id) {
@@ -172,7 +175,9 @@ public class BasketMatchSeriesServiceImpl implements IBasketMatchSeriesService {
 
         locked.setSeriesStatus(newStatus);
         locked.setWinnerEventTeamId(snapshot.getWinnerEventTeamId());
+        winnerOfSeriesAdvanceSupport.advanceIfCompleted(locked);
         qualificationSyncService.syncAfterSeriesRebuild(locked, previousStatus, previousWinner, snapshot);
+        winnerOfSeriesAdvanceSupport.advanceIfCompleted(locked);
 
         if (locked.getStageId() != null) {
             stageExecutionService.checkStageCompletion(locked.getStageId());
