@@ -1,4 +1,18 @@
 import { parseTime } from '@/utils/ruoyi'
+import {
+  buildV4PlayoffBracketPreviewLines as buildPlayoffBracketPreviewLinesFromHelper,
+  buildV4PlayoffRoundSizes as buildPlayoffRoundSizesFromHelper,
+  buildV4PlayoffStages,
+  findPlayoffBlock,
+  formatV4PlayoffSeedSourceLabel,
+  formatV4PlayoffStageName as formatPlayoffStageNameFromHelper,
+  inferPlayoffSeedSource,
+  isV4PlayoffTeamCount as isPlayoffTeamCountFromHelper,
+  isV4StandingCapableStage,
+  normalizeV4PlayoffBestOf,
+  validateV4PlayoffExpansion,
+  type V4PlayoffSeedSource
+} from '@/utils/v4PlayoffFormat'
 
 /** V4 后台运营展示辅助（纯展示，不改业务值） */
 
@@ -895,7 +909,13 @@ export const V4_ORGANIZATION_MODE_OPTIONS = [
 
 export const V4_CUSTOM_COMPETITION_FORMAT_OPTIONS = [
   { label: '循环积分赛', value: 'ROUND_ROBIN' },
-  { label: '单败淘汰赛', value: 'SINGLE_ELIMINATION' }
+  { label: '单败淘汰赛', value: 'SINGLE_ELIMINATION' },
+  { label: '季后赛', value: 'PLAYOFF' }
+] as const
+
+export const V4_CUSTOM_ELIMINATION_PAIRING_OPTIONS = [
+  { label: '高排名对低排名', value: 'HIGH_VS_LOW' },
+  { label: '随机抽签', value: 'RANDOM_DRAW' }
 ] as const
 
 export const V4_BEST_OF_OPTIONS = [
@@ -917,45 +937,24 @@ export const V4_PLAYOFF_SEED_SOURCE_OPTIONS = [
 
 export const V4_PLAYOFF_BEST_OF_OPTIONS = [
   { label: 'BO1', value: 1 },
-  { label: 'BO3', value: 3 }
+  { label: 'BO3', value: 3 },
+  { label: 'BO5', value: 5 }
 ] as const
 
 export function isV4PlayoffTeamCount(n: number): boolean {
-  return n === 4 || n === 8 || n === 16
+  return isPlayoffTeamCountFromHelper(n)
 }
 
 export function buildV4PlayoffRoundSizes(teamCount: number): number[] {
-  if (!isV4PlayoffTeamCount(teamCount)) return []
-  const sizes: number[] = []
-  let n = teamCount
-  while (n >= 2) {
-    sizes.push(n)
-    n = n / 2
-  }
-  return sizes
+  return buildPlayoffRoundSizesFromHelper(teamCount)
 }
 
 export function formatV4PlayoffStageName(teamCount: number): string {
-  if (teamCount <= 2) return '总决赛'
-  if (teamCount === 4) return '4强赛'
-  if (teamCount === 8) return '8强赛'
-  if (teamCount === 16) return '16强赛'
-  return `${teamCount}强赛`
+  return formatPlayoffStageNameFromHelper(teamCount)
 }
 
 export function buildV4PlayoffBracketPreviewLines(teamCount: number): string[] {
-  const orderMap: Record<number, number[]> = {
-    4: [1, 4, 2, 3],
-    8: [1, 8, 4, 5, 2, 7, 3, 6],
-    16: [1, 16, 4, 13, 5, 12, 8, 9, 6, 11, 7, 10, 2, 15, 3, 14]
-  }
-  const order = orderMap[teamCount]
-  if (!order) return []
-  const lines: string[] = []
-  for (let i = 0; i < order.length; i += 2) {
-    lines.push(`Seed${order[i]} vs Seed${order[i + 1]}`)
-  }
-  return lines
+  return buildPlayoffBracketPreviewLinesFromHelper(teamCount)
 }
 
 export function normalizeV4EliminationPairingRule(rule?: string | null): string {
@@ -1625,32 +1624,12 @@ export function buildV4SchemeStagePayloads(
     if (!isV4PlayoffTeamCount(teamCount)) {
       return []
     }
-    const sizes = buildV4PlayoffRoundSizes(teamCount)
-    const bestOfList = params.playoffRoundBestOf && params.playoffRoundBestOf.length === sizes.length
-      ? params.playoffRoundBestOf
-      : sizes.map(() => 1)
-    return sizes.map((size, idx) => {
-      const isFinal = idx === sizes.length - 1
-      const stageCode = isFinal ? 'FINAL' : `STAGE_${idx + 1}`
-      const next = isFinal ? undefined : (idx + 2 === sizes.length ? 'FINAL' : `STAGE_${idx + 2}`)
-      const bo = bestOfList[idx] === 3 ? 3 : 1
-      return {
-        stage: {
-          stageCode,
-          stageName: formatV4PlayoffStageName(size),
-          stageOrder: idx + 1,
-          stageType: isFinal ? 'FINAL' : 'KNOCKOUT',
-          organizationMode: 'UNGROUPED',
-          competitionFormat: 'SINGLE_ELIMINATION',
-          groupingMode: 'NONE',
-          bestOf: bo,
-          advancementType: isFinal ? 'NONE' : 'WINNER_ADVANCE',
-          pairingRule: 'PLAYOFF_BRACKET',
-          nextStageCode: next,
-          requiresManualConfirmation: 0
-        }
-      }
-    })
+    return buildV4PlayoffStages({
+      teamCount,
+      bestOfList: params.playoffRoundBestOf,
+      seedSource: (params.seedSource as V4PlayoffSeedSource) || 'TEAM_CREATE_TIME',
+      startOrder: 1
+    }) as V4SchemeStagePayload[]
   }
   if (schemeId === 'SINGLE_ELIMINATION') {
     return [{
@@ -1997,6 +1976,19 @@ export function validateV4StageCombinationDetailed(
     }
   }
 
+  const playoffBlock = findPlayoffBlock(sorted)
+  if (playoffBlock) {
+    const prefix = sorted.slice(0, playoffBlock.startIndex)
+    const playoffCheck = validateV4PlayoffExpansion(prefix, playoffBlock.stages, maxTeamCount || 0)
+    messages.push(...playoffCheck.messages)
+    if (playoffCheck.valid && prefix.length === 0) {
+      const seed = inferPlayoffSeedSource(playoffBlock.stages[0], true)
+      if (seed === 'STANDING' && !prefix.some(isV4StandingCapableStage)) {
+        messages.push('当前无可用积分排名阶段。')
+      }
+    }
+  }
+
   return { valid: messages.length === 0, messages: [...new Set(messages)], warnings: [...new Set(warnings)] }
 }
 
@@ -2075,8 +2067,8 @@ export function formatV4QuickCreateNaturalLanguage(
   if (schemeId === 'PLAYOFF') {
     const sizes = buildV4PlayoffRoundSizes(expectedTeamCount)
     const bos = params.playoffRoundBestOf || sizes.map(() => 1)
-    const rounds = sizes.map((size, idx) => `${formatV4PlayoffStageName(size)}（${size}→${size / 2}，BO${bos[idx] === 3 ? 3 : 1}）`).join(' → ')
-    const seed = (params.seedSource || 'TEAM_CREATE_TIME') === 'STANDING' ? '按积分赛排名' : '按球队创建时间顺序'
+    const rounds = sizes.map((size, idx) => `${formatV4PlayoffStageName(size)}（${size}→${size / 2}，BO${normalizeV4PlayoffBestOf(bos[idx])}）`).join(' → ')
+    const seed = formatV4PlayoffSeedSourceLabel(params.seedSource)
     return `${expectedTeamCount} 支队伍进入季后赛固定淘汰树；种子来源：${seed}；阶段：${rounds}。首轮按固定象限落位，后续轮严格继承上一轮 Series Winner，不再重新抽签或重排种子。`
   }
   if (schemeId === 'ROUND_ROBIN_TO_ELIM') {
@@ -2098,7 +2090,26 @@ export function formatV4CustomFormatPreview(
 ): Array<{ title: string; summary: string; advance?: string; isFinal: boolean }> {
   const sorted = rebuildV4StageLinearChain(stages)
   const participants = calcV4StagePlannedParticipants(sorted, maxTeamCount)
-  return sorted.map((stage, index) => {
+  const playoffBlock = findPlayoffBlock(sorted)
+  const result: Array<{ title: string; summary: string; advance?: string; isFinal: boolean }> = []
+  for (let index = 0; index < sorted.length; index += 1) {
+    if (playoffBlock && index === playoffBlock.startIndex) {
+      const flow = playoffBlock.stages.map((s, i) => {
+        const size = playoffBlock.teamCount / (2 ** i)
+        return `${s.stageName || formatV4PlayoffStageName(size)} ${size}→${size / 2}`
+      }).join(' → ')
+      result.push({
+        title: '季后赛',
+        summary: flow,
+        isFinal: true
+      })
+      index = playoffBlock.startIndex + playoffBlock.stages.length - 1
+      continue
+    }
+    if (playoffBlock && index > playoffBlock.startIndex && index < playoffBlock.startIndex + playoffBlock.stages.length) {
+      continue
+    }
+    const stage = sorted[index]
     const isFinal = isV4FinalStageIndex(index, sorted.length)
     const part = participants[index]
     let advance: string | undefined
@@ -2107,13 +2118,14 @@ export function formatV4CustomFormatPreview(
     } else if (!isFinal && part?.note) {
       advance = part.note
     }
-    return {
+    result.push({
       title: `阶段 ${stage.stageOrder}：${stage.stageName}`,
       summary: formatV4StageCardSummary(stage, sorted),
       advance,
       isFinal
-    }
-  })
+    })
+  }
+  return result
 }
 
 export function formatV4FormatFlowFromStages(stages: V4StageSummaryInput[]): string {
@@ -2182,9 +2194,12 @@ export function formatV4StageCardSummary(
   }
   if (format === 'SINGLE_ELIMINATION') {
     const pairing = normalizeV4EliminationPairingRule(stage.pairingRule)
-    const pairingLabel = pairing === 'RANDOM_DRAW' ? '随机抽签' : '高排名对低排名'
-    if (isFinal) return `单败淘汰 · ${bo} · ${pairingLabel} · 最终阶段`
-    return `单败淘汰 · ${bo} · ${pairingLabel} · 胜者晋级`
+    const pairingLabel = pairing === 'PLAYOFF_BRACKET'
+      ? '固定路径晋级'
+      : pairing === 'RANDOM_DRAW' ? '随机抽签' : '高排名对低排名'
+    const kind = pairing === 'PLAYOFF_BRACKET' ? '季后赛' : '单败淘汰'
+    if (isFinal) return `${kind} · ${bo} · ${pairingLabel} · 最终阶段`
+    return `${kind} · ${bo} · ${pairingLabel} · 胜者晋级`
   }
   return formatV4StageCompetitionFormLabel(stage)
 }

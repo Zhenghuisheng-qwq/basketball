@@ -225,7 +225,7 @@
     <el-dialog
       v-model="seasonDetailOpen"
       :title="seasonDetailTitle"
-      width="860px"
+      width="min(1520px, 94vw)"
       class="season-detail-dialog"
       append-to-body
       destroy-on-close
@@ -280,7 +280,7 @@
             @update:format-template-id="handleRulesFormatTemplateChange"
           />
           <el-empty v-else description="请选择赛区查看赛制配置" />
-          <div class="el-form-item__tip mt8">待确认状态下可编辑赛制；开放报名前请确认并启用赛制。当前仅支持 BO1 循环赛、分组赛和单败淘汰。</div>
+          <div class="el-form-item__tip mt8">待确认状态下可编辑赛制；开放报名前请确认并启用赛制。</div>
         </el-tab-pane>
         <el-tab-pane label="发布设置" name="publish">
           <el-descriptions v-if="seasonDetail" :column="1" border>
@@ -965,6 +965,7 @@ onMounted(() => {
 
 .season-detail-dialog :deep(.el-dialog__body) {
   max-height: calc(100vh - 180px);
+  overflow-x: auto;
   overflow-y: auto;
 }
 

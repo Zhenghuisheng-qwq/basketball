@@ -138,13 +138,35 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
                     .max(Integer::compareTo)
                     .orElse(0) + 1;
             boolean playoffInherit = PlayoffBracketSupport.isPlayoffBracket(stage.getPairingRule());
+            boolean winnerQuals = !confirmed.isEmpty() && confirmed.stream().allMatch(q -> {
+                StageTeamEntryTypeEnum et = mapEntryType(q.getQualificationType());
+                return et == StageTeamEntryTypeEnum.MATCH_WINNER
+                        || et == StageTeamEntryTypeEnum.SERIES_WINNER
+                        || et == StageTeamEntryTypeEnum.BYE_ADVANCE;
+            });
+            boolean tctSeed = playoffInherit
+                    && PlayoffBracketSupport.useTeamCreateTimeSeed(stage.getStageCode(), false, winnerQuals);
+            Map<Long, Integer> tctSeedByEventTeam = new HashMap<>();
+            if (tctSeed) {
+                List<BasketEventTeam> advancing = confirmed.stream()
+                        .map(q -> eventTeamMapper.selectById(q.getEventTeamId()))
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+                List<BasketEventTeam> byCreateTime = sortEventTeamsBySourceTeamCreateTime(advancing);
+                int seq = 1;
+                for (BasketEventTeam et : byCreateTime) {
+                    tctSeedByEventTeam.put(et.getId(), seq++);
+                }
+            }
             for (BasketDivisionStageQualification qualification : confirmed) {
                 if (existingEventTeamIds.contains(qualification.getEventTeamId())) {
                     continue;
                 }
                 StageTeamEntryTypeEnum entryType = mapEntryType(qualification.getQualificationType());
                 int seedNo;
-                if (playoffInherit && qualification.getSourceRank() != null) {
+                if (tctSeed) {
+                    seedNo = tctSeedByEventTeam.getOrDefault(qualification.getEventTeamId(), nextSeed++);
+                } else if (playoffInherit && qualification.getSourceRank() != null) {
                     seedNo = qualification.getSourceRank();
                 } else {
                     seedNo = nextSeed++;

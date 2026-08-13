@@ -80,6 +80,14 @@ class PlayoffBracketSupportTest {
         }
     }
 
+    @Test
+    void useTeamCreateTimeSeedRules() {
+        assertEquals(true, PlayoffBracketSupport.useTeamCreateTimeSeed("PLAYOFF_16", true, false));
+        assertEquals(false, PlayoffBracketSupport.useTeamCreateTimeSeed("PLAYOFF_8_STD", false, false));
+        assertEquals(true, PlayoffBracketSupport.useTeamCreateTimeSeed("PLAYOFF_8_TCT", false, false));
+        assertEquals(false, PlayoffBracketSupport.useTeamCreateTimeSeed("PLAYOFF_8_TCT", false, true));
+    }
+
     private static List<BasketDivisionStageTeam> seeds(int n, boolean inherited) {
         List<BasketDivisionStageTeam> teams = new ArrayList<>();
         for (int i = n; i >= 1; i--) {

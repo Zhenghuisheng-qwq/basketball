@@ -155,10 +155,14 @@
               <el-descriptions-item v-if="quickEstimate.eliminationMatches" label="淘汰赛预计场次">{{ quickEstimate.eliminationMatches }} 场</el-descriptions-item>
               <el-descriptions-item v-if="quickEstimate.totalMatches" label="总预计场次" :span="2">{{ quickEstimate.totalMatches }} 场（最终以实际审核队伍数为准）</el-descriptions-item>
             </el-descriptions>
-            <div v-if="selectedScheme === 'PLAYOFF' && playoffBracketLines.length" class="playoff-bracket-preview mt8">
-              <div class="scheme-section-title">首轮淘汰树预览</div>
-              <div v-for="(line, li) in playoffBracketLines" :key="li" class="playoff-bracket-line">{{ line }}</div>
-              <div class="el-form-item__tip mt4">Seed1 与 Seed2 分属不同半区，理论上仅在总决赛相遇。</div>
+            <div v-if="selectedScheme === 'PLAYOFF' && playoffRoundSizes.length" class="playoff-bracket-preview mt8">
+              <div class="scheme-section-title">季后赛对阵预览</div>
+              <PlayoffBracketPreview
+                :team-count="quickParams.expectedTeamCount || maxTeamCount"
+                :best-of-list="quickParams.playoffRoundBestOf"
+                :round-names="playoffRoundSizes.map((size) => formatV4PlayoffStageName(size))"
+                :seed-source="quickParams.seedSource || 'TEAM_CREATE_TIME'"
+              />
             </div>
           </el-card>
         </template>
@@ -186,6 +190,68 @@
 
         <div v-if="sortedStages.length && rulesSectionTab === 'custom'" class="stage-flow-list">
           <template v-for="(stage, sIndex) in sortedStages" :key="stage.id || stage.stageCode">
+            <template v-if="isPlayoffBlockStart(sIndex)">
+              <el-card shadow="hover" class="stage-config-card playoff-config-card">
+                <div class="stage-flow-card-head">
+                  <div class="stage-flow-title-wrap">
+                    <span class="stage-flow-order">季后赛</span>
+                    <el-tag type="danger" size="small">{{ playoffBlock?.teamCount }} 支 → 冠军</el-tag>
+                  </div>
+                </div>
+                <el-form label-width="120px" class="stage-inline-form" :disabled="!snapshot?.mutable">
+                  <el-form-item label="竞赛方式">
+                    <el-radio-group model-value="PLAYOFF" @change="(val: string) => collapsePlayoffBlock(val)">
+                      <el-radio v-for="opt in V4_CUSTOM_COMPETITION_FORMAT_OPTIONS" :key="opt.value" :label="opt.value">{{ opt.label }}</el-radio>
+                    </el-radio-group>
+                  </el-form-item>
+                  <el-form-item label="参赛组织">
+                    <span class="readonly-info-value">不分组</span>
+                  </el-form-item>
+                  <el-form-item label="种子来源">
+                    <el-select :model-value="playoffSeedSource" style="width: 100%" @change="handlePlayoffSeedSourceChange">
+                      <el-option
+                        v-for="opt in V4_PLAYOFF_SEED_SOURCE_OPTIONS"
+                        :key="opt.value"
+                        :label="opt.label"
+                        :value="opt.value"
+                        :disabled="opt.value === 'STANDING' && !playoffStandingStages.length"
+                      />
+                    </el-select>
+                    <div class="el-form-item__tip mt4">{{ playoffCustomSeedTip }}</div>
+                  </el-form-item>
+                  <el-form-item v-if="playoffSeedSource === 'STANDING' && playoffStandingStages.length" label="积分来源阶段">
+                    <el-select :model-value="playoffSourceStageCode" disabled style="width: 100%">
+                      <el-option v-for="s in playoffStandingStages" :key="s.stageCode" :label="s.stageName" :value="s.stageCode" />
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item label="首轮对阵">
+                    <span class="readonly-info-value">固定种子对阵</span>
+                  </el-form-item>
+                  <el-form-item label="后续阶段">
+                    <span class="readonly-info-value">固定路径晋级</span>
+                  </el-form-item>
+                  <el-form-item label="阶段配置">
+                    <div class="playoff-bo-list">
+                      <div v-for="(pStage, idx) in (playoffBlock?.stages || [])" :key="pStage.id || pStage.stageCode" class="playoff-stage-row">
+                        <el-input
+                          v-if="snapshot?.mutable"
+                          v-model="pStage.stageName"
+                          class="playoff-stage-name"
+                          @change="() => saveStageInline(pStage)"
+                        />
+                        <span v-else>{{ pStage.stageName }}</span>
+                        <span class="playoff-stage-size">{{ playoffRoundSize(idx) }} → {{ playoffRoundSize(idx) / 2 }}</span>
+                        <el-select :model-value="pStage.bestOf ?? 1" style="width: 110px" @change="(val: number) => handleBestOfChange(pStage, val)">
+                          <el-option v-for="opt in V4_PLAYOFF_BEST_OF_OPTIONS" :key="opt.value" :label="opt.label" :value="opt.value" />
+                        </el-select>
+                      </div>
+                    </div>
+                  </el-form-item>
+                </el-form>
+              </el-card>
+            </template>
+            <template v-else-if="isInsidePlayoffBlock(sIndex)"></template>
+            <template v-else>
             <el-card shadow="hover" class="stage-config-card">
               <div class="stage-flow-card-head">
                 <div class="stage-flow-title-wrap">
@@ -238,7 +304,7 @@
                       v-for="opt in V4_CUSTOM_COMPETITION_FORMAT_OPTIONS"
                       :key="opt.value"
                       :label="opt.value"
-                      :disabled="opt.value === 'SINGLE_ELIMINATION' && resolveStageOrganizationMode(stage) === 'GROUPED'"
+                      :disabled="(opt.value === 'SINGLE_ELIMINATION' || opt.value === 'PLAYOFF') && resolveStageOrganizationMode(stage) === 'GROUPED'"
                     >
                       {{ opt.label }}
                     </el-radio>
@@ -329,7 +395,7 @@
                       @change="(val: string) => patchStageField(stage, 'pairingRule', val)"
                     >
                       <el-option
-                        v-for="opt in V4_ELIMINATION_PAIRING_RULE_OPTIONS"
+                        v-for="opt in V4_CUSTOM_ELIMINATION_PAIRING_OPTIONS"
                         :key="opt.value"
                         :label="opt.label"
                         :value="opt.value"
@@ -378,11 +444,12 @@
               <span class="stage-flow-arrow-icon">↓</span>
               <span v-if="formatV4StageAdvanceCountLabel(stage)" class="stage-flow-advance">{{ formatV4StageAdvanceCountLabel(stage) }}</span>
             </div>
+            </template>
           </template>
         </div>
         <el-empty v-else-if="rulesSectionTab === 'custom'" description="暂无比赛阶段，请添加阶段 1" />
 
-        <div v-if="snapshot?.mutable && rulesSectionTab === 'custom'" class="mt8">
+        <div v-if="snapshot?.mutable && rulesSectionTab === 'custom' && !playoffBlock" class="mt8">
           <el-button type="primary" plain icon="Plus" v-hasPermi="['basket:v4FormatRule:edit']" @click="handleAddNextStage">+ 添加下一比赛阶段</el-button>
         </div>
 
@@ -408,6 +475,15 @@
             <el-descriptions-item v-if="stageEstimate.eliminationMatches" label="淘汰赛预计场次">{{ stageEstimate.eliminationMatches }} 场</el-descriptions-item>
             <el-descriptions-item v-if="stageEstimate.totalMatches" label="总预计场次" :span="2">{{ stageEstimate.totalMatches }} 场（最终以实际审核队伍数为准）</el-descriptions-item>
           </el-descriptions>
+          <div v-if="playoffBlock" class="mt8">
+            <div class="scheme-section-title">季后赛对阵预览</div>
+            <PlayoffBracketPreview
+              :team-count="playoffBlock.teamCount"
+              :best-of-list="playoffBestOfList"
+              :round-names="playoffRoundNames"
+              :seed-source="playoffSeedSource"
+            />
+          </div>
         </el-card>
 
       </el-tab-pane>
@@ -601,6 +677,7 @@
 <script setup lang="ts">
 import { computed, getCurrentInstance, reactive, ref, watch } from 'vue'
 import type { FormInstance } from 'element-plus'
+import PlayoffBracketPreview from './PlayoffBracketPreview.vue'
 import {
   addFormatStage,
   applyFormatPlan,
@@ -621,6 +698,7 @@ import {
   V4_FORMAT_SCHEME_OPTIONS,
   V4_ORGANIZATION_MODE_OPTIONS,
   V4_CUSTOM_COMPETITION_FORMAT_OPTIONS,
+  V4_CUSTOM_ELIMINATION_PAIRING_OPTIONS,
   V4_BEST_OF_OPTIONS,
   V4_ELIMINATION_PAIRING_RULE_OPTIONS,
   V4_PLAYOFF_SEED_SOURCE_OPTIONS,
@@ -631,7 +709,6 @@ import {
   V4_WIZARD_GROUPING_MODE_OPTIONS,
   V4_WIZARD_TIE_BREAK_MIDDLE_OPTIONS,
   buildDefaultV4QuickCreateParams,
-  buildV4PlayoffBracketPreviewLines,
   buildV4PlayoffRoundSizes,
   buildV4SchemeStagePayloads,
   formatV4PlayoffStageName,
@@ -676,6 +753,16 @@ import {
   type V4StageSummaryInput,
   type V4WizardStagePreset
 } from '@/utils/v4AdminDisplay'
+import {
+  buildV4PlayoffStages,
+  findPlayoffBlock,
+  inferPlayoffSeedSource,
+  isV4PlayoffTeamCount,
+  isV4StandingCapableStage,
+  normalizeV4PlayoffBestOf,
+  resolvePlayoffInputTeamCount,
+  type V4PlayoffSeedSource
+} from '@/utils/v4PlayoffFormat'
 
 export interface DivisionFormatRulesMeta {
   id?: number
@@ -933,13 +1020,17 @@ async function handleOrganizationModeChange(stage: BasketDivisionStageVo, mode: 
 }
 
 async function handleCompetitionFormatChange(stage: BasketDivisionStageVo, format: string) {
-  if (format === 'SINGLE_ELIMINATION' && resolveStageOrganizationMode(stage) === 'GROUPED') {
+  if ((format === 'SINGLE_ELIMINATION' || format === 'PLAYOFF') && resolveStageOrganizationMode(stage) === 'GROUPED') {
     proxy!.$modal.msgWarning('当前版本暂不支持分组内淘汰赛')
+    return
+  }
+  if (format === 'PLAYOFF') {
+    await expandPlayoffFromStage(stage)
     return
   }
   stage.competitionFormat = format
   if (format === 'SINGLE_ELIMINATION') {
-    stage.pairingRule = normalizeV4EliminationPairingRule(stage.pairingRule)
+    stage.pairingRule = normalizeV4EliminationPairingRule(stage.pairingRule === 'PLAYOFF_BRACKET' ? 'HIGH_VS_LOW' : stage.pairingRule)
   } else {
     stage.pairingRule = 'NONE'
   }
@@ -1032,11 +1123,6 @@ const playoffRoundSizes = computed(() => {
   return buildV4PlayoffRoundSizes(quickParams.expectedTeamCount || props.maxTeamCount)
 })
 
-const playoffBracketLines = computed(() => {
-  if (selectedScheme.value !== 'PLAYOFF') return [] as string[]
-  return buildV4PlayoffBracketPreviewLines(quickParams.expectedTeamCount || props.maxTeamCount)
-})
-
 const playoffSeedTip = computed(() => {
   const hit = V4_PLAYOFF_SEED_SOURCE_OPTIONS.find((o) => o.value === (quickParams.seedSource || 'TEAM_CREATE_TIME'))
   if ((quickParams.seedSource || '') === 'STANDING') {
@@ -1045,11 +1131,217 @@ const playoffSeedTip = computed(() => {
   return hit?.tip || ''
 })
 
+const playoffBlock = computed(() => findPlayoffBlock(sortedStages.value))
+
+const playoffSeedSource = computed<V4PlayoffSeedSource>(() => {
+  const block = playoffBlock.value
+  if (!block) return 'TEAM_CREATE_TIME'
+  return inferPlayoffSeedSource(block.stages[0], block.startIndex === 0)
+})
+
+const playoffStandingStages = computed(() => {
+  const block = playoffBlock.value
+  if (!block) return [] as BasketDivisionStageVo[]
+  return sortedStages.value.slice(0, block.startIndex).filter((s) => isV4StandingCapableStage(s))
+})
+
+const playoffSourceStageCode = computed(() => playoffStandingStages.value[playoffStandingStages.value.length - 1]?.stageCode || '')
+
+const playoffCustomSeedTip = computed(() => {
+  if (playoffSeedSource.value === 'STANDING') {
+    if (!playoffStandingStages.value.length) return '当前无可用积分排名阶段。'
+    return '按所选前置积分阶段最终排名生成 1～N 号种子。'
+  }
+  if (playoffBlock.value && playoffBlock.value.startIndex === 0) {
+    return '当前无可用积分排名阶段。默认按球队创建时间顺序排种子。'
+  }
+  return '按球队创建时间顺序生成 1～N 号种子。'
+})
+
+const playoffBestOfList = computed(() => (playoffBlock.value?.stages || []).map((s) => s.bestOf ?? 1))
+
+const playoffRoundNames = computed(() => (playoffBlock.value?.stages || []).map((s) => s.stageName || ''))
+
+function isPlayoffBlockStart(sIndex: number): boolean {
+  return !!playoffBlock.value && playoffBlock.value.startIndex === sIndex
+}
+
+function isInsidePlayoffBlock(sIndex: number): boolean {
+  const block = playoffBlock.value
+  if (!block) return false
+  return sIndex > block.startIndex && sIndex < block.startIndex + block.stages.length
+}
+
+function playoffRoundSize(idx: number): number {
+  const n = playoffBlock.value?.teamCount || 0
+  return n / (2 ** idx)
+}
+
+function stageToSchemePayload(stage: BasketDivisionStageVo): V4SchemeStagePayload {
+  const orgMode = resolveV4OrganizationMode(stage)
+  return {
+    stage: {
+      stageCode: stage.stageCode || '',
+      stageName: stage.stageName || '',
+      stageOrder: stage.stageOrder || 1,
+      stageType: stage.stageType || 'CUSTOM',
+      organizationMode: orgMode,
+      competitionFormat: stage.competitionFormat || 'ROUND_ROBIN',
+      groupingMode: orgMode === 'GROUPED' ? (stage.groupingMode || 'MANUAL') : 'NONE',
+      groupCount: orgMode === 'GROUPED' ? stage.groupCount : undefined,
+      roundRobinCycles: stage.roundRobinCycles,
+      bestOf: stage.bestOf ?? 1,
+      winPoints: stage.winPoints,
+      lossPoints: stage.lossPoints,
+      advancementType: stage.advancementType || 'NONE',
+      advancementCount: stage.advancementCount,
+      pairingRule: resolveV4StagePairingRuleForSave(stage),
+      nextStageCode: stage.nextStageCode || undefined,
+      requiresManualConfirmation: stage.requiresManualConfirmation ?? 0
+    }
+  }
+}
+
+async function expandPlayoffFromStage(stage: BasketDivisionStageVo) {
+  if (actionBusy.value) return
+  const sorted = sortedStages.value
+  const startIndex = sorted.findIndex((s) => (stage.id && s.id === stage.id) || s.stageCode === stage.stageCode)
+  if (startIndex < 0) return
+  const prefix = sorted.slice(0, startIndex)
+  const following = sorted.slice(startIndex + 1)
+  const inputCount = resolvePlayoffInputTeamCount(prefix, props.maxTeamCount)
+  if (!isV4PlayoffTeamCount(inputCount)) {
+    proxy!.$modal.msgWarning('当前标准季后赛支持 4 / 8 / 16 支队伍。其它人数后续结合 BYE 处理。')
+    return
+  }
+  if (following.some((s) => !isV4PlayoffBracketStageLike(s))) {
+    try {
+      await proxy!.$modal.confirm('选择季后赛将把当前及后续阶段展开为完整淘汰树，是否继续？')
+    } catch {
+      return
+    }
+  }
+  const standing = prefix.filter((s) => isV4StandingCapableStage(s))
+  const seedSource: V4PlayoffSeedSource = standing.length ? 'STANDING' : 'TEAM_CREATE_TIME'
+  const existingBlock = playoffBlock.value
+  const existingBos = existingBlock && existingBlock.startIndex === startIndex
+    ? existingBlock.stages.map((s) => s.bestOf ?? 1)
+    : undefined
+  const playoffPayloads = buildV4PlayoffStages({
+    teamCount: inputCount,
+    bestOfList: existingBos,
+    seedSource,
+    startOrder: startIndex + 1,
+    existingCodes: prefix.map((s) => s.stageCode || '').filter(Boolean)
+  })
+  const prefixPayloads = prefix.map((s) => stageToSchemePayload(s))
+  if (prefixPayloads.length && playoffPayloads[0]) {
+    const lastPrefix = prefixPayloads[prefixPayloads.length - 1]
+    lastPrefix.stage.nextStageCode = playoffPayloads[0].stage.stageCode
+  }
+  actionBusy.value = true
+  panelLoading.value = true
+  try {
+    await syncStagesFromPayloads([...prefixPayloads, ...playoffPayloads])
+    emitChange()
+    proxy!.$modal.msgSuccess('已展开季后赛阶段')
+  } catch (e: any) {
+    proxy!.$modal.msgError(e?.msg || e?.message || '展开季后赛失败')
+    await loadSnapshot()
+  } finally {
+    panelLoading.value = false
+    actionBusy.value = false
+  }
+}
+
+function isV4PlayoffBracketStageLike(stage: { competitionFormat?: string; pairingRule?: string }) {
+  return (stage.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION'
+    && (stage.pairingRule || '').toUpperCase() === 'PLAYOFF_BRACKET'
+}
+
+async function collapsePlayoffBlock(format: string) {
+  if (format === 'PLAYOFF') return
+  const block = playoffBlock.value
+  if (!block || actionBusy.value) return
+  const prefix = sortedStages.value.slice(0, block.startIndex)
+  const first = block.stages[0]
+  const kept: V4SchemeStagePayload = {
+    stage: {
+      stageCode: first.stageCode || 'PLAYOFF_1',
+      stageName: format === 'SINGLE_ELIMINATION' ? '淘汰赛' : '循环赛',
+      stageOrder: block.startIndex + 1,
+      stageType: 'CUSTOM',
+      organizationMode: 'UNGROUPED',
+      competitionFormat: format,
+      groupingMode: 'NONE',
+      roundRobinCycles: format === 'ROUND_ROBIN' ? 1 : undefined,
+      bestOf: 1,
+      winPoints: format === 'ROUND_ROBIN' ? 2 : undefined,
+      lossPoints: format === 'ROUND_ROBIN' ? 1 : undefined,
+      advancementType: 'NONE',
+      pairingRule: format === 'SINGLE_ELIMINATION' ? 'HIGH_VS_LOW' : 'NONE',
+      requiresManualConfirmation: 0
+    }
+  }
+  const prefixPayloads = prefix.map((s) => stageToSchemePayload(s))
+  if (prefixPayloads.length) {
+    prefixPayloads[prefixPayloads.length - 1].stage.nextStageCode = kept.stage.stageCode
+  }
+  actionBusy.value = true
+  panelLoading.value = true
+  try {
+    await syncStagesFromPayloads([...prefixPayloads, kept])
+    emitChange()
+  } catch (e: any) {
+    proxy!.$modal.msgError(e?.msg || e?.message || '切换竞赛方式失败')
+    await loadSnapshot()
+  } finally {
+    panelLoading.value = false
+    actionBusy.value = false
+  }
+}
+
+async function handlePlayoffSeedSourceChange(val: V4PlayoffSeedSource) {
+  if (val === 'STANDING' && !playoffStandingStages.value.length) {
+    proxy!.$modal.msgWarning('当前无可用积分排名阶段。')
+    return
+  }
+  const block = playoffBlock.value
+  if (!block || actionBusy.value) return
+  const prefix = sortedStages.value.slice(0, block.startIndex)
+  const payloads = buildV4PlayoffStages({
+    teamCount: block.teamCount,
+    bestOfList: block.stages.map((s) => s.bestOf ?? 1),
+    seedSource: val,
+    startOrder: block.startIndex + 1,
+    existingCodes: prefix.map((s) => s.stageCode || '').filter(Boolean)
+  })
+  payloads.forEach((p, i) => {
+    if (block.stages[i]?.stageName) p.stage.stageName = block.stages[i].stageName as string
+  })
+  const prefixPayloads = prefix.map((s) => stageToSchemePayload(s))
+  if (prefixPayloads.length && payloads[0]) {
+    prefixPayloads[prefixPayloads.length - 1].stage.nextStageCode = payloads[0].stage.stageCode
+  }
+  actionBusy.value = true
+  panelLoading.value = true
+  try {
+    await syncStagesFromPayloads([...prefixPayloads, ...payloads])
+    emitChange()
+  } catch (e: any) {
+    proxy!.$modal.msgError(e?.msg || e?.message || '更新种子来源失败')
+    await loadSnapshot()
+  } finally {
+    panelLoading.value = false
+    actionBusy.value = false
+  }
+}
+
 function updatePlayoffBestOf(idx: number, val: number) {
   const sizes = playoffRoundSizes.value
   const list = [...(quickParams.playoffRoundBestOf || sizes.map(() => 1))]
   while (list.length < sizes.length) list.push(1)
-  list[idx] = val === 3 ? 3 : 1
+  list[idx] = normalizeV4PlayoffBestOf(val)
   quickParams.playoffRoundBestOf = list
   emitChange()
 }
@@ -1552,6 +1844,25 @@ watch(
   }
 )
 
+watch(
+  () => {
+    const block = playoffBlock.value
+    if (!block || !snapshot.value?.mutable) return ''
+    const prefix = sortedStages.value.slice(0, block.startIndex)
+    const input = resolvePlayoffInputTeamCount(prefix, props.maxTeamCount)
+    return `${input}:${block.teamCount}`
+  },
+  async (key, prev) => {
+    if (!key || !prev || actionBusy.value || panelLoading.value) return
+    const [input, current] = key.split(':').map(Number)
+    if (!input || input === current) return
+    if (!isV4PlayoffTeamCount(input)) return
+    const first = playoffBlock.value?.stages[0]
+    if (!first) return
+    await expandPlayoffFromStage(first as BasketDivisionStageVo)
+  }
+)
+
 defineExpose({ reload: loadSnapshot })
 </script>
 
@@ -2030,4 +2341,16 @@ defineExpose({ reload: loadSnapshot })
 .playoff-bo-name { min-width: 72px; color: var(--el-text-color-regular); }
 .playoff-bracket-preview { padding: 8px 12px; background: var(--el-fill-color-lighter); border-radius: 6px; }
 .playoff-bracket-line { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height: 1.7; }
+.playoff-stage-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.playoff-stage-name { width: 160px; }
+.playoff-stage-size {
+  min-width: 72px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
 </style>

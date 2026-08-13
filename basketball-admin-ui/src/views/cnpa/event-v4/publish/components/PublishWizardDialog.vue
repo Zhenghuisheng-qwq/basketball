@@ -1304,7 +1304,7 @@ async function handleRulesTabChange() {
 
 <style scoped>
 .publish-wizard-dialog :deep(.el-dialog) {
-  width: min(1200px, 94vw);
+  width: min(1520px, 94vw);
   max-height: 88vh;
   margin: 6vh auto;
   display: flex;
@@ -1363,7 +1363,7 @@ async function handleRulesTabChange() {
 .dialog-content {
   flex: 1;
   min-height: 0;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: auto;
   padding: 8px 24px 24px;
 }

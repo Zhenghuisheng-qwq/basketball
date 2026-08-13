@@ -44,6 +44,20 @@ public final class PlayoffBracketSupport {
     }
 
     /**
+     * 是否按球队创建时间赋种子。
+     * 首阶段默认创建时间；后续胜者路径不重排；仅当 stageCode 含 _TCT 时，对积分晋级名单按创建时间重新赋种。
+     */
+    public static boolean useTeamCreateTimeSeed(String stageCode, boolean firstStage, boolean winnerPathInherit) {
+        if (firstStage) {
+            return true;
+        }
+        if (winnerPathInherit) {
+            return false;
+        }
+        return stageCode != null && stageCode.toUpperCase().contains("_TCT");
+    }
+
+    /**
      * 是否继承上一淘汰轮固定路径（相邻 Series Winner）。
      * 来自积分/初始名单的首轮必须走象限矩阵；仅 MATCH/SERIES/BYE 胜者晋级才相邻配对。
      */
