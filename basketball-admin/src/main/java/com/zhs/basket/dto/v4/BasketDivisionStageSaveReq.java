@@ -22,5 +22,8 @@ public class BasketDivisionStageSaveReq {
     private Integer advancementCount;
     private String pairingRule;
     private String nextStageCode;
+    private String seedRule;
+    private String drawRule;
+    private String byeRule;
     private Integer requiresManualConfirmation;
 }

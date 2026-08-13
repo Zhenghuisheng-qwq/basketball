@@ -14,6 +14,8 @@ public class BasketDivisionFormatSnapshot {
     private String sourceTemplateCode;
     private String sourceTemplateName;
     private Integer sourceTemplateVersion;
+    private String sourceTemplateType;
+    private String registrationMode;
     private Integer snapshotVersion;
     private String snapshotStatus;
     private String rosterWorkflowMode;

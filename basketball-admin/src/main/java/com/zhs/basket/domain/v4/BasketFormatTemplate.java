@@ -11,6 +11,8 @@ public class BasketFormatTemplate {
     private String templateName;
     private Integer versionNo;
     private String templateDescription;
+    private String templateType;
+    private String defaultRegistrationMode;
     private Integer enabled;
     private Integer isDefault;
     private Date createTime;

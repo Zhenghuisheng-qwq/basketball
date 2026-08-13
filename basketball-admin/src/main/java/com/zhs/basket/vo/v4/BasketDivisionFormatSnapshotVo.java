@@ -11,6 +11,10 @@ public class BasketDivisionFormatSnapshotVo {
     private String sourceTemplateCode;
     private String sourceTemplateName;
     private Integer sourceTemplateVersion;
+    private String sourceTemplateType;
+    private String sourceTemplateTypeName;
+    private String registrationMode;
+    private String registrationModeName;
     private Integer snapshotVersion;
     private String snapshotStatus;
     /** 兼容字段：Rule Version = snapshotId */

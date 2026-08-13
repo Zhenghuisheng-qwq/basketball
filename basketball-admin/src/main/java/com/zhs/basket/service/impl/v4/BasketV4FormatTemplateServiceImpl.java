@@ -3,11 +3,15 @@ package com.zhs.basket.service.impl.v4;
 import com.zhs.basket.domain.v4.BasketFormatTemplate;
 import com.zhs.basket.domain.v4.BasketFormatTemplateStage;
 import com.zhs.basket.domain.v4.BasketFormatTemplateTieBreakRule;
+import com.zhs.basket.domain.v4.BasketSeries;
 import com.zhs.basket.mapper.v4.BasketFormatTemplateMapper;
 import com.zhs.basket.mapper.v4.BasketFormatTemplateStageMapper;
 import com.zhs.basket.mapper.v4.BasketFormatTemplateTieBreakRuleMapper;
+import com.zhs.basket.mapper.v4.BasketSeriesMapper;
 import com.zhs.basket.service.v4.IBasketV4FormatTemplateService;
 import com.zhs.basket.support.v4.V4FormatDisplaySupport;
+import com.zhs.basket.support.v4.template.StandardFormatTemplateFactory;
+import com.zhs.basket.support.v4.template.StandardTemplateDefinition;
 import com.zhs.basket.vo.v4.*;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.bean.BeanUtils;
@@ -27,9 +31,12 @@ public class BasketV4FormatTemplateServiceImpl implements IBasketV4FormatTemplat
     private BasketFormatTemplateStageMapper stageMapper;
     @Autowired
     private BasketFormatTemplateTieBreakRuleMapper tieBreakRuleMapper;
+    @Autowired
+    private BasketSeriesMapper seriesMapper;
+    @Autowired
+    private StandardFormatTemplateFactory standardTemplateFactory;
 
     private static final Set<String> DISALLOWED_TEMPLATE_CODES = Set.of(
-            "LEAGUE_STANDARD_V1",
             "V4_LEGACY_ROUND_ROBIN_V1"
     );
 
@@ -71,6 +78,27 @@ public class BasketV4FormatTemplateServiceImpl implements IBasketV4FormatTemplat
         return vo;
     }
 
+    @Override
+    public StandardTemplateCatalogVo getStandardCatalog(Long seriesId) {
+        if (seriesId == null) {
+            throw new ServiceException("seriesId 不能为空");
+        }
+        BasketSeries series = seriesMapper.selectById(seriesId);
+        if (series == null) {
+            throw new ServiceException("赛事系列不存在");
+        }
+        StandardTemplateCatalogVo vo = new StandardTemplateCatalogVo();
+        vo.setSeriesCode(series.getSeriesCode());
+        vo.setDefaultTemplateCode(standardTemplateFactory.defaultTemplateCode(series.getSeriesCode()));
+        vo.setTemplates(standardTemplateFactory.catalog(series.getSeriesCode()));
+        return vo;
+    }
+
+    @Override
+    public StandardTemplateDefinition getStandardCapabilities(String templateCode) {
+        return standardTemplateFactory.builderForTemplateCode(templateCode).capabilities();
+    }
+
     public BasketFormatTemplate requireEnabledTemplate(Long templateId) {
         if (templateId == null) {
             throw new ServiceException("formatTemplateId 不能为空");
@@ -86,7 +114,9 @@ public class BasketV4FormatTemplateServiceImpl implements IBasketV4FormatTemplat
     }
 
     public void assertTemplateBelongsToSeries(BasketFormatTemplate template, Long seriesId) {
-        if (template.getSeriesId() != null && !template.getSeriesId().equals(seriesId)) {
+        if (template.getSeriesId() != null && !template.getSeriesId().equals(seriesId)
+                && !"STANDARD".equals(template.getTemplateType())
+                && !com.zhs.basket.support.v4.template.StandardTemplateCodes.isStandard(template.getTemplateCode())) {
             throw new ServiceException("赛制模板不属于当前赛事系列");
         }
     }
@@ -112,5 +142,17 @@ public class BasketV4FormatTemplateServiceImpl implements IBasketV4FormatTemplat
                 .filter(t -> templateCode.equals(t.getTemplateCode()))
                 .findFirst()
                 .orElseThrow(() -> new ServiceException("找不到对应的赛制模板，请联系管理员"));
+    }
+
+    public BasketFormatTemplate requireEnabledTemplateByCode(String templateCode) {
+        if (templateCode == null || templateCode.isEmpty()) {
+            throw new ServiceException("赛制模板编码不能为空");
+        }
+        BasketFormatTemplate template = templateMapper.selectByCodeVersion(templateCode, 1);
+        if (template == null || template.getEnabled() == null || template.getEnabled() != 1
+                || !isWizardAllowedTemplate(template)) {
+            throw new ServiceException("找不到对应的赛制模板，请联系管理员");
+        }
+        return template;
     }
 }

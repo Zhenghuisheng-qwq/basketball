@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketStagePairingExecutionMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketStagePairingExecution" id="Result">
+        <id property="id" column="id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="stageId" column="stage_id"/>
+        <result property="ruleVersionId" column="rule_version_id"/>
+        <result property="rosterVersionId" column="roster_version_id"/>
+        <result property="executionNo" column="execution_no"/>
+        <result property="seedRule" column="seed_rule"/>
+        <result property="drawRule" column="draw_rule"/>
+        <result property="byeRule" column="bye_rule"/>
+        <result property="placementRule" column="placement_rule"/>
+        <result property="sourceStageId" column="source_stage_id"/>
+        <result property="resolutionStatus" column="resolution_status"/>
+        <result property="qualificationStageId" column="qualification_stage_id"/>
+        <result property="status" column="status"/>
+        <result property="randomSeed" column="random_seed"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="generatedTime" column="generated_time"/>
+        <result property="confirmedTime" column="confirmed_time"/>
+        <result property="confirmedBy" column="confirmed_by"/>
+        <result property="isCurrent" column="is_current"/>
+        <result property="currentUniqueKey" column="current_unique_key"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, division_id, stage_id, rule_version_id, roster_version_id, execution_no,
+        seed_rule, draw_rule, bye_rule, placement_rule, source_stage_id, resolution_status,
+        qualification_stage_id, status, random_seed, operator_id, generated_time,
+        confirmed_time, confirmed_by, is_current, current_unique_key, create_time, update_time, is_delete
+    </sql>
+
+    <select id="selectById" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_stage_pairing_execution
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectCurrentByStageId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_stage_pairing_execution
+        where stage_id = #{stageId} and is_current = 1 and is_delete = 0
+        limit 1
+    </select>
+
+    <select id="selectCurrentByStageIdForUpdate" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_stage_pairing_execution
+        where stage_id = #{stageId} and is_current = 1 and is_delete = 0
+        limit 1
+        for update
+    </select>
+
+    <select id="selectByStageId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_stage_pairing_execution
+        where stage_id = #{stageId} and is_delete = 0
+        order by execution_no desc
+    </select>
+
+    <select id="selectMaxExecutionNo" resultType="java.lang.Integer">
+        select max(execution_no) from basket_stage_pairing_execution
+        where stage_id = #{stageId} and is_delete = 0
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_stage_pairing_execution (
+            division_id, stage_id, rule_version_id, roster_version_id, execution_no,
+            seed_rule, draw_rule, bye_rule, placement_rule, source_stage_id, resolution_status,
+            qualification_stage_id, status, random_seed, operator_id, generated_time,
+            confirmed_time, confirmed_by, is_current, current_unique_key, create_time, update_time, is_delete
+        ) values (
+            #{divisionId}, #{stageId}, #{ruleVersionId}, #{rosterVersionId}, #{executionNo},
+            #{seedRule}, #{drawRule}, #{byeRule}, #{placementRule}, #{sourceStageId}, #{resolutionStatus},
+            #{qualificationStageId}, #{status}, #{randomSeed}, #{operatorId}, #{generatedTime},
+            #{confirmedTime}, #{confirmedBy}, #{isCurrent}, #{currentUniqueKey}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_stage_pairing_execution
+        <set>
+            <if test="status != null">status = #{status},</if>
+            <if test="placementRule != null">placement_rule = #{placementRule},</if>
+            <if test="sourceStageId != null">source_stage_id = #{sourceStageId},</if>
+            <if test="resolutionStatus != null">resolution_status = #{resolutionStatus},</if>
+            <if test="qualificationStageId != null">qualification_stage_id = #{qualificationStageId},</if>
+            <if test="randomSeed != null">random_seed = #{randomSeed},</if>
+            <if test="operatorId != null">operator_id = #{operatorId},</if>
+            <if test="generatedTime != null">generated_time = #{generatedTime},</if>
+            <if test="confirmedTime != null">confirmed_time = #{confirmedTime},</if>
+            <if test="confirmedBy != null">confirmed_by = #{confirmedBy},</if>
+            <if test="isCurrent != null">is_current = #{isCurrent},</if>
+            current_unique_key = #{currentUniqueKey},
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="clearCurrentByStageId">
+        update basket_stage_pairing_execution
+        set is_current = 0, current_unique_key = NULL, update_time = now()
+        where stage_id = #{stageId} and is_current = 1 and is_delete = 0
+    </update>
+
+    <update id="markSuperseded">
+        update basket_stage_pairing_execution
+        set status = 'SUPERSEDED', is_current = 0, current_unique_key = NULL, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+</mapper>

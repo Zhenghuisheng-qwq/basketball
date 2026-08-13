@@ -1045,6 +1045,10 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                     vo.setSeriesAwayWinCount(ms.getAwayWinCount());
                     vo.setSeriesStatus(ms.getSeriesStatus());
                     vo.setSeriesStatusName(seriesStatusLabel(ms.getSeriesStatus()));
+                    vo.setHomeSourceType(ms.getHomeSourceType());
+                    vo.setAwaySourceType(ms.getAwaySourceType());
+                    vo.setHomeSourceDisplay(ms.getHomeSourceDisplay());
+                    vo.setAwaySourceDisplay(ms.getAwaySourceDisplay());
                 }
             }
             BasketEventTeam home = teamMap.get(match.getHomeEventTeamId());
@@ -1053,11 +1057,19 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 vo.setHomeTeamName(home.getTeamNameSnapshot());
                 vo.setHomeTeamLogoFileId(home.getTeamLogoFileId());
                 vo.setHomeTeamLogoUrl(urlMap.get(home.getTeamLogoFileId()));
+            } else if (vo.getHomeSourceDisplay() != null && !vo.getHomeSourceDisplay().isBlank()) {
+                vo.setHomeTeamName(vo.getHomeSourceDisplay());
+            } else if (match.getHomeEventTeamId() == null) {
+                vo.setHomeTeamName("待定");
             }
             if (away != null) {
                 vo.setAwayTeamName(away.getTeamNameSnapshot());
                 vo.setAwayTeamLogoFileId(away.getTeamLogoFileId());
                 vo.setAwayTeamLogoUrl(urlMap.get(away.getTeamLogoFileId()));
+            } else if (vo.getAwaySourceDisplay() != null && !vo.getAwaySourceDisplay().isBlank()) {
+                vo.setAwayTeamName(vo.getAwaySourceDisplay());
+            } else if (match.getAwayEventTeamId() == null) {
+                vo.setAwayTeamName("待定");
             }
             result.add(vo);
         }

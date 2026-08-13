@@ -20,34 +20,46 @@ const teamRows = computed(() => [
   {
     teamId: props.series.topTeamId,
     name: props.series.topTeamName,
-    shortName: props.series.topTeamName.slice(0, 3).toUpperCase() || '--',
+    shortName: (props.series.topTeamName || '待定').slice(0, 3).toUpperCase() || '--',
     logo: props.series.topTeamLogo,
     badgeKey: undefined as string | undefined,
     score: props.series.topScore,
     seed: props.series.topSeed ?? '-',
-    isWinner: props.series.winnerTeamId === props.series.topTeamId,
-    team: toEventTeam({
-      teamId: props.series.topTeamId,
-      teamName: props.series.topTeamName,
-      teamLogoUrl: props.series.topTeamLogo,
-    }),
+    hasTeamLink: isPublicTeamId(props.series.topTeamId),
+    isWinner: Boolean(props.series.winnerTeamId) && props.series.winnerTeamId === props.series.topTeamId,
+    team: isPublicTeamId(props.series.topTeamId)
+      ? toEventTeam({
+          teamId: props.series.topTeamId,
+          teamName: props.series.topTeamName,
+          teamLogoUrl: props.series.topTeamLogo,
+        })
+      : null,
   },
   {
     teamId: props.series.bottomTeamId,
     name: props.series.bottomTeamName,
-    shortName: props.series.bottomTeamName.slice(0, 3).toUpperCase() || '--',
+    shortName: (props.series.bottomTeamName || '待定').slice(0, 3).toUpperCase() || '--',
     logo: props.series.bottomTeamLogo,
     badgeKey: undefined as string | undefined,
     score: props.series.bottomScore,
     seed: props.series.bottomSeed ?? '-',
-    isWinner: props.series.winnerTeamId === props.series.bottomTeamId,
-    team: toEventTeam({
-      teamId: props.series.bottomTeamId,
-      teamName: props.series.bottomTeamName,
-      teamLogoUrl: props.series.bottomTeamLogo,
-    }),
+    hasTeamLink: isPublicTeamId(props.series.bottomTeamId),
+    isWinner: Boolean(props.series.winnerTeamId) && props.series.winnerTeamId === props.series.bottomTeamId,
+    team: isPublicTeamId(props.series.bottomTeamId)
+      ? toEventTeam({
+          teamId: props.series.bottomTeamId,
+          teamName: props.series.bottomTeamName,
+          teamLogoUrl: props.series.bottomTeamLogo,
+        })
+      : null,
   },
 ])
+
+function isPublicTeamId(id?: string | number | null) {
+  if (id == null || id === '') return false
+  const numeric = Number(id)
+  return Number.isFinite(numeric) && numeric > 0
+}
 
 function handleLogoError(teamId: string) {
   failedLogoIds.value = new Set(failedLogoIds.value).add(teamId)
@@ -69,7 +81,7 @@ function showLogoImage(teamId: string, logo?: string) {
 
     <div
       v-for="(teamRow, index) in teamRows"
-      :key="teamRow.teamId"
+      :key="`${index}-${teamRow.teamId || teamRow.name}`"
       class="playoff-series-card__team"
       :class="{
         'playoff-series-card__team--winner': teamRow.isWinner,
@@ -80,7 +92,7 @@ function showLogoImage(teamId: string, logo?: string) {
       <span class="playoff-series-card__seed">{{ teamRow.seed }}</span>
 
       <router-link
-        v-if="teamRow.team"
+        v-if="teamRow.hasTeamLink && teamRow.team"
         :to="`/tournament/team/${teamRow.team.teamId}/overview`"
         class="playoff-series-card__team-link"
       >
@@ -107,6 +119,12 @@ function showLogoImage(teamId: string, logo?: string) {
           {{ teamRow.team.shortName }}
         </span>
       </router-link>
+      <div v-else class="playoff-series-card__team-link playoff-series-card__team-link--static">
+        <div class="playoff-series-card__logo-wrap">
+          <span class="playoff-series-card__logo-fallback">TBD</span>
+        </div>
+        <span class="playoff-series-card__name">{{ teamRow.name || '待定' }}</span>
+      </div>
 
       <strong class="playoff-series-card__score">{{ teamRow.score }}</strong>
     </div>
@@ -192,6 +210,14 @@ function showLogoImage(teamId: string, logo?: string) {
 
   &:hover {
     opacity: 0.82;
+  }
+}
+
+.playoff-series-card__team-link--static {
+  cursor: default;
+
+  &:hover {
+    opacity: 1;
   }
 }
 

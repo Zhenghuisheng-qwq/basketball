@@ -29,8 +29,8 @@ public final class PlayoffBracketSupport {
 
     /**
      * 2 的次幂首轮 Series 落位顺序（连续两两配对）。
-     * 4/8 为标准 mirror 递归；16 使用 E2E 锁定矩阵；32+ 由锁定 16 逐级 expand，保证 16 对阵回归不变。
-     * 16: 1/16, 4/13, 5/12, 8/9, 6/11, 7/10, 2/15, 3/14
+     * 4/8 为标准 mirror 递归；16 使用 E2E 锁定矩阵（历史兼容，不作为 32+ 的展开源）。
+     * 32+ 使用标准 recursive mirror，保证 Seed1/Seed2 分半区、Seed1/Seed4 与 Seed2/Seed3 不早于 SF 相遇。
      */
     public static int[] firstRoundSeedOrder(int teamCount) {
         if (!supportsTeamCount(teamCount)) {
@@ -39,14 +39,7 @@ public final class PlayoffBracketSupport {
         if (teamCount == 16) {
             return LOCKED_SEED_ORDER_16.clone();
         }
-        if (teamCount < 16) {
-            return buildRecursiveSeedOrder(teamCount);
-        }
-        int[] order = LOCKED_SEED_ORDER_16;
-        while (order.length < teamCount) {
-            order = expandSeedOrder(order);
-        }
-        return order;
+        return buildRecursiveSeedOrder(teamCount);
     }
 
     /** 标准 mirror：每一档 [s] → [s, n+1-s]。 */

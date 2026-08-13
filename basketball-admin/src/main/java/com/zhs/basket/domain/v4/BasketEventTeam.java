@@ -27,4 +27,8 @@ public class BasketEventTeam {
     private Date createTime;
     private Date updateTime;
     private Integer isDelete;
+
+    public boolean isPersonalFormationTeam() {
+        return sourceDrawTeamId != null;
+    }
 }

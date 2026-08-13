@@ -70,6 +70,10 @@ final class StageScheduleSupport {
         if (versionContext != null) {
             batch.setRuleVersionId(versionContext.getRuleVersionId());
             batch.setRosterVersionId(versionContext.getRosterVersionId());
+            batch.setPairingExecutionId(versionContext.getPairingExecutionId());
+        }
+        if (context.getPairingExecutionId() != null) {
+            batch.setPairingExecutionId(context.getPairingExecutionId());
         }
         batch.setStructureStatus(StructureStatusEnum.ACTIVE.getCode());
         batch.setGenerateType(GENERATE_TYPE_AUTO);

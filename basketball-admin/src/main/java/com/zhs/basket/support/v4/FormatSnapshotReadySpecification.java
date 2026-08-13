@@ -38,6 +38,12 @@ public class FormatSnapshotReadySpecification {
             boolean isLast = i == ordered.size() - 1;
 
             validateBestOf(stage.getBestOf());
+            if (stage.getSemifinalBestOf() != null) {
+                validateBestOf(stage.getSemifinalBestOf());
+            }
+            if (stage.getFinalBestOf() != null) {
+                validateBestOf(stage.getFinalBestOf());
+            }
             StageFormatSpecification.validateOrganizationAndGrouping(stage);
             StageFormatSpecification.validateCompetitionFormat(stage, false);
             StageFormatSpecification.validateAllowedCombination(stage);
@@ -65,9 +71,7 @@ public class FormatSnapshotReadySpecification {
     }
 
     public static void validateBestOf(Integer bestOf) {
-        if (bestOf == null || (bestOf != 1 && bestOf != 3 && bestOf != 5)) {
-            throw new ServiceException("best_of 仅支持 1、3、5");
-        }
+        BestOfValues.requireLegal(bestOf);
     }
 
     public static void validateBestOfForSave(Integer bestOf) {

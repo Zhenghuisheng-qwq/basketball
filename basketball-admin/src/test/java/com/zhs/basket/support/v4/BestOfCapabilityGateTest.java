@@ -29,22 +29,20 @@ class BestOfCapabilityGateTest {
     }
 
     @Test
-    void openRegistration_blocksRoundRobinBo3() {
+    void openRegistration_allowsRoundRobinBo3() {
         BasketDivisionStage stage = new BasketDivisionStage();
         stage.setStageName("常规赛");
         stage.setCompetitionFormat(CompetitionFormatEnum.ROUND_ROBIN.getCode());
         stage.setBestOf(3);
-        ServiceException ex = assertThrows(ServiceException.class,
-                () -> BestOfCapabilityGate.assertCanOpenRegistration(List.of(stage)));
-        assertTrue(ex.getMessage().contains("循环积分赛"));
+        assertDoesNotThrow(() -> BestOfCapabilityGate.assertCanOpenRegistration(List.of(stage)));
     }
 
     @Test
-    void openRegistration_blocksBestOf3WhenUnsupported() {
+    void openRegistration_blocksIllegalBestOf() {
         BasketDivisionStage stage = new BasketDivisionStage();
         stage.setStageName("未知阶段");
         stage.setCompetitionFormat("UNKNOWN");
-        stage.setBestOf(3);
+        stage.setBestOf(4);
         assertThrows(ServiceException.class, () -> BestOfCapabilityGate.assertCanOpenRegistration(List.of(stage)));
     }
 
@@ -55,20 +53,25 @@ class BestOfCapabilityGateTest {
     }
 
     @Test
-    void generateSchedule_blocksRoundRobinBo3() {
+    void generateSchedule_allowsRoundRobinBo3() {
         BasketDivisionStage stage = new BasketDivisionStage();
         stage.setCompetitionFormat(CompetitionFormatEnum.ROUND_ROBIN.getCode());
         stage.setBestOf(3);
-        ServiceException ex = assertThrows(ServiceException.class,
-                () -> BestOfCapabilityGate.assertCanGenerateSchedule(stage));
-        assertTrue(ex.getMessage().contains("循环积分"));
+        assertDoesNotThrow(() -> BestOfCapabilityGate.assertCanGenerateSchedule(stage));
     }
 
     @Test
-    void generateSchedule_blocksUnsupportedFormatBo5() {
+    void generateSchedule_allowsBo7() {
+        BasketDivisionStage stage = eliminationStage(7);
+        stage.setFinalBestOf(7);
+        assertDoesNotThrow(() -> BestOfCapabilityGate.assertCanGenerateSchedule(stage));
+    }
+
+    @Test
+    void generateSchedule_blocksIllegalBestOf() {
         BasketDivisionStage stage = new BasketDivisionStage();
         stage.setCompetitionFormat("UNKNOWN");
-        stage.setBestOf(5);
+        stage.setBestOf(4);
         assertThrows(ServiceException.class, () -> BestOfCapabilityGate.assertCanGenerateSchedule(stage));
     }
 

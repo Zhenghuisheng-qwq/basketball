@@ -300,8 +300,8 @@ export function validateV4PlayoffExpansion(
   }
   for (const stage of playoffStages) {
     const bo = stage.bestOf ?? 1
-    if (![1, 3, 5].includes(bo)) {
-      messages.push(`「${stage.stageName || '淘汰阶段'}」BO 规则无效，仅支持 BO1 / BO3 / BO5`)
+    if (![1, 3, 5, 7].includes(bo)) {
+      messages.push(`「${stage.stageName || '淘汰阶段'}」BO 规则无效，仅支持 BO1 / BO3 / BO5 / BO7`)
     }
   }
   return { valid: messages.length === 0, messages }

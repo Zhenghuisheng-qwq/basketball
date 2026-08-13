@@ -15,6 +15,8 @@
         <result property="groupCount" column="group_count"/>
         <result property="roundRobinCycles" column="round_robin_cycles"/>
         <result property="bestOf" column="best_of"/>
+        <result property="semifinalBestOf" column="semifinal_best_of"/>
+        <result property="finalBestOf" column="final_best_of"/>
         <result property="winPoints" column="win_points"/>
         <result property="lossPoints" column="loss_points"/>
         <result property="forfeitWinPoints" column="forfeit_win_points"/>
@@ -23,6 +25,9 @@
         <result property="advancementCount" column="advancement_count"/>
         <result property="pairingRule" column="pairing_rule"/>
         <result property="nextStageCode" column="next_stage_code"/>
+        <result property="seedRule" column="seed_rule"/>
+        <result property="drawRule" column="draw_rule"/>
+        <result property="byeRule" column="bye_rule"/>
         <result property="requiresManualConfirmation" column="requires_manual_confirmation"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>

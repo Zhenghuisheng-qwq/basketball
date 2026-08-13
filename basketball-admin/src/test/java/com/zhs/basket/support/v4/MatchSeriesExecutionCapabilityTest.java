@@ -22,10 +22,10 @@ class MatchSeriesExecutionCapabilityTest {
     }
 
     @Test
-    void rejectsRoundRobinBo3() {
+    void allowsRoundRobinBo3() {
         BasketDivisionStage stage = eliminationStage(3);
         stage.setCompetitionFormat(CompetitionFormatEnum.ROUND_ROBIN.getCode());
-        assertFalse(MatchSeriesExecutionCapability.supportsScheduleGeneration(stage));
+        assertTrue(MatchSeriesExecutionCapability.supportsScheduleGeneration(stage));
     }
 
     @Test

@@ -16,10 +16,7 @@ public final class MatchSeriesResultCalculator {
     }
 
     public static int requiredWins(int bestOf) {
-        if (bestOf != 3 && bestOf != 5) {
-            throw new ServiceException("best_of 仅支持 3 或 5");
-        }
-        return bestOf / 2 + 1;
+        return BestOfValues.requiredWins(bestOf);
     }
 
     public static MatchSeriesResultSnapshot calculate(int bestOf,

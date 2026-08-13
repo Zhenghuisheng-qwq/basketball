@@ -11,6 +11,7 @@ import com.zhs.basket.enums.v4.ScheduleGenerationStrategyEnum;
 import com.zhs.basket.mapper.v4.BasketMatchSeriesMapper;
 import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
+import com.zhs.basket.support.v4.BestOfValues;
 import com.zhs.basket.support.v4.ByeQualificationService;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +48,7 @@ public class MatchSeriesEliminationScheduleGenerator {
         StageScheduleSupport.requireContext(context);
         BasketDivisionStage stage = context.getStage();
         int bestOf = stage.getBestOf();
+        BestOfValues.requireLegal(bestOf);
 
         List<BasketMatchSeries> existingSeries = seriesMapper.selectByStageId(stage.getId());
         if (!existingSeries.isEmpty()) {

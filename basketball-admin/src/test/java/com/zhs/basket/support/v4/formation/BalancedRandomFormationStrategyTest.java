@@ -6,6 +6,7 @@ import com.zhs.common.exception.ServiceException;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -69,6 +70,16 @@ class BalancedRandomFormationStrategyTest {
         assertTrue(max - min <= 1);
     }
 
+    @Test
+    void sameSeedAndSamePlayers_reproducibleRegardlessOfInputOrder() {
+        FormationContext first = context(GameModeEnum.FIVE_V_FIVE, 10, 42L);
+        FormationContext second = context(GameModeEnum.FIVE_V_FIVE, 10, 42L);
+        Collections.reverse(second.getValidPlayers());
+        FormationPlan planA = strategy.plan(first);
+        FormationPlan planB = strategy.plan(second);
+        assertEquals(playerIds(planA), playerIds(planB));
+    }
+
     private FormationContext context(GameModeEnum mode, int n, long seed) {
         FormationContext context = new FormationContext();
         context.setDivisionId(100L);
@@ -89,5 +100,12 @@ class BalancedRandomFormationStrategyTest {
 
     private List<Integer> sizes(FormationPlan plan) {
         return plan.getTeams().stream().map(t -> t.getPlayers().size()).collect(Collectors.toList());
+    }
+
+    private List<Long> playerIds(FormationPlan plan) {
+        return plan.getTeams().stream()
+                .flatMap(t -> t.getPlayers().stream())
+                .map(FormationPlayer::getPersonalRegistrationId)
+                .collect(Collectors.toList());
     }
 }

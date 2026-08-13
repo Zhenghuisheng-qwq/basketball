@@ -7,7 +7,9 @@ import com.zhs.basket.enums.v4.*;
 import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IBasketV4StructureVersionService;
-import com.zhs.basket.support.v4.roster.TeamRosterSupport;
+import com.zhs.basket.service.v4.IStagePairingExecutionApplicationService;
+import com.zhs.basket.support.v4.bracket.GroupRankPlacementSupport;
+import com.zhs.basket.support.v4.stage.SingleEliminationStageScheduleStrategy;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
 import com.zhs.basket.support.v4.stage.PlayoffBracketSupport;
 import com.zhs.basket.support.v4.ByeQualificationService;
@@ -15,6 +17,7 @@ import com.zhs.basket.support.v4.BestOfCapabilityGate;
 import com.zhs.basket.support.v4.MatchSeriesQualificationSyncService;
 import com.zhs.basket.support.v4.StageFormatSpecification;
 import com.zhs.basket.support.v4.V4FormatDisplaySupport;
+import com.zhs.basket.support.v4.roster.TeamRosterSupport;
 import com.zhs.basket.support.v4.stage.EliminationStageSupport;
 import com.zhs.basket.support.v4.stage.DivisionStageScheduleStrategy;
 import com.zhs.basket.support.v4.stage.DivisionStageScheduleStrategyFactory;
@@ -82,6 +85,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private IBasketV4StructureVersionService structureVersionService;
     @Autowired
     private TeamRosterSupport teamRosterSupport;
+    @Autowired
+    private IStagePairingExecutionApplicationService pairingExecutionApplicationService;
 
     @Override
     public List<BasketDivisionStageExecutionListVo> listStages(Long divisionId) {
@@ -143,7 +148,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
                     .filter(Objects::nonNull)
                     .max(Integer::compareTo)
                     .orElse(0) + 1;
-            boolean playoffInherit = PlayoffBracketSupport.isPlayoffBracket(stage.getPairingRule());
+            boolean playoffInherit = PlayoffBracketSupport.isPlayoffBracket(stage.getPairingRule())
+                    || PairingRuleEnum.HIGH_VS_LOW.getCode().equals(stage.getPairingRule());
             boolean winnerQuals = !confirmed.isEmpty() && confirmed.stream().allMatch(q -> {
                 StageTeamEntryTypeEnum et = mapEntryType(q.getQualificationType());
                 return et == StageTeamEntryTypeEnum.MATCH_WINNER
@@ -242,20 +248,47 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     @Transactional(rollbackFor = Exception.class)
     public Long generateSchedule(Long stageId) {
         BasketDivisionStage stage = requireStage(stageId);
-        BasketDivision division = requireDivision(stage.getDivisionId());
-        validateStageForGenerate(stage);
+        BasketDivision division = divisionMapper.selectByIdForUpdate(stage.getDivisionId());
+        if (division == null) {
+            throw new ServiceException("Division 不存在");
+        }
         BestOfCapabilityGate.assertCanGenerateSchedule(stage);
         schedulePrerequisiteValidator.validateBeforeGenerateSchedule(division, stage, isFirstStage(stage));
 
-        initializeStageTeams(stageId);
-        stage = requireStage(stageId);
+        if (GroupRankPlacementSupport.usesGroupRankPlacement(stage, findPreviousStage(stage))) {
+            var pairing = pairingExecutionApplicationService.getCurrent(stageId);
+            if (pairing.getExecutionId() == null || !"CONFIRMED".equals(pairing.getStatus())) {
+                throw new ServiceException("请先确认 GROUP_CROSS / MANUAL 占位后再生成淘汰结构");
+            }
+        } else {
+            initializeStageTeams(stageId);
+            stage = requireStage(stageId);
+            assertPlayoffQualificationReady(stage);
+        }
 
-        BasketScheduleBatch existingDraft = scheduleBatchMapper.selectDraftByStageId(stageId);
-        if (existingDraft != null) {
-            throw new ServiceException("该阶段已有草稿赛程，请先作废后再生成");
+        if (scheduleBatchMapper.selectPublishedByStageId(stageId) != null) {
+            throw new ServiceException("当前赛段已发布，需要先撤回后再调整");
+        }
+        if (matchMapper.countFinishedByStageId(stageId) > 0) {
+            throw new ServiceException("赛事已产生正式比赛结果，不能重建结构");
+        }
+        String status = stage.getExecutionStatus();
+        if (StageExecutionStatusEnum.RUNNING.getCode().equals(status)
+                || StageExecutionStatusEnum.RESULT_PENDING_CONFIRM.getCode().equals(status)
+                || StageExecutionStatusEnum.COMPLETED.getCode().equals(status)) {
+            throw new ServiceException("当前阶段状态不允许生成赛程");
         }
 
         StageExecutionContext context = buildExecutionContext(stage);
+        BasketScheduleBatch active = scheduleBatchMapper.selectActiveByStageId(stageId);
+        if (active != null && sameStructureBinding(active, context)
+                && PublishStatusEnum.DRAFT.getCode().equals(active.getPublishStatus())) {
+            return active.getId();
+        }
+        if (active != null && PublishStatusEnum.DRAFT.getCode().equals(active.getPublishStatus())) {
+            structureVersionService.markStale(active.getId());
+        }
+
         StageScheduleIntegrityValidator.validateBeforeGenerate(context);
         DivisionStageScheduleStrategy strategy = scheduleStrategyFactory.resolve(stage);
         strategy.validate(context);
@@ -853,6 +886,13 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             }
             item.setSourceRank(row.getSourceRank());
             item.setQualificationStatus(row.getQualificationStatus());
+            if (row.getGroupId() != null) {
+                BasketDivisionGroup group = groupMapper.selectById(row.getGroupId());
+                if (group != null) {
+                    item.setGroupCode(group.getGroupCode());
+                    item.setGroupName(group.getGroupName());
+                }
+            }
             vo.getItems().add(item);
         }
         return vo;
@@ -866,6 +906,16 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         context.setStageTeams(stageTeamMapper.selectByStageId(stage.getId()));
         context.setExecutionVersion(stage.getExecutionVersion() != null ? stage.getExecutionVersion() : 0);
         context.setVersionContext(structureVersionService.resolveForGenerate(division.getId()));
+        if (SingleEliminationStageScheduleStrategy.requiresConfirmedDraw(stage)
+                || GroupRankPlacementSupport.usesGroupRankPlacement(stage, findPreviousStage(stage))) {
+            var plan = pairingExecutionApplicationService.loadConfirmedPlan(stage);
+            context.setBracketSlotPlan(plan);
+            var vo = pairingExecutionApplicationService.getCurrent(stage.getId());
+            context.setPairingExecutionId(vo.getExecutionId());
+            if (context.getVersionContext() != null) {
+                context.getVersionContext().setPairingExecutionId(vo.getExecutionId());
+            }
+        }
 
         if (isGroupStage(stage)) {
             BasketDivisionGroupingBatch groupingBatch = groupingBatchMapper.selectActiveByDivisionAndStage(
@@ -949,16 +999,30 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         }
     }
 
-    private void validateStageForGenerate(BasketDivisionStage stage) {
-        String status = stage.getExecutionStatus();
-        if (StageExecutionStatusEnum.SCHEDULE_GENERATED.getCode().equals(status)
-                || StageExecutionStatusEnum.RUNNING.getCode().equals(status)
-                || StageExecutionStatusEnum.RESULT_PENDING_CONFIRM.getCode().equals(status)
-                || StageExecutionStatusEnum.COMPLETED.getCode().equals(status)) {
-            throw new ServiceException("当前阶段状态不允许生成赛程");
+    private boolean sameStructureBinding(BasketScheduleBatch batch, StageExecutionContext context) {
+        Long ruleId = context.getVersionContext() == null ? null : context.getVersionContext().getRuleVersionId();
+        Long rosterId = context.getVersionContext() == null ? null : context.getVersionContext().getRosterVersionId();
+        Long pairingId = context.getPairingExecutionId();
+        return Objects.equals(batch.getRuleVersionId(), ruleId)
+                && Objects.equals(batch.getRosterVersionId(), rosterId)
+                && Objects.equals(batch.getPairingExecutionId(), pairingId);
+    }
+
+    private void assertPlayoffQualificationReady(BasketDivisionStage stage) {
+        if (isFirstStage(stage)) {
+            return;
         }
-        if (scheduleBatchMapper.selectPublishedByStageId(stage.getId()) != null) {
-            throw new ServiceException("该阶段已有已发布赛程");
+        BasketDivisionStage previous = findPreviousStage(stage);
+        if (previous == null) {
+            return;
+        }
+        List<BasketDivisionStageQualification> confirmed = qualificationMapper.selectConfirmedByStageId(previous.getId());
+        if (confirmed.isEmpty()) {
+            throw new ServiceException("晋级尚未确认，无法生成淘汰结构");
+        }
+        Integer slots = previous.getAdvancementCount();
+        if (slots != null && slots > 0 && confirmed.size() < slots) {
+            throw new ServiceException("季后赛名额大于已确认晋级队数，无法生成结构");
         }
     }
 
@@ -1051,6 +1115,24 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         vo.setCompletedTime(stage.getCompletedTime());
         vo.setConfirmedTime(stage.getConfirmedTime());
         vo.setNextStageCode(stage.getNextStageCode());
+        vo.setRoundRobinCycles(stage.getRoundRobinCycles());
+        vo.setBestOf(stage.getBestOf());
+        vo.setSemifinalBestOf(stage.getSemifinalBestOf());
+        vo.setFinalBestOf(stage.getFinalBestOf());
+        vo.setPairingRule(stage.getPairingRule());
+        vo.setSeedRule(stage.getSeedRule());
+        vo.setDrawRule(stage.getDrawRule());
+        vo.setByeRule(stage.getByeRule());
+        vo.setAdvancementCount(stage.getAdvancementCount());
+        vo.setAdvancementType(stage.getAdvancementType());
+        try {
+            var pairingVo = pairingExecutionApplicationService.getCurrent(stage.getId());
+            vo.setHasUnresolvedPlaceholders(Boolean.TRUE.equals(pairingVo.getHasUnresolvedPlaceholders()));
+            vo.setParticipantResolved(Boolean.TRUE.equals(pairingVo.getParticipantResolved()));
+        } catch (RuntimeException ignored) {
+            vo.setHasUnresolvedPlaceholders(false);
+            vo.setParticipantResolved(false);
+        }
         return vo;
     }
 

@@ -71,6 +71,10 @@ public class V4MatchSeriesDisplaySupport {
         vo.setWinnerEventTeamId(series.getWinnerEventTeamId());
         vo.setHomeEventTeamId(series.getHomeEventTeamId());
         vo.setAwayEventTeamId(series.getAwayEventTeamId());
+        vo.setHomeSourceType(series.getHomeSourceType());
+        vo.setAwaySourceType(series.getAwaySourceType());
+        vo.setHomeSourceDisplay(series.getHomeSourceDisplay());
+        vo.setAwaySourceDisplay(series.getAwaySourceDisplay());
 
         fillStageInfo(vo, series);
         fillTeamNames(vo, series);
@@ -107,6 +111,16 @@ public class V4MatchSeriesDisplaySupport {
         if (series.getAwayEventTeamId() != null) ids.add(series.getAwayEventTeamId());
         if (series.getWinnerEventTeamId() != null) ids.add(series.getWinnerEventTeamId());
         if (ids.isEmpty()) {
+            if (series.getHomeSourceDisplay() != null && !series.getHomeSourceDisplay().isBlank()) {
+                vo.setHomeTeamName(series.getHomeSourceDisplay());
+            } else {
+                vo.setHomeTeamName("待定");
+            }
+            if (series.getAwaySourceDisplay() != null && !series.getAwaySourceDisplay().isBlank()) {
+                vo.setAwayTeamName(series.getAwaySourceDisplay());
+            } else {
+                vo.setAwayTeamName("待定");
+            }
             return;
         }
         List<BasketEventTeam> teams = eventTeamDao.selectByIds(ids);
@@ -119,10 +133,18 @@ public class V4MatchSeriesDisplaySupport {
         BasketEventTeam home = map.get(series.getHomeEventTeamId());
         if (home != null) {
             vo.setHomeTeamName(home.getTeamNameSnapshot());
+        } else if (series.getHomeSourceDisplay() != null && !series.getHomeSourceDisplay().isBlank()) {
+            vo.setHomeTeamName(series.getHomeSourceDisplay());
+        } else if (series.getHomeEventTeamId() == null) {
+            vo.setHomeTeamName("待定");
         }
         BasketEventTeam away = map.get(series.getAwayEventTeamId());
         if (away != null) {
             vo.setAwayTeamName(away.getTeamNameSnapshot());
+        } else if (series.getAwaySourceDisplay() != null && !series.getAwaySourceDisplay().isBlank()) {
+            vo.setAwayTeamName(series.getAwaySourceDisplay());
+        } else if (series.getAwayEventTeamId() == null) {
+            vo.setAwayTeamName("待定");
         }
         BasketEventTeam winner = map.get(series.getWinnerEventTeamId());
         if (winner != null) {

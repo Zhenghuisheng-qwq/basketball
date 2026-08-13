@@ -24,6 +24,18 @@ public class BasketV4FormatTemplateController extends BaseController {
         return success(templateService.listEnabledTemplates(seriesId));
     }
 
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.DIVISION_LIST + "')")
+    @GetMapping("/standard")
+    public AjaxResult standardCatalog(@RequestParam Long seriesId) {
+        return success(templateService.getStandardCatalog(seriesId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.DIVISION_QUERY + "')")
+    @GetMapping("/standard/{templateCode}/capabilities")
+    public AjaxResult standardCapabilities(@PathVariable String templateCode) {
+        return success(templateService.getStandardCapabilities(templateCode));
+    }
+
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.DIVISION_QUERY + "')")
     @GetMapping("/{id}")
     public AjaxResult detail(@PathVariable Long id) {

@@ -22,6 +22,8 @@ public interface BasketScheduleBatchMapper {
 
     BasketScheduleBatch selectPublishedByStageId(@Param("stageId") Long stageId);
 
+    BasketScheduleBatch selectActiveByStageId(@Param("stageId") Long stageId);
+
     int countByDivisionId(@Param("divisionId") Long divisionId);
 
     int insert(BasketScheduleBatch entity);

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketStagePairingEntryMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketStagePairingEntry" id="Result">
+        <id property="id" column="id"/>
+        <result property="executionId" column="execution_id"/>
+        <result property="slotNo" column="slot_no"/>
+        <result property="eventTeamId" column="event_team_id"/>
+        <result property="seedNo" column="seed_no"/>
+        <result property="rankingNo" column="ranking_no"/>
+        <result property="isBye" column="is_bye"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="sourceStageId" column="source_stage_id"/>
+        <result property="sourceGroupId" column="source_group_id"/>
+        <result property="sourceRank" column="source_rank"/>
+        <result property="resolvedEventTeamId" column="resolved_event_team_id"/>
+        <result property="resolutionStatus" column="resolution_status"/>
+        <result property="qualificationId" column="qualification_id"/>
+        <result property="groupRankKey" column="group_rank_key"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, execution_id, slot_no, event_team_id, seed_no, ranking_no, is_bye,
+        source_type, source_stage_id, source_group_id, source_rank, resolved_event_team_id,
+        resolution_status, qualification_id, group_rank_key, create_time, update_time, is_delete
+    </sql>
+
+    <select id="selectByExecutionId" resultMap="Result">
+        select <include refid="BaseColumns"/>
+        from basket_stage_pairing_entry
+        where execution_id = #{executionId} and is_delete = 0
+        order by slot_no asc
+    </select>
+
+    <insert id="batchInsert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_stage_pairing_entry (
+            execution_id, slot_no, event_team_id, seed_no, ranking_no, is_bye,
+            source_type, source_stage_id, source_group_id, source_rank, resolved_event_team_id,
+            resolution_status, qualification_id, group_rank_key, create_time, update_time, is_delete
+        ) values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.executionId}, #{item.slotNo}, #{item.eventTeamId}, #{item.seedNo}, #{item.rankingNo}, #{item.isBye},
+             #{item.sourceType}, #{item.sourceStageId}, #{item.sourceGroupId}, #{item.sourceRank}, #{item.resolvedEventTeamId},
+             #{item.resolutionStatus}, #{item.qualificationId}, #{item.groupRankKey},
+             #{item.createTime}, #{item.updateTime}, #{item.isDelete})
+        </foreach>
+    </insert>
+
+    <update id="updateResolution">
+        update basket_stage_pairing_entry
+        set resolved_event_team_id = #{resolvedEventTeamId},
+            resolution_status = #{resolutionStatus},
+            qualification_id = #{qualificationId},
+            update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="deleteByExecutionId">
+        update basket_stage_pairing_entry
+        set is_delete = 1,
+            group_rank_key = NULL,
+            resolved_event_team_id = NULL,
+            update_time = now()
+        where execution_id = #{executionId} and is_delete = 0
+    </update>
+</mapper>

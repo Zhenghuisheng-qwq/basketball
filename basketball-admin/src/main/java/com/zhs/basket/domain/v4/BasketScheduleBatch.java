@@ -26,6 +26,8 @@ public class BasketScheduleBatch {
     private Long ruleVersionId;
     /** Roster Version；Legacy 可为 null */
     private Long rosterVersionId;
+    /** Confirmed pairing / draw execution that produced this structure. */
+    private Long pairingExecutionId;
     /** ACTIVE/STALE，与 publishStatus 独立 */
     private String structureStatus;
     private String generateType;

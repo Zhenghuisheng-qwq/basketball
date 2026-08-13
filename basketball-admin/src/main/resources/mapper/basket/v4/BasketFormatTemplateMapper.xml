@@ -9,6 +9,8 @@
         <result property="templateName" column="template_name"/>
         <result property="versionNo" column="version_no"/>
         <result property="templateDescription" column="template_description"/>
+        <result property="templateType" column="template_type"/>
+        <result property="defaultRegistrationMode" column="default_registration_mode"/>
         <result property="enabled" column="enabled"/>
         <result property="isDefault" column="is_default"/>
         <result property="createTime" column="create_time"/>
@@ -16,7 +18,7 @@
         <result property="isDelete" column="is_delete"/>
     </resultMap>
 
-    <sql id="BaseColumns">id, series_id, template_code, template_name, version_no, template_description, enabled, is_default, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, series_id, template_code, template_name, version_no, template_description, template_type, default_registration_mode, enabled, is_default, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketFormatTemplateResult">
         select <include refid="BaseColumns"/> from basket_format_template
@@ -45,10 +47,10 @@
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_format_template (
             series_id, template_code, template_name, version_no, template_description,
-            enabled, is_default, create_time, update_time, is_delete
+            template_type, default_registration_mode, enabled, is_default, create_time, update_time, is_delete
         ) values (
             #{seriesId}, #{templateCode}, #{templateName}, #{versionNo}, #{templateDescription},
-            #{enabled}, #{isDefault}, #{createTime}, #{updateTime}, #{isDelete}
+            #{templateType}, #{defaultRegistrationMode}, #{enabled}, #{isDefault}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 </mapper>

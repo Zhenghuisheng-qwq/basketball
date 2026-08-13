@@ -17,8 +17,11 @@ public class StageSchedulePreviewVo {
     private Integer roundCount;
     /** BO3/BO5 单轮淘汰：对阵组（Series）数量 */
     private Integer seriesCount;
-    /** BO3/BO5 单轮淘汰：最大 Game 总数（seriesCount × bestOf） */
     private Integer maxGameCount;
+    private Integer bracketCapacity;
+    private Integer byeCount;
+    private Integer firstRoundActual;
+    private Integer totalActualSeries;
     private Boolean hasBye;
     private List<String> warnings = new ArrayList<>();
     private List<GroupPreview> groupPreviews = new ArrayList<>();

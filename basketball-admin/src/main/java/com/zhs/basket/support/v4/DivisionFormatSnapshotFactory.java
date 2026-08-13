@@ -5,6 +5,10 @@ import com.zhs.basket.enums.v4.DivisionStageStatusEnum;
 import com.zhs.basket.enums.v4.RosterWorkflowModeEnum;
 import com.zhs.basket.enums.v4.SnapshotStatusEnum;
 import com.zhs.basket.enums.v4.StageExecutionStatusEnum;
+import com.zhs.basket.enums.v4.TemplateTypeEnum;
+import com.zhs.basket.support.v4.template.StandardTemplateCodes;
+import com.zhs.basket.support.v4.template.StandardTemplateDefinition;
+import com.zhs.basket.support.v4.template.StandardTemplateStageDefinition;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -28,6 +32,7 @@ public class DivisionFormatSnapshotFactory {
         snapshot.setSourceTemplateCode(template.getTemplateCode());
         snapshot.setSourceTemplateName(template.getTemplateName());
         snapshot.setSourceTemplateVersion(template.getVersionNo());
+        snapshot.setSourceTemplateType(resolveTemplateType(template));
         snapshot.setSnapshotVersion(snapshotVersion);
         snapshot.setSnapshotStatus(SnapshotStatusEnum.DRAFT.getCode());
         snapshot.setRosterWorkflowMode(RosterWorkflowModeEnum.VERSIONED.getCode());
@@ -58,6 +63,8 @@ public class DivisionFormatSnapshotFactory {
             stage.setGroupCount(ts.getGroupCount());
             stage.setRoundRobinCycles(ts.getRoundRobinCycles());
             stage.setBestOf(ts.getBestOf());
+        stage.setSemifinalBestOf(ts.getSemifinalBestOf());
+        stage.setFinalBestOf(ts.getFinalBestOf());
             stage.setWinPoints(ts.getWinPoints());
             stage.setLossPoints(ts.getLossPoints());
             stage.setForfeitWinPoints(ts.getForfeitWinPoints());
@@ -66,6 +73,9 @@ public class DivisionFormatSnapshotFactory {
             stage.setAdvancementCount(ts.getAdvancementCount());
             stage.setPairingRule(ts.getPairingRule());
             stage.setNextStageCode(ts.getNextStageCode());
+            stage.setSeedRule(ts.getSeedRule());
+            stage.setDrawRule(ts.getDrawRule());
+            stage.setByeRule(ts.getByeRule());
             stage.setRequiresManualConfirmation(ts.getRequiresManualConfirmation());
             stage.setStageStatus(DivisionStageStatusEnum.DRAFT.getCode());
             stage.setExecutionStatus(StageExecutionStatusEnum.DRAFT.getCode());
@@ -101,5 +111,81 @@ public class DivisionFormatSnapshotFactory {
             rules.add(rule);
         }
         return rules;
+    }
+
+    public List<BasketDivisionStage> buildStagesFromDefinition(Long divisionId, Long snapshotId,
+                                                               StandardTemplateDefinition definition) {
+        Date now = new Date();
+        List<BasketDivisionStage> stages = new ArrayList<>();
+        if (definition == null || definition.getStages() == null) {
+            return stages;
+        }
+        for (StandardTemplateStageDefinition ts : definition.getStages()) {
+            BasketDivisionStage stage = new BasketDivisionStage();
+            stage.setSnapshotId(snapshotId);
+            stage.setDivisionId(divisionId);
+            copyStageDefinition(stage, ts);
+            stage.setStageStatus(DivisionStageStatusEnum.DRAFT.getCode());
+            stage.setExecutionStatus(StageExecutionStatusEnum.DRAFT.getCode());
+            stage.setExecutionVersion(0);
+            stage.setCreateTime(now);
+            stage.setUpdateTime(now);
+            stage.setIsDelete(0);
+            stages.add(stage);
+        }
+        return stages;
+    }
+
+    public void applyDefinition(List<BasketDivisionStage> stages, StandardTemplateDefinition definition) {
+        if (stages == null || definition == null || definition.getStages() == null) {
+            return;
+        }
+        Map<String, StandardTemplateStageDefinition> byCode = new HashMap<>();
+        for (StandardTemplateStageDefinition ts : definition.getStages()) {
+            byCode.put(ts.getStageCode(), ts);
+        }
+        for (BasketDivisionStage stage : stages) {
+            StandardTemplateStageDefinition ts = byCode.get(stage.getStageCode());
+            if (ts != null) {
+                copyStageDefinition(stage, ts);
+            }
+        }
+    }
+
+    private void copyStageDefinition(BasketDivisionStage stage, StandardTemplateStageDefinition ts) {
+        stage.setStageCode(ts.getStageCode());
+        stage.setStageName(ts.getStageName());
+        stage.setStageOrder(ts.getStageOrder());
+        stage.setStageType(ts.getStageType());
+        stage.setOrganizationMode(ts.getOrganizationMode());
+        stage.setCompetitionFormat(ts.getCompetitionFormat());
+        stage.setGroupingMode(ts.getGroupingMode());
+        stage.setGroupCount(ts.getGroupCount());
+        stage.setRoundRobinCycles(ts.getRoundRobinCycles());
+        stage.setBestOf(ts.getBestOf());
+        stage.setSemifinalBestOf(ts.getSemifinalBestOf());
+        stage.setFinalBestOf(ts.getFinalBestOf());
+        stage.setWinPoints(ts.getWinPoints());
+        stage.setLossPoints(ts.getLossPoints());
+        stage.setForfeitWinPoints(ts.getForfeitWinPoints());
+        stage.setForfeitLossPoints(ts.getForfeitLossPoints());
+        stage.setAdvancementType(ts.getAdvancementType());
+        stage.setAdvancementCount(ts.getAdvancementCount());
+        stage.setPairingRule(ts.getPairingRule());
+        stage.setNextStageCode(ts.getNextStageCode());
+        stage.setSeedRule(ts.getSeedRule());
+        stage.setDrawRule(ts.getDrawRule());
+        stage.setByeRule(ts.getByeRule());
+        stage.setRequiresManualConfirmation(ts.getRequiresManualConfirmation() == null ? 0 : ts.getRequiresManualConfirmation());
+    }
+
+    private static String resolveTemplateType(BasketFormatTemplate template) {
+        if (template.getTemplateType() != null && !template.getTemplateType().isEmpty()) {
+            return template.getTemplateType();
+        }
+        if (StandardTemplateCodes.isStandard(template.getTemplateCode())) {
+            return TemplateTypeEnum.STANDARD.getCode();
+        }
+        return TemplateTypeEnum.CUSTOM.getCode();
     }
 }

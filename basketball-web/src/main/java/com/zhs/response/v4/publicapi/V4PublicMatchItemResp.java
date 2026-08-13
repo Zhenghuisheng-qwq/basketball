@@ -29,6 +29,10 @@ public class V4PublicMatchItemResp {
 
     private String homeTeamName;
 
+    private String homeSourceType;
+
+    private String homeSourceDisplay;
+
     @JsonSerialize(using = ToStringSerializer.class)
     private Long homeTeamLogoFileId;
 
@@ -38,6 +42,10 @@ public class V4PublicMatchItemResp {
     private Long awayEventTeamId;
 
     private String awayTeamName;
+
+    private String awaySourceType;
+
+    private String awaySourceDisplay;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long awayTeamLogoFileId;

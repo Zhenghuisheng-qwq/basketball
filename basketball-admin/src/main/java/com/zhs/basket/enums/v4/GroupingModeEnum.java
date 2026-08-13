@@ -4,7 +4,8 @@ public enum GroupingModeEnum {
     NONE("NONE", "无分组"),
     OFFLINE_RANDOM_RESULT("OFFLINE_RANDOM_RESULT", "线下抽签结果录入"),
     MANUAL("MANUAL", "人工分组"),
-    SEEDED("SEEDED", "种子分组");
+    SEEDED("SEEDED", "种子分组"),
+    POT_RANDOM("POT_RANDOM", "分档随机");
 
     private final String code;
     private final String description;

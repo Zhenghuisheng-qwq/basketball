@@ -98,7 +98,7 @@ export type BracketStageBucket = {
   matches: V4PublicMatchItem[]
 }
 
-/** 按 MatchSeries 去重：BO3/BO5 多场 Match 只生成一张 SeriesCard */
+/** 按 MatchSeries 去重：BO3/BO5/BO7 多场 Match 只生成一张 SeriesCard */
 function dedupeMatchesToSeries(matches: V4PublicMatchItem[]): V4PublicMatchItem[] {
   const bySeries = new Map<string, V4PublicMatchItem>()
   const sorted = [...matches].sort((a, b) => {
@@ -159,8 +159,8 @@ export function v4BracketToPlayoffSeries(
       let side: 'left' | 'right' | 'center' = index % 2 === 0 ? 'left' : 'right'
       if (round === 'final') side = 'center'
 
-      const homeId = String(item.homeEventTeamId || '')
-      const awayId = String(item.awayEventTeamId || '')
+      const homeId = publicTeamId(item.homeEventTeamId)
+      const awayId = publicTeamId(item.awayEventTeamId)
       // Series 局分优先；无系列分时才回落单场比分
       const topScore = item.seriesHomeWinCount != null
         ? toNumber(item.seriesHomeWinCount, 0)
@@ -168,7 +168,7 @@ export function v4BracketToPlayoffSeries(
       const bottomScore = item.seriesAwayWinCount != null
         ? toNumber(item.seriesAwayWinCount, 0)
         : toNumber(item.awayScore, 0)
-      const winnerTeamId = String(item.winnerEventTeamId || '')
+      const winnerTeamId = publicTeamId(item.winnerEventTeamId)
 
       result.push({
         id: String(item.matchSeriesId || item.matchId),
@@ -179,8 +179,8 @@ export function v4BracketToPlayoffSeries(
         side,
         topTeamId: homeId,
         bottomTeamId: awayId,
-        topTeamName: item.homeTeamName || (homeId ? '' : 'BYE'),
-        bottomTeamName: item.awayTeamName || (awayId ? '' : 'BYE'),
+        topTeamName: placeholderName(item.homeTeamName, item.homeSourceDisplay, item.homeSourceType, homeId),
+        bottomTeamName: placeholderName(item.awayTeamName, item.awaySourceDisplay, item.awaySourceType, awayId),
         topTeamLogo: item.homeTeamLogoUrl || '',
         bottomTeamLogo: item.awayTeamLogoUrl || '',
         topScore,
@@ -192,4 +192,28 @@ export function v4BracketToPlayoffSeries(
     })
   })
   return result
+}
+
+function publicTeamId(id?: string | number | null): string {
+  if (id == null || id === '') return ''
+  const numeric = Number(id)
+  if (!Number.isFinite(numeric) || numeric <= 0) return ''
+  return String(id)
+}
+
+function placeholderName(
+  teamName?: string | null,
+  sourceDisplay?: string | null,
+  sourceType?: string | null,
+  teamId?: string,
+): string {
+  if (teamName && teamName.trim()) {
+    return sourceDisplay && !teamName.includes(sourceDisplay)
+      ? `${sourceDisplay} · ${teamName}`
+      : teamName
+  }
+  if (sourceType === 'BYE') return 'BYE'
+  if (sourceDisplay && sourceDisplay.trim()) return sourceDisplay
+  if (teamId) return ''
+  return '待定'
 }

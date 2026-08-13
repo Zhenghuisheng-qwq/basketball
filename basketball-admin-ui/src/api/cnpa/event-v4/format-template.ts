@@ -46,6 +46,9 @@ export interface BasketDivisionStageVo {
   advancementCount?: number
   pairingRule?: string
   pairingRuleName?: string
+  seedRule?: string
+  drawRule?: string
+  byeRule?: string
   nextStageCode?: string
   requiresManualConfirmation?: number
   stageStatus?: string
@@ -65,6 +68,10 @@ export interface BasketDivisionFormatSnapshotVo {
   sourceTemplateCode?: string
   sourceTemplateName?: string
   sourceTemplateVersion?: number
+  sourceTemplateType?: string
+  sourceTemplateTypeName?: string
+  registrationMode?: string
+  registrationModeName?: string
   snapshotVersion?: number
   snapshotStatus?: string
   ruleVersionId?: number
@@ -181,4 +188,84 @@ export function validateFormatPlan(data: BasketDivisionFormatPlanApplyReq): Prom
 
 export function lockFormatSnapshot(divisionId: number): Promise<AjaxResult> {
   return request({ url: `/basket/v4/divisions/${divisionId}/format-snapshot/lock`, method: 'post' })
+}
+
+export interface StandardTemplateOptionDefinition {
+  key?: string
+  label?: string
+  inputType?: string
+  allowedValues?: string[]
+  defaultValue?: string
+  minValue?: number
+  maxValue?: number
+}
+
+export interface StandardTemplateStageDefinition {
+  stageCode?: string
+  stageName?: string
+  stageOrder?: number
+  stageType?: string
+  competitionFormat?: string
+  groupingMode?: string
+  groupCount?: number
+  roundRobinCycles?: number
+  bestOf?: number
+  advancementType?: string
+  advancementCount?: number
+  pairingRule?: string
+  nextStageCode?: string
+  seedRule?: string
+  drawRule?: string
+  byeRule?: string
+}
+
+export interface StandardTemplateDefinition {
+  templateCode?: string
+  templateName?: string
+  templateType?: string
+  seriesCode?: string
+  registrationMode?: string
+  defaultRegistrationMode?: string
+  previewSummary?: string
+  formationNote?: string
+  stages?: StandardTemplateStageDefinition[]
+  options?: StandardTemplateOptionDefinition[]
+}
+
+export interface StandardTemplateCatalogVo {
+  seriesCode?: string
+  defaultTemplateCode?: string
+  templates?: StandardTemplateDefinition[]
+}
+
+export interface StandardTemplateApplyReq {
+  templateCode?: string
+  registrationMode?: string
+  gameMode?: string
+  roundRobinCycles?: number
+  playoffSlots?: number
+  groupCount?: number
+  groupCycles?: number
+  advancePerGroup?: number
+  groupingMode?: string
+  eliminationPlacement?: string
+  seedRule?: string
+  drawRule?: string
+  byeRule?: string
+  regularBestOf?: number
+  knockoutBestOf?: number
+  semifinalBestOf?: number
+  finalBestOf?: number
+}
+
+export function listStandardTemplates(seriesId: number): Promise<AjaxResult<StandardTemplateCatalogVo>> {
+  return request({ url: '/basket/v4/format-template/standard', method: 'get', params: { seriesId } })
+}
+
+export function getStandardTemplateCapabilities(templateCode: string): Promise<AjaxResult<StandardTemplateDefinition>> {
+  return request({ url: `/basket/v4/format-template/standard/${templateCode}/capabilities`, method: 'get' })
+}
+
+export function applyStandardTemplate(divisionId: number, data: StandardTemplateApplyReq): Promise<AjaxResult<BasketDivisionFormatSnapshotVo>> {
+  return request({ url: `/basket/v4/divisions/${divisionId}/standard-template/apply`, method: 'post', data, headers: { repeatSubmit: false } })
 }

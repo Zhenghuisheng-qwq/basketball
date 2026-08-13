@@ -38,6 +38,9 @@ public class BasketEventTeam implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long sourceTeamId;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long sourceDrawTeamId;
+
     private String teamNameSnapshot;
 
     @JsonSerialize(using = ToStringSerializer.class)
@@ -62,5 +65,9 @@ public class BasketEventTeam implements Serializable {
     private Date updateTime;
 
     private Integer isDelete;
+
+    public boolean isPersonalFormationTeam() {
+        return sourceDrawTeamId != null;
+    }
 
 }

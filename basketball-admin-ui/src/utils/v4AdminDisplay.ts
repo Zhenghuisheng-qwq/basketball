@@ -951,7 +951,8 @@ export const V4_CUSTOM_ELIMINATION_PAIRING_OPTIONS = [
 export const V4_BEST_OF_OPTIONS = [
   { label: 'BO1', value: 1 },
   { label: 'BO3', value: 3 },
-  { label: 'BO5', value: 5 }
+  { label: 'BO5', value: 5 },
+  { label: 'BO7', value: 7 }
 ] as const
 
 export const V4_ELIMINATION_PAIRING_RULE_OPTIONS = [
@@ -968,7 +969,8 @@ export const V4_PLAYOFF_SEED_SOURCE_OPTIONS = [
 export const V4_PLAYOFF_BEST_OF_OPTIONS = [
   { label: 'BO1', value: 1 },
   { label: 'BO3', value: 3 },
-  { label: 'BO5', value: 5 }
+  { label: 'BO5', value: 5 },
+  { label: 'BO7', value: 7 }
 ] as const
 
 export function isV4PlayoffTeamCount(n: number): boolean {

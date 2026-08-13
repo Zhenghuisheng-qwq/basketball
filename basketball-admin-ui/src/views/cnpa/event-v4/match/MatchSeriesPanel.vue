@@ -1,6 +1,6 @@
 <template>
   <div v-loading="loading" class="match-series-panel">
-    <el-empty v-if="!loading && !seriesList.length" description="当前阶段暂无 BO3/BO5 系列赛" />
+    <el-empty v-if="!loading && !seriesList.length" description="当前阶段暂无 BO3/BO5/BO7 系列赛" />
     <div v-for="series in seriesList" :key="series.id" class="series-card">
       <div class="series-card__header">
         <div class="series-card__title">

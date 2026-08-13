@@ -62,9 +62,37 @@ public final class BasketV4RoundRobinScheduler {
     }
 
     /**
-     * 标准循环赛圈算法：奇数队加 BYE 轮空，不生成 BYE 对阵比赛。
+     * Circle method for one cycle. cycles=2 copies the same pairings with reversed sides
+     * and round-number offset. Does not duplicate the pairing engine.
      */
     public static List<Round> generateRoundRobin(List<Long> teamIds) {
+        return generateRoundRobin(teamIds, 1);
+    }
+
+    public static List<Round> generateRoundRobin(List<Long> teamIds, int cycles) {
+        if (cycles != 1 && cycles != 2) {
+            throw new IllegalArgumentException("round_robin_cycles 仅支持 1 或 2");
+        }
+        List<Round> firstCycle = generateOneCycle(teamIds);
+        if (cycles == 1) {
+            return firstCycle;
+        }
+        List<Round> rounds = new ArrayList<>(firstCycle);
+        int offset = firstCycle.size();
+        for (Round round : firstCycle) {
+            List<Pairing> reversed = new ArrayList<>(round.getPairings().size());
+            for (Pairing pairing : round.getPairings()) {
+                reversed.add(new Pairing(pairing.getAwayEventTeamId(), pairing.getHomeEventTeamId()));
+            }
+            rounds.add(new Round(round.getRoundNo() + offset, reversed));
+        }
+        return rounds;
+    }
+
+    /**
+     * 标准循环赛圈算法：奇数队加 BYE 轮空，不生成 BYE 对阵比赛。
+     */
+    static List<Round> generateOneCycle(List<Long> teamIds) {
         if (teamIds == null || teamIds.size() < 2) {
             throw new IllegalArgumentException("至少需要 2 支球队");
         }

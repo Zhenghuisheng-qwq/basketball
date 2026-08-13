@@ -20,18 +20,27 @@ final class StageScheduleMathSupport {
     }
 
     static RoundRobinStats computeRoundRobinStats(int teamCount) {
+        return computeRoundRobinStats(teamCount, 1);
+    }
+
+    static RoundRobinStats computeRoundRobinStats(int teamCount, int cycles) {
         if (teamCount < 2) {
             return new RoundRobinStats(0, 0, 0, false);
         }
+        int cycleCount = cycles <= 0 ? 1 : cycles;
         boolean hasBye = teamCount % 2 == 1;
-        int roundCount = hasBye ? teamCount : teamCount - 1;
-        int totalMatches = teamCount * (teamCount - 1) / 2;
-        int matchesPerTeam = teamCount - 1;
+        int roundCount = (hasBye ? teamCount : teamCount - 1) * cycleCount;
+        int totalMatches = teamCount * (teamCount - 1) / 2 * cycleCount;
+        int matchesPerTeam = (teamCount - 1) * cycleCount;
         return new RoundRobinStats(totalMatches, matchesPerTeam, roundCount, hasBye);
     }
 
     static boolean isPowerOfTwo(int value) {
         return value > 0 && (value & (value - 1)) == 0;
+    }
+
+    static int nextPowerOfTwo(int n) {
+        return com.zhs.basket.support.v4.bracket.EliminationCapacity.nextPowerOfTwo(n);
     }
 
     static int eliminationRoundCount(int teamCount) {

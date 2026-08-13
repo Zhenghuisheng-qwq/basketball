@@ -18,6 +18,10 @@ public class BasketMatchSeries {
     private Integer bracketSlot;
     private Long homeEventTeamId;
     private Long awayEventTeamId;
+    private String homeSourceType;
+    private String awaySourceType;
+    private String homeSourceDisplay;
+    private String awaySourceDisplay;
     private Integer bestOf;
     private Integer homeWinCount;
     private Integer awayWinCount;

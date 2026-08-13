@@ -36,9 +36,19 @@
             </template>
           </el-table-column>
           <el-table-column label="参赛队" prop="participantCount" width="70" align="center" />
-          <el-table-column label="操作" width="560" fixed="right">
+          <el-table-column label="占位" width="90" align="center">
+            <template #default="scope">
+              <el-tag v-if="scope.row.hasUnresolvedPlaceholders" type="warning" size="small">待解析</el-tag>
+              <el-tag v-else-if="scope.row.participantResolved" type="success" size="small">已解析</el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="640" fixed="right">
             <template #default="scope">
               <el-button link type="primary" @click="handleStagePreview(scope.row)">预览</el-button>
+              <el-button link type="primary" v-if="scope.row.competitionFormat === 'GROUP_STAGE'" @click="openGroupPanel(scope.row)">小组</el-button>
+              <el-button link type="primary" v-if="needsPairingPrep(scope.row)" @click="openPairingWorkspace(scope.row)">结构准备</el-button>
+              <el-button link type="warning" v-if="canResolvePlaceholders(scope.row)" @click="doResolveFromList(scope.row)">解析占位</el-button>
               <el-button link type="success" v-if="canGenerate(scope.row)" @click="handleStageGenerate(scope.row)">生成</el-button>
               <el-button link type="success" v-if="scope.row.executionStatus === 'SCHEDULE_GENERATED'" @click="handleStagePublish(scope.row)">发布</el-button>
               <el-button link type="warning" v-if="scope.row.executionStatus === 'SCHEDULE_GENERATED'" @click="handleStageCancel(scope.row)">作废</el-button>
@@ -62,15 +72,98 @@
         </el-table>
     </div>
 
-    <el-dialog v-model="stagePreviewVisible" title="赛程生成预览" width="520px">
-      <el-descriptions v-if="stagePreview" :column="1" border size="small">
+    <el-dialog v-model="stagePreviewVisible" title="赛程生成预览" width="640px">
+      <el-descriptions v-if="stagePreview" :column="2" border size="small">
         <el-descriptions-item label="参赛队伍">{{ stagePreview.teamCount }}</el-descriptions-item>
         <el-descriptions-item label="每队场数">{{ stagePreview.matchesPerTeam ?? '-' }}</el-descriptions-item>
-        <el-descriptions-item label="总比赛数">{{ stagePreview.totalMatches }}</el-descriptions-item>
+        <el-descriptions-item label="总比赛/系列">{{ stagePreview.totalMatches }}</el-descriptions-item>
         <el-descriptions-item label="轮次数">{{ stagePreview.roundCount ?? '-' }}</el-descriptions-item>
         <el-descriptions-item label="轮空">{{ stagePreview.hasBye ? '是' : '否' }}</el-descriptions-item>
+        <el-descriptions-item v-if="stagePreview.bracketCapacity" label="Bracket Capacity">{{ stagePreview.bracketCapacity }}</el-descriptions-item>
+        <el-descriptions-item v-if="stagePreview.byeCount != null" label="BYE">{{ stagePreview.byeCount }}</el-descriptions-item>
+        <el-descriptions-item v-if="stagePreview.firstRoundActual != null" label="首轮实际对阵">{{ stagePreview.firstRoundActual }}</el-descriptions-item>
+        <el-descriptions-item v-if="stagePreview.totalActualSeries != null" label="总实际 Series">{{ stagePreview.totalActualSeries }}</el-descriptions-item>
       </el-descriptions>
       <el-alert v-for="(w, i) in (stagePreview?.warnings || [])" :key="i" :title="w" type="warning" class="mt8" :closable="false" />
+    </el-dialog>
+
+    <el-dialog v-model="pairingVisible" :title="isGroupRankWorkspace(pairingStage) ? 'GROUP_CROSS / 占位签位' : 'Seed / Draw / Slot'" width="920px">
+      <el-alert class="mb8" type="info" :closable="false" show-icon
+        :title="pairingAlertTitle" />
+      <el-alert v-if="pairingVo?.hasUnresolvedPlaceholders" class="mb8" type="warning" :closable="false" show-icon
+        title="淘汰结构已固定。小组赛未结束或晋级未确认前，签位仍是占位来源，等待小组赛结果。" />
+      <div class="mb8">
+        <el-button size="small" @click="loadPairingWorkspace">刷新</el-button>
+        <el-button size="small" type="primary" v-if="pairingStage?.seedRule === 'ADMIN_SEED'" @click="saveSeeds">保存种子</el-button>
+        <el-button size="small" type="primary" v-if="pairingStage?.seedRule === 'EXTERNAL_RANKING'" @click="saveRanking">保存排名</el-button>
+        <el-button size="small" type="success" v-if="pairingStage?.drawRule === 'RANDOM_CONFIRM'" @click="doGenerateDraw">生成抽签</el-button>
+        <el-button size="small" v-if="pairingStage?.drawRule === 'RANDOM_CONFIRM'" @click="doRedraw">重抽</el-button>
+        <el-button size="small" type="success" v-if="pairingStage?.pairingRule === 'GROUP_CROSS'" @click="doGenerateGroupCross">生成 GROUP_CROSS</el-button>
+        <el-button size="small" type="success" v-if="showManualSlotTable" @click="saveManual">保存签位</el-button>
+        <el-button size="small" type="warning" @click="doConfirmDraw">确认</el-button>
+        <el-button size="small" type="primary" v-if="pairingVo?.hasUnresolvedPlaceholders" @click="doResolvePlaceholders">解析占位</el-button>
+      </div>
+      <el-form v-if="pairingStage?.seedRule === 'ADMIN_SEED'" label-width="90px" class="mb8">
+        <el-form-item label="种子(最多4)">
+          <el-select v-model="seedTeamIds" multiple filterable placeholder="选择种子队" style="width:100%">
+            <el-option v-for="t in pairingTeams" :key="t.eventTeamId" :label="teamOptionLabel(t)" :value="t.eventTeamId" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <el-table v-if="pairingStage?.seedRule === 'EXTERNAL_RANKING'" :data="rankingItems" border size="small" max-height="240" class="mb8">
+        <el-table-column label="球队" min-width="160">
+          <template #default="scope">{{ rankingTeamName(scope.row.eventTeamId) }}</template>
+        </el-table-column>
+        <el-table-column label="外部排名" width="140">
+          <template #default="scope">
+            <el-input-number v-model="scope.row.rankingNo" :min="1" :max="pairingTeams.length" controls-position="right" />
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-table v-if="showEventTeamManualTable" :data="manualSlots" border size="small" max-height="280">
+        <el-table-column label="Slot" prop="slotNo" width="70" />
+        <el-table-column label="BYE" width="80">
+          <template #default="scope">
+            <el-switch v-model="scope.row.bye" @change="() => { if (scope.row.bye) scope.row.eventTeamId = undefined }" />
+          </template>
+        </el-table-column>
+        <el-table-column label="球队">
+          <template #default="scope">
+            <el-select v-model="scope.row.eventTeamId" :disabled="scope.row.bye" clearable filterable placeholder="球队" style="width:100%">
+              <el-option v-for="t in pairingTeams" :key="'m'+t.eventTeamId" :label="teamOptionLabel(t)" :value="t.eventTeamId" />
+            </el-select>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-table v-if="showGroupRankManualTable" :data="manualSlots" border size="small" max-height="280">
+        <el-table-column label="Slot" prop="slotNo" width="70" />
+        <el-table-column label="BYE" width="80">
+          <template #default="scope">
+            <el-switch v-model="scope.row.bye" @change="() => { if (scope.row.bye) { scope.row.sourceGroupId = undefined; scope.row.sourceRank = undefined } }" />
+          </template>
+        </el-table-column>
+        <el-table-column label="小组">
+          <template #default="scope">
+            <el-select v-model="scope.row.sourceGroupId" :disabled="scope.row.bye" clearable filterable placeholder="小组" style="width:100%">
+              <el-option v-for="g in groupLayouts" :key="'g'+g.groupId" :label="g.groupName || (g.groupCode + '组')" :value="g.groupId" />
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="名次" width="120">
+          <template #default="scope">
+            <el-input-number v-model="scope.row.sourceRank" :disabled="scope.row.bye" :min="1" :max="2" controls-position="right" />
+          </template>
+        </el-table-column>
+      </el-table>
+      <div v-for="round in (pairingVo?.bracketPreview?.rounds || [])" :key="round.roundNo" class="bracket-round">
+        <div class="bracket-round__title">{{ round.roundName }} · {{ round.boRole }} · BO{{ round.bestOf }}</div>
+        <div v-for="pair in (round.pairings || [])" :key="pair.slot" class="bracket-pair">
+          <span>{{ slotLabel(pair.home) }}</span>
+          <span class="vs">vs</span>
+          <span>{{ slotLabel(pair.away) }}</span>
+          <el-tag v-if="pair.byeAdvance" size="small" type="info">BYE 晋级</el-tag>
+        </div>
+      </div>
     </el-dialog>
 
     <el-dialog v-model="qualPreviewVisible" title="晋级预览" width="640px">
@@ -125,19 +218,40 @@
         <el-button type="primary" @click="submitPairingAdjust">确认调整</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="groupPanelVisible" title="小组赛状态" width="880px">
+      <el-alert class="mb8" type="info" :closable="false" show-icon
+        :title="`分组 ${groupPanelStatus || '-'} · 积分榜 ${groupPanelStandingHint}`" />
+      <div v-for="group in groupPanelGroups" :key="group.groupId" class="group-card">
+        <div class="group-card__title">{{ group.groupName || ((group.groupCode || '') + '组') }}</div>
+        <el-table :data="group.rows" border size="small">
+          <el-table-column label="球队" min-width="140">
+            <template #default="scope">{{ scope.row.teamName || ('#' + scope.row.eventTeamId) }}</template>
+          </el-table-column>
+          <el-table-column label="排名" prop="rankNo" width="70" align="center" />
+          <el-table-column label="胜/负" width="80" align="center">
+            <template #default="scope">{{ scope.row.winCount ?? '-' }}/{{ scope.row.loseCount ?? '-' }}</template>
+          </el-table-column>
+          <el-table-column label="积分" prop="standingPoints" width="70" align="center" />
+        </el-table>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts" name="CnpaEventV4Schedule">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
 import {
   cancelV4StageDraftSchedule, checkV4StageCompletion, confirmV4StageQualification,
-  generateV4StageSchedule, listV4StageExecution, listV4StageTeams, previewV4StageQualification,
-  previewV4StageSchedule, publishV4StageSchedule,
-  type BasketDivisionStageExecutionVo, type StageSchedulePreviewVo, type StageTeamItemVo
+  confirmV4Draw, generateV4Draw, generateV4GroupCross, generateV4StageSchedule, getV4PairingExecution,
+  listV4StageExecution, listV4StageStandings, listV4StageTeams, previewV4StageQualification,
+  previewV4StageSchedule, publishV4StageSchedule, redrawV4Draw, resolveV4Placeholders, saveV4AdminSeeds, saveV4ExternalRanking,
+  saveV4ManualSlots, type BasketDivisionStageExecutionVo, type BracketSlotView,
+  type StagePairingExecutionVo, type StageSchedulePreviewVo, type StageTeamItemVo
 } from '@/api/cnpa/event-v4/stage-execution'
+import { getV4DivisionGroupingBatchDetail, listV4DivisionGroupingBatch } from '@/api/cnpa/event-v4/division-grouping'
 import { adjustV4Pairing, manualAdvanceV4, type PairingSlotReq } from '@/api/cnpa/event-v4/stage-exception'
 import { getV4ScheduleBatch } from '@/api/cnpa/event-v4/schedule-batch'
 import { listV4MatchSeriesByStage } from '@/api/cnpa/event-v4/match-series'
@@ -170,6 +284,31 @@ const pairingStageTeams = ref<StageTeamItemVo[]>([])
 const pairingSlots = ref<PairingSlotReq[]>([])
 const pairingAdjustReason = ref('')
 
+const pairingVisible = ref(false)
+const pairingStage = ref<BasketDivisionStageExecutionVo>()
+const pairingVo = ref<StagePairingExecutionVo | null>(null)
+const pairingTeams = ref<StageTeamItemVo[]>([])
+const seedTeamIds = ref<number[]>([])
+const rankingItems = ref<Array<{ eventTeamId: number; rankingNo: number }>>([])
+const manualSlots = ref<Array<{
+  slotNo: number
+  eventTeamId?: number
+  bye: boolean
+  sourceType?: string
+  sourceGroupId?: number
+  sourceRank?: number
+}>>([])
+const groupLayouts = ref<Array<{ groupId: number; groupCode?: string; groupName?: string }>>([])
+const groupPanelVisible = ref(false)
+const groupPanelStatus = ref('')
+const groupPanelStandingHint = ref('未加载')
+const groupPanelGroups = ref<Array<{
+  groupId: number
+  groupCode?: string
+  groupName?: string
+  rows: Array<{ eventTeamId?: number; teamName?: string; rankNo?: number; winCount?: number; loseCount?: number; standingPoints?: number }>
+}>>([])
+
 const seasonOptions = ref<V4AdminOptionVo[]>([])
 
 function formatDivisionLabel(item: V4AdminOptionVo) {
@@ -182,8 +321,46 @@ function teamOptionLabel(t: StageTeamItemVo) {
 }
 
 function canGenerate(row: BasketDivisionStageExecutionVo) {
-  return ['READY', 'DRAFT'].includes(row.executionStatus || '')
+  return ['READY', 'DRAFT', 'SCHEDULE_GENERATED'].includes(row.executionStatus || '')
 }
+
+function previousGroupStage(row?: BasketDivisionStageExecutionVo | null) {
+  if (!row) return undefined
+  return stageList.value
+    .filter(s => (s.stageOrder || 0) < (row.stageOrder || 0) && s.competitionFormat === 'GROUP_STAGE')
+    .sort((a, b) => (b.stageOrder || 0) - (a.stageOrder || 0))[0]
+}
+
+function isGroupRankWorkspace(row?: BasketDivisionStageExecutionVo | null) {
+  if (!row || row.competitionFormat !== 'SINGLE_ELIMINATION') return false
+  return row.pairingRule === 'GROUP_CROSS' || (row.pairingRule === 'MANUAL' && !!previousGroupStage(row))
+}
+
+function needsPairingPrep(row: BasketDivisionStageExecutionVo) {
+  if (row.competitionFormat !== 'SINGLE_ELIMINATION') return false
+  if (isGroupRankWorkspace(row)) return true
+  return row.drawRule === 'RANDOM_CONFIRM' || row.drawRule === 'MANUAL_SLOT' || row.seedRule === 'ADMIN_SEED' || row.seedRule === 'EXTERNAL_RANKING'
+}
+
+function canResolvePlaceholders(row: BasketDivisionStageExecutionVo) {
+  return !!row.hasUnresolvedPlaceholders
+}
+
+const showGroupRankManualTable = computed(() =>
+  !!pairingStage.value && isGroupRankWorkspace(pairingStage.value) && pairingStage.value.pairingRule === 'MANUAL'
+)
+const showEventTeamManualTable = computed(() =>
+  pairingStage.value?.drawRule === 'MANUAL_SLOT' && !isGroupRankWorkspace(pairingStage.value)
+)
+const showManualSlotTable = computed(() => showGroupRankManualTable.value || showEventTeamManualTable.value)
+const pairingAlertTitle = computed(() => {
+  const stage = pairingStage.value
+  const vo = pairingVo.value
+  if (isGroupRankWorkspace(stage)) {
+    return `占位 ${vo?.participantCount || 0} · capacity ${vo?.bracketCapacity || '-'} · BYE ${vo?.byeCount ?? '-'} · ${stage?.pairingRule || '-'} / ${vo?.resolutionStatus || 'PENDING'}`
+  }
+  return `参赛 ${vo?.participantCount || 0} · capacity ${vo?.bracketCapacity || '-'} · BYE ${vo?.byeCount ?? '-'} · ${stage?.seedRule || '-'} / ${stage?.drawRule || '-'} / ${stage?.byeRule || '-'}`
+})
 
 function canManualAdvance(row: BasketDivisionStageExecutionVo) {
   return row.competitionFormat === 'SINGLE_ELIMINATION'
@@ -386,6 +563,196 @@ function submitPairingAdjust() {
 onMounted(async () => {
   await loadSeasonOptions()
 })
+
+async function openPairingWorkspace(row: BasketDivisionStageExecutionVo) {
+  pairingStage.value = row
+  pairingVisible.value = true
+  const teamsRes = await listV4StageTeams(row.stageId).catch(() => ({ data: [] }))
+  pairingTeams.value = teamsRes.data || []
+  await loadGroupLayouts(row)
+  await loadPairingWorkspace()
+}
+
+async function loadGroupLayouts(row: BasketDivisionStageExecutionVo) {
+  groupLayouts.value = []
+  const groupStage = previousGroupStage(row)
+  if (!groupStage || !stageDivisionId.value) return
+  const listRes = await listV4DivisionGroupingBatch({
+    divisionId: stageDivisionId.value,
+    stageId: groupStage.stageId,
+    groupingStatus: 'LOCKED',
+    pageNum: 1,
+    pageSize: 1
+  })
+  const batchId = listRes.rows?.[0]?.groupingBatchId
+  if (!batchId) return
+  const detail = await getV4DivisionGroupingBatchDetail(batchId)
+  groupLayouts.value = (detail.data?.groups || []).map(g => ({
+    groupId: g.groupId!,
+    groupCode: g.groupCode,
+    groupName: g.groupName
+  }))
+}
+
+async function loadPairingWorkspace() {
+  if (!pairingStage.value) return
+  const res = await getV4PairingExecution(pairingStage.value.stageId)
+  pairingVo.value = res.data
+  seedTeamIds.value = (pairingVo.value?.entries || [])
+    .filter(e => e.seedNo && e.seedNo <= 4 && e.eventTeamId)
+    .sort((a, b) => (a.seedNo || 0) - (b.seedNo || 0))
+    .map(e => e.eventTeamId!)
+  const rankFromEntries = (pairingVo.value?.entries || []).filter(e => e.eventTeamId && e.rankingNo)
+  if (rankFromEntries.length === pairingTeams.value.length) {
+    rankingItems.value = rankFromEntries.map(e => ({ eventTeamId: e.eventTeamId!, rankingNo: e.rankingNo! }))
+  } else {
+    rankingItems.value = pairingTeams.value.map((t, idx) => ({ eventTeamId: t.eventTeamId, rankingNo: idx + 1 }))
+  }
+  const capacity = pairingVo.value?.bracketCapacity || 0
+  if (showManualSlotTable.value) {
+    if (pairingVo.value?.entries?.length) {
+      manualSlots.value = pairingVo.value.entries.map(e => ({
+        slotNo: e.slotNo,
+        eventTeamId: e.eventTeamId,
+        bye: !!e.bye,
+        sourceType: e.sourceType,
+        sourceGroupId: e.sourceGroupId,
+        sourceRank: e.sourceRank
+      }))
+    } else {
+      manualSlots.value = Array.from({ length: capacity }, (_, i) => ({ slotNo: i + 1, bye: false }))
+    }
+  }
+}
+
+function slotLabel(slot?: BracketSlotView) {
+  if (!slot) return '-'
+  if (slot.bye || slot.sourceType === 'BYE') return 'BYE'
+  const source = slot.sourceDisplay || slot.displayName || slot.displayCode || ''
+  const team = slot.resolvedEventTeamName || (slot.resolutionStatus === 'RESOLVED' ? slot.teamName : '')
+  if (source && team) return `${source} → ${team}`
+  if (source) return source
+  const seed = slot.seedNo != null ? `Seed${slot.seedNo} ` : ''
+  return `${seed}${slot.teamName || slot.eventTeamId || '-'}`
+}
+
+function rankingTeamName(eventTeamId: number) {
+  return pairingTeams.value.find(t => t.eventTeamId === eventTeamId)?.teamName || String(eventTeamId)
+}
+
+async function saveSeeds() {
+  if (!pairingStage.value) return
+  await saveV4AdminSeeds(pairingStage.value.stageId, seedTeamIds.value.slice(0, 4))
+  ElMessage.success('种子已保存')
+  await loadPairingWorkspace()
+}
+
+async function saveRanking() {
+  if (!pairingStage.value) return
+  await saveV4ExternalRanking(pairingStage.value.stageId, rankingItems.value)
+  ElMessage.success('外部排名已按当前列表顺序保存')
+  await loadPairingWorkspace()
+}
+
+async function doGenerateDraw() {
+  if (!pairingStage.value) return
+  await generateV4Draw(pairingStage.value.stageId)
+  ElMessage.success('抽签已生成，刷新不会重抽')
+  await loadPairingWorkspace()
+}
+
+async function doRedraw() {
+  if (!pairingStage.value) return
+  await ElMessageBox.confirm('重抽将保留历史执行并使旧结构 STALE', '提示', { type: 'warning' })
+  await redrawV4Draw(pairingStage.value.stageId)
+  ElMessage.success('已重抽')
+  await loadPairingWorkspace()
+}
+
+async function saveManual() {
+  if (!pairingStage.value) return
+  await saveV4ManualSlots(pairingStage.value.stageId, manualSlots.value)
+  ElMessage.success('手动签位已保存')
+  await loadPairingWorkspace()
+}
+
+async function doConfirmDraw() {
+  if (!pairingStage.value) return
+  await confirmV4Draw(pairingStage.value.stageId)
+  ElMessage.success('抽签已确认，可以生成结构')
+  await loadPairingWorkspace()
+}
+
+async function doGenerateGroupCross() {
+  if (!pairingStage.value) return
+  await generateV4GroupCross(pairingStage.value.stageId)
+  ElMessage.success('GROUP_CROSS 占位已生成')
+  await loadPairingWorkspace()
+}
+
+async function doResolvePlaceholders() {
+  if (!pairingStage.value) return
+  await ElMessageBox.confirm('将按已确认 GROUP_TOP_N 解析占位，签位不会重抽。', '解析占位')
+  await resolveV4Placeholders(pairingStage.value.stageId)
+  ElMessage.success('占位已解析')
+  await loadPairingWorkspace()
+  loadStageList()
+}
+
+async function doResolveFromList(row: BasketDivisionStageExecutionVo) {
+  await ElMessageBox.confirm('将按已确认 GROUP_TOP_N 解析占位，签位不会重抽。', '解析占位')
+  await resolveV4Placeholders(row.stageId)
+  ElMessage.success('占位已解析')
+  loadStageList()
+}
+
+async function openGroupPanel(row: BasketDivisionStageExecutionVo) {
+  groupPanelVisible.value = true
+  groupPanelGroups.value = []
+  groupPanelStatus.value = '-'
+  groupPanelStandingHint.value = '加载中'
+  if (!stageDivisionId.value) return
+  const listRes = await listV4DivisionGroupingBatch({
+    divisionId: stageDivisionId.value,
+    stageId: row.stageId,
+    pageNum: 1,
+    pageSize: 1
+  })
+  const batch = listRes.rows?.[0]
+  groupPanelStatus.value = batch?.groupingStatus || '未分组'
+  if (!batch?.groupingBatchId) {
+    groupPanelStandingHint.value = '无分组批次'
+    return
+  }
+  const [detail, standingRes] = await Promise.all([
+    getV4DivisionGroupingBatchDetail(batch.groupingBatchId),
+    listV4StageStandings(row.stageId).catch(() => ({ data: [] }))
+  ])
+  const standingScopes = standingRes.data || []
+  const rankByTeam = new Map<number, any>()
+  for (const scope of standingScopes) {
+    for (const item of (scope.rows || [])) {
+      if (item.eventTeamId) rankByTeam.set(item.eventTeamId, item)
+    }
+  }
+  groupPanelGroups.value = (detail.data?.groups || []).map(g => ({
+    groupId: g.groupId!,
+    groupCode: g.groupCode,
+    groupName: g.groupName,
+    rows: (g.teams || []).map(t => {
+      const standing = rankByTeam.get(t.eventTeamId!)
+      return {
+        eventTeamId: t.eventTeamId,
+        teamName: t.teamNameSnapshot,
+        rankNo: standing?.rankNo,
+        winCount: standing?.winCount,
+        loseCount: standing?.loseCount,
+        standingPoints: standing?.standingPoints
+      }
+    })
+  }))
+  groupPanelStandingHint.value = standingScopes.length ? '已加载' : '暂无积分榜'
+}
 </script>
 
 <style scoped>
@@ -393,4 +760,10 @@ onMounted(async () => {
 .mt8 { margin-top: 8px; }
 .pairing-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .pairing-row__label { width: 64px; color: #606266; font-size: 13px; }
+.bracket-round { margin-top: 12px; }
+.bracket-round__title { font-weight: 600; margin-bottom: 6px; }
+.bracket-pair { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; font-size: 13px; }
+.vs { color: #909399; }
+.group-card { margin-bottom: 12px; }
+.group-card__title { font-weight: 600; margin-bottom: 6px; }
 </style>

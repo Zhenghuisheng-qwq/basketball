@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
@@ -44,6 +45,9 @@ public class BalancedRandomFormationStrategy implements FormationStrategy {
         }
 
         long seed = context.getRandomSeed() != null ? context.getRandomSeed() : System.nanoTime();
+        players.sort(Comparator
+                .comparing(BalancedRandomFormationStrategy::registrationIdOrMax)
+                .thenComparing(BalancedRandomFormationStrategy::playerIdOrMax));
         Collections.shuffle(players, new Random(seed));
 
         int base = n / teamCount;
@@ -63,5 +67,13 @@ public class BalancedRandomFormationStrategy implements FormationStrategy {
             cursor += size;
         }
         return plan;
+    }
+
+    private static long registrationIdOrMax(FormationPlayer player) {
+        return player.getPersonalRegistrationId() == null ? Long.MAX_VALUE : player.getPersonalRegistrationId();
+    }
+
+    private static long playerIdOrMax(FormationPlayer player) {
+        return player.getPlayerId() == null ? Long.MAX_VALUE : player.getPlayerId();
     }
 }

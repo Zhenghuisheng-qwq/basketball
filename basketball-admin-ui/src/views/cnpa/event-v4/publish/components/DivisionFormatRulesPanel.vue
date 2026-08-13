@@ -10,9 +10,24 @@
       <template #title>赛制已确认，后续报名和比赛将按此赛制执行。</template>
     </el-alert>
 
-    <p class="section-hint bo-capability-hint mb8">单败淘汰赛支持 BO1 / BO3 / BO5；循环积分赛当前仅支持 BO1。</p>
+    <p v-if="snapshot?.sourceTemplateCode" class="section-hint mb8">
+      Template {{ snapshot.sourceTemplateType || 'CUSTOM' }} / {{ snapshot.sourceTemplateCode }}
+      <span v-if="snapshot.registrationMode"> / {{ snapshot.registrationMode }}</span>
+    </p>
 
     <el-tabs :model-value="rulesSectionTab" type="border-card" class="rules-section-tabs mb8" @tab-change="handleRulesSectionTabChange">
+      <el-tab-pane label="标准模板" name="standard">
+        <template v-if="rulesSectionTab === 'standard'">
+          <StandardTemplateConfigPanel
+            :division-id="divisionId"
+            :series-id="seriesId"
+            :mutable="!!snapshot?.mutable"
+            :game-mode="divisionMeta?.gameMode"
+            :registration-mode="snapshot?.registrationMode || divisionMeta?.registrationMode"
+            @applied="handleStandardTemplateApplied"
+          />
+        </template>
+      </el-tab-pane>
       <el-tab-pane label="快速创建" name="quick">
         <template v-if="rulesSectionTab === 'quick'">
           <div class="scheme-section-title">单阶段赛制</div>
@@ -170,6 +185,14 @@
 
       <el-tab-pane label="自定义赛制" name="custom">
         <el-alert
+          v-if="isStandardSnapshot"
+          type="info"
+          :closable="false"
+          show-icon
+          class="mb8"
+          title="当前规则来自 STANDARD 模板，核心阶段结构不可删改。如需自由组合阶段，请改用自定义赛制。"
+        />
+        <el-alert
           v-for="(msg, vi) in stageValidation.messages"
           :key="'err-' + vi"
           type="error"
@@ -282,7 +305,7 @@
                   <span v-else class="stage-flow-title">{{ stage.stageName }}</span>
                   <el-tag v-if="isFinalStageIndex(sIndex)" type="danger" size="small" class="ml8">最终阶段</el-tag>
                 </div>
-                <div v-if="snapshot?.mutable" class="stage-card-actions">
+                <div v-if="snapshot?.mutable && !isStandardSnapshot" class="stage-card-actions">
                   <el-button link :disabled="sortedStages.length <= 1" type="danger" @click="handleDeleteStage(stage)">删除</el-button>
                   <el-button link :disabled="sIndex === 0" @click="moveStage(stage, -1)">上移</el-button>
                   <el-button link :disabled="sIndex === sortedStages.length - 1" @click="moveStage(stage, 1)">下移</el-button>
@@ -694,6 +717,7 @@
 import { computed, getCurrentInstance, reactive, ref, watch } from 'vue'
 import type { FormInstance } from 'element-plus'
 import PlayoffBracketPreview from './PlayoffBracketPreview.vue'
+import StandardTemplateConfigPanel from './StandardTemplateConfigPanel.vue'
 import {
   addFormatStage,
   applyFormatPlan,
@@ -815,7 +839,7 @@ const emit = defineEmits<{
 
 const { proxy } = getCurrentInstance()!
 
-type RulesSectionTab = 'quick' | 'custom' | 'advanced'
+type RulesSectionTab = 'standard' | 'quick' | 'custom' | 'advanced'
 
 const STAGE_PRESET_OPTIONS = V4_WIZARD_STAGE_PRESET_OPTIONS
 const STAGE_SHAPE_OPTIONS = V4_WIZARD_STAGE_PRESET_OPTIONS.map((item) => ({ label: item.label, value: item.value }))
@@ -831,8 +855,12 @@ const applyingScheme = ref(false)
 
 const snapshot = ref<BasketDivisionFormatSnapshotVo>()
 const formatTemplateList = ref<BasketFormatTemplateListVo[]>([])
+const isStandardSnapshot = computed(() =>
+  snapshot.value?.sourceTemplateType === 'STANDARD'
+  || ['LEAGUE_STANDARD_V1', 'ARENA_STANDARD_V1', 'CUP_STANDARD_V1', 'OPEN_STANDARD_V1'].includes(snapshot.value?.sourceTemplateCode || '')
+)
 
-const rulesSectionTab = ref<RulesSectionTab>('quick')
+const rulesSectionTab = ref<RulesSectionTab>('standard')
 const selectedScheme = ref<V4FormatSchemeId>('GROUP_TO_ELIM')
 const quickParams = reactive<V4QuickCreateParams>(buildDefaultV4QuickCreateParams('GROUP_TO_ELIM', 16))
 
@@ -1431,14 +1459,24 @@ function updatePlayoffBestOf(idx: number, val: number) {
 }
 
 function ensureRulesUiState() {
+  if (isStandardSnapshot.value) {
+    rulesSectionTab.value = 'standard'
+    return
+  }
   const inferred = inferV4FormatSchemeFromStages(sortedStages.value)
   if (inferred === 'CUSTOM' || !inferred) {
     if (sortedStages.value.length) rulesSectionTab.value = 'custom'
-    else rulesSectionTab.value = 'quick'
+    else rulesSectionTab.value = 'standard'
   }
   selectedScheme.value = inferred || 'GROUP_TO_ELIM'
   Object.assign(quickParams, buildDefaultV4QuickCreateParams(selectedScheme.value, props.maxTeamCount))
   quickParams.expectedTeamCount = props.maxTeamCount
+}
+
+async function handleStandardTemplateApplied() {
+  await loadSnapshot()
+  emitChange()
+  proxy!.$modal.msgSuccess('标准模板已应用为规则草稿，锁定后才会成为 Rule Version')
 }
 
 function resolveStageBestOfOptions(stage: BasketDivisionStageVo) {

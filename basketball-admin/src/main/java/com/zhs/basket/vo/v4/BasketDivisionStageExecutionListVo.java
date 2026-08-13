@@ -23,4 +23,16 @@ public class BasketDivisionStageExecutionListVo {
     private Date completedTime;
     private Date confirmedTime;
     private String nextStageCode;
+    private Integer roundRobinCycles;
+    private Integer bestOf;
+    private Integer semifinalBestOf;
+    private Integer finalBestOf;
+    private String pairingRule;
+    private String seedRule;
+    private String drawRule;
+    private String byeRule;
+    private Integer advancementCount;
+    private String advancementType;
+    private Boolean hasUnresolvedPlaceholders;
+    private Boolean participantResolved;
 }

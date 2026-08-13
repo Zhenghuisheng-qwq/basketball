@@ -12,4 +12,5 @@ public class StructureVersionContext {
     private Integer ruleVersionNo;
     private Long rosterVersionId;
     private Integer rosterVersionNo;
+    private Long pairingExecutionId;
 }

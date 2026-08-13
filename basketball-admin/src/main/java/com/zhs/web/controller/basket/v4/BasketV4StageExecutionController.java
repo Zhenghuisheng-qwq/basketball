@@ -2,7 +2,11 @@ package com.zhs.web.controller.basket.v4;
 
 import com.zhs.basket.constant.BasketEventV4Perms;
 import com.zhs.basket.dto.v4.BasketStageManualRankReq;
+import com.zhs.basket.dto.v4.StageExternalRankingReq;
+import com.zhs.basket.dto.v4.StageManualSlotReq;
+import com.zhs.basket.dto.v4.StagePairingSeedReq;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
+import com.zhs.basket.service.v4.IStagePairingExecutionApplicationService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
 import com.zhs.common.core.domain.AjaxResult;
@@ -17,6 +21,8 @@ public class BasketV4StageExecutionController extends BaseController {
 
     @Autowired
     private IDivisionStageExecutionApplicationService stageExecutionApplicationService;
+    @Autowired
+    private IStagePairingExecutionApplicationService pairingExecutionApplicationService;
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_LIST + "')")
     @GetMapping("/list")
@@ -108,5 +114,73 @@ public class BasketV4StageExecutionController extends BaseController {
         req.setStageId(stageId);
         stageExecutionApplicationService.applyManualRank(req);
         return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_LIST + "')")
+    @GetMapping("/{stageId}/pairing-execution")
+    public AjaxResult getPairingExecution(@PathVariable Long stageId) {
+        return success(pairingExecutionApplicationService.getCurrent(stageId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_LIST + "')")
+    @GetMapping("/{stageId}/bracket-preview")
+    public AjaxResult previewBracket(@PathVariable Long stageId) {
+        return success(pairingExecutionApplicationService.previewBracket(stageId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 PairingExecution", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/admin-seeds")
+    public AjaxResult saveAdminSeeds(@PathVariable Long stageId, @RequestBody StagePairingSeedReq req) {
+        return success(pairingExecutionApplicationService.saveAdminSeeds(stageId, req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 PairingExecution", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/external-ranking")
+    public AjaxResult saveExternalRanking(@PathVariable Long stageId, @RequestBody StageExternalRankingReq req) {
+        return success(pairingExecutionApplicationService.saveExternalRanking(stageId, req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 PairingExecution", businessType = BusinessType.INSERT)
+    @PostMapping("/{stageId}/generate-draw")
+    public AjaxResult generateDraw(@PathVariable Long stageId) {
+        return success(pairingExecutionApplicationService.generateRandomDraw(stageId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 PairingExecution", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/confirm-draw")
+    public AjaxResult confirmDraw(@PathVariable Long stageId) {
+        return success(pairingExecutionApplicationService.confirm(stageId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 PairingExecution", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/manual-slots")
+    public AjaxResult saveManualSlots(@PathVariable Long stageId, @RequestBody StageManualSlotReq req) {
+        return success(pairingExecutionApplicationService.saveManualSlots(stageId, req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 PairingExecution", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/redraw")
+    public AjaxResult redraw(@PathVariable Long stageId) {
+        return success(pairingExecutionApplicationService.redraw(stageId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 PairingExecution", businessType = BusinessType.INSERT)
+    @PostMapping("/{stageId}/generate-group-cross")
+    public AjaxResult generateGroupCross(@PathVariable Long stageId) {
+        return success(pairingExecutionApplicationService.generateGroupCross(stageId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 PairingExecution", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/resolve-placeholders")
+    public AjaxResult resolvePlaceholders(@PathVariable Long stageId) {
+        return success(pairingExecutionApplicationService.resolvePlaceholders(stageId));
     }
 }

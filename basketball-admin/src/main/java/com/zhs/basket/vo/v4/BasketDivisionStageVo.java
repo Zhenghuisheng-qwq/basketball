@@ -30,6 +30,9 @@ public class BasketDivisionStageVo {
     private Integer advancementCount;
     private String pairingRule;
     private String pairingRuleName;
+    private String seedRule;
+    private String drawRule;
+    private String byeRule;
     private String nextStageCode;
     private Integer requiresManualConfirmation;
     private String stageStatus;

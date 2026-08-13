@@ -18,7 +18,7 @@ public class EventTeamCaptainAuthorization {
         if (!isEventTeamCaptain(eventTeam, playerId)) {
             return false;
         }
-        if (eventTeam.getSourceTeamId() == null) {
+        if (eventTeam.isPersonalFormationTeam()) {
             return true;
         }
         if (grant == null) {

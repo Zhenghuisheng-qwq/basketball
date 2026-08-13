@@ -76,11 +76,19 @@ class RoundRobinStageScheduleStrategyTest {
     }
 
     @Test
-    void validate_bestOf3_rejected() {
+    void validate_bestOf3_allowed() {
         StageExecutionContext context = buildContext(4, 3);
+        strategy.validate(context);
+        assertEquals(3, context.getStage().getBestOf());
+    }
 
-        ServiceException ex = assertThrows(ServiceException.class, () -> strategy.validate(context));
-        assertTrue(ex.getMessage().contains("BO3/BO5"));
+    @Test
+    void preview_fourTeamsDouble_twelvePairingsSixRounds() {
+        StageExecutionContext context = buildContext(4, 1);
+        context.getStage().setRoundRobinCycles(2);
+        StageSchedulePreviewVo preview = strategy.preview(context);
+        assertEquals(12, preview.getTotalMatches());
+        assertEquals(6, preview.getRoundCount());
     }
 
     private StageExecutionContext buildContext(int teamCount, int bestOf) {

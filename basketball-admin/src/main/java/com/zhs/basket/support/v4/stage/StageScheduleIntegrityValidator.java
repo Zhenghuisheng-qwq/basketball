@@ -14,7 +14,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * 赛程生成前后完整性校验（单循环为主）。
+ * 赛程生成前后完整性校验（循环赛）。
  */
 public final class StageScheduleIntegrityValidator {
 
@@ -42,10 +42,11 @@ public final class StageScheduleIntegrityValidator {
         if (CompetitionFormatEnum.ROUND_ROBIN.getCode().equals(stage.getCompetitionFormat())
                 && !AbstractStageScheduleStrategy.isGroupStage(stage)) {
             int teamCount = stageTeams.size();
+            int cycles = resolveCycles(stage);
             StageScheduleMathSupport.RoundRobinStats stats =
-                    StageScheduleMathSupport.computeRoundRobinStats(teamCount);
+                    StageScheduleMathSupport.computeRoundRobinStats(teamCount, cycles);
             if (stats.getTotalMatches() <= 0) {
-                throw new ServiceException("单循环队伍数量无效，无法生成赛程");
+                throw new ServiceException("循环赛队伍数量无效，无法生成赛程");
             }
         }
     }
@@ -70,10 +71,14 @@ public final class StageScheduleIntegrityValidator {
         }
 
         int teamCount = stageTeamIds.size();
+        int cycles = resolveCycles(context.getStage());
+        int bestOf = context.getStage().getBestOf() == null ? 1 : context.getStage().getBestOf();
         boolean hasBye = teamCount % 2 == 1;
-        Set<String> pairKeys = new HashSet<>();
+        Map<String, Integer> unorderedPairCounts = new HashMap<>();
+        Map<String, Set<String>> sidesByPair = new HashMap<>();
         Set<String> matchNos = new HashSet<>();
         Map<Long, Integer> perTeamCounts = new HashMap<>();
+        Set<Long> countedSeriesGames = new HashSet<>();
 
         for (BasketV4Match match : matches) {
             Long home = match.getHomeEventTeamId();
@@ -103,17 +108,36 @@ public final class StageScheduleIntegrityValidator {
                 throw new ServiceException("赛程数据无效：matchNo 重复");
             }
 
-            long low = Math.min(home, away);
-            long high = Math.max(home, away);
-            if (!pairKeys.add(low + ":" + high)) {
-                throw new ServiceException("赛程数据无效：存在重复对阵");
+            boolean countPair = match.getSeriesId() == null
+                    || countedSeriesGames.add(match.getSeriesId());
+            if (countPair) {
+                long low = Math.min(home, away);
+                long high = Math.max(home, away);
+                String pairKey = low + ":" + high;
+                unorderedPairCounts.merge(pairKey, 1, Integer::sum);
+                sidesByPair.computeIfAbsent(pairKey, key -> new HashSet<>())
+                        .add(home + ">" + away);
             }
 
             perTeamCounts.merge(home, 1, Integer::sum);
             perTeamCounts.merge(away, 1, Integer::sum);
         }
 
-        int expectedPerTeam = teamCount - 1;
+        int expectedPairOccurrences = cycles;
+        for (Map.Entry<String, Integer> entry : unorderedPairCounts.entrySet()) {
+            if (entry.getValue() != expectedPairOccurrences) {
+                throw new ServiceException("赛程数据无效：每对球队应恰好对阵 " + expectedPairOccurrences + " 次");
+            }
+            if (cycles == 2 && sidesByPair.get(entry.getKey()).size() != 2) {
+                throw new ServiceException("赛程数据无效：双循环必须主客顺序相反");
+            }
+        }
+        int expectedUniquePairs = teamCount * (teamCount - 1) / 2;
+        if (unorderedPairCounts.size() != expectedUniquePairs) {
+            throw new ServiceException("赛程数据无效：对阵集合不完整");
+        }
+
+        int expectedPerTeam = (teamCount - 1) * cycles * bestOf;
         for (Long teamId : stageTeamIds) {
             int count = perTeamCounts.getOrDefault(teamId, 0);
             if (count != expectedPerTeam) {
@@ -122,17 +146,20 @@ public final class StageScheduleIntegrityValidator {
             }
         }
 
-        if (hasBye) {
-            int expectedRounds = teamCount;
-            Set<Integer> rounds = new HashSet<>();
-            for (BasketV4Match match : matches) {
-                rounds.add(match.getRoundNo());
-            }
-            if (rounds.size() != expectedRounds) {
-                throw new ServiceException(String.format(
-                        "赛程数据无效：奇数队伍轮次应为 %d，实际 %d", expectedRounds, rounds.size()));
-            }
+        int expectedRounds = (hasBye ? teamCount : teamCount - 1) * cycles;
+        Set<Integer> rounds = new HashSet<>();
+        for (BasketV4Match match : matches) {
+            rounds.add(match.getRoundNo());
         }
+        if (rounds.size() != expectedRounds) {
+            throw new ServiceException(String.format(
+                    "赛程数据无效：轮次应为 %d，实际 %d", expectedRounds, rounds.size()));
+        }
+    }
+
+    private static int resolveCycles(BasketDivisionStage stage) {
+        Integer cycles = stage.getRoundRobinCycles();
+        return cycles == null || cycles <= 0 ? 1 : cycles;
     }
 
     private static void requireContext(StageExecutionContext context) {

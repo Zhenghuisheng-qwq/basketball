@@ -9,6 +9,8 @@
         <result property="sourceTemplateCode" column="source_template_code"/>
         <result property="sourceTemplateName" column="source_template_name"/>
         <result property="sourceTemplateVersion" column="source_template_version"/>
+        <result property="sourceTemplateType" column="source_template_type"/>
+        <result property="registrationMode" column="registration_mode"/>
         <result property="snapshotVersion" column="snapshot_version"/>
         <result property="snapshotStatus" column="snapshot_status"/>
         <result property="rosterWorkflowMode" column="roster_workflow_mode"/>
@@ -43,12 +45,12 @@
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_division_format_snapshot (
             division_id, source_template_id, source_template_code, source_template_name,
-            source_template_version, snapshot_version, snapshot_status, roster_workflow_mode, is_current, active_unique_key,
+            source_template_version, source_template_type, registration_mode, snapshot_version, snapshot_status, roster_workflow_mode, is_current, active_unique_key,
             superseded_snapshot_id, superseded_time, locked_time, locked_by,
             create_time, update_time, is_delete
         ) values (
             #{divisionId}, #{sourceTemplateId}, #{sourceTemplateCode}, #{sourceTemplateName},
-            #{sourceTemplateVersion}, #{snapshotVersion}, #{snapshotStatus}, #{rosterWorkflowMode}, #{isCurrent}, #{activeUniqueKey},
+            #{sourceTemplateVersion}, #{sourceTemplateType}, #{registrationMode}, #{snapshotVersion}, #{snapshotStatus}, #{rosterWorkflowMode}, #{isCurrent}, #{activeUniqueKey},
             #{supersededSnapshotId}, #{supersededTime}, #{lockedTime}, #{lockedBy},
             #{createTime}, #{updateTime}, #{isDelete}
         )
@@ -59,6 +61,8 @@
         <set>
             <if test="snapshotStatus != null">snapshot_status = #{snapshotStatus},</if>
             <if test="rosterWorkflowMode != null">roster_workflow_mode = #{rosterWorkflowMode},</if>
+            <if test="registrationMode != null">registration_mode = #{registrationMode},</if>
+            <if test="sourceTemplateType != null">source_template_type = #{sourceTemplateType},</if>
             <if test="isCurrent != null">is_current = #{isCurrent},</if>
             <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
             <if test="activeUniqueKey == null and isCurrent != null and isCurrent == 0">active_unique_key = null,</if>

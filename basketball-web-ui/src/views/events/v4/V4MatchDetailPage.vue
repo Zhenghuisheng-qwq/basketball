@@ -53,7 +53,9 @@ function backToSeason() {
 
 function goTeam(eventTeamId?: string | null) {
   const id = String(eventTeamId || '').trim()
-  if (!id) return
+  if (!id || id === '0' || id === 'null' || id === 'undefined') return
+  const numeric = Number(id)
+  if (!Number.isFinite(numeric) || numeric <= 0) return
   router.push(`/tournament/team/${id}`)
 }
 

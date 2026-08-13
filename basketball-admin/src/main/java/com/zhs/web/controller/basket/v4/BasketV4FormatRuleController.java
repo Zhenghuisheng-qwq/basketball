@@ -5,6 +5,7 @@ import com.zhs.basket.dto.v4.BasketDivisionFormatPlanApplyReq;
 import com.zhs.basket.dto.v4.BasketDivisionStageOrderReq;
 import com.zhs.basket.dto.v4.BasketDivisionStageSaveReq;
 import com.zhs.basket.dto.v4.BasketDivisionTieBreakRuleSaveReq;
+import com.zhs.basket.dto.v4.StandardTemplateApplyReq;
 import com.zhs.basket.service.v4.IBasketV4FormatSnapshotService;
 import com.zhs.common.core.controller.BaseController;
 import com.zhs.common.core.domain.AjaxResult;
@@ -84,6 +85,13 @@ public class BasketV4FormatRuleController extends BaseController {
     @PostMapping("/format-plan/validate")
     public AjaxResult validateFormatPlan(@RequestBody BasketDivisionFormatPlanApplyReq req) {
         return success(snapshotService.validateFormatPlan(req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_EDIT + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_EDIT + "')")
+    @PostMapping("/{divisionId}/standard-template/apply")
+    public AjaxResult applyStandardTemplate(@PathVariable Long divisionId,
+                                            @RequestBody StandardTemplateApplyReq req) {
+        return success(snapshotService.applyStandardTemplate(divisionId, req));
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_LOCK + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_OPEN + "')")

@@ -20,9 +20,13 @@ public class V4PublicMatchSeriesDetailResp {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long homeEventTeamId;
     private String homeTeamName;
+    private String homeSourceType;
+    private String homeSourceDisplay;
     @JsonSerialize(using = ToStringSerializer.class)
     private Long awayEventTeamId;
     private String awayTeamName;
+    private String awaySourceType;
+    private String awaySourceDisplay;
     private Integer bestOf;
     private Integer requiredWins;
     private Integer homeWinCount;

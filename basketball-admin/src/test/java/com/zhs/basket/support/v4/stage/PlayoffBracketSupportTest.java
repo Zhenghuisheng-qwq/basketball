@@ -8,6 +8,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PlayoffBracketSupportTest {
 
@@ -33,20 +34,27 @@ class PlayoffBracketSupportTest {
         int[] order = PlayoffBracketSupport.firstRoundSeedOrder(32);
         assertEquals(32, order.length);
         assertEquals(1, order[0]);
-        assertEquals(32, order[1]);
-        // expand from locked 16: seed2 sits in lower half (index >= 16)
-        int idx2 = -1;
-        for (int i = 0; i < order.length; i++) {
-            if (order[i] == 2) {
-                idx2 = i;
-                break;
-            }
-        }
-        assertEquals(24, idx2);
-        // first-round pairings remain adjacent complements
+        int idx1 = indexOfSeed(order, 1);
+        int idx2 = indexOfSeed(order, 2);
+        int idx3 = indexOfSeed(order, 3);
+        int idx4 = indexOfSeed(order, 4);
+        assertTrue(idx1 < 16 != idx2 < 16, "Seed1 / Seed2 必须分半区");
+        assertTrue(idx1 / 8 != idx4 / 8, "Seed1 / Seed4 不能早于 Semifinal 相遇");
+        assertTrue(idx1 / 16 == idx4 / 16, "Seed1 / Seed4 应在同一半区于 SF 相遇");
+        assertTrue(idx2 / 8 != idx3 / 8, "Seed2 / Seed3 不能早于 Semifinal 相遇");
+        assertTrue(idx2 / 16 == idx3 / 16, "Seed2 / Seed3 应在同一半区于 SF 相遇");
         for (int i = 0; i < order.length; i += 2) {
             assertEquals(33, order[i] + order[i + 1]);
         }
+    }
+
+    private static int indexOfSeed(int[] order, int seed) {
+        for (int i = 0; i < order.length; i++) {
+            if (order[i] == seed) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     @Test

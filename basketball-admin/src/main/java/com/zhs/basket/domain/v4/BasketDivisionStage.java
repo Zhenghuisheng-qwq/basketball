@@ -18,6 +18,10 @@ public class BasketDivisionStage {
     private Integer groupCount;
     private Integer roundRobinCycles;
     private Integer bestOf;
+    /** Knockout semifinal BO; null means inherit bestOf (legacy). */
+    private Integer semifinalBestOf;
+    /** Knockout final BO; null means inherit bestOf (legacy). */
+    private Integer finalBestOf;
     private Integer winPoints;
     private Integer lossPoints;
     private Integer forfeitWinPoints;
@@ -26,6 +30,9 @@ public class BasketDivisionStage {
     private Integer advancementCount;
     private String pairingRule;
     private String nextStageCode;
+    private String seedRule;
+    private String drawRule;
+    private String byeRule;
     private Integer requiresManualConfirmation;
     private String stageStatus;
     private String executionStatus;

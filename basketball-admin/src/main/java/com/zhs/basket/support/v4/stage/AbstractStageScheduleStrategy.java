@@ -57,6 +57,12 @@ abstract class AbstractStageScheduleStrategy implements DivisionStageScheduleStr
     }
 
     protected void validateTeamsPresent(StageExecutionContext context) {
+        if (context.getBracketSlotPlan() != null
+                && context.getBracketSlotPlan().getSlots() != null
+                && context.getBracketSlotPlan().getSlots().stream()
+                .anyMatch(com.zhs.basket.support.v4.bracket.BracketSlot::isUnresolvedPlaceholder)) {
+            return;
+        }
         List<BasketDivisionStageTeam> teams = context.getStageTeams();
         if (teams == null || teams.size() < 2) {
             throw new ServiceException("阶段参赛队伍不足 2 支，无法生成赛程");
@@ -104,6 +110,10 @@ abstract class AbstractStageScheduleStrategy implements DivisionStageScheduleStr
         if (versionContext != null) {
             batch.setRuleVersionId(versionContext.getRuleVersionId());
             batch.setRosterVersionId(versionContext.getRosterVersionId());
+            batch.setPairingExecutionId(versionContext.getPairingExecutionId());
+        }
+        if (context.getPairingExecutionId() != null) {
+            batch.setPairingExecutionId(context.getPairingExecutionId());
         }
         batch.setStructureStatus(StructureStatusEnum.ACTIVE.getCode());
         batch.setGenerateType(GENERATE_TYPE_AUTO);
@@ -217,13 +227,19 @@ abstract class AbstractStageScheduleStrategy implements DivisionStageScheduleStr
     }
 
     protected StageSchedulePreviewVo buildRoundRobinPreview(int teamCount) {
-        StageScheduleMathSupport.RoundRobinStats stats = StageScheduleMathSupport.computeRoundRobinStats(teamCount);
+        return buildRoundRobinPreview(teamCount, 1);
+    }
+
+    protected StageSchedulePreviewVo buildRoundRobinPreview(int teamCount, int cycles) {
+        StageScheduleMathSupport.RoundRobinStats stats =
+                StageScheduleMathSupport.computeRoundRobinStats(teamCount, cycles);
         StageSchedulePreviewVo preview = new StageSchedulePreviewVo();
         preview.setTeamCount(teamCount);
         preview.setMatchesPerTeam(stats.getMatchesPerTeam());
         preview.setTotalMatches(stats.getTotalMatches());
         preview.setRoundCount(stats.getRoundCount());
         preview.setHasBye(stats.isHasBye());
+        preview.setSeriesCount(stats.getTotalMatches());
         return preview;
     }
 }

@@ -16,6 +16,8 @@
         <result property="groupCount" column="group_count"/>
         <result property="roundRobinCycles" column="round_robin_cycles"/>
         <result property="bestOf" column="best_of"/>
+        <result property="semifinalBestOf" column="semifinal_best_of"/>
+        <result property="finalBestOf" column="final_best_of"/>
         <result property="winPoints" column="win_points"/>
         <result property="lossPoints" column="loss_points"/>
         <result property="forfeitWinPoints" column="forfeit_win_points"/>
@@ -24,6 +26,9 @@
         <result property="advancementCount" column="advancement_count"/>
         <result property="pairingRule" column="pairing_rule"/>
         <result property="nextStageCode" column="next_stage_code"/>
+        <result property="seedRule" column="seed_rule"/>
+        <result property="drawRule" column="draw_rule"/>
+        <result property="byeRule" column="bye_rule"/>
         <result property="requiresManualConfirmation" column="requires_manual_confirmation"/>
         <result property="stageStatus" column="stage_status"/>
         <result property="executionStatus" column="execution_status"/>
@@ -80,16 +85,20 @@
         insert into basket_division_stage (
             snapshot_id, division_id, stage_code, stage_name, stage_order, stage_type, organization_mode,
             competition_format, grouping_mode, group_count, round_robin_cycles, best_of,
+            semifinal_best_of, final_best_of,
             win_points, loss_points, forfeit_win_points, forfeit_loss_points,
             advancement_type, advancement_count, pairing_rule, next_stage_code,
+            seed_rule, draw_rule, bye_rule,
             requires_manual_confirmation, stage_status, execution_status, schedule_batch_id,
             participant_count, qualified_count, started_time, completed_time, confirmed_time,
             confirmed_by, current_unique_key, execution_version, create_time, update_time, is_delete
         ) values (
             #{snapshotId}, #{divisionId}, #{stageCode}, #{stageName}, #{stageOrder}, #{stageType}, #{organizationMode},
             #{competitionFormat}, #{groupingMode}, #{groupCount}, #{roundRobinCycles}, #{bestOf},
+            #{semifinalBestOf}, #{finalBestOf},
             #{winPoints}, #{lossPoints}, #{forfeitWinPoints}, #{forfeitLossPoints},
             #{advancementType}, #{advancementCount}, #{pairingRule}, #{nextStageCode},
+            #{seedRule}, #{drawRule}, #{byeRule},
             #{requiresManualConfirmation}, #{stageStatus}, #{executionStatus}, #{scheduleBatchId},
             #{participantCount}, #{qualifiedCount}, #{startedTime}, #{completedTime}, #{confirmedTime},
             #{confirmedBy}, #{currentUniqueKey}, #{executionVersion}, #{createTime}, #{updateTime}, #{isDelete}
@@ -109,6 +118,8 @@
             group_count = #{groupCount},
             round_robin_cycles = #{roundRobinCycles},
             <if test="bestOf != null">best_of = #{bestOf},</if>
+            semifinal_best_of = #{semifinalBestOf},
+            final_best_of = #{finalBestOf},
             win_points = #{winPoints},
             loss_points = #{lossPoints},
             forfeit_win_points = #{forfeitWinPoints},
@@ -117,6 +128,9 @@
             advancement_count = #{advancementCount},
             <if test="pairingRule != null">pairing_rule = #{pairingRule},</if>
             next_stage_code = #{nextStageCode},
+            seed_rule = #{seedRule},
+            draw_rule = #{drawRule},
+            bye_rule = #{byeRule},
             <if test="requiresManualConfirmation != null">requires_manual_confirmation = #{requiresManualConfirmation},</if>
             <if test="stageStatus != null">stage_status = #{stageStatus},</if>
             <if test="executionStatus != null">execution_status = #{executionStatus},</if>

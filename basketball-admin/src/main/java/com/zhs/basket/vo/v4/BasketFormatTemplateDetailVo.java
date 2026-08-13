@@ -13,6 +13,8 @@ public class BasketFormatTemplateDetailVo {
     private String templateDescription;
     private Integer enabled;
     private Integer isDefault;
+    private String templateType;
+    private String defaultRegistrationMode;
     private List<BasketFormatTemplateStageVo> stages;
     private List<BasketFormatTemplateTieBreakRuleVo> tieBreakRules;
 }

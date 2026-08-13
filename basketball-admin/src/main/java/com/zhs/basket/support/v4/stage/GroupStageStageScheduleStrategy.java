@@ -10,6 +10,7 @@ import com.zhs.basket.domain.v4.BasketV4Match;
 import com.zhs.basket.enums.v4.CompetitionFormatEnum;
 import com.zhs.basket.enums.v4.GroupingStatusEnum;
 import com.zhs.basket.enums.v4.ScheduleGenerationStrategyEnum;
+import com.zhs.basket.support.v4.BestOfValues;
 import com.zhs.basket.support.v4.StageFormatSpecification;
 import com.zhs.basket.support.v4.BasketV4RoundRobinScheduler;
 import com.zhs.basket.support.v4.BasketV4RoundRobinScheduler.Pairing;
@@ -43,7 +44,11 @@ public class GroupStageStageScheduleStrategy extends AbstractStageScheduleStrate
     @Override
     public void validate(StageExecutionContext context) {
         requireContext(context);
-        validateBestOfOne(context.getStage());
+        BestOfValues.requireLegal(context.getStage().getBestOf());
+        int cycles = resolveCycles(context.getStage());
+        if (cycles != 1 && cycles != 2) {
+            throw new ServiceException("round_robin_cycles 仅支持 1 或 2");
+        }
         validateTeamsPresent(context);
 
         BasketDivisionGroupingBatch batch = context.getGroupingBatch();
@@ -123,7 +128,7 @@ public class GroupStageStageScheduleStrategy extends AbstractStageScheduleStrate
             }
 
             StageScheduleMathSupport.RoundRobinStats stats =
-                    StageScheduleMathSupport.computeRoundRobinStats(groupTeamCount);
+                    StageScheduleMathSupport.computeRoundRobinStats(groupTeamCount, resolveCycles(context.getStage()));
             StageSchedulePreviewVo.GroupPreview groupPreview = new StageSchedulePreviewVo.GroupPreview();
             groupPreview.setGroupId(group.getId());
             groupPreview.setGroupCode(group.getGroupCode());
@@ -163,7 +168,8 @@ public class GroupStageStageScheduleStrategy extends AbstractStageScheduleStrate
         int maxRoundCount = 0;
         for (BasketDivisionGroup group : sortedGroups) {
             StageScheduleMathSupport.RoundRobinStats stats =
-                    StageScheduleMathSupport.computeRoundRobinStats(teamsByGroup.get(group.getId()).size());
+                    StageScheduleMathSupport.computeRoundRobinStats(teamsByGroup.get(group.getId()).size(),
+                            resolveCycles(context.getStage()));
             expectedMatchCount += stats.getTotalMatches();
             maxRoundCount = Math.max(maxRoundCount, stats.getRoundCount());
         }
@@ -179,7 +185,7 @@ public class GroupStageStageScheduleStrategy extends AbstractStageScheduleStrate
                 ? context.getDivision().getMatchStartTime() : new Date();
         TimeSlotAllocator allocator = new TimeSlotAllocator(startFrom);
 
-        Set<String> seenPairKeys = new HashSet<>();
+        Set<String> seenPairKeys = resolveCycles(context.getStage()) > 1 ? null : new HashSet<>();
         int globalSeq = 1;
         for (BasketDivisionGroup group : sortedGroups) {
             List<Long> teamIds = teamsByGroup.get(group.getId()).stream()
@@ -189,7 +195,8 @@ public class GroupStageStageScheduleStrategy extends AbstractStageScheduleStrate
                     .map(BasketDivisionGroupTeam::getEventTeamId)
                     .collect(Collectors.toList());
             List<Round> rounds = BasketV4RoundRobinScheduler.generateRoundRobin(
-                    BasketV4RoundRobinScheduler.sortedTeamIds(teamIds));
+                    BasketV4RoundRobinScheduler.sortedTeamIds(teamIds),
+                    resolveCycles(context.getStage()));
 
             for (Round round : rounds) {
                 int seqInRound = 1;
@@ -227,6 +234,11 @@ public class GroupStageStageScheduleStrategy extends AbstractStageScheduleStrate
                         .comparing(BasketDivisionGroup::getGroupOrder, Comparator.nullsLast(Integer::compareTo))
                         .thenComparing(BasketDivisionGroup::getId))
                 .collect(Collectors.toList());
+    }
+
+    private static int resolveCycles(BasketDivisionStage stage) {
+        Integer cycles = stage.getRoundRobinCycles();
+        return cycles == null || cycles <= 0 ? 1 : cycles;
     }
 
     private String buildGroupMatchNo(Long divisionId, String groupCode, int roundNo, int seqInRound) {

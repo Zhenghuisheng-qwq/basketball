@@ -121,6 +121,14 @@ public class BasketMatchSeriesDisplayServiceImpl implements IBasketMatchSeriesDi
         }
 
         fillTeamNames(vo, series);
+        if ((vo.getHomeTeamName() == null || vo.getHomeTeamName().isBlank())
+                && series.getHomeEventTeamId() == null) {
+            vo.setHomeTeamName(series.getHomeSourceDisplay() != null ? series.getHomeSourceDisplay() : "待定");
+        }
+        if ((vo.getAwayTeamName() == null || vo.getAwayTeamName().isBlank())
+                && series.getAwayEventTeamId() == null) {
+            vo.setAwayTeamName(series.getAwaySourceDisplay() != null ? series.getAwaySourceDisplay() : "待定");
+        }
         fillQualification(vo, series);
         vo.setGames(buildGames(series));
         return vo;

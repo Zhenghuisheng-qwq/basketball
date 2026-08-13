@@ -99,8 +99,10 @@ class MatchSeriesResultCalculatorTest {
 
     @Test
     void requiredWins_formula() {
+        assertEquals(1, MatchSeriesResultCalculator.requiredWins(1));
         assertEquals(2, MatchSeriesResultCalculator.requiredWins(3));
         assertEquals(3, MatchSeriesResultCalculator.requiredWins(5));
+        assertEquals(4, MatchSeriesResultCalculator.requiredWins(7));
     }
 
     @Test
