@@ -121,10 +121,14 @@ export interface V4PublicMatchItem {
   matchTime?: string
   homeEventTeamId?: string
   homeTeamName?: string
+  homeSourceType?: string
+  homeSourceDisplay?: string
   homeTeamLogoFileId?: string
   homeTeamLogoUrl?: string
   awayEventTeamId?: string
   awayTeamName?: string
+  awaySourceType?: string
+  awaySourceDisplay?: string
   awayTeamLogoFileId?: string
   awayTeamLogoUrl?: string
   homeScore?: number
