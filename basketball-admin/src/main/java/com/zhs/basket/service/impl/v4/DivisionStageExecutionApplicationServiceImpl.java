@@ -48,6 +48,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     @Autowired
     private BasketDivisionStageMapper stageMapper;
     @Autowired
+    private BasketDivisionFormatSnapshotMapper snapshotMapper;
+    @Autowired
     private BasketDivisionMapper divisionMapper;
     @Autowired
     private BasketDivisionStageTeamMapper stageTeamMapper;
@@ -95,12 +97,20 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     @Override
     public List<BasketDivisionStageExecutionListVo> listStages(Long divisionId) {
         requireDivision(divisionId);
-        List<BasketDivisionStage> stages = stageMapper.selectByDivisionId(divisionId);
+        List<BasketDivisionStage> stages = listCurrentRuleStages(divisionId);
         List<BasketDivisionStageExecutionListVo> result = new ArrayList<>();
         for (BasketDivisionStage stage : stages) {
             result.add(toExecutionListVo(stage));
         }
         return result;
+    }
+
+    private List<BasketDivisionStage> listCurrentRuleStages(Long divisionId) {
+        BasketDivisionFormatSnapshot snapshot = snapshotMapper.selectActiveByDivisionId(divisionId);
+        if (snapshot != null) {
+            return stageMapper.selectBySnapshotId(snapshot.getId());
+        }
+        return stageMapper.selectByDivisionId(divisionId);
     }
 
     @Override

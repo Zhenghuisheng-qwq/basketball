@@ -1,6 +1,7 @@
 package com.zhs.basket.service.impl.v4;
 
 import com.zhs.basket.domain.v4.BasketDivision;
+import com.zhs.basket.domain.v4.BasketDivisionFormatSnapshot;
 import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketFormatTemplate;
 import com.zhs.basket.domain.v4.BasketSeason;
@@ -8,6 +9,7 @@ import com.zhs.basket.domain.v4.RosterLimit;
 import com.zhs.basket.dto.v4.BasketDivisionCreateReq;
 import com.zhs.basket.dto.v4.BasketDivisionUpdateReq;
 import com.zhs.basket.enums.v4.*;
+import com.zhs.basket.mapper.v4.BasketDivisionFormatSnapshotMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketEventTeamMapper;
@@ -51,6 +53,8 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     private BasketEventTeamMapper eventTeamMapper;
     @Autowired
     private BasketDivisionStageMapper stageMapper;
+    @Autowired
+    private BasketDivisionFormatSnapshotMapper snapshotMapper;
     @Autowired
     private IBasketV4DivisionClosingService divisionClosingService;
 
@@ -235,11 +239,17 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
             division.setLineupMaxCount(limit.getMaxCount());
         }
         if (req.getFormatTemplateId() != null && !req.getFormatTemplateId().equals(division.getFormatTemplateId())) {
-            ruleMutableSpecification.assertCanChangeKeyFields(division);
-            formatSnapshotService.rebuildDraftSnapshot(division.getId(), req.getFormatTemplateId());
-            BasketDivision refreshed = requireDivision(division.getId());
-            division.setFormatTemplateId(refreshed.getFormatTemplateId());
-            division.setFormatSnapshotId(refreshed.getFormatSnapshotId());
+            BasketDivisionFormatSnapshot current = snapshotMapper.selectActiveByDivisionId(division.getId());
+            Long aligned = ruleMutableSpecification.resolveFormatTemplateIdForUpdate(req.getFormatTemplateId(), current);
+            if (current != null && current.getSourceTemplateId() != null) {
+                division.setFormatTemplateId(aligned);
+            } else {
+                ruleMutableSpecification.assertCanChangeKeyFields(division);
+                formatSnapshotService.rebuildDraftSnapshot(division.getId(), req.getFormatTemplateId());
+                BasketDivision refreshed = requireDivision(division.getId());
+                division.setFormatTemplateId(refreshed.getFormatTemplateId());
+                division.setFormatSnapshotId(refreshed.getFormatSnapshotId());
+            }
         }
         if (req.getMaxTeamCount() != null) {
             division.setMaxTeamCount(req.getMaxTeamCount());

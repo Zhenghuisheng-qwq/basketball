@@ -18,6 +18,13 @@
           <el-tab-pane v-for="stage in overview?.stages || []" :key="stage.stageId" :label="stage.stageName" :name="String(stage.stageId)" />
         </el-tabs>
         <el-empty v-if="!currentStage" description="没有可排期的赛段" />
+        <el-alert
+          v-else-if="currentStage.structureStatus !== 'ACTIVE'"
+          type="warning"
+          :closable="false"
+          class="mb8"
+          title="结构尚未生成，当前不能排期。请先锁定参赛名单并生成赛程结构。"
+        />
         <StageScheduleBoard
           v-else
           embedded

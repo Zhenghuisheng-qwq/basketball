@@ -1,0 +1,351 @@
+{
+  "db": "111.229.241.29",
+  "divisionId": "173",
+  "password": "111111aa",
+  "marker": "PROD_ARENA_S4_20T_60P_20260814",
+  "formalCap": 16,
+  "approvedRegistrations": 20,
+  "activeMembers": 60,
+  "teams": [
+    {
+      "name": "S4 WOLVES",
+      "short": "WLV",
+      "teamId": "2088259275499520001",
+      "grantId": "386",
+      "captainEmail": "s4a20_t01p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t01p01@cnpa.smoke",
+        "s4a20_t01p02@cnpa.smoke",
+        "s4a20_t01p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001000",
+        "2099220814200001001",
+        "2099220814200001002"
+      ]
+    },
+    {
+      "name": "S4 TIGERS",
+      "short": "TGR",
+      "teamId": "2088259296127107073",
+      "grantId": "387",
+      "captainEmail": "s4a20_t02p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t02p01@cnpa.smoke",
+        "s4a20_t02p02@cnpa.smoke",
+        "s4a20_t02p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001010",
+        "2099220814200001011",
+        "2099220814200001012"
+      ]
+    },
+    {
+      "name": "S4 SHARKS",
+      "short": "SHK",
+      "teamId": "2088259316180074497",
+      "grantId": "388",
+      "captainEmail": "s4a20_t03p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t03p01@cnpa.smoke",
+        "s4a20_t03p02@cnpa.smoke",
+        "s4a20_t03p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001020",
+        "2099220814200001021",
+        "2099220814200001022"
+      ]
+    },
+    {
+      "name": "S4 EAGLES",
+      "short": "EGL",
+      "teamId": "2088259336128184322",
+      "grantId": "389",
+      "captainEmail": "s4a20_t04p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t04p01@cnpa.smoke",
+        "s4a20_t04p02@cnpa.smoke",
+        "s4a20_t04p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001030",
+        "2099220814200001031",
+        "2099220814200001032"
+      ]
+    },
+    {
+      "name": "S4 DRAGONS",
+      "short": "DRG",
+      "teamId": "2088259356181151746",
+      "grantId": "390",
+      "captainEmail": "s4a20_t05p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t05p01@cnpa.smoke",
+        "s4a20_t05p02@cnpa.smoke",
+        "s4a20_t05p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001040",
+        "2099220814200001041",
+        "2099220814200001042"
+      ]
+    },
+    {
+      "name": "S4 PANTHERS",
+      "short": "PNT",
+      "teamId": "2088259376200564738",
+      "grantId": "391",
+      "captainEmail": "s4a20_t06p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t06p01@cnpa.smoke",
+        "s4a20_t06p02@cnpa.smoke",
+        "s4a20_t06p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001050",
+        "2099220814200001051",
+        "2099220814200001052"
+      ]
+    },
+    {
+      "name": "S4 RAPTORS",
+      "short": "RAP",
+      "teamId": "2088259396182228993",
+      "grantId": "392",
+      "captainEmail": "s4a20_t07p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t07p01@cnpa.smoke",
+        "s4a20_t07p02@cnpa.smoke",
+        "s4a20_t07p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001060",
+        "2099220814200001061",
+        "2099220814200001062"
+      ]
+    },
+    {
+      "name": "S4 KNIGHTS",
+      "short": "KNT",
+      "teamId": "2088259415941595138",
+      "grantId": "393",
+      "captainEmail": "s4a20_t08p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t08p01@cnpa.smoke",
+        "s4a20_t08p02@cnpa.smoke",
+        "s4a20_t08p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001070",
+        "2099220814200001071",
+        "2099220814200001072"
+      ]
+    },
+    {
+      "name": "S4 COBRAS",
+      "short": "CBR",
+      "teamId": "2088259435902287873",
+      "grantId": "394",
+      "captainEmail": "s4a20_t09p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t09p01@cnpa.smoke",
+        "s4a20_t09p02@cnpa.smoke",
+        "s4a20_t09p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001080",
+        "2099220814200001081",
+        "2099220814200001082"
+      ]
+    },
+    {
+      "name": "S4 FALCONS",
+      "short": "FAL",
+      "teamId": "2088259455951060994",
+      "grantId": "395",
+      "captainEmail": "s4a20_t10p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t10p01@cnpa.smoke",
+        "s4a20_t10p02@cnpa.smoke",
+        "s4a20_t10p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001090",
+        "2099220814200001091",
+        "2099220814200001092"
+      ]
+    },
+    {
+      "name": "S4 VIPERS",
+      "short": "VIP",
+      "teamId": "2088259476696088578",
+      "grantId": "396",
+      "captainEmail": "s4a20_t11p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t11p01@cnpa.smoke",
+        "s4a20_t11p02@cnpa.smoke",
+        "s4a20_t11p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001100",
+        "2099220814200001101",
+        "2099220814200001102"
+      ]
+    },
+    {
+      "name": "S4 STORM",
+      "short": "STM",
+      "teamId": "2088259496497397762",
+      "grantId": "397",
+      "captainEmail": "s4a20_t12p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t12p01@cnpa.smoke",
+        "s4a20_t12p02@cnpa.smoke",
+        "s4a20_t12p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001110",
+        "2099220814200001111",
+        "2099220814200001112"
+      ]
+    },
+    {
+      "name": "S4 THUNDER",
+      "short": "THN",
+      "teamId": "2088259516055437313",
+      "grantId": "398",
+      "captainEmail": "s4a20_t13p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t13p01@cnpa.smoke",
+        "s4a20_t13p02@cnpa.smoke",
+        "s4a20_t13p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001120",
+        "2099220814200001121",
+        "2099220814200001122"
+      ]
+    },
+    {
+      "name": "S4 BLAZE",
+      "short": "BLZ",
+      "teamId": "2088259535403761665",
+      "grantId": "399",
+      "captainEmail": "s4a20_t14p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t14p01@cnpa.smoke",
+        "s4a20_t14p02@cnpa.smoke",
+        "s4a20_t14p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001130",
+        "2099220814200001131",
+        "2099220814200001132"
+      ]
+    },
+    {
+      "name": "S4 PHANTOM",
+      "short": "PHN",
+      "teamId": "2088259555070853122",
+      "grantId": "400",
+      "captainEmail": "s4a20_t15p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t15p01@cnpa.smoke",
+        "s4a20_t15p02@cnpa.smoke",
+        "s4a20_t15p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001140",
+        "2099220814200001141",
+        "2099220814200001142"
+      ]
+    },
+    {
+      "name": "S4 TITANS",
+      "short": "TTN",
+      "teamId": "2088259574603726850",
+      "grantId": "401",
+      "captainEmail": "s4a20_t16p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t16p01@cnpa.smoke",
+        "s4a20_t16p02@cnpa.smoke",
+        "s4a20_t16p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001150",
+        "2099220814200001151",
+        "2099220814200001152"
+      ]
+    },
+    {
+      "name": "S4 HORNETS",
+      "short": "HRN",
+      "teamId": "2088259594681860097",
+      "grantId": "402",
+      "captainEmail": "s4a20_t17p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t17p01@cnpa.smoke",
+        "s4a20_t17p02@cnpa.smoke",
+        "s4a20_t17p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001160",
+        "2099220814200001161",
+        "2099220814200001162"
+      ]
+    },
+    {
+      "name": "S4 COMETS",
+      "short": "CMT",
+      "teamId": "2088259614499946498",
+      "grantId": "403",
+      "captainEmail": "s4a20_t18p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t18p01@cnpa.smoke",
+        "s4a20_t18p02@cnpa.smoke",
+        "s4a20_t18p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001170",
+        "2099220814200001171",
+        "2099220814200001172"
+      ]
+    },
+    {
+      "name": "S4 SPARTANS",
+      "short": "SPT",
+      "teamId": "2088259634699714562",
+      "grantId": "404",
+      "captainEmail": "s4a20_t19p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t19p01@cnpa.smoke",
+        "s4a20_t19p02@cnpa.smoke",
+        "s4a20_t19p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001180",
+        "2099220814200001181",
+        "2099220814200001182"
+      ]
+    },
+    {
+      "name": "S4 LEGENDS",
+      "short": "LGD",
+      "teamId": "2088259654681378818",
+      "grantId": "405",
+      "captainEmail": "s4a20_t20p01@cnpa.smoke",
+      "emails": [
+        "s4a20_t20p01@cnpa.smoke",
+        "s4a20_t20p02@cnpa.smoke",
+        "s4a20_t20p03@cnpa.smoke"
+      ],
+      "playerIds": [
+        "2099220814200001190",
+        "2099220814200001191",
+        "2099220814200001192"
+      ]
+    }
+  ]
+}

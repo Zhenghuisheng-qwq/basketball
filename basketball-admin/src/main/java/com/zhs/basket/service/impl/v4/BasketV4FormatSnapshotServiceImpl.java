@@ -21,6 +21,7 @@ import com.zhs.basket.support.v4.template.StandardFormatTemplateFactory;
 import com.zhs.basket.support.v4.template.StandardTemplateContext;
 import com.zhs.basket.support.v4.template.StandardTemplateDefinition;
 import com.zhs.basket.support.v4.template.StandardTemplateGraphGuard;
+import com.zhs.basket.support.v4.version.RuleVersionSupport;
 import com.zhs.basket.vo.v4.BasketDivisionFormatSnapshotVo;
 import com.zhs.basket.vo.v4.BasketDivisionStageVo;
 import com.zhs.basket.vo.v4.BasketDivisionTieBreakRuleVo;
@@ -130,6 +131,7 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         vo.setFormatSummary(V4FormatDisplaySupport.buildFormatSummary(vo));
         boolean mutable = ruleMutableSpecification.isMutable(division, snapshot);
         vo.setMutable(mutable);
+        vo.setCanApplyStandard(mutable);
         vo.setLockable(SnapshotStatusEnum.DRAFT.getCode().equals(snapshot.getSnapshotStatus()));
         vo.setLocked(SnapshotStatusEnum.fromCode(snapshot.getSnapshotStatus()).isLockedOrBeyond());
         return vo;
@@ -220,25 +222,27 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
 
         BasketFormatTemplate template = templateService.requireEnabledTemplateByCode(templateCode);
         BasketDivisionFormatSnapshot existing = snapshotMapper.selectActiveByDivisionId(divisionId);
-        ruleMutableSpecification.assertCanRebuild(division, existing);
+        ruleMutableSpecification.assertCanApplyStandardTemplate(division, existing);
         Long supersededId = null;
         if (existing != null) {
             if (SnapshotStatusEnum.fromCode(existing.getSnapshotStatus()).isLockedOrBeyond()) {
-                throw new ServiceException("\u5df2\u9501\u5b9a\u89c4\u5219\u5feb\u7167\u4e0d\u5141\u8bb8\u5e94\u7528\u6807\u51c6\u6a21\u677f");
+                throw new ServiceException("已锁定规则快照不允许应用标准模板");
             }
             supersededId = existing.getId();
             supersedeSnapshot(existing);
         }
         doCreateSnapshotFromDefinition(division, template, supersededId, definition, context.getRegistrationMode());
-        if (req != null && StringUtils.isNotEmpty(req.getRegistrationMode())) {
-            division.setRegistrationMode(req.getRegistrationMode());
-            division.setUpdateTime(new Date());
-            divisionMapper.updateById(division);
-        }
-        if (req != null && StringUtils.isNotEmpty(req.getGameMode())) {
-            division.setGameMode(req.getGameMode());
-            division.setUpdateTime(new Date());
-            divisionMapper.updateById(division);
+        if (DivisionStatusEnum.DRAFT.getCode().equals(division.getDivisionStatus())) {
+            if (req != null && StringUtils.isNotEmpty(req.getRegistrationMode())) {
+                division.setRegistrationMode(req.getRegistrationMode());
+                division.setUpdateTime(new Date());
+                divisionMapper.updateById(division);
+            }
+            if (req != null && StringUtils.isNotEmpty(req.getGameMode())) {
+                division.setGameMode(req.getGameMode());
+                division.setUpdateTime(new Date());
+                divisionMapper.updateById(division);
+            }
         }
         validateSnapshotReady(divisionId);
         return getDivisionSnapshot(divisionId);
@@ -761,7 +765,7 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         vo.setSnapshotStatusName(V4FormatDisplaySupport.snapshotStatusLabel(snapshot.getSnapshotStatus()));
         vo.setIsCurrent(snapshot.getIsCurrent());
         vo.setRuleVersionId(snapshot.getId());
-        vo.setRuleVersionNo(snapshot.getSnapshotVersion());
+        vo.setRuleVersionNo(RuleVersionSupport.productRuleVersionNo(snapshot));
         vo.setRuleVersionStatus(snapshot.getSnapshotStatus());
         return vo;
     }
@@ -810,10 +814,16 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
     }
 
     private void supersedeSnapshot(BasketDivisionFormatSnapshot existing) {
+        retireCurrentSnapshot(existing, true);
+    }
+
+    private void retireCurrentSnapshot(BasketDivisionFormatSnapshot existing, boolean deleteDraftStages) {
         snapshotMapper.clearActiveUniqueKey(existing.getId());
         snapshotMapper.markSuperseded(existing.getId());
-        divisionStageMapper.softDeleteBySnapshotId(existing.getId());
-        divisionTieBreakRuleMapper.softDeleteBySnapshotId(existing.getId());
+        if (deleteDraftStages) {
+            divisionStageMapper.softDeleteBySnapshotId(existing.getId());
+            divisionTieBreakRuleMapper.softDeleteBySnapshotId(existing.getId());
+        }
     }
 
     private Long doCreateSnapshotFromDefinition(BasketDivision division, BasketFormatTemplate template,

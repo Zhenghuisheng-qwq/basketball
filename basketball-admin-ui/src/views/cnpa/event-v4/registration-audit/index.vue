@@ -15,14 +15,14 @@
 
     <el-tabs v-model="activeTab" @tab-change="onTabChange">
       <!-- 球队报名 -->
-      <el-tab-pane v-if="workspaceMode !== 'PERSONAL'" label="球队报名" name="team">
+      <el-tab-pane v-if="!inWorkspace || workspaceMode === 'TEAM'" label="球队报名" name="team">
         <el-form :model="queryParams" :inline="true" class="mb8">
-          <el-form-item label="赛季">
+          <el-form-item v-if="!inWorkspace" label="赛季">
             <el-select v-model="queryParams.seasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onSeasonChange">
               <el-option v-for="item in seasonOptions" :key="item.id" :label="item.label" :value="item.id" />
             </el-select>
           </el-form-item>
-          <el-form-item label="平台赛区">
+          <el-form-item v-if="!inWorkspace" label="平台赛区">
             <el-select v-model="queryParams.divisionId" clearable filterable placeholder="选择赛区" style="width: 200px" :disabled="!queryParams.seasonId">
               <el-option v-for="item in divisionOptions" :key="item.id" :label="formatDivisionLabel(item)" :value="item.id" />
             </el-select>
@@ -71,21 +71,23 @@
       </el-tab-pane>
 
       <!-- 球队最终名单 -->
-      <el-tab-pane v-if="workspaceMode !== 'PERSONAL'" label="最终名单" name="roster">
+      <el-tab-pane v-if="!inWorkspace || workspaceMode === 'TEAM'" label="最终名单" name="roster">
         <el-form :inline="true" class="mb8">
-          <el-form-item label="赛季">
+          <el-form-item v-if="!inWorkspace" label="赛季">
             <el-select v-model="rosterSeasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onRosterSeasonChange">
               <el-option v-for="item in seasonOptions" :key="item.id" :label="item.label" :value="item.id" />
             </el-select>
           </el-form-item>
-          <el-form-item label="平台赛区">
+          <el-form-item v-if="!inWorkspace" label="平台赛区">
             <el-select v-model="rosterDivisionId" clearable filterable placeholder="选择赛区" style="width: 200px" :disabled="!rosterSeasonId" @change="loadRosterWorkspace">
               <el-option v-for="item in rosterDivisionOptions" :key="item.id" :label="formatDivisionLabel(item)" :value="item.id" />
             </el-select>
           </el-form-item>
           <el-form-item>
             <el-button type="primary" icon="Search" @click="loadRosterWorkspace">刷新</el-button>
-            <el-button type="warning" :disabled="!rosterWorkspace?.canEdit" v-hasPermi="['basket:v4RegistrationAudit:approve']" @click="handleAutoAllocate">自动分配</el-button>
+            <el-tooltip content="按报名提交时间排序，正式名额以内进入正式参赛名单，超过正式名额的审核合格球队按顺序进入候补名单。" placement="top">
+              <el-button type="warning" :disabled="!rosterWorkspace?.canEdit" v-hasPermi="['basket:v4RegistrationAudit:approve']" @click="handleAutoAllocate">按报名顺序自动分配</el-button>
+            </el-tooltip>
             <el-button type="success" :disabled="!rosterWorkspace?.canLock" v-hasPermi="['basket:v4Division:edit']" @click="handleLockRoster">锁定最终名单</el-button>
             <el-button :disabled="rosterWorkspace?.rosterStatus !== 'LOCKED'" v-hasPermi="['basket:v4Division:edit']" @click="openPromote">候补递补</el-button>
           </el-form-item>
@@ -99,16 +101,16 @@
         </el-descriptions>
 
         <el-tabs v-if="rosterWorkspace" v-model="rosterInnerTab">
-          <el-tab-pane label="全部审核合格" name="approved" />
-          <el-tab-pane label="正式参赛" name="formal" />
+          <el-tab-pane :label="`全部审核合格（${rosterWorkspace.approvedCount || rosterWorkspace.approvedList?.length || 0}）`" name="approved" />
+          <el-tab-pane :label="`正式参赛（${rosterWorkspace.formalCount || 0}）`" name="formal" />
           <el-tab-pane name="candidate">
             <template #label>
-              <el-tooltip content="当正式球队无法参赛时，候补球队可按顺序递补。不是候补球员或替补名单。" placement="top">
-                <span>候补球队</span>
+              <el-tooltip content="候补的是整支球队。当正式球队无法参赛时，按候补顺序递补。不是候补球员或替补成员。" placement="top">
+                <span>候补球队（{{ rosterWorkspace.candidateCount || 0 }}）</span>
               </el-tooltip>
             </template>
           </el-tab-pane>
-          <el-tab-pane label="本届不参赛" name="excluded" />
+          <el-tab-pane :label="`本届不参赛（${rosterWorkspace.excludedCount || 0}）`" name="excluded" />
           <el-tab-pane label="审核未通过" name="rejected" />
           <el-tab-pane label="名单版本" name="versions" />
         </el-tabs>
@@ -166,14 +168,14 @@
           </el-table-column>
         </el-table>
       </el-tab-pane>
-      <el-tab-pane v-if="workspaceMode !== 'TEAM'" label="个人报名" name="personal">
+      <el-tab-pane v-if="!inWorkspace || workspaceMode === 'PERSONAL'" label="个人报名" name="personal">
         <el-form :model="personalQuery" :inline="true" class="mb8">
-          <el-form-item label="赛季">
+          <el-form-item v-if="!inWorkspace" label="赛季">
             <el-select v-model="personalQuery.seasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onPersonalSeasonChange">
               <el-option v-for="item in seasonOptions" :key="item.id" :label="item.label" :value="item.id" />
             </el-select>
           </el-form-item>
-          <el-form-item label="平台赛区">
+          <el-form-item v-if="!inWorkspace" label="平台赛区">
             <el-select v-model="personalQuery.divisionId" clearable filterable placeholder="选择赛区" style="width: 200px" :disabled="!personalQuery.seasonId">
               <el-option v-for="item in personalDivisionOptions" :key="item.id" :label="formatDivisionLabel(item)" :value="item.id" />
             </el-select>
@@ -222,14 +224,14 @@
       </el-tab-pane>
 
       <!-- 个人组队结果 -->
-      <el-tab-pane v-if="workspaceMode !== 'TEAM'" label="Formation 临时组队" name="formation">
+      <el-tab-pane v-if="!inWorkspace || workspaceMode === 'PERSONAL'" label="Formation 临时组队" name="formation">
         <el-form :model="drawQuery" :inline="true" class="mb8">
-          <el-form-item label="赛季">
+          <el-form-item v-if="!inWorkspace" label="赛季">
             <el-select v-model="drawSeasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onDrawSeasonChange">
               <el-option v-for="item in seasonOptions" :key="item.id" :label="item.label" :value="item.id" />
             </el-select>
           </el-form-item>
-          <el-form-item label="平台赛区">
+          <el-form-item v-if="!inWorkspace" label="平台赛区">
             <el-select v-model="drawQuery.divisionId" clearable filterable placeholder="选择赛区" style="width: 200px" :disabled="!drawSeasonId">
               <el-option v-for="item in drawDivisionOptions" :key="item.id" :label="formatDivisionLabel(item)" :value="item.id" />
             </el-select>
@@ -654,6 +656,7 @@ import DivisionEventSelector from '../components/DivisionEventSelector.vue'
 import DivisionContextHeader from '../components/DivisionContextHeader.vue'
 import WorkflowBlockedState from '../components/WorkflowBlockedState.vue'
 import { useDivisionWorkspace } from '../composables/useDivisionWorkspace'
+import { resolveRegistrationAuditLoads } from './registrationAuditLoads'
 import {
   assignV4TeamRoster,
   autoAllocateV4TeamRoster,
@@ -732,10 +735,33 @@ const { proxy } = getCurrentInstance() as any
 const router = useRouter()
 const { divisionId, overview, blocked, selectDivision, clearDivision } = useDivisionWorkspace('roster')
 const workspaceMode = computed(() => overview.value?.context?.registrationMode || '')
+const inWorkspace = computed(() => Boolean(divisionId.value))
+const contextReady = computed(() => Boolean(
+  divisionId.value
+  && overview.value?.context?.divisionId
+  && Number(overview.value.context.divisionId) === Number(divisionId.value)
+))
+const auditLoads = computed(() => resolveRegistrationAuditLoads(workspaceMode.value))
 const activeTab = ref('team')
 
-watch([divisionId, workspaceMode], () => {
-  if (!divisionId.value) return
+watch([divisionId, workspaceMode, contextReady], () => {
+  if (!divisionId.value) {
+    rosterWorkspace.value = undefined
+    formationWorkspace.value = undefined
+    return
+  }
+  if (!contextReady.value) return
+  bindWorkspaceQuery()
+  if (workspaceMode.value === 'PERSONAL' && (activeTab.value === 'team' || activeTab.value === 'roster')) {
+    activeTab.value = 'personal'
+  }
+  if (workspaceMode.value === 'TEAM' && (activeTab.value === 'personal' || activeTab.value === 'formation')) {
+    activeTab.value = 'team'
+  }
+  syncWorkspaceLoads()
+})
+
+function bindWorkspaceQuery() {
   const seasonId = overview.value?.context?.seasonId
   if (seasonId) {
     queryParams.seasonId = seasonId
@@ -747,16 +773,31 @@ watch([divisionId, workspaceMode], () => {
   rosterDivisionId.value = divisionId.value
   personalQuery.divisionId = divisionId.value
   drawQuery.divisionId = divisionId.value
-  if (workspaceMode.value === 'PERSONAL' && (activeTab.value === 'team' || activeTab.value === 'roster')) {
-    activeTab.value = 'personal'
+}
+
+function syncWorkspaceLoads() {
+  const loads = auditLoads.value
+  if (loads.loadTeamRegistration) getList()
+  else {
+    dataList.value = []
+    total.value = 0
   }
-  if (workspaceMode.value === 'TEAM' && (activeTab.value === 'personal' || activeTab.value === 'formation')) {
-    activeTab.value = 'team'
+  if (loads.loadTeamRoster) loadRosterWorkspace()
+  else rosterWorkspace.value = undefined
+  if (loads.loadPersonalRegistration) getPersonalList()
+  else {
+    personalList.value = []
+    personalTotal.value = 0
   }
-  getList()
-  loadRosterWorkspace()
-  loadFormationWorkspace()
-})
+  if (loads.loadFormation) {
+    loadFormationWorkspace()
+    getDrawList()
+  } else {
+    formationWorkspace.value = undefined
+    drawList.value = []
+    drawTotal.value = 0
+  }
+}
 
 function goPublishRule() {
   router.push({ path: '/event/event-v4-publish', query: { divisionId: String(divisionId.value) } })
@@ -904,8 +945,12 @@ function otherFormationMembers(personalRegistrationId?: number) {
     .filter(item => item.personalRegistrationId !== personalRegistrationId)
 }
 
+function canLoadFormation() {
+  return inWorkspace.value ? auditLoads.value.loadFormation : true
+}
+
 function loadFormationWorkspace() {
-  if (!drawQuery.divisionId) {
+  if (!canLoadFormation() || !drawQuery.divisionId) {
     formationWorkspace.value = undefined
     return
   }
@@ -918,7 +963,7 @@ function loadFormationWorkspace() {
 }
 
 function handleGenerateFormation() {
-  if (!drawQuery.divisionId) return
+  if (!canLoadFormation() || !drawQuery.divisionId) return
   proxy.$modal.confirm('将按当前有效个人自动生成临时队伍，未锁定前可调整。确认生成？').then(() => generateV4PersonalFormation(drawQuery.divisionId!)).then(() => {
     proxy.$modal.msgSuccess('已生成临时队伍')
     loadFormationWorkspace()
@@ -927,7 +972,7 @@ function handleGenerateFormation() {
 }
 
 function handleRegenerateFormation() {
-  if (!drawQuery.divisionId) return
+  if (!canLoadFormation() || !drawQuery.divisionId) return
   proxy.$modal.confirm('重新生成将覆盖当前未锁定的组队结果。确认重新生成？').then(() => regenerateV4PersonalFormation(drawQuery.divisionId!)).then(() => {
     proxy.$modal.msgSuccess('已重新生成')
     loadFormationWorkspace()
@@ -936,7 +981,7 @@ function handleRegenerateFormation() {
 }
 
 function handleLockFormation() {
-  if (!drawQuery.divisionId) return
+  if (!canLoadFormation() || !drawQuery.divisionId) return
   proxy.$modal.confirm('锁定后将生成正式临时参赛快照，且当前组队不可再直接修改。确认锁定？').then(() => lockV4PersonalFormation(drawQuery.divisionId!)).then(() => {
     proxy.$modal.msgSuccess('临时队伍已锁定')
     loadFormationWorkspace()
@@ -972,11 +1017,8 @@ function handleSwapFormationMember(leftPersonalRegistrationId?: number, rightPer
   }).then(() => loadFormationWorkspace())
 }
 
-watch(() => drawQuery.divisionId, () => {
-  loadFormationWorkspace()
-})
-
 function getList() {
+  if (inWorkspace.value && !auditLoads.value.loadTeamRegistration) return
   loading.value = true
   listV4RegistrationAudit(queryParams).then(res => {
     dataList.value = res.rows || []
@@ -985,8 +1027,15 @@ function getList() {
 }
 
 function resetQuery() {
-  Object.assign(queryParams, { pageNum: 1, pageSize: 10, seasonId: undefined, divisionId: undefined, registrationStatus: undefined, teamName: undefined })
-  divisionOptions.value = []
+  Object.assign(queryParams, {
+    pageNum: 1,
+    pageSize: 10,
+    seasonId: inWorkspace.value ? queryParams.seasonId : undefined,
+    divisionId: inWorkspace.value ? queryParams.divisionId : undefined,
+    registrationStatus: undefined,
+    teamName: undefined
+  })
+  if (!inWorkspace.value) divisionOptions.value = []
   getList()
 }
 
@@ -1023,6 +1072,7 @@ function submitReject() {
 }
 
 function getPersonalList() {
+  if (inWorkspace.value && !auditLoads.value.loadPersonalRegistration) return
   personalLoading.value = true
   listV4PersonalRegistration(personalQuery).then(res => {
     personalList.value = res.rows || []
@@ -1031,8 +1081,15 @@ function getPersonalList() {
 }
 
 function resetPersonalQuery() {
-  Object.assign(personalQuery, { pageNum: 1, pageSize: 10, seasonId: undefined, divisionId: undefined, registrationStatus: undefined, playerName: undefined })
-  personalDivisionOptions.value = []
+  Object.assign(personalQuery, {
+    pageNum: 1,
+    pageSize: 10,
+    seasonId: inWorkspace.value ? personalQuery.seasonId : undefined,
+    divisionId: inWorkspace.value ? personalQuery.divisionId : undefined,
+    registrationStatus: undefined,
+    playerName: undefined
+  })
+  if (!inWorkspace.value) personalDivisionOptions.value = []
   getPersonalList()
 }
 
@@ -1069,6 +1126,11 @@ function submitPersonalReject() {
 }
 
 function getDrawList() {
+  if (inWorkspace.value && !auditLoads.value.loadFormation) {
+    drawList.value = []
+    drawTotal.value = 0
+    return
+  }
   drawLoading.value = true
   listV4PersonalDrawBatch(drawQuery).then(res => {
     drawList.value = res.rows || []
@@ -1077,9 +1139,17 @@ function getDrawList() {
 }
 
 function resetDrawQuery() {
-  drawSeasonId.value = undefined
-  Object.assign(drawQuery, { pageNum: 1, pageSize: 10, divisionId: undefined, batchStatus: undefined })
-  drawDivisionOptions.value = []
+  if (!inWorkspace.value) {
+    drawSeasonId.value = undefined
+    drawQuery.divisionId = undefined
+    drawDivisionOptions.value = []
+  }
+  Object.assign(drawQuery, {
+    pageNum: 1,
+    pageSize: 10,
+    divisionId: drawQuery.divisionId,
+    batchStatus: undefined
+  })
   getDrawList()
 }
 
@@ -1254,7 +1324,7 @@ function onRosterSeasonChange(seasonId?: number) {
 }
 
 async function loadRosterWorkspace() {
-  if (!rosterDivisionId.value) {
+  if (!auditLoads.value.loadTeamRoster || !rosterDivisionId.value) {
     rosterWorkspace.value = undefined
     return
   }
@@ -1277,7 +1347,7 @@ function handleAssign(row: TeamRosterItemVo, role: string) {
 
 function handleAutoAllocate() {
   if (!rosterDivisionId.value) return
-  proxy.$modal.confirm('按报名时间将前 N 支设为正式，其余设为候补？').then(() => autoAllocateV4TeamRoster(rosterDivisionId.value!)).then(() => {
+  proxy.$modal.confirm('按报名提交时间排序，正式名额以内进入正式参赛名单，超过正式名额的审核合格球队按顺序进入候补名单。确认分配？').then(() => autoAllocateV4TeamRoster(rosterDivisionId.value!)).then(() => {
     proxy.$modal.msgSuccess('已自动分配')
     loadRosterWorkspace()
   }).catch(() => {})
@@ -1320,8 +1390,9 @@ function submitPromote() {
 }
 
 function onTabChange(name: string | number) {
-  if (name === 'personal' && !personalList.value.length) getPersonalList()
-  if (name === 'formation') {
+  const loads = auditLoads.value
+  if (name === 'personal' && loads.loadPersonalRegistration && !personalList.value.length) getPersonalList()
+  if (name === 'formation' && loads.loadFormation) {
     if (!drawList.value.length) getDrawList()
     loadFormationWorkspace()
   }
@@ -1329,7 +1400,7 @@ function onTabChange(name: string | number) {
 
 onMounted(async () => {
   await loadSeasonOptions()
-  getList()
+  if (!divisionId.value) getList()
 })
 </script>
 

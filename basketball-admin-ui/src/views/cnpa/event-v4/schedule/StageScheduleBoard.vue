@@ -216,6 +216,11 @@ function formatTime(v?: string) {
 
 function reload() {
   if (!props.stage?.stageId) return
+  if (props.stage.structureStatus !== 'ACTIVE') {
+    summary.value = undefined
+    units.value = []
+    return
+  }
   loading.value = true
   const status = filterStatus.value === 'ALL' ? undefined : filterStatus.value
   listV4StageScheduleUnits(props.stage.stageId, status).then(res => {

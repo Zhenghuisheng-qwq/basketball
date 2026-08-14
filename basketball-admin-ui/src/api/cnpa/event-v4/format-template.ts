@@ -80,6 +80,7 @@ export interface BasketDivisionFormatSnapshotVo {
   snapshotStatusName?: string
   isCurrent?: number
   mutable?: boolean
+  canApplyStandard?: boolean
   lockable?: boolean
   locked?: boolean
   formatSummary?: string

@@ -24,6 +24,7 @@
             :series-code="seriesCode"
             :series-name="seriesName"
             :mutable="!!snapshot?.mutable"
+            :can-apply="!!snapshot?.mutable"
             :game-mode="divisionMeta?.gameMode"
             :registration-mode="snapshot?.registrationMode || divisionMeta?.registrationMode"
             @applied="handleStandardTemplateApplied"
@@ -1512,6 +1513,8 @@ function ensureRulesUiState() {
 
 async function handleStandardTemplateApplied(payload?: { templateCode?: string }) {
   await loadSnapshot()
+  emit('update:formatTemplateId', snapshot.value?.sourceTemplateId)
+  emit('snapshot-change', snapshot.value!)
   emitChange()
   const name = v4StandardTemplateProductName(payload?.templateCode || snapshot.value?.sourceTemplateCode)
   proxy!.$modal.msgSuccess(`已应用${name}标准模板`)

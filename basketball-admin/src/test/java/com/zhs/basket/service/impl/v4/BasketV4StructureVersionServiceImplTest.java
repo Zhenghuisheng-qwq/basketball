@@ -41,6 +41,8 @@ class BasketV4StructureVersionServiceImplTest {
         RuleVersionView rule = new RuleVersionView();
         rule.setRuleVersionId(11L);
         rule.setRuleVersionNo(1);
+        rule.setLocked(true);
+        rule.setRosterWorkflowMode(RosterWorkflowModeEnum.VERSIONED.getCode());
         BasketDivisionRosterVersion roster = new BasketDivisionRosterVersion();
         roster.setId(201L);
         roster.setVersionNo(1);
@@ -73,11 +75,23 @@ class BasketV4StructureVersionServiceImplTest {
     void resolveForGenerate_versionedWithoutRoster_rejected() {
         RuleVersionView rule = new RuleVersionView();
         rule.setRuleVersionId(11L);
+        rule.setLocked(true);
         rule.setRosterWorkflowMode(RosterWorkflowModeEnum.VERSIONED.getCode());
         when(ruleVersionService.getCurrent(100L)).thenReturn(rule);
         when(rosterVersionService.getCurrentLockedVersion(100L)).thenReturn(null);
         ServiceException ex = assertThrows(ServiceException.class, () -> service.resolveForGenerate(100L));
         assertTrue(ex.getMessage().contains("锁定"));
+    }
+
+    @Test
+    void resolveForGenerate_versionedDraftRule_rejected() {
+        RuleVersionView rule = new RuleVersionView();
+        rule.setRuleVersionId(12L);
+        rule.setLocked(false);
+        rule.setRosterWorkflowMode(RosterWorkflowModeEnum.VERSIONED.getCode());
+        when(ruleVersionService.getCurrent(100L)).thenReturn(rule);
+        ServiceException ex = assertThrows(ServiceException.class, () -> service.resolveForGenerate(100L));
+        assertTrue(ex.getMessage().contains("规则"));
     }
 
     @Test

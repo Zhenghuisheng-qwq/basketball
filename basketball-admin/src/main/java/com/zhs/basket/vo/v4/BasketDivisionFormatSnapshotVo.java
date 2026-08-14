@@ -26,6 +26,7 @@ public class BasketDivisionFormatSnapshotVo {
     private String snapshotStatusName;
     private Integer isCurrent;
     private Boolean mutable;
+    private Boolean canApplyStandard;
     private Boolean lockable;
     private Boolean locked;
     private String formatSummary;

@@ -13,6 +13,7 @@
         @action="goPublishRule"
       />
       <div v-else>
+        <el-alert v-if="structureHint" :type="structureHintType" :closable="false" show-icon class="mb8" :title="structureHint" />
         <el-alert v-if="hasStaleStructure" type="error" :closable="false" show-icon class="mb8" title="当前赛程结构已因参赛名单变化失效，请重新生成。" />
         <DoubleEliminationDemoPanel v-if="hasDoubleElim" class="mb8" />
 
@@ -31,6 +32,18 @@
           </el-table-column>
           <el-table-column label="赛制" width="100">
             <template #default="scope">{{ v4CompetitionFormatLabel(scope.row.competitionFormat) }}</template>
+          </el-table-column>
+          <el-table-column label="Seed" width="120">
+            <template #default="scope">{{ scope.row.seedRule || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="Draw" width="130">
+            <template #default="scope">{{ scope.row.drawRule || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="Bye" width="120">
+            <template #default="scope">{{ scope.row.byeRule || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="BO" width="140">
+            <template #default="scope">{{ formatStageBo(scope.row) }}</template>
           </el-table-column>
           <el-table-column label="执行状态" width="120">
             <template #default="scope">
@@ -280,6 +293,21 @@ const { divisionId, overview, blocked, selectDivision, clearDivision } = useDivi
 const stageDivisionId = computed(() => divisionId.value)
 const hasStaleStructure = computed(() => (overview.value?.stages || []).some(s => s.structureStatus === 'STALE'))
 const hasDoubleElim = computed(() => (overview.value?.stages || []).some(s => s.competitionFormat === 'DOUBLE_ELIMINATION'))
+const ruleLocked = computed(() => Boolean(overview.value?.rule?.locked))
+const rosterLocked = computed(() => Boolean(overview.value?.roster?.locked))
+const structureHint = computed(() => {
+  if (!ruleLocked.value) return '待发布规则预览：当前展示最新规则草稿的 Stage Graph，锁定规则后才能生成正式结构。'
+  if (!rosterLocked.value) return '等待锁定最终参赛名单'
+  return ''
+})
+const structureHintType = computed(() => (ruleLocked.value ? 'warning' : 'info'))
+
+function formatStageBo(row: BasketDivisionStageExecutionVo) {
+  const parts = [`BO${row.bestOf ?? '-'}`]
+  if (row.semifinalBestOf != null) parts.push(`SF BO${row.semifinalBestOf}`)
+  if (row.finalBestOf != null) parts.push(`Final BO${row.finalBestOf}`)
+  return parts.join(' / ')
+}
 
 function goPublishRule() {
   router.push({ path: '/event/event-v4-publish', query: divisionId.value ? { divisionId: String(divisionId.value) } : {} })
@@ -334,6 +362,8 @@ function teamOptionLabel(t: StageTeamItemVo) {
 }
 
 function canGenerate(row: BasketDivisionStageExecutionVo) {
+  if (!ruleLocked.value || !rosterLocked.value) return false
+  if (overview.value?.capabilities && overview.value.capabilities.canGenerateStructure === false) return false
   return ['READY', 'DRAFT', 'SCHEDULE_GENERATED'].includes(row.executionStatus || '') && row.competitionFormat !== 'DOUBLE_ELIMINATION'
 }
 

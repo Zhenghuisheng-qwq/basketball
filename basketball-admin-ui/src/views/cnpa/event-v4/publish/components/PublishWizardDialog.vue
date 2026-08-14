@@ -1009,7 +1009,7 @@ function buildDivisionPayload(div: WizardDivisionDraft, includeTimes: boolean): 
     divisionName: div.divisionName.trim(),
     registrationMode: div.registrationMode,
     formatType: div.formatType,
-    formatTemplateId: div.formatTemplateId,
+    formatTemplateId: (div.id && snapshotMap[div.id]?.sourceTemplateId) || div.formatTemplateId,
     maxTeamCount: div.maxTeamCount,
     sortOrder: div.sortOrder
   }

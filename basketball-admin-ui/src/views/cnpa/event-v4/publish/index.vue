@@ -51,6 +51,8 @@
         :series-id="overview?.context?.seriesId"
         :series-code="overview?.context?.seriesCode"
         :series-name="overview?.context?.seriesName"
+        @update:format-template-id="id => { if (workspaceDivision) workspaceDivision.formatTemplateId = id }"
+        @snapshot-change="snap => { if (workspaceDivision && snap?.sourceTemplateId) workspaceDivision.formatTemplateId = snap.sourceTemplateId }"
       />
     </template>
 

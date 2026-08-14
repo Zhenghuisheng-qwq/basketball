@@ -31,6 +31,7 @@ import com.zhs.basket.support.v4.DivisionRuleMutableSpecification;
 import com.zhs.basket.support.v4.DoubleEliminationCapabilityGate;
 import com.zhs.basket.support.v4.V4AdminDisplaySupport;
 import com.zhs.basket.support.v4.V4FormatDisplaySupport;
+import com.zhs.basket.support.v4.version.RuleVersionSupport;
 import com.zhs.basket.support.v4.version.RuleVersionView;
 import com.zhs.basket.vo.v4.BasketDivisionListVo;
 import com.zhs.basket.vo.v4.BasketDivisionStageExecutionListVo;
@@ -118,17 +119,11 @@ public class DivisionOperationOverviewQueryServiceImpl implements IDivisionOpera
         BasketSeason season = seasonMapper.selectById(division.getSeasonId());
         BasketSeries series = season == null ? null : seriesMapper.selectById(season.getSeriesId());
         BasketDivisionFormatSnapshot snapshot = snapshotMapper.selectActiveByDivisionId(divisionId);
-        RuleVersionView ruleView = snapshot == null ? null : new RuleVersionView();
-        if (snapshot != null) {
-            ruleView.setRuleVersionId(snapshot.getId());
-            ruleView.setRuleVersionNo(snapshot.getSnapshotVersion());
-            ruleView.setRuleVersionStatus(snapshot.getSnapshotStatus());
-            ruleView.setLocked(snapshot.getSnapshotStatus() != null
-                    && !"DRAFT".equals(snapshot.getSnapshotStatus()));
-            ruleView.setRosterWorkflowMode(snapshot.getRosterWorkflowMode());
-        }
+        RuleVersionView ruleView = RuleVersionSupport.fromSnapshot(snapshot);
 
-        List<BasketDivisionStage> stages = stageMapper.selectByDivisionId(divisionId);
+        List<BasketDivisionStage> stages = snapshot == null
+                ? stageMapper.selectByDivisionId(divisionId)
+                : stageMapper.selectBySnapshotId(snapshot.getId());
         boolean hasDoubleElim = stages.stream().anyMatch(DoubleEliminationCapabilityGate::isDoubleElimination);
         boolean ruleMutable = ruleMutableSpecification.isMutable(division, snapshot);
         String workflowMode = snapshot == null ? null : snapshot.getRosterWorkflowMode();
@@ -256,7 +251,7 @@ public class DivisionOperationOverviewQueryServiceImpl implements IDivisionOpera
             return vo;
         }
         vo.setRuleVersionId(snapshot.getId());
-        vo.setRuleVersionNo(snapshot.getSnapshotVersion());
+        vo.setRuleVersionNo(view != null ? view.getRuleVersionNo() : RuleVersionSupport.productRuleVersionNo(snapshot));
         vo.setRuleStatus(snapshot.getSnapshotStatus());
         vo.setRuleStatusName(V4AdminDisplaySupport.ruleStatusLabel(snapshot.getSnapshotStatus()));
         vo.setLocked(view != null && view.isLocked());

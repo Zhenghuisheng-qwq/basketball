@@ -18,7 +18,7 @@ export function useDivisionWorkspace(entry: DivisionWorkspaceEntry) {
   const ruleLocked = computed(() => Boolean(overview.value?.rule?.locked))
   const requireRule = computed(() => Boolean(overview.value?.capabilities?.requireRulePublished))
   const blocked = computed(() => {
-    if (entry === 'publish') return false
+    if (entry === 'publish' || entry === 'structure') return false
     if (!divisionId.value || !overview.value) return false
     if (requireRule.value && !ruleLocked.value) {
       return overview.value.capabilities?.blockReason || '请先完成赛事规则发布'

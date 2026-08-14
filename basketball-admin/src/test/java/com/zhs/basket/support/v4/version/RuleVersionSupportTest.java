@@ -30,14 +30,29 @@ class RuleVersionSupportTest {
     }
 
     @Test
+    void fromSnapshot_lockedDraftRevision3_productRuleIsV1() {
+        BasketDivisionFormatSnapshot snapshot = new BasketDivisionFormatSnapshot();
+        snapshot.setId(265L);
+        snapshot.setSnapshotVersion(3);
+        snapshot.setSnapshotStatus(SnapshotStatusEnum.LOCKED.getCode());
+
+        RuleVersionView view = RuleVersionSupport.fromSnapshot(snapshot);
+        assertEquals(265L, view.getRuleVersionId());
+        assertEquals(1, view.getRuleVersionNo());
+        assertTrue(view.isLocked());
+    }
+
+    @Test
     void fromSnapshot_draft_notLocked() {
         BasketDivisionFormatSnapshot snapshot = new BasketDivisionFormatSnapshot();
         snapshot.setId(12L);
+        snapshot.setSnapshotVersion(2);
         snapshot.setSnapshotStatus(SnapshotStatusEnum.DRAFT.getCode());
 
         RuleVersionView view = RuleVersionSupport.fromSnapshot(snapshot);
         assertFalse(view.isLocked());
         assertFalse(RuleVersionSupport.isLocked(snapshot));
+        assertNull(view.getRuleVersionNo());
     }
 
     @Test

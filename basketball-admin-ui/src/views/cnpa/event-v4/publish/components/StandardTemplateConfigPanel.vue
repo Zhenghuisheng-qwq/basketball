@@ -47,7 +47,7 @@
                 v-if="opt.inputType === 'SELECT'"
                 :model-value="form[opt.key || '']"
                 style="width: 100%"
-                :disabled="!mutable"
+                :disabled="!canApply"
                 @change="(val) => setOption(opt.key, val)"
               >
                 <el-option
@@ -61,7 +61,7 @@
                 v-else-if="opt.inputType === 'NUMBER' && (opt.allowedValues || []).length"
                 :model-value="String(form[opt.key || ''] ?? opt.defaultValue)"
                 style="width: 100%"
-                :disabled="!mutable"
+                :disabled="!canApply"
                 @change="(val) => setOption(opt.key, Number(val))"
               >
                 <el-option
@@ -76,7 +76,7 @@
                 :model-value="Number(form[opt.key || ''] ?? opt.defaultValue)"
                 :min="opt.minValue"
                 :max="opt.maxValue"
-                :disabled="!mutable"
+                :disabled="!canApply"
                 controls-position="right"
                 @change="(val) => setOption(opt.key, val)"
               />
@@ -98,7 +98,7 @@
           title="个人报名将在报名审核后进行 Formation 临时组队。Formation 不是正式比赛阶段。"
         />
         <el-form-item>
-          <el-button type="primary" :loading="applying" :disabled="!mutable || applying" @click="apply">应用此标准模板</el-button>
+          <el-button type="primary" :loading="applying" :disabled="!canApply || applying" @click="apply">应用此标准模板</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -149,9 +149,12 @@ const props = defineProps<{
   seriesCode?: string
   seriesName?: string
   mutable?: boolean
+  canApply?: boolean
   gameMode?: string
   registrationMode?: string
 }>()
+
+const canApply = computed(() => props.canApply !== false && (props.canApply || props.mutable))
 
 const emit = defineEmits<{
   applied: [payload: { templateCode: string }]

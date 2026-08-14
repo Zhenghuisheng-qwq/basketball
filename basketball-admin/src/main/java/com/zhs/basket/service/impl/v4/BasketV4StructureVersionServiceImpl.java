@@ -9,6 +9,7 @@ import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
 import com.zhs.basket.service.v4.IBasketV4RosterVersionService;
 import com.zhs.basket.service.v4.IBasketV4RuleVersionService;
 import com.zhs.basket.service.v4.IBasketV4StructureVersionService;
+import com.zhs.basket.support.v4.DivisionOperationCapabilitySupport;
 import com.zhs.basket.support.v4.version.RosterWorkflowSupport;
 import com.zhs.basket.support.v4.version.RuleVersionView;
 import com.zhs.basket.support.v4.version.StructureVersionContext;
@@ -37,6 +38,9 @@ public class BasketV4StructureVersionServiceImpl implements IBasketV4StructureVe
         if (rule != null) {
             context.setRuleVersionId(rule.getRuleVersionId());
             context.setRuleVersionNo(rule.getRuleVersionNo());
+        }
+        if (rule != null && RosterWorkflowSupport.isVersioned(rule) && !rule.isLocked()) {
+            throw new ServiceException(DivisionOperationCapabilitySupport.MSG_PUBLISH_RULE_FIRST);
         }
         BasketDivisionRosterVersion roster = rosterVersionService.getCurrentLockedVersion(divisionId);
         BasketDivision division = divisionMapper.selectById(divisionId);

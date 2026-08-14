@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
@@ -106,5 +107,25 @@ class DivisionRuleMutableSpecificationTest {
         ServiceException ex = assertThrows(ServiceException.class,
                 () -> specification.assertCanEditRules(division, null));
         assertTrue(ex.getMessage().contains("缺少规则快照"));
+    }
+
+    @Test
+    void resolveFormatTemplateIdForUpdate_keepsCurrentSnapshotTemplate() {
+        snapshot.setSourceTemplateId(6L);
+        assertEquals(6L, specification.resolveFormatTemplateIdForUpdate(3L, snapshot));
+    }
+
+    @Test
+    void resolveFormatTemplateIdForUpdate_withoutSnapshot_usesRequested() {
+        assertEquals(3L, specification.resolveFormatTemplateIdForUpdate(3L, null));
+    }
+
+    @Test
+    void canApplyStandardTemplate_locked_rejected() {
+        snapshot.setSnapshotStatus(SnapshotStatusEnum.LOCKED.getCode());
+        assertTrue(!specification.canApplyStandardTemplate(division, snapshot));
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> specification.assertCanApplyStandardTemplate(division, snapshot));
+        assertTrue(ex.getMessage().contains("已锁定"));
     }
 }

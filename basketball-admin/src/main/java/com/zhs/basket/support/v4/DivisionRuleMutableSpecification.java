@@ -133,4 +133,32 @@ public class DivisionRuleMutableSpecification {
             return false;
         }
     }
+
+    /**
+     * Division 更新里的 formatTemplateId 不能覆盖当前 Rule Snapshot。
+     * 已有当前快照时，指针必须跟着 Snapshot，避免向导脏模板 ID 重建旧 CUSTOM。
+     */
+    public Long resolveFormatTemplateIdForUpdate(Long requestedTemplateId, BasketDivisionFormatSnapshot current) {
+        if (current != null && current.getSourceTemplateId() != null) {
+            return current.getSourceTemplateId();
+        }
+        return requestedTemplateId;
+    }
+
+    public boolean canApplyStandardTemplate(BasketDivision division, BasketDivisionFormatSnapshot snapshot) {
+        if (snapshot != null && SnapshotStatusEnum.fromCode(snapshot.getSnapshotStatus()).isLockedOrBeyond()) {
+            return false;
+        }
+        if (snapshot == null) {
+            return division != null && DivisionStatusEnum.DRAFT.getCode().equals(division.getDivisionStatus());
+        }
+        return isMutable(division, snapshot);
+    }
+
+    public void assertCanApplyStandardTemplate(BasketDivision division, BasketDivisionFormatSnapshot snapshot) {
+        if (snapshot != null && SnapshotStatusEnum.fromCode(snapshot.getSnapshotStatus()).isLockedOrBeyond()) {
+            throw new ServiceException("已锁定规则快照不允许应用标准模板");
+        }
+        assertCanRebuild(division, snapshot);
+    }
 }
