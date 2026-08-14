@@ -231,23 +231,45 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
 
     @Override
     public List<BasketStageTeamItemVo> listStageTeams(Long stageId) {
-        requireStage(stageId);
+        BasketDivisionStage stage = requireStage(stageId);
         List<BasketDivisionStageTeam> teams = stageTeamMapper.selectByStageId(stageId);
+        List<BasketEventTeam> formalTeams = safeFormalEventTeams(stage.getDivisionId());
+        Set<Long> formalIds = formalTeams.stream().map(BasketEventTeam::getId).collect(Collectors.toSet());
         List<BasketStageTeamItemVo> result = new ArrayList<>();
-        for (BasketDivisionStageTeam team : teams) {
-            BasketStageTeamItemVo vo = new BasketStageTeamItemVo();
-            vo.setEventTeamId(team.getEventTeamId());
-            vo.setSeedNo(team.getSeedNo());
-            BasketEventTeam eventTeam = eventTeamMapper.selectById(team.getEventTeamId());
-            if (eventTeam != null) {
-                vo.setTeamName(eventTeam.getTeamNameSnapshot());
+        if (teams.isEmpty() && isFirstStage(stage)) {
+            for (BasketEventTeam eventTeam : formalTeams) {
+                result.add(toStageTeamItem(eventTeam.getId(), eventTeam.getTeamNameSnapshot(), null));
             }
-            result.add(vo);
+        } else {
+            for (BasketDivisionStageTeam team : teams) {
+                if (team.getEventTeamId() == null || (!formalIds.isEmpty() && !formalIds.contains(team.getEventTeamId()))) {
+                    continue;
+                }
+                BasketEventTeam eventTeam = eventTeamMapper.selectById(team.getEventTeamId());
+                result.add(toStageTeamItem(team.getEventTeamId(),
+                        eventTeam == null ? null : eventTeam.getTeamNameSnapshot(), team.getSeedNo()));
+            }
         }
         result.sort(Comparator
                 .comparing(BasketStageTeamItemVo::getSeedNo, Comparator.nullsLast(Integer::compareTo))
                 .thenComparing(BasketStageTeamItemVo::getEventTeamId, Comparator.nullsLast(Long::compareTo)));
         return result;
+    }
+
+    private List<BasketEventTeam> safeFormalEventTeams(Long divisionId) {
+        try {
+            return teamRosterSupport.selectFormalEventTeams(divisionId);
+        } catch (ServiceException ex) {
+            return List.of();
+        }
+    }
+
+    private BasketStageTeamItemVo toStageTeamItem(Long eventTeamId, String teamName, Integer seedNo) {
+        BasketStageTeamItemVo vo = new BasketStageTeamItemVo();
+        vo.setEventTeamId(eventTeamId);
+        vo.setTeamName(teamName);
+        vo.setSeedNo(seedNo);
+        return vo;
     }
 
     @Override
@@ -1128,6 +1150,9 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             var pairingVo = pairingExecutionApplicationService.getCurrent(stage.getId());
             vo.setHasUnresolvedPlaceholders(Boolean.TRUE.equals(pairingVo.getHasUnresolvedPlaceholders()));
             vo.setParticipantResolved(Boolean.TRUE.equals(pairingVo.getParticipantResolved()));
+            if (vo.getParticipantCount() == null && pairingVo.getParticipantCount() != null) {
+                vo.setParticipantCount(pairingVo.getParticipantCount());
+            }
         } catch (RuntimeException ignored) {
             vo.setHasUnresolvedPlaceholders(false);
             vo.setParticipantResolved(false);

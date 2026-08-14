@@ -64,7 +64,11 @@
             <template #default="scope">
               <el-button link type="primary" @click="handleStagePreview(scope.row)">预览</el-button>
               <el-button link type="primary" v-if="scope.row.competitionFormat === 'GROUP_STAGE'" @click="openGroupPanel(scope.row)">小组</el-button>
-              <el-button link type="primary" v-if="needsPairingPrep(scope.row)" @click="openPairingWorkspace(scope.row)">结构准备</el-button>
+              <el-tooltip v-if="needsPairingPrep(scope.row)" :disabled="!pairingPrepBlockReason(scope.row)" :content="pairingPrepBlockReason(scope.row)" placement="top">
+                <span>
+                  <el-button link type="primary" :disabled="!!pairingPrepBlockReason(scope.row)" @click="openPairingWorkspace(scope.row)">结构准备</el-button>
+                </span>
+              </el-tooltip>
               <el-button link type="warning" v-if="canResolvePlaceholders(scope.row)" @click="doResolveFromList(scope.row)">解析占位</el-button>
               <el-button link type="success" v-if="canGenerate(scope.row)" @click="handleStageGenerate(scope.row)">生成</el-button>
               <el-button link type="warning" v-if="scope.row.executionStatus === 'SCHEDULE_GENERATED'" @click="handleStageCancel(scope.row)">作废</el-button>
@@ -122,7 +126,7 @@
       </div>
       <el-form v-if="pairingStage?.seedRule === 'ADMIN_SEED'" label-width="90px" class="mb8">
         <el-form-item label="种子(最多4)">
-          <el-select v-model="seedTeamIds" multiple filterable placeholder="选择种子队" style="width:100%">
+          <el-select v-model="seedTeamIds" multiple filterable :multiple-limit="4" placeholder="选择种子队（最多4支）" style="width:100%">
             <el-option v-for="t in pairingTeams" :key="t.eventTeamId" :label="teamOptionLabel(t)" :value="t.eventTeamId" />
           </el-select>
         </el-form-item>
@@ -385,6 +389,15 @@ function needsPairingPrep(row: BasketDivisionStageExecutionVo) {
   return row.drawRule === 'RANDOM_CONFIRM' || row.drawRule === 'MANUAL_SLOT' || row.seedRule === 'ADMIN_SEED' || row.seedRule === 'EXTERNAL_RANKING'
 }
 
+function pairingPrepBlockReason(_row?: BasketDivisionStageExecutionVo) {
+  if (!rosterLocked.value) return '请先锁定最终参赛名单。'
+  const formal = overview.value?.roster?.formalCount
+  if (formal == null || formal <= 0) {
+    return '当前锁定名单没有正式参赛球队，请返回报名与参赛名单检查名单分配。'
+  }
+  return ''
+}
+
 function canResolvePlaceholders(row: BasketDivisionStageExecutionVo) {
   return !!row.hasUnresolvedPlaceholders
 }
@@ -595,12 +608,22 @@ watch(divisionId, () => {
 }, { immediate: true })
 
 async function openPairingWorkspace(row: BasketDivisionStageExecutionVo) {
+  const blockedReason = pairingPrepBlockReason(row)
+  if (blockedReason) {
+    ElMessage.warning(blockedReason)
+    return
+  }
   pairingStage.value = row
-  pairingVisible.value = true
   const teamsRes = await listV4StageTeams(row.stageId).catch(() => ({ data: [] }))
   pairingTeams.value = teamsRes.data || []
   await loadGroupLayouts(row)
   await loadPairingWorkspace()
+  if (!pairingTeams.value.length && !(pairingVo.value?.participantCount)) {
+    ElMessage.warning('当前没有可参与赛程结构的正式参赛球队，请先完成报名、名单分配并锁定最终参赛名单。')
+    pairingVisible.value = false
+    return
+  }
+  pairingVisible.value = true
 }
 
 async function loadGroupLayouts(row: BasketDivisionStageExecutionVo) {

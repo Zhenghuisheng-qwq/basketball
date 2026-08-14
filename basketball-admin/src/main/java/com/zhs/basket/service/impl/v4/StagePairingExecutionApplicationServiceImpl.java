@@ -16,6 +16,8 @@ import com.zhs.basket.enums.v4.ByeRuleEnum;
 import com.zhs.basket.enums.v4.DrawRuleEnum;
 import com.zhs.basket.enums.v4.GroupingStatusEnum;
 import com.zhs.basket.enums.v4.PairingExecutionStatusEnum;
+import com.zhs.basket.enums.v4.StageTeamEntryTypeEnum;
+import com.zhs.basket.enums.v4.StageTeamQualificationStatusEnum;
 import com.zhs.basket.enums.v4.PairingRuleEnum;
 import com.zhs.basket.enums.v4.ParticipantResolutionStatusEnum;
 import com.zhs.basket.enums.v4.ParticipantSourceTypeEnum;
@@ -696,19 +698,11 @@ public class StagePairingExecutionApplicationServiceImpl implements IStagePairin
         vo.setConfirmedTime(execution.getConfirmedTime());
         int participantCount = (int) entries.stream().filter(e -> !Integer.valueOf(1).equals(e.getIsBye())).count();
         if (participantCount >= 2) {
-            EliminationCapacity capacity = EliminationCapacity.of(participantCount);
-            vo.setParticipantCount(capacity.getParticipantCount());
-            vo.setBracketCapacity(capacity.getCapacity());
-            vo.setByeCount(capacity.getByeCount());
-            vo.setFirstRoundActual(capacity.getFirstRoundActual());
-            vo.setTotalActualSeries(capacity.getTotalActualSeries());
+            applyCapacity(vo, participantCount);
         } else if (teams.size() >= 2) {
-            EliminationCapacity capacity = EliminationCapacity.of(teams.size());
-            vo.setParticipantCount(capacity.getParticipantCount());
-            vo.setBracketCapacity(capacity.getCapacity());
-            vo.setByeCount(capacity.getByeCount());
-            vo.setFirstRoundActual(capacity.getFirstRoundActual());
-            vo.setTotalActualSeries(capacity.getTotalActualSeries());
+            applyCapacity(vo, teams.size());
+        } else {
+            applyFormalRosterCapacity(vo, stage);
         }
         Map<Long, String> groupCodes = loadGroupCodes(entries);
         for (BasketStagePairingEntry entry : entries) {
@@ -788,14 +782,33 @@ public class StagePairingExecutionApplicationServiceImpl implements IStagePairin
         vo.setStatus(PairingExecutionStatusEnum.DRAFT.getCode());
         List<BasketDivisionStageTeam> teams = stageTeamMapper.selectByStageId(stage.getId());
         if (teams.size() >= 2) {
-            EliminationCapacity capacity = EliminationCapacity.of(teams.size());
-            vo.setParticipantCount(capacity.getParticipantCount());
-            vo.setBracketCapacity(capacity.getCapacity());
-            vo.setByeCount(capacity.getByeCount());
-            vo.setFirstRoundActual(capacity.getFirstRoundActual());
-            vo.setTotalActualSeries(capacity.getTotalActualSeries());
+            applyCapacity(vo, teams.size());
+        } else {
+            applyFormalRosterCapacity(vo, stage);
         }
         return vo;
+    }
+
+    private void applyFormalRosterCapacity(StagePairingExecutionVo vo, BasketDivisionStage stage) {
+        try {
+            int formalCount = teamRosterSupport.selectFormalEventTeams(stage.getDivisionId()).size();
+            if (formalCount >= 2) {
+                applyCapacity(vo, formalCount);
+            } else {
+                vo.setParticipantCount(formalCount);
+            }
+        } catch (ServiceException ignored) {
+            vo.setParticipantCount(0);
+        }
+    }
+
+    private void applyCapacity(StagePairingExecutionVo vo, int participantCount) {
+        EliminationCapacity capacity = EliminationCapacity.of(participantCount);
+        vo.setParticipantCount(capacity.getParticipantCount());
+        vo.setBracketCapacity(capacity.getCapacity());
+        vo.setByeCount(capacity.getByeCount());
+        vo.setFirstRoundActual(capacity.getFirstRoundActual());
+        vo.setTotalActualSeries(capacity.getTotalActualSeries());
     }
 
     private Map<Long, Integer> loadRanking(BasketStagePairingExecution execution) {
@@ -939,10 +952,39 @@ public class StagePairingExecutionApplicationServiceImpl implements IStagePairin
         List<BasketDivisionStageTeam> teams = stageTeamMapper.selectByStageId(stage.getId()).stream()
                 .filter(team -> team.getEventTeamId() != null && formalIds.contains(team.getEventTeamId()))
                 .collect(Collectors.toList());
+        if (teams.size() < 2 && findPreviousStage(stage) == null && formalTeams.size() >= 2) {
+            teams = initFirstStageTeamsFromFormal(stage, formalTeams);
+        }
         if (teams.size() < 2) {
-            throw new ServiceException("请先初始化阶段参赛队伍（仅 FORMAL EventTeam）");
+            throw new ServiceException("当前锁定名单没有足够的正式参赛球队，请返回报名与参赛名单检查名单分配");
         }
         return teams;
+    }
+
+    private List<BasketDivisionStageTeam> initFirstStageTeamsFromFormal(BasketDivisionStage stage,
+                                                                        List<BasketEventTeam> formalTeams) {
+        Date now = new Date();
+        List<BasketDivisionStageTeam> toInsert = new ArrayList<>();
+        int seed = 1;
+        for (BasketEventTeam eventTeam : formalTeams) {
+            BasketDivisionStageTeam team = new BasketDivisionStageTeam();
+            team.setDivisionId(stage.getDivisionId());
+            team.setSnapshotId(stage.getSnapshotId());
+            team.setStageId(stage.getId());
+            team.setEventTeamId(eventTeam.getId());
+            team.setSeedNo(seed++);
+            team.setEntryType(StageTeamEntryTypeEnum.INITIAL.getCode());
+            team.setQualificationStatus(StageTeamQualificationStatusEnum.PENDING.getCode());
+            team.setActiveUniqueKey(stage.getId() + "_" + eventTeam.getId());
+            team.setCreateTime(now);
+            team.setUpdateTime(now);
+            team.setIsDelete(NOT_DELETED);
+            toInsert.add(team);
+        }
+        if (stageTeamMapper.batchInsert(toInsert) != toInsert.size()) {
+            throw new ServiceException("初始化阶段参赛队伍失败");
+        }
+        return toInsert;
     }
 
     private Map<Long, String> teamNames(List<BasketDivisionStageTeam> teams) {
