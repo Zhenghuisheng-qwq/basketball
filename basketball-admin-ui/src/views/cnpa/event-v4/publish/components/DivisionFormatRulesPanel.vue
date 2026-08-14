@@ -10,10 +10,10 @@
       <template #title>赛事规则已发布，当前版本不可修改。</template>
     </el-alert>
 
-    <p v-if="snapshot?.sourceTemplateCode" class="section-hint mb8">
-      Template {{ snapshot.sourceTemplateType || 'CUSTOM' }} / {{ snapshot.sourceTemplateCode }}
-      <span v-if="snapshot.registrationMode"> / {{ snapshot.registrationMode }}</span>
-    </p>
+    <div v-if="snapshot" class="current-scheme-bar mb8">
+      <span>{{ currentSchemeSummary }}</span>
+      <el-button link type="primary" @click="handleRulesSectionTabChange('advanced')">查看技术信息</el-button>
+    </div>
 
     <el-tabs :model-value="rulesSectionTab" type="border-card" class="rules-section-tabs mb8" @tab-change="handleRulesSectionTabChange">
       <el-tab-pane label="标准模板" name="standard">
@@ -21,6 +21,8 @@
           <StandardTemplateConfigPanel
             :division-id="divisionId"
             :series-id="seriesId"
+            :series-code="seriesCode"
+            :series-name="seriesName"
             :mutable="!!snapshot?.mutable"
             :game-mode="divisionMeta?.gameMode"
             :registration-mode="snapshot?.registrationMode || divisionMeta?.registrationMode"
@@ -40,6 +42,7 @@
               :class="{ 'scheme-card--active': selectedScheme === item.id }"
               @click="handleSelectScheme(item.id)"
             >
+              <div v-if="selectedScheme === item.id" class="scheme-card-check">✓ 已选择</div>
               <div class="scheme-card-name">{{ item.name }}</div>
               <div class="scheme-card-summary">{{ item.summary }}</div>
               <div class="scheme-card-scene">{{ item.scene }}</div>
@@ -60,6 +63,7 @@
               :class="{ 'scheme-card--active': selectedScheme === item.id }"
               @click="handleSelectScheme(item.id)"
             >
+              <div v-if="selectedScheme === item.id" class="scheme-card-check">✓ 已选择</div>
               <div class="scheme-card-name">{{ item.name }}</div>
               <div class="scheme-card-summary">{{ item.summary }}</div>
               <div class="scheme-card-scene">{{ item.scene }}</div>
@@ -527,6 +531,14 @@
 
       <el-tab-pane label="高级设置" name="advanced">
         <el-collapse>
+          <el-collapse-item title="技术信息" name="tech">
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="模板类型">{{ v4TemplateTypeLabel(snapshot?.sourceTemplateType) }}（{{ snapshot?.sourceTemplateType || '-' }}）</el-descriptions-item>
+              <el-descriptions-item label="Template Code">{{ snapshot?.sourceTemplateCode || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="报名方式">{{ v4RegistrationModeLabel(snapshot?.registrationMode) }}（{{ snapshot?.registrationMode || '-' }}）</el-descriptions-item>
+              <el-descriptions-item label="比赛模式">{{ v4GameModeLabel(divisionMeta?.gameMode) }}（{{ divisionMeta?.gameMode || '-' }}）</el-descriptions-item>
+            </el-descriptions>
+          </el-collapse-item>
           <el-collapse-item title="赛制模板与恢复" name="template">
             <el-form label-width="120px">
               <el-form-item label="底层模板">
@@ -781,8 +793,13 @@ import {
   resolveV4OrganizationMode,
   validateV4QuickCreateParams,
   validateV4StageCombinationDetailed,
+  v4CurrentFormatSchemeSummary,
+  v4GameModeLabel,
   v4GroupingModeLabel,
   v4OrganizationModeLabel,
+  v4RegistrationModeLabel,
+  v4StandardTemplateProductName,
+  v4TemplateTypeLabel,
   v4TieBreakRuleLabel,
   v4WizardAdvancementMode,
   v4WizardAdvancementTypeOptions,
@@ -824,6 +841,8 @@ const props = withDefaults(defineProps<{
   maxTeamCount: number
   formatTemplateId?: number
   seriesId?: number
+  seriesCode?: string
+  seriesName?: string
   divisionMeta?: DivisionFormatRulesMeta
   contextKey?: string
 }>(), {
@@ -859,6 +878,18 @@ const isStandardSnapshot = computed(() =>
   snapshot.value?.sourceTemplateType === 'STANDARD'
   || ['LEAGUE_STANDARD_V1', 'ARENA_STANDARD_V1', 'CUP_STANDARD_V1', 'OPEN_STANDARD_V1'].includes(snapshot.value?.sourceTemplateCode || '')
 )
+
+const currentSchemeSummary = computed(() => {
+  const inferred = inferV4FormatSchemeFromStages(sortedStages.value)
+  const schemeName = inferred && inferred !== 'CUSTOM' ? getV4FormatSchemeOption(inferred)?.name : ''
+  return v4CurrentFormatSchemeSummary({
+    sourceTemplateType: snapshot.value?.sourceTemplateType,
+    sourceTemplateCode: snapshot.value?.sourceTemplateCode,
+    registrationMode: snapshot.value?.registrationMode || props.divisionMeta?.registrationMode,
+    gameMode: props.divisionMeta?.gameMode,
+    schemeName
+  })
+})
 
 const rulesSectionTab = ref<RulesSectionTab>('standard')
 const selectedScheme = ref<V4FormatSchemeId>('GROUP_TO_ELIM')
@@ -1479,10 +1510,11 @@ function ensureRulesUiState() {
   quickParams.expectedTeamCount = props.maxTeamCount
 }
 
-async function handleStandardTemplateApplied() {
+async function handleStandardTemplateApplied(payload?: { templateCode?: string }) {
   await loadSnapshot()
   emitChange()
-  proxy!.$modal.msgSuccess('标准模板已应用为规则草稿，锁定后才会成为 Rule Version')
+  const name = v4StandardTemplateProductName(payload?.templateCode || snapshot.value?.sourceTemplateCode)
+  proxy!.$modal.msgSuccess(`已应用${name}标准模板`)
 }
 
 function resolveStageBestOfOptions(stage: BasketDivisionStageVo) {
@@ -2118,18 +2150,39 @@ defineExpose({ reload: loadSnapshot })
 
 .scheme-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
 
 .scheme-card {
+  position: relative;
   cursor: pointer;
-  transition: border-color 0.2s;
+  border-radius: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.scheme-card:hover {
+  border-color: var(--el-color-primary-light-5);
 }
 
 .scheme-card--active {
   border-color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
   box-shadow: 0 0 0 1px var(--el-color-primary-light-5);
+}
+
+.scheme-card-check {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 12px;
+  color: var(--el-color-primary);
+  font-weight: 600;
+}
+
+.scheme-card :deep(.el-card__body) {
+  padding: 14px 16px 12px;
+  padding-right: 72px;
 }
 
 .scheme-card-name {
@@ -2188,6 +2241,16 @@ defineExpose({ reload: loadSnapshot })
 .section-hint {
   font-size: 13px;
   color: var(--el-text-color-secondary);
+}
+
+.current-scheme-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
 }
 
 .bo-capability-hint {

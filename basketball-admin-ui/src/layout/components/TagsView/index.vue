@@ -137,6 +137,9 @@ function handleKeyDown(event: KeyboardEvent): void {
 }
 
 function isActive(r: any): boolean {
+  if (r.meta?.workspaceTag && route.meta?.workspaceTag && r.meta.workspaceTag === route.meta.workspaceTag) {
+    return true
+  }
   return r.path === route.path
 }
 

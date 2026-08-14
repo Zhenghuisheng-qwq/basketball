@@ -26,7 +26,7 @@
       <div v-loading="wizardLoading" class="dialog-content">
         <!-- Step 1: 赛季基础信息 -->
         <div v-show="currentStep === 0" class="form-main">
-          <el-form ref="seasonFormRef" :model="seasonForm" :rules="seasonRules" label-width="120px" class="wizard-form">
+          <el-form ref="seasonFormRef" :model="seasonForm" :rules="seasonRules" label-width="120px" class="wizard-form event-basic-form">
           <el-form-item label="赛事系列" prop="seriesId">
             <el-select v-model="seasonForm.seriesId" style="width: 100%" :disabled="!!seasonForm.id" @change="() => applySeasonAutoDefaults()">
               <el-option v-for="item in seriesList" :key="item.id" :label="v4SeriesDisplayLabel(item.seriesName, item.seriesCode)" :value="item.id" />
@@ -397,9 +397,15 @@ const props = defineProps<{
   seasonId?: number
 }>()
 
+export type PublishWizardSuccessPayload = {
+  seasonId?: number
+  divisionIds: number[]
+  finished?: boolean
+}
+
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  success: []
+  success: [payload?: PublishWizardSuccessPayload]
 }>()
 
 const { proxy } = getCurrentInstance()!
@@ -973,6 +979,14 @@ async function initWizard() {
   }
 }
 
+function notifyWizardSuccess(finished = false) {
+  emit('success', {
+    seasonId: seasonForm.id,
+    divisionIds: divisionDrafts.value.map((d) => d.id).filter((id): id is number => id != null),
+    finished
+  })
+}
+
 function buildSeasonPayload(): BasketSeasonCreateReq {
   return {
     seriesId: seasonForm.seriesId,
@@ -1110,7 +1124,7 @@ async function handleSaveDraft() {
       }
     }
     proxy!.$modal.msgSuccess('草稿已保存')
-    emit('success')
+    notifyWizardSuccess(false)
   } catch (e: any) {
     proxy!.$modal.msgError(e?.msg || e?.message || '保存失败')
   } finally {
@@ -1221,7 +1235,7 @@ async function handlePublishSeason() {
     proxy!.$modal.msgSuccess('赛季已发布（未开放任何赛区报名）')
     dirty.value = false
     visibleProxy.value = false
-    emit('success')
+    notifyWizardSuccess(true)
   } catch (e: any) {
     proxy!.$modal.msgError(e?.msg || e?.message || '发布失败')
   } finally {
@@ -1257,7 +1271,7 @@ async function handlePublishAndOpen() {
     proxy!.$modal.msgSuccess(`赛季已发布，${targets.length} 个赛区已开放报名`)
     dirty.value = false
     visibleProxy.value = false
-    emit('success')
+    notifyWizardSuccess(true)
   } catch (e: any) {
     proxy!.$modal.msgError(e?.msg || e?.message || '发布失败')
   } finally {
@@ -1379,6 +1393,23 @@ async function handleRulesTabChange() {
 
 .wizard-form :deep(.el-form-item) {
   margin-bottom: 18px;
+}
+
+.event-basic-form :deep(.el-input-number .el-input__inner) {
+  text-align: left;
+}
+
+.event-basic-form :deep(.el-input-number .el-input__wrapper) {
+  padding-left: 11px;
+}
+
+.event-basic-form :deep(.el-range-input) {
+  text-align: left;
+}
+
+.event-basic-form :deep(.el-range-separator) {
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .image-upload-row {

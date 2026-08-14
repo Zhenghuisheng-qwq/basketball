@@ -123,6 +123,10 @@ class StandardFormatTemplateR4Test {
         assertEquals("KNOCKOUT", def.getStages().get(1).getStageCode());
         assertEquals(CompetitionFormatEnum.SINGLE_ELIMINATION.getCode(), def.getStages().get(1).getCompetitionFormat());
         assertEquals(AdvancementTypeEnum.GROUP_TOP_N.getCode(), def.getStages().get(0).getAdvancementType());
+        assertEquals(5, def.getStages().get(1).getSemifinalBestOf());
+        assertEquals(5, def.getStages().get(1).getFinalBestOf());
+        assertTrue(def.getOptions().stream().anyMatch(o -> "semifinalBestOf".equals(o.getKey())));
+        assertTrue(def.getOptions().stream().anyMatch(o -> "finalBestOf".equals(o.getKey())));
     }
 
     @Test
@@ -157,6 +161,10 @@ class StandardFormatTemplateR4Test {
         assertTrue(def.getStages().stream().noneMatch(s ->
                 s.getStageCode().contains("FORMATION") || "FORMATION".equals(s.getStageType())));
         assertTrue(def.getFormationNote() != null && !def.getFormationNote().isEmpty());
+        assertEquals(5, def.getStages().get(0).getSemifinalBestOf());
+        assertEquals(5, def.getStages().get(0).getFinalBestOf());
+        assertTrue(def.getOptions().stream().anyMatch(o -> "semifinalBestOf".equals(o.getKey())));
+        assertTrue(def.getOptions().stream().anyMatch(o -> "finalBestOf".equals(o.getKey())));
     }
 
     @Test
@@ -209,9 +217,47 @@ class StandardFormatTemplateR4Test {
         assertEquals(RegistrationModeEnum.PERSONAL.getCode(),
                 league.build(context(RegistrationModeEnum.PERSONAL.getCode())).getRegistrationMode());
         assertEquals(RegistrationModeEnum.PERSONAL.getCode(),
+                arena.build(context(RegistrationModeEnum.PERSONAL.getCode())).getRegistrationMode());
+        assertEquals(RegistrationModeEnum.PERSONAL.getCode(),
                 cup.build(context(RegistrationModeEnum.PERSONAL.getCode())).getRegistrationMode());
         assertEquals(RegistrationModeEnum.TEAM.getCode(),
                 open.build(context(RegistrationModeEnum.TEAM.getCode())).getRegistrationMode());
+    }
+
+    @Test
+    void test23_publicCatalogReturnsAllFourForAnySeries() {
+        for (String seriesCode : List.of("LEAGUE", "ARENA", "CUP", "OPEN")) {
+            var codes = factory.catalog(seriesCode).stream()
+                    .map(StandardTemplateDefinition::getTemplateCode)
+                    .collect(java.util.stream.Collectors.toSet());
+            assertEquals(4, codes.size());
+            assertTrue(codes.contains(StandardTemplateCodes.LEAGUE_STANDARD_V1));
+            assertTrue(codes.contains(StandardTemplateCodes.ARENA_STANDARD_V1));
+            assertTrue(codes.contains(StandardTemplateCodes.CUP_STANDARD_V1));
+            assertTrue(codes.contains(StandardTemplateCodes.OPEN_STANDARD_V1));
+        }
+    }
+
+    @Test
+    void test24_crossSeriesStandardTemplatesResolvable() {
+        assertEquals(StandardTemplateCodes.ARENA_STANDARD_V1,
+                factory.builderForTemplateCode(StandardTemplateCodes.ARENA_STANDARD_V1).templateCode());
+        assertEquals(StandardTemplateCodes.CUP_STANDARD_V1,
+                factory.builderForTemplateCode(StandardTemplateCodes.CUP_STANDARD_V1).templateCode());
+        assertEquals(StandardTemplateCodes.OPEN_STANDARD_V1,
+                factory.builderForTemplateCode(StandardTemplateCodes.OPEN_STANDARD_V1).templateCode());
+        assertEquals(StandardTemplateCodes.LEAGUE_STANDARD_V1,
+                factory.builderForTemplateCode(StandardTemplateCodes.LEAGUE_STANDARD_V1).templateCode());
+    }
+
+    @Test
+    void test25_applyRequestDoesNotCarrySeriesIdentity() {
+        var fields = java.util.Arrays.stream(com.zhs.basket.dto.v4.StandardTemplateApplyReq.class.getDeclaredFields())
+                .map(java.lang.reflect.Field::getName)
+                .collect(java.util.stream.Collectors.toSet());
+        assertFalse(fields.contains("seriesId"));
+        assertFalse(fields.contains("seriesCode"));
+        assertFalse(fields.contains("seriesType"));
     }
 
     @Test

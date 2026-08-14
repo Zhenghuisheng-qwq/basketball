@@ -105,7 +105,11 @@ public class CupStandardTemplateBuilder implements StandardFormatTemplateBuilder
                 StandardTemplateOptionDefinition.select("regularBestOf", "\u5c0f\u7ec4\u8d5b BO",
                         List.of("1", "3", "5", "7"), "1"),
                 StandardTemplateOptionDefinition.select("knockoutBestOf", "\u6dd8\u6c70\u8d5b Early BO",
-                        List.of("1", "3", "5", "7"), "3")
+                        List.of("1", "3", "5", "7"), "3"),
+                StandardTemplateOptionDefinition.select("semifinalBestOf", "\u534a\u51b3\u8d5b BO",
+                        List.of("1", "3", "5", "7"), "5"),
+                StandardTemplateOptionDefinition.select("finalBestOf", "\u51b3\u8d5b BO",
+                        List.of("1", "3", "5", "7"), "5")
         ));
         return definition;
     }

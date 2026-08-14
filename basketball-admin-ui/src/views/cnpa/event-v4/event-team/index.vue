@@ -25,7 +25,12 @@
           <el-table-column label="平台赛区" prop="divisionName" min-width="120" />
           <el-table-column label="平台" prop="platformCode" width="80" />
           <el-table-column label="正式参赛队（快照）" prop="teamNameSnapshot" min-width="140" />
-          <el-table-column label="来源赛事球队" prop="sourceTeamId" width="120" />
+          <el-table-column label="来源" width="130">
+            <template #default="scope">
+              <el-tag v-if="scope.row.sourceTeamId" size="small">长期球队 #{{ scope.row.sourceTeamId }}</el-tag>
+              <el-tag v-else type="warning" size="small">临时参赛队</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="队长" prop="captainPlayerName" min-width="100" />
           <el-table-column label="编号" prop="eventTeamNo" width="120" />
           <el-table-column label="状态" prop="eventTeamStatus" width="100" align="center">
@@ -33,8 +38,9 @@
               <el-tag size="small" class="nowrap-tag">{{ scope.row.eventTeamStatus === 'ACTIVE' ? '有效' : (scope.row.eventTeamStatus === 'INACTIVE' ? '无效' : scope.row.eventTeamStatus) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="100">
+          <el-table-column label="操作" width="140">
             <template #default="scope">
+              <el-button link type="primary" @click="openTeamDetail(scope.row)">详情</el-button>
               <el-button link type="primary" @click="viewPlayers(scope.row)">球员</el-button>
             </template>
           </el-table-column>
@@ -227,12 +233,44 @@
         <el-button type="primary" @click="submitAssignTeam">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-drawer v-model="teamDetailOpen" title="参赛队伍详情" size="720px" append-to-body>
+      <template v-if="teamDetail">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="参赛队 ID">{{ teamDetail.id }}</el-descriptions-item>
+          <el-descriptions-item label="编号">{{ teamDetail.eventTeamNo || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="队名">{{ teamDetail.teamNameSnapshot }}</el-descriptions-item>
+          <el-descriptions-item label="队长">{{ teamDetail.captainPlayerName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="赛季">{{ teamDetail.seasonTitle }}</el-descriptions-item>
+          <el-descriptions-item label="赛区">{{ teamDetail.divisionName }}（{{ teamDetail.platformCode }}）</el-descriptions-item>
+          <el-descriptions-item label="来源">
+            <el-tag v-if="teamDetail.sourceTeamId" size="small">长期球队 #{{ teamDetail.sourceTeamId }}</el-tag>
+            <el-tag v-else type="warning" size="small">临时参赛队（无 basket_team）</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="报名 ID">{{ teamDetail.registrationId || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="状态">{{ teamDetail.eventTeamStatus === 'ACTIVE' ? '有效' : teamDetail.eventTeamStatus }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ parseTime(teamDetail.createTime) }}</el-descriptions-item>
+        </el-descriptions>
+        <el-divider content-position="left">本届阵容</el-divider>
+        <el-table v-loading="teamDetailPlayerLoading" :data="teamDetailPlayers" size="small" border>
+          <el-table-column label="球员" prop="playerNameSnapshot" />
+          <el-table-column label="Game ID" prop="gameIdSnapshot" />
+          <el-table-column label="位置" prop="position" width="80" />
+          <el-table-column label="队长" width="70">
+            <template #default="scope">{{ scope.row.isCaptain === 1 ? '是' : '否' }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="80">
+            <template #default="scope">{{ scope.row.eventPlayerStatus === 'ACTIVE' ? '有效' : scope.row.eventPlayerStatus }}</template>
+          </el-table-column>
+        </el-table>
+      </template>
+    </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts" name="CnpaEventV4EventTeam">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { listV4EventPlayer, listV4EventTeam, type BasketEventPlayerQuery, type BasketEventTeamListVo, type BasketEventTeamQuery } from '@/api/cnpa/event-v4/event-team'
+import { getV4EventTeam, listV4EventPlayer, listV4EventTeam, type BasketEventPlayerListVo, type BasketEventPlayerQuery, type BasketEventTeamListVo, type BasketEventTeamQuery } from '@/api/cnpa/event-v4/event-team'
 import {
   assignV4DivisionGroupTeam,
   cancelV4DivisionGroupingBatch,
@@ -369,6 +407,26 @@ function viewPlayers(row: any) {
   playerQuery.divisionId = row.divisionId
   playerQuery.pageNum = 1
   loadPlayers()
+}
+
+const teamDetailOpen = ref(false)
+const teamDetail = ref<BasketEventTeamListVo>()
+const teamDetailPlayers = ref<BasketEventPlayerListVo[]>([])
+const teamDetailPlayerLoading = ref(false)
+
+function openTeamDetail(row: BasketEventTeamListVo) {
+  if (!row.id) return
+  teamDetailOpen.value = true
+  teamDetail.value = row
+  teamDetailPlayers.value = []
+  teamDetailPlayerLoading.value = true
+  getV4EventTeam(row.id).then(res => {
+    if (res.data) teamDetail.value = res.data
+  }).finally(() => {
+    listV4EventPlayer({ eventTeamId: row.id, pageNum: 1, pageSize: 100 }).then(res => {
+      teamDetailPlayers.value = res.rows || []
+    }).finally(() => { teamDetailPlayerLoading.value = false })
+  })
 }
 
 async function onGroupingSeasonChange(seasonId?: number) {

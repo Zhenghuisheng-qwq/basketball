@@ -8,7 +8,7 @@
         v-if="blocked"
         :title="blocked"
         detail="请先完成赛事规则发布后再整理参赛名单。"
-        action-text="去发布赛事规则"
+        action-text="去配置赛事规则"
         @action="goPublishRule"
       />
       <template v-else>
@@ -129,8 +129,9 @@
             </template>
           </el-table-column>
           <el-table-column label="候补顺序" prop="candidateOrder" width="90" align="center" />
-          <el-table-column label="操作" width="280" fixed="right">
+          <el-table-column label="操作" width="340" fixed="right">
             <template #default="scope">
+              <el-button link type="primary" v-if="scope.row.registrationId" v-hasPermi="['basket:v4RegistrationAudit:query']" @click="openDetail(scope.row)">详情</el-button>
               <template v-if="rosterWorkspace?.canEdit && scope.row.auditStatus === 'APPROVED'">
                 <el-button link type="success" v-hasPermi="['basket:v4RegistrationAudit:approve']" @click="handleAssign(scope.row, 'FORMAL')">设为正式</el-button>
                 <el-button link type="warning" v-hasPermi="['basket:v4RegistrationAudit:approve']" @click="handleAssign(scope.row, 'CANDIDATE')">设为候补</el-button>

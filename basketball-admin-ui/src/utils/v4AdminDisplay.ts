@@ -174,7 +174,8 @@ const GROUPING_MODE_LABELS: Record<string, string> = {
   NONE: '无分组',
   OFFLINE_RANDOM_RESULT: '线下抽签结果',
   MANUAL: '人工分组',
-  SEEDED: '种子分组'
+  SEEDED: '种子分组',
+  POT_RANDOM: '分档随机'
 }
 
 const ORGANIZATION_MODE_LABELS: Record<string, string> = {
@@ -2432,3 +2433,259 @@ export const V4_SUBMISSION_STATUS_FILTER_OPTIONS = [
   { label: '已驳回', value: 'REJECTED' },
   { label: '已被新版本替代', value: 'SUPERSEDED' }
 ] as const
+
+/** 标准模板产品展示（仅 UI，不参与 Apply Payload） */
+export const V4_STANDARD_TEMPLATE_CODES = [
+  'LEAGUE_STANDARD_V1',
+  'ARENA_STANDARD_V1',
+  'CUP_STANDARD_V1',
+  'OPEN_STANDARD_V1'
+] as const
+
+export interface V4StandardTemplateCardMeta {
+  templateCode: string
+  title: string
+  flow: string
+  tags: string[]
+  paramTitle: string
+}
+
+const STANDARD_TEMPLATE_CARD_META: Record<string, V4StandardTemplateCardMeta> = {
+  LEAGUE_STANDARD_V1: {
+    templateCode: 'LEAGUE_STANDARD_V1',
+    title: '联赛 League',
+    flow: '循环赛 → 季后赛',
+    tags: ['默认：球队报名', 'Top N', '高低位对阵'],
+    paramTitle: '联赛参数配置'
+  },
+  ARENA_STANDARD_V1: {
+    templateCode: 'ARENA_STANDARD_V1',
+    title: '竞技场 Arena',
+    flow: '单败淘汰',
+    tags: ['默认：球队报名', '种子 / 抽签', 'BYE 轮空'],
+    paramTitle: '竞技场参数配置'
+  },
+  CUP_STANDARD_V1: {
+    templateCode: 'CUP_STANDARD_V1',
+    title: '杯赛 Cup',
+    flow: '小组循环 → 淘汰赛',
+    tags: ['默认：球队报名', '小组晋级', '交叉站位'],
+    paramTitle: '杯赛参数配置'
+  },
+  OPEN_STANDARD_V1: {
+    templateCode: 'OPEN_STANDARD_V1',
+    title: '公开赛 Open',
+    flow: '单败淘汰',
+    tags: ['默认：个人报名', '赛前临时组队', '单败淘汰'],
+    paramTitle: '公开赛参数配置'
+  }
+}
+
+const STANDARD_TEMPLATE_OPTION_LABELS: Record<string, string> = {
+  registrationMode: '报名方式',
+  roundRobinCycles: '循环次数',
+  playoffSlots: '季后赛名额',
+  regularBestOf: '常规赛 BO',
+  knockoutBestOf: '淘汰赛前轮 BO',
+  semifinalBestOf: '半决赛 BO',
+  finalBestOf: '总决赛 BO',
+  seedRule: '种子规则',
+  drawRule: '抽签规则',
+  byeRule: '轮空规则',
+  groupCount: '小组数量',
+  groupCycles: '循环次数',
+  advancePerGroup: '每组晋级数',
+  groupingMode: '分组规则',
+  eliminationPlacement: '交叉站位规则'
+}
+
+const SEED_RULE_LABELS: Record<string, string> = {
+  ADMIN_SEED: '运营指定种子',
+  ADMIN: '运营指定种子',
+  RANDOM: '随机',
+  EXTERNAL_RANKING: '外部排名',
+  NONE: '无种子'
+}
+
+const DRAW_RULE_LABELS: Record<string, string> = {
+  RANDOM_CONFIRM: '随机抽签确认',
+  MANUAL_SLOT: '手工签位'
+}
+
+const BYE_RULE_LABELS: Record<string, string> = {
+  SEED_PRIORITY: '种子优先轮空',
+  RANDOM: '随机轮空',
+  MANUAL: '人工指定轮空'
+}
+
+const PLACEMENT_RULE_LABELS: Record<string, string> = {
+  GROUP_CROSS: '小组交叉站位',
+  MANUAL: '人工落位',
+  HIGH_VS_LOW: '高排名对低排名'
+}
+
+const TEMPLATE_TYPE_LABELS: Record<string, string> = {
+  STANDARD: '标准模板',
+  CUSTOM: '自定义赛制'
+}
+
+const STANDARD_OPTION_GROUPS: Record<string, { title: string; keys: string[] }[]> = {
+  LEAGUE_STANDARD_V1: [
+    { title: '基础设置', keys: ['registrationMode', 'roundRobinCycles', 'playoffSlots'] },
+    { title: '比赛局制', keys: ['regularBestOf', 'knockoutBestOf', 'semifinalBestOf', 'finalBestOf'] }
+  ],
+  ARENA_STANDARD_V1: [
+    { title: '基础设置', keys: ['registrationMode'] },
+    { title: '抽签规则', keys: ['seedRule', 'drawRule', 'byeRule'] },
+    { title: '比赛局制', keys: ['knockoutBestOf', 'semifinalBestOf', 'finalBestOf'] }
+  ],
+  CUP_STANDARD_V1: [
+    { title: '基础设置', keys: ['registrationMode'] },
+    { title: '小组赛', keys: ['groupCount', 'groupCycles', 'advancePerGroup', 'groupingMode', 'regularBestOf'] },
+    { title: '淘汰赛', keys: ['eliminationPlacement', 'knockoutBestOf', 'semifinalBestOf', 'finalBestOf'] }
+  ],
+  OPEN_STANDARD_V1: [
+    { title: '基础设置', keys: ['registrationMode'] },
+    { title: '抽签规则', keys: ['seedRule', 'drawRule', 'byeRule'] },
+    { title: '淘汰赛', keys: ['knockoutBestOf', 'semifinalBestOf', 'finalBestOf'] }
+  ]
+}
+
+export function v4IsStandardTemplateCode(code?: string | null): boolean {
+  return !!code && (V4_STANDARD_TEMPLATE_CODES as readonly string[]).includes(code)
+}
+
+export function v4TemplateTypeLabel(type?: string | null): string {
+  return lookup(TEMPLATE_TYPE_LABELS, type, type || '-')
+}
+
+export function v4StandardTemplateCardMeta(templateCode?: string | null): V4StandardTemplateCardMeta {
+  const code = templateCode || ''
+  return STANDARD_TEMPLATE_CARD_META[code] || {
+    templateCode: code,
+    title: code || '标准模板',
+    flow: '',
+    tags: [],
+    paramTitle: '模板参数配置'
+  }
+}
+
+export function v4StandardTemplateProductName(templateCode?: string | null): string {
+  return v4StandardTemplateCardMeta(templateCode).title
+}
+
+export function v4StandardTemplateOptionLabel(key?: string | null, fallback?: string | null, templateCode?: string | null): string {
+  if (key === 'regularBestOf' && templateCode === 'CUP_STANDARD_V1') return '小组赛 BO'
+  if (key && STANDARD_TEMPLATE_OPTION_LABELS[key]) return STANDARD_TEMPLATE_OPTION_LABELS[key]
+  return fallback || key || '-'
+}
+
+const STANDARD_BO_VALUES = ['1', '3', '5', '7']
+
+export function v4StandardTemplateEnsureOptions(
+  template?: { templateCode?: string; options?: { key?: string; label?: string; inputType?: string; allowedValues?: string[]; defaultValue?: string; minValue?: number; maxValue?: number }[] } | null
+) {
+  const options = [...(template?.options || [])]
+  const keys = new Set(options.map((item) => item.key).filter(Boolean))
+  const addBo = (key: string, label: string, defaultValue: string) => {
+    if (keys.has(key)) return
+    options.push({
+      key,
+      label,
+      inputType: 'SELECT',
+      allowedValues: STANDARD_BO_VALUES,
+      defaultValue
+    })
+    keys.add(key)
+  }
+  addBo('semifinalBestOf', '半决赛 BO', '5')
+  addBo('finalBestOf', '总决赛 BO', '5')
+  return options
+}
+
+export function v4StandardTemplateOptionValueLabel(key?: string | null, value?: string | number | null): string {
+  const raw = value == null ? '' : String(value)
+  if (!raw) return '-'
+  if (key === 'registrationMode') return v4RegistrationModeLabel(raw)
+  if (key === 'seedRule') return lookup(SEED_RULE_LABELS, raw, raw)
+  if (key === 'drawRule') return lookup(DRAW_RULE_LABELS, raw, raw)
+  if (key === 'byeRule') return lookup(BYE_RULE_LABELS, raw, raw)
+  if (key === 'groupingMode') return v4GroupingModeLabel(raw)
+  if (key === 'eliminationPlacement') return lookup(PLACEMENT_RULE_LABELS, raw, raw)
+  if (key && /BestOf$/i.test(key)) return `BO${raw}`
+  return raw
+}
+
+export function v4StandardTemplateOptionGroups(templateCode?: string | null) {
+  return STANDARD_OPTION_GROUPS[templateCode || ''] || [{ title: '模板参数', keys: [] }]
+}
+
+function readTemplateOptionDefault(options: { key?: string; defaultValue?: string }[] | undefined, key: string) {
+  const found = (options || []).find((item) => item.key === key)
+  return found?.defaultValue
+}
+
+export function v4StandardTemplateBoSummary(
+  templateCode?: string | null,
+  options?: { key?: string; defaultValue?: string }[],
+  form?: Record<string, string | number | undefined>
+): string {
+  const pick = (key: string, fallback: string) => {
+    const fromForm = form?.[key]
+    if (fromForm != null && fromForm !== '') return String(fromForm)
+    return readTemplateOptionDefault(options, key) || fallback
+  }
+  if (templateCode === 'LEAGUE_STANDARD_V1') {
+    return `常规赛 BO${pick('regularBestOf', '1')} · 淘汰赛 BO${pick('knockoutBestOf', '3')}/${pick('semifinalBestOf', '5')}/${pick('finalBestOf', '5')}`
+  }
+  if (templateCode === 'CUP_STANDARD_V1') {
+    return `小组 BO${pick('regularBestOf', '1')} · 淘汰赛 BO${pick('knockoutBestOf', '3')}/${pick('semifinalBestOf', '5')}/${pick('finalBestOf', '5')}`
+  }
+  return `前轮 BO${pick('knockoutBestOf', '3')} · 半决赛 BO${pick('semifinalBestOf', '5')} · 总决赛 BO${pick('finalBestOf', '5')}`
+}
+
+export function v4StandardTemplatePreviewSteps(
+  templateCode?: string | null,
+  form?: Record<string, string | number | undefined>
+): string[] {
+  if (templateCode === 'LEAGUE_STANDARD_V1') {
+    const topN = form?.playoffSlots || 8
+    return ['常规赛', '积分排名', `Top ${topN}`, '单败淘汰', '冠军']
+  }
+  if (templateCode === 'ARENA_STANDARD_V1') {
+    return ['参赛名单', '抽签 / BYE', '单败淘汰', '冠军']
+  }
+  if (templateCode === 'CUP_STANDARD_V1') {
+    const n = form?.advancePerGroup || 2
+    return ['小组循环', '小组排名', `每组 Top${n}`, '交叉站位', '单败淘汰', '冠军']
+  }
+  if (templateCode === 'OPEN_STANDARD_V1' && String(form?.registrationMode || '') === 'TEAM') {
+    return ['球队报名', '最终参赛名单', '单败淘汰', '冠军']
+  }
+  if (String(form?.registrationMode || '') === 'PERSONAL') {
+    return ['个人报名', '审核', 'Formation 临时组队', '临时参赛队', '单败淘汰', '冠军']
+  }
+  return ['参赛名单', '单败淘汰', '冠军']
+}
+
+export function v4CurrentFormatSchemeSummary(input: {
+  sourceTemplateType?: string | null
+  sourceTemplateCode?: string | null
+  registrationMode?: string | null
+  gameMode?: string | null
+  schemeName?: string | null
+}): string {
+  const type = (input.sourceTemplateType || '').toUpperCase()
+  const code = input.sourceTemplateCode || ''
+  const reg = input.registrationMode ? v4RegistrationModeLabel(input.registrationMode) : ''
+  const mode = input.gameMode ? v4GameModeLabel(input.gameMode) : ''
+  let head = '自定义赛制'
+  if (v4IsStandardTemplateCode(code) || type === 'STANDARD') {
+    head = `标准模板 · ${v4StandardTemplateProductName(code)}`
+  } else if (input.schemeName) {
+    head = `快速创建 · ${input.schemeName}`
+  } else if (type === 'CUSTOM' || !code) {
+    head = '自定义赛制'
+  }
+  return ['当前已应用方案：' + head, reg, mode].filter(Boolean).join(' · ')
+}

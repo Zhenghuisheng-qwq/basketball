@@ -91,7 +91,11 @@ public class OpenStandardTemplateBuilder implements StandardFormatTemplateBuilde
                 StandardTemplateOptionDefinition.select("byeRule", "BYE \u89c4\u5219",
                         List.of("RANDOM", "SEED_PRIORITY", "MANUAL"), "RANDOM"),
                 StandardTemplateOptionDefinition.select("knockoutBestOf", "\u6dd8\u6c70\u8d5b Early BO",
-                        List.of("1", "3", "5", "7"), "3")
+                        List.of("1", "3", "5", "7"), "3"),
+                StandardTemplateOptionDefinition.select("semifinalBestOf", "\u534a\u51b3\u8d5b BO",
+                        List.of("1", "3", "5", "7"), "5"),
+                StandardTemplateOptionDefinition.select("finalBestOf", "\u51b3\u8d5b BO",
+                        List.of("1", "3", "5", "7"), "5")
         ));
         return definition;
     }

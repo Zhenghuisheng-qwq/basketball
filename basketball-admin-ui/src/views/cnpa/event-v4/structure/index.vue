@@ -1,14 +1,15 @@
 <template>
   <div class="app-container">
-    <el-alert title="赛程结构生成：只处理谁和谁打，不在此页填写日期时间" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="赛程结构：只处理谁和谁打，不在此页填写日期时间" type="info" :closable="false" show-icon class="mb8" />
     <DivisionEventSelector v-if="!divisionId" entry="structure" @select="row => selectDivision(row.divisionId)" />
     <template v-else>
       <DivisionContextHeader :overview="overview" show-switch @switch="clearDivision" />
+      <DivisionWorkspaceNav />
       <WorkflowBlockedState
         v-if="blocked"
         :title="blocked"
         detail="请先完成赛事规则发布后再生成赛程结构。"
-        action-text="去发布赛事规则"
+        action-text="去配置赛事规则"
         @action="goPublishRule"
       />
       <div v-else>
@@ -69,6 +70,7 @@
                 @click="openManualAdvance(scope.row)"
               >直接晋级</el-button>
               <el-button link type="success" v-if="scope.row.executionStatus === 'RESULT_PENDING_CONFIRM'" @click="handleQualConfirm(scope.row)">确认晋级</el-button>
+              <el-button link type="warning" v-if="scope.row.executionStatus === 'COMPLETED'" @click="handleQualCancel(scope.row)">撤销晋级确认</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -249,11 +251,12 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import DivisionEventSelector from '../components/DivisionEventSelector.vue'
 import DivisionContextHeader from '../components/DivisionContextHeader.vue'
+import DivisionWorkspaceNav from '../components/DivisionWorkspaceNav.vue'
 import WorkflowBlockedState from '../components/WorkflowBlockedState.vue'
 import DoubleEliminationDemoPanel from '../components/DoubleEliminationDemoPanel.vue'
 import { useDivisionWorkspace } from '../composables/useDivisionWorkspace'
 import {
-  cancelV4StageDraftSchedule, checkV4StageCompletion, confirmV4StageQualification,
+  cancelV4StageDraftSchedule, cancelV4StageQualificationConfirm, checkV4StageCompletion, confirmV4StageQualification,
   confirmV4Draw, generateV4Draw, generateV4GroupCross, generateV4StageSchedule, getV4PairingExecution,
   listV4StageExecution, listV4StageStandings, listV4StageTeams, previewV4StageQualification,
   previewV4StageSchedule, redrawV4Draw, resolveV4Placeholders, saveV4AdminSeeds, saveV4ExternalRanking,
@@ -435,6 +438,15 @@ function handleQualConfirm(row: BasketDivisionStageExecutionVo) {
   ElMessageBox.confirm('确认晋级结果？将初始化下一阶段参赛队伍', '提示').then(() => {
     confirmV4StageQualification(row.stageId).then(() => {
       ElMessage.success('晋级已确认')
+      loadStageList()
+    })
+  })
+}
+
+function handleQualCancel(row: BasketDivisionStageExecutionVo) {
+  ElMessageBox.confirm('撤销晋级确认？下一阶段若尚未生成赛程，将回退到待确认。', '提示').then(() => {
+    cancelV4StageQualificationConfirm(row.stageId).then(() => {
+      ElMessage.success('已撤销晋级确认')
       loadStageList()
     })
   })

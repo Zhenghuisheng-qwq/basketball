@@ -1,22 +1,27 @@
 <template>
   <div>
-    <el-form :inline="true" class="mb8" @submit.prevent>
-      <el-form-item label="赛事系列">
-        <el-input v-model="query.seriesCode" clearable placeholder="LEAGUE / ARENA / CUP / OPEN" style="width: 220px" @keyup.enter="load" />
-      </el-form-item>
-      <el-form-item label="报名方式">
-        <el-select v-model="query.registrationMode" clearable placeholder="全部" style="width: 140px">
-          <el-option label="球队报名" value="TEAM" />
-          <el-option label="个人报名" value="PERSONAL" />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="Search" @click="load">搜索</el-button>
-        <el-button icon="Refresh" @click="reset">重置</el-button>
-      </el-form-item>
+    <el-form :inline="true" class="mb8 selector-toolbar" @submit.prevent>
+      <div class="selector-filters">
+        <el-form-item label="赛事系列">
+          <el-input v-model="query.seriesCode" clearable placeholder="LEAGUE / ARENA / CUP / OPEN" style="width: 260px" @keyup.enter="load" />
+        </el-form-item>
+        <el-form-item label="报名方式">
+          <el-select v-model="query.registrationMode" clearable placeholder="全部" style="width: 140px">
+            <el-option label="球队报名" value="TEAM" />
+            <el-option label="个人报名" value="PERSONAL" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" icon="Search" @click="load">搜索</el-button>
+          <el-button icon="Refresh" @click="reset">重置</el-button>
+        </el-form-item>
+      </div>
+      <div v-if="$slots.actions" class="selector-actions">
+        <slot name="actions" />
+      </div>
     </el-form>
     <el-table v-loading="loading" :data="rows" border highlight-current-row @row-click="onRow">
-      <el-table-column label="赛事系列" min-width="120">
+      <el-table-column label="赛事系列" min-width="140" show-overflow-tooltip>
         <template #default="scope">{{ scope.row.seriesName || scope.row.seriesCode || '-' }}</template>
       </el-table-column>
       <el-table-column label="赛季" prop="seasonTitle" min-width="140" />
@@ -30,7 +35,11 @@
       <el-table-column label="模式" width="70">
         <template #default="scope">{{ v4GameModeLabel(scope.row.gameMode) }}</template>
       </el-table-column>
-      <el-table-column label="平台" prop="platformCode" width="80" />
+      <el-table-column label="平台" width="100" show-overflow-tooltip>
+        <template #default="scope">
+          <span class="nowrap-cell">{{ scope.row.platformCode || '-' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="赛事规则" width="140">
         <template #default="scope">{{ scope.row.ruleStatusName || '-' }}</template>
       </el-table-column>
@@ -43,9 +52,18 @@
       <el-table-column label="排期/发布" min-width="130" show-overflow-tooltip>
         <template #default="scope">{{ scope.row.scheduleSummary || '-' }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="120" fixed="right">
+      <el-table-column label="操作" width="160" fixed="right">
         <template #default="scope">
           <el-button link type="primary" @click.stop="emit('select', scope.row)">进入</el-button>
+          <el-dropdown v-if="showMore" trigger="click" @command="(cmd: string) => emit('more', cmd, scope.row)">
+            <el-button link type="primary" @click.stop>更多</el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="edit-season" v-hasPermi="['basket:v4Season:edit']">编辑基础资料</el-dropdown-item>
+                <el-dropdown-item command="view-divisions" v-hasPermi="['basket:v4Division:query']">查看赛区</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </template>
       </el-table-column>
     </el-table>
@@ -59,8 +77,14 @@ import { ElMessage } from 'element-plus'
 import { listV4DivisionSelector, type DivisionSelectorItemVo, type DivisionWorkspaceEntry } from '@/api/cnpa/event-v4/overview'
 import { v4GameModeLabel, v4RegistrationModeLabel } from '@/utils/v4AdminDisplay'
 
-const props = defineProps<{ entry: DivisionWorkspaceEntry }>()
-const emit = defineEmits<{ select: [row: DivisionSelectorItemVo] }>()
+const props = defineProps<{
+  entry: DivisionWorkspaceEntry
+  showMore?: boolean
+}>()
+const emit = defineEmits<{
+  select: [row: DivisionSelectorItemVo]
+  more: [command: string, row: DivisionSelectorItemVo]
+}>()
 
 const loading = ref(false)
 const rows = ref<DivisionSelectorItemVo[]>([])
@@ -95,4 +119,29 @@ function onRow(row: DivisionSelectorItemVo) {
 }
 
 onMounted(load)
+
+defineExpose({ reload: load })
 </script>
+
+<style scoped>
+.nowrap-cell {
+  white-space: nowrap;
+}
+.selector-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.selector-filters,
+.selector-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 8px;
+}
+.selector-toolbar :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+</style>

@@ -77,8 +77,29 @@ function filterAsyncRouter(asyncRouterMap: any[], lastRouter = false, type = fal
       delete route['children']
       delete route['redirect']
     }
+    applyEventWorkspaceMeta(route)
     return true
   })
+}
+
+const WORKSPACE_HOME = '/event/event-v4-overview'
+const WORKSPACE_TITLES: Record<string, string> = {
+  'event-v4-overview': '赛事工作台',
+  'event-v4-publish': '赛事规则',
+  'event-v4-structure': '赛程结构',
+  'event-v4-schedule': '日期与时间',
+  'event-v4-publish-preview': '赛程发布'
+}
+
+function applyEventWorkspaceMeta(route: any) {
+  const leaf = String(route.path || '').split('/').filter(Boolean).pop() || ''
+  if (!(leaf in WORKSPACE_TITLES)) return
+  route.meta = route.meta || {}
+  route.meta.workspaceTag = 'event-workspace'
+  route.meta.title = WORKSPACE_TITLES[leaf]
+  if (leaf !== 'event-v4-overview') {
+    route.meta.activeMenu = WORKSPACE_HOME
+  }
 }
 
 function filterChildren(childrenMap: any[], lastRouter: any = false) {

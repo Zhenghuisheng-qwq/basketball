@@ -61,6 +61,19 @@ const useTagsViewStore = defineStore(
       },
 
       addVisitedView(view: any) {
+        const workspaceTag = view.meta?.workspaceTag
+        if (workspaceTag) {
+          const next = Object.assign({}, view, { title: '赛事工作台' })
+          const idx = this.visitedViews.findIndex((v: any) => v.meta?.workspaceTag === workspaceTag)
+          if (idx > -1) {
+            this.visitedViews.splice(idx, 1, next)
+            saveVisitedViews(this.visitedViews)
+            return
+          }
+          this.visitedViews.push(next)
+          saveVisitedViews(this.visitedViews)
+          return
+        }
         if (this.visitedViews.some((v: any) => v.path === view.path)) return
         this.visitedViews.push(
           Object.assign({}, view, {

@@ -1,14 +1,15 @@
 <template>
   <div class="app-container">
-    <el-alert title="赛程预览与发布：只检查并发布，不修改规则、名单或对阵" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="赛程发布：只检查并发布，不修改规则、名单或对阵" type="info" :closable="false" show-icon class="mb8" />
     <DivisionEventSelector v-if="!divisionId" entry="publish-preview" @select="row => selectDivision(row.divisionId)" />
     <template v-else>
       <DivisionContextHeader :overview="overview" show-switch @switch="clearDivision" />
+      <DivisionWorkspaceNav />
       <WorkflowBlockedState
         v-if="blocked"
         :title="blocked"
         detail="请先完成赛事规则发布后再进入发布中心。"
-        action-text="去发布赛事规则"
+        action-text="去配置赛事规则"
         @action="goPublishRule"
       />
       <div v-else v-loading="loading">
@@ -38,15 +39,19 @@
             <el-button type="danger" v-if="currentStage.publishStatus === 'PUBLISHED'" @click="openWithdraw">撤回发布</el-button>
           </div>
           <PublishValidationPanel :preview="preview" />
-          <el-table v-if="records.length" :data="records" border size="small" class="mt8">
-            <el-table-column label="操作" prop="actionType" width="120" />
-            <el-table-column label="Publish No" prop="publishNo" width="110" />
-            <el-table-column label="排期修订" prop="scheduleRevision" width="100" />
-            <el-table-column label="状态" prop="publishStatus" width="110" />
-            <el-table-column label="操作人" prop="operatorId" width="100" />
-            <el-table-column label="时间" prop="operationTime" min-width="160" />
-            <el-table-column label="原因" prop="reason" min-width="160" />
-          </el-table>
+          <div class="mt8">
+            <div class="records-title">发布记录</div>
+            <el-table :data="records" border size="small">
+              <el-table-column label="操作" prop="actionType" width="120" />
+              <el-table-column label="Publish No" prop="publishNo" width="110" />
+              <el-table-column label="排期修订" prop="scheduleRevision" width="100" />
+              <el-table-column label="状态" prop="publishStatus" width="110" />
+              <el-table-column label="操作人" prop="operatorId" width="100" />
+              <el-table-column label="时间" prop="operationTime" min-width="160" />
+              <el-table-column label="原因" prop="reason" min-width="160" />
+            </el-table>
+            <el-empty v-if="!records.length" description="尚无发布/撤回记录" :image-size="60" />
+          </div>
         </template>
       </div>
       <el-dialog v-model="withdrawVisible" title="撤回发布" width="480px">
@@ -70,6 +75,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import DivisionEventSelector from '../components/DivisionEventSelector.vue'
 import DivisionContextHeader from '../components/DivisionContextHeader.vue'
+import DivisionWorkspaceNav from '../components/DivisionWorkspaceNav.vue'
 import WorkflowBlockedState from '../components/WorkflowBlockedState.vue'
 import PublishValidationPanel from '../components/PublishValidationPanel.vue'
 import { useDivisionWorkspace } from '../composables/useDivisionWorkspace'
@@ -158,4 +164,10 @@ function goPublishRule() {
   router.push({ path: '/event/event-v4-publish', query: { divisionId: String(divisionId.value) } })
 }
 </script>
+
+<style scoped>
+.mb8 { margin-bottom: 8px; }
+.mt8 { margin-top: 8px; }
+.records-title { font-weight: 600; margin-bottom: 8px; }
+</style>
 

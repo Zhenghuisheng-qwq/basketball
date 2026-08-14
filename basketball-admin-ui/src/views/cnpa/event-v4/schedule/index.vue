@@ -4,11 +4,12 @@
     <DivisionEventSelector v-if="!divisionId" entry="schedule" @select="row => selectDivision(row.divisionId)" />
     <template v-else>
       <DivisionContextHeader :overview="overview" show-switch @switch="clearDivision" />
+      <DivisionWorkspaceNav />
       <WorkflowBlockedState
         v-if="blocked"
         :title="blocked"
         detail="请先完成赛事规则发布后再排期。"
-        action-text="去发布赛事规则"
+        action-text="去配置赛事规则"
         @action="goPublishRule"
       />
       <div v-else>
@@ -33,6 +34,7 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import DivisionEventSelector from '../components/DivisionEventSelector.vue'
 import DivisionContextHeader from '../components/DivisionContextHeader.vue'
+import DivisionWorkspaceNav from '../components/DivisionWorkspaceNav.vue'
 import WorkflowBlockedState from '../components/WorkflowBlockedState.vue'
 import StageScheduleBoard from './StageScheduleBoard.vue'
 import { useDivisionWorkspace } from '../composables/useDivisionWorkspace'
