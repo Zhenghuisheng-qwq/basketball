@@ -1,10 +1,21 @@
 <template>
   <div class="app-container">
-    <el-alert title="报名审核：球队审核通过后进入最终名单分配，锁定后才生成正式参赛快照；个人报名审核通过后进入 Formation，锁定临时队伍后才生成正式参赛快照" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="报名与参赛名单：审核通过不等于已经参赛。TEAM 需分配正式/候补后再锁定；PERSONAL 审核后进入 Formation 临时组队。" type="info" :closable="false" show-icon class="mb8" />
+    <DivisionEventSelector v-if="!divisionId" entry="roster" @select="row => selectDivision(row.divisionId)" />
+    <template v-else>
+      <DivisionContextHeader :overview="overview" show-switch @switch="clearDivision" />
+      <WorkflowBlockedState
+        v-if="blocked"
+        :title="blocked"
+        detail="请先完成赛事规则发布后再整理参赛名单。"
+        action-text="去发布赛事规则"
+        @action="goPublishRule"
+      />
+      <template v-else>
 
     <el-tabs v-model="activeTab" @tab-change="onTabChange">
       <!-- 球队报名 -->
-      <el-tab-pane label="球队报名" name="team">
+      <el-tab-pane v-if="workspaceMode !== 'PERSONAL'" label="球队报名" name="team">
         <el-form :model="queryParams" :inline="true" class="mb8">
           <el-form-item label="赛季">
             <el-select v-model="queryParams.seasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onSeasonChange">
@@ -60,7 +71,7 @@
       </el-tab-pane>
 
       <!-- 球队最终名单 -->
-      <el-tab-pane label="最终名单" name="roster">
+      <el-tab-pane v-if="workspaceMode !== 'PERSONAL'" label="最终名单" name="roster">
         <el-form :inline="true" class="mb8">
           <el-form-item label="赛季">
             <el-select v-model="rosterSeasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onRosterSeasonChange">
@@ -90,12 +101,19 @@
         <el-tabs v-if="rosterWorkspace" v-model="rosterInnerTab">
           <el-tab-pane label="全部审核合格" name="approved" />
           <el-tab-pane label="正式参赛" name="formal" />
-          <el-tab-pane label="候补" name="candidate" />
-          <el-tab-pane label="不参赛" name="excluded" />
+          <el-tab-pane name="candidate">
+            <template #label>
+              <el-tooltip content="当正式球队无法参赛时，候补球队可按顺序递补。不是候补球员或替补名单。" placement="top">
+                <span>候补球队</span>
+              </el-tooltip>
+            </template>
+          </el-tab-pane>
+          <el-tab-pane label="本届不参赛" name="excluded" />
           <el-tab-pane label="审核未通过" name="rejected" />
+          <el-tab-pane label="名单版本" name="versions" />
         </el-tabs>
 
-        <el-table v-loading="rosterLoading" :data="rosterTableRows" border>
+        <el-table v-if="rosterInnerTab !== 'versions'" v-loading="rosterLoading" :data="rosterTableRows" border>
           <el-table-column label="球队" prop="teamName" min-width="140" />
           <el-table-column label="报名时间" prop="submitTime" width="170">
             <template #default="scope">{{ parseTime(scope.row.submitTime) }}</template>
@@ -125,10 +143,29 @@
             </template>
           </el-table-column>
         </el-table>
+        <el-table v-if="rosterInnerTab === 'versions'" :data="overview?.roster?.versions || []" border>
+          <el-table-column label="版本" width="90">
+            <template #default="scope">V{{ scope.row.versionNo }}</template>
+          </el-table-column>
+          <el-table-column label="状态" min-width="140">
+            <template #default="scope">{{ scope.row.statusName }}</template>
+          </el-table-column>
+          <el-table-column label="正式" prop="formalCount" width="80" />
+          <el-table-column label="候补球队" prop="candidateCount" width="100" />
+          <el-table-column label="不参赛" prop="excludedCount" width="80" />
+          <el-table-column label="当前" width="80">
+            <template #default="scope">{{ scope.row.isCurrent === 1 ? '是' : '' }}</template>
+          </el-table-column>
+          <el-table-column label="锁定时间" prop="lockedTime" min-width="160" />
+          <el-table-column label="操作人" prop="lockedBy" width="100" />
+          <el-table-column label="操作" width="100">
+            <template #default="scope">
+              <el-button link type="primary" v-if="scope.row.rosterVersionId" @click="openRosterVersion(scope.row.rosterVersionId)">查看</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
       </el-tab-pane>
-
-      <!-- 个人报名 -->
-      <el-tab-pane label="个人报名" name="personal">
+      <el-tab-pane v-if="workspaceMode !== 'TEAM'" label="个人报名" name="personal">
         <el-form :model="personalQuery" :inline="true" class="mb8">
           <el-form-item label="赛季">
             <el-select v-model="personalQuery.seasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onPersonalSeasonChange">
@@ -184,7 +221,7 @@
       </el-tab-pane>
 
       <!-- 个人组队结果 -->
-      <el-tab-pane label="个人组队结果" name="formation">
+      <el-tab-pane v-if="workspaceMode !== 'TEAM'" label="Formation 临时组队" name="formation">
         <el-form :model="drawQuery" :inline="true" class="mb8">
           <el-form-item label="赛季">
             <el-select v-model="drawSeasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onDrawSeasonChange">
@@ -244,9 +281,15 @@
                 <template #header>
                   <div class="formation-team-head">
                     <strong>{{ team.temporaryTeamName }}</strong>
+                    <el-tag size="small" type="warning">临时参赛球队，仅用于本届赛事</el-tag>
                     <span>{{ team.memberCount || 0 }} 人</span>
                   </div>
-                  <div class="formation-captain">队长：{{ team.captainPlayerName || '-' }}</div>
+                  <div class="formation-captain">
+                    临时队长：{{ team.captainPlayerName || '-' }}
+                    <el-tooltip content="临时队长按该临时球队成员账号创建时间最早者自动确定，仅在本届赛事内生效。" placement="top">
+                      <span class="captain-tip">?</span>
+                    </el-tooltip>
+                  </div>
                   <el-button v-if="formationWorkspace.canAdjust" link type="primary" @click="handleRenameFormationTeam(team)">改名</el-button>
                 </template>
                 <div v-for="member in team.members || []" :key="member.personalRegistrationId" class="formation-person">
@@ -598,11 +641,29 @@
         <el-button type="primary" @click="submitPromote">确定递补</el-button>
       </template>
     </el-dialog>
+      </template>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts" name="CnpaEventV4RegistrationAudit">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, getCurrentInstance, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import DivisionEventSelector from '../components/DivisionEventSelector.vue'
+import DivisionContextHeader from '../components/DivisionContextHeader.vue'
+import WorkflowBlockedState from '../components/WorkflowBlockedState.vue'
+import { useDivisionWorkspace } from '../composables/useDivisionWorkspace'
+import {
+  assignV4TeamRoster,
+  autoAllocateV4TeamRoster,
+  getV4TeamRosterVersion,
+  getV4TeamRosterWorkspace,
+  lockV4TeamRoster,
+  moveV4TeamRosterCandidate,
+  promoteV4TeamRosterCandidate,
+  type TeamRosterItemVo,
+  type TeamRosterWorkspaceVo
+} from '@/api/cnpa/event-v4/team-roster'
 import {
   approveV4RegistrationAudit,
   getV4RegistrationAuditDetail,
@@ -649,16 +710,6 @@ import {
 } from '@/api/cnpa/event-v4/personal-draw'
 import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, listV4AdminTeamOptions, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
 import {
-  assignV4TeamRoster,
-  autoAllocateV4TeamRoster,
-  getV4TeamRosterWorkspace,
-  lockV4TeamRoster,
-  moveV4TeamRosterCandidate,
-  promoteV4TeamRosterCandidate,
-  type TeamRosterItemVo,
-  type TeamRosterWorkspaceVo
-} from '@/api/cnpa/event-v4/team-roster'
-import {
   V4_DRAW_BATCH_STATUS_FILTER_OPTIONS,
   V4_PERSONAL_REGISTRATION_STATUS_FILTER_OPTIONS,
   V4_REGISTRATION_STATUS_FILTER_OPTIONS,
@@ -677,7 +728,49 @@ import {
 import { parseTime } from '@/utils/ruoyi'
 
 const { proxy } = getCurrentInstance() as any
+const router = useRouter()
+const { divisionId, overview, blocked, selectDivision, clearDivision } = useDivisionWorkspace('roster')
+const workspaceMode = computed(() => overview.value?.context?.registrationMode || '')
 const activeTab = ref('team')
+
+watch([divisionId, workspaceMode], () => {
+  if (!divisionId.value) return
+  const seasonId = overview.value?.context?.seasonId
+  if (seasonId) {
+    queryParams.seasonId = seasonId
+    rosterSeasonId.value = seasonId
+    personalQuery.seasonId = seasonId
+    drawSeasonId.value = seasonId
+  }
+  queryParams.divisionId = divisionId.value
+  rosterDivisionId.value = divisionId.value
+  personalQuery.divisionId = divisionId.value
+  drawQuery.divisionId = divisionId.value
+  if (workspaceMode.value === 'PERSONAL' && (activeTab.value === 'team' || activeTab.value === 'roster')) {
+    activeTab.value = 'personal'
+  }
+  if (workspaceMode.value === 'TEAM' && (activeTab.value === 'personal' || activeTab.value === 'formation')) {
+    activeTab.value = 'team'
+  }
+  getList()
+  loadRosterWorkspace()
+  loadFormationWorkspace()
+})
+
+function goPublishRule() {
+  router.push({ path: '/event/event-v4-publish', query: { divisionId: String(divisionId.value) } })
+}
+
+function openRosterVersion(rosterVersionId: number) {
+  if (!divisionId.value) return
+  getV4TeamRosterVersion(divisionId.value, rosterVersionId).then(res => {
+    const data = res.data
+    proxy?.$alert(
+      `正式 ${data?.formalCount || 0} / 候补球队 ${data?.candidateCount || 0} / 不参赛 ${data?.excludedCount || 0}`,
+      `名单 V${data?.versionNo}`
+    )
+  })
+}
 
 // ---- 球队报名 ----
 const loading = ref(false)

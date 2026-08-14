@@ -15,6 +15,7 @@ import com.zhs.basket.service.v4.IStagePublishApplicationService;
 import com.zhs.basket.support.v4.stage.PlayoffBracketSupport;
 import com.zhs.basket.support.v4.ByeQualificationService;
 import com.zhs.basket.support.v4.BestOfCapabilityGate;
+import com.zhs.basket.support.v4.DoubleEliminationCapabilityGate;
 import com.zhs.basket.support.v4.MatchSeriesQualificationSyncService;
 import com.zhs.basket.support.v4.StageFormatSpecification;
 import com.zhs.basket.support.v4.V4FormatDisplaySupport;
@@ -256,6 +257,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             throw new ServiceException("Division 不存在");
         }
         BestOfCapabilityGate.assertCanGenerateSchedule(stage);
+        DoubleEliminationCapabilityGate.assertCanGenerateSchedule(stage);
         schedulePrerequisiteValidator.validateBeforeGenerateSchedule(division, stage, isFirstStage(stage));
 
         if (GroupRankPlacementSupport.usesGroupRankPlacement(stage, findPreviousStage(stage))) {
@@ -446,6 +448,9 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
 
         BasketDivisionStage nextStage = findNextStage(stage);
         if (nextStage != null) {
+            // GROUP_CROSS knockout may already be PUBLISHED with TBD placeholders.
+            // Natural resolution still materializes confirmed qualifiers onto stage_team
+            // without rebuilding structure or changing PublishNo.
             initializeStageTeams(nextStage.getId());
             nextStage = requireStage(nextStage.getId());
             if (StageExecutionStatusEnum.DRAFT.getCode().equals(nextStage.getExecutionStatus())
@@ -663,6 +668,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             case ROUND_ROBIN -> buildRoundRobinPreview(stage, nextStage, targetStageId, now);
             case SINGLE_ELIMINATION -> buildEliminationPreview(stage, nextStage, targetStageId, now);
             case MANUAL -> List.of();
+            case DOUBLE_ELIMINATION -> throw new ServiceException(DoubleEliminationCapabilityGate.RESERVED_MESSAGE);
         };
     }
 
@@ -956,6 +962,10 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     }
 
     private void assertCanSyncNewStageTeams(BasketDivisionStage stage) {
+        List<BasketDivisionStageTeam> existing = stageTeamMapper.selectByStageId(stage.getId());
+        if (GroupRankPlacementSupport.allowsNaturalResolutionTeamSync(stage, existing.isEmpty())) {
+            return;
+        }
         if (scheduleBatchMapper.selectPublishedByStageId(stage.getId()) != null) {
             throw schedulePrerequisiteValidator.businessError(StageSchedulePrerequisiteValidator.MSG_PUBLISHED_NO_MORE_TEAMS);
         }

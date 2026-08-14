@@ -29,6 +29,13 @@ public class DivisionRuleMutableSpecification {
     private BasketPersonalRegistrationMapper personalRegistrationMapper;
 
     public void assertCanRebuild(BasketDivision division, BasketDivisionFormatSnapshot snapshot) {
+        if (snapshot == null) {
+            if (division == null || !DivisionStatusEnum.DRAFT.getCode().equals(division.getDivisionStatus())) {
+                throw new ServiceException("仅草稿状态 Division 可编辑规则");
+            }
+            assertNoBusinessData(division.getId());
+            return;
+        }
         assertCanEditRules(division, snapshot);
     }
 

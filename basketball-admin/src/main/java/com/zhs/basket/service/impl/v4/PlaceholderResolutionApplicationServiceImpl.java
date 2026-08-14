@@ -27,6 +27,7 @@ import com.zhs.basket.mapper.v4.BasketStagePairingEntryMapper;
 import com.zhs.basket.mapper.v4.BasketStagePairingExecutionMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.req.AuditFieldInput;
+import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
 import com.zhs.basket.service.v4.IPlaceholderResolutionApplicationService;
 import com.zhs.basket.service.v4.IStagePairingExecutionApplicationService;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
@@ -91,6 +92,9 @@ public class PlaceholderResolutionApplicationServiceImpl implements IPlaceholder
     @Autowired
     @Lazy
     private IStagePairingExecutionApplicationService pairingExecutionApplicationService;
+    @Autowired
+    @Lazy
+    private IDivisionStageExecutionApplicationService stageExecutionApplicationService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -183,6 +187,9 @@ public class PlaceholderResolutionApplicationServiceImpl implements IPlaceholder
             }
         }
 
+        // Materialize confirmed GROUP_RANK teams onto knockout stage_team even if the
+        // placeholder stage was already PUBLISHED (natural resolution, no PublishNo bump).
+        stageExecutionApplicationService.initializeStageTeams(stage.getId());
         applyResolvedTeamsToSeries(stage, entries);
         execution.setResolutionStatus(ParticipantResolutionStatusEnum.RESOLVED.getCode());
         execution.setQualificationStageId(sourceStageId);

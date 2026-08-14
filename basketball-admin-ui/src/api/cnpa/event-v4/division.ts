@@ -5,6 +5,7 @@ export interface BasketDivisionQuery {
   pageNum?: number
   pageSize?: number
   seasonId?: number
+  seriesCode?: string
   platformCode?: string
   registrationMode?: string
   formatType?: string

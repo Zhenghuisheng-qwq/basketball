@@ -12,6 +12,7 @@ import com.zhs.response.v4.publicapi.*;
 import com.zhs.mapper.v4.BasketV4PublicStageMapper;
 import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicSupport;
+import com.zhs.service.support.PublicTeamDisplaySupport;
 import com.zhs.service.support.V4MatchSeriesDisplaySupport;
 import com.zhs.service.v4.IBasketV4PublicService;
 import jakarta.annotation.Resource;
@@ -532,6 +533,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         return switch (format.toUpperCase()) {
             case "ROUND_ROBIN" -> "单循环";
             case "SINGLE_ELIMINATION" -> "单败淘汰";
+            case "DOUBLE_ELIMINATION" -> "双败淘汰（预留 / Demo）";
             default -> format;
         };
     }
@@ -910,7 +912,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (!MatchPublishStatusEnum.PUBLISHED.getCode().equals(match.getPublishStatus())) {
             throw new ServiceException("比赛未发布");
         }
-        if (!matchSeriesDisplaySupport.isPublishedBatch(match.getScheduleBatchId())) {
+        if (!matchSeriesDisplaySupport.isPubliclyVisibleMatch(match)) {
             throw new ServiceException("比赛未发布");
         }
         return match;
@@ -973,6 +975,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         vo.setCaptainName(captainMap.get(team.getId()));
         vo.setPlatformCode(team.getPlatformCode());
         vo.setEventTeamStatus(team.getEventTeamStatus());
+        vo.setTemporaryTeam(PublicTeamDisplaySupport.isTemporary(team));
     }
 
     private List<V4PublicEventPlayerItemResp> listPlayersByEventTeamId(Long eventTeamId) {
@@ -1010,12 +1013,9 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (CollectionUtils.isEmpty(matches)) {
             return matches;
         }
-        Map<Long, Boolean> published = new HashMap<>();
         List<BasketV4Match> kept = new ArrayList<>();
         for (BasketV4Match match : matches) {
-            Long batchId = match.getScheduleBatchId();
-            boolean ok = published.computeIfAbsent(batchId, id -> matchSeriesDisplaySupport.isPublishedBatch(id));
-            if (ok) {
+            if (matchSeriesDisplaySupport.isPubliclyVisibleMatch(match)) {
                 kept.add(match);
             }
         }

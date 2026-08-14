@@ -21,8 +21,11 @@ public class BasketDivisionListVo {
     private String formatType;
     private Long formatTemplateId;
     private String formatTemplateName;
+    private String formatTemplateCode;
+    private String formatTemplateType;
     private Long formatSnapshotId;
     private String formatSnapshotStatus;
+    private String rosterWorkflowMode;
     private String formatSummary;
     private Integer maxTeamCount;
     private Integer maxPersonCount;

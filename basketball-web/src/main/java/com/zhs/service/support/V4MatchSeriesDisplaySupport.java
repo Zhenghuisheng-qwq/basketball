@@ -1,9 +1,12 @@
 package com.zhs.service.support;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.zhs.dao.v4.BasketDivisionFormatSnapshotDao;
 import com.zhs.dao.v4.BasketEventTeamDao;
 import com.zhs.dao.v4.BasketScheduleBatchDao;
 import com.zhs.dao.v4.BasketV4MatchDao;
+import com.zhs.enums.v4.MatchPublishStatusEnum;
+import com.zhs.model.v4.BasketDivisionFormatSnapshot;
 import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.enums.v4.PublishStatusEnum;
 import com.zhs.mapper.v4.BasketV4MatchSeriesMapper;
@@ -34,6 +37,8 @@ public class V4MatchSeriesDisplaySupport {
     private BasketV4PublicStageMapper publicStageMapper;
     @Resource
     private BasketScheduleBatchDao scheduleBatchDao;
+    @Resource
+    private BasketDivisionFormatSnapshotDao formatSnapshotDao;
 
     public V4PublicMatchSeriesDetailResp buildDetail(Long seriesId, Long currentMatchId) {
         if (seriesId == null) {
@@ -43,7 +48,7 @@ public class V4MatchSeriesDisplaySupport {
         if (series == null) {
             return null;
         }
-        if (!isPublishedBatch(series.getScheduleBatchId())) {
+        if (!isPubliclyVisibleSeries(series)) {
             return null;
         }
         return buildDetail(series, currentMatchId);
@@ -56,7 +61,7 @@ public class V4MatchSeriesDisplaySupport {
         }
         List<V4PublicMatchSeriesDetailResp> result = new ArrayList<>();
         for (BasketMatchSeries series : list) {
-            if (!isPublishedBatch(series.getScheduleBatchId())) {
+            if (!isPubliclyVisibleSeries(series)) {
                 continue;
             }
             result.add(buildDetail(series, null));
@@ -226,6 +231,44 @@ public class V4MatchSeriesDisplaySupport {
         }
         BasketScheduleBatch batch = scheduleBatchDao.selectById(batchId);
         return batch != null && PublishStatusEnum.PUBLISHED.getCode().equals(batch.getPublishStatus());
+    }
+
+    public boolean isVersionedDivision(Long divisionId) {
+        if (divisionId == null) {
+            return false;
+        }
+        BasketDivisionFormatSnapshot snapshot = formatSnapshotDao.selectOne(new LambdaQueryWrapper<BasketDivisionFormatSnapshot>()
+                .eq(BasketDivisionFormatSnapshot::getDivisionId, divisionId)
+                .eq(BasketDivisionFormatSnapshot::getIsCurrent, 1)
+                .eq(BasketDivisionFormatSnapshot::getIsDelete, 0)
+                .last("limit 1"));
+        return snapshot != null && PublicVisibilityPolicy.isVersionedWorkflow(snapshot.getRosterWorkflowMode());
+    }
+
+    public boolean isPubliclyVisibleMatch(BasketV4Match match) {
+        if (match == null) {
+            return false;
+        }
+        boolean matchPublished = MatchPublishStatusEnum.PUBLISHED.getCode().equals(match.getPublishStatus());
+        boolean batchPublished = isPublishedBatch(match.getScheduleBatchId());
+        return PublicVisibilityPolicy.keepPublishedMatch(isVersionedDivision(match.getDivisionId()), matchPublished, batchPublished);
+    }
+
+    public boolean isPubliclyVisibleSeries(BasketMatchSeries series) {
+        if (series == null) {
+            return false;
+        }
+        boolean batchPublished = isPublishedBatch(series.getScheduleBatchId());
+        boolean hasPublishedChild = false;
+        if (!isVersionedDivision(series.getDivisionId()) && !batchPublished && series.getId() != null) {
+            Long count = matchDao.selectCount(new LambdaQueryWrapper<BasketV4Match>()
+                    .eq(BasketV4Match::getSeriesId, series.getId())
+                    .eq(BasketV4Match::getIsDelete, 0)
+                    .eq(BasketV4Match::getPublishStatus, MatchPublishStatusEnum.PUBLISHED.getCode()));
+            hasPublishedChild = count != null && count > 0;
+        }
+        return PublicVisibilityPolicy.keepPublishedSeries(
+                isVersionedDivision(series.getDivisionId()), batchPublished, hasPublishedChild);
     }
 
     private java.util.Date inheritSeriesTime(BasketMatchSeries series) {

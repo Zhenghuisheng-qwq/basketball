@@ -13,4 +13,6 @@ public class BasketV4MatchQuery {
     private String publishStatus;
     private Long eventTeamId;
     private String teamName;
+    private Long stageId;
+    private Long seriesId;
 }

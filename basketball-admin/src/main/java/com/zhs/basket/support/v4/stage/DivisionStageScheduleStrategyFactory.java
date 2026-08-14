@@ -22,6 +22,7 @@ public class DivisionStageScheduleStrategyFactory {
         if (stage == null) {
             throw new ServiceException("阶段不能为空");
         }
+        com.zhs.basket.support.v4.DoubleEliminationCapabilityGate.assertCanGenerateSchedule(stage);
         return strategies.stream()
                 .filter(strategy -> strategy.supports(stage))
                 .findFirst()

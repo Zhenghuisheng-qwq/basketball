@@ -1,6 +1,10 @@
 -- CNPA V4 Round2: 赛事发布 V4 菜单与权限
 -- 父菜单：赛事管理 (menu_id=2152, path=event)
 
+INSERT INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
+SELECT 2152, '赛事管理', 0, 1, 'event', NULL, '', 'CnpaEvent', 1, 0, 'M', '0', '0', '', 'guide', 'admin', sysdate(), 'V4 Series/Season/Division 父菜单'
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = 2152);
+
 SET @eventParentId = 2152;
 
 -- 菜单 ID 2280-2295：避开已占用的 2260-2263（争议管理按钮权限）

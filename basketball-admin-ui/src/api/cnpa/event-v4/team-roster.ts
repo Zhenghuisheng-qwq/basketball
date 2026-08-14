@@ -50,6 +50,44 @@ export interface TeamRosterLockResultVo {
   idempotentReplay?: boolean
 }
 
+export interface RosterVersionHistoryItemVo {
+  rosterVersionId?: number
+  versionNo?: number
+  status?: string
+  statusName?: string
+  isCurrent?: number
+  formalCount?: number
+  candidateCount?: number
+  excludedCount?: number
+  createTime?: string
+  lockedTime?: string
+  lockedBy?: number
+}
+
+export function listV4TeamRosterVersions(divisionId: number): Promise<AjaxResult<RosterVersionHistoryItemVo[]>> {
+  return request({ url: `/basket/v4/divisions/${divisionId}/roster/team/versions`, method: 'get' })
+}
+
+export function getV4TeamRosterVersion(divisionId: number, rosterVersionId: number): Promise<AjaxResult<TeamRosterVersionDetailVo>> {
+  return request({ url: `/basket/v4/divisions/${divisionId}/roster/team/versions/${rosterVersionId}`, method: 'get' })
+}
+
+export interface TeamRosterVersionDetailVo {
+  rosterVersionId?: number
+  divisionId?: number
+  versionNo?: number
+  status?: string
+  isCurrent?: number
+  formalCount?: number
+  candidateCount?: number
+  excludedCount?: number
+  lockedTime?: string
+  lockedBy?: number
+  formalList?: TeamRosterItemVo[]
+  candidateList?: TeamRosterItemVo[]
+  excludedList?: TeamRosterItemVo[]
+}
+
 export function getV4TeamRosterWorkspace(divisionId: number): Promise<AjaxResult<TeamRosterWorkspaceVo>> {
   return request({ url: `/basket/v4/divisions/${divisionId}/roster/team`, method: 'get' })
 }

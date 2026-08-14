@@ -30,4 +30,6 @@ public class V4PublicEventTeamItemResp {
     private String platformCode;
 
     private String eventTeamStatus;
+
+    private Boolean temporaryTeam;
 }

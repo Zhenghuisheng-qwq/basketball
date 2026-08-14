@@ -81,4 +81,30 @@ class DivisionRuleMutableSpecificationTest {
 
         assertDoesNotThrow(() -> specification.assertCanEditRules(division, snapshot));
     }
+
+    @Test
+    void assertCanRebuild_firstApplyWithoutSnapshot_allowedOnDraft() {
+        when(registrationMapper.countActiveByDivisionId(100L)).thenReturn(0);
+        when(personalRegistrationMapper.countActiveByDivisionId(100L)).thenReturn(0);
+        when(eventTeamMapper.countActiveByDivisionId(100L)).thenReturn(0);
+        when(scheduleBatchMapper.countByDivisionId(100L)).thenReturn(0);
+        when(matchMapper.countByDivisionId(100L)).thenReturn(0);
+
+        assertDoesNotThrow(() -> specification.assertCanRebuild(division, null));
+    }
+
+    @Test
+    void assertCanRebuild_withoutSnapshot_rejectedWhenNotDraft() {
+        division.setDivisionStatus(DivisionStatusEnum.REGISTRATION_OPEN.getCode());
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> specification.assertCanRebuild(division, null));
+        assertTrue(ex.getMessage().contains("草稿"));
+    }
+
+    @Test
+    void assertCanEditRules_withoutSnapshot_stillRejected() {
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> specification.assertCanEditRules(division, null));
+        assertTrue(ex.getMessage().contains("缺少规则快照"));
+    }
 }

@@ -114,12 +114,19 @@ final class StageScheduleSupport {
         match.setBracketSlot(bracketSlot);
         match.setMatchNo(matchNo);
         match.setMatchStatus(MatchStatusEnum.SCHEDULED.getCode());
-        match.setPublishStatus(MatchPublishStatusEnum.DRAFT.getCode());
+        match.setPublishStatus(matchPublishStatusForBatch(batch));
         match.setPlatformCode(division.getPlatformCode());
         match.setCreateTime(now);
         match.setUpdateTime(now);
         match.setIsDelete(NOT_DELETED);
         return match;
+    }
+
+    static String matchPublishStatusForBatch(BasketScheduleBatch batch) {
+        if (batch != null && PublishStatusEnum.PUBLISHED.getCode().equals(batch.getPublishStatus())) {
+            return MatchPublishStatusEnum.PUBLISHED.getCode();
+        }
+        return MatchPublishStatusEnum.DRAFT.getCode();
     }
 
     static void insertMatch(BasketV4MatchMapper matchMapper, BasketV4Match match) {

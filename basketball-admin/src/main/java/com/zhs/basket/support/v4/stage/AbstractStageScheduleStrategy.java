@@ -59,13 +59,18 @@ abstract class AbstractStageScheduleStrategy implements DivisionStageScheduleStr
     protected void validateTeamsPresent(StageExecutionContext context) {
         if (context.getBracketSlotPlan() != null
                 && context.getBracketSlotPlan().getSlots() != null
+                && context.getBracketSlotPlan().getSlots().size() >= 2
                 && context.getBracketSlotPlan().getSlots().stream()
-                .anyMatch(com.zhs.basket.support.v4.bracket.BracketSlot::isUnresolvedPlaceholder)) {
+                .anyMatch(slot -> slot.isUnresolvedPlaceholder() || slot.isBye()
+                        || slot.effectiveEventTeamId() != null)) {
             return;
         }
         List<BasketDivisionStageTeam> teams = context.getStageTeams();
         if (teams == null || teams.size() < 2) {
-            throw new ServiceException("阶段参赛队伍不足 2 支，无法生成赛程");
+            int slotCount = context.getBracketSlotPlan() != null && context.getBracketSlotPlan().getSlots() != null
+                    ? context.getBracketSlotPlan().getSlots().size() : 0;
+            throw new ServiceException("阶段参赛队伍不足 2 支，无法生成赛程（stageTeams="
+                    + (teams == null ? 0 : teams.size()) + ", pairingSlots=" + slotCount + "）");
         }
     }
 
@@ -106,6 +111,7 @@ abstract class AbstractStageScheduleStrategy implements DivisionStageScheduleStr
         batch.setExpectedMatchCount(expectedMatchCount);
         batch.setActualMatchCount(expectedMatchCount);
         batch.setExecutionVersion(context.getExecutionVersion());
+        batch.setScheduleRevision(0);
         StructureVersionContext versionContext = context.getVersionContext();
         if (versionContext != null) {
             batch.setRuleVersionId(versionContext.getRuleVersionId());

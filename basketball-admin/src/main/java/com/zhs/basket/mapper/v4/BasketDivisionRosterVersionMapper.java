@@ -12,6 +12,8 @@ public interface BasketDivisionRosterVersionMapper {
 
     List<BasketDivisionRosterVersion> selectByDivisionId(@Param("divisionId") Long divisionId);
 
+    List<BasketDivisionRosterVersion> selectCurrentByDivisionIds(@Param("divisionIds") List<Long> divisionIds);
+
     int selectMaxVersionByDivisionId(@Param("divisionId") Long divisionId);
 
     int insert(BasketDivisionRosterVersion entity);

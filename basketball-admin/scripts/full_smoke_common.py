@@ -696,8 +696,10 @@ def submit_and_approve_match(
     d = detail["data"]
     player_stats = []
     for i, ps in enumerate(d.get("playerStats") or []):
+        if ps.get("eventPlayerId") is None:
+            continue
         base = 8 + (int(str(ps.get("eventPlayerId") or "0")[-2:]) % 17)
-        own = as_id(ps.get("eventTeamId")) == as_id(submit_event_team_id)
+        own = as_id(ps.get("eventTeamId") or submit_event_team_id) == as_id(submit_event_team_id)
         points = base + (6 if own else 2) + (i % 5)
         player_stats.append(
             {
@@ -729,6 +731,9 @@ def submit_and_approve_match(
     }
     sr = req(f"{WEB}/basket/v4/player/match-submission/save", "POST", body, web_token)
     if sr.get("code") != 200:
+        msg = str(sr.get("msg") or "")
+        if sr.get("code") == 400 and ("\u53d6\u80dc" in msg or "\u4f59\u573a" in msg or "\u4e0d\u53ef\u518d\u63d0\u4ea4" in msg):
+            return {"matchId": mid, "skipped": True, "reason": msg}
         raise RuntimeError(f"save submission failed match {mid}: {sr}")
     sub_id = extract_id(sr)
     tr = req(f"{WEB}/basket/v4/player/match-submission/submit", "POST", {"submissionId": sub_id}, web_token)
@@ -789,6 +794,8 @@ def finish_bo1_stage(admin_token: str, web_by_event: dict[str, str], division_id
 
 def finish_series_games(admin_token: str, web_by_event: dict, series_id: int | str, results_plan: list[str]) -> dict:
     s = get_series(admin_token, series_id)
+    if s.get("winnerEventTeamId") or s.get("seriesStatus") in ("FINISHED", "COMPLETED"):
+        return s
     games = sorted(s.get("games") or [], key=lambda g: g.get("seriesGameNo") or 0)
     idx = 0
     score_pool = [(78, 72), (71, 76), (84, 80), (69, 74), (82, 77)]
@@ -801,19 +808,33 @@ def finish_series_games(admin_token: str, web_by_event: dict, series_id: int | s
         if idx >= len(results_plan):
             break
         side = results_plan[idx]
-        mid = game["matchId"]
+        mid = game.get("matchId") or game.get("id")
+        if not mid:
+            continue
         mr = req(f"{ADMIN}/basket/v4/match/{mid}", token=admin_token)
         m = mr.get("data") or {}
         home = m.get("homeEventTeamId")
         away = m.get("awayEventTeamId")
+        if not home or not away:
+            continue
         a, b = score_pool[idx % len(score_pool)]
         if side == "HOME":
             hs, aws, submit_team = max(a, b), min(a, b), home
         else:
             hs, aws, submit_team = min(a, b), max(a, b), away
         wt = web_by_event.get(as_id(submit_team))
-        submit_and_approve_match(admin_token, wt, m, hs, aws, submit_team)
+        if not wt:
+            raise RuntimeError(f"no web token for submit team {submit_team}")
+        try:
+            submit_and_approve_match(admin_token, wt, m, hs, aws, submit_team)
+        except RuntimeError as exc:
+            if "已经取胜" in str(exc) or "不可再提交" in str(exc):
+                break
+            raise
         idx += 1
+        s = get_series(admin_token, series_id)
+        if s.get("winnerEventTeamId") or s.get("seriesStatus") in ("FINISHED", "COMPLETED"):
+            break
     return get_series(admin_token, series_id)
 
 

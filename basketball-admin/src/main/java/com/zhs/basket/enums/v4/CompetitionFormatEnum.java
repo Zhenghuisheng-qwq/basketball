@@ -3,6 +3,7 @@ package com.zhs.basket.enums.v4;
 public enum CompetitionFormatEnum {
     ROUND_ROBIN("ROUND_ROBIN", "单循环/循环赛"),
     SINGLE_ELIMINATION("SINGLE_ELIMINATION", "单败淘汰"),
+    DOUBLE_ELIMINATION("DOUBLE_ELIMINATION", "双败淘汰（预留/Demo）"),
     MANUAL("MANUAL", "人工安排");
 
     private final String code;

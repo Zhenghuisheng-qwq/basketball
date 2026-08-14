@@ -73,4 +73,16 @@ class PlaceholderModelR6Test {
         rr.setGroupingMode("NONE");
         assertFalse(GroupRankPlacementSupport.usesGroupRankPlacement(knockout, rr));
     }
+
+    @Test
+    void publishedGroupCrossWithEmptyStageTeamsAllowsNaturalResolutionSync() {
+        com.zhs.basket.domain.v4.BasketDivisionStage knockout = new com.zhs.basket.domain.v4.BasketDivisionStage();
+        knockout.setPairingRule("GROUP_CROSS");
+        assertTrue(GroupRankPlacementSupport.allowsNaturalResolutionTeamSync(knockout, true));
+        assertFalse(GroupRankPlacementSupport.allowsNaturalResolutionTeamSync(knockout, false));
+
+        com.zhs.basket.domain.v4.BasketDivisionStage playoff = new com.zhs.basket.domain.v4.BasketDivisionStage();
+        playoff.setPairingRule("HIGH_VS_LOW");
+        assertFalse(GroupRankPlacementSupport.allowsNaturalResolutionTeamSync(playoff, true));
+    }
 }

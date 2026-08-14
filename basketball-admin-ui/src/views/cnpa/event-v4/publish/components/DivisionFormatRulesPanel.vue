@@ -7,7 +7,7 @@
       show-icon
       class="mb8"
     >
-      <template #title>赛制已确认，后续报名和比赛将按此赛制执行。</template>
+      <template #title>赛事规则已发布，当前版本不可修改。</template>
     </el-alert>
 
     <p v-if="snapshot?.sourceTemplateCode" class="section-hint mb8">
@@ -348,9 +348,7 @@
                       {{ opt.label }}
                     </el-radio>
                   </el-radio-group>
-                  <div v-if="resolveStageOrganizationMode(stage) === 'GROUPED'" class="el-form-item__tip">
-                    当前版本暂不支持分组内淘汰赛。
-                  </div>
+                  <DoubleEliminationDemoPanel v-if="stage.competitionFormat === 'DOUBLE_ELIMINATION' || showDoubleElimDemo" class="mt8" />
                 </el-form-item>
                 <el-form-item label="BO 规则">
                   <el-radio-group
@@ -718,6 +716,7 @@ import { computed, getCurrentInstance, reactive, ref, watch } from 'vue'
 import type { FormInstance } from 'element-plus'
 import PlayoffBracketPreview from './PlayoffBracketPreview.vue'
 import StandardTemplateConfigPanel from './StandardTemplateConfigPanel.vue'
+import DoubleEliminationDemoPanel from '../../components/DoubleEliminationDemoPanel.vue'
 import {
   addFormatStage,
   applyFormatPlan,
@@ -849,6 +848,7 @@ const singleStageSchemes = V4_FORMAT_SCHEME_OPTIONS.filter((s) => s.category ===
 const comboStageSchemes = V4_FORMAT_SCHEME_OPTIONS.filter((s) => s.category === 'combo' || s.category === 'custom')
 
 const panelLoading = ref(false)
+const showDoubleElimDemo = ref(false)
 const actionBusy = ref(false)
 const rebuilding = ref(false)
 const applyingScheme = ref(false)
@@ -1078,6 +1078,12 @@ async function handleOrganizationModeChange(stage: BasketDivisionStageVo, mode: 
 }
 
 async function handleCompetitionFormatChange(stage: BasketDivisionStageVo, format: string) {
+  if (format === 'DOUBLE_ELIMINATION') {
+    showDoubleElimDemo.value = true
+    proxy!.$modal.msgWarning('当前版本暂未开放双败淘汰正式执行。')
+    return
+  }
+  showDoubleElimDemo.value = false
   if ((format === 'SINGLE_ELIMINATION' || format === 'PLAYOFF') && resolveStageOrganizationMode(stage) === 'GROUPED') {
     proxy!.$modal.msgWarning('当前版本暂不支持分组内淘汰赛')
     return

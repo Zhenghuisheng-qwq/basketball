@@ -178,6 +178,23 @@ class LeagueArenaStructureR5Test {
         assertCapacity(3, 4, 1, 1, 2);
         assertCapacity(5, 8, 3, 1, 4);
         assertCapacity(10, 16, 6, 2, 9);
+        assertCapacity(12, 16, 4, 4, 11);
+    }
+
+    @Test
+    void r9_eightTeamsSingleRoundRobinHas28PairingsEachOnce() {
+        List<Long> teams = List.of(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L);
+        List<Round> rounds = BasketV4RoundRobinScheduler.generateRoundRobin(teams, 1);
+        assertEquals(28, BasketV4RoundRobinScheduler.countMatches(rounds));
+        Set<String> pairs = new HashSet<>();
+        for (Round round : rounds) {
+            for (Pairing pairing : round.getPairings()) {
+                long a = Math.min(pairing.getHomeEventTeamId(), pairing.getAwayEventTeamId());
+                long b = Math.max(pairing.getHomeEventTeamId(), pairing.getAwayEventTeamId());
+                assertTrue(pairs.add(a + "-" + b), "duplicate pairing " + a + " vs " + b);
+            }
+        }
+        assertEquals(28, pairs.size());
     }
 
     @Test

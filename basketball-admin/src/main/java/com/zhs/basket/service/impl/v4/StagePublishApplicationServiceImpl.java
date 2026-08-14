@@ -86,6 +86,7 @@ public class StagePublishApplicationServiceImpl implements IStagePublishApplicat
     @Transactional(rollbackFor = Exception.class)
     public StagePublishRecordVo publish(Long stageId) {
         StagePublishContext context = buildContext(stageId);
+        com.zhs.basket.support.v4.DoubleEliminationCapabilityGate.assertCanGenerateSchedule(context.getStage());
         BasketScheduleBatch batch = context.getStructureBatch();
         if (batch != null && PublishStatusEnum.PUBLISHED.getCode().equals(batch.getPublishStatus())) {
             String fingerprint = ScheduleFingerprintSupport.fingerprint(context.getUnits());

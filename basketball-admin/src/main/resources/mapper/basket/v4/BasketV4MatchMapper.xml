@@ -46,6 +46,9 @@
         <result property="scheduleBatchId" column="schedule_batch_id" />
         <result property="roundNo" column="round_no" />
         <result property="matchNo" column="match_no" />
+        <result property="stageId" column="stage_id" />
+        <result property="seriesId" column="series_id" />
+        <result property="seriesGameNo" column="series_game_no" />
         <result property="matchTime" column="match_time" />
         <result property="homeEventTeamId" column="home_event_team_id" />
         <result property="homeTeamName" column="home_team_name" />
@@ -74,6 +77,9 @@
             m.schedule_batch_id,
             m.round_no,
             m.match_no,
+            m.stage_id,
+            m.series_id,
+            m.series_game_no,
             m.match_time,
             m.home_event_team_id,
             ht.team_name_snapshot as home_team_name,
@@ -109,6 +115,8 @@
         <if test="id != null">and m.id = #{id}</if>
         <if test="seasonId != null">and m.season_id = #{seasonId}</if>
         <if test="divisionId != null">and m.division_id = #{divisionId}</if>
+        <if test="stageId != null">and m.stage_id = #{stageId}</if>
+        <if test="seriesId != null">and m.series_id = #{seriesId}</if>
         <if test="scheduleBatchId != null">and m.schedule_batch_id = #{scheduleBatchId}</if>
         <if test="roundNo != null">and m.round_no = #{roundNo}</if>
         <if test="matchStatus != null and matchStatus != ''">and m.match_status = #{matchStatus}</if>
@@ -152,6 +160,8 @@
             <if test="remark != null">remark = #{remark},</if>
             <if test="homeScore != null">home_score = #{homeScore},</if>
             <if test="awayScore != null">away_score = #{awayScore},</if>
+            <if test="homeEventTeamId != null">home_event_team_id = #{homeEventTeamId},</if>
+            <if test="awayEventTeamId != null">away_event_team_id = #{awayEventTeamId},</if>
             <if test="winnerEventTeamId != null">winner_event_team_id = #{winnerEventTeamId},</if>
             source_match_id_home = #{sourceMatchIdHome},
             source_match_id_away = #{sourceMatchIdAway},

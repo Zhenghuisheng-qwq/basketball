@@ -90,6 +90,13 @@ const leftSemi = computed(() =>
 const rightSemi = computed(() =>
   playoffSeries.value.find((item) => item.round === 'semifinal' && item.side === 'right'),
 )
+const extraSeries = computed(() => {
+  const qf = playoffSeries.value.filter((item) => item.round === 'quarterfinal')
+  const used = new Set(
+    [...leftQuarter.value.slice(0, 2), ...rightQuarter.value.slice(0, 2)].filter(Boolean).map((item) => item.id),
+  )
+  return qf.filter((item) => !used.has(item.id))
+})
 const finalSeries = computed(() => playoffSeries.value.find((item) => item.round === 'final'))
 </script>
 <template>
@@ -108,6 +115,9 @@ const finalSeries = computed(() => playoffSeries.value.find((item) => item.round
     <p v-else-if="state === 'empty'" class="playoff-bracket__scroll-hint" style="display: block">暂无淘汰赛对阵</p>
     <p v-else class="playoff-bracket__scroll-hint">左右滑动查看完整对阵</p>
 
+    <div v-if="state === 'success' && extraSeries.length" class="playoff-bracket__extra">
+      <PlayoffSeriesCard v-for="item in extraSeries" :key="item.id" :series="item" />
+    </div>
     <div v-if="state === 'success'" class="playoff-bracket__viewport">
       <div class="playoff-bracket__board">
         <div class="playoff-bracket__round playoff-bracket__round--quarter">
@@ -212,6 +222,13 @@ const finalSeries = computed(() => playoffSeries.value.find((item) => item.round
   color: rgba(17, 17, 17, 0.52);
   font-size: 12px;
   text-align: center;
+}
+
+.playoff-bracket__extra {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 8px 0 16px;
 }
 
 .playoff-bracket__viewport {

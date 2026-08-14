@@ -138,20 +138,24 @@ public class MatchSeriesSupport {
         series.setSeriesStatus(MatchSeriesStatusEnum.READY.getCode());
         series.setUpdateTime(new Date());
         seriesMapper.updateById(series);
-        if (context == null || batch == null) {
-            return;
-        }
         List<com.zhs.basket.domain.v4.BasketV4Match> existing = matchMapper.selectBySeriesId(series.getId());
         if (existing != null && !existing.isEmpty()) {
+            String publishStatus = StageScheduleSupport.matchPublishStatusForBatch(batch);
             for (com.zhs.basket.domain.v4.BasketV4Match match : existing) {
                 match.setHomeEventTeamId(homeEventTeamId);
                 match.setAwayEventTeamId(awayEventTeamId);
+                if (publishStatus != null) {
+                    match.setPublishStatus(publishStatus);
+                }
                 matchMapper.updateById(match);
             }
             return;
         }
+        if (context == null || batch == null) {
+            return;
+        }
         insertGames(context, batch, series, series.getBestOf(), series.getRoundNo(), series.getBracketSlot(),
-                homeEventTeamId, awayEventTeamId, true);
+                homeEventTeamId, awayEventTeamId, false);
     }
 
     public void updateSourceLabels(BasketMatchSeries series) {

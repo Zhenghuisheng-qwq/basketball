@@ -10,4 +10,6 @@ public interface ITeamRosterLockApplicationService {
     TeamRosterLockResultVo lock(Long divisionId, Long operatorId);
 
     TeamRosterVersionDetailVo getVersion(Long divisionId, Long rosterVersionId);
+
+    java.util.List<com.zhs.basket.vo.v4.RosterVersionHistoryItemVo> listVersions(Long divisionId);
 }

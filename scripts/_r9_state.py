@@ -1,0 +1,16 @@
+import pymysql
+c=pymysql.connect(host="192.168.31.48",user="root",password="123456",database="basketball_r9_fresh",charset="utf8mb4",cursorclass=pymysql.cursors.DictCursor)
+cur=c.cursor()
+cur.execute("SELECT id,season_id,platform_code,registration_mode,division_name,division_status,format_snapshot_id FROM basket_division WHERE is_delete=0")
+print("DIV")
+for r in cur.fetchall():
+    print(r)
+cur.execute("SELECT division_id,version_no,status,is_current,formal_count,candidate_count FROM basket_division_roster_version WHERE is_delete=0")
+print("ROSTER", cur.fetchall())
+cur.execute("SELECT division_id,COUNT(*) c FROM basket_event_team WHERE is_delete=0 GROUP BY division_id")
+print("ET", cur.fetchall())
+cur.execute("SELECT division_id,COUNT(*) c FROM basket_registration WHERE is_delete=0 GROUP BY division_id")
+print("REG", cur.fetchall())
+cur.execute("SELECT division_id,COUNT(*) c FROM basket_personal_registration WHERE is_delete=0 GROUP BY division_id")
+print("PREG", cur.fetchall())
+c.close()

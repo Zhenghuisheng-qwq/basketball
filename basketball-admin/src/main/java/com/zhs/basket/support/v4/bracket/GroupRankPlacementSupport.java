@@ -20,4 +20,18 @@ public final class GroupRankPlacementSupport {
         return PairingRuleEnum.GROUP_CROSS.getCode().equals(pairing)
                 || PairingRuleEnum.MANUAL.getCode().equals(pairing);
     }
+
+    /**
+     * Published GROUP_CROSS / MANUAL knockout may have zero stage teams until
+     * Qualification Confirm materializes GROUP_RANK placeholders. That first sync
+     * is natural resolution, not "append teams after publish".
+     */
+    public static boolean allowsNaturalResolutionTeamSync(BasketDivisionStage stage, boolean existingStageTeamsEmpty) {
+        if (!existingStageTeamsEmpty || stage == null) {
+            return false;
+        }
+        String pairing = stage.getPairingRule();
+        return PairingRuleEnum.GROUP_CROSS.getCode().equals(pairing)
+                || PairingRuleEnum.MANUAL.getCode().equals(pairing);
+    }
 }

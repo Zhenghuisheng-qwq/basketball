@@ -12,6 +12,7 @@ import com.zhs.basket.service.v4.IBasketV4FormatSnapshotService;
 import com.zhs.basket.support.v4.DivisionFormatPlanValidator;
 import com.zhs.basket.support.v4.DivisionFormatSnapshotFactory;
 import com.zhs.basket.support.v4.DivisionRuleMutableSpecification;
+import com.zhs.basket.support.v4.DoubleEliminationCapabilityGate;
 import com.zhs.basket.support.v4.FormatSnapshotReadySpecification;
 import com.zhs.basket.support.v4.StageFormatSpecification;
 import com.zhs.basket.support.v4.V4FormatDisplaySupport;
@@ -359,6 +360,7 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
             return;
         }
         validateSnapshotReady(divisionId);
+        DoubleEliminationCapabilityGate.assertCanLockOrPublish(divisionStageMapper.selectBySnapshotId(snapshot.getId()));
         if (!SnapshotStatusEnum.DRAFT.getCode().equals(snapshot.getSnapshotStatus())) {
             throw new ServiceException("规则快照已锁定或不可锁定");
         }

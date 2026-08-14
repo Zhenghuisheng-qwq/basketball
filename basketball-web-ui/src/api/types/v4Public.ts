@@ -92,6 +92,7 @@ export interface V4PublicEventTeamItem {
   captainName?: string
   platformCode?: string
   eventTeamStatus?: string
+  temporaryTeam?: boolean
 }
 
 export interface V4PublicEventPlayerItem {

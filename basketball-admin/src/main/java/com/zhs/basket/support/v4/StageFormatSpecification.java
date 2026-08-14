@@ -59,6 +59,7 @@ public final class StageFormatSpecification {
         if (CompetitionFormatEnum.MANUAL.getCode().equals(format) && rejectManualForNewWrite) {
             throw new ServiceException("阶段「" + stage.getStageName() + "」暂不支持 MANUAL 赛制新写入");
         }
+        DoubleEliminationCapabilityGate.assertNotReservedFormat(format);
         if (!CompetitionFormatEnum.ROUND_ROBIN.getCode().equals(format)
                 && !CompetitionFormatEnum.SINGLE_ELIMINATION.getCode().equals(format)
                 && !CompetitionFormatEnum.MANUAL.getCode().equals(format)) {

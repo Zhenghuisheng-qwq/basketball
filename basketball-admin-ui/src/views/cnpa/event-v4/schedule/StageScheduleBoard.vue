@@ -1,14 +1,10 @@
 <template>
-  <el-dialog v-model="visible" :title="dialogTitle" width="1100px" destroy-on-close @opened="reload">
+  <component :is="embedded ? 'div' : 'el-dialog'" v-bind="embedded ? {} : { title: dialogTitle, width: '1100px', 'destroy-on-close': true }" v-model="visible" @opened="reload">
     <el-descriptions v-if="summary" :column="4" border size="small" class="mb8">
       <el-descriptions-item label="排期">{{ summary.scheduledUnits ?? 0 }} / {{ summary.totalUnits ?? 0 }}</el-descriptions-item>
-      <el-descriptions-item label="Structure">{{ summary.structureStatus || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="Publish">{{ summary.publishStatus || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="Revision">E{{ summary.executionVersion ?? 0 }} / S{{ summary.scheduleRevision ?? 0 }} / P{{ summary.publishNo ?? '-' }}</el-descriptions-item>
-      <el-descriptions-item label="Rule">{{ summary.ruleStatus || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="Roster">{{ summary.rosterStatus || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="Pairing">{{ summary.pairingStatus || '-' }}</el-descriptions-item>
-      <el-descriptions-item label="占位">{{ summary.unresolvedUnits ?? 0 }} TBD</el-descriptions-item>
+      <el-descriptions-item label="赛程结构">{{ structureLabel }}</el-descriptions-item>
+      <el-descriptions-item label="赛程发布">{{ publishLabel }}</el-descriptions-item>
+      <el-descriptions-item label="版本">结构 V{{ summary.executionVersion ?? 0 }} / 排期 R{{ summary.scheduleRevision ?? 0 }} / 发布 {{ summary.publishNo ? '#' + summary.publishNo : '-' }}</el-descriptions-item>
     </el-descriptions>
 
     <div class="mb8">
@@ -20,19 +16,28 @@
       <el-button class="ml8" size="small" @click="reload">刷新</el-button>
       <el-button size="small" type="primary" :disabled="!canEdit" @click="openBatch">按轮批量排期</el-button>
       <el-button size="small" type="success" v-if="summary?.canRecommend" :disabled="!canEdit" @click="openRecommend">生成推荐排期</el-button>
-      <el-button size="small" type="warning" @click="openPublishPreview">预览发布</el-button>
-      <el-button size="small" type="success" v-if="summary?.publishStatus !== 'PUBLISHED'" @click="doPublish">检查并发布</el-button>
-      <el-button size="small" type="danger" v-if="summary?.publishStatus === 'PUBLISHED'" @click="openWithdraw">撤回发布</el-button>
+      <el-button size="small" type="warning" v-if="!hidePublish" @click="openPublishPreview">预览发布</el-button>
+      <el-button size="small" type="success" v-if="!hidePublish && summary?.publishStatus !== 'PUBLISHED'" @click="doPublish">检查并发布</el-button>
+      <el-button size="small" type="danger" v-if="!hidePublish && summary?.publishStatus === 'PUBLISHED'" @click="openWithdraw">撤回发布</el-button>
     </div>
 
     <el-table v-loading="loading" :data="units" border size="small" max-height="460" @selection-change="onSelect">
       <el-table-column v-if="canEdit" type="selection" width="42" />
       <el-table-column label="轮次" prop="roundNo" width="70" />
       <el-table-column label="BO" prop="bestOf" width="60" />
-      <el-table-column label="对阵" min-width="220">
+      <el-table-column label="对阵" min-width="260">
         <template #default="scope">
-          {{ scope.row.homeParticipantName || '待定' }} vs {{ scope.row.awayParticipantName || '待定' }}
-          <el-tag v-if="scope.row.participantResolutionStatus === 'TBD'" type="warning" size="small" class="ml8">TBD</el-tag>
+          {{ participantLabel(scope.row, 'home') }} vs {{ participantLabel(scope.row, 'away') }}
+          <el-tag v-if="scope.row.bestOf && scope.row.bestOf > 1" size="small" class="ml8">BO{{ scope.row.bestOf }} 系列赛</el-tag>
+          <el-tag v-if="isPlaceholder(scope.row)" type="warning" size="small" class="ml8">参赛队待定，但对阵来源已确定</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column type="expand" width="48">
+        <template #default="scope">
+          <div v-if="scope.row.bestOf && scope.row.bestOf > 1" class="child-games">
+            <div v-for="n in scope.row.bestOf" :key="n">Game{{ n }}：跟随系列赛日期时间，无独立排期</div>
+          </div>
+          <span v-else>BO1 单场</span>
         </template>
       </el-table-column>
       <el-table-column label="日期" width="120">
@@ -42,7 +47,7 @@
         <template #default="scope">{{ formatTime(scope.row.scheduledStartTime) }}</template>
       </el-table-column>
       <el-table-column label="来源" width="100">
-        <template #default="scope">{{ scope.row.scheduleSource || '-' }}</template>
+        <template #default="scope">{{ scheduleSourceLabel(scope.row.scheduleSource) }}</template>
       </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="scope">{{ scope.row.scheduleStatus === 'SCHEDULED' ? '已排期' : '未排期' }}</template>
@@ -125,11 +130,11 @@
         <el-button type="danger" @click="doWithdraw">确认撤回</el-button>
       </template>
     </el-dialog>
-  </el-dialog>
+  </component>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   applyV4ScheduleRecommend,
@@ -148,8 +153,13 @@ import {
   type StagePublishPreviewVo,
   type StageScheduleSummaryVo
 } from '@/api/cnpa/event-v4/stage-execution'
+import { v4PlaceholderProductLabel, v4PublishStatusLabel, v4ScheduleSourceLabel, v4StructureProductStatusLabel } from '@/utils/v4AdminDisplay'
 
-const props = defineProps<{ stage?: BasketDivisionStageExecutionVo | null }>()
+const props = defineProps<{
+  stage?: BasketDivisionStageExecutionVo | null
+  embedded?: boolean
+  hidePublish?: boolean
+}>()
 const emit = defineEmits(['updated'])
 const visible = defineModel<boolean>({ default: false })
 
@@ -174,8 +184,31 @@ const publishPreview = ref<StagePublishPreviewVo>()
 const withdrawVisible = ref(false)
 const withdrawReason = ref('')
 
-const dialogTitle = computed(() => `赛段排期 / 发布 · ${props.stage?.stageName || ''}`)
+const dialogTitle = computed(() => `赛段排期 · ${props.stage?.stageName || ''}`)
 const canEdit = computed(() => summary.value?.publishStatus !== 'PUBLISHED' && summary.value?.structureStatus === 'ACTIVE')
+const structureLabel = computed(() => v4StructureProductStatusLabel(summary.value?.structureStatus))
+const publishLabel = computed(() => v4PublishStatusLabel(summary.value?.publishStatus))
+
+function scheduleSourceLabel(source?: string) {
+  return v4ScheduleSourceLabel(source)
+}
+
+function isPlaceholder(row: ScheduleUnitView) {
+  return row.participantResolutionStatus === 'TBD' || row.participantResolutionStatus === 'PENDING' || row.homeSourceType === 'GROUP_RANK' || row.awaySourceType === 'GROUP_RANK' || row.homeSourceType === 'WINNER_OF_SERIES' || row.awaySourceType === 'WINNER_OF_SERIES'
+}
+
+function participantLabel(row: ScheduleUnitView, side: 'home' | 'away') {
+  const name = side === 'home' ? row.homeParticipantName : row.awayParticipantName
+  const sourceType = side === 'home' ? row.homeSourceType : row.awaySourceType
+  const sourceDisplay = side === 'home' ? row.homeSourceDisplay : row.awaySourceDisplay
+  if (name && sourceDisplay && !name.includes(sourceDisplay)) return `${name}（${sourceDisplay}）`
+  if (name) return name
+  return v4PlaceholderProductLabel(row.participantResolutionStatus, sourceType, sourceDisplay)
+}
+
+watch(() => props.stage?.stageId, () => {
+  if (props.embedded) reload()
+}, { immediate: true })
 
 function formatTime(v?: string) {
   return v ? String(v).slice(0, 5) : '-'
@@ -324,5 +357,5 @@ function doWithdraw() {
 .ml8 { margin-left: 8px; }
 .issue { font-size: 13px; margin-bottom: 4px; }
 .issue.error { color: #f56c6c; }
-.issue.warn { color: #e6a23c; }
+.child-games { padding: 8px 12px; color: #909399; font-size: 12px; }
 </style>

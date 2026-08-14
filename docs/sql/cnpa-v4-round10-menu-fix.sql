@@ -65,7 +65,9 @@ UPDATE sys_menu SET visible = '1', status = '0',
 WHERE parent_id = 2154 AND menu_id != 2326 AND menu_type = 'C';
 
 UPDATE sys_menu SET visible = '1' WHERE menu_id = 2154 AND NOT EXISTS (
-  SELECT 1 FROM sys_menu c WHERE c.parent_id = 2154 AND c.visible = '0' AND c.menu_type = 'C' AND c.status = '0'
+  SELECT 1 FROM (
+    SELECT 1 AS ok FROM sys_menu c WHERE c.parent_id = 2154 AND c.visible = '0' AND c.menu_type = 'C' AND c.status = '0'
+  ) visible_children
 );
 
 -- 若 2154 仍有可见子菜单则保持显示

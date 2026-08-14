@@ -122,6 +122,17 @@
         order by id desc limit 1
     </select>
 
+    <select id="selectByDivisionIds" resultMap="BasketScheduleBatchResult">
+        select <include refid="BaseColumns" /> from basket_schedule_batch
+        where is_delete = 0
+        <if test="divisionIds != null and divisionIds.size() &gt; 0">
+            and division_id in
+            <foreach collection="divisionIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        </if>
+        <if test="divisionIds == null or divisionIds.size() == 0">and 1 = 0</if>
+        order by id desc
+    </select>
+
     <select id="selectActiveByStageId" resultMap="BasketScheduleBatchResult">
         select <include refid="BaseColumns" /> from basket_schedule_batch
         where stage_id = #{stageId} and structure_status = 'ACTIVE' and <include refid="NotDeleted"/>

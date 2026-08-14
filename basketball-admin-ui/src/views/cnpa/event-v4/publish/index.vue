@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <el-alert
-      title="新版赛事结构"
+      title="发布赛事：决定怎么比。实际参赛单位来自报名与参赛名单，不在此页填写本届实际队数。"
       type="info"
       :closable="false"
       show-icon
@@ -9,14 +9,36 @@
     >
       <template #default>
         <ul class="page-tip-list">
-          <li>层级：赛事系列 → 赛季 → 平台赛区。</li>
-          <li>同一赛季可创建多个平台赛区，各赛区独立配置平台、比赛模式、报名方式、人数、名额、报名时间和规则模板。</li>
-          <li>当前支持单循环、小组赛和 BO1 单败淘汰。</li>
-          <li>BO3、BO5、双败及淘汰赛轮空暂未开放。</li>
-          <li>个人报名采用后台录入线下抽签组队结果，不是系统在线自动抽签。</li>
+          <li>先选择或创建 Series / Season / Division，再配置并锁定赛事规则。</li>
+          <li>STANDARD 模板与 CUSTOM 自由阶段图都可使用。规则锁定后当前版本不可修改。</li>
+          <li>队伍上限只约束报名名额，不是本届实际参赛队数。</li>
         </ul>
       </template>
     </el-alert>
+
+    <template v-if="workspaceDivisionId">
+      <DivisionContextHeader :overview="overview" show-switch @switch="clearDivision" />
+      <el-alert
+        v-if="overview?.rule?.locked"
+        type="warning"
+        :closable="false"
+        show-icon
+        class="mb8"
+        title="赛事规则已发布，当前版本不可修改。"
+      />
+      <DivisionFormatRulesPanel
+        v-if="workspaceDivision"
+        :key="workspaceDivisionId"
+        :division-id="workspaceDivisionId"
+        :max-team-count="workspaceDivision.maxTeamCount || 16"
+        :format-template-id="workspaceDivision.formatTemplateId"
+        :division-meta="workspaceDivision"
+        :series-id="overview?.context?.seriesId"
+      />
+    </template>
+
+    <template v-else>
+    <DivisionEventSelector entry="publish" class="mb8" @select="row => selectDivision(row.divisionId)" />
 
     <el-card shadow="never" class="mb8">
       <template #header><span>赛事系列</span></template>
@@ -151,7 +173,7 @@
         <el-table-column label="操作" width="360" fixed="right" class-name="small-padding fixed-width">
           <template #default="scope">
             <div class="table-actions">
-              <el-button link type="primary" @click="handleEditDivision(scope.row)" v-hasPermi="['basket:v4Division:edit']">编辑</el-button>
+              <el-button link type="primary" @click="enterDivisionRules(scope.row)" v-hasPermi="['basket:v4FormatRule:view']">配置规则</el-button>
               <el-button link type="success" @click="handleOpenDivision(scope.row)" v-hasPermi="['basket:v4Division:openRegistration']" v-if="scope.row.divisionStatus === 'DRAFT'">开放报名</el-button>
               <el-button link type="warning" @click="handleCloseDivision(scope.row)" v-hasPermi="['basket:v4Division:closeRegistration']" v-if="scope.row.divisionStatus === 'REGISTRATION_OPEN'">关闭报名</el-button>
               <el-button
@@ -370,6 +392,7 @@
       :season-id="wizardSeasonId"
       @success="handleWizardSuccess"
     />
+    </template>
 
   </div>
 </template>
@@ -378,6 +401,9 @@
 import { computed, getCurrentInstance, onMounted, reactive, ref, watch } from 'vue'
 import PublishWizardDialog from './components/PublishWizardDialog.vue'
 import DivisionFormatRulesPanel from './components/DivisionFormatRulesPanel.vue'
+import DivisionEventSelector from '../components/DivisionEventSelector.vue'
+import DivisionContextHeader from '../components/DivisionContextHeader.vue'
+import { useDivisionWorkspace } from '../composables/useDivisionWorkspace'
 import { listV4Series, type BasketSeriesVo } from '@/api/cnpa/event-v4/series'
 import {
   addV4Season,
@@ -396,6 +422,7 @@ import {
   closeV4DivisionRegistration,
   finishV4Division,
   delV4Division,
+  getV4Division,
   listV4Division,
   openV4DivisionRegistration,
   updateV4Division,
@@ -442,6 +469,18 @@ const divisionLoading = ref(false)
 const formatTemplateList = ref<BasketFormatTemplateListVo[]>([])
 
 const rulesDivisionId = ref<number>()
+const { divisionId: workspaceDivisionId, overview, selectDivision, clearDivision } = useDivisionWorkspace('publish')
+const workspaceDivision = ref<BasketDivisionListVo>()
+
+watch(workspaceDivisionId, (id) => {
+  workspaceDivision.value = undefined
+  if (!id) return
+  getV4Division(id).then(res => { workspaceDivision.value = res.data })
+}, { immediate: true })
+
+function enterDivisionRules(row: BasketDivisionListVo) {
+  if (row.id) selectDivision(row.id)
+}
 
 const currentRulesDivision = computed(() =>
   seasonDetail.value?.divisions?.find((d) => d.id === rulesDivisionId.value)

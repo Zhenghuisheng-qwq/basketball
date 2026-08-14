@@ -22,6 +22,9 @@ public final class StageScheduleIntegrityValidator {
 
     public static void validateBeforeGenerate(StageExecutionContext context) {
         requireContext(context);
+        if (hasUsablePairingPlan(context)) {
+            return;
+        }
         BasketDivisionStage stage = context.getStage();
         List<BasketDivisionStageTeam> stageTeams = context.getStageTeams();
         if (stageTeams == null || stageTeams.size() < 2) {
@@ -155,6 +158,16 @@ public final class StageScheduleIntegrityValidator {
             throw new ServiceException(String.format(
                     "赛程数据无效：轮次应为 %d，实际 %d", expectedRounds, rounds.size()));
         }
+    }
+
+    private static boolean hasUsablePairingPlan(StageExecutionContext context) {
+        if (context.getBracketSlotPlan() == null || context.getBracketSlotPlan().getSlots() == null) {
+            return false;
+        }
+        return context.getBracketSlotPlan().getSlots().size() >= 2
+                && context.getBracketSlotPlan().getSlots().stream()
+                .anyMatch(slot -> slot.isUnresolvedPlaceholder() || slot.isBye()
+                        || slot.effectiveEventTeamId() != null);
     }
 
     private static int resolveCycles(BasketDivisionStage stage) {

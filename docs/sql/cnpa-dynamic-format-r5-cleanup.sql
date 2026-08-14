@@ -88,8 +88,7 @@ INNER JOIN basket_event_team et ON et.id = ep.event_team_id
 INNER JOIN basket_division d ON d.id = et.division_id
 WHERE d.format_snapshot_id IS NULL;
 
-DELETE FROM basket_event_team et
-USING basket_event_team et
+DELETE et FROM basket_event_team et
 INNER JOIN basket_division d ON d.id = et.division_id
 WHERE d.format_snapshot_id IS NULL;
 
@@ -224,13 +223,15 @@ DROP TABLE IF EXISTS basket_match_exception_application;
 DROP TABLE IF EXISTS basket_match_roster;
 DROP TABLE IF EXISTS basket_match_team;
 DROP TABLE IF EXISTS basket_match_official_result;
-DROP TABLE IF EXISTS basket_match_period_score;
+-- V4 正式表名即为 basket_match_period_score，Fresh DB 在 r1-ddl 之后不可 DROP
+-- DROP TABLE IF EXISTS basket_match_period_score;
 DROP TABLE IF EXISTS basket_match_status_log;
 
 -- ---------------------------------------------------------------------------
 -- 6. 删除废弃字段 rank_explain_json
 -- ---------------------------------------------------------------------------
-ALTER TABLE basket_standing DROP COLUMN IF EXISTS rank_explain_json;
+-- MySQL 8.0.12 不支持 DROP COLUMN IF EXISTS；列不存在时由执行器跳过 1091
+ALTER TABLE basket_standing DROP COLUMN rank_explain_json;
 
 -- ---------------------------------------------------------------------------
 -- 7. 收紧新主线字段（Legacy 行已清空后）

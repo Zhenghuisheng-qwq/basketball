@@ -17,6 +17,7 @@ public class TeamRosterVersionDetailVo {
     private Integer candidateCount;
     private Integer excludedCount;
     private Date lockedTime;
+    private Long lockedBy;
     private List<TeamRosterItemVo> formalList = new ArrayList<>();
     private List<TeamRosterItemVo> candidateList = new ArrayList<>();
     private List<TeamRosterItemVo> excludedList = new ArrayList<>();

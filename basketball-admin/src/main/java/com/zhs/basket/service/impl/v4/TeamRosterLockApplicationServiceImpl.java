@@ -21,6 +21,7 @@ import com.zhs.basket.service.v4.ITeamRosterLockApplicationService;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
 import com.zhs.basket.support.v4.roster.TeamRosterSupport;
 import com.zhs.basket.support.v4.version.RuleVersionView;
+import com.zhs.basket.vo.v4.RosterVersionHistoryItemVo;
 import com.zhs.basket.vo.v4.TeamRosterItemVo;
 import com.zhs.basket.vo.v4.TeamRosterLockResultVo;
 import com.zhs.basket.vo.v4.TeamRosterVersionDetailVo;
@@ -120,6 +121,7 @@ public class TeamRosterLockApplicationServiceImpl implements ITeamRosterLockAppl
         vo.setCandidateCount(version.getCandidateCount());
         vo.setExcludedCount(version.getExcludedCount());
         vo.setLockedTime(version.getLockedTime());
+        vo.setLockedBy(version.getLockedBy());
 
         Map<Long, String> teamNames = new HashMap<>();
         for (BasketDivisionRosterEntry entry : rosterEntryMapper.selectByRosterVersionId(rosterVersionId)) {
@@ -143,6 +145,30 @@ public class TeamRosterLockApplicationServiceImpl implements ITeamRosterLockAppl
             }
         }
         return vo;
+    }
+
+    @Override
+    public List<RosterVersionHistoryItemVo> listVersions(Long divisionId) {
+        if (divisionId == null) {
+            throw new ServiceException("divisionId 不能为空");
+        }
+        List<RosterVersionHistoryItemVo> result = new ArrayList<>();
+        for (BasketDivisionRosterVersion version : rosterVersionMapper.selectByDivisionId(divisionId)) {
+            RosterVersionHistoryItemVo item = new RosterVersionHistoryItemVo();
+            item.setRosterVersionId(version.getId());
+            item.setVersionNo(version.getVersionNo());
+            item.setStatus(version.getStatus());
+            item.setStatusName(com.zhs.basket.support.v4.V4AdminDisplaySupport.rosterStatusLabel(version.getStatus()));
+            item.setIsCurrent(version.getIsCurrent());
+            item.setFormalCount(version.getFormalCount());
+            item.setCandidateCount(version.getCandidateCount());
+            item.setExcludedCount(version.getExcludedCount());
+            item.setCreateTime(version.getCreateTime());
+            item.setLockedTime(version.getLockedTime());
+            item.setLockedBy(version.getLockedBy());
+            result.add(item);
+        }
+        return result;
     }
 
     private RuleVersionView validateRule(BasketDivision division) {

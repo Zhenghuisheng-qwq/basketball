@@ -6,6 +6,7 @@ import com.zhs.basket.dto.v4.BasketDivisionFinishReq;
 import com.zhs.basket.dto.v4.BasketDivisionUpdateReq;
 import com.zhs.basket.query.v4.BasketDivisionQuery;
 import com.zhs.basket.service.v4.IBasketV4DivisionService;
+import com.zhs.basket.service.v4.IDivisionOperationOverviewQueryService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
 import com.zhs.common.core.domain.AjaxResult;
@@ -21,12 +22,28 @@ public class BasketV4DivisionController extends BaseController {
 
     @Autowired
     private IBasketV4DivisionService divisionService;
+    @Autowired
+    private IDivisionOperationOverviewQueryService overviewQueryService;
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.DIVISION_LIST + "')")
     @GetMapping("/list")
     public TableDataInfo list(BasketDivisionQuery query) {
         startPage();
         return getDataTable(divisionService.selectList(query));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.DIVISION_LIST + "')")
+    @GetMapping("/selector-list")
+    public TableDataInfo selectorList(BasketDivisionQuery query,
+                                      @RequestParam(required = false) String entry) {
+        startPage();
+        return getDataTable(overviewQueryService.listSelector(query, entry));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.DIVISION_QUERY + "')")
+    @GetMapping("/{id}/workflow-overview")
+    public AjaxResult workflowOverview(@PathVariable Long id) {
+        return success(overviewQueryService.getOverview(id));
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.DIVISION_QUERY + "')")

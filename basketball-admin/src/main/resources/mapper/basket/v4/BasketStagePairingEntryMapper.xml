@@ -59,12 +59,8 @@
         where id = #{id} and is_delete = 0
     </update>
 
-    <update id="deleteByExecutionId">
-        update basket_stage_pairing_entry
-        set is_delete = 1,
-            group_rank_key = NULL,
-            resolved_event_team_id = NULL,
-            update_time = now()
-        where execution_id = #{executionId} and is_delete = 0
-    </update>
+    <delete id="deleteByExecutionId">
+        delete from basket_stage_pairing_entry
+        where execution_id = #{executionId}
+    </delete>
 </mapper>

@@ -44,6 +44,12 @@ public class BasketV4TeamRosterController extends BaseController {
         return success(lockApplicationService.getVersion(divisionId, rosterVersionId));
     }
 
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.REGISTRATION_AUDIT_QUERY + "')")
+    @GetMapping("/versions")
+    public AjaxResult versions(@PathVariable Long divisionId) {
+        return success(lockApplicationService.listVersions(divisionId));
+    }
+
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.REGISTRATION_AUDIT_APPROVE + "')")
     @Log(title = "V4 TeamRoster", businessType = BusinessType.UPDATE)
     @PostMapping("/allocation")

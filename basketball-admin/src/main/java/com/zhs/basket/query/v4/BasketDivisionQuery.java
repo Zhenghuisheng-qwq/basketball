@@ -6,6 +6,7 @@ import lombok.Data;
 public class BasketDivisionQuery {
     private Long id;
     private Long seasonId;
+    private String seriesCode;
     private String platformCode;
     private String registrationMode;
     private String formatType;

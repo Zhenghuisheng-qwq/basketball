@@ -209,11 +209,11 @@ function placeholderName(
 ): string {
   if (teamName && teamName.trim()) {
     return sourceDisplay && !teamName.includes(sourceDisplay)
-      ? `${sourceDisplay} · ${teamName}`
+      ? `${teamName}（${sourceDisplay}）`
       : teamName
   }
-  if (sourceType === 'BYE') return 'BYE'
+  if (sourceType === 'BYE') return '轮空'
   if (sourceDisplay && sourceDisplay.trim()) return sourceDisplay
   if (teamId) return ''
-  return '待定'
+  return sourceDisplay || '待确定'
 }

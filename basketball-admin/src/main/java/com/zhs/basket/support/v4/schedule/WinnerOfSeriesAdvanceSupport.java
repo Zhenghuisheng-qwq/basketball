@@ -68,6 +68,7 @@ public class WinnerOfSeriesAdvanceSupport {
             throw new ServiceException("已解析的胜者不能改绑到另一支球队");
         }
         if (current != null && current.equals(winner)) {
+            ensureChildGames(target);
             return;
         }
         if (home) {
@@ -85,6 +86,10 @@ public class WinnerOfSeriesAdvanceSupport {
         if (matchSeriesMapper.updateById(target) != 1) {
             throw new ServiceException("胜者晋级写入下一轮失败");
         }
+        ensureChildGames(target);
+    }
+
+    private void ensureChildGames(BasketMatchSeries target) {
         Long homeId = positive(target.getHomeEventTeamId());
         Long awayId = positive(target.getAwayEventTeamId());
         if (homeId == null || awayId == null) {

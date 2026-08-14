@@ -40,8 +40,11 @@
         <result property="formatType" column="format_type" />
         <result property="formatTemplateId" column="format_template_id" />
         <result property="formatTemplateName" column="format_template_name" />
+        <result property="formatTemplateCode" column="format_template_code" />
+        <result property="formatTemplateType" column="format_template_type" />
         <result property="formatSnapshotId" column="format_snapshot_id" />
         <result property="formatSnapshotStatus" column="format_snapshot_status" />
+        <result property="rosterWorkflowMode" column="roster_workflow_mode" />
         <result property="maxTeamCount" column="max_team_count" />
         <result property="maxPersonCount" column="max_person_count" />
         <result property="lineupMinCount" column="lineup_min_count" />
@@ -90,7 +93,10 @@
             d.format_template_id,
             d.format_snapshot_id,
             ft.template_name as format_template_name,
+            ft.template_code as format_template_code,
+            ft.template_type as format_template_type,
             fs.snapshot_status as format_snapshot_status,
+            fs.roster_workflow_mode as roster_workflow_mode,
             d.max_team_count,
             d.max_person_count,
             d.lineup_min_count,
@@ -111,6 +117,7 @@
         where d.is_delete = 0
         <if test="id != null">and d.id = #{id}</if>
         <if test="seasonId != null">and d.season_id = #{seasonId}</if>
+        <if test="seriesCode != null and seriesCode != ''">and s.series_code = #{seriesCode}</if>
         <if test="platformCode != null and platformCode != ''">and d.platform_code = #{platformCode}</if>
         <if test="registrationMode != null and registrationMode != ''">and d.registration_mode = #{registrationMode}</if>
         <if test="formatType != null and formatType != ''">and d.format_type = #{formatType}</if>

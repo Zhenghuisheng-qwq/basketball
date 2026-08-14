@@ -258,6 +258,12 @@ function goMatch(matchId: string) {
   router.push(`/events/match/${matchId}`)
 }
 
+function goPlayer(sourcePlayerId?: string | null) {
+  const id = String(sourcePlayerId || '').trim()
+  if (!id) return
+  router.push(`/player/${id}`)
+}
+
 function backToList() {
   router.push('/tournament')
 }
@@ -374,6 +380,7 @@ onMounted(() => {
                   />
                   <div>
                     <h3 class="v4-team-card__name">{{ displayText(team.teamName) }}</h3>
+                    <p v-if="team.temporaryTeam" class="v4-team-card__meta">临时参赛球队，仅用于本届赛事</p>
                     <p class="v4-team-card__meta">
                       队长 {{ displayText(team.captainName) }} · {{ v4PlatformLabel(team.platformCode) }}
                     </p>
@@ -399,7 +406,15 @@ onMounted(() => {
                     </thead>
                     <tbody>
                       <tr v-for="player in expandedTeamDetail.players" :key="player.eventPlayerId">
-                        <td>{{ displayText(player.playerName) }}</td>
+                        <td>
+                          <button
+                            v-if="player.sourcePlayerId"
+                            type="button"
+                            class="v4-link"
+                            @click="goPlayer(player.sourcePlayerId)"
+                          >{{ displayText(player.playerName) }}</button>
+                          <span v-else>{{ displayText(player.playerName) }}</span>
+                        </td>
                         <td>{{ displayText(player.position) }}</td>
                         <td>{{ displayText(player.jerseyNo) }}</td>
                         <td>{{ player.isCaptain ? '队长' : player.isStarter ? '首发' : '替补' }}</td>

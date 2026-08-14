@@ -19,6 +19,7 @@ import {
 const PUBLISH_STATUS_LABELS: Record<string, string> = {
   DRAFT: '草稿',
   PUBLISHED: '已发布',
+  WITHDRAWN: '已撤回',
   OFFLINE: '已下线'
 }
 
@@ -70,7 +71,7 @@ const REGISTRATION_MODE_LABELS: Record<string, string> = {
 }
 
 const PARTICIPATION_ROLE_LABELS: Record<string, string> = {
-  UNALLOCATED: '未分配',
+  UNALLOCATED: '审核合格/等待名单分配',
   FORMAL: '正式参赛',
   CANDIDATE: '候补球队',
   EXCLUDED: '本届不参赛'
@@ -90,8 +91,8 @@ const GAME_MODE_LABELS: Record<string, string> = {
 
 const SNAPSHOT_STATUS_LABELS: Record<string, string> = {
   DRAFT: '草稿',
-  LOCKED: '已锁定',
-  IN_USE: '使用中',
+  LOCKED: '已发布 / 已锁定规则',
+  IN_USE: '已发布 / 已锁定规则',
   ARCHIVED: '已归档'
 }
 
@@ -163,6 +164,9 @@ const STAGE_EXECUTION_STATUS_TAG: Record<string, string> = {
 const COMPETITION_FORMAT_LABELS: Record<string, string> = {
   ROUND_ROBIN: '循环赛',
   SINGLE_ELIMINATION: '单败淘汰',
+  GROUP_STAGE: '小组赛',
+  PLAYOFF: '季后赛',
+  DOUBLE_ELIMINATION: '双败淘汰（预留 / Demo）',
   MANUAL: '人工安排'
 }
 
@@ -388,6 +392,43 @@ export function v4StageExecutionStatusTagType(status?: string | null): string {
 
 export function v4CompetitionFormatLabel(format?: string | null): string {
   return lookup(COMPETITION_FORMAT_LABELS, format, format || '-')
+}
+
+export function v4RuleProductStatusLabel(status?: string | null): string {
+  return lookup(SNAPSHOT_STATUS_LABELS, status, status ? status : '未配置')
+}
+
+export function v4RosterProductStatusLabel(status?: string | null): string {
+  if (!status || status === 'DRAFT') return '名单整理中'
+  if (status === 'LOCKED') return '最终名单已锁定'
+  return status
+}
+
+export function v4StructureProductStatusLabel(status?: string | null): string {
+  if (status === 'ACTIVE') return '当前结构'
+  if (status === 'STALE') return '结构已失效，需重新生成'
+  if (!status) return '尚未生成'
+  return status
+}
+
+export function v4PlaceholderProductLabel(resolutionStatus?: string | null, sourceType?: string | null, sourceDisplay?: string | null): string {
+  if (sourceType === 'BYE' || resolutionStatus === 'BYE') return '轮空'
+  if (resolutionStatus === 'RESOLVED') {
+    return sourceDisplay ? `已确定：${sourceDisplay}` : '已确定'
+  }
+  if (sourceType === 'GROUP_RANK') {
+    return sourceDisplay ? `待小组赛结果确定（${sourceDisplay}）` : '待小组赛结果确定'
+  }
+  if (sourceType === 'WINNER_OF_SERIES') {
+    return sourceDisplay || '等待系列赛胜者'
+  }
+  return sourceDisplay || (resolutionStatus === 'PENDING' || resolutionStatus === 'TBD' ? '待确定' : '-')
+}
+
+export function v4ScheduleSourceLabel(source?: string | null): string {
+  if (source === 'RECOMMENDED') return '推荐'
+  if (source === 'MANUAL') return '手工'
+  return source || '-'
 }
 
 export function v4GroupingModeLabel(mode?: string | null): string {
@@ -940,7 +981,8 @@ export const V4_ORGANIZATION_MODE_OPTIONS = [
 export const V4_CUSTOM_COMPETITION_FORMAT_OPTIONS = [
   { label: '循环积分赛', value: 'ROUND_ROBIN' },
   { label: '单败淘汰赛', value: 'SINGLE_ELIMINATION' },
-  { label: '季后赛', value: 'PLAYOFF' }
+  { label: '季后赛', value: 'PLAYOFF' },
+  { label: '双败淘汰（预留 / Demo）', value: 'DOUBLE_ELIMINATION' }
 ] as const
 
 export const V4_CUSTOM_ELIMINATION_PAIRING_OPTIONS = [
