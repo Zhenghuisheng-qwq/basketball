@@ -16,4 +16,6 @@ public interface BasketV4MatchTeamStatMapper {
     int insert(BasketV4MatchTeamStat entity);
     int updateById(BasketV4MatchTeamStat entity);
     int softDelete(@Param("id") Long id);
+
+    int softDeleteByMatchId(@Param("matchId") Long matchId);
 }

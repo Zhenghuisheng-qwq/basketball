@@ -13,6 +13,9 @@ public class BasketStageStandingRowVo {
     private Integer pointAgainst;
     private Integer pointDiff;
     private Integer standingPoints;
+    private Integer baseStandingPoints;
+    private Integer adjustmentPoints;
+    private boolean canAdjustStandingPoints;
     private Integer manualRankPending;
     private Integer manualRankNo;
     private String manualRankReason;

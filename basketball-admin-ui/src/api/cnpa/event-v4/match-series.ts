@@ -55,6 +55,9 @@ export interface BasketMatchSeriesDetailVo {
   qualificationStatusName?: string
   finalStage?: boolean
   resultLabel?: string
+  canAdjustSchedule?: boolean
+  adjustScheduleBlockReason?: string
+  canResolveSeriesManually?: boolean
   games?: BasketMatchSeriesGameVo[]
 }
 

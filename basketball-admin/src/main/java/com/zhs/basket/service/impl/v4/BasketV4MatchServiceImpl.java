@@ -6,6 +6,8 @@ import com.zhs.basket.enums.v4.MatchPublishStatusEnum;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.query.v4.BasketV4MatchQuery;
 import com.zhs.basket.service.v4.IBasketV4MatchService;
+import com.zhs.basket.support.v4.AdminOfficialResultCapability;
+import com.zhs.basket.support.v4.schedule.ScheduleAdjustmentGuard;
 import com.zhs.basket.vo.v4.BasketV4MatchListVo;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +25,13 @@ public class BasketV4MatchServiceImpl implements IBasketV4MatchService {
 
     @Override
     public List<BasketV4MatchListVo> selectList(BasketV4MatchQuery query) {
-        return matchMapper.selectVoList(query);
+        List<BasketV4MatchListVo> rows = matchMapper.selectVoList(query);
+        if (rows != null) {
+            for (BasketV4MatchListVo row : rows) {
+                fillRuntimeAdjust(row);
+            }
+        }
+        return rows;
     }
 
     @Override
@@ -37,7 +45,27 @@ public class BasketV4MatchServiceImpl implements IBasketV4MatchService {
         if (rows.isEmpty()) {
             throw new ServiceException("比赛不存在");
         }
+        fillRuntimeAdjust(rows.get(0));
         return rows.get(0);
+    }
+
+    private void fillRuntimeAdjust(BasketV4MatchListVo row) {
+        if (row == null) {
+            return;
+        }
+        row.setStandaloneMatch(!ScheduleAdjustmentGuard.isSeriesChildMatch(row.getSeriesId()));
+        String block = ScheduleAdjustmentGuard.matchManagementMatchBlockReason(
+                row.getSeriesId(), row.getPublishStatus(), row.getMatchStatus());
+        row.setAdjustScheduleBlockReason(block);
+        row.setCanAdjustSchedule(block == null);
+        BasketV4Match probe = new BasketV4Match();
+        probe.setHomeEventTeamId(row.getHomeEventTeamId());
+        probe.setAwayEventTeamId(row.getAwayEventTeamId());
+        probe.setPublishStatus(row.getPublishStatus());
+        probe.setMatchStatus(row.getMatchStatus());
+        row.setCanEnterOfficialResult(AdminOfficialResultCapability.canEnterOfficialResult(probe));
+        row.setCanCorrectOfficialResult(AdminOfficialResultCapability.canCorrectOfficialResult(probe));
+        row.setCanForfeitMatch(AdminOfficialResultCapability.canForfeitMatch(probe));
     }
 
     @Override

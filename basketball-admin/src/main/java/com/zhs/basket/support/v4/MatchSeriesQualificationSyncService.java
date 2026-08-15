@@ -3,13 +3,16 @@ package com.zhs.basket.support.v4;
 import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketDivisionStageQualification;
 import com.zhs.basket.domain.v4.BasketMatchSeries;
+import com.zhs.basket.domain.v4.BasketV4Match;
 import com.zhs.basket.enums.v4.MatchSeriesStatusEnum;
+import com.zhs.basket.enums.v4.MatchStatusEnum;
 import com.zhs.basket.enums.v4.QualificationRecordStatusEnum;
 import com.zhs.basket.enums.v4.QualificationTypeEnum;
-import com.zhs.basket.enums.v4.StageExecutionStatusEnum;
 import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionStageQualificationMapper;
-import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
+import com.zhs.basket.mapper.v4.BasketMatchSeriesMapper;
+import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
+import com.zhs.basket.support.v4.schedule.WinnerOfSeriesAdvanceSupport;
 import com.zhs.basket.support.v4.stage.EliminationStageSupport;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * Series 完成/回退时同步 PREVIEW 晋级记录（沿用 BO1 确认机制，不自动 CONFIRMED）。
@@ -31,7 +35,9 @@ public class MatchSeriesQualificationSyncService {
     @Autowired
     private BasketDivisionStageQualificationMapper qualificationMapper;
     @Autowired
-    private BasketScheduleBatchMapper scheduleBatchMapper;
+    private BasketV4MatchMapper matchMapper;
+    @Autowired
+    private BasketMatchSeriesMapper seriesMapper;
 
     public void syncAfterSeriesRebuild(BasketMatchSeries series,
                                        String previousStatus,
@@ -110,29 +116,44 @@ public class MatchSeriesQualificationSyncService {
     }
 
     public void assertCanModifyDownstream(BasketDivisionStage stage) {
-        if (!StringUtils.hasText(stage.getNextStageCode())) {
-            return;
+        if (hasOfficialDownstreamStarted(stage)) {
+            throw new ServiceException(WinnerOfSeriesAdvanceSupport.MSG_DOWNSTREAM_STARTED);
+        }
+    }
+
+    public boolean hasOfficialDownstreamStarted(BasketDivisionStage stage) {
+        if (stage == null || !StringUtils.hasText(stage.getNextStageCode())) {
+            return false;
         }
         BasketDivisionStage nextStage = stageMapper.selectByDivisionId(stage.getDivisionId()).stream()
                 .filter(s -> stage.getNextStageCode().equals(s.getStageCode()))
                 .findFirst()
                 .orElse(null);
-        if (nextStage == null) {
-            return;
+        return nextStage != null && hasOfficialExecution(nextStage);
+    }
+
+    private boolean hasOfficialExecution(BasketDivisionStage nextStage) {
+        List<BasketV4Match> matches = matchMapper.selectByStageId(nextStage.getId());
+        if (matches != null) {
+            for (BasketV4Match match : matches) {
+                String status = match.getMatchStatus();
+                if (MatchStatusEnum.PLAYING.getCode().equals(status)
+                        || MatchStatusEnum.FINISHED.getCode().equals(status)
+                        || MatchStatusEnum.FORFEITED.getCode().equals(status)) {
+                    return true;
+                }
+            }
         }
-        if (nextStage.getScheduleBatchId() != null) {
-            throw new ServiceException("下一阶段已生成或发布赛程，无法自动变更系列赛晋级结果，请走人工异常处理");
+        List<BasketMatchSeries> seriesList = seriesMapper.selectByStageId(nextStage.getId());
+        if (seriesList != null) {
+            for (BasketMatchSeries series : seriesList) {
+                if (MatchSeriesStatusEnum.RUNNING.getCode().equals(series.getSeriesStatus())
+                        || MatchSeriesStatusEnum.COMPLETED.getCode().equals(series.getSeriesStatus())) {
+                    return true;
+                }
+            }
         }
-        if (scheduleBatchMapper.selectDraftByStageId(nextStage.getId()) != null
-                || scheduleBatchMapper.selectPublishedByStageId(nextStage.getId()) != null) {
-            throw new ServiceException("下一阶段已生成或发布赛程，无法自动变更系列赛晋级结果，请走人工异常处理");
-        }
-        String exec = nextStage.getExecutionStatus();
-        if (exec != null
-                && !StageExecutionStatusEnum.DRAFT.getCode().equals(exec)
-                && !StageExecutionStatusEnum.READY.getCode().equals(exec)) {
-            throw new ServiceException("下一阶段已进入执行，无法自动变更系列赛晋级结果，请走人工异常处理");
-        }
+        return false;
     }
 
     public static String buildSeriesQualificationKey(Long seriesId, String status) {

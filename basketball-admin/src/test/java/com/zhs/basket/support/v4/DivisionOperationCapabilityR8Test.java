@@ -63,7 +63,18 @@ class DivisionOperationCapabilityR8Test {
                 true, true, "ACTIVE", "PUBLISHED", 0, false, true, true, false);
         assertTrue(cap.isCanWithdraw());
         assertFalse(cap.isCanEditSchedule());
+        assertFalse(cap.isCanAdjustSchedule());
         assertEquals(DivisionOperationCapabilitySupport.MSG_PUBLISHED_READONLY, cap.getBlockReason());
+        assertTrue(cap.getBlockReason().contains("比赛执行 → 比赛管理"));
+    }
+
+    @Test
+    void withdrawnStageAllowsDraftEdit_notPublishedReschedule() {
+        StageOperationCapabilities cap = DivisionOperationCapabilitySupport.stageCapabilities(
+                true, true, "ACTIVE", "WITHDRAWN", 0, true, true, true, false);
+        assertTrue(cap.isCanEditSchedule());
+        assertFalse(cap.isCanAdjustSchedule());
+        assertTrue(cap.isCanPublish());
     }
 
     @Test

@@ -24,6 +24,7 @@ public class BasketV4MatchListVo {
     private String awayTeamName;
     private Integer homeScore;
     private Integer awayScore;
+    private Long winnerEventTeamId;
     private String matchStatus;
     private String publishStatus;
     private String venueText;
@@ -33,4 +34,10 @@ public class BasketV4MatchListVo {
     private Integer seriesGameNo;
     private String seriesCode;
     private Integer bestOf;
+    private boolean standaloneMatch;
+    private boolean canAdjustSchedule;
+    private String adjustScheduleBlockReason;
+    private boolean canEnterOfficialResult;
+    private boolean canCorrectOfficialResult;
+    private boolean canForfeitMatch;
 }

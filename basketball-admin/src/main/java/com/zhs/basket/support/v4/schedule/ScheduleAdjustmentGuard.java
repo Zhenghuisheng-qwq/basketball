@@ -11,11 +11,13 @@ import com.zhs.common.exception.ServiceException;
 public final class ScheduleAdjustmentGuard {
 
     public static final String MSG_REASON_REQUIRED = "调整已发布比赛必须填写原因";
-    public static final String MSG_NOT_PUBLISHED = "仅已发布赛段可以调整比赛时间";
-    public static final String MSG_SERIES_STARTED = "系列赛已经开始，不能使用普通排期调整，请进入比赛执行处理。";
+    public static final String MSG_NOT_PUBLISHED = "赛段尚未发布，请前往赛事工作台调整排期。";
+    public static final String MSG_NOT_OPERATIONAL = "赛段尚未发布，请前往赛事工作台调整排期。";
+    public static final String MSG_SERIES_STARTED = "该系列赛已经开始，不能使用普通时间调整。";
     public static final String MSG_SERIES_FINISHED = "系列赛已结束，不能修改日期时间";
-    public static final String MSG_MATCH_STARTED = "比赛已经开始，不能使用普通排期调整，请进入比赛执行处理。";
+    public static final String MSG_MATCH_STARTED = "比赛已经开始，不能使用普通时间调整。";
     public static final String MSG_MATCH_FINISHED = "比赛已结束，不能修改日期时间";
+    public static final String MSG_CHILD_MATCH = "该比赛属于 BO 系列赛，请前往『系列赛』调整整个系列赛时间。";
 
     private ScheduleAdjustmentGuard() {}
 
@@ -55,6 +57,53 @@ public final class ScheduleAdjustmentGuard {
         return MatchStatusEnum.FINISHED.getCode().equals(matchStatus)
                 || MatchStatusEnum.FORFEITED.getCode().equals(matchStatus)
                 || MatchStatusEnum.CANCELLED.getCode().equals(matchStatus);
+    }
+
+    public static String matchManagementBlockReason(String publishStatus, String seriesStatus, boolean childStarted) {
+        if (!PublishStatusEnum.PUBLISHED.getCode().equals(publishStatus)) {
+            return MSG_NOT_OPERATIONAL;
+        }
+        if (isSeriesFinished(seriesStatus)) {
+            return MSG_SERIES_FINISHED;
+        }
+        if (isSeriesStarted(seriesStatus, childStarted)) {
+            return MSG_SERIES_STARTED;
+        }
+        return null;
+    }
+
+    public static boolean canAdjustInMatchManagement(String publishStatus, String seriesStatus, boolean childStarted) {
+        return matchManagementBlockReason(publishStatus, seriesStatus, childStarted) == null;
+    }
+
+    public static boolean isSeriesChildMatch(Long seriesId) {
+        return seriesId != null && seriesId > 0;
+    }
+
+    public static String matchManagementMatchBlockReason(Long seriesId, String publishStatus, String matchStatus) {
+        if (isSeriesChildMatch(seriesId)) {
+            return MSG_CHILD_MATCH;
+        }
+        if (!PublishStatusEnum.PUBLISHED.getCode().equals(publishStatus)) {
+            return MSG_NOT_OPERATIONAL;
+        }
+        if (isMatchFinished(matchStatus)) {
+            return MSG_MATCH_FINISHED;
+        }
+        if (isMatchStarted(matchStatus)) {
+            return MSG_MATCH_STARTED;
+        }
+        return null;
+    }
+
+    public static boolean canAdjustStandaloneMatch(Long seriesId, String publishStatus, String matchStatus) {
+        return matchManagementMatchBlockReason(seriesId, publishStatus, matchStatus) == null;
+    }
+
+    public static void assertStandaloneMatch(Long seriesId) {
+        if (isSeriesChildMatch(seriesId)) {
+            throw new ServiceException(MSG_CHILD_MATCH);
+        }
     }
 
     public static boolean canAdjust(ScheduleUnitView unit, boolean childStarted) {

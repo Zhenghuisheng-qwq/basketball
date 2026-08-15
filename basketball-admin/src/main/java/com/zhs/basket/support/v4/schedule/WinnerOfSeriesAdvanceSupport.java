@@ -4,18 +4,22 @@ import com.zhs.basket.domain.v4.BasketDivision;
 import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketMatchSeries;
 import com.zhs.basket.domain.v4.BasketScheduleBatch;
+import com.zhs.basket.domain.v4.BasketV4Match;
 import com.zhs.basket.enums.v4.MatchSeriesStatusEnum;
+import com.zhs.basket.enums.v4.MatchStatusEnum;
 import com.zhs.basket.enums.v4.ParticipantSourceTypeEnum;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketMatchSeriesMapper;
 import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
+import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.support.v4.stage.MatchSeriesSupport;
 import com.zhs.basket.support.v4.stage.StageExecutionContext;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -25,6 +29,9 @@ import java.util.Objects;
  */
 @Component
 public class WinnerOfSeriesAdvanceSupport {
+
+    public static final String MSG_DOWNSTREAM_STARTED =
+            "下游系列赛已经开始或产生正式结果，不能直接修改上游晋级结果，请进入赛事管理员仲裁流程。";
 
     @Autowired
     private BasketMatchSeriesMapper matchSeriesMapper;
@@ -36,40 +43,64 @@ public class WinnerOfSeriesAdvanceSupport {
     private BasketDivisionStageMapper stageMapper;
     @Autowired
     private MatchSeriesSupport matchSeriesSupport;
+    @Autowired
+    private BasketV4MatchMapper matchMapper;
 
     public void advanceIfCompleted(BasketMatchSeries completed) {
-        if (completed == null || completed.getId() == null) {
+        rewireAfterSeriesResult(completed);
+    }
+
+    public void rewireAfterSeriesResult(BasketMatchSeries source) {
+        if (source == null || source.getId() == null) {
             return;
         }
-        if (!MatchSeriesStatusEnum.COMPLETED.getCode().equals(completed.getSeriesStatus())) {
-            return;
-        }
-        Long winner = completed.getWinnerEventTeamId();
-        if (winner == null || winner <= 0) {
-            return;
-        }
-        List<BasketMatchSeries> next = matchSeriesMapper.selectBySourceSeriesId(completed.getId());
+        List<BasketMatchSeries> next = matchSeriesMapper.selectBySourceSeriesId(source.getId());
         if (next == null || next.isEmpty()) {
             return;
         }
+        boolean completed = MatchSeriesStatusEnum.COMPLETED.getCode().equals(source.getSeriesStatus());
+        Long winner = completed ? positive(source.getWinnerEventTeamId()) : null;
         for (BasketMatchSeries target : next) {
-            applyWinner(completed.getId(), winner, target);
+            applyOrClear(source.getId(), winner, target);
         }
     }
 
-    private void applyWinner(Long sourceSeriesId, Long winner, BasketMatchSeries target) {
+    public void assertDownstreamNotStarted(BasketMatchSeries source) {
+        if (source == null || source.getId() == null) {
+            return;
+        }
+        List<BasketMatchSeries> next = matchSeriesMapper.selectBySourceSeriesId(source.getId());
+        if (next == null) {
+            return;
+        }
+        for (BasketMatchSeries target : next) {
+            if (isDownstreamStarted(target)) {
+                throw new ServiceException(MSG_DOWNSTREAM_STARTED);
+            }
+        }
+    }
+
+    private void applyOrClear(Long sourceSeriesId, Long winner, BasketMatchSeries target) {
         boolean home = Objects.equals(sourceSeriesId, target.getSourceSeriesIdHome());
         boolean away = Objects.equals(sourceSeriesId, target.getSourceSeriesIdAway());
         if (!home && !away) {
             return;
         }
-        Long current = home ? target.getHomeEventTeamId() : target.getAwayEventTeamId();
-        if (current != null && current > 0 && !current.equals(winner)) {
-            throw new ServiceException("已解析的胜者不能改绑到另一支球队");
+        Long current = home ? positive(target.getHomeEventTeamId()) : positive(target.getAwayEventTeamId());
+        if (winner == null) {
+            if (current == null) {
+                return;
+            }
+            assertSlotMutable(target);
+            clearSlot(target, home);
+            return;
         }
         if (current != null && current.equals(winner)) {
             ensureChildGames(target);
             return;
+        }
+        if (current != null) {
+            assertSlotMutable(target);
         }
         if (home) {
             target.setHomeEventTeamId(winner);
@@ -83,10 +114,70 @@ public class WinnerOfSeriesAdvanceSupport {
                 target.setAwaySourceType(ParticipantSourceTypeEnum.WINNER_OF_SERIES.getCode());
             }
         }
+        target.setUpdateTime(new Date());
         if (matchSeriesMapper.updateById(target) != 1) {
             throw new ServiceException("胜者晋级写入下一轮失败");
         }
         ensureChildGames(target);
+    }
+
+    private void clearSlot(BasketMatchSeries target, boolean home) {
+        if (home) {
+            target.setHomeEventTeamId(0L);
+        } else {
+            target.setAwayEventTeamId(0L);
+        }
+        if (MatchSeriesStatusEnum.READY.getCode().equals(target.getSeriesStatus())
+                || MatchSeriesStatusEnum.RUNNING.getCode().equals(target.getSeriesStatus())) {
+            target.setSeriesStatus(MatchSeriesStatusEnum.PENDING.getCode());
+        }
+        target.setUpdateTime(new Date());
+        if (matchSeriesMapper.updateById(target) != 1) {
+            throw new ServiceException("撤销胜者晋级失败");
+        }
+        List<BasketV4Match> games = matchMapper.selectBySeriesId(target.getId());
+        if (games == null) {
+            return;
+        }
+        for (BasketV4Match game : games) {
+            if (home) {
+                game.setHomeEventTeamId(0L);
+            } else {
+                game.setAwayEventTeamId(0L);
+            }
+            game.setUpdateTime(new Date());
+            matchMapper.updateById(game);
+        }
+    }
+
+    private void assertSlotMutable(BasketMatchSeries target) {
+        if (isDownstreamStarted(target)) {
+            throw new ServiceException(MSG_DOWNSTREAM_STARTED);
+        }
+    }
+
+    public boolean isDownstreamStarted(BasketMatchSeries target) {
+        if (target == null) {
+            return false;
+        }
+        String status = target.getSeriesStatus();
+        if (MatchSeriesStatusEnum.RUNNING.getCode().equals(status)
+                || MatchSeriesStatusEnum.COMPLETED.getCode().equals(status)) {
+            return true;
+        }
+        List<BasketV4Match> games = matchMapper.selectBySeriesId(target.getId());
+        if (games == null) {
+            return false;
+        }
+        for (BasketV4Match game : games) {
+            String matchStatus = game.getMatchStatus();
+            if (MatchStatusEnum.PLAYING.getCode().equals(matchStatus)
+                    || MatchStatusEnum.FINISHED.getCode().equals(matchStatus)
+                    || MatchStatusEnum.FORFEITED.getCode().equals(matchStatus)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void ensureChildGames(BasketMatchSeries target) {

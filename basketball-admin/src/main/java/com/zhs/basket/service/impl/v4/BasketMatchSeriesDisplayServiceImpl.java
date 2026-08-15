@@ -7,7 +7,9 @@ import com.zhs.basket.enums.v4.QualificationRecordStatusEnum;
 import com.zhs.basket.enums.v4.SubmissionStatusEnum;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IBasketMatchSeriesDisplayService;
+import com.zhs.basket.support.v4.AdminOfficialResultCapability;
 import com.zhs.basket.support.v4.MatchSeriesResultCalculator;
+import com.zhs.basket.support.v4.schedule.ScheduleAdjustmentGuard;
 import com.zhs.basket.support.v4.stage.EliminationStageSupport;
 import com.zhs.basket.vo.v4.BasketMatchSeriesDetailVo;
 import com.zhs.basket.vo.v4.BasketMatchSeriesGameVo;
@@ -221,6 +223,24 @@ public class BasketMatchSeriesDisplayServiceImpl implements IBasketMatchSeriesDi
         }
         vo.setGamesPlayed(gamesPlayed);
         vo.setRoundName(knockoutRoundName(series.getRoundNo(), series.getRoundNo()));
+        boolean childStarted = false;
+        if (vo.getGames() != null) {
+            for (BasketMatchSeriesGameVo game : vo.getGames()) {
+                if (game == null || Boolean.TRUE.equals(game.getSkipped())) {
+                    continue;
+                }
+                if (ScheduleAdjustmentGuard.isMatchStarted(game.getMatchStatus())
+                        || ScheduleAdjustmentGuard.isMatchFinished(game.getMatchStatus())) {
+                    childStarted = true;
+                    break;
+                }
+            }
+        }
+        String block = ScheduleAdjustmentGuard.matchManagementBlockReason(
+                vo.getPublishStatus(), vo.getSeriesStatus(), childStarted);
+        vo.setAdjustScheduleBlockReason(block);
+        vo.setCanAdjustSchedule(block == null);
+        vo.setCanResolveSeriesManually(AdminOfficialResultCapability.canResolveSeriesManually(series));
         return vo;
     }
 

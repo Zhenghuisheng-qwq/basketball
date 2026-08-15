@@ -12,8 +12,14 @@
       class="mb8"
       type="warning"
       :closable="false"
-      title="赛段已发布，赛制结构与对阵已锁定。如遇特殊情况，可调整未开始比赛的日期与时间。"
-    />
+    >
+      <template #title>
+        赛段已发布，赛前排期规划已锁定。<br />
+        如需重新规划赛程，请先撤回发布后修改。<br />
+        赛事运行期间若仅需调整某一场比赛或系列赛时间，<br />
+        请前往『比赛执行 → 比赛管理』处理。
+      </template>
+    </el-alert>
 
     <div class="mb8">
       <el-radio-group v-model="filterStatus" size="small" @change="reload">
@@ -60,13 +66,10 @@
       <el-table-column label="状态" width="100">
         <template #default="scope">{{ scope.row.scheduleStatus === 'SCHEDULED' ? '已排期' : '未排期' }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="180" fixed="right">
+      <el-table-column v-if="!published" label="操作" width="180" fixed="right">
         <template #default="scope">
-          <el-button v-if="published" link type="primary" :disabled="!scope.row.canAdjustSchedule" @click="openAdjust(scope.row)">调整时间</el-button>
-          <template v-else>
-            <el-button link type="primary" :disabled="!scope.row.canEditSchedule" @click="openEdit(scope.row)">编辑</el-button>
-            <el-button link type="warning" :disabled="!scope.row.canEditSchedule" @click="doClear(scope.row)">清除</el-button>
-          </template>
+          <el-button link type="primary" :disabled="!scope.row.canEditSchedule" @click="openEdit(scope.row)">编辑</el-button>
+          <el-button link type="warning" :disabled="!scope.row.canEditSchedule" @click="doClear(scope.row)">清除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -82,22 +85,6 @@
       <template #footer>
         <el-button @click="editVisible = false">取消</el-button>
         <el-button type="primary" @click="submitEdit">保存</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="adjustVisible" title="调整时间" width="480px" append-to-body>
-      <el-form label-width="90px">
-        <el-form-item label="当前日期">{{ adjustRow?.scheduledDate || '待安排' }}</el-form-item>
-        <el-form-item label="当前时间">{{ formatTime(adjustRow?.scheduledStartTime) }}</el-form-item>
-        <el-form-item label="新日期" required><el-date-picker v-model="adjustDate" type="date" value-format="YYYY-MM-DD" /></el-form-item>
-        <el-form-item label="新时间" required><el-time-picker v-model="adjustTime" value-format="HH:mm" format="HH:mm" /></el-form-item>
-        <el-form-item label="调整原因" required>
-          <el-input v-model="adjustReason" type="textarea" :rows="3" placeholder="必填，例如：双方协商延期 / 服务器维护 / 赛事运营调整 / 不可抗力 / 其他" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="adjustVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitAdjust">确认调整</el-button>
       </template>
     </el-dialog>
 
@@ -166,7 +153,6 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   applyV4ScheduleRecommend,
   assignV4StageSchedule,
-  rescheduleV4StageSchedule,
   batchAssignV4StageSchedule,
   clearV4StageSchedule,
   listV4StageScheduleUnits,
@@ -200,11 +186,6 @@ const editVisible = ref(false)
 const editRow = ref<ScheduleUnitView>()
 const editDate = ref('')
 const editTime = ref('')
-const adjustVisible = ref(false)
-const adjustRow = ref<ScheduleUnitView>()
-const adjustDate = ref('')
-const adjustTime = ref('')
-const adjustReason = ref('')
 const batchVisible = ref(false)
 const batchRound = ref<number | null>(null)
 const batchDate = ref('')
@@ -276,6 +257,10 @@ function openEdit(row: ScheduleUnitView) {
 
 function submitEdit() {
   if (!props.stage?.stageId || !editRow.value) return
+  if (published.value) {
+    ElMessage.error('赛段已发布，请先撤回后修改；单场/系列赛改期请前往比赛管理')
+    return
+  }
   assignV4StageSchedule(props.stage.stageId, {
     unitType: editRow.value.unitType,
     unitId: editRow.value.unitId,
@@ -284,38 +269,6 @@ function submitEdit() {
   }).then(() => {
     ElMessage.success('已排期')
     editVisible.value = false
-    reload()
-    emit('updated')
-  })
-}
-
-function openAdjust(row: ScheduleUnitView) {
-  adjustRow.value = row
-  adjustDate.value = row.scheduledDate || ''
-  adjustTime.value = formatTime(row.scheduledStartTime) === '-' ? '21:00' : formatTime(row.scheduledStartTime)
-  adjustReason.value = ''
-  adjustVisible.value = true
-}
-
-function submitAdjust() {
-  if (!props.stage?.stageId || !adjustRow.value) return
-  if (!adjustDate.value || !adjustTime.value) {
-    ElMessage.error('请填写新的日期和时间')
-    return
-  }
-  if (!adjustReason.value.trim()) {
-    ElMessage.error('调整原因必填')
-    return
-  }
-  rescheduleV4StageSchedule(props.stage.stageId, {
-    unitType: adjustRow.value.unitType,
-    unitId: adjustRow.value.unitId,
-    scheduledDate: adjustDate.value,
-    scheduledStartTime: adjustTime.value,
-    reason: adjustReason.value.trim()
-  }).then(() => {
-    ElMessage.success('已调整并发布新排期版本')
-    adjustVisible.value = false
     reload()
     emit('updated')
   })

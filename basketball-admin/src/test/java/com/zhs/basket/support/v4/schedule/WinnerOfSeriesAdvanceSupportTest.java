@@ -37,6 +37,7 @@ class WinnerOfSeriesAdvanceSupportTest {
     @Mock private BasketDivisionMapper divisionMapper;
     @Mock private BasketDivisionStageMapper stageMapper;
     @Mock private MatchSeriesSupport matchSeriesSupport;
+    @Mock private com.zhs.basket.mapper.v4.BasketV4MatchMapper matchMapper;
     @InjectMocks private WinnerOfSeriesAdvanceSupport support;
 
     @Test
@@ -45,8 +46,9 @@ class WinnerOfSeriesAdvanceSupportTest {
         qf.setId(11L);
         qf.setWinnerEventTeamId(null);
         qf.setSeriesStatus(MatchSeriesStatusEnum.RUNNING.getCode());
+        when(matchSeriesMapper.selectBySourceSeriesId(11L)).thenReturn(List.of());
         support.advanceIfCompleted(qf);
-        verify(matchSeriesMapper, never()).selectBySourceSeriesId(any());
+        verify(matchSeriesMapper, never()).updateById(any());
     }
 
     @Test
@@ -67,11 +69,31 @@ class WinnerOfSeriesAdvanceSupportTest {
     }
 
     @Test
-    void rebindDifferentTeam_rejected() {
+    void rebindDifferentTeam_allowedWhenDownstreamNotStarted() {
         BasketMatchSeries qf = completed(11L, 100L);
         BasketMatchSeries sf = nextRound(21L, 11L, null);
         sf.setHomeEventTeamId(999L);
+        sf.setSeriesStatus(MatchSeriesStatusEnum.READY.getCode());
         when(matchSeriesMapper.selectBySourceSeriesId(11L)).thenReturn(List.of(sf));
+        when(matchSeriesMapper.updateById(sf)).thenReturn(1);
+        when(matchMapper.selectBySeriesId(21L)).thenReturn(List.of());
+
+        support.advanceIfCompleted(qf);
+
+        assertEquals(100L, sf.getHomeEventTeamId());
+        verify(matchSeriesMapper).updateById(sf);
+    }
+
+    @Test
+    void rebindDifferentTeam_rejectedWhenDownstreamHasOfficialResult() {
+        BasketMatchSeries qf = completed(11L, 100L);
+        BasketMatchSeries sf = nextRound(21L, 11L, null);
+        sf.setHomeEventTeamId(999L);
+        sf.setSeriesStatus(MatchSeriesStatusEnum.READY.getCode());
+        com.zhs.basket.domain.v4.BasketV4Match finished = new com.zhs.basket.domain.v4.BasketV4Match();
+        finished.setMatchStatus(com.zhs.basket.enums.v4.MatchStatusEnum.FINISHED.getCode());
+        when(matchSeriesMapper.selectBySourceSeriesId(11L)).thenReturn(List.of(sf));
+        when(matchMapper.selectBySeriesId(21L)).thenReturn(List.of(finished));
         assertThrows(ServiceException.class, () -> support.advanceIfCompleted(qf));
         verify(matchSeriesMapper, never()).updateById(any());
     }

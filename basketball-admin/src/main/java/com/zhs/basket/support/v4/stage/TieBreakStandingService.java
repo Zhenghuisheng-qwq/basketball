@@ -12,6 +12,8 @@ import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionTieBreakRuleMapper;
 import com.zhs.basket.mapper.v4.BasketStandingMapper;
 import com.zhs.basket.mapper.v4.BasketStandingRankReasonMapper;
+import com.zhs.basket.domain.BasketPointAdjustment;
+import com.zhs.basket.mapper.BasketPointAdjustmentMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +52,8 @@ public class TieBreakStandingService {
     private BasketStandingRankReasonMapper rankReasonMapper;
     @Autowired
     private TieBreakComparatorBuilder comparatorBuilder;
+    @Autowired
+    private BasketPointAdjustmentMapper pointAdjustmentMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public void rebuildStageStanding(Long stageId) {
@@ -59,11 +63,14 @@ public class TieBreakStandingService {
                         || MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus()))
                 .collect(Collectors.toList());
         if (stageMatches.isEmpty()) {
+            clearExistingStanding(stage);
             return;
         }
 
         int winPoints = defaultPoints(stage.getWinPoints(), 2);
         int lossPoints = defaultPoints(stage.getLossPoints(), 1);
+        int forfeitWinPoints = stage.getForfeitWinPoints() != null ? stage.getForfeitWinPoints() : winPoints;
+        int forfeitLossPoints = stage.getForfeitLossPoints() != null ? stage.getForfeitLossPoints() : 0;
         List<BasketDivisionTieBreakRule> tieBreakRules = tieBreakRuleMapper.selectByStageId(stageId);
         Long seasonId = stageMatches.get(0).getSeasonId();
         Long divisionId = stage.getDivisionId();
@@ -73,10 +80,12 @@ public class TieBreakStandingService {
         for (Map.Entry<Long, List<BasketV4Match>> entry : scopeMatches.entrySet()) {
             Long groupScopeKey = entry.getKey();
             List<BasketV4Match> matches = entry.getValue();
-            Map<Long, StandingAgg> aggMap = aggregateMatches(matches, winPoints, lossPoints);
+            Map<Long, StandingAgg> aggMap = aggregateMatches(matches, winPoints, lossPoints, forfeitWinPoints, forfeitLossPoints);
+            applyV4PointAdjustments(aggMap, divisionId, stageId);
             List<StandingAgg> sorted = comparatorBuilder.sortStandings(new ArrayList<>(aggMap.values()), tieBreakRules, matches);
             Set<Long> manualPendingTeams = comparatorBuilder.findStillTiedTeamIds(sorted, tieBreakRules, matches);
             boolean manualRuleEnabled = comparatorBuilder.hasManualRule(tieBreakRules);
+            Map<Long, BasketStanding> previousManual = loadPreviousManualRanks(divisionId, stageId, groupScopeKey);
 
             rankReasonMapper.softDeleteByStageScope(divisionId, stageId, groupScopeKey);
             standingMapper.deleteByStageScope(divisionId, stageId, groupScopeKey);
@@ -103,6 +112,7 @@ public class TieBreakStandingService {
                 row.setPointDiff(agg.pointFor - agg.pointAgainst);
                 row.setStandingPoints(agg.standingPoints);
                 row.setManualRankPending(manualRuleEnabled && manualPendingTeams.contains(agg.eventTeamId) ? 1 : 0);
+                restoreManualRank(row, previousManual.get(agg.eventTeamId));
                 row.setActiveUniqueKey(buildActiveUniqueKey(divisionId, stageId, groupScopeKey, agg.eventTeamId));
                 row.setCreateTime(now);
                 row.setUpdateTime(now);
@@ -222,9 +232,14 @@ public class TieBreakStandingService {
         return scopes;
     }
 
-    private Map<Long, StandingAgg> aggregateMatches(List<BasketV4Match> matches, int winPoints, int lossPoints) {
+    private Map<Long, StandingAgg> aggregateMatches(List<BasketV4Match> matches, int winPoints, int lossPoints,
+                                                    int forfeitWinPoints, int forfeitLossPoints) {
         Map<Long, StandingAgg> aggMap = new LinkedHashMap<>();
         for (BasketV4Match match : matches) {
+            if (MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus())) {
+                applyForfeit(aggMap, match, forfeitWinPoints, forfeitLossPoints);
+                continue;
+            }
             if (match.getHomeScore() == null || match.getAwayScore() == null) {
                 continue;
             }
@@ -247,6 +262,80 @@ public class TieBreakStandingService {
             }
         }
         return aggMap;
+    }
+
+    private void clearExistingStanding(BasketDivisionStage stage) {
+        List<BasketStanding> existing = standingMapper.selectByStageId(stage.getId());
+        if (existing == null || existing.isEmpty()) {
+            return;
+        }
+        Set<Long> scopes = new HashSet<>();
+        for (BasketStanding row : existing) {
+            scopes.add(row.getGroupScopeKey() != null ? row.getGroupScopeKey() : OVERALL_SCOPE_KEY);
+        }
+        for (Long scope : scopes) {
+            rankReasonMapper.softDeleteByStageScope(stage.getDivisionId(), stage.getId(), scope);
+            standingMapper.deleteByStageScope(stage.getDivisionId(), stage.getId(), scope);
+        }
+    }
+
+    private void applyV4PointAdjustments(Map<Long, StandingAgg> aggMap, Long divisionId, Long stageId) {
+        if (aggMap == null || aggMap.isEmpty() || divisionId == null || stageId == null) {
+            return;
+        }
+        List<BasketPointAdjustment> sums = pointAdjustmentMapper.selectV4SumByStage(divisionId, stageId);
+        if (sums == null || sums.isEmpty()) {
+            return;
+        }
+        for (BasketPointAdjustment sum : sums) {
+            if (sum.getEventTeamId() == null || sum.getAdjustmentPoints() == null) {
+                continue;
+            }
+            StandingAgg agg = aggMap.get(sum.getEventTeamId());
+            if (agg == null) {
+                continue;
+            }
+            agg.standingPoints += sum.getAdjustmentPoints();
+        }
+    }
+
+    private void applyForfeit(Map<Long, StandingAgg> aggMap, BasketV4Match match,
+                              int forfeitWinPoints, int forfeitLossPoints) {
+        Long winnerId = match.getWinnerEventTeamId();
+        Long loserId = match.getLoserEventTeamId();
+        if (winnerId == null || loserId == null) {
+            return;
+        }
+        StandingAgg winner = aggMap.computeIfAbsent(winnerId, StandingAgg::new);
+        StandingAgg loser = aggMap.computeIfAbsent(loserId, StandingAgg::new);
+        winner.winCount++;
+        winner.standingPoints += forfeitWinPoints;
+        loser.loseCount++;
+        loser.standingPoints += forfeitLossPoints;
+    }
+
+    private Map<Long, BasketStanding> loadPreviousManualRanks(Long divisionId, Long stageId, Long groupScopeKey) {
+        List<BasketStanding> previous = standingMapper.selectByStageScope(divisionId, stageId, groupScopeKey);
+        Map<Long, BasketStanding> result = new HashMap<>();
+        if (previous == null) {
+            return result;
+        }
+        for (BasketStanding row : previous) {
+            if (row.getEventTeamId() != null && row.getManualRankNo() != null) {
+                result.put(row.getEventTeamId(), row);
+            }
+        }
+        return result;
+    }
+
+    private void restoreManualRank(BasketStanding row, BasketStanding previous) {
+        if (previous == null) {
+            return;
+        }
+        row.setManualRankNo(previous.getManualRankNo());
+        row.setManualRankReason(previous.getManualRankReason());
+        row.setManualRankBy(previous.getManualRankBy());
+        row.setManualRankTime(previous.getManualRankTime());
     }
 
     private boolean isGroupStage(BasketDivisionStage stage) {

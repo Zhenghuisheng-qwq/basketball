@@ -1,11 +1,15 @@
 package com.zhs.web.controller.basket.v4;
 
 import com.zhs.basket.constant.BasketEventV4Perms;
+import com.zhs.basket.dto.v4.BasketAdminOfficialResultReq;
+import com.zhs.basket.dto.v4.BasketAdminResultCorrectionReq;
 import com.zhs.basket.dto.v4.BasketManualAdvanceReq;
 import com.zhs.basket.dto.v4.BasketMatchForfeitReq;
+import com.zhs.basket.dto.v4.BasketMatchForfeitRevokeReq;
 import com.zhs.basket.dto.v4.BasketSeriesRevokeResolutionReq;
 import com.zhs.basket.dto.v4.BasketPairingAdjustReq;
 import com.zhs.basket.dto.v4.BasketSeriesForfeitReq;
+import com.zhs.basket.dto.v4.BasketSeriesManualResolutionReq;
 import com.zhs.basket.service.v4.IStageExecutionExceptionApplicationService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
@@ -30,6 +34,14 @@ public class BasketV4StageExceptionController extends BaseController {
     @PostMapping("/match-forfeit")
     public AjaxResult forfeitMatch(@RequestBody BasketMatchForfeitReq req) {
         exceptionService.forfeitMatch(req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_EXCEPTION + "')")
+    @Log(title = "V4 RevokeMatchForfeit", businessType = BusinessType.UPDATE)
+    @PostMapping("/match-forfeit-revoke")
+    public AjaxResult revokeMatchForfeit(@RequestBody BasketMatchForfeitRevokeReq req) {
+        exceptionService.revokeMatchForfeit(req);
         return success();
     }
 
@@ -62,6 +74,30 @@ public class BasketV4StageExceptionController extends BaseController {
     @PostMapping("/series-revoke-resolution")
     public AjaxResult revokeSeriesResolution(@RequestBody BasketSeriesRevokeResolutionReq req) {
         exceptionService.revokeSeriesResolution(req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_EXCEPTION + "')")
+    @Log(title = "V4 AdminOfficialResult", businessType = BusinessType.UPDATE)
+    @PostMapping("/match-official-result")
+    public AjaxResult enterOfficialResult(@RequestBody BasketAdminOfficialResultReq req) {
+        exceptionService.enterOfficialResult(req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_EXCEPTION + "')")
+    @Log(title = "V4 ResultCorrection", businessType = BusinessType.UPDATE)
+    @PostMapping("/match-result-correction")
+    public AjaxResult correctOfficialResult(@RequestBody BasketAdminResultCorrectionReq req) {
+        exceptionService.correctOfficialResult(req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_EXCEPTION + "')")
+    @Log(title = "V4 SeriesManualResolution", businessType = BusinessType.UPDATE)
+    @PostMapping("/series-manual-resolution")
+    public AjaxResult resolveSeriesManually(@RequestBody BasketSeriesManualResolutionReq req) {
+        exceptionService.resolveSeriesManually(req);
         return success();
     }
 }

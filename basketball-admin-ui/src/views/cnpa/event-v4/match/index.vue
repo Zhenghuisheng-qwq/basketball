@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-alert title="比赛列表：查询/编辑草稿比赛时间、场地、备注" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="比赛管理：发布后的比赛执行与特殊改期。系列赛时间在「系列赛」Tab 调整；赛前整体排期请回赛事工作台。" type="info" :closable="false" show-icon class="mb8" />
 
     <el-form :model="query" :inline="true" class="mb8">
       <el-form-item label="视图">
@@ -73,7 +73,10 @@
       <el-table-column label="主队" prop="homeTeamName" min-width="100" />
       <el-table-column label="客队" prop="awayTeamName" min-width="100" />
       <el-table-column label="比分" width="100" align="center">
-        <template #default="scope">{{ formatV4MatchScore(scope.row.homeScore, scope.row.awayScore) }}</template>
+        <template #default="scope">
+          <span v-if="scope.row.matchStatus === 'FORFEITED'">判负</span>
+          <span v-else>{{ formatV4MatchScore(scope.row.homeScore, scope.row.awayScore) }}</span>
+        </template>
       </el-table-column>
       <el-table-column label="平台赛区" prop="divisionName" min-width="110" />
       <el-table-column label="比赛状态" prop="matchStatus" width="100" align="center">
@@ -90,16 +93,51 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="220" fixed="right">
+      <el-table-column label="操作" width="420" fixed="right">
         <template #default="scope">
-          <el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button>
+          <el-button link type="primary" @click="openEdit(scope.row)">
+            {{ scope.row.publishStatus === 'DRAFT' ? '编辑' : '详情' }}
+          </el-button>
+          <el-tooltip
+            v-if="isStandaloneMatch(scope.row)"
+            :content="adjustDisabledReason(scope.row) || '调整独立比赛时间'"
+            placement="top"
+          >
+            <el-button
+              link
+              type="primary"
+              :disabled="!canAdjustMatch(scope.row)"
+              @click="openAdjust(scope.row)"
+            >调整时间</el-button>
+          </el-tooltip>
+          <el-button
+            link
+            type="success"
+            v-if="canEnterResult(scope.row)"
+            v-hasPermi="['basket:v4Stage:exception']"
+            @click="openResult(scope.row, 'enter')"
+          >管理员录入结果</el-button>
           <el-button
             link
             type="warning"
-            v-if="scope.row.matchStatus === 'SCHEDULED' || scope.row.matchStatus === 'PLAYING'"
+            v-if="canCorrectResult(scope.row)"
+            v-hasPermi="['basket:v4Stage:exception']"
+            @click="openResult(scope.row, 'correct')"
+          >修正比赛结果</el-button>
+          <el-button
+            link
+            type="warning"
+            v-if="canForfeitRow(scope.row)"
             v-hasPermi="['basket:v4Stage:exception']"
             @click="openForfeit(scope.row)"
           >判负</el-button>
+          <el-button
+            link
+            type="danger"
+            v-if="canRevokeForfeitRow(scope.row)"
+            v-hasPermi="['basket:v4Stage:exception']"
+            @click="openRevokeForfeit(scope.row)"
+          >撤销判负</el-button>
           <el-button link type="danger" v-if="scope.row.publishStatus === 'DRAFT'" @click="handleDelete(scope.row)">删除</el-button>
         </template>
       </el-table-column>
@@ -126,15 +164,97 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="editVisible" title="编辑草稿比赛" width="480px">
-      <el-form :model="editForm" label-width="90px">
-        <el-form-item label="比赛时间"><el-date-picker v-model="editForm.matchTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width:100%" /></el-form-item>
-        <el-form-item label="场地"><el-input v-model="editForm.venueText" /></el-form-item>
-        <el-form-item label="备注"><el-input v-model="editForm.remark" type="textarea" /></el-form-item>
+    <el-dialog v-model="revokeForfeitVisible" title="撤销判负" width="480px">
+      <el-alert type="warning" :closable="false" show-icon class="mb8"
+        :title="`将撤销 ${revokeForfeitRow?.homeTeamName} vs ${revokeForfeitRow?.awayTeamName} 的判负，比赛恢复为未结算。`" />
+      <el-form label-width="100px">
+        <el-form-item label="原因" required>
+          <el-input v-model="revokeForfeitReason" type="textarea" rows="3" placeholder="必填" />
+        </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitEdit">保存</el-button>
+        <el-button @click="revokeForfeitVisible = false">取消</el-button>
+        <el-button type="primary" :loading="revokeForfeitSaving" @click="submitRevokeForfeit">确认撤销</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="adjustVisible" title="调整时间" width="520px">
+      <el-form label-width="100px">
+        <el-form-item label="赛事">{{ adjustRow?.seasonTitle || '-' }}</el-form-item>
+        <el-form-item label="Division">{{ adjustRow?.divisionName || '-' }}</el-form-item>
+        <el-form-item label="Stage / Round">R{{ adjustRow?.roundNo ?? '-' }}</el-form-item>
+        <el-form-item label="比赛编号">{{ adjustRow?.matchNo || adjustRow?.id || '-' }}</el-form-item>
+        <el-form-item label="主队">{{ adjustRow?.homeTeamName || '待定' }}</el-form-item>
+        <el-form-item label="客队">{{ adjustRow?.awayTeamName || '待定' }}</el-form-item>
+        <el-form-item label="当前日期">{{ currentMatchDate(adjustRow) }}</el-form-item>
+        <el-form-item label="当前时间">{{ currentMatchClock(adjustRow) }}</el-form-item>
+        <el-form-item label="新日期" required>
+          <el-date-picker v-model="adjustDate" type="date" value-format="YYYY-MM-DD" />
+        </el-form-item>
+        <el-form-item label="新时间" required>
+          <el-time-picker v-model="adjustTime" value-format="HH:mm" format="HH:mm" />
+        </el-form-item>
+        <el-form-item label="调整原因" required>
+          <el-input v-model="adjustReason" type="textarea" :rows="3" placeholder="必填，例如：双方协商延期" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="adjustVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitAdjust">调整比赛时间</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="editVisible" :title="editForm.publishStatus === 'DRAFT' ? '编辑草稿比赛' : '比赛详情'" width="480px">
+      <el-form :model="editForm" label-width="90px">
+        <el-form-item label="比赛时间"><el-date-picker v-model="editForm.matchTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width:100%" :disabled="editForm.publishStatus !== 'DRAFT'" /></el-form-item>
+        <el-form-item label="场地"><el-input v-model="editForm.venueText" :disabled="editForm.publishStatus !== 'DRAFT'" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="editForm.remark" type="textarea" :disabled="editForm.publishStatus !== 'DRAFT'" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editVisible = false">关闭</el-button>
+        <el-button v-if="editForm.publishStatus === 'DRAFT'" type="primary" @click="submitEdit">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="resultVisible" :title="resultMode === 'correct' ? '修正比赛结果' : '管理员录入结果'" width="560px">
+      <el-alert
+        type="warning"
+        :closable="false"
+        show-icon
+        class="mb8"
+        :title="resultMode === 'correct'
+          ? '修正后将重新计算积分、统计和系列赛进度。原队长提交材料不会被删除。'
+          : '管理员录入后将直接形成正式比赛结果，并重新计算相关积分、统计和系列赛进度。'"
+      />
+      <el-form label-width="110px">
+        <el-form-item label="赛事">{{ resultRow?.seasonTitle || '-' }}</el-form-item>
+        <el-form-item label="Division">{{ resultRow?.divisionName || '-' }}</el-form-item>
+        <el-form-item label="Stage / Round">R{{ resultRow?.roundNo ?? '-' }}</el-form-item>
+        <el-form-item label="比赛">{{ resultRow?.matchNo || resultRow?.id || '-' }}</el-form-item>
+        <el-form-item label="主队">{{ resultRow?.homeTeamName || '-' }}</el-form-item>
+        <el-form-item label="客队">{{ resultRow?.awayTeamName || '-' }}</el-form-item>
+        <template v-if="resultMode === 'correct'">
+          <el-form-item label="原比分">{{ formatV4MatchScore(resultRow?.homeScore, resultRow?.awayScore) }}</el-form-item>
+          <el-form-item label="原 Winner">{{ originalWinnerName(resultRow) }}</el-form-item>
+          <el-form-item label="原状态">{{ v4MatchStatusLabel(resultRow?.matchStatus) }}</el-form-item>
+        </template>
+        <el-form-item label="主队比分" required>
+          <el-input-number v-model="resultHomeScore" :min="0" :max="300" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="客队比分" required>
+          <el-input-number v-model="resultAwayScore" :min="0" :max="300" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="新 Winner">{{ computedWinnerName() }}</el-form-item>
+        <el-form-item :label="resultMode === 'correct' ? '修正原因' : '原因'" required>
+          <el-input v-model="resultReason" type="textarea" rows="3" placeholder="必填" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="resultRemark" type="textarea" rows="2" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="resultVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitResult">{{ resultMode === 'correct' ? '确认修正' : '确认录入' }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -143,9 +263,9 @@
 <script setup lang="ts" name="CnpaEventV4Match">
 import { onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { forfeitV4Match } from '@/api/cnpa/event-v4/stage-exception'
+import { correctV4OfficialResult, enterV4OfficialResult, forfeitV4Match, revokeV4MatchForfeit } from '@/api/cnpa/event-v4/stage-exception'
 import { deleteV4Match, getV4Match, listV4Match, updateV4Match } from '@/api/cnpa/event-v4/schedule-batch'
-import { listV4StageExecution } from '@/api/cnpa/event-v4/stage-execution'
+import { listV4StageExecution, rescheduleV4StageSchedule } from '@/api/cnpa/event-v4/stage-execution'
 import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
 import MatchSeriesPanel from './MatchSeriesPanel.vue'
 import {
@@ -164,7 +284,14 @@ const total = ref(0)
 const query = reactive<Record<string, any>>({ pageNum: 1, pageSize: 10 })
 const editVisible = ref(false)
 const editId = ref<number>()
-const editForm = reactive({ matchTime: '', venueText: '', remark: '' })
+const editForm = reactive({ matchTime: '', venueText: '', remark: '', publishStatus: '' })
+const resultVisible = ref(false)
+const resultMode = ref<'enter' | 'correct'>('enter')
+const resultRow = ref<any>()
+const resultHomeScore = ref<number>()
+const resultAwayScore = ref<number>()
+const resultReason = ref('')
+const resultRemark = ref('')
 const seasonOptions = ref<V4AdminOptionVo[]>([])
 const divisionOptions = ref<V4AdminOptionVo[]>([])
 const PUBLISH_OPTIONS = V4_PUBLISH_STATUS_FILTER_OPTIONS
@@ -177,6 +304,15 @@ const forfeitVisible = ref(false)
 const forfeitRow = ref<any>()
 const forfeitLoserId = ref<number>()
 const forfeitReason = ref('')
+const revokeForfeitVisible = ref(false)
+const revokeForfeitRow = ref<any>()
+const revokeForfeitReason = ref('')
+const revokeForfeitSaving = ref(false)
+const adjustVisible = ref(false)
+const adjustRow = ref<any>()
+const adjustDate = ref('')
+const adjustTime = ref('')
+const adjustReason = ref('')
 
 watch(viewMode, () => {
   if (viewMode.value === 'series') {
@@ -244,7 +380,80 @@ function openEdit(row: any) {
   editForm.matchTime = row.matchTime
   editForm.venueText = row.venueText || ''
   editForm.remark = row.remark || ''
+  editForm.publishStatus = row.publishStatus || ''
   editVisible.value = true
+}
+
+function canEnterResult(row: any) {
+  if (row?.canEnterOfficialResult != null) return Boolean(row.canEnterOfficialResult)
+  return row?.publishStatus === 'PUBLISHED'
+    && (row?.matchStatus === 'SCHEDULED' || row?.matchStatus === 'PLAYING')
+    && row?.homeEventTeamId && row?.awayEventTeamId
+}
+
+function canCorrectResult(row: any) {
+  if (row?.canCorrectOfficialResult != null) return Boolean(row.canCorrectOfficialResult)
+  return row?.publishStatus === 'PUBLISHED' && row?.matchStatus === 'FINISHED'
+}
+
+function canForfeitRow(row: any) {
+  if (row?.matchStatus === 'FORFEITED') return false
+  if (row?.canForfeitMatch != null) return Boolean(row.canForfeitMatch)
+  return row?.matchStatus === 'SCHEDULED' || row?.matchStatus === 'PLAYING'
+}
+
+function canRevokeForfeitRow(row: any) {
+  return row?.matchStatus === 'FORFEITED'
+}
+
+function originalWinnerName(row: any) {
+  if (!row) return '-'
+  if (row.winnerEventTeamId && row.winnerEventTeamId === row.homeEventTeamId) return row.homeTeamName
+  if (row.winnerEventTeamId && row.winnerEventTeamId === row.awayEventTeamId) return row.awayTeamName
+  return '-'
+}
+
+function computedWinnerName() {
+  if (resultHomeScore.value == null || resultAwayScore.value == null) return '-'
+  if (resultHomeScore.value === resultAwayScore.value) return '平局（按赛制校验）'
+  return resultHomeScore.value > resultAwayScore.value
+    ? (resultRow.value?.homeTeamName || '主队')
+    : (resultRow.value?.awayTeamName || '客队')
+}
+
+function openResult(row: any, mode: 'enter' | 'correct') {
+  resultMode.value = mode
+  resultRow.value = row
+  resultHomeScore.value = mode === 'correct' ? row.homeScore : undefined
+  resultAwayScore.value = mode === 'correct' ? row.awayScore : undefined
+  resultReason.value = ''
+  resultRemark.value = ''
+  resultVisible.value = true
+}
+
+function submitResult() {
+  if (!resultRow.value?.id || resultHomeScore.value == null || resultAwayScore.value == null || !resultReason.value.trim()) {
+    ElMessage.warning('请填写比分和原因')
+    return
+  }
+  const confirmText = resultMode.value === 'correct'
+    ? '确认修正正式比赛结果？将重新计算积分、统计和系列赛进度。'
+    : '管理员录入后将直接形成正式比赛结果，并重新计算相关积分、统计和系列赛进度。'
+  ElMessageBox.confirm(confirmText, '二次确认', { type: 'warning' }).then(() => {
+    const payload = {
+      matchId: resultRow.value.id,
+      homeScore: resultHomeScore.value!,
+      awayScore: resultAwayScore.value!,
+      reason: resultReason.value.trim(),
+      remark: resultRemark.value.trim() || undefined
+    }
+    const api = resultMode.value === 'correct' ? correctV4OfficialResult : enterV4OfficialResult
+    api(payload).then(() => {
+      ElMessage.success(resultMode.value === 'correct' ? '已修正比赛结果' : '已录入正式结果')
+      resultVisible.value = false
+      loadList()
+    })
+  })
 }
 
 function submitEdit() {
@@ -262,6 +471,94 @@ function handleDelete(row: any) {
       ElMessage.success('已删除')
       loadList()
     })
+  })
+}
+
+function isChildMatch(row: any) {
+  const seriesId = Number(row?.seriesId)
+  return Number.isFinite(seriesId) && seriesId > 0
+}
+
+function isStandaloneMatch(row: any) {
+  if (row?.standaloneMatch != null) return Boolean(row.standaloneMatch)
+  return !isChildMatch(row)
+}
+
+function isNotStartedMatch(row: any) {
+  const status = String(row?.matchStatus || '').toUpperCase()
+  return status === 'SCHEDULED' || status === 'READY' || status === 'NOT_STARTED'
+}
+
+function canAdjustMatch(row: any) {
+  if (!isStandaloneMatch(row)) return false
+  if (row?.canAdjustSchedule != null) return Boolean(row.canAdjustSchedule)
+  return row?.publishStatus === 'PUBLISHED' && isNotStartedMatch(row)
+}
+
+function adjustDisabledReason(row: any) {
+  if (row?.adjustScheduleBlockReason) return row.adjustScheduleBlockReason
+  if (isChildMatch(row)) return '该比赛属于 BO 系列赛，请前往『系列赛』调整整个系列赛时间。'
+  if (row?.publishStatus !== 'PUBLISHED') return '赛段尚未发布，请前往赛事工作台调整排期。'
+  if (row?.matchStatus === 'PLAYING' || row?.matchStatus === 'IN_PROGRESS') return '比赛已经开始，不能使用普通时间调整。'
+  if (row?.matchStatus === 'FINISHED' || row?.matchStatus === 'FORFEITED' || row?.matchStatus === 'CANCELLED') {
+    return '比赛已结束，不能修改日期时间'
+  }
+  return ''
+}
+
+function currentMatchDate(row: any) {
+  const raw = String(row?.matchTime || '')
+  return raw.length >= 10 ? raw.slice(0, 10) : '待安排'
+}
+
+function currentMatchClock(row: any) {
+  const raw = String(row?.matchTime || '')
+  return raw.length >= 16 ? raw.slice(11, 16) : '待安排'
+}
+
+function openAdjust(row: any) {
+  if (!canAdjustMatch(row)) {
+    ElMessage.warning(adjustDisabledReason(row) || '当前不能调整时间')
+    return
+  }
+  if (!row.stageId) {
+    ElMessage.error('缺少赛段信息，无法调整时间')
+    return
+  }
+  adjustRow.value = row
+  adjustDate.value = currentMatchDate(row) === '待安排' ? '' : currentMatchDate(row)
+  adjustTime.value = currentMatchClock(row) === '待安排' ? '21:00' : currentMatchClock(row)
+  adjustReason.value = ''
+  adjustVisible.value = true
+}
+
+function submitAdjust() {
+  if (!adjustRow.value?.stageId || !adjustRow.value?.id) {
+    ElMessage.error('缺少赛段或比赛信息')
+    return
+  }
+  if (isChildMatch(adjustRow.value)) {
+    ElMessage.error('该比赛属于 BO 系列赛，请前往『系列赛』调整整个系列赛时间。')
+    return
+  }
+  if (!adjustDate.value || !adjustTime.value) {
+    ElMessage.error('请填写新的日期和时间')
+    return
+  }
+  if (!adjustReason.value.trim()) {
+    ElMessage.error('调整原因必填')
+    return
+  }
+  rescheduleV4StageSchedule(adjustRow.value.stageId, {
+    unitType: 'MATCH',
+    unitId: adjustRow.value.id,
+    scheduledDate: adjustDate.value,
+    scheduledStartTime: adjustTime.value,
+    reason: adjustReason.value.trim()
+  }).then(() => {
+    ElMessage.success('已调整比赛时间')
+    adjustVisible.value = false
+    loadList()
   })
 }
 
@@ -286,6 +583,32 @@ function submitForfeit() {
       ElMessage.success('已判定弃赛/判负')
       forfeitVisible.value = false
       loadList()
+    })
+  })
+}
+
+function openRevokeForfeit(row: any) {
+  revokeForfeitRow.value = row
+  revokeForfeitReason.value = ''
+  revokeForfeitVisible.value = true
+}
+
+function submitRevokeForfeit() {
+  if (!revokeForfeitRow.value?.id || !revokeForfeitReason.value?.trim()) {
+    ElMessage.warning('请填写撤销原因')
+    return
+  }
+  ElMessageBox.confirm('确认撤销判负？比赛将恢复为未结算，并重新计算积分/系列赛。', '二次确认', { type: 'warning' }).then(() => {
+    revokeForfeitSaving.value = true
+    revokeV4MatchForfeit({
+      matchId: revokeForfeitRow.value.id,
+      reason: revokeForfeitReason.value.trim()
+    }).then(() => {
+      ElMessage.success('已撤销判负')
+      revokeForfeitVisible.value = false
+      loadList()
+    }).finally(() => {
+      revokeForfeitSaving.value = false
     })
   })
 }

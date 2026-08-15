@@ -87,8 +87,13 @@ public class ScheduleUnitResolver {
             return fromSeries(series, batch, teamNames, hasStartedChildMatch(unitId));
         }
         BasketV4Match match = matchMapper.selectById(unitId);
-        if (match == null || match.getSeriesId() != null
-                || !Objects.equals(match.getScheduleBatchId(), batch.getId())
+        if (match == null) {
+            throw new ServiceException("比赛不存在");
+        }
+        if (ScheduleAdjustmentGuard.isSeriesChildMatch(match.getSeriesId())) {
+            throw new ServiceException(ScheduleAdjustmentGuard.MSG_CHILD_MATCH);
+        }
+        if (!Objects.equals(match.getScheduleBatchId(), batch.getId())
                 || !Objects.equals(match.getStageId(), batch.getStageId())) {
             throw new ServiceException("比赛不属于当前赛段结构，或不是独立排期对象");
         }
@@ -215,9 +220,9 @@ public class ScheduleUnitResolver {
                 || MatchStatusEnum.FORFEITED.getCode().equals(view.getMatchStatus())
                 || "COMPLETED".equals(view.getSeriesStatus())
                 || "FORFEITED".equals(view.getSeriesStatus());
-        boolean adjustable = ScheduleAdjustmentGuard.canAdjust(view, childStarted);
         view.setCanEditSchedule(active && !published && !finished && view.isRequired());
-        view.setCanAdjustSchedule(active && published && adjustable);
+        // 赛事工作台不提供发布后改期；运营改期只走比赛管理
+        view.setCanAdjustSchedule(false);
     }
 
     private boolean isBye(BasketMatchSeries series) {

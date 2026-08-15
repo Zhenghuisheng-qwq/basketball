@@ -92,6 +92,7 @@ export interface RosterSummaryVo {
 export interface StageOperationCapabilities {
   canGenerateStructure?: boolean
   canEditSchedule?: boolean
+  canAdjustSchedule?: boolean
   canPublish?: boolean
   canWithdraw?: boolean
   canRecommendSchedule?: boolean

@@ -89,6 +89,12 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <update id="softDeleteByMatchId">
+        update basket_match_team_stat
+        set is_delete = 1, update_time = now()
+        where match_id = #{matchId} and is_delete = 0
+    </update>
+
     <select id="selectByMatchAndEventTeam" resultMap="BasketV4MatchTeamStatResult">
         select <include refid="BaseColumns" /> from basket_match_team_stat
         where match_id = #{matchId} and event_team_id = #{eventTeamId} and is_delete = 0
@@ -104,7 +110,7 @@
         from basket_match_team_stat ts
         join basket_match m on m.id = ts.match_id and m.is_delete = 0
         where ts.division_id = #{divisionId} and ts.is_delete = 0
-          and m.match_status = 'FINISHED' and m.publish_status = 'PUBLISHED'
+          and m.match_status in ('FINISHED', 'FORFEITED') and m.publish_status = 'PUBLISHED'
     </select>
 
 </mapper>

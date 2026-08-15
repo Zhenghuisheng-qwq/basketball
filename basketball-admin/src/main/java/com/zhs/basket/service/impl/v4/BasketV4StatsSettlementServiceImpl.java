@@ -5,8 +5,8 @@ import com.zhs.basket.enums.v4.CompetitionFormatEnum;
 import com.zhs.basket.enums.v4.MatchStatusEnum;
 import com.zhs.basket.enums.v4.RankTypeEnum;
 import com.zhs.basket.mapper.v4.*;
-import com.zhs.basket.service.v4.IBasketMatchSeriesService;
 import com.zhs.basket.service.v4.IBasketV4StatsSettlementService;
+import com.zhs.basket.support.v4.settlement.OfficialMatchResultSettlementService;
 import com.zhs.basket.support.v4.stage.TieBreakStandingService;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,22 +52,12 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
     @Autowired
     private TieBreakStandingService tieBreakStandingService;
     @Autowired
-    private IBasketMatchSeriesService matchSeriesService;
+    private OfficialMatchResultSettlementService officialMatchResultSettlementService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void settleBySubmission(Long submissionId) {
-        BasketMatchSubmission submission = requireSubmission(submissionId);
-        BasketV4Match match = requireMatch(submission.getMatchId());
-        applyOfficialMatchResult(submission, match);
-        if (match.getSeriesId() != null) {
-            matchSeriesService.rebuildSeriesResult(match.getSeriesId());
-        }
-        if (match.getStageId() != null) {
-            rebuildStageStats(match.getStageId());
-        } else {
-            rebuildDivisionStats(submission.getDivisionId());
-        }
+        officialMatchResultSettlementService.settleFromSubmission(submissionId);
     }
 
     @Override
@@ -251,11 +241,20 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
         List<BasketEventTeam> teams = eventTeamMapper.selectActiveByDivisionId(divisionId);
         Map<Long, Integer> winPointsByStage = loadWinPointsByStage(matches);
         Map<Long, Integer> lossPointsByStage = loadLossPointsByStage(matches);
+        Map<Long, Integer> forfeitWinPointsByStage = loadForfeitWinPointsByStage(matches);
+        Map<Long, Integer> forfeitLossPointsByStage = loadForfeitLossPointsByStage(matches);
         Map<Long, StandingAgg> aggMap = new LinkedHashMap<>();
         for (BasketEventTeam team : teams) {
             aggMap.put(team.getId(), new StandingAgg(team.getId(), seasonId, divisionId));
         }
         for (BasketV4Match match : matches) {
+            if (MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus())) {
+                int forfeitWin = forfeitWinPointsByStage.getOrDefault(match.getStageId(),
+                        winPointsByStage.getOrDefault(match.getStageId(), WIN_POINTS));
+                int forfeitLoss = forfeitLossPointsByStage.getOrDefault(match.getStageId(), 0);
+                applyForfeitToStanding(aggMap, match, forfeitWin, forfeitLoss);
+                continue;
+            }
             if (match.getHomeScore() == null || match.getAwayScore() == null) {
                 continue;
             }
@@ -291,6 +290,21 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
             row.setIsDelete(NOT_DELETED);
             standingMapper.insert(row);
         }
+    }
+
+    private void applyForfeitToStanding(Map<Long, StandingAgg> aggMap, BasketV4Match match,
+                                        int forfeitWinPoints, int forfeitLossPoints) {
+        Long winnerId = match.getWinnerEventTeamId();
+        Long loserId = match.getLoserEventTeamId();
+        if (winnerId == null || loserId == null) {
+            return;
+        }
+        StandingAgg winner = aggMap.computeIfAbsent(winnerId, id -> new StandingAgg(id, null, null));
+        StandingAgg loser = aggMap.computeIfAbsent(loserId, id -> new StandingAgg(id, null, null));
+        winner.winCount++;
+        winner.standingPoints += forfeitWinPoints;
+        loser.loseCount++;
+        loser.standingPoints += forfeitLossPoints;
     }
 
     private void applyMatchToStanding(Map<Long, StandingAgg> aggMap, Long homeId, Long awayId,
@@ -336,6 +350,36 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
             BasketDivisionStage stage = stageMapper.selectById(match.getStageId());
             result.put(match.getStageId(), stage != null && stage.getLossPoints() != null
                     ? stage.getLossPoints() : LOSE_POINTS);
+        }
+        return result;
+    }
+
+    private Map<Long, Integer> loadForfeitWinPointsByStage(List<BasketV4Match> matches) {
+        Map<Long, Integer> result = new HashMap<>();
+        for (BasketV4Match match : matches) {
+            if (match.getStageId() == null || result.containsKey(match.getStageId())) {
+                continue;
+            }
+            BasketDivisionStage stage = stageMapper.selectById(match.getStageId());
+            if (stage != null && stage.getForfeitWinPoints() != null) {
+                result.put(match.getStageId(), stage.getForfeitWinPoints());
+            } else {
+                result.put(match.getStageId(), stage != null && stage.getWinPoints() != null
+                        ? stage.getWinPoints() : WIN_POINTS);
+            }
+        }
+        return result;
+    }
+
+    private Map<Long, Integer> loadForfeitLossPointsByStage(List<BasketV4Match> matches) {
+        Map<Long, Integer> result = new HashMap<>();
+        for (BasketV4Match match : matches) {
+            if (match.getStageId() == null || result.containsKey(match.getStageId())) {
+                continue;
+            }
+            BasketDivisionStage stage = stageMapper.selectById(match.getStageId());
+            result.put(match.getStageId(), stage != null && stage.getForfeitLossPoints() != null
+                    ? stage.getForfeitLossPoints() : 0);
         }
         return result;
     }

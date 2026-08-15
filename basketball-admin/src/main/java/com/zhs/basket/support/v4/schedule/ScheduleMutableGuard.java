@@ -22,7 +22,7 @@ public final class ScheduleMutableGuard {
 
     public static void assertNotPublished(BasketScheduleBatch batch) {
         if (batch != null && PublishStatusEnum.PUBLISHED.getCode().equals(batch.getPublishStatus())) {
-            throw new ServiceException("赛段已发布，请先撤回后再修改排期");
+            throw new ServiceException("赛段已发布，赛前排期规划已锁定。如需重新规划赛程，请先撤回发布后修改。赛事运行期间若仅需调整某一场比赛或系列赛时间，请前往『比赛执行 → 比赛管理』处理。");
         }
     }
 

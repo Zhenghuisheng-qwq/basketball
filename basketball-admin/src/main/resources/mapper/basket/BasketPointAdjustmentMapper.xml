@@ -1,22 +1,50 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.zhs.basket.mapper.BasketPointAdjustmentMapper">
+    <sql id="BaseColumns">
+        id, season_id as seasonId, division_id as divisionId, stage_id as stageId, group_id as groupId,
+        team_id as teamId, event_team_id as eventTeamId, discipline_id as disciplineId,
+        adjustment_type as adjustmentType, adjustment_points as adjustmentPoints,
+        adjustment_reason as adjustmentReason, remark, idempotency_key as idempotencyKey,
+        operator_id as operatorId, operator_name as operatorName,
+        create_time as createTime, update_time as updateTime, is_delete as isDelete
+    </sql>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_point_adjustment
-        (season_id, stage_id, group_id, team_id, discipline_id, adjustment_points, adjustment_reason,
-         idempotency_key, operator_id, create_time, update_time, is_delete)
+        (season_id, division_id, stage_id, group_id, team_id, event_team_id, discipline_id, adjustment_type,
+         adjustment_points, adjustment_reason, remark, idempotency_key, operator_id, operator_name,
+         create_time, update_time, is_delete)
         values
-        (#{seasonId}, #{stageId}, #{groupId}, #{teamId}, #{disciplineId}, #{adjustmentPoints}, #{adjustmentReason},
-         #{idempotencyKey}, #{operatorId}, #{createTime}, #{updateTime}, #{isDelete})
+        (#{seasonId}, #{divisionId}, #{stageId}, #{groupId}, #{teamId}, #{eventTeamId}, #{disciplineId}, #{adjustmentType},
+         #{adjustmentPoints}, #{adjustmentReason}, #{remark}, #{idempotencyKey}, #{operatorId}, #{operatorName},
+         #{createTime}, #{updateTime}, #{isDelete})
     </insert>
 
     <select id="selectByIdempotencyKey" resultType="com.zhs.basket.domain.BasketPointAdjustment">
-        select id, season_id as seasonId, stage_id as stageId, group_id as groupId, team_id as teamId,
-               discipline_id as disciplineId, adjustment_points as adjustmentPoints,
-               adjustment_reason as adjustmentReason, idempotency_key as idempotencyKey,
-               operator_id as operatorId, create_time as createTime, update_time as updateTime, is_delete as isDelete
+        select <include refid="BaseColumns"/>
         from basket_point_adjustment
         where idempotency_key = #{idempotencyKey} and is_delete = 0
         limit 1
+    </select>
+
+    <select id="selectV4ByStageAndEventTeam" resultType="com.zhs.basket.domain.BasketPointAdjustment">
+        select <include refid="BaseColumns"/>
+        from basket_point_adjustment
+        where division_id = #{divisionId}
+          and stage_id = #{stageId}
+          and event_team_id = #{eventTeamId}
+          and is_delete = 0
+        order by id asc
+    </select>
+
+    <select id="selectV4SumByStage" resultType="com.zhs.basket.domain.BasketPointAdjustment">
+        select event_team_id as eventTeamId, sum(adjustment_points) as adjustmentPoints
+        from basket_point_adjustment
+        where division_id = #{divisionId}
+          and stage_id = #{stageId}
+          and event_team_id is not null
+          and is_delete = 0
+        group by event_team_id
     </select>
 </mapper>

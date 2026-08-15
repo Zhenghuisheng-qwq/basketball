@@ -21,7 +21,6 @@ public class StructureActiveScheduleValidator implements ScheduleAssignmentValid
     public void validate(StagePublishContext context, List<ScheduleUnitView> proposed, LocalDate date, LocalTime time, ValidationResult result) {
         try {
             ScheduleMutableGuard.assertStructureActive(context.getStructureBatch());
-            ScheduleMutableGuard.assertNotPublished(context.getStructureBatch());
         } catch (ServiceException ex) {
             result.add(ValidationIssue.error("SCHEDULE_GUARD", ex.getMessage()));
         }

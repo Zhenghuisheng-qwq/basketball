@@ -1,0 +1,147 @@
+{
+  "startedAt": "2026-08-15T21:41:05",
+  "cases": {
+    "league.rr.played": {
+      "ok": true,
+      "detail": "played=28"
+    },
+    "league.standing.ready": {
+      "ok": true,
+      "detail": "n=8"
+    },
+    "adj.delta-2.ledger": {
+      "ok": true,
+      "detail": "reuse sum=-2"
+    },
+    "adj.delta-2.final": {
+      "ok": true,
+      "detail": "reuse"
+    },
+    "adj.sum-1": {
+      "ok": true,
+      "detail": "reuse sum=-2"
+    },
+    "adj.final.base-1": {
+      "ok": true,
+      "detail": "base=14 adj=-2 final=12 sum=-2"
+    },
+    "correction.winner": {
+      "ok": true,
+      "detail": "winner=338 expect=338"
+    },
+    "correction.adj.not_stacked": {
+      "ok": true,
+      "detail": "sum=-2 adj=-2"
+    },
+    "correction.final.keeps_adj": {
+      "ok": true,
+      "detail": "adj=-2 final=12 base=14"
+    },
+    "forfeit.pending.exists": {
+      "ok": true,
+      "detail": "reuse revoke=1"
+    },
+    "forfeit.status": {
+      "ok": true,
+      "detail": "reuse"
+    },
+    "forfeit.standing.win": {
+      "ok": true,
+      "detail": "reuse"
+    },
+    "revoke.status": {
+      "ok": true,
+      "detail": "reuse"
+    },
+    "revoke.standing.restored": {
+      "ok": true,
+      "detail": "reuse"
+    },
+    "revoke.audit.ledger": {
+      "ok": true,
+      "detail": "n=1"
+    },
+    "qual.preview": {
+      "ok": true,
+      "detail": "阶段尚未进入可预览晋级状态"
+    },
+    "qual.unconfirmed.adj.pass": {
+      "ok": true,
+      "detail": "reuse confirmed stage"
+    },
+    "qual.confirmed.adj.reject": {
+      "ok": true,
+      "detail": "当前积分已用于正式晋级确认，如需调整积分，请先处理已确认的晋级结果。"
+    },
+    "playoff.series": {
+      "ok": true,
+      "detail": "n=5"
+    },
+    "series.direct.completed": {
+      "ok": true,
+      "detail": "{'st': 'COMPLETED', 'w': 333, 'hw': 2, 'aw': 0}"
+    },
+    "series.forfeit.winner": {
+      "ok": true,
+      "detail": "{'st': 'COMPLETED', 'w': 335, 'rt': 'FORFEIT'}"
+    },
+    "series.manual": {
+      "ok": true,
+      "detail": "{'st': 'COMPLETED', 'w': 338, 'rt': 'MANUAL'}"
+    },
+    "series.advance.slot": {
+      "ok": true,
+      "detail": "n=1"
+    },
+    "downstream.started": {
+      "ok": true,
+      "detail": "200"
+    },
+    "guard.correct.reject": {
+      "ok": true,
+      "detail": "下游系列赛已经开始或产生正式结果，不能直接修改上游晋级结果，请进入赛事管理员仲裁流程。"
+    },
+    "guard.series.revoke.reject": {
+      "ok": true,
+      "detail": "下游系列赛已经开始或产生正式结果，不能直接修改上游晋级结果，请进入赛事管理员仲裁流程。"
+    },
+    "guard.match.forfeit.revoke.reject": {
+      "ok": true,
+      "detail": "下游系列赛已经开始或产生正式结果，不能直接修改上游晋级结果，请进入赛事管理员仲裁流程。"
+    },
+    "invariant.rule": {
+      "ok": true,
+      "detail": "{'currentRule': 1, 'currentRoster': 1, 'currentStructure': 2, 'formal': 8, 'candidate': 0, 'eventTeam': 8, 'matchSeries': 7, 'match': 57, 'publishRecord': 2}"
+    },
+    "invariant.roster": {
+      "ok": true,
+      "detail": "{'currentRule': 1, 'currentRoster': 1, 'currentStructure': 2, 'formal': 8, 'candidate': 0, 'eventTeam': 8, 'matchSeries': 7, 'match': 57, 'publishRecord': 2}"
+    },
+    "invariant.structure": {
+      "ok": true,
+      "detail": "perStage=[{'stage_id': 907, 'c': 1}, {'stage_id': 908, 'c': 1}] inv={'currentRule': 1, 'currentRoster': 1, 'currentStructure': 2, 'formal': 8, 'candidate': 0, 'eventTeam': 8, 'matchSeries': 7, 'match': 57, 'publishRecord': 2}"
+    }
+  },
+  "ids": {
+    "seasonId": 210,
+    "divisionId": 244,
+    "rrStageId": 907,
+    "poStageId": 908,
+    "eventTeamA": 338,
+    "baseBeforeAdj": 14
+  },
+  "invariants": {
+    "currentRule": 1,
+    "currentRoster": 1,
+    "currentStructure": 2,
+    "formal": 8,
+    "candidate": 0,
+    "eventTeam": 8,
+    "matchSeries": 7,
+    "match": 57,
+    "publishRecord": 2
+  },
+  "finishedAt": "2026-08-15T21:41:09",
+  "pass": 30,
+  "fail": 0
+}

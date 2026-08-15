@@ -15,6 +15,7 @@ const props = defineProps<{
   selectedTeamId: number | null
   isCalendarOpen: boolean
   isTeamSelectorOpen: boolean
+  hideDateFilter?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -89,6 +90,7 @@ watch(
       </label>
 
       <button
+        v-if="!hideDateFilter"
         type="button"
         class="filter-btn"
         :class="{ active: isCalendarOpen }"

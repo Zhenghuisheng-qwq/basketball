@@ -6,6 +6,7 @@ import lombok.Data;
 public class StageOperationCapabilities {
     private boolean canGenerateStructure;
     private boolean canEditSchedule;
+    private boolean canAdjustSchedule;
     private boolean canPublish;
     private boolean canWithdraw;
     private boolean canRecommendSchedule;

@@ -28,6 +28,8 @@ import com.zhs.basket.service.v4.IBasketMatchSeriesService;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
 import com.zhs.basket.support.v4.MatchSeriesQualificationSyncService;
+import com.zhs.basket.support.v4.schedule.WinnerOfSeriesAdvanceSupport;
+import com.zhs.basket.support.v4.settlement.OfficialMatchResultSettlementService;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockStatic;
@@ -65,6 +68,8 @@ class StageExecutionExceptionApplicationServiceImplTest {
     @Mock private IBasketMatchSeriesService matchSeriesService;
     @Mock private IDivisionStageExecutionApplicationService stageExecutionService;
     @Mock private BasketBusinessAuditWriter auditWriter;
+    @Mock private OfficialMatchResultSettlementService officialMatchResultSettlementService;
+    @Mock private WinnerOfSeriesAdvanceSupport winnerOfSeriesAdvanceSupport;
 
     @InjectMocks
     private StageExecutionExceptionApplicationServiceImpl service;
@@ -92,13 +97,18 @@ class StageExecutionExceptionApplicationServiceImplTest {
         match.setHomeEventTeamId(101L);
         match.setAwayEventTeamId(102L);
         match.setMatchStatus(MatchStatusEnum.SCHEDULED.getCode());
+        match.setPublishStatus("PUBLISHED");
     }
 
     @Test
     void caseA_matchForfeit_setsWinnerAndRebuildsSeries() {
         match.setSeriesId(20L);
+        BasketMatchSeries series = new BasketMatchSeries();
+        series.setId(20L);
+        series.setSeriesStatus(MatchSeriesStatusEnum.RUNNING.getCode());
         when(matchMapper.selectById(1L)).thenReturn(match);
-        when(matchMapper.updateById(any())).thenReturn(1);
+        when(seriesMapper.selectById(20L)).thenReturn(series);
+        when(officialMatchResultSettlementService.settle(any())).thenReturn(true);
 
         BasketMatchForfeitReq req = new BasketMatchForfeitReq();
         req.setMatchId(1L);
@@ -107,8 +117,7 @@ class StageExecutionExceptionApplicationServiceImplTest {
 
         service.forfeitMatch(req);
 
-        verify(matchMapper).updateById(any());
-        verify(matchSeriesService).rebuildSeriesResult(20L);
+        verify(officialMatchResultSettlementService).settle(any());
         verify(auditWriter).writeAudit(any(), any(), anyLong(), any(), any(), any(), any());
     }
 
@@ -139,6 +148,7 @@ class StageExecutionExceptionApplicationServiceImplTest {
         }
 
         verify(seriesMapper).updateResolution(any());
+        verify(winnerOfSeriesAdvanceSupport).rewireAfterSeriesResult(any());
         verify(stageExecutionService).checkStageCompletion(10L);
     }
 
@@ -313,8 +323,151 @@ class StageExecutionExceptionApplicationServiceImplTest {
 
         service.revokeSeriesResolution(req);
 
+        verify(winnerOfSeriesAdvanceSupport).assertDownstreamNotStarted(series);
         verify(seriesMapper).clearResolution(20L);
         verify(matchSeriesService).rebuildSeriesResult(20L);
+    }
+
+    @Test
+    void enterOfficialResult_settlesAndAudits() {
+        when(matchMapper.selectById(1L)).thenReturn(match);
+        when(officialMatchResultSettlementService.settle(any())).thenReturn(true);
+
+        com.zhs.basket.dto.v4.BasketAdminOfficialResultReq req = new com.zhs.basket.dto.v4.BasketAdminOfficialResultReq();
+        req.setMatchId(1L);
+        req.setHomeScore(80);
+        req.setAwayScore(70);
+        req.setReason("队长失联补录");
+
+        service.enterOfficialResult(req);
+
+        verify(officialMatchResultSettlementService).settle(any());
+        verify(auditWriter).writeAudit(any(), any(), anyLong(), eq("ADMIN_DIRECT_RESULT"), any(), any(), any());
+    }
+
+    @Test
+    void correctOfficialResult_requiresFinished() {
+        match.setMatchStatus(MatchStatusEnum.SCHEDULED.getCode());
+        when(matchMapper.selectById(1L)).thenReturn(match);
+
+        com.zhs.basket.dto.v4.BasketAdminResultCorrectionReq req = new com.zhs.basket.dto.v4.BasketAdminResultCorrectionReq();
+        req.setMatchId(1L);
+        req.setHomeScore(70);
+        req.setAwayScore(80);
+        req.setReason("比分录反");
+
+        ServiceException ex = assertThrows(ServiceException.class, () -> service.correctOfficialResult(req));
+        assertTrue(ex.getMessage().contains("修正"));
+    }
+
+    @Test
+    void resolveSeriesManually_setsManualAndAdvances() {
+        BasketMatchSeries series = new BasketMatchSeries();
+        series.setId(20L);
+        series.setStageId(10L);
+        series.setHomeEventTeamId(101L);
+        series.setAwayEventTeamId(102L);
+        series.setSeriesStatus(MatchSeriesStatusEnum.RUNNING.getCode());
+        when(seriesMapper.selectById(20L)).thenReturn(series);
+        when(stageMapper.selectById(10L)).thenReturn(eliminationStage);
+        when(seriesMapper.updateResolution(any())).thenReturn(1);
+        doNothing().when(qualificationSyncService).assertCanModifyDownstream(any());
+
+        com.zhs.basket.dto.v4.BasketSeriesManualResolutionReq req = new com.zhs.basket.dto.v4.BasketSeriesManualResolutionReq();
+        req.setSeriesId(20L);
+        req.setWinnerEventTeamId(101L);
+        req.setDecisionType("ARBITRATION");
+        req.setReason("赛事仲裁");
+
+        try (var mocked = mockStatic(SecurityUtils.class)) {
+            mocked.when(SecurityUtils::getUserId).thenReturn(1L);
+            service.resolveSeriesManually(req);
+        }
+
+        verify(seriesMapper).updateResolution(any());
+        verify(winnerOfSeriesAdvanceSupport).rewireAfterSeriesResult(any());
+        verify(auditWriter).writeAudit(any(), any(), anyLong(), eq("SERIES_MANUAL_RESOLUTION"), any(), any(), any());
+    }
+
+    @Test
+    void revokeMatchForfeit_unsetsAndAudits() {
+        match.setMatchStatus(MatchStatusEnum.FORFEITED.getCode());
+        match.setWinnerEventTeamId(101L);
+        match.setLoserEventTeamId(102L);
+        when(matchMapper.selectById(1L)).thenReturn(match);
+        when(stageMapper.selectById(10L)).thenReturn(eliminationStage);
+        doNothing().when(qualificationSyncService).assertCanModifyDownstream(any());
+
+        com.zhs.basket.dto.v4.BasketMatchForfeitRevokeReq req = new com.zhs.basket.dto.v4.BasketMatchForfeitRevokeReq();
+        req.setMatchId(1L);
+        req.setReason("误判撤销");
+
+        service.revokeMatchForfeit(req);
+
+        verify(officialMatchResultSettlementService).unsetOfficialResult(1L);
+        verify(auditWriter).writeAudit(any(), any(), anyLong(), eq("REVOKE_MATCH_FORFEIT"), any(), any(), any());
+    }
+
+    @Test
+    void revokeMatchForfeit_childMatch_usesWinnerGuard() {
+        match.setMatchStatus(MatchStatusEnum.FORFEITED.getCode());
+        match.setSeriesId(20L);
+        match.setWinnerEventTeamId(101L);
+        when(matchMapper.selectById(1L)).thenReturn(match);
+        BasketMatchSeries series = new BasketMatchSeries();
+        series.setId(20L);
+        series.setSeriesStatus(MatchSeriesStatusEnum.COMPLETED.getCode());
+        when(seriesMapper.selectById(20L)).thenReturn(series);
+
+        com.zhs.basket.dto.v4.BasketMatchForfeitRevokeReq req = new com.zhs.basket.dto.v4.BasketMatchForfeitRevokeReq();
+        req.setMatchId(1L);
+        req.setReason("误判撤销");
+
+        service.revokeMatchForfeit(req);
+
+        verify(winnerOfSeriesAdvanceSupport).assertDownstreamNotStarted(series);
+        verify(officialMatchResultSettlementService).unsetOfficialResult(1L);
+    }
+
+    @Test
+    void revokeMatchForfeit_rejectsWhenDownstreamStarted() {
+        match.setMatchStatus(MatchStatusEnum.FORFEITED.getCode());
+        match.setSeriesId(20L);
+        when(matchMapper.selectById(1L)).thenReturn(match);
+        BasketMatchSeries series = new BasketMatchSeries();
+        series.setId(20L);
+        when(seriesMapper.selectById(20L)).thenReturn(series);
+        doThrow(new ServiceException(WinnerOfSeriesAdvanceSupport.MSG_DOWNSTREAM_STARTED))
+                .when(winnerOfSeriesAdvanceSupport).assertDownstreamNotStarted(any());
+
+        com.zhs.basket.dto.v4.BasketMatchForfeitRevokeReq req = new com.zhs.basket.dto.v4.BasketMatchForfeitRevokeReq();
+        req.setMatchId(1L);
+        req.setReason("误判撤销");
+
+        ServiceException ex = assertThrows(ServiceException.class, () -> service.revokeMatchForfeit(req));
+        assertTrue(ex.getMessage().contains("下游"));
+        verify(officialMatchResultSettlementService, never()).unsetOfficialResult(anyLong());
+    }
+
+    @Test
+    void revokeSeriesResolution_rejectsWhenDownstreamStarted() {
+        BasketMatchSeries series = new BasketMatchSeries();
+        series.setId(20L);
+        series.setStageId(10L);
+        series.setResolutionType(SeriesResolutionTypeEnum.FORFEIT.getCode());
+        when(seriesMapper.selectById(20L)).thenReturn(series);
+        when(stageMapper.selectById(10L)).thenReturn(eliminationStage);
+        doNothing().when(qualificationSyncService).assertCanModifyDownstream(any());
+        doThrow(new ServiceException(WinnerOfSeriesAdvanceSupport.MSG_DOWNSTREAM_STARTED))
+                .when(winnerOfSeriesAdvanceSupport).assertDownstreamNotStarted(any());
+
+        BasketSeriesRevokeResolutionReq req = new BasketSeriesRevokeResolutionReq();
+        req.setSeriesId(20L);
+        req.setReason("误判撤销");
+
+        ServiceException ex = assertThrows(ServiceException.class, () -> service.revokeSeriesResolution(req));
+        assertTrue(ex.getMessage().contains("下游"));
+        verify(seriesMapper, never()).clearResolution(anyLong());
     }
 
     private static BasketDivisionStage nextStage() {

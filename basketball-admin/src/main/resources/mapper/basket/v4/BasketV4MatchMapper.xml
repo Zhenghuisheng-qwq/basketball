@@ -58,6 +58,7 @@
         <result property="awayTeamName" column="away_team_name" />
         <result property="homeScore" column="home_score" />
         <result property="awayScore" column="away_score" />
+        <result property="winnerEventTeamId" column="winner_event_team_id" />
         <result property="matchStatus" column="match_status" />
         <result property="publishStatus" column="publish_status" />
         <result property="venueText" column="venue_text" />
@@ -91,6 +92,7 @@
             at.team_name_snapshot as away_team_name,
             m.home_score,
             m.away_score,
+            m.winner_event_team_id,
             m.match_status,
             m.publish_status,
             m.venue_text,
@@ -107,6 +109,12 @@
     <select id="selectById" resultMap="BasketV4MatchResult">
         select <include refid="BaseColumns" /> from basket_match
         where id = #{id} and <include refid="NotDeleted"/>
+    </select>
+
+    <select id="selectByIdForUpdate" resultMap="BasketV4MatchResult">
+        select <include refid="BaseColumns" /> from basket_match
+        where id = #{id} and <include refid="NotDeleted"/>
+        for update
     </select>
 
     <select id="selectList" resultMap="BasketV4MatchResult">
@@ -178,6 +186,17 @@
         where id = #{id} and <include refid="NotDeleted"/>
     </update>
 
+    <update id="clearOfficialResult">
+        update basket_match
+        set home_score = null,
+            away_score = null,
+            winner_event_team_id = null,
+            loser_event_team_id = null,
+            match_status = #{matchStatus},
+            update_time = now()
+        where id = #{id} and <include refid="NotDeleted"/>
+    </update>
+
     <!-- is_delete is TINYINT: cannot store snowflake/large id. Use 1 + uniquify UK columns. -->
     <update id="softDelete">
         update basket_match
@@ -220,7 +239,7 @@
 
     <select id="selectFinishedPublishedByDivisionId" resultMap="BasketV4MatchResult">
         select <include refid="BaseColumns" /> from basket_match
-        where division_id = #{divisionId} and match_status = 'FINISHED' and publish_status = 'PUBLISHED' and is_delete = 0
+        where division_id = #{divisionId} and match_status in ('FINISHED', 'FORFEITED') and publish_status = 'PUBLISHED' and is_delete = 0
         order by match_time asc, id asc
     </select>
 

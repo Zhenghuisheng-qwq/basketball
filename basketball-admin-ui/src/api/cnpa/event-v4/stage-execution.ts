@@ -240,6 +240,25 @@ export function applyV4StageManualRank(stageId: number, data: {
   return request({ url: `/basket/v4/admin/stages/${stageId}/manual-rank`, method: 'post', data })
 }
 
+export function applyV4StandingPointAdjustment(stageId: number, data: {
+  divisionId: number
+  eventTeamId: number
+  delta: number
+  reason: string
+  remark?: string
+  clientRequestId: string
+}) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/standing/point-adjustment`, method: 'post', data })
+}
+
+export function listV4StandingPointAdjustments(stageId: number, divisionId: number, eventTeamId: number) {
+  return request({
+    url: `/basket/v4/admin/stages/${stageId}/standing/point-adjustments`,
+    method: 'get',
+    params: { divisionId, eventTeamId },
+  })
+}
+
 export interface ScheduleUnitView {
   unitType: string
   unitId: number

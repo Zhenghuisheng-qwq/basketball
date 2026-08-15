@@ -43,5 +43,8 @@ public class BasketMatchSeriesDetailVo {
     private String qualificationStatusName;
     private Boolean finalStage;
     private String resultLabel;
+    private boolean canAdjustSchedule;
+    private String adjustScheduleBlockReason;
+    private boolean canResolveSeriesManually;
     private List<BasketMatchSeriesGameVo> games;
 }

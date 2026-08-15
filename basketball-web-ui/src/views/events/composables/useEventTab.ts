@@ -18,7 +18,7 @@ export function useEventTab() {
 
   function setTab(tab: EventTab) {
     router.push({
-      path: '/tournament',
+      path: route.path,
       query: {
         ...route.query,
         tab,

@@ -10,6 +10,8 @@ import java.util.List;
 public interface BasketV4MatchMapper {
     BasketV4Match selectById(@Param("id") Long id);
 
+    BasketV4Match selectByIdForUpdate(@Param("id") Long id);
+
     List<BasketV4Match> selectList(BasketV4Match query);
 
     List<BasketV4MatchListVo> selectVoList(BasketV4MatchQuery query);
@@ -19,6 +21,8 @@ public interface BasketV4MatchMapper {
     int insert(BasketV4Match entity);
 
     int updateById(BasketV4Match entity);
+
+    int clearOfficialResult(@Param("id") Long id, @Param("matchStatus") String matchStatus);
 
     int softDelete(@Param("id") Long id);
 

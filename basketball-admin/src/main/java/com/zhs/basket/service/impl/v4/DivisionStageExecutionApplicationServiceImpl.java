@@ -1,9 +1,11 @@
 package com.zhs.basket.service.impl.v4;
 
+import com.zhs.basket.domain.BasketPointAdjustment;
 import com.zhs.basket.domain.BasketTeam;
 import com.zhs.basket.domain.v4.*;
 import com.zhs.basket.dto.v4.BasketStageManualRankReq;
 import com.zhs.basket.enums.v4.*;
+import com.zhs.basket.mapper.BasketPointAdjustmentMapper;
 import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IBasketV4StructureVersionService;
@@ -17,6 +19,7 @@ import com.zhs.basket.support.v4.ByeQualificationService;
 import com.zhs.basket.support.v4.BestOfCapabilityGate;
 import com.zhs.basket.support.v4.DoubleEliminationCapabilityGate;
 import com.zhs.basket.support.v4.MatchSeriesQualificationSyncService;
+import com.zhs.basket.support.v4.StandingPointAdjustmentCapability;
 import com.zhs.basket.support.v4.StageFormatSpecification;
 import com.zhs.basket.support.v4.V4FormatDisplaySupport;
 import com.zhs.basket.support.v4.roster.TeamRosterSupport;
@@ -96,6 +99,10 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private TeamRosterSupport teamRosterSupport;
     @Autowired
     private IStagePairingExecutionApplicationService pairingExecutionApplicationService;
+    @Autowired
+    private BasketPointAdjustmentMapper pointAdjustmentMapper;
+    @Autowired
+    private MatchSeriesQualificationSyncService qualificationSyncService;
 
     @Override
     public List<BasketDivisionStageExecutionListVo> listStages(Long divisionId) {
@@ -554,6 +561,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         List<Long> standingIds = rows.stream().map(BasketStanding::getId).collect(Collectors.toList());
         Map<Long, List<BasketStandingRankReason>> reasonMap = rankReasonMapper.selectByStandingIds(standingIds).stream()
                 .collect(Collectors.groupingBy(BasketStandingRankReason::getStandingId));
+        Map<Long, Integer> adjustmentMap = loadV4AdjustmentSums(stage.getDivisionId(), stageId);
+        boolean canAdjustStandingPoints = canAdjustStandingPoints(stage);
 
         Map<Long, BasketStageStandingScopeVo> scopes = new LinkedHashMap<>();
         for (BasketStanding standing : rows) {
@@ -584,6 +593,11 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             rowVo.setPointAgainst(standing.getPointAgainst());
             rowVo.setPointDiff(standing.getPointDiff());
             rowVo.setStandingPoints(standing.getStandingPoints());
+            int adjustmentPoints = adjustmentMap.getOrDefault(standing.getEventTeamId(), 0);
+            int finalPoints = standing.getStandingPoints() != null ? standing.getStandingPoints() : 0;
+            rowVo.setAdjustmentPoints(adjustmentPoints);
+            rowVo.setBaseStandingPoints(finalPoints - adjustmentPoints);
+            rowVo.setCanAdjustStandingPoints(canAdjustStandingPoints);
             rowVo.setManualRankPending(standing.getManualRankPending());
             rowVo.setManualRankNo(standing.getManualRankNo());
             rowVo.setManualRankReason(standing.getManualRankReason());
@@ -1050,6 +1064,34 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private boolean supportsStanding(BasketDivisionStage stage) {
         CompetitionFormatEnum format = CompetitionFormatEnum.fromCode(stage.getCompetitionFormat());
         return format == CompetitionFormatEnum.ROUND_ROBIN;
+    }
+
+    private Map<Long, Integer> loadV4AdjustmentSums(Long divisionId, Long stageId) {
+        Map<Long, Integer> result = new HashMap<>();
+        List<BasketPointAdjustment> sums = pointAdjustmentMapper.selectV4SumByStage(divisionId, stageId);
+        if (sums == null) {
+            return result;
+        }
+        for (BasketPointAdjustment sum : sums) {
+            if (sum.getEventTeamId() != null && sum.getAdjustmentPoints() != null) {
+                result.put(sum.getEventTeamId(), sum.getAdjustmentPoints());
+            }
+        }
+        return result;
+    }
+
+    private boolean canAdjustStandingPoints(BasketDivisionStage stage) {
+        if (!StandingPointAdjustmentCapability.canAdjustStandingPoints(stage)) {
+            return false;
+        }
+        if (StageExecutionStatusEnum.COMPLETED.getCode().equals(stage.getExecutionStatus())) {
+            return false;
+        }
+        List<BasketDivisionStageQualification> confirmed = qualificationMapper.selectConfirmedByStageId(stage.getId());
+        if (confirmed != null && !confirmed.isEmpty()) {
+            return false;
+        }
+        return !qualificationSyncService.hasOfficialDownstreamStarted(stage);
     }
 
     private boolean isGroupStage(BasketDivisionStage stage) {

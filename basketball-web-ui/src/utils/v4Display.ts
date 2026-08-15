@@ -143,6 +143,36 @@ export function v4MatchSeriesStatusLabel(status: string | null | undefined): str
   }
 }
 
+export function v4PublicRoundLabel(name?: string | null, roundNo?: number | null): string {
+  const raw = String(name || '').trim()
+  const upper = raw.toUpperCase()
+  if (upper === 'R32') return '32强'
+  if (upper === 'R16') return '16强'
+  if (upper === 'R8' || upper === 'QF') return '8强'
+  if (upper === 'SF' || upper === 'SEMI' || raw === '半决赛') return '半决赛'
+  if (upper === 'FINAL' || raw === '总决赛' || raw === 'Final') return '总决赛'
+  if (raw) return raw
+  return roundNo != null ? `R${roundNo}` : '赛程'
+}
+
+export function v4ScheduleStatusLabel(status?: string | null, statusName?: string | null): string {
+  const code = String(status || '').toUpperCase()
+  if (code === 'READY' || code === 'PENDING' || code === 'SCHEDULED' || code === 'NOT_STARTED') {
+    return '未开始'
+  }
+  if (statusName) return statusName
+  return v4MatchSeriesStatusLabel(status)
+}
+
+export function v4ScheduleTeamLabel(name?: string | null, placeholderSource?: string | null): string {
+  const text = String(name || '').trim()
+  if (text && text !== '待定' && text !== '--') return text
+  const source = String(placeholderSource || '').toUpperCase()
+  if (source === 'WINNER_OF_SERIES') return '上一轮胜者'
+  if (source === 'GROUP_RANK') return '小组名次待定'
+  return '待定'
+}
+
 export function v4BestOfLabel(bestOf?: number | null): string {
   if (bestOf == null || bestOf <= 1) return 'BO1'
   return `BO${bestOf}`

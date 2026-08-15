@@ -1,7 +1,7 @@
 import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
-import { getV4PublicDivisionSchedule, getV4PublicMatchList, getV4PublicStanding } from '@/api/v4Public'
+import { getV4PublicDivisionSchedule, getV4PublicStanding } from '@/api/v4Public'
 import type { V4PublicScheduleItem } from '@/api/types/v4Public'
-import { v4MatchToLegacyShape, v4StandingToPublic } from '../utils/v4PublicAdapters'
+import { v4StandingToPublic } from '../utils/v4PublicAdapters'
 import type { PublicStandingItemVo } from '@/api/types/public'
 import {
   formatDateKey,
@@ -12,8 +12,9 @@ import {
 } from './useCalendar'
 import type { Match } from '../types/events'
 import type { usePublicSeasonContext } from './usePublicSeasonContext'
-import { standingToTeam, toScheduleMatch } from '../utils/mapPublic'
+import { standingToTeam } from '../utils/mapPublic'
 import { teamIdToNumeric } from '../utils/teamLookup'
+import { v4ScheduleTeamLabel } from '@/utils/v4Display'
 
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
@@ -51,9 +52,28 @@ export function useScheduleFilters() {
 
   const teamOptions = computed(() => teams.value.map(standingToTeam))
 
-  function resolveEventTeamId(numericId: number | null): string | undefined {
-    if (numericId === null) return undefined
-    return teamOptions.value.find((team) => team.id === numericId)?.teamId
+  function scheduleItemToMatch(item: V4PublicScheduleItem, seasonName: string): Match {
+    const date = item.scheduleDate || ''
+    const startTime = item.startTime ? String(item.startTime).slice(0, 5) : ''
+    return {
+      id: Number(item.id) || 0,
+      matchId: String(item.id),
+      season: seasonName,
+      date,
+      startTime,
+      homeTeamKey: String(item.homeEventTeamId || ''),
+      awayTeamKey: String(item.awayEventTeamId || ''),
+      homeTeamId: teamIdToNumeric(String(item.homeEventTeamId || '')),
+      awayTeamId: teamIdToNumeric(String(item.awayEventTeamId || '')),
+      homeTeamName: v4ScheduleTeamLabel(item.homeTeam, item.placeholderSource),
+      awayTeamName: v4ScheduleTeamLabel(item.awayTeam, item.placeholderSource),
+      homeTeamLogo: '',
+      awayTeamLogo: '',
+      venue: '--',
+      status: 'scheduled',
+      week: date && isValidDateKey(date) ? getWeekNumber(date) : 0,
+      stageName: item.stageName || item.roundName,
+    }
   }
 
   const filteredMatches = computed<Match[]>(() => {
@@ -69,6 +89,7 @@ export function useScheduleFilters() {
 
   const filteredScheduleItems = computed(() => {
     return scheduleItems.value.filter((item) => {
+      // 日期只做辅助筛选；无日期的已发布项必须保留
       const itemDate = item.scheduleDate || ''
       const dateMatch = !selectedDate.value || !itemDate || itemDate === selectedDate.value
       const teamMatch =
@@ -82,7 +103,7 @@ export function useScheduleFilters() {
   const scheduleByRound = computed(() => {
     const map = new Map<string, V4PublicScheduleItem[]>()
     for (const item of filteredScheduleItems.value) {
-      const key = item.roundName || (item.roundNo != null ? `R${item.roundNo}` : '赛程')
+      const key = item.roundName || (item.roundNo != null ? `R${item.roundNo}` : 'ROUND')
       const list = map.get(key) ?? []
       list.push(item)
       map.set(key, list)
@@ -107,9 +128,10 @@ export function useScheduleFilters() {
   }
 
   function applyCalendarBaseDate(force = false) {
-    if (!force && isValidDateKey(selectedDate.value)) return
-    selectedDate.value = resolveCalendarBaseDate()
-    currentWeek.value = getWeekNumber(selectedDate.value)
+    // 禁止默认用赛季开赛日过滤，否则 Arena / 无日期项会整页空白
+    if (!force) return
+    selectedDate.value = ''
+    currentWeek.value = getWeekNumber(resolveCalendarBaseDate())
   }
 
   function closePanels() {
@@ -180,31 +202,25 @@ export function useScheduleFilters() {
     state.value = 'loading'
     errorMessage.value = ''
     try {
-      const [scheduleRes, matchRes, standingRes] = await Promise.all([
+      const [scheduleRes, standingRes] = await Promise.all([
         getV4PublicDivisionSchedule(divisionId),
-        getV4PublicMatchList({
-          divisionId,
-          eventTeamId: resolveEventTeamId(selectedTeamId.value),
-        }),
         getV4PublicStanding(divisionId),
       ])
       if (current !== reqId) return
       const seasonName = ctx.currentSeason.value?.seasonName || ''
       scheduleItems.value = scheduleRes.data ?? []
-      matches.value = (matchRes.data ?? []).map((item) =>
-        toScheduleMatch(v4MatchToLegacyShape(item) as any, seasonName),
-      )
+      matches.value = scheduleItems.value
+        .filter((item) => item.unitType === 'MATCH')
+        .map((item) => scheduleItemToMatch(item, seasonName))
       teams.value = (standingRes.data ?? []).map((row) =>
         v4StandingToPublic(row, ctx.seasonId.value),
       )
 
-      if (!hasSeriesItems.value && Boolean(options?.resetDate)) {
-        applyCalendarBaseDate(true)
-      } else if (hasSeriesItems.value && Boolean(options?.resetDate)) {
+      if (Boolean(options?.resetDate)) {
         selectedDate.value = ''
       }
 
-      state.value = (scheduleItems.value.length || matches.value.length) ? 'success' : 'empty'
+      state.value = scheduleItems.value.length ? 'success' : 'empty'
     } catch (err) {
       if (current !== reqId) return
       matches.value = []

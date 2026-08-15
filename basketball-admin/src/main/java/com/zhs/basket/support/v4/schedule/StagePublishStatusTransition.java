@@ -41,7 +41,7 @@ public final class StagePublishStatusTransition {
             if (current == PublishStatusEnum.PUBLISHED) {
                 return PublishStatusEnum.PUBLISHED;
             }
-            throw new ServiceException("仅已发布赛段可以调整比赛时间");
+            throw new ServiceException(ScheduleAdjustmentGuard.MSG_NOT_PUBLISHED);
         }
         throw new ServiceException("未知发布动作");
     }

@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket.v4;
 
 import com.zhs.basket.constant.BasketEventV4Perms;
+import com.zhs.basket.dto.v4.BasketStandingPointAdjustmentReq;
 import com.zhs.basket.dto.v4.BasketStageManualRankReq;
 import com.zhs.basket.dto.v4.ScheduleAssignReq;
 import com.zhs.basket.dto.v4.ScheduleBatchAssignReq;
@@ -11,6 +12,7 @@ import com.zhs.basket.dto.v4.StageManualSlotReq;
 import com.zhs.basket.dto.v4.StagePairingSeedReq;
 import com.zhs.basket.dto.v4.StageWithdrawReq;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
+import com.zhs.basket.service.v4.IStandingPointAdjustmentApplicationService;
 import com.zhs.basket.service.v4.IStagePairingExecutionApplicationService;
 import com.zhs.basket.service.v4.IStagePublishApplicationService;
 import com.zhs.basket.service.v4.IStageScheduleApplicationService;
@@ -34,6 +36,8 @@ public class BasketV4StageExecutionController extends BaseController {
     private IStageScheduleApplicationService stageScheduleApplicationService;
     @Autowired
     private IStagePublishApplicationService stagePublishApplicationService;
+    @Autowired
+    private IStandingPointAdjustmentApplicationService standingPointAdjustmentApplicationService;
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_LIST + "')")
     @GetMapping("/list")
@@ -124,6 +128,23 @@ public class BasketV4StageExecutionController extends BaseController {
         req.setStageId(stageId);
         stageExecutionApplicationService.applyManualRank(req);
         return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STANDING_MANUAL_RANK + "')")
+    @Log(title = "V4 StandingPointAdjustment", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/standing/point-adjustment")
+    public AjaxResult applyStandingPointAdjustment(@PathVariable Long stageId,
+                                                   @RequestBody BasketStandingPointAdjustmentReq req) {
+        req.setStageId(stageId);
+        return success(standingPointAdjustmentApplicationService.applyAdjustment(req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STANDING_VIEW + "')")
+    @GetMapping("/{stageId}/standing/point-adjustments")
+    public AjaxResult listStandingPointAdjustments(@PathVariable Long stageId,
+                                                   @RequestParam Long divisionId,
+                                                   @RequestParam Long eventTeamId) {
+        return success(standingPointAdjustmentApplicationService.listHistory(divisionId, stageId, eventTeamId));
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_LIST + "')")

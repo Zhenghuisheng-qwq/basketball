@@ -49,7 +49,23 @@
               <el-table-column label="得分" prop="pointFor" width="70" align="center" />
               <el-table-column label="失分" prop="pointAgainst" width="70" align="center" />
               <el-table-column label="净胜分" prop="pointDiff" width="80" align="center" />
-              <el-table-column label="积分" prop="standingPoints" width="80" align="center" />
+              <el-table-column label="基础积分" prop="baseStandingPoints" width="88" align="center" />
+              <el-table-column label="人工调整" width="88" align="center">
+                <template #default="s">
+                  <el-tag v-if="s.row.adjustmentPoints" :type="s.row.adjustmentPoints < 0 ? 'danger' : 'success'" size="small">
+                    {{ formatDelta(s.row.adjustmentPoints) }}
+                  </el-tag>
+                  <span v-else>0</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="最终积分" width="96" align="center">
+                <template #default="s">
+                  <span>{{ s.row.standingPoints ?? 0 }}</span>
+                  <el-tooltip v-if="s.row.adjustmentPoints" :content="`基础 ${s.row.baseStandingPoints ?? 0} ${formatDelta(s.row.adjustmentPoints)}`" placement="top">
+                    <el-tag class="ml4" size="small" type="info">调整 {{ formatDelta(s.row.adjustmentPoints) }}</el-tag>
+                  </el-tooltip>
+                </template>
+              </el-table-column>
               <el-table-column label="排名依据" min-width="160">
                 <template #default="s">{{ s.row.decisiveReasonText || '-' }}</template>
               </el-table-column>
@@ -58,6 +74,17 @@
                   <el-tag v-if="s.row.manualRankPending" type="warning" size="small">待处理</el-tag>
                   <span v-else-if="s.row.manualRankNo">#{{ s.row.manualRankNo }}</span>
                   <span v-else>-</span>
+                </template>
+              </el-table-column>
+              <el-table-column v-if="canShowPointAdjustment" label="操作" width="110" align="center" fixed="right">
+                <template #default="s">
+                  <el-button
+                    v-if="s.row.canAdjustStandingPoints"
+                    type="primary"
+                    link
+                    size="small"
+                    @click="openPointAdjustmentDialog(s.row)"
+                  >积分调整</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -172,6 +199,50 @@
         <el-button type="primary" :loading="manualRankSaving" @click="submitManualRank">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="pointAdjustVisible" title="积分调整" width="720px" destroy-on-close @closed="resetPointAdjustForm">
+      <el-descriptions :column="2" border size="small" class="mb8">
+        <el-descriptions-item label="赛区">{{ selectedDivisionLabel }}</el-descriptions-item>
+        <el-descriptions-item label="阶段">{{ selectedStageLabel }}</el-descriptions-item>
+        <el-descriptions-item label="球队" :span="2">{{ pointAdjustRow?.teamName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="当前基础积分">{{ pointAdjustRow?.baseStandingPoints ?? 0 }}</el-descriptions-item>
+        <el-descriptions-item label="当前人工调整">{{ formatDelta(pointAdjustRow?.adjustmentPoints) }}</el-descriptions-item>
+        <el-descriptions-item label="当前最终积分" :span="2">{{ pointAdjustRow?.standingPoints ?? 0 }}</el-descriptions-item>
+      </el-descriptions>
+
+      <el-form label-width="100px" class="mb8">
+        <el-form-item label="本次调整" required>
+          <el-input-number v-model="pointAdjustForm.delta" :min="-999" :max="999" :step="1" :precision="0" />
+        </el-form-item>
+        <el-form-item label="原因" required>
+          <el-select v-model="pointAdjustForm.reason" placeholder="请选择原因" style="width: 240px">
+            <el-option v-for="item in pointAdjustReasons" :key="item" :label="item" :value="item" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="pointAdjustForm.reason === '其他'" label="具体原因" required>
+          <el-input v-model="pointAdjustForm.customReason" maxlength="200" show-word-limit placeholder="请填写具体原因" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="pointAdjustForm.remark" type="textarea" :rows="2" maxlength="500" show-word-limit />
+        </el-form-item>
+      </el-form>
+
+      <div class="scope-title">调整历史</div>
+      <el-table :data="pointAdjustHistory" border size="small" max-height="260">
+        <el-table-column label="时间" prop="createTime" width="170" />
+        <el-table-column label="操作人" prop="operatorName" width="100" />
+        <el-table-column label="调整值" width="80" align="center">
+          <template #default="s">{{ formatDelta(s.row.delta) }}</template>
+        </el-table-column>
+        <el-table-column label="原因" prop="reason" min-width="140" />
+        <el-table-column label="备注" prop="remark" min-width="140" />
+      </el-table>
+
+      <template #footer>
+        <el-button @click="pointAdjustVisible = false">取消</el-button>
+        <el-button type="primary" :loading="pointAdjustSaving" @click="submitPointAdjustment">确认调整</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -182,6 +253,8 @@ import { listV4PlayerStat, listV4Rank, listV4Standing, listV4TeamStat } from '@/
 import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
 import {
   applyV4StageManualRank,
+  applyV4StandingPointAdjustment,
+  listV4StandingPointAdjustments,
   listV4StageExecution,
   listV4StageStandings,
   type BasketDivisionStageExecutionVo,
@@ -199,6 +272,9 @@ interface StageStandingRow {
   pointAgainst?: number
   pointDiff?: number
   standingPoints?: number
+  baseStandingPoints?: number
+  adjustmentPoints?: number
+  canAdjustStandingPoints?: boolean
   manualRankPending?: number
   manualRankNo?: number
   manualRankReason?: string
@@ -238,6 +314,19 @@ const manualRankForm = ref<{
   items: Array<StageStandingRow & { manualRankNo: number }>
 }>({ reason: '', items: [] })
 
+const pointAdjustVisible = ref(false)
+const pointAdjustSaving = ref(false)
+const pointAdjustRow = ref<StageStandingRow | null>(null)
+const pointAdjustHistory = ref<Array<{ createTime?: string; operatorName?: string; delta?: number; reason?: string; remark?: string }>>([])
+const pointAdjustForm = ref({
+  delta: -1,
+  reason: '违规处罚',
+  customReason: '',
+  remark: '',
+  clientRequestId: '',
+})
+const pointAdjustReasons = ['违规处罚', '赛事奖励', '仲裁调整', '数据纠错', '其他']
+
 const currentStage = computed(() => stageOptions.value.find(s => s.stageId === stageId.value))
 const selectedDivisionLabel = computed(() => divisionOptions.value.find(d => d.id === divisionId.value)?.label || '-')
 const selectedStageLabel = computed(() => {
@@ -264,6 +353,17 @@ function formatDivisionLabel(item: V4AdminOptionVo) {
 function isScoringStage(stage?: BasketDivisionStageExecutionVo) {
   if (!stage) return false
   return stage.competitionFormat === 'ROUND_ROBIN' || stage.stageType === 'GROUP'
+}
+
+const canShowPointAdjustment = computed(() => {
+  if (!divisionId.value || !stageId.value) return false
+  if (!checkPermi(['basket:v4Standing:manualRank'])) return false
+  return isScoringStage(currentStage.value)
+})
+
+function formatDelta(value?: number | null) {
+  const n = value ?? 0
+  return n > 0 ? `+${n}` : `${n}`
 }
 
 function canShowManualRank(scope: StageStandingScope) {
@@ -362,6 +462,61 @@ function resetManualRankForm() {
   manualRankForm.value = { reason: '', items: [] }
 }
 
+async function openPointAdjustmentDialog(row: StageStandingRow) {
+  if (!divisionId.value || !stageId.value) return
+  pointAdjustRow.value = row
+  pointAdjustForm.value = {
+    delta: -1,
+    reason: '违规处罚',
+    customReason: '',
+    remark: '',
+    clientRequestId: `spa-${stageId.value}-${row.eventTeamId}-${Date.now()}`,
+  }
+  pointAdjustVisible.value = true
+  const res = await listV4StandingPointAdjustments(stageId.value, divisionId.value, row.eventTeamId)
+  pointAdjustHistory.value = res.data || []
+}
+
+function resetPointAdjustForm() {
+  pointAdjustRow.value = null
+  pointAdjustHistory.value = []
+  pointAdjustForm.value = { delta: -1, reason: '违规处罚', customReason: '', remark: '', clientRequestId: '' }
+}
+
+async function submitPointAdjustment() {
+  if (!stageId.value || !divisionId.value || !pointAdjustRow.value) return
+  const delta = pointAdjustForm.value.delta
+  if (!delta || !Number.isInteger(delta)) {
+    ElMessage.warning('调整值必须是非 0 整数')
+    return
+  }
+  const reason = pointAdjustForm.value.reason === '其他'
+    ? pointAdjustForm.value.customReason.trim()
+    : pointAdjustForm.value.reason
+  if (!reason) {
+    ElMessage.warning('请填写调整原因')
+    return
+  }
+  pointAdjustSaving.value = true
+  try {
+    await applyV4StandingPointAdjustment(stageId.value, {
+      divisionId: divisionId.value,
+      eventTeamId: pointAdjustRow.value.eventTeamId,
+      delta,
+      reason,
+      remark: pointAdjustForm.value.remark?.trim() || undefined,
+      clientRequestId: pointAdjustForm.value.clientRequestId,
+    })
+    ElMessage.success('积分已调整，积分榜已重算')
+    pointAdjustVisible.value = false
+    loadStageStandings()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '调整失败')
+  } finally {
+    pointAdjustSaving.value = false
+  }
+}
+
 async function submitManualRank() {
   if (!stageId.value) return
   const reason = manualRankForm.value.reason?.trim()
@@ -408,6 +563,7 @@ onMounted(async () => {
 <style scoped>
 .mb8 { margin-bottom: 8px; }
 .ml8 { margin-left: 8px; }
+.ml4 { margin-left: 4px; }
 .scope-title { font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .reason-line { font-size: 12px; line-height: 1.5; margin-bottom: 4px; }
 </style>

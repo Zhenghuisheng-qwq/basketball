@@ -12,7 +12,7 @@ const emit = defineEmits<{
 const tabs: Array<{ key: EventTab; label: string }> = [
   { key: 'overview', label: '总览' },
   { key: 'schedule', label: '赛程' },
-  { key: 'stage', label: '赛段' },
+  { key: 'stage', label: '对阵/赛段' },
 ]
 </script>
 <template>

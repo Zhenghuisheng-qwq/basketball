@@ -18,7 +18,7 @@ public final class DivisionOperationCapabilitySupport {
     public static final String MSG_STRUCTURE_MISSING = "请先生成赛程结构";
     public static final String MSG_SCHEDULE_INCOMPLETE_PREFIX = "还有 ";
     public static final String MSG_SCHEDULE_INCOMPLETE_SUFFIX = " 场未排期";
-    public static final String MSG_PUBLISHED_READONLY = "赛段已发布，请先撤回后再修改";
+    public static final String MSG_PUBLISHED_READONLY = "赛段已发布，赛前排期规划已锁定。如需重新规划赛程，请先撤回发布后修改。赛事运行期间若仅需调整某一场比赛或系列赛时间，请前往『比赛执行 → 比赛管理』处理。";
     public static final String MSG_DOUBLE_ELIM = DoubleEliminationCapabilityGate.RESERVED_MESSAGE;
 
     private DivisionOperationCapabilitySupport() {
@@ -139,10 +139,13 @@ public final class DivisionOperationCapabilitySupport {
         }
         if (published) {
             cap.setCanWithdraw(true);
+            cap.setCanEditSchedule(false);
+            cap.setCanAdjustSchedule(false);
             cap.setBlockReason(MSG_PUBLISHED_READONLY);
             return cap;
         }
         cap.setCanEditSchedule(active);
+        cap.setCanAdjustSchedule(false);
         cap.setCanRecommendSchedule(active && canRecommend);
         if (unscheduled > 0) {
             cap.setBlockReason(MSG_SCHEDULE_INCOMPLETE_PREFIX + unscheduled + MSG_SCHEDULE_INCOMPLETE_SUFFIX);

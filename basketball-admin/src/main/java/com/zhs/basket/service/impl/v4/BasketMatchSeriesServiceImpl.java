@@ -175,9 +175,9 @@ public class BasketMatchSeriesServiceImpl implements IBasketMatchSeriesService {
 
         locked.setSeriesStatus(newStatus);
         locked.setWinnerEventTeamId(snapshot.getWinnerEventTeamId());
-        winnerOfSeriesAdvanceSupport.advanceIfCompleted(locked);
+        winnerOfSeriesAdvanceSupport.rewireAfterSeriesResult(locked);
         qualificationSyncService.syncAfterSeriesRebuild(locked, previousStatus, previousWinner, snapshot);
-        winnerOfSeriesAdvanceSupport.advanceIfCompleted(locked);
+        winnerOfSeriesAdvanceSupport.rewireAfterSeriesResult(locked);
 
         if (locked.getStageId() != null) {
             stageExecutionService.checkStageCompletion(locked.getStageId());
