@@ -21,6 +21,33 @@
   position: relative;
 }
 
+.division-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.division-switch__btn {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 2px;
+  background: #111;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+
+  &.active,
+  &:hover {
+    color: #fff;
+    border-color: var(--cnpa-red);
+    background: rgba(225, 6, 19, 0.22);
+  }
+}
+
 .events-content-section {
   width: 100%;
 }
