@@ -213,14 +213,14 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
         if (SubmissionStatusEnum.PENDING_REVIEW.getCode().equals(myStatus)) {
             row.setCanViewSubmission(true);
             row.setUserActionType("VIEW_SUBMISSION");
-            row.setUserActionText("查看提交详情");
+            row.setUserActionText("查看提交");
             row.setCannotSubmitReason("本方审核中");
             return;
         }
         if (SubmissionStatusEnum.APPROVED.getCode().equals(myStatus)) {
             row.setCanViewSubmission(true);
             row.setUserActionType("VIEW_SUBMISSION");
-            row.setUserActionText("查看审核结果");
+            row.setUserActionText("查看比赛数据");
             row.setCannotSubmitReason("本方已通过");
             return;
         }
@@ -252,7 +252,7 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
             row.setCanSubmit(true);
             row.setCanSubmitData(true);
             row.setUserActionType("SUBMIT");
-            row.setUserActionText("提交比赛数据");
+            row.setUserActionText(SubmissionStatusEnum.DRAFT.getCode().equals(myStatus) ? "继续填写" : "提交比赛数据");
             return;
         }
 

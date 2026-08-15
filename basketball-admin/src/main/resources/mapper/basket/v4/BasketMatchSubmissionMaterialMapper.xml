@@ -65,6 +65,11 @@
         order by id asc
     </select>
 
+    <select id="countByFileId" resultType="int">
+        select count(1) from basket_match_submission_material
+        where file_id = #{fileId} and is_delete = 0
+    </select>
+
     <update id="deleteBySubmissionId">
         update basket_match_submission_material
         set is_delete = 1, update_time = now()

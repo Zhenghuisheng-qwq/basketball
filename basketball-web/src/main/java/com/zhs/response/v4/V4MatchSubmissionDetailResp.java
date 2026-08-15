@@ -10,8 +10,14 @@ public class V4MatchSubmissionDetailResp {
     private String matchNo;
     private Integer roundNo;
     private Date matchTime;
+    private String seasonTitle;
     private String divisionName;
     private String platformCode;
+    private String gameMode;
+    private Integer lineupMinCount;
+    private Integer lineupMaxCount;
+    private String stageName;
+    private String roundName;
     private Long homeEventTeamId;
     private String homeTeamName;
     private Long awayEventTeamId;
@@ -32,4 +38,6 @@ public class V4MatchSubmissionDetailResp {
     private V4MatchSubmissionTeamStatResp teamStat;
     private List<V4MatchSubmissionPlayerStatResp> playerStats;
     private List<Long> materialFileIds;
+    private V4MatchSubmissionSeriesContextResp seriesContext;
+    private List<V4MatchSubmissionEligiblePlayerResp> eligiblePlayers;
 }

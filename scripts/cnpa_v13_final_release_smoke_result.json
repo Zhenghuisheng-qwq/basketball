@@ -1,0 +1,560 @@
+{
+  "startedAt": "2026-08-15T21:58:50",
+  "cases": {
+    "schema.iso.basket_match_series": {
+      "ok": true,
+      "detail": "basket_match_series",
+      "severity": "P0"
+    },
+    "schema.iso.basket_schedule_batch": {
+      "ok": true,
+      "detail": "basket_schedule_batch",
+      "severity": "P0"
+    },
+    "schema.iso.basket_business_audit": {
+      "ok": true,
+      "detail": "basket_business_audit",
+      "severity": "P0"
+    },
+    "schema.iso.basket_division_format_snapshot": {
+      "ok": true,
+      "detail": "basket_division_format_snapshot",
+      "severity": "P0"
+    },
+    "schema.iso.basket_division_roster_version": {
+      "ok": true,
+      "detail": "basket_division_roster_version",
+      "severity": "P0"
+    },
+    "schema.iso.point_adjustment": {
+      "ok": false,
+      "detail": "isolated missing R10 table (prod has it)",
+      "severity": "P2"
+    },
+    "schema.prod.point_adjustment.cols": {
+      "ok": true,
+      "detail": "missing=[] have=['adjustment_points', 'adjustment_reason', 'adjustment_type', 'create_time', 'discipline_id', 'division_id', 'event_team_id', 'group_id', 'id', 'idempotency_key', 'is_delete', 'operator_id', 'operator_name', 'remark', 'season_id', 'stage_id', 'team_id', 'update_time']",
+      "severity": "P0"
+    },
+    "schema.prod.team_id.nullable": {
+      "ok": true,
+      "detail": "[{'n': 'YES'}]",
+      "severity": "P0"
+    },
+    "schema.prod.idx_point_adjust_v4": {
+      "ok": true,
+      "detail": "[{'INDEX_NAME': 'idx_point_adjust_v4'}]",
+      "severity": "P0"
+    },
+    "catalog.LEAGUE": {
+      "ok": true,
+      "detail": "codes=['LEAGUE_STANDARD_V1', 'ARENA_STANDARD_V1', 'CUP_STANDARD_V1', 'OPEN_STANDARD_V1'] default=LEAGUE_STANDARD_V1",
+      "severity": "P1"
+    },
+    "catalog.ARENA": {
+      "ok": true,
+      "detail": "codes=['LEAGUE_STANDARD_V1', 'ARENA_STANDARD_V1', 'CUP_STANDARD_V1', 'OPEN_STANDARD_V1'] default=ARENA_STANDARD_V1",
+      "severity": "P1"
+    },
+    "catalog.CUP": {
+      "ok": true,
+      "detail": "codes=['LEAGUE_STANDARD_V1', 'ARENA_STANDARD_V1', 'CUP_STANDARD_V1', 'OPEN_STANDARD_V1'] default=CUP_STANDARD_V1",
+      "severity": "P1"
+    },
+    "catalog.OPEN": {
+      "ok": true,
+      "detail": "codes=['LEAGUE_STANDARD_V1', 'ARENA_STANDARD_V1', 'CUP_STANDARD_V1', 'OPEN_STANDARD_V1'] default=OPEN_STANDARD_V1",
+      "severity": "P1"
+    },
+    "rule.current.locked": {
+      "ok": true,
+      "detail": "{'snapshotStatus': 'LOCKED', 'locked': True, 'sourceTemplateCode': 'CUP_STANDARD_V1', 'ruleVersionNo': 1, 'snapshotVersion': 4}",
+      "severity": "P1"
+    },
+    "rule.current.x1": {
+      "ok": true,
+      "detail": "current=1",
+      "severity": "P0"
+    },
+    "rule.locked.reject.apply": {
+      "ok": true,
+      "detail": "已锁定规则快照不允许应用标准模板",
+      "severity": "P1"
+    },
+    "rule.locked.reject.quick": {
+      "ok": true,
+      "detail": "No static resource basket/v4/divisions/16/format-snapshot/quick-edit.",
+      "severity": "P1"
+    },
+    "rule.locked.reject.custom": {
+      "ok": true,
+      "detail": "No static resource basket/v4/divisions/16/format-snapshot/custom.",
+      "severity": "P1"
+    },
+    "rule.locked.reject.bo": {
+      "ok": true,
+      "detail": "Request method 'PUT' is not supported",
+      "severity": "P1"
+    },
+    "arena16.roster": {
+      "ok": true,
+      "detail": "[{'formal_count': 16, 'candidate_count': 4, 'status': 'LOCKED'}]",
+      "severity": "P1"
+    },
+    "arena16.eventTeam": {
+      "ok": true,
+      "detail": "eventTeam=16 formal=16",
+      "severity": "P0"
+    },
+    "arena16.structure.participants": {
+      "ok": true,
+      "detail": "stageTeam=16 formal=16",
+      "severity": "P1"
+    },
+    "arena16.structure.current.x1": {
+      "ok": true,
+      "detail": "[{'stage_id': 31, 'c': 1}]",
+      "severity": "P0"
+    },
+    "arena16.series15": {
+      "ok": true,
+      "detail": "series=15",
+      "severity": "P1"
+    },
+    "arena16.match51": {
+      "ok": true,
+      "detail": "match=51",
+      "severity": "P1"
+    },
+    "arena16.orphan0": {
+      "ok": true,
+      "detail": "orphan=0",
+      "severity": "P0"
+    },
+    "arena16.bo.chain": {
+      "ok": true,
+      "detail": "got=[(1, 3, 8), (2, 3, 4), (3, 5, 2), (4, 5, 1)]",
+      "severity": "P1"
+    },
+    "arena16.web.series15": {
+      "ok": true,
+      "detail": "public=15 series=15 types=['MATCH_SERIES']",
+      "severity": "P1"
+    },
+    "arena16.web.not_51_games": {
+      "ok": true,
+      "detail": "public=15",
+      "severity": "P1"
+    },
+    "arena16.web.placeholder_or_resolved": {
+      "ok": true,
+      "detail": "placeholders~0 total=15",
+      "severity": "P1"
+    },
+    "arena16.winner.completed": {
+      "ok": true,
+      "detail": "[{'series_status': 'COMPLETED', 'home_win_count': 2, 'away_win_count': 0, 'winner_event_team_id': 40}]",
+      "severity": "P0"
+    },
+    "arena16.champion": {
+      "ok": true,
+      "detail": "[{'w': 40}]",
+      "severity": "P1"
+    },
+    "team.formation.isolated": {
+      "ok": true,
+      "detail": "500 No static resource basket/v4/divisions/17/personal-formation/requests.",
+      "severity": "P1"
+    },
+    "league8.roster": {
+      "ok": true,
+      "detail": "[{'formal_count': 8, 'candidate_count': 0, 'status': 'LOCKED'}]",
+      "severity": "P1"
+    },
+    "league8.eventTeam": {
+      "ok": true,
+      "detail": "eventTeam=8 formal=8",
+      "severity": "P0"
+    },
+    "league8.structure.participants": {
+      "ok": true,
+      "detail": "stageTeam=16 formal=8",
+      "severity": "P1"
+    },
+    "league8.structure.current.x1": {
+      "ok": true,
+      "detail": "[{'stage_id': 33, 'c': 1}, {'stage_id': 34, 'c': 1}]",
+      "severity": "P0"
+    },
+    "league8.rr28": {
+      "ok": true,
+      "detail": "rr=28",
+      "severity": "P1"
+    },
+    "league8.playoff.bo": {
+      "ok": true,
+      "detail": "got=[(1, 3, 4), (2, 5, 2), (3, 7, 1)]",
+      "severity": "P1"
+    },
+    "league8.standing8": {
+      "ok": true,
+      "detail": "standing=8",
+      "severity": "P1"
+    },
+    "cup8.roster": {
+      "ok": true,
+      "detail": "[{'formal_count': 8, 'candidate_count': 0, 'status': 'LOCKED'}]",
+      "severity": "P1"
+    },
+    "cup8.eventTeam": {
+      "ok": true,
+      "detail": "eventTeam=8 formal=8",
+      "severity": "P0"
+    },
+    "cup8.structure.participants": {
+      "ok": true,
+      "detail": "stageTeam=16 formal=8",
+      "severity": "P1"
+    },
+    "cup8.structure.current.x1": {
+      "ok": true,
+      "detail": "[{'stage_id': 36, 'c': 1}, {'stage_id': 37, 'c': 1}]",
+      "severity": "P0"
+    },
+    "cup8.group_cross": {
+      "ok": true,
+      "detail": "got=[('A组第1名', 'D组第2名'), ('A组第2名', 'D组第1名'), ('B组第1名', 'C组第2名'), ('B组第2名', 'C组第1名')]",
+      "severity": "P1"
+    },
+    "cup8.placeholder.resolve": {
+      "ok": true,
+      "detail": "resolved=4",
+      "severity": "P1"
+    },
+    "open.team.roster": {
+      "ok": true,
+      "detail": "[{'formal_count': 8, 'candidate_count': 0, 'status': 'LOCKED'}]",
+      "severity": "P1"
+    },
+    "open.team.eventTeam": {
+      "ok": true,
+      "detail": "eventTeam=8 formal=8",
+      "severity": "P0"
+    },
+    "open.team.structure.participants": {
+      "ok": true,
+      "detail": "stageTeam=8 formal=8",
+      "severity": "P1"
+    },
+    "open.team.structure.current.x1": {
+      "ok": true,
+      "detail": "[{'stage_id': 44, 'c': 1}]",
+      "severity": "P0"
+    },
+    "open.personal.roster": {
+      "ok": true,
+      "detail": "[{'formal_count': 2, 'candidate_count': 0, 'status': 'LOCKED'}]",
+      "severity": "P1"
+    },
+    "open.personal.eventTeam": {
+      "ok": true,
+      "detail": "eventTeam=2 formal=2",
+      "severity": "P0"
+    },
+    "open.personal.structure.participants": {
+      "ok": true,
+      "detail": "stageTeam=2 formal=2",
+      "severity": "P1"
+    },
+    "open.personal.structure.current.x1": {
+      "ok": true,
+      "detail": "[{'stage_id': 58, 'c': 1}]",
+      "severity": "P0"
+    },
+    "open.personal.no_long_team": {
+      "ok": true,
+      "detail": "[{'id': 138, 'source_team_id': None}, {'id': 139, 'source_team_id': None}]",
+      "severity": "P0"
+    },
+    "open.team.formation.none": {
+      "ok": true,
+      "detail": "仅个人报名 Division 支持 Formation",
+      "severity": "P1"
+    },
+    "open.personal.formation.api": {
+      "ok": true,
+      "detail": "仅个人报名 Division 支持 Formation",
+      "severity": "P1"
+    },
+    "iso.eventTeam.disjoint": {
+      "ok": true,
+      "detail": "A={106, 107, 108, 109, 110, 111, 112, 113} B={114, 115, 116, 117, 118, 119, 120, 121}",
+      "severity": "P0"
+    },
+    "iso.series.disjoint": {
+      "ok": true,
+      "detail": "A={72, 73, 74, 75, 76, 77, 78} B={79, 80, 81, 82, 83, 84, 85}",
+      "severity": "P0"
+    },
+    "unpub.web.hidden": {
+      "ok": true,
+      "detail": "pubBatch=0 web=0",
+      "severity": "P0"
+    },
+    "drr.publish.for_reschedule": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "reschedule.bo1.pass": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "reschedule.bo1.stage.published": {
+      "ok": true,
+      "detail": "[{'publish_status': 'PUBLISHED'}]",
+      "severity": "P0"
+    },
+    "series.undo.isolated": {
+      "ok": false,
+      "detail": "当前系列赛无异常判定，无需撤销",
+      "severity": "P2"
+    },
+    "adj.ledger.sum": {
+      "ok": true,
+      "detail": "sum=-2 adj=-2 base=14 final=12",
+      "severity": "P0"
+    },
+    "adj.final.base_plus": {
+      "ok": true,
+      "detail": "base=14 adj=-2 final=12",
+      "severity": "P0"
+    },
+    "league.standing.ready": {
+      "ok": true,
+      "detail": "n=8",
+      "severity": "P1"
+    },
+    "league.rr.played": {
+      "ok": true,
+      "detail": "played RR",
+      "severity": "P1"
+    },
+    "adj.isolation.other_div": {
+      "ok": true,
+      "detail": "other=0",
+      "severity": "P0"
+    },
+    "qual.confirmed.adj.reject": {
+      "ok": true,
+      "detail": "当前积分已用于正式晋级确认，如需调整积分，请先处理已确认的晋级结果。",
+      "severity": "P1"
+    },
+    "audit.ADMIN_DIRECT_RESULT": {
+      "ok": true,
+      "detail": "present=True",
+      "severity": "P1"
+    },
+    "audit.RESULT_CORRECTION": {
+      "ok": true,
+      "detail": "present=True",
+      "severity": "P1"
+    },
+    "audit.FORFEIT": {
+      "ok": true,
+      "detail": "present=True",
+      "severity": "P1"
+    },
+    "audit.REVOKE_MATCH_FORFEIT": {
+      "ok": true,
+      "detail": "present=True",
+      "severity": "P1"
+    },
+    "audit.SERIES_FORFEIT": {
+      "ok": true,
+      "detail": "present=True",
+      "severity": "P1"
+    },
+    "audit.SERIES_MANUAL_RESOLUTION": {
+      "ok": true,
+      "detail": "present=True",
+      "severity": "P1"
+    },
+    "audit.REVOKE_SERIES_RESOLUTION": {
+      "ok": false,
+      "detail": "present=False",
+      "severity": "P2"
+    },
+    "audit.POINT_ADJUSTMENT": {
+      "ok": true,
+      "detail": "present=True",
+      "severity": "P1"
+    },
+    "ops.series.ready.exists": {
+      "ok": true,
+      "detail": "n=7",
+      "severity": "P1"
+    },
+    "reschedule.series.pass": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "reschedule.series.id_stable": {
+      "ok": true,
+      "detail": "[{'id': 46, 'series_status': 'READY'}]",
+      "severity": "P0"
+    },
+    "reschedule.stage.published": {
+      "ok": true,
+      "detail": "[{'publish_status': 'PUBLISHED'}]",
+      "severity": "P0"
+    },
+    "reschedule.children.stable": {
+      "ok": true,
+      "detail": "before=7 after=7",
+      "severity": "P0"
+    },
+    "reschedule.child.reject": {
+      "ok": true,
+      "detail": "该比赛属于 BO 系列赛，请前往『系列赛』调整整个系列赛时间。",
+      "severity": "P1"
+    },
+    "match.list.child.no_adjust": {
+      "ok": true,
+      "detail": "childAdjust=0 rows=57",
+      "severity": "P1"
+    },
+    "forfeit.history.or_revoked": {
+      "ok": true,
+      "detail": "currentForfeit=1",
+      "severity": "P1"
+    },
+    "forfeit.audit.pair": {
+      "ok": true,
+      "detail": "[{'action_type': 'FORFEIT'}, {'action_type': 'FORFEIT'}, {'action_type': 'FORFEIT'}, {'action_type': 'REVOKE_MATCH_FORFEIT'}, {'action_type': 'FORFEIT'}]",
+      "severity": "P1"
+    },
+    "series.forfeit.exists": {
+      "ok": true,
+      "detail": "[{'id': 40, 'series_status': 'COMPLETED', 'resolution_type': None, 'winner_event_team_id': 333}, {'id': 41, 'series_status': 'COMPLETED', 'resolution_type': 'FORFEIT', 'winner_event_team_id': 335}, {'id': 42, 'series_status': 'COMPLETED', 'resolution_type': 'MANUAL', 'winner_event_team_id': 338}, {'id': 43, 'series_status': 'COMPLETED', 'resolution_type': None, 'winner_event_team_id': 336}, {'id': 44, 'series_status': 'RUNNING', 'resolution_type': None, 'winner_event_team_id': None}, {'id': 45, 'series_status': 'RUNNING', 'resolution_type': None, 'winner_event_team_id': None}, {'id': 46, 'series_status': 'READY', 'resolution_type': None, 'winner_event_team_id': None}]",
+      "severity": "P1"
+    },
+    "series.manual.exists": {
+      "ok": true,
+      "detail": "[{'id': 40, 'series_status': 'COMPLETED', 'resolution_type': None, 'winner_event_team_id': 333}, {'id': 41, 'series_status': 'COMPLETED', 'resolution_type': 'FORFEIT', 'winner_event_team_id': 335}, {'id': 42, 'series_status': 'COMPLETED', 'resolution_type': 'MANUAL', 'winner_event_team_id': 338}, {'id': 43, 'series_status': 'COMPLETED', 'resolution_type': None, 'winner_event_team_id': 336}, {'id': 44, 'series_status': 'RUNNING', 'resolution_type': None, 'winner_event_team_id': None}, {'id': 45, 'series_status': 'RUNNING', 'resolution_type': None, 'winner_event_team_id': None}, {'id': 46, 'series_status': 'READY', 'resolution_type': None, 'winner_event_team_id': None}]",
+      "severity": "P1"
+    },
+    "guard.series.revoke.reject": {
+      "ok": true,
+      "detail": "下游系列赛已经开始或产生正式结果，不能直接修改上游晋级结果，请进入赛事管理员仲裁流程。",
+      "severity": "P0"
+    },
+    "personal.standing.exists_local": {
+      "ok": false,
+      "detail": "[]",
+      "severity": "P2"
+    },
+    "reschedule.bo1.id_stable": {
+      "ok": true,
+      "detail": "[{'id': 229, 'match_time': datetime.datetime(2026, 11, 3, 18, 40), 'series_id': None}]",
+      "severity": "P0"
+    },
+    "web.standing.final": {
+      "ok": true,
+      "detail": "public=16 mismatch=[]",
+      "severity": "P1"
+    },
+    "ui.match.correct.visible": {
+      "ok": true,
+      "detail": "finishedStandalone=28",
+      "severity": "P1"
+    },
+    "ui.match.forfeit_revoke.visible": {
+      "ok": true,
+      "detail": "forfeited=1",
+      "severity": "P2"
+    },
+    "ui.series.actions": {
+      "ok": true,
+      "detail": "n=7",
+      "severity": "P1"
+    },
+    "browser.admin.ui.boot": {
+      "ok": true,
+      "detail": "status=200",
+      "severity": "P1"
+    },
+    "browser.web.ui.boot": {
+      "ok": true,
+      "detail": "status=200",
+      "severity": "P1"
+    },
+    "admin.ws.overview": {
+      "ok": true,
+      "detail": "hint=赛段已发布，赛前排期规划已锁定。如需重新规划赛程，请先撤回发布后修改。赛事运行期间若仅需调整某一场比赛或系列赛时间，请前往『比赛执行 → 比赛管理』处理。；赛段已发布，赛前排期规划已锁定。如需重新规划赛程，请先撤回发布后修改。赛事运行期间若仅需调整某一场比赛或系列赛时间，请前往『比赛执行 → 比赛管理』处理。 cap={'canEditSchedule': False, 'canPublishStage': False, 'canWithdrawStage': True}",
+      "severity": "P1"
+    },
+    "admin.ws.published.lock": {
+      "ok": true,
+      "detail": "hint=赛段已发布，赛前排期规划已锁定。如需重新规划赛程，请先撤回发布后修改。赛事运行期间若仅需调整某一场比赛或系列赛时间，请前往『比赛执行 → 比赛管理』处理。；赛段已发布，赛前排期规划已锁定。如需重新规划赛程，请先撤回发布后修改。赛事运行期间若仅需调整某一场比赛或系列赛时间，请前往『比赛执行 → 比赛管理』处理。 canEditSchedule=False",
+      "severity": "P1"
+    },
+    "admin.ws.stages": {
+      "ok": true,
+      "detail": "n=2",
+      "severity": "P1"
+    },
+    "admin.stats.base_adj_final": {
+      "ok": true,
+      "detail": "{'eventTeamId': '338', 'teamName': 'E2E_AOPS_AOPS08', 'rankNo': 2, 'winCount': 7, 'loseCount': 0, 'pointFor': 540, 'pointAgainst': 486, 'pointDiff': 54, 'standingPoints': 12, 'baseStandingPoints': 14, 'adjustmentPoints': -2, 'canAdjustStand",
+      "severity": "P1"
+    },
+    "admin.stats.rr.has_adjust": {
+      "ok": true,
+      "detail": "rows=8",
+      "severity": "P1"
+    },
+    "admin.stats.ko.no_adjust_flag": {
+      "ok": true,
+      "detail": "n=6",
+      "severity": "P1"
+    },
+    "admin.stats.ledger": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "web.schedule.arena15": {
+      "ok": true,
+      "detail": "n=15 types=['MATCH_SERIES']",
+      "severity": "P1"
+    },
+    "web.season.keep_ids": {
+      "ok": true,
+      "detail": "{'seasonId': '6', 'seriesId': '2', 'seriesCode': 'ARENA', 'seriesName': 'Arena', 'seasonYear': 2026, 'seasonName': 'E2E-ARENA', 'displayTitle': 'E2E-ARENA 2026', 'description': 'E2E_V13_FINAL', 'cover",
+      "severity": "P1"
+    },
+    "open.personal.temp_team.db": {
+      "ok": true,
+      "detail": "source_team_id=null eventTeam=2 roster locked",
+      "severity": "P1"
+    }
+  },
+  "bugs": {
+    "P0": [],
+    "P1": [],
+    "P2": [
+      "schema.iso.point_adjustment: isolated missing R10 table (prod has it)",
+      "audit.REVOKE_SERIES_RESOLUTION: present=False",
+      "personal.standing.exists_local: []",
+      "series.undo.isolated: 当前系列赛无异常判定，无需撤销"
+    ]
+  },
+  "ids": {},
+  "notes": [],
+  "endedAt": "2026-08-15T21:58:52",
+  "pass": 104,
+  "fail": 4
+}

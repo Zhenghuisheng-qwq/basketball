@@ -1,0 +1,176 @@
+{
+  "seasonId": 141,
+  "seasonName": "CNPA Arena 2026 S12",
+  "divisionId": 176,
+  "divisionName": "CNPA Arena 2026 S12 - PS/Xbox 3V3",
+  "stageId": 642,
+  "formal": 16,
+  "candidate": 4,
+  "series": 15,
+  "match": 51,
+  "finishedMatch": 4,
+  "openMatch": 47,
+  "finishedSeries": [
+    {
+      "seriesId": 47,
+      "after": [
+        {
+          "series_status": "COMPLETED",
+          "winner_event_team_id": 280
+        }
+      ]
+    },
+    {
+      "seriesId": 48,
+      "after": [
+        {
+          "series_status": "COMPLETED",
+          "winner_event_team_id": 283
+        }
+      ]
+    }
+  ],
+  "captains": [
+    {
+      "team": "S12猎鹰",
+      "short": "A01",
+      "email": "fs_s12_a0101@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637242519187457"
+    },
+    {
+      "team": "S12雷霆",
+      "short": "A02",
+      "email": "fs_s12_a0201@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637256167452674"
+    },
+    {
+      "team": "S12风暴",
+      "short": "A03",
+      "email": "fs_s12_a0301@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637270444863489"
+    },
+    {
+      "team": "S12夜翼",
+      "short": "A04",
+      "email": "fs_s12_a0401@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637283933745153"
+    },
+    {
+      "team": "S12赤焰",
+      "short": "A05",
+      "email": "fs_s12_a0501@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637297644924930"
+    },
+    {
+      "team": "S12寒霜",
+      "short": "A06",
+      "email": "fs_s12_a0601@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637311209304065"
+    },
+    {
+      "team": "S12黑骑",
+      "short": "A07",
+      "email": "fs_s12_a0701@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637325214085121"
+    },
+    {
+      "team": "S12银狼",
+      "short": "A08",
+      "email": "fs_s12_a0801@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637338619080705"
+    },
+    {
+      "team": "S12金鲨",
+      "short": "A09",
+      "email": "fs_s12_a0901@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637352254763010"
+    },
+    {
+      "team": "S12青龙",
+      "short": "A10",
+      "email": "fs_s12_a1001@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637365965942785"
+    },
+    {
+      "team": "S12白虎",
+      "short": "A11",
+      "email": "fs_s12_a1101@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637380058804226"
+    },
+    {
+      "team": "S12朱雀",
+      "short": "A12",
+      "email": "fs_s12_a1201@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637393690292226"
+    },
+    {
+      "team": "S12玄武",
+      "short": "A13",
+      "email": "fs_s12_a1301@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637406961070081"
+    },
+    {
+      "team": "S12星火",
+      "short": "A14",
+      "email": "fs_s12_a1401@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637420445757441"
+    },
+    {
+      "team": "S12狂澜",
+      "short": "A15",
+      "email": "fs_s12_a1501@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637434274377729"
+    },
+    {
+      "team": "S12破晓",
+      "short": "A16",
+      "email": "fs_s12_a1601@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637447633235969"
+    },
+    {
+      "team": "S12余烬",
+      "short": "A17",
+      "email": "fs_s12_a1701@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637461176643585"
+    },
+    {
+      "team": "S12幻影",
+      "short": "A18",
+      "email": "fs_s12_a1801@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637475101732866"
+    },
+    {
+      "team": "S12铁壁",
+      "short": "A19",
+      "email": "fs_s12_a1901@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637489093931009"
+    },
+    {
+      "team": "S12疾风",
+      "short": "A20",
+      "email": "fs_s12_a2001@cnpa.smoke",
+      "password": "111111aa",
+      "teamId": "2088637502326960129"
+    }
+  ],
+  "at": "2026-08-15T22:49:16"
+}

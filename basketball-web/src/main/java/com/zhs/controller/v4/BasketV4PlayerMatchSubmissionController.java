@@ -35,6 +35,12 @@ public class BasketV4PlayerMatchSubmissionController {
         return R.ok(matchSubmissionService.getDetail(matchId, submitEventTeamId));
     }
 
+    @ApiOperation("本场可选择的本队 EventPlayer")
+    @GetMapping("/{matchId}/eligible-players")
+    public R eligiblePlayers(@PathVariable Long matchId, @RequestParam(required = false) Long submitEventTeamId) {
+        return R.ok(matchSubmissionService.listEligiblePlayers(matchId, submitEventTeamId));
+    }
+
     @ApiOperation("保存草稿")
     @PostMapping("/save")
     public R save(@RequestBody V4MatchSubmissionSaveReq req) {

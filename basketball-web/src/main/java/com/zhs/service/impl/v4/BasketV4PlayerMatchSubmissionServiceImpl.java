@@ -17,6 +17,7 @@ import com.zhs.request.v4.*;
 import com.zhs.response.v4.*;
 import com.zhs.service.v4.IBasketV4PlayerMatchSubmissionService;
 import com.zhs.support.v4.EventTeamCaptainAuthorization;
+import com.zhs.support.v4.MatchSubmissionPlayerStatRules;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -56,7 +57,14 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
     @Resource
     private BasketMatchSeriesDao matchSeriesDao;
     @Resource
+    private BasketDivisionDao divisionDao;
+    @Resource
+    private BasketSeasonDao seasonDao;
+    @Resource
     private EventTeamCaptainAuthorization eventTeamCaptainAuthorization;
+
+    private static final int MAX_MATERIAL_COUNT = 9;
+    private static final String EVENT_PLAYER_STATUS_ACTIVE = "ACTIVE";
 
     @Override
     public List<V4MyMatchResp> listMyMatches(Long seasonId, Long divisionId, String matchStatus,
@@ -91,6 +99,9 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         resp.setAwayEventTeamId(match.getAwayEventTeamId());
         resp.setSubmitEventTeamId(submitEventTeamId);
         fillTeamNames(resp, match);
+        fillDivisionContext(resp, match);
+        resp.setSeriesContext(buildSeriesContext(match, resp.getHomeTeamName(), resp.getAwayTeamName()));
+        resp.setEligiblePlayers(loadEligiblePlayers(submitEventTeamId));
 
         BasketMatchSubmission latest = findLatestSubmission(matchId, submitEventTeamId);
         if (latest != null) {
@@ -111,6 +122,18 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
             resp.setSubmissionStatus(SubmissionStatusEnum.DRAFT.getCode());
         }
         return resp;
+    }
+
+    @Override
+    public List<V4MatchSubmissionEligiblePlayerResp> listEligiblePlayers(Long matchId, Long submitEventTeamId) {
+        Long memberId = UserContext.getRequiredMemberId();
+        BasketPlayerProfile player = requirePlayerByMemberId(memberId);
+        BasketV4Match match = requireMatch(matchId);
+        if (submitEventTeamId == null) {
+            submitEventTeamId = resolveMyEventTeamId(match, player.getId(), memberId);
+        }
+        requireSubmitContext(match, submitEventTeamId, player.getId(), memberId);
+        return loadEligiblePlayers(submitEventTeamId);
     }
 
     @Override
@@ -535,6 +558,106 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         if (req == null || req.getMatchId() == null || req.getSubmitEventTeamId() == null) {
             throw new ServiceException("matchId / submitEventTeamId 不能为空");
         }
+        if (!CollectionUtils.isEmpty(req.getPlayerStats())) {
+            List<Long> playerIds = new ArrayList<>();
+            for (V4MatchSubmissionPlayerStatReq ps : req.getPlayerStats()) {
+                if (ps != null) {
+                    playerIds.add(ps.getEventPlayerId());
+                }
+            }
+            MatchSubmissionPlayerStatRules.assertNoDuplicateEventPlayers(playerIds);
+        }
+        if (!CollectionUtils.isEmpty(req.getMaterialFileIds()) && req.getMaterialFileIds().size() > MAX_MATERIAL_COUNT) {
+            throw new ServiceException("比赛截图最多上传 " + MAX_MATERIAL_COUNT + " 张");
+        }
+    }
+
+    private void fillDivisionContext(V4MatchSubmissionDetailResp resp, BasketV4Match match) {
+        if (match.getSeasonId() != null) {
+            BasketSeason season = seasonDao.selectById(match.getSeasonId());
+            if (season != null) {
+                resp.setSeasonTitle(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+            }
+        }
+        if (match.getDivisionId() != null) {
+            BasketDivision division = divisionDao.selectById(match.getDivisionId());
+            if (division != null) {
+                if (resp.getDivisionName() == null) {
+                    resp.setDivisionName(division.getDivisionName());
+                }
+                resp.setGameMode(division.getGameMode());
+                resp.setLineupMinCount(division.getLineupMinCount());
+                resp.setLineupMaxCount(division.getLineupMaxCount());
+            }
+        }
+        resp.setRoundName(match.getStageCode());
+    }
+
+    private V4MatchSubmissionSeriesContextResp buildSeriesContext(BasketV4Match match, String homeTeamName, String awayTeamName) {
+        if (match.getSeriesId() == null) {
+            return null;
+        }
+        BasketMatchSeries series = matchSeriesDao.selectById(match.getSeriesId());
+        if (series == null || !NOT_DELETED.equals(series.getIsDelete())) {
+            return null;
+        }
+        V4MatchSubmissionSeriesContextResp ctx = new V4MatchSubmissionSeriesContextResp();
+        ctx.setMatchSeriesId(series.getId());
+        ctx.setSeriesCode(series.getSeriesCode());
+        ctx.setBestOf(series.getBestOf());
+        ctx.setSeriesGameNo(match.getSeriesGameNo());
+        ctx.setHomeWinCount(series.getHomeWinCount() == null ? 0 : series.getHomeWinCount());
+        ctx.setAwayWinCount(series.getAwayWinCount() == null ? 0 : series.getAwayWinCount());
+        ctx.setSeriesStatus(series.getSeriesStatus());
+        ctx.setSeriesStatusName(seriesStatusName(series.getSeriesStatus()));
+        ctx.setHomeTeamName(homeTeamName);
+        ctx.setAwayTeamName(awayTeamName);
+        boolean finished = MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus())
+                || MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus());
+        boolean skipped = "COMPLETED".equals(series.getSeriesStatus()) && !finished;
+        ctx.setSkipped(skipped);
+        if (skipped) {
+            ctx.setSkippedReason("该系列赛已决出胜负，本局无需进行");
+        }
+        return ctx;
+    }
+
+    private String seriesStatusName(String status) {
+        if (status == null) {
+            return null;
+        }
+        return switch (status) {
+            case "PENDING" -> "未开始";
+            case "READY" -> "未开始";
+            case "RUNNING" -> "进行中";
+            case "COMPLETED" -> "已完成";
+            case "CANCELLED" -> "已取消";
+            default -> status;
+        };
+    }
+
+    private List<V4MatchSubmissionEligiblePlayerResp> loadEligiblePlayers(Long submitEventTeamId) {
+        List<BasketEventPlayer> players = eventPlayerDao.selectList(new LambdaQueryWrapper<BasketEventPlayer>()
+                .eq(BasketEventPlayer::getEventTeamId, submitEventTeamId)
+                .eq(BasketEventPlayer::getIsDelete, NOT_DELETED)
+                .and(w -> w.eq(BasketEventPlayer::getEventPlayerStatus, EVENT_PLAYER_STATUS_ACTIVE)
+                        .or().isNull(BasketEventPlayer::getEventPlayerStatus))
+                .orderByDesc(BasketEventPlayer::getIsCaptain)
+                .orderByDesc(BasketEventPlayer::getIsStarter)
+                .orderByAsc(BasketEventPlayer::getJerseyNo)
+                .orderByAsc(BasketEventPlayer::getId));
+        List<V4MatchSubmissionEligiblePlayerResp> result = new ArrayList<>();
+        for (BasketEventPlayer player : players) {
+            V4MatchSubmissionEligiblePlayerResp item = new V4MatchSubmissionEligiblePlayerResp();
+            item.setEventPlayerId(player.getId());
+            item.setPlayerName(player.getPlayerNameSnapshot());
+            item.setGameId(player.getGameIdSnapshot());
+            item.setJerseyNo(player.getJerseyNo());
+            item.setPosition(player.getPosition());
+            item.setIsCaptain(player.getIsCaptain());
+            result.add(item);
+        }
+        return result;
     }
 
     private static class SubmitContext {

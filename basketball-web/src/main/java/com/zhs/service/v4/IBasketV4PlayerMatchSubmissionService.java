@@ -4,6 +4,7 @@ import com.zhs.request.v4.V4MatchSubmissionIdReq;
 import com.zhs.request.v4.V4MatchSubmissionResubmitReq;
 import com.zhs.request.v4.V4MatchSubmissionSaveReq;
 import com.zhs.response.v4.V4MatchSubmissionDetailResp;
+import com.zhs.response.v4.V4MatchSubmissionEligiblePlayerResp;
 import com.zhs.response.v4.V4MyMatchResp;
 import com.zhs.response.v4.V4MySubmissionListResp;
 
@@ -14,6 +15,8 @@ public interface IBasketV4PlayerMatchSubmissionService {
                                       String publishStatus, String submissionStatus, Boolean upcomingOnly);
 
     V4MatchSubmissionDetailResp getDetail(Long matchId, Long submitEventTeamId);
+
+    List<V4MatchSubmissionEligiblePlayerResp> listEligiblePlayers(Long matchId, Long submitEventTeamId);
 
     Long saveDraft(V4MatchSubmissionSaveReq req);
 

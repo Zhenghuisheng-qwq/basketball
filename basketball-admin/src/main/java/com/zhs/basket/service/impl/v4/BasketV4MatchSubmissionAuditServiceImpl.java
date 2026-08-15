@@ -6,6 +6,7 @@ import com.zhs.basket.enums.v4.SubmissionStatusEnum;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.query.v4.BasketMatchSubmissionAuditQuery;
 import com.zhs.basket.query.v4.BasketV4MatchQuery;
+import com.zhs.basket.service.IBasketPrivateFileService;
 import com.zhs.basket.service.v4.IBasketMatchSeriesDisplayService;
 import com.zhs.basket.service.v4.IBasketV4MatchSubmissionAuditService;
 import com.zhs.basket.service.v4.IBasketV4StatsSettlementService;
@@ -17,6 +18,8 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -108,6 +111,9 @@ public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSu
         for (BasketMatchSubmissionMaterial m : submissionMaterialMapper.selectBySubmissionId(submissionId)) {
             BasketMatchSubmissionMaterialVo mVo = new BasketMatchSubmissionMaterialVo();
             BeanUtils.copyProperties(m, mVo);
+            if (m.getFileId() != null) {
+                mVo.setAccessUrl("/basket/v4/match-submission-audit/material/" + m.getFileId());
+            }
             materials.add(mVo);
         }
         vo.setMaterials(materials);

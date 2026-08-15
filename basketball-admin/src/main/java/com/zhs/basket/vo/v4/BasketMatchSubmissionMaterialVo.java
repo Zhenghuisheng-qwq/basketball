@@ -8,4 +8,5 @@ public class BasketMatchSubmissionMaterialVo {
     private String fileName;
     private String materialType;
     private String remark;
+    private String accessUrl;
 }

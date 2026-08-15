@@ -16,4 +16,5 @@ public interface BasketMatchSubmissionMaterialMapper {
     int insert(BasketMatchSubmissionMaterial entity);
     int updateById(BasketMatchSubmissionMaterial entity);
     int softDelete(@Param("id") Long id);
+    int countByFileId(@Param("fileId") Long fileId);
 }

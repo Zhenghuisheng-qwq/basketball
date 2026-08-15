@@ -35,6 +35,11 @@ public class BasketPrivateFileServiceImpl implements IBasketPrivateFileService {
         if (materialMapper.countByFileIdForCert(fileId) <= 0) {
             throw new ServiceException("无权访问该文件");
         }
+        streamFileAsset(fileId, response);
+    }
+
+    @Override
+    public void streamFileAsset(Long fileId, HttpServletResponse response) {
         BasketFileAsset asset = fileAssetMapper.selectById(fileId);
         if (asset == null) {
             throw new ServiceException("文件不存在");
