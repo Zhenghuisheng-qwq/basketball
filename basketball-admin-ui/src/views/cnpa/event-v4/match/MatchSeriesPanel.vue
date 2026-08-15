@@ -1,54 +1,80 @@
 <template>
   <div v-loading="loading" class="match-series-panel">
-    <el-empty v-if="!loading && !seriesList.length" description="当前阶段暂无 BO3/BO5/BO7 系列赛" />
-    <div v-for="series in seriesList" :key="series.id" class="series-card">
-      <div class="series-card__header">
-        <div class="series-card__title">
-          <span class="series-card__stage">{{ series.stageName || '淘汰赛' }}</span>
-          <el-tag size="small" type="warning">BO{{ series.bestOf }}</el-tag>
-          <span class="series-card__code">{{ series.seriesCode }}</span>
-        </div>
-        <el-tag :type="v4SeriesStatusTagType(series.seriesStatus)" size="small">
-          {{ series.seriesStatusName || v4SeriesStatusLabel(series.seriesStatus) }}
-        </el-tag>
-      </div>
-
-      <div class="series-card__versus">
-        <div class="series-card__team">{{ series.homeTeamName }}</div>
-        <div class="series-card__center">
-          <div class="series-card__set-score">局分 {{ series.homeWinCount ?? 0 }} : {{ series.awayWinCount ?? 0 }}</div>
-          <div class="series-card__required">先胜 {{ series.requiredWins }} 局</div>
-        </div>
-        <div class="series-card__team series-card__team--away">{{ series.awayTeamName }}</div>
-      </div>
-
-      <div v-if="series.winnerTeamName" class="series-card__winner">
-        {{ series.finalStage ? '冠军' : '胜者' }}：{{ series.winnerTeamName }}
-        <el-tag v-if="series.resolutionType && series.resolutionType !== 'NORMAL'" size="small" type="warning" class="ml8">
-          {{ v4SeriesResolutionLabel(series.resolutionType) }}
-        </el-tag>
-        <el-tag v-if="series.qualificationStatusName" size="small" class="ml8">{{ series.qualificationStatusName }}</el-tag>
-      </div>
-
-      <div v-if="series.seriesStatus !== 'COMPLETED'" class="series-card__actions">
-        <el-button size="small" type="warning" v-hasPermi="['basket:v4Stage:exception']" @click="openSeriesForfeit(series)">判定系列赛弃赛</el-button>
-      </div>
-      <div v-else-if="series.resolutionType === 'FORFEIT'" class="series-card__actions">
-        <el-button size="small" type="info" v-hasPermi="['basket:v4Stage:exception']" @click="openRevokeForfeit(series)">撤销弃赛判定</el-button>
-      </div>
-
-      <div class="series-card__games">
-        <div v-for="game in series.games || []" :key="game.matchId" class="series-game-row">
-          <span class="series-game-row__label">Game {{ game.seriesGameNo }} / {{ series.bestOf }}</span>
-          <span class="series-game-row__teams">{{ series.homeTeamName }} vs {{ series.awayTeamName }}</span>
-          <span v-if="game.skipped" class="series-game-row__skip">{{ game.skippedReason || '无需进行' }}</span>
-          <span v-else-if="game.homeScore != null" class="series-game-row__score">单场比分 {{ formatV4MatchScore(game.homeScore, game.awayScore) }}</span>
-          <span v-else class="series-game-row__pending">{{ game.matchStatusName || '待比赛' }}</span>
-          <el-tag size="small" class="series-game-row__status">{{ game.matchStatusName }}</el-tag>
-          <el-button link type="primary" size="small" @click="$emit('openMatch', game.matchId)">详情</el-button>
-        </div>
-      </div>
-    </div>
+    <el-empty v-if="!loading && !seriesList.length" description="当前范围暂无 BO3/BO5/BO7 系列赛" />
+    <el-table v-else :data="seriesList" border row-key="id">
+      <el-table-column type="expand">
+        <template #default="scope">
+          <div class="series-games">
+            <div v-for="game in scope.row.games || []" :key="game.matchId" class="series-game-row">
+              <span class="series-game-row__label">Game {{ game.seriesGameNo }} / {{ scope.row.bestOf }}</span>
+              <span class="series-game-row__teams">{{ scope.row.homeTeamName || '待定' }} vs {{ scope.row.awayTeamName || '待定' }}</span>
+              <span v-if="game.skipped" class="series-game-row__skip">{{ game.skippedReason || '无需进行' }}</span>
+              <span v-else-if="game.homeScore != null" class="series-game-row__score">{{ formatV4MatchScore(game.homeScore, game.awayScore) }}</span>
+              <span v-else class="series-game-row__pending">{{ game.matchStatusName || '待比赛' }}</span>
+              <el-tag size="small">{{ game.matchStatusName }}</el-tag>
+              <el-button link type="primary" size="small" @click="$emit('openMatch', game.matchId)">详情</el-button>
+            </div>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="Series ID" prop="id" width="90" />
+      <el-table-column label="赛事" prop="seasonName" min-width="140" />
+      <el-table-column label="Division" prop="divisionName" min-width="160" />
+      <el-table-column label="Stage" prop="stageName" min-width="100" />
+      <el-table-column label="Round" width="80" align="center">
+        <template #default="scope">{{ scope.row.roundName || (`R${scope.row.roundNo ?? '-'}`) }}</template>
+      </el-table-column>
+      <el-table-column label="Series Code" prop="seriesCode" min-width="180" />
+      <el-table-column label="主队" min-width="120">
+        <template #default="scope">{{ scope.row.homeTeamName || '待定' }}</template>
+      </el-table-column>
+      <el-table-column label="客队" min-width="120">
+        <template #default="scope">{{ scope.row.awayTeamName || '待定' }}</template>
+      </el-table-column>
+      <el-table-column label="BO" width="70" align="center">
+        <template #default="scope">BO{{ scope.row.bestOf }}</template>
+      </el-table-column>
+      <el-table-column label="Series Score" width="110" align="center">
+        <template #default="scope">{{ scope.row.seriesScore || `${scope.row.homeWinCount ?? 0}:${scope.row.awayWinCount ?? 0}` }}</template>
+      </el-table-column>
+      <el-table-column label="Schedule Date" width="120" align="center">
+        <template #default="scope">{{ scope.row.scheduledDate || '待安排' }}</template>
+      </el-table-column>
+      <el-table-column label="Start Time" width="100" align="center">
+        <template #default="scope">{{ formatStartTime(scope.row.scheduledStartTime) }}</template>
+      </el-table-column>
+      <el-table-column label="Series Status" width="110" align="center">
+        <template #default="scope">
+          <el-tag :type="v4SeriesStatusTagType(scope.row.seriesStatus)" size="small">
+            {{ scope.row.seriesStatusName || v4SeriesStatusLabel(scope.row.seriesStatus) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="Publish Status" width="110" align="center">
+        <template #default="scope">{{ scope.row.publishStatusName || scope.row.publishStatus || '-' }}</template>
+      </el-table-column>
+      <el-table-column label="Games Played" width="110" align="center">
+        <template #default="scope">{{ scope.row.gamesPlayed ?? 0 }} / {{ scope.row.bestOf ?? '-' }}</template>
+      </el-table-column>
+      <el-table-column label="操作" width="160" fixed="right">
+        <template #default="scope">
+          <el-button
+            v-if="scope.row.seriesStatus !== 'COMPLETED'"
+            link
+            type="warning"
+            v-hasPermi="['basket:v4Stage:exception']"
+            @click="openSeriesForfeit(scope.row)"
+          >弃赛</el-button>
+          <el-button
+            v-else-if="scope.row.resolutionType === 'FORFEIT'"
+            link
+            type="info"
+            v-hasPermi="['basket:v4Stage:exception']"
+            @click="openRevokeForfeit(scope.row)"
+          >撤销弃赛</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
 
     <el-dialog v-model="forfeitVisible" title="判定系列赛弃赛" width="480px">
       <el-alert type="warning" :closable="false" show-icon class="mb8"
@@ -76,10 +102,10 @@
 import { ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { forfeitV4Series, revokeV4SeriesResolution } from '@/api/cnpa/event-v4/stage-exception'
-import { listV4MatchSeriesByStage, type BasketMatchSeriesDetailVo } from '@/api/cnpa/event-v4/match-series'
-import { formatV4MatchScore, v4SeriesResolutionLabel, v4SeriesStatusLabel, v4SeriesStatusTagType } from '@/utils/v4AdminDisplay'
+import { listV4MatchSeriesByDivision, listV4MatchSeriesByStage, type BasketMatchSeriesDetailVo } from '@/api/cnpa/event-v4/match-series'
+import { formatV4MatchScore, v4SeriesStatusLabel, v4SeriesStatusTagType } from '@/utils/v4AdminDisplay'
 
-const props = defineProps<{ stageId?: number }>()
+const props = defineProps<{ stageId?: number; divisionId?: number }>()
 defineEmits<{ openMatch: [matchId?: number] }>()
 
 const loading = ref(false)
@@ -90,20 +116,27 @@ const forfeitTeamId = ref<number>()
 const forfeitReason = ref('')
 
 async function load() {
-  if (!props.stageId) {
+  if (!props.stageId && !props.divisionId) {
     seriesList.value = []
     return
   }
   loading.value = true
   try {
-    const res = await listV4MatchSeriesByStage(props.stageId)
+    const res = props.stageId
+      ? await listV4MatchSeriesByStage(props.stageId)
+      : await listV4MatchSeriesByDivision(props.divisionId!)
     seriesList.value = res.data || []
   } finally {
     loading.value = false
   }
 }
 
-watch(() => props.stageId, () => { void load() }, { immediate: true })
+watch(() => [props.stageId, props.divisionId], () => { void load() }, { immediate: true })
+
+function formatStartTime(value?: string) {
+  if (!value) return '待安排'
+  return value.length >= 8 ? value.slice(0, 5) : value
+}
 
 function openSeriesForfeit(series: BasketMatchSeriesDetailVo) {
   forfeitSeries.value = series
@@ -148,23 +181,12 @@ defineExpose({ reload: load })
 </script>
 
 <style scoped>
-.match-series-panel { display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px; }
-.series-card { border: 1px solid var(--el-border-color); border-radius: 8px; padding: 16px; background: #fafafa; }
-.series-card__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.series-card__title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.series-card__code { color: #909399; font-size: 12px; font-weight: normal; }
-.series-card__versus { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; margin-bottom: 12px; }
-.series-card__team { font-size: 15px; font-weight: 600; }
-.series-card__team--away { text-align: right; }
-.series-card__center { text-align: center; }
-.series-card__set-score { font-size: 20px; font-weight: 700; color: #303133; }
-.series-card__required { font-size: 12px; color: #909399; margin-top: 4px; }
-.series-card__winner { margin-bottom: 12px; color: #67c23a; font-size: 13px; }
-.series-card__games { border-top: 1px dashed var(--el-border-color); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.match-series-panel { margin-bottom: 16px; }
+.series-games { padding: 8px 16px 12px 48px; display: flex; flex-direction: column; gap: 8px; }
 .series-game-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
 .series-game-row__label { font-weight: 600; min-width: 90px; }
 .series-game-row__score { color: #606266; }
 .series-game-row__skip { color: #909399; font-style: italic; }
 .series-game-row__pending { color: #909399; }
-.ml8 { margin-left: 8px; }
+.mb8 { margin-bottom: 8px; }
 </style>

@@ -341,6 +341,33 @@ export interface V4PublicRankItem {
   rankValue?: number
 }
 
+export interface V4PublicScheduleItem {
+  id: string
+  unitType: 'MATCH' | 'MATCH_SERIES'
+  stageId?: string
+  stageName?: string
+  roundNo?: number
+  roundName?: string
+  seriesCode?: string
+  homeEventTeamId?: string
+  homeTeam?: string
+  awayEventTeamId?: string
+  awayTeam?: string
+  bestOf?: number
+  seriesScore?: string
+  gameProgress?: string
+  scheduleDate?: string
+  startTime?: string
+  status?: string
+  statusName?: string
+  placeholderSource?: string
+  published?: boolean
+  homeWinCount?: number
+  awayWinCount?: number
+  requiredWins?: number
+  gamesPlayed?: number
+}
+
 export type V4SeriesCode = 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'
 
 export type V4SeasonDetailTab = 'overview' | 'teams' | 'schedule' | 'standing' | 'stats'

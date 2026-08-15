@@ -87,7 +87,7 @@ public class LeagueStandardTemplateBuilder implements StandardFormatTemplateBuil
                 StandardTemplateOptionDefinition.select("semifinalBestOf", "\u534a\u51b3\u8d5b BO",
                         List.of("1", "3", "5", "7"), "5"),
                 StandardTemplateOptionDefinition.select("finalBestOf", "\u51b3\u8d5b BO",
-                        List.of("1", "3", "5", "7"), "5")
+                        List.of("1", "3", "5", "7"), "7")
         ));
         return definition;
     }
@@ -119,7 +119,7 @@ public class LeagueStandardTemplateBuilder implements StandardFormatTemplateBuil
             resolved.setSemifinalBestOf(5);
         }
         if (resolved.getFinalBestOf() == null) {
-            resolved.setFinalBestOf(5);
+            resolved.setFinalBestOf(7);
         }
         return resolved;
     }

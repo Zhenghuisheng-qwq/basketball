@@ -27,6 +27,7 @@ import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
 import com.zhs.basket.service.v4.IStagePairingExecutionApplicationService;
 import com.zhs.basket.service.v4.IStageScheduleApplicationService;
 import com.zhs.basket.support.v4.DivisionOperationCapabilitySupport;
+import com.zhs.basket.support.v4.stage.StructureGenerationPrerequisiteValidator;
 import com.zhs.basket.support.v4.DivisionRuleMutableSpecification;
 import com.zhs.basket.support.v4.DoubleEliminationCapabilityGate;
 import com.zhs.basket.support.v4.V4AdminDisplaySupport;
@@ -86,6 +87,8 @@ public class DivisionOperationOverviewQueryServiceImpl implements IDivisionOpera
     private IStagePairingExecutionApplicationService pairingExecutionApplicationService;
     @Autowired
     private DivisionRuleMutableSpecification ruleMutableSpecification;
+    @Autowired
+    private StructureGenerationPrerequisiteValidator structureGenerationPrerequisiteValidator;
 
     @Override
     public List<DivisionSelectorItemVo> listSelector(BasketDivisionQuery query, String entry) {
@@ -311,7 +314,11 @@ public class DivisionOperationOverviewQueryServiceImpl implements IDivisionOpera
         boolean ruleLocked = DivisionOperationCapabilitySupport.isRuleLocked(snapshot == null ? null : snapshot.getSnapshotStatus());
         boolean versioned = DivisionOperationCapabilitySupport.isVersioned(snapshot == null ? null : snapshot.getRosterWorkflowMode());
         boolean rosterReady = !versioned || (currentRoster != null && "LOCKED".equals(currentRoster.getStatus()));
-        boolean pairingOk = !pairingRequired || (pairing != null && "CONFIRMED".equals(pairing.getStatus()));
+        String pairingBlock = pairingRequired
+                ? structureGenerationPrerequisiteValidator.pairingBlockReason(
+                row.getSeedRule(), row.getDrawRule(), row.getPairingRule(), pairing)
+                : null;
+        boolean pairingOk = pairingBlock == null;
         boolean qualificationReady = qualificationReady(row, allStages);
         StageOperationCapabilities sc = DivisionOperationCapabilitySupport.stageCapabilities(
                 ruleLocked,
@@ -321,6 +328,7 @@ public class DivisionOperationOverviewQueryServiceImpl implements IDivisionOpera
                 schedule.getUnscheduledUnits(),
                 schedule.isCanRecommend(),
                 pairingOk,
+                pairingBlock,
                 qualificationReady,
                 doubleElim);
 
@@ -354,7 +362,11 @@ public class DivisionOperationOverviewQueryServiceImpl implements IDivisionOpera
         vo.setFinishedCount(finished);
         vo.setResultTotal(schedule.getTotalUnits());
         vo.setCapabilities(sc);
-        vo.setWorkflowHint(sc.getBlockReason() == null ? resolveStageHint(vo) : sc.getBlockReason());
+        if ("待生成".equals(sc.getBlockReason()) && sc.isCanGenerateStructure()) {
+            vo.setWorkflowHint("抽签已确认，可以生成结构");
+        } else {
+            vo.setWorkflowHint(sc.getBlockReason() == null ? resolveStageHint(vo) : sc.getBlockReason());
+        }
         return vo;
     }
 

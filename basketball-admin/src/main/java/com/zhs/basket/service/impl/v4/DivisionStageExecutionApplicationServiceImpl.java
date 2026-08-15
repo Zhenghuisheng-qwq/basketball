@@ -27,6 +27,7 @@ import com.zhs.basket.support.v4.stage.ScheduleGenerationResult;
 import com.zhs.basket.support.v4.stage.StageExecutionContext;
 import com.zhs.basket.support.v4.stage.StageScheduleIntegrityValidator;
 import com.zhs.basket.support.v4.stage.StageSchedulePrerequisiteValidator;
+import com.zhs.basket.support.v4.stage.StructureGenerationPrerequisiteValidator;
 import com.zhs.basket.support.v4.stage.StageSchedulePreviewVo;
 import com.zhs.basket.support.v4.stage.TieBreakStandingService;
 import com.zhs.basket.vo.v4.*;
@@ -81,6 +82,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private TieBreakStandingService tieBreakStandingService;
     @Autowired
     private StageSchedulePrerequisiteValidator schedulePrerequisiteValidator;
+    @Autowired
+    private StructureGenerationPrerequisiteValidator structureGenerationPrerequisiteValidator;
     @Autowired
     private IStagePublishApplicationService stagePublishApplicationService;
     @Autowired
@@ -290,7 +293,11 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         }
         BestOfCapabilityGate.assertCanGenerateSchedule(stage);
         DoubleEliminationCapabilityGate.assertCanGenerateSchedule(stage);
-        schedulePrerequisiteValidator.validateBeforeGenerateSchedule(division, stage, isFirstStage(stage));
+        if (structureGenerationPrerequisiteValidator.isVersioned(division.getId())) {
+            structureGenerationPrerequisiteValidator.assertCanGenerate(division, stage);
+        } else {
+            schedulePrerequisiteValidator.validateBeforeGenerateSchedule(division, stage, isFirstStage(stage));
+        }
 
         if (GroupRankPlacementSupport.usesGroupRankPlacement(stage, findPreviousStage(stage))) {
             var pairing = pairingExecutionApplicationService.getCurrent(stageId);

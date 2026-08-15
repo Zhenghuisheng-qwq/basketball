@@ -17,6 +17,8 @@ const {
   isCalendarOpen,
   isTeamSelectorOpen,
   filteredMatches,
+  scheduleByRound,
+  hasSeriesItems,
   toggleCalendar,
   toggleTeamSelector,
   selectDate,
@@ -75,6 +77,7 @@ function closeStats() {
         </div>
 
         <WeekDateNav
+          v-if="!hasSeriesItems"
           :selected-date="selectedDate"
           :week-number="currentWeek"
           @select-date="selectDate"
@@ -82,7 +85,31 @@ function closeStats() {
           @next-week="goNextWeek"
         />
 
+        <div v-if="hasSeriesItems" class="series-schedule">
+          <section v-for="[roundName, items] in scheduleByRound" :key="roundName" class="series-round">
+            <h3 class="series-round__title">{{ roundName }}</h3>
+            <article v-for="item in items" :key="`${item.unitType}-${item.id}`" class="series-card">
+              <div class="series-card__meta">
+                <span>{{ item.seriesCode || item.roundName }}</span>
+                <span v-if="item.bestOf">BO{{ item.bestOf }}</span>
+                <span>{{ item.statusName || item.status || '待比赛' }}</span>
+              </div>
+              <div class="series-card__versus">
+                <strong>{{ item.homeTeam || '待定' }}</strong>
+                <span class="series-card__score">{{ item.seriesScore || '0:0' }}</span>
+                <strong>{{ item.awayTeam || '待定' }}</strong>
+              </div>
+              <div class="series-card__foot">
+                <span>{{ item.scheduleDate && item.startTime ? `${item.scheduleDate} ${String(item.startTime).slice(0, 5)}` : '待安排' }}</span>
+                <span v-if="item.gameProgress">进度 {{ item.gameProgress }}</span>
+              </div>
+            </article>
+          </section>
+          <div v-if="!scheduleByRound.length" class="series-empty">暂无已发布赛程</div>
+        </div>
+
         <MatchList
+          v-else
           :matches="filteredMatches"
           @open-detail="openDetail"
           @open-stats="openStats"
@@ -117,6 +144,54 @@ function closeStats() {
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 20px;
+}
+
+.series-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.series-round__title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.series-card {
+  border: 1px solid rgba(10, 10, 10, 0.12);
+  background: #f7f6f3;
+  padding: 16px 18px;
+  margin-bottom: 10px;
+}
+
+.series-card__meta,
+.series-card__foot {
+  display: flex;
+  gap: 12px;
+  color: rgba(10, 10, 10, 0.55);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.series-card__versus {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.series-card__score {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.series-empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: rgba(10, 10, 10, 0.55);
 }
 
 @media (max-width: 768px) {

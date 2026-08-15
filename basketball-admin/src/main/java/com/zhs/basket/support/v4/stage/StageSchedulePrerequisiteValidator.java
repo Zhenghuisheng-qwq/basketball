@@ -15,7 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * 赛程生成/发布前的前置门禁：报名关闭、无待审、参赛队伍已确认。
+ * LEGACY Structure/Schedule 前置门禁。
+ * VERSIONED Generate 走 {@link StructureGenerationPrerequisiteValidator}，不再用报名状态判断。
  */
 @Component
 public class StageSchedulePrerequisiteValidator {

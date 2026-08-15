@@ -65,6 +65,12 @@
         order by round_no asc, bracket_slot asc, id asc
     </select>
 
+    <select id="selectByDivisionId" resultMap="Result">
+        select <include refid="BaseColumns"/> from basket_match_series
+        where division_id = #{divisionId} and <include refid="NotDeleted"/>
+        order by stage_id asc, round_no asc, bracket_slot asc, id asc
+    </select>
+
     <select id="selectByScheduleBatchId" resultMap="Result">
         select <include refid="BaseColumns"/> from basket_match_series
         where schedule_batch_id = #{scheduleBatchId} and <include refid="NotDeleted"/>

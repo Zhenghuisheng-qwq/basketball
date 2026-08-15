@@ -492,6 +492,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         return detail;
     }
 
+    @Override
+    public List<V4PublicScheduleItemResp> listDivisionSchedule(Long divisionId) {
+        requireDivision(divisionId);
+        return matchSeriesDisplaySupport.listScheduleByDivisionId(divisionId);
+    }
+
     private void enrichStandingTeamInfo(List<V4PublicStandingItemResp> rows) {
         Map<Long, BasketEventTeam> teamMap = loadEventTeamMap(
                 rows.stream().map(V4PublicStandingItemResp::getEventTeamId).collect(Collectors.toList()));

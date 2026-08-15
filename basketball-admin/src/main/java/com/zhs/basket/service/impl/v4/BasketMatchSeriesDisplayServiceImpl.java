@@ -35,11 +35,30 @@ public class BasketMatchSeriesDisplayServiceImpl implements IBasketMatchSeriesDi
     private BasketDivisionStageQualificationMapper qualificationMapper;
     @Autowired
     private BasketMatchSubmissionMapper submissionMapper;
+    @Autowired
+    private BasketDivisionMapper divisionMapper;
+    @Autowired
+    private BasketSeasonMapper seasonMapper;
+    @Autowired
+    private BasketScheduleBatchMapper scheduleBatchMapper;
 
     @Override
     public BasketMatchSeriesDetailVo getDetail(Long seriesId) {
         BasketMatchSeries series = requireSeries(seriesId);
-        return buildDetail(series);
+        BasketMatchSeriesDetailVo vo = buildDetail(series);
+        if (series.getStageId() != null) {
+            List<BasketMatchSeries> stageList = seriesMapper.selectByStageId(series.getStageId());
+            Integer maxRound = null;
+            if (!CollectionUtils.isEmpty(stageList)) {
+                for (BasketMatchSeries item : stageList) {
+                    if (item.getRoundNo() != null) {
+                        maxRound = maxRound == null ? item.getRoundNo() : Math.max(maxRound, item.getRoundNo());
+                    }
+                }
+            }
+            vo.setRoundName(knockoutRoundName(series.getRoundNo(), maxRound));
+        }
+        return vo;
     }
 
     @Override
@@ -55,11 +74,46 @@ public class BasketMatchSeriesDisplayServiceImpl implements IBasketMatchSeriesDi
         for (BasketMatchSeries series : list) {
             result.add(buildDetail(series));
         }
+        fillRoundNames(result);
         result.sort(Comparator
                 .comparing(BasketMatchSeriesDetailVo::getRoundNo, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(BasketMatchSeriesDetailVo::getBracketSlot, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(BasketMatchSeriesDetailVo::getId, Comparator.nullsLast(Comparator.naturalOrder())));
         return result;
+    }
+
+    @Override
+    public List<BasketMatchSeriesDetailVo> listByDivisionId(Long divisionId) {
+        if (divisionId == null) {
+            throw new ServiceException("divisionId 不能为空");
+        }
+        List<BasketMatchSeries> list = seriesMapper.selectByDivisionId(divisionId);
+        if (CollectionUtils.isEmpty(list)) {
+            return List.of();
+        }
+        List<BasketMatchSeriesDetailVo> result = new ArrayList<>();
+        for (BasketMatchSeries series : list) {
+            result.add(buildDetail(series));
+        }
+        fillRoundNames(result);
+        result.sort(Comparator
+                .comparing(BasketMatchSeriesDetailVo::getStageId, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(BasketMatchSeriesDetailVo::getRoundNo, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(BasketMatchSeriesDetailVo::getBracketSlot, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(BasketMatchSeriesDetailVo::getId, Comparator.nullsLast(Comparator.naturalOrder())));
+        return result;
+    }
+
+    private void fillRoundNames(List<BasketMatchSeriesDetailVo> result) {
+        java.util.Map<Long, Integer> maxRoundByStage = new java.util.HashMap<>();
+        for (BasketMatchSeriesDetailVo vo : result) {
+            if (vo.getStageId() != null && vo.getRoundNo() != null) {
+                maxRoundByStage.merge(vo.getStageId(), vo.getRoundNo(), Math::max);
+            }
+        }
+        for (BasketMatchSeriesDetailVo vo : result) {
+            vo.setRoundName(knockoutRoundName(vo.getRoundNo(), maxRoundByStage.get(vo.getStageId())));
+        }
     }
 
     @Override
@@ -103,11 +157,35 @@ public class BasketMatchSeriesDisplayServiceImpl implements IBasketMatchSeriesDi
         vo.setRequiredWins(MatchSeriesResultCalculator.requiredWins(series.getBestOf()));
         vo.setHomeWinCount(series.getHomeWinCount());
         vo.setAwayWinCount(series.getAwayWinCount());
+        int homeWins = series.getHomeWinCount() == null ? 0 : series.getHomeWinCount();
+        int awayWins = series.getAwayWinCount() == null ? 0 : series.getAwayWinCount();
+        vo.setSeriesScore(homeWins + ":" + awayWins);
+        vo.setScheduledDate(series.getScheduledDate());
+        vo.setScheduledStartTime(series.getScheduledStartTime());
         vo.setSeriesStatus(series.getSeriesStatus());
         vo.setSeriesStatusName(seriesStatusLabel(series.getSeriesStatus()));
         vo.setResolutionType(series.getResolutionType());
         vo.setResolutionReason(series.getResolutionReason());
         vo.setWinnerEventTeamId(series.getWinnerEventTeamId());
+
+        BasketDivision division = series.getDivisionId() != null ? divisionMapper.selectById(series.getDivisionId()) : null;
+        if (division != null) {
+            vo.setDivisionName(division.getDivisionName());
+            vo.setSeasonId(division.getSeasonId());
+            if (division.getSeasonId() != null) {
+                BasketSeason season = seasonMapper.selectById(division.getSeasonId());
+                if (season != null) {
+                    vo.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+                }
+            }
+        }
+        if (series.getScheduleBatchId() != null) {
+            BasketScheduleBatch batch = scheduleBatchMapper.selectById(series.getScheduleBatchId());
+            if (batch != null) {
+                vo.setPublishStatus(batch.getPublishStatus());
+                vo.setPublishStatusName(publishStatusLabel(batch.getPublishStatus()));
+            }
+        }
 
         BasketDivisionStage stage = series.getStageId() != null ? stageMapper.selectById(series.getStageId()) : null;
         if (stage != null) {
@@ -131,6 +209,18 @@ public class BasketMatchSeriesDisplayServiceImpl implements IBasketMatchSeriesDi
         }
         fillQualification(vo, series);
         vo.setGames(buildGames(series));
+        int gamesPlayed = 0;
+        if (vo.getGames() != null) {
+            for (BasketMatchSeriesGameVo game : vo.getGames()) {
+                if (game != null && !Boolean.TRUE.equals(game.getSkipped())
+                        && (MatchStatusEnum.FINISHED.getCode().equals(game.getMatchStatus())
+                        || MatchStatusEnum.FORFEITED.getCode().equals(game.getMatchStatus()))) {
+                    gamesPlayed++;
+                }
+            }
+        }
+        vo.setGamesPlayed(gamesPlayed);
+        vo.setRoundName(knockoutRoundName(series.getRoundNo(), series.getRoundNo()));
         return vo;
     }
 
@@ -306,6 +396,39 @@ public class BasketMatchSeriesDisplayServiceImpl implements IBasketMatchSeriesDi
             case "PENDING" -> "待审核";
             case "REJECTED" -> "已驳回";
             default -> "未审核";
+        };
+    }
+
+    private String knockoutRoundName(Integer roundNo, Integer maxRound) {
+        if (roundNo == null) {
+            return "--";
+        }
+        if (maxRound == null || maxRound < 1 || roundNo < 1) {
+            return "R" + roundNo;
+        }
+        int shift = maxRound - roundNo + 1;
+        if (shift < 1 || shift > 8) {
+            return "R" + roundNo;
+        }
+        int remaining = 1 << shift;
+        if (remaining <= 2) {
+            return "Final";
+        }
+        if (remaining == 4) {
+            return "SF";
+        }
+        return "R" + remaining;
+    }
+
+    private String publishStatusLabel(String status) {
+        if (status == null) {
+            return "--";
+        }
+        return switch (status) {
+            case "PUBLISHED" -> "已发布";
+            case "DRAFT" -> "草稿";
+            case "WITHDRAWN" -> "已撤回";
+            default -> status;
         };
     }
 

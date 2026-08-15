@@ -9,6 +9,7 @@ import type {
   V4PublicPlayerStatItem,
   V4PublicRankItem,
   V4PublicSeasonDetail,
+  V4PublicScheduleItem,
   V4PublicSeasonItem,
   V4PublicSeriesItem,
   V4PublicStageItem,
@@ -45,6 +46,12 @@ export function getV4PublicTeamList(divisionId: string) {
 
 export function getV4PublicTeamDetail(eventTeamId: string) {
   return request.get<any, ApiResult<V4PublicEventTeamDetail>>(`/basket/v4/public/team/${eventTeamId}`)
+}
+
+export function getV4PublicDivisionSchedule(divisionId: string) {
+  return request.get<any, ApiResult<V4PublicScheduleItem[]>>(
+    `/basket/v4/public/division/${divisionId}/schedule`,
+  )
 }
 
 export function getV4PublicMatchList(params: {

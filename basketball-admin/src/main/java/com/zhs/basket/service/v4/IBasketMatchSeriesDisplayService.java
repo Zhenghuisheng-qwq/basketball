@@ -10,5 +10,7 @@ public interface IBasketMatchSeriesDisplayService {
 
     List<BasketMatchSeriesDetailVo> listByStageId(Long stageId);
 
+    List<BasketMatchSeriesDetailVo> listByDivisionId(Long divisionId);
+
     BasketMatchSeriesDetailVo getContextByMatchId(Long matchId);
 }

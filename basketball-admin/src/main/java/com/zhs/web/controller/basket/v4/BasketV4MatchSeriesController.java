@@ -27,6 +27,12 @@ public class BasketV4MatchSeriesController extends BaseController {
         return success(matchSeriesDisplayService.listByStageId(stageId));
     }
 
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.MATCH_LIST + "')")
+    @GetMapping("/division/{divisionId}")
+    public AjaxResult listByDivision(@PathVariable Long divisionId) {
+        return success(matchSeriesDisplayService.listByDivisionId(divisionId));
+    }
+
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.MATCH_QUERY + "')")
     @GetMapping("/context/match/{matchId}")
     public AjaxResult getContextByMatch(@PathVariable Long matchId) {

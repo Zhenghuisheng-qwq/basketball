@@ -164,6 +164,10 @@ class BasketV4FormatSnapshotApplyStandardTest {
         assertEquals(CompetitionFormatEnum.ROUND_ROBIN.getCode(), storedStages.get(0).getCompetitionFormat());
         assertEquals(StandardTemplateCodes.STAGE_PLAYOFF, storedStages.get(1).getStageCode());
         assertEquals(CompetitionFormatEnum.SINGLE_ELIMINATION.getCode(), storedStages.get(1).getCompetitionFormat());
+        assertEquals(1, storedStages.get(0).getBestOf());
+        assertEquals(3, storedStages.get(1).getBestOf());
+        assertEquals(5, storedStages.get(1).getSemifinalBestOf());
+        assertEquals(7, storedStages.get(1).getFinalBestOf());
     }
 
     @Test

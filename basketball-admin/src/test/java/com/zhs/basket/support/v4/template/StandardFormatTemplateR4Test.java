@@ -64,6 +64,10 @@ class StandardFormatTemplateR4Test {
         assertEquals("PLAYOFF", def.getStages().get(1).getStageCode());
         assertEquals(CompetitionFormatEnum.SINGLE_ELIMINATION.getCode(), def.getStages().get(1).getCompetitionFormat());
         assertEquals(AdvancementTypeEnum.OVERALL_TOP_N.getCode(), def.getStages().get(0).getAdvancementType());
+        assertEquals(1, def.getStages().get(0).getBestOf());
+        assertEquals(3, def.getStages().get(1).getBestOf());
+        assertEquals(5, def.getStages().get(1).getSemifinalBestOf());
+        assertEquals(7, def.getStages().get(1).getFinalBestOf());
     }
 
     @Test

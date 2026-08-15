@@ -1,0 +1,354 @@
+{
+  "startedAt": "2026-08-15T12:52:28",
+  "cases": {
+    "catalog.LEAGUE": {
+      "ok": true,
+      "detail": "codes=['LEAGUE_STANDARD_V1', 'ARENA_STANDARD_V1', 'CUP_STANDARD_V1', 'OPEN_STANDARD_V1'] default=LEAGUE_STANDARD_V1",
+      "severity": "P1"
+    },
+    "catalog.ARENA": {
+      "ok": true,
+      "detail": "codes=['LEAGUE_STANDARD_V1', 'ARENA_STANDARD_V1', 'CUP_STANDARD_V1', 'OPEN_STANDARD_V1'] default=ARENA_STANDARD_V1",
+      "severity": "P1"
+    },
+    "catalog.CUP": {
+      "ok": true,
+      "detail": "codes=['LEAGUE_STANDARD_V1', 'ARENA_STANDARD_V1', 'CUP_STANDARD_V1', 'OPEN_STANDARD_V1'] default=CUP_STANDARD_V1",
+      "severity": "P1"
+    },
+    "catalog.OPEN": {
+      "ok": true,
+      "detail": "codes=['LEAGUE_STANDARD_V1', 'ARENA_STANDARD_V1', 'CUP_STANDARD_V1', 'OPEN_STANDARD_V1'] default=OPEN_STANDARD_V1",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-RULE-FLOW": {
+      "ok": true,
+      "detail": "apiName=E2E-RULE-FLOW mode=TEAM max=16",
+      "severity": "P1"
+    },
+    "rule.custom.rr": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "rule.custom.has_rr": {
+      "ok": true,
+      "detail": "formats=['ROUND_ROBIN']",
+      "severity": "P1"
+    },
+    "rule.apply.arena": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "rule.apply.arena.graph": {
+      "ok": true,
+      "detail": "type=None code=None formats=['SINGLE_ELIMINATION']",
+      "severity": "P1"
+    },
+    "rule.apply.cup": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "rule.apply.cup.graph": {
+      "ok": false,
+      "detail": "type=None code=None formats=['ROUND_ROBIN', 'SINGLE_ELIMINATION']",
+      "severity": "P1"
+    },
+    "rule.old_draft.not_current": {
+      "ok": true,
+      "detail": "staleCurrent=0",
+      "severity": "P1"
+    },
+    "rule.publish.lock": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "rule.product.v1": {
+      "ok": true,
+      "detail": "rule={'ruleVersionId': '20', 'ruleVersionNo': 1, 'ruleStatus': 'LOCKED', 'ruleStatusName': '已发布 / 已锁定规则', 'locked': True, 'templateType': 'STANDARD', 'templateCode': 'CUP_STANDARD_V1'}",
+      "severity": "P1"
+    },
+    "rule.internal.revision_ok": {
+      "ok": true,
+      "detail": "[{'snapshot_version': 1, 'snapshot_status': 'DRAFT', 'source_template_code': 'ROUND_ROBIN_BASIC_V1', 'is_current': 0}, {'snapshot_version': 2, 'snapshot_status': 'DRAFT', 'source_template_code': 'ROUND_ROBIN_BASIC_V1', 'is_current': 0}, {'snapshot_version': 3, 'snapshot_status': 'DRAFT', 'source_template_code': 'ARENA_STANDARD_V1', 'is_current': 0}, {'snapshot_version': 4, 'snapshot_status': 'LOCKED', 'source_template_code': 'CUP_STANDARD_V1', 'is_current': 1}]",
+      "severity": "P1"
+    },
+    "rule.locked.reject.apply": {
+      "ok": true,
+      "detail": "已锁定规则快照不允许应用标准模板",
+      "severity": "P1"
+    },
+    "rule.locked.reject.quick": {
+      "ok": true,
+      "detail": "仅草稿状态规则快照可编辑",
+      "severity": "P1"
+    },
+    "rule.locked.reject.custom": {
+      "ok": true,
+      "detail": "仅草稿状态规则快照可编辑",
+      "severity": "P1"
+    },
+    "rule.locked.reject.bo": {
+      "ok": true,
+      "detail": "仅草稿状态规则快照可编辑",
+      "severity": "P1"
+    },
+    "rule.locked.canEditRule_false": {
+      "ok": true,
+      "detail": "{'canEditRule': False, 'canLockRule': False, 'canManageRoster': True, 'canLockRoster': True, 'canGenerateStructure': False, 'canEditSchedule': False, 'canPublishStage': False, 'canWithdrawStage': False, 'requireRulePublished': True, 'legacyCompatible': False, 'blockReason': '请先完成并锁定最终参赛名单'}",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-ARENA16": {
+      "ok": true,
+      "detail": "apiName=E2E-ARENA16 mode=TEAM max=16",
+      "severity": "P1"
+    },
+    "arena16.approved20": {
+      "ok": true,
+      "detail": "approved=20",
+      "severity": "P1"
+    },
+    "arena16.formal": {
+      "ok": true,
+      "detail": "formal=16 expect=16",
+      "severity": "P1"
+    },
+    "arena16.candidate": {
+      "ok": true,
+      "detail": "candidate=4 expect=4",
+      "severity": "P1"
+    },
+    "arena16.eventTeam": {
+      "ok": true,
+      "detail": "eventTeam=16 expect=16",
+      "severity": "P1"
+    },
+    "arena16.approved_ge_formal": {
+      "ok": true,
+      "detail": "approved=20",
+      "severity": "P1"
+    },
+    "arena16.candidate_order": {
+      "ok": true,
+      "detail": "orders=[1, 2, 3, 4]",
+      "severity": "P1"
+    },
+    "team.roster.ws": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "team.formation.isolated": {
+      "ok": true,
+      "detail": "仅个人报名 Division 支持 Formation",
+      "severity": "P1"
+    },
+    "team.manual.formal_to_cand": {
+      "ok": true,
+      "detail": "after-lock-or-ok 最终名单已锁定，不能直接修改分配。如需调整请走名单递补并生成新版本",
+      "severity": "P2"
+    },
+    "arena16.init": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "arena16.seed.formal_only": {
+      "ok": true,
+      "detail": "eventTeam=16",
+      "severity": "P1"
+    },
+    "arena16.seed.max4": {
+      "ok": true,
+      "detail": "管理员种子最多 4 支",
+      "severity": "P2"
+    },
+    "arena16.series15": {
+      "ok": true,
+      "detail": "series=15",
+      "severity": "P1"
+    },
+    "arena16.match51": {
+      "ok": true,
+      "detail": "match=51",
+      "severity": "P1"
+    },
+    "arena16.bye0": {
+      "ok": true,
+      "detail": "bye=0",
+      "severity": "P1"
+    },
+    "arena16.bo.chain": {
+      "ok": true,
+      "detail": "[{'best_of': 3, 'c': 12}, {'best_of': 5, 'c': 3}]",
+      "severity": "P1"
+    },
+    "arena16.schedule.units15": {
+      "ok": true,
+      "detail": "units=15 seriesUnits=15 types=['MATCH_SERIES']",
+      "severity": "P1"
+    },
+    "arena16.admin.series15": {
+      "ok": true,
+      "detail": "adminSeries=15",
+      "severity": "P1"
+    },
+    "arena16.web.series15": {
+      "ok": true,
+      "detail": "public=15 series=15",
+      "severity": "P1"
+    },
+    "arena16.web.placeholder_kept": {
+      "ok": true,
+      "detail": "placeholders~7 total=15",
+      "severity": "P1"
+    },
+    "arena16.generate.idempotent": {
+      "ok": true,
+      "detail": "active=1 second=500 当前赛段已发布，需要先撤回后再调整",
+      "severity": "P1"
+    },
+    "arena16.bo3.game1.no_advance": {
+      "ok": true,
+      "detail": "series={'id': 26, 'home_win_count': 1, 'away_win_count': 0, 'series_status': 'RUNNING', 'winner_event_team_id': None, 'best_of': 3} nextResolved=0",
+      "severity": "P0"
+    },
+    "arena16.bo3.sweep.finished": {
+      "ok": true,
+      "detail": "series={'id': 26, 'home_win_count': 2, 'away_win_count': 0, 'series_status': 'COMPLETED', 'winner_event_team_id': 40}",
+      "severity": "P1"
+    },
+    "arena16.bo3.game3.not_required": {
+      "ok": true,
+      "detail": "leftover=[{'id': 134, 'match_status': 'SCHEDULED'}]",
+      "severity": "P1"
+    },
+    "arena16.champion": {
+      "ok": true,
+      "detail": "[{'w': 40}]",
+      "severity": "P1"
+    },
+    "arena10.e2e": {
+      "ok": false,
+      "detail": "RuntimeError(\"div-E2E-ARENA10 failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-LEAGUE8": {
+      "ok": true,
+      "detail": "apiName=E2E-LEAGUE8 mode=TEAM max=8",
+      "severity": "P1"
+    },
+    "league8.e2e": {
+      "ok": false,
+      "detail": "RuntimeError(\"register failed E2E_A_A01: {'code': 400, 'msg': '球队所属赛事与报名 Division 不一致', 'data': None, '_http_status': 200}\")",
+      "severity": "P1"
+    },
+    "league.drr": {
+      "ok": false,
+      "detail": "RuntimeError(\"div-E2E-LEAGUE8-DRR failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-CUP8": {
+      "ok": true,
+      "detail": "apiName=E2E-CUP8 mode=TEAM max=8",
+      "severity": "P1"
+    },
+    "cup8.e2e": {
+      "ok": false,
+      "detail": "RuntimeError(\"register failed E2E_A_A01: {'code': 400, 'msg': '球队所属赛事与报名 Division 不一致', 'data': None, '_http_status': 200}\")",
+      "severity": "P1"
+    },
+    "open.personal.e2e": {
+      "ok": false,
+      "detail": "RuntimeError('div-E2E-OPEN-PERSONAL failed: {\\'msg\\': \"\\\\r\\\\n### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Duplicate entry \\'9-PC-0\\' for key \\'basket_division.uk_season_platform\\'\\\\r\\\\n### The error may exist in file [D:\\\\\\\\code\\\\\\\\dz\\\\\\\\basketball\\\\\\\\scaffolding-v2\\\\\\\\basketball-admin\\\\\\\\target\\\\\\\\classes\\\\\\\\mapper\\\\\\\\basket\\\\\\\\v4\\\\\\\\BasketDivisionMapper.xml]\\\\r\\\\n### The error may involve defaultParameterMap\\\\r\\\\n### The error occurred while setting parameters\\\\r\\\\n### SQL: insert into basket_division (             season_id, platform_code, game_mode, division_name, registration_mode, format_type, format_template_id, format_snapshot_id, max_team_count, max_person_count, lineup_min_count, lineup_max_count, registration_start_time, registration_en",
+      "severity": "P1"
+    },
+    "open.team.e2e": {
+      "ok": false,
+      "detail": "RuntimeError(\"div-E2E-OPEN-TEAM failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")",
+      "severity": "P1"
+    },
+    "cross.e2e": {
+      "ok": false,
+      "detail": "RuntimeError(\"div-E2E-CROSS-ARENA-LEAGUE failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")",
+      "severity": "P1"
+    },
+    "iso.e2e": {
+      "ok": false,
+      "detail": "RuntimeError(\"div-E2E-CROSS-ISO-A failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")",
+      "severity": "P0"
+    },
+    "unpub.e2e": {
+      "ok": false,
+      "detail": "RuntimeError(\"div-E2E-CROSS-UNPUB failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")",
+      "severity": "P0"
+    },
+    "formation.reject": {
+      "ok": false,
+      "detail": "RuntimeError('div-E2E-OPEN-3V3-SHORT failed: {\\'msg\\': \"\\\\r\\\\n### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Duplicate entry \\'9-PC-0\\' for key \\'basket_division.uk_season_platform\\'\\\\r\\\\n### The error may exist in file [D:\\\\\\\\code\\\\\\\\dz\\\\\\\\basketball\\\\\\\\scaffolding-v2\\\\\\\\basketball-admin\\\\\\\\target\\\\\\\\classes\\\\\\\\mapper\\\\\\\\basket\\\\\\\\v4\\\\\\\\BasketDivisionMapper.xml]\\\\r\\\\n### The error may involve defaultParameterMap\\\\r\\\\n### The error occurred while setting parameters\\\\r\\\\n### SQL: insert into basket_division (             season_id, platform_code, game_mode, division_name, registration_mode, format_type, format_template_id, format_snapshot_id, max_team_count, max_person_count, lineup_min_count, lineup_max_count, registration_start_time, registration_e",
+      "severity": "P1"
+    },
+    "candidate.e2e": {
+      "ok": false,
+      "detail": "RuntimeError(\"div-E2E-CROSS-CANDIDATE failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")",
+      "severity": "P1"
+    },
+    "capability.overview": {
+      "ok": true,
+      "detail": "cap={'canEditRule': False, 'canLockRule': False, 'canManageRoster': False, 'canLockRoster': False, 'canGenerateStructure': True, 'canEditSchedule': False, 'canPublishStage': False, 'canWithdrawStage': True, 'requireRulePublished': True, 'legacyCompatible': False, 'blockReason': None} hint=赛段已发布，请先撤回后再修改",
+      "severity": "P1"
+    },
+    "blocker.not_fuzzy": {
+      "ok": true,
+      "detail": "hint=赛段已发布，请先撤回后再修改 block=None",
+      "severity": "P1"
+    }
+  },
+  "bugs": {
+    "P0": [
+      "iso.e2e: RuntimeError(\"div-E2E-CROSS-ISO-A failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")",
+      "unpub.e2e: RuntimeError(\"div-E2E-CROSS-UNPUB failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")"
+    ],
+    "P1": [
+      "rule.apply.cup.graph: type=None code=None formats=['ROUND_ROBIN', 'SINGLE_ELIMINATION']",
+      "arena10.e2e: RuntimeError(\"div-E2E-ARENA10 failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")",
+      "league8.e2e: RuntimeError(\"register failed E2E_A_A01: {'code': 400, 'msg': '球队所属赛事与报名 Division 不一致', 'data': None, '_http_status': 200}\")",
+      "league.drr: RuntimeError(\"div-E2E-LEAGUE8-DRR failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")",
+      "cup8.e2e: RuntimeError(\"register failed E2E_A_A01: {'code': 400, 'msg': '球队所属赛事与报名 Division 不一致', 'data': None, '_http_status': 200}\")",
+      "open.personal.e2e: RuntimeError('div-E2E-OPEN-PERSONAL failed: {\\'msg\\': \"\\\\r\\\\n### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Duplicate entry \\'9-PC-0\\' for key \\'basket_division.uk_season_platform\\'\\\\r\\\\n### The error may exist in file [D:\\\\\\\\code\\\\\\\\dz\\\\\\\\basketball\\\\\\\\scaffolding-v2\\\\\\\\basketball-admin\\\\\\\\target\\\\\\\\classes\\\\\\\\mapper\\\\\\\\basket\\\\\\\\v4\\\\\\\\BasketDivisionMapper",
+      "open.team.e2e: RuntimeError(\"div-E2E-OPEN-TEAM failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")",
+      "cross.e2e: RuntimeError(\"div-E2E-CROSS-ARENA-LEAGUE failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")",
+      "formation.reject: RuntimeError('div-E2E-OPEN-3V3-SHORT failed: {\\'msg\\': \"\\\\r\\\\n### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Duplicate entry \\'9-PC-0\\' for key \\'basket_division.uk_season_platform\\'\\\\r\\\\n### The error may exist in file [D:\\\\\\\\code\\\\\\\\dz\\\\\\\\basketball\\\\\\\\scaffolding-v2\\\\\\\\basketball-admin\\\\\\\\target\\\\\\\\classes\\\\\\\\mapper\\\\\\\\basket\\\\\\\\v4\\\\\\\\BasketDivisionMappe",
+      "candidate.e2e: RuntimeError(\"div-E2E-CROSS-CANDIDATE failed: {'msg': '当前赛季已存在 PC · 5V5 · 球队报名 赛区。', 'code': 500, '_http_status': 200}\")"
+    ],
+    "P2": []
+  },
+  "ids": {
+    "arenaSeason": 6,
+    "leagueSeason": 7,
+    "cupSeason": 8,
+    "openSeason": 9,
+    "ruleFlow": 16,
+    "arena16": 17,
+    "drawPreview.31": "{'executionId': '6', 'stageId': '31', 'executionNo': 1, 'seedRule': 'ADMIN_SEED', 'drawRule': 'RANDOM_CONFIRM', 'byeRule': 'SEED_PRIORITY', 'placementRule': None, 'resolutionStatus': None, 'sourceStageId': None, 'hasUnresolvedPlaceholders': False, 'participantResolved': True, 'status': 'DRAFT', 'randomSeed': '8597672923063577460', 'generatedTime': '2026-08-15 12:53:05', 'confirmedTime': None, 'par"
+  },
+  "invariants": {
+    "arena16": {
+      "currentRule": 1,
+      "currentRoster": 1,
+      "currentStructure": 1,
+      "formal": 16,
+      "candidate": 4,
+      "eventTeam": 16,
+      "matchSeries": 15,
+      "match": 51,
+      "publishRecord": 1
+    }
+  },
+  "matrix": {},
+  "fixes": [],
+  "endedAt": "2026-08-15T12:53:21"
+}

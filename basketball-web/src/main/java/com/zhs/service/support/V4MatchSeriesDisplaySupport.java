@@ -17,6 +17,7 @@ import com.zhs.model.v4.BasketMatchSeries;
 import com.zhs.model.v4.BasketV4Match;
 import com.zhs.response.v4.publicapi.V4PublicMatchSeriesDetailResp;
 import com.zhs.response.v4.publicapi.V4PublicMatchSeriesGameResp;
+import com.zhs.response.v4.publicapi.V4PublicScheduleItemResp;
 import com.zhs.response.v4.publicapi.V4PublicStageItemResp;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -67,6 +68,72 @@ public class V4MatchSeriesDisplaySupport {
             result.add(buildDetail(series, null));
         }
         return result;
+    }
+
+    public List<V4PublicScheduleItemResp> listScheduleByDivisionId(Long divisionId) {
+        if (divisionId == null) {
+            return List.of();
+        }
+        List<BasketMatchSeries> seriesList = matchSeriesMapper.selectByDivisionId(divisionId);
+        List<V4PublicStageItemResp> stages = publicStageMapper.selectStagesByDivisionId(divisionId);
+        Map<Long, V4PublicStageItemResp> stageMap = new HashMap<>();
+        Map<Long, Integer> maxRoundByStage = new HashMap<>();
+        if (!CollectionUtils.isEmpty(stages)) {
+            for (V4PublicStageItemResp stage : stages) {
+                if (stage.getStageId() != null) {
+                    stageMap.put(stage.getStageId(), stage);
+                }
+            }
+        }
+        if (!CollectionUtils.isEmpty(seriesList)) {
+            for (BasketMatchSeries series : seriesList) {
+                if (series.getStageId() == null || series.getRoundNo() == null) {
+                    continue;
+                }
+                maxRoundByStage.merge(series.getStageId(), series.getRoundNo(), Math::max);
+            }
+        }
+
+        List<V4PublicScheduleItemResp> items = new ArrayList<>();
+        Set<Long> exposedSeriesIds = new HashSet<>();
+        if (!CollectionUtils.isEmpty(seriesList)) {
+            for (BasketMatchSeries series : seriesList) {
+                if (!isPubliclyVisibleSeries(series)) {
+                    continue;
+                }
+                if (!PublicScheduleUnitResolver.exposeAsSeries(series.getBestOf())) {
+                    continue;
+                }
+                items.add(toSeriesScheduleItem(series, stageMap.get(series.getStageId()),
+                        maxRoundByStage.get(series.getStageId())));
+                if (series.getId() != null) {
+                    exposedSeriesIds.add(series.getId());
+                }
+            }
+        }
+
+        List<BasketV4Match> matches = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()
+                .eq(BasketV4Match::getDivisionId, divisionId)
+                .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .orderByAsc(BasketV4Match::getRoundNo)
+                .orderByAsc(BasketV4Match::getMatchNo));
+        if (!CollectionUtils.isEmpty(matches)) {
+            for (BasketV4Match match : matches) {
+                if (match.getSeriesId() != null && exposedSeriesIds.contains(match.getSeriesId())) {
+                    continue;
+                }
+                if (!isPubliclyVisibleMatch(match)) {
+                    continue;
+                }
+                items.add(toMatchScheduleItem(match, stageMap.get(match.getStageId())));
+            }
+        }
+
+        items.sort(Comparator
+                .comparing(V4PublicScheduleItemResp::getStageId, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(V4PublicScheduleItemResp::getRoundNo, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(V4PublicScheduleItemResp::getId, Comparator.nullsLast(Comparator.naturalOrder())));
+        return items;
     }
 
     public V4PublicMatchSeriesDetailResp buildDetail(BasketMatchSeries series, Long currentMatchId) {
@@ -269,6 +336,130 @@ public class V4MatchSeriesDisplaySupport {
         }
         return PublicVisibilityPolicy.keepPublishedSeries(
                 isVersionedDivision(series.getDivisionId()), batchPublished, hasPublishedChild);
+    }
+
+    private V4PublicScheduleItemResp toSeriesScheduleItem(BasketMatchSeries series,
+                                                          V4PublicStageItemResp stage,
+                                                          Integer maxRound) {
+        V4PublicMatchSeriesDetailResp detail = buildDetail(series, null);
+        V4PublicScheduleItemResp item = new V4PublicScheduleItemResp();
+        item.setId(series.getId());
+        item.setUnitType(PublicScheduleUnitResolver.MATCH_SERIES);
+        item.setStageId(series.getStageId());
+        item.setStageName(detail.getStageName() != null ? detail.getStageName()
+                : (stage != null ? stage.getStageName() : null));
+        item.setRoundNo(series.getRoundNo());
+        item.setRoundName(PublicKnockoutRoundNames.name(series.getRoundNo(), maxRound));
+        item.setSeriesCode(series.getSeriesCode());
+        item.setHomeEventTeamId(detail.getHomeEventTeamId());
+        item.setAwayEventTeamId(detail.getAwayEventTeamId());
+        item.setHomeTeam(detail.getHomeTeamName());
+        item.setAwayTeam(detail.getAwayTeamName());
+        item.setBestOf(series.getBestOf());
+        int homeWins = series.getHomeWinCount() == null ? 0 : series.getHomeWinCount();
+        int awayWins = series.getAwayWinCount() == null ? 0 : series.getAwayWinCount();
+        item.setHomeWinCount(homeWins);
+        item.setAwayWinCount(awayWins);
+        item.setRequiredWins(detail.getRequiredWins());
+        item.setSeriesScore(homeWins + ":" + awayWins);
+        int gamesPlayed = 0;
+        if (detail.getGames() != null) {
+            for (V4PublicMatchSeriesGameResp game : detail.getGames()) {
+                if (game != null && !Boolean.TRUE.equals(game.getSkipped()) && isOfficialGameStatus(game.getMatchStatus())) {
+                    gamesPlayed++;
+                }
+            }
+        }
+        item.setGamesPlayed(gamesPlayed);
+        item.setGameProgress(gamesPlayed + "/" + (series.getBestOf() == null ? 0 : series.getBestOf()));
+        item.setScheduleDate(series.getScheduledDate());
+        item.setStartTime(series.getScheduledStartTime());
+        item.setStatus(series.getSeriesStatus());
+        item.setStatusName(detail.getSeriesStatusName());
+        item.setPlaceholderSource(joinPlaceholderSource(series.getHomeSourceType(), series.getAwaySourceType()));
+        item.setPublished(true);
+        return item;
+    }
+
+    private V4PublicScheduleItemResp toMatchScheduleItem(BasketV4Match match, V4PublicStageItemResp stage) {
+        V4PublicScheduleItemResp item = new V4PublicScheduleItemResp();
+        item.setId(match.getId());
+        item.setUnitType(PublicScheduleUnitResolver.MATCH);
+        item.setStageId(match.getStageId());
+        item.setStageName(stage != null ? stage.getStageName() : null);
+        item.setRoundNo(match.getRoundNo());
+        item.setRoundName(match.getRoundNo() == null ? "--" : ("R" + match.getRoundNo()));
+        item.setSeriesCode(match.getMatchNo());
+        item.setHomeEventTeamId(positiveOrNull(match.getHomeEventTeamId()));
+        item.setAwayEventTeamId(positiveOrNull(match.getAwayEventTeamId()));
+        item.setHomeTeam(null);
+        item.setAwayTeam(null);
+        if (item.getHomeEventTeamId() != null || item.getAwayEventTeamId() != null) {
+            Set<Long> ids = new HashSet<>();
+            if (item.getHomeEventTeamId() != null) ids.add(item.getHomeEventTeamId());
+            if (item.getAwayEventTeamId() != null) ids.add(item.getAwayEventTeamId());
+            List<BasketEventTeam> teams = eventTeamDao.selectBatchIds(ids);
+            Map<Long, BasketEventTeam> map = new HashMap<>();
+            if (teams != null) {
+                for (BasketEventTeam team : teams) {
+                    if (team != null) {
+                        map.put(team.getId(), team);
+                    }
+                }
+            }
+            BasketEventTeam home = map.get(item.getHomeEventTeamId());
+            BasketEventTeam away = map.get(item.getAwayEventTeamId());
+            if (home != null) {
+                item.setHomeTeam(home.getTeamNameSnapshot());
+            }
+            if (away != null) {
+                item.setAwayTeam(away.getTeamNameSnapshot());
+            }
+        }
+        if (item.getHomeTeam() == null || item.getHomeTeam().isBlank()) {
+            item.setHomeTeam("待定");
+        }
+        if (item.getAwayTeam() == null || item.getAwayTeam().isBlank()) {
+            item.setAwayTeam("待定");
+        }
+        item.setBestOf(1);
+        item.setSeriesScore(null);
+        item.setGameProgress(null);
+        if (match.getMatchTime() != null) {
+            java.time.LocalDateTime ldt = java.time.LocalDateTime.ofInstant(
+                    match.getMatchTime().toInstant(), java.time.ZoneId.of("Asia/Shanghai"));
+            item.setScheduleDate(ldt.toLocalDate());
+            item.setStartTime(ldt.toLocalTime());
+        }
+        item.setStatus(match.getMatchStatus());
+        item.setStatusName(matchStatusLabel(match.getMatchStatus()));
+        item.setPlaceholderSource(null);
+        item.setPublished(true);
+        return item;
+    }
+
+    private boolean isOfficialGameStatus(String status) {
+        return MatchStatusEnum.FINISHED.getCode().equals(status)
+                || MatchStatusEnum.FORFEITED.getCode().equals(status);
+    }
+
+    private Long positiveOrNull(Long id) {
+        return id == null || id <= 0 ? null : id;
+    }
+
+    private String joinPlaceholderSource(String home, String away) {
+        boolean homePh = home != null && !home.isBlank() && !"DIRECT_EVENT_TEAM".equalsIgnoreCase(home);
+        boolean awayPh = away != null && !away.isBlank() && !"DIRECT_EVENT_TEAM".equalsIgnoreCase(away);
+        if (homePh && awayPh) {
+            return home;
+        }
+        if (homePh) {
+            return home;
+        }
+        if (awayPh) {
+            return away;
+        }
+        return null;
     }
 
     private java.util.Date inheritSeriesTime(BasketMatchSeries series) {

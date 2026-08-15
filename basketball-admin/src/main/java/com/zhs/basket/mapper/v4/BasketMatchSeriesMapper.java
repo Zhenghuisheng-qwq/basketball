@@ -13,6 +13,8 @@ public interface BasketMatchSeriesMapper {
 
     List<BasketMatchSeries> selectByStageId(@Param("stageId") Long stageId);
 
+    List<BasketMatchSeries> selectByDivisionId(@Param("divisionId") Long divisionId);
+
     List<BasketMatchSeries> selectCompletedByStageId(@Param("stageId") Long stageId);
 
     int countIncompleteByStageId(@Param("stageId") Long stageId);

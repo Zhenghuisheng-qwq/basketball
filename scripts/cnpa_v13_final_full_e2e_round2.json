@@ -1,0 +1,455 @@
+{
+  "startedAt": "2026-08-15T12:54:45",
+  "cases": {
+    "rule.apply.cup.graph": {
+      "ok": false,
+      "detail": "[('GROUP', None, 'ROUND_ROBIN', None), ('KNOCKOUT', None, 'SINGLE_ELIMINATION', None)]",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-ARENA10": {
+      "ok": true,
+      "detail": "apiName=E2E-ARENA10 mode=TEAM max=16",
+      "severity": "P1"
+    },
+    "arena10.formal": {
+      "ok": true,
+      "detail": "formal=10 expect=10",
+      "severity": "P1"
+    },
+    "arena10.candidate": {
+      "ok": true,
+      "detail": "candidate=0 expect=0",
+      "severity": "P1"
+    },
+    "arena10.eventTeam": {
+      "ok": true,
+      "detail": "eventTeam=10 expect=10",
+      "severity": "P1"
+    },
+    "arena10.approved_ge_formal": {
+      "ok": true,
+      "detail": "approved=10",
+      "severity": "P1"
+    },
+    "arena10.candidate_order": {
+      "ok": true,
+      "detail": "orders=[]",
+      "severity": "P1"
+    },
+    "arena10.real_series9": {
+      "ok": true,
+      "detail": "all=9 real=9",
+      "severity": "P1"
+    },
+    "arena10.no_fake_bye": {
+      "ok": true,
+      "detail": "[]",
+      "severity": "P1"
+    },
+    "arena10.web": {
+      "ok": true,
+      "detail": "public=9",
+      "severity": "P1"
+    },
+    "league8.formal": {
+      "ok": true,
+      "detail": "formal=8 expect=8",
+      "severity": "P1"
+    },
+    "league8.candidate": {
+      "ok": true,
+      "detail": "candidate=0 expect=0",
+      "severity": "P1"
+    },
+    "league8.eventTeam": {
+      "ok": true,
+      "detail": "eventTeam=8 expect=8",
+      "severity": "P1"
+    },
+    "league8.approved_ge_formal": {
+      "ok": true,
+      "detail": "approved=8",
+      "severity": "P1"
+    },
+    "league8.candidate_order": {
+      "ok": true,
+      "detail": "orders=[]",
+      "severity": "P1"
+    },
+    "league8.stages": {
+      "ok": true,
+      "detail": "[('REGULAR', 'ROUND_ROBIN', 1), ('PLAYOFF', 'SINGLE_ELIMINATION', 3)]",
+      "severity": "P1"
+    },
+    "league8.web.draft_hidden": {
+      "ok": true,
+      "detail": "n=0",
+      "severity": "P1"
+    },
+    "league8.rr.28": {
+      "ok": true,
+      "detail": "n=28",
+      "severity": "P1"
+    },
+    "league8.rr.each7": {
+      "ok": true,
+      "detail": "{66: 7, 73: 7, 67: 7, 72: 7, 68: 7, 71: 7, 69: 7, 70: 7}",
+      "severity": "P1"
+    },
+    "league8.rr.played": {
+      "ok": true,
+      "detail": "played=28",
+      "severity": "P1"
+    },
+    "league8.standing": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "league8.playoff.series7": {
+      "ok": true,
+      "detail": "n=7 bos=[3, 3, 3, 3, 5, 5, 7]",
+      "severity": "P1"
+    },
+    "league8.playoff.child29": {
+      "ok": true,
+      "detail": "child=29",
+      "severity": "P1"
+    },
+    "league8.champion": {
+      "ok": true,
+      "detail": "[{'w': 73}]",
+      "severity": "P1"
+    },
+    "league.bo.regular1": {
+      "ok": true,
+      "detail": "{'stageId': '33', 'stageCode': 'REGULAR', 'stageName': '常规赛', 'stageOrder': 1, 'stageType': 'REGULAR', 'stageTypeName': '常规赛', 'competitionFormat': 'ROUND_ROBIN', 'competitionFormatName': '单循环/循环赛', 'executionStatus': 'COMPLETED', 'executionStatusName': '已完成', 'scheduleBatchId': '10', 'publishStatus': 'PUBLISHED', 'structureStatus': 'ACTIVE', 'executionVersion': 0, 'scheduleRevision': 0, 'participantCount': 8, 'qualifiedCount': 8, 'startedTime': '2026-08-15 12:55:23', 'completedTime': '2026-08-15 12:55:29', 'confirmedTime': '2026-08-15 12:55:29', 'nextStageCode': 'PLAYOFF', 'roundRobinCycles': 1, 'bestOf': 1, 'semifinalBestOf': None, 'finalBestOf': None, 'pairingRule': 'NONE', 'seedRule': None, 'drawRule': None, 'byeRule': None, 'advancementCount': 8, 'advancementType': 'OVERALL_TOP_N', 'h",
+      "severity": "P1"
+    },
+    "league8.e2e": {
+      "ok": false,
+      "detail": "OperationalError(1054, \"Unknown column 'round_name' in 'field list'\")",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-LEAGUE8-DRR": {
+      "ok": true,
+      "detail": "apiName=E2E-LEAGUE8-DRR mode=TEAM max=8",
+      "severity": "P1"
+    },
+    "league.drr.56": {
+      "ok": true,
+      "detail": "n=56",
+      "severity": "P1"
+    },
+    "league.drr.swap": {
+      "ok": true,
+      "detail": "swappedPairs=28",
+      "severity": "P1"
+    },
+    "cup8.formal": {
+      "ok": true,
+      "detail": "formal=8 expect=8",
+      "severity": "P1"
+    },
+    "cup8.candidate": {
+      "ok": true,
+      "detail": "candidate=0 expect=0",
+      "severity": "P1"
+    },
+    "cup8.eventTeam": {
+      "ok": true,
+      "detail": "eventTeam=8 expect=8",
+      "severity": "P1"
+    },
+    "cup8.approved_ge_formal": {
+      "ok": true,
+      "detail": "approved=8",
+      "severity": "P1"
+    },
+    "cup8.candidate_order": {
+      "ok": true,
+      "detail": "orders=[]",
+      "severity": "P1"
+    },
+    "cup8.groups.4": {
+      "ok": true,
+      "detail": "n=4",
+      "severity": "P1"
+    },
+    "cup8.group.match4": {
+      "ok": true,
+      "detail": "n=4",
+      "severity": "P1"
+    },
+    "cup8.cross.gen": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "cup8.cross.confirm": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "cup8.resolve": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "cup8.champion": {
+      "ok": true,
+      "detail": "[{'w': 82}, {'w': 85}]",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-OPEN-TEAM": {
+      "ok": true,
+      "detail": "apiName=E2E-OPEN-TEAM mode=TEAM max=8",
+      "severity": "P1"
+    },
+    "open.team.formation0": {
+      "ok": true,
+      "detail": "仅个人报名 Division 支持 Formation",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-CROSS-ARENA-LEAGUE": {
+      "ok": true,
+      "detail": "apiName=E2E-CROSS-ARENA-LEAGUE mode=TEAM max=8",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-CROSS-ISO-A": {
+      "ok": true,
+      "detail": "apiName=E2E-CROSS-ISO-A mode=TEAM max=8",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-CROSS-ISO-B": {
+      "ok": true,
+      "detail": "apiName=E2E-CROSS-ISO-B mode=TEAM max=8",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-CROSS-UNPUB": {
+      "ok": true,
+      "detail": "apiName=E2E-CROSS-UNPUB mode=TEAM max=8",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-CROSS-CANDIDATE": {
+      "ok": true,
+      "detail": "apiName=E2E-CROSS-CANDIDATE mode=TEAM max=8",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-OPEN-PERSONAL": {
+      "ok": true,
+      "detail": "apiName=E2E-OPEN-PERSONAL mode=PERSONAL max=16",
+      "severity": "P1"
+    },
+    "open.personal.temp.no_source": {
+      "ok": true,
+      "detail": "[{'id': 138, 'source_team_id': None, 'captain_member_id': 2099111512000050000, 'team_name_snapshot': '临时队伍 01'}, {'id': 139, 'source_team_id': None, 'captain_member_id': 2099111512000050001, 'team_name_snapshot': '临时队伍 02'}]",
+      "severity": "P1"
+    },
+    "open.personal.temp.captain": {
+      "ok": true,
+      "detail": "pairs=[(2099111512000050000, 2099111512000050000), (2099111512000050001, 2099111512000050001)]",
+      "severity": "P1"
+    },
+    "open.personal.web": {
+      "ok": true,
+      "detail": "public=1",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-CROSS-LEAGUE-ARENA-PERSONAL": {
+      "ok": true,
+      "detail": "apiName=E2E-CROSS-LEAGUE-ARENA-PERSONAL mode=PERSONAL max=8",
+      "severity": "P1"
+    },
+    "cross.league_arena.formation": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "cross.league_arena.se": {
+      "ok": true,
+      "detail": "[('KNOCKOUT', 'SINGLE_ELIMINATION')]",
+      "severity": "P1"
+    },
+    "cross.arena_league.rr_playoff": {
+      "ok": true,
+      "detail": "[('REGULAR', 'ROUND_ROBIN'), ('PLAYOFF', 'SINGLE_ELIMINATION')]",
+      "severity": "P1"
+    },
+    "iso.event_team.disjoint": {
+      "ok": true,
+      "detail": "A={106, 107, 108, 109, 110, 111, 112, 113} B={114, 115, 116, 117, 118, 119, 120, 121}",
+      "severity": "P0"
+    },
+    "iso.series.disjoint": {
+      "ok": true,
+      "detail": "A={'75', '76', '74', '72', '77', '73', '78'} B={'84', '79', '82', '85', '80', '81', '83'}",
+      "severity": "P0"
+    },
+    "unpub.web.hidden": {
+      "ok": true,
+      "detail": "schedule=0 matches=0",
+      "severity": "P0"
+    },
+    "candidate.formal": {
+      "ok": true,
+      "detail": "formal=8 expect=8",
+      "severity": "P1"
+    },
+    "candidate.candidate": {
+      "ok": true,
+      "detail": "candidate=2 expect=2",
+      "severity": "P1"
+    },
+    "candidate.eventTeam": {
+      "ok": true,
+      "detail": "eventTeam=8 expect=8",
+      "severity": "P1"
+    },
+    "candidate.approved_ge_formal": {
+      "ok": true,
+      "detail": "approved=10",
+      "severity": "P1"
+    },
+    "candidate.candidate_order": {
+      "ok": true,
+      "detail": "orders=[1, 2]",
+      "severity": "P1"
+    },
+    "candidate.promote": {
+      "ok": true,
+      "detail": "操作成功",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-OPEN-3V3-SHORT": {
+      "ok": true,
+      "detail": "apiName=E2E-OPEN-3V3-SHORT mode=PERSONAL max=8",
+      "severity": "P1"
+    },
+    "formation.3v3.reject": {
+      "ok": true,
+      "detail": "3V3 至少需要 6 名有效个人才能形成 2 支合法球队",
+      "severity": "P1"
+    },
+    "meta.reload.E2E-OPEN-5V5-SHORT": {
+      "ok": true,
+      "detail": "apiName=E2E-OPEN-5V5-SHORT mode=PERSONAL max=8",
+      "severity": "P1"
+    },
+    "formation.5v5.reject": {
+      "ok": true,
+      "detail": "5V5 至少需要 10 名有效个人才能形成 2 支合法球队",
+      "severity": "P1"
+    }
+  },
+  "bugs": {
+    "P0": [],
+    "P1": [
+      "rule.apply.cup.graph: [('GROUP', None, 'ROUND_ROBIN', None), ('KNOCKOUT', None, 'SINGLE_ELIMINATION', None)]",
+      "league8.e2e: OperationalError(1054, \"Unknown column 'round_name' in 'field list'\")"
+    ],
+    "P2": []
+  },
+  "ids": {
+    "arena10": 22,
+    "drawPreview.39": "{'executionId': '7', 'stageId': '39', 'executionNo': 1, 'seedRule': 'ADMIN_SEED', 'drawRule': 'RANDOM_CONFIRM', 'byeRule': 'SEED_PRIORITY', 'placementRule': None, 'resolutionStatus': None, 'sourceStageId': None, 'hasUnresolvedPlaceholders': False, 'participantResolved': True, 'status': 'DRAFT', 'randomSeed': '-4365612334910170277', 'generatedTime': '2026-08-15 12:55:02', 'confirmedTime': None, 'pa",
+    "league8": 18,
+    "leagueDrr": 23,
+    "cup8": 19,
+    "openTeam": 24,
+    "drawPreview.44": "{'executionId': '9', 'stageId': '44', 'executionNo': 1, 'seedRule': 'NONE', 'drawRule': 'RANDOM_CONFIRM', 'byeRule': 'RANDOM', 'placementRule': None, 'resolutionStatus': None, 'sourceStageId': None, 'hasUnresolvedPlaceholders': False, 'participantResolved': True, 'status': 'DRAFT', 'randomSeed': '2646390814700545916', 'generatedTime': '2026-08-15 12:56:22', 'confirmedTime': None, 'participantCount",
+    "crossAL": 25,
+    "isoA": 26,
+    "isoB": 27,
+    "unpub": 28,
+    "candidate": 29,
+    "openPersonal": 30,
+    "drawPreview.58": "{'executionId': '10', 'stageId': '58', 'executionNo': 1, 'seedRule': 'NONE', 'drawRule': 'RANDOM_CONFIRM', 'byeRule': 'RANDOM', 'placementRule': None, 'resolutionStatus': None, 'sourceStageId': None, 'hasUnresolvedPlaceholders': False, 'participantResolved': True, 'status': 'DRAFT', 'randomSeed': '5560579377075378275', 'generatedTime': '2026-08-15 12:57:36', 'confirmedTime': None, 'participantCoun",
+    "drawPreview.49": "{'executionId': '11', 'stageId': '49', 'executionNo': 1, 'seedRule': 'ADMIN_SEED', 'drawRule': 'RANDOM_CONFIRM', 'byeRule': 'SEED_PRIORITY', 'placementRule': None, 'resolutionStatus': None, 'sourceStageId': None, 'hasUnresolvedPlaceholders': False, 'participantResolved': True, 'status': 'DRAFT', 'randomSeed': '4861366408384785726', 'generatedTime': '2026-08-15 12:57:42', 'confirmedTime': None, 'pa",
+    "drawPreview.51": "{'executionId': '12', 'stageId': '51', 'executionNo': 1, 'seedRule': 'ADMIN_SEED', 'drawRule': 'RANDOM_CONFIRM', 'byeRule': 'SEED_PRIORITY', 'placementRule': None, 'resolutionStatus': None, 'sourceStageId': None, 'hasUnresolvedPlaceholders': False, 'participantResolved': True, 'status': 'DRAFT', 'randomSeed': '629725592283686661', 'generatedTime': '2026-08-15 12:57:42', 'confirmedTime': None, 'par",
+    "drawPreview.53": "{'executionId': '13', 'stageId': '53', 'executionNo': 1, 'seedRule': 'ADMIN_SEED', 'drawRule': 'RANDOM_CONFIRM', 'byeRule': 'SEED_PRIORITY', 'placementRule': None, 'resolutionStatus': None, 'sourceStageId': None, 'hasUnresolvedPlaceholders': False, 'participantResolved': True, 'status': 'DRAFT', 'randomSeed': '-3339103383083428954', 'generatedTime': '2026-08-15 12:57:44', 'confirmedTime': None, 'p"
+  },
+  "invariants": {
+    "arena10": {
+      "currentRule": 1,
+      "currentRoster": 1,
+      "currentStructure": 1,
+      "formal": 10,
+      "candidate": 0,
+      "eventTeam": 10,
+      "matchSeries": 9,
+      "match": 33,
+      "publishRecord": 1
+    },
+    "league8": {
+      "currentRule": 1,
+      "currentRoster": 1,
+      "currentStructure": 2,
+      "formal": 8,
+      "candidate": 0,
+      "eventTeam": 8,
+      "matchSeries": 7,
+      "match": 57,
+      "publishRecord": 2
+    },
+    "leagueDrr": {
+      "currentRule": 1,
+      "currentRoster": 1,
+      "currentStructure": 1,
+      "formal": 8,
+      "candidate": 0,
+      "eventTeam": 8,
+      "matchSeries": 0,
+      "match": 56,
+      "publishRecord": 0
+    },
+    "cup8": {
+      "currentRule": 1,
+      "currentRoster": 1,
+      "currentStructure": 2,
+      "formal": 8,
+      "candidate": 0,
+      "eventTeam": 8,
+      "matchSeries": 7,
+      "match": 31,
+      "publishRecord": 2
+    },
+    "openTeam": {
+      "currentRule": 1,
+      "currentRoster": 1,
+      "currentStructure": 1,
+      "formal": 8,
+      "candidate": 0,
+      "eventTeam": 8,
+      "matchSeries": 7,
+      "match": 27,
+      "publishRecord": 1
+    },
+    "openPersonal": {
+      "currentRule": 1,
+      "currentRoster": 1,
+      "currentStructure": 1,
+      "formal": 0,
+      "candidate": 0,
+      "eventTeam": 2,
+      "matchSeries": 1,
+      "match": 5,
+      "publishRecord": 1
+    },
+    "crossLA": {
+      "currentRule": 1,
+      "currentRoster": 1,
+      "currentStructure": 0,
+      "formal": 0,
+      "candidate": 0,
+      "eventTeam": 2,
+      "matchSeries": 0,
+      "match": 0,
+      "publishRecord": 0
+    }
+  },
+  "matrix": {},
+  "fixes": [],
+  "endedAt": "2026-08-15T12:57:47",
+  "round": 2
+}

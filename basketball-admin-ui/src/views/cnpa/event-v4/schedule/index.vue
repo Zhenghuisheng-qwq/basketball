@@ -55,13 +55,15 @@ const hasStaleStructure = computed(() => (overview.value?.stages || []).some(s =
 const currentStage = computed(() => (overview.value?.stages || []).find(s => String(s.stageId) === activeStageId.value))
 const boardStage = computed(() => stageRows.value.find(s => String(s.stageId) === activeStageId.value) || currentStage.value as BasketDivisionStageExecutionVo)
 
-watch(() => overview.value?.stages, (stages) => {
+watch([() => overview.value?.stages, divisionId], ([stages]) => {
+  if (!divisionId.value) {
+    stageRows.value = []
+    return
+  }
   if (stages?.length && !stages.some(s => String(s.stageId) === activeStageId.value)) {
     activeStageId.value = String(stages[0].stageId)
   }
-  if (divisionId.value) {
-    listV4StageExecution(divisionId.value).then(res => { stageRows.value = res.data || [] })
-  }
+  listV4StageExecution(divisionId.value).then(res => { stageRows.value = res.data || [] })
 }, { immediate: true })
 
 function onStageChange() {

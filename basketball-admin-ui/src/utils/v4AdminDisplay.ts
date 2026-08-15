@@ -2636,7 +2636,7 @@ export function v4StandardTemplateBoSummary(
     return readTemplateOptionDefault(options, key) || fallback
   }
   if (templateCode === 'LEAGUE_STANDARD_V1') {
-    return `常规赛 BO${pick('regularBestOf', '1')} · 淘汰赛 BO${pick('knockoutBestOf', '3')}/${pick('semifinalBestOf', '5')}/${pick('finalBestOf', '5')}`
+    return `常规赛 BO${pick('regularBestOf', '1')} · 淘汰赛 BO${pick('knockoutBestOf', '3')}/${pick('semifinalBestOf', '5')}/${pick('finalBestOf', '7')}`
   }
   if (templateCode === 'CUP_STANDARD_V1') {
     return `小组 BO${pick('regularBestOf', '1')} · 淘汰赛 BO${pick('knockoutBestOf', '3')}/${pick('semifinalBestOf', '5')}/${pick('finalBestOf', '5')}`

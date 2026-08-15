@@ -70,7 +70,11 @@
                 </span>
               </el-tooltip>
               <el-button link type="warning" v-if="canResolvePlaceholders(scope.row)" @click="doResolveFromList(scope.row)">解析占位</el-button>
-              <el-button link type="success" v-if="canGenerate(scope.row)" @click="handleStageGenerate(scope.row)">生成</el-button>
+              <el-tooltip v-if="showGenerateAction(scope.row)" :disabled="!generateBlockReason(scope.row)" :content="generateBlockReason(scope.row)" placement="top">
+                <span>
+                  <el-button link type="success" :disabled="!!generateBlockReason(scope.row)" @click="handleStageGenerate(scope.row)">生成</el-button>
+                </span>
+              </el-tooltip>
               <el-button link type="warning" v-if="scope.row.executionStatus === 'SCHEDULE_GENERATED'" @click="handleStageCancel(scope.row)">作废</el-button>
               <el-button
                 link type="warning"
@@ -365,10 +369,27 @@ function teamOptionLabel(t: StageTeamItemVo) {
   return t.seedNo != null ? `#${t.seedNo} ${t.teamName}` : (t.teamName || String(t.eventTeamId))
 }
 
-function canGenerate(row: BasketDivisionStageExecutionVo) {
-  if (!ruleLocked.value || !rosterLocked.value) return false
-  if (overview.value?.capabilities && overview.value.capabilities.canGenerateStructure === false) return false
+function generateBlockReason(row: BasketDivisionStageExecutionVo) {
+  if (!ruleLocked.value) return '规则未锁定'
+  if (!rosterLocked.value) return '名单未锁定'
+  const formal = overview.value?.roster?.formalCount
+  if (formal != null && formal < 2) return '正式参赛单位不足'
+  const stageCap = overview.value?.stages?.find(s => s.stageId === row.stageId)?.capabilities
+  if (stageCap && stageCap.canGenerateStructure === false) {
+    return stageCap.blockReason || '当前不能生成赛程结构'
+  }
+  if (overview.value?.capabilities && overview.value.capabilities.canGenerateStructure === false) {
+    return overview.value.capabilities.blockReason || '当前不能生成赛程结构'
+  }
+  return ''
+}
+
+function showGenerateAction(row: BasketDivisionStageExecutionVo) {
   return ['READY', 'DRAFT', 'SCHEDULE_GENERATED'].includes(row.executionStatus || '') && row.competitionFormat !== 'DOUBLE_ELIMINATION'
+}
+
+function canGenerate(row: BasketDivisionStageExecutionVo) {
+  return showGenerateAction(row) && !generateBlockReason(row)
 }
 
 function previousGroupStage(row?: BasketDivisionStageExecutionVo | null) {
@@ -446,6 +467,11 @@ function handleStagePreview(row: BasketDivisionStageExecutionVo) {
 }
 
 function handleStageGenerate(row: BasketDivisionStageExecutionVo) {
+  const reason = generateBlockReason(row)
+  if (reason) {
+    ElMessage.warning(reason)
+    return
+  }
   ElMessageBox.confirm('确认生成该阶段草稿赛程？', '提示').then(() => {
     generateV4StageSchedule(row.stageId).then(res => {
       ElMessage.success('生成成功，批次ID=' + res.data)

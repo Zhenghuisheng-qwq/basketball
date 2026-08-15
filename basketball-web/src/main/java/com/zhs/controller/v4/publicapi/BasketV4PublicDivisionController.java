@@ -3,6 +3,7 @@ package com.zhs.controller.v4.publicapi;
 import com.zhs.common.NoLoginRequest;
 import com.zhs.response.v4.publicapi.V4PublicDivisionDetailResp;
 import com.zhs.response.v4.publicapi.V4PublicDivisionListItemResp;
+import com.zhs.response.v4.publicapi.V4PublicScheduleItemResp;
 import com.zhs.service.v4.IBasketV4PublicService;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
@@ -35,5 +36,11 @@ public class BasketV4PublicDivisionController {
     @GetMapping("/{divisionId}")
     public R<V4PublicDivisionDetailResp> getDivisionDetail(@PathVariable Long divisionId) {
         return R.ok(v4PublicService.getDivisionDetail(divisionId));
+    }
+
+    @ApiOperation("公开赛程：BO1=MATCH，BO3/5/7=MATCH_SERIES")
+    @GetMapping("/{divisionId}/schedule")
+    public R<List<V4PublicScheduleItemResp>> listDivisionSchedule(@PathVariable Long divisionId) {
+        return R.ok(v4PublicService.listDivisionSchedule(divisionId));
     }
 }

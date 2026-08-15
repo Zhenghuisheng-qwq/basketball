@@ -31,4 +31,6 @@ public class BasketV4MatchListVo {
     private Long stageId;
     private Long seriesId;
     private Integer seriesGameNo;
+    private String seriesCode;
+    private Integer bestOf;
 }

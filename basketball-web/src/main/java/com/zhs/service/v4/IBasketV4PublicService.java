@@ -37,6 +37,8 @@ public interface IBasketV4PublicService {
 
     V4PublicMatchSeriesDetailResp getMatchSeriesDetail(Long seriesId);
 
+    List<V4PublicScheduleItemResp> listDivisionSchedule(Long divisionId);
+
     List<V4PublicTeamStatItemResp> listTeamStat(Long divisionId);
 
     List<V4PublicPlayerStatItemResp> listPlayerStat(Long divisionId);

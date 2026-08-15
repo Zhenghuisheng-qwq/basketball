@@ -32,6 +32,22 @@ class DivisionOperationCapabilityR8Test {
     }
 
     @Test
+    void pairingReadyWithoutStructure_isPendingGenerate() {
+        StageOperationCapabilities cap = DivisionOperationCapabilitySupport.stageCapabilities(
+                true, true, null, "DRAFT", 0, false, true, true, false);
+        assertTrue(cap.isCanGenerateStructure());
+        assertEquals("待生成", cap.getBlockReason());
+    }
+
+    @Test
+    void pairingNotReady_blocksGenerateWithSpecificReason() {
+        StageOperationCapabilities cap = DivisionOperationCapabilitySupport.stageCapabilities(
+                true, true, null, "DRAFT", 0, false, false, "Draw 未确认", true, false);
+        assertFalse(cap.isCanGenerateStructure());
+        assertEquals("Draw 未确认", cap.getBlockReason());
+    }
+
+    @Test
     void staleStructureBlocksScheduleAndPublish() {
         StageOperationCapabilities cap = DivisionOperationCapabilitySupport.stageCapabilities(
                 true, true, "STALE", "DRAFT", 0, true, true, true, false);

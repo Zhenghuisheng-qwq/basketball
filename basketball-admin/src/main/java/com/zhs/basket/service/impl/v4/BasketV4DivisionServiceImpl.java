@@ -285,7 +285,12 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
             throw new ServiceException("报名开放后不允许修改 registrationMode");
         }
         if (req.getFormatTemplateId() != null && !req.getFormatTemplateId().equals(division.getFormatTemplateId())) {
-            throw new ServiceException("已锁定规则后不允许更换模板");
+            BasketDivisionFormatSnapshot current = snapshotMapper.selectActiveByDivisionId(division.getId());
+            if (current != null && current.getSourceTemplateId() != null) {
+                division.setFormatTemplateId(current.getSourceTemplateId());
+            } else {
+                throw new ServiceException("已锁定规则后不允许更换模板");
+            }
         }
         if (req.getLineupMinCount() != null && !req.getLineupMinCount().equals(division.getLineupMinCount())) {
             throw new ServiceException("报名开放后不允许修改 lineupMinCount");

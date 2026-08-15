@@ -83,6 +83,21 @@ public final class DivisionOperationCapabilitySupport {
             boolean pairingConfirmedOrNotRequired,
             boolean qualificationReady,
             boolean doubleElimination) {
+        return stageCapabilities(ruleLocked, rosterReady, structureStatus, publishStatus, unscheduledUnits,
+                canRecommend, pairingConfirmedOrNotRequired, null, qualificationReady, doubleElimination);
+    }
+
+    public static StageOperationCapabilities stageCapabilities(
+            boolean ruleLocked,
+            boolean rosterReady,
+            String structureStatus,
+            String publishStatus,
+            Integer unscheduledUnits,
+            boolean canRecommend,
+            boolean pairingConfirmedOrNotRequired,
+            String pairingBlockReason,
+            boolean qualificationReady,
+            boolean doubleElimination) {
         StageOperationCapabilities cap = new StageOperationCapabilities();
         boolean published = PublishStatusEnum.PUBLISHED.getCode().equals(publishStatus);
         boolean stale = StructureStatusEnum.STALE.getCode().equals(structureStatus);
@@ -106,23 +121,25 @@ public final class DivisionOperationCapabilitySupport {
             cap.setBlockReason("等待小组赛排名确认");
             return cap;
         }
-        cap.setCanGenerateStructure(!published && pairingConfirmedOrNotRequired);
+        if (!pairingConfirmedOrNotRequired) {
+            cap.setCanGenerateStructure(false);
+            cap.setBlockReason(pairingBlockReason == null || pairingBlockReason.isEmpty()
+                    ? "抽签尚未确认" : pairingBlockReason);
+            return cap;
+        }
+        cap.setCanGenerateStructure(!published);
         if (stale) {
             cap.setBlockReason(MSG_STRUCTURE_STALE);
             cap.setCanGenerateStructure(true);
             return cap;
         }
         if (!hasStructure) {
-            cap.setBlockReason(MSG_STRUCTURE_MISSING);
+            cap.setBlockReason("待生成");
             return cap;
         }
         if (published) {
             cap.setCanWithdraw(true);
             cap.setBlockReason(MSG_PUBLISHED_READONLY);
-            return cap;
-        }
-        if (!pairingConfirmedOrNotRequired) {
-            cap.setBlockReason("抽签尚未确认");
             return cap;
         }
         cap.setCanEditSchedule(active);

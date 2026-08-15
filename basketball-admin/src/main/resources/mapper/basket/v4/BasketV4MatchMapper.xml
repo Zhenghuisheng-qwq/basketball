@@ -49,6 +49,8 @@
         <result property="stageId" column="stage_id" />
         <result property="seriesId" column="series_id" />
         <result property="seriesGameNo" column="series_game_no" />
+        <result property="seriesCode" column="series_code" />
+        <result property="bestOf" column="best_of" />
         <result property="matchTime" column="match_time" />
         <result property="homeEventTeamId" column="home_event_team_id" />
         <result property="homeTeamName" column="home_team_name" />
@@ -80,6 +82,8 @@
             m.stage_id,
             m.series_id,
             m.series_game_no,
+            ms.series_code,
+            ms.best_of,
             m.match_time,
             m.home_event_team_id,
             ht.team_name_snapshot as home_team_name,
@@ -96,6 +100,7 @@
         left join basket_division d on d.id = m.division_id and d.is_delete = 0
         left join basket_event_team ht on ht.id = m.home_event_team_id and ht.is_delete = 0
         left join basket_event_team at on at.id = m.away_event_team_id and at.is_delete = 0
+        left join basket_match_series ms on ms.id = m.series_id and ms.is_delete = 0
         where m.is_delete = 0
     </sql>
 

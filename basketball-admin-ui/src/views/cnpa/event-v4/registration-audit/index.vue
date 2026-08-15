@@ -224,7 +224,7 @@
       </el-tab-pane>
 
       <!-- 个人组队结果 -->
-      <el-tab-pane v-if="!inWorkspace || workspaceMode === 'PERSONAL'" label="Formation 临时组队" name="formation">
+      <el-tab-pane v-if="workspaceMode === 'PERSONAL'" label="Formation 临时组队" name="formation">
         <el-form :model="drawQuery" :inline="true" class="mb8">
           <el-form-item v-if="!inWorkspace" label="赛季">
             <el-select v-model="drawSeasonId" clearable filterable placeholder="选择赛季" style="width: 200px" @change="onDrawSeasonChange">
@@ -946,7 +946,7 @@ function otherFormationMembers(personalRegistrationId?: number) {
 }
 
 function canLoadFormation() {
-  return inWorkspace.value ? auditLoads.value.loadFormation : true
+  return auditLoads.value.loadFormation
 }
 
 function loadFormationWorkspace() {

@@ -14,4 +14,6 @@ public interface BasketV4MatchSeriesMapper {
     BasketMatchSeries selectById(@Param("id") Long id);
 
     List<BasketMatchSeries> selectByStageId(@Param("stageId") Long stageId);
+
+    List<BasketMatchSeries> selectByDivisionId(@Param("divisionId") Long divisionId);
 }

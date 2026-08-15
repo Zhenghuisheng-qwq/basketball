@@ -52,12 +52,22 @@
       v-if="viewMode === 'series'"
       ref="seriesPanelRef"
       :stage-id="seriesStageId"
+      :division-id="query.divisionId"
       @open-match="openEditById"
     />
 
     <el-table v-if="viewMode === 'match'" v-loading="loading" :data="list" border>
       <el-table-column label="比赛ID" prop="id" width="80" />
       <el-table-column label="轮次" prop="roundNo" width="60" align="center" />
+      <el-table-column label="Series Code" prop="seriesCode" min-width="160">
+        <template #default="scope">{{ scope.row.seriesCode || '-' }}</template>
+      </el-table-column>
+      <el-table-column label="BO" width="70" align="center">
+        <template #default="scope">{{ scope.row.bestOf ? `BO${scope.row.bestOf}` : '-' }}</template>
+      </el-table-column>
+      <el-table-column label="Game No" width="90" align="center">
+        <template #default="scope">{{ scope.row.seriesGameNo ? `Game ${scope.row.seriesGameNo}` : '-' }}</template>
+      </el-table-column>
       <el-table-column label="比赛编号" prop="matchNo" min-width="130" />
       <el-table-column label="比赛时间" prop="matchTime" width="160" />
       <el-table-column label="主队" prop="homeTeamName" min-width="100" />
@@ -168,15 +178,25 @@ const forfeitRow = ref<any>()
 const forfeitLoserId = ref<number>()
 const forfeitReason = ref('')
 
+watch(viewMode, () => {
+  if (viewMode.value === 'series') {
+    seriesPanelRef.value?.reload()
+  }
+})
+
 watch(() => query.divisionId, async (divisionId) => {
   seriesStageId.value = undefined
   stageOptions.value = []
   if (!divisionId) return
   const res = await listV4StageExecution(divisionId)
-  stageOptions.value = (res.data || []).map((s: any) => ({ id: s.id, stageName: s.stageName }))
-  if (stageOptions.value.length === 1) {
-    seriesStageId.value = stageOptions.value[0].id
-  }
+  stageOptions.value = (res.data || []).map((s: any) => ({
+    id: s.stageId ?? s.id,
+    stageName: s.stageName,
+    stageType: s.stageType,
+    bestOf: s.bestOf
+  }))
+  const knockout = stageOptions.value.find((s: any) => s.stageType === 'KNOCKOUT' || (s.bestOf && s.bestOf > 1))
+  seriesStageId.value = (knockout || stageOptions.value[0])?.id
 })
 
 function formatDivisionLabel(item: V4AdminOptionVo) {

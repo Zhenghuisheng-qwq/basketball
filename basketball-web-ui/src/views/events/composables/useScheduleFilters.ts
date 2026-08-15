@@ -1,5 +1,6 @@
 import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
-import { getV4PublicMatchList, getV4PublicStanding } from '@/api/v4Public'
+import { getV4PublicDivisionSchedule, getV4PublicMatchList, getV4PublicStanding } from '@/api/v4Public'
+import type { V4PublicScheduleItem } from '@/api/types/v4Public'
 import { v4MatchToLegacyShape, v4StandingToPublic } from '../utils/v4PublicAdapters'
 import type { PublicStandingItemVo } from '@/api/types/public'
 import {
@@ -19,17 +20,22 @@ type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 export function useScheduleFilters() {
   const ctx = inject<SeasonContext>('publicSeasonContext')!
 
-  const selectedDate = ref(formatDateKey(new Date()))
+  const selectedDate = ref('')
   const selectedTeamId = ref<number | null>(null)
-  const currentWeek = ref(getWeekNumber(selectedDate.value))
+  const currentWeek = ref(getWeekNumber(formatDateKey(new Date())))
   const isCalendarOpen = ref(false)
   const isTeamSelectorOpen = ref(false)
 
   const matches = ref<Match[]>([])
+  const scheduleItems = ref<V4PublicScheduleItem[]>([])
   const teams = ref<PublicStandingItemVo[]>([])
   const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
   const errorMessage = ref('')
   let reqId = 0
+
+  const hasSeriesItems = computed(() =>
+    scheduleItems.value.some((item) => item.unitType === 'MATCH_SERIES'),
+  )
 
   const seasonOptions = computed(() =>
     ctx.seasons.value.map((item) => ({
@@ -52,13 +58,36 @@ export function useScheduleFilters() {
 
   const filteredMatches = computed<Match[]>(() => {
     return matches.value.filter((match) => {
-      const dateMatch = !selectedDate.value || match.date === selectedDate.value
+      const dateMatch = !selectedDate.value || !match.date || match.date === selectedDate.value
       const teamMatch =
         selectedTeamId.value === null ||
         teamIdToNumeric(match.homeTeamKey) === selectedTeamId.value ||
         teamIdToNumeric(match.awayTeamKey) === selectedTeamId.value
       return dateMatch && teamMatch
     })
+  })
+
+  const filteredScheduleItems = computed(() => {
+    return scheduleItems.value.filter((item) => {
+      const itemDate = item.scheduleDate || ''
+      const dateMatch = !selectedDate.value || !itemDate || itemDate === selectedDate.value
+      const teamMatch =
+        selectedTeamId.value === null ||
+        teamIdToNumeric(String(item.homeEventTeamId || '')) === selectedTeamId.value ||
+        teamIdToNumeric(String(item.awayEventTeamId || '')) === selectedTeamId.value
+      return dateMatch && teamMatch
+    })
+  })
+
+  const scheduleByRound = computed(() => {
+    const map = new Map<string, V4PublicScheduleItem[]>()
+    for (const item of filteredScheduleItems.value) {
+      const key = item.roundName || (item.roundNo != null ? `R${item.roundNo}` : '赛程')
+      const list = map.get(key) ?? []
+      list.push(item)
+      map.set(key, list)
+    }
+    return Array.from(map.entries())
   })
 
   function resolveCalendarBaseDate(): string {
@@ -143,15 +172,16 @@ export function useScheduleFilters() {
     const divisionId = ctx.divisionId.value
     if (!divisionId) {
       matches.value = []
+      scheduleItems.value = []
       teams.value = []
       state.value = 'empty'
-      applyCalendarBaseDate(true)
       return
     }
     state.value = 'loading'
     errorMessage.value = ''
     try {
-      const [scheduleRes, standingRes] = await Promise.all([
+      const [scheduleRes, matchRes, standingRes] = await Promise.all([
+        getV4PublicDivisionSchedule(divisionId),
         getV4PublicMatchList({
           divisionId,
           eventTeamId: resolveEventTeamId(selectedTeamId.value),
@@ -160,19 +190,25 @@ export function useScheduleFilters() {
       ])
       if (current !== reqId) return
       const seasonName = ctx.currentSeason.value?.seasonName || ''
-      matches.value = (scheduleRes.data ?? []).map((item) =>
+      scheduleItems.value = scheduleRes.data ?? []
+      matches.value = (matchRes.data ?? []).map((item) =>
         toScheduleMatch(v4MatchToLegacyShape(item) as any, seasonName),
       )
       teams.value = (standingRes.data ?? []).map((row) =>
         v4StandingToPublic(row, ctx.seasonId.value),
       )
 
-      applyCalendarBaseDate(Boolean(options?.resetDate))
+      if (!hasSeriesItems.value && Boolean(options?.resetDate)) {
+        applyCalendarBaseDate(true)
+      } else if (hasSeriesItems.value && Boolean(options?.resetDate)) {
+        selectedDate.value = ''
+      }
 
-      state.value = matches.value.length ? 'success' : 'empty'
+      state.value = (scheduleItems.value.length || matches.value.length) ? 'success' : 'empty'
     } catch (err) {
       if (current !== reqId) return
       matches.value = []
+      scheduleItems.value = []
       state.value = 'error'
       errorMessage.value = err instanceof Error ? err.message : '加载赛程失败'
       applyCalendarBaseDate(true)
@@ -208,6 +244,9 @@ export function useScheduleFilters() {
     isCalendarOpen,
     isTeamSelectorOpen,
     filteredMatches,
+    filteredScheduleItems,
+    scheduleByRound,
+    hasSeriesItems,
     teamOptions,
     state,
     errorMessage,

@@ -22,11 +22,21 @@ export interface BasketMatchSeriesGameVo {
 export interface BasketMatchSeriesDetailVo {
   id?: number
   seriesCode?: string
+  seasonId?: number
+  seasonName?: string
   divisionId?: number
+  divisionName?: string
   stageId?: number
   stageName?: string
   roundNo?: number
+  roundName?: string
   bracketSlot?: number
+  scheduledDate?: string
+  scheduledStartTime?: string
+  publishStatus?: string
+  publishStatusName?: string
+  gamesPlayed?: number
+  seriesScore?: string
   homeEventTeamId?: number
   homeTeamName?: string
   awayEventTeamId?: number
@@ -54,6 +64,10 @@ export function getV4MatchSeries(id: number): Promise<AjaxResult<BasketMatchSeri
 
 export function listV4MatchSeriesByStage(stageId: number): Promise<AjaxResult<BasketMatchSeriesDetailVo[]>> {
   return request({ url: `/basket/v4/match-series/stage/${stageId}`, method: 'get' })
+}
+
+export function listV4MatchSeriesByDivision(divisionId: number): Promise<AjaxResult<BasketMatchSeriesDetailVo[]>> {
+  return request({ url: `/basket/v4/match-series/division/${divisionId}`, method: 'get' })
 }
 
 export function getV4MatchSeriesContextByMatch(matchId: number): Promise<AjaxResult<BasketMatchSeriesDetailVo>> {

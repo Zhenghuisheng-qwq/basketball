@@ -77,6 +77,13 @@ class StageSchedulePrerequisiteValidatorR9Test {
     }
 
     @Test
+    void legacyOpenRegistration_stillBlockedByOldGuard() {
+        division.setDivisionStatus("REGISTRATION_OPEN");
+        assertThrows(com.zhs.common.exception.ServiceException.class,
+                () -> validator.validateBeforeGenerateSchedule(division, stage, true));
+    }
+
+    @Test
     void legacyTeam_stillRequiresApprovedEqualsEventTeam() {
         when(rosterVersionMapper.selectCurrentLockedByDivisionId(3L)).thenReturn(null);
         when(eventTeamMapper.countActiveByDivisionId(3L)).thenReturn(8);

@@ -40,6 +40,16 @@ class WinnerOfSeriesAdvanceSupportTest {
     @InjectMocks private WinnerOfSeriesAdvanceSupport support;
 
     @Test
+    void incompleteSeries_doesNotAdvanceOnSingleGameWinner() {
+        BasketMatchSeries qf = new BasketMatchSeries();
+        qf.setId(11L);
+        qf.setWinnerEventTeamId(null);
+        qf.setSeriesStatus(MatchSeriesStatusEnum.RUNNING.getCode());
+        support.advanceIfCompleted(qf);
+        verify(matchSeriesMapper, never()).selectBySourceSeriesId(any());
+    }
+
+    @Test
     void firstResolve_fillsNextRound_keepsSchedule() {
         BasketMatchSeries qf = completed(11L, 100L);
         BasketMatchSeries sf = nextRound(21L, 11L, null);
