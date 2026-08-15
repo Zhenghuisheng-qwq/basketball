@@ -3,7 +3,9 @@ package com.zhs.basket.service.v4;
 import com.zhs.basket.dto.v4.ScheduleAssignReq;
 import com.zhs.basket.dto.v4.ScheduleBatchAssignReq;
 import com.zhs.basket.dto.v4.ScheduleRecommendApplyReq;
+import com.zhs.basket.dto.v4.ScheduleRescheduleReq;
 import com.zhs.basket.vo.v4.ScheduleRecommendationPreviewVo;
+import com.zhs.basket.vo.v4.StagePublishRecordVo;
 import com.zhs.basket.vo.v4.StageScheduleBoardVo;
 import com.zhs.basket.vo.v4.StageScheduleSummaryVo;
 
@@ -22,4 +24,6 @@ public interface IStageScheduleApplicationService {
     ScheduleRecommendationPreviewVo previewRecommend(Long stageId, boolean overwriteScheduled);
 
     void applyRecommend(Long stageId, ScheduleRecommendApplyReq req);
+
+    StagePublishRecordVo reschedule(Long stageId, ScheduleRescheduleReq req);
 }

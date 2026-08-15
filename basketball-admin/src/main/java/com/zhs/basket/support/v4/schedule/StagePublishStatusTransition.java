@@ -37,6 +37,12 @@ public final class StagePublishStatusTransition {
             }
             throw new ServiceException("仅已发布赛段可以撤回");
         }
+        if (action == StagePublishActionTypeEnum.SCHEDULE_ADJUST) {
+            if (current == PublishStatusEnum.PUBLISHED) {
+                return PublishStatusEnum.PUBLISHED;
+            }
+            throw new ServiceException("仅已发布赛段可以调整比赛时间");
+        }
         throw new ServiceException("未知发布动作");
     }
 

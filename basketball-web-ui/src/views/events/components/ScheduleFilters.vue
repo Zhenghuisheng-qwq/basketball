@@ -73,6 +73,21 @@ watch(
         </select>
       </label>
 
+      <label v-if="(ctx.seasonDetail.value?.divisions || []).length > 1" class="filter-item">
+        <select
+          :value="ctx.divisionId.value"
+          @change="ctx.selectDivision(($event.target as HTMLSelectElement).value)"
+        >
+          <option
+            v-for="division in ctx.seasonDetail.value?.divisions || []"
+            :key="division.divisionId"
+            :value="division.divisionId"
+          >
+            {{ division.divisionName || division.platformCode || division.divisionId }}
+          </option>
+        </select>
+      </label>
+
       <button
         type="button"
         class="filter-btn"

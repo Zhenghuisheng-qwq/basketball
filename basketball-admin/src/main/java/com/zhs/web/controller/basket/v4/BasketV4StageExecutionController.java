@@ -5,6 +5,7 @@ import com.zhs.basket.dto.v4.BasketStageManualRankReq;
 import com.zhs.basket.dto.v4.ScheduleAssignReq;
 import com.zhs.basket.dto.v4.ScheduleBatchAssignReq;
 import com.zhs.basket.dto.v4.ScheduleRecommendApplyReq;
+import com.zhs.basket.dto.v4.ScheduleRescheduleReq;
 import com.zhs.basket.dto.v4.StageExternalRankingReq;
 import com.zhs.basket.dto.v4.StageManualSlotReq;
 import com.zhs.basket.dto.v4.StagePairingSeedReq;
@@ -220,6 +221,13 @@ public class BasketV4StageExecutionController extends BaseController {
     public AjaxResult batchAssignSchedule(@PathVariable Long stageId, @RequestBody ScheduleBatchAssignReq req) {
         stageScheduleApplicationService.batchAssign(stageId, req);
         return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")
+    @Log(title = "V4 StageScheduleAdjust", businessType = BusinessType.UPDATE)
+    @PostMapping("/{stageId}/schedule/reschedule")
+    public AjaxResult rescheduleSchedule(@PathVariable Long stageId, @RequestBody ScheduleRescheduleReq req) {
+        return success(stageScheduleApplicationService.reschedule(stageId, req));
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_GENERATE + "')")

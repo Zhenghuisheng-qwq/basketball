@@ -265,6 +265,7 @@ export interface ScheduleUnitView {
   participantResolutionStatus?: string
   publishStatus?: string
   canEditSchedule?: boolean
+  canAdjustSchedule?: boolean
   required?: boolean
   matchStatus?: string
   seriesStatus?: string
@@ -345,6 +346,10 @@ export function getV4StageScheduleSummary(stageId: number) {
 
 export function assignV4StageSchedule(stageId: number, data: { unitType: string; unitId: number; scheduledDate: string; scheduledStartTime: string }) {
   return request({ url: `/basket/v4/admin/stages/${stageId}/schedule/assign`, method: 'post', data })
+}
+
+export function rescheduleV4StageSchedule(stageId: number, data: { unitType: string; unitId: number; scheduledDate: string; scheduledStartTime: string; reason: string }) {
+  return request({ url: `/basket/v4/admin/stages/${stageId}/schedule/reschedule`, method: 'post', data })
 }
 
 export function batchAssignV4StageSchedule(stageId: number, data: { scheduledDate: string; scheduledStartTime: string; roundNo?: number; items?: Array<{ unitType: string; unitId: number }> }) {

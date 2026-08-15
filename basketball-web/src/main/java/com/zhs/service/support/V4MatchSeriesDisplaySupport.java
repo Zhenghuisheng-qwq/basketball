@@ -74,8 +74,19 @@ public class V4MatchSeriesDisplaySupport {
         if (divisionId == null) {
             return List.of();
         }
-        List<BasketMatchSeries> seriesList = matchSeriesMapper.selectByDivisionId(divisionId);
         List<V4PublicStageItemResp> stages = publicStageMapper.selectStagesByDivisionId(divisionId);
+        List<BasketMatchSeries> seriesList = new ArrayList<>();
+        if (!CollectionUtils.isEmpty(stages)) {
+            for (V4PublicStageItemResp stage : stages) {
+                if (stage == null || stage.getStageId() == null) {
+                    continue;
+                }
+                List<BasketMatchSeries> part = matchSeriesMapper.selectByStageId(stage.getStageId());
+                if (!CollectionUtils.isEmpty(part)) {
+                    seriesList.addAll(part);
+                }
+            }
+        }
         Map<Long, V4PublicStageItemResp> stageMap = new HashMap<>();
         Map<Long, Integer> maxRoundByStage = new HashMap<>();
         if (!CollectionUtils.isEmpty(stages)) {
@@ -372,8 +383,8 @@ public class V4MatchSeriesDisplaySupport {
         }
         item.setGamesPlayed(gamesPlayed);
         item.setGameProgress(gamesPlayed + "/" + (series.getBestOf() == null ? 0 : series.getBestOf()));
-        item.setScheduleDate(series.getScheduledDate());
-        item.setStartTime(series.getScheduledStartTime());
+        item.setScheduleDate(formatScheduleDate(series.getScheduledDate()));
+        item.setStartTime(formatScheduleTime(series.getScheduledStartTime()));
         item.setStatus(series.getSeriesStatus());
         item.setStatusName(detail.getSeriesStatusName());
         item.setPlaceholderSource(joinPlaceholderSource(series.getHomeSourceType(), series.getAwaySourceType()));
@@ -398,7 +409,7 @@ public class V4MatchSeriesDisplaySupport {
             Set<Long> ids = new HashSet<>();
             if (item.getHomeEventTeamId() != null) ids.add(item.getHomeEventTeamId());
             if (item.getAwayEventTeamId() != null) ids.add(item.getAwayEventTeamId());
-            List<BasketEventTeam> teams = eventTeamDao.selectBatchIds(ids);
+            List<BasketEventTeam> teams = eventTeamDao.selectByIds(ids);
             Map<Long, BasketEventTeam> map = new HashMap<>();
             if (teams != null) {
                 for (BasketEventTeam team : teams) {
@@ -426,10 +437,11 @@ public class V4MatchSeriesDisplaySupport {
         item.setSeriesScore(null);
         item.setGameProgress(null);
         if (match.getMatchTime() != null) {
-            java.time.LocalDateTime ldt = java.time.LocalDateTime.ofInstant(
-                    match.getMatchTime().toInstant(), java.time.ZoneId.of("Asia/Shanghai"));
-            item.setScheduleDate(ldt.toLocalDate());
-            item.setStartTime(ldt.toLocalTime());
+            java.time.LocalDateTime ldt = toShanghaiDateTime(match.getMatchTime());
+            if (ldt != null) {
+                item.setScheduleDate(formatScheduleDate(ldt.toLocalDate()));
+                item.setStartTime(formatScheduleTime(ldt.toLocalTime()));
+            }
         }
         item.setStatus(match.getMatchStatus());
         item.setStatusName(matchStatusLabel(match.getMatchStatus()));
@@ -539,5 +551,30 @@ public class V4MatchSeriesDisplaySupport {
         } catch (Exception ex) {
             return status;
         }
+    }
+
+    private String formatScheduleDate(java.time.LocalDate date) {
+        return date == null ? null : date.toString();
+    }
+
+    private String formatScheduleTime(java.time.LocalTime time) {
+        if (time == null) {
+            return null;
+        }
+        String raw = time.toString();
+        return raw.length() >= 5 ? raw.substring(0, 5) : raw;
+    }
+
+    private java.time.LocalDateTime toShanghaiDateTime(java.util.Date date) {
+        if (date == null) {
+            return null;
+        }
+        if (date instanceof java.sql.Timestamp timestamp) {
+            return timestamp.toLocalDateTime();
+        }
+        if (date instanceof java.sql.Date sqlDate) {
+            return sqlDate.toLocalDate().atStartOfDay();
+        }
+        return java.time.LocalDateTime.ofInstant(date.toInstant(), java.time.ZoneId.of("Asia/Shanghai"));
     }
 }

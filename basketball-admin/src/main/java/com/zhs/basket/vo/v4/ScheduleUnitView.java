@@ -28,6 +28,7 @@ public class ScheduleUnitView {
     private String participantResolutionStatus;
     private String publishStatus;
     private boolean canEditSchedule;
+    private boolean canAdjustSchedule;
     private boolean required;
     private String matchStatus;
     private String seriesStatus;

@@ -3,7 +3,8 @@ package com.zhs.basket.enums.v4;
 public enum StagePublishActionTypeEnum {
     PUBLISH("PUBLISH", "发布"),
     WITHDRAW("WITHDRAW", "撤回"),
-    REPUBLISH("REPUBLISH", "再发布");
+    REPUBLISH("REPUBLISH", "再发布"),
+    SCHEDULE_ADJUST("SCHEDULE_ADJUST", "排期调整");
 
     private final String code;
     private final String description;

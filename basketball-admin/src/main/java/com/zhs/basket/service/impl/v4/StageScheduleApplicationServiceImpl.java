@@ -3,16 +3,24 @@ package com.zhs.basket.service.impl.v4;
 import com.zhs.basket.domain.v4.BasketDivision;
 import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketScheduleBatch;
+import com.zhs.basket.domain.v4.BasketStagePublishRecord;
 import com.zhs.basket.dto.v4.ScheduleAssignReq;
 import com.zhs.basket.dto.v4.ScheduleBatchAssignReq;
 import com.zhs.basket.dto.v4.ScheduleRecommendApplyReq;
+import com.zhs.basket.dto.v4.ScheduleRescheduleReq;
+import com.zhs.basket.enums.v4.PublishStatusEnum;
 import com.zhs.basket.enums.v4.ScheduleSourceEnum;
 import com.zhs.basket.enums.v4.ScheduleStatusEnum;
+import com.zhs.basket.enums.v4.ScheduleUnitTypeEnum;
+import com.zhs.basket.enums.v4.StagePublishActionTypeEnum;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
+import com.zhs.basket.mapper.v4.BasketStagePublishRecordMapper;
 import com.zhs.basket.service.v4.IStageScheduleApplicationService;
+import com.zhs.basket.support.v4.schedule.ScheduleAdjustmentGuard;
 import com.zhs.basket.support.v4.schedule.ScheduleAssignmentValidator;
+import com.zhs.basket.support.v4.schedule.ScheduleFingerprintSupport;
 import com.zhs.basket.support.v4.schedule.ScheduleMutableGuard;
 import com.zhs.basket.support.v4.schedule.ScheduleRecommendationStrategy;
 import com.zhs.basket.support.v4.schedule.ScheduleRecommendationStrategyFactory;
@@ -23,9 +31,11 @@ import com.zhs.basket.support.v4.schedule.ValidationIssue;
 import com.zhs.basket.support.v4.schedule.ValidationResult;
 import com.zhs.basket.vo.v4.ScheduleRecommendationPreviewVo;
 import com.zhs.basket.vo.v4.ScheduleUnitView;
+import com.zhs.basket.vo.v4.StagePublishRecordVo;
 import com.zhs.basket.vo.v4.StageScheduleBoardVo;
 import com.zhs.basket.vo.v4.StageScheduleSummaryVo;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -51,6 +62,8 @@ public class StageScheduleApplicationServiceImpl implements IStageScheduleApplic
     private ScheduleRecommendationStrategyFactory recommendationStrategyFactory;
     @Autowired
     private List<ScheduleAssignmentValidator> assignmentValidators;
+    @Autowired
+    private BasketStagePublishRecordMapper publishRecordMapper;
 
     @Override
     public StageScheduleBoardVo listScheduleUnits(Long stageId, String scheduleStatus) {
@@ -227,6 +240,35 @@ public class StageScheduleApplicationServiceImpl implements IStageScheduleApplic
         }
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public StagePublishRecordVo reschedule(Long stageId, ScheduleRescheduleReq req) {
+        if (req == null) {
+            throw new ServiceException("排期调整请求不能为空");
+        }
+        ScheduleAdjustmentGuard.assertReason(req.getReason());
+        BasketDivisionStage stage = requireStage(stageId);
+        BasketScheduleBatch batch = requireActiveBatch(stageId);
+        ScheduleAdjustmentGuard.assertPublished(batch);
+        ScheduleUnitView unit = scheduleUnitResolver.requireUnit(batch, req.getUnitType(), req.getUnitId());
+        boolean childStarted = ScheduleUnitTypeEnum.MATCH_SERIES.getCode().equals(unit.getUnitType())
+                && scheduleUnitResolver.hasStartedChildMatch(unit.getUnitId());
+        ScheduleAdjustmentGuard.assertCanAdjust(unit, childStarted);
+        LocalDate date = ScheduleTimes.parseDate(req.getScheduledDate());
+        LocalTime time = ScheduleTimes.parseTime(req.getScheduledStartTime());
+        List<ScheduleUnitView> proposed = replaceUnitSchedule(scheduleUnitResolver.listUnits(batch), unit, date, time,
+                ScheduleSourceEnum.MANUAL.getCode());
+        validateAssignment(stage, batch, proposed, date, time);
+        String oldDate = unit.getScheduledDate();
+        String oldTime = unit.getScheduledStartTime();
+        scheduleUnitResolver.applySchedule(batch, unit, date, time, ScheduleSourceEnum.MANUAL.getCode());
+        bumpScheduleRevision(batch);
+        int nextRevision = (batch.getScheduleRevision() == null ? 0 : batch.getScheduleRevision()) + 1;
+        batch.setScheduleRevision(nextRevision);
+        return persistScheduleAdjust(stage, batch, unit, oldDate, oldTime, req.getScheduledDate(),
+                req.getScheduledStartTime(), req.getReason().trim());
+    }
+
     public StageScheduleSummaryVo toSummary(BasketDivisionStage stage, BasketScheduleBatch batch, List<ScheduleUnitView> units) {
         StageScheduleSummaryVo summary = new StageScheduleSummaryVo();
         summary.setStageId(stage.getId());
@@ -298,6 +340,63 @@ public class StageScheduleApplicationServiceImpl implements IStageScheduleApplic
 
     private void bumpScheduleRevision(BasketScheduleBatch batch) {
         scheduleBatchMapper.incrementScheduleRevision(batch.getId());
+    }
+
+    private StagePublishRecordVo persistScheduleAdjust(BasketDivisionStage stage, BasketScheduleBatch batch,
+                                                       ScheduleUnitView unit, String oldDate, String oldTime,
+                                                       String newDate, String newTime, String reason) {
+        Date now = new Date();
+        Long operator = 0L;
+        try {
+            operator = SecurityUtils.getUserId();
+        } catch (Exception ignored) {
+            operator = 0L;
+        }
+        BasketStagePublishRecord current = publishRecordMapper.selectCurrentByStageId(stage.getId());
+        int publishNo = current != null && current.getPublishNo() != null ? current.getPublishNo() : 1;
+        publishRecordMapper.clearCurrentByStageId(stage.getId());
+
+        List<ScheduleUnitView> units = scheduleUnitResolver.listUnits(batch);
+        BasketStagePublishRecord record = new BasketStagePublishRecord();
+        record.setDivisionId(stage.getDivisionId());
+        record.setStageId(stage.getId());
+        record.setStructureBatchId(batch.getId());
+        record.setStructureExecutionVersion(batch.getExecutionVersion() == null ? 0 : batch.getExecutionVersion());
+        record.setRuleVersionId(batch.getRuleVersionId());
+        record.setRosterVersionId(batch.getRosterVersionId());
+        record.setPairingExecutionId(batch.getPairingExecutionId());
+        record.setScheduleRevision(batch.getScheduleRevision() == null ? 0 : batch.getScheduleRevision());
+        record.setPublishNo(publishNo);
+        record.setActionType(StagePublishActionTypeEnum.SCHEDULE_ADJUST.getCode());
+        record.setPublishStatus(PublishStatusEnum.PUBLISHED.getCode());
+        record.setScheduleFingerprint(ScheduleFingerprintSupport.fingerprint(units));
+        record.setOperatorId(operator);
+        record.setOperationTime(now);
+        record.setReason(ScheduleAdjustmentGuard.formatAuditReason(
+                unit.getUnitType(), unit.getUnitId(), oldDate, oldTime, newDate, newTime, reason));
+        record.setIsCurrent(1);
+        record.setCurrentUniqueKey("STAGE:" + stage.getId());
+        record.setCreateTime(now);
+        record.setUpdateTime(now);
+        record.setIsDelete(0);
+        if (publishRecordMapper.insert(record) != 1) {
+            throw new ServiceException("写入排期调整记录失败");
+        }
+        StagePublishRecordVo vo = new StagePublishRecordVo();
+        vo.setId(record.getId());
+        vo.setStageId(record.getStageId());
+        vo.setStructureBatchId(record.getStructureBatchId());
+        vo.setStructureExecutionVersion(record.getStructureExecutionVersion());
+        vo.setScheduleRevision(record.getScheduleRevision());
+        vo.setPublishNo(record.getPublishNo());
+        vo.setActionType(record.getActionType());
+        vo.setPublishStatus(record.getPublishStatus());
+        vo.setScheduleFingerprint(record.getScheduleFingerprint());
+        vo.setOperatorId(record.getOperatorId());
+        vo.setOperationTime(record.getOperationTime());
+        vo.setReason(record.getReason());
+        vo.setIsCurrent(record.getIsCurrent());
+        return vo;
     }
 
     private String sourceOrManual(String source) {

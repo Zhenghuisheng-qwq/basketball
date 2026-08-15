@@ -18,7 +18,8 @@
         <result property="awaySourceDisplay" column="away_source_display"/>
         <result property="bestOf" column="best_of"/>
         <result property="scheduledDate" column="scheduled_date" jdbcType="DATE"/>
-        <result property="scheduledStartTime" column="scheduled_start_time" jdbcType="TIME"/>
+        <result property="scheduledStartTime" column="scheduled_start_time"
+                typeHandler="com.zhs.support.FlexibleLocalTimeTypeHandler"/>
         <result property="scheduleSource" column="schedule_source"/>
         <result property="scheduleStatus" column="schedule_status"/>
         <result property="homeWinCount" column="home_win_count"/>

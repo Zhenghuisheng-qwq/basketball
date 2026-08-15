@@ -32,8 +32,8 @@ public class V4PublicScheduleItemResp {
     private Integer bestOf;
     private String seriesScore;
     private String gameProgress;
-    private java.time.LocalDate scheduleDate;
-    private java.time.LocalTime startTime;
+    private String scheduleDate;
+    private String startTime;
     private String status;
     private String statusName;
     private String placeholderSource;

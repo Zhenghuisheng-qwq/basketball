@@ -43,11 +43,20 @@ public class ScheduleUnitResolver {
         }
         Map<Long, String> teamNames = loadTeamNames(batch.getDivisionId());
         List<ScheduleUnitView> units = new ArrayList<>();
+        List<BasketV4Match> matches = matchMapper.selectByStageId(batch.getStageId());
+        java.util.Set<Long> startedSeriesIds = new java.util.HashSet<>();
+        for (BasketV4Match match : matches) {
+            if (match == null || match.getSeriesId() == null || !Objects.equals(batch.getId(), match.getScheduleBatchId())) {
+                continue;
+            }
+            if (isStartedOrFinishedMatch(match.getMatchStatus())) {
+                startedSeriesIds.add(match.getSeriesId());
+            }
+        }
         List<BasketMatchSeries> seriesList = matchSeriesMapper.selectByScheduleBatchId(batch.getId());
         for (BasketMatchSeries series : seriesList) {
-            units.add(fromSeries(series, batch, teamNames));
+            units.add(fromSeries(series, batch, teamNames, startedSeriesIds.contains(series.getId())));
         }
-        List<BasketV4Match> matches = matchMapper.selectByStageId(batch.getStageId());
         for (BasketV4Match match : matches) {
             if (!Objects.equals(batch.getId(), match.getScheduleBatchId())) {
                 continue;
@@ -75,7 +84,7 @@ public class ScheduleUnitResolver {
                     || !Objects.equals(series.getStageId(), batch.getStageId())) {
                 throw new ServiceException("系列赛不属于当前赛段结构");
             }
-            return fromSeries(series, batch, teamNames);
+            return fromSeries(series, batch, teamNames, hasStartedChildMatch(unitId));
         }
         BasketV4Match match = matchMapper.selectById(unitId);
         if (match == null || match.getSeriesId() != null
@@ -111,7 +120,29 @@ public class ScheduleUnitResolver {
         }
     }
 
-    private ScheduleUnitView fromSeries(BasketMatchSeries series, BasketScheduleBatch batch, Map<Long, String> teamNames) {
+    public boolean hasStartedChildMatch(Long seriesId) {
+        if (seriesId == null) {
+            return false;
+        }
+        List<BasketV4Match> games = matchMapper.selectBySeriesId(seriesId);
+        if (games == null) {
+            return false;
+        }
+        for (BasketV4Match match : games) {
+            if (match != null && isStartedOrFinishedMatch(match.getMatchStatus())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isStartedOrFinishedMatch(String matchStatus) {
+        return ScheduleAdjustmentGuard.isMatchStarted(matchStatus)
+                || ScheduleAdjustmentGuard.isMatchFinished(matchStatus);
+    }
+
+    private ScheduleUnitView fromSeries(BasketMatchSeries series, BasketScheduleBatch batch,
+                                        Map<Long, String> teamNames, boolean childStarted) {
         ScheduleUnitView view = base(batch);
         view.setUnitType(ScheduleUnitTypeEnum.MATCH_SERIES.getCode());
         view.setUnitId(series.getId());
@@ -135,7 +166,7 @@ public class ScheduleUnitResolver {
         view.setRequired(!isBye(series));
         view.setParticipantResolutionStatus(resolutionStatus(series.getHomeEventTeamId(), series.getAwayEventTeamId(),
                 view.getHomeSourceType(), view.getAwaySourceType(), isBye(series)));
-        fillEditable(view, batch);
+        fillEditable(view, batch, childStarted);
         return view;
     }
 
@@ -164,7 +195,7 @@ public class ScheduleUnitResolver {
         view.setRequired(true);
         view.setParticipantResolutionStatus(resolutionStatus(match.getHomeEventTeamId(), match.getAwayEventTeamId(),
                 null, null, false));
-        fillEditable(view, batch);
+        fillEditable(view, batch, false);
         return view;
     }
 
@@ -177,14 +208,16 @@ public class ScheduleUnitResolver {
         return view;
     }
 
-    private void fillEditable(ScheduleUnitView view, BasketScheduleBatch batch) {
+    private void fillEditable(ScheduleUnitView view, BasketScheduleBatch batch, boolean childStarted) {
         boolean published = PublishStatusEnum.PUBLISHED.getCode().equals(batch.getPublishStatus());
         boolean active = StructureStatusEnum.ACTIVE.getCode().equals(batch.getStructureStatus());
         boolean finished = MatchStatusEnum.FINISHED.getCode().equals(view.getMatchStatus())
                 || MatchStatusEnum.FORFEITED.getCode().equals(view.getMatchStatus())
                 || "COMPLETED".equals(view.getSeriesStatus())
                 || "FORFEITED".equals(view.getSeriesStatus());
+        boolean adjustable = ScheduleAdjustmentGuard.canAdjust(view, childStarted);
         view.setCanEditSchedule(active && !published && !finished && view.isRequired());
+        view.setCanAdjustSchedule(active && published && adjustable);
     }
 
     private boolean isBye(BasketMatchSeries series) {
