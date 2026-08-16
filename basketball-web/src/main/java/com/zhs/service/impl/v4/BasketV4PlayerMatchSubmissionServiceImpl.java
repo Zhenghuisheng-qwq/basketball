@@ -17,6 +17,8 @@ import com.zhs.request.v4.*;
 import com.zhs.response.v4.*;
 import com.zhs.service.v4.IBasketV4PlayerMatchSubmissionService;
 import com.zhs.support.v4.EventTeamCaptainAuthorization;
+import com.zhs.support.v4.FullMatchSubmissionRules;
+import com.zhs.support.v4.FullMatchSubmissionSupport;
 import com.zhs.support.v4.MatchSubmissionPlayerStatRules;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
@@ -62,6 +64,8 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
     private BasketSeasonDao seasonDao;
     @Resource
     private EventTeamCaptainAuthorization eventTeamCaptainAuthorization;
+    @Resource
+    private FullMatchSubmissionSupport fullMatchSubmissionSupport;
 
     private static final int MAX_MATERIAL_COUNT = 9;
     private static final String EVENT_PLAYER_STATUS_ACTIVE = "ACTIVE";
@@ -102,6 +106,8 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         fillDivisionContext(resp, match);
         resp.setSeriesContext(buildSeriesContext(match, resp.getHomeTeamName(), resp.getAwayTeamName()));
         resp.setEligiblePlayers(loadEligiblePlayers(submitEventTeamId));
+        resp.setHomeEligiblePlayers(loadEligiblePlayers(match.getHomeEventTeamId()));
+        resp.setAwayEligiblePlayers(loadEligiblePlayers(match.getAwayEventTeamId()));
 
         BasketMatchSubmission latest = findLatestSubmission(matchId, submitEventTeamId);
         if (latest != null) {
@@ -116,10 +122,17 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
             resp.setAuditTime(latest.getAuditTime());
             resp.setAuditRemark(latest.getAuditRemark());
             resp.setRejectReason(latest.getRejectReason());
+            resp.setSubmissionMode(latest.getSubmissionMode());
+            resp.setDraftComplete(latest.getDraftComplete());
+            resp.setSeriesSubmissionId(latest.getSeriesSubmissionId());
             fillSubmissionPayload(resp, latest.getId());
+            if (fullMatchSubmissionSupport.isFullMatch(latest)) {
+                fullMatchSubmissionSupport.fillDetail(resp, latest, match);
+            }
         } else {
             resp.setVersionNo(1);
             resp.setSubmissionStatus(SubmissionStatusEnum.DRAFT.getCode());
+            resp.setSubmissionMode(FullMatchSubmissionRules.MODE_WINNER_FULL_MATCH);
         }
         return resp;
     }
@@ -154,11 +167,31 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         } else if (SubmissionStatusEnum.PENDING_REVIEW.getCode().equals(submission.getSubmissionStatus())) {
             throw new ServiceException("审核中不可覆盖，请等待审核结果");
         }
+        if (submission.getSeriesSubmissionId() != null && fullMatchSubmissionSupport.isFullMatchReq(req)) {
+            throw new ServiceException("系列赛对局请通过系列赛工作台保存");
+        }
         submission.setHomeScore(req.getHomeScore());
         submission.setAwayScore(req.getAwayScore());
         submission.setSubmitRemark(req.getSubmitRemark());
         submission.setSubmissionStatus(SubmissionStatusEnum.DRAFT.getCode());
         submission.setUpdateTime(now);
+        if (fullMatchSubmissionSupport.isFullMatchReq(req)) {
+            boolean complete = Boolean.TRUE.equals(req.getDraftComplete());
+            int homeScore = req.getHomeScore() != null ? req.getHomeScore() : FullMatchSubmissionRules.sumPoints(req.getHomePlayerStats());
+            int awayScore = req.getAwayScore() != null ? req.getAwayScore() : FullMatchSubmissionRules.sumPoints(req.getAwayPlayerStats());
+            submission.setHomeScore(homeScore);
+            submission.setAwayScore(awayScore);
+            submission.setSubmissionMode(FullMatchSubmissionRules.MODE_WINNER_FULL_MATCH);
+            submission.setDraftComplete(complete ? 1 : 0);
+            fullMatchSubmissionSupport.replaceFullMatchPayload(submission, match,
+                    req.getHomePlayerStats(), req.getAwayPlayerStats(), req.getPeriodScores(),
+                    req.getMaterialFileIds(), complete, "本场", now);
+            submissionDao.updateById(submission);
+            return submission.getId();
+        }
+        if (submission.getSubmissionMode() == null) {
+            submission.setSubmissionMode(FullMatchSubmissionRules.MODE_LEGACY);
+        }
         submissionDao.updateById(submission);
         replaceSubmissionPayload(submission, req, now);
         return submission.getId();
@@ -184,6 +217,19 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         }
         if (submission.getHomeScore() == null || submission.getAwayScore() == null) {
             throw new ServiceException("请先填写总比分");
+        }
+        if (submission.getSeriesSubmissionId() != null) {
+            throw new ServiceException("系列赛对局请通过系列赛工作台提交整个系列赛审核");
+        }
+        if (fullMatchSubmissionSupport.isFullMatch(submission)) {
+            BasketV4Match match = requirePublishedMatch(submission.getMatchId());
+            fullMatchSubmissionSupport.validatePersistedComplete(submission, match, "本场");
+            Long winnerId = FullMatchSubmissionRules.declaredWinner(
+                    match.getHomeEventTeamId(), match.getAwayEventTeamId(),
+                    submission.getHomeScore(), submission.getAwayScore());
+            if (!submission.getSubmitEventTeamId().equals(winnerId)) {
+                throw new ServiceException("本场数据应由获胜球队队长提交。");
+            }
         }
         Date now = new Date();
         submission.setSubmissionStatus(SubmissionStatusEnum.PENDING_REVIEW.getCode());
@@ -237,8 +283,22 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         V4MatchSubmissionSaveReq saveReq = new V4MatchSubmissionSaveReq();
         saveReq.setTeamStat(req.getTeamStat());
         saveReq.setPlayerStats(req.getPlayerStats());
+        saveReq.setHomePlayerStats(req.getHomePlayerStats());
+        saveReq.setAwayPlayerStats(req.getAwayPlayerStats());
+        saveReq.setPeriodScores(req.getPeriodScores());
         saveReq.setMaterialFileIds(req.getMaterialFileIds());
         saveReq.setSubmitEventTeamId(old.getSubmitEventTeamId());
+        saveReq.setSubmissionMode(req.getSubmissionMode() != null ? req.getSubmissionMode() : old.getSubmissionMode());
+        if (fullMatchSubmissionSupport.isFullMatchReq(saveReq)) {
+            submission.setSubmissionMode(FullMatchSubmissionRules.MODE_WINNER_FULL_MATCH);
+            submission.setHomeScore(req.getHomeScore());
+            submission.setAwayScore(req.getAwayScore());
+            fullMatchSubmissionSupport.replaceFullMatchPayload(submission, match,
+                    req.getHomePlayerStats(), req.getAwayPlayerStats(), req.getPeriodScores(),
+                    req.getMaterialFileIds(), false, "本场", now);
+            submissionDao.updateById(submission);
+            return submission.getId();
+        }
         replaceSubmissionPayload(submission, saveReq, now);
         return submission.getId();
     }

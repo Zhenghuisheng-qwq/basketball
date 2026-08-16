@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
+import FullMatchGameEditor from '@/components/account/events/FullMatchGameEditor.vue'
 import {
   getV4MatchSubmissionDetail,
   resubmitV4MatchSubmission,
@@ -21,6 +22,8 @@ import type {
 import { v4SubmissionStatusLabel } from '@/utils/v4AccountEventsMappers'
 import { v4BestOfLabel, v4MatchSeriesStatusLabel, v4PlatformLabel } from '@/utils/v4Display'
 import { formatDateTimeShort } from '@/utils/participationMappers'
+import { validateGame } from '@/utils/fullMatchSubmissionRules'
+import type { V4MatchSubmissionPeriodScore } from '@/api/types/v4SeriesSubmission'
 
 const MAX_SCREENSHOTS = 6
 const PLAYER_STAT_FIELDS = ['points', 'rebound', 'assist', 'steal', 'block', 'foul', 'turnover'] as const
@@ -50,6 +53,40 @@ const canEdit = computed(() => {
 })
 
 const skipped = computed(() => Boolean(detail.value?.seriesContext?.skipped))
+const isFullMatch = computed(() => (detail.value?.submissionMode || 'WINNER_FULL_MATCH') !== 'LEGACY_TEAM_SIDE')
+const emptyPlayer = (): V4MatchSubmissionPlayerStat => ({
+  eventPlayerId: '', points: 0, rebound: 0, assist: 0, steal: 0, block: 0, foul: 0, turnover: 0,
+  fieldGoalMade: 0, fieldGoalAttempt: 0, threePointMade: 0, threePointAttempt: 0, freeThrowMade: 0, freeThrowAttempt: 0,
+})
+function normalizePeriods(rows?: Array<{ periodNo: number; homeScore?: number; awayScore?: number }>): V4MatchSubmissionPeriodScore[] {
+  if (!rows?.length) {
+    return [1, 2, 3, 4].map((periodNo) => ({ periodNo, homeScore: 0, awayScore: 0 }))
+  }
+  return rows.map((row) => ({
+    periodNo: row.periodNo,
+    homeScore: row.homeScore ?? 0,
+    awayScore: row.awayScore ?? 0,
+  }))
+}
+
+const fullForm = ref({
+  homeStats: [emptyPlayer(), emptyPlayer(), emptyPlayer(), emptyPlayer(), emptyPlayer()] as V4MatchSubmissionPlayerStat[],
+  awayStats: [emptyPlayer(), emptyPlayer(), emptyPlayer(), emptyPlayer(), emptyPlayer()] as V4MatchSubmissionPlayerStat[],
+  periods: normalizePeriods(),
+})
+const fullValidation = computed(() => {
+  if (!detail.value) return { errors: [] as string[], homeScore: 0, awayScore: 0, pass: false }
+  return validateGame({
+    gameLabel: '本场',
+    homeName: detail.value.homeTeamName || '主队',
+    awayName: detail.value.awayTeamName || '客队',
+    homePlayers: fullForm.value.homeStats,
+    awayPlayers: fullForm.value.awayStats,
+    periods: fullForm.value.periods,
+    materialCount: form.value.materialFileIds.length,
+    requireComplete: true,
+  })
+})
 
 const eligiblePlayers = computed<V4MatchSubmissionEligiblePlayer[]>(() => detail.value?.eligiblePlayers || [])
 
@@ -153,6 +190,13 @@ async function loadDetail() {
     form.value.materialFileIds = (detail.value.materialFileIds || []).map(String)
     form.value.teamStat = { ...emptyTeamStat(), ...(detail.value.teamStat || {}) }
     ensurePlayerRows(detail.value.playerStats || [])
+    const homeStats = (detail.value.homePlayerStats || []).map((row) => ({ ...emptyPlayer(), ...row, eventPlayerId: String(row.eventPlayerId || '') }))
+    const awayStats = (detail.value.awayPlayerStats || []).map((row) => ({ ...emptyPlayer(), ...row, eventPlayerId: String(row.eventPlayerId || '') }))
+    while (homeStats.length < 5) homeStats.push(emptyPlayer())
+    while (awayStats.length < 5) awayStats.push(emptyPlayer())
+    fullForm.value.homeStats = homeStats
+    fullForm.value.awayStats = awayStats
+    fullForm.value.periods = normalizePeriods(detail.value.periodScores)
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '加载失败')
   } finally {
@@ -161,6 +205,21 @@ async function loadDetail() {
 }
 
 function buildSavePayload() {
+  if (isFullMatch.value) {
+    return {
+      matchId: matchId.value,
+      submitEventTeamId: submitEventTeamId.value,
+      homeScore: fullValidation.value.homeScore,
+      awayScore: fullValidation.value.awayScore,
+      submitRemark: form.value.submitRemark,
+      materialFileIds: form.value.materialFileIds,
+      homePlayerStats: fullForm.value.homeStats.filter((row) => String(row.eventPlayerId || '').trim()),
+      awayPlayerStats: fullForm.value.awayStats.filter((row) => String(row.eventPlayerId || '').trim()),
+      periodScores: fullForm.value.periods,
+      submissionMode: 'WINNER_FULL_MATCH',
+      draftComplete: Boolean(fullValidation.value.pass),
+    }
+  }
   const playerStats = form.value.playerStats
     .filter((row) => String(row.eventPlayerId || '').trim())
     .map((row) => ({
@@ -197,7 +256,11 @@ async function handleSaveDraft() {
 
 async function handleSubmitAudit() {
   if (!canEdit.value || skipped.value) return
-  if (form.value.homeScore == null || form.value.awayScore == null) {
+  if (isFullMatch.value && !fullValidation.value.pass) {
+    ElMessage.warning(fullValidation.value.errors[0] || '请先填写完整比赛数据')
+    return
+  }
+  if (!isFullMatch.value && (form.value.homeScore == null || form.value.awayScore == null)) {
     ElMessage.warning('请填写最终比赛比分')
     return
   }
@@ -288,7 +351,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="account-view">
+  <div class="account-view fm-page">
     <AccountPageHeader
       zh-title="比赛数据提交"
       en-title="MATCH DATA SUBMISSION"
@@ -323,9 +386,31 @@ onMounted(() => {
         <p v-if="detail.rejectReason" class="v4-sub-reject">驳回原因：{{ detail.rejectReason }}</p>
         <p v-if="skipped" class="v4-sub-readonly">{{ detail.seriesContext?.skippedReason || '该系列赛已决出胜负，本局无需进行' }}</p>
         <p v-else-if="isReadonly" class="v4-sub-readonly">当前状态只读，不可覆盖保存。</p>
+        <input ref="fileInput" type="file" accept="image/*" multiple class="v4-sub-file" @change="handleUpload" />
       </AccountPanel>
 
-      <AccountPanel title="对阵与总比分">
+      <AccountPanel v-if="isFullMatch" title="双方完整比赛数据">
+        <FullMatchGameEditor
+          game-label="本场"
+          :home-name="detail.homeTeamName || '主队'"
+          :away-name="detail.awayTeamName || '客队'"
+          :home-players="detail.homeEligiblePlayers || eligiblePlayers"
+          :away-players="detail.awayEligiblePlayers || []"
+          :home-stats="fullForm.homeStats"
+          :away-stats="fullForm.awayStats"
+          :periods="fullForm.periods"
+          :material-file-ids="form.materialFileIds"
+          :readonly="!canEdit || skipped"
+          @update:home-stats="fullForm.homeStats = $event"
+          @update:away-stats="fullForm.awayStats = $event"
+          @update:periods="fullForm.periods = $event"
+          @upload="triggerUpload"
+          @remove-material="removeScreenshot"
+          @preview="previewUrl = getAccountFileUrl($event)"
+        />
+      </AccountPanel>
+
+      <AccountPanel v-if="!isFullMatch" title="对阵与总比分">
         <p class="v4-sub-hint">请填写最终比赛比分。本轮仍按手工总比分结算，不会自动汇总球员得分。</p>
         <div class="v4-sub-scores">
           <label>
@@ -339,7 +424,7 @@ onMounted(() => {
         </div>
       </AccountPanel>
 
-      <AccountPanel title="本方球队技术统计">
+      <AccountPanel v-if="!isFullMatch" title="本方球队技术统计">
         <p class="v4-sub-team-name">{{ detail.submitTeamName || '本方球队' }}</p>
         <div class="v4-sub-grid">
           <label v-for="field in ['score', 'rebound', 'assist', 'steal', 'block', 'turnover', 'foul'] as const" :key="field">
@@ -357,7 +442,7 @@ onMounted(() => {
         </div>
       </AccountPanel>
 
-      <AccountPanel title="本方球员技术统计">
+      <AccountPanel v-if="!isFullMatch" title="本方球员技术统计">
         <div class="v4-sub-table-wrap">
           <table class="v4-sub-table">
             <thead>
@@ -410,9 +495,8 @@ onMounted(() => {
         </button>
       </AccountPanel>
 
-      <AccountPanel title="比赛截图 / 比赛凭证">
+      <AccountPanel v-if="!isFullMatch" title="比赛截图 / 比赛凭证">
         <p class="v4-sub-hint">请上传本局比赛结果或技术统计截图，供管理员审核。最多 {{ MAX_SCREENSHOTS }} 张。</p>
-        <input ref="fileInput" type="file" accept="image/*" multiple class="v4-sub-file" @change="handleUpload" />
         <button
           v-if="canEdit && !skipped"
           type="button"
@@ -438,7 +522,7 @@ onMounted(() => {
 
       <div class="v4-sub-actions">
         <button v-if="canEdit && !skipped" type="button" class="account-btn-secondary" :disabled="saving" @click="handleSaveDraft">保存草稿</button>
-        <button v-if="canEdit && !skipped" type="button" class="account-btn-primary" :disabled="submitting || saving" @click="handleSubmitAudit">提交审核</button>
+        <button v-if="canEdit && !skipped" type="button" class="account-btn-primary" :disabled="submitting || saving || (isFullMatch && !fullValidation.pass)" @click="handleSubmitAudit">提交审核</button>
         <button
           v-if="detail.submissionStatus === 'REJECTED' && !skipped"
           type="button"
@@ -460,6 +544,11 @@ onMounted(() => {
 
 <style scoped lang="scss">
 @import '../styles/account-center.scss';
+
+:global(.member-account-layout:has(.fm-page)),
+:global(.account-center-vars:has(.fm-page)) {
+  --account-content-max: 1680px;
+}
 
 .v4-sub-loading,
 .v4-sub-hint,

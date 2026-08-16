@@ -9,8 +9,8 @@
       "detail": "http=200 V4-34-SER-66-R1-S01 3:1 status=COMPLETED"
     },
     "web.login.schedule": {
-      "ok": false,
-      "detail": "http://127.0.0.1:5173/account/my-events?tab=schedule 首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n我的赛程安排\nMY SCHEDULE\n可参与赛事\n我的报名\n已参加赛事\n我的赛程\n\n完成球员认证后，可在此查看个人赛程安排。\n\n认证通过后可"
+      "ok": true,
+      "detail": "http://127.0.0.1:5173/account/my-events?tab=schedule 首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-LD-LD0701\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n我的赛程安排\nMY SCHEDULE\n可参与赛事\n我的报名\n已"
     },
     "web.bo1.directRoute": {
       "ok": true,
@@ -18,7 +18,7 @@
     },
     "web.bo1.noSeriesScore": {
       "ok": true,
-      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nE2E_LD_LD07 VS E2E_LD_LD04\n\n待提交\n比赛信息\n\nE2E-LEAGUE-DRR-S 2026 · E2E-LEAGUE8-DRR · REGULA"
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-LD-LD0701\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nE2E_LD_LD07 VS E2E_LD_LD04\n\n待提交\n比赛信息\n\nE2E-LEAGU"
     },
     "web.bo1.playerSelect": {
       "ok": true,
@@ -26,47 +26,55 @@
     },
     "web.bo1.scoreHint": {
       "ok": true,
-      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nE2E_LD_LD07 VS E2E_LD_LD04\n\n待提交\n比赛信息\n\nE2E-LEAG"
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-LD-LD0701\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nE2E_LD_"
     },
     "web.bo1.screenshot.ui": {
       "ok": true,
-      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nE2E_LD_LD07 VS E2E_LD_LD04\n\n待提交\n比赛信息\n\nE2E-LEAG"
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-LD-LD0701\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nE2E_LD_"
     },
     "web.bo1.draft.thumbs": {
       "ok": true,
       "detail": "thumbs=6"
     },
     "web.bo3.seriesCard": {
-      "ok": false,
-      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n我的赛程安排\nMY SCHEDULE\n可参与赛事\n我的报名\n已参加赛事\n我的赛程\n\n完成球员认证后，可在此查看个人赛程安排。\n\n认证通过后可聚合查看全部已参加赛事的比赛安排\n\n前往球员认证\nCNPA 中国职业电竞篮球联赛\n© 2026 CNPA. All rights reserved."
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-IB-IB0301\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n我的赛程安排\nMY SCHEDULE\n可参与赛事\n我的报名\n已参加赛事\n我的赛程\n1\n待比赛\n0\n待提交\n0\n审核中\n2\n已结束\n待比赛\n1\n全部赛程\n3\n\nLeague\n\nE2E-ISO-B-S 2026 · E2E-CROSS-ISO-B · 淘汰赛第 1 "
     },
     "web.bo3.gameContext": {
       "ok": true,
-      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nE2E_IB_IB03 VS E2E_IB_IB06\n\n已通过\n比赛信息\n\nE2E-ISO-B-S 2026 · E2E-CROSS-ISO-B · KNOCKOUT\n\n比"
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-IB-IB0301\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nE2E_IB_IB03 VS E2E_IB_IB06\n\n已通过\n比赛信息\n\nE2E-ISO-B"
     },
     "web.bo5.series31": {
-      "ok": false,
-      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nSB\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n我的赛程安排\nMY SCHEDULE\n可参与赛事\n我的报名\n已参加赛事\n我的赛程\n\n完成球员认证后，可在此查看个人赛程安排。\n\n认证通过后可聚合查看全部已参加赛事的比赛安排\n\n前往球员认证\nCNPA 中国职业电竞篮球联赛\n© 2026 CNPA. All rights reserved."
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nSB\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-SB-H101\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n我的赛程安排\nMY SCHEDULE\n可参与赛事\n我的报名\n已参加赛事\n我的赛程\n1\n待比赛\n1\n待提交\n0\n审核中\n4\n已结束\n待比赛\n1\n全部赛程\n5\n\nArena\n\nE2E-SUBMISSION-BO5 2026 · E2E-SUBMISSION-BO5 · 淘汰赛第 1 轮\n\nV4-34-SER-66-R1-S01 · BO5\n\n已结束"
     },
     "web.bo5.game5.skip": {
-      "ok": false,
-      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nSB\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n我的赛程安排\nMY SCHEDULE\n可参与赛事\n我的报名\n已参加赛事\n我的赛程\n\n完成球员认证后，可在此查看个人赛程安排。\n\n认证通过后可聚合查看全部已参加赛事的比赛安排\n\n前往球员认证\nCNPA 中国职业电竞篮球联赛\n© 2026 CNPA. All rights reserved."
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nSB\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-SB-H101\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n我的赛程安排\nMY SCHEDULE\n可参与赛事\n我的报名\n已参加赛事\n我的赛程\n1\n待比赛\n1\n待提交\n0\n审核中\n4\n已结束\n待比赛\n1\n全部赛程\n5\n\nArena\n\nE2E-SUBMISSION-BO5 2026 · E2E-SUBMISSION-BO5 · 淘汰赛第 1 轮\n\nV4-34-SER-66-R1-S01 · BO5\n\n已结束"
     },
     "web.public.bo5.modal": {
-      "ok": false,
-      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nSB\n个人中心\n1\n赛季\nE2E-SUBMISSION-BO5 2026\n赛季\n战队数\n2\n战队\n当前阶段\n报名已截止\n阶段\n比赛平台\nPC\n平台\n总览\n赛程\n对阵/赛段\nPC · E2E-SUBMISSION-BO5\n高光选手\nSEASON LEADERS\n场均得分\n54 PPG\nSBH_P1\nE2\nE2E_SUB_BO5_HOME\n场均助攻\n12 APG\nSBH_P1\nE2\nE2E_SUB_BO5_HOME\n场均篮板\n24 RPG\nSBH_P1\nE2\nE2E_SUB_BO5_HOME\n联赛战队\nLEAGUE "
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nSB\n个人中心\n1\n赛季\nE2E-SUBMISSION-BO5 2026\n赛季\n战队数\n2\n战队\n当前阶段\n报名已截止\n阶段\n比赛平台\nPC\n平台\n总览\n赛程\n对阵/赛段\nPC · E2E-SUBMISSION-BO5\n赛程\nSCHEDULE\n24\n18\n16\n15\n10\n6\n3\n选择球队\n▼\n总决赛\nV4-34-SER-66-R1-S01\nBO5\n已结束\nE2E_SUB_BO5_HOME\nVS\nE2E_SUB_BO5_AWAY\n2026-10-20 21:00\n3:1\nV4-34-SER-66-R1-S01\n关"
     },
     "admin.login.audit": {
-      "ok": false,
+      "ok": true,
       "detail": "http://127.0.0.1:5174/competition-exec/event-v4-match-submission-audit"
     },
     "admin.bo1.detail.stats": {
+      "ok": true,
+      "detail": "CNPA管理系统\n赛事管理\n系统监控\n系统工具\n比赛执行\n比赛管理\n比赛数据审核\n若依官网\n系统管理\n首页\n/\n比赛执行\n/\n比赛数据审核\n3\n若依\n运营工作台 比赛数据审核 \n刷新\n比赛数据审核\n\n按每场比赛的每支队伍独立审核；一方审核中不影响另一方提交。\n\n赛季\n选择赛季\n平台赛区\n选择赛区\n状态\n请选择\n球队\n比赛编号\n搜索\n重置\n提交ID\n\t\n比赛编号\n\t\n轮次\n\t\n平台赛区\n\t\n对阵\n\t\n提交方\n\t\n提交人\n\t\n版本\n\t\n状态\n\t\n提交时间\n\t\n操作\n234\n\t\nV4-23-14-04\n\t\n14\n\t\nE2E-LEAGUE8-DRR\n\t\nE2E_LD_LD06 vs E2E_LD_LD"
+    },
+    "admin.screenshot.thumb": {
       "ok": false,
-      "detail": "404错误!\n找不到网页！\n对不起，您正在寻找的页面不存在。尝试检查URL的错误，然后按浏览器上的刷新按钮或尝试在我们的应用程序中找到其他内容。\n返回首页"
+      "detail": "shots=0"
+    },
+    "admin.screenshot.preview": {
+      "ok": false,
+      "detail": "no audit-shot in drawer"
     },
     "admin.bo3.gameContext": {
-      "ok": false,
-      "detail": "no match_no for 428"
+      "ok": true,
+      "detail": "CNPA管理系统\n赛事管理\n系统监控\n系统工具\n比赛执行\n比赛管理\n比赛数据审核\n若依官网\n系统管理\n首页\n/\n比赛执行\n/\n比赛数据审核\n3\n若依\n运营工作台 比赛数据审核 \n刷新\n比赛数据审核\n\n按每场比赛的每支队伍独立审核；一方审核中不影响另一方提交。\n\n赛季\n选择赛季\n平台赛区\n选择赛区\n状态\n请选择\n球队\n比赛编号\n搜索\n重置\n提交ID\n\t\n比赛编号\n\t\n轮次\n\t\n平台赛区\n\t\n对阵\n\t\n提交方\n\t\n提交人\n\t\n版本\n\t\n状态\n\t\n提交时间\n\t\n操作\n235\n\t\nV4-27-SER-51-R1-S04-G1\n\t\n1\n\t\nE2E-CROSS-ISO-B\n\t\nE2E_IB_IB03 vs"
     }
   },
   "ids": {
@@ -111,6 +119,7 @@
   "match_no": {
     "327": "V4-23-14-03",
     "328": "V4-23-14-04",
-    "428": "V4-27-SER-51-R1-S04-G1"
+    "428": "V4-27-SER-51-R1-S04-G1",
+    "476": "V4-34-SER-66-R1-S01-G4"
   }
 }

@@ -37,6 +37,8 @@ public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSu
     @Autowired
     private BasketMatchSubmissionMaterialMapper submissionMaterialMapper;
     @Autowired
+    private BasketMatchSubmissionPeriodScoreMapper submissionPeriodScoreMapper;
+    @Autowired
     private BasketV4MatchMapper matchMapper;
     @Autowired
     private BasketEventTeamMapper eventTeamMapper;
@@ -76,6 +78,7 @@ public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSu
         vo.setAuditTime(submission.getAuditTime());
         vo.setAuditRemark(submission.getAuditRemark());
         vo.setRejectReason(submission.getRejectReason());
+        vo.setSubmissionMode(submission.getSubmissionMode());
 
         matchMapper.selectVoList(matchQuery).stream().findFirst().ifPresent(m -> {
             vo.setMatchNo(m.getMatchNo());
@@ -108,6 +111,37 @@ public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSu
             playerStats.add(psVo);
         }
         vo.setPlayerStats(playerStats);
+        if (isWinnerFullMatch(submission.getSubmissionMode())) {
+            for (BasketMatchSubmissionTeamStat ts : submissionTeamStatMapper.selectListBySubmissionId(submissionId)) {
+                BasketMatchSubmissionTeamStatVo tsVo = new BasketMatchSubmissionTeamStatVo();
+                BeanUtils.copyProperties(ts, tsVo);
+                if (ts.getEventTeamId() != null && ts.getEventTeamId().equals(vo.getHomeEventTeamId())) {
+                    vo.setHomeTeamStat(tsVo);
+                } else if (ts.getEventTeamId() != null && ts.getEventTeamId().equals(vo.getAwayEventTeamId())) {
+                    vo.setAwayTeamStat(tsVo);
+                }
+            }
+            List<BasketMatchSubmissionPlayerStatVo> homePlayers = new ArrayList<>();
+            List<BasketMatchSubmissionPlayerStatVo> awayPlayers = new ArrayList<>();
+            for (BasketMatchSubmissionPlayerStatVo psVo : playerStats) {
+                if (psVo.getEventTeamId() != null && psVo.getEventTeamId().equals(vo.getHomeEventTeamId())) {
+                    homePlayers.add(psVo);
+                } else {
+                    awayPlayers.add(psVo);
+                }
+            }
+            vo.setHomePlayerStats(homePlayers);
+            vo.setAwayPlayerStats(awayPlayers);
+            List<BasketMatchSubmissionPeriodScoreVo> periods = new ArrayList<>();
+            for (BasketMatchSubmissionPeriodScore period : submissionPeriodScoreMapper.selectBySubmissionId(submissionId)) {
+                BasketMatchSubmissionPeriodScoreVo pVo = new BasketMatchSubmissionPeriodScoreVo();
+                pVo.setPeriodNo(period.getPeriodNo());
+                pVo.setHomeScore(period.getHomeScore());
+                pVo.setAwayScore(period.getAwayScore());
+                periods.add(pVo);
+            }
+            vo.setPeriodScores(periods);
+        }
 
         List<BasketMatchSubmissionMaterialVo> materials = new ArrayList<>();
         for (BasketMatchSubmissionMaterial m : submissionMaterialMapper.selectBySubmissionId(submissionId)) {
@@ -141,6 +175,9 @@ public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSu
         BasketMatchSubmission submission = requireSubmission(submissionId);
         if (!SubmissionStatusEnum.PENDING_REVIEW.getCode().equals(submission.getSubmissionStatus())) {
             throw new ServiceException("仅待审核状态可通过");
+        }
+        if (submission.getSeriesSubmissionId() != null) {
+            throw new ServiceException("系列赛对局请从系列赛审核入口统一审核");
         }
         Date now = new Date();
         submission.setSubmissionStatus(SubmissionStatusEnum.APPROVED.getCode());
@@ -215,6 +252,10 @@ public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSu
             throw new ServiceException("无权访问该文件");
         }
         privateFileService.streamFileAsset(fileId, response);
+    }
+
+    private boolean isWinnerFullMatch(String mode) {
+        return "WINNER_FULL_MATCH".equals(mode) || "FULL_MATCH".equals(mode);
     }
 
     private BasketMatchSubmission requireSubmission(Long id) {

@@ -521,6 +521,18 @@ const router = createRouter({
 
         {
 
+          path: 'my-events/v4/series-submission/:matchSeriesId',
+
+          name: 'AccountV4SeriesSubmission',
+
+          component: () => import('@/views/account/events/V4SeriesSubmissionView.vue'),
+
+          meta: { title: '系列赛数据提交' },
+
+        },
+
+        {
+
           path: 'my-events/2026-open/individual-registration',
 
           redirect: { name: 'AccountMyEvents', query: { tab: 'available' } },

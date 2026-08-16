@@ -16,13 +16,19 @@
         <result property="block" column="block" />
         <result property="turnover" column="turnover" />
         <result property="foul" column="foul" />
+        <result property="fieldGoalMade" column="field_goal_made" />
+        <result property="fieldGoalAttempt" column="field_goal_attempt" />
+        <result property="threePointMade" column="three_point_made" />
+        <result property="threePointAttempt" column="three_point_attempt" />
+        <result property="freeThrowMade" column="free_throw_made" />
+        <result property="freeThrowAttempt" column="free_throw_attempt" />
         <result property="minutes" column="minutes" />
         <result property="createTime" column="create_time" />
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
-    <sql id="BaseColumns">id, submission_id, match_id, division_id, event_team_id, event_player_id, points, rebound, assist, steal, block, turnover, foul, minutes, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, submission_id, match_id, division_id, event_team_id, event_player_id, points, rebound, assist, steal, block, turnover, foul, field_goal_made, field_goal_attempt, three_point_made, three_point_attempt, free_throw_made, free_throw_attempt, minutes, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketMatchSubmissionPlayerStatResult">
         select <include refid="BaseColumns" /> from basket_match_submission_player_stat
@@ -37,9 +43,9 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_match_submission_player_stat (
-            submission_id, match_id, division_id, event_team_id, event_player_id, points, rebound, assist, steal, block, turnover, foul, minutes, create_time, update_time, is_delete
+            submission_id, match_id, division_id, event_team_id, event_player_id, points, rebound, assist, steal, block, turnover, foul, field_goal_made, field_goal_attempt, three_point_made, three_point_attempt, free_throw_made, free_throw_attempt, minutes, create_time, update_time, is_delete
         ) values (
-            #{submissionId}, #{matchId}, #{divisionId}, #{eventTeamId}, #{eventPlayerId}, #{points}, #{rebound}, #{assist}, #{steal}, #{block}, #{turnover}, #{foul}, #{minutes}, #{createTime}, #{updateTime}, #{isDelete}
+            #{submissionId}, #{matchId}, #{divisionId}, #{eventTeamId}, #{eventPlayerId}, #{points}, #{rebound}, #{assist}, #{steal}, #{block}, #{turnover}, #{foul}, #{fieldGoalMade}, #{fieldGoalAttempt}, #{threePointMade}, #{threePointAttempt}, #{freeThrowMade}, #{freeThrowAttempt}, #{minutes}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -58,6 +64,12 @@
             <if test="block != null">block = #{block},</if>
             <if test="turnover != null">turnover = #{turnover},</if>
             <if test="foul != null">foul = #{foul},</if>
+            <if test="fieldGoalMade != null">field_goal_made = #{fieldGoalMade},</if>
+            <if test="fieldGoalAttempt != null">field_goal_attempt = #{fieldGoalAttempt},</if>
+            <if test="threePointMade != null">three_point_made = #{threePointMade},</if>
+            <if test="threePointAttempt != null">three_point_attempt = #{threePointAttempt},</if>
+            <if test="freeThrowMade != null">free_throw_made = #{freeThrowMade},</if>
+            <if test="freeThrowAttempt != null">free_throw_attempt = #{freeThrowAttempt},</if>
             <if test="minutes != null">minutes = #{minutes},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
             update_time = now()

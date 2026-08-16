@@ -22,4 +22,6 @@ public interface BasketMatchSubmissionMapper {
     int softDelete(@Param("id") Long id);
 
     int countByScheduleBatchId(@Param("scheduleBatchId") Long scheduleBatchId);
+
+    List<BasketMatchSubmission> selectBySeriesSubmissionId(@Param("seriesSubmissionId") Long seriesSubmissionId);
 }

@@ -23,12 +23,15 @@
         <result property="auditRemark" column="audit_remark" />
         <result property="rejectReason" column="reject_reason" />
         <result property="submitRemark" column="submit_remark" />
+        <result property="seriesSubmissionId" column="series_submission_id" />
+        <result property="submissionMode" column="submission_mode" />
+        <result property="draftComplete" column="draft_complete" />
         <result property="createTime" column="create_time" />
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
     </resultMap>
 
-    <sql id="BaseColumns">id, match_id, season_id, division_id, submit_event_team_id, opponent_event_team_id, submit_event_player_id, submit_member_id, submitter_role, submission_status, version_no, home_score, away_score, submit_time, audit_user_id, audit_user_name, audit_time, audit_remark, reject_reason, submit_remark, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, match_id, season_id, division_id, submit_event_team_id, opponent_event_team_id, submit_event_player_id, submit_member_id, submitter_role, submission_status, version_no, home_score, away_score, submit_time, audit_user_id, audit_user_name, audit_time, audit_remark, reject_reason, submit_remark, series_submission_id, submission_mode, draft_complete, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketMatchSubmissionResult">
         select <include refid="BaseColumns" /> from basket_match_submission
@@ -43,9 +46,9 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_match_submission (
-            match_id, season_id, division_id, submit_event_team_id, opponent_event_team_id, submit_event_player_id, submit_member_id, submitter_role, submission_status, version_no, home_score, away_score, submit_time, audit_user_id, audit_user_name, audit_time, audit_remark, reject_reason, submit_remark, create_time, update_time, is_delete
+            match_id, season_id, division_id, submit_event_team_id, opponent_event_team_id, submit_event_player_id, submit_member_id, submitter_role, submission_status, version_no, home_score, away_score, submit_time, audit_user_id, audit_user_name, audit_time, audit_remark, reject_reason, submit_remark, series_submission_id, submission_mode, draft_complete, create_time, update_time, is_delete
         ) values (
-            #{matchId}, #{seasonId}, #{divisionId}, #{submitEventTeamId}, #{opponentEventTeamId}, #{submitEventPlayerId}, #{submitMemberId}, #{submitterRole}, #{submissionStatus}, #{versionNo}, #{homeScore}, #{awayScore}, #{submitTime}, #{auditUserId}, #{auditUserName}, #{auditTime}, #{auditRemark}, #{rejectReason}, #{submitRemark}, #{createTime}, #{updateTime}, #{isDelete}
+            #{matchId}, #{seasonId}, #{divisionId}, #{submitEventTeamId}, #{opponentEventTeamId}, #{submitEventPlayerId}, #{submitMemberId}, #{submitterRole}, #{submissionStatus}, #{versionNo}, #{homeScore}, #{awayScore}, #{submitTime}, #{auditUserId}, #{auditUserName}, #{auditTime}, #{auditRemark}, #{rejectReason}, #{submitRemark}, #{seriesSubmissionId}, #{submissionMode}, #{draftComplete}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -71,6 +74,9 @@
             <if test="auditRemark != null">audit_remark = #{auditRemark},</if>
             <if test="rejectReason != null">reject_reason = #{rejectReason},</if>
             <if test="submitRemark != null">submit_remark = #{submitRemark},</if>
+            <if test="seriesSubmissionId != null">series_submission_id = #{seriesSubmissionId},</if>
+            <if test="submissionMode != null">submission_mode = #{submissionMode},</if>
+            <if test="draftComplete != null">draft_complete = #{draftComplete},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
             update_time = now()
         </set>
@@ -154,6 +160,12 @@
         <if test="teamName != null and teamName != ''">and st.team_name_snapshot like concat('%', #{teamName}, '%')</if>
         <if test="matchNo != null and matchNo != ''">and m.match_no like concat('%', #{matchNo}, '%')</if>
         order by case when s.submission_status = 'PENDING_REVIEW' then 0 else 1 end, s.submit_time desc, s.id desc
+    </select>
+
+    <select id="selectBySeriesSubmissionId" resultMap="BasketMatchSubmissionResult">
+        select <include refid="BaseColumns" /> from basket_match_submission
+        where series_submission_id = #{seriesSubmissionId} and is_delete = 0
+        order by id asc
     </select>
 
     <select id="countByScheduleBatchId" resultType="int">

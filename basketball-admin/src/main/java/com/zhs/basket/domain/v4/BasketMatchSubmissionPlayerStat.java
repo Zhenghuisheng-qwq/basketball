@@ -22,6 +22,12 @@ public class BasketMatchSubmissionPlayerStat {
     private Integer block;
     private Integer turnover;
     private Integer foul;
+    private Integer fieldGoalMade;
+    private Integer fieldGoalAttempt;
+    private Integer threePointMade;
+    private Integer threePointAttempt;
+    private Integer freeThrowMade;
+    private Integer freeThrowAttempt;
     private BigDecimal minutes;
     private Date createTime;
     private Date updateTime;

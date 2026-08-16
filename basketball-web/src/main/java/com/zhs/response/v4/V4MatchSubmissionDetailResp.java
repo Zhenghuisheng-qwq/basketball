@@ -37,7 +37,17 @@ public class V4MatchSubmissionDetailResp {
     private String rejectReason;
     private V4MatchSubmissionTeamStatResp teamStat;
     private List<V4MatchSubmissionPlayerStatResp> playerStats;
+    private V4MatchSubmissionTeamStatResp homeTeamStat;
+    private V4MatchSubmissionTeamStatResp awayTeamStat;
+    private List<V4MatchSubmissionPlayerStatResp> homePlayerStats;
+    private List<V4MatchSubmissionPlayerStatResp> awayPlayerStats;
+    private List<V4MatchSubmissionPeriodScoreResp> periodScores;
     private List<Long> materialFileIds;
     private V4MatchSubmissionSeriesContextResp seriesContext;
     private List<V4MatchSubmissionEligiblePlayerResp> eligiblePlayers;
+    private List<V4MatchSubmissionEligiblePlayerResp> homeEligiblePlayers;
+    private List<V4MatchSubmissionEligiblePlayerResp> awayEligiblePlayers;
+    private String submissionMode;
+    private Integer draftComplete;
+    private Long seriesSubmissionId;
 }

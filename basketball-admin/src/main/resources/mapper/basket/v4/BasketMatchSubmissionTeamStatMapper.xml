@@ -85,6 +85,12 @@
         limit 1
     </select>
 
+    <select id="selectListBySubmissionId" resultMap="BasketMatchSubmissionTeamStatResult">
+        select <include refid="BaseColumns" /> from basket_match_submission_team_stat
+        where submission_id = #{submissionId} and is_delete = 0
+        order by id asc
+    </select>
+
     <update id="deleteBySubmissionId">
         update basket_match_submission_team_stat
         set is_delete = 1, update_time = now()

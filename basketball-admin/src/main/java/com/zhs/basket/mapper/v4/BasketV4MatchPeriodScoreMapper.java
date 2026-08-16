@@ -14,4 +14,6 @@ public interface BasketV4MatchPeriodScoreMapper {
     int insert(BasketV4MatchPeriodScore entity);
     int updateById(BasketV4MatchPeriodScore entity);
     int softDelete(@Param("id") Long id);
+    List<BasketV4MatchPeriodScore> selectByMatchId(@Param("matchId") Long matchId);
+    int softDeleteByMatchId(@Param("matchId") Long matchId);
 }

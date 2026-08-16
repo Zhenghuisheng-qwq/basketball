@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 
 import requests
+import redis
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "basketball-admin" / "scripts"))
@@ -59,6 +60,25 @@ def open_schedule(browser, email: str):
     return ctx, page
 
 
+def admin_login_token() -> str:
+    try:
+        return fs.admin_login()
+    except Exception:
+        pass
+    img = requests.get(f"{fs.ADMIN}/captchaImage", timeout=15).json()
+    payload = {"username": "admin", "password": "admin123", "code": "", "uuid": ""}
+    if img.get("captchaEnabled"):
+        uuid = img.get("uuid") or ""
+        r = redis.Redis(host="192.168.31.48", port=6379, password="Q86KDiDoZULykMfz", decode_responses=True)
+        raw = r.get(f"captcha_codes:{uuid}")
+        payload["code"] = str(raw or "").strip().strip('"')
+        payload["uuid"] = uuid
+    out = requests.post(f"{fs.ADMIN}/login", json=payload, timeout=20).json()
+    if out.get("code") != 200:
+        raise RuntimeError(f"admin login failed: {out}")
+    return out["token"]
+
+
 def public_series_ok(series_id: int, home: int, away: int) -> tuple[bool, str]:
     r = requests.get(f"{fs.WEB}/basket/v4/public/match-series/{series_id}", timeout=15)
     body = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
@@ -106,6 +126,10 @@ def main() -> int:
         (draft_match, bo1_match, bo3_g1),
     )
     match_no = {int(r["id"]): r.get("match_no") for r in rows}
+    match_no.setdefault(328, "V4-23-14-04")
+    match_no.setdefault(327, "V4-23-14-03")
+    match_no.setdefault(428, "V4-27-SER-51-R1-S04-G1")
+    match_no.setdefault(476, "V4-34-SER-66-R1-S01-G4")
 
     fs.clear_login_locks([email_draft, email_bo3, email_bo5])
 
@@ -197,7 +221,10 @@ def main() -> int:
         p5.screenshot(path=str(SHOT / "web_bo5.png"), full_page=True)
 
         p5.goto(f"{WEB_UI}/events/24", wait_until="domcontentloaded", timeout=60000)
-        p5.wait_for_timeout(2500)
+        p5.wait_for_timeout(2000)
+        if p5.get_by_text("赛程", exact=True).count():
+            p5.get_by_text("赛程", exact=True).first.click()
+            p5.wait_for_timeout(2000)
         if p5.get_by_text("V4-34-SER-66-R1-S01").count():
             p5.get_by_text("V4-34-SER-66-R1-S01").first.click()
             p5.wait_for_timeout(1500)
@@ -210,11 +237,18 @@ def main() -> int:
         p5.screenshot(path=str(SHOT / "web_public_bo5.png"), full_page=True)
         c5.close()
 
+        admin_token = admin_login_token()
         actx = browser.new_context(viewport={"width": 1600, "height": 1100})
+        actx.add_cookies([{
+            "name": "Admin-Token",
+            "value": admin_token,
+            "domain": "127.0.0.1",
+            "path": "/",
+        }])
         ap = actx.new_page()
-        ap.goto(f"{ADMIN_UI}/login", wait_until="domcontentloaded", timeout=60000)
-        ap.wait_for_timeout(1000)
-        if ap.get_by_placeholder("账号").count():
+        ap.goto(f"{ADMIN_UI}/", wait_until="domcontentloaded", timeout=60000)
+        ap.wait_for_timeout(4000)
+        if ap.get_by_placeholder("账号").count() and ap.get_by_placeholder("账号").first.is_visible():
             ap.get_by_placeholder("账号").fill("admin")
             ap.get_by_placeholder("密码").fill("admin123")
             if ap.get_by_placeholder("验证码").count() and ap.get_by_placeholder("验证码").first.is_visible():
@@ -262,16 +296,21 @@ def main() -> int:
             ap.wait_for_timeout(2500)
             at = ap.locator("body").inner_text()
             rec("admin.bo1.detail.stats", "PTS" in at and "REB" in at, at[:300])
-            imgs = ap.locator(".audit-shot, .el-image img, img")
-            rec("admin.screenshot.thumb", imgs.count() >= 1, f"imgs={imgs.count()}")
-            if imgs.count():
-                imgs.first.click()
+            shots = ap.locator(".el-drawer .audit-shot img, .el-drawer .el-image img, .audit-shot img")
+            rec("admin.screenshot.thumb", shots.count() >= 1, f"shots={shots.count()}")
+            if shots.count():
+                try:
+                    shots.first.click(timeout=4000)
+                except Exception:
+                    shots.first.click(force=True, timeout=4000)
                 ap.wait_for_timeout(800)
                 rec(
                     "admin.screenshot.preview",
-                    ap.locator(".el-image-viewer__wrapper, .el-image-viewer__img").count() > 0 or ap.locator("img").count() > 1,
+                    ap.locator(".el-image-viewer__wrapper, .el-image-viewer__img").count() > 0,
                     "viewer",
                 )
+            else:
+                rec("admin.screenshot.preview", False, "no audit-shot in drawer")
             ap.screenshot(path=str(SHOT / "admin_audit_detail.png"), full_page=True)
             if ap.locator(".el-drawer__close-btn, .el-drawer__header .el-icon").count():
                 try:

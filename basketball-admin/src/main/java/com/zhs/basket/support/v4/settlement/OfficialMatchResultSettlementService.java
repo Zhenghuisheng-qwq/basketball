@@ -2,9 +2,11 @@ package com.zhs.basket.support.v4.settlement;
 
 import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketMatchSubmission;
+import com.zhs.basket.domain.v4.BasketMatchSubmissionPeriodScore;
 import com.zhs.basket.domain.v4.BasketMatchSubmissionPlayerStat;
 import com.zhs.basket.domain.v4.BasketMatchSubmissionTeamStat;
 import com.zhs.basket.domain.v4.BasketV4Match;
+import com.zhs.basket.domain.v4.BasketV4MatchPeriodScore;
 import com.zhs.basket.domain.v4.BasketV4MatchPlayerStat;
 import com.zhs.basket.domain.v4.BasketV4MatchTeamStat;
 import com.zhs.basket.enums.v4.CompetitionFormatEnum;
@@ -44,6 +46,10 @@ public class OfficialMatchResultSettlementService {
     private BasketMatchSubmissionTeamStatMapper submissionTeamStatMapper;
     @Autowired
     private BasketMatchSubmissionPlayerStatMapper submissionPlayerStatMapper;
+    @Autowired
+    private com.zhs.basket.mapper.v4.BasketMatchSubmissionPeriodScoreMapper submissionPeriodScoreMapper;
+    @Autowired
+    private com.zhs.basket.mapper.v4.BasketV4MatchPeriodScoreMapper matchPeriodScoreMapper;
     @Autowired
     private BasketV4MatchTeamStatMapper matchTeamStatMapper;
     @Autowired
@@ -158,12 +164,92 @@ public class OfficialMatchResultSettlementService {
     }
 
     private void applySubmissionStats(BasketMatchSubmission submission, BasketV4Match match, Date now) {
+        if (isWinnerFullMatch(submission.getSubmissionMode())) {
+            applyFullMatchStats(submission, match, now);
+            return;
+        }
         BasketMatchSubmissionTeamStat subTeamStat = submissionTeamStatMapper.selectBySubmissionId(submission.getId());
         upsertSubmitTeamMatchStat(submission, match, subTeamStat, now);
         upsertOpponentMinimalTeamStat(submission, match, now);
         List<BasketMatchSubmissionPlayerStat> subPlayerStats = submissionPlayerStatMapper.selectBySubmissionId(submission.getId());
         for (BasketMatchSubmissionPlayerStat ps : subPlayerStats) {
             upsertMatchPlayerStat(submission, match, ps, now);
+        }
+    }
+
+    private void applyFullMatchStats(BasketMatchSubmission submission, BasketV4Match match, Date now) {
+        List<BasketMatchSubmissionTeamStat> teamStats = submissionTeamStatMapper.selectListBySubmissionId(submission.getId());
+        for (BasketMatchSubmissionTeamStat teamStat : teamStats) {
+            upsertFullTeamMatchStat(submission, match, teamStat, now);
+        }
+        List<BasketMatchSubmissionPlayerStat> subPlayerStats = submissionPlayerStatMapper.selectBySubmissionId(submission.getId());
+        for (BasketMatchSubmissionPlayerStat ps : subPlayerStats) {
+            upsertMatchPlayerStat(submission, match, ps, now);
+        }
+        applySubmissionPeriodScores(submission, match, now);
+    }
+
+    private void upsertFullTeamMatchStat(BasketMatchSubmission submission, BasketV4Match match,
+                                         BasketMatchSubmissionTeamStat subTeamStat, Date now) {
+        if (subTeamStat == null || subTeamStat.getEventTeamId() == null) {
+            return;
+        }
+        boolean isHome = subTeamStat.getEventTeamId().equals(match.getHomeEventTeamId());
+        int teamScore = isHome ? nvl(submission.getHomeScore()) : nvl(submission.getAwayScore());
+        int oppScore = isHome ? nvl(submission.getAwayScore()) : nvl(submission.getHomeScore());
+        Long opponentId = isHome ? match.getAwayEventTeamId() : match.getHomeEventTeamId();
+        BasketV4MatchTeamStat existing = matchTeamStatMapper.selectByMatchAndEventTeam(match.getId(), subTeamStat.getEventTeamId());
+        BasketV4MatchTeamStat row = existing != null ? existing : new BasketV4MatchTeamStat();
+        row.setMatchId(match.getId());
+        row.setSeasonId(match.getSeasonId());
+        row.setDivisionId(match.getDivisionId());
+        row.setEventTeamId(subTeamStat.getEventTeamId());
+        row.setOpponentEventTeamId(opponentId);
+        row.setIsWinner(teamScore > oppScore ? 1 : 0);
+        row.setScore(teamScore);
+        row.setPointsFor(teamScore);
+        row.setPointsAgainst(oppScore);
+        row.setFieldGoalMade(nvl(subTeamStat.getFieldGoalMade()));
+        row.setFieldGoalAttempt(nvl(subTeamStat.getFieldGoalAttempt()));
+        row.setThreePointMade(nvl(subTeamStat.getThreePointMade()));
+        row.setThreePointAttempt(nvl(subTeamStat.getThreePointAttempt()));
+        row.setFreeThrowMade(nvl(subTeamStat.getFreeThrowMade()));
+        row.setFreeThrowAttempt(nvl(subTeamStat.getFreeThrowAttempt()));
+        row.setRebound(nvl(subTeamStat.getRebound()));
+        row.setAssist(nvl(subTeamStat.getAssist()));
+        row.setSteal(nvl(subTeamStat.getSteal()));
+        row.setBlock(nvl(subTeamStat.getBlock()));
+        row.setTurnover(nvl(subTeamStat.getTurnover()));
+        row.setFoul(nvl(subTeamStat.getFoul()));
+        applyTeamStatDefaults(row);
+        row.setSourceSubmissionId(submission.getId());
+        row.setUpdateTime(now);
+        if (existing == null) {
+            row.setCreateTime(now);
+            row.setIsDelete(NOT_DELETED);
+            matchTeamStatMapper.insert(row);
+        } else {
+            matchTeamStatMapper.updateById(row);
+        }
+    }
+
+    private void applySubmissionPeriodScores(BasketMatchSubmission submission, BasketV4Match match, Date now) {
+        List<BasketMatchSubmissionPeriodScore> periods = submissionPeriodScoreMapper.selectBySubmissionId(submission.getId());
+        if (periods == null || periods.isEmpty()) {
+            return;
+        }
+        matchPeriodScoreMapper.softDeleteByMatchId(match.getId());
+        for (BasketMatchSubmissionPeriodScore period : periods) {
+            BasketV4MatchPeriodScore row = new BasketV4MatchPeriodScore();
+            row.setMatchId(match.getId());
+            row.setDivisionId(match.getDivisionId());
+            row.setPeriodNo(period.getPeriodNo());
+            row.setHomeScore(nvl(period.getHomeScore()));
+            row.setAwayScore(nvl(period.getAwayScore()));
+            row.setCreateTime(now);
+            row.setUpdateTime(now);
+            row.setIsDelete(NOT_DELETED);
+            matchPeriodScoreMapper.insert(row);
         }
     }
 
@@ -306,6 +392,12 @@ public class OfficialMatchResultSettlementService {
         row.setBlock(nvl(ps.getBlock()));
         row.setTurnover(nvl(ps.getTurnover()));
         row.setFoul(nvl(ps.getFoul()));
+        row.setFieldGoalMade(nvl(ps.getFieldGoalMade()));
+        row.setFieldGoalAttempt(nvl(ps.getFieldGoalAttempt()));
+        row.setThreePointMade(nvl(ps.getThreePointMade()));
+        row.setThreePointAttempt(nvl(ps.getThreePointAttempt()));
+        row.setFreeThrowMade(nvl(ps.getFreeThrowMade()));
+        row.setFreeThrowAttempt(nvl(ps.getFreeThrowAttempt()));
         row.setMinutes(ps.getMinutes());
         row.setSourceSubmissionId(submission.getId());
         row.setUpdateTime(now);
@@ -419,6 +511,10 @@ public class OfficialMatchResultSettlementService {
         if (row.getFoul() == null) {
             row.setFoul(0);
         }
+    }
+
+    private boolean isWinnerFullMatch(String mode) {
+        return "WINNER_FULL_MATCH".equals(mode) || "FULL_MATCH".equals(mode);
     }
 
     private int nvl(Integer v) {

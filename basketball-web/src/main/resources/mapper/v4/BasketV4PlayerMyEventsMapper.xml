@@ -71,7 +71,7 @@
                 where s1.is_delete = 0
               ) ps on ps.match_id = m.id and ps.submit_event_team_id = et.id
               where m.is_delete = 0 and m.publish_status = 'PUBLISHED'
-                and m.match_status != 'CANCELLED'
+                and m.match_status in ('FINISHED', 'FORFEITED')
                 and (m.home_event_team_id = et.id or m.away_event_team_id = et.id)
                 and (ps.submission_status is null or ps.submission_status in ('DRAFT', 'REJECTED'))
             ) as pendingSubmissionCount

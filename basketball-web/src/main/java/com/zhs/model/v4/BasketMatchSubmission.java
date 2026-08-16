@@ -69,6 +69,13 @@ public class BasketMatchSubmission implements Serializable {
 
     private String submitRemark;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long seriesSubmissionId;
+
+    private String submissionMode;
+
+    private Integer draftComplete;
+
     private Date createTime;
 
     private Date updateTime;

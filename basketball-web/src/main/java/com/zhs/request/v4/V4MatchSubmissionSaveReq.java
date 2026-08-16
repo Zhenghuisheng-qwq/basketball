@@ -12,6 +12,11 @@ public class V4MatchSubmissionSaveReq {
     private Integer awayScore;
     private V4MatchSubmissionTeamStatReq teamStat;
     private List<V4MatchSubmissionPlayerStatReq> playerStats;
+    private List<V4MatchSubmissionPlayerStatReq> homePlayerStats;
+    private List<V4MatchSubmissionPlayerStatReq> awayPlayerStats;
+    private List<V4MatchSubmissionPeriodScoreReq> periodScores;
     private List<Long> materialFileIds;
     private String submitRemark;
+    private String submissionMode;
+    private Boolean draftComplete;
 }

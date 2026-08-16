@@ -244,11 +244,16 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
   const matchStatus = normalizeStatus(row.matchStatus)
   const myStatus = normalizeStatus(row.mySubmissionStatus)
   const opponentStatus = normalizeStatus(row.opponentSubmissionStatus)
-  const submitRoute = {
-    name: 'AccountV4MatchSubmission',
-    params: { matchId: row.matchId },
-    query: { submitEventTeamId: row.myEventTeamId },
-  } as const
+  const submitRoute = row.bestOf && row.bestOf > 1 && row.matchSeriesId
+    ? {
+        name: 'AccountV4SeriesSubmission',
+        params: { matchSeriesId: row.matchSeriesId },
+      }
+    : {
+        name: 'AccountV4MatchSubmission',
+        params: { matchId: row.matchId },
+        query: { submitEventTeamId: row.myEventTeamId },
+      }
   const detailRoute = {
     name: 'V4MatchDetail',
     params: { matchId: row.matchId },

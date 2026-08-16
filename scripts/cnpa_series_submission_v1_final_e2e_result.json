@@ -1,0 +1,438 @@
+{
+  "startedAt": "2026-08-16T16:40:20",
+  "env": {
+    "web": "http://127.0.0.1:18881",
+    "admin": "http://127.0.0.1:18080",
+    "webUi": "http://127.0.0.1:5173",
+    "adminUi": "http://127.0.0.1:5174",
+    "db": "basketball_r9_fresh@192.168.31.48:3306"
+  },
+  "cases": {
+    "env.services": {
+      "ok": true,
+      "detail": "admin=18080 web=18881 ui=5173/5174 db=basketball_r9_fresh"
+    },
+    "schema.header": {
+      "ok": true,
+      "detail": "basket_match_series_submission"
+    },
+    "schema.period": {
+      "ok": true,
+      "detail": "basket_match_submission_period_score"
+    },
+    "schema.submission.cols": {
+      "ok": true,
+      "detail": "['draft_complete', 'series_submission_id', 'submission_mode']"
+    },
+    "schema.basket_match_submission_player_stat.shooting": {
+      "ok": true,
+      "detail": "basket_match_submission_player_stat"
+    },
+    "schema.basket_match_player_stat.shooting": {
+      "ok": true,
+      "detail": "basket_match_player_stat"
+    },
+    "schema.migration.rerun": {
+      "ok": true,
+      "detail": "additive ALTER is duplicate-column safe on second run"
+    },
+    "legacy.fixture": {
+      "ok": true,
+      "detail": "match=326"
+    },
+    "legacy.draft": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "legacy.detail": {
+      "ok": true,
+      "detail": "mode=LEGACY_TEAM_SIDE"
+    },
+    "legacy.submit": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "legacy.admin.detail": {
+      "ok": true,
+      "detail": "players=2"
+    },
+    "legacy.reject": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "legacy.resubmit": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "legacy.approve": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "legacy.settlement": {
+      "ok": true,
+      "detail": "{'id': 326, 'series_id': None, 'series_game_no': None, 'match_status': 'FINISHED', 'publish_status': 'PUBLISHED', 'home_score': 80, 'away_score': 70, 'winner_event_team_id': 81, 'loser_event_team_id': 76, 'home_event_team_id': 81, 'away_event_team_id': 76, 'season_id': 12, 'division_id': 23}"
+    },
+    "bo1.fixture": {
+      "ok": true,
+      "detail": "home=5 away=5"
+    },
+    "bo1.selector.scope": {
+      "ok": true,
+      "detail": "overlap=set()"
+    },
+    "bo1.cross.team": {
+      "ok": true,
+      "detail": "本场 · 主队：球员不属于该队当前有效名单"
+    },
+    "bo1.cross.division": {
+      "ok": true,
+      "detail": "本场 · 主队：球员不属于该队当前有效名单"
+    },
+    "bo1.duplicate": {
+      "ok": true,
+      "detail": "本场 · 主队 · 第 2 行：同一球队同一场不能重复选择球员"
+    },
+    "bo1.shooting.fgm_gt_fga": {
+      "ok": true,
+      "detail": "本场 · 主队 · 第 1 行：FGM 9 大于 FGA 8"
+    },
+    "bo1.shooting.3pm_gt_3pa": {
+      "ok": true,
+      "detail": "本场 · 主队 · 第 1 行：3PM 4 大于 3PA 3"
+    },
+    "bo1.shooting.3pm_gt_fgm": {
+      "ok": true,
+      "detail": "本场 · 主队 · 第 1 行：3PM 3 大于 FGM 2"
+    },
+    "bo1.shooting.3pa_gt_fga": {
+      "ok": true,
+      "detail": "本场 · 主队 · 第 1 行：FGM 8 大于 FGA 3"
+    },
+    "bo1.shooting.ftm_gt_fta": {
+      "ok": true,
+      "detail": "本场 · 主队 · 第 1 行：FTM 3 大于 FTA 2"
+    },
+    "bo1.shooting.pts_formula": {
+      "ok": true,
+      "detail": "本场 · 主队 · 第 1 行：PTS 20 与公式 2×FGM+3PM+FTM=21 不一致"
+    },
+    "bo1.period.mismatch": {
+      "ok": true,
+      "detail": "本场：节比分主队合计 44 必须等于本场比分 45"
+    },
+    "bo1.score.mismatch": {
+      "ok": true,
+      "detail": "本场：主队球员 PTS 合计 45 必须等于主队比分 48"
+    },
+    "bo1.save": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo1.reload.shots": {
+      "ok": true,
+      "detail": "[2088908727968182273, 2088908728412778497]"
+    },
+    "bo1.reload.preview": {
+      "ok": true,
+      "detail": "status=200 ctype=image/png bytes=81"
+    },
+    "bo1.team.rows": {
+      "ok": true,
+      "detail": "n=2"
+    },
+    "bo1.team.sum": {
+      "ok": true,
+      "detail": "db=45 exp=45"
+    },
+    "bo1.period.db": {
+      "ok": true,
+      "detail": "[{'period_no': 1, 'match_id': 327}, {'period_no': 2, 'match_id': 327}, {'period_no': 3, 'match_id': 327}, {'period_no': 4, 'match_id': 327}]"
+    },
+    "bo1.wrong.otherMember": {
+      "ok": true,
+      "detail": "无权提交该记录"
+    },
+    "bo1.wrong.winner": {
+      "ok": true,
+      "detail": "本场数据应由获胜球队队长提交。"
+    },
+    "bo1.winner.submit": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo1.admin.full": {
+      "ok": true,
+      "detail": "mode=WINNER_FULL_MATCH"
+    },
+    "bo1.approve": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo1.official.match": {
+      "ok": true,
+      "detail": "{'id': 327, 'series_id': None, 'series_game_no': None, 'match_status': 'FINISHED', 'publish_status': 'PUBLISHED', 'home_score': 45, 'away_score': 31, 'winner_event_team_id': 80, 'loser_event_team_id': 77, 'home_event_team_id': 80, 'away_event_team_id': 77, 'season_id': 12, 'division_id': 23}"
+    },
+    "bo1.official.team.both": {
+      "ok": true,
+      "detail": "[{'event_team_id': 77, 'score': 31}, {'event_team_id': 80, 'score': 45}]"
+    },
+    "bo1.official.player.shooting": {
+      "ok": true,
+      "detail": "n=5"
+    },
+    "bo3.fixture": {
+      "ok": true,
+      "detail": "{'id': 89, 'series_code': 'V4-28-SER-53-R1-S04', 'best_of': 3, 'series_status': 'READY', 'home_win_count': 0, 'away_win_count': 0, 'winner_event_team_id': None, 'home_event_team_id': 124, 'away_event_team_id': 127, 'division_id': 28, 'stage_id': 53}"
+    },
+    "bo3.declare": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo3.g3.skipped": {
+      "ok": true,
+      "detail": "[(1, True, False), (2, True, False), (3, False, True)]"
+    },
+    "bo3.progress.0": {
+      "ok": true,
+      "detail": "0"
+    },
+    "bo3.g1.complete": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo3.progress.1": {
+      "ok": true,
+      "detail": "1"
+    },
+    "bo3.submit.incomplete": {
+      "ok": true,
+      "detail": "G2 尚未完成，不能提交整个系列赛审核"
+    },
+    "bo3.g2.complete": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo3.progress.2": {
+      "ok": true,
+      "detail": "2"
+    },
+    "bo3.shot.isolation": {
+      "ok": true,
+      "detail": "g1={'2088908734469353473'} g2={'2088908735434043393'}"
+    },
+    "bo3.submit.scoreMismatch": {
+      "ok": true,
+      "detail": "各 Game 胜负累计 1:1 必须等于声明的系列赛比分 2:0"
+    },
+    "bo3.wrong.captain": {
+      "ok": true,
+      "detail": "系列赛数据应由获胜球队队长提交。"
+    },
+    "bo3.submit": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo3.bypass.game.audit": {
+      "ok": true,
+      "detail": "仅待审核状态可通过"
+    },
+    "bo3.admin.list": {
+      "ok": true,
+      "detail": "n=1"
+    },
+    "bo3.admin.detail": {
+      "ok": true,
+      "detail": "games=2"
+    },
+    "bo3.approve": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo3.official.series": {
+      "ok": true,
+      "detail": "{'id': 89, 'series_code': 'V4-28-SER-53-R1-S04', 'best_of': 3, 'series_status': 'COMPLETED', 'home_win_count': 2, 'away_win_count': 0, 'winner_event_team_id': 124, 'home_event_team_id': 124, 'away_event_team_id': 127, 'division_id': 28, 'stage_id': 53}"
+    },
+    "bo3.g3.noOfficial": {
+      "ok": true,
+      "detail": "{'id': 457, 'series_id': 89, 'series_game_no': 3, 'match_status': 'SCHEDULED', 'publish_status': 'PUBLISHED', 'home_score': None, 'away_score': None, 'winner_event_team_id': None, 'loser_event_team_id': None, 'home_event_team_id': 124, 'away_event_team_id': 127, 'season_id': 18, 'division_id': 28}"
+    },
+    "bo3.approve.idempotent": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo5.fixture": {
+      "ok": true,
+      "detail": "n=5"
+    },
+    "bo5.actual.4": {
+      "ok": true,
+      "detail": "4"
+    },
+    "bo5.g5.skip": {
+      "ok": true,
+      "detail": "[(1, True, False), (2, True, False), (3, True, False), (4, True, False), (5, False, True)]"
+    },
+    "bo5.g1.save": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo5.g2.save": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo5.g3.save": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo5.g4.save": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo5.submit.incomplete": {
+      "ok": true,
+      "detail": "G4 尚未完成，不能提交整个系列赛审核"
+    },
+    "bo5.progress.4": {
+      "ok": true,
+      "detail": "4"
+    },
+    "bo5.shot.isolation": {
+      "ok": true,
+      "detail": "{478: {'2088908759949750273'}, 479: {'2088908760536952833'}, 480: {'2088908761321287682'}, 481: {'2088908761887518722'}}"
+    },
+    "bo5.submit": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo5.public.before": {
+      "ok": true,
+      "detail": "status=SCHEDULED"
+    },
+    "bo5.approve": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "bo5.official.3-1": {
+      "ok": true,
+      "detail": "{'id': 94, 'series_code': 'V4-35-SER-68-R1-S01', 'best_of': 5, 'series_status': 'COMPLETED', 'home_win_count': 3, 'away_win_count': 1, 'winner_event_team_id': 145, 'home_event_team_id': 145, 'away_event_team_id': 146, 'division_id': 35, 'stage_id': 68}"
+    },
+    "bo5.g5.noOfficial": {
+      "ok": true,
+      "detail": "{'id': 482, 'series_id': 94, 'series_game_no': 5, 'match_status': 'SCHEDULED', 'publish_status': 'PUBLISHED', 'home_score': None, 'away_score': None, 'winner_event_team_id': None, 'loser_event_team_id': None, 'home_event_team_id': 145, 'away_event_team_id': 146, 'season_id': 25, 'division_id': 35}"
+    },
+    "bo5.g1g4.finished": {
+      "ok": true,
+      "detail": "['FINISHED', 'FINISHED', 'FINISHED', 'FINISHED']"
+    },
+    "reject.reason.required": {
+      "ok": true,
+      "detail": "驳回原因不能为空"
+    },
+    "reject.ok": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "reject.restore": {
+      "ok": true,
+      "detail": "status=REJECTED reason=E2E series reject"
+    },
+    "resubmit.ok": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "resubmit.version": {
+      "ok": true,
+      "detail": "old=[{'status': 'SUPERSEDED', 'version_no': 1}] new=[{'id': 4, 'status': 'DRAFT', 'version_no': 2}]"
+    },
+    "tx.rollback": {
+      "ok": true,
+      "detail": "approve=提交缺少总比分 g1=SCHEDULED series=READY"
+    },
+    "eventplayer.lifecycle": {
+      "ok": true,
+      "detail": "status=[{'event_player_status': 'ACTIVE', 'c': 736}] inactive=0"
+    },
+    "eventplayer.only.active": {
+      "ok": true,
+      "detail": "no inactive EventPlayer; selector uses ACTIVE/NULL"
+    },
+    "ops.legacy.audit.list": {
+      "ok": true,
+      "detail": "total=251"
+    },
+    "ops.direct.alive": {
+      "ok": true,
+      "detail": "code=500 msg=请填写操作原因"
+    },
+    "ops.forfeit.alive": {
+      "ok": true,
+      "detail": "code=500 msg=请填写操作原因"
+    },
+    "browser.web.workspace": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nSS\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-SS-H101\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n系列赛数据\n系列赛数据提交\nSERIES DATA SUBMISSION\n系列赛数据提交\n\nE2E_SS_BO5_HOME VS E2E_SS_BO5_AWAY\n\n已通过\n系列赛最终结果\nE2E_SS_BO5_HOME\n3 : 0\n0 : 3\n3 : 1\n1 : 3\n3 : 2\n2 : 3\nE2E_SS_BO5_AWAY\n\n赛制 BO5 · 实际完成 4 场 · 胜者 E2E_SS_BO5_HOME\n\nG1\n已完成\nG2\n已完成\nG3\n已完成\nG4\n已完成\nG1 · 比赛数据\nE2E_SS_BO5"
+    },
+    "browser.admin.audit": {
+      "ok": true,
+      "detail": "http://localhost:5174/competition-exec/event-v4-match-submission-audit CNPA管理系统\n赛事管理\n系统监控\n系统工具\n比赛执行\n比赛管理\n比赛数据审核\n若依官网\n系统管理\n首页\n/\n比赛执行\n/\n比赛数据审核\n3\n若依\n运营工作台 比赛数据审核 \n刷新\n单场提交审核\n系列赛审核\n比赛数据审核\n\n按每场比赛的每支队伍独立审核；一方审核中不影响另一方提交。旧单队 Submission 继续在此审核。\n\n赛季\n选择赛季\n平台赛区\n选择赛区\n状态\n请选择\n球队\n比赛编号\n搜索\n重置\n提交ID\n\t\n比赛编号\n\t\n轮次\n\t\n平台赛区\n\t\n对阵\n\t\n提交方\n\t\n提交人\n\t\n版本\n\t\n状态\n\t\n提交时间\n\t\n操作\n241\n\t\nV4-23-14-03\n\t\n14\n\t\nE2E-LEA"
+    },
+    "ops.correction.alive": {
+      "ok": true,
+      "detail": "code=500 msg=请填写操作原因"
+    },
+    "ops.forfeitUndo.alive": {
+      "ok": true,
+      "detail": "code=500 msg=请填写操作原因"
+    },
+    "ops.seriesForfeit.alive": {
+      "ok": true,
+      "detail": "code=500 msg=请填写操作原因"
+    },
+    "ops.manual.alive": {
+      "ok": true,
+      "detail": "code=500 msg=请填写操作原因"
+    }
+  },
+  "bugs": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "ids": {
+    "legacy": {
+      "matchId": 326,
+      "submissionId": 243
+    },
+    "bo1": {
+      "matchId": 327,
+      "home": 80,
+      "away": 77,
+      "submissionId": 241
+    },
+    "bo3": {
+      "seriesId": 89,
+      "headerId": 1,
+      "home": 124,
+      "away": 127
+    },
+    "bo5": {
+      "seriesId": 94,
+      "headerId": 2,
+      "home": 145,
+      "away": 146,
+      "games": [
+        478,
+        479,
+        480,
+        481,
+        482
+      ]
+    },
+    "reject": {
+      "seriesId": 88,
+      "oldHeader": 3,
+      "newHeader": 4
+    }
+  },
+  "finishedAt": "2026-08-16T16:40:43"
+}

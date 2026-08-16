@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketMatchSeriesSubmissionMapper">
+
+    <resultMap type="com.zhs.basket.domain.v4.BasketMatchSeriesSubmission" id="SeriesSubmissionResult">
+        <id property="id" column="id" />
+        <result property="matchSeriesId" column="match_series_id" />
+        <result property="seasonId" column="season_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="stageId" column="stage_id" />
+        <result property="submitEventTeamId" column="submit_event_team_id" />
+        <result property="submitMemberId" column="submit_member_id" />
+        <result property="declaredHomeWinCount" column="declared_home_win_count" />
+        <result property="declaredAwayWinCount" column="declared_away_win_count" />
+        <result property="actualGameCount" column="actual_game_count" />
+        <result property="status" column="status" />
+        <result property="versionNo" column="version_no" />
+        <result property="submitTime" column="submit_time" />
+        <result property="auditUserId" column="audit_user_id" />
+        <result property="auditUserName" column="audit_user_name" />
+        <result property="auditTime" column="audit_time" />
+        <result property="auditRemark" column="audit_remark" />
+        <result property="rejectReason" column="reject_reason" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <sql id="BaseColumns">id, match_series_id, season_id, division_id, stage_id, submit_event_team_id, submit_member_id, declared_home_win_count, declared_away_win_count, actual_game_count, status, version_no, submit_time, audit_user_id, audit_user_name, audit_time, audit_remark, reject_reason, create_time, update_time, is_delete</sql>
+
+    <select id="selectById" resultMap="SeriesSubmissionResult">
+        select <include refid="BaseColumns" /> from basket_match_series_submission
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByIdForUpdate" resultMap="SeriesSubmissionResult">
+        select <include refid="BaseColumns" /> from basket_match_series_submission
+        where id = #{id} and is_delete = 0
+        for update
+    </select>
+
+    <select id="selectVersionsBySeriesId" resultMap="SeriesSubmissionResult">
+        select <include refid="BaseColumns" /> from basket_match_series_submission
+        where match_series_id = #{matchSeriesId} and is_delete = 0
+        order by version_no desc, id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_match_series_submission (
+            match_series_id, season_id, division_id, stage_id, submit_event_team_id, submit_member_id,
+            declared_home_win_count, declared_away_win_count, actual_game_count, status, version_no,
+            submit_time, audit_user_id, audit_user_name, audit_time, audit_remark, reject_reason,
+            create_time, update_time, is_delete
+        ) values (
+            #{matchSeriesId}, #{seasonId}, #{divisionId}, #{stageId}, #{submitEventTeamId}, #{submitMemberId},
+            #{declaredHomeWinCount}, #{declaredAwayWinCount}, #{actualGameCount}, #{status}, #{versionNo},
+            #{submitTime}, #{auditUserId}, #{auditUserName}, #{auditTime}, #{auditRemark}, #{rejectReason},
+            #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateById">
+        update basket_match_series_submission
+        <set>
+            <if test="submitEventTeamId != null">submit_event_team_id = #{submitEventTeamId},</if>
+            <if test="submitMemberId != null">submit_member_id = #{submitMemberId},</if>
+            <if test="declaredHomeWinCount != null">declared_home_win_count = #{declaredHomeWinCount},</if>
+            <if test="declaredAwayWinCount != null">declared_away_win_count = #{declaredAwayWinCount},</if>
+            <if test="actualGameCount != null">actual_game_count = #{actualGameCount},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="versionNo != null">version_no = #{versionNo},</if>
+            <if test="submitTime != null">submit_time = #{submitTime},</if>
+            <if test="auditUserId != null">audit_user_id = #{auditUserId},</if>
+            <if test="auditUserName != null">audit_user_name = #{auditUserName},</if>
+            <if test="auditTime != null">audit_time = #{auditTime},</if>
+            <if test="auditRemark != null">audit_remark = #{auditRemark},</if>
+            <if test="rejectReason != null">reject_reason = #{rejectReason},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <resultMap type="com.zhs.basket.vo.v4.BasketSeriesSubmissionAuditListVo" id="AuditListVoResult">
+        <id property="seriesSubmissionId" column="series_submission_id" />
+        <result property="matchSeriesId" column="match_series_id" />
+        <result property="seriesCode" column="series_code" />
+        <result property="bestOf" column="best_of" />
+        <result property="divisionName" column="division_name" />
+        <result property="homeTeamName" column="home_team_name" />
+        <result property="awayTeamName" column="away_team_name" />
+        <result property="submitTeamName" column="submit_team_name" />
+        <result property="declaredHomeWinCount" column="declared_home_win_count" />
+        <result property="declaredAwayWinCount" column="declared_away_win_count" />
+        <result property="actualGameCount" column="actual_game_count" />
+        <result property="versionNo" column="version_no" />
+        <result property="status" column="status" />
+        <result property="submitTime" column="submit_time" />
+        <result property="auditTime" column="audit_time" />
+    </resultMap>
+
+    <select id="selectAuditVoList" resultMap="AuditListVoResult">
+        select
+            ss.id as series_submission_id,
+            ss.match_series_id,
+            ms.series_code,
+            ms.best_of,
+            d.division_name,
+            ht.team_name_snapshot as home_team_name,
+            at.team_name_snapshot as away_team_name,
+            st.team_name_snapshot as submit_team_name,
+            ss.declared_home_win_count,
+            ss.declared_away_win_count,
+            ss.actual_game_count,
+            ss.version_no,
+            ss.status,
+            ss.submit_time,
+            ss.audit_time
+        from basket_match_series_submission ss
+        join basket_match_series ms on ms.id = ss.match_series_id and ms.is_delete = 0
+        left join basket_division d on d.id = ss.division_id and d.is_delete = 0
+        left join basket_event_team ht on ht.id = ms.home_event_team_id and ht.is_delete = 0
+        left join basket_event_team at on at.id = ms.away_event_team_id and at.is_delete = 0
+        left join basket_event_team st on st.id = ss.submit_event_team_id and st.is_delete = 0
+        where ss.is_delete = 0
+        <if test="seasonId != null">and ss.season_id = #{seasonId}</if>
+        <if test="divisionId != null">and ss.division_id = #{divisionId}</if>
+        <if test="matchSeriesId != null">and ss.match_series_id = #{matchSeriesId}</if>
+        <if test="status != null and status != ''">and ss.status = #{status}</if>
+        <if test="teamName != null and teamName != ''">and (ht.team_name_snapshot like concat('%', #{teamName}, '%') or at.team_name_snapshot like concat('%', #{teamName}, '%'))</if>
+        <if test="seriesCode != null and seriesCode != ''">and ms.series_code like concat('%', #{seriesCode}, '%')</if>
+        order by case when ss.status = 'PENDING_REVIEW' then 0 else 1 end, ss.submit_time desc, ss.id desc
+    </select>
+</mapper>

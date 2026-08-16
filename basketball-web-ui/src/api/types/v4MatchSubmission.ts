@@ -17,6 +17,7 @@ export interface V4MatchSubmissionTeamStat {
 }
 
 export interface V4MatchSubmissionPlayerStat {
+  eventTeamId?: string
   eventPlayerId: string
   playerName?: string
   points?: number
@@ -26,6 +27,12 @@ export interface V4MatchSubmissionPlayerStat {
   block?: number
   turnover?: number
   foul?: number
+  fieldGoalMade?: number
+  fieldGoalAttempt?: number
+  threePointMade?: number
+  threePointAttempt?: number
+  freeThrowMade?: number
+  freeThrowAttempt?: number
   minutes?: number
 }
 
@@ -85,9 +92,19 @@ export interface V4MatchSubmissionDetail {
   rejectReason?: string
   teamStat?: V4MatchSubmissionTeamStat
   playerStats?: V4MatchSubmissionPlayerStat[]
+  homeTeamStat?: V4MatchSubmissionTeamStat
+  awayTeamStat?: V4MatchSubmissionTeamStat
+  homePlayerStats?: V4MatchSubmissionPlayerStat[]
+  awayPlayerStats?: V4MatchSubmissionPlayerStat[]
+  periodScores?: Array<{ periodNo: number; homeScore?: number; awayScore?: number }>
   materialFileIds?: string[]
   seriesContext?: V4MatchSubmissionSeriesContext | null
   eligiblePlayers?: V4MatchSubmissionEligiblePlayer[]
+  homeEligiblePlayers?: V4MatchSubmissionEligiblePlayer[]
+  awayEligiblePlayers?: V4MatchSubmissionEligiblePlayer[]
+  submissionMode?: string
+  draftComplete?: number
+  seriesSubmissionId?: string
 }
 
 export interface V4MyMatchItem {
@@ -128,8 +145,13 @@ export interface V4MatchSubmissionSaveReq {
   awayScore?: number
   teamStat?: V4MatchSubmissionTeamStat
   playerStats?: V4MatchSubmissionPlayerStat[]
+  homePlayerStats?: V4MatchSubmissionPlayerStat[]
+  awayPlayerStats?: V4MatchSubmissionPlayerStat[]
+  periodScores?: Array<{ periodNo: number; homeScore?: number; awayScore?: number }>
   materialFileIds?: string[]
   submitRemark?: string
+  submissionMode?: string
+  draftComplete?: boolean
 }
 
 export interface V4MatchSubmissionIdReq {

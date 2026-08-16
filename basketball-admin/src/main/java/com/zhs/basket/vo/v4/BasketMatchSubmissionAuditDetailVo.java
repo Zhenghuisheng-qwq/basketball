@@ -37,8 +37,14 @@ public class BasketMatchSubmissionAuditDetailVo {
     private Date auditTime;
     private String auditRemark;
     private String rejectReason;
+    private String submissionMode;
     private BasketMatchSubmissionTeamStatVo teamStat;
     private List<BasketMatchSubmissionPlayerStatVo> playerStats;
+    private BasketMatchSubmissionTeamStatVo homeTeamStat;
+    private BasketMatchSubmissionTeamStatVo awayTeamStat;
+    private List<BasketMatchSubmissionPlayerStatVo> homePlayerStats;
+    private List<BasketMatchSubmissionPlayerStatVo> awayPlayerStats;
+    private List<BasketMatchSubmissionPeriodScoreVo> periodScores;
     private List<BasketMatchSubmissionMaterialVo> materials;
     private List<BasketMatchSubmissionVersionVo> historyVersions;
     /** BO3/BO5 系列赛上下文（series_id 非空时） */

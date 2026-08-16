@@ -55,4 +55,16 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <select id="selectByMatchId" resultMap="BasketV4MatchPeriodScoreResult">
+        select <include refid="BaseColumns" /> from basket_match_period_score
+        where match_id = #{matchId} and is_delete = 0
+        order by period_no asc
+    </select>
+
+    <update id="softDeleteByMatchId">
+        update basket_match_period_score
+        set is_delete = 1, update_time = now()
+        where match_id = #{matchId} and is_delete = 0
+    </update>
+
 </mapper>
