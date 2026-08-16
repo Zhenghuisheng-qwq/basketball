@@ -1,0 +1,116 @@
+{
+  "cases": {
+    "public.bo3.series": {
+      "ok": true,
+      "detail": "http=200 V4-27-SER-51-R1-S04 2:0 status=COMPLETED"
+    },
+    "public.bo5.series": {
+      "ok": true,
+      "detail": "http=200 V4-34-SER-66-R1-S01 3:1 status=COMPLETED"
+    },
+    "web.login.schedule": {
+      "ok": false,
+      "detail": "http://127.0.0.1:5173/account/my-events?tab=schedule 首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n我的赛程安排\nMY SCHEDULE\n可参与赛事\n我的报名\n已参加赛事\n我的赛程\n\n完成球员认证后，可在此查看个人赛程安排。\n\n认证通过后可"
+    },
+    "web.bo1.directRoute": {
+      "ok": true,
+      "detail": "http://127.0.0.1:5173/account/my-events/v4/match-submission/327?submitEventTeamId=80"
+    },
+    "web.bo1.noSeriesScore": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nE2E_LD_LD07 VS E2E_LD_LD04\n\n待提交\n比赛信息\n\nE2E-LEAGUE-DRR-S 2026 · E2E-LEAGUE8-DRR · REGULA"
+    },
+    "web.bo1.playerSelect": {
+      "ok": true,
+      "detail": "selects=5"
+    },
+    "web.bo1.scoreHint": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nE2E_LD_LD07 VS E2E_LD_LD04\n\n待提交\n比赛信息\n\nE2E-LEAG"
+    },
+    "web.bo1.screenshot.ui": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nE2E_LD_LD07 VS E2E_LD_LD04\n\n待提交\n比赛信息\n\nE2E-LEAG"
+    },
+    "web.bo1.draft.thumbs": {
+      "ok": true,
+      "detail": "thumbs=6"
+    },
+    "web.bo3.seriesCard": {
+      "ok": false,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n我的赛程安排\nMY SCHEDULE\n可参与赛事\n我的报名\n已参加赛事\n我的赛程\n\n完成球员认证后，可在此查看个人赛程安排。\n\n认证通过后可聚合查看全部已参加赛事的比赛安排\n\n前往球员认证\nCNPA 中国职业电竞篮球联赛\n© 2026 CNPA. All rights reserved."
+    },
+    "web.bo3.gameContext": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nE2\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nE2E_IB_IB03 VS E2E_IB_IB06\n\n已通过\n比赛信息\n\nE2E-ISO-B-S 2026 · E2E-CROSS-ISO-B · KNOCKOUT\n\n比"
+    },
+    "web.bo5.series31": {
+      "ok": false,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nSB\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n我的赛程安排\nMY SCHEDULE\n可参与赛事\n我的报名\n已参加赛事\n我的赛程\n\n完成球员认证后，可在此查看个人赛程安排。\n\n认证通过后可聚合查看全部已参加赛事的比赛安排\n\n前往球员认证\nCNPA 中国职业电竞篮球联赛\n© 2026 CNPA. All rights reserved."
+    },
+    "web.bo5.game5.skip": {
+      "ok": false,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nSB\n个人中心\n1\n\nCNPA PLAYER CENTER\n\n基础用户\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n我的赛程安排\nMY SCHEDULE\n可参与赛事\n我的报名\n已参加赛事\n我的赛程\n\n完成球员认证后，可在此查看个人赛程安排。\n\n认证通过后可聚合查看全部已参加赛事的比赛安排\n\n前往球员认证\nCNPA 中国职业电竞篮球联赛\n© 2026 CNPA. All rights reserved."
+    },
+    "web.public.bo5.modal": {
+      "ok": false,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nSB\n个人中心\n1\n赛季\nE2E-SUBMISSION-BO5 2026\n赛季\n战队数\n2\n战队\n当前阶段\n报名已截止\n阶段\n比赛平台\nPC\n平台\n总览\n赛程\n对阵/赛段\nPC · E2E-SUBMISSION-BO5\n高光选手\nSEASON LEADERS\n场均得分\n54 PPG\nSBH_P1\nE2\nE2E_SUB_BO5_HOME\n场均助攻\n12 APG\nSBH_P1\nE2\nE2E_SUB_BO5_HOME\n场均篮板\n24 RPG\nSBH_P1\nE2\nE2E_SUB_BO5_HOME\n联赛战队\nLEAGUE "
+    },
+    "admin.login.audit": {
+      "ok": false,
+      "detail": "http://127.0.0.1:5174/competition-exec/event-v4-match-submission-audit"
+    },
+    "admin.bo1.detail.stats": {
+      "ok": false,
+      "detail": "404错误!\n找不到网页！\n对不起，您正在寻找的页面不存在。尝试检查URL的错误，然后按浏览器上的刷新按钮或尝试在我们的应用程序中找到其他内容。\n返回首页"
+    },
+    "admin.bo3.gameContext": {
+      "ok": false,
+      "detail": "no match_no for 428"
+    }
+  },
+  "ids": {
+    "accounts": {
+      "79": "fs_ld_ld0601@cnpa.smoke",
+      "116": "fs_ib_ib0301@cnpa.smoke",
+      "143": "fs_sb_h101@cnpa.smoke"
+    },
+    "bo1": {
+      "matchId": 328,
+      "homeEventTeamId": 79,
+      "awayEventTeamId": 78,
+      "v1": 233,
+      "v2": 234
+    },
+    "bo3": {
+      "seriesId": 82,
+      "games": [
+        428,
+        429,
+        430
+      ],
+      "home": 116,
+      "away": 119
+    },
+    "bo5": {
+      "seriesId": 93,
+      "divisionId": 34,
+      "games": [
+        473,
+        474,
+        475,
+        476,
+        477
+      ],
+      "home": 143,
+      "away": 144,
+      "seriesCode": "V4-34-SER-66-R1-S01"
+    },
+    "adminLogin": "admin / admin123"
+  },
+  "match_no": {
+    "327": "V4-23-14-03",
+    "328": "V4-23-14-04",
+    "428": "V4-27-SER-51-R1-S04-G1"
+  }
+}
