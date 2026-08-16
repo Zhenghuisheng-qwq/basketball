@@ -65,13 +65,12 @@
           :closable="false"
           show-icon
           class="mb8"
-          :title="`系列赛：${detail.seriesContext.homeTeamName} vs ${detail.seriesContext.awayTeamName}`"
+          :title="`系列赛 ${detail.seriesContext.seriesCode || ''}：${detail.seriesContext.homeTeamName} vs ${detail.seriesContext.awayTeamName}`"
         >
           <template #default>
-            <div>赛制：BO{{ detail.seriesContext.bestOf }}</div>
-            <div>当前：Game {{ currentSeriesGameNo(detail) }} / {{ detail.seriesContext.bestOf }}</div>
+            <div>赛制：BO{{ detail.seriesContext.bestOf }} · Game {{ currentSeriesGameNo(detail) }} / {{ detail.seriesContext.bestOf }}</div>
             <div>当前局分：{{ detail.seriesContext.homeTeamName }} {{ detail.seriesContext.homeWinCount ?? 0 }} : {{ detail.seriesContext.awayWinCount ?? 0 }} {{ detail.seriesContext.awayTeamName }}</div>
-            <div>Series 状态：{{ detail.seriesContext.seriesStatusName }}</div>
+            <div>Series 状态：{{ detail.seriesContext.seriesStatusName }}（审核的是单局，不是整个系列赛）</div>
           </template>
         </el-alert>
         <el-descriptions :column="2" border>
@@ -91,25 +90,42 @@
           <el-descriptions-item label="备注" :span="2">{{ detail.submitRemark || '-' }}</el-descriptions-item>
           <el-descriptions-item v-if="detail.rejectReason" label="驳回原因" :span="2">{{ detail.rejectReason }}</el-descriptions-item>
         </el-descriptions>
-        <el-divider content-position="left">球队统计</el-divider>
+        <el-divider content-position="left">本方球队统计</el-divider>
         <el-descriptions v-if="detail.teamStat" :column="4" border size="small">
           <el-descriptions-item label="得分">{{ detail.teamStat.score }}</el-descriptions-item>
           <el-descriptions-item label="篮板">{{ detail.teamStat.rebound }}</el-descriptions-item>
           <el-descriptions-item label="助攻">{{ detail.teamStat.assist }}</el-descriptions-item>
           <el-descriptions-item label="抢断">{{ detail.teamStat.steal }}</el-descriptions-item>
+          <el-descriptions-item label="盖帽">{{ detail.teamStat.block }}</el-descriptions-item>
+          <el-descriptions-item label="失误">{{ detail.teamStat.turnover }}</el-descriptions-item>
+          <el-descriptions-item label="犯规">{{ detail.teamStat.foul }}</el-descriptions-item>
+          <el-descriptions-item label="FGM/FGA">{{ detail.teamStat.fieldGoalMade ?? 0 }}/{{ detail.teamStat.fieldGoalAttempt ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="3PM/3PA">{{ detail.teamStat.threePointMade ?? 0 }}/{{ detail.teamStat.threePointAttempt ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="FTM/FTA">{{ detail.teamStat.freeThrowMade ?? 0 }}/{{ detail.teamStat.freeThrowAttempt ?? 0 }}</el-descriptions-item>
         </el-descriptions>
-        <el-divider content-position="left">球员统计</el-divider>
+        <el-divider content-position="left">本方球员统计</el-divider>
         <el-table :data="detail.playerStats || []" size="small" border>
-          <el-table-column label="球员" prop="playerName" />
-          <el-table-column label="得分" prop="points" width="70" />
-          <el-table-column label="篮板" prop="rebound" width="70" />
-          <el-table-column label="助攻" prop="assist" width="70" />
+          <el-table-column label="球员" prop="playerName" min-width="120" />
+          <el-table-column label="PTS" prop="points" width="70" />
+          <el-table-column label="REB" prop="rebound" width="70" />
+          <el-table-column label="AST" prop="assist" width="70" />
+          <el-table-column label="STL" prop="steal" width="70" />
+          <el-table-column label="BLK" prop="block" width="70" />
+          <el-table-column label="FLS" prop="foul" width="70" />
+          <el-table-column label="TO" prop="turnover" width="70" />
         </el-table>
-        <el-divider content-position="left">材料</el-divider>
-        <el-table :data="detail.materials || []" size="small" border>
-          <el-table-column label="文件ID" prop="fileId" />
-          <el-table-column label="文件名" prop="fileName" />
-        </el-table>
+        <el-divider content-position="left">比赛截图</el-divider>
+        <div v-if="detail.materials?.length" class="audit-shots">
+          <el-image
+            v-for="item in detail.materials"
+            :key="item.fileId"
+            :src="materialUrls[item.fileId]"
+            :preview-src-list="materialPreviewList"
+            fit="cover"
+            class="audit-shot"
+          />
+        </div>
+        <el-empty v-else description="未上传截图" :image-size="60" />
         <el-divider content-position="left">审核记录</el-divider>
         <el-table :data="detail.historyVersions || []" size="small" border>
           <el-table-column label="版本" prop="versionNo" width="70" />
@@ -155,6 +171,10 @@ import {
   v4SubmissionStatusTagType
 } from '@/utils/v4AdminDisplay'
 import { parseTime } from '@/utils/ruoyi'
+import axios from 'axios'
+import { getToken } from '@/utils/auth'
+
+const baseURL = import.meta.env.VITE_APP_BASE_API
 
 const STATUS_OPTIONS = V4_SUBMISSION_STATUS_FILTER_OPTIONS
 
@@ -164,6 +184,9 @@ const dataList = ref<V4MatchSubmissionAuditListVo[]>([])
 const queryParams = reactive({ pageNum: 1, pageSize: 10, seasonId: undefined, divisionId: undefined, matchId: undefined, submissionStatus: undefined, teamName: undefined, matchNo: undefined })
 const detailOpen = ref(false)
 const detail = ref<V4MatchSubmissionAuditDetailVo | null>(null)
+const materialUrls = ref<Record<number, string>>({})
+const materialPreviewList = ref<string[]>([])
+const materialObjectUrls = ref<string[]>([])
 const rejectOpen = ref(false)
 const rejectForm = reactive({ submissionId: 0, rejectReason: '', auditRemark: '' })
 const seasonOptions = ref<V4AdminOptionVo[]>([])
@@ -208,10 +231,43 @@ function openDetail(row: V4MatchSubmissionAuditListVo) {
   loadDetail(row.submissionId)
 }
 
+function revokeMaterialUrls() {
+  materialObjectUrls.value.forEach((url) => URL.revokeObjectURL(url))
+  materialObjectUrls.value = []
+  materialUrls.value = {}
+  materialPreviewList.value = []
+}
+
+async function loadMaterialPreviews(detailVo: V4MatchSubmissionAuditDetailVo) {
+  revokeMaterialUrls()
+  const next: Record<number, string> = {}
+  const preview: string[] = []
+  for (const item of detailVo.materials || []) {
+    if (!item.fileId) continue
+    try {
+      const res = await axios.get(`${baseURL}/basket/v4/match-submission-audit/material/${item.fileId}`, {
+        responseType: 'blob',
+        headers: { Authorization: 'Bearer ' + getToken() }
+      })
+      const url = URL.createObjectURL(res.data)
+      next[item.fileId] = url
+      preview.push(url)
+      materialObjectUrls.value.push(url)
+    } catch {
+      next[item.fileId] = ''
+    }
+  }
+  materialUrls.value = next
+  materialPreviewList.value = preview
+}
+
 function loadDetail(submissionId: number) {
-  getV4MatchSubmissionAuditDetail(submissionId).then(res => {
+  getV4MatchSubmissionAuditDetail(submissionId).then(async res => {
     detail.value = res.data
     detailOpen.value = true
+    if (res.data) {
+      await loadMaterialPreviews(res.data)
+    }
   })
 }
 
@@ -257,4 +313,6 @@ onMounted(async () => {
 <style scoped>
 .mb8 { margin-bottom: 8px; }
 .nowrap-tag { white-space: nowrap; }
+.audit-shots { display: flex; flex-wrap: wrap; gap: 12px; }
+.audit-shot { width: 140px; height: 90px; border: 1px solid #ebeef5; }
 </style>

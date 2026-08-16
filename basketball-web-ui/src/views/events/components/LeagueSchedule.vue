@@ -204,8 +204,11 @@ function openSeriesGame(matchId?: string) {
         <template v-else-if="seriesDetail">
           <p class="series-modal__meta">
             {{ seriesDetail.homeTeamName || '待定' }}
-            VS
+            <strong>{{ seriesDetail.homeWinCount ?? 0 }} : {{ seriesDetail.awayWinCount ?? 0 }}</strong>
             {{ seriesDetail.awayTeamName || '待定' }}
+          </p>
+          <p class="series-modal__meta">
+            {{ seriesDetail.seriesCode || '系列赛' }}
             · BO{{ seriesDetail.bestOf || 1 }}
             · {{ seriesDetail.seriesStatusName || seriesDetail.seriesStatus || '' }}
           </p>
@@ -214,15 +217,18 @@ function openSeriesGame(matchId?: string) {
               v-for="game in seriesDetail.games || []"
               :key="game.matchId || String(game.seriesGameNo)"
               class="series-modal__game"
-              :class="{ clickable: Boolean(game.matchId) }"
-              @click="openSeriesGame(game.matchId)"
+              :class="{ clickable: Boolean(game.matchId) && !game.skipped }"
+              @click="!game.skipped && openSeriesGame(game.matchId)"
             >
               <span>Game {{ game.seriesGameNo }}</span>
-              <span>{{ game.matchStatusName || game.matchStatus || '待安排' }}</span>
-              <span v-if="game.homeScore != null && game.awayScore != null">
-                {{ game.homeScore }} : {{ game.awayScore }}
-              </span>
-              <span v-else>{{ game.scheduledTime || '待安排' }}</span>
+              <span v-if="game.skipped">{{ game.skippedReason || '无需进行' }}</span>
+              <template v-else>
+                <span>{{ game.matchStatusName || game.matchStatus || '待安排' }}</span>
+                <span v-if="game.homeScore != null && game.awayScore != null">
+                  {{ game.homeScore }} : {{ game.awayScore }}
+                </span>
+                <span v-else>{{ game.scheduledTime || '待安排' }}</span>
+              </template>
             </li>
           </ul>
         </template>

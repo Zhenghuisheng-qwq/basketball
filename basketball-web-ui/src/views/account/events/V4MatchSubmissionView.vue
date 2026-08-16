@@ -11,10 +11,19 @@ import {
   saveV4MatchSubmissionDraft,
   submitV4MatchSubmission,
 } from '@/api/v4MatchSubmission'
-import type { V4MatchSubmissionDetail, V4MatchSubmissionPlayerStat } from '@/api/types/v4MatchSubmission'
+import { getAccountFileUrl, uploadAccountFile } from '@/api/accountFile'
+import type {
+  V4MatchSubmissionDetail,
+  V4MatchSubmissionEligiblePlayer,
+  V4MatchSubmissionPlayerStat,
+  V4MatchSubmissionTeamStat,
+} from '@/api/types/v4MatchSubmission'
 import { v4SubmissionStatusLabel } from '@/utils/v4AccountEventsMappers'
-import { v4PlatformLabel } from '@/utils/v4Display'
+import { v4BestOfLabel, v4MatchSeriesStatusLabel, v4PlatformLabel } from '@/utils/v4Display'
 import { formatDateTimeShort } from '@/utils/participationMappers'
+
+const MAX_SCREENSHOTS = 6
+const PLAYER_STAT_FIELDS = ['points', 'rebound', 'assist', 'steal', 'block', 'foul', 'turnover'] as const
 
 const route = useRoute()
 const router = useRouter()
@@ -22,6 +31,9 @@ const router = useRouter()
 const loading = ref(false)
 const saving = ref(false)
 const submitting = ref(false)
+const uploading = ref(false)
+const previewUrl = ref('')
+const fileInput = ref<HTMLInputElement | null>(null)
 const detail = ref<V4MatchSubmissionDetail | null>(null)
 
 const matchId = computed(() => String(route.params.matchId || ''))
@@ -37,12 +49,32 @@ const canEdit = computed(() => {
   return status === 'DRAFT' || status === 'REJECTED' || !detail.value?.submissionId
 })
 
+const skipped = computed(() => Boolean(detail.value?.seriesContext?.skipped))
+
+const eligiblePlayers = computed<V4MatchSubmissionEligiblePlayer[]>(() => detail.value?.eligiblePlayers || [])
+
+const lineupMin = computed(() => {
+  if (detail.value?.lineupMinCount && detail.value.lineupMinCount > 0) return detail.value.lineupMinCount
+  return (detail.value?.gameMode || '').toUpperCase() === 'THREE_V_THREE' ? 3 : 5
+})
+
+const lineupMax = computed(() => {
+  const rosterMax = detail.value?.lineupMaxCount && detail.value.lineupMaxCount > 0 ? detail.value.lineupMaxCount : 8
+  const playerMax = eligiblePlayers.value.length || rosterMax
+  return Math.max(1, Math.min(rosterMax, playerMax))
+})
+
 const form = ref({
   homeScore: 0,
   awayScore: 0,
   submitRemark: '',
   materialFileIds: [] as string[],
-  teamStat: {
+  teamStat: emptyTeamStat(),
+  playerStats: [] as V4MatchSubmissionPlayerStat[],
+})
+
+function emptyTeamStat(): V4MatchSubmissionTeamStat {
+  return {
     score: 0,
     rebound: 0,
     assist: 0,
@@ -50,9 +82,64 @@ const form = ref({
     block: 0,
     turnover: 0,
     foul: 0,
-  },
-  playerStats: [] as V4MatchSubmissionPlayerStat[],
-})
+    fieldGoalMade: 0,
+    fieldGoalAttempt: 0,
+    threePointMade: 0,
+    threePointAttempt: 0,
+    freeThrowMade: 0,
+    freeThrowAttempt: 0,
+  }
+}
+
+function emptyPlayerRow(): V4MatchSubmissionPlayerStat {
+  return {
+    eventPlayerId: '',
+    points: 0,
+    rebound: 0,
+    assist: 0,
+    steal: 0,
+    block: 0,
+    turnover: 0,
+    foul: 0,
+  }
+}
+
+function playerLabel(player: V4MatchSubmissionEligiblePlayer): string {
+  const name = player.playerName || player.gameId || '未命名球员'
+  const extra = [player.jerseyNo ? `#${player.jerseyNo}` : '', player.isCaptain ? '队长' : '']
+    .filter(Boolean)
+    .join(' · ')
+  return extra ? `${name}（${extra}）` : name
+}
+
+function availablePlayers(index: number): V4MatchSubmissionEligiblePlayer[] {
+  const selected = new Set(
+    form.value.playerStats
+      .map((row, i) => (i === index ? '' : String(row.eventPlayerId || '')))
+      .filter(Boolean),
+  )
+  return eligiblePlayers.value.filter((player) => !selected.has(String(player.eventPlayerId)))
+}
+
+function ensurePlayerRows(existing: V4MatchSubmissionPlayerStat[]) {
+  const rows = existing.map((item) => ({ ...emptyPlayerRow(), ...item, eventPlayerId: String(item.eventPlayerId || '') }))
+  const minRows = Math.min(lineupMin.value, lineupMax.value)
+  while (rows.length < minRows) rows.push(emptyPlayerRow())
+  form.value.playerStats = rows.slice(0, lineupMax.value)
+}
+
+function addPlayerStatRow() {
+  if (form.value.playerStats.length >= lineupMax.value) {
+    ElMessage.warning(`最多添加 ${lineupMax.value} 名球员`)
+    return
+  }
+  form.value.playerStats.push(emptyPlayerRow())
+}
+
+function removePlayerStatRow(index: number) {
+  if (form.value.playerStats.length <= 1) return
+  form.value.playerStats.splice(index, 1)
+}
 
 async function loadDetail() {
   loading.value = true
@@ -64,10 +151,8 @@ async function loadDetail() {
     form.value.awayScore = detail.value.awayScore ?? 0
     form.value.submitRemark = detail.value.submitRemark || ''
     form.value.materialFileIds = (detail.value.materialFileIds || []).map(String)
-    if (detail.value.teamStat) {
-      form.value.teamStat = { ...form.value.teamStat, ...detail.value.teamStat }
-    }
-    form.value.playerStats = (detail.value.playerStats || []).map((item) => ({ ...item }))
+    form.value.teamStat = { ...emptyTeamStat(), ...(detail.value.teamStat || {}) }
+    ensurePlayerRows(detail.value.playerStats || [])
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '加载失败')
   } finally {
@@ -76,6 +161,12 @@ async function loadDetail() {
 }
 
 function buildSavePayload() {
+  const playerStats = form.value.playerStats
+    .filter((row) => String(row.eventPlayerId || '').trim())
+    .map((row) => ({
+      ...row,
+      eventPlayerId: String(row.eventPlayerId),
+    }))
   return {
     matchId: matchId.value,
     submitEventTeamId: submitEventTeamId.value,
@@ -84,12 +175,12 @@ function buildSavePayload() {
     submitRemark: form.value.submitRemark,
     materialFileIds: form.value.materialFileIds,
     teamStat: form.value.teamStat,
-    playerStats: form.value.playerStats,
+    playerStats,
   }
 }
 
 async function handleSaveDraft() {
-  if (!canEdit.value) return
+  if (!canEdit.value || skipped.value) return
   saving.value = true
   try {
     const res = await saveV4MatchSubmissionDraft(buildSavePayload())
@@ -105,7 +196,11 @@ async function handleSaveDraft() {
 }
 
 async function handleSubmitAudit() {
-  if (!canEdit.value) return
+  if (!canEdit.value || skipped.value) return
+  if (form.value.homeScore == null || form.value.awayScore == null) {
+    ElMessage.warning('请填写最终比赛比分')
+    return
+  }
   saving.value = true
   try {
     const saveRes = await saveV4MatchSubmissionDraft(buildSavePayload())
@@ -138,18 +233,54 @@ async function handleResubmit() {
   }
 }
 
-function addPlayerStatRow() {
-  form.value.playerStats.push({
-    eventPlayerId: '',
-    points: 0,
-    rebound: 0,
-    assist: 0,
-    steal: 0,
-    block: 0,
-    turnover: 0,
-    foul: 0,
-  })
+function triggerUpload() {
+  if (!canEdit.value || form.value.materialFileIds.length >= MAX_SCREENSHOTS) return
+  fileInput.value?.click()
 }
+
+async function handleUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = ''
+  if (!files.length || !canEdit.value) return
+  const remain = MAX_SCREENSHOTS - form.value.materialFileIds.length
+  if (remain <= 0) {
+    ElMessage.warning(`最多上传 ${MAX_SCREENSHOTS} 张截图`)
+    return
+  }
+  uploading.value = true
+  try {
+    for (const file of files.slice(0, remain)) {
+      if (!file.type.startsWith('image/')) {
+        ElMessage.error('请上传图片文件')
+        continue
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        ElMessage.error('单张截图不能超过 8MB')
+        continue
+      }
+      const res = await uploadAccountFile(file, 'MATCH_DATA_SCREENSHOT')
+      const fileId = String(res.data?.fileId || '')
+      if (fileId) form.value.materialFileIds.push(fileId)
+    }
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '上传失败')
+  } finally {
+    uploading.value = false
+  }
+}
+
+function removeScreenshot(index: number) {
+  if (!canEdit.value) return
+  form.value.materialFileIds.splice(index, 1)
+}
+
+const contextLine = computed(() => {
+  const d = detail.value
+  if (!d) return ''
+  const parts = [d.seasonTitle, d.divisionName || v4PlatformLabel(d.platformCode), d.roundName || (d.roundNo != null ? `第 ${d.roundNo} 轮` : '')]
+  return parts.filter(Boolean).join(' · ')
+})
 
 onMounted(() => {
   void loadDetail()
@@ -170,7 +301,7 @@ onMounted(() => {
     />
 
     <AccountStatusBanner
-      title="V4 比赛数据提交"
+      title="比赛数据提交"
       :description="detail ? `${detail.homeTeamName} VS ${detail.awayTeamName}` : '加载中'"
       :status-text="v4SubmissionStatusLabel(detail?.submissionStatus)"
       :status-type="detail?.submissionStatus === 'APPROVED' ? 'success' : detail?.submissionStatus === 'REJECTED' ? 'danger' : 'info'"
@@ -180,64 +311,136 @@ onMounted(() => {
 
     <template v-else-if="detail">
       <AccountPanel title="比赛信息">
-        <p>{{ detail.divisionName }} · {{ v4PlatformLabel(detail.platformCode) }}</p>
+        <p>{{ contextLine }}</p>
         <p>比赛时间：{{ formatDateTimeShort(detail.matchTime) }}</p>
+        <p v-if="detail.seriesContext" class="v4-sub-series">
+          {{ detail.seriesContext.seriesCode || '系列赛' }}
+          · {{ v4BestOfLabel(detail.seriesContext.bestOf) }}
+          · Game {{ detail.seriesContext.seriesGameNo }}
+          · 系列赛当前比分：{{ detail.seriesContext.homeWinCount ?? 0 }} : {{ detail.seriesContext.awayWinCount ?? 0 }}
+          · {{ detail.seriesContext.seriesStatusName || v4MatchSeriesStatusLabel(detail.seriesContext.seriesStatus) }}
+        </p>
         <p v-if="detail.rejectReason" class="v4-sub-reject">驳回原因：{{ detail.rejectReason }}</p>
-        <p v-if="isReadonly" class="v4-sub-readonly">当前状态只读，不可覆盖保存。</p>
+        <p v-if="skipped" class="v4-sub-readonly">{{ detail.seriesContext?.skippedReason || '该系列赛已决出胜负，本局无需进行' }}</p>
+        <p v-else-if="isReadonly" class="v4-sub-readonly">当前状态只读，不可覆盖保存。</p>
       </AccountPanel>
 
-      <AccountPanel title="总比分">
+      <AccountPanel title="对阵与总比分">
+        <p class="v4-sub-hint">请填写最终比赛比分。本轮仍按手工总比分结算，不会自动汇总球员得分。</p>
         <div class="v4-sub-scores">
           <label>
             主队 {{ detail.homeTeamName }}
-            <input v-model.number="form.homeScore" type="number" min="0" :disabled="!canEdit" />
+            <input v-model.number="form.homeScore" type="number" min="0" :disabled="!canEdit || skipped" />
           </label>
           <label>
             客队 {{ detail.awayTeamName }}
-            <input v-model.number="form.awayScore" type="number" min="0" :disabled="!canEdit" />
+            <input v-model.number="form.awayScore" type="number" min="0" :disabled="!canEdit || skipped" />
           </label>
         </div>
       </AccountPanel>
 
-      <AccountPanel title="本方球队统计">
+      <AccountPanel title="本方球队技术统计">
+        <p class="v4-sub-team-name">{{ detail.submitTeamName || '本方球队' }}</p>
         <div class="v4-sub-grid">
           <label v-for="field in ['score', 'rebound', 'assist', 'steal', 'block', 'turnover', 'foul'] as const" :key="field">
-            {{ field }}
-            <input v-model.number="form.teamStat[field]" type="number" min="0" :disabled="!canEdit" />
+            {{ field === 'score' ? '得分' : field === 'rebound' ? '篮板' : field === 'assist' ? '助攻' : field === 'steal' ? '抢断' : field === 'block' ? '盖帽' : field === 'turnover' ? '失误' : '犯规' }}
+            <input v-model.number="form.teamStat[field]" type="number" min="0" :disabled="!canEdit || skipped" />
           </label>
         </div>
-      </AccountPanel>
-
-      <AccountPanel title="本方球员统计">
-        <div v-for="(row, index) in form.playerStats" :key="index" class="v4-sub-player-row">
-          <input v-model="row.eventPlayerId" placeholder="eventPlayerId" :disabled="!canEdit" />
-          <input v-model.number="row.points" type="number" min="0" placeholder="得分" :disabled="!canEdit" />
-          <input v-model.number="row.rebound" type="number" min="0" placeholder="篮板" :disabled="!canEdit" />
-          <input v-model.number="row.assist" type="number" min="0" placeholder="助攻" :disabled="!canEdit" />
+        <div class="v4-sub-grid v4-sub-grid--shooting">
+          <label>FGM<input v-model.number="form.teamStat.fieldGoalMade" type="number" min="0" :disabled="!canEdit || skipped" /></label>
+          <label>FGA<input v-model.number="form.teamStat.fieldGoalAttempt" type="number" min="0" :disabled="!canEdit || skipped" /></label>
+          <label>3PM<input v-model.number="form.teamStat.threePointMade" type="number" min="0" :disabled="!canEdit || skipped" /></label>
+          <label>3PA<input v-model.number="form.teamStat.threePointAttempt" type="number" min="0" :disabled="!canEdit || skipped" /></label>
+          <label>FTM<input v-model.number="form.teamStat.freeThrowMade" type="number" min="0" :disabled="!canEdit || skipped" /></label>
+          <label>FTA<input v-model.number="form.teamStat.freeThrowAttempt" type="number" min="0" :disabled="!canEdit || skipped" /></label>
         </div>
-        <button v-if="canEdit" type="button" class="account-btn-secondary" @click="addPlayerStatRow">添加球员行</button>
       </AccountPanel>
 
-      <AccountPanel title="材料与备注">
-        <label class="v4-sub-remark">
-          材料 fileId（逗号分隔，占位）
-          <input
-            :value="form.materialFileIds.join(',')"
-            :disabled="!canEdit"
-            @input="form.materialFileIds = ($event.target as HTMLInputElement).value.split(',').map((s) => s.trim()).filter(Boolean)"
-          />
-        </label>
-        <label class="v4-sub-remark">
-          提交备注
-          <textarea v-model="form.submitRemark" rows="3" :disabled="!canEdit" />
-        </label>
+      <AccountPanel title="本方球员技术统计">
+        <div class="v4-sub-table-wrap">
+          <table class="v4-sub-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>球员</th>
+                <th>PTS</th>
+                <th>REB</th>
+                <th>AST</th>
+                <th>STL</th>
+                <th>BLK</th>
+                <th>FLS</th>
+                <th>TO</th>
+                <th v-if="canEdit && !skipped"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in form.playerStats" :key="index">
+                <td>{{ index + 1 }}</td>
+                <td>
+                  <select v-model="row.eventPlayerId" :disabled="!canEdit || skipped">
+                    <option value="">选择球员</option>
+                    <option
+                      v-for="player in availablePlayers(index)"
+                      :key="String(player.eventPlayerId)"
+                      :value="String(player.eventPlayerId)"
+                    >
+                      {{ playerLabel(player) }}
+                    </option>
+                  </select>
+                </td>
+                <td v-for="field in PLAYER_STAT_FIELDS" :key="field">
+                  <input v-model.number="row[field]" type="number" min="0" :disabled="!canEdit || skipped" />
+                </td>
+                <td v-if="canEdit && !skipped">
+                  <button type="button" class="account-btn-secondary v4-sub-mini" @click="removePlayerStatRow(index)">删除</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <button
+          v-if="canEdit && !skipped"
+          type="button"
+          class="account-btn-secondary"
+          :disabled="form.playerStats.length >= lineupMax"
+          @click="addPlayerStatRow"
+        >
+          添加球员
+        </button>
+      </AccountPanel>
+
+      <AccountPanel title="比赛截图 / 比赛凭证">
+        <p class="v4-sub-hint">请上传本局比赛结果或技术统计截图，供管理员审核。最多 {{ MAX_SCREENSHOTS }} 张。</p>
+        <input ref="fileInput" type="file" accept="image/*" multiple class="v4-sub-file" @change="handleUpload" />
+        <button
+          v-if="canEdit && !skipped"
+          type="button"
+          class="account-btn-secondary"
+          :disabled="uploading || form.materialFileIds.length >= MAX_SCREENSHOTS"
+          @click="triggerUpload"
+        >
+          {{ uploading ? '上传中…' : '+ 上传截图' }}
+        </button>
+        <div v-if="form.materialFileIds.length" class="v4-sub-shots">
+          <figure v-for="(fileId, index) in form.materialFileIds" :key="fileId" class="v4-sub-shot">
+            <button type="button" class="v4-sub-shot__thumb" @click="previewUrl = getAccountFileUrl(fileId)">
+              <img :src="getAccountFileUrl(fileId)" alt="比赛截图" />
+            </button>
+            <button v-if="canEdit && !skipped" type="button" class="v4-sub-shot__del" @click="removeScreenshot(index)">删除</button>
+          </figure>
+        </div>
+      </AccountPanel>
+
+      <AccountPanel title="备注">
+        <textarea v-model="form.submitRemark" rows="3" :disabled="!canEdit || skipped" class="v4-sub-textarea" />
       </AccountPanel>
 
       <div class="v4-sub-actions">
-        <button v-if="canEdit" type="button" class="account-btn-secondary" :disabled="saving" @click="handleSaveDraft">保存草稿</button>
-        <button v-if="canEdit" type="button" class="account-btn-primary" :disabled="submitting" @click="handleSubmitAudit">提交审核</button>
+        <button v-if="canEdit && !skipped" type="button" class="account-btn-secondary" :disabled="saving" @click="handleSaveDraft">保存草稿</button>
+        <button v-if="canEdit && !skipped" type="button" class="account-btn-primary" :disabled="submitting || saving" @click="handleSubmitAudit">提交审核</button>
         <button
-          v-if="detail.submissionStatus === 'REJECTED'"
+          v-if="detail.submissionStatus === 'REJECTED' && !skipped"
           type="button"
           class="account-btn-primary"
           :disabled="submitting"
@@ -248,14 +451,36 @@ onMounted(() => {
         <button type="button" class="account-btn-secondary" @click="router.push('/account/my-events?tab=schedule')">返回我的赛程</button>
       </div>
     </template>
+
+    <div v-if="previewUrl" class="v4-sub-preview" @click.self="previewUrl = ''">
+      <img :src="previewUrl" alt="截图预览" />
+    </div>
   </div>
 </template>
 
 <style scoped lang="scss">
 @import '../styles/account-center.scss';
 
-.v4-sub-loading {
+.v4-sub-loading,
+.v4-sub-hint,
+.v4-sub-team-name {
   color: #696969;
+}
+
+.v4-sub-hint {
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.v4-sub-team-name {
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: #111;
+}
+
+.v4-sub-series,
+.v4-sub-reject {
+  margin-top: 8px;
 }
 
 .v4-sub-reject {
@@ -269,7 +494,7 @@ onMounted(() => {
 .v4-sub-scores,
 .v4-sub-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
 
   label {
@@ -286,25 +511,87 @@ onMounted(() => {
   }
 }
 
-.v4-sub-player-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(80px, 1fr));
-  gap: 8px;
-  margin-bottom: 8px;
+.v4-sub-grid--shooting {
+  margin-top: 12px;
 }
 
-.v4-sub-remark {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.v4-sub-table-wrap {
+  overflow-x: auto;
   margin-bottom: 12px;
+}
+
+.v4-sub-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
   font-size: 13px;
 
-  textarea,
-  input {
-    padding: 8px 10px;
+  th,
+  td {
+    padding: 8px 6px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    text-align: left;
+  }
+
+  input,
+  select {
+    width: 100%;
+    min-width: 64px;
+    height: 36px;
+    padding: 0 6px;
     border: 1px solid rgba(0, 0, 0, 0.18);
   }
+}
+
+.v4-sub-mini {
+  padding: 0 8px;
+  height: 32px;
+}
+
+.v4-sub-file {
+  display: none;
+}
+
+.v4-sub-shots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.v4-sub-shot {
+  margin: 0;
+  width: 120px;
+}
+
+.v4-sub-shot__thumb {
+  display: block;
+  width: 120px;
+  height: 80px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #f6f4f0;
+  cursor: pointer;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.v4-sub-shot__del {
+  margin-top: 6px;
+  border: 0;
+  background: none;
+  color: #b42318;
+  cursor: pointer;
+}
+
+.v4-sub-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
 }
 
 .v4-sub-actions {
@@ -312,5 +599,20 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 20px;
+}
+
+.v4-sub-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+
+  img {
+    max-width: 90vw;
+    max-height: 90vh;
+  }
 }
 </style>

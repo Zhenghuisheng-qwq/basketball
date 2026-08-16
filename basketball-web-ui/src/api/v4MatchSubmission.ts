@@ -2,6 +2,7 @@ import request from '@/api/request'
 import type { ApiResult } from '@/api/types/common'
 import type {
   V4MatchSubmissionDetail,
+  V4MatchSubmissionEligiblePlayer,
   V4MatchSubmissionIdReq,
   V4MatchSubmissionResubmitReq,
   V4MatchSubmissionSaveReq,
@@ -17,6 +18,13 @@ export function getV4MyMatches(params?: {
   upcomingOnly?: boolean
 }) {
   return request.get<any, ApiResult<V4MyMatchItem[]>>('/basket/v4/player/match-submission/my-matches', { params })
+}
+
+export function getV4MatchSubmissionEligiblePlayers(matchId: string, submitEventTeamId?: string) {
+  return request.get<any, ApiResult<V4MatchSubmissionEligiblePlayer[]>>(
+    `/basket/v4/player/match-submission/${matchId}/eligible-players`,
+    { params: submitEventTeamId ? { submitEventTeamId } : undefined },
+  )
 }
 
 export function getV4MatchSubmissionDetail(matchId: string, submitEventTeamId?: string) {

@@ -29,13 +29,43 @@ export interface V4MatchSubmissionPlayerStat {
   minutes?: number
 }
 
+export interface V4MatchSubmissionEligiblePlayer {
+  eventPlayerId: string
+  playerName?: string
+  gameId?: string
+  jerseyNo?: string
+  position?: string
+  isCaptain?: number
+}
+
+export interface V4MatchSubmissionSeriesContext {
+  matchSeriesId?: string
+  seriesCode?: string
+  bestOf?: number
+  seriesGameNo?: number
+  homeWinCount?: number
+  awayWinCount?: number
+  seriesStatus?: string
+  seriesStatusName?: string
+  homeTeamName?: string
+  awayTeamName?: string
+  skipped?: boolean
+  skippedReason?: string
+}
+
 export interface V4MatchSubmissionDetail {
   matchId: string
   matchNo?: string
   roundNo?: number
   matchTime?: string
+  seasonTitle?: string
   divisionName?: string
   platformCode?: string
+  gameMode?: string
+  lineupMinCount?: number
+  lineupMaxCount?: number
+  stageName?: string
+  roundName?: string
   homeEventTeamId?: string
   homeTeamName?: string
   awayEventTeamId?: string
@@ -56,6 +86,8 @@ export interface V4MatchSubmissionDetail {
   teamStat?: V4MatchSubmissionTeamStat
   playerStats?: V4MatchSubmissionPlayerStat[]
   materialFileIds?: string[]
+  seriesContext?: V4MatchSubmissionSeriesContext | null
+  eligiblePlayers?: V4MatchSubmissionEligiblePlayer[]
 }
 
 export interface V4MyMatchItem {

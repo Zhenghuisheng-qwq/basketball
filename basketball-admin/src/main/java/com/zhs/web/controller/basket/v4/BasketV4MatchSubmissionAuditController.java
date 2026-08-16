@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.util.Map;
 
 @RestController
@@ -29,6 +31,12 @@ public class BasketV4MatchSubmissionAuditController extends BaseController {
     public TableDataInfo list(BasketMatchSubmissionAuditQuery query) {
         startPage();
         return getDataTable(auditService.selectList(query));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.MATCH_SUBMISSION_AUDIT_QUERY + "')")
+    @GetMapping("/material/{fileId}")
+    public void streamMaterial(@PathVariable Long fileId, HttpServletResponse response) {
+        auditService.streamMaterial(fileId, response);
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.MATCH_SUBMISSION_AUDIT_QUERY + "')")

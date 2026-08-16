@@ -46,6 +46,8 @@ public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSu
     private IBasketV4StatsSettlementService statsSettlementService;
     @Autowired
     private IBasketMatchSeriesDisplayService matchSeriesDisplayService;
+    @Autowired
+    private IBasketPrivateFileService privateFileService;
 
     @Override
     public List<BasketMatchSubmissionAuditListVo> selectList(BasketMatchSubmissionAuditQuery query) {
@@ -205,6 +207,14 @@ public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSu
                 vo.setSubmitterName(ep.getPlayerNameSnapshot());
             }
         }
+    }
+
+    @Override
+    public void streamMaterial(Long fileId, HttpServletResponse response) {
+        if (fileId == null || submissionMaterialMapper.countByFileId(fileId) <= 0) {
+            throw new ServiceException("无权访问该文件");
+        }
+        privateFileService.streamFileAsset(fileId, response);
     }
 
     private BasketMatchSubmission requireSubmission(Long id) {

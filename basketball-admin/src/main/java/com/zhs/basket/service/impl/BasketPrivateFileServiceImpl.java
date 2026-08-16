@@ -8,6 +8,7 @@ import com.zhs.common.config.RuoYiConfig;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.StringUtils;
 import com.zhs.common.utils.file.FileUtils;
+import com.zhs.framework.cos.TencentCosUploadService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class BasketPrivateFileServiceImpl implements IBasketPrivateFileService {
 
     @Autowired private BasketFileAssetMapper fileAssetMapper;
     @Autowired private BasketPlayerCertMaterialMapper materialMapper;
+    @Autowired private TencentCosUploadService tencentCosUploadService;
 
     @Value("${CNPA_FILE_ROOT:./upload}")
     private String cnpaFileRoot;
@@ -60,6 +62,9 @@ public class BasketPrivateFileServiceImpl implements IBasketPrivateFileService {
             try (InputStream in = new URL(asset.getAccessUrl()).openStream()) {
                 return in.readAllBytes();
             }
+        }
+        if ("cos".equalsIgnoreCase(asset.getStorageProvider()) && StringUtils.hasText(asset.getObjectKey())) {
+            return tencentCosUploadService.read(asset.getBucketName(), asset.getObjectKey());
         }
         Path path = resolveLocalPath(asset);
         if (Files.exists(path)) {

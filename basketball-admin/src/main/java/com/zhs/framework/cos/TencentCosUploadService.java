@@ -1,6 +1,7 @@
 package com.zhs.framework.cos;
 
 import com.qcloud.cos.COSClient;
+import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.zhs.common.exception.ServiceException;
@@ -97,6 +98,24 @@ public class TencentCosUploadService {
             throw new ServiceException("文件扩展名无效");
         }
         return ext;
+    }
+
+    public byte[] read(String bucketName, String objectKey) {
+        if (StringUtils.isEmpty(objectKey)) {
+            throw new ServiceException("文件路径无效");
+        }
+        try {
+            COSClient client = cosClientHolder.getRequiredClient();
+            String bucket = StringUtils.isNotEmpty(bucketName) ? bucketName : cosProperties.getBucket();
+            COSObject cosObject = client.getObject(bucket, objectKey);
+            try (InputStream inputStream = cosObject.getObjectContent()) {
+                return inputStream.readAllBytes();
+            }
+        } catch (ServiceException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new ServiceException("COS 文件读取失败: " + ex.getMessage());
+        }
     }
 
     private String resolveOriginalName(String originalFilename) {

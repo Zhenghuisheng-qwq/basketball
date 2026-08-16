@@ -7,7 +7,7 @@ import { getAccountFileUrl } from '@/api/accountFile'
 import { getV4MySchedule } from '@/api/v4PlayerEvents'
 import type { V4MyScheduleItem, V4MyScheduleSummary } from '@/api/types/v4PlayerEvents'
 import { useAccountStore } from '@/stores/account'
-import { v4MatchStatusLabel, v4PlatformLabel } from '@/utils/v4Display'
+import { v4BestOfLabel, v4MatchSeriesStatusLabel, v4MatchStatusLabel, v4PlatformLabel } from '@/utils/v4Display'
 import { v4SubmissionStatusLabel } from '@/utils/v4AccountEventsMappers'
 import { formatDateTimeShort } from '@/utils/participationMappers'
 
@@ -93,9 +93,45 @@ function resolveSeasonLine(row: V4MyScheduleItem): string {
 
 function resolveRoundLine(row: V4MyScheduleItem): string {
   const parts = [row.stageName, row.groupName, row.roundName].filter(Boolean)
+  if (row.bestOf && row.bestOf > 1 && row.seriesGameNo) {
+    parts.push(`${v4BestOfLabel(row.bestOf)} · Game ${row.seriesGameNo}`)
+  }
   if (parts.length) return parts.join(' · ')
   if (row.roundNo) return `常规赛第 ${row.roundNo} 轮`
   return '常规赛'
+}
+
+type ScheduleBlock =
+  | { kind: 'match'; key: string; row: V4MyScheduleItem }
+  | { kind: 'series'; key: string; rows: V4MyScheduleItem[] }
+
+const scheduleBlocks = computed<ScheduleBlock[]>(() => {
+  const used = new Set<string>()
+  const blocks: ScheduleBlock[] = []
+  for (const row of displayedRows.value) {
+    const seriesId = row.matchSeriesId ? String(row.matchSeriesId) : ''
+    if (seriesId) {
+      if (used.has(seriesId)) continue
+      used.add(seriesId)
+      const rows = displayedRows.value
+        .filter((item) => String(item.matchSeriesId || '') === seriesId)
+        .slice()
+        .sort((a, b) => (a.seriesGameNo || 0) - (b.seriesGameNo || 0))
+      blocks.push({ kind: 'series', key: `series-${seriesId}`, rows })
+      continue
+    }
+    blocks.push({ kind: 'match', key: `match-${row.matchId}-${row.myEventTeamId}`, row })
+  }
+  return blocks
+})
+
+function isSkippedGame(row: V4MyScheduleItem): boolean {
+  return row.userActionType === 'NONE' || Boolean(row.cannotSubmitReason && row.cannotSubmitReason.includes('无需进行'))
+}
+
+function gameActionText(row: V4MyScheduleItem): string {
+  if (isSkippedGame(row)) return '无需进行'
+  return row.userActionText || '查看提交'
 }
 
 function formatMatchDate(value?: string): string {
@@ -277,111 +313,154 @@ watch(
       />
 
       <div v-else class="v4-schedule-panel__cards">
+        <template v-for="block in scheduleBlocks" :key="block.key">
+          <section v-if="block.kind === 'series'" class="v4-series-card">
+            <header class="v4-series-card__head">
+              <div>
+                <p class="v4-match-card__series">{{ resolveEventTitle(block.rows[0]) }}</p>
+                <p class="v4-match-card__meta">{{ resolveSeasonLine(block.rows[0]) }} · {{ block.rows[0].roundName || resolveRoundLine(block.rows[0]) }}</p>
+                <p class="v4-series-card__code">{{ block.rows[0].matchSeriesCode || '系列赛' }} · {{ v4BestOfLabel(block.rows[0].bestOf) }}</p>
+              </div>
+              <span class="v4-match-card__status">{{ block.rows[0].matchSeriesStatusName || v4MatchSeriesStatusLabel(block.rows[0].matchSeriesStatus) }}</span>
+            </header>
+            <div class="v4-series-card__score">
+              <strong>{{ block.rows[0].homeTeamName }}</strong>
+              <em>{{ block.rows[0].seriesHomeWinCount ?? 0 }} : {{ block.rows[0].seriesAwayWinCount ?? 0 }}</em>
+              <strong>{{ block.rows[0].awayTeamName }}</strong>
+            </div>
+            <div class="v4-series-card__games">
+              <article v-for="row in block.rows" :key="`${row.matchId}-${row.myEventTeamId}`" class="v4-series-game">
+                <div class="v4-series-game__meta">
+                  <strong>Game {{ row.seriesGameNo }}</strong>
+                  <span>{{ row.homeTeamName }} vs {{ row.awayTeamName }}</span>
+                  <span v-if="showScore(row)">{{ formatCenterScore(row) }}</span>
+                  <span v-else>未开赛</span>
+                  <span>{{ v4MatchStatusLabel(row.matchStatus) }}</span>
+                  <span>{{ v4SubmissionStatusLabel(row.mySubmissionStatus) }}</span>
+                </div>
+                <div class="v4-series-game__action">
+                  <span v-if="isSkippedGame(row)" class="v4-series-game__skip">无需进行</span>
+                  <button
+                    v-else-if="canPrimaryAction(row)"
+                    type="button"
+                    class="account-btn-primary"
+                    @click="goSubmit(row)"
+                  >
+                    {{ gameActionText(row) }}
+                  </button>
+                  <button v-else type="button" class="account-btn-secondary" @click="goSubmit(row)">
+                    {{ gameActionText(row) }}
+                  </button>
+                </div>
+              </article>
+            </div>
+          </section>
+
         <article
-          v-for="row in displayedRows"
-          :key="`${row.matchId}-${row.myEventTeamId}`"
+          v-else-if="block.kind === 'match'"
           class="v4-match-card"
         >
           <header class="v4-match-card__head">
             <div class="v4-match-card__event">
-              <p class="v4-match-card__series">{{ resolveEventTitle(row) }}</p>
-              <p class="v4-match-card__meta">{{ resolveSeasonLine(row) }}</p>
-              <p class="v4-match-card__round">{{ resolveRoundLine(row) }}</p>
+              <p class="v4-match-card__series">{{ resolveEventTitle(block.row) }}</p>
+              <p class="v4-match-card__meta">{{ resolveSeasonLine(block.row) }}</p>
+              <p class="v4-match-card__round">{{ resolveRoundLine(block.row) }}</p>
             </div>
             <span
               class="v4-match-card__status"
-              :class="`v4-match-card__status--${matchStatusTone(row.matchStatus)}`"
+              :class="`v4-match-card__status--${matchStatusTone(block.row.matchStatus)}`"
             >
-              {{ v4MatchStatusLabel(row.matchStatus) }}
+              {{ v4MatchStatusLabel(block.row.matchStatus) }}
             </span>
           </header>
 
           <div class="v4-match-card__versus">
             <div class="v4-match-card__team v4-match-card__team--home">
               <SafeImage
-                :src="row.homeTeamLogoFileId ? getAccountFileUrl(row.homeTeamLogoFileId) : ''"
-                :alt="row.homeTeamName || ''"
-                :initials="teamInitials(row.homeTeamName, row.homeTeamShortName)"
+                :src="block.row.homeTeamLogoFileId ? getAccountFileUrl(block.row.homeTeamLogoFileId) : ''"
+                :alt="block.row.homeTeamName || ''"
+                :initials="teamInitials(block.row.homeTeamName, block.row.homeTeamShortName)"
                 :size="52"
                 class="v4-match-card__logo"
               />
               <div class="v4-match-card__team-text">
-                <strong :title="row.homeTeamName">{{ row.homeTeamName }}</strong>
-                <span v-if="row.homeTeamShortName">{{ row.homeTeamShortName }}</span>
+                <strong :title="block.row.homeTeamName">{{ block.row.homeTeamName }}</strong>
+                <span v-if="block.row.homeTeamShortName">{{ block.row.homeTeamShortName }}</span>
               </div>
             </div>
 
             <div class="v4-match-card__center">
-              <template v-if="showScore(row)">
-                <p class="v4-match-card__score">{{ formatCenterScore(row) }}</p>
+              <template v-if="showScore(block.row)">
+                <p class="v4-match-card__score">{{ formatCenterScore(block.row) }}</p>
                 <span class="v4-match-card__center-label">已结束</span>
               </template>
               <template v-else>
-                <p class="v4-match-card__date">{{ formatMatchDate(row.matchTime) }}</p>
-                <p class="v4-match-card__clock">{{ formatMatchClock(row.matchTime) }}</p>
+                <p class="v4-match-card__date">{{ formatMatchDate(block.row.matchTime) }}</p>
+                <p class="v4-match-card__clock">{{ formatMatchClock(block.row.matchTime) }}</p>
                 <span class="v4-match-card__vs">VS</span>
               </template>
             </div>
 
             <div class="v4-match-card__team v4-match-card__team--away">
               <SafeImage
-                :src="row.awayTeamLogoFileId ? getAccountFileUrl(row.awayTeamLogoFileId) : ''"
-                :alt="row.awayTeamName || ''"
-                :initials="teamInitials(row.awayTeamName, row.awayTeamShortName)"
+                :src="block.row.awayTeamLogoFileId ? getAccountFileUrl(block.row.awayTeamLogoFileId) : ''"
+                :alt="block.row.awayTeamName || ''"
+                :initials="teamInitials(block.row.awayTeamName, block.row.awayTeamShortName)"
                 :size="52"
                 class="v4-match-card__logo"
               />
               <div class="v4-match-card__team-text">
-                <strong :title="row.awayTeamName">{{ row.awayTeamName }}</strong>
-                <span v-if="row.awayTeamShortName">{{ row.awayTeamShortName }}</span>
+                <strong :title="block.row.awayTeamName">{{ block.row.awayTeamName }}</strong>
+                <span v-if="block.row.awayTeamShortName">{{ block.row.awayTeamShortName }}</span>
               </div>
             </div>
           </div>
 
           <div class="v4-match-card__footer">
             <div class="v4-match-card__info">
-              <span>比赛时间：{{ formatDateTimeShort(row.matchTime) || '时间待定' }}</span>
-              <span v-if="row.matchNo">场次：{{ row.matchNo }}</span>
+              <span>比赛时间：{{ formatDateTimeShort(block.row.matchTime) || '时间待定' }}</span>
+              <span v-if="block.row.matchNo">场次：{{ block.row.matchNo }}</span>
             </div>
 
             <div class="v4-match-card__submission-row">
-              <div class="v4-submission-chip" :class="`v4-submission-chip--${submissionTone(row.mySubmissionStatus)}`">
+              <div class="v4-submission-chip" :class="`v4-submission-chip--${submissionTone(block.row.mySubmissionStatus)}`">
                 <span class="v4-submission-chip__label">本方提交</span>
-                <strong>{{ v4SubmissionStatusLabel(row.mySubmissionStatus) }}</strong>
+                <strong>{{ v4SubmissionStatusLabel(block.row.mySubmissionStatus) }}</strong>
               </div>
-              <div class="v4-submission-chip" :class="`v4-submission-chip--${submissionTone(row.opponentSubmissionStatus)}`">
+              <div class="v4-submission-chip" :class="`v4-submission-chip--${submissionTone(block.row.opponentSubmissionStatus)}`">
                 <span class="v4-submission-chip__label">对方提交</span>
-                <strong>{{ v4SubmissionStatusLabel(row.opponentSubmissionStatus) }}</strong>
+                <strong>{{ v4SubmissionStatusLabel(block.row.opponentSubmissionStatus) }}</strong>
               </div>
             </div>
 
-            <p v-if="row.latestRejectReason" class="v4-match-card__reject">
-              驳回原因：{{ row.latestRejectReason }}
+            <p v-if="block.row.latestRejectReason" class="v4-match-card__reject">
+              驳回原因：{{ block.row.latestRejectReason }}
             </p>
-            <p v-else-if="row.cannotSubmitReason && !canPrimaryAction(row)" class="v4-match-card__hint">
-              {{ row.cannotSubmitReason }}
+            <p v-else-if="block.row.cannotSubmitReason && !canPrimaryAction(block.row)" class="v4-match-card__hint">
+              {{ block.row.cannotSubmitReason }}
             </p>
 
             <div class="v4-match-card__actions">
               <button
-                v-if="canPrimaryAction(row)"
+                v-if="canPrimaryAction(block.row)"
                 type="button"
                 class="account-btn-primary"
-                @click="handlePrimaryAction(row)"
+                @click="handlePrimaryAction(block.row)"
               >
-                {{ row.userActionText || '提交比赛数据' }}
+                {{ gameActionText(block.row) }}
               </button>
               <button
                 v-else
                 type="button"
                 class="account-btn-secondary"
-                @click="goSubmit(row)"
+                @click="goSubmit(block.row)"
               >
-                {{ row.userActionText || '查看比赛详情' }}
+                {{ gameActionText(block.row) }}
               </button>
             </div>
           </div>
         </article>
+        </template>
       </div>
       <p class="v4-schedule-panel__footnote">
         赛程数据来自您正式参加的赛事。比赛数据提交权限以具体赛区、参赛队伍及当前比赛权限为准。
@@ -434,6 +513,66 @@ watch(
     font-size: 13px;
     color: #666;
     line-height: 1.7;
+  }
+}
+
+.v4-series-card {
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  &__code {
+    margin-top: 4px;
+    font-size: 13px;
+    color: #666;
+  }
+
+  &__score {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin: 8px 0 16px;
+    font-size: 18px;
+
+    em {
+      font-style: normal;
+      font-size: 28px;
+      font-weight: 700;
+    }
+  }
+
+  &__games {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+.v4-series-game {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    font-size: 13px;
+  }
+
+  &__skip {
+    color: #888;
+    font-size: 13px;
   }
 }
 
