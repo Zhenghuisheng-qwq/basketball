@@ -35,7 +35,7 @@
           <el-table-column label="编号" prop="eventTeamNo" width="120" />
           <el-table-column label="状态" prop="eventTeamStatus" width="100" align="center">
             <template #default="scope">
-              <el-tag size="small" class="nowrap-tag">{{ scope.row.eventTeamStatus === 'ACTIVE' ? '有效' : (scope.row.eventTeamStatus === 'INACTIVE' ? '无效' : scope.row.eventTeamStatus) }}</el-tag>
+              <el-tag size="small" class="nowrap-tag" :type="scope.row.eventTeamStatus === 'DISQUALIFIED' ? 'danger' : ''">{{ scope.row.eventTeamStatus === 'ACTIVE' ? '有效' : (scope.row.eventTeamStatus === 'INACTIVE' ? '无效' : (scope.row.eventTeamStatus === 'DISQUALIFIED' ? '赛事资格已取消' : scope.row.eventTeamStatus)) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="140">
@@ -248,7 +248,7 @@
             <el-tag v-else type="warning" size="small">临时参赛队（无 basket_team）</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="报名 ID">{{ teamDetail.registrationId || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="状态">{{ teamDetail.eventTeamStatus === 'ACTIVE' ? '有效' : teamDetail.eventTeamStatus }}</el-descriptions-item>
+          <el-descriptions-item label="状态">{{ teamDetail.eventTeamStatus === 'ACTIVE' ? '有效' : (teamDetail.eventTeamStatus === 'DISQUALIFIED' ? '赛事资格已取消' : teamDetail.eventTeamStatus) }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ parseTime(teamDetail.createTime) }}</el-descriptions-item>
         </el-descriptions>
         <el-divider content-position="left">本届阵容</el-divider>

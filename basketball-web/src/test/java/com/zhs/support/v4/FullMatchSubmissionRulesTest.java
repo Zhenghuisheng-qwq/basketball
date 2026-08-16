@@ -15,8 +15,57 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class FullMatchSubmissionRulesTest {
 
     @Test
-    void ptsFormula_21() {
-        assertEquals(21, FullMatchSubmissionRules.expectedPoints(8, 3, 2));
+    void ptsFormula_twoPointOnlyThrees() {
+        assertEquals(21, FullMatchSubmissionRules.expectedPoints(0, 7, 0));
+    }
+
+    @Test
+    void ptsFormula_mixed() {
+        assertEquals(19, FullMatchSubmissionRules.expectedPoints(4, 3, 2));
+    }
+
+    @Test
+    void ptsFormula_legacyEightThreeTwoIsNow27() {
+        assertEquals(27, FullMatchSubmissionRules.expectedPoints(8, 3, 2));
+    }
+
+    @Test
+    void shooting_threePointGreaterThanTwoPointOk() {
+        V4MatchSubmissionPlayerStatReq row = player(1L, 21, 0, 0, 7, 9, 0, 0);
+        assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePlayerRow("G1 · Home · Atlas", row, true));
+    }
+
+    @Test
+    void shooting_ptsMismatchNewFormula() {
+        V4MatchSubmissionPlayerStatReq row = player(1L, 18, 4, 6, 3, 4, 2, 2);
+        assertThrows(ServiceException.class, () -> FullMatchSubmissionRules.validatePlayerRow("G1 · Home · Atlas", row, true));
+    }
+
+    @Test
+    void shooting_mixedOk() {
+        V4MatchSubmissionPlayerStatReq row = player(1L, 19, 4, 6, 3, 4, 2, 2);
+        assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePlayerRow("G1 · Home · Atlas", row, true));
+    }
+
+    @Test
+    void period_skippedFor3v3() {
+        assertDoesNotThrow(() ->
+                FullMatchSubmissionRules.validatePeriodScores("G1", List.of(), 21, 15, true, false));
+    }
+
+    @Test
+    void period_requiredFor5v5() {
+        assertThrows(ServiceException.class, () ->
+                FullMatchSubmissionRules.validatePeriodScores("G1", List.of(), 21, 15, true, true));
+    }
+
+    @Test
+    void requiresPeriodScores_byGameMode() {
+        org.junit.jupiter.api.Assertions.assertFalse(FullMatchSubmissionRules.requiresPeriodScores("THREE_V_THREE"));
+        org.junit.jupiter.api.Assertions.assertFalse(FullMatchSubmissionRules.requiresPeriodScores("3V3"));
+        org.junit.jupiter.api.Assertions.assertTrue(FullMatchSubmissionRules.requiresPeriodScores("FIVE_V_FIVE"));
+        org.junit.jupiter.api.Assertions.assertTrue(FullMatchSubmissionRules.requiresPeriodScores("5V5"));
+        org.junit.jupiter.api.Assertions.assertTrue(FullMatchSubmissionRules.requiresPeriodScores(null));
     }
 
     @Test
@@ -44,13 +93,13 @@ class FullMatchSubmissionRulesTest {
 
     @Test
     void shooting_ok() {
-        V4MatchSubmissionPlayerStatReq row = player(1L, 21, 8, 10, 3, 4, 2, 2);
+        V4MatchSubmissionPlayerStatReq row = player(1L, 27, 8, 10, 3, 4, 2, 2);
         assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePlayerRow("G1 · Home · Atlas", row, true));
     }
 
     @Test
     void duplicatePlayer() {
-        V4MatchSubmissionPlayerStatReq a = player(11L, 21, 8, 10, 3, 4, 2, 2);
+        V4MatchSubmissionPlayerStatReq a = player(11L, 27, 8, 10, 3, 4, 2, 2);
         V4MatchSubmissionPlayerStatReq b = player(11L, 10, 4, 6, 1, 2, 1, 1);
         assertThrows(ServiceException.class,
                 () -> FullMatchSubmissionRules.validateTeamPlayers("G1", "Home", 100L, Arrays.asList(a, b), true));

@@ -26,6 +26,7 @@ public class DisciplineListVo {
     private String reasonText;
     private Integer disciplineStatus;
     private String recordStatus;
+    private String executionStatus;
     private Integer matchSuspensionRemaining;
     private Integer pointDeduction;
     private Date effectiveStartTime;

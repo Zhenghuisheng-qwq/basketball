@@ -29,6 +29,17 @@ public interface BasketDisciplineRecordMapper {
 
     int updateMatchSuspensionRemaining(@Param("id") Long id, @Param("remaining") Integer remaining);
 
+    int updateExecution(@Param("id") Long id,
+            @Param("executionStatus") String executionStatus,
+            @Param("executedTime") Date executedTime,
+            @Param("executionError") String executionError,
+            @Param("matchForfeitCount") Integer matchForfeitCount,
+            @Param("seriesForfeitCount") Integer seriesForfeitCount,
+            @Param("qualificationRemovedCount") Integer qualificationRemovedCount,
+            @Param("warningCount") Integer warningCount);
+
+    int bindEventTeamId(@Param("id") Long id, @Param("eventTeamId") Long eventTeamId);
+
     BasketDisciplineRecord selectActiveMatchSuspension(@Param("seasonId") Long seasonId,
             @Param("memberId") Long memberId, @Param("now") Date now);
 }

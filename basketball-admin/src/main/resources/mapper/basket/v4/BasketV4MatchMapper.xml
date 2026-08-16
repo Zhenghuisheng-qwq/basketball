@@ -259,6 +259,14 @@
         order by round_no asc, bracket_slot asc, match_time asc, id asc
     </select>
 
+    <select id="selectByDivisionAndEventTeam" resultMap="BasketV4MatchResult">
+        select <include refid="BaseColumns" /> from basket_match
+        where division_id = #{divisionId}
+          and (home_event_team_id = #{eventTeamId} or away_event_team_id = #{eventTeamId})
+          and <include refid="NotDeleted"/>
+        order by id asc
+    </select>
+
     <select id="selectByStageAndRound" resultMap="BasketV4MatchResult">
         select <include refid="BaseColumns" /> from basket_match
         where stage_id = #{stageId}

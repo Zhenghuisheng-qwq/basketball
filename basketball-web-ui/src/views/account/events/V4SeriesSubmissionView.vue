@@ -15,7 +15,7 @@ import {
 import { getAccountFileUrl, uploadAccountFile } from '@/api/accountFile'
 import type { V4MatchSubmissionPlayerStat } from '@/api/types/v4MatchSubmission'
 import type { V4MatchSubmissionPeriodScore, V4SeriesSubmissionWorkspace } from '@/api/types/v4SeriesSubmission'
-import { seriesOptions, validateGame } from '@/utils/fullMatchSubmissionRules'
+import { requiresPeriodScores, seriesOptions, validateGame } from '@/utils/fullMatchSubmissionRules'
 import { v4SubmissionStatusLabel } from '@/utils/v4AccountEventsMappers'
 
 const route = useRoute()
@@ -75,6 +75,7 @@ const currentValidation = computed(() => {
     periods: currentDraft.value.periods,
     materialCount: currentDraft.value.materialFileIds.length,
     requireComplete: true,
+    gameMode: workspace.value.gameMode,
   })
 })
 
@@ -158,7 +159,7 @@ async function saveCurrent(complete: boolean) {
       awayScore: currentValidation.value.awayScore,
       homePlayerStats: currentDraft.value.homeStats.filter((row) => String(row.eventPlayerId || '').trim()),
       awayPlayerStats: currentDraft.value.awayStats.filter((row) => String(row.eventPlayerId || '').trim()),
-      periodScores: currentDraft.value.periods,
+      periodScores: requiresPeriodScores(workspace.value?.gameMode) ? currentDraft.value.periods : [],
       materialFileIds: currentDraft.value.materialFileIds,
       submitRemark: currentDraft.value.submitRemark,
       draftComplete: complete,
@@ -286,6 +287,7 @@ onMounted(() => { void loadWorkspace() })
             :away-stats="currentDraft.awayStats"
             :periods="currentDraft.periods"
             :material-file-ids="currentDraft.materialFileIds"
+            :game-mode="workspace.gameMode"
             :readonly="!canEdit"
             @update:home-stats="currentDraft.homeStats = $event; markCurrentDirty()"
             @update:away-stats="currentDraft.awayStats = $event; markCurrentDirty()"

@@ -73,4 +73,16 @@ public class V4PublicMatchDetailResp {
     private Integer bestOf;
 
     private V4PublicMatchSeriesDetailResp seriesContext;
+
+    private String resultType;
+
+    private String resultReason;
+
+    private Boolean homeDisqualified;
+
+    private Boolean awayDisqualified;
+
+    private String homeResultLabel;
+
+    private String awayResultLabel;
 }

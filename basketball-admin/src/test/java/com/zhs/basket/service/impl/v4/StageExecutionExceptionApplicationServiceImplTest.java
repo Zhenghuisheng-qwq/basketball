@@ -35,6 +35,7 @@ import com.zhs.common.utils.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -42,6 +43,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -70,6 +72,7 @@ class StageExecutionExceptionApplicationServiceImplTest {
     @Mock private BasketBusinessAuditWriter auditWriter;
     @Mock private OfficialMatchResultSettlementService officialMatchResultSettlementService;
     @Mock private WinnerOfSeriesAdvanceSupport winnerOfSeriesAdvanceSupport;
+    @Mock private com.zhs.basket.support.v4.EventTeamParticipationGuard eventTeamParticipationGuard;
 
     @InjectMocks
     private StageExecutionExceptionApplicationServiceImpl service;
@@ -128,6 +131,7 @@ class StageExecutionExceptionApplicationServiceImplTest {
         series.setStageId(10L);
         series.setHomeEventTeamId(101L);
         series.setAwayEventTeamId(102L);
+        series.setBestOf(3);
         series.setHomeWinCount(1);
         series.setAwayWinCount(1);
         series.setSeriesStatus(MatchSeriesStatusEnum.RUNNING.getCode());
@@ -147,7 +151,10 @@ class StageExecutionExceptionApplicationServiceImplTest {
             service.forfeitSeries(req);
         }
 
-        verify(seriesMapper).updateResolution(any());
+        ArgumentCaptor<BasketMatchSeries> captor = ArgumentCaptor.forClass(BasketMatchSeries.class);
+        verify(seriesMapper).updateResolution(captor.capture());
+        assertEquals(2, captor.getValue().getHomeWinCount());
+        assertEquals(0, captor.getValue().getAwayWinCount());
         verify(winnerOfSeriesAdvanceSupport).rewireAfterSeriesResult(any());
         verify(stageExecutionService).checkStageCompletion(10L);
     }

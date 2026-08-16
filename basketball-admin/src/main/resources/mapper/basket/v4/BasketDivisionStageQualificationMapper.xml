@@ -134,4 +134,13 @@
           and <include refid="NotDeleted"/>
     </update>
 
+    <update id="softDeletePreviewByStageAndEventTeam">
+        update basket_division_stage_qualification
+        set is_delete = 1, active_unique_key = null, update_time = now()
+        where stage_id = #{stageId}
+          and event_team_id = #{eventTeamId}
+          and qualification_status = 'PREVIEW'
+          and <include refid="NotDeleted"/>
+    </update>
+
 </mapper>

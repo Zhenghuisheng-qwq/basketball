@@ -25,6 +25,13 @@ public class BasketDisciplineRecord {
     private Integer pointDeduction;
     private Integer disciplineStatus;
     private String recordStatus;
+    private String executionStatus;
+    private Date executedTime;
+    private String executionError;
+    private Integer executionMatchForfeitCount;
+    private Integer executionSeriesForfeitCount;
+    private Integer executionQualificationRemovedCount;
+    private Integer executionWarningCount;
     private Date effectiveStartTime;
     private Date effectiveEndTime;
     private Long decisionBy;

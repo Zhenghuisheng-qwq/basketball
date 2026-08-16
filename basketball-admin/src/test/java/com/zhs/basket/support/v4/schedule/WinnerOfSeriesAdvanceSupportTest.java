@@ -38,6 +38,7 @@ class WinnerOfSeriesAdvanceSupportTest {
     @Mock private BasketDivisionStageMapper stageMapper;
     @Mock private MatchSeriesSupport matchSeriesSupport;
     @Mock private com.zhs.basket.mapper.v4.BasketV4MatchMapper matchMapper;
+    @Mock private com.zhs.basket.support.v4.EventTeamParticipationGuard eventTeamParticipationGuard;
     @InjectMocks private WinnerOfSeriesAdvanceSupport support;
 
     @Test

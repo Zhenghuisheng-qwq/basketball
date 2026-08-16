@@ -5,7 +5,7 @@ import { getV4PublicMatchDetail } from '@/api/v4Public'
 import type { V4PublicMatchDetail } from '@/api/types/v4Public'
 import SafeImage from '@/components/common/SafeImage.vue'
 import { displayNumber, displayText, formatDateTime, initials } from '@/utils/publicDisplay'
-import { formatScore, v4BestOfLabel, v4MatchSeriesStatusLabel, v4MatchStatusLabel } from '@/utils/v4Display'
+import { formatScore, formatSeriesSetScore, v4BestOfLabel, v4MatchSeriesStatusLabel, v4MatchStatusLabel } from '@/utils/v4Display'
 import '../styles/v4-events.scss'
 
 const route = useRoute()
@@ -104,7 +104,15 @@ onMounted(() => {
           <div v-if="match.seriesContext" class="v4-series-context">
             <span>{{ v4BestOfLabel(match.bestOf) }}</span>
             <span>Game {{ match.seriesGameNo }} / {{ match.seriesContext.bestOf }}</span>
-            <span>局分 {{ match.seriesContext.homeWinCount ?? 0 }} : {{ match.seriesContext.awayWinCount ?? 0 }}</span>
+            <span>局分 {{ formatSeriesSetScore({
+              homeWinCount: match.seriesContext.homeWinCount,
+              awayWinCount: match.seriesContext.awayWinCount,
+              bestOf: match.seriesContext.bestOf || match.bestOf,
+              seriesStatus: match.seriesContext.seriesStatus,
+              winnerEventTeamId: match.seriesContext.winnerEventTeamId,
+              homeEventTeamId: match.seriesContext.homeEventTeamId || match.homeTeam?.eventTeamId,
+              awayEventTeamId: match.seriesContext.awayEventTeamId || match.awayTeam?.eventTeamId,
+            }) }}</span>
             <span>{{ match.seriesContext.seriesStatusName || v4MatchSeriesStatusLabel(match.seriesContext.seriesStatus) }}</span>
           </div>
           <p v-if="contextLine" class="v4-events-hero__eyebrow">{{ contextLine }}</p>

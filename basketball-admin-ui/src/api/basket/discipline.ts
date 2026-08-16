@@ -66,6 +66,10 @@ export function activateDiscipline(id: number): Promise<AjaxResult> {
   return request({ url: `/basket/discipline/${id}/activate`, method: 'post' })
 }
 
+export function retryDisciplineExecution(id: number): Promise<AjaxResult> {
+  return request({ url: `/basket/discipline/${id}/retry-execution`, method: 'post' })
+}
+
 export function revokeDiscipline(id: number, data: { revokeReason: string }): Promise<AjaxResult> {
   return request({ url: `/basket/discipline/${id}/revoke`, method: 'post', data })
 }

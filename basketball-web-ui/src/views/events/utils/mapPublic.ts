@@ -15,6 +15,7 @@ export function toEventTeam(input: {
   teamLogoUrl?: string | null
   wins?: number | null
   losses?: number | null
+  disqualified?: boolean | null
 }): Team {
   const name = displayText(input.teamName, '未知球队')
   const teamId = String(input.teamId)
@@ -27,6 +28,7 @@ export function toEventTeam(input: {
     logo: input.teamLogoUrl?.trim() || '',
     wins: toNumber(input.wins, 0),
     losses: toNumber(input.losses, 0),
+    disqualified: Boolean(input.disqualified),
   }
 }
 
@@ -72,6 +74,12 @@ export function toScheduleMatch(item: PublicMatchItemVo, seasonName = ''): Match
     week: dt.date && dt.date !== '--' ? getWeekNumber(dt.date) : 0,
     matchStatus: item.matchStatus ?? undefined,
     stageName: item.stageName ?? undefined,
+    resultType: (item as { resultType?: string }).resultType,
+    resultReason: (item as { resultReason?: string }).resultReason,
+    homeResultLabel: (item as { homeResultLabel?: string }).homeResultLabel,
+    awayResultLabel: (item as { awayResultLabel?: string }).awayResultLabel,
+    homeDisqualified: Boolean((item as { homeDisqualified?: boolean }).homeDisqualified),
+    awayDisqualified: Boolean((item as { awayDisqualified?: boolean }).awayDisqualified),
   }
 }
 

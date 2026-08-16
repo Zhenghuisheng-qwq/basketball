@@ -90,10 +90,10 @@ def main() -> int:
     else:
         record("schema", schema_ok, "shooting + series header")
 
-    # Rule self-check (no server): PTS = 2*FGM + 3PM + FTM; BO5 3:1 => 4 games.
-    pts_ok = (2 * 8 + 3 + 2) == 21
+    # Rule self-check (no server): PTS = 2*2PM + 3*3PM + FTM; BO5 3:1 => 4 games.
+    pts_ok = (2 * 0 + 3 * 7 + 0) == 21 and (2 * 4 + 3 * 3 + 2) == 19
     series_ok = (3 + 1) == 4
-    record("rules_pts_formula", pts_ok, "FGM=8 3PM=3 FTM=2 => PTS=21")
+    record("rules_pts_formula", pts_ok, "2PM=0 3PM=7 =>21; 2PM=4 3PM=3 FTM=2 =>19")
     record("rules_bo5_3_1_actual", series_ok, "declared 3:1 => actualGameCount=4")
     record("rules_bo3_2_0_actual", (2 + 0) == 2, "declared 2:0 => actualGameCount=2")
     record("rules_shooting_fgm_gt_fga", 9 > 8, "FGM>FGA reject")

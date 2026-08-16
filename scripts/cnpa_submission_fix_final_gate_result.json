@@ -1,0 +1,132 @@
+{
+  "cases": {
+    "health.admin": {
+      "ok": true,
+      "detail": "http://127.0.0.1:8080"
+    },
+    "health.web": {
+      "ok": true,
+      "detail": "http://127.0.0.1:8881"
+    },
+    "setup.3v3.match": {
+      "ok": true,
+      "detail": "{'matchId': 560, 'home': 339, 'divisionId': 245}"
+    },
+    "forfeit.api": {
+      "ok": true,
+      "detail": "操作成功"
+    },
+    "forfeit.db.official.2_0": {
+      "ok": true,
+      "detail": "{'id': 20, 'best_of': 3, 'home_win_count': 2, 'away_win_count': 0, 'winner_event_team_id': 214, 'series_status': 'COMPLETED', 'resolution_type': 'FORFEIT'}"
+    },
+    "forfeit.child.noFakeScore": {
+      "ok": true,
+      "detail": "[{'id': 271, 'home_score': None, 'away_score': None, 'match_status': 'SCHEDULED'}, {'id': 272, 'home_score': None, 'away_score': None, 'match_status': 'SCHEDULED'}, {'id': 273, 'home_score': None, 'away_score': None, 'match_status': 'SCHEDULED'}]"
+    },
+    "history.db.still.0_0": {
+      "ok": true,
+      "detail": "{'id': 41, 'home_win_count': 0, 'away_win_count': 0, 'winner_event_team_id': 335, 'best_of': 3, 'resolution_type': 'FORFEIT'}"
+    },
+    "public.hist.fallback.2_0": {
+      "ok": true,
+      "detail": "{'score': '2:0', 'status': '已结束', 'res': '系列赛弃赛'}"
+    },
+    "admin.hist.fallback.2_0": {
+      "ok": true,
+      "detail": "{'seriesScore': '2:0', 'wins': '2:0'}"
+    },
+    "consistency.hist.admin_public": {
+      "ok": true,
+      "detail": "admin=2:0 public=2:0"
+    },
+    "public.new.forfeit.2_0": {
+      "ok": true,
+      "detail": "2:0"
+    },
+    "public.bo1.no_0_0": {
+      "ok": true,
+      "detail": "{'status': 'FORFEITED', 'home': None, 'away': None}"
+    },
+    "browser.3v3.noQ": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nG3\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-G3-H101\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nGATE_3V3_HOME VS GATE_3V3_AWAY\n\n待提交\n比赛信息\n\nGATE-3V3-SUB 2026 · GATE-3V3-SUB · KNOCKOUT\n\n比赛"
+    },
+    "browser.3v3.no3pmFgm": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nG3\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-G3-H101\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nGATE_3V3_HOME VS GATE_3V3_AWAY\n\n待提交\n比赛信息\n\nGATE-3V3-SUB 2026 · GATE-3V3-SUB · KNOCKOUT\n\n比赛时间：-\n\nV4-245-SER-919-R1-S01 · BO5 · Game"
+    },
+    "browser.3v3.noPtsFormulaErr": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nG3\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-G3-H101\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nGATE_3V3_HOME VS GATE_3V3_AWAY\n\n待提交\n比赛信息\n\nGATE-3V3-SUB 2026 · GATE-3V3-SUB · KNOCKOUT\n\n比赛时间：-\n\nV4-245-SER-919-R1-S01 · BO5 · Game"
+    },
+    "browser.3v3.teamPts21": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nG3\n个人中心\n1\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-G3-H101\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n1\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nGATE_3V3_HOME VS GATE_3V3_AWAY\n\n待提交\n比赛信息\n\nGATE-3V3-SUB 2026 · GATE-3V3-SUB · KNOCKOUT\n\n比赛时间：-\n\nV4-245-SER-919-R1-S01 · BO5 · Game"
+    },
+    "browser.5v5.hasQ": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nPL\n个人中心\n2\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-PR-P0701\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n2\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nPLAYOFF_V1_E2E_PR_P07 VS PLAYOFF_V1_E2E_PR_P08\n\n待提交\n比赛信息\n\nPLAYOFF_V1_E2E_SEASON_R_002129"
+    },
+    "browser.5v5.periodMismatch": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nPL\n个人中心\n2\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-PR-P0701\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n2\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nPLAYOFF_V1_E2E_PR_P07 VS PLAYOFF_V1_E2E_PR_P08\n\n待提交\n比赛信息\n\nPLAYOFF_V1_E2E_SEASON_R_002129 · PLAYOFF_V1_E2E_DIV_RAND8_002129 · R2\n"
+    },
+    "browser.5v5.periodFixed": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\nPL\n个人中心\n2\n\nCNPA PLAYER CENTER\n\nCNPA-P-FS-PR-P0701\n\n认证球员\n\nfs***@cnpa.smoke\n\n概览\n球员身份\n我的球队\n我的赛事\n消息通知\n2\n账号设置\n退出登录\n首页\n/\n个人中心\n/\n我的赛事\n/\n比赛数据\n比赛数据提交\nMATCH DATA SUBMISSION\n比赛数据提交\n\nPLAYOFF_V1_E2E_PR_P07 VS PLAYOFF_V1_E2E_PR_P08\n\n待提交\n比赛信息\n\nPLAYOFF_V1_E2E_SEASON_R_002129 · PLAYOFF_V1_E2E_DIV_RAND8_002129 · R2\n"
+    },
+    "browser.public.bo3.schedule": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\n登录\n注册\n赛季\nE2E-ADMIN-OPS 2026\n赛季\n战队数\n8\n战队\n当前阶段\n报名已截止\n阶段\n比赛平台\nPC\n平台\n总览\n赛程\n对阵/赛段\nPC · E2E-ADMIN-OPS\n赛程\nSCHEDULE\n211\n210\n205\n154\n153\n152\n151\n150\n149\n148\n147\n146\n144\n145\n143\n142\n141\n140\n139\n138\n137\n136\n135\n134\n133\n131\n130\n129\n128\n127\n126\n125\n124\n123\n122\n121\n120\n119\n118\n117\n116\n115\n114\n113\n112\n111\n110\n109\n108\n107\n选择球队\n▼\nR1\nV4-244-1-01\nBO1\n已结束\nE"
+    },
+    "browser.public.bo3.modal": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\n登录\n注册\n赛季\nE2E-ADMIN-OPS 2026\n赛季\n战队数\n8\n战队\n当前阶段\n报名已截止\n阶段\n比赛平台\nPC\n平台\n总览\n赛程\n对阵/赛段\nPC · E2E-ADMIN-OPS\n赛程\nSCHEDULE\n211\n210\n205\n154\n153\n152\n151\n150\n149\n148\n147\n146\n144\n145\n143\n142\n141\n140\n139\n138\n137\n136\n135\n134\n133\n131\n130\n129\n128\n127\n126\n125\n124\n123\n122\n121\n120\n119\n118\n117\n116\n115\n114\n113\n112\n111\n110\n109\n108\n107\n选择球队\n▼\nR1\nV4-244-1-01\nBO1\n已结束\nE"
+    },
+    "browser.public.bo1.forfeit": {
+      "ok": true,
+      "detail": "首页\n赛事\n数据\n名人堂\n公告\n合作伙伴\n登录\n注册\n← 返回赛程\n\nLEAGUE · FULL_SMOKE_20260811_ADVANCED_V8 SEASON · FULL_SMOKE_20260811_ADVANCED_V8_PC_5V5 · SE BO1 BYE\n\n第 1 轮 · --\n\nFS\nFSA8_FOUR\n判胜\n弃权\n暂无场地信息\nFSA8_ONE\nFS\n单场球队数据\n暂无数据\n单场球员数据\n暂无已确认的球员技术统计\n\nCNPA 中国职业电竞篮球联赛，汇聚全国顶尖战队，打造专业、公平、开放的赛事平台。\n\nW\nB\nD\n赛事\nCNPA League\nCNPA Arena\nCNPA Cup\nCNPA Open\n数据\n球员数据\n战队数据\n赛事赛程\n数据记录\n名人堂\n周最佳\n赛事荣誉\n历届冠军\n最佳阵容"
+    },
+    "browser.admin.series": {
+      "ok": true,
+      "detail": "CNPA管理系统\n运营工作台\n赛事管理\n账号与认证\n比赛执行\n比赛管理\n比赛数据审核\n纪律与档案\n内容运营\n系统管理\n首页\n/\n比赛执行\n/\n比赛管理\n若依\n运营工作台 比赛管理 \n刷新\n比赛管理：发布后的比赛执行与特殊改期。系列赛时间在「系列赛」Tab 调整；赛前整体排期请回赛事工作台。\n视图\n单场列表\n系列赛\n赛季\n选择赛季\n平台赛区\n选择赛区\n批次\n轮次\n发布状态\n请选择\n比赛状态\n请选择\n球队名称\n搜索\n比赛ID\n\t\n轮次\n\t\nSeries Code\n\t\nBO\n\t\nGame No\n\t\n比赛编号\n\t\n比赛时间\n\t\n主队\n\t\n客队\n\t\n比分\n\t\n平台赛区\n\t\n比赛状态\n\t\n发布状态\n\t\n操"
+    }
+  },
+  "three": {
+    "matchId": 560,
+    "home": 339,
+    "divisionId": 245
+  },
+  "newForfeit": {
+    "seriesId": 20,
+    "already": false,
+    "id": 20,
+    "best_of": 3,
+    "home_win_count": 2,
+    "away_win_count": 0,
+    "winner_event_team_id": 214,
+    "series_status": "COMPLETED",
+    "resolution_type": "FORFEIT",
+    "children": [
+      {
+        "id": 271,
+        "home_score": null,
+        "away_score": null,
+        "match_status": "SCHEDULED"
+      },
+      {
+        "id": 272,
+        "home_score": null,
+        "away_score": null,
+        "match_status": "SCHEDULED"
+      },
+      {
+        "id": 273,
+        "home_score": null,
+        "away_score": null,
+        "match_status": "SCHEDULED"
+      }
+    ]
+  }
+}

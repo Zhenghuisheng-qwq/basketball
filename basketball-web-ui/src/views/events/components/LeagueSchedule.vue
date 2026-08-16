@@ -5,6 +5,8 @@ import PaperSection from '@/components/common/PaperSection.vue'
 import { getV4PublicMatchSeries } from '@/api/v4Public'
 import type { V4PublicMatchSeriesDetail, V4PublicScheduleItem } from '@/api/types/v4Public'
 import {
+  formatScore,
+  formatSeriesSetScore,
   v4BestOfLabel,
   v4PublicRoundLabel,
   v4ScheduleStatusLabel,
@@ -67,6 +69,23 @@ function closeDetail() {
 
 function closeStats() {
   statsVisible.value = false
+}
+
+function seriesScoreText(item: V4PublicScheduleItem): string {
+  if (item.seriesScore && item.seriesScore !== '0:0' && item.seriesScore !== '0 : 0') {
+    return item.seriesScore.replace(':', ' : ')
+  }
+  const text = formatSeriesSetScore({
+    homeWinCount: item.homeWinCount,
+    awayWinCount: item.awayWinCount,
+    bestOf: item.bestOf,
+    seriesStatus: item.status,
+    winnerEventTeamId: item.winnerEventTeamId,
+    homeEventTeamId: item.homeEventTeamId,
+    awayEventTeamId: item.awayEventTeamId,
+    emptyText: '',
+  })
+  return text === '-- : --' ? '' : text
 }
 
 function formatScheduleTime(item: V4PublicScheduleItem): string {
@@ -174,7 +193,8 @@ function openSeriesGame(matchId?: string) {
               </div>
               <div class="series-card__foot">
                 <span>{{ formatScheduleTime(item) }}</span>
-                <span v-if="item.seriesScore">{{ item.seriesScore }}</span>
+                <span v-if="seriesScoreText(item)">{{ seriesScoreText(item) }}</span>
+                <span v-if="item.resultReason" class="dq-reason">{{ item.resultReason }}</span>
               </div>
             </article>
           </section>
@@ -204,13 +224,25 @@ function openSeriesGame(matchId?: string) {
         <template v-else-if="seriesDetail">
           <p class="series-modal__meta">
             {{ seriesDetail.homeTeamName || '待定' }}
-            <strong>{{ seriesDetail.homeWinCount ?? 0 }} : {{ seriesDetail.awayWinCount ?? 0 }}</strong>
+            <strong>{{ formatSeriesSetScore({
+              homeWinCount: seriesDetail.homeWinCount,
+              awayWinCount: seriesDetail.awayWinCount,
+              bestOf: seriesDetail.bestOf,
+              seriesStatus: seriesDetail.seriesStatus,
+              resolutionType: seriesDetail.resolutionType,
+              winnerEventTeamId: seriesDetail.winnerEventTeamId,
+              homeEventTeamId: seriesDetail.homeEventTeamId,
+              awayEventTeamId: seriesDetail.awayEventTeamId,
+            }) }}</strong>
             {{ seriesDetail.awayTeamName || '待定' }}
           </p>
           <p class="series-modal__meta">
             {{ seriesDetail.seriesCode || '系列赛' }}
             · BO{{ seriesDetail.bestOf || 1 }}
             · {{ seriesDetail.seriesStatusName || seriesDetail.seriesStatus || '' }}
+          </p>
+          <p v-if="seriesDetail.resultReason || seriesDetail.resultSummary" class="series-modal__meta dq-reason">
+            {{ seriesDetail.resultReason || seriesDetail.resultSummary }}
           </p>
           <ul class="series-modal__games">
             <li
@@ -225,7 +257,7 @@ function openSeriesGame(matchId?: string) {
               <template v-else>
                 <span>{{ game.matchStatusName || game.matchStatus || '待安排' }}</span>
                 <span v-if="game.homeScore != null && game.awayScore != null">
-                  {{ game.homeScore }} : {{ game.awayScore }}
+                  {{ formatScore(game.homeScore, game.awayScore, game.matchStatus) }}
                 </span>
                 <span v-else>{{ game.scheduledTime || '待安排' }}</span>
               </template>
@@ -340,6 +372,11 @@ function openSeriesGame(matchId?: string) {
 .series-modal__head h3,
 .series-modal__meta {
   margin: 0 0 12px;
+}
+
+.dq-reason {
+  color: #b91c1c;
+  font-weight: 700;
 }
 
 .series-modal__close {

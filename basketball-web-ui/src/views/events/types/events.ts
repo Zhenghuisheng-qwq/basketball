@@ -15,6 +15,7 @@ export interface Team {
   badgeKey?: string
   wins: number
   losses: number
+  disqualified?: boolean
 }
 
 export interface PlayerLeader {
@@ -52,6 +53,12 @@ export interface Match {
   week: number
   matchStatus?: number
   stageName?: string
+  resultType?: string
+  resultReason?: string
+  homeResultLabel?: string
+  awayResultLabel?: string
+  homeDisqualified?: boolean
+  awayDisqualified?: boolean
 }
 
 export interface Standing {
@@ -64,6 +71,7 @@ export interface Standing {
   winRate: number
   pointDiff: number
   recent: Array<'W' | 'L'>
+  disqualified?: boolean
 }
 
 export interface CompetitionStage {

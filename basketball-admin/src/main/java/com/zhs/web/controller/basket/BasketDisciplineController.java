@@ -4,6 +4,7 @@ import com.zhs.basket.query.DisciplineQuery;
 import com.zhs.basket.req.DisciplineCreateReq;
 import com.zhs.basket.req.DisciplineRevokeReq;
 import com.zhs.basket.service.IBasketDisciplineService;
+import com.zhs.basket.service.IPenaltyExecutionService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
 import com.zhs.common.core.domain.AjaxResult;
@@ -19,6 +20,8 @@ public class BasketDisciplineController extends BaseController {
 
     @Autowired
     private IBasketDisciplineService disciplineService;
+    @Autowired
+    private IPenaltyExecutionService penaltyExecutionService;
 
     @PreAuthorize("@ss.hasPermi('basket:discipline:list')")
     @GetMapping("/list")
@@ -69,7 +72,17 @@ public class BasketDisciplineController extends BaseController {
     @PostMapping("/{id}/activate")
     public AjaxResult activate(@PathVariable Long id) {
         disciplineService.activate(id);
-        return success();
+        if (disciplineService.needsEventExecution(id)) {
+            penaltyExecutionService.execute(id);
+        }
+        return success(disciplineService.detail(id));
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:discipline:activate')")
+    @Log(title = "球队与球员处罚", businessType = BusinessType.UPDATE)
+    @PostMapping("/{id}/retry-execution")
+    public AjaxResult retryExecution(@PathVariable Long id) {
+        return success(penaltyExecutionService.execute(id));
     }
 
     @PreAuthorize("@ss.hasPermi('basket:discipline:revoke')")

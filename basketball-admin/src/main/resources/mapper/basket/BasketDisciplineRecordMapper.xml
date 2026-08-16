@@ -21,6 +21,13 @@
         <result property="pointDeduction" column="point_deduction" />
         <result property="disciplineStatus" column="discipline_status" />
         <result property="recordStatus" column="record_status" />
+        <result property="executionStatus" column="execution_status" />
+        <result property="executedTime" column="executed_time" />
+        <result property="executionError" column="execution_error" />
+        <result property="executionMatchForfeitCount" column="execution_match_forfeit_count" />
+        <result property="executionSeriesForfeitCount" column="execution_series_forfeit_count" />
+        <result property="executionQualificationRemovedCount" column="execution_qualification_removed_count" />
+        <result property="executionWarningCount" column="execution_warning_count" />
         <result property="effectiveStartTime" column="effective_start_time" />
         <result property="effectiveEndTime" column="effective_end_time" />
         <result property="decisionBy" column="decision_by" />
@@ -41,7 +48,10 @@
     <sql id="Base_Column_List">
         id, record_no, target_type, season_id, match_id, team_id, event_team_id, player_id, member_id,
         discipline_type, penalty_code, title, reason_text, penalty_content, match_suspension_count,
-        match_suspension_remaining, point_deduction, discipline_status, record_status, effective_start_time,
+        match_suspension_remaining, point_deduction, discipline_status, record_status,
+        execution_status, executed_time, execution_error,
+        execution_match_forfeit_count, execution_series_forfeit_count,
+        execution_qualification_removed_count, execution_warning_count, effective_start_time,
         effective_end_time, decision_by, decision_time, approved_by, approved_time, revoked_by, revoked_time,
         revoke_reason, source_type, idempotency_key, announcement_id, create_time, update_time, is_delete
     </sql>
@@ -66,12 +76,14 @@
         insert into basket_discipline_record
         (record_no, target_type, season_id, match_id, team_id, event_team_id, player_id, member_id,
          discipline_type, penalty_code, title, reason_text, penalty_content, match_suspension_count,
-         match_suspension_remaining, point_deduction, discipline_status, record_status, effective_start_time,
+         match_suspension_remaining, point_deduction, discipline_status, record_status, execution_status,
+         effective_start_time,
          effective_end_time, decision_by, decision_time, source_type, idempotency_key, create_time, update_time, is_delete)
         values
         (#{recordNo}, #{targetType}, #{seasonId}, #{matchId}, #{teamId}, #{eventTeamId}, #{playerId}, #{memberId},
          #{disciplineType}, #{penaltyCode}, #{title}, #{reasonText}, #{penaltyContent}, #{matchSuspensionCount},
-         #{matchSuspensionRemaining}, #{pointDeduction}, #{disciplineStatus}, #{recordStatus}, #{effectiveStartTime},
+         #{matchSuspensionRemaining}, #{pointDeduction}, #{disciplineStatus}, #{recordStatus}, #{executionStatus},
+         #{effectiveStartTime},
          #{effectiveEndTime}, #{decisionBy}, #{decisionTime}, #{sourceType}, #{idempotencyKey}, #{createTime}, #{updateTime}, #{isDelete})
     </insert>
 
@@ -93,6 +105,12 @@
                d.penalty_content as penaltyContent, d.match_suspension_count as matchSuspensionCount,
                d.match_suspension_remaining as matchSuspensionRemaining, d.point_deduction as pointDeduction,
                d.discipline_status as disciplineStatus, d.record_status as recordStatus,
+               d.execution_status as executionStatus,
+               d.executed_time as executedTime, d.execution_error as executionError,
+               d.execution_match_forfeit_count as executionMatchForfeitCount,
+               d.execution_series_forfeit_count as executionSeriesForfeitCount,
+               d.execution_qualification_removed_count as executionQualificationRemovedCount,
+               d.execution_warning_count as executionWarningCount,
                d.effective_start_time as effectiveStartTime, d.effective_end_time as effectiveEndTime,
                d.decision_by as decisionBy, d.decision_time as decisionTime, d.approved_by as approvedBy,
                d.approved_time as approvedTime, d.revoked_by as revokedBy, d.revoked_time as revokedTime,
@@ -119,6 +137,7 @@
                d.member_id as memberId,
                d.discipline_type as disciplineType, d.penalty_code as penaltyCode, d.title, d.reason_text as reasonText,
                d.discipline_status as disciplineStatus, d.record_status as recordStatus,
+               d.execution_status as executionStatus,
                d.match_suspension_remaining as matchSuspensionRemaining, d.point_deduction as pointDeduction,
                d.effective_start_time as effectiveStartTime, d.effective_end_time as effectiveEndTime,
                d.decision_time as decisionTime, d.create_time as createTime
@@ -167,6 +186,25 @@
         update basket_discipline_record
         set match_suspension_remaining = #{remaining}, update_time = now()
         where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="updateExecution">
+        update basket_discipline_record
+        set execution_status = #{executionStatus},
+            executed_time = #{executedTime},
+            execution_error = #{executionError},
+            execution_match_forfeit_count = #{matchForfeitCount},
+            execution_series_forfeit_count = #{seriesForfeitCount},
+            execution_qualification_removed_count = #{qualificationRemovedCount},
+            execution_warning_count = #{warningCount},
+            update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="bindEventTeamId">
+        update basket_discipline_record
+        set event_team_id = #{eventTeamId}, update_time = now()
+        where id = #{id} and is_delete = 0 and event_team_id is null
     </update>
 
     <select id="selectActiveMatchSuspension" resultMap="BasketDisciplineRecordResult">

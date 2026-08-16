@@ -79,4 +79,16 @@ public class V4PublicMatchItemResp {
     private String seriesStatus;
 
     private String seriesStatusName;
+
+    private String resultType;
+
+    private String resultReason;
+
+    private Boolean homeDisqualified;
+
+    private Boolean awayDisqualified;
+
+    private String homeResultLabel;
+
+    private String awayResultLabel;
 }

@@ -18,6 +18,11 @@ public interface BasketEventTeamMapper {
 
     List<BasketEventTeam> selectActiveByDivisionId(@Param("divisionId") Long divisionId);
 
+    List<BasketEventTeam> selectStandingEligibleByDivisionId(@Param("divisionId") Long divisionId);
+
+    List<BasketEventTeam> selectBySeasonAndSourceTeam(@Param("seasonId") Long seasonId,
+                                                      @Param("sourceTeamId") Long sourceTeamId);
+
     List<BasketEventTeam> selectActiveByDivisionAndRosterVersion(@Param("divisionId") Long divisionId,
                                                                 @Param("rosterVersionId") Long rosterVersionId);
 

@@ -105,10 +105,11 @@
           <el-descriptions-item label="盖帽">{{ detail.teamStat.block }}</el-descriptions-item>
           <el-descriptions-item label="失误">{{ detail.teamStat.turnover }}</el-descriptions-item>
           <el-descriptions-item label="犯规">{{ detail.teamStat.foul }}</el-descriptions-item>
-          <el-descriptions-item label="FGM/FGA">{{ detail.teamStat.fieldGoalMade ?? 0 }}/{{ detail.teamStat.fieldGoalAttempt ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="2PM/2PA">{{ detail.teamStat.fieldGoalMade ?? 0 }}/{{ detail.teamStat.fieldGoalAttempt ?? 0 }}</el-descriptions-item>
           <el-descriptions-item label="3PM/3PA">{{ detail.teamStat.threePointMade ?? 0 }}/{{ detail.teamStat.threePointAttempt ?? 0 }}</el-descriptions-item>
           <el-descriptions-item label="FTM/FTA">{{ detail.teamStat.freeThrowMade ?? 0 }}/{{ detail.teamStat.freeThrowAttempt ?? 0 }}</el-descriptions-item>
         </el-descriptions>
+        <p v-if="detail.periodScores?.length" class="mb8">节比分：{{ detail.periodScores.map(p => `Q${p.periodNo} ${p.homeScore}:${p.awayScore}`).join(' / ') }}</p>
         <el-divider content-position="left">本方球员统计</el-divider>
         <el-table :data="detail.playerStats || []" size="small" border>
           <el-table-column label="球员" prop="playerName" min-width="120" />
@@ -201,7 +202,8 @@
           </el-descriptions>
           <el-tabs>
             <el-tab-pane v-for="game in seriesDetail.games || []" :key="game.submissionId" :label="`G${game.seriesGameNo} ${game.homeScore}:${game.awayScore}`">
-              <p>最终比分 {{ game.homeScore }} : {{ game.awayScore }} · 节比分：{{ (game.periodScores || []).map(p => `Q${p.periodNo} ${p.homeScore}:${p.awayScore}`).join(' / ') || '-' }}</p>
+              <p>最终比分 {{ game.homeScore }} : {{ game.awayScore }}</p>
+              <p v-if="game.periodScores?.length">节比分：{{ game.periodScores.map(p => `Q${p.periodNo} ${p.homeScore}:${p.awayScore}`).join(' / ') }}</p>
               <p v-if="game.submitRemark">备注：{{ game.submitRemark }}</p>
               <el-alert v-if="game.validationErrors?.length" type="error" :closable="false" class="mb8" :title="game.validationErrors[0]">
                 <ul>
@@ -212,10 +214,10 @@
               <el-descriptions :column="4" border size="small" class="mb8">
                 <el-descriptions-item :label="`${seriesDetail.homeTeamName} PTS`">{{ game.homeTeamStat?.score ?? '-' }}</el-descriptions-item>
                 <el-descriptions-item label="REB">{{ game.homeTeamStat?.rebound ?? '-' }}</el-descriptions-item>
-                <el-descriptions-item label="FGM/FGA">{{ game.homeTeamStat?.fieldGoalMade ?? 0 }}/{{ game.homeTeamStat?.fieldGoalAttempt ?? 0 }}</el-descriptions-item>
+                <el-descriptions-item label="2PM/2PA">{{ game.homeTeamStat?.fieldGoalMade ?? 0 }}/{{ game.homeTeamStat?.fieldGoalAttempt ?? 0 }}</el-descriptions-item>
                 <el-descriptions-item :label="`${seriesDetail.awayTeamName} PTS`">{{ game.awayTeamStat?.score ?? '-' }}</el-descriptions-item>
                 <el-descriptions-item label="REB">{{ game.awayTeamStat?.rebound ?? '-' }}</el-descriptions-item>
-                <el-descriptions-item label="FGM/FGA">{{ game.awayTeamStat?.fieldGoalMade ?? 0 }}/{{ game.awayTeamStat?.fieldGoalAttempt ?? 0 }}</el-descriptions-item>
+                <el-descriptions-item label="2PM/2PA">{{ game.awayTeamStat?.fieldGoalMade ?? 0 }}/{{ game.awayTeamStat?.fieldGoalAttempt ?? 0 }}</el-descriptions-item>
               </el-descriptions>
               <el-divider content-position="left">{{ seriesDetail.homeTeamName }} 球员</el-divider>
               <el-table :data="game.homePlayerStats || []" size="small" border>
@@ -227,8 +229,8 @@
                 <el-table-column label="BLK" prop="block" width="60" />
                 <el-table-column label="PF" prop="foul" width="60" />
                 <el-table-column label="TO" prop="turnover" width="60" />
-                <el-table-column label="FGM" prop="fieldGoalMade" width="60" />
-                <el-table-column label="FGA" prop="fieldGoalAttempt" width="60" />
+                <el-table-column label="2PM" prop="fieldGoalMade" width="60" />
+                <el-table-column label="2PA" prop="fieldGoalAttempt" width="60" />
                 <el-table-column label="3PM" prop="threePointMade" width="60" />
                 <el-table-column label="3PA" prop="threePointAttempt" width="60" />
                 <el-table-column label="FTM" prop="freeThrowMade" width="60" />
@@ -244,8 +246,8 @@
                 <el-table-column label="BLK" prop="block" width="60" />
                 <el-table-column label="PF" prop="foul" width="60" />
                 <el-table-column label="TO" prop="turnover" width="60" />
-                <el-table-column label="FGM" prop="fieldGoalMade" width="60" />
-                <el-table-column label="FGA" prop="fieldGoalAttempt" width="60" />
+                <el-table-column label="2PM" prop="fieldGoalMade" width="60" />
+                <el-table-column label="2PA" prop="fieldGoalAttempt" width="60" />
                 <el-table-column label="3PM" prop="threePointMade" width="60" />
                 <el-table-column label="3PA" prop="threePointAttempt" width="60" />
                 <el-table-column label="FTM" prop="freeThrowMade" width="60" />

@@ -1,12 +1,14 @@
 package com.zhs.support.v4;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.zhs.dao.v4.BasketDivisionDao;
 import com.zhs.dao.v4.BasketEventPlayerDao;
 import com.zhs.dao.v4.BasketMatchSubmissionMaterialDao;
 import com.zhs.dao.v4.BasketMatchSubmissionPeriodScoreDao;
 import com.zhs.dao.v4.BasketMatchSubmissionPlayerStatDao;
 import com.zhs.dao.v4.BasketMatchSubmissionTeamStatDao;
 import com.zhs.exception.ServiceException;
+import com.zhs.model.v4.BasketDivision;
 import com.zhs.model.v4.BasketEventPlayer;
 import com.zhs.model.v4.BasketMatchSubmission;
 import com.zhs.model.v4.BasketMatchSubmissionMaterial;
@@ -46,6 +48,8 @@ public class FullMatchSubmissionSupport {
     private BasketMatchSubmissionPeriodScoreDao submissionPeriodScoreDao;
     @Resource
     private BasketEventPlayerDao eventPlayerDao;
+    @Resource
+    private BasketDivisionDao divisionDao;
 
     public boolean isFullMatchReq(V4MatchSubmissionSaveReq req) {
         if (req == null) {
@@ -84,12 +88,13 @@ public class FullMatchSubmissionSupport {
         int awayScore = submission.getAwayScore() != null ? submission.getAwayScore() : awayPts;
         submission.setHomeScore(homeScore);
         submission.setAwayScore(awayScore);
+        boolean requirePeriods = FullMatchSubmissionRules.requiresPeriodScores(resolveGameMode(match));
         if (requireComplete) {
             FullMatchSubmissionRules.validateScoreCross(gameLabel, homeScore, awayScore, homePts, awayPts);
-            FullMatchSubmissionRules.validatePeriodScores(gameLabel, periodScores, homeScore, awayScore, true);
+            FullMatchSubmissionRules.validatePeriodScores(gameLabel, periodScores, homeScore, awayScore, true, requirePeriods);
             FullMatchSubmissionRules.validateMaterials(gameLabel, materialFileIds, true);
         } else {
-            FullMatchSubmissionRules.validatePeriodScores(gameLabel, periodScores, homeScore, awayScore, false);
+            FullMatchSubmissionRules.validatePeriodScores(gameLabel, periodScores, homeScore, awayScore, false, requirePeriods);
             FullMatchSubmissionRules.validateMaterials(gameLabel, materialFileIds, false);
         }
 
@@ -98,7 +103,9 @@ public class FullMatchSubmissionSupport {
         insertTeamStat(submission, match.getAwayEventTeamId(), awayPlayers, now);
         insertPlayers(submission, match.getHomeEventTeamId(), homePlayers, now);
         insertPlayers(submission, match.getAwayEventTeamId(), awayPlayers, now);
-        insertPeriods(submission, periodScores, now);
+        if (requirePeriods) {
+            insertPeriods(submission, periodScores, now);
+        }
         insertMaterials(submission, materialFileIds, now);
     }
 
@@ -114,8 +121,20 @@ public class FullMatchSubmissionSupport {
         int homeScore = FullMatchSubmissionRules.nvl(submission.getHomeScore());
         int awayScore = FullMatchSubmissionRules.nvl(submission.getAwayScore());
         FullMatchSubmissionRules.validateScoreCross(gameLabel, homeScore, awayScore, homePts, awayPts);
-        FullMatchSubmissionRules.validatePeriodScores(gameLabel, periods, homeScore, awayScore, true);
+        boolean requirePeriods = FullMatchSubmissionRules.requiresPeriodScores(resolveGameMode(match));
+        FullMatchSubmissionRules.validatePeriodScores(gameLabel, periods, homeScore, awayScore, true, requirePeriods);
         FullMatchSubmissionRules.validateMaterials(gameLabel, materials, true);
+    }
+
+    public String resolveGameMode(BasketV4Match match) {
+        if (match == null || match.getDivisionId() == null) {
+            return "FIVE_V_FIVE";
+        }
+        BasketDivision division = divisionDao.selectById(match.getDivisionId());
+        if (division == null || division.getGameMode() == null || division.getGameMode().isBlank()) {
+            return "FIVE_V_FIVE";
+        }
+        return division.getGameMode();
     }
 
     public void fillDetail(V4MatchSubmissionDetailResp resp, BasketMatchSubmission submission, BasketV4Match match) {

@@ -6,6 +6,7 @@ import { getAccountFileUrl } from '@/api/accountFile'
 import {
   aggregateTeam,
   playerFieldErrors,
+  requiresPeriodScores,
   shootingLine,
   validateGame,
 } from '@/utils/fullMatchSubmissionRules'
@@ -22,6 +23,7 @@ const props = defineProps<{
   materialFileIds: string[]
   readonly?: boolean
   requireComplete?: boolean
+  gameMode?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -55,8 +57,10 @@ const validation = computed(() =>
     periods: props.periods,
     materialCount: props.materialFileIds.length,
     requireComplete: props.requireComplete !== false,
+    gameMode: props.gameMode,
   }),
 )
+const showPeriods = computed(() => requiresPeriodScores(props.gameMode))
 const periodTouched = computed(() =>
   validation.value.homeScore + validation.value.awayScore + validation.value.homePeriod + validation.value.awayPeriod > 0,
 )
@@ -144,7 +148,7 @@ function fieldErr(side: 'home' | 'away', index: number) {
       <p class="fm-board__hint">根据双方球员 PTS 自动计算</p>
     </section>
 
-    <section class="fm-period">
+    <section v-if="showPeriods" class="fm-period">
       <div class="fm-sec-head">
         <strong>节比分</strong>
         <small>Q1–Q4 可填写，合计须等于上方最终比分</small>
@@ -191,9 +195,9 @@ function fieldErr(side: 'home' | 'away', index: number) {
           <div><small>TO</small><b>{{ pack.t.turnover }}</b></div>
         </div>
         <div class="fm-tcard__shoot">
-          <div><small>投篮</small><b>{{ shootingLine(pack.t.fieldGoalMade, pack.t.fieldGoalAttempt) }}</b></div>
-          <div><small>三分</small><b>{{ shootingLine(pack.t.threePointMade, pack.t.threePointAttempt) }}</b></div>
-          <div><small>罚球</small><b>{{ shootingLine(pack.t.freeThrowMade, pack.t.freeThrowAttempt) }}</b></div>
+          <div><small>2PT</small><b>{{ shootingLine(pack.t.fieldGoalMade, pack.t.fieldGoalAttempt) }}</b></div>
+          <div><small>3PT</small><b>{{ shootingLine(pack.t.threePointMade, pack.t.threePointAttempt) }}</b></div>
+          <div><small>FT</small><b>{{ shootingLine(pack.t.freeThrowMade, pack.t.freeThrowAttempt) }}</b></div>
         </div>
       </article>
     </section>
@@ -202,7 +206,7 @@ function fieldErr(side: 'home' | 'away', index: number) {
       <strong v-if="validation.status === 'pass'">✓ 本场数据校验通过</strong>
       <strong v-else-if="validation.status === 'empty'">待填写比赛数据</strong>
       <strong v-else>本场数据尚未通过校验</strong>
-      <p v-if="validation.status === 'empty'">请填写双方球员、节比分，并上传本场截图。</p>
+      <p v-if="validation.status === 'empty'">请填写双方球员{{ showPeriods ? '、节比分' : '' }}，并上传本场截图。</p>
       <ul v-else-if="validation.errors.length">
         <li v-for="item in validation.errors.slice(0, 6)" :key="item">{{ item }}</li>
       </ul>
@@ -220,7 +224,7 @@ function fieldErr(side: 'home' | 'away', index: number) {
               <tr>
                 <th class="is-player">球员</th>
                 <th v-for="col in STAT_COLS" :key="col[0]">{{ col[1] }}</th>
-                <th>FGM/FGA</th>
+                <th title="两分球命中/出手">2PM/2PA</th>
                 <th>3PM/3PA</th>
                 <th>FTM/FTA</th>
                 <th v-if="!readonly" class="is-op">操作</th>

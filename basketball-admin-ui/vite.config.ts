@@ -2,7 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import path from 'path'
 import createVitePlugins from './vite/plugins'
 
-const baseUrl = 'http://localhost:18080' // isolated E2E admin
+const baseUrl = 'http://localhost:8080' // basketball-admin
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode, command }) => {

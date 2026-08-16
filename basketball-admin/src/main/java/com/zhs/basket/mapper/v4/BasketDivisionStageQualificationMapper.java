@@ -29,4 +29,6 @@ public interface BasketDivisionStageQualificationMapper {
                                                                         @Param("qualificationType") String qualificationType);
 
     int softDeleteActiveBySourceSeriesId(@Param("sourceSeriesId") Long sourceSeriesId);
+
+    int softDeletePreviewByStageAndEventTeam(@Param("stageId") Long stageId, @Param("eventTeamId") Long eventTeamId);
 }

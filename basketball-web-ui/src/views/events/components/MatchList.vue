@@ -61,7 +61,13 @@ function getTeamById(id: number | string) {
       </TeamEntryLink>
 
       <div class="cell score-cell sport-num">
-        <template v-if="match.status === 'finished' || match.status === 'live'">
+        <template v-if="match.resultType === 'EVENT_DISQUALIFICATION' || match.resultType === 'FORFEIT'">
+          <span>{{ match.awayResultLabel || '判负' }}</span>
+          <span class="vs">vs</span>
+          <span>{{ match.homeResultLabel || '判胜' }}</span>
+          <small v-if="match.resultReason" class="dq-reason">{{ match.resultReason }}</small>
+        </template>
+        <template v-else-if="match.status === 'finished' || match.status === 'live'">
           {{ match.awayScore }} : {{ match.homeScore }}
         </template>
         <template v-else-if="match.status === 'cancelled'">-</template>
@@ -152,6 +158,19 @@ function getTeamById(id: number | string) {
   text-align: center;
   font-size: clamp(22px, 2.2vw, 30px);
   font-weight: 900;
+}
+
+.score-cell .vs {
+  margin: 0 6px;
+  font-size: 14px;
+}
+
+.dq-reason {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #b91c1c;
 }
 
 .venue {

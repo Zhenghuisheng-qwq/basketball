@@ -257,6 +257,39 @@
         <el-descriptions-item v-if="showsDateRange(detail.penaltyCode) || detail.effectiveStartTime" label="生效时间">{{ parseTime(detail.effectiveStartTime) }}</el-descriptions-item>
         <el-descriptions-item v-if="showsDateRange(detail.penaltyCode) || detail.effectiveEndTime" label="结束时间">{{ parseTime(detail.effectiveEndTime) || '-' }}</el-descriptions-item>
       </el-descriptions>
+      <el-descriptions v-if="detail.eventImpact || detail.penaltyCode === 'EVENT_DISQUALIFICATION'" :column="1" border class="mt16" title="赛事影响">
+        <template #title>赛事影响</template>
+        <el-descriptions-item label="处罚对象">{{ formatDisciplineTargetName(detail) }}</el-descriptions-item>
+        <el-descriptions-item label="赛事">{{ formatDisciplineSeasonLabel(detail) }}</el-descriptions-item>
+        <el-descriptions-item label="状态">{{ formatDisciplineExecutionStatus(detail.eventImpact?.executionStatus || detail.executionStatus) }}</el-descriptions-item>
+        <el-descriptions-item label="赛事资格">{{ eventTeamStatusText(detail) }}</el-descriptions-item>
+        <el-descriptions-item label="Execution Status">{{ formatDisciplineExecutionStatus(detail.eventImpact?.executionStatus || detail.executionStatus) }}</el-descriptions-item>
+        <el-descriptions-item label="Match Auto Forfeit">{{ detail.eventImpact?.futureMatchForfeitCount ?? detail.executionMatchForfeitCount ?? 0 }}</el-descriptions-item>
+        <el-descriptions-item label="Series Auto Forfeit">{{ detail.eventImpact?.seriesForfeitCount ?? detail.executionSeriesForfeitCount ?? 0 }}</el-descriptions-item>
+        <el-descriptions-item label="Qualification Removed">{{ detail.eventImpact?.qualificationRemovedCount ?? detail.executionQualificationRemovedCount ?? 0 }}</el-descriptions-item>
+        <el-descriptions-item label="Warning Count">{{ detail.eventImpact?.warningCount ?? detail.executionWarningCount ?? 0 }}</el-descriptions-item>
+        <el-descriptions-item label="执行时间">{{ parseTime(detail.eventImpact?.executedTime || detail.executedTime) || '-' }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.eventImpact?.warnings?.length" label="管理员提示">
+          <div v-for="(warn, idx) in detail.eventImpact.warnings" :key="idx">{{ warn }}</div>
+        </el-descriptions-item>
+        <el-descriptions-item v-if="detail.eventImpact?.errorMessage || detail.executionError" label="失败原因">{{ detail.eventImpact?.errorMessage || detail.executionError }}</el-descriptions-item>
+      </el-descriptions>
+      <el-table
+        v-if="(detail.executionDetails || detail.eventImpact?.details || []).length"
+        :data="detail.executionDetails || detail.eventImpact?.details || []"
+        border
+        class="mt16"
+        size="small"
+      >
+        <el-table-column label="动作" prop="actionType" min-width="180" />
+        <el-table-column label="对象类型" prop="targetType" width="120" />
+        <el-table-column label="对象ID" prop="targetId" width="100" />
+        <el-table-column label="结果" prop="executionStatus" width="90" />
+        <el-table-column label="说明" prop="resultMessage" min-width="220" show-overflow-tooltip />
+      </el-table>
+      <div v-if="canRetryExecution(detail)" class="mt16">
+        <el-button type="warning" @click="doRetryExecution(detail.id)" v-hasPermi="['basket:discipline:activate']">重试赛事自动处理</el-button>
+      </div>
     </el-drawer>
   </div>
 </template>
@@ -268,6 +301,7 @@ import {
   activateDiscipline,
   createDiscipline,
   getDiscipline,
+  retryDisciplineExecution,
   listDiscipline,
   revokeDiscipline,
   searchDisciplinePlayers,
@@ -286,6 +320,7 @@ import {
   formatDisciplineTargetName,
   formatDisciplineTargetType,
   formatDisciplineType,
+  formatDisciplineExecutionStatus,
   formatSeasonStatus,
   showsDateRange,
   showsMatchSuspension,
@@ -354,6 +389,14 @@ let querySeasonTimer: ReturnType<typeof setTimeout> | undefined
 let formSeasonTimer: ReturnType<typeof setTimeout> | undefined
 let formPlayerTimer: ReturnType<typeof setTimeout> | undefined
 let formTeamTimer: ReturnType<typeof setTimeout> | undefined
+
+function eventTeamStatusText(row: any) {
+  const status = row?.eventImpact?.eventTeamStatus
+  if (status === 'DISQUALIFIED') return '已取消'
+  if (row?.penaltyCode === 'EVENT_DISQUALIFICATION' && row?.recordStatus === 'ACTIVE') return '已取消'
+  if (row?.recordStatus === 'REVOKED') return '已恢复参赛资格'
+  return '-'
+}
 
 function debounceRun(timerHolder: 'querySeason' | 'formSeason' | 'formPlayer' | 'formTeam', fn: () => void, wait = 300) {
   const map = {
@@ -659,9 +702,23 @@ async function showDetail(id: number) {
 }
 
 async function doActivate(id: number) {
-  await ElMessageBox.confirm('确认使该处罚生效？', '提示')
+  await ElMessageBox.confirm('确认使该处罚生效？取消赛事资格将自动处理未结束比赛与系列赛，不会改写已正式结束的历史结果。', '提示')
   await activateDiscipline(id)
   ElMessage.success('处罚已生效')
+  loadList()
+}
+
+function canRetryExecution(row?: { penaltyCode?: string; executionStatus?: string; eventImpact?: { executionStatus?: string } }) {
+  if (!row || row.penaltyCode !== 'EVENT_DISQUALIFICATION') return false
+  const status = row.eventImpact?.executionStatus || row.executionStatus
+  return status === 'FAILED' || status === 'PARTIAL' || status === 'PENDING'
+}
+
+async function doRetryExecution(id: number) {
+  await ElMessageBox.confirm('确认重试该处罚的赛事自动处理？已成功判负的比赛不会重复处理。', '提示')
+  await retryDisciplineExecution(id)
+  ElMessage.success('已重试赛事自动处理')
+  await showDetail(id)
   loadList()
 }
 

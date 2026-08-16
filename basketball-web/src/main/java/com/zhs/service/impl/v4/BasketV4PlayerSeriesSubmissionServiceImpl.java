@@ -79,6 +79,8 @@ public class BasketV4PlayerSeriesSubmissionServiceImpl implements IBasketV4Playe
     private EventTeamCaptainAuthorization eventTeamCaptainAuthorization;
     @Resource
     private FullMatchSubmissionSupport fullMatchSubmissionSupport;
+    @Resource
+    private com.zhs.support.v4.EventTeamParticipationGuard eventTeamParticipationGuard;
 
     @Override
     public V4SeriesSubmissionWorkspaceResp getWorkspace(Long matchSeriesId) {
@@ -459,11 +461,13 @@ public class BasketV4PlayerSeriesSubmissionServiceImpl implements IBasketV4Playe
         if (isAuthorizedCaptain(series.getDivisionId(), series.getHomeEventTeamId(), playerId)
                 || belongsToEventTeam(series.getHomeEventTeamId(), playerId, memberId)
                 && isAuthorizedCaptain(series.getDivisionId(), series.getHomeEventTeamId(), playerId)) {
+            eventTeamParticipationGuard.assertCanParticipate(series.getHomeEventTeamId());
             SideContext ctx = new SideContext();
             ctx.eventTeamId = series.getHomeEventTeamId();
             return ctx;
         }
         if (isAuthorizedCaptain(series.getDivisionId(), series.getAwayEventTeamId(), playerId)) {
+            eventTeamParticipationGuard.assertCanParticipate(series.getAwayEventTeamId());
             SideContext ctx = new SideContext();
             ctx.eventTeamId = series.getAwayEventTeamId();
             return ctx;
@@ -523,6 +527,7 @@ public class BasketV4PlayerSeriesSubmissionServiceImpl implements IBasketV4Playe
             BasketDivision division = divisionDao.selectById(series.getDivisionId());
             if (division != null) {
                 resp.setDivisionName(division.getDivisionName());
+                resp.setGameMode(division.getGameMode());
                 if (division.getSeasonId() != null) {
                     BasketSeason season = seasonDao.selectById(division.getSeasonId());
                     if (season != null) {

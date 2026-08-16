@@ -22,7 +22,7 @@ import type {
 import { v4SubmissionStatusLabel } from '@/utils/v4AccountEventsMappers'
 import { v4BestOfLabel, v4MatchSeriesStatusLabel, v4PlatformLabel } from '@/utils/v4Display'
 import { formatDateTimeShort } from '@/utils/participationMappers'
-import { validateGame } from '@/utils/fullMatchSubmissionRules'
+import { requiresPeriodScores, validateGame } from '@/utils/fullMatchSubmissionRules'
 import type { V4MatchSubmissionPeriodScore } from '@/api/types/v4SeriesSubmission'
 
 const MAX_SCREENSHOTS = 6
@@ -85,6 +85,7 @@ const fullValidation = computed(() => {
     periods: fullForm.value.periods,
     materialCount: form.value.materialFileIds.length,
     requireComplete: true,
+    gameMode: detail.value.gameMode,
   })
 })
 
@@ -215,7 +216,7 @@ function buildSavePayload() {
       materialFileIds: form.value.materialFileIds,
       homePlayerStats: fullForm.value.homeStats.filter((row) => String(row.eventPlayerId || '').trim()),
       awayPlayerStats: fullForm.value.awayStats.filter((row) => String(row.eventPlayerId || '').trim()),
-      periodScores: fullForm.value.periods,
+      periodScores: requiresPeriodScores(detail.value?.gameMode) ? fullForm.value.periods : [],
       submissionMode: 'WINNER_FULL_MATCH',
       draftComplete: Boolean(fullValidation.value.pass),
     }
@@ -400,6 +401,7 @@ onMounted(() => {
           :away-stats="fullForm.awayStats"
           :periods="fullForm.periods"
           :material-file-ids="form.materialFileIds"
+          :game-mode="detail.gameMode"
           :readonly="!canEdit || skipped"
           @update:home-stats="fullForm.homeStats = $event"
           @update:away-stats="fullForm.awayStats = $event"

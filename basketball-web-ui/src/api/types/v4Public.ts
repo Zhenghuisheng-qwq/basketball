@@ -92,6 +92,8 @@ export interface V4PublicEventTeamItem {
   captainName?: string
   platformCode?: string
   eventTeamStatus?: string
+  eventTeamStatusName?: string
+  disqualified?: boolean
   temporaryTeam?: boolean
 }
 
@@ -145,6 +147,12 @@ export interface V4PublicMatchItem {
   seriesAwayWinCount?: number
   seriesStatus?: string
   seriesStatusName?: string
+  resultType?: string
+  resultReason?: string
+  homeDisqualified?: boolean
+  awayDisqualified?: boolean
+  homeResultLabel?: string
+  awayResultLabel?: string
 }
 
 export interface V4PublicMatchTeamStatItem {
@@ -213,6 +221,12 @@ export interface V4PublicMatchDetail {
   seriesGameNo?: number
   bestOf?: number
   seriesContext?: V4PublicMatchSeriesDetail
+  resultType?: string
+  resultReason?: string
+  homeDisqualified?: boolean
+  awayDisqualified?: boolean
+  homeResultLabel?: string
+  awayResultLabel?: string
 }
 
 export interface V4PublicMatchSeriesGame {
@@ -241,9 +255,18 @@ export interface V4PublicMatchSeriesDetail {
   awayWinCount?: number
   seriesStatus?: string
   seriesStatusName?: string
+  winnerEventTeamId?: string
+  homeEventTeamId?: string
+  awayEventTeamId?: string
   winnerTeamName?: string
   finalStage?: boolean
   resultLabel?: string
+  resultSummary?: string
+  resultReason?: string
+  resolutionType?: string
+  resolutionTypeName?: string
+  homeDisqualified?: boolean
+  awayDisqualified?: boolean
   games?: V4PublicMatchSeriesGame[]
 }
 
@@ -262,6 +285,8 @@ export interface V4PublicStandingItem {
   stageId?: string
   groupId?: string
   qualificationStatus?: string
+  eventTeamStatus?: string
+  disqualified?: boolean
 }
 
 export interface V4PublicStageItem {
@@ -364,8 +389,13 @@ export interface V4PublicScheduleItem {
   published?: boolean
   homeWinCount?: number
   awayWinCount?: number
+  winnerEventTeamId?: string
   requiredWins?: number
   gamesPlayed?: number
+  resultType?: string
+  resultReason?: string
+  homeDisqualified?: boolean
+  awayDisqualified?: boolean
 }
 
 export type V4SeriesCode = 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'

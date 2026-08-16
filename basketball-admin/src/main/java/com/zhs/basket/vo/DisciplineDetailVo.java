@@ -1,5 +1,6 @@
 package com.zhs.basket.vo;
 
+import com.zhs.basket.domain.BasketDisciplineExecutionDetail;
 import com.zhs.basket.domain.BasketDisciplineRecord;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -13,4 +14,6 @@ public class DisciplineDetailVo extends BasketDisciplineRecord {
     private String eventTeamName;
     private String playerNo;
     private String playerName;
+    private PenaltyExecutionResultVo eventImpact;
+    private java.util.List<BasketDisciplineExecutionDetail> executionDetails;
 }

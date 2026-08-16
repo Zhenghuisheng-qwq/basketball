@@ -31,6 +31,7 @@ export function v4StandingToPublic(row: V4PublicStandingItem, seasonId = ''): Pu
     winRate: played > 0 ? wins / played : 0,
     streakType: null,
     streakCount: null,
+    disqualified: Boolean(row.disqualified),
   }
 }
 
@@ -161,13 +162,13 @@ export function v4BracketToPlayoffSeries(
 
       const homeId = publicTeamId(item.homeEventTeamId)
       const awayId = publicTeamId(item.awayEventTeamId)
-      // Series 局分优先；无系列分时才回落单场比分
-      const topScore = item.seriesHomeWinCount != null
+      const isSeries = Boolean(item.matchSeriesId) || (item.bestOf != null && item.bestOf > 1)
+      const topScore = isSeries
         ? toNumber(item.seriesHomeWinCount, 0)
-        : toNumber(item.homeScore, 0)
-      const bottomScore = item.seriesAwayWinCount != null
+        : (item.homeScore == null ? 0 : toNumber(item.homeScore, 0))
+      const bottomScore = isSeries
         ? toNumber(item.seriesAwayWinCount, 0)
-        : toNumber(item.awayScore, 0)
+        : (item.awayScore == null ? 0 : toNumber(item.awayScore, 0))
       const winnerTeamId = publicTeamId(item.winnerEventTeamId)
 
       result.push({

@@ -31,6 +31,21 @@ export const DISCIPLINE_RECORD_STATUS_OPTIONS = [
   { value: 'REVOKED', label: '已解除' }
 ]
 
+export const DISCIPLINE_EXECUTION_STATUS_LABELS: Record<string, string> = {
+  PENDING: '待执行',
+  PROCESSING: '执行中',
+  EFFECTIVE: '已生效',
+  PARTIAL: '部分完成',
+  FAILED: '执行失败',
+  SKIPPED: '无需执行',
+  REVOKED: '已撤销执行'
+}
+
+export function formatDisciplineExecutionStatus(value?: string) {
+  if (!value) return '-'
+  return DISCIPLINE_EXECUTION_STATUS_LABELS[value] || value
+}
+
 const TARGET_TYPE_LABELS = Object.fromEntries(DISCIPLINE_TARGET_TYPE_OPTIONS.map(i => [i.value, i.label]))
 const DISCIPLINE_TYPE_LABELS = Object.fromEntries(DISCIPLINE_TYPE_OPTIONS.map(i => [i.value, i.label]))
 const PENALTY_CODE_LABELS = Object.fromEntries(DISCIPLINE_PENALTY_OPTIONS.map(i => [i.value, i.label]))

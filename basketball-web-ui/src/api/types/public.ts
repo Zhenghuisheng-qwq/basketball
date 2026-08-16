@@ -358,6 +358,7 @@ export interface PublicStandingItemVo {
   winRate?: number | string | null
   streakType?: string | null
   streakCount?: number | null
+  disqualified?: boolean | null
   qualifiedFlag?: number | null
 }
 

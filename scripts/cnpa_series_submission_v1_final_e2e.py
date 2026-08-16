@@ -36,11 +36,11 @@ def p2(name, detail):
     REPORT['cases'][name] = {'ok': True, 'detail': 'P2 ' + detail}
     log('P2 ' + name + ' ' + detail[:220])
 
-def legal(epid, pts=21, fgm=8, fga=10, tpm=3, tpa=4, ftm=2, fta=2, reb=5, ast=3, stl=1, blk=1, pf=2, tov=1):
+def legal(epid, pts=27, fgm=8, fga=10, tpm=3, tpa=4, ftm=2, fta=2, reb=5, ast=3, stl=1, blk=1, pf=2, tov=1):
     return {'eventPlayerId': epid, 'points': pts, 'rebound': reb, 'assist': ast, 'steal': stl, 'block': blk, 'foul': pf, 'turnover': tov, 'fieldGoalMade': fgm, 'fieldGoalAttempt': fga, 'threePointMade': tpm, 'threePointAttempt': tpa, 'freeThrowMade': ftm, 'freeThrowAttempt': fta}
 
-P2 = dict(pts=10, fgm=4, fga=6, tpm=1, tpa=2, ftm=1, fta=1, reb=3, ast=2, stl=1, blk=0, pf=1, tov=1)
-P3 = dict(pts=14, fgm=6, fga=8, tpm=2, tpa=3, ftm=0, fta=0, reb=4, ast=2, stl=0, blk=1, pf=2, tov=2)
+P2 = dict(pts=12, fgm=4, fga=6, tpm=1, tpa=2, ftm=1, fta=1, reb=3, ast=2, stl=1, blk=0, pf=1, tov=1)
+P3 = dict(pts=18, fgm=6, fga=8, tpm=2, tpa=3, ftm=0, fta=0, reb=4, ast=2, stl=0, blk=1, pf=2, tov=2)
 
 def periods(h, a):
     qh, qa = h // 4, a // 4
@@ -168,15 +168,16 @@ def run_bo1(admin):
     cases = [
         ("fgm_gt_fga", dict(fgm=9, fga=8, pts=21)),
         ("3pm_gt_3pa", dict(tpm=4, tpa=3, pts=21)),
-        ("3pm_gt_fgm", dict(fgm=2, tpm=3, pts=9)),
-        ("3pa_gt_fga", dict(fga=3, tpa=4, pts=21)),
         ("ftm_gt_fta", dict(ftm=3, fta=2, pts=22)),
-        ("pts_formula", dict(pts=20, fgm=8, tpm=3, ftm=2)),
+        ("pts_formula", dict(pts=18, fgm=4, tpm=3, ftm=2)),
     ]
     for name, kw in cases:
         row = legal(home_p[0]["eventPlayerId"], **kw)
         bad, *_ = save_full(token_a, match_id, home, [row], ar, [upload(token_a, PNG_A, "bad-" + name + ".png")], name, True)
         record("bo1.shooting." + name, bad.get("code") != 200, str(bad.get("msg")), "P1")
+    three_only = legal(home_p[0]["eventPlayerId"], pts=21, fgm=0, fga=0, tpm=7, tpa=9, ftm=0, fta=0)
+    ok_three, *_ = save_full(token_a, match_id, home, [three_only], ar, [upload(token_a, PNG_A, "ok-3pm.png")], "3pm-only", True)
+    record("bo1.shooting.3pm_gt_2pm_ok", ok_three.get("code") == 200, str(ok_three.get("msg")), "P0")
     f1 = upload(token_a, PNG_A, "bo1-a.png")
     f2 = upload(token_a, PNG_B, "bo1-b.png")
     hs, aws = sum_pts(hr), sum_pts(ar)

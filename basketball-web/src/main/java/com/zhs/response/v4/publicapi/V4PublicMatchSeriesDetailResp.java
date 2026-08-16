@@ -38,6 +38,9 @@ public class V4PublicMatchSeriesDetailResp {
     private String resolutionType;
     private String resolutionTypeName;
     private String resultSummary;
+    private String resultReason;
+    private Boolean homeDisqualified;
+    private Boolean awayDisqualified;
     @JsonSerialize(using = ToStringSerializer.class)
     private Long winnerEventTeamId;
     private String winnerTeamName;

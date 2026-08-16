@@ -317,12 +317,53 @@ export function v4JoinLabels(
 }
 
 export function formatScore(home?: number | null, away?: number | null, status?: string | null): string {
-  if ((status || '').toUpperCase() === 'FINISHED' || home != null || away != null) {
-    const h = home ?? 0
-    const a = away ?? 0
-    return `${h} - ${a}`
+  const normalized = (status || '').toUpperCase()
+  if (normalized === 'FORFEITED') {
+    if (home != null && away != null && (home > 0 || away > 0)) {
+      return `${home} - ${away}`
+    }
+    return '判胜'
+  }
+  if (home != null && away != null) {
+    return `${home} - ${away}`
+  }
+  if (normalized === 'FINISHED') {
+    return '已结束'
   }
   return 'VS'
+}
+
+export function formatSeriesSetScore(opts: {
+  homeWinCount?: number | null
+  awayWinCount?: number | null
+  bestOf?: number | null
+  seriesStatus?: string | null
+  resolutionType?: string | null
+  winnerEventTeamId?: string | number | null
+  homeEventTeamId?: string | number | null
+  awayEventTeamId?: string | number | null
+  emptyText?: string
+}): string {
+  const required = Math.floor((Number(opts.bestOf) || 1) / 2) + 1
+  let home = opts.homeWinCount
+  let away = opts.awayWinCount
+  const status = String(opts.seriesStatus || '').toUpperCase()
+  const resolution = String(opts.resolutionType || '').toUpperCase()
+  const finished = status === 'COMPLETED' || resolution === 'FORFEIT'
+  if (finished && (home == null || home === 0) && (away == null || away === 0) && opts.winnerEventTeamId) {
+    const winner = String(opts.winnerEventTeamId)
+    if (winner && winner === String(opts.homeEventTeamId || '')) {
+      home = required
+      away = 0
+    } else if (winner && winner === String(opts.awayEventTeamId || '')) {
+      home = 0
+      away = required
+    }
+  }
+  if (!finished && (home == null || home === 0) && (away == null || away === 0)) {
+    return opts.emptyText ?? '-- : --'
+  }
+  return `${home ?? 0} : ${away ?? 0}`
 }
 
 export function isSeasonRegistrationOpen(status?: string | null): boolean {

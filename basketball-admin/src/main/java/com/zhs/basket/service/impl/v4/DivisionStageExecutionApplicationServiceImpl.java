@@ -103,6 +103,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private BasketPointAdjustmentMapper pointAdjustmentMapper;
     @Autowired
     private MatchSeriesQualificationSyncService qualificationSyncService;
+    @Autowired
+    private com.zhs.basket.support.v4.EventTeamParticipationGuard eventTeamParticipationGuard;
 
     @Override
     public List<BasketDivisionStageExecutionListVo> listStages(Long divisionId) {
@@ -153,6 +155,9 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
                 if (existingEventTeamIds.contains(team.getId())) {
                     continue;
                 }
+                if (eventTeamParticipationGuard.isDisqualified(team)) {
+                    continue;
+                }
                 toInsert.add(buildStageTeam(stage, team.getId(), null, null, null,
                         nextSeed++, StageTeamEntryTypeEnum.INITIAL.getCode(), now));
             }
@@ -196,6 +201,9 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             }
             for (BasketDivisionStageQualification qualification : confirmed) {
                 if (existingEventTeamIds.contains(qualification.getEventTeamId())) {
+                    continue;
+                }
+                if (eventTeamParticipationGuard.isDisqualified(qualification.getEventTeamId())) {
                     continue;
                 }
                 StageTeamEntryTypeEnum entryType = mapEntryType(qualification.getQualificationType());
@@ -554,7 +562,10 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             return List.of();
         }
 
-        Map<Long, String> teamNames = eventTeamMapper.selectActiveByDivisionId(stage.getDivisionId()).stream()
+        Map<Long, BasketEventTeam> eventTeams = eventTeamMapper.selectStandingEligibleByDivisionId(stage.getDivisionId())
+                .stream()
+                .collect(Collectors.toMap(BasketEventTeam::getId, t -> t, (a, b) -> a));
+        Map<Long, String> teamNames = eventTeams.values().stream()
                 .collect(Collectors.toMap(BasketEventTeam::getId,
                         t -> t.getTeamNameSnapshot() != null ? t.getTeamNameSnapshot() : String.valueOf(t.getId()),
                         (a, b) -> a));
@@ -586,6 +597,12 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             BasketStageStandingRowVo rowVo = new BasketStageStandingRowVo();
             rowVo.setEventTeamId(standing.getEventTeamId());
             rowVo.setTeamName(teamNames.get(standing.getEventTeamId()));
+            BasketEventTeam standingTeam = eventTeams.get(standing.getEventTeamId());
+            if (standingTeam != null) {
+                rowVo.setEventTeamStatus(standingTeam.getEventTeamStatus());
+                rowVo.setDisqualified(com.zhs.basket.enums.v4.EventTeamStatusEnum.isDisqualified(
+                        standingTeam.getEventTeamStatus()));
+            }
             rowVo.setRankNo(standing.getRankNo());
             rowVo.setWinCount(standing.getWinCount());
             rowVo.setLoseCount(standing.getLoseCount());
@@ -736,7 +753,10 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         List<BasketStanding> standings = standingMapper.selectByStageScope(
                 stage.getDivisionId(), stage.getId(), OVERALL_SCOPE_KEY);
         return toPreviewRows(stage, targetStageId, now,
-                standings.stream().limit(topN).collect(Collectors.toList()),
+                standings.stream()
+                        .filter(row -> !eventTeamParticipationGuard.isDisqualified(row.getEventTeamId()))
+                        .limit(topN)
+                        .collect(Collectors.toList()),
                 QualificationTypeEnum.OVERALL_TOP_N, null);
     }
 
@@ -753,6 +773,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         for (Map.Entry<Long, List<BasketStanding>> entry : grouped.entrySet()) {
             List<BasketStanding> topRows = entry.getValue().stream()
                     .sorted(Comparator.comparing(BasketStanding::getRankNo, Comparator.nullsLast(Integer::compareTo)))
+                    .filter(row -> !eventTeamParticipationGuard.isDisqualified(row.getEventTeamId()))
                     .limit(topN)
                     .collect(Collectors.toList());
             result.addAll(toPreviewRows(stage, targetStageId, now, topRows,
@@ -804,6 +825,9 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
 
         List<BasketDivisionStageQualification> result = new ArrayList<>();
         for (BasketV4Match match : finished) {
+            if (eventTeamParticipationGuard.isDisqualified(match.getWinnerEventTeamId())) {
+                continue;
+            }
             QualificationTypeEnum type = nextStage == null
                     ? QualificationTypeEnum.CHAMPION : QualificationTypeEnum.MATCH_WINNER;
             BasketDivisionStageQualification row = new BasketDivisionStageQualification();
@@ -836,6 +860,9 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         List<BasketDivisionStageQualification> result = new ArrayList<>();
         for (BasketMatchSeries series : completed) {
             if (series.getWinnerEventTeamId() == null) {
+                continue;
+            }
+            if (eventTeamParticipationGuard.isDisqualified(series.getWinnerEventTeamId())) {
                 continue;
             }
             QualificationTypeEnum type = nextStage == null

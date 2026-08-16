@@ -6,6 +6,8 @@ import lombok.Data;
 public class BasketStageStandingRowVo {
     private Long eventTeamId;
     private String teamName;
+    private String eventTeamStatus;
+    private Boolean disqualified;
     private Integer rankNo;
     private Integer winCount;
     private Integer loseCount;

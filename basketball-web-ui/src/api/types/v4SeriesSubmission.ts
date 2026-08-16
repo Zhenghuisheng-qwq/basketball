@@ -37,6 +37,7 @@ export interface V4SeriesSubmissionWorkspace {
   roundNo?: number
   seasonTitle?: string
   divisionName?: string
+  gameMode?: string
   stageName?: string
   homeEventTeamId?: string
   homeTeamName?: string

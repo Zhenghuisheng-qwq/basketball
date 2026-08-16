@@ -330,6 +330,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         resp.setAwayScore(match.getAwayScore());
         resp.setWinnerEventTeamId(match.getWinnerEventTeamId());
         fillMatchContextNames(resp, match);
+        com.zhs.support.v4.EventTeamPublicDisplaySupport.fillMatchDetail(resp, match,
+                teamMap.get(match.getHomeEventTeamId()), teamMap.get(match.getAwayEventTeamId()));
 
         Map<Long, String> captainMap = loadCaptainNameMap(new ArrayList<>(teamMap.values()));
         BasketEventTeam home = teamMap.get(match.getHomeEventTeamId());
@@ -391,6 +393,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 vo.setTeamName(team.getTeamNameSnapshot());
                 vo.setTeamLogoFileId(team.getTeamLogoFileId());
                 vo.setTeamLogoUrl(urlMap.get(team.getTeamLogoFileId()));
+                com.zhs.support.v4.EventTeamPublicDisplaySupport.fillStanding(vo, team);
             }
             result.add(vo);
         }
@@ -509,6 +512,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 row.setTeamName(team.getTeamNameSnapshot());
                 row.setTeamLogoFileId(team.getTeamLogoFileId());
                 row.setTeamLogoUrl(urlMap.get(team.getTeamLogoFileId()));
+                com.zhs.support.v4.EventTeamPublicDisplaySupport.fillStanding(row, team);
             }
         }
     }
@@ -981,6 +985,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         vo.setCaptainName(captainMap.get(team.getId()));
         vo.setPlatformCode(team.getPlatformCode());
         vo.setEventTeamStatus(team.getEventTeamStatus());
+        com.zhs.support.v4.EventTeamPublicDisplaySupport.fillEventTeam(vo, team);
         vo.setTemporaryTeam(PublicTeamDisplaySupport.isTemporary(team));
     }
 
@@ -1074,8 +1079,9 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 BasketMatchSeries ms = seriesMap.get(match.getSeriesId());
                 if (ms != null) {
                     vo.setBestOf(ms.getBestOf());
-                    vo.setSeriesHomeWinCount(ms.getHomeWinCount());
-                    vo.setSeriesAwayWinCount(ms.getAwayWinCount());
+                    int[] seriesWins = matchSeriesDisplaySupport.resolveDisplayWinCounts(ms);
+                    vo.setSeriesHomeWinCount(seriesWins[0]);
+                    vo.setSeriesAwayWinCount(seriesWins[1]);
                     vo.setSeriesStatus(ms.getSeriesStatus());
                     vo.setSeriesStatusName(seriesStatusLabel(ms.getSeriesStatus()));
                     vo.setHomeSourceType(ms.getHomeSourceType());
@@ -1108,6 +1114,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             } else {
                 vo.setAwayTeamName("待定");
             }
+            com.zhs.support.v4.EventTeamPublicDisplaySupport.fillMatch(vo, match, home, away);
             result.add(vo);
         }
         return result;

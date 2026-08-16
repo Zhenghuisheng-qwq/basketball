@@ -30,8 +30,21 @@ public final class FullMatchSubmissionRules {
         return v == null ? 0 : v;
     }
 
-    public static int expectedPoints(int fgm, int tpm, int ftm) {
-        return 2 * fgm + tpm + ftm;
+    /**
+     * WINNER_FULL_MATCH 口径：field_goal_* 表示两分球（2PM/2PA），不是含三分的标准 FGM。
+     * PTS = 2×2PM + 3×3PM + FTM
+     */
+    public static int expectedPoints(int twoPointMade, int threePointMade, int freeThrowMade) {
+        return 2 * twoPointMade + 3 * threePointMade + freeThrowMade;
+    }
+
+    /** 仅 5V5 需要节比分。3V3 不展示、不校验、不落库。 */
+    public static boolean requiresPeriodScores(String gameMode) {
+        if (gameMode == null || gameMode.isBlank()) {
+            return true;
+        }
+        String code = gameMode.trim().toUpperCase();
+        return !("THREE_V_THREE".equals(code) || "3V3".equals(code));
     }
 
     public static int actualGameCount(int bestOf, int homeWins, int awayWins) {
@@ -110,8 +123,8 @@ public final class FullMatchSubmissionRules {
         assertNonNegative(prefix, "BLK", blk);
         assertNonNegative(prefix, "PF", pf);
         assertNonNegative(prefix, "TOV", tov);
-        assertNonNegative(prefix, "FGM", fgm);
-        assertNonNegative(prefix, "FGA", fga);
+        assertNonNegative(prefix, "2PM", fgm);
+        assertNonNegative(prefix, "2PA", fga);
         assertNonNegative(prefix, "3PM", tpm);
         assertNonNegative(prefix, "3PA", tpa);
         assertNonNegative(prefix, "FTM", ftm);
@@ -120,23 +133,17 @@ public final class FullMatchSubmissionRules {
             return;
         }
         if (fgm > fga) {
-            throw new ServiceException(prefix + "：FGM " + fgm + " 大于 FGA " + fga);
+            throw new ServiceException(prefix + "：2PM " + fgm + " 大于 2PA " + fga);
         }
         if (tpm > tpa) {
             throw new ServiceException(prefix + "：3PM " + tpm + " 大于 3PA " + tpa);
-        }
-        if (tpm > fgm) {
-            throw new ServiceException(prefix + "：3PM " + tpm + " 大于 FGM " + fgm);
-        }
-        if (tpa > fga) {
-            throw new ServiceException(prefix + "：3PA " + tpa + " 大于 FGA " + fga);
         }
         if (ftm > fta) {
             throw new ServiceException(prefix + "：FTM " + ftm + " 大于 FTA " + fta);
         }
         int expected = expectedPoints(fgm, tpm, ftm);
         if (pts != expected) {
-            throw new ServiceException(prefix + "：PTS " + pts + " 与公式 2×FGM+3PM+FTM=" + expected + " 不一致");
+            throw new ServiceException(prefix + "：PTS " + pts + " 与公式 2×2PM+3×3PM+FTM=" + expected + " 不一致");
         }
     }
 
@@ -171,6 +178,15 @@ public final class FullMatchSubmissionRules {
 
     public static void validatePeriodScores(String gameLabel, List<V4MatchSubmissionPeriodScoreReq> periods,
                                             int homeScore, int awayScore, boolean requireComplete) {
+        validatePeriodScores(gameLabel, periods, homeScore, awayScore, requireComplete, true);
+    }
+
+    public static void validatePeriodScores(String gameLabel, List<V4MatchSubmissionPeriodScoreReq> periods,
+                                            int homeScore, int awayScore, boolean requireComplete,
+                                            boolean requirePeriods) {
+        if (!requirePeriods) {
+            return;
+        }
         if (!requireComplete && (periods == null || periods.isEmpty())) {
             return;
         }

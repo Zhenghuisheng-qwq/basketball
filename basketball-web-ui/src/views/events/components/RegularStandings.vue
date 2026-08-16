@@ -49,6 +49,7 @@ function mapRows(rawRows: Parameters<typeof v4StandingToPublic>[0][]): Standing[
         winRate: played > 0 ? (wins / played) * 100 : 0,
         pointDiff: toNumber(pub.pointDiff, 0),
         recent: [] as Array<'W' | 'L'>,
+        disqualified: Boolean(row.disqualified || pub.disqualified),
       }
     })
     .sort((a, b) => a.rank - b.rank)
@@ -198,6 +199,7 @@ watch(
                 >
                   <TeamLogo :team="getTeamById(row.teamId)!" size="sm" />
                   {{ getTeamById(row.teamId)!.name }}
+                  <em v-if="row.disqualified" class="dq-tag">取消资格</em>
                 </TeamEntryLink>
                 <span>{{ row.wins }}</span>
                 <span>{{ row.losses }}</span>
@@ -225,6 +227,7 @@ watch(
                 >
                   <TeamLogo :team="getTeamById(row.teamId)!" size="sm" />
                   {{ getTeamById(row.teamId)!.name }}
+                  <em v-if="row.disqualified" class="dq-tag">取消资格</em>
                 </TeamEntryLink>
                 <span>{{ row.wins }}</span>
                 <span>{{ row.losses }}</span>
@@ -338,6 +341,16 @@ watch(
   .loss {
     background: #ef4444;
   }
+}
+
+.dq-tag {
+  margin-left: 6px;
+  font-style: normal;
+  font-size: 11px;
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  border-radius: 4px;
+  padding: 0 4px;
 }
 
 .standings-note {

@@ -238,7 +238,7 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
 
     private void rebuildStanding(Long divisionId, Long seasonId) {
         List<BasketV4Match> matches = matchMapper.selectFinishedPublishedByDivisionId(divisionId);
-        List<BasketEventTeam> teams = eventTeamMapper.selectActiveByDivisionId(divisionId);
+        List<BasketEventTeam> teams = eventTeamMapper.selectStandingEligibleByDivisionId(divisionId);
         Map<Long, Integer> winPointsByStage = loadWinPointsByStage(matches);
         Map<Long, Integer> lossPointsByStage = loadLossPointsByStage(matches);
         Map<Long, Integer> forfeitWinPointsByStage = loadForfeitWinPointsByStage(matches);

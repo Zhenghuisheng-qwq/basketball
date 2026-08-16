@@ -86,6 +86,8 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
     private OfficialMatchResultSettlementService officialMatchResultSettlementService;
     @Autowired
     private WinnerOfSeriesAdvanceSupport winnerOfSeriesAdvanceSupport;
+    @Autowired
+    private com.zhs.basket.support.v4.EventTeamParticipationGuard eventTeamParticipationGuard;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -114,6 +116,7 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
         command.setLoserEventTeamId(loser);
         command.setMatchStatus(MatchStatusEnum.FORFEITED.getCode());
         command.setSource(OfficialResultSource.FORFEIT);
+        command.setRemark(req.getReason());
         command.setClearOfficialPlayerStats(true);
         if (!officialMatchResultSettlementService.settle(command)) {
             return;
@@ -181,6 +184,7 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
 
         Long winner = forfeitTeam.equals(series.getHomeEventTeamId())
                 ? series.getAwayEventTeamId() : series.getHomeEventTeamId();
+        applyUnstartedSeriesSweepScore(series, winner);
         Date now = new Date();
         Long operatorId = SecurityUtils.getUserId();
         series.setWinnerEventTeamId(winner);
@@ -224,6 +228,7 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
         if (!stageTeamMapper.existsByStageAndEventTeam(stage.getId(), req.getEventTeamId())) {
             throw new ServiceException("球队不在当前阶段参赛名单中");
         }
+        eventTeamParticipationGuard.assertCanParticipate(req.getEventTeamId());
         BasketDivisionStageQualification existing = qualificationMapper.selectActiveByStageAndTeamAndType(
                 stage.getId(), req.getEventTeamId(), QualificationTypeEnum.MANUAL.getCode());
         if (existing != null) {
@@ -560,6 +565,22 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
     private static String buildAdjustedMatchNo(BasketDivisionStage stage, int bracketSlot, int gameNo) {
         return "V4-" + stage.getDivisionId() + "-ADJ-" + stage.getId()
                 + "-S" + bracketSlot + "-G" + gameNo + "-" + System.currentTimeMillis();
+    }
+
+    private void applyUnstartedSeriesSweepScore(BasketMatchSeries series, Long winner) {
+        int required = requiredWins(series.getBestOf());
+        if (winner != null && winner.equals(series.getHomeEventTeamId())) {
+            series.setHomeWinCount(required);
+            series.setAwayWinCount(0);
+        } else {
+            series.setHomeWinCount(0);
+            series.setAwayWinCount(required);
+        }
+    }
+
+    private static int requiredWins(Integer bestOf) {
+        int bo = bestOf == null || bestOf < 1 ? 1 : bestOf;
+        return (bo / 2) + 1;
     }
 
     private void requireReason(String reason) {

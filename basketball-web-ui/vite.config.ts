@@ -14,16 +14,16 @@ export default defineConfig({
     proxy: {
       '/web-api': {
         // 官网业务后端 basketball-web :8881（admin 后台为 :8080）
-        target: 'http://localhost:18881',
+        target: 'http://localhost:8881',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/web-api/, ''),
       },
       '/head': {
-        target: 'http://localhost:18881',
+        target: 'http://localhost:8881',
         changeOrigin: true,
       },
       '/player-avatar': {
-        target: 'http://localhost:18881',
+        target: 'http://localhost:8881',
         changeOrigin: true,
       },
     },

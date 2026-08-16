@@ -36,5 +36,6 @@ public class BasketMatchSeries implements Serializable {
     private Long winnerEventTeamId;
     private String seriesStatus;
     private String resolutionType;
+    private String resolutionReason;
     private Integer isDelete;
 }

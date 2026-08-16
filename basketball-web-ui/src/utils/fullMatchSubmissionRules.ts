@@ -26,8 +26,14 @@ export function nvl(v?: number | null) {
   return v == null || Number.isNaN(Number(v)) ? 0 : Number(v)
 }
 
-export function expectedPoints(fgm: number, tpm: number, ftm: number) {
-  return 2 * fgm + tpm + ftm
+/** WINNER_FULL_MATCH：fieldGoal* 表示两分球 2PM/2PA。PTS = 2×2PM + 3×3PM + FTM */
+export function expectedPoints(twoPointMade: number, threePointMade: number, freeThrowMade: number) {
+  return 2 * twoPointMade + 3 * threePointMade + freeThrowMade
+}
+
+export function requiresPeriodScores(gameMode?: string | null) {
+  const code = String(gameMode || '').trim().toUpperCase()
+  return code !== 'THREE_V_THREE' && code !== '3V3'
 }
 
 export function shootingPct(made?: number, attempt?: number) {
@@ -55,11 +61,12 @@ export function isBlankGame(opts: {
   awayPlayers: FullMatchPlayerRow[]
   periods: FullMatchPeriodRow[]
   materialCount: number
+  gameMode?: string | null
 }) {
   const rows = [...usedRows(opts.homePlayers), ...usedRows(opts.awayPlayers)]
   const hasPlayer = rows.some((row) => String(row.eventPlayerId || '').trim())
   const hasStat = rows.some((row) => hasAnyStat(row))
-  const periodSum = periodTotals(opts.periods)
+  const periodSum = requiresPeriodScores(opts.gameMode) ? periodTotals(opts.periods) : { home: 0, away: 0 }
   return !hasPlayer && !hasStat && periodSum.home === 0 && periodSum.away === 0 && opts.materialCount <= 0
 }
 
@@ -77,7 +84,7 @@ export function playerFieldErrors(row: FullMatchPlayerRow) {
   const ftm = nvl(row.freeThrowMade)
   const fta = nvl(row.freeThrowAttempt)
   if (fgm > fga) flags.fieldGoal = true
-  if (tpm > tpa || tpm > fgm || tpa > fga) flags.threePoint = true
+  if (tpm > tpa) flags.threePoint = true
   if (ftm > fta) flags.freeThrow = true
   if (pts !== expectedPoints(fgm, tpm, ftm)) flags.points = true
   return flags
@@ -133,13 +140,11 @@ export function validatePlayerRow(prefix: string, row: FullMatchPlayerRow, requi
   const ints = [pts, nvl(row.rebound), nvl(row.assist), nvl(row.steal), nvl(row.block), nvl(row.foul), nvl(row.turnover), fgm, fga, tpm, tpa, ftm, fta]
   if (ints.some((v) => v < 0 || !Number.isInteger(v))) errors.push(`${prefix}所有数值必须为大于等于 0 的整数`)
   if (!requireComplete && !valued) return errors
-  if (fgm > fga) errors.push(`${prefix}：FGM ${fgm} 大于 FGA ${fga}`)
+  if (fgm > fga) errors.push(`${prefix}：2PM ${fgm} 大于 2PA ${fga}`)
   if (tpm > tpa) errors.push(`${prefix}：3PM ${tpm} 大于 3PA ${tpa}`)
-  if (tpm > fgm) errors.push(`${prefix}：3PM ${tpm} 大于 FGM ${fgm}`)
-  if (tpa > fga) errors.push(`${prefix}：3PA ${tpa} 大于 FGA ${fga}`)
   if (ftm > fta) errors.push(`${prefix}：FTM ${ftm} 大于 FTA ${fta}`)
   const expected = expectedPoints(fgm, tpm, ftm)
-  if (pts !== expected) errors.push(`${prefix}：PTS ${pts} 与公式 2×FGM+3PM+FTM=${expected} 不一致`)
+  if (pts !== expected) errors.push(`${prefix}：PTS ${pts} 与公式 2×2PM+3×3PM+FTM=${expected} 不一致`)
   return errors
 }
 
@@ -168,8 +173,10 @@ export function validateGame(opts: {
   periods: FullMatchPeriodRow[]
   materialCount: number
   requireComplete: boolean
+  gameMode?: string | null
 }) {
   const errors: string[] = []
+  const needPeriod = requiresPeriodScores(opts.gameMode)
   const empty = isBlankGame(opts)
   errors.push(...validateTeamPlayers(opts.gameLabel, opts.homeName, opts.homePlayers, false))
   errors.push(...validateTeamPlayers(opts.gameLabel, opts.awayName, opts.awayPlayers, false))
@@ -178,7 +185,7 @@ export function validateGame(opts: {
   const quarters = periodTotals(opts.periods)
   const homeQ = quarters.home
   const awayQ = quarters.away
-  if (!empty && (homeScore > 0 || awayScore > 0 || homeQ > 0 || awayQ > 0)) {
+  if (needPeriod && !empty && (homeScore > 0 || awayScore > 0 || homeQ > 0 || awayQ > 0)) {
     if (homeQ !== homeScore) errors.push(`${opts.gameLabel} · ${opts.homeName}：四节得分合计 ${homeQ}，与最终比分 ${homeScore} 不一致`)
     if (awayQ !== awayScore) errors.push(`${opts.gameLabel} · ${opts.awayName}：四节得分合计 ${awayQ}，与最终比分 ${awayScore} 不一致`)
   }
@@ -191,6 +198,7 @@ export function validateGame(opts: {
     if (homeScore === awayScore) errors.push(`${opts.gameLabel}：比赛不允许平局`)
     if (opts.materialCount <= 0) errors.push(`${opts.gameLabel}：请上传本场证明材料`)
   }
+  const periodOk = !needPeriod || (homeQ === homeScore && awayQ === awayScore)
   const pass = !empty
     && errors.length === 0
     && homeReady
@@ -198,8 +206,7 @@ export function validateGame(opts: {
     && homeScore > 0
     && awayScore > 0
     && homeScore !== awayScore
-    && homeQ === homeScore
-    && awayQ === awayScore
+    && periodOk
     && opts.materialCount > 0
   const status: 'empty' | 'error' | 'pass' = empty ? 'empty' : (errors.length || !pass ? (errors.length ? 'error' : 'empty') : 'pass')
   return { errors, homeScore, awayScore, homePeriod: homeQ, awayPeriod: awayQ, empty, status, pass }

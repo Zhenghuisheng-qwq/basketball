@@ -70,9 +70,15 @@ export function useScheduleFilters() {
       homeTeamLogo: '',
       awayTeamLogo: '',
       venue: '--',
-      status: 'scheduled',
+      status: item.resultType === 'EVENT_DISQUALIFICATION' || item.resultType === 'FORFEIT' ? 'finished' : 'scheduled',
       week: date && isValidDateKey(date) ? getWeekNumber(date) : 0,
       stageName: item.stageName || item.roundName,
+      resultType: item.resultType,
+      resultReason: item.resultReason,
+      homeDisqualified: Boolean(item.homeDisqualified),
+      awayDisqualified: Boolean(item.awayDisqualified),
+      homeResultLabel: item.homeDisqualified ? '判负' : item.resultType ? '判胜' : undefined,
+      awayResultLabel: item.awayDisqualified ? '判负' : item.resultType ? '判胜' : undefined,
     }
   }
 

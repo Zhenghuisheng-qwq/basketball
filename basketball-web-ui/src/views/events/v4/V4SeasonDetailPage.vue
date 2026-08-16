@@ -28,6 +28,7 @@ import SafeImage from '@/components/common/SafeImage.vue'
 import { displayText, formatDateTime, formatDecimal, initials } from '@/utils/publicDisplay'
 import {
   formatScore,
+  formatSeriesSetScore,
   v4FormatTypeLabel,
   v4MatchStatusLabel,
   v4BestOfLabel,
@@ -102,7 +103,11 @@ type ScheduleSeriesGroup = {
   awayTeamName?: string
   seriesHomeWinCount?: number
   seriesAwayWinCount?: number
+  seriesStatus?: string
   seriesStatusName?: string
+  winnerEventTeamId?: string
+  homeEventTeamId?: string
+  awayEventTeamId?: string
   games: V4PublicMatchItem[]
 }
 
@@ -122,7 +127,11 @@ function groupRoundMatches(roundMatches: V4PublicMatchItem[]): Array<ScheduleSer
           awayTeamName: match.awayTeamName,
           seriesHomeWinCount: match.seriesHomeWinCount,
           seriesAwayWinCount: match.seriesAwayWinCount,
+          seriesStatus: match.seriesStatus,
           seriesStatusName: match.seriesStatusName,
+          winnerEventTeamId: match.winnerEventTeamId,
+          homeEventTeamId: match.homeEventTeamId,
+          awayEventTeamId: match.awayEventTeamId,
           games: [],
         }
         seriesMap.set(key, group)
@@ -452,7 +461,15 @@ onMounted(() => {
                     <span>{{ v4BestOfLabel(item.bestOf) }}</span>
                   </div>
                   <div class="v4-series-card__set-score">
-                    局分 {{ item.seriesHomeWinCount ?? 0 }} : {{ item.seriesAwayWinCount ?? 0 }}
+                    局分 {{ formatSeriesSetScore({
+                      homeWinCount: item.seriesHomeWinCount,
+                      awayWinCount: item.seriesAwayWinCount,
+                      bestOf: item.bestOf,
+                      seriesStatus: item.seriesStatus,
+                      winnerEventTeamId: item.winnerEventTeamId,
+                      homeEventTeamId: item.homeEventTeamId,
+                      awayEventTeamId: item.awayEventTeamId,
+                    }) }}
                     · {{ item.seriesStatusName || v4MatchSeriesStatusLabel(item.games[0]?.seriesStatus) }}
                   </div>
                   <div

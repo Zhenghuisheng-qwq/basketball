@@ -165,6 +165,8 @@
             resolution_reason = #{resolutionReason},
             resolved_time = #{resolvedTime},
             resolved_by = #{resolvedBy},
+            home_win_count = #{homeWinCount},
+            away_win_count = #{awayWinCount},
             update_time = now()
         where id = #{id} and <include refid="NotDeleted"/>
     </update>

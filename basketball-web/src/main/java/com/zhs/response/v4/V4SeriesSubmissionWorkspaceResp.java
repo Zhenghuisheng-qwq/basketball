@@ -13,6 +13,7 @@ public class V4SeriesSubmissionWorkspaceResp {
     private Integer roundNo;
     private String seasonTitle;
     private String divisionName;
+    private String gameMode;
     private String stageName;
     private Long homeEventTeamId;
     private String homeTeamName;

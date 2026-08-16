@@ -99,6 +99,20 @@
         order by id asc
     </select>
 
+    <select id="selectStandingEligibleByDivisionId" resultMap="BasketEventTeamResult">
+        select <include refid="BaseColumns" /> from basket_event_team
+        where division_id = #{divisionId}
+          and event_team_status in ('ACTIVE', 'DISQUALIFIED')
+          and is_delete = 0
+        order by id asc
+    </select>
+
+    <select id="selectBySeasonAndSourceTeam" resultMap="BasketEventTeamResult">
+        select <include refid="BaseColumns" /> from basket_event_team
+        where season_id = #{seasonId} and source_team_id = #{sourceTeamId} and is_delete = 0
+        order by id asc
+    </select>
+
     <select id="selectActiveByDivisionAndRosterVersion" resultMap="BasketEventTeamResult">
         select <include refid="BaseColumns" /> from basket_event_team
         where division_id = #{divisionId}

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketDisciplineExecutionDetailMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_discipline_execution_detail
+        (discipline_record_id, action_type, target_type, target_id, execution_status, result_message,
+         create_time, update_time, is_delete)
+        values
+        (#{disciplineRecordId}, #{actionType}, #{targetType}, #{targetId}, #{executionStatus}, #{resultMessage},
+         #{createTime}, #{updateTime}, #{isDelete})
+    </insert>
+
+    <update id="updateStatus">
+        update basket_discipline_execution_detail
+        set execution_status = #{executionStatus},
+            result_message = #{resultMessage},
+            update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <select id="selectByAction" resultType="com.zhs.basket.domain.BasketDisciplineExecutionDetail">
+        select id, discipline_record_id as disciplineRecordId, action_type as actionType,
+               target_type as targetType, target_id as targetId, execution_status as executionStatus,
+               result_message as resultMessage, create_time as createTime, update_time as updateTime, is_delete as isDelete
+        from basket_discipline_execution_detail
+        where discipline_record_id = #{disciplineRecordId}
+          and action_type = #{actionType}
+          and target_type = #{targetType}
+          and target_id = #{targetId}
+          and is_delete = 0
+        limit 1
+    </select>
+
+    <select id="selectByDisciplineId" resultType="com.zhs.basket.domain.BasketDisciplineExecutionDetail">
+        select id, discipline_record_id as disciplineRecordId, action_type as actionType,
+               target_type as targetType, target_id as targetId, execution_status as executionStatus,
+               result_message as resultMessage, create_time as createTime, update_time as updateTime, is_delete as isDelete
+        from basket_discipline_execution_detail
+        where discipline_record_id = #{disciplineRecordId} and is_delete = 0
+        order by id
+    </select>
+</mapper>

@@ -66,6 +66,8 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
     private EventTeamCaptainAuthorization eventTeamCaptainAuthorization;
     @Resource
     private FullMatchSubmissionSupport fullMatchSubmissionSupport;
+    @Resource
+    private com.zhs.support.v4.EventTeamParticipationGuard eventTeamParticipationGuard;
 
     private static final int MAX_MATERIAL_COUNT = 9;
     private static final String EVENT_PLAYER_STATUS_ACTIVE = "ACTIVE";
@@ -497,6 +499,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         if (!submitEventTeamId.equals(match.getHomeEventTeamId()) && !submitEventTeamId.equals(match.getAwayEventTeamId())) {
             throw new ServiceException("submitEventTeamId 必须是主队或客队");
         }
+        eventTeamParticipationGuard.assertCanParticipate(submitEventTeamId);
         Long opponentId = submitEventTeamId.equals(match.getHomeEventTeamId()) ? match.getAwayEventTeamId() : match.getHomeEventTeamId();
         BasketEventPlayer eventPlayer = findEventPlayer(submitEventTeamId, playerId, memberId);
         String role = SubmitterRoleEnum.PLAYER.getCode();

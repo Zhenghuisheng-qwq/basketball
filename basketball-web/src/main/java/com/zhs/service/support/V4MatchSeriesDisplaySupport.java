@@ -156,8 +156,9 @@ public class V4MatchSeriesDisplaySupport {
         vo.setRoundNo(series.getRoundNo());
         vo.setBestOf(series.getBestOf());
         vo.setRequiredWins(requiredWins(series.getBestOf()));
-        vo.setHomeWinCount(series.getHomeWinCount());
-        vo.setAwayWinCount(series.getAwayWinCount());
+        int[] displayWins = resolveDisplayWinCounts(series);
+        vo.setHomeWinCount(displayWins[0]);
+        vo.setAwayWinCount(displayWins[1]);
         vo.setSeriesStatus(series.getSeriesStatus());
         vo.setSeriesStatusName(seriesStatusLabel(series.getSeriesStatus()));
         vo.setResolutionType(series.getResolutionType());
@@ -181,6 +182,7 @@ public class V4MatchSeriesDisplaySupport {
         fillStageInfo(vo, series);
         fillTeamNames(vo, series);
         fillForfeitSummary(vo, series);
+        fillDisqualificationDisplay(vo, series);
         vo.setGames(buildGames(series, currentMatchId));
         return vo;
     }
@@ -367,12 +369,14 @@ public class V4MatchSeriesDisplaySupport {
         item.setHomeTeam(detail.getHomeTeamName());
         item.setAwayTeam(detail.getAwayTeamName());
         item.setBestOf(series.getBestOf());
-        int homeWins = series.getHomeWinCount() == null ? 0 : series.getHomeWinCount();
-        int awayWins = series.getAwayWinCount() == null ? 0 : series.getAwayWinCount();
+        int[] displayWins = resolveDisplayWinCounts(series);
+        int homeWins = displayWins[0];
+        int awayWins = displayWins[1];
         item.setHomeWinCount(homeWins);
         item.setAwayWinCount(awayWins);
+        item.setWinnerEventTeamId(series.getWinnerEventTeamId());
         item.setRequiredWins(detail.getRequiredWins());
-        item.setSeriesScore(homeWins + ":" + awayWins);
+        item.setSeriesScore(formatSeriesScore(series, homeWins, awayWins));
         int gamesPlayed = 0;
         if (detail.getGames() != null) {
             for (V4PublicMatchSeriesGameResp game : detail.getGames()) {
@@ -389,6 +393,11 @@ public class V4MatchSeriesDisplaySupport {
         item.setStatusName(detail.getSeriesStatusName());
         item.setPlaceholderSource(joinPlaceholderSource(series.getHomeSourceType(), series.getAwaySourceType()));
         item.setPublished(true);
+        BasketEventTeam homeTeam = series.getHomeEventTeamId() != null && series.getHomeEventTeamId() > 0
+                ? eventTeamDao.selectById(series.getHomeEventTeamId()) : null;
+        BasketEventTeam awayTeam = series.getAwayEventTeamId() != null && series.getAwayEventTeamId() > 0
+                ? eventTeamDao.selectById(series.getAwayEventTeamId()) : null;
+        com.zhs.support.v4.EventTeamPublicDisplaySupport.fillSchedule(item, series, homeTeam, awayTeam);
         return item;
     }
 
@@ -487,6 +496,34 @@ public class V4MatchSeriesDisplaySupport {
                 || MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus());
     }
 
+    /**
+     * 公开端系列赛局分。弃赛若未写入胜场，按获胜所需场次展示，避免 0:0。
+     */
+    public int[] resolveDisplayWinCounts(BasketMatchSeries series) {
+        int home = series.getHomeWinCount() == null ? 0 : series.getHomeWinCount();
+        int away = series.getAwayWinCount() == null ? 0 : series.getAwayWinCount();
+        boolean forfeit = "FORFEIT".equalsIgnoreCase(String.valueOf(series.getResolutionType()));
+        boolean completed = "COMPLETED".equalsIgnoreCase(String.valueOf(series.getSeriesStatus()));
+        if ((forfeit || completed) && home == 0 && away == 0 && series.getWinnerEventTeamId() != null) {
+            int need = requiredWins(series.getBestOf());
+            if (series.getWinnerEventTeamId().equals(series.getHomeEventTeamId())) {
+                return new int[]{need, 0};
+            }
+            if (series.getWinnerEventTeamId().equals(series.getAwayEventTeamId())) {
+                return new int[]{0, need};
+            }
+        }
+        return new int[]{home, away};
+    }
+
+    public String formatSeriesScore(BasketMatchSeries series, int homeWins, int awayWins) {
+        boolean show = "COMPLETED".equalsIgnoreCase(String.valueOf(series.getSeriesStatus()))
+                || "FORFEIT".equalsIgnoreCase(String.valueOf(series.getResolutionType()))
+                || homeWins > 0
+                || awayWins > 0;
+        return show ? homeWins + ":" + awayWins : null;
+    }
+
     private int requiredWins(Integer bestOf) {
         if (bestOf == null || bestOf <= 1) {
             return 1;
@@ -514,6 +551,14 @@ public class V4MatchSeriesDisplaySupport {
         } else {
             vo.setResultSummary("系列赛弃赛，" + vo.getWinnerTeamName() + " 晋级");
         }
+    }
+
+    private void fillDisqualificationDisplay(V4PublicMatchSeriesDetailResp vo, BasketMatchSeries series) {
+        BasketEventTeam home = series.getHomeEventTeamId() != null && series.getHomeEventTeamId() > 0
+                ? eventTeamDao.selectById(series.getHomeEventTeamId()) : null;
+        BasketEventTeam away = series.getAwayEventTeamId() != null && series.getAwayEventTeamId() > 0
+                ? eventTeamDao.selectById(series.getAwayEventTeamId()) : null;
+        com.zhs.support.v4.EventTeamPublicDisplaySupport.fillSeries(vo, series, home, away);
     }
 
     private String resolutionTypeLabel(String type) {

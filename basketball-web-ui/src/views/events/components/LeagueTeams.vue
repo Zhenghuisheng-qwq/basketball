@@ -68,6 +68,7 @@ async function loadTeams(divisionId: string) {
         teamId: row.eventTeamId,
         teamName: row.teamName,
         teamLogoUrl: row.teamLogoUrl,
+        disqualified: Boolean(row.disqualified || row.eventTeamStatus === 'DISQUALIFIED'),
       }),
       sourceTeamId: row.sourceTeamId,
     }))
@@ -138,7 +139,10 @@ function goPage(index: number) {
             class="team-card team-card-link"
           >
             <TeamLogo :team="team" size="lg" />
-            <h3>{{ team.name }}</h3>
+            <h3>
+              {{ team.name }}
+              <em v-if="team.disqualified" class="dq-tag">赛事资格已取消</em>
+            </h3>
           </router-link>
         </div>
 
@@ -211,6 +215,14 @@ function goPage(index: number) {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
+}
+
+.dq-tag {
+  display: block;
+  margin-top: 6px;
+  font-style: normal;
+  font-size: 12px;
+  color: #f87171;
 }
 
 .team-card {

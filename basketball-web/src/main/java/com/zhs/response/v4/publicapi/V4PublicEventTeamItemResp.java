@@ -31,5 +31,9 @@ public class V4PublicEventTeamItemResp {
 
     private String eventTeamStatus;
 
+    private String eventTeamStatusName;
+
+    private Boolean disqualified;
+
     private Boolean temporaryTeam;
 }

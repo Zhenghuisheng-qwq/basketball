@@ -36,4 +36,8 @@ public class V4PublicStandingItemResp {
     private Long groupId;
 
     private String qualificationStatus;
+
+    private String eventTeamStatus;
+
+    private Boolean disqualified;
 }

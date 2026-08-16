@@ -40,6 +40,16 @@ public class V4PublicScheduleItemResp {
     private Boolean published;
     private Integer homeWinCount;
     private Integer awayWinCount;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long winnerEventTeamId;
     private Integer requiredWins;
     private Integer gamesPlayed;
+
+    private String resultType;
+
+    private String resultReason;
+
+    private Boolean homeDisqualified;
+
+    private Boolean awayDisqualified;
 }

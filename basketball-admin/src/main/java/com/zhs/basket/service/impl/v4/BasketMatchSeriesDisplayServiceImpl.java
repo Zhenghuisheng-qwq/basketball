@@ -157,11 +157,25 @@ public class BasketMatchSeriesDisplayServiceImpl implements IBasketMatchSeriesDi
         vo.setAwayEventTeamId(series.getAwayEventTeamId());
         vo.setBestOf(series.getBestOf());
         vo.setRequiredWins(MatchSeriesResultCalculator.requiredWins(series.getBestOf()));
-        vo.setHomeWinCount(series.getHomeWinCount());
-        vo.setAwayWinCount(series.getAwayWinCount());
         int homeWins = series.getHomeWinCount() == null ? 0 : series.getHomeWinCount();
         int awayWins = series.getAwayWinCount() == null ? 0 : series.getAwayWinCount();
-        vo.setSeriesScore(homeWins + ":" + awayWins);
+        boolean awardedEmpty = ("COMPLETED".equalsIgnoreCase(String.valueOf(series.getSeriesStatus()))
+                || "FORFEIT".equalsIgnoreCase(String.valueOf(series.getResolutionType())))
+                && homeWins == 0 && awayWins == 0 && series.getWinnerEventTeamId() != null;
+        if (awardedEmpty) {
+            int need = MatchSeriesResultCalculator.requiredWins(series.getBestOf() == null ? 1 : series.getBestOf());
+            if (series.getWinnerEventTeamId().equals(series.getHomeEventTeamId())) {
+                homeWins = need;
+            } else if (series.getWinnerEventTeamId().equals(series.getAwayEventTeamId())) {
+                awayWins = need;
+            }
+        }
+        vo.setHomeWinCount(homeWins);
+        vo.setAwayWinCount(awayWins);
+        boolean showScore = "COMPLETED".equalsIgnoreCase(String.valueOf(series.getSeriesStatus()))
+                || "FORFEIT".equalsIgnoreCase(String.valueOf(series.getResolutionType()))
+                || homeWins > 0 || awayWins > 0;
+        vo.setSeriesScore(showScore ? homeWins + ":" + awayWins : null);
         vo.setScheduledDate(series.getScheduledDate());
         vo.setScheduledStartTime(series.getScheduledStartTime());
         vo.setSeriesStatus(series.getSeriesStatus());

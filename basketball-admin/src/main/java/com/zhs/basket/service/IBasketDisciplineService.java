@@ -18,6 +18,8 @@ public interface IBasketDisciplineService {
 
     void activate(Long id);
 
+    boolean needsEventExecution(Long id);
+
     void revoke(Long id, DisciplineRevokeReq req);
 
     void consumeMatchSuspension(Long matchId, Long memberId);

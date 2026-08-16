@@ -11,6 +11,8 @@ import com.zhs.basket.req.AuditFieldInput;
 import com.zhs.basket.req.DisciplineCreateReq;
 import com.zhs.basket.req.DisciplineRevokeReq;
 import com.zhs.basket.service.IBasketDisciplineService;
+import com.zhs.basket.service.IPenaltyExecutionService;
+import com.zhs.basket.vo.PenaltyExecutionResultVo;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
 import com.zhs.basket.vo.DisciplineDetailVo;
 import com.zhs.basket.vo.DisciplineListVo;
@@ -41,6 +43,8 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
     @Autowired private BasketMatchMapper matchMapper;
     @Autowired private com.zhs.basket.mapper.v4.BasketSeasonMapper seasonMapper;
     @Autowired private BasketBusinessAuditWriter auditWriter;
+    @Autowired private IPenaltyExecutionService penaltyExecutionService;
+    @Autowired private BasketDisciplineExecutionDetailMapper executionDetailMapper;
 
     @Override
     public List<DisciplineListVo> list(DisciplineQuery query) {
@@ -53,6 +57,7 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         if (detail == null) {
             throw new ServiceException("处罚记录不存在");
         }
+        fillEventImpact(detail);
         return detail;
     }
 
@@ -92,6 +97,9 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         row.setPointDeduction(params.pointDeduction);
         row.setDisciplineStatus(DisciplineStatusEnum.INACTIVE.getCode());
         row.setRecordStatus(DisciplineRecordStatusEnum.DRAFT.name());
+        if (DisciplinePenaltyCodeEnum.EVENT_DISQUALIFICATION.name().equals(req.getPenaltyCode())) {
+            row.setExecutionStatus(com.zhs.basket.enums.PenaltyExecutionStatusEnum.PENDING.name());
+        }
         row.setEffectiveStartTime(params.effectiveStartTime);
         row.setEffectiveEndTime(params.effectiveEndTime);
         row.setDecisionBy(SecurityUtils.getUserId());
@@ -104,6 +112,12 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         disciplineRecordMapper.insert(row);
         auditWriter.writeAudit("DISCIPLINE", "DISCIPLINE_RECORD", row.getId(), "CREATE", "创建处罚记录", null, null);
         return row.getId();
+    }
+
+    @Override
+    public boolean needsEventExecution(Long id) {
+        BasketDisciplineRecord record = requireRecord(id);
+        return DisciplinePenaltyCodeEnum.EVENT_DISQUALIFICATION.name().equals(record.getPenaltyCode());
     }
 
     @Override
@@ -151,6 +165,9 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
             restrictionMapper.deactivateBySubject(subject.subjectType, subject.subjectId, record.getSeasonId());
         }
         auditWriter.writeAudit("DISCIPLINE", "DISCIPLINE_RECORD", id, "REVOKE", "撤销处罚", req.getRevokeReason(), null);
+        if (DisciplinePenaltyCodeEnum.EVENT_DISQUALIFICATION.name().equals(record.getPenaltyCode())) {
+            penaltyExecutionService.restoreEligibility(id);
+        }
     }
 
     @Override
@@ -487,6 +504,44 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
             return new RestrictionSubject(DisciplineTargetTypeEnum.PERMANENT_TEAM.getCode(), record.getTeamId());
         }
         return null;
+    }
+
+    private void fillEventImpact(DisciplineDetailVo detail) {
+        if (detail.getExecutionStatus() == null && detail.getEventTeamId() == null) {
+            return;
+        }
+        PenaltyExecutionResultVo impact = new PenaltyExecutionResultVo();
+        impact.setExecutionStatus(detail.getExecutionStatus());
+        impact.setExecutedTime(detail.getExecutedTime());
+        impact.setErrorMessage(detail.getExecutionError());
+        impact.setEventTeamId(detail.getEventTeamId());
+        impact.setEventTeamName(detail.getEventTeamName());
+        impact.setSeasonId(detail.getSeasonId());
+        impact.setSeasonName(detail.getSeasonName());
+        impact.setFutureMatchForfeitCount(nz(detail.getExecutionMatchForfeitCount()));
+        impact.setSeriesForfeitCount(nz(detail.getExecutionSeriesForfeitCount()));
+        impact.setQualificationRemovedCount(nz(detail.getExecutionQualificationRemovedCount()));
+        impact.setWarningCount(nz(detail.getExecutionWarningCount()));
+        if (detail.getId() != null) {
+            java.util.List<BasketDisciplineExecutionDetail> details = executionDetailMapper.selectByDisciplineId(detail.getId());
+            impact.setDetails(details);
+            detail.setExecutionDetails(details);
+            if (details != null) {
+                for (BasketDisciplineExecutionDetail row : details) {
+                    if (row.getResultMessage() != null
+                            && ("DOWNSTREAM_GUARD".equals(row.getActionType())
+                            || "REQUIRES_ADMIN_ADJUDICATION".equals(row.getActionType())
+                            || "QUALIFICATION_BLOCK".equals(row.getActionType()))) {
+                        impact.getWarnings().add(row.getResultMessage());
+                    }
+                }
+            }
+        }
+        detail.setEventImpact(impact);
+    }
+
+    private int nz(Integer value) {
+        return value == null ? 0 : value;
     }
 
     private AuditFieldInput field(String name, String label, String before, String after) {

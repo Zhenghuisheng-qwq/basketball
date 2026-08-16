@@ -45,6 +45,8 @@ public class WinnerOfSeriesAdvanceSupport {
     private MatchSeriesSupport matchSeriesSupport;
     @Autowired
     private BasketV4MatchMapper matchMapper;
+    @Autowired
+    private com.zhs.basket.support.v4.EventTeamParticipationGuard eventTeamParticipationGuard;
 
     public void advanceIfCompleted(BasketMatchSeries completed) {
         rewireAfterSeriesResult(completed);
@@ -60,6 +62,9 @@ public class WinnerOfSeriesAdvanceSupport {
         }
         boolean completed = MatchSeriesStatusEnum.COMPLETED.getCode().equals(source.getSeriesStatus());
         Long winner = completed ? positive(source.getWinnerEventTeamId()) : null;
+        if (winner != null && eventTeamParticipationGuard != null && eventTeamParticipationGuard.isDisqualified(winner)) {
+            winner = null;
+        }
         for (BasketMatchSeries target : next) {
             applyOrClear(source.getId(), winner, target);
         }
