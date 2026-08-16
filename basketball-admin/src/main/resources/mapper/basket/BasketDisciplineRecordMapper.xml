@@ -96,6 +96,7 @@
         select d.id, d.record_no as recordNo, d.target_type as targetType, d.season_id as seasonId,
                coalesce(nullif(trim(s.display_title), ''), s.season_name) as seasonName,
                ser.series_name as seriesName,
+               et.division_id as divisionId, bd.division_name as divisionName,
                d.match_id as matchId, d.team_id as teamId, t.team_name as teamName,
                d.event_team_id as eventTeamId, et.team_name_snapshot as eventTeamName,
                d.player_id as playerId, p.player_no as playerNo,
@@ -115,14 +116,17 @@
                d.decision_by as decisionBy, d.decision_time as decisionTime, d.approved_by as approvedBy,
                d.approved_time as approvedTime, d.revoked_by as revokedBy, d.revoked_time as revokedTime,
                d.revoke_reason as revokeReason, d.source_type as sourceType, d.idempotency_key as idempotencyKey,
-               d.announcement_id as announcementId, d.create_time as createTime, d.update_time as updateTime, d.is_delete as isDelete
+               d.announcement_id as announcementId, a.announcement_status as announcementStatus,
+               d.create_time as createTime, d.update_time as updateTime, d.is_delete as isDelete
         from basket_discipline_record d
         left join basket_season s on s.id = d.season_id and s.is_delete = 0
         left join basket_series ser on ser.id = s.series_id and ser.is_delete = 0
         left join basket_team t on t.id = d.team_id and t.is_delete = 0
         left join basket_event_team et on et.id = d.event_team_id and et.is_delete = 0
+        left join basket_division bd on bd.id = et.division_id and bd.is_delete = 0
         left join basket_player_profile p on p.id = d.player_id and p.is_delete = 0
         left join basket_member_profile mp on mp.member_id = d.member_id and mp.is_delete = 0
+        left join basket_announcement a on a.id = d.announcement_id and a.is_delete = 0
         where d.id = #{id} and d.is_delete = 0
     </select>
 
@@ -130,6 +134,7 @@
         select d.id, d.record_no as recordNo, d.target_type as targetType, d.season_id as seasonId,
                coalesce(nullif(trim(s.display_title), ''), s.season_name) as seasonName,
                ser.series_name as seriesName,
+               et.division_id as divisionId, bd.division_name as divisionName,
                d.team_id as teamId, t.team_name as teamName,
                d.event_team_id as eventTeamId, et.team_name_snapshot as eventTeamName,
                d.player_id as playerId, p.player_no as playerNo,
@@ -138,6 +143,11 @@
                d.discipline_type as disciplineType, d.penalty_code as penaltyCode, d.title, d.reason_text as reasonText,
                d.discipline_status as disciplineStatus, d.record_status as recordStatus,
                d.execution_status as executionStatus,
+               d.execution_match_forfeit_count as executionMatchForfeitCount,
+               d.execution_series_forfeit_count as executionSeriesForfeitCount,
+               d.execution_qualification_removed_count as executionQualificationRemovedCount,
+               d.execution_warning_count as executionWarningCount,
+               d.announcement_id as announcementId, a.announcement_status as announcementStatus,
                d.match_suspension_remaining as matchSuspensionRemaining, d.point_deduction as pointDeduction,
                d.effective_start_time as effectiveStartTime, d.effective_end_time as effectiveEndTime,
                d.decision_time as decisionTime, d.create_time as createTime
@@ -146,8 +156,10 @@
         left join basket_series ser on ser.id = s.series_id and ser.is_delete = 0
         left join basket_team t on t.id = d.team_id and t.is_delete = 0
         left join basket_event_team et on et.id = d.event_team_id and et.is_delete = 0
+        left join basket_division bd on bd.id = et.division_id and bd.is_delete = 0
         left join basket_player_profile p on p.id = d.player_id and p.is_delete = 0
         left join basket_member_profile mp on mp.member_id = d.member_id and mp.is_delete = 0
+        left join basket_announcement a on a.id = d.announcement_id and a.is_delete = 0
         where d.is_delete = 0
         <if test="seasonId != null">and d.season_id = #{seasonId}</if>
         <if test="tournamentId != null">and s.series_id = #{tournamentId}</if>
@@ -205,6 +217,12 @@
         update basket_discipline_record
         set event_team_id = #{eventTeamId}, update_time = now()
         where id = #{id} and is_delete = 0 and event_team_id is null
+    </update>
+
+    <update id="updateAnnouncementId">
+        update basket_discipline_record
+        set announcement_id = #{announcementId}, update_time = now()
+        where id = #{id} and is_delete = 0
     </update>
 
     <select id="selectActiveMatchSuspension" resultMap="BasketDisciplineRecordResult">

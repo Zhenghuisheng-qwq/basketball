@@ -440,7 +440,14 @@ function getTeamNameSizeClass(name: string) {
           <nav class="compare-hero__crumb" aria-label="面包屑">
             <router-link to="/tournament">赛事</router-link>
             <span>/</span>
-            <router-link to="/tournament">CNPA League</router-link>
+            <router-link
+              :to="{
+                path: '/tournament',
+                query: selectedDivisionId ? { divisionId: selectedDivisionId } : {},
+              }"
+            >
+              {{ selectedSeason?.seriesName || '赛事' }}
+            </router-link>
             <span>/</span>
             <b>球队对比</b>
           </nav>

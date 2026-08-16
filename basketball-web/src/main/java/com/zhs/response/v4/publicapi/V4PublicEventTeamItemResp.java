@@ -36,4 +36,20 @@ public class V4PublicEventTeamItemResp {
     private Boolean disqualified;
 
     private Boolean temporaryTeam;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long divisionId;
+
+    private String divisionName;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long seasonId;
+
+    private String seasonName;
+
+    private String seriesCode;
+
+    private String seriesName;
+
+    private String gameMode;
 }

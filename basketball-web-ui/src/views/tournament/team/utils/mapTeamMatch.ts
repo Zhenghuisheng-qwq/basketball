@@ -1,4 +1,5 @@
 import type { V4PublicMatchItem } from '@/api/types/v4Public'
+import { isDisqualificationResult } from '@/utils/eventContext'
 import { v4MatchStatusToNumber } from '@/views/events/utils/v4PublicAdapters'
 import { formatDateTime, mapMatchStatus, toNumber } from '@/utils/publicDisplay'
 import type { TeamBase, TeamMatchRecord } from '@/types/team'
@@ -9,18 +10,28 @@ export function mapV4MatchToTeamRecord(
 ): TeamMatchRecord {
   const isHome = String(item.homeEventTeamId) === String(eventTeamId)
   const opponentId = String(isHome ? item.awayEventTeamId : item.homeEventTeamId)
-  const teamScore = isHome ? item.homeScore : item.awayScore
-  const opponentScore = isHome ? item.awayScore : item.homeScore
+  const officialTeamScore = isHome ? item.homeScore : item.awayScore
+  const officialOpponentScore = isHome ? item.awayScore : item.homeScore
+  const originalTeamScore = isHome ? item.originalHomeScore : item.originalAwayScore
+  const originalOpponentScore = isHome ? item.originalAwayScore : item.originalHomeScore
   const status = mapMatchStatus(v4MatchStatusToNumber(item.matchStatus))
-  const finished = status === 'finished' || status === 'live'
+  const forfeited = String(item.matchStatus || '').toUpperCase() === 'FORFEITED'
+  const finished = status === 'finished' || status === 'live' || forfeited
+  const dq = isDisqualificationResult(item.resultType)
+  const sideLabel = isHome ? item.homeResultLabel : item.awayResultLabel
   let result: TeamMatchRecord['result']
-  if (finished && teamScore != null && opponentScore != null) {
-    result = toNumber(teamScore) > toNumber(opponentScore) ? 'win' : 'loss'
-    if (toNumber(teamScore) === toNumber(opponentScore)) result = undefined
+  if (finished && String(item.winnerEventTeamId || '') === String(eventTeamId)) {
+    result = 'win'
+  } else if (finished && item.winnerEventTeamId) {
+    result = 'loss'
   }
   const dt = formatDateTime(item.matchTime)
   const stageLabel = item.seriesStatusName || ''
   const isPlayoff = /淘汰|季后|playoff/i.test(stageLabel)
+  const bestOf = toNumber(item.bestOf, 1)
+  const seriesScoreText = bestOf > 1 && (item.seriesHomeWinCount != null || item.seriesAwayWinCount != null)
+    ? `${toNumber(isHome ? item.seriesHomeWinCount : item.seriesAwayWinCount, 0)}:${toNumber(isHome ? item.seriesAwayWinCount : item.seriesHomeWinCount, 0)}`
+    : ''
 
   return {
     id: String(item.matchId),
@@ -34,12 +45,20 @@ export function mapV4MatchToTeamRecord(
       : item.homeTeamLogoUrl || '',
     date: dt.date === '--' ? '' : dt.date,
     time: dt.time,
-    teamScore: teamScore ?? undefined,
-    opponentScore: opponentScore ?? undefined,
+    teamScore: officialTeamScore ?? undefined,
+    opponentScore: officialOpponentScore ?? undefined,
     result,
-    status: status === 'finished' || status === 'live' ? 'finished' : 'scheduled',
+    status: finished ? 'finished' : 'scheduled',
     stage: isPlayoff ? 'playoffs' : 'regular',
     competition: stageLabel || `第${item.roundNo ?? '--'}轮`,
+    resultType: item.resultType || undefined,
+    resultReason: item.resultReason || undefined,
+    resultLabel: dq
+      ? (sideLabel || (result === 'win' ? '取消资格判胜' : '取消资格判负'))
+      : sideLabel || undefined,
+    originalTeamScore: originalTeamScore ?? undefined,
+    originalOpponentScore: originalOpponentScore ?? undefined,
+    seriesScoreText: seriesScoreText || undefined,
   } as TeamMatchRecord & { opponentName: string; opponentLogoUrl: string }
 }
 

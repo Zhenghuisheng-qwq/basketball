@@ -240,12 +240,6 @@ public class TieBreakComparatorBuilder {
         }
         int wins = 0;
         for (BasketV4Match match : matches) {
-            if (match.getHomeScore() == null || match.getAwayScore() == null) {
-                continue;
-            }
-            if (match.getHomeScore().equals(match.getAwayScore())) {
-                continue;
-            }
             Long home = match.getHomeEventTeamId();
             Long away = match.getAwayEventTeamId();
             if (!teamId.equals(home) && !teamId.equals(away)) {
@@ -255,7 +249,7 @@ public class TieBreakComparatorBuilder {
             if (!opponentIds.contains(opponentId)) {
                 continue;
             }
-            Long winner = match.getHomeScore() > match.getAwayScore() ? home : away;
+            Long winner = match.getWinnerEventTeamId();
             if (teamId.equals(winner)) {
                 wins++;
             }

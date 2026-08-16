@@ -109,6 +109,40 @@ class OfficialMatchResultSettlementServiceTest {
     }
 
     @Test
+    void settle_disqualification_keepsOriginalScoreAndPlayerStats() {
+        BasketV4Match match = scheduled();
+        match.setMatchStatus(MatchStatusEnum.FINISHED.getCode());
+        match.setHomeScore(15);
+        match.setAwayScore(8);
+        match.setWinnerEventTeamId(101L);
+        match.setLoserEventTeamId(102L);
+        when(matchMapper.selectByIdForUpdate(1L)).thenReturn(match);
+        when(matchMapper.updateById(any())).thenReturn(1);
+        BasketV4MatchTeamStat homeStat = new BasketV4MatchTeamStat();
+        homeStat.setEventTeamId(101L);
+        homeStat.setFieldGoalMade(6);
+        when(matchTeamStatMapper.selectByMatchAndEventTeam(1L, 101L)).thenReturn(homeStat);
+        when(matchTeamStatMapper.selectByMatchAndEventTeam(1L, 102L)).thenReturn(new BasketV4MatchTeamStat());
+
+        OfficialMatchResultCommand command = new OfficialMatchResultCommand();
+        command.setMatchId(1L);
+        command.setWinnerEventTeamId(102L);
+        command.setLoserEventTeamId(101L);
+        command.setMatchStatus(MatchStatusEnum.FORFEITED.getCode());
+        command.setSource(OfficialResultSource.DISQUALIFICATION);
+        command.setClearOfficialPlayerStats(false);
+        assertTrue(service.settle(command));
+
+        ArgumentCaptor<BasketV4Match> matchCaptor = ArgumentCaptor.forClass(BasketV4Match.class);
+        verify(matchMapper).updateById(matchCaptor.capture());
+        assertEquals(15, matchCaptor.getValue().getHomeScore());
+        assertEquals(8, matchCaptor.getValue().getAwayScore());
+        assertEquals(102L, matchCaptor.getValue().getWinnerEventTeamId());
+        verify(matchPlayerStatMapper, never()).softDeleteByMatchId(any());
+        verify(statsSettlementService).rebuildStageStats(10L);
+    }
+
+    @Test
     void unsetOfficialResult_clearsForfeitAndRebuilds() {
         BasketV4Match match = scheduled();
         match.setMatchStatus(MatchStatusEnum.FORFEITED.getCode());

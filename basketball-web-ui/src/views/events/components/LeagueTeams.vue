@@ -135,7 +135,10 @@ function goPage(index: number) {
           <router-link
             v-for="team in visibleTeams"
             :key="team.id"
-            :to="`/tournament/team/${team.teamId}/overview`"
+            :to="{
+              path: `/tournament/team/${team.teamId}/overview`,
+              query: ctx.divisionId.value ? { divisionId: ctx.divisionId.value } : {},
+            }"
             class="team-card team-card-link"
           >
             <TeamLogo :team="team" size="lg" />

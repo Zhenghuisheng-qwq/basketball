@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import PlayerMatchTable from './PlayerMatchTable.vue'
+import DisciplineStatusPanel from '@/components/discipline/DisciplineStatusPanel.vue'
 import type { PlayerDetailData } from '../types'
 
 defineProps<{
@@ -17,6 +18,10 @@ function goAllMatches() {
 
 <template>
   <div class="player-detail-overview">
+    <DisciplineStatusPanel
+      :items="detail.profile.activeDisciplineSummary || []"
+      title="处罚状态"
+    />
     <section class="player-detail-overview__section">
       <div class="player-detail-section-head">
         <div>

@@ -1,16 +1,22 @@
 <script setup lang="ts">
+import { computed, inject } from 'vue'
 import tournamentTop from '@/assets/icon/tournament_top.png'
 import LeagueHeroMeta from './LeagueHeroMeta.vue'
 import { useLeagueHeroMeta } from '../composables/useLeagueHeroMeta'
+import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
 
 const { heroMetaItems } = useLeagueHeroMeta()
+const ctx = inject<ReturnType<typeof usePublicSeasonContext> | null>('publicSeasonContext', null)
+const seriesLabel = computed(
+  () => ctx?.currentTournament.value?.tournamentName || ctx?.divisionDetail.value?.seriesName || '赛事',
+)
 </script>
 <template>
-  <section class="league-hero" aria-label="CNPA League">
+  <section class="league-hero" :aria-label="seriesLabel">
     <img
       class="league-hero__image"
       :src="tournamentTop"
-      alt="CNPA League 官方职业联赛"
+      :alt="seriesLabel"
     />
 
     <LeagueHeroMeta class="league-hero__meta" :items="heroMetaItems" />

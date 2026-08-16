@@ -27,6 +27,35 @@ const stageLabel = computed(() => stageLabels[props.team.currentStage])
 
 const recordText = computed(() => `${props.team.wins}胜${props.team.losses}负`)
 
+const dqSummary = computed(() => (props.team.activeDisciplineSummary || []).find((item) => item.penaltyCode === 'EVENT_DISQUALIFICATION')
+  || (props.team.disqualified ? {
+    penaltyLabel: '取消赛事资格',
+    statusLabel: '生效中',
+    effectiveStartTime: '',
+    description: '该球队在本届赛事中的参赛资格已取消。',
+  } : null))
+
+const dqHint = computed(() => {
+  if (!dqSummary.value) return ''
+  const time = dqSummary.value.effectiveStartTime ? dqSummary.value.effectiveStartTime.slice(0, 10) : ''
+  return [dqSummary.value.penaltyLabel, dqSummary.value.statusLabel, time].filter(Boolean).join(' · ')
+})
+
+const heroDescription = computed(() => {
+  if (props.team.disqualified) {
+    return dqSummary.value?.description || '该球队在本届赛事中的参赛资格已取消。'
+  }
+  return props.team.description
+})
+
+const seriesCrumb = computed(() => props.team.seriesName?.trim() || '')
+const seasonCrumb = computed(() => props.team.seasonName?.trim() || '')
+const divisionCrumb = computed(() => props.team.divisionName?.trim() || '')
+const tournamentQuery = computed(() => ({
+  ...(teamPageCtx?.seasonId.value ? { seasonId: teamPageCtx.seasonId.value } : {}),
+  ...(teamPageCtx?.divisionId.value ? { divisionId: teamPageCtx.divisionId.value } : {}),
+}))
+
 const compareCompetitionText = computed(
   () => `${props.team.seasonName} · ${stageLabels[props.team.currentStage]}`,
 )
@@ -96,8 +125,20 @@ const infoCards = computed<HeroInfoCard[]>(() => [
     <div class="team-hero__inner">
       <nav class="team-hero__breadcrumb" aria-label="面包屑">
         <router-link to="/tournament" class="team-hero__crumb">赛事</router-link>
-        <span class="team-hero__crumb-sep">/</span>
-        <router-link to="/tournament" class="team-hero__crumb">CNPA League</router-link>
+        <template v-if="seriesCrumb">
+          <span class="team-hero__crumb-sep">/</span>
+          <router-link :to="{ path: '/tournament', query: tournamentQuery }" class="team-hero__crumb">
+            {{ seriesCrumb }}
+          </router-link>
+        </template>
+        <template v-if="seasonCrumb && seasonCrumb !== seriesCrumb">
+          <span class="team-hero__crumb-sep">/</span>
+          <span class="team-hero__crumb">{{ seasonCrumb }}</span>
+        </template>
+        <template v-if="divisionCrumb && divisionCrumb !== seasonCrumb">
+          <span class="team-hero__crumb-sep">/</span>
+          <span class="team-hero__crumb">{{ divisionCrumb }}</span>
+        </template>
         <span class="team-hero__crumb-sep">/</span>
         <span class="team-hero__crumb team-hero__crumb--current">{{ team.name }}</span>
       </nav>
@@ -110,10 +151,16 @@ const infoCards = computed<HeroInfoCard[]>(() => [
         <div class="team-hero__summary">
           <div class="team-hero__title-row">
             <h1 class="team-hero__name">{{ team.name }}</h1>
-            <span v-if="team.verified" class="team-hero__badge">已认证</span>
+            <span
+              v-if="team.disqualified"
+              class="team-hero__badge team-hero__badge--dq"
+              :title="dqHint"
+            >赛事资格已取消</span>
+            <span v-else-if="team.verified" class="team-hero__badge">已认证</span>
           </div>
+          <p v-if="team.disqualified && dqHint" class="team-hero__dq-hint">{{ dqHint }}</p>
 
-          <p class="team-hero__desc">{{ team.description }}</p>
+          <p class="team-hero__desc">{{ heroDescription }}</p>
 
           <div class="team-hero__stats">
             <span class="team-hero__stat">{{ stageLabel }} {{ recordText }}</span>
@@ -326,6 +373,19 @@ const infoCards = computed<HeroInfoCard[]>(() => [
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
+
+  &--dq {
+    border-color: rgba(225, 6, 19, 0.55);
+    background: rgba(225, 6, 19, 0.14);
+    color: #ff8b8b;
+  }
+}
+
+.team-hero__dq-hint {
+  margin: 0 0 10px;
+  color: rgba(255, 139, 139, 0.78);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .team-hero__desc {

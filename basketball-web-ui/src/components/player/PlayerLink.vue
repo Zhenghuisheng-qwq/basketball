@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { goToPlayerDetail, type PlayerDetailTab } from '@/utils/playerNavigate'
 
 const props = withDefaults(
@@ -15,12 +15,16 @@ const props = withDefaults(
   },
 )
 
+const route = useRoute()
 const router = useRouter()
 
 function handleClick(event: MouseEvent) {
   event.preventDefault()
   event.stopPropagation()
-  goToPlayerDetail(router, props.playerId, props.tab)
+  const extra: Record<string, string> = {}
+  if (route.query.divisionId) extra.divisionId = String(route.query.divisionId)
+  if (route.query.seasonId) extra.seasonId = String(route.query.seasonId)
+  goToPlayerDetail(router, props.playerId, props.tab, extra)
 }
 </script>
 

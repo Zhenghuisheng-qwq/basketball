@@ -1,7 +1,7 @@
 <template>
   <router-link
     v-if="hasTeamId"
-    :to="`/tournament/team/${team.teamId}/overview`"
+    :to="teamTo"
     class="team-entry-link"
   >
     <slot />
@@ -12,18 +12,29 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
+import { teamDetailLocation } from '@/utils/eventContext'
 import type { Team } from '@/views/events/types/events'
+import type { usePublicSeasonContext } from '@/views/events/composables/usePublicSeasonContext'
 
 const props = defineProps<{
   team: Team
 }>()
+
+const ctx = inject<ReturnType<typeof usePublicSeasonContext> | null>('publicSeasonContext', null)
 
 const hasTeamId = computed(() => {
   const id = String(props.team?.teamId || '').trim()
   if (!id || id === 'null' || id === 'undefined' || id === '0') return false
   return true
 })
+
+const teamTo = computed(() =>
+  teamDetailLocation(props.team.teamId, {
+    divisionId: ctx?.divisionId.value,
+    seasonId: ctx?.seasonId.value,
+  }),
+)
 </script>
 
 <style scoped lang="scss">

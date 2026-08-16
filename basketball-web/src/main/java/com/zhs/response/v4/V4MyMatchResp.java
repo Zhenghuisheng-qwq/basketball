@@ -54,6 +54,7 @@ public class V4MyMatchResp {
     private String latestRejectReason;
     private Integer homeScore;
     private Integer awayScore;
+    private Long winnerEventTeamId;
 
     /** BO3/BO5 系列赛 ID（与赛事系列 seriesId 区分） */
     private Long matchSeriesId;

@@ -10,6 +10,10 @@ import lombok.EqualsAndHashCode;
 public class DisciplineDetailVo extends BasketDisciplineRecord {
     private String seasonName;
     private String seriesName;
+    private Long divisionId;
+    private String divisionName;
+    private Integer announcementStatus;
+    private String announcementStatusName;
     private String teamName;
     private String eventTeamName;
     private String playerNo;

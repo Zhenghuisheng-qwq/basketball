@@ -35,7 +35,10 @@ const infoItems = computed(() => [
     label: '当前参赛球队',
     value: currentTeamsText.value,
     link: props.profile.currentTeamId
-      ? `/tournament/team/${props.profile.currentTeamId}/overview`
+      ? {
+          path: `/tournament/team/${props.profile.currentTeamId}/overview`,
+          query: props.profile.divisionId ? { divisionId: props.profile.divisionId } : {},
+        }
       : undefined,
   },
   { label: '比赛平台', value: props.profile.platform },
@@ -51,12 +54,36 @@ const infoItems = computed(() => [
     <div class="player-detail-hero__inner">
       <nav class="player-detail-hero__breadcrumb" aria-label="面包屑">
         <router-link to="/tournament">赛事</router-link>
+        <template v-if="profile.seriesName">
+          <span>/</span>
+          <router-link
+            :to="{
+              path: '/tournament',
+              query: profile.divisionId ? { divisionId: profile.divisionId } : {},
+            }"
+          >
+            {{ profile.seriesName }}
+          </router-link>
+        </template>
+        <template v-if="profile.seasonName && profile.seasonName !== profile.seriesName">
+          <span>/</span>
+          <span>{{ profile.seasonName }}</span>
+        </template>
+        <template v-if="profile.divisionName && profile.divisionName !== profile.seasonName">
+          <span>/</span>
+          <span>{{ profile.divisionName }}</span>
+        </template>
         <span>/</span>
-        <router-link to="/tournament">CNPA League</router-link>
-        <span>/</span>
-        <router-link :to="`/tournament/team/${profile.currentTeamId}/overview`">
+        <router-link
+          v-if="profile.currentTeamId"
+          :to="{
+            path: `/tournament/team/${profile.currentTeamId}/overview`,
+            query: profile.divisionId ? { divisionId: profile.divisionId } : {},
+          }"
+        >
           {{ profile.currentTeamAbbr }}
         </router-link>
+        <span v-else>{{ profile.currentTeamAbbr }}</span>
         <span>/</span>
         <span class="is-current">{{ profile.displayName }}</span>
       </nav>
@@ -67,7 +94,18 @@ const infoItems = computed(() => [
           <div class="player-detail-hero__summary">
             <div class="player-detail-hero__title-row">
               <h1 class="player-detail-hero__name">{{ profile.displayName }}</h1>
-              <span v-if="profile.verified" class="player-detail-hero__badge">已认证</span>
+              <span
+                v-for="tag in profile.playerPenaltyTags"
+                :key="tag.tagLabel"
+                class="player-detail-hero__badge player-detail-hero__badge--penalty"
+                :title="[tag.penaltyLabel, tag.statusLabel, tag.effectiveStartTime?.slice(0, 10)].filter(Boolean).join(' · ')"
+              >{{ tag.tagLabel }}</span>
+              <span
+                v-if="profile.eventTeamDisqualified"
+                class="player-detail-hero__badge player-detail-hero__badge--dq"
+                title="所属球队在本届赛事中的参赛资格已取消"
+              >所属球队赛事资格已取消</span>
+              <span v-if="profile.verified && !profile.playerPenaltyTags?.length && !profile.eventTeamDisqualified" class="player-detail-hero__badge">已认证</span>
             </div>
             <p class="player-detail-hero__registration">{{ profile.registrationText }}</p>
             <div class="player-detail-hero__meta">
@@ -200,12 +238,26 @@ const infoItems = computed(() => [
   color: #f1d59a;
   font-size: 12px;
   font-weight: 800;
+
+  &--penalty,
+  &--dq {
+    border-color: rgba(225, 6, 19, 0.55);
+    background: rgba(225, 6, 19, 0.14);
+    color: #ff8b8b;
+  }
 }
 
 .player-detail-hero__registration {
   margin: 10px 0 0;
   color: rgba(255, 255, 255, 0.72);
   font-size: 14px;
+}
+
+.player-detail-hero__dq {
+  margin: 8px 0 0;
+  color: #ff8b8b;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .player-detail-hero__meta {

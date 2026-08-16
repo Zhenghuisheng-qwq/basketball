@@ -7,7 +7,8 @@ public enum OfficialResultSource {
     SUBMISSION("SUBMISSION", "captain submission"),
     ADMIN_DIRECT("ADMIN_DIRECT", "admin direct"),
     ADMIN_CORRECTION("ADMIN_CORRECTION", "admin correction"),
-    FORFEIT("FORFEIT", "match forfeit");
+    FORFEIT("FORFEIT", "match forfeit"),
+    DISQUALIFICATION("DISQUALIFICATION", "event disqualification override");
 
     private final String code;
     private final String description;

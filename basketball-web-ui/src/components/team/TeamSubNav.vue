@@ -1,7 +1,17 @@
 <script setup lang="ts">
+import { useRoute } from 'vue-router'
+
 defineProps<{
   teamId: string
 }>()
+
+const route = useRoute()
+const keepQuery = () => {
+  const query: Record<string, string> = {}
+  if (route.query.divisionId) query.divisionId = String(route.query.divisionId)
+  if (route.query.seasonId) query.seasonId = String(route.query.seasonId)
+  return query
+}
 
 const tabs = [
   { label: '总览', path: 'overview' },
@@ -16,7 +26,7 @@ const tabs = [
     <router-link
       v-for="tab in tabs"
       :key="tab.path"
-      :to="`/tournament/team/${teamId}/${tab.path}`"
+      :to="{ path: `/tournament/team/${teamId}/${tab.path}`, query: keepQuery() }"
       class="team-sub-nav__link"
       active-class="team-sub-nav__link--active"
     >

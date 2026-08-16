@@ -66,6 +66,10 @@ public class PublicMatchItemVo implements Serializable {
     @ApiModelProperty("客队得分")
     private Integer awayScore;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty("官方胜者（eventTeamId）")
+    private Long winnerTeamId;
+
     @ApiModelProperty("比赛状态")
     private Integer matchStatus;
 
@@ -84,4 +88,13 @@ public class PublicMatchItemVo implements Serializable {
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date actualEndTime;
+
+    private String resultType;
+    private String resultReason;
+    private String homeResultLabel;
+    private String awayResultLabel;
+    private Boolean homeDisqualified;
+    private Boolean awayDisqualified;
+    private Integer originalHomeScore;
+    private Integer originalAwayScore;
 }

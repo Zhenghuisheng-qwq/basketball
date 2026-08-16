@@ -161,6 +161,7 @@ export interface V4MyScheduleItem {
   currentSide?: string
   homeScore?: number
   awayScore?: number
+  winnerEventTeamId?: string
   matchStatus?: string
   publishStatus?: string
   mySubmissionStatus?: string

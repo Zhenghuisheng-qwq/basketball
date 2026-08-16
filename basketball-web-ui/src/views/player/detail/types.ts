@@ -4,6 +4,15 @@ export interface PlayerCurrentTeam {
   shortName: string
   logoUrl: string
   eventContext: string
+  divisionId?: string
+  seriesName?: string
+  seasonName?: string
+  divisionName?: string
+  platformCode?: string
+  gameMode?: string
+  eventTeamId?: string
+  disqualified?: boolean
+  seasonId?: string
 }
 
 export interface PlayerProfile {
@@ -24,6 +33,23 @@ export interface PlayerProfile {
   position: string
   platform: string
   currentStage: string
+  seriesName?: string
+  seasonName?: string
+  divisionName?: string
+  divisionId?: string
+  eventTeamId?: string
+  eventTeamDisqualified?: boolean
+  seasonId?: string
+  playerPenaltyTags?: Array<{
+    tagLabel: string
+    penaltyLabel?: string
+    statusLabel?: string
+    effectiveStartTime?: string
+    description?: string
+    publicReason?: string | null
+    seasonId?: string
+  }>
+  activeDisciplineSummary?: import('@/api/types/v4Public').PublicActiveDisciplineSummary[]
 }
 
 export interface PlayerHonorSummary {
@@ -58,8 +84,12 @@ export interface PlayerMatchRecord {
   opponentId: string
   opponentLogoUrl: string
   result: 'WIN' | 'LOSS'
+  resultLabel?: string
   teamScore: number
   opponentScore: number
+  originalTeamScore?: number
+  originalOpponentScore?: number
+  seriesScoreText?: string
   minutes: number
   points: number
   rebounds: number

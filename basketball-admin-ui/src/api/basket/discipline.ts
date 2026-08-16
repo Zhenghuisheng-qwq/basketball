@@ -82,6 +82,10 @@ export function searchDisciplinePlayers(params: { seasonId: number; keyword?: st
   return request({ url: '/basket/discipline/selector/players', method: 'get', params })
 }
 
+export function generateDisciplineAnnouncementDraft(id: number, data?: { publicStatement?: string }): Promise<AjaxResult<any>> {
+  return request({ url: `/basket/discipline/${id}/announcement-draft`, method: 'post', data: data || {} })
+}
+
 export function searchDisciplineTeams(params: {
   seasonId: number
   targetType: string

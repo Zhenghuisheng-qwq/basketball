@@ -33,4 +33,15 @@ public class PublicPlayerCurrentTeamVo implements Serializable {
 
     @ApiModelProperty("成员角色 CAPTAIN/MEMBER")
     private String myRole;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long eventTeamId;
+
+    private String seriesCode;
+
+    private Boolean disqualified;
+
+    private String eventTeamStatus;
+
+    private String eventTeamStatusName;
 }

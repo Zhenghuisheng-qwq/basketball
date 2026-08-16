@@ -14,9 +14,13 @@ public interface IStageExecutionExceptionApplicationService {
 
     void forfeitMatch(BasketMatchForfeitReq req);
 
+    void overrideMatchOfficialResultForDisqualification(BasketMatchForfeitReq req);
+
     void revokeMatchForfeit(BasketMatchForfeitRevokeReq req);
 
     void forfeitSeries(BasketSeriesForfeitReq req);
+
+    void applySeriesOfficialSweepForDisqualification(BasketSeriesForfeitReq req);
 
     void manualAdvance(BasketManualAdvanceReq req);
 

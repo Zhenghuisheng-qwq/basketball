@@ -18,6 +18,16 @@ withDefaults(
 const router = useRouter()
 
 function formatResult(row: PlayerMatchRecord): string {
+  if (row.resultLabel) {
+    if (row.seriesScoreText) return `${row.resultLabel} ${row.seriesScoreText}`
+    if (row.originalTeamScore != null && row.originalOpponentScore != null) {
+      return `${row.resultLabel}（原比分 ${row.originalTeamScore}:${row.originalOpponentScore} 成绩已取消）`
+    }
+    return row.resultLabel
+  }
+  if (row.seriesScoreText) {
+    return `${row.result === 'WIN' ? '胜利' : '失败'} ${row.seriesScoreText}`
+  }
   const prefix = row.result === 'WIN' ? '胜利' : '失败'
   return `${prefix} ${row.teamScore}:${row.opponentScore}`
 }
@@ -38,7 +48,11 @@ function formatShot(made: number | null | undefined, attempted: number | null | 
 }
 
 function goTeam(teamId: string) {
-  router.push(`/tournament/team/${teamId}/overview`)
+  const divisionId = String(router.currentRoute.value.query.divisionId || '').trim()
+  router.push({
+    path: `/tournament/team/${teamId}/overview`,
+    query: divisionId ? { divisionId } : {},
+  })
 }
 
 function openStats(matchId: string) {

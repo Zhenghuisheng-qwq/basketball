@@ -92,6 +92,8 @@ public final class EventTeamPublicDisplaySupport {
         vo.setHomeResultLabel(labelForSide(match.getWinnerEventTeamId(), match.getHomeEventTeamId()));
         vo.setAwayResultLabel(labelForSide(match.getWinnerEventTeamId(), match.getAwayEventTeamId()));
         if (dqForfeit) {
+            vo.setOriginalHomeScore(match.getHomeScore());
+            vo.setOriginalAwayScore(match.getAwayScore());
             vo.setHomeScore(null);
             vo.setAwayScore(null);
         }
@@ -146,6 +148,8 @@ public final class EventTeamPublicDisplaySupport {
         vo.setHomeResultLabel(labelForSide(match.getWinnerEventTeamId(), match.getHomeEventTeamId()));
         vo.setAwayResultLabel(labelForSide(match.getWinnerEventTeamId(), match.getAwayEventTeamId()));
         if (dqForfeit) {
+            vo.setOriginalHomeScore(match.getHomeScore());
+            vo.setOriginalAwayScore(match.getAwayScore());
             vo.setHomeScore(null);
             vo.setAwayScore(null);
         }

@@ -37,6 +37,7 @@ export function mapV4TeamDetailToPublic(
     divisionName?: string
     seasonId?: string
     seasonTitle?: string
+    seriesName?: string
   },
 ): PublicTeamDetailVo {
   const name = displayText(detail.teamName, '未知球队')
@@ -52,6 +53,10 @@ export function mapV4TeamDetailToPublic(
     divisionName: extras?.divisionName,
     seasonId: extras?.seasonId,
     seasonName: extras?.seasonTitle,
+    seriesName: extras?.seriesName || detail.seriesName,
+    eventTeamStatus: detail.eventTeamStatus,
+    disqualified: Boolean(detail.disqualified),
+    activeDisciplineSummary: detail.activeDisciplineSummary || [],
   }
 }
 

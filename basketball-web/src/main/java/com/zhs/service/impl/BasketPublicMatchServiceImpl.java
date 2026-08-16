@@ -26,6 +26,7 @@ import com.zhs.response.publicapi.PublicMatchTeamStatVo;
 import com.zhs.service.IBasketPublicMatchService;
 import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicSupport;
+import com.zhs.support.v4.EventTeamPublicDisplaySupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -117,10 +118,15 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             vo.setHomeTeamId(match.getHomeEventTeamId());
             vo.setAwayTeamId(match.getAwayEventTeamId());
         }
-        vo.setHomeScore(match.getHomeScore());
-        vo.setAwayScore(match.getAwayScore());
-        // winner 保留 eventTeamId 语义，前端胜负判断以比分/名称主路径为准
-        vo.setWinnerTeamId(match.getWinnerEventTeamId());
+        if (base != null) {
+            vo.setHomeScore(base.getHomeScore());
+            vo.setAwayScore(base.getAwayScore());
+            vo.setWinnerTeamId(base.getWinnerTeamId() != null ? base.getWinnerTeamId() : match.getWinnerEventTeamId());
+        } else {
+            vo.setHomeScore(match.getHomeScore());
+            vo.setAwayScore(match.getAwayScore());
+            vo.setWinnerTeamId(match.getWinnerEventTeamId());
+        }
         vo.setScheduledStartTime(match.getMatchTime());
         if (MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus())) {
             vo.setActualEndTime(match.getMatchTime());
@@ -199,6 +205,7 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
                     ? away.getSourceTeamId() : match.getAwayEventTeamId());
             vo.setHomeScore(match.getHomeScore());
             vo.setAwayScore(match.getAwayScore());
+            vo.setWinnerTeamId(match.getWinnerEventTeamId());
             vo.setScheduledStartTime(match.getMatchTime());
             if (MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus())) {
                 vo.setActualEndTime(match.getMatchTime());
@@ -213,9 +220,44 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
                 vo.setAwayTeamName(away.getTeamNameSnapshot());
                 vo.setAwayTeamLogoUrl(logoMap.get(away.getTeamLogoFileId()));
             }
+            fillLegacyMatchDisplay(vo, match, home, away);
             vos.add(vo);
         }
         return vos;
+    }
+
+    private void fillLegacyMatchDisplay(PublicMatchItemVo vo, BasketV4Match match,
+                                        BasketEventTeam home, BasketEventTeam away) {
+        if (vo == null || match == null) {
+            return;
+        }
+        boolean homeDq = EventTeamPublicDisplaySupport.isDisqualified(home);
+        boolean awayDq = EventTeamPublicDisplaySupport.isDisqualified(away);
+        vo.setHomeDisqualified(homeDq);
+        vo.setAwayDisqualified(awayDq);
+        if (!MatchStatusEnum.FORFEITED.getCode().equalsIgnoreCase(match.getMatchStatus())) {
+            return;
+        }
+        boolean dq = (match.getRemark() != null && match.getRemark().contains(EventTeamPublicDisplaySupport.REASON_DQ))
+                || (match.getRemark() != null && match.getRemark().contains(EventTeamPublicDisplaySupport.RESULT_EVENT_DISQUALIFICATION))
+                || homeDq || awayDq;
+        vo.setResultType(dq ? EventTeamPublicDisplaySupport.RESULT_EVENT_DISQUALIFICATION
+                : EventTeamPublicDisplaySupport.RESULT_FORFEIT);
+        vo.setResultReason(dq ? EventTeamPublicDisplaySupport.REASON_DQ : "官方判负");
+        if (match.getWinnerEventTeamId() != null) {
+            vo.setHomeResultLabel(match.getWinnerEventTeamId().equals(match.getHomeEventTeamId())
+                    ? EventTeamPublicDisplaySupport.LABEL_FORFEIT_WIN
+                    : EventTeamPublicDisplaySupport.LABEL_FORFEIT_LOSS);
+            vo.setAwayResultLabel(match.getWinnerEventTeamId().equals(match.getAwayEventTeamId())
+                    ? EventTeamPublicDisplaySupport.LABEL_FORFEIT_WIN
+                    : EventTeamPublicDisplaySupport.LABEL_FORFEIT_LOSS);
+        }
+        if (dq) {
+            vo.setOriginalHomeScore(match.getHomeScore());
+            vo.setOriginalAwayScore(match.getAwayScore());
+            vo.setHomeScore(null);
+            vo.setAwayScore(null);
+        }
     }
 
     private boolean isPubliclyVisible(BasketV4Match match) {

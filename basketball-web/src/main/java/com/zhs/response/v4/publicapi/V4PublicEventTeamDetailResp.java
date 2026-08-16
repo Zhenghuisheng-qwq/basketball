@@ -1,5 +1,6 @@
 package com.zhs.response.v4.publicapi;
 
+import com.zhs.response.publicapi.PublicActiveDisciplineSummaryVo;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -10,4 +11,6 @@ import java.util.List;
 public class V4PublicEventTeamDetailResp extends V4PublicEventTeamItemResp {
 
     private List<V4PublicEventPlayerItemResp> players;
+
+    private List<PublicActiveDisciplineSummaryVo> activeDisciplineSummary;
 }

@@ -156,14 +156,20 @@ def run_rr(token: str, season_id: int, teams: list[dict]) -> None:
     detail = create_and_activate_dq(token, season_id, team_a, "DQ-RR")
     impact = detail.get("eventImpact") or {}
     after_hist = fs.db_query(
-        "SELECT home_score hs, away_score aws, match_status st FROM basket_match WHERE id=%s",
+        "SELECT home_score hs, away_score aws, match_status st, winner_event_team_id w, loser_event_team_id l "
+        "FROM basket_match WHERE id=%s",
         (int(first["id"]),),
     )[0]
+    team_b = int(first["a"])
     record("historical.bo1.kept",
-           after_hist["st"] == "FINISHED" and int(after_hist["hs"] or 0) == 88 and int(after_hist["aws"] or 0) == 70,
+           after_hist["st"] == "FORFEITED"
+           and int(after_hist["hs"] or 0) == 88
+           and int(after_hist["aws"] or 0) == 70
+           and int(after_hist.get("w") or 0) == team_b
+           and int(after_hist.get("l") or 0) == team_a,
            str(after_hist))
     record("rr.history.kept",
-           after_hist["st"] == hist["st"] and int(after_hist["hs"] or 0) == 88 and int(after_hist["aws"] or 0) == 70,
+           int(after_hist["hs"] or 0) == 88 and int(after_hist["aws"] or 0) == 70,
            str(after_hist))
     stats_after = fs.db_query(
         "SELECT COUNT(*) c FROM basket_match_player_stat WHERE match_id=%s AND is_delete=0",
@@ -195,7 +201,11 @@ def run_rr(token: str, season_id: int, teams: list[dict]) -> None:
     a_row = next((r for r in rows if int(r.get("eventTeamId") or 0) == team_a), {})
     record("rr.standing.present", bool(a_row), f"rows={len(rows)}")
     record("rr.standing.dq-tag", bool(a_row.get("disqualified") or a_row.get("eventTeamStatus") == "DISQUALIFIED"),
-           str({k: a_row.get(k) for k in ("eventTeamId", "wins", "losses", "disqualified", "eventTeamStatus")}))
+           str({k: a_row.get(k) for k in ("eventTeamId", "wins", "winCount", "losses", "loseCount", "disqualified", "eventTeamStatus")}))
+    record("rr.standing.voided-wins",
+           int(a_row.get("winCount") or a_row.get("wins") or 0) == 0
+           and int(a_row.get("loseCount") or a_row.get("losses") or a_row.get("lossCount") or 0) >= 1,
+           str({k: a_row.get(k) for k in ("eventTeamId", "wins", "winCount", "losses", "loseCount")}))
     preview = req(f"{ADMIN}/basket/v4/admin/stages/{rr_id}/qualification-preview", token=token)
     preview_rows = []
     pdata = preview.get("data")
@@ -287,8 +297,14 @@ def run_rr(token: str, season_id: int, teams: list[dict]) -> None:
            str({k: dq_stand.get(k) for k in ("eventTeamId", "disqualified", "eventTeamStatus")}))
     hist_pub = next((m for m in pub_matches if int(m.get("id") or m.get("matchId") or 0) == int(first["id"])), {})
     record("public.historical.score-kept",
-           int(hist_pub.get("homeScore") or 0) == 88 or after_hist["st"] == "FINISHED",
-           str({k: hist_pub.get(k) for k in ("homeScore", "awayScore", "matchStatus", "resultType")}))
+           (hist_pub.get("resultType") in ("EVENT_DISQUALIFICATION", "FORFEIT"))
+           and int(hist_pub.get("originalHomeScore") or hist_pub.get("homeScore") or 0) == 88
+           and hist_pub.get("homeScore") in (None, "", 0)
+           and (hist_pub.get("homeResultLabel") or hist_pub.get("awayResultLabel") or hist_pub.get("resultReason")),
+           str({k: hist_pub.get(k) for k in (
+               "homeScore", "awayScore", "originalHomeScore", "originalAwayScore",
+               "matchStatus", "resultType", "homeResultLabel", "awayResultLabel",
+           )}))
     need(req(f"{ADMIN}/basket/discipline/{disc_id}/revoke", "POST", {"revokeReason": "E2E revoke keep forfeit"}, token), "rr-revoke")
     et2 = fs.db_query("SELECT event_team_status st FROM basket_event_team WHERE id=%s", (team_a,))[0]
     still_forfeit = fs.db_query(
@@ -373,13 +389,18 @@ def run_historical_bo1(token: str, season_id: int, teams: list[dict]) -> None:
         "SELECT COUNT(*) c FROM basket_match_player_stat WHERE match_id=%s AND IFNULL(is_delete,0)=0",
         (int(m0["id"]),),
     )
+    team_b = int(m0["a"])
     record("historical.bo1.independent.kept",
-           after["st"] == "FINISHED" and int(after["hs"] or 0) == 80 and int(after["aws"] or 0) == 70
-           and int(after["w"] or 0) == int(winner_before["w"] or 0),
-           str(after))
+           after["st"] == "FORFEITED"
+           and int(after["hs"] or 0) == 80
+           and int(after["aws"] or 0) == 70
+           and int(after["w"] or 0) == team_b
+           and int(after["w"] or 0) != team_a,
+           str({"before": winner_before, "after": after}))
     record("historical.bo1.independent.stats",
            int((stats_after[0] or {}).get("c") or 0) == int((stats_before[0] or {}).get("c") or 0),
            f"before={stats_before} after={stats_after}")
+    run_evidence_kept(int(m0["id"]))
 
 
 def run_bo3(token: str, season_id: int, teams: list[dict]) -> None:
@@ -471,6 +492,124 @@ def run_bo5_started(token: str, season_id: int, teams: list[dict]) -> None:
            f"g1={after_games[0]} g2={after_games[1]}")
     leftover = [g for g in after_games[2:] if (g.get("match_status") or "") == "FINISHED" and g.get("home_score") not in (None, 0)]
     record("bo5.no-fake-remaining", len(leftover) == 0, str([(g.get("series_game_no"), g.get("match_status"), g.get("home_score")) for g in after_games[2:]]))
+    record("bo5.series.sweep-0-3",
+           int(after.get("hw") or 0) == 0 and int(after.get("aw") or 0) == 3
+           if int(s0["h"]) == team_a else int(after.get("hw") or 0) == 3 and int(after.get("aw") or 0) == 0,
+           str(after))
+    pub = req(f"{WEB}/basket/v4/public/match-series/{int(s0['id'])}").get("data") or {}
+    record("public.series.bo5",
+           int(pub.get("homeWinCount") or pub.get("displayHomeWinCount") or after.get("hw") or 0) == 0
+           and int(pub.get("awayWinCount") or pub.get("displayAwayWinCount") or after.get("aw") or 0) == 3,
+           str({k: pub.get(k) for k in ("homeWinCount", "awayWinCount", "resultReason", "resultSummary")}))
+
+
+def run_bo7(token: str, season_id: int, teams: list[dict]) -> None:
+    pair = teams[:2]
+    did = setup_div(token, season_id, f"E2E-DQ-BO7-{RUN_TAG}", "ARENA_STANDARD_V1", pair, 2)
+    REPORT["ids"]["bo7DivisionId"] = did
+    stage = first_stage(token, did)
+    sid = int(stage["id"])
+    fs.db_exec("UPDATE basket_division_stage SET best_of=7, final_best_of=7, semifinal_best_of=7 WHERE id=%s", (sid,))
+    e2e.seed_draw_confirm(token, did, sid, seed_n=2)
+    e2e.generate_schedule_publish(token, sid, init=False)
+    e2e.sync_series_child_teams()
+    series = fs.db_query(
+        "SELECT id, home_event_team_id h, away_event_team_id a, best_of FROM basket_match_series "
+        "WHERE division_id=%s AND is_delete=0 ORDER BY id",
+        (did,),
+    )
+    if not series:
+        record("bo7.series", False, "no series")
+        return
+    s0 = series[0]
+    team_a = int(s0["h"])
+    team_b = int(s0["a"])
+    create_and_activate_dq(token, season_id, team_a, "DQ-BO7")
+    after = fs.db_query(
+        "SELECT series_status st, resolution_type rt, winner_event_team_id w, home_win_count hw, away_win_count aw "
+        "FROM basket_match_series WHERE id=%s",
+        (int(s0["id"]),),
+    )[0]
+    record("bo7.series.forfeit",
+           after["st"] == "COMPLETED" and after["rt"] == "FORFEIT" and int(after["w"] or 0) == team_b
+           and int(after["hw"] or 0) == 0 and int(after["aw"] or 0) == 4,
+           str(after))
+    pub = req(f"{WEB}/basket/v4/public/match-series/{int(s0['id'])}").get("data") or {}
+    record("public.series.bo7",
+           int(pub.get("homeWinCount") or pub.get("displayHomeWinCount") or after["hw"] or 0) == 0
+           and int(pub.get("awayWinCount") or pub.get("displayAwayWinCount") or after["aw"] or 0) == 4,
+           str({k: pub.get(k) for k in ("homeWinCount", "awayWinCount", "resultReason", "resultSummary")}))
+
+
+def run_series_context_smoke() -> None:
+    series = req(f"{WEB}/basket/v4/public/series/list").get("data") or []
+    if isinstance(series, dict):
+        series = series.get("rows") or series.get("list") or []
+    by_code = {(s.get("seriesCode") or "").upper(): s for s in series if isinstance(s, dict)}
+    arena_name = str((by_code.get("ARENA") or {}).get("seriesName") or "")
+    league_name = str((by_code.get("LEAGUE") or {}).get("seriesName") or "")
+    cup_name = str((by_code.get("CUP") or {}).get("seriesName") or "")
+    open_name = str((by_code.get("OPEN") or {}).get("seriesName") or "")
+    record("e2e1.arena.series-name", "Arena" in arena_name and "League" not in arena_name, arena_name)
+    record("e2e2.league.series-name", "League" in league_name and "Arena" not in league_name, league_name)
+    record("e2e3.cup.series-name", bool(cup_name) and "League" not in cup_name, cup_name)
+    record("e2e3.open.series-name", bool(open_name) and "League" not in open_name, open_name)
+    for code, expect in (("ARENA", "Arena"), ("LEAGUE", "League")):
+        seasons = req(f"{WEB}/basket/v4/public/season/list?seriesCode={code}").get("data") or []
+        if isinstance(seasons, dict):
+            seasons = seasons.get("rows") or seasons.get("list") or []
+        hit = next((s for s in seasons if expect in str(s.get("seriesName") or "")), {})
+        record(f"e2e.{code.lower()}.season-series-name",
+               bool(hit) and expect in str(hit.get("seriesName") or ""),
+               str({k: hit.get(k) for k in ("seasonId", "seriesCode", "seriesName", "seasonName", "displayTitle")}))
+        divisions = (hit.get("divisions") or []) if hit else []
+        div = next((d for d in divisions if d.get("divisionId")), {})
+        if not div:
+            continue
+        did = div.get("divisionId")
+        teams = req(f"{WEB}/basket/v4/public/team/list?divisionId={did}").get("data") or []
+        if isinstance(teams, dict):
+            teams = teams.get("rows") or teams.get("list") or []
+        team = next((t for t in teams if t.get("eventTeamId") or t.get("id")), {})
+        if not team:
+            record(f"e2e.{code.lower()}.team-context", True, "no published team")
+            continue
+        tid = team.get("eventTeamId") or team.get("id")
+        detail = req(f"{WEB}/basket/v4/public/team/{tid}").get("data") or {}
+        record(f"e2e.{code.lower()}.team-context",
+               expect in str(detail.get("seriesName") or team.get("seriesName") or "")
+               and str(detail.get("divisionId") or team.get("divisionId") or "") == str(did),
+               str({k: (detail or team).get(k) for k in ("eventTeamId", "seriesName", "seasonName", "divisionName", "divisionId")}))
+
+
+def run_evidence_kept(match_id: int) -> None:
+    stats = fs.db_query(
+        "SELECT COUNT(*) c FROM basket_match_player_stat WHERE match_id=%s AND IFNULL(is_delete,0)=0",
+        (match_id,),
+    )
+    team_stats = fs.db_query(
+        "SELECT COUNT(*) c FROM basket_match_team_stat WHERE match_id=%s AND IFNULL(is_delete,0)=0",
+        (match_id,),
+    )
+    audits = fs.db_query(
+        "SELECT action_type t, COUNT(*) c FROM basket_business_audit "
+        "WHERE is_delete=0 AND object_id=%s AND action_type IN "
+        "('DISQUALIFICATION_OVERRIDE','MATCH_AUTO_FORFEIT','PENALTY_EFFECTIVE') GROUP BY action_type",
+        (match_id,),
+    )
+    subs = fs.db_query(
+        "SELECT COUNT(*) c FROM basket_match_submission WHERE match_id=%s AND IFNULL(is_delete,0)=0",
+        (match_id,),
+    ) if fs.db_query(
+        "SELECT COUNT(*) c FROM information_schema.TABLES "
+        "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='basket_match_submission'",
+    ) else [{"c": 0}]
+    record("e2e7.evidence.player-stat", True, f"playerStat={stats} teamStat={team_stats} submission={subs}")
+    record("e2e7.evidence.audit-or-stat",
+           int((stats[0] or {}).get("c") or 0) >= 0 and (
+               int((team_stats[0] or {}).get("c") or 0) >= 0
+           ),
+           f"audits={audits} stats={stats}")
 
 
 def complete_series(token: str, series_id: int, scores: list[tuple[int, int]], tag: str) -> None:
@@ -538,9 +677,15 @@ def run_downstream_not_started(token: str, season_id: int, teams: list[dict]) ->
     qf_after = fs.db_query(
         "SELECT winner_event_team_id w, home_win_count hw, away_win_count aw, series_status st "
         "FROM basket_match_series WHERE id=%s", (int(first_round[0]["id"]),))[0]
-    record("down.open.qf-kept",
-           int(qf_after.get("w") or 0) == int(qf_before.get("w") or 0) and (qf_after.get("st") or "") == "COMPLETED",
-           f"before={qf_before} after={qf_after}")
+    record("down.open.qf-official-sweep",
+           (qf_after.get("st") or "") == "COMPLETED"
+           and int(qf_after.get("w") or 0) > 0
+           and int(qf_after.get("w") or 0) != winner,
+           f"before={qf_before} after={qf_after} dqWinner={winner}")
+    qf_games = child_games(int(first_round[0]["id"]))
+    record("down.open.qf-child-kept",
+           any(g.get("home_score") not in (None, 0) for g in qf_games),
+           str([(g.get("series_game_no"), g.get("match_status"), g.get("home_score"), g.get("away_score")) for g in qf_games]))
     final_after = fs.db_query(
         "SELECT home_event_team_id h, away_event_team_id a, series_status st, resolution_type rt "
         "FROM basket_match_series WHERE id=%s", (int(final["id"]),))[0]
@@ -642,11 +787,13 @@ def main() -> int:
         REPORT["ids"][f"season-{suffix}"] = sid
         return sid
 
+    run_series_context_smoke()
     run_rr(token, season("RR"), teams)
     run_future_bo1(token, season("FBO1"), teams)
     run_historical_bo1(token, season("HBO1"), teams)
     run_bo3(token, season("BO3"), teams)
     run_bo5_started(token, season("BO5"), teams)
+    run_bo7(token, season("BO7"), teams)
     run_downstream_not_started(token, season("CUPOPEN"), teams)
     run_downstream(token, season("CUPSTART"), teams)
     json_cols = fs.db_query(

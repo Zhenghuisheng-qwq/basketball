@@ -36,6 +36,9 @@ public class PublicPlayerDetailVo implements Serializable {
     @ApiModelProperty("当前参赛球队（支持多 Division 并行）")
     private List<PublicPlayerCurrentTeamVo> currentTeams;
 
+    @ApiModelProperty("当前有效球员处罚摘要，不含所属球队 DQ")
+    private List<PublicActiveDisciplineSummaryVo> activeDisciplineSummary;
+
     @ApiModelProperty("资料是否公开；false 时仅返回最小信息")
     private Boolean profilePublic;
 

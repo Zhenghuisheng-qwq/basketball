@@ -73,6 +73,8 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
     private BasketPublicMatchServiceImpl matchService;
     @Resource
     private BasketPublicDataCenterServiceImpl dataCenterService;
+    @Resource
+    private com.zhs.support.v4.PublicDisciplineDisplaySupport publicDisciplineDisplaySupport;
 
     @Override
     public PublicTeamDetailVo getTeam(Long teamId) {
@@ -270,6 +272,7 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
         vo.setCurrentMemberCount(team.getCurrentMemberCount());
         vo.setEstablishedDate(team.getEstablishedDate());
         vo.setLegacyTeam(team.getDivisionId() == null);
+        vo.setActiveDisciplineSummary(publicDisciplineDisplaySupport.listPermanentTeamActive(team.getId()));
         vo.setDivisionId(team.getDivisionId());
         if (team.getDivisionId() != null) {
             BasketDivision division = divisionDao.selectById(team.getDivisionId());

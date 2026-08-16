@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket;
 
 import com.zhs.basket.query.DisciplineQuery;
+import com.zhs.basket.req.DisciplineAnnouncementDraftReq;
 import com.zhs.basket.req.DisciplineCreateReq;
 import com.zhs.basket.req.DisciplineRevokeReq;
 import com.zhs.basket.service.IBasketDisciplineService;
@@ -83,6 +84,14 @@ public class BasketDisciplineController extends BaseController {
     @PostMapping("/{id}/retry-execution")
     public AjaxResult retryExecution(@PathVariable Long id) {
         return success(penaltyExecutionService.execute(id));
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:announcement:add')")
+    @Log(title = "球队与球员处罚", businessType = BusinessType.INSERT)
+    @PostMapping("/{id}/announcement-draft")
+    public AjaxResult generateAnnouncementDraft(@PathVariable Long id,
+                                                @RequestBody(required = false) DisciplineAnnouncementDraftReq req) {
+        return success(disciplineService.generateAnnouncementDraft(id, req));
     }
 
     @PreAuthorize("@ss.hasPermi('basket:discipline:revoke')")

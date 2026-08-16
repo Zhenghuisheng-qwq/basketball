@@ -63,7 +63,9 @@ export interface V4PublicDivisionDetail {
   divisionId: string
   seasonId: string
   seriesCode?: string
+  seriesName?: string
   seasonTitle?: string
+  seasonName?: string
   platformCode: string
   divisionName: string
   registrationMode?: string
@@ -95,6 +97,13 @@ export interface V4PublicEventTeamItem {
   eventTeamStatusName?: string
   disqualified?: boolean
   temporaryTeam?: boolean
+  divisionId?: string
+  divisionName?: string
+  seasonId?: string
+  seasonName?: string
+  seriesCode?: string
+  seriesName?: string
+  gameMode?: string
 }
 
 export interface V4PublicEventPlayerItem {
@@ -111,8 +120,26 @@ export interface V4PublicEventPlayerItem {
   isStarter?: number
 }
 
+export interface PublicActiveDisciplineSummary {
+  targetType?: string
+  penaltyCode?: string
+  penaltyLabel?: string
+  tagLabel?: string
+  description?: string
+  status?: string
+  statusLabel?: string
+  effectiveStartTime?: string
+  divisionId?: string
+  divisionName?: string
+  seasonId?: string
+  seasonName?: string
+  seriesName?: string
+  publicReason?: string | null
+}
+
 export interface V4PublicEventTeamDetail extends V4PublicEventTeamItem {
   players: V4PublicEventPlayerItem[]
+  activeDisciplineSummary?: PublicActiveDisciplineSummary[]
 }
 
 export interface V4PublicMatchItem {
@@ -136,6 +163,8 @@ export interface V4PublicMatchItem {
   awayTeamLogoUrl?: string
   homeScore?: number
   awayScore?: number
+  originalHomeScore?: number
+  originalAwayScore?: number
   winnerEventTeamId?: string
   matchStatus?: string
   publishStatus?: string
@@ -212,6 +241,8 @@ export interface V4PublicMatchDetail {
   venueText?: string
   homeScore?: number
   awayScore?: number
+  originalHomeScore?: number
+  originalAwayScore?: number
   winnerEventTeamId?: string
   homeTeam?: V4PublicEventTeamDetail
   awayTeam?: V4PublicEventTeamDetail

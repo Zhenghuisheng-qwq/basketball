@@ -12,6 +12,7 @@ import {
   type PublicTeamPageContext,
 } from './composables/usePublicTeamPage'
 import { mapV4MatchToTeamRecord, opponentAsTeam } from './utils/mapTeamMatch'
+import DisciplineStatusPanel from '@/components/discipline/DisciplineStatusPanel.vue'
 
 const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
 const router = useRouter()
@@ -89,6 +90,7 @@ function formatDateTime(match: TeamMatchRecord): string {
 
 function getStatusLabel(match: TeamMatchRecord): string {
   if (match.status === 'scheduled') return '未开始'
+  if (match.resultLabel) return match.resultLabel
   if (match.result === 'win') return '胜利'
   if (match.result === 'loss') return '失败'
   return '已结束'
@@ -128,7 +130,10 @@ function isCaptain(player: PublicTeamRosterItemVo): boolean {
 
 function openPlayerDetail(player: PublicTeamRosterItemVo) {
   if (!player.playerId) return
-  goToPlayerDetail(router, player.playerId, 'overview')
+  goToPlayerDetail(router, player.playerId, 'overview', {
+    ...(ctx.divisionId.value ? { divisionId: ctx.divisionId.value } : {}),
+    ...(ctx.seasonId.value ? { seasonId: ctx.seasonId.value } : {}),
+  })
 }
 
 function getOpponent(match: TeamMatchRecord) {
@@ -138,7 +143,11 @@ function getOpponent(match: TeamMatchRecord) {
 function goMatchStats(match: TeamMatchRecord) {
   router.push({
     path: `/tournament/team/${ctx.teamId.value}/stats`,
-    query: { matchId: match.id },
+    query: {
+      matchId: match.id,
+      ...(ctx.divisionId.value ? { divisionId: ctx.divisionId.value } : {}),
+      ...(ctx.seasonId.value ? { seasonId: ctx.seasonId.value } : {}),
+    },
   })
 }
 
@@ -157,6 +166,10 @@ function goMatchPage(page: number) {
 
 <template>
   <div class="team-overview">
+    <DisciplineStatusPanel
+      :items="ctx.teamView.value?.activeDisciplineSummary || ctx.detail.value?.activeDisciplineSummary || []"
+      title="赛事状态"
+    />
     <section class="overview-section roster-section">
       <div class="section-head">
         <div class="section-head-group">

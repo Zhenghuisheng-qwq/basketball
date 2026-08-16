@@ -99,11 +99,14 @@ class EventDisqualificationExecutionStrategyTest {
         PenaltyExecutionResultVo result = strategy.execute(record);
 
         assertEquals(PenaltyExecutionStatusEnum.EFFECTIVE.name(), result.getExecutionStatus());
-        assertEquals(1, result.getFutureMatchForfeitCount());
+        assertEquals(2, result.getFutureMatchForfeitCount());
         ArgumentCaptor<BasketMatchForfeitReq> captor = ArgumentCaptor.forClass(BasketMatchForfeitReq.class);
         verify(exceptionService, times(1)).forfeitMatch(captor.capture());
         assertEquals(2L, captor.getValue().getMatchId());
         assertEquals(101L, captor.getValue().getLoserEventTeamId());
+        ArgumentCaptor<BasketMatchForfeitReq> overrideCaptor = ArgumentCaptor.forClass(BasketMatchForfeitReq.class);
+        verify(exceptionService).overrideMatchOfficialResultForDisqualification(overrideCaptor.capture());
+        assertEquals(1L, overrideCaptor.getValue().getMatchId());
         verify(eventTeamMapper).updateById(any());
         verify(statsSettlementService).rebuildDivisionStats(10L);
     }
@@ -188,8 +191,8 @@ class EventDisqualificationExecutionStrategyTest {
         PenaltyExecutionResultVo result = strategy.execute(record);
 
         assertEquals(PenaltyExecutionStatusEnum.PARTIAL.name(), result.getExecutionStatus());
-        verify(winnerOfSeriesAdvanceSupport).rewireAfterSeriesResult(done);
-        verify(exceptionService, never()).forfeitSeries(any());
+        verify(exceptionService).applySeriesOfficialSweepForDisqualification(any());
+        verify(winnerOfSeriesAdvanceSupport, never()).rewireAfterSeriesResult(any());
         assertTrue(result.getWarnings().stream().anyMatch(w -> w.contains("\u7ba1\u7406\u5458")));
     }
 

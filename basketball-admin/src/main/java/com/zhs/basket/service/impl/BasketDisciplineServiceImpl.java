@@ -10,8 +10,13 @@ import com.zhs.basket.query.DisciplineQuery;
 import com.zhs.basket.req.AuditFieldInput;
 import com.zhs.basket.req.DisciplineCreateReq;
 import com.zhs.basket.req.DisciplineRevokeReq;
+import com.zhs.basket.service.IBasketAnnouncementService;
 import com.zhs.basket.service.IBasketDisciplineService;
 import com.zhs.basket.service.IPenaltyExecutionService;
+import com.zhs.basket.support.DisciplineAnnouncementDraftSupport;
+import com.zhs.basket.req.AnnouncementAddReq;
+import com.zhs.basket.req.DisciplineAnnouncementDraftReq;
+import com.zhs.basket.vo.DisciplineAnnouncementDraftVo;
 import com.zhs.basket.vo.PenaltyExecutionResultVo;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
 import com.zhs.basket.vo.DisciplineDetailVo;
@@ -45,10 +50,19 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
     @Autowired private BasketBusinessAuditWriter auditWriter;
     @Autowired private IPenaltyExecutionService penaltyExecutionService;
     @Autowired private BasketDisciplineExecutionDetailMapper executionDetailMapper;
+    @Autowired private IBasketAnnouncementService announcementService;
+    @Autowired private BasketAnnouncementMapper announcementMapper;
 
     @Override
     public List<DisciplineListVo> list(DisciplineQuery query) {
-        return disciplineRecordMapper.selectList(query != null ? query : new DisciplineQuery());
+        List<DisciplineListVo> rows = disciplineRecordMapper.selectList(query != null ? query : new DisciplineQuery());
+        Date now = new Date();
+        if (rows != null) {
+            for (DisciplineListVo row : rows) {
+                fillListDisplay(row, now);
+            }
+        }
+        return rows;
     }
 
     @Override
@@ -58,6 +72,7 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
             throw new ServiceException("处罚记录不存在");
         }
         fillEventImpact(detail);
+        fillAnnouncementStatus(detail);
         return detail;
     }
 
@@ -216,6 +231,40 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         log.setUpdateTime(now);
         log.setIsDelete(NOT_DELETED);
         suspensionLogMapper.insert(log);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DisciplineAnnouncementDraftVo generateAnnouncementDraft(Long id, DisciplineAnnouncementDraftReq req) {
+        DisciplineDetailVo detail = detail(id);
+        if (detail.getAnnouncementId() != null) {
+            BasketAnnouncement existing = announcementMapper.selectById(detail.getAnnouncementId());
+            if (existing != null && (existing.getIsDelete() == null || existing.getIsDelete() == 0)) {
+                return toDraftVo(detail, existing, false);
+            }
+        }
+        String targetName = DisciplineAnnouncementDraftSupport.resolveTargetName(
+                detail.getTargetType(), detail.getPlayerNo(), detail.getPlayerName(),
+                detail.getEventTeamName(), detail.getTeamName(), detail.getEventTeamId(),
+                detail.getTeamId(), detail.getPlayerId());
+        String title = DisciplineAnnouncementDraftSupport.buildTitle(targetName, detail.getPenaltyCode());
+        String publicStatement = req == null ? null : req.getPublicStatement();
+        String content = DisciplineAnnouncementDraftSupport.buildContent(
+                targetName, detail.getSeriesName(), detail.getSeasonName(),
+                detail.getPenaltyCode(), detail.getEffectiveStartTime(), publicStatement);
+        AnnouncementAddReq addReq = new AnnouncementAddReq();
+        addReq.setCategoryCode("NOTICE");
+        addReq.setTitle(title);
+        addReq.setSummary(targetName + " " + DisciplineAnnouncementDraftSupport.penaltyLabel(detail.getPenaltyCode()));
+        addReq.setContentText(content);
+        addReq.setPublicScope("PUBLIC");
+        addReq.setSeasonId(detail.getSeasonId());
+        Long announcementId = announcementService.add(addReq);
+        disciplineRecordMapper.updateAnnouncementId(id, announcementId);
+        auditWriter.writeAudit("DISCIPLINE", "DISCIPLINE_RECORD", id, "LINK_ANNOUNCEMENT",
+                "生成处罚公告草稿", null, null);
+        BasketAnnouncement created = announcementMapper.selectById(announcementId);
+        return toDraftVo(detail, created, true);
     }
 
     @Override
@@ -504,6 +553,42 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
             return new RestrictionSubject(DisciplineTargetTypeEnum.PERMANENT_TEAM.getCode(), record.getTeamId());
         }
         return null;
+    }
+
+    private void fillListDisplay(DisciplineListVo row, Date now) {
+        if (row == null) {
+            return;
+        }
+        if (DisciplineRecordStatusEnum.ACTIVE.name().equals(row.getRecordStatus())
+                && row.getEffectiveEndTime() != null
+                && now != null
+                && row.getEffectiveEndTime().before(now)) {
+            row.setBusinessStatus("EXPIRED");
+        } else {
+            row.setBusinessStatus(row.getRecordStatus());
+        }
+        row.setAnnouncementStatusName(DisciplineAnnouncementDraftSupport.resolveAnnouncementStatusName(row.getAnnouncementStatus()));
+    }
+
+    private void fillAnnouncementStatus(DisciplineDetailVo detail) {
+        if (detail == null) {
+            return;
+        }
+        detail.setAnnouncementStatusName(DisciplineAnnouncementDraftSupport.resolveAnnouncementStatusName(detail.getAnnouncementStatus()));
+    }
+
+    private DisciplineAnnouncementDraftVo toDraftVo(DisciplineDetailVo detail, BasketAnnouncement announcement, boolean created) {
+        DisciplineAnnouncementDraftVo vo = new DisciplineAnnouncementDraftVo();
+        vo.setDisciplineId(detail.getId());
+        vo.setCreated(created);
+        if (announcement != null) {
+            vo.setAnnouncementId(announcement.getId());
+            vo.setTitle(announcement.getTitle());
+            vo.setContentText(announcement.getContentText());
+            vo.setAnnouncementStatus(announcement.getAnnouncementStatus());
+            vo.setAnnouncementStatusName(DisciplineAnnouncementDraftSupport.resolveAnnouncementStatusName(announcement.getAnnouncementStatus()));
+        }
+        return vo;
     }
 
     private void fillEventImpact(DisciplineDetailVo detail) {

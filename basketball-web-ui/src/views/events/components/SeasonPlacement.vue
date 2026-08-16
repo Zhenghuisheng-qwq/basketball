@@ -52,7 +52,10 @@ watch(
 
 function openTeam(teamId?: string | null) {
   if (!teamId) return
-  router.push(`/tournament/team/${teamId}/overview`)
+  router.push({
+    path: `/tournament/team/${teamId}/overview`,
+    query: ctx?.divisionId.value ? { divisionId: ctx.divisionId.value } : {},
+  })
 }
 </script>
 

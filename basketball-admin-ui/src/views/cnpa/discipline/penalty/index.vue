@@ -54,37 +54,58 @@
     </el-form>
 
     <el-table :data="displayRows" v-loading="loading" border>
-      <el-table-column label="处罚编号" prop="recordNo" min-width="150" />
-      <el-table-column label="处罚对象类型" prop="targetType" width="120">
-        <template #default="scope">{{ formatDisciplineTargetType(scope.row.targetType) }}</template>
-      </el-table-column>
+      <el-table-column label="处罚编号" prop="recordNo" min-width="150" fixed />
       <el-table-column label="处罚对象" min-width="160">
         <template #default="scope">{{ formatDisciplineTargetName(scope.row) }}</template>
       </el-table-column>
-      <el-table-column label="所属赛季" min-width="180">
+      <el-table-column label="对象类型" width="100">
+        <template #default="scope">{{ formatDisciplineTargetType(scope.row.targetType) }}</template>
+      </el-table-column>
+      <el-table-column label="所属赛事" min-width="160">
         <template #default="scope">{{ formatDisciplineSeasonLabel(scope.row) }}</template>
       </el-table-column>
-      <el-table-column label="处罚类型" width="110">
-        <template #default="scope">{{ formatDisciplineType(scope.row.disciplineType) }}</template>
+      <el-table-column label="所属 Division" min-width="130">
+        <template #default="scope">{{ formatDisciplineDivisionLabel(scope.row) }}</template>
       </el-table-column>
-      <el-table-column label="处罚措施" width="140">
+      <el-table-column label="处罚类型" width="130">
         <template #default="scope">{{ formatDisciplinePenaltyCode(scope.row.penaltyCode) }}</template>
       </el-table-column>
-      <el-table-column label="处罚原因" prop="reasonText" min-width="140" show-overflow-tooltip />
+      <el-table-column label="处罚原因摘要" min-width="150" show-overflow-tooltip>
+        <template #default="scope">{{ formatReasonSummary(scope.row.reasonText) }}</template>
+      </el-table-column>
       <el-table-column label="生效时间" width="170">
         <template #default="scope">{{ parseTime(scope.row.effectiveStartTime) }}</template>
       </el-table-column>
       <el-table-column label="失效时间" width="170">
         <template #default="scope">{{ parseTime(scope.row.effectiveEndTime) }}</template>
       </el-table-column>
-      <el-table-column label="状态" prop="recordStatus" width="90">
-        <template #default="scope">{{ formatDisciplineRecordStatus(scope.row.recordStatus) }}</template>
+      <el-table-column label="业务状态" width="100">
+        <template #default="scope">
+          <el-tag size="small" :type="businessStatusTagType(scope.row.businessStatus || scope.row.recordStatus)">
+            {{ formatDisciplineBusinessStatus(scope.row) }}
+          </el-tag>
+        </template>
       </el-table-column>
-      <el-table-column label="操作" width="220" fixed="right">
+      <el-table-column label="执行状态" width="110">
+        <template #default="scope">
+          <el-tag v-if="scope.row.executionStatus" size="small" :type="executionStatusTagType(scope.row.executionStatus)">
+            {{ formatDisciplineExecutionStatus(scope.row.executionStatus) }}
+          </el-tag>
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="赛事影响" min-width="220">
+        <template #default="scope">{{ formatEventImpactSummary(scope.row) }}</template>
+      </el-table-column>
+      <el-table-column label="公告状态" width="90">
+        <template #default="scope">{{ formatAnnouncementStatus(scope.row) }}</template>
+      </el-table-column>
+      <el-table-column label="操作" width="280" fixed="right">
         <template #default="scope">
           <el-button link type="primary" @click="showDetail(scope.row.id)" v-hasPermi="['basket:discipline:query']">详情</el-button>
           <el-button link type="success" v-if="scope.row.recordStatus === 'DRAFT'" @click="doActivate(scope.row.id)" v-hasPermi="['basket:discipline:activate']">生效</el-button>
-          <el-button link type="danger" v-if="scope.row.recordStatus === 'ACTIVE'" @click="doRevoke(scope.row.id)" v-hasPermi="['basket:discipline:revoke']">解除处罚</el-button>
+          <el-button link type="danger" v-if="scope.row.recordStatus === 'ACTIVE'" @click="doRevoke(scope.row.id)" v-hasPermi="['basket:discipline:revoke']">撤销处罚</el-button>
+          <el-button link type="warning" v-if="canRetryExecution(scope.row)" @click="doRetryExecution(scope.row.id)" v-hasPermi="['basket:discipline:activate']">重试执行</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -239,57 +260,70 @@
       </template>
     </el-dialog>
 
-    <el-drawer v-model="detailOpen" title="处罚详情" size="560px">
-      <el-descriptions v-if="detail" :column="1" border>
-        <el-descriptions-item label="处罚编号">{{ detail.recordNo }}</el-descriptions-item>
-        <el-descriptions-item label="处罚对象类型">{{ formatDisciplineTargetType(detail.targetType) }}</el-descriptions-item>
-        <el-descriptions-item label="处罚对象">{{ formatDisciplineTargetName(detail) }}</el-descriptions-item>
-        <el-descriptions-item label="所属赛季">{{ formatDisciplineSeasonLabel(detail) }}</el-descriptions-item>
-        <el-descriptions-item v-if="detail.targetType === 'PLAYER' && detail.teamName" label="所属球队">{{ detail.teamName }}</el-descriptions-item>
-        <el-descriptions-item label="处罚类型">{{ formatDisciplineType(detail.disciplineType) }}</el-descriptions-item>
-        <el-descriptions-item label="处罚措施">{{ formatDisciplinePenaltyCode(detail.penaltyCode) }}</el-descriptions-item>
-        <el-descriptions-item label="标题">{{ detail.title }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ formatDisciplineRecordStatus(detail.recordStatus) }}</el-descriptions-item>
-        <el-descriptions-item label="处罚原因">{{ detail.reasonText }}</el-descriptions-item>
-        <el-descriptions-item v-if="showsMatchSuspension(detail.penaltyCode)" label="禁赛场次">{{ detail.matchSuspensionCount }}</el-descriptions-item>
-        <el-descriptions-item v-if="showsMatchSuspension(detail.penaltyCode)" label="剩余禁赛">{{ detail.matchSuspensionRemaining }}</el-descriptions-item>
-        <el-descriptions-item v-if="showsPointDeduction(detail.penaltyCode) || detail.pointDeduction" label="扣除积分">{{ detail.pointDeduction }}</el-descriptions-item>
-        <el-descriptions-item v-if="showsDateRange(detail.penaltyCode) || detail.effectiveStartTime" label="生效时间">{{ parseTime(detail.effectiveStartTime) }}</el-descriptions-item>
-        <el-descriptions-item v-if="showsDateRange(detail.penaltyCode) || detail.effectiveEndTime" label="结束时间">{{ parseTime(detail.effectiveEndTime) || '-' }}</el-descriptions-item>
-      </el-descriptions>
-      <el-descriptions v-if="detail.eventImpact || detail.penaltyCode === 'EVENT_DISQUALIFICATION'" :column="1" border class="mt16" title="赛事影响">
-        <template #title>赛事影响</template>
-        <el-descriptions-item label="处罚对象">{{ formatDisciplineTargetName(detail) }}</el-descriptions-item>
-        <el-descriptions-item label="赛事">{{ formatDisciplineSeasonLabel(detail) }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ formatDisciplineExecutionStatus(detail.eventImpact?.executionStatus || detail.executionStatus) }}</el-descriptions-item>
-        <el-descriptions-item label="赛事资格">{{ eventTeamStatusText(detail) }}</el-descriptions-item>
-        <el-descriptions-item label="Execution Status">{{ formatDisciplineExecutionStatus(detail.eventImpact?.executionStatus || detail.executionStatus) }}</el-descriptions-item>
-        <el-descriptions-item label="Match Auto Forfeit">{{ detail.eventImpact?.futureMatchForfeitCount ?? detail.executionMatchForfeitCount ?? 0 }}</el-descriptions-item>
-        <el-descriptions-item label="Series Auto Forfeit">{{ detail.eventImpact?.seriesForfeitCount ?? detail.executionSeriesForfeitCount ?? 0 }}</el-descriptions-item>
-        <el-descriptions-item label="Qualification Removed">{{ detail.eventImpact?.qualificationRemovedCount ?? detail.executionQualificationRemovedCount ?? 0 }}</el-descriptions-item>
-        <el-descriptions-item label="Warning Count">{{ detail.eventImpact?.warningCount ?? detail.executionWarningCount ?? 0 }}</el-descriptions-item>
-        <el-descriptions-item label="执行时间">{{ parseTime(detail.eventImpact?.executedTime || detail.executedTime) || '-' }}</el-descriptions-item>
-        <el-descriptions-item v-if="detail.eventImpact?.warnings?.length" label="管理员提示">
-          <div v-for="(warn, idx) in detail.eventImpact.warnings" :key="idx">{{ warn }}</div>
-        </el-descriptions-item>
-        <el-descriptions-item v-if="detail.eventImpact?.errorMessage || detail.executionError" label="失败原因">{{ detail.eventImpact?.errorMessage || detail.executionError }}</el-descriptions-item>
-      </el-descriptions>
-      <el-table
-        v-if="(detail.executionDetails || detail.eventImpact?.details || []).length"
-        :data="detail.executionDetails || detail.eventImpact?.details || []"
-        border
-        class="mt16"
-        size="small"
-      >
-        <el-table-column label="动作" prop="actionType" min-width="180" />
-        <el-table-column label="对象类型" prop="targetType" width="120" />
-        <el-table-column label="对象ID" prop="targetId" width="100" />
-        <el-table-column label="结果" prop="executionStatus" width="90" />
-        <el-table-column label="说明" prop="resultMessage" min-width="220" show-overflow-tooltip />
-      </el-table>
-      <div v-if="canRetryExecution(detail)" class="mt16">
-        <el-button type="warning" @click="doRetryExecution(detail.id)" v-hasPermi="['basket:discipline:activate']">重试赛事自动处理</el-button>
-      </div>
+    <el-drawer v-model="detailOpen" title="处罚详情" size="680px">
+      <template v-if="detail">
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="处罚编号">{{ detail.recordNo }}</el-descriptions-item>
+          <el-descriptions-item label="处罚对象">{{ formatDisciplineTargetName(detail) }}</el-descriptions-item>
+          <el-descriptions-item label="对象类型">{{ formatDisciplineTargetType(detail.targetType) }}</el-descriptions-item>
+          <el-descriptions-item label="所属赛事">{{ formatDisciplineSeasonLabel(detail) }}</el-descriptions-item>
+          <el-descriptions-item label="所属 Division">{{ formatDisciplineDivisionLabel(detail) }}</el-descriptions-item>
+          <el-descriptions-item v-if="detail.targetType === 'PLAYER' && detail.teamName" label="所属球队">{{ detail.teamName }}</el-descriptions-item>
+          <el-descriptions-item label="处罚类型">{{ formatDisciplinePenaltyCode(detail.penaltyCode) }}</el-descriptions-item>
+          <el-descriptions-item label="标题">{{ detail.title }}</el-descriptions-item>
+          <el-descriptions-item label="业务状态">
+            <el-tag size="small" :type="businessStatusTagType(detail.recordStatus)">{{ formatDisciplineBusinessStatus(detail) }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="执行状态">
+            <el-tag v-if="detail.executionStatus" size="small" :type="executionStatusTagType(detail.executionStatus)">
+              {{ formatDisciplineExecutionStatus(detail.executionStatus) }}
+            </el-tag>
+            <span v-else>-</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="处罚原因">{{ detail.reasonText }}</el-descriptions-item>
+          <el-descriptions-item v-if="showsMatchSuspension(detail.penaltyCode)" label="禁赛场次">{{ detail.matchSuspensionCount }}</el-descriptions-item>
+          <el-descriptions-item v-if="showsMatchSuspension(detail.penaltyCode)" label="剩余禁赛">{{ detail.matchSuspensionRemaining }}</el-descriptions-item>
+          <el-descriptions-item v-if="showsPointDeduction(detail.penaltyCode) || detail.pointDeduction" label="扣除积分">{{ detail.pointDeduction }}</el-descriptions-item>
+          <el-descriptions-item label="生效时间">{{ parseTime(detail.effectiveStartTime) || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="失效时间">{{ parseTime(detail.effectiveEndTime) || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="公告状态">{{ formatAnnouncementStatus(detail) }}</el-descriptions-item>
+        </el-descriptions>
+
+        <el-descriptions v-if="detail.eventImpact || detail.penaltyCode === 'EVENT_DISQUALIFICATION'" :column="1" border class="mt16">
+          <template #title>赛事执行结果</template>
+          <el-descriptions-item label="EventTeam Status">{{ eventTeamStatusText(detail) }}</el-descriptions-item>
+          <el-descriptions-item label="Match Auto Forfeit">{{ detail.eventImpact?.futureMatchForfeitCount ?? detail.executionMatchForfeitCount ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="Series Auto Forfeit">{{ detail.eventImpact?.seriesForfeitCount ?? detail.executionSeriesForfeitCount ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="Qualification Removed">{{ detail.eventImpact?.qualificationRemovedCount ?? detail.executionQualificationRemovedCount ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="Warning">{{ detail.eventImpact?.warningCount ?? detail.executionWarningCount ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="Executed Time">{{ parseTime(detail.eventImpact?.executedTime || detail.executedTime) || '-' }}</el-descriptions-item>
+          <el-descriptions-item v-if="detail.eventImpact?.warnings?.length" label="管理员提示">
+            <div v-for="(warn, idx) in detail.eventImpact.warnings" :key="idx">{{ warn }}</div>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="detail.eventImpact?.errorMessage || detail.executionError" label="失败原因">{{ detail.eventImpact?.errorMessage || detail.executionError }}</el-descriptions-item>
+        </el-descriptions>
+
+        <el-table
+          v-if="(detail.executionDetails || detail.eventImpact?.details || []).length"
+          :data="detail.executionDetails || detail.eventImpact?.details || []"
+          border
+          class="mt16"
+          size="small"
+        >
+          <el-table-column label="动作" prop="actionType" min-width="200" />
+          <el-table-column label="对象类型" prop="targetType" width="120" />
+          <el-table-column label="对象ID" prop="targetId" width="100" />
+          <el-table-column label="结果" prop="executionStatus" width="90" />
+          <el-table-column label="说明" prop="resultMessage" min-width="220" show-overflow-tooltip />
+        </el-table>
+
+        <div class="mt16 drawer-actions">
+          <el-button v-if="detail.recordStatus === 'DRAFT'" type="success" @click="doActivate(detail.id)" v-hasPermi="['basket:discipline:activate']">生效</el-button>
+          <el-button v-if="detail.recordStatus === 'ACTIVE'" type="danger" @click="doRevoke(detail.id)" v-hasPermi="['basket:discipline:revoke']">撤销处罚</el-button>
+          <el-button v-if="canRetryExecution(detail)" type="warning" @click="doRetryExecution(detail.id)" v-hasPermi="['basket:discipline:activate']">重试执行</el-button>
+          <el-button type="primary" plain @click="doGenerateAnnouncement" v-hasPermi="['basket:announcement:add']">生成处罚公告</el-button>
+        </div>
+      </template>
     </el-drawer>
   </div>
 </template>
@@ -300,6 +334,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   activateDiscipline,
   createDiscipline,
+  generateDisciplineAnnouncementDraft,
   getDiscipline,
   retryDisciplineExecution,
   listDiscipline,
@@ -315,12 +350,18 @@ import {
   DISCIPLINE_TARGET_TYPE_OPTIONS,
   DISCIPLINE_TYPE_OPTIONS,
   formatDisciplinePenaltyCode,
-  formatDisciplineRecordStatus,
   formatDisciplineSeasonLabel,
+  formatDisciplineDivisionLabel,
+  formatDisciplineBusinessStatus,
   formatDisciplineTargetName,
   formatDisciplineTargetType,
   formatDisciplineType,
   formatDisciplineExecutionStatus,
+  formatAnnouncementStatus,
+  formatEventImpactSummary,
+  formatReasonSummary,
+  executionStatusTagType,
+  businessStatusTagType,
   formatSeasonStatus,
   showsDateRange,
   showsMatchSuspension,
@@ -711,7 +752,7 @@ async function doActivate(id: number) {
 function canRetryExecution(row?: { penaltyCode?: string; executionStatus?: string; eventImpact?: { executionStatus?: string } }) {
   if (!row || row.penaltyCode !== 'EVENT_DISQUALIFICATION') return false
   const status = row.eventImpact?.executionStatus || row.executionStatus
-  return status === 'FAILED' || status === 'PARTIAL' || status === 'PENDING'
+  return status === 'FAILED' || status === 'PARTIAL'
 }
 
 async function doRetryExecution(id: number) {
@@ -723,9 +764,26 @@ async function doRetryExecution(id: number) {
 }
 
 async function doRevoke(id: number) {
-  const { value } = await ElMessageBox.prompt('请输入解除原因', '解除处罚', { inputType: 'textarea' })
+  const { value } = await ElMessageBox.prompt('请输入解除原因', '撤销处罚', { inputType: 'textarea' })
   await revokeDiscipline(id, { revokeReason: value })
-  ElMessage.success('处罚已解除')
+  ElMessage.success('处罚已撤销')
+  if (detail.value?.id === id) {
+    await showDetail(id)
+  }
+  loadList()
+}
+
+async function doGenerateAnnouncement() {
+  if (!detail.value?.id) return
+  const { value } = await ElMessageBox.prompt(
+    '可填写对外公开说明。内部处罚原因不会自动带入公告，避免后台备注泄漏。留空则仅生成结构化草稿。',
+    '生成处罚公告草稿',
+    { inputType: 'textarea', inputPlaceholder: '可选：公开说明', confirmButtonText: '生成草稿', inputValidator: () => true }
+  )
+  const res = await generateDisciplineAnnouncementDraft(detail.value.id, { publicStatement: value || undefined })
+  const data = res.data || {}
+  ElMessage.success(data.created === false ? '已关联现有公告草稿' : '已生成公告草稿，不会自动发布')
+  await showDetail(detail.value.id)
   loadList()
 }
 
@@ -752,5 +810,10 @@ onMounted(async () => {
   margin-top: 6px;
   color: var(--el-text-color-secondary);
   font-size: 12px;
+}
+.drawer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 </style>

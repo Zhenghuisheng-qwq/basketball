@@ -8,6 +8,8 @@ import {
   getPublicPlayerMatchPage,
   getPublicPlayerSeasonStat,
 } from '@/api/publicPlayer'
+import { getV4PublicMatchList } from '@/api/v4Public'
+import { mapV4MatchToTeamRecord } from '@/views/tournament/team/utils/mapTeamMatch'
 import PlayerHero from './components/PlayerHero.vue'
 import PlayerTabs from './components/PlayerTabs.vue'
 import PlayerOverview from './components/PlayerOverview.vue'
@@ -29,6 +31,7 @@ const route = useRoute()
 const router = useRouter()
 
 const playerId = computed(() => resolvePlayerId(route.params.playerId as string))
+const queryDivisionId = computed(() => String(route.query.divisionId || '').trim())
 const playerDetail = ref<PlayerDetailData | null>(null)
 const loadState = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const loadError = ref('')
@@ -73,15 +76,68 @@ async function loadPlayer() {
       loadState.value = 'empty'
       return
     }
-    const profile = mapPublicPlayerProfile(rawDetail)
+    const profile = mapPublicPlayerProfile(rawDetail, { divisionId: queryDivisionId.value })
     const detail = buildEmptyPlayerDetail(profile)
-    const matches = (matchRes.data?.records ?? []).map((item) =>
+    let matches = (matchRes.data?.records ?? []).map((item) =>
       mapPublicPlayerMatch(item, profile.currentTeamId, profile.currentTeamName),
     )
+    const contextDivisionId = queryDivisionId.value || profile.divisionId
+    if (contextDivisionId && profile.eventTeamId) {
+      try {
+        const v4Res = await getV4PublicMatchList({
+          divisionId: contextDivisionId,
+          eventTeamId: profile.eventTeamId,
+        })
+        matches = (v4Res.data ?? []).map((item) => {
+          const mapped = mapV4MatchToTeamRecord(item, profile.eventTeamId || profile.currentTeamId)
+          return {
+            id: mapped.id,
+            matchId: mapped.id,
+            date: mapped.date,
+            tournamentName: profile.seriesName || profile.seasonName || '公开赛事',
+            stageName: mapped.competition,
+            teamName: profile.currentTeamName,
+            teamId: profile.eventTeamId || profile.currentTeamId,
+            teamLogoUrl: profile.currentTeamLogoUrl,
+            opponentName: mapped.opponentName || '对手',
+            opponentId: mapped.opponentId,
+            opponentLogoUrl: mapped.opponentLogoUrl || '',
+            result: mapped.result === 'win' ? 'WIN' : 'LOSS',
+            resultLabel: mapped.resultType === 'EVENT_DISQUALIFICATION'
+              ? (mapped.result === 'win' ? '对手取消资格判负' : '球队取消资格判负')
+              : mapped.resultLabel,
+            teamScore: mapped.teamScore ?? 0,
+            opponentScore: mapped.opponentScore ?? 0,
+            originalTeamScore: mapped.originalTeamScore,
+            originalOpponentScore: mapped.originalOpponentScore,
+            seriesScoreText: mapped.seriesScoreText,
+            minutes: 0,
+            points: 0,
+            rebounds: 0,
+            assists: 0,
+            steals: 0,
+            blocks: 0,
+            turnovers: 0,
+            fouls: 0,
+            fieldGoalsMade: null,
+            fieldGoalsAttempted: null,
+            threePointsMade: null,
+            threePointsAttempted: null,
+            freeThrowsMade: null,
+            freeThrowsAttempted: null,
+          }
+        })
+      } catch {
+        // keep global match fallback
+      }
+    }
     detail.recentMatches = matches.slice(0, 5)
     detail.allMatches = matches
-    detail.careerStats = mapPublicPlayerSeasonStats(statRes.data ?? [])
-    detail.seasonStageOptions = mapSeasonStageOptions(statRes.data ?? [])
+    const seasonStats = (statRes.data ?? []).filter((row) =>
+      queryDivisionId.value ? String(row.divisionId || '') === queryDivisionId.value : true,
+    )
+    detail.careerStats = mapPublicPlayerSeasonStats(seasonStats.length ? seasonStats : (statRes.data ?? []))
+    detail.seasonStageOptions = mapSeasonStageOptions(seasonStats.length ? seasonStats : (statRes.data ?? []))
     detail.honors = mapPublicPlayerHonors(honorRes.data?.records ?? [])
     playerDetail.value = detail
     loadState.value = 'success'
@@ -106,7 +162,7 @@ function setTab(tab: PlayerDetailTab) {
 }
 
 watch(
-  playerId,
+  [playerId, queryDivisionId],
   () => {
     void loadPlayer()
   },

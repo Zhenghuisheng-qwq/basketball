@@ -40,6 +40,8 @@ public interface BasketDisciplineRecordMapper {
 
     int bindEventTeamId(@Param("id") Long id, @Param("eventTeamId") Long eventTeamId);
 
+    int updateAnnouncementId(@Param("id") Long id, @Param("announcementId") Long announcementId);
+
     BasketDisciplineRecord selectActiveMatchSuspension(@Param("seasonId") Long seasonId,
             @Param("memberId") Long memberId, @Param("now") Date now);
 }

@@ -9,6 +9,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 @Data
 @ApiModel("公开球队详情")
@@ -50,4 +51,6 @@ public class PublicTeamDetailVo implements Serializable {
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
     private Date establishedDate;
+
+    private List<PublicActiveDisciplineSummaryVo> activeDisciplineSummary;
 }

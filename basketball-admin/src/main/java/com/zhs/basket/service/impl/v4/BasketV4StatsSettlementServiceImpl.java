@@ -236,6 +236,17 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
         }
     }
 
+    private Set<Long> loadDisqualificationVoidedMatchIds(Long divisionId) {
+        List<BasketV4Match> matches = matchMapper.selectFinishedPublishedByDivisionId(divisionId);
+        Set<Long> ids = new HashSet<>();
+        for (BasketV4Match match : matches) {
+            if (MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus()) && match.getId() != null) {
+                ids.add(match.getId());
+            }
+        }
+        return ids;
+    }
+
     private void rebuildStanding(Long divisionId, Long seasonId) {
         List<BasketV4Match> matches = matchMapper.selectFinishedPublishedByDivisionId(divisionId);
         List<BasketEventTeam> teams = eventTeamMapper.selectStandingEligibleByDivisionId(divisionId);
@@ -261,7 +272,7 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
             int winPoints = winPointsByStage.getOrDefault(match.getStageId(), WIN_POINTS);
             int lossPoints = lossPointsByStage.getOrDefault(match.getStageId(), LOSE_POINTS);
             applyMatchToStanding(aggMap, match.getHomeEventTeamId(), match.getAwayEventTeamId(),
-                    match.getHomeScore(), match.getAwayScore(), winPoints, lossPoints);
+                    match.getWinnerEventTeamId(), match.getHomeScore(), match.getAwayScore(), winPoints, lossPoints);
         }
         List<StandingAgg> sorted = aggMap.values().stream()
                 .sorted(Comparator.comparingInt(StandingAgg::getWinCount).reversed()
@@ -308,19 +319,22 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
     }
 
     private void applyMatchToStanding(Map<Long, StandingAgg> aggMap, Long homeId, Long awayId,
-                                      int homeScore, int awayScore, int winPoints, int lossPoints) {
+                                      Long winnerId, int homeScore, int awayScore, int winPoints, int lossPoints) {
         StandingAgg home = aggMap.computeIfAbsent(homeId, id -> new StandingAgg(id, null, null));
         StandingAgg away = aggMap.computeIfAbsent(awayId, id -> new StandingAgg(id, null, null));
         home.pointFor += homeScore;
         home.pointAgainst += awayScore;
         away.pointFor += awayScore;
         away.pointAgainst += homeScore;
-        if (homeScore > awayScore) {
+        if (winnerId == null) {
+            return;
+        }
+        if (winnerId.equals(homeId)) {
             home.winCount++;
             home.standingPoints += winPoints;
             away.loseCount++;
             away.standingPoints += lossPoints;
-        } else if (awayScore > homeScore) {
+        } else if (winnerId.equals(awayId)) {
             away.winCount++;
             away.standingPoints += winPoints;
             home.loseCount++;
@@ -408,9 +422,13 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
     }
 
     private void rebuildTeamStat(Long divisionId, Long seasonId) {
+        Set<Long> voidedMatchIds = loadDisqualificationVoidedMatchIds(divisionId);
         List<BasketV4MatchTeamStat> rows = matchTeamStatMapper.selectByDivisionId(divisionId);
         Map<Long, TeamStatAgg> aggMap = new HashMap<>();
         for (BasketV4MatchTeamStat row : rows) {
+            if (row.getMatchId() != null && voidedMatchIds.contains(row.getMatchId())) {
+                continue;
+            }
             TeamStatAgg agg = aggMap.computeIfAbsent(row.getEventTeamId(), TeamStatAgg::new);
             agg.matchCount++;
             if (Integer.valueOf(1).equals(row.getIsWinner())) {
@@ -453,9 +471,13 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
     }
 
     private void rebuildPlayerStat(Long divisionId, Long seasonId) {
+        Set<Long> voidedMatchIds = loadDisqualificationVoidedMatchIds(divisionId);
         List<BasketV4MatchPlayerStat> rows = matchPlayerStatMapper.selectByDivisionId(divisionId);
         Map<Long, PlayerStatAgg> aggMap = new HashMap<>();
         for (BasketV4MatchPlayerStat row : rows) {
+            if (row.getMatchId() != null && voidedMatchIds.contains(row.getMatchId())) {
+                continue;
+            }
             PlayerStatAgg agg = aggMap.computeIfAbsent(row.getEventPlayerId(), id -> new PlayerStatAgg(row.getEventTeamId()));
             agg.matchCount++;
             agg.points += nvl(row.getPoints());

@@ -28,7 +28,8 @@ export const DISCIPLINE_PENALTY_OPTIONS = [
 export const DISCIPLINE_RECORD_STATUS_OPTIONS = [
   { value: 'DRAFT', label: '草稿' },
   { value: 'ACTIVE', label: '生效中' },
-  { value: 'REVOKED', label: '已解除' }
+  { value: 'REVOKED', label: '已解除' },
+  { value: 'EXPIRED', label: '已过期' }
 ]
 
 export const DISCIPLINE_EXECUTION_STATUS_LABELS: Record<string, string> = {
@@ -90,6 +91,62 @@ export function formatDisciplineSeasonLabel(row: { seriesName?: string; seasonNa
   if (row.seasonName) return row.seasonName
   if (row.seasonId != null) return `赛季 #${row.seasonId}`
   return '-'
+}
+
+export function formatDisciplineDivisionLabel(row: { divisionName?: string; divisionId?: number | string }) {
+  if (row.divisionName) return row.divisionName
+  if (row.divisionId != null) return `Division #${row.divisionId}`
+  return '-'
+}
+
+export function formatDisciplineBusinessStatus(row: { businessStatus?: string; recordStatus?: string; effectiveEndTime?: string }) {
+  const status = row.businessStatus || row.recordStatus
+  if (status === 'EXPIRED') return '已过期'
+  return formatDisciplineRecordStatus(status)
+}
+
+export function formatAnnouncementStatus(row: { announcementStatusName?: string; announcementId?: number | string; announcementStatus?: number }) {
+  if (row.announcementStatusName) return row.announcementStatusName
+  if (row.announcementStatus == null) return '未生成'
+  if (row.announcementStatus === 1) return '已发布'
+  if (row.announcementStatus === 2) return '已下线'
+  if (row.announcementStatus === 0) return '草稿'
+  return '未生成'
+}
+
+export function formatEventImpactSummary(row: {
+  executionMatchForfeitCount?: number
+  executionSeriesForfeitCount?: number
+  executionQualificationRemovedCount?: number
+  executionWarningCount?: number
+}) {
+  const match = row.executionMatchForfeitCount ?? 0
+  const series = row.executionSeriesForfeitCount ?? 0
+  const qualification = row.executionQualificationRemovedCount ?? 0
+  const warning = row.executionWarningCount ?? 0
+  if (!match && !series && !qualification && !warning) return '-'
+  return `比赛判负 ${match} / 系列赛判负 ${series} / 资格移除 ${qualification} / 警告 ${warning}`
+}
+
+export function formatReasonSummary(reason?: string) {
+  const text = (reason || '').trim()
+  if (!text) return '-'
+  return text.length > 24 ? `${text.slice(0, 24)}…` : text
+}
+
+export function executionStatusTagType(status?: string) {
+  if (status === 'EFFECTIVE') return 'success'
+  if (status === 'FAILED') return 'danger'
+  if (status === 'PARTIAL') return 'warning'
+  if (status === 'PROCESSING' || status === 'PENDING') return 'info'
+  return ''
+}
+
+export function businessStatusTagType(status?: string) {
+  if (status === 'ACTIVE') return 'success'
+  if (status === 'REVOKED' || status === 'EXPIRED') return 'info'
+  if (status === 'DRAFT') return 'warning'
+  return ''
 }
 
 export function formatDisciplineTargetName(row: {

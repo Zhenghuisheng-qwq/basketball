@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, inject, ref } from 'vue'
 import TeamBadge from '@/components/home/TeamBadge.vue'
+import { teamDetailLocation } from '@/utils/eventContext'
 import type { PlayoffSeries } from '../types/events'
 import { toEventTeam } from '../utils/mapPublic'
+import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
+
+const ctx = inject<ReturnType<typeof usePublicSeasonContext> | null>('publicSeasonContext', null)
 
 const props = withDefaults(
   defineProps<{
@@ -93,7 +97,7 @@ function showLogoImage(teamId: string, logo?: string) {
 
       <router-link
         v-if="teamRow.hasTeamLink && teamRow.team"
-        :to="`/tournament/team/${teamRow.team.teamId}/overview`"
+        :to="teamDetailLocation(teamRow.team.teamId, { divisionId: ctx?.divisionId.value, seasonId: ctx?.seasonId.value })"
         class="playoff-series-card__team-link"
       >
         <div class="playoff-series-card__logo-wrap">

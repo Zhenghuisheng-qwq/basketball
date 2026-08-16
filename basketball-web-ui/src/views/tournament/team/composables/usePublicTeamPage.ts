@@ -6,7 +6,6 @@ import {
   getV4PublicStanding,
   getV4PublicStageList,
   getV4PublicTeamDetail,
-  getV4PublicTeamStat,
 } from '@/api/v4Public'
 import type {
   PublicTeamDetailVo,
@@ -22,7 +21,6 @@ import {
   mapV4PlayerToRoster,
   mapV4StandingToRank,
   mapV4TeamDetailToPublic,
-  mapV4TeamStatToSeasonStat,
 } from '../utils/mapV4PublicTeam'
 import { resolveEventTeamDivisionId } from '../utils/resolveTeamDivision'
 
@@ -60,6 +58,7 @@ export function usePublicTeamPage() {
   const seasonId = ref('')
   const divisionDetail = ref<V4PublicDivisionDetail | null>(null)
   const seasonTitle = ref('')
+  const seriesName = ref('')
 
   const detail = ref<PublicTeamDetailVo | null>(null)
   const roster = ref<PublicTeamRosterItemVo[]>([])
@@ -106,6 +105,11 @@ export function usePublicTeamPage() {
       ranking: toNumber(rank?.rankNo, 0),
       themeColor: '#c9a360',
       secondaryColor: '#111111',
+      seriesName: displayText(seriesName.value || d.seriesName, ''),
+      divisionName: displayText(d.divisionName || divisionDetail.value?.divisionName, ''),
+      disqualified: Boolean(d.disqualified || d.eventTeamStatus === 'DISQUALIFIED'),
+      eventTeamStatus: d.eventTeamStatus || '',
+      activeDisciplineSummary: d.activeDisciplineSummary || [],
     }
   })
 
@@ -127,6 +131,7 @@ export function usePublicTeamPage() {
     seasonId.value = ''
     divisionDetail.value = null
     seasonTitle.value = ''
+    seriesName.value = ''
     currentStageName.value = ''
 
     try {
@@ -162,10 +167,9 @@ export function usePublicTeamPage() {
 
       divisionId.value = resolvedDivisionId
 
-      const [divisionRes, standingRes, teamStatRes, stageRes] = await Promise.all([
+      const [divisionRes, standingRes, stageRes] = await Promise.all([
         getV4PublicDivisionDetail(resolvedDivisionId),
         getV4PublicStanding(resolvedDivisionId).catch(() => ({ data: [] })),
-        getV4PublicTeamStat(resolvedDivisionId).catch(() => ({ data: [] })),
         getV4PublicStageList(resolvedDivisionId).catch(() => ({ data: [] })),
       ])
       if (current !== reqId) return
@@ -173,9 +177,10 @@ export function usePublicTeamPage() {
       divisionDetail.value = divisionRes.data ?? null
       seasonId.value = String(divisionDetail.value?.seasonId || '')
       seasonTitle.value = displayText(
-        divisionDetail.value?.seasonTitle,
+        divisionDetail.value?.seasonTitle || divisionDetail.value?.seasonName,
         divisionDetail.value?.divisionName || '',
       )
+      seriesName.value = displayText(divisionDetail.value?.seriesName, '')
 
       if (seasonId.value) {
         try {
@@ -185,17 +190,16 @@ export function usePublicTeamPage() {
             seasonRes.data?.displayTitle || seasonRes.data?.seasonName,
             seasonTitle.value,
           )
+          seriesName.value = displayText(seasonRes.data?.seriesName, seriesName.value)
         } catch {
           // keep division title fallback
         }
       }
 
       const standingRows = standingRes.data ?? []
-      const teamStatRows = teamStatRes.data ?? []
       const teamStanding = standingRows.find(
         (row) => String(row.eventTeamId) === String(id),
       )
-      const teamStat = teamStatRows.find((row) => String(row.eventTeamId) === String(id))
 
       const currentStage = (stageRes.data ?? []).find((stage) => stage.currentStage)
       currentStageName.value = displayText(currentStage?.stageName, '')
@@ -205,12 +209,11 @@ export function usePublicTeamPage() {
         divisionName: divisionDetail.value?.divisionName,
         seasonId: seasonId.value,
         seasonTitle: seasonTitle.value,
+        seriesName: seriesName.value || teamDetail.seriesName,
       })
       roster.value = (teamDetail.players ?? []).map(mapV4PlayerToRoster)
-      stats.value = teamStat
-        ? [mapV4TeamStatToSeasonStat(teamStat, { seasonId: seasonId.value })]
-        : teamStanding
-          ? [{
+      stats.value = teamStanding
+        ? [{
               seasonId: seasonId.value,
               teamId: id,
               teamName: teamStanding.teamName,

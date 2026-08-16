@@ -132,6 +132,39 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void overrideMatchOfficialResultForDisqualification(BasketMatchForfeitReq req) {
+        requireReason(req.getReason());
+        BasketV4Match match = requireMatch(req.getMatchId());
+        Long loser = req.getLoserEventTeamId();
+        if (loser == null || (!loser.equals(match.getHomeEventTeamId()) && !loser.equals(match.getAwayEventTeamId()))) {
+            throw new ServiceException("判负球队必须是比赛双方之一");
+        }
+        Long winner = loser.equals(match.getHomeEventTeamId()) ? match.getAwayEventTeamId() : match.getHomeEventTeamId();
+        OfficialMatchResultCommand command = new OfficialMatchResultCommand();
+        command.setMatchId(match.getId());
+        command.setHomeScore(match.getHomeScore());
+        command.setAwayScore(match.getAwayScore());
+        command.setWinnerEventTeamId(winner);
+        command.setLoserEventTeamId(loser);
+        command.setMatchStatus(MatchStatusEnum.FORFEITED.getCode());
+        command.setSource(OfficialResultSource.DISQUALIFICATION);
+        command.setRemark(req.getReason());
+        command.setClearOfficialPlayerStats(false);
+        if (!officialMatchResultSettlementService.settle(command)) {
+            return;
+        }
+        auditWriter.writeAudit("V4_STAGE", "MATCH", match.getId(), "DISQUALIFICATION_OVERRIDE",
+                "取消资格覆盖官方比赛结果", req.getReason(), List.of(
+                        AuditFieldInput.of("resultSource", "结果来源", null, OfficialResultSource.DISQUALIFICATION.getCode()),
+                        AuditFieldInput.of("winnerEventTeamId", "胜者", match.getWinnerEventTeamId(), winner),
+                        AuditFieldInput.of("loserEventTeamId", "判负方", match.getLoserEventTeamId(), loser),
+                        AuditFieldInput.of("originalHomeScore", "原主队比分", match.getHomeScore(), match.getHomeScore()),
+                        AuditFieldInput.of("originalAwayScore", "原客队比分", match.getAwayScore(), match.getAwayScore())
+                ));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void revokeMatchForfeit(BasketMatchForfeitRevokeReq req) {
         requireReason(req.getReason());
         BasketV4Match match = requireMatch(req.getMatchId());
@@ -213,6 +246,52 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
                         AuditFieldInput.of("winnerEventTeamId", "系列赛胜者", null, winner),
                         AuditFieldInput.of("forfeitEventTeamId", "弃赛方", null, forfeitTeam)
                 ));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void applySeriesOfficialSweepForDisqualification(BasketSeriesForfeitReq req) {
+        requireReason(req.getReason());
+        BasketMatchSeries series = requireSeries(req.getSeriesId());
+        Long forfeitTeam = req.getForfeitEventTeamId();
+        if (forfeitTeam == null
+                || (!forfeitTeam.equals(series.getHomeEventTeamId()) && !forfeitTeam.equals(series.getAwayEventTeamId()))) {
+            throw new ServiceException("弃赛球队必须是系列赛双方之一");
+        }
+        Long winner = forfeitTeam.equals(series.getHomeEventTeamId())
+                ? series.getAwayEventTeamId() : series.getHomeEventTeamId();
+        boolean downstreamStarted = false;
+        try {
+            winnerOfSeriesAdvanceSupport.assertDownstreamNotStarted(series);
+        } catch (ServiceException ex) {
+            if (ex.getMessage() != null && ex.getMessage().contains(WinnerOfSeriesAdvanceSupport.MSG_DOWNSTREAM_STARTED)) {
+                downstreamStarted = true;
+            } else {
+                throw ex;
+            }
+        }
+        if (downstreamStarted && forfeitTeam.equals(series.getWinnerEventTeamId())) {
+            throw new ServiceException(WinnerOfSeriesAdvanceSupport.MSG_DOWNSTREAM_STARTED);
+        }
+        if (downstreamStarted) {
+            applyUnstartedSeriesSweepScore(series, winner);
+            Date now = new Date();
+            series.setResolutionType(SeriesResolutionTypeEnum.FORFEIT.getCode());
+            series.setResolutionReason(req.getReason().trim());
+            series.setResolvedTime(now);
+            series.setResolvedBy(SecurityUtils.getUserId());
+            series.setUpdateTime(now);
+            if (seriesMapper.updateResolution(series) != 1) {
+                throw new ServiceException("更新系列赛官方局分失败");
+            }
+            auditWriter.writeAudit("V4_STAGE", "MATCH_SERIES", series.getId(), "DISQUALIFICATION_SWEEP",
+                    "取消资格覆盖系列赛官方局分", req.getReason(), List.of(
+                            AuditFieldInput.of("homeWinCount", "主队胜场", null, series.getHomeWinCount()),
+                            AuditFieldInput.of("awayWinCount", "客队胜场", null, series.getAwayWinCount())
+                    ));
+            return;
+        }
+        forfeitSeries(req);
     }
 
     @Override

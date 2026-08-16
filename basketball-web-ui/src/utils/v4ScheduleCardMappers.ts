@@ -172,12 +172,11 @@ function buildSubmissionSide(
 
 function resolveWinnerSide(row: V4MyScheduleItem): { home?: boolean; away?: boolean } {
   if (!isFinishedMatch(normalizeStatus(row.matchStatus))) return {}
-  if (row.homeScore == null || row.awayScore == null) return {}
-  if (row.homeScore === row.awayScore) return {}
-  return {
-    home: row.homeScore > row.awayScore,
-    away: row.awayScore > row.homeScore,
-  }
+  const winner = String(row.winnerEventTeamId || '')
+  if (!winner) return {}
+  if (winner === String(row.homeEventTeamId || '')) return { home: true, away: false }
+  if (winner === String(row.awayEventTeamId || '')) return { home: false, away: true }
+  return {}
 }
 
 function buildCenterView(row: V4MyScheduleItem): ScheduleVersusCenterView {

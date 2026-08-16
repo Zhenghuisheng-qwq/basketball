@@ -60,6 +60,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     private V4MatchSeriesDisplaySupport matchSeriesDisplaySupport;
     @Resource
     private BasketScheduleBatchDao scheduleBatchDao;
+    @Resource
+    private com.zhs.support.v4.PublicDisciplineDisplaySupport publicDisciplineDisplaySupport;
 
     @Override
     public List<V4PublicDivisionListItemResp> listDivisions(Long seasonId) {
@@ -221,7 +223,9 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         resp.setDivisionId(division.getId());
         resp.setSeasonId(division.getSeasonId());
         resp.setSeriesCode(series != null ? series.getSeriesCode() : null);
+        resp.setSeriesName(series != null ? series.getSeriesName() : null);
         resp.setSeasonTitle(season != null ? resolveSeasonTitle(season) : null);
+        resp.setSeasonName(season != null ? resolveSeasonTitle(season) : null);
         resp.setPlatformCode(division.getPlatformCode());
         resp.setDivisionName(division.getDivisionName());
         resp.setRegistrationMode(division.getRegistrationMode());
@@ -270,7 +274,9 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
         V4PublicEventTeamDetailResp resp = new V4PublicEventTeamDetailResp();
         copyEventTeamBase(team, resp, captainMap, urlMap);
+        fillEventTeamEventContext(resp, team);
         resp.setPlayers(listPlayersByEventTeamId(eventTeamId));
+        resp.setActiveDisciplineSummary(publicDisciplineDisplaySupport.listEventTeamActive(team));
         return resp;
     }
 
@@ -296,7 +302,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                     MatchStatusEnum.SCHEDULED.getCode(), MatchStatusEnum.PLAYING.getCode());
         }
         if (Boolean.TRUE.equals(finishedOnly)) {
-            wrapper.eq(BasketV4Match::getMatchStatus, MatchStatusEnum.FINISHED.getCode());
+            wrapper.in(BasketV4Match::getMatchStatus,
+                    MatchStatusEnum.FINISHED.getCode(), MatchStatusEnum.FORFEITED.getCode());
         }
         if (eventTeamId != null) {
             wrapper.and(w -> w.eq(BasketV4Match::getHomeEventTeamId, eventTeamId)
@@ -987,6 +994,34 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         vo.setEventTeamStatus(team.getEventTeamStatus());
         com.zhs.support.v4.EventTeamPublicDisplaySupport.fillEventTeam(vo, team);
         vo.setTemporaryTeam(PublicTeamDisplaySupport.isTemporary(team));
+        vo.setDivisionId(team.getDivisionId());
+        vo.setSeasonId(team.getSeasonId());
+        vo.setPlatformCode(team.getPlatformCode());
+    }
+
+    private void fillEventTeamEventContext(V4PublicEventTeamItemResp vo, BasketEventTeam team) {
+        if (vo == null || team == null || team.getDivisionId() == null) {
+            return;
+        }
+        BasketDivision division = divisionDao.selectById(team.getDivisionId());
+        if (division == null) {
+            return;
+        }
+        vo.setDivisionId(division.getId());
+        vo.setDivisionName(division.getDivisionName());
+        vo.setPlatformCode(division.getPlatformCode() != null ? division.getPlatformCode() : team.getPlatformCode());
+        vo.setGameMode(division.getGameMode());
+        BasketSeason season = seasonDao.selectById(division.getSeasonId());
+        if (season == null) {
+            return;
+        }
+        vo.setSeasonId(season.getId());
+        vo.setSeasonName(resolveSeasonTitle(season));
+        BasketSeries series = seriesDao.selectById(season.getSeriesId());
+        if (series != null) {
+            vo.setSeriesCode(series.getSeriesCode());
+            vo.setSeriesName(series.getSeriesName());
+        }
     }
 
     private List<V4PublicEventPlayerItemResp> listPlayersByEventTeamId(Long eventTeamId) {

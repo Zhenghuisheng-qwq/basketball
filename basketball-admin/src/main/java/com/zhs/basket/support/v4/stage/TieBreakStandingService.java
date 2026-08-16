@@ -249,12 +249,13 @@ public class TieBreakStandingService {
             home.pointAgainst += match.getAwayScore();
             away.pointFor += match.getAwayScore();
             away.pointAgainst += match.getHomeScore();
-            if (match.getHomeScore() > match.getAwayScore()) {
+            Long winnerId = match.getWinnerEventTeamId();
+            if (winnerId != null && winnerId.equals(match.getHomeEventTeamId())) {
                 home.winCount++;
                 home.standingPoints += winPoints;
                 away.loseCount++;
                 away.standingPoints += lossPoints;
-            } else if (match.getAwayScore() > match.getHomeScore()) {
+            } else if (winnerId != null && winnerId.equals(match.getAwayEventTeamId())) {
                 away.winCount++;
                 away.standingPoints += winPoints;
                 home.loseCount++;

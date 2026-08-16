@@ -354,7 +354,9 @@ function formatPct(value: number | null | undefined): string {
 }
 
 function handlePlayerDetailClick(playerId: string) {
-  goToPlayerDetail(router, playerId, 'overview')
+  goToPlayerDetail(router, playerId, 'overview', {
+    ...(divisionId.value ? { divisionId: divisionId.value } : {}),
+  })
 }
 
 function showSummaryTable() {

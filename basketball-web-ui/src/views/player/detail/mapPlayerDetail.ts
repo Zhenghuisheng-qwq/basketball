@@ -17,7 +17,10 @@ import type {
 } from './types'
 import { EMPTY_HONOR_SUMMARY } from './types'
 
-export function mapPublicPlayerProfile(detail: PublicPlayerDetailVo): PlayerProfile {
+export function mapPublicPlayerProfile(
+  detail: PublicPlayerDetailVo,
+  options?: { divisionId?: string | null },
+): PlayerProfile {
   const displayName = displayText(detail.displayName, '未知球员')
   const currentTeams = (detail.currentTeams || []).map((item) => {
     const teamName = displayText(item.teamName, '--')
@@ -25,14 +28,26 @@ export function mapPublicPlayerProfile(detail: PublicPlayerDetailVo): PlayerProf
       .filter(Boolean)
       .join(' · ')
     return {
-      teamId: String(item.teamId || ''),
+      teamId: String(item.eventTeamId || item.teamId || ''),
       teamName,
       shortName: displayText(item.shortName, teamName).slice(0, 8),
       logoUrl: item.logoUrl?.trim() || '',
       eventContext: eventContext || '当前赛事球队',
+      divisionId: item.divisionId ? String(item.divisionId) : '',
+      seriesName: item.seriesName || '',
+      seasonName: item.seasonName || '',
+      divisionName: item.divisionName || '',
+      platformCode: item.platformCode || '',
+      gameMode: item.gameMode || '',
+      eventTeamId: item.eventTeamId ? String(item.eventTeamId) : String(item.teamId || ''),
+      disqualified: Boolean(item.disqualified),
+      seasonId: item.seasonId ? String(item.seasonId) : '',
     }
   })
-  const primary = currentTeams[0]
+  const queryDivisionId = String(options?.divisionId || '').trim()
+  const primary = (queryDivisionId
+    ? currentTeams.find((item) => String(item.divisionId) === queryDivisionId)
+    : undefined) || currentTeams[0]
   const teamName = primary?.teamName || displayText(detail.currentTeamName, '--')
   const verified = toNumber(detail.certificationStatus, 0) === 3 || toNumber(detail.certificationStatus, 0) === 1
   return {
@@ -51,8 +66,34 @@ export function mapPublicPlayerProfile(detail: PublicPlayerDetailVo): PlayerProf
     teamKey: primary?.teamId || String(detail.currentTeamId || ''),
     logoColor: '#c9a360',
     position: displayText(detail.positionCode, '--'),
-    platform: '--',
+    platform: v4PlatformLabel(primary?.platformCode) || '--',
     currentStage: '常规赛',
+    seriesName: primary?.seriesName || '',
+    seasonName: primary?.seasonName || '',
+    divisionName: primary?.divisionName || '',
+    divisionId: primary?.divisionId || queryDivisionId,
+    eventTeamId: primary?.eventTeamId || primary?.teamId || '',
+    eventTeamDisqualified: Boolean(primary?.disqualified),
+    seasonId: primary?.seasonId || '',
+    activeDisciplineSummary: (detail.activeDisciplineSummary || []).filter((item) => {
+      const seasonId = primary?.seasonId || ''
+      return !item.seasonId || !seasonId || String(item.seasonId) === seasonId
+    }),
+    playerPenaltyTags: (detail.activeDisciplineSummary || [])
+      .filter((item) => {
+        const seasonId = primary?.seasonId || ''
+        return (!item.seasonId || !seasonId || String(item.seasonId) === seasonId)
+          && item.targetType === 'PLAYER'
+      })
+      .map((item) => ({
+        tagLabel: item.tagLabel || item.penaltyLabel || '处罚中',
+        penaltyLabel: item.penaltyLabel,
+        statusLabel: item.statusLabel,
+        effectiveStartTime: item.effectiveStartTime,
+        description: item.description,
+        publicReason: item.publicReason,
+        seasonId: item.seasonId,
+      })),
   }
 }
 
@@ -67,9 +108,17 @@ export function mapPublicPlayerMatch(
   const opponentLogoUrl = (isHome ? item.awayTeamLogoUrl : item.homeTeamLogoUrl)?.trim() || ''
   const teamScore = toNumber(isHome ? item.homeScore : item.awayScore, 0)
   const opponentScore = toNumber(isHome ? item.awayScore : item.homeScore, 0)
-  const finished = toNumber(item.matchStatus, 0) === 3
-  const result: PlayerMatchRecord['result'] =
-    finished && teamScore >= opponentScore ? (teamScore > opponentScore ? 'WIN' : 'LOSS') : 'LOSS'
+  const finished = toNumber(item.matchStatus, 0) === 3 || Boolean(item.resultType)
+  const dq = String(item.resultType || '') === 'EVENT_DISQUALIFICATION'
+  const sideLabel = isHome ? item.homeResultLabel : item.awayResultLabel
+  const winnerId = String(item.winnerTeamId || '')
+  const playerSideId = String((isHome ? item.homeTeamId : item.awayTeamId) || '')
+  let result: PlayerMatchRecord['result'] = 'LOSS'
+  if (finished && winnerId && (winnerId === String(playerTeamId) || winnerId === playerSideId)) {
+    result = 'WIN'
+  } else if (finished && !winnerId && sideLabel && sideLabel.includes('胜')) {
+    result = 'WIN'
+  }
   const dt = formatDateTime(item.scheduledStartTime)
   return {
     id: String(item.matchId),
@@ -84,6 +133,11 @@ export function mapPublicPlayerMatch(
     opponentId,
     opponentLogoUrl,
     result,
+    resultLabel: dq
+      ? (result === 'WIN' ? '对手取消资格判负' : '球队取消资格判负')
+      : sideLabel || undefined,
+    originalTeamScore: (isHome ? item.originalHomeScore : item.originalAwayScore) ?? undefined,
+    originalOpponentScore: (isHome ? item.originalAwayScore : item.originalHomeScore) ?? undefined,
     teamScore,
     opponentScore,
     minutes: 0,

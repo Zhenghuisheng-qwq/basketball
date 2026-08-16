@@ -94,6 +94,8 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
     private BasketPublicMatchServiceImpl matchService;
     @Resource
     private BasketPublicDataCenterServiceImpl dataCenterService;
+    @Resource
+    private com.zhs.support.v4.PublicDisciplineDisplaySupport publicDisciplineDisplaySupport;
 
     @Override
     public PublicPlayerDetailVo getPlayer(Long playerId) {
@@ -118,7 +120,23 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
         vo.setCertificationStatus(player.getCertificationStatus());
         vo.setPlayerStatus(player.getPlayerStatus());
         List<PublicPlayerCurrentTeamVo> currentTeams = loadCurrentTeams(player);
+        List<PublicPlayerCurrentTeamVo> eventTeams = loadEventCurrentTeams(player);
+        if (!eventTeams.isEmpty()) {
+            Set<String> eventKeys = eventTeams.stream()
+                    .map(item -> String.valueOf(item.getDivisionId()) + ":" + String.valueOf(item.getEventTeamId()))
+                    .collect(Collectors.toSet());
+            List<PublicPlayerCurrentTeamVo> merged = new ArrayList<>(eventTeams);
+            for (PublicPlayerCurrentTeamVo row : currentTeams) {
+                String key = String.valueOf(row.getDivisionId()) + ":" + String.valueOf(row.getEventTeamId() != null ? row.getEventTeamId() : row.getTeamId());
+                if (!eventKeys.contains(key)) {
+                    merged.add(row);
+                }
+            }
+            currentTeams = merged;
+        }
         vo.setCurrentTeams(currentTeams);
+        vo.setActiveDisciplineSummary(publicDisciplineDisplaySupport.listPlayerActive(
+                player.getId(), player.getMemberId(), null));
         if (!currentTeams.isEmpty()) {
             PublicPlayerCurrentTeamVo primary = currentTeams.get(0);
             vo.setCurrentTeamId(primary.getTeamId());
@@ -139,6 +157,83 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             }
         }
         return vo;
+    }
+
+    private List<PublicPlayerCurrentTeamVo> loadEventCurrentTeams(BasketPlayerProfile player) {
+        if (player == null || player.getId() == null) {
+            return Collections.emptyList();
+        }
+        List<BasketEventPlayer> eventPlayers = eventPlayerDao.selectList(new LambdaQueryWrapper<BasketEventPlayer>()
+                .eq(BasketEventPlayer::getSourcePlayerId, player.getId())
+                .eq(BasketEventPlayer::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .orderByDesc(BasketEventPlayer::getId));
+        if (CollectionUtils.isEmpty(eventPlayers)) {
+            return Collections.emptyList();
+        }
+        Set<Long> eventTeamIds = eventPlayers.stream().map(BasketEventPlayer::getEventTeamId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketEventTeam> eventTeamMap = new HashMap<>();
+        if (!eventTeamIds.isEmpty()) {
+            for (BasketEventTeam team : eventTeamDao.selectByIds(eventTeamIds)) {
+                if (team != null && Objects.equals(team.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                    eventTeamMap.put(team.getId(), team);
+                }
+            }
+        }
+        Set<Long> divisionIds = eventTeamMap.values().stream().map(BasketEventTeam::getDivisionId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketDivision> divisionMap = new HashMap<>();
+        if (!divisionIds.isEmpty()) {
+            for (BasketDivision division : divisionDao.selectByIds(divisionIds)) {
+                if (division != null && Objects.equals(division.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                    divisionMap.put(division.getId(), division);
+                }
+            }
+        }
+        Set<Long> seasonIds = divisionMap.values().stream().map(BasketDivision::getSeasonId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketSeason> seasonMap = publicSupport.loadSeasonMap(seasonIds);
+        Set<Long> seriesIds = seasonMap.values().stream().map(BasketSeason::getSeriesId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketSeries> seriesMap = publicSupport.loadSeriesMap(seriesIds);
+        Set<Long> logoIds = eventTeamMap.values().stream().map(BasketEventTeam::getTeamLogoFileId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, String> logoMap = publicSupport.loadAccessUrlMap(logoIds);
+
+        List<PublicPlayerCurrentTeamVo> rows = new ArrayList<>();
+        Set<Long> seenTeams = new java.util.HashSet<>();
+        for (BasketEventPlayer eventPlayer : eventPlayers) {
+            BasketEventTeam team = eventTeamMap.get(eventPlayer.getEventTeamId());
+            if (team == null || !seenTeams.add(team.getId())) {
+                continue;
+            }
+            BasketDivision division = divisionMap.get(team.getDivisionId());
+            if (division == null
+                    || DivisionStatusEnum.ARCHIVED.getCode().equals(division.getDivisionStatus())) {
+                continue;
+            }
+            PublicPlayerCurrentTeamVo item = new PublicPlayerCurrentTeamVo();
+            item.setTeamId(team.getId());
+            item.setEventTeamId(team.getId());
+            item.setTeamName(team.getTeamNameSnapshot());
+            item.setShortName(team.getTeamShortName());
+            item.setLogoUrl(logoMap.get(team.getTeamLogoFileId()));
+            item.setDivisionId(division.getId());
+            item.setDivisionName(division.getDivisionName());
+            item.setPlatformCode(division.getPlatformCode());
+            item.setGameMode(division.getGameMode());
+            item.setMyRole(Integer.valueOf(1).equals(eventPlayer.getIsCaptain()) ? "CAPTAIN" : "MEMBER");
+            item.setDisqualified(com.zhs.support.v4.EventTeamPublicDisplaySupport.isDisqualified(team));
+            item.setEventTeamStatus(team.getEventTeamStatus());
+            item.setEventTeamStatusName(com.zhs.support.v4.EventTeamPublicDisplaySupport.statusName(team.getEventTeamStatus()));
+            BasketSeason season = seasonMap.get(division.getSeasonId());
+            if (season != null) {
+                item.setSeasonId(season.getId());
+                item.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+                BasketSeries series = seriesMap.get(season.getSeriesId());
+                if (series != null) {
+                    item.setSeriesName(series.getSeriesName());
+                    item.setSeriesCode(series.getSeriesCode());
+                }
+            }
+            rows.add(item);
+        }
+        return rows;
     }
 
     private List<PublicPlayerCurrentTeamVo> loadCurrentTeams(BasketPlayerProfile player) {

@@ -16,11 +16,20 @@ export interface PublicMatchItemVo {
   awayTeamLogoUrl?: string | null
   homeScore?: number | null
   awayScore?: number | null
+  winnerTeamId?: string | null
   matchStatus?: number | null
   dataStatus?: number | null
   venueName?: string | null
   scheduledStartTime?: string | null
   actualEndTime?: string | null
+  resultType?: string | null
+  resultReason?: string | null
+  homeResultLabel?: string | null
+  awayResultLabel?: string | null
+  homeDisqualified?: boolean | null
+  awayDisqualified?: boolean | null
+  originalHomeScore?: number | null
+  originalAwayScore?: number | null
 }
 
 export interface PublicMatchTeamStatVo {
@@ -457,6 +466,9 @@ export interface PublicTeamDetailVo {
   seasonName?: string | null
   seriesId?: string | null
   seriesName?: string | null
+  eventTeamStatus?: string | null
+  disqualified?: boolean | null
+  activeDisciplineSummary?: import('./v4Public').PublicActiveDisciplineSummary[] | null
   legacyTeam?: boolean | null
   establishedDate?: string | null
 }
@@ -510,7 +522,12 @@ export interface PublicPlayerCurrentTeamVo {
   seasonId?: string | null
   seasonName?: string | null
   seriesName?: string | null
+  seriesCode?: string | null
   myRole?: string | null
+  eventTeamId?: string | null
+  disqualified?: boolean | null
+  eventTeamStatus?: string | null
+  eventTeamStatusName?: string | null
 }
 
 export interface PublicPlayerDetailVo {
@@ -529,6 +546,7 @@ export interface PublicPlayerDetailVo {
   /** @deprecated 兼容字段；请用 currentTeams */
   currentTeamLogoUrl?: string | null
   currentTeams?: PublicPlayerCurrentTeamVo[] | null
+  activeDisciplineSummary?: import('./v4Public').PublicActiveDisciplineSummary[] | null
   certificationStatus?: number | null
   playerStatus?: number | null
   profilePublic?: boolean | null

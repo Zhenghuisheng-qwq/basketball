@@ -117,6 +117,26 @@ class TieBreakStandingServicePointAdjustmentTest {
 
         assertEquals(1, pointsOf(100L));
         assertEquals(0, pointsOf(200L));
+        assertNoScoreContribution(100L);
+        assertNoScoreContribution(200L);
+    }
+
+    @Test
+    void caseA_normalMatchContributesOfficialPfPa() {
+        when(matchMapper.selectFinishedByStageId(20L)).thenReturn(List.of(finished(100L, 200L, 88, 70)));
+        when(pointAdjustmentMapper.selectV4SumByStage(10L, 20L)).thenReturn(List.of());
+
+        service.rebuildStageStanding(20L);
+
+        BasketStanding home = lastStandingOf(100L);
+        BasketStanding away = lastStandingOf(200L);
+        assertEquals(2, home.getStandingPoints());
+        assertEquals(1, away.getStandingPoints());
+        assertEquals(88, home.getPointFor());
+        assertEquals(70, home.getPointAgainst());
+        assertEquals(18, home.getPointDiff());
+        assertEquals(70, away.getPointFor());
+        assertEquals(88, away.getPointAgainst());
     }
 
     @Test
@@ -127,6 +147,67 @@ class TieBreakStandingServicePointAdjustmentTest {
         service.rebuildStageStanding(20L);
 
         assertEquals(12, pointsOf(100L));
+    }
+
+    @Test
+    void caseG_forfeitKeepsOfficialWinnerWhenOriginalScoreContradicts() {
+        BasketV4Match forfeit = new BasketV4Match();
+        forfeit.setSeasonId(1L);
+        forfeit.setMatchStatus(MatchStatusEnum.FORFEITED.getCode());
+        forfeit.setHomeEventTeamId(100L);
+        forfeit.setAwayEventTeamId(200L);
+        forfeit.setHomeScore(88);
+        forfeit.setAwayScore(70);
+        forfeit.setWinnerEventTeamId(200L);
+        forfeit.setLoserEventTeamId(100L);
+        when(matchMapper.selectFinishedByStageId(20L)).thenReturn(List.of(forfeit));
+        when(pointAdjustmentMapper.selectV4SumByStage(10L, 20L)).thenReturn(List.of());
+
+        service.rebuildStageStanding(20L);
+
+        assertEquals(0, pointsOf(100L));
+        assertEquals(2, pointsOf(200L));
+        assertNoScoreContribution(100L);
+        assertNoScoreContribution(200L);
+    }
+
+    @Test
+    void caseD_dqRawScoreDoesNotAffectH2hScoreDifferential() {
+        BasketV4Match dq = new BasketV4Match();
+        dq.setSeasonId(1L);
+        dq.setMatchStatus(MatchStatusEnum.FORFEITED.getCode());
+        dq.setHomeEventTeamId(100L);
+        dq.setAwayEventTeamId(200L);
+        dq.setHomeScore(88);
+        dq.setAwayScore(70);
+        dq.setWinnerEventTeamId(200L);
+        dq.setLoserEventTeamId(100L);
+        when(matchMapper.selectFinishedByStageId(20L)).thenReturn(List.of(dq));
+        when(pointAdjustmentMapper.selectV4SumByStage(10L, 20L)).thenReturn(List.of());
+
+        service.rebuildStageStanding(20L);
+
+        assertEquals(0, lastStandingOf(100L).getPointDiff());
+        assertEquals(0, lastStandingOf(200L).getPointDiff());
+        List<TieBreakStandingService.StandingAgg> group = List.of(
+                new TieBreakStandingService.StandingAgg(100L),
+                new TieBreakStandingService.StandingAgg(200L));
+        assertEquals(0, comparatorBuilder.miniTableWins(100L, group, List.of(dq)));
+        assertEquals(1, comparatorBuilder.miniTableWins(200L, group, List.of(dq)));
+    }
+
+    @Test
+    void caseH_finishedUsesOfficialWinnerNotScore() {
+        BasketV4Match match = finished(100L, 200L, 88, 70);
+        match.setWinnerEventTeamId(200L);
+        match.setLoserEventTeamId(100L);
+        when(matchMapper.selectFinishedByStageId(20L)).thenReturn(List.of(match));
+        when(pointAdjustmentMapper.selectV4SumByStage(10L, 20L)).thenReturn(List.of());
+
+        service.rebuildStageStanding(20L);
+
+        assertEquals(1, pointsOf(100L));
+        assertEquals(2, pointsOf(200L));
     }
 
     @Test
@@ -162,12 +243,22 @@ class TieBreakStandingServicePointAdjustmentTest {
     }
 
     private int lastPointsOf(Long eventTeamId) {
+        return lastStandingOf(eventTeamId).getStandingPoints();
+    }
+
+    private void assertNoScoreContribution(Long eventTeamId) {
+        BasketStanding row = lastStandingOf(eventTeamId);
+        assertEquals(0, row.getPointFor());
+        assertEquals(0, row.getPointAgainst());
+        assertEquals(0, row.getPointDiff());
+    }
+
+    private BasketStanding lastStandingOf(Long eventTeamId) {
         ArgumentCaptor<BasketStanding> captor = ArgumentCaptor.forClass(BasketStanding.class);
         verify(standingMapper, times(standingInsertCount())).insert(captor.capture());
         return captor.getAllValues().stream()
                 .filter(row -> eventTeamId.equals(row.getEventTeamId()))
                 .reduce((a, b) -> b)
-                .map(BasketStanding::getStandingPoints)
                 .orElseThrow();
     }
 
@@ -193,6 +284,13 @@ class TieBreakStandingServicePointAdjustmentTest {
         match.setAwayEventTeamId(away);
         match.setHomeScore(homeScore);
         match.setAwayScore(awayScore);
+        if (homeScore > awayScore) {
+            match.setWinnerEventTeamId(home);
+            match.setLoserEventTeamId(away);
+        } else if (awayScore > homeScore) {
+            match.setWinnerEventTeamId(away);
+            match.setLoserEventTeamId(home);
+        }
         return match;
     }
 

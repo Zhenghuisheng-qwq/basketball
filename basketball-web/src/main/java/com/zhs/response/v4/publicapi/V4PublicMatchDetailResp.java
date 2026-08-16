@@ -54,6 +54,10 @@ public class V4PublicMatchDetailResp {
 
     private Integer awayScore;
 
+    private Integer originalHomeScore;
+
+    private Integer originalAwayScore;
+
     @JsonSerialize(using = ToStringSerializer.class)
     private Long winnerEventTeamId;
 

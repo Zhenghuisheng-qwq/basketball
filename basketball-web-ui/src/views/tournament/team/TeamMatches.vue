@@ -138,6 +138,7 @@ function formatDateTime(match: TeamMatchRecord): string {
 
 function getStatusLabel(match: TeamMatchRecord): string {
   if (match.status === 'scheduled') return '未开始'
+  if (match.resultLabel) return match.resultLabel
   if (match.result === 'win') return '胜利'
   if (match.result === 'loss') return '失败'
   return '已结束'
@@ -157,7 +158,10 @@ function displayScore(value: number | undefined): number {
 function goMatchStats(match: TeamMatchRecord) {
   router.push({
     path: `/tournament/team/${teamId.value}/stats`,
-    query: { matchId: match.id },
+    query: {
+      matchId: match.id,
+      ...(divisionId.value ? { divisionId: divisionId.value } : {}),
+    },
   })
 }
 
@@ -256,6 +260,21 @@ function goPage(page: number) {
             </template>
             <template v-else>
               <span class="match-table__score">
+                <template v-if="match.seriesScoreText">
+                  <span class="score-number" :class="{ 'is-winner': match.result === 'win' }">
+                    {{ match.seriesScoreText }}
+                  </span>
+                </template>
+                <template v-else-if="match.resultLabel">
+                  <span class="score-number">{{ match.resultLabel }}</span>
+                  <small
+                    v-if="match.originalTeamScore != null && match.originalOpponentScore != null"
+                    class="score-original"
+                  >
+                    原比分 {{ match.originalTeamScore }}:{{ match.originalOpponentScore }} 成绩已取消
+                  </small>
+                </template>
+                <template v-else>
                 <span
                   class="score-number"
                   :class="{ 'is-winner': match.result === 'win' }"
@@ -269,6 +288,7 @@ function goPage(page: number) {
                 >
                   {{ displayScore(match.opponentScore) }}
                 </span>
+                </template>
               </span>
             </template>
 
@@ -555,6 +575,15 @@ function goPage(page: number) {
 
 .score-number.is-winner {
   color: var(--cnpa-red);
+}
+
+.score-original {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: #666;
 }
 
 .score-separator {

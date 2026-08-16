@@ -110,6 +110,14 @@ public class OfficialMatchResultSettlementService {
                 && isOfficialSettled(locked.getMatchStatus())) {
             throw new ServiceException("比赛已有正式结果，无法重复判负");
         }
+        if (OfficialResultSource.DISQUALIFICATION.equals(command.getSource())) {
+            if (command.getHomeScore() == null) {
+                command.setHomeScore(locked.getHomeScore());
+            }
+            if (command.getAwayScore() == null) {
+                command.setAwayScore(locked.getAwayScore());
+            }
+        }
         if (MatchStatusEnum.FINISHED.getCode().equals(command.getMatchStatus())
                 && command.getHomeScore() != null && command.getAwayScore() != null) {
             rejectDrawForElimination(locked, command.getHomeScore(), command.getAwayScore());
@@ -119,7 +127,9 @@ public class OfficialMatchResultSettlementService {
         if (command.isClearOfficialPlayerStats()) {
             matchPlayerStatMapper.softDeleteByMatchId(locked.getId());
         }
-        if (OfficialResultSource.FORFEIT.equals(command.getSource())) {
+        if (OfficialResultSource.DISQUALIFICATION.equals(command.getSource())) {
+            upsertDisqualificationTeamStats(locked, now);
+        } else if (OfficialResultSource.FORFEIT.equals(command.getSource())) {
             upsertForfeitTeamStats(locked, now);
         } else if (command.isScoreOnlyTeamStats()) {
             upsertScoreOnlyTeamStats(locked, now, command.getSourceSubmissionId());
@@ -258,6 +268,13 @@ public class OfficialMatchResultSettlementService {
                 match.getHomeScore(), match.getAwayScore(), now, sourceSubmissionId, true);
         upsertOutcomeTeamStat(match, match.getAwayEventTeamId(), match.getHomeEventTeamId(),
                 match.getAwayScore(), match.getHomeScore(), now, sourceSubmissionId, true);
+    }
+
+    private void upsertDisqualificationTeamStats(BasketV4Match match, Date now) {
+        upsertOutcomeTeamStat(match, match.getHomeEventTeamId(), match.getAwayEventTeamId(),
+                match.getHomeScore(), match.getAwayScore(), now, null, false);
+        upsertOutcomeTeamStat(match, match.getAwayEventTeamId(), match.getHomeEventTeamId(),
+                match.getAwayScore(), match.getHomeScore(), now, null, false);
     }
 
     private void upsertForfeitTeamStats(BasketV4Match match, Date now) {

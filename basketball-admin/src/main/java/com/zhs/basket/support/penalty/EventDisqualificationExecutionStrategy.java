@@ -174,21 +174,22 @@ public class EventDisqualificationExecutionStrategy implements PenaltyExecutionS
             if (!MatchSeriesStatusEnum.COMPLETED.getCode().equals(series.getSeriesStatus())) {
                 continue;
             }
-            if (eventTeam.getId() == null || !eventTeam.getId().equals(series.getWinnerEventTeamId())) {
+            if (!eventTeam.getId().equals(series.getHomeEventTeamId())
+                    && !eventTeam.getId().equals(series.getAwayEventTeamId())) {
                 continue;
             }
+            boolean dqIsWinner = eventTeam.getId().equals(series.getWinnerEventTeamId());
             List<BasketMatchSeries> next = seriesMapper.selectBySourceSeriesId(series.getId());
-            if (next == null || next.isEmpty()) {
-                continue;
-            }
             boolean started = false;
+            if (next != null) {
             for (BasketMatchSeries target : next) {
                 if (winnerOfSeriesAdvanceSupport.isDownstreamStarted(target)) {
                     started = true;
                     break;
                 }
             }
-            if (started) {
+            }
+            if (started && dqIsWinner) {
                 if (alreadySucceeded(record.getId(), PenaltyExecutionActionTypeEnum.DOWNSTREAM_GUARD.name(),
                         TARGET_SERIES, series.getId())) {
                     result.getWarnings().add(MSG_DOWNSTREAM_STARTED_ADMIN);
@@ -203,18 +204,29 @@ public class EventDisqualificationExecutionStrategy implements PenaltyExecutionS
                         MSG_DOWNSTREAM_STARTED_ADMIN, REASON, null);
                 continue;
             }
-            if (alreadySucceeded(record.getId(), PenaltyExecutionActionTypeEnum.REQUIRES_ADMIN_ADJUDICATION.name(),
+            if (alreadySucceeded(record.getId(), PenaltyExecutionActionTypeEnum.SERIES_AUTO_FORFEIT.name(),
                     TARGET_SERIES, series.getId())) {
-                result.getWarnings().add(MSG_REQUIRES_ADMIN_ADJUDICATION);
+                result.setSeriesForfeitCount(result.getSeriesForfeitCount() + 1);
+                result.getForfeitedSeriesIds().add(series.getId());
                 continue;
             }
+            BasketSeriesForfeitReq sweepReq = new BasketSeriesForfeitReq();
+            sweepReq.setSeriesId(series.getId());
+            sweepReq.setForfeitEventTeamId(eventTeam.getId());
+            sweepReq.setReason(REASON);
             try {
-                winnerOfSeriesAdvanceSupport.rewireAfterSeriesResult(series);
-                result.getWarnings().add(MSG_REQUIRES_ADMIN_ADJUDICATION);
-                saveDetail(record.getId(), PenaltyExecutionActionTypeEnum.REQUIRES_ADMIN_ADJUDICATION.name(),
-                        TARGET_SERIES, series.getId(), DETAIL_SUCCESS, MSG_REQUIRES_ADMIN_ADJUDICATION);
-                auditWriter.writeAudit("DISCIPLINE", "MATCH_SERIES", series.getId(), "REQUIRES_ADMIN_ADJUDICATION",
-                        MSG_REQUIRES_ADMIN_ADJUDICATION, REASON, null);
+                exceptionService.applySeriesOfficialSweepForDisqualification(sweepReq);
+                result.setSeriesForfeitCount(result.getSeriesForfeitCount() + 1);
+                result.getForfeitedSeriesIds().add(series.getId());
+                saveDetail(record.getId(), PenaltyExecutionActionTypeEnum.SERIES_AUTO_FORFEIT.name(),
+                        TARGET_SERIES, series.getId(), DETAIL_SUCCESS, REASON);
+                auditWriter.writeAudit("DISCIPLINE", "MATCH_SERIES", series.getId(), "SERIES_AUTO_FORFEIT",
+                        "\u53d6\u6d88\u8d44\u683c\u8986\u76d6\u7cfb\u5217\u8d5b\u5b98\u65b9\u7ed3\u679c", REASON, null);
+                if (dqIsWinner) {
+                    result.getWarnings().add(MSG_REQUIRES_ADMIN_ADJUDICATION);
+                    saveDetail(record.getId(), PenaltyExecutionActionTypeEnum.REQUIRES_ADMIN_ADJUDICATION.name(),
+                            TARGET_SERIES, series.getId(), DETAIL_SUCCESS, MSG_REQUIRES_ADMIN_ADJUDICATION);
+                }
             } catch (ServiceException ex) {
                 if (isDownstreamGuard(ex)) {
                     result.getWarnings().add(MSG_DOWNSTREAM_STARTED_ADMIN);
@@ -226,7 +238,7 @@ public class EventDisqualificationExecutionStrategy implements PenaltyExecutionS
                 } else {
                     result.setErrorMessage(appendError(result.getErrorMessage(),
                             "\u7cfb\u5217\u8d5b " + series.getId() + "\uff1a" + ex.getMessage()));
-                    saveDetail(record.getId(), PenaltyExecutionActionTypeEnum.REQUIRES_ADMIN_ADJUDICATION.name(),
+                    saveDetail(record.getId(), PenaltyExecutionActionTypeEnum.SERIES_AUTO_FORFEIT.name(),
                             TARGET_SERIES, series.getId(), DETAIL_FAILED, ex.getMessage());
                 }
             }
@@ -269,12 +281,35 @@ public class EventDisqualificationExecutionStrategy implements PenaltyExecutionS
                 if (MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus())
                         && match.getWinnerEventTeamId() != null
                         && !eventTeam.getId().equals(match.getWinnerEventTeamId())
-                        && !alreadySucceeded(record.getId(), PenaltyExecutionActionTypeEnum.MATCH_AUTO_FORFEIT.name(),
+                        && alreadySucceeded(record.getId(), PenaltyExecutionActionTypeEnum.MATCH_AUTO_FORFEIT.name(),
                         TARGET_MATCH, match.getId())) {
-                    saveDetail(record.getId(), PenaltyExecutionActionTypeEnum.MATCH_AUTO_FORFEIT.name(),
-                            TARGET_MATCH, match.getId(), DETAIL_SUCCESS, REASON);
                     result.setFutureMatchForfeitCount(result.getFutureMatchForfeitCount() + 1);
                     result.getForfeitedMatchIds().add(match.getId());
+                    continue;
+                }
+                if (alreadySucceeded(record.getId(), PenaltyExecutionActionTypeEnum.MATCH_AUTO_FORFEIT.name(),
+                        TARGET_MATCH, match.getId())) {
+                    result.setFutureMatchForfeitCount(result.getFutureMatchForfeitCount() + 1);
+                    result.getForfeitedMatchIds().add(match.getId());
+                    continue;
+                }
+                BasketMatchForfeitReq overrideReq = new BasketMatchForfeitReq();
+                overrideReq.setMatchId(match.getId());
+                overrideReq.setLoserEventTeamId(eventTeam.getId());
+                overrideReq.setReason(REASON);
+                try {
+                    exceptionService.overrideMatchOfficialResultForDisqualification(overrideReq);
+                    result.setFutureMatchForfeitCount(result.getFutureMatchForfeitCount() + 1);
+                    result.getForfeitedMatchIds().add(match.getId());
+                    saveDetail(record.getId(), PenaltyExecutionActionTypeEnum.MATCH_AUTO_FORFEIT.name(),
+                            TARGET_MATCH, match.getId(), DETAIL_SUCCESS, REASON);
+                    auditWriter.writeAudit("DISCIPLINE", "MATCH", match.getId(), "MATCH_AUTO_FORFEIT",
+                            "\u53d6\u6d88\u8d44\u683c\u8986\u76d6\u5df2\u5b8c\u6210\u6bd4\u8d5b\u5b98\u65b9\u7ed3\u679c", REASON, null);
+                } catch (ServiceException ex) {
+                    result.setErrorMessage(appendError(result.getErrorMessage(),
+                            "\u6bd4\u8d5b " + match.getId() + "\uff1a" + ex.getMessage()));
+                    saveDetail(record.getId(), PenaltyExecutionActionTypeEnum.MATCH_AUTO_FORFEIT.name(),
+                            TARGET_MATCH, match.getId(), DETAIL_FAILED, ex.getMessage());
                 }
                 continue;
             }

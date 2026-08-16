@@ -56,13 +56,19 @@ function goTeam(eventTeamId?: string | null) {
   if (!id || id === '0' || id === 'null' || id === 'undefined') return
   const numeric = Number(id)
   if (!Number.isFinite(numeric) || numeric <= 0) return
-  router.push(`/tournament/team/${id}`)
+  router.push({
+    path: `/tournament/team/${id}`,
+    query: match.value?.divisionId ? { divisionId: String(match.value.divisionId) } : {},
+  })
 }
 
 function goPlayer(sourcePlayerId?: string | null) {
   const id = String(sourcePlayerId || '').trim()
   if (!id) return
-  router.push(`/player/${id}`)
+  router.push({
+    path: `/player/${id}`,
+    query: match.value?.divisionId ? { divisionId: String(match.value.divisionId) } : {},
+  })
 }
 
 /** 空值 / 无有效出手 → --，避免假 0% */

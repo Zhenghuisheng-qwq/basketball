@@ -17,7 +17,11 @@ public class V4PublicDivisionDetailResp {
 
     private String seriesCode;
 
+    private String seriesName;
+
     private String seasonTitle;
+
+    private String seasonName;
 
     private String platformCode;
 

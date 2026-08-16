@@ -22,6 +22,11 @@ export interface TeamBase {
   ranking: number
   themeColor: string
   secondaryColor: string
+  seriesName?: string
+  divisionName?: string
+  disqualified?: boolean
+  eventTeamStatus?: string
+  activeDisciplineSummary?: import('@/api/types/v4Public').PublicActiveDisciplineSummary[]
 }
 
 export type TeamMatchResult = 'win' | 'loss'
@@ -80,6 +85,12 @@ export interface TeamMatchRecord {
   stage: TeamStage
   competition: string
   playoffGame?: string
+  resultType?: string
+  resultReason?: string
+  resultLabel?: string
+  originalTeamScore?: number
+  originalOpponentScore?: number
+  seriesScoreText?: string
 }
 
 export interface TeamSeasonAverages {
