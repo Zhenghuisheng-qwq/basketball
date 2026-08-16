@@ -1,9 +1,9 @@
 package com.zhs.basket.support;
 
-import com.zhs.basket.domain.BasketDisciplineRestriction;
 import com.zhs.basket.domain.BasketPlayerProfile;
-import com.zhs.basket.mapper.BasketDisciplineRestrictionMapper;
 import com.zhs.basket.mapper.BasketPlayerProfileMapper;
+import com.zhs.basket.support.restriction.EffectiveDisciplineRestriction;
+import com.zhs.basket.support.restriction.EffectiveDisciplineRestrictionResolver;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class BasketDisciplineRestrictionSupport {
 
-    @Autowired private BasketDisciplineRestrictionMapper restrictionMapper;
+    @Autowired private EffectiveDisciplineRestrictionResolver restrictionResolver;
     @Autowired private BasketPlayerProfileMapper playerProfileMapper;
 
     public void assertAllowRegistration(String subjectType, Long subjectId, Long seasonId) {
@@ -66,12 +66,11 @@ public class BasketDisciplineRestrictionSupport {
         if (subjectId == null) {
             return null;
         }
-        BasketDisciplineRestriction restriction = restrictionMapper.selectActiveBySubject(subjectType, subjectId, seasonId);
-        if (restriction == null) {
+        EffectiveDisciplineRestriction restriction = restrictionResolver.resolve(subjectType, subjectId, seasonId);
+        if (restriction == null || restriction.isUnrestricted()) {
             return null;
         }
-        Integer allowed = readFlag(restriction, flag);
-        if (allowed != null && allowed == 0) {
+        if (!readFlag(restriction, flag)) {
             return message;
         }
         return null;
@@ -85,23 +84,24 @@ public class BasketDisciplineRestrictionSupport {
     }
 
     private boolean hasRemainingSuspension(String subjectType, Long subjectId, Long seasonId) {
-        BasketDisciplineRestriction restriction = restrictionMapper.selectActiveBySubject(subjectType, subjectId, seasonId);
-        return restriction != null && restriction.getRemainingMatchSuspensions() != null
-                && restriction.getRemainingMatchSuspensions() > 0;
+        EffectiveDisciplineRestriction restriction = restrictionResolver.resolve(subjectType, subjectId, seasonId);
+        return restriction != null && restriction.getRemainingMatchSuspensions() > 0;
     }
 
-    private Integer readFlag(BasketDisciplineRestriction restriction, String flag) {
+    private boolean readFlag(EffectiveDisciplineRestriction restriction, String flag) {
         switch (flag) {
             case "allowRegistration":
-                return restriction.getAllowRegistration();
+                return restriction.isAllowRegistration();
             case "allowTransfer":
-                return restriction.getAllowTransfer();
+                return restriction.isAllowTransfer();
             case "allowCaptain":
-                return restriction.getAllowCaptain();
+                return restriction.isAllowCaptain();
             case "allowLineup":
-                return restriction.getAllowLineup();
+                return restriction.isAllowLineup();
+            case "allowParticipation":
+                return restriction.isAllowParticipation();
             default:
-                return 1;
+                return true;
         }
     }
 }

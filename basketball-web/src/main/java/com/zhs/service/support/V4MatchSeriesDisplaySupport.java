@@ -414,6 +414,8 @@ public class V4MatchSeriesDisplaySupport {
         item.setAwayEventTeamId(positiveOrNull(match.getAwayEventTeamId()));
         item.setHomeTeam(null);
         item.setAwayTeam(null);
+        BasketEventTeam home = null;
+        BasketEventTeam away = null;
         if (item.getHomeEventTeamId() != null || item.getAwayEventTeamId() != null) {
             Set<Long> ids = new HashSet<>();
             if (item.getHomeEventTeamId() != null) ids.add(item.getHomeEventTeamId());
@@ -427,8 +429,8 @@ public class V4MatchSeriesDisplaySupport {
                     }
                 }
             }
-            BasketEventTeam home = map.get(item.getHomeEventTeamId());
-            BasketEventTeam away = map.get(item.getAwayEventTeamId());
+            home = map.get(item.getHomeEventTeamId());
+            away = map.get(item.getAwayEventTeamId());
             if (home != null) {
                 item.setHomeTeam(home.getTeamNameSnapshot());
             }
@@ -456,7 +458,42 @@ public class V4MatchSeriesDisplaySupport {
         item.setStatusName(matchStatusLabel(match.getMatchStatus()));
         item.setPlaceholderSource(null);
         item.setPublished(true);
+        applyMatchOfficialDisplay(item, match, home, away);
         return item;
+    }
+
+    private void applyMatchOfficialDisplay(V4PublicScheduleItemResp item, BasketV4Match match,
+            BasketEventTeam home, BasketEventTeam away) {
+        if (item == null || match == null) {
+            return;
+        }
+        boolean homeDq = com.zhs.support.v4.EventTeamPublicDisplaySupport.isDisqualified(home);
+        boolean awayDq = com.zhs.support.v4.EventTeamPublicDisplaySupport.isDisqualified(away);
+        item.setHomeDisqualified(homeDq);
+        item.setAwayDisqualified(awayDq);
+        boolean forfeited = MatchStatusEnum.FORFEITED.getCode().equalsIgnoreCase(match.getMatchStatus());
+        if (!forfeited) {
+            item.setHomeScore(match.getHomeScore());
+            item.setAwayScore(match.getAwayScore());
+            return;
+        }
+        boolean dqForfeit = homeDq || awayDq
+                || (match.getRemark() != null && match.getRemark().contains("赛事资格取消"));
+        item.setResultType(dqForfeit
+                ? com.zhs.support.v4.EventTeamPublicDisplaySupport.RESULT_EVENT_DISQUALIFICATION
+                : com.zhs.support.v4.EventTeamPublicDisplaySupport.RESULT_FORFEIT);
+        Long winner = match.getWinnerEventTeamId();
+        if (winner != null && winner.equals(match.getHomeEventTeamId())) {
+            item.setHomeResultLabel(com.zhs.support.v4.EventTeamPublicDisplaySupport.LABEL_FORFEIT_WIN);
+            item.setAwayResultLabel(com.zhs.support.v4.EventTeamPublicDisplaySupport.LABEL_FORFEIT_LOSS);
+        } else if (winner != null && winner.equals(match.getAwayEventTeamId())) {
+            item.setHomeResultLabel(com.zhs.support.v4.EventTeamPublicDisplaySupport.LABEL_FORFEIT_LOSS);
+            item.setAwayResultLabel(com.zhs.support.v4.EventTeamPublicDisplaySupport.LABEL_FORFEIT_WIN);
+        }
+        if (!dqForfeit) {
+            item.setHomeScore(match.getHomeScore());
+            item.setAwayScore(match.getAwayScore());
+        }
     }
 
     private boolean isOfficialGameStatus(String status) {

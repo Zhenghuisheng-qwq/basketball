@@ -59,7 +59,10 @@ const infoItems = computed(() => [
           <router-link
             :to="{
               path: '/tournament',
-              query: profile.divisionId ? { divisionId: profile.divisionId } : {},
+              query: {
+                ...(profile.seriesCode ? { series: String(profile.seriesCode).toUpperCase() } : {}),
+                ...(profile.divisionId ? { divisionId: profile.divisionId } : {}),
+              },
             }"
           >
             {{ profile.seriesName }}
@@ -77,8 +80,11 @@ const infoItems = computed(() => [
         <router-link
           v-if="profile.currentTeamId"
           :to="{
-            path: `/tournament/team/${profile.currentTeamId}/overview`,
-            query: profile.divisionId ? { divisionId: profile.divisionId } : {},
+            path: `/tournament/team/${profile.eventTeamId || profile.currentTeamId}/overview`,
+            query: {
+              ...(profile.seriesCode ? { series: String(profile.seriesCode).toUpperCase() } : {}),
+              ...(profile.divisionId ? { divisionId: profile.divisionId } : {}),
+            },
           }"
         >
           {{ profile.currentTeamAbbr }}

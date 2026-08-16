@@ -25,6 +25,31 @@ export const DISCIPLINE_PENALTY_OPTIONS = [
   { value: 'CAPTAIN_BAN', label: '禁止担任队长', requires: [] as string[] }
 ]
 
+/** 与 DisciplinePenaltyTargetCompatibilityPolicy 对齐。ACCOUNT 本轮全部 CREATE DISABLED。 */
+export const DISCIPLINE_PENALTY_TARGET_MATRIX: Record<string, string[]> = {
+  WARNING: ['PLAYER', 'PERMANENT_TEAM', 'EVENT_TEAM'],
+  MATCH_SUSPENSION: ['PLAYER'],
+  DATE_RANGE_SUSPENSION: ['PLAYER'],
+  POINT_DEDUCTION: ['EVENT_TEAM'],
+  REGISTRATION_BAN: ['PLAYER'],
+  TRANSFER_BAN: ['PLAYER'],
+  MATCH_ELIGIBILITY_CANCEL: [],
+  EVENT_DISQUALIFICATION: ['EVENT_TEAM'],
+  TEAM_SUSPENSION: [],
+  PLAYER_QUALIFICATION_SUSPENSION: [],
+  CAPTAIN_BAN: ['PLAYER']
+}
+
+export function isPenaltyTargetCompatible(penaltyCode?: string, targetType?: string) {
+  if (!penaltyCode || !targetType) return false
+  return (DISCIPLINE_PENALTY_TARGET_MATRIX[penaltyCode] || []).includes(targetType)
+}
+
+export function getCreatablePenaltyOptions(targetType?: string) {
+  if (!targetType) return []
+  return DISCIPLINE_PENALTY_OPTIONS.filter(item => isPenaltyTargetCompatible(item.value, targetType))
+}
+
 export const DISCIPLINE_RECORD_STATUS_OPTIONS = [
   { value: 'DRAFT', label: '草稿' },
   { value: 'ACTIVE', label: '生效中' },

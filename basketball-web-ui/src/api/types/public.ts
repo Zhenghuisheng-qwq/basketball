@@ -466,6 +466,7 @@ export interface PublicTeamDetailVo {
   seasonName?: string | null
   seriesId?: string | null
   seriesName?: string | null
+  seriesCode?: string | null
   eventTeamStatus?: string | null
   disqualified?: boolean | null
   activeDisciplineSummary?: import('./v4Public').PublicActiveDisciplineSummary[] | null

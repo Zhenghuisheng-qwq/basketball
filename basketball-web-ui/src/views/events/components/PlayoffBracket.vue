@@ -102,7 +102,7 @@ const finalSeries = computed(() => playoffSeries.value.find((item) => item.round
 <template>
   <section class="playoff-bracket">
     <div class="playoff-bracket__heading">
-      <span class="playoff-bracket__league">CNPA LEAGUE</span>
+      <span class="playoff-bracket__league">{{ ctx.currentTournament?.value?.tournamentName || ctx.divisionDetail?.value?.seriesName || 'CNPA' }}</span>
       <h3 class="playoff-bracket__title">
         <i aria-hidden="true" />
         季后赛对阵图

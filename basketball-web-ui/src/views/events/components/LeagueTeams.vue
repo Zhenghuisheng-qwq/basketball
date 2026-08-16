@@ -114,8 +114,8 @@ function goPage(index: number) {
       <div class="site-shell-inner">
       <div class="section-head">
         <div class="section-head-group">
-          <h2 class="section-head-title">联赛战队</h2>
-          <span class="section-head-sub">League Teams</span>
+          <h2 class="section-head-title">参赛球队</h2>
+          <span class="section-head-sub">{{ ctx.currentTournament?.value?.tournamentName || ctx.divisionDetail?.value?.seriesName || 'Teams' }}</span>
         </div>
         <div class="head-actions">
           <label class="season-select">

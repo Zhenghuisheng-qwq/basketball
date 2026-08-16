@@ -301,19 +301,19 @@ public class BasketV4SeriesSubmissionAuditServiceImpl implements IBasketV4Series
         if (awayPts != awayScore) {
             errors.add(label + "：客队球员 PTS 合计 " + awayPts + " 必须等于客队比分 " + awayScore);
         }
-        int homeQ = 0;
-        int awayQ = 0;
-        if (game.getPeriodScores() != null) {
+        if (game.getPeriodScores() != null && !game.getPeriodScores().isEmpty()) {
+            int homeQ = 0;
+            int awayQ = 0;
             for (BasketMatchSubmissionPeriodScoreVo period : game.getPeriodScores()) {
                 homeQ += period.getHomeScore() == null ? 0 : period.getHomeScore();
                 awayQ += period.getAwayScore() == null ? 0 : period.getAwayScore();
             }
-        }
-        if (homeQ != homeScore) {
-            errors.add(label + "：节比分主队合计 " + homeQ + " 必须等于本场比分 " + homeScore);
-        }
-        if (awayQ != awayScore) {
-            errors.add(label + "：节比分客队合计 " + awayQ + " 必须等于本场比分 " + awayScore);
+            if (homeQ != homeScore) {
+                errors.add(label + "：节比分主队合计 " + homeQ + " 必须等于本场比分 " + homeScore);
+            }
+            if (awayQ != awayScore) {
+                errors.add(label + "：节比分客队合计 " + awayQ + " 必须等于本场比分 " + awayScore);
+            }
         }
         if (game.getMaterials() == null || game.getMaterials().isEmpty()) {
             errors.add(label + "：请上传本场证明材料");

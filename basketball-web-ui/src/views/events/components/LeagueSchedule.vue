@@ -256,7 +256,7 @@ function openSeriesGame(matchId?: string) {
               <span v-if="game.skipped">{{ game.skippedReason || '无需进行' }}</span>
               <template v-else>
                 <span>{{ game.matchStatusName || game.matchStatus || '待安排' }}</span>
-                <span v-if="game.homeScore != null && game.awayScore != null">
+                <span v-if="game.homeScore != null && game.awayScore != null || String(game.matchStatus || '').toUpperCase() === 'FORFEITED'">
                   {{ formatScore(game.homeScore, game.awayScore, game.matchStatus) }}
                 </span>
                 <span v-else>{{ game.scheduledTime || '待安排' }}</span>

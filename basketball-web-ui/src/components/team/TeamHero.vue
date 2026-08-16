@@ -52,6 +52,7 @@ const seriesCrumb = computed(() => props.team.seriesName?.trim() || '')
 const seasonCrumb = computed(() => props.team.seasonName?.trim() || '')
 const divisionCrumb = computed(() => props.team.divisionName?.trim() || '')
 const tournamentQuery = computed(() => ({
+  ...(props.team.seriesCode ? { series: String(props.team.seriesCode).toUpperCase() } : {}),
   ...(teamPageCtx?.seasonId.value ? { seasonId: teamPageCtx.seasonId.value } : {}),
   ...(teamPageCtx?.divisionId.value ? { divisionId: teamPageCtx.divisionId.value } : {}),
 }))

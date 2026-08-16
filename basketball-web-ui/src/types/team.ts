@@ -23,6 +23,7 @@ export interface TeamBase {
   themeColor: string
   secondaryColor: string
   seriesName?: string
+  seriesCode?: string
   divisionName?: string
   disqualified?: boolean
   eventTeamStatus?: string

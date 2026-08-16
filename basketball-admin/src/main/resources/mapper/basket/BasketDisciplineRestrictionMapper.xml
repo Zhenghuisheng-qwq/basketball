@@ -62,4 +62,35 @@
         set remaining_match_suspensions = #{remaining}, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
+
+    <select id="selectBySubjectForUpdate" resultMap="BasketDisciplineRestrictionResult">
+        select id, subject_type, subject_id, season_id, allow_registration, allow_transfer, allow_captain,
+               allow_lineup, allow_participation, remaining_match_suspensions, effective_discipline_id,
+               active_flag, effective_start_time, effective_end_time, create_time, update_time, is_delete
+        from basket_discipline_restriction
+        where subject_type = #{subjectType} and subject_id = #{subjectId} and is_delete = 0
+        <choose>
+            <when test="seasonId != null">and season_id = #{seasonId}</when>
+            <otherwise>and season_id is null</otherwise>
+        </choose>
+        order by active_flag desc, id desc
+        limit 1
+        for update
+    </select>
+
+    <update id="updateProjection">
+        update basket_discipline_restriction
+        set allow_registration = #{allowRegistration},
+            allow_transfer = #{allowTransfer},
+            allow_captain = #{allowCaptain},
+            allow_lineup = #{allowLineup},
+            allow_participation = #{allowParticipation},
+            remaining_match_suspensions = #{remainingMatchSuspensions},
+            effective_discipline_id = #{effectiveDisciplineId},
+            active_flag = #{activeFlag},
+            effective_start_time = null,
+            effective_end_time = null,
+            update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
 </mapper>

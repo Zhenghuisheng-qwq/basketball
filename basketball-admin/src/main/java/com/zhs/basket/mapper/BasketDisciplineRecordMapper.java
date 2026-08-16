@@ -13,6 +13,12 @@ public interface BasketDisciplineRecordMapper {
     List<BasketDisciplineRecord> selectActiveBySeasonAndMembers(@Param("seasonId") Long seasonId,
             @Param("memberIds") List<Long> memberIds, @Param("now") Date now);
 
+    List<BasketDisciplineRecord> selectActiveBySubject(@Param("subjectType") String subjectType,
+            @Param("subjectId") Long subjectId, @Param("seasonId") Long seasonId);
+
+    List<BasketDisciplineRecord> selectActiveBySubjectForUpdate(@Param("subjectType") String subjectType,
+            @Param("subjectId") Long subjectId, @Param("seasonId") Long seasonId);
+
     int insert(BasketDisciplineRecord row);
 
     BasketDisciplineRecord selectById(Long id);

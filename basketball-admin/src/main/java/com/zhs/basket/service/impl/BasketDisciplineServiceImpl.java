@@ -14,6 +14,8 @@ import com.zhs.basket.service.IBasketAnnouncementService;
 import com.zhs.basket.service.IBasketDisciplineService;
 import com.zhs.basket.service.IPenaltyExecutionService;
 import com.zhs.basket.support.DisciplineAnnouncementDraftSupport;
+import com.zhs.basket.support.DisciplinePenaltyTargetCompatibilityPolicy;
+import com.zhs.basket.support.restriction.DisciplineRestrictionAggregator;
 import com.zhs.basket.req.AnnouncementAddReq;
 import com.zhs.basket.req.DisciplineAnnouncementDraftReq;
 import com.zhs.basket.vo.DisciplineAnnouncementDraftVo;
@@ -42,7 +44,7 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
 
     @Autowired private BasketDisciplineRecordMapper disciplineRecordMapper;
     @Autowired private BasketDisciplineSelectorMapper disciplineSelectorMapper;
-    @Autowired private BasketDisciplineRestrictionMapper restrictionMapper;
+    @Autowired private DisciplineRestrictionAggregator restrictionAggregator;
     @Autowired private BasketPointAdjustmentMapper pointAdjustmentMapper;
     @Autowired private BasketDisciplineSuspensionLogMapper suspensionLogMapper;
     @Autowired private BasketMatchMapper matchMapper;
@@ -132,13 +134,16 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
     @Override
     public boolean needsEventExecution(Long id) {
         BasketDisciplineRecord record = requireRecord(id);
-        return DisciplinePenaltyCodeEnum.EVENT_DISQUALIFICATION.name().equals(record.getPenaltyCode());
+        return DisciplinePenaltyCodeEnum.EVENT_DISQUALIFICATION.name().equals(record.getPenaltyCode())
+                && DisciplineTargetTypeEnum.EVENT_TEAM.getCode().equalsIgnoreCase(record.getTargetType())
+                && record.getEventTeamId() != null;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void activate(Long id) {
         BasketDisciplineRecord record = requireRecord(id);
+        DisciplinePenaltyTargetCompatibilityPolicy.validateRecord(record);
         String fromStatus = record.getRecordStatus();
         if (!DisciplineRecordStatusEnum.DRAFT.name().equals(fromStatus)
                 && !DisciplineRecordStatusEnum.APPROVED.name().equals(fromStatus)
@@ -151,7 +156,7 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         }
         record.setRecordStatus(DisciplineRecordStatusEnum.ACTIVE.name());
         record.setDisciplineStatus(DisciplineStatusEnum.ACTIVE.getCode());
-        upsertRestriction(record);
+        restrictionAggregator.recompute(record);
         writePointAdjustmentIfNeeded(record);
         List<AuditFieldInput> fields = Arrays.asList(
                 field("recordStatus", "记录状态", fromStatus, DisciplineRecordStatusEnum.ACTIVE.name()),
@@ -175,10 +180,9 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
                 SecurityUtils.getUserId(), req.getRevokeReason()) != 1) {
             throw new ServiceException("处罚撤销失败，可能已被其他管理员处理");
         }
-        RestrictionSubject subject = resolveSubject(record);
-        if (subject != null) {
-            restrictionMapper.deactivateBySubject(subject.subjectType, subject.subjectId, record.getSeasonId());
-        }
+        record.setRecordStatus(DisciplineRecordStatusEnum.REVOKED.name());
+        record.setDisciplineStatus(DisciplineStatusEnum.INACTIVE.getCode());
+        restrictionAggregator.recompute(record);
         auditWriter.writeAudit("DISCIPLINE", "DISCIPLINE_RECORD", id, "REVOKE", "撤销处罚", req.getRevokeReason(), null);
         if (DisciplinePenaltyCodeEnum.EVENT_DISQUALIFICATION.name().equals(record.getPenaltyCode())) {
             penaltyExecutionService.restoreEligibility(id);
@@ -210,17 +214,8 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         }
         int nextRemaining = remaining - 1;
         disciplineRecordMapper.updateMatchSuspensionRemaining(record.getId(), nextRemaining);
-        RestrictionSubject subject = resolveSubject(record);
-        if (subject != null) {
-            BasketDisciplineRestriction restriction = restrictionMapper.selectActiveBySubject(
-                    subject.subjectType, subject.subjectId, record.getSeasonId());
-            if (restriction != null) {
-                restrictionMapper.updateRemainingSuspensions(restriction.getId(), nextRemaining);
-                if (nextRemaining <= 0 && restriction.getAllowLineup() != null && restriction.getAllowLineup() == 0) {
-                    restrictionMapper.deactivateBySubject(subject.subjectType, subject.subjectId, record.getSeasonId());
-                }
-            }
-        }
+        record.setMatchSuspensionRemaining(nextRemaining);
+        restrictionAggregator.recompute(record);
         BasketDisciplineSuspensionLog log = new BasketDisciplineSuspensionLog();
         log.setDisciplineId(record.getId());
         log.setMatchId(matchId);
@@ -334,8 +329,8 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
                 if (pointDeduction < 1) {
                     throw new ServiceException("扣除积分至少为 1");
                 }
-                if (req.getTeamId() == null) {
-                    throw new ServiceException("扣分处罚需要关联球队");
+                if (req.getEventTeamId() == null) {
+                    throw new ServiceException(DisciplinePenaltyTargetCompatibilityPolicy.MSG_POINT_EVENT_TEAM_REQUIRED);
                 }
                 suspensionCount = 0;
                 if (start == null) {
@@ -395,6 +390,7 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         }
         String targetType = StringUtils.isNotEmpty(req.getTargetType())
                 ? req.getTargetType() : DisciplineTargetTypeEnum.PLAYER.getCode();
+        DisciplinePenaltyTargetCompatibilityPolicy.validateCreate(req.getPenaltyCode(), targetType, req.getEventTeamId());
         if (DisciplineTargetTypeEnum.PLAYER.getCode().equalsIgnoreCase(targetType)) {
             if (req.getPlayerId() == null && req.getMemberId() == null) {
                 throw new ServiceException("请选择处罚球员");
@@ -433,81 +429,6 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         return record;
     }
 
-    private void upsertRestriction(BasketDisciplineRecord record) {
-        RestrictionSubject subject = resolveSubject(record);
-        if (subject == null) {
-            return;
-        }
-        restrictionMapper.deactivateBySubject(subject.subjectType, subject.subjectId, record.getSeasonId());
-        BasketDisciplineRestriction restriction = buildRestriction(record, subject);
-        Date now = new Date();
-        restriction.setCreateTime(now);
-        restriction.setUpdateTime(now);
-        restriction.setIsDelete(NOT_DELETED);
-        restrictionMapper.insert(restriction);
-    }
-
-    private BasketDisciplineRestriction buildRestriction(BasketDisciplineRecord record, RestrictionSubject subject) {
-        BasketDisciplineRestriction row = new BasketDisciplineRestriction();
-        row.setSubjectType(subject.subjectType);
-        row.setSubjectId(subject.subjectId);
-        row.setSeasonId(record.getSeasonId());
-        row.setAllowRegistration(1);
-        row.setAllowTransfer(1);
-        row.setAllowCaptain(1);
-        row.setAllowLineup(1);
-        row.setAllowParticipation(1);
-        row.setRemainingMatchSuspensions(0);
-        row.setEffectiveDisciplineId(record.getId());
-        row.setActiveFlag(1);
-        row.setEffectiveStartTime(record.getEffectiveStartTime());
-        row.setEffectiveEndTime(record.getEffectiveEndTime());
-        applyPenaltyCode(row, record);
-        return row;
-    }
-
-    private void applyPenaltyCode(BasketDisciplineRestriction row, BasketDisciplineRecord record) {
-        String penaltyCode = record.getPenaltyCode();
-        if (StringUtils.isEmpty(penaltyCode)) {
-            return;
-        }
-        try {
-            DisciplinePenaltyCodeEnum code = DisciplinePenaltyCodeEnum.valueOf(penaltyCode);
-            switch (code) {
-                case REGISTRATION_BAN:
-                    row.setAllowRegistration(0);
-                    break;
-                case TRANSFER_BAN:
-                    row.setAllowTransfer(0);
-                    break;
-                case CAPTAIN_BAN:
-                    row.setAllowCaptain(0);
-                    break;
-                case MATCH_SUSPENSION:
-                case MATCH_ELIGIBILITY_CANCEL:
-                    row.setAllowLineup(0);
-                    row.setRemainingMatchSuspensions(safeInt(record.getMatchSuspensionRemaining()));
-                    break;
-                case DATE_RANGE_SUSPENSION:
-                case EVENT_DISQUALIFICATION:
-                case PLAYER_QUALIFICATION_SUSPENSION:
-                    row.setAllowParticipation(0);
-                    row.setAllowLineup(0);
-                    break;
-                case TEAM_SUSPENSION:
-                    row.setAllowRegistration(0);
-                    row.setAllowParticipation(0);
-                    break;
-                case POINT_DEDUCTION:
-                case WARNING:
-                default:
-                    break;
-            }
-        } catch (IllegalArgumentException ignored) {
-            // unknown penalty code ignored
-        }
-    }
-
     private void writePointAdjustmentIfNeeded(BasketDisciplineRecord record) {
         if (record.getPointDeduction() == null || record.getPointDeduction() <= 0 || record.getTeamId() == null) {
             return;
@@ -529,30 +450,6 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         adjustment.setUpdateTime(now);
         adjustment.setIsDelete(NOT_DELETED);
         pointAdjustmentMapper.insert(adjustment);
-    }
-
-    private RestrictionSubject resolveSubject(BasketDisciplineRecord record) {
-        String targetType = StringUtils.isNotEmpty(record.getTargetType())
-                ? record.getTargetType() : DisciplineTargetTypeEnum.PLAYER.getCode();
-        if (DisciplineTargetTypeEnum.PLAYER.getCode().equalsIgnoreCase(targetType) && record.getPlayerId() != null) {
-            return new RestrictionSubject(DisciplineTargetTypeEnum.PLAYER.getCode(), record.getPlayerId());
-        }
-        if (DisciplineTargetTypeEnum.PERMANENT_TEAM.getCode().equalsIgnoreCase(targetType) && record.getTeamId() != null) {
-            return new RestrictionSubject(DisciplineTargetTypeEnum.PERMANENT_TEAM.getCode(), record.getTeamId());
-        }
-        if (DisciplineTargetTypeEnum.EVENT_TEAM.getCode().equalsIgnoreCase(targetType) && record.getEventTeamId() != null) {
-            return new RestrictionSubject(DisciplineTargetTypeEnum.EVENT_TEAM.getCode(), record.getEventTeamId());
-        }
-        if (record.getMemberId() != null) {
-            return new RestrictionSubject(DisciplineTargetTypeEnum.ACCOUNT.getCode(), record.getMemberId());
-        }
-        if (record.getPlayerId() != null) {
-            return new RestrictionSubject(DisciplineTargetTypeEnum.PLAYER.getCode(), record.getPlayerId());
-        }
-        if (record.getTeamId() != null) {
-            return new RestrictionSubject(DisciplineTargetTypeEnum.PERMANENT_TEAM.getCode(), record.getTeamId());
-        }
-        return null;
     }
 
     private void fillListDisplay(DisciplineListVo row, Date now) {
@@ -636,20 +533,6 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         input.setBeforeValue(before);
         input.setAfterValue(after);
         return input;
-    }
-
-    private int safeInt(Integer value) {
-        return value != null ? value : 0;
-    }
-
-    private static class RestrictionSubject {
-        private final String subjectType;
-        private final Long subjectId;
-
-        private RestrictionSubject(String subjectType, Long subjectId) {
-            this.subjectType = subjectType;
-            this.subjectId = subjectId;
-        }
     }
 
     private static class PenaltyParams {

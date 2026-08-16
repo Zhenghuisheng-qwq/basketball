@@ -2,6 +2,7 @@ import type { V4PublicMatchItem } from '@/api/types/v4Public'
 import { isDisqualificationResult } from '@/utils/eventContext'
 import { v4MatchStatusToNumber } from '@/views/events/utils/v4PublicAdapters'
 import { formatDateTime, mapMatchStatus, toNumber } from '@/utils/publicDisplay'
+import { formatSeriesSetScore } from '@/utils/v4Display'
 import type { TeamBase, TeamMatchRecord } from '@/types/team'
 
 export function mapV4MatchToTeamRecord(
@@ -29,8 +30,20 @@ export function mapV4MatchToTeamRecord(
   const stageLabel = item.seriesStatusName || ''
   const isPlayoff = /淘汰|季后|playoff/i.test(stageLabel)
   const bestOf = toNumber(item.bestOf, 1)
-  const seriesScoreText = bestOf > 1 && (item.seriesHomeWinCount != null || item.seriesAwayWinCount != null)
-    ? `${toNumber(isHome ? item.seriesHomeWinCount : item.seriesAwayWinCount, 0)}:${toNumber(isHome ? item.seriesAwayWinCount : item.seriesHomeWinCount, 0)}`
+  const seriesScoreRaw = bestOf > 1
+    ? formatSeriesSetScore({
+        homeWinCount: item.seriesHomeWinCount,
+        awayWinCount: item.seriesAwayWinCount,
+        bestOf,
+        seriesStatus: item.seriesStatus,
+        winnerEventTeamId: item.winnerEventTeamId,
+        homeEventTeamId: item.homeEventTeamId,
+        awayEventTeamId: item.awayEventTeamId,
+        emptyText: '',
+      })
+    : ''
+  const seriesScoreText = seriesScoreRaw && seriesScoreRaw !== '-- : --'
+    ? (isHome ? seriesScoreRaw.replace(' : ', ':') : seriesScoreRaw.split(' : ').reverse().join(':'))
     : ''
 
   return {

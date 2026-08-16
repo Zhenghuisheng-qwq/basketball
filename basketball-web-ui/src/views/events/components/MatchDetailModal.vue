@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { getV4PublicMatchDetail } from '@/api/v4Public'
 import type { PublicMatchDetailVo } from '@/api/types/public'
 import {
-  displayNumber,
   displayText,
   formatDateTime,
   matchStatusLabel,
 } from '@/utils/publicDisplay'
+import { formatScore } from '@/utils/v4Display'
 import type { Match } from '../types/events'
 import { v4MatchStatusToNumber } from '../utils/v4PublicAdapters'
 
@@ -20,10 +20,25 @@ const emit = defineEmits<{
   close: []
 }>()
 
-const detail = ref<PublicMatchDetailVo | null>(null)
+type MatchDetailView = PublicMatchDetailVo & {
+  officialStatus?: string
+  resultType?: string
+  homeResultLabel?: string
+  awayResultLabel?: string
+}
+
+const detail = ref<MatchDetailView | null>(null)
 const state = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
 const errorMessage = ref('')
 let reqId = 0
+const scoreText = computed(() => {
+  if (!detail.value) return 'VS'
+  return formatScore(detail.value.homeScore, detail.value.awayScore, detail.value.officialStatus, {
+    homeLabel: detail.value.homeResultLabel,
+    awayLabel: detail.value.awayResultLabel,
+    resultType: detail.value.resultType,
+  })
+})
 
 async function loadDetail(matchId: string) {
   const current = ++reqId
@@ -50,7 +65,11 @@ async function loadDetail(matchId: string) {
       awayTeamName: raw.awayTeam?.teamName || props.match?.awayTeamName,
       homeScore: raw.homeScore,
       awayScore: raw.awayScore,
-    } as PublicMatchDetailVo
+      officialStatus: raw.matchStatus,
+      resultType: raw.resultType,
+      homeResultLabel: raw.homeResultLabel,
+      awayResultLabel: raw.awayResultLabel,
+    } as MatchDetailView
     state.value = 'success'
   } catch (err) {
     if (current !== reqId) return
@@ -94,10 +113,7 @@ watch(
         <div class="modal-versus sport-num">
           <span>{{ displayText(detail.awayTeamName) }}</span>
           <strong>
-            <template v-if="detail.homeScore != null || detail.awayScore != null">
-              {{ displayNumber(detail.awayScore) }} : {{ displayNumber(detail.homeScore) }}
-            </template>
-            <template v-else>VS</template>
+            {{ scoreText }}
           </strong>
           <span>{{ displayText(detail.homeTeamName) }}</span>
         </div>

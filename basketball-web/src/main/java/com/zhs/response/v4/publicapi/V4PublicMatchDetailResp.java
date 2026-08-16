@@ -19,6 +19,8 @@ public class V4PublicMatchDetailResp {
 
     private String seriesName;
 
+    private String seriesCode;
+
     @JsonSerialize(using = ToStringSerializer.class)
     private Long seasonId;
 
@@ -89,4 +91,8 @@ public class V4PublicMatchDetailResp {
     private String homeResultLabel;
 
     private String awayResultLabel;
+
+    private String gameMode;
+
+    private List<V4PublicMatchPeriodScoreResp> periodScores;
 }

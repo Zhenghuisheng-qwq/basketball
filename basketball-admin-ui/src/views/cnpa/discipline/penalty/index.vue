@@ -103,7 +103,7 @@
       <el-table-column label="操作" width="280" fixed="right">
         <template #default="scope">
           <el-button link type="primary" @click="showDetail(scope.row.id)" v-hasPermi="['basket:discipline:query']">详情</el-button>
-          <el-button link type="success" v-if="scope.row.recordStatus === 'DRAFT'" @click="doActivate(scope.row.id)" v-hasPermi="['basket:discipline:activate']">生效</el-button>
+          <el-button link type="success" v-if="canActivate(scope.row)" @click="doActivate(scope.row.id)" v-hasPermi="['basket:discipline:activate']">生效</el-button>
           <el-button link type="danger" v-if="scope.row.recordStatus === 'ACTIVE'" @click="doRevoke(scope.row.id)" v-hasPermi="['basket:discipline:revoke']">撤销处罚</el-button>
           <el-button link type="warning" v-if="canRetryExecution(scope.row)" @click="doRetryExecution(scope.row.id)" v-hasPermi="['basket:discipline:activate']">重试执行</el-button>
         </template>
@@ -214,7 +214,7 @@
 
         <el-form-item label="处罚措施" required>
           <el-select v-model="form.penaltyCode" style="width: 100%" @change="onPenaltyCodeChange">
-            <el-option v-for="item in DISCIPLINE_PENALTY_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+            <el-option v-for="item in availablePenaltyOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
 
@@ -262,6 +262,15 @@
 
     <el-drawer v-model="detailOpen" title="处罚详情" size="680px">
       <template v-if="detail">
+        <el-alert
+          v-if="!isPenaltyTargetCompatible(detail.penaltyCode, detail.targetType)"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="mb8"
+          title="当前处罚对象与处罚措施组合已不再支持，请重新选择。"
+          description="该历史记录仍可查看，但不能生效或执行。本页不提供编辑，如需合法处罚请新建。"
+        />
         <el-descriptions :column="1" border>
           <el-descriptions-item label="处罚编号">{{ detail.recordNo }}</el-descriptions-item>
           <el-descriptions-item label="处罚对象">{{ formatDisciplineTargetName(detail) }}</el-descriptions-item>
@@ -318,7 +327,7 @@
         </el-table>
 
         <div class="mt16 drawer-actions">
-          <el-button v-if="detail.recordStatus === 'DRAFT'" type="success" @click="doActivate(detail.id)" v-hasPermi="['basket:discipline:activate']">生效</el-button>
+          <el-button v-if="canActivate(detail)" type="success" @click="doActivate(detail.id)" v-hasPermi="['basket:discipline:activate']">生效</el-button>
           <el-button v-if="detail.recordStatus === 'ACTIVE'" type="danger" @click="doRevoke(detail.id)" v-hasPermi="['basket:discipline:revoke']">撤销处罚</el-button>
           <el-button v-if="canRetryExecution(detail)" type="warning" @click="doRetryExecution(detail.id)" v-hasPermi="['basket:discipline:activate']">重试执行</el-button>
           <el-button type="primary" plain @click="doGenerateAnnouncement" v-hasPermi="['basket:announcement:add']">生成处罚公告</el-button>
@@ -345,10 +354,11 @@ import {
   type DisciplineSelectorOption
 } from '@/api/basket/discipline'
 import {
-  DISCIPLINE_PENALTY_OPTIONS,
   DISCIPLINE_RECORD_STATUS_OPTIONS,
   DISCIPLINE_TARGET_TYPE_OPTIONS,
   DISCIPLINE_TYPE_OPTIONS,
+  getCreatablePenaltyOptions,
+  isPenaltyTargetCompatible,
   formatDisciplinePenaltyCode,
   formatDisciplineSeasonLabel,
   formatDisciplineDivisionLabel,
@@ -415,6 +425,7 @@ const form = reactive<any>({
 
 const TEAM_TARGET_TYPES = ['PERMANENT_TEAM', 'EVENT_TEAM']
 const isTeamTarget = computed(() => TEAM_TARGET_TYPES.includes(form.targetType))
+const availablePenaltyOptions = computed(() => getCreatablePenaltyOptions(form.targetType))
 
 const displayRows = computed(() => {
   if (activeTab.value !== 'TEAM') return rows.value
@@ -546,6 +557,13 @@ function clearTargetSelection() {
 
 function onTargetTypeChange() {
   clearTargetSelection()
+  if (!isPenaltyTargetCompatible(form.penaltyCode, form.targetType)) {
+    form.penaltyCode = ''
+    form.matchSuspensionCount = 0
+    form.pointDeduction = 0
+    form.effectiveStartTime = undefined
+    form.effectiveEndTime = undefined
+  }
 }
 
 function onSeasonChange() {
@@ -684,8 +702,12 @@ async function submitCreate() {
     ElMessage.warning('请填写扣除积分')
     return
   }
-  if (showsPointDeduction(form.penaltyCode) && !form.teamId) {
-    ElMessage.warning('扣分处罚需要关联球队，请选择带有球队上下文的对象')
+  if (showsPointDeduction(form.penaltyCode) && !form.eventTeamId) {
+    ElMessage.warning('扣分处罚必须选择赛事球队')
+    return
+  }
+  if (!isPenaltyTargetCompatible(form.penaltyCode, form.targetType)) {
+    ElMessage.warning('当前处罚对象与处罚措施组合已不再支持，请重新选择。')
     return
   }
   if (showsDateRange(form.penaltyCode)) {
@@ -749,8 +771,13 @@ async function doActivate(id: number) {
   loadList()
 }
 
-function canRetryExecution(row?: { penaltyCode?: string; executionStatus?: string; eventImpact?: { executionStatus?: string } }) {
+function canActivate(row?: { recordStatus?: string; penaltyCode?: string; targetType?: string }) {
+  return row?.recordStatus === 'DRAFT' && isPenaltyTargetCompatible(row.penaltyCode, row.targetType)
+}
+
+function canRetryExecution(row?: { penaltyCode?: string; targetType?: string; executionStatus?: string; eventImpact?: { executionStatus?: string } }) {
   if (!row || row.penaltyCode !== 'EVENT_DISQUALIFICATION') return false
+  if (!isPenaltyTargetCompatible(row.penaltyCode, row.targetType)) return false
   const status = row.eventImpact?.executionStatus || row.executionStatus
   return status === 'FAILED' || status === 'PARTIAL'
 }

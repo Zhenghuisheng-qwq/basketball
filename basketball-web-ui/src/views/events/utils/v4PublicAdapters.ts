@@ -8,6 +8,7 @@ import type {
   V4PublicStandingItem,
 } from '@/api/types/v4Public'
 import { toNumber } from '@/utils/publicDisplay'
+import { formatSeriesSetScore } from '@/utils/v4Display'
 
 export function v4StandingToPublic(row: V4PublicStandingItem, seasonId = ''): PublicStandingItemVo {
   const wins = toNumber(row.winCount, 0)
@@ -163,11 +164,24 @@ export function v4BracketToPlayoffSeries(
       const homeId = publicTeamId(item.homeEventTeamId)
       const awayId = publicTeamId(item.awayEventTeamId)
       const isSeries = Boolean(item.matchSeriesId) || (item.bestOf != null && item.bestOf > 1)
+      const seriesText = isSeries
+        ? formatSeriesSetScore({
+            homeWinCount: item.seriesHomeWinCount,
+            awayWinCount: item.seriesAwayWinCount,
+            bestOf: item.bestOf,
+            seriesStatus: item.seriesStatus,
+            winnerEventTeamId: item.winnerEventTeamId,
+            homeEventTeamId: item.homeEventTeamId,
+            awayEventTeamId: item.awayEventTeamId,
+            emptyText: '0 : 0',
+          })
+        : ''
+      const [seriesHome, seriesAway] = seriesText.split(' : ').map((part) => toNumber(part, 0))
       const topScore = isSeries
-        ? toNumber(item.seriesHomeWinCount, 0)
+        ? seriesHome
         : (item.homeScore == null ? 0 : toNumber(item.homeScore, 0))
       const bottomScore = isSeries
-        ? toNumber(item.seriesAwayWinCount, 0)
+        ? seriesAway
         : (item.awayScore == null ? 0 : toNumber(item.awayScore, 0))
       const winnerTeamId = publicTeamId(item.winnerEventTeamId)
 

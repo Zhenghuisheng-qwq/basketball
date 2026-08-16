@@ -6,6 +6,7 @@ export interface PlayerCurrentTeam {
   eventContext: string
   divisionId?: string
   seriesName?: string
+  seriesCode?: string
   seasonName?: string
   divisionName?: string
   platformCode?: string
@@ -34,6 +35,7 @@ export interface PlayerProfile {
   platform: string
   currentStage: string
   seriesName?: string
+  seriesCode?: string
   seasonName?: string
   divisionName?: string
   divisionId?: string

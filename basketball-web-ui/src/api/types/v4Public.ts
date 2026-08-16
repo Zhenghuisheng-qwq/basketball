@@ -225,6 +225,7 @@ export interface V4PublicMatchDetail {
   matchId: string
   seriesId?: string
   seriesName?: string
+  seriesCode?: string
   seasonId: string
   seasonName?: string
   divisionId: string
@@ -258,6 +259,8 @@ export interface V4PublicMatchDetail {
   awayDisqualified?: boolean
   homeResultLabel?: string
   awayResultLabel?: string
+  gameMode?: string
+  periodScores?: Array<{ periodNo?: number; homeScore?: number; awayScore?: number }>
 }
 
 export interface V4PublicMatchSeriesGame {
@@ -427,6 +430,10 @@ export interface V4PublicScheduleItem {
   resultReason?: string
   homeDisqualified?: boolean
   awayDisqualified?: boolean
+  homeScore?: number
+  awayScore?: number
+  homeResultLabel?: string
+  awayResultLabel?: string
 }
 
 export type V4SeriesCode = 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'

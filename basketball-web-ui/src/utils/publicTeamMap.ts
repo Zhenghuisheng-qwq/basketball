@@ -75,9 +75,17 @@ export function mapPublicTeamMatch(item: PublicMatchItemVo, teamId: string): Tea
   const teamScore = isHome ? item.homeScore : item.awayScore
   const opponentScore = isHome ? item.awayScore : item.homeScore
   const status = mapMatchStatus(item.matchStatus)
-  const finished = status === 'finished' || status === 'live'
+  const forfeited = String(item.resultType || '').toUpperCase() === 'FORFEIT'
+    || String(item.resultType || '').toUpperCase() === 'EVENT_DISQUALIFICATION'
+  const finished = status === 'finished' || status === 'live' || forfeited
+  const winnerId = String(item.winnerTeamId || '')
+  const playerSideId = String((isHome ? item.homeTeamId : item.awayTeamId) || '')
   let result: TeamMatchRecord['result']
-  if (finished && teamScore != null && opponentScore != null) {
+  if (finished && winnerId && (winnerId === String(teamId) || winnerId === playerSideId)) {
+    result = 'win'
+  } else if (finished && winnerId) {
+    result = 'loss'
+  } else if (finished && teamScore != null && opponentScore != null) {
     result = teamScore > opponentScore ? 'win' : teamScore < opponentScore ? 'loss' : undefined
   }
   const dt = formatDateTime(item.scheduledStartTime)

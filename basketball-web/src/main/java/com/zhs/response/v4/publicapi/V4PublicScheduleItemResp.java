@@ -52,4 +52,12 @@ public class V4PublicScheduleItemResp {
     private Boolean homeDisqualified;
 
     private Boolean awayDisqualified;
+
+    private Integer homeScore;
+
+    private Integer awayScore;
+
+    private String homeResultLabel;
+
+    private String awayResultLabel;
 }

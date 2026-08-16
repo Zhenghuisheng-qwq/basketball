@@ -6,6 +6,7 @@ import type { V4PublicMatchDetail } from '@/api/types/v4Public'
 import SafeImage from '@/components/common/SafeImage.vue'
 import { displayNumber, displayText, formatDateTime, initials } from '@/utils/publicDisplay'
 import { formatScore, formatSeriesSetScore, v4BestOfLabel, v4MatchSeriesStatusLabel, v4MatchStatusLabel } from '@/utils/v4Display'
+import { requiresPeriodScores } from '@/utils/fullMatchSubmissionRules'
 import '../styles/v4-events.scss'
 
 const route = useRoute()
@@ -58,7 +59,10 @@ function goTeam(eventTeamId?: string | null) {
   if (!Number.isFinite(numeric) || numeric <= 0) return
   router.push({
     path: `/tournament/team/${id}`,
-    query: match.value?.divisionId ? { divisionId: String(match.value.divisionId) } : {},
+    query: {
+      ...(match.value?.seriesCode ? { series: String(match.value.seriesCode).toUpperCase() } : {}),
+      ...(match.value?.divisionId ? { divisionId: String(match.value.divisionId) } : {}),
+    },
   })
 }
 
@@ -67,7 +71,10 @@ function goPlayer(sourcePlayerId?: string | null) {
   if (!id) return
   router.push({
     path: `/player/${id}`,
-    query: match.value?.divisionId ? { divisionId: String(match.value.divisionId) } : {},
+    query: {
+      ...(match.value?.seriesCode ? { series: String(match.value.seriesCode).toUpperCase() } : {}),
+      ...(match.value?.divisionId ? { divisionId: String(match.value.divisionId) } : {}),
+    },
   })
 }
 
@@ -88,6 +95,12 @@ const contextLine = computed(() => {
     .map((item) => (item || '').trim())
     .filter(Boolean)
     .join(' · ')
+})
+
+const visiblePeriodScores = computed(() => {
+  const m = match.value
+  if (!m || !requiresPeriodScores(m.gameMode) || !m.periodScores?.length) return []
+  return m.periodScores.filter((row) => row.periodNo != null)
 })
 
 watch(matchId, () => {
@@ -142,7 +155,11 @@ onMounted(() => {
             </button>
             <div class="v4-match-row__center">
               <div class="v4-match-row__score">
-                {{ formatScore(match.homeScore, match.awayScore, match.matchStatus) }}
+                {{ formatScore(match.homeScore, match.awayScore, match.matchStatus, {
+                  homeLabel: match.homeResultLabel,
+                  awayLabel: match.awayResultLabel,
+                  resultType: match.resultType,
+                }) }}
               </div>
               <div class="v4-match-row__status">
                 {{ match.matchStatusName || v4MatchStatusLabel(match.matchStatus) }}
@@ -181,10 +198,34 @@ onMounted(() => {
           >
             <span>Game {{ game.seriesGameNo }}</span>
             <span v-if="game.skipped">{{ game.skippedReason || '无需进行' }}</span>
-            <span v-else>{{ formatScore(game.homeScore, game.awayScore, game.matchStatus) }}</span>
+            <span v-else>{{ formatScore(game.homeScore, game.awayScore, game.matchStatus, {
+              resultType: game.matchStatus,
+            }) }}</span>
             <span>{{ game.matchStatusName || v4MatchStatusLabel(game.matchStatus) }}</span>
           </div>
         </div>
+
+        <template v-if="visiblePeriodScores.length">
+          <h2 class="v4-schedule-round__title">单节比分</h2>
+          <div class="v4-table-wrap">
+            <table class="v4-table">
+              <thead>
+                <tr>
+                  <th>节次</th>
+                  <th>{{ displayText(match.homeTeam?.teamName, '主队') }}</th>
+                  <th>{{ displayText(match.awayTeam?.teamName, '客队') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in visiblePeriodScores" :key="row.periodNo">
+                  <td>Q{{ row.periodNo }}</td>
+                  <td>{{ statCell(row.homeScore) }}</td>
+                  <td>{{ statCell(row.awayScore) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
 
         <h2 class="v4-schedule-round__title">单场球队数据</h2>
         <div v-if="!match.teamStats?.length" class="v4-state">暂无数据</div>

@@ -15,6 +15,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class FullMatchSubmissionRulesTest {
 
     @Test
+    void ptsFormula_bossCase_fgm10_3pm5_ftm4() {
+        assertEquals(39, FullMatchSubmissionRules.expectedPoints(10, 5, 4));
+    }
+
+    @Test
+    void ptsFormula_bossCase_fgm0_3pm4_ftm2() {
+        assertEquals(14, FullMatchSubmissionRules.expectedPoints(0, 4, 2));
+    }
+
+    @Test
+    void ptsFormula_bossCase_allZero() {
+        assertEquals(0, FullMatchSubmissionRules.expectedPoints(0, 0, 0));
+    }
+
+    @Test
     void ptsFormula_twoPointOnlyThrees() {
         assertEquals(21, FullMatchSubmissionRules.expectedPoints(0, 7, 0));
     }

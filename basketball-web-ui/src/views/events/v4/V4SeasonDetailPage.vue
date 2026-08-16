@@ -502,7 +502,11 @@ onMounted(() => {
                 </div>
                 <div class="v4-match-row__center">
                   <div class="v4-match-row__score">
-                    {{ formatScore(item.homeScore, item.awayScore, item.matchStatus) }}
+                    {{ formatScore(item.homeScore, item.awayScore, item.matchStatus, {
+                      homeLabel: item.homeResultLabel,
+                      awayLabel: item.awayResultLabel,
+                      resultType: item.resultType,
+                    }) }}
                   </div>
                   <div class="v4-match-row__status">{{ v4MatchStatusLabel(item.matchStatus) }}</div>
                   <div class="v4-match-row__status">{{ formatDateTime(item.matchTime).full }}</div>

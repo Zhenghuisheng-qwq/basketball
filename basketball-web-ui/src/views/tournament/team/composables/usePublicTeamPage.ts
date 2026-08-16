@@ -106,6 +106,7 @@ export function usePublicTeamPage() {
       themeColor: '#c9a360',
       secondaryColor: '#111111',
       seriesName: displayText(seriesName.value || d.seriesName, ''),
+      seriesCode: d.seriesCode || divisionDetail.value?.seriesCode || '',
       divisionName: displayText(d.divisionName || divisionDetail.value?.divisionName, ''),
       disqualified: Boolean(d.disqualified || d.eventTeamStatus === 'DISQUALIFIED'),
       eventTeamStatus: d.eventTeamStatus || '',
@@ -150,10 +151,12 @@ export function usePublicTeamPage() {
         return
       }
 
-      const resolvedDivisionId = await resolveEventTeamDivisionId(id, {
-        divisionId: queryDivisionId.value,
-        seasonId: querySeasonId.value,
-      })
+      const resolvedDivisionId = queryDivisionId.value
+        || String(teamDetail.divisionId || '').trim()
+        || await resolveEventTeamDivisionId(id, {
+          divisionId: queryDivisionId.value,
+          seasonId: querySeasonId.value,
+        })
       if (current !== reqId) return
 
       if (!resolvedDivisionId) {
@@ -210,6 +213,7 @@ export function usePublicTeamPage() {
         seasonId: seasonId.value,
         seasonTitle: seasonTitle.value,
         seriesName: seriesName.value || teamDetail.seriesName,
+        seriesCode: teamDetail.seriesCode || divisionDetail.value?.seriesCode,
       })
       roster.value = (teamDetail.players ?? []).map(mapV4PlayerToRoster)
       stats.value = teamStanding

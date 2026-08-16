@@ -316,18 +316,41 @@ export function v4JoinLabels(
   return labels.length ? labels.join(' / ') : fallback
 }
 
-export function formatScore(home?: number | null, away?: number | null, status?: string | null): string {
-  const normalized = (status || '').toUpperCase()
-  if (normalized === 'FORFEITED') {
-    if (home != null && away != null && (home > 0 || away > 0)) {
+export function requiredWins(bestOf?: number | null): number {
+  const bo = Number(bestOf)
+  const legal = bo === 1 || bo === 3 || bo === 5 || bo === 7 ? bo : 1
+  return Math.floor(legal / 2) + 1
+}
+
+export function isOfficialForfeitResult(status?: string | null, resultType?: string | null): boolean {
+  const normalized = String(status || '').toUpperCase()
+  const type = String(resultType || '').toUpperCase()
+  return normalized === 'FORFEITED' || normalized === 'FORFEIT'
+    || type === 'FORFEIT' || type === 'EVENT_DISQUALIFICATION'
+}
+
+export function formatScore(
+  home?: number | null,
+  away?: number | null,
+  status?: string | null,
+  opts?: { homeLabel?: string | null; awayLabel?: string | null; resultType?: string | null },
+): string {
+  const forfeited = isOfficialForfeitResult(status, opts?.resultType)
+  if (forfeited) {
+    if (home != null && away != null && (Number(home) > 0 || Number(away) > 0)) {
       return `${home} - ${away}`
     }
-    return '判胜'
+    const homeLabel = String(opts?.homeLabel || '').trim()
+    const awayLabel = String(opts?.awayLabel || '').trim()
+    if (homeLabel || awayLabel) {
+      return `${homeLabel || '--'} - ${awayLabel || '--'}`
+    }
+    return '判负'
   }
   if (home != null && away != null) {
     return `${home} - ${away}`
   }
-  if (normalized === 'FINISHED') {
+  if (String(status || '').toUpperCase() === 'FINISHED') {
     return '已结束'
   }
   return 'VS'
@@ -344,7 +367,7 @@ export function formatSeriesSetScore(opts: {
   awayEventTeamId?: string | number | null
   emptyText?: string
 }): string {
-  const required = Math.floor((Number(opts.bestOf) || 1) / 2) + 1
+  const required = requiredWins(opts.bestOf)
   let home = opts.homeWinCount
   let away = opts.awayWinCount
   const status = String(opts.seriesStatus || '').toUpperCase()

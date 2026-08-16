@@ -51,6 +51,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     @Resource
     private BasketV4MatchPlayerStatDao matchPlayerStatDao;
     @Resource
+    private BasketV4MatchPeriodScoreDao matchPeriodScoreDao;
+    @Resource
     private BasketPublicSupport publicSupport;
     @Resource
     private BasketV4PublicStageMapper publicStageMapper;
@@ -358,6 +360,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
         resp.setTeamStats(listMatchTeamStats(matchId, teamMap));
         resp.setPlayerStats(listMatchPlayerStats(matchId, teamMap));
+        resp.setPeriodScores(listMatchPeriodScores(matchId));
         if (match.getSeriesId() != null) {
             resp.setMatchSeriesId(match.getSeriesId());
             resp.setSeriesGameNo(match.getSeriesGameNo());
@@ -1276,12 +1279,14 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 BasketSeries series = seriesDao.selectById(season.getSeriesId());
                 if (series != null && Objects.equals(series.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
                     resp.setSeriesName(series.getSeriesName());
+                    resp.setSeriesCode(series.getSeriesCode());
                 }
             }
         }
         BasketDivision division = divisionDao.selectById(match.getDivisionId());
         if (division != null && Objects.equals(division.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
             resp.setDivisionName(division.getDivisionName());
+            resp.setGameMode(division.getGameMode());
         }
         if (match.getStageId() != null) {
             List<V4PublicStageItemResp> stages = publicStageMapper.selectStagesByDivisionId(match.getDivisionId());
@@ -1312,6 +1317,26 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             case "SCHEDULED", "DRAFT" -> "未开始";
             default -> matchStatus;
         };
+    }
+
+    private List<V4PublicMatchPeriodScoreResp> listMatchPeriodScores(Long matchId) {
+        List<BasketV4MatchPeriodScore> rows = matchPeriodScoreDao.selectList(
+                new LambdaQueryWrapper<BasketV4MatchPeriodScore>()
+                        .eq(BasketV4MatchPeriodScore::getMatchId, matchId)
+                        .eq(BasketV4MatchPeriodScore::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                        .orderByAsc(BasketV4MatchPeriodScore::getPeriodNo));
+        if (CollectionUtils.isEmpty(rows)) {
+            return Collections.emptyList();
+        }
+        List<V4PublicMatchPeriodScoreResp> result = new ArrayList<>();
+        for (BasketV4MatchPeriodScore row : rows) {
+            V4PublicMatchPeriodScoreResp vo = new V4PublicMatchPeriodScoreResp();
+            vo.setPeriodNo(row.getPeriodNo());
+            vo.setHomeScore(row.getHomeScore());
+            vo.setAwayScore(row.getAwayScore());
+            result.add(vo);
+        }
+        return result;
     }
 
     private String seriesStatusLabel(String status) {

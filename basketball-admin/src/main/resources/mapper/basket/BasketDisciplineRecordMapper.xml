@@ -225,6 +225,44 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <sql id="ActiveBySubject_Where">
+        where is_delete = 0 and record_status = 'ACTIVE'
+        <choose>
+            <when test="subjectType == 'PLAYER'">
+                and target_type = 'PLAYER' and player_id = #{subjectId}
+            </when>
+            <when test="subjectType == 'PERMANENT_TEAM'">
+                and target_type = 'PERMANENT_TEAM' and team_id = #{subjectId}
+            </when>
+            <when test="subjectType == 'EVENT_TEAM'">
+                and target_type = 'EVENT_TEAM' and event_team_id = #{subjectId}
+            </when>
+            <when test="subjectType == 'ACCOUNT'">
+                and target_type = 'ACCOUNT' and member_id = #{subjectId}
+            </when>
+            <otherwise>
+                and 1 = 0
+            </otherwise>
+        </choose>
+        <choose>
+            <when test="seasonId != null">and season_id = #{seasonId}</when>
+            <otherwise>and season_id is null</otherwise>
+        </choose>
+    </sql>
+
+    <select id="selectActiveBySubject" resultMap="BasketDisciplineRecordResult">
+        select <include refid="Base_Column_List" /> from basket_discipline_record
+        <include refid="ActiveBySubject_Where" />
+        order by id asc
+    </select>
+
+    <select id="selectActiveBySubjectForUpdate" resultMap="BasketDisciplineRecordResult">
+        select <include refid="Base_Column_List" /> from basket_discipline_record
+        <include refid="ActiveBySubject_Where" />
+        order by id asc
+        for update
+    </select>
+
     <select id="selectActiveMatchSuspension" resultMap="BasketDisciplineRecordResult">
         select <include refid="Base_Column_List" /> from basket_discipline_record
         where season_id = #{seasonId} and member_id = #{memberId}

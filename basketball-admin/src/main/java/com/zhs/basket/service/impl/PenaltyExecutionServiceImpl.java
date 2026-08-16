@@ -5,6 +5,7 @@ import com.zhs.basket.enums.PenaltyExecutionStatusEnum;
 import com.zhs.basket.mapper.BasketDisciplineExecutionDetailMapper;
 import com.zhs.basket.mapper.BasketDisciplineRecordMapper;
 import com.zhs.basket.service.IPenaltyExecutionService;
+import com.zhs.basket.support.DisciplinePenaltyTargetCompatibilityPolicy;
 import com.zhs.basket.support.penalty.PenaltyExecutionStrategy;
 import com.zhs.basket.support.penalty.PenaltyExecutionStrategyFactory;
 import com.zhs.basket.vo.PenaltyExecutionResultVo;
@@ -29,6 +30,7 @@ public class PenaltyExecutionServiceImpl implements IPenaltyExecutionService {
     @Override
     public PenaltyExecutionResultVo execute(Long disciplineId) {
         BasketDisciplineRecord record = requireRecord(disciplineId);
+        DisciplinePenaltyTargetCompatibilityPolicy.validateRecord(record);
         PenaltyExecutionStrategy strategy = strategyFactory.find(record);
         if (strategy == null) {
             PenaltyExecutionResultVo skipped = new PenaltyExecutionResultVo();
