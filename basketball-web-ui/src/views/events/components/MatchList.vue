@@ -8,6 +8,7 @@ import TeamLogo from './TeamLogo.vue'
 
 const props = defineProps<{
   matches: Match[]
+  emptyText?: string
 }>()
 
 const emit = defineEmits<{
@@ -46,7 +47,7 @@ function getTeamById(id: number | string) {
       <span>数据</span>
     </div>
 
-    <div v-if="matches.length === 0" class="match-empty">当日暂无比赛</div>
+    <div v-if="matches.length === 0" class="match-empty">{{ emptyText || '当前筛选条件下暂无赛程' }}</div>
 
     <article v-for="match in matches" :key="match.id" class="match-row">
       <span class="cell time">{{ match.startTime }}</span>

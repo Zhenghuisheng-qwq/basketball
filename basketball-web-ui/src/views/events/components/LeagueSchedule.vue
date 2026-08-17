@@ -29,9 +29,14 @@ const {
   currentWeek,
   isCalendarOpen,
   isTeamSelectorOpen,
-  filteredMatches,
+  pagedMatches,
   scheduleByRound,
   hasSeriesItems,
+  teamOptions,
+  currentPage,
+  pageSize,
+  total,
+  showPagination,
   toggleCalendar,
   toggleTeamSelector,
   selectDate,
@@ -146,6 +151,9 @@ function openSeriesGame(matchId?: string) {
             :selected-team-id="selectedTeamId"
             :is-calendar-open="isCalendarOpen"
             :is-team-selector-open="isTeamSelectorOpen"
+            :team-options="teamOptions"
+            :loading="state === 'loading'"
+            :error="state === 'error'"
             :hide-date-filter="hasSeriesItems"
             @update:selected-season="selectSeason"
             @toggle-calendar="toggleCalendar"
@@ -198,15 +206,30 @@ function openSeriesGame(matchId?: string) {
               </div>
             </article>
           </section>
-          <div v-if="!scheduleByRound.length" class="series-empty">暂无已发布赛程</div>
+          <div v-if="!scheduleByRound.length" class="series-empty">当前筛选条件下暂无赛程</div>
         </div>
 
         <MatchList
           v-else
-          :matches="filteredMatches"
+          :matches="pagedMatches"
+          empty-text="当前筛选条件下暂无赛程"
           @open-detail="openDetail"
           @open-stats="openStats"
         />
+
+        <div v-if="state === 'success' && showPagination" class="schedule-pagination">
+          <span class="schedule-pagination__total">共 {{ total }} 场</span>
+          <el-pagination
+            v-model:current-page="currentPage"
+            :page-size="pageSize"
+            :total="total"
+            :pager-count="5"
+            layout="prev, pager, next"
+            prev-text="上一页"
+            next-text="下一页"
+            hide-on-single-page
+          />
+        </div>
       </div>
     </PaperSection>
 
@@ -341,6 +364,40 @@ function openSeriesGame(matchId?: string) {
   padding: 48px 16px;
   text-align: center;
   color: rgba(10, 10, 10, 0.55);
+}
+
+.schedule-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.schedule-pagination__total {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(10, 10, 10, 0.55);
+}
+
+.schedule-pagination :deep(.el-pagination) {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.schedule-pagination :deep(.el-pager li) {
+  font-weight: 700;
+}
+
+.schedule-pagination :deep(.el-pager li.is-active) {
+  background: var(--cnpa-red);
+  color: #fff;
+}
+
+.schedule-pagination :deep(.btn-prev),
+.schedule-pagination :deep(.btn-next) {
+  font-weight: 700;
 }
 
 .series-modal {

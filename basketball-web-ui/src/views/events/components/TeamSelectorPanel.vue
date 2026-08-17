@@ -1,47 +1,35 @@
 <script setup lang="ts">
-import { inject, ref, watch } from 'vue'
-import { getV4PublicStanding } from '@/api/v4Public'
-import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
+import type { ScheduleTeamOption } from '../utils/scheduleTeamFilter'
 import type { Team } from '../types/events'
-import { standingToTeam } from '../utils/mapPublic'
-import { v4StandingToPublic } from '../utils/v4PublicAdapters'
 import TeamLogo from './TeamLogo.vue'
 
-type SeasonContext = ReturnType<typeof usePublicSeasonContext>
-
 defineProps<{
-  selectedTeamId: number | null
+  selectedTeamId: string | null
+  teams: ScheduleTeamOption[]
+  loading?: boolean
+  error?: boolean
 }>()
 
 const emit = defineEmits<{
-  select: [teamId: number | null]
+  select: [teamId: string | null]
 }>()
 
-const ctx = inject<SeasonContext>('publicSeasonContext')!
-const teams = ref<Team[]>([])
-
-async function loadTeams(divisionId: string) {
-  if (!divisionId) {
-    teams.value = []
-    return
-  }
-  try {
-    const res = await getV4PublicStanding(divisionId)
-    teams.value = (res.data ?? []).map((row) =>
-      standingToTeam(v4StandingToPublic(row, ctx.seasonId.value)),
-    )
-  } catch {
-    teams.value = []
+function toTeam(option: ScheduleTeamOption): Team {
+  return {
+    id: 0,
+    teamId: option.eventTeamId,
+    code: option.shortName || option.name,
+    name: option.name,
+    shortName: option.shortName || option.name,
+    logo: option.logoUrl || '',
+    wins: 0,
+    losses: 0,
   }
 }
 
-watch(
-  () => ctx.divisionId.value,
-  (divisionId) => {
-    void loadTeams(divisionId)
-  },
-  { immediate: true },
-)
+function displayName(option: ScheduleTeamOption): string {
+  return option.shortName || option.name
+}
 </script>
 <template>
   <div
@@ -49,29 +37,33 @@ watch(
     @click.stop
   >
     <h3>选择参赛战队</h3>
-    <div class="team-list">
+    <p v-if="loading" class="team-hint">赛程加载中…</p>
+    <p v-else-if="error" class="team-hint">赛程加载失败，请稍后重试</p>
+    <div v-else class="team-list">
       <button
         type="button"
         class="team-item"
-        :class="{ active: selectedTeamId === null }"
+        :class="{ active: selectedTeamId == null || selectedTeamId === '' }"
         @click="emit('select', null)"
       >
         <span class="team-all">ALL</span>
         <span>全部战队</span>
-        <span v-if="selectedTeamId === null" class="check">●</span>
+        <span v-if="selectedTeamId == null || selectedTeamId === ''" class="check">●</span>
       </button>
+
+      <p v-if="!teams.length" class="team-empty">当日暂无参赛球队</p>
 
       <button
         v-for="team in teams"
-        :key="team.id"
+        :key="team.eventTeamId"
         type="button"
         class="team-item"
-        :class="{ active: selectedTeamId === team.id }"
-        @click="emit('select', team.id)"
+        :class="{ active: selectedTeamId === team.eventTeamId }"
+        @click="emit('select', team.eventTeamId)"
       >
-        <TeamLogo :team="team" size="sm" />
-        <span>{{ team.name }}</span>
-        <span v-if="selectedTeamId === team.id" class="check">●</span>
+        <TeamLogo :team="toTeam(team)" size="sm" />
+        <span>{{ displayName(team) }}</span>
+        <span v-if="selectedTeamId === team.eventTeamId" class="check">●</span>
       </button>
     </div>
   </div>
@@ -86,6 +78,19 @@ watch(
     font-size: 16px;
     color: #111;
   }
+}
+
+.team-hint,
+.team-empty {
+  margin: 0;
+  padding: 12px 4px;
+  color: rgba(10, 10, 10, 0.55);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.team-empty {
+  grid-column: 1 / -1;
 }
 
 .team-list {
@@ -115,6 +120,7 @@ watch(
   &.active {
     border-color: var(--cnpa-red);
     box-shadow: inset 0 0 0 1px rgba(225, 6, 19, 0.18);
+    background: rgba(225, 6, 19, 0.06);
   }
 }
 
@@ -146,6 +152,12 @@ watch(
 @media (max-width: 768px) {
   .team-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .team-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

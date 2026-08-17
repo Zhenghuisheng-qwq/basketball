@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { computed, inject, ref, watch } from 'vue'
-import { getV4PublicStanding } from '@/api/v4Public'
+import { computed, inject } from 'vue'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
-import { standingToTeam } from '../utils/mapPublic'
-import { v4StandingToPublic } from '../utils/v4PublicAdapters'
+import type { ScheduleTeamOption } from '../utils/scheduleTeamFilter'
 import CalendarPanel from './CalendarPanel.vue'
 import TeamSelectorPanel from './TeamSelectorPanel.vue'
 
@@ -12,9 +10,12 @@ type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 const props = defineProps<{
   selectedSeason: string
   selectedDate: string
-  selectedTeamId: number | null
+  selectedTeamId: string | null
   isCalendarOpen: boolean
   isTeamSelectorOpen: boolean
+  teamOptions: ScheduleTeamOption[]
+  loading?: boolean
+  error?: boolean
   hideDateFilter?: boolean
 }>()
 
@@ -23,12 +24,11 @@ const emit = defineEmits<{
   toggleCalendar: []
   toggleTeamSelector: []
   selectDate: [value: string]
-  selectTeam: [value: number | null]
+  selectTeam: [value: string | null]
   shiftMonths: [offset: number]
 }>()
 
 const ctx = inject<SeasonContext>('publicSeasonContext')!
-const teams = ref<ReturnType<typeof standingToTeam>[]>([])
 
 const seasonOptions = computed(() =>
   ctx.seasons.value.map((item) => ({
@@ -38,32 +38,10 @@ const seasonOptions = computed(() =>
 )
 
 const selectedTeamLabel = computed(() => {
-  if (props.selectedTeamId === null) return '选择球队'
-  return teams.value.find((team) => team.id === props.selectedTeamId)?.name || '选择球队'
+  if (props.selectedTeamId == null || props.selectedTeamId === '') return '选择球队'
+  const team = props.teamOptions.find((item) => item.eventTeamId === props.selectedTeamId)
+  return team ? `选择球队 · ${team.shortName || team.name}` : '选择球队'
 })
-
-async function loadTeams(divisionId: string) {
-  if (!divisionId) {
-    teams.value = []
-    return
-  }
-  try {
-    const res = await getV4PublicStanding(divisionId)
-    teams.value = (res.data ?? []).map((row) =>
-      standingToTeam(v4StandingToPublic(row, ctx.seasonId.value)),
-    )
-  } catch {
-    teams.value = []
-  }
-}
-
-watch(
-  () => ctx.divisionId.value,
-  (divisionId) => {
-    void loadTeams(divisionId)
-  },
-  { immediate: true },
-)
 </script>
 <template>
   <div class="schedule-filters">
@@ -128,6 +106,9 @@ watch(
       v-if="isTeamSelectorOpen"
       class="schedule-panel"
       :selected-team-id="selectedTeamId"
+      :teams="teamOptions"
+      :loading="loading"
+      :error="error"
       @select="emit('selectTeam', $event)"
     />
   </div>
