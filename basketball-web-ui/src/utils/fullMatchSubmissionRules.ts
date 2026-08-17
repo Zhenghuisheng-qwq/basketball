@@ -26,6 +26,11 @@ export function nvl(v?: number | null) {
   return v == null || Number.isNaN(Number(v)) ? 0 : Number(v)
 }
 
+/** 0 是合法得分；只有 null / undefined / NaN 表示未提供。 */
+export function hasScoreValue(score?: number | null) {
+  return score != null && Number.isFinite(Number(score))
+}
+
 /** WINNER_FULL_MATCH：fieldGoal* 表示两分球 2PM/2PA。PTS = 2×2PM + 3×3PM + FTM */
 export function expectedPoints(twoPointMade: number, threePointMade: number, freeThrowMade: number) {
   return 2 * twoPointMade + 3 * threePointMade + freeThrowMade
@@ -194,7 +199,9 @@ export function validateGame(opts: {
   if (opts.requireComplete && !empty) {
     if (!homeReady) errors.push(`${opts.gameLabel} · ${opts.homeName}至少需要一名球员数据`)
     if (!awayReady) errors.push(`${opts.gameLabel} · ${opts.awayName}至少需要一名球员数据`)
-    if (homeScore <= 0 || awayScore <= 0) errors.push(`${opts.gameLabel}：双方比分必须大于 0`)
+    if (!hasScoreValue(homeScore) || !hasScoreValue(awayScore) || homeScore < 0 || awayScore < 0) {
+      errors.push(`${opts.gameLabel}：双方比分必须填写且不能为负数`)
+    }
     if (homeScore === awayScore) errors.push(`${opts.gameLabel}：比赛不允许平局`)
     if (opts.materialCount <= 0) errors.push(`${opts.gameLabel}：请上传本场证明材料`)
   }
@@ -203,8 +210,10 @@ export function validateGame(opts: {
     && errors.length === 0
     && homeReady
     && awayReady
-    && homeScore > 0
-    && awayScore > 0
+    && hasScoreValue(homeScore)
+    && hasScoreValue(awayScore)
+    && homeScore >= 0
+    && awayScore >= 0
     && homeScore !== awayScore
     && periodOk
     && opts.materialCount > 0

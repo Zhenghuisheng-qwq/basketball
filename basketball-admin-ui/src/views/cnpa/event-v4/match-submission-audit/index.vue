@@ -125,8 +125,8 @@
         <div v-if="detail.materials?.length" class="audit-shots">
           <template v-for="item in detail.materials" :key="item.fileId">
             <img
-              v-if="materialUrls[item.fileId]"
-              :src="materialUrls[item.fileId]"
+              v-if="materialUrls[String(item.fileId)]"
+              :src="materialUrls[String(item.fileId)]"
               class="audit-shot"
               alt="比赛截图"
               @click="openShotPreview(item.fileId)"
@@ -258,8 +258,8 @@
                 <el-image
                   v-for="shot in game.materials || []"
                   :key="shot.fileId"
-                  :src="seriesMaterialUrls[shot.fileId] || ''"
-                  :preview-src-list="(game.materials || []).map(item => seriesMaterialUrls[item.fileId] || '').filter(Boolean)"
+                  :src="seriesMaterialUrls[String(shot.fileId)] || ''"
+                  :preview-src-list="(game.materials || []).map(item => seriesMaterialUrls[String(item.fileId)] || '').filter(Boolean)"
                   fit="cover"
                   style="width: 120px; height: 80px; margin-right: 8px"
                 />
@@ -310,9 +310,7 @@ import {
   v4SubmissionStatusTagType
 } from '@/utils/v4AdminDisplay'
 import { parseTime } from '@/utils/ruoyi'
-import { getToken } from '@/utils/auth'
-
-const baseURL = import.meta.env.VITE_APP_BASE_API
+import { fetchAuthedImageUrl, resolveSubmissionMaterialUrl } from '@/utils/resolveAttachmentUrl'
 
 const STATUS_OPTIONS = V4_SUBMISSION_STATUS_FILTER_OPTIONS
 const activeTab = ref('game')
@@ -322,7 +320,7 @@ const seriesList = ref<V4SeriesSubmissionAuditListVo[]>([])
 const seriesQuery = reactive({ pageNum: 1, pageSize: 10, status: undefined as string | undefined, seriesCode: undefined as string | undefined })
 const seriesDetailOpen = ref(false)
 const seriesDetail = ref<V4SeriesSubmissionAuditDetailVo | null>(null)
-const seriesMaterialUrls = ref<Record<number, string>>({})
+const seriesMaterialUrls = ref<Record<string, string>>({})
 const seriesRejectId = ref(0)
 
 const loading = ref(false)
@@ -333,7 +331,7 @@ const detailOpen = ref(false)
 const detail = ref<V4MatchSubmissionAuditDetailVo | null>(null)
 const previewVisible = ref(false)
 const previewIndex = ref(0)
-const materialUrls = ref<Record<number, string>>({})
+const materialUrls = ref<Record<string, string>>({})
 const materialPreviewList = ref<string[]>([])
 const materialObjectUrls = ref<string[]>([])
 const rejectOpen = ref(false)
@@ -396,32 +394,18 @@ function revokeMaterialUrls() {
 
 async function loadMaterialPreviews(detailVo: V4MatchSubmissionAuditDetailVo) {
   revokeMaterialUrls()
-  const next: Record<number, string> = {}
+  const next: Record<string, string> = {}
   const preview: string[] = []
   for (const item of detailVo.materials || []) {
     if (!item.fileId) continue
+    const key = String(item.fileId)
     try {
-      const res = await fetch(`${baseURL}/basket/v4/match-submission-audit/material/${item.fileId}`, {
-        headers: {
-          Authorization: 'Bearer ' + getToken(),
-          Accept: 'image/*',
-        },
-      })
-      if (!res.ok) {
-        next[item.fileId] = ''
-        continue
-      }
-      const buf = await res.arrayBuffer()
-      if (!buf || buf.byteLength < 8) {
-        next[item.fileId] = ''
-        continue
-      }
-      const url = URL.createObjectURL(new Blob([buf], { type: 'image/png' }))
-      next[item.fileId] = url
+      const url = await fetchAuthedImageUrl(resolveSubmissionMaterialUrl(key))
+      next[key] = url
       preview.push(url)
       materialObjectUrls.value.push(url)
     } catch {
-      next[item.fileId] = ''
+      next[key] = ''
     }
   }
   materialUrls.value = next
@@ -492,14 +476,10 @@ function openSeriesDetail(row: V4SeriesSubmissionAuditListVo) {
     seriesMaterialUrls.value = {}
     for (const game of res.data?.games || []) {
       for (const item of game.materials || []) {
-        if (!item.fileId || seriesMaterialUrls.value[item.fileId]) continue
+        const key = String(item.fileId || '')
+        if (!key || seriesMaterialUrls.value[key]) continue
         try {
-          const fileRes = await fetch(`${baseURL}/basket/v4/match-submission-audit/material/${item.fileId}`, {
-            headers: { Authorization: 'Bearer ' + getToken(), Accept: 'image/*' },
-          })
-          if (!fileRes.ok) continue
-          const buf = await fileRes.arrayBuffer()
-          seriesMaterialUrls.value[item.fileId] = URL.createObjectURL(new Blob([buf], { type: 'image/png' }))
+          seriesMaterialUrls.value[key] = await fetchAuthedImageUrl(resolveSubmissionMaterialUrl(key))
         } catch {
           /* keep empty */
         }

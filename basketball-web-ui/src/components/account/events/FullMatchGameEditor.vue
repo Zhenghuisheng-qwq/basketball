@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type { V4MatchSubmissionEligiblePlayer, V4MatchSubmissionPlayerStat } from '@/api/types/v4MatchSubmission'
 import type { V4MatchSubmissionPeriodScore } from '@/api/types/v4SeriesSubmission'
-import { getAccountFileUrl } from '@/api/accountFile'
+import { useAccountFilePreview } from '@/composables/useAccountFilePreview'
 import {
   aggregateTeam,
   playerFieldErrors,
@@ -61,6 +61,8 @@ const validation = computed(() =>
   }),
 )
 const showPeriods = computed(() => requiresPeriodScores(props.gameMode))
+const materialIds = computed(() => props.materialFileIds || [])
+const { urls: materialUrls, previewUrl, openPreview, closePreview } = useAccountFilePreview(materialIds)
 const periodTouched = computed(() =>
   validation.value.homeScore + validation.value.awayScore + validation.value.homePeriod + validation.value.awayPeriod > 0,
 )
@@ -295,14 +297,18 @@ function fieldErr(side: 'home' | 'away', index: number) {
       <p class="fm-shots__hint">上传本场完整比赛结算截图，用于管理员审核。</p>
       <div class="fm-shots__grid">
         <figure v-for="(fileId, index) in materialFileIds" :key="fileId">
-          <button type="button" @click="emit('preview', fileId)">
-            <img :src="getAccountFileUrl(fileId)" alt="比赛截图" />
+          <button type="button" @click="openPreview(fileId); emit('preview', fileId)">
+            <img v-if="materialUrls[fileId]" :src="materialUrls[fileId]" alt="比赛截图" />
+            <span v-else class="fm-shot-pending">加载中</span>
           </button>
           <button v-if="!readonly" type="button" class="fm-del" @click="emit('removeMaterial', index)">删除</button>
         </figure>
         <button v-if="!readonly" type="button" class="fm-shots__add" @click="emit('upload')">＋ 添加截图</button>
       </div>
     </section>
+    <div v-if="previewUrl" class="fm-preview" @click.self="closePreview">
+      <img :src="previewUrl" alt="截图预览" />
+    </div>
   </div>
 </template>
 
@@ -538,6 +544,27 @@ function fieldErr(side: 'home' | 'away', index: number) {
   color: #6f6862;
   border-radius: 6px;
   cursor: pointer;
+}
+.fm-shot-pending {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 132px;
+  height: 88px;
+  border-radius: 6px;
+  border: 1px solid #ddd7d1;
+  color: #8a837c;
+  font-size: 12px;
+}
+.fm-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  img { max-width: 92vw; max-height: 88vh; object-fit: contain; }
 }
 
 @media (max-width: 1100px) {

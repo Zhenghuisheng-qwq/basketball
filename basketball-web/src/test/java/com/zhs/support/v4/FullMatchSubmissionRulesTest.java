@@ -1,8 +1,11 @@
 package com.zhs.support.v4;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhs.exception.ServiceException;
 import com.zhs.request.v4.V4MatchSubmissionPeriodScoreReq;
 import com.zhs.request.v4.V4MatchSubmissionPlayerStatReq;
+import com.zhs.response.v4.V4MatchSubmissionDetailResp;
+import com.zhs.response.v4.V4SeriesSubmissionGameResp;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -150,6 +153,80 @@ class FullMatchSubmissionRulesTest {
     void emptyRowIgnored() {
         V4MatchSubmissionPlayerStatReq blank = new V4MatchSubmissionPlayerStatReq();
         assertEquals(0, FullMatchSubmissionRules.usedRows(List.of(blank)).size());
+    }
+
+    @Test
+    void zeroScore_legalWhenFormulaHolds_0_to_21() {
+        V4MatchSubmissionPlayerStatReq zero = player(1L, 0, 0, 5, 0, 7, 0, 0);
+        V4MatchSubmissionPlayerStatReq twentyOne = player(2L, 21, 0, 0, 7, 9, 0, 0);
+        assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePlayerRow("G1 · A · Atlas", zero, true));
+        assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePlayerRow("G1 · B · Atlas", twentyOne, true));
+        assertDoesNotThrow(() -> FullMatchSubmissionRules.validateScoreCross("G1", 0, 21, 0, 21));
+        assertDoesNotThrow(() -> FullMatchSubmissionRules.validateScoreCross("G1", 21, 0, 21, 0));
+    }
+
+    @Test
+    void zeroPts_withTwoPointMade_failsFormula() {
+        V4MatchSubmissionPlayerStatReq row = player(1L, 0, 1, 1, 0, 0, 0, 0);
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> FullMatchSubmissionRules.validatePlayerRow("G1 · A · Atlas", row, true));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("2×2PM+3×3PM+FTM=2"));
+    }
+
+    @Test
+    void zeroPts_withThreePointMade_failsFormula() {
+        V4MatchSubmissionPlayerStatReq row = player(1L, 0, 0, 0, 1, 1, 0, 0);
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> FullMatchSubmissionRules.validatePlayerRow("G1 · A · Atlas", row, true));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("2×2PM+3×3PM+FTM=3"));
+    }
+
+    @Test
+    void zeroPts_withFreeThrowMade_failsFormula() {
+        V4MatchSubmissionPlayerStatReq row = player(1L, 0, 0, 0, 0, 0, 1, 1);
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> FullMatchSubmissionRules.validatePlayerRow("G1 · A · Atlas", row, true));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("2×2PM+3×3PM+FTM=1"));
+    }
+
+    @Test
+    void fiveV5_zeroHomeAllQuarters_21Away_pass() {
+        List<V4MatchSubmissionPeriodScoreReq> periods = Arrays.asList(
+                q(1, 0, 5), q(2, 0, 5), q(3, 0, 5), q(4, 0, 6));
+        assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePeriodScores("G1", periods, 0, 21, true, true));
+        assertDoesNotThrow(() -> FullMatchSubmissionRules.validateScoreCross("G1", 0, 21, 0, 21));
+    }
+
+    @Test
+    void threeV3_zeroToTwentyOne_skipsQuarters() {
+        assertDoesNotThrow(() ->
+                FullMatchSubmissionRules.validatePeriodScores("G1", List.of(), 0, 21, true, false));
+        assertDoesNotThrow(() -> FullMatchSubmissionRules.validateScoreCross("G1", 0, 21, 0, 21));
+    }
+
+    @Test
+    void zeroToZero_stillRejectedAsDraw() {
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> FullMatchSubmissionRules.validateScoreCross("G1", 0, 0, 0, 0));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("不允许平局"));
+    }
+
+    @Test
+    void materialFileIds_serializeAsStrings() throws Exception {
+        long snowflakeId = 199999999999999999L;
+        V4MatchSubmissionDetailResp resp = new V4MatchSubmissionDetailResp();
+        resp.setMaterialFileIds(List.of(snowflakeId));
+        String json = new ObjectMapper().writeValueAsString(resp);
+        org.junit.jupiter.api.Assertions.assertTrue(json.contains("\"" + snowflakeId + "\""));
+    }
+
+    @Test
+    void seriesMaterialFileIds_serializeAsStrings() throws Exception {
+        long snowflakeId = 188888888888888888L;
+        V4SeriesSubmissionGameResp resp = new V4SeriesSubmissionGameResp();
+        resp.setMaterialFileIds(List.of(snowflakeId));
+        String json = new ObjectMapper().writeValueAsString(resp);
+        org.junit.jupiter.api.Assertions.assertTrue(json.contains("\"" + snowflakeId + "\""));
     }
 
     private V4MatchSubmissionPlayerStatReq player(Long id, int pts, int fgm, int fga, int tpm, int tpa, int ftm, int fta) {

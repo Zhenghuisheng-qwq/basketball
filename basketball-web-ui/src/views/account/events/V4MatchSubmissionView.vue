@@ -12,7 +12,8 @@ import {
   saveV4MatchSubmissionDraft,
   submitV4MatchSubmission,
 } from '@/api/v4MatchSubmission'
-import { getAccountFileUrl, uploadAccountFile } from '@/api/accountFile'
+import { uploadAccountFile } from '@/api/accountFile'
+import { useAccountFilePreview } from '@/composables/useAccountFilePreview'
 import type {
   V4MatchSubmissionDetail,
   V4MatchSubmissionEligiblePlayer,
@@ -35,7 +36,6 @@ const loading = ref(false)
 const saving = ref(false)
 const submitting = ref(false)
 const uploading = ref(false)
-const previewUrl = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const detail = ref<V4MatchSubmissionDetail | null>(null)
 
@@ -110,6 +110,8 @@ const form = ref({
   teamStat: emptyTeamStat(),
   playerStats: [] as V4MatchSubmissionPlayerStat[],
 })
+const materialIds = computed(() => form.value.materialFileIds)
+const { urls: materialUrls, previewUrl, openPreview, closePreview } = useAccountFilePreview(materialIds)
 
 function emptyTeamStat(): V4MatchSubmissionTeamStat {
   return {
@@ -408,7 +410,7 @@ onMounted(() => {
           @update:periods="fullForm.periods = $event"
           @upload="triggerUpload"
           @remove-material="removeScreenshot"
-          @preview="previewUrl = getAccountFileUrl($event)"
+          @preview="openPreview($event)"
         />
       </AccountPanel>
 
@@ -510,8 +512,9 @@ onMounted(() => {
         </button>
         <div v-if="form.materialFileIds.length" class="v4-sub-shots">
           <figure v-for="(fileId, index) in form.materialFileIds" :key="fileId" class="v4-sub-shot">
-            <button type="button" class="v4-sub-shot__thumb" @click="previewUrl = getAccountFileUrl(fileId)">
-              <img :src="getAccountFileUrl(fileId)" alt="比赛截图" />
+            <button type="button" class="v4-sub-shot__thumb" @click="openPreview(fileId)">
+              <img v-if="materialUrls[fileId]" :src="materialUrls[fileId]" alt="比赛截图" />
+              <span v-else class="v4-sub-shot__pending">加载中</span>
             </button>
             <button v-if="canEdit && !skipped" type="button" class="v4-sub-shot__del" @click="removeScreenshot(index)">删除</button>
           </figure>
@@ -538,7 +541,7 @@ onMounted(() => {
       </div>
     </template>
 
-    <div v-if="previewUrl" class="v4-sub-preview" @click.self="previewUrl = ''">
+    <div v-if="previewUrl" class="v4-sub-preview" @click.self="closePreview">
       <img :src="previewUrl" alt="截图预览" />
     </div>
   </div>
@@ -655,6 +658,15 @@ onMounted(() => {
   width: 120px;
 }
 
+.v4-sub-shot__pending {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 132px;
+  height: 88px;
+  color: #8a837c;
+  font-size: 12px;
+}
 .v4-sub-shot__thumb {
   display: block;
   width: 120px;

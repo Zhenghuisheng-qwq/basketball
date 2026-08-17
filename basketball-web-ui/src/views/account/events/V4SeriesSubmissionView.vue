@@ -12,7 +12,7 @@ import {
   saveV4SeriesGame,
   submitV4SeriesSubmission,
 } from '@/api/v4SeriesSubmission'
-import { getAccountFileUrl, uploadAccountFile } from '@/api/accountFile'
+import { uploadAccountFile } from '@/api/accountFile'
 import type { V4MatchSubmissionPlayerStat } from '@/api/types/v4MatchSubmission'
 import type { V4MatchSubmissionPeriodScore, V4SeriesSubmissionWorkspace } from '@/api/types/v4SeriesSubmission'
 import { requiresPeriodScores, seriesOptions, validateGame } from '@/utils/fullMatchSubmissionRules'
@@ -25,7 +25,6 @@ const loading = ref(false)
 const saving = ref(false)
 const workspace = ref<V4SeriesSubmissionWorkspace | null>(null)
 const current = ref(0)
-const previewUrl = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const declared = ref('3-1')
 
@@ -294,7 +293,6 @@ onMounted(() => { void loadWorkspace() })
             @update:periods="currentDraft.periods = $event; markCurrentDirty()"
             @upload="fileInput?.click()"
             @remove-material="currentDraft.materialFileIds.splice($event, 1); markCurrentDirty()"
-            @preview="previewUrl = $event"
           />
           <input ref="fileInput" type="file" accept="image/*" multiple hidden @change="handleUpload" />
           <div class="ss-actions">
@@ -333,9 +331,6 @@ onMounted(() => { void loadWorkspace() })
         </aside>
       </div>
     </template>
-    <div v-if="previewUrl" class="ss-preview" @click.self="previewUrl = ''">
-      <img :src="getAccountFileUrl(previewUrl)" alt="预览" />
-    </div>
   </div>
 </template>
 
@@ -359,6 +354,5 @@ onMounted(() => { void loadWorkspace() })
 .ss-actions, .ss-submit { display: flex; gap: 10px; margin-top: 14px; }
 .ss-submit { width: 100%; }
 .ss-reject { color: #b42318; }
-.ss-preview { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.72); img { max-width: 90vw; max-height: 90vh; } }
 @media (max-width: 1100px) { .ss-workspace { grid-template-columns: 1fr; } }
 </style>

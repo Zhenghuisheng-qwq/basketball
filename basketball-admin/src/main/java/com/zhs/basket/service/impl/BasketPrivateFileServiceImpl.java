@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -49,8 +51,14 @@ public class BasketPrivateFileServiceImpl implements IBasketPrivateFileService {
         try {
             byte[] bytes = readBytes(asset);
             String fileName = StringUtils.hasText(asset.getOriginalName()) ? asset.getOriginalName() : asset.getFileName();
-            response.setContentType(StringUtils.hasText(asset.getMimeType()) ? asset.getMimeType() : "application/octet-stream");
-            FileUtils.setAttachmentResponseHeader(response, fileName);
+            String mimeType = StringUtils.hasText(asset.getMimeType()) ? asset.getMimeType() : "application/octet-stream";
+            response.setContentType(mimeType);
+            if (mimeType.toLowerCase().startsWith("image/")) {
+                String encodedName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+                response.setHeader("Content-Disposition", "inline; filename*=UTF-8''" + encodedName);
+            } else {
+                FileUtils.setAttachmentResponseHeader(response, fileName);
+            }
             response.getOutputStream().write(bytes);
         } catch (IOException e) {
             throw new ServiceException("读取文件失败");

@@ -216,8 +216,15 @@ public final class FullMatchSubmissionRules {
         }
     }
 
+    /**
+     * 球队总分必须等于球员 PTS 合计。0 分是合法结果（例如 0:21），
+     * 只要公式成立且不是平局。0:0 仍按现有“不允许平局”拒绝。
+     */
     public static void validateScoreCross(String gameLabel, int homeScore, int awayScore,
                                           int homePtsSum, int awayPtsSum) {
+        if (homeScore < 0 || awayScore < 0) {
+            throw new ServiceException(gameLabel + "：双方比分必须填写且不能为负数");
+        }
         if (homePtsSum != homeScore) {
             throw new ServiceException(gameLabel + "：主队球员 PTS 合计 " + homePtsSum + " 必须等于主队比分 " + homeScore);
         }
