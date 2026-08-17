@@ -260,12 +260,7 @@ function goPage(page: number) {
             </template>
             <template v-else>
               <span class="match-table__score">
-                <template v-if="match.seriesScoreText">
-                  <span class="score-number" :class="{ 'is-winner': match.result === 'win' }">
-                    {{ match.seriesScoreText }}
-                  </span>
-                </template>
-                <template v-else-if="match.resultLabel">
+                <template v-if="match.resultLabel">
                   <span class="score-number">{{ match.resultLabel }}</span>
                   <small
                     v-if="match.originalTeamScore != null && match.originalOpponentScore != null"
@@ -274,7 +269,7 @@ function goPage(page: number) {
                     原比分 {{ match.originalTeamScore }}:{{ match.originalOpponentScore }} 成绩已取消
                   </small>
                 </template>
-                <template v-else>
+                <template v-else-if="match.teamScore != null && match.opponentScore != null">
                 <span
                   class="score-number"
                   :class="{ 'is-winner': match.result === 'win' }"
@@ -288,6 +283,9 @@ function goPage(page: number) {
                 >
                   {{ displayScore(match.opponentScore) }}
                 </span>
+                </template>
+                <template v-else>
+                  <span class="score-number">{{ getStatusLabel(match) }}</span>
                 </template>
               </span>
             </template>

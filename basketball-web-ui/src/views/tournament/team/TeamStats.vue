@@ -19,6 +19,7 @@ import {
   PUBLIC_TEAM_PAGE_KEY,
   type PublicTeamPageContext,
 } from './composables/usePublicTeamPage'
+import { mapV4TeamStatToSeasonStat } from './utils/mapV4PublicTeam'
 import {
   mapV4MatchDetailToSingleMatchStats,
   mapV4PlayerStatToAverage,
@@ -99,11 +100,10 @@ const competitionOptions = computed(() => {
   return name ? [name] : []
 })
 
-const seasonCardTitle = computed(() =>
-  stageFilter.value === 'regular'
-    ? { cn: '常规赛场均', en: 'Regular Season Averages' }
-    : { cn: '季后赛场均', en: 'Playoff Averages' },
-)
+const seasonCardTitle = computed(() => ({
+  cn: '赛事场均',
+  en: 'Event Averages',
+}))
 
 const seasonStatItems = computed(() => {
   if (!seasonStats.value) return []
@@ -119,22 +119,15 @@ const seasonStatItems = computed(() => {
 })
 
 const summaryPlayerStats = computed(() => {
-  if (stageFilter.value === 'regular') {
-    return playerStatsMode.value === 'average'
-      ? averagePlayerStats.value
-      : totalPlayerStats.value
+  if (stageFilter.value === 'playoffs' && playoffStatsMode.value === 'single') {
+    return []
   }
-  return playoffStatsMode.value === 'summary'
-    ? totalPlayerStats.value
-    : averagePlayerStats.value
+  return playerStatsMode.value === 'average'
+    ? averagePlayerStats.value
+    : totalPlayerStats.value
 })
 
-const summaryStatsMode = computed<PlayerStatsMode>(() => {
-  if (stageFilter.value === 'regular') {
-    return playerStatsMode.value
-  }
-  return playoffStatsMode.value === 'summary' ? 'total' : 'average'
-})
+const summaryStatsMode = computed<PlayerStatsMode>(() => playerStatsMode.value)
 
 const summaryMaxMap = computed(() => buildMaxMap(summaryPlayerStats.value, summaryStatsMode.value))
 
@@ -166,23 +159,10 @@ async function loadSeasonStats() {
     if (current !== seasonReqId) return
     const row = (res.data ?? []).find((item) => String(item.eventTeamId) === String(id))
     seasonStatsList.value = row
-      ? [{
+      ? [mapV4TeamStatToSeasonStat(row, {
           seasonId: ctx.seasonId.value,
-          teamId: id,
-          teamName: row.teamName,
-          teamLogoUrl: row.teamLogoUrl,
-          games: row.matchCount,
-          wins: row.winCount,
-          losses: row.loseCount,
-          avgPoints: row.avgPointsFor,
-          avgPointsAgainst: row.avgPointsAgainst,
-          avgRebounds: row.matchCount ? (row.rebound ?? 0) / (row.matchCount || 1) : 0,
-          avgAssists: row.matchCount ? (row.assist ?? 0) / (row.matchCount || 1) : 0,
-          avgSteals: row.matchCount ? (row.steal ?? 0) / (row.matchCount || 1) : 0,
-          avgBlocks: row.matchCount ? (row.block ?? 0) / (row.matchCount || 1) : 0,
-          avgTurnovers: row.matchCount ? (row.turnover ?? 0) / (row.matchCount || 1) : 0,
-          winRate: row.matchCount ? (row.winCount ?? 0) / (row.matchCount || 1) : 0,
-        }]
+          divisionId: divId,
+        })]
       : []
     seasonStatState.value = seasonStatsList.value.length ? 'success' : 'empty'
   } catch (err) {
@@ -415,6 +395,7 @@ function showSingleTable() {
           <strong class="season-card__value">{{ item.value.toFixed(1) }}</strong>
         </article>
       </div>
+      <p class="stats-note">场均为本赛事 Division 汇总，暂不按常规赛 / 季后赛拆分。</p>
     </section>
 
     <section class="stats-section">
@@ -424,35 +405,25 @@ function showSingleTable() {
           <span class="section-head-sub">Player Stats</span>
         </div>
 
-        <div v-if="stageFilter === 'regular'" class="mode-tabs">
+        <div class="mode-tabs">
           <button
             type="button"
             class="mode-tab"
-            :class="{ active: playerStatsMode === 'average' }"
-            @click="playerStatsMode = 'average'"
+            :class="{ active: showSummaryTable() && playerStatsMode === 'average' }"
+            @click="playerStatsMode = 'average'; playoffStatsMode = 'summary'"
           >
             场均
           </button>
           <button
             type="button"
             class="mode-tab"
-            :class="{ active: playerStatsMode === 'total' }"
-            @click="playerStatsMode = 'total'"
+            :class="{ active: showSummaryTable() && playerStatsMode === 'total' }"
+            @click="playerStatsMode = 'total'; playoffStatsMode = 'summary'"
           >
             累计
           </button>
-        </div>
-
-        <div v-else class="mode-tabs">
           <button
-            type="button"
-            class="mode-tab"
-            :class="{ active: playoffStatsMode === 'summary' }"
-            @click="playoffStatsMode = 'summary'"
-          >
-            季后赛汇总
-          </button>
-          <button
+            v-if="stageFilter === 'playoffs'"
             type="button"
             class="mode-tab"
             :class="{ active: playoffStatsMode === 'single' }"

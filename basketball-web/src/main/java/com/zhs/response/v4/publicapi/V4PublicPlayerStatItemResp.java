@@ -18,6 +18,9 @@ public class V4PublicPlayerStatItemResp {
 
     private String playerName;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long eventTeamId;
+
     private String teamName;
 
     private Integer matchCount;

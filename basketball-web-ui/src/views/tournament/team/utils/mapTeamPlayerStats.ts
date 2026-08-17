@@ -1,5 +1,6 @@
 import type { V4PublicMatchDetail, V4PublicPlayerStatItem } from '@/api/types/v4Public'
 import { displayText, formatDateTime, toNumber } from '@/utils/publicDisplay'
+import { calculateAverage } from '@/utils/statAverage'
 import type {
   TeamPlayerAverageStat,
   TeamPlayerTotalStat,
@@ -13,19 +14,19 @@ function publicPlayerRouteId(item: { sourcePlayerId?: string | null; eventPlayer
 }
 
 export function mapV4PlayerStatToAverage(item: V4PublicPlayerStatItem): TeamPlayerAverageStat {
+  const games = toNumber(item.matchCount, 0)
   return {
     playerId: publicPlayerRouteId(item),
     nickname: displayText(item.playerName, '未知球员'),
     avatar: '',
-    games: toNumber(item.matchCount, 0),
-    points: toNumber(item.avgPoints, 0),
-    rebounds: toNumber(item.avgRebound, 0),
-    assists: toNumber(item.avgAssist, 0),
-    steals: toNumber(item.steal, 0),
-    blocks: toNumber(item.block, 0),
+    games,
+    points: item.avgPoints != null ? toNumber(item.avgPoints, 0) : calculateAverage(item.points, games),
+    rebounds: item.avgRebound != null ? toNumber(item.avgRebound, 0) : calculateAverage(item.rebound, games),
+    assists: item.avgAssist != null ? toNumber(item.avgAssist, 0) : calculateAverage(item.assist, games),
+    steals: calculateAverage(item.steal, games),
+    blocks: calculateAverage(item.block, games),
     fouls: 0,
-    turnovers: toNumber(item.turnover, 0),
-    // 球员级 FG/3P/FT 正式数据源不存在
+    turnovers: calculateAverage(item.turnover, games),
     fgPct: null,
     tpPct: null,
     ftPct: null,

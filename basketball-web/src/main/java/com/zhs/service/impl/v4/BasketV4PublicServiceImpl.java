@@ -1,20 +1,26 @@
 package com.zhs.service.impl.v4;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.zhs.dao.BasketTeamProfileChangeDao;
 import com.zhs.dao.v4.*;
+import com.zhs.enums.TeamProfileChangeAuditStatusEnum;
 import com.zhs.enums.v4.DivisionStatusEnum;
 import com.zhs.enums.v4.MatchPublishStatusEnum;
 import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.enums.v4.PublishStatusEnum;
 import com.zhs.exception.ServiceException;
+import com.zhs.model.BasketTeamProfileChange;
 import com.zhs.model.v4.*;
+import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.v4.publicapi.*;
 import com.zhs.mapper.v4.BasketV4PublicStageMapper;
 import com.zhs.service.support.BasketPublicConstants;
+import com.zhs.service.support.BasketPublicHonorSupport;
 import com.zhs.service.support.BasketPublicSupport;
 import com.zhs.service.support.PublicTeamDisplaySupport;
 import com.zhs.service.support.V4MatchSeriesDisplaySupport;
 import com.zhs.service.v4.IBasketV4PublicService;
+import com.zhs.support.v4.V4PublicTeamArchiveAssembler;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -64,6 +70,10 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     private BasketScheduleBatchDao scheduleBatchDao;
     @Resource
     private com.zhs.support.v4.PublicDisciplineDisplaySupport publicDisciplineDisplaySupport;
+    @Resource
+    private BasketTeamProfileChangeDao teamProfileChangeDao;
+    @Resource
+    private BasketPublicHonorSupport publicHonorSupport;
 
     @Override
     public List<V4PublicDivisionListItemResp> listDivisions(Long seasonId) {
@@ -279,6 +289,65 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         fillEventTeamEventContext(resp, team);
         resp.setPlayers(listPlayersByEventTeamId(eventTeamId));
         resp.setActiveDisciplineSummary(publicDisciplineDisplaySupport.listEventTeamActive(team));
+        return resp;
+    }
+
+    @Override
+    public V4PublicTeamArchiveResp getTeamArchive(Long eventTeamId) {
+        BasketEventTeam team = requireEventTeam(eventTeamId);
+        requirePublishedSeason(team.getSeasonId());
+        V4PublicTeamArchiveResp resp = new V4PublicTeamArchiveResp();
+        resp.setEventTeamId(team.getId());
+        resp.setSourceTeamId(team.getSourceTeamId());
+        if (team.getSourceTeamId() == null) {
+            return resp;
+        }
+        List<BasketTeamProfileChange> approved = V4PublicTeamArchiveAssembler.approvedOnly(
+                teamProfileChangeDao.selectList(new LambdaQueryWrapper<BasketTeamProfileChange>()
+                        .eq(BasketTeamProfileChange::getTeamId, team.getSourceTeamId())
+                        .eq(BasketTeamProfileChange::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                        .eq(BasketTeamProfileChange::getAuditStatus, TeamProfileChangeAuditStatusEnum.APPROVED.getCode())
+                        .orderByDesc(BasketTeamProfileChange::getAuditTime)
+                        .orderByDesc(BasketTeamProfileChange::getId)));
+        for (BasketTeamProfileChange change : approved) {
+            if (V4PublicTeamArchiveAssembler.isNameChanged(change)) {
+                V4PublicTeamArchiveResp.V4PublicTeamNameHistoryItem item =
+                        new V4PublicTeamArchiveResp.V4PublicTeamNameHistoryItem();
+                item.setChangeId(change.getId());
+                item.setOldName(change.getOldTeamName());
+                item.setNewName(change.getNewTeamName());
+                item.setSubmittedAt(change.getCreateTime());
+                item.setApprovedAt(change.getAuditTime());
+                resp.getNameHistory().add(item);
+            }
+            if (V4PublicTeamArchiveAssembler.isLogoChanged(change)) {
+                V4PublicTeamArchiveResp.V4PublicTeamLogoHistoryItem item =
+                        new V4PublicTeamArchiveResp.V4PublicTeamLogoHistoryItem();
+                item.setChangeId(change.getId());
+                item.setOldLogoFileId(change.getOldLogoFileId());
+                item.setNewLogoFileId(change.getNewLogoFileId());
+                item.setOldLogoUrl(change.getOldLogoUrl());
+                item.setNewLogoUrl(change.getNewLogoUrl());
+                item.setSubmittedAt(change.getCreateTime());
+                item.setApprovedAt(change.getAuditTime());
+                resp.getLogoHistory().add(item);
+            }
+        }
+        try {
+            List<PublicHonorItemResp> honors = publicHonorSupport.pageByTeam(team.getSourceTeamId(), 1, 50).getRecords();
+            if (!CollectionUtils.isEmpty(honors)) {
+                for (PublicHonorItemResp honor : honors) {
+                    V4PublicTeamArchiveResp.V4PublicTeamHonorItem item = new V4PublicTeamArchiveResp.V4PublicTeamHonorItem();
+                    item.setHonorId(honor.getHonorId());
+                    item.setHonorTitle(honor.getHonorTitle());
+                    item.setCompetitionName(honor.getSeasonName() != null ? honor.getSeasonName() : honor.getTournamentName());
+                    item.setAwardDate(honor.getAwardDate());
+                    resp.getHonors().add(item);
+                }
+            }
+        } catch (Exception ignored) {
+            // honors are optional for archive
+        }
         return resp;
     }
 
@@ -638,6 +707,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             vo.setSteal(row.getSteal());
             vo.setBlock(row.getBlock());
             vo.setTurnover(row.getTurnover());
+            vo.setEventTeamId(row.getEventTeamId());
             BasketEventPlayer player = playerMap.get(row.getEventPlayerId());
             if (player != null) {
                 vo.setSourcePlayerId(player.getSourcePlayerId());

@@ -16,6 +16,7 @@ import type {
   V4PublicStageItem,
   V4PublicStageStandingScope,
   V4PublicStandingItem,
+  V4PublicTeamArchive,
   V4PublicTeamStatItem,
 } from '@/api/types/v4Public'
 
@@ -47,6 +48,10 @@ export function getV4PublicTeamList(divisionId: string) {
 
 export function getV4PublicTeamDetail(eventTeamId: string) {
   return request.get<any, ApiResult<V4PublicEventTeamDetail>>(`/basket/v4/public/team/${eventTeamId}`)
+}
+
+export function getV4PublicTeamArchive(eventTeamId: string) {
+  return request.get<any, ApiResult<V4PublicTeamArchive>>(`/basket/v4/public/team/${eventTeamId}/archive`)
 }
 
 export function getV4PublicDivisionSchedule(divisionId: string) {

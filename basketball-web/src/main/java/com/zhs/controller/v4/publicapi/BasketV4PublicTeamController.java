@@ -3,6 +3,7 @@ package com.zhs.controller.v4.publicapi;
 import com.zhs.common.NoLoginRequest;
 import com.zhs.response.v4.publicapi.V4PublicEventTeamDetailResp;
 import com.zhs.response.v4.publicapi.V4PublicEventTeamItemResp;
+import com.zhs.response.v4.publicapi.V4PublicTeamArchiveResp;
 import com.zhs.service.v4.IBasketV4PublicService;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
@@ -35,5 +36,11 @@ public class BasketV4PublicTeamController {
     @GetMapping("/{eventTeamId}")
     public R<V4PublicEventTeamDetailResp> getTeamDetail(@PathVariable Long eventTeamId) {
         return R.ok(v4PublicService.getTeamDetail(eventTeamId));
+    }
+
+    @ApiOperation("公开球队档案")
+    @GetMapping("/{eventTeamId}/archive")
+    public R<V4PublicTeamArchiveResp> getTeamArchive(@PathVariable Long eventTeamId) {
+        return R.ok(v4PublicService.getTeamArchive(eventTeamId));
     }
 }

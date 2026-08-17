@@ -2,7 +2,7 @@ import type { V4PublicMatchItem } from '@/api/types/v4Public'
 import { isDisqualificationResult } from '@/utils/eventContext'
 import { v4MatchStatusToNumber } from '@/views/events/utils/v4PublicAdapters'
 import { formatDateTime, mapMatchStatus, toNumber } from '@/utils/publicDisplay'
-import { formatSeriesSetScore } from '@/utils/v4Display'
+import { v4BestOfLabel } from '@/utils/v4Display'
 import type { TeamBase, TeamMatchRecord } from '@/types/team'
 
 export function mapV4MatchToTeamRecord(
@@ -30,20 +30,9 @@ export function mapV4MatchToTeamRecord(
   const stageLabel = item.seriesStatusName || ''
   const isPlayoff = /淘汰|季后|playoff/i.test(stageLabel)
   const bestOf = toNumber(item.bestOf, 1)
-  const seriesScoreRaw = bestOf > 1
-    ? formatSeriesSetScore({
-        homeWinCount: item.seriesHomeWinCount,
-        awayWinCount: item.seriesAwayWinCount,
-        bestOf,
-        seriesStatus: item.seriesStatus,
-        winnerEventTeamId: item.winnerEventTeamId,
-        homeEventTeamId: item.homeEventTeamId,
-        awayEventTeamId: item.awayEventTeamId,
-        emptyText: '',
-      })
-    : ''
-  const seriesScoreText = seriesScoreRaw && seriesScoreRaw !== '-- : --'
-    ? (isHome ? seriesScoreRaw.replace(' : ', ':') : seriesScoreRaw.split(' : ').reverse().join(':'))
+  const gameNo = toNumber(item.seriesGameNo, 0)
+  const seriesContext = bestOf > 1
+    ? `${v4BestOfLabel(bestOf)}${gameNo > 0 ? ` G${gameNo}` : ''}`
     : ''
 
   return {
@@ -63,7 +52,7 @@ export function mapV4MatchToTeamRecord(
     result,
     status: finished ? 'finished' : 'scheduled',
     stage: isPlayoff ? 'playoffs' : 'regular',
-    competition: stageLabel || `第${item.roundNo ?? '--'}轮`,
+    competition: [seriesContext, stageLabel || `第${item.roundNo ?? '--'}轮`].filter(Boolean).join(' · '),
     resultType: item.resultType || undefined,
     resultReason: item.resultReason || undefined,
     resultLabel: dq
@@ -71,7 +60,6 @@ export function mapV4MatchToTeamRecord(
       : sideLabel || undefined,
     originalTeamScore: originalTeamScore ?? undefined,
     originalOpponentScore: originalOpponentScore ?? undefined,
-    seriesScoreText: seriesScoreText || undefined,
   } as TeamMatchRecord & { opponentName: string; opponentLogoUrl: string }
 }
 

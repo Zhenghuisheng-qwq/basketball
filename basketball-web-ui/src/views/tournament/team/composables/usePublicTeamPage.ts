@@ -6,6 +6,7 @@ import {
   getV4PublicStanding,
   getV4PublicStageList,
   getV4PublicTeamDetail,
+  getV4PublicTeamStat,
 } from '@/api/v4Public'
 import type {
   PublicTeamDetailVo,
@@ -21,6 +22,7 @@ import {
   mapV4PlayerToRoster,
   mapV4StandingToRank,
   mapV4TeamDetailToPublic,
+  mapV4TeamStatToSeasonStat,
 } from '../utils/mapV4PublicTeam'
 import { resolveEventTeamDivisionId } from '../utils/resolveTeamDivision'
 
@@ -64,6 +66,8 @@ export function usePublicTeamPage() {
   const roster = ref<PublicTeamRosterItemVo[]>([])
   const stats = ref<PublicTeamSeasonStatVo[]>([])
   const ranking = ref<PublicTeamRankItemVo[]>([])
+  const standingWins = ref(0)
+  const standingLosses = ref(0)
   const currentStageName = ref('')
   const captainName = ref('--')
   const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
@@ -73,14 +77,13 @@ export function usePublicTeamPage() {
   const teamView = computed<TeamBase | null>(() => {
     if (!detail.value) return null
     const d = detail.value
-    const stat = stats.value[0]
     const rank = ranking.value[0]
     const name = displayText(d.teamName, '未知球队')
     const captainFromRoster =
       roster.value.find((item) => (item.roleType || '').toUpperCase().includes('CAPTAIN'))
         ?.playerName || ''
-    const wins = toNumber(stat?.wins, 0)
-    const losses = toNumber(stat?.losses, 0)
+    const wins = standingWins.value
+    const losses = standingLosses.value
 
     return {
       id: d.teamId,
@@ -146,6 +149,8 @@ export function usePublicTeamPage() {
         roster.value = []
         stats.value = []
         ranking.value = []
+        standingWins.value = 0
+        standingLosses.value = 0
         state.value = 'empty'
         errorMessage.value = '球队不存在或未公开'
         return
@@ -164,16 +169,19 @@ export function usePublicTeamPage() {
         roster.value = (teamDetail.players ?? []).map(mapV4PlayerToRoster)
         stats.value = []
         ranking.value = []
+        standingWins.value = 0
+        standingLosses.value = 0
         state.value = 'success'
         return
       }
 
       divisionId.value = resolvedDivisionId
 
-      const [divisionRes, standingRes, stageRes] = await Promise.all([
+      const [divisionRes, standingRes, stageRes, teamStatRes] = await Promise.all([
         getV4PublicDivisionDetail(resolvedDivisionId),
         getV4PublicStanding(resolvedDivisionId).catch(() => ({ data: [] })),
         getV4PublicStageList(resolvedDivisionId).catch(() => ({ data: [] })),
+        getV4PublicTeamStat(resolvedDivisionId).catch(() => ({ data: [] })),
       ])
       if (current !== reqId) return
 
@@ -203,6 +211,9 @@ export function usePublicTeamPage() {
       const teamStanding = standingRows.find(
         (row) => String(row.eventTeamId) === String(id),
       )
+      const teamStatRow = (teamStatRes.data ?? []).find(
+        (row) => String(row.eventTeamId) === String(id),
+      )
 
       const currentStage = (stageRes.data ?? []).find((stage) => stage.currentStage)
       currentStageName.value = displayText(currentStage?.stageName, '')
@@ -216,23 +227,15 @@ export function usePublicTeamPage() {
         seriesCode: teamDetail.seriesCode || divisionDetail.value?.seriesCode,
       })
       roster.value = (teamDetail.players ?? []).map(mapV4PlayerToRoster)
-      stats.value = teamStanding
-        ? [{
-              seasonId: seasonId.value,
-              teamId: id,
-              teamName: teamStanding.teamName,
-              teamLogoUrl: teamStanding.teamLogoUrl,
-              games: toNumber(teamStanding.winCount, 0) + toNumber(teamStanding.loseCount, 0),
-              wins: teamStanding.winCount,
-              losses: teamStanding.loseCount,
-              winRate:
-                toNumber(teamStanding.winCount, 0) + toNumber(teamStanding.loseCount, 0) > 0
-                  ? toNumber(teamStanding.winCount, 0)
-                    / (toNumber(teamStanding.winCount, 0) + toNumber(teamStanding.loseCount, 0))
-                  : 0,
-            }]
-          : []
+      stats.value = teamStatRow
+        ? [mapV4TeamStatToSeasonStat(teamStatRow, {
+            seasonId: seasonId.value,
+            divisionId: resolvedDivisionId,
+          })]
+        : []
       ranking.value = teamStanding ? [mapV4StandingToRank(teamStanding, seasonId.value)] : []
+      standingWins.value = toNumber(teamStanding?.winCount, 0)
+      standingLosses.value = toNumber(teamStanding?.loseCount, 0)
       state.value = 'success'
     } catch (err) {
       if (current !== reqId) return
@@ -240,6 +243,8 @@ export function usePublicTeamPage() {
       roster.value = []
       stats.value = []
       ranking.value = []
+      standingWins.value = 0
+      standingLosses.value = 0
       divisionId.value = ''
       seasonId.value = ''
       state.value = 'error'

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
-import { getV4PublicRank } from '@/api/v4Public'
+import { getV4PublicPlayerStat } from '@/api/v4Public'
+import type { V4PublicPlayerStatItem } from '@/api/types/v4Public'
 import PaperSection from '@/components/common/PaperSection.vue'
-import { formatDecimal } from '@/utils/publicDisplay'
+import { formatDecimal, toNumber } from '@/utils/publicDisplay'
+import { calculateAverage } from '@/utils/statAverage'
 import type { PlayerLeader } from '../types/events'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
-import { V4_LEADER_RANK_TYPE } from '../utils/v4PublicAdapters'
 import { standingToTeam } from '../utils/mapPublic'
 import { buildTeamLookup } from '../utils/teamLookup'
 import TeamLogo from './TeamLogo.vue'
@@ -13,10 +14,40 @@ import TeamLogo from './TeamLogo.vue'
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
 const LEADER_CONFIG = [
-  { key: 'AVG_POINTS', title: '场均得分', unit: 'PPG' as const },
-  { key: 'AVG_ASSISTS', title: '场均助攻', unit: 'APG' as const },
-  { key: 'AVG_REBOUNDS', title: '场均篮板', unit: 'RPG' as const },
+  { key: 'avgPoints' as const, title: '场均得分', unit: 'PPG' as const, totalKey: 'points' as const },
+  { key: 'avgAssist' as const, title: '场均助攻', unit: 'APG' as const, totalKey: 'assist' as const },
+  { key: 'avgRebound' as const, title: '场均篮板', unit: 'RPG' as const, totalKey: 'rebound' as const },
 ]
+
+function playerAverageValue(
+  item: V4PublicPlayerStatItem,
+  avgKey: 'avgPoints' | 'avgAssist' | 'avgRebound',
+  totalKey: 'points' | 'assist' | 'rebound',
+): number {
+  if (item[avgKey] != null) {
+    return toNumber(item[avgKey], 0)
+  }
+  return calculateAverage(item[totalKey], item.matchCount)
+}
+
+function pickAverageLeader(
+  rows: V4PublicPlayerStatItem[],
+  avgKey: 'avgPoints' | 'avgAssist' | 'avgRebound',
+  totalKey: 'points' | 'assist' | 'rebound',
+): V4PublicPlayerStatItem | null {
+  let best: V4PublicPlayerStatItem | null = null
+  let bestValue = Number.NEGATIVE_INFINITY
+  for (const row of rows) {
+    const games = toNumber(row.matchCount, 0)
+    if (games <= 0) continue
+    const value = playerAverageValue(row, avgKey, totalKey)
+    if (value > bestValue) {
+      best = row
+      bestValue = value
+    }
+  }
+  return best
+}
 
 const ctx = inject<SeasonContext>('publicSeasonContext')!
 
@@ -40,25 +71,23 @@ async function load(divisionId: string) {
   state.value = 'loading'
   errorMessage.value = ''
   try {
-    const results = await Promise.all(
-      LEADER_CONFIG.map(async (config, index) => {
-        const rankType = V4_LEADER_RANK_TYPE[config.key]
-        const res = await getV4PublicRank(divisionId, rankType)
-        const leader = (res.data ?? []).find((item) => item.rankNo === 1) ?? (res.data ?? [])[0]
-        if (!leader) return null
-        return {
-          id: index + 1,
-          title: config.title,
-          value: Number(formatDecimal(leader.rankValue, 1)),
-          unit: config.unit,
-          playerName: leader.playerName || '--',
-          teamId: String(leader.eventTeamId || ''),
-          teamName: leader.teamName || '',
-          teamLogo: '',
-          portrait: '',
-        } satisfies PlayerLeader
-      }),
-    )
+    const res = await getV4PublicPlayerStat(divisionId)
+    const rows = res.data ?? []
+    const results = LEADER_CONFIG.map((config, index) => {
+      const leader = pickAverageLeader(rows, config.key, config.totalKey)
+      if (!leader) return null
+      return {
+        id: index + 1,
+        title: config.title,
+        value: Number(formatDecimal(playerAverageValue(leader, config.key, config.totalKey), 1)),
+        unit: config.unit,
+        playerName: leader.playerName || '--',
+        teamId: String(leader.eventTeamId || ''),
+        teamName: leader.teamName || '',
+        teamLogo: '',
+        portrait: '',
+      } satisfies PlayerLeader
+    })
     if (current !== reqId) return
     seasonLeaders.value = results.filter((item) => item !== null) as PlayerLeader[]
     state.value = seasonLeaders.value.length ? 'success' : 'empty'

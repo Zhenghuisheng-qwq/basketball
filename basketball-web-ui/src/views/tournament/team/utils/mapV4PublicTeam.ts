@@ -13,6 +13,7 @@ import type {
   V4PublicTeamStatItem,
 } from '@/api/types/v4Public'
 import { displayText, toNumber } from '@/utils/publicDisplay'
+import { calculateAverage } from '@/utils/statAverage'
 import { v4PlatformLabel } from '@/utils/v4Display'
 import type { TeamBase, TeamStage } from '@/types/team'
 
@@ -73,7 +74,6 @@ export function mapV4TeamStatToSeasonStat(
   const games = toNumber(item.matchCount, 0)
   const wins = toNumber(item.winCount, 0)
   const losses = toNumber(item.loseCount, 0)
-  const avg = (total: unknown) => (games > 0 ? toNumber(total, 0) / games : 0)
 
   return {
     seasonId: extras?.seasonId,
@@ -85,14 +85,14 @@ export function mapV4TeamStatToSeasonStat(
     losses,
     pointsFor: item.pointsFor,
     pointsAgainst: item.pointsAgainst,
-    avgPoints: item.avgPointsFor ?? avg(item.pointsFor),
-    avgPointsAgainst: item.avgPointsAgainst ?? avg(item.pointsAgainst),
-    avgRebounds: avg(item.rebound),
-    avgAssists: avg(item.assist),
-    avgSteals: avg(item.steal),
-    avgBlocks: avg(item.block),
-    avgTurnovers: avg(item.turnover),
-    winRate: games > 0 ? wins / games : 0,
+    avgPoints: item.avgPointsFor ?? calculateAverage(item.pointsFor, games),
+    avgPointsAgainst: item.avgPointsAgainst ?? calculateAverage(item.pointsAgainst, games),
+    avgRebounds: calculateAverage(item.rebound, games),
+    avgAssists: calculateAverage(item.assist, games),
+    avgSteals: calculateAverage(item.steal, games),
+    avgBlocks: calculateAverage(item.block, games),
+    avgTurnovers: calculateAverage(item.turnover, games),
+    winRate: calculateAverage(wins, games),
   }
 }
 

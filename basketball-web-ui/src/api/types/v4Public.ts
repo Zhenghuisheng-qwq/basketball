@@ -374,6 +374,7 @@ export interface V4PublicTeamStatItem {
 export interface V4PublicPlayerStatItem {
   eventPlayerId: string
   sourcePlayerId?: string
+  eventTeamId?: string
   playerName?: string
   teamName?: string
   matchCount?: number
@@ -439,3 +440,36 @@ export interface V4PublicScheduleItem {
 export type V4SeriesCode = 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'
 
 export type V4SeasonDetailTab = 'overview' | 'teams' | 'schedule' | 'standing' | 'stats'
+
+export interface V4PublicTeamNameHistoryItem {
+  changeId?: string
+  oldName?: string
+  newName?: string
+  submittedAt?: string
+  approvedAt?: string
+}
+
+export interface V4PublicTeamLogoHistoryItem {
+  changeId?: string
+  oldLogoFileId?: string
+  newLogoFileId?: string
+  oldLogoUrl?: string
+  newLogoUrl?: string
+  submittedAt?: string
+  approvedAt?: string
+}
+
+export interface V4PublicTeamHonorItem {
+  honorId?: string
+  honorTitle?: string
+  competitionName?: string
+  awardDate?: string
+}
+
+export interface V4PublicTeamArchive {
+  eventTeamId?: string
+  sourceTeamId?: string
+  nameHistory?: V4PublicTeamNameHistoryItem[]
+  logoHistory?: V4PublicTeamLogoHistoryItem[]
+  honors?: V4PublicTeamHonorItem[]
+}

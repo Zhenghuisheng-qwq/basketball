@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { inject, ref } from 'vue'
+import { inject, ref, watch } from 'vue'
+import { getV4PublicTeamArchive } from '@/api/v4Public'
+import { displayText, formatDateTime } from '@/utils/publicDisplay'
 import {
   PUBLIC_TEAM_PAGE_KEY,
   type PublicTeamPageContext,
@@ -35,6 +37,7 @@ interface TeamLogoHistoryItem {
   label: string
   period: string
   logo?: string
+  oldLogo?: string
   isCurrent?: boolean
 }
 
@@ -65,13 +68,77 @@ const archiveBlocks: ArchiveBlock[] = [
   },
 ]
 
-inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
+const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
 
 const honorState = ref<'loading' | 'success' | 'empty' | 'error'>('empty')
 const honorError = ref('')
 const honors = ref<TeamHonorItem[]>([])
 const nameHistory = ref<TeamNameHistoryItem[]>([])
 const logoHistory = ref<TeamLogoHistoryItem[]>([])
+let reqId = 0
+
+function formatPeriod(value?: string | null): string {
+  const dt = formatDateTime(value || '')
+  return dt.date === '--' ? '' : dt.date
+}
+
+function hideBrokenLogo(event: Event) {
+  const img = event.target as HTMLImageElement | null
+  if (img) img.style.display = 'none'
+}
+
+async function loadArchive() {
+  const teamId = ctx.teamId.value
+  const current = ++reqId
+  if (!teamId) {
+    honors.value = []
+    nameHistory.value = []
+    logoHistory.value = []
+    honorState.value = 'empty'
+    return
+  }
+  honorState.value = 'loading'
+  honorError.value = ''
+  try {
+    const res = await getV4PublicTeamArchive(teamId)
+    if (current !== reqId) return
+    const data = res.data
+    honors.value = (data?.honors ?? []).map((item, index) => ({
+      id: String(item.honorId || index),
+      honorTitle: displayText(item.honorTitle, '荣誉'),
+      competitionName: displayText(item.competitionName, ''),
+      date: formatPeriod(item.awardDate),
+      isLatest: index === 0,
+    }))
+    nameHistory.value = (data?.nameHistory ?? []).map((item, index) => ({
+      id: String(item.changeId || index),
+      name: `${displayText(item.oldName, '--')} → ${displayText(item.newName, '--')}`,
+      period: formatPeriod(item.approvedAt || item.submittedAt),
+      note: '审核通过后生效',
+      isCurrent: index === 0,
+    }))
+    logoHistory.value = (data?.logoHistory ?? []).map((item, index) => ({
+      id: String(item.changeId || index),
+      label: 'Logo 变更',
+      period: formatPeriod(item.approvedAt || item.submittedAt),
+      logo: item.newLogoUrl || '',
+      oldLogo: item.oldLogoUrl || '',
+      isCurrent: index === 0,
+    }))
+    honorState.value = honors.value.length ? 'success' : 'empty'
+  } catch (err) {
+    if (current !== reqId) return
+    honors.value = []
+    nameHistory.value = []
+    logoHistory.value = []
+    honorState.value = 'error'
+    honorError.value = err instanceof Error ? err.message : '加载球队档案失败'
+  }
+}
+
+watch(() => ctx.teamId.value, () => {
+  void loadArchive()
+}, { immediate: true })
 
 function hasBlockData(key: ArchiveBlock['key']): boolean {
   if (key === 'honors') return honors.value.length > 0
@@ -163,7 +230,12 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
           class="archive-item archive-item--logo"
         >
           <div class="archive-item__logo">
-            <img v-if="item.logo" :src="item.logo" :alt="item.label" />
+            <img v-if="item.oldLogo" :src="item.oldLogo" alt="变更前 Logo" @error="hideBrokenLogo" />
+            <span v-else>{{ getLogoInitial(item) }}</span>
+          </div>
+          <span class="archive-item__arrow" aria-hidden="true">→</span>
+          <div class="archive-item__logo">
+            <img v-if="item.logo" :src="item.logo" alt="变更后 Logo" @error="hideBrokenLogo" />
             <span v-else>{{ getLogoInitial(item) }}</span>
           </div>
           <div class="archive-item__content">
@@ -313,6 +385,12 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
     height: 100%;
     object-fit: contain;
   }
+}
+
+.archive-item__arrow {
+  color: rgba(0, 0, 0, 0.4);
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .archive-item__content {

@@ -20,6 +20,8 @@ public interface IBasketV4PublicService {
 
     V4PublicEventTeamDetailResp getTeamDetail(Long eventTeamId);
 
+    V4PublicTeamArchiveResp getTeamArchive(Long eventTeamId);
+
     List<V4PublicMatchItemResp> listMatches(Long divisionId, Integer roundNo, String matchStatus,
                                             Boolean upcomingOnly, Boolean finishedOnly, Long eventTeamId);
 
