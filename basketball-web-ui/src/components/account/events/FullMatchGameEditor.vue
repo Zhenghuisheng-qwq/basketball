@@ -197,7 +197,7 @@ function fieldErr(side: 'home' | 'away', index: number) {
           <div><small>TO</small><b>{{ pack.t.turnover }}</b></div>
         </div>
         <div class="fm-tcard__shoot">
-          <div><small>2PT</small><b>{{ shootingLine(pack.t.fieldGoalMade, pack.t.fieldGoalAttempt) }}</b></div>
+          <div><small>FG</small><b>{{ shootingLine(pack.t.fieldGoalMade, pack.t.fieldGoalAttempt) }}</b></div>
           <div><small>3PT</small><b>{{ shootingLine(pack.t.threePointMade, pack.t.threePointAttempt) }}</b></div>
           <div><small>FT</small><b>{{ shootingLine(pack.t.freeThrowMade, pack.t.freeThrowAttempt) }}</b></div>
         </div>
@@ -226,7 +226,7 @@ function fieldErr(side: 'home' | 'away', index: number) {
               <tr>
                 <th class="is-player">球员</th>
                 <th v-for="col in STAT_COLS" :key="col[0]">{{ col[1] }}</th>
-                <th title="两分球命中/出手">2PM/2PA</th>
+                <th title="总运动战命中/出手（含三分）">FGM/FGA</th>
                 <th>3PM/3PA</th>
                 <th>FTM/FTA</th>
                 <th v-if="!readonly" class="is-op">操作</th>

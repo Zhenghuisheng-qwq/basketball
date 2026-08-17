@@ -18,38 +18,44 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class FullMatchSubmissionRulesTest {
 
     @Test
-    void ptsFormula_bossCase_fgm10_3pm5_ftm4() {
-        assertEquals(39, FullMatchSubmissionRules.expectedPoints(10, 5, 4));
+    void ptsFormula_fgm10_3pm4_ftm5_is29() {
+        assertEquals(29, FullMatchSubmissionRules.expectedPoints(10, 4, 5));
     }
 
     @Test
-    void ptsFormula_bossCase_fgm0_3pm4_ftm2() {
-        assertEquals(14, FullMatchSubmissionRules.expectedPoints(0, 4, 2));
+    void ptsFormula_fgm7_3pm7_ftm0_is21() {
+        assertEquals(21, FullMatchSubmissionRules.expectedPoints(7, 7, 0));
     }
 
     @Test
-    void ptsFormula_bossCase_allZero() {
+    void ptsFormula_fgm1_3pm0_is2() {
+        assertEquals(2, FullMatchSubmissionRules.expectedPoints(1, 0, 0));
+    }
+
+    @Test
+    void ptsFormula_fgm1_3pm1_is3() {
+        assertEquals(3, FullMatchSubmissionRules.expectedPoints(1, 1, 0));
+    }
+
+    @Test
+    void ptsFormula_fgm2_3pm1_ftm1_is6() {
+        assertEquals(6, FullMatchSubmissionRules.expectedPoints(2, 1, 1));
+    }
+
+    @Test
+    void ptsFormula_allZero() {
         assertEquals(0, FullMatchSubmissionRules.expectedPoints(0, 0, 0));
     }
 
     @Test
-    void ptsFormula_twoPointOnlyThrees() {
-        assertEquals(21, FullMatchSubmissionRules.expectedPoints(0, 7, 0));
+    void ptsFormula_oldSemanticsWouldBe5_newIs3() {
+        assertEquals(3, FullMatchSubmissionRules.expectedPoints(1, 1, 0));
+        org.junit.jupiter.api.Assertions.assertNotEquals(5, FullMatchSubmissionRules.expectedPoints(1, 1, 0));
     }
 
     @Test
-    void ptsFormula_mixed() {
-        assertEquals(19, FullMatchSubmissionRules.expectedPoints(4, 3, 2));
-    }
-
-    @Test
-    void ptsFormula_legacyEightThreeTwoIsNow27() {
-        assertEquals(27, FullMatchSubmissionRules.expectedPoints(8, 3, 2));
-    }
-
-    @Test
-    void shooting_threePointGreaterThanTwoPointOk() {
-        V4MatchSubmissionPlayerStatReq row = player(1L, 21, 0, 0, 7, 9, 0, 0);
+    void shooting_allThreesOk_whenFgmIncludes3pm() {
+        V4MatchSubmissionPlayerStatReq row = player(1L, 21, 7, 9, 7, 9, 0, 0);
         assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePlayerRow("G1 · Home · Atlas", row, true));
     }
 
@@ -61,8 +67,44 @@ class FullMatchSubmissionRulesTest {
 
     @Test
     void shooting_mixedOk() {
-        V4MatchSubmissionPlayerStatReq row = player(1L, 19, 4, 6, 3, 4, 2, 2);
+        V4MatchSubmissionPlayerStatReq row = player(1L, 13, 4, 6, 3, 4, 2, 2);
         assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePlayerRow("G1 · Home · Atlas", row, true));
+    }
+
+    @Test
+    void shooting_threePointGreaterThanFgmFails() {
+        V4MatchSubmissionPlayerStatReq row = player(1L, 12, 3, 5, 4, 4, 0, 0);
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> FullMatchSubmissionRules.validatePlayerRow("G1 · Home · Atlas", row, true));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("3PM 4 大于 FGM 3"));
+    }
+
+    @Test
+    void shooting_threePointAttemptGreaterThanFgaFails() {
+        V4MatchSubmissionPlayerStatReq row = player(1L, 0, 0, 5, 0, 7, 0, 0);
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> FullMatchSubmissionRules.validatePlayerRow("G1 · Home · Atlas", row, true));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("3PA 7 大于 FGA 5"));
+    }
+
+    @Test
+    void shooting_fgm10_3pm4_ftm5_pts29_pass() {
+        V4MatchSubmissionPlayerStatReq row = player(1L, 29, 10, 12, 4, 6, 5, 5);
+        assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePlayerRow("G1 · Home · Atlas", row, true));
+    }
+
+    @Test
+    void shooting_fgm1_3pm1_pts3_pass() {
+        V4MatchSubmissionPlayerStatReq row = player(1L, 3, 1, 1, 1, 1, 0, 0);
+        assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePlayerRow("G1 · Home · Atlas", row, true));
+    }
+
+    @Test
+    void shooting_fgm1_3pm1_pts5_failOldFormula() {
+        V4MatchSubmissionPlayerStatReq row = player(1L, 5, 1, 1, 1, 1, 0, 0);
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> FullMatchSubmissionRules.validatePlayerRow("G1 · Home · Atlas", row, true));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("(FGM-3PM)×2+3PM×3+FTM=3"));
     }
 
     @Test
@@ -111,13 +153,13 @@ class FullMatchSubmissionRulesTest {
 
     @Test
     void shooting_ok() {
-        V4MatchSubmissionPlayerStatReq row = player(1L, 27, 8, 10, 3, 4, 2, 2);
+        V4MatchSubmissionPlayerStatReq row = player(1L, 21, 8, 10, 3, 4, 2, 2);
         assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePlayerRow("G1 · Home · Atlas", row, true));
     }
 
     @Test
     void duplicatePlayer() {
-        V4MatchSubmissionPlayerStatReq a = player(11L, 27, 8, 10, 3, 4, 2, 2);
+        V4MatchSubmissionPlayerStatReq a = player(11L, 21, 8, 10, 3, 4, 2, 2);
         V4MatchSubmissionPlayerStatReq b = player(11L, 10, 4, 6, 1, 2, 1, 1);
         assertThrows(ServiceException.class,
                 () -> FullMatchSubmissionRules.validateTeamPlayers("G1", "Home", 100L, Arrays.asList(a, b), true));
@@ -157,8 +199,8 @@ class FullMatchSubmissionRulesTest {
 
     @Test
     void zeroScore_legalWhenFormulaHolds_0_to_21() {
-        V4MatchSubmissionPlayerStatReq zero = player(1L, 0, 0, 5, 0, 7, 0, 0);
-        V4MatchSubmissionPlayerStatReq twentyOne = player(2L, 21, 0, 0, 7, 9, 0, 0);
+        V4MatchSubmissionPlayerStatReq zero = player(1L, 0, 0, 5, 0, 5, 0, 0);
+        V4MatchSubmissionPlayerStatReq twentyOne = player(2L, 21, 7, 9, 7, 9, 0, 0);
         assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePlayerRow("G1 · A · Atlas", zero, true));
         assertDoesNotThrow(() -> FullMatchSubmissionRules.validatePlayerRow("G1 · B · Atlas", twentyOne, true));
         assertDoesNotThrow(() -> FullMatchSubmissionRules.validateScoreCross("G1", 0, 21, 0, 21));
@@ -170,15 +212,15 @@ class FullMatchSubmissionRulesTest {
         V4MatchSubmissionPlayerStatReq row = player(1L, 0, 1, 1, 0, 0, 0, 0);
         ServiceException ex = assertThrows(ServiceException.class,
                 () -> FullMatchSubmissionRules.validatePlayerRow("G1 · A · Atlas", row, true));
-        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("2×2PM+3×3PM+FTM=2"));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("(FGM-3PM)×2+3PM×3+FTM=2"));
     }
 
     @Test
     void zeroPts_withThreePointMade_failsFormula() {
-        V4MatchSubmissionPlayerStatReq row = player(1L, 0, 0, 0, 1, 1, 0, 0);
+        V4MatchSubmissionPlayerStatReq row = player(1L, 0, 1, 1, 1, 1, 0, 0);
         ServiceException ex = assertThrows(ServiceException.class,
                 () -> FullMatchSubmissionRules.validatePlayerRow("G1 · A · Atlas", row, true));
-        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("2×2PM+3×3PM+FTM=3"));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("(FGM-3PM)×2+3PM×3+FTM=3"));
     }
 
     @Test
@@ -186,7 +228,7 @@ class FullMatchSubmissionRulesTest {
         V4MatchSubmissionPlayerStatReq row = player(1L, 0, 0, 0, 0, 0, 1, 1);
         ServiceException ex = assertThrows(ServiceException.class,
                 () -> FullMatchSubmissionRules.validatePlayerRow("G1 · A · Atlas", row, true));
-        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("2×2PM+3×3PM+FTM=1"));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("(FGM-3PM)×2+3PM×3+FTM=1"));
     }
 
     @Test

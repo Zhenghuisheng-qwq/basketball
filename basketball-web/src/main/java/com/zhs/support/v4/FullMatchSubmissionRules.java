@@ -31,11 +31,13 @@ public final class FullMatchSubmissionRules {
     }
 
     /**
-     * WINNER_FULL_MATCH 口径：field_goal_* 表示两分球（2PM/2PA），不是含三分的标准 FGM。
-     * PTS = 2×2PM + 3×3PM + FTM
+     * 正式口径：field_goal_* = 总运动战命中/出手（FGM/FGA），3PM 是 FGM 的子集。
+     * 2PM = FGM - 3PM
+     * PTS = (FGM - 3PM)×2 + 3PM×3 + FTM
      */
-    public static int expectedPoints(int twoPointMade, int threePointMade, int freeThrowMade) {
-        return 2 * twoPointMade + 3 * threePointMade + freeThrowMade;
+    public static int expectedPoints(int fieldGoalMade, int threePointMade, int freeThrowMade) {
+        int twoPointMade = fieldGoalMade - threePointMade;
+        return twoPointMade * 2 + threePointMade * 3 + freeThrowMade;
     }
 
     /** 仅 5V5 需要节比分。3V3 不展示、不校验、不落库。 */
@@ -123,8 +125,8 @@ public final class FullMatchSubmissionRules {
         assertNonNegative(prefix, "BLK", blk);
         assertNonNegative(prefix, "PF", pf);
         assertNonNegative(prefix, "TOV", tov);
-        assertNonNegative(prefix, "2PM", fgm);
-        assertNonNegative(prefix, "2PA", fga);
+        assertNonNegative(prefix, "FGM", fgm);
+        assertNonNegative(prefix, "FGA", fga);
         assertNonNegative(prefix, "3PM", tpm);
         assertNonNegative(prefix, "3PA", tpa);
         assertNonNegative(prefix, "FTM", ftm);
@@ -133,7 +135,7 @@ public final class FullMatchSubmissionRules {
             return;
         }
         if (fgm > fga) {
-            throw new ServiceException(prefix + "：2PM " + fgm + " 大于 2PA " + fga);
+            throw new ServiceException(prefix + "：FGM " + fgm + " 大于 FGA " + fga);
         }
         if (tpm > tpa) {
             throw new ServiceException(prefix + "：3PM " + tpm + " 大于 3PA " + tpa);
@@ -141,9 +143,15 @@ public final class FullMatchSubmissionRules {
         if (ftm > fta) {
             throw new ServiceException(prefix + "：FTM " + ftm + " 大于 FTA " + fta);
         }
+        if (tpm > fgm) {
+            throw new ServiceException(prefix + "：3PM " + tpm + " 大于 FGM " + fgm);
+        }
+        if (tpa > fga) {
+            throw new ServiceException(prefix + "：3PA " + tpa + " 大于 FGA " + fga);
+        }
         int expected = expectedPoints(fgm, tpm, ftm);
         if (pts != expected) {
-            throw new ServiceException(prefix + "：PTS " + pts + " 与公式 2×2PM+3×3PM+FTM=" + expected + " 不一致");
+            throw new ServiceException(prefix + "：PTS " + pts + " 与公式 (FGM-3PM)×2+3PM×3+FTM=" + expected + " 不一致");
         }
     }
 

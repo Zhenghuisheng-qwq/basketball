@@ -53,12 +53,16 @@ public class BasketMatchSubmissionPlayerStat implements Serializable {
 
     private Integer foul;
 
+    /** FGM：总运动战命中，含三分 */
     private Integer fieldGoalMade;
 
+    /** FGA：总运动战出手，含三分 */
     private Integer fieldGoalAttempt;
 
+    /** 3PM：三分命中，是 FGM 的子集 */
     private Integer threePointMade;
 
+    /** 3PA：三分出手，是 FGA 的子集 */
     private Integer threePointAttempt;
 
     private Integer freeThrowMade;

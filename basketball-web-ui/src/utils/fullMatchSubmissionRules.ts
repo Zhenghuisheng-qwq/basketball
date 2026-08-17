@@ -31,9 +31,10 @@ export function hasScoreValue(score?: number | null) {
   return score != null && Number.isFinite(Number(score))
 }
 
-/** WINNER_FULL_MATCH：fieldGoal* 表示两分球 2PM/2PA。PTS = 2×2PM + 3×3PM + FTM */
-export function expectedPoints(twoPointMade: number, threePointMade: number, freeThrowMade: number) {
-  return 2 * twoPointMade + 3 * threePointMade + freeThrowMade
+/** 正式口径：fieldGoal* = 总运动战命中/出手（FGM/FGA），3PM 是 FGM 的子集。PTS = (FGM-3PM)×2 + 3PM×3 + FTM */
+export function expectedPoints(fieldGoalMade: number, threePointMade: number, freeThrowMade: number) {
+  const twoPointMade = fieldGoalMade - threePointMade
+  return twoPointMade * 2 + threePointMade * 3 + freeThrowMade
 }
 
 export function requiresPeriodScores(gameMode?: string | null) {
@@ -88,8 +89,8 @@ export function playerFieldErrors(row: FullMatchPlayerRow) {
   const tpa = nvl(row.threePointAttempt)
   const ftm = nvl(row.freeThrowMade)
   const fta = nvl(row.freeThrowAttempt)
-  if (fgm > fga) flags.fieldGoal = true
-  if (tpm > tpa) flags.threePoint = true
+  if (fgm > fga || tpm > fgm || tpa > fga) flags.fieldGoal = true
+  if (tpm > tpa || tpm > fgm || tpa > fga) flags.threePoint = true
   if (ftm > fta) flags.freeThrow = true
   if (pts !== expectedPoints(fgm, tpm, ftm)) flags.points = true
   return flags
@@ -145,11 +146,13 @@ export function validatePlayerRow(prefix: string, row: FullMatchPlayerRow, requi
   const ints = [pts, nvl(row.rebound), nvl(row.assist), nvl(row.steal), nvl(row.block), nvl(row.foul), nvl(row.turnover), fgm, fga, tpm, tpa, ftm, fta]
   if (ints.some((v) => v < 0 || !Number.isInteger(v))) errors.push(`${prefix}所有数值必须为大于等于 0 的整数`)
   if (!requireComplete && !valued) return errors
-  if (fgm > fga) errors.push(`${prefix}：2PM ${fgm} 大于 2PA ${fga}`)
+  if (fgm > fga) errors.push(`${prefix}：FGM ${fgm} 大于 FGA ${fga}`)
   if (tpm > tpa) errors.push(`${prefix}：3PM ${tpm} 大于 3PA ${tpa}`)
   if (ftm > fta) errors.push(`${prefix}：FTM ${ftm} 大于 FTA ${fta}`)
+  if (tpm > fgm) errors.push(`${prefix}：3PM ${tpm} 大于 FGM ${fgm}`)
+  if (tpa > fga) errors.push(`${prefix}：3PA ${tpa} 大于 FGA ${fga}`)
   const expected = expectedPoints(fgm, tpm, ftm)
-  if (pts !== expected) errors.push(`${prefix}：PTS ${pts} 与公式 2×2PM+3×3PM+FTM=${expected} 不一致`)
+  if (pts !== expected) errors.push(`${prefix}：PTS ${pts} 与公式 (FGM-3PM)×2+3PM×3+FTM=${expected} 不一致`)
   return errors
 }
 

@@ -19,11 +19,13 @@ const route = useRoute()
 const router = useRouter()
 const accountStore = useAccountStore()
 
+type ScheduleFilter = 'upcoming' | 'all' | 'finished'
+
 const loading = ref(false)
 const loadError = ref('')
 const rows = ref<V4MyScheduleItem[]>([])
 const summary = ref<V4MyScheduleSummary>({})
-const includeFinished = ref(false)
+const scheduleFilter = ref<ScheduleFilter>('upcoming')
 
 const isVerified = computed(() => accountStore.isVerifiedPlayer)
 
@@ -40,14 +42,44 @@ const pendingSubmitCount = computed(() => summary.value.pendingSubmitCount ?? 0)
 const reviewingCount = computed(() => summary.value.reviewingCount ?? 0)
 const finishedCount = computed(() => summary.value.finishedCount ?? 0)
 
+function isFinishedMatch(row: V4MyScheduleItem): boolean {
+  return (row.matchStatus || '').toUpperCase() === 'FINISHED'
+}
+
 const displayedRows = computed(() => {
+  let list = rows.value
   if (initialOnlyPending.value) {
-    return rows.value.filter((row) => {
+    list = list.filter((row) => {
       const status = (row.mySubmissionStatus || '').toUpperCase()
       return !status || status === 'DRAFT' || status === 'REJECTED'
     })
   }
-  return rows.value
+  if (scheduleFilter.value === 'upcoming') {
+    return list.filter((row) => !isFinishedMatch(row))
+  }
+  if (scheduleFilter.value === 'finished') {
+    return list.filter((row) => isFinishedMatch(row))
+  }
+  return list
+})
+
+const emptyCopy = computed(() => {
+  if (scheduleFilter.value === 'finished') {
+    return {
+      message: '暂无已结束赛程',
+      subtitle: '比赛结束后会显示在这里，也可切换「全部赛程」查看全部场次。',
+    }
+  }
+  if (scheduleFilter.value === 'all') {
+    return {
+      message: '暂无赛程',
+      subtitle: '通过报名审核并生成赛程后，比赛将显示在这里。',
+    }
+  }
+  return {
+    message: '暂无待比赛赛程',
+    subtitle: '当前没有即将开始的比赛，可切换「已结束」或「全部赛程」查看历史比赛。',
+  }
 })
 
 async function loadList() {
@@ -63,7 +95,7 @@ async function loadList() {
     const res = await getV4MySchedule({
       seasonId: undefined,
       divisionId: divisionFilter.value || undefined,
-      includeFinished: includeFinished.value,
+      includeFinished: true,
       onlyPendingSubmit: initialOnlyPending.value || undefined,
     })
     summary.value = res.data?.summary || {}
@@ -224,10 +256,6 @@ watch(
   { immediate: true },
 )
 
-watch(includeFinished, () => {
-  void loadList()
-})
-
 watch(
   () => [route.query.divisionId, route.query.onlyPendingSubmit],
   () => {
@@ -278,8 +306,8 @@ watch(
           <button
             type="button"
             class="v4-schedule-segment__btn"
-            :class="{ 'v4-schedule-segment__btn--active': !includeFinished }"
-            @click="includeFinished = false"
+            :class="{ 'v4-schedule-segment__btn--active': scheduleFilter === 'upcoming' }"
+            @click="scheduleFilter = 'upcoming'"
           >
             待比赛
             <span class="v4-schedule-segment__count">{{ upcomingCount }}</span>
@@ -287,11 +315,20 @@ watch(
           <button
             type="button"
             class="v4-schedule-segment__btn"
-            :class="{ 'v4-schedule-segment__btn--active': includeFinished }"
-            @click="includeFinished = true"
+            :class="{ 'v4-schedule-segment__btn--active': scheduleFilter === 'all' }"
+            @click="scheduleFilter = 'all'"
           >
             全部赛程
             <span class="v4-schedule-segment__count">{{ totalCount }}</span>
+          </button>
+          <button
+            type="button"
+            class="v4-schedule-segment__btn"
+            :class="{ 'v4-schedule-segment__btn--active': scheduleFilter === 'finished' }"
+            @click="scheduleFilter = 'finished'"
+          >
+            已结束
+            <span class="v4-schedule-segment__count">{{ finishedCount }}</span>
           </button>
         </div>
       </div>
@@ -307,8 +344,8 @@ watch(
 
       <AccountEmptyState
         v-else-if="!displayedRows.length"
-        :message="includeFinished ? '暂无赛程' : '暂无待比赛赛程'"
-        :subtitle="includeFinished ? '通过报名审核并生成赛程后，比赛将显示在这里。' : '当前没有即将开始的比赛，可切换「全部赛程」查看历史比赛。'"
+        :message="emptyCopy.message"
+        :subtitle="emptyCopy.subtitle"
         large
       />
 
