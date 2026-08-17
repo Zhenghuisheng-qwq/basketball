@@ -196,10 +196,10 @@ public class TieBreakComparatorBuilder {
             comparator = comparator == null ? next : comparator.thenComparing(next);
         }
         if (comparator == null) {
-            comparator = Comparator.comparingInt(TieBreakStandingService.StandingAgg::getStandingPoints).reversed()
-                    .thenComparing(Comparator.comparingInt(TieBreakStandingService.StandingAgg::getWinCount).reversed())
-                    .thenComparing(Comparator.comparingInt(TieBreakStandingService.StandingAgg::getPointDiff).reversed())
-                    .thenComparing(Comparator.comparingInt(TieBreakStandingService.StandingAgg::getPointFor).reversed());
+            comparator = Comparator.comparingInt(TieBreakStandingService.StandingAgg::getPointDiff).reversed()
+                    .thenComparing(headToHeadMiniTableComparator(tiedGroup, scopeMatches))
+                    .thenComparing(Comparator.comparing(TieBreakStandingService.StandingAgg::getEventTeamId,
+                            Comparator.nullsLast(Long::compareTo)));
         }
         return comparator;
     }

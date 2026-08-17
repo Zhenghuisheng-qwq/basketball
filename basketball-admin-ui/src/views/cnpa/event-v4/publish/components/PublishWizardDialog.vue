@@ -252,6 +252,9 @@
                   <div class="confirm-format-step">
                     <div class="confirm-format-title">{{ item.title }}</div>
                     <div class="cell-sub">{{ item.summary }}</div>
+                    <div v-if="fi === 0 && formatV4DivisionStandingPointsSummary(sortedStages(scope.row))" class="cell-sub">
+                      {{ formatV4DivisionStandingPointsSummary(sortedStages(scope.row)) }}
+                    </div>
                   </div>
                   <div v-if="fi < sortedStages(scope.row).length - 1" class="confirm-format-arrow">↓</div>
                 </template>
@@ -357,6 +360,7 @@ import {
   buildV4SeasonDefaultSeasonName,
   formatV4CompactRange,
   formatV4CustomFormatPreview,
+  formatV4DivisionStandingPointsSummary,
   formatV4DivisionComboLabel,
   formatV4DivisionTabLabel,
   formatV4WizardPrimaryIssue,

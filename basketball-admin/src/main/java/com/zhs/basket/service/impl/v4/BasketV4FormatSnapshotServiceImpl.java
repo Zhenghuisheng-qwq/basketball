@@ -69,7 +69,7 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
     private BasketSeriesMapper seriesMapper;
 
     private static final List<String> DEFAULT_TIE_BREAK_CODES = List.of(
-            "WIN_COUNT", "HEAD_TO_HEAD", "POINT_DIFFERENCE", "TOTAL_POINTS", "MANUAL");
+            "POINT_DIFFERENCE", "HEAD_TO_HEAD", "TOTAL_POINTS", "MANUAL");
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -873,6 +873,8 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         context.setKnockoutBestOf(safe.getKnockoutBestOf());
         context.setSemifinalBestOf(safe.getSemifinalBestOf());
         context.setFinalBestOf(safe.getFinalBestOf());
+        context.setWinPoints(safe.getWinPoints());
+        context.setLossPoints(safe.getLossPoints());
         return context;
     }
 

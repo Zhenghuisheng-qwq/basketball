@@ -5,6 +5,7 @@ import com.zhs.basket.enums.v4.PairingRuleEnum;
 import com.zhs.basket.enums.v4.RegistrationModeEnum;
 import com.zhs.basket.enums.v4.SeriesCodeEnum;
 import com.zhs.basket.enums.v4.TemplateTypeEnum;
+import com.zhs.basket.support.v4.StandingPointsRule;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.stereotype.Component;
 
@@ -44,6 +45,7 @@ public class LeagueStandardTemplateBuilder implements StandardFormatTemplateBuil
         validateBestOf(resolved.getKnockoutBestOf(), "League playoff early BO");
         validateBestOf(resolved.getSemifinalBestOf(), "League semifinal BO");
         validateBestOf(resolved.getFinalBestOf(), "League final BO");
+        StandingPointsRule.requireNonNegative(resolved.getWinPoints(), resolved.getLossPoints(), "League");
         RegistrationModeEnum.fromCode(resolved.getRegistrationMode());
     }
 
@@ -55,6 +57,7 @@ public class LeagueStandardTemplateBuilder implements StandardFormatTemplateBuil
         definition.getStages().add(StandardTemplateStages.roundRobin(
                 StandardTemplateCodes.STAGE_REGULAR, "\u5e38\u89c4\u8d5b", 1, "REGULAR",
                 resolved.getRoundRobinCycles(), resolved.getRegularBestOf(),
+                resolved.getWinPoints(), resolved.getLossPoints(),
                 AdvancementTypeEnum.OVERALL_TOP_N.getCode(), resolved.getPlayoffSlots(),
                 StandardTemplateCodes.STAGE_PLAYOFF));
         definition.getStages().add(StandardTemplateStages.knockout(
@@ -80,6 +83,10 @@ public class LeagueStandardTemplateBuilder implements StandardFormatTemplateBuil
                         List.of("1", "2"), "1"),
                 StandardTemplateOptionDefinition.number("playoffSlots", "\u5b63\u540e\u8d5b\u540d\u989d", 2, 64, "8",
                         List.of("4", "8", "16", "32")),
+                StandardTemplateOptionDefinition.number("winPoints", "\u80dc\u573a\u79ef\u5206", 0, null,
+                        String.valueOf(StandingPointsRule.LEGACY_WIN_POINTS), null),
+                StandardTemplateOptionDefinition.number("lossPoints", "\u8d1f\u573a\u79ef\u5206", 0, null,
+                        String.valueOf(StandingPointsRule.LEGACY_LOSS_POINTS), null),
                 StandardTemplateOptionDefinition.select("regularBestOf", "\u5e38\u89c4\u8d5b BO",
                         List.of("1", "3", "5", "7"), "1"),
                 StandardTemplateOptionDefinition.select("knockoutBestOf", "\u6dd8\u6c70\u8d5b Early BO",
@@ -120,6 +127,12 @@ public class LeagueStandardTemplateBuilder implements StandardFormatTemplateBuil
         }
         if (resolved.getFinalBestOf() == null) {
             resolved.setFinalBestOf(7);
+        }
+        if (resolved.getWinPoints() == null) {
+            resolved.setWinPoints(StandingPointsRule.LEGACY_WIN_POINTS);
+        }
+        if (resolved.getLossPoints() == null) {
+            resolved.setLossPoints(StandingPointsRule.LEGACY_LOSS_POINTS);
         }
         return resolved;
     }

@@ -6,13 +6,15 @@ import com.zhs.basket.enums.v4.GroupingModeEnum;
 import com.zhs.basket.enums.v4.OrganizationModeEnum;
 import com.zhs.basket.enums.v4.PairingRuleEnum;
 import com.zhs.basket.enums.v4.StageTypeEnum;
+import com.zhs.basket.support.v4.StandingPointsRule;
 
 final class StandardTemplateStages {
     private StandardTemplateStages() {
     }
 
     static StandardTemplateStageDefinition roundRobin(String code, String name, int order, String stageType,
-                                                      Integer cycles, Integer bestOf, String advancementType,
+                                                      Integer cycles, Integer bestOf, Integer winPoints,
+                                                      Integer lossPoints, String advancementType,
                                                       Integer advancementCount, String nextStageCode) {
         StandardTemplateStageDefinition stage = base(code, name, order, stageType,
                 OrganizationModeEnum.UNGROUPED.getCode(),
@@ -20,10 +22,7 @@ final class StandardTemplateStages {
                 GroupingModeEnum.NONE.getCode());
         stage.setRoundRobinCycles(cycles);
         stage.setBestOf(bestOf);
-        stage.setWinPoints(2);
-        stage.setLossPoints(1);
-        stage.setForfeitWinPoints(2);
-        stage.setForfeitLossPoints(0);
+        applyStandingPoints(stage, winPoints, lossPoints);
         stage.setAdvancementType(advancementType);
         stage.setAdvancementCount(advancementCount);
         stage.setPairingRule(PairingRuleEnum.NONE.getCode());
@@ -33,6 +32,7 @@ final class StandardTemplateStages {
 
     static StandardTemplateStageDefinition groupedRoundRobin(String code, String name, int order,
                                                              Integer groupCount, Integer cycles, Integer bestOf,
+                                                             Integer winPoints, Integer lossPoints,
                                                              Integer advancePerGroup, String groupingMode,
                                                              String nextStageCode) {
         StandardTemplateStageDefinition stage = base(code, name, order, StageTypeEnum.GROUP.getCode(),
@@ -42,15 +42,22 @@ final class StandardTemplateStages {
         stage.setGroupCount(groupCount);
         stage.setRoundRobinCycles(cycles);
         stage.setBestOf(bestOf);
-        stage.setWinPoints(2);
-        stage.setLossPoints(1);
-        stage.setForfeitWinPoints(2);
-        stage.setForfeitLossPoints(0);
+        applyStandingPoints(stage, winPoints, lossPoints);
         stage.setAdvancementType(AdvancementTypeEnum.GROUP_TOP_N.getCode());
         stage.setAdvancementCount(advancePerGroup);
         stage.setPairingRule(PairingRuleEnum.NONE.getCode());
         stage.setNextStageCode(nextStageCode);
         return stage;
+    }
+
+    private static void applyStandingPoints(StandardTemplateStageDefinition stage,
+                                            Integer winPoints, Integer lossPoints) {
+        int win = StandingPointsRule.winPointsOrLegacy(winPoints);
+        int loss = StandingPointsRule.lossPointsOrLegacy(lossPoints);
+        stage.setWinPoints(win);
+        stage.setLossPoints(loss);
+        stage.setForfeitWinPoints(win);
+        stage.setForfeitLossPoints(loss);
     }
 
     static StandardTemplateStageDefinition knockout(String code, String name, int order, Integer bestOf,

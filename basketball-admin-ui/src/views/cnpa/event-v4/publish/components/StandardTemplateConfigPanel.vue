@@ -41,6 +41,8 @@
         </div>
         <div v-for="group in optionGroups" :key="group.title" class="param-group">
           <div class="param-group-title">{{ group.title }}</div>
+          <p v-if="group.hint" class="param-group-hint">{{ group.hint }}</p>
+          <p v-if="group.rankingHint" class="param-group-ranking">{{ group.rankingHint }}</p>
           <div class="std-param-grid">
             <el-form-item v-for="opt in group.options" :key="opt.key" :label="v4StandardTemplateOptionLabel(opt.key, opt.label, selected.templateCode)">
               <el-select
@@ -116,15 +118,17 @@
           {{ stage.stageName }}（{{ v4CompetitionFormatLabel(stage.competitionFormat) }}）<span v-if="si < (selected.stages || []).length - 1"> → </span>
         </span>
       </p>
+      <p v-if="standingPreviewText" class="el-form-item__tip">{{ standingPreviewText }}</p>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import {
   applyStandardTemplate,
   listStandardTemplates,
+  type BasketDivisionFormatSnapshotVo,
   type StandardTemplateApplyReq,
   type StandardTemplateDefinition,
   type StandardTemplateOptionDefinition
@@ -140,8 +144,11 @@ import {
   v4StandardTemplateOptionLabel,
   v4StandardTemplateOptionValueLabel,
   v4StandardTemplatePreviewSteps,
-  v4SeriesDisplayLabel
+  v4SeriesDisplayLabel,
+  v4StageSupportsStandingPoints
 } from '@/utils/v4AdminDisplay'
+
+const formDrafts = new Map<string, Record<string, string | number | undefined>>()
 
 const props = defineProps<{
   divisionId: number
@@ -152,6 +159,7 @@ const props = defineProps<{
   canApply?: boolean
   gameMode?: string
   registrationMode?: string
+  snapshot?: BasketDivisionFormatSnapshotVo
 }>()
 
 const canApply = computed(() => props.canApply !== false && (props.canApply || props.mutable))
@@ -189,11 +197,11 @@ const optionGroups = computed(() => {
   const opts = displayOptions.value
   const groups = v4StandardTemplateOptionGroups(current.templateCode)
   const used = new Set<string>()
-  const result: { title: string; options: StandardTemplateOptionDefinition[] }[] = []
+  const result: { title: string; hint?: string; rankingHint?: string; options: StandardTemplateOptionDefinition[] }[] = []
   for (const group of groups) {
     const options = opts.filter((opt) => opt.key && group.keys.includes(opt.key))
     options.forEach((opt) => { if (opt.key) used.add(opt.key) })
-    if (options.length) result.push({ title: group.title, options })
+    if (options.length) result.push({ title: group.title, hint: group.hint, rankingHint: group.rankingHint, options })
   }
   const leftover = opts.filter((opt) => opt.key && !used.has(opt.key))
   if (leftover.length) result.push({ title: '其他参数', options: leftover })
@@ -201,6 +209,13 @@ const optionGroups = computed(() => {
 })
 
 const previewSteps = computed(() => v4StandardTemplatePreviewSteps(selected.value?.templateCode, form))
+
+const standingPreviewText = computed(() => {
+  if (!displayOptions.value.some((opt) => opt.key === 'winPoints')) return ''
+  const win = form.winPoints != null && form.winPoints !== '' ? form.winPoints : 2
+  const loss = form.lossPoints != null && form.lossPoints !== '' ? form.lossPoints : 1
+  return `积分规则：胜 +${win} / 负 +${loss}。排名：积分 ＞ 净胜分 ＞ 相互胜负`
+})
 
 function cardMeta(item?: StandardTemplateDefinition) {
   return v4StandardTemplateCardMeta(item?.templateCode)
@@ -219,11 +234,23 @@ watch(() => props.seriesId, async (seriesId) => {
   catalogSeriesCode.value = res.data?.seriesCode || ''
   templates.value = res.data?.templates || []
   defaultCode.value = res.data?.defaultTemplateCode || ''
-  selectedCode.value = defaultCode.value || templates.value[0]?.templateCode || ''
+  const appliedCode = props.snapshot?.sourceTemplateCode
+  selectedCode.value = (appliedCode && templates.value.some((item) => item.templateCode === appliedCode))
+    ? appliedCode
+    : (defaultCode.value || templates.value[0]?.templateCode || '')
   hydrateForm()
 }, { immediate: true })
 
 watch(selectedCode, () => hydrateForm())
+
+function draftKey(code = selectedCode.value) {
+  return `${props.divisionId}:${code}`
+}
+
+function persistDraft() {
+  if (!selectedCode.value) return
+  formDrafts.set(draftKey(), { ...form })
+}
 
 function hydrateForm() {
   const current = selected.value
@@ -237,6 +264,40 @@ function hydrateForm() {
     || current.options?.find((opt) => opt.key === 'registrationMode')?.defaultValue
     || current.registrationMode
     || form.registrationMode
+  overlaySnapshot(current.templateCode)
+  const draft = formDrafts.get(draftKey(current.templateCode))
+  if (draft) Object.assign(form, draft)
+}
+
+function overlaySnapshot(templateCode?: string) {
+  const snap = props.snapshot
+  if (!snap || !templateCode || snap.sourceTemplateCode !== templateCode) return
+  const stages = snap.stages || []
+  const standing = stages.find((stage) => v4StageSupportsStandingPoints(stage))
+  if (standing) {
+    if (standing.winPoints != null) form.winPoints = standing.winPoints
+    if (standing.lossPoints != null) form.lossPoints = standing.lossPoints
+    if (standing.roundRobinCycles != null) {
+      if (form.roundRobinCycles !== undefined) form.roundRobinCycles = standing.roundRobinCycles
+      if (form.groupCycles !== undefined) form.groupCycles = standing.roundRobinCycles
+    }
+    if (standing.advancementCount != null) {
+      if (form.playoffSlots !== undefined) form.playoffSlots = standing.advancementCount
+      if (form.advancePerGroup !== undefined) form.advancePerGroup = standing.advancementCount
+    }
+    if (standing.groupCount != null && form.groupCount !== undefined) form.groupCount = standing.groupCount
+    if (standing.groupingMode && form.groupingMode !== undefined) form.groupingMode = standing.groupingMode
+    if (standing.bestOf != null && form.regularBestOf !== undefined) form.regularBestOf = standing.bestOf
+  }
+  const knockout = stages.find((stage) => (stage.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION')
+  if (knockout) {
+    if (knockout.bestOf != null && form.knockoutBestOf !== undefined) form.knockoutBestOf = knockout.bestOf
+    if (knockout.pairingRule && form.eliminationPlacement !== undefined) form.eliminationPlacement = knockout.pairingRule
+    if (knockout.seedRule && form.seedRule !== undefined) form.seedRule = knockout.seedRule
+    if (knockout.drawRule && form.drawRule !== undefined) form.drawRule = knockout.drawRule
+    if (knockout.byeRule && form.byeRule !== undefined) form.byeRule = knockout.byeRule
+  }
+  if (snap.registrationMode) form.registrationMode = snap.registrationMode
 }
 
 function coerce(value: string | undefined, inputType?: string) {
@@ -245,18 +306,24 @@ function coerce(value: string | undefined, inputType?: string) {
 }
 
 function selectTemplate(code?: string) {
-  if (code) selectedCode.value = code
+  if (!code || code === selectedCode.value) return
+  persistDraft()
+  selectedCode.value = code
 }
 
-function setOption(key: string | undefined, value: string | number) {
+function setOption(key: string | undefined, value: string | number | null) {
   if (!key) return
-  form[key] = value
+  form[key] = value == null ? undefined : value
+  persistDraft()
 }
+
+onBeforeUnmount(() => persistDraft())
 
 async function apply() {
   if (!props.divisionId || !selectedCode.value) return
   applying.value = true
   try {
+    persistDraft()
     const payload: StandardTemplateApplyReq = {
       templateCode: selectedCode.value,
       registrationMode: String(form.registrationMode || ''),
@@ -274,7 +341,9 @@ async function apply() {
       regularBestOf: num(form.regularBestOf),
       knockoutBestOf: num(form.knockoutBestOf),
       semifinalBestOf: num(form.semifinalBestOf),
-      finalBestOf: num(form.finalBestOf)
+      finalBestOf: num(form.finalBestOf),
+      winPoints: num(form.winPoints),
+      lossPoints: num(form.lossPoints)
     }
     await applyStandardTemplate(props.divisionId, payload)
     emit('applied', { templateCode: selectedCode.value })
@@ -283,8 +352,8 @@ async function apply() {
   }
 }
 
-function num(value: string | number | undefined) {
-  if (value === undefined || value === '') return undefined
+function num(value: string | number | undefined | null) {
+  if (value === undefined || value === null || value === '') return undefined
   const n = Number(value)
   return Number.isNaN(n) ? undefined : n
 }
@@ -407,6 +476,20 @@ function str(value: string | number | undefined) {
   font-weight: 600;
   color: var(--el-text-color-secondary);
   margin: 4px 0 8px;
+}
+
+.param-group-hint {
+  margin: -2px 0 8px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
+}
+
+.param-group-ranking {
+  margin: -2px 0 8px;
+  font-size: 12px;
+  color: var(--el-text-color-regular);
+  line-height: 1.5;
 }
 
 .std-param-grid {

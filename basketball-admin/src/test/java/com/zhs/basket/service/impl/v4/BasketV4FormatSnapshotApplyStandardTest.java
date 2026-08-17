@@ -74,6 +74,7 @@ class BasketV4FormatSnapshotApplyStandardTest {
 
     private final AtomicReference<BasketDivisionFormatSnapshot> current = new AtomicReference<>();
     private final List<BasketDivisionStage> storedStages = new ArrayList<>();
+    private final List<BasketDivisionTieBreakRule> storedRules = new ArrayList<>();
     private final AtomicLong stageId = new AtomicLong(1000);
 
     @BeforeEach
@@ -110,7 +111,6 @@ class BasketV4FormatSnapshotApplyStandardTest {
             return 1;
         });
         when(divisionStageMapper.selectBySnapshotId(anyLong())).thenAnswer(inv -> new ArrayList<>(storedStages));
-        List<BasketDivisionTieBreakRule> storedRules = new ArrayList<>();
         lenient().when(divisionTieBreakRuleMapper.insert(any())).thenAnswer(inv -> {
             BasketDivisionTieBreakRule rule = inv.getArgument(0);
             rule.setId(2000L + storedRules.size());
@@ -168,6 +168,100 @@ class BasketV4FormatSnapshotApplyStandardTest {
         assertEquals(3, storedStages.get(1).getBestOf());
         assertEquals(5, storedStages.get(1).getSemifinalBestOf());
         assertEquals(7, storedStages.get(1).getFinalBestOf());
+        assertEquals(2, storedStages.get(0).getWinPoints());
+        assertEquals(1, storedStages.get(0).getLossPoints());
+        assertNull(storedStages.get(1).getWinPoints());
+        assertNull(storedStages.get(1).getLossPoints());
+        List<String> regularRules = storedRules.stream()
+                .filter(rule -> storedStages.get(0).getId().equals(rule.getStageId()))
+                .map(BasketDivisionTieBreakRule::getRuleCode)
+                .toList();
+        assertEquals(List.of("POINT_DIFFERENCE", "HEAD_TO_HEAD", "TOTAL_POINTS", "MANUAL"), regularRules);
+        assertTrue(storedRules.stream().noneMatch(rule -> storedStages.get(1).getId().equals(rule.getStageId())));
+    }
+
+    @Test
+    void applyLeagueStandard_customStandingPoints_onlyOnRoundRobin() {
+        current.set(draftCustom());
+        when(snapshotMapper.selectMaxVersionByDivisionId(173L)).thenReturn(1);
+        stubDivisionGraph();
+        when(templateService.requireEnabledTemplateByCode(StandardTemplateCodes.LEAGUE_STANDARD_V1))
+                .thenReturn(template(2L, StandardTemplateCodes.LEAGUE_STANDARD_V1));
+
+        StandardTemplateApplyReq req = new StandardTemplateApplyReq();
+        req.setTemplateCode(StandardTemplateCodes.LEAGUE_STANDARD_V1);
+        req.setRegistrationMode("TEAM");
+        req.setWinPoints(3);
+        req.setLossPoints(1);
+        service.applyStandardTemplate(173L, req);
+
+        assertEquals(3, storedStages.get(0).getWinPoints());
+        assertEquals(1, storedStages.get(0).getLossPoints());
+        assertEquals(3, storedStages.get(0).getForfeitWinPoints());
+        assertEquals(1, storedStages.get(0).getForfeitLossPoints());
+        assertNull(storedStages.get(1).getWinPoints());
+        assertNull(storedStages.get(1).getLossPoints());
+    }
+
+    @Test
+    void applyLeagueStandard_zeroLossPoints_persisted() {
+        current.set(draftCustom());
+        when(snapshotMapper.selectMaxVersionByDivisionId(173L)).thenReturn(1);
+        stubDivisionGraph();
+        when(templateService.requireEnabledTemplateByCode(StandardTemplateCodes.LEAGUE_STANDARD_V1))
+                .thenReturn(template(2L, StandardTemplateCodes.LEAGUE_STANDARD_V1));
+
+        StandardTemplateApplyReq req = new StandardTemplateApplyReq();
+        req.setTemplateCode(StandardTemplateCodes.LEAGUE_STANDARD_V1);
+        req.setWinPoints(1);
+        req.setLossPoints(0);
+        service.applyStandardTemplate(173L, req);
+
+        assertEquals(1, storedStages.get(0).getWinPoints());
+        assertEquals(0, storedStages.get(0).getLossPoints());
+    }
+
+    @Test
+    void applyCupStandard_customStandingPoints_onlyOnGroup() {
+        current.set(draftCustom());
+        when(snapshotMapper.selectMaxVersionByDivisionId(173L)).thenReturn(1);
+        stubDivisionGraph();
+        when(templateService.requireEnabledTemplateByCode(StandardTemplateCodes.CUP_STANDARD_V1))
+                .thenReturn(template(7L, StandardTemplateCodes.CUP_STANDARD_V1));
+
+        StandardTemplateApplyReq req = new StandardTemplateApplyReq();
+        req.setTemplateCode(StandardTemplateCodes.CUP_STANDARD_V1);
+        req.setRegistrationMode("TEAM");
+        req.setWinPoints(2);
+        req.setLossPoints(0);
+        service.applyStandardTemplate(173L, req);
+
+        assertEquals(2, storedStages.get(0).getWinPoints());
+        assertEquals(0, storedStages.get(0).getLossPoints());
+        assertNull(storedStages.get(1).getWinPoints());
+        assertNull(storedStages.get(1).getLossPoints());
+    }
+
+    @Test
+    void applyArenaStandard_ignoresLeftoverStandingPoints() {
+        current.set(draftCustom());
+        when(snapshotMapper.selectMaxVersionByDivisionId(173L)).thenReturn(1);
+        stubDivisionGraph();
+        when(templateService.requireEnabledTemplateByCode(StandardTemplateCodes.ARENA_STANDARD_V1))
+                .thenReturn(template(6L, StandardTemplateCodes.ARENA_STANDARD_V1));
+
+        StandardTemplateApplyReq req = new StandardTemplateApplyReq();
+        req.setTemplateCode(StandardTemplateCodes.ARENA_STANDARD_V1);
+        req.setRegistrationMode("TEAM");
+        req.setWinPoints(3);
+        req.setLossPoints(1);
+        service.applyStandardTemplate(173L, req);
+
+        assertEquals(1, storedStages.size());
+        assertNull(storedStages.get(0).getWinPoints());
+        assertNull(storedStages.get(0).getLossPoints());
+        assertNull(storedStages.get(0).getForfeitWinPoints());
+        assertNull(storedStages.get(0).getForfeitLossPoints());
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.zhs.basket.enums.v4.PairingRuleEnum;
 import com.zhs.basket.enums.v4.RegistrationModeEnum;
 import com.zhs.basket.enums.v4.SeriesCodeEnum;
 import com.zhs.basket.enums.v4.TemplateTypeEnum;
+import com.zhs.basket.support.v4.StandingPointsRule;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.stereotype.Component;
 
@@ -61,6 +62,7 @@ public class CupStandardTemplateBuilder implements StandardFormatTemplateBuilder
                 || !com.zhs.basket.support.v4.BestOfValues.isLegal(resolved.getKnockoutBestOf())) {
             throw new ServiceException("Cup knockout BO only allows 1/3/5/7");
         }
+        StandingPointsRule.requireNonNegative(resolved.getWinPoints(), resolved.getLossPoints(), "Cup");
     }
 
     @Override
@@ -71,6 +73,7 @@ public class CupStandardTemplateBuilder implements StandardFormatTemplateBuilder
         definition.getStages().add(StandardTemplateStages.groupedRoundRobin(
                 StandardTemplateCodes.STAGE_GROUP, "\u5c0f\u7ec4\u8d5b", 1,
                 resolved.getGroupCount(), resolved.getGroupCycles(), resolved.getRegularBestOf(),
+                resolved.getWinPoints(), resolved.getLossPoints(),
                 resolved.getAdvancePerGroup(), resolved.getGroupingMode(),
                 StandardTemplateCodes.STAGE_KNOCKOUT));
         definition.getStages().add(StandardTemplateStages.knockout(
@@ -98,6 +101,10 @@ public class CupStandardTemplateBuilder implements StandardFormatTemplateBuilder
                         List.of("1", "2"), "1"),
                 StandardTemplateOptionDefinition.number("advancePerGroup", "\u6bcf\u7ec4\u664b\u7ea7", 1, 16, "2",
                         List.of("1", "2")),
+                StandardTemplateOptionDefinition.number("winPoints", "\u80dc\u573a\u79ef\u5206", 0, null,
+                        String.valueOf(StandingPointsRule.LEGACY_WIN_POINTS), null),
+                StandardTemplateOptionDefinition.number("lossPoints", "\u8d1f\u573a\u79ef\u5206", 0, null,
+                        String.valueOf(StandingPointsRule.LEGACY_LOSS_POINTS), null),
                 StandardTemplateOptionDefinition.select("groupingMode", "\u5206\u7ec4\u65b9\u5f0f",
                         List.of("POT_RANDOM", "MANUAL"), "POT_RANDOM"),
                 StandardTemplateOptionDefinition.select("eliminationPlacement", "\u6dd8\u6c70\u843d\u4f4d",
@@ -149,6 +156,12 @@ public class CupStandardTemplateBuilder implements StandardFormatTemplateBuilder
         }
         if (resolved.getFinalBestOf() == null) {
             resolved.setFinalBestOf(5);
+        }
+        if (resolved.getWinPoints() == null) {
+            resolved.setWinPoints(StandingPointsRule.LEGACY_WIN_POINTS);
+        }
+        if (resolved.getLossPoints() == null) {
+            resolved.setLossPoints(StandingPointsRule.LEGACY_LOSS_POINTS);
         }
         return resolved;
     }

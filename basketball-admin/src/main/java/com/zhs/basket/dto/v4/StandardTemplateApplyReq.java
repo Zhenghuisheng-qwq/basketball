@@ -21,4 +21,6 @@ public class StandardTemplateApplyReq {
     private Integer knockoutBestOf;
     private Integer semifinalBestOf;
     private Integer finalBestOf;
+    private Integer winPoints;
+    private Integer lossPoints;
 }

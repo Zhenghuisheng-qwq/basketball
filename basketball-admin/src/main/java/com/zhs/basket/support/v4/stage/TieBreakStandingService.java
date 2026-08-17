@@ -6,6 +6,7 @@ import com.zhs.basket.domain.v4.BasketStanding;
 import com.zhs.basket.domain.v4.BasketStandingRankReason;
 import com.zhs.basket.domain.v4.BasketV4Match;
 import com.zhs.basket.support.v4.StageFormatSpecification;
+import com.zhs.basket.support.v4.StandingPointsRule;
 import com.zhs.basket.enums.v4.MatchStatusEnum;
 import com.zhs.basket.enums.v4.TieBreakRuleEnum;
 import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
@@ -67,8 +68,8 @@ public class TieBreakStandingService {
             return;
         }
 
-        int winPoints = defaultPoints(stage.getWinPoints(), 2);
-        int lossPoints = defaultPoints(stage.getLossPoints(), 1);
+        int winPoints = StandingPointsRule.winPointsOrLegacy(stage.getWinPoints());
+        int lossPoints = StandingPointsRule.lossPointsOrLegacy(stage.getLossPoints());
         int forfeitWinPoints = stage.getForfeitWinPoints() != null ? stage.getForfeitWinPoints() : winPoints;
         int forfeitLossPoints = stage.getForfeitLossPoints() != null ? stage.getForfeitLossPoints() : 0;
         List<BasketDivisionTieBreakRule> tieBreakRules = tieBreakRuleMapper.selectByStageId(stageId);
@@ -341,10 +342,6 @@ public class TieBreakStandingService {
 
     private boolean isGroupStage(BasketDivisionStage stage) {
         return StageFormatSpecification.isGrouped(stage);
-    }
-
-    private int defaultPoints(Integer configured, int fallback) {
-        return configured != null ? configured : fallback;
     }
 
     public static String buildActiveUniqueKey(Long divisionId, Long stageId, Long groupScopeKey, Long eventTeamId) {

@@ -257,6 +257,8 @@ export interface StandardTemplateApplyReq {
   knockoutBestOf?: number
   semifinalBestOf?: number
   finalBestOf?: number
+  winPoints?: number
+  lossPoints?: number
 }
 
 export function listStandardTemplates(seriesId: number): Promise<AjaxResult<StandardTemplateCatalogVo>> {

@@ -27,6 +27,7 @@
             :can-apply="!!snapshot?.mutable"
             :game-mode="divisionMeta?.gameMode"
             :registration-mode="snapshot?.registrationMode || divisionMeta?.registrationMode"
+            :snapshot="snapshot"
             @applied="handleStandardTemplateApplied"
           />
         </template>

@@ -1283,11 +1283,11 @@ export function formatV4TieBreakPreview(
 export function formatV4TieBreakSummaryArrow(
   rules?: Array<{ ruleCode?: string; priorityNo?: number; enabled?: number }> | null
 ): string {
-  const normalized = normalizeV4WizardTieBreakRules(rules)
-  return normalized
-    .filter((r) => r.enabled === 1)
-    .map((r) => v4TieBreakRuleLabel(r.ruleCode))
-    .join(' → ') || '-'
+  const enabled = (rules || [])
+    .filter((r) => r.ruleCode && (r.enabled ?? 1) === 1)
+    .sort((a, b) => (a.priorityNo ?? 99) - (b.priorityNo ?? 99))
+  if (!enabled.length) return '积分 ＞ 净胜分 ＞ 相互胜负'
+  return ['积分', ...enabled.map((r) => v4TieBreakRuleLabel(r.ruleCode))].join(' ＞ ')
 }
 
 export interface V4StageSummaryInput {
@@ -1398,12 +1398,25 @@ export function formatV4StagePairingRule(stage: V4StageSummaryInput): string {
   return '每两支队伍比赛 1 场'
 }
 
+export function v4StageSupportsStandingPoints(stage?: { competitionFormat?: string } | null): boolean {
+  return (stage?.competitionFormat || '').toUpperCase() === 'ROUND_ROBIN'
+}
+
 export function formatV4StagePointsRule(stage: V4StageSummaryInput): string {
   if ((stage.competitionFormat || '').toUpperCase() === 'SINGLE_ELIMINATION') return '淘汰赛不计积分'
-  if (stage.winPoints != null && stage.lossPoints != null) {
+  if (v4StageSupportsStandingPoints(stage) && stage.winPoints != null && stage.lossPoints != null) {
     return `胜 ${stage.winPoints} 分，负 ${stage.lossPoints} 分`
   }
   return '-'
+}
+
+export function formatV4DivisionStandingPointsSummary(stages?: V4StageSummaryInput[] | null): string {
+  const standing = (stages || []).find((stage) => v4StageSupportsStandingPoints(stage)
+    && stage.winPoints != null
+    && stage.lossPoints != null)
+  if (!standing) return ''
+  const line = `胜 +${standing.winPoints} / 负 +${standing.lossPoints}`
+  return isV4GroupedStage(standing) ? `小组赛积分：${line}` : `常规赛积分：${line}`
 }
 
 export function formatV4StageAdvancementArrangement(
@@ -2265,18 +2278,21 @@ export function formatV4StageCardSummary(
   const index = sorted.findIndex((s) => s.stageCode === stage.stageCode)
   const isFinal = index >= 0 && isV4FinalStageIndex(index, sorted.length)
 
+  const pointsText = stage.winPoints != null && stage.lossPoints != null
+    ? `胜 ${stage.winPoints} / 负 ${stage.lossPoints}`
+    : ''
   if (isV4GroupedStage(stage) && format === 'ROUND_ROBIN') {
     const adv = stage.advancementCount
     const advText = adv ? `每组前${adv}晋级` : '每组前 N 晋级'
-    return `分组循环 · ${bo} · ${advText}`
+    return ['分组循环', bo, pointsText, advText].filter(Boolean).join(' · ')
   }
   if (format === 'ROUND_ROBIN') {
     const adv = (stage.advancementType || '').toUpperCase()
     if (adv === 'OVERALL_TOP_N' && stage.advancementCount) {
-      return `单循环 · ${bo} · 总排名前${stage.advancementCount}晋级`
+      return ['单循环', bo, pointsText, `总排名前${stage.advancementCount}晋级`].filter(Boolean).join(' · ')
     }
-    if (isFinal) return `单循环 · ${bo} · 最终阶段`
-    return `单循环 · ${bo}`
+    if (isFinal) return ['单循环', bo, pointsText, '最终阶段'].filter(Boolean).join(' · ')
+    return ['单循环', bo, pointsText].filter(Boolean).join(' · ')
   }
   if (format === 'SINGLE_ELIMINATION') {
     const pairing = normalizeV4EliminationPairingRule(stage.pairingRule)
@@ -2496,7 +2512,9 @@ const STANDARD_TEMPLATE_OPTION_LABELS: Record<string, string> = {
   groupCycles: '循环次数',
   advancePerGroup: '每组晋级数',
   groupingMode: '分组规则',
-  eliminationPlacement: '交叉站位规则'
+  eliminationPlacement: '交叉站位规则',
+  winPoints: '胜场积分',
+  lossPoints: '负场积分'
 }
 
 const SEED_RULE_LABELS: Record<string, string> = {
@@ -2529,9 +2547,15 @@ const TEMPLATE_TYPE_LABELS: Record<string, string> = {
   CUSTOM: '自定义赛制'
 }
 
-const STANDARD_OPTION_GROUPS: Record<string, { title: string; keys: string[] }[]> = {
+const STANDARD_OPTION_GROUPS: Record<string, { title: string; keys: string[]; hint?: string; rankingHint?: string }[]> = {
   LEAGUE_STANDARD_V1: [
     { title: '基础设置', keys: ['registrationMode', 'roundRobinCycles', 'playoffSlots'] },
+    {
+      title: '积分规则',
+      keys: ['winPoints', 'lossPoints'],
+      hint: '适用于常规赛积分排名，淘汰赛阶段按胜负晋级，不使用积分。',
+      rankingHint: '排名优先级：积分 ＞ 净胜分 ＞ 相互胜负'
+    },
     { title: '比赛局制', keys: ['regularBestOf', 'knockoutBestOf', 'semifinalBestOf', 'finalBestOf'] }
   ],
   ARENA_STANDARD_V1: [
@@ -2542,6 +2566,12 @@ const STANDARD_OPTION_GROUPS: Record<string, { title: string; keys: string[] }[]
   CUP_STANDARD_V1: [
     { title: '基础设置', keys: ['registrationMode'] },
     { title: '小组赛', keys: ['groupCount', 'groupCycles', 'advancePerGroup', 'groupingMode', 'regularBestOf'] },
+    {
+      title: '小组积分规则',
+      keys: ['winPoints', 'lossPoints'],
+      hint: '适用于小组赛排名，淘汰赛阶段不使用积分。',
+      rankingHint: '排名优先级：积分 ＞ 净胜分 ＞ 相互胜负'
+    },
     { title: '淘汰赛', keys: ['eliminationPlacement', 'knockoutBestOf', 'semifinalBestOf', 'finalBestOf'] }
   ],
   OPEN_STANDARD_V1: [
@@ -2576,6 +2606,10 @@ export function v4StandardTemplateProductName(templateCode?: string | null): str
 
 export function v4StandardTemplateOptionLabel(key?: string | null, fallback?: string | null, templateCode?: string | null): string {
   if (key === 'regularBestOf' && templateCode === 'CUP_STANDARD_V1') return '小组赛 BO'
+  if (key === 'winPoints' && templateCode === 'LEAGUE_STANDARD_V1') return '常规赛胜场积分'
+  if (key === 'lossPoints' && templateCode === 'LEAGUE_STANDARD_V1') return '常规赛负场积分'
+  if (key === 'winPoints' && templateCode === 'CUP_STANDARD_V1') return '小组赛胜场积分'
+  if (key === 'lossPoints' && templateCode === 'CUP_STANDARD_V1') return '小组赛负场积分'
   if (key && STANDARD_TEMPLATE_OPTION_LABELS[key]) return STANDARD_TEMPLATE_OPTION_LABELS[key]
   return fallback || key || '-'
 }
