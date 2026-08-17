@@ -40,6 +40,8 @@ public class V4MatchSeriesDisplaySupport {
     private BasketScheduleBatchDao scheduleBatchDao;
     @Resource
     private BasketDivisionFormatSnapshotDao formatSnapshotDao;
+    @Resource
+    private BasketPublicSupport publicSupport;
 
     public V4PublicMatchSeriesDetailResp buildDetail(Long seriesId, Long currentMatchId) {
         if (seriesId == null) {
@@ -144,7 +146,54 @@ public class V4MatchSeriesDisplaySupport {
                 .comparing(V4PublicScheduleItemResp::getStageId, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(V4PublicScheduleItemResp::getRoundNo, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(V4PublicScheduleItemResp::getId, Comparator.nullsLast(Comparator.naturalOrder())));
+        fillScheduleTeamLogos(items);
         return items;
+    }
+
+    private void fillScheduleTeamLogos(List<V4PublicScheduleItemResp> items) {
+        if (CollectionUtils.isEmpty(items)) {
+            return;
+        }
+        Set<Long> teamIds = new HashSet<>();
+        for (V4PublicScheduleItemResp item : items) {
+            if (item.getHomeEventTeamId() != null && item.getHomeEventTeamId() > 0) {
+                teamIds.add(item.getHomeEventTeamId());
+            }
+            if (item.getAwayEventTeamId() != null && item.getAwayEventTeamId() > 0) {
+                teamIds.add(item.getAwayEventTeamId());
+            }
+        }
+        if (teamIds.isEmpty()) {
+            return;
+        }
+        List<BasketEventTeam> teams = eventTeamDao.selectByIds(teamIds);
+        if (CollectionUtils.isEmpty(teams)) {
+            return;
+        }
+        Map<Long, BasketEventTeam> teamMap = new HashMap<>();
+        Set<Long> logoIds = new HashSet<>();
+        for (BasketEventTeam team : teams) {
+            if (team == null || team.getId() == null) {
+                continue;
+            }
+            teamMap.put(team.getId(), team);
+            if (team.getTeamLogoFileId() != null) {
+                logoIds.add(team.getTeamLogoFileId());
+            }
+        }
+        Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(logoIds);
+        for (V4PublicScheduleItemResp item : items) {
+            BasketEventTeam home = teamMap.get(item.getHomeEventTeamId());
+            if (home != null) {
+                item.setHomeTeamLogoFileId(home.getTeamLogoFileId());
+                item.setHomeTeamLogoUrl(urlMap.get(home.getTeamLogoFileId()));
+            }
+            BasketEventTeam away = teamMap.get(item.getAwayEventTeamId());
+            if (away != null) {
+                item.setAwayTeamLogoFileId(away.getTeamLogoFileId());
+                item.setAwayTeamLogoUrl(urlMap.get(away.getTeamLogoFileId()));
+            }
+        }
     }
 
     public V4PublicMatchSeriesDetailResp buildDetail(BasketMatchSeries series, Long currentMatchId) {

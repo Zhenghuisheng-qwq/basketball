@@ -411,8 +411,12 @@ export interface V4PublicScheduleItem {
   seriesCode?: string
   homeEventTeamId?: string
   homeTeam?: string
+  homeTeamLogoFileId?: string
+  homeTeamLogoUrl?: string
   awayEventTeamId?: string
   awayTeam?: string
+  awayTeamLogoFileId?: string
+  awayTeamLogoUrl?: string
   bestOf?: number
   seriesScore?: string
   gameProgress?: string

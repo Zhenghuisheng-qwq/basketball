@@ -26,9 +26,19 @@ public class V4PublicScheduleItemResp {
     private String homeTeam;
 
     @JsonSerialize(using = ToStringSerializer.class)
+    private Long homeTeamLogoFileId;
+
+    private String homeTeamLogoUrl;
+
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long awayEventTeamId;
 
     private String awayTeam;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long awayTeamLogoFileId;
+
+    private String awayTeamLogoUrl;
     private Integer bestOf;
     private String seriesScore;
     private String gameProgress;

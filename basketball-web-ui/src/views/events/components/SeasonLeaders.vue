@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
-import { getV4PublicPlayerStat } from '@/api/v4Public'
+import { getV4PublicPlayerStat, getV4PublicTeamList } from '@/api/v4Public'
 import type { V4PublicPlayerStatItem } from '@/api/types/v4Public'
 import PaperSection from '@/components/common/PaperSection.vue'
 import { formatDecimal, toNumber } from '@/utils/publicDisplay'
@@ -71,20 +71,27 @@ async function load(divisionId: string) {
   state.value = 'loading'
   errorMessage.value = ''
   try {
-    const res = await getV4PublicPlayerStat(divisionId)
+    const [res, teamRes] = await Promise.all([
+      getV4PublicPlayerStat(divisionId),
+      getV4PublicTeamList(divisionId),
+    ])
     const rows = res.data ?? []
+    const logoByTeamId = new Map(
+      (teamRes.data ?? []).map((team) => [String(team.eventTeamId || ''), team.teamLogoUrl?.trim() || '']),
+    )
     const results = LEADER_CONFIG.map((config, index) => {
       const leader = pickAverageLeader(rows, config.key, config.totalKey)
       if (!leader) return null
+      const teamId = String(leader.eventTeamId || '')
       return {
         id: index + 1,
         title: config.title,
         value: Number(formatDecimal(playerAverageValue(leader, config.key, config.totalKey), 1)),
         unit: config.unit,
         playerName: leader.playerName || '--',
-        teamId: String(leader.eventTeamId || ''),
+        teamId,
         teamName: leader.teamName || '',
-        teamLogo: '',
+        teamLogo: logoByTeamId.get(teamId) || '',
         portrait: '',
       } satisfies PlayerLeader
     })
