@@ -1,41 +1,26 @@
 import { computed, ref } from 'vue'
 import type { CalendarDay, CalendarMonth } from '../types/events'
+import {
+  calendarRangeLabel,
+  formatDateKey,
+  isValidDateKey,
+  parseDateKey,
+  resolveCalendarAnchor,
+  toDateKey,
+} from '@/utils/scheduleDateKey'
+
+export { formatDateKey, isValidDateKey, parseDateKey, toDateKey }
 
 function pad(value: number): string {
   return String(value).padStart(2, '0')
 }
 
-export function formatDateKey(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-export function isValidDateKey(value: string | null | undefined): boolean {
-  if (!value) return false
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-  if (!match) return false
-  const date = parseDateKey(value)
-  return formatDateKey(date) === value
-}
-
-export function toDateKey(value: string | null | undefined): string {
-  if (!value) return ''
-  const normalized = value.replace('T', ' ').trim()
-  const datePart = normalized.split(/\s+/)[0]
-  if (isValidDateKey(datePart)) return datePart
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return ''
-  return formatDateKey(parsed)
-}
-
-export function parseDateKey(value: string): Date {
-  const [year, month, day] = value.split('-').map(Number)
-  return new Date(year, month - 1, day)
-}
-
 function buildMonth(year: number, month: number, selectedDate: string): CalendarMonth {
-  const firstDay = new Date(year, month, 1)
+  const safeYear = Number.isFinite(year) ? year : parseDateKey('').getFullYear()
+  const safeMonth = Number.isFinite(month) ? month : parseDateKey('').getMonth()
+  const firstDay = new Date(safeYear, safeMonth, 1)
   const startWeekday = firstDay.getDay()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const daysInMonth = new Date(safeYear, safeMonth + 1, 0).getDate()
   const days: CalendarDay[] = []
 
   for (let i = 0; i < startWeekday; i += 1) {
@@ -49,8 +34,8 @@ function buildMonth(year: number, month: number, selectedDate: string): Calendar
   }
 
   for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = `${year}-${pad(month + 1)}-${pad(day)}`
-    const weekday = new Date(year, month, day).getDay()
+    const date = `${safeYear}-${pad(safeMonth + 1)}-${pad(day)}`
+    const weekday = new Date(safeYear, safeMonth, day).getDay()
     days.push({
       date,
       day,
@@ -61,38 +46,38 @@ function buildMonth(year: number, month: number, selectedDate: string): Calendar
   }
 
   return {
-    year,
-    month,
-    label: `${year}年${month + 1}月`,
+    year: safeYear,
+    month: safeMonth,
+    label: `${safeYear}年${safeMonth + 1}月`,
     days,
   }
 }
 
 export function useCalendar(initialDate: string) {
-  const anchorDate = ref(parseDateKey(initialDate))
+  const anchorDate = ref(resolveCalendarAnchor(initialDate))
 
   function setAnchorFromDate(dateKey: string) {
+    if (!isValidDateKey(dateKey)) return
     anchorDate.value = parseDateKey(dateKey)
   }
 
   function shiftMonths(offset: number) {
-    const next = new Date(anchorDate.value)
-    next.setMonth(next.getMonth() + offset)
+    const base = Number.isNaN(anchorDate.value.getTime()) ? parseDateKey('') : anchorDate.value
+    const next = new Date(base.getFullYear(), base.getMonth() + offset, 1)
     anchorDate.value = next
   }
 
   function getThreeMonths(selectedDate: string): CalendarMonth[] {
-    const start = new Date(anchorDate.value.getFullYear(), anchorDate.value.getMonth(), 1)
+    const base = Number.isNaN(anchorDate.value.getTime()) ? parseDateKey('') : anchorDate.value
+    const start = new Date(base.getFullYear(), base.getMonth(), 1)
+    const highlight = isValidDateKey(selectedDate) ? selectedDate : ''
     return [0, 1, 2].map((offset) => {
       const monthDate = new Date(start.getFullYear(), start.getMonth() + offset, 1)
-      return buildMonth(monthDate.getFullYear(), monthDate.getMonth(), selectedDate)
+      return buildMonth(monthDate.getFullYear(), monthDate.getMonth(), highlight)
     })
   }
 
-  const monthLabel = computed(() => {
-    const months = getThreeMonths(formatDateKey(anchorDate.value))
-    return `${months[0]?.label} - ${months[2]?.label}`
-  })
+  const monthLabel = computed(() => calendarRangeLabel(anchorDate.value))
 
   return {
     anchorDate,

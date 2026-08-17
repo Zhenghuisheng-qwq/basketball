@@ -1,0 +1,151 @@
+{
+  "seasonId": 142,
+  "divisionId": 177,
+  "count": 16,
+  "captains": [
+    {
+      "team_id": "2089312974246330369",
+      "team_name": "S13猎鹰",
+      "captain_name": "猎鹰队长",
+      "captain_email": "fs_s13l_l0101@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089312980533592065",
+      "team_name": "S13雷霆",
+      "captain_name": "雷霆队长",
+      "captain_email": "fs_s13l_l0201@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089312986523058177",
+      "team_name": "S13风暴",
+      "captain_name": "风暴队长",
+      "captain_email": "fs_s13l_l0301@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089312992596410369",
+      "team_name": "S13夜翼",
+      "captain_name": "夜翼队长",
+      "captain_email": "fs_s13l_l0401@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089312998736871425",
+      "team_name": "S13赤焰",
+      "captain_name": "赤焰队长",
+      "captain_email": "fs_s13l_l0501@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089313004734726146",
+      "team_name": "S13寒霜",
+      "captain_name": "寒霜队长",
+      "captain_email": "fs_s13l_l0601@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089313010732580866",
+      "team_name": "S13黑骑",
+      "captain_name": "黑骑队长",
+      "captain_email": "fs_s13l_l0701@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089313016776572929",
+      "team_name": "S13银狼",
+      "captain_name": "银狼队长",
+      "captain_email": "fs_s13l_l0801@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089313023017697282",
+      "team_name": "S13金鲨",
+      "captain_name": "金鲨队长",
+      "captain_email": "fs_s13l_l0901@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089313029149769730",
+      "team_name": "S13青龙",
+      "captain_name": "青龙队长",
+      "captain_email": "fs_s13l_l1001@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089313035143430145",
+      "team_name": "S13白虎",
+      "captain_name": "白虎队长",
+      "captain_email": "fs_s13l_l1101@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089313041057398786",
+      "team_name": "S13朱雀",
+      "captain_name": "朱雀队长",
+      "captain_email": "fs_s13l_l1201@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089313047181082625",
+      "team_name": "S13玄武",
+      "captain_name": "玄武队长",
+      "captain_email": "fs_s13l_l1301@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089313053136994306",
+      "team_name": "S13星火",
+      "captain_name": "星火队长",
+      "captain_email": "fs_s13l_l1401@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089313059193569282",
+      "team_name": "S13狂澜",
+      "captain_name": "狂澜队长",
+      "captain_email": "fs_s13l_l1501@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    },
+    {
+      "team_id": "2089313065355001857",
+      "team_name": "S13破晓",
+      "captain_name": "破晓队长",
+      "captain_email": "fs_s13l_l1601@cnpa.smoke",
+      "current_member_count": 5,
+      "registration_status": "APPROVED",
+      "participation_role": "FORMAL"
+    }
+  ]
+}

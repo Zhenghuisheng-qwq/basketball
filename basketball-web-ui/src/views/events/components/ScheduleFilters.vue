@@ -30,7 +30,12 @@ const emit = defineEmits<{
 const ctx = inject<SeasonContext>('publicSeasonContext')!
 const teams = ref<ReturnType<typeof standingToTeam>[]>([])
 
-const seasonOptions = computed(() => ctx.seasons.value.map((item) => String(item.seasonId)))
+const seasonOptions = computed(() =>
+  ctx.seasons.value.map((item) => ({
+    id: String(item.seasonId),
+    label: item.competitionSeasonName || item.seasonName || String(item.seasonId),
+  })),
+)
 
 const selectedTeamLabel = computed(() => {
   if (props.selectedTeamId === null) return '选择球队'
@@ -68,8 +73,8 @@ watch(
           :value="selectedSeason"
           @change="emit('update:selectedSeason', ($event.target as HTMLSelectElement).value)"
         >
-          <option v-for="season in seasonOptions" :key="season" :value="season">
-            {{ season }}
+          <option v-for="season in seasonOptions" :key="season.id" :value="season.id">
+            {{ season.label }}
           </option>
         </select>
       </label>

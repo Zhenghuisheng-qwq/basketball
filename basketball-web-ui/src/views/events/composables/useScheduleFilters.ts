@@ -3,6 +3,7 @@ import { getV4PublicDivisionSchedule, getV4PublicStanding } from '@/api/v4Public
 import type { V4PublicScheduleItem } from '@/api/types/v4Public'
 import { v4StandingToPublic } from '../utils/v4PublicAdapters'
 import type { PublicStandingItemVo } from '@/api/types/public'
+import { matchPassesDateFilter } from '@/utils/scheduleDateKey'
 import {
   formatDateKey,
   getWeekNumber,
@@ -90,7 +91,7 @@ export function useScheduleFilters() {
 
   const filteredMatches = computed<Match[]>(() => {
     return matches.value.filter((match) => {
-      const dateMatch = !selectedDate.value || !match.date || match.date === selectedDate.value
+      const dateMatch = matchPassesDateFilter(match.date, selectedDate.value)
       const teamMatch =
         selectedTeamId.value === null ||
         teamIdToNumeric(match.homeTeamKey) === selectedTeamId.value ||
@@ -101,9 +102,7 @@ export function useScheduleFilters() {
 
   const filteredScheduleItems = computed(() => {
     return scheduleItems.value.filter((item) => {
-      // 日期只做辅助筛选；无日期的已发布项必须保留
-      const itemDate = item.scheduleDate || ''
-      const dateMatch = !selectedDate.value || !itemDate || itemDate === selectedDate.value
+      const dateMatch = matchPassesDateFilter(item.scheduleDate, selectedDate.value)
       const teamMatch =
         selectedTeamId.value === null ||
         teamIdToNumeric(String(item.homeEventTeamId || '')) === selectedTeamId.value ||
@@ -208,7 +207,9 @@ export function useScheduleFilters() {
       matches.value = []
       scheduleItems.value = []
       teams.value = []
-      state.value = 'empty'
+      const contextPending =
+        ctx.overviewState.value === 'idle' || ctx.overviewState.value === 'loading'
+      state.value = contextPending ? 'loading' : 'empty'
       return
     }
     state.value = 'loading'
@@ -244,7 +245,7 @@ export function useScheduleFilters() {
   }
 
   watch(
-    () => [ctx.divisionId.value, selectedTeamId.value] as const,
+    () => [ctx.divisionId.value, ctx.overviewState.value, selectedTeamId.value] as const,
     ([did], prev) => {
       const prevDid = prev?.[0]
       const resetDate = prev === undefined || did !== prevDid
