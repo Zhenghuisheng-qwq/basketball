@@ -165,6 +165,11 @@ function goMatchStats(match: TeamMatchRecord) {
   })
 }
 
+
+function goMatchDetail(match: TeamMatchRecord) {
+  if (!match.id || match.status === 'scheduled') return
+  router.push(`/events/match/${match.id}`)
+}
 function goPrevPage() {
   if (currentPage.value > 1) currentPage.value -= 1
 }
@@ -309,6 +314,14 @@ function goPage(page: number) {
               >
                 查看数据
               </button>
+                <button
+                  v-if="match.status !== 'scheduled'"
+                  type="button"
+                  class="action-btn action-btn--secondary"
+                  @click="goMatchDetail(match)"
+                >
+                  比赛详情
+                </button>
             </div>
           </article>
         </div>
@@ -732,6 +745,72 @@ function goPage(page: number) {
 
   .match-table {
     min-width: 1140px;
+  }
+}
+
+.team-matches {
+  padding: clamp(22px, 2.6vw, 38px);
+  border: 1px solid var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg);
+  box-shadow: var(--cnpa-public-shadow-soft);
+  box-sizing: border-box;
+}
+
+.status-tabs,
+.filter-select select {
+  border-color: var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg-soft);
+}
+
+.status-tab {
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.status-tab:focus-visible,
+.filter-select select:focus-visible,
+.action-btn:focus-visible,
+.pagination-btn:focus-visible,
+.pagination-page:focus-visible {
+  outline: 2px solid rgba(225, 6, 19, 0.4);
+  outline-offset: 2px;
+}
+
+.team-matches .match-table {
+  overflow: hidden;
+  border: 1px solid var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg);
+  box-shadow: var(--cnpa-public-shadow-soft);
+}
+
+.team-matches .match-table__head {
+  background: var(--cnpa-public-card-bg-soft);
+}
+
+.team-matches .match-table__row {
+  background: var(--cnpa-public-card-bg);
+  transition: background 0.2s ease;
+}
+
+.team-matches .match-table__row:hover {
+  background: #fbfaf8;
+}
+
+@media (max-width: 768px) {
+  .team-matches {
+    padding: 20px 16px;
+  }
+
+  .team-matches__toolbar,
+  .match-filters,
+  .filter-selects {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .status-tabs,
+  .filter-select,
+  .filter-select select {
+    width: 100%;
   }
 }
 </style>

@@ -348,4 +348,64 @@ const infoItems = computed(() => [
     align-items: flex-start;
   }
 }
+
+.player-detail-hero {
+  min-height: clamp(520px, 45vw, 680px);
+  border: 0;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.2);
+}
+
+.player-detail-hero__bg {
+  background-position: center;
+  background-size: cover;
+}
+
+.player-detail-hero__left {
+  align-items: center;
+  gap: clamp(28px, 4vw, 64px);
+}
+
+.player-detail-hero :deep(.player-avatar--hero) {
+  flex: 0 0 clamp(180px, 18vw, 260px);
+  width: clamp(180px, 18vw, 260px);
+  height: clamp(180px, 18vw, 260px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.28);
+}
+
+.player-detail-hero__summary {
+  max-width: 620px;
+}
+
+.player-detail-hero__name {
+  letter-spacing: 0;
+}
+
+.player-detail-hero__logo-bg {
+  opacity: 0.32;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.24));
+}
+
+.player-detail-hero__info-bar {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 10, 10, 0.62);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 767px) {
+  .player-detail-hero {
+    min-height: auto;
+  }
+
+  .player-detail-hero__left {
+    align-items: center;
+    text-align: center;
+  }
+
+  .player-detail-hero__title-row,
+  .player-detail-hero__meta {
+    justify-content: center;
+  }
+}
 </style>

@@ -77,4 +77,26 @@ const tabs: Array<{ value: PlayerDetailTab; label: string }> = [
     color: var(--cnpa-paper-text);
   }
 }
+
+.player-detail-tabs {
+  gap: clamp(20px, 3vw, 40px);
+  padding-inline: 2px;
+  scrollbar-width: none;
+}
+
+.player-detail-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.player-detail-tabs__item {
+  min-height: 48px;
+  padding-bottom: 13px;
+  font-weight: 800;
+}
+
+.player-detail-tabs__item:focus-visible {
+  color: var(--cnpa-red);
+  outline: 2px solid rgba(225, 6, 19, 0.35);
+  outline-offset: -2px;
+}
 </style>

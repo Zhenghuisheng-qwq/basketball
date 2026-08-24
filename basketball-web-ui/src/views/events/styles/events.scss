@@ -2,7 +2,7 @@
 
 .events-page {
   width: 100%;
-  background: #050505;
+  background: var(--cnpa-public-paper-bg, #f4f1ea);
   overflow-x: clip;
 }
 
@@ -50,6 +50,7 @@
 
 .events-content-section {
   width: 100%;
+  background: var(--cnpa-public-paper-bg, #f4f1ea);
 }
 
 .events-section {
@@ -62,7 +63,8 @@
 }
 
 .events-section-panel {
-  background: #0d0d0d;
+  background: var(--cnpa-public-card-bg, #fff);
+  color: var(--cnpa-public-text, #111);
 }
 
 .events-section-red {

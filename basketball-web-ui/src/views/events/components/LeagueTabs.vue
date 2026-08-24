@@ -32,13 +32,13 @@ const tabs: Array<{ key: EventTab; label: string }> = [
 </template>
 <style scoped lang="scss">
 .league-tabs {
-  display: inline-flex;
+  display: flex;
   align-items: stretch;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   min-height: 64px;
   margin-top: 0;
-  background: #080808;
+  background: rgba(8, 8, 8, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-top: none;
   border-radius: 0 0 2px 2px;
@@ -48,7 +48,7 @@ const tabs: Array<{ key: EventTab; label: string }> = [
 .league-tab {
   position: relative;
   flex: 0 0 auto;
-  min-width: clamp(88px, 8vw, 120px);
+  min-width: clamp(96px, 10vw, 150px);
   padding: 0 clamp(20px, 2vw, 36px);
   border: none;
   background: transparent;
@@ -78,11 +78,18 @@ const tabs: Array<{ key: EventTab; label: string }> = [
       background: var(--cnpa-red);
     }
   }
+
+  &:focus-visible {
+    outline: 2px solid rgba(225, 6, 19, 0.72);
+    outline-offset: -2px;
+  }
 }
 
 @media (max-width: 480px) {
   .league-tabs {
     min-height: 56px;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
   .league-tab {

@@ -172,4 +172,24 @@ function handleShift(offset: number) {
     min-width: 240px;
   }
 }
+
+.calendar-panel {
+  border: 1px solid rgba(10, 10, 10, 0.12);
+  box-shadow: 0 18px 40px rgba(25, 26, 28, 0.12);
+}
+
+.month-arrow {
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.month-arrow:hover,
+.month-arrow:focus-visible {
+  border-color: var(--cnpa-red);
+  color: var(--cnpa-red);
+  outline: none;
+}
+
+.day-cell.selected button {
+  border-radius: 50%;
+}
 </style>

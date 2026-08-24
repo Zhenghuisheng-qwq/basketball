@@ -160,4 +160,15 @@ function displayName(option: ScheduleTeamOption): string {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.team-panel {
+  border: 1px solid rgba(10, 10, 10, 0.12);
+  box-shadow: 0 18px 40px rgba(25, 26, 28, 0.12);
+}
+
+.team-item:focus-visible {
+  border-color: var(--cnpa-red);
+  box-shadow: 0 0 0 3px rgba(225, 6, 19, 0.08);
+  outline: none;
+}
 </style>

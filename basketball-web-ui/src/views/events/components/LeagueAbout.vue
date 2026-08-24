@@ -7,6 +7,10 @@ const ctx = inject<ReturnType<typeof usePublicSeasonContext> | null>('publicSeas
 const seriesLabel = computed(
   () => ctx?.currentTournament.value?.tournamentName || ctx?.divisionDetail.value?.seriesName || '赛事',
 )
+const description = computed(() => {
+  const value = ctx?.overview.value?.description
+  return typeof value === 'string' ? value.trim() : ''
+})
 </script>
 <template>
   <section class="league-about" :aria-label="`关于 ${seriesLabel}`">
@@ -16,6 +20,11 @@ const seriesLabel = computed(
         :src="tournamentFoot"
         :alt="`关于 ${seriesLabel}`"
       />
+      <div v-if="description" class="league-about__copy">
+        <span class="league-about__eyebrow">ABOUT THE EVENT</span>
+        <h2>赛事介绍</h2>
+        <p>{{ description }}</p>
+      </div>
     </div>
   </section>
 </template>
@@ -30,5 +39,54 @@ const seriesLabel = computed(
   display: block;
   width: 100%;
   height: auto;
+}
+
+.league-about .site-shell {
+  position: relative;
+}
+
+.league-about__copy {
+  position: absolute;
+  right: clamp(20px, 5vw, 84px);
+  bottom: clamp(22px, 5vw, 72px);
+  width: min(42%, 540px);
+  padding: clamp(20px, 2.5vw, 34px);
+  border-left: 3px solid var(--cnpa-red, #e10613);
+  background: rgba(8, 8, 8, 0.76);
+  color: #fff;
+  box-sizing: border-box;
+}
+
+.league-about__eyebrow {
+  color: #ff4b35;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.league-about__copy h2 {
+  margin: 9px 0 0;
+  font-size: clamp(24px, 2.2vw, 36px);
+  font-weight: 950;
+}
+
+.league-about__copy p {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+@media (max-width: 700px) {
+  .league-about__copy {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    padding: 22px 16px 26px;
+    border-left: 0;
+    border-top: 3px solid var(--cnpa-red, #e10613);
+    background: #111;
+  }
 }
 </style>

@@ -46,19 +46,34 @@ const ctx = usePublicTeamPage()
   font-weight: 700;
 
   &.is-error {
-    color: #e10613;
+    color: var(--cnpa-red);
   }
 }
 
 .team-page__retry {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-left: 12px;
-  padding: 8px 14px;
-  border: 0;
-  border-radius: 4px;
-  background: #e10613;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--cnpa-red);
+  border-radius: 2px;
+  background: var(--cnpa-red);
   color: #fff;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--cnpa-red-dark);
+    background: var(--cnpa-red-dark);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(225, 6, 19, 0.4);
+    outline-offset: 2px;
+  }
 }
 </style>

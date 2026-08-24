@@ -33,10 +33,13 @@
 }
 
 .player-detail-empty {
-  padding: 80px 0 120px;
+  margin: 0 auto;
+  max-width: var(--site-width);
+  padding: 80px 16px 120px;
   text-align: center;
   color: rgba(255, 255, 255, 0.72);
   font-size: 18px;
+  box-sizing: border-box;
 }
 
 .player-detail-section-head {
@@ -271,5 +274,92 @@
   .player-detail-section-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+
+.player-detail-page__paper-inner {
+  min-width: 0;
+  padding-inline: var(--cnpa-public-content-gutter);
+}
+
+.player-detail-section-head__action:focus-visible,
+.player-detail-view-btn:focus-visible,
+.player-detail-stat-switch__btn:focus-visible,
+.player-detail-mode-switch__btn:focus-visible,
+.player-detail-filter-row select:focus-visible,
+.player-detail-filter-row button:focus-visible,
+.player-detail-pagination__btn:focus-visible,
+.player-detail-team-link:focus-visible {
+  outline: 2px solid rgba(225, 6, 19, 0.4);
+  outline-offset: 2px;
+}
+
+.player-detail-table-scroll {
+  border: 1px solid var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg);
+  box-shadow: var(--cnpa-public-shadow-soft);
+}
+
+.player-detail-table thead th {
+  background: #171717;
+}
+
+.player-detail-table tbody td {
+  background: var(--cnpa-public-card-bg);
+}
+
+.player-detail-table tbody tr:hover td {
+  background: var(--cnpa-public-card-bg-soft);
+}
+
+.player-detail-filter-row select,
+.player-detail-filter-row button,
+.player-detail-stat-switch__btn,
+.player-detail-mode-switch__btn {
+  border-color: var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg);
+}
+
+.player-detail-pagination__btn {
+  border-color: var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg);
+}
+
+.player-detail-empty-inline {
+  border: 1px dashed var(--cnpa-public-border);
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.player-detail-empty {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.player-detail-empty-inline {
+  color: var(--cnpa-paper-text-muted);
+}
+
+@media (max-width: 767px) {
+  .player-detail-page__paper-inner {
+    padding-inline: 16px;
+  }
+
+  .player-detail-filter-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .player-detail-filter-row select,
+  .player-detail-filter-row button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .player-detail-filter-row {
+    grid-template-columns: 1fr;
   }
 }

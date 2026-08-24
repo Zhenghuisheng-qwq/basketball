@@ -1272,4 +1272,43 @@ function getTeamNameSizeClass(name: string) {
     padding-inline: 20px;
   }
 }
+
+.compare-hero__bg {
+  background-position: center;
+  background-size: cover;
+}
+
+.compare-team__logo {
+  filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.24));
+}
+
+.compare-team__button:focus-visible,
+.compare-vs-area button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.compare-content {
+  padding-top: clamp(28px, 3.2vw, 48px);
+  padding-bottom: clamp(48px, 5vw, 76px);
+}
+
+.summary-card,
+.metric-section,
+.comparison-note {
+  border-color: var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg);
+  box-shadow: var(--cnpa-public-shadow-soft);
+}
+
+.summary-card:hover {
+  border-color: rgba(225, 6, 19, 0.34);
+  box-shadow: var(--cnpa-public-shadow);
+}
+
+@media (max-width: 768px) {
+  .compare-content {
+    padding-inline: 16px;
+  }
+}
 </style>

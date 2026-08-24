@@ -31,7 +31,7 @@ function divisionLabel(division: { platformCode?: string; divisionName?: string;
       <div class="site-shell">
         <LeagueHero />
         <LeagueTabs :active-tab="activeTab" @change="setTab" />
-        <div v-if="divisions.length" class="division-switch" aria-label="赛区">
+        <div v-if="divisions.length > 1" class="division-switch" aria-label="赛区">
           <button
             v-for="division in divisions"
             :key="division.divisionId"

@@ -182,10 +182,10 @@ function goPage(index: number) {
   min-width: 132px;
   height: 36px;
   padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(17, 17, 17, 0.14);
   border-radius: 2px;
-  background: #151515;
-  color: #fff;
+  background: #fff;
+  color: #111;
   font-family: inherit;
   font-size: 13px;
 }
@@ -200,10 +200,10 @@ function goPage(index: number) {
 .carousel-arrow {
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(17, 17, 17, 0.14);
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
+  background: #fff;
+  color: #111;
   font-size: 24px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -234,14 +234,15 @@ function goPage(index: number) {
   align-items: center;
   gap: 10px;
   padding: 22px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #0d0d0d;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  background: #fff;
   transition: border-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
 
   h3 {
     margin: 0;
     font-size: 14px;
     font-weight: 800;
+    color: #111;
   }
 
   &:hover {

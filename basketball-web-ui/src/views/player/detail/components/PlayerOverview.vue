@@ -272,4 +272,25 @@ function goAllMatches() {
     grid-template-columns: 1fr;
   }
 }
+
+.player-detail-overview__section {
+  padding: clamp(22px, 2.6vw, 38px);
+  border: 1px solid var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg);
+  box-shadow: var(--cnpa-public-shadow-soft);
+  box-sizing: border-box;
+}
+
+.player-detail-overview__honor-item,
+.player-detail-honor-card {
+  border-color: var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg-soft);
+  box-shadow: var(--cnpa-public-shadow-soft);
+}
+
+.player-detail-overview__honor-item:hover,
+.player-detail-honor-card:hover {
+  border-color: rgba(225, 6, 19, 0.34);
+  box-shadow: var(--cnpa-public-shadow);
+}
 </style>

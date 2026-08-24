@@ -151,6 +151,11 @@ function goMatchStats(match: TeamMatchRecord) {
   })
 }
 
+
+function goMatchDetail(match: TeamMatchRecord) {
+  if (!match.id || match.status === 'scheduled') return
+  router.push(`/events/match/${match.id}`)
+}
 function goMatchPrevPage() {
   if (matchCurrentPage.value > 1) matchCurrentPage.value -= 1
 }
@@ -313,6 +318,14 @@ function goMatchPage(page: number) {
                 </button>
                 <button v-else type="button" class="action-btn" @click="goMatchStats(match)">
                   查看数据
+                </button>
+                <button
+                  v-if="match.status !== 'scheduled'"
+                  type="button"
+                  class="action-btn action-btn--secondary"
+                  @click="goMatchDetail(match)"
+                >
+                  比赛详情
                 </button>
               </div>
             </article>

@@ -626,4 +626,92 @@ const infoCards = computed<HeroInfoCard[]>(() => [
     }
   }
 }
+
+.team-hero {
+  min-height: clamp(560px, 48vw, 720px);
+}
+
+.team-hero__bg {
+  background-position: center;
+  background-size: cover;
+}
+
+.team-hero__main {
+  align-items: center;
+  gap: clamp(44px, 5vw, 80px);
+}
+
+.team-hero__logo-wrap {
+  flex: 0 0 clamp(180px, 17vw, 250px);
+  display: grid;
+  place-items: center;
+  min-height: clamp(180px, 17vw, 250px);
+  padding: clamp(14px, 1.6vw, 24px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(5, 5, 5, 0.3);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.24);
+  box-sizing: border-box;
+}
+
+.team-hero__summary {
+  max-width: 660px;
+}
+
+.team-hero__name {
+  letter-spacing: 0;
+  line-height: 1.02;
+}
+
+.team-hero__desc {
+  max-width: 56ch;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.team-hero__compare-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.team-hero__info-panel {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 10, 10, 0.66);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 992px) {
+  .team-hero {
+    min-height: auto;
+  }
+
+  .team-hero__main {
+    align-items: center;
+    text-align: center;
+  }
+
+  .team-hero__summary,
+  .team-hero__title-row,
+  .team-hero__stats {
+    justify-content: center;
+  }
+
+  .team-hero__desc {
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .team-hero__logo-wrap {
+    flex-basis: 156px;
+    width: 156px;
+    min-height: 156px;
+  }
+
+  .team-hero__info-value {
+    white-space: normal;
+  }
+}
 </style>

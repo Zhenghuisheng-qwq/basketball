@@ -169,4 +169,32 @@ const selectedTeamLabel = computed(() => {
   right: 0;
   z-index: 30;
 }
+
+.filter-item select:focus-visible,
+.filter-btn:focus-visible {
+  border-color: var(--cnpa-red);
+  box-shadow: 0 0 0 3px rgba(225, 6, 19, 0.08);
+  outline: none;
+}
+
+@media (max-width: 768px) {
+  .filter-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .filter-item,
+  .filter-item select,
+  .filter-btn {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

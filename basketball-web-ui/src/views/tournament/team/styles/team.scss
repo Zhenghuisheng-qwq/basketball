@@ -541,3 +541,20 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.team-page__content {
+  min-width: 0;
+}
+
+.team-page__content > .team-overview,
+.team-page__content > .team-matches,
+.team-page__content > .team-stats,
+.team-page__content > .team-comparison {
+  width: 100%;
+}
+
+.team-page__content .comparison-heading,
+.team-page__content .comparison-section {
+  min-width: 0;
+}

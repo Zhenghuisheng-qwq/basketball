@@ -237,4 +237,35 @@ function openHonor(tournamentId?: string) {
     grid-template-columns: 1fr;
   }
 }
+
+.player-detail-career__section {
+  padding: clamp(22px, 2.6vw, 38px);
+  border: 1px solid var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg);
+  box-shadow: var(--cnpa-public-shadow-soft);
+  box-sizing: border-box;
+}
+
+.player-detail-career-honor {
+  border-color: var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg-soft);
+  color: var(--cnpa-paper-text);
+  box-shadow: var(--cnpa-public-shadow-soft);
+}
+
+.player-detail-career-honor__season,
+.player-detail-career-honor__date {
+  color: var(--cnpa-paper-text-secondary);
+}
+
+.player-detail-career-honor.is-clickable:hover {
+  border-color: rgba(225, 6, 19, 0.34);
+  box-shadow: var(--cnpa-public-shadow);
+}
+
+@media (max-width: 767px) {
+  .player-detail-career__section {
+    padding: 20px 16px;
+  }
+}
 </style>

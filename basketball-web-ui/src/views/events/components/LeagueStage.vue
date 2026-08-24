@@ -37,9 +37,9 @@ const selectedStage = computed(() =>
 const showBracket = computed(() => isEliminationStage(selectedStage.value))
 
 const stageOptions = computed(() =>
-  stages.value.map((stage, index) => ({
+  stages.value.map((stage) => ({
     value: stage.stageId,
-    label: `${String(index + 1).padStart(2, '0')} ${stage.stageName || stage.stageTypeName || '阶段'}`,
+    label: isEliminationStage(stage) ? '季后赛' : '常规赛',
   })),
 )
 
@@ -86,7 +86,7 @@ watch(
               v-if="stageOptions.length"
               v-model="selectedStageId"
               :options="stageOptions"
-              variant="dark"
+              variant="paper"
             />
             <p v-if="stagesLoading" class="stage-state">加载阶段...</p>
             <RegularStandings
@@ -129,12 +129,14 @@ watch(
 <style scoped lang="scss">
 .stage-main {
   padding: 48px 0 24px;
+  background: var(--cnpa-public-paper-bg, #f4f1ea);
+  color: #111;
 }
 
 .stage-state {
   margin: 0;
   padding: 24px 0;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(17, 17, 17, 0.55);
 }
 
 .stage-playoffs-shell {

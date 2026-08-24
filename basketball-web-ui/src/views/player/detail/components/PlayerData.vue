@@ -484,4 +484,33 @@ onBeforeUnmount(() => {
 .player-detail-stage-selector__option.is-selected .player-detail-stage-selector__check {
   display: block;
 }
+
+.player-detail-data {
+  padding: clamp(22px, 2.6vw, 38px);
+  border: 1px solid var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg);
+  box-shadow: var(--cnpa-public-shadow-soft);
+  box-sizing: border-box;
+}
+
+.player-detail-data__mode-tabs {
+  border-color: var(--cnpa-public-border);
+}
+
+.player-detail-data__mode-tab:focus-visible,
+.player-detail-stage-selector__trigger:focus-visible,
+.player-detail-stage-selector__option:focus-visible {
+  outline: 2px solid rgba(225, 6, 19, 0.4);
+  outline-offset: 2px;
+}
+
+.player-detail-data .player-detail-table-scroll {
+  margin-top: var(--cnpa-public-card-spacing);
+}
+
+@media (max-width: 767px) {
+  .player-detail-data {
+    padding: 20px 16px;
+  }
+}
 </style>

@@ -21,7 +21,7 @@ const statusMap: Record<
   { label: string; className: string; disabled?: boolean }
 > = {
   finished: { label: '已结束', className: 'status-finished' },
-  scheduled: { label: '未开始', className: 'status-scheduled' },
+  scheduled: { label: '敬请期待', className: 'status-scheduled', disabled: true },
   live: { label: '进行中', className: 'status-live' },
   cancelled: { label: '已取消', className: 'status-cancelled', disabled: true },
 }
@@ -43,8 +43,8 @@ function getTeamById(id: number | string) {
       <span>比分</span>
       <span>主队</span>
       <span>比赛场馆</span>
-      <span>比赛</span>
-      <span>数据</span>
+      <span>比赛状态</span>
+      <span>相关内容</span>
     </div>
 
     <div v-if="matches.length === 0" class="match-empty">{{ emptyText || '当前筛选条件下暂无赛程' }}</div>
@@ -69,6 +69,7 @@ function getTeamById(id: number | string) {
           <small v-if="match.resultReason" class="dq-reason">{{ match.resultReason }}</small>
         </template>
         <template v-else-if="match.status === 'finished' || match.status === 'live'">
+          <small v-if="match.status === 'finished'" class="score-label">最终比分</small>
           {{ match.awayScore }} : {{ match.homeScore }}
         </template>
         <template v-else-if="match.status === 'cancelled'">-</template>
@@ -94,16 +95,15 @@ function getTeamById(id: number | string) {
         <button
           type="button"
           class="action-btn"
-          :disabled="statusMap[match.status].disabled"
-          @click="emit('openDetail', match)"
+          disabled
         >
-          比赛详情
+          比赛录像
         </button>
         <button
           type="button"
           class="action-btn"
           :disabled="statusMap[match.status].disabled"
-          @click="emit('openStats', match)"
+          @click="emit('openDetail', match)"
         >
           技术统计
         </button>
@@ -161,6 +161,15 @@ function getTeamById(id: number | string) {
   font-weight: 900;
 }
 
+.score-label {
+  display: block;
+  margin-bottom: 5px;
+  color: rgba(10, 10, 10, 0.48);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .score-cell .vs {
   margin: 0 6px;
   font-size: 14px;
@@ -181,6 +190,17 @@ function getTeamById(id: number | string) {
 
 .status-live {
   color: var(--cnpa-red);
+  font-weight: 800;
+}
+
+.status-finished {
+  color: #111;
+  font-weight: 800;
+}
+
+.status-scheduled,
+.status-cancelled {
+  color: rgba(10, 10, 10, 0.42);
   font-weight: 800;
 }
 

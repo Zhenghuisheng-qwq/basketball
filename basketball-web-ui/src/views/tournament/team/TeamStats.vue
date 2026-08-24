@@ -931,4 +931,56 @@ function showSingleTable() {
     align-items: flex-start;
   }
 }
+
+.team-stats {
+  padding: clamp(22px, 2.6vw, 38px);
+  border: 1px solid var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg);
+  box-shadow: var(--cnpa-public-shadow-soft);
+  box-sizing: border-box;
+}
+
+.team-stats .filter-select select,
+.team-stats .mode-tabs,
+.team-stats .season-card,
+.team-stats .stats-table {
+  border-color: var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg-soft);
+}
+
+.team-stats .season-card {
+  box-shadow: var(--cnpa-public-shadow-soft);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.team-stats .season-card:hover {
+  border-color: rgba(225, 6, 19, 0.34);
+  box-shadow: var(--cnpa-public-shadow);
+  transform: translateY(-2px);
+}
+
+.team-stats .filter-select select:focus-visible,
+.team-stats .mode-tab:focus-visible,
+.team-stats .view-btn:focus-visible {
+  outline: 2px solid rgba(225, 6, 19, 0.4);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .team-stats {
+    padding: 20px 16px;
+  }
+
+  .team-stats__toolbar,
+  .stats-filters {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .team-stats .filter-select,
+  .team-stats .filter-select select {
+    width: 100%;
+    max-width: none;
+  }
+}
 </style>

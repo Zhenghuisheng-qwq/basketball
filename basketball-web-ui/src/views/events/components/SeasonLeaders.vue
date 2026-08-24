@@ -208,9 +208,9 @@ watch(
   display: grid;
   grid-template-columns: 1fr 120px;
   min-height: 180px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(17, 17, 17, 0.1);
   border-radius: 6px;
-  background: linear-gradient(135deg, #171717 0%, #080808 100%);
+  background: #fff;
   overflow: hidden;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 
@@ -230,7 +230,7 @@ watch(
 
 .leader-title {
   font-size: 13px;
-  color: var(--cnpa-text-secondary);
+  color: rgba(17, 17, 17, 0.52);
 }
 
 .leader-value {
@@ -241,14 +241,14 @@ watch(
   small {
     margin-left: 6px;
     font-size: 14px;
-    color: rgba(255, 255, 255, 0.72);
+    color: rgba(17, 17, 17, 0.52);
   }
 }
 
 .leader-name {
   font-size: 18px;
   font-weight: 900;
-  color: #fff;
+  color: #111;
 }
 
 .leader-team {
@@ -257,7 +257,7 @@ watch(
   gap: 8px;
   margin-top: auto;
   font-size: 13px;
-  color: var(--cnpa-text-secondary);
+  color: rgba(17, 17, 17, 0.58);
   text-decoration: none;
 }
 

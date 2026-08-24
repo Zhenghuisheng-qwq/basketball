@@ -147,4 +147,14 @@ function openStats(matchId: string) {
 
 <style scoped lang="scss">
 @use '../styles/player-detail.scss';
+
+.player-detail-view-btn {
+  border-color: var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg);
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.player-detail-view-btn:hover {
+  background: var(--cnpa-public-card-bg-soft);
+}
 </style>

@@ -186,4 +186,18 @@ function goPage(page: number) {
     color: #e10613;
   }
 }
+
+.player-detail-matches {
+  padding: clamp(22px, 2.6vw, 38px);
+  border: 1px solid var(--cnpa-public-border);
+  background: var(--cnpa-public-card-bg);
+  box-shadow: var(--cnpa-public-shadow-soft);
+  box-sizing: border-box;
+}
+
+@media (max-width: 767px) {
+  .player-detail-matches {
+    padding: 20px 16px;
+  }
+}
 </style>

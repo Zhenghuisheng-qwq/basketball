@@ -16,8 +16,6 @@ import { useScheduleFilters } from '../composables/useScheduleFilters'
 import ScheduleFilters from './ScheduleFilters.vue'
 import WeekDateNav from './WeekDateNav.vue'
 import MatchList from './MatchList.vue'
-import MatchDetailModal from './MatchDetailModal.vue'
-import StatsModal from './StatsModal.vue'
 import type { Match } from '../types/events'
 
 const router = useRouter()
@@ -48,33 +46,16 @@ const {
   errorMessage,
 } = useScheduleFilters()
 
-const detailMatch = ref<Match | null>(null)
-const statsMatch = ref<Match | null>(null)
-const detailVisible = ref(false)
-const statsVisible = ref(false)
-
 const seriesDetail = ref<V4PublicMatchSeriesDetail | null>(null)
 const seriesDetailVisible = ref(false)
 const seriesDetailLoading = ref(false)
 const seriesDetailError = ref('')
 
 function openDetail(match: Match) {
-  detailMatch.value = match
-  detailVisible.value = true
+  if (!match.matchId || match.status === 'scheduled' || match.status === 'cancelled') return
+  router.push(`/events/match/${match.matchId}`)
 }
 
-function openStats(match: Match) {
-  statsMatch.value = match
-  statsVisible.value = true
-}
-
-function closeDetail() {
-  detailVisible.value = false
-}
-
-function closeStats() {
-  statsVisible.value = false
-}
 
 function seriesScoreText(item: V4PublicScheduleItem): string {
   if (item.seriesScore && item.seriesScore !== '0:0' && item.seriesScore !== '0 : 0') {
@@ -104,6 +85,30 @@ function formatScheduleTime(item: V4PublicScheduleItem): string {
 function teamName(item: V4PublicScheduleItem, side: 'home' | 'away'): string {
   const name = side === 'home' ? item.homeTeam : item.awayTeam
   return v4ScheduleTeamLabel(name, item.placeholderSource)
+}
+
+function seriesStatusCode(item: V4PublicScheduleItem): string {
+  return String(item.status || '').toUpperCase()
+}
+
+function isSeriesScheduled(item: V4PublicScheduleItem): boolean {
+  return ['READY', 'PENDING', 'SCHEDULED', 'NOT_STARTED', 'UPCOMING'].includes(seriesStatusCode(item))
+}
+
+function isSeriesFinished(item: V4PublicScheduleItem): boolean {
+  return ['COMPLETED', 'FINISHED', 'CLOSED'].includes(seriesStatusCode(item))
+}
+
+function isSeriesOpenable(item: V4PublicScheduleItem): boolean {
+  return item.unitType === 'MATCH_SERIES' && Boolean(item.id) && !isSeriesScheduled(item) && seriesStatusCode(item) !== 'CANCELLED'
+}
+
+function seriesStatusLabel(item: V4PublicScheduleItem): string {
+  if (isSeriesScheduled(item)) return '敬请期待'
+  if (['RUNNING', 'LIVE', 'IN_PROGRESS'].includes(seriesStatusCode(item))) return '进行中'
+  if (isSeriesFinished(item)) return '已结束'
+  if (seriesStatusCode(item) === 'CANCELLED') return '已取消'
+  return v4ScheduleStatusLabel(item.status, item.statusName)
 }
 
 async function openSeries(item: V4PublicScheduleItem) {
@@ -184,15 +189,19 @@ function openSeriesGame(matchId?: string) {
               v-for="item in items"
               :key="`${item.unitType}-${item.id}`"
               class="series-card"
+              :class="{
+                'series-card--disabled': !isSeriesOpenable(item),
+                'series-card--finished': isSeriesFinished(item),
+              }"
               role="button"
-              tabindex="0"
-              @click="openSeries(item)"
-              @keydown.enter="openSeries(item)"
-            >
+              :aria-disabled="!isSeriesOpenable(item)"
+              :tabindex="isSeriesOpenable(item) ? 0 : -1"
+              @click="isSeriesOpenable(item) && openSeries(item)"
+              @keydown.enter="isSeriesOpenable(item) && openSeries(item)">
               <div class="series-card__meta">
                 <span>{{ item.seriesCode || v4PublicRoundLabel(item.roundName, item.roundNo) }}</span>
                 <span>{{ v4BestOfLabel(item.bestOf) }}</span>
-                <span>{{ v4ScheduleStatusLabel(item.status, item.statusName) }}</span>
+                <span>{{ seriesStatusLabel(item) }}</span>
               </div>
               <div class="series-card__versus">
                 <strong>{{ teamName(item, 'home') }}</strong>
@@ -201,7 +210,7 @@ function openSeriesGame(matchId?: string) {
               </div>
               <div class="series-card__foot">
                 <span>{{ formatScheduleTime(item) }}</span>
-                <span v-if="seriesScoreText(item)">{{ seriesScoreText(item) }}</span>
+                <span v-if="seriesScoreText(item)" class="series-card__score">{{ isSeriesFinished(item) ? '最终比分 ' : '' }}{{ seriesScoreText(item) }}</span>
                 <span v-if="item.resultReason" class="dq-reason">{{ item.resultReason }}</span>
               </div>
             </article>
@@ -214,7 +223,6 @@ function openSeriesGame(matchId?: string) {
           :matches="pagedMatches"
           empty-text="当前筛选条件下暂无赛程"
           @open-detail="openDetail"
-          @open-stats="openStats"
         />
 
         <div v-if="state === 'success' && showPagination" class="schedule-pagination">
@@ -232,9 +240,6 @@ function openSeriesGame(matchId?: string) {
         </div>
       </div>
     </PaperSection>
-
-    <MatchDetailModal :visible="detailVisible" :match="detailMatch" @close="closeDetail" />
-    <StatsModal :visible="statsVisible" :match="statsMatch" @close="closeStats" />
 
     <div v-if="seriesDetailVisible" class="series-modal" @click.self="closeSeries">
       <div class="series-modal__panel" role="dialog" aria-label="系列赛详情">
@@ -329,13 +334,31 @@ function openSeriesGame(matchId?: string) {
 }
 
 .series-card {
+  position: relative;
   border: 1px solid rgba(10, 10, 10, 0.12);
-  background: #f7f6f3;
+  background: #fff;
   padding: 16px 18px;
   margin-bottom: 10px;
   cursor: pointer;
-}
+  box-shadow: 0 8px 24px rgba(25, 26, 28, 0.06);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 
+  &:hover:not(.series-card--disabled) {
+    border-color: rgba(225, 6, 19, 0.38);
+    box-shadow: 0 14px 28px rgba(25, 26, 28, 0.1);
+    transform: translateY(-2px);
+  }
+
+  &--disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  &--finished .series-card__score {
+    color: #111;
+    font-weight: 800;
+  }
+}
 .series-card__meta,
 .series-card__foot {
   display: flex;
@@ -345,6 +368,11 @@ function openSeriesGame(matchId?: string) {
   font-weight: 700;
 }
 
+.series-card__meta span:last-child {
+  margin-left: auto;
+  color: var(--cnpa-red, #e10613);
+}
+
 .series-card__versus {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -352,6 +380,14 @@ function openSeriesGame(matchId?: string) {
   align-items: center;
   margin: 10px 0;
   font-size: 16px;
+}
+
+.series-card__versus strong:first-child {
+  text-align: right;
+}
+
+.series-card__versus strong:last-child {
+  text-align: left;
 }
 
 .series-card__vs {
@@ -471,6 +507,16 @@ function openSeriesGame(matchId?: string) {
 
   .schedule-head {
     flex-direction: column;
+  }
+
+  .series-card__meta,
+  .series-card__foot {
+    flex-wrap: wrap;
+  }
+
+  .series-card__versus {
+    grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);
+    font-size: 14px;
   }
 }
 </style>

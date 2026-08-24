@@ -91,4 +91,27 @@ const tabs = [
     font-size: 16px;
   }
 }
+
+.team-sub-nav {
+  display: flex;
+  width: 100%;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--cnpa-public-border);
+  scrollbar-width: none;
+}
+
+.team-sub-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.team-sub-nav__link {
+  min-height: 52px;
+  letter-spacing: 0;
+}
+
+.team-sub-nav__link:focus-visible {
+  color: var(--cnpa-red);
+  outline: 2px solid rgba(225, 6, 19, 0.35);
+  outline-offset: -2px;
+}
 </style>

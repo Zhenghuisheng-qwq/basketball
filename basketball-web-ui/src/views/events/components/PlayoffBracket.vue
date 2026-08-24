@@ -396,4 +396,10 @@ const finalSeries = computed(() => playoffSeries.value.find((item) => item.round
     min-width: 1080px;
   }
 }
+
+.playoff-bracket__viewport {
+  padding: 8px 0 16px;
+  border-top: 1px solid rgba(10, 10, 10, 0.08);
+  border-bottom: 1px solid rgba(10, 10, 10, 0.08);
+}
 </style>

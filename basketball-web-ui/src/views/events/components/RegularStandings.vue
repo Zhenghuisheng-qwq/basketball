@@ -261,7 +261,7 @@ watch(
 
 .standings-group__title {
   margin: 0 0 12px;
-  color: #f5f5f5;
+  color: #111;
   font-size: 18px;
   font-weight: 900;
 }
@@ -277,14 +277,16 @@ watch(
 }
 
 .standings-panel {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #111;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(25, 26, 28, 0.06);
 
   h3 {
     margin: 0;
     padding: 16px;
     font-size: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(17, 17, 17, 0.08);
+    color: #111;
   }
 }
 
@@ -306,13 +308,14 @@ watch(
 .table-head {
   min-height: 42px;
   font-size: 12px;
-  color: var(--cnpa-text-secondary);
+  color: rgba(17, 17, 17, 0.5);
 }
 
 .table-row {
   min-height: 52px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(17, 17, 17, 0.06);
   font-size: 13px;
+  color: #111;
 }
 
 .rank-playoff {
@@ -321,7 +324,7 @@ watch(
 }
 
 .rank-regular {
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(17, 17, 17, 0.58);
   font-weight: 700;
 }
 
@@ -364,7 +367,7 @@ watch(
 
 .standings-note {
   margin: 16px 0 0;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(17, 17, 17, 0.5);
   font-size: 13px;
 }
 
