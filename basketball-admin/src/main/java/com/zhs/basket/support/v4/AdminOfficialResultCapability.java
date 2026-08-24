@@ -55,6 +55,16 @@ public final class AdminOfficialResultCapability {
         return MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus());
     }
 
+    public static boolean canForfeitSeries(BasketMatchSeries series) {
+        if (series == null || !hasBothSeriesTeams(series)) {
+            return false;
+        }
+        String status = series.getSeriesStatus();
+        return MatchSeriesStatusEnum.READY.getCode().equals(status)
+                || MatchSeriesStatusEnum.RUNNING.getCode().equals(status)
+                || MatchSeriesStatusEnum.COMPLETED.getCode().equals(status);
+    }
+
     public static boolean canResolveSeriesManually(BasketMatchSeries series) {
         if (series == null || !hasBothSeriesTeams(series)) {
             return false;

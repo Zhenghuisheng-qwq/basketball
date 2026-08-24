@@ -10,4 +10,7 @@ public interface PenaltyExecutionStrategy {
     PenaltyExecutionResultVo execute(BasketDisciplineRecord record);
 
     void restoreEligibility(BasketDisciplineRecord record);
+
+    default void syncAfterEffective(BasketDisciplineRecord record) {
+    }
 }

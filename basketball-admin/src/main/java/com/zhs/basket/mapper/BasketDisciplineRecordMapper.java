@@ -19,6 +19,9 @@ public interface BasketDisciplineRecordMapper {
     List<BasketDisciplineRecord> selectActiveBySubjectForUpdate(@Param("subjectType") String subjectType,
             @Param("subjectId") Long subjectId, @Param("seasonId") Long seasonId);
 
+    List<BasketDisciplineRecord> selectActivePointDeductionsByEventTeamIds(
+            @Param("eventTeamIds") List<Long> eventTeamIds);
+
     int insert(BasketDisciplineRecord row);
 
     BasketDisciplineRecord selectById(Long id);

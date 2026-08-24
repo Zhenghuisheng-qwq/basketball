@@ -421,7 +421,7 @@ export function v4PlaceholderProductLabel(resolutionStatus?: string | null, sour
     return sourceDisplay ? `待小组赛结果确定（${sourceDisplay}）` : '待小组赛结果确定'
   }
   if (sourceType === 'WINNER_OF_SERIES') {
-    return sourceDisplay || '等待系列赛胜者'
+    return sourceDisplay || '等待前置比赛胜者'
   }
   return sourceDisplay || (resolutionStatus === 'PENDING' || resolutionStatus === 'TBD' ? '待确定' : '-')
 }
@@ -430,6 +430,16 @@ export function v4ScheduleSourceLabel(source?: string | null): string {
   if (source === 'RECOMMENDED') return '推荐'
   if (source === 'MANUAL') return '手工'
   return source || '-'
+}
+
+export function v4PairingStatusLabel(resolutionStatus?: string | null): string {
+  if (resolutionStatus === 'RESOLVED') return '已确定'
+  if (resolutionStatus === 'BYE') return '轮空'
+  return '待确定'
+}
+
+export function v4UnitScheduleStatusLabel(scheduleStatus?: string | null): string {
+  return scheduleStatus === 'SCHEDULED' ? '已排期' : '未排期'
 }
 
 export function v4GroupingModeLabel(mode?: string | null): string {

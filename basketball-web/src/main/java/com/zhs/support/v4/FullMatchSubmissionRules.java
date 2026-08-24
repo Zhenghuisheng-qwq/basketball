@@ -23,6 +23,19 @@ public final class FullMatchSubmissionRules {
         return MODE_WINNER_FULL_MATCH.equals(mode) || MODE_FULL_MATCH.equals(mode);
     }
 
+    public static final String MSG_PAIRING_UNRESOLVED = "\u5bf9\u9635\u5c1a\u672a\u786e\u5b9a\uff0c\u4e0d\u80fd\u63d0\u4ea4\u6bd4\u8d5b\u6570\u636e";
+
+    public static boolean isPairingResolved(Long homeEventTeamId, Long awayEventTeamId) {
+        return homeEventTeamId != null && homeEventTeamId > 0
+                && awayEventTeamId != null && awayEventTeamId > 0;
+    }
+
+    public static void assertPairingResolved(Long homeEventTeamId, Long awayEventTeamId) {
+        if (!isPairingResolved(homeEventTeamId, awayEventTeamId)) {
+            throw new ServiceException(MSG_PAIRING_UNRESOLVED);
+        }
+    }
+
     private FullMatchSubmissionRules() {
     }
 

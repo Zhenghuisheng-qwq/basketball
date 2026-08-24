@@ -68,6 +68,7 @@ export interface Standing {
   teamLogo: string
   wins: number
   losses: number
+  standingPoints: number
   winRate: number
   pointDiff: number
   recent: Array<'W' | 'L'>

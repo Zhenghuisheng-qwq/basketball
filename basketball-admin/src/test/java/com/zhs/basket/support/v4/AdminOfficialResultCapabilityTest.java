@@ -49,6 +49,21 @@ class AdminOfficialResultCapabilityTest {
         assertFalse(AdminOfficialResultCapability.canResolveSeriesManually(series));
     }
 
+    @Test
+    void placeholder_cannotExecute() {
+        BasketV4Match match = published(MatchStatusEnum.SCHEDULED);
+        match.setHomeEventTeamId(null);
+        match.setAwayEventTeamId(null);
+        assertFalse(AdminOfficialResultCapability.canEnterOfficialResult(match));
+        assertFalse(AdminOfficialResultCapability.canForfeitMatch(match));
+        BasketMatchSeries series = new BasketMatchSeries();
+        series.setHomeEventTeamId(0L);
+        series.setAwayEventTeamId(0L);
+        series.setSeriesStatus(MatchSeriesStatusEnum.READY.getCode());
+        assertFalse(AdminOfficialResultCapability.canResolveSeriesManually(series));
+        assertFalse(AdminOfficialResultCapability.canForfeitSeries(series));
+    }
+
     private static BasketV4Match published(MatchStatusEnum status) {
         BasketV4Match match = new BasketV4Match();
         match.setHomeEventTeamId(1L);

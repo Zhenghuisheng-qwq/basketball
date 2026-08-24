@@ -49,7 +49,7 @@ class WinnerOfSeriesAdvanceSupportTest {
         qf.setSeriesStatus(MatchSeriesStatusEnum.RUNNING.getCode());
         when(matchSeriesMapper.selectBySourceSeriesId(11L)).thenReturn(List.of());
         support.advanceIfCompleted(qf);
-        verify(matchSeriesMapper, never()).updateById(any());
+        verify(matchSeriesMapper, never()).updatePairing(any());
     }
 
     @Test
@@ -59,7 +59,7 @@ class WinnerOfSeriesAdvanceSupportTest {
         sf.setScheduledDate(LocalDate.of(2026, 11, 3));
         sf.setScheduledStartTime(LocalTime.of(21, 0));
         when(matchSeriesMapper.selectBySourceSeriesId(11L)).thenReturn(List.of(sf));
-        when(matchSeriesMapper.updateById(sf)).thenReturn(1);
+        when(matchSeriesMapper.updatePairing(sf)).thenReturn(1);
 
         support.advanceIfCompleted(qf);
 
@@ -76,13 +76,13 @@ class WinnerOfSeriesAdvanceSupportTest {
         sf.setHomeEventTeamId(999L);
         sf.setSeriesStatus(MatchSeriesStatusEnum.READY.getCode());
         when(matchSeriesMapper.selectBySourceSeriesId(11L)).thenReturn(List.of(sf));
-        when(matchSeriesMapper.updateById(sf)).thenReturn(1);
+        when(matchSeriesMapper.updatePairing(sf)).thenReturn(1);
         when(matchMapper.selectBySeriesId(21L)).thenReturn(List.of());
 
         support.advanceIfCompleted(qf);
 
         assertEquals(100L, sf.getHomeEventTeamId());
-        verify(matchSeriesMapper).updateById(sf);
+        verify(matchSeriesMapper).updatePairing(sf);
     }
 
     @Test
@@ -96,7 +96,7 @@ class WinnerOfSeriesAdvanceSupportTest {
         when(matchSeriesMapper.selectBySourceSeriesId(11L)).thenReturn(List.of(sf));
         when(matchMapper.selectBySeriesId(21L)).thenReturn(List.of(finished));
         assertThrows(ServiceException.class, () -> support.advanceIfCompleted(qf));
-        verify(matchSeriesMapper, never()).updateById(any());
+        verify(matchSeriesMapper, never()).updatePairing(any());
     }
 
     @Test
@@ -107,7 +107,7 @@ class WinnerOfSeriesAdvanceSupportTest {
         sf.setScheduledDate(LocalDate.of(2026, 11, 3));
         sf.setScheduledStartTime(LocalTime.of(21, 0));
         when(matchSeriesMapper.selectBySourceSeriesId(11L)).thenReturn(List.of(sf));
-        when(matchSeriesMapper.updateById(sf)).thenReturn(1);
+        when(matchSeriesMapper.updatePairing(sf)).thenReturn(1);
         when(divisionMapper.selectById(1L)).thenReturn(new BasketDivision());
         when(stageMapper.selectById(2L)).thenReturn(new BasketDivisionStage());
         when(scheduleBatchMapper.selectById(3L)).thenReturn(new BasketScheduleBatch());

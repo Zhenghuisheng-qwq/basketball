@@ -32,6 +32,7 @@ import com.zhs.basket.support.v4.stage.StageScheduleIntegrityValidator;
 import com.zhs.basket.support.v4.stage.StageSchedulePrerequisiteValidator;
 import com.zhs.basket.support.v4.stage.StructureGenerationPrerequisiteValidator;
 import com.zhs.basket.support.v4.stage.StageSchedulePreviewVo;
+import com.zhs.basket.support.standing.DisciplineStandingAdjustmentResolver;
 import com.zhs.basket.support.v4.stage.TieBreakStandingService;
 import com.zhs.basket.vo.v4.*;
 import com.zhs.common.exception.ServiceException;
@@ -105,6 +106,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private MatchSeriesQualificationSyncService qualificationSyncService;
     @Autowired
     private com.zhs.basket.support.v4.EventTeamParticipationGuard eventTeamParticipationGuard;
+    @Autowired(required = false)
+    private DisciplineStandingAdjustmentResolver disciplineStandingAdjustmentResolver;
 
     @Override
     public List<BasketDivisionStageExecutionListVo> listStages(Long divisionId) {
@@ -573,6 +576,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         Map<Long, List<BasketStandingRankReason>> reasonMap = rankReasonMapper.selectByStandingIds(standingIds).stream()
                 .collect(Collectors.groupingBy(BasketStandingRankReason::getStandingId));
         Map<Long, Integer> adjustmentMap = loadV4AdjustmentSums(stage.getDivisionId(), stageId);
+        mergeDisciplineAdjustments(adjustmentMap, rows);
         boolean canAdjustStandingPoints = canAdjustStandingPoints(stage);
 
         Map<Long, BasketStageStandingScopeVo> scopes = new LinkedHashMap<>();
@@ -1105,6 +1109,27 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             }
         }
         return result;
+    }
+
+    private void mergeDisciplineAdjustments(Map<Long, Integer> adjustmentMap, List<BasketStanding> rows) {
+        if (disciplineStandingAdjustmentResolver == null || rows == null || rows.isEmpty()) {
+            return;
+        }
+        List<Long> eventTeamIds = rows.stream()
+                .map(BasketStanding::getEventTeamId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, Integer> deductions = disciplineStandingAdjustmentResolver.resolveByEventTeamIds(eventTeamIds);
+        if (deductions == null || deductions.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<Long, Integer> entry : deductions.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null || entry.getValue() == 0) {
+                continue;
+            }
+            adjustmentMap.merge(entry.getKey(), entry.getValue(), Integer::sum);
+        }
     }
 
     private boolean canAdjustStandingPoints(BasketDivisionStage stage) {

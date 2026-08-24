@@ -216,11 +216,11 @@ public class BasketMatchSeriesDisplayServiceImpl implements IBasketMatchSeriesDi
 
         fillTeamNames(vo, series);
         if ((vo.getHomeTeamName() == null || vo.getHomeTeamName().isBlank())
-                && series.getHomeEventTeamId() == null) {
+                && (series.getHomeEventTeamId() == null || series.getHomeEventTeamId() <= 0)) {
             vo.setHomeTeamName(series.getHomeSourceDisplay() != null ? series.getHomeSourceDisplay() : "待定");
         }
         if ((vo.getAwayTeamName() == null || vo.getAwayTeamName().isBlank())
-                && series.getAwayEventTeamId() == null) {
+                && (series.getAwayEventTeamId() == null || series.getAwayEventTeamId() <= 0)) {
             vo.setAwayTeamName(series.getAwaySourceDisplay() != null ? series.getAwaySourceDisplay() : "待定");
         }
         fillQualification(vo, series);
@@ -255,18 +255,20 @@ public class BasketMatchSeriesDisplayServiceImpl implements IBasketMatchSeriesDi
         vo.setAdjustScheduleBlockReason(block);
         vo.setCanAdjustSchedule(block == null);
         vo.setCanResolveSeriesManually(AdminOfficialResultCapability.canResolveSeriesManually(series));
+        vo.setCanForfeitSeries(AdminOfficialResultCapability.canForfeitSeries(series)
+                && !MatchSeriesStatusEnum.COMPLETED.getCode().equals(series.getSeriesStatus()));
         return vo;
     }
 
     private void fillTeamNames(BasketMatchSeriesDetailVo vo, BasketMatchSeries series) {
-        if (series.getHomeEventTeamId() != null) {
+        if (series.getHomeEventTeamId() != null && series.getHomeEventTeamId() > 0) {
             BasketEventTeam home = eventTeamMapper.selectById(series.getHomeEventTeamId());
             if (home != null) {
                 vo.setHomeTeamName(home.getTeamNameSnapshot());
                 vo.setHomeTeamLogoFileId(home.getTeamLogoFileId());
             }
         }
-        if (series.getAwayEventTeamId() != null) {
+        if (series.getAwayEventTeamId() != null && series.getAwayEventTeamId() > 0) {
             BasketEventTeam away = eventTeamMapper.selectById(series.getAwayEventTeamId());
             if (away != null) {
                 vo.setAwayTeamName(away.getTeamNameSnapshot());

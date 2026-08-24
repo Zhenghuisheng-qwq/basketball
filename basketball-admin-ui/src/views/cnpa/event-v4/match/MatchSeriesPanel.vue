@@ -42,6 +42,12 @@
       <el-table-column label="时间" width="90" align="center">
         <template #default="scope">{{ formatStartTime(scope.row.scheduledStartTime) }}</template>
       </el-table-column>
+      <el-table-column label="对阵状态" width="110" align="center">
+        <template #default="scope">{{ pairingResolved(scope.row) ? '已确定' : '待对手确定' }}</template>
+      </el-table-column>
+      <el-table-column label="排期状态" width="90" align="center">
+        <template #default="scope">{{ scope.row.scheduledDate ? '已排期' : '未排期' }}</template>
+      </el-table-column>
       <el-table-column label="状态" width="100" align="center">
         <template #default="scope">
           <el-tag :type="v4SeriesStatusTagType(scope.row.seriesStatus)" size="small">
@@ -75,7 +81,7 @@
             @click="openManualResolve(scope.row)"
           >管理员裁决</el-button>
           <el-button
-            v-if="scope.row.seriesStatus !== 'COMPLETED'"
+            v-if="canForfeitSeries(scope.row)"
             link
             type="warning"
             v-hasPermi="['basket:v4Stage:exception']"
@@ -347,9 +353,18 @@ function submitSeriesForfeit() {
   })
 }
 
+function pairingResolved(series: BasketMatchSeriesDetailVo) {
+  return Number(series.homeEventTeamId || 0) > 0 && Number(series.awayEventTeamId || 0) > 0
+}
+
+function canForfeitSeries(series: BasketMatchSeriesDetailVo) {
+  if (series.canForfeitSeries != null) return Boolean(series.canForfeitSeries)
+  return pairingResolved(series) && series.seriesStatus !== 'COMPLETED'
+}
+
 function canResolveManually(series: BasketMatchSeriesDetailVo) {
   if (series.canResolveSeriesManually != null) return Boolean(series.canResolveSeriesManually)
-  return !!series.homeEventTeamId && !!series.awayEventTeamId
+  return pairingResolved(series)
     && series.seriesStatus !== 'CANCELLED'
     && series.resolutionType !== 'FORFEIT'
     && series.resolutionType !== 'MANUAL'

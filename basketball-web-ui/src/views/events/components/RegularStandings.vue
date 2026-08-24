@@ -46,7 +46,8 @@ function mapRows(rawRows: Parameters<typeof v4StandingToPublic>[0][]): Standing[
         teamLogo: pub.teamLogoUrl || '',
         wins,
         losses,
-        winRate: played > 0 ? (wins / played) * 100 : 0,
+        standingPoints: toNumber(pub.standingPoints, 0),
+        winRate: pub.winRate != null ? toNumber(pub.winRate, 0) : (played > 0 ? (wins / played) * 100 : 0),
         pointDiff: toNumber(pub.pointDiff, 0),
         recent: [] as Array<'W' | 'L'>,
         disqualified: Boolean(row.disqualified || pub.disqualified),
@@ -188,7 +189,7 @@ watch(
             <h3>{{ zoneTitle(group, 'qualify') }}</h3>
             <div class="table-wrap">
               <div class="table-head">
-                <span>排名</span><span>战队</span><span>胜</span><span>负</span><span>胜率</span><span>净胜分</span><span>近况</span>
+                <span>排名</span><span>战队</span><span>胜</span><span>负</span><span>积分</span><span>胜率</span><span>净胜分</span><span>近况</span>
               </div>
               <div v-for="row in qualifyRows(group)" :key="`${group.key}-${row.teamId}`" class="table-row">
                 <span class="rank rank-playoff">{{ row.rank }}</span>
@@ -203,6 +204,7 @@ watch(
                 </TeamEntryLink>
                 <span>{{ row.wins }}</span>
                 <span>{{ row.losses }}</span>
+                <span class="points">{{ row.standingPoints }}</span>
                 <span>{{ formatWinRate(row.winRate) }}</span>
                 <span>{{ formatPointDiff(row.pointDiff) }}</span>
                 <span class="recent">
@@ -216,7 +218,7 @@ watch(
             <h3>{{ zoneTitle(group, 'rest') }}</h3>
             <div class="table-wrap">
               <div class="table-head">
-                <span>排名</span><span>战队</span><span>胜</span><span>负</span><span>胜率</span><span>净胜分</span><span>近况</span>
+                <span>排名</span><span>战队</span><span>胜</span><span>负</span><span>积分</span><span>胜率</span><span>净胜分</span><span>近况</span>
               </div>
               <div v-for="row in restRows(group)" :key="`${group.key}-r-${row.teamId}`" class="table-row">
                 <span class="rank rank-regular">{{ row.rank }}</span>
@@ -231,6 +233,7 @@ watch(
                 </TeamEntryLink>
                 <span>{{ row.wins }}</span>
                 <span>{{ row.losses }}</span>
+                <span class="points">{{ row.standingPoints }}</span>
                 <span>{{ formatWinRate(row.winRate) }}</span>
                 <span>{{ formatPointDiff(row.pointDiff) }}</span>
                 <span class="recent">
@@ -287,15 +290,17 @@ watch(
 
 .table-wrap {
   width: 100%;
+  overflow-x: auto;
 }
 
 .table-head,
 .table-row {
   display: grid;
-  grid-template-columns: 52px 1.4fr repeat(4, 64px) 88px;
+  grid-template-columns: 52px 1.4fr repeat(5, 64px) 88px;
   gap: 8px;
   align-items: center;
   padding: 0 12px;
+  min-width: 720px;
 }
 
 .table-head {
@@ -318,6 +323,10 @@ watch(
 .rank-regular {
   color: rgba(255, 255, 255, 0.72);
   font-weight: 700;
+}
+
+.points {
+  font-weight: 800;
 }
 
 .team {

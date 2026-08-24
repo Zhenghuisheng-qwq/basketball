@@ -15,6 +15,7 @@ import com.zhs.basket.mapper.v4.BasketStandingMapper;
 import com.zhs.basket.mapper.v4.BasketStandingRankReasonMapper;
 import com.zhs.basket.domain.BasketPointAdjustment;
 import com.zhs.basket.mapper.BasketPointAdjustmentMapper;
+import com.zhs.basket.support.standing.DisciplineStandingAdjustmentResolver;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +56,8 @@ public class TieBreakStandingService {
     private TieBreakComparatorBuilder comparatorBuilder;
     @Autowired
     private BasketPointAdjustmentMapper pointAdjustmentMapper;
+    @Autowired(required = false)
+    private DisciplineStandingAdjustmentResolver disciplineStandingAdjustmentResolver;
 
     @Transactional(rollbackFor = Exception.class)
     public void rebuildStageStanding(Long stageId) {
@@ -83,6 +86,7 @@ public class TieBreakStandingService {
             List<BasketV4Match> matches = entry.getValue();
             Map<Long, StandingAgg> aggMap = aggregateMatches(matches, winPoints, lossPoints, forfeitWinPoints, forfeitLossPoints);
             applyV4PointAdjustments(aggMap, divisionId, stageId);
+            applyDisciplinePointDeductions(aggMap);
             List<StandingAgg> sorted = comparatorBuilder.sortStandings(new ArrayList<>(aggMap.values()), tieBreakRules, matches);
             Set<Long> manualPendingTeams = comparatorBuilder.findStillTiedTeamIds(sorted, tieBreakRules, matches);
             boolean manualRuleEnabled = comparatorBuilder.hasManualRule(tieBreakRules);
@@ -298,6 +302,26 @@ public class TieBreakStandingService {
                 continue;
             }
             agg.standingPoints += sum.getAdjustmentPoints();
+        }
+    }
+
+    private void applyDisciplinePointDeductions(Map<Long, StandingAgg> aggMap) {
+        if (aggMap == null || aggMap.isEmpty() || disciplineStandingAdjustmentResolver == null) {
+            return;
+        }
+        Map<Long, Integer> deductions = disciplineStandingAdjustmentResolver.resolveByEventTeamIds(aggMap.keySet());
+        if (deductions == null || deductions.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<Long, Integer> entry : deductions.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null || entry.getValue() == 0) {
+                continue;
+            }
+            StandingAgg agg = aggMap.get(entry.getKey());
+            if (agg == null) {
+                continue;
+            }
+            agg.standingPoints += entry.getValue();
         }
     }
 

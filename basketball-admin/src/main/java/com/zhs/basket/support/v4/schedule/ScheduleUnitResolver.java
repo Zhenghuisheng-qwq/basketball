@@ -221,8 +221,8 @@ public class ScheduleUnitResolver {
                 || "COMPLETED".equals(view.getSeriesStatus())
                 || "FORFEITED".equals(view.getSeriesStatus());
         view.setCanEditSchedule(active && !published && !finished && view.isRequired());
-        // 赛事工作台不提供发布后改期；运营改期只走比赛管理
-        view.setCanAdjustSchedule(false);
+        view.setCanAdjustSchedule(published && active && !finished && view.isRequired()
+                && ScheduleAdjustmentGuard.canAdjust(view, childStarted));
     }
 
     private boolean isBye(BasketMatchSeries series) {
@@ -280,7 +280,7 @@ public class ScheduleUnitResolver {
             return display;
         }
         if (ParticipantSourceTypeEnum.WINNER_OF_SERIES.getCode().equals(sourceType)) {
-            return "待定胜者";
+            return "前置比赛胜者";
         }
         if (ParticipantSourceTypeEnum.GROUP_RANK.getCode().equals(sourceType)) {
             return "待定";

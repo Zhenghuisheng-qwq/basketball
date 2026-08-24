@@ -46,5 +46,6 @@ public class BasketMatchSeriesDetailVo {
     private boolean canAdjustSchedule;
     private String adjustScheduleBlockReason;
     private boolean canResolveSeriesManually;
+    private boolean canForfeitSeries;
     private List<BasketMatchSeriesGameVo> games;
 }

@@ -133,7 +133,7 @@ class StageSchedulePublishR7Test {
         ValidationResult result = new ValidationResult();
         validator.validate(context, result);
         assertTrue(result.hasErrors());
-        assertEquals("SCHEDULE_INCOMPLETE", result.errors().get(0).getCode());
+        assertEquals("SCHEDULE_MISSING", result.errors().get(0).getCode());
     }
 
     @Test

@@ -16,6 +16,7 @@ import com.zhs.basket.service.IPenaltyExecutionService;
 import com.zhs.basket.support.DisciplineAnnouncementDraftSupport;
 import com.zhs.basket.support.DisciplinePenaltyTargetCompatibilityPolicy;
 import com.zhs.basket.support.restriction.DisciplineRestrictionAggregator;
+import com.zhs.basket.support.standing.PointDeductionStandingSyncService;
 import com.zhs.basket.req.AnnouncementAddReq;
 import com.zhs.basket.req.DisciplineAnnouncementDraftReq;
 import com.zhs.basket.vo.DisciplineAnnouncementDraftVo;
@@ -54,6 +55,7 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
     @Autowired private BasketDisciplineExecutionDetailMapper executionDetailMapper;
     @Autowired private IBasketAnnouncementService announcementService;
     @Autowired private BasketAnnouncementMapper announcementMapper;
+    @Autowired(required = false) private PointDeductionStandingSyncService pointDeductionStandingSyncService;
 
     @Override
     public List<DisciplineListVo> list(DisciplineQuery query) {
@@ -134,7 +136,8 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
     @Override
     public boolean needsEventExecution(Long id) {
         BasketDisciplineRecord record = requireRecord(id);
-        return DisciplinePenaltyCodeEnum.EVENT_DISQUALIFICATION.name().equals(record.getPenaltyCode())
+        return (DisciplinePenaltyCodeEnum.EVENT_DISQUALIFICATION.name().equals(record.getPenaltyCode())
+                || DisciplinePenaltyCodeEnum.POINT_DEDUCTION.name().equals(record.getPenaltyCode()))
                 && DisciplineTargetTypeEnum.EVENT_TEAM.getCode().equalsIgnoreCase(record.getTargetType())
                 && record.getEventTeamId() != null;
     }
@@ -158,6 +161,7 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         record.setDisciplineStatus(DisciplineStatusEnum.ACTIVE.getCode());
         restrictionAggregator.recompute(record);
         writePointAdjustmentIfNeeded(record);
+        syncPointDeductionStanding(record);
         List<AuditFieldInput> fields = Arrays.asList(
                 field("recordStatus", "记录状态", fromStatus, DisciplineRecordStatusEnum.ACTIVE.name()),
                 field("disciplineStatus", "处罚状态", String.valueOf(DisciplineStatusEnum.INACTIVE.getCode()),
@@ -184,7 +188,8 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         record.setDisciplineStatus(DisciplineStatusEnum.INACTIVE.getCode());
         restrictionAggregator.recompute(record);
         auditWriter.writeAudit("DISCIPLINE", "DISCIPLINE_RECORD", id, "REVOKE", "撤销处罚", req.getRevokeReason(), null);
-        if (DisciplinePenaltyCodeEnum.EVENT_DISQUALIFICATION.name().equals(record.getPenaltyCode())) {
+        if (DisciplinePenaltyCodeEnum.EVENT_DISQUALIFICATION.name().equals(record.getPenaltyCode())
+                || DisciplinePenaltyCodeEnum.POINT_DEDUCTION.name().equals(record.getPenaltyCode())) {
             penaltyExecutionService.restoreEligibility(id);
         }
     }
@@ -429,7 +434,18 @@ public class BasketDisciplineServiceImpl implements IBasketDisciplineService {
         return record;
     }
 
+    private void syncPointDeductionStanding(BasketDisciplineRecord record) {
+        if (pointDeductionStandingSyncService == null
+                || !PointDeductionStandingSyncService.isPointDeductionEventTeam(record)) {
+            return;
+        }
+        pointDeductionStandingSyncService.rebuildForRecord(record);
+    }
+
     private void writePointAdjustmentIfNeeded(BasketDisciplineRecord record) {
+        if (PointDeductionStandingSyncService.isPointDeductionEventTeam(record)) {
+            return;
+        }
         if (record.getPointDeduction() == null || record.getPointDeduction() <= 0 || record.getTeamId() == null) {
             return;
         }

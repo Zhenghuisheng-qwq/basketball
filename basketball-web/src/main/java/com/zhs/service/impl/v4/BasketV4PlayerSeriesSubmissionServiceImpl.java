@@ -458,6 +458,7 @@ public class BasketV4PlayerSeriesSubmissionServiceImpl implements IBasketV4Playe
     }
 
     private SideContext requireSeriesSideCaptain(BasketMatchSeries series, Long playerId, Long memberId) {
+        FullMatchSubmissionRules.assertPairingResolved(series.getHomeEventTeamId(), series.getAwayEventTeamId());
         if (isAuthorizedCaptain(series.getDivisionId(), series.getHomeEventTeamId(), playerId)
                 || belongsToEventTeam(series.getHomeEventTeamId(), playerId, memberId)
                 && isAuthorizedCaptain(series.getDivisionId(), series.getHomeEventTeamId(), playerId)) {

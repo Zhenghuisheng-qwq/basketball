@@ -14,10 +14,9 @@
       :closable="false"
     >
       <template #title>
-        赛段已发布，赛前排期规划已锁定。<br />
-        如需重新规划赛程，请先撤回发布后修改。<br />
-        赛事运行期间若仅需调整某一场比赛或系列赛时间，<br />
-        请前往『比赛执行 → 比赛管理』处理。
+        赛段已发布。整体重排请先撤回发布。<br />
+        未排期场次可在本页「补排」，已排期场次可「改期」。两者都走正式排期变更审计。<br />
+        对阵未确定不阻止补排或改期。
       </template>
     </el-alert>
 
@@ -28,7 +27,7 @@
         <el-radio-button value="SCHEDULED">已排期</el-radio-button>
       </el-radio-group>
       <el-button class="ml8" size="small" @click="reload">刷新</el-button>
-      <el-button size="small" type="primary" :disabled="!canEdit" @click="openBatch">按轮批量排期</el-button>
+      <el-button size="small" type="primary" :disabled="!canBatch" @click="openBatch">按轮批量排期</el-button>
       <el-button size="small" type="success" v-if="summary?.canRecommend" :disabled="!canEdit" @click="openRecommend">生成推荐排期</el-button>
       <el-button size="small" type="warning" v-if="!hidePublish" @click="openPublishPreview">预览发布</el-button>
       <el-button size="small" type="success" v-if="!hidePublish && summary?.publishStatus !== 'PUBLISHED'" @click="doPublish">检查并发布</el-button>
@@ -36,14 +35,14 @@
     </div>
 
     <el-table v-loading="loading" :data="units" border size="small" max-height="460" @selection-change="onSelect">
-      <el-table-column v-if="canEdit" type="selection" width="42" />
+      <el-table-column v-if="canBatch" type="selection" width="42" :selectable="canScheduleRow" />
       <el-table-column label="轮次" prop="roundNo" width="70" />
       <el-table-column label="BO" prop="bestOf" width="60" />
       <el-table-column label="对阵" min-width="260">
         <template #default="scope">
           {{ participantLabel(scope.row, 'home') }} vs {{ participantLabel(scope.row, 'away') }}
           <el-tag v-if="scope.row.bestOf && scope.row.bestOf > 1" size="small" class="ml8">BO{{ scope.row.bestOf }} 系列赛</el-tag>
-          <el-tag v-if="isPlaceholder(scope.row)" type="warning" size="small" class="ml8">参赛队待定，但对阵来源已确定</el-tag>
+          <el-tag v-if="isPlaceholder(scope.row)" type="warning" size="small" class="ml8">对阵待确定</el-tag>
         </template>
       </el-table-column>
       <el-table-column type="expand" width="48">
@@ -63,24 +62,31 @@
       <el-table-column label="来源" width="100">
         <template #default="scope">{{ scheduleSourceLabel(scope.row.scheduleSource) }}</template>
       </el-table-column>
-      <el-table-column label="状态" width="100">
-        <template #default="scope">{{ scope.row.scheduleStatus === 'SCHEDULED' ? '已排期' : '未排期' }}</template>
+      <el-table-column label="对阵状态" width="110">
+        <template #default="scope">{{ pairingStatusLabel(scope.row) }}</template>
       </el-table-column>
-      <el-table-column v-if="!published" label="操作" width="180" fixed="right">
+      <el-table-column label="排期状态" width="90">
+        <template #default="scope">{{ unitScheduleStatusLabel(scope.row.scheduleStatus) }}</template>
+      </el-table-column>
+      <el-table-column v-if="canBatch" label="操作" width="200" fixed="right">
         <template #default="scope">
-          <el-button link type="primary" :disabled="!scope.row.canEditSchedule" @click="openEdit(scope.row)">编辑</el-button>
-          <el-button link type="warning" :disabled="!scope.row.canEditSchedule" @click="doClear(scope.row)">清除</el-button>
+          <el-button link type="primary" :disabled="!canScheduleRow(scope.row)" @click="openEdit(scope.row)">{{ actionLabel(scope.row) }}</el-button>
+          <el-button v-if="canEdit" link type="warning" :disabled="!scope.row.canEditSchedule" @click="doClear(scope.row)">清除</el-button>
         </template>
       </el-table-column>
     </el-table>
-    <div v-if="canEdit && selected.length" class="mt8">
+    <div v-if="canBatch && selected.length" class="mt8">
       <el-button size="small" type="primary" @click="batchSelected">给选中场次排期</el-button>
     </div>
 
-    <el-dialog v-model="editVisible" title="编辑排期" width="420px" append-to-body>
+    <el-dialog v-model="editVisible" :title="editDialogTitle" width="420px" append-to-body>
       <el-form label-width="90px">
+        <el-form-item label="对阵">{{ editPairingText }}</el-form-item>
         <el-form-item label="日期"><el-date-picker v-model="editDate" type="date" value-format="YYYY-MM-DD" /></el-form-item>
         <el-form-item label="开始时间"><el-time-picker v-model="editTime" value-format="HH:mm" format="HH:mm" /></el-form-item>
+        <el-form-item v-if="published" label="原因" required>
+          <el-input v-model="adjustReason" type="textarea" rows="3" placeholder="必填，写入排期变更审计" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editVisible = false">取消</el-button>
@@ -94,6 +100,9 @@
         <el-form-item v-else label="已选">{{ selected.length }} 场</el-form-item>
         <el-form-item label="日期"><el-date-picker v-model="batchDate" type="date" value-format="YYYY-MM-DD" /></el-form-item>
         <el-form-item label="开始时间"><el-time-picker v-model="batchTime" value-format="HH:mm" format="HH:mm" /></el-form-item>
+        <el-form-item v-if="published" label="原因" required>
+          <el-input v-model="adjustReason" type="textarea" rows="3" placeholder="必填，写入排期变更审计" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="batchVisible = false">取消</el-button>
@@ -160,6 +169,7 @@ import {
   previewV4StagePublish,
   publishV4StageSchedule,
   republishV4StageSchedule,
+  rescheduleV4StageSchedule,
   withdrawV4StageSchedule,
   type BasketDivisionStageExecutionVo,
   type ScheduleRecommendationPreviewVo,
@@ -167,7 +177,7 @@ import {
   type StagePublishPreviewVo,
   type StageScheduleSummaryVo
 } from '@/api/cnpa/event-v4/stage-execution'
-import { v4PlaceholderProductLabel, v4PublishStatusLabel, v4ScheduleSourceLabel, v4StructureProductStatusLabel } from '@/utils/v4AdminDisplay'
+import { v4PairingStatusLabel, v4PlaceholderProductLabel, v4PublishStatusLabel, v4ScheduleSourceLabel, v4StructureProductStatusLabel, v4UnitScheduleStatusLabel } from '@/utils/v4AdminDisplay'
 
 const props = defineProps<{
   stage?: BasketDivisionStageExecutionVo | null
@@ -197,10 +207,18 @@ const publishVisible = ref(false)
 const publishPreview = ref<StagePublishPreviewVo>()
 const withdrawVisible = ref(false)
 const withdrawReason = ref('')
+const adjustReason = ref('')
 
 const dialogTitle = computed(() => `赛段排期 · ${props.stage?.stageName || ''}`)
 const published = computed(() => summary.value?.publishStatus === 'PUBLISHED')
 const canEdit = computed(() => !published.value && summary.value?.structureStatus === 'ACTIVE')
+const canReschedule = computed(() => published.value && summary.value?.structureStatus === 'ACTIVE')
+const canBatch = computed(() => canEdit.value || canReschedule.value)
+const editDialogTitle = computed(() => (editRow.value ? actionLabel(editRow.value) : '排期'))
+const editPairingText = computed(() => {
+  if (!editRow.value) return '-'
+  return `${participantLabel(editRow.value, 'home')} vs ${participantLabel(editRow.value, 'away')}`
+})
 const structureLabel = computed(() => v4StructureProductStatusLabel(summary.value?.structureStatus))
 const publishLabel = computed(() => v4PublishStatusLabel(summary.value?.publishStatus))
 
@@ -210,6 +228,44 @@ function scheduleSourceLabel(source?: string) {
 
 function isPlaceholder(row: ScheduleUnitView) {
   return row.participantResolutionStatus === 'TBD' || row.participantResolutionStatus === 'PENDING' || row.homeSourceType === 'GROUP_RANK' || row.awaySourceType === 'GROUP_RANK' || row.homeSourceType === 'WINNER_OF_SERIES' || row.awaySourceType === 'WINNER_OF_SERIES'
+}
+
+function isLegalScheduleUnit(row: ScheduleUnitView) {
+  if (!row || row.required === false) return false
+  if (row.participantResolutionStatus === 'BYE') return false
+  const homeId = Number(row.homeParticipantId || 0)
+  const awayId = Number(row.awayParticipantId || 0)
+  if (homeId > 0 && awayId > 0) return true
+  const legal = (source?: string) => source === 'WINNER_OF_SERIES' || source === 'GROUP_RANK'
+  return legal(row.homeSourceType) && legal(row.awaySourceType)
+}
+
+function isScheduleComplete(row: ScheduleUnitView) {
+  return !!row.scheduledDate && !!row.scheduledStartTime
+}
+
+function canScheduleRow(row: ScheduleUnitView) {
+  if (!isLegalScheduleUnit(row)) return false
+  if (published.value) return !!row.canAdjustSchedule
+  return !!row.canEditSchedule
+}
+
+function actionLabel(row: ScheduleUnitView) {
+  const scheduled = isScheduleComplete(row)
+  if (published.value) return scheduled ? '改期' : '补排'
+  return scheduled ? '编辑排期' : '排期'
+}
+
+function toUnitId(row: ScheduleUnitView) {
+  return Number(row.unitId)
+}
+
+function pairingStatusLabel(row: ScheduleUnitView) {
+  return v4PairingStatusLabel(row.participantResolutionStatus)
+}
+
+function unitScheduleStatusLabel(status?: string) {
+  return v4UnitScheduleStatusLabel(status)
 }
 
 function participantLabel(row: ScheduleUnitView, side: 'home' | 'away') {
@@ -252,21 +308,35 @@ function openEdit(row: ScheduleUnitView) {
   editRow.value = row
   editDate.value = row.scheduledDate || ''
   editTime.value = formatTime(row.scheduledStartTime) === '-' ? '21:00' : formatTime(row.scheduledStartTime)
+  adjustReason.value = ''
   editVisible.value = true
 }
 
 function submitEdit() {
   if (!props.stage?.stageId || !editRow.value) return
-  if (published.value) {
-    ElMessage.error('赛段已发布，请先撤回后修改；单场/系列赛改期请前往比赛管理')
-    return
-  }
-  assignV4StageSchedule(props.stage.stageId, {
+  const payload = {
     unitType: editRow.value.unitType,
-    unitId: editRow.value.unitId,
+    unitId: toUnitId(editRow.value),
     scheduledDate: editDate.value,
     scheduledStartTime: editTime.value
-  }).then(() => {
+  }
+  if (published.value) {
+    if (!adjustReason.value.trim()) {
+      ElMessage.error('补排/改期原因必填')
+      return
+    }
+    rescheduleV4StageSchedule(props.stage.stageId, {
+      ...payload,
+      reason: adjustReason.value.trim()
+    }).then(() => {
+      ElMessage.success(isScheduleComplete(editRow.value!) ? '已改期' : '已补排')
+      editVisible.value = false
+      reload()
+      emit('updated')
+    })
+    return
+  }
+  assignV4StageSchedule(props.stage.stageId, payload).then(() => {
     ElMessage.success('已排期')
     editVisible.value = false
     reload()
@@ -275,8 +345,8 @@ function submitEdit() {
 }
 
 function doClear(row: ScheduleUnitView) {
-  if (!props.stage?.stageId) return
-  clearV4StageSchedule(props.stage.stageId, { unitType: row.unitType, unitId: row.unitId }).then(() => {
+  if (!props.stage?.stageId || published.value) return
+  clearV4StageSchedule(props.stage.stageId, { unitType: row.unitType, unitId: toUnitId(row) }).then(() => {
     ElMessage.success('已清除排期')
     reload()
     emit('updated')
@@ -288,6 +358,7 @@ function openBatch() {
   batchDate.value = ''
   batchTime.value = '21:00'
   selected.value = []
+  adjustReason.value = ''
   batchVisible.value = true
 }
 
@@ -295,14 +366,48 @@ function batchSelected() {
   batchRound.value = null
   batchDate.value = ''
   batchTime.value = '21:00'
+  adjustReason.value = ''
   batchVisible.value = true
+}
+
+function batchTargets() {
+  if (batchRound.value != null) {
+    return units.value.filter(u => Number(u.roundNo) === Number(batchRound.value) && canScheduleRow(u))
+  }
+  return selected.value.filter(canScheduleRow)
 }
 
 function submitBatch() {
   if (!props.stage?.stageId) return
+  if (published.value) {
+    if (!adjustReason.value.trim()) {
+      ElMessage.error('补排/改期原因必填')
+      return
+    }
+    const targets = batchTargets()
+    if (!targets.length) {
+      ElMessage.error('没有可排期的比赛单位')
+      return
+    }
+    const reason = adjustReason.value.trim()
+    const stageId = props.stage.stageId
+    targets.reduce((prev, u) => prev.then(() => rescheduleV4StageSchedule(stageId, {
+      unitType: u.unitType,
+      unitId: toUnitId(u),
+      scheduledDate: batchDate.value,
+      scheduledStartTime: batchTime.value,
+      reason
+    })), Promise.resolve()).then(() => {
+      ElMessage.success('批量补排/改期成功')
+      batchVisible.value = false
+      reload()
+      emit('updated')
+    })
+    return
+  }
   const payload: any = { scheduledDate: batchDate.value, scheduledStartTime: batchTime.value }
   if (batchRound.value != null) payload.roundNo = batchRound.value
-  else payload.items = selected.value.map(u => ({ unitType: u.unitType, unitId: u.unitId }))
+  else payload.items = selected.value.filter(canScheduleRow).map(u => ({ unitType: u.unitType, unitId: toUnitId(u) }))
   batchAssignV4StageSchedule(props.stage.stageId, payload).then(() => {
     ElMessage.success('批量排期成功')
     batchVisible.value = false

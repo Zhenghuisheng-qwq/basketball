@@ -256,6 +256,17 @@
         order by id asc
     </select>
 
+    <select id="selectActivePointDeductionsByEventTeamIds" resultMap="BasketDisciplineRecordResult">
+        select <include refid="Base_Column_List" /> from basket_discipline_record
+        where is_delete = 0
+          and penalty_code = 'POINT_DEDUCTION'
+          and target_type = 'EVENT_TEAM'
+          and record_status = 'ACTIVE'
+          and event_team_id in
+          <foreach collection="eventTeamIds" item="tid" open="(" separator="," close=")">#{tid}</foreach>
+        order by id asc
+    </select>
+
     <select id="selectActiveBySubjectForUpdate" resultMap="BasketDisciplineRecordResult">
         select <include refid="Base_Column_List" /> from basket_discipline_record
         <include refid="ActiveBySubject_Where" />

@@ -496,6 +496,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
     }
 
     private SubmitContext requireSubmitContext(BasketV4Match match, Long submitEventTeamId, Long playerId, Long memberId) {
+        FullMatchSubmissionRules.assertPairingResolved(match.getHomeEventTeamId(), match.getAwayEventTeamId());
         if (!submitEventTeamId.equals(match.getHomeEventTeamId()) && !submitEventTeamId.equals(match.getAwayEventTeamId())) {
             throw new ServiceException("submitEventTeamId 必须是主队或客队");
         }

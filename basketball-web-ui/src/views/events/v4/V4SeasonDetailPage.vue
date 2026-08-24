@@ -277,6 +277,21 @@ function backToList() {
   router.push('/tournament')
 }
 
+function formatStandingWinRate(row: V4PublicStandingItem) {
+  if (row.winRate != null) {
+    return `${Number(row.winRate).toFixed(1)}%`
+  }
+  const wins = Number(row.winCount ?? 0)
+  const losses = Number(row.loseCount ?? 0)
+  const played = wins + losses
+  return played > 0 ? `${((wins / played) * 100).toFixed(1)}%` : '0.0%'
+}
+
+function formatStandingPointDiff(value: number | null | undefined) {
+  const n = Number(value ?? 0)
+  return n > 0 ? `+${n}` : `${n}`
+}
+
 watch(
   () => route.params.seasonId,
   () => {
@@ -535,7 +550,7 @@ onMounted(() => {
                 <table class="v4-table">
                   <thead>
                     <tr>
-                      <th>排名</th><th>队伍</th><th>胜</th><th>负</th><th>净胜分</th><th>积分</th>
+                      <th>排名</th><th>队伍</th><th>胜</th><th>负</th><th>积分</th><th>胜率</th><th>净胜分</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -544,8 +559,9 @@ onMounted(() => {
                       <td>{{ displayText(row.teamName) }}</td>
                       <td>{{ row.winCount ?? 0 }}</td>
                       <td>{{ row.loseCount ?? 0 }}</td>
-                      <td>{{ row.pointDiff ?? 0 }}</td>
                       <td>{{ row.standingPoints ?? 0 }}</td>
+                      <td>{{ formatStandingWinRate(row) }}</td>
+                      <td>{{ formatStandingPointDiff(row.pointDiff) }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -561,10 +577,9 @@ onMounted(() => {
                   <th>队伍</th>
                   <th>胜</th>
                   <th>负</th>
-                  <th>得分</th>
-                  <th>失分</th>
-                  <th>净胜分</th>
                   <th>积分</th>
+                  <th>胜率</th>
+                  <th>净胜分</th>
                 </tr>
               </thead>
               <tbody>
@@ -573,10 +588,9 @@ onMounted(() => {
                   <td>{{ displayText(row.teamName) }}</td>
                   <td>{{ row.winCount ?? 0 }}</td>
                   <td>{{ row.loseCount ?? 0 }}</td>
-                  <td>{{ row.pointFor ?? 0 }}</td>
-                  <td>{{ row.pointAgainst ?? 0 }}</td>
-                  <td>{{ row.pointDiff ?? 0 }}</td>
                   <td>{{ row.standingPoints ?? 0 }}</td>
+                  <td>{{ formatStandingWinRate(row) }}</td>
+                  <td>{{ formatStandingPointDiff(row.pointDiff) }}</td>
                 </tr>
               </tbody>
             </table>

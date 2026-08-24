@@ -29,7 +29,7 @@ export function v4StandingToPublic(row: V4PublicStandingItem, seasonId = ''): Pu
     pointsAgainst: row.pointAgainst,
     pointDiff: row.pointDiff,
     standingPoints: row.standingPoints,
-    winRate: played > 0 ? wins / played : 0,
+    winRate: row.winRate != null ? toNumber(row.winRate, 0) : (played > 0 ? (wins / played) * 100 : 0),
     streakType: null,
     streakCount: null,
     disqualified: Boolean(row.disqualified),

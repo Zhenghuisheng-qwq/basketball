@@ -146,6 +146,20 @@
         where id = #{id} and <include refid="NotDeleted"/>
     </update>
 
+    <!-- Pairing resolve only. Never rewrite schedule date/time/source/revision. -->
+    <update id="updatePairing">
+        update basket_match_series
+        <set>
+            home_event_team_id = #{homeEventTeamId},
+            away_event_team_id = #{awayEventTeamId},
+            <if test="homeSourceType != null">home_source_type = #{homeSourceType},</if>
+            <if test="awaySourceType != null">away_source_type = #{awaySourceType},</if>
+            <if test="seriesStatus != null">series_status = #{seriesStatus},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and <include refid="NotDeleted"/>
+    </update>
+
     <update id="updateResult">
         update basket_match_series
         set home_win_count = #{homeWinCount},

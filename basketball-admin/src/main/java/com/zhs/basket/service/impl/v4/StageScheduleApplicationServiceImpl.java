@@ -25,6 +25,7 @@ import com.zhs.basket.support.v4.schedule.ScheduleMutableGuard;
 import com.zhs.basket.support.v4.schedule.ScheduleRecommendationStrategy;
 import com.zhs.basket.support.v4.schedule.ScheduleRecommendationStrategyFactory;
 import com.zhs.basket.support.v4.schedule.ScheduleTimes;
+import com.zhs.basket.support.v4.schedule.PairingResolutionGuard;
 import com.zhs.basket.support.v4.schedule.ScheduleUnitResolver;
 import com.zhs.basket.support.v4.schedule.StagePublishContext;
 import com.zhs.basket.support.v4.schedule.ValidationIssue;
@@ -97,6 +98,7 @@ public class StageScheduleApplicationServiceImpl implements IStageScheduleApplic
         ScheduleMutableGuard.assertNotPublished(batch);
         ScheduleUnitView unit = scheduleUnitResolver.requireUnit(batch, req.getUnitType(), req.getUnitId());
         ScheduleMutableGuard.assertUnitEditable(unit);
+        PairingResolutionGuard.assertSchedulable(unit);
         LocalDate date = ScheduleTimes.parseDate(req.getScheduledDate());
         LocalTime time = ScheduleTimes.parseTime(req.getScheduledStartTime());
         List<ScheduleUnitView> proposed = replaceUnitSchedule(scheduleUnitResolver.listUnits(batch), unit, date, time,
@@ -147,6 +149,7 @@ public class StageScheduleApplicationServiceImpl implements IStageScheduleApplic
         for (ScheduleAssignReq item : assignments) {
             ScheduleUnitView target = scheduleUnitResolver.requireUnit(batch, item.getUnitType(), item.getUnitId());
             ScheduleMutableGuard.assertUnitEditable(target);
+            PairingResolutionGuard.assertSchedulable(target);
             LocalDate date = ScheduleTimes.parseDate(item.getScheduledDate());
             LocalTime time = ScheduleTimes.parseTime(item.getScheduledStartTime());
             proposed = replaceUnitSchedule(proposed, target, date, time, item.getScheduleSource());
@@ -254,6 +257,7 @@ public class StageScheduleApplicationServiceImpl implements IStageScheduleApplic
         boolean childStarted = ScheduleUnitTypeEnum.MATCH_SERIES.getCode().equals(unit.getUnitType())
                 && scheduleUnitResolver.hasStartedChildMatch(unit.getUnitId());
         ScheduleAdjustmentGuard.assertCanAdjust(unit, childStarted);
+        PairingResolutionGuard.assertSchedulable(unit);
         LocalDate date = ScheduleTimes.parseDate(req.getScheduledDate());
         LocalTime time = ScheduleTimes.parseTime(req.getScheduledStartTime());
         List<ScheduleUnitView> proposed = replaceUnitSchedule(scheduleUnitResolver.listUnits(batch), unit, date, time,
@@ -279,7 +283,8 @@ public class StageScheduleApplicationServiceImpl implements IStageScheduleApplic
             }
             total++;
             if (ScheduleStatusEnum.SCHEDULED.getCode().equals(unit.getScheduleStatus())
-                    && unit.getScheduledDate() != null) {
+                    && unit.getScheduledDate() != null
+                    && unit.getScheduledStartTime() != null) {
                 scheduled++;
             }
             if ("RESOLVED".equals(unit.getParticipantResolutionStatus())) {

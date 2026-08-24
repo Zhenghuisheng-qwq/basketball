@@ -31,6 +31,8 @@ public class V4PublicStandingItemResp {
 
     private Integer standingPoints;
 
+    private java.math.BigDecimal winRate;
+
     private Long stageId;
 
     private Long groupId;

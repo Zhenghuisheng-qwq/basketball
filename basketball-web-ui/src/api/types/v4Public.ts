@@ -316,6 +316,7 @@ export interface V4PublicStandingItem {
   pointAgainst?: number
   pointDiff?: number
   standingPoints?: number
+  winRate?: number
   stageId?: string
   groupId?: string
   qualificationStatus?: string

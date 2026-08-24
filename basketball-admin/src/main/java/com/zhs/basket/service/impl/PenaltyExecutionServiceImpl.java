@@ -40,6 +40,7 @@ public class PenaltyExecutionServiceImpl implements IPenaltyExecutionService {
             return skipped;
         }
         if (PenaltyExecutionStatusEnum.EFFECTIVE.name().equals(record.getExecutionStatus())) {
+            strategy.syncAfterEffective(record);
             return readExisting(record);
         }
         markProcessing(record.getId());

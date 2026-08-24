@@ -1,0 +1,700 @@
+{
+  "target": {
+    "seriesId": 1,
+    "seasonId": 142,
+    "divisionId": 177,
+    "regularStageId": 645,
+    "playoffStageId": 646,
+    "templateCode": "LEAGUE_STANDARD_V1",
+    "testOnly": true
+  },
+  "before": {
+    "matchStatus": [
+      {
+        "match_status": "FINISHED",
+        "c": 1
+      },
+      {
+        "match_status": "SCHEDULED",
+        "c": 119
+      }
+    ],
+    "standingCount": 2,
+    "qualificationCount": 0,
+    "seriesCount": 0
+  },
+  "matchStatusAfter": [
+    {
+      "match_status": "FINISHED",
+      "c": 120
+    }
+  ],
+  "applied": {
+    "entered": 119,
+    "corrected": 1
+  },
+  "failedCount": 0,
+  "scoring": {
+    "winPoints": 2,
+    "lossPoints": 1,
+    "pointDeductionUsed": false
+  },
+  "expected": [
+    {
+      "rank": 1,
+      "eventTeamId": 296,
+      "teamName": "S13猎鹰",
+      "w": 15,
+      "l": 0,
+      "points": 30,
+      "winRate": 100.0,
+      "pf": 1338,
+      "pa": 1104,
+      "diff": 234,
+      "qualified": true
+    },
+    {
+      "rank": 2,
+      "eventTeamId": 297,
+      "teamName": "S13雷霆",
+      "w": 14,
+      "l": 1,
+      "points": 29,
+      "winRate": 93.3,
+      "pf": 1316,
+      "pa": 1111,
+      "diff": 205,
+      "qualified": true
+    },
+    {
+      "rank": 3,
+      "eventTeamId": 298,
+      "teamName": "S13风暴",
+      "w": 13,
+      "l": 2,
+      "points": 28,
+      "winRate": 86.7,
+      "pf": 1294,
+      "pa": 1119,
+      "diff": 175,
+      "qualified": true
+    },
+    {
+      "rank": 4,
+      "eventTeamId": 299,
+      "teamName": "S13夜翼",
+      "w": 11,
+      "l": 4,
+      "points": 26,
+      "winRate": 73.3,
+      "pf": 1261,
+      "pa": 1139,
+      "diff": 122,
+      "qualified": true
+    },
+    {
+      "rank": 5,
+      "eventTeamId": 300,
+      "teamName": "S13赤焰",
+      "w": 11,
+      "l": 4,
+      "points": 26,
+      "winRate": 73.3,
+      "pf": 1258,
+      "pa": 1146,
+      "diff": 112,
+      "qualified": true
+    },
+    {
+      "rank": 6,
+      "eventTeamId": 301,
+      "teamName": "S13寒霜",
+      "w": 10,
+      "l": 5,
+      "points": 25,
+      "winRate": 66.7,
+      "pf": 1245,
+      "pa": 1165,
+      "diff": 80,
+      "qualified": true
+    },
+    {
+      "rank": 7,
+      "eventTeamId": 302,
+      "teamName": "S13黑骑",
+      "w": 8,
+      "l": 7,
+      "points": 23,
+      "winRate": 53.3,
+      "pf": 1188,
+      "pa": 1172,
+      "diff": 16,
+      "qualified": true
+    },
+    {
+      "rank": 8,
+      "eventTeamId": 303,
+      "teamName": "S13银狼",
+      "w": 8,
+      "l": 7,
+      "points": 23,
+      "winRate": 53.3,
+      "pf": 1198,
+      "pa": 1182,
+      "diff": 16,
+      "qualified": true
+    },
+    {
+      "rank": 9,
+      "eventTeamId": 304,
+      "teamName": "S13金鲨",
+      "w": 7,
+      "l": 8,
+      "points": 22,
+      "winRate": 46.7,
+      "pf": 1180,
+      "pa": 1196,
+      "diff": -16,
+      "qualified": false
+    },
+    {
+      "rank": 10,
+      "eventTeamId": 305,
+      "teamName": "S13青龙",
+      "w": 6,
+      "l": 9,
+      "points": 21,
+      "winRate": 40.0,
+      "pf": 1171,
+      "pa": 1209,
+      "diff": -38,
+      "qualified": false
+    },
+    {
+      "rank": 11,
+      "eventTeamId": 306,
+      "teamName": "S13白虎",
+      "w": 5,
+      "l": 10,
+      "points": 20,
+      "winRate": 33.3,
+      "pf": 1155,
+      "pa": 1235,
+      "diff": -80,
+      "qualified": false
+    },
+    {
+      "rank": 12,
+      "eventTeamId": 307,
+      "teamName": "S13朱雀",
+      "w": 4,
+      "l": 11,
+      "points": 19,
+      "winRate": 26.7,
+      "pf": 1148,
+      "pa": 1260,
+      "diff": -112,
+      "qualified": false
+    },
+    {
+      "rank": 13,
+      "eventTeamId": 308,
+      "teamName": "S13玄武",
+      "w": 3,
+      "l": 12,
+      "points": 18,
+      "winRate": 20.0,
+      "pf": 1134,
+      "pa": 1275,
+      "diff": -141,
+      "qualified": false
+    },
+    {
+      "rank": 14,
+      "eventTeamId": 310,
+      "teamName": "S13狂澜",
+      "w": 3,
+      "l": 12,
+      "points": 18,
+      "winRate": 20.0,
+      "pf": 1107,
+      "pa": 1271,
+      "diff": -164,
+      "qualified": false
+    },
+    {
+      "rank": 15,
+      "eventTeamId": 309,
+      "teamName": "S13星火",
+      "w": 2,
+      "l": 13,
+      "points": 17,
+      "winRate": 13.3,
+      "pf": 1129,
+      "pa": 1304,
+      "diff": -175,
+      "qualified": false
+    },
+    {
+      "rank": 16,
+      "eventTeamId": 311,
+      "teamName": "S13破晓",
+      "w": 0,
+      "l": 15,
+      "points": 15,
+      "winRate": 0.0,
+      "pf": 1106,
+      "pa": 1340,
+      "diff": -234,
+      "qualified": false
+    }
+  ],
+  "standing": [
+    {
+      "rank": 1,
+      "eventTeamId": "296",
+      "team": "S13猎鹰",
+      "w": 15,
+      "l": 0,
+      "points": 29,
+      "winRate": 100.0,
+      "pf": 1338,
+      "pa": 1104,
+      "diff": 234
+    },
+    {
+      "rank": 2,
+      "eventTeamId": "297",
+      "team": "S13雷霆",
+      "w": 14,
+      "l": 1,
+      "points": 29,
+      "winRate": 93.3,
+      "pf": 1316,
+      "pa": 1111,
+      "diff": 205
+    },
+    {
+      "rank": 3,
+      "eventTeamId": "298",
+      "team": "S13风暴",
+      "w": 13,
+      "l": 2,
+      "points": 28,
+      "winRate": 86.7,
+      "pf": 1294,
+      "pa": 1119,
+      "diff": 175
+    },
+    {
+      "rank": 4,
+      "eventTeamId": "299",
+      "team": "S13夜翼",
+      "w": 11,
+      "l": 4,
+      "points": 26,
+      "winRate": 73.3,
+      "pf": 1261,
+      "pa": 1139,
+      "diff": 122
+    },
+    {
+      "rank": 5,
+      "eventTeamId": "300",
+      "team": "S13赤焰",
+      "w": 11,
+      "l": 4,
+      "points": 26,
+      "winRate": 73.3,
+      "pf": 1258,
+      "pa": 1146,
+      "diff": 112
+    },
+    {
+      "rank": 6,
+      "eventTeamId": "301",
+      "team": "S13寒霜",
+      "w": 10,
+      "l": 5,
+      "points": 25,
+      "winRate": 66.7,
+      "pf": 1245,
+      "pa": 1165,
+      "diff": 80
+    },
+    {
+      "rank": 7,
+      "eventTeamId": "302",
+      "team": "S13黑骑",
+      "w": 8,
+      "l": 7,
+      "points": 23,
+      "winRate": 53.3,
+      "pf": 1188,
+      "pa": 1172,
+      "diff": 16
+    },
+    {
+      "rank": 8,
+      "eventTeamId": "303",
+      "team": "S13银狼",
+      "w": 8,
+      "l": 7,
+      "points": 23,
+      "winRate": 53.3,
+      "pf": 1198,
+      "pa": 1182,
+      "diff": 16
+    },
+    {
+      "rank": 9,
+      "eventTeamId": "304",
+      "team": "S13金鲨",
+      "w": 7,
+      "l": 8,
+      "points": 22,
+      "winRate": 46.7,
+      "pf": 1180,
+      "pa": 1196,
+      "diff": -16
+    },
+    {
+      "rank": 10,
+      "eventTeamId": "305",
+      "team": "S13青龙",
+      "w": 6,
+      "l": 9,
+      "points": 21,
+      "winRate": 40.0,
+      "pf": 1171,
+      "pa": 1209,
+      "diff": -38
+    },
+    {
+      "rank": 11,
+      "eventTeamId": "306",
+      "team": "S13白虎",
+      "w": 5,
+      "l": 10,
+      "points": 20,
+      "winRate": 33.3,
+      "pf": 1155,
+      "pa": 1235,
+      "diff": -80
+    },
+    {
+      "rank": 12,
+      "eventTeamId": "307",
+      "team": "S13朱雀",
+      "w": 4,
+      "l": 11,
+      "points": 19,
+      "winRate": 26.7,
+      "pf": 1148,
+      "pa": 1260,
+      "diff": -112
+    },
+    {
+      "rank": 13,
+      "eventTeamId": "308",
+      "team": "S13玄武",
+      "w": 3,
+      "l": 12,
+      "points": 18,
+      "winRate": 20.0,
+      "pf": 1134,
+      "pa": 1275,
+      "diff": -141
+    },
+    {
+      "rank": 14,
+      "eventTeamId": "310",
+      "team": "S13狂澜",
+      "w": 3,
+      "l": 12,
+      "points": 18,
+      "winRate": 20.0,
+      "pf": 1107,
+      "pa": 1271,
+      "diff": -164
+    },
+    {
+      "rank": 15,
+      "eventTeamId": "309",
+      "team": "S13星火",
+      "w": 2,
+      "l": 13,
+      "points": 17,
+      "winRate": 13.3,
+      "pf": 1129,
+      "pa": 1304,
+      "diff": -175
+    },
+    {
+      "rank": 16,
+      "eventTeamId": "311",
+      "team": "S13破晓",
+      "w": 0,
+      "l": 15,
+      "points": 15,
+      "winRate": 0.0,
+      "pf": 1106,
+      "pa": 1340,
+      "diff": -234
+    }
+  ],
+  "ties": {
+    "caseA": {
+      "teams": [
+        "S13夜翼",
+        "S13赤焰"
+      ],
+      "points": [
+        26,
+        26
+      ],
+      "diff": [
+        122,
+        112
+      ],
+      "wins": [
+        11,
+        11
+      ],
+      "ranks": [
+        4,
+        5
+      ],
+      "result": "PASS"
+    },
+    "caseB": {
+      "teams": [
+        "S13黑骑",
+        "S13银狼"
+      ],
+      "points": [
+        23,
+        23
+      ],
+      "diff": [
+        16,
+        16
+      ],
+      "h2hWinner": "S13黑骑",
+      "ranks": [
+        7,
+        8
+      ],
+      "result": "PASS"
+    }
+  },
+  "topN": 8,
+  "qualificationPreview": {
+    "stageId": "645",
+    "stageCode": "REGULAR",
+    "stageName": "常规赛",
+    "targetStageId": "646",
+    "targetStageCode": "PLAYOFF",
+    "targetStageName": "季后赛",
+    "manualRankPending": false,
+    "items": [
+      {
+        "qualificationId": null,
+        "eventTeamId": "296",
+        "teamName": null,
+        "groupId": null,
+        "groupCode": null,
+        "groupName": null,
+        "qualificationType": "OVERALL_TOP_N",
+        "qualificationTypeName": "总排名前N",
+        "sourceRank": 1,
+        "qualificationStatus": "PREVIEW"
+      },
+      {
+        "qualificationId": null,
+        "eventTeamId": "297",
+        "teamName": null,
+        "groupId": null,
+        "groupCode": null,
+        "groupName": null,
+        "qualificationType": "OVERALL_TOP_N",
+        "qualificationTypeName": "总排名前N",
+        "sourceRank": 2,
+        "qualificationStatus": "PREVIEW"
+      },
+      {
+        "qualificationId": null,
+        "eventTeamId": "298",
+        "teamName": null,
+        "groupId": null,
+        "groupCode": null,
+        "groupName": null,
+        "qualificationType": "OVERALL_TOP_N",
+        "qualificationTypeName": "总排名前N",
+        "sourceRank": 3,
+        "qualificationStatus": "PREVIEW"
+      },
+      {
+        "qualificationId": null,
+        "eventTeamId": "299",
+        "teamName": null,
+        "groupId": null,
+        "groupCode": null,
+        "groupName": null,
+        "qualificationType": "OVERALL_TOP_N",
+        "qualificationTypeName": "总排名前N",
+        "sourceRank": 4,
+        "qualificationStatus": "PREVIEW"
+      },
+      {
+        "qualificationId": null,
+        "eventTeamId": "300",
+        "teamName": null,
+        "groupId": null,
+        "groupCode": null,
+        "groupName": null,
+        "qualificationType": "OVERALL_TOP_N",
+        "qualificationTypeName": "总排名前N",
+        "sourceRank": 5,
+        "qualificationStatus": "PREVIEW"
+      },
+      {
+        "qualificationId": null,
+        "eventTeamId": "301",
+        "teamName": null,
+        "groupId": null,
+        "groupCode": null,
+        "groupName": null,
+        "qualificationType": "OVERALL_TOP_N",
+        "qualificationTypeName": "总排名前N",
+        "sourceRank": 6,
+        "qualificationStatus": "PREVIEW"
+      },
+      {
+        "qualificationId": null,
+        "eventTeamId": "302",
+        "teamName": null,
+        "groupId": null,
+        "groupCode": null,
+        "groupName": null,
+        "qualificationType": "OVERALL_TOP_N",
+        "qualificationTypeName": "总排名前N",
+        "sourceRank": 7,
+        "qualificationStatus": "PREVIEW"
+      },
+      {
+        "qualificationId": null,
+        "eventTeamId": "303",
+        "teamName": null,
+        "groupId": null,
+        "groupCode": null,
+        "groupName": null,
+        "qualificationType": "OVERALL_TOP_N",
+        "qualificationTypeName": "总排名前N",
+        "sourceRank": 8,
+        "qualificationStatus": "PREVIEW"
+      }
+    ]
+  },
+  "playoffPairs": [
+    {
+      "seriesId": 62,
+      "roundNo": 1,
+      "slot": 0,
+      "bestOf": 3,
+      "home": "S13猎鹰",
+      "away": "S13银狼",
+      "homeSeed": 1,
+      "awaySeed": 8,
+      "sourceHome": null,
+      "sourceAway": null,
+      "status": "READY"
+    },
+    {
+      "seriesId": 63,
+      "roundNo": 1,
+      "slot": 1,
+      "bestOf": 3,
+      "home": "S13夜翼",
+      "away": "S13赤焰",
+      "homeSeed": 4,
+      "awaySeed": 5,
+      "sourceHome": null,
+      "sourceAway": null,
+      "status": "READY"
+    },
+    {
+      "seriesId": 64,
+      "roundNo": 1,
+      "slot": 2,
+      "bestOf": 3,
+      "home": "S13雷霆",
+      "away": "S13黑骑",
+      "homeSeed": 2,
+      "awaySeed": 7,
+      "sourceHome": null,
+      "sourceAway": null,
+      "status": "READY"
+    },
+    {
+      "seriesId": 65,
+      "roundNo": 1,
+      "slot": 3,
+      "bestOf": 3,
+      "home": "S13风暴",
+      "away": "S13寒霜",
+      "homeSeed": 3,
+      "awaySeed": 6,
+      "sourceHome": null,
+      "sourceAway": null,
+      "status": "READY"
+    },
+    {
+      "seriesId": 66,
+      "roundNo": 2,
+      "slot": 0,
+      "bestOf": 5,
+      "home": null,
+      "away": null,
+      "homeSeed": null,
+      "awaySeed": null,
+      "sourceHome": 62,
+      "sourceAway": 63,
+      "status": "READY"
+    },
+    {
+      "seriesId": 67,
+      "roundNo": 2,
+      "slot": 1,
+      "bestOf": 5,
+      "home": null,
+      "away": null,
+      "homeSeed": null,
+      "awaySeed": null,
+      "sourceHome": 64,
+      "sourceAway": 65,
+      "status": "READY"
+    },
+    {
+      "seriesId": 68,
+      "roundNo": 3,
+      "slot": 0,
+      "bestOf": 7,
+      "home": null,
+      "away": null,
+      "homeSeed": null,
+      "awaySeed": null,
+      "sourceHome": 66,
+      "sourceAway": 67,
+      "status": "READY"
+    }
+  ],
+  "pairingOk": true,
+  "winnerAdvanceOk": true,
+  "bo": {
+    "regular": 1,
+    "firstRound": 3,
+    "semi": 5,
+    "final": 7
+  }
+}

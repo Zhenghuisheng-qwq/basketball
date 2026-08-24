@@ -30,7 +30,8 @@
             <el-descriptions-item label="排期修订">{{ currentStage.scheduleRevision != null ? 'R' + currentStage.scheduleRevision : '-' }}</el-descriptions-item>
           </el-descriptions>
           <el-alert v-if="currentStage.structureStatus === 'STALE'" type="error" :closable="false" class="mb8" title="当前赛程结构已因参赛名单变化失效，请重新生成。" />
-          <el-alert v-if="currentStage.publishStatus === 'WITHDRAWN'" type="warning" :closable="false" class="mb8" title="赛段已撤回。请到「日期与时间」用普通编辑改排期，完成后在此重新发布。已发布期间的单场/系列赛改期请前往『比赛执行 → 比赛管理』，不要用撤回处理。" />
+          <el-alert v-if="currentStage.publishStatus === 'WITHDRAWN'" type="warning" :closable="false" class="mb8" title="赛段已撤回。请到「日期与时间」用普通编辑改排期，完成后在此重新发布。" />
+          <el-alert v-else-if="currentStage.publishStatus === 'PUBLISHED'" type="info" :closable="false" class="mb8" title="赛段已发布。未排期场次请到「日期与时间」补排，已排期场次可改期，两者都走正式排期变更审计。对阵待确定不阻止发布。" />
           <div class="mb8">
             <el-button type="warning" @click="loadPreview">预览检查</el-button>
             <el-button type="success" :disabled="!preview?.canPublish || currentStage.publishStatus === 'PUBLISHED'" @click="doPublish">

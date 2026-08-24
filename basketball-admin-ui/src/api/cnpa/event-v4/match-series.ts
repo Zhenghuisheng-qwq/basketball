@@ -58,6 +58,7 @@ export interface BasketMatchSeriesDetailVo {
   canAdjustSchedule?: boolean
   adjustScheduleBlockReason?: string
   canResolveSeriesManually?: boolean
+  canForfeitSeries?: boolean
   games?: BasketMatchSeriesGameVo[]
 }
 

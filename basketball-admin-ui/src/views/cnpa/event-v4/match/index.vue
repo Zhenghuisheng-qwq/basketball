@@ -398,6 +398,7 @@ function canCorrectResult(row: any) {
 
 function canForfeitRow(row: any) {
   if (row?.matchStatus === 'FORFEITED') return false
+  if (!row?.homeEventTeamId || !row?.awayEventTeamId) return false
   if (row?.canForfeitMatch != null) return Boolean(row.canForfeitMatch)
   return row?.matchStatus === 'SCHEDULED' || row?.matchStatus === 'PLAYING'
 }

@@ -21,6 +21,7 @@ import com.zhs.basket.mapper.v4.BasketV4MatchPlayerStatMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchTeamStatMapper;
 import com.zhs.basket.service.v4.IBasketMatchSeriesService;
 import com.zhs.basket.service.v4.IBasketV4StatsSettlementService;
+import com.zhs.basket.support.v4.schedule.PairingResolutionGuard;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -72,6 +73,7 @@ public class OfficialMatchResultSettlementService {
             throw new ServiceException("提交缺少总比分");
         }
         BasketV4Match locked = requireMatchForUpdate(submission.getMatchId());
+        PairingResolutionGuard.assertResolvedForExecution(locked.getHomeEventTeamId(), locked.getAwayEventTeamId());
         rejectDrawForElimination(locked, submission.getHomeScore(), submission.getAwayScore());
         Long winnerId = resolveWinner(locked.getHomeEventTeamId(), locked.getAwayEventTeamId(),
                 submission.getHomeScore(), submission.getAwayScore());
@@ -95,6 +97,7 @@ public class OfficialMatchResultSettlementService {
             throw new ServiceException("matchId 不能为空");
         }
         BasketV4Match locked = requireMatchForUpdate(command.getMatchId());
+        PairingResolutionGuard.assertResolvedForExecution(locked.getHomeEventTeamId(), locked.getAwayEventTeamId());
         if (isSameOfficialOutcome(locked, command)) {
             return false;
         }

@@ -467,6 +467,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             vo.setPointAgainst(row.getPointAgainst());
             vo.setPointDiff(row.getPointDiff());
             vo.setStandingPoints(row.getStandingPoints());
+            fillStandingWinRate(vo);
             BasketEventTeam team = teamMap.get(row.getEventTeamId());
             if (team != null) {
                 vo.setTeamName(team.getTeamNameSnapshot());
@@ -593,7 +594,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 row.setTeamLogoUrl(urlMap.get(team.getTeamLogoFileId()));
                 com.zhs.support.v4.EventTeamPublicDisplaySupport.fillStanding(row, team);
             }
+            fillStandingWinRate(row);
         }
+    }
+
+    private void fillStandingWinRate(V4PublicStandingItemResp row) {
+        com.zhs.support.v4.V4PublicStandingWinRateSupport.fill(row);
     }
 
     private String resolveStageTypeName(String stageType) {

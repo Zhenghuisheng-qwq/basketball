@@ -120,7 +120,7 @@ public class WinnerOfSeriesAdvanceSupport {
             }
         }
         target.setUpdateTime(new Date());
-        if (matchSeriesMapper.updateById(target) != 1) {
+        if (matchSeriesMapper.updatePairing(target) != 1) {
             throw new ServiceException("胜者晋级写入下一轮失败");
         }
         ensureChildGames(target);
@@ -137,7 +137,7 @@ public class WinnerOfSeriesAdvanceSupport {
             target.setSeriesStatus(MatchSeriesStatusEnum.PENDING.getCode());
         }
         target.setUpdateTime(new Date());
-        if (matchSeriesMapper.updateById(target) != 1) {
+        if (matchSeriesMapper.updatePairing(target) != 1) {
             throw new ServiceException("撤销胜者晋级失败");
         }
         List<BasketV4Match> games = matchMapper.selectBySeriesId(target.getId());

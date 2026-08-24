@@ -24,8 +24,8 @@ public class ScheduleCompletenessPublishValidator implements StagePublishValidat
             boolean scheduled = ScheduleStatusEnum.SCHEDULED.getCode().equals(unit.getScheduleStatus())
                     && unit.getScheduledDate() != null && unit.getScheduledStartTime() != null;
             if (!scheduled) {
-                ValidationIssue issue = ValidationIssue.error("SCHEDULE_INCOMPLETE",
-                        "Round " + unit.getRoundNo() + " 单位 #" + unit.getUnitId() + " 未排期");
+                ValidationIssue issue = ValidationIssue.error("SCHEDULE_MISSING",
+                        "赛程尚未完整排期：Round " + unit.getRoundNo() + " 单位 #" + unit.getUnitId() + " 缺少日期时间");
                 issue.setUnitType(unit.getUnitType());
                 issue.setUnitId(unit.getUnitId());
                 result.add(issue);

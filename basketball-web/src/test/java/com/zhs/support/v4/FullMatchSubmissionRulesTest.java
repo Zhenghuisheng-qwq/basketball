@@ -179,6 +179,15 @@ class FullMatchSubmissionRulesTest {
     }
 
     @Test
+    void placeholderPairing_cannotSubmit() {
+        org.junit.jupiter.api.Assertions.assertFalse(FullMatchSubmissionRules.isPairingResolved(null, 8L));
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> FullMatchSubmissionRules.assertPairingResolved(null, null));
+        assertEquals(FullMatchSubmissionRules.MSG_PAIRING_UNRESOLVED, ex.getMessage());
+        assertDoesNotThrow(() -> FullMatchSubmissionRules.assertPairingResolved(1L, 8L));
+    }
+
+    @Test
     void winnerFullMatchAlias() {
         org.junit.jupiter.api.Assertions.assertTrue(FullMatchSubmissionRules.isWinnerFullMatch("WINNER_FULL_MATCH"));
         org.junit.jupiter.api.Assertions.assertTrue(FullMatchSubmissionRules.isWinnerFullMatch("FULL_MATCH"));

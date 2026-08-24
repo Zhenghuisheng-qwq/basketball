@@ -48,4 +48,21 @@ class PenaltyExecutionServiceCompatibilityTest {
         verify(disciplineRecordMapper, never()).updateExecution(
                 any(), any(), any(), any(), any(), any(), any(), any());
     }
+
+    @Test
+    void alreadyEffectivePointDeductionRetriesStandingSync() {
+        BasketDisciplineRecord record = new BasketDisciplineRecord();
+        record.setId(22L);
+        record.setTargetType("EVENT_TEAM");
+        record.setPenaltyCode("POINT_DEDUCTION");
+        record.setEventTeamId(231L);
+        record.setExecutionStatus("EFFECTIVE");
+        when(disciplineRecordMapper.selectById(22L)).thenReturn(record);
+        when(strategyFactory.find(record)).thenReturn(strategy);
+
+        service.execute(22L);
+
+        verify(strategy).syncAfterEffective(record);
+        verify(strategy, never()).execute(any());
+    }
 }
