@@ -309,7 +309,7 @@ function openSeriesGame(matchId?: string) {
 .league-schedule__inner {
   padding:
     clamp(28px, 2.4vw, 42px)
-    clamp(28px, 3vw, 52px)
+    var(--cnpa-public-content-gutter)
     clamp(32px, 2.8vw, 48px);
 }
 

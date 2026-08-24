@@ -256,7 +256,6 @@ const finalSeries = computed(() => playoffSeries.value.find((item) => item.round
   align-items: stretch;
   justify-content: center;
   width: 100%;
-  max-width: 1280px;
   height: clamp(360px, 31vw, 420px);
   min-height: 360px;
   margin: 0 auto;
@@ -305,7 +304,6 @@ const finalSeries = computed(() => playoffSeries.value.find((item) => item.round
 
 @media (min-width: 1600px) {
   .playoff-bracket__board {
-    max-width: 1340px;
     --round-one-width: clamp(235px, 15vw, 250px);
     --semifinal-width: clamp(205px, 13vw, 220px);
     --final-width: clamp(240px, 16vw, 260px);
@@ -316,7 +314,6 @@ const finalSeries = computed(() => playoffSeries.value.find((item) => item.round
 
 @media (min-width: 1366px) and (max-width: 1599px) {
   .playoff-bracket__board {
-    max-width: 1220px;
     --round-one-width: clamp(220px, 15.5vw, 235px);
     --semifinal-width: clamp(190px, 13vw, 205px);
     --final-width: clamp(225px, 15.5vw, 240px);
@@ -328,7 +325,6 @@ const finalSeries = computed(() => playoffSeries.value.find((item) => item.round
 
 @media (max-width: 1365px) and (min-width: 1200px) {
   .playoff-bracket__board {
-    max-width: 1160px;
     min-width: 1120px;
     --round-one-width: clamp(200px, 14vw, 220px);
     --semifinal-width: clamp(178px, 12vw, 195px);
@@ -340,7 +336,6 @@ const finalSeries = computed(() => playoffSeries.value.find((item) => item.round
 
 @media (max-width: 1199px) and (min-width: 1100px) {
   .playoff-bracket__board {
-    max-width: 1120px;
     min-width: 1120px;
     --round-one-width: 200px;
     --semifinal-width: 178px;

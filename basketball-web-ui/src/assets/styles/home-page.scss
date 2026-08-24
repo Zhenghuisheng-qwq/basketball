@@ -2,13 +2,6 @@
   width: 100%;
   background: #050505;
   overflow-x: hidden;
-
-  .site-shell {
-    width: calc(100% - 2 * var(--site-gutter));
-    max-width: var(--site-width);
-    margin-inline: auto;
-    box-sizing: border-box;
-  }
 }
 
 .home-hero-section {
@@ -1640,8 +1633,8 @@
 
 .home-focus-section {
   padding-block: clamp(44px, 5vw, 78px);
-  background: var(--cnpa-paper-bg, #f4f1ea);
-  color: #111;
+  background: #050505;
+  color: #fff;
 }
 
 .home-focus-header {
@@ -1654,7 +1647,7 @@
 
 .home-focus-header p {
   margin: 0;
-  color: rgba(17, 17, 17, 0.5);
+  color: rgba(255, 255, 255, 0.52);
 }
 
 .home-focus-filter {
@@ -1662,12 +1655,18 @@
 }
 
 .home-focus-filter__item {
-  border-color: rgba(0, 0, 0, 0.18);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.home-focus-empty {
+  padding: 20px 0 0;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .home-focus-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 14px;
 }
 

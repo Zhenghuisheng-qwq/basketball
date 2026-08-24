@@ -247,7 +247,7 @@ watch(
 .competition-format__inner {
   padding:
     clamp(28px, 2.4vw, 42px)
-    clamp(28px, 3vw, 52px)
+    var(--cnpa-public-content-gutter)
     clamp(32px, 2.8vw, 48px);
 }
 
@@ -409,8 +409,8 @@ watch(
 
 @media (max-width: 768px) {
   .competition-format__inner {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: var(--cnpa-public-content-gutter);
+    padding-right: var(--cnpa-public-content-gutter);
   }
 }
 </style>

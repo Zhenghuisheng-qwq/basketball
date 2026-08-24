@@ -140,7 +140,12 @@ watch(
           </div>
         </div>
 
-        <div class="season-leaders__grid">
+        <div v-if="state === 'loading'" class="season-leaders__state">加载中...</div>
+        <div v-else-if="state === 'error'" class="season-leaders__state season-leaders__state--error">
+          {{ errorMessage || '加载高光选手失败' }}
+        </div>
+        <div v-else-if="state === 'empty'" class="season-leaders__state">暂无高光选手</div>
+        <div v-else class="season-leaders__grid">
           <article v-for="leader in seasonLeaders" :key="leader.id" class="leader-card">
             <div class="leader-info">
               <span class="leader-title">{{ leader.title }}</span>
@@ -186,7 +191,7 @@ watch(
 .season-leaders__inner {
   padding:
     clamp(28px, 2.4vw, 42px)
-    clamp(28px, 3vw, 52px)
+    var(--cnpa-public-content-gutter)
     clamp(32px, 2.8vw, 48px);
 }
 
@@ -202,6 +207,18 @@ watch(
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+}
+
+.season-leaders__state {
+  padding: 24px 0 8px;
+  color: rgba(17, 17, 17, 0.55);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.season-leaders__state--error {
+  color: var(--cnpa-red);
 }
 
 .leader-card {
@@ -283,8 +300,8 @@ watch(
 
 @media (max-width: 768px) {
   .season-leaders__inner {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: var(--cnpa-public-content-gutter);
+    padding-right: var(--cnpa-public-content-gutter);
   }
 
   .season-leaders__header {

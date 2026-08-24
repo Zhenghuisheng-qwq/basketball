@@ -30,9 +30,9 @@
   --cnpa-border: rgba(255, 255, 255, 0.12);
   --cnpa-text: #f5f5f5;
 
-  /* 全站统一版心：左右 gutter + 最大宽度 1600px（master 视觉基线） */
+  /* 全站统一版心：标准桌面保持紧凑，超宽屏按比例扩展 */
   --site-gutter: clamp(16px, 3.2vw, 72px);
-  --site-width: 1600px;
+  --site-width: clamp(1600px, 70vw, 2400px);
   --site-content-width: min(calc(100% - var(--site-gutter) * 2), var(--site-width));
   --site-margin-inline: var(--site-gutter);
   --site-inner-padding: 0;

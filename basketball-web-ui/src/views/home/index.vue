@@ -7,6 +7,7 @@ import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import LeagueSystem from '@/components/home/LeagueSystem.vue'
 import {
   getPublicHome,
+  getPublicHomeBanners,
   getPublicHomePlayerRanking,
   getPublicHomeRecentMatches,
   getPublicHomeStatSummary,
@@ -14,6 +15,7 @@ import {
 } from '@/api/publicHome'
 import type {
   PublicAnnouncementItemResp,
+  PublicHomeBannerResp,
   PublicMatchItemVo,
   PublicPlayerRankItemVo,
   PublicSeasonSummaryVo,
@@ -28,22 +30,44 @@ import {
   initials,
   mapMatchStatus,
 } from '@/utils/publicDisplay'
-import {
-  bannerList,
-  communityList,
-  currentEventMock,
-  focusTeamMock,
-  homeCompetitionFilters,
-  type HomeCompetitionFilter,
-} from '@/views/home/mock/phase1HomeMock'
-
 type SectionState = 'loading' | 'success' | 'empty' | 'error'
+type HomeCompetitionFilter = 'ALL' | 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'
+
+type HomeBannerItem = {
+  id: string
+  image: string
+  label: string
+  accent: 'red' | 'gold' | 'blue'
+}
+
+type HomeCommunityItem = {
+  id: string
+  name: string
+  description: string
+  available: boolean
+}
 
 const router = useRouter()
 
 const PREVIEW_MATCH_COUNT = 3
 const PREVIEW_TEAM_COUNT = 6
 
+const homeCompetitionFilters: Array<{ key: HomeCompetitionFilter; label: string }> = [
+  { key: 'ALL', label: '全部赛事' },
+  { key: 'LEAGUE', label: 'League' },
+  { key: 'ARENA', label: 'Arena' },
+  { key: 'CUP', label: 'Cup' },
+  { key: 'OPEN', label: 'Open' },
+]
+
+const communityList: HomeCommunityItem[] = [
+  { id: 'kook', name: 'KOOK', description: '加入赛事实时交流', available: false },
+  { id: 'wechat', name: '微信群', description: '社群入口即将开放', available: false },
+  { id: 'bilibili', name: 'B站', description: '关注赛事内容更新', available: false },
+  { id: 'douyin', name: '抖音', description: '获取更多精彩片段', available: false },
+]
+
+const banners = ref<HomeBannerItem[]>([])
 const matches = ref<PublicMatchItemVo[]>([])
 const teams = ref<PublicTeamRankItemVo[]>([])
 const teamRanks = ref<PublicTeamRankItemVo[]>([])
@@ -52,6 +76,7 @@ const summary = ref<PublicSeasonSummaryVo | null>(null)
 const announcements = ref<PublicAnnouncementItemResp[]>([])
 
 const matchState = ref<SectionState>('loading')
+const bannerState = ref<SectionState>('loading')
 const teamState = ref<SectionState>('loading')
 const rankState = ref<SectionState>('loading')
 const playerState = ref<SectionState>('loading')
@@ -59,6 +84,7 @@ const summaryState = ref<SectionState>('loading')
 const contentState = ref<SectionState>('loading')
 
 const matchError = ref('')
+const bannerError = ref('')
 const teamError = ref('')
 const rankError = ref('')
 const playerError = ref('')
@@ -72,11 +98,23 @@ const activeFocusCompetition = ref<HomeCompetitionFilter>('LEAGUE')
 
 const featuredAnnouncement = computed(() => announcements.value[0] ?? null)
 const sideAnnouncements = computed(() => announcements.value.slice(1))
-const activeBanner = computed(() => bannerList[activeBannerIndex.value] ?? bannerList[0])
-const visibleFocusTeams = computed(() => {
-  if (activeFocusCompetition.value === 'ALL') return focusTeamMock
-  return focusTeamMock.filter((item) => item.competition === activeFocusCompetition.value)
-})
+const activeBanner = computed(() => banners.value[activeBannerIndex.value] ?? null)
+const hasCurrentEvent = computed(() => Boolean(summary.value?.tournamentName || summary.value?.seasonName))
+
+function bannerAccent(index: number): HomeBannerItem['accent'] {
+  return ['red', 'gold', 'blue'][index % 3] as HomeBannerItem['accent']
+}
+
+function mapBanner(item: PublicHomeBannerResp, index: number): HomeBannerItem | null {
+  const image = item.imageUrl?.trim()
+  if (!image) return null
+  return {
+    id: item.bannerId,
+    image,
+    label: displayText(item.title || item.subtitle, 'CNPA'),
+    accent: bannerAccent(index),
+  }
+}
 
 function matchCardTone(index: number): 'side' | 'featured' {
   if (matches.value.length === 1) return 'featured'
@@ -164,21 +202,18 @@ function selectBanner(index: number) {
 }
 
 function previousBanner() {
-  activeBannerIndex.value = (activeBannerIndex.value - 1 + bannerList.length) % bannerList.length
+  if (!banners.value.length) return
+  activeBannerIndex.value = (activeBannerIndex.value - 1 + banners.value.length) % banners.value.length
 }
 
 function nextBanner() {
-  activeBannerIndex.value = (activeBannerIndex.value + 1) % bannerList.length
+  if (!banners.value.length) return
+  activeBannerIndex.value = (activeBannerIndex.value + 1) % banners.value.length
 }
 
 function handleCurrentEvent() {
+  if (!hasCurrentEvent.value) return
   router.push('/tournament')
-}
-
-function handleFocusTeam(teamId: string) {
-  const team = focusTeamMock.find((item) => item.id === teamId)
-  if (!team) return
-  router.push({ path: '/data', query: { competition: team.competition.toLowerCase() } })
 }
 
 function handleTeamClick(teamId: string) {
@@ -187,6 +222,23 @@ function handleTeamClick(teamId: string) {
 
 function matchRound(match: PublicMatchItemVo): string {
   return displayText(match.stageName || match.groupName, '公开赛事')
+}
+
+async function loadBanners() {
+  bannerState.value = 'loading'
+  bannerError.value = ''
+  try {
+    const res = await getPublicHomeBanners()
+    banners.value = (res.data ?? [])
+      .map((item, index) => mapBanner(item, index))
+      .filter((item): item is HomeBannerItem => Boolean(item))
+    activeBannerIndex.value = 0
+    bannerState.value = banners.value.length ? 'success' : 'empty'
+  } catch (err) {
+    banners.value = []
+    bannerState.value = 'error'
+    bannerError.value = err instanceof Error ? err.message : '加载首页 Banner 失败'
+  }
 }
 
 async function loadMatches() {
@@ -279,6 +331,7 @@ function openAnnouncement(id?: string | null) {
 }
 
 onMounted(() => {
+  void loadBanners()
   void loadMatches()
   void loadTeams()
   void loadTeamRanks()
@@ -292,7 +345,10 @@ onMounted(() => {
   <div class="home-page">
     <section class="site-section home-hero-section">
       <div class="site-shell">
-        <div class="home-hero-carousel" aria-label="CNPA 品牌视觉轮播">
+        <div v-if="bannerState === 'loading'" class="home-state">加载中...</div>
+        <div v-else-if="bannerState === 'error'" class="home-state home-state--error">{{ bannerError }}</div>
+        <div v-else-if="bannerState === 'empty'" class="home-state">暂无首页 Banner</div>
+        <div v-else-if="activeBanner" class="home-hero-carousel" aria-label="CNPA 品牌视觉轮播">
           <img class="hero-image" :src="activeBanner.image" :alt="activeBanner.label" />
           <div class="home-hero-carousel__veil" :class="`home-hero-carousel__veil--${activeBanner.accent}`" />
           <div class="home-hero-carousel__meta">
@@ -300,12 +356,12 @@ onMounted(() => {
             <span class="home-hero-carousel__label">{{ activeBanner.label }}</span>
           </div>
           <div class="home-hero-carousel__controls">
-            <button type="button" class="home-hero-carousel__arrow" aria-label="上一张" @click="previousBanner">
+            <button v-if="banners.length > 1" type="button" class="home-hero-carousel__arrow" aria-label="上一张" @click="previousBanner">
               ‹
             </button>
-            <div class="home-hero-carousel__dots" role="tablist" aria-label="选择品牌视觉">
+            <div v-if="banners.length > 1" class="home-hero-carousel__dots" role="tablist" aria-label="选择品牌视觉">
               <button
-                v-for="(banner, index) in bannerList"
+                v-for="(banner, index) in banners"
                 :key="banner.id"
                 type="button"
                 class="home-hero-carousel__dot"
@@ -316,7 +372,7 @@ onMounted(() => {
                 @click="selectBanner(index)"
               />
             </div>
-            <button type="button" class="home-hero-carousel__arrow" aria-label="下一张" @click="nextBanner">
+            <button v-if="banners.length > 1" type="button" class="home-hero-carousel__arrow" aria-label="下一张" @click="nextBanner">
               ›
             </button>
           </div>
@@ -421,7 +477,16 @@ onMounted(() => {
 
     <section class="site-section home-current-event-section">
       <div class="site-shell">
-        <div class="home-current-event-card">
+        <div v-if="summaryState === 'loading'" class="home-current-event-card home-current-event-card--state">
+          <div class="home-state">加载中...</div>
+        </div>
+        <div v-else-if="summaryState === 'error'" class="home-current-event-card home-current-event-card--state">
+          <div class="home-state home-state--error">{{ summaryError }}</div>
+        </div>
+        <div v-else-if="!hasCurrentEvent" class="home-current-event-card home-current-event-card--state">
+          <div class="home-state">暂无当前赛事</div>
+        </div>
+        <div v-else class="home-current-event-card">
           <div class="home-current-event-card__intro">
             <span class="home-kicker">CURRENT EVENT</span>
             <h2>当前赛事</h2>
@@ -430,9 +495,9 @@ onMounted(() => {
           <div class="home-current-event-card__main">
             <div class="home-current-event-card__heading">
               <div>
-                <span class="home-current-event-card__status">{{ currentEventMock.status }}</span>
-                <h3>{{ currentEventMock.name }}</h3>
-                <p>{{ currentEventMock.season }} · {{ currentEventMock.stage }}</p>
+                <span class="home-current-event-card__status">当前赛事</span>
+                <h3>{{ displayText(summary?.tournamentName || summary?.seasonName) }}</h3>
+                <p>{{ displayText(summary?.seasonName, '赛季信息待发布') }}</p>
               </div>
               <button type="button" class="home-outline-button" @click="handleCurrentEvent">
                 进入赛事
@@ -441,16 +506,16 @@ onMounted(() => {
             </div>
             <div class="home-current-event-card__stats">
               <div>
-                <strong>{{ currentEventMock.teamCount }}</strong>
+                <strong>{{ displayText(summary?.teamCount, '0') }}</strong>
                 <span>参赛队伍</span>
               </div>
               <div>
-                <strong>{{ currentEventMock.matchCount }}</strong>
+                <strong>{{ displayText(summary?.matchCount, '0') }}</strong>
                 <span>比赛场次</span>
               </div>
               <div>
-                <strong>{{ currentEventMock.stage }}</strong>
-                <span>当前阶段</span>
+                <strong>{{ displayText(summary?.finishedMatchCount, '0') }}</strong>
+                <span>已完成比赛</span>
               </div>
             </div>
           </div>
@@ -510,7 +575,7 @@ onMounted(() => {
             <span class="home-kicker">FOCUS TEAMS</span>
             <h2 class="home-section-title">本周焦点战队</h2>
           </div>
-          <p>视觉 Mock 展示，后续可接入运营配置。</p>
+          <p>运营配置发布后将在此展示。</p>
         </div>
         <div class="home-focus-filter" aria-label="焦点战队赛事筛选">
           <button
@@ -524,27 +589,7 @@ onMounted(() => {
             {{ filter.label }}
           </button>
         </div>
-        <div class="home-focus-grid">
-          <article v-for="team in visibleFocusTeams" :key="team.id" class="home-focus-card">
-            <div class="home-focus-card__topline">
-              <span>{{ team.competition }}</span>
-              <span>FEATURED</span>
-            </div>
-            <div class="home-focus-card__logo">
-              <img v-if="team.logoUrl" :src="team.logoUrl" :alt="team.name" />
-              <span v-else>{{ initials(team.name) }}</span>
-            </div>
-            <h3>{{ team.name }}</h3>
-            <p>{{ team.description }}</p>
-            <div class="home-focus-card__metric">
-              <span>{{ team.metricLabel }}</span>
-              <strong>{{ team.metricValue }}</strong>
-            </div>
-            <button type="button" class="home-text-button" @click="handleFocusTeam(team.id)">
-              查看赛事数据 <span aria-hidden="true">↗</span>
-            </button>
-          </article>
-        </div>
+        <div class="home-focus-empty home-state">暂无焦点战队</div>
       </div>
     </section>
 

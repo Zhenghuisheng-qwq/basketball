@@ -152,7 +152,7 @@ watch(
 .stage-progress-section__inner {
   padding:
     clamp(28px, 2.4vw, 42px)
-    clamp(28px, 3vw, 52px)
+    var(--cnpa-public-content-gutter)
     clamp(18px, 1.6vw, 28px);
 }
 
@@ -174,8 +174,8 @@ watch(
 
 @media (max-width: 768px) {
   .stage-progress-section__inner {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: var(--cnpa-public-content-gutter);
+    padding-right: var(--cnpa-public-content-gutter);
   }
 
   .stage-section-divider {
