@@ -17,6 +17,7 @@
 .site-container {
   width: var(--site-content-width);
   margin-inline: auto;
+  padding-inline: var(--site-inner-padding);
   box-sizing: border-box;
   overflow-x: clip;
 }
@@ -30,13 +31,13 @@
 .site-content {
   width: var(--site-content-width);
   margin-inline: auto;
-  padding-inline: var(--site-inner-padding);
+  padding-inline: var(--cnpa-public-content-gutter);
   box-sizing: border-box;
 }
 
 .page-container {
   width: var(--site-content-width);
   margin-inline: auto;
-  padding: 48px var(--site-inner-padding) 64px;
+  padding: var(--cnpa-public-section-spacing) var(--cnpa-public-content-gutter) clamp(48px, 5vw, 80px);
   box-sizing: border-box;
 }

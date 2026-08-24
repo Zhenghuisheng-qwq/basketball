@@ -1,9 +1,9 @@
 /* 官网公开页：Hero（site-shell 内 icon 背景图）→ PaperTear → 暖灰正文 */
 
 :root {
-  --paper-bg: var(--cnpa-paper-bg);
-  --paper-bg-soft: var(--cnpa-paper-bg-soft);
-  --paper-border: var(--cnpa-paper-border);
+  --paper-bg: var(--cnpa-public-paper-bg);
+  --paper-bg-soft: var(--cnpa-public-paper-surface);
+  --paper-border: var(--cnpa-public-border);
   --ink-color: var(--cnpa-paper-text);
   --muted-color: var(--cnpa-paper-text-secondary);
   --brand-red: var(--cnpa-red);
@@ -15,7 +15,7 @@
   flex-direction: column;
   width: 100%;
   min-height: calc(100vh - var(--site-header-height));
-  background: #050505;
+  background: var(--cnpa-bg-primary);
   overflow-x: clip;
 }
 
@@ -28,7 +28,7 @@
   flex: 1;
   width: 100%;
   padding-top: 8px;
-  background: #050505;
+  background: var(--cnpa-bg-primary);
 }
 
 .public-page__panel {
@@ -68,15 +68,16 @@
   position: relative;
   z-index: 2;
   width: 100%;
-  background-color: var(--cnpa-paper-bg);
+  background-color: var(--cnpa-public-paper-bg);
   background-image: linear-gradient(
     180deg,
-    #ebe9e9 0%,
-    var(--cnpa-paper-bg) 45%,
-    #e7e5e5 100%
+    var(--cnpa-public-paper-surface) 0%,
+    var(--cnpa-public-paper-bg) 48%,
+    var(--cnpa-paper-bg-deep) 100%
   );
   border-radius: 2px 2px 0 0;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--cnpa-public-border);
+  box-shadow: var(--cnpa-public-shadow);
   overflow: hidden;
 }
 
@@ -88,7 +89,7 @@
 .public-page__panel-body {
   position: relative;
   z-index: 1;
-  padding: clamp(24px, 3vw, 40px) clamp(14px, 1.8vw, 24px) clamp(16px, 2vw, 24px);
+  padding: clamp(24px, 3vw, 40px) var(--cnpa-public-content-gutter) clamp(20px, 2vw, 28px);
   box-sizing: border-box;
   background: transparent;
 }
@@ -100,7 +101,7 @@
   width: 100%;
   height: 11px;
   margin-top: -1px;
-  background: var(--cnpa-paper-bg);
+  background: var(--cnpa-public-paper-bg);
   pointer-events: none;
   clip-path: polygon(
     0 0,
@@ -161,7 +162,7 @@
 /* Hero 基础：与 master LeagueHero / DataHero 一致 */
 .public-hero {
   width: 100%;
-  background: #050505;
+  background: var(--cnpa-bg-primary);
   overflow: visible;
 }
 
@@ -174,7 +175,7 @@
   position: relative;
   width: 100%;
   overflow: hidden;
-  background: #050505;
+  background: var(--cnpa-bg-primary);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 2px 2px 0 0;
   box-sizing: border-box;

@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import TornEdge from '@/components/home/TornEdge.vue'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
-import homeTop from '@/assets/icon/home_top.png'
 import LeagueSystem from '@/components/home/LeagueSystem.vue'
 import {
   getPublicHome,
@@ -27,7 +26,16 @@ import {
   formatPercent,
   formatStatValue,
   initials,
+  mapMatchStatus,
 } from '@/utils/publicDisplay'
+import {
+  bannerList,
+  communityList,
+  currentEventMock,
+  focusTeamMock,
+  homeCompetitionFilters,
+  type HomeCompetitionFilter,
+} from '@/views/home/mock/phase1HomeMock'
 
 type SectionState = 'loading' | 'success' | 'empty' | 'error'
 
@@ -58,9 +66,17 @@ const summaryError = ref('')
 const contentError = ref('')
 
 const brokenLogos = ref<Record<string, boolean>>({})
+const activeBannerIndex = ref(0)
+const activeCompetitionFilter = ref<HomeCompetitionFilter>('ALL')
+const activeFocusCompetition = ref<HomeCompetitionFilter>('LEAGUE')
 
 const featuredAnnouncement = computed(() => announcements.value[0] ?? null)
 const sideAnnouncements = computed(() => announcements.value.slice(1))
+const activeBanner = computed(() => bannerList[activeBannerIndex.value] ?? bannerList[0])
+const visibleFocusTeams = computed(() => {
+  if (activeFocusCompetition.value === 'ALL') return focusTeamMock
+  return focusTeamMock.filter((item) => item.competition === activeFocusCompetition.value)
+})
 
 function matchCardTone(index: number): 'side' | 'featured' {
   if (matches.value.length === 1) return 'featured'
@@ -101,6 +117,68 @@ function handleMoreTeams() {
 
 function handleWatchMatch(matchId: string) {
   router.push({ path: '/tournament', query: { tab: 'schedule', matchId } })
+}
+
+function matchStatus(match: PublicMatchItemVo) {
+  return mapMatchStatus(match.matchStatus)
+}
+
+function matchStatusLabel(match: PublicMatchItemVo): string {
+  switch (matchStatus(match)) {
+    case 'live':
+      return '进行中'
+    case 'finished':
+      return '已结束'
+    case 'postponed':
+      return '已延期'
+    case 'cancelled':
+      return '已取消'
+    default:
+      return '敬请期待'
+  }
+}
+
+function matchScore(match: PublicMatchItemVo): string {
+  if (match.homeScore === null || match.homeScore === undefined) return 'VS'
+  if (match.awayScore === null || match.awayScore === undefined) return 'VS'
+  return `${match.homeScore} : ${match.awayScore}`
+}
+
+function matchActionLabel(match: PublicMatchItemVo): string {
+  switch (matchStatus(match)) {
+    case 'live':
+      return '进入比赛'
+    case 'finished':
+      return '查看相关数据'
+    default:
+      return '敬请期待'
+  }
+}
+
+function matchActionDisabled(match: PublicMatchItemVo): boolean {
+  return matchStatus(match) !== 'live' && matchStatus(match) !== 'finished'
+}
+
+function selectBanner(index: number) {
+  activeBannerIndex.value = index
+}
+
+function previousBanner() {
+  activeBannerIndex.value = (activeBannerIndex.value - 1 + bannerList.length) % bannerList.length
+}
+
+function nextBanner() {
+  activeBannerIndex.value = (activeBannerIndex.value + 1) % bannerList.length
+}
+
+function handleCurrentEvent() {
+  router.push('/tournament')
+}
+
+function handleFocusTeam(teamId: string) {
+  const team = focusTeamMock.find((item) => item.id === teamId)
+  if (!team) return
+  router.push({ path: '/data', query: { competition: team.competition.toLowerCase() } })
 }
 
 function handleTeamClick(teamId: string) {
@@ -214,7 +292,35 @@ onMounted(() => {
   <div class="home-page">
     <section class="site-section home-hero-section">
       <div class="site-shell">
-        <img class="hero-image" :src="homeTop" alt="CNPA 篮球赛事平台" />
+        <div class="home-hero-carousel" aria-label="CNPA 品牌视觉轮播">
+          <img class="hero-image" :src="activeBanner.image" :alt="activeBanner.label" />
+          <div class="home-hero-carousel__veil" :class="`home-hero-carousel__veil--${activeBanner.accent}`" />
+          <div class="home-hero-carousel__meta">
+            <span class="home-hero-carousel__eyebrow">CNPA / 0{{ activeBannerIndex + 1 }}</span>
+            <span class="home-hero-carousel__label">{{ activeBanner.label }}</span>
+          </div>
+          <div class="home-hero-carousel__controls">
+            <button type="button" class="home-hero-carousel__arrow" aria-label="上一张" @click="previousBanner">
+              ‹
+            </button>
+            <div class="home-hero-carousel__dots" role="tablist" aria-label="选择品牌视觉">
+              <button
+                v-for="(banner, index) in bannerList"
+                :key="banner.id"
+                type="button"
+                class="home-hero-carousel__dot"
+                :class="{ 'home-hero-carousel__dot--active': activeBannerIndex === index }"
+                :aria-label="`切换到${banner.label}`"
+                :aria-selected="activeBannerIndex === index"
+                role="tab"
+                @click="selectBanner(index)"
+              />
+            </div>
+            <button type="button" class="home-hero-carousel__arrow" aria-label="下一张" @click="nextBanner">
+              ›
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -228,6 +334,19 @@ onMounted(() => {
               <button type="button" class="section-more section-more-dark" @click="handleMoreMatches">
                 查看更多
                 <span>›</span>
+              </button>
+            </div>
+
+            <div class="home-competition-filter" aria-label="近期赛事筛选">
+              <button
+                v-for="filter in homeCompetitionFilters"
+                :key="filter.key"
+                type="button"
+                class="home-competition-filter__item"
+                :class="{ 'home-competition-filter__item--active': activeCompetitionFilter === filter.key }"
+                @click="activeCompetitionFilter = filter.key"
+              >
+                {{ filter.label }}
               </button>
             </div>
 
@@ -248,6 +367,9 @@ onMounted(() => {
                   <div class="match-card-header">
                     <span>{{ formatDateTime(match.scheduledStartTime).full }}</span>
                     <span>{{ matchRound(match) }}</span>
+                    <span class="home-match-card__status" :class="`home-match-card__status--${matchStatus(match)}`">
+                      {{ matchStatusLabel(match) }}
+                    </span>
                   </div>
                   <div class="match-versus">
                     <div class="match-team">
@@ -264,7 +386,7 @@ onMounted(() => {
                     </div>
                     <div class="match-vs-wrap">
                       <span class="match-vs-glow" aria-hidden="true" />
-                      <span class="match-vs">VS</span>
+                      <span class="match-vs">{{ matchScore(match) }}</span>
                     </div>
                     <div class="match-team">
                       <div class="match-logo">
@@ -279,14 +401,59 @@ onMounted(() => {
                       <span class="match-team-name">{{ displayText(match.awayTeamName) }}</span>
                     </div>
                   </div>
-                  <button type="button" class="watch-btn" @click="handleWatchMatch(match.matchId)">
-                    <span>查看赛程</span>
+                  <button
+                    type="button"
+                    class="watch-btn"
+                    :class="{ 'watch-btn--disabled': matchActionDisabled(match) }"
+                    :disabled="matchActionDisabled(match)"
+                    @click="handleWatchMatch(match.matchId)"
+                  >
+                    <span>{{ matchActionLabel(match) }}</span>
                   </button>
                 </article>
               </div>
             </div>
           </div>
           <TornEdge position="bottom" tone="light" variant="sharp" />
+        </div>
+      </div>
+    </section>
+
+    <section class="site-section home-current-event-section">
+      <div class="site-shell">
+        <div class="home-current-event-card">
+          <div class="home-current-event-card__intro">
+            <span class="home-kicker">CURRENT EVENT</span>
+            <h2>当前赛事</h2>
+            <p>聚焦正在发生的 CNPA 赛事，快速进入赛事主页。</p>
+          </div>
+          <div class="home-current-event-card__main">
+            <div class="home-current-event-card__heading">
+              <div>
+                <span class="home-current-event-card__status">{{ currentEventMock.status }}</span>
+                <h3>{{ currentEventMock.name }}</h3>
+                <p>{{ currentEventMock.season }} · {{ currentEventMock.stage }}</p>
+              </div>
+              <button type="button" class="home-outline-button" @click="handleCurrentEvent">
+                进入赛事
+                <span aria-hidden="true">↗</span>
+              </button>
+            </div>
+            <div class="home-current-event-card__stats">
+              <div>
+                <strong>{{ currentEventMock.teamCount }}</strong>
+                <span>参赛队伍</span>
+              </div>
+              <div>
+                <strong>{{ currentEventMock.matchCount }}</strong>
+                <span>比赛场次</span>
+              </div>
+              <div>
+                <strong>{{ currentEventMock.stage }}</strong>
+                <span>当前阶段</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -335,6 +502,51 @@ onMounted(() => {
       :error-message="summaryError"
       @retry="loadSummary"
     />
+
+    <section class="site-section home-focus-section">
+      <div class="site-shell">
+        <div class="home-focus-header">
+          <div>
+            <span class="home-kicker">FOCUS TEAMS</span>
+            <h2 class="home-section-title">本周焦点战队</h2>
+          </div>
+          <p>视觉 Mock 展示，后续可接入运营配置。</p>
+        </div>
+        <div class="home-focus-filter" aria-label="焦点战队赛事筛选">
+          <button
+            v-for="filter in homeCompetitionFilters.slice(1)"
+            :key="`focus-${filter.key}`"
+            type="button"
+            class="home-focus-filter__item"
+            :class="{ 'home-focus-filter__item--active': activeFocusCompetition === filter.key }"
+            @click="activeFocusCompetition = filter.key"
+          >
+            {{ filter.label }}
+          </button>
+        </div>
+        <div class="home-focus-grid">
+          <article v-for="team in visibleFocusTeams" :key="team.id" class="home-focus-card">
+            <div class="home-focus-card__topline">
+              <span>{{ team.competition }}</span>
+              <span>FEATURED</span>
+            </div>
+            <div class="home-focus-card__logo">
+              <img v-if="team.logoUrl" :src="team.logoUrl" :alt="team.name" />
+              <span v-else>{{ initials(team.name) }}</span>
+            </div>
+            <h3>{{ team.name }}</h3>
+            <p>{{ team.description }}</p>
+            <div class="home-focus-card__metric">
+              <span>{{ team.metricLabel }}</span>
+              <strong>{{ team.metricValue }}</strong>
+            </div>
+            <button type="button" class="home-text-button" @click="handleFocusTeam(team.id)">
+              查看赛事数据 <span aria-hidden="true">↗</span>
+            </button>
+          </article>
+        </div>
+      </div>
+    </section>
 
     <section id="ranking" class="site-section site-section--dark ranking-section">
       <div class="site-shell">
@@ -479,6 +691,28 @@ onMounted(() => {
                   <time>{{ formatAnnouncementDate(item.publishTime) }}</time>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="site-section home-community-section">
+      <div class="site-shell">
+        <div class="home-community-card">
+          <div class="home-community-card__intro">
+            <span class="home-kicker">CNPA COMMUNITY</span>
+            <h2 class="home-section-title">加入篮球电竞社区</h2>
+            <p>关注赛事动态、精彩内容与玩家故事。</p>
+          </div>
+          <div class="home-community-grid">
+            <div v-for="community in communityList" :key="community.id" class="home-community-item">
+              <span class="home-community-item__icon">{{ community.name.slice(0, 1) }}</span>
+              <div>
+                <strong>{{ community.name }}</strong>
+                <span>{{ community.description }}</span>
+              </div>
+              <small v-if="!community.available">即将开放</small>
             </div>
           </div>
         </div>

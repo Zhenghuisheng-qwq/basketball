@@ -22,12 +22,11 @@ const seriesLinks = [
       <div class="footer-grid">
         <div class="footer-brand">
           <img :src="logoImg" alt="CNPA" class="footer-logo" />
-          <p>CNPA 中国职业电竞篮球联赛，汇聚全国顶尖战队，打造专业、公平、开放的赛事平台。</p>
-          <div class="social-icons">
-            <span aria-hidden="true">W</span>
-            <span aria-hidden="true">B</span>
-            <span aria-hidden="true">D</span>
-          </div>
+          <p>
+            CNPA 以赛事为核心，<br />
+            连接球员、战队、内容，<br />
+            构建属于中国玩家的篮球电竞赛事平台。
+          </p>
         </div>
 
         <div class="footer-col">
@@ -94,26 +93,26 @@ const seriesLinks = [
 <style scoped lang="scss">
 .web-footer {
   width: 100%;
-  background: #070707;
-  border-top: 1px solid var(--cnpa-border-color);
+  background: var(--cnpa-black);
+  border-top: 1px solid var(--cnpa-border);
 }
 
 .footer-shell {
-  padding: 48px 0 28px;
+  padding: clamp(40px, 5vw, 72px) 0 clamp(24px, 3vw, 36px);
 }
 
 .footer-grid {
   display: grid;
   grid-template-columns: 1.4fr repeat(4, 1fr) 1.2fr;
-  gap: 24px;
+  gap: var(--cnpa-public-card-spacing);
 }
 
 .footer-brand {
   p {
-    margin: 16px 0;
+    margin: 18px 0 0;
     font-size: 13px;
-    line-height: 1.7;
-    color: var(--cnpa-text-secondary);
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.68);
   }
 }
 
@@ -122,28 +121,13 @@ const seriesLinks = [
   height: auto;
 }
 
-.social-icons {
-  display: flex;
-  gap: 10px;
-
-  span {
-    width: 32px;
-    height: 32px;
-    display: grid;
-    place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    font-size: 12px;
-    font-weight: 900;
-  }
-}
-
 .footer-col {
   display: flex;
   flex-direction: column;
   gap: 10px;
 
   h4 {
-    margin: 0 0 6px;
+    margin: 0 0 8px;
     font-size: 14px;
     color: #fff;
   }
@@ -169,7 +153,7 @@ const seriesLinks = [
 
 .footer-qrcodes {
   display: flex;
-  gap: 16px;
+  gap: var(--cnpa-public-card-spacing);
 }
 
 .qrcode-box {
@@ -186,8 +170,8 @@ const seriesLinks = [
   height: 88px;
   display: grid;
   place-items: center;
-  border: 1px dashed rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.05);
   font-size: 12px;
 }
 
@@ -196,9 +180,9 @@ const seriesLinks = [
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 32px;
+  margin-top: clamp(28px, 3vw, 44px);
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 12px;
   color: var(--cnpa-text-secondary);
 }

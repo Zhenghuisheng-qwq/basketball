@@ -54,6 +54,17 @@
   --cnpa-paper-text-muted: var(--cnpa-paper-text-secondary);
   --cnpa-paper-edge-height: clamp(34px, 2.5vw, 48px);
   --cnpa-paper-texture-opacity: 0.018;
+
+  --cnpa-public-paper-bg: var(--cnpa-paper-bg);
+  --cnpa-public-paper-surface: var(--cnpa-paper-surface);
+  --cnpa-public-card-bg: #fff;
+  --cnpa-public-card-bg-soft: #f8f7f5;
+  --cnpa-public-border: var(--cnpa-paper-border);
+  --cnpa-public-shadow: 0 12px 28px rgba(20, 20, 20, 0.08);
+  --cnpa-public-shadow-soft: 0 6px 18px rgba(20, 20, 20, 0.06);
+  --cnpa-public-section-spacing: clamp(40px, 5vw, 80px);
+  --cnpa-public-card-spacing: clamp(16px, 2vw, 28px);
+  --cnpa-public-content-gutter: clamp(16px, 2.4vw, 36px);
 }
 
 .site-main {
