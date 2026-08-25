@@ -5,6 +5,7 @@ import TornEdge from '@/components/home/TornEdge.vue'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import LeagueSystem from '@/components/home/LeagueSystem.vue'
+import HomeHero from '@/components/home/HomeHero.vue'
 import {
   getPublicHome,
   getPublicHomeBanners,
@@ -36,8 +37,6 @@ type HomeCompetitionFilter = 'ALL' | 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'
 type HomeBannerItem = {
   id: string
   image: string
-  label: string
-  accent: 'red' | 'gold' | 'blue'
 }
 
 type HomeCommunityItem = {
@@ -93,12 +92,10 @@ const summaryError = ref('')
 const contentError = ref('')
 
 const brokenLogos = ref<Record<string, boolean>>({})
-const activeBannerIndex = ref(0)
 const activeCompetitionFilter = ref<HomeCompetitionFilter>('ALL')
 
 const featuredAnnouncement = computed(() => announcements.value[0] ?? null)
 const sideAnnouncements = computed(() => announcements.value.slice(1))
-const activeBanner = computed(() => banners.value[activeBannerIndex.value] ?? null)
 const hasCurrentEvent = computed(() => Boolean(summary.value?.tournamentName || summary.value?.seasonName))
 
 function matchCompetitionType(match: PublicMatchItemVo): Exclude<HomeCompetitionFilter, 'ALL'> | null {
@@ -125,18 +122,12 @@ const filteredMatches = computed(() => {
 })
 const visibleMatches = computed(() => filteredMatches.value.slice(0, PREVIEW_MATCH_COUNT))
 
-function bannerAccent(index: number): HomeBannerItem['accent'] {
-  return ['red', 'gold', 'blue'][index % 3] as HomeBannerItem['accent']
-}
-
-function mapBanner(item: PublicHomeBannerResp, index: number): HomeBannerItem | null {
+function mapBanner(item: PublicHomeBannerResp): HomeBannerItem | null {
   const image = item.imageUrl?.trim()
   if (!image) return null
   return {
     id: item.bannerId,
     image,
-    label: displayText(item.title || item.subtitle, 'CNPA'),
-    accent: bannerAccent(index),
   }
 }
 
@@ -226,20 +217,6 @@ function matchActionDisabled(match: PublicMatchItemVo): boolean {
   return matchStatus(match) !== 'live' && matchStatus(match) !== 'finished'
 }
 
-function selectBanner(index: number) {
-  activeBannerIndex.value = index
-}
-
-function previousBanner() {
-  if (!banners.value.length) return
-  activeBannerIndex.value = (activeBannerIndex.value - 1 + banners.value.length) % banners.value.length
-}
-
-function nextBanner() {
-  if (!banners.value.length) return
-  activeBannerIndex.value = (activeBannerIndex.value + 1) % banners.value.length
-}
-
 function handleCurrentEvent() {
   if (!hasCurrentEvent.value) return
   const seasonId = summary.value?.seasonId?.trim()
@@ -264,9 +241,8 @@ async function loadBanners() {
   try {
     const res = await getPublicHomeBanners()
     banners.value = (res.data ?? [])
-      .map((item, index) => mapBanner(item, index))
+      .map((item) => mapBanner(item))
       .filter((item): item is HomeBannerItem => Boolean(item))
-    activeBannerIndex.value = 0
     bannerState.value = banners.value.length ? 'success' : 'empty'
   } catch (err) {
     banners.value = []
@@ -377,42 +353,11 @@ onMounted(() => {
 
 <template>
   <div class="home-page">
-    <section class="site-section home-hero-section">
-      <div class="site-shell">
-        <div v-if="bannerState === 'loading'" class="home-state">加载中...</div>
-        <div v-else-if="bannerState === 'error'" class="home-state home-state--error">{{ bannerError }}</div>
-        <div v-else-if="bannerState === 'empty'" class="home-state">暂无首页 Banner</div>
-        <div v-else-if="activeBanner" class="home-hero-carousel" aria-label="CNPA 品牌视觉轮播">
-          <img class="hero-image" :src="activeBanner.image" :alt="activeBanner.label" />
-          <div class="home-hero-carousel__veil" :class="`home-hero-carousel__veil--${activeBanner.accent}`" />
-          <div class="home-hero-carousel__meta">
-            <span class="home-hero-carousel__eyebrow">CNPA / 0{{ activeBannerIndex + 1 }}</span>
-            <span class="home-hero-carousel__label">{{ activeBanner.label }}</span>
-          </div>
-          <div class="home-hero-carousel__controls">
-            <button v-if="banners.length > 1" type="button" class="home-hero-carousel__arrow" aria-label="上一张" @click="previousBanner">
-              ‹
-            </button>
-            <div v-if="banners.length > 1" class="home-hero-carousel__dots" role="tablist" aria-label="选择品牌视觉">
-              <button
-                v-for="(banner, index) in banners"
-                :key="banner.id"
-                type="button"
-                class="home-hero-carousel__dot"
-                :class="{ 'home-hero-carousel__dot--active': activeBannerIndex === index }"
-                :aria-label="`切换到${banner.label}`"
-                :aria-selected="activeBannerIndex === index"
-                role="tab"
-                @click="selectBanner(index)"
-              />
-            </div>
-            <button v-if="banners.length > 1" type="button" class="home-hero-carousel__arrow" aria-label="下一张" @click="nextBanner">
-              ›
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
+    <HomeHero
+      :banners="banners"
+      :loading="bannerState === 'loading'"
+      :error-message="bannerState === 'error' ? bannerError : ''"
+    />
 
     <section id="matches" class="site-section home-match-section">
       <div class="site-shell home-match-shell">
