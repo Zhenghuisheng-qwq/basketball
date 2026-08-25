@@ -1923,6 +1923,19 @@
   padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.035);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.home-community-item:not(.home-community-item--disabled):hover {
+  border-color: rgba(255, 60, 35, 0.62);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.home-community-item--disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .home-community-item__icon {
@@ -2081,6 +2094,10 @@
   }
 
   .home-community-item small {
-    display: none;
+    white-space: nowrap;
+  }
+
+  .home-community-item div span {
+    white-space: normal;
   }
 }

@@ -45,6 +45,7 @@ type HomeCommunityItem = {
   name: string
   description: string
   available: boolean
+  url?: string
 }
 
 const router = useRouter()
@@ -70,7 +71,7 @@ const homeFocusFilters: Array<{ key: HomeFocusFilter; label: string }> = [
 
 const communityList: HomeCommunityItem[] = [
   { id: 'kook', name: 'KOOK', description: '加入赛事实时交流', available: false },
-  { id: 'wechat', name: '微信群', description: '社群入口即将开放', available: false },
+  { id: 'wechat', name: '微信群', description: '赛事资讯与活动通知', available: false },
   { id: 'bilibili', name: 'B站', description: '关注赛事内容更新', available: false },
   { id: 'douyin', name: '抖音', description: '获取更多精彩片段', available: false },
 ]
@@ -246,7 +247,7 @@ function matchActionLabel(match: PublicMatchItemVo): string {
     case 'live':
       return '进入比赛'
     case 'finished':
-      return '查看相关数据'
+      return '查看比赛详情'
     default:
       return '未开始'
   }
@@ -427,7 +428,7 @@ onMounted(() => {
                 {{ filter.label }}
               </button>
             </div>
-            <p v-if="competitionFilterUnavailable" class="home-competition-filter__note">
+            <p v-if="matchState === 'success' && competitionFilterUnavailable" class="home-competition-filter__note">
               当前接口未返回赛事类型，League / Arena / Cup / Open 筛选暂不可用。
             </p>
 
@@ -784,14 +785,24 @@ onMounted(() => {
             <p>关注赛事动态、精彩内容与玩家故事。</p>
           </div>
           <div class="home-community-grid">
-            <div v-for="community in communityList" :key="community.id" class="home-community-item">
+            <component
+              :is="community.available && community.url ? 'a' : 'div'"
+              v-for="community in communityList"
+              :key="community.id"
+              class="home-community-item"
+              :class="{ 'home-community-item--disabled': !community.available || !community.url }"
+              :aria-disabled="!community.available || !community.url"
+              v-bind="community.available && community.url
+                ? { href: community.url, target: '_blank', rel: 'noreferrer' }
+                : {}"
+            >
               <span class="home-community-item__icon">{{ community.name.slice(0, 1) }}</span>
               <div>
                 <strong>{{ community.name }}</strong>
                 <span>{{ community.description }}</span>
               </div>
-              <small v-if="!community.available">即将开放</small>
-            </div>
+              <small v-if="!community.available || !community.url">未配置</small>
+            </component>
           </div>
         </div>
       </div>
