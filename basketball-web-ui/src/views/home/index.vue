@@ -50,6 +50,7 @@ type HomeCommunityItem = {
 const router = useRouter()
 
 const PREVIEW_MATCH_COUNT = 3
+const MATCH_QUERY_LIMIT = 10
 const PREVIEW_TEAM_COUNT = 6
 
 const homeCompetitionFilters: Array<{ key: HomeCompetitionFilter; label: string }> = [
@@ -94,12 +95,35 @@ const contentError = ref('')
 const brokenLogos = ref<Record<string, boolean>>({})
 const activeBannerIndex = ref(0)
 const activeCompetitionFilter = ref<HomeCompetitionFilter>('ALL')
-const activeFocusCompetition = ref<HomeCompetitionFilter>('LEAGUE')
 
 const featuredAnnouncement = computed(() => announcements.value[0] ?? null)
 const sideAnnouncements = computed(() => announcements.value.slice(1))
 const activeBanner = computed(() => banners.value[activeBannerIndex.value] ?? null)
 const hasCurrentEvent = computed(() => Boolean(summary.value?.tournamentName || summary.value?.seasonName))
+
+function matchCompetitionType(match: PublicMatchItemVo): Exclude<HomeCompetitionFilter, 'ALL'> | null {
+  const record = match as PublicMatchItemVo & Record<string, unknown>
+  const rawValue = ['seriesType', 'eventType', 'competitionType']
+    .map((key) => record[key])
+    .find((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+  if (!rawValue) return null
+
+  const normalized = rawValue.trim().toUpperCase()
+  if (normalized === 'LEAGUE' || normalized === 'ARENA' || normalized === 'CUP' || normalized === 'OPEN') {
+    return normalized
+  }
+  return null
+}
+
+const hasCompetitionMetadata = computed(() => matches.value.some((match) => matchCompetitionType(match) !== null))
+const competitionFilterUnavailable = computed(
+  () => activeCompetitionFilter.value !== 'ALL' && !hasCompetitionMetadata.value,
+)
+const filteredMatches = computed(() => {
+  if (activeCompetitionFilter.value === 'ALL') return matches.value
+  return matches.value.filter((match) => matchCompetitionType(match) === activeCompetitionFilter.value)
+})
+const visibleMatches = computed(() => filteredMatches.value.slice(0, PREVIEW_MATCH_COUNT))
 
 function bannerAccent(index: number): HomeBannerItem['accent'] {
   return ['red', 'gold', 'blue'][index % 3] as HomeBannerItem['accent']
@@ -117,8 +141,8 @@ function mapBanner(item: PublicHomeBannerResp, index: number): HomeBannerItem | 
 }
 
 function matchCardTone(index: number): 'side' | 'featured' {
-  if (matches.value.length === 1) return 'featured'
-  if (matches.value.length === 2) return index === 0 ? 'featured' : 'side'
+  if (visibleMatches.value.length === 1) return 'featured'
+  if (visibleMatches.value.length === 2) return index === 0 ? 'featured' : 'side'
   return index === 1 ? 'featured' : 'side'
 }
 
@@ -155,6 +179,11 @@ function handleMoreTeams() {
 
 function handleWatchMatch(matchId: string) {
   router.push({ path: '/tournament', query: { tab: 'schedule', matchId } })
+}
+
+function selectCompetitionFilter(filter: HomeCompetitionFilter) {
+  if (filter !== 'ALL' && !hasCompetitionMetadata.value) return
+  activeCompetitionFilter.value = filter
 }
 
 function matchStatus(match: PublicMatchItemVo) {
@@ -213,6 +242,11 @@ function nextBanner() {
 
 function handleCurrentEvent() {
   if (!hasCurrentEvent.value) return
+  const seasonId = summary.value?.seasonId?.trim()
+  if (seasonId) {
+    router.push(`/events/${seasonId}`)
+    return
+  }
   router.push('/tournament')
 }
 
@@ -245,7 +279,7 @@ async function loadMatches() {
   matchState.value = 'loading'
   matchError.value = ''
   try {
-    const res = await getPublicHomeRecentMatches(PREVIEW_MATCH_COUNT)
+    const res = await getPublicHomeRecentMatches(MATCH_QUERY_LIMIT)
     matches.value = res.data ?? []
     matchState.value = matches.value.length ? 'success' : 'empty'
   } catch (err) {
@@ -400,7 +434,8 @@ onMounted(() => {
                 type="button"
                 class="home-competition-filter__item"
                 :class="{ 'home-competition-filter__item--active': activeCompetitionFilter === filter.key }"
-                @click="activeCompetitionFilter = filter.key"
+                :disabled="filter.key !== 'ALL' && !hasCompetitionMetadata"
+                @click="selectCompetitionFilter(filter.key)"
               >
                 {{ filter.label }}
               </button>
@@ -409,9 +444,13 @@ onMounted(() => {
             <div v-if="matchState === 'loading'" class="home-state">加载中...</div>
             <div v-else-if="matchState === 'error'" class="home-state home-state--error">{{ matchError }}</div>
             <div v-else-if="matchState === 'empty'" class="home-state">暂无近期赛事</div>
+            <div v-else-if="competitionFilterUnavailable" class="home-state">
+              当前接口未返回赛事类型，暂无法筛选
+            </div>
+            <div v-else-if="!filteredMatches.length" class="home-state">暂无该赛事类型比赛</div>
             <div v-else class="home-match-grid">
               <div
-                v-for="(match, index) in matches"
+                v-for="(match, index) in visibleMatches"
                 :key="match.matchId"
                 class="home-match-column"
               >
@@ -576,18 +615,6 @@ onMounted(() => {
             <h2 class="home-section-title">本周焦点战队</h2>
           </div>
           <p>运营配置发布后将在此展示。</p>
-        </div>
-        <div class="home-focus-filter" aria-label="焦点战队赛事筛选">
-          <button
-            v-for="filter in homeCompetitionFilters.slice(1)"
-            :key="`focus-${filter.key}`"
-            type="button"
-            class="home-focus-filter__item"
-            :class="{ 'home-focus-filter__item--active': activeFocusCompetition === filter.key }"
-            @click="activeFocusCompetition = filter.key"
-          >
-            {{ filter.label }}
-          </button>
         </div>
         <div class="home-focus-empty home-state">暂无焦点战队</div>
       </div>

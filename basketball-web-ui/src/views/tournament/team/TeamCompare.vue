@@ -88,6 +88,7 @@ const selectedDivision = computed(() =>
 )
 
 const compareCompetitionText = computed(() => {
+  if (!selectedSeasonId.value || !selectedDivisionId.value) return '缺少赛事上下文，暂无法比较'
   const season = displayText(selectedSeason.value?.displayTitle || seasonTitle.value, '公开赛季')
   const divisionLabel = selectedDivision.value
     ? `${v4PlatformLabel(selectedDivision.value.platformCode)} · ${displayText(selectedDivision.value.divisionName)}`
@@ -213,7 +214,7 @@ function pickDefaultSeason(items: V4PublicSeasonItem[]) {
   if (querySeasonId && items.some((item) => String(item.seasonId) === querySeasonId)) {
     return querySeasonId
   }
-  return items[0]?.seasonId ? String(items[0].seasonId) : ''
+  return ''
 }
 
 function pickDefaultDivision(season: V4PublicSeasonItem | undefined) {
@@ -222,7 +223,7 @@ function pickDefaultDivision(season: V4PublicSeasonItem | undefined) {
   if (queryDivisionId && divisions.some((item) => String(item.divisionId) === queryDivisionId)) {
     return queryDivisionId
   }
-  return divisions[0]?.divisionId ? String(divisions[0].divisionId) : ''
+  return ''
 }
 
 async function loadTeamOptions() {
@@ -443,7 +444,10 @@ function getTeamNameSizeClass(name: string) {
             <router-link
               :to="{
                 path: '/tournament',
-                query: selectedDivisionId ? { divisionId: selectedDivisionId } : {},
+                query: {
+                  ...(selectedSeasonId ? { seasonId: selectedSeasonId } : {}),
+                  ...(selectedDivisionId ? { divisionId: selectedDivisionId } : {}),
+                },
               }"
             >
               {{ selectedSeason?.seriesName || '赛事' }}
@@ -620,6 +624,7 @@ function getTeamNameSizeClass(name: string) {
       :side-text="modalSideText"
       :teams="teamOptions"
       :teams-state="teamsLoadState"
+      :show-scope-selectors="false"
       @close="closeSelector"
       @select="handleTeamSelect"
     />

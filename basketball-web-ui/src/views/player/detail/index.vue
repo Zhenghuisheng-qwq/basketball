@@ -5,7 +5,6 @@ import PaperTear from '@/components/common/PaperTear.vue'
 import {
   getPublicPlayerDetail,
   getPublicPlayerHonorPage,
-  getPublicPlayerMatchPage,
   getPublicPlayerSeasonStat,
 } from '@/api/publicPlayer'
 import { getV4PublicMatchList } from '@/api/v4Public'
@@ -19,7 +18,6 @@ import PlayerCareer from './components/PlayerCareer.vue'
 import {
   buildEmptyPlayerDetail,
   mapPublicPlayerHonors,
-  mapPublicPlayerMatch,
   mapPublicPlayerProfile,
   mapPublicPlayerSeasonStats,
   mapSeasonStageOptions,
@@ -63,9 +61,8 @@ async function loadPlayer() {
   loadState.value = 'loading'
   loadError.value = ''
   try {
-    const [detailRes, matchRes, statRes, honorRes] = await Promise.all([
+    const [detailRes, statRes, honorRes] = await Promise.all([
       getPublicPlayerDetail(id),
-      getPublicPlayerMatchPage(id, { currentPage: 1, pageSize: 100 }),
       getPublicPlayerSeasonStat(id),
       getPublicPlayerHonorPage(id, { currentPage: 1, pageSize: 50 }),
     ])
@@ -78,9 +75,7 @@ async function loadPlayer() {
     }
     const profile = mapPublicPlayerProfile(rawDetail, { divisionId: queryDivisionId.value })
     const detail = buildEmptyPlayerDetail(profile)
-    let matches = (matchRes.data?.records ?? []).map((item) =>
-      mapPublicPlayerMatch(item, profile.currentTeamId, profile.currentTeamName),
-    )
+    let matches = detail.allMatches
     const contextDivisionId = queryDivisionId.value || profile.divisionId
     if (contextDivisionId && profile.eventTeamId) {
       try {
@@ -128,7 +123,7 @@ async function loadPlayer() {
           }
         })
       } catch {
-        // keep global match fallback
+        matches = []
       }
     }
     detail.recentMatches = matches.slice(0, 5)
