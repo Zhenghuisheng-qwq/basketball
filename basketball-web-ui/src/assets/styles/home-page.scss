@@ -1553,6 +1553,13 @@
   margin: -8px 0 24px;
 }
 
+.home-competition-filter__note {
+  margin: -12px 0 20px;
+  color: rgba(15, 15, 15, 0.5);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .home-competition-filter__item,
 .home-focus-filter__item {
   padding: 8px 16px;
@@ -1574,6 +1581,29 @@
   border-color: #ff321f;
   background: #ff321f;
   color: #fff;
+}
+
+.home-competition-filter__item:disabled,
+.home-focus-filter__item:disabled,
+.home-competition-filter__item:disabled:hover,
+.home-focus-filter__item:disabled:hover {
+  border-color: rgba(15, 15, 15, 0.12);
+  background: transparent;
+  color: rgba(15, 15, 15, 0.35);
+  cursor: not-allowed;
+  opacity: 0.78;
+}
+
+.home-focus-filter__item:disabled,
+.home-focus-filter__item:disabled:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.section-more:disabled,
+.section-more:disabled:hover {
+  color: rgba(15, 15, 15, 0.34);
+  cursor: not-allowed;
 }
 
 .home-match-card__status {
@@ -1726,6 +1756,10 @@
   color: rgba(255, 255, 255, 0.5);
   font-size: 11px;
   font-weight: 700;
+}
+
+.home-current-event-card__stats:empty {
+  display: none;
 }
 
 .home-focus-section {
