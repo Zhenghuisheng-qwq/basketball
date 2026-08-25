@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>版心对齐测试</title>
+</head>
+<body>
+  <h1>版心对齐调试工具</h1>
+  <p>在首页打开浏览器控制台（F12），然后复制粘贴下面的代码：</p>
+
+  <h2>方法1: 显示所有版心边框</h2>
+  <pre><code>// 为所有 .site-shell 元素添加红色边框
+document.querySelectorAll('.site-shell').forEach((el, index) => {
+  el.style.outline = '3px solid red';
+  el.style.outlineOffset = '-3px';
+  console.log(`版心 ${index + 1}:`, el.className, '宽度:', el.offsetWidth);
+});
+
+// 显示统计信息
+const shells = document.querySelectorAll('.site-shell');
+console.log(`共找到 ${shells.length} 个 .site-shell 元素`);
+console.log('它们的宽度应该相同（除了 grid 布局内的）');
+</code></pre>
+
+  <h2>方法2: 检查版心宽度</h2>
+  <pre><code>// 检查所有版心元素的宽度
+const shells = document.querySelectorAll('.site-shell');
+const widths = {};
+
+shells.forEach((el) => {
+  const width = el.offsetWidth;
+  const className = el.className;
+
+  if (!widths[width]) {
+    widths[width] = [];
+  }
+  widths[width].push(className);
+});
+
+console.table(widths);
+console.log('如果所有版心对齐，应该只有1-2个不同的宽度值');
+</code></pre>
+
+  <h2>方法3: 对比 Hero 和下面区域</h2>
+  <pre><code>// 检查 Hero 内容和下面区域的对齐
+const heroContent = document.querySelector('.hero .site-shell');
+const statsContent = document.querySelector('.stats-bar .site-shell');
+const eventsContent = document.querySelector('.section.site-shell');
+
+console.log('Hero 内容左边距:', heroContent.getBoundingClientRect().left);
+console.log('Stats 内容左边距:', statsContent.getBoundingClientRect().left);
+console.log('Events 内容左边距:', eventsContent.getBoundingClientRect().left);
+console.log('如果这三个值相同，说明已对齐');
+
+// 添加视觉标记
+[heroContent, statsContent, eventsContent].forEach((el, i) => {
+  const marker = document.createElement('div');
+  marker.style.cssText = `
+    position: fixed;
+    left: ${el.getBoundingClientRect().left}px;
+    top: ${100 + i * 30}px;
+    width: 10px;
+    height: 20px;
+    background: ${['red', 'green', 'blue'][i]};
+    z-index: 9999;
+    pointer-events: none;
+  `;
+  marker.textContent = ['Hero', 'Stats', 'Events'][i];
+  document.body.appendChild(marker);
+});
+</code></pre>
+
+  <h2>方法4: 快速诊断</h2>
+  <pre><code>// 一键检查所有版心对齐情况
+(() => {
+  const shells = Array.from(document.querySelectorAll('.site-shell'));
+  const leftPositions = shells.map(el => ({
+    element: el.className,
+    left: el.getBoundingClientRect().left,
+    width: el.offsetWidth
+  }));
+
+  console.group('版心对齐检查');
+  console.table(leftPositions);
+
+  const uniqueLefts = [...new Set(leftPositions.map(p => p.left))];
+
+  if (uniqueLefts.length === 1) {
+    console.log('✅ 所有版心完美对齐！');
+  } else {
+    console.warn('⚠️ 发现不对齐的版心:');
+    console.log('不同的左边距值:', uniqueLefts);
+  }
+  console.groupEnd();
+})();
+</code></pre>
+
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      color: #c41e3a;
+    }
+
+    h2 {
+      color: #333;
+      margin-top: 30px;
+      border-bottom: 2px solid #c41e3a;
+      padding-bottom: 10px;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    code {
+      font-family: 'Consolas', 'Monaco', monospace;
+    }
+
+    p {
+      font-size: 16px;
+      line-height: 1.8;
+      color: #555;
+    }
+  </style>
+</body>
+</html>

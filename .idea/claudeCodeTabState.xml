@@ -6,10 +6,10 @@
         <entry key="0">
           <value>
             <TabSessionState>
-              <option name="provider" value="codex" />
-              <option name="sessionId" value="01a032be-0733-7e02-babe-15f20ef5840f" />
+              <option name="provider" value="claude" />
+              <option name="sessionId" value="5b53dd11-9812-480f-8e20-04fdc610f3ef" />
               <option name="cwd" value="D:\code\dz\basketball\scaffolding-v2" />
-              <option name="model" value="gpt-5.6-sol" />
+              <option name="model" value="claude-opus-4-8[1m]" />
               <option name="permissionMode" value="bypassPermissions" />
             </TabSessionState>
           </value>
