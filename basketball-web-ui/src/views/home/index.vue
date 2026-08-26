@@ -318,7 +318,6 @@ onMounted(() => {
     <section id="matches" class="site-section home-match-section">
       <div class="site-shell home-match-shell">
         <div class="home-match-paper paper-band paper-band-light">
-          <TornEdge position="top" tone="light" variant="sharp" />
           <div class="home-match-inner">
             <div class="section-head section-head-dark home-match-header">
               <div>

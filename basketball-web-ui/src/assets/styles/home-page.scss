@@ -48,7 +48,8 @@
 .home-team-section,
 .home-combined-section,
 .home-data-focus-section,
-.home-announce-section {
+.home-announce-section,
+.home-community-section {
   background: #000;
 }
 
@@ -60,7 +61,6 @@
   overflow-y: visible;
 }
 
-.home-match-paper,
 .home-announce-section .paper-band {
   padding-top: clamp(18px, 1.8vw, 28px);
 }
@@ -116,7 +116,7 @@
 }
 
 .home-match-section {
-  margin-top: clamp(48px, 4vw, 72px);
+  margin-top: -2px;
   margin-bottom: 0;
   background: #000;
 }
@@ -1719,6 +1719,8 @@
 }
 
 .home-hero {
+  position: relative;
+  z-index: 2;
   width: 100%;
   background: #000;
   overflow: hidden;
@@ -1743,6 +1745,22 @@
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
+}
+
+.home-hero__tear {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: clamp(72px, 8vw, 120px);
+  margin: 0;
+  object-fit: cover;
+  object-position: center 71.5%;
+  pointer-events: none;
+  user-select: none;
 }
 
 .home-hero__sr-only {
@@ -2184,7 +2202,14 @@
 
 .home-community-section {
   position: relative;
+  color: #fff;
+}
+
+.home-community-paper {
+  position: relative;
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
   padding-block: clamp(42px, 5vw, 72px);
   color: #fff;
   background:

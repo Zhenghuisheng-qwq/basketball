@@ -43,6 +43,13 @@ function nextBanner() {
           fetchpriority="high"
           draggable="false"
         />
+        <img
+          class="home-hero__tear"
+          src="@/assets/icon/sizhi.png"
+          alt=""
+          aria-hidden="true"
+          draggable="false"
+        />
         <h1 id="home-hero-title" class="home-hero__sr-only">CNPA</h1>
 
         <div

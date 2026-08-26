@@ -32,6 +32,7 @@ function openLink(card: CommunityCard) {
 <template>
   <section class="site-section home-community-section" aria-labelledby="home-community-title">
     <div class="site-shell home-community-shell">
+      <div class="home-community-paper">
       <div class="home-community-inner">
         <header class="home-community-header">
           <h2 id="home-community-title" class="home-community-title">加入 CNPA</h2>
@@ -66,6 +67,7 @@ function openLink(card: CommunityCard) {
             <small>{{ card.action }} →</small>
           </button>
         </div>
+      </div>
       </div>
     </div>
   </section>
