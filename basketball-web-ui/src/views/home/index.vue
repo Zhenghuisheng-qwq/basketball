@@ -111,6 +111,16 @@ const currentSeasonId = computed(() => {
   return currentEventCards.value.find((card) => card.seasonId)?.seasonId || ''
 })
 
+const dataFocusDefaultSeries = computed(() => {
+  const order: Array<Exclude<HomeCompetitionFilter, 'ALL'>> = ['LEAGUE', 'CUP', 'ARENA', 'OPEN']
+  for (const code of order) {
+    if (currentEventCards.value.some((card) => card.seriesCode === code && card.seasonId)) {
+      return code
+    }
+  }
+  return 'LEAGUE' as const
+})
+
 function emptyEventCard(template: Pick<HomeEventCard, 'seriesCode' | 'title' | 'icon'>): HomeEventCard {
   return {
     ...template,
@@ -633,7 +643,7 @@ onMounted(() => {
       </div>
     </section>
 
-    <HomeDataFocus />
+    <HomeDataFocus :default-series-code="dataFocusDefaultSeries" />
 
     <HomeCommunity />
 

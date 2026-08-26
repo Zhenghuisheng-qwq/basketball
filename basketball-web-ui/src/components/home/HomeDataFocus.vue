@@ -8,7 +8,7 @@ import iconPts from '@/assets/icon/home/basketball1.png'
 import iconAst from '@/assets/icon/home/basketball2.png'
 import iconReb from '@/assets/icon/home/basketball3.png'
 
-type SeriesFilter = '' | 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'
+type SeriesFilter = 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'
 type SectionState = 'loading' | 'success' | 'empty' | 'error'
 
 type LeaderCard = {
@@ -29,15 +29,19 @@ const markIcons: Record<string, string> = {
   REB: iconReb,
 }
 
+const props = defineProps<{
+  defaultSeriesCode?: SeriesFilter
+}>()
+
 const seriesFilters: Array<{ key: SeriesFilter; label: string }> = [
-  { key: '', label: '全部赛事' },
   { key: 'LEAGUE', label: 'League' },
   { key: 'ARENA', label: 'Arena' },
   { key: 'CUP', label: 'Cup' },
   { key: 'OPEN', label: 'Open' },
 ]
 
-const seriesFilter = ref<SeriesFilter>('')
+const seriesFilter = ref<SeriesFilter>('LEAGUE')
+const userPickedSeries = ref(false)
 const filterOpen = ref(false)
 const state = ref<SectionState>('loading')
 const errorMessage = ref('')
@@ -49,7 +53,7 @@ const filterLabel = computed(() =>
   seriesFilters.find((item) => item.key === seriesFilter.value)?.label || '赛事筛选',
 )
 
-const resolvedSeriesCode = computed(() => seriesFilter.value || 'LEAGUE')
+const resolvedSeriesCode = computed(() => seriesFilter.value)
 
 const featuredRecord = computed(() => {
   if (!featured.value) return '--'
@@ -119,9 +123,21 @@ async function load() {
 }
 
 function selectSeries(key: SeriesFilter) {
+  userPickedSeries.value = true
   seriesFilter.value = key
   filterOpen.value = false
 }
+
+watch(
+  () => props.defaultSeriesCode,
+  (code) => {
+    if (userPickedSeries.value) return
+    if (code === 'LEAGUE' || code === 'CUP' || code === 'ARENA' || code === 'OPEN') {
+      seriesFilter.value = code
+    }
+  },
+  { immediate: true },
+)
 
 watch(
   resolvedSeriesCode,
@@ -156,7 +172,7 @@ watch(
               <div v-if="filterOpen" class="data-focus-filter__menu" role="listbox">
                 <button
                   v-for="item in seriesFilters"
-                  :key="item.key || 'ALL'"
+                  :key="item.key"
                   type="button"
                   role="option"
                   :aria-selected="seriesFilter === item.key"
