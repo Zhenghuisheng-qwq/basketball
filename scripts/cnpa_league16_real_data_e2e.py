@@ -40,11 +40,12 @@ WEB = fs.WEB
 req = fs.req
 as_id = fs.as_id
 
-SEASON_NAME = "2026 E2E S1"
-SEASON_TITLE = "CNPA League 2026 E2E S1"
-DIV_NAME = "5V5 E2E Division"
+SEASON_NAME = "2026 E2E S2"
+SEASON_TITLE = "CNPA League 2026 E2E S2"
+DIV_NAME = "5V5 E2E Division S2"
 SERIES_ID = 1
 RNG_SEED = 20260826
+fs.MARKER = "E2E_LEAGUE16_2026S2"
 MARKER = fs.MARKER
 
 REPORT = {
@@ -156,8 +157,8 @@ def create_division(token: str, season_id: int) -> int:
         "lineupMinCount": 5,
         "lineupMaxCount": 8,
         "registrationStartTime": "2026-08-01 00:00:00",
-        "registrationEndTime": "2026-08-26 23:50:00",
-        "matchStartTime": "2026-08-26 23:50:00",
+        "registrationEndTime": "2026-08-28 23:50:00",
+        "matchStartTime": "2026-08-28 23:50:00",
         "matchEndTime": "2026-09-30 23:59:59",
         "sortOrder": 1,
     }
@@ -177,8 +178,8 @@ def align_time_windows(token: str, season_id: int, did: int) -> None:
     dr = req(f"{ADMIN}/basket/v4/division/{did}", "PUT", {
         "id": did,
         "registrationStartTime": "2026-08-01 00:00:00",
-        "registrationEndTime": "2026-08-26 23:50:00",
-        "matchStartTime": "2026-08-26 23:50:00",
+        "registrationEndTime": "2026-08-28 23:50:00",
+        "matchStartTime": "2026-08-28 23:50:00",
         "matchEndTime": "2026-09-30 23:59:59",
     }, token)
     log(f"division window {dr.get('code')} {dr.get('msg')}")
@@ -258,10 +259,80 @@ def assign_schedule(token: str, stage_id: int, start: date, end: date, prefer_we
     log(f"  scheduled {assigned}/{len(units)} units by roundNo {span}")
 
 
-def generate_and_publish(token: str, stage_id: int, start: date, end: date, prefer_week_tail: bool = False) -> None:
+def _as_date(value) -> date | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    text = str(value)
+    return date.fromisoformat(text[:10])
+
+
+def audit_round_matchdays(stage_id: int, label: str, *, strict: bool = False) -> bool:
+    rows = fs.db_query(
+        "SELECT round_no, COUNT(*) cnt, MIN(DATE(match_time)) dmin, MAX(DATE(match_time)) dmax "
+        "FROM basket_match WHERE stage_id=%s AND is_delete=0 "
+        "AND (series_id IS NULL OR series_id=0) AND match_time IS NOT NULL "
+        "GROUP BY round_no ORDER BY round_no",
+        (stage_id,),
+    )
+    log(f"==== {label} ====")
+    by_round: dict[int, tuple[int, date, date]] = {}
+    for row in rows:
+        round_no = int(row["round_no"])
+        cnt = int(row["cnt"])
+        dmin = _as_date(row["dmin"])
+        dmax = _as_date(row["dmax"])
+        by_round[round_no] = (cnt, dmin, dmax)
+        log(f"R{round_no}  {cnt}  {dmin}  {dmax}")
+    mixed = fs.db_query(
+        "SELECT DATE(match_time) d, GROUP_CONCAT(DISTINCT round_no ORDER BY round_no) rounds, "
+        "COUNT(DISTINCT round_no) n "
+        "FROM basket_match WHERE stage_id=%s AND is_delete=0 "
+        "AND (series_id IS NULL OR series_id=0) AND match_time IS NOT NULL "
+        "GROUP BY DATE(match_time) HAVING n > 1 ORDER BY d",
+        (stage_id,),
+    )
+    crossed = []
+    prev = None
+    for round_no in sorted(by_round):
+        cnt, dmin, dmax = by_round[round_no]
+        if prev is not None:
+            _pcnt, _pmin, pmax = by_round[prev]
+            if pmax is not None and dmin is not None and not (pmax < dmin):
+                crossed.append(f"R{prev}..R{round_no} {pmax} !< {dmin}")
+        prev = round_no
+    last3 = {13, 14, 15}
+    if last3 & set(by_round):
+        log(f"{label} last rounds:")
+        for round_no in (13, 14, 15):
+            if round_no in by_round:
+                cnt, dmin, dmax = by_round[round_no]
+                log(f"  R{round_no} {cnt} {dmin}..{dmax}")
+    ok = not mixed and not crossed
+    if mixed:
+        log(f"{label} MIXED DAYS: {mixed}")
+    if crossed:
+        log(f"{label} BOUNDARY FAIL: {crossed}")
+    record(
+        f"boundary.{label}",
+        ok,
+        f"rounds={len(by_round)} mixed={len(mixed)} crossed={crossed}",
+        "P1",
+    )
+    if strict and not ok:
+        raise RuntimeError(f"{label} round matchday boundary failed: mixed={mixed} crossed={crossed}")
+    return ok
+
+
+def generate_and_publish(token: str, stage_id: int, start: date, end: date, prefer_week_tail: bool = False,
+                         audit_auto: bool = False) -> None:
     if e2e.is_published(stage_id):
         log(f"  stage {stage_id} already published")
         assign_schedule(token, stage_id, start, end, prefer_week_tail=prefer_week_tail)
+        audit_round_matchdays(stage_id, "E2E MANUAL ASSIGN AFTERWARD", strict=False)
         return
     gen = e2e.generate_only(token, stage_id, init=True)
     if gen.get("code") != 200:
@@ -274,7 +345,10 @@ def generate_and_publish(token: str, stage_id: int, start: date, end: date, pref
             gen = e2e.generate_only(token, stage_id, init=True)
         if gen.get("code") != 200:
             raise RuntimeError(f"gen-{stage_id}: {gen}")
+    if audit_auto:
+        audit_round_matchdays(stage_id, "GENERATED AUTO SCHEDULE", strict=True)
     assign_schedule(token, stage_id, start, end, prefer_week_tail=prefer_week_tail)
+    audit_round_matchdays(stage_id, "E2E MANUAL ASSIGN AFTERWARD", strict=audit_auto)
     pub = req(f"{ADMIN}/basket/v4/admin/stages/{stage_id}/publish-schedule", "POST", token=token)
     if pub.get("code") != 200 and "已" not in str(pub.get("msg") or ""):
         raise RuntimeError(f"publish {stage_id}: {pub}")
@@ -789,7 +863,7 @@ def main() -> int:
     rr = next(s for s in st if (s.get("competitionFormat") or "") == "ROUND_ROBIN")
     po = next(s for s in st if (s.get("competitionFormat") or "") == "SINGLE_ELIMINATION")
     record("league.stages", True, f"rr={rr.get('id')} po={po.get('id')}")
-    generate_and_publish(token, int(rr["id"]), date(2026, 8, 26), date(2026, 8, 27))
+    generate_and_publish(token, int(rr["id"]), date(2026, 8, 26), date(2026, 8, 27), audit_auto=True)
     REPORT["lifecycle"]["Schedule"] = "PASS"
     rr_n = count(
         "SELECT COUNT(*) c FROM basket_match WHERE stage_id=%s AND is_delete=0 AND (series_id IS NULL OR series_id=0)",

@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-08-26T19:38:59",
+  "startedAt": "2026-08-27T02:20:46",
   "lifecycle": {
     "Season": "PASS",
     "Division": "PASS",
@@ -17,71 +17,71 @@
     "Champion": "PASS"
   },
   "dataset": {
-    "seasonId": 1,
-    "divisionId": 1,
+    "seasonId": 2,
+    "divisionId": 2,
     "eventTeams": [
       {
-        "id": "17",
+        "id": "33",
         "name": "E2E-L01"
       },
       {
-        "id": "18",
+        "id": "34",
         "name": "E2E-L02"
       },
       {
-        "id": "19",
+        "id": "35",
         "name": "E2E-L03"
       },
       {
-        "id": "20",
+        "id": "36",
         "name": "E2E-L04"
       },
       {
-        "id": "21",
+        "id": "37",
         "name": "E2E-L05"
       },
       {
-        "id": "22",
+        "id": "38",
         "name": "E2E-L06"
       },
       {
-        "id": "23",
+        "id": "39",
         "name": "E2E-L07"
       },
       {
-        "id": "24",
+        "id": "40",
         "name": "E2E-L08"
       },
       {
-        "id": "25",
+        "id": "41",
         "name": "E2E-L09"
       },
       {
-        "id": "26",
+        "id": "42",
         "name": "E2E-L10"
       },
       {
-        "id": "27",
+        "id": "43",
         "name": "E2E-L11"
       },
       {
-        "id": "28",
+        "id": "44",
         "name": "E2E-L12"
       },
       {
-        "id": "29",
+        "id": "45",
         "name": "E2E-L13"
       },
       {
-        "id": "30",
+        "id": "46",
         "name": "E2E-L14"
       },
       {
-        "id": "31",
+        "id": "47",
         "name": "E2E-L15"
       },
       {
-        "id": "32",
+        "id": "48",
         "name": "E2E-L16"
       }
     ],
@@ -95,7 +95,7 @@
     "teamStat": 16,
     "standing": 24,
     "champion": {
-      "w": 17,
+      "w": 33,
       "n": "E2E-L01"
     }
   },
@@ -107,8 +107,8 @@
         "win": 15,
         "lose": 0,
         "points": 30,
-        "diff": 258,
-        "eventTeamId": "17"
+        "diff": 366,
+        "eventTeamId": "33"
       },
       {
         "rank": 2,
@@ -116,8 +116,8 @@
         "win": 14,
         "lose": 1,
         "points": 29,
-        "diff": 311,
-        "eventTeamId": "18"
+        "diff": 244,
+        "eventTeamId": "34"
       },
       {
         "rank": 3,
@@ -125,8 +125,8 @@
         "win": 13,
         "lose": 2,
         "points": 28,
-        "diff": 156,
-        "eventTeamId": "19"
+        "diff": 231,
+        "eventTeamId": "35"
       },
       {
         "rank": 4,
@@ -134,8 +134,8 @@
         "win": 12,
         "lose": 3,
         "points": 27,
-        "diff": 182,
-        "eventTeamId": "20"
+        "diff": 249,
+        "eventTeamId": "36"
       },
       {
         "rank": 5,
@@ -143,8 +143,8 @@
         "win": 11,
         "lose": 4,
         "points": 26,
-        "diff": 116,
-        "eventTeamId": "21"
+        "diff": 57,
+        "eventTeamId": "37"
       },
       {
         "rank": 6,
@@ -152,8 +152,8 @@
         "win": 10,
         "lose": 5,
         "points": 25,
-        "diff": 130,
-        "eventTeamId": "22"
+        "diff": 104,
+        "eventTeamId": "38"
       },
       {
         "rank": 7,
@@ -161,8 +161,8 @@
         "win": 9,
         "lose": 6,
         "points": 24,
-        "diff": 72,
-        "eventTeamId": "23"
+        "diff": -3,
+        "eventTeamId": "39"
       },
       {
         "rank": 8,
@@ -170,8 +170,8 @@
         "win": 8,
         "lose": 7,
         "points": 23,
-        "diff": 82,
-        "eventTeamId": "24"
+        "diff": 22,
+        "eventTeamId": "40"
       },
       {
         "rank": 9,
@@ -179,8 +179,8 @@
         "win": 7,
         "lose": 8,
         "points": 22,
-        "diff": 74,
-        "eventTeamId": "25"
+        "diff": -26,
+        "eventTeamId": "41"
       },
       {
         "rank": 10,
@@ -188,8 +188,8 @@
         "win": 6,
         "lose": 9,
         "points": 21,
-        "diff": -94,
-        "eventTeamId": "26"
+        "diff": 37,
+        "eventTeamId": "42"
       },
       {
         "rank": 11,
@@ -197,8 +197,8 @@
         "win": 5,
         "lose": 10,
         "points": 20,
-        "diff": -114,
-        "eventTeamId": "27"
+        "diff": -138,
+        "eventTeamId": "43"
       },
       {
         "rank": 12,
@@ -206,8 +206,8 @@
         "win": 4,
         "lose": 11,
         "points": 19,
-        "diff": -162,
-        "eventTeamId": "28"
+        "diff": -159,
+        "eventTeamId": "44"
       },
       {
         "rank": 13,
@@ -215,8 +215,8 @@
         "win": 3,
         "lose": 12,
         "points": 18,
-        "diff": -191,
-        "eventTeamId": "29"
+        "diff": -189,
+        "eventTeamId": "45"
       },
       {
         "rank": 14,
@@ -224,8 +224,8 @@
         "win": 2,
         "lose": 13,
         "points": 17,
-        "diff": -220,
-        "eventTeamId": "30"
+        "diff": -182,
+        "eventTeamId": "46"
       },
       {
         "rank": 15,
@@ -233,8 +233,8 @@
         "win": 1,
         "lose": 14,
         "points": 16,
-        "diff": -258,
-        "eventTeamId": "31"
+        "diff": -289,
+        "eventTeamId": "47"
       },
       {
         "rank": 16,
@@ -242,8 +242,8 @@
         "win": 0,
         "lose": 15,
         "points": 15,
-        "diff": -342,
-        "eventTeamId": "32"
+        "diff": -324,
+        "eventTeamId": "48"
       }
     ]
   },
@@ -296,51 +296,51 @@
         "code": 200,
         "data": {
           "seriesCode": "LEAGUE",
-          "seasonId": "1",
-          "divisionId": "1",
+          "seasonId": "2",
+          "divisionId": "2",
           "pointsLeader": {
-            "eventPlayerId": "81",
+            "eventPlayerId": "161",
             "sourcePlayerId": "2099111512001001000",
             "playerName": "E2E-L01-P1",
             "avatarUrl": "https://basketball-1453992653.cos.ap-shanghai.myqcloud.com/basketball/public/2026/07/25/f1c25e244e6a42cf976f2d5935f676b5.png",
-            "eventTeamId": "17",
+            "eventTeamId": "33",
             "teamName": "E2E-L01",
             "teamLogoUrl": null,
             "matchCount": 28,
-            "value": 43.93
+            "value": 44.04
           },
           "assistsLeader": {
-            "eventPlayerId": "87",
+            "eventPlayerId": "167",
             "sourcePlayerId": "2099111512001001101",
             "playerName": "E2E-L02-P2",
             "avatarUrl": "https://basketball-1453992653.cos.ap-shanghai.myqcloud.com/basketball/public/2026/07/26/e1d4f3e961f644778e5c1aa620d49f03.png",
-            "eventTeamId": "18",
+            "eventTeamId": "34",
             "teamName": "E2E-L02",
             "teamLogoUrl": null,
             "matchCount": 28,
-            "value": 13.96
+            "value": 14.29
           },
           "reboundsLeader": {
-            "eventPlayerId": "93",
+            "eventPlayerId": "173",
             "sourcePlayerId": "2099111512001001202",
             "playerName": "E2E-L03-P3",
             "avatarUrl": "https://basketball-1453992653.cos.ap-shanghai.myqcloud.com/basketball/public/2026/07/25/358314f1d5fd4bc0b1e9a83e84ab68d5.png",
-            "eventTeamId": "19",
+            "eventTeamId": "35",
             "teamName": "E2E-L03",
             "teamLogoUrl": null,
             "matchCount": 22,
-            "value": 15.64
+            "value": 15.91
           },
           "focusTeam": {
-            "eventTeamId": "17",
+            "eventTeamId": "33",
             "teamName": "E2E-L01",
             "teamLogoUrl": null,
-            "weekMatchCount": 16,
-            "weekWinCount": 12,
+            "weekMatchCount": 18,
+            "weekWinCount": 14,
             "weekLoseCount": 4,
-            "weekPointDiff": 117,
-            "weekAvgPointDiff": 7.3,
-            "weekWinRate": 0.75,
+            "weekPointDiff": 175,
+            "weekAvgPointDiff": 9.7,
+            "weekWinRate": 0.7778,
             "recentForm": [
               "W",
               "W",
@@ -354,7 +354,7 @@
       "seasonList": {
         "http": 200,
         "code": 200,
-        "n": 1
+        "n": 2
       }
     }
   },
@@ -371,7 +371,17 @@
     },
     "league.stages": {
       "ok": true,
-      "detail": "rr=4 po=5",
+      "detail": "rr=9 po=10",
+      "severity": "P1"
+    },
+    "boundary.GENERATED AUTO SCHEDULE": {
+      "ok": true,
+      "detail": "rounds=15 mixed=0 crossed=[]",
+      "severity": "P1"
+    },
+    "boundary.E2E MANUAL ASSIGN AFTERWARD": {
+      "ok": true,
+      "detail": "rounds=0 mixed=0 crossed=[]",
       "severity": "P1"
     },
     "rr.120": {
@@ -401,7 +411,7 @@
     },
     "champion.L01": {
       "ok": true,
-      "detail": "[{'w': 17, 'n': 'E2E-L01'}]",
+      "detail": "[{'w': 33, 'n': 'E2E-L01'}]",
       "severity": "P0"
     },
     "division.finish": {

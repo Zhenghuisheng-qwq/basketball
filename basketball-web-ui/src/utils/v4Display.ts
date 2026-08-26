@@ -143,6 +143,24 @@ export function v4MatchSeriesStatusLabel(status: string | null | undefined): str
   }
 }
 
+/** 系列赛详情 Hero 专用，不复用单场 Match 状态文案 */
+export function v4SeriesHeroStatusLabel(status: string | null | undefined): string {
+  switch ((status || '').toUpperCase()) {
+    case 'PENDING':
+    case 'READY':
+    case 'SCHEDULED':
+      return '系列赛未开始'
+    case 'RUNNING':
+      return '系列赛进行中'
+    case 'COMPLETED':
+      return '系列赛已结束'
+    case 'CANCELLED':
+      return '系列赛已取消'
+    default:
+      return v4MatchSeriesStatusLabel(status)
+  }
+}
+
 export function v4PublicRoundLabel(name?: string | null, roundNo?: number | null): string {
   const raw = String(name || '').trim()
   const upper = raw.toUpperCase()

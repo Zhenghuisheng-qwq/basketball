@@ -37,5 +37,17 @@ public class V4PublicMatchPlayerStatItemResp {
 
     private Integer foul;
 
+    private Integer fieldGoalMade;
+
+    private Integer fieldGoalAttempt;
+
+    private Integer threePointMade;
+
+    private Integer threePointAttempt;
+
+    private Integer freeThrowMade;
+
+    private Integer freeThrowAttempt;
+
     private BigDecimal minutes;
 }

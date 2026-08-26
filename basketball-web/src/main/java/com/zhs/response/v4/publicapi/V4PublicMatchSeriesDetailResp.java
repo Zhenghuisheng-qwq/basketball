@@ -20,11 +20,19 @@ public class V4PublicMatchSeriesDetailResp {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long homeEventTeamId;
     private String homeTeamName;
+    private String homeTeamShortName;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long homeTeamLogoFileId;
+    private String homeTeamLogoUrl;
     private String homeSourceType;
     private String homeSourceDisplay;
     @JsonSerialize(using = ToStringSerializer.class)
     private Long awayEventTeamId;
     private String awayTeamName;
+    private String awayTeamShortName;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long awayTeamLogoFileId;
+    private String awayTeamLogoUrl;
     private String awaySourceType;
     private String awaySourceDisplay;
     private java.time.LocalDate scheduledDate;
@@ -46,5 +54,14 @@ public class V4PublicMatchSeriesDetailResp {
     private String winnerTeamName;
     private Boolean finalStage;
     private String resultLabel;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long seasonId;
+    private String seasonName;
+    private String eventSeriesCode;
+    private String eventSeriesName;
+    private String divisionName;
+    private String gameMode;
     private List<V4PublicMatchSeriesGameResp> games;
+    private List<V4PublicMatchTeamStatItemResp> teamStats;
+    private List<V4PublicMatchPlayerStatItemResp> playerStats;
 }

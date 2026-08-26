@@ -81,6 +81,18 @@ const router = createRouter({
 
     },
 
+    {
+
+      path: '/events/match-series/:seriesId',
+
+      name: 'V4MatchSeriesDetail',
+
+      component: () => import('@/views/events/v4/V4MatchDetailPage.vue'),
+
+      meta: { title: '系列赛详情' },
+
+    },
+
         {
 
       path: '/data',
