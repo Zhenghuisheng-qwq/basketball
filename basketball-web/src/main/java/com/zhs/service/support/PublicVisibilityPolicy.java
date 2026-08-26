@@ -30,4 +30,14 @@ public final class PublicVisibilityPolicy {
         }
         return batchPublished;
     }
+
+    /**
+     * Remaining unplayed child games of an officially finished MatchSeries
+     * must not enter public upcoming / recent schedule lists.
+     * Official results of that series stay visible.
+     */
+    public static boolean keepUnplayedChildInPublicSchedule(boolean seriesOfficiallyOver,
+                                                            boolean matchHasOfficialResult) {
+        return !seriesOfficiallyOver || matchHasOfficialResult;
+    }
 }

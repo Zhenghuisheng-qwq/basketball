@@ -36,6 +36,7 @@ import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicSupport;
 import com.zhs.service.support.HomeRealtimeFocusSupport;
 import com.zhs.service.support.V4CurrentSeasonSelector;
+import com.zhs.service.support.V4MatchSeriesDisplaySupport;
 import com.zhs.service.v4.IBasketV4PublicService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -86,6 +87,8 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
     private BasketEventPlayerDao eventPlayerDao;
     @Resource
     private BasketEventTeamDao eventTeamDao;
+    @Resource
+    private V4MatchSeriesDisplaySupport matchSeriesDisplaySupport;
 
     @Override
     public PublicHomeVo getHome() {
@@ -137,6 +140,7 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
                 .orderByAsc(BasketV4Match::getRoundNo)
                 .orderByAsc(BasketV4Match::getId)
                 .last("limit " + size));
+        upcoming = matchSeriesDisplaySupport.excludeRemainingUnplayed(upcoming);
 
         List<BasketV4Match> finished = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()
                 .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)

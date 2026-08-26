@@ -1153,7 +1153,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 kept.add(match);
             }
         }
-        return kept;
+        return matchSeriesDisplaySupport.excludeRemainingUnplayed(kept);
     }
 
     private List<V4PublicMatchItemResp> enrichMatchItems(List<BasketV4Match> matches) {

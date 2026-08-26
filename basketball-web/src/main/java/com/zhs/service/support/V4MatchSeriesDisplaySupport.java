@@ -374,6 +374,39 @@ public class V4MatchSeriesDisplaySupport {
         return snapshot != null && PublicVisibilityPolicy.isVersionedWorkflow(snapshot.getRosterWorkflowMode());
     }
 
+    public List<BasketV4Match> excludeRemainingUnplayed(List<BasketV4Match> matches) {
+        if (CollectionUtils.isEmpty(matches)) {
+            return matches;
+        }
+        Set<Long> seriesIds = new HashSet<>();
+        for (BasketV4Match match : matches) {
+            if (match != null && match.getSeriesId() != null) {
+                seriesIds.add(match.getSeriesId());
+            }
+        }
+        Map<Long, BasketMatchSeries> seriesMap = loadSeriesMap(seriesIds);
+        List<BasketV4Match> kept = new ArrayList<>();
+        for (BasketV4Match match : matches) {
+            if (match == null) {
+                continue;
+            }
+            BasketMatchSeries series = match.getSeriesId() == null ? null : seriesMap.get(match.getSeriesId());
+            if (!isRemainingUnplayedChild(match, series)) {
+                kept.add(match);
+            }
+        }
+        return kept;
+    }
+
+    public boolean isRemainingUnplayedChild(BasketV4Match match, BasketMatchSeries series) {
+        if (match == null || series == null) {
+            return false;
+        }
+        boolean seriesOver = "COMPLETED".equals(series.getSeriesStatus())
+                || "FORFEIT".equalsIgnoreCase(String.valueOf(series.getResolutionType()));
+        return !PublicVisibilityPolicy.keepUnplayedChildInPublicSchedule(seriesOver, isOfficialResult(match));
+    }
+
     public boolean isPubliclyVisibleMatch(BasketV4Match match) {
         if (match == null) {
             return false;
