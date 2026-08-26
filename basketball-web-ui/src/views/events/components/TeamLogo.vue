@@ -5,7 +5,7 @@ import { initials } from '@/utils/publicDisplay'
 
 const props = defineProps<{
   team: Team
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'schedule'
 }>()
 
 const imageError = ref(false)
@@ -56,6 +56,11 @@ function handleError() {
   height: 48px;
 }
 
+.team-logo-schedule {
+  width: 48px;
+  height: 48px;
+}
+
 .team-logo-lg {
   width: 64px;
   height: 64px;
@@ -72,7 +77,7 @@ function handleError() {
   height: 100%;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(225, 6, 19, 0.35);
   background: #151515;
   color: #fff;
   font-size: 12px;
@@ -81,5 +86,9 @@ function handleError() {
 
 .team-logo-sm .team-logo-fallback {
   font-size: 10px;
+}
+
+.team-logo-schedule .team-logo-fallback {
+  font-size: 14px;
 }
 </style>

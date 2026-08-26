@@ -582,9 +582,9 @@ onMounted(() => {
               </div>
 
               <div class="combined-right">
-                <div class="combined-column-heading">
-                  <span class="home-kicker">CURRENT EVENTS</span>
+                <div class="combined-column-heading combined-column-heading--news">
                   <h2>当前赛事</h2>
+                  <span class="home-kicker">CURRENT EVENTS</span>
                 </div>
 
                 <div class="current-events-grid">

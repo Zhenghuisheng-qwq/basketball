@@ -1,7 +1,6 @@
 .home-page {
   width: 100%;
   background: #050505;
-  overflow-x: hidden;
 }
 
 /* 首页所有内容区域必须走 site-shell 作为顶层容器 */
@@ -564,12 +563,26 @@
   box-sizing: border-box;
 }
 
+.data-focus-stack {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(36px, 3.2vw, 48px);
+}
+
+.data-focus-box {
+  min-width: 0;
+}
+
+.data-focus-box--featured .data-focus-header {
+  margin-bottom: 22px;
+}
+
 .data-focus-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 22px;
+  margin-bottom: 20px;
 }
 
 .data-focus-filter {
@@ -580,20 +593,23 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
-  min-width: 120px;
-  padding: 8px 14px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 4px;
-  background: #fff;
-  color: #111;
+  gap: 1px;
+  min-width: 0;
+  padding: 4px 2px 2px;
+  border: 0;
+  background: transparent;
+  color: #888;
   font: inherit;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
 
   small {
     color: #e10613;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 }
 
@@ -602,17 +618,17 @@
   top: calc(100% + 6px);
   right: 0;
   z-index: 4;
-  min-width: 140px;
+  min-width: 128px;
   padding: 6px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 4px;
   background: #fff;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
 
   button {
     display: block;
     width: 100%;
-    padding: 8px 10px;
+    padding: 7px 10px;
     border: 0;
     background: transparent;
     color: #222;
@@ -630,26 +646,27 @@
   }
 }
 
-.data-focus-grid {
+.data-leader-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.35fr);
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 20px;
 }
 
-.data-leader-card,
-.data-featured-card {
+.data-leader-card {
   position: relative;
-  min-height: 220px;
-  padding: 20px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 20px 18px 18px;
   overflow: hidden;
   background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 8px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
-.data-leader-card h3,
-.data-featured-card h3 {
+.data-leader-card h3 {
   margin: 0;
   color: #111;
   font-size: 18px;
@@ -658,7 +675,7 @@
 
 .data-leader-card strong {
   display: block;
-  margin-top: 18px;
+  margin-top: 14px;
   color: #e10613;
   font-size: clamp(40px, 3.6vw, 56px);
   line-height: 0.95;
@@ -674,24 +691,25 @@
   height: 86px;
   object-fit: contain;
   pointer-events: none;
-  /* 图标为浅色描边 + 黑底，反色后黑底变白，作为浅水印叠在白卡片上 */
   filter: invert(1);
-  opacity: 0.14;
+  opacity: 0.12;
 }
 
 .data-leader-card__team {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 28px;
+  margin-top: 16px;
 }
 
-.data-leader-card__logo,
-.data-featured-card__logo {
+.data-leader-card__logo {
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  width: 36px;
+  height: 36px;
   overflow: hidden;
+  border-radius: 4px;
   background: #151515;
   color: #fff;
   font-size: 11px;
@@ -704,17 +722,14 @@
   }
 }
 
-.data-leader-card__logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 4px;
-}
-
 .data-leader-card__team b {
   display: block;
+  overflow: hidden;
   color: #111;
   font-size: 14px;
   font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .data-leader-card__team small {
@@ -724,88 +739,211 @@
   font-size: 12px;
 }
 
-.data-featured-card__main {
+.weekly-focus-card {
+  display: grid;
+  grid-template-columns:
+    minmax(240px, 1.6fr)
+    minmax(140px, 0.7fr)
+    minmax(140px, 0.7fr)
+    minmax(220px, 1fr);
+  align-items: center;
+  gap: 20px 28px;
+  min-height: 150px;
+  padding: clamp(24px, 2.4vw, 32px) clamp(22px, 2.2vw, 32px);
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-left: 4px solid #e10613;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.weekly-team {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin: 20px 0 22px;
+  gap: 16px;
+  min-width: 0;
 }
 
-.data-featured-card__logo {
-  width: 72px;
-  height: 72px;
-  border-radius: 8px;
-}
-
-.data-featured-card__main strong {
-  color: #111;
-  font-size: clamp(22px, 2vw, 28px);
-  font-weight: 950;
-}
-
-.data-featured-card__stats {
+.weekly-team__logo {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  place-items: center;
+  flex-shrink: 0;
+  width: clamp(68px, 5vw, 92px);
+  height: clamp(68px, 5vw, 92px);
+  overflow: hidden;
+  border: 1px solid rgba(225, 6, 19, 0.35);
+  border-radius: 8px;
+  background: #151515;
+  color: #fff;
+  font-size: clamp(18px, 1.4vw, 24px);
+  font-weight: 900;
+  letter-spacing: 0.02em;
 
-  span {
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+.weekly-team__copy {
+  min-width: 0;
+}
+
+.weekly-team__copy strong {
+  display: block;
+  overflow: hidden;
+  color: #111;
+  font-size: clamp(22px, 1.7vw, 30px);
+  font-weight: 800;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weekly-team__copy small {
+  display: block;
+  margin-top: 6px;
+  color: #888;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.weekly-stat,
+.weekly-form {
+  min-width: 0;
+
+  > span {
     display: block;
     color: #888;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
-  }
-
-  b {
-    display: block;
-    margin-top: 6px;
-    color: #e10613;
-    font-size: 18px;
-    font-weight: 900;
   }
 }
 
-.data-featured-card__form {
+.weekly-stat b {
   display: flex;
-  gap: 4px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-top: 8px;
+  color: #171717;
+  font-size: clamp(24px, 2vw, 30px);
+  font-weight: 800;
+  line-height: 1.1;
+
+  em,
+  i {
+    font-style: normal;
+  }
+
+  em {
+    color: #e10613;
+  }
+
+  i {
+    color: #555;
+  }
+
+  &.is-accent {
+    color: #e10613;
+    font-size: clamp(28px, 2.2vw, 36px);
+  }
+}
+
+.weekly-stat small,
+.weekly-form small {
+  display: block;
+  margin-top: 6px;
+  color: #888;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.weekly-form__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 
   i {
     display: grid;
     place-items: center;
-    width: 18px;
-    height: 18px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    background: #f0f0f0;
-    color: #bbb;
-    font-size: 10px;
+    font-size: 12px;
     font-style: normal;
     font-weight: 800;
   }
 
   .is-win {
-    color: #e10613;
-    background: #fff3f3;
+    background: #e10613;
+    color: #fff;
   }
 
   .is-lose {
-    color: #666;
-    background: #f0f0f0;
+    background: #333;
+    color: #fff;
   }
 }
 
-@media (max-width: 1100px) {
-  .data-focus-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.weekly-focus-empty {
+  display: grid;
+  place-items: center;
+  min-height: 112px;
+  max-height: 140px;
+  margin: 0;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  color: rgba(17, 17, 17, 0.55);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 1439px) {
+  .weekly-focus-card {
+    gap: 16px 20px;
+    padding: 24px 22px;
   }
 
-  .data-featured-card {
+  .weekly-team {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .weekly-focus-card {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .weekly-team {
     grid-column: 1 / -1;
   }
 }
 
-@media (max-width: 720px) {
-  .data-focus-grid {
+@media (max-width: 767px) {
+  .data-leader-grid {
     grid-template-columns: 1fr;
+  }
+
+  .weekly-focus-card {
+    grid-template-columns: 1fr 1fr;
+    min-height: 0;
+    padding: 22px 18px;
+  }
+
+  .weekly-team,
+  .weekly-form {
+    grid-column: 1 / -1;
+  }
+
+  .weekly-team__logo {
+    width: 64px;
+    height: 64px;
   }
 }
 

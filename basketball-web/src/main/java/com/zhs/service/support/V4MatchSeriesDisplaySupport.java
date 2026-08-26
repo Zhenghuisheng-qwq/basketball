@@ -5,6 +5,8 @@ import com.zhs.dao.v4.BasketDivisionFormatSnapshotDao;
 import com.zhs.dao.v4.BasketEventTeamDao;
 import com.zhs.dao.v4.BasketScheduleBatchDao;
 import com.zhs.dao.v4.BasketV4MatchDao;
+import com.zhs.dao.v4.BasketV4MatchTeamStatDao;
+import com.zhs.model.v4.BasketV4MatchTeamStat;
 import com.zhs.enums.v4.MatchPublishStatusEnum;
 import com.zhs.model.v4.BasketDivisionFormatSnapshot;
 import com.zhs.enums.v4.MatchStatusEnum;
@@ -42,6 +44,8 @@ public class V4MatchSeriesDisplaySupport {
     private BasketDivisionFormatSnapshotDao formatSnapshotDao;
     @Resource
     private BasketPublicSupport publicSupport;
+    @Resource
+    private BasketV4MatchTeamStatDao matchTeamStatDao;
 
     public V4PublicMatchSeriesDetailResp buildDetail(Long seriesId, Long currentMatchId) {
         if (seriesId == null) {
@@ -147,6 +151,7 @@ public class V4MatchSeriesDisplaySupport {
                 .thenComparing(V4PublicScheduleItemResp::getRoundNo, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(V4PublicScheduleItemResp::getId, Comparator.nullsLast(Comparator.naturalOrder())));
         fillScheduleTeamLogos(items);
+        fillScheduleActionFlags(items, matches);
         return items;
     }
 
@@ -194,6 +199,84 @@ public class V4MatchSeriesDisplaySupport {
                 item.setAwayTeamLogoUrl(urlMap.get(away.getTeamLogoFileId()));
             }
         }
+    }
+
+    private void fillScheduleActionFlags(List<V4PublicScheduleItemResp> items, List<BasketV4Match> matches) {
+        if (CollectionUtils.isEmpty(items)) {
+            return;
+        }
+        Map<Long, BasketV4Match> matchById = new HashMap<>();
+        Map<Long, List<Long>> seriesMatchIds = new HashMap<>();
+        Set<Long> allMatchIds = new HashSet<>();
+        if (!CollectionUtils.isEmpty(matches)) {
+            for (BasketV4Match match : matches) {
+                if (match == null || match.getId() == null) {
+                    continue;
+                }
+                matchById.put(match.getId(), match);
+                allMatchIds.add(match.getId());
+                if (match.getSeriesId() != null && match.getSeriesId() > 0) {
+                    seriesMatchIds.computeIfAbsent(match.getSeriesId(), key -> new ArrayList<>()).add(match.getId());
+                }
+            }
+        }
+        Set<Long> matchIdsWithStats = loadMatchIdsWithOfficialStats(allMatchIds);
+        for (V4PublicScheduleItemResp item : items) {
+            if (item == null || item.getId() == null) {
+                continue;
+            }
+            if (PublicScheduleUnitResolver.MATCH_SERIES.equals(item.getUnitType())) {
+                List<Long> gameIds = seriesMatchIds.getOrDefault(item.getId(), List.of());
+                boolean hasStats = false;
+                for (Long gameId : gameIds) {
+                    if (matchIdsWithStats.contains(gameId)) {
+                        hasStats = true;
+                        break;
+                    }
+                }
+                item.setHasOfficialStats(hasStats);
+                item.setReplayUrl(null);
+                continue;
+            }
+            BasketV4Match match = matchById.get(item.getId());
+            item.setReplayUrl(match == null ? null : normalizeReplayUrl(match.getReplayUrl()));
+            item.setHasOfficialStats(matchIdsWithStats.contains(item.getId()));
+        }
+    }
+
+    private Set<Long> loadMatchIdsWithOfficialStats(Set<Long> matchIds) {
+        if (CollectionUtils.isEmpty(matchIds)) {
+            return Set.of();
+        }
+        List<BasketV4MatchTeamStat> rows = matchTeamStatDao.selectList(new LambdaQueryWrapper<BasketV4MatchTeamStat>()
+                .in(BasketV4MatchTeamStat::getMatchId, matchIds)
+                .eq(BasketV4MatchTeamStat::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .select(BasketV4MatchTeamStat::getMatchId));
+        if (CollectionUtils.isEmpty(rows)) {
+            return Set.of();
+        }
+        Set<Long> result = new HashSet<>();
+        for (BasketV4MatchTeamStat row : rows) {
+            if (row != null && row.getMatchId() != null) {
+                result.add(row.getMatchId());
+            }
+        }
+        return result;
+    }
+
+    private String normalizeReplayUrl(String replayUrl) {
+        if (replayUrl == null || replayUrl.isBlank()) {
+            return null;
+        }
+        String trimmed = replayUrl.trim();
+        String lower = trimmed.toLowerCase();
+        if (lower.startsWith("javascript:")) {
+            return null;
+        }
+        if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
+            return null;
+        }
+        return trimmed;
     }
 
     public V4PublicMatchSeriesDetailResp buildDetail(BasketMatchSeries series, Long currentMatchId) {
@@ -330,6 +413,7 @@ public class V4MatchSeriesDisplaySupport {
             game.setWinnerEventTeamId(match.getWinnerEventTeamId());
             game.setScheduledTime(match.getMatchTime() != null ? match.getMatchTime() : inheritSeriesTime(series));
             game.setCurrentGame(currentMatchId != null && currentMatchId.equals(match.getId()));
+            game.setReplayUrl(normalizeReplayUrl(match.getReplayUrl()));
             if ((seriesCompleted || seriesForfeit) && !isOfficialResult(match)) {
                 game.setSkipped(true);
                 game.setSkippedReason(seriesForfeit ? "系列赛已判定弃赛，本局无需进行" : "系列赛已提前结束，本局无需进行");
@@ -540,6 +624,7 @@ public class V4MatchSeriesDisplaySupport {
         item.setStatusName(matchStatusLabel(match.getMatchStatus()));
         item.setPlaceholderSource(null);
         item.setPublished(true);
+        item.setWinnerEventTeamId(positiveOrNull(match.getWinnerEventTeamId()));
         applyMatchOfficialDisplay(item, match, home, away);
         return item;
     }

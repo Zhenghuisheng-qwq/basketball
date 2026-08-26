@@ -2,8 +2,9 @@
 import { computed, inject, ref, watch } from 'vue'
 import { getV4PublicPlayerStat, getV4PublicTeamList } from '@/api/v4Public'
 import type { V4PublicPlayerStatItem } from '@/api/types/v4Public'
-import { formatDecimal, toNumber } from '@/utils/publicDisplay'
+import { formatDecimal, initials, toNumber } from '@/utils/publicDisplay'
 import { calculateAverage } from '@/utils/statAverage'
+import TeamEntryLink from '@/components/team/TeamEntryLink.vue'
 import type { PlayerLeader } from '../types/events'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
 import { standingToTeam } from '../utils/mapPublic'
@@ -12,10 +13,37 @@ import TeamLogo from './TeamLogo.vue'
 
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
+type LeaderView = PlayerLeader & {
+  roleTitle: string
+  roleEn: string
+  metricLabel: string
+}
+
 const LEADER_CONFIG = [
-  { key: 'avgPoints' as const, title: '场均得分', unit: 'PPG' as const, totalKey: 'points' as const },
-  { key: 'avgAssist' as const, title: '场均助攻', unit: 'APG' as const, totalKey: 'assist' as const },
-  { key: 'avgRebound' as const, title: '场均篮板', unit: 'RPG' as const, totalKey: 'rebound' as const },
+  {
+    key: 'avgPoints' as const,
+    roleTitle: '得分王',
+    roleEn: 'POINTS LEADER',
+    metricLabel: '场均得分',
+    unit: 'PPG' as const,
+    totalKey: 'points' as const,
+  },
+  {
+    key: 'avgAssist' as const,
+    roleTitle: '助攻王',
+    roleEn: 'ASSISTS LEADER',
+    metricLabel: '场均助攻',
+    unit: 'APG' as const,
+    totalKey: 'assist' as const,
+  },
+  {
+    key: 'avgRebound' as const,
+    roleTitle: '篮板王',
+    roleEn: 'REBOUNDS LEADER',
+    metricLabel: '场均篮板',
+    unit: 'RPG' as const,
+    totalKey: 'rebound' as const,
+  },
 ]
 
 function playerAverageValue(
@@ -48,9 +76,14 @@ function pickAverageLeader(
   return best
 }
 
+function readAvatarUrl(item: V4PublicPlayerStatItem): string {
+  const extra = item as V4PublicPlayerStatItem & { avatarUrl?: string | null }
+  return extra.avatarUrl?.trim() || ''
+}
+
 const ctx = inject<SeasonContext>('publicSeasonContext')!
 
-const seasonLeaders = ref<PlayerLeader[]>([])
+const seasonLeaders = ref<LeaderView[]>([])
 const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const errorMessage = ref('')
 const imageErrors = ref<Record<number, boolean>>({})
@@ -58,6 +91,10 @@ let reqId = 0
 
 function handlePortraitError(id: number) {
   imageErrors.value[id] = true
+}
+
+function hasPortrait(leader: LeaderView) {
+  return Boolean(leader.portrait?.trim()) && !imageErrors.value[leader.id]
 }
 
 async function load(divisionId: string) {
@@ -84,18 +121,21 @@ async function load(divisionId: string) {
       const teamId = String(leader.eventTeamId || '')
       return {
         id: index + 1,
-        title: config.title,
+        title: config.metricLabel,
         value: Number(formatDecimal(playerAverageValue(leader, config.key, config.totalKey), 1)),
         unit: config.unit,
         playerName: leader.playerName || '--',
         teamId,
         teamName: leader.teamName || '',
         teamLogo: logoByTeamId.get(teamId) || '',
-        portrait: '',
-      } satisfies PlayerLeader
+        portrait: readAvatarUrl(leader),
+        roleTitle: config.roleTitle,
+        roleEn: config.roleEn,
+        metricLabel: config.metricLabel,
+      } satisfies LeaderView
     })
     if (current !== reqId) return
-    seasonLeaders.value = results.filter((item) => item !== null) as PlayerLeader[]
+    seasonLeaders.value = results.filter((item) => item !== null) as LeaderView[]
     state.value = seasonLeaders.value.length ? 'success' : 'empty'
   } catch (err) {
     if (current !== reqId) return
@@ -128,54 +168,67 @@ watch(
   { immediate: true },
 )
 </script>
+
 <template>
   <section class="season-leaders">
-      <div class="season-leaders__inner">
-        <div class="season-leaders__header">
-          <div class="section-head-group">
-            <h2 class="cnpa-paper-section__title">高光选手</h2>
-            <span class="cnpa-paper-section__subtitle">Season Leaders</span>
-          </div>
-        </div>
-
-        <div v-if="state === 'loading'" class="season-leaders__state">加载中...</div>
-        <div v-else-if="state === 'error'" class="season-leaders__state season-leaders__state--error">
-          {{ errorMessage || '加载高光选手失败' }}
-        </div>
-        <div v-else-if="state === 'empty'" class="season-leaders__state">暂无高光选手</div>
-        <div v-else class="season-leaders__grid">
-          <article v-for="leader in seasonLeaders" :key="leader.id" class="leader-card">
-            <div class="leader-info">
-              <span class="leader-title">{{ leader.title }}</span>
-              <div class="leader-value sport-num">
-                {{ leader.value }}
-                <small>{{ leader.unit }}</small>
-              </div>
-              <strong class="leader-name">{{ leader.playerName }}</strong>
-              <TeamEntryLink
-                v-if="getTeamById(leader.teamId)"
-                :team="getTeamById(leader.teamId)!"
-                class="leader-team"
-              >
-                <TeamLogo :team="getTeamById(leader.teamId)!" size="sm" />
-                <span>{{ getTeamById(leader.teamId)!.name }}</span>
-              </TeamEntryLink>
-            </div>
-
-            <div class="leader-portrait">
-              <img
-                v-if="!imageErrors[leader.id]"
-                :src="leader.portrait"
-                :alt="leader.playerName"
-                @error="handlePortraitError(leader.id)"
-              />
-              <div v-else class="leader-silhouette" aria-hidden="true" />
-            </div>
-          </article>
+    <div class="season-leaders__inner">
+      <div class="season-leaders__header">
+        <div class="section-head-group">
+          <h2 class="cnpa-paper-section__title">高光选手</h2>
+          <span class="cnpa-paper-section__subtitle">Season Leaders</span>
         </div>
       </div>
+
+      <div v-if="state === 'loading'" class="season-leaders__state">加载中...</div>
+      <div v-else-if="state === 'error'" class="season-leaders__state season-leaders__state--error">
+        {{ errorMessage || '加载高光选手失败' }}
+      </div>
+      <div v-else-if="state === 'empty'" class="season-leaders__state">暂无高光选手</div>
+      <div v-else class="season-leaders__grid">
+        <article v-for="leader in seasonLeaders" :key="leader.id" class="leader-card">
+          <div class="leader-card__avatar">
+            <img
+              v-if="hasPortrait(leader)"
+              :src="leader.portrait"
+              :alt="leader.playerName"
+              @error="handlePortraitError(leader.id)"
+            />
+            <span v-else class="leader-card__initials">{{ initials(leader.playerName) }}</span>
+          </div>
+
+          <div class="leader-card__body">
+            <header class="leader-card__role">
+              <h3>{{ leader.roleTitle }}</h3>
+              <small>{{ leader.roleEn }}</small>
+            </header>
+
+            <div class="leader-card__stat sport-num">
+              <strong>{{ leader.value }}</strong>
+              <span>{{ leader.unit }}</span>
+            </div>
+
+            <p class="leader-card__name">{{ leader.playerName }}</p>
+
+            <TeamEntryLink
+              v-if="getTeamById(leader.teamId)"
+              :team="getTeamById(leader.teamId)!"
+              class="leader-card__team"
+            >
+              <TeamLogo :team="getTeamById(leader.teamId)!" size="md" />
+              <span>{{ getTeamById(leader.teamId)!.name }}</span>
+            </TeamEntryLink>
+            <div v-else class="leader-card__team leader-card__team--plain">
+              <span>{{ leader.teamName || '--' }}</span>
+            </div>
+
+            <p class="leader-card__metric">{{ leader.metricLabel }}</p>
+          </div>
+        </article>
+      </div>
+    </div>
   </section>
 </template>
+
 <style scoped lang="scss">
 .season-leaders {
   margin-top: 0;
@@ -213,79 +266,185 @@ watch(
 
 .leader-card {
   display: grid;
-  grid-template-columns: 1fr 120px;
-  min-height: 180px;
-  border: 1px solid rgba(17, 17, 17, 0.1);
-  border-radius: 6px;
-  background: #fff;
+  grid-template-columns: minmax(104px, 38%) minmax(0, 1fr);
+  min-height: 0;
   overflow: hidden;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, #f6f4f2 100%),
+    repeating-linear-gradient(
+      -18deg,
+      rgba(17, 17, 17, 0.018) 0,
+      rgba(17, 17, 17, 0.018) 1px,
+      transparent 1px,
+      transparent 10px
+    );
+  box-shadow: inset 0 3px 0 var(--cnpa-red);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 
   &:hover {
-    transform: translateY(-4px);
-    border-color: var(--cnpa-red);
-    box-shadow: 0 12px 32px rgba(225, 6, 19, 0.12);
+    transform: translateY(-2px);
+    border-color: rgba(225, 6, 19, 0.28);
+    box-shadow:
+      inset 0 3px 0 var(--cnpa-red),
+      0 10px 24px rgba(17, 17, 17, 0.08);
   }
 }
 
-.leader-info {
-  padding: 24px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.leader-title {
-  font-size: 13px;
-  color: rgba(17, 17, 17, 0.52);
-}
-
-.leader-value {
-  font-size: clamp(36px, 3.6vw, 48px);
-  line-height: 1;
-  color: var(--cnpa-red);
-
-  small {
-    margin-left: 6px;
-    font-size: 14px;
-    color: rgba(17, 17, 17, 0.52);
-  }
-}
-
-.leader-name {
-  font-size: 18px;
-  font-weight: 900;
-  color: #111;
-}
-
-.leader-team {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: auto;
-  font-size: 13px;
-  color: rgba(17, 17, 17, 0.58);
-  text-decoration: none;
-}
-
-.leader-portrait {
+.leader-card__avatar {
   position: relative;
-  background: linear-gradient(180deg, rgba(225, 6, 19, 0.08) 0%, rgba(0, 0, 0, 0.4) 100%);
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  background:
+    linear-gradient(180deg, rgba(225, 6, 19, 0.08) 0%, transparent 42%),
+    linear-gradient(180deg, #f3f0ec 0%, #e8e4de 100%);
 
-  img,
-  .leader-silhouette {
-    width: 100%;
-    height: 100%;
+  &::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(225, 6, 19, 0.35), transparent);
+  }
+
+  img {
+    width: clamp(100px, 18vw, 150px);
+    height: clamp(100px, 18vw, 150px);
+    max-width: 86%;
     object-fit: cover;
     object-position: top center;
   }
 }
 
-.leader-silhouette {
-  background:
-    radial-gradient(circle at 50% 28%, rgba(255, 255, 255, 0.18) 0%, transparent 34%),
-    linear-gradient(180deg, #2a2a2a 0%, #111 100%);
-  clip-path: polygon(28% 100%, 72% 100%, 68% 38%, 50% 24%, 32% 38%);
+.leader-card__initials {
+  display: grid;
+  place-items: center;
+  width: clamp(100px, 18vw, 150px);
+  height: clamp(100px, 18vw, 150px);
+  max-width: 86%;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: #efece8;
+  color: #111;
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.leader-card__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 16px 16px;
+}
+
+.leader-card__role {
+  h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #111;
+  }
+
+  small {
+    display: block;
+    margin-top: 2px;
+    color: var(--cnpa-red);
+    font-size: 10px;
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: 0.14em;
+  }
+}
+
+.leader-card__stat {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  line-height: 1;
+
+  strong {
+    font-size: clamp(42px, 4.4vw, 56px);
+    font-weight: 900;
+    color: var(--cnpa-red);
+  }
+
+  span {
+    padding-bottom: 6px;
+    color: rgba(17, 17, 17, 0.72);
+    font-size: clamp(12px, 1.2vw, 16px);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+}
+
+.leader-card__name {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: #111;
+  font-size: clamp(18px, 1.6vw, 22px);
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.leader-card__team {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 4px;
+  background: rgba(17, 17, 17, 0.045);
+  color: rgba(17, 17, 17, 0.78);
+  text-decoration: none;
+
+  span {
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  :deep(.team-logo-md) {
+    width: clamp(32px, 3.2vw, 44px);
+    height: clamp(32px, 3.2vw, 44px);
+  }
+}
+
+.leader-card__team--plain {
+  min-height: 36px;
+}
+
+.leader-card__metric {
+  margin: auto 0 0;
+  color: rgba(17, 17, 17, 0.48);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 1100px) {
+  .leader-card__stat strong {
+    font-size: clamp(36px, 4vw, 48px);
+  }
+}
+
+@media (max-width: 900px) {
+  .season-leaders__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .leader-card {
+    grid-template-columns: minmax(120px, 32%) minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
@@ -299,7 +458,7 @@ watch(
   }
 
   .leader-card {
-    grid-template-columns: 1fr 96px;
+    grid-template-columns: minmax(104px, 36%) minmax(0, 1fr);
   }
 }
 </style>

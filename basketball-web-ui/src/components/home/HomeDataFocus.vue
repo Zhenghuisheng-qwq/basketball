@@ -9,7 +9,7 @@ import iconAst from '@/assets/icon/home/basketball2.png'
 import iconReb from '@/assets/icon/home/basketball3.png'
 
 type SeriesFilter = 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'
-type SectionState = 'loading' | 'success' | 'empty' | 'error'
+type SectionState = 'loading' | 'success' | 'error'
 
 type LeaderCard = {
   key: string
@@ -55,12 +55,17 @@ const filterLabel = computed(() =>
 
 const resolvedSeriesCode = computed(() => seriesFilter.value)
 
-const featuredRecord = computed(() => {
-  if (!featured.value) return '--'
-  const wins = featured.value.weekWinCount
-  const losses = featured.value.weekLoseCount
-  if (wins == null || losses == null) return '--'
-  return `${wins}胜${losses}负`
+const featuredWins = computed(() => featured.value?.weekWinCount)
+const featuredLosses = computed(() => featured.value?.weekLoseCount)
+const hasFeaturedRecord = computed(() => featuredWins.value != null && featuredLosses.value != null)
+
+const featuredWinRate = computed(() => {
+  const rate = featured.value?.weekWinRate
+  if (rate == null || rate === '') return ''
+  const numeric = Number(rate)
+  if (!Number.isFinite(numeric)) return ''
+  const percent = numeric <= 1 ? numeric * 100 : numeric
+  return `${Math.round(percent)}%`
 })
 
 const featuredNet = computed(() => {
@@ -72,7 +77,7 @@ const featuredNet = computed(() => {
 })
 
 const featuredForm = computed(() =>
-  (featured.value?.recentForm ?? []).filter((item) => item === 'W' || item === 'L'),
+  (featured.value?.recentForm ?? []).filter((item) => item === 'W' || item === 'L').slice(0, 5),
 )
 
 function toLeaderCard(
@@ -112,8 +117,7 @@ async function load() {
       toLeaderCard('篮板王', '场均篮板', 'REB', data?.reboundsLeader),
     ]
     featured.value = data?.focusTeam ?? null
-    const hasLeader = Boolean(data?.pointsLeader || data?.assistsLeader || data?.reboundsLeader)
-    state.value = hasLeader || featured.value ? 'success' : 'empty'
+    state.value = 'success'
   } catch (err) {
     leaders.value = []
     featured.value = null
@@ -154,77 +158,89 @@ watch(
       <div class="paper-band paper-band-light">
         <TornEdge position="top" tone="light" variant="soft" />
         <div class="paper-band-inner home-data-focus-inner">
-          <div class="data-focus-header">
-            <div class="combined-column-heading combined-column-heading--news">
-              <h2>数据焦点</h2>
-              <span class="home-kicker">DATA FOCUS</span>
-            </div>
-            <div class="data-focus-filter">
-              <button
-                type="button"
-                class="data-focus-filter__trigger"
-                :aria-expanded="filterOpen"
-                @click="filterOpen = !filterOpen"
-              >
-                赛事筛选
-                <small>{{ filterLabel }}</small>
-              </button>
-              <div v-if="filterOpen" class="data-focus-filter__menu" role="listbox">
-                <button
-                  v-for="item in seriesFilters"
-                  :key="item.key"
-                  type="button"
-                  role="option"
-                  :aria-selected="seriesFilter === item.key"
-                  @click="selectSeries(item.key)"
-                >
-                  {{ item.label }}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="state === 'loading'" class="home-state">加载中...</div>
-          <div v-else-if="state === 'error'" class="home-state home-state--error">{{ errorMessage }}</div>
-          <div v-else-if="state === 'empty'" class="home-state">暂无数据焦点</div>
-          <div v-else class="data-focus-grid">
-            <article
-              v-for="card in leaders"
-              :key="card.key"
-              class="data-leader-card"
-              :class="`data-leader-card--${card.mark.toLowerCase()}`"
-            >
-              <h3>{{ card.title }}</h3>
-              <strong>{{ card.value }}</strong>
-              <img
-                class="data-leader-card__mark"
-                :src="markIcons[card.mark]"
-                alt=""
-                aria-hidden="true"
-                draggable="false"
-              />
-              <div class="data-leader-card__team">
-                <span class="data-leader-card__logo">
-                  <img
-                    v-if="showLogo(card.avatarUrl || card.teamLogoUrl, card.key)"
-                    :src="card.avatarUrl || card.teamLogoUrl"
-                    :alt="card.playerName"
-                    @error="brokenLogos[card.key] = true"
-                  />
-                  <i v-else>{{ initials(card.playerName) }}</i>
-                </span>
-                <div>
-                  <b>{{ card.playerName }}</b>
-                  <small>{{ card.teamName || card.statLabel }}</small>
+          <div class="data-focus-stack">
+            <section class="data-focus-box" aria-label="数据焦点">
+              <div class="data-focus-header">
+                <div class="combined-column-heading combined-column-heading--news">
+                  <h2>数据焦点</h2>
+                  <span class="home-kicker">DATA FOCUS</span>
+                </div>
+                <div class="data-focus-filter">
+                  <button
+                    type="button"
+                    class="data-focus-filter__trigger"
+                    :aria-expanded="filterOpen"
+                    @click="filterOpen = !filterOpen"
+                  >
+                    <span>赛事</span>
+                    <small>{{ filterLabel }} ▼</small>
+                  </button>
+                  <div v-if="filterOpen" class="data-focus-filter__menu" role="listbox">
+                    <button
+                      v-for="item in seriesFilters"
+                      :key="item.key"
+                      type="button"
+                      role="option"
+                      :aria-selected="seriesFilter === item.key"
+                      @click="selectSeries(item.key)"
+                    >
+                      {{ item.label }}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </article>
 
-            <article class="data-featured-card">
-              <h3>本周焦点战队</h3>
-              <template v-if="featured">
-                <div class="data-featured-card__main">
-                  <span class="data-featured-card__logo">
+              <div v-if="state === 'loading'" class="home-state">加载中...</div>
+              <div v-else-if="state === 'error'" class="home-state home-state--error">{{ errorMessage }}</div>
+              <div v-else-if="!leaders.length" class="home-state">暂无数据焦点</div>
+              <div v-else class="data-leader-grid">
+                <article
+                  v-for="card in leaders"
+                  :key="card.key"
+                  class="data-leader-card"
+                  :class="`data-leader-card--${card.mark.toLowerCase()}`"
+                >
+                  <h3>{{ card.title }}</h3>
+                  <strong>{{ card.value }}</strong>
+                  <img
+                    class="data-leader-card__mark"
+                    :src="markIcons[card.mark]"
+                    alt=""
+                    aria-hidden="true"
+                    draggable="false"
+                  />
+                  <div class="data-leader-card__team">
+                    <span class="data-leader-card__logo">
+                      <img
+                        v-if="showLogo(card.avatarUrl || card.teamLogoUrl, card.key)"
+                        :src="card.avatarUrl || card.teamLogoUrl"
+                        :alt="card.playerName"
+                        @error="brokenLogos[card.key] = true"
+                      />
+                      <i v-else>{{ initials(card.playerName) }}</i>
+                    </span>
+                    <div>
+                      <b>{{ card.playerName }}</b>
+                      <small>{{ card.teamName || card.statLabel }}</small>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <section class="data-focus-box data-focus-box--featured" aria-label="本周焦点">
+              <div class="data-focus-header">
+                <div class="combined-column-heading combined-column-heading--news">
+                  <h2>本周焦点</h2>
+                  <span class="home-kicker">WEEKLY FOCUS</span>
+                </div>
+              </div>
+
+              <div v-if="state === 'loading'" class="home-state">加载中...</div>
+              <div v-else-if="state === 'error'" class="home-state home-state--error">{{ errorMessage }}</div>
+              <article v-else-if="featured" class="weekly-focus-card">
+                <div class="weekly-team">
+                  <span class="weekly-team__logo">
                     <img
                       v-if="showLogo(featured.teamLogoUrl || '', 'featured')"
                       :src="featured.teamLogoUrl!"
@@ -233,31 +249,38 @@ watch(
                     />
                     <i v-else>{{ initials(featured.teamName) }}</i>
                   </span>
-                  <strong>{{ displayText(featured.teamName) }}</strong>
-                </div>
-                <div class="data-featured-card__stats">
-                  <div>
-                    <span>战绩</span>
-                    <b>{{ featuredRecord }}</b>
-                  </div>
-                  <div>
-                    <span>净胜分</span>
-                    <b>{{ featuredNet }}</b>
-                  </div>
-                  <div v-if="featuredForm.length">
-                    <span>最近战绩</span>
-                    <div class="data-featured-card__form">
-                      <i
-                        v-for="(item, index) in featuredForm"
-                        :key="`${item}-${index}`"
-                        :class="item === 'W' ? 'is-win' : 'is-lose'"
-                      >{{ item }}</i>
-                    </div>
+                  <div class="weekly-team__copy">
+                    <strong :title="displayText(featured.teamName)">{{ displayText(featured.teamName) }}</strong>
+                    <small>焦点战队</small>
                   </div>
                 </div>
-              </template>
-              <p v-else class="home-state home-state--inline">本周暂无焦点战队</p>
-            </article>
+                <div class="weekly-stat">
+                  <span>战绩</span>
+                  <b v-if="hasFeaturedRecord">
+                    <em>{{ featuredWins }}胜</em>
+                    <i>{{ featuredLosses }}负</i>
+                  </b>
+                  <b v-else>--</b>
+                  <small v-if="featuredWinRate">胜率 {{ featuredWinRate }}</small>
+                </div>
+                <div class="weekly-stat">
+                  <span>场均净胜</span>
+                  <b class="is-accent">{{ featuredNet }}</b>
+                </div>
+                <div class="weekly-form">
+                  <span>最近战绩</span>
+                  <div v-if="featuredForm.length" class="weekly-form__badges">
+                    <i
+                      v-for="(item, index) in featuredForm"
+                      :key="`${item}-${index}`"
+                      :class="item === 'W' ? 'is-win' : 'is-lose'"
+                    >{{ item === 'W' ? '胜' : '负' }}</i>
+                  </div>
+                  <small v-else>暂无近期战绩</small>
+                </div>
+              </article>
+              <p v-else class="weekly-focus-empty">本周暂无焦点战队</p>
+            </section>
           </div>
         </div>
       </div>
