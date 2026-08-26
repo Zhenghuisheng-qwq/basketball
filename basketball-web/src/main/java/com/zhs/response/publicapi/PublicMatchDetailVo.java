@@ -74,8 +74,8 @@ public class PublicMatchDetailVo implements Serializable {
     @ApiModelProperty("胜方球队主键")
     private Long winnerTeamId;
 
-    @ApiModelProperty("比赛状态")
-    private Integer matchStatus;
+    @ApiModelProperty("比赛状态：SCHEDULED / PLAYING / FINISHED / CANCELLED / FORFEITED")
+    private String matchStatus;
 
     @ApiModelProperty("数据状态")
     private Integer dataStatus;

@@ -51,7 +51,7 @@ export interface Match {
   venue: string
   status: MatchStatus
   week: number
-  matchStatus?: number
+  matchStatus?: string | number
   stageName?: string
   resultType?: string
   resultReason?: string

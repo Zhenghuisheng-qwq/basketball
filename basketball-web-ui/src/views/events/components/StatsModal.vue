@@ -5,7 +5,6 @@ import { getV4PublicMatchDetail } from '@/api/v4Public'
 import type { PublicMatchDetailVo, PublicMatchPlayerStatVo } from '@/api/types/public'
 import { displayNumber, displayText, formatPercent } from '@/utils/publicDisplay'
 import type { Match } from '../types/events'
-import { v4MatchStatusToNumber } from '../utils/v4PublicAdapters'
 
 const props = defineProps<{
   visible: boolean
@@ -56,7 +55,7 @@ async function loadStats(matchId: string) {
     detail.value = {
       matchId: raw.matchId,
       scheduledStartTime: raw.matchTime,
-      matchStatus: v4MatchStatusToNumber(raw.matchStatus),
+      matchStatus: raw.matchStatus,
       homeTeamName: raw.homeTeam?.teamName,
       awayTeamName: raw.awayTeam?.teamName,
       homeScore: raw.homeScore,

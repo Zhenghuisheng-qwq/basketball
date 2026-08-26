@@ -123,12 +123,6 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             vo.setAwayTeamName(base.getAwayTeamName());
             vo.setAwayTeamLogoUrl(base.getAwayTeamLogoUrl());
             vo.setVenueName(base.getVenueName());
-            vo.setSeriesId(base.getSeriesId());
-            vo.setSeriesCode(base.getSeriesCode());
-            vo.setSeriesName(base.getSeriesName());
-            vo.setSeasonName(base.getSeasonName());
-            vo.setDivisionId(base.getDivisionId());
-            vo.setDivisionName(base.getDivisionName());
             vo.setStageId(base.getStageId());
             vo.setStageName(base.getStageName());
             vo.setMatchStatus(base.getMatchStatus());
@@ -148,6 +142,9 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
         vo.setScheduledStartTime(match.getMatchTime());
         if (MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus())) {
             vo.setActualEndTime(match.getMatchTime());
+        }
+        if (vo.getMatchStatus() == null) {
+            vo.setMatchStatus(match.getMatchStatus());
         }
         vo.setSeasonName(resolveSeasonName(season));
 

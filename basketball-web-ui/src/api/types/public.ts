@@ -4,6 +4,12 @@ export interface PublicMatchItemVo {
   matchId: string
   matchNo?: string | null
   seasonId?: string | null
+  seasonName?: string | null
+  seriesId?: string | null
+  seriesCode?: string | null
+  seriesName?: string | null
+  divisionId?: string | null
+  divisionName?: string | null
   stageId?: string | null
   stageName?: string | null
   groupId?: string | null
@@ -17,7 +23,7 @@ export interface PublicMatchItemVo {
   homeScore?: number | null
   awayScore?: number | null
   winnerTeamId?: string | null
-  matchStatus?: number | null
+  matchStatus?: string | null
   dataStatus?: number | null
   venueName?: string | null
   scheduledStartTime?: string | null

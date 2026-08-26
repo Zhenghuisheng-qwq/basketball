@@ -40,10 +40,26 @@ export function formatStatValue(value: unknown, unit?: string): string {
   return unit ? `${text} ${unit}` : text
 }
 
-/** 比赛状态：0草稿 1已编排 2进行中 3已结束 4已延期 5已取消 */
+/** 比赛状态：V4 字符串优先；兼容旧整型 0草稿 1已编排 2进行中 3已结束 4已延期 5已取消 */
 export type UiMatchStatus = 'scheduled' | 'live' | 'finished' | 'cancelled' | 'postponed'
 
-export function mapMatchStatus(status: number | null | undefined): UiMatchStatus {
+export function mapMatchStatus(status: number | string | null | undefined): UiMatchStatus {
+  if (typeof status === 'string') {
+    switch (status.trim().toUpperCase()) {
+      case 'PLAYING':
+      case 'LIVE':
+        return 'live'
+      case 'FINISHED':
+      case 'FORFEITED':
+        return 'finished'
+      case 'CANCELLED':
+        return 'cancelled'
+      case 'POSTPONED':
+        return 'postponed'
+      default:
+        return 'scheduled'
+    }
+  }
   switch (status) {
     case 2:
       return 'live'
@@ -58,7 +74,7 @@ export function mapMatchStatus(status: number | null | undefined): UiMatchStatus
   }
 }
 
-export function matchStatusLabel(status: number | null | undefined): string {
+export function matchStatusLabel(status: number | string | null | undefined): string {
   switch (mapMatchStatus(status)) {
     case 'live':
       return '进行中'

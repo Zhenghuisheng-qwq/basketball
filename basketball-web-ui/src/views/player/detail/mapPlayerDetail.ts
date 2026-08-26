@@ -123,8 +123,8 @@ export function mapPublicPlayerMatch(
   const opponentLogoUrl = (isHome ? item.awayTeamLogoUrl : item.homeTeamLogoUrl)?.trim() || ''
   const teamScore = isHome ? item.homeScore : item.awayScore
   const opponentScore = isHome ? item.awayScore : item.homeScore
-  const finished = toNumber(item.matchStatus, 0) === 3
-    || String(item.matchStatus || '').toUpperCase() === 'FORFEITED'
+  const finished = ['FINISHED', 'FORFEITED'].includes(String(item.matchStatus || '').toUpperCase())
+    || toNumber(item.matchStatus, 0) === 3
     || Boolean(item.resultType)
   const dq = String(item.resultType || '') === 'EVENT_DISQUALIFICATION'
   const sideLabel = isHome ? item.homeResultLabel : item.awayResultLabel

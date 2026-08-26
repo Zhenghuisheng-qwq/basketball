@@ -9,7 +9,6 @@ import {
 } from '@/utils/publicDisplay'
 import { formatScore } from '@/utils/v4Display'
 import type { Match } from '../types/events'
-import { v4MatchStatusToNumber } from '../utils/v4PublicAdapters'
 
 const props = defineProps<{
   visible: boolean
@@ -57,7 +56,7 @@ async function loadDetail(matchId: string) {
     detail.value = {
       matchId: raw.matchId,
       scheduledStartTime: raw.matchTime,
-      matchStatus: v4MatchStatusToNumber(raw.matchStatus),
+      matchStatus: raw.matchStatus,
       venueName: raw.venueText,
       seasonName: props.match?.season,
       stageName: raw.seriesContext?.stageName,

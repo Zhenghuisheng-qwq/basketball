@@ -177,21 +177,6 @@ function matchStatus(match: PublicMatchItemVo) {
   return mapMatchStatus(typeof rawStatus === 'number' ? rawStatus : null)
 }
 
-function matchStatusLabel(match: PublicMatchItemVo): string {
-  switch (matchStatus(match)) {
-    case 'live':
-      return '进行中'
-    case 'finished':
-      return '已结束'
-    case 'postponed':
-      return '已延期'
-    case 'cancelled':
-      return '已取消'
-    default:
-      return '未开始'
-  }
-}
-
 function matchActionLabel(match: PublicMatchItemVo): string {
   switch (matchStatus(match)) {
     case 'live':
