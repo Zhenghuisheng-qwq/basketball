@@ -1,4 +1,4 @@
-import type { V4PublicSeasonItem, V4PublicStageItem } from '@/api/types/v4Public'
+import type { V4PublicDivisionBrief, V4PublicSeasonItem, V4PublicStageItem } from '@/api/types/v4Public'
 
 export const HOME_SERIES_CODES = ['LEAGUE', 'ARENA', 'CUP', 'OPEN'] as const
 
@@ -59,4 +59,8 @@ export function pickCurrentStageName(stages: V4PublicStageItem[]): string | null
   const current = stages.find((stage) => stage.currentStage)
   const name = current?.stageName?.trim()
   return name || null
+}
+
+export function pickDefaultDivision(season: V4PublicSeasonItem | null | undefined): V4PublicDivisionBrief | null {
+  return season?.divisions?.[0] ?? null
 }

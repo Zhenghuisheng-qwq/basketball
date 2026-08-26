@@ -266,6 +266,41 @@ export interface PublicSeasonPlacementResp {
   championHonorId?: string | null
 }
 
+export interface PublicHomePlayerLeaderVo {
+  eventPlayerId?: string | null
+  sourcePlayerId?: string | null
+  playerName?: string | null
+  avatarUrl?: string | null
+  eventTeamId?: string | null
+  teamName?: string | null
+  teamLogoUrl?: string | null
+  matchCount?: number | null
+  value?: number | string | null
+}
+
+export interface PublicHomeFocusTeamVo {
+  eventTeamId?: string | null
+  teamName?: string | null
+  teamLogoUrl?: string | null
+  weekMatchCount?: number | null
+  weekWinCount?: number | null
+  weekLoseCount?: number | null
+  weekPointDiff?: number | null
+  weekAvgPointDiff?: number | string | null
+  weekWinRate?: number | string | null
+  recentForm?: string[] | null
+}
+
+export interface PublicHomeDataFocusVo {
+  seriesCode?: string | null
+  seasonId?: string | null
+  divisionId?: string | null
+  pointsLeader?: PublicHomePlayerLeaderVo | null
+  assistsLeader?: PublicHomePlayerLeaderVo | null
+  reboundsLeader?: PublicHomePlayerLeaderVo | null
+  focusTeam?: PublicHomeFocusTeamVo | null
+}
+
 export interface PublicHomeVo {
   recentMatches?: PublicMatchItemVo[] | null
   teamRankings?: PublicTeamRankItemVo[] | null

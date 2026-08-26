@@ -57,6 +57,21 @@ class V4CurrentSeasonSelectorTest {
         assertNull(picked.get("OPEN"));
     }
 
+    @Test
+    void homeFourSeriesUsesStatusPriorityAndLeavesMissingOpenEmpty() {
+        V4PublicSeasonItemResp leaguePlaying = publicSeason(1L, "LEAGUE", SeasonStatusEnum.PLAYING.getCode(), daysAgo(2));
+        V4PublicSeasonItemResp leagueFinished = publicSeason(11L, "LEAGUE", SeasonStatusEnum.FINISHED.getCode(), daysAgo(1));
+        V4PublicSeasonItemResp cupOpen = publicSeason(2L, "CUP", SeasonStatusEnum.REGISTRATION_OPEN.getCode(), daysAgo(3));
+        V4PublicSeasonItemResp arenaNotStarted = publicSeason(3L, "ARENA", SeasonStatusEnum.NOT_STARTED.getCode(), daysAgo(4));
+        Map<String, V4PublicSeasonItemResp> picked = V4CurrentSeasonSelector.pickCurrentBySeriesCode(
+                List.of(leagueFinished, cupOpen, arenaNotStarted, leaguePlaying),
+                List.of("LEAGUE", "CUP", "ARENA", "OPEN"));
+        assertEquals(1L, picked.get("LEAGUE").getSeasonId());
+        assertEquals(2L, picked.get("CUP").getSeasonId());
+        assertEquals(3L, picked.get("ARENA").getSeasonId());
+        assertNull(picked.get("OPEN"));
+    }
+
     private static BasketSeason season(Long id, String status, Date start) {
         BasketSeason season = new BasketSeason();
         season.setId(id);

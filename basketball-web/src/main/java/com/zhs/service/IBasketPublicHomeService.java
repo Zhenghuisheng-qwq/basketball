@@ -1,5 +1,6 @@
 package com.zhs.service;
 
+import com.zhs.response.publicapi.PublicHomeDataFocusVo;
 import com.zhs.response.publicapi.PublicHomeVo;
 import com.zhs.response.publicapi.PublicMatchItemVo;
 import com.zhs.response.publicapi.PublicPlayerRankItemVo;
@@ -19,4 +20,6 @@ public interface IBasketPublicHomeService {
     List<PublicPlayerRankItemVo> listPlayerRanking(Integer limit);
 
     PublicSeasonSummaryVo getStatSummary();
+
+    PublicHomeDataFocusVo getDataFocus(String seriesCode);
 }

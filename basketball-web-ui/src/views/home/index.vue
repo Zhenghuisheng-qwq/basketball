@@ -8,14 +8,13 @@ import HomeHero from '@/components/home/HomeHero.vue'
 import {
   getPublicHomeBanners,
   getPublicHomeRecentMatches,
-  getPublicHomeStatSummary,
 } from '@/api/publicHome'
+import { getV4PublicSeasonList, getV4PublicStageList } from '@/api/v4Public'
 import { getPublicAnnouncementPage } from '@/api/publicAnnouncement'
 import type {
   PublicAnnouncementItemResp,
   PublicHomeBannerResp,
   PublicMatchItemVo,
-  PublicSeasonSummaryVo,
 } from '@/api/types/public'
 import { formatAnnouncementDate, goToAnnouncementList } from '@/utils/announcementNavigate'
 import {
@@ -24,9 +23,33 @@ import {
   initials,
   mapMatchStatus,
 } from '@/utils/publicDisplay'
+import { v4SeasonStatusLabel } from '@/utils/v4Display'
+import {
+  pickCurrentSeasonBySeries,
+  pickCurrentStageName,
+  pickDefaultDivision,
+} from '@/utils/currentSeason'
+import iconLeague from '@/assets/icon/home/league.png'
+import iconCup from '@/assets/icon/home/cup.png'
+import iconArena from '@/assets/icon/home/arena.png'
+import iconOpen from '@/assets/icon/home/open.png'
 type SectionState = 'loading' | 'success' | 'empty' | 'error'
 type HomeCompetitionFilter = 'ALL' | 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'
 type HomeNewsTab = 'EVENT' | 'NOTICE'
+type HomeEventCard = {
+  seriesCode: Exclude<HomeCompetitionFilter, 'ALL'>
+  title: string
+  icon: string
+  seasonId: string | null
+  seasonName: string | null
+  displayTitle: string | null
+  seasonStatus: string | null
+  divisionId: string | null
+  divisionName: string | null
+  currentStageName: string | null
+  matchStartTime: string | null
+  matchEndTime: string | null
+}
 
 type HomeBannerItem = {
   id: string
@@ -52,9 +75,16 @@ const homeNewsTabs: Array<{ key: HomeNewsTab; label: string }> = [
   { key: 'NOTICE', label: '公告' },
 ]
 
+const HOME_EVENT_TEMPLATES: Array<Pick<HomeEventCard, 'seriesCode' | 'title' | 'icon'>> = [
+  { seriesCode: 'LEAGUE', title: 'CNPA LEAGUE', icon: iconLeague },
+  { seriesCode: 'CUP', title: 'CNPA CUP', icon: iconCup },
+  { seriesCode: 'ARENA', title: 'CNPA ARENA', icon: iconArena },
+  { seriesCode: 'OPEN', title: 'CNPA OPEN', icon: iconOpen },
+]
+
 const banners = ref<HomeBannerItem[]>([])
 const matches = ref<PublicMatchItemVo[]>([])
-const summary = ref<PublicSeasonSummaryVo | null>(null)
+const currentEventCards = ref<HomeEventCard[]>(HOME_EVENT_TEMPLATES.map((item) => emptyEventCard(item)))
 const eventNews = ref<PublicAnnouncementItemResp[]>([])
 const noticeNews = ref<PublicAnnouncementItemResp[]>([])
 
@@ -76,19 +106,28 @@ const visibleNews = computed(() => {
   return source.slice(0, PREVIEW_NEWS_COUNT)
 })
 const currentSeasonId = computed(() => {
-  const summarySeasonId = summary.value?.seasonId?.trim()
-  if (summarySeasonId) return summarySeasonId
-  return matches.value.find((match) => match.seasonId?.trim())?.seasonId?.trim() || ''
+  const league = currentEventCards.value.find((card) => card.seriesCode === 'LEAGUE' && card.seasonId)
+  if (league?.seasonId) return league.seasonId
+  return currentEventCards.value.find((card) => card.seasonId)?.seasonId || ''
 })
 
-function matchCompetitionType(match: PublicMatchItemVo): Exclude<HomeCompetitionFilter, 'ALL'> | null {
-  const record = match as PublicMatchItemVo & Record<string, unknown>
-  const rawValue = ['seriesType', 'eventType', 'competitionType']
-    .map((key) => record[key])
-    .find((value): value is string => typeof value === 'string' && Boolean(value.trim()))
-  if (!rawValue) return null
+function emptyEventCard(template: Pick<HomeEventCard, 'seriesCode' | 'title' | 'icon'>): HomeEventCard {
+  return {
+    ...template,
+    seasonId: null,
+    seasonName: null,
+    displayTitle: null,
+    seasonStatus: null,
+    divisionId: null,
+    divisionName: null,
+    currentStageName: null,
+    matchStartTime: null,
+    matchEndTime: null,
+  }
+}
 
-  const normalized = rawValue.trim().toUpperCase()
+function matchCompetitionType(match: PublicMatchItemVo): Exclude<HomeCompetitionFilter, 'ALL'> | null {
+  const normalized = match.seriesCode?.trim().toUpperCase()
   if (normalized === 'LEAGUE' || normalized === 'ARENA' || normalized === 'CUP' || normalized === 'OPEN') {
     return normalized
   }
@@ -226,12 +265,71 @@ async function loadMatches() {
   }
 }
 
-async function loadSummary() {
+function formatEventDatePart(value?: string | null): string | null {
+  if (!value) return null
+  const date = formatDateTime(value).date
+  if (!date || date === '--' || date.length < 10) return null
+  return date.slice(5)
+}
+
+function formatEventRange(start?: string | null, end?: string | null): string | null {
+  const left = formatEventDatePart(start)
+  const right = formatEventDatePart(end)
+  if (!left && !right) return null
+  if (!left) return right
+  if (!right) return left
+  return `${left} ~ ${right}`
+}
+
+function eventStatusTone(status?: string | null): string {
+  switch ((status || '').trim().toUpperCase()) {
+    case 'PLAYING':
+      return 'event-status-tag--active'
+    case 'REGISTRATION_OPEN':
+    case 'REGISTRATION_CLOSED':
+    case 'NOT_STARTED':
+      return 'event-status-tag--upcoming'
+    default:
+      return ''
+  }
+}
+
+function handleCurrentEvent(card: HomeEventCard) {
+  if (!card.seasonId) return
+  router.push(`/events/${card.seasonId}`)
+}
+
+async function loadCurrentEvents() {
   try {
-    const res = await getPublicHomeStatSummary()
-    summary.value = res.data ?? null
+    const res = await getV4PublicSeasonList()
+    const bySeries = pickCurrentSeasonBySeries(res.data ?? [])
+    const cards = HOME_EVENT_TEMPLATES.map((template) => {
+      const season = bySeries[template.seriesCode]
+      const division = pickDefaultDivision(season)
+      return {
+        ...emptyEventCard(template),
+        seasonId: season?.seasonId?.trim() || null,
+        seasonName: season?.seasonName?.trim() || null,
+        displayTitle: season?.displayTitle?.trim() || null,
+        seasonStatus: season?.seasonStatus?.trim() || null,
+        divisionId: division?.divisionId?.trim() || null,
+        divisionName: division?.divisionName?.trim() || null,
+        matchStartTime: season?.matchStartTime || null,
+        matchEndTime: season?.matchEndTime || null,
+      }
+    })
+    await Promise.all(cards.map(async (card) => {
+      if (!card.divisionId) return
+      try {
+        const stageRes = await getV4PublicStageList(card.divisionId)
+        card.currentStageName = pickCurrentStageName(stageRes.data ?? [])
+      } catch {
+        card.currentStageName = null
+      }
+    }))
+    currentEventCards.value = cards
   } catch {
-    summary.value = null
+    currentEventCards.value = HOME_EVENT_TEMPLATES.map((item) => emptyEventCard(item))
   }
 }
 
@@ -287,7 +385,7 @@ function handleMoreNews() {
 onMounted(() => {
   void loadBanners()
   void loadMatches()
-  void loadSummary()
+  void loadCurrentEvents()
   void loadHomeContent()
 })
 </script>
@@ -480,113 +578,48 @@ onMounted(() => {
                 </div>
 
                 <div class="current-events-grid">
-                  <article class="current-event-card">
-                    <span class="event-status-tag event-status-tag--active">进行中</span>
+                  <article
+                    v-for="card in currentEventCards"
+                    :key="card.seriesCode"
+                    class="current-event-card"
+                    :class="{ 'is-clickable': Boolean(card.seasonId) }"
+                    @click="handleCurrentEvent(card)"
+                  >
+                    <span
+                      v-if="card.seasonStatus"
+                      class="event-status-tag"
+                      :class="eventStatusTone(card.seasonStatus)"
+                    >
+                      {{ v4SeasonStatusLabel(card.seasonStatus) }}
+                    </span>
+                    <span v-else-if="!card.seasonId" class="event-status-tag">暂无赛事</span>
                     <div class="event-icon">
-                      <img src="@/assets/icon/home/league.png" alt="CNPA LEAGUE" />
+                      <img :src="card.icon" :alt="card.title" />
                     </div>
                     <div class="event-body">
-                      <h3 class="event-title">CNPA LEAGUE</h3>
-                      <div class="event-details">
-                        <div class="event-detail-item">
+                      <h3 class="event-title">{{ card.title }}</h3>
+                      <div v-if="card.seasonId" class="event-details">
+                        <div v-if="card.divisionName" class="event-detail-item">
                           <img src="@/assets/icon/home/stage.png" alt="" class="event-detail-icon" />
-                          <span>当前地区：深圳赛区 第2期</span>
+                          <span>当前地区：{{ card.divisionName }}</span>
                         </div>
-                        <div class="event-detail-item">
+                        <div v-if="card.seasonStatus" class="event-detail-item">
                           <img src="@/assets/icon/home/user.png" alt="" class="event-detail-icon" />
-                          <span>赛事状态：已结束</span>
+                          <span>赛事状态：{{ v4SeasonStatusLabel(card.seasonStatus) }}</span>
                         </div>
-                        <div class="event-detail-item">
+                        <div v-if="card.currentStageName" class="event-detail-item">
                           <img src="@/assets/icon/home/platform.png" alt="" class="event-detail-icon" />
-                          <span>比赛阶段：CNPA 季后</span>
+                          <span>比赛阶段：{{ card.currentStageName }}</span>
                         </div>
-                        <div class="event-detail-item">
+                        <div v-if="formatEventRange(card.matchStartTime, card.matchEndTime)" class="event-detail-item">
                           <img src="@/assets/icon/home/date.png" alt="" class="event-detail-icon" />
-                          <span>时间：09-10 ~ 11-30</span>
+                          <span>时间：{{ formatEventRange(card.matchStartTime, card.matchEndTime) }}</span>
                         </div>
                       </div>
-                    </div>
-                  </article>
-
-                  <article class="current-event-card">
-                    <span class="event-status-tag event-status-tag--upcoming">报名中</span>
-                    <div class="event-icon">
-                      <img src="@/assets/icon/home/cup.png" alt="CNPA CUP" />
-                    </div>
-                    <div class="event-body">
-                      <h3 class="event-title">CNPA CUP</h3>
-                      <div class="event-details">
+                      <div v-else class="event-details">
                         <div class="event-detail-item">
                           <img src="@/assets/icon/home/stage.png" alt="" class="event-detail-icon" />
-                          <span>当前地区：挑金杯积</span>
-                        </div>
-                        <div class="event-detail-item">
-                          <img src="@/assets/icon/home/user.png" alt="" class="event-detail-icon" />
-                          <span>赛事状态：进行中</span>
-                        </div>
-                        <div class="event-detail-item">
-                          <img src="@/assets/icon/home/platform.png" alt="" class="event-detail-icon" />
-                          <span>比赛阶段：CNPA 季后</span>
-                        </div>
-                        <div class="event-detail-item">
-                          <img src="@/assets/icon/home/date.png" alt="" class="event-detail-icon" />
-                          <span>时间：06-15 ~ 10-10</span>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-
-                  <article class="current-event-card">
-                    <span class="event-status-tag event-status-tag--upcoming">即将开始</span>
-                    <div class="event-icon">
-                      <img src="@/assets/icon/home/arena.png" alt="CNPA ARENA" />
-                    </div>
-                    <div class="event-body">
-                      <h3 class="event-title">CNPA ARENA</h3>
-                      <div class="event-details">
-                        <div class="event-detail-item">
-                          <img src="@/assets/icon/home/stage.png" alt="" class="event-detail-icon" />
-                          <span>当前地区：竞技场黄金</span>
-                        </div>
-                        <div class="event-detail-item">
-                          <img src="@/assets/icon/home/user.png" alt="" class="event-detail-icon" />
-                          <span>赛事状态：进行中</span>
-                        </div>
-                        <div class="event-detail-item">
-                          <img src="@/assets/icon/home/platform.png" alt="" class="event-detail-icon" />
-                          <span>比赛阶段：CNPA 季后</span>
-                        </div>
-                        <div class="event-detail-item">
-                          <img src="@/assets/icon/home/date.png" alt="" class="event-detail-icon" />
-                          <span>时间：10-01 ~ 10-31</span>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-
-                  <article class="current-event-card">
-                    <span class="event-status-tag">未开始</span>
-                    <div class="event-icon">
-                      <img src="@/assets/icon/home/open.png" alt="CNPA OPEN" />
-                    </div>
-                    <div class="event-body">
-                      <h3 class="event-title">CNPA OPEN</h3>
-                      <div class="event-details">
-                        <div class="event-detail-item">
-                          <img src="@/assets/icon/home/stage.png" alt="" class="event-detail-icon" />
-                          <span>当前地区：挑金杯积</span>
-                        </div>
-                        <div class="event-detail-item">
-                          <img src="@/assets/icon/home/user.png" alt="" class="event-detail-icon" />
-                          <span>赛事状态：未开始</span>
-                        </div>
-                        <div class="event-detail-item">
-                          <img src="@/assets/icon/home/platform.png" alt="" class="event-detail-icon" />
-                          <span>比赛阶段：CNPA 季后</span>
-                        </div>
-                        <div class="event-detail-item">
-                          <img src="@/assets/icon/home/date.png" alt="" class="event-detail-icon" />
-                          <span>时间：09-01 ~ 09-30</span>
+                          <span>暂无赛事</span>
                         </div>
                       </div>
                     </div>
@@ -600,7 +633,7 @@ onMounted(() => {
       </div>
     </section>
 
-    <HomeDataFocus :season-id="currentSeasonId" />
+    <HomeDataFocus />
 
     <HomeCommunity />
 

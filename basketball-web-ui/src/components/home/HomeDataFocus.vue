@@ -1,15 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import TornEdge from '@/components/home/TornEdge.vue'
-import {
-  getV4PublicSeasonDetail,
-  getV4PublicSeasonList,
-  getV4PublicStanding,
-  getV4PublicTeamStat,
-} from '@/api/v4Public'
-import type { V4PublicStandingItem, V4PublicTeamStatItem } from '@/api/types/v4Public'
+import { getPublicHomeDataFocus } from '@/api/publicHome'
+import type { PublicHomeFocusTeamVo, PublicHomePlayerLeaderVo } from '@/api/types/public'
 import { displayText, formatDecimal, initials } from '@/utils/publicDisplay'
-import { calculateAverage } from '@/utils/statAverage'
 import iconPts from '@/assets/icon/home/basketball1.png'
 import iconAst from '@/assets/icon/home/basketball2.png'
 import iconReb from '@/assets/icon/home/basketball3.png'
@@ -23,14 +17,11 @@ type LeaderCard = {
   statLabel: string
   mark: string
   value: string
-  teamId: string
+  playerName: string
+  avatarUrl: string
   teamName: string
   teamLogoUrl: string
 }
-
-const props = defineProps<{
-  seasonId?: string
-}>()
 
 const markIcons: Record<string, string> = {
   PTS: iconPts,
@@ -52,60 +43,52 @@ const state = ref<SectionState>('loading')
 const errorMessage = ref('')
 const brokenLogos = ref<Record<string, boolean>>({})
 const leaders = ref<LeaderCard[]>([])
-const featured = ref<V4PublicStandingItem | null>(null)
-const featuredStat = ref<V4PublicTeamStatItem | null>(null)
+const featured = ref<PublicHomeFocusTeamVo | null>(null)
 
 const filterLabel = computed(() =>
   seriesFilters.find((item) => item.key === seriesFilter.value)?.label || '赛事筛选',
 )
 
+const resolvedSeriesCode = computed(() => seriesFilter.value || 'LEAGUE')
+
 const featuredRecord = computed(() => {
   if (!featured.value) return '--'
-  const wins = featured.value.winCount ?? 0
-  const losses = featured.value.loseCount ?? 0
+  const wins = featured.value.weekWinCount
+  const losses = featured.value.weekLoseCount
+  if (wins == null || losses == null) return '--'
   return `${wins}胜${losses}负`
 })
 
 const featuredNet = computed(() => {
-  const stat = featuredStat.value
-  if (stat?.avgPointsFor != null && stat?.avgPointsAgainst != null) {
-    const diff = Number(stat.avgPointsFor) - Number(stat.avgPointsAgainst)
-    if (!Number.isFinite(diff)) return '--'
-    return `${diff > 0 ? '+' : ''}${formatDecimal(diff, 1)}`
-  }
-  const total = featured.value?.pointDiff
-  const games = (featured.value?.winCount ?? 0) + (featured.value?.loseCount ?? 0)
-  if (total == null || games <= 0) return '--'
-  const avg = Number(total) / games
-  return `${avg > 0 ? '+' : ''}${formatDecimal(avg, 1)}`
+  const diff = featured.value?.weekAvgPointDiff
+  if (diff == null || diff === '') return '--'
+  const numeric = Number(diff)
+  if (!Number.isFinite(numeric)) return '--'
+  return `${numeric > 0 ? '+' : ''}${formatDecimal(numeric, 1)}`
 })
 
-function pickLeader(
-  rows: V4PublicTeamStatItem[],
+const featuredForm = computed(() =>
+  (featured.value?.recentForm ?? []).filter((item) => item === 'W' || item === 'L'),
+)
+
+function toLeaderCard(
   title: string,
   statLabel: string,
   mark: string,
-  valueOf: (row: V4PublicTeamStatItem) => number,
+  row?: PublicHomePlayerLeaderVo | null,
 ): LeaderCard {
-  let best: V4PublicTeamStatItem | null = null
-  let bestValue = Number.NEGATIVE_INFINITY
-  for (const row of rows) {
-    if ((row.matchCount ?? 0) <= 0) continue
-    const value = valueOf(row)
-    if (value > bestValue) {
-      best = row
-      bestValue = value
-    }
-  }
+  const value = row?.value
+  const numeric = value == null || value === '' ? Number.NaN : Number(value)
   return {
     key: title,
     title,
     statLabel,
     mark,
-    value: best ? formatDecimal(bestValue, 1) : '--',
-    teamId: best?.eventTeamId || '',
-    teamName: displayText(best?.teamName, '暂无数据'),
-    teamLogoUrl: best?.teamLogoUrl?.trim() || '',
+    value: Number.isFinite(numeric) ? formatDecimal(numeric, 1) : '--',
+    playerName: displayText(row?.playerName, '暂无数据'),
+    avatarUrl: row?.avatarUrl?.trim() || '',
+    teamName: row?.teamName?.trim() || '',
+    teamLogoUrl: row?.teamLogoUrl?.trim() || '',
   }
 }
 
@@ -113,59 +96,23 @@ function showLogo(url: string, key: string) {
   return Boolean(url) && !brokenLogos.value[key]
 }
 
-async function resolveDivisionId(): Promise<string> {
-  if (seriesFilter.value) {
-    const res = await getV4PublicSeasonList({ seriesCode: seriesFilter.value })
-    const season = res.data?.[0]
-    if (!season?.seasonId) return ''
-    if (season.divisions?.[0]?.divisionId) return season.divisions[0].divisionId
-    const detail = await getV4PublicSeasonDetail(season.seasonId)
-    return detail.data?.defaultDivisionId || detail.data?.divisions?.[0]?.divisionId || ''
-  }
-  if (props.seasonId) {
-    const detail = await getV4PublicSeasonDetail(props.seasonId)
-    return detail.data?.defaultDivisionId || detail.data?.divisions?.[0]?.divisionId || ''
-  }
-  const res = await getV4PublicSeasonList()
-  const season = res.data?.[0]
-  if (!season?.seasonId) return ''
-  if (season.divisions?.[0]?.divisionId) return season.divisions[0].divisionId
-  const detail = await getV4PublicSeasonDetail(season.seasonId)
-  return detail.data?.defaultDivisionId || detail.data?.divisions?.[0]?.divisionId || ''
-}
-
 async function load() {
   state.value = 'loading'
   errorMessage.value = ''
   try {
-    const divisionId = await resolveDivisionId()
-    if (!divisionId) {
-      leaders.value = []
-      featured.value = null
-      featuredStat.value = null
-      state.value = 'empty'
-      return
-    }
-    const [statRes, standingRes] = await Promise.all([
-      getV4PublicTeamStat(divisionId),
-      getV4PublicStanding(divisionId),
-    ])
-    const stats = statRes.data ?? []
-    const standings = standingRes.data ?? []
+    const res = await getPublicHomeDataFocus(resolvedSeriesCode.value)
+    const data = res.data
     leaders.value = [
-      pickLeader(stats, '得分王', '场均得分', 'PTS', (row) => Number(row.avgPointsFor ?? calculateAverage(row.pointsFor, row.matchCount))),
-      pickLeader(stats, '助攻王', '场均助攻', 'AST', (row) => calculateAverage(row.assist, row.matchCount)),
-      pickLeader(stats, '篮板王', '场均篮板', 'REB', (row) => calculateAverage(row.rebound, row.matchCount)),
+      toLeaderCard('得分王', '场均得分', 'PTS', data?.pointsLeader),
+      toLeaderCard('助攻王', '场均助攻', 'AST', data?.assistsLeader),
+      toLeaderCard('篮板王', '场均篮板', 'REB', data?.reboundsLeader),
     ]
-    featured.value = standings[0] ?? null
-    featuredStat.value = featured.value
-      ? stats.find((item) => item.eventTeamId === featured.value?.eventTeamId) ?? null
-      : null
-    state.value = leaders.value.some((item) => item.teamId) || featured.value ? 'success' : 'empty'
+    featured.value = data?.focusTeam ?? null
+    const hasLeader = Boolean(data?.pointsLeader || data?.assistsLeader || data?.reboundsLeader)
+    state.value = hasLeader || featured.value ? 'success' : 'empty'
   } catch (err) {
     leaders.value = []
     featured.value = null
-    featuredStat.value = null
     state.value = 'error'
     errorMessage.value = err instanceof Error ? err.message : '加载数据焦点失败'
   }
@@ -177,7 +124,7 @@ function selectSeries(key: SeriesFilter) {
 }
 
 watch(
-  () => [props.seasonId, seriesFilter.value],
+  resolvedSeriesCode,
   () => {
     void load()
   },
@@ -243,16 +190,16 @@ watch(
               <div class="data-leader-card__team">
                 <span class="data-leader-card__logo">
                   <img
-                    v-if="showLogo(card.teamLogoUrl, card.key)"
-                    :src="card.teamLogoUrl"
-                    :alt="card.teamName"
+                    v-if="showLogo(card.avatarUrl || card.teamLogoUrl, card.key)"
+                    :src="card.avatarUrl || card.teamLogoUrl"
+                    :alt="card.playerName"
                     @error="brokenLogos[card.key] = true"
                   />
-                  <i v-else>{{ initials(card.teamName) }}</i>
+                  <i v-else>{{ initials(card.playerName) }}</i>
                 </span>
                 <div>
-                  <b>{{ card.teamName }}</b>
-                  <small>{{ card.statLabel }}</small>
+                  <b>{{ card.playerName }}</b>
+                  <small>{{ card.teamName || card.statLabel }}</small>
                 </div>
               </div>
             </article>
@@ -281,15 +228,19 @@ watch(
                     <span>净胜分</span>
                     <b>{{ featuredNet }}</b>
                   </div>
-                  <div>
+                  <div v-if="featuredForm.length">
                     <span>最近战绩</span>
-                    <div class="data-featured-card__form" aria-hidden="true">
-                      <i v-for="n in 5" :key="n">-</i>
+                    <div class="data-featured-card__form">
+                      <i
+                        v-for="(item, index) in featuredForm"
+                        :key="`${item}-${index}`"
+                        :class="item === 'W' ? 'is-win' : 'is-lose'"
+                      >{{ item }}</i>
                     </div>
                   </div>
                 </div>
               </template>
-              <p v-else class="home-state home-state--inline">暂无焦点战队</p>
+              <p v-else class="home-state home-state--inline">本周暂无焦点战队</p>
             </article>
           </div>
         </div>

@@ -2,6 +2,7 @@ import request from '@/api/request'
 import type { ApiResult } from '@/api/types/common'
 import type {
   PublicHomeBannerResp,
+  PublicHomeDataFocusVo,
   PublicHomeVo,
   PublicMatchItemVo,
   PublicPlayerRankItemVo,
@@ -39,4 +40,10 @@ export function getPublicHomePlayerRanking(limit = 10) {
 
 export function getPublicHomeStatSummary() {
   return request.get<any, ApiResult<PublicSeasonSummaryVo>>('/basket/public/home/stat-summary')
+}
+
+export function getPublicHomeDataFocus(seriesCode?: string) {
+  return request.get<any, ApiResult<PublicHomeDataFocusVo>>('/basket/public/home/data-focus', {
+    params: seriesCode ? { seriesCode } : undefined,
+  })
 }

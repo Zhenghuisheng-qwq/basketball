@@ -2,6 +2,7 @@ package com.zhs.controller.publicapi;
 
 import com.zhs.common.NoLoginRequest;
 import com.zhs.response.publicapi.PublicHomeBannerResp;
+import com.zhs.response.publicapi.PublicHomeDataFocusVo;
 import com.zhs.response.publicapi.PublicHomeVo;
 import com.zhs.response.publicapi.PublicMatchItemVo;
 import com.zhs.response.publicapi.PublicPlayerRankItemVo;
@@ -69,5 +70,12 @@ public class BasketPublicHomeController {
     @GetMapping("/stat-summary")
     public R<PublicSeasonSummaryVo> getStatSummary() {
         return R.ok(publicHomeService.getStatSummary());
+    }
+
+    @ApiOperation("首页数据焦点（实时 PlayerStat + 本周正式比赛）")
+    @GetMapping("/data-focus")
+    public R<PublicHomeDataFocusVo> getDataFocus(
+            @RequestParam(required = false) String seriesCode) {
+        return R.ok(publicHomeService.getDataFocus(seriesCode));
     }
 }

@@ -1,6 +1,8 @@
 package com.zhs.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.zhs.dao.v4.BasketEventPlayerDao;
+import com.zhs.dao.v4.BasketEventTeamDao;
 import com.zhs.dao.v4.BasketSeasonDao;
 import com.zhs.dao.v4.BasketV4MatchDao;
 import com.zhs.enums.PublicPlayerRankTypeEnum;
@@ -8,13 +10,23 @@ import com.zhs.enums.PublicTeamRankTypeEnum;
 import com.zhs.enums.v4.MatchPublishStatusEnum;
 import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.enums.v4.PublishStatusEnum;
+import com.zhs.model.v4.BasketEventPlayer;
+import com.zhs.model.v4.BasketEventTeam;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketV4Match;
+import com.zhs.response.publicapi.PublicHomeDataFocusVo;
+import com.zhs.response.publicapi.PublicHomeFocusTeamVo;
+import com.zhs.response.publicapi.PublicHomePlayerLeaderVo;
 import com.zhs.response.publicapi.PublicHomeVo;
 import com.zhs.response.publicapi.PublicMatchItemVo;
 import com.zhs.response.publicapi.PublicPlayerRankItemVo;
 import com.zhs.response.publicapi.PublicSeasonSummaryVo;
 import com.zhs.response.publicapi.PublicTeamRankItemVo;
+import com.zhs.response.v4.publicapi.V4PublicDivisionBriefResp;
+import com.zhs.response.v4.publicapi.V4PublicMatchItemResp;
+import com.zhs.response.v4.publicapi.V4PublicPlayerStatItemResp;
+import com.zhs.response.v4.publicapi.V4PublicSeasonItemResp;
+import com.zhs.response.v4.publicapi.V4PublicStandingItemResp;
 import com.zhs.service.IBasketPublicAnnouncementService;
 import com.zhs.service.IBasketPublicBannerService;
 import com.zhs.service.IBasketPublicDataCenterService;
@@ -22,16 +34,25 @@ import com.zhs.service.IBasketPublicHomeService;
 import com.zhs.service.IBasketPublicPartnerService;
 import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicSupport;
+import com.zhs.service.support.HomeRealtimeFocusSupport;
+import com.zhs.service.support.V4CurrentSeasonSelector;
+import com.zhs.service.v4.IBasketV4PublicService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -59,6 +80,12 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
     private IBasketPublicAnnouncementService announcementService;
     @Resource
     private IBasketPublicPartnerService partnerService;
+    @Resource
+    private IBasketV4PublicService v4PublicService;
+    @Resource
+    private BasketEventPlayerDao eventPlayerDao;
+    @Resource
+    private BasketEventTeamDao eventTeamDao;
 
     @Override
     public PublicHomeVo getHome() {
@@ -158,6 +185,173 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
             return null;
         }
         return dataCenterService.getSeasonSummary(season.getId());
+    }
+
+    @Override
+    public PublicHomeDataFocusVo getDataFocus(String seriesCode) {
+        String normalized = HomeRealtimeFocusSupport.normalizeSeriesCode(seriesCode);
+        PublicHomeDataFocusVo vo = new PublicHomeDataFocusVo();
+        vo.setSeriesCode(normalized);
+        try {
+            return buildDataFocus(normalized, vo);
+        } catch (Exception ignored) {
+            return vo;
+        }
+    }
+
+    private PublicHomeDataFocusVo buildDataFocus(String normalized, PublicHomeDataFocusVo vo) {
+        if (!HomeRealtimeFocusSupport.isHomeSeriesCode(normalized)) {
+            return vo;
+        }
+
+        List<V4PublicSeasonItemResp> seasons = safeList(() ->
+                v4PublicService.listSeasons(normalized, null, null));
+        V4PublicSeasonItemResp current = V4CurrentSeasonSelector.pickCurrentPublic(seasons);
+        if (current == null || current.getSeasonId() == null) {
+            return vo;
+        }
+        vo.setSeasonId(current.getSeasonId());
+        V4PublicDivisionBriefResp division = HomeRealtimeFocusSupport.pickDefaultDivision(current);
+        if (division == null || division.getDivisionId() == null) {
+            return vo;
+        }
+        vo.setDivisionId(division.getDivisionId());
+
+        List<V4PublicPlayerStatItemResp> playerStats = safeList(() ->
+                v4PublicService.listPlayerStat(division.getDivisionId()));
+        vo.setPointsLeader(HomeRealtimeFocusSupport.pickLeader(
+                playerStats, V4PublicPlayerStatItemResp::getAvgPoints));
+        vo.setAssistsLeader(HomeRealtimeFocusSupport.pickLeader(
+                playerStats, V4PublicPlayerStatItemResp::getAvgAssist));
+        vo.setReboundsLeader(HomeRealtimeFocusSupport.pickLeader(
+                playerStats, V4PublicPlayerStatItemResp::getAvgRebound));
+        enrichLeaders(vo.getPointsLeader(), vo.getAssistsLeader(), vo.getReboundsLeader());
+
+        List<V4PublicMatchItemResp> officialMatches = safeList(() ->
+                v4PublicService.listMatches(division.getDivisionId(), null, null, null, Boolean.TRUE, null));
+        Map<Long, Integer> rankMap = loadStandingRankMap(division.getDivisionId());
+        Date now = new Date();
+        PublicHomeFocusTeamVo focusTeam = HomeRealtimeFocusSupport.pickWeeklyFocusTeam(
+                officialMatches,
+                HomeRealtimeFocusSupport.weekStartInclusive(now),
+                HomeRealtimeFocusSupport.weekEndExclusive(now),
+                rankMap);
+        if (focusTeam != null) {
+            fillFocusTeamDisplay(focusTeam);
+        }
+        vo.setFocusTeam(focusTeam);
+        return vo;
+    }
+
+    private Map<Long, Integer> loadStandingRankMap(Long divisionId) {
+        List<V4PublicStandingItemResp> rows = safeList(() -> v4PublicService.listStanding(divisionId));
+        if (CollectionUtils.isEmpty(rows)) {
+            return Collections.emptyMap();
+        }
+        Map<Long, Integer> ranks = new HashMap<>();
+        for (V4PublicStandingItemResp row : rows) {
+            if (row.getEventTeamId() != null && row.getRankNo() != null) {
+                ranks.put(row.getEventTeamId(), row.getRankNo());
+            }
+        }
+        return ranks;
+    }
+
+    private void enrichLeaders(PublicHomePlayerLeaderVo... leaders) {
+        Set<Long> playerIds = new LinkedHashSet<>();
+        Set<Long> teamIds = new LinkedHashSet<>();
+        List<PublicHomePlayerLeaderVo> present = new ArrayList<>();
+        for (PublicHomePlayerLeaderVo leader : leaders) {
+            if (leader == null) {
+                continue;
+            }
+            present.add(leader);
+            if (leader.getEventPlayerId() != null) {
+                playerIds.add(leader.getEventPlayerId());
+            }
+            if (leader.getEventTeamId() != null) {
+                teamIds.add(leader.getEventTeamId());
+            }
+        }
+        if (present.isEmpty()) {
+            return;
+        }
+        Map<Long, BasketEventPlayer> playerMap = loadEventPlayerMap(playerIds);
+        Map<Long, BasketEventTeam> teamMap = loadEventTeamMap(teamIds);
+        Set<Long> fileIds = new HashSet<>();
+        for (BasketEventPlayer player : playerMap.values()) {
+            if (player.getAvatarFileId() != null) {
+                fileIds.add(player.getAvatarFileId());
+            }
+        }
+        for (BasketEventTeam team : teamMap.values()) {
+            if (team.getTeamLogoFileId() != null) {
+                fileIds.add(team.getTeamLogoFileId());
+            }
+        }
+        Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(fileIds);
+        for (PublicHomePlayerLeaderVo leader : present) {
+            BasketEventPlayer player = playerMap.get(leader.getEventPlayerId());
+            if (player != null) {
+                if (leader.getSourcePlayerId() == null) {
+                    leader.setSourcePlayerId(player.getSourcePlayerId());
+                }
+                if (!StringUtils.hasText(leader.getPlayerName())) {
+                    leader.setPlayerName(player.getPlayerNameSnapshot());
+                }
+                leader.setAvatarUrl(urlMap.get(player.getAvatarFileId()));
+            }
+            BasketEventTeam team = teamMap.get(leader.getEventTeamId());
+            if (team != null) {
+                if (!StringUtils.hasText(leader.getTeamName())) {
+                    leader.setTeamName(team.getTeamNameSnapshot());
+                }
+                leader.setTeamLogoUrl(urlMap.get(team.getTeamLogoFileId()));
+            }
+        }
+    }
+
+    private void fillFocusTeamDisplay(PublicHomeFocusTeamVo focusTeam) {
+        if (focusTeam.getEventTeamId() == null) {
+            return;
+        }
+        BasketEventTeam team = eventTeamDao.selectById(focusTeam.getEventTeamId());
+        if (team == null) {
+            return;
+        }
+        if (!StringUtils.hasText(focusTeam.getTeamName())) {
+            focusTeam.setTeamName(team.getTeamNameSnapshot());
+        }
+        if (!StringUtils.hasText(focusTeam.getTeamLogoUrl()) && team.getTeamLogoFileId() != null) {
+            Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(Collections.singleton(team.getTeamLogoFileId()));
+            focusTeam.setTeamLogoUrl(urlMap.get(team.getTeamLogoFileId()));
+        }
+    }
+
+    private Map<Long, BasketEventPlayer> loadEventPlayerMap(Set<Long> playerIds) {
+        if (CollectionUtils.isEmpty(playerIds)) {
+            return Collections.emptyMap();
+        }
+        List<BasketEventPlayer> rows = eventPlayerDao.selectBatchIds(playerIds);
+        if (CollectionUtils.isEmpty(rows)) {
+            return Collections.emptyMap();
+        }
+        return rows.stream()
+                .filter(row -> row.getId() != null)
+                .collect(Collectors.toMap(BasketEventPlayer::getId, Function.identity(), (left, right) -> left));
+    }
+
+    private Map<Long, BasketEventTeam> loadEventTeamMap(Set<Long> teamIds) {
+        if (CollectionUtils.isEmpty(teamIds)) {
+            return Collections.emptyMap();
+        }
+        List<BasketEventTeam> rows = eventTeamDao.selectBatchIds(teamIds);
+        if (CollectionUtils.isEmpty(rows)) {
+            return Collections.emptyMap();
+        }
+        return rows.stream()
+                .filter(row -> row.getId() != null)
+                .collect(Collectors.toMap(BasketEventTeam::getId, Function.identity(), (left, right) -> left));
     }
 
     private int normalizeLimit(Integer limit) {
