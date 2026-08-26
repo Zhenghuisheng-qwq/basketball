@@ -13,7 +13,7 @@ const description = computed(() => {
 })
 </script>
 <template>
-  <section class="league-about" :aria-label="`关于 ${seriesLabel}`">
+  <section class="site-section site-section--dark league-about" :aria-label="`关于 ${seriesLabel}`">
     <div class="site-shell">
       <img
         class="league-about__image"
@@ -30,8 +30,6 @@ const description = computed(() => {
 </template>
 <style scoped lang="scss">
 .league-about {
-  width: 100%;
-  background: #050505;
   overflow: hidden;
 }
 

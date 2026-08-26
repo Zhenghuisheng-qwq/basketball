@@ -92,6 +92,8 @@ const seriesLinks = [
 
 <style scoped lang="scss">
 .web-footer {
+  position: relative;
+  z-index: 1;
   width: 100%;
   background: var(--cnpa-black);
   border-top: 1px solid var(--cnpa-border);

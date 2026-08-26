@@ -26,6 +26,26 @@ public class PublicMatchItemVo implements Serializable {
     @ApiModelProperty("赛季主键")
     private Long seasonId;
 
+    @ApiModelProperty("赛季名称")
+    private String seasonName;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty("CNPA Series 主键（来自 Season.seriesId，不是 Match.seriesId）")
+    private Long seriesId;
+
+    @ApiModelProperty("CNPA Series 编码：LEAGUE / ARENA / CUP / OPEN")
+    private String seriesCode;
+
+    @ApiModelProperty("CNPA Series 名称")
+    private String seriesName;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty("赛区主键")
+    private Long divisionId;
+
+    @ApiModelProperty("赛区名称")
+    private String divisionName;
+
     @JsonSerialize(using = ToStringSerializer.class)
     @ApiModelProperty("阶段主键")
     private Long stageId;
@@ -70,8 +90,8 @@ public class PublicMatchItemVo implements Serializable {
     @ApiModelProperty("官方胜者（eventTeamId）")
     private Long winnerTeamId;
 
-    @ApiModelProperty("比赛状态")
-    private Integer matchStatus;
+    @ApiModelProperty("比赛状态：SCHEDULED / PLAYING / FINISHED / CANCELLED / FORFEITED")
+    private String matchStatus;
 
     @ApiModelProperty("数据状态")
     private Integer dataStatus;

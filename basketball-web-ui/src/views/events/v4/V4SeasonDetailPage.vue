@@ -314,7 +314,7 @@ onMounted(() => {
 
 <template>
   <div class="v4-events-page">
-    <section class="v4-events-hero">
+    <section class="site-section v4-events-hero">
       <div class="site-shell">
         <button type="button" class="v4-btn v4-btn--ghost" @click="backToList">← 返回赛事列表</button>
         <div v-if="loading" class="v4-state">加载中...</div>
@@ -356,7 +356,7 @@ onMounted(() => {
       </div>
     </section>
 
-    <section v-if="season && !loading" class="v4-events-list-section">
+    <section v-if="season && !loading" class="site-section v4-events-list-section">
       <div class="site-shell">
         <div v-if="activeTab === 'overview'" class="v4-overview-grid">
           <div class="v4-overview-item">

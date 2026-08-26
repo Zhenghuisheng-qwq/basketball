@@ -664,13 +664,15 @@
 
 .data-leader-card__mark {
   position: absolute;
-  top: 54px;
-  right: 12px;
-  color: rgba(17, 17, 17, 0.06);
-  font-size: 56px;
-  font-weight: 950;
-  letter-spacing: -0.04em;
+  top: 42px;
+  right: 8px;
+  width: 86px;
+  height: 86px;
+  object-fit: contain;
   pointer-events: none;
+  /* 图标为浅色描边 + 黑底，反色后黑底变白，作为浅水印叠在白卡片上 */
+  filter: invert(1);
+  opacity: 0.14;
 }
 
 .data-leader-card__team {
@@ -2202,76 +2204,90 @@
 
 .home-community-section {
   position: relative;
+  z-index: 2;
+  overflow: visible;
   color: #fff;
 }
 
 .home-community-paper {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
+  aspect-ratio: 4 / 1;
   box-sizing: border-box;
-  padding-block: clamp(42px, 5vw, 72px);
   color: #fff;
-  background:
-    linear-gradient(135deg, rgba(142, 0, 8, 0.94) 0%, rgba(225, 6, 19, 0.9) 48%, rgba(80, 0, 4, 0.96) 100%),
-    repeating-linear-gradient(
-      -24deg,
-      rgba(255, 255, 255, 0.045) 0,
-      rgba(255, 255, 255, 0.045) 2px,
-      transparent 2px,
-      transparent 8px
-    );
+  background: #4a0006;
 
   &::after {
-    content: 'CNPA';
+    content: '';
     position: absolute;
-    top: -18px;
-    right: clamp(8px, 4vw, 48px);
-    color: transparent;
-    font-size: clamp(96px, 16vw, 220px);
-    font-weight: 950;
-    letter-spacing: -0.06em;
-    line-height: 0.8;
-    -webkit-text-stroke: 2px rgba(255, 255, 255, 0.12);
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    height: 8px;
+    background: #fff;
     pointer-events: none;
   }
 }
 
+.home-community-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  pointer-events: none;
+  user-select: none;
+}
+
+.home-community-tear {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: auto;
+  /* 白边在素材 y=236，绝对定位贴盒子顶 */
+  transform: translateY(calc(-240 / 724 * 100%));
+  mix-blend-mode: screen;
+  pointer-events: none;
+  user-select: none;
+}
+
+.home-community-tear-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 2;
+  height: clamp(120px, 16vw, 200px);
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(-18px);
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+    /* 白撕纸从 y=336 开始，对齐盒子底；黑底不再滤色，保持黑色接到页脚 */
+    transform: translateY(calc(-336 / 724 * 100%));
+  }
+}
+
 .home-community-inner {
-  position: relative;
-  z-index: 1;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
   width: 100%;
   box-sizing: border-box;
-}
-
-.home-community-header {
-  max-width: 720px;
-  margin-bottom: clamp(22px, 3vw, 32px);
-}
-
-.home-community-title {
-  margin: 0;
-  font-size: clamp(34px, 4vw, 54px);
-  font-weight: 950;
-  font-style: italic;
-  letter-spacing: -0.04em;
-  line-height: 0.95;
-}
-
-.home-community-sub {
-  display: block;
-  margin-top: 10px;
-  color: rgba(255, 255, 255, 0.86);
-  font-size: clamp(12px, 1.1vw, 15px);
-  font-weight: 700;
-  letter-spacing: 0.16em;
-}
-
-.home-community-header p {
-  margin: 12px 0 0;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 14px;
-  line-height: 1.7;
+  padding-bottom: clamp(28px, 3.2vw, 48px);
 }
 
 .home-community-grid {
@@ -2283,10 +2299,10 @@
 
 .home-community-item {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   grid-template-areas:
     'icon title'
-    '. desc'
+    'icon desc'
     'action action';
   column-gap: 10px;
   row-gap: 4px;
@@ -2312,13 +2328,16 @@
   grid-area: icon;
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  color: #fff;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
 
-  svg {
-    width: 28px;
-    height: 28px;
+  img {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    /* 图标为白标黑底，叠在深色卡片上消掉黑底 */
+    mix-blend-mode: screen;
   }
 }
 
@@ -2344,6 +2363,15 @@
 }
 
 @media (max-width: 1100px) {
+  .home-community-paper {
+    aspect-ratio: auto;
+  }
+
+  .home-community-inner {
+    position: relative;
+    padding-top: clamp(160px, 22vw, 240px);
+  }
+
   .home-community-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

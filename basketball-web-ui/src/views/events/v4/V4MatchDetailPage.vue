@@ -114,7 +114,7 @@ onMounted(() => {
 
 <template>
   <div class="v4-events-page">
-    <section class="v4-events-hero">
+    <section class="site-section v4-events-hero">
       <div class="site-shell">
         <button type="button" class="v4-btn v4-btn--ghost" @click="backToSeason">← 返回赛程</button>
         <div v-if="loading" class="v4-state">加载中...</div>
@@ -185,7 +185,7 @@ onMounted(() => {
       </div>
     </section>
 
-    <section v-if="match && !loading" class="v4-events-list-section">
+    <section v-if="match && !loading" class="site-section v4-events-list-section">
       <div class="site-shell">
         <div v-if="match.seriesContext?.games?.length" class="v4-series-games-panel">
           <h2 class="v4-schedule-round__title">系列赛各局</h2>

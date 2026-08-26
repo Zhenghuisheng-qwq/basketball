@@ -501,8 +501,8 @@ function openSeriesGame(matchId?: string) {
 
 @media (max-width: 768px) {
   .league-schedule__inner {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: var(--cnpa-public-content-gutter);
+    padding-right: var(--cnpa-public-content-gutter);
   }
 
   .schedule-head {

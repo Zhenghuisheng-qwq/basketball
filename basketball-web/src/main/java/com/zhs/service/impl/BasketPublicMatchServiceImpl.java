@@ -3,20 +3,25 @@ package com.zhs.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.zhs.dao.v4.BasketDivisionDao;
 import com.zhs.dao.v4.BasketEventPlayerDao;
 import com.zhs.dao.v4.BasketEventTeamDao;
 import com.zhs.dao.v4.BasketSeasonDao;
 import com.zhs.dao.v4.BasketV4MatchDao;
 import com.zhs.dao.v4.BasketV4MatchPlayerStatDao;
 import com.zhs.dao.v4.BasketV4MatchTeamStatDao;
+import com.zhs.mapper.v4.BasketV4PublicStageMapper;
 import com.zhs.enums.v4.MatchPublishStatusEnum;
 import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.enums.v4.PublishStatusEnum;
 import com.zhs.exception.ServiceException;
+import com.zhs.model.v4.BasketDivision;
 import com.zhs.model.v4.BasketEventPlayer;
 import com.zhs.model.v4.BasketEventTeam;
 import com.zhs.model.v4.BasketSeason;
+import com.zhs.model.v4.BasketSeries;
 import com.zhs.model.v4.BasketV4Match;
+import com.zhs.response.v4.publicapi.V4PublicStageItemResp;
 import com.zhs.model.v4.BasketV4MatchPlayerStat;
 import com.zhs.model.v4.BasketV4MatchTeamStat;
 import com.zhs.response.publicapi.PublicMatchDetailVo;
@@ -51,6 +56,10 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
     private BasketEventTeamDao eventTeamDao;
     @Resource
     private BasketSeasonDao seasonDao;
+    @Resource
+    private BasketDivisionDao divisionDao;
+    @Resource
+    private BasketV4PublicStageMapper publicStageMapper;
     @Resource
     private BasketV4MatchTeamStatDao matchTeamStatDao;
     @Resource
@@ -114,6 +123,15 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             vo.setAwayTeamName(base.getAwayTeamName());
             vo.setAwayTeamLogoUrl(base.getAwayTeamLogoUrl());
             vo.setVenueName(base.getVenueName());
+            vo.setSeriesId(base.getSeriesId());
+            vo.setSeriesCode(base.getSeriesCode());
+            vo.setSeriesName(base.getSeriesName());
+            vo.setSeasonName(base.getSeasonName());
+            vo.setDivisionId(base.getDivisionId());
+            vo.setDivisionName(base.getDivisionName());
+            vo.setStageId(base.getStageId());
+            vo.setStageName(base.getStageName());
+            vo.setMatchStatus(base.getMatchStatus());
         } else {
             vo.setHomeTeamId(match.getHomeEventTeamId());
             vo.setAwayTeamId(match.getAwayEventTeamId());
@@ -189,6 +207,11 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
         Map<Long, BasketEventTeam> teamMap = loadEventTeamMap(eventTeamIds);
         Map<Long, String> logoMap = publicSupport.loadAccessUrlMap(teamMap.values().stream()
                 .map(BasketEventTeam::getTeamLogoFileId).filter(Objects::nonNull).collect(Collectors.toSet()));
+        Map<Long, BasketSeason> seasonMap = loadSeasonMap(matches);
+        Map<Long, BasketSeries> seriesMap = publicSupport.loadSeriesMap(seasonMap.values().stream()
+                .map(BasketSeason::getSeriesId).filter(Objects::nonNull).collect(Collectors.toSet()));
+        Map<Long, BasketDivision> divisionMap = loadDivisionMap(matches);
+        Map<Long, String> stageNameMap = loadStageNameMap(matches);
 
         List<PublicMatchItemVo> vos = new ArrayList<>(matches.size());
         for (BasketV4Match match : matches) {
@@ -196,6 +219,8 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             vo.setMatchId(match.getId());
             vo.setMatchNo(match.getMatchNo());
             vo.setSeasonId(match.getSeasonId());
+            vo.setMatchStatus(match.getMatchStatus());
+            fillCnpaSeriesContext(vo, match, seasonMap, seriesMap, divisionMap, stageNameMap);
             // 公开页路由/对比使用 basket_team.id，优先回填 EventTeam.source_team_id
             BasketEventTeam home = teamMap.get(match.getHomeEventTeamId());
             BasketEventTeam away = teamMap.get(match.getAwayEventTeamId());
@@ -275,6 +300,92 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             throw new ServiceException("赛季不存在或未公开");
         }
         return season;
+    }
+
+    private void fillCnpaSeriesContext(PublicMatchItemVo vo, BasketV4Match match,
+                                       Map<Long, BasketSeason> seasonMap,
+                                       Map<Long, BasketSeries> seriesMap,
+                                       Map<Long, BasketDivision> divisionMap,
+                                       Map<Long, String> stageNameMap) {
+        vo.setDivisionId(match.getDivisionId());
+        vo.setStageId(match.getStageId());
+        vo.setStageName(stageNameMap.get(match.getStageId()));
+        BasketDivision division = divisionMap.get(match.getDivisionId());
+        if (division != null) {
+            vo.setDivisionName(division.getDivisionName());
+        }
+        BasketSeason season = seasonMap.get(match.getSeasonId());
+        if (season == null) {
+            return;
+        }
+        vo.setSeasonName(resolveSeasonName(season));
+        BasketSeries series = seriesMap.get(season.getSeriesId());
+        if (series == null) {
+            return;
+        }
+        vo.setSeriesId(series.getId());
+        vo.setSeriesCode(series.getSeriesCode());
+        vo.setSeriesName(series.getSeriesName());
+    }
+
+    private Map<Long, BasketSeason> loadSeasonMap(List<BasketV4Match> matches) {
+        Set<Long> seasonIds = matches.stream()
+                .map(BasketV4Match::getSeasonId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (seasonIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<BasketSeason> seasons = seasonDao.selectByIds(seasonIds);
+        if (CollectionUtils.isEmpty(seasons)) {
+            return Collections.emptyMap();
+        }
+        Map<Long, BasketSeason> map = new HashMap<>();
+        for (BasketSeason season : seasons) {
+            if (season != null && Objects.equals(season.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                map.put(season.getId(), season);
+            }
+        }
+        return map;
+    }
+
+    private Map<Long, BasketDivision> loadDivisionMap(List<BasketV4Match> matches) {
+        Set<Long> divisionIds = matches.stream()
+                .map(BasketV4Match::getDivisionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (divisionIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<BasketDivision> divisions = divisionDao.selectByIds(divisionIds);
+        if (CollectionUtils.isEmpty(divisions)) {
+            return Collections.emptyMap();
+        }
+        Map<Long, BasketDivision> map = new HashMap<>();
+        for (BasketDivision division : divisions) {
+            if (division != null && Objects.equals(division.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                map.put(division.getId(), division);
+            }
+        }
+        return map;
+    }
+
+    private Map<Long, String> loadStageNameMap(List<BasketV4Match> matches) {
+        Set<Long> stageIds = matches.stream()
+                .map(BasketV4Match::getStageId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (stageIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Long, String> map = new HashMap<>();
+        for (Long stageId : stageIds) {
+            V4PublicStageItemResp stage = publicStageMapper.selectStageById(stageId);
+            if (stage != null && stage.getStageName() != null && !stage.getStageName().isBlank()) {
+                map.put(stageId, stage.getStageName());
+            }
+        }
+        return map;
     }
 
     private String resolveSeasonName(BasketSeason season) {

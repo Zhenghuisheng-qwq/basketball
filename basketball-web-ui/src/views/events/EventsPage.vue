@@ -27,7 +27,7 @@ function divisionLabel(division: { platformCode?: string; divisionName?: string;
 </script>
 <template>
   <div class="events-page">
-    <section class="events-hero-section">
+    <section class="site-section site-section--hero events-hero-section">
       <div class="site-shell">
         <LeagueHero />
         <LeagueTabs :active-tab="activeTab" @change="setTab" />
@@ -46,7 +46,7 @@ function divisionLabel(division: { platformCode?: string; divisionName?: string;
       </div>
     </section>
 
-    <section class="events-content-section">
+    <section class="site-section events-content-section">
       <LeagueOverview v-if="activeTab === 'overview'" />
       <LeagueSchedule v-else-if="activeTab === 'schedule'" />
       <LeagueStage v-else />

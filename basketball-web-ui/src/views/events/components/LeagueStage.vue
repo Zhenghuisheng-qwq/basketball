@@ -80,8 +80,8 @@ watch(
   <div class="league-stage">
     <template v-if="!showBracket">
       <div class="site-shell">
-        <section class="events-section-dark stage-main">
-          <div class="site-shell-inner">
+        <PaperSection edge="both" tone="gray" class="stage-main">
+          <div class="stage-main__inner">
             <StageProgressHeader
               v-if="stageOptions.length"
               v-model="selectedStageId"
@@ -96,7 +96,7 @@ watch(
               :stage-name="selectedStage?.stageName"
             />
           </div>
-        </section>
+        </PaperSection>
       </div>
 
       <CompetitionFormat :current-stage="formatCurrentStage" />
@@ -128,9 +128,15 @@ watch(
 </template>
 <style scoped lang="scss">
 .stage-main {
-  padding: 48px 0 24px;
-  background: var(--cnpa-public-paper-bg, #f4f1ea);
+  margin-top: 0;
   color: #111;
+}
+
+.stage-main__inner {
+  padding:
+    clamp(28px, 2.4vw, 42px)
+    var(--cnpa-public-content-gutter)
+    clamp(24px, 2.2vw, 36px);
 }
 
 .stage-state {

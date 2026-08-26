@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
+import PaperSection from '@/components/common/PaperSection.vue'
 import { getV4PublicStanding, getV4PublicTeamList } from '@/api/v4Public'
 import type { Team } from '../types/events'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
@@ -110,12 +111,12 @@ function goPage(index: number) {
 </script>
 <template>
   <div class="site-shell">
-    <section class="league-teams events-section-panel">
-      <div class="site-shell-inner">
+    <PaperSection edge="both" tone="gray" class="league-teams">
+      <div class="league-teams__inner">
       <div class="section-head">
         <div class="section-head-group">
-          <h2 class="section-head-title">参赛球队</h2>
-          <span class="section-head-sub">{{ ctx.currentTournament?.value?.tournamentName || ctx.divisionDetail?.value?.seriesName || 'Teams' }}</span>
+          <h2 class="cnpa-paper-section__title">参赛球队</h2>
+          <span class="cnpa-paper-section__subtitle">{{ ctx.currentTournament?.value?.tournamentName || ctx.divisionDetail?.value?.seriesName || 'Teams' }}</span>
         </div>
         <div class="head-actions">
           <label class="season-select">
@@ -164,12 +165,19 @@ function goPage(index: number) {
         />
       </div>
       </div>
-    </section>
+    </PaperSection>
   </div>
 </template>
 <style scoped lang="scss">
 .league-teams {
-  padding: 56px 0;
+  margin-top: 0;
+}
+
+.league-teams__inner {
+  padding:
+    clamp(28px, 2.4vw, 42px)
+    var(--cnpa-public-content-gutter)
+    clamp(32px, 2.8vw, 48px);
 }
 
 .head-actions {
@@ -273,7 +281,7 @@ function goPage(index: number) {
   height: 8px;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(17, 17, 17, 0.18);
   cursor: pointer;
   transition: background 0.2s ease, transform 0.2s ease;
 

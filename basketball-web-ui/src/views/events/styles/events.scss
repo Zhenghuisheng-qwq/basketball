@@ -1,8 +1,9 @@
 @use '@/assets/styles/variables.scss' as *;
 
+/* 版心链路：site-section → site-shell → paper / 内容 → *-inner；不要改 site-shell 的 width */
 .events-page {
   width: 100%;
-  background: var(--cnpa-public-paper-bg, #f4f1ea);
+  background: #050505;
   overflow-x: clip;
 }
 
@@ -13,11 +14,11 @@
 }
 
 .events-hero-section {
-  width: 100%;
   background: #050505;
 }
 
-.events-hero-section .site-shell {
+.events-hero-section .site-shell,
+.events-content-section .site-shell {
   position: relative;
 }
 
@@ -49,8 +50,7 @@
 }
 
 .events-content-section {
-  width: 100%;
-  background: var(--cnpa-public-paper-bg, #f4f1ea);
+  background: #050505;
 }
 
 .events-section {

@@ -693,6 +693,7 @@ function getTeamNameSizeClass(name: string) {
   flex-direction: column;
   padding-top: 18px;
   padding-bottom: clamp(12px, 1.4vw, 18px);
+  padding-inline: var(--cnpa-public-content-gutter);
   box-sizing: border-box;
 }
 
@@ -1010,6 +1011,7 @@ function getTeamNameSizeClass(name: string) {
 
 .compare-content {
   padding-block: clamp(16px, 1.6vw, 24px) clamp(56px, 5vw, 72px);
+  padding-inline: var(--cnpa-public-content-gutter);
   color: var(--cnpa-paper-text);
 }
 

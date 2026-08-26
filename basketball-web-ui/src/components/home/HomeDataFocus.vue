@@ -10,6 +10,9 @@ import {
 import type { V4PublicStandingItem, V4PublicTeamStatItem } from '@/api/types/v4Public'
 import { displayText, formatDecimal, initials } from '@/utils/publicDisplay'
 import { calculateAverage } from '@/utils/statAverage'
+import iconPts from '@/assets/icon/home/basketball1.png'
+import iconAst from '@/assets/icon/home/basketball2.png'
+import iconReb from '@/assets/icon/home/basketball3.png'
 
 type SeriesFilter = '' | 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'
 type SectionState = 'loading' | 'success' | 'empty' | 'error'
@@ -28,6 +31,12 @@ type LeaderCard = {
 const props = defineProps<{
   seasonId?: string
 }>()
+
+const markIcons: Record<string, string> = {
+  PTS: iconPts,
+  AST: iconAst,
+  REB: iconReb,
+}
 
 const seriesFilters: Array<{ key: SeriesFilter; label: string }> = [
   { key: '', label: '全部赛事' },
@@ -224,7 +233,13 @@ watch(
             >
               <h3>{{ card.title }}</h3>
               <strong>{{ card.value }}</strong>
-              <span class="data-leader-card__mark" aria-hidden="true">{{ card.mark }}</span>
+              <img
+                class="data-leader-card__mark"
+                :src="markIcons[card.mark]"
+                alt=""
+                aria-hidden="true"
+                draggable="false"
+              />
               <div class="data-leader-card__team">
                 <span class="data-leader-card__logo">
                   <img
@@ -278,7 +293,6 @@ watch(
             </article>
           </div>
         </div>
-        <TornEdge position="bottom" tone="light" variant="sharp" />
       </div>
     </div>
   </section>

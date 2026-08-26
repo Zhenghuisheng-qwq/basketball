@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import { communityLinks } from '@/constants/communityLinks'
+import iconKook from '@/assets/icon/home/social_kook.png'
+import iconQq from '@/assets/icon/home/social_qq.png'
+import iconBili from '@/assets/icon/home/social_bili.png'
+import iconDouyin from '@/assets/icon/home/social_douyin.png'
 
 type CommunityCard = {
   id: string
@@ -8,6 +12,14 @@ type CommunityCard = {
   description: string
   action: string
   url: string
+  icon: string
+}
+
+const cardIcons: Record<string, string> = {
+  kook: iconKook,
+  qq: iconQq,
+  bilibili: iconBili,
+  douyin: iconDouyin,
 }
 
 const cards: CommunityCard[] = [
@@ -18,6 +30,7 @@ const cards: CommunityCard[] = [
 ].map((card) => ({
   ...card,
   url: communityLinks.find((link) => link.id === card.id)?.url || card.url,
+  icon: cardIcons[card.id],
 }))
 
 function openLink(card: CommunityCard) {
@@ -30,16 +43,27 @@ function openLink(card: CommunityCard) {
 </script>
 
 <template>
-  <section class="site-section home-community-section" aria-labelledby="home-community-title">
+  <section class="site-section home-community-section" aria-label="加入 CNPA">
     <div class="site-shell home-community-shell">
       <div class="home-community-paper">
+      <img
+        class="home-community-bg"
+        src="@/assets/icon/home/join_cnpa.png"
+        alt=""
+        aria-hidden="true"
+        draggable="false"
+      />
+      <img
+        class="home-community-tear"
+        src="@/assets/icon/home/sizhi_cnpa_top.png"
+        alt=""
+        aria-hidden="true"
+        draggable="false"
+      />
+      <div class="home-community-tear-bottom" aria-hidden="true">
+        <img src="@/assets/icon/home/sizhi_cnpa_under.png" alt="" draggable="false" />
+      </div>
       <div class="home-community-inner">
-        <header class="home-community-header">
-          <h2 id="home-community-title" class="home-community-title">加入 CNPA</h2>
-          <span class="home-community-sub">JOIN THE COMMUNITY</span>
-          <p>关注赛事动态，与球员、战队和观众一起加入 CNPA 社区。</p>
-        </header>
-
         <div class="home-community-grid">
           <button
             v-for="card in cards"
@@ -49,18 +73,7 @@ function openLink(card: CommunityCard) {
             @click="openLink(card)"
           >
             <span class="home-community-item__icon" aria-hidden="true">
-              <svg v-if="card.id === 'kook'" viewBox="0 0 32 32" fill="none">
-                <path d="M7 8.5h12.5a6.5 6.5 0 0 1 0 13H16l-5.2 4.4V21.5H7A4.5 4.5 0 0 1 7 8.5Z" fill="currentColor"/>
-              </svg>
-              <svg v-else-if="card.id === 'qq'" viewBox="0 0 32 32" fill="none">
-                <path d="M16 5.5c-3.4 0-6.2 3.2-6.2 7.1 0 1.3.3 2.5.8 3.6-2.3 1.3-3.8 3.6-3.8 6.2 0 .8.6 1.1 1.2.7 1-.7 1.9-1.2 2.8-1.5.7 2.1 2.7 3.6 5.2 3.6s4.5-1.5 5.2-3.6c.9.3 1.8.8 2.8 1.5.6.4 1.2.1 1.2-.7 0-2.6-1.5-4.9-3.8-6.2.5-1.1.8-2.3.8-3.6 0-3.9-2.8-7.1-6.2-7.1Z" fill="currentColor"/>
-              </svg>
-              <svg v-else-if="card.id === 'bilibili'" viewBox="0 0 32 32" fill="none">
-                <path d="M8.2 7.2 11 10h10l2.8-2.8 1.5 1.5L22.8 12H25a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V14a2 2 0 0 1 2-2h2.2L6.7 8.7 8.2 7.2ZM9 15.5v7h14v-7H9Z" fill="currentColor"/>
-              </svg>
-              <svg v-else viewBox="0 0 32 32" fill="none">
-                <path d="M18.2 5.5v13.2a4.7 4.7 0 1 1-3.4-4.5V8.8c2.6 1.3 4.5 3.3 5.6 5.8 1.5-2.1 2.6-4.7 3.1-7.6h-2.4c-.4 1.6-1.1 3.1-2 4.4V5.5h-.9Z" fill="currentColor"/>
-              </svg>
+              <img :src="card.icon" alt="" draggable="false" />
             </span>
             <strong>{{ card.title }}</strong>
             <span class="home-community-item__desc">{{ card.description }}</span>
