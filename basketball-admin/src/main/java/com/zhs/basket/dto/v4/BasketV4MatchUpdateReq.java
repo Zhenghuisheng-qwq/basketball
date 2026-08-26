@@ -11,4 +11,5 @@ public class BasketV4MatchUpdateReq {
     private Date matchTime;
     private String venueText;
     private String remark;
+    private String replayUrl;
 }

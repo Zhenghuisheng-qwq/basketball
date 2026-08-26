@@ -36,6 +36,7 @@ public class BasketV4Match {
     private String platformCode;
     private String venueText;
     private String remark;
+    private String replayUrl;
     private Date createTime;
     private Date updateTime;
     private Integer isDelete;

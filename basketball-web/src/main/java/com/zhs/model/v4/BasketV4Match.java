@@ -74,6 +74,8 @@ public class BasketV4Match implements Serializable {
 
     private String remark;
 
+    private String replayUrl;
+
     private Date createTime;
 
     private Date updateTime;

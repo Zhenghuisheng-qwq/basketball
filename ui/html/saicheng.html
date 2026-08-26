@@ -1,0 +1,2990 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNPA League - 赛程</title>
+
+    <style>
+        /* =========================================================
+           1. Global
+        ========================================================= */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --cnpa-red: #e51422;
+            --cnpa-red-dark: #b90e18;
+
+            --black: #080808;
+            --black-2: #101010;
+            --black-3: #181818;
+
+            --paper: #f1efed;
+            --paper-2: #f7f6f4;
+
+            --white: #ffffff;
+
+            --text: #151515;
+            --text-secondary: #6f6f6f;
+            --text-muted: #9b9b9b;
+
+            --border: #dfddda;
+            --border-light: #eceae7;
+
+            --site-width: 1560px;
+            --site-padding: clamp(18px, 3vw, 58px);
+        }
+
+        html,
+        body {
+            min-height: 100%;
+        }
+
+        body {
+            font-family:
+                    -apple-system,
+                    BlinkMacSystemFont,
+                    "Segoe UI",
+                    "PingFang SC",
+                    "Microsoft YaHei",
+                    Arial,
+                    sans-serif;
+
+            color: var(--text);
+            background: #050505;
+            overflow-x: hidden;
+        }
+
+        button,
+        select,
+        input {
+            font: inherit;
+        }
+
+        button {
+            border: 0;
+        }
+
+        .site-shell {
+            width: min(
+                    calc(100% - var(--site-padding) * 2),
+                    var(--site-width)
+            );
+            margin: 0 auto;
+        }
+
+
+        /* =========================================================
+           2. Header
+        ========================================================= */
+
+        .site-header {
+            height: 72px;
+            background: rgba(6, 6, 7, 0.98);
+            border-top: 2px solid var(--cnpa-red);
+            border-bottom: 1px solid #292929;
+
+            display: flex;
+            align-items: center;
+
+            position: relative;
+            z-index: 20;
+        }
+
+        .header-inner {
+            height: 100%;
+
+            display: flex;
+            align-items: stretch;
+        }
+
+        .brand {
+            width: 180px;
+
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            color: white;
+            font-size: 28px;
+            font-weight: 900;
+            font-style: italic;
+            letter-spacing: 2px;
+        }
+
+        .brand-mark {
+            width: 34px;
+            height: 34px;
+
+            background:
+                    linear-gradient(
+                            135deg,
+                            transparent 0 23%,
+                            var(--cnpa-red) 24% 48%,
+                            transparent 49% 55%,
+                            var(--cnpa-red) 56% 82%,
+                            transparent 83%
+                    );
+
+            transform: skewX(-8deg);
+        }
+
+        .main-nav {
+            display: flex;
+            align-items: stretch;
+            margin-left: 20px;
+        }
+
+        .main-nav a {
+            min-width: 104px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            color: #e7e7e7;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 15px;
+
+            position: relative;
+
+            transition:
+                    color 0.2s ease,
+                    background 0.2s ease;
+        }
+
+        .main-nav a:hover {
+            color: white;
+            background: #111;
+        }
+
+        .main-nav a.active {
+            color: white;
+            background:
+                    linear-gradient(
+                            180deg,
+                            rgba(229, 20, 34, 0.18),
+                            rgba(229, 20, 34, 0.03)
+                    );
+        }
+
+        .main-nav a.active::after {
+            content: "";
+            position: absolute;
+            left: 26px;
+            right: 26px;
+            bottom: 0;
+            height: 3px;
+            background: var(--cnpa-red);
+        }
+
+        .header-actions {
+            margin-left: auto;
+
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-search {
+            width: 42px;
+            height: 42px;
+
+            display: grid;
+            place-items: center;
+
+            color: white;
+            font-size: 22px;
+        }
+
+        .login-btn,
+        .register-btn {
+            width: 86px;
+            height: 42px;
+
+            display: grid;
+            place-items: center;
+
+            color: white;
+            font-weight: 700;
+        }
+
+        .login-btn {
+            border: 1px solid #555;
+            background: transparent;
+        }
+
+        .register-btn {
+            background: var(--cnpa-red);
+        }
+
+
+        /* =========================================================
+           3. Event secondary header
+        ========================================================= */
+
+        .event-nav {
+            background:
+                    radial-gradient(
+                            circle at 80% 0%,
+                            rgba(153, 0, 0, 0.15),
+                            transparent 40%
+                    ),
+                    #0c0c0d;
+
+            border-bottom: 1px solid #222;
+        }
+
+        .event-nav-inner {
+            height: 68px;
+
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
+        }
+
+        .event-nav a {
+            min-width: 190px;
+            padding: 0 24px;
+
+            display: flex;
+            align-items: center;
+
+            text-decoration: none;
+
+            font-size: 17px;
+            color: #aaa;
+            font-weight: 600;
+
+            position: relative;
+        }
+
+        .event-nav a.active {
+            color: var(--cnpa-red);
+        }
+
+        .event-nav a.active::after {
+            content: "";
+            position: absolute;
+            left: 24px;
+            right: 24px;
+            bottom: 0;
+            height: 4px;
+            background: var(--cnpa-red);
+        }
+
+
+        /* =========================================================
+           4. Main page
+        ========================================================= */
+
+        .schedule-page {
+            min-height: calc(100vh - 140px);
+
+            background:
+                    linear-gradient(
+                            rgba(255,255,255,0.95),
+                            rgba(244,242,239,0.98)
+                    );
+
+            padding: 32px 0 70px;
+        }
+
+        .schedule-heading {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+
+            margin-bottom: 26px;
+        }
+
+        .schedule-title-row {
+            display: flex;
+            align-items: baseline;
+            gap: 16px;
+        }
+
+        .schedule-title {
+            font-size: clamp(32px, 3vw, 48px);
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: -2px;
+        }
+
+        .schedule-slash {
+            font-size: 25px;
+            font-weight: 300;
+            color: #777;
+        }
+
+        .schedule-en {
+            color: var(--cnpa-red);
+
+            font-size: 15px;
+            font-style: italic;
+            font-weight: 800;
+
+            letter-spacing: 2px;
+        }
+
+        .season-select {
+            min-width: 260px;
+            height: 44px;
+
+            padding: 0 40px 0 16px;
+
+            background: white;
+            border: 1px solid var(--border);
+
+            color: #222;
+            font-weight: 700;
+
+            cursor: pointer;
+            outline: none;
+        }
+
+
+        /* =========================================================
+           5. Weekly toolbar
+        ========================================================= */
+
+        .calendar-toolbar {
+            min-height: 82px;
+
+            background:
+                    linear-gradient(
+                            90deg,
+                            #0b0b0c,
+                            #141414 60%,
+                            #0d0d0e
+                    );
+
+            display: grid;
+
+            grid-template-columns:
+                130px
+                minmax(0, 1fr)
+                auto;
+
+            align-items: center;
+
+            padding: 0 18px;
+
+            color: white;
+
+            border-radius: 4px 4px 0 0;
+        }
+
+        .week-control {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .week-number {
+            white-space: nowrap;
+
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .arrow-btn {
+            width: 42px;
+            height: 42px;
+
+            display: grid;
+            place-items: center;
+
+            background: #161616;
+            border: 1px solid #333;
+
+            color: white;
+            font-size: 24px;
+
+            cursor: pointer;
+
+            transition:
+                    border-color 0.2s ease,
+                    background 0.2s ease;
+        }
+
+        .arrow-btn:hover {
+            background: #222;
+            border-color: #555;
+        }
+
+        .week-days {
+            display: grid;
+
+            grid-template-columns:
+                90px
+                repeat(7, minmax(78px, 1fr));
+
+            height: 100%;
+        }
+
+        .day-item {
+            min-width: 0;
+
+            padding: 11px 8px 8px;
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+            color: #d1d1d1;
+            cursor: pointer;
+
+            position: relative;
+
+            transition:
+                    color 0.2s ease,
+                    background 0.2s ease;
+        }
+
+        .day-item:hover {
+            background: rgba(255,255,255,0.04);
+        }
+
+        .day-item .weekday {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .day-item .date {
+            margin-top: 4px;
+
+            font-size: 17px;
+            font-weight: 800;
+        }
+
+        .day-item .match-count {
+            min-height: 15px;
+            margin-top: 3px;
+
+            font-size: 10px;
+            color: #777;
+        }
+
+        .day-item.all .weekday {
+            color: var(--cnpa-red);
+        }
+
+        .day-item.all .date {
+            color: var(--cnpa-red);
+            font-size: 14px;
+        }
+
+        .day-item.active {
+            background:
+                    linear-gradient(
+                            180deg,
+                            var(--cnpa-red),
+                            #b70d17
+                    );
+
+            color: white;
+        }
+
+        .day-item.active .weekday,
+        .day-item.active .match-count {
+            color: rgba(255,255,255,0.85);
+        }
+
+        .day-item.today:not(.active)::after {
+            content: "";
+            position: absolute;
+
+            bottom: 6px;
+
+            width: 5px;
+            height: 5px;
+
+            border-radius: 50%;
+            background: var(--cnpa-red);
+        }
+
+        .calendar-tools {
+            margin-left: 12px;
+
+            display: flex;
+            gap: 10px;
+        }
+
+        .toolbar-btn {
+            min-width: 108px;
+            height: 42px;
+
+            padding: 0 15px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+
+            background: #171717;
+            border: 1px solid #3b3b3b;
+
+            color: white;
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition:
+                    background 0.2s ease,
+                    border-color 0.2s ease;
+        }
+
+        .toolbar-btn:hover,
+        .toolbar-btn.active {
+            background: var(--cnpa-red);
+            border-color: var(--cnpa-red);
+        }
+
+
+        /* =========================================================
+           6. Filter summary
+        ========================================================= */
+
+        .filter-summary {
+            min-height: 46px;
+
+            display: flex;
+            align-items: center;
+            gap: 14px;
+
+            padding: 0 24px;
+
+            background: white;
+            border:
+                    1px solid var(--border-light);
+
+            color: #525252;
+            font-size: 13px;
+        }
+
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .summary-divider {
+            width: 1px;
+            height: 18px;
+            background: #ddd;
+        }
+
+
+        /* =========================================================
+           7. Expanded calendar
+        ========================================================= */
+
+        .calendar-panel {
+            display: none;
+
+            padding: 24px;
+
+            background: #fff;
+
+            border:
+                    1px solid var(--border);
+            border-top: none;
+        }
+
+        .calendar-panel.show {
+            display: block;
+        }
+
+        .calendar-months {
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, minmax(0, 1fr));
+
+            gap: 18px;
+        }
+
+        .month-card {
+            min-height: 325px;
+
+            background: var(--paper-2);
+
+            border: 1px solid var(--border-light);
+
+            padding: 20px;
+        }
+
+        .month-title {
+            margin-bottom: 18px;
+
+            text-align: center;
+
+            font-size: 17px;
+            font-weight: 800;
+        }
+
+        .month-weekdays,
+        .month-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+
+            text-align: center;
+        }
+
+        .month-weekdays span {
+            padding: 8px 0;
+
+            color: #999;
+            font-size: 12px;
+        }
+
+        .calendar-date {
+            min-height: 40px;
+
+            display: grid;
+            place-items: center;
+
+            margin: 2px;
+
+            font-size: 13px;
+
+            cursor: pointer;
+
+            position: relative;
+        }
+
+        .calendar-date:hover {
+            background: #eee;
+        }
+
+        .calendar-date.weekend {
+            color: #e64550;
+        }
+
+        .calendar-date.has-match::after {
+            content: "";
+
+            position: absolute;
+            left: 50%;
+            bottom: 3px;
+
+            transform: translateX(-50%);
+
+            width: 4px;
+            height: 4px;
+
+            border-radius: 50%;
+
+            background: var(--cnpa-red);
+        }
+
+        .calendar-date.selected {
+            background: var(--cnpa-red);
+            color: white;
+            font-weight: 800;
+        }
+
+        .calendar-date.selected::after {
+            background: white;
+        }
+
+        .calendar-date.empty {
+            pointer-events: none;
+        }
+
+
+        /* =========================================================
+           8. Team panel
+        ========================================================= */
+
+        .team-panel {
+            display: none;
+
+            padding: 24px;
+
+            background: #fff;
+
+            border:
+                    1px solid var(--border);
+            border-top: none;
+        }
+
+        .team-panel.show {
+            display: block;
+        }
+
+        .team-panel-title {
+            margin-bottom: 18px;
+
+            display: flex;
+            align-items: center;
+            gap: 14px;
+
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .team-panel-title::before,
+        .team-panel-title::after {
+            content: "";
+            height: 1px;
+            flex: 1;
+            background: #e0e0e0;
+        }
+
+        .team-grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(9, minmax(86px, 1fr));
+
+            gap: 10px;
+        }
+
+        .team-filter-item {
+            min-height: 100px;
+
+            padding: 11px 6px;
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+            gap: 7px;
+
+            background: #fafafa;
+
+            border: 1px solid transparent;
+
+            cursor: pointer;
+
+            position: relative;
+
+            transition:
+                    border-color 0.2s ease,
+                    background 0.2s ease,
+                    transform 0.2s ease;
+        }
+
+        .team-filter-item:hover {
+            background: #f3f3f3;
+            transform: translateY(-1px);
+        }
+
+        .team-filter-item.active {
+            border-color: var(--cnpa-red);
+            background: rgba(229,20,34,0.04);
+        }
+
+        .team-filter-item.active::after {
+            content: "✓";
+
+            position: absolute;
+            top: 6px;
+            right: 8px;
+
+            width: 18px;
+            height: 18px;
+
+            border-radius: 50%;
+
+            display: grid;
+            place-items: center;
+
+            background: var(--cnpa-red);
+            color: white;
+
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .team-filter-logo {
+            width: 48px;
+            height: 48px;
+
+            display: grid;
+            place-items: center;
+
+            background: #161616;
+            color: white;
+
+            font-size: 13px;
+            font-weight: 900;
+        }
+
+        .team-filter-item.all .team-filter-logo {
+            background: transparent;
+            border: 1px solid var(--cnpa-red);
+
+            color: var(--cnpa-red);
+
+            font-size: 20px;
+        }
+
+        .team-filter-name {
+            max-width: 100%;
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+
+        /* =========================================================
+           9. Match content
+        ========================================================= */
+
+        .match-content {
+            margin-top: 24px;
+        }
+
+        .date-group + .date-group {
+            margin-top: 32px;
+        }
+
+        .date-group-title {
+            min-height: 44px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 0 16px 0 18px;
+
+            border-left: 4px solid var(--cnpa-red);
+
+            background:
+                    linear-gradient(
+                            90deg,
+                            #faf9f7,
+                            transparent
+                    );
+        }
+
+        .date-group-title strong {
+            font-size: 19px;
+            font-weight: 900;
+        }
+
+        .date-group-title span {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+
+        /* =========================================================
+           10. Match table
+        ========================================================= */
+
+        .schedule-table {
+            margin-top: 8px;
+
+            border:
+                    1px solid var(--border-light);
+
+            background: white;
+        }
+
+        .schedule-columns {
+            --schedule-columns:
+                    92px
+                    minmax(175px, 1fr)
+                    130px
+                    minmax(175px, 1fr)
+                    145px
+                    78px
+                    100px;
+        }
+
+        .schedule-header,
+        .match-main-row {
+            display: grid;
+            grid-template-columns:
+                var(--schedule-columns);
+
+            align-items: center;
+        }
+
+        .schedule-header {
+            min-height: 42px;
+
+            background: #111;
+
+            color: #eee;
+
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .schedule-header > div {
+            padding: 0 14px;
+        }
+
+        .schedule-header .center {
+            text-align: center;
+        }
+
+        .match-item {
+            border-bottom:
+                    1px solid var(--border-light);
+
+            transition: background 0.18s ease;
+        }
+
+        .match-item:last-child {
+            border-bottom: 0;
+        }
+
+        .match-item:hover {
+            background: #fcfbfa;
+        }
+
+        .match-main-row {
+            min-height: 68px;
+        }
+
+        .match-main-row > div {
+            min-width: 0;
+
+            padding: 8px 14px;
+        }
+
+
+        /* =========================================================
+           11. Time
+        ========================================================= */
+
+        .match-time {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .match-time strong {
+            font-size: 17px;
+            line-height: 1;
+            font-weight: 900;
+        }
+
+        .match-no {
+            margin-top: 5px;
+
+            color: #aaa;
+            font-size: 10px;
+        }
+
+
+        /* =========================================================
+           12. Team
+        ========================================================= */
+
+        .team-cell {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+
+        .team-logo {
+            width: 46px;
+            height: 46px;
+
+            flex: 0 0 46px;
+
+            display: grid;
+            place-items: center;
+
+            background:
+                    linear-gradient(
+                            145deg,
+                            #141414,
+                            #222
+                    );
+
+            border: 1px solid #292929;
+
+            color: white;
+
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .team-name-group {
+            min-width: 0;
+
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .team-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .team-code {
+            color: #999;
+            font-size: 11px;
+        }
+
+
+        /* =========================================================
+           13. Score
+        ========================================================= */
+
+        .score-cell {
+            text-align: center;
+        }
+
+        .score {
+            font-size: clamp(21px, 1.8vw, 28px);
+            font-weight: 900;
+            letter-spacing: 1px;
+        }
+
+        .score .loser {
+            color: #777;
+        }
+
+        .score-vs {
+            font-size: 23px;
+            font-weight: 900;
+
+            color: #666;
+        }
+
+
+        /* =========================================================
+           14. Stage / BO / Status
+        ========================================================= */
+
+        .stage-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .stage-name {
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .round-name {
+            color: #777;
+            font-size: 11px;
+        }
+
+        .bo-cell,
+        .status-cell {
+            text-align: center;
+        }
+
+        .bo-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            min-width: 46px;
+            height: 27px;
+
+            padding: 0 8px;
+
+            background: #f3f3f3;
+            border: 1px solid #ddd;
+
+            color: #333;
+
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            min-width: 58px;
+            min-height: 26px;
+
+            padding: 3px 8px;
+
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .status-badge.finished {
+            background: #efefef;
+            color: #555;
+        }
+
+        .status-badge.live {
+            background: rgba(229,20,34,0.1);
+            color: var(--cnpa-red);
+        }
+
+        .status-badge.scheduled {
+            background: #f4f4f4;
+            color: #999;
+        }
+
+        .status-badge.forfeit {
+            background: #fff0e8;
+            color: #d95e1f;
+        }
+
+
+        /* =========================================================
+           15. Actions
+        ========================================================= */
+
+        .match-actions-row {
+            min-height: 42px;
+
+            padding: 6px 14px;
+
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+
+            border-top:
+                    1px solid #f0efed;
+
+            background:
+                    linear-gradient(
+                            90deg,
+                            transparent 60%,
+                            #faf9f8
+                    );
+        }
+
+        .match-action-btn {
+            min-width: 118px;
+            height: 31px;
+
+            padding: 0 14px;
+
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+
+            background: white;
+            border: 1px solid #c9c9c9;
+
+            color: #333;
+
+            font-size: 12px;
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition:
+                    border-color 0.18s ease,
+                    color 0.18s ease,
+                    background 0.18s ease;
+        }
+
+        .match-action-btn:not(:disabled):hover {
+            border-color: var(--cnpa-red);
+            color: var(--cnpa-red);
+        }
+
+        .match-action-btn.primary {
+            border-color: rgba(229,20,34,0.55);
+            color: var(--cnpa-red);
+        }
+
+        .match-action-btn:disabled {
+            background: #f4f4f4;
+            border-color: #ddd;
+
+            color: #aaa;
+            cursor: not-allowed;
+        }
+
+        .waiting-btn {
+            min-width: 250px;
+        }
+
+
+        /* =========================================================
+           16. Empty
+        ========================================================= */
+
+        .schedule-empty {
+            display: none;
+
+            min-height: 180px;
+
+            align-items: center;
+            justify-content: center;
+
+            flex-direction: column;
+            gap: 8px;
+
+            background: white;
+            border: 1px solid var(--border-light);
+
+            color: #888;
+        }
+
+        .schedule-empty.show {
+            display: flex;
+        }
+
+        .schedule-empty strong {
+            color: #333;
+            font-size: 18px;
+        }
+
+
+        /* =========================================================
+           17. Responsive
+        ========================================================= */
+
+        @media (max-width: 1200px) {
+
+            .calendar-toolbar {
+                grid-template-columns:
+                    110px
+                    minmax(0, 1fr);
+            }
+
+            .calendar-tools {
+                grid-column: 1 / -1;
+
+                margin: 0;
+                padding: 8px 0 12px;
+
+                justify-content: flex-end;
+            }
+
+            .week-days {
+                grid-template-columns:
+                    72px
+                    repeat(7, minmax(60px, 1fr));
+            }
+
+            .team-grid {
+                grid-template-columns:
+                    repeat(6, minmax(90px, 1fr));
+            }
+
+            .schedule-columns {
+                --schedule-columns:
+                        82px
+                        minmax(145px, 1fr)
+                        105px
+                        minmax(145px, 1fr)
+                        130px
+                        65px
+                        88px;
+            }
+        }
+
+
+        @media (max-width: 900px) {
+
+            .main-nav a {
+                min-width: 78px;
+            }
+
+            .event-nav a {
+                min-width: 150px;
+            }
+
+            .schedule-heading {
+                align-items: flex-start;
+                gap: 18px;
+            }
+
+            .schedule-title-row {
+                flex-wrap: wrap;
+            }
+
+            .season-select {
+                min-width: 220px;
+            }
+
+            .calendar-toolbar {
+                display: block;
+
+                padding: 12px;
+            }
+
+            .week-control {
+                margin-bottom: 8px;
+            }
+
+            .week-days {
+                overflow-x: auto;
+
+                grid-template-columns:
+                    70px repeat(7, 74px);
+            }
+
+            .calendar-tools {
+                margin-top: 10px;
+            }
+
+            .calendar-months {
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
+            }
+
+            .calendar-months .month-card:nth-child(3) {
+                display: none;
+            }
+
+            .team-grid {
+                grid-template-columns:
+                    repeat(4, minmax(80px, 1fr));
+            }
+
+            .schedule-header {
+                display: none;
+            }
+
+            .match-main-row {
+                grid-template-columns:
+                    80px
+                    1fr
+                    95px
+                    1fr;
+
+                min-height: 76px;
+            }
+
+            .stage-cell,
+            .bo-cell,
+            .status-cell {
+                grid-row: 2;
+
+                text-align: left;
+            }
+
+            .stage-cell {
+                grid-column: 2;
+            }
+
+            .bo-cell {
+                grid-column: 3;
+            }
+
+            .status-cell {
+                grid-column: 4;
+                text-align: right;
+            }
+        }
+
+
+        @media (max-width: 640px) {
+
+            :root {
+                --site-padding: 12px;
+            }
+
+            .site-header {
+                height: 58px;
+            }
+
+            .brand {
+                width: auto;
+
+                font-size: 20px;
+            }
+
+            .brand-mark {
+                width: 26px;
+                height: 26px;
+            }
+
+            .main-nav {
+                display: none;
+            }
+
+            .event-nav-inner {
+                overflow-x: auto;
+            }
+
+            .event-nav a {
+                min-width: 125px;
+                height: 56px;
+
+                font-size: 14px;
+            }
+
+            .schedule-page {
+                padding-top: 22px;
+            }
+
+            .schedule-heading {
+                flex-direction: column;
+            }
+
+            .season-select {
+                width: 100%;
+            }
+
+            .week-days {
+                grid-template-columns:
+                    65px repeat(7, 68px);
+            }
+
+            .calendar-tools {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .toolbar-btn {
+                width: 100%;
+            }
+
+            .calendar-months {
+                grid-template-columns: 1fr;
+            }
+
+            .calendar-months .month-card:nth-child(2),
+            .calendar-months .month-card:nth-child(3) {
+                display: none;
+            }
+
+            .team-grid {
+                grid-template-columns:
+                    repeat(3, minmax(76px, 1fr));
+            }
+
+            .date-group-title {
+                align-items: flex-start;
+                flex-direction: column;
+                justify-content: center;
+
+                padding-top: 8px;
+                padding-bottom: 8px;
+            }
+
+            .match-main-row {
+                display: grid;
+
+                grid-template-columns:
+                    1fr 88px 1fr;
+
+                padding: 14px 12px;
+                gap: 8px;
+
+                position: relative;
+            }
+
+            .match-time {
+                grid-column: 1 / -1;
+
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
+
+                padding: 0 0 8px !important;
+            }
+
+            .team-cell {
+                flex-direction: column;
+
+                text-align: center;
+            }
+
+            .team-name-group {
+                align-items: center;
+            }
+
+            .score-cell {
+                align-self: center;
+            }
+
+            .stage-cell {
+                grid-column: 1 / -1;
+                grid-row: auto;
+
+                flex-direction: row;
+                justify-content: center;
+                gap: 7px;
+
+                padding-top: 6px !important;
+
+                text-align: center;
+            }
+
+            .bo-cell {
+                grid-column: 1 / 2;
+                grid-row: auto;
+
+                text-align: center;
+            }
+
+            .status-cell {
+                grid-column: 3 / 4;
+                grid-row: auto;
+
+                text-align: center;
+            }
+
+            .match-actions-row {
+                justify-content: stretch;
+            }
+
+            .match-action-btn {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .waiting-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+
+<body>
+
+<!-- =========================================================
+     Header
+========================================================= -->
+<header class="site-header">
+    <div class="site-shell header-inner">
+
+        <div class="brand">
+            <span class="brand-mark"></span>
+            <span>CNPA</span>
+        </div>
+
+        <nav class="main-nav">
+            <a href="#">首页</a>
+            <a href="#" class="active">赛事</a>
+            <a href="#">战队</a>
+            <a href="#">数据</a>
+            <a href="#">新闻</a>
+            <a href="#">关于CNPA</a>
+        </nav>
+
+        <div class="header-actions">
+            <button class="header-search">⌕</button>
+            <button class="login-btn">登录</button>
+            <button class="register-btn">注册</button>
+        </div>
+
+    </div>
+</header>
+
+
+<!-- =========================================================
+     Event nav
+========================================================= -->
+<section class="event-nav">
+    <div class="site-shell event-nav-inner">
+
+        <a href="#" class="active">CNPA League 2026</a>
+        <a href="#">CNPA Cup 2026</a>
+        <a href="#">CNPA Arena 2026</a>
+
+    </div>
+</section>
+
+
+<!-- =========================================================
+     Schedule
+========================================================= -->
+<main class="schedule-page">
+    <div class="site-shell">
+
+        <!-- Heading -->
+        <section class="schedule-heading">
+
+            <div>
+                <div class="schedule-title-row">
+                    <h1 class="schedule-title">赛程</h1>
+                    <span class="schedule-slash">/</span>
+                    <span class="schedule-en">SCHEDULE</span>
+                </div>
+            </div>
+
+            <select class="season-select">
+                <option>CNPA League 2026 E2E S1</option>
+                <option>CNPA League 2026 S2</option>
+            </select>
+
+        </section>
+
+
+        <!-- =====================================================
+             Week toolbar
+        ====================================================== -->
+        <section class="calendar-toolbar">
+
+            <div class="week-control">
+                <strong class="week-number">第 8 周</strong>
+                <button
+                        class="arrow-btn"
+                        id="prevWeekBtn"
+                        aria-label="上一周"
+                >
+                    ‹
+                </button>
+            </div>
+
+            <div class="week-days" id="weekDays">
+
+                <button class="day-item all active" data-date="">
+                    <span class="weekday">全部</span>
+                    <span class="date">ALL</span>
+                    <span class="match-count"></span>
+                </button>
+
+                <button class="day-item" data-date="2026-08-23">
+                    <span class="weekday">周日</span>
+                    <span class="date">8/23</span>
+                    <span class="match-count"></span>
+                </button>
+
+                <button class="day-item" data-date="2026-08-24">
+                    <span class="weekday">周一</span>
+                    <span class="date">8/24</span>
+                    <span class="match-count">4场</span>
+                </button>
+
+                <button class="day-item" data-date="2026-08-25">
+                    <span class="weekday">周二</span>
+                    <span class="date">8/25</span>
+                    <span class="match-count">8场</span>
+                </button>
+
+                <button class="day-item" data-date="2026-08-26">
+                    <span class="weekday">周三</span>
+                    <span class="date">8/26</span>
+                    <span class="match-count">7场</span>
+                </button>
+
+                <button class="day-item" data-date="2026-08-27">
+                    <span class="weekday">周四</span>
+                    <span class="date">8/27</span>
+                    <span class="match-count">12场</span>
+                </button>
+
+                <button class="day-item" data-date="2026-08-28">
+                    <span class="weekday">周五</span>
+                    <span class="date">8/28</span>
+                    <span class="match-count"></span>
+                </button>
+
+                <button class="day-item" data-date="2026-08-29">
+                    <span class="weekday">周六</span>
+                    <span class="date">8/29</span>
+                    <span class="match-count"></span>
+                </button>
+
+            </div>
+
+            <div class="calendar-tools">
+
+                <button
+                        class="toolbar-btn"
+                        id="nextWeekBtn"
+                        aria-label="下一周"
+                        style="min-width: 48px;"
+                >
+                    ›
+                </button>
+
+                <button
+                        class="toolbar-btn"
+                        id="calendarToggle"
+                >
+                    <span>▣</span>
+                    <span>日历</span>
+                    <span>▾</span>
+                </button>
+
+                <button
+                        class="toolbar-btn"
+                        id="teamToggle"
+                >
+                    <span>⌁</span>
+                    <span id="teamButtonText">选择球队</span>
+                    <span>▾</span>
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             Summary
+        ====================================================== -->
+        <section class="filter-summary">
+
+            <div class="summary-item">
+                <span>▣</span>
+                <span id="summaryDate">全部日期</span>
+            </div>
+
+            <span class="summary-divider"></span>
+
+            <div class="summary-item">
+                <span>♙</span>
+                <span id="summaryTeam">全部球队</span>
+            </div>
+
+            <span class="summary-divider"></span>
+
+            <div class="summary-item">
+                <span>#</span>
+                <span>
+                    共
+                    <strong id="summaryCount">0</strong>
+                    场
+                </span>
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             Month calendar
+        ====================================================== -->
+        <section
+                class="calendar-panel"
+                id="calendarPanel"
+        >
+
+            <div class="calendar-months">
+
+                <div class="month-card">
+                    <div class="month-title">2026年7月</div>
+
+                    <div class="month-weekdays">
+                        <span>日</span>
+                        <span>一</span>
+                        <span>二</span>
+                        <span>三</span>
+                        <span>四</span>
+                        <span>五</span>
+                        <span>六</span>
+                    </div>
+
+                    <div
+                            class="month-days"
+                            data-year="2026"
+                            data-month="6"
+                    ></div>
+                </div>
+
+
+                <div class="month-card">
+                    <div class="month-title">2026年8月</div>
+
+                    <div class="month-weekdays">
+                        <span>日</span>
+                        <span>一</span>
+                        <span>二</span>
+                        <span>三</span>
+                        <span>四</span>
+                        <span>五</span>
+                        <span>六</span>
+                    </div>
+
+                    <div
+                            class="month-days"
+                            data-year="2026"
+                            data-month="7"
+                    ></div>
+                </div>
+
+
+                <div class="month-card">
+                    <div class="month-title">2026年9月</div>
+
+                    <div class="month-weekdays">
+                        <span>日</span>
+                        <span>一</span>
+                        <span>二</span>
+                        <span>三</span>
+                        <span>四</span>
+                        <span>五</span>
+                        <span>六</span>
+                    </div>
+
+                    <div
+                            class="month-days"
+                            data-year="2026"
+                            data-month="8"
+                    ></div>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- =====================================================
+             Team Filter
+        ====================================================== -->
+        <section
+                class="team-panel"
+                id="teamPanel"
+        >
+
+            <div class="team-panel-title">
+                <span>选择参赛球队</span>
+            </div>
+
+            <div
+                    class="team-grid"
+                    id="teamGrid"
+            ></div>
+
+        </section>
+
+
+        <!-- =====================================================
+             Match list
+        ====================================================== -->
+        <section
+                class="match-content"
+                id="matchContent"
+        ></section>
+
+
+        <section
+                class="schedule-empty"
+                id="scheduleEmpty"
+        >
+            <strong>暂无符合条件的比赛</strong>
+            <span>可以尝试切换日期或球队</span>
+        </section>
+
+    </div>
+</main>
+
+
+<script>
+    /* =========================================================
+       Demo data
+       后续 Vue 中直接替换为真实 schedule API
+    ========================================================= */
+
+    const teams = [
+        { id: 1, code: "E2E-L01", name: "赤焰" },
+        { id: 2, code: "E2E-L02", name: "雷霆" },
+        { id: 3, code: "E2E-L03", name: "湖人" },
+        { id: 4, code: "E2E-L04", name: "勇士" },
+        { id: 5, code: "E2E-L05", name: "骑士" },
+        { id: 6, code: "E2E-L06", name: "猛龙" },
+        { id: 7, code: "E2E-L07", name: "雄鹿" },
+        { id: 8, code: "E2E-L08", name: "篮网" },
+        { id: 9, code: "E2E-L09", name: "凯尔特人" },
+        { id: 10, code: "E2E-L10", name: "掘金" },
+        { id: 11, code: "E2E-L11", name: "公牛" },
+        { id: 12, code: "E2E-L12", name: "尼克斯" },
+        { id: 13, code: "E2E-L13", name: "76人" },
+        { id: 14, code: "E2E-L14", name: "太阳" },
+        { id: 15, code: "E2E-L15", name: "独行侠" },
+        { id: 16, code: "E2E-L16", name: "开拓者" }
+    ];
+
+
+    const matches = [
+
+        {
+            id: 101,
+            no: "V4-1-1-01",
+
+            date: "2026-08-26",
+            time: "19:00",
+
+            awayTeamId: 16,
+            awayScore: 92,
+
+            homeTeamId: 1,
+            homeScore: 108,
+
+            stage: "常规赛",
+            round: "第1轮",
+
+            bo: "BO1",
+
+            status: "FINISHED",
+
+            videoUrl: "https://www.bilibili.com/",
+            statsAvailable: true
+        },
+
+        {
+            id: 102,
+            no: "V4-1-1-07",
+
+            date: "2026-08-26",
+            time: "19:00",
+
+            awayTeamId: 10,
+            awayScore: 60,
+
+            homeTeamId: 7,
+            homeScore: 80,
+
+            stage: "常规赛",
+            round: "第1轮",
+
+            bo: "BO1",
+
+            status: "FINISHED",
+
+            videoUrl: "",
+            statsAvailable: true
+        },
+
+        {
+            id: 103,
+            no: "V4-1-2-05",
+
+            date: "2026-08-26",
+            time: "19:00",
+
+            awayTeamId: 4,
+            awayScore: 98,
+
+            homeTeamId: 11,
+            homeScore: 84,
+
+            stage: "常规赛",
+            round: "第2轮",
+
+            bo: "BO1",
+
+            status: "FINISHED",
+
+            videoUrl: "",
+            statsAvailable: false
+        },
+
+        {
+            id: 104,
+            no: "V4-1-6-03",
+
+            date: "2026-08-26",
+            time: "19:00",
+
+            awayTeamId: 13,
+            awayScore: 68,
+
+            homeTeamId: 9,
+            homeScore: 104,
+
+            stage: "常规赛",
+            round: "第6轮",
+
+            bo: "BO1",
+
+            status: "FINISHED",
+
+            videoUrl: "https://www.bilibili.com/",
+            statsAvailable: true
+        },
+
+        {
+            id: 105,
+            no: "V4-1-1-03",
+
+            date: "2026-08-26",
+            time: "20:20",
+
+            awayTeamId: 14,
+            awayScore: 79,
+
+            homeTeamId: 3,
+            homeScore: 85,
+
+            stage: "常规赛",
+            round: "第1轮",
+
+            bo: "BO1",
+
+            status: "FINISHED",
+
+            videoUrl: "",
+            statsAvailable: true
+        },
+
+        {
+            id: 106,
+            no: "V4-1-2-01",
+
+            date: "2026-08-26",
+            time: "20:20",
+
+            awayTeamId: 1,
+
+            homeTeamId: 15,
+
+            stage: "常规赛",
+            round: "第2轮",
+
+            bo: "BO1",
+
+            status: "SCHEDULED",
+
+            videoUrl: "",
+            statsAvailable: false
+        },
+
+        {
+            id: 107,
+            no: "V4-1-2-07",
+
+            date: "2026-08-26",
+            time: "20:20",
+
+            awayTeamId: 6,
+
+            homeTeamId: 9,
+
+            stage: "常规赛",
+            round: "第2轮",
+
+            bo: "BO1",
+
+            status: "SCHEDULED",
+
+            videoUrl: "",
+            statsAvailable: false
+        },
+
+        {
+            id: 108,
+            no: "V4-2-SF-01",
+
+            date: "2026-08-27",
+            time: "21:00",
+
+            awayTeamId: 1,
+            awayScore: 3,
+
+            homeTeamId: 4,
+            homeScore: 1,
+
+            stage: "季后赛",
+            round: "半决赛",
+
+            bo: "BO5",
+
+            status: "FINISHED",
+
+            videoUrl: "https://www.bilibili.com/",
+            statsAvailable: true
+        },
+
+        {
+            id: 109,
+            no: "V4-2-F-01",
+
+            date: "2026-08-28",
+            time: "21:00",
+
+            awayTeamId: 1,
+            awayScore: 4,
+
+            homeTeamId: 2,
+            homeScore: 2,
+
+            stage: "季后赛",
+            round: "总决赛",
+
+            bo: "BO7",
+
+            status: "FINISHED",
+
+            videoUrl: "https://www.bilibili.com/",
+            statsAvailable: true
+        },
+
+        {
+            id: 110,
+            no: "V4-1-3-02",
+
+            date: "2026-08-25",
+            time: "20:00",
+
+            awayTeamId: 5,
+            awayScore: 88,
+
+            homeTeamId: 6,
+            homeScore: 91,
+
+            stage: "常规赛",
+            round: "第3轮",
+
+            bo: "BO1",
+
+            status: "FINISHED",
+
+            videoUrl: "",
+            statsAvailable: true
+        }
+
+    ];
+
+
+    /* =========================================================
+       State
+    ========================================================= */
+
+    let selectedDate = null;
+    let selectedTeamId = null;
+
+
+    /* =========================================================
+       Helpers
+    ========================================================= */
+
+    const getTeam = (id) => {
+        return teams.find(item => item.id === id);
+    };
+
+
+    const formatDateTitle = (dateString) => {
+
+        const date = new Date(dateString + "T00:00:00");
+
+        const weekdayMap = [
+            "星期日",
+            "星期一",
+            "星期二",
+            "星期三",
+            "星期四",
+            "星期五",
+            "星期六"
+        ];
+
+        return `${date.getMonth() + 1}月${date.getDate()}日 · ${weekdayMap[date.getDay()]}`;
+    };
+
+
+    const getFilteredMatches = () => {
+
+        return matches.filter(match => {
+
+            const dateMatched =
+                !selectedDate ||
+                match.date === selectedDate;
+
+            const teamMatched =
+                !selectedTeamId ||
+                match.homeTeamId === selectedTeamId ||
+                match.awayTeamId === selectedTeamId;
+
+            return dateMatched && teamMatched;
+        });
+    };
+
+
+    const groupByDate = (items) => {
+
+        return items.reduce((map, item) => {
+
+            if (!map[item.date]) {
+                map[item.date] = [];
+            }
+
+            map[item.date].push(item);
+
+            return map;
+
+        }, {});
+    };
+
+
+    /* =========================================================
+       Team filter render
+    ========================================================= */
+
+    function renderTeamGrid() {
+
+        const grid = document.getElementById("teamGrid");
+
+        grid.innerHTML = "";
+
+
+        const allItem = document.createElement("button");
+
+        allItem.className =
+            "team-filter-item all" +
+            (!selectedTeamId ? " active" : "");
+
+        allItem.innerHTML = `
+            <span class="team-filter-logo">♙</span>
+            <span class="team-filter-name">全部球队</span>
+        `;
+
+        allItem.onclick = () => {
+
+            selectedTeamId = null;
+
+            renderTeamGrid();
+            renderMatches();
+            updateSummary();
+
+            closeTeamPanel();
+        };
+
+        grid.appendChild(allItem);
+
+
+        teams.forEach(team => {
+
+            const element = document.createElement("button");
+
+            element.className =
+                "team-filter-item" +
+                (
+                    selectedTeamId === team.id
+                        ? " active"
+                        : ""
+                );
+
+            element.innerHTML = `
+                <span class="team-filter-logo">
+                    ${team.code.slice(0, 2)}
+                </span>
+
+                <span class="team-filter-name">
+                    ${team.name}
+                </span>
+            `;
+
+            element.onclick = () => {
+
+                selectedTeamId = team.id;
+
+                renderTeamGrid();
+                renderMatches();
+                updateSummary();
+
+                closeTeamPanel();
+            };
+
+            grid.appendChild(element);
+        });
+    }
+
+
+    /* =========================================================
+       Match row
+    ========================================================= */
+
+    function buildMatchItem(match) {
+
+        const away = getTeam(match.awayTeamId);
+        const home = getTeam(match.homeTeamId);
+
+        const item = document.createElement("article");
+
+        item.className = "match-item";
+
+
+        let scoreHtml = "";
+
+        if (
+            match.status === "FINISHED" ||
+            match.status === "FORFEITED"
+        ) {
+
+            const awayWinner =
+                match.awayScore > match.homeScore;
+
+            const homeWinner =
+                match.homeScore > match.awayScore;
+
+            scoreHtml = `
+                <div class="score">
+                    <span class="${awayWinner ? "" : "loser"}">
+                        ${match.awayScore}
+                    </span>
+                    :
+                    <span class="${homeWinner ? "" : "loser"}">
+                        ${match.homeScore}
+                    </span>
+                </div>
+            `;
+
+        } else {
+
+            scoreHtml = `
+                <div class="score-vs">
+                    VS
+                </div>
+            `;
+        }
+
+
+        const statusMap = {
+            FINISHED: {
+                text: "已结束",
+                className: "finished"
+            },
+
+            SCHEDULED: {
+                text: "未开始",
+                className: "scheduled"
+            },
+
+            PLAYING: {
+                text: "进行中",
+                className: "live"
+            },
+
+            FORFEITED: {
+                text: "弃权结束",
+                className: "forfeit"
+            }
+        };
+
+        const status =
+            statusMap[match.status] ||
+            statusMap.SCHEDULED;
+
+
+        item.innerHTML = `
+
+            <div class="match-main-row">
+
+                <div class="match-time">
+                    <strong>${match.time}</strong>
+
+                    <span class="match-no">
+                        #${match.no}
+                    </span>
+                </div>
+
+
+                <div class="team-cell">
+
+                    <span class="team-logo">
+                        ${away.code.slice(0, 2)}
+                    </span>
+
+                    <span class="team-name-group">
+
+                        <span class="team-name">
+                            ${away.name}
+                        </span>
+
+                        <span class="team-code">
+                            ${away.code}
+                        </span>
+
+                    </span>
+
+                </div>
+
+
+                <div class="score-cell">
+                    ${scoreHtml}
+                </div>
+
+
+                <div class="team-cell">
+
+                    <span class="team-logo">
+                        ${home.code.slice(0, 2)}
+                    </span>
+
+                    <span class="team-name-group">
+
+                        <span class="team-name">
+                            ${home.name}
+                        </span>
+
+                        <span class="team-code">
+                            ${home.code}
+                        </span>
+
+                    </span>
+
+                </div>
+
+
+                <div class="stage-cell">
+
+                    <span class="stage-name">
+                        ${match.stage}
+                    </span>
+
+                    <span class="round-name">
+                        ${match.round}
+                    </span>
+
+                </div>
+
+
+                <div class="bo-cell">
+
+                    <span class="bo-badge">
+                        ${match.bo}
+                    </span>
+
+                </div>
+
+
+                <div class="status-cell">
+
+                    <span
+                        class="
+                            status-badge
+                            ${status.className}
+                        "
+                    >
+                        ${status.text}
+                    </span>
+
+                </div>
+
+            </div>
+
+            ${buildActions(match)}
+        `;
+
+        return item;
+    }
+
+
+    /* =========================================================
+       CTA
+    ========================================================= */
+
+    function buildActions(match) {
+
+        if (match.status === "SCHEDULED") {
+
+            return `
+                <div class="match-actions-row">
+
+                    <button
+                        class="
+                            match-action-btn
+                            waiting-btn
+                        "
+                        disabled
+                    >
+                        ◇ 敬请期待
+                    </button>
+
+                </div>
+            `;
+        }
+
+
+        const videoDisabled =
+            !match.videoUrl;
+
+        const statsDisabled =
+            !match.statsAvailable;
+
+
+        return `
+            <div class="match-actions-row">
+
+                <button
+                    class="
+                        match-action-btn
+                        primary
+                    "
+                    ${videoDisabled ? "disabled" : ""}
+                    onclick="
+                        ${videoDisabled
+            ? ""
+            : `window.open('${match.videoUrl}','_blank','noopener,noreferrer')`
+        }
+                    "
+                >
+                    ▷ 比赛录像
+                </button>
+
+
+                <button
+                    class="match-action-btn"
+                    ${statsDisabled ? "disabled" : ""}
+                    onclick="
+                        ${
+            statsDisabled
+                ? ""
+                : `alert('打开比赛 ${match.id} 技术统计')`
+        }
+                    "
+                >
+                    ▥ 技术统计
+                </button>
+
+            </div>
+        `;
+    }
+
+
+    /* =========================================================
+       Render matches
+    ========================================================= */
+
+    function renderMatches() {
+
+        const content =
+            document.getElementById("matchContent");
+
+        const empty =
+            document.getElementById("scheduleEmpty");
+
+        content.innerHTML = "";
+
+
+        const filtered =
+            getFilteredMatches()
+                .sort((a, b) => {
+
+                    const aDate =
+                        `${a.date} ${a.time}`;
+
+                    const bDate =
+                        `${b.date} ${b.time}`;
+
+                    return aDate.localeCompare(bDate);
+                });
+
+
+        if (!filtered.length) {
+
+            empty.classList.add("show");
+            return;
+        }
+
+        empty.classList.remove("show");
+
+
+        const grouped =
+            groupByDate(filtered);
+
+
+        Object.keys(grouped)
+            .sort()
+            .forEach(date => {
+
+                const group =
+                    document.createElement("section");
+
+                group.className = "date-group";
+
+
+                const title =
+                    document.createElement("div");
+
+                title.className = "date-group-title";
+
+                title.innerHTML = `
+                    <strong>
+                        ${formatDateTitle(date)}
+                    </strong>
+
+                    <span>
+                        共 ${grouped[date].length} 场比赛
+                    </span>
+                `;
+
+
+                const table =
+                    document.createElement("div");
+
+                table.className =
+                    "schedule-table schedule-columns";
+
+
+                table.innerHTML = `
+                    <div class="schedule-header">
+
+                        <div>时间</div>
+
+                        <div>客队</div>
+
+                        <div class="center">
+                            比分
+                        </div>
+
+                        <div>主队</div>
+
+                        <div>赛事阶段</div>
+
+                        <div class="center">
+                            BO
+                        </div>
+
+                        <div class="center">
+                            状态
+                        </div>
+
+                    </div>
+                `;
+
+
+                grouped[date].forEach(match => {
+
+                    table.appendChild(
+                        buildMatchItem(match)
+                    );
+                });
+
+
+                group.appendChild(title);
+                group.appendChild(table);
+
+                content.appendChild(group);
+            });
+    }
+
+
+    /* =========================================================
+       Summary
+    ========================================================= */
+
+    function updateSummary() {
+
+        const filtered =
+            getFilteredMatches();
+
+
+        document.getElementById(
+            "summaryDate"
+        ).textContent =
+            selectedDate
+                ? formatDateTitle(selectedDate)
+                : "全部日期";
+
+
+        const selectedTeam =
+            selectedTeamId
+                ? getTeam(selectedTeamId)
+                : null;
+
+
+        document.getElementById(
+            "summaryTeam"
+        ).textContent =
+            selectedTeam
+                ? `${selectedTeam.name} · ${selectedTeam.code}`
+                : "全部球队";
+
+
+        document.getElementById(
+            "summaryCount"
+        ).textContent =
+            filtered.length;
+
+
+        document.getElementById(
+            "teamButtonText"
+        ).textContent =
+            selectedTeam
+                ? selectedTeam.name
+                : "选择球队";
+    }
+
+
+    /* =========================================================
+       Week dates
+    ========================================================= */
+
+    document
+        .querySelectorAll(".day-item")
+        .forEach(item => {
+
+            item.addEventListener(
+                "click",
+                function () {
+
+                    selectedDate =
+                        this.dataset.date || null;
+
+                    document
+                        .querySelectorAll(
+                            ".day-item"
+                        )
+                        .forEach(el => {
+                            el.classList.remove("active");
+                        });
+
+                    this.classList.add("active");
+
+
+                    renderMatches();
+                    updateSummary();
+                }
+            );
+        });
+
+
+    /* =========================================================
+       Calendar toggle
+    ========================================================= */
+
+    const calendarToggle =
+        document.getElementById(
+            "calendarToggle"
+        );
+
+    const calendarPanel =
+        document.getElementById(
+            "calendarPanel"
+        );
+
+    const teamToggle =
+        document.getElementById(
+            "teamToggle"
+        );
+
+    const teamPanel =
+        document.getElementById(
+            "teamPanel"
+        );
+
+
+    calendarToggle.onclick = () => {
+
+        const show =
+            !calendarPanel.classList.contains("show");
+
+        teamPanel.classList.remove("show");
+        teamToggle.classList.remove("active");
+
+        calendarPanel.classList.toggle(
+            "show",
+            show
+        );
+
+        calendarToggle.classList.toggle(
+            "active",
+            show
+        );
+    };
+
+
+    teamToggle.onclick = () => {
+
+        const show =
+            !teamPanel.classList.contains("show");
+
+        calendarPanel.classList.remove("show");
+        calendarToggle.classList.remove("active");
+
+        teamPanel.classList.toggle(
+            "show",
+            show
+        );
+
+        teamToggle.classList.toggle(
+            "active",
+            show
+        );
+    };
+
+
+    function closeTeamPanel() {
+
+        teamPanel.classList.remove("show");
+        teamToggle.classList.remove("active");
+    }
+
+
+    /* =========================================================
+       Month calendar
+    ========================================================= */
+
+    function renderMonthCalendars() {
+
+        const matchDates =
+            new Set(
+                matches.map(match => match.date)
+            );
+
+
+        document
+            .querySelectorAll(".month-days")
+            .forEach(container => {
+
+                const year =
+                    Number(container.dataset.year);
+
+                const month =
+                    Number(container.dataset.month);
+
+
+                container.innerHTML = "";
+
+
+                const firstDay =
+                    new Date(year, month, 1);
+
+                const daysInMonth =
+                    new Date(
+                        year,
+                        month + 1,
+                        0
+                    ).getDate();
+
+
+                for (
+                    let i = 0;
+                    i < firstDay.getDay();
+                    i++
+                ) {
+
+                    const empty =
+                        document.createElement("span");
+
+                    empty.className =
+                        "calendar-date empty";
+
+                    container.appendChild(empty);
+                }
+
+
+                for (
+                    let day = 1;
+                    day <= daysInMonth;
+                    day++
+                ) {
+
+                    const date =
+                        new Date(
+                            year,
+                            month,
+                            day
+                        );
+
+                    const yyyy =
+                        date.getFullYear();
+
+                    const mm =
+                        String(
+                            date.getMonth() + 1
+                        ).padStart(2, "0");
+
+                    const dd =
+                        String(day)
+                            .padStart(2, "0");
+
+                    const dateString =
+                        `${yyyy}-${mm}-${dd}`;
+
+
+                    const item =
+                        document.createElement("button");
+
+                    item.className =
+                        "calendar-date";
+
+
+                    if (
+                        date.getDay() === 0 ||
+                        date.getDay() === 6
+                    ) {
+
+                        item.classList.add(
+                            "weekend"
+                        );
+                    }
+
+
+                    if (
+                        matchDates.has(dateString)
+                    ) {
+
+                        item.classList.add(
+                            "has-match"
+                        );
+                    }
+
+
+                    if (
+                        selectedDate === dateString
+                    ) {
+
+                        item.classList.add(
+                            "selected"
+                        );
+                    }
+
+
+                    item.textContent =
+                        day;
+
+
+                    item.onclick = () => {
+
+                        selectedDate =
+                            dateString;
+
+
+                        document
+                            .querySelectorAll(
+                                ".day-item"
+                            )
+                            .forEach(el => {
+                                el.classList.remove(
+                                    "active"
+                                );
+                            });
+
+
+                        renderMonthCalendars();
+                        renderMatches();
+                        updateSummary();
+
+
+                        calendarPanel.classList.remove(
+                            "show"
+                        );
+
+                        calendarToggle.classList.remove(
+                            "active"
+                        );
+                    };
+
+
+                    container.appendChild(
+                        item
+                    );
+                }
+            });
+    }
+
+
+    /* =========================================================
+       Init
+    ========================================================= */
+
+    renderTeamGrid();
+    renderMonthCalendars();
+    renderMatches();
+    updateSummary();
+</script>
+
+</body>
+</html>

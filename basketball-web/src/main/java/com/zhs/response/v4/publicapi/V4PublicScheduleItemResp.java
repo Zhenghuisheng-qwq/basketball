@@ -70,4 +70,8 @@ public class V4PublicScheduleItemResp {
     private String homeResultLabel;
 
     private String awayResultLabel;
+
+    private String replayUrl;
+
+    private Boolean hasOfficialStats;
 }

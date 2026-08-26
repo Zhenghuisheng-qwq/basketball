@@ -209,10 +209,13 @@
         <el-form-item label="比赛时间"><el-date-picker v-model="editForm.matchTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width:100%" :disabled="editForm.publishStatus !== 'DRAFT'" /></el-form-item>
         <el-form-item label="场地"><el-input v-model="editForm.venueText" :disabled="editForm.publishStatus !== 'DRAFT'" /></el-form-item>
         <el-form-item label="备注"><el-input v-model="editForm.remark" type="textarea" :disabled="editForm.publishStatus !== 'DRAFT'" /></el-form-item>
+        <el-form-item label="比赛录像">
+          <el-input v-model="editForm.replayUrl" placeholder="B站等 http/https 外链" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editVisible = false">关闭</el-button>
-        <el-button v-if="editForm.publishStatus === 'DRAFT'" type="primary" @click="submitEdit">保存</el-button>
+        <el-button type="primary" @click="submitEdit">保存</el-button>
       </template>
     </el-dialog>
 
@@ -284,7 +287,7 @@ const total = ref(0)
 const query = reactive<Record<string, any>>({ pageNum: 1, pageSize: 10 })
 const editVisible = ref(false)
 const editId = ref<number>()
-const editForm = reactive({ matchTime: '', venueText: '', remark: '', publishStatus: '' })
+const editForm = reactive({ matchTime: '', venueText: '', remark: '', replayUrl: '', publishStatus: '' })
 const resultVisible = ref(false)
 const resultMode = ref<'enter' | 'correct'>('enter')
 const resultRow = ref<any>()
@@ -380,6 +383,7 @@ function openEdit(row: any) {
   editForm.matchTime = row.matchTime
   editForm.venueText = row.venueText || ''
   editForm.remark = row.remark || ''
+  editForm.replayUrl = row.replayUrl || ''
   editForm.publishStatus = row.publishStatus || ''
   editVisible.value = true
 }
@@ -459,7 +463,10 @@ function submitResult() {
 
 function submitEdit() {
   if (!editId.value) return
-  updateV4Match(editId.value, { ...editForm }).then(() => {
+  const payload = editForm.publishStatus === 'DRAFT'
+    ? { ...editForm }
+    : { replayUrl: editForm.replayUrl }
+  updateV4Match(editId.value, payload).then(() => {
     ElMessage.success('已保存')
     editVisible.value = false
     loadList()

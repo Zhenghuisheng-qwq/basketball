@@ -22,4 +22,6 @@ public class V4PublicMatchSeriesGameResp {
     private Boolean skipped;
     private String skippedReason;
     private Boolean currentGame;
+
+    private String replayUrl;
 }

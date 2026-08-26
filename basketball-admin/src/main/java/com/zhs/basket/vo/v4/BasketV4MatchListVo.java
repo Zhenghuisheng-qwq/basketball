@@ -29,6 +29,7 @@ public class BasketV4MatchListVo {
     private String publishStatus;
     private String venueText;
     private String remark;
+    private String replayUrl;
     private Long stageId;
     private Long seriesId;
     private Integer seriesGameNo;

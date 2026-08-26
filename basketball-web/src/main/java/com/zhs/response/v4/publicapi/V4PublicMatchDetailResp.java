@@ -52,6 +52,8 @@ public class V4PublicMatchDetailResp {
 
     private String venueText;
 
+    private String replayUrl;
+
     private Integer homeScore;
 
     private Integer awayScore;

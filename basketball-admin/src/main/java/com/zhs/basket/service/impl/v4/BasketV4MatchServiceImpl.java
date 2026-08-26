@@ -6,6 +6,7 @@ import com.zhs.basket.enums.v4.MatchPublishStatusEnum;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.query.v4.BasketV4MatchQuery;
 import com.zhs.basket.service.v4.IBasketV4MatchService;
+import com.zhs.basket.support.ExternalUrlValidator;
 import com.zhs.basket.support.v4.AdminOfficialResultCapability;
 import com.zhs.basket.support.v4.schedule.ScheduleAdjustmentGuard;
 import com.zhs.basket.vo.v4.BasketV4MatchListVo;
@@ -72,20 +73,29 @@ public class BasketV4MatchServiceImpl implements IBasketV4MatchService {
     @Transactional(rollbackFor = Exception.class)
     public void updateDraft(Long id, BasketV4MatchUpdateReq req) {
         BasketV4Match match = requireMatch(id);
-        if (!MatchPublishStatusEnum.DRAFT.getCode().equals(match.getPublishStatus())) {
-            throw new ServiceException("仅草稿/未发布比赛可编辑");
-        }
         if (req == null) {
             throw new ServiceException("请求体不能为空");
         }
-        if (req.getMatchTime() != null) {
-            match.setMatchTime(req.getMatchTime());
+        boolean isDraft = MatchPublishStatusEnum.DRAFT.getCode().equals(match.getPublishStatus());
+        boolean editingCore = req.getMatchTime() != null || req.getVenueText() != null || req.getRemark() != null;
+        if (!isDraft && editingCore) {
+            throw new ServiceException("仅草稿/未发布比赛可编辑");
         }
-        if (req.getVenueText() != null) {
-            match.setVenueText(req.getVenueText());
+        if (isDraft) {
+            if (req.getMatchTime() != null) {
+                match.setMatchTime(req.getMatchTime());
+            }
+            if (req.getVenueText() != null) {
+                match.setVenueText(req.getVenueText());
+            }
+            if (req.getRemark() != null) {
+                match.setRemark(req.getRemark());
+            }
         }
-        if (req.getRemark() != null) {
-            match.setRemark(req.getRemark());
+        if (req.getReplayUrl() != null) {
+            String replayUrl = req.getReplayUrl().trim();
+            ExternalUrlValidator.validateHttpUrl(replayUrl, "比赛录像");
+            match.setReplayUrl(replayUrl.isEmpty() ? "" : replayUrl);
         }
         match.setUpdateTime(new Date());
         if (matchMapper.updateById(match) != 1) {

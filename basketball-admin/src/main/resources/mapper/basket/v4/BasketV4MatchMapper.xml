@@ -31,6 +31,7 @@
         <result property="platformCode" column="platform_code" />
         <result property="venueText" column="venue_text" />
         <result property="remark" column="remark" />
+        <result property="replayUrl" column="replay_url" />
         <result property="createTime" column="create_time" />
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
@@ -63,9 +64,10 @@
         <result property="publishStatus" column="publish_status" />
         <result property="venueText" column="venue_text" />
         <result property="remark" column="remark" />
+        <result property="replayUrl" column="replay_url" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, division_id, schedule_batch_id, round_no, match_no, stage_code, stage_id, series_id, series_game_no, group_id, bracket_slot, match_time, schedule_source, schedule_status, home_event_team_id, away_event_team_id, home_score, away_score, winner_event_team_id, source_match_id_home, source_match_id_away, loser_event_team_id, match_status, publish_status, platform_code, venue_text, remark, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, division_id, schedule_batch_id, round_no, match_no, stage_code, stage_id, series_id, series_game_no, group_id, bracket_slot, match_time, schedule_source, schedule_status, home_event_team_id, away_event_team_id, home_score, away_score, winner_event_team_id, source_match_id_home, source_match_id_away, loser_event_team_id, match_status, publish_status, platform_code, venue_text, remark, replay_url, create_time, update_time, is_delete</sql>
 
     <sql id="NotDeleted">is_delete = 0</sql>
 
@@ -96,7 +98,8 @@
             m.match_status,
             m.publish_status,
             m.venue_text,
-            m.remark
+            m.remark,
+            m.replay_url
         from basket_match m
         left join basket_season se on se.id = m.season_id and se.is_delete = 0
         left join basket_division d on d.id = m.division_id and d.is_delete = 0
@@ -171,6 +174,7 @@
             <if test="matchTime != null">match_time = #{matchTime},</if>
             <if test="venueText != null">venue_text = #{venueText},</if>
             <if test="remark != null">remark = #{remark},</if>
+            <if test="replayUrl != null">replay_url = #{replayUrl},</if>
             <if test="homeScore != null">home_score = #{homeScore},</if>
             <if test="awayScore != null">away_score = #{awayScore},</if>
             <if test="homeEventTeamId != null">home_event_team_id = #{homeEventTeamId},</if>

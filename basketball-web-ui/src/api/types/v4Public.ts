@@ -240,6 +240,8 @@ export interface V4PublicMatchDetail {
   matchStatusName?: string
   publishStatus?: string
   venueText?: string
+  replayUrl?: string
+  videoUrl?: string
   homeScore?: number
   awayScore?: number
   originalHomeScore?: number
@@ -275,6 +277,8 @@ export interface V4PublicMatchSeriesGame {
   skipped?: boolean
   skippedReason?: string
   currentGame?: boolean
+  replayUrl?: string
+  videoUrl?: string
 }
 
 export interface V4PublicMatchSeriesDetail {
@@ -440,6 +444,9 @@ export interface V4PublicScheduleItem {
   awayScore?: number
   homeResultLabel?: string
   awayResultLabel?: string
+  replayUrl?: string
+  videoUrl?: string
+  hasOfficialStats?: boolean
 }
 
 export type V4SeriesCode = 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'

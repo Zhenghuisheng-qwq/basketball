@@ -413,6 +413,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         resp.setMatchStatusName(resolveMatchStatusName(match.getMatchStatus()));
         resp.setPublishStatus(match.getPublishStatus());
         resp.setVenueText(match.getVenueText());
+        resp.setReplayUrl(normalizeReplayUrl(match.getReplayUrl()));
         resp.setHomeScore(match.getHomeScore());
         resp.setAwayScore(match.getAwayScore());
         resp.setWinnerEventTeamId(match.getWinnerEventTeamId());
@@ -1436,5 +1437,20 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             case "CANCELLED" -> "已取消";
             default -> status;
         };
+    }
+
+    private String normalizeReplayUrl(String replayUrl) {
+        if (replayUrl == null || replayUrl.isBlank()) {
+            return null;
+        }
+        String trimmed = replayUrl.trim();
+        String lower = trimmed.toLowerCase();
+        if (lower.startsWith("javascript:")) {
+            return null;
+        }
+        if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
+            return null;
+        }
+        return trimmed;
     }
 }
