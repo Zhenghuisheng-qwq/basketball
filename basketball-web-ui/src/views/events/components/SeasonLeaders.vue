@@ -2,7 +2,6 @@
 import { computed, inject, ref, watch } from 'vue'
 import { getV4PublicPlayerStat, getV4PublicTeamList } from '@/api/v4Public'
 import type { V4PublicPlayerStatItem } from '@/api/types/v4Public'
-import PaperSection from '@/components/common/PaperSection.vue'
 import { formatDecimal, toNumber } from '@/utils/publicDisplay'
 import { calculateAverage } from '@/utils/statAverage'
 import type { PlayerLeader } from '../types/events'
@@ -130,8 +129,7 @@ watch(
 )
 </script>
 <template>
-  <div class="site-shell season-leaders-shell">
-    <PaperSection edge="both" tone="gray" class="season-leaders">
+  <section class="season-leaders">
       <div class="season-leaders__inner">
         <div class="season-leaders__header">
           <div class="section-head-group">
@@ -176,23 +174,15 @@ watch(
           </article>
         </div>
       </div>
-    </PaperSection>
-  </div>
+  </section>
 </template>
 <style scoped lang="scss">
-.season-leaders-shell {
-  margin-top: 0;
-}
-
 .season-leaders {
   margin-top: 0;
 }
 
 .season-leaders__inner {
-  padding:
-    clamp(28px, 2.4vw, 42px)
-    var(--cnpa-public-content-gutter)
-    clamp(32px, 2.8vw, 48px);
+  padding-block: clamp(28px, 2.4vw, 42px) clamp(32px, 2.8vw, 48px);
 }
 
 .season-leaders__header {
@@ -299,11 +289,6 @@ watch(
 }
 
 @media (max-width: 768px) {
-  .season-leaders__inner {
-    padding-left: var(--cnpa-public-content-gutter);
-    padding-right: var(--cnpa-public-content-gutter);
-  }
-
   .season-leaders__header {
     align-items: flex-start;
     flex-direction: column;

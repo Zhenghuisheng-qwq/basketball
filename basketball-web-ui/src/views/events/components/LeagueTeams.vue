@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
-import PaperSection from '@/components/common/PaperSection.vue'
 import { getV4PublicStanding, getV4PublicTeamList } from '@/api/v4Public'
 import type { Team } from '../types/events'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
@@ -19,20 +18,6 @@ const teams = ref<LeagueTeam[]>([])
 const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const errorMessage = ref('')
 let reqId = 0
-
-const seasonOptions = computed(() =>
-  ctx.seasons.value.map((item) => ({
-    value: String(item.seasonId),
-    label: item.seasonName || item.competitionSeasonName || `赛季 ${item.seasonId}`,
-  })),
-)
-
-const selectedSeason = computed({
-  get: () => ctx.seasonId.value,
-  set: (value: string) => {
-    if (value) ctx.selectSeason(value)
-  },
-})
 
 const totalPages = computed(() => Math.max(1, Math.ceil(teams.value.length / pageSize)))
 
@@ -110,22 +95,12 @@ function goPage(index: number) {
 }
 </script>
 <template>
-  <div class="site-shell">
-    <PaperSection edge="both" tone="gray" class="league-teams">
+  <section class="league-teams">
       <div class="league-teams__inner">
-      <div class="section-head">
+      <div class="league-teams__header">
         <div class="section-head-group">
           <h2 class="cnpa-paper-section__title">参赛球队</h2>
           <span class="cnpa-paper-section__subtitle">{{ ctx.currentTournament?.value?.tournamentName || ctx.divisionDetail?.value?.seriesName || 'Teams' }}</span>
-        </div>
-        <div class="head-actions">
-          <label class="season-select">
-            <select v-model="selectedSeason">
-              <option v-for="season in seasonOptions" :key="season.value" :value="season.value">
-                {{ season.label }}
-              </option>
-            </select>
-          </label>
         </div>
       </div>
 
@@ -165,8 +140,7 @@ function goPage(index: number) {
         />
       </div>
       </div>
-    </PaperSection>
-  </div>
+  </section>
 </template>
 <style scoped lang="scss">
 .league-teams {
@@ -174,28 +148,11 @@ function goPage(index: number) {
 }
 
 .league-teams__inner {
-  padding:
-    clamp(28px, 2.4vw, 42px)
-    var(--cnpa-public-content-gutter)
-    clamp(32px, 2.8vw, 48px);
+  padding-block: clamp(8px, 1vw, 16px) clamp(32px, 2.8vw, 48px);
 }
 
-.head-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.season-select select {
-  min-width: 132px;
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid rgba(17, 17, 17, 0.14);
-  border-radius: 2px;
-  background: #fff;
-  color: #111;
-  font-family: inherit;
-  font-size: 13px;
+.league-teams__header {
+  margin-bottom: 22px;
 }
 
 .carousel {
@@ -300,11 +257,6 @@ function goPage(index: number) {
 @media (max-width: 992px) {
   .team-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .head-actions {
-    flex-direction: column;
-    align-items: flex-end;
   }
 }
 

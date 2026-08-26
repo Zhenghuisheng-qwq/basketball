@@ -1,0 +1,31 @@
+{
+  "startedAt": "2026-08-26T19:27:22",
+  "lifecycle": {
+    "Season": "PASS",
+    "Division": "PASS",
+    "Structure": "PASS",
+    "Registration": "PASS",
+    "Roster": "PASS",
+    "Event Snapshot": "PASS"
+  },
+  "dataset": {},
+  "verify": {},
+  "homepage": {},
+  "bugs": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "cases": {
+    "event.snapshot": {
+      "ok": true,
+      "detail": "eventTeam=16 eventPlayer=80",
+      "severity": "P0"
+    },
+    "league.stages": {
+      "ok": true,
+      "detail": "rr=4 po=5 boRR=1 boPO=3",
+      "severity": "P1"
+    }
+  }
+}

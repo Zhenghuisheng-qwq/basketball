@@ -80,7 +80,7 @@ watch(
   <div class="league-stage">
     <template v-if="!showBracket">
       <div class="site-shell">
-        <PaperSection edge="both" tone="gray" class="stage-main">
+        <PaperSection edge="none" tone="gray" class="stage-main">
           <div class="stage-main__inner">
             <StageProgressHeader
               v-if="stageOptions.length"
@@ -99,12 +99,12 @@ watch(
         </PaperSection>
       </div>
 
-      <CompetitionFormat :current-stage="formatCurrentStage" />
+      <CompetitionFormat paper-edge="none" :current-stage="formatCurrentStage" />
     </template>
 
     <template v-else>
       <div class="site-shell stage-playoffs-shell">
-        <PaperSection edge="top" tone="gray" class="stage-progress-section">
+        <PaperSection edge="none" tone="gray" class="stage-progress-section">
           <div class="stage-progress-section__inner">
             <StageProgressHeader
               v-if="stageOptions.length"
@@ -116,7 +116,7 @@ watch(
           </div>
         </PaperSection>
 
-        <PaperSection edge="bottom" tone="gray" class="competition-format-section">
+        <PaperSection edge="none" tone="gray" class="competition-format-section">
           <div class="stage-section-divider" aria-hidden="true" />
           <CompetitionFormat embedded :current-stage="formatCurrentStage" />
         </PaperSection>

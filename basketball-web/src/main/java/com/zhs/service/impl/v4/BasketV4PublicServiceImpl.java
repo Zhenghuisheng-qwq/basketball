@@ -18,6 +18,7 @@ import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicHonorSupport;
 import com.zhs.service.support.BasketPublicSupport;
 import com.zhs.service.support.PublicTeamDisplaySupport;
+import com.zhs.service.support.V4CurrentSeasonSelector;
 import com.zhs.service.support.V4MatchSeriesDisplaySupport;
 import com.zhs.service.v4.IBasketV4PublicService;
 import com.zhs.support.v4.V4PublicTeamArchiveAssembler;
@@ -196,6 +197,14 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             result.add(vo);
         }
         return result;
+    }
+
+    @Override
+    public V4PublicSeasonItemResp getCurrentSeason(String seriesCode) {
+        if (!StringUtils.hasText(seriesCode)) {
+            return null;
+        }
+        return V4CurrentSeasonSelector.pickCurrentPublic(listSeasons(seriesCode.trim(), null, null));
     }
 
     @Override

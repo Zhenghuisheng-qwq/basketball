@@ -142,7 +142,7 @@ function openSeriesGame(matchId?: string) {
 </script>
 <template>
   <div class="site-shell league-schedule-shell">
-    <PaperSection edge="both" tone="gray" class="league-schedule">
+    <PaperSection edge="none" tone="gray" class="league-schedule">
       <div class="league-schedule__inner">
         <div class="schedule-head">
           <div>

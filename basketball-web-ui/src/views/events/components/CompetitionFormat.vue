@@ -252,7 +252,8 @@ watch(
 }
 
 .competition-format--embedded .competition-format__inner {
-  padding-top: clamp(20px, 2vw, 28px);
+  padding-inline: 0;
+  padding-top: clamp(8px, 1vw, 16px);
 }
 
 .competition-format__header {

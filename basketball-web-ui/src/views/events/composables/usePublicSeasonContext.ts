@@ -2,6 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getV4PublicDivisionDetail,
+  getV4PublicCurrentSeason,
   getV4PublicSeasonDetail,
   getV4PublicSeasonList,
   getV4PublicSeriesList,
@@ -346,9 +347,9 @@ export function usePublicSeasonContext() {
       const code = (seriesCode || 'LEAGUE').toUpperCase()
       resolvingSeason = true
       try {
-        await loadSeasonsBySeriesCode(code)
-        const first = rawSeasons.value[0]
-        if (!first) {
+        const currentRes = await getV4PublicCurrentSeason(code)
+        const current = currentRes.data
+        if (!current?.seasonId) {
           seasonDetail.value = null
           divisionDetail.value = null
           overview.value = null
@@ -360,7 +361,7 @@ export function usePublicSeasonContext() {
           query: {
             ...route.query,
             series: code,
-            seasonId: first.seasonId,
+            seasonId: current.seasonId,
           },
         })
       } finally {

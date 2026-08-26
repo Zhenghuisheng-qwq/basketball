@@ -10,6 +10,8 @@ public interface IBasketV4PublicService {
 
     List<V4PublicSeasonItemResp> listSeasons(String seriesCode, Integer seasonYear, String seasonStatus);
 
+    V4PublicSeasonItemResp getCurrentSeason(String seriesCode);
+
     V4PublicSeasonDetailResp getSeasonDetail(Long seasonId);
 
     List<V4PublicDivisionListItemResp> listDivisions(Long seasonId);

@@ -32,6 +32,12 @@ export function getV4PublicSeasonList(params?: {
   return request.get<any, ApiResult<V4PublicSeasonItem[]>>('/basket/v4/public/season/list', { params })
 }
 
+export function getV4PublicCurrentSeason(seriesCode: string) {
+  return request.get<any, ApiResult<V4PublicSeasonItem>>('/basket/v4/public/season/current', {
+    params: { seriesCode },
+  })
+}
+
 export function getV4PublicSeasonDetail(seasonId: string) {
   return request.get<any, ApiResult<V4PublicSeasonDetail>>(`/basket/v4/public/season/${seasonId}`)
 }
