@@ -13,10 +13,12 @@ import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketTeamLifecycleClosingMapper;
 import com.zhs.basket.service.v4.IBasketV4DivisionClosingService;
+import com.zhs.basket.service.v4.IBasketV4SeasonService;
 import com.zhs.basket.support.CaptainGrantLogSupport;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -61,6 +63,9 @@ public class BasketV4DivisionClosingServiceImpl implements IBasketV4DivisionClos
     private BasketTeamLifecycleClosingMapper lifecycleClosingMapper;
     @Autowired
     private CaptainGrantLogSupport grantLogSupport;
+    @Autowired
+    @Lazy
+    private IBasketV4SeasonService seasonService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -76,6 +81,7 @@ public class BasketV4DivisionClosingServiceImpl implements IBasketV4DivisionClos
         String status = division.getDivisionStatus();
         if (DivisionStatusEnum.FINISHED.getCode().equals(status)
                 || DivisionStatusEnum.ARCHIVED.getCode().equals(status)) {
+            seasonService.refreshAggregatedStatus(division.getSeasonId());
             return;
         }
         if (!FINISHABLE_STATUSES.contains(status)) {
@@ -88,6 +94,7 @@ public class BasketV4DivisionClosingServiceImpl implements IBasketV4DivisionClos
             BasketDivision latest = divisionMapper.selectById(divisionId);
             if (latest != null && (DivisionStatusEnum.FINISHED.getCode().equals(latest.getDivisionStatus())
                     || DivisionStatusEnum.ARCHIVED.getCode().equals(latest.getDivisionStatus()))) {
+                seasonService.refreshAggregatedStatus(latest.getSeasonId());
                 return;
             }
             throw new ServiceException("结束赛事失败，Division 状态已变更");
@@ -121,5 +128,7 @@ public class BasketV4DivisionClosingServiceImpl implements IBasketV4DivisionClos
                     teamIds, APPLICATION_PENDING, APPLICATION_CANCELLED, finishTime);
             playerProfileMapper.clearCurrentTeamIdByTeamIds(teamIds);
         }
+        seasonService.refreshAggregatedStatus(division.getSeasonId());
     }
 }
+

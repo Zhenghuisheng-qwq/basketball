@@ -192,6 +192,21 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void refreshAggregatedStatus(Long seasonId) {
+        BasketSeason season = requireSeason(seasonId);
+        String next = resolveSeasonStatusOnPublish(seasonId);
+        if (next.equals(season.getSeasonStatus())) {
+            return;
+        }
+        season.setSeasonStatus(next);
+        season.setUpdateTime(new Date());
+        if (seasonMapper.updateById(season) != 1) {
+            throw new ServiceException("刷新 Season 状态失败");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
         BasketSeason season = requireSeason(id);
         if (!PublishStatusEnum.DRAFT.getCode().equals(season.getPublishStatus())) {

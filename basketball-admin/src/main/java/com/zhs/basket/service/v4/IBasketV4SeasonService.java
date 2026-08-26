@@ -26,4 +26,7 @@ public interface IBasketV4SeasonService {
     void offline(Long id);
 
     void delete(Long id);
+
+    void refreshAggregatedStatus(Long seasonId);
 }
+
