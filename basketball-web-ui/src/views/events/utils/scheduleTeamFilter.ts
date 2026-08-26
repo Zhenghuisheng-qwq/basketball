@@ -4,6 +4,7 @@ export type ScheduleTeamOption = {
   eventTeamId: string
   name: string
   shortName?: string
+  code?: string
   logoUrl?: string
 }
 
@@ -25,6 +26,8 @@ export type ScheduleTeamMatchLike = {
   awayTeamName?: string | null
   homeTeamShortName?: string | null
   awayTeamShortName?: string | null
+  homeTeamCode?: string | null
+  awayTeamCode?: string | null
   homeTeamLogo?: string | null
   awayTeamLogo?: string | null
   homeTeamLogoUrl?: string | null
@@ -33,7 +36,7 @@ export type ScheduleTeamMatchLike = {
   date?: string | null
 }
 
-export const DEFAULT_SCHEDULE_PAGE_SIZE = 10
+export const DEFAULT_SCHEDULE_PAGE_SIZE = 20
 
 const TBD = '\u5f85\u5b9a'
 const BYE_CN = '\u8f6e\u7a7a'
@@ -76,14 +79,14 @@ function sideFromMatch(match: ScheduleTeamMatchLike, side: 'home' | 'away'): Sch
     return {
       eventTeamId: match.homeEventTeamId ?? match.homeTeamKey,
       name: match.homeTeam ?? match.homeTeamName,
-      shortName: match.homeTeamShortName,
+      shortName: match.homeTeamShortName || match.homeTeamCode,
       logoUrl: match.homeTeamLogo || match.homeTeamLogoUrl,
     }
   }
   return {
     eventTeamId: match.awayEventTeamId ?? match.awayTeamKey,
     name: match.awayTeam ?? match.awayTeamName,
-    shortName: match.awayTeamShortName,
+    shortName: match.awayTeamShortName || match.awayTeamCode,
     logoUrl: match.awayTeamLogo || match.awayTeamLogoUrl,
   }
 }
@@ -102,6 +105,7 @@ export function toScheduleTeamOption(side: ScheduleTeamSide): ScheduleTeamOption
     eventTeamId: normalizeEventTeamId(side.eventTeamId),
     name: name || shortName || UNKNOWN_TEAM,
     shortName: shortName || undefined,
+    code: shortName || undefined,
     logoUrl: logoUrl || undefined,
   }
 }
@@ -111,6 +115,7 @@ function mergeTeamOption(current: ScheduleTeamOption, incoming: ScheduleTeamOpti
     eventTeamId: current.eventTeamId,
     name: current.name && current.name !== UNKNOWN_TEAM ? current.name : incoming.name,
     shortName: current.shortName || incoming.shortName,
+    code: current.code || incoming.code,
     logoUrl: current.logoUrl || incoming.logoUrl,
   }
 }
@@ -176,7 +181,7 @@ export function resolveSelectedTeamId(
 
 export function enrichTeamOptions(
   options: ScheduleTeamOption[],
-  extras: Map<string, { name?: string; shortName?: string; logoUrl?: string }>,
+  extras: Map<string, { name?: string; shortName?: string; code?: string; logoUrl?: string }>,
 ): ScheduleTeamOption[] {
   return options.map((option) => {
     const extra = extras.get(option.eventTeamId)
@@ -185,6 +190,7 @@ export function enrichTeamOptions(
       eventTeamId: option.eventTeamId,
       name: extra.name || option.name,
       shortName: extra.shortName,
+      code: extra.code,
       logoUrl: extra.logoUrl,
     })
   })

@@ -21,6 +21,7 @@ import com.zhs.service.support.PublicTeamDisplaySupport;
 import com.zhs.service.support.V4CurrentSeasonSelector;
 import com.zhs.service.support.V4MatchSeriesDisplaySupport;
 import com.zhs.service.v4.IBasketV4PublicService;
+import com.zhs.support.v4.V4PublicMatchSeriesStatAggregator;
 import com.zhs.support.v4.V4PublicTeamArchiveAssembler;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -582,6 +583,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (detail == null) {
             throw new ServiceException("系列赛不存在");
         }
+        fillSeriesEventContext(detail);
+        attachSeriesAggregate(detail);
         return detail;
     }
 
@@ -1075,6 +1078,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         vo.setSourceTeamId(team.getSourceTeamId());
         vo.setTeamName(team.getTeamNameSnapshot());
         vo.setTeamShortName(team.getTeamShortName());
+        vo.setEventTeamNo(team.getEventTeamNo());
         vo.setTeamLogoFileId(team.getTeamLogoFileId());
         vo.setTeamLogoUrl(urlMap.get(team.getTeamLogoFileId()));
         vo.setCaptainPlayerId(team.getCaptainPlayerId());
@@ -1287,6 +1291,14 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (CollectionUtils.isEmpty(rows)) {
             return Collections.emptyList();
         }
+        return toPublicTeamStats(rows, teamMap);
+    }
+
+    private List<V4PublicMatchTeamStatItemResp> toPublicTeamStats(List<BasketV4MatchTeamStat> rows,
+                                                                 Map<Long, BasketEventTeam> teamMap) {
+        if (CollectionUtils.isEmpty(rows)) {
+            return Collections.emptyList();
+        }
         List<V4PublicMatchTeamStatItemResp> result = new ArrayList<>();
         for (BasketV4MatchTeamStat row : rows) {
             V4PublicMatchTeamStatItemResp vo = new V4PublicMatchTeamStatItemResp();
@@ -1324,6 +1336,14 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (CollectionUtils.isEmpty(rows)) {
             return Collections.emptyList();
         }
+        return toPublicPlayerStats(rows, teamMap);
+    }
+
+    private List<V4PublicMatchPlayerStatItemResp> toPublicPlayerStats(List<BasketV4MatchPlayerStat> rows,
+                                                                     Map<Long, BasketEventTeam> teamMap) {
+        if (CollectionUtils.isEmpty(rows)) {
+            return Collections.emptyList();
+        }
         Map<Long, BasketEventPlayer> playerMap = loadEventPlayerMap(
                 rows.stream().map(BasketV4MatchPlayerStat::getEventPlayerId).collect(Collectors.toList()));
         List<V4PublicMatchPlayerStatItemResp> result = new ArrayList<>();
@@ -1338,6 +1358,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             vo.setBlock(row.getBlock());
             vo.setTurnover(row.getTurnover());
             vo.setFoul(row.getFoul());
+            vo.setFieldGoalMade(row.getFieldGoalMade());
+            vo.setFieldGoalAttempt(row.getFieldGoalAttempt());
+            vo.setThreePointMade(row.getThreePointMade());
+            vo.setThreePointAttempt(row.getThreePointAttempt());
+            vo.setFreeThrowMade(row.getFreeThrowMade());
+            vo.setFreeThrowAttempt(row.getFreeThrowAttempt());
             vo.setMinutes(row.getMinutes());
             BasketEventPlayer player = playerMap.get(row.getEventPlayerId());
             if (player != null) {
@@ -1349,6 +1375,110 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 vo.setTeamName(team.getTeamNameSnapshot());
             }
             result.add(vo);
+        }
+        return result;
+    }
+
+    private void fillSeriesEventContext(V4PublicMatchSeriesDetailResp detail) {
+        if (detail == null || detail.getDivisionId() == null) {
+            return;
+        }
+        BasketDivision division = divisionDao.selectById(detail.getDivisionId());
+        if (division == null || !Objects.equals(division.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+            return;
+        }
+        detail.setDivisionName(division.getDivisionName());
+        detail.setGameMode(division.getGameMode());
+        BasketSeason season = seasonDao.selectById(division.getSeasonId());
+        if (season == null || !Objects.equals(season.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+            return;
+        }
+        detail.setSeasonId(season.getId());
+        detail.setSeasonName(StringUtils.hasText(season.getDisplayTitle()) ? season.getDisplayTitle() : season.getSeasonName());
+        if (season.getSeriesId() == null) {
+            return;
+        }
+        BasketSeries series = seriesDao.selectById(season.getSeriesId());
+        if (series != null && Objects.equals(series.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+            detail.setEventSeriesCode(series.getSeriesCode());
+            detail.setEventSeriesName(series.getSeriesName());
+        }
+    }
+
+    /**
+     * 只累计当前 Series 内正式可公开、且已有官方统计的 Game。
+     * Forfeit / 未执行剩余局若没有 TeamStat，不进入累计，也不伪造 0。
+     */
+    private void attachSeriesAggregate(V4PublicMatchSeriesDetailResp detail) {
+        if (detail == null) {
+            return;
+        }
+        List<V4PublicMatchSeriesGameResp> games = detail.getGames();
+        if (CollectionUtils.isEmpty(games)) {
+            detail.setTeamStats(Collections.emptyList());
+            detail.setPlayerStats(Collections.emptyList());
+            return;
+        }
+        Set<Long> candidateIds = games.stream()
+                .filter(game -> game != null && game.getMatchId() != null && !Boolean.TRUE.equals(game.getSkipped()))
+                .map(V4PublicMatchSeriesGameResp::getMatchId)
+                .collect(Collectors.toSet());
+        Set<Long> matchIdsWithStats = loadMatchIdsWithOfficialStats(candidateIds);
+        V4PublicMatchSeriesStatAggregator.markStatsAvailable(games, matchIdsWithStats);
+        Set<Long> eligibleIds = V4PublicMatchSeriesStatAggregator.eligibleMatchIds(games, matchIdsWithStats);
+        if (eligibleIds.isEmpty()) {
+            detail.setTeamStats(Collections.emptyList());
+            detail.setPlayerStats(Collections.emptyList());
+            return;
+        }
+        List<BasketV4MatchTeamStat> teamEntities = matchTeamStatDao.selectList(new LambdaQueryWrapper<BasketV4MatchTeamStat>()
+                .in(BasketV4MatchTeamStat::getMatchId, eligibleIds)
+                .eq(BasketV4MatchTeamStat::getIsDelete, BasketPublicConstants.NOT_DELETED));
+        List<BasketV4MatchPlayerStat> playerEntities = matchPlayerStatDao.selectList(new LambdaQueryWrapper<BasketV4MatchPlayerStat>()
+                .in(BasketV4MatchPlayerStat::getMatchId, eligibleIds)
+                .eq(BasketV4MatchPlayerStat::getIsDelete, BasketPublicConstants.NOT_DELETED));
+        Set<Long> teamIds = new HashSet<>();
+        if (detail.getHomeEventTeamId() != null) {
+            teamIds.add(detail.getHomeEventTeamId());
+        }
+        if (detail.getAwayEventTeamId() != null) {
+            teamIds.add(detail.getAwayEventTeamId());
+        }
+        if (!CollectionUtils.isEmpty(teamEntities)) {
+            for (BasketV4MatchTeamStat row : teamEntities) {
+                if (row.getEventTeamId() != null) {
+                    teamIds.add(row.getEventTeamId());
+                }
+            }
+        }
+        if (!CollectionUtils.isEmpty(playerEntities)) {
+            for (BasketV4MatchPlayerStat row : playerEntities) {
+                if (row.getEventTeamId() != null) {
+                    teamIds.add(row.getEventTeamId());
+                }
+            }
+        }
+        Map<Long, BasketEventTeam> teamMap = loadEventTeamMap(teamIds);
+        detail.setTeamStats(V4PublicMatchSeriesStatAggregator.sumTeamStats(toPublicTeamStats(teamEntities, teamMap)));
+        detail.setPlayerStats(V4PublicMatchSeriesStatAggregator.sumPlayerStats(toPublicPlayerStats(playerEntities, teamMap)));
+    }
+
+    private Set<Long> loadMatchIdsWithOfficialStats(Set<Long> matchIds) {
+        if (CollectionUtils.isEmpty(matchIds)) {
+            return Set.of();
+        }
+        List<BasketV4MatchTeamStat> rows = matchTeamStatDao.selectList(new LambdaQueryWrapper<BasketV4MatchTeamStat>()
+                .in(BasketV4MatchTeamStat::getMatchId, matchIds)
+                .eq(BasketV4MatchTeamStat::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .select(BasketV4MatchTeamStat::getMatchId));
+        if (CollectionUtils.isEmpty(rows)) {
+            return Set.of();
+        }
+        Set<Long> result = new HashSet<>();
+        for (BasketV4MatchTeamStat row : rows) {
+            if (row != null && row.getMatchId() != null) {
+                result.add(row.getMatchId());
+            }
         }
         return result;
     }

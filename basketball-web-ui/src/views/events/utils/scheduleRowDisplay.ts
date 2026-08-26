@@ -34,16 +34,28 @@ export function scheduleTeamName(item: V4PublicScheduleItem, side: 'home' | 'awa
   return v4ScheduleTeamLabel(side === 'home' ? item.homeTeam : item.awayTeam, item.placeholderSource)
 }
 
+export function scheduleTeamCode(item: V4PublicScheduleItem, side: 'home' | 'away'): string {
+  const name = scheduleTeamName(item, side)
+  const code = side === 'home'
+    ? String(item.homeTeamShortName || item.homeTeamCode || '').trim()
+    : String(item.awayTeamShortName || item.awayTeamCode || '').trim()
+  if (!code || code === name) return ''
+  if (/^CNPA-T-\d+$/i.test(code)) return ''
+  if (name.includes(code)) return ''
+  return code
+}
+
 export function toScheduleTeam(item: V4PublicScheduleItem, side: 'home' | 'away'): Team {
   const eventTeamId = String(side === 'home' ? item.homeEventTeamId || '' : item.awayEventTeamId || '')
   const name = scheduleTeamName(item, side)
+  const code = scheduleTeamCode(item, side)
   const logo = String(side === 'home' ? item.homeTeamLogoUrl || '' : item.awayTeamLogoUrl || '').trim()
   return {
     id: Number(eventTeamId) || 0,
     teamId: eventTeamId,
-    code: name.slice(0, 2).toUpperCase(),
+    code: code || name.slice(0, 2).toUpperCase(),
     name,
-    shortName: name,
+    shortName: code || name,
     logo,
     wins: 0,
     losses: 0,
@@ -69,7 +81,7 @@ export function formatScheduleDateShort(scheduleDate?: string | null): string | 
 }
 
 export function formatMatchNo(item: V4PublicScheduleItem): string {
-  const code = String(item.seriesCode || '').trim()
+  const code = String(item.matchNo || item.seriesCode || '').trim()
   return code ? `#${code}` : ''
 }
 
@@ -143,6 +155,19 @@ export function scheduleStatusLabel(item: V4PublicScheduleItem): string {
   }
   if (isScheduleScheduled(item)) return '未开始'
   return v4MatchStatusLabel(item.status)
+}
+
+export function schedulePlatformBadge(item: V4PublicScheduleItem, side: 'home' | 'away'): string {
+  const name = scheduleTeamName(item, side)
+  const raw = String(
+    side === 'home'
+      ? (item.homeTeam || item.homeTeamCode || item.homeTeamShortName || '')
+      : (item.awayTeam || item.awayTeamCode || item.awayTeamShortName || ''),
+  ).trim()
+  if (/E2/i.test(name) || /E2/i.test(raw)) return 'E2'
+  const letters = raw.replace(/[^A-Za-z0-9\u4e00-\u9fff]/g, '')
+  if (letters.length >= 2) return letters.slice(0, 2).toUpperCase()
+  return 'E2'
 }
 
 export function scheduleStatusTone(item: V4PublicScheduleItem): ScheduleStatusTone {

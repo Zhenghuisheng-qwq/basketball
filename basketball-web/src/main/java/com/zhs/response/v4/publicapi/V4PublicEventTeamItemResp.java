@@ -17,6 +17,8 @@ public class V4PublicEventTeamItemResp {
 
     private String teamShortName;
 
+    private String eventTeamNo;
+
     @JsonSerialize(using = ToStringSerializer.class)
     private Long teamLogoFileId;
 

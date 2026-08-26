@@ -60,7 +60,7 @@ export function shiftMondayWeek(weekStart: string, direction: -1 | 1): string {
 }
 
 function monthDayText(date: Date): string {
-  return String(date.getMonth() + 1) + '/' + String(date.getDate()).padStart(2, '0')
+  return String(date.getMonth() + 1) + '/' + String(date.getDate())
 }
 
 export function sundayWeekDays(weekStart: string, counts: Record<string, number> = {}): CalendarDay[] {
@@ -81,11 +81,15 @@ export function mondayWeekDays(weekStart: string, counts: Record<string, number>
   return sundayWeekDays(weekStart, counts)
 }
 
-export function weekNumberOf(dateKey: string): number {
-  const date = parseDateKey(isValidDateKey(dateKey) ? dateKey : todayDateKey())
-  const yearStart = new Date(date.getFullYear(), 0, 1)
+export function weekNumberOf(dateKey: string, seasonStart?: string): number {
+  const weekStart = parseDateKey(startOfSundayWeek(isValidDateKey(dateKey) ? dateKey : todayDateKey()))
+  const originKey = isValidDateKey(seasonStart || '') ? startOfSundayWeek(seasonStart as string) : ''
+  if (originKey) {
+    const origin = parseDateKey(originKey)
+    return Math.max(1, Math.floor((weekStart.getTime() - origin.getTime()) / 86400000 / 7) + 1)
+  }
+  const yearStart = new Date(weekStart.getFullYear(), 0, 1)
   const firstSunday = new Date(yearStart.getFullYear(), yearStart.getMonth(), yearStart.getDate() - yearStart.getDay())
-  const weekStart = parseDateKey(startOfSundayWeek(formatDateKey(date)))
   return Math.floor((weekStart.getTime() - firstSunday.getTime()) / 86400000 / 7) + 1
 }
 
@@ -221,7 +225,7 @@ export function resolveInitWeekStart(items: V4PublicScheduleItem[], seasonStatus
   if (!dates.length) return startOfSundayWeek(todayDateKey())
   const status = String(seasonStatus || '').toUpperCase()
   if (['FINISHED', 'COMPLETED', 'CLOSED', 'ARCHIVED'].includes(status)) {
-    return startOfSundayWeek(dates[dates.length - 1])
+    return startOfSundayWeek(dates[0])
   }
   if (['NOT_STARTED', 'DRAFT', 'REGISTRATION_OPEN', 'REGISTRATION_CLOSED', 'PENDING', 'REGISTRATION'].includes(status)) {
     return startOfSundayWeek(dates[0])

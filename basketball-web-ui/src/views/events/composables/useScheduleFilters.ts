@@ -16,14 +16,22 @@ import {
 } from '../utils/scheduleTeamFilter'
 import {
   countScheduleByDate,
-  groupScheduleByDate,
   resolveInitWeekStart,
   scheduleItemDateKey,
   shiftMonthKey,
   shiftSundayWeek,
+  sortScheduleItems,
   startOfMonthKey,
   startOfSundayWeek,
+  weekNumberOf,
 } from '../utils/scheduleCalendar'
+import {
+  browseScheduleDateGroups,
+  DEFAULT_VISIBLE_DATE_GROUPS,
+  nextVisibleDateGroupCount,
+  resolveInitSelectedDate,
+  uniqueSortedScheduleDates,
+} from '../utils/scheduleDateBrowse'
 
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
@@ -36,7 +44,8 @@ export function useScheduleFilters() {
   const calendarMonthAnchor = ref(startOfMonthKey(todayDateKey()))
   const calendarExpanded = ref(false)
   const teamFilterExpanded = ref(false)
-  const currentPage = ref(1)
+  const visibleDateGroupCount = ref(DEFAULT_VISIBLE_DATE_GROUPS)
+  const dateTouched = ref(false)
 
   const scheduleItems = ref<V4PublicScheduleItem[]>([])
   const standingRows = ref<PublicStandingItemVo[]>([])
@@ -70,12 +79,14 @@ export function useScheduleFilters() {
         eventTeamId,
         name: row.teamName || row.teamShortName || '未知球队',
         shortName: row.teamShortName,
+        code: row.eventTeamNo || row.teamShortName,
         logoUrl: String(row.teamLogoUrl || '').trim() || logos.get(eventTeamId) || '',
       })
     }
     if (fromEventTeams.length) return fromEventTeams
     return buildScheduleTeamOptions(scheduleItems.value).map((option) => ({
       ...option,
+      code: option.code || option.shortName,
       logoUrl: option.logoUrl || logos.get(option.eventTeamId) || '',
     }))
   })
@@ -94,26 +105,79 @@ export function useScheduleFilters() {
     return teamFilteredItems.value.filter((item) => scheduleItemDateKey(item) === date)
   })
 
-  const groupedScheduleByDate = computed(() => groupScheduleByDate(filteredScheduleItems.value))
+  const sortedFilteredItems = computed(() => sortScheduleItems(filteredScheduleItems.value))
+
+  const total = computed(() => filteredScheduleItems.value.length)
+
+  const dateBrowse = computed(() =>
+    browseScheduleDateGroups(
+      sortedFilteredItems.value,
+      selectedDate.value,
+      visibleDateGroupCount.value,
+    ),
+  )
+
+  const groupedScheduleByDate = computed(() => dateBrowse.value.visibleGroups)
+  const allDateGroupCount = computed(() => dateBrowse.value.allGroups.length)
+  const remainingDateGroups = computed(() => dateBrowse.value.remainingGroups)
+  const canLoadMoreDateGroups = computed(() => dateBrowse.value.canLoadMore)
+  const visibleItemCount = computed(() =>
+    dateBrowse.value.visibleGroups.reduce((sum, group) => sum + group.items.length, 0),
+  )
 
   const dateCounts = computed(() => countScheduleByDate(teamFilteredItems.value))
 
-  const total = computed(() => filteredScheduleItems.value.length)
+  const firstWeekStart = computed(() => {
+    const dates = scheduleItems.value
+      .map((item) => scheduleItemDateKey(item))
+      .filter((item) => isValidDateKey(item))
+      .sort()
+    return dates[0] ? startOfSundayWeek(dates[0]) : calendarWeekStart.value
+  })
+
+  const weekNumber = computed(() => weekNumberOf(calendarWeekStart.value, firstWeekStart.value))
 
   function collapsePanels() {
     calendarExpanded.value = false
     teamFilterExpanded.value = false
   }
 
+  function resetVisibleDateGroups() {
+    visibleDateGroupCount.value = DEFAULT_VISIBLE_DATE_GROUPS
+  }
+
   function resetFilters() {
-    selectedDate.value = ''
     selectedTeamId.value = null
-    currentPage.value = 1
+    dateTouched.value = false
+    resetVisibleDateGroups()
     collapsePanels()
+  }
+
+  function syncCalendarToSelectedDate() {
+    const status = ctx.seasonDetail.value?.seasonStatus
+    if (isValidDateKey(selectedDate.value)) {
+      calendarWeekStart.value = startOfSundayWeek(selectedDate.value)
+    } else {
+      calendarWeekStart.value = resolveInitWeekStart(scheduleItems.value, status)
+    }
+    calendarMonthAnchor.value = startOfMonthKey(calendarWeekStart.value)
+  }
+
+  function applyInitSelectedDate(force = false) {
+    const status = ctx.seasonDetail.value?.seasonStatus
+    const nextDate = resolveInitSelectedDate(scheduleItems.value, status)
+    const dates = uniqueSortedScheduleDates(scheduleItems.value)
+    if (force) {
+      selectedDate.value = nextDate
+    } else if (selectedDate.value && !dates.includes(selectedDate.value)) {
+      selectedDate.value = nextDate
+    }
+    syncCalendarToSelectedDate()
   }
 
   function selectDate(date: string) {
     if (!isValidDateKey(date)) return
+    dateTouched.value = true
     if (selectedDate.value === date) {
       selectedDate.value = ''
       return
@@ -125,6 +189,7 @@ export function useScheduleFilters() {
   }
 
   function clearDate() {
+    dateTouched.value = true
     selectedDate.value = ''
   }
 
@@ -153,13 +218,17 @@ export function useScheduleFilters() {
   }
 
   function goPrevWeek() {
+    dateTouched.value = true
     calendarWeekStart.value = shiftSundayWeek(calendarWeekStart.value, -1)
     selectedDate.value = ''
+    resetVisibleDateGroups()
   }
 
   function goNextWeek() {
+    dateTouched.value = true
     calendarWeekStart.value = shiftSundayWeek(calendarWeekStart.value, 1)
     selectedDate.value = ''
+    resetVisibleDateGroups()
   }
 
   function goPrevMonth() {
@@ -168,6 +237,14 @@ export function useScheduleFilters() {
 
   function goNextMonth() {
     calendarMonthAnchor.value = shiftMonthKey(calendarMonthAnchor.value, 1)
+  }
+
+  function loadMoreDateGroups() {
+    if (!canLoadMoreDateGroups.value) return
+    visibleDateGroupCount.value = nextVisibleDateGroupCount(
+      visibleDateGroupCount.value,
+      dateBrowse.value.allGroups.length,
+    )
   }
 
   async function loadSchedule(options?: { resetFilters?: boolean }) {
@@ -196,12 +273,14 @@ export function useScheduleFilters() {
         v4StandingToPublic(row, ctx.seasonId.value),
       )
       eventTeams.value = teamRes.data ?? []
-      if (options?.resetFilters) resetFilters()
-      calendarWeekStart.value = resolveInitWeekStart(
-        scheduleItems.value,
-        ctx.seasonDetail.value?.seasonStatus,
-      )
-      calendarMonthAnchor.value = startOfMonthKey(calendarWeekStart.value)
+      if (options?.resetFilters) {
+        resetFilters()
+        applyInitSelectedDate(true)
+      } else if (!dateTouched.value) {
+        applyInitSelectedDate(true)
+      } else {
+        applyInitSelectedDate(false)
+      }
       state.value = scheduleItems.value.length ? 'success' : 'empty'
     } catch (err) {
       if (current !== reqId) return
@@ -236,18 +315,20 @@ export function useScheduleFilters() {
     selectedTeamId.value = resolveSelectedTeamId(selectedTeamId.value, options)
   })
 
-  watch(
-    () => [selectedDate.value, selectedTeamId.value] as const,
-    () => {
-      currentPage.value = 1
-    },
-  )
+  watch(selectedTeamId, () => {
+    resetVisibleDateGroups()
+  })
+
+  watch(selectedDate, (date) => {
+    if (!isValidDateKey(date)) resetVisibleDateGroups()
+  })
 
   return {
     selectedDate,
     selectedTeamId,
     selectedTeam,
     calendarWeekStart,
+    weekNumber,
     calendarMonthAnchor,
     calendarExpanded,
     teamFilterExpanded,
@@ -257,7 +338,12 @@ export function useScheduleFilters() {
     dateCounts,
     filteredScheduleItems,
     groupedScheduleByDate,
+    allDateGroupCount,
     total,
+    visibleItemCount,
+    remainingDateGroups,
+    canLoadMoreDateGroups,
+    loadMoreDateGroups,
     state,
     errorMessage,
     selectDate,

@@ -88,6 +88,7 @@ export interface V4PublicEventTeamItem {
   sourceTeamId?: string
   teamName: string
   teamShortName?: string
+  eventTeamNo?: string
   teamLogoFileId?: string
   teamLogoUrl?: string
   captainPlayerId?: string
@@ -218,6 +219,12 @@ export interface V4PublicMatchPlayerStatItem {
   block?: number | null
   turnover?: number | null
   foul?: number | null
+  fieldGoalMade?: number | null
+  fieldGoalAttempt?: number | null
+  threePointMade?: number | null
+  threePointAttempt?: number | null
+  freeThrowMade?: number | null
+  freeThrowAttempt?: number | null
   minutes?: number | null
 }
 
@@ -277,6 +284,7 @@ export interface V4PublicMatchSeriesGame {
   skipped?: boolean
   skippedReason?: string
   currentGame?: boolean
+  statsAvailable?: boolean
   replayUrl?: string
   videoUrl?: string
 }
@@ -284,7 +292,10 @@ export interface V4PublicMatchSeriesGame {
 export interface V4PublicMatchSeriesDetail {
   id?: string
   seriesCode?: string
+  divisionId?: string
+  stageId?: string
   stageName?: string
+  roundNo?: number
   homeTeamName?: string
   awayTeamName?: string
   bestOf?: number
@@ -295,7 +306,13 @@ export interface V4PublicMatchSeriesDetail {
   seriesStatusName?: string
   winnerEventTeamId?: string
   homeEventTeamId?: string
+  homeTeamShortName?: string
+  homeTeamLogoFileId?: string
+  homeTeamLogoUrl?: string
   awayEventTeamId?: string
+  awayTeamShortName?: string
+  awayTeamLogoFileId?: string
+  awayTeamLogoUrl?: string
   winnerTeamName?: string
   finalStage?: boolean
   resultLabel?: string
@@ -305,7 +322,17 @@ export interface V4PublicMatchSeriesDetail {
   resolutionTypeName?: string
   homeDisqualified?: boolean
   awayDisqualified?: boolean
+  seasonId?: string
+  seasonName?: string
+  eventSeriesCode?: string
+  eventSeriesName?: string
+  divisionName?: string
+  gameMode?: string
+  scheduledDate?: string
+  scheduledStartTime?: string
   games?: V4PublicMatchSeriesGame[]
+  teamStats?: V4PublicMatchTeamStatItem[]
+  playerStats?: V4PublicMatchPlayerStatItem[]
 }
 
 export interface V4PublicStandingItem {
@@ -414,12 +441,17 @@ export interface V4PublicScheduleItem {
   roundNo?: number
   roundName?: string
   seriesCode?: string
+  matchNo?: string
   homeEventTeamId?: string
   homeTeam?: string
+  homeTeamShortName?: string
+  homeTeamCode?: string
   homeTeamLogoFileId?: string
   homeTeamLogoUrl?: string
   awayEventTeamId?: string
   awayTeam?: string
+  awayTeamShortName?: string
+  awayTeamCode?: string
   awayTeamLogoFileId?: string
   awayTeamLogoUrl?: string
   bestOf?: number

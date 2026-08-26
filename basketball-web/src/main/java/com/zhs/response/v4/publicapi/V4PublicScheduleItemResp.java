@@ -20,10 +20,16 @@ public class V4PublicScheduleItemResp {
     private String roundName;
     private String seriesCode;
 
+    private String matchNo;
+
     @JsonSerialize(using = ToStringSerializer.class)
     private Long homeEventTeamId;
 
     private String homeTeam;
+
+    private String homeTeamShortName;
+
+    private String homeTeamCode;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long homeTeamLogoFileId;
@@ -34,6 +40,10 @@ public class V4PublicScheduleItemResp {
     private Long awayEventTeamId;
 
     private String awayTeam;
+
+    private String awayTeamShortName;
+
+    private String awayTeamCode;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long awayTeamLogoFileId;

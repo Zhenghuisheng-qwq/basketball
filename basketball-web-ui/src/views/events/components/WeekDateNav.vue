@@ -6,6 +6,7 @@ import { todayDateKey } from '@/utils/scheduleDateKey'
 const props = defineProps<{
   selectedDate: string
   weekStart: string
+  weekNumber?: number
   dateCounts?: Record<string, number>
   calendarExpanded?: boolean
   teamFilterExpanded?: boolean
@@ -23,7 +24,7 @@ const emit = defineEmits<{
 
 const today = computed(() => todayDateKey())
 const weekDays = computed(() => sundayWeekDays(props.weekStart, props.dateCounts || {}))
-const weekLabel = computed(() => '第' + weekNumberOf(props.weekStart) + '周')
+const weekLabel = computed(() => `第${props.weekNumber || weekNumberOf(props.weekStart)}周`)
 const teamButtonLabel = computed(() => props.selectedTeamName || '选择球队')
 
 function onSelect(date: string) {
@@ -33,245 +34,280 @@ function onSelect(date: string) {
   }
   emit('selectDate', date)
 }
-</script>
-<template>
-  <div class="schedule-weekbar" role="tablist" aria-label="赛程周日历">
-    <button type="button" class="cal-arrow" aria-label="上一周" @click="emit('prevWeek')">‹</button>
-    <span class="cal-week-label">{{ weekLabel }}</span>
 
-    <div class="cal-days">
+function countText(count: number) {
+  return count > 0 ? `${count}场` : ''
+}
+</script>
+
+<template>
+  <section class="calendar-toolbar" aria-label="赛程周日历">
+    <div class="week-control">
+      <button type="button" class="arrow-btn" aria-label="上一周" @click="emit('prevWeek')">‹</button>
+      <strong class="week-number">{{ weekLabel }}</strong>
+      <button type="button" class="arrow-btn" aria-label="下一周" @click="emit('nextWeek')">›</button>
+    </div>
+
+    <div class="week-days" role="tablist">
       <button
         type="button"
-        class="cal-all"
+        class="day-item all"
         :class="{ active: !selectedDate }"
         :aria-pressed="!selectedDate"
         @click="emit('clearDate')"
       >
-        全部
+        <span class="day-main">全部 ALL</span>
       </button>
+
       <button
         v-for="day in weekDays"
         :key="day.date"
         type="button"
-        class="cal-day"
-        :class="{ active: day.date === selectedDate, today: day.date === today }"
+        class="day-item"
+        :class="{
+          active: day.date === selectedDate,
+          today: day.date === today,
+          'has-match': day.count > 0,
+        }"
         :aria-pressed="day.date === selectedDate"
         @click="onSelect(day.date)"
       >
-        <span v-if="day.count > 0" class="cal-day__badge">{{ day.count }}</span>
-        <span class="cal-day__week">{{ day.weekday }}</span>
-        <strong class="cal-day__date">{{ day.dateText }}</strong>
+        <span class="day-main">{{ day.weekday }} {{ day.dateText }}</span>
+        <span v-if="countText(day.count)" class="match-count">{{ countText(day.count) }}</span>
       </button>
     </div>
 
-    <button type="button" class="cal-arrow" aria-label="下一周" @click="emit('nextWeek')">›</button>
-
-    <div class="week-tools">
+    <div class="calendar-tools">
       <button
         type="button"
-        class="tool-btn tool-btn--calendar"
-        :class="{ expanded: calendarExpanded }"
+        class="toolbar-btn calendar-btn"
+        :class="{ active: calendarExpanded }"
         :aria-expanded="calendarExpanded"
         @click="emit('toggleCalendar')"
       >
-        日历 {{ calendarExpanded ? '∧' : '▾' }}
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <rect x="1.5" y="2.5" width="13" height="12" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4" />
+          <path d="M1.5 6h13M5 1.2v3.2M11 1.2v3.2" fill="none" stroke="currentColor" stroke-width="1.4" />
+        </svg>
+        <span>日历</span>
       </button>
       <button
         type="button"
-        class="tool-btn tool-btn--team"
-        :class="{ expanded: teamFilterExpanded, filtered: Boolean(selectedTeamName) }"
+        class="toolbar-btn team-btn"
+        :class="{ active: teamFilterExpanded }"
         :aria-expanded="teamFilterExpanded"
         @click="emit('toggleTeamFilter')"
       >
-        {{ teamButtonLabel }} {{ teamFilterExpanded ? '∧' : '▾' }}
+        <span>{{ teamButtonLabel }}</span>
+        <svg viewBox="0 0 12 8" width="10" height="7" aria-hidden="true">
+          <path d="M1 1.5 L6 6.5 L11 1.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+        </svg>
       </button>
     </div>
-  </div>
+  </section>
 </template>
+
 <style scoped lang="scss">
-.schedule-weekbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 72px;
-  margin-bottom: 16px;
-  padding: 0 10px 0 8px;
-  background: #111;
+.calendar-toolbar {
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) auto;
+  align-items: stretch;
+  padding: 0 12px;
   color: #fff;
-  border-radius: 3px;
+  background: #111;
 }
 
-.cal-arrow {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+.week-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.week-number {
+  min-width: 46px;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+.arrow-btn,
+.toolbar-btn {
+  border: 1px solid #3a3a3a;
   background: #1a1a1a;
   color: #fff;
-  font-size: 20px;
   font-family: inherit;
   cursor: pointer;
+}
+
+.arrow-btn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-color: #4a4a4a;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
 
   &:hover {
-    border-color: var(--cnpa-red, #e10613);
-    color: var(--cnpa-red, #e10613);
+    border-color: #fff;
   }
 }
 
-.cal-week-label {
-  flex: 0 0 auto;
-  color: rgba(255, 255, 255, 0.56);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-}
-
-.cal-days {
-  flex: 1;
-  min-width: 0;
+.week-days {
   display: grid;
-  grid-template-columns: repeat(8, minmax(72px, 92px));
-  justify-content: start;
-  gap: 4px;
+  grid-template-columns: 80px repeat(7, minmax(72px, 1fr));
+  min-height: 68px;
 }
 
-.cal-all,
-.cal-day {
-  position: relative;
+.day-item {
+  min-width: 0;
+  padding: 10px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  min-height: 52px;
-  padding: 4px 4px 6px;
+  gap: 3px;
   border: 0;
-  border-bottom: 2px solid transparent;
   background: transparent;
-  color: rgba(255, 255, 255, 0.64);
+  color: #d8d8d8;
   font-family: inherit;
   cursor: pointer;
-}
+  position: relative;
 
-.cal-all {
-  color: #fff;
-  font-size: 13px;
-  font-weight: 800;
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .day-main {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .match-count {
+    font-size: 11px;
+    color: #888;
+    font-weight: 600;
+  }
+
+  &.all .day-main {
+    color: #d8d8d8;
+    font-weight: 800;
+  }
 
   &.active {
-    background: rgba(225, 6, 19, 0.12);
-    color: var(--cnpa-red, #e10613);
-    border-bottom-color: var(--cnpa-red, #e10613);
-  }
-}
-
-.cal-day {
-  &.today:not(.active) {
-    box-shadow: inset 0 0 0 1px var(--cnpa-red, #e10613);
+    background: var(--cnpa-red, #e51422);
     color: #fff;
+
+    .day-main,
+    .match-count {
+      color: #fff;
+    }
   }
 
-  &.active {
-    background: var(--cnpa-red, #e10613);
-    color: #fff;
+  &.all.active {
+    background: rgba(229, 20, 34, 0.16);
+
+    .day-main {
+      color: #ff5a63;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 18%;
+      right: 18%;
+      bottom: 0;
+      height: 2px;
+      border-radius: 0;
+      background: var(--cnpa-red, #e51422);
+    }
   }
 
-  &:hover:not(.active) {
-    background: rgba(255, 255, 255, 0.08);
+  &.has-match:not(.active)::after {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--cnpa-red, #e51422);
   }
 }
 
-.cal-day__week {
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.cal-day__date {
-  font-size: 13px;
-  font-weight: 800;
-  color: inherit;
-}
-
-.cal-day__badge {
-  position: absolute;
-  top: 3px;
-  right: 4px;
-  min-width: 16px;
-  height: 14px;
-  padding: 0 4px;
-  border-radius: 7px;
-  background: var(--cnpa-red, #e10613);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 14px;
-}
-
-.cal-day.active .cal-day__badge {
-  background: #fff;
-  color: var(--cnpa-red, #e10613);
-}
-
-.week-tools {
+.calendar-tools {
+  margin-left: 10px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-  margin-left: auto;
+  gap: 8px;
 }
 
-.tool-btn {
-  height: 32px;
-  padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: transparent;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  font-family: inherit;
-  cursor: pointer;
-  white-space: nowrap;
+.toolbar-btn {
+  height: 36px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+
+  &:hover,
+  &.active {
+    background: var(--cnpa-red, #e51422);
+    border-color: var(--cnpa-red, #e51422);
+  }
 }
 
-.tool-btn--calendar.expanded,
-.tool-btn--team.expanded {
-  background: var(--cnpa-red, #e10613);
-  border-color: var(--cnpa-red, #e10613);
+.calendar-btn {
+  min-width: 78px;
 }
 
-.tool-btn--team.filtered:not(.expanded) {
-  border-color: var(--cnpa-red, #e10613);
-  color: #ffd4d7;
+.team-btn {
+  min-width: 108px;
 }
 
-@media (max-width: 1199px) {
-  .cal-days {
+@media (max-width: 1200px) {
+  .calendar-toolbar {
+    grid-template-columns: 132px minmax(0, 1fr);
+    padding-top: 8px;
+  }
+
+  .calendar-tools {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 8px 0 12px;
+    justify-content: flex-end;
+  }
+
+  .week-days {
+    grid-template-columns: 72px repeat(7, minmax(68px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .calendar-toolbar {
+    display: block;
+    padding: 10px 12px 12px;
+  }
+
+  .week-control {
+    margin-bottom: 8px;
+  }
+
+  .week-days {
     overflow-x: auto;
-    grid-template-columns: repeat(8, minmax(64px, 76px));
-  }
-}
-
-@media (max-width: 767px) {
-  .schedule-weekbar {
-    flex-wrap: wrap;
-    height: auto;
-    min-height: 72px;
-    padding: 8px;
+    grid-template-columns: 78px repeat(7, 86px);
+    min-height: 64px;
   }
 
-  .cal-days {
-    order: 3;
-    flex: 1 1 100%;
-    grid-template-columns: repeat(8, minmax(64px, 1fr));
-  }
-
-  .week-tools {
-    margin-left: 0;
-  }
-
-  .tool-btn {
-    flex: 1;
+  .calendar-tools {
+    margin-top: 10px;
   }
 }
 </style>

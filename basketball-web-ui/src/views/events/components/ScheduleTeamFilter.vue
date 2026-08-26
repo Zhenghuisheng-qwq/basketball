@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import type { ScheduleTeamOption } from '../utils/scheduleTeamFilter'
 import TeamLogo from './TeamLogo.vue'
 import type { Team } from '../types/events'
+
+const COLLAPSE_AFTER = 16
 
 const props = defineProps<{
   teams: ScheduleTeamOption[]
@@ -12,17 +15,31 @@ const emit = defineEmits<{
   selectTeam: [value: string | null]
 }>()
 
+const expanded = ref(false)
+
+const visibleTeams = computed(() => {
+  if (expanded.value || props.teams.length <= COLLAPSE_AFTER) return props.teams
+  return props.teams.slice(0, COLLAPSE_AFTER)
+})
+
+const canExpand = computed(() => props.teams.length > COLLAPSE_AFTER && !expanded.value)
+
 function toTeam(option: ScheduleTeamOption): Team {
+  const shortName = option.shortName || option.name
   return {
     id: Number(option.eventTeamId) || 0,
     teamId: option.eventTeamId,
-    code: (option.shortName || option.name || '').slice(0, 2).toUpperCase(),
+    code: shortName || option.name,
     name: option.name,
-    shortName: option.name,
+    shortName: shortName || option.name,
     logo: option.logoUrl || '',
     wins: 0,
     losses: 0,
   }
+}
+
+function displayName(option: ScheduleTeamOption): string {
+  return String(option.name || option.shortName || '球队').trim()
 }
 
 function isSelected(teamId: string | null): boolean {
@@ -30,120 +47,146 @@ function isSelected(teamId: string | null): boolean {
   return props.selectedTeamId === teamId
 }
 </script>
+
 <template>
   <section class="team-filter" aria-label="选择参赛球队">
-    <div class="team-filter__head">
-      <span class="team-filter__rule" />
-      <h3>选择参赛球队</h3>
-      <span class="team-filter__rule" />
-    </div>
-
-    <div class="team-filter__grid">
+    <div class="team-filter-head">
       <button
         type="button"
-        class="team-chip team-chip--all"
-        :class="{ selected: isSelected(null) }"
+        class="all-btn"
+        :class="{ active: isSelected(null) }"
         :aria-pressed="isSelected(null)"
         @click="emit('selectTeam', null)"
       >
-        <span v-if="isSelected(null)" class="team-chip__check" aria-hidden="true">✓</span>
-        <span class="team-chip__all-mark">全部</span>
-        <span class="team-chip__name">全部球队</span>
+        全部球队
       </button>
+      <span class="team-count">{{ teams.length }} 支参赛球队</span>
+    </div>
 
+    <div class="team-grid">
       <button
-        v-for="team in teams"
+        v-for="team in visibleTeams"
         :key="team.eventTeamId"
         type="button"
         class="team-chip"
-        :class="{ selected: isSelected(team.eventTeamId) }"
+        :class="{ active: isSelected(team.eventTeamId) }"
         :aria-pressed="isSelected(team.eventTeamId)"
         :title="team.name"
         @click="emit('selectTeam', team.eventTeamId)"
       >
-        <span v-if="isSelected(team.eventTeamId)" class="team-chip__check" aria-hidden="true">✓</span>
         <TeamLogo :team="toTeam(team)" size="schedule" />
-        <span class="team-chip__name">{{ team.name }}</span>
+        <span class="team-chip-name">{{ displayName(team) }}</span>
       </button>
     </div>
+
+    <button
+      v-if="canExpand"
+      type="button"
+      class="more-teams"
+      @click="expanded = true"
+    >
+      更多球队
+      <span aria-hidden="true">›</span>
+    </button>
   </section>
 </template>
+
 <style scoped lang="scss">
 .team-filter {
-  margin: 0 0 20px;
-  padding: 14px 4px 4px;
+  padding: 12px 12px 10px;
+  background: #faf9f7;
+  border: 1px solid #eceae7;
+  border-top: none;
+  overflow-x: hidden;
 }
 
-.team-filter__head {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+.team-filter-head {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 
-.team-filter__head h3 {
-  margin: 0;
-  color: #5a5754;
+.all-btn {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 2px solid transparent;
+  background: #fff;
+  color: #333;
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
+  font-family: inherit;
+  cursor: pointer;
+
+  &.active {
+    border-color: var(--cnpa-red, #e51422);
+    background: rgba(229, 20, 34, 0.04);
+    color: var(--cnpa-red, #e51422);
+  }
 }
 
-.team-filter__rule {
-  height: 1px;
-  background: #e5e5e5;
+.team-count {
+  color: #888;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.team-filter__grid {
+.team-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  column-gap: 6px;
+  row-gap: 7px;
+  overflow-x: hidden;
 }
 
 .team-chip {
   position: relative;
+  min-width: 0;
+  height: 46px;
+  padding: 0 8px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 8px;
-  min-height: 110px;
-  padding: 12px 8px 10px;
   border: 2px solid transparent;
   background: #fff;
-  color: #111;
+  color: #151515;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
 
   &:hover {
-    background: #f7f5f2;
+    background: #fff;
+    border-color: #eceae7;
   }
 
-  &.selected {
-    border-color: var(--cnpa-red, #e10613);
-    background: rgba(225, 6, 19, 0.06);
+  &.active {
+    border-color: var(--cnpa-red, #e51422);
+    background: rgba(229, 20, 34, 0.04);
+  }
+
+  &.active::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--cnpa-red, #e51422);
+  }
+
+  :deep(.team-logo-schedule) {
+    width: 34px;
+    height: 34px;
+  }
+
+  :deep(.team-logo-schedule .team-logo-fallback) {
+    font-size: 11px;
   }
 }
 
-.team-chip--all {
-  justify-content: center;
-}
-
-.team-chip__all-mark {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  background: #151515;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.team-chip__name {
-  max-width: 100%;
+.team-chip-name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -151,34 +194,43 @@ function isSelected(teamId: string | null): boolean {
   font-weight: 700;
 }
 
-.team-chip__check {
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  color: var(--cnpa-red, #e10613);
+.more-teams {
+  width: 100%;
+  height: 34px;
+  border: 0;
+  border-top: 1px solid #eceae7;
+  background: transparent;
+  color: #666;
   font-size: 12px;
-  font-weight: 900;
-}
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
 
-@media (max-width: 1023px) {
-  .team-filter__grid {
-    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  &:hover {
+    color: var(--cnpa-red, #e51422);
   }
 }
 
-@media (max-width: 767px) {
-  .team-filter__grid {
+@media (max-width: 1440px) {
+  .team-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .team-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .team-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-
-  .team-chip {
-    min-height: 92px;
-    padding: 8px 4px;
-  }
 }
 
-@media (max-width: 479px) {
-  .team-filter__grid {
+@media (max-width: 640px) {
+  .team-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

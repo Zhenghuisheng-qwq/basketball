@@ -192,11 +192,13 @@ public class V4MatchSeriesDisplaySupport {
             if (home != null) {
                 item.setHomeTeamLogoFileId(home.getTeamLogoFileId());
                 item.setHomeTeamLogoUrl(urlMap.get(home.getTeamLogoFileId()));
+                fillScheduleTeamIdentity(item, home, true);
             }
             BasketEventTeam away = teamMap.get(item.getAwayEventTeamId());
             if (away != null) {
                 item.setAwayTeamLogoFileId(away.getTeamLogoFileId());
                 item.setAwayTeamLogoUrl(urlMap.get(away.getTeamLogoFileId()));
+                fillScheduleTeamIdentity(item, away, false);
             }
         }
     }
@@ -228,14 +230,18 @@ public class V4MatchSeriesDisplaySupport {
             if (PublicScheduleUnitResolver.MATCH_SERIES.equals(item.getUnitType())) {
                 List<Long> gameIds = seriesMatchIds.getOrDefault(item.getId(), List.of());
                 boolean hasStats = false;
+                String replayUrl = null;
                 for (Long gameId : gameIds) {
                     if (matchIdsWithStats.contains(gameId)) {
                         hasStats = true;
-                        break;
+                    }
+                    if (replayUrl == null) {
+                        BasketV4Match game = matchById.get(gameId);
+                        replayUrl = game == null ? null : normalizeReplayUrl(game.getReplayUrl());
                     }
                 }
                 item.setHasOfficialStats(hasStats);
-                item.setReplayUrl(null);
+                item.setReplayUrl(replayUrl);
                 continue;
             }
             BasketV4Match match = matchById.get(item.getId());
@@ -262,6 +268,50 @@ public class V4MatchSeriesDisplaySupport {
             }
         }
         return result;
+    }
+
+    private void fillScheduleTeamIdentity(V4PublicScheduleItemResp item, BasketEventTeam team, boolean home) {
+        if (item == null || team == null) {
+            return;
+        }
+        String shortName = blankToNull(team.getTeamShortName());
+        String code = firstNonBlank(team.getTeamShortName(), team.getEventTeamNo());
+        if (home) {
+            if (item.getHomeTeamShortName() == null || item.getHomeTeamShortName().isBlank()) {
+                item.setHomeTeamShortName(shortName);
+            }
+            if (item.getHomeTeamCode() == null || item.getHomeTeamCode().isBlank()) {
+                item.setHomeTeamCode(code);
+            }
+            return;
+        }
+        if (item.getAwayTeamShortName() == null || item.getAwayTeamShortName().isBlank()) {
+            item.setAwayTeamShortName(shortName);
+        }
+        if (item.getAwayTeamCode() == null || item.getAwayTeamCode().isBlank()) {
+            item.setAwayTeamCode(code);
+        }
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            String normalized = blankToNull(value);
+            if (normalized != null) {
+                return normalized;
+            }
+        }
+        return null;
+    }
+
+    private String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private String normalizeReplayUrl(String replayUrl) {
@@ -361,14 +411,22 @@ public class V4MatchSeriesDisplaySupport {
         }
         List<BasketEventTeam> teams = eventTeamDao.selectByIds(ids);
         Map<Long, BasketEventTeam> map = new HashMap<>();
+        Set<Long> logoIds = new HashSet<>();
         for (BasketEventTeam team : teams) {
             if (team != null) {
                 map.put(team.getId(), team);
+                if (team.getTeamLogoFileId() != null) {
+                    logoIds.add(team.getTeamLogoFileId());
+                }
             }
         }
+        Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(logoIds);
         BasketEventTeam home = map.get(series.getHomeEventTeamId());
         if (home != null) {
             vo.setHomeTeamName(home.getTeamNameSnapshot());
+            vo.setHomeTeamShortName(blankToNull(home.getTeamShortName()));
+            vo.setHomeTeamLogoFileId(home.getTeamLogoFileId());
+            vo.setHomeTeamLogoUrl(urlMap.get(home.getTeamLogoFileId()));
         } else if (series.getHomeSourceDisplay() != null && !series.getHomeSourceDisplay().isBlank()) {
             vo.setHomeTeamName(series.getHomeSourceDisplay());
         } else {
@@ -378,6 +436,9 @@ public class V4MatchSeriesDisplaySupport {
         BasketEventTeam away = map.get(series.getAwayEventTeamId());
         if (away != null) {
             vo.setAwayTeamName(away.getTeamNameSnapshot());
+            vo.setAwayTeamShortName(blankToNull(away.getTeamShortName()));
+            vo.setAwayTeamLogoFileId(away.getTeamLogoFileId());
+            vo.setAwayTeamLogoUrl(urlMap.get(away.getTeamLogoFileId()));
         } else if (series.getAwaySourceDisplay() != null && !series.getAwaySourceDisplay().isBlank()) {
             vo.setAwayTeamName(series.getAwaySourceDisplay());
         } else {
@@ -530,6 +591,7 @@ public class V4MatchSeriesDisplaySupport {
         item.setRoundNo(series.getRoundNo());
         item.setRoundName(PublicKnockoutRoundNames.name(series.getRoundNo(), maxRound));
         item.setSeriesCode(series.getSeriesCode());
+        item.setMatchNo(series.getSeriesCode());
         item.setHomeEventTeamId(detail.getHomeEventTeamId());
         item.setAwayEventTeamId(detail.getAwayEventTeamId());
         item.setHomeTeam(detail.getHomeTeamName());
@@ -576,6 +638,7 @@ public class V4MatchSeriesDisplaySupport {
         item.setRoundNo(match.getRoundNo());
         item.setRoundName(match.getRoundNo() == null ? "--" : ("R" + match.getRoundNo()));
         item.setSeriesCode(match.getMatchNo());
+        item.setMatchNo(match.getMatchNo());
         item.setHomeEventTeamId(positiveOrNull(match.getHomeEventTeamId()));
         item.setAwayEventTeamId(positiveOrNull(match.getAwayEventTeamId()));
         item.setHomeTeam(null);
@@ -599,9 +662,11 @@ public class V4MatchSeriesDisplaySupport {
             away = map.get(item.getAwayEventTeamId());
             if (home != null) {
                 item.setHomeTeam(home.getTeamNameSnapshot());
+                fillScheduleTeamIdentity(item, home, true);
             }
             if (away != null) {
                 item.setAwayTeam(away.getTeamNameSnapshot());
+                fillScheduleTeamIdentity(item, away, false);
             }
         }
         if (item.getHomeTeam() == null || item.getHomeTeam().isBlank()) {
