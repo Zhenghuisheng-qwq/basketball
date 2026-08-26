@@ -130,7 +130,7 @@ def create_season(token: str) -> int:
         "description": MARKER,
         "registrationMode": "TEAM",
         "seasonStartTime": "2026-08-01 00:00:00",
-        "seasonEndTime": "2026-08-31 23:59:59",
+        "seasonEndTime": "2026-09-30 23:59:59",
     }
     r = need(req(f"{ADMIN}/basket/v4/season", "POST", body, token), "create-season")
     sid = int(fs.extract_id(r))
@@ -158,7 +158,7 @@ def create_division(token: str, season_id: int) -> int:
         "registrationStartTime": "2026-08-01 00:00:00",
         "registrationEndTime": "2026-08-26 23:50:00",
         "matchStartTime": "2026-08-26 23:50:00",
-        "matchEndTime": "2026-08-31 23:59:59",
+        "matchEndTime": "2026-09-30 23:59:59",
         "sortOrder": 1,
     }
     r = need(req(f"{ADMIN}/basket/v4/division", "POST", body, token), "create-div")
@@ -171,7 +171,7 @@ def align_time_windows(token: str, season_id: int, did: int) -> None:
         "seasonName": SEASON_NAME,
         "displayTitle": SEASON_TITLE,
         "seasonStartTime": "2026-08-01 00:00:00",
-        "seasonEndTime": "2026-08-31 23:59:59",
+        "seasonEndTime": "2026-09-30 23:59:59",
     }, token)
     log(f"season window {sr.get('code')} {sr.get('msg')}")
     dr = req(f"{ADMIN}/basket/v4/division/{did}", "PUT", {
@@ -179,7 +179,7 @@ def align_time_windows(token: str, season_id: int, did: int) -> None:
         "registrationStartTime": "2026-08-01 00:00:00",
         "registrationEndTime": "2026-08-26 23:50:00",
         "matchStartTime": "2026-08-26 23:50:00",
-        "matchEndTime": "2026-08-31 23:59:59",
+        "matchEndTime": "2026-09-30 23:59:59",
     }, token)
     log(f"division window {dr.get('code')} {dr.get('msg')}")
     if dr.get("code") != 200:
@@ -193,35 +193,57 @@ def widen_match_window_after_lock(token: str, did: int) -> None:
         "registrationStartTime": "2026-08-01 00:00:00",
         "registrationEndTime": "2026-08-26 00:00:00",
         "matchStartTime": "2026-08-26 00:00:00",
-        "matchEndTime": "2026-08-31 23:59:59",
+        "matchEndTime": "2026-09-30 23:59:59",
     }, token)
     log(f"post-lock match window {wr.get('code')} {wr.get('msg')}")
 
 
+def _unit_round_no(unit: dict) -> int:
+    raw = unit.get("roundNo")
+    if raw is None:
+        raw = unit.get("round_no")
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return 0
+
+
 def assign_schedule(token: str, stage_id: int, start: date, end: date, prefer_week_tail: bool = False) -> None:
-    units = e2e.schedule_units(token, stage_id)
-    days = []
-    cur = start
-    while cur <= end:
-        days.append(cur)
-        cur += timedelta(days=1)
-    if not days:
-        days = [start]
-    if prefer_week_tail:
-        week = [d for d in days if d >= date(2026, 8, 24)]
-        if week:
-            days = week
-    tms = ["19:00", "19:40", "20:20", "21:00", "21:40", "22:20"]
+    units = [u for u in e2e.schedule_units(token, stage_id) if isinstance(u, dict)]
+    units.sort(key=lambda u: (_unit_round_no(u), int(as_id(u.get("unitId") or u.get("id") or 0))))
+    cursor = start
+    if prefer_week_tail and cursor < date(2026, 8, 24):
+        cursor = date(2026, 8, 24)
+    slots = ["21:00", "22:00"]
+    slot_capacity = 6
+    day_capacity = len(slots) * slot_capacity
+    previous_round = None
+    last_day = None
+    day_used = 0
+    slot_used = {slot: 0 for slot in slots}
     assigned = 0
-    for i, u in enumerate(units):
-        if not isinstance(u, dict):
-            continue
-        day = days[i % len(days)]
+    first_day = None
+    for u in units:
+        round_no = _unit_round_no(u)
+        if previous_round is not None and round_no != previous_round:
+            cursor = (last_day + timedelta(days=1)) if last_day else cursor
+            day_used = 0
+            slot_used = {slot: 0 for slot in slots}
+        if day_used >= day_capacity:
+            cursor = cursor + timedelta(days=1)
+            day_used = 0
+            slot_used = {slot: 0 for slot in slots}
+        tm = next(slot for slot in slots if slot_used[slot] < slot_capacity)
+        slot_used[tm] += 1
+        day_used += 1
+        last_day = cursor
+        first_day = first_day or cursor
+        previous_round = round_no
         body = {
             "unitType": u.get("unitType") or "MATCH",
             "unitId": u.get("unitId") or u.get("id"),
-            "scheduledDate": day.isoformat(),
-            "scheduledStartTime": tms[i % len(tms)],
+            "scheduledDate": cursor.isoformat(),
+            "scheduledStartTime": tm,
             "scheduleSource": "MANUAL",
         }
         ar = req(f"{ADMIN}/basket/v4/admin/stages/{stage_id}/schedule/assign", "POST", body, token)
@@ -232,7 +254,8 @@ def assign_schedule(token: str, stage_id: int, start: date, end: date, prefer_we
             log(f"  assign warn {ar.get('msg')}")
             continue
         assigned += 1
-    log(f"  scheduled {assigned}/{len(units)} units {start}~{end}")
+    span = f"{first_day}~{last_day}" if first_day and last_day else f"{start}~{end}"
+    log(f"  scheduled {assigned}/{len(units)} units by roundNo {span}")
 
 
 def generate_and_publish(token: str, stage_id: int, start: date, end: date, prefer_week_tail: bool = False) -> None:
