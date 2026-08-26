@@ -20,6 +20,11 @@
   padding-inline: var(--site-inner-padding);
   box-sizing: border-box;
   overflow-x: clip;
+  overflow-y: visible;
+}
+
+.site-shell.home-community-shell {
+  overflow: visible;
 }
 
 .site-shell-inner {

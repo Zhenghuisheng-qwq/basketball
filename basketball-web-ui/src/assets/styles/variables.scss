@@ -68,13 +68,21 @@
 }
 
 .site-main {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   width: 100%;
-  min-height: calc(100vh - var(--site-header-height));
+  min-height: 0;
   padding-top: var(--site-header-height);
   box-sizing: border-box;
+}
+
+.app:has(.home-page) > .site-main {
+  flex-grow: 0;
+}
+
+.home-page {
+  flex: 0 0 auto;
 }
 
 @media (max-width: 900px) {

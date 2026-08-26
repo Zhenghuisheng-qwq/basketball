@@ -10,13 +10,14 @@
 }
 
 .public-page {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   width: 100%;
-  min-height: calc(100vh - var(--site-header-height));
+  min-height: 0;
   background: var(--cnpa-bg-primary);
   overflow-x: clip;
+  overflow-y: visible;
 }
 
 .public-page__hero {
@@ -25,7 +26,7 @@
 }
 
 .public-page__main {
-  flex: 1;
+  flex: 1 0 auto;
   width: 100%;
   padding-top: 8px;
   background: var(--cnpa-bg-primary);
