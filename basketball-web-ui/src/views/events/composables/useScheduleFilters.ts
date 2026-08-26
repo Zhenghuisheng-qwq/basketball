@@ -259,20 +259,17 @@ export function useScheduleFilters() {
       state.value = contextPending ? 'loading' : 'empty'
       return
     }
-    state.value = 'loading'
+    const keepVisible = scheduleItems.value.length > 0
+    if (!keepVisible) {
+      state.value = 'loading'
+    }
     errorMessage.value = ''
     try {
-      const [scheduleRes, standingRes, teamRes] = await Promise.all([
-        getV4PublicDivisionSchedule(divisionId),
-        getV4PublicStanding(divisionId).catch(() => ({ data: [] })),
-        getV4PublicTeamList(divisionId).catch(() => ({ data: [] })),
-      ])
+      const standingP = getV4PublicStanding(divisionId).catch(() => ({ data: [] }))
+      const teamP = getV4PublicTeamList(divisionId).catch(() => ({ data: [] }))
+      const scheduleRes = await getV4PublicDivisionSchedule(divisionId)
       if (current !== reqId) return
       scheduleItems.value = scheduleRes.data ?? []
-      standingRows.value = (standingRes.data ?? []).map((row) =>
-        v4StandingToPublic(row, ctx.seasonId.value),
-      )
-      eventTeams.value = teamRes.data ?? []
       if (options?.resetFilters) {
         resetFilters()
         applyInitSelectedDate(true)
@@ -282,6 +279,12 @@ export function useScheduleFilters() {
         applyInitSelectedDate(false)
       }
       state.value = scheduleItems.value.length ? 'success' : 'empty'
+      const [standingRes, teamRes] = await Promise.all([standingP, teamP])
+      if (current !== reqId) return
+      standingRows.value = (standingRes.data ?? []).map((row) =>
+        v4StandingToPublic(row, ctx.seasonId.value),
+      )
+      eventTeams.value = teamRes.data ?? []
     } catch (err) {
       if (current !== reqId) return
       scheduleItems.value = []
@@ -293,10 +296,9 @@ export function useScheduleFilters() {
   }
 
   watch(
-    () => [ctx.divisionId.value, ctx.overviewState.value] as const,
-    ([did], prev) => {
-      const reset = prev === undefined || did !== prev[0]
-      void loadSchedule({ resetFilters: reset })
+    () => ctx.divisionId.value,
+    (did, prev) => {
+      void loadSchedule({ resetFilters: prev !== undefined && did !== prev })
     },
     { immediate: true },
   )
