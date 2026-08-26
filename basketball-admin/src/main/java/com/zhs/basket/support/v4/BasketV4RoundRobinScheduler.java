@@ -141,13 +141,34 @@ public final class BasketV4RoundRobinScheduler {
 
     /**
      * 从 matchStartTime 起向后找第一个合法时间槽；槽满则顺延。
+     * allocate() 仍按全局连续填槽，不感知 Round。
+     * Round 日边界由 caller 显式调用 {@link #advanceToNextMatchDay()}。
      */
     public static class TimeSlotAllocator {
         private final Map<String, Integer> slotUsage = new HashMap<>();
         private final Date startFrom;
+        private Calendar lastAllocatedDate;
 
         public TimeSlotAllocator(Date startFrom) {
             this.startFrom = startFrom != null ? startFrom : new Date();
+        }
+
+        /**
+         * 丢弃当前最后占用自然日的剩余槽位。下一次 {@link #allocate()}
+         * 从该日之后第一个合法比赛日开始，仍走原有 weekday / slot / capacity 规则。
+         */
+        public void advanceToNextMatchDay() {
+            if (lastAllocatedDate == null) {
+                return;
+            }
+            for (int hour : ALLOWED_HOURS) {
+                Calendar slotCal = (Calendar) lastAllocatedDate.clone();
+                slotCal.set(Calendar.HOUR_OF_DAY, hour);
+                slotCal.set(Calendar.MINUTE, 0);
+                slotCal.set(Calendar.SECOND, 0);
+                slotCal.set(Calendar.MILLISECOND, 0);
+                slotUsage.put(slotKey(slotCal), MAX_MATCHES_PER_SLOT);
+            }
         }
 
         public Date allocate() {
@@ -180,11 +201,21 @@ public final class BasketV4RoundRobinScheduler {
                     int used = slotUsage.getOrDefault(key, 0);
                     if (used < MAX_MATCHES_PER_SLOT) {
                         slotUsage.put(key, used + 1);
+                        rememberAllocatedDate(slotCal);
                         return slotTime;
                     }
                 }
             }
             throw new IllegalStateException("无法在合理范围内分配比赛时间槽");
+        }
+
+        private void rememberAllocatedDate(Calendar slotCal) {
+            Calendar day = (Calendar) slotCal.clone();
+            day.set(Calendar.HOUR_OF_DAY, 0);
+            day.set(Calendar.MINUTE, 0);
+            day.set(Calendar.SECOND, 0);
+            day.set(Calendar.MILLISECOND, 0);
+            lastAllocatedDate = day;
         }
 
         private static boolean isAllowedWeekday(int dayOfWeek) {

@@ -74,6 +74,7 @@ public class RoundRobinStageScheduleStrategy extends AbstractStageScheduleStrate
                 ? context.getDivision().getMatchStartTime() : new Date();
         TimeSlotAllocator allocator = new TimeSlotAllocator(startFrom);
         Set<String> seenOrderedKeys = new HashSet<>();
+        Integer previousRoundNo = null;
 
         for (Round round : rounds) {
             int seq = 1;
@@ -85,7 +86,8 @@ public class RoundRobinStageScheduleStrategy extends AbstractStageScheduleStrate
                 if (bestOf <= 1) {
                     BasketV4Match match = newMatch(context, batch, round.getRoundNo(), null,
                             BasketV4RoundRobinScheduler.buildMatchNo(context.getDivision().getId(), round.getRoundNo(), seq));
-                    match.setMatchTime(allocator.allocate());
+                    match.setMatchTime(nextRoundRobinMatchTime(allocator, previousRoundNo, round.getRoundNo()));
+                    previousRoundNo = round.getRoundNo();
                     match.setHomeEventTeamId(pairing.getHomeEventTeamId());
                     match.setAwayEventTeamId(pairing.getAwayEventTeamId());
                     validateAndInsertMatch(match, context, round.getRoundNo(), seq, null);
@@ -103,5 +105,16 @@ public class RoundRobinStageScheduleStrategy extends AbstractStageScheduleStrate
     private static int resolveCycles(BasketDivisionStage stage) {
         Integer cycles = stage.getRoundRobinCycles();
         return cycles == null || cycles <= 0 ? 1 : cycles;
+    }
+
+    /**
+     * 自动排期：相邻 Round 不共享自然日。第一轮不 advance，仍从 matchStartTime 起槽。
+     * generateRoundRobin 已按 roundNo ASC、轮内 pairing 顺序产出。
+     */
+    static Date nextRoundRobinMatchTime(TimeSlotAllocator allocator, Integer previousRoundNo, int currentRoundNo) {
+        if (previousRoundNo != null && previousRoundNo != currentRoundNo) {
+            allocator.advanceToNextMatchDay();
+        }
+        return allocator.allocate();
     }
 }
