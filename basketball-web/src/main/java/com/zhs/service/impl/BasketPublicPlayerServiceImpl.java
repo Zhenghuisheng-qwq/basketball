@@ -380,6 +380,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
         Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(logoIds);
 
         Map<Long, String> profileAvatarMap = publicSupport.loadPlayerAvatarUrlMap(Collections.singletonList(player));
+        Map<Long, OfficialShootingTotals> shootingByEventPlayer = loadOfficialShootingTotals(eventPlayerIds, seasonId);
 
         List<PublicPlayerSeasonStatVo> rows = new ArrayList<>();
         for (BasketPlayerStat stat : stats) {
@@ -445,16 +446,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             vo.setAvgBlocks(avgOf(stat.getBlock(), games));
             vo.setAvgTurnovers(avgOf(stat.getTurnover(), games));
 
-            // 球员级 FG/3P/FT：正式表无字段，保持 null（前端显示 --）
-            vo.setFieldGoalMade(null);
-            vo.setFieldGoalAttempt(null);
-            vo.setFieldGoalPct(null);
-            vo.setThreePointMade(null);
-            vo.setThreePointAttempt(null);
-            vo.setThreePointPct(null);
-            vo.setFreeThrowMade(null);
-            vo.setFreeThrowAttempt(null);
-            vo.setFreeThrowPct(null);
+            applyOfficialShooting(vo, shootingByEventPlayer.get(stat.getEventPlayerId()));
 
             rows.add(vo);
         }
@@ -477,6 +469,93 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             return null;
         }
         return BigDecimal.valueOf(total).divide(BigDecimal.valueOf(games), 2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 球员赛季聚合表无投篮字段；公开页按已发布完赛的正式 Box Score
+     * 汇总 FGM/FGA、3PM/3PA、FTM/FTA，命中率用总命中/总出手，不平均每场百分比。
+     */
+    private Map<Long, OfficialShootingTotals> loadOfficialShootingTotals(Set<Long> eventPlayerIds, Long seasonId) {
+        if (CollectionUtils.isEmpty(eventPlayerIds)) {
+            return Collections.emptyMap();
+        }
+        List<BasketV4MatchPlayerStat> rows = matchPlayerStatDao.selectList(new LambdaQueryWrapper<BasketV4MatchPlayerStat>()
+                .in(BasketV4MatchPlayerStat::getEventPlayerId, eventPlayerIds)
+                .eq(BasketV4MatchPlayerStat::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(seasonId != null, BasketV4MatchPlayerStat::getSeasonId, seasonId));
+        if (CollectionUtils.isEmpty(rows)) {
+            return Collections.emptyMap();
+        }
+        Set<Long> matchIds = rows.stream()
+                .map(BasketV4MatchPlayerStat::getMatchId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        List<BasketV4Match> officialMatches = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()
+                .in(BasketV4Match::getId, matchIds)
+                .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketV4Match::getPublishStatus, MatchPublishStatusEnum.PUBLISHED.getCode())
+                .eq(BasketV4Match::getMatchStatus, MatchStatusEnum.FINISHED.getCode()));
+        if (CollectionUtils.isEmpty(officialMatches)) {
+            return Collections.emptyMap();
+        }
+        Set<Long> officialMatchIds = officialMatches.stream()
+                .map(BasketV4Match::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, OfficialShootingTotals> totals = new HashMap<>();
+        for (BasketV4MatchPlayerStat row : rows) {
+            if (row.getEventPlayerId() == null || row.getMatchId() == null || !officialMatchIds.contains(row.getMatchId())) {
+                continue;
+            }
+            totals.computeIfAbsent(row.getEventPlayerId(), id -> new OfficialShootingTotals()).add(row);
+        }
+        return totals;
+    }
+
+    private static void applyOfficialShooting(PublicPlayerSeasonStatVo vo, OfficialShootingTotals shooting) {
+        if (shooting == null) {
+            return;
+        }
+        vo.setFieldGoalMade(shooting.fieldGoalMade);
+        vo.setFieldGoalAttempt(shooting.fieldGoalAttempt);
+        vo.setFieldGoalPct(shootingPct(shooting.fieldGoalMade, shooting.fieldGoalAttempt));
+        vo.setThreePointMade(shooting.threePointMade);
+        vo.setThreePointAttempt(shooting.threePointAttempt);
+        vo.setThreePointPct(shootingPct(shooting.threePointMade, shooting.threePointAttempt));
+        vo.setFreeThrowMade(shooting.freeThrowMade);
+        vo.setFreeThrowAttempt(shooting.freeThrowAttempt);
+        vo.setFreeThrowPct(shootingPct(shooting.freeThrowMade, shooting.freeThrowAttempt));
+    }
+
+    private static BigDecimal shootingPct(int made, int attempt) {
+        if (attempt <= 0) {
+            return null;
+        }
+        return BigDecimal.valueOf(made)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(attempt), 1, RoundingMode.HALF_UP);
+    }
+
+    private static final class OfficialShootingTotals {
+        private int fieldGoalMade;
+        private int fieldGoalAttempt;
+        private int threePointMade;
+        private int threePointAttempt;
+        private int freeThrowMade;
+        private int freeThrowAttempt;
+
+        private void add(BasketV4MatchPlayerStat row) {
+            fieldGoalMade += nvl(row.getFieldGoalMade());
+            fieldGoalAttempt += nvl(row.getFieldGoalAttempt());
+            threePointMade += nvl(row.getThreePointMade());
+            threePointAttempt += nvl(row.getThreePointAttempt());
+            freeThrowMade += nvl(row.getFreeThrowMade());
+            freeThrowAttempt += nvl(row.getFreeThrowAttempt());
+        }
+
+        private static int nvl(Integer value) {
+            return value == null ? 0 : value;
+        }
     }
 
     @Override

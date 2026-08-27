@@ -70,6 +70,8 @@ export interface PlayerHonor {
   seasonName: string
   honorName: string
   honorDate: string
+  honorValue?: string
+  honorCode?: string
   imageUrl: string
   tournamentId?: string
 }
@@ -126,6 +128,12 @@ export interface PlayerCareerStatistics {
   blocks: number
   turnovers: number
   fouls: number
+  fieldGoalMade: number | null
+  fieldGoalAttempted: number | null
+  threePointsMade: number | null
+  threePointsAttempted: number | null
+  freeThrowsMade: number | null
+  freeThrowsAttempted: number | null
   /** null = 无投篮数据源，页面显示 --；0 = 真实 0% */
   fieldGoalPercentage: number | null
   threePointPercentage: number | null
@@ -144,9 +152,11 @@ export interface PlayerTeamHistory {
   id: number
   startDate: string
   endDate: string
+  period: string
   teamId: string
   teamName: string
   teamLogoUrl: string
+  divisionId?: string
   description: string
   current: boolean
 }
@@ -155,6 +165,7 @@ export interface PlayerNameHistory {
   id: number
   startDate: string
   endDate: string
+  period: string
   playerName: string
   description: string
   current: boolean

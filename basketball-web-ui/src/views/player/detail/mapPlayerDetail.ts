@@ -6,12 +6,13 @@ import type {
 } from '@/api/types/public'
 import type { V4PublicMatchPlayerStatItem } from '@/api/types/v4Public'
 import { displayText, formatDateTime, toNumber } from '@/utils/publicDisplay'
-import { v4GameModeLabel, v4PlatformLabel } from '@/utils/v4Display'
+import { v4PlatformLabel } from '@/utils/v4Display'
 import type {
   PlayerCareerStatistics,
   PlayerDetailData,
   PlayerHonor,
   PlayerMatchRecord,
+  PlayerNameHistory,
   PlayerProfile,
   PlayerSeasonStageOption,
   PlayerTeamHistory,
@@ -185,9 +186,17 @@ function nullablePct(value: number | string | null | undefined): number | null {
 
 function buildSeasonLabel(row: PublicPlayerSeasonStatVo): string {
   const season = displayText(row.seasonName || row.seriesName, '公开赛季')
-  const platform = v4PlatformLabel(row.platformCode)
-  const mode = v4GameModeLabel(row.gameMode)
-  return [season, platform, mode].filter((part) => part && part !== '--').join(' · ')
+  const division = displayText(row.divisionName, '')
+  if (division && division !== '--' && !season.includes(division)) {
+    return `${season} · ${division}`
+  }
+  return season
+}
+
+function nullableInt(value: number | string | null | undefined): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
 }
 
 export function mapPublicPlayerSeasonStats(
@@ -210,6 +219,12 @@ export function mapPublicPlayerSeasonStats(
     blocks: toNumber(row.avgBlocks ?? row.blocks, 0),
     turnovers: toNumber(row.avgTurnovers ?? row.turnovers, 0),
     fouls: toNumber(row.fouls, 0),
+    fieldGoalMade: nullableInt(row.fieldGoalMade),
+    fieldGoalAttempted: nullableInt(row.fieldGoalAttempt),
+    threePointsMade: nullableInt(row.threePointMade),
+    threePointsAttempted: nullableInt(row.threePointAttempt),
+    freeThrowsMade: nullableInt(row.freeThrowMade),
+    freeThrowsAttempted: nullableInt(row.freeThrowAttempt),
     fieldGoalPercentage: nullablePct(row.fieldGoalPct),
     threePointPercentage: nullablePct(row.threePointPct),
     freeThrowPercentage: nullablePct(row.freeThrowPct),
@@ -229,31 +244,184 @@ export function mapSeasonStageOptions(rows: PublicPlayerSeasonStatVo[]): PlayerS
   })
 }
 
-export function buildPlayerTeamHistory(profile: PlayerProfile): PlayerTeamHistory[] {
-  if (!profile.currentTeamId) return []
-  return [
-    {
-      id: 1,
-      startDate: '--',
-      endDate: '至今',
-      teamId: profile.currentTeamId,
-      teamName: profile.currentTeamName,
+function seasonPeriodLabel(row: Pick<PublicPlayerSeasonStatVo, 'seasonName' | 'seriesName'>): string {
+  return displayText(row.seasonName || row.seriesName, '')
+}
+
+function formatCareerPeriod(labels: string[], current: boolean): string {
+  const start = labels[0] || ''
+  const end = labels[labels.length - 1] || ''
+  if (!start && current) return '至今'
+  if (!start) return '--'
+  if (current) return `${start} — 至今`
+  if (end && end !== start) return `${start} — ${end}`
+  return start
+}
+
+export function buildPlayerTeamHistory(
+  profile: PlayerProfile,
+  rows: PublicPlayerSeasonStatVo[] = [],
+): PlayerTeamHistory[] {
+  type Stint = {
+    teamId: string
+    teamName: string
+    teamLogoUrl: string
+    divisionId?: string
+    labels: string[]
+    current: boolean
+  }
+  const byKey = new Map<string, Stint>()
+  const sorted = [...rows].sort((a, b) =>
+    String(a.seasonName || a.seasonId || '').localeCompare(String(b.seasonName || b.seasonId || '')),
+  )
+  for (const row of sorted) {
+    const teamName = displayText(row.teamName, '')
+    const teamId = String(row.eventTeamId || row.teamId || '')
+    if (!teamId && (!teamName || teamName === '--')) continue
+    const key = (teamName && teamName !== '--' ? teamName : teamId).toLowerCase()
+    const label = seasonPeriodLabel(row)
+    const existing = byKey.get(key)
+    if (existing) {
+      if (label && !existing.labels.includes(label)) existing.labels.push(label)
+      if (!existing.teamLogoUrl && row.teamLogoUrl) existing.teamLogoUrl = row.teamLogoUrl.trim()
+      continue
+    }
+    byKey.set(key, {
+      teamId: teamId || profile.eventTeamId || profile.currentTeamId,
+      teamName: teamName || profile.currentTeamName || '--',
+      teamLogoUrl: row.teamLogoUrl?.trim() || '',
+      divisionId: row.divisionId ? String(row.divisionId) : '',
+      labels: label ? [label] : [],
+      current: false,
+    })
+  }
+
+  const currentTeamId = profile.eventTeamId || profile.currentTeamId
+  const currentName = profile.currentTeamName
+  const hasCurrent = [...byKey.values()].some((item) =>
+    item.teamId === currentTeamId
+    || item.teamId === profile.currentTeamId
+    || (currentName && currentName !== '--' && item.teamName === currentName),
+  )
+  if (!hasCurrent && (currentTeamId || (currentName && currentName !== '--'))) {
+    byKey.set(currentTeamId || currentName, {
+      teamId: currentTeamId,
+      teamName: currentName || '--',
       teamLogoUrl: profile.currentTeamLogoUrl,
-      description: '当前所属球队',
+      divisionId: profile.divisionId,
+      labels: profile.seasonName ? [profile.seasonName] : [],
       current: true,
-    },
-  ]
+    })
+  }
+
+  const list = [...byKey.values()]
+  for (const item of list) {
+    item.current = Boolean(
+      item.teamId
+      && (item.teamId === profile.eventTeamId || item.teamId === profile.currentTeamId),
+    ) || Boolean(currentName && currentName !== '--' && item.teamName === currentName)
+  }
+  if (!list.some((item) => item.current) && list.length) {
+    list[list.length - 1].current = true
+  }
+
+  return list.map((item, index) => {
+    let description = '参赛队伍'
+    if (item.current) description = '当前效力队伍'
+    else if (index === 0) description = '首支参赛队伍'
+    return {
+      id: index + 1,
+      startDate: item.labels[0] || '--',
+      endDate: item.current ? '至今' : (item.labels[item.labels.length - 1] || '--'),
+      period: formatCareerPeriod(item.labels, item.current),
+      teamId: item.teamId,
+      teamName: item.teamName,
+      teamLogoUrl: item.teamLogoUrl,
+      divisionId: item.divisionId,
+      description,
+      current: item.current,
+    }
+  })
+}
+
+export function buildPlayerNameHistory(
+  profile: PlayerProfile,
+  rows: PublicPlayerSeasonStatVo[] = [],
+): PlayerNameHistory[] {
+  type Entry = { playerName: string; labels: string[]; current: boolean }
+  const entries: Entry[] = []
+  const sorted = [...rows].sort((a, b) =>
+    String(a.seasonName || a.seasonId || '').localeCompare(String(b.seasonName || b.seasonId || '')),
+  )
+  for (const row of sorted) {
+    const playerName = displayText(row.playerName, '')
+    if (!playerName || playerName === '--') continue
+    const label = seasonPeriodLabel(row)
+    const last = entries[entries.length - 1]
+    if (last && last.playerName === playerName) {
+      if (label && !last.labels.includes(label)) last.labels.push(label)
+      continue
+    }
+    entries.push({
+      playerName,
+      labels: label ? [label] : [],
+      current: false,
+    })
+  }
+
+  const currentName = displayText(profile.displayName, '未知球员')
+  if (!entries.some((item) => item.playerName === currentName)) {
+    entries.push({
+      playerName: currentName,
+      labels: profile.seasonName ? [profile.seasonName] : [],
+      current: true,
+    })
+  }
+  if (!entries.length) {
+    entries.push({
+      playerName: currentName,
+      labels: [],
+      current: true,
+    })
+  }
+
+  entries.forEach((item) => {
+    item.current = item.playerName === currentName
+  })
+  if (!entries.some((item) => item.current)) {
+    entries[entries.length - 1].current = true
+  }
+
+  return entries.map((item, index) => {
+    let description = '曾用名称'
+    if (item.current) description = '当前名称'
+    else if (index === 0) description = '首次注册名称'
+    return {
+      id: index + 1,
+      startDate: item.labels[0] || '--',
+      endDate: item.current ? '至今' : (item.labels[item.labels.length - 1] || '--'),
+      period: formatCareerPeriod(item.labels, item.current),
+      playerName: item.playerName,
+      description,
+      current: item.current,
+    }
+  })
 }
 
 export function mapPublicPlayerHonors(rows: PublicHonorItemResp[]): PlayerHonor[] {
-  return rows.map((item) => ({
-    id: String(item.honorId),
-    seasonName: displayText(item.seasonName || item.tournamentName, '公开赛季'),
-    honorName: displayText(item.honorTitle || item.honorName, '球员荣誉'),
-    honorDate: formatDateTime(item.awardDate).date,
-    imageUrl: item.coverUrl || item.playerAvatarUrl || '',
-    tournamentId: item.tournamentId ? String(item.tournamentId) : undefined,
-  }))
+  return rows.map((item) => {
+    const honorDate = formatDateTime(item.awardDate).date
+    return {
+      id: String(item.honorId),
+      seasonName: displayText(item.tournamentName || item.seasonName, '公开赛季'),
+      honorName: displayText(item.honorTitle || item.honorName, '球员荣誉'),
+      honorDate: honorDate === '--' ? '' : honorDate,
+      honorValue: displayText(item.honorValue || item.honorSubtitle, ''),
+      honorCode: item.honorCode || '',
+      imageUrl: item.coverUrl?.trim() || '',
+      tournamentId: item.tournamentId ? String(item.tournamentId) : undefined,
+    }
+  })
 }
 
 export function findPlayerBoxScore(
@@ -309,15 +477,6 @@ export function buildEmptyPlayerDetail(profile: PlayerProfile): PlayerDetailData
     careerStats: [],
     seasonStageOptions: [],
     teamHistory: buildPlayerTeamHistory(profile),
-    nameHistory: [
-      {
-        id: 1,
-        startDate: '--',
-        endDate: '至今',
-        playerName: profile.displayName,
-        description: '当前使用名称',
-        current: true,
-      },
-    ],
+    nameHistory: buildPlayerNameHistory(profile),
   }
 }

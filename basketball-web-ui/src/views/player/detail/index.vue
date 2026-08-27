@@ -17,6 +17,8 @@ import PlayerCareer from './components/PlayerCareer.vue'
 import {
   applyPlayerBoxScore,
   buildEmptyPlayerDetail,
+  buildPlayerNameHistory,
+  buildPlayerTeamHistory,
   findPlayerBoxScore,
   mapPublicPlayerHonors,
   mapPublicPlayerProfile,
@@ -93,7 +95,13 @@ async function loadPlayer() {
             matchId: mapped.id,
             date: mapped.date,
             tournamentName: profile.seriesName || profile.seasonName || '公开赛事',
-            stageName: mapped.competition,
+            stageName: [
+              mapped.stageHeadline?.startsWith('第') ? mapped.stageHeadline : '',
+              mapped.playoffGame || '',
+            ].filter(Boolean).join(' · ')
+              || mapped.stageHeadline
+              || mapped.competition
+              || '--',
             teamName: profile.currentTeamName,
             teamId: profile.eventTeamId || profile.currentTeamId,
             teamLogoUrl: profile.currentTeamLogoUrl,
@@ -148,6 +156,8 @@ async function loadPlayer() {
     detail.allMatches = matches
     detail.careerStats = mapPublicPlayerSeasonStats(scopedStats)
     detail.seasonStageOptions = mapSeasonStageOptions(scopedStats)
+    detail.teamHistory = buildPlayerTeamHistory(profile, scopedStats)
+    detail.nameHistory = buildPlayerNameHistory(profile, scopedStats)
     detail.honors = mapPublicPlayerHonors(honorRes.data?.records ?? [])
     playerDetail.value = detail
     loadState.value = 'success'

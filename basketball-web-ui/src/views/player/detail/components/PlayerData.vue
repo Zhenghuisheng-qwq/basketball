@@ -25,16 +25,6 @@ const selectedStage = computed(
     props.detail.seasonStageOptions[0],
 )
 
-const seasonFilterOptions = computed(() => {
-  const seen = new Map<string, string>()
-  for (const row of props.detail.careerStats) {
-    if (row.seasonId && !seen.has(row.seasonId)) {
-      seen.set(row.seasonId, row.tournamentName || `赛季 ${row.seasonId}`)
-    }
-  }
-  return [...seen.entries()].map(([id, label]) => ({ id, label }))
-})
-
 const careerRows = computed(() => {
   let rows = props.detail.careerStats
   if (seasonFilter.value !== '全部赛季') {
@@ -49,14 +39,20 @@ const careerAverageRow = computed(() => {
   const totalGames = rows.reduce((sum, row) => sum + row.games, 0)
   const avg = (key: keyof PlayerCareerStatistics) =>
     rows.reduce((sum, row) => sum + Number(row[key] ?? 0), 0) / rows.length
-  const avgPct = (key: 'fieldGoalPercentage' | 'threePointPercentage' | 'freeThrowPercentage') => {
+  const sumNullable = (key: keyof PlayerCareerStatistics) => {
     const values = rows
       .map((row) => row[key])
       .filter((value): value is number => value !== null && value !== undefined && Number.isFinite(Number(value)))
       .map(Number)
     if (!values.length) return null
-    return values.reduce((sum, value) => sum + value, 0) / values.length
+    return values.reduce((sum, value) => sum + value, 0)
   }
+  const madeFg = sumNullable('fieldGoalMade')
+  const attFg = sumNullable('fieldGoalAttempted')
+  const madeTp = sumNullable('threePointsMade')
+  const attTp = sumNullable('threePointsAttempted')
+  const madeFt = sumNullable('freeThrowsMade')
+  const attFt = sumNullable('freeThrowsAttempted')
   return {
     seasonId: '',
     divisionId: '',
@@ -73,9 +69,15 @@ const careerAverageRow = computed(() => {
     blocks: avg('blocks'),
     turnovers: avg('turnovers'),
     fouls: avg('fouls'),
-    fieldGoalPercentage: avgPct('fieldGoalPercentage'),
-    threePointPercentage: avgPct('threePointPercentage'),
-    freeThrowPercentage: avgPct('freeThrowPercentage'),
+    fieldGoalMade: madeFg,
+    fieldGoalAttempted: attFg,
+    threePointsMade: madeTp,
+    threePointsAttempted: attTp,
+    freeThrowsMade: madeFt,
+    freeThrowsAttempted: attFt,
+    fieldGoalPercentage: shootingPctFromTotals(madeFg, attFg),
+    threePointPercentage: shootingPctFromTotals(madeTp, attTp),
+    freeThrowPercentage: shootingPctFromTotals(madeFt, attFt),
   }
 })
 
@@ -84,18 +86,62 @@ const seasonStatRows = computed(() => {
   return props.detail.careerStats.filter((row) => row.seasonId === selectedStage.value.id)
 })
 
+function shootingPctFromTotals(made: number | null, attempt: number | null): number | null {
+  if (made == null || attempt == null || !Number.isFinite(made) || !Number.isFinite(attempt)) return null
+  if (attempt <= 0) return null
+  return (made / attempt) * 100
+}
+
 function formatStat(value: number | null | undefined, isPct = false): string {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return '--'
   }
   const num = Number(value)
   if (isPct) {
-    // 后端可能返回 0~1 或 0~100
     const pct = num <= 1 ? num * 100 : num
     return `${pct.toFixed(1)}%`
   }
   if (statMode.value === 'average') return Number.isInteger(num) ? String(num) : num.toFixed(1)
   return String(Math.round(num))
+}
+
+function formatShootingPct(
+  row: Pick<
+    PlayerCareerStatistics,
+    | 'fieldGoalPercentage'
+    | 'threePointPercentage'
+    | 'freeThrowPercentage'
+    | 'fieldGoalMade'
+    | 'fieldGoalAttempted'
+    | 'threePointsMade'
+    | 'threePointsAttempted'
+    | 'freeThrowsMade'
+    | 'freeThrowsAttempted'
+  >,
+  kind: 'fg' | 'tp' | 'ft',
+): string {
+  const attempt = kind === 'fg'
+    ? row.fieldGoalAttempted
+    : kind === 'tp'
+      ? row.threePointsAttempted
+      : row.freeThrowsAttempted
+  const made = kind === 'fg'
+    ? row.fieldGoalMade
+    : kind === 'tp'
+      ? row.threePointsMade
+      : row.freeThrowsMade
+  const apiPct = kind === 'fg'
+    ? row.fieldGoalPercentage
+    : kind === 'tp'
+      ? row.threePointPercentage
+      : row.freeThrowPercentage
+  if (attempt === 0) return '—'
+  const computed = shootingPctFromTotals(made ?? null, attempt ?? null)
+  if (computed != null) return `${computed.toFixed(1)}%`
+  if (apiPct == null || Number.isNaN(Number(apiPct))) return '--'
+  const num = Number(apiPct)
+  const pct = num <= 1 ? num * 100 : num
+  return `${pct.toFixed(1)}%`
 }
 
 function setDataMode(mode: PlayerDataMode) {
@@ -216,7 +262,7 @@ onBeforeUnmount(() => {
             <option
               v-for="row in detail.careerStats"
               :key="row.seasonId"
-              :value="`${row.seasonId}赛季`"
+              :value="row.seasonId"
             >
               {{ row.tournamentName || `赛季 ${row.seasonId}` }}
             </option>
@@ -228,63 +274,80 @@ onBeforeUnmount(() => {
 
         <div v-else class="player-detail-table-scroll">
           <table class="player-detail-table player-detail-table--career">
+            <colgroup>
+              <col class="col-event" />
+              <col class="col-team" />
+              <col class="col-platform" />
+              <col class="col-gp" />
+              <col class="col-stat" />
+              <col class="col-stat" />
+              <col class="col-stat" />
+              <col class="col-stat" />
+              <col class="col-stat" />
+              <col class="col-stat" />
+              <col class="col-stat" />
+              <col class="col-shooting" />
+              <col class="col-shooting" />
+              <col class="col-shooting" />
+            </colgroup>
             <thead>
               <tr>
-                <th class="is-left">赛事</th>
-                <th class="is-left">球队</th>
-                <th>平台</th>
-                <th>出场 <small>GP</small></th>
-                <th>得分 <small>PTS</small></th>
-                <th>篮板 <small>REB</small></th>
-                <th>助攻 <small>AST</small></th>
-                <th>抢断 <small>STL</small></th>
-                <th>盖帽 <small>BLK</small></th>
-                <th>失误 <small>TOV</small></th>
-                <th>犯规 <small>PF</small></th>
-                <th>投篮% <small>FG</small></th>
-                <th>三分% <small>3P</small></th>
-                <th>罚球% <small>FT</small></th>
+                <th class="col-event">赛事</th>
+                <th class="col-team">球队</th>
+                <th class="col-platform">平台</th>
+                <th class="col-gp">出场 <small>GP</small></th>
+                <th class="col-stat">得分 <small>PTS</small></th>
+                <th class="col-stat">篮板 <small>REB</small></th>
+                <th class="col-stat">助攻 <small>AST</small></th>
+                <th class="col-stat">抢断 <small>STL</small></th>
+                <th class="col-stat">盖帽 <small>BLK</small></th>
+                <th class="col-stat">失误 <small>TOV</small></th>
+                <th class="col-stat">犯规 <small>PF</small></th>
+                <th class="col-shooting">投篮% <small>FG</small></th>
+                <th class="col-shooting">三分% <small>3P</small></th>
+                <th class="col-shooting">罚球% <small>FT</small></th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="row in careerRows" :key="`${row.seasonId}-${row.teamId}`">
-                <td class="is-left">{{ row.tournamentName }}</td>
-                <td class="is-left">
-                  <router-link :to="`/tournament/team/${row.teamId}/overview`" class="player-detail-team-link">
+                <td class="col-event" :title="row.tournamentName">{{ row.tournamentName }}</td>
+                <td class="col-team">
+                  <router-link :to="`/tournament/team/${row.teamId}/overview`" class="player-detail-team-link player-data-team">
                     <TeamLogo
                       :team="{ id: row.teamId, name: row.teamName, shortName: row.teamName, logoUrl: row.teamLogoUrl }"
                       size="xs"
                     />
-                    <span>{{ row.teamName }}</span>
+                    <span :title="row.teamName">{{ row.teamName }}</span>
                   </router-link>
                 </td>
-                <td>{{ row.platform }}</td>
-                <td>{{ row.games }}</td>
-                <td class="is-accent">{{ formatStat(row.points) }}</td>
-                <td>{{ formatStat(row.rebounds) }}</td>
-                <td class="is-accent">{{ formatStat(row.assists) }}</td>
-                <td class="is-accent">{{ formatStat(row.steals) }}</td>
-                <td>{{ formatStat(row.blocks) }}</td>
-                <td>{{ formatStat(row.turnovers) }}</td>
-                <td>{{ formatStat(row.fouls) }}</td>
-                <td class="is-accent">{{ formatStat(row.fieldGoalPercentage, true) }}</td>
-                <td class="is-accent">{{ formatStat(row.threePointPercentage, true) }}</td>
-                <td class="is-accent">{{ formatStat(row.freeThrowPercentage, true) }}</td>
+                <td class="col-platform">{{ row.platform }}</td>
+                <td class="col-gp">{{ row.games }}</td>
+                <td class="col-stat is-accent">{{ formatStat(row.points) }}</td>
+                <td class="col-stat">{{ formatStat(row.rebounds) }}</td>
+                <td class="col-stat is-accent">{{ formatStat(row.assists) }}</td>
+                <td class="col-stat is-accent">{{ formatStat(row.steals) }}</td>
+                <td class="col-stat">{{ formatStat(row.blocks) }}</td>
+                <td class="col-stat">{{ formatStat(row.turnovers) }}</td>
+                <td class="col-stat">{{ formatStat(row.fouls) }}</td>
+                <td class="col-shooting is-accent">{{ formatShootingPct(row, 'fg') }}</td>
+                <td class="col-shooting is-accent">{{ formatShootingPct(row, 'tp') }}</td>
+                <td class="col-shooting is-accent">{{ formatShootingPct(row, 'ft') }}</td>
               </tr>
               <tr v-if="careerAverageRow" class="is-summary">
-                <td class="is-left">{{ careerAverageRow.tournamentName }}</td>
-                <td colspan="2">-</td>
-                <td>{{ careerAverageRow.games }}</td>
-                <td class="is-accent">{{ formatStat(careerAverageRow.points) }}</td>
-                <td>{{ formatStat(careerAverageRow.rebounds) }}</td>
-                <td class="is-accent">{{ formatStat(careerAverageRow.assists) }}</td>
-                <td class="is-accent">{{ formatStat(careerAverageRow.steals) }}</td>
-                <td>{{ formatStat(careerAverageRow.blocks) }}</td>
-                <td>{{ formatStat(careerAverageRow.turnovers) }}</td>
-                <td>{{ formatStat(careerAverageRow.fouls) }}</td>
-                <td class="is-accent">{{ formatStat(careerAverageRow.fieldGoalPercentage, true) }}</td>
-                <td class="is-accent">{{ formatStat(careerAverageRow.threePointPercentage, true) }}</td>
-                <td class="is-accent">{{ formatStat(careerAverageRow.freeThrowPercentage, true) }}</td>
+                <td class="col-event">{{ careerAverageRow.tournamentName }}</td>
+                <td class="col-team">-</td>
+                <td class="col-platform">-</td>
+                <td class="col-gp">{{ careerAverageRow.games }}</td>
+                <td class="col-stat is-accent">{{ formatStat(careerAverageRow.points) }}</td>
+                <td class="col-stat">{{ formatStat(careerAverageRow.rebounds) }}</td>
+                <td class="col-stat is-accent">{{ formatStat(careerAverageRow.assists) }}</td>
+                <td class="col-stat is-accent">{{ formatStat(careerAverageRow.steals) }}</td>
+                <td class="col-stat">{{ formatStat(careerAverageRow.blocks) }}</td>
+                <td class="col-stat">{{ formatStat(careerAverageRow.turnovers) }}</td>
+                <td class="col-stat">{{ formatStat(careerAverageRow.fouls) }}</td>
+                <td class="col-shooting is-accent">{{ formatShootingPct(careerAverageRow, 'fg') }}</td>
+                <td class="col-shooting is-accent">{{ formatShootingPct(careerAverageRow, 'tp') }}</td>
+                <td class="col-shooting is-accent">{{ formatShootingPct(careerAverageRow, 'ft') }}</td>
               </tr>
             </tbody>
           </table>
@@ -330,37 +393,51 @@ onBeforeUnmount(() => {
         <div v-if="seasonStatRows.length === 0" class="player-detail-empty-inline">暂无赛事数据</div>
 
         <div v-else class="player-detail-table-scroll">
-          <table class="player-detail-table player-detail-table--career">
-          <thead>
-            <tr>
-              <th>球队</th>
-              <th>出场</th>
-              <th>得分</th>
-              <th>篮板</th>
-              <th>助攻</th>
-              <th>抢断</th>
-              <th>盖帽</th>
-              <th>投篮%</th>
-              <th>三分%</th>
-              <th>罚球%</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in seasonStatRows" :key="row.seasonId">
-              <td class="is-left">{{ row.teamName }}</td>
-              <td>{{ row.games }}</td>
-              <td class="is-accent">{{ formatStat(row.points) }}</td>
-              <td>{{ formatStat(row.rebounds) }}</td>
-              <td class="is-accent">{{ formatStat(row.assists) }}</td>
-              <td class="is-accent">{{ formatStat(row.steals) }}</td>
-              <td>{{ formatStat(row.blocks) }}</td>
-              <td class="is-accent">{{ formatStat(row.fieldGoalPercentage, true) }}</td>
-              <td class="is-accent">{{ formatStat(row.threePointPercentage, true) }}</td>
-              <td class="is-accent">{{ formatStat(row.freeThrowPercentage, true) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          <table class="player-detail-table player-detail-table--career player-detail-table--season">
+            <colgroup>
+              <col class="col-team" />
+              <col class="col-gp" />
+              <col class="col-stat" />
+              <col class="col-stat" />
+              <col class="col-stat" />
+              <col class="col-stat" />
+              <col class="col-stat" />
+              <col class="col-shooting" />
+              <col class="col-shooting" />
+              <col class="col-shooting" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-team">球队</th>
+                <th class="col-gp">出场</th>
+                <th class="col-stat">得分</th>
+                <th class="col-stat">篮板</th>
+                <th class="col-stat">助攻</th>
+                <th class="col-stat">抢断</th>
+                <th class="col-stat">盖帽</th>
+                <th class="col-shooting">投篮%</th>
+                <th class="col-shooting">三分%</th>
+                <th class="col-shooting">罚球%</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in seasonStatRows" :key="row.seasonId">
+                <td class="col-team" :title="row.teamName">
+                  <span class="player-data-team-name">{{ row.teamName }}</span>
+                </td>
+                <td class="col-gp">{{ row.games }}</td>
+                <td class="col-stat is-accent">{{ formatStat(row.points) }}</td>
+                <td class="col-stat">{{ formatStat(row.rebounds) }}</td>
+                <td class="col-stat is-accent">{{ formatStat(row.assists) }}</td>
+                <td class="col-stat is-accent">{{ formatStat(row.steals) }}</td>
+                <td class="col-stat">{{ formatStat(row.blocks) }}</td>
+                <td class="col-shooting is-accent">{{ formatShootingPct(row, 'fg') }}</td>
+                <td class="col-shooting is-accent">{{ formatShootingPct(row, 'tp') }}</td>
+                <td class="col-shooting is-accent">{{ formatShootingPct(row, 'ft') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </template>
   </div>
@@ -539,16 +616,74 @@ onBeforeUnmount(() => {
 }
 
 .player-detail-data__panel .player-detail-table--career {
-  min-width: 1080px;
+  width: 100%;
+  min-width: 1240px;
+  table-layout: fixed;
+
+  col.col-event { width: 200px; }
+  col.col-team { width: 168px; }
+  col.col-platform { width: 80px; }
+  col.col-gp { width: 64px; }
+  col.col-stat { width: 56px; }
+  col.col-shooting { width: 72px; }
+
+  .col-event,
+  .col-team {
+    overflow: hidden;
+    max-width: 0;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .col-platform,
+  .col-gp,
+  .col-stat,
+  .col-shooting {
+    overflow: hidden;
+    text-align: center;
+    white-space: nowrap;
+  }
 }
 
-.player-detail-data__panel .player-detail-table--career th,
-.player-detail-data__panel .player-detail-table--career td {
-  text-align: center;
+.player-detail-data__panel .player-detail-table--season {
+  min-width: 920px;
+
+  col.col-team { width: 200px; }
+  col.col-gp { width: 72px; }
+  col.col-stat { width: 72px; }
+  col.col-shooting { width: 88px; }
 }
 
-.player-detail-data__panel .player-detail-table--career .is-left {
-  text-align: left;
+.player-data-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  :deep(.team-logo),
+  :deep(.team-logo--xs) {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.player-data-team-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .player-detail-data__panel .player-detail-table--career thead th {

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import teamBackground from '@/assets/icon/tournament/team_background.png'
-import platformIcon from '@/assets/icon/team/platform.png'
-import stageIcon from '@/assets/icon/team/stage.png'
-import positionIcon from '@/assets/icon/team/lineup.png'
+import platformIcon from '@/assets/icon/person/platform.png'
+import positionIcon from '@/assets/icon/person/site.png'
+import stageIcon from '@/assets/icon/person/stage.png'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import type { PlayerProfile } from '../types'
@@ -278,14 +278,14 @@ const infoItems = computed(() => [
 
 .player-detail-hero__info-logo {
   display: grid;
-  flex: 0 0 28px;
+  flex: 0 0 40px;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
 
   :deep(.team-logo) {
-    width: 28px;
-    height: 28px;
+    width: 40px;
+    height: 40px;
   }
 }
 
@@ -346,10 +346,11 @@ const infoItems = computed(() => [
 }
 
 .player-detail-hero__info-icon {
-  width: 22px;
-  height: 22px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
   flex-shrink: 0;
+  mix-blend-mode: screen;
 }
 
 .player-detail-hero__info-copy {

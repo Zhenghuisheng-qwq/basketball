@@ -6,6 +6,10 @@ import com.zhs.dao.v4.BasketEventPlayerDao;
 import com.zhs.dao.v4.BasketEventTeamDao;
 import com.zhs.dao.v4.BasketPlayerStatDao;
 import com.zhs.dao.v4.BasketSeasonDao;
+import com.zhs.dao.v4.BasketV4MatchDao;
+import com.zhs.dao.v4.BasketV4MatchPlayerStatDao;
+import com.zhs.enums.v4.MatchPublishStatusEnum;
+import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.enums.v4.PublishStatusEnum;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.v4.BasketDivision;
@@ -14,6 +18,8 @@ import com.zhs.model.v4.BasketEventTeam;
 import com.zhs.model.v4.BasketPlayerStat;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketSeries;
+import com.zhs.model.v4.BasketV4Match;
+import com.zhs.model.v4.BasketV4MatchPlayerStat;
 import com.zhs.response.publicapi.PublicPlayerSeasonStatVo;
 import com.zhs.service.support.BasketPublicSupport;
 import org.junit.jupiter.api.Test;
@@ -51,6 +57,10 @@ class BasketPublicPlayerSeasonStatTest {
     private BasketDivisionDao divisionDao;
     @Mock
     private BasketPublicSupport publicSupport;
+    @Mock
+    private BasketV4MatchPlayerStatDao matchPlayerStatDao;
+    @Mock
+    private BasketV4MatchDao matchDao;
 
     @InjectMocks
     private BasketPublicPlayerServiceImpl service;
@@ -142,6 +152,52 @@ class BasketPublicPlayerSeasonStatTest {
         assertNull(rows.get(0).getFieldGoalPct());
     }
 
+    @Test
+    void listSeasonStat_aggregatesShootingFromOfficialMatchStats() {
+        Long sourcePlayerId = 2099260826001008000L;
+        BasketPlayerProfile profile = new BasketPlayerProfile();
+        profile.setId(sourcePlayerId);
+        when(publicSupport.requirePlayer(sourcePlayerId)).thenReturn(profile);
+        when(publicSupport.isPlayerPubliclyVisible(profile)).thenReturn(true);
+        when(publicSupport.canShowMatchData(profile)).thenReturn(true);
+
+        BasketEventPlayer ep = eventPlayer(241L, sourcePlayerId, 3L, 3L, 49L, "BO-T01-P1");
+        when(eventPlayerDao.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(ep));
+        when(playerStatDao.selectList(any(LambdaQueryWrapper.class)))
+                .thenReturn(List.of(playerStat(241L, 3L, 3L, 49L, 2, 24, 6, 4)));
+        when(eventTeamDao.selectByIds(anyCollection())).thenReturn(List.of(eventTeam(49L, "BO-T01")));
+        when(divisionDao.selectByIds(anyCollection())).thenReturn(List.of(division(3L, "PC / BO TEST", "PC", "FIVE_V_FIVE")));
+
+        BasketSeason season = season(3L, 1L, "2026 BO Playoff Demo", daysAgo(1));
+        when(publicSupport.loadSeasonMap(anyCollection())).thenReturn(Map.of(3L, season));
+        when(publicSupport.loadSeriesMap(anyCollection())).thenReturn(Collections.emptyMap());
+        when(publicSupport.loadAccessUrlMap(anyCollection())).thenReturn(Collections.emptyMap());
+        when(publicSupport.loadPlayerAvatarUrlMap(any())).thenReturn(Collections.emptyMap());
+
+        BasketV4MatchPlayerStat officialA = matchPlayerStat(241L, 101L, 7, 14, 3, 5, 0, 2);
+        BasketV4MatchPlayerStat officialB = matchPlayerStat(241L, 102L, 5, 6, 2, 5, 9, 42);
+        BasketV4MatchPlayerStat unpublished = matchPlayerStat(241L, 103L, 20, 20, 10, 10, 10, 10);
+        when(matchPlayerStatDao.selectList(any(LambdaQueryWrapper.class)))
+                .thenReturn(List.of(officialA, officialB, unpublished));
+        when(matchDao.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(
+                officialMatch(101L),
+                officialMatch(102L)
+        ));
+
+        List<PublicPlayerSeasonStatVo> rows = service.listSeasonStat(sourcePlayerId, null);
+        assertEquals(1, rows.size());
+        PublicPlayerSeasonStatVo row = rows.get(0);
+        assertEquals(12, row.getFieldGoalMade());
+        assertEquals(20, row.getFieldGoalAttempt());
+        assertEquals(new BigDecimal("60.0"), row.getFieldGoalPct());
+        assertEquals(5, row.getThreePointMade());
+        assertEquals(10, row.getThreePointAttempt());
+        assertEquals(new BigDecimal("50.0"), row.getThreePointPct());
+        assertEquals(9, row.getFreeThrowMade());
+        assertEquals(44, row.getFreeThrowAttempt());
+        assertEquals(new BigDecimal("20.5"), row.getFreeThrowPct());
+    }
+
     private static BasketEventPlayer eventPlayer(Long id, Long sourcePlayerId, Long seasonId, Long divisionId,
                                                  Long eventTeamId, String name) {
         BasketEventPlayer ep = new BasketEventPlayer();
@@ -206,5 +262,29 @@ class BasketPublicPlayerSeasonStatTest {
 
     private static Date daysAgo(int days) {
         return new Date(System.currentTimeMillis() - days * 24L * 3600_000L);
+    }
+
+    private static BasketV4MatchPlayerStat matchPlayerStat(Long eventPlayerId, Long matchId,
+                                                           int fgm, int fga, int tpm, int tpa, int ftm, int fta) {
+        BasketV4MatchPlayerStat row = new BasketV4MatchPlayerStat();
+        row.setEventPlayerId(eventPlayerId);
+        row.setMatchId(matchId);
+        row.setFieldGoalMade(fgm);
+        row.setFieldGoalAttempt(fga);
+        row.setThreePointMade(tpm);
+        row.setThreePointAttempt(tpa);
+        row.setFreeThrowMade(ftm);
+        row.setFreeThrowAttempt(fta);
+        row.setIsDelete(0);
+        return row;
+    }
+
+    private static BasketV4Match officialMatch(Long id) {
+        BasketV4Match match = new BasketV4Match();
+        match.setId(id);
+        match.setPublishStatus(MatchPublishStatusEnum.PUBLISHED.getCode());
+        match.setMatchStatus(MatchStatusEnum.FINISHED.getCode());
+        match.setIsDelete(0);
+        return match;
     }
 }

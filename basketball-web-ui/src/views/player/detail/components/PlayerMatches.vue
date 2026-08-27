@@ -15,7 +15,19 @@ const resultFilter = ref('全部结果')
 const resultOptions = ['全部结果', '胜利', '失败']
 const scopeLabel = computed(() => {
   const profile = props.detail.profile
-  return [profile.seasonName, profile.platform, profile.divisionName].filter(Boolean).join(' / ') || '当前赛事范围'
+  const season = String(profile.seasonName || '').trim()
+  const division = String(profile.divisionName || '').trim()
+  const platform = String(profile.platform || '').trim()
+  const parts: string[] = []
+  if (season) parts.push(season)
+  if (division) parts.push(division)
+  else if (platform && platform !== '--') parts.push(platform)
+  const unique: string[] = []
+  for (const part of parts) {
+    const covered = unique.some((item) => item.includes(part) || part.includes(item))
+    if (!covered) unique.push(part)
+  }
+  return unique.join(' · ') || '当前赛事范围'
 })
 
 const filteredMatches = computed(() => {
