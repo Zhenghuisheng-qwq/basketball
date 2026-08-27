@@ -9,6 +9,7 @@ export type SeriesTab = {
 defineProps<{
   tabs: SeriesTab[]
   modelValue: string
+  primaryKey?: string
 }>()
 
 const emit = defineEmits<{
@@ -30,7 +31,10 @@ defineExpose({ SERIES_TOTAL_TAB })
       type="button"
       role="tab"
       class="series-game-tabs__btn"
-      :class="{ 'is-active': modelValue === tab.key }"
+      :class="{
+        'is-active': modelValue === tab.key,
+        'is-primary': tab.key === (primaryKey || SERIES_TOTAL_TAB),
+      }"
       :aria-selected="modelValue === tab.key"
       @click="select(tab.key)"
     >
@@ -53,8 +57,8 @@ defineExpose({ SERIES_TOTAL_TAB })
 
 .series-game-tabs__btn {
   flex: 0 0 auto;
-  min-height: 36px;
-  padding: 0 16px;
+  min-height: 34px;
+  padding: 0 12px;
   border: 0;
   background: rgba(0, 0, 0, 0.42);
   color: rgba(255, 255, 255, 0.78);
@@ -63,6 +67,11 @@ defineExpose({ SERIES_TOTAL_TAB })
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
+
+  &.is-primary {
+    min-width: 108px;
+    padding: 0 16px;
+  }
 
   &.is-active {
     background: var(--cnpa-red, #e51422);

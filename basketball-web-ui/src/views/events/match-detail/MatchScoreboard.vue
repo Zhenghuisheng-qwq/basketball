@@ -12,6 +12,7 @@ defineProps<{
   statusText: string
   metaText?: string
   caption?: string
+  advanceLabel?: string
 }>()
 
 function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
@@ -34,6 +35,10 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
       >
         {{ leftTeam.name }}
       </strong>
+      <span
+        v-if="advanceLabel && isWinner(leftTeam, winnerEventTeamId)"
+        class="match-scoreboard__advance"
+      >{{ advanceLabel }}</span>
     </TeamEntryLink>
 
     <div class="match-scoreboard__center">
@@ -69,6 +74,10 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
       >
         {{ rightTeam.name }}
       </strong>
+      <span
+        v-if="advanceLabel && isWinner(rightTeam, winnerEventTeamId)"
+        class="match-scoreboard__advance"
+      >{{ advanceLabel }}</span>
     </TeamEntryLink>
   </div>
 </template>
@@ -100,6 +109,19 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
   font-size: 22px;
   font-weight: 800;
   letter-spacing: 0.2px;
+}
+
+.match-scoreboard__advance {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--cnpa-red, #e51422);
+  color: var(--cnpa-red, #e51422);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
 }
 
 .match-scoreboard__name.is-loser,

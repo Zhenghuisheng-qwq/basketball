@@ -43,7 +43,7 @@ export type BoxScoreRow = {
   total?: boolean
 }
 
-function isPresent(value: number | null | undefined): value is number {
+export function isPresent(value: number | null | undefined): value is number {
   return value != null && Number.isFinite(Number(value))
 }
 

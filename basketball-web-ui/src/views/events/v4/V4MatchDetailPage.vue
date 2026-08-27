@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getV4PublicMatchDetail, getV4PublicMatchSeries } from '@/api/v4Public'
+import { getV4PublicDivisionSchedule, getV4PublicMatchDetail, getV4PublicMatchSeries } from '@/api/v4Public'
 import type { V4PublicMatchDetail, V4PublicMatchSeriesDetail } from '@/api/types/v4Public'
 import PaperSection from '@/components/common/PaperSection.vue'
 import { requiresPeriodScores } from '@/utils/fullMatchSubmissionRules'
@@ -12,13 +12,14 @@ import {
   v4SeriesHeroStatusLabel,
 } from '@/utils/v4Display'
 import MatchScoreboard from '../match-detail/MatchScoreboard.vue'
+import SeriesProgress from '../match-detail/SeriesProgress.vue'
 import SeriesGameTabs from '../match-detail/SeriesGameTabs.vue'
 import PeriodScoreBoard from '../match-detail/PeriodScoreBoard.vue'
 import BoxScorePanel from '../match-detail/BoxScorePanel.vue'
+import seriesHeroBg from '@/assets/icon/score/detail_top_background.png'
 import {
   SERIES_TOTAL_TAB,
   formatMatchWhen,
-  gameCaption,
   gameTabLabel,
   matchBasketballScore,
   publicSeriesGames,
@@ -43,13 +44,17 @@ const match = ref<V4PublicMatchDetail | null>(null)
 const matchCache = ref<Record<string, V4PublicMatchDetail>>({})
 const selectedTeamId = ref('')
 const activeTab = ref(SERIES_TOTAL_TAB)
+const seriesRoundName = ref('')
 
 const visibleGames = computed(() => publicSeriesGames(series.value))
+const progressGames = computed(() =>
+  [...(series.value?.games || [])].sort((a, b) => (a.seriesGameNo || 0) - (b.seriesGameNo || 0)),
+)
 
 const seriesTabs = computed(() => {
   if (!seriesMode.value) return []
   return [
-    { key: SERIES_TOTAL_TAB, label: '系列赛总计' },
+    { key: SERIES_TOTAL_TAB, label: '系列赛统计' },
     ...visibleGames.value.map((game) => ({
       key: String(game.matchId),
       label: gameTabLabel(game),
@@ -63,54 +68,61 @@ const activeGame = computed(() => {
 })
 
 const leftTeam = computed(() => {
+  if (seriesMode.value) {
+    const s = series.value
+    return toDetailTeam(s?.awayEventTeamId, s?.awayTeamName, s?.awayTeamLogoUrl, s?.awayTeamShortName)
+  }
   if (match.value) return teamFromMatchSide(match.value, 'away')
-  const s = series.value
-  return toDetailTeam(s?.awayEventTeamId, s?.awayTeamName, s?.awayTeamLogoUrl, s?.awayTeamShortName)
+  return toDetailTeam()
 })
 
 const rightTeam = computed(() => {
-  if (match.value && !seriesMode.value) return teamFromMatchSide(match.value, 'home')
-  if (match.value && activeGame.value) return teamFromMatchSide(match.value, 'home')
-  const s = series.value
-  return toDetailTeam(s?.homeEventTeamId, s?.homeTeamName, s?.homeTeamLogoUrl, s?.homeTeamShortName)
+  if (seriesMode.value) {
+    const s = series.value
+    return toDetailTeam(s?.homeEventTeamId, s?.homeTeamName, s?.homeTeamLogoUrl, s?.homeTeamShortName)
+  }
+  if (match.value) return teamFromMatchSide(match.value, 'home')
+  return toDetailTeam()
 })
 
 const score = computed(() => {
-  if (seriesMode.value && activeTab.value === SERIES_TOTAL_TAB) {
+  if (seriesMode.value) {
     return seriesWinScore(series.value)
   }
   return matchBasketballScore(match.value)
 })
 
 const winnerEventTeamId = computed(() => {
-  if (seriesMode.value && activeTab.value === SERIES_TOTAL_TAB) {
+  if (seriesMode.value) {
     return series.value?.winnerEventTeamId || ''
   }
   return match.value?.winnerEventTeamId || ''
 })
 
 const statusText = computed(() => {
-  if (seriesMode.value && activeTab.value === SERIES_TOTAL_TAB) {
+  if (seriesMode.value) {
     return v4SeriesHeroStatusLabel(series.value?.seriesStatus)
-  }
-  if (seriesMode.value && activeGame.value) {
-    return ''
   }
   return match.value?.matchStatusName || v4MatchStatusLabel(match.value?.matchStatus)
 })
 
 const caption = computed(() => {
-  if (seriesMode.value && activeGame.value) {
-    return gameCaption(activeGame.value)
-  }
+  if (seriesMode.value) return ''
   return ''
+})
+
+const advanceLabel = computed(() => {
+  if (!seriesMode.value) return ''
+  const status = String(series.value?.seriesStatus || '').toUpperCase()
+  if (status !== 'COMPLETED' || !series.value?.winnerEventTeamId) return ''
+  return '晋级'
 })
 
 const metaText = computed(() => {
   if (seriesMode.value) {
     const s = series.value
-    const stage = v4PublicRoundLabel(s?.stageName, s?.roundNo) || s?.stageName || ''
-    return [stage, v4BestOfLabel(s?.bestOf)].filter(Boolean).join(' · ')
+    const round = v4PublicRoundLabel(seriesRoundName.value || s?.stageName, s?.roundNo)
+    return [round, v4BestOfLabel(s?.bestOf)].filter(Boolean).join(' · ')
   }
   const m = match.value
   if (!m) return ''
@@ -155,6 +167,29 @@ const showBoxScore = computed(() => {
     return Boolean(boxPlayers.value.length || boxTeamStats.value.length)
   }
   return true
+})
+
+const boxTitle = computed(() => {
+  if (seriesMode.value && activeTab.value === SERIES_TOTAL_TAB) return '系列赛累计统计'
+  return '比赛技术统计'
+})
+
+const boxSubtitle = computed(() => {
+  if (seriesMode.value && activeTab.value === SERIES_TOTAL_TAB) return 'SERIES TOTALS'
+  return 'BOX SCORE'
+})
+
+const boxHint = computed(() => {
+  if (seriesMode.value && activeTab.value === SERIES_TOTAL_TAB) {
+    const n = visibleGames.value.length || progressGames.value.filter((game) => !game.skipped).length
+    return n ? n + ' 场系列赛累计数据' : ''
+  }
+  if (seriesMode.value && activeGame.value) {
+    const no = activeGame.value.seriesGameNo
+    const when = formatMatchWhen(activeGame.value.scheduledTime)
+    return ['G' + no, when].filter(Boolean).join(' · ')
+  }
+  return ''
 })
 
 const boxTeams = computed(() => [leftTeam.value, rightTeam.value].filter((team) => team.name))
@@ -222,7 +257,19 @@ async function loadPage() {
       if (!series.value) {
         throw new Error('暂无系列赛详情')
       }
+      seriesRoundName.value = ''
       applyTabFromRoute()
+      if (series.value.divisionId) {
+        try {
+          const schedule = await getV4PublicDivisionSchedule(String(series.value.divisionId))
+          const row = (schedule.data || []).find((item) =>
+            item.unitType === 'MATCH_SERIES' && String(item.id) === String(series.value?.id),
+          )
+          seriesRoundName.value = String(row?.roundName || '').trim()
+        } catch {
+          seriesRoundName.value = ''
+        }
+      }
       if (activeTab.value !== SERIES_TOTAL_TAB) {
         await loadMatchById(activeTab.value)
       } else {
@@ -297,8 +344,18 @@ onMounted(() => {
 
 <template>
   <div class="match-detail-page">
-    <section class="site-section match-detail-hero">
+    <section class="site-section match-detail-hero" :class="{ 'is-series': seriesMode }">
       <div class="site-shell">
+        <div class="match-detail-hero__frame">
+          <img
+            v-if="seriesMode"
+            class="match-detail-hero__image"
+            :src="seriesHeroBg"
+            alt=""
+            draggable="false"
+          />
+          <div v-if="seriesMode" class="match-detail-hero__shade" aria-hidden="true" />
+          <div class="match-detail-hero__body">
         <nav class="match-detail-crumb">
           <router-link to="/events">赛事</router-link>
           <span>/</span>
@@ -317,6 +374,15 @@ onMounted(() => {
             :status-text="statusText"
             :meta-text="metaText"
             :caption="caption"
+            :advance-label="advanceLabel"
+          />
+          <SeriesProgress
+            v-if="seriesMode && progressGames.length"
+            :games="progressGames"
+            :left-team="leftTeam"
+            :right-team="rightTeam"
+            :active-match-id="activeTab === SERIES_TOTAL_TAB ? '' : activeTab"
+            @select="onTabChange"
           />
           <p
             v-if="seriesMode && activeTab === SERIES_TOTAL_TAB && (series?.resultReason || series?.resultSummary)"
@@ -328,9 +394,12 @@ onMounted(() => {
             v-if="showSeriesTabs"
             :tabs="seriesTabs"
             :model-value="activeTab"
+            :primary-key="SERIES_TOTAL_TAB"
             @update:model-value="onTabChange"
           />
         </template>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -355,6 +424,9 @@ onMounted(() => {
               :selected-team-id="selectedTeamId"
               :players="boxPlayers"
               :team-stats="boxTeamStats"
+              :title="boxTitle"
+              :subtitle="boxSubtitle"
+              :hint="boxHint"
               @update:selected-team-id="selectedTeamId = $event"
               @go-player="goPlayer"
             />
@@ -380,7 +452,54 @@ onMounted(() => {
   color: #fff;
 }
 
+.match-detail-hero.is-series {
+  background: #050505;
+  padding: 0;
+}
+
+.match-detail-hero__frame {
+  position: relative;
+}
+
+.match-detail-hero.is-series .match-detail-hero__frame {
+  overflow: hidden;
+}
+
+.match-detail-hero__image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 28%;
+  pointer-events: none;
+  user-select: none;
+}
+
+.match-detail-hero__shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(5, 5, 5, 0.16) 0%, rgba(5, 5, 5, 0.22) 68%, #050505 100%);
+  pointer-events: none;
+}
+
+.match-detail-hero__body {
+  position: relative;
+  z-index: 2;
+}
+
+.match-detail-hero.is-series .match-detail-hero__body {
+  padding: 28px 0 36px;
+}
+
 .match-detail-hero :deep(.series-game-tabs) {
+  margin-top: 22px;
+}
+
+.match-detail-hero :deep(.series-progress) {
   margin-top: 28px;
 }
 

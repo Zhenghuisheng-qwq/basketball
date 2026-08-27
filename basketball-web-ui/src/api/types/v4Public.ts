@@ -280,6 +280,7 @@ export interface V4PublicMatchSeriesGame {
   matchStatusName?: string
   homeScore?: number
   awayScore?: number
+  winnerEventTeamId?: string
   scheduledTime?: string
   skipped?: boolean
   skippedReason?: string

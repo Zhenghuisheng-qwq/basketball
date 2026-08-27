@@ -1,0 +1,154 @@
+{
+  "seasonId": 3,
+  "seasonTitle": "2026 BO Playoff Demo",
+  "divisionId": 3,
+  "divisionName": "PC / BO TEST",
+  "bo3": {
+    "series": {
+      "id": 15,
+      "round_no": 1,
+      "best_of": 3,
+      "home_win_count": 2,
+      "away_win_count": 1,
+      "winner_event_team_id": 49,
+      "series_status": "COMPLETED",
+      "home": "BO-T01",
+      "away": "BO-T08"
+    },
+    "games": [
+      {
+        "id": 943,
+        "series_game_no": 1,
+        "home_score": 78,
+        "away_score": 72,
+        "match_status": "FINISHED",
+        "winner_event_team_id": 49,
+        "match_time": null
+      },
+      {
+        "id": 944,
+        "series_game_no": 2,
+        "home_score": 69,
+        "away_score": 75,
+        "match_status": "FINISHED",
+        "winner_event_team_id": 56,
+        "match_time": null
+      },
+      {
+        "id": 945,
+        "series_game_no": 3,
+        "home_score": 84,
+        "away_score": 80,
+        "match_status": "FINISHED",
+        "winner_event_team_id": 49,
+        "match_time": null
+      }
+    ]
+  },
+  "bo5": {
+    "series": {
+      "id": 19,
+      "round_no": 2,
+      "best_of": 5,
+      "home_win_count": 3,
+      "away_win_count": 2,
+      "winner_event_team_id": 49,
+      "series_status": "COMPLETED",
+      "home": "BO-T01",
+      "away": "BO-T04"
+    },
+    "games": [
+      {
+        "id": 955,
+        "series_game_no": 1,
+        "home_score": 82,
+        "away_score": 75,
+        "match_status": "FINISHED",
+        "winner_event_team_id": 49,
+        "match_time": null
+      },
+      {
+        "id": 956,
+        "series_game_no": 2,
+        "home_score": 71,
+        "away_score": 79,
+        "match_status": "FINISHED",
+        "winner_event_team_id": 52,
+        "match_time": null
+      },
+      {
+        "id": 957,
+        "series_game_no": 3,
+        "home_score": 88,
+        "away_score": 83,
+        "match_status": "FINISHED",
+        "winner_event_team_id": 49,
+        "match_time": null
+      },
+      {
+        "id": 958,
+        "series_game_no": 4,
+        "home_score": 74,
+        "away_score": 81,
+        "match_status": "FINISHED",
+        "winner_event_team_id": 52,
+        "match_time": null
+      },
+      {
+        "id": 959,
+        "series_game_no": 5,
+        "home_score": 91,
+        "away_score": 86,
+        "match_status": "FINISHED",
+        "winner_event_team_id": 49,
+        "match_time": null
+      }
+    ]
+  },
+  "public": {
+    "schedule": {
+      "code": 200,
+      "n": 35
+    },
+    "season": {
+      "code": 200,
+      "title": "2026 BO Playoff Demo"
+    },
+    "series": [
+      {
+        "id": 15,
+        "code": 200,
+        "bestOf": 3,
+        "homeWin": 2,
+        "awayWin": 1,
+        "games": 3
+      },
+      {
+        "id": 19,
+        "code": 200,
+        "bestOf": 5,
+        "homeWin": 3,
+        "awayWin": 2,
+        "games": 5
+      }
+    ]
+  },
+  "urls": {
+    "season": "http://localhost:5175/events/3?tab=stage",
+    "schedule": "http://localhost:5175/events/3?tab=schedule",
+    "bo3Series": "http://localhost:5175/events/match-series/15",
+    "bo5Series": "http://localhost:5175/events/match-series/19",
+    "bo3Games": [
+      "http://localhost:5175/events/match/943?seasonId=3&divisionId=3",
+      "http://localhost:5175/events/match/944?seasonId=3&divisionId=3",
+      "http://localhost:5175/events/match/945?seasonId=3&divisionId=3"
+    ],
+    "bo5Games": [
+      "http://localhost:5175/events/match/955?seasonId=3&divisionId=3",
+      "http://localhost:5175/events/match/956?seasonId=3&divisionId=3",
+      "http://localhost:5175/events/match/957?seasonId=3&divisionId=3",
+      "http://localhost:5175/events/match/958?seasonId=3&divisionId=3",
+      "http://localhost:5175/events/match/959?seasonId=3&divisionId=3"
+    ]
+  }
+}

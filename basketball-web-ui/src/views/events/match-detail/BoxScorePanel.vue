@@ -11,12 +11,19 @@ import {
   toBoxScoreRow,
 } from './matchDetailDisplay'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   teams: Team[]
   selectedTeamId: string
   players: V4PublicMatchPlayerStatItem[]
   teamStats?: V4PublicMatchTeamStatItem[]
-}>()
+  title?: string
+  subtitle?: string
+  hint?: string
+}>(), {
+  title: '比赛技术统计',
+  subtitle: 'BOX SCORE',
+  hint: '',
+})
 
 const emit = defineEmits<{
   'update:selectedTeamId': [value: string]
@@ -41,8 +48,9 @@ const totalRow = computed(() => {
   <section class="box-score">
     <div class="box-score__head">
       <div>
-        <h2>比赛技术统计</h2>
-        <span>BOX SCORE</span>
+        <h2>{{ title }}</h2>
+        <span>{{ subtitle }}</span>
+        <small v-if="hint">{{ hint }}</small>
       </div>
       <div class="box-score__teams" role="tablist" aria-label="球队">
         <button
@@ -143,6 +151,15 @@ const totalRow = computed(() => {
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 1.4px;
+  }
+
+  small {
+    display: block;
+    margin-top: 6px;
+    color: #888;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0;
   }
 }
 
