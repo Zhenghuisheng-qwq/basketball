@@ -20,6 +20,17 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
   const id = String(team.teamId || '').trim()
   return Boolean(winner && id && winner === id)
 }
+
+function secondaryLine(team: Team): string {
+  const name = String(team.name || '').trim()
+  const short = String(team.shortName || team.code || '').trim()
+  const parts: string[] = []
+  if (short && short.toUpperCase() !== name.toUpperCase() && !name.toUpperCase().includes(short.toUpperCase())) parts.push(short)
+  if ((team.wins || 0) + (team.losses || 0) > 0) {
+    parts.push(`${team.wins}-${team.losses}`)
+  }
+  return parts.join('  ')
+}
 </script>
 
 <template>
@@ -35,6 +46,7 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
       >
         {{ leftTeam.name }}
       </strong>
+      <span v-if="secondaryLine(leftTeam)" class="match-scoreboard__sub">{{ secondaryLine(leftTeam) }}</span>
       <span
         v-if="advanceLabel && isWinner(leftTeam, winnerEventTeamId)"
         class="match-scoreboard__advance"
@@ -46,12 +58,14 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
         <template v-if="score.kind === 'score'">
           <span
             :class="{
+              'is-winner': isWinner(leftTeam, winnerEventTeamId),
               'is-loser': Boolean(winnerEventTeamId) && !isWinner(leftTeam, winnerEventTeamId),
             }"
           >{{ formatExactScore(score.left) }}</span>
           <span class="match-scoreboard__colon">:</span>
           <span
             :class="{
+              'is-winner': isWinner(rightTeam, winnerEventTeamId),
               'is-loser': Boolean(winnerEventTeamId) && !isWinner(rightTeam, winnerEventTeamId),
             }"
           >{{ formatExactScore(score.right) }}</span>
@@ -59,7 +73,7 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
         <span v-else class="match-scoreboard__vs">VS</span>
       </div>
       <p v-if="caption" class="match-scoreboard__caption">{{ caption }}</p>
-      <p class="match-scoreboard__status">{{ statusText }}</p>
+      <p v-if="statusText" class="match-scoreboard__status">{{ statusText }}</p>
       <p v-if="metaText" class="match-scoreboard__meta">{{ metaText }}</p>
     </div>
 
@@ -74,6 +88,7 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
       >
         {{ rightTeam.name }}
       </strong>
+      <span v-if="secondaryLine(rightTeam)" class="match-scoreboard__sub">{{ secondaryLine(rightTeam) }}</span>
       <span
         v-if="advanceLabel && isWinner(rightTeam, winnerEventTeamId)"
         class="match-scoreboard__advance"
@@ -95,7 +110,7 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   color: inherit;
   text-decoration: none;
   min-width: 0;
@@ -106,17 +121,27 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: 0.2px;
+  font-size: clamp(20px, 2.4vw, 34px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.match-scoreboard__sub {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .match-scoreboard__advance {
   display: inline-flex;
   align-items: center;
-  min-height: 20px;
-  padding: 0 8px;
+  min-height: 22px;
+  padding: 0 10px;
   border: 1px solid var(--cnpa-red, #e51422);
+  border-radius: 999px;
   color: var(--cnpa-red, #e51422);
   font-size: 11px;
   font-weight: 800;
@@ -124,16 +149,15 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
   line-height: 1;
 }
 
-.match-scoreboard__name.is-loser,
-.match-scoreboard__score .is-loser {
-  color: rgba(255, 255, 255, 0.46);
+.match-scoreboard__name.is-loser {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .match-scoreboard__center {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   min-width: 220px;
 }
 
@@ -141,16 +165,24 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 16px;
-  font-size: clamp(52px, 6vw, 72px);
-  line-height: 1;
+  gap: 18px;
+  font-size: clamp(56px, 7vw, 84px);
+  line-height: 0.92;
   font-weight: 900;
   letter-spacing: 1px;
   white-space: nowrap;
 }
 
+.match-scoreboard__score .is-winner {
+  color: var(--cnpa-red, #e51422);
+}
+
+.match-scoreboard__score .is-loser {
+  color: #fff;
+}
+
 .match-scoreboard__colon {
-  color: rgba(255, 255, 255, 0.38);
+  color: rgba(255, 255, 255, 0.42);
 }
 
 .match-scoreboard__vs {
@@ -166,15 +198,28 @@ function isWinner(team: Team, winnerEventTeamId?: string | null): boolean {
   text-align: center;
 }
 
-.match-scoreboard__caption,
-.match-scoreboard__status {
+.match-scoreboard__caption {
   color: #fff;
   font-size: 15px;
   font-weight: 700;
 }
 
+.match-scoreboard__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.46);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .match-scoreboard__meta {
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(255, 255, 255, 0.58);
   font-size: 13px;
   font-weight: 600;
 }

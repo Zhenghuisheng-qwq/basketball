@@ -19,10 +19,12 @@ const props = withDefaults(defineProps<{
   title?: string
   subtitle?: string
   hint?: string
+  variant?: 'default' | 'series'
 }>(), {
   title: '比赛技术统计',
   subtitle: 'BOX SCORE',
   hint: '',
+  variant: 'default',
 })
 
 const emit = defineEmits<{
@@ -31,6 +33,21 @@ const emit = defineEmits<{
 }>()
 
 const currentTeam = computed(() => props.teams.find((team) => String(team.teamId) === String(props.selectedTeamId)) || props.teams[0])
+
+function hasTeamLogo(team: Team): boolean {
+  return Boolean(String(team.logo || '').trim())
+}
+
+function teamMark(team: Team): string {
+  const short = String(team.shortName || team.code || '').replace(/\s+/g, '')
+  const name = String(team.name || '').replace(/\s+/g, '')
+  const source = (short || name).replace(/^E2E-?/i, '').replace(/^CNPA-T-/i, '')
+  if (!source) return '--'
+  const token = source.match(/[A-Za-z]*\d+$/)
+  if (token) return token[0].toUpperCase()
+  if (source.length <= 3) return source.toUpperCase()
+  return source.slice(-3).toUpperCase()
+}
 
 const rows = computed(() => {
   const teamId = currentTeam.value?.teamId
@@ -45,11 +62,11 @@ const totalRow = computed(() => {
 </script>
 
 <template>
-  <section class="box-score">
+  <section class="box-score" :class="{ 'box-score--series': variant === 'series' }">
     <div class="box-score__head">
       <div>
         <h2>{{ title }}</h2>
-        <span>{{ subtitle }}</span>
+        <span class="box-score__subtitle">{{ subtitle }}</span>
         <small v-if="hint">{{ hint }}</small>
       </div>
       <div class="box-score__teams" role="tablist" aria-label="球队">
@@ -61,8 +78,17 @@ const totalRow = computed(() => {
           :class="{ 'is-active': String(selectedTeamId) === String(team.teamId) }"
           @click="emit('update:selectedTeamId', String(team.teamId))"
         >
-          <TeamLogo :team="team" size="sm" />
-          <span>{{ team.name }}</span>
+          <template v-if="variant === 'series'">
+            <span class="box-score__mark">
+              <TeamLogo v-if="hasTeamLogo(team)" :team="team" size="sm" />
+              <template v-else>{{ teamMark(team) }}</template>
+            </span>
+            <span class="box-score__name">{{ team.name }}</span>
+          </template>
+          <template v-else>
+            <TeamLogo :team="team" size="sm" />
+            <span>{{ team.name }}</span>
+          </template>
         </button>
       </div>
     </div>
@@ -136,21 +162,24 @@ const totalRow = computed(() => {
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 
   h2 {
     margin: 0;
-    font-size: 22px;
+    font-size: clamp(24px, 2.2vw, 32px);
     font-weight: 900;
+    letter-spacing: 0.02em;
   }
 
-  span {
+  .box-score__subtitle {
     display: block;
-    margin-top: 4px;
+    margin-top: 6px;
     color: var(--cnpa-red, #e51422);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 800;
-    letter-spacing: 1.4px;
+    font-style: italic;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
   }
 
   small {
@@ -165,17 +194,31 @@ const totalRow = computed(() => {
 
 .box-score__teams {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.box-score__mark {
+  display: none;
+}
+
+.box-score__name {
+  color: inherit;
+  font-style: normal;
 }
 
 .box-score__team {
-  min-height: 40px;
-  padding: 0 12px;
+  min-height: 44px;
+  padding: 0 18px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #ddd;
-  background: #fff;
+  border: 0;
+  border-radius: 10px;
+  background: #e4e2e0;
   color: #222;
   font-size: 13px;
   font-weight: 800;
@@ -183,10 +226,66 @@ const totalRow = computed(() => {
   cursor: pointer;
 
   &.is-active {
-    background: #111;
-    border-color: #111;
+    background: var(--cnpa-red, #e51422);
     color: #fff;
   }
+}
+
+.box-score--series .box-score__teams {
+  gap: 4px;
+  max-width: 230px;
+}
+
+.box-score--series .box-score__team {
+  height: 38px;
+  min-height: 38px;
+  min-width: 0;
+  padding: 0 10px 0 0;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #d5d1cc;
+  border-radius: 3px;
+  background: #efece7;
+  color: #161616;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: none;
+
+  &.is-active {
+    border-color: var(--cnpa-red, #e10613);
+    background: var(--cnpa-red, #e10613);
+    color: #fff;
+  }
+}
+
+.box-score--series .box-score__mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-right: 8px;
+  background: #111;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.box-score--series .box-score__team.is-active .box-score__mark {
+  background: #3a0508;
+}
+
+.box-score--series .box-score__mark :deep(.team-logo),
+.box-score--series .box-score__mark :deep(.team-logo-sm) {
+  width: 38px;
+  height: 38px;
+}
+
+.box-score--series .box-score__name {
+  padding-right: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .box-score__empty {

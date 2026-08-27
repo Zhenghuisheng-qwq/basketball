@@ -47,34 +47,47 @@ defineExpose({ SERIES_TOTAL_TAB })
 .series-game-tabs {
   display: flex;
   justify-content: center;
-  gap: 8px;
+  gap: 4px;
   overflow-x: auto;
   overflow-y: hidden;
   max-width: 100%;
-  padding-bottom: 2px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
   scrollbar-width: thin;
 }
 
 .series-game-tabs__btn {
   flex: 0 0 auto;
+  height: 34px;
   min-height: 34px;
-  padding: 0 12px;
-  border: 0;
-  background: rgba(0, 0, 0, 0.42);
-  color: rgba(255, 255, 255, 0.78);
+  min-width: 44px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 3px;
+  background: #111;
+  color: rgba(255, 255, 255, 0.72);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: none;
 
   &.is-primary {
-    min-width: 108px;
-    padding: 0 16px;
+    min-width: 100px;
+    padding: 0 12px;
+  }
+
+  &:hover:not(.is-active) {
+    border-color: rgba(225, 6, 19, 0.55);
+    color: #fff;
   }
 
   &.is-active {
-    background: var(--cnpa-red, #e51422);
+    background: var(--cnpa-red, #e10613);
+    border-color: var(--cnpa-red, #e10613);
     color: #fff;
   }
 }

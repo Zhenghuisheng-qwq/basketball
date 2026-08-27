@@ -408,7 +408,7 @@ onMounted(() => {
       class="site-section match-detail-content"
     >
       <div class="site-shell">
-        <PaperSection edge="none" tone="light" class="match-detail-paper">
+        <PaperSection edge="both" tone="light" class="match-detail-paper">
           <div class="match-detail-paper__inner">
             <PeriodScoreBoard
               v-if="showPeriodBoard && match"
@@ -417,6 +417,7 @@ onMounted(() => {
               :periods="match.periodScores || []"
               :left-total="match.awayScore"
               :right-total="match.homeScore"
+              :winner-event-team-id="match.winnerEventTeamId"
             />
             <BoxScorePanel
               v-if="showBoxScore"
@@ -427,6 +428,7 @@ onMounted(() => {
               :title="boxTitle"
               :subtitle="boxSubtitle"
               :hint="boxHint"
+              :variant="seriesMode ? 'series' : 'default'"
               @update:selected-team-id="selectedTeamId = $event"
               @go-player="goPlayer"
             />
@@ -549,7 +551,7 @@ onMounted(() => {
 }
 
 .match-detail-paper__inner {
-  padding: 36px var(--cnpa-public-content-gutter) 72px;
+  padding: 28px var(--cnpa-public-content-gutter) 56px;
 }
 
 @media (max-width: 640px) {

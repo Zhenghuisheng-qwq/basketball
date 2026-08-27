@@ -160,6 +160,7 @@ function onSelect(game: V4PublicMatchSeriesGame) {
   min-width: 0;
   padding: 12px 8px 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
   background: rgba(0, 0, 0, 0.35);
   color: inherit;
   text-align: center;
@@ -205,7 +206,7 @@ function onSelect(game: V4PublicMatchSeriesGame) {
 }
 
 .series-progress__score .is-win {
-  color: #fff;
+  color: var(--cnpa-red, #e51422);
   font-weight: 900;
 }
 
