@@ -92,6 +92,7 @@ export function mapV4TeamStatToSeasonStat(
     avgSteals: calculateAverage(item.steal, games),
     avgBlocks: calculateAverage(item.block, games),
     avgTurnovers: calculateAverage(item.turnover, games),
+    avgFouls: item.foul != null ? calculateAverage(item.foul, games) : undefined,
     winRate: calculateAverage(wins, games),
   }
 }

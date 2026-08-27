@@ -402,6 +402,8 @@ export interface V4PublicTeamStatItem {
   steal?: number
   block?: number
   turnover?: number
+  /** 当前 V4 Public team-stat VO 未下发 */
+  foul?: number | null
 }
 
 export interface V4PublicPlayerStatItem {
@@ -420,6 +422,17 @@ export interface V4PublicPlayerStatItem {
   steal?: number
   block?: number
   turnover?: number
+  /** 当前 V4 Public player-stat VO 未下发 */
+  foul?: number | null
+  fieldGoalMade?: number | null
+  fieldGoalAttempt?: number | null
+  threePointMade?: number | null
+  threePointAttempt?: number | null
+  freeThrowMade?: number | null
+  freeThrowAttempt?: number | null
+  fieldGoalPct?: number | string | null
+  threePointPct?: number | string | null
+  freeThrowPct?: number | string | null
 }
 
 export interface V4PublicRankItem {

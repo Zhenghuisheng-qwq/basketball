@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import PaperTear from '@/components/common/PaperTear.vue'
 import TeamHero from '@/components/team/TeamHero.vue'
 import TeamSubNav from '@/components/team/TeamSubNav.vue'
 import { usePublicTeamPage } from './composables/usePublicTeamPage'
@@ -23,7 +22,6 @@ const ctx = usePublicTeamPage()
         <TeamHero :team="ctx.teamView.value" :team-id="ctx.teamId.value" />
 
         <div class="team-page__paper">
-          <PaperTear position="top" tone="light" />
           <div class="team-page__paper-body">
             <div class="site-shell-inner team-page__paper-inner">
               <TeamSubNav :team-id="ctx.teamId.value" />

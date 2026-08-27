@@ -13,6 +13,28 @@ function publicPlayerRouteId(item: { sourcePlayerId?: string | null; eventPlayer
   return String(item.sourcePlayerId || '').trim()
 }
 
+function shootingPct(
+  made?: number | string | null,
+  attempt?: number | string | null,
+  pct?: number | string | null,
+): number | null {
+  if (pct != null && pct !== '' && Number.isFinite(Number(pct))) {
+    const num = Number(pct)
+    return num <= 1 ? num * 100 : num
+  }
+  if (attempt == null || attempt === '' || !Number.isFinite(Number(attempt))) return null
+  const attempts = Number(attempt)
+  if (attempts === 0) return null
+  return (toNumber(made, 0) / attempts) * 100
+}
+
+function formatMakesAttempts(made?: number | null, attempt?: number | null): string {
+  if (attempt == null || !Number.isFinite(Number(attempt))) return '—'
+  const attempts = Number(attempt)
+  if (attempts === 0) return '—'
+  return `${toNumber(made, 0)}/${attempts}`
+}
+
 export function mapV4PlayerStatToAverage(item: V4PublicPlayerStatItem): TeamPlayerAverageStat {
   const games = toNumber(item.matchCount, 0)
   return {
@@ -25,11 +47,11 @@ export function mapV4PlayerStatToAverage(item: V4PublicPlayerStatItem): TeamPlay
     assists: item.avgAssist != null ? toNumber(item.avgAssist, 0) : calculateAverage(item.assist, games),
     steals: calculateAverage(item.steal, games),
     blocks: calculateAverage(item.block, games),
-    fouls: 0,
+    fouls: item.foul != null ? calculateAverage(item.foul, games) : null,
     turnovers: calculateAverage(item.turnover, games),
-    fgPct: null,
-    tpPct: null,
-    ftPct: null,
+    fgPct: shootingPct(item.fieldGoalMade, item.fieldGoalAttempt, item.fieldGoalPct),
+    tpPct: shootingPct(item.threePointMade, item.threePointAttempt, item.threePointPct),
+    ftPct: shootingPct(item.freeThrowMade, item.freeThrowAttempt, item.freeThrowPct),
   }
 }
 
@@ -44,11 +66,11 @@ export function mapV4PlayerStatToTotal(item: V4PublicPlayerStatItem): TeamPlayer
     assists: toNumber(item.assist, 0),
     steals: toNumber(item.steal, 0),
     blocks: toNumber(item.block, 0),
-    fouls: 0,
+    fouls: item.foul != null ? toNumber(item.foul, 0) : null,
     turnovers: toNumber(item.turnover, 0),
-    fgPct: null,
-    tpPct: null,
-    ftPct: null,
+    fgPct: shootingPct(item.fieldGoalMade, item.fieldGoalAttempt, item.fieldGoalPct),
+    tpPct: shootingPct(item.threePointMade, item.threePointAttempt, item.threePointPct),
+    ftPct: shootingPct(item.freeThrowMade, item.freeThrowAttempt, item.freeThrowPct),
   }
 }
 
@@ -57,33 +79,33 @@ function mapV4MatchPlayerStat(item: V4PublicMatchDetail['playerStats'][number]):
     playerId: publicPlayerRouteId(item),
     nickname: displayText(item.playerName, '未知球员'),
     avatar: '',
-    grade: '--',
+    grade: '—',
     points: toNumber(item.points, 0),
     rebounds: toNumber(item.rebound, 0),
     assists: toNumber(item.assist, 0),
     steals: toNumber(item.steal, 0),
     blocks: toNumber(item.block, 0),
-    fouls: 0,
+    fouls: item.foul != null ? toNumber(item.foul, 0) : null,
     turnovers: toNumber(item.turnover, 0),
-    fg: '--',
-    tp: '--',
-    ft: '--',
+    fg: formatMakesAttempts(item.fieldGoalMade, item.fieldGoalAttempt),
+    tp: formatMakesAttempts(item.threePointMade, item.threePointAttempt),
+    ft: formatMakesAttempts(item.freeThrowMade, item.freeThrowAttempt),
   }
 }
 
 function mapV4MatchTeamTotal(item: V4PublicMatchDetail['teamStats'][number]): TeamSingleMatchTotal {
   return {
-    grade: '--',
+    grade: '—',
     points: toNumber(item.pointsFor ?? item.score, 0),
     rebounds: toNumber(item.rebound, 0),
     assists: toNumber(item.assist, 0),
     steals: toNumber(item.steal, 0),
     blocks: toNumber(item.block, 0),
-    fouls: 0,
+    fouls: item.foul != null ? toNumber(item.foul, 0) : null,
     turnovers: toNumber(item.turnover, 0),
-    fg: '--',
-    tp: '--',
-    ft: '--',
+    fg: formatMakesAttempts(item.fieldGoalMade, item.fieldGoalAttempt),
+    tp: formatMakesAttempts(item.threePointMade, item.threePointAttempt),
+    ft: formatMakesAttempts(item.freeThrowMade, item.freeThrowAttempt),
   }
 }
 

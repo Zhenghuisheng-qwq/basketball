@@ -80,11 +80,20 @@ export interface CompetitionStage {
   index: string
   name: string
   period: string
+  statusCode?: string
   fields: Array<{
     label: string
     value: string
   }>
 }
+
+export type PlayoffRoundKey =
+  | 'round32'
+  | 'round16'
+  | 'quarterfinal'
+  | 'semifinal'
+  | 'final'
+  | 'other'
 
 export interface PlayoffSeries {
   id: string
@@ -93,17 +102,21 @@ export interface PlayoffSeries {
   /** 代表场 Match 主键（跳转详情用，勿把 seriesId 当 matchId） */
   matchId?: string
   bestOf?: number
-  round: 'quarterfinal' | 'semifinal' | 'final'
-  side: 'left' | 'right' | 'center'
+  round: PlayoffRoundKey
+  roundLabel: string
+  roundLabelEn: string
+  side?: 'left' | 'right' | 'center'
   topTeamId: string
   bottomTeamId: string
   topTeamName: string
   bottomTeamName: string
   topTeamLogo: string
   bottomTeamLogo: string
-  topScore: number
-  bottomScore: number
+  topScore: number | null
+  bottomScore: number | null
   winnerTeamId: string
+  seriesStatus?: string
+  scheduledLabel?: string
   topSeed?: number | string
   bottomSeed?: number | string
 }

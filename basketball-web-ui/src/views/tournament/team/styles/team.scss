@@ -19,15 +19,11 @@
   overflow-y: visible;
   color: var(--cnpa-paper-text);
   box-sizing: border-box;
-  --paper-background: var(--cnpa-paper-bg);
-  --paper-tear-color: var(--cnpa-paper-bg);
-  background-color: var(--cnpa-paper-bg);
-  background-image: linear-gradient(
-    180deg,
-    #ebe9e9 0%,
-    var(--cnpa-paper-bg) 45%,
-    #e7e5e5 100%
-  );
+  --paper-background: #f7f6f5;
+  --paper-tear-color: #f7f6f5;
+  --cnpa-paper-bg: #f7f6f5;
+  background-color: #f7f6f5;
+  background-image: none;
 }
 
 .compare-paper {
@@ -39,7 +35,6 @@
   overflow: visible;
   color: var(--cnpa-paper-text);
   box-sizing: border-box;
-  --paper-tear-color: var(--cnpa-paper-bg);
   background-color: var(--cnpa-paper-bg);
   background-image: linear-gradient(
     180deg,
@@ -47,21 +42,6 @@
     var(--cnpa-paper-bg) 58%,
     #e7e5e5 100%
   );
-
-  .paper-tear {
-    position: relative;
-    z-index: 6;
-  }
-
-  .paper-tear--top {
-    height: clamp(36px, 3.2vw, 56px);
-    margin-bottom: calc(-1 * clamp(24px, 2.2vw, 38px));
-  }
-
-  .torn-edge-top {
-    top: 0;
-    transform: translateY(-50%);
-  }
 }
 
 .compare-paper.cnpa-paper-section {
@@ -89,7 +69,7 @@
 }
 
 .team-page__content {
-  padding-block: clamp(12px, 1.6vw, 22px) clamp(36px, 4vw, 52px);
+  padding-block: clamp(8px, 1vw, 14px) clamp(48px, 5vw, 72px);
   color: var(--cnpa-paper-text);
   min-height: 320px;
   background: transparent;

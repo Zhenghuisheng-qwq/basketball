@@ -261,7 +261,7 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
   if (isAbnormalMatchStatus(matchStatus)) {
     return {
       secondary: {
-        label: '查看比赛详情',
+        label: '查看本场详情',
         kind: 'secondary',
         route: detailRoute,
       },
@@ -278,7 +278,7 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
         route: submitRoute,
       },
       secondary: {
-        label: '查看比赛详情',
+        label: '查看本场详情',
         kind: 'secondary',
         route: detailRoute,
       },
@@ -293,7 +293,7 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
         route: submitRoute,
       },
       secondary: {
-        label: '查看比赛详情',
+        label: '查看本场详情',
         kind: 'secondary',
         route: detailRoute,
       },
@@ -319,7 +319,7 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
         route: detailRoute,
       },
       secondary: {
-        label: '查看比赛详情',
+        label: '查看本场详情',
         kind: 'secondary',
         route: detailRoute,
       },
@@ -330,7 +330,7 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
   if (isUpcomingMatch(matchStatus)) {
     return {
       secondary: {
-        label: '查看比赛详情',
+        label: '查看本场详情',
         kind: 'secondary',
         route: detailRoute,
       },
@@ -345,7 +345,7 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
         route: submitRoute,
       },
       secondary: {
-        label: '查看比赛详情',
+        label: '查看本场详情',
         kind: 'secondary',
         route: detailRoute,
       },
@@ -356,7 +356,7 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
   if (isFinishedMatch(matchStatus)) {
     return {
       secondary: {
-        label: '查看比赛详情',
+        label: '查看本场详情',
         kind: 'secondary',
         route: detailRoute,
       },
@@ -366,7 +366,7 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
 
   return {
     secondary: {
-      label: '查看比赛详情',
+      label: '查看本场详情',
       kind: 'secondary',
       route: detailRoute,
     },

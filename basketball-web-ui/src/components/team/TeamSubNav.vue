@@ -17,7 +17,7 @@ const tabs = [
   { label: '总览', path: 'overview' },
   { label: '比赛', path: 'matches' },
   { label: '数据', path: 'stats' },
-  { label: '动态', path: 'archive' },
+  { label: '档案', path: 'archive' },
 ] as const
 </script>
 
@@ -71,10 +71,10 @@ const tabs = [
     &::after {
       content: '';
       position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      height: 3px;
+      left: 12%;
+      right: 12%;
+      bottom: -1px;
+      height: 4px;
       background: var(--cnpa-red);
     }
   }

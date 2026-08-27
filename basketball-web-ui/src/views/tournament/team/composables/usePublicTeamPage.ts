@@ -234,8 +234,13 @@ export function usePublicTeamPage() {
           })]
         : []
       ranking.value = teamStanding ? [mapV4StandingToRank(teamStanding, seasonId.value)] : []
-      standingWins.value = toNumber(teamStanding?.winCount, 0)
-      standingLosses.value = toNumber(teamStanding?.loseCount, 0)
+      if (teamStatRow) {
+        standingWins.value = toNumber(teamStatRow.winCount, 0)
+        standingLosses.value = toNumber(teamStatRow.loseCount, 0)
+      } else {
+        standingWins.value = toNumber(teamStanding?.winCount, 0)
+        standingLosses.value = toNumber(teamStanding?.loseCount, 0)
+      }
       state.value = 'success'
     } catch (err) {
       if (current !== reqId) return

@@ -1,24 +1,25 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
-import { getV4PublicStageBracket, getV4PublicStageList } from '@/api/v4Public'
+import { getV4PublicStageBracket, getV4PublicStageList, getV4PublicStageSeries } from '@/api/v4Public'
 import type { V4PublicStageItem } from '@/api/types/v4Public'
-import type { PlayoffSeries } from '../types/events'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
-import { v4BracketToPlayoffSeries, type BracketStageBucket } from '../utils/v4PublicAdapters'
-import BracketLineConnector from './BracketLineConnector.vue'
-import BracketMergeConnector from './BracketMergeConnector.vue'
+import {
+  groupMatchItemsToRounds,
+  groupPublicSeriesToRounds,
+  toMirroredBracket,
+  type BracketRoundColumn,
+} from '../utils/playoffBracketDisplay'
 import PlayoffSeriesCard from './PlayoffSeriesCard.vue'
 
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
 defineProps<{
-  /** 当前选中的淘汰阶段；用于标题提示，Bracket 仍合并全部淘汰 Stage */
   focusStageId?: string
 }>()
 
 const ctx = inject<SeasonContext>('publicSeasonContext')!
 
-const playoffSeries = ref<PlayoffSeries[]>([])
+const rounds = ref<BracketRoundColumn[]>([])
 const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const errorMessage = ref('')
 let reqId = 0
@@ -31,7 +32,7 @@ function isEliminationStage(stage: V4PublicStageItem): boolean {
 async function load(divisionId: string) {
   const current = ++reqId
   if (!divisionId) {
-    playoffSeries.value = []
+    rounds.value = []
     state.value = 'empty'
     return
   }
@@ -44,27 +45,35 @@ async function load(divisionId: string) {
       .sort((a, b) => (a.stageOrder ?? 0) - (b.stageOrder ?? 0))
     if (!stages.length) {
       if (current !== reqId) return
-      playoffSeries.value = []
+      rounds.value = []
       state.value = 'empty'
       return
     }
-    const buckets: BracketStageBucket[] = await Promise.all(
+
+    const seriesBuckets = await Promise.all(
       stages.map(async (stage) => {
-        const bracketRes = await getV4PublicStageBracket(stage.stageId)
-        return {
-          stageId: stage.stageId,
-          stageOrder: stage.stageOrder,
-          stageName: stage.stageName,
-          matches: bracketRes.data ?? [],
-        }
+        const res = await getV4PublicStageSeries(stage.stageId)
+        return res.data ?? []
       }),
     )
+    let next = groupPublicSeriesToRounds(seriesBuckets.flat())
+
+    if (!next.length) {
+      const matchBuckets = await Promise.all(
+        stages.map(async (stage) => {
+          const res = await getV4PublicStageBracket(stage.stageId)
+          return res.data ?? []
+        }),
+      )
+      next = groupMatchItemsToRounds(matchBuckets.flat())
+    }
+
     if (current !== reqId) return
-    playoffSeries.value = v4BracketToPlayoffSeries(buckets)
-    state.value = playoffSeries.value.length ? 'success' : 'empty'
+    rounds.value = next
+    state.value = next.length ? 'success' : 'empty'
   } catch (err) {
     if (current !== reqId) return
-    playoffSeries.value = []
+    rounds.value = []
     state.value = 'error'
     errorMessage.value = err instanceof Error ? err.message : '加载对阵图失败'
   }
@@ -78,323 +87,376 @@ watch(
   { immediate: true },
 )
 
-const leftQuarter = computed(() =>
-  playoffSeries.value.filter((item) => item.round === 'quarterfinal' && item.side === 'left'),
-)
-const rightQuarter = computed(() =>
-  playoffSeries.value.filter((item) => item.round === 'quarterfinal' && item.side === 'right'),
-)
-const leftSemi = computed(() =>
-  playoffSeries.value.find((item) => item.round === 'semifinal' && item.side === 'left'),
-)
-const rightSemi = computed(() =>
-  playoffSeries.value.find((item) => item.round === 'semifinal' && item.side === 'right'),
-)
-const extraSeries = computed(() => {
-  const qf = playoffSeries.value.filter((item) => item.round === 'quarterfinal')
-  const used = new Set(
-    [...leftQuarter.value.slice(0, 2), ...rightQuarter.value.slice(0, 2)].filter(Boolean).map((item) => item.id),
-  )
-  return qf.filter((item) => !used.has(item.id))
+// halfSize = playoffParticipantCount / 2; membership follows real MatchSeries, not qualificationCount.
+const layout = computed(() => toMirroredBracket(rounds.value))
+
+const leagueName = computed(() => {
+  const name = ctx.overview.value?.tournamentName || ctx.seasonDetail.value?.seriesName || ''
+  return String(name).trim()
 })
-const finalSeries = computed(() => playoffSeries.value.find((item) => item.round === 'final'))
+
+const boardMinWidth = computed(() => {
+  const columns = layout.value.left.length + layout.value.right.length + 1
+  const connectors = Math.max(columns - 1, 0)
+  return `${columns * 248 + connectors * 28}px`
+})
+
+function railKind(fromCount: number, toCount: number): 'merge' | 'line' {
+  return fromCount > toCount ? 'merge' : 'line'
+}
+
+function railUnits(fromCount: number, toCount: number): number {
+  if (fromCount > toCount && toCount > 0) return toCount
+  return 1
+}
+
+function leftGap(index: number): { from: number; to: number } {
+  return {
+    from: layout.value.left[index]?.series.length || 0,
+    to: layout.value.left[index + 1]?.series.length || 1,
+  }
+}
+
+function rightGap(index: number): { from: number; to: number } {
+  if (index === 0) {
+    return { from: 1, to: layout.value.right[0]?.series.length || 1 }
+  }
+  return {
+    from: layout.value.right[index]?.series.length || 0,
+    to: layout.value.right[index - 1]?.series.length || 1,
+  }
+}
+
+function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
+  return series.some((item) => String(item.seriesStatus || '').toUpperCase() === 'COMPLETED')
+}
 </script>
+
 <template>
   <section class="playoff-bracket">
-    <div class="playoff-bracket__heading">
-      <span class="playoff-bracket__league">{{ ctx.currentTournament?.value?.tournamentName || ctx.divisionDetail?.value?.seriesName || 'CNPA' }}</span>
-      <h3 class="playoff-bracket__title">
+    <header class="playoff-bracket__heading">
+      <p v-if="leagueName" class="playoff-bracket__league">{{ leagueName }}</p>
+      <h3>
         <i aria-hidden="true" />
         季后赛对阵图
         <i aria-hidden="true" />
       </h3>
-    </div>
+    </header>
 
-    <p v-if="state === 'loading'" class="playoff-bracket__scroll-hint" style="display: block">加载对阵图...</p>
-    <p v-else-if="state === 'error'" class="playoff-bracket__scroll-hint" style="display: block">{{ errorMessage }}</p>
-    <p v-else-if="state === 'empty'" class="playoff-bracket__scroll-hint" style="display: block">暂无淘汰赛对阵</p>
-    <p v-else class="playoff-bracket__scroll-hint">左右滑动查看完整对阵</p>
+    <p v-if="state === 'loading'" class="playoff-bracket__state">加载对阵图...</p>
+    <p v-else-if="state === 'error'" class="playoff-bracket__state">{{ errorMessage }}</p>
+    <p v-else-if="state === 'empty'" class="playoff-bracket__state">暂无淘汰赛对阵</p>
 
-    <div v-if="state === 'success' && extraSeries.length" class="playoff-bracket__extra">
-      <PlayoffSeriesCard v-for="item in extraSeries" :key="item.id" :series="item" />
-    </div>
-    <div v-if="state === 'success'" class="playoff-bracket__viewport">
-      <div class="playoff-bracket__board">
-        <div class="playoff-bracket__round playoff-bracket__round--quarter">
-          <div v-if="leftQuarter[0]" class="bracket-match bracket-match--row-top">
-            <PlayoffSeriesCard :series="leftQuarter[0]" />
-          </div>
-          <div v-if="leftQuarter[1]" class="bracket-match bracket-match--row-bottom">
-            <PlayoffSeriesCard :series="leftQuarter[1]" />
-          </div>
-        </div>
-
-        <BracketMergeConnector direction="ltr" />
-
-        <div class="playoff-bracket__round playoff-bracket__round--semifinal">
-          <div v-if="leftSemi" class="bracket-match bracket-match--row-mid">
-            <PlayoffSeriesCard :series="leftSemi" variant="semifinal" />
-          </div>
-        </div>
-
-        <BracketLineConnector direction="ltr" />
-
-        <div class="playoff-bracket__round playoff-bracket__round--final">
-          <div v-if="finalSeries" class="bracket-match bracket-match--row-mid">
-            <PlayoffSeriesCard :series="finalSeries" variant="final" />
-          </div>
-        </div>
-
-        <BracketLineConnector direction="ltr" />
-
-        <div class="playoff-bracket__round playoff-bracket__round--semifinal">
-          <div v-if="rightSemi" class="bracket-match bracket-match--row-mid">
-            <PlayoffSeriesCard :series="rightSemi" variant="semifinal" />
+    <div v-else class="playoff-bracket__viewport">
+      <div class="playoff-bracket__board" :style="{ minWidth: boardMinWidth }">
+        <div class="bracket-half">
+          <div class="bracket-half__cols">
+            <template v-for="(column, index) in layout.left" :key="column.key">
+              <div class="bracket-round">
+                <div class="bracket-round__head">
+                  <strong>{{ column.label }}</strong>
+                  <em>{{ column.labelEn }}</em>
+                </div>
+                <div
+                  v-for="item in column.series"
+                  :key="item.id"
+                  class="bracket-round__slot"
+                >
+                  <PlayoffSeriesCard :series="item" />
+                </div>
+              </div>
+              <div
+                class="bracket-rail"
+                :class="{ 'is-advanced': columnAdvanced(column.series) }"
+                aria-hidden="true"
+              >
+                <div class="bracket-rail__head" />
+                <div class="bracket-rail__body">
+                  <i
+                    v-for="unit in railUnits(leftGap(index).from, leftGap(index).to)"
+                    :key="`${column.key}-u-${unit}`"
+                    :class="`bracket-rail__unit bracket-rail__unit--${railKind(leftGap(index).from, leftGap(index).to)}`"
+                  />
+                </div>
+              </div>
+            </template>
           </div>
         </div>
 
-        <BracketMergeConnector direction="rtl" />
-
-        <div class="playoff-bracket__round playoff-bracket__round--quarter">
-          <div v-if="rightQuarter[0]" class="bracket-match bracket-match--row-top">
-            <PlayoffSeriesCard :series="rightQuarter[0]" />
+        <div class="bracket-final">
+          <div class="bracket-round__head">
+            <strong>总决赛</strong>
+            <em>FINAL</em>
           </div>
-          <div v-if="rightQuarter[1]" class="bracket-match bracket-match--row-bottom">
-            <PlayoffSeriesCard :series="rightQuarter[1]" />
+          <div class="bracket-final__body">
+            <PlayoffSeriesCard v-if="layout.final" :series="layout.final" emphasize />
+          </div>
+        </div>
+
+        <div class="bracket-half">
+          <div class="bracket-half__cols">
+            <template v-for="(column, index) in layout.right" :key="column.key">
+              <div
+                class="bracket-rail is-rtl"
+                :class="{ 'is-advanced': columnAdvanced(column.series) }"
+                aria-hidden="true"
+              >
+                <div class="bracket-rail__head" />
+                <div class="bracket-rail__body">
+                  <i
+                    v-for="unit in railUnits(rightGap(index).from, rightGap(index).to)"
+                    :key="`${column.key}-u-${unit}`"
+                    :class="`bracket-rail__unit bracket-rail__unit--${railKind(rightGap(index).from, rightGap(index).to)}`"
+                  />
+                </div>
+              </div>
+              <div class="bracket-round">
+                <div class="bracket-round__head">
+                  <strong>{{ column.label }}</strong>
+                  <em>{{ column.labelEn }}</em>
+                </div>
+                <div
+                  v-for="item in column.series"
+                  :key="item.id"
+                  class="bracket-round__slot"
+                >
+                  <PlayoffSeriesCard :series="item" />
+                </div>
+              </div>
+            </template>
           </div>
         </div>
       </div>
     </div>
   </section>
 </template>
+
 <style scoped lang="scss">
 .playoff-bracket {
-  --bracket-line-color: rgba(225, 6, 19, 0.78);
-  --bracket-line-width: 1px;
-  --round-one-width: clamp(210px, 16vw, 250px);
-  --semifinal-width: clamp(185px, 14vw, 220px);
-  --final-width: clamp(220px, 17vw, 260px);
-  --merge-line-width: clamp(24px, 2.4vw, 38px);
-  --final-line-width: clamp(24px, 2.6vw, 42px);
   width: 100%;
 }
 
 .playoff-bracket__heading {
-  margin: 6px 0 clamp(14px, 1.2vw, 22px);
+  margin: 0 0 8px;
   text-align: center;
 }
 
 .playoff-bracket__league {
-  display: block;
-  color: #202020;
-  font-size: 13px;
+  margin: 0 0 4px;
+  color: rgba(17, 17, 17, 0.42);
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-.playoff-bracket__title {
-  display: flex;
+.playoff-bracket__heading h3 {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin: 6px 0 0;
-  color: #111111;
-  font-size: clamp(26px, 2vw, 36px);
+  gap: 12px;
+  margin: 0;
+  color: #111;
+  font-size: clamp(22px, 1.8vw, 30px);
   font-weight: 900;
   line-height: 1.1;
 
   i {
-    width: clamp(18px, 1.6vw, 28px);
-    height: 2px;
-    background: #e10613;
-    transform: rotate(-18deg);
-    border-radius: 1px;
-
-    &:last-child {
-      transform: rotate(18deg);
-    }
+    display: block;
+    width: 28px;
+    height: 1px;
+    background: var(--cnpa-red, #e10613);
+    opacity: 0.55;
   }
 }
 
-.playoff-bracket__scroll-hint {
-  display: none;
-  margin: 0 0 10px;
-  color: rgba(17, 17, 17, 0.52);
-  font-size: 12px;
-  text-align: center;
-}
-
-.playoff-bracket__extra {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding: 8px 0 16px;
+.playoff-bracket__state {
+  margin: 0;
+  padding: 16px 0;
+  color: rgba(17, 17, 17, 0.55);
+  font-size: 13px;
 }
 
 .playoff-bracket__viewport {
-  position: relative;
-  width: 100%;
-  margin-top: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .playoff-bracket__board {
-  display: grid;
-  grid-template-columns:
-    var(--round-one-width)
-    var(--merge-line-width)
-    var(--semifinal-width)
-    var(--final-line-width)
-    var(--final-width)
-    var(--final-line-width)
-    var(--semifinal-width)
-    var(--merge-line-width)
-    var(--round-one-width);
-  grid-template-rows:
-    minmax(76px, auto)
-    minmax(24px, 1fr)
-    minmax(76px, auto);
+  display: flex;
   align-items: stretch;
   justify-content: center;
-  width: 100%;
-  height: clamp(360px, 31vw, 420px);
-  min-height: 360px;
-  margin: 0 auto;
-}
-
-.playoff-bracket__round {
-  display: grid;
-  grid-template-rows: subgrid;
-  grid-row: 1 / -1;
+  width: max-content;
+  max-width: 1320px;
   min-height: 0;
+  margin-inline: auto;
 }
 
-.playoff-bracket__round--quarter {
-  grid-template-rows: subgrid;
-  padding-block: clamp(16px, 2vw, 30px);
-  box-sizing: border-box;
-}
-
-.playoff-bracket__round--semifinal,
-.playoff-bracket__round--final {
+.bracket-half {
   display: flex;
-  align-items: center;
-  grid-row: 1 / -1;
-}
-
-.bracket-match {
-  position: relative;
-  width: 100%;
+  flex-direction: column;
   min-width: 0;
 }
 
-.playoff-bracket__round--quarter .bracket-match--row-top {
-  grid-row: 1;
-  align-self: start;
+.bracket-half__cols {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  min-height: 320px;
 }
 
-.playoff-bracket__round--quarter .bracket-match--row-bottom {
-  grid-row: 3;
-  align-self: end;
+.bracket-round {
+  flex: 1 1 240px;
+  max-width: 280px;
+  min-width: 230px;
+  display: flex;
+  flex-direction: column;
 }
 
-.playoff-bracket__round--semifinal .bracket-match,
-.playoff-bracket__round--final .bracket-match {
-  width: 100%;
+.bracket-round__head,
+.bracket-rail__head {
+  min-height: 28px;
+  margin-bottom: 0;
 }
 
-@media (min-width: 1600px) {
-  .playoff-bracket__board {
-    --round-one-width: clamp(235px, 15vw, 250px);
-    --semifinal-width: clamp(205px, 13vw, 220px);
-    --final-width: clamp(240px, 16vw, 260px);
-    --merge-line-width: clamp(32px, 2.2vw, 38px);
-    --final-line-width: clamp(34px, 2.4vw, 42px);
-  }
-}
+.bracket-round__head {
+  text-align: center;
 
-@media (min-width: 1366px) and (max-width: 1599px) {
-  .playoff-bracket__board {
-    --round-one-width: clamp(220px, 15.5vw, 235px);
-    --semifinal-width: clamp(190px, 13vw, 205px);
-    --final-width: clamp(225px, 15.5vw, 240px);
-    --merge-line-width: clamp(28px, 2.2vw, 34px);
-    --final-line-width: clamp(30px, 2.4vw, 36px);
-    height: clamp(350px, 30vw, 400px);
-  }
-}
-
-@media (max-width: 1365px) and (min-width: 1200px) {
-  .playoff-bracket__board {
-    min-width: 1120px;
-    --round-one-width: clamp(200px, 14vw, 220px);
-    --semifinal-width: clamp(178px, 12vw, 195px);
-    --final-width: clamp(210px, 14.5vw, 230px);
-    --merge-line-width: clamp(24px, 2vw, 30px);
-    --final-line-width: clamp(24px, 2.2vw, 32px);
-  }
-}
-
-@media (max-width: 1199px) and (min-width: 1100px) {
-  .playoff-bracket__board {
-    min-width: 1120px;
-    --round-one-width: 200px;
-    --semifinal-width: 178px;
-    --final-width: 210px;
-    --merge-line-width: 24px;
-    --final-line-width: 26px;
-  }
-}
-
-@media (max-width: 1100px) {
-  .playoff-bracket__scroll-hint {
+  strong {
     display: block;
+    color: #111;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.15;
   }
 
-  .playoff-bracket__viewport {
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px;
-
-    &::before,
-    &::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 24px;
-      pointer-events: none;
-      z-index: 2;
-    }
-
-    &::before {
-      left: 0;
-      background: linear-gradient(90deg, rgba(239, 238, 235, 0.95), transparent);
-    }
-
-    &::after {
-      right: 0;
-      background: linear-gradient(270deg, rgba(239, 238, 235, 0.95), transparent);
-    }
-  }
-
-  .playoff-bracket__board {
-    min-width: 1120px;
-    max-width: none;
-    margin-inline: auto;
+  em {
+    display: block;
+    margin-top: 1px;
+    color: var(--cnpa-red, #e10613);
+    font-size: 10px;
+    font-style: italic;
+    font-weight: 800;
+    letter-spacing: 0.06em;
   }
 }
 
-@media (max-width: 767px) {
-  .playoff-bracket__board {
-    min-width: 1080px;
+.bracket-round__slot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-height: 88px;
+  padding: 7px 0;
+}
+
+.bracket-final {
+  flex: 0 0 272px;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  min-width: 250px;
+}
+
+.bracket-final__body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.bracket-rail {
+  flex: 0 0 26px;
+  min-width: 26px;
+  display: flex;
+  flex-direction: column;
+}
+
+.bracket-rail__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.bracket-rail__unit {
+  position: relative;
+  flex: 1;
+  min-height: 88px;
+}
+
+.bracket-rail__unit--line::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: rgba(225, 6, 19, 0.5);
+  transform: translateY(-50%);
+}
+
+.bracket-rail__unit--merge::before {
+  content: '';
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  left: 0;
+  width: 50%;
+  border: 1.5px solid rgba(225, 6, 19, 0.5);
+  border-left: 0;
+}
+
+.bracket-rail__unit--merge::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  right: 0;
+  height: 1.5px;
+  background: rgba(225, 6, 19, 0.5);
+  transform: translateY(-50%);
+}
+
+.bracket-rail.is-rtl {
+  transform: scaleX(-1);
+}
+
+.bracket-rail.is-advanced .bracket-rail__unit--merge::before {
+  border-color: rgba(225, 6, 19, 0.62);
+}
+
+.bracket-rail.is-advanced .bracket-rail__unit--line::after,
+.bracket-rail.is-advanced .bracket-rail__unit--merge::after {
+  background: rgba(225, 6, 19, 0.62);
+}
+
+@media (max-width: 1439px) {
+  .bracket-round {
+    max-width: 250px;
+    min-width: 214px;
+    flex-basis: 214px;
+  }
+
+  .bracket-final {
+    flex-basis: 248px;
+    min-width: 232px;
   }
 }
 
-.playoff-bracket__viewport {
-  padding: 8px 0 16px;
-  border-top: 1px solid rgba(10, 10, 10, 0.08);
-  border-bottom: 1px solid rgba(10, 10, 10, 0.08);
+@media (max-width: 1279px) {
+  .bracket-round {
+    max-width: 230px;
+    min-width: 200px;
+    flex-basis: 200px;
+  }
+
+  .bracket-final {
+    flex-basis: 232px;
+    min-width: 220px;
+  }
+
+  .bracket-rail {
+    flex-basis: 22px;
+    min-width: 22px;
+  }
 }
 </style>

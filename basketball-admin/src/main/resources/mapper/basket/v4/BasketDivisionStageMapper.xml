@@ -172,13 +172,22 @@
         where id = #{id} and <include refid="NotDeleted"/>
     </update>
 
+    <!-- is_delete is TINYINT: cannot store id. Use 1 + uniquify UK columns (code + order). -->
     <update id="softDeleteById">
-        update basket_division_stage set is_delete = 1, stage_order = id, update_time = now()
+        update basket_division_stage
+        set is_delete = 1,
+            stage_order = id,
+            stage_code = concat(left(stage_code, 40), '#', id),
+            update_time = now()
         where id = #{id} and <include refid="NotDeleted"/>
     </update>
 
     <update id="softDeleteBySnapshotId">
-        update basket_division_stage set is_delete = 1, stage_order = id, update_time = now()
+        update basket_division_stage
+        set is_delete = 1,
+            stage_order = id,
+            stage_code = concat(left(stage_code, 40), '#', id),
+            update_time = now()
         where snapshot_id = #{snapshotId} and <include refid="NotDeleted"/>
     </update>
 </mapper>

@@ -77,6 +77,11 @@
   box-sizing: border-box;
 }
 
+.app > .site-header,
+.app > .web-footer {
+  flex: 0 0 auto;
+}
+
 .app:has(.home-page) > .site-main {
   flex-grow: 0;
 }

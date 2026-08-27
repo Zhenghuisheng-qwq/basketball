@@ -11,7 +11,6 @@ import ComparisonMetricRow from '@/components/team/ComparisonMetricRow.vue'
 import ComparisonSummaryCard from '@/components/team/ComparisonSummaryCard.vue'
 import TeamSelectModal from '@/components/team/TeamSelectModal.vue'
 import TeamLogo from '@/components/team/TeamLogo.vue'
-import PaperTear from '@/components/common/PaperTear.vue'
 import {
   getV4PublicSeasonList,
   getV4PublicStanding,
@@ -154,10 +153,22 @@ const overviewIconMap: Record<string, string> = {
   场均净胜分: compareIcon4,
 }
 
-const modalSideText = computed(() => {
-  if (selectorSide.value === 'left') return '正在更换左侧球队'
-  if (!rightTeamId.value) return '正在选择对比球队'
-  return '正在更换右侧球队'
+const selectorContextText = computed(() => {
+  const season = displayText(selectedSeason.value?.displayTitle || seasonTitle.value, '')
+  const platform = selectedDivision.value
+    ? v4PlatformLabel(selectedDivision.value.platformCode)
+    : ''
+  const division = selectedDivision.value
+    ? displayText(selectedDivision.value.divisionName)
+    : ''
+  let eventPart = ''
+  if (platform && division) {
+    eventPart = division.includes(platform) ? division : `${platform} / ${division}`
+  } else {
+    eventPart = division || platform
+  }
+  if (season && eventPart) return `${season} · ${eventPart}`
+  return season || eventPart
 })
 
 const modalDisabledTeamIds = computed(() => {
@@ -535,7 +546,6 @@ function getTeamNameSizeClass(name: string) {
       </section>
 
       <div class="compare-paper">
-        <PaperTear position="top" tone="light" />
         <div class="compare-paper__body">
           <div class="site-shell-inner compare-content team-comparison">
             <header class="comparison-heading">
@@ -616,15 +626,13 @@ function getTeamNameSizeClass(name: string) {
 
     <TeamSelectModal
       :visible="selectorVisible"
-      title="选择球队"
-      subtitle="点击球队即可完成更换"
-      :competition-text="compareCompetitionText"
+      :division-id="selectedDivisionId"
+      :current-team-id="leftTeamId"
+      :competition-text="selectorContextText"
       :disabled-team-ids="modalDisabledTeamIds"
       :selected-team-ids="modalSelectedTeamIds"
-      :side-text="modalSideText"
       :teams="teamOptions"
       :teams-state="teamsLoadState"
-      :show-scope-selectors="false"
       @close="closeSelector"
       @select="handleTeamSelect"
     />

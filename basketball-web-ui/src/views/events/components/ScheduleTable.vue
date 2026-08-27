@@ -2,11 +2,11 @@
 import TeamEntryLink from '@/components/team/TeamEntryLink.vue'
 import type { V4PublicScheduleItem } from '@/api/types/v4Public'
 import TeamLogo from './TeamLogo.vue'
+import { publicContestDetailLabel } from '@/utils/v4Display'
 import {
   formatMatchNo,
   formatScheduleClock,
   formatStageRoundBlock,
-  hasOfficialStats,
   isScheduleSeries,
   isWinningSide,
   scheduleBestOfLabel,
@@ -50,17 +50,23 @@ function isUpcoming(item: V4PublicScheduleItem): boolean {
   return scheduleStatusTone(item) === 'scheduled' || scheduleStatusTone(item) === 'cancelled'
 }
 
-function canStats(item: V4PublicScheduleItem): boolean {
-  return hasOfficialStats(item)
+function canOpenDetail(item: V4PublicScheduleItem): boolean {
+  if (!item.id) return false
+  if (isScheduleSeries(item)) return true
+  return !isUpcoming(item)
 }
 
-function onStats(item: V4PublicScheduleItem) {
-  if (!canStats(item)) return
+function onOpenDetail(item: V4PublicScheduleItem) {
+  if (!canOpenDetail(item)) return
   if (isScheduleSeries(item)) {
     emit('openSeries', item)
     return
   }
-  emit('openStats', item)
+  emit('openMatch', item)
+}
+
+function detailLabel(item: V4PublicScheduleItem): string {
+  return publicContestDetailLabel(item.unitType)
 }
 
 function teamName(item: V4PublicScheduleItem, side: 'home' | 'away'): string {
@@ -146,7 +152,7 @@ function roundText(item: V4PublicScheduleItem): string {
 
       <div class="action-cell">
         <button
-          v-if="isUpcoming(item)"
+          v-if="!canOpenDetail(item)"
           type="button"
           class="match-action-btn waiting-btn"
           disabled
@@ -161,13 +167,9 @@ function roundText(item: V4PublicScheduleItem): string {
           v-else
           type="button"
           class="match-action-btn"
-          :disabled="!canStats(item)"
-          @click="onStats(item)"
+          @click="onOpenDetail(item)"
         >
-          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-            <path d="M3 12.5V8.2M8 12.5V4.5M13 12.5V6.5" fill="none" stroke="currentColor" stroke-width="1.6" />
-          </svg>
-          技术统计
+          {{ detailLabel(item) }}
         </button>
       </div>
     </article>

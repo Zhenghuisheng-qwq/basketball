@@ -6,6 +6,8 @@ import type { V4PublicMatchDetail, V4PublicMatchSeriesDetail } from '@/api/types
 import PaperSection from '@/components/common/PaperSection.vue'
 import { requiresPeriodScores } from '@/utils/fullMatchSubmissionRules'
 import {
+  publicContestDetailLabel,
+  publicContestDetailPath,
   v4BestOfLabel,
   v4MatchStatusLabel,
   v4PublicRoundLabel,
@@ -16,7 +18,7 @@ import SeriesProgress from '../match-detail/SeriesProgress.vue'
 import SeriesGameTabs from '../match-detail/SeriesGameTabs.vue'
 import PeriodScoreBoard from '../match-detail/PeriodScoreBoard.vue'
 import BoxScorePanel from '../match-detail/BoxScorePanel.vue'
-import seriesHeroBg from '@/assets/icon/score/detail_top_background.png'
+import heroBg from '@/assets/icon/score/detail_top_background.png'
 import {
   SERIES_TOTAL_TAB,
   formatMatchWhen,
@@ -136,7 +138,15 @@ const breadcrumb = computed(() => {
   const eventName = series.value?.eventSeriesName
     || match.value?.seriesName
     || '赛事'
-  return ['赛事', eventName, seriesMode.value ? '系列赛详情' : '比赛详情']
+  return ['赛事', eventName, seriesMode.value ? publicContestDetailLabel('MATCH_SERIES') : publicContestDetailLabel('MATCH')]
+})
+
+const parentSeriesPath = computed(() => {
+  if (seriesMode.value) return ''
+  return publicContestDetailPath({
+    unitType: 'MATCH_SERIES',
+    matchSeriesId: match.value?.matchSeriesId,
+  })
 })
 
 const showSeriesTabs = computed(() => seriesMode.value && seriesTabs.value.length > 0)
@@ -214,13 +224,33 @@ function syncSelectedTeam() {
   }
 }
 
+function contestQuery() {
+  const seasonId = series.value?.seasonId || match.value?.seasonId || String(route.query.seasonId || '')
+  const divisionId = series.value?.divisionId || match.value?.divisionId || String(route.query.divisionId || '')
+  return {
+    ...(seasonId ? { seasonId } : {}),
+    ...(divisionId ? { divisionId } : {}),
+  }
+}
+
+function goRealMatchDetail(id: string) {
+  return router.push({
+    path: `/events/match/${id}`,
+    query: contestQuery(),
+  })
+}
+
 function applyTabFromRoute() {
   if (!seriesMode.value) {
     activeTab.value = SERIES_TOTAL_TAB
     return
   }
   if (gameQuery.value && visibleGames.value.some((game) => String(game.matchId) === gameQuery.value)) {
-    activeTab.value = gameQuery.value
+    activeTab.value = SERIES_TOTAL_TAB
+    void router.replace({
+      path: `/events/match/${gameQuery.value}`,
+      query: contestQuery(),
+    })
     return
   }
   activeTab.value = SERIES_TOTAL_TAB
@@ -296,24 +326,15 @@ async function loadPage() {
 }
 
 async function onTabChange(tab: string) {
-  activeTab.value = tab
-  const query = { ...route.query }
-  if (tab === SERIES_TOTAL_TAB) {
-    delete query.game
-  } else {
-    query.game = tab
-  }
-  await router.replace({ path: route.path, query })
-  if (tab === SERIES_TOTAL_TAB) {
-    match.value = null
-    syncSelectedTeam()
+  if (tab !== SERIES_TOTAL_TAB) {
+    await goRealMatchDetail(tab)
     return
   }
-  try {
-    await loadMatchById(tab)
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '加载场次失败'
-  }
+  activeTab.value = SERIES_TOTAL_TAB
+  const query = { ...route.query }
+  delete query.game
+  await router.replace({ path: route.path, query })
+  match.value = null
   syncSelectedTeam()
 }
 
@@ -344,17 +365,16 @@ onMounted(() => {
 
 <template>
   <div class="match-detail-page">
-    <section class="site-section match-detail-hero" :class="{ 'is-series': seriesMode }">
+    <section class="site-section match-detail-hero">
       <div class="site-shell">
         <div class="match-detail-hero__frame">
           <img
-            v-if="seriesMode"
             class="match-detail-hero__image"
-            :src="seriesHeroBg"
+            :src="heroBg"
             alt=""
             draggable="false"
           />
-          <div v-if="seriesMode" class="match-detail-hero__shade" aria-hidden="true" />
+          <div class="match-detail-hero__shade" aria-hidden="true" />
           <div class="match-detail-hero__body">
         <nav class="match-detail-crumb">
           <router-link to="/events">赛事</router-link>
@@ -362,6 +382,10 @@ onMounted(() => {
           <router-link :to="seasonPath">{{ breadcrumb[1] }}</router-link>
           <span>/</span>
           <strong>{{ breadcrumb[2] }}</strong>
+          <template v-if="parentSeriesPath">
+            <span>/</span>
+            <router-link :to="parentSeriesPath">{{ publicContestDetailLabel('MATCH_SERIES') }}</router-link>
+          </template>
         </nav>
         <div v-if="loading" class="match-detail-state">加载中...</div>
         <div v-else-if="error" class="match-detail-state is-error">{{ error }}</div>
@@ -408,7 +432,7 @@ onMounted(() => {
       class="site-section match-detail-content"
     >
       <div class="site-shell">
-        <PaperSection edge="both" tone="light" class="match-detail-paper">
+        <PaperSection edge="none" tone="light" class="match-detail-paper">
           <div class="match-detail-paper__inner">
             <PeriodScoreBoard
               v-if="showPeriodBoard && match"
@@ -447,23 +471,13 @@ onMounted(() => {
 }
 
 .match-detail-hero {
-  background:
-    radial-gradient(circle at 50% 0%, rgba(229, 20, 34, 0.22), transparent 42%),
-    linear-gradient(180deg, #141414 0%, #050505 100%);
-  padding: 28px 0 36px;
-  color: #fff;
-}
-
-.match-detail-hero.is-series {
   background: #050505;
   padding: 0;
+  color: #fff;
 }
 
 .match-detail-hero__frame {
   position: relative;
-}
-
-.match-detail-hero.is-series .match-detail-hero__frame {
   overflow: hidden;
 }
 
@@ -491,9 +505,6 @@ onMounted(() => {
 .match-detail-hero__body {
   position: relative;
   z-index: 2;
-}
-
-.match-detail-hero.is-series .match-detail-hero__body {
   padding: 28px 0 36px;
 }
 
@@ -555,7 +566,7 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
-  .match-detail-hero {
+  .match-detail-hero__body {
     padding-top: 18px;
   }
 

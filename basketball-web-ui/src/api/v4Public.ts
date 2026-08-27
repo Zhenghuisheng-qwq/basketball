@@ -109,6 +109,12 @@ export function getV4PublicStageBracket(stageId: string) {
   return request.get<any, ApiResult<V4PublicMatchItem[]>>(`/basket/v4/public/stage/${stageId}/bracket`)
 }
 
+export function getV4PublicStageSeries(stageId: string) {
+  return request.get<any, ApiResult<V4PublicMatchSeriesDetail[]>>(
+    `/basket/v4/public/match-series/stage/${stageId}`,
+  )
+}
+
 export function getV4PublicTeamStat(divisionId: string) {
   return request.get<any, ApiResult<V4PublicTeamStatItem[]>>('/basket/v4/public/stats/team-stat', {
     params: { divisionId },

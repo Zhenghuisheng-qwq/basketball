@@ -47,10 +47,10 @@ function onStageChange(event: Event) {
 <style scoped lang="scss">
 .stage-progress-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 32px;
-  margin-bottom: clamp(18px, 2vw, 28px);
+  gap: 20px;
+  margin-bottom: clamp(16px, 1.6vw, 22px);
 }
 
 .stage-progress-header__title {

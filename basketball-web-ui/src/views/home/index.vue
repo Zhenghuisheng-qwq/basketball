@@ -231,7 +231,7 @@ function matchActionLabel(match: PublicMatchItemVo): string {
     case 'live':
       return '进入比赛'
     case 'finished':
-      return '查看比赛详情'
+      return '查看本场详情'
     default:
       return '未开始'
   }

@@ -37,13 +37,22 @@
         )
     </insert>
 
+    <!-- is_delete is TINYINT: cannot store id. Use 1 + uniquify UK columns (priority + rule). -->
     <update id="softDeleteBySnapshotId">
-        update basket_division_tie_break_rule set is_delete = 1, update_time = now()
+        update basket_division_tie_break_rule
+        set is_delete = 1,
+            priority_no = id,
+            rule_code = concat(left(rule_code, 10), '#', id),
+            update_time = now()
         where snapshot_id = #{snapshotId} and is_delete = 0
     </update>
 
     <update id="softDeleteByStageId">
-        update basket_division_tie_break_rule set is_delete = 1, update_time = now()
+        update basket_division_tie_break_rule
+        set is_delete = 1,
+            priority_no = id,
+            rule_code = concat(left(rule_code, 10), '#', id),
+            update_time = now()
         where stage_id = #{stageId} and is_delete = 0
     </update>
 </mapper>

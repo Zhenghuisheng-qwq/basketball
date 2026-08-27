@@ -13,7 +13,6 @@ interface ArchiveBlock {
   subtitle: string
   emptyTitle: string
   emptyDesc: string
-  icon: 'trophy' | 'card' | 'image'
 }
 
 interface TeamHonorItem {
@@ -21,24 +20,20 @@ interface TeamHonorItem {
   honorTitle: string
   competitionName: string
   date: string
-  isLatest?: boolean
 }
 
 interface TeamNameHistoryItem {
   id: string
-  name: string
-  period: string
-  note: string
-  isCurrent?: boolean
+  oldName: string
+  newName: string
+  date: string
 }
 
 interface TeamLogoHistoryItem {
   id: string
-  label: string
-  period: string
-  logo?: string
-  oldLogo?: string
-  isCurrent?: boolean
+  oldLogo: string
+  newLogo: string
+  date: string
 }
 
 const archiveBlocks: ArchiveBlock[] = [
@@ -48,43 +43,64 @@ const archiveBlocks: ArchiveBlock[] = [
     subtitle: 'Team Honors',
     emptyTitle: '暂无球队荣誉',
     emptyDesc: '球队获得荣誉并发布后将在此展示',
-    icon: 'trophy',
   },
   {
     key: 'names',
     title: '球队名称',
     subtitle: 'Name History',
-    emptyTitle: '暂无球队名称变更记录',
-    emptyDesc: '球队更名并通过赛事审核后将在此展示',
-    icon: 'card',
+    emptyTitle: '暂无名称变更记录',
+    emptyDesc: '球队更名记录将在审核通过后展示',
   },
   {
     key: 'logos',
     title: '球队 Logo',
     subtitle: 'Logo History',
-    emptyTitle: '暂无球队 Logo 变更记录',
-    emptyDesc: '球队更换 Logo 并通过赛事审核后将在此展示',
-    icon: 'image',
+    emptyTitle: '暂无 Logo 变更记录',
+    emptyDesc: 'Logo 变更记录将在审核通过后展示',
   },
 ]
 
 const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
 
-const honorState = ref<'loading' | 'success' | 'empty' | 'error'>('empty')
-const honorError = ref('')
+const archiveState = ref<'loading' | 'success' | 'empty' | 'error'>('empty')
+const archiveError = ref('')
 const honors = ref<TeamHonorItem[]>([])
 const nameHistory = ref<TeamNameHistoryItem[]>([])
 const logoHistory = ref<TeamLogoHistoryItem[]>([])
 let reqId = 0
 
-function formatPeriod(value?: string | null): string {
+function formatArchiveDate(value?: string | null): string {
   const dt = formatDateTime(value || '')
   return dt.date === '--' ? '' : dt.date
+}
+
+function rawText(value?: string | null): string {
+  return value == null ? '' : String(value).trim()
 }
 
 function hideBrokenLogo(event: Event) {
   const img = event.target as HTMLImageElement | null
   if (img) img.style.display = 'none'
+}
+
+function honorMeta(honor: TeamHonorItem): string {
+  return [honor.competitionName, honor.date].filter(Boolean).join(' · ')
+}
+
+function hasNamePair(item: TeamNameHistoryItem): boolean {
+  return Boolean(item.oldName && item.newName)
+}
+
+function singleName(item: TeamNameHistoryItem): string {
+  return item.oldName || item.newName || '名称变更'
+}
+
+function hasLogoPair(item: TeamLogoHistoryItem): boolean {
+  return Boolean(item.oldLogo && item.newLogo)
+}
+
+function singleLogo(item: TeamLogoHistoryItem): string {
+  return item.newLogo || item.oldLogo
 }
 
 async function loadArchive() {
@@ -94,11 +110,11 @@ async function loadArchive() {
     honors.value = []
     nameHistory.value = []
     logoHistory.value = []
-    honorState.value = 'empty'
+    archiveState.value = 'empty'
     return
   }
-  honorState.value = 'loading'
-  honorError.value = ''
+  archiveState.value = 'loading'
+  archiveError.value = ''
   try {
     const res = await getV4PublicTeamArchive(teamId)
     if (current !== reqId) return
@@ -106,33 +122,32 @@ async function loadArchive() {
     honors.value = (data?.honors ?? []).map((item, index) => ({
       id: String(item.honorId || index),
       honorTitle: displayText(item.honorTitle, '荣誉'),
-      competitionName: displayText(item.competitionName, ''),
-      date: formatPeriod(item.awardDate),
-      isLatest: index === 0,
+      competitionName: rawText(item.competitionName),
+      date: formatArchiveDate(item.awardDate),
     }))
     nameHistory.value = (data?.nameHistory ?? []).map((item, index) => ({
       id: String(item.changeId || index),
-      name: `${displayText(item.oldName, '--')} → ${displayText(item.newName, '--')}`,
-      period: formatPeriod(item.approvedAt || item.submittedAt),
-      note: '审核通过后生效',
-      isCurrent: index === 0,
+      oldName: rawText(item.oldName),
+      newName: rawText(item.newName),
+      date: formatArchiveDate(item.approvedAt || item.submittedAt),
     }))
     logoHistory.value = (data?.logoHistory ?? []).map((item, index) => ({
       id: String(item.changeId || index),
-      label: 'Logo 变更',
-      period: formatPeriod(item.approvedAt || item.submittedAt),
-      logo: item.newLogoUrl || '',
-      oldLogo: item.oldLogoUrl || '',
-      isCurrent: index === 0,
+      oldLogo: rawText(item.oldLogoUrl),
+      newLogo: rawText(item.newLogoUrl),
+      date: formatArchiveDate(item.approvedAt || item.submittedAt),
     }))
-    honorState.value = honors.value.length ? 'success' : 'empty'
+    archiveState.value =
+      honors.value.length || nameHistory.value.length || logoHistory.value.length
+        ? 'success'
+        : 'empty'
   } catch (err) {
     if (current !== reqId) return
     honors.value = []
     nameHistory.value = []
     logoHistory.value = []
-    honorState.value = 'error'
-    honorError.value = err instanceof Error ? err.message : '加载球队档案失败'
+    archiveState.value = 'error'
+    archiveError.value = err instanceof Error ? err.message : '加载球队档案失败'
   }
 }
 
@@ -145,19 +160,8 @@ function hasBlockData(key: ArchiveBlock['key']): boolean {
   if (key === 'names') return nameHistory.value.length > 0
   return logoHistory.value.length > 0
 }
-
-function getHonorInitial(honor: TeamHonorItem): string {
-  return honor.honorTitle.trim().slice(0, 1) || '荣'
-}
-
-function getNameInitial(item: TeamNameHistoryItem): string {
-  return item.name.trim().slice(0, 1) || '名'
-}
-
-function getLogoInitial(item: TeamLogoHistoryItem): string {
-  return item.label.trim().slice(0, 1) || 'L'
-}
 </script>
+
 <template>
   <div class="team-archive">
     <header class="archive-header">
@@ -175,81 +179,104 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
       </div>
 
       <div
-        v-if="block.key === 'honors' && honorState === 'loading'"
-        class="empty-card"
+        v-if="archiveState === 'loading'"
+        class="empty-row"
+        role="status"
       >
-        <h4>加载中...</h4>
+        <div class="empty-row__text">
+          <strong>加载中...</strong>
+        </div>
       </div>
       <div
-        v-else-if="block.key === 'honors' && honorState === 'error'"
-        class="empty-card"
+        v-else-if="archiveState === 'error'"
+        class="empty-row empty-row--error"
+        role="alert"
       >
-        <h4>加载失败</h4>
-        <p>{{ honorError }}</p>
+        <div class="empty-row__text">
+          <strong>加载失败</strong>
+          <span>{{ archiveError }}</span>
+        </div>
       </div>
-      <div v-else-if="!hasBlockData(block.key)" class="empty-card">
-        <div class="empty-icon" :class="`empty-icon--${block.icon}`" aria-hidden="true" />
-        <h4>{{ block.emptyTitle }}</h4>
-        <p>{{ block.emptyDesc }}</p>
+      <div
+        v-else-if="!hasBlockData(block.key)"
+        class="empty-row"
+        role="status"
+      >
+        <div class="empty-row__text">
+          <strong>{{ block.emptyTitle }}</strong>
+          <span>{{ block.emptyDesc }}</span>
+        </div>
       </div>
 
-      <div v-else-if="block.key === 'honors'" class="archive-list">
+      <div v-else-if="block.key === 'honors'" class="honor-list">
         <article
           v-for="honor in honors"
           :key="honor.id"
-          class="archive-item archive-item--honor"
+          class="honor-item"
         >
-          <div class="archive-item__badge">{{ getHonorInitial(honor) }}</div>
-          <div class="archive-item__content">
-            <strong class="archive-item__title">{{ honor.honorTitle }}</strong>
-            <span class="archive-item__meta">{{ honor.competitionName }} · {{ honor.date }}</span>
+          <div class="honor-item__body">
+            <strong class="honor-item__title">{{ honor.honorTitle }}</strong>
+            <span v-if="honorMeta(honor)" class="honor-item__meta">{{ honorMeta(honor) }}</span>
           </div>
-          <span v-if="honor.isLatest" class="archive-item__tag">最新</span>
         </article>
       </div>
 
-      <div v-else-if="block.key === 'names'" class="archive-list">
-        <article
+      <ol v-else-if="block.key === 'names'" class="archive-timeline">
+        <li
           v-for="item in nameHistory"
           :key="item.id"
-          class="archive-item archive-item--name"
+          class="timeline-item"
         >
-          <div class="archive-item__badge">{{ getNameInitial(item) }}</div>
-          <div class="archive-item__content">
-            <strong class="archive-item__title">{{ item.name }}</strong>
-            <span class="archive-item__meta">{{ item.period }} · {{ item.note }}</span>
+          <div class="timeline-item__rail" aria-hidden="true">
+            <span class="timeline-item__dot" />
           </div>
-          <span v-if="item.isCurrent" class="archive-item__tag">当前</span>
-        </article>
-      </div>
+          <div class="timeline-item__body">
+            <time v-if="item.date" class="timeline-item__date">{{ item.date }}</time>
+            <div v-if="hasNamePair(item)" class="timeline-item__change">
+              <span>{{ item.oldName }}</span>
+              <span class="timeline-item__arrow" aria-hidden="true">→</span>
+              <strong>{{ item.newName }}</strong>
+            </div>
+            <strong v-else class="timeline-item__title">{{ singleName(item) }}</strong>
+          </div>
+        </li>
+      </ol>
 
-      <div v-else class="archive-list archive-list--logos">
-        <article
+      <ol v-else class="archive-timeline">
+        <li
           v-for="item in logoHistory"
           :key="item.id"
-          class="archive-item archive-item--logo"
+          class="timeline-item timeline-item--logo"
         >
-          <div class="archive-item__logo">
-            <img v-if="item.oldLogo" :src="item.oldLogo" alt="变更前 Logo" @error="hideBrokenLogo" />
-            <span v-else>{{ getLogoInitial(item) }}</span>
+          <div class="timeline-item__rail" aria-hidden="true">
+            <span class="timeline-item__dot" />
           </div>
-          <span class="archive-item__arrow" aria-hidden="true">→</span>
-          <div class="archive-item__logo">
-            <img v-if="item.logo" :src="item.logo" alt="变更后 Logo" @error="hideBrokenLogo" />
-            <span v-else>{{ getLogoInitial(item) }}</span>
+          <div class="timeline-item__body">
+            <time v-if="item.date" class="timeline-item__date">{{ item.date }}</time>
+            <div v-if="hasLogoPair(item)" class="logo-compare">
+              <div class="logo-compare__mark">
+                <img :src="item.oldLogo" alt="变更前 Logo" @error="hideBrokenLogo" />
+              </div>
+              <span class="timeline-item__arrow" aria-hidden="true">→</span>
+              <div class="logo-compare__mark">
+                <img :src="item.newLogo" alt="变更后 Logo" @error="hideBrokenLogo" />
+              </div>
+            </div>
+            <div v-else-if="singleLogo(item)" class="logo-compare">
+              <div class="logo-compare__mark">
+                <img :src="singleLogo(item)" alt="球队 Logo" @error="hideBrokenLogo" />
+              </div>
+            </div>
+            <span class="timeline-item__caption">Logo 更新</span>
           </div>
-          <div class="archive-item__content">
-            <strong class="archive-item__title">{{ item.label }}</strong>
-            <span class="archive-item__meta">{{ item.period }}</span>
-          </div>
-          <span v-if="item.isCurrent" class="archive-item__tag">当前</span>
-        </article>
-      </div>
+        </li>
+      </ol>
     </section>
 
-    <p class="archive-note">ⓘ 仅展示赛事审核通过并实际使用过的球队历史记录</p>
+    <p class="archive-note">仅展示赛事审核通过并实际使用过的球队历史记录</p>
   </div>
 </template>
+
 <style scoped lang="scss">
 .team-archive {
   background: transparent;
@@ -257,14 +284,14 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
 }
 
 .archive-header {
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 .archive-title {
   display: flex;
   align-items: flex-end;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 12px;
 }
 
 .archive-title__cn {
@@ -287,14 +314,14 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
 }
 
 .archive-header__desc {
-  margin: 13px 0 0;
+  margin: 10px 0 0;
   color: rgba(0, 0, 0, 0.6);
   font-size: 14px;
   font-weight: 600;
 }
 
-.archive-block {
-  margin-top: 26px;
+.archive-block + .archive-block {
+  margin-top: 32px;
 }
 
 .block-title {
@@ -302,7 +329,7 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 
   &::before {
     content: '';
@@ -317,6 +344,7 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
   margin: 0;
   font-size: 22px;
   font-weight: 900;
+  line-height: 1;
 }
 
 .block-title__en {
@@ -325,60 +353,221 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  line-height: 1;
 }
 
-.empty-card {
-  padding: 28px 22px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.28);
-
-  h4 {
-    margin: 0 0 8px;
-    font-size: 16px;
-  }
-
-  p {
-    margin: 0;
-    color: rgba(0, 0, 0, 0.55);
-    font-size: 13px;
-  }
-}
-
-.empty-icon {
-  width: 36px;
-  height: 36px;
-  margin-bottom: 12px;
-  border-radius: 50%;
-  background: rgba(225, 6, 19, 0.12);
-}
-
-.archive-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.archive-item {
+.empty-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  min-height: 76px;
   padding: 14px 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(243, 242, 241, 0.72);
+  box-sizing: border-box;
 }
 
-.archive-item__badge,
-.archive-item__logo {
+.empty-row--error {
+  border-color: rgba(225, 6, 19, 0.18);
+}
+
+.empty-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+
+  strong {
+    color: rgba(17, 17, 17, 0.78);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.3;
+  }
+
+  span {
+    color: rgba(17, 17, 17, 0.48);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+}
+
+.honor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.honor-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+  transition: background 0.18s ease;
+
+  &::before {
+    content: '';
+    width: 3px;
+    align-self: stretch;
+    min-height: 28px;
+    background: var(--cnpa-red);
+    flex-shrink: 0;
+    opacity: 0.72;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.96);
+  }
+}
+
+.honor-item__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.honor-item__title {
+  display: block;
+  color: #111;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.honor-item__meta {
+  display: block;
+  margin-top: 4px;
+  color: rgba(17, 17, 17, 0.52);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.archive-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.06);
+
+  &:last-child {
+    border-bottom: 0;
+    padding-bottom: 2px;
+  }
+}
+
+.timeline-item__rail {
+  display: flex;
+  justify-content: center;
+  width: 12px;
+  flex-shrink: 0;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 16px;
+    bottom: -14px;
+    left: 50%;
+    width: 1px;
+    background: rgba(17, 17, 17, 0.1);
+    transform: translateX(-50%);
+  }
+}
+
+.timeline-item:last-child .timeline-item__rail::after {
+  display: none;
+}
+
+.timeline-item__dot {
+  position: relative;
+  z-index: 1;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--cnpa-red);
+  box-shadow: 0 0 0 3px rgba(225, 6, 19, 0.08);
+}
+
+.timeline-item__body {
+  min-width: 0;
+  flex: 1;
+  padding: 2px 8px 2px 0;
+  border-radius: 0;
+  transition: background 0.18s ease;
+}
+
+.timeline-item:hover .timeline-item__body {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.timeline-item__date {
+  display: block;
+  color: rgba(17, 17, 17, 0.45);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.timeline-item__change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+  color: rgba(17, 17, 17, 0.62);
+  font-size: 15px;
+  font-weight: 700;
+
+  strong {
+    color: #111;
+    font-weight: 800;
+  }
+}
+
+.timeline-item__title {
+  display: block;
+  margin-top: 4px;
+  color: #111;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.timeline-item__arrow {
+  color: rgba(17, 17, 17, 0.35);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.timeline-item__caption {
+  display: block;
+  margin-top: 6px;
+  color: rgba(17, 17, 17, 0.48);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.logo-compare {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.logo-compare__mark {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
-  background: #111;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 900;
   overflow: hidden;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: #fff;
 
   img {
     width: 100%;
@@ -387,40 +576,26 @@ function getLogoInitial(item: TeamLogoHistoryItem): string {
   }
 }
 
-.archive-item__arrow {
-  color: rgba(0, 0, 0, 0.4);
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.archive-item__content {
-  min-width: 0;
-  flex: 1;
-}
-
-.archive-item__title {
-  display: block;
-  color: #111;
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.archive-item__meta {
-  display: block;
-  margin-top: 4px;
-  color: rgba(0, 0, 0, 0.55);
-  font-size: 12px;
-}
-
-.archive-item__tag {
-  color: var(--cnpa-red);
-  font-size: 12px;
-  font-weight: 800;
-}
-
 .archive-note {
-  margin: 28px 0 0;
-  color: rgba(0, 0, 0, 0.45);
+  margin: 24px 0 0;
+  color: rgba(0, 0, 0, 0.42);
   font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .empty-row {
+    min-height: 70px;
+    padding: 12px 14px;
+  }
+
+  .timeline-item--logo .logo-compare {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .timeline-item--logo .timeline-item__arrow {
+    transform: rotate(90deg);
+    margin-left: 16px;
+  }
 }
 </style>

@@ -1,20 +1,10 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import {
-  getV4PublicSeasonList,
-  getV4PublicStanding,
-  getV4PublicTeamList,
-  getV4PublicTeamStat,
-} from '@/api/v4Public'
-import type { V4PublicDivisionBrief, V4PublicSeasonItem } from '@/api/types/v4Public'
+import { getV4PublicTeamList } from '@/api/v4Public'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import { displayText } from '@/utils/publicDisplay'
-import { v4PlatformLabel } from '@/utils/v4Display'
 import type { TeamBase } from '@/types/team'
-import {
-  mapV4EventTeamToBase,
-  mapV4StandingToTeamBase,
-} from '@/views/tournament/team/utils/mapV4PublicTeam'
+import { mapV4EventTeamToBase } from '@/views/tournament/team/utils/mapV4PublicTeam'
 
 const props = withDefaults(
   defineProps<{
@@ -22,73 +12,34 @@ const props = withDefaults(
     title?: string
     subtitle?: string
     competitionText?: string
+    currentTeamId?: string
     disabledTeamIds?: string[]
     selectedTeamIds?: string[]
-    sideText?: string
     teams?: TeamBase[]
     teamsState?: 'loading' | 'success' | 'empty' | 'error'
-    seasons?: V4PublicSeasonItem[]
-    selectedSeasonId?: string
-    selectedDivisionId?: string
-    showScopeSelectors?: boolean
+    divisionId?: string
   }>(),
   {
-    title: '选择球队',
-    subtitle: '点击球队即可完成更换',
-    competitionText: '公开赛季 · 常规赛',
+    title: '选择对比球队',
+    subtitle: '从当前赛事参赛球队中选择一支球队进行对比',
+    competitionText: '',
+    currentTeamId: '',
     disabledTeamIds: () => [],
     selectedTeamIds: () => [],
-    sideText: '正在选择对比球队',
     teams: undefined,
     teamsState: 'success',
-    seasons: undefined,
-    selectedSeasonId: '',
-    selectedDivisionId: '',
-    showScopeSelectors: true,
+    divisionId: '',
   },
 )
 
 const emit = defineEmits<{
   close: []
   select: [teamId: string]
-  'update:selectedSeasonId': [seasonId: string]
-  'update:selectedDivisionId': [divisionId: string]
 }>()
 
 const fetchedTeams = ref<TeamBase[]>([])
-const fetchedSeasons = ref<V4PublicSeasonItem[]>([])
-const internalSeasonId = ref('')
-const internalDivisionId = ref('')
 const fetchState = ref<'idle' | 'loading' | 'success' | 'empty' | 'error'>('idle')
 let reqId = 0
-
-const resolvedSeasons = computed(() => props.seasons ?? fetchedSeasons.value)
-const activeSeasonId = computed({
-  get: () => props.selectedSeasonId || internalSeasonId.value,
-  set: (value: string) => {
-    internalSeasonId.value = value
-    emit('update:selectedSeasonId', value)
-  },
-})
-const activeDivisionId = computed({
-  get: () => props.selectedDivisionId || internalDivisionId.value,
-  set: (value: string) => {
-    internalDivisionId.value = value
-    emit('update:selectedDivisionId', value)
-  },
-})
-
-const selectedSeason = computed(() =>
-  resolvedSeasons.value.find((item) => String(item.seasonId) === activeSeasonId.value),
-)
-
-const divisionOptions = computed<V4PublicDivisionBrief[]>(
-  () => selectedSeason.value?.divisions ?? [],
-)
-
-const selectedDivision = computed(() =>
-  divisionOptions.value.find((item) => String(item.divisionId) === activeDivisionId.value),
-)
 
 const resolvedTeams = computed(() => props.teams ?? fetchedTeams.value)
 
@@ -100,24 +51,20 @@ const listState = computed(() => {
 const disabledSet = computed(() => new Set(props.disabledTeamIds))
 const selectedSet = computed(() => new Set(props.selectedTeamIds))
 
-const showTeamScopeHint = computed(() =>
-  resolvedTeams.value.some((team, index, list) =>
-    list.some((other, otherIndex) => otherIndex !== index && other.name === team.name),
-  ),
+const hasComparableTeams = computed(() =>
+  resolvedTeams.value.some((team) => team.id !== props.currentTeamId),
 )
 
 function isDisabled(teamId: string): boolean {
   return disabledSet.value.has(teamId)
 }
 
-function isSelected(teamId: string): boolean {
-  return selectedSet.value.has(teamId)
+function isCurrent(teamId: string): boolean {
+  return Boolean(props.currentTeamId) && teamId === props.currentTeamId && isDisabled(teamId)
 }
 
-function teamScopeLabel(team: TeamBase): string {
-  if (!showTeamScopeHint.value) return ''
-  const parts = [team.platform, team.seasonName].filter(Boolean)
-  return parts.join(' · ')
+function isSelected(teamId: string): boolean {
+  return selectedSet.value.has(teamId) && !isCurrent(teamId)
 }
 
 function handleSelect(team: TeamBase) {
@@ -131,79 +78,21 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
-async function ensureSeasonsLoaded() {
-  if (props.seasons?.length || fetchedSeasons.value.length) return
-  const res = await getV4PublicSeasonList()
-  fetchedSeasons.value = res.data ?? []
-  if (!activeSeasonId.value && fetchedSeasons.value[0]?.seasonId) {
-    activeSeasonId.value = String(fetchedSeasons.value[0].seasonId)
-  }
-}
-
 async function loadTeams() {
   if (props.teams) return
+  const divisionId = props.divisionId.trim()
   const current = ++reqId
+  if (!divisionId) {
+    fetchedTeams.value = []
+    fetchState.value = 'empty'
+    return
+  }
+
   fetchState.value = 'loading'
   try {
-    await ensureSeasonsLoaded()
+    const teamRes = await getV4PublicTeamList(divisionId)
     if (current !== reqId) return
-
-    const season = selectedSeason.value
-    if (!activeSeasonId.value && season?.seasonId) {
-      activeSeasonId.value = String(season.seasonId)
-    }
-    if (!activeDivisionId.value) {
-      activeDivisionId.value = String(season?.divisions?.[0]?.divisionId || '')
-    }
-
-    const divisionId = activeDivisionId.value
-    if (!divisionId) {
-      fetchedTeams.value = []
-      fetchState.value = 'empty'
-      return
-    }
-
-    const divisionLabel = selectedDivision.value
-      ? `${v4PlatformLabel(selectedDivision.value.platformCode)} · ${displayText(selectedDivision.value.divisionName)}`
-      : ''
-    const seasonName = displayText(season?.displayTitle, '')
-
-    const [teamRes, standingRes, statRes] = await Promise.all([
-      getV4PublicTeamList(divisionId),
-      getV4PublicStanding(divisionId).catch(() => ({ data: [] })),
-      getV4PublicTeamStat(divisionId).catch(() => ({ data: [] })),
-    ])
-    if (current !== reqId) return
-
-    const standingMap = new Map(
-      (standingRes.data ?? []).map((row) => [String(row.eventTeamId), row]),
-    )
-    const statMap = new Map(
-      (statRes.data ?? []).map((row) => [String(row.eventTeamId), row]),
-    )
-
-    let teams: TeamBase[] = (teamRes.data ?? []).map((team) => {
-      const standing = standingMap.get(String(team.eventTeamId))
-      const stat = statMap.get(String(team.eventTeamId))
-      return mapV4EventTeamToBase(team, {
-        wins: stat?.winCount ?? standing?.winCount,
-        losses: stat?.loseCount ?? standing?.loseCount,
-        ranking: standing?.rankNo,
-        seasonName,
-        divisionLabel,
-      })
-    })
-
-    if (!teams.length) {
-      teams = (standingRes.data ?? []).map((row) =>
-        mapV4StandingToTeamBase(row, {
-          seasonName,
-          divisionLabel,
-          platformCode: selectedDivision.value?.platformCode,
-        }),
-      )
-    }
-
+    const teams = (teamRes.data ?? []).map((team) => mapV4EventTeamToBase(team))
     fetchedTeams.value = teams
     fetchState.value = teams.length ? 'success' : 'empty'
   } catch {
@@ -213,23 +102,9 @@ async function loadTeams() {
   }
 }
 
-watch(activeSeasonId, (seasonId) => {
-  const season = resolvedSeasons.value.find((item) => String(item.seasonId) === seasonId)
-  const nextDivisionId = String(season?.divisions?.[0]?.divisionId || '')
-  if (nextDivisionId && nextDivisionId !== activeDivisionId.value) {
-    activeDivisionId.value = nextDivisionId
-  }
-})
-
-watch(activeDivisionId, () => {
-  if (!props.teams && props.visible) {
-    void loadTeams()
-  }
-})
-
 watch(
-  () => props.visible,
-  (visible) => {
+  () => [props.visible, props.divisionId] as const,
+  ([visible]) => {
     if (visible) {
       document.body.style.overflow = 'hidden'
       window.addEventListener('keydown', handleKeydown)
@@ -264,11 +139,10 @@ onUnmounted(() => {
           <div class="team-select-modal__heading">
             <h2 id="team-select-title" class="team-select-modal__title">{{ title }}</h2>
             <p class="team-select-modal__subtitle">{{ subtitle }}</p>
-            <p v-if="sideText" class="team-select-modal__side-text">{{ sideText }}</p>
           </div>
 
           <div class="team-select-modal__actions">
-            <span class="team-select-modal__meta">{{ competitionText }}</span>
+            <span v-if="competitionText" class="team-select-modal__meta">{{ competitionText }}</span>
             <button
               type="button"
               class="team-select-modal__close"
@@ -280,62 +154,34 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div v-if="showScopeSelectors && teams == null" class="team-select-modal__filters">
-          <label class="team-select-modal__filter">
-            <span>赛季</span>
-            <select v-model="activeSeasonId">
-              <option
-                v-for="season in resolvedSeasons"
-                :key="season.seasonId"
-                :value="String(season.seasonId)"
-              >
-                {{ displayText(season.displayTitle) }}
-              </option>
-            </select>
-          </label>
-          <label class="team-select-modal__filter">
-            <span>组别</span>
-            <select v-model="activeDivisionId">
-              <option
-                v-for="division in divisionOptions"
-                :key="division.divisionId"
-                :value="String(division.divisionId)"
-              >
-                {{ v4PlatformLabel(division.platformCode) }} · {{ displayText(division.divisionName) }}
-              </option>
-            </select>
-          </label>
-        </div>
+        <div class="team-select-modal__body">
+          <div v-if="listState === 'loading'" class="team-select-modal__state">加载中...</div>
+          <div v-else-if="listState === 'error'" class="team-select-modal__state is-error">
+            加载球队列表失败
+          </div>
+          <div v-else-if="!hasComparableTeams" class="team-select-modal__state">
+            暂无其他可对比球队
+          </div>
 
-        <div v-if="listState === 'loading'" class="team-select-modal__state">加载中...</div>
-        <div v-else-if="listState === 'error'" class="team-select-modal__state is-error">
-          加载球队列表失败
-        </div>
-        <div v-else-if="resolvedTeams.length === 0" class="team-select-modal__state">
-          暂无可选球队
-        </div>
-
-        <div v-else class="team-select-grid">
-          <button
-            v-for="team in resolvedTeams"
-            :key="team.id"
-            type="button"
-            class="team-select-card"
-            :class="{
-              'is-selected': isSelected(team.id),
-              'is-disabled': isDisabled(team.id),
-            }"
-            :disabled="isDisabled(team.id)"
-            @click="handleSelect(team)"
-          >
-            <TeamLogo :team="team" size="selector" class="team-select-card__logo" />
-            <span class="team-select-card__name">{{ displayText(team.name) }}</span>
-            <span v-if="teamScopeLabel(team)" class="team-select-card__scope">
-              {{ teamScopeLabel(team) }}
-            </span>
-            <span v-if="isSelected(team.id)" class="team-select-card__badge">已在对比</span>
-            <span v-else-if="isDisabled(team.id)" class="team-select-card__badge">已在对比</span>
-          </button>
+          <div v-else class="team-select-grid">
+            <button
+              v-for="team in resolvedTeams"
+              :key="team.id"
+              type="button"
+              class="team-select-card"
+              :class="{
+                'is-selected': isSelected(team.id),
+                'is-current': isCurrent(team.id),
+                'is-disabled': isDisabled(team.id),
+              }"
+              :disabled="isDisabled(team.id)"
+              @click="handleSelect(team)"
+            >
+              <TeamLogo :team="team" size="selector" class="team-select-card__logo" />
+              <span class="team-select-card__name">{{ displayText(team.name) }}</span>
+              <span v-if="isCurrent(team.id)" class="team-select-card__badge">当前球队</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -356,12 +202,14 @@ onUnmounted(() => {
 }
 
 .team-select-modal {
+  display: flex;
+  flex-direction: column;
   width: min(1024px, calc(100vw - 64px));
-  max-height: min(86vh, 780px);
-  overflow: auto;
-  padding: 32px;
+  max-height: min(78vh, 680px);
+  overflow: hidden;
+  padding: 28px 32px 24px;
   border: 1px solid rgba(0, 0, 0, 0.14);
-  border-radius: 2px;
+  border-radius: 4px;
   background: linear-gradient(
     180deg,
     #ebe9e9 0%,
@@ -377,36 +225,8 @@ onUnmounted(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 24px;
-}
-
-.team-select-modal__filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-shrink: 0;
   margin-bottom: 20px;
-}
-
-.team-select-modal__filter {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 220px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--cnpa-paper-text-muted);
-
-  select {
-    height: 40px;
-    padding: 0 12px;
-    border: 1px solid rgba(0, 0, 0, 0.14);
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.35);
-    color: var(--cnpa-paper-text);
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 700;
-  }
 }
 
 .team-select-modal__title {
@@ -424,13 +244,6 @@ onUnmounted(() => {
   color: var(--cnpa-paper-text-muted);
 }
 
-.team-select-modal__side-text {
-  margin: 10px 0 0;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--cnpa-red);
-}
-
 .team-select-modal__actions {
   display: flex;
   align-items: center;
@@ -439,9 +252,9 @@ onUnmounted(() => {
 }
 
 .team-select-modal__meta {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--cnpa-paper-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a8680;
   white-space: nowrap;
 }
 
@@ -449,19 +262,25 @@ onUnmounted(() => {
   width: 34px;
   height: 34px;
   border: 1px solid rgba(0, 0, 0, 0.14);
-  border-radius: 2px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.28);
   color: var(--cnpa-paper-text);
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, color 0.2s ease;
 
   &:hover {
     border-color: var(--cnpa-red);
     color: var(--cnpa-red);
   }
+}
+
+.team-select-modal__body {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .team-select-modal__state {
@@ -479,7 +298,7 @@ onUnmounted(() => {
 .team-select-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
 
 .team-select-card {
@@ -488,30 +307,34 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  min-height: 142px;
-  padding: 20px 14px 16px;
+  gap: 10px;
+  min-height: 124px;
+  padding: 16px 12px 14px;
   border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.28);
+  border-radius: 4px;
+  background: #f7f4ef;
   color: var(--cnpa-paper-text);
   cursor: pointer;
   font-family: inherit;
-  transition: border-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+  transition: border-color 0.2s ease, color 0.2s ease;
 
   &:hover:not(:disabled) {
-    border-color: rgba(217, 0, 18, 0.55);
-    transform: translateY(-2px);
+    border-color: var(--cnpa-red);
+
+    .team-select-card__name {
+      font-weight: 900;
+    }
   }
 
+  &.is-current,
   &.is-disabled,
   &:disabled {
-    cursor: not-allowed;
-    opacity: 0.46;
+    cursor: default;
+    opacity: 0.72;
   }
 
   &.is-selected:not(:disabled) {
-    border-color: rgba(0, 0, 0, 0.16);
+    border-color: rgba(0, 0, 0, 0.22);
   }
 }
 
@@ -520,18 +343,10 @@ onUnmounted(() => {
 }
 
 .team-select-card__name {
-  font-size: 13px;
-  font-weight: 900;
+  font-size: 15px;
+  font-weight: 800;
   text-align: center;
   line-height: 1.2;
-}
-
-.team-select-card__scope {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--cnpa-paper-text-muted);
-  text-align: center;
-  line-height: 1.3;
 }
 
 .team-select-card__badge {
@@ -554,7 +369,7 @@ onUnmounted(() => {
 
   .team-select-modal {
     width: calc(100vw - 32px);
-    padding: 24px 20px;
+    padding: 22px 18px 18px;
   }
 
   .team-select-modal__header {
@@ -566,9 +381,13 @@ onUnmounted(() => {
     justify-content: space-between;
   }
 
+  .team-select-modal__meta {
+    white-space: normal;
+  }
+
   .team-select-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    gap: 12px;
   }
 }
 </style>

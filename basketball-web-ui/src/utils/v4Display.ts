@@ -29,7 +29,21 @@ const DIVISION_STATUS_LABELS: Record<string, string> = {
   ...SEASON_STATUS_LABELS,
   READY: '已就绪',
   RUNNING: '进行中',
-  RESULT_PENDING_CONFIRM: '待确认晋级',
+  RESULT_PENDING_CONFIRM: '结果待确认',
+  COMPLETED: '已完成',
+  CANCELLED: '已取消',
+}
+
+/**
+ * Stage execution_status (StageExecutionStatusEnum).
+ * Do not infer COMPLETED from Final winner — show the official lifecycle code.
+ */
+const STAGE_EXECUTION_STATUS_LABELS: Record<string, string> = {
+  DRAFT: '草稿',
+  READY: '已就绪',
+  SCHEDULE_GENERATED: '赛程已生成',
+  RUNNING: '进行中',
+  RESULT_PENDING_CONFIRM: '结果待确认',
   COMPLETED: '已完成',
   CANCELLED: '已取消',
 }
@@ -196,6 +210,44 @@ export function v4BestOfLabel(bestOf?: number | null): string {
   return `BO${bestOf}`
 }
 
+export function isSeriesBestOf(bestOf?: number | null): boolean {
+  return Number(bestOf) > 1
+}
+
+export function hasMatchSeriesId(value?: string | null): boolean {
+  return String(value || '').trim() !== ''
+}
+
+function contestUnitType(value?: string | null): 'MATCH' | 'MATCH_SERIES' | '' {
+  const type = String(value || '').trim().toUpperCase()
+  if (type === 'MATCH_SERIES') return 'MATCH_SERIES'
+  if (type === 'MATCH') return 'MATCH'
+  return ''
+}
+
+export function publicContestDetailPath(input: {
+  unitType?: string | null
+  matchId?: string | null
+  matchSeriesId?: string | null
+}): string {
+  const type = contestUnitType(input.unitType)
+  const matchId = String(input.matchId || '').trim()
+  const matchSeriesId = String(input.matchSeriesId || '').trim()
+  if (type === 'MATCH_SERIES') {
+    return matchSeriesId ? `/events/match-series/${matchSeriesId}` : ''
+  }
+  if (type === 'MATCH') {
+    return matchId ? `/events/match/${matchId}` : ''
+  }
+  if (matchId && !matchSeriesId) return `/events/match/${matchId}`
+  if (matchSeriesId && !matchId) return `/events/match-series/${matchSeriesId}`
+  return ''
+}
+
+export function publicContestDetailLabel(unitType?: string | null): string {
+  return contestUnitType(unitType) === 'MATCH_SERIES' ? '系列赛详情' : '本场详情'
+}
+
 export function v4QualificationTypeLabel(type?: string | null): string {
   switch ((type || '').toUpperCase()) {
     case 'MATCH_WINNER':
@@ -231,6 +283,18 @@ export function v4SeasonStatusLabel(status: string | null | undefined): string {
 
 export function v4DivisionStatusLabel(status: string | null | undefined): string {
   return lookup(DIVISION_STATUS_LABELS, status)
+}
+
+export function v4StageExecutionStatusLabel(
+  status?: string | null,
+  fallbackName?: string | null,
+): string {
+  const code = String(status || '').trim()
+  if (!code) {
+    const named = String(fallbackName || '').trim()
+    return named || '--'
+  }
+  return lookup(STAGE_EXECUTION_STATUS_LABELS, code, String(fallbackName || '').trim() || '--')
 }
 
 /** 公开页状态展示：优先 Division，其次 Season */

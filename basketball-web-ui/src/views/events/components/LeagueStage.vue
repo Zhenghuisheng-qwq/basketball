@@ -9,6 +9,7 @@ import PlayoffBracket from './PlayoffBracket.vue'
 import CompetitionFormat from './CompetitionFormat.vue'
 import LeagueAbout from './LeagueAbout.vue'
 import StageProgressHeader from './StageProgressHeader.vue'
+import PaperTear from '@/components/common/PaperTear.vue'
 
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 const ctx = inject<SeasonContext>('publicSeasonContext')!
@@ -94,6 +95,7 @@ watch(
               :stage-id="selectedStageId"
               :grouped="isGroupedStage(selectedStage)"
               :stage-name="selectedStage?.stageName"
+              :advance-count="selectedStage?.advancementCount"
             />
           </div>
         </PaperSection>
@@ -117,7 +119,9 @@ watch(
         </PaperSection>
 
         <PaperSection edge="none" tone="gray" class="competition-format-section">
-          <div class="stage-section-divider" aria-hidden="true" />
+          <div class="stage-section-tear" aria-hidden="true">
+            <PaperTear position="top" tone="dark" />
+          </div>
           <CompetitionFormat embedded :current-stage="formatCurrentStage" />
         </PaperSection>
       </div>
@@ -134,9 +138,13 @@ watch(
 
 .stage-main__inner {
   padding:
-    clamp(28px, 2.4vw, 42px)
+    clamp(24px, 2.2vw, 36px)
     var(--cnpa-public-content-gutter)
     clamp(24px, 2.2vw, 36px);
+}
+
+.stage-main :deep(.stage-progress-header) {
+  margin-bottom: clamp(12px, 1.2vw, 16px);
 }
 
 .stage-state {
@@ -157,35 +165,30 @@ watch(
 
 .stage-progress-section__inner {
   padding:
-    clamp(28px, 2.4vw, 42px)
+    clamp(22px, 2vw, 34px)
     var(--cnpa-public-content-gutter)
-    clamp(18px, 1.6vw, 28px);
+    clamp(12px, 1.2vw, 20px);
 }
 
-.stage-section-divider {
-  height: 1px;
-  margin:
-    0
-    clamp(28px, 3vw, 52px)
-    clamp(4px, 0.5vw, 8px);
-  background:
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(17, 17, 17, 0.28) 8%,
-      rgba(17, 17, 17, 0.28) 92%,
-      transparent 100%
-    );
+.stage-playoffs-shell :deep(.stage-progress-header) {
+  margin-bottom: 10px;
+}
+
+.stage-playoffs-shell :deep(.stage-progress-header__select) {
+  width: clamp(140px, 12vw, 180px);
+  height: 40px;
+}
+
+.stage-section-tear {
+  --paper-tear-color: #161616;
+  height: 18px;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {
   .stage-progress-section__inner {
     padding-left: var(--cnpa-public-content-gutter);
     padding-right: var(--cnpa-public-content-gutter);
-  }
-
-  .stage-section-divider {
-    margin-inline: 16px;
   }
 }
 </style>

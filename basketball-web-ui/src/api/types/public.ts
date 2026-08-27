@@ -430,6 +430,8 @@ export interface PublicTeamSeasonStatVo {
   avgSteals?: number | string | null
   avgBlocks?: number | string | null
   avgTurnovers?: number | string | null
+  /** 当前 V4 Public team-stat 未下发；有值才展示 */
+  avgFouls?: number | string | null
   fieldGoalPct?: number | string | null
   threePointPct?: number | string | null
   freeThrowPct?: number | string | null

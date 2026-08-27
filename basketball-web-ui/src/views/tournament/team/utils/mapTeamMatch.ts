@@ -27,10 +27,17 @@ export function mapV4MatchToTeamRecord(
     result = 'loss'
   }
   const dt = formatDateTime(item.matchTime)
-  const stageLabel = item.seriesStatusName || ''
-  const isPlayoff = /淘汰|季后|playoff/i.test(stageLabel)
+  const seriesStatusLabel = item.seriesStatusName || ''
   const bestOf = toNumber(item.bestOf, 1)
   const gameNo = toNumber(item.seriesGameNo, 0)
+  const roundNo = toNumber(item.roundNo, 0)
+  const isPlayoff = Boolean(item.matchSeriesId) && bestOf > 1
+  const seriesLine = isPlayoff
+    ? `${v4BestOfLabel(bestOf)}${gameNo > 0 ? ` G${gameNo}` : ''}`
+    : ''
+  const stageHeadline = isPlayoff
+    ? (roundNo > 0 ? `第${roundNo}轮` : '季后赛')
+    : '常规赛'
   const seriesContext = bestOf > 1
     ? `${v4BestOfLabel(bestOf)}${gameNo > 0 ? ` G${gameNo}` : ''}`
     : ''
@@ -52,7 +59,10 @@ export function mapV4MatchToTeamRecord(
     result,
     status: finished ? 'finished' : 'scheduled',
     stage: isPlayoff ? 'playoffs' : 'regular',
-    competition: [seriesContext, stageLabel || `第${item.roundNo ?? '--'}轮`].filter(Boolean).join(' · '),
+    competition: [seriesContext, seriesStatusLabel || `第${item.roundNo ?? '--'}轮`].filter(Boolean).join(' · '),
+    stageHeadline,
+    stageMeta: seriesLine || undefined,
+    playoffGame: seriesLine || undefined,
     resultType: item.resultType || undefined,
     resultReason: item.resultReason || undefined,
     resultLabel: dq
@@ -60,6 +70,8 @@ export function mapV4MatchToTeamRecord(
       : sideLabel || undefined,
     originalTeamScore: originalTeamScore ?? undefined,
     originalOpponentScore: originalOpponentScore ?? undefined,
+    matchSeriesId: item.matchSeriesId ? String(item.matchSeriesId) : undefined,
+    bestOf: bestOf > 1 ? bestOf : undefined,
   } as TeamMatchRecord & { opponentName: string; opponentLogoUrl: string }
 }
 

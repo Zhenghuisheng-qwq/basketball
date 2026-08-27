@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import teamBackground from '@/assets/icon/tournament/team_background.png'
+import captainIcon from '@/assets/icon/team/master.png'
+import platformIcon from '@/assets/icon/team/platform.png'
+import stageIcon from '@/assets/icon/team/stage.png'
+import rosterIcon from '@/assets/icon/team/lineup.png'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import TeamSelectModal from '@/components/team/TeamSelectModal.vue'
 import type { TeamBase, TeamStage } from '@/types/team'
@@ -14,6 +18,7 @@ const props = defineProps<{
   teamId: string
 }>()
 
+const route = useRoute()
 const router = useRouter()
 const compareModalVisible = ref(false)
 const teamPageCtx = inject(PUBLIC_TEAM_PAGE_KEY, null)
@@ -57,9 +62,28 @@ const tournamentQuery = computed(() => ({
   ...(teamPageCtx?.divisionId.value ? { divisionId: teamPageCtx.divisionId.value } : {}),
 }))
 
-const compareCompetitionText = computed(
-  () => `${props.team.seasonName} · ${stageLabels[props.team.currentStage]}`,
+const compareDivisionId = computed(() =>
+  String(
+    teamPageCtx?.divisionId.value
+    || teamPageCtx?.detail.value?.divisionId
+    || route.query.divisionId
+    || '',
+  ).trim(),
 )
+
+const compareContextText = computed(() => {
+  const season = props.team.seasonName?.trim() || ''
+  const platform = props.team.platform?.trim() || ''
+  const division = props.team.divisionName?.trim() || ''
+  let eventPart = ''
+  if (platform && division) {
+    eventPart = division.includes(platform) ? division : `${platform} / ${division}`
+  } else {
+    eventPart = division || platform
+  }
+  if (season && eventPart) return `${season} · ${eventPart}`
+  return season || eventPart
+})
 
 function openCompareModal() {
   compareModalVisible.value = true
@@ -74,7 +98,7 @@ function handleSelectCompareTeam(targetTeamId: string) {
       left: props.teamId,
       right: targetTeamId,
       ...(teamPageCtx?.seasonId.value ? { seasonId: teamPageCtx.seasonId.value } : {}),
-      ...(teamPageCtx?.divisionId.value ? { divisionId: teamPageCtx.divisionId.value } : {}),
+      ...(compareDivisionId.value ? { divisionId: compareDivisionId.value } : {}),
     },
   })
 }
@@ -83,11 +107,9 @@ const heroBgStyle = computed(() => ({
   backgroundImage: `linear-gradient(90deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.38) 45%, rgba(0, 0, 0, 0.15) 100%), url(${teamBackground})`,
 }))
 
-type HeroInfoIcon = 'captain' | 'gamepad' | 'stage' | 'roster'
-
 interface HeroInfoCard {
   key: string
-  icon: HeroInfoIcon
+  icon: string
   label: string
   value: string
 }
@@ -95,25 +117,25 @@ interface HeroInfoCard {
 const infoCards = computed<HeroInfoCard[]>(() => [
   {
     key: 'captain',
-    icon: 'captain' as const,
+    icon: captainIcon,
     label: '队长',
     value: props.team.captainName,
   },
   {
     key: 'platform',
-    icon: 'gamepad' as const,
+    icon: platformIcon,
     label: '比赛平台',
     value: props.team.platform?.trim() || '--',
   },
   {
     key: 'stage',
-    icon: 'stage' as const,
+    icon: stageIcon,
     label: '当前阶段',
     value: stageLabel.value,
   },
   {
     key: 'roster',
-    icon: 'roster' as const,
+    icon: rosterIcon,
     label: '注册阵容',
     value: `${props.team.rosterCount} 人`,
   },
@@ -122,6 +144,9 @@ const infoCards = computed<HeroInfoCard[]>(() => [
 <template>
   <section class="team-hero" aria-label="球队详情头部">
     <div class="team-hero__bg" :style="heroBgStyle" aria-hidden="true" />
+    <div class="team-hero__watermark" aria-hidden="true">
+      <TeamLogo :team="team" size="hero" />
+    </div>
 
     <div class="team-hero__inner">
       <nav class="team-hero__breadcrumb" aria-label="面包屑">
@@ -164,14 +189,16 @@ const infoCards = computed<HeroInfoCard[]>(() => [
           <p class="team-hero__desc">{{ heroDescription }}</p>
 
           <div class="team-hero__stats">
-            <span class="team-hero__stat">{{ stageLabel }} {{ recordText }}</span>
+            <span class="team-hero__stat">{{ recordText }}</span>
             <span class="team-hero__stat-divider">|</span>
             <span class="team-hero__stat">排名第{{ team.ranking }}</span>
+            <button type="button" class="team-hero__compare-btn" @click="openCompareModal">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M7 7h11l-3-3M17 17H6l3 3" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              球队对比
+            </button>
           </div>
-
-          <button type="button" class="team-hero__compare-btn" @click="openCompareModal">
-            球队对比
-          </button>
         </div>
       </div>
 
@@ -180,52 +207,10 @@ const infoCards = computed<HeroInfoCard[]>(() => [
           v-for="card in infoCards"
           :key="card.key"
           class="team-hero__info-card"
+          :data-info="card.key"
         >
           <div class="team-hero__info-icon" aria-hidden="true">
-            <svg
-              v-if="card.icon === 'captain'"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-            >
-              <circle cx="12" cy="8" r="3.5" />
-              <path d="M6 20v-1.5a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4V20" stroke-linecap="round" />
-            </svg>
-            <svg
-              v-else-if="card.icon === 'gamepad'"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-            >
-              <path
-                d="M8 11h8a3 3 0 0 0 0-6H9a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a3 3 0 0 0 0-6H8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            <svg
-              v-else-if="card.icon === 'stage'"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-            >
-              <circle cx="12" cy="12" r="8.5" />
-              <path d="M12 8v4l2.5 2.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            <svg
-              v-else
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-            >
-              <circle cx="9" cy="9" r="3" />
-              <circle cx="16" cy="10" r="2.5" />
-              <path d="M4 19v-1a4 4 0 0 1 4-4h1M14 14a3.5 3.5 0 0 1 3.5 3.5V19" stroke-linecap="round" />
-            </svg>
+            <img :src="card.icon" alt="" />
           </div>
 
           <div class="team-hero__info-content">
@@ -239,12 +224,10 @@ const infoCards = computed<HeroInfoCard[]>(() => [
 
   <TeamSelectModal
     :visible="compareModalVisible"
-    title="选择球队"
-    subtitle="点击球队即可完成更换"
-    :competition-text="compareCompetitionText"
+    :division-id="compareDivisionId"
+    :current-team-id="teamId"
     :disabled-team-ids="[teamId]"
-    :selected-team-ids="[teamId]"
-    side-text="正在选择对比球队"
+    :competition-text="compareContextText"
     @close="compareModalVisible = false"
     @select="handleSelectCompareTeam"
   />
@@ -252,7 +235,7 @@ const infoCards = computed<HeroInfoCard[]>(() => [
 <style scoped lang="scss">
 .team-hero {
   --team-hero-content-offset: clamp(36px, 4vw, 86px);
-  --team-hero-main-offset: clamp(56px, 5vw, 108px);
+  --team-hero-gold: #d6ac58;
 
   position: relative;
   overflow: hidden;
@@ -271,14 +254,40 @@ const infoCards = computed<HeroInfoCard[]>(() => [
   pointer-events: none;
 }
 
+.team-hero__watermark {
+  position: absolute;
+  right: clamp(-24px, 2vw, 40px);
+  top: 46%;
+  z-index: 0;
+  width: clamp(280px, 34vw, 460px);
+  height: clamp(280px, 34vw, 460px);
+  opacity: 0.12;
+  filter: grayscale(0.15);
+  pointer-events: none;
+  transform: translateY(-50%);
+
+  :deep(.team-logo) {
+    width: 100%;
+    height: 100%;
+  }
+
+  :deep(.team-logo--hero) {
+    width: 100%;
+    height: 100%;
+  }
+
+  :deep(.badge) {
+    transform: scale(5.4);
+  }
+}
+
 .team-hero__inner {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 100%;
-  padding: 24px 0 0;
+  padding: 22px 0 0;
   box-sizing: border-box;
 }
 
@@ -287,10 +296,10 @@ const infoCards = computed<HeroInfoCard[]>(() => [
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin: 0 0 24px;
+  margin: 0 0 28px;
   padding-left: var(--team-hero-content-offset);
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.52);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .team-hero__crumb {
@@ -303,7 +312,7 @@ const infoCards = computed<HeroInfoCard[]>(() => [
 
   &--current {
     color: #fff;
-    font-weight: 600;
+    font-weight: 700;
   }
 }
 
@@ -314,28 +323,31 @@ const infoCards = computed<HeroInfoCard[]>(() => [
 .team-hero__main {
   display: flex;
   align-items: center;
-  gap: clamp(42px, 4vw, 64px);
-  margin-top: 40px;
-  margin-left: var(--team-hero-main-offset);
+  gap: clamp(28px, 3.6vw, 56px);
+  margin: 8px 0 36px;
+  padding-left: var(--team-hero-content-offset);
+  padding-right: var(--team-hero-content-offset);
   position: relative;
   z-index: 2;
 }
 
 .team-hero__logo-wrap {
-  flex-shrink: 0;
+  flex: none;
+  display: grid;
+  place-items: center;
 
   :deep(.team-logo--hero) {
-    width: clamp(148px, 10vw, 180px);
-    height: clamp(148px, 10vw, 180px);
+    width: clamp(132px, 12vw, 176px);
+    height: clamp(132px, 12vw, 176px);
 
     .team-logo__fallback {
-      font-size: clamp(58px, 4.8vw, 82px);
-      letter-spacing: 0.06em;
+      font-size: clamp(48px, 4vw, 72px);
+      letter-spacing: 0.04em;
       border-radius: 4px;
     }
 
     .badge {
-      transform: scale(2.35);
+      transform: scale(2.2);
     }
   }
 }
@@ -343,39 +355,42 @@ const infoCards = computed<HeroInfoCard[]>(() => [
 .team-hero__summary {
   flex: 1;
   min-width: 0;
+  max-width: 720px;
 }
 
 .team-hero__title-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
+  gap: 14px;
+  margin-bottom: 10px;
 }
 
 .team-hero__name {
   margin: 0;
-  font-size: clamp(48px, 4.4vw, 68px);
+  font-size: clamp(44px, 4.2vw, 64px);
   font-weight: 900;
-  letter-spacing: 1px;
-  line-height: 1;
+  letter-spacing: 0;
+  line-height: 1.02;
   color: #fff;
 }
 
 .team-hero__badge {
   display: inline-flex;
   align-items: center;
-  height: 24px;
-  padding: 0 10px;
-  border: 1px solid rgba(24, 180, 107, 0.45);
-  border-radius: 2px;
-  background: rgba(24, 180, 107, 0.1);
-  color: #6ee7a8;
-  font-size: 12px;
-  font-weight: 700;
+  height: 20px;
+  padding: 0 9px;
+  border: 1px solid rgba(225, 6, 19, 0.7);
+  border-radius: 999px;
+  background: #e10613;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
   line-height: 1;
+  box-sizing: border-box;
 
   &--dq {
+    border-radius: 2px;
     border-color: rgba(225, 6, 19, 0.55);
     background: rgba(225, 6, 19, 0.14);
     color: #ff8b8b;
@@ -390,115 +405,147 @@ const infoCards = computed<HeroInfoCard[]>(() => [
 }
 
 .team-hero__desc {
-  margin: 0 0 20px;
-  font-size: 17px;
+  margin: 0 0 18px;
+  max-width: 52ch;
+  font-size: 16px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.72);
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .team-hero__stats {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 12px 16px;
   margin: 0;
-  font-size: clamp(17px, 1.1vw, 18px);
+  font-size: 16px;
   font-weight: 800;
   color: #fff;
 }
 
 .team-hero__stat-divider {
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.32);
 }
 
 .team-hero__compare-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 138px;
-  height: 40px;
-  margin-top: 18px;
-  border: 1px solid rgba(220, 55, 45, 0.55);
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  margin-left: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 2px;
-  background: linear-gradient(180deg, rgba(112, 18, 18, 0.92) 0%, rgba(65, 8, 8, 0.92) 100%);
+  background: rgba(255, 255, 255, 0.06);
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   cursor: pointer;
   font-family: inherit;
-  transition: filter 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 
   &:hover {
-    filter: brightness(1.12);
-    transform: translateY(-1px);
-    border-color: rgba(255, 80, 65, 0.72);
+    border-color: rgba(225, 6, 19, 0.7);
+    background: rgba(225, 6, 19, 0.16);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
   }
 }
 
 .team-hero__info-panel {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: stretch;
   width: 100%;
-  max-width: 100%;
-  height: 86px;
-  margin: 44px 0 30px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 2px;
-  background: rgba(10, 8, 8, 0.66);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  min-height: 82px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(214, 172, 88, 0.22);
+  background: rgba(8, 8, 8, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 .team-hero__info-card {
+  position: relative;
   display: flex;
   align-items: center;
-  column-gap: 14px;
+  column-gap: 12px;
   min-width: 0;
-  height: 100%;
-  padding: 0 clamp(24px, 2.4vw, 34px);
-  background: transparent;
+  padding: 16px clamp(20px, 2.4vw, 34px);
   box-sizing: border-box;
 
-  &:not(:first-child) {
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
+  &:not(:first-child)::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 1px;
+    height: 36px;
+    background: rgba(214, 172, 88, 0.4);
+    transform: translateY(-50%);
   }
 }
 
 .team-hero__info-icon {
   flex: none;
-  width: 26px;
-  height: 26px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 3px;
-  border: 1px solid rgba(214, 172, 88, 0.45);
-  border-radius: 2px;
-  box-sizing: border-box;
-  color: #d6ac58;
-  opacity: 0.95;
+  overflow: visible;
 
-  svg {
+  img {
     display: block;
-    width: 100%;
-    height: 100%;
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    mix-blend-mode: screen;
+    transform-origin: center center;
   }
+}
+
+.team-hero__info-card[data-info='captain'] img {
+  transform: scale(0.98);
+}
+
+.team-hero__info-card[data-info='platform'] img {
+  transform: scale(1.12);
+}
+
+.team-hero__info-card[data-info='stage'] img {
+  transform: scale(0.84);
+}
+
+.team-hero__info-card[data-info='roster'] img {
+  transform: scale(0.9);
 }
 
 .team-hero__info-content {
   flex: 1;
   min-width: 0;
-  text-align: left;
 }
 
 .team-hero__info-label {
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 13px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -507,9 +554,9 @@ const infoCards = computed<HeroInfoCard[]>(() => [
 
 .team-hero__info-value {
   overflow: hidden;
-  margin-top: 4px;
+  margin-top: 5px;
   color: #fff;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -518,76 +565,38 @@ const infoCards = computed<HeroInfoCard[]>(() => [
 
 @media (max-width: 1280px) {
   .team-hero {
-    --team-hero-main-offset: 36px;
-  }
-
-  .team-hero__logo-wrap :deep(.team-logo--hero) {
-    width: 160px;
-    height: 160px;
-
-    .team-logo__fallback {
-      font-size: clamp(52px, 4.2vw, 68px);
-    }
-
-    .badge {
-      transform: scale(2.1);
-    }
-  }
-
-  .team-hero__main {
-    gap: clamp(36px, 3.5vw, 52px);
-    margin-top: 36px;
+    --team-hero-content-offset: 36px;
   }
 }
 
 @media (max-width: 992px) {
   .team-hero {
-    --team-hero-main-offset: 20px;
+    --team-hero-content-offset: 20px;
+  }
+
+  .team-hero__watermark {
+    opacity: 0.08;
+    width: 240px;
+    height: 240px;
   }
 
   .team-hero__main {
     flex-direction: column;
     align-items: flex-start;
-  }
-}
-
-@media (max-width: 991px) {
-  .team-hero {
-    --team-hero-content-offset: 20px;
-  }
-
-  .team-hero__logo-wrap :deep(.team-logo--hero) {
-    width: 148px;
-    height: 148px;
-
-    .team-logo__fallback {
-      font-size: 50px;
-    }
-
-    .badge {
-      transform: scale(1.95);
-    }
+    margin-bottom: 28px;
   }
 
   .team-hero__info-panel {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    height: auto;
   }
 
   .team-hero__info-card {
-    min-height: 80px;
-    padding-block: 14px;
-
-    &:nth-child(odd) {
-      border-left: none;
-    }
-
-    &:nth-child(even) {
-      border-left: 1px solid rgba(255, 255, 255, 0.1);
+    &:nth-child(odd)::before {
+      display: none;
     }
 
     &:nth-child(n + 3) {
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(214, 172, 88, 0.22);
     }
   }
 }
@@ -597,18 +606,12 @@ const infoCards = computed<HeroInfoCard[]>(() => [
     --team-hero-content-offset: 16px;
   }
 
-  .team-hero__main {
-    gap: 24px;
-    margin-top: 32px;
-  }
-
   .team-hero__name {
-    font-size: clamp(40px, 10vw, 52px);
+    font-size: clamp(36px, 10vw, 48px);
   }
 
-  .team-hero__info-panel {
-    margin-top: 36px;
-    margin-bottom: 24px;
+  .team-hero__watermark {
+    display: none;
   }
 }
 
@@ -618,96 +621,15 @@ const infoCards = computed<HeroInfoCard[]>(() => [
   }
 
   .team-hero__info-card {
-    border-left: none !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    &::before {
+      display: none;
+    }
+
+    border-top: 1px solid rgba(214, 172, 88, 0.22);
 
     &:first-child {
       border-top: none;
     }
-  }
-}
-
-.team-hero {
-  min-height: clamp(560px, 48vw, 720px);
-}
-
-.team-hero__bg {
-  background-position: center;
-  background-size: cover;
-}
-
-.team-hero__main {
-  align-items: center;
-  gap: clamp(44px, 5vw, 80px);
-}
-
-.team-hero__logo-wrap {
-  flex: 0 0 clamp(180px, 17vw, 250px);
-  display: grid;
-  place-items: center;
-  min-height: clamp(180px, 17vw, 250px);
-  padding: clamp(14px, 1.6vw, 24px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(5, 5, 5, 0.3);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.24);
-  box-sizing: border-box;
-}
-
-.team-hero__summary {
-  max-width: 660px;
-}
-
-.team-hero__name {
-  letter-spacing: 0;
-  line-height: 1.02;
-}
-
-.team-hero__desc {
-  max-width: 56ch;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
-.team-hero__compare-btn:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 3px;
-}
-
-.team-hero__info-panel {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(10, 10, 10, 0.66);
-  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(8px);
-}
-
-@media (max-width: 992px) {
-  .team-hero {
-    min-height: auto;
-  }
-
-  .team-hero__main {
-    align-items: center;
-    text-align: center;
-  }
-
-  .team-hero__summary,
-  .team-hero__title-row,
-  .team-hero__stats {
-    justify-content: center;
-  }
-
-  .team-hero__desc {
-    margin-inline: auto;
-  }
-}
-
-@media (max-width: 600px) {
-  .team-hero__logo-wrap {
-    flex-basis: 156px;
-    width: 156px;
-    min-height: 156px;
   }
 
   .team-hero__info-value {

@@ -55,8 +55,10 @@ function goTeam(teamId: string) {
   })
 }
 
-function openStats(matchId: string) {
-  router.push({ path: '/tournament', query: { tab: 'schedule', stats: matchId } })
+function openMatchDetail(matchId: string) {
+  const id = String(matchId || '').trim()
+  if (!id) return
+  router.push(`/events/match/${id}`)
 }
 </script>
 
@@ -102,8 +104,8 @@ function openStats(matchId: string) {
             <td>{{ formatLine(row) }}</td>
             <td>{{ row.stageName }}</td>
             <td>
-              <button v-if="showView" type="button" class="player-detail-view-btn" @click="openStats(row.matchId)">
-                技术统计
+              <button v-if="showView" type="button" class="player-detail-view-btn" @click="openMatchDetail(row.matchId)">
+                本场详情
               </button>
             </td>
           </template>
@@ -134,8 +136,8 @@ function openStats(matchId: string) {
             <td>{{ formatShot(row.threePointsMade, row.threePointsAttempted) }}</td>
             <td>{{ formatShot(row.freeThrowsMade, row.freeThrowsAttempted) }}</td>
             <td>
-              <button v-if="showView" type="button" class="player-detail-view-btn" @click="openStats(row.matchId)">
-                技术统计
+              <button v-if="showView" type="button" class="player-detail-view-btn" @click="openMatchDetail(row.matchId)">
+                本场详情
               </button>
             </td>
           </template>

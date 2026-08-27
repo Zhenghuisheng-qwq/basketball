@@ -77,7 +77,7 @@ const router = createRouter({
 
       component: () => import('@/views/events/v4/V4MatchDetailPage.vue'),
 
-      meta: { title: '比赛详情' },
+      meta: { title: '本场详情' },
 
     },
 
@@ -744,7 +744,7 @@ const router = createRouter({
 
           component: () => import('@/views/tournament/team/TeamArchive.vue'),
 
-          meta: { title: '球队动态' },
+          meta: { title: '球队档案' },
 
         },
 

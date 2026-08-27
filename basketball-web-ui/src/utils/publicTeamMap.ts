@@ -113,7 +113,7 @@ export function mapTeamSeasonAverages(stat?: PublicTeamSeasonStatVo | null): Tea
     assists: toNumber(stat.avgAssists, 0),
     steals: toNumber(stat.avgSteals, 0),
     blocks: toNumber(stat.avgBlocks, 0),
-    fouls: 0,
+    fouls: stat.avgFouls != null ? toNumber(stat.avgFouls, 0) : null,
     turnovers: toNumber(stat.avgTurnovers, 0),
   }
 }

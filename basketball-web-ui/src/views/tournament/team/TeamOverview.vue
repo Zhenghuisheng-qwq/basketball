@@ -5,6 +5,7 @@ import { getV4PublicMatchList } from '@/api/v4Public'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
 import { displayText, initials } from '@/utils/publicDisplay'
+import { hasMatchSeriesId, publicContestDetailLabel, publicContestDetailPath } from '@/utils/v4Display'
 import type { PublicTeamRosterItemVo } from '@/api/types/public'
 import type { TeamMatchRecord } from '@/types/team'
 import {
@@ -19,6 +20,7 @@ const router = useRouter()
 
 const rosterPageSize = 5
 const rosterPage = ref(0)
+const brokenAvatarIds = ref<Record<string, boolean>>({})
 const matchPageSize = 5
 const matchCurrentPage = ref(1)
 
@@ -118,10 +120,31 @@ function goRosterPage(index: number) {
   rosterPage.value = index
 }
 
-function getPlayerNumber(player: PublicTeamRosterItemVo): string {
-  if (player.jerseyNo) return String(player.jerseyNo).padStart(2, '0')
-  const match = displayText(player.playerName, '').match(/(\d+)$/)
-  return match?.[1]?.padStart(2, '0') || initials(player.playerName)
+function hasRosterAvatar(player: PublicTeamRosterItemVo): boolean {
+  return Boolean(player.avatarUrl) && !brokenAvatarIds.value[String(player.playerId)]
+}
+
+function markBrokenAvatar(playerId: string | number) {
+  brokenAvatarIds.value = { ...brokenAvatarIds.value, [String(playerId)]: true }
+}
+
+function getPlayerAbbrev(player: PublicTeamRosterItemVo): string {
+  const name = displayText(player.playerName, '')
+  const tagged = name.match(/P\d+$/i)
+  if (tagged) return tagged[0].toUpperCase()
+  if (player.jerseyNo) return String(player.jerseyNo)
+  const digits = name.match(/(\d+)$/)
+  if (digits) return digits[1]
+  return initials(player.playerName)
+}
+
+function formatCompetition(text: string) {
+  const raw = (text || '').trim()
+  const matched = raw.match(/^(BO\d+)\s*(.*)$/i)
+  if (matched) {
+    return { series: matched[1].toUpperCase(), meta: matched[2].trim() }
+  }
+  return { series: '', meta: raw || '--' }
 }
 
 function isCaptain(player: PublicTeamRosterItemVo): boolean {
@@ -152,9 +175,36 @@ function goMatchStats(match: TeamMatchRecord) {
 }
 
 
+function matchQuery() {
+  return {
+    ...(ctx.divisionId.value ? { divisionId: ctx.divisionId.value } : {}),
+    ...(ctx.seasonId.value ? { seasonId: ctx.seasonId.value } : {}),
+  }
+}
+
 function goMatchDetail(match: TeamMatchRecord) {
-  if (!match.id || match.status === 'scheduled') return
-  router.push(`/events/match/${match.id}`)
+  if (match.status === 'scheduled') return
+  const path = publicContestDetailPath({
+    unitType: 'MATCH',
+    matchId: match.id,
+  })
+  if (!path) return
+  router.push({
+    path,
+    query: matchQuery(),
+  })
+}
+
+function goSeriesDetail(match: TeamMatchRecord) {
+  const path = publicContestDetailPath({
+    unitType: 'MATCH_SERIES',
+    matchSeriesId: match.matchSeriesId,
+  })
+  if (!path) return
+  router.push({
+    path,
+    query: matchQuery(),
+  })
 }
 function goMatchPrevPage() {
   if (matchCurrentPage.value > 1) matchCurrentPage.value -= 1
@@ -190,8 +240,9 @@ function goMatchPage(page: number) {
       <div v-else-if="roster.length === 0" class="overview-empty">暂无阵容数据</div>
 
       <template v-else>
-        <div class="roster-wrap">
+        <div class="roster-wrap" :class="{ 'is-paged': rosterTotalPages > 1 }">
           <button
+            v-if="rosterTotalPages > 1"
             type="button"
             class="roster-arrow roster-arrow--left"
             aria-label="上一页"
@@ -212,12 +263,13 @@ function goMatchPage(page: number) {
             >
               <div class="player-avatar">
                 <img
-                  v-if="player.avatarUrl"
-                  :src="player.avatarUrl"
+                  v-if="hasRosterAvatar(player)"
+                  :src="player.avatarUrl || undefined"
                   :alt="displayText(player.playerName)"
                   class="player-avatar__img"
+                  @error="markBrokenAvatar(player.playerId)"
                 />
-                <span v-else class="player-avatar__placeholder">{{ getPlayerNumber(player) }}</span>
+                <span v-else class="player-avatar__placeholder">{{ getPlayerAbbrev(player) }}</span>
               </div>
 
               <div class="player-name">{{ displayText(player.playerName) }}</div>
@@ -227,6 +279,7 @@ function goMatchPage(page: number) {
           </div>
 
           <button
+            v-if="rosterTotalPages > 1"
             type="button"
             class="roster-arrow roster-arrow--right"
             aria-label="下一页"
@@ -235,7 +288,7 @@ function goMatchPage(page: number) {
             ›
           </button>
 
-          <div class="carousel-dots">
+          <div v-if="rosterTotalPages > 1" class="carousel-dots">
             <button
               v-for="index in rosterTotalPages"
               :key="index"
@@ -286,7 +339,7 @@ function goMatchPage(page: number) {
               <span class="match-table__datetime">{{ formatDateTime(match) }}</span>
 
               <div class="match-table__opponent">
-                <TeamLogo :team="getOpponent(match)" size="md" class="match-table__opponent-logo" />
+                <TeamLogo :team="getOpponent(match)" size="sm" class="match-table__opponent-logo" />
                 <span>{{ getOpponent(match).name }}</span>
               </div>
 
@@ -305,28 +358,31 @@ function goMatchPage(page: number) {
                 </span>
               </template>
 
-              <span class="match-table__stage">{{ match.competition }}</span>
+              <span class="match-table__stage">
+                <strong v-if="formatCompetition(match.competition).series">{{
+                  formatCompetition(match.competition).series
+                }}</strong>
+                <em>{{ formatCompetition(match.competition).meta }}</em>
+              </span>
 
               <div class="match-table__actions">
-                <button
-                  v-if="match.status === 'scheduled'"
-                  type="button"
-                  class="action-btn action-btn--disabled"
-                  disabled
-                >
-                  敬请期待
-                </button>
-                <button v-else type="button" class="action-btn" @click="goMatchStats(match)">
-                  查看数据
-                </button>
-                <button
-                  v-if="match.status !== 'scheduled'"
-                  type="button"
-                  class="action-btn action-btn--secondary"
-                  @click="goMatchDetail(match)"
-                >
-                  比赛详情
-                </button>
+                <span v-if="match.status === 'scheduled'" class="action-link is-disabled">敬请期待</span>
+                <template v-else>
+                  <button type="button" class="action-link" @click="goMatchStats(match)">
+                    数据统计
+                  </button>
+                  <button type="button" class="action-link" @click="goMatchDetail(match)">
+                    {{ publicContestDetailLabel('MATCH') }} →
+                  </button>
+                  <button
+                    v-if="hasMatchSeriesId(match.matchSeriesId)"
+                    type="button"
+                    class="action-link"
+                    @click="goSeriesDetail(match)"
+                  >
+                    {{ publicContestDetailLabel('MATCH_SERIES') }} →
+                  </button>
+                </template>
               </div>
             </article>
           </div>

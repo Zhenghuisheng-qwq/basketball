@@ -1,408 +1,231 @@
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue'
-import TeamBadge from '@/components/home/TeamBadge.vue'
-import { teamDetailLocation } from '@/utils/eventContext'
+import { computed } from 'vue'
+import { publicContestDetailPath, v4BestOfLabel, v4MatchSeriesStatusLabel } from '@/utils/v4Display'
 import type { PlayoffSeries } from '../types/events'
-import { toEventTeam } from '../utils/mapPublic'
-import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
 
-const ctx = inject<ReturnType<typeof usePublicSeasonContext> | null>('publicSeasonContext', null)
+const props = defineProps<{
+  series: PlayoffSeries
+  emphasize?: boolean
+}>()
 
-const props = withDefaults(
-  defineProps<{
-    series: PlayoffSeries
-    variant?: 'default' | 'semifinal' | 'final'
-  }>(),
+const seriesPath = computed(() => publicContestDetailPath({
+  unitType: props.series.matchSeriesId ? 'MATCH_SERIES' : 'MATCH',
+  matchId: props.series.matchId || (!props.series.matchSeriesId ? props.series.id : ''),
+  matchSeriesId: props.series.matchSeriesId,
+}))
+
+const metaLabel = computed(() => v4BestOfLabel(props.series.bestOf))
+
+const statusCode = computed(() => String(props.series.seriesStatus || '').toUpperCase())
+
+const footer = computed(() => {
+  if (statusCode.value === 'RUNNING') return v4MatchSeriesStatusLabel(props.series.seriesStatus)
+  if (statusCode.value === 'COMPLETED' || statusCode.value === 'CANCELLED') return ''
+  return props.series.scheduledLabel || ''
+})
+
+const rows = computed(() => [
   {
-    variant: 'default',
-  },
-)
-
-const failedLogoIds = ref<Set<string>>(new Set())
-
-const teamRows = computed(() => [
-  {
-    teamId: props.series.topTeamId,
-    name: props.series.topTeamName,
-    shortName: (props.series.topTeamName || '待定').slice(0, 3).toUpperCase() || '--',
+    key: 'home',
+    name: props.series.topTeamName || '待定',
     logo: props.series.topTeamLogo,
-    badgeKey: undefined as string | undefined,
+    seed: props.series.topSeed,
     score: props.series.topScore,
-    seed: props.series.topSeed ?? '-',
-    hasTeamLink: isPublicTeamId(props.series.topTeamId),
-    isWinner: Boolean(props.series.winnerTeamId) && props.series.winnerTeamId === props.series.topTeamId,
-    team: isPublicTeamId(props.series.topTeamId)
-      ? toEventTeam({
-          teamId: props.series.topTeamId,
-          teamName: props.series.topTeamName,
-          teamLogoUrl: props.series.topTeamLogo,
-        })
-      : null,
+    winner: Boolean(props.series.winnerTeamId) && props.series.winnerTeamId === props.series.topTeamId,
   },
   {
-    teamId: props.series.bottomTeamId,
-    name: props.series.bottomTeamName,
-    shortName: (props.series.bottomTeamName || '待定').slice(0, 3).toUpperCase() || '--',
+    key: 'away',
+    name: props.series.bottomTeamName || '待定',
     logo: props.series.bottomTeamLogo,
-    badgeKey: undefined as string | undefined,
+    seed: props.series.bottomSeed,
     score: props.series.bottomScore,
-    seed: props.series.bottomSeed ?? '-',
-    hasTeamLink: isPublicTeamId(props.series.bottomTeamId),
-    isWinner: Boolean(props.series.winnerTeamId) && props.series.winnerTeamId === props.series.bottomTeamId,
-    team: isPublicTeamId(props.series.bottomTeamId)
-      ? toEventTeam({
-          teamId: props.series.bottomTeamId,
-          teamName: props.series.bottomTeamName,
-          teamLogoUrl: props.series.bottomTeamLogo,
-        })
-      : null,
+    winner: Boolean(props.series.winnerTeamId) && props.series.winnerTeamId === props.series.bottomTeamId,
   },
 ])
 
-function isPublicTeamId(id?: string | number | null) {
-  if (id == null || id === '') return false
-  const numeric = Number(id)
-  return Number.isFinite(numeric) && numeric > 0
+const showSeed = computed(() => rows.value.some((row) => row.seed != null && String(row.seed).trim() !== ''))
+
+const championName = computed(() => {
+  if (!props.emphasize || statusCode.value !== 'COMPLETED') return ''
+  return rows.value.find((row) => row.winner)?.name || ''
+})
+
+function scoreText(value: number | null | undefined) {
+  return value == null ? '-' : String(value)
 }
 
-function handleLogoError(teamId: string) {
-  failedLogoIds.value = new Set(failedLogoIds.value).add(teamId)
-}
-
-function showLogoImage(teamId: string, logo?: string) {
-  return Boolean(logo) && !failedLogoIds.value.has(teamId)
+function badgeText(name: string) {
+  return String(name || '').replace(/\s+/g, '').slice(0, 2).toUpperCase() || '--'
 }
 </script>
+
 <template>
-  <article
+  <component
+    :is="seriesPath ? 'router-link' : 'article'"
+    :to="seriesPath || undefined"
     class="playoff-series-card"
-    :class="{
-      'playoff-series-card--semifinal': variant === 'semifinal',
-      'playoff-series-card--final': variant === 'final',
-    }"
+    :class="{ 'playoff-series-card--final': emphasize }"
   >
-    <div v-if="variant === 'final'" class="playoff-series-card__final-title">总决赛</div>
-
+    <div class="playoff-series-card__meta">
+      <strong v-if="emphasize">总决赛</strong>
+      <span>{{ metaLabel }}</span>
+    </div>
     <div
-      v-for="(teamRow, index) in teamRows"
-      :key="`${index}-${teamRow.teamId || teamRow.name}`"
-      class="playoff-series-card__team"
-      :class="{
-        'playoff-series-card__team--winner': teamRow.isWinner,
-        'playoff-series-card__team--loser': !teamRow.isWinner,
-        'playoff-series-card__team--bordered': index > 0,
-      }"
+      v-for="row in rows"
+      :key="row.key"
+      class="playoff-series-card__row"
+      :class="{ 'is-winner': row.winner, 'has-seed': showSeed }"
     >
-      <span class="playoff-series-card__seed">{{ teamRow.seed }}</span>
-
-      <router-link
-        v-if="teamRow.hasTeamLink && teamRow.team"
-        :to="teamDetailLocation(teamRow.team.teamId, { divisionId: ctx?.divisionId.value, seasonId: ctx?.seasonId.value })"
-        class="playoff-series-card__team-link"
-      >
-        <div class="playoff-series-card__logo-wrap">
-          <img
-            v-if="showLogoImage(teamRow.teamId, teamRow.team.logo)"
-            class="playoff-series-card__logo"
-            :src="teamRow.team.logo"
-            :alt="`${teamRow.team.name} Logo`"
-            @error="handleLogoError(teamRow.teamId)"
-          />
-          <div
-            v-else-if="teamRow.team.badgeKey"
-            class="playoff-series-card__badge-scale"
-          >
-            <TeamBadge :type="teamRow.team.badgeKey" />
-          </div>
-          <span v-else class="playoff-series-card__logo-fallback">
-            {{ teamRow.team.shortName.slice(0, 2) }}
-          </span>
-        </div>
-
-        <span class="playoff-series-card__name">
-          {{ teamRow.team.shortName }}
-        </span>
-      </router-link>
-      <div v-else class="playoff-series-card__team-link playoff-series-card__team-link--static">
-        <div class="playoff-series-card__logo-wrap">
-          <span class="playoff-series-card__logo-fallback">TBD</span>
-        </div>
-        <span class="playoff-series-card__name">{{ teamRow.name || '待定' }}</span>
-      </div>
-
-      <strong class="playoff-series-card__score">{{ teamRow.score }}</strong>
+      <span v-if="showSeed" class="playoff-series-card__seed">{{ row.seed || '' }}</span>
+      <span class="playoff-series-card__logo" aria-hidden="true">
+        <img v-if="row.logo" :src="row.logo" :alt="''" />
+        <em v-else>{{ badgeText(row.name) }}</em>
+      </span>
+      <span class="playoff-series-card__name">{{ row.name }}</span>
+      <strong class="playoff-series-card__score">{{ scoreText(row.score) }}</strong>
     </div>
-
-    <div v-if="variant === 'final' && series.winnerTeamId" class="playoff-series-card__champion">
-      <span aria-hidden="true" />
-      <strong>
-        总冠军
-        {{
-          series.winnerTeamId === series.topTeamId
-            ? series.topTeamName
-            : series.winnerTeamId === series.bottomTeamId
-              ? series.bottomTeamName
-              : ''
-        }}
-      </strong>
-      <span aria-hidden="true" />
-    </div>
-  </article>
+    <div v-if="championName" class="playoff-series-card__champion">总冠军 {{ championName }}</div>
+    <div v-else-if="footer" class="playoff-series-card__foot">{{ footer }}</div>
+  </component>
 </template>
+
 <style scoped lang="scss">
 .playoff-series-card {
+  display: block;
   width: 100%;
-  min-height: 76px;
-  padding: 0;
-  color: #111111;
-  background: linear-gradient(145deg, rgba(246, 245, 242, 0.98), rgba(232, 231, 227, 0.98));
-  border: 1px solid rgba(10, 10, 10, 0.15);
-  border-radius: 5px;
+  min-width: 0;
+  min-height: 108px;
+  padding: 10px 12px 9px;
+  color: inherit;
+  text-decoration: none;
+  background: #f7f4f0;
+  border: 1px solid #dedede;
+  border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(17, 17, 17, 0.05);
   box-sizing: border-box;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
 
   &:hover {
-    transform: translateY(-1px);
-    border-color: rgba(225, 6, 19, 0.4);
+    border-color: rgba(225, 6, 19, 0.55);
+    background: #fff8f6;
   }
-}
-
-.playoff-series-card--semifinal {
-  min-height: 100px;
 }
 
 .playoff-series-card--final {
-  min-height: 146px;
-  padding-bottom: 8px;
-  border-color: rgba(10, 10, 10, 0.2);
-  background: linear-gradient(145deg, #f4f3ef, #e6e5e1);
+  min-height: 128px;
+  padding: 12px 14px 11px;
+  border-color: var(--cnpa-red, #e10613);
+  box-shadow: 0 3px 12px rgba(225, 6, 19, 0.08);
 }
 
-.playoff-series-card__final-title {
-  padding: 10px 12px 0;
-  color: #111111;
-  font-size: 14px;
-  font-weight: 800;
-  text-align: center;
-}
+.playoff-series-card__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: rgba(17, 17, 17, 0.42);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 
-.playoff-series-card__team {
-  display: grid;
-  grid-template-columns: 24px 36px minmax(0, 1fr) 28px;
-  align-items: center;
-  column-gap: 9px;
-  min-height: 56px;
-  padding: 8px 14px;
-  box-sizing: border-box;
-}
-
-.playoff-series-card__team--bordered {
-  border-top: 1px solid rgba(10, 10, 10, 0.1);
-}
-
-.playoff-series-card__team-link {
-  grid-column: 2 / 4;
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
-  align-items: center;
-  column-gap: 9px;
-  min-width: 0;
-  color: inherit;
-  text-decoration: none;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-
-  &:hover {
-    opacity: 0.82;
+  strong {
+    color: var(--cnpa-red, #e10613);
+    font-size: 12px;
+    font-weight: 800;
   }
 }
 
-.playoff-series-card__team-link--static {
-  cursor: default;
+.playoff-series-card__row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 28px;
+  gap: 10px;
+  align-items: center;
+  min-height: 36px;
+  padding: 3px 0;
 
-  &:hover {
-    opacity: 1;
+  &.has-seed {
+    grid-template-columns: 16px 36px minmax(0, 1fr) 28px;
+  }
+}
+
+.playoff-series-card__row.is-winner {
+  .playoff-series-card__name,
+  .playoff-series-card__score {
+    color: var(--cnpa-red, #e10613);
+    font-weight: 800;
   }
 }
 
 .playoff-series-card__seed {
-  color: #202020;
-  font-size: 13px;
-  font-weight: 700;
+  color: rgba(17, 17, 17, 0.45);
+  font-size: 11px;
+  font-weight: 800;
   text-align: center;
-  line-height: 1.2;
-}
-
-.playoff-series-card__logo-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  overflow: visible;
 }
 
 .playoff-series-card__logo {
-  display: block;
-  width: 30px;
-  height: 30px;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  object-position: center;
-}
-
-.playoff-series-card__badge-scale {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  overflow: visible;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #161616;
 
-  :deep(.badge) {
-    transform: scale(0.46875);
-    transform-origin: center;
+  img {
+    width: 36px;
+    height: 36px;
+    object-fit: cover;
   }
-}
 
-.playoff-series-card--final .playoff-series-card__logo-wrap {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-}
-
-.playoff-series-card--final .playoff-series-card__logo {
-  width: 34px;
-  height: 34px;
-}
-
-.playoff-series-card--final .playoff-series-card__badge-scale {
-  width: 34px;
-  height: 34px;
-
-  :deep(.badge) {
-    transform: scale(0.53125);
+  em {
+    font-style: normal;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.02em;
   }
-}
-
-.playoff-series-card__logo-fallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  color: rgba(17, 17, 17, 0.7);
-  font-size: 10px;
-  font-weight: 800;
-  border: 1px solid rgba(17, 17, 17, 0.14);
-  box-sizing: border-box;
 }
 
 .playoff-series-card__name {
-  overflow: hidden;
   min-width: 0;
-  color: #444444;
-  font-size: clamp(13px, 0.9vw, 16px);
-  font-weight: 700;
+  overflow: hidden;
+  color: #222;
+  font-size: 14px;
+  font-weight: 800;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.playoff-series-card__row:not(.is-winner) .playoff-series-card__name {
+  color: rgba(17, 17, 17, 0.62);
+  font-weight: 700;
+}
+
 .playoff-series-card__score {
-  text-align: right;
-  font-size: 14px;
+  width: 28px;
+  color: #111;
+  font-size: 16px;
   font-weight: 800;
-  line-height: 1.2;
-}
-
-.playoff-series-card__team--winner {
-  .playoff-series-card__name,
-  .playoff-series-card__score {
-    color: #e10613;
-  }
-
-  .playoff-series-card__logo,
-  :deep(.badge) {
-    opacity: 1;
-  }
-}
-
-.playoff-series-card__team--loser {
-  .playoff-series-card__name {
-    color: rgba(17, 17, 17, 0.72);
-  }
-
-  .playoff-series-card__logo,
-  :deep(.badge) {
-    opacity: 0.72;
-  }
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .playoff-series-card__champion {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  padding: 10px 14px 14px;
-
-  strong {
-    color: #e10613;
-    font-size: 18px;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-  }
-
-  span {
-    height: 1px;
-    background: rgba(225, 6, 19, 0.55);
-
-    &:first-child {
-      margin-left: 8px;
-      transform: rotate(-8deg);
-      transform-origin: right center;
-    }
-
-    &:last-child {
-      margin-right: 8px;
-      transform: rotate(8deg);
-      transform-origin: left center;
-    }
-  }
+  margin-top: 8px;
+  color: var(--cnpa-red, #e10613);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 
-@media (max-width: 1100px) {
-  .playoff-series-card__logo-wrap {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-  }
-
-  .playoff-series-card__logo {
-    width: 27px;
-    height: 27px;
-  }
-
-  .playoff-series-card__badge-scale {
-    width: 27px;
-    height: 27px;
-
-    :deep(.badge) {
-      transform: scale(0.421875);
-    }
-  }
-
-  .playoff-series-card__team {
-    grid-template-columns: 22px 32px minmax(0, 1fr) 26px;
-    padding-inline: 10px;
-  }
-
-  .playoff-series-card__team-link {
-    grid-column: 2 / 4;
-    grid-template-columns: 32px minmax(0, 1fr);
-  }
+.playoff-series-card__foot {
+  margin-top: 6px;
+  color: rgba(17, 17, 17, 0.5);
+  font-size: 11px;
+  font-weight: 700;
 }
 </style>

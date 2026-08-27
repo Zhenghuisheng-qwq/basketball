@@ -105,17 +105,29 @@ const seasonCardTitle = computed(() => ({
   en: 'Event Averages',
 }))
 
+type MetricTier = 'primary' | 'secondary' | 'tertiary'
+
 const seasonStatItems = computed(() => {
   if (!seasonStats.value) return []
   return [
-    { label: '得分', value: seasonStats.value.points },
-    { label: '篮板', value: seasonStats.value.rebounds },
-    { label: '助攻', value: seasonStats.value.assists },
-    { label: '抢断', value: seasonStats.value.steals },
-    { label: '盖帽', value: seasonStats.value.blocks },
-    { label: '犯规', value: seasonStats.value.fouls },
-    { label: '失误', value: seasonStats.value.turnovers },
+    { key: 'points', label: '得分', value: seasonStats.value.points, tier: 'primary' as MetricTier },
+    { key: 'rebounds', label: '篮板', value: seasonStats.value.rebounds, tier: 'secondary' as MetricTier },
+    { key: 'assists', label: '助攻', value: seasonStats.value.assists, tier: 'secondary' as MetricTier },
+    { key: 'steals', label: '抢断', value: seasonStats.value.steals, tier: 'tertiary' as MetricTier },
+    { key: 'blocks', label: '盖帽', value: seasonStats.value.blocks, tier: 'tertiary' as MetricTier },
+    { key: 'fouls', label: '犯规', value: seasonStats.value.fouls, tier: 'tertiary' as MetricTier },
+    { key: 'turnovers', label: '失误', value: seasonStats.value.turnovers, tier: 'tertiary' as MetricTier },
   ]
+})
+
+const rosterJerseyMap = computed(() => {
+  const map = new Map<string, string>()
+  for (const item of ctx.roster.value) {
+    if (item.playerId && item.jerseyNo) {
+      map.set(String(item.playerId), String(item.jerseyNo))
+    }
+  }
+  return map
 })
 
 const summaryPlayerStats = computed(() => {
@@ -126,6 +138,10 @@ const summaryPlayerStats = computed(() => {
     ? averagePlayerStats.value
     : totalPlayerStats.value
 })
+
+const showFgPctColumn = computed(() => summaryPlayerStats.value.some((row) => row.fgPct != null))
+const showTpPctColumn = computed(() => summaryPlayerStats.value.some((row) => row.tpPct != null))
+const showFtPctColumn = computed(() => summaryPlayerStats.value.some((row) => row.ftPct != null))
 
 const summaryStatsMode = computed<PlayerStatsMode>(() => playerStatsMode.value)
 
@@ -297,7 +313,12 @@ function buildSingleMaxMap(rows: TeamSingleMatchPlayerStat[]) {
   if (!rows.length) return maxes
 
   for (const col of singleNumericColumns) {
-    maxes[col] = Math.max(...rows.map((row) => row[col]))
+    const values = rows
+      .map((row) => row[col])
+      .filter((value): value is number => value !== null && value !== undefined && !Number.isNaN(Number(value)))
+    if (values.length) {
+      maxes[col] = Math.max(...values)
+    }
   }
   return maxes
 }
@@ -307,30 +328,43 @@ function isSummaryMax(
   col: NumericColumn,
 ): boolean {
   const maxValue = summaryMaxMap.value[col]
-  if (maxValue === undefined) return false
+  if (maxValue === undefined || maxValue === 0) return false
   return normalizeSummaryValue(row[col], col, summaryStatsMode.value) === maxValue
 }
 
 function isSingleMax(row: TeamSingleMatchPlayerStat, col: (typeof singleNumericColumns)[number]) {
   const maxValue = singleMaxMap.value[col]
-  if (maxValue === undefined) return false
+  if (maxValue === undefined || maxValue === 0) return false
   return row[col] === maxValue
 }
 
-function getPlayerNumber(nickname: string): string {
-  const match = nickname.match(/(\d+)$/)
-  return match ? match[1].padStart(2, '0') : initials(nickname)
+function getPlayerNumber(row: { playerId: string; nickname: string }): string {
+  const jersey = rosterJerseyMap.value.get(row.playerId)
+  if (jersey) return jersey.padStart(2, '0')
+  const match = row.nickname.match(/(\d+)$/)
+  return match ? match[1].padStart(2, '0') : initials(row.nickname)
 }
 
-function formatCount(value: number, mode: PlayerStatsMode): string {
-  return mode === 'average' ? value.toFixed(1) : String(Math.round(value))
+function formatMetric(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'
+  return Number(value).toFixed(1)
+}
+
+function formatCount(value: number | null | undefined, mode: PlayerStatsMode): string {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'
+  return mode === 'average' ? Number(value).toFixed(1) : String(Math.round(Number(value)))
 }
 
 function formatPct(value: number | null | undefined): string {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return '--'
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'
   const num = Number(value)
   const pct = num <= 1 ? num * 100 : num
   return `${pct.toFixed(1)}%`
+}
+
+function formatSingleValue(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === '' || value === '--') return '—'
+  return String(value)
 }
 
 function handlePlayerDetailClick(playerId: string) {
@@ -376,12 +410,10 @@ function showSingleTable() {
     </div>
 
     <section class="stats-section">
-      <div class="section-head section-head--compact">
-        <div class="section-head-group">
-          <h3 class="section-head-title section-head-title--sm">{{ seasonCardTitle.cn }}</h3>
-          <span class="section-head-sub">{{ seasonCardTitle.en }}</span>
-        </div>
-      </div>
+      <p class="season-caption">
+        {{ seasonCardTitle.cn }}
+        <em>{{ seasonCardTitle.en }}</em>
+      </p>
 
       <div v-if="seasonStatState === 'loading'" class="stats-empty">加载中...</div>
       <div v-else-if="seasonStatState === 'error'" class="stats-empty is-error">
@@ -390,12 +422,19 @@ function showSingleTable() {
       <div v-else-if="!seasonStats" class="stats-empty">暂无场均数据</div>
 
       <div v-else class="season-cards">
-        <article v-for="item in seasonStatItems" :key="item.label" class="season-card">
+        <article
+          v-for="item in seasonStatItems"
+          :key="item.key"
+          class="season-card"
+          :class="`season-card--${item.tier}`"
+        >
           <span class="season-card__label">{{ item.label }}</span>
-          <strong class="season-card__value">{{ item.value.toFixed(1) }}</strong>
+          <strong class="season-card__value">{{ formatMetric(item.value) }}</strong>
         </article>
       </div>
-      <p class="stats-note">场均为本赛事 Division 汇总，暂不按常规赛 / 季后赛拆分。</p>
+      <p class="stats-note stats-note--metrics">
+        场均为本赛事 Division 汇总，暂不按常规赛 / 季后赛拆分。
+      </p>
     </section>
 
     <section class="stats-section">
@@ -444,7 +483,7 @@ function showSingleTable() {
         <table v-else class="stats-table">
           <thead>
             <tr>
-              <th>球员</th>
+              <th class="col-player">球员</th>
               <th>出场</th>
               <th>得分</th>
               <th>篮板</th>
@@ -453,15 +492,15 @@ function showSingleTable() {
               <th>盖帽</th>
               <th>犯规</th>
               <th>失误</th>
-              <th>投篮命中率</th>
-              <th>三分命中率</th>
-              <th>罚球命中率</th>
-              <th>查看</th>
+              <th v-if="showFgPctColumn">投篮命中率</th>
+              <th v-if="showTpPctColumn">三分命中率</th>
+              <th v-if="showFtPctColumn">罚球命中率</th>
+              <th class="col-action">查看</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in summaryPlayerStats" :key="row.playerId">
-              <td>
+              <td class="col-player">
                 <div class="player-cell">
                   <div class="player-cell__avatar">
                     <img
@@ -471,50 +510,54 @@ function showSingleTable() {
                       class="player-cell__avatar-img"
                     />
                     <span v-else class="player-cell__avatar-placeholder">
-                      {{ getPlayerNumber(row.nickname) }}
+                      {{ getPlayerNumber(row) }}
                     </span>
                   </div>
                   <PlayerLink
+                    class="player-cell__name"
                     :player-id="row.playerId"
                     :player-name="row.nickname"
                     tab="overview"
                   />
                 </div>
               </td>
-              <td>{{ row.games }}</td>
-              <td :class="{ 'is-max': isSummaryMax(row, 'points') }">
+              <td class="is-num">{{ row.games }}</td>
+              <td
+                class="is-num"
+                :class="{ 'is-max': isSummaryMax(row, 'points'), 'is-max--lead': isSummaryMax(row, 'points') }"
+              >
                 {{ formatCount(row.points, summaryStatsMode) }}
               </td>
-              <td :class="{ 'is-max': isSummaryMax(row, 'rebounds') }">
+              <td class="is-num" :class="{ 'is-max': isSummaryMax(row, 'rebounds') }">
                 {{ formatCount(row.rebounds, summaryStatsMode) }}
               </td>
-              <td :class="{ 'is-max': isSummaryMax(row, 'assists') }">
+              <td class="is-num" :class="{ 'is-max': isSummaryMax(row, 'assists') }">
                 {{ formatCount(row.assists, summaryStatsMode) }}
               </td>
-              <td :class="{ 'is-max': isSummaryMax(row, 'steals') }">
+              <td class="is-num" :class="{ 'is-max': isSummaryMax(row, 'steals') }">
                 {{ formatCount(row.steals, summaryStatsMode) }}
               </td>
-              <td :class="{ 'is-max': isSummaryMax(row, 'blocks') }">
+              <td class="is-num" :class="{ 'is-max': isSummaryMax(row, 'blocks') }">
                 {{ formatCount(row.blocks, summaryStatsMode) }}
               </td>
-              <td :class="{ 'is-max': isSummaryMax(row, 'fouls') }">
+              <td class="is-num" :class="{ 'is-max': isSummaryMax(row, 'fouls') }">
                 {{ formatCount(row.fouls, summaryStatsMode) }}
               </td>
-              <td :class="{ 'is-max': isSummaryMax(row, 'turnovers') }">
+              <td class="is-num" :class="{ 'is-max': isSummaryMax(row, 'turnovers') }">
                 {{ formatCount(row.turnovers, summaryStatsMode) }}
               </td>
-              <td :class="{ 'is-max': isSummaryMax(row, 'fgPct') }">
+              <td v-if="showFgPctColumn" class="is-num" :class="{ 'is-max': isSummaryMax(row, 'fgPct') }">
                 {{ formatPct(row.fgPct) }}
               </td>
-              <td :class="{ 'is-max': isSummaryMax(row, 'tpPct') }">
+              <td v-if="showTpPctColumn" class="is-num" :class="{ 'is-max': isSummaryMax(row, 'tpPct') }">
                 {{ formatPct(row.tpPct) }}
               </td>
-              <td :class="{ 'is-max': isSummaryMax(row, 'ftPct') }">
+              <td v-if="showFtPctColumn" class="is-num" :class="{ 'is-max': isSummaryMax(row, 'ftPct') }">
                 {{ formatPct(row.ftPct) }}
               </td>
-              <td>
-                <button type="button" class="view-btn" @click="handlePlayerDetailClick(row.playerId)">
-                  球员详情
+              <td class="col-action">
+                <button type="button" class="player-action" @click="handlePlayerDetailClick(row.playerId)">
+                  查看球员 →
                 </button>
               </td>
             </tr>
@@ -536,7 +579,7 @@ function showSingleTable() {
           <table class="stats-table">
             <thead>
               <tr>
-                <th>球员</th>
+                <th class="col-player">球员</th>
                 <th>评分</th>
                 <th>得分</th>
                 <th>篮板</th>
@@ -548,12 +591,12 @@ function showSingleTable() {
                 <th>投篮</th>
                 <th>三分</th>
                 <th>罚球</th>
-                <th>查看</th>
+                <th class="col-action">查看</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="row in singleMatchStats.players" :key="row.playerId">
-                <td>
+                <td class="col-player">
                   <div class="player-cell">
                     <div class="player-cell__avatar">
                       <img
@@ -563,54 +606,69 @@ function showSingleTable() {
                         class="player-cell__avatar-img"
                       />
                       <span v-else class="player-cell__avatar-placeholder">
-                        {{ getPlayerNumber(row.nickname) }}
+                        {{ getPlayerNumber(row) }}
                       </span>
                     </div>
                     <PlayerLink
+                      class="player-cell__name"
                       :player-id="row.playerId"
                       :player-name="row.nickname"
                       tab="overview"
                     />
                   </div>
                 </td>
-                <td>{{ row.grade }}</td>
-                <td :class="{ 'is-max': isSingleMax(row, 'points') }">{{ row.points }}</td>
-                <td :class="{ 'is-max': isSingleMax(row, 'rebounds') }">{{ row.rebounds }}</td>
-                <td :class="{ 'is-max': isSingleMax(row, 'assists') }">{{ row.assists }}</td>
-                <td :class="{ 'is-max': isSingleMax(row, 'steals') }">{{ row.steals }}</td>
-                <td :class="{ 'is-max': isSingleMax(row, 'blocks') }">{{ row.blocks }}</td>
-                <td :class="{ 'is-max': isSingleMax(row, 'fouls') }">{{ row.fouls }}</td>
-                <td :class="{ 'is-max': isSingleMax(row, 'turnovers') }">{{ row.turnovers }}</td>
-                <td>{{ row.fg }}</td>
-                <td>{{ row.tp }}</td>
-                <td>{{ row.ft }}</td>
-                <td>
-                  <button type="button" class="view-btn" @click="handlePlayerDetailClick(row.playerId)">
-                    球员详情
+                <td class="is-num">{{ formatSingleValue(row.grade) }}</td>
+                <td
+                  class="is-num"
+                  :class="{ 'is-max': isSingleMax(row, 'points'), 'is-max--lead': isSingleMax(row, 'points') }"
+                >
+                  {{ row.points }}
+                </td>
+                <td class="is-num" :class="{ 'is-max': isSingleMax(row, 'rebounds') }">{{ row.rebounds }}</td>
+                <td class="is-num" :class="{ 'is-max': isSingleMax(row, 'assists') }">{{ row.assists }}</td>
+                <td class="is-num" :class="{ 'is-max': isSingleMax(row, 'steals') }">{{ row.steals }}</td>
+                <td class="is-num" :class="{ 'is-max': isSingleMax(row, 'blocks') }">{{ row.blocks }}</td>
+                <td class="is-num" :class="{ 'is-max': isSingleMax(row, 'fouls') }">
+                  {{ formatSingleValue(row.fouls) }}
+                </td>
+                <td class="is-num" :class="{ 'is-max': isSingleMax(row, 'turnovers') }">{{ row.turnovers }}</td>
+                <td class="is-num">{{ row.fg }}</td>
+                <td class="is-num">{{ row.tp }}</td>
+                <td class="is-num">{{ row.ft }}</td>
+                <td class="col-action">
+                  <button type="button" class="player-action" @click="handlePlayerDetailClick(row.playerId)">
+                    查看球员 →
                   </button>
                 </td>
               </tr>
               <tr class="team-total-row">
-                <td>球队合计</td>
-                <td>{{ singleMatchStats.teamTotal.grade }}</td>
-                <td>{{ singleMatchStats.teamTotal.points }}</td>
-                <td>{{ singleMatchStats.teamTotal.rebounds }}</td>
-                <td>{{ singleMatchStats.teamTotal.assists }}</td>
-                <td>{{ singleMatchStats.teamTotal.steals }}</td>
-                <td>{{ singleMatchStats.teamTotal.blocks }}</td>
-                <td>{{ singleMatchStats.teamTotal.fouls }}</td>
-                <td>{{ singleMatchStats.teamTotal.turnovers }}</td>
-                <td>{{ singleMatchStats.teamTotal.fg }}</td>
-                <td>{{ singleMatchStats.teamTotal.tp }}</td>
-                <td>{{ singleMatchStats.teamTotal.ft }}</td>
-                <td />
+                <td class="col-player">球队合计</td>
+                <td class="is-num">{{ formatSingleValue(singleMatchStats.teamTotal.grade) }}</td>
+                <td class="is-num">{{ singleMatchStats.teamTotal.points }}</td>
+                <td class="is-num">{{ singleMatchStats.teamTotal.rebounds }}</td>
+                <td class="is-num">{{ singleMatchStats.teamTotal.assists }}</td>
+                <td class="is-num">{{ singleMatchStats.teamTotal.steals }}</td>
+                <td class="is-num">{{ singleMatchStats.teamTotal.blocks }}</td>
+                <td class="is-num">{{ formatSingleValue(singleMatchStats.teamTotal.fouls) }}</td>
+                <td class="is-num">{{ singleMatchStats.teamTotal.turnovers }}</td>
+                <td class="is-num">{{ singleMatchStats.teamTotal.fg }}</td>
+                <td class="is-num">{{ singleMatchStats.teamTotal.tp }}</td>
+                <td class="is-num">{{ singleMatchStats.teamTotal.ft }}</td>
+                <td class="col-action" />
               </tr>
             </tbody>
           </table>
         </template>
       </div>
 
-      <p class="stats-note">
+      <p class="stats-note stats-note--source">
+        <span class="stats-note__icon" aria-hidden="true">
+          <svg viewBox="0 0 16 16" width="13" height="13" fill="none">
+            <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.2" />
+            <path d="M8 7.2v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+            <circle cx="8" cy="5.15" r="0.7" fill="currentColor" />
+          </svg>
+        </span>
         数据来源：比赛结束后提交的游戏数据截图，经赛事审核后计入。
       </p>
     </section>
@@ -657,6 +715,11 @@ function showSingleTable() {
 }
 
 .section-head--compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 20px;
 }
 
@@ -664,36 +727,62 @@ function showSingleTable() {
   font-size: clamp(18px, 1.8vw, 22px);
 }
 
+.season-caption {
+  margin: 0 0 16px;
+  color: #e51b23;
+  font-size: 15px;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.02em;
+
+  em {
+    margin-left: 10px;
+    font-style: italic;
+    text-transform: uppercase;
+  }
+}
+
 .stats-filters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
   margin-left: auto;
 }
 
+.filter-select {
+  position: relative;
+  display: inline-flex;
+}
+
 .filter-select select {
-  min-width: 160px;
-  height: 44px;
-  padding: 0 12px;
-  border: 1px solid rgba(0, 0, 0, 0.14);
+  min-width: 148px;
+  height: 36px;
+  padding: 0 30px 0 12px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
   border-radius: 2px;
-  background: var(--cnpa-paper-surface);
-  color: var(--cnpa-paper-text);
+  background-color: #faf8f6;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23111111' d='M1.1.3 5 4.2 8.9.3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  background-size: 10px 6px;
+  color: #111;
   font-family: inherit;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .filter-select:first-child select {
-  min-width: 210px;
+  min-width: 196px;
   max-width: 240px;
 }
 
 .filter-select:last-child select {
-  min-width: 150px;
-  max-width: 170px;
+  min-width: 132px;
+  max-width: 160px;
 }
 
 .stats-section + .stats-section {
@@ -703,8 +792,8 @@ function showSingleTable() {
 .stats-empty {
   padding: 40px 16px;
   text-align: center;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  background: rgba(25, 25, 25, 0.025);
+  border: 1px dashed rgba(17, 17, 17, 0.14);
+  background: transparent;
   color: var(--cnpa-paper-text-muted);
   font-size: 14px;
 
@@ -715,62 +804,84 @@ function showSingleTable() {
 
 .season-cards {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: minmax(0, 1.16fr) repeat(6, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .season-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 122px;
-  padding: 24px 18px 22px;
-  border: 1px solid var(--cnpa-paper-border);
+  min-height: 108px;
+  padding: 18px 12px 16px;
+  border: 1px solid rgba(17, 17, 17, 0.1);
   border-radius: 2px;
-  background: rgba(25, 25, 25, 0.03);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  background: #fff;
+  box-shadow: none;
   text-align: center;
   box-sizing: border-box;
 }
 
+.season-card--primary {
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e51b23;
+  }
+}
+
 .season-card__label {
   display: block;
-  margin: 0 0 16px;
-  font-size: 15px;
+  margin: 0 0 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: rgba(0, 0, 0, 0.62);
+  color: rgba(0, 0, 0, 0.58);
   text-align: center;
 }
 
 .season-card__value {
   margin: 0;
-  font-size: clamp(38px, 3vw, 50px);
+  font-size: clamp(32px, 2.5vw, 44px);
   line-height: 1;
-  font-weight: 900;
+  font-weight: 800;
   color: #111;
   letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.season-card--primary .season-card__value {
+  font-size: clamp(36px, 2.85vw, 50px);
+  font-weight: 900;
+}
+
+.season-card--secondary .season-card__value {
+  font-weight: 800;
 }
 
 .mode-tabs {
   display: inline-flex;
-  border: 1px solid var(--cnpa-paper-border);
-  background: var(--cnpa-paper-surface);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: #faf8f6;
 }
 
 .mode-tab {
-  min-width: 88px;
-  height: 36px;
+  min-width: 80px;
+  height: 34px;
   padding: 0 14px;
   border: none;
   border-right: 1px solid rgba(17, 17, 17, 0.1);
   background: transparent;
-  color: var(--cnpa-paper-text-muted);
+  color: #111;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.2s ease;
 
   &:last-child {
     border-right: none;
@@ -795,51 +906,78 @@ function showSingleTable() {
 
 .stats-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 820px;
   border-collapse: collapse;
-  border: 1px solid var(--cnpa-paper-border);
-  background: rgba(25, 25, 25, 0.03);
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  background: #fff;
 
   th,
   td {
-    padding: 12px 10px;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 13px 8px;
+    border-top: 1px solid rgba(17, 17, 17, 0.08);
     text-align: center;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--cnpa-paper-text);
     white-space: nowrap;
   }
 
   th {
-    background: var(--cnpa-paper-surface);
-    color: var(--cnpa-paper-text-muted);
-    font-weight: 800;
+    height: 40px;
+    padding: 10px 8px;
+    background: #f3f2f0;
+    color: #6b6b6b;
+    font-weight: 600;
+    border-top: 0;
   }
 
   tbody tr {
-    background: rgba(25, 25, 25, 0.025);
+    background: #fff;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #faf9f7;
   }
 
   tbody tr:hover {
-    background: rgba(25, 25, 25, 0.035);
+    background: #f4efe9;
+  }
+
+  .is-num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .col-player {
+    text-align: left;
+    padding-left: 14px;
+  }
+
+  .col-action {
+    width: 88px;
+    padding-left: 6px;
+    padding-right: 10px;
   }
 }
 
 .is-max {
-  color: var(--cnpa-red);
-  font-weight: 900;
+  font-weight: 700;
+}
+
+.is-max--lead {
+  color: #e51b23;
 }
 
 .player-cell {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .player-cell__avatar {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
 }
 
@@ -857,130 +995,122 @@ function showSingleTable() {
   place-items: center;
   border-radius: 50%;
   border: 1px solid rgba(17, 17, 17, 0.12);
-  background: linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 100%);
+  background: #1a1a1a;
   color: #fff;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
-.view-btn {
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid rgba(0, 0, 0, 0.14);
-  background: var(--cnpa-paper-surface);
-  color: var(--cnpa-paper-text);
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
+.player-cell__name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.player-action {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #5c5c5c;
+  font-size: 12px;
+  font-weight: 600;
   font-family: inherit;
-  transition: all 0.2s ease;
+  cursor: pointer;
+  white-space: nowrap;
 
   &:hover {
-    border-color: var(--cnpa-red);
-    color: var(--cnpa-red);
+    color: #e51b23;
   }
 }
 
 .team-total-row {
-  background: var(--cnpa-paper-surface);
+  background: #f3ead8 !important;
   font-weight: 800;
 }
 
 .stats-note {
-  margin: 16px 0 0;
-  font-size: 12px;
+  margin: 12px 0 0;
+  font-size: 13px;
   line-height: 1.6;
-  color: var(--cnpa-paper-text-muted);
+  color: #6f6d69;
+}
+
+.stats-note--metrics {
+  margin-top: 12px;
+}
+
+.stats-note--source {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.stats-note__icon {
+  display: inline-flex;
+  color: #8a8680;
+  transform: translateY(2px);
+  flex-shrink: 0;
+}
+
+.team-stats {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  box-sizing: border-box;
+}
+
+.team-stats .filter-select select:focus-visible,
+.team-stats .mode-tab:focus-visible,
+.team-stats .player-action:focus-visible {
+  outline: 2px solid rgba(225, 6, 19, 0.4);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1440px) {
+  .season-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .season-card--primary {
+    grid-column: span 1;
+  }
 }
 
 @media (max-width: 1280px) {
   .season-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
-  }
-
-  .season-card {
-    min-height: 112px;
-    padding: 20px 12px;
-  }
-
-  .season-card__value {
-    font-size: 38px;
-  }
-}
-
-@media (max-width: 992px) {
-  .season-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
-  .team-stats__toolbar {
-    align-items: flex-start;
+  .team-stats__toolbar,
+  .stats-filters {
+    align-items: stretch;
+    width: 100%;
     flex-direction: column;
+    margin-left: 0;
   }
 
   .stats-filters {
-    width: 100%;
     justify-content: flex-start;
-    margin-left: 0;
+  }
+
+  .filter-select,
+  .filter-select select {
+    width: 100%;
+    max-width: none;
   }
 
   .section-head--compact {
     flex-direction: column;
     align-items: flex-start;
   }
-}
 
-.team-stats {
-  padding: clamp(22px, 2.6vw, 38px);
-  border: 1px solid var(--cnpa-public-border);
-  background: var(--cnpa-public-card-bg);
-  box-shadow: var(--cnpa-public-shadow-soft);
-  box-sizing: border-box;
-}
-
-.team-stats .filter-select select,
-.team-stats .mode-tabs,
-.team-stats .season-card,
-.team-stats .stats-table {
-  border-color: var(--cnpa-public-border);
-  background: var(--cnpa-public-card-bg-soft);
-}
-
-.team-stats .season-card {
-  box-shadow: var(--cnpa-public-shadow-soft);
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.team-stats .season-card:hover {
-  border-color: rgba(225, 6, 19, 0.34);
-  box-shadow: var(--cnpa-public-shadow);
-  transform: translateY(-2px);
-}
-
-.team-stats .filter-select select:focus-visible,
-.team-stats .mode-tab:focus-visible,
-.team-stats .view-btn:focus-visible {
-  outline: 2px solid rgba(225, 6, 19, 0.4);
-  outline-offset: 2px;
-}
-
-@media (max-width: 768px) {
-  .team-stats {
-    padding: 20px 16px;
-  }
-
-  .team-stats__toolbar,
-  .stats-filters {
-    align-items: stretch;
-    width: 100%;
-  }
-
-  .team-stats .filter-select,
-  .team-stats .filter-select select {
-    width: 100%;
-    max-width: none;
+  .season-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

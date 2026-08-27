@@ -85,6 +85,8 @@ export interface TeamMatchRecord {
   status: TeamMatchStatus
   stage: TeamStage
   competition: string
+  stageHeadline?: string
+  stageMeta?: string
   playoffGame?: string
   resultType?: string
   resultReason?: string
@@ -92,6 +94,8 @@ export interface TeamMatchRecord {
   originalTeamScore?: number
   originalOpponentScore?: number
   seriesScoreText?: string
+  matchSeriesId?: string
+  bestOf?: number
 }
 
 export interface TeamSeasonAverages {
@@ -100,7 +104,8 @@ export interface TeamSeasonAverages {
   assists: number
   steals: number
   blocks: number
-  fouls: number
+  /** null = 当前 Public Team Stat 未提供犯规 */
+  fouls: number | null
   turnovers: number
 }
 
@@ -114,7 +119,8 @@ export interface TeamPlayerAverageStat {
   assists: number
   steals: number
   blocks: number
-  fouls: number
+  /** null = 当前 Public Player Stat 未提供犯规 */
+  fouls: number | null
   turnovers: number
   /** null = 无投篮数据源 */
   fgPct: number | null
@@ -136,7 +142,8 @@ export interface TeamSingleMatchPlayerStat {
   assists: number
   steals: number
   blocks: number
-  fouls: number
+  /** null = 单场接口未提供犯规 */
+  fouls: number | null
   turnovers: number
   fg: string
   tp: string
@@ -150,7 +157,7 @@ export interface TeamSingleMatchTotal {
   assists: number
   steals: number
   blocks: number
-  fouls: number
+  fouls: number | null
   turnovers: number
   fg: string
   tp: string
