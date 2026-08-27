@@ -25,10 +25,20 @@ const selectedStage = computed(
     props.detail.seasonStageOptions[0],
 )
 
+const seasonFilterOptions = computed(() => {
+  const seen = new Map<string, string>()
+  for (const row of props.detail.careerStats) {
+    if (row.seasonId && !seen.has(row.seasonId)) {
+      seen.set(row.seasonId, row.tournamentName || `赛季 ${row.seasonId}`)
+    }
+  }
+  return [...seen.entries()].map(([id, label]) => ({ id, label }))
+})
+
 const careerRows = computed(() => {
   let rows = props.detail.careerStats
   if (seasonFilter.value !== '全部赛季') {
-    rows = rows.filter((row) => row.tournamentName.includes(seasonFilter.value.slice(0, 4)))
+    rows = rows.filter((row) => row.seasonId === seasonFilter.value)
   }
   return rows
 })
@@ -146,7 +156,17 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="player-detail-data">
-    <div class="player-detail-data__mode-tabs">
+    <header class="player-detail-data__intro">
+      <h2 class="player-detail-data__title">
+        球员数据
+        <span>PLAYER DATA</span>
+      </h2>
+      <p class="player-detail-data__desc">
+        汇总球员在 CNPA 公开赛事中的生涯与赛季表现，仅统计已审核的正式比赛数据
+      </p>
+    </header>
+
+    <div class="player-detail-data__mode-tabs" role="tablist" aria-label="数据范围">
       <button
         type="button"
         class="player-detail-data__mode-tab"
@@ -161,152 +181,156 @@ onBeforeUnmount(() => {
         :class="{ 'is-active': dataMode === 'season' }"
         @click="setDataMode('season')"
       >
-        赛季数据
+        赛事数据
       </button>
     </div>
 
     <template v-if="dataMode === 'career'">
-      <div class="player-detail-section-head">
-        <div class="player-detail-section-head__group">
-          <h2 class="player-detail-section-head__title">生涯数据</h2>
+      <section class="player-detail-data__panel" aria-label="生涯数据表">
+        <div class="player-detail-data__panel-head">
+          <strong>生涯数据</strong>
+          <div class="player-detail-stat-switch" role="group" aria-label="统计类型">
+            <button
+              type="button"
+              class="player-detail-stat-switch__btn"
+              :class="{ 'is-active': statMode === 'average' }"
+              @click="statMode = 'average'"
+            >
+              场均
+            </button>
+            <button
+              type="button"
+              class="player-detail-stat-switch__btn"
+              :class="{ 'is-active': statMode === 'total' }"
+              @click="statMode = 'total'"
+            >
+              累计
+            </button>
+          </div>
         </div>
-        <div class="player-detail-stat-switch">
-          <button
-            type="button"
-            class="player-detail-stat-switch__btn"
-            :class="{ 'is-active': statMode === 'average' }"
-            @click="statMode = 'average'"
-          >
-            场均
-          </button>
-          <button
-            type="button"
-            class="player-detail-stat-switch__btn"
-            :class="{ 'is-active': statMode === 'total' }"
-            @click="statMode = 'total'"
-          >
-            累计
-          </button>
+
+        <div class="player-detail-data__panel-filter">
+          <label class="player-detail-data__filter-label" for="player-career-stage-filter">统计赛段</label>
+          <select id="player-career-stage-filter" v-model="seasonFilter">
+            <option value="全部赛季">全部赛段</option>
+            <option
+              v-for="row in detail.careerStats"
+              :key="row.seasonId"
+              :value="`${row.seasonId}赛季`"
+            >
+              {{ row.tournamentName || `赛季 ${row.seasonId}` }}
+            </option>
+          </select>
+          <span class="player-detail-data__hint">场均按有效出场场次计算，投篮百分比仅统计有投篮数据的场次</span>
         </div>
-      </div>
 
-      <div class="player-detail-filter-row">
-        <select v-model="seasonFilter">
-          <option value="全部赛季">全部赛季</option>
-          <option
-            v-for="row in detail.careerStats"
-            :key="row.seasonId"
-            :value="`${row.seasonId}赛季`"
-          >
-            赛季 {{ row.seasonId }}
-          </option>
-        </select>
-        <span class="player-detail-data__hint">展示 API 返回的赛季场均统计</span>
-      </div>
+        <div v-if="careerRows.length === 0" class="player-detail-empty-inline">暂无生涯数据</div>
 
-      <div v-if="careerRows.length === 0" class="player-detail-empty-inline">暂无生涯数据</div>
+        <div v-else class="player-detail-table-scroll">
+          <table class="player-detail-table player-detail-table--career">
+            <thead>
+              <tr>
+                <th class="is-left">赛事</th>
+                <th class="is-left">球队</th>
+                <th>平台</th>
+                <th>出场 <small>GP</small></th>
+                <th>得分 <small>PTS</small></th>
+                <th>篮板 <small>REB</small></th>
+                <th>助攻 <small>AST</small></th>
+                <th>抢断 <small>STL</small></th>
+                <th>盖帽 <small>BLK</small></th>
+                <th>失误 <small>TOV</small></th>
+                <th>犯规 <small>PF</small></th>
+                <th>投篮% <small>FG</small></th>
+                <th>三分% <small>3P</small></th>
+                <th>罚球% <small>FT</small></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in careerRows" :key="`${row.seasonId}-${row.teamId}`">
+                <td class="is-left">{{ row.tournamentName }}</td>
+                <td class="is-left">
+                  <router-link :to="`/tournament/team/${row.teamId}/overview`" class="player-detail-team-link">
+                    <TeamLogo
+                      :team="{ id: row.teamId, name: row.teamName, shortName: row.teamName, logoUrl: row.teamLogoUrl }"
+                      size="xs"
+                    />
+                    <span>{{ row.teamName }}</span>
+                  </router-link>
+                </td>
+                <td>{{ row.platform }}</td>
+                <td>{{ row.games }}</td>
+                <td class="is-accent">{{ formatStat(row.points) }}</td>
+                <td>{{ formatStat(row.rebounds) }}</td>
+                <td class="is-accent">{{ formatStat(row.assists) }}</td>
+                <td class="is-accent">{{ formatStat(row.steals) }}</td>
+                <td>{{ formatStat(row.blocks) }}</td>
+                <td>{{ formatStat(row.turnovers) }}</td>
+                <td>{{ formatStat(row.fouls) }}</td>
+                <td class="is-accent">{{ formatStat(row.fieldGoalPercentage, true) }}</td>
+                <td class="is-accent">{{ formatStat(row.threePointPercentage, true) }}</td>
+                <td class="is-accent">{{ formatStat(row.freeThrowPercentage, true) }}</td>
+              </tr>
+              <tr v-if="careerAverageRow" class="is-summary">
+                <td class="is-left">{{ careerAverageRow.tournamentName }}</td>
+                <td colspan="2">-</td>
+                <td>{{ careerAverageRow.games }}</td>
+                <td class="is-accent">{{ formatStat(careerAverageRow.points) }}</td>
+                <td>{{ formatStat(careerAverageRow.rebounds) }}</td>
+                <td class="is-accent">{{ formatStat(careerAverageRow.assists) }}</td>
+                <td class="is-accent">{{ formatStat(careerAverageRow.steals) }}</td>
+                <td>{{ formatStat(careerAverageRow.blocks) }}</td>
+                <td>{{ formatStat(careerAverageRow.turnovers) }}</td>
+                <td>{{ formatStat(careerAverageRow.fouls) }}</td>
+                <td class="is-accent">{{ formatStat(careerAverageRow.fieldGoalPercentage, true) }}</td>
+                <td class="is-accent">{{ formatStat(careerAverageRow.threePointPercentage, true) }}</td>
+                <td class="is-accent">{{ formatStat(careerAverageRow.freeThrowPercentage, true) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <div v-else class="player-detail-table-scroll">
-        <table class="player-detail-table">
-          <thead>
-            <tr>
-              <th>赛事</th>
-              <th>球队</th>
-              <th>平台</th>
-              <th>出场</th>
-              <th>得分</th>
-              <th>篮板</th>
-              <th>助攻</th>
-              <th>抢断</th>
-              <th>盖帽</th>
-              <th>失误</th>
-              <th>犯规</th>
-              <th>投篮%</th>
-              <th>三分%</th>
-              <th>罚球%</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in careerRows" :key="row.seasonId">
-              <td class="is-left">{{ row.tournamentName }}</td>
-              <td class="is-left">
-                <router-link :to="`/tournament/team/${row.teamId}/overview`" class="player-detail-team-link">
-                  <TeamLogo
-                    :team="{ id: row.teamId, name: row.teamName, shortName: row.teamName, logoUrl: row.teamLogoUrl }"
-                    size="xs"
-                  />
-                  <span>{{ row.teamName }}</span>
-                </router-link>
-              </td>
-              <td>{{ row.platform }}</td>
-              <td>{{ row.games }}</td>
-              <td>{{ formatStat(row.points) }}</td>
-              <td>{{ formatStat(row.rebounds) }}</td>
-              <td>{{ formatStat(row.assists) }}</td>
-              <td>{{ formatStat(row.steals) }}</td>
-              <td>{{ formatStat(row.blocks) }}</td>
-              <td>{{ formatStat(row.turnovers) }}</td>
-              <td>{{ formatStat(row.fouls) }}</td>
-              <td>{{ formatStat(row.fieldGoalPercentage, true) }}</td>
-              <td>{{ formatStat(row.threePointPercentage, true) }}</td>
-              <td>{{ formatStat(row.freeThrowPercentage, true) }}</td>
-            </tr>
-            <tr v-if="careerAverageRow" class="is-summary">
-              <td class="is-left">{{ careerAverageRow.tournamentName }}</td>
-              <td colspan="2">-</td>
-              <td>{{ careerAverageRow.games }}</td>
-              <td>{{ formatStat(careerAverageRow.points) }}</td>
-              <td>{{ formatStat(careerAverageRow.rebounds) }}</td>
-              <td>{{ formatStat(careerAverageRow.assists) }}</td>
-              <td>{{ formatStat(careerAverageRow.steals) }}</td>
-              <td>{{ formatStat(careerAverageRow.blocks) }}</td>
-              <td>{{ formatStat(careerAverageRow.turnovers) }}</td>
-              <td>{{ formatStat(careerAverageRow.fouls) }}</td>
-              <td>{{ formatStat(careerAverageRow.fieldGoalPercentage, true) }}</td>
-              <td>{{ formatStat(careerAverageRow.threePointPercentage, true) }}</td>
-              <td>{{ formatStat(careerAverageRow.freeThrowPercentage, true) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <p v-if="careerRows.length" class="player-detail-data__source">
+          数据来源：比赛结束后提交并通过赛事审核的比赛数据。
+        </p>
+      </section>
     </template>
 
     <template v-else>
-      <div ref="dropdownRef" class="player-detail-stage-selector" :class="{ 'is-open': dropdownOpen }">
-        <button type="button" class="player-detail-stage-selector__trigger" @click.stop="toggleDropdown">
-          {{ selectedStage?.label || '暂无赛季' }}
-          <span class="player-detail-stage-selector__arrow" aria-hidden="true" />
-        </button>
-        <div v-show="dropdownOpen" class="player-detail-stage-selector__dropdown">
-          <button
-            v-for="option in detail.seasonStageOptions"
-            :key="option.id"
-            type="button"
-            class="player-detail-stage-selector__option"
-            :class="{ 'is-selected': option.id === selectedStageId }"
-            @click="selectStage(option.id)"
-          >
-            {{ option.label }}
-            <span class="player-detail-stage-selector__check" aria-hidden="true" />
-          </button>
+      <section class="player-detail-data__panel" aria-label="赛事数据表">
+        <div class="player-detail-data__panel-head">
+          <strong>{{ selectedStage?.tournamentName || '赛事数据' }}</strong>
+          <span class="player-detail-data__panel-meta">
+            {{ selectedStage?.stageLabel || '常规赛' }} · 共 {{ selectedStage?.games || 0 }} 场
+          </span>
         </div>
-      </div>
 
-      <div class="player-detail-section-head">
-        <div>
-          <div class="player-detail-section-head__group">
-            <h2 class="player-detail-section-head__title">{{ selectedStage?.tournamentName || '赛季数据' }}</h2>
-            <span class="player-detail-section-head__sub">
-              {{ selectedStage?.stageLabel || '常规赛' }} · 共 {{ selectedStage?.games || 0 }} 场
-            </span>
+        <div class="player-detail-data__panel-filter">
+          <div ref="dropdownRef" class="player-detail-stage-selector" :class="{ 'is-open': dropdownOpen }">
+            <button type="button" class="player-detail-stage-selector__trigger" @click.stop="toggleDropdown">
+              {{ selectedStage?.label || '暂无赛季' }}
+              <span class="player-detail-stage-selector__arrow" aria-hidden="true" />
+            </button>
+            <div v-show="dropdownOpen" class="player-detail-stage-selector__dropdown">
+              <button
+                v-for="option in detail.seasonStageOptions"
+                :key="option.id"
+                type="button"
+                class="player-detail-stage-selector__option"
+                :class="{ 'is-selected': option.id === selectedStageId }"
+                @click="selectStage(option.id)"
+              >
+                {{ option.label }}
+                <span class="player-detail-stage-selector__check" aria-hidden="true" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div v-if="seasonStatRows.length === 0" class="player-detail-empty-inline">暂无赛季数据</div>
+        <div v-if="seasonStatRows.length === 0" class="player-detail-empty-inline">暂无赛事数据</div>
 
-      <div v-else class="player-detail-table-scroll">
-        <table class="player-detail-table">
+        <div v-else class="player-detail-table-scroll">
+          <table class="player-detail-table player-detail-table--career">
           <thead>
             <tr>
               <th>球队</th>
@@ -325,18 +349,19 @@ onBeforeUnmount(() => {
             <tr v-for="row in seasonStatRows" :key="row.seasonId">
               <td class="is-left">{{ row.teamName }}</td>
               <td>{{ row.games }}</td>
-              <td>{{ formatStat(row.points) }}</td>
+              <td class="is-accent">{{ formatStat(row.points) }}</td>
               <td>{{ formatStat(row.rebounds) }}</td>
-              <td>{{ formatStat(row.assists) }}</td>
-              <td>{{ formatStat(row.steals) }}</td>
+              <td class="is-accent">{{ formatStat(row.assists) }}</td>
+              <td class="is-accent">{{ formatStat(row.steals) }}</td>
               <td>{{ formatStat(row.blocks) }}</td>
-              <td>{{ formatStat(row.fieldGoalPercentage, true) }}</td>
-              <td>{{ formatStat(row.threePointPercentage, true) }}</td>
-              <td>{{ formatStat(row.freeThrowPercentage, true) }}</td>
+              <td class="is-accent">{{ formatStat(row.fieldGoalPercentage, true) }}</td>
+              <td class="is-accent">{{ formatStat(row.threePointPercentage, true) }}</td>
+              <td class="is-accent">{{ formatStat(row.freeThrowPercentage, true) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
+      </section>
     </template>
   </div>
 </template>
@@ -344,46 +369,229 @@ onBeforeUnmount(() => {
 <style scoped lang="scss">
 @use '../styles/player-detail.scss';
 
+.player-detail-data {
+  box-sizing: border-box;
+}
+
+.player-detail-data__intro {
+  margin-bottom: 22px;
+}
+
+.player-detail-data__title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  font-size: clamp(28px, 2.6vw, 36px);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: var(--cnpa-paper-text);
+
+  span {
+    color: var(--cnpa-red);
+    font-size: 0.42em;
+    font-style: italic;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+  }
+}
+
+.player-detail-data__desc {
+  margin: 8px 0 0;
+  max-width: 640px;
+  color: var(--cnpa-paper-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .player-detail-data__mode-tabs {
   display: inline-flex;
-  gap: 28px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid var(--cnpa-paper-border);
+  margin: 0 0 22px;
+  overflow: hidden;
+  border: 1px solid var(--cnpa-public-border);
+  border-radius: 4px;
+  background: #fff;
 }
 
 .player-detail-data__mode-tab {
   position: relative;
+  min-width: 124px;
+  height: 42px;
   margin: 0;
-  padding: 0 2px 12px;
+  padding: 0 22px;
   border: 0;
-  background: transparent;
-  color: var(--cnpa-paper-text-secondary);
-  font-size: 18px;
-  font-weight: 600;
+  background: #fff;
+  color: #666;
+  font-size: 15px;
+  font-weight: 800;
   cursor: pointer;
 
   &.is-active {
-    color: var(--cnpa-red);
+    background: #171717;
+    color: #fff;
 
-    &::after {
+    &::before {
       content: '';
       position: absolute;
       left: 0;
-      right: 0;
-      bottom: -1px;
-      height: 3px;
+      top: 0;
+      bottom: 0;
+      width: 3px;
       background: var(--cnpa-red);
     }
   }
 }
 
+.player-detail-data__panel {
+  overflow: hidden;
+  border: 1px solid var(--cnpa-public-border);
+  background: #fff;
+}
+
+.player-detail-data__panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  padding: 0 20px;
+  background: #171717;
+  color: #fff;
+}
+
+.player-detail-data__panel-head strong {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.player-detail-data__panel-meta {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.player-detail-data__panel-head .player-detail-stat-switch {
+  gap: 6px;
+}
+
+.player-detail-data__panel-head .player-detail-stat-switch__btn {
+  min-width: 64px;
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+
+  &.is-active {
+    background: var(--cnpa-red);
+    color: #fff;
+    box-shadow: none;
+  }
+}
+
+.player-detail-data__panel-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 20px;
+  background: #f6f5f4;
+  border-bottom: 1px solid var(--cnpa-public-border);
+}
+
+.player-detail-data__filter-label {
+  color: #555;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.player-detail-data__panel-filter select {
+  min-width: 180px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--cnpa-public-border);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--cnpa-paper-text);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+}
+
 .player-detail-data__hint {
-  align-self: center;
+  margin-left: auto;
   color: var(--cnpa-paper-text-secondary);
   font-size: 12px;
 }
 
+.player-detail-data__source {
+  margin: 0;
+  padding: 12px 20px 16px;
+  color: var(--cnpa-paper-text-secondary);
+  font-size: 12px;
+}
+
+.player-detail-data__panel .player-detail-table-scroll {
+  border: 0;
+  box-shadow: none;
+}
+
+.player-detail-data__panel .player-detail-table--career {
+  min-width: 1080px;
+}
+
+.player-detail-data__panel .player-detail-table--career th,
+.player-detail-data__panel .player-detail-table--career td {
+  text-align: center;
+}
+
+.player-detail-data__panel .player-detail-table--career .is-left {
+  text-align: left;
+}
+
+.player-detail-data__panel .player-detail-table--career thead th {
+  height: 42px;
+  background: #f0eeec;
+  color: #555;
+  font-size: 12px;
+  font-weight: 800;
+  border-bottom: 1px solid var(--cnpa-public-border);
+
+  small {
+    margin-left: 4px;
+    color: #999;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+}
+
+.player-detail-data__panel .player-detail-table--career tbody td {
+  background: #fff;
+}
+
+.player-detail-data__panel .player-detail-table--career tbody tr:nth-child(even) td {
+  background: #f7f6f5;
+}
+
+.player-detail-data__panel .player-detail-table--career tbody tr:hover td {
+  background: #f3f1ee;
+}
+
+.player-detail-data__panel .player-detail-table--career .is-accent {
+  color: var(--cnpa-red);
+  font-weight: 800;
+}
+
+.player-detail-data__panel .player-detail-table--career tbody tr.is-summary td {
+  background: #ebe6dc;
+  font-weight: 800;
+}
+
 .player-detail-empty-inline {
+  margin: 16px 20px 20px;
   padding: 32px 16px;
   text-align: center;
   color: var(--cnpa-paper-text-muted);
@@ -393,7 +601,6 @@ onBeforeUnmount(() => {
 .player-detail-stage-selector {
   position: relative;
   width: min(100%, 320px);
-  margin-bottom: 18px;
 }
 
 .player-detail-stage-selector__trigger {
@@ -485,32 +692,29 @@ onBeforeUnmount(() => {
   display: block;
 }
 
-.player-detail-data {
-  padding: clamp(22px, 2.6vw, 38px);
-  border: 1px solid var(--cnpa-public-border);
-  background: var(--cnpa-public-card-bg);
-  box-shadow: var(--cnpa-public-shadow-soft);
-  box-sizing: border-box;
-}
-
-.player-detail-data__mode-tabs {
-  border-color: var(--cnpa-public-border);
-}
-
 .player-detail-data__mode-tab:focus-visible,
+.player-detail-data__panel-filter select:focus-visible,
 .player-detail-stage-selector__trigger:focus-visible,
 .player-detail-stage-selector__option:focus-visible {
   outline: 2px solid rgba(225, 6, 19, 0.4);
   outline-offset: 2px;
 }
 
-.player-detail-data .player-detail-table-scroll {
-  margin-top: var(--cnpa-public-card-spacing);
-}
-
 @media (max-width: 767px) {
-  .player-detail-data {
-    padding: 20px 16px;
+  .player-detail-data__panel-head,
+  .player-detail-data__panel-filter {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .player-detail-data__hint {
+    margin-left: 0;
+  }
+
+  .player-detail-data__panel-filter select,
+  .player-detail-stage-selector {
+    width: 100%;
+    min-width: 0;
   }
 }
 </style>

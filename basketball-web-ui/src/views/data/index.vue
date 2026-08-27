@@ -282,16 +282,18 @@ onMounted(async () => {
 </script>
 <template>
   <div class="data-center-page">
-    <DataHero
-      v-model:tournament-id="selectedSeasonId"
-      :groups="seasonGroups"
-      :loading="seasonLoading"
-      :error="seasonError"
-    />
+    <div class="site-shell data-center-page__shell">
+      <DataHero
+        v-model:tournament-id="selectedSeasonId"
+        :groups="seasonGroups"
+        :loading="seasonLoading"
+        :error="seasonError"
+      />
 
-    <section class="data-center-page__main">
-      <div class="site-shell">
-        <DataTypeTabs v-model="activeDataType" />
+      <section class="data-center-page__main">
+        <div class="data-center-page__tabs">
+          <DataTypeTabs v-model="activeDataType" />
+        </div>
 
         <div class="data-center-panel">
           <div class="data-center-panel__tear-top" aria-hidden="true">
@@ -299,7 +301,7 @@ onMounted(async () => {
           </div>
 
           <div class="data-center-panel__shell">
-            <div class="data-center-panel__body">
+            <div class="site-shell-inner data-center-panel__body">
               <div class="data-center-panel__toolbar">
                 <div class="data-stat-switch" role="group" aria-label="统计类型">
                   <button
@@ -339,8 +341,8 @@ onMounted(async () => {
             <div class="data-center-panel__edge-bottom" aria-hidden="true" />
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
 
     <div class="data-center-page__red-tear" aria-hidden="true">
       <svg
@@ -387,10 +389,20 @@ onMounted(async () => {
   color: #fff;
 }
 
+.data-center-page__shell {
+  position: relative;
+}
+
 .data-center-page__main {
   width: 100%;
   padding: 8px 0 0;
   background: #050505;
+}
+
+.data-center-page__tabs {
+  width: 100%;
+  padding-inline: var(--cnpa-public-content-gutter);
+  box-sizing: border-box;
 }
 
 .data-center-panel {
@@ -437,15 +449,13 @@ onMounted(async () => {
     var(--cnpa-paper-bg) 45%,
     #e7e5e5 100%
   );
-  border-radius: 2px 2px 0 0;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
   overflow: hidden;
 }
 
 .data-center-panel__body {
   position: relative;
   z-index: 1;
-  padding: 20px clamp(14px, 1.8vw, 24px) 0;
+  padding: 20px var(--cnpa-public-content-gutter) 0;
   box-sizing: border-box;
   background: transparent;
 }

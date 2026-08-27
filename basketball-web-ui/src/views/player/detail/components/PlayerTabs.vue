@@ -37,7 +37,8 @@ const tabs: Array<{ value: PlayerDetailTab; label: string }> = [
   display: flex;
   align-items: flex-end;
   gap: 36px;
-  margin-bottom: 24px;
+  margin: 0 0 22px;
+  padding-top: 4px;
   border-bottom: 1px solid var(--cnpa-paper-border);
   overflow-x: auto;
 }

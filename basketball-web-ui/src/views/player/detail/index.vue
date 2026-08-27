@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import PaperTear from '@/components/common/PaperTear.vue'
 import {
   getPublicPlayerDetail,
   getPublicPlayerHonorPage,
   getPublicPlayerSeasonStat,
 } from '@/api/publicPlayer'
-import { getV4PublicMatchList } from '@/api/v4Public'
+import { getV4PublicMatchDetail, getV4PublicMatchList } from '@/api/v4Public'
 import { mapV4MatchToTeamRecord } from '@/views/tournament/team/utils/mapTeamMatch'
 import PlayerHero from './components/PlayerHero.vue'
 import PlayerTabs from './components/PlayerTabs.vue'
@@ -16,13 +15,15 @@ import PlayerMatches from './components/PlayerMatches.vue'
 import PlayerData from './components/PlayerData.vue'
 import PlayerCareer from './components/PlayerCareer.vue'
 import {
+  applyPlayerBoxScore,
   buildEmptyPlayerDetail,
+  findPlayerBoxScore,
   mapPublicPlayerHonors,
   mapPublicPlayerProfile,
   mapPublicPlayerSeasonStats,
   mapSeasonStageOptions,
 } from './mapPlayerDetail'
-import type { PlayerDetailData } from './types'
+import type { PlayerDetailData, PlayerMatchRecord, PlayerProfile } from './types'
 import { normalizePlayerTab, resolvePlayerId, type PlayerDetailTab } from '@/utils/playerNavigate'
 
 const route = useRoute()
@@ -76,6 +77,7 @@ async function loadPlayer() {
     const profile = mapPublicPlayerProfile(rawDetail, { divisionId: queryDivisionId.value })
     const detail = buildEmptyPlayerDetail(profile)
     let matches = detail.allMatches
+    let inPlayoffs = false
     const contextDivisionId = queryDivisionId.value || profile.divisionId
     if (contextDivisionId && profile.eventTeamId) {
       try {
@@ -85,6 +87,7 @@ async function loadPlayer() {
         })
         matches = (v4Res.data ?? []).map((item) => {
           const mapped = mapV4MatchToTeamRecord(item, profile.eventTeamId || profile.currentTeamId)
+          if (mapped.stage === 'playoffs') inPlayoffs = true
           return {
             id: mapped.id,
             matchId: mapped.id,
@@ -106,6 +109,7 @@ async function loadPlayer() {
             originalTeamScore: mapped.originalTeamScore,
             originalOpponentScore: mapped.originalOpponentScore,
             seriesScoreText: mapped.seriesScoreText,
+            matchSeriesId: mapped.matchSeriesId,
             minutes: 0,
             points: 0,
             rebounds: 0,
@@ -122,17 +126,28 @@ async function loadPlayer() {
             freeThrowsAttempted: null,
           }
         })
+        matches.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
       } catch {
         matches = []
       }
     }
-    detail.recentMatches = matches.slice(0, 5)
-    detail.allMatches = matches
     const seasonStats = (statRes.data ?? []).filter((row) =>
       queryDivisionId.value ? String(row.divisionId || '') === queryDivisionId.value : true,
     )
-    detail.careerStats = mapPublicPlayerSeasonStats(seasonStats.length ? seasonStats : (statRes.data ?? []))
-    detail.seasonStageOptions = mapSeasonStageOptions(seasonStats.length ? seasonStats : (statRes.data ?? []))
+    const scopedStats = seasonStats.length ? seasonStats : (statRes.data ?? [])
+    const eventPlayerId = String(scopedStats[0]?.eventPlayerId || '').trim()
+    if (eventPlayerId) {
+      profile.eventPlayerId = eventPlayerId
+    }
+    if (inPlayoffs) {
+      profile.currentStage = '季后赛'
+    }
+    matches = await hydratePlayerMatchStats(matches, profile)
+    detail.profile = profile
+    detail.recentMatches = matches.slice(0, 5)
+    detail.allMatches = matches
+    detail.careerStats = mapPublicPlayerSeasonStats(scopedStats)
+    detail.seasonStageOptions = mapSeasonStageOptions(scopedStats)
     detail.honors = mapPublicPlayerHonors(honorRes.data?.records ?? [])
     playerDetail.value = detail
     loadState.value = 'success'
@@ -143,6 +158,31 @@ async function loadPlayer() {
     loadState.value = 'error'
     loadError.value = err instanceof Error ? err.message : '加载球员详情失败'
   }
+}
+
+async function hydratePlayerMatchStats(
+  rows: PlayerMatchRecord[],
+  profile: PlayerProfile,
+): Promise<PlayerMatchRecord[]> {
+  if (!rows.length) return rows
+  const next = [...rows]
+  const batchSize = 6
+  for (let index = 0; index < next.length; index += batchSize) {
+    const batch = next.slice(index, index + batchSize)
+    const details = await Promise.all(batch.map(async (row) => {
+      try {
+        const res = await getV4PublicMatchDetail(row.matchId)
+        return res.data ?? null
+      } catch {
+        return null
+      }
+    }))
+    details.forEach((detail, offset) => {
+      const target = index + offset
+      next[target] = applyPlayerBoxScore(next[target], findPlayerBoxScore(detail?.playerStats, profile))
+    })
+  }
+  return next
 }
 
 function setTab(tab: PlayerDetailTab) {
@@ -172,44 +212,26 @@ watch(
       <div v-else-if="loadState === 'error'" class="player-detail-empty is-error">
         {{ loadError || '加载球员详情失败' }}
       </div>
-      <template v-else-if="playerDetail">
+      <div v-else-if="!playerDetail" class="player-detail-empty">
+        球员不存在，请返回数据中心或球队页面重新选择。
+      </div>
+      <template v-else>
         <PlayerHero :profile="playerDetail.profile" />
-      </template>
-      <div v-else class="player-detail-empty">球员不存在，请返回数据中心或球队页面重新选择。</div>
-    </div>
-
-    <div v-if="playerDetail" class="player-detail-page__paper">
-      <PaperTear position="top" tone="light" />
-      <div class="player-detail-page__paper-body">
-        <div class="site-shell player-detail-page__paper-inner">
-          <div class="site-shell-inner">
-            <PlayerTabs :model-value="activeTab" @update:model-value="setTab" />
-            <component :is="tabComponent" :detail="playerDetail" :player-id="playerId!" />
+        <div class="player-detail-page__paper">
+          <div class="player-detail-page__paper-body">
+            <div class="site-shell-inner player-detail-page__paper-inner">
+              <PlayerTabs :model-value="activeTab" @update:model-value="setTab" />
+              <component :is="tabComponent" :detail="playerDetail" :player-id="playerId!" />
+            </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
 @use './styles/player-detail.scss';
-
-.player-detail-page__paper {
-  position: relative;
-
-  :deep(.paper-tear) {
-    height: 0;
-  }
-
-  :deep(.torn-edge-top) {
-    transform: translateY(-48%);
-  }
-
-  :deep(.torn-edge-main) {
-    fill: var(--cnpa-paper-bg) !important;
-  }
-}
 
 .player-detail-empty.is-error {
   color: #e10613;

@@ -20,23 +20,21 @@ function handleTournamentChange(value: string) {
 </script>
 <template>
   <section class="data-hero" aria-label="CNPA 数据中心">
-    <div class="site-shell data-hero__inner">
-      <div class="data-hero__visual">
-        <img
-          class="data-hero__image"
-          :src="dataHeroBg"
-          alt="CNPA 数据中心"
-          draggable="false"
+    <div class="data-hero__visual">
+      <img
+        class="data-hero__image"
+        :src="dataHeroBg"
+        alt="CNPA 数据中心"
+        draggable="false"
+      />
+      <div class="data-hero__selector">
+        <TournamentSelector
+          :model-value="tournamentId"
+          :groups="groups"
+          :loading="loading"
+          :error="error"
+          @update:model-value="handleTournamentChange"
         />
-        <div class="data-hero__selector">
-          <TournamentSelector
-            :model-value="tournamentId"
-            :groups="groups"
-            :loading="loading"
-            :error="error"
-            @update:model-value="handleTournamentChange"
-          />
-        </div>
       </div>
     </div>
   </section>
@@ -45,11 +43,6 @@ function handleTournamentChange(value: string) {
 .data-hero {
   width: 100%;
   background: #000;
-  overflow: visible;
-}
-
-.data-hero__inner {
-  position: relative;
   overflow: visible;
 }
 

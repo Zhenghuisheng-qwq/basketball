@@ -1,15 +1,45 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import PlayerMatchTable from './PlayerMatchTable.vue'
 import DisciplineStatusPanel from '@/components/discipline/DisciplineStatusPanel.vue'
-import type { PlayerDetailData } from '../types'
+import type { PlayerCareerStatistics, PlayerDetailData } from '../types'
 
-defineProps<{
+const props = defineProps<{
   detail: PlayerDetailData
 }>()
 
 const router = useRouter()
+
+const profile = computed(() => props.detail.profile)
+
+const seasonStat = computed<PlayerCareerStatistics | null>(() => {
+  const divisionId = String(props.detail.profile.divisionId || '')
+  return props.detail.careerStats.find((row) => String(row.divisionId) === divisionId)
+    || props.detail.careerStats[0]
+    || null
+})
+
+const seasonBoxes = computed(() => {
+  const row = seasonStat.value
+  if (!row || !row.games) return []
+  return [
+    { key: 'games', label: '出场次数', unit: '场', value: formatStat(row.games, false), accent: false },
+    { key: 'pts', label: '场均得分', unit: '分', value: formatStat(row.points, true), accent: true },
+    { key: 'reb', label: '场均篮板', unit: '板', value: formatStat(row.rebounds, true), accent: false },
+    { key: 'ast', label: '场均助攻', unit: '助', value: formatStat(row.assists, true), accent: false },
+  ]
+})
+
+const honorItems = computed(() => props.detail.honors.slice(0, 4))
+
+function formatStat(value: number | null | undefined, average: boolean): string {
+  if (value == null || Number.isNaN(Number(value))) return '--'
+  const num = Number(value)
+  if (!average || Number.isInteger(num)) return String(num)
+  return num.toFixed(1)
+}
 
 function goAllMatches() {
   router.replace({ query: { ...router.currentRoute.value.query, tab: 'matches' } })
@@ -22,6 +52,7 @@ function goAllMatches() {
       :items="detail.profile.activeDisciplineSummary || []"
       title="处罚状态"
     />
+
     <section class="player-detail-overview__section">
       <div class="player-detail-section-head">
         <div>
@@ -30,43 +61,56 @@ function goAllMatches() {
             <span class="player-detail-section-head__sub">Player Honors</span>
           </div>
           <p class="player-detail-section-head__desc">
-            记录球员参加 CNPA 赛事以来获得的个人与团队荣誉
+            当前赛事身份与真实荣誉记录，不跨赛季拼接
           </p>
         </div>
       </div>
 
-      <div class="player-detail-overview__honor-grid">
-        <article class="player-detail-honor-card">
-          <span class="player-detail-honor-card__tag">CNPA</span>
+      <div class="player-honor-board">
+        <article class="player-honor-card">
+          <span class="player-honor-card__brand">CNPA</span>
           <PlayerAvatar
-            :name="detail.profile.displayName"
-            :avatar-url="detail.profile.avatarUrl"
+            :name="profile.displayName"
+            :avatar-url="profile.avatarUrl"
+            :player-id="profile.id"
             size="card"
             tone="gold"
           />
-          <strong class="player-detail-honor-card__name">{{ detail.profile.displayName }}</strong>
-          <span class="player-detail-honor-card__position">{{ detail.profile.position }}</span>
-          <span class="player-detail-honor-card__team">{{ detail.profile.currentTeamAbbr }}</span>
-          <span class="player-detail-honor-card__registered">CNPA REGISTERED PLAYER</span>
+          <strong>{{ profile.displayName }}</strong>
+          <em>{{ profile.position }}</em>
+          <span>{{ profile.currentTeamAbbr }}</span>
+          <small>{{ profile.registrationText }}</small>
         </article>
 
-        <div
-          v-if="detail.honors.length === 0"
-          class="player-detail-overview__stats player-detail-overview__stats--empty"
-        >
-          <p>暂无荣誉记录</p>
-          <span>球员荣誉发布后将在此展示</span>
-        </div>
-        <div v-else class="player-detail-overview__stats">
-          <article
-            v-for="honor in detail.honors.slice(0, 4)"
-            :key="honor.id"
-            class="player-detail-overview__honor-item"
-          >
-            <strong>{{ honor.honorName }}</strong>
-            <span>{{ honor.seasonName }}</span>
-            <span>{{ honor.honorDate }}</span>
-          </article>
+        <div class="player-honor-board__main">
+          <div v-if="seasonBoxes.length" class="player-honor-stats">
+            <div
+              v-for="item in seasonBoxes"
+              :key="item.key"
+              class="player-honor-stats__item"
+              :class="{ 'is-accent': item.accent }"
+            >
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+              <em>{{ item.unit }}</em>
+            </div>
+          </div>
+
+          <div class="player-honor-board__footer">
+            <div class="player-honor-board__footer-head">赛事荣誉</div>
+            <div v-if="honorItems.length === 0" class="player-honor-board__empty">
+              暂无荣誉记录
+            </div>
+            <div v-else class="player-honor-board__list">
+              <article v-for="honor in honorItems" :key="honor.id">
+                <img v-if="honor.imageUrl" :src="honor.imageUrl" alt="" />
+                <div>
+                  <strong>{{ honor.honorName }}</strong>
+                  <span>{{ [honor.seasonName, honor.honorDate].filter(Boolean).join(' · ') }}</span>
+                </div>
+              </article>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -82,7 +126,9 @@ function goAllMatches() {
         </button>
       </div>
 
-      <PlayerMatchTable :rows="detail.recentMatches" compact />
+      <div class="player-recent-panel">
+        <PlayerMatchTable :rows="detail.recentMatches" compact />
+      </div>
     </section>
   </div>
 </template>
@@ -94,203 +140,225 @@ function goAllMatches() {
   margin-top: 36px;
 }
 
-.player-detail-overview__honor-grid {
+.player-detail-overview__section {
+  padding: 8px 0 4px;
+  box-sizing: border-box;
+}
+
+.player-honor-board {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.42);
 }
 
-.player-detail-overview__stats--empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  min-height: 180px;
-  padding: 24px;
-  border: 1px dashed rgba(17, 17, 17, 0.16);
-  background: rgba(255, 255, 255, 0.45);
-  color: rgba(17, 17, 17, 0.55);
-
-  p {
-    margin: 0 0 8px;
-    font-size: 16px;
-    font-weight: 800;
-    color: rgba(17, 17, 17, 0.72);
-  }
-
-  span {
-    font-size: 13px;
-  }
-}
-
-.player-detail-honor-card {
-  position: relative;
+.player-honor-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 24px 18px 20px;
-  border: 1px solid rgba(201, 163, 90, 0.42);
+  min-height: 268px;
+  padding: 18px 14px 16px;
   background:
-    linear-gradient(180deg, rgba(17, 17, 17, 0.96) 0%, rgba(8, 8, 8, 0.98) 100%);
-  color: #f1d59a;
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), 96% 100%, 4% 100%, 0 calc(100% - 12px));
+    linear-gradient(180deg, rgba(18, 16, 12, 0.16), rgba(8, 8, 8, 0.08)),
+    #14110d;
+  color: #f3e3c2;
+  text-align: center;
+  box-sizing: border-box;
 }
 
-.player-detail-honor-card__tag {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 2px 8px;
-  background: var(--cnpa-red);
+.player-honor-card__brand {
+  margin-bottom: 14px;
+  color: rgba(243, 227, 194, 0.72);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+}
+
+.player-honor-card strong {
+  margin-top: 12px;
   color: #fff;
-  font-size: 10px;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.player-honor-card em {
+  margin-top: 6px;
+  color: #e10613;
+  font-size: 13px;
+  font-style: normal;
   font-weight: 800;
 }
 
-.player-detail-honor-card__name {
-  font-size: 18px;
-}
-
-.player-detail-honor-card__position,
-.player-detail-honor-card__team {
+.player-honor-card span {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.62);
   font-size: 12px;
-  color: rgba(241, 213, 154, 0.72);
+  font-weight: 700;
 }
 
-.player-detail-honor-card__registered {
-  margin-top: 8px;
-  font-size: 10px;
-  letter-spacing: 0.12em;
+.player-honor-card small {
+  margin-top: auto;
+  padding-top: 14px;
+  color: rgba(243, 227, 194, 0.46);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
 }
 
-.player-detail-overview__stats {
+.player-honor-board__main {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 12px;
 }
 
-.player-detail-overview__honor-item {
+.player-honor-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-height: 132px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.player-honor-stats__item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 14px 16px;
-  border: 1px solid rgba(17, 17, 17, 0.1);
-  background: rgba(255, 255, 255, 0.45);
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border-right: 1px solid rgba(17, 17, 17, 0.06);
 
-  strong {
-    color: #111;
-    font-size: 15px;
-    font-weight: 800;
+  &:last-child {
+    border-right: 0;
   }
 
   span {
-    color: rgba(17, 17, 17, 0.55);
+    color: #777;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
+  }
+
+  strong {
+    color: #171717;
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  em {
+    color: #999;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  &.is-accent strong {
+    color: var(--cnpa-red, #e10613);
   }
 }
 
-.player-detail-stat-cards {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+.player-honor-board__footer {
+  min-height: 92px;
+  overflow: hidden;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: #fff;
 }
 
-.player-detail-stat-card,
-.player-detail-medal {
+.player-honor-board__footer-head {
+  padding: 8px 14px;
+  background: #171717;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.player-honor-board__empty {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 16px;
-  border: 1px solid var(--cnpa-paper-border);
-  background: transparent;
+  align-items: center;
+  min-height: 60px;
+  padding: 0 14px;
+  color: #888;
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.player-detail-stat-card__icon {
-  color: var(--cnpa-red);
-  font-size: 18px;
-  line-height: 1;
-}
-
-.player-detail-stat-card strong,
-.player-detail-medal strong {
-  font-size: 24px;
-  line-height: 1;
-}
-
-.player-detail-stat-card span:last-child,
-.player-detail-medal span:last-child {
-  color: var(--cnpa-paper-text-secondary);
-  font-size: 12px;
-}
-
-.player-detail-medals {
+.player-honor-board__list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  padding: 12px 14px;
 }
 
-.player-detail-medal__icon {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+.player-honor-board__list article {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.player-honor-board__list img {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+}
+
+.player-honor-board__list strong,
+.player-honor-board__list span {
+  display: block;
+}
+
+.player-honor-board__list strong {
   color: #111;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.player-honor-board__list span {
+  color: #777;
   font-size: 12px;
-  font-weight: 900;
 }
 
-.player-detail-medal__icon--gold {
-  background: linear-gradient(145deg, #f1d59a, #c9a35a);
-}
-
-.player-detail-medal__icon--silver {
-  background: linear-gradient(145deg, #ececec, #a8a8a8);
-}
-
-.player-detail-medal__icon--bronze {
-  background: linear-gradient(145deg, #d7a06a, #8b5a2b);
+.player-recent-panel {
+  overflow: hidden;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.55);
 }
 
 @media (max-width: 991px) {
-  .player-detail-overview__honor-grid {
+  .player-honor-board {
     grid-template-columns: 1fr;
   }
 
-  .player-detail-stat-cards,
-  .player-detail-medals {
+  .player-honor-card {
+    min-height: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 12px;
+    padding: 16px;
+  }
+
+  .player-honor-card small {
+    width: 100%;
+    padding-top: 4px;
+  }
+
+  .player-honor-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 0;
+  }
+
+  .player-honor-board__list {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 767px) {
-  .player-detail-stat-cards,
-  .player-detail-medals {
-    grid-template-columns: 1fr;
+  .player-honor-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
-
-.player-detail-overview__section {
-  padding: clamp(22px, 2.6vw, 38px);
-  border: 1px solid var(--cnpa-public-border);
-  background: var(--cnpa-public-card-bg);
-  box-shadow: var(--cnpa-public-shadow-soft);
-  box-sizing: border-box;
-}
-
-.player-detail-overview__honor-item,
-.player-detail-honor-card {
-  border-color: var(--cnpa-public-border);
-  background: var(--cnpa-public-card-bg-soft);
-  box-shadow: var(--cnpa-public-shadow-soft);
-}
-
-.player-detail-overview__honor-item:hover,
-.player-detail-honor-card:hover {
-  border-color: rgba(225, 6, 19, 0.34);
-  box-shadow: var(--cnpa-public-shadow);
 }
 </style>

@@ -15,7 +15,7 @@ const resultFilter = ref('全部结果')
 const resultOptions = ['全部结果', '胜利', '失败']
 const scopeLabel = computed(() => {
   const profile = props.detail.profile
-  return [profile.seriesName, profile.seasonName, profile.divisionName].filter(Boolean).join(' · ') || '当前赛事范围'
+  return [profile.seasonName, profile.platform, profile.divisionName].filter(Boolean).join(' / ') || '当前赛事范围'
 })
 
 const filteredMatches = computed(() => {
@@ -113,10 +113,7 @@ function goPage(page: number) {
 }
 
 .player-detail-matches {
-  padding: clamp(22px, 2.6vw, 38px);
-  border: 1px solid var(--cnpa-public-border);
-  background: var(--cnpa-public-card-bg);
-  box-shadow: var(--cnpa-public-shadow-soft);
+  padding: 8px 0 0;
   box-sizing: border-box;
 }
 

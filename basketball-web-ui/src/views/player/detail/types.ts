@@ -40,6 +40,7 @@ export interface PlayerProfile {
   divisionName?: string
   divisionId?: string
   eventTeamId?: string
+  eventPlayerId?: string
   eventTeamDisqualified?: boolean
   seasonId?: string
   playerPenaltyTags?: Array<{
@@ -92,6 +93,7 @@ export interface PlayerMatchRecord {
   originalTeamScore?: number
   originalOpponentScore?: number
   seriesScoreText?: string
+  matchSeriesId?: string
   minutes: number
   points: number
   rebounds: number

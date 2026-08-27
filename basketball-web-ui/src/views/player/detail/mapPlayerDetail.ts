@@ -4,6 +4,7 @@ import type {
   PublicPlayerDetailVo,
   PublicPlayerSeasonStatVo,
 } from '@/api/types/public'
+import type { V4PublicMatchPlayerStatItem } from '@/api/types/v4Public'
 import { displayText, formatDateTime, toNumber } from '@/utils/publicDisplay'
 import { v4GameModeLabel, v4PlatformLabel } from '@/utils/v4Display'
 import type {
@@ -24,9 +25,7 @@ export function mapPublicPlayerProfile(
   const displayName = displayText(detail.displayName, '未知球员')
   const currentTeams = (detail.currentTeams || []).map((item) => {
     const teamName = displayText(item.teamName, '--')
-    const eventContext = [item.seriesName, item.seasonName, item.divisionName, item.platformCode, item.gameMode]
-      .filter(Boolean)
-      .join(' · ')
+    const eventContext = [item.seasonName, item.divisionName].filter(Boolean).join(' · ')
     return {
       teamId: String(item.eventTeamId || item.teamId || ''),
       teamName,
@@ -76,6 +75,7 @@ export function mapPublicPlayerProfile(
     divisionName: primary?.divisionName || '',
     divisionId: primary?.divisionId || queryDivisionId,
     eventTeamId: primary?.eventTeamId || primary?.teamId || '',
+    eventPlayerId: '',
     eventTeamDisqualified: Boolean(primary?.disqualified),
     seasonId: primary?.seasonId || '',
     activeDisciplineSummary: (detail.activeDisciplineSummary || []).filter((item) =>
@@ -254,6 +254,49 @@ export function mapPublicPlayerHonors(rows: PublicHonorItemResp[]): PlayerHonor[
     imageUrl: item.coverUrl || item.playerAvatarUrl || '',
     tournamentId: item.tournamentId ? String(item.tournamentId) : undefined,
   }))
+}
+
+export function findPlayerBoxScore(
+  stats: V4PublicMatchPlayerStatItem[] | undefined,
+  profile: Pick<PlayerProfile, 'id' | 'displayName' | 'eventTeamId' | 'eventPlayerId'>,
+): V4PublicMatchPlayerStatItem | undefined {
+  const list = stats || []
+  const bySource = list.find((item) => String(item.sourcePlayerId || '') === String(profile.id))
+  if (bySource) return bySource
+  if (profile.eventPlayerId) {
+    const byEvent = list.find((item) => String(item.eventPlayerId || '') === String(profile.eventPlayerId))
+    if (byEvent) return byEvent
+  }
+  return list.find((item) => {
+    const sameName = String(item.playerName || '') === profile.displayName
+    if (!sameName) return false
+    if (!profile.eventTeamId) return true
+    return String(item.eventTeamId || '') === String(profile.eventTeamId)
+  })
+}
+
+export function applyPlayerBoxScore(
+  row: PlayerMatchRecord,
+  stat?: V4PublicMatchPlayerStatItem,
+): PlayerMatchRecord {
+  if (!stat) return row
+  return {
+    ...row,
+    minutes: stat.minutes == null ? row.minutes : toNumber(stat.minutes, row.minutes),
+    points: toNumber(stat.points, row.points),
+    rebounds: toNumber(stat.rebound, row.rebounds),
+    assists: toNumber(stat.assist, row.assists),
+    steals: toNumber(stat.steal, row.steals),
+    blocks: toNumber(stat.block, row.blocks),
+    turnovers: toNumber(stat.turnover, row.turnovers),
+    fouls: stat.foul == null ? row.fouls : toNumber(stat.foul, row.fouls),
+    fieldGoalsMade: stat.fieldGoalMade ?? row.fieldGoalsMade,
+    fieldGoalsAttempted: stat.fieldGoalAttempt ?? row.fieldGoalsAttempted,
+    threePointsMade: stat.threePointMade ?? row.threePointsMade,
+    threePointsAttempted: stat.threePointAttempt ?? row.threePointsAttempted,
+    freeThrowsMade: stat.freeThrowMade ?? row.freeThrowsMade,
+    freeThrowsAttempted: stat.freeThrowAttempt ?? row.freeThrowsAttempted,
+  }
 }
 
 export function buildEmptyPlayerDetail(profile: PlayerProfile): PlayerDetailData {
