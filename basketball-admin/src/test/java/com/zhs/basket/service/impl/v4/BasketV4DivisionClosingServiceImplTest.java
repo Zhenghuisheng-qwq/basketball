@@ -10,6 +10,7 @@ import com.zhs.basket.mapper.BasketTeamMemberMapper;
 import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketTeamLifecycleClosingMapper;
+import com.zhs.basket.service.v4.IBasketV4SeasonService;
 import com.zhs.basket.support.CaptainGrantLogSupport;
 import com.zhs.common.exception.ServiceException;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,7 @@ class BasketV4DivisionClosingServiceImplTest {
     @Mock private BasketPlayerProfileMapper playerProfileMapper;
     @Mock private BasketTeamLifecycleClosingMapper lifecycleClosingMapper;
     @Mock private CaptainGrantLogSupport grantLogSupport;
+    @Mock private IBasketV4SeasonService seasonService;
 
     @InjectMocks
     private BasketV4DivisionClosingServiceImpl closingService;
@@ -58,6 +60,7 @@ class BasketV4DivisionClosingServiceImplTest {
         assertDoesNotThrow(() -> closingService.finishDivision(118L, "retry"));
         verify(lifecycleClosingMapper, never()).casFinishDivision(anyLong(), anyCollection(), any());
         verify(captainGrantMapper, never()).expireActiveByDivisionId(anyLong(), any());
+        verify(seasonService).refreshAggregatedStatus(3L);
     }
 
     @Test
@@ -94,6 +97,7 @@ class BasketV4DivisionClosingServiceImplTest {
         verify(lifecycleClosingMapper).expirePendingInvitationsByTeamIds(eq(List.of(1001L, 1002L)), eq(0), eq(3), any(Date.class));
         verify(lifecycleClosingMapper).cancelPendingApplicationsByTeamIds(eq(List.of(1001L, 1002L)), eq(0), eq(3), any(Date.class));
         verify(playerProfileMapper).clearCurrentTeamIdByTeamIds(eq(List.of(1001L, 1002L)));
+        verify(seasonService).refreshAggregatedStatus(3L);
     }
 
     @Test
@@ -105,6 +109,7 @@ class BasketV4DivisionClosingServiceImplTest {
 
         assertDoesNotThrow(() -> closingService.finishDivision(118L, null));
         verify(captainGrantMapper, never()).expireActiveByDivisionId(anyLong(), any());
+        verify(seasonService).refreshAggregatedStatus(3L);
     }
 
     @Test
@@ -123,6 +128,7 @@ class BasketV4DivisionClosingServiceImplTest {
     private BasketDivision division(Long id, String status) {
         BasketDivision d = new BasketDivision();
         d.setId(id);
+        d.setSeasonId(3L);
         d.setDivisionStatus(status);
         d.setIsDelete(0);
         return d;
