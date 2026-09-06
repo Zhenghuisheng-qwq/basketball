@@ -127,6 +127,10 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
     @Override
     public List<V4PublicSeriesItemResp> listSeries() {
+        return publicSupport.cacheGetOrLoad("v4:series:list", this::loadSeriesUncached);
+    }
+
+    private List<V4PublicSeriesItemResp> loadSeriesUncached() {
         List<BasketSeries> seriesList = seriesDao.selectList(new LambdaQueryWrapper<BasketSeries>()
                 .eq(BasketSeries::getIsDelete, BasketPublicConstants.NOT_DELETED)
                 .eq(BasketSeries::getEnabled, 1)
@@ -136,10 +140,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             return Collections.emptyList();
         }
         Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(collectSeriesFileIds(seriesList));
-        List<V4PublicSeasonItemResp> publishedSeasons = listSeasons(null, null, null);
-        Map<String, Long> seasonCountBySeriesCode = publishedSeasons.stream()
-                .filter(s -> StringUtils.hasText(s.getSeriesCode()))
-                .collect(Collectors.groupingBy(V4PublicSeasonItemResp::getSeriesCode, Collectors.counting()));
+        Map<Long, Long> seasonCountBySeriesId = countPublishedSeasonsBySeriesId();
 
         List<V4PublicSeriesItemResp> result = new ArrayList<>();
         for (BasketSeries series : seriesList) {
@@ -155,14 +156,38 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             vo.setBannerFileId(series.getBannerFileId());
             vo.setBannerUrl(urlMap.get(series.getBannerFileId()));
             vo.setEnabled(series.getEnabled());
-            vo.setSeasonCount(seasonCountBySeriesCode.getOrDefault(series.getSeriesCode(), 0L).intValue());
+            vo.setSeasonCount(seasonCountBySeriesId.getOrDefault(series.getId(), 0L).intValue());
             result.add(vo);
         }
         return result;
     }
 
+    private Map<Long, Long> countPublishedSeasonsBySeriesId() {
+        List<BasketSeason> published = seasonDao.selectList(new LambdaQueryWrapper<BasketSeason>()
+                .eq(BasketSeason::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketSeason::getPublishStatus, PublishStatusEnum.PUBLISHED.getCode())
+                .select(BasketSeason::getSeriesId));
+        if (CollectionUtils.isEmpty(published)) {
+            return Collections.emptyMap();
+        }
+        return published.stream()
+                .map(BasketSeason::getSeriesId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.groupingBy(id -> id, Collectors.counting()));
+    }
+
     @Override
     public List<V4PublicSeasonItemResp> listSeasons(String seriesCode, Integer seasonYear, String seasonStatus) {
+        String key = "v4:season:list:"
+                + (StringUtils.hasText(seriesCode) ? seriesCode.trim().toUpperCase() : "_")
+                + ":"
+                + (seasonYear == null ? "_" : seasonYear)
+                + ":"
+                + (StringUtils.hasText(seasonStatus) ? seasonStatus.trim() : "_");
+        return publicSupport.cacheGetOrLoad(key, () -> loadSeasonsUncached(seriesCode, seasonYear, seasonStatus));
+    }
+
+    private List<V4PublicSeasonItemResp> loadSeasonsUncached(String seriesCode, Integer seasonYear, String seasonStatus) {
         LambdaQueryWrapper<BasketSeason> wrapper = new LambdaQueryWrapper<BasketSeason>()
                 .eq(BasketSeason::getIsDelete, BasketPublicConstants.NOT_DELETED)
                 .eq(BasketSeason::getPublishStatus, PublishStatusEnum.PUBLISHED.getCode())
@@ -237,7 +262,6 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     @Override
     public V4PublicDivisionDetailResp getDivisionDetail(Long divisionId) {
         BasketDivision division = requireDivision(divisionId);
-        requirePublishedSeason(division.getSeasonId());
         BasketSeason season = seasonDao.selectById(division.getSeasonId());
         BasketSeries series = season != null ? seriesDao.selectById(season.getSeriesId()) : null;
 
@@ -497,6 +521,10 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     @Override
     public List<V4PublicStageItemResp> listStages(Long divisionId) {
         requireDivision(divisionId);
+        return publicSupport.cacheGetOrLoad("v4:stage:list:" + divisionId, () -> loadStagesUncached(divisionId));
+    }
+
+    private List<V4PublicStageItemResp> loadStagesUncached(Long divisionId) {
         List<V4PublicStageItemResp> stages = publicStageMapper.selectStagesByDivisionId(divisionId);
         if (CollectionUtils.isEmpty(stages)) {
             return Collections.emptyList();

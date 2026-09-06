@@ -264,7 +264,7 @@ watch(activeStatisticType, () => {
 
 watch([selectedSeasonId, activeDataType], () => {
   void loadTable()
-})
+}, { immediate: true })
 
 watch(
   () => [route.query.tab, route.query.series],
@@ -277,7 +277,6 @@ watch(
 onMounted(async () => {
   applyRouteQuery()
   await loadSeasons()
-  await loadTable()
 })
 </script>
 <template>
