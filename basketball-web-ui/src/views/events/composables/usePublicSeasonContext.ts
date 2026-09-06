@@ -372,18 +372,11 @@ export function usePublicSeasonContext() {
   )
 
   watch(
-    seasonId,
-    (sid) => {
+    () => [seasonId.value, typeof route.query.divisionId === 'string' ? route.query.divisionId : ''] as const,
+    ([sid]) => {
       void loadSeasonDetail(sid)
     },
     { immediate: true },
-  )
-
-  watch(
-    () => route.query.divisionId,
-    () => {
-      if (seasonId.value) void loadSeasonDetail(seasonId.value)
-    },
   )
 
   return {

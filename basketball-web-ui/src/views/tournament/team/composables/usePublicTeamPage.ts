@@ -193,7 +193,7 @@ export function usePublicTeamPage() {
       )
       seriesName.value = displayText(divisionDetail.value?.seriesName, '')
 
-      if (seasonId.value) {
+      if (seasonId.value && !seasonTitle.value) {
         try {
           const seasonRes = await getV4PublicSeasonDetail(seasonId.value)
           if (current !== reqId) return

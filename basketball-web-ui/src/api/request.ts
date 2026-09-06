@@ -39,6 +39,26 @@ const request: AxiosInstance = axios.create({
   timeout: 15000,
 })
 
+const inflightGets = new Map<string, Promise<unknown>>()
+
+function inflightGetKey(url: string, config?: { params?: unknown }) {
+  return `${url}?${config?.params ? JSON.stringify(config.params) : ''}`
+}
+
+const originalGet = request.get.bind(request)
+request.get = ((url: string, config?: Parameters<AxiosInstance['get']>[1]) => {
+  const key = inflightGetKey(url, config)
+  const pending = inflightGets.get(key)
+  if (pending) {
+    return pending as ReturnType<AxiosInstance['get']>
+  }
+  const next = originalGet(url, config).finally(() => {
+    inflightGets.delete(key)
+  })
+  inflightGets.set(key, next)
+  return next
+}) as AxiosInstance['get']
+
 request.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getToken()
   if (token) {

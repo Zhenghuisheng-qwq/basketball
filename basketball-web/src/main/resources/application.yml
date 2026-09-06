@@ -30,11 +30,11 @@ spring:
 
   data:
     redis:
-      host: 192.168.31.48
+      host: 111.229.241.29
       port: 6379
       password:
       database: 0
-      timeout: 10s
+      timeout: 400ms
       lettuce:
         pool:
           max-active: 8

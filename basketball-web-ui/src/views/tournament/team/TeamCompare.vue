@@ -238,9 +238,12 @@ function pickDefaultDivision(season: V4PublicSeasonItem | undefined) {
   return ''
 }
 
+let bootstrapping = false
+
 async function loadTeamOptions() {
   const current = ++teamsReqId
   teamsLoadState.value = 'loading'
+  bootstrapping = true
   try {
     const seasonsRes = await getV4PublicSeasonList()
     if (current !== teamsReqId) return
@@ -260,6 +263,8 @@ async function loadTeamOptions() {
     if (current !== teamsReqId) return
     teamOptions.value = []
     teamsLoadState.value = 'error'
+  } finally {
+    bootstrapping = false
   }
 }
 
@@ -350,6 +355,7 @@ async function loadCompareData() {
 }
 
 watch(selectedSeasonId, async (seasonId) => {
+  if (bootstrapping) return
   seasonTitle.value = displayText(
     seasons.value.find((item) => String(item.seasonId) === seasonId)?.displayTitle,
     '',
@@ -365,6 +371,7 @@ watch(selectedSeasonId, async (seasonId) => {
 })
 
 watch(selectedDivisionId, (divisionId) => {
+  if (bootstrapping) return
   if (divisionId) {
     void loadTeamsForDivision(divisionId)
     void loadCompareData()

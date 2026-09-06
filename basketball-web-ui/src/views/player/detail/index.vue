@@ -80,6 +80,7 @@ async function loadPlayer() {
     const detail = buildEmptyPlayerDetail(profile)
     let matches = detail.allMatches
     let inPlayoffs = false
+    let finishedMatchIds = new Set<string>()
     const contextDivisionId = queryDivisionId.value || profile.divisionId
     if (contextDivisionId && profile.eventTeamId) {
       try {
@@ -87,6 +88,14 @@ async function loadPlayer() {
           divisionId: contextDivisionId,
           eventTeamId: profile.eventTeamId,
         })
+        finishedMatchIds = new Set(
+          (v4Res.data ?? [])
+            .filter((item) => {
+              const status = String(item.matchStatus || '').toUpperCase()
+              return status === 'FINISHED' || status === 'FORFEITED' || status === 'FORFEIT'
+            })
+            .map((item) => String(item.matchId)),
+        )
         matches = (v4Res.data ?? []).map((item) => {
           const mapped = mapV4MatchToTeamRecord(item, profile.eventTeamId || profile.currentTeamId)
           if (mapped.stage === 'playoffs') inPlayoffs = true
@@ -150,7 +159,7 @@ async function loadPlayer() {
     if (inPlayoffs) {
       profile.currentStage = '季后赛'
     }
-    matches = await hydratePlayerMatchStats(matches, profile)
+    matches = await hydratePlayerMatchStats(matches, profile, finishedMatchIds)
     detail.profile = profile
     detail.recentMatches = matches.slice(0, 5)
     detail.allMatches = matches
@@ -173,25 +182,27 @@ async function loadPlayer() {
 async function hydratePlayerMatchStats(
   rows: PlayerMatchRecord[],
   profile: PlayerProfile,
+  finishedMatchIds?: Set<string>,
 ): Promise<PlayerMatchRecord[]> {
   if (!rows.length) return rows
   const next = [...rows]
-  const batchSize = 6
-  for (let index = 0; index < next.length; index += batchSize) {
-    const batch = next.slice(index, index + batchSize)
-    const details = await Promise.all(batch.map(async (row) => {
-      try {
-        const res = await getV4PublicMatchDetail(row.matchId)
-        return res.data ?? null
-      } catch {
-        return null
-      }
-    }))
-    details.forEach((detail, offset) => {
-      const target = index + offset
-      next[target] = applyPlayerBoxScore(next[target], findPlayerBoxScore(detail?.playerStats, profile))
-    })
-  }
+  const targets = next
+    .map((row, index) => ({ row, index }))
+    .filter((item) => !finishedMatchIds || finishedMatchIds.has(String(item.row.matchId)))
+    .slice(0, 20)
+  if (!targets.length) return next
+  const details = await Promise.all(targets.map(async (item) => {
+    try {
+      const res = await getV4PublicMatchDetail(item.row.matchId)
+      return res.data ?? null
+    } catch {
+      return null
+    }
+  }))
+  details.forEach((detail, offset) => {
+    const target = targets[offset].index
+    next[target] = applyPlayerBoxScore(next[target], findPlayerBoxScore(detail?.playerStats, profile))
+  })
   return next
 }
 

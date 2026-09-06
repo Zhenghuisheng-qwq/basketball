@@ -92,21 +92,30 @@ public class BasketPublicSupport {
         return sortOrder != null && "asc".equalsIgnoreCase(sortOrder.trim());
     }
 
+    private static final long CACHE_BREAKER_MS = 30_000L;
+    private volatile long cacheDisabledUntilMs;
+
     public <T> T cacheGetOrLoad(String cacheSuffix, Supplier<T> loader) {
         BasketPublicCacheKey key = new BasketPublicCacheKey(cacheSuffix);
+        long now = System.currentTimeMillis();
+        if (now < cacheDisabledUntilMs) {
+            return loader.get();
+        }
         try {
             T cached = miniRedisUtil.get(key);
             if (cached != null) {
                 return cached;
             }
         } catch (Exception ex) {
+            cacheDisabledUntilMs = System.currentTimeMillis() + CACHE_BREAKER_MS;
             log.debug("public cache get ignored: {}", ex.getMessage());
         }
         T value = loader.get();
-        if (value != null) {
+        if (value != null && System.currentTimeMillis() >= cacheDisabledUntilMs) {
             try {
                 miniRedisUtil.set(key, value);
             } catch (Exception ex) {
+                cacheDisabledUntilMs = System.currentTimeMillis() + CACHE_BREAKER_MS;
                 log.debug("public cache set ignored: {}", ex.getMessage());
             }
         }

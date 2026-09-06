@@ -17,6 +17,7 @@ public class V4PublicMatchSeriesDetailResp {
     private Long stageId;
     private String stageName;
     private Integer roundNo;
+    private String roundName;
     @JsonSerialize(using = ToStringSerializer.class)
     private Long homeEventTeamId;
     private String homeTeamName;

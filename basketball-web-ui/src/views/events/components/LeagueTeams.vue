@@ -117,7 +117,9 @@ function goPage(index: number) {
             }"
             class="team-card team-card-link"
           >
-            <TeamLogo :team="team" size="lg" />
+            <span class="team-card__logo-stage">
+              <TeamLogo :team="team" size="lg" />
+            </span>
             <h3>
               {{ team.name }}
               <em v-if="team.disqualified" class="dq-tag">赛事资格已取消</em>
@@ -193,12 +195,49 @@ function goPage(index: number) {
   color: #f87171;
 }
 
+.team-card__logo-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+  background: var(--cnpa-paper-surface, #f1efef);
+  border: 1px solid var(--cnpa-paper-border, rgba(25, 25, 25, 0.11));
+  box-sizing: border-box;
+}
+
+.team-card__logo-stage :deep(.team-logo-lg) {
+  width: auto;
+  height: auto;
+  max-width: 64px;
+  max-height: 64px;
+}
+
+.team-card__logo-stage :deep(.team-logo-image) {
+  width: auto;
+  height: auto;
+  max-width: 64px;
+  max-height: 64px;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 1px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 1px 2px rgba(0, 0, 0, 0.16));
+}
+
+.team-card__logo-stage :deep(.team-logo-fallback) {
+  width: 64px;
+  height: 64px;
+  max-width: 64px;
+  max-height: 64px;
+}
+
 .team-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 22px 12px;
+  padding: 18px 12px;
   border: 1px solid rgba(17, 17, 17, 0.1);
   background: #fff;
   transition: border-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
@@ -267,6 +306,23 @@ function goPage(index: number) {
 
   .carousel {
     grid-template-columns: 32px 1fr 32px;
+  }
+
+  .team-card__logo-stage {
+    width: 64px;
+    height: 64px;
+  }
+
+  .team-card__logo-stage :deep(.team-logo-lg),
+  .team-card__logo-stage :deep(.team-logo-image),
+  .team-card__logo-stage :deep(.team-logo-fallback) {
+    max-width: 52px;
+    max-height: 52px;
+  }
+
+  .team-card__logo-stage :deep(.team-logo-fallback) {
+    width: 52px;
+    height: 52px;
   }
 }
 </style>

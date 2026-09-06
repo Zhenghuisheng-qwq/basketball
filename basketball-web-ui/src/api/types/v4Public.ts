@@ -297,6 +297,7 @@ export interface V4PublicMatchSeriesDetail {
   stageId?: string
   stageName?: string
   roundNo?: number
+  roundName?: string
   homeTeamName?: string
   awayTeamName?: string
   bestOf?: number

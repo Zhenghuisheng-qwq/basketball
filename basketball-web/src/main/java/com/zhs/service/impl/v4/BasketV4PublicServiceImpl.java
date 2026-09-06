@@ -397,7 +397,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     @Override
     public V4PublicMatchDetailResp getMatchDetail(Long matchId) {
         BasketV4Match match = requirePublishedMatch(matchId);
-        requirePublishedSeason(match.getSeasonId());
+        BasketSeason season = requirePublishedSeason(match.getSeasonId());
         Map<Long, BasketEventTeam> teamMap = loadEventTeamMap(Arrays.asList(match.getHomeEventTeamId(), match.getAwayEventTeamId()));
         Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(teamMap.values().stream()
                 .map(BasketEventTeam::getTeamLogoFileId).filter(Objects::nonNull).collect(Collectors.toSet()));
@@ -418,23 +418,25 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         resp.setHomeScore(match.getHomeScore());
         resp.setAwayScore(match.getAwayScore());
         resp.setWinnerEventTeamId(match.getWinnerEventTeamId());
-        fillMatchContextNames(resp, match);
+        List<V4PublicStageItemResp> stages = fillMatchContextNames(resp, match, season);
         com.zhs.support.v4.EventTeamPublicDisplaySupport.fillMatchDetail(resp, match,
                 teamMap.get(match.getHomeEventTeamId()), teamMap.get(match.getAwayEventTeamId()));
 
         Map<Long, String> captainMap = loadCaptainNameMap(new ArrayList<>(teamMap.values()));
         BasketEventTeam home = teamMap.get(match.getHomeEventTeamId());
         BasketEventTeam away = teamMap.get(match.getAwayEventTeamId());
+        Map<Long, List<V4PublicEventPlayerItemResp>> playersByTeam = listPlayersByEventTeamIds(
+                Arrays.asList(match.getHomeEventTeamId(), match.getAwayEventTeamId()));
         if (home != null) {
             V4PublicEventTeamDetailResp homeVo = new V4PublicEventTeamDetailResp();
             copyEventTeamBase(home, homeVo, captainMap, urlMap);
-            homeVo.setPlayers(listPlayersByEventTeamId(home.getId()));
+            homeVo.setPlayers(playersByTeam.getOrDefault(home.getId(), Collections.emptyList()));
             resp.setHomeTeam(homeVo);
         }
         if (away != null) {
             V4PublicEventTeamDetailResp awayVo = new V4PublicEventTeamDetailResp();
             copyEventTeamBase(away, awayVo, captainMap, urlMap);
-            awayVo.setPlayers(listPlayersByEventTeamId(away.getId()));
+            awayVo.setPlayers(playersByTeam.getOrDefault(away.getId(), Collections.emptyList()));
             resp.setAwayTeam(awayVo);
         }
 
@@ -444,7 +446,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (match.getSeriesId() != null) {
             resp.setMatchSeriesId(match.getSeriesId());
             resp.setSeriesGameNo(match.getSeriesGameNo());
-            V4PublicMatchSeriesDetailResp seriesContext = matchSeriesDisplaySupport.buildDetail(match.getSeriesId(), matchId);
+            V4PublicMatchSeriesDetailResp seriesContext = matchSeriesDisplaySupport.buildDetail(
+                    match.getSeriesId(), matchId, teamMap, urlMap, stages);
             if (seriesContext != null) {
                 resp.setBestOf(seriesContext.getBestOf());
                 resp.setSeriesContext(seriesContext);
@@ -1118,18 +1121,30 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     }
 
     private List<V4PublicEventPlayerItemResp> listPlayersByEventTeamId(Long eventTeamId) {
+        return listPlayersByEventTeamIds(Collections.singletonList(eventTeamId))
+                .getOrDefault(eventTeamId, Collections.emptyList());
+    }
+
+    private Map<Long, List<V4PublicEventPlayerItemResp>> listPlayersByEventTeamIds(Collection<Long> eventTeamIds) {
+        if (CollectionUtils.isEmpty(eventTeamIds)) {
+            return Collections.emptyMap();
+        }
+        Set<Long> ids = eventTeamIds.stream().filter(Objects::nonNull).collect(Collectors.toSet());
+        if (ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
         List<BasketEventPlayer> players = eventPlayerDao.selectList(new LambdaQueryWrapper<BasketEventPlayer>()
-                .eq(BasketEventPlayer::getEventTeamId, eventTeamId)
+                .in(BasketEventPlayer::getEventTeamId, ids)
                 .eq(BasketEventPlayer::getIsDelete, BasketPublicConstants.NOT_DELETED)
                 .orderByDesc(BasketEventPlayer::getIsCaptain)
                 .orderByDesc(BasketEventPlayer::getIsStarter)
                 .orderByAsc(BasketEventPlayer::getJerseyNo));
         if (CollectionUtils.isEmpty(players)) {
-            return Collections.emptyList();
+            return Collections.emptyMap();
         }
         Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(
                 players.stream().map(BasketEventPlayer::getAvatarFileId).filter(Objects::nonNull).collect(Collectors.toSet()));
-        List<V4PublicEventPlayerItemResp> result = new ArrayList<>();
+        Map<Long, List<V4PublicEventPlayerItemResp>> grouped = new LinkedHashMap<>();
         for (BasketEventPlayer player : players) {
             V4PublicEventPlayerItemResp vo = new V4PublicEventPlayerItemResp();
             vo.setEventPlayerId(player.getId());
@@ -1143,22 +1158,13 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             vo.setJerseyNo(player.getJerseyNo());
             vo.setIsCaptain(player.getIsCaptain());
             vo.setIsStarter(player.getIsStarter());
-            result.add(vo);
+            grouped.computeIfAbsent(player.getEventTeamId(), key -> new ArrayList<>()).add(vo);
         }
-        return result;
+        return grouped;
     }
 
     private List<BasketV4Match> filterPublishedStageMatches(List<BasketV4Match> matches) {
-        if (CollectionUtils.isEmpty(matches)) {
-            return matches;
-        }
-        List<BasketV4Match> kept = new ArrayList<>();
-        for (BasketV4Match match : matches) {
-            if (matchSeriesDisplaySupport.isPubliclyVisibleMatch(match)) {
-                kept.add(match);
-            }
-        }
-        return matchSeriesDisplaySupport.excludeRemainingUnplayed(kept);
+        return matchSeriesDisplaySupport.filterPubliclyVisibleMatches(matches);
     }
 
     private List<V4PublicMatchItemResp> enrichMatchItems(List<BasketV4Match> matches) {
@@ -1486,8 +1492,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     /**
      * 正式赛事上下文：仅读 Season / Division / Series / Stage 主数据，不读 pending / Team ACTIVE。
      */
-    private void fillMatchContextNames(V4PublicMatchDetailResp resp, BasketV4Match match) {
-        BasketSeason season = seasonDao.selectById(match.getSeasonId());
+    private List<V4PublicStageItemResp> fillMatchContextNames(V4PublicMatchDetailResp resp, BasketV4Match match,
+                                                             BasketSeason season) {
         if (season != null && Objects.equals(season.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
             resp.setSeasonName(StringUtils.hasText(season.getDisplayTitle()) ? season.getDisplayTitle() : season.getSeasonName());
             resp.setSeriesId(season.getSeriesId());
@@ -1504,21 +1510,24 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             resp.setDivisionName(division.getDivisionName());
             resp.setGameMode(division.getGameMode());
         }
-        if (match.getStageId() != null) {
-            List<V4PublicStageItemResp> stages = publicStageMapper.selectStagesByDivisionId(match.getDivisionId());
-            if (!CollectionUtils.isEmpty(stages)) {
-                for (V4PublicStageItemResp stage : stages) {
-                    if (Objects.equals(stage.getStageId(), match.getStageId())) {
-                        resp.setStageName(stage.getStageName());
-                        resp.setStageType(stage.getStageType());
-                        break;
-                    }
+        List<V4PublicStageItemResp> stages = List.of();
+        if (match.getStageId() != null || match.getDivisionId() != null) {
+            stages = publicStageMapper.selectStagesByDivisionId(match.getDivisionId());
+            if (stages == null) {
+                stages = List.of();
+            }
+            for (V4PublicStageItemResp stage : stages) {
+                if (Objects.equals(stage.getStageId(), match.getStageId())) {
+                    resp.setStageName(stage.getStageName());
+                    resp.setStageType(stage.getStageType());
+                    break;
                 }
             }
         }
         if (!StringUtils.hasText(resp.getStageName()) && StringUtils.hasText(match.getStageCode())) {
             resp.setStageName(match.getStageCode());
         }
+        return stages;
     }
 
     private String resolveMatchStatusName(String matchStatus) {

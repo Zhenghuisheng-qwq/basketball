@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getV4PublicDivisionSchedule, getV4PublicMatchDetail, getV4PublicMatchSeries } from '@/api/v4Public'
+import { getV4PublicMatchDetail, getV4PublicMatchSeries } from '@/api/v4Public'
 import type { V4PublicMatchDetail, V4PublicMatchSeriesDetail } from '@/api/types/v4Public'
 import PaperSection from '@/components/common/PaperSection.vue'
 import { requiresPeriodScores } from '@/utils/fullMatchSubmissionRules'
@@ -287,19 +287,8 @@ async function loadPage() {
       if (!series.value) {
         throw new Error('暂无系列赛详情')
       }
-      seriesRoundName.value = ''
       applyTabFromRoute()
-      if (series.value.divisionId) {
-        try {
-          const schedule = await getV4PublicDivisionSchedule(String(series.value.divisionId))
-          const row = (schedule.data || []).find((item) =>
-            item.unitType === 'MATCH_SERIES' && String(item.id) === String(series.value?.id),
-          )
-          seriesRoundName.value = String(row?.roundName || '').trim()
-        } catch {
-          seriesRoundName.value = ''
-        }
-      }
+      seriesRoundName.value = String(series.value.roundName || '').trim()
       if (activeTab.value !== SERIES_TOTAL_TAB) {
         await loadMatchById(activeTab.value)
       } else {
@@ -356,11 +345,7 @@ function goPlayer(sourcePlayerId?: string) {
 
 watch([seriesId, matchId, () => route.name], () => {
   void loadPage()
-})
-
-onMounted(() => {
-  void loadPage()
-})
+}, { immediate: true })
 </script>
 
 <template>

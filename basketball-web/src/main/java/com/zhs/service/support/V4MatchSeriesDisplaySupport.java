@@ -58,7 +58,22 @@ public class V4MatchSeriesDisplaySupport {
         if (!isPubliclyVisibleSeries(series)) {
             return null;
         }
-        return buildDetail(series, currentMatchId);
+        return buildDetail(series, currentMatchId, null);
+    }
+
+    public V4PublicMatchSeriesDetailResp buildDetail(Long seriesId, Long currentMatchId,
+                                                    Map<Long, BasketEventTeam> teamMap,
+                                                    Map<Long, String> urlMap,
+                                                    List<V4PublicStageItemResp> stages) {
+        if (seriesId == null) {
+            return null;
+        }
+        BasketMatchSeries series = matchSeriesMapper.selectById(seriesId);
+        if (series == null || !isPubliclyVisibleSeries(series)) {
+            return null;
+        }
+        SeriesBuildContext ctx = prepareSeriesBuildContext(List.of(series), teamMap, urlMap, stages);
+        return buildDetail(series, currentMatchId, ctx);
     }
 
     public List<V4PublicMatchSeriesDetailResp> listByStageId(Long stageId) {
@@ -66,12 +81,20 @@ public class V4MatchSeriesDisplaySupport {
         if (CollectionUtils.isEmpty(list)) {
             return List.of();
         }
-        List<V4PublicMatchSeriesDetailResp> result = new ArrayList<>();
+        ScheduleVisibilityCache visibility = new ScheduleVisibilityCache();
+        List<BasketMatchSeries> visible = new ArrayList<>();
         for (BasketMatchSeries series : list) {
-            if (!isPubliclyVisibleSeries(series)) {
-                continue;
+            if (isPubliclyVisibleSeries(series, visibility)) {
+                visible.add(series);
             }
-            result.add(buildDetail(series, null));
+        }
+        if (visible.isEmpty()) {
+            return List.of();
+        }
+        SeriesBuildContext ctx = prepareSeriesBuildContext(visible, null, null, null);
+        List<V4PublicMatchSeriesDetailResp> result = new ArrayList<>();
+        for (BasketMatchSeries series : visible) {
+            result.add(buildDetail(series, null, ctx));
         }
         return result;
     }
@@ -81,17 +104,9 @@ public class V4MatchSeriesDisplaySupport {
             return List.of();
         }
         List<V4PublicStageItemResp> stages = publicStageMapper.selectStagesByDivisionId(divisionId);
-        List<BasketMatchSeries> seriesList = new ArrayList<>();
-        if (!CollectionUtils.isEmpty(stages)) {
-            for (V4PublicStageItemResp stage : stages) {
-                if (stage == null || stage.getStageId() == null) {
-                    continue;
-                }
-                List<BasketMatchSeries> part = matchSeriesMapper.selectByStageId(stage.getStageId());
-                if (!CollectionUtils.isEmpty(part)) {
-                    seriesList.addAll(part);
-                }
-            }
+        List<BasketMatchSeries> seriesList = matchSeriesMapper.selectByDivisionId(divisionId);
+        if (seriesList == null) {
+            seriesList = new ArrayList<>();
         }
         Map<Long, V4PublicStageItemResp> stageMap = new HashMap<>();
         Map<Long, Integer> maxRoundByStage = new HashMap<>();
@@ -117,6 +132,7 @@ public class V4MatchSeriesDisplaySupport {
                 .orderByAsc(BasketV4Match::getRoundNo)
                 .orderByAsc(BasketV4Match::getMatchNo));
         Map<Long, BasketEventTeam> teamMap = loadScheduleTeamMap(seriesList, matches);
+        Map<Long, List<BasketV4Match>> matchesBySeries = groupMatchesBySeriesId(matches);
 
         ScheduleVisibilityCache visibility = new ScheduleVisibilityCache();
         List<V4PublicScheduleItemResp> items = new ArrayList<>();
@@ -130,7 +146,8 @@ public class V4MatchSeriesDisplaySupport {
                     continue;
                 }
                 items.add(toSeriesScheduleItem(series, stageMap.get(series.getStageId()),
-                        maxRoundByStage.get(series.getStageId()), teamMap));
+                        maxRoundByStage.get(series.getStageId()), teamMap,
+                        matchesBySeries.getOrDefault(series.getId(), List.of())));
                 if (series.getId() != null) {
                     exposedSeriesIds.add(series.getId());
                 }
@@ -348,12 +365,21 @@ public class V4MatchSeriesDisplaySupport {
     }
 
     public V4PublicMatchSeriesDetailResp buildDetail(BasketMatchSeries series, Long currentMatchId) {
+        return buildDetail(series, currentMatchId, prepareSeriesBuildContext(List.of(series), null, null, null));
+    }
+
+    private V4PublicMatchSeriesDetailResp buildDetail(BasketMatchSeries series, Long currentMatchId,
+                                                     SeriesBuildContext ctx) {
+        if (ctx == null) {
+            ctx = prepareSeriesBuildContext(List.of(series), null, null, null);
+        }
         V4PublicMatchSeriesDetailResp vo = new V4PublicMatchSeriesDetailResp();
         vo.setId(series.getId());
         vo.setSeriesCode(series.getSeriesCode());
         vo.setDivisionId(series.getDivisionId());
         vo.setStageId(series.getStageId());
         vo.setRoundNo(series.getRoundNo());
+        vo.setRoundName(PublicKnockoutRoundNames.name(series.getRoundNo(), ctx.maxRoundByStage.get(series.getStageId())));
         vo.setBestOf(series.getBestOf());
         vo.setRequiredWins(requiredWins(series.getBestOf()));
         int[] displayWins = resolveDisplayWinCounts(series);
@@ -379,19 +405,19 @@ public class V4MatchSeriesDisplaySupport {
             vo.setAwayEventTeamId(null);
         }
 
-        fillStageInfo(vo, series);
-        fillTeamNames(vo, series);
+        fillStageInfo(vo, series, ctx.stages);
+        fillTeamNames(vo, series, ctx.teamMap, ctx.urlMap);
         fillForfeitSummary(vo, series);
-        fillDisqualificationDisplay(vo, series);
-        vo.setGames(buildGames(series, currentMatchId));
+        fillDisqualificationDisplay(vo, series, ctx.teamMap);
+        vo.setGames(buildGames(series, currentMatchId, ctx.matchesBySeries.getOrDefault(series.getId(), List.of())));
         return vo;
     }
 
-    private void fillStageInfo(V4PublicMatchSeriesDetailResp vo, BasketMatchSeries series) {
+    private void fillStageInfo(V4PublicMatchSeriesDetailResp vo, BasketMatchSeries series,
+                               List<V4PublicStageItemResp> stages) {
         if (series.getDivisionId() == null || series.getStageId() == null) {
             return;
         }
-        List<V4PublicStageItemResp> stages = publicStageMapper.selectStagesByDivisionId(series.getDivisionId());
         if (CollectionUtils.isEmpty(stages)) {
             return;
         }
@@ -409,12 +435,15 @@ public class V4MatchSeriesDisplaySupport {
         }
     }
 
-    private void fillTeamNames(V4PublicMatchSeriesDetailResp vo, BasketMatchSeries series) {
-        Set<Long> ids = new HashSet<>();
-        if (series.getHomeEventTeamId() != null && series.getHomeEventTeamId() > 0) ids.add(series.getHomeEventTeamId());
-        if (series.getAwayEventTeamId() != null && series.getAwayEventTeamId() > 0) ids.add(series.getAwayEventTeamId());
-        if (series.getWinnerEventTeamId() != null) ids.add(series.getWinnerEventTeamId());
-        if (ids.isEmpty()) {
+    private void fillTeamNames(V4PublicMatchSeriesDetailResp vo, BasketMatchSeries series,
+                               Map<Long, BasketEventTeam> teamMap, Map<Long, String> urlMap) {
+        Map<Long, BasketEventTeam> map = teamMap == null ? Collections.emptyMap() : teamMap;
+        if (urlMap == null) {
+            urlMap = Collections.emptyMap();
+        }
+        if (map.isEmpty()
+                && (series.getHomeEventTeamId() == null || series.getHomeEventTeamId() <= 0)
+                && (series.getAwayEventTeamId() == null || series.getAwayEventTeamId() <= 0)) {
             if (series.getHomeSourceDisplay() != null && !series.getHomeSourceDisplay().isBlank()) {
                 vo.setHomeTeamName(series.getHomeSourceDisplay());
             } else {
@@ -427,18 +456,6 @@ public class V4MatchSeriesDisplaySupport {
             }
             return;
         }
-        List<BasketEventTeam> teams = eventTeamDao.selectByIds(ids);
-        Map<Long, BasketEventTeam> map = new HashMap<>();
-        Set<Long> logoIds = new HashSet<>();
-        for (BasketEventTeam team : teams) {
-            if (team != null) {
-                map.put(team.getId(), team);
-                if (team.getTeamLogoFileId() != null) {
-                    logoIds.add(team.getTeamLogoFileId());
-                }
-            }
-        }
-        Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(logoIds);
         BasketEventTeam home = map.get(series.getHomeEventTeamId());
         if (home != null) {
             vo.setHomeTeamName(home.getTeamNameSnapshot());
@@ -469,11 +486,8 @@ public class V4MatchSeriesDisplaySupport {
         }
     }
 
-    private List<V4PublicMatchSeriesGameResp> buildGames(BasketMatchSeries series, Long currentMatchId) {
-        List<BasketV4Match> matches = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()
-                .eq(BasketV4Match::getSeriesId, series.getId())
-                .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
-                .orderByAsc(BasketV4Match::getSeriesGameNo));
+    private List<V4PublicMatchSeriesGameResp> buildGames(BasketMatchSeries series, Long currentMatchId,
+                                                        List<BasketV4Match> matches) {
         if (CollectionUtils.isEmpty(matches)) {
             return List.of();
         }
@@ -506,15 +520,40 @@ public class V4MatchSeriesDisplaySupport {
         if (CollectionUtils.isEmpty(seriesIds)) {
             return Collections.emptyMap();
         }
-        Map<Long, BasketMatchSeries> map = new HashMap<>();
+        Set<Long> ids = new HashSet<>();
         for (Long id : seriesIds) {
-            if (id == null) continue;
-            BasketMatchSeries series = matchSeriesMapper.selectById(id);
-            if (series != null) {
-                map.put(id, series);
+            if (id != null) {
+                ids.add(id);
+            }
+        }
+        if (ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<BasketMatchSeries> list = matchSeriesMapper.selectByIds(ids);
+        if (CollectionUtils.isEmpty(list)) {
+            return Collections.emptyMap();
+        }
+        Map<Long, BasketMatchSeries> map = new HashMap<>();
+        for (BasketMatchSeries series : list) {
+            if (series != null && series.getId() != null) {
+                map.put(series.getId(), series);
             }
         }
         return map;
+    }
+
+    public List<BasketV4Match> filterPubliclyVisibleMatches(List<BasketV4Match> matches) {
+        if (CollectionUtils.isEmpty(matches)) {
+            return matches;
+        }
+        ScheduleVisibilityCache cache = new ScheduleVisibilityCache();
+        List<BasketV4Match> kept = new ArrayList<>();
+        for (BasketV4Match match : matches) {
+            if (isPubliclyVisibleMatch(match, cache)) {
+                kept.add(match);
+            }
+        }
+        return excludeRemainingUnplayed(kept);
     }
 
     public boolean isPublishedBatch(Long batchId) {
@@ -623,25 +662,135 @@ public class V4MatchSeriesDisplaySupport {
         private final Map<Long, Boolean> versionedDivision = new HashMap<>();
     }
 
+    private static final class SeriesBuildContext {
+        private List<V4PublicStageItemResp> stages = List.of();
+        private Map<Long, BasketEventTeam> teamMap = Collections.emptyMap();
+        private Map<Long, String> urlMap = Collections.emptyMap();
+        private Map<Long, List<BasketV4Match>> matchesBySeries = new HashMap<>();
+        private final Map<Long, Integer> maxRoundByStage = new HashMap<>();
+    }
+
+    private SeriesBuildContext prepareSeriesBuildContext(List<BasketMatchSeries> seriesList,
+                                                        Map<Long, BasketEventTeam> existingTeams,
+                                                        Map<Long, String> existingUrls,
+                                                        List<V4PublicStageItemResp> existingStages) {
+        SeriesBuildContext ctx = new SeriesBuildContext();
+        if (CollectionUtils.isEmpty(seriesList)) {
+            return ctx;
+        }
+        Map<Long, Integer> seriesCountByStage = new HashMap<>();
+        for (BasketMatchSeries series : seriesList) {
+            if (series.getStageId() != null && series.getRoundNo() != null) {
+                ctx.maxRoundByStage.merge(series.getStageId(), series.getRoundNo(), Math::max);
+            }
+            if (series.getStageId() != null) {
+                seriesCountByStage.merge(series.getStageId(), 1, Integer::sum);
+            }
+        }
+        for (Map.Entry<Long, Integer> entry : seriesCountByStage.entrySet()) {
+            if (entry.getValue() != null && entry.getValue() > 1) {
+                continue;
+            }
+            List<BasketMatchSeries> siblings = matchSeriesMapper.selectByStageId(entry.getKey());
+            if (CollectionUtils.isEmpty(siblings)) {
+                continue;
+            }
+            for (BasketMatchSeries sibling : siblings) {
+                if (sibling != null && sibling.getRoundNo() != null) {
+                    ctx.maxRoundByStage.merge(entry.getKey(), sibling.getRoundNo(), Math::max);
+                }
+            }
+        }
+        Long divisionId = seriesList.stream()
+                .map(BasketMatchSeries::getDivisionId)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+        if (!CollectionUtils.isEmpty(existingStages)) {
+            ctx.stages = existingStages;
+        } else if (divisionId != null) {
+            List<V4PublicStageItemResp> stages = publicStageMapper.selectStagesByDivisionId(divisionId);
+            ctx.stages = stages == null ? List.of() : stages;
+        }
+        Set<Long> teamIds = new HashSet<>();
+        Set<Long> seriesIds = new HashSet<>();
+        for (BasketMatchSeries series : seriesList) {
+            if (series.getId() != null) {
+                seriesIds.add(series.getId());
+            }
+            addPositiveId(teamIds, series.getHomeEventTeamId());
+            addPositiveId(teamIds, series.getAwayEventTeamId());
+            addPositiveId(teamIds, series.getWinnerEventTeamId());
+        }
+        if (existingTeams != null && !existingTeams.isEmpty() && teamIds.stream().allMatch(existingTeams::containsKey)) {
+            ctx.teamMap = existingTeams;
+            ctx.urlMap = existingUrls != null ? existingUrls : Collections.emptyMap();
+        } else if (!teamIds.isEmpty()) {
+            List<BasketEventTeam> teams = eventTeamDao.selectByIds(teamIds);
+            Map<Long, BasketEventTeam> map = new HashMap<>();
+            Set<Long> logoIds = new HashSet<>();
+            if (!CollectionUtils.isEmpty(teams)) {
+                for (BasketEventTeam team : teams) {
+                    if (team != null && team.getId() != null) {
+                        map.put(team.getId(), team);
+                        if (team.getTeamLogoFileId() != null) {
+                            logoIds.add(team.getTeamLogoFileId());
+                        }
+                    }
+                }
+            }
+            ctx.teamMap = map;
+            ctx.urlMap = publicSupport.loadAccessUrlMap(logoIds);
+        }
+        if (!seriesIds.isEmpty()) {
+            List<BasketV4Match> matches = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()
+                    .in(BasketV4Match::getSeriesId, seriesIds)
+                    .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                    .orderByAsc(BasketV4Match::getSeriesGameNo)
+                    .orderByAsc(BasketV4Match::getId));
+            ctx.matchesBySeries = groupMatchesBySeriesId(matches);
+        }
+        return ctx;
+    }
+
+    private Map<Long, List<BasketV4Match>> groupMatchesBySeriesId(List<BasketV4Match> matches) {
+        Map<Long, List<BasketV4Match>> map = new HashMap<>();
+        if (CollectionUtils.isEmpty(matches)) {
+            return map;
+        }
+        for (BasketV4Match match : matches) {
+            if (match == null || match.getSeriesId() == null) {
+                continue;
+            }
+            map.computeIfAbsent(match.getSeriesId(), key -> new ArrayList<>()).add(match);
+        }
+        return map;
+    }
+
     private V4PublicScheduleItemResp toSeriesScheduleItem(BasketMatchSeries series,
                                                           V4PublicStageItemResp stage,
                                                           Integer maxRound,
-                                                          Map<Long, BasketEventTeam> teamMap) {
-        V4PublicMatchSeriesDetailResp detail = buildDetail(series, null);
+                                                          Map<Long, BasketEventTeam> teamMap,
+                                                          List<BasketV4Match> seriesMatches) {
         V4PublicScheduleItemResp item = new V4PublicScheduleItemResp();
         item.setId(series.getId());
         item.setUnitType(PublicScheduleUnitResolver.MATCH_SERIES);
         item.setStageId(series.getStageId());
-        item.setStageName(detail.getStageName() != null ? detail.getStageName()
-                : (stage != null ? stage.getStageName() : null));
+        item.setStageName(stage != null ? stage.getStageName() : null);
         item.setRoundNo(series.getRoundNo());
         item.setRoundName(PublicKnockoutRoundNames.name(series.getRoundNo(), maxRound));
         item.setSeriesCode(series.getSeriesCode());
         item.setMatchNo(series.getSeriesCode());
-        item.setHomeEventTeamId(detail.getHomeEventTeamId());
-        item.setAwayEventTeamId(detail.getAwayEventTeamId());
-        item.setHomeTeam(detail.getHomeTeamName());
-        item.setAwayTeam(detail.getAwayTeamName());
+        Long homeId = positiveOrNull(series.getHomeEventTeamId());
+        Long awayId = positiveOrNull(series.getAwayEventTeamId());
+        item.setHomeEventTeamId(homeId);
+        item.setAwayEventTeamId(awayId);
+        BasketEventTeam homeTeam = homeId != null ? teamMap.get(homeId) : null;
+        BasketEventTeam awayTeam = awayId != null ? teamMap.get(awayId) : null;
+        item.setHomeTeam(homeTeam != null ? homeTeam.getTeamNameSnapshot()
+                : (blankToNull(series.getHomeSourceDisplay()) != null ? series.getHomeSourceDisplay() : "待定"));
+        item.setAwayTeam(awayTeam != null ? awayTeam.getTeamNameSnapshot()
+                : (blankToNull(series.getAwaySourceDisplay()) != null ? series.getAwaySourceDisplay() : "待定"));
         item.setBestOf(series.getBestOf());
         int[] displayWins = resolveDisplayWinCounts(series);
         int homeWins = displayWins[0];
@@ -649,12 +798,12 @@ public class V4MatchSeriesDisplaySupport {
         item.setHomeWinCount(homeWins);
         item.setAwayWinCount(awayWins);
         item.setWinnerEventTeamId(series.getWinnerEventTeamId());
-        item.setRequiredWins(detail.getRequiredWins());
+        item.setRequiredWins(requiredWins(series.getBestOf()));
         item.setSeriesScore(formatSeriesScore(series, homeWins, awayWins));
         int gamesPlayed = 0;
-        if (detail.getGames() != null) {
-            for (V4PublicMatchSeriesGameResp game : detail.getGames()) {
-                if (game != null && !Boolean.TRUE.equals(game.getSkipped()) && isOfficialGameStatus(game.getMatchStatus())) {
+        if (!CollectionUtils.isEmpty(seriesMatches)) {
+            for (BasketV4Match match : seriesMatches) {
+                if (match != null && !isRemainingUnplayedChild(match, series) && isOfficialResult(match)) {
                     gamesPlayed++;
                 }
             }
@@ -664,13 +813,9 @@ public class V4MatchSeriesDisplaySupport {
         item.setScheduleDate(formatScheduleDate(series.getScheduledDate()));
         item.setStartTime(formatScheduleTime(series.getScheduledStartTime()));
         item.setStatus(series.getSeriesStatus());
-        item.setStatusName(detail.getSeriesStatusName());
+        item.setStatusName(seriesStatusLabel(series.getSeriesStatus()));
         item.setPlaceholderSource(joinPlaceholderSource(series.getHomeSourceType(), series.getAwaySourceType()));
         item.setPublished(true);
-        BasketEventTeam homeTeam = series.getHomeEventTeamId() != null && series.getHomeEventTeamId() > 0
-                ? teamMap.get(series.getHomeEventTeamId()) : null;
-        BasketEventTeam awayTeam = series.getAwayEventTeamId() != null && series.getAwayEventTeamId() > 0
-                ? teamMap.get(series.getAwayEventTeamId()) : null;
         com.zhs.support.v4.EventTeamPublicDisplaySupport.fillSchedule(item, series, homeTeam, awayTeam);
         return item;
     }
@@ -853,11 +998,13 @@ public class V4MatchSeriesDisplaySupport {
         }
     }
 
-    private void fillDisqualificationDisplay(V4PublicMatchSeriesDetailResp vo, BasketMatchSeries series) {
+    private void fillDisqualificationDisplay(V4PublicMatchSeriesDetailResp vo, BasketMatchSeries series,
+                                            Map<Long, BasketEventTeam> teamMap) {
+        Map<Long, BasketEventTeam> map = teamMap == null ? Collections.emptyMap() : teamMap;
         BasketEventTeam home = series.getHomeEventTeamId() != null && series.getHomeEventTeamId() > 0
-                ? eventTeamDao.selectById(series.getHomeEventTeamId()) : null;
+                ? map.get(series.getHomeEventTeamId()) : null;
         BasketEventTeam away = series.getAwayEventTeamId() != null && series.getAwayEventTeamId() > 0
-                ? eventTeamDao.selectById(series.getAwayEventTeamId()) : null;
+                ? map.get(series.getAwayEventTeamId()) : null;
         com.zhs.support.v4.EventTeamPublicDisplaySupport.fillSeries(vo, series, home, away);
     }
 
