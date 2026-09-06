@@ -319,13 +319,20 @@
   box-sizing: border-box;
 }
 
-.match-table__head,
-.match-table__row {
+.match-history-grid {
   display: grid;
-  grid-template-columns: 0.65fr 1.05fr 3.05fr 1.5fr 1.65fr 1.35fr;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: center;
-  column-gap: 8px;
-  padding: 0 22px 0 16px;
+
+  > * {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 8px;
+    box-sizing: border-box;
+    text-align: center;
+  }
 }
 
 .match-table__head {
@@ -335,28 +342,10 @@
   font-size: 13px;
   font-weight: 800;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-
-  > :nth-child(1),
-  > :nth-child(4) {
-    justify-self: center;
-    text-align: center;
-  }
-
-  > :nth-child(2),
-  > :nth-child(3),
-  > :nth-child(5) {
-    justify-self: start;
-    text-align: left;
-  }
-
-  > :nth-child(6) {
-    justify-self: end;
-    text-align: right;
-  }
 }
 
 .match-table__row {
-  min-height: 58px;
+  min-height: 52px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   background: #fff;
   transition: background 0.2s ease;
@@ -371,8 +360,6 @@
 }
 
 .match-table__status {
-  justify-self: center;
-  text-align: center;
   font-size: 15px;
   font-weight: 800;
 
@@ -391,26 +378,21 @@
 }
 
 .match-table__datetime {
-  justify-self: start;
-  text-align: left;
   font-size: 14px;
   font-weight: 600;
   color: #666;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .match-table__opponent {
-  justify-self: start;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 9px;
-  min-width: 0;
+  gap: 8px;
   font-size: 15px;
   font-weight: 700;
   color: #333;
 
   span {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -424,22 +406,24 @@
 }
 
 .match-table__opponent :deep(.team-logo) {
+  flex-shrink: 0;
   width: 32px;
   height: 32px;
+  overflow: hidden;
+}
+
+.match-table__opponent :deep(.team-logo-image) {
+  object-fit: contain;
 }
 
 .match-table__score {
-  justify-self: center;
-  display: inline-flex;
-  align-items: baseline;
-  justify-content: center;
   gap: 7px;
-  min-width: 5.6em;
   font-size: 26px;
   font-weight: 900;
   line-height: 1;
   color: #111;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .score-number {
@@ -463,13 +447,7 @@
 }
 
 .match-table__stage {
-  justify-self: start;
-  display: inline-flex;
-  align-items: baseline;
-  justify-content: flex-start;
   gap: 6px;
-  min-width: 0;
-  text-align: left;
   font-size: 13px;
   color: #8a8a8a;
 
@@ -488,17 +466,15 @@
 }
 
 .match-table__actions {
-  justify-self: end;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 14px;
-  padding-right: 2px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .action-link {
+  flex-shrink: 0;
   border: none;
   padding: 0;
+  white-space: nowrap;
   background: transparent;
   color: #555;
   font-size: 13px;

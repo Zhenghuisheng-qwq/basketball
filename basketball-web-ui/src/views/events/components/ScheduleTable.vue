@@ -84,15 +84,15 @@ function roundText(item: V4PublicScheduleItem): string {
 
 <template>
   <div class="schedule-table">
-    <div class="schedule-header" aria-hidden="true">
+    <div class="schedule-grid schedule-header" aria-hidden="true">
       <div>时间</div>
-      <div class="end">客队</div>
-      <div class="center">比分</div>
+      <div>客队</div>
+      <div>比分</div>
       <div>主队</div>
       <div>赛事阶段</div>
-      <div class="center">BO</div>
-      <div class="center">状态</div>
-      <div class="end">操作</div>
+      <div>BO</div>
+      <div>状态</div>
+      <div>操作</div>
     </div>
 
     <p v-if="items.length === 0" class="schedule-table__empty">{{ emptyText || '当前筛选条件下暂无赛程' }}</p>
@@ -100,7 +100,7 @@ function roundText(item: V4PublicScheduleItem): string {
     <article
       v-for="item in items"
       :key="`${item.unitType}-${item.id}`"
-      class="match-item"
+      class="schedule-grid match-item"
     >
       <div class="match-time">
         <strong>{{ clockText(item) }}</strong>
@@ -178,18 +178,32 @@ function roundText(item: V4PublicScheduleItem): string {
 
 <style scoped lang="scss">
 .schedule-table {
-  --schedule-columns: 84px minmax(0, 1.12fr) 168px minmax(0, 1.12fr) minmax(0, 0.78fr) 62px 76px minmax(104px, 0.52fr);
+  --schedule-columns:
+    minmax(72px, 0.9fr)
+    minmax(140px, 1.35fr)
+    minmax(84px, 0.85fr)
+    minmax(140px, 1.35fr)
+    minmax(88px, 1.15fr)
+    minmax(48px, 0.65fr)
+    minmax(60px, 0.75fr)
+    minmax(88px, 1.1fr);
   margin-top: 8px;
   border: 1px solid #e8e6e3;
   background: #fff;
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
-.schedule-header,
-.match-item {
+.schedule-grid {
   display: grid;
   grid-template-columns: var(--schedule-columns);
   align-items: center;
+  justify-items: stretch;
+}
+
+@media (min-width: 1024px) {
+  .schedule-grid {
+    min-width: 1040px;
+  }
 }
 
 .schedule-header {
@@ -200,16 +214,13 @@ function roundText(item: V4PublicScheduleItem): string {
   font-weight: 700;
 
   > div {
-    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 8px;
     box-sizing: border-box;
-  }
-
-  .center {
     text-align: center;
-  }
-
-  .end {
-    text-align: right;
   }
 }
 
@@ -227,17 +238,30 @@ function roundText(item: V4PublicScheduleItem): string {
 
   > :deep(*) {
     min-width: 0;
-    padding: 8px 12px;
+    padding: 8px;
     box-sizing: border-box;
   }
 }
 
-.match-time {
+.match-time,
+.score-cell,
+.stage-cell,
+.bo-cell,
+.status-cell,
+.action-cell {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
 
+.match-time,
+.stage-cell {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.match-time {
   strong {
     font-size: 18px;
     line-height: 1;
@@ -255,27 +279,22 @@ function roundText(item: V4PublicScheduleItem): string {
 }
 
 .team-cell.team-cell--away,
-.team-cell.team-cell--home {
+.team-cell.team-cell--home,
+:deep(.team-entry-link.team-cell) {
   display: flex;
   width: 100%;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   color: inherit;
+  text-align: center;
   text-decoration: none;
 }
 
-.team-cell--away {
-  justify-content: flex-end;
-  text-align: right;
-}
-
-.team-cell--home {
-  justify-content: flex-start;
-  text-align: left;
-}
-
 .team-name {
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: calc(100% - 58px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -283,13 +302,14 @@ function roundText(item: V4PublicScheduleItem): string {
   font-weight: 800;
 }
 
+.team-cell :deep(.team-logo),
+.team-cell :deep(.team-logo-schedule) {
+  flex-shrink: 0;
+}
+
 .team-cell :deep(.team-logo-schedule) {
   width: 46px;
   height: 46px;
-}
-
-.score-cell {
-  text-align: center;
 }
 
 .score {
@@ -321,9 +341,6 @@ function roundText(item: V4PublicScheduleItem): string {
 }
 
 .stage-cell {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
   gap: 2px;
 }
 
@@ -335,10 +352,6 @@ function roundText(item: V4PublicScheduleItem): string {
 .round-name {
   color: #888;
   font-size: 12px;
-}
-
-.bo-cell {
-  text-align: center;
 }
 
 .bo-badge {
@@ -353,10 +366,6 @@ function roundText(item: V4PublicScheduleItem): string {
   color: #222;
   font-size: 12px;
   font-weight: 800;
-}
-
-.status-cell {
-  text-align: center;
 }
 
 .status-badge {
@@ -396,17 +405,11 @@ function roundText(item: V4PublicScheduleItem): string {
   }
 }
 
-.action-cell {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-}
-
 .match-action-btn {
-  width: 100%;
-  min-width: 0;
+  width: auto;
+  min-width: 88px;
   height: 30px;
-  padding: 0 8px;
+  padding: 0 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -441,12 +444,6 @@ function roundText(item: V4PublicScheduleItem): string {
   background: #fff;
 }
 
-@media (max-width: 1439px) {
-  .schedule-table {
-    --schedule-columns: 76px minmax(0, 1.08fr) 148px minmax(0, 1.08fr) minmax(0, 0.76fr) 58px 72px minmax(96px, 0.5fr);
-  }
-}
-
 @media (max-width: 1023px) {
   .schedule-header {
     display: none;
@@ -472,6 +469,10 @@ function roundText(item: V4PublicScheduleItem): string {
     justify-content: flex-start;
     padding-top: 0;
   }
+
+  .match-action-btn {
+    width: 100%;
+  }
 }
 
 @media (max-width: 640px) {
@@ -491,6 +492,10 @@ function roundText(item: V4PublicScheduleItem): string {
   .team-cell--home {
     flex-direction: column;
     text-align: center;
+  }
+
+  .team-name {
+    max-width: 100%;
   }
 
   .team-cell--away {

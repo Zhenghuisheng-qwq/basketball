@@ -254,16 +254,16 @@ function goPage(page: number) {
     <template v-else>
       <div class="match-list">
         <div class="match-table">
-          <div class="match-table__head">
-            <span>状态</span>
-            <span>日期时间</span>
-            <span>对手</span>
-            <span>比分</span>
-            <span>赛段</span>
-            <span>查看</span>
-          </div>
+          <div class="team-matches-grid match-table__head">
+              <span>状态</span>
+              <span>日期时间</span>
+              <span>对手</span>
+              <span>比分</span>
+              <span>赛段</span>
+              <span>查看</span>
+            </div>
 
-          <article v-for="match in paginatedMatches" :key="match.id" class="match-table__row">
+            <article v-for="match in paginatedMatches" :key="match.id" class="team-matches-grid match-table__row">
             <span class="match-table__status" :class="getStatusClass(match)">
               {{ getStatusLabel(match) }}
             </span>
@@ -272,7 +272,7 @@ function goPage(page: number) {
 
             <div class="match-table__opponent">
               <TeamLogo :team="getOpponent(match)" size="sm" class="match-table__opponent-logo" />
-              <span>{{ getOpponent(match).name }}</span>
+              <span :title="getOpponent(match).name">{{ getOpponent(match).name }}</span>
             </div>
 
             <template v-if="match.status === 'scheduled'">
@@ -527,19 +527,26 @@ function goPage(page: number) {
 }
 
 .match-table {
-  min-width: 880px;
+  width: 100%;
   border: 1px solid rgba(17, 17, 17, 0.1);
   background: #fff;
   overflow: hidden;
 }
 
-.match-table__head,
-.match-table__row {
+.team-matches-grid {
   display: grid;
-  grid-template-columns: 0.7fr 1.4fr 2.7fr 1.5fr 1.55fr 1.15fr;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: center;
-  column-gap: 8px;
-  padding: 0 22px 0 16px;
+
+  > * {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 8px;
+    box-sizing: border-box;
+    text-align: center;
+  }
 }
 
 .match-table__head {
@@ -549,28 +556,10 @@ function goPage(page: number) {
   font-size: 13px;
   font-weight: 600;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-
-  > :nth-child(1),
-  > :nth-child(4) {
-    justify-self: center;
-    text-align: center;
-  }
-
-  > :nth-child(2),
-  > :nth-child(3),
-  > :nth-child(5) {
-    justify-self: start;
-    text-align: left;
-  }
-
-  > :nth-child(6) {
-    justify-self: end;
-    text-align: right;
-  }
 }
 
 .match-table__row {
-  min-height: 60px;
+  min-height: 52px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   background: #fff;
 
@@ -588,8 +577,6 @@ function goPage(page: number) {
 }
 
 .match-table__status {
-  justify-self: center;
-  text-align: center;
   font-size: 15px;
   font-weight: 800;
 
@@ -609,26 +596,21 @@ function goPage(page: number) {
 }
 
 .match-table__datetime {
-  justify-self: start;
-  text-align: left;
   font-size: 14px;
   font-weight: 600;
   color: #666;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .match-table__opponent {
-  justify-self: start;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 9px;
-  min-width: 0;
+  gap: 8px;
   font-size: 15px;
   font-weight: 700;
   color: #333;
 
   span {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -642,17 +624,21 @@ function goPage(page: number) {
 }
 
 .match-table__opponent :deep(.team-logo) {
+  flex-shrink: 0;
   width: 32px;
   height: 32px;
+  overflow: hidden;
+}
+
+.match-table__opponent :deep(.team-logo__img),
+.match-table__opponent :deep(img) {
+  display: block;
+  object-fit: contain;
 }
 
 .match-table__score {
-  justify-self: center;
-  display: inline-flex;
-  align-items: baseline;
-  justify-content: center;
+  flex-wrap: wrap;
   gap: 6px;
-  min-width: 5.2em;
   font-size: 22px;
   font-weight: 900;
   line-height: 1;
@@ -690,12 +676,7 @@ function goPage(page: number) {
 }
 
 .match-table__stage {
-  justify-self: start;
-  display: inline-flex;
-  align-items: baseline;
-  justify-content: flex-start;
   gap: 6px;
-  min-width: 0;
   font-size: 13px;
   color: #8a8a8a;
 
@@ -714,16 +695,15 @@ function goPage(page: number) {
 }
 
 .match-table__actions {
-  justify-self: end;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .action-link {
+  flex-shrink: 0;
   border: none;
   padding: 0;
+  white-space: nowrap;
   background: transparent;
   color: #555;
   font-size: 13px;

@@ -78,9 +78,61 @@ function opponentTeam(row: PlayerMatchRecord) {
 </script>
 
 <template>
-  <div class="player-detail-table-scroll" :class="{ 'is-compact': compact }">
-    <table class="player-detail-table" :class="{ 'is-compact': compact }">
-      <colgroup v-if="!compact">
+  <div v-if="compact" class="player-recent-matches">
+    <div class="player-recent-match-grid player-recent-match-head" aria-hidden="true">
+      <span>日期</span>
+      <span>对手</span>
+      <span>比赛结果</span>
+      <span>个人数据</span>
+      <span>赛段</span>
+      <span>查看</span>
+    </div>
+
+    <article
+      v-for="row in rows"
+      :key="row.id"
+      class="player-recent-match-grid player-recent-match-row"
+    >
+      <span>{{ row.date }}</span>
+
+      <div class="player-recent-match-opponent">
+        <TeamLogo :team="opponentTeam(row)" size="xs" />
+        <span :title="row.opponentName">{{ row.opponentName }}</span>
+      </div>
+
+      <span class="player-detail-result" :class="row.result === 'WIN' ? 'is-win' : 'is-loss'">
+        <em>{{ resultLabel(row) }}</em>
+        <strong v-if="scoreView(row).left" class="player-detail-score">
+          <b :class="{ 'is-winner': row.result === 'WIN' }">{{ scoreView(row).left }}</b>
+          <i>:</i>
+          <b>{{ scoreView(row).right }}</b>
+        </strong>
+        <strong v-else>{{ scoreView(row).text }}</strong>
+      </span>
+
+      <span>{{ formatLine(row) }}</span>
+      <span>{{ row.stageName }}</span>
+
+      <div v-if="showView" class="player-detail-actions">
+        <button type="button" class="player-detail-action" @click="openMatchDetail(row.matchId)">
+          {{ publicContestDetailLabel('MATCH') }}
+        </button>
+        <button
+          v-if="hasMatchSeriesId(row.matchSeriesId)"
+          type="button"
+          class="player-detail-action player-detail-action--series"
+          @click="openSeriesDetail(row.matchSeriesId)"
+        >
+          {{ publicContestDetailLabel('MATCH_SERIES') }}
+        </button>
+      </div>
+      <span v-else />
+    </article>
+  </div>
+
+  <div v-else class="player-detail-table-scroll">
+    <table class="player-detail-table player-match-history-table">
+      <colgroup>
         <col class="col-date" />
         <col class="col-opponent" />
         <col class="col-result" />
@@ -98,15 +150,7 @@ function opponentTeam(row: PlayerMatchRecord) {
         <col class="col-action" />
       </colgroup>
       <thead>
-        <tr v-if="compact">
-          <th>日期</th>
-          <th>对手</th>
-          <th>比赛结果</th>
-          <th>个人数据</th>
-          <th>赛段</th>
-          <th>查看</th>
-        </tr>
-        <tr v-else>
+        <tr>
           <th class="col-date">日期</th>
           <th class="col-opponent">对手</th>
           <th class="col-result">比赛结果</th>
@@ -126,89 +170,50 @@ function opponentTeam(row: PlayerMatchRecord) {
       </thead>
       <tbody>
         <tr v-for="row in rows" :key="row.id">
-          <template v-if="compact">
-            <td>{{ row.date }}</td>
-            <td class="is-left">
-              <span class="player-detail-opponent">
-                <TeamLogo :team="opponentTeam(row)" size="xs" />
-                <span>{{ row.opponentName }}</span>
-              </span>
-            </td>
-            <td>
-              <span class="player-detail-result" :class="row.result === 'WIN' ? 'is-win' : 'is-loss'">
-                <em>{{ resultLabel(row) }}</em>
-                <strong v-if="scoreView(row).left" class="player-detail-score">
-                  <b :class="{ 'is-winner': row.result === 'WIN' }">{{ scoreView(row).left }}</b>
-                  <i>:</i>
-                  <b>{{ scoreView(row).right }}</b>
-                </strong>
-                <strong v-else>{{ scoreView(row).text }}</strong>
-              </span>
-            </td>
-            <td>{{ formatLine(row) }}</td>
-            <td>{{ row.stageName }}</td>
-            <td>
-              <div v-if="showView" class="player-detail-actions">
-                <button type="button" class="player-detail-action" @click="openMatchDetail(row.matchId)">
-                  {{ publicContestDetailLabel('MATCH') }}
-                </button>
-                <button
-                  v-if="hasMatchSeriesId(row.matchSeriesId)"
-                  type="button"
-                  class="player-detail-action player-detail-action--series"
-                  @click="openSeriesDetail(row.matchSeriesId)"
-                >
-                  {{ publicContestDetailLabel('MATCH_SERIES') }}
-                </button>
-              </div>
-            </td>
-          </template>
-          <template v-else>
-            <td class="col-date">{{ row.date }}</td>
-            <td class="col-opponent">
-              <span class="player-detail-opponent">
-                <TeamLogo :team="opponentTeam(row)" size="xs" />
-                <span>{{ row.opponentName }}</span>
-              </span>
-            </td>
-            <td class="col-result">
-              <span class="player-detail-result" :class="row.result === 'WIN' ? 'is-win' : 'is-loss'">
-                <em>{{ resultLabel(row) }}</em>
-                <strong v-if="scoreView(row).left" class="player-detail-score">
-                  <b :class="{ 'is-winner': row.result === 'WIN' }">{{ scoreView(row).left }}</b>
-                  <i>:</i>
-                  <b>{{ scoreView(row).right }}</b>
-                </strong>
-                <strong v-else>{{ scoreView(row).text }}</strong>
-              </span>
-            </td>
-            <td class="col-stage">{{ row.stageName }}</td>
-            <td class="col-minutes">{{ row.minutes }}</td>
-            <td class="col-stat">{{ row.points }}</td>
-            <td class="col-stat">{{ row.rebounds }}</td>
-            <td class="col-stat">{{ row.assists }}</td>
-            <td class="col-stat">{{ row.steals }}</td>
-            <td class="col-stat">{{ row.blocks }}</td>
-            <td class="col-stat">{{ row.turnovers }}</td>
-            <td class="col-shooting">{{ formatShot(row.fieldGoalsMade, row.fieldGoalsAttempted) }}</td>
-            <td class="col-shooting">{{ formatShot(row.threePointsMade, row.threePointsAttempted) }}</td>
-            <td class="col-shooting">{{ formatShot(row.freeThrowsMade, row.freeThrowsAttempted) }}</td>
-            <td class="col-action">
-              <div v-if="showView" class="player-detail-actions">
-                <button type="button" class="player-detail-action" @click="openMatchDetail(row.matchId)">
-                  {{ publicContestDetailLabel('MATCH') }}
-                </button>
-                <button
-                  v-if="hasMatchSeriesId(row.matchSeriesId)"
-                  type="button"
-                  class="player-detail-action player-detail-action--series"
-                  @click="openSeriesDetail(row.matchSeriesId)"
-                >
-                  {{ publicContestDetailLabel('MATCH_SERIES') }}
-                </button>
-              </div>
-            </td>
-          </template>
+          <td class="col-date">{{ row.date }}</td>
+          <td class="col-opponent">
+            <span class="player-detail-opponent">
+              <TeamLogo :team="opponentTeam(row)" size="xs" />
+              <span :title="row.opponentName">{{ row.opponentName }}</span>
+            </span>
+          </td>
+          <td class="col-result">
+            <span class="player-detail-result" :class="row.result === 'WIN' ? 'is-win' : 'is-loss'">
+              <em>{{ resultLabel(row) }}</em>
+              <strong v-if="scoreView(row).left" class="player-detail-score">
+                <b :class="{ 'is-winner': row.result === 'WIN' }">{{ scoreView(row).left }}</b>
+                <i>:</i>
+                <b>{{ scoreView(row).right }}</b>
+              </strong>
+              <strong v-else>{{ scoreView(row).text }}</strong>
+            </span>
+          </td>
+          <td class="col-stage">{{ row.stageName }}</td>
+          <td class="col-minutes">{{ row.minutes }}</td>
+          <td class="col-stat">{{ row.points }}</td>
+          <td class="col-stat">{{ row.rebounds }}</td>
+          <td class="col-stat">{{ row.assists }}</td>
+          <td class="col-stat">{{ row.steals }}</td>
+          <td class="col-stat">{{ row.blocks }}</td>
+          <td class="col-stat">{{ row.turnovers }}</td>
+          <td class="col-shooting">{{ formatShot(row.fieldGoalsMade, row.fieldGoalsAttempted) }}</td>
+          <td class="col-shooting">{{ formatShot(row.threePointsMade, row.threePointsAttempted) }}</td>
+          <td class="col-shooting">{{ formatShot(row.freeThrowsMade, row.freeThrowsAttempted) }}</td>
+          <td class="col-action">
+            <div v-if="showView" class="player-detail-actions">
+              <button type="button" class="player-detail-action" @click="openMatchDetail(row.matchId)">
+                {{ publicContestDetailLabel('MATCH') }}
+              </button>
+              <button
+                v-if="hasMatchSeriesId(row.matchSeriesId)"
+                type="button"
+                class="player-detail-action player-detail-action--series"
+                @click="openSeriesDetail(row.matchSeriesId)"
+              >
+                {{ publicContestDetailLabel('MATCH_SERIES') }}
+              </button>
+            </div>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -218,14 +223,66 @@ function opponentTeam(row: PlayerMatchRecord) {
 <style scoped lang="scss">
 @use '../styles/player-detail.scss';
 
-.player-detail-table-scroll.is-compact {
-  border: 0;
-  box-shadow: none;
+.player-recent-matches {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.player-recent-match-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: center;
+
+  > * {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 8px;
+    box-sizing: border-box;
+    text-align: center;
+  }
+}
+
+.player-recent-match-head {
+  min-height: 42px;
+  background: #111;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.player-recent-match-row {
+  min-height: 52px;
+  border-bottom: 1px solid var(--cnpa-paper-border, rgba(17, 17, 17, 0.08));
   background: transparent;
 }
 
-.player-detail-table.is-compact {
-  min-width: 920px;
+.player-recent-match-opponent {
+  gap: 8px;
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :deep(.team-logo) {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+  }
+
+  :deep(.team-logo__img) {
+    object-fit: contain;
+  }
+}
+
+.player-recent-matches .player-detail-result {
+  align-items: center;
+  gap: 6px;
 }
 
 .player-detail-table:not(.is-compact) {
@@ -236,24 +293,69 @@ function opponentTeam(row: PlayerMatchRecord) {
   .col-result { width: 10%; }
   .col-stage { width: 10%; }
   .col-minutes { width: 6%; }
-  .col-stat { width: 5%; text-align: center; }
-  .col-shooting { width: 5%; text-align: center; }
+  .col-stat { width: 5%; }
+  .col-shooting { width: 5%; }
   .col-action { width: 156px; }
-  .col-date,
-  .col-opponent,
-  .col-stage {
-    text-align: left;
-  }
-  .col-result,
-  .col-minutes,
-  .col-action {
+}
+
+.player-match-history-table {
+  thead th,
+  tbody td {
     text-align: center;
+    vertical-align: middle;
+    line-height: 1.3;
   }
 }
 
-.col-opponent,
-.col-stage {
+.player-match-history-table .col-opponent,
+.player-match-history-table .col-stage {
   overflow: hidden;
+}
+
+.player-match-history-table .player-detail-opponent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :deep(.team-logo) {
+    display: block;
+    flex-shrink: 0;
+    align-self: center;
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+  }
+
+  :deep(.team-logo__img) {
+    display: block;
+    object-fit: contain;
+  }
+}
+
+.player-match-history-table .player-detail-result {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.player-match-history-table .player-detail-score {
+  align-items: center;
+}
+
+.player-match-history-table .player-detail-actions {
+  justify-content: center;
+  align-items: center;
 }
 
 .player-detail-opponent {
@@ -326,7 +428,7 @@ function opponentTeam(row: PlayerMatchRecord) {
 
 .player-detail-actions {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 7px;
@@ -359,7 +461,4 @@ function opponentTeam(row: PlayerMatchRecord) {
   }
 }
 
-.player-detail-table.is-compact td:last-child {
-  white-space: nowrap;
-}
 </style>

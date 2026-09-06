@@ -88,11 +88,12 @@ const selectedDivision = computed(() =>
 
 const compareCompetitionText = computed(() => {
   if (!selectedSeasonId.value || !selectedDivisionId.value) return '缺少赛事上下文，暂无法比较'
-  const season = displayText(selectedSeason.value?.displayTitle || seasonTitle.value, '公开赛季')
-  const divisionLabel = selectedDivision.value
-    ? `${v4PlatformLabel(selectedDivision.value.platformCode)} · ${displayText(selectedDivision.value.divisionName)}`
-    : ''
-  return divisionLabel ? `${season} · ${divisionLabel} · ${stageLabels.regular}` : `${season} · ${stageLabels.regular}`
+  return displayText(
+    selectedSeason.value?.displayTitle
+      || selectedSeason.value?.seasonName
+      || seasonTitle.value,
+    '公开赛季',
+  )
 })
 
 const leftTeam = computed<TeamBase>(() => {

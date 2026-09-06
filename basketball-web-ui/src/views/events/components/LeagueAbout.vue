@@ -1,12 +1,24 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
-import tournamentFoot from '@/assets/icon/tournament_foot.png'
+import { useRoute } from 'vue-router'
+import { pickCompetitionSeriesCode, resolveCompetitionTheme } from '@/config/competitionTheme'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
 
+const route = useRoute()
 const ctx = inject<ReturnType<typeof usePublicSeasonContext> | null>('publicSeasonContext', null)
 const seriesLabel = computed(
   () => ctx?.currentTournament.value?.tournamentName || ctx?.divisionDetail.value?.seriesName || '赛事',
 )
+const seriesCode = computed(() => {
+  const querySeries = route.query.series ?? route.query.seriesCode
+  return pickCompetitionSeriesCode(
+    typeof querySeries === 'string' ? querySeries : '',
+    ctx?.divisionDetail.value?.seriesCode,
+    ctx?.seasonDetail.value?.seriesCode,
+    ctx?.currentTournament.value?.tournamentNo,
+  )
+})
+const aboutTheme = computed(() => resolveCompetitionTheme(seriesCode.value))
 const description = computed(() => {
   const value = ctx?.overview.value?.description
   return typeof value === 'string' ? value.trim() : ''
@@ -17,7 +29,7 @@ const description = computed(() => {
     <div class="site-shell">
       <img
         class="league-about__image"
-        :src="tournamentFoot"
+        :src="aboutTheme.footImage"
         :alt="`关于 ${seriesLabel}`"
       />
       <div v-if="description" class="league-about__copy">

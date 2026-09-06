@@ -1,26 +1,28 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
+import { useRoute } from 'vue-router'
 import LeagueHeroMeta from './LeagueHeroMeta.vue'
 import { useLeagueHeroMeta } from '../composables/useLeagueHeroMeta'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
-import { resolveCompetitionTheme } from '@/config/competitionTheme'
+import { pickCompetitionSeriesCode, resolveCompetitionTheme } from '@/config/competitionTheme'
 
+const route = useRoute()
 const { heroMetaItems } = useLeagueHeroMeta()
 const ctx = inject<ReturnType<typeof usePublicSeasonContext> | null>('publicSeasonContext', null)
 const seriesLabel = computed(
   () => ctx?.currentTournament.value?.tournamentName || ctx?.divisionDetail.value?.seriesName || '赛事',
 )
-const seriesCode = computed(
-  () =>
-    ctx?.divisionDetail.value?.seriesCode
-    || ctx?.seasonDetail.value?.seriesCode
-    || ctx?.currentTournament.value?.tournamentNo
-    || 'CNPA',
-)
+const seriesCode = computed(() => {
+  const querySeries = route.query.series ?? route.query.seriesCode
+  return pickCompetitionSeriesCode(
+    typeof querySeries === 'string' ? querySeries : '',
+    ctx?.divisionDetail.value?.seriesCode,
+    ctx?.seasonDetail.value?.seriesCode,
+    ctx?.currentTournament.value?.tournamentNo,
+  )
+})
 const heroTheme = computed(() => resolveCompetitionTheme(seriesCode.value))
-const heroImage = computed(
-  () => ctx?.currentTournament.value?.coverUrl?.trim() || heroTheme.value.fallbackImage,
-)
+const heroImage = computed(() => heroTheme.value.topImage)
 const heroOverlayStyle = computed(() => ({ background: heroTheme.value.overlay }))
 </script>
 <template>

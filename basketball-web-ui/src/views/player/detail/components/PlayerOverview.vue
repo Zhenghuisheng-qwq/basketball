@@ -251,7 +251,8 @@ function goAllMatches() {
 }
 
 .player-recent-panel {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid rgba(17, 17, 17, 0.08);
   background: rgba(255, 255, 255, 0.55);
 }

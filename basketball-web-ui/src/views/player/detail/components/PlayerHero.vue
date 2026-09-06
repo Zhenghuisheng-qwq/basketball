@@ -24,10 +24,6 @@ const teamForLogo = computed(() => ({
   code: props.profile.currentTeamAbbr,
 }))
 
-const eventName = computed(() =>
-  props.profile.seasonName || props.profile.seriesName || '--',
-)
-
 const seasonYear = computed(() => {
   const matched = String(props.profile.seasonName || '').match(/\d{4}/)
   return matched?.[0] || ''
@@ -62,8 +58,7 @@ const infoItems = computed(() => [
   {
     key: 'team',
     label: '所属战队',
-    value: props.profile.currentTeamAbbr || props.profile.currentTeamName,
-    secondary: eventName.value,
+    value: props.profile.currentTeamName,
     logo: true,
   },
   {
@@ -166,7 +161,6 @@ const infoItems = computed(() => [
           <div class="player-detail-hero__info-copy">
             <span class="player-detail-hero__info-label">{{ item.label }}</span>
             <strong class="player-detail-hero__info-value">{{ item.value }}</strong>
-            <em v-if="item.secondary" class="player-detail-hero__info-secondary">{{ item.secondary }}</em>
           </div>
         </div>
       </div>

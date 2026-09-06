@@ -322,7 +322,7 @@ function goMatchPage(page: number) {
       <template v-else>
         <div class="match-list">
           <div class="match-table">
-            <div class="match-table__head">
+            <div class="match-history-grid match-table__head">
               <span>状态</span>
               <span>日期时间</span>
               <span>对手</span>
@@ -331,7 +331,7 @@ function goMatchPage(page: number) {
               <span>查看</span>
             </div>
 
-            <article v-for="match in pagedRecentMatches" :key="match.id" class="match-table__row">
+            <article v-for="match in pagedRecentMatches" :key="match.id" class="match-history-grid match-table__row">
               <span class="match-table__status" :class="getStatusClass(match)">
                 {{ getStatusLabel(match) }}
               </span>
@@ -340,7 +340,7 @@ function goMatchPage(page: number) {
 
               <div class="match-table__opponent">
                 <TeamLogo :team="getOpponent(match)" size="sm" class="match-table__opponent-logo" />
-                <span>{{ getOpponent(match).name }}</span>
+                <span :title="getOpponent(match).name">{{ getOpponent(match).name }}</span>
               </div>
 
               <template v-if="match.status === 'scheduled'">
