@@ -18,11 +18,13 @@ const props = withDefaults(
     title?: string
     titleEn?: string
     emptyText?: string
+    hideHeading?: boolean
   }>(),
   {
     title: '淘汰赛对阵图',
     titleEn: 'ELIMINATION BRACKET',
     emptyText: '淘汰赛对阵暂未生成',
+    hideHeading: false,
   },
 )
 
@@ -81,8 +83,12 @@ const leagueName = computed(() => {
 const boardMinWidth = computed(() => {
   const columns = layout.value.left.length + layout.value.right.length + 1
   const connectors = Math.max(columns - 1, 0)
-  return `${columns * 248 + connectors * 28}px`
+  return `${columns * 236 + connectors * 34}px`
 })
+
+function roundIndex(index: number): string {
+  return String(index + 1).padStart(2, '0')
+}
 
 function railKind(fromCount: number, toCount: number): 'merge' | 'line' {
   return fromCount > toCount ? 'merge' : 'line'
@@ -110,14 +116,29 @@ function rightGap(index: number): { from: number; to: number } {
   }
 }
 
-function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
-  return series.some((item) => String(item.seriesStatus || '').toUpperCase() === 'COMPLETED')
+function isConfirmedAdvance(item?: { seriesStatus?: string; winnerTeamId?: string } | null): boolean {
+  if (!item) return false
+  const status = String(item.seriesStatus || '').toUpperCase()
+  return status === 'COMPLETED' && Boolean(item.winnerTeamId)
+}
+
+function railUnitAdvanced(
+  series: Array<{ seriesStatus?: string; winnerTeamId?: string }>,
+  unitIndex: number,
+  fromCount: number,
+  toCount: number,
+): boolean {
+  if (fromCount > toCount && toCount > 0) {
+    const pair = series.slice(unitIndex * 2, unitIndex * 2 + 2)
+    return pair.some((item) => isConfirmedAdvance(item))
+  }
+  return series.some((item) => isConfirmedAdvance(item))
 }
 </script>
 
 <template>
   <section class="playoff-bracket">
-    <header class="playoff-bracket__heading">
+    <header v-if="!hideHeading" class="playoff-bracket__heading">
       <p v-if="leagueName" class="playoff-bracket__league">{{ leagueName }}</p>
       <h3>
         <i aria-hidden="true" />
@@ -138,6 +159,7 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
             <template v-for="(column, index) in layout.left" :key="column.key">
               <div class="bracket-round">
                 <div class="bracket-round__head">
+                  <span class="bracket-round__index">{{ roundIndex(index) }}</span>
                   <strong>{{ column.label }}</strong>
                   <em>{{ column.labelEn }}</em>
                 </div>
@@ -149,17 +171,24 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
                   <PlayoffSeriesCard :series="item" />
                 </div>
               </div>
-              <div
-                class="bracket-rail"
-                :class="{ 'is-advanced': columnAdvanced(column.series) }"
-                aria-hidden="true"
-              >
+              <div class="bracket-rail" aria-hidden="true">
                 <div class="bracket-rail__head" />
                 <div class="bracket-rail__body">
                   <i
                     v-for="unit in railUnits(leftGap(index).from, leftGap(index).to)"
                     :key="`${column.key}-u-${unit}`"
-                    :class="`bracket-rail__unit bracket-rail__unit--${railKind(leftGap(index).from, leftGap(index).to)}`"
+                    :class="[
+                      'bracket-rail__unit',
+                      `bracket-rail__unit--${railKind(leftGap(index).from, leftGap(index).to)}`,
+                      {
+                        'is-advanced': railUnitAdvanced(
+                          column.series,
+                          unit - 1,
+                          leftGap(index).from,
+                          leftGap(index).to,
+                        ),
+                      },
+                    ]"
                   />
                 </div>
               </div>
@@ -168,7 +197,8 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
         </div>
 
         <div class="bracket-final">
-          <div class="bracket-round__head">
+          <div class="bracket-round__head bracket-round__head--final">
+            <span class="bracket-round__index">{{ roundIndex(layout.left.length) }}</span>
             <strong>总决赛</strong>
             <em>FINAL</em>
           </div>
@@ -180,17 +210,24 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
         <div class="bracket-half">
           <div class="bracket-half__cols">
             <template v-for="(column, index) in layout.right" :key="column.key">
-              <div
-                class="bracket-rail is-rtl"
-                :class="{ 'is-advanced': columnAdvanced(column.series) }"
-                aria-hidden="true"
-              >
+              <div class="bracket-rail is-rtl" aria-hidden="true">
                 <div class="bracket-rail__head" />
                 <div class="bracket-rail__body">
                   <i
                     v-for="unit in railUnits(rightGap(index).from, rightGap(index).to)"
                     :key="`${column.key}-u-${unit}`"
-                    :class="`bracket-rail__unit bracket-rail__unit--${railKind(rightGap(index).from, rightGap(index).to)}`"
+                    :class="[
+                      'bracket-rail__unit',
+                      `bracket-rail__unit--${railKind(rightGap(index).from, rightGap(index).to)}`,
+                      {
+                        'is-advanced': railUnitAdvanced(
+                          column.series,
+                          Math.max(unit - 1, 0),
+                          rightGap(index).from,
+                          rightGap(index).to,
+                        ),
+                      },
+                    ]"
                   />
                 </div>
               </div>
@@ -217,6 +254,8 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
 
 <style scoped lang="scss">
 .playoff-bracket {
+  --bracket-line: rgba(17, 17, 17, 0.16);
+  --bracket-line-on: var(--cnpa-red, #e10613);
   width: 100%;
 }
 
@@ -275,6 +314,13 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
+  padding: 8px 2px 4px;
+  border: 1px solid rgba(17, 17, 17, 0.06);
+  border-radius: 4px;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(225, 6, 19, 0.04), transparent 36%),
+    linear-gradient(180deg, #f8f7f5 0%, #f1efec 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .playoff-bracket__board {
@@ -285,6 +331,7 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
   max-width: 1320px;
   min-height: 0;
   margin-inline: auto;
+  padding: 10px 8px 16px;
 }
 
 .bracket-half {
@@ -301,21 +348,25 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
 }
 
 .bracket-round {
-  flex: 1 1 240px;
-  max-width: 280px;
-  min-width: 230px;
+  flex: 1 1 228px;
+  max-width: 268px;
+  min-width: 220px;
   display: flex;
   flex-direction: column;
+  padding: 0 6px;
+  background: linear-gradient(180deg, rgba(17, 17, 17, 0.018), transparent 72%);
+  box-shadow: inset 0 1px 0 rgba(17, 17, 17, 0.06);
 }
 
 .bracket-round__head,
 .bracket-rail__head {
-  min-height: 28px;
-  margin-bottom: 0;
+  min-height: 46px;
+  margin-bottom: 2px;
 }
 
 .bracket-round__head {
   text-align: center;
+  padding-top: 6px;
 
   strong {
     display: block;
@@ -332,7 +383,24 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
     font-size: 10px;
     font-style: italic;
     font-weight: 800;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
+  }
+}
+
+.bracket-round__index {
+  display: block;
+  margin-bottom: 1px;
+  color: rgba(17, 17, 17, 0.28);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.bracket-round__head--final {
+  padding-top: 4px;
+
+  strong {
+    font-size: 17px;
   }
 }
 
@@ -340,16 +408,22 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
   flex: 1;
   display: flex;
   align-items: center;
-  min-height: 88px;
-  padding: 7px 0;
+  min-height: 96px;
+  padding: 8px 0;
 }
 
 .bracket-final {
-  flex: 0 0 272px;
-  max-width: 300px;
+  position: relative;
+  flex: 0 0 292px;
+  max-width: 320px;
   display: flex;
   flex-direction: column;
-  min-width: 250px;
+  min-width: 268px;
+  padding: 0 8px;
+  background:
+    radial-gradient(circle at 50% 58%, rgba(225, 6, 19, 0.055), transparent 58%),
+    linear-gradient(180deg, rgba(225, 6, 19, 0.03), transparent 70%);
+  box-shadow: inset 0 1px 0 rgba(225, 6, 19, 0.12);
 }
 
 .bracket-final__body {
@@ -359,8 +433,8 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
 }
 
 .bracket-rail {
-  flex: 0 0 26px;
-  min-width: 26px;
+  flex: 0 0 32px;
+  min-width: 32px;
   display: flex;
   flex-direction: column;
 }
@@ -384,7 +458,7 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
   left: 0;
   right: 0;
   height: 1.5px;
-  background: rgba(225, 6, 19, 0.5);
+  background: var(--bracket-line);
   transform: translateY(-50%);
 }
 
@@ -395,7 +469,7 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
   bottom: 25%;
   left: 0;
   width: 50%;
-  border: 1.5px solid rgba(225, 6, 19, 0.5);
+  border: 1.5px solid var(--bracket-line);
   border-left: 0;
 }
 
@@ -406,7 +480,7 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
   left: 50%;
   right: 0;
   height: 1.5px;
-  background: rgba(225, 6, 19, 0.5);
+  background: var(--bracket-line);
   transform: translateY(-50%);
 }
 
@@ -414,43 +488,49 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
   transform: scaleX(-1);
 }
 
-.bracket-rail.is-advanced .bracket-rail__unit--merge::before {
-  border-color: rgba(225, 6, 19, 0.62);
+.bracket-rail__unit.is-advanced.bracket-rail__unit--merge::before {
+  border-color: var(--bracket-line-on);
 }
 
-.bracket-rail.is-advanced .bracket-rail__unit--line::after,
-.bracket-rail.is-advanced .bracket-rail__unit--merge::after {
-  background: rgba(225, 6, 19, 0.62);
+.bracket-rail__unit.is-advanced.bracket-rail__unit--line::after,
+.bracket-rail__unit.is-advanced.bracket-rail__unit--merge::after {
+  background: var(--bracket-line-on);
 }
 
 @media (max-width: 1439px) {
   .bracket-round {
-    max-width: 250px;
-    min-width: 214px;
-    flex-basis: 214px;
+    max-width: 246px;
+    min-width: 208px;
+    flex-basis: 208px;
   }
 
   .bracket-final {
-    flex-basis: 248px;
-    min-width: 232px;
+    flex-basis: 268px;
+    min-width: 248px;
   }
 }
 
 @media (max-width: 1279px) {
   .bracket-round {
-    max-width: 230px;
-    min-width: 200px;
-    flex-basis: 200px;
+    max-width: 228px;
+    min-width: 198px;
+    flex-basis: 198px;
   }
 
   .bracket-final {
-    flex-basis: 232px;
-    min-width: 220px;
+    flex-basis: 252px;
+    min-width: 236px;
   }
 
   .bracket-rail {
-    flex-basis: 22px;
-    min-width: 22px;
+    flex-basis: 28px;
+    min-width: 28px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .playoff-bracket__viewport {
+    padding-inline: 0;
   }
 }
 </style>

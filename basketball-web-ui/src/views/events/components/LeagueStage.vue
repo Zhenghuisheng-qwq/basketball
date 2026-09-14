@@ -43,6 +43,15 @@ const stageOptions = computed(() =>
 const heading = computed(() => stageHeading(selectedStage.value))
 const emptyText = computed(() => stageEmptyText(selectedStage.value))
 const grouped = computed(() => isGroupedStage(selectedStage.value))
+const seriesLabel = computed(() => {
+  const name = ctx.overview.value?.tournamentName || ctx.seasonDetail.value?.seriesName || ''
+  return String(name).trim()
+})
+
+const stageLive = computed(() => {
+  const status = String(selectedStage.value?.executionStatus || '').toUpperCase()
+  return selectedStage.value?.currentStage === true || status === 'RUNNING' || status === 'RESULT_PENDING_CONFIRM'
+})
 
 async function loadStages(divisionId: string) {
   if (!divisionId) {
@@ -118,11 +127,16 @@ watch(
               v-model="selectedStageId"
               :options="stageOptions"
               variant="paper"
+              :context-label="seriesLabel"
+              :stage-title="heading.title"
+              :stage-title-en="heading.titleEn"
+              :stage-live="stageLive"
             />
             <p v-if="stagesLoading" class="stage-state">加载阶段...</p>
             <p v-else-if="stagesError" class="stage-state">{{ stagesError }}</p>
             <PlayoffBracket
               v-else
+              hide-heading
               :focus-stage-id="selectedStageId"
               :title="heading.title"
               :title-en="heading.titleEn"
@@ -167,6 +181,7 @@ watch(
 }
 
 .stage-playoffs-shell {
+  --stage-title-inline: var(--cnpa-public-content-gutter);
   display: flex;
   flex-direction: column;
 }
@@ -179,7 +194,7 @@ watch(
 .stage-progress-section__inner {
   padding:
     clamp(22px, 2vw, 34px)
-    var(--cnpa-public-content-gutter)
+    var(--stage-title-inline)
     clamp(12px, 1.2vw, 20px);
 }
 
@@ -189,7 +204,10 @@ watch(
 
 .stage-playoffs-shell :deep(.stage-progress-header__select) {
   width: clamp(140px, 12vw, 180px);
-  height: 40px;
+}
+
+.competition-format-section :deep(.competition-format--embedded .competition-format__inner) {
+  padding-inline: var(--stage-title-inline);
 }
 
 .stage-section-tear {

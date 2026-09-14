@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 export type StageOption = {
   value: string
   label: string
@@ -8,7 +10,13 @@ const props = defineProps<{
   modelValue: string
   options: StageOption[]
   variant?: 'dark' | 'paper'
+  contextLabel?: string
+  stageTitle?: string
+  stageTitleEn?: string
+  stageLive?: boolean
 }>()
+
+const hasCenter = computed(() => Boolean(props.stageTitle))
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -22,11 +30,21 @@ function onStageChange(event: Event) {
 <template>
   <header
     class="stage-progress-header"
-    :class="[`stage-progress-header--${variant || 'paper'}`]"
+    :class="[
+      `stage-progress-header--${variant || 'paper'}`,
+      { 'stage-progress-header--centered': hasCenter },
+    ]"
   >
     <div class="stage-progress-header__titles">
       <h2 class="stage-progress-header__title">赛事进度</h2>
       <span class="stage-progress-header__subtitle">STAGE PROGRESS</span>
+    </div>
+
+    <div v-if="hasCenter" class="stage-progress-header__center">
+      <p v-if="contextLabel" class="stage-progress-header__context">{{ contextLabel }}</p>
+      <h3 class="stage-progress-header__stage">{{ stageTitle }}</h3>
+      <em v-if="stageTitleEn" class="stage-progress-header__stage-en">{{ stageTitleEn }}</em>
+      <span v-if="stageLive" class="stage-progress-header__live">进行中</span>
     </div>
 
     <div v-if="props.options.length > 1" class="stage-progress-header__selector">
@@ -42,6 +60,7 @@ function onStageChange(event: Event) {
         </option>
       </select>
     </div>
+    <div v-else-if="hasCenter" class="stage-progress-header__selector" aria-hidden="true" />
   </header>
 </template>
 <style scoped lang="scss">
@@ -53,20 +72,29 @@ function onStageChange(event: Event) {
   margin-bottom: clamp(16px, 1.6vw, 22px);
 }
 
+.stage-progress-header--centered {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  column-gap: 16px;
+}
+
 .stage-progress-header__title {
   margin: 0;
-  font-size: clamp(28px, 2.1vw, 38px);
+  font-size: clamp(28px, 2.4vw, 34px);
   font-weight: 900;
+  letter-spacing: 0.04em;
   line-height: 1.1;
 }
 
 .stage-progress-header__subtitle {
   display: block;
   margin-top: 6px;
-  font-size: clamp(12px, 0.9vw, 15px);
+  font-size: clamp(13px, 1.2vw, 16px);
   font-weight: 800;
   font-style: italic;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .stage-progress-header--paper {
@@ -89,22 +117,67 @@ function onStageChange(event: Event) {
   }
 }
 
+.stage-progress-header__center {
+  min-width: 0;
+  text-align: center;
+}
+
+.stage-progress-header__context {
+  margin: 0 0 4px;
+  color: rgba(17, 17, 17, 0.38);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.stage-progress-header__stage {
+  margin: 0;
+  color: #111;
+  font-size: clamp(20px, 1.7vw, 28px);
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.stage-progress-header__stage-en {
+  display: block;
+  margin-top: 4px;
+  color: var(--cnpa-red, #e10613);
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.stage-progress-header__live {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 7px 1px;
+  border: 1px solid rgba(225, 6, 19, 0.28);
+  color: var(--cnpa-red, #e10613);
+  font-size: 10px;
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0.12em;
+}
+
 .stage-progress-header__selector {
   flex: none;
+  justify-self: end;
 }
 
 .stage-progress-header__select {
-  width: clamp(160px, 14vw, 220px);
-  height: 46px;
-  padding: 0 36px 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 3px;
+  width: clamp(148px, 12vw, 196px);
+  height: 38px;
+  padding: 0 32px 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E")
-      no-repeat right 12px center / 12px 8px,
+      no-repeat right 11px center / 11px 7px,
     #111111;
   color: #ffffff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
@@ -113,7 +186,7 @@ function onStageChange(event: Event) {
 
   &:hover,
   &:focus-visible {
-    border-color: rgba(225, 6, 19, 0.45);
+    border-color: var(--cnpa-red, #e10613);
     outline: none;
   }
 
@@ -136,9 +209,16 @@ function onStageChange(event: Event) {
 }
 
 @media (max-width: 767px) {
-  .stage-progress-header {
+  .stage-progress-header,
+  .stage-progress-header--centered {
+    display: flex;
     flex-direction: column;
+    align-items: stretch;
     gap: 16px;
+  }
+
+  .stage-progress-header__center {
+    text-align: left;
   }
 
   .stage-progress-header__selector {
