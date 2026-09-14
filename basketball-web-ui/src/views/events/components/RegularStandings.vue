@@ -18,6 +18,7 @@ import {
   splitRightRows,
   stageProgressLayout,
   type StageProgressLayout,
+  type StandingZoneTone,
   type ZoneCopy,
 } from '../utils/stageProgressDisplay'
 import { buildTeamRecentFormMap, type RecentFormResult } from '../utils/recentFormDisplay'
@@ -31,6 +32,8 @@ const props = defineProps<{
   grouped?: boolean
   stageName?: string
   advanceCount?: number | null
+  emptyText?: string
+  zoneTone?: StandingZoneTone
 }>()
 
 type StandingGroup = {
@@ -123,11 +126,23 @@ function groupSplitAt(group: StandingGroup): number {
 }
 
 function groupLeftCopy(group: StandingGroup): ZoneCopy {
-  return leftZoneCopy(groupLayout(group), groupQualifyCount(group), group.rows.length, groupSplitAt(group))
+  return leftZoneCopy(
+    groupLayout(group),
+    groupQualifyCount(group),
+    group.rows.length,
+    groupSplitAt(group),
+    props.zoneTone || 'playoff',
+  )
 }
 
 function groupRightCopy(group: StandingGroup): ZoneCopy {
-  return rightZoneCopy(groupLayout(group), groupQualifyCount(group), group.rows.length, groupSplitAt(group))
+  return rightZoneCopy(
+    groupLayout(group),
+    groupQualifyCount(group),
+    group.rows.length,
+    groupSplitAt(group),
+    props.zoneTone || 'playoff',
+  )
 }
 
 function groupLeftRows(group: StandingGroup): Standing[] {
@@ -216,7 +231,7 @@ watch(
   <section class="regular-standings">
     <p v-if="state === 'loading'" class="standings-note">加载积分榜...</p>
     <p v-else-if="state === 'error'" class="standings-note">{{ errorMessage }}</p>
-    <p v-else-if="state === 'empty'" class="standings-note">暂无积分榜数据</p>
+    <p v-else-if="state === 'empty'" class="standings-note">{{ emptyText || '暂无积分榜数据' }}</p>
 
     <div v-else class="standings-groups">
       <div v-for="group in groups" :key="group.key" class="standings-group">

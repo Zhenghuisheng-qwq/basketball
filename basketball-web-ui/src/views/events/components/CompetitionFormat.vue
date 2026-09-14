@@ -7,7 +7,6 @@ import { displayText } from '@/utils/publicDisplay'
 import {
   v4BestOfLabel,
   v4FormatTypeLabel,
-  v4PlatformLabel,
   v4StageExecutionStatusLabel,
 } from '@/utils/v4Display'
 import type { CompetitionStage } from '../types/events'
@@ -24,7 +23,7 @@ const props = withDefaults(
     embedded?: boolean
   }>(),
   {
-    currentStage: 'regular',
+    currentStage: '',
     paperEdge: 'both',
     embedded: false,
   },
@@ -37,51 +36,11 @@ const seriesByStage = ref<Record<string, V4PublicMatchSeriesDetail[]>>({})
 const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 let reqId = 0
 
-const activeKey = computed(() => props.currentStage || 'regular')
+const activeKey = computed(() => props.currentStage || '')
 
 function isEliminationStage(stage: V4PublicStageItem): boolean {
   const type = `${stage.competitionFormat || ''} ${stage.stageType || ''}`.toUpperCase()
   return type.includes('ELIM') || type.includes('KNOCK') || type.includes('PLAYOFF') || type.includes('FINAL')
-}
-
-function mapStageKey(stage: V4PublicStageItem, index: number): string {
-  const type = (stage.stageType || stage.competitionFormat || '').toUpperCase()
-  if (type.includes('FINAL')) return 'finals'
-  if (type.includes('ELIM') || type.includes('PLAYOFF') || type.includes('KNOCK')) return 'playoffs'
-  if (type.includes('ROUND') || type.includes('REGULAR') || type.includes('GROUP')) return 'regular'
-  return ['regular', 'playoffs', 'finals'][index] || `stage-${index + 1}`
-}
-
-function buildFallbackStages(): CompetitionStage[] {
-  const division = ctx.divisionDetail.value
-  const teamCount = division?.eventTeamCount ?? division?.maxTeamCount
-  const formatLabel = v4FormatTypeLabel(division?.formatType)
-  const platformLabel = v4PlatformLabel(division?.platformCode)
-  const genericFields = [
-    { label: '参赛队伍', value: teamCount != null ? `${teamCount} 支` : '--' },
-    { label: '赛制', value: displayText(formatLabel) },
-    { label: '比赛平台', value: displayText(platformLabel) },
-  ]
-
-  return [
-    {
-      key: 'regular',
-      index: '01',
-      name: '常规赛',
-      period: displayText(division?.matchStartTime?.slice(0, 10)),
-      fields: genericFields,
-    },
-    {
-      key: 'playoffs',
-      index: '02',
-      name: '季后赛',
-      period: displayText(division?.matchEndTime?.slice(0, 10)),
-      fields: [
-        { label: '赛制', value: displayText(formatLabel) },
-        { label: '比赛平台', value: displayText(platformLabel) },
-      ],
-    },
-  ]
 }
 
 function mapApiStage(stage: V4PublicStageItem, index: number): CompetitionStage {
@@ -109,7 +68,7 @@ function mapApiStage(stage: V4PublicStageItem, index: number): CompetitionStage 
     fields.push({ label: '晋级名额', value: `${stage.advancementCount}支` })
   }
   return {
-    key: mapStageKey(stage, index),
+    key: String(stage.stageId || `stage-${index + 1}`),
     index: String((stage.stageOrder ?? index + 1)).padStart(2, '0'),
     name: displayText(stage.stageName || stage.stageTypeName, '阶段'),
     period: statusLabel,
@@ -118,12 +77,7 @@ function mapApiStage(stage: V4PublicStageItem, index: number): CompetitionStage 
   }
 }
 
-const competitionStages = computed<CompetitionStage[]>(() => {
-  if (apiStages.value.length) {
-    return apiStages.value.map(mapApiStage)
-  }
-  return buildFallbackStages()
-})
+const competitionStages = computed<CompetitionStage[]>(() => apiStages.value.map(mapApiStage))
 
 async function load(divisionId: string) {
   const current = ++reqId

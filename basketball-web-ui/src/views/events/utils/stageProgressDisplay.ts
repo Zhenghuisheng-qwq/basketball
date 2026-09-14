@@ -18,6 +18,8 @@ export type ZoneCopy = {
   en?: string
 }
 
+export type StandingZoneTone = 'playoff' | 'qualify'
+
 export function resolveQualifyCount(
   qualifyCount?: number | null,
   fallback?: number | null,
@@ -45,23 +47,25 @@ export function leftZoneCopy(
   qualifyCount: number,
   rowCount: number,
   splitIndex: number,
+  tone: StandingZoneTone = 'playoff',
 ): ZoneCopy {
+  const qualify = tone === 'qualify'
   if (layout === 'cutoff' && qualifyCount > 0) {
     return {
-      title: `季后赛区（前${qualifyCount}名晋级）`,
-      hint: `前${qualifyCount}名晋级季后赛`,
-      en: 'PLAYOFF ZONE',
+      title: qualify ? `晋级区（前${qualifyCount}名晋级）` : `季后赛区（前${qualifyCount}名晋级）`,
+      hint: qualify ? `前${qualifyCount}名晋级下一阶段` : `前${qualifyCount}名晋级季后赛`,
+      en: qualify ? 'QUALIFY ZONE' : 'PLAYOFF ZONE',
     }
   }
   const end = Math.max(1, Math.min(splitIndex, rowCount))
   if (qualifyCount > 0 && qualifyCount >= rowCount) {
     return {
-      title: `季后赛区（前${qualifyCount}名晋级）`,
-      hint: `全部${rowCount}支晋级季后赛`,
-      en: 'PLAYOFF ZONE',
+      title: qualify ? `晋级区（前${qualifyCount}名晋级）` : `季后赛区（前${qualifyCount}名晋级）`,
+      hint: qualify ? `全部${rowCount}支晋级下一阶段` : `全部${rowCount}支晋级季后赛`,
+      en: qualify ? 'QUALIFY ZONE' : 'PLAYOFF ZONE',
     }
   }
-  return { title: `季后赛区（1-${end}名）` }
+  return { title: qualify ? `晋级区（1-${end}名）` : `季后赛区（1-${end}名）` }
 }
 
 export function rightZoneCopy(
@@ -69,18 +73,20 @@ export function rightZoneCopy(
   qualifyCount: number,
   rowCount: number,
   splitIndex: number,
+  tone: StandingZoneTone = 'playoff',
 ): ZoneCopy {
+  const qualify = tone === 'qualify'
   if (layout === 'cutoff' && qualifyCount > 0) {
     return {
-      title: `非季后赛区（${qualifyCount + 1}名及以后）`,
-      en: 'OUTSIDE PLAYOFFS',
+      title: qualify ? `非晋级区（${qualifyCount + 1}名及以后）` : `非季后赛区（${qualifyCount + 1}名及以后）`,
+      en: qualify ? 'OUTSIDE QUALIFY' : 'OUTSIDE PLAYOFFS',
     }
   }
   const start = Math.min(splitIndex + 1, rowCount)
   if (qualifyCount > 0 && qualifyCount >= rowCount) {
     return {
-      title: `季后赛区（全部已晋级）`,
-      en: 'PLAYOFF ZONE',
+      title: qualify ? `晋级区（全部已晋级）` : `季后赛区（全部已晋级）`,
+      en: qualify ? 'QUALIFY ZONE' : 'PLAYOFF ZONE',
     }
   }
   return { title: `其余排名（${start}名及以后）` }

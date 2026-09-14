@@ -33,7 +33,7 @@ spring:
     redis:
       host: 127.0.0.1
       port: 6379
-      password:
+      password: CnpaRedis@2026#Cache!
       database: 0
   mail:
     host: ${CNPA_MAIL_HOST:}

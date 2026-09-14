@@ -10,6 +10,14 @@ import CompetitionFormat from './CompetitionFormat.vue'
 import LeagueAbout from './LeagueAbout.vue'
 import StageProgressHeader from './StageProgressHeader.vue'
 import PaperTear from '@/components/common/PaperTear.vue'
+import {
+  isBracketStage,
+  isGroupedStage,
+  pickDefaultStage,
+  stageEmptyText,
+  stageHeading,
+  stageSelectorLabel,
+} from '../utils/stageRenderer'
 
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 const ctx = inject<SeasonContext>('publicSeasonContext')!
@@ -17,53 +25,46 @@ const ctx = inject<SeasonContext>('publicSeasonContext')!
 const stages = ref<V4PublicStageItem[]>([])
 const selectedStageId = ref('')
 const stagesLoading = ref(false)
-
-function isEliminationStage(stage?: V4PublicStageItem | null): boolean {
-  if (!stage) return false
-  const type = `${stage.competitionFormat || ''} ${stage.stageType || ''}`.toUpperCase()
-  return type.includes('ELIM') || type.includes('KNOCK') || type.includes('PLAYOFF') || type.includes('FINAL')
-}
-
-function isGroupedStage(stage?: V4PublicStageItem | null): boolean {
-  if (!stage) return false
-  const mode = (stage.organizationMode || '').toUpperCase()
-  const type = `${stage.competitionFormat || ''} ${stage.stageType || ''}`.toUpperCase()
-  return mode === 'GROUPED' || type.includes('GROUP')
-}
+const stagesError = ref('')
 
 const selectedStage = computed(() =>
   stages.value.find((item) => item.stageId === selectedStageId.value) || null,
 )
 
-const showBracket = computed(() => isEliminationStage(selectedStage.value))
+const showBracket = computed(() => isBracketStage(selectedStage.value))
 
 const stageOptions = computed(() =>
-  stages.value.map((stage) => ({
-    value: stage.stageId,
-    label: isEliminationStage(stage) ? '季后赛' : '常规赛',
+  stages.value.map((item) => ({
+    value: item.stageId,
+    label: stageSelectorLabel(item),
   })),
 )
 
-const formatCurrentStage = computed(() => (showBracket.value ? 'playoffs' : 'regular'))
+const heading = computed(() => stageHeading(selectedStage.value))
+const emptyText = computed(() => stageEmptyText(selectedStage.value))
+const grouped = computed(() => isGroupedStage(selectedStage.value))
 
 async function loadStages(divisionId: string) {
   if (!divisionId) {
     stages.value = []
     selectedStageId.value = ''
+    stagesError.value = ''
     return
   }
   stagesLoading.value = true
+  stagesError.value = ''
   try {
     const res = await getV4PublicStageList(divisionId)
     const list = [...(res.data ?? [])].sort(
       (a, b) => (a.stageOrder ?? 0) - (b.stageOrder ?? 0) || String(a.stageId).localeCompare(String(b.stageId)),
     )
     stages.value = list
-    const current = list.find((item) => item.currentStage) || list[0]
+    const current = pickDefaultStage(list)
     selectedStageId.value = current?.stageId || ''
   } catch {
     stages.value = []
     selectedStageId.value = ''
+    stagesError.value = '阶段数据加载失败'
   } finally {
     stagesLoading.value = false
   }
@@ -90,18 +91,22 @@ watch(
               variant="paper"
             />
             <p v-if="stagesLoading" class="stage-state">加载阶段...</p>
+            <p v-else-if="stagesError" class="stage-state">{{ stagesError }}</p>
+            <p v-else-if="!selectedStageId" class="stage-state">暂无阶段数据</p>
             <RegularStandings
               v-else
               :stage-id="selectedStageId"
-              :grouped="isGroupedStage(selectedStage)"
+              :grouped="grouped"
               :stage-name="selectedStage?.stageName"
               :advance-count="selectedStage?.advancementCount"
+              :empty-text="emptyText"
+              :zone-tone="grouped ? 'qualify' : 'playoff'"
             />
           </div>
         </PaperSection>
       </div>
 
-      <CompetitionFormat paper-edge="none" :current-stage="formatCurrentStage" />
+      <CompetitionFormat paper-edge="none" :current-stage="selectedStageId" />
     </template>
 
     <template v-else>
@@ -114,7 +119,15 @@ watch(
               :options="stageOptions"
               variant="paper"
             />
-            <PlayoffBracket :focus-stage-id="selectedStageId" />
+            <p v-if="stagesLoading" class="stage-state">加载阶段...</p>
+            <p v-else-if="stagesError" class="stage-state">{{ stagesError }}</p>
+            <PlayoffBracket
+              v-else
+              :focus-stage-id="selectedStageId"
+              :title="heading.title"
+              :title-en="heading.titleEn"
+              :empty-text="emptyText"
+            />
           </div>
         </PaperSection>
 
@@ -122,7 +135,7 @@ watch(
           <div class="stage-section-tear" aria-hidden="true">
             <PaperTear position="top" tone="dark" />
           </div>
-          <CompetitionFormat embedded :current-stage="formatCurrentStage" />
+          <CompetitionFormat embedded :current-stage="selectedStageId" />
         </PaperSection>
       </div>
     </template>

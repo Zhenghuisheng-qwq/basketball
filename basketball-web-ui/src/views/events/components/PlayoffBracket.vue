@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
-import { getV4PublicStageBracket, getV4PublicStageList, getV4PublicStageSeries } from '@/api/v4Public'
-import type { V4PublicStageItem } from '@/api/types/v4Public'
+import { getV4PublicStageBracket, getV4PublicStageSeries } from '@/api/v4Public'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
 import {
   groupMatchItemsToRounds,
@@ -13,9 +12,19 @@ import PlayoffSeriesCard from './PlayoffSeriesCard.vue'
 
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
-defineProps<{
-  focusStageId?: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    focusStageId?: string
+    title?: string
+    titleEn?: string
+    emptyText?: string
+  }>(),
+  {
+    title: '淘汰赛对阵图',
+    titleEn: 'ELIMINATION BRACKET',
+    emptyText: '淘汰赛对阵暂未生成',
+  },
+)
 
 const ctx = inject<SeasonContext>('publicSeasonContext')!
 
@@ -24,14 +33,9 @@ const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const errorMessage = ref('')
 let reqId = 0
 
-function isEliminationStage(stage: V4PublicStageItem): boolean {
-  const type = `${stage.competitionFormat || ''} ${stage.stageType || ''}`.toUpperCase()
-  return type.includes('ELIM') || type.includes('KNOCK') || type.includes('PLAYOFF') || type.includes('FINAL')
-}
-
-async function load(divisionId: string) {
+async function load(stageId?: string) {
   const current = ++reqId
-  if (!divisionId) {
+  if (!stageId) {
     rounds.value = []
     state.value = 'empty'
     return
@@ -39,33 +43,12 @@ async function load(divisionId: string) {
   state.value = 'loading'
   errorMessage.value = ''
   try {
-    const stageRes = await getV4PublicStageList(divisionId)
-    const stages = [...(stageRes.data ?? [])]
-      .filter(isEliminationStage)
-      .sort((a, b) => (a.stageOrder ?? 0) - (b.stageOrder ?? 0))
-    if (!stages.length) {
-      if (current !== reqId) return
-      rounds.value = []
-      state.value = 'empty'
-      return
-    }
-
-    const seriesBuckets = await Promise.all(
-      stages.map(async (stage) => {
-        const res = await getV4PublicStageSeries(stage.stageId)
-        return res.data ?? []
-      }),
-    )
-    let next = groupPublicSeriesToRounds(seriesBuckets.flat())
+    const seriesRes = await getV4PublicStageSeries(stageId)
+    let next = groupPublicSeriesToRounds(seriesRes.data ?? [])
 
     if (!next.length) {
-      const matchBuckets = await Promise.all(
-        stages.map(async (stage) => {
-          const res = await getV4PublicStageBracket(stage.stageId)
-          return res.data ?? []
-        }),
-      )
-      next = groupMatchItemsToRounds(matchBuckets.flat())
+      const matchRes = await getV4PublicStageBracket(stageId)
+      next = groupMatchItemsToRounds(matchRes.data ?? [])
     }
 
     if (current !== reqId) return
@@ -80,9 +63,9 @@ async function load(divisionId: string) {
 }
 
 watch(
-  () => ctx.divisionId.value,
-  (divisionId) => {
-    void load(divisionId)
+  () => props.focusStageId,
+  (stageId) => {
+    void load(stageId)
   },
   { immediate: true },
 )
@@ -138,14 +121,15 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
       <p v-if="leagueName" class="playoff-bracket__league">{{ leagueName }}</p>
       <h3>
         <i aria-hidden="true" />
-        季后赛对阵图
+        {{ title }}
         <i aria-hidden="true" />
       </h3>
+      <em v-if="titleEn" class="playoff-bracket__en">{{ titleEn }}</em>
     </header>
 
     <p v-if="state === 'loading'" class="playoff-bracket__state">加载对阵图...</p>
     <p v-else-if="state === 'error'" class="playoff-bracket__state">{{ errorMessage }}</p>
-    <p v-else-if="state === 'empty'" class="playoff-bracket__state">暂无淘汰赛对阵</p>
+    <p v-else-if="state === 'empty'" class="playoff-bracket__state">{{ emptyText }}</p>
 
     <div v-else class="playoff-bracket__viewport">
       <div class="playoff-bracket__board" :style="{ minWidth: boardMinWidth }">
@@ -248,6 +232,16 @@ function columnAdvanced(series: { seriesStatus?: string }[]): boolean {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.playoff-bracket__en {
+  display: block;
+  margin-top: 4px;
+  color: var(--cnpa-red, #e10613);
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
 .playoff-bracket__heading h3 {

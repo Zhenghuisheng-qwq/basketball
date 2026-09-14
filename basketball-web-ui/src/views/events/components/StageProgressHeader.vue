@@ -29,7 +29,7 @@ function onStageChange(event: Event) {
       <span class="stage-progress-header__subtitle">STAGE PROGRESS</span>
     </div>
 
-    <div class="stage-progress-header__selector">
+    <div v-if="props.options.length > 1" class="stage-progress-header__selector">
       <label class="sr-only" for="stage-progress-select">选择阶段</label>
       <select
         id="stage-progress-select"
