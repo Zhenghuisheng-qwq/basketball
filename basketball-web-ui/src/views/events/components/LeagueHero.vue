@@ -46,6 +46,9 @@ const heroOverlayStyle = computed(() => ({ background: heroTheme.value.overlay }
 
   position: relative;
   width: 100%;
+  aspect-ratio: 21 / 9;
+  min-height: 280px;
+  max-height: 760px;
   overflow: hidden;
   background: #050505;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -54,12 +57,14 @@ const heroOverlayStyle = computed(() => ({ background: heroTheme.value.overlay }
 }
 
 .league-hero__image {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 0;
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
   object-fit: cover;
+  object-position: center center;
 }
 
 .league-hero__overlay {
@@ -118,6 +123,9 @@ const heroOverlayStyle = computed(() => ({ background: heroTheme.value.overlay }
     --hero-meta-right: 3.2%;
     --hero-meta-bottom: 3.5%;
     --hero-meta-width: min(92%, 520px);
+    aspect-ratio: 16 / 9;
+    min-height: 340px;
+    max-height: none;
     overflow: hidden;
   }
 
@@ -128,6 +136,14 @@ const heroOverlayStyle = computed(() => ({ background: heroTheme.value.overlay }
     bottom: var(--hero-meta-bottom);
     width: var(--hero-meta-width);
   }
+}
 
+@media (max-width: 767px) {
+  .league-hero {
+    aspect-ratio: auto;
+    height: clamp(380px, 88vw, 520px);
+    min-height: 380px;
+    max-height: none;
+  }
 }
 </style>

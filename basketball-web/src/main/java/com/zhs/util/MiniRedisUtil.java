@@ -68,4 +68,8 @@ public class MiniRedisUtil {
         }
         return current;
     }
+
+    public void deleteByPattern(final String pattern) {
+        redisCache.deleteObjects(redisCache.keys(pattern));
+    }
 }

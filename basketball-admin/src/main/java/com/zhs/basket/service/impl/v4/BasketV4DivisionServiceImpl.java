@@ -19,6 +19,7 @@ import com.zhs.basket.service.v4.IBasketV4DivisionClosingService;
 import com.zhs.basket.service.v4.IBasketV4DivisionService;
 import com.zhs.basket.service.v4.IBasketV4FormatSnapshotService;
 import com.zhs.basket.support.v4.BestOfCapabilityGate;
+import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.support.v4.DivisionRuleMutableSpecification;
 import com.zhs.basket.support.v4.V4FormatDisplaySupport;
 import com.zhs.basket.vo.v4.BasketDivisionFormatSnapshotVo;
@@ -57,6 +58,8 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     private BasketDivisionFormatSnapshotMapper snapshotMapper;
     @Autowired
     private IBasketV4DivisionClosingService divisionClosingService;
+    @Autowired
+    private V4PublicReadCachePublisher publicReadCachePublisher;
 
     @Override
     public List<BasketDivisionListVo> selectList(BasketDivisionQuery query) {
@@ -140,6 +143,7 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         if (divisionMapper.updateById(division) != 1) {
             throw new ServiceException("更新 Division 失败");
         }
+        publicReadCachePublisher.divisionMutation(id, division.getSeasonId());
     }
 
     @Override
@@ -178,6 +182,7 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         if (divisionMapper.updateById(division) != 1) {
             throw new ServiceException("开放 Division 报名失败");
         }
+        publicReadCachePublisher.divisionMutation(id, division.getSeasonId());
     }
 
     @Override
@@ -192,6 +197,7 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         if (divisionMapper.updateById(division) != 1) {
             throw new ServiceException("关闭 Division 报名失败");
         }
+        publicReadCachePublisher.divisionMutation(id, division.getSeasonId());
     }
 
     @Override

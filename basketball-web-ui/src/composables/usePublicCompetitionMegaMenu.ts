@@ -2,7 +2,6 @@ import { computed, ref, watch, type ComputedRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   competitionMenuGroups,
-  DATA_TAB_VALUES,
   type MegaMenuType,
   type MenuEntryHighlight,
   type PublicMenuEntry,
@@ -85,42 +84,16 @@ export function usePublicCompetitionMegaMenu() {
     return typeof raw === 'string' ? raw.trim().toUpperCase() : ''
   }
 
-  function normalizeDataTab(): string {
-    const raw = route.query.tab
-    if (typeof raw === 'string' && (DATA_TAB_VALUES as readonly string[]).includes(raw)) {
-      return raw
-    }
-    return 'team'
-  }
-
   function isEventsListRoute(): boolean {
     return route.path === '/tournament' || route.path === '/events'
   }
 
   function getEntryHighlight(entry: PublicMenuEntry): MenuEntryHighlight | null {
-    if (entry.id.startsWith('events-')) {
-      if (!isEventsListRoute()) return null
+    if (!entry.id.startsWith('events-') || !isEventsListRoute()) return null
 
-      if (entry.id.startsWith('events-series-')) {
-        const code = entry.id.slice('events-series-'.length)
-        if (normalizeSeries() === code) return 'primary'
-        return null
-      }
-    }
-
-    if (entry.id.startsWith('data-') && isDataRoute.value) {
-      if (entry.id.startsWith('data-series-')) {
-        const code = entry.id.slice('data-series-'.length)
-        if (normalizeSeries() === code) return 'secondary'
-        return null
-      }
-
-      const tabByEntry: Record<string, string> = {
-        'data-team': 'team',
-        'data-player': 'player',
-      }
-      const tab = tabByEntry[entry.id]
-      if (tab && normalizeDataTab() === tab) return 'primary'
+    if (entry.id.startsWith('events-series-')) {
+      const code = entry.id.slice('events-series-'.length)
+      if (normalizeSeries() === code) return 'primary'
     }
 
     return null

@@ -9,6 +9,7 @@ import com.zhs.basket.mapper.BasketPlayerProfileMapper;
 import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IBasketV4EventSnapshotService;
+import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,11 +39,14 @@ public class BasketV4EventSnapshotServiceImpl implements IBasketV4EventSnapshotS
     private BasketTeamMapper teamMapper;
     @Autowired
     private BasketPlayerProfileMapper playerProfileMapper;
+    @Autowired
+    private V4PublicReadCachePublisher publicReadCachePublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void generateFromApprovedRegistration(BasketRegistration registration) {
         generateInternal(registration, null, false);
+        publicReadCachePublisher.divisionMutation(registration.getDivisionId(), registration.getSeasonId());
     }
 
     @Override
@@ -52,6 +56,7 @@ public class BasketV4EventSnapshotServiceImpl implements IBasketV4EventSnapshotS
             throw new ServiceException("rosterVersionId 不能为空");
         }
         generateInternal(registration, rosterVersionId, true);
+        publicReadCachePublisher.divisionMutation(registration.getDivisionId(), registration.getSeasonId());
     }
 
     private void generateInternal(BasketRegistration registration, Long rosterVersionId, boolean updateIfExists) {

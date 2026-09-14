@@ -21,6 +21,7 @@ import com.zhs.basket.mapper.v4.BasketStagePairingExecutionMapper;
 import com.zhs.basket.mapper.v4.BasketStagePublishRecordMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.service.v4.IStagePublishApplicationService;
+import com.zhs.basket.support.v4.V4PublicReadCacheEvictEvent;
 import com.zhs.basket.support.v4.schedule.ScheduleFingerprintSupport;
 import com.zhs.basket.support.v4.schedule.ScheduleUnitResolver;
 import com.zhs.basket.support.v4.schedule.StagePublishContext;
@@ -36,6 +37,7 @@ import com.zhs.basket.vo.v4.ValidationIssueVo;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,6 +70,8 @@ public class StagePublishApplicationServiceImpl implements IStagePublishApplicat
     private StageScheduleApplicationServiceImpl scheduleApplicationService;
     @Autowired
     private List<StagePublishValidator> publishValidators;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Override
     public StagePublishPreviewVo preview(Long stageId) {
@@ -207,6 +211,9 @@ public class StagePublishApplicationServiceImpl implements IStagePublishApplicat
         if (publishRecordMapper.insert(record) != 1) {
             throw new ServiceException("写入发布记录失败");
         }
+        eventPublisher.publishEvent(new V4PublicReadCacheEvictEvent(
+                stage.getDivisionId(), null, context.getDivision() == null ? null : context.getDivision().getSeasonId(),
+                stage.getId(), null, null));
         return toVo(record);
     }
 

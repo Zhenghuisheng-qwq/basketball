@@ -15,9 +15,11 @@ import com.zhs.basket.mapper.v4.BasketTeamLifecycleClosingMapper;
 import com.zhs.basket.service.v4.IBasketV4DivisionClosingService;
 import com.zhs.basket.service.v4.IBasketV4SeasonService;
 import com.zhs.basket.support.CaptainGrantLogSupport;
+import com.zhs.basket.support.v4.V4PublicReadCacheEvictEvent;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,6 +68,8 @@ public class BasketV4DivisionClosingServiceImpl implements IBasketV4DivisionClos
     @Autowired
     @Lazy
     private IBasketV4SeasonService seasonService;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -129,6 +133,8 @@ public class BasketV4DivisionClosingServiceImpl implements IBasketV4DivisionClos
             playerProfileMapper.clearCurrentTeamIdByTeamIds(teamIds);
         }
         seasonService.refreshAggregatedStatus(division.getSeasonId());
+        eventPublisher.publishEvent(new V4PublicReadCacheEvictEvent(
+                divisionId, null, division.getSeasonId(), null, null, null));
     }
 }
 

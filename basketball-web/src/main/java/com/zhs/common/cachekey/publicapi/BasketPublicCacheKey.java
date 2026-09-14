@@ -10,8 +10,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class BasketPublicCacheKey implements MiniCacheKey {
 
-    private static final String PREFIX = "basket:public:";
-    private static final long DEFAULT_SECONDS = 60L;
+    public static final String PREFIX = "basket:public:";
+    public static final long DEFAULT_SECONDS = 60L;
 
     private final String suffix;
     private final long expireSeconds;

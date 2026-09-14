@@ -35,6 +35,8 @@ class BasketMatchSeriesServiceImplTest {
     private IDivisionStageExecutionApplicationService stageExecutionService;
     @Mock
     private com.zhs.basket.support.v4.schedule.WinnerOfSeriesAdvanceSupport winnerOfSeriesAdvanceSupport;
+    @Mock
+    private com.zhs.basket.support.v4.V4PublicReadCachePublisher publicReadCachePublisher;
 
     @InjectMocks
     private BasketMatchSeriesServiceImpl service;

@@ -99,6 +99,12 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
 
     @Override
     public PublicPlayerDetailVo getPlayer(Long playerId) {
+        return publicSupport.cacheGetOrLoad("player:detail:" + playerId,
+                () -> loadPlayerUncached(playerId),
+                ignored -> publicSupport.slowTtlSeconds());
+    }
+
+    private PublicPlayerDetailVo loadPlayerUncached(Long playerId) {
         BasketPlayerProfile player = publicSupport.requirePlayer(playerId);
         PublicPlayerDetailVo vo = new PublicPlayerDetailVo();
         vo.setPlayerId(player.getId());
@@ -316,6 +322,12 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
 
     @Override
     public List<PublicPlayerSeasonStatVo> listSeasonStat(Long playerId, Long seasonId) {
+        return publicSupport.cacheGetOrLoad("player:season-stat:" + playerId + ":" + (seasonId == null ? "-" : seasonId),
+                () -> loadSeasonStatUncached(playerId, seasonId),
+                ignored -> publicSupport.liveTtlSeconds());
+    }
+
+    private List<PublicPlayerSeasonStatVo> loadSeasonStatUncached(Long playerId, Long seasonId) {
         BasketPlayerProfile player = publicSupport.requirePlayer(playerId);
         if (!publicSupport.isPlayerPubliclyVisible(player) || !publicSupport.canShowMatchData(player)) {
             return Collections.emptyList();

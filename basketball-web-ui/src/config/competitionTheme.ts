@@ -30,7 +30,7 @@ export const competitionThemes: Record<CompetitionSeriesCode, CompetitionTheme> 
     footImage: tournamentFoot,
     overlay: leagueOverlay,
     accent: '#ff4b35',
-    backgroundPosition: 'center',
+    backgroundPosition: 'left center',
   },
   ARENA: {
     code: 'ARENA',

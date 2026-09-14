@@ -21,6 +21,7 @@ import com.zhs.basket.support.v4.AdminOfficialResultCapability;
 import com.zhs.basket.support.v4.schedule.PairingResolutionGuard;
 import com.zhs.basket.support.v4.schedule.WinnerOfSeriesAdvanceSupport;
 import com.zhs.basket.support.v4.settlement.OfficialMatchResultCommand;
+import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.support.v4.settlement.OfficialMatchResultSettlementService;
 import com.zhs.basket.enums.v4.OfficialResultSource;
 import com.zhs.basket.enums.v4.MatchSeriesStatusEnum;
@@ -85,6 +86,8 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
     private BasketBusinessAuditWriter auditWriter;
     @Autowired
     private OfficialMatchResultSettlementService officialMatchResultSettlementService;
+    @Autowired
+    private V4PublicReadCachePublisher publicReadCachePublisher;
     @Autowired
     private WinnerOfSeriesAdvanceSupport winnerOfSeriesAdvanceSupport;
     @Autowired
@@ -243,6 +246,8 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
                 MatchSeriesStatusEnum.RUNNING.getCode(), null, snapshot);
         winnerOfSeriesAdvanceSupport.rewireAfterSeriesResult(series);
         stageExecutionService.checkStageCompletion(series.getStageId());
+        publicReadCachePublisher.seriesMutation(series.getDivisionId(), null, series.getStageId(),
+                series.getId(), series.getHomeEventTeamId(), series.getAwayEventTeamId());
         auditWriter.writeAudit("V4_STAGE", "MATCH_SERIES", series.getId(), "SERIES_FORFEIT",
                 "系列赛弃赛", req.getReason(), List.of(
                         AuditFieldInput.of("resultSource", "结果来源", null, SeriesResolutionTypeEnum.FORFEIT.getCode()),
@@ -292,6 +297,8 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
                             AuditFieldInput.of("homeWinCount", "主队胜场", null, series.getHomeWinCount()),
                             AuditFieldInput.of("awayWinCount", "客队胜场", null, series.getAwayWinCount())
                     ));
+            publicReadCachePublisher.seriesMutation(series.getDivisionId(), null, series.getStageId(),
+                    series.getId(), series.getHomeEventTeamId(), series.getAwayEventTeamId());
             return;
         }
         forfeitSeries(req);
@@ -389,6 +396,7 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
         }
         auditWriter.writeAudit("V4_STAGE", "STAGE", stage.getId(), "PAIRING_ADJUST",
                 "人工调整对阵", req.getReason(), null);
+        publicReadCachePublisher.scheduleMutation(stage.getDivisionId(), null, stage.getId());
     }
 
     @Override
@@ -411,6 +419,8 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
         }
         matchSeriesService.rebuildSeriesResult(series.getId());
         stageExecutionService.checkStageCompletion(series.getStageId());
+        publicReadCachePublisher.seriesMutation(series.getDivisionId(), null, series.getStageId(),
+                series.getId(), series.getHomeEventTeamId(), series.getAwayEventTeamId());
         auditWriter.writeAudit("V4_STAGE", "MATCH_SERIES", series.getId(), "REVOKE_SERIES_RESOLUTION",
                 "撤销系列赛异常判定", req.getReason(), List.of(
                         AuditFieldInput.of("resolutionType", "裁决类型", series.getResolutionType(), null),
@@ -524,6 +534,8 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
                 MatchSeriesStatusEnum.RUNNING.getCode(), previousWinner, snapshot);
         winnerOfSeriesAdvanceSupport.rewireAfterSeriesResult(series);
         stageExecutionService.checkStageCompletion(series.getStageId());
+        publicReadCachePublisher.seriesMutation(series.getDivisionId(), null, series.getStageId(),
+                series.getId(), series.getHomeEventTeamId(), series.getAwayEventTeamId());
         auditWriter.writeAudit("V4_STAGE", "MATCH_SERIES", series.getId(), "SERIES_MANUAL_RESOLUTION",
                 "系列赛管理员裁决", req.getReason(), List.of(
                         AuditFieldInput.of("resultSource", "结果来源", series.getResolutionType(),

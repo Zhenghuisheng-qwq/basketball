@@ -9,6 +9,7 @@ import com.zhs.basket.mapper.v4.BasketV4MatchTeamStatMapper;
 import com.zhs.basket.service.v4.IBasketMatchSeriesService;
 import com.zhs.basket.service.v4.IBasketV4StatsSettlementService;
 import com.zhs.common.exception.ServiceException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,6 +37,7 @@ class OfficialMatchResultSettlementServiceTest {
     @Mock private BasketV4MatchPlayerStatMapper matchPlayerStatMapper;
     @Mock private IBasketMatchSeriesService matchSeriesService;
     @Mock private IBasketV4StatsSettlementService statsSettlementService;
+    @Mock private ApplicationEventPublisher eventPublisher;
     @InjectMocks private OfficialMatchResultSettlementService service;
 
     @Test

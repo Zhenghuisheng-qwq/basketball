@@ -12,6 +12,7 @@ import com.zhs.basket.support.v4.MatchSeriesGameInput;
 import com.zhs.basket.support.v4.MatchSeriesQualificationSyncService;
 import com.zhs.basket.support.v4.MatchSeriesResultCalculator;
 import com.zhs.basket.support.v4.MatchSeriesResultSnapshot;
+import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.support.v4.schedule.WinnerOfSeriesAdvanceSupport;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.uuid.IdUtils;
@@ -39,6 +40,8 @@ public class BasketMatchSeriesServiceImpl implements IBasketMatchSeriesService {
     private IDivisionStageExecutionApplicationService stageExecutionService;
     @Autowired
     private WinnerOfSeriesAdvanceSupport winnerOfSeriesAdvanceSupport;
+    @Autowired
+    private V4PublicReadCachePublisher publicReadCachePublisher;
 
     @Override
     public BasketMatchSeries getById(Long id) {
@@ -129,6 +132,8 @@ public class BasketMatchSeriesServiceImpl implements IBasketMatchSeriesService {
         if (seriesMapper.updateResult(update) != 1) {
             throw new ServiceException("更新系列赛结果失败");
         }
+        publicReadCachePublisher.seriesMutation(series.getDivisionId(), null, series.getStageId(),
+                seriesId, series.getHomeEventTeamId(), series.getAwayEventTeamId());
     }
 
     @Override

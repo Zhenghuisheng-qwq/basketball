@@ -8,6 +8,7 @@ import com.zhs.basket.query.v4.BasketV4MatchQuery;
 import com.zhs.basket.service.v4.IBasketV4MatchService;
 import com.zhs.basket.support.ExternalUrlValidator;
 import com.zhs.basket.support.v4.AdminOfficialResultCapability;
+import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.support.v4.schedule.ScheduleAdjustmentGuard;
 import com.zhs.basket.vo.v4.BasketV4MatchListVo;
 import com.zhs.common.exception.ServiceException;
@@ -23,6 +24,8 @@ public class BasketV4MatchServiceImpl implements IBasketV4MatchService {
 
     @Autowired
     private BasketV4MatchMapper matchMapper;
+    @Autowired
+    private V4PublicReadCachePublisher publicReadCachePublisher;
 
     @Override
     public List<BasketV4MatchListVo> selectList(BasketV4MatchQuery query) {
@@ -100,6 +103,10 @@ public class BasketV4MatchServiceImpl implements IBasketV4MatchService {
         match.setUpdateTime(new Date());
         if (matchMapper.updateById(match) != 1) {
             throw new ServiceException("更新比赛失败");
+        }
+        if (!isDraft || req.getReplayUrl() != null) {
+            publicReadCachePublisher.matchMutation(match.getDivisionId(), match.getId(), match.getSeasonId(),
+                    match.getStageId(), match.getHomeEventTeamId(), match.getAwayEventTeamId(), match.getSeriesId());
         }
     }
 

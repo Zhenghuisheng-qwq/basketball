@@ -24,7 +24,11 @@ import com.zhs.model.BasketVenue;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketSeries;
 import com.zhs.support.MemberAvatarSupport;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.zhs.util.MiniRedisUtil;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -32,6 +36,8 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.Collection;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.ToLongFunction;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -68,6 +74,24 @@ public class BasketPublicSupport {
     private BasketVenueDao venueDao;
     @Resource
     private MiniRedisUtil miniRedisUtil;
+    @Resource
+    private ObjectMapper objectMapper;
+
+    private ObjectMapper cacheMapper;
+
+    public static final long LIVE_TTL_SECONDS = 15L;
+    public static final long SLOW_TTL_SECONDS = 300L;
+    public static final long FINALIZED_TTL_SECONDS = 604_800L;
+    public static final long ARCHIVED_TTL_SECONDS = 2_592_000L;
+
+    @PostConstruct
+    void initCacheMapper() {
+        cacheMapper = objectMapper.copy();
+        cacheMapper.activateDefaultTyping(
+                LaissezFaireSubTypeValidator.instance,
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.WRAPPER_ARRAY);
+    }
 
     public int normalizePage(Integer currentPage) {
         return currentPage == null || currentPage < 1 ? BasketPublicConstants.DEFAULT_PAGE : currentPage;
@@ -95,31 +119,109 @@ public class BasketPublicSupport {
     private static final long CACHE_BREAKER_MS = 30_000L;
     private volatile long cacheDisabledUntilMs;
 
+    public long liveTtlSeconds() {
+        return LIVE_TTL_SECONDS;
+    }
+
+    public long slowTtlSeconds() {
+        return SLOW_TTL_SECONDS + ThreadLocalRandom.current().nextLong(60);
+    }
+
+    public long finalizedTtlSeconds() {
+        return FINALIZED_TTL_SECONDS + ThreadLocalRandom.current().nextLong(3_600);
+    }
+
+    public long archivedTtlSeconds() {
+        return ARCHIVED_TTL_SECONDS + ThreadLocalRandom.current().nextLong(3_600);
+    }
+
     public <T> T cacheGetOrLoad(String cacheSuffix, Supplier<T> loader) {
-        BasketPublicCacheKey key = new BasketPublicCacheKey(cacheSuffix);
+        return cacheGetOrLoad(cacheSuffix, BasketPublicCacheKey.DEFAULT_SECONDS, loader);
+    }
+
+    public <T> T cacheGetOrLoad(String cacheSuffix, long expireSeconds, Supplier<T> loader) {
+        return cacheGetOrLoad(cacheSuffix, loader, value -> expireSeconds);
+    }
+
+    public <T> T cacheGetOrLoad(String cacheSuffix, Supplier<T> loader, ToLongFunction<T> ttlResolver) {
         long now = System.currentTimeMillis();
         if (now < cacheDisabledUntilMs) {
             return loader.get();
         }
+        BasketPublicCacheKey peekKey = new BasketPublicCacheKey(cacheSuffix);
         try {
-            T cached = miniRedisUtil.get(key);
-            if (cached != null) {
-                return cached;
+            Object raw = miniRedisUtil.get(peekKey);
+            if (raw instanceof String json && !json.isBlank()) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    T cached = (T) cacheMapper.readValue(json, Object.class);
+                    if (cached != null) {
+                        return cached;
+                    }
+                } catch (Exception deserializeEx) {
+                    log.warn("public cache value ignored, rebuild: {}", deserializeEx.getMessage());
+                    try {
+                        miniRedisUtil.delete(peekKey);
+                    } catch (Exception ignored) {
+                        // ignore broken-key delete
+                    }
+                }
             }
         } catch (Exception ex) {
-            cacheDisabledUntilMs = System.currentTimeMillis() + CACHE_BREAKER_MS;
+            if (isRedisInfraFailure(ex)) {
+                cacheDisabledUntilMs = System.currentTimeMillis() + CACHE_BREAKER_MS;
+            }
             log.debug("public cache get ignored: {}", ex.getMessage());
         }
         T value = loader.get();
         if (value != null && System.currentTimeMillis() >= cacheDisabledUntilMs) {
+            long ttl = ttlResolver == null ? LIVE_TTL_SECONDS : Math.max(1L, ttlResolver.applyAsLong(value));
+            BasketPublicCacheKey key = new BasketPublicCacheKey(cacheSuffix, ttl);
             try {
-                miniRedisUtil.set(key, value);
+                miniRedisUtil.set(key, cacheMapper.writeValueAsString(value));
+            } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
+                log.debug("public cache serialize ignored: {}", ex.getMessage());
             } catch (Exception ex) {
-                cacheDisabledUntilMs = System.currentTimeMillis() + CACHE_BREAKER_MS;
+                if (isRedisInfraFailure(ex)) {
+                    cacheDisabledUntilMs = System.currentTimeMillis() + CACHE_BREAKER_MS;
+                }
                 log.debug("public cache set ignored: {}", ex.getMessage());
             }
         }
         return value;
+    }
+
+    static boolean isRedisInfraFailure(Throwable ex) {
+        Throwable cur = ex;
+        while (cur != null) {
+            String name = cur.getClass().getName();
+            if (name.contains("RedisConnectionFailure")
+                    || name.contains("RedisSystemException")
+                    || name.contains("QueryTimeoutException")
+                    || name.contains("RedisCommandTimeout")
+                    || cur instanceof java.net.ConnectException
+                    || cur instanceof java.net.SocketTimeoutException) {
+                return true;
+            }
+            cur = cur.getCause();
+        }
+        return false;
+    }
+
+    public void evictPublicCache(String cacheSuffix) {
+        try {
+            miniRedisUtil.delete(new BasketPublicCacheKey(cacheSuffix));
+        } catch (Exception ex) {
+            log.debug("public cache evict ignored: {}", ex.getMessage());
+        }
+    }
+
+    public void evictPublicCachePrefix(String suffixPrefix) {
+        try {
+            miniRedisUtil.deleteByPattern(BasketPublicCacheKey.PREFIX + suffixPrefix + "*");
+        } catch (Exception ex) {
+            log.debug("public cache prefix evict ignored: {}", ex.getMessage());
+        }
     }
 
     public BasketSeason requirePublicSeason(Long seasonId) {

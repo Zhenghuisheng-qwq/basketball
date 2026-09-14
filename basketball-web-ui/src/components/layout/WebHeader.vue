@@ -45,27 +45,17 @@ const searchPanelRef = ref<HTMLElement | null>(null)
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const megaMenuNavRef = ref<HTMLElement | null>(null)
 const eventsTriggerRef = ref<HTMLButtonElement | null>(null)
-const dataTriggerRef = ref<HTMLButtonElement | null>(null)
 const megaMenuRef = ref<InstanceType<typeof PublicCompetitionMegaMenu> | null>(null)
 
 const megaMenuAnchorLeft = ref(0)
 
-const megaMenuAriaLabel = computed(() => (
-  openMenu.value === 'event' ? '赛事导航' : '数据导航'
-))
-
 function updateMegaMenuAnchorPosition() {
-  if (!isMegaMenuOpen.value || !openMenu.value || !megaMenuNavRef.value) {
+  if (!isMegaMenuOpen.value || !megaMenuNavRef.value || !eventsTriggerRef.value) {
     return
   }
 
-  const trigger = openMenu.value === 'event'
-    ? eventsTriggerRef.value
-    : dataTriggerRef.value
-  if (!trigger) return
-
   const navRect = megaMenuNavRef.value.getBoundingClientRect()
-  const triggerRect = trigger.getBoundingClientRect()
+  const triggerRect = eventsTriggerRef.value.getBoundingClientRect()
   megaMenuAnchorLeft.value = Math.max(0, triggerRect.left - navRect.left)
 }
 
@@ -131,12 +121,10 @@ function handleMegaMenuTriggerKeyDown(event: KeyboardEvent, type: MegaMenuType) 
   }
 }
 
-function closeMegaMenu(focusTrigger: MegaMenuType | false = false) {
+function closeMegaMenu(focusTrigger = false) {
   closeMenu()
-  if (focusTrigger === 'event') {
+  if (focusTrigger) {
     eventsTriggerRef.value?.focus()
-  } else if (focusTrigger === 'data') {
-    dataTriggerRef.value?.focus()
   }
 }
 
@@ -169,7 +157,7 @@ function handleDocumentKeyDown(event: KeyboardEvent) {
 
     if (isMegaMenuOpen.value) {
       event.preventDefault()
-      closeMegaMenu(openMenu.value ?? false)
+      closeMegaMenu(true)
       return
     }
 
@@ -181,10 +169,6 @@ function handleDocumentKeyDown(event: KeyboardEvent) {
 
 function handleEventsTriggerKeyDown(event: KeyboardEvent) {
   handleMegaMenuTriggerKeyDown(event, 'event')
-}
-
-function handleDataTriggerKeyDown(event: KeyboardEvent) {
-  handleMegaMenuTriggerKeyDown(event, 'data')
 }
 
 function toggleMobileMenu() {
@@ -312,20 +296,6 @@ onBeforeUnmount(() => {
               赛事
             </button>
 
-            <button
-              ref="dataTriggerRef"
-              type="button"
-              class="nav-link nav-link--button"
-              :class="{ 'nav-link-active': isDataNavActive || (isMegaMenuOpen && openMenu === 'data') }"
-              aria-haspopup="dialog"
-              :aria-expanded="isMegaMenuOpen && openMenu === 'data'"
-              @mouseenter="handleMegaMenuMouseEnter('data')"
-              @click="handleMegaMenuToggle('data')"
-              @keydown="handleDataTriggerKeyDown"
-            >
-              数据
-            </button>
-
             <Transition name="mega-menu">
               <div
                 v-if="isMegaMenuOpen"
@@ -336,8 +306,8 @@ onBeforeUnmount(() => {
               >
                 <PublicCompetitionMegaMenu
                   ref="megaMenuRef"
-                  :type="openMenu ?? 'event'"
-                  :ariaLabel="megaMenuAriaLabel"
+                  type="event"
+                  ariaLabel="赛事导航"
                   :groups="currentGroups"
                   :get-entry-highlight="getEntryHighlight"
                   @navigate="navigateMegaMenuEntry"
@@ -345,6 +315,17 @@ onBeforeUnmount(() => {
               </div>
             </Transition>
           </div>
+
+          <router-link
+            to="/data"
+            class="nav-link"
+            active-class=""
+            exact-active-class=""
+            :class="{ 'nav-link-active': isDataNavActive }"
+            @mouseenter="handleOtherNavMouseEnter"
+          >
+            数据
+          </router-link>
 
           <router-link
             v-for="item in navItems"
@@ -456,11 +437,19 @@ onBeforeUnmount(() => {
 
         <PublicCompetitionMobileMenu
           :is-events-nav-active="isEventsNavActive"
-          :is-data-nav-active="isDataNavActive"
           :get-entry-highlight="getEntryHighlight"
           @navigate="handleMobileNavigate"
           @close="closeMobileMenu"
         />
+
+        <router-link
+          to="/data"
+          class="mobile-nav__link"
+          :class="{ 'mobile-nav__link--active': isDataNavActive }"
+          @click="closeMobileMenu"
+        >
+          数据
+        </router-link>
 
         <router-link
           v-for="item in navItems"

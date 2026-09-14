@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import teamBackground from '@/assets/icon/tournament/team_background.png'
+import teamIcon from '@/assets/icon/team/master.png'
 import platformIcon from '@/assets/icon/person/platform.png'
 import positionIcon from '@/assets/icon/person/site.png'
 import stageIcon from '@/assets/icon/person/stage.png'
@@ -45,21 +46,12 @@ const identityLine = computed(() => {
   return parts.join('  |  ')
 })
 
-const teamPath = computed(() => {
-  const teamId = props.profile.eventTeamId || props.profile.currentTeamId
-  if (!teamId) return undefined
-  return {
-    path: `/tournament/team/${teamId}/overview`,
-    query: props.profile.divisionId ? { divisionId: props.profile.divisionId } : {},
-  }
-})
-
 const infoItems = computed(() => [
   {
     key: 'team',
     label: '所属战队',
     value: props.profile.currentTeamName,
-    logo: true,
+    icon: teamIcon,
   },
   {
     key: 'platform',
@@ -89,33 +81,6 @@ const infoItems = computed(() => [
     </div>
 
     <div class="player-detail-hero__inner">
-      <nav class="player-detail-hero__breadcrumb" aria-label="面包屑">
-        <router-link to="/tournament">赛事</router-link>
-        <template v-if="profile.seriesName">
-          <span>/</span>
-          <router-link
-            :to="{
-              path: '/tournament',
-              query: {
-                ...(profile.seriesCode ? { series: String(profile.seriesCode).toUpperCase() } : {}),
-                ...(profile.divisionId ? { divisionId: profile.divisionId } : {}),
-              },
-            }"
-          >
-            {{ profile.seriesName }}
-          </router-link>
-        </template>
-        <template v-if="profile.seasonName && profile.seasonName !== profile.seriesName">
-          <span>/</span>
-          <span>{{ profile.seasonName }}</span>
-        </template>
-        <span>/</span>
-        <router-link v-if="teamPath" :to="teamPath">{{ profile.currentTeamAbbr }}</router-link>
-        <span v-else>{{ profile.currentTeamAbbr }}</span>
-        <span>/</span>
-        <span class="is-current">{{ profile.displayName }}</span>
-      </nav>
-
       <div class="player-detail-hero__main">
         <PlayerAvatar
           :name="profile.displayName"
@@ -154,10 +119,7 @@ const infoItems = computed(() => [
           :key="item.key"
           class="player-detail-hero__info-item"
         >
-          <span v-if="item.logo" class="player-detail-hero__info-logo">
-            <TeamLogo :team="teamForLogo" size="sm" />
-          </span>
-          <img v-else-if="item.icon" :src="item.icon" alt="" class="player-detail-hero__info-icon" />
+          <img v-if="item.icon" :src="item.icon" alt="" class="player-detail-hero__info-icon" />
           <div class="player-detail-hero__info-copy">
             <span class="player-detail-hero__info-label">{{ item.label }}</span>
             <strong class="player-detail-hero__info-value">{{ item.value }}</strong>
@@ -208,31 +170,7 @@ const infoItems = computed(() => [
 .player-detail-hero__inner {
   position: relative;
   z-index: 2;
-  padding: 18px 0 0;
-}
-
-.player-detail-hero__breadcrumb {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 18px;
-  color: rgba(255, 255, 255, 0.56);
-  font-size: 13px;
-
-  a {
-    color: rgba(255, 255, 255, 0.72);
-    text-decoration: none;
-
-    &:hover {
-      color: #fff;
-    }
-  }
-
-  .is-current {
-    color: #fff;
-    font-weight: 700;
-  }
+  padding: 36px 0 0;
 }
 
 .player-detail-hero__main {
@@ -268,19 +206,6 @@ const infoItems = computed(() => [
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0;
-}
-
-.player-detail-hero__info-logo {
-  display: grid;
-  flex: 0 0 40px;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-
-  :deep(.team-logo) {
-    width: 40px;
-    height: 40px;
-  }
 }
 
 .player-detail-hero__badge {

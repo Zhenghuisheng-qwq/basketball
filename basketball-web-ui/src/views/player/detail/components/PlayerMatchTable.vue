@@ -32,6 +32,15 @@ function scoreText(row: PlayerMatchRecord): string {
 }
 
 function formatLine(row: PlayerMatchRecord): string {
+  if (
+    row.fieldGoalsMade == null
+    && row.fieldGoalsAttempted == null
+    && !row.points
+    && !row.rebounds
+    && !row.assists
+  ) {
+    return '--'
+  }
   return `${row.points}分 · ${row.rebounds}板 · ${row.assists}助`
 }
 

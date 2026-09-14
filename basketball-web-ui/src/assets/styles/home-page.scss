@@ -1312,7 +1312,7 @@
   margin-top: 18px;
   padding: 0;
   border: none;
-  background: linear-gradient(180deg, #ff4223 0%, #eb160b 100%);
+  background: var(--cnpa-red, #e10613);
   color: #fff;
   font-weight: 900;
   font-size: 15px;
@@ -2038,8 +2038,8 @@
 .home-competition-filter__item--active,
 .home-focus-filter__item:hover,
 .home-focus-filter__item--active {
-  border-color: #ff321f;
-  background: #ff321f;
+  border-color: var(--cnpa-red, #e10613);
+  background: var(--cnpa-red, #e10613);
   color: #fff;
 }
 

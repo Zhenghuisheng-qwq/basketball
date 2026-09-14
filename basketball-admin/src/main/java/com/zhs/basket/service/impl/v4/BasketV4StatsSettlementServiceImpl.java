@@ -6,6 +6,7 @@ import com.zhs.basket.enums.v4.MatchStatusEnum;
 import com.zhs.basket.enums.v4.RankTypeEnum;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IBasketV4StatsSettlementService;
+import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.support.v4.settlement.OfficialMatchResultSettlementService;
 import com.zhs.basket.support.v4.stage.TieBreakStandingService;
 import com.zhs.common.exception.ServiceException;
@@ -53,6 +54,8 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
     private TieBreakStandingService tieBreakStandingService;
     @Autowired
     private OfficialMatchResultSettlementService officialMatchResultSettlementService;
+    @Autowired
+    private V4PublicReadCachePublisher publicReadCachePublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -81,6 +84,7 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
         rebuildTeamStat(divisionId, seasonId);
         rebuildPlayerStat(divisionId, seasonId);
         rebuildRank(divisionId, seasonId);
+        publicReadCachePublisher.standingMutation(divisionId, seasonId, stageId);
     }
 
     @Override
@@ -99,6 +103,7 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
         rebuildTeamStat(divisionId, seasonId);
         rebuildPlayerStat(divisionId, seasonId);
         rebuildRank(divisionId, seasonId);
+        publicReadCachePublisher.standingMutation(divisionId, seasonId, null);
     }
 
     private void applyOfficialMatchResult(BasketMatchSubmission submission, BasketV4Match match) {

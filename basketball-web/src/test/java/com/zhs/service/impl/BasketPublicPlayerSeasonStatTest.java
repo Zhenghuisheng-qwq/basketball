@@ -22,6 +22,7 @@ import com.zhs.model.v4.BasketV4Match;
 import com.zhs.model.v4.BasketV4MatchPlayerStat;
 import com.zhs.response.publicapi.PublicPlayerSeasonStatVo;
 import com.zhs.service.support.BasketPublicSupport;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,6 +34,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -64,6 +66,12 @@ class BasketPublicPlayerSeasonStatTest {
 
     @InjectMocks
     private BasketPublicPlayerServiceImpl service;
+
+    @BeforeEach
+    void passThroughPublicCache() {
+        when(publicSupport.cacheGetOrLoad(any(), any(), any())).thenAnswer(inv ->
+                ((Supplier<?>) inv.getArgument(1)).get());
+    }
 
     @Test
     void listSeasonStat_returnsDivisionScopedRowsWithNullShooting() {

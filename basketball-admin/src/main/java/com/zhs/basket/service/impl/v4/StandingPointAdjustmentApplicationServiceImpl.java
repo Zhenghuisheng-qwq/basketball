@@ -20,12 +20,14 @@ import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
 import com.zhs.basket.service.v4.IStandingPointAdjustmentApplicationService;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
 import com.zhs.basket.support.v4.MatchSeriesQualificationSyncService;
+import com.zhs.basket.support.v4.V4PublicReadCacheEvictEvent;
 import com.zhs.basket.support.v4.StandingPointAdjustmentCapability;
 import com.zhs.basket.vo.v4.BasketStandingPointAdjustmentVo;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,6 +69,8 @@ public class StandingPointAdjustmentApplicationServiceImpl implements IStandingP
     private IDivisionStageExecutionApplicationService stageExecutionApplicationService;
     @Autowired
     private BasketBusinessAuditWriter auditWriter;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -130,6 +134,8 @@ public class StandingPointAdjustmentApplicationServiceImpl implements IStandingP
         fields.add(AuditFieldInput.of("eventTeamId", "参赛队", null, req.getEventTeamId()));
         auditWriter.writeAudit("V4_STANDING", "EVENT_TEAM", req.getEventTeamId(), "POINT_ADJUSTMENT",
                 "管理员调整赛事积分 " + signed(req.getDelta()), req.getReason().trim(), fields);
+        eventPublisher.publishEvent(new V4PublicReadCacheEvictEvent(
+                req.getDivisionId(), null, row.getSeasonId(), req.getStageId(), req.getEventTeamId(), null));
         return toVo(row);
     }
 

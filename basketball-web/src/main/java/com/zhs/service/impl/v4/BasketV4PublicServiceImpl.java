@@ -8,6 +8,7 @@ import com.zhs.enums.v4.DivisionStatusEnum;
 import com.zhs.enums.v4.MatchPublishStatusEnum;
 import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.enums.v4.PublishStatusEnum;
+import com.zhs.enums.v4.SeasonStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketTeamProfileChange;
 import com.zhs.model.v4.*;
@@ -82,6 +83,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (seasonId == null || seasonId <= 0) {
             return Collections.emptyList();
         }
+        return publicSupport.cacheGetOrLoad("v4:division-list:" + seasonId,
+                () -> loadDivisionsUncached(seasonId),
+                ignored -> ttlForSeason(seasonId));
+    }
+
+    private List<V4PublicDivisionListItemResp> loadDivisionsUncached(Long seasonId) {
         BasketSeason season = seasonDao.selectById(seasonId);
         if (season == null || !Objects.equals(season.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
             return Collections.emptyList();
@@ -235,6 +242,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
     @Override
     public V4PublicSeasonDetailResp getSeasonDetail(Long seasonId) {
+        return publicSupport.cacheGetOrLoad("v4:season:" + seasonId,
+                () -> loadSeasonDetailUncached(seasonId),
+                vo -> ttlSecondsForSeasonStatus(vo.getSeasonStatus()));
+    }
+
+    private V4PublicSeasonDetailResp loadSeasonDetailUncached(Long seasonId) {
         BasketSeason season = requirePublishedSeason(seasonId);
         BasketSeries series = seriesDao.selectById(season.getSeriesId());
         List<BasketDivision> divisions = listDivisionsBySeasonId(season.getId());
@@ -245,22 +258,21 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         resp.setDivisions(toDivisionBriefList(divisions));
         resp.setDefaultDivisionId(divisions.isEmpty() ? null : divisions.get(0).getId());
 
-        int teamCount = 0;
-        int matchCount = 0;
-        int finishedCount = 0;
-        for (BasketDivision division : divisions) {
-            teamCount += countEventTeams(division.getId());
-            matchCount += countPublishedMatches(division.getId(), null);
-            finishedCount += countPublishedMatches(division.getId(), MatchStatusEnum.FINISHED.getCode());
-        }
-        resp.setEventTeamCount(teamCount);
-        resp.setMatchCount(matchCount);
-        resp.setFinishedMatchCount(finishedCount);
+        List<Long> divisionIds = divisions.stream().map(BasketDivision::getId).filter(Objects::nonNull).toList();
+        resp.setEventTeamCount(countEventTeamsInDivisions(divisionIds));
+        resp.setMatchCount(countPublishedMatchesInDivisions(divisionIds, null));
+        resp.setFinishedMatchCount(countPublishedMatchesInDivisions(divisionIds, MatchStatusEnum.FINISHED.getCode()));
         return resp;
     }
 
     @Override
     public V4PublicDivisionDetailResp getDivisionDetail(Long divisionId) {
+        return publicSupport.cacheGetOrLoad("v4:division:" + divisionId,
+                () -> loadDivisionDetailUncached(divisionId),
+                vo -> ttlSecondsForDivisionStatus(vo.getDivisionStatus()));
+    }
+
+    private V4PublicDivisionDetailResp loadDivisionDetailUncached(Long divisionId) {
         BasketDivision division = requireDivision(divisionId);
         BasketSeason season = seasonDao.selectById(division.getSeasonId());
         BasketSeries series = season != null ? seriesDao.selectById(season.getSeriesId()) : null;
@@ -292,6 +304,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
     @Override
     public List<V4PublicEventTeamItemResp> listTeams(Long divisionId) {
+        return publicSupport.cacheGetOrLoad("v4:team-list:" + divisionId,
+                () -> loadTeamsUncached(divisionId),
+                ignored -> ttlForDivision(divisionId));
+    }
+
+    private List<V4PublicEventTeamItemResp> loadTeamsUncached(Long divisionId) {
         requireDivision(divisionId);
         List<BasketEventTeam> teams = eventTeamDao.selectList(new LambdaQueryWrapper<BasketEventTeam>()
                 .eq(BasketEventTeam::getDivisionId, divisionId)
@@ -312,6 +330,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
     @Override
     public V4PublicEventTeamDetailResp getTeamDetail(Long eventTeamId) {
+        return publicSupport.cacheGetOrLoad("v4:team:" + eventTeamId,
+                () -> loadTeamDetailUncached(eventTeamId),
+                ignored -> publicSupport.slowTtlSeconds());
+    }
+
+    private V4PublicEventTeamDetailResp loadTeamDetailUncached(Long eventTeamId) {
         BasketEventTeam team = requireEventTeam(eventTeamId);
         requirePublishedSeason(team.getSeasonId());
         Map<Long, String> captainMap = loadCaptainNameMap(Collections.singletonList(team));
@@ -388,6 +412,18 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     @Override
     public List<V4PublicMatchItemResp> listMatches(Long divisionId, Integer roundNo, String matchStatus,
                                                    Boolean upcomingOnly, Boolean finishedOnly, Long eventTeamId) {
+        String cacheKey = "v4:match-list:" + divisionId
+                + ":" + nvl(roundNo) + ":" + nvl(matchStatus)
+                + ":" + Boolean.TRUE.equals(upcomingOnly)
+                + ":" + Boolean.TRUE.equals(finishedOnly)
+                + ":" + nvl(eventTeamId);
+        return publicSupport.cacheGetOrLoad(cacheKey,
+                () -> loadMatchesUncached(divisionId, roundNo, matchStatus, upcomingOnly, finishedOnly, eventTeamId),
+                ignored -> ttlForDivision(divisionId));
+    }
+
+    private List<V4PublicMatchItemResp> loadMatchesUncached(Long divisionId, Integer roundNo, String matchStatus,
+                                                            Boolean upcomingOnly, Boolean finishedOnly, Long eventTeamId) {
         requireDivision(divisionId);
         LambdaQueryWrapper<BasketV4Match> wrapper = new LambdaQueryWrapper<BasketV4Match>()
                 .eq(BasketV4Match::getDivisionId, divisionId)
@@ -420,6 +456,14 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
     @Override
     public V4PublicMatchDetailResp getMatchDetail(Long matchId) {
+        return publicSupport.cacheGetOrLoad("v4:match:" + matchId,
+                () -> loadMatchDetailUncached(matchId),
+                vo -> isFinalMatch(vo.getMatchStatus())
+                        ? publicSupport.finalizedTtlSeconds()
+                        : publicSupport.liveTtlSeconds());
+    }
+
+    private V4PublicMatchDetailResp loadMatchDetailUncached(Long matchId) {
         BasketV4Match match = requirePublishedMatch(matchId);
         BasketSeason season = requirePublishedSeason(match.getSeasonId());
         Map<Long, BasketEventTeam> teamMap = loadEventTeamMap(Arrays.asList(match.getHomeEventTeamId(), match.getAwayEventTeamId()));
@@ -482,6 +526,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
     @Override
     public List<V4PublicStandingItemResp> listStanding(Long divisionId) {
+        return publicSupport.cacheGetOrLoad("v4:standing:" + divisionId,
+                () -> loadStandingUncached(divisionId),
+                ignored -> ttlForDivision(divisionId));
+    }
+
+    private List<V4PublicStandingItemResp> loadStandingUncached(Long divisionId) {
         requireDivision(divisionId);
         List<BasketStanding> rows = standingDao.selectList(new LambdaQueryWrapper<BasketStanding>()
                 .eq(BasketStanding::getDivisionId, divisionId)
@@ -520,8 +570,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
     @Override
     public List<V4PublicStageItemResp> listStages(Long divisionId) {
-        requireDivision(divisionId);
-        return publicSupport.cacheGetOrLoad("v4:stage:list:" + divisionId, () -> loadStagesUncached(divisionId));
+        return publicSupport.cacheGetOrLoad("v4:stage:list:" + divisionId,
+                () -> {
+                    requireDivision(divisionId);
+                    return loadStagesUncached(divisionId);
+                },
+                ignored -> ttlForDivision(divisionId));
     }
 
     private List<V4PublicStageItemResp> loadStagesUncached(Long divisionId) {
@@ -543,6 +597,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (stageId == null) {
             throw new ServiceException("stageId 不能为空");
         }
+        return publicSupport.cacheGetOrLoad("v4:stage:standings:" + stageId,
+                () -> loadStageStandingsUncached(stageId),
+                ignored -> ttlForStage(stageId));
+    }
+
+    private List<V4PublicStageStandingScopeResp> loadStageStandingsUncached(Long stageId) {
         V4PublicStageItemResp stage = publicStageMapper.selectStageById(stageId);
         Integer qualifyCount = resolveStageQualifyCount(stage);
         List<Long> scopeKeys = publicStageMapper.selectGroupScopeKeysByStageId(stageId);
@@ -585,6 +645,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (stageId == null) {
             throw new ServiceException("stageId 不能为空");
         }
+        return publicSupport.cacheGetOrLoad("v4:stage:bracket:" + stageId,
+                () -> loadStageBracketUncached(stageId),
+                ignored -> ttlForStage(stageId));
+    }
+
+    private List<V4PublicMatchItemResp> loadStageBracketUncached(Long stageId) {
         List<BasketV4Match> matches = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()
                 .eq(BasketV4Match::getStageId, stageId)
                 .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
@@ -602,7 +668,9 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (stageId == null) {
             throw new ServiceException("stageId 不能为空");
         }
-        return matchSeriesDisplaySupport.listByStageId(stageId);
+        return publicSupport.cacheGetOrLoad("v4:stage:series:" + stageId,
+                () -> matchSeriesDisplaySupport.listByStageId(stageId),
+                ignored -> ttlForStage(stageId));
     }
 
     @Override
@@ -610,6 +678,14 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         if (seriesId == null) {
             throw new ServiceException("seriesId 不能为空");
         }
+        return publicSupport.cacheGetOrLoad("v4:match-series:" + seriesId,
+                () -> loadMatchSeriesUncached(seriesId),
+                vo -> isFinalSeries(vo.getSeriesStatus())
+                        ? publicSupport.finalizedTtlSeconds()
+                        : publicSupport.liveTtlSeconds());
+    }
+
+    private V4PublicMatchSeriesDetailResp loadMatchSeriesUncached(Long seriesId) {
         V4PublicMatchSeriesDetailResp detail = matchSeriesDisplaySupport.buildDetail(seriesId, null);
         if (detail == null) {
             throw new ServiceException("系列赛不存在");
@@ -621,8 +697,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
     @Override
     public List<V4PublicScheduleItemResp> listDivisionSchedule(Long divisionId) {
-        requireDivision(divisionId);
-        return matchSeriesDisplaySupport.listScheduleByDivisionId(divisionId);
+        return publicSupport.cacheGetOrLoad("v4:schedule:" + divisionId,
+                () -> {
+                    requireDivision(divisionId);
+                    return matchSeriesDisplaySupport.listScheduleByDivisionId(divisionId);
+                },
+                ignored -> ttlForDivision(divisionId));
     }
 
     private void enrichStandingTeamInfo(List<V4PublicStandingItemResp> rows) {
@@ -690,6 +770,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
     @Override
     public List<V4PublicTeamStatItemResp> listTeamStat(Long divisionId) {
+        return publicSupport.cacheGetOrLoad("v4:team-stat:" + divisionId,
+                () -> loadTeamStatUncached(divisionId),
+                ignored -> ttlForDivision(divisionId));
+    }
+
+    private List<V4PublicTeamStatItemResp> loadTeamStatUncached(Long divisionId) {
         requireDivision(divisionId);
         List<BasketTeamStat> rows = teamStatDao.selectList(new LambdaQueryWrapper<BasketTeamStat>()
                 .eq(BasketTeamStat::getDivisionId, divisionId)
@@ -731,6 +817,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
     @Override
     public List<V4PublicPlayerStatItemResp> listPlayerStat(Long divisionId) {
+        return publicSupport.cacheGetOrLoad("v4:player-stat:" + divisionId,
+                () -> loadPlayerStatUncached(divisionId),
+                ignored -> ttlForDivision(divisionId));
+    }
+
+    private List<V4PublicPlayerStatItemResp> loadPlayerStatUncached(Long divisionId) {
         requireDivision(divisionId);
         List<BasketPlayerStat> rows = playerStatDao.selectList(new LambdaQueryWrapper<BasketPlayerStat>()
                 .eq(BasketPlayerStat::getDivisionId, divisionId)
@@ -774,6 +866,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
     @Override
     public List<V4PublicRankItemResp> listRank(Long divisionId, String rankType) {
+        return publicSupport.cacheGetOrLoad("v4:rank:" + divisionId + ":" + nvl(rankType),
+                () -> loadRankUncached(divisionId, rankType),
+                ignored -> ttlForDivision(divisionId));
+    }
+
+    private List<V4PublicRankItemResp> loadRankUncached(Long divisionId, String rankType) {
         requireDivision(divisionId);
         LambdaQueryWrapper<BasketRank> wrapper = new LambdaQueryWrapper<BasketRank>()
                 .eq(BasketRank::getDivisionId, divisionId)
@@ -1059,15 +1157,29 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     }
 
     private int countEventTeams(Long divisionId) {
+        return countEventTeamsInDivisions(Collections.singletonList(divisionId));
+    }
+
+    private int countEventTeamsInDivisions(List<Long> divisionIds) {
+        if (CollectionUtils.isEmpty(divisionIds)) {
+            return 0;
+        }
         Long count = eventTeamDao.selectCount(new LambdaQueryWrapper<BasketEventTeam>()
-                .eq(BasketEventTeam::getDivisionId, divisionId)
+                .in(BasketEventTeam::getDivisionId, divisionIds)
                 .eq(BasketEventTeam::getIsDelete, BasketPublicConstants.NOT_DELETED));
         return count != null ? count.intValue() : 0;
     }
 
     private int countPublishedMatches(Long divisionId, String matchStatus) {
+        return countPublishedMatchesInDivisions(Collections.singletonList(divisionId), matchStatus);
+    }
+
+    private int countPublishedMatchesInDivisions(List<Long> divisionIds, String matchStatus) {
+        if (CollectionUtils.isEmpty(divisionIds)) {
+            return 0;
+        }
         LambdaQueryWrapper<BasketV4Match> wrapper = new LambdaQueryWrapper<BasketV4Match>()
-                .eq(BasketV4Match::getDivisionId, divisionId)
+                .in(BasketV4Match::getDivisionId, divisionIds)
                 .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
                 .eq(BasketV4Match::getPublishStatus, MatchPublishStatusEnum.PUBLISHED.getCode());
         if (StringUtils.hasText(matchStatus)) {
@@ -1619,5 +1731,78 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             return null;
         }
         return trimmed;
+    }
+
+    private long ttlForDivision(Long divisionId) {
+        if (divisionId == null) {
+            return publicSupport.liveTtlSeconds();
+        }
+        BasketDivision division = divisionDao.selectById(divisionId);
+        return ttlSecondsForDivisionStatus(division == null ? null : division.getDivisionStatus());
+    }
+
+    private long ttlForSeason(Long seasonId) {
+        if (seasonId == null) {
+            return publicSupport.slowTtlSeconds();
+        }
+        BasketSeason season = seasonDao.selectById(seasonId);
+        return ttlSecondsForSeasonStatus(season == null ? null : season.getSeasonStatus());
+    }
+
+    private long ttlForStage(Long stageId) {
+        if (stageId == null) {
+            return publicSupport.liveTtlSeconds();
+        }
+        V4PublicStageItemResp stage = publicStageMapper.selectStageById(stageId);
+        return stage != null && isFinalStage(stage.getExecutionStatus())
+                ? publicSupport.finalizedTtlSeconds()
+                : publicSupport.liveTtlSeconds();
+    }
+
+    private long ttlSecondsForDivisionStatus(String status) {
+        if (DivisionStatusEnum.ARCHIVED.getCode().equals(status)) {
+            return publicSupport.archivedTtlSeconds();
+        }
+        if (DivisionStatusEnum.FINISHED.getCode().equals(status)) {
+            return publicSupport.finalizedTtlSeconds();
+        }
+        return publicSupport.liveTtlSeconds();
+    }
+
+    private long ttlSecondsForSeasonStatus(String status) {
+        if (SeasonStatusEnum.ARCHIVED.getCode().equals(status)) {
+            return publicSupport.archivedTtlSeconds();
+        }
+        if (SeasonStatusEnum.FINISHED.getCode().equals(status)) {
+            return publicSupport.finalizedTtlSeconds();
+        }
+        return publicSupport.slowTtlSeconds();
+    }
+
+    private boolean isFinalDivision(String status) {
+        return DivisionStatusEnum.FINISHED.getCode().equals(status)
+                || DivisionStatusEnum.ARCHIVED.getCode().equals(status);
+    }
+
+    private boolean isFinalSeason(String status) {
+        return SeasonStatusEnum.FINISHED.getCode().equals(status)
+                || SeasonStatusEnum.ARCHIVED.getCode().equals(status);
+    }
+
+    private boolean isFinalMatch(String status) {
+        return MatchStatusEnum.FINISHED.getCode().equals(status)
+                || MatchStatusEnum.FORFEITED.getCode().equals(status);
+    }
+
+    private boolean isFinalStage(String status) {
+        return "COMPLETED".equalsIgnoreCase(status);
+    }
+
+    private boolean isFinalSeries(String status) {
+        return "COMPLETED".equalsIgnoreCase(status);
+    }
+
+    private String nvl(Object value) {
+        return value == null ? "-" : String.valueOf(value);
     }
 }

@@ -9,6 +9,7 @@ import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.PlayerCertApproveReq;
 import com.zhs.basket.req.PlayerCertRejectReq;
 import com.zhs.basket.support.BatchAuditSupport;
+import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.service.IBasketPlayerCertService;
 import com.zhs.basket.support.*;
@@ -43,6 +44,7 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
     @Autowired private PlayerNoGenerator playerNoGenerator;
     @Autowired private BasketAdminMessageService messageService;
     @Autowired private BasketAccountSecurityLogWriter securityLogWriter;
+    @Autowired private V4PublicReadCachePublisher publicReadCachePublisher;
 
     @Override
     public List<PlayerCertListVo> selectList(PlayerCertQuery query) {
@@ -146,6 +148,9 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
         messageService.sendSiteMessage(app.getMemberId(), auditorId, "PLAYER_CERT", applicationId,
                 "球员认证已通过", "您的球员认证申请已通过审核。");
         securityLogWriter.write(app.getMemberId(), "PLAYER_CERT_APPROVED", "球员认证通过", null, "已通过", auditorId);
+        if (profile != null) {
+            publicReadCachePublisher.playerMutation(profile.getId());
+        }
     }
 
     @Override

@@ -17,6 +17,7 @@ import com.zhs.basket.mapper.v4.BasketStandingMapper;
 import com.zhs.basket.service.v4.IBasketV4StatsSettlementService;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
+import org.springframework.context.ApplicationEventPublisher;
 import com.zhs.basket.support.v4.MatchSeriesQualificationSyncService;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
@@ -54,6 +55,7 @@ class StandingPointAdjustmentApplicationServiceImplTest {
     @Mock private IBasketV4StatsSettlementService statsSettlementService;
     @Mock private IDivisionStageExecutionApplicationService stageExecutionApplicationService;
     @Mock private BasketBusinessAuditWriter auditWriter;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private StandingPointAdjustmentApplicationServiceImpl service;

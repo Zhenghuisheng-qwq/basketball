@@ -77,77 +77,6 @@ async function loadPlayer() {
       return
     }
     const profile = mapPublicPlayerProfile(rawDetail, { divisionId: queryDivisionId.value })
-    const detail = buildEmptyPlayerDetail(profile)
-    let matches = detail.allMatches
-    let inPlayoffs = false
-    let finishedMatchIds = new Set<string>()
-    const contextDivisionId = queryDivisionId.value || profile.divisionId
-    if (contextDivisionId && profile.eventTeamId) {
-      try {
-        const v4Res = await getV4PublicMatchList({
-          divisionId: contextDivisionId,
-          eventTeamId: profile.eventTeamId,
-        })
-        finishedMatchIds = new Set(
-          (v4Res.data ?? [])
-            .filter((item) => {
-              const status = String(item.matchStatus || '').toUpperCase()
-              return status === 'FINISHED' || status === 'FORFEITED' || status === 'FORFEIT'
-            })
-            .map((item) => String(item.matchId)),
-        )
-        matches = (v4Res.data ?? []).map((item) => {
-          const mapped = mapV4MatchToTeamRecord(item, profile.eventTeamId || profile.currentTeamId)
-          if (mapped.stage === 'playoffs') inPlayoffs = true
-          return {
-            id: mapped.id,
-            matchId: mapped.id,
-            date: mapped.date,
-            tournamentName: profile.seriesName || profile.seasonName || '公开赛事',
-            stageName: [
-              mapped.stageHeadline?.startsWith('第') ? mapped.stageHeadline : '',
-              mapped.playoffGame || '',
-            ].filter(Boolean).join(' · ')
-              || mapped.stageHeadline
-              || mapped.competition
-              || '--',
-            teamName: profile.currentTeamName,
-            teamId: profile.eventTeamId || profile.currentTeamId,
-            teamLogoUrl: profile.currentTeamLogoUrl,
-            opponentName: mapped.opponentName || '对手',
-            opponentId: mapped.opponentId,
-            opponentLogoUrl: mapped.opponentLogoUrl || '',
-            result: mapped.result === 'win' ? 'WIN' : 'LOSS',
-            resultLabel: mapped.resultType === 'EVENT_DISQUALIFICATION'
-              ? (mapped.result === 'win' ? '对手取消资格判负' : '球队取消资格判负')
-              : mapped.resultLabel,
-            teamScore: mapped.teamScore ?? 0,
-            opponentScore: mapped.opponentScore ?? 0,
-            originalTeamScore: mapped.originalTeamScore,
-            originalOpponentScore: mapped.originalOpponentScore,
-            seriesScoreText: mapped.seriesScoreText,
-            matchSeriesId: mapped.matchSeriesId,
-            minutes: 0,
-            points: 0,
-            rebounds: 0,
-            assists: 0,
-            steals: 0,
-            blocks: 0,
-            turnovers: 0,
-            fouls: 0,
-            fieldGoalsMade: null,
-            fieldGoalsAttempted: null,
-            threePointsMade: null,
-            threePointsAttempted: null,
-            freeThrowsMade: null,
-            freeThrowsAttempted: null,
-          }
-        })
-        matches.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-      } catch {
-        matches = []
-      }
-    }
     const seasonStats = (statRes.data ?? []).filter((row) =>
       queryDivisionId.value ? String(row.divisionId || '') === queryDivisionId.value : true,
     )
@@ -156,13 +85,8 @@ async function loadPlayer() {
     if (eventPlayerId) {
       profile.eventPlayerId = eventPlayerId
     }
-    if (inPlayoffs) {
-      profile.currentStage = '季后赛'
-    }
-    matches = await hydratePlayerMatchStats(matches, profile, finishedMatchIds)
+    const detail = buildEmptyPlayerDetail(profile)
     detail.profile = profile
-    detail.recentMatches = matches.slice(0, 5)
-    detail.allMatches = matches
     detail.careerStats = mapPublicPlayerSeasonStats(scopedStats)
     detail.seasonStageOptions = mapSeasonStageOptions(scopedStats)
     detail.teamHistory = buildPlayerTeamHistory(profile, scopedStats)
@@ -171,6 +95,7 @@ async function loadPlayer() {
     playerDetail.value = detail
     loadState.value = 'success'
     document.title = `${profile.displayName} - CNPA 篮球赛事平台`
+    void loadPlayerMatches(current, profile)
   } catch (err) {
     if (current !== reqId) return
     playerDetail.value = null
@@ -179,31 +104,126 @@ async function loadPlayer() {
   }
 }
 
-async function hydratePlayerMatchStats(
+async function loadPlayerMatches(current: number, profile: PlayerProfile) {
+  const contextDivisionId = queryDivisionId.value || profile.divisionId
+  if (!contextDivisionId || !profile.eventTeamId) return
+  try {
+    const v4Res = await getV4PublicMatchList({
+      divisionId: contextDivisionId,
+      eventTeamId: profile.eventTeamId,
+    })
+    if (current !== reqId) return
+    const finishedMatchIds = new Set<string>()
+    let inPlayoffs = false
+    const matches = (v4Res.data ?? []).map((item) => {
+      const status = String(item.matchStatus || '').toUpperCase()
+      if (status === 'FINISHED' || status === 'FORFEITED' || status === 'FORFEIT') {
+        finishedMatchIds.add(String(item.matchId))
+      }
+      const mapped = mapV4MatchToTeamRecord(item, profile.eventTeamId || profile.currentTeamId)
+      if (mapped.stage === 'playoffs') inPlayoffs = true
+      return {
+        id: mapped.id,
+        matchId: mapped.id,
+        date: mapped.date,
+        tournamentName: profile.seriesName || profile.seasonName || '公开赛事',
+        stageName: [
+          mapped.stageHeadline?.startsWith('第') ? mapped.stageHeadline : '',
+          mapped.playoffGame || '',
+        ].filter(Boolean).join(' · ')
+          || mapped.stageHeadline
+          || mapped.competition
+          || '--',
+        teamName: profile.currentTeamName,
+        teamId: profile.eventTeamId || profile.currentTeamId,
+        teamLogoUrl: profile.currentTeamLogoUrl,
+        opponentName: mapped.opponentName || '对手',
+        opponentId: mapped.opponentId,
+        opponentLogoUrl: mapped.opponentLogoUrl || '',
+        result: mapped.result === 'win' ? 'WIN' : 'LOSS',
+        resultLabel: mapped.resultType === 'EVENT_DISQUALIFICATION'
+          ? (mapped.result === 'win' ? '对手取消资格判负' : '球队取消资格判负')
+          : mapped.resultLabel,
+        teamScore: mapped.teamScore ?? 0,
+        opponentScore: mapped.opponentScore ?? 0,
+        originalTeamScore: mapped.originalTeamScore,
+        originalOpponentScore: mapped.originalOpponentScore,
+        seriesScoreText: mapped.seriesScoreText,
+        matchSeriesId: mapped.matchSeriesId,
+        minutes: 0,
+        points: 0,
+        rebounds: 0,
+        assists: 0,
+        steals: 0,
+        blocks: 0,
+        turnovers: 0,
+        fouls: 0,
+        fieldGoalsMade: null,
+        fieldGoalsAttempted: null,
+        threePointsMade: null,
+        threePointsAttempted: null,
+        freeThrowsMade: null,
+        freeThrowsAttempted: null,
+      } satisfies PlayerMatchRecord
+    })
+    matches.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    if (inPlayoffs) profile.currentStage = '季后赛'
+    applyPlayerMatches(matches, profile)
+    void hydrateMatchStatsInBackground(current, matches, profile, finishedMatchIds)
+  } catch {
+    if (current !== reqId) return
+    applyPlayerMatches([], profile)
+  }
+}
+
+function applyPlayerMatches(matches: PlayerMatchRecord[], profile: PlayerProfile) {
+  if (!playerDetail.value) return
+  playerDetail.value = {
+    ...playerDetail.value,
+    profile,
+    recentMatches: matches.slice(0, 5),
+    allMatches: matches,
+  }
+}
+
+function patchMatchRow(matchId: string, nextRow: PlayerMatchRecord) {
+  const detail = playerDetail.value
+  if (!detail) return
+  const allMatches = detail.allMatches.map((row) => (
+    String(row.matchId) === matchId ? nextRow : row
+  ))
+  playerDetail.value = {
+    ...detail,
+    recentMatches: allMatches.slice(0, 5),
+    allMatches,
+  }
+}
+
+async function hydrateMatchStatsInBackground(
+  current: number,
   rows: PlayerMatchRecord[],
   profile: PlayerProfile,
-  finishedMatchIds?: Set<string>,
-): Promise<PlayerMatchRecord[]> {
-  if (!rows.length) return rows
-  const next = [...rows]
-  const targets = next
-    .map((row, index) => ({ row, index }))
-    .filter((item) => !finishedMatchIds || finishedMatchIds.has(String(item.row.matchId)))
-    .slice(0, 20)
-  if (!targets.length) return next
-  const details = await Promise.all(targets.map(async (item) => {
-    try {
-      const res = await getV4PublicMatchDetail(item.row.matchId)
-      return res.data ?? null
-    } catch {
-      return null
+  finishedMatchIds: Set<string>,
+) {
+  const queue = rows.filter((row) => finishedMatchIds.has(String(row.matchId)))
+  const workerCount = Math.min(4, queue.length)
+  if (!workerCount) return
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (queue.length) {
+      const row = queue.shift()
+      if (!row || current !== reqId) return
+      try {
+        const res = await getV4PublicMatchDetail(row.matchId)
+        if (current !== reqId) return
+        patchMatchRow(
+          String(row.matchId),
+          applyPlayerBoxScore(row, findPlayerBoxScore(res.data?.playerStats, profile)),
+        )
+      } catch {
+        // 单场失败不影响页面
+      }
     }
   }))
-  details.forEach((detail, offset) => {
-    const target = targets[offset].index
-    next[target] = applyPlayerBoxScore(next[target], findPlayerBoxScore(detail?.playerStats, profile))
-  })
-  return next
 }
 
 function setTab(tab: PlayerDetailTab) {

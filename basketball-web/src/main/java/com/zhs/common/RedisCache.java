@@ -3,7 +3,11 @@ package com.zhs.common;
 import jakarta.annotation.Resource;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -44,5 +48,17 @@ public class RedisCache {
 
     public Long increment(String key) {
         return redisTemplate.opsForValue().increment(key);
+    }
+
+    public Set<String> keys(String pattern) {
+        Set<String> keys = redisTemplate.keys(pattern);
+        return keys == null ? Collections.emptySet() : keys;
+    }
+
+    public void deleteObjects(Collection<String> keys) {
+        if (CollectionUtils.isEmpty(keys)) {
+            return;
+        }
+        redisTemplate.delete(keys);
     }
 }

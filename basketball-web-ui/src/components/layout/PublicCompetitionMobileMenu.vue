@@ -8,7 +8,6 @@ import {
 
 defineProps<{
   isEventsNavActive: boolean
-  isDataNavActive: boolean
   getEntryHighlight: (entry: PublicMenuEntry) => 'primary' | 'secondary' | null
 }>()
 
@@ -61,43 +60,10 @@ function handleNavigate(entry: PublicMenuEntry) {
             }"
             @click="handleNavigate(entry)"
           >
-            <span class="mobile-competition-nav__icon">{{ entry.abbrev }}</span>
-            <span>{{ entry.label }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="mobile-competition-nav__section">
-      <button
-        type="button"
-        class="mobile-competition-nav__trigger"
-        :class="{ 'mobile-competition-nav__trigger--active': isDataNavActive }"
-        :aria-expanded="openSection === 'data'"
-        @click="toggleSection('data')"
-      >
-        数据
-      </button>
-
-      <div v-if="openSection === 'data'" class="mobile-competition-nav__panel">
-        <div
-          v-for="group in competitionMenuGroups.data"
-          :key="group.title"
-          class="mobile-competition-nav__group"
-        >
-          <div class="mobile-competition-nav__group-title">{{ group.title }}</div>
-          <button
-            v-for="entry in group.entries"
-            :key="entry.id"
-            type="button"
-            class="mobile-competition-nav__entry"
-            :class="{
-              'mobile-competition-nav__entry--active': getEntryHighlight(entry) === 'primary',
-              'mobile-competition-nav__entry--secondary': getEntryHighlight(entry) === 'secondary',
-            }"
-            @click="handleNavigate(entry)"
-          >
-            <span class="mobile-competition-nav__icon">{{ entry.abbrev }}</span>
+            <span class="mobile-competition-nav__icon">
+              <img v-if="entry.icon" :src="entry.icon" alt="" />
+              <template v-else>{{ entry.abbrev }}</template>
+            </span>
             <span>{{ entry.label }}</span>
           </button>
         </div>
@@ -184,8 +150,16 @@ function handleNavigate(entry: PublicMenuEntry) {
   width: 28px;
   height: 28px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  background: #fff;
   font-size: 10px;
   font-weight: 800;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 }
 </style>

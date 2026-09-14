@@ -104,7 +104,10 @@ defineExpose({
           }"
           @click="handleNavigate(entry)"
         >
-          <span class="menu-entry__icon" aria-hidden="true">{{ entry.abbrev }}</span>
+          <span class="menu-entry__icon" aria-hidden="true">
+            <img v-if="entry.icon" :src="entry.icon" alt="" />
+            <template v-else>{{ entry.abbrev }}</template>
+          </span>
           <span class="menu-entry__name">{{ entry.label }}</span>
         </button>
       </section>
@@ -140,10 +143,6 @@ defineExpose({
   padding: 8px 0 10px;
   overflow-y: auto;
   overscroll-behavior: contain;
-}
-
-.competition-mega-menu[data-menu-type='data'] .competition-mega-menu__body {
-  padding: 14px 12px 16px;
 }
 
 .menu-section + .menu-section {
@@ -224,24 +223,6 @@ defineExpose({
   }
 }
 
-.competition-mega-menu[data-menu-type='data'] .menu-entry {
-  display: flex;
-  gap: 12px;
-  min-height: 46px;
-  padding: 6px 10px 6px 8px;
-  border-radius: 4px;
-
-  &:hover,
-  &:focus-visible,
-  &--active {
-    &::before {
-      top: 6px;
-      bottom: 6px;
-      border-radius: 0 2px 2px 0;
-    }
-  }
-}
-
 .menu-entry__icon {
   flex: 0 0 auto;
   display: grid;
@@ -249,11 +230,19 @@ defineExpose({
   width: 30px;
   height: 30px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  background: #fff;
   color: rgba(255, 255, 255, 0.9);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.04em;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 }
 
 .menu-entry__name {
@@ -267,6 +256,6 @@ defineExpose({
 }
 
 .menu-entry--active .menu-entry__icon {
-  background: rgba(225, 6, 19, 0.28);
+  background: #fff;
 }
 </style>

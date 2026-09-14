@@ -22,8 +22,10 @@ import com.zhs.basket.mapper.v4.BasketV4MatchTeamStatMapper;
 import com.zhs.basket.service.v4.IBasketMatchSeriesService;
 import com.zhs.basket.service.v4.IBasketV4StatsSettlementService;
 import com.zhs.basket.support.v4.schedule.PairingResolutionGuard;
+import com.zhs.basket.support.v4.V4PublicReadCacheEvictEvent;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +64,8 @@ public class OfficialMatchResultSettlementService {
     @Autowired
     @Lazy
     private IBasketV4StatsSettlementService statsSettlementService;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Transactional(rollbackFor = Exception.class)
     public void settleFromSubmission(Long submissionId) {
@@ -439,6 +443,14 @@ public class OfficialMatchResultSettlementService {
         } else if (match.getDivisionId() != null) {
             statsSettlementService.rebuildDivisionStats(match.getDivisionId());
         }
+        eventPublisher.publishEvent(new V4PublicReadCacheEvictEvent(
+                match.getDivisionId(),
+                match.getId(),
+                match.getSeasonId(),
+                match.getStageId(),
+                match.getHomeEventTeamId(),
+                match.getAwayEventTeamId(),
+                match.getSeriesId()));
     }
 
     private BasketV4Match requireMatchForUpdate(Long matchId) {

@@ -13,6 +13,7 @@ import com.zhs.basket.mapper.v4.BasketTeamLifecycleClosingMapper;
 import com.zhs.basket.service.v4.IBasketV4SeasonService;
 import com.zhs.basket.support.CaptainGrantLogSupport;
 import com.zhs.common.exception.ServiceException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -48,6 +49,7 @@ class BasketV4DivisionClosingServiceImplTest {
     @Mock private BasketTeamLifecycleClosingMapper lifecycleClosingMapper;
     @Mock private CaptainGrantLogSupport grantLogSupport;
     @Mock private IBasketV4SeasonService seasonService;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private BasketV4DivisionClosingServiceImpl closingService;

@@ -31,6 +31,7 @@ import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
 import com.zhs.basket.service.v4.IPlaceholderResolutionApplicationService;
 import com.zhs.basket.service.v4.IStagePairingExecutionApplicationService;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
+import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.support.v4.bracket.BracketSlot;
 import com.zhs.basket.support.v4.bracket.GroupRankParticipantResolver;
 import com.zhs.basket.support.v4.bracket.ParticipantResolveContext;
@@ -95,6 +96,8 @@ public class PlaceholderResolutionApplicationServiceImpl implements IPlaceholder
     @Autowired
     @Lazy
     private IDivisionStageExecutionApplicationService stageExecutionApplicationService;
+    @Autowired
+    private V4PublicReadCachePublisher publicReadCachePublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -198,6 +201,7 @@ public class PlaceholderResolutionApplicationServiceImpl implements IPlaceholder
                 "PLACEHOLDER_RESOLVE", "解析淘汰占位为真实 EventTeam", null, List.of(
                         field("stageId", String.valueOf(stage.getId())),
                         field("qualificationStageId", String.valueOf(sourceStageId))));
+        publicReadCachePublisher.scheduleMutation(stage.getDivisionId(), null, stage.getId());
         return pairingExecutionApplicationService.getCurrent(stage.getId());
     }
 

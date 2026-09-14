@@ -53,15 +53,6 @@ const heroDescription = computed(() => {
   return props.team.description
 })
 
-const seriesCrumb = computed(() => props.team.seriesName?.trim() || '')
-const seasonCrumb = computed(() => props.team.seasonName?.trim() || '')
-const divisionCrumb = computed(() => props.team.divisionName?.trim() || '')
-const tournamentQuery = computed(() => ({
-  ...(props.team.seriesCode ? { series: String(props.team.seriesCode).toUpperCase() } : {}),
-  ...(teamPageCtx?.seasonId.value ? { seasonId: teamPageCtx.seasonId.value } : {}),
-  ...(teamPageCtx?.divisionId.value ? { divisionId: teamPageCtx.divisionId.value } : {}),
-}))
-
 const compareDivisionId = computed(() =>
   String(
     teamPageCtx?.divisionId.value
@@ -149,26 +140,6 @@ const infoCards = computed<HeroInfoCard[]>(() => [
     </div>
 
     <div class="team-hero__inner">
-      <nav class="team-hero__breadcrumb" aria-label="面包屑">
-        <router-link to="/tournament" class="team-hero__crumb">赛事</router-link>
-        <template v-if="seriesCrumb">
-          <span class="team-hero__crumb-sep">/</span>
-          <router-link :to="{ path: '/tournament', query: tournamentQuery }" class="team-hero__crumb">
-            {{ seriesCrumb }}
-          </router-link>
-        </template>
-        <template v-if="seasonCrumb && seasonCrumb !== seriesCrumb">
-          <span class="team-hero__crumb-sep">/</span>
-          <span class="team-hero__crumb">{{ seasonCrumb }}</span>
-        </template>
-        <template v-if="divisionCrumb && divisionCrumb !== seasonCrumb">
-          <span class="team-hero__crumb-sep">/</span>
-          <span class="team-hero__crumb">{{ divisionCrumb }}</span>
-        </template>
-        <span class="team-hero__crumb-sep">/</span>
-        <span class="team-hero__crumb team-hero__crumb--current">{{ team.name }}</span>
-      </nav>
-
       <div class="team-hero__main">
         <div class="team-hero__logo-wrap">
           <TeamLogo :team="team" size="hero" />
@@ -287,37 +258,8 @@ const infoCards = computed<HeroInfoCard[]>(() => [
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding: 22px 0 0;
+  padding: 50px 0 0;
   box-sizing: border-box;
-}
-
-.team-hero__breadcrumb {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 28px;
-  padding-left: var(--team-hero-content-offset);
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.team-hero__crumb {
-  color: inherit;
-  transition: color 0.2s ease;
-
-  &:hover {
-    color: rgba(255, 255, 255, 0.88);
-  }
-
-  &--current {
-    color: #fff;
-    font-weight: 700;
-  }
-}
-
-.team-hero__crumb-sep {
-  opacity: 0.38;
 }
 
 .team-hero__main {

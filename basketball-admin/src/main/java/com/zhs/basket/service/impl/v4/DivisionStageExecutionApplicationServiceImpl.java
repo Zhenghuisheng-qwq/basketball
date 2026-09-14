@@ -33,6 +33,7 @@ import com.zhs.basket.support.v4.stage.StageSchedulePrerequisiteValidator;
 import com.zhs.basket.support.v4.stage.StructureGenerationPrerequisiteValidator;
 import com.zhs.basket.support.v4.stage.StageSchedulePreviewVo;
 import com.zhs.basket.support.standing.DisciplineStandingAdjustmentResolver;
+import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.support.v4.stage.TieBreakStandingService;
 import com.zhs.basket.vo.v4.*;
 import com.zhs.common.exception.ServiceException;
@@ -108,6 +109,8 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private com.zhs.basket.support.v4.EventTeamParticipationGuard eventTeamParticipationGuard;
     @Autowired(required = false)
     private DisciplineStandingAdjustmentResolver disciplineStandingAdjustmentResolver;
+    @Autowired
+    private V4PublicReadCachePublisher publicReadCachePublisher;
 
     @Override
     public List<BasketDivisionStageExecutionListVo> listStages(Long divisionId) {
@@ -441,6 +444,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         stage.setCompletedTime(now);
         stage.setUpdateTime(now);
         stageMapper.updateExecutionStatus(stage);
+        publicReadCachePublisher.standingMutation(stage.getDivisionId(), null, stageId);
     }
 
     @Override
@@ -517,6 +521,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
                 stageMapper.updateExecutionStatus(nextStage);
             }
         }
+        publicReadCachePublisher.scheduleMutation(stage.getDivisionId(), null, stageId);
     }
 
     @Override
@@ -555,6 +560,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         stage.setConfirmedTime(null);
         stage.setUpdateTime(new Date());
         stageMapper.updateExecutionStatus(stage);
+        publicReadCachePublisher.scheduleMutation(stage.getDivisionId(), null, stageId);
     }
 
     @Override
@@ -712,6 +718,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         }
 
         qualificationMapper.softDeletePreviewByStageId(stage.getId());
+        publicReadCachePublisher.standingMutation(stage.getDivisionId(), null, stage.getId());
     }
 
     private BasketStandingRankReasonVo toRankReasonVo(BasketStandingRankReason reason) {

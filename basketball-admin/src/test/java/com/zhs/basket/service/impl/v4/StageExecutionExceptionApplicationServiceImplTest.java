@@ -29,6 +29,7 @@ import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
 import com.zhs.basket.support.v4.MatchSeriesQualificationSyncService;
 import com.zhs.basket.support.v4.schedule.WinnerOfSeriesAdvanceSupport;
+import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.support.v4.settlement.OfficialMatchResultSettlementService;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
@@ -71,6 +72,7 @@ class StageExecutionExceptionApplicationServiceImplTest {
     @Mock private IDivisionStageExecutionApplicationService stageExecutionService;
     @Mock private BasketBusinessAuditWriter auditWriter;
     @Mock private OfficialMatchResultSettlementService officialMatchResultSettlementService;
+    @Mock private V4PublicReadCachePublisher publicReadCachePublisher;
     @Mock private WinnerOfSeriesAdvanceSupport winnerOfSeriesAdvanceSupport;
     @Mock private com.zhs.basket.support.v4.EventTeamParticipationGuard eventTeamParticipationGuard;
 
