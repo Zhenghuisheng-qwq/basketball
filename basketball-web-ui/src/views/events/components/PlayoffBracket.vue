@@ -86,10 +86,6 @@ const boardMinWidth = computed(() => {
   return `${columns * 236 + connectors * 34}px`
 })
 
-function roundIndex(index: number): string {
-  return String(index + 1).padStart(2, '0')
-}
-
 function railKind(fromCount: number, toCount: number): 'merge' | 'line' {
   return fromCount > toCount ? 'merge' : 'line'
 }
@@ -159,7 +155,6 @@ function railUnitAdvanced(
             <template v-for="(column, index) in layout.left" :key="column.key">
               <div class="bracket-round">
                 <div class="bracket-round__head">
-                  <span class="bracket-round__index">{{ roundIndex(index) }}</span>
                   <strong>{{ column.label }}</strong>
                   <em>{{ column.labelEn }}</em>
                 </div>
@@ -198,7 +193,6 @@ function railUnitAdvanced(
 
         <div class="bracket-final">
           <div class="bracket-round__head bracket-round__head--final">
-            <span class="bracket-round__index">{{ roundIndex(layout.left.length) }}</span>
             <strong>总决赛</strong>
             <em>FINAL</em>
           </div>
@@ -254,7 +248,7 @@ function railUnitAdvanced(
 
 <style scoped lang="scss">
 .playoff-bracket {
-  --bracket-line: rgba(17, 17, 17, 0.16);
+  --bracket-line: rgba(17, 17, 17, 0.28);
   --bracket-line-on: var(--cnpa-red, #e10613);
   width: 100%;
 }
@@ -314,12 +308,10 @@ function railUnitAdvanced(
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 8px 2px 4px;
+  padding: 10px 2px 8px;
   border: 1px solid rgba(17, 17, 17, 0.06);
   border-radius: 4px;
-  background:
-    radial-gradient(circle at 50% 46%, rgba(225, 6, 19, 0.04), transparent 36%),
-    linear-gradient(180deg, #f8f7f5 0%, #f1efec 100%);
+  background: linear-gradient(180deg, #f8f7f5 0%, #f1efec 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
@@ -331,7 +323,7 @@ function railUnitAdvanced(
   max-width: 1320px;
   min-height: 0;
   margin-inline: auto;
-  padding: 10px 8px 16px;
+  padding: 8px 8px 18px;
 }
 
 .bracket-half {
@@ -354,14 +346,14 @@ function railUnitAdvanced(
   display: flex;
   flex-direction: column;
   padding: 0 6px;
-  background: linear-gradient(180deg, rgba(17, 17, 17, 0.018), transparent 72%);
-  box-shadow: inset 0 1px 0 rgba(17, 17, 17, 0.06);
+  background: linear-gradient(180deg, rgba(17, 17, 17, 0.008), transparent 48%);
+  box-shadow: inset 0 1px 0 rgba(17, 17, 17, 0.04);
 }
 
 .bracket-round__head,
 .bracket-rail__head {
-  min-height: 46px;
-  margin-bottom: 2px;
+  min-height: 36px;
+  margin-bottom: 0;
 }
 
 .bracket-round__head {
@@ -385,15 +377,6 @@ function railUnitAdvanced(
     font-weight: 800;
     letter-spacing: 0.08em;
   }
-}
-
-.bracket-round__index {
-  display: block;
-  margin-bottom: 1px;
-  color: rgba(17, 17, 17, 0.28);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
 }
 
 .bracket-round__head--final {
@@ -420,10 +403,12 @@ function railUnitAdvanced(
   flex-direction: column;
   min-width: 268px;
   padding: 0 8px;
-  background:
-    radial-gradient(circle at 50% 58%, rgba(225, 6, 19, 0.055), transparent 58%),
-    linear-gradient(180deg, rgba(225, 6, 19, 0.03), transparent 70%);
-  box-shadow: inset 0 1px 0 rgba(225, 6, 19, 0.12);
+  background: radial-gradient(
+    ellipse 58% 36% at 50% 64%,
+    rgba(225, 6, 19, 0.016),
+    transparent 72%
+  );
+  box-shadow: inset 0 1px 0 rgba(17, 17, 17, 0.05);
 }
 
 .bracket-final__body {

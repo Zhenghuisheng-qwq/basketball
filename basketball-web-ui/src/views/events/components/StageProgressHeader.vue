@@ -41,10 +41,16 @@ function onStageChange(event: Event) {
     </div>
 
     <div v-if="hasCenter" class="stage-progress-header__center">
-      <p v-if="contextLabel" class="stage-progress-header__context">{{ contextLabel }}</p>
+      <p v-if="contextLabel || stageLive" class="stage-progress-header__context">
+        <span v-if="contextLabel">{{ contextLabel }}</span>
+        <span v-if="contextLabel && stageLive" class="stage-progress-header__context-sep" aria-hidden="true">·</span>
+        <span v-if="stageLive" class="stage-progress-header__live-inline">
+          <i aria-hidden="true" />
+          进行中
+        </span>
+      </p>
       <h3 class="stage-progress-header__stage">{{ stageTitle }}</h3>
       <em v-if="stageTitleEn" class="stage-progress-header__stage-en">{{ stageTitleEn }}</em>
-      <span v-if="stageLive" class="stage-progress-header__live">进行中</span>
     </div>
 
     <div v-if="props.options.length > 1" class="stage-progress-header__selector">
@@ -81,8 +87,8 @@ function onStageChange(event: Event) {
 
 .stage-progress-header__title {
   margin: 0;
-  font-size: clamp(28px, 2.4vw, 34px);
-  font-weight: 900;
+  font-size: clamp(26px, 2.2vw, 31px);
+  font-weight: 800;
   letter-spacing: 0.04em;
   line-height: 1.1;
 }
@@ -99,7 +105,7 @@ function onStageChange(event: Event) {
 
 .stage-progress-header--paper {
   .stage-progress-header__title {
-    color: #111111;
+    color: #2a2a2a;
   }
 
   .stage-progress-header__subtitle {
@@ -123,12 +129,36 @@ function onStageChange(event: Event) {
 }
 
 .stage-progress-header__context {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   margin: 0 0 4px;
   color: rgba(17, 17, 17, 0.38);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+
+.stage-progress-header__context-sep {
+  letter-spacing: 0;
+  opacity: 0.55;
+}
+
+.stage-progress-header__live-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--cnpa-red, #e10613);
+  letter-spacing: 0.12em;
+
+  i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
 }
 
 .stage-progress-header__stage {
@@ -149,20 +179,9 @@ function onStageChange(event: Event) {
   letter-spacing: 0.08em;
 }
 
-.stage-progress-header__live {
-  display: inline-block;
-  margin-top: 6px;
-  padding: 2px 7px 1px;
-  border: 1px solid rgba(225, 6, 19, 0.28);
-  color: var(--cnpa-red, #e10613);
-  font-size: 10px;
-  font-weight: 800;
-  font-style: normal;
-  letter-spacing: 0.12em;
-}
-
 .stage-progress-header__selector {
   flex: none;
+  align-self: center;
   justify-self: end;
 }
 
@@ -219,6 +238,10 @@ function onStageChange(event: Event) {
 
   .stage-progress-header__center {
     text-align: left;
+  }
+
+  .stage-progress-header__context {
+    justify-content: flex-start;
   }
 
   .stage-progress-header__selector {
