@@ -34,10 +34,10 @@ public class MemberAuthProperties {
     private long loginLockMinutes = 15;
 
     /**
-     * 邮箱验证码 Dev Bypass（由环境变量 CNPA_MAIL_DEV_BYPASS / application 配置控制，禁止业务代码写死）。
-     * true：跳过真实 SMTP；任意合法 6 位数字可通过验证码校验；注册/登录仍走正式 Service。
-     * false：生成验证码 → SMTP 发送 → 校验真实 codeHash。
-     * 公网测试/老板验收可设 true；正式真实用户开放前必须设 false。
+     * Local/auto-test only: skip QQ SMTP delivery.
+     * Controlled by CNPA_MAIL_DEV_BYPASS / application config. Default false.
+     * When true: still generate a real random 6-digit code and store it in Redis.
+     * Verification always checks Redis. Never accept a fixed 123456 fallback.
      */
-    private boolean devMailBypass = true;
+    private boolean devMailBypass = false;
 }

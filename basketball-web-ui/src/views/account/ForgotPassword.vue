@@ -84,7 +84,7 @@ async function handleSendCode() {
     ElMessage.success('如果邮箱已注册，验证码将发送至该邮箱')
     startCountdown(res.data.resendSeconds || 60)
   } catch (error) {
-    errors.form = error instanceof Error ? error.message : '验证码发送失败'
+    errors.form = error instanceof Error ? error.message : '验证码发送失败，请稍后重试'
   } finally {
     sendingCode.value = false
   }

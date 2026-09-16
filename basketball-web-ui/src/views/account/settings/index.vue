@@ -165,7 +165,7 @@ async function handleSendChangeEmailCode() {
     ElMessage.success('验证码已发送，请查收新邮箱')
     startEmailCountdown(res.data.resendSeconds || 60)
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '验证码发送失败')
+    ElMessage.error(error instanceof Error ? error.message : '验证码发送失败，请稍后重试')
   } finally {
     emailSending.value = false
   }

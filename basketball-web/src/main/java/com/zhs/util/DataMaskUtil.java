@@ -16,8 +16,18 @@ public final class DataMaskUtil {
         }
         String[] parts = email.split("@", 2);
         String local = parts[0];
-        String visible = local.length() <= 2 ? local.charAt(0) + "*" : local.substring(0, 2) + "***";
-        return visible + "@" + parts[1];
+        String domain = parts[1];
+        String maskedLocal;
+        if (local.length() >= 6) {
+            maskedLocal = local.substring(0, 3) + "****" + local.substring(local.length() - 3);
+        } else if (local.length() >= 3) {
+            maskedLocal = local.charAt(0) + "****" + local.charAt(local.length() - 1);
+        } else if (local.length() == 2) {
+            maskedLocal = local.charAt(0) + "****";
+        } else {
+            maskedLocal = "****";
+        }
+        return maskedLocal + "@" + domain;
     }
 
     public static String maskMobile(String mobile) {

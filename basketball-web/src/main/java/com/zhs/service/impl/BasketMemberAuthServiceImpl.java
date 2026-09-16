@@ -9,6 +9,7 @@ import com.zhs.common.cachekey.member.EmailCodeDailyLimitCacheKey;
 import com.zhs.common.cachekey.member.EmailCodeFailCacheKey;
 import com.zhs.common.cachekey.member.EmailCodeIpLimitCacheKey;
 import com.zhs.common.cachekey.member.EmailCodeLimitCacheKey;
+import com.zhs.common.cachekey.member.EmailCodeValueCacheKey;
 import com.zhs.common.cachekey.member.LoginFailCacheKey;
 import com.zhs.config.MemberAuthProperties;
 import com.zhs.dao.BasketAccountSecurityLogDao;
@@ -53,9 +54,11 @@ import com.zhs.response.member.MemberRegisterResp;
 import com.zhs.response.member.MemberSessionResp;
 import com.zhs.response.member.MemberSummaryResp;
 import com.zhs.service.IBasketMemberAuthService;
+import com.zhs.service.mail.EmailVerifyCodeGenerator;
 import com.zhs.service.mail.IMemberMailService;
 import com.zhs.support.MemberAvatarSupport;
 import com.zhs.support.MemberSessionSupport;
+import com.zhs.util.DataMaskUtil;
 import com.zhs.util.MiniRedisUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
@@ -66,7 +69,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.security.SecureRandom;
 import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -80,7 +82,6 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
     private static final String LOGIN_TYPE_PASSWORD = "PASSWORD";
     private static final String TOKEN_TYPE_BEARER = "Bearer";
     private static final String SEND_PROVIDER_DEV_BYPASS = "DEV_BYPASS";
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private static final String EVENT_PASSWORD_RESET = "PASSWORD_RESET";
     private static final String EVENT_EMAIL_CHANGE = "EMAIL_CHANGE";
@@ -143,7 +144,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         EmailCodeLimitCacheKey limitKey = new EmailCodeLimitCacheKey(
                 purpose.getCode(), email, authProperties.getCodeResendSeconds());
         if (Boolean.TRUE.equals(miniRedisUtil.hasKey(limitKey))) {
-            throw new ServiceException("发送过于频繁，请稍后再试");
+            throw new ServiceException("验证码发送过于频繁，请稍后再试");
         }
 
         String day = DateUtil.format(new Date(), "yyyyMMdd");
@@ -160,10 +161,12 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
             throw new ServiceException("当前网络发送过于频繁，请稍后再试");
         }
 
-        String code = generateNumericCode(6);
+        String code = EmailVerifyCodeGenerator.sixDigits();
         String bizNo = "VC" + IdUtil.getSnowflakeNextIdStr();
         Date now = new Date();
         Date expireTime = new Date(now.getTime() + authProperties.getCodeExpireSeconds() * 1000L);
+        EmailCodeValueCacheKey codeKey = new EmailCodeValueCacheKey(
+                purpose.getCode(), email, authProperties.getCodeExpireSeconds());
 
         BasketVerifyCodeRecord record = new BasketVerifyCodeRecord();
         record.setBizNo(bizNo);
@@ -178,32 +181,35 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         record.setIsDelete(0);
 
         if (isDevMailBypass()) {
-            // Dev Bypass：不发真实邮件，仅落库成功流水；校验时任意合法 6 位数字可通过（不绕过注册业务）
             record.setSendProvider(SEND_PROVIDER_DEV_BYPASS);
             record.setSendStatus(VerifySendStatusEnum.SUCCESS.getCode());
             record.setFailureReason("DEV_MAIL_BYPASS");
-            verifyCodeRecordDao.insert(record);
+            storeIssuedEmailCode(codeKey, code, record);
             log.warn("[member-auth] Mail verification dev bypass enabled, skip SMTP email={} purpose={} bizNo={}",
-                    maskEmail(email), purpose.getCode(), bizNo);
+                    DataMaskUtil.maskEmail(email), purpose.getCode(), bizNo);
         } else {
             record.setSendProvider("SMTP");
             try {
-                memberMailService.sendVerifyCodeMail(
+                memberMailService.sendVerificationCode(
                         email,
                         code,
-                        purpose.getLabel(),
+                        purpose,
                         Math.max(1, authProperties.getCodeExpireSeconds() / 60));
                 record.setSendStatus(VerifySendStatusEnum.SUCCESS.getCode());
-                verifyCodeRecordDao.insert(record);
+                storeIssuedEmailCode(codeKey, code, record);
             } catch (ServiceException e) {
+                discardIssuedEmailCode(codeKey);
                 record.setSendStatus(VerifySendStatusEnum.FAIL.getCode());
                 record.setFailureReason(trimReason(e.getMessage()));
                 verifyCodeRecordDao.insert(record);
-                throw e;
+                throw new ServiceException("验证码发送失败，请稍后重试");
             } catch (Exception e) {
+                discardIssuedEmailCode(codeKey);
                 record.setSendStatus(VerifySendStatusEnum.FAIL.getCode());
                 record.setFailureReason("发送异常");
                 verifyCodeRecordDao.insert(record);
+                log.error("[member-auth] send email code failed email={} purpose={} ex={}",
+                        DataMaskUtil.maskEmail(email), purpose.getCode(), e.getClass().getName());
                 throw new ServiceException("验证码发送失败，请稍后重试");
             }
         }
@@ -291,7 +297,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         saveAgreement(account.getId(), "PRIVACY_POLICY", "隐私政策", terminalType, clientIp, userAgent, now);
 
         writeSecurityLog(account.getId(), "REGISTER", "用户注册",
-                null, maskEmail(email), "MEMBER", account.getId(), clientIp, terminalType, now, "官网邮箱注册");
+                null, DataMaskUtil.maskEmail(email), "MEMBER", account.getId(), clientIp, terminalType, now, "官网邮箱注册");
 
         MemberRegisterResp resp = new MemberRegisterResp();
         resp.setEmail(email);
@@ -351,7 +357,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
 
         consumeVerifyCode(newEmail, VerifyPurposeEnum.CHANGE_EMAIL, req.getVerifyBizNo(), req.getVerifyCode());
 
-        String oldMasked = maskEmail(account.getEmail());
+        String oldMasked = DataMaskUtil.maskEmail(account.getEmail());
         Date now = new Date();
         account.setEmail(newEmail);
         account.setEmailVerified(VerifiedFlagEnum.YES.getCode());
@@ -365,7 +371,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         memberSessionSupport.invalidateAllSessions(memberId, currentToken, authVersion);
 
         writeSecurityLog(memberId, EVENT_EMAIL_CHANGE, "修改登录邮箱",
-                oldMasked, maskEmail(newEmail), "MEMBER", memberId, clientIp, null, now, null);
+                oldMasked, DataMaskUtil.maskEmail(newEmail), "MEMBER", memberId, clientIp, null, now, null);
 
         AccountChangeEmailResp resp = new AccountChangeEmailResp();
         resp.setNeedRelogin(true);
@@ -530,7 +536,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         }
         if (record.getExpireTime() != null && record.getExpireTime().before(new Date())) {
             invalidateVerifyRecord(record.getId(), "已过期");
-            throw new ServiceException("验证码已过期");
+            throw new ServiceException("验证码已过期，请重新获取");
         }
 
         EmailCodeFailCacheKey failKey = new EmailCodeFailCacheKey(normalizedBizNo, authProperties.getCodeExpireSeconds());
@@ -540,10 +546,17 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
             throw new ServiceException("验证码错误次数过多，请重新获取");
         }
 
-        boolean bypassCodeCheck = isDevMailBypass();
-        if (!bypassCodeCheck && !passwordEncoder.matches(normalizedCode, record.getCodeHash())) {
+        EmailCodeValueCacheKey codeKey = new EmailCodeValueCacheKey(
+                purpose.getCode(), email, authProperties.getCodeExpireSeconds());
+        Object cached = miniRedisUtil.get(codeKey);
+        String cachedCode = cached == null ? null : String.valueOf(cached);
+        if (!StringUtils.hasText(cachedCode)) {
+            invalidateVerifyRecord(record.getId(), "已过期");
+            throw new ServiceException("验证码已过期，请重新获取");
+        }
+        if (!normalizedCode.equals(cachedCode.trim())) {
             miniRedisUtil.increment(failKey);
-            throw new ServiceException("验证码错误或已过期");
+            throw new ServiceException("验证码错误");
         }
 
         int updated = verifyCodeRecordDao.update(null,
@@ -556,6 +569,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         if (updated == 0) {
             throw new ServiceException("验证码已失效");
         }
+        miniRedisUtil.delete(codeKey);
         miniRedisUtil.delete(failKey);
     }
 
@@ -656,7 +670,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         target.setNickname(profile.nickname());
         // 正式头像；无 avatar_file_id 时保持 null，前端 Placeholder。绝不读 pending change。
         target.setAvatarUrl(profile.avatarUrl());
-        target.setEmailMasked(maskEmail(account.getEmail()));
+        target.setEmailMasked(DataMaskUtil.maskEmail(account.getEmail()));
         target.setEmailVerified(VerifiedFlagEnum.isYes(account.getEmailVerified()));
         target.setAccountStatus(account.getAccountStatus());
     }
@@ -818,14 +832,18 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         return local.length() > 20 ? local.substring(0, 20) : local;
     }
 
-    private String maskEmail(String email) {
-        if (!StringUtils.hasText(email) || !email.contains("@")) {
-            return "***";
+    private void storeIssuedEmailCode(EmailCodeValueCacheKey codeKey, String code, BasketVerifyCodeRecord record) {
+        miniRedisUtil.set(codeKey, code);
+        try {
+            verifyCodeRecordDao.insert(record);
+        } catch (RuntimeException e) {
+            discardIssuedEmailCode(codeKey);
+            throw e;
         }
-        String[] parts = email.split("@", 2);
-        String local = parts[0];
-        String visible = local.length() <= 2 ? local.substring(0, 1) + "*" : local.substring(0, 2) + "***";
-        return visible + "@" + parts[1];
+    }
+
+    private void discardIssuedEmailCode(EmailCodeValueCacheKey codeKey) {
+        miniRedisUtil.delete(codeKey);
     }
 
     private String trimReason(String reason) {
@@ -842,16 +860,7 @@ public class BasketMemberAuthServiceImpl implements IBasketMemberAuthService {
         return userAgent.length() > 1000 ? userAgent.substring(0, 1000) : userAgent;
     }
 
-    /** 使用 SecureRandom 生成数字验证码，禁止 Math.random / 非安全 RNG。 */
-    private String generateNumericCode(int length) {
-        StringBuilder sb = new StringBuilder(length);
-        for (int i = 0; i < length; i++) {
-            sb.append(SECURE_RANDOM.nextInt(10));
-        }
-        return sb.toString();
-    }
-
-    /** 本地开发跳过 SMTP：配置开关为 true，或显式开关开启。 */
+    /** Local/auto-test only: skip SMTP. Verification still uses Redis. */
     private boolean isDevMailBypass() {
         return authProperties.isDevMailBypass();
     }

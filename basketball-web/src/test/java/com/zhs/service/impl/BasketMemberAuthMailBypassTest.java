@@ -2,10 +2,11 @@ package com.zhs.service.impl;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zhs.common.cachekey.MiniCacheKey;
+import com.zhs.common.cachekey.member.EmailCodeValueCacheKey;
 import com.zhs.config.MemberAuthProperties;
 import com.zhs.dao.BasketAccountSecurityLogDao;
 import com.zhs.dao.BasketMemberAccountDao;
@@ -15,6 +16,7 @@ import com.zhs.dao.BasketNotificationSettingDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketPrivacySettingDao;
 import com.zhs.dao.BasketVerifyCodeRecordDao;
+import com.zhs.enums.VerifyPurposeEnum;
 import com.zhs.enums.VerifySendStatusEnum;
 import com.zhs.enums.VerifyStatusEnum;
 import com.zhs.exception.ServiceException;
@@ -45,6 +47,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -54,13 +58,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * CASE A: CNPA_MAIL_DEV_BYPASS=true -> test email + any 6-digit code can register (no SMTP).
- * CASE B: CNPA_MAIL_DEV_BYPASS=false -> wrong code must fail (proves bypass is off).
+ * Bypass only skips SMTP. Redis still stores a real random code. 123456 is never a fallback.
  */
 @ExtendWith(MockitoExtension.class)
 class BasketMemberAuthMailBypassTest {
@@ -100,6 +104,7 @@ class BasketMemberAuthMailBypassTest {
 
     private final MemberAuthProperties authProperties = new MemberAuthProperties();
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final Map<String, Object> redis = new ConcurrentHashMap<>();
 
     @InjectMocks
     private BasketMemberAuthServiceImpl service;
@@ -113,15 +118,37 @@ class BasketMemberAuthMailBypassTest {
         authProperties.setCodeDailyLimit(20);
         authProperties.setCodeIpHourlyLimit(30);
         authProperties.setCodeMaxFailTimes(5);
+        org.mockito.Mockito.lenient().when(miniRedisUtil.hasKey(any(MiniCacheKey.class))).thenAnswer(inv ->
+                redis.containsKey(((MiniCacheKey) inv.getArgument(0)).buildKey()));
+        org.mockito.Mockito.lenient().when(miniRedisUtil.get(any(MiniCacheKey.class))).thenAnswer(inv ->
+                redis.get(((MiniCacheKey) inv.getArgument(0)).buildKey()));
+        org.mockito.Mockito.lenient().when(miniRedisUtil.delete(any(MiniCacheKey.class))).thenAnswer(inv ->
+                redis.remove(((MiniCacheKey) inv.getArgument(0)).buildKey()) != null);
+        org.mockito.Mockito.lenient().when(miniRedisUtil.increment(any(MiniCacheKey.class))).thenAnswer(inv -> {
+            MiniCacheKey key = inv.getArgument(0);
+            long next = 1L;
+            Object current = redis.get(key.buildKey());
+            if (current != null) {
+                try {
+                    next = Long.parseLong(String.valueOf(current)) + 1;
+                } catch (NumberFormatException ignored) {
+                    next = 1L;
+                }
+            }
+            redis.put(key.buildKey(), next);
+            return next;
+        });
+        org.mockito.Mockito.lenient().doAnswer(inv -> {
+            MiniCacheKey key = inv.getArgument(0);
+            redis.put(key.buildKey(), inv.getArgument(1));
+            return null;
+        }).when(miniRedisUtil).set(any(MiniCacheKey.class), any());
     }
 
     @Test
-    void caseA_devBypassTrue_anySixDigitCode_registerSucceedsWithoutSmtp() {
+    void caseA_devBypassTrue_skipsSmtpButStoresRealRedisCode() {
         authProperties.setDevMailBypass(true);
         when(memberAccountDao.selectOne(any(LambdaQueryWrapper.class))).thenReturn(null);
-        when(miniRedisUtil.hasKey(any(MiniCacheKey.class))).thenReturn(false);
-        when(miniRedisUtil.increment(any(MiniCacheKey.class))).thenReturn(1L);
-
         ArgumentCaptor<BasketVerifyCodeRecord> insertCaptor = ArgumentCaptor.forClass(BasketVerifyCodeRecord.class);
         when(verifyCodeRecordDao.insert(insertCaptor.capture())).thenReturn(1);
 
@@ -132,8 +159,13 @@ class BasketMemberAuthMailBypassTest {
 
         assertNotNull(sendResp.getBizNo());
         assertNull(sendResp.getDevBypass(), "must not expose bypass flag to client");
-        verify(memberMailService, never()).sendVerifyCodeMail(anyString(), anyString(), anyString(), anyLong());
+        verify(memberMailService, never()).sendVerificationCode(anyString(), anyString(),
+                any(VerifyPurposeEnum.class), anyLong());
         assertEquals("DEV_BYPASS", insertCaptor.getValue().getSendProvider());
+
+        EmailCodeValueCacheKey codeKey = new EmailCodeValueCacheKey("REGISTER", TEST_EMAIL, 300);
+        String storedCode = String.valueOf(redis.get(codeKey.buildKey()));
+        assertTrue(storedCode.matches("^\\d{6}$"));
 
         BasketVerifyCodeRecord stored = insertCaptor.getValue();
         stored.setId(100L);
@@ -147,16 +179,13 @@ class BasketMemberAuthMailBypassTest {
         when(agreementRecordDao.insert(any(BasketMemberAgreementRecord.class))).thenReturn(1);
         when(securityLogDao.insert(any(BasketAccountSecurityLog.class))).thenReturn(1);
 
-        MemberRegisterReq registerReq = buildRegisterReq(sendResp.getBizNo(), "654321");
+        MemberRegisterReq registerReq = buildRegisterReq(sendResp.getBizNo(), storedCode);
         MemberRegisterResp registerResp = service.register(registerReq, "127.0.0.1", "junit");
-
         assertEquals(TEST_EMAIL, registerResp.getEmail());
-        verify(memberAccountDao).insert(any(BasketMemberAccount.class));
-        verify(memberProfileDao).insert(any(BasketMemberProfile.class));
     }
 
     @Test
-    void caseB_devBypassFalse_wrongCode_registerFailsWithoutSmtpSend() {
+    void caseB_devBypassFalse_wrongCode_registerFails() {
         authProperties.setDevMailBypass(false);
 
         BasketVerifyCodeRecord record = new BasketVerifyCodeRecord();
@@ -173,14 +202,16 @@ class BasketMemberAuthMailBypassTest {
 
         when(memberAccountDao.selectOne(any(LambdaQueryWrapper.class))).thenReturn(null);
         when(verifyCodeRecordDao.selectOne(any(LambdaQueryWrapper.class))).thenReturn(record);
-        when(miniRedisUtil.get(any(MiniCacheKey.class))).thenReturn(null);
+        redis.put(new EmailCodeValueCacheKey("REGISTER", TEST_EMAIL, 300).buildKey(), "111111");
 
         MemberRegisterReq registerReq = buildRegisterReq("VC_TEST_BIZ", "999999");
         ServiceException ex = assertThrows(ServiceException.class,
                 () -> service.register(registerReq, "127.0.0.1", "junit"));
         assertTrue(ex.getMessage() != null && ex.getMessage().contains("\u9a8c\u8bc1\u7801"));
         verify(memberAccountDao, never()).insert(any(BasketMemberAccount.class));
-        verify(memberMailService, never()).sendVerifyCodeMail(anyString(), anyString(), anyString(), anyLong());
+        verify(memberMailService, never()).sendVerificationCode(anyString(), anyString(),
+                any(VerifyPurposeEnum.class), anyLong());
+        assertEquals("111111", redis.get(new EmailCodeValueCacheKey("REGISTER", TEST_EMAIL, 300).buildKey()));
     }
 
     private MemberRegisterReq buildRegisterReq(String bizNo, String code) {

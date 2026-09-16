@@ -43,10 +43,12 @@ spring:
           min-idle: 0
 
   mail:
+    # QQ SMTP. password is the SMTP authorization code, not the QQ login password.
     host: ${CNPA_MAIL_HOST:smtp.qq.com}
     port: ${CNPA_MAIL_PORT:465}
-    username: ${CNPA_MAIL_USERNAME:}
-    password: ${CNPA_MAIL_AUTH_CODE:}
+    username: ${CNPA_MAIL_USERNAME:416743310@qq.com}
+    password: ${CNPA_MAIL_AUTH_CODE:olrplytzxytpbgfe}
+    protocol: smtp
     default-encoding: UTF-8
     properties:
       mail:
@@ -56,6 +58,10 @@ spring:
             enable: true
           starttls:
             enable: false
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+        debug: false
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -100,16 +106,14 @@ member:
     code-max-fail-times: 5
     login-fail-max-times: 5
     login-lock-minutes: 15
-    # 邮箱验证码 Dev Bypass（仅绕过 SMTP 投递/验证码比对，不绕过注册业务）
-    # 本地默认 true；公网测试/老板验收也可通过环境变量设 true
-    # 正式真实用户开放前必须：CNPA_MAIL_DEV_BYPASS=false + 真实邮箱验证码 Smoke
-    # 环境变量优先于 profile；勿在 Java 写死
-    dev-mail-bypass: ${CNPA_MAIL_DEV_BYPASS:true}
+    # Default closed. Local auto tests may set CNPA_MAIL_DEV_BYPASS=true to skip SMTP only.
+    # Formal path must keep false: random code + QQ SMTP + Redis verify. No fixed 123456.
+    dev-mail-bypass: ${CNPA_MAIL_DEV_BYPASS:false}
   mail:
     from: ${CNPA_MAIL_FROM:${CNPA_MAIL_USERNAME:}}
-    from-name: ${CNPA_MAIL_FROM_NAME:CNPA赛事平台}
+    from-name: ${CNPA_MAIL_FROM_NAME:CNPA}
   init:
-    enabled: true
+    enabled: false
     batch-size: 30
     password: 111111aa
     email-domain: qq.com
