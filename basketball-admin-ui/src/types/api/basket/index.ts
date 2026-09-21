@@ -1543,6 +1543,42 @@ export const HOME_BANNER_POSITION_OPTIONS = [
   { value: 'HOME_TOP', label: '首页顶部' }
 ]
 
+export const SOCIAL_LINK_STATUS_OPTIONS = [
+  { value: 0, label: '停用' },
+  { value: 1, label: '启用' }
+]
+
+export const SOCIAL_PLATFORM_LABELS: Record<string, string> = {
+  KOOK: 'KOOK',
+  WECHAT: '微信',
+  BILIBILI: 'B站',
+  DOUYIN: '抖音'
+}
+
+export interface SiteSocialLinkItem {
+  id: number
+  platformCode: string
+  platformName?: string
+  title?: string
+  subtitle?: string
+  buttonText?: string
+  jumpUrl?: string
+  sortOrder?: number
+  status?: number
+  statusName?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface SiteSocialLinkEditReq {
+  title: string
+  subtitle?: string
+  buttonText: string
+  jumpUrl?: string
+  sortOrder: number
+  status: number
+}
+
 /** 合作伙伴状态 */
 export const PARTNER_STATUS_OPTIONS = [
   { value: 0, label: '草稿' },

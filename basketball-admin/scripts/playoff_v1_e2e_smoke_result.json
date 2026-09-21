@@ -2,7 +2,7 @@
   "startedAt": "2026-08-12T00:21:29",
   "env": {
     "ENV": "LOCAL",
-    "DB_HOST": "192.168.31.48",
+    "DB_HOST": "192.168.31.49",
     "DB_NAME": "basketball",
     "ADMIN": "http://127.0.0.1:8080",
     "WEB": "http://127.0.0.1:8881",

@@ -1,19 +1,49 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { communityLinks } from '@/constants/communityLinks'
-import type { CommunityLink } from '../types/events'
+import { onMounted, ref } from 'vue'
+import { getPublicSocialLinks } from '@/api/publicSite'
+import { isSafeHttpUrl } from '@/constants/communityLinks'
 
-const iconMap: Record<CommunityLink['icon'], string> = {
-  kook: 'K',
-  qq: 'Q',
-  bilibili: 'B',
-  douyin: 'D',
+type CommunityCard = {
+  id: string
+  platformCode: string
+  title: string
+  description: string
+  url: string
+  clickable: boolean
 }
 
-function handleClick(link: CommunityLink, event?: Event) {
+const iconMap: Record<string, string> = {
+  KOOK: 'K',
+  WECHAT: 'W',
+  BILIBILI: 'B',
+  DOUYIN: 'D',
+}
+
+const links = ref<CommunityCard[]>([])
+
+onMounted(async () => {
+  try {
+    const res = await getPublicSocialLinks()
+    links.value = (res.data || []).map((item) => {
+      const url = item.jumpUrl?.trim() || ''
+      const clickable = isSafeHttpUrl(url)
+      return {
+        id: String(item.id),
+        platformCode: item.platformCode,
+        title: item.title || '',
+        description: item.subtitle || '',
+        url: clickable ? url : '',
+        clickable,
+      }
+    })
+  } catch {
+    links.value = []
+  }
+})
+
+function handleClick(link: CommunityCard, event?: Event) {
   event?.preventDefault()
-  if (!link.url || link.url === '#') {
-    ElMessage.info('社区入口暂未开放')
+  if (!link.clickable) {
     return
   }
   window.open(link.url, '_blank', 'noopener,noreferrer')
@@ -34,13 +64,15 @@ function handleClick(link: CommunityLink, event?: Event) {
 
       <div class="community-grid">
         <button
-          v-for="link in communityLinks"
+          v-for="link in links"
           :key="link.id"
           type="button"
           class="community-card"
+          :class="{ 'is-static': !link.clickable }"
+          :aria-disabled="!link.clickable"
           @click="handleClick(link, $event)"
         >
-          <span class="community-icon">{{ iconMap[link.icon] }}</span>
+          <span class="community-icon">{{ iconMap[link.platformCode] || link.platformCode.slice(0, 1) }}</span>
           <span class="community-copy">
             <strong>{{ link.title }}</strong>
             <small>{{ link.description }}</small>
@@ -86,6 +118,15 @@ function handleClick(link: CommunityLink, event?: Event) {
   &:hover {
     transform: translateY(-2px);
     border-color: rgba(255, 255, 255, 0.24);
+  }
+
+  &.is-static {
+    cursor: default;
+
+    &:hover {
+      transform: none;
+      border-color: rgba(255, 255, 255, 0.08);
+    }
   }
 }
 

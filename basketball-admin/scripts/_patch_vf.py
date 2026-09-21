@@ -23,7 +23,7 @@ if old not in t:
 p.write_text(t.replace(old, new), encoding="utf-8", newline="\n")
 # also fix existing charlie grant valid_from
 import pymysql
-c=pymysql.connect(host="192.168.31.48",port=3306,user="root",password="123456",database="basketball",autocommit=True)
+c=pymysql.connect(host="192.168.31.49",port=3306,user="root",password="123456",database="basketball",autocommit=True)
 cur=c.cursor()
 cur.execute("UPDATE basket_captain_grant SET valid_from=DATE_SUB(NOW(), INTERVAL 1 HOUR) WHERE division_id=142 AND team_id IS NULL")
 print("updated grants", cur.rowcount)

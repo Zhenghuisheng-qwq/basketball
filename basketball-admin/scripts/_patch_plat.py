@@ -14,7 +14,7 @@ if t2 == t:
 p.write_text(t2, encoding="utf-8", newline="\n")
 print("patched ok")
 import pymysql
-c = pymysql.connect(host="192.168.31.48", port=3306, user="root", password="123456", database="basketball", cursorclass=pymysql.cursors.DictCursor)
+c = pymysql.connect(host="192.168.31.49", port=3306, user="root", password="123456", database="basketball", cursorclass=pymysql.cursors.DictCursor)
 cur = c.cursor()
 cur.execute("SELECT COUNT(*) AS c FROM basket_member_account WHERE email LIKE %s", ("fs_%@cnpa.smoke",))
 print("smoke_members", cur.fetchone())

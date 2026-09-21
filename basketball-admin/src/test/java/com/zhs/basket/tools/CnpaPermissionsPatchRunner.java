@@ -12,7 +12,7 @@ public final class CnpaPermissionsPatchRunner {
 
     private static final String JDBC_URL = System.getProperty(
             "migration.jdbc.url",
-            "jdbc:mysql://192.168.31.48:3306/basketball?useUnicode=true&characterEncoding=utf8&allowMultiQueries=true&serverTimezone=GMT%2B8");
+            "jdbc:mysql://192.168.31.49:3306/basketball?useUnicode=true&characterEncoding=utf8&allowMultiQueries=true&serverTimezone=GMT%2B8");
     private static final String JDBC_USER = System.getProperty("migration.jdbc.user", "root");
     private static final String JDBC_PASSWORD = System.getProperty("migration.jdbc.password", "123456");
 

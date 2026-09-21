@@ -17,7 +17,11 @@
 
     <el-card shadow="never" class="mb8">
       <template #header><span>赛事系列</span></template>
-      <el-radio-group v-model="selectedSeriesId" @change="handleSeriesChange">
+      <div v-if="seriesLoaded && !seriesList.length" class="series-empty">
+        <div class="series-empty-title">暂无赛事系列</div>
+        <div class="series-empty-desc">League、Arena、Cup、Open 是系统固定赛事系列，当前未初始化。请先完成系统初始化，再创建赛季。</div>
+      </div>
+      <el-radio-group v-else v-model="selectedSeriesId" @change="handleSeriesChange">
         <el-radio-button v-for="item in seriesList" :key="item.id" :label="item.id">
           {{ v4SeriesDisplayLabel(item.seriesName, item.seriesCode) }}
         </el-radio-button>
@@ -44,6 +48,7 @@
             <el-button type="primary" icon="Search" @click="loadSeasonList">搜索</el-button>
             <el-button icon="Refresh" @click="resetSeasonQuery">重置</el-button>
             <el-button type="primary" icon="Plus" @click="handleCreateEvent" v-hasPermi="['basket:v4Season:add']" :disabled="!selectedSeriesId">新建赛事</el-button>
+            <span v-if="seriesLoaded && !selectedSeriesId" class="series-missing-hint">请先完成系统赛事系列初始化</span>
           </el-form-item>
         </el-form>
       </div>
@@ -432,6 +437,7 @@ const route = useRoute()
 const PUBLISH_STATUS_OPTIONS = V4_PUBLISH_STATUS_FILTER_OPTIONS
 
 const seriesList = ref<BasketSeriesVo[]>([])
+const seriesLoaded = ref(false)
 const selectedSeriesId = ref<number>()
 const seasonList = ref<BasketSeasonListVo[]>([])
 const seasonTotal = ref(0)
@@ -655,16 +661,20 @@ async function applySeasonQuery() {
 }
 
 async function loadSeries() {
-  const res = await listV4Series({ enabled: 1 })
-  seriesList.value = res.data || []
-  if (route.query.seasonId) {
-    await applySeasonQuery()
-    return
-  }
-  if (!selectedSeriesId.value && seriesList.value.length) {
-    selectedSeriesId.value = seriesList.value[0].id
-    seasonQuery.seriesId = selectedSeriesId.value
-    loadSeasonList()
+  try {
+    const res = await listV4Series({ enabled: 1 })
+    seriesList.value = res.data || []
+    if (route.query.seasonId) {
+      await applySeasonQuery()
+      return
+    }
+    if (!selectedSeriesId.value && seriesList.value.length) {
+      selectedSeriesId.value = seriesList.value[0].id
+      seasonQuery.seriesId = selectedSeriesId.value
+      loadSeasonList()
+    }
+  } finally {
+    seriesLoaded.value = true
   }
 }
 
@@ -1025,5 +1035,19 @@ onMounted(() => {
 }
 .page-tip-list li + li {
   margin-top: 2px;
+}
+.series-empty-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.series-empty-desc,
+.series-missing-hint {
+  margin-top: 4px;
+  color: var(--el-color-warning);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.series-missing-hint {
+  margin-left: 8px;
 }
 </style>

@@ -1,6 +1,6 @@
 ﻿import pymysql
 from full_smoke_common import admin_login, req, ADMIN, ID_BASE
-c=pymysql.connect(host="192.168.31.48",port=3306,user="root",password="123456",database="basketball",cursorclass=pymysql.cursors.DictCursor)
+c=pymysql.connect(host="192.168.31.49",port=3306,user="root",password="123456",database="basketball",cursorclass=pymysql.cursors.DictCursor)
 cur=c.cursor()
 cur.execute("SELECT id, team_name, team_status, audit_status, division_id, captain_player_id FROM basket_team WHERE division_id=142 OR team_name LIKE 'FS_%'")
 print("teams", cur.fetchall())

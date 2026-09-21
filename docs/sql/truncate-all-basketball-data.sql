@@ -54,6 +54,7 @@ TRUNCATE TABLE basket_player_team_relation;
 TRUNCATE TABLE basket_point_adjustment;
 TRUNCATE TABLE basket_privacy_setting;
 TRUNCATE TABLE basket_site_config;
+TRUNCATE TABLE basket_site_social_link;
 TRUNCATE TABLE basket_stage_standing;
 TRUNCATE TABLE basket_stat_change_record;
 TRUNCATE TABLE basket_stat_sync_record;

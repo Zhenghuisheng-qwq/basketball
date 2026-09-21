@@ -6,7 +6,7 @@ LOCAL DEVELOPMENT ONLY — CNPA V2 业务数据基线重置（Full Business Rese
 执行：python cleanup_local_test_data.py --execute --confirm LOCAL-BASKETBALL-CLEANUP
 
 安全：
-- 仅允许 host=192.168.31.48 database=basketball
+- 仅允许 host=192.168.31.49 database=basketball
 - NO DDL / NO DROP / NO ALTER / 不对混合配置表 TRUNCATE
 - 保留：sys_*、Series、Format Template*、File Asset
 - 清空：全部 CNPA 动态业务数据（含 Member / Player / Team / Season / Match 等）
@@ -21,7 +21,7 @@ from typing import Any
 
 import pymysql
 
-ALLOWED_HOST = "192.168.31.48"
+ALLOWED_HOST = "192.168.31.49"
 ALLOWED_DB = "basketball"
 CONFIRM_TOKEN = "LOCAL-BASKETBALL-CLEANUP"
 

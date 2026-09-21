@@ -1,41 +1,48 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { communityLinks } from '@/constants/communityLinks'
-import iconKook from '@/assets/icon/home/social_kook.png'
-import iconWx from '@/assets/icon/home/social_wx.png'
-import iconBili from '@/assets/icon/home/social_bili.png'
-import iconDouyin from '@/assets/icon/home/social_douyin.png'
+import { onMounted, ref } from 'vue'
+import { getPublicSocialLinks } from '@/api/publicSite'
+import { isSafeHttpUrl, SOCIAL_PLATFORM_ICONS } from '@/constants/communityLinks'
 
 type CommunityCard = {
   id: string
+  platformCode: string
   title: string
   description: string
   action: string
   url: string
   icon: string
+  clickable: boolean
 }
 
-const cardIcons: Record<string, string> = {
-  kook: iconKook,
-  qq: iconWx,
-  bilibili: iconBili,
-  douyin: iconDouyin,
-}
+const cards = ref<CommunityCard[]>([])
 
-const cards: CommunityCard[] = [
-  { id: 'kook', title: '加入 KOOK', description: '官方赛事社区', action: '加入社区', url: '#' },
-  { id: 'qq', title: '加入微信群', description: '球员与观众交流群', action: '加入群聊', url: '#' },
-  { id: 'bilibili', title: '关注 B 站', description: '赛事直播与精彩内容', action: '访问主页', url: '#' },
-  { id: 'douyin', title: '关注抖音', description: '赛事短视频与即时动态', action: '立即关注', url: '#' },
-].map((card) => ({
-  ...card,
-  url: communityLinks.find((link) => link.id === card.id)?.url || card.url,
-  icon: cardIcons[card.id],
-}))
+onMounted(async () => {
+  try {
+    const res = await getPublicSocialLinks()
+    const list = res.data || []
+    cards.value = list
+      .filter((item) => item.platformCode && SOCIAL_PLATFORM_ICONS[item.platformCode])
+      .map((item) => {
+        const url = item.jumpUrl?.trim() || ''
+        const clickable = isSafeHttpUrl(url)
+        return {
+          id: String(item.id),
+          platformCode: item.platformCode,
+          title: item.title || '',
+          description: item.subtitle || '',
+          action: item.buttonText || '',
+          url: clickable ? url : '',
+          icon: SOCIAL_PLATFORM_ICONS[item.platformCode],
+          clickable,
+        }
+      })
+  } catch {
+    cards.value = []
+  }
+})
 
 function openLink(card: CommunityCard) {
-  if (!card.url || card.url === '#') {
-    ElMessage.info('社区入口暂未开放')
+  if (!card.clickable) {
     return
   }
   window.open(card.url, '_blank', 'noopener,noreferrer')
@@ -70,6 +77,8 @@ function openLink(card: CommunityCard) {
             :key="card.id"
             type="button"
             class="home-community-item"
+            :class="{ 'is-static': !card.clickable }"
+            :aria-disabled="!card.clickable"
             @click="openLink(card)"
           >
             <span class="home-community-item__icon" aria-hidden="true">
@@ -77,7 +86,7 @@ function openLink(card: CommunityCard) {
             </span>
             <strong>{{ card.title }}</strong>
             <span class="home-community-item__desc">{{ card.description }}</span>
-            <small>{{ card.action }} →</small>
+            <small>{{ card.action }}</small>
           </button>
         </div>
       </div>

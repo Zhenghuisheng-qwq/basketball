@@ -5,7 +5,7 @@
 - 日期：2026-08-11
 - 环境：Local UAT
 - Commit：`1a6cf16`（本轮另含 pairing/soft-delete 修复与 Smoke 脚本，详见第 17 章）
-- DB：`192.168.31.48:3306/basketball`
+- DB：`192.168.31.49:3306/basketball`
 - Admin：`http://127.0.0.1:8080`
 - Web：`http://127.0.0.1:8881`
 - Web UI：`http://127.0.0.1:5173`

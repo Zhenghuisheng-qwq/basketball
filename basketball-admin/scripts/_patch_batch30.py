@@ -4,7 +4,7 @@ from pathlib import Path
 
 import redis
 
-r = redis.Redis(host="192.168.31.48", port=6379, db=0)
+r = redis.Redis(host="192.168.31.49", port=6379, db=0)
 n = 0
 for pat in ["member:email:code:ip:*", "member:email:code:limit:*", "member:email:code:day:*"]:
     for k in r.scan_iter(pat):

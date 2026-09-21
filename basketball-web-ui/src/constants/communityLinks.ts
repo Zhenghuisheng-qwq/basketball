@@ -1,32 +1,40 @@
 import type { CommunityLink } from '@/views/events/types/events'
+import iconKook from '@/assets/icon/home/social_kook.png'
+import iconWx from '@/assets/icon/home/social_wx.png'
+import iconBili from '@/assets/icon/home/social_bili.png'
+import iconDouyin from '@/assets/icon/home/social_douyin.png'
 
-export const communityLinks: CommunityLink[] = [
-  {
-    id: 'kook',
-    title: '加入 KOOK',
-    description: '实时语音互动，与战队粉丝一起观赛',
-    icon: 'kook',
-    url: '#',
-  },
-  {
-    id: 'qq',
-    title: '加入微信群',
-    description: '获取赛事资讯与活动通知',
-    icon: 'qq',
-    url: '#',
-  },
-  {
-    id: 'bilibili',
-    title: '关注 B 站',
-    description: '观看官方赛事直播与精彩集锦',
-    icon: 'bilibili',
-    url: '#',
-  },
-  {
-    id: 'douyin',
-    title: '关注抖音',
-    description: '追踪赛事热点与球员动态',
-    icon: 'douyin',
-    url: '#',
-  },
-]
+export const SOCIAL_PLATFORM_ICONS: Record<string, string> = {
+  KOOK: iconKook,
+  WECHAT: iconWx,
+  BILIBILI: iconBili,
+  DOUYIN: iconDouyin,
+}
+
+/** @deprecated 业务文案与 URL 已改为后台配置，仅保留类型兼容 */
+export const communityLinks: CommunityLink[] = []
+
+export function isSafeHttpUrl(url?: string | null): boolean {
+  if (!url || !url.trim()) {
+    return false
+  }
+  const trimmed = url.trim()
+  if (trimmed.length > 512) {
+    return false
+  }
+  const lower = trimmed.toLowerCase()
+  if (
+    lower.startsWith('javascript:') ||
+    lower.startsWith('data:') ||
+    lower.startsWith('file:') ||
+    lower.startsWith('vbscript:')
+  ) {
+    return false
+  }
+  try {
+    const parsed = new URL(trimmed)
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+  } catch {
+    return false
+  }
+}

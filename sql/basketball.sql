@@ -1515,4 +1515,22 @@ CREATE TABLE `basket_site_config` (
                                       KEY idx_site_config_group (group_code, config_status, public_flag)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='官网业务配置表';
 
+DROP TABLE IF EXISTS `basket_site_social_link`;
+CREATE TABLE `basket_site_social_link` (
+                                      `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+                                      `platform_code` VARCHAR(32) NOT NULL COMMENT '平台编码：KOOK/WECHAT/BILIBILI/DOUYIN',
+                                      `title` VARCHAR(64) NOT NULL COMMENT '标题',
+                                      `subtitle` VARCHAR(128) NOT NULL DEFAULT '' COMMENT '描述',
+                                      `button_text` VARCHAR(32) NOT NULL COMMENT '按钮文案',
+                                      `jump_url` VARCHAR(512) DEFAULT NULL COMMENT '跳转链接，允许为空',
+                                      `sort_order` INT NOT NULL DEFAULT 0 COMMENT '排序，升序',
+                                      `status` TINYINT NOT NULL DEFAULT 1 COMMENT '0停用 1启用',
+                                      `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                      `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                      `is_delete` TINYINT NOT NULL DEFAULT 0 COMMENT '删除标记',
+                                      PRIMARY KEY (`id`),
+                                      UNIQUE KEY `uk_site_social_link_platform` (`platform_code`),
+                                      KEY `idx_site_social_link_status_sort` (`status`, `sort_order`, `is_delete`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='官网社群与媒体入口';
+
 SET FOREIGN_KEY_CHECKS = 1;

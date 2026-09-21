@@ -15,7 +15,7 @@
 |---|---|---|
 | env_admin_backend | PASS | http://127.0.0.1:8080 |
 | env_admin_ui | PASS | http://127.0.0.1:80 |
-| env_mysql | PASS | 192.168.31.48:3306/basketball |
+| env_mysql | PASS | 192.168.31.49:3306/basketball |
 | env_redis | PASS | PONG |
 | api_admin_login | PASS | HTTP 200 token=eyJhbGciOiJI... |
 | p0_season_soft_delete_uk | PASS | delete=200 recreate=200 |

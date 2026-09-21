@@ -1,6 +1,6 @@
 ﻿import pymysql, json
 from full_smoke_common import admin_login, req, ADMIN, sorted_stages
-c=pymysql.connect(host="192.168.31.48",port=3306,user="root",password="123456",database="basketball",cursorclass=pymysql.cursors.DictCursor)
+c=pymysql.connect(host="192.168.31.49",port=3306,user="root",password="123456",database="basketball",cursorclass=pymysql.cursors.DictCursor)
 cur=c.cursor()
 cur.execute("SELECT id, division_status FROM basket_division WHERE id=142")
 print("div", cur.fetchone())

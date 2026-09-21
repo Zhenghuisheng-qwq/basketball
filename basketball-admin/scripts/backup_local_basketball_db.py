@@ -6,7 +6,7 @@ LOCAL DEVELOPMENT ONLY — 用 pymysql 做 basketball 全库逻辑备份（无�
   python backup_local_basketball_db.py
   python backup_local_basketball_db.py --out ../../backup/basketball_before_cleanup_20260811.sql
 
-安全：仅允许 host=192.168.31.48 database=basketball
+安全：仅允许 host=192.168.31.49 database=basketball
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from pathlib import Path
 import pymysql
 from pymysql.constants import FIELD_TYPE
 
-ALLOWED_HOST = "192.168.31.48"
+ALLOWED_HOST = "192.168.31.49"
 ALLOWED_DB = "basketball"
 
 DB = dict(

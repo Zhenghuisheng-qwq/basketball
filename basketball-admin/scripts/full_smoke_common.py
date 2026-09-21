@@ -17,14 +17,14 @@ ADMIN = "http://127.0.0.1:8080"
 WEB = "http://127.0.0.1:8881"
 WEBUI = "http://127.0.0.1:5173"
 DB = dict(
-    host="192.168.31.48",
+    host="192.168.31.49",
     port=3306,
     user="root",
     password="123456",
     database="basketball",
     charset="utf8mb4",
 )
-REDIS_HOST = "192.168.31.48"
+REDIS_HOST = "192.168.31.49"
 MARKER = "FULL_SMOKE_20260811"
 MEMBER_PASS = "111111aa"
 PASS_HASH = "$2a$10$Kq/KEI3FV.cxoKnhm1O/ceh7Q5.8Pm3Vhpb30zzRPTqDEMYzTCOu."

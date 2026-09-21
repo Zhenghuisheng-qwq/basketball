@@ -10,7 +10,7 @@
 | Web API | http://127.0.0.1:8881 |
 | Admin UI | http://127.0.0.1:80 |
 | Web UI | http://127.0.0.1:5173 |
-| MySQL | 192.168.31.48:3306 / basketball |
+| MySQL | 192.168.31.49:3306 / basketball |
 | 命令 | `python scripts/cnpa_v2_core_smoke_final.py`；`python scripts/run_data_check.py --json` |
 | 环境 | `scripts/.env.v2.local` |
 

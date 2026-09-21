@@ -125,6 +125,16 @@ export interface PublicSeasonSummaryVo {
   playerStatCount?: number | null
 }
 
+export interface PublicSocialLinkResp {
+  id: string
+  platformCode: string
+  title?: string | null
+  subtitle?: string | null
+  buttonText?: string | null
+  jumpUrl?: string | null
+  sortOrder?: number | null
+}
+
 export interface PublicHomeBannerResp {
   bannerId: string
   title?: string | null

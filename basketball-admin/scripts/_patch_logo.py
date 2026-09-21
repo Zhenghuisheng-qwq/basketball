@@ -9,7 +9,7 @@ p.write_text(t.replace(old, new), encoding="utf-8", newline="\n")
 print("logo removed from create_teams_flow")
 # cleanup grants/teams for MAIN division if any
 import pymysql
-c = pymysql.connect(host="192.168.31.48", port=3306, user="root", password="123456", database="basketball", autocommit=True, cursorclass=pymysql.cursors.DictCursor)
+c = pymysql.connect(host="192.168.31.49", port=3306, user="root", password="123456", database="basketball", autocommit=True, cursorclass=pymysql.cursors.DictCursor)
 cur = c.cursor()
 cur.execute("SELECT id, division_name, division_status FROM basket_division WHERE division_name LIKE %s", ("%FULL_SMOKE_20260811%",))
 print("divisions", cur.fetchall())

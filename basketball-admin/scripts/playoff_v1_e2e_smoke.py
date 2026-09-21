@@ -499,7 +499,7 @@ def consistency_check(division_ids: list[str]) -> dict[str, Any]:
 
 def main() -> int:
     health = env_health()
-    REPORT["env"] = {"ENV": "LOCAL", "DB_HOST": "192.168.31.48", "DB_NAME": "basketball", "ADMIN": ADMIN, "WEB": WEB, "health": health}
+    REPORT["env"] = {"ENV": "LOCAL", "DB_HOST": "192.168.31.49", "DB_NAME": "basketball", "ADMIN": ADMIN, "WEB": WEB, "health": health}
     log(json.dumps(REPORT["env"], ensure_ascii=False))
     if health.get("admin") != "UP" or health.get("mysql") != "UP":
         REPORT["final"] = "FAIL"; fail_bug("P0", f"env down: {health}")

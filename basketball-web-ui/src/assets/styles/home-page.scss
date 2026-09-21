@@ -2476,6 +2476,15 @@
     transform: translateY(-3px);
     background: #171717;
   }
+
+  &.is-static {
+    cursor: default;
+
+    &:hover {
+      transform: none;
+      background: #111;
+    }
+  }
 }
 
 .home-community-item__icon {

@@ -63,6 +63,10 @@ public final class BasketContentPerms {
     public static final String PARTNER_OFFLINE = "basket:partner:offline";
     public static final String PARTNER_REMOVE = "basket:partner:remove";
 
+    public static final String SOCIAL_LINK_LIST = "basket:socialLink:list";
+    public static final String SOCIAL_LINK_QUERY = "basket:socialLink:query";
+    public static final String SOCIAL_LINK_EDIT = "basket:socialLink:edit";
+
     public static final String PARTNER_SUPPORT_LIST = "basket:partnerSupport:list";
     public static final String PARTNER_SUPPORT_QUERY = "basket:partnerSupport:query";
     public static final String PARTNER_SUPPORT_ADD = "basket:partnerSupport:add";

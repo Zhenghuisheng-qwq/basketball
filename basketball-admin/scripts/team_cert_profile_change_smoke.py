@@ -10,7 +10,7 @@ import pymysql
 WEB = "http://127.0.0.1:8881"
 ADMIN = "http://127.0.0.1:8080"
 MARKER = "CERT_PC_SMOKE_20260811"
-DB = dict(host="192.168.31.48", port=3306, user="root", password="123456",
+DB = dict(host="192.168.31.49", port=3306, user="root", password="123456",
           database="basketball", charset="utf8mb4", cursorclass=pymysql.cursors.DictCursor)
 
 
@@ -106,7 +106,7 @@ def main():
     # clear login lock
     try:
         import redis
-        r = redis.Redis(host="192.168.31.48", port=6379, db=0, socket_connect_timeout=3)
+        r = redis.Redis(host="192.168.31.49", port=6379, db=0, socket_connect_timeout=3)
         r.delete(f"member:login:fail:{email}")
     except Exception:
         pass

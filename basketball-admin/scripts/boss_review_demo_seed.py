@@ -17,7 +17,7 @@ import pymysql
 
 ADMIN = "http://localhost:8080"
 WEB = "http://localhost:8881"
-DB = dict(host="192.168.31.48", port=3306, user="root", password="123456", database="basketball", charset="utf8mb4")
+DB = dict(host="192.168.31.49", port=3306, user="root", password="123456", database="basketball", charset="utf8mb4")
 INTERNAL_MARK = "BOSS_REVIEW_2026"
 MEMBER_PASS = "111111aa"
 PASS_HASH = "$2a$10$Kq/KEI3FV.cxoKnhm1O/ceh7Q5.8Pm3Vhpb30zzRPTqDEMYzTCOu."
@@ -145,7 +145,7 @@ def clear_login_locks(emails: list[str]) -> None:
     try:
         import redis
 
-        r = redis.Redis(host="192.168.31.48", port=6379, db=0)
+        r = redis.Redis(host="192.168.31.49", port=6379, db=0)
         for email in emails:
             k = f"member:login:fail:{email}"
             if r.exists(k):

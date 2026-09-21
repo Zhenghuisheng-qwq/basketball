@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketSiteSocialLinkMapper">
+    <resultMap type="com.zhs.basket.domain.BasketSiteSocialLink" id="BasketSiteSocialLinkResult">
+        <id property="id" column="id"/>
+        <result property="platformCode" column="platform_code"/>
+        <result property="title" column="title"/>
+        <result property="subtitle" column="subtitle"/>
+        <result property="buttonText" column="button_text"/>
+        <result property="jumpUrl" column="jump_url"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="BasketSiteSocialLinkResult">
+        select id, platform_code, title, subtitle, button_text, jump_url, sort_order, status,
+               create_time, update_time, is_delete
+        from basket_site_social_link
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultType="com.zhs.basket.resp.SiteSocialLinkListResp">
+        select id, platform_code as platformCode, title, subtitle,
+               button_text as buttonText, jump_url as jumpUrl, sort_order as sortOrder,
+               status, create_time as createTime, update_time as updateTime
+        from basket_site_social_link
+        where is_delete = 0
+        order by sort_order asc, id asc
+    </select>
+
+    <update id="updateById">
+        update basket_site_social_link
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="subtitle != null">subtitle = #{subtitle},</if>
+            <if test="buttonText != null">button_text = #{buttonText},</if>
+            jump_url = #{jumpUrl},
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="status != null">status = #{status},</if>
+            update_time = now()
+        </set>
+        where id = #{id} and is_delete = 0
+    </update>
+</mapper>
