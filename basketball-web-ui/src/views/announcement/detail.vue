@@ -471,6 +471,7 @@ watch(
 }
 
 .announcement-detail-page__paper :deep(.paper-tear) {
+  display: none; /* 临时隐藏撕纸，勿删 */
   height: 0;
   overflow: visible;
   z-index: 6;

@@ -168,6 +168,10 @@ watch(
 
 .hall-of-fame-page__content {
   margin: 0;
+
+  :deep(.paper-tear) {
+    display: none; /* 临时隐藏撕纸，勿删 */
+  }
 }
 
 .hall-of-fame-page__paper-inner {

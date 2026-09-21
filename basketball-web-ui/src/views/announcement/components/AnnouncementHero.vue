@@ -17,7 +17,7 @@ withDefaults(
     :aria-label="variant === 'detail' ? 'CNPA 公告详情' : 'CNPA 公告中心'"
   >
     <div class="site-shell">
-      <div class="announcement-hero__frame">
+      <div class="announcement-hero__frame cnpa-public-hero-frame">
         <img
           class="announcement-hero__image"
           :src="ssggTopBackground"
@@ -37,19 +37,6 @@ withDefaults(
 }
 
 .announcement-hero__frame {
-  width: 100%;
-  height: clamp(300px, 32vw, 510px);
-  overflow: hidden;
   background: #000;
-}
-
-.announcement-hero__image {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-  user-select: none;
-  -webkit-user-drag: none;
 }
 </style>

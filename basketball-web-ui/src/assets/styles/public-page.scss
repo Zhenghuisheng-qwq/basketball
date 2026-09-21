@@ -160,7 +160,51 @@
   }
 }
 
-/* Hero 基础：与 master LeagueHero / DataHero 一致 */
+/* 与赛事 LeagueHero 同一画幅：21/9，宽屏约 1050×449 */
+.cnpa-public-hero-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  min-height: 280px;
+  max-height: 760px;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 2px 2px 0 0;
+  box-sizing: border-box;
+}
+
+.cnpa-public-hero-frame > img,
+.cnpa-public-hero-image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+@media (max-width: 991px) {
+  .cnpa-public-hero-frame {
+    aspect-ratio: 16 / 9;
+    min-height: 340px;
+    max-height: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .cnpa-public-hero-frame {
+    aspect-ratio: auto;
+    height: clamp(380px, 88vw, 520px);
+    min-height: 380px;
+    max-height: none;
+  }
+}
+
 .public-hero {
   width: 100%;
   background: var(--cnpa-bg-primary);
@@ -170,26 +214,6 @@
 .public-hero__shell {
   position: relative;
   overflow: visible;
-}
-
-.public-hero__frame {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-  background: var(--cnpa-bg-primary);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 2px 2px 0 0;
-  box-sizing: border-box;
-}
-
-.public-hero__image {
-  position: relative;
-  z-index: 0;
-  display: block;
-  width: 100%;
-  height: auto;
-  user-select: none;
-  -webkit-user-drag: none;
 }
 
 .public-hero--data .public-hero__frame {

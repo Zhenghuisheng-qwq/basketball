@@ -416,6 +416,7 @@ onMounted(async () => {
 .data-center-panel__tear-top {
   position: relative;
   z-index: 4;
+  display: none; /* 临时隐藏撕纸，勿删 */
   height: 0;
   pointer-events: none;
 
@@ -499,6 +500,7 @@ onMounted(async () => {
 .data-center-panel__edge-bottom {
   position: relative;
   z-index: 3;
+  display: none; /* 临时隐藏撕纸，勿删 */
   width: 100%;
   height: 11px;
   margin-top: -1px;
@@ -542,6 +544,7 @@ onMounted(async () => {
 .data-center-page__red-tear {
   position: relative;
   z-index: 3;
+  display: none; /* 临时隐藏撕纸，勿删 */
   width: 100%;
   height: 12px;
   margin-top: 36px;

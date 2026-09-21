@@ -5,12 +5,14 @@ import mrtTopBackground from '@/assets/icon/mrt/mrt_top_background.png'
 <template>
   <section class="hall-hero-section" aria-label="CNPA 名人堂">
     <div class="site-shell">
-      <img
-        class="hall-hero__image"
-        :src="mrtTopBackground"
-        alt="CNPA 名人堂 HALL OF HONORS"
-        draggable="false"
-      />
+      <div class="hall-hero__frame cnpa-public-hero-frame">
+        <img
+          class="hall-hero__image"
+          :src="mrtTopBackground"
+          alt="CNPA 名人堂 HALL OF HONORS"
+          draggable="false"
+        />
+      </div>
     </div>
   </section>
 </template>
@@ -22,12 +24,7 @@ import mrtTopBackground from '@/assets/icon/mrt/mrt_top_background.png'
   overflow: hidden;
 }
 
-.hall-hero__image {
-  display: block;
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  user-select: none;
-  -webkit-user-drag: none;
+.hall-hero__frame {
+  background: #000;
 }
 </style>

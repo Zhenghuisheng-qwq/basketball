@@ -101,7 +101,7 @@ void loadPartners(1)
   <div class="partners-page">
     <section class="partners-hero" aria-label="合作伙伴">
       <div class="site-shell partners-hero__shell">
-        <div class="partners-hero__visual">
+        <div class="partners-hero__visual cnpa-public-hero-frame">
           <img
             class="partners-hero__image"
             :src="partnersHeroImg"
@@ -239,23 +239,12 @@ void loadPartners(1)
 }
 
 .partners-hero__visual {
-  width: 100%;
-  height: clamp(360px, 34vw, 500px);
-  overflow: hidden;
-  background: #000;
   line-height: 0;
   border: none;
   box-shadow: none;
 }
 
 .partners-hero__image {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center center;
-  user-select: none;
-  -webkit-user-drag: none;
   border: none;
   outline: none;
 }
@@ -268,6 +257,10 @@ void loadPartners(1)
 .partners-content__paper {
   --cnpa-paper-bg: #f4f3ef;
   margin-top: 0;
+
+  :deep(.paper-tear) {
+    display: none; /* 临时隐藏撕纸，勿删 */
+  }
 }
 
 .partners-content__inner {

@@ -10,7 +10,7 @@ export const communityLinks: CommunityLink[] = [
   },
   {
     id: 'qq',
-    title: '加入 QQ 群',
+    title: '加入微信群',
     description: '获取赛事资讯与活动通知',
     icon: 'qq',
     url: '#',

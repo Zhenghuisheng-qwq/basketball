@@ -20,7 +20,7 @@ function handleTournamentChange(value: string) {
 </script>
 <template>
   <section class="data-hero" aria-label="CNPA 数据中心">
-    <div class="data-hero__visual">
+    <div class="data-hero__visual cnpa-public-hero-frame">
       <img
         class="data-hero__image"
         :src="dataHeroBg"
@@ -47,18 +47,10 @@ function handleTournamentChange(value: string) {
 }
 
 .data-hero__visual {
-  position: relative;
-  width: 100%;
   overflow: visible;
-  background: #000;
 }
 
 .data-hero__image {
-  display: block;
-  width: 100%;
-  height: auto;
-  user-select: none;
-  -webkit-user-drag: none;
   pointer-events: none;
 }
 

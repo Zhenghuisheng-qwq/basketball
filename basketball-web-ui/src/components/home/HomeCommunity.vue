@@ -2,7 +2,7 @@
 import { ElMessage } from 'element-plus'
 import { communityLinks } from '@/constants/communityLinks'
 import iconKook from '@/assets/icon/home/social_kook.png'
-import iconQq from '@/assets/icon/home/social_qq.png'
+import iconWx from '@/assets/icon/home/social_wx.png'
 import iconBili from '@/assets/icon/home/social_bili.png'
 import iconDouyin from '@/assets/icon/home/social_douyin.png'
 
@@ -17,14 +17,14 @@ type CommunityCard = {
 
 const cardIcons: Record<string, string> = {
   kook: iconKook,
-  qq: iconQq,
+  qq: iconWx,
   bilibili: iconBili,
   douyin: iconDouyin,
 }
 
 const cards: CommunityCard[] = [
   { id: 'kook', title: '加入 KOOK', description: '官方赛事社区', action: '加入社区', url: '#' },
-  { id: 'qq', title: '加入 QQ 群', description: '球员与观众交流群', action: '加入群聊', url: '#' },
+  { id: 'qq', title: '加入微信群', description: '球员与观众交流群', action: '加入群聊', url: '#' },
   { id: 'bilibili', title: '关注 B 站', description: '赛事直播与精彩内容', action: '访问主页', url: '#' },
   { id: 'douyin', title: '关注抖音', description: '赛事短视频与即时动态', action: '立即关注', url: '#' },
 ].map((card) => ({

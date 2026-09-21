@@ -66,17 +66,6 @@ const seriesLinks = [
           <router-link to="/partners">合作伙伴</router-link>
           <span class="footer-plain">联系我们</span>
         </div>
-
-        <div class="footer-qrcodes">
-          <div class="qrcode-box">
-            <div class="qrcode-placeholder">公众号</div>
-            <span>官方公众号</span>
-          </div>
-          <div class="qrcode-box">
-            <div class="qrcode-placeholder">微博</div>
-            <span>官方微博</span>
-          </div>
-        </div>
       </div>
 
       <div class="footer-bottom">
@@ -105,7 +94,7 @@ const seriesLinks = [
 
 .footer-grid {
   display: grid;
-  grid-template-columns: 1.4fr repeat(4, 1fr) 1.2fr;
+  grid-template-columns: 1.4fr repeat(4, 1fr);
   gap: var(--cnpa-public-card-spacing);
 }
 
@@ -153,30 +142,6 @@ const seriesLinks = [
   cursor: default;
 }
 
-.footer-qrcodes {
-  display: flex;
-  gap: var(--cnpa-public-card-spacing);
-}
-
-.qrcode-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--cnpa-text-secondary);
-}
-
-.qrcode-placeholder {
-  width: 88px;
-  height: 88px;
-  display: grid;
-  place-items: center;
-  border: 1px dashed rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.05);
-  font-size: 12px;
-}
-
 .footer-bottom {
   display: flex;
   align-items: center;
@@ -197,10 +162,6 @@ const seriesLinks = [
 @media (max-width: 1200px) {
   .footer-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .footer-qrcodes {
-    grid-column: span 3;
   }
 }
 

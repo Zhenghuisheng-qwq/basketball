@@ -27,7 +27,7 @@ const resolvedBackground = computed(() => {
     :aria-label="ariaLabel"
   >
     <div class="site-shell public-hero__shell">
-      <div class="public-hero__frame">
+      <div class="public-hero__frame cnpa-public-hero-frame">
         <img
           class="public-hero__image"
           :src="resolvedBackground"
