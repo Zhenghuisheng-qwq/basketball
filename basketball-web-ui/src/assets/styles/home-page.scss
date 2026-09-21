@@ -1907,7 +1907,7 @@
   right: 0;
   bottom: 0;
   z-index: 1;
-  display: block;
+  display: none; /* 临时隐藏撕纸，勿删 */
   width: 100%;
   height: clamp(72px, 8vw, 120px);
   margin: 0;
@@ -2377,6 +2377,7 @@
     left: 0;
     right: 0;
     z-index: 3;
+    display: none; /* 临时隐藏撕纸白边，勿删 */
     height: 8px;
     background: #fff;
     pointer-events: none;
@@ -2401,7 +2402,7 @@
   top: 0;
   left: 0;
   z-index: 2;
-  display: block;
+  display: none; /* 临时隐藏撕纸，勿删 */
   width: 100%;
   height: auto;
   /* 白边在素材 y=236，绝对定位贴盒子顶 */
@@ -2417,6 +2418,7 @@
   right: 0;
   top: 100%;
   z-index: 2;
+  display: none; /* 临时隐藏撕纸，勿删 */
   height: clamp(120px, 16vw, 200px);
   overflow: hidden;
   pointer-events: none;

@@ -242,7 +242,7 @@ watch(
 }
 
 .competition-format--embedded .competition-format__inner {
-  padding-inline: var(--cnpa-public-content-gutter);
+  padding-inline: 0;
   padding-top: clamp(6px, 0.8vw, 12px);
 }
 
@@ -395,7 +395,7 @@ watch(
 }
 
 @media (max-width: 768px) {
-  .competition-format__inner {
+  .competition-format:not(.competition-format--embedded) .competition-format__inner {
     padding-left: var(--cnpa-public-content-gutter);
     padding-right: var(--cnpa-public-content-gutter);
   }
