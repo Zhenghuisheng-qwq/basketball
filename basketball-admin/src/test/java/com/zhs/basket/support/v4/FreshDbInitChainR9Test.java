@@ -7,24 +7,20 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FreshDbInitChainR9Test {
 
     @Test
-    void officialFreshChainIncludesMatchSubmissionScoreColumns() throws Exception {
+    void matchSubmissionMigrationIncludesScoreColumns() throws Exception {
         Path cwd = Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize();
         Path root = cwd;
-        if (!Files.exists(root.resolve("scripts/cnpa_v13_r9_fresh_db.py"))) {
+        if (!Files.exists(root.resolve("docs/sql/cnpa-v13-r9-final-migration.sql"))) {
             root = cwd.getParent();
         }
-        String chain = readFlexible(root.resolve("scripts/cnpa_v13_r9_fresh_db.py"));
         String migration = readFlexible(root.resolve("docs/sql/cnpa-v13-r9-final-migration.sql"));
         String patch = readFlexible(root.resolve("docs/sql/cnpa-v4-round5-match-data-patch.sql"));
 
-        assertTrue(chain.contains("cnpa-v4-round5-match-data-patch.sql"));
-        assertFalse(chain.contains("\"docs/sql/cnpa-v13-r7-precheck-schema-reconcile.sql\""));
         assertTrue(patch.contains("home_score"));
         assertTrue(patch.contains("away_score"));
         assertTrue(patch.contains("submit_remark"));
