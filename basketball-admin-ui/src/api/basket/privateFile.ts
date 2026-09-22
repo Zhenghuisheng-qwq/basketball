@@ -6,7 +6,7 @@ import { blobValidate } from '@/utils/ruoyi'
 const baseURL = import.meta.env.VITE_APP_BASE_API
 
 /** 预览私有认证材料文件 */
-export async function previewPrivateFile(fileId: number) {
+export async function previewPrivateFile(fileId: number | string) {
   try {
     const res = await axios.get(`${baseURL}/basket/private-file/${fileId}`, {
       responseType: 'blob',

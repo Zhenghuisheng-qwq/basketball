@@ -6,6 +6,10 @@ export function resolveSubmissionMaterialUrl(fileId: string | number) {
   return baseURL + '/basket/v4/match-submission-audit/material/' + String(fileId)
 }
 
+export function resolvePrivateFileUrl(fileId: string | number) {
+  return baseURL + '/basket/private-file/' + String(fileId)
+}
+
 export async function fetchAuthedImageUrl(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: {

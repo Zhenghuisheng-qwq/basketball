@@ -95,7 +95,15 @@
 
     <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
-    <el-drawer v-model="detailOpen" title="球员认证详情" size="720px" append-to-body>
+    <el-dialog
+      v-model="detailOpen"
+      title="球员认证详情"
+      width="860px"
+      append-to-body
+      align-center
+      class="player-cert-detail-dialog"
+      @closed="clearProofImages"
+    >
       <template v-if="detail">
         <div class="detail-header">
           <el-avatar :src="resolveMemberAvatarUrl(detail.avatarUrl)" :size="56">
@@ -128,15 +136,19 @@
           <div v-for="item in proofMaterials" :key="item.materialId || item.fileId" class="proof-item">
             <div class="proof-label">{{ item.materialName || item.materialType || '证明材料' }}</div>
             <el-image
-              v-if="item.accessUrl && isImage(item.mimeType)"
-              :src="item.accessUrl"
+              v-if="proofImageSrc(item)"
+              :src="proofImageSrc(item)"
               fit="contain"
               class="proof-image"
-              :preview-src-list="[item.accessUrl]"
+              :preview-src-list="[proofImageSrc(item)]"
             />
             <div v-else class="proof-actions">
-              <el-button link type="primary" @click="handlePreviewFile(item.fileId)" v-if="item.fileId">预览文件</el-button>
-              <span v-else>-</span>
+              <span v-if="proofImageStatus(item) === 'loading'" class="sub-text">加载中</span>
+              <template v-else>
+                <span v-if="isImage(item.mimeType)" class="sub-text">加载失败</span>
+                <el-button link type="primary" @click="handlePreviewFile(resolveMaterialFileId(item))" v-if="resolveMaterialFileId(item)">预览文件</el-button>
+                <span v-else>-</span>
+              </template>
             </div>
           </div>
         </div>
@@ -152,7 +164,7 @@
           <template #default="scope">{{ parseTime(scope.row.auditTime) }}</template>
         </el-table-column>
       </el-table>
-    </el-drawer>
+    </el-dialog>
 
     <el-dialog title="确认驳回认证？" v-model="rejectOpen" width="480px" append-to-body>
       <el-form ref="rejectRef" :model="rejectForm" label-width="88px">
@@ -190,6 +202,7 @@ import {
   rejectPlayerCert
 } from '@/api/basket/playerCert'
 import { previewPrivateFile } from '@/api/basket/privateFile'
+import { fetchAuthedImageUrl, resolvePrivateFileUrl } from '@/utils/resolveAttachmentUrl'
 import type {
   PlayerCertAuditRecord,
   PlayerCertDetail,
@@ -204,6 +217,7 @@ import { resolveMemberAvatarUrl } from '@/utils/memberAvatar'
 import { buildBatchAuditPayload, formatBatchAuditMessage, useBatchAuditSelection } from '@/utils/batchAudit'
 
 const { proxy } = getCurrentInstance()
+onUnmounted(() => clearProofImages())
 const tableRef = ref()
 
 const dataList = ref<PlayerCertListItem[]>([])
@@ -214,7 +228,10 @@ const detailOpen = ref(false)
 const detailLoading = ref(false)
 const detail = ref<PlayerCertDetail>()
 const materials = ref<PlayerCertMaterial[]>([])
+const proofImageMap = ref<Record<string, string>>({})
+const proofImageState = ref<Record<string, 'loading' | 'ready' | 'error'>>({})
 const auditRecords = ref<PlayerCertAuditRecord[]>([])
+let proofLoadSeq = 0
 const currentId = ref<number>()
 const rejectOpen = ref(false)
 const batchRejectOpen = ref(false)
@@ -275,6 +292,59 @@ function isImage(mimeType?: string) {
   return !!mimeType && mimeType.startsWith('image/')
 }
 
+function resolveMaterialFileId(item: PlayerCertMaterial) {
+  const fromUrl = item.accessUrl?.match(/\/basket\/account\/file\/(\d+)/)?.[1]
+  if (fromUrl) return fromUrl
+  if (item.fileId != null && String(item.fileId) !== '') return String(item.fileId)
+  return ''
+}
+
+function proofImageSrc(item: PlayerCertMaterial) {
+  const fileId = resolveMaterialFileId(item)
+  return fileId ? proofImageMap.value[fileId] || '' : ''
+}
+
+function proofImageStatus(item: PlayerCertMaterial) {
+  const fileId = resolveMaterialFileId(item)
+  return fileId ? proofImageState.value[fileId] : undefined
+}
+
+function clearProofImages(invalidate = true) {
+  if (invalidate) proofLoadSeq += 1
+  Object.values(proofImageMap.value).forEach(url => {
+    if (url.startsWith('blob:')) URL.revokeObjectURL(url)
+  })
+  proofImageMap.value = {}
+  proofImageState.value = {}
+}
+
+async function loadProofImages(list: PlayerCertMaterial[]) {
+  const seq = ++proofLoadSeq
+  clearProofImages(false)
+  const state: Record<string, 'loading' | 'ready' | 'error'> = {}
+  const images = list.filter(item => isImage(item.mimeType) && resolveMaterialFileId(item))
+  images.forEach(item => {
+    state[resolveMaterialFileId(item)] = 'loading'
+  })
+  proofImageState.value = state
+  await Promise.all(images.map(async item => {
+    const fileId = resolveMaterialFileId(item)
+    try {
+      const direct = item.accessUrl && /^https?:\/\//i.test(item.accessUrl) ? item.accessUrl : ''
+      const url = direct || await fetchAuthedImageUrl(resolvePrivateFileUrl(fileId))
+      if (seq !== proofLoadSeq) {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url)
+        return
+      }
+      proofImageMap.value = { ...proofImageMap.value, [fileId]: url }
+      proofImageState.value = { ...proofImageState.value, [fileId]: 'ready' }
+    } catch {
+      if (seq !== proofLoadSeq) return
+      proofImageState.value = { ...proofImageState.value, [fileId]: 'error' }
+    }
+  }))
+}
+
 function getList() {
   loading.value = true
   listPlayerCert(queryParams.value).then(response => {
@@ -300,6 +370,7 @@ function handleDetail(row: PlayerCertListItem) {
   detailLoading.value = true
   detail.value = undefined
   materials.value = []
+  clearProofImages()
   auditRecords.value = []
   Promise.all([
     getPlayerCert(row.id),
@@ -308,12 +379,13 @@ function handleDetail(row: PlayerCertListItem) {
     detail.value = detailRes.data
     materials.value = detailRes.data?.materials || []
     auditRecords.value = auditRes.data || []
+    loadProofImages(materials.value)
   }).finally(() => {
     detailLoading.value = false
   })
 }
 
-function handlePreviewFile(fileId?: number) {
+function handlePreviewFile(fileId?: number | string) {
   if (fileId) {
     previewPrivateFile(fileId)
   }
@@ -457,5 +529,11 @@ getList()
   min-height: 80px;
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.player-cert-detail-dialog :deep(.el-dialog__body) {
+  max-height: calc(100vh - 160px);
+  overflow: auto;
 }
 </style>
