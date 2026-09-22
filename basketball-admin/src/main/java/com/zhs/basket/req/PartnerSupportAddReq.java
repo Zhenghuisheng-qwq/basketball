@@ -1,5 +1,6 @@
 package com.zhs.basket.req;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -12,6 +13,7 @@ public class PartnerSupportAddReq {
     private String partnerName;
     private String supportType;
     private BigDecimal supportAmount;
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private Date supportDate;
     private String publicDescription;
     private Integer publishStatus;
