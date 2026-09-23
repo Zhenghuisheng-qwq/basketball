@@ -12,6 +12,8 @@ public interface BasketPartnerSupportRecordPublicDao {
 
     Long countPublicRecords();
 
+    Long countPublicSupportRows();
+
     BigDecimal sumPublicCashAmount();
 
     List<PublicPartnerSupportRecordResp> selectPublicPage(@Param("offset") long offset, @Param("limit") int limit);

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
-import PaperTear from '@/components/common/PaperTear.vue'
 import { getPublicPartners } from '@/api/public/partner'
 import type { PublicPartnerSupportRecordResp } from '@/api/types/public'
 import { displayText, toNumber } from '@/utils/publicDisplay'
@@ -46,13 +45,20 @@ function formatCount(value: number) {
   return Number.isFinite(value) ? String(value) : '0'
 }
 
-function supportText(record: PublicPartnerSupportRecordResp) {
-  return displayText(record.supportDisplayText, `¥${formatMoney(toNumber(record.supportAmount, 0))}`)
+function isCashSupport(record: PublicPartnerSupportRecordResp) {
+  return (record.supportType || 'CASH').toUpperCase() === 'CASH'
 }
 
-function partnerInitial(name?: string | null) {
-  const text = displayText(name, '合').trim()
-  return text.charAt(0).toUpperCase()
+function supportMethodText(record: PublicPartnerSupportRecordResp) {
+  if (isCashSupport(record)) {
+    return `¥ ${formatMoney(toNumber(record.supportAmount, 0))}`
+  }
+  return displayText(record.supportDisplayText || record.supportTypeText, '-')
+}
+
+function supportDateText(record: PublicPartnerSupportRecordResp) {
+  const date = displayText(record.supportDate, '')
+  return date ? date.slice(0, 10) : '-'
 }
 
 async function loadPartners(nextPage = pageNum.value) {
@@ -113,107 +119,106 @@ void loadPartners(1)
     </section>
 
     <section class="partners-content">
-      <div class="site-shell">
-        <div class="cnpa-paper-section cnpa-paper-section--light partners-content__paper">
-          <PaperTear position="top" tone="light" />
-          <div class="cnpa-paper-section__content partners-content__inner">
-            <section class="partners-summary">
-              <h2 class="section-heading">
-                <span class="section-heading__cn">感谢支持</span>
-                <span class="section-heading__en">SUPPORT SUMMARY</span>
-              </h2>
-              <div class="partners-summary__grid">
-                <article class="partners-summary__card">
-                  <div class="partners-summary__label">支持伙伴总数</div>
-                  <div class="partners-summary__number">
-                    <template v-if="loading">—</template>
-                    <template v-else>{{ formatCount(supportRecordCount) }}</template>
-                  </div>
-                </article>
-                <article class="partners-summary__card">
-                  <div class="partners-summary__label">累计赞助金额</div>
-                  <div class="partners-summary__number partners-summary__number--money">
-                    <span class="currency">¥</span>
-                    <template v-if="loading">—</template>
-                    <template v-else>{{ formattedTotalCash }}</template>
-                  </div>
-                </article>
-              </div>
-            </section>
+      <div class="partners-panel">
+        <div class="site-shell partners-panel__inner">
+          <section class="partners-summary">
+            <h2 class="section-heading">
+              <span class="section-heading__cn">感谢支持</span>
+              <span class="section-heading__en">SUPPORT SUMMARY</span>
+            </h2>
+            <div class="partners-summary__grid">
+              <article class="partners-summary__card">
+                <div class="partners-summary__label">支持伙伴总数</div>
+                <div class="partners-summary__number">
+                  <template v-if="loading">—</template>
+                  <template v-else>{{ formatCount(supportRecordCount) }}</template>
+                </div>
+              </article>
+              <article class="partners-summary__card">
+                <div class="partners-summary__label">累计赞助金额</div>
+                <div class="partners-summary__number partners-summary__number--money">
+                  <span class="currency">¥</span>
+                  <template v-if="loading">—</template>
+                  <template v-else>{{ formattedTotalCash }}</template>
+                </div>
+              </article>
+            </div>
+          </section>
 
-            <div class="partners-paper-rule" aria-hidden="true" />
+          <section ref="wallRef" class="partners-wall">
+            <h2 class="section-heading">
+              <span class="section-heading__cn">赞助感谢墙</span>
+              <span class="section-heading__en">SPONSOR WALL</span>
+            </h2>
 
-            <section ref="wallRef" class="partners-wall">
-              <h2 class="section-heading">
-                <span class="section-heading__cn">赞助感谢墙</span>
-                <span class="section-heading__en">SPONSOR WALL</span>
-              </h2>
+            <div v-if="pageState === 'loading'" class="partners-state">加载中...</div>
+            <div v-else-if="pageState === 'error'" class="partners-state partners-state--error">
+              <p>{{ error }}</p>
+              <button type="button" class="partners-retry" @click="loadPartners(pageNum)">重新加载</button>
+            </div>
+            <div v-else-if="pageState === 'empty'" class="partners-empty">
+              暂无公开的赞助记录
+            </div>
+            <div v-else class="partners-table-wrap">
+              <table class="partners-table">
+                <thead>
+                  <tr>
+                    <th scope="col">支持伙伴</th>
+                    <th scope="col">支持方式</th>
+                    <th scope="col">支持日期</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="record in records" :key="String(record.recordId || record.partnerId)">
+                    <td>
+                      <a
+                        v-if="record.websiteUrl"
+                        class="partners-table__name"
+                        :href="record.websiteUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >{{ displayText(record.partnerName) }}</a>
+                      <span v-else class="partners-table__name">{{ displayText(record.partnerName) }}</span>
+                    </td>
+                    <td>
+                      <span class="partners-table__method" :class="{ 'is-cash': isCashSupport(record) }">
+                        {{ supportMethodText(record) }}
+                      </span>
+                    </td>
+                    <td class="partners-table__date">{{ supportDateText(record) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
-              <div v-if="pageState === 'loading'" class="partners-state">加载中...</div>
-              <div v-else-if="pageState === 'error'" class="partners-state partners-state--error">
-                <p>{{ error }}</p>
-                <button type="button" class="partners-retry" @click="loadPartners(pageNum)">重新加载</button>
-              </div>
-              <div v-else-if="pageState === 'empty'" class="partners-empty">
-                暂无公开的合作伙伴
-              </div>
-              <div v-else class="partners-wall__grid" aria-label="赞助感谢墙">
-                <component
-                  :is="record.websiteUrl ? 'a' : 'article'"
-                  v-for="record in records"
-                  :key="String(record.partnerId || record.recordId)"
-                  class="partners-card"
-                  :href="record.websiteUrl || undefined"
-                  :target="record.websiteUrl ? '_blank' : undefined"
-                  :rel="record.websiteUrl ? 'noopener noreferrer' : undefined"
-                >
-                  <div class="partners-card__logo">
-                    <img
-                      v-if="record.partnerLogoUrl"
-                      :src="record.partnerLogoUrl"
-                      :alt="displayText(record.partnerName)"
-                      loading="lazy"
-                    />
-                    <span v-else class="partners-card__fallback">{{ partnerInitial(record.partnerName) }}</span>
-                  </div>
-                  <div class="partners-card__name" :title="displayText(record.partnerName)">
-                    {{ displayText(record.partnerName) }}
-                  </div>
-                  <div class="partners-card__label">累计赞助</div>
-                  <div class="partners-card__amount">{{ supportText(record) }}</div>
-                </component>
-              </div>
-
-              <nav v-if="showPagination" class="partners-pagination" aria-label="分页">
-                <button
-                  type="button"
-                  class="partners-pagination__btn"
-                  :disabled="pageNum <= 1 || loading"
-                  aria-label="上一页"
-                  @click="goPage(pageNum - 1)"
-                >
-                  ‹
-                </button>
-                <button
-                  type="button"
-                  class="partners-pagination__btn is-current"
-                  aria-current="page"
-                >
-                  {{ pageNum }}
-                </button>
-                <button
-                  type="button"
-                  class="partners-pagination__btn"
-                  :disabled="pageNum >= totalPages || loading"
-                  aria-label="下一页"
-                  @click="goPage(pageNum + 1)"
-                >
-                  ›
-                </button>
-              </nav>
-            </section>
-          </div>
-          <PaperTear position="bottom" tone="light" />
+            <nav v-if="showPagination" class="partners-pagination" aria-label="分页">
+              <button
+                type="button"
+                class="partners-pagination__btn"
+                :disabled="pageNum <= 1 || loading"
+                aria-label="上一页"
+                @click="goPage(pageNum - 1)"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                class="partners-pagination__btn is-current"
+                aria-current="page"
+              >
+                {{ pageNum }}
+              </button>
+              <button
+                type="button"
+                class="partners-pagination__btn"
+                :disabled="pageNum >= totalPages || loading"
+                aria-label="下一页"
+                @click="goPage(pageNum + 1)"
+              >
+                ›
+              </button>
+            </nav>
+          </section>
         </div>
       </div>
     </section>
@@ -254,273 +259,214 @@ void loadPartners(1)
   background: #080808;
 }
 
-.partners-content__paper {
-  --cnpa-paper-bg: #f4f3ef;
-  margin-top: 0;
-
-  :deep(.paper-tear) {
-    display: none; /* 临时隐藏撕纸，勿删 */
-  }
+.partners-panel {
+  background: #f6f4f1;
+  color: #161616;
 }
 
-.partners-content__inner {
-  padding: clamp(36px, 3.4vw, 44px) clamp(20px, 3.2vw, 32px) clamp(36px, 3vw, 48px);
-  box-sizing: border-box;
+.partners-panel__inner {
+  padding-block: clamp(36px, 4vw, 56px) clamp(40px, 4vw, 64px);
 }
 
 .section-heading {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 12px 16px;
+  gap: 10px 14px;
   margin: 0;
-  font-weight: 900;
-  letter-spacing: 0.5px;
 }
 
 .section-heading__cn {
-  font-size: clamp(24px, 2vw, 32px);
+  font-size: clamp(26px, 2.2vw, 34px);
   line-height: 1.1;
-  color: #121212;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #141414;
 }
 
 .section-heading__en {
   font-family: Impact, 'Arial Narrow', sans-serif;
   font-style: italic;
-  color: var(--cnpa-red, #e10613);
-  font-size: clamp(13px, 1vw, 16px);
   font-weight: 800;
+  font-size: clamp(13px, 1vw, 16px);
   letter-spacing: 0.8px;
-}
-
-.partners-summary {
-  padding-top: 8px;
-  padding-bottom: clamp(36px, 3vw, 52px);
+  color: #e10613;
 }
 
 .partners-summary__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(18px, 2vw, 28px);
-  margin-top: clamp(24px, 2.2vw, 30px);
+  gap: clamp(16px, 2vw, 28px);
+  margin-top: clamp(22px, 2vw, 28px);
 }
 
 .partners-summary__card {
-  min-height: clamp(160px, 14vw, 190px);
-  max-height: 220px;
-  padding: 24px;
-  border: 1px solid rgba(30, 30, 30, 0.38);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.34);
+  min-height: clamp(148px, 16vw, 188px);
+  padding: 22px 16px;
+  border: 1px solid rgba(28, 28, 28, 0.72);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 35px rgba(255, 255, 255, 0.25);
   box-sizing: border-box;
 }
 
 .partners-summary__label {
+  margin-bottom: clamp(12px, 1.4vw, 18px);
+  font-size: clamp(16px, 1.4vw, 20px);
   font-weight: 900;
-  font-size: clamp(16px, 1.5vw, 19px);
-  letter-spacing: 1px;
-  margin-bottom: clamp(16px, 1.6vw, 22px);
-  color: #121212;
+  letter-spacing: 0.5px;
+  color: #171717;
 }
 
 .partners-summary__number {
   font-family: Impact, 'Arial Black', sans-serif;
-  font-stretch: condensed;
-  color: #c90911;
-  font-size: clamp(56px, 5.5vw, 72px);
+  font-size: clamp(52px, 5.2vw, 76px);
   line-height: 0.9;
   letter-spacing: 1px;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+  color: #d10012;
 }
 
 .partners-summary__number--money {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 4px;
-  font-size: clamp(48px, 4.6vw, 68px);
+  gap: 6px;
+  max-width: 100%;
+  font-size: clamp(36px, 4.2vw, 64px);
   white-space: nowrap;
 
   .currency {
     font-family: Arial, sans-serif;
-    font-size: clamp(20px, 2vw, 27px);
+    font-size: 0.42em;
     line-height: 1;
-    transform: translateY(-0.08em);
-  }
-}
-
-.partners-paper-rule {
-  height: clamp(24px, 2.5vw, 36px);
-  margin: 0 0 clamp(24px, 2.2vw, 30px);
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 50%;
-    border-top: 1px solid rgba(50, 50, 50, 0.17);
-    filter: blur(0.15px);
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(50% - 5px);
-    height: 10px;
-    opacity: 0.15;
-    background: repeating-linear-gradient(
-      175deg,
-      transparent 0 26px,
-      rgba(30, 30, 30, 0.35) 27px 28px,
-      transparent 29px 47px
-    );
   }
 }
 
 .partners-wall {
+  margin-top: clamp(40px, 4vw, 56px);
   scroll-margin-top: calc(var(--site-header-height) + 16px);
 }
 
-.partners-wall__grid {
-  margin-top: clamp(24px, 2.2vw, 30px);
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(14px, 1.6vw, 20px);
+.partners-table-wrap {
+  margin-top: clamp(18px, 2vw, 26px);
+  overflow-x: auto;
 }
 
-.partners-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.partners-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.partners-table th,
+.partners-table td {
+  padding: 16px 8px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.partners-table th {
+  padding-top: 4px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(22, 22, 22, 0.14);
+  font-size: clamp(14px, 1.2vw, 16px);
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  color: #171717;
+}
+
+.partners-table td {
+  border-bottom: 1px solid rgba(22, 22, 22, 0.08);
+  font-size: clamp(14px, 1.15vw, 16px);
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.partners-table th:nth-child(2),
+.partners-table td:nth-child(2) {
   text-align: center;
-  min-height: 190px;
-  padding: 22px 16px 20px;
-  border: 1px solid rgba(30, 30, 30, 0.28);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.34);
-  color: inherit;
-  text-decoration: none;
-  box-sizing: border-box;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
-  }
 }
 
-.partners-card__logo {
-  width: 72px;
-  height: 72px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(30, 30, 30, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
+.partners-table th:nth-child(3),
+.partners-table td:nth-child(3) {
+  text-align: right;
 }
 
-.partners-card__fallback {
-  font-size: 28px;
-  font-weight: 800;
-  color: #333;
-}
-
-.partners-card__name {
-  margin-top: 14px;
-  font-size: 16px;
-  font-weight: 800;
-  color: #121212;
-  max-width: 100%;
+.partners-table__name {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.partners-card__label {
-  margin-top: 10px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: #666;
-}
-
-.partners-card__amount {
-  margin-top: 6px;
-  font-size: 18px;
+  color: inherit;
   font-weight: 800;
-  color: #c90911;
+  text-decoration: none;
+}
+
+a.partners-table__name:hover {
+  color: #d10012;
+}
+
+.partners-table__method {
+  font-weight: 800;
+}
+
+.partners-table__method.is-cash {
+  color: #e10613;
+}
+
+.partners-table__date {
+  font-variant-numeric: tabular-nums;
+  color: #2a2a2a;
 }
 
 .partners-pagination {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
-  margin-top: 23px;
+  gap: 10px;
+  margin-top: 28px;
 }
 
 .partners-pagination__btn {
-  min-width: 40px;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid rgba(30, 30, 30, 0.24);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.42);
-  color: #111;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid rgba(22, 22, 22, 0.16);
+  border-radius: 6px;
+  background: #fff;
+  color: #222;
   font: inherit;
   font-size: 18px;
   font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 
   &:disabled {
-    opacity: 0.45;
+    opacity: 0.4;
     cursor: not-allowed;
   }
 
   &.is-current {
-    background: #d60712;
-    border-color: #d60712;
+    background: #e10613;
+    border-color: #e10613;
     color: #fff;
+    cursor: default;
   }
 }
 
-.partners-state {
-  margin-top: clamp(24px, 2.2vw, 30px);
-  padding: 32px 16px;
-  text-align: center;
-  color: #555;
-  font-size: 16px;
-  font-weight: 700;
-}
-
+.partners-state,
 .partners-empty {
-  margin-top: clamp(24px, 2.2vw, 30px);
+  margin-top: 24px;
   min-height: 160px;
-  max-height: 220px;
-  padding: 48px 20px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  color: #555;
+  color: #666;
   font-size: 16px;
   font-weight: 700;
 }
@@ -533,28 +479,27 @@ void loadPartners(1)
 .partners-retry {
   min-width: 120px;
   height: 40px;
-  border: 1px solid rgba(30, 30, 30, 0.24);
-  border-radius: 4px;
+  border: 1px solid rgba(22, 22, 22, 0.18);
+  border-radius: 6px;
   background: #fff;
-  color: #111;
+  color: #161616;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
 }
 
-@media (max-width: 1100px) {
-  .partners-wall__grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .partners-summary__grid {
     grid-template-columns: 1fr;
   }
 
-  .partners-wall__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .partners-summary__number--money {
+    white-space: normal;
+  }
+
+  .partners-table th,
+  .partners-table td {
+    padding-inline: 4px;
   }
 }
 </style>

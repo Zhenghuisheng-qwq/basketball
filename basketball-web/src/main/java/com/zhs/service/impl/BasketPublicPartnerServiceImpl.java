@@ -75,7 +75,7 @@ public class BasketPublicPartnerServiceImpl implements IBasketPublicPartnerServi
     public PublicPartnersResp pagePartners(Integer currentPage, Integer pageSize) {
         int page = publicSupport.normalizePage(currentPage);
         int size = normalizePartnerPageSize(pageSize);
-        String cacheKey = "partner:wall:" + page + ":" + size;
+        String cacheKey = "partner:wall:records:" + page + ":" + size;
         return publicSupport.cacheGetOrLoad(cacheKey, () -> buildPartnersResp(page, size));
     }
 
@@ -90,7 +90,8 @@ public class BasketPublicPartnerServiceImpl implements IBasketPublicPartnerServi
         resp.setSummary(summary);
 
         PublicPartnerPageResp pageResp = new PublicPartnerPageResp();
-        long total = summary.getSupportRecordCount();
+        Long rowCount = supportRecordPublicDao.countPublicSupportRows();
+        long total = rowCount == null ? 0L : rowCount;
         pageResp.setTotal(total);
         if (total <= 0) {
             pageResp.setRows(Collections.emptyList());
