@@ -23,6 +23,11 @@ public final class BasketPublicConstants {
     public static final int DEFAULT_PAGE = 1;
     public static final int DEFAULT_SIZE = 10;
     public static final int MAX_SIZE = 100;
+    /** Hard cap for one-division team list (covers 16/32 team formats). */
+    /** Hard cap for one-division team list (covers 16/32 team formats). */
+    public static final int MAX_UNPAGED_TEAM_LIST = 64;
+    /** Hard cap for one-division match list (16-team RR = 120 plus playoff slack). */
+    public static final int MAX_UNPAGED_MATCH_LIST = 256;
     public static final int HOME_LIMIT = 10;
     public static final int HOME_ANNOUNCEMENT_LIMIT = 5;
 

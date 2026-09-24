@@ -8,6 +8,7 @@ import com.zhs.response.team.JoinableTeamPageResp;
 import com.zhs.response.team.TeamDetailResp;
 import com.zhs.response.team.TeamSummaryResp;
 import com.zhs.service.IAccountTeamService;
+import com.zhs.support.ClientIpResolver;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -31,6 +32,8 @@ public class AccountTeamController {
 
     @Resource
     private IAccountTeamService accountTeamService;
+    @Resource
+    private ClientIpResolver clientIpResolver;
 
     @ApiOperation("我的球队列表（scope=current|history，默认 current）")
     @GetMapping("/mine")
@@ -67,7 +70,7 @@ public class AccountTeamController {
     @ApiOperation("创建球队")
     @PostMapping("/create")
     public R<TeamDetailResp> create(@RequestBody TeamCreateReq req, HttpServletRequest request) {
-        return R.ok(accountTeamService.create(req, resolveClientIp(request)), "球队创建成功");
+        return R.ok(accountTeamService.create(req, clientIpResolver.resolve(request)), "球队创建成功");
     }
 
     @ApiOperation("球队详情")
@@ -81,7 +84,7 @@ public class AccountTeamController {
     public R<TeamDetailResp> update(@PathVariable String teamId,
                                      @RequestBody TeamUpdateReq req,
                                      HttpServletRequest request) {
-        return R.ok(accountTeamService.update(teamId, req, resolveClientIp(request)), "球队更新成功");
+        return R.ok(accountTeamService.update(teamId, req, clientIpResolver.resolve(request)), "球队更新成功");
     }
 
     @ApiOperation("绑定球队 Logo")
@@ -89,24 +92,12 @@ public class AccountTeamController {
     public R<TeamDetailResp> bindLogo(@PathVariable String teamId,
                                       @RequestBody TeamLogoBindReq req,
                                       HttpServletRequest request) {
-        return R.ok(accountTeamService.bindLogo(teamId, req, resolveClientIp(request)), "Logo 绑定成功");
+        return R.ok(accountTeamService.bindLogo(teamId, req, clientIpResolver.resolve(request)), "Logo 绑定成功");
     }
 
     @ApiOperation("提交/重新提交球队认证")
     @PostMapping("/{teamId}/submit-certification")
     public R<TeamDetailResp> submitCertification(@PathVariable String teamId, HttpServletRequest request) {
-        return R.ok(accountTeamService.submitCertification(teamId, resolveClientIp(request)), "已提交球队认证审核");
-    }
-
-    private String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr();
+        return R.ok(accountTeamService.submitCertification(teamId, clientIpResolver.resolve(request)), "已提交球队认证审核");
     }
 }

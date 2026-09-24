@@ -21,6 +21,7 @@ import com.zhs.response.account.SecurityLogItemResp;
 import com.zhs.service.IAccountSecurityService;
 import com.zhs.service.IBasketMemberAuthService;
 import com.zhs.support.MemberSessionSupport;
+import com.zhs.support.PageSizeLimiter;
 import com.zhs.util.DataMaskUtil;
 import jakarta.annotation.Resource;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -205,6 +206,6 @@ public class AccountSecurityServiceImpl implements IAccountSecurityService {
     }
 
     private long normalizeSize(Integer pageSize) {
-        return pageSize == null || pageSize < 1 ? 10L : pageSize;
+        return PageSizeLimiter.clamp(pageSize);
     }
 }

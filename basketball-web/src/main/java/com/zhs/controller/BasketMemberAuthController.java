@@ -12,6 +12,7 @@ import com.zhs.response.member.MemberLoginResp;
 import com.zhs.response.member.MemberRegisterResp;
 import com.zhs.response.member.MemberSessionResp;
 import com.zhs.service.IBasketMemberAuthService;
+import com.zhs.support.ClientIpResolver;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -35,33 +36,35 @@ public class BasketMemberAuthController {
 
     @Resource
     private IBasketMemberAuthService basketMemberAuthService;
+    @Resource
+    private ClientIpResolver clientIpResolver;
 
     @NoLoginRequest
     @ApiOperation("发送邮箱验证码")
     @PostMapping("/email-code/send")
     public R<EmailCodeSendResp> sendEmailCode(@RequestBody EmailCodeSendReq req, HttpServletRequest request) {
-        return R.ok(basketMemberAuthService.sendEmailCode(req, resolveClientIp(request)), "验证码已发送");
+        return R.ok(basketMemberAuthService.sendEmailCode(req, clientIpResolver.resolve(request)), "验证码已发送");
     }
 
     @NoLoginRequest
     @ApiOperation("注册官网用户")
     @PostMapping("/register")
     public R<MemberRegisterResp> register(@RequestBody MemberRegisterReq req, HttpServletRequest request) {
-        return R.ok(basketMemberAuthService.register(req, resolveClientIp(request), request.getHeader("User-Agent")), "注册成功");
+        return R.ok(basketMemberAuthService.register(req, clientIpResolver.resolve(request), request.getHeader("User-Agent")), "注册成功");
     }
 
     @NoLoginRequest
     @ApiOperation("密码登录")
     @PostMapping("/login/password")
     public R<MemberLoginResp> loginByPassword(@RequestBody MemberPasswordLoginReq req, HttpServletRequest request) {
-        return R.ok(basketMemberAuthService.loginByPassword(req, resolveClientIp(request), request.getHeader("User-Agent")), "登录成功");
+        return R.ok(basketMemberAuthService.loginByPassword(req, clientIpResolver.resolve(request), request.getHeader("User-Agent")), "登录成功");
     }
 
     @NoLoginRequest
     @ApiOperation("找回密码")
     @PostMapping("/password/reset")
     public R<Void> resetPassword(@RequestBody MemberPasswordResetReq req, HttpServletRequest request) {
-        basketMemberAuthService.resetPassword(req, resolveClientIp(request));
+        basketMemberAuthService.resetPassword(req, clientIpResolver.resolve(request));
         return R.ok(null, "密码已重置");
     }
 
@@ -78,15 +81,5 @@ public class BasketMemberAuthController {
         return R.ok(null, "已退出登录");
     }
 
-    private String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr();
-    }
 }
+

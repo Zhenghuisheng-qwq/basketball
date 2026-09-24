@@ -3,6 +3,7 @@ package com.zhs.controller.v4;
 import com.zhs.request.team.TeamCreateReq;
 import com.zhs.request.v4.V4PersonalFormationBindTeamReq;
 import com.zhs.service.v4.IBasketV4PersonalFormationService;
+import com.zhs.support.ClientIpResolver;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -17,6 +18,8 @@ public class BasketV4PersonalFormationController {
 
     @Resource
     private IBasketV4PersonalFormationService personalFormationService;
+    @Resource
+    private ClientIpResolver clientIpResolver;
 
     @ApiOperation("我的组队任务列表")
     @GetMapping("/tasks")
@@ -48,23 +51,12 @@ public class BasketV4PersonalFormationController {
     public R createTeam(@PathVariable Long drawTeamId,
                         @RequestBody TeamCreateReq req,
                         HttpServletRequest request) {
-        return R.ok(personalFormationService.createLongTermTeam(drawTeamId, req, resolveClientIp(request)));
+        return R.ok(personalFormationService.createLongTermTeam(drawTeamId, req, clientIpResolver.resolve(request)));
     }
 
     @ApiOperation("确认组队并转换正式报名")
     @PostMapping("/tasks/{drawTeamId}/confirm")
     public R confirm(@PathVariable Long drawTeamId) {
         return R.ok(personalFormationService.confirmFormation(drawTeamId));
-    }
-
-    private static String resolveClientIp(HttpServletRequest request) {
-        if (request == null) {
-            return null;
-        }
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
     }
 }

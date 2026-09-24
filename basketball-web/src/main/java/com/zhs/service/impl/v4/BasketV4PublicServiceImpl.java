@@ -314,7 +314,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         List<BasketEventTeam> teams = eventTeamDao.selectList(new LambdaQueryWrapper<BasketEventTeam>()
                 .eq(BasketEventTeam::getDivisionId, divisionId)
                 .eq(BasketEventTeam::getIsDelete, BasketPublicConstants.NOT_DELETED)
-                .orderByAsc(BasketEventTeam::getTeamNameSnapshot));
+                .orderByAsc(BasketEventTeam::getTeamNameSnapshot)
+                .last("limit " + BasketPublicConstants.MAX_UNPAGED_TEAM_LIST));
         if (CollectionUtils.isEmpty(teams)) {
             return Collections.emptyList();
         }
@@ -450,6 +451,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             wrapper.and(w -> w.eq(BasketV4Match::getHomeEventTeamId, eventTeamId)
                     .or().eq(BasketV4Match::getAwayEventTeamId, eventTeamId));
         }
+        wrapper.last("limit " + BasketPublicConstants.MAX_UNPAGED_MATCH_LIST);
         List<BasketV4Match> matches = matchDao.selectList(wrapper);
         return enrichMatchItems(filterPublishedStageMatches(matches));
     }

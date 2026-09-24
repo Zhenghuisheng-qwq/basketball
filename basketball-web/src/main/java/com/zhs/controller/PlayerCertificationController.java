@@ -6,6 +6,7 @@ import com.zhs.request.player.PlayerCertSubmitReq;
 import com.zhs.response.player.PlayerCertCurrentResp;
 import com.zhs.response.player.PlayerCertMaterialResp;
 import com.zhs.service.IPlayerCertificationService;
+import com.zhs.support.ClientIpResolver;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -28,6 +29,8 @@ public class PlayerCertificationController {
 
     @Resource
     private IPlayerCertificationService playerCertificationService;
+    @Resource
+    private ClientIpResolver clientIpResolver;
 
     @ApiOperation("获取当前球员认证状态")
     @GetMapping("/current")
@@ -63,18 +66,6 @@ public class PlayerCertificationController {
     @ApiOperation("提交球员认证申请")
     @PostMapping("/submit")
     public R<PlayerCertCurrentResp> submit(@RequestBody PlayerCertSubmitReq req, HttpServletRequest request) {
-        return R.ok(playerCertificationService.submit(req, resolveClientIp(request)), "认证申请已提交");
-    }
-
-    private String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr();
+        return R.ok(playerCertificationService.submit(req, clientIpResolver.resolve(request)), "认证申请已提交");
     }
 }

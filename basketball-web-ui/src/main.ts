@@ -5,8 +5,11 @@ import 'element-plus/dist/index.css'
 import App from './App.vue'
 import router from './router'
 import { initAuthState } from '@/composables/useAuth'
+import { installBrowserDeterrence } from '@/security/browserDeterrence'
 import '@/assets/styles/index.scss'
 import '@/assets/styles/account-layout.css'
+
+installBrowserDeterrence()
 
 async function bootstrap() {
   const app = createApp(App)

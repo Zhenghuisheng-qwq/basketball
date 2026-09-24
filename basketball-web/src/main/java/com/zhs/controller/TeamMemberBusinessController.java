@@ -6,6 +6,7 @@ import com.zhs.response.team.CandidatePlayerPageResp;
 import com.zhs.response.team.TeamMemberDetailResp;
 import com.zhs.response.team.TeamMemberItemResp;
 import com.zhs.service.ITeamMemberBusinessService;
+import com.zhs.support.ClientIpResolver;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -30,6 +31,8 @@ public class TeamMemberBusinessController {
 
     @Resource
     private ITeamMemberBusinessService teamMemberBusinessService;
+    @Resource
+    private ClientIpResolver clientIpResolver;
 
     @ApiOperation("球队成员分页（历史球队自动含 LEFT；includeHistory=true 强制含历史）")
     @GetMapping("/{teamId}/member/page")
@@ -60,14 +63,14 @@ public class TeamMemberBusinessController {
     public R<Void> removeMember(@PathVariable String teamId,
                                 @PathVariable String teamMemberId,
                                 HttpServletRequest request) {
-        teamMemberBusinessService.removeMember(teamId, teamMemberId, resolveClientIp(request));
+        teamMemberBusinessService.removeMember(teamId, teamMemberId, clientIpResolver.resolve(request));
         return R.ok(null, "成员移除成功");
     }
 
     @ApiOperation("主动离队")
     @PostMapping("/{teamId}/leave")
     public R<Void> leave(@PathVariable String teamId, HttpServletRequest request) {
-        teamMemberBusinessService.leave(teamId, resolveClientIp(request));
+        teamMemberBusinessService.leave(teamId, clientIpResolver.resolve(request));
         return R.ok(null, "离队成功");
     }
 
@@ -78,17 +81,5 @@ public class TeamMemberBusinessController {
                                                                    @RequestParam(required = false) Integer pageSize,
                                                                    @RequestParam(required = false) String keyword) {
         return R.ok(teamMemberBusinessService.pageCandidatePlayers(teamId, currentPage, pageSize, keyword));
-    }
-
-    private String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr();
     }
 }

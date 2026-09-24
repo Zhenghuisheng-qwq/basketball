@@ -11,6 +11,7 @@ import com.zhs.response.account.LoginLogItemResp;
 import com.zhs.response.account.SecurityLogItemResp;
 import com.zhs.service.IBasketMemberAuthService;
 import com.zhs.service.IAccountSecurityService;
+import com.zhs.support.ClientIpResolver;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -34,6 +35,8 @@ public class AccountSecurityController {
     private IAccountSecurityService accountSecurityService;
     @Resource
     private IBasketMemberAuthService basketMemberAuthService;
+    @Resource
+    private ClientIpResolver clientIpResolver;
 
     @ApiOperation("分页查询登录日志")
     @GetMapping("/login-log/page")
@@ -55,7 +58,7 @@ public class AccountSecurityController {
     @PostMapping("/change-password")
     public R<AccountChangePasswordResp> changePassword(@RequestBody AccountChangePasswordReq req, HttpServletRequest request) {
         AccountChangePasswordResp resp = accountSecurityService.changePassword(
-                req, resolveClientIp(request), resolveTerminal(request), TokenUtil.resolveFrom(request));
+                req, clientIpResolver.resolve(request), resolveTerminal(request), TokenUtil.resolveFrom(request));
         return R.ok(resp, "密码修改成功，请重新登录");
     }
 
@@ -65,27 +68,15 @@ public class AccountSecurityController {
             @RequestBody com.zhs.request.member.EmailCodeSendReq req,
             HttpServletRequest request) {
         return R.ok(basketMemberAuthService.sendChangeEmailCode(
-                req.getEmail(), UserContext.getRequiredMemberId(), resolveClientIp(request)), "验证码已发送");
+                req.getEmail(), UserContext.getRequiredMemberId(), clientIpResolver.resolve(request)), "验证码已发送");
     }
 
     @ApiOperation("修改登录邮箱")
     @PostMapping("/change-email")
     public R<AccountChangeEmailResp> changeEmail(@RequestBody AccountChangeEmailReq req, HttpServletRequest request) {
         AccountChangeEmailResp resp = accountSecurityService.changeEmail(
-                req, resolveClientIp(request), TokenUtil.resolveFrom(request));
+                req, clientIpResolver.resolve(request), TokenUtil.resolveFrom(request));
         return R.ok(resp, "邮箱修改成功，请重新登录");
-    }
-
-    private String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr();
     }
 
     private String resolveTerminal(HttpServletRequest request) {
