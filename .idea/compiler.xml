@@ -10,17 +10,9 @@
         <module name="basketball-admin" />
         <module name="basketball-web" />
       </profile>
-      <profile name="Annotation profile for Spring-generator" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
-        </processorPath>
-        <module name="generator" />
-      </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="generator" target="21" />
       <module name="jsj-admin-ui" target="1.5" />
       <module name="jsj-mini-app" target="1.5" />
       <module name="Spring-generator" target="21" />
