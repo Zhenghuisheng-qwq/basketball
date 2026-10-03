@@ -216,8 +216,13 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
         BasketSeason season = requireSeason(id);
-        if (!PublishStatusEnum.DRAFT.getCode().equals(season.getPublishStatus())) {
-            throw new ServiceException("仅草稿状态 Season 可删除");
+        String publishStatus = season.getPublishStatus();
+        if (PublishStatusEnum.PUBLISHED.getCode().equals(publishStatus)) {
+            throw new ServiceException("已发布赛季不能直接删除，请先下线");
+        }
+        if (!PublishStatusEnum.DRAFT.getCode().equals(publishStatus)
+                && !PublishStatusEnum.OFFLINE.getCode().equals(publishStatus)) {
+            throw new ServiceException("仅草稿或已下线且没有赛区的 Season 可删除");
         }
         if (seasonMapper.countDivisionBySeasonId(id) > 0) {
             throw new ServiceException("存在平台赛区时不允许删除 Season，请先处理赛区");
@@ -225,6 +230,7 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
         if (seasonMapper.softDelete(id) != 1) {
             throw new ServiceException("删除 Season 失败");
         }
+        publicReadCachePublisher.seasonMutation(id);
     }
 
     private void validateCreateReq(BasketSeasonCreateReq req) {

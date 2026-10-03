@@ -89,4 +89,14 @@
         set active_unique_key = null, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
+
+    <!-- is_delete 为 TINYINT，不能写入 id。清空 active_unique_key 以释放当前快照唯一键。 -->
+    <update id="softDeleteByDivisionId">
+        update basket_division_format_snapshot
+        set is_delete = 1,
+            is_current = 0,
+            active_unique_key = null,
+            update_time = now()
+        where division_id = #{divisionId} and is_delete = 0
+    </update>
 </mapper>

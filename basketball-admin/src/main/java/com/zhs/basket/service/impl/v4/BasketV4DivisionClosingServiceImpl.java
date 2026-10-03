@@ -15,6 +15,7 @@ import com.zhs.basket.mapper.v4.BasketTeamLifecycleClosingMapper;
 import com.zhs.basket.service.v4.IBasketV4DivisionClosingService;
 import com.zhs.basket.service.v4.IBasketV4SeasonService;
 import com.zhs.basket.support.CaptainGrantLogSupport;
+import com.zhs.basket.support.v4.DivisionSafeRecoverySupport;
 import com.zhs.basket.support.v4.V4PublicReadCacheEvictEvent;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.StringUtils;
@@ -69,6 +70,8 @@ public class BasketV4DivisionClosingServiceImpl implements IBasketV4DivisionClos
     @Lazy
     private IBasketV4SeasonService seasonService;
     @Autowired
+    private DivisionSafeRecoverySupport safeRecoverySupport;
+    @Autowired
     private ApplicationEventPublisher eventPublisher;
 
     @Override
@@ -91,6 +94,7 @@ public class BasketV4DivisionClosingServiceImpl implements IBasketV4DivisionClos
         if (!FINISHABLE_STATUSES.contains(status)) {
             throw new ServiceException("当前 Division 状态不允许结束赛事：" + status);
         }
+        safeRecoverySupport.assertCanFinish(divisionId);
 
         Date finishTime = new Date();
         int cas = lifecycleClosingMapper.casFinishDivision(divisionId, FINISHABLE_STATUSES, finishTime);

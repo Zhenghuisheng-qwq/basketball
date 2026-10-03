@@ -190,4 +190,14 @@
             update_time = now()
         where snapshot_id = #{snapshotId} and <include refid="NotDeleted"/>
     </update>
+
+    <update id="softDeleteByDivisionId">
+        update basket_division_stage
+        set is_delete = 1,
+            stage_order = id,
+            stage_code = concat(left(stage_code, 40), '#', id),
+            current_unique_key = null,
+            update_time = now()
+        where division_id = #{divisionId} and <include refid="NotDeleted"/>
+    </update>
 </mapper>

@@ -17,4 +17,6 @@ public interface BasketDivisionFormatSnapshotMapper {
     int markSuperseded(@Param("id") Long id);
 
     int clearActiveUniqueKey(@Param("id") Long id);
+
+    int softDeleteByDivisionId(@Param("divisionId") Long divisionId);
 }

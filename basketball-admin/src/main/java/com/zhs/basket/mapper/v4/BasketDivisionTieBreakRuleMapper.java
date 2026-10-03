@@ -15,4 +15,6 @@ public interface BasketDivisionTieBreakRuleMapper {
     int softDeleteBySnapshotId(@Param("snapshotId") Long snapshotId);
 
     int softDeleteByStageId(@Param("stageId") Long stageId);
+
+    int softDeleteByDivisionId(@Param("divisionId") Long divisionId);
 }

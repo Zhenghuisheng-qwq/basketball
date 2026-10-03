@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import tournamentTop from '@/assets/icon/tournament_top.png'
+import tournamentTop from '@/assets/icon/tournament_top.webp'
 import dataHeroBg from '@/assets/icon/data_hero_bg.png'
 
 export type PublicHeroVariant = 'competition' | 'data'

@@ -18,7 +18,9 @@ import com.zhs.basket.query.v4.BasketDivisionQuery;
 import com.zhs.basket.service.v4.IBasketV4DivisionClosingService;
 import com.zhs.basket.service.v4.IBasketV4DivisionService;
 import com.zhs.basket.service.v4.IBasketV4FormatSnapshotService;
+import com.zhs.basket.service.v4.IBasketV4SeasonService;
 import com.zhs.basket.support.v4.BestOfCapabilityGate;
+import com.zhs.basket.support.v4.DivisionSafeRecoverySupport;
 import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.support.v4.DivisionRuleMutableSpecification;
 import com.zhs.basket.support.v4.V4FormatDisplaySupport;
@@ -58,6 +60,10 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     private BasketDivisionFormatSnapshotMapper snapshotMapper;
     @Autowired
     private IBasketV4DivisionClosingService divisionClosingService;
+    @Autowired
+    private IBasketV4SeasonService seasonService;
+    @Autowired
+    private DivisionSafeRecoverySupport safeRecoverySupport;
     @Autowired
     private V4PublicReadCachePublisher publicReadCachePublisher;
 
@@ -210,12 +216,13 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
         BasketDivision division = requireDivision(id);
-        if (!DivisionStatusEnum.DRAFT.getCode().equals(division.getDivisionStatus())) {
-            throw new ServiceException("仅草稿状态 Division 可删除");
-        }
+        safeRecoverySupport.validateDivisionCanDelete(division);
+        safeRecoverySupport.softDeleteFormatConfig(division.getId());
         if (divisionMapper.softDelete(id) != 1) {
             throw new ServiceException("删除 Division 失败");
         }
+        seasonService.refreshAggregatedStatus(division.getSeasonId());
+        publicReadCachePublisher.divisionMutation(id, division.getSeasonId());
     }
 
     private void applyDraftUpdate(BasketDivision division, BasketDivisionUpdateReq req) {

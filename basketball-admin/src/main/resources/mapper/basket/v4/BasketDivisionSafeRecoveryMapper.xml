@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketDivisionSafeRecoveryMapper">
+
+    <select id="countTeamRegistration" resultType="int">
+        select
+            (select count(1) from basket_registration
+             where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_registration_player
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_registration_audit
+               where division_id = #{divisionId} and is_delete = 0)
+    </select>
+
+    <select id="countPersonalRegistration" resultType="int">
+        select
+            (select count(1) from basket_personal_registration
+             where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_personal_registration_audit
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_personal_draw_batch
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_personal_draw_team
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_personal_draw_assignment
+               where division_id = #{divisionId} and is_delete = 0)
+    </select>
+
+    <select id="countRoster" resultType="int">
+        select
+            (select count(1) from basket_division_roster_version
+             where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_division_roster_entry
+               where division_id = #{divisionId} and is_delete = 0)
+    </select>
+
+    <select id="countEventTeam" resultType="int">
+        select
+            (select count(1) from basket_event_team
+             where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_team
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_team_member
+               where division_id = #{divisionId} and is_delete = 0)
+    </select>
+
+    <select id="countEventPlayer" resultType="int">
+        select count(1) from basket_event_player
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
+    <select id="countCaptainGrant" resultType="int">
+        select count(1) from basket_captain_grant
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
+    <select id="countScheduleBatch" resultType="int">
+        select count(1) from basket_schedule_batch
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
+    <select id="countMatchSeries" resultType="int">
+        select count(1) from basket_match_series
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
+    <select id="countMatch" resultType="int">
+        select count(1) from basket_match
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
+    <select id="countStanding" resultType="int">
+        select
+            (select count(1) from basket_standing
+             where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_standing_rank_reason
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_rank
+               where division_id = #{divisionId} and is_delete = 0)
+    </select>
+
+    <select id="countStats" resultType="int">
+        select
+            (select count(1) from basket_match_team_stat
+             where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_match_player_stat
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_match_period_score
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_team_stat
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_player_stat
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_point_adjustment
+               where division_id = #{divisionId} and is_delete = 0)
+    </select>
+
+    <select id="countSubmission" resultType="int">
+        select
+            (select count(1) from basket_match_submission
+             where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_match_series_submission
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_match_submission_team_stat
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_match_submission_player_stat
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_match_submission_period_score
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_match_submission_material
+               where division_id = #{divisionId} and is_delete = 0)
+    </select>
+
+    <select id="countQualification" resultType="int">
+        select
+            (select count(1) from basket_division_stage_qualification
+             where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_division_stage_team
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_division_grouping_batch
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_division_group
+               where division_id = #{divisionId} and is_delete = 0)
+            + (select count(1) from basket_division_group_team
+               where division_id = #{divisionId} and is_delete = 0)
+    </select>
+
+    <select id="countCompletedOfficialMatches" resultType="int">
+        select count(1) from basket_match
+        where division_id = #{divisionId}
+          and is_delete = 0
+          and publish_status = 'PUBLISHED'
+          and match_status in ('FINISHED', 'FORFEITED')
+    </select>
+</mapper>

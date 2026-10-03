@@ -78,7 +78,7 @@
           </template>
         </el-table-column>
         <el-table-column label="平台赛区数" prop="divisionCount" width="100" align="center" />
-        <el-table-column label="操作" width="380" fixed="right" class-name="small-padding fixed-width">
+        <el-table-column label="操作" width="420" fixed="right" class-name="small-padding fixed-width">
           <template #default="scope">
             <div class="table-actions">
               <el-button link type="primary" @click="handleOpenSeasonDetail(scope.row)">赛季详情</el-button>
@@ -87,7 +87,12 @@
               <el-button link type="primary" @click="handleSelectSeason(scope.row)">查看赛区</el-button>
               <el-button link type="success" @click="handlePublishSeason(scope.row)" v-hasPermi="['basket:v4Season:publish']" v-if="scope.row.publishStatus === 'DRAFT' || scope.row.publishStatus === 'OFFLINE'">发布</el-button>
               <el-button link type="warning" @click="handleOfflineSeason(scope.row)" v-hasPermi="['basket:v4Season:offline']" v-if="scope.row.publishStatus === 'PUBLISHED'">下线</el-button>
-              <el-button link type="danger" @click="handleDeleteSeason(scope.row)" v-hasPermi="['basket:v4Season:remove']" v-if="scope.row.publishStatus === 'DRAFT'">删除</el-button>
+              <el-button link type="danger" @click="handleDeleteSeason(scope.row)" v-hasPermi="['basket:v4Season:remove']" v-if="canDeleteSeason(scope.row)">删除</el-button>
+              <el-tooltip v-else-if="isSeasonDeleteBlockedByDivision(scope.row)" content="该赛季下仍有赛区，请先删除赛区后再删除赛季" placement="top">
+                <span class="delete-disabled-wrap">
+                  <el-button link type="danger" disabled v-hasPermi="['basket:v4Season:remove']">删除</el-button>
+                </span>
+              </el-tooltip>
             </div>
           </template>
         </el-table-column>
@@ -150,7 +155,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="360" fixed="right" class-name="small-padding fixed-width">
+        <el-table-column label="操作" width="420" fixed="right" class-name="small-padding fixed-width">
           <template #default="scope">
             <div class="table-actions">
               <el-button link type="primary" @click="handleEditDivision(scope.row)" v-hasPermi="['basket:v4Division:edit']" v-if="scope.row.divisionStatus !== 'FINISHED'">编辑赛区</el-button>
@@ -165,7 +170,7 @@
                 v-if="['REGISTRATION_CLOSED', 'SCHEDULED', 'PLAYING'].includes(scope.row.divisionStatus || '')"
               >结束赛事</el-button>
               <el-tag v-if="scope.row.divisionStatus === 'FINISHED'" type="info" size="small">已结束</el-tag>
-              <el-button link type="danger" @click="handleDeleteDivision(scope.row)" v-hasPermi="['basket:v4Division:remove']" v-if="scope.row.divisionStatus === 'DRAFT'">删除</el-button>
+              <el-button link type="danger" @click="handleDeleteDivision(scope.row)" v-hasPermi="['basket:v4Division:remove']" v-if="canShowDivisionDelete(scope.row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -811,8 +816,22 @@ async function handleOfflineSeason(row: BasketSeasonListVo) {
   loadSeasonList()
 }
 
+function canDeleteSeason(row: BasketSeasonListVo) {
+  const empty = (row.divisionCount ?? 0) === 0
+  return empty && (row.publishStatus === 'DRAFT' || row.publishStatus === 'OFFLINE')
+}
+
+function isSeasonDeleteBlockedByDivision(row: BasketSeasonListVo) {
+  const hasDivision = (row.divisionCount ?? 0) > 0
+  return hasDivision && (row.publishStatus === 'DRAFT' || row.publishStatus === 'OFFLINE')
+}
+
+function canShowDivisionDelete(row: BasketDivisionListVo) {
+  return ['DRAFT', 'REGISTRATION_OPEN', 'REGISTRATION_CLOSED', 'FINISHED'].includes(row.divisionStatus || '')
+}
+
 async function handleDeleteSeason(row: BasketSeasonListVo) {
-  await proxy!.$modal.confirm('确认删除该草稿赛季？')
+  await proxy!.$modal.confirm('删除后该草稿/下线赛季将不再显示，是否继续？')
   await delV4Season(row.id!)
   proxy!.$modal.msgSuccess('删除成功')
   if (selectedSeason.value?.id === row.id) {
@@ -910,7 +929,7 @@ async function handleFinishDivision(row: BasketDivisionListVo) {
 }
 
 async function handleDeleteDivision(row: BasketDivisionListVo) {
-  await proxy!.$modal.confirm('确认删除该草稿赛区？')
+  await proxy!.$modal.confirm('仅未产生正式报名、赛程或比赛数据的赛区可以删除。删除后赛区及其赛制配置将被移除，是否继续？')
   await delV4Division(row.id!)
   proxy!.$modal.msgSuccess('删除成功')
   loadDivisionList()
@@ -923,6 +942,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.delete-disabled-wrap {
+  display: inline-flex;
+}
+
 .card-header {
   display: flex;
   align-items: center;

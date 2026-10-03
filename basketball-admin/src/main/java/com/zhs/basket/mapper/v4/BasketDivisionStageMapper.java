@@ -18,6 +18,8 @@ public interface BasketDivisionStageMapper {
 
     int softDeleteBySnapshotId(@Param("snapshotId") Long snapshotId);
 
+    int softDeleteByDivisionId(@Param("divisionId") Long divisionId);
+
     int updateStageOrder(@Param("id") Long id, @Param("stageOrder") Integer stageOrder);
 
     int updateExecutionStatus(BasketDivisionStage entity);
