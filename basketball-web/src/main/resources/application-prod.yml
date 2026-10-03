@@ -34,7 +34,7 @@ spring:
       # Shared with basketball-admin. Public cache keys are basket:public:*.
       host: 127.0.0.1
       port: 6379
-      password:
+      password: 'CnpaRedis@2026#Cache!'
       database: 0
   mail:
     # QQ SMTP. password is the SMTP authorization code, not the QQ login password.
