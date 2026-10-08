@@ -38,11 +38,10 @@ spring:
       database: 0
   mail:
     # QQ SMTP. password is the SMTP authorization code, not the QQ login password.
-    # 仓库里没有授权码，留空只为避免启动时解析占位符失败；发信前填上 username 和 password。
     host: smtp.qq.com
     port: 465
-    username: ""
-    password: ""
+    username: 416743310@qq.com
+    password: olrplytzxytpbgfe
     protocol: smtp
     default-encoding: UTF-8
     properties:
@@ -89,7 +88,7 @@ member:
   init:
     enabled: false
   mail:
-    from: ""
+    from: 416743310@qq.com
     from-name: CNPA
 
 springdoc:
