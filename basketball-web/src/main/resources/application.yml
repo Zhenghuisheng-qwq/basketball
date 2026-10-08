@@ -44,10 +44,10 @@ spring:
 
   mail:
     # QQ SMTP. password is the SMTP authorization code, not the QQ login password.
-    host: ${CNPA_MAIL_HOST:smtp.qq.com}
-    port: ${CNPA_MAIL_PORT:465}
-    username: ${CNPA_MAIL_USERNAME:}
-    password: ${CNPA_MAIL_PASSWORD:${CNPA_MAIL_AUTH_CODE:}}
+    host: smtp.qq.com
+    port: 465
+    username: 416743310@qq.com
+    password: olrplytzxytpbgfe
     protocol: smtp
     default-encoding: UTF-8
     properties:
@@ -109,8 +109,8 @@ member:
     # Formal path must keep false: random code + QQ SMTP + Redis verify. No fixed 123456.
     dev-mail-bypass: ${CNPA_MAIL_DEV_BYPASS:false}
   mail:
-    from: ${CNPA_MAIL_FROM:${CNPA_MAIL_USERNAME:}}
-    from-name: ${CNPA_MAIL_FROM_NAME:CNPA}
+    from: 416743310@qq.com
+    from-name: CNPA
   init:
     enabled: false
     batch-size: 30
