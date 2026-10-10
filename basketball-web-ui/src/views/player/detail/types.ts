@@ -88,7 +88,7 @@ export interface PlayerMatchRecord {
   opponentName: string
   opponentId: string
   opponentLogoUrl: string
-  result: 'WIN' | 'LOSS'
+  result: 'WIN' | 'LOSS' | 'UNDECIDED'
   resultLabel?: string
   teamScore: number
   opponentScore: number

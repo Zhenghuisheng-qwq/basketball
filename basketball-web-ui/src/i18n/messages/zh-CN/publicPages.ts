@@ -125,6 +125,7 @@ export default {
     view: '查看',
     win: '胜利',
     loss: '失败',
+    undecided: '结果未定',
     statLine: '{points}分 · {rebounds}板 · {assists}助',
     minutes: '出场时间',
     points: '得分',

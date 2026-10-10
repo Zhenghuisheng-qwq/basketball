@@ -125,19 +125,19 @@ export function mapPublicPlayerMatch(
   const opponentLogoUrl = (isHome ? item.awayTeamLogoUrl : item.homeTeamLogoUrl)?.trim() || ''
   const teamScore = isHome ? item.homeScore : item.awayScore
   const opponentScore = isHome ? item.awayScore : item.homeScore
-  const finished = ['FINISHED', 'FORFEITED'].includes(String(item.matchStatus || '').toUpperCase())
-    || toNumber(item.matchStatus, 0) === 3
-    || Boolean(item.resultType)
-  const dq = String(item.resultType || '') === 'EVENT_DISQUALIFICATION'
-  const sideLabel = isHome ? item.homeResultLabel : item.awayResultLabel
+  const status = String(item.matchStatus || '').toUpperCase()
+  const resultType = String(item.resultType || '').toUpperCase()
+  const cancelled = status === 'CANCELLED'
+  const forfeited = status === 'FORFEITED' || resultType === 'FORFEIT'
+  const dq = resultType === 'EVENT_DISQUALIFICATION'
+  const finished = status === 'FINISHED' || forfeited || dq
   const winnerId = String(item.winnerTeamId || '')
   const playerSideId = String((isHome ? item.homeTeamId : item.awayTeamId) || '')
-  let result: PlayerMatchRecord['result'] = 'LOSS'
-  if (finished && winnerId && (winnerId === String(playerTeamId) || winnerId === playerSideId)) {
-    result = 'WIN'
-  } else if (finished && !winnerId && sideLabel && sideLabel.includes('胜')) {
-    result = 'WIN'
-  }
+  const playerWon = Boolean(winnerId) && (winnerId === String(playerTeamId) || winnerId === playerSideId)
+  const opponentWon = Boolean(winnerId) && !playerWon
+  let result: PlayerMatchRecord['result'] = 'UNDECIDED'
+  if (!cancelled && finished && playerWon) result = 'WIN'
+  else if (!cancelled && finished && opponentWon) result = 'LOSS'
   const dt = formatDateTime(item.scheduledStartTime)
   return {
     id: String(item.matchId),
@@ -152,11 +152,13 @@ export function mapPublicPlayerMatch(
     opponentId,
     opponentLogoUrl,
     result,
-    resultLabel: dq
-      ? (result === 'WIN' ? translate('publicPages.player.opponentDqLoss') : translate('publicPages.player.teamDqLoss'))
-      : sideLabel || (String(item.resultType || '') === 'FORFEIT'
-        ? (result === 'WIN' ? translate('publicPages.player.judgedWin') : translate('publicPages.player.judgedLoss'))
-        : undefined),
+    resultLabel: result === 'UNDECIDED'
+      ? (cancelled ? translate('match.cancelled') : translate('publicPages.player.undecided'))
+      : dq
+        ? (result === 'WIN' ? translate('publicPages.player.opponentDqLoss') : translate('publicPages.player.teamDqLoss'))
+        : forfeited
+          ? (result === 'WIN' ? translate('publicPages.player.judgedWin') : translate('publicPages.player.judgedLoss'))
+          : undefined,
     originalTeamScore: (isHome ? item.originalHomeScore : item.originalAwayScore) ?? undefined,
     originalOpponentScore: (isHome ? item.originalAwayScore : item.originalHomeScore) ?? undefined,
     teamScore: teamScore ?? 0,

@@ -144,7 +144,7 @@ async function loadPlayerMatches(current: number, profile: PlayerProfile) {
         opponentName: mapped.opponentName || t('publicPages.player.opponent'),
         opponentId: mapped.opponentId,
         opponentLogoUrl: mapped.opponentLogoUrl || '',
-        result: mapped.result === 'win' ? 'WIN' : 'LOSS',
+        result: mapped.result === 'win' ? 'WIN' : mapped.result === 'loss' ? 'LOSS' : 'UNDECIDED',
         resultLabel: mapped.resultType === 'EVENT_DISQUALIFICATION'
           ? (mapped.result === 'win' ? t('publicPages.player.opponentDqLoss') : t('publicPages.player.teamDqLoss'))
           : mapped.resultLabel,

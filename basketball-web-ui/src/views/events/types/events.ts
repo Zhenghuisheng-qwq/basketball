@@ -108,6 +108,8 @@ export interface PlayoffSeries {
   side?: 'left' | 'right' | 'center'
   topTeamId: string
   bottomTeamId: string
+  topSourceType?: string
+  bottomSourceType?: string
   topTeamName: string
   bottomTeamName: string
   topTeamLogo: string

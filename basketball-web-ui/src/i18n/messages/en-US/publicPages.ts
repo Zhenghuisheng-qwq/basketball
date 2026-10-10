@@ -125,6 +125,7 @@ export default {
     view: 'View',
     win: 'Win',
     loss: 'Loss',
+    undecided: 'Result pending',
     statLine: '{points} PTS · {rebounds} REB · {assists} AST',
     minutes: 'MIN',
     points: 'PTS',

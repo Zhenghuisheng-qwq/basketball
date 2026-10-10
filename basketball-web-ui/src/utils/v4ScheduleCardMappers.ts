@@ -1,3 +1,4 @@
+import { translate } from '@/i18n'
 import type { V4MyScheduleItem } from '@/api/types/v4PlayerEvents'
 import type {
   ScheduleCardAccent,
@@ -32,11 +33,14 @@ function isUpcomingMatch(status: string): boolean {
 }
 
 export function formatScheduleMatchDate(value?: string | null): string {
-  if (!value) return '时间待定'
-  const normalized = value.replace('T', ' ').trim()
-  const datePart = normalized.slice(0, 10)
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return '时间待定'
-  return datePart
+  if (!hasScheduleDate(value)) return translate('accountEvents.common.timeTbd')
+  return String(value).replace('T', ' ').trim().slice(0, 10)
+}
+
+function hasScheduleDate(value?: string | null): boolean {
+  if (!value) return false
+  const datePart = value.replace('T', ' ').trim().slice(0, 10)
+  return /^\d{4}-\d{2}-\d{2}$/.test(datePart)
 }
 
 export function formatScheduleMatchTime(value?: string | null): string {
@@ -50,7 +54,7 @@ export function formatScheduleMatchTime(value?: string | null): string {
 export function formatScheduleMatchDateTime(value?: string | null): string {
   const date = formatScheduleMatchDate(value)
   const time = formatScheduleMatchTime(value)
-  if (date === '时间待定') return date
+  if (!hasScheduleDate(value)) return translate('accountEvents.common.timeTbd')
   return time ? `${date} ${time}` : date
 }
 
@@ -126,8 +130,8 @@ export function scheduleSubmissionTone(
 
 function buildDivisionLine(row: V4MyScheduleItem): string {
   const division = (row.divisionName || '').trim()
-  if (division) return division.includes('赛区') ? division : `${division} 赛区`
-  return '赛区待定'
+  if (division) return division
+  return translate('accountEvents.schedule.divisionPending')
 }
 
 function buildRoundLine(row: V4MyScheduleItem): string {

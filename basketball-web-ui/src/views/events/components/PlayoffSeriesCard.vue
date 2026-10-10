@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { publicContestDetailPath, v4BestOfLabel, v4MatchSeriesStatusLabel } from '@/utils/v4Display'
+import { isUnresolvedBracketSlot } from '../utils/playoffBracketDisplay'
 import type { PlayoffSeries } from '../types/events'
 
 const props = defineProps<{
@@ -21,17 +22,11 @@ const metaLabel = computed(() => v4BestOfLabel(props.series.bestOf))
 
 const statusCode = computed(() => String(props.series.seriesStatus || '').toUpperCase())
 
-function isPlaceholderName(name: string) {
-  const text = String(name || '').trim()
-  return !text || text === '待定' || text.includes('上一轮') || text === '轮空'
-}
-
 const isPending = computed(() => {
   if (statusCode.value === 'COMPLETED' || statusCode.value === 'RUNNING') return false
-  if (statusCode.value === 'PENDING') return true
-  const missingIds = !props.series.topTeamId || !props.series.bottomTeamId
-  const placeholders = isPlaceholderName(props.series.topTeamName) || isPlaceholderName(props.series.bottomTeamName)
-  return missingIds || placeholders
+  if (statusCode.value === 'PENDING' || statusCode.value === 'CANCELLED') return statusCode.value === 'PENDING'
+  return isUnresolvedBracketSlot(props.series.topTeamId, props.series.topSourceType)
+    || isUnresolvedBracketSlot(props.series.bottomTeamId, props.series.bottomSourceType)
 })
 
 const isLive = computed(() => statusCode.value === 'RUNNING')

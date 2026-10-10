@@ -68,7 +68,7 @@ async function handleSubmit() {
     const result = await login(form.email.trim().toLowerCase(), form.password, form.remember)
     if (!result.success) {
       errors.form = result.message || 'auth.loginFailed'
-      if (result.errorCode === 'INVALID_CREDENTIALS') form.password = ''
+      if (!result.success) form.password = ''
       return
     }
     ElMessage.success({ message: t('auth.loginSuccess'), duration: 1800 })

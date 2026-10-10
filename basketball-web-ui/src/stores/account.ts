@@ -44,7 +44,7 @@ import {
   teamRelationsStorageKey,
 } from '@/constants/accountStorageKeys'
 import { CLOSED_OPEN_TOURNAMENT } from '@/constants/openRegistrationDefaults'
-import { validatePasswordRules } from '@/utils/passwordRules'
+import { validatePasswordRules, type PasswordChangeErrorField } from '@/utils/passwordRules'
 import { buildPlayerIdentity, mapVerificationPlatform } from '@/utils/playerIdentity'
 import { getDefaultTeamRelations } from '@/utils/teamRelations'
 import {
@@ -744,11 +744,15 @@ export const useAccountStore = defineStore('account', () => {
     sessionStorage.removeItem(myTournamentsStorageKey(id))
   }
 
-  async function changePassword(currentPassword: string, newPassword: string): Promise<{ error?: string; needRelogin?: boolean }> {
-    if (!currentPassword.trim()) return { error: translate('accountShell.settings.currentPasswordRequired') }
+  async function changePassword(currentPassword: string, newPassword: string): Promise<{ error?: string; field?: PasswordChangeErrorField; needRelogin?: boolean }> {
+    if (!currentPassword.trim()) {
+      return { error: translate('accountShell.settings.currentPasswordRequired'), field: 'currentPassword' }
+    }
     const ruleError = validatePasswordRules(newPassword)
-    if (ruleError) return { error: ruleError }
-    if (newPassword === currentPassword) return { error: translate('accountShell.profile.samePassword') }
+    if (ruleError) return { error: ruleError, field: 'newPassword' }
+    if (newPassword === currentPassword) {
+      return { error: translate('accountShell.profile.samePassword'), field: 'newPassword' }
+    }
     try {
       const res = await changeAccountPassword({
         oldPassword: currentPassword,
@@ -759,8 +763,8 @@ export const useAccountStore = defineStore('account', () => {
         return { needRelogin: true }
       }
       return {}
-    } catch (error) {
-      return { error: error instanceof Error ? error.message : translate('accountShell.profile.passwordChangeFailed') }
+    } catch {
+      return { error: translate('accountShell.profile.passwordChangeFailed'), field: 'general' }
     }
   }
 

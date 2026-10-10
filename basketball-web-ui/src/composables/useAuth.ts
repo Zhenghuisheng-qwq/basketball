@@ -1,4 +1,5 @@
 import { computed } from 'vue'
+import { translate } from '@/i18n'
 import { useUserStore } from '@/stores/user'
 import { useAccountStore } from '@/stores/account'
 import { useNotificationCenterStore } from '@/stores/notificationCenter'
@@ -10,15 +11,12 @@ export interface AuthLoginResult {
   errorCode?: 'INVALID_CREDENTIALS' | 'ACCOUNT_NOT_FOUND' | 'UNKNOWN'
 }
 
-function mapError(error: unknown): AuthLoginResult {
-  const message = error instanceof Error ? error.message : '登录失败'
-  let errorCode: AuthLoginResult['errorCode'] = 'UNKNOWN'
-  if (message.includes('密码') || message.includes('邮箱或密码')) {
-    errorCode = 'INVALID_CREDENTIALS'
-  } else if (message.includes('不存在') || message.includes('尚未注册')) {
-    errorCode = 'ACCOUNT_NOT_FOUND'
+function mapError(): AuthLoginResult {
+  return {
+    success: false,
+    message: translate('auth.loginFailed'),
+    errorCode: 'UNKNOWN',
   }
-  return { success: false, message, errorCode }
 }
 
 async function syncAccountAfterLogin(loggedIn: boolean) {
@@ -68,8 +66,8 @@ export function useAuth() {
       await userStore.loginByPassword(email, password, remember)
       await syncAccountAfterLogin(true)
       return { success: true }
-    } catch (error) {
-      return mapError(error)
+    } catch {
+      return mapError()
     }
   }
 

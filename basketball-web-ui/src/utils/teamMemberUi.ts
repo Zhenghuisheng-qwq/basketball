@@ -41,8 +41,8 @@ export function resolveTeamMemberDisplayName(member: TeamMemberItemDto): string 
 }
 
 export function resolveTeamMemberAvatarFallback(member: TeamMemberItemDto): string {
-  const name = resolveTeamMemberDisplayName(member)
-  if (name && name !== '未命名球员') return name.slice(0, 1).toUpperCase()
+  const name = member.nickname || member.gameNickname || member.realName
+  if (name) return name.slice(0, 1).toUpperCase()
   const tail = member.playerNo?.replace(/\D/g, '').slice(-2)
   return tail || '?'
 }
@@ -75,7 +75,7 @@ export function resolveMemberPlatformGameId(
   if (matched?.gameId) return matched.gameId
 
   const summary = member.gameIdSummary?.trim()
-  if (!summary || summary === '未绑定') return '-'
+  if (!summary) return '-'
 
   for (const part of summary.split(/\s*\/\s*/)) {
     const match = part.trim().match(/^(PS5?|PC|XBOX(?:\sONE)?)\s*[:：]\s*(.+)$/i)

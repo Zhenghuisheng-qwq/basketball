@@ -116,8 +116,8 @@ export function v4PublicRoundLabel(name?: string | null, roundNo?: number | null
   if (upper === 'R32' || upper === 'R16' || upper === 'R8' || upper === 'QF') {
     return codeLabel('events.round', upper)
   }
-  if (upper === 'SF' || upper === 'SEMI' || raw === '半决赛') return codeLabel('events.round', 'SF')
-  if (upper === 'FINAL' || raw === '总决赛' || raw === 'Final') return codeLabel('events.round', 'FINAL')
+  if (upper === 'SF' || upper === 'SEMI') return codeLabel('events.round', 'SF')
+  if (upper === 'FINAL') return codeLabel('events.round', 'FINAL')
   if (raw) return raw
   return roundNo != null ? translate('events.round.OTHER', { round: roundNo }) : translate('events.round.SCHEDULE')
 }
@@ -133,7 +133,7 @@ export function v4ScheduleStatusLabel(status?: string | null, statusName?: strin
 
 export function v4ScheduleTeamLabel(name?: string | null, placeholderSource?: string | null): string {
   const text = String(name || '').trim()
-  if (text && text !== '待定' && text !== '--') return text
+  if (text) return text
   const source = String(placeholderSource || '').toUpperCase()
   if (source === 'WINNER_OF_SERIES') return translate('match.winnerOfPrevious')
   if (source === 'GROUP_RANK') return translate('match.groupRankPending')

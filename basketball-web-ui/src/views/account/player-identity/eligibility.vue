@@ -24,7 +24,7 @@ const statusLabel = computed(() => {
 
 const identityStatusLabel = computed(() => {
   const text = limit.value?.permanentIdentityStatus || ''
-  if (!text || text === 'KEPT' || text === '继续保留') return t('accountIdentity.eligibility.identityKept')
+  if (!text || text === 'KEPT') return t('accountIdentity.eligibility.identityKept')
   return text
 })
 

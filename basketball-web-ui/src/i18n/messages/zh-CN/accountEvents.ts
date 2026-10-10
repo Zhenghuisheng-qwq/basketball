@@ -251,6 +251,7 @@ export default {
     emptyFinishedHint: '比赛结束后会显示在这里，也可切换「全部赛程」查看全部场次。',
     emptyAll: '暂无赛程',
     emptyAllHint: '通过报名审核并生成赛程后，比赛将显示在这里。',
+    divisionPending: '赛区待定',
     emptyUpcoming: '暂无待比赛赛程',
     emptyUpcomingHint: '当前没有即将开始的比赛，可切换「已结束」或「全部赛程」查看历史比赛。',
     matchTime: '比赛时间：{time}',

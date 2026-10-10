@@ -7,7 +7,7 @@ import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import PasswordInput from '@/views/account/components/PasswordInput.vue'
 import { useAccountStore } from '@/stores/account'
-import { resolvePasswordChangeError, validatePasswordRules } from '@/utils/passwordRules'
+import { validatePasswordRules, type PasswordChangeErrorField } from '@/utils/passwordRules'
 import { forceRelogin } from '@/utils/forceRelogin'
 import { getLoginLogPage, getOperationLogPage } from '@/api/accountSecurity'
 import type { LoginLogItemDto, SecurityLogItemDto } from '@/api/types/accountSecurity'
@@ -98,13 +98,14 @@ function cancelForm() {
   resetErrors()
 }
 
-function applyPasswordChangeError(message: string) {
+function applyPasswordChangeError(result: { error?: string; field?: PasswordChangeErrorField }) {
   resetErrors()
-  const { field, message: text } = resolvePasswordChangeError(message)
-  if (field === 'currentPassword') errors.currentPassword = text
-  else if (field === 'confirmPassword') errors.confirmPassword = text
-  else if (field === 'newPassword') errors.newPassword = text
-  else ElMessage.warning(text)
+  const text = result.error || t('accountShell.profile.passwordChangeFailed')
+  if (result.field === 'currentPassword' || result.field === 'newPassword' || result.field === 'confirmPassword') {
+    errors[result.field] = text
+    return
+  }
+  ElMessage.warning(text)
 }
 
 async function savePassword() {
@@ -117,7 +118,7 @@ async function savePassword() {
   try {
     const result = await accountStore.changePassword(form.currentPassword, form.newPassword)
     if (result.error) {
-      applyPasswordChangeError(result.error)
+      applyPasswordChangeError(result)
       return
     }
     ElMessage.success(t('accountShell.security.passwordChanged'))

@@ -311,10 +311,14 @@ export interface V4PublicMatchSeriesDetail {
   homeTeamShortName?: string
   homeTeamLogoFileId?: string
   homeTeamLogoUrl?: string
+  homeSourceType?: string
+  homeSourceDisplay?: string
   awayEventTeamId?: string
   awayTeamShortName?: string
   awayTeamLogoFileId?: string
   awayTeamLogoUrl?: string
+  awaySourceType?: string
+  awaySourceDisplay?: string
   winnerTeamName?: string
   finalStage?: boolean
   resultLabel?: string

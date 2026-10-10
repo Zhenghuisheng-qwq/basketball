@@ -251,6 +251,7 @@ export default {
     emptyFinishedHint: 'Finished matches show up here. Switch to All matches to see every game.',
     emptyAll: 'No matches',
     emptyAllHint: 'Matches appear here after registration is approved and the schedule is published.',
+    divisionPending: 'Division to be determined',
     emptyUpcoming: 'No upcoming matches',
     emptyUpcomingHint: 'Nothing is coming up. Switch to Finished or All matches to see earlier games.',
     matchTime: 'Match time: {time}',

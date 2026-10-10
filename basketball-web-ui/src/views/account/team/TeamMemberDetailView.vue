@@ -42,10 +42,8 @@ const gameIdLines = computed(() => {
       return t('accountTeam.common.platformId', { platform, id: item.gameId || '-' })
     })
   }
-  if (detail.value?.gameIdSummary && detail.value.gameIdSummary !== '未绑定') {
-    return detail.value.gameIdSummary.split(/\s*\/\s*/).filter(Boolean)
-  }
-  return []
+  const summary = detail.value?.gameIdSummary?.trim() || ''
+  return summary.split(/\s*\/\s*/).filter((part) => /[:：]/.test(part))
 })
 
 const hasStatSummary = computed(() => {

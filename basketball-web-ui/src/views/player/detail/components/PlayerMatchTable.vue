@@ -21,6 +21,7 @@ const router = useRouter()
 const { t } = useI18n()
 
 function resultLabel(row: PlayerMatchRecord): string {
+  if (row.result === 'UNDECIDED') return row.resultLabel || t('publicPages.player.undecided')
   if (row.resultLabel) return row.resultLabel
   return row.result === 'WIN' ? t('publicPages.player.win') : t('publicPages.player.loss')
 }
@@ -115,7 +116,7 @@ function opponentTeam(row: PlayerMatchRecord) {
         <span :title="row.opponentName">{{ row.opponentName }}</span>
       </div>
 
-      <span class="player-detail-result" :class="row.result === 'WIN' ? 'is-win' : 'is-loss'">
+      <span class="player-detail-result" :class="row.result === 'WIN' ? 'is-win' : row.result === 'LOSS' ? 'is-loss' : 'is-pending'">
         <em>{{ resultLabel(row) }}</em>
         <strong v-if="scoreView(row).left" class="player-detail-score">
           <b :class="{ 'is-winner': row.result === 'WIN' }">{{ scoreView(row).left }}</b>
@@ -193,7 +194,7 @@ function opponentTeam(row: PlayerMatchRecord) {
             </span>
           </td>
           <td class="col-result">
-            <span class="player-detail-result" :class="row.result === 'WIN' ? 'is-win' : 'is-loss'">
+            <span class="player-detail-result" :class="row.result === 'WIN' ? 'is-win' : row.result === 'LOSS' ? 'is-loss' : 'is-pending'">
               <em>{{ resultLabel(row) }}</em>
               <strong v-if="scoreView(row).left" class="player-detail-score">
                 <b :class="{ 'is-winner': row.result === 'WIN' }">{{ scoreView(row).left }}</b>

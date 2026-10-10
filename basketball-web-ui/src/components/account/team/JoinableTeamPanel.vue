@@ -47,28 +47,18 @@ function formatEventContext(team: TeamSummaryDto) {
 }
 
 function resolveTeamStatus(team: TeamSummaryDto): { text: string; type: 'success' | 'warning' | 'danger' | 'default' } {
-  if (team.hasPendingApply || team.disabledReason === '申请审核中') {
+  if (team.hasPendingApply) {
     return { text: t('accountTeam.joinable.applied'), type: 'warning' }
   }
-  if (team.disabledReason === '球队已满') {
-    return { text: t('accountTeam.joinable.full'), type: 'danger' }
+  if (team.canApply === false) {
+    return { text: t('accountTeam.joinable.cannotApply'), type: 'default' }
   }
-  if (team.canApply !== false) {
-    return { text: t('accountTeam.joinable.canApply'), type: 'success' }
-  }
-  return { text: t('accountTeam.joinable.cannotApply'), type: 'default' }
+  return { text: t('accountTeam.joinable.canApply'), type: 'success' }
 }
 
 function resolveApplyButtonText(team: TeamSummaryDto) {
-  if (team.hasPendingApply || team.disabledReason === '申请审核中') {
-    return t('accountTeam.joinable.applying')
-  }
-  if (team.disabledReason === '球队已满') {
-    return t('accountTeam.joinable.teamFull')
-  }
-  if (team.canApply === false) {
-    return t('accountTeam.joinable.cannotApply')
-  }
+  if (team.hasPendingApply) return t('accountTeam.joinable.applying')
+  if (team.canApply === false) return t('accountTeam.joinable.cannotApply')
   return t('accountTeam.joinable.apply')
 }
 

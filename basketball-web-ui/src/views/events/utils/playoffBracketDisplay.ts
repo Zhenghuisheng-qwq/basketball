@@ -50,12 +50,21 @@ function publicTeamId(id?: string | number | null): string {
   return String(id)
 }
 
-function teamName(name?: string | null, sourceDisplay?: string | null, sourceType?: string | null): string {
+function teamName(name?: string | null, sourceType?: string | null, sourceDisplay?: string | null): string {
   const text = String(name || '').trim()
   if (text) return text
-  if (sourceType === 'BYE') return '轮空'
-  if (sourceDisplay && sourceDisplay.trim()) return sourceDisplay
-  return '待定'
+  const type = String(sourceType || '').toUpperCase()
+  if (type === 'BYE') return translate('match.bye')
+  if (type === 'WINNER_OF_SERIES') return translate('match.winnerOfPrevious')
+  if (type === 'GROUP_RANK') return translate('match.groupRankPending')
+  const display = String(sourceDisplay || '').trim()
+  if (display) return display
+  return translate('match.tbd')
+}
+
+export function isUnresolvedBracketSlot(teamId?: string | null, sourceType?: string | null): boolean {
+  if (String(teamId || '').trim()) return false
+  return String(sourceType || '').toUpperCase() !== 'BYE'
 }
 
 export function formatBracketSchedule(date?: string | null, time?: string | null): string {
@@ -138,8 +147,10 @@ export function publicSeriesToCard(
     roundLabelEn: meta.labelEn,
     topTeamId: publicTeamId(row.homeEventTeamId),
     bottomTeamId: publicTeamId(row.awayEventTeamId),
-    topTeamName: teamName(row.homeTeamName, row.homeTeamShortName),
-    bottomTeamName: teamName(row.awayTeamName, row.awayTeamShortName),
+    topSourceType: row.homeSourceType,
+    bottomSourceType: row.awaySourceType,
+    topTeamName: teamName(row.homeTeamName, row.homeSourceType, row.homeSourceDisplay),
+    bottomTeamName: teamName(row.awayTeamName, row.awaySourceType, row.awaySourceDisplay),
     topTeamLogo: row.homeTeamLogoUrl || '',
     bottomTeamLogo: row.awayTeamLogoUrl || '',
     topScore: started ? toNumber(row.homeWinCount, 0) : null,
@@ -179,6 +190,10 @@ export function groupMatchItemsToRounds(matches: V4PublicMatchItem[]): BracketRo
     bestOf: item.bestOf,
     homeEventTeamId: item.homeEventTeamId,
     awayEventTeamId: item.awayEventTeamId,
+    homeSourceType: item.homeSourceType,
+    awaySourceType: item.awaySourceType,
+    homeSourceDisplay: item.homeSourceDisplay,
+    awaySourceDisplay: item.awaySourceDisplay,
     homeTeamName: item.homeTeamName,
     awayTeamName: item.awayTeamName,
     homeTeamLogoUrl: item.homeTeamLogoUrl,

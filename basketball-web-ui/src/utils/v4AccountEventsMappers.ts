@@ -283,7 +283,7 @@ export function mapV4DivisionToAvailableEvent(item: V4AvailableDivision): Availa
     registrationStatus: item.myRegistrationStatus,
     registrationId: item.myRegistrationId != null ? String(item.myRegistrationId) : undefined,
     eventStatus: windowLabel,
-    eventStatusCode: windowCode || 'OPEN',
+    eventStatusCode: windowCode || undefined,
     isCaptain: Boolean(item.grantTeamId),
     hasCaptainGrant: item.myGrantStatus === 'ACTIVE',
   }
