@@ -37,10 +37,10 @@ function gameTone(game: V4PublicMatchSeriesGame): 'completed' | 'live' | 'schedu
 }
 
 function toneLabel(game: V4PublicMatchSeriesGame): string {
-  if (game.skipped) return game.skippedReason || t('eventsPage.match.notNeeded')
+  if (game.skipped) return t('eventsPage.match.notNeeded')
   const tone = gameTone(game)
   if (tone === 'live') return t('match.live')
-  if (tone === 'cancelled') return game.matchStatusName || t('match.cancelled')
+  if (tone === 'cancelled') return t('match.cancelled')
   if (tone === 'scheduled') return t('match.notStarted')
   return ''
 }

@@ -107,7 +107,7 @@ const statusText = computed(() => {
   if (seriesMode.value) {
     return v4SeriesHeroStatusLabel(series.value?.seriesStatus)
   }
-  return match.value?.matchStatusName || v4MatchStatusLabel(match.value?.matchStatus)
+  return v4MatchStatusLabel(match.value?.matchStatus) || match.value?.matchStatusName || '--'
 })
 
 const caption = computed(() => {

@@ -158,7 +158,9 @@ export function gameTabLabel(game: V4PublicMatchSeriesGame): string {
 
 export function gameCaption(game: V4PublicMatchSeriesGame | null | undefined): string {
   if (!game) return ''
-  const status = game.matchStatusName || v4MatchStatusLabel(game.matchStatus)
+  const status = game.matchStatus
+    ? v4MatchStatusLabel(game.matchStatus)
+    : (game.matchStatusName || '')
   return `${gameTabLabel(game)} · ${status}`
 }
 
