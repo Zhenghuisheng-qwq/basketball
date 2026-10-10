@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
@@ -8,12 +9,13 @@ import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import MyEventsPagination from '@/components/account/events/MyEventsPagination.vue'
 import { useAccountStore } from '@/stores/account'
-import { IDENTITY_PLATFORM_LABELS } from '@/types/account'
 import { formatDateTime } from '@/utils/formatDate'
 import { v4PlatformLabel } from '@/utils/v4Display'
+import type { IdentityChangeRecord } from '@/types/account'
 
 const router = useRouter()
 const accountStore = useAccountStore()
+const { t, te } = useI18n()
 
 const loading = ref(true)
 const loadError = ref('')
@@ -25,9 +27,17 @@ const showPager = computed(() => accountStore.identityChangeTotal > accountStore
 
 function platformLabel(platform?: string) {
   if (!platform) return '—'
-  return IDENTITY_PLATFORM_LABELS[platform as keyof typeof IDENTITY_PLATFORM_LABELS]
-    || v4PlatformLabel(platform)
-    || platform
+  const code = platform.toUpperCase()
+  const key = `accountIdentity.platform.${code}`
+  if (te(key)) return t(key)
+  return v4PlatformLabel(platform) || platform
+}
+
+function changeTypeLabel(row: IdentityChangeRecord) {
+  const code = (row.changeType || '').toUpperCase()
+  const key = code ? `accountIdentity.changeType.${code}` : ''
+  if (key && te(key)) return t(key)
+  return row.changeTypeName || t('accountIdentity.changeType.OTHER')
 }
 
 async function loadHistory(page = accountStore.identityChangePage, pageSize = accountStore.identityChangePageSize) {
@@ -39,7 +49,7 @@ async function loadHistory(page = accountStore.identityChangePage, pageSize = ac
     }
     await accountStore.loadIdentityChangeHistory({ currentPage: page, pageSize })
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : '加载变更记录失败'
+    loadError.value = error instanceof Error ? error.message : t('accountIdentity.feedback.loadHistoryFailed')
     ElMessage.error(loadError.value)
   } finally {
     loading.value = false
@@ -54,49 +64,49 @@ onMounted(() => {
 <template>
   <div class="account-view">
     <AccountPageHeader
-      zh-title="资料变更记录"
+      :zh-title="t('accountIdentity.history.pageTitle')"
       en-title="IDENTITY CHANGE HISTORY"
       :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '球员身份', to: '/account/player-identity' },
-        { label: '资料变更记录' },
+        { label: t('nav.home'), to: '/home' },
+        { label: t('nav.account'), to: '/account/overview' },
+        { label: t('accountIdentity.title'), to: '/account/player-identity' },
+        { label: t('accountIdentity.history.crumb') },
       ]"
     />
 
     <AccountStatusBanner
-      :title="`永久球员身份 ${account?.playerNo || ''}`"
-      description="查看平台与游戏 ID 已生效的历史变更"
-      status-text="只读记录"
+      :title="t('accountIdentity.history.bannerTitle', { id: account?.playerNo || '' })"
+      :description="t('accountIdentity.history.bannerDesc')"
+      :status-text="t('accountIdentity.status.readOnly')"
       status-type="info"
     />
 
-    <AccountPanel title="平台与游戏 ID 变更记录">
-      <p v-if="loading" class="identity-loading">加载中…</p>
+    <AccountPanel :title="t('accountIdentity.history.panelTitle')">
+      <p v-if="loading" class="identity-loading">{{ t('accountIdentity.feedback.loading') }}</p>
       <p v-else-if="loadError" class="identity-error">{{ loadError }}</p>
       <AccountEmptyState
         v-else-if="!history.length"
         large
-        message="暂无变更记录"
-        subtitle="已生效的平台与游戏 ID 变更将在此展示"
+        :message="t('accountIdentity.history.empty')"
+        :subtitle="t('accountIdentity.history.emptyHint')"
       />
       <template v-else>
         <div class="platform-table-wrap">
           <table class="platform-table">
             <thead>
               <tr>
-                <th>生效时间</th>
-                <th>平台</th>
-                <th>变更类型</th>
-                <th>原游戏 ID</th>
-                <th>新游戏 ID</th>
+                <th>{{ t('accountIdentity.fields.effectiveTime') }}</th>
+                <th>{{ t('accountIdentity.fields.platform') }}</th>
+                <th>{{ t('accountIdentity.fields.changeType') }}</th>
+                <th>{{ t('accountIdentity.fields.oldGameId') }}</th>
+                <th>{{ t('accountIdentity.fields.newGameId') }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(row, index) in history" :key="`${row.effectiveTime}-${row.platform}-${index}`">
                 <td>{{ formatDateTime(row.effectiveTime) || row.effectiveTime }}</td>
                 <td>{{ platformLabel(row.platform) }}</td>
-                <td>{{ row.changeTypeName || '—' }}</td>
+                <td>{{ changeTypeLabel(row) }}</td>
                 <td>{{ row.oldGameId }}</td>
                 <td>{{ row.newGameId }}</td>
               </tr>
@@ -109,17 +119,17 @@ onMounted(() => {
           :page-size="accountStore.identityChangePageSize"
           :total="accountStore.identityChangeTotal"
           :page-size-options="pageSizeOptions"
-          :meta-text="`共 ${accountStore.identityChangeTotal} 条变更记录`"
+          :meta-text="t('accountIdentity.history.total', { count: accountStore.identityChangeTotal })"
           :disabled="loading"
-          aria-label="资料变更记录分页"
+          :aria-label="t('accountIdentity.history.pagination')"
           @update:page="(p) => loadHistory(p, accountStore.identityChangePageSize)"
           @update:page-size="(s) => loadHistory(1, s)"
         />
       </template>
-      <p class="identity-footnote">历史赛事继续显示当届平台与游戏 ID 快照；审核中的修改不会作为已生效记录展示。</p>
+      <p class="identity-footnote">{{ t('accountIdentity.history.footnote') }}</p>
       <div class="account-panel__action account-panel__action--right">
         <button type="button" class="account-btn-secondary" @click="router.push('/account/player-identity/platforms')">
-          返回平台与游戏 ID
+          {{ t('accountIdentity.actions.backToPlatforms') }}
         </button>
       </div>
     </AccountPanel>

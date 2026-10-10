@@ -1,4 +1,6 @@
 import account from './account'
+import accountIdentity from './accountIdentity'
+import accountShell from './accountShell'
 import auth from './auth'
 import common from './common'
 import events from './events'
@@ -16,6 +18,8 @@ const messages = {
   home,
   auth,
   account,
+  accountShell,
+  accountIdentity,
   events,
   eventsPage,
   match,

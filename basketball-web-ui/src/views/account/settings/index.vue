@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
@@ -19,6 +20,7 @@ type SettingsTab = 'profile' | 'privacy' | 'notification' | 'security'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const accountStore = useAccountStore()
 
 const activeTab = ref<SettingsTab>('security')
@@ -107,6 +109,38 @@ const latestRejectedChange = computed(() => {
 const formalAvatarUrl = computed(() => resolveMemberAvatarUrl(profile.value?.avatarUrl || profileForm.avatarUrl))
 const canEditPublicProfile = computed(() => !hasPendingChange.value)
 
+const breadcrumbs = computed(() => [
+  { label: t('accountShell.common.home'), to: '/home' },
+  { label: t('accountShell.common.accountCenter'), to: '/account/overview' },
+  { label: t('accountShell.settings.title') },
+])
+
+const settingsTabs = computed(() => [
+  { key: 'profile' as const, label: t('accountShell.settings.tabs.profile') },
+  { key: 'privacy' as const, label: t('accountShell.settings.tabs.privacy') },
+  { key: 'notification' as const, label: t('accountShell.settings.tabs.notification') },
+  { key: 'security' as const, label: t('accountShell.settings.tabs.security') },
+])
+
+const privacyItems = computed(() => [
+  { key: 'profileVisible' as const, label: t('accountShell.settings.privacy.profileVisible') },
+  { key: 'allowTeamInvite' as const, label: t('accountShell.settings.privacy.allowTeamInvite') },
+  { key: 'showTeamHistory' as const, label: t('accountShell.settings.privacy.showTeamHistory') },
+  { key: 'showMatchData' as const, label: t('accountShell.settings.privacy.showMatchData') },
+])
+
+const notificationItems = computed(() => [
+  { key: 'systemNotice' as const, label: t('accountShell.settings.notification.systemNotice') },
+  { key: 'certificationNotice' as const, label: t('accountShell.settings.notification.certificationNotice') },
+  { key: 'tournamentNotice' as const, label: t('accountShell.settings.notification.tournamentNotice') },
+  { key: 'teamNotice' as const, label: t('accountShell.settings.notification.teamNotice') },
+  { key: 'announcementNotice' as const, label: t('accountShell.settings.notification.announcementNotice') },
+])
+
+const emailStatusText = computed(() =>
+  profile.value?.emailVerified ? t('accountShell.common.verified') : t('accountShell.common.unverified'),
+)
+
 watch(
   () => [accountStore.profile?.nickname, accountStore.profile?.avatarUrl] as const,
   ([nickname, avatarUrl]) => {
@@ -136,8 +170,8 @@ onUnmounted(() => {
 
 function validateNewEmail(value: string): string {
   const trimmed = value.trim()
-  if (!trimmed) return '请输入新邮箱'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return '邮箱格式不正确'
+  if (!trimmed) return t('accountShell.settings.newEmailRequired')
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return t('accountShell.settings.emailInvalid')
   return ''
 }
 
@@ -162,10 +196,10 @@ async function handleSendChangeEmailCode() {
   try {
     const res = await sendChangeEmailCode(emailForm.newEmail.trim().toLowerCase())
     emailVerifyBizNo.value = res.data.bizNo
-    ElMessage.success('验证码已发送，请查收新邮箱')
+    ElMessage.success(t('accountShell.settings.codeSent'))
     startEmailCountdown(res.data.resendSeconds || 60)
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '验证码发送失败，请稍后重试')
+    ElMessage.error(error instanceof Error ? error.message : t('accountShell.settings.codeSendFailed'))
   } finally {
     emailSending.value = false
   }
@@ -173,10 +207,10 @@ async function handleSendChangeEmailCode() {
 
 async function saveEmail() {
   emailErrors.newEmail = validateNewEmail(emailForm.newEmail)
-  emailErrors.verifyCode = emailForm.verifyCode.trim() ? '' : '请输入验证码'
+  emailErrors.verifyCode = emailForm.verifyCode.trim() ? '' : t('accountShell.settings.codeRequired')
   if (emailErrors.newEmail || emailErrors.verifyCode || emailLoading.value) return
   if (!emailVerifyBizNo.value) {
-    ElMessage.warning('请先发送验证码')
+    ElMessage.warning(t('accountShell.settings.sendCodeFirst'))
     return
   }
   emailLoading.value = true
@@ -186,14 +220,14 @@ async function saveEmail() {
       verifyBizNo: emailVerifyBizNo.value,
       verifyCode: emailForm.verifyCode.trim(),
     })
-    ElMessage.success('邮箱修改成功，请重新登录')
+    ElMessage.success(t('accountShell.settings.emailChanged'))
     await forceRelogin({
       reason: 'email_changed',
       redirect: '/account/settings',
       skipLogoutApi: true,
     })
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '邮箱修改失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountShell.settings.emailChangeFailed'))
   } finally {
     emailLoading.value = false
   }
@@ -207,11 +241,11 @@ function resetErrors() {
 
 function validateForm(): boolean {
   resetErrors()
-  if (!form.currentPassword) errors.currentPassword = '请输入当前密码'
+  if (!form.currentPassword) errors.currentPassword = t('accountShell.settings.currentPasswordRequired')
   const ruleError = validatePasswordRules(form.newPassword)
   if (ruleError) errors.newPassword = ruleError
-  if (!form.confirmPassword) errors.confirmPassword = '请确认新密码'
-  else if (form.confirmPassword !== form.newPassword) errors.confirmPassword = '两次密码输入不一致'
+  if (!form.confirmPassword) errors.confirmPassword = t('accountShell.settings.confirmPasswordRequired')
+  else if (form.confirmPassword !== form.newPassword) errors.confirmPassword = t('accountShell.settings.passwordMismatch')
   return !errors.currentPassword && !errors.newPassword && !errors.confirmPassword
 }
 
@@ -234,7 +268,7 @@ function applyPasswordChangeError(message: string) {
 async function savePassword() {
   if (loading.value) return
   if (!validateForm()) {
-    ElMessage.warning('请检查表单填写是否正确')
+    ElMessage.warning(t('accountShell.settings.checkForm'))
     return
   }
   loading.value = true
@@ -244,7 +278,7 @@ async function savePassword() {
       applyPasswordChangeError(result.error)
       return
     }
-    ElMessage.success('密码修改成功，请重新登录')
+    ElMessage.success(t('accountShell.settings.passwordChanged'))
     await forceRelogin({
       reason: 'password_changed',
       redirect: '/account/settings',
@@ -257,10 +291,10 @@ async function savePassword() {
 
 function validateNickname(value: string): string {
   const trimmed = value.trim()
-  if (!trimmed) return '请输入昵称'
-  if (trimmed.length < 2 || trimmed.length > 20) return '昵称长度应为 2 至 20 个字符'
+  if (!trimmed) return t('accountShell.settings.nicknameRequired')
+  if (trimmed.length < 2 || trimmed.length > 20) return t('accountShell.settings.nicknameLength')
   if (!/^[\u4e00-\u9fa5a-zA-Z0-9_]+$/.test(trimmed)) {
-    return '昵称仅支持中文、英文、数字和下划线'
+    return t('accountShell.settings.nicknameCharset')
   }
   return ''
 }
@@ -273,7 +307,7 @@ function handleAvatarSelected(file: File) {
 async function saveProfile() {
   if (profileSaving.value) return
   if (hasPendingChange.value) {
-    ElMessage.warning('你已有资料修改申请正在审核，请等待审核完成。')
+    ElMessage.warning(t('accountShell.settings.pendingExists'))
     return
   }
 
@@ -288,7 +322,7 @@ async function saveProfile() {
   const nicknameChanged = nickname !== formalNickname
   const avatarChanged = Boolean(avatarFile.value)
   if (!nicknameChanged && !avatarChanged) {
-    ElMessage.warning('资料没有发生变化')
+    ElMessage.warning(t('accountShell.settings.noChange'))
     return
   }
 
@@ -299,9 +333,9 @@ async function saveProfile() {
       avatarFile: avatarFile.value || undefined,
     })
     avatarFile.value = null
-    ElMessage.success('资料修改申请已提交，请等待管理员审核')
+    ElMessage.success(t('accountShell.settings.profileSubmitted'))
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '提交失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountShell.settings.submitFailed'))
   } finally {
     profileSaving.value = false
   }
@@ -311,9 +345,9 @@ async function savePrivacy() {
   settingsSaving.value = true
   try {
     await accountStore.updatePrivacy({ ...privacyForm })
-    ElMessage.success('隐私设置已保存')
+    ElMessage.success(t('accountShell.settings.privacySaved'))
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '保存失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountShell.common.saveFailed'))
   } finally {
     settingsSaving.value = false
   }
@@ -323,9 +357,9 @@ async function saveNotificationSettings() {
   settingsSaving.value = true
   try {
     await accountStore.updateNotificationSetting({ ...notificationForm })
-    ElMessage.success('通知设置已保存')
+    ElMessage.success(t('accountShell.settings.notificationSaved'))
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '保存失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountShell.common.saveFailed'))
   } finally {
     settingsSaving.value = false
   }
@@ -339,53 +373,44 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
 <template>
   <div class="account-view account-view--settings">
     <AccountPageHeader
-      zh-title="账号设置"
+      :zh-title="t('accountShell.settings.title')"
       en-title="ACCOUNT SETTINGS"
-      :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '账号设置' },
-      ]"
+      :breadcrumb-items="breadcrumbs"
     />
 
     <AccountStatusBanner
-      title="管理你的 CNPA 账号"
-      description="维护账号资料、隐私与通知偏好"
-      status-text="账号状态正常"
+      :title="t('accountShell.settings.bannerTitle')"
+      :description="t('accountShell.settings.bannerDesc')"
+      :status-text="t('accountShell.settings.bannerStatus')"
       status-type="success"
     />
 
-    <nav class="account-settings-tabs" aria-label="账号设置分类">
+    <nav class="account-settings-tabs" :aria-label="t('accountShell.settings.tabsLabel')">
       <button
-        v-for="tab in ([
-          ['profile', '账号资料'],
-          ['privacy', '隐私设置'],
-          ['notification', '通知设置'],
-          ['security', '账号安全'],
-        ] as const)"
-        :key="tab[0]"
+        v-for="tab in settingsTabs"
+        :key="tab.key"
         type="button"
         class="account-settings-tabs__item"
-        :class="{ 'account-settings-tabs__item--active': activeTab === tab[0] }"
-        @click="setTab(tab[0])"
+        :class="{ 'account-settings-tabs__item--active': activeTab === tab.key }"
+        @click="setTab(tab.key)"
       >
-        {{ tab[1] }}
+        {{ tab.label }}
       </button>
     </nav>
 
-    <div v-if="settingsLoading" class="settings-loading">加载设置中...</div>
+    <div v-if="settingsLoading" class="settings-loading">{{ t('accountShell.settings.loading') }}</div>
 
     <div v-else-if="activeTab === 'profile'" class="account-grid-2">
-      <AccountPanel title="账号资料">
+      <AccountPanel :title="t('accountShell.settings.profileTitle')">
         <form class="security-form" @submit.prevent="saveProfile">
           <div class="security-form__field">
-            <label>头像</label>
+            <label>{{ t('accountShell.settings.avatar') }}</label>
             <ProfileAvatarUploader
               v-model="profileForm.avatarUrl"
               :name="profile?.nickname || profileForm.nickname || 'CN'"
-              action-label="更换头像"
+              :action-label="t('accountShell.settings.changeAvatar')"
               :disabled="!canEditPublicProfile"
-              hint="新头像审核通过后才会公开展示"
+              :hint="t('accountShell.settings.avatarHint')"
               @error="avatarError = $event"
               @file-selected="handleAvatarSelected"
             />
@@ -393,7 +418,7 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
           </div>
 
           <div class="security-form__field">
-            <label for="settings-nickname">昵称</label>
+            <label for="settings-nickname">{{ t('accountShell.settings.nickname') }}</label>
             <input
               id="settings-nickname"
               v-model="profileForm.nickname"
@@ -403,12 +428,12 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
               autocomplete="nickname"
               :disabled="!canEditPublicProfile"
             />
-            <p class="security-form__hint">昵称修改后需审核通过才会公开展示</p>
+            <p class="security-form__hint">{{ t('accountShell.settings.nicknameHint') }}</p>
           </div>
 
           <div class="security-form__field">
-            <label>注册邮箱</label>
-            <p class="security-form__hint">{{ profile?.maskedEmail || account?.maskedEmail }}（登录凭据，只读）</p>
+            <label>{{ t('accountShell.common.registeredEmail') }}</label>
+            <p class="security-form__hint">{{ t('accountShell.settings.emailReadonly', { email: profile?.maskedEmail || account?.maskedEmail || '' }) }}</p>
           </div>
 
           <div class="security-form__actions">
@@ -417,78 +442,78 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
               class="account-btn-primary"
               :disabled="profileSaving || !canEditPublicProfile"
             >
-              {{ profileSaving ? '提交中...' : '保存资料' }}
+              {{ profileSaving ? t('accountShell.settings.submitting') : t('accountShell.settings.saveProfile') }}
             </button>
           </div>
         </form>
       </AccountPanel>
 
       <div class="settings-profile-side">
-        <AccountPanel v-if="hasPendingChange && pendingChange" title="资料修改审核中">
+        <AccountPanel v-if="hasPendingChange && pendingChange" :title="t('accountShell.settings.pendingTitle')">
           <dl class="account-info-list settings-audit-list">
             <div class="account-field-row">
-              <dt>状态</dt>
-              <dd class="account-status-text--warning">{{ pendingChange.auditStatusName || '审核中' }}</dd>
+              <dt>{{ t('accountShell.settings.status') }}</dt>
+              <dd class="account-status-text--warning">{{ pendingChange.auditStatusName || t('accountShell.common.pending') }}</dd>
             </div>
             <div class="account-field-row">
-              <dt>提交时间</dt>
+              <dt>{{ t('accountShell.settings.submitTime') }}</dt>
               <dd>{{ formatDateTime(pendingChange.submitTime || '') }}</dd>
             </div>
             <div class="account-field-row settings-audit-list__compare">
-              <dt>昵称</dt>
+              <dt>{{ t('accountShell.settings.nicknameLabel') }}</dt>
               <dd>
-                <span>当前：{{ pendingChange.oldNickname || profile?.nickname || '-' }}</span>
-                <span>申请：{{ pendingChange.newNickname || '-' }}</span>
+                <span>{{ t('accountShell.settings.currentValue', { value: pendingChange.oldNickname || profile?.nickname || '-' }) }}</span>
+                <span>{{ t('accountShell.settings.requestedValue', { value: pendingChange.newNickname || '-' }) }}</span>
               </dd>
             </div>
             <div class="account-field-row settings-audit-list__avatars">
-              <dt>头像</dt>
+              <dt>{{ t('accountShell.settings.avatarLabel') }}</dt>
               <dd>
                 <div class="settings-avatar-compare">
                   <figure>
-                    <img :src="resolveMemberAvatarUrl(pendingChange.oldAvatarUrl || formalAvatarUrl)" alt="当前头像" />
-                    <figcaption>当前</figcaption>
+                    <img :src="resolveMemberAvatarUrl(pendingChange.oldAvatarUrl || formalAvatarUrl)" :alt="t('accountShell.settings.currentAvatarAlt')" />
+                    <figcaption>{{ t('accountShell.settings.current') }}</figcaption>
                   </figure>
                   <figure>
-                    <img :src="resolveMemberAvatarUrl(pendingChange.newAvatarUrl || formalAvatarUrl)" alt="申请头像" />
-                    <figcaption>申请</figcaption>
+                    <img :src="resolveMemberAvatarUrl(pendingChange.newAvatarUrl || formalAvatarUrl)" :alt="t('accountShell.settings.requestedAvatarAlt')" />
+                    <figcaption>{{ t('accountShell.settings.requested') }}</figcaption>
                   </figure>
                 </div>
               </dd>
             </div>
           </dl>
-          <p class="security-form__hint">审核完成前不可再次提交修改。</p>
+          <p class="security-form__hint">{{ t('accountShell.settings.pendingHint') }}</p>
         </AccountPanel>
 
-        <AccountPanel v-else-if="latestRejectedChange" title="资料修改未通过审核">
+        <AccountPanel v-else-if="latestRejectedChange" :title="t('accountShell.settings.rejectedTitle')">
           <dl class="account-info-list">
             <div class="account-field-row">
-              <dt>状态</dt>
-              <dd class="account-status-text--danger">{{ latestRejectedChange.auditStatusName || '已驳回' }}</dd>
+              <dt>{{ t('accountShell.settings.status') }}</dt>
+              <dd class="account-status-text--danger">{{ latestRejectedChange.auditStatusName || t('accountShell.settings.rejectedFallback') }}</dd>
             </div>
             <div class="account-field-row">
-              <dt>审核原因</dt>
-              <dd>{{ latestRejectedChange.auditRemark || '未填写' }}</dd>
+              <dt>{{ t('accountShell.settings.auditReason') }}</dt>
+              <dd>{{ latestRejectedChange.auditRemark || t('accountShell.settings.notFilled') }}</dd>
             </div>
             <div class="account-field-row">
-              <dt>审核时间</dt>
+              <dt>{{ t('accountShell.settings.auditTime') }}</dt>
               <dd>{{ formatDateTime(latestRejectedChange.auditTime || '') }}</dd>
             </div>
           </dl>
-          <p class="security-form__hint">正式昵称 / 头像未变更，可修改后重新提交。</p>
+          <p class="security-form__hint">{{ t('accountShell.settings.rejectedHint') }}</p>
         </AccountPanel>
 
-        <AccountPanel title="账号概览">
+        <AccountPanel :title="t('accountShell.settings.overviewTitle')">
           <dl class="account-info-list">
-            <div class="account-field-row"><dt>账号状态</dt><dd class="account-status-text--success">正常</dd></div>
+            <div class="account-field-row"><dt>{{ t('accountShell.common.accountStatus') }}</dt><dd class="account-status-text--success">{{ t('accountShell.common.normal') }}</dd></div>
             <div class="account-field-row">
-              <dt>邮箱状态</dt>
+              <dt>{{ t('accountShell.common.emailStatus') }}</dt>
               <dd :class="profile?.emailVerified ? 'account-status-text--success' : ''">
-                {{ profile?.emailVerified ? '已验证' : '未验证' }}
+                {{ emailStatusText }}
               </dd>
             </div>
             <div class="account-field-row">
-              <dt>最近登录</dt>
+              <dt>{{ t('accountShell.common.lastLogin') }}</dt>
               <dd>{{ formatDateTime(security?.lastLoginAt || account?.lastLoginAt || '') }}</dd>
             </div>
           </dl>
@@ -497,86 +522,75 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
     </div>
 
     <div v-else-if="activeTab === 'privacy'" class="account-grid-2">
-      <AccountPanel title="隐私设置">
+      <AccountPanel :title="t('accountShell.settings.privacyTitle')">
         <form class="security-form" @submit.prevent="savePrivacy">
-          <label v-for="item in [
-            ['profileVisible', '公开个人资料'],
-            ['allowTeamInvite', '允许球队邀请'],
-            ['showTeamHistory', '展示球队历史'],
-            ['showMatchData', '展示比赛数据'],
-          ]" :key="item[0]" class="settings-toggle">
-            <span>{{ item[1] }}</span>
+          <label v-for="item in privacyItems" :key="item.key" class="settings-toggle">
+            <span>{{ item.label }}</span>
             <input
               type="checkbox"
-              :checked="privacyForm[item[0] as keyof PrivacySettingDto] === 1"
-              @change="toggleSetting(privacyForm, item[0])"
+              :checked="privacyForm[item.key] === 1"
+              @change="toggleSetting(privacyForm, item.key)"
             />
           </label>
           <div class="security-form__actions">
-            <button type="submit" class="account-btn-primary" :disabled="settingsSaving">保存隐私设置</button>
+            <button type="submit" class="account-btn-primary" :disabled="settingsSaving">{{ t('accountShell.settings.savePrivacy') }}</button>
           </div>
         </form>
       </AccountPanel>
     </div>
 
     <div v-else-if="activeTab === 'notification'" class="account-grid-2">
-      <AccountPanel title="通知设置">
+      <AccountPanel :title="t('accountShell.settings.notificationTitle')">
         <form class="security-form" @submit.prevent="saveNotificationSettings">
-          <label v-for="item in [
-            ['systemNotice', '系统通知'],
-            ['certificationNotice', '认证通知'],
-            ['tournamentNotice', '赛事通知'],
-            ['teamNotice', '球队通知'],
-            ['announcementNotice', '公告通知'],
-          ]" :key="item[0]" class="settings-toggle">
-            <span>{{ item[1] }}</span>
+          <label v-for="item in notificationItems" :key="item.key" class="settings-toggle">
+            <span>{{ item.label }}</span>
             <input
               type="checkbox"
-              :checked="notificationForm[item[0] as keyof NotificationSettingDto] === 1"
-              @change="toggleSetting(notificationForm, item[0])"
+              :checked="notificationForm[item.key] === 1"
+              @change="toggleSetting(notificationForm, item.key)"
             />
           </label>
           <div class="security-form__actions">
-            <button type="submit" class="account-btn-primary" :disabled="settingsSaving">保存通知设置</button>
+            <button type="submit" class="account-btn-primary" :disabled="settingsSaving">{{ t('accountShell.settings.saveNotification') }}</button>
           </div>
         </form>
       </AccountPanel>
     </div>
 
     <div v-else class="account-grid-2 security-layout">
-      <AccountPanel title="修改密码">
+      <AccountPanel :title="t('accountShell.settings.changePassword')">
         <form class="security-form" @submit.prevent="savePassword">
           <div class="security-form__field">
-            <label for="current-password">当前密码</label>
+            <label for="current-password">{{ t('accountShell.settings.currentPassword') }}</label>
             <PasswordInput id="current-password" v-model="form.currentPassword" autocomplete="current-password" />
             <p v-if="errors.currentPassword" class="security-form__error">{{ errors.currentPassword }}</p>
           </div>
           <div class="security-form__field">
-            <label for="new-password">新密码</label>
+            <label for="new-password">{{ t('accountShell.settings.newPassword') }}</label>
             <PasswordInput id="new-password" v-model="form.newPassword" autocomplete="new-password" />
-            <p class="security-form__hint">8 至 20 位，需包含字母与数字（登录凭据）</p>
+            <p class="security-form__hint">{{ t('accountShell.settings.passwordHint') }}</p>
             <p v-if="errors.newPassword" class="security-form__error">{{ errors.newPassword }}</p>
           </div>
           <div class="security-form__field">
-            <label for="confirm-password">确认新密码</label>
+            <label for="confirm-password">{{ t('accountShell.settings.confirmPassword') }}</label>
             <PasswordInput id="confirm-password" v-model="form.confirmPassword" autocomplete="new-password" />
             <p v-if="errors.confirmPassword" class="security-form__error">{{ errors.confirmPassword }}</p>
           </div>
           <div class="security-form__actions">
-            <button type="submit" class="account-btn-primary" :disabled="loading">保存新密码</button>
-            <button type="button" class="account-btn-secondary" @click="cancelForm">取消</button>
+            <button type="submit" class="account-btn-primary" :disabled="loading">{{ t('accountShell.settings.savePassword') }}</button>
+            <button type="button" class="account-btn-secondary" @click="cancelForm">{{ t('accountShell.common.cancel') }}</button>
           </div>
         </form>
       </AccountPanel>
 
-      <AccountPanel title="修改登录邮箱">
+      <AccountPanel :title="t('accountShell.settings.changeEmail')">
         <form class="security-form" @submit.prevent="saveEmail">
           <div class="security-form__field">
-            <label>当前邮箱</label>
+            <label>{{ t('accountShell.settings.currentEmail') }}</label>
             <p class="security-form__hint">{{ profile?.maskedEmail || account?.maskedEmail }}</p>
           </div>
           <div class="security-form__field">
-            <label for="new-email">新邮箱</label>
+            <label for="new-email">{{ t('accountShell.settings.newEmail') }}</label>
             <input
               id="new-email"
               v-model="emailForm.newEmail"
@@ -588,7 +602,7 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
             <p v-if="emailErrors.newEmail" class="security-form__error">{{ emailErrors.newEmail }}</p>
           </div>
           <div class="security-form__field">
-            <label for="change-email-code">新邮箱验证码</label>
+            <label for="change-email-code">{{ t('accountShell.settings.emailCode') }}</label>
             <div class="settings-code-row">
               <input
                 id="change-email-code"
@@ -605,42 +619,42 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
                 :disabled="emailSending || emailCountdown > 0"
                 @click="handleSendChangeEmailCode"
               >
-                {{ emailCountdown > 0 ? `${emailCountdown}s` : emailSending ? '发送中' : '发送验证码' }}
+                {{ emailCountdown > 0 ? `${emailCountdown}s` : emailSending ? t('accountShell.settings.sending') : t('accountShell.settings.sendCode') }}
               </button>
             </div>
             <p v-if="emailErrors.verifyCode" class="security-form__error">{{ emailErrors.verifyCode }}</p>
           </div>
           <div class="security-form__actions">
-            <button type="submit" class="account-btn-primary" :disabled="emailLoading">保存新邮箱</button>
+            <button type="submit" class="account-btn-primary" :disabled="emailLoading">{{ t('accountShell.settings.saveEmail') }}</button>
           </div>
-          <p class="security-form__hint">修改成功后需使用新邮箱与原密码重新登录</p>
+          <p class="security-form__hint">{{ t('accountShell.settings.emailReloginHint') }}</p>
         </form>
       </AccountPanel>
 
-      <AccountPanel title="账号信息">
+      <AccountPanel :title="t('accountShell.settings.accountInfo')">
         <dl class="account-info-list">
-          <div class="account-field-row"><dt>注册邮箱</dt><dd>{{ profile?.maskedEmail }}</dd></div>
+          <div class="account-field-row"><dt>{{ t('accountShell.common.registeredEmail') }}</dt><dd>{{ profile?.maskedEmail }}</dd></div>
           <div class="account-field-row">
-            <dt>邮箱状态</dt>
+            <dt>{{ t('accountShell.common.emailStatus') }}</dt>
             <dd :class="profile?.emailVerified ? 'account-status-text--success' : ''">
-              {{ profile?.emailVerified ? '已验证' : '未验证' }}
+              {{ emailStatusText }}
             </dd>
           </div>
-          <div class="account-field-row"><dt>账号状态</dt><dd class="account-status-text--success">正常</dd></div>
+          <div class="account-field-row"><dt>{{ t('accountShell.common.accountStatus') }}</dt><dd class="account-status-text--success">{{ t('accountShell.common.normal') }}</dd></div>
           <div class="account-field-row">
-            <dt>最近登录</dt>
+            <dt>{{ t('accountShell.common.lastLogin') }}</dt>
             <dd>{{ formatDateTime(security?.lastLoginAt || account?.lastLoginAt || '') }}</dd>
           </div>
           <div class="account-field-row">
-            <dt>密码更新时间</dt>
+            <dt>{{ t('accountShell.common.passwordUpdatedAt') }}</dt>
             <dd>{{ formatDateTime(security?.passwordUpdatedAt || '') }}</dd>
           </div>
         </dl>
-        <p class="security-form__hint">如非本人操作，请立即修改密码并联系管理员</p>
+        <p class="security-form__hint">{{ t('accountShell.common.notYou') }}</p>
       </AccountPanel>
     </div>
 
-    <p class="security-tip">请勿向任何人透露密码或邮箱验证码</p>
+    <p class="security-tip">{{ t('accountShell.common.securityTip') }}</p>
   </div>
 </template>
 

@@ -35,6 +35,7 @@ import {
   getOpenRegistrationPage,
   submitOpenRegistration,
 } from '@/api/openRegistration'
+import { translate } from '@/i18n'
 import { isLoggedIn } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
 import {
@@ -412,7 +413,7 @@ export const useAccountStore = defineStore('account', () => {
         }
       }
     } catch (error) {
-      overviewError.value = error instanceof Error ? error.message : '加载失败'
+      overviewError.value = error instanceof Error ? error.message : translate('accountShell.overview.loadFailed')
       throw error
     } finally {
       overviewLoading.value = false
@@ -461,10 +462,10 @@ export const useAccountStore = defineStore('account', () => {
     avatarFile?: File
   }) {
     if (!profile.value || !currentAccount.value) {
-      throw new Error('资料未加载')
+      throw new Error(translate('accountShell.profile.profileNotLoaded'))
     }
     if (profile.value.hasPendingChange) {
-      throw new Error('你已有资料修改申请正在审核，请等待审核完成。')
+      throw new Error(translate('accountShell.profile.pendingReview'))
     }
 
     const nickname = (payload.nickname ?? profile.value.nickname).trim()
@@ -480,7 +481,7 @@ export const useAccountStore = defineStore('account', () => {
     const nicknameChanged = nickname !== formalNickname
     const avatarChanged = Boolean(avatarFileId)
     if (!nicknameChanged && !avatarChanged) {
-      throw new Error('资料没有发生变化')
+      throw new Error(translate('accountShell.settings.noChange'))
     }
 
     await submitAccountProfileChange({
@@ -571,11 +572,11 @@ export const useAccountStore = defineStore('account', () => {
       // 头像变更需审核，不在认证流程中立即生效
       await submitPublicProfileChange({ avatarFile: data.avatarFile })
     } else if (!existingAvatar) {
-      throw new Error('请先在账号资料中设置头像（审核通过后生效）')
+      throw new Error(translate('accountShell.profile.avatarRequired'))
     }
 
     if (!data.gameScreenshotFile) {
-      throw new Error('请上传游戏账号证明截图')
+      throw new Error(translate('accountShell.profile.screenshotRequired'))
     }
 
     const draftPayload: PlayerCertDraftPayload = {
@@ -586,7 +587,7 @@ export const useAccountStore = defineStore('account', () => {
     }
     const draft = await saveCertDraft(draftPayload)
     const applicationId = draft.currentApplicationId
-    if (!applicationId) throw new Error('未能创建认证申请')
+    if (!applicationId) throw new Error(translate('accountShell.profile.applicationCreateFailed'))
 
     const uploaded = await uploadAccountFile(data.gameScreenshotFile, 'PLAYER_CERT_GAME_SCREENSHOT')
     await bindCertMaterial(applicationId, uploaded.data.fileId, 'PLAYER_CERT_GAME_SCREENSHOT')
@@ -744,10 +745,10 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   async function changePassword(currentPassword: string, newPassword: string): Promise<{ error?: string; needRelogin?: boolean }> {
-    if (!currentPassword.trim()) return { error: '请输入当前密码' }
+    if (!currentPassword.trim()) return { error: translate('accountShell.settings.currentPasswordRequired') }
     const ruleError = validatePasswordRules(newPassword)
     if (ruleError) return { error: ruleError }
-    if (newPassword === currentPassword) return { error: '新密码不能与当前密码相同' }
+    if (newPassword === currentPassword) return { error: translate('accountShell.profile.samePassword') }
     try {
       const res = await changeAccountPassword({
         oldPassword: currentPassword,
@@ -759,7 +760,7 @@ export const useAccountStore = defineStore('account', () => {
       }
       return {}
     } catch (error) {
-      return { error: error instanceof Error ? error.message : '密码修改失败' }
+      return { error: error instanceof Error ? error.message : translate('accountShell.profile.passwordChangeFailed') }
     }
   }
 
@@ -807,9 +808,9 @@ export const useAccountStore = defineStore('account', () => {
       return { percent: 0, items: [] as { key: string; label: string; done: boolean; weight: number }[] }
     }
     const items = [
-      { key: 'email', label: '邮箱已验证', done: profile.value.emailVerified, weight: 40 },
-      { key: 'avatar', label: '上传个人头像', done: Boolean(profile.value.avatarUrl?.trim()), weight: 30 },
-      { key: 'nickname', label: '设置个人昵称', done: Boolean(profile.value.nickname?.trim()), weight: 30 },
+      { key: 'email', label: translate('accountShell.common.emailVerified'), done: profile.value.emailVerified, weight: 40 },
+      { key: 'avatar', label: translate('accountShell.profile.uploadAvatarItem'), done: Boolean(profile.value.avatarUrl?.trim()), weight: 30 },
+      { key: 'nickname', label: translate('accountShell.profile.setNicknameItem'), done: Boolean(profile.value.nickname?.trim()), weight: 30 },
     ]
     const percent = items.reduce((sum, item) => sum + (item.done ? item.weight : 0), 0)
     return { percent, items }
@@ -886,9 +887,9 @@ export const useAccountStore = defineStore('account', () => {
 
 export function getAccountRoleLabel(role: AccountRole): string {
   const labels: Record<AccountRole, string> = {
-    BASIC_USER: '基础用户',
-    PLAYER: '认证球员',
-    CAPTAIN: '队长权限',
+    BASIC_USER: translate('accountShell.sidebar.basicUser'),
+    PLAYER: translate('accountShell.sidebar.verifiedPlayer'),
+    CAPTAIN: translate('accountShell.overview.captainTitle'),
   }
   return labels[role]
 }

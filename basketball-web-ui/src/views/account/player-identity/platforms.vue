@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import { uploadAccountFile } from '@/api/accountFile'
 import { useAccountStore } from '@/stores/account'
-import { IDENTITY_PLATFORM_LABELS, type IdentityPlatform } from '@/types/account'
+import type { IdentityPlatform, PlatformGameIdRecord } from '@/types/account'
 import { ElMessage } from 'element-plus'
 
 const accountStore = useAccountStore()
+const { t, te } = useI18n()
 const showAddDialog = ref(false)
 const showPendingDialog = ref(false)
 const submitting = ref(false)
@@ -32,11 +34,26 @@ const isAddMode = computed(() => {
   return !row?.platformAccountId || row.status === 'UNBOUND'
 })
 
+function platformLabel(code?: string) {
+  if (!code) return '-'
+  const key = `accountIdentity.platform.${code}`
+  return te(key) ? t(key) : code
+}
+
+function platformStatusLabel(row: PlatformGameIdRecord) {
+  if (row.status === 'UNBOUND') return t('accountIdentity.platformStatus.unbound')
+  if (row.status === 'PENDING' && row.pendingKind === 'ADD') return t('accountIdentity.platformStatus.addPending')
+  if (row.status === 'PENDING' && row.pendingKind === 'EDIT') return t('accountIdentity.platformStatus.editPending')
+  if (row.status === 'PENDING') return t('accountIdentity.status.pending')
+  if (row.status === 'EFFECTIVE') return t('accountIdentity.status.effective')
+  return row.statusText || '-'
+}
+
 onMounted(async () => {
   try {
     await accountStore.loadPlayerPlatformState()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载平台数据失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountIdentity.feedback.loadPlatformFailed'))
   }
 })
 
@@ -59,11 +76,11 @@ async function handleProofUpload(event: Event) {
   input.value = ''
   if (!file) return
   if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-    ElMessage.warning('仅支持 JPG、JPEG、PNG')
+    ElMessage.warning(t('accountIdentity.feedback.imagesOnly'))
     return
   }
   if (file.size > 8 * 1024 * 1024) {
-    ElMessage.warning('文件大小不能超过 8MB')
+    ElMessage.warning(t('accountIdentity.feedback.fileTooLarge'))
     return
   }
   uploadingProof.value = true
@@ -71,9 +88,9 @@ async function handleProofUpload(event: Event) {
     const res = await uploadAccountFile(file, 'PLAYER_CERT_GAME_SCREENSHOT')
     addForm.proofFileId = res.data.fileId
     addForm.proofFileName = res.data.originalName || file.name
-    ElMessage.success('证明材料已上传')
+    ElMessage.success(t('accountIdentity.feedback.proofUploaded'))
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '上传失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountIdentity.feedback.uploadFailed'))
   } finally {
     uploadingProof.value = false
   }
@@ -81,11 +98,11 @@ async function handleProofUpload(event: Event) {
 
 async function submitAdd() {
   if (!addForm.gameId.trim()) {
-    ElMessage.warning('请填写游戏 ID')
+    ElMessage.warning(t('accountIdentity.feedback.enterGameId'))
     return
   }
   if (!addForm.proofFileId) {
-    ElMessage.warning('请上传证明材料')
+    ElMessage.warning(t('accountIdentity.feedback.uploadProofRequired'))
     return
   }
   if (submitting.value) return
@@ -97,9 +114,9 @@ async function submitAdd() {
       proofFileId: addForm.proofFileId,
     })
     showAddDialog.value = false
-    ElMessage.success('已提交审核')
+    ElMessage.success(t('accountIdentity.feedback.submittedForReview'))
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '提交失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountIdentity.feedback.submitFailed'))
   } finally {
     submitting.value = false
   }
@@ -113,39 +130,39 @@ function viewPending() {
 <template>
   <div class="account-view">
     <AccountPageHeader
-      zh-title="平台与游戏 ID"
+      :zh-title="t('accountIdentity.platforms.pageTitle')"
       en-title="PLATFORM & GAME ID"
       :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '球员身份', to: '/account/player-identity' },
-        { label: '平台与游戏 ID' },
+        { label: t('nav.home'), to: '/home' },
+        { label: t('nav.account'), to: '/account/overview' },
+        { label: t('accountIdentity.title'), to: '/account/player-identity' },
+        { label: t('accountIdentity.platforms.crumb') },
       ]"
     />
 
     <AccountStatusBanner
-      :title="`永久球员身份 ${account?.playerNo}`"
-      description="在同一球员档案下管理各平台游戏 ID"
-      status-text="球员认证已生效"
+      :title="t('accountIdentity.platforms.bannerTitle', { id: account?.playerNo || '' })"
+      :description="t('accountIdentity.platforms.bannerDesc')"
+      :status-text="t('accountIdentity.status.certActive')"
       status-type="success"
     />
 
-    <AccountPanel title="平台身份记录">
+    <AccountPanel :title="t('accountIdentity.platforms.recordsTitle')">
       <div class="platform-table-wrap">
         <table class="platform-table">
           <thead>
             <tr>
-              <th>平台</th>
-              <th>游戏 ID</th>
-              <th>审核状态</th>
-              <th>操作</th>
+              <th>{{ t('accountIdentity.fields.platform') }}</th>
+              <th>{{ t('accountIdentity.fields.gameId') }}</th>
+              <th>{{ t('accountIdentity.fields.reviewStatus') }}</th>
+              <th>{{ t('accountIdentity.fields.action') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in records" :key="row.platform">
-              <td>{{ IDENTITY_PLATFORM_LABELS[row.platform] }}</td>
-              <td>{{ row.gameId || '未绑定' }}</td>
-              <td>{{ row.status === 'UNBOUND' ? '-' : row.statusText }}</td>
+              <td>{{ platformLabel(row.platform) }}</td>
+              <td>{{ row.gameId || t('accountIdentity.platformStatus.unbound') }}</td>
+              <td>{{ row.status === 'UNBOUND' ? '-' : platformStatusLabel(row) }}</td>
               <td>
                 <button
                   v-if="row.locked"
@@ -161,7 +178,7 @@ function viewPending() {
                   class="account-btn-secondary"
                   @click="viewPending"
                 >
-                  查看申请
+                  {{ t('accountIdentity.actions.viewRequest') }}
                 </button>
                 <button
                   v-else-if="row.status === 'UNBOUND'"
@@ -169,7 +186,7 @@ function viewPending() {
                   class="account-btn-primary"
                   @click="openAdd(row.platform)"
                 >
-                  新增游戏 ID
+                  {{ t('accountIdentity.actions.addGameId') }}
                 </button>
                 <button
                   v-else
@@ -177,7 +194,7 @@ function viewPending() {
                   class="account-btn-secondary"
                   @click="openAdd(row.platform)"
                 >
-                  申请修改
+                  {{ t('accountIdentity.actions.requestChange') }}
                 </button>
               </td>
             </tr>
@@ -186,23 +203,23 @@ function viewPending() {
       </div>
     </AccountPanel>
 
-    <AccountPanel title="身份管理规则">
+    <AccountPanel :title="t('accountIdentity.platforms.rulesTitle')">
       <ul class="identity-entry-rules">
-        <li>同一平台游戏 ID 不可重复绑定。</li>
-        <li>新增或修改平台身份必须经过管理员审核。</li>
-        <li>正在用于锁定赛事的平台与游戏 ID 不能修改。</li>
-        <li>审核通过前继续使用当前已生效 ID。</li>
-        <li>审核中的修改不会出现在资料变更记录中。</li>
+        <li>{{ t('accountIdentity.platforms.ruleUnique') }}</li>
+        <li>{{ t('accountIdentity.platforms.ruleReview') }}</li>
+        <li>{{ t('accountIdentity.platforms.ruleLocked') }}</li>
+        <li>{{ t('accountIdentity.platforms.ruleKeepCurrent') }}</li>
+        <li>{{ t('accountIdentity.platforms.ruleHidden') }}</li>
       </ul>
     </AccountPanel>
 
     <div v-if="showAddDialog" class="account-dialog-backdrop" @click.self="showAddDialog = false">
       <div class="account-dialog">
-        <h3>{{ isAddMode ? '新增' : '修改' }}游戏 ID</h3>
+        <h3>{{ isAddMode ? t('accountIdentity.actions.addGameId') : t('accountIdentity.actions.editGameId') }}</h3>
         <div class="account-info-list">
-          <div class="account-info-row"><span class="account-info-row__label">平台</span><span>{{ IDENTITY_PLATFORM_LABELS[addForm.platform] }}</span></div>
+          <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.platform') }}</span><span>{{ platformLabel(addForm.platform) }}</span></div>
         </div>
-        <input v-model="addForm.gameId" class="identity-apply-form__input" placeholder="请输入游戏 ID" />
+        <input v-model="addForm.gameId" class="identity-apply-form__input" :placeholder="t('accountIdentity.platforms.gameIdPlaceholder')" />
         <input
           ref="proofInputRef"
           type="file"
@@ -211,13 +228,13 @@ function viewPending() {
           @change="handleProofUpload"
         />
         <button type="button" class="account-btn-secondary platform-proof-upload" :disabled="uploadingProof" @click="triggerProofUpload">
-          {{ uploadingProof ? '上传中...' : addForm.proofFileId ? '重新上传证明材料' : '上传证明材料' }}
+          {{ uploadingProof ? t('accountIdentity.actions.uploading') : addForm.proofFileId ? t('accountIdentity.platforms.reuploadProof') : t('accountIdentity.platforms.uploadProof') }}
         </button>
         <p v-if="addForm.proofFileName" class="platform-proof-name">{{ addForm.proofFileName }}</p>
         <div class="account-dialog__actions">
-          <button type="button" class="account-btn-secondary" @click="showAddDialog = false">取消</button>
+          <button type="button" class="account-btn-secondary" @click="showAddDialog = false">{{ t('accountIdentity.actions.cancel') }}</button>
           <button type="button" class="account-btn-primary" :disabled="submitting" @click="submitAdd">
-            {{ submitting ? '提交中...' : '提交审核' }}
+            {{ submitting ? t('accountIdentity.actions.submitting') : t('accountIdentity.actions.submitReview') }}
           </button>
         </div>
       </div>
@@ -225,13 +242,13 @@ function viewPending() {
 
     <div v-if="showPendingDialog && pendingRecord" class="account-dialog-backdrop" @click.self="showPendingDialog = false">
       <div class="account-dialog">
-        <h3>审核中详情</h3>
+        <h3>{{ t('accountIdentity.platforms.pendingTitle') }}</h3>
         <div class="account-info-list">
-          <div class="account-info-row"><span class="account-info-row__label">平台</span><span>{{ IDENTITY_PLATFORM_LABELS[pendingRecord.platform] }}</span></div>
-          <div class="account-info-row"><span class="account-info-row__label">游戏 ID</span><span>{{ pendingRecord.gameId || '待审核' }}</span></div>
-          <div class="account-info-row"><span class="account-info-row__label">状态</span><span>{{ pendingRecord.statusText }}</span></div>
+          <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.platform') }}</span><span>{{ platformLabel(pendingRecord.platform) }}</span></div>
+          <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.gameId') }}</span><span>{{ pendingRecord.gameId || t('accountIdentity.platformStatus.awaiting') }}</span></div>
+          <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.status') }}</span><span>{{ platformStatusLabel(pendingRecord) }}</span></div>
         </div>
-        <button type="button" class="account-btn-secondary" @click="showPendingDialog = false">关闭</button>
+        <button type="button" class="account-btn-secondary" @click="showPendingDialog = false">{{ t('accountIdentity.actions.close') }}</button>
       </div>
     </div>
   </div>

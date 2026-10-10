@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { NotificationTabKey } from '@/types/accountNotifications'
+
+const { t } = useI18n()
 
 defineProps<{
   activeTab: NotificationTabKey
@@ -20,7 +23,7 @@ const emit = defineEmits<{
       :class="{ 'notification-center-tabs__item--active': activeTab === 'ALL' }"
       @click="emit('change', 'ALL')"
     >
-      全部 {{ total }}
+      {{ t('accountShell.notifications.tabAll', { count: total }) }}
     </button>
     <button
       type="button"
@@ -28,7 +31,7 @@ const emit = defineEmits<{
       :class="{ 'notification-center-tabs__item--active': activeTab === 'UNREAD' }"
       @click="emit('change', 'UNREAD')"
     >
-      未读 {{ unread }}
+      {{ t('accountShell.notifications.tabUnread', { count: unread }) }}
     </button>
   </div>
 </template>

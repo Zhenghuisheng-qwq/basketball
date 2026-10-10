@@ -1,7 +1,13 @@
+<script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+</script>
+
 <template>
   <footer class="account-footer">
     <div class="site-shell account-footer__inner">
-      <span>CNPA 中国职业电竞篮球联赛</span>
+      <span>{{ t('accountShell.leagueName') }}</span>
       <span>© 2026 CNPA. All rights reserved.</span>
     </div>
   </footer>

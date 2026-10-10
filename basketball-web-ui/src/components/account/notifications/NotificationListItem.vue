@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import NotificationIcon from './NotificationIcon.vue'
 import type { AccountNotificationItem } from '@/types/accountNotifications'
+
+const { t } = useI18n()
 
 defineProps<{
   item: AccountNotificationItem
@@ -16,7 +19,7 @@ const emit = defineEmits<{
     <div class="notification-row__type">
       <NotificationIcon :type="item.type" />
       <span>{{ item.typeText }}</span>
-      <span v-if="item.isUnread" class="notification-row__dot" aria-label="未读" />
+      <span v-if="item.isUnread" class="notification-row__dot" :aria-label="t('accountShell.notifications.unread')" />
     </div>
     <div class="notification-row__content">
       <strong>{{ item.title }}</strong>
@@ -25,7 +28,7 @@ const emit = defineEmits<{
     <time class="notification-row__time">{{ item.createdAt }}</time>
     <div class="notification-row__action">
       <button type="button" class="account-btn-secondary notification-row__btn" @click="emit('view', item.id)">
-        查看详情
+        {{ t('accountShell.notifications.viewDetail') }}
       </button>
     </div>
   </div>

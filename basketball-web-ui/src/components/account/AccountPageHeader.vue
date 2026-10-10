@@ -1,14 +1,18 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 defineProps<{
   zhTitle: string
   enTitle: string
   breadcrumbItems: { label: string; to?: string }[]
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
   <header class="account-page-header account-page-head">
-    <nav class="account-breadcrumb page-breadcrumb" aria-label="面包屑">
+    <nav class="account-breadcrumb page-breadcrumb" :aria-label="t('accountShell.common.breadcrumb')">
       <template v-for="(item, index) in breadcrumbItems" :key="`${item.label}-${index}`">
         <router-link v-if="item.to" :to="item.to">{{ item.label }}</router-link>
         <span v-else>{{ item.label }}</span>

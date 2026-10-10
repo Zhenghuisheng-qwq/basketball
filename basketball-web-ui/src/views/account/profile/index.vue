@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
@@ -11,6 +12,7 @@ import { useAccountStore } from '@/stores/account'
 
 const route = useRoute()
 const router = useRouter()
+const { t, locale } = useI18n()
 const accountStore = useAccountStore()
 
 const isEditing = ref(route.query.mode === 'edit')
@@ -19,7 +21,10 @@ const saving = ref(false)
 const avatarFile = ref<File | null>(null)
 
 const profile = computed(() => accountStore.profile)
-const completeness = computed(() => accountStore.getProfileCompleteness())
+const completeness = computed(() => {
+  locale.value
+  return accountStore.getProfileCompleteness()
+})
 
 const editForm = reactive({
   nickname: '',
@@ -35,7 +40,7 @@ onMounted(async () => {
   try {
     await accountStore.loadProfile()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载资料失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountShell.profile.loadFailed'))
   }
 })
 
@@ -74,10 +79,10 @@ function cancelEdit() {
 
 function validateNickname(value: string): string {
   const trimmed = value.trim()
-  if (!trimmed) return '请输入个人昵称'
-  if (trimmed.length < 2 || trimmed.length > 20) return '昵称长度应为 2 至 20 个字符'
+  if (!trimmed) return t('accountShell.profile.nicknameRequired')
+  if (trimmed.length < 2 || trimmed.length > 20) return t('accountShell.profile.nicknameLength')
   if (!/^[一-龥a-zA-Z0-9_]+$/.test(trimmed)) {
-    return '昵称仅支持中文、英文、数字和下划线'
+    return t('accountShell.profile.nicknameCharset')
   }
   return ''
 }
@@ -105,11 +110,11 @@ async function saveProfile() {
     router.replace({ query: {} })
     ElMessage.success(
       accountStore.profile?.hasPendingChange
-        ? '资料修改申请已提交，请等待管理员审核'
-        : '资料已保存',
+        ? t('accountShell.profile.pendingSubmitted')
+        : t('accountShell.profile.saved'),
     )
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '保存失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountShell.common.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -118,31 +123,48 @@ async function saveProfile() {
 function handleAvatarSelected(file: File) {
   avatarFile.value = file
 }
+
+const breadcrumbs = computed(() => [
+  { label: t('accountShell.common.home'), to: '/home' },
+  { label: t('accountShell.common.accountCenter'), to: '/account/overview' },
+  { label: t('accountShell.profile.title') },
+])
+
+const profileNotes = computed(() => [
+  t('accountShell.profile.notePrivate'),
+  t('accountShell.profile.noteNickname'),
+  t('accountShell.profile.noteNotCert'),
+  t('accountShell.profile.noteCert'),
+])
+
+const emailStatusText = computed(() =>
+  profile.value?.emailVerified ? t('accountShell.common.verified') : t('accountShell.common.unverified'),
+)
+
+const bannerStatusText = computed(() =>
+  profile.value?.emailVerified ? t('accountShell.common.emailVerified') : t('accountShell.common.emailUnverified'),
+)
 </script>
 
 <template>
   <div class="account-view">
     <AccountPageHeader
-      zh-title="个人资料"
+      :zh-title="t('accountShell.profile.title')"
       en-title="PROFILE"
-      :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '个人资料' },
-      ]"
+      :breadcrumb-items="breadcrumbs"
     />
 
     <AccountStatusBanner
-      :title="isEditing ? '完善基础资料' : '基础资料'"
-      description="这些资料用于账号识别与个人中心展示"
-      :status-text="profile?.emailVerified ? '邮箱已验证' : '邮箱未验证'"
+      :title="isEditing ? t('accountShell.profile.completeTitle') : t('accountShell.profile.basicTitle')"
+      :description="t('accountShell.profile.description')"
+      :status-text="bannerStatusText"
       :status-type="profile?.emailVerified ? 'success' : 'warning'"
     />
 
-    <div v-if="accountStore.profileLoading && !profile" class="account-view__loading">加载中...</div>
+    <div v-if="accountStore.profileLoading && !profile" class="account-view__loading">{{ t('accountShell.common.loading') }}</div>
 
     <div v-else class="profile-layout">
-      <AccountPanel title="基础资料">
+      <AccountPanel :title="t('accountShell.profile.panelTitle')">
         <template v-if="!isEditing">
           <div class="profile-read">
             <div class="profile-read__avatar">
@@ -154,24 +176,26 @@ function handleAvatarSelected(file: File) {
               <span v-else>{{ profile?.nickname?.slice(0, 2).toUpperCase() }}</span>
             </div>
             <dl class="account-info-list">
-              <div class="account-field-row"><dt>个人昵称</dt><dd>{{ profile?.nickname }}</dd></div>
-              <div class="account-field-row"><dt>用户编号</dt><dd>{{ profile?.userNo }}</dd></div>
+              <div class="account-field-row"><dt>{{ t('accountShell.profile.nickname') }}</dt><dd>{{ profile?.nickname }}</dd></div>
+              <div class="account-field-row"><dt>{{ t('accountShell.profile.userNo') }}</dt><dd>{{ profile?.userNo }}</dd></div>
               <div class="account-field-row">
-                <dt>注册邮箱</dt>
-                <dd>{{ profile?.maskedEmail }} · {{ profile?.emailVerified ? '已验证' : '未验证' }}</dd>
+                <dt>{{ t('accountShell.common.registeredEmail') }}</dt>
+                <dd>{{ profile?.maskedEmail }} · {{ emailStatusText }}</dd>
               </div>
             </dl>
-            <button type="button" class="account-btn-primary" @click="startEdit">修改个人资料</button>
+            <button type="button" class="account-btn-primary" @click="startEdit">{{ t('accountShell.profile.edit') }}</button>
           </div>
         </template>
 
         <template v-else>
           <form class="profile-form" @submit.prevent="saveProfile">
             <div class="profile-form__field">
-              <label>头像</label>
+              <label>{{ t('accountShell.profile.avatar') }}</label>
               <ProfileAvatarUploader
                 v-model="editForm.avatarUrl"
                 :name="editForm.nickname || profile?.nickname || 'CN'"
+                :action-label="t('accountShell.profile.uploadAvatar')"
+                :hint="t('accountShell.profile.avatarFileHint')"
                 @error="avatarError = $event"
                 @file-selected="handleAvatarSelected"
               />
@@ -179,7 +203,7 @@ function handleAvatarSelected(file: File) {
             </div>
 
             <div class="profile-form__field">
-              <label for="profile-nickname">个人昵称</label>
+              <label for="profile-nickname">{{ t('accountShell.profile.nickname') }}</label>
               <input
                 id="profile-nickname"
                 v-model="editForm.nickname"
@@ -187,43 +211,40 @@ function handleAvatarSelected(file: File) {
                 maxlength="20"
                 autocomplete="nickname"
               />
-              <p class="profile-form__hint">用于个人中心显示，不等同于赛事游戏 ID</p>
+              <p class="profile-form__hint">{{ t('accountShell.profile.nicknameHint') }}</p>
               <p v-if="nicknameError" class="profile-form__error">{{ nicknameError }}</p>
             </div>
 
             <div class="profile-form__field">
-              <label>用户编号</label>
+              <label>{{ t('accountShell.profile.userNo') }}</label>
               <div class="profile-form__readonly">
                 <span>{{ profile?.userNo }}</span>
               </div>
             </div>
 
             <div class="profile-form__field">
-              <label>注册邮箱</label>
+              <label>{{ t('accountShell.common.registeredEmail') }}</label>
               <div class="profile-form__readonly">
-                <span>{{ profile?.maskedEmail }} · {{ profile?.emailVerified ? '已验证' : '未验证' }}</span>
+                <span>{{ profile?.maskedEmail }} · {{ emailStatusText }}</span>
               </div>
-              <p class="profile-form__hint">修改邮箱需前往账号安全</p>
+              <p class="profile-form__hint">{{ t('accountShell.profile.emailHint') }}</p>
             </div>
 
             <div class="profile-form__actions">
-              <button type="submit" class="account-btn-primary" :disabled="saving">保存修改</button>
-              <button type="button" class="account-btn-secondary" @click="cancelEdit">取消</button>
+              <button type="submit" class="account-btn-primary" :disabled="saving">{{ t('accountShell.profile.save') }}</button>
+              <button type="button" class="account-btn-secondary" @click="cancelEdit">{{ t('accountShell.common.cancel') }}</button>
             </div>
           </form>
         </template>
       </AccountPanel>
 
-      <AccountPanel v-if="!isEditing" title="资料说明">
+      <AccountPanel v-if="!isEditing" :title="t('accountShell.profile.notesTitle')">
         <ProfileCompleteness :percent="completeness.percent" :items="completeness.items" />
         <ul class="profile-notes">
-          <li>用户编号和注册邮箱不会公开展示。</li>
-          <li>个人昵称仅用于账号与个人中心识别。</li>
-          <li>头像和昵称不等同于赛事认证资料。</li>
-          <li>游戏平台、游戏 ID 和角色位置需要在球员认证中提交。</li>
+          <li v-for="note in profileNotes" :key="note">{{ note }}</li>
         </ul>
         <router-link to="/account/player-verification" class="profile-notes__link">
-          查看球员认证说明
+          {{ t('accountShell.profile.viewCert') }}
         </router-link>
       </AccountPanel>
     </div>

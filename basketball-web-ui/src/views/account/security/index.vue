@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
@@ -12,6 +13,7 @@ import { getLoginLogPage, getOperationLogPage } from '@/api/accountSecurity'
 import type { LoginLogItemDto, SecurityLogItemDto } from '@/api/types/accountSecurity'
 import { formatDateTime } from '@/utils/formatDate'
 
+const { t } = useI18n()
 const accountStore = useAccountStore()
 
 const form = reactive({
@@ -54,7 +56,7 @@ async function loadLoginLogs() {
     loginLogs.value = res.data.records || []
     loginTotal.value = res.data.total || 0
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载登录日志失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountShell.security.loadLoginFailed'))
   } finally {
     logsLoading.value = false
   }
@@ -67,7 +69,7 @@ async function loadOperationLogs() {
     operationLogs.value = res.data.records || []
     operationTotal.value = res.data.total || 0
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载操作日志失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountShell.security.loadOperationFailed'))
   } finally {
     logsLoading.value = false
   }
@@ -81,11 +83,11 @@ function resetErrors() {
 
 function validateForm(): boolean {
   resetErrors()
-  if (!form.currentPassword) errors.currentPassword = '请输入当前密码'
+  if (!form.currentPassword) errors.currentPassword = t('accountShell.security.currentPasswordRequired')
   const ruleError = validatePasswordRules(form.newPassword)
   if (ruleError) errors.newPassword = ruleError
-  if (!form.confirmPassword) errors.confirmPassword = '请确认新密码'
-  else if (form.confirmPassword !== form.newPassword) errors.confirmPassword = '两次密码输入不一致'
+  if (!form.confirmPassword) errors.confirmPassword = t('accountShell.security.confirmPasswordRequired')
+  else if (form.confirmPassword !== form.newPassword) errors.confirmPassword = t('accountShell.security.passwordMismatch')
   return !errors.currentPassword && !errors.newPassword && !errors.confirmPassword
 }
 
@@ -108,7 +110,7 @@ function applyPasswordChangeError(message: string) {
 async function savePassword() {
   if (loading.value) return
   if (!validateForm()) {
-    ElMessage.warning('请检查表单填写是否正确')
+    ElMessage.warning(t('accountShell.security.checkForm'))
     return
   }
   loading.value = true
@@ -118,7 +120,7 @@ async function savePassword() {
       applyPasswordChangeError(result.error)
       return
     }
-    ElMessage.success('密码修改成功，请重新登录')
+    ElMessage.success(t('accountShell.security.passwordChanged'))
     await forceRelogin({
       reason: 'password_changed',
       redirect: '/account/settings',
@@ -130,91 +132,97 @@ async function savePassword() {
 }
 
 function loginResultText(result?: number) {
-  return result === 1 ? '成功' : '失败'
+  return result === 1 ? t('accountShell.security.success') : t('accountShell.security.failure')
 }
+
+const breadcrumbs = computed(() => [
+  { label: t('accountShell.common.home'), to: '/home' },
+  { label: t('accountShell.common.accountCenter'), to: '/account/overview' },
+  { label: t('accountShell.security.title') },
+])
+
+const emailStatusText = computed(() =>
+  profile.value?.emailVerified ? t('accountShell.common.verified') : t('accountShell.common.unverified'),
+)
 </script>
 
 <template>
   <div class="account-page account-center-vars">
     <AccountPageHeader
-      zh-title="账号安全"
+      :zh-title="t('accountShell.security.title')"
       en-title="ACCOUNT SECURITY"
-      :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '账号安全' },
-      ]"
+      :breadcrumb-items="breadcrumbs"
     />
 
     <AccountStatusBanner
-      title="保护你的 CNPA 账号"
-      description="管理登录密码并查看安全记录"
-      status-text="账号状态正常"
+      :title="t('accountShell.security.bannerTitle')"
+      :description="t('accountShell.security.bannerDesc')"
+      :status-text="t('accountShell.security.bannerStatus')"
       status-type="success"
     />
 
     <div class="account-grid-2 security-layout">
-      <AccountPanel title="修改密码">
+      <AccountPanel :title="t('accountShell.security.changePassword')">
         <form class="security-form" @submit.prevent="savePassword">
           <div class="security-form__field">
-            <label for="current-password">当前密码</label>
+            <label for="current-password">{{ t('accountShell.security.currentPassword') }}</label>
             <PasswordInput id="current-password" v-model="form.currentPassword" autocomplete="current-password" />
             <p v-if="errors.currentPassword" class="security-form__error">{{ errors.currentPassword }}</p>
           </div>
           <div class="security-form__field">
-            <label for="new-password">新密码</label>
+            <label for="new-password">{{ t('accountShell.security.newPassword') }}</label>
             <PasswordInput id="new-password" v-model="form.newPassword" autocomplete="new-password" />
-            <p class="security-form__hint">8 至 20 位，需包含字母与数字</p>
+            <p class="security-form__hint">{{ t('accountShell.security.passwordHint') }}</p>
             <p v-if="errors.newPassword" class="security-form__error">{{ errors.newPassword }}</p>
           </div>
           <div class="security-form__field">
-            <label for="confirm-password">确认新密码</label>
+            <label for="confirm-password">{{ t('accountShell.security.confirmPassword') }}</label>
             <PasswordInput id="confirm-password" v-model="form.confirmPassword" autocomplete="new-password" />
             <p v-if="errors.confirmPassword" class="security-form__error">{{ errors.confirmPassword }}</p>
           </div>
           <div class="security-form__actions">
-            <button type="submit" class="account-btn-primary" :disabled="loading">保存新密码</button>
-            <button type="button" class="account-btn-secondary" @click="cancelForm">取消</button>
+            <button type="submit" class="account-btn-primary" :disabled="loading">{{ t('accountShell.security.savePassword') }}</button>
+            <button type="button" class="account-btn-secondary" @click="cancelForm">{{ t('accountShell.common.cancel') }}</button>
           </div>
         </form>
       </AccountPanel>
 
-      <AccountPanel title="账号信息">
+      <AccountPanel :title="t('accountShell.security.accountInfo')">
         <dl class="account-info-list">
-          <div class="account-field-row"><dt>注册邮箱</dt><dd>{{ profile?.maskedEmail }}</dd></div>
+          <div class="account-field-row"><dt>{{ t('accountShell.common.registeredEmail') }}</dt><dd>{{ profile?.maskedEmail }}</dd></div>
           <div class="account-field-row">
-            <dt>邮箱状态</dt>
+            <dt>{{ t('accountShell.common.emailStatus') }}</dt>
             <dd :class="profile?.emailVerified ? 'account-status-text--success' : ''">
-              {{ profile?.emailVerified ? '已验证' : '未验证' }}
+              {{ emailStatusText }}
             </dd>
           </div>
-          <div class="account-field-row"><dt>账号状态</dt><dd class="account-status-text--success">正常</dd></div>
+          <div class="account-field-row"><dt>{{ t('accountShell.common.accountStatus') }}</dt><dd class="account-status-text--success">{{ t('accountShell.common.normal') }}</dd></div>
           <div class="account-field-row">
-            <dt>最近登录</dt>
+            <dt>{{ t('accountShell.common.lastLogin') }}</dt>
             <dd>{{ formatDateTime(security?.lastLoginAt || account?.lastLoginAt || '') }}</dd>
           </div>
           <div class="account-field-row">
-            <dt>密码更新时间</dt>
+            <dt>{{ t('accountShell.common.passwordUpdatedAt') }}</dt>
             <dd>{{ formatDateTime(security?.passwordUpdatedAt || '') }}</dd>
           </div>
         </dl>
-        <p class="security-form__hint">如非本人操作，请立即修改密码并联系管理员</p>
+        <p class="security-form__hint">{{ t('accountShell.common.notYou') }}</p>
       </AccountPanel>
     </div>
 
     <div class="account-grid-2 security-layout security-logs">
-      <AccountPanel title="登录日志">
-        <div v-if="logsLoading && !loginLogs.length" class="security-form__hint">加载中...</div>
-        <div v-else-if="!loginLogs.length" class="security-form__hint">暂无登录记录</div>
+      <AccountPanel :title="t('accountShell.security.loginLogs')">
+        <div v-if="logsLoading && !loginLogs.length" class="security-form__hint">{{ t('accountShell.common.loading') }}</div>
+        <div v-else-if="!loginLogs.length" class="security-form__hint">{{ t('accountShell.security.noLoginLogs') }}</div>
         <div v-else class="platform-table-wrap">
           <table class="platform-table">
             <thead>
               <tr>
-                <th>时间</th>
-                <th>方式</th>
-                <th>结果</th>
-                <th>地区</th>
-                <th>终端</th>
+                <th>{{ t('accountShell.security.time') }}</th>
+                <th>{{ t('accountShell.security.method') }}</th>
+                <th>{{ t('accountShell.security.result') }}</th>
+                <th>{{ t('accountShell.security.region') }}</th>
+                <th>{{ t('accountShell.security.terminal') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -230,17 +238,17 @@ function loginResultText(result?: number) {
         </div>
       </AccountPanel>
 
-      <AccountPanel title="安全操作日志">
-        <div v-if="logsLoading && !operationLogs.length" class="security-form__hint">加载中...</div>
-        <div v-else-if="!operationLogs.length" class="security-form__hint">暂无操作记录</div>
+      <AccountPanel :title="t('accountShell.security.operationLogs')">
+        <div v-if="logsLoading && !operationLogs.length" class="security-form__hint">{{ t('accountShell.common.loading') }}</div>
+        <div v-else-if="!operationLogs.length" class="security-form__hint">{{ t('accountShell.security.noOperationLogs') }}</div>
         <div v-else class="platform-table-wrap">
           <table class="platform-table">
             <thead>
               <tr>
-                <th>时间</th>
-                <th>事件</th>
-                <th>变更</th>
-                <th>终端</th>
+                <th>{{ t('accountShell.security.time') }}</th>
+                <th>{{ t('accountShell.security.event') }}</th>
+                <th>{{ t('accountShell.security.change') }}</th>
+                <th>{{ t('accountShell.security.terminal') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -256,7 +264,7 @@ function loginResultText(result?: number) {
       </AccountPanel>
     </div>
 
-    <p class="security-tip">请勿向任何人透露密码或邮箱验证码</p>
+    <p class="security-tip">{{ t('accountShell.common.securityTip') }}</p>
   </div>
 </template>
 

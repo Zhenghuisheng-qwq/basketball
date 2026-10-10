@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { GamePosition, IdentityPlatform } from '@/types/account'
-import { IDENTITY_PLATFORM_LABELS, GAME_POSITION_LABELS } from '@/types/account'
 import ProfileAvatarUploader from './ProfileAvatarUploader.vue'
 
 export interface PlayerCertFormPayload {
@@ -26,6 +26,8 @@ const emit = defineEmits<{
   submit: [data: PlayerCertFormPayload]
 }>()
 
+const { t } = useI18n()
+
 const avatarUrl = ref(props.initial?.avatarUrl || '')
 const avatarFile = ref<File | null>(null)
 const avatarError = ref('')
@@ -38,8 +40,8 @@ const screenshotName = computed(() => gameScreenshotFile.value?.name || '')
 
 const hasAvatar = computed(() => Boolean(avatarUrl.value.trim()))
 
-const platforms = Object.entries(IDENTITY_PLATFORM_LABELS) as [IdentityPlatform, string][]
-const positions = Object.entries(GAME_POSITION_LABELS) as [GamePosition, string][]
+const platformCodes: IdentityPlatform[] = ['PC', 'PS', 'XBOX']
+const positionCodes: GamePosition[] = ['PG', 'SG', 'SF', 'PF', 'C']
 
 const isComplete = computed(() =>
   Boolean(
@@ -78,60 +80,60 @@ function submit() {
 <template>
   <div class="identity-apply-form">
     <div class="identity-apply-form__field">
-      <label>球员头像</label>
+      <label>{{ t('accountIdentity.fields.playerAvatar') }}</label>
       <ProfileAvatarUploader
         v-model="avatarUrl"
-        name="球员头像"
+        :name="t('accountIdentity.fields.playerAvatar')"
         @file-selected="handleAvatarSelected"
         @error="avatarError = $event"
       />
       <p v-if="avatarError" class="identity-apply-form__error">{{ avatarError }}</p>
-      <p v-else-if="!hasAvatar" class="identity-apply-form__hint">提交前请先上传球员头像</p>
+      <p v-else-if="!hasAvatar" class="identity-apply-form__hint">{{ t('accountIdentity.apply.avatarRequired') }}</p>
     </div>
 
     <div class="identity-apply-form__field">
-      <label>游戏平台</label>
+      <label>{{ t('accountIdentity.fields.gamePlatform') }}</label>
       <div class="identity-apply-form__chips">
         <button
-          v-for="[key, label] in platforms"
-          :key="key"
+          v-for="code in platformCodes"
+          :key="code"
           type="button"
           class="identity-apply-form__chip"
-          :class="{ 'identity-apply-form__chip--active': platform === key }"
-          @click="platform = key"
+          :class="{ 'identity-apply-form__chip--active': platform === code }"
+          @click="platform = code"
         >
-          {{ label }}
+          {{ t(`accountIdentity.platform.${code}`) }}
         </button>
       </div>
     </div>
 
     <div class="identity-apply-form__field">
-      <label>游戏 ID</label>
-      <input v-model="gameAccount" type="text" class="identity-apply-form__input" placeholder="平台游戏 ID" />
+      <label>{{ t('accountIdentity.fields.gameId') }}</label>
+      <input v-model="gameAccount" type="text" class="identity-apply-form__input" :placeholder="t('accountIdentity.apply.gameIdPlaceholder')" />
     </div>
 
     <div class="identity-apply-form__field">
-      <label>常用位置</label>
+      <label>{{ t('accountIdentity.fields.position') }}</label>
       <div class="identity-apply-form__chips">
         <button
-          v-for="[key] in positions"
-          :key="key"
+          v-for="code in positionCodes"
+          :key="code"
           type="button"
           class="identity-apply-form__chip identity-apply-form__chip--compact"
-          :class="{ 'identity-apply-form__chip--active': position === key }"
-          @click="position = key"
+          :class="{ 'identity-apply-form__chip--active': position === code }"
+          @click="position = code"
         >
-          {{ key }}
+          {{ code }}
         </button>
       </div>
     </div>
 
     <div class="identity-apply-form__field">
-      <label>游戏账号证明</label>
+      <label>{{ t('accountIdentity.fields.proofAccount') }}</label>
       <div class="identity-apply-form__proof">
-        <p>请上传能够清晰显示游戏平台与游戏 ID 的证明截图。</p>
+        <p>{{ t('accountIdentity.apply.proofHint') }}</p>
         <label class="account-btn-secondary identity-apply-form__upload-btn">
-          {{ screenshotName || '上传证明截图' }}
+          {{ screenshotName || t('accountIdentity.apply.uploadProof') }}
           <input type="file" accept="image/*" hidden @change="pickScreenshot" />
         </label>
       </div>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { GamePlatform, GamePosition, PlayerVerificationSnapshot } from '@/types/account'
-import { GAME_PLATFORM_LABELS, GAME_POSITION_LABELS } from '@/types/account'
 
 const props = defineProps<{
   initial?: Partial<PlayerVerificationSnapshot>
@@ -14,6 +14,8 @@ const emit = defineEmits<{
   submit: [data: PlayerVerificationSnapshot]
   cancel: []
 }>()
+
+const { t } = useI18n()
 
 const form = reactive<PlayerVerificationSnapshot>({
   primaryPlatform: props.initial?.primaryPlatform || 'PC',
@@ -28,18 +30,18 @@ const errors = reactive<Record<string, string>>({})
 const screenshotPreview = ref(form.gameIdScreenshotUrl)
 const loading = ref(false)
 
-const platforms = Object.entries(GAME_PLATFORM_LABELS) as [GamePlatform, string][]
-const positions = Object.entries(GAME_POSITION_LABELS) as [GamePosition, string][]
+const platformCodes: GamePlatform[] = ['PC', 'PS5', 'XBOX', 'MOBILE']
+const positionCodes: GamePosition[] = ['PG', 'SG', 'SF', 'PF', 'C']
 
 function validate(): boolean {
-  errors.primaryPlatform = form.primaryPlatform ? '' : '请选择主要游戏平台'
+  errors.primaryPlatform = form.primaryPlatform ? '' : t('accountIdentity.feedback.selectPlatform')
   const gameId = form.gameId.trim()
-  if (!gameId) errors.gameId = '请输入游戏 ID'
-  else if (gameId.length < 2 || gameId.length > 32) errors.gameId = '游戏 ID 长度应为 2 至 32 个字符'
+  if (!gameId) errors.gameId = t('accountIdentity.feedback.enterGameIdField')
+  else if (gameId.length < 2 || gameId.length > 32) errors.gameId = t('accountIdentity.feedback.gameIdLength')
   else errors.gameId = ''
-  errors.gameIdScreenshotUrl = form.gameIdScreenshotUrl ? '' : '请上传游戏 ID 截图'
-  errors.gamePosition = form.gamePosition ? '' : '请选择 2K 角色位置'
-  errors.commonPosition = form.commonPosition ? '' : '请选择常用位置'
+  errors.gameIdScreenshotUrl = form.gameIdScreenshotUrl ? '' : t('accountIdentity.feedback.uploadScreenshot')
+  errors.gamePosition = form.gamePosition ? '' : t('accountIdentity.feedback.selectGamePosition')
+  errors.commonPosition = form.commonPosition ? '' : t('accountIdentity.feedback.selectPosition')
   return !Object.values(errors).some(Boolean)
 }
 
@@ -59,16 +61,16 @@ async function compressScreenshot(file: File): Promise<string> {
         canvas.height = height
         const ctx = canvas.getContext('2d')
         if (!ctx) {
-          reject(new Error('无法处理图片'))
+          reject(new Error(t('accountIdentity.feedback.imageProcessFailed')))
           return
         }
         ctx.drawImage(img, 0, 0, width, height)
         resolve(canvas.toDataURL('image/jpeg', 0.8))
       }
-      img.onerror = () => reject(new Error('图片加载失败'))
+      img.onerror = () => reject(new Error(t('accountIdentity.feedback.imageLoadFailed')))
       img.src = reader.result as string
     }
-    reader.onerror = () => reject(new Error('读取失败'))
+    reader.onerror = () => reject(new Error(t('accountIdentity.feedback.readFailed')))
     reader.readAsDataURL(file)
   })
 }
@@ -79,11 +81,11 @@ async function handleScreenshot(event: Event) {
   input.value = ''
   if (!file) return
   if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-    errors.gameIdScreenshotUrl = '仅支持 JPG、JPEG、PNG'
+    errors.gameIdScreenshotUrl = t('accountIdentity.feedback.imagesOnly')
     return
   }
   if (file.size > 8 * 1024 * 1024) {
-    errors.gameIdScreenshotUrl = '截图大小不能超过 8MB'
+    errors.gameIdScreenshotUrl = t('accountIdentity.feedback.screenshotTooLarge')
     return
   }
   try {
@@ -92,7 +94,7 @@ async function handleScreenshot(event: Event) {
     screenshotPreview.value = dataUrl
     errors.gameIdScreenshotUrl = ''
   } catch {
-    errors.gameIdScreenshotUrl = '截图上传失败'
+    errors.gameIdScreenshotUrl = t('accountIdentity.feedback.screenshotFailed')
   }
 }
 
@@ -116,53 +118,53 @@ function handleSubmit() {
 <template>
   <form class="player-verification-form verification-form" @submit.prevent="handleSubmit">
     <div class="verification-form__field">
-      <label for="primaryPlatform">主要游戏平台</label>
+      <label for="primaryPlatform">{{ t('accountIdentity.fields.primaryPlatform') }}</label>
       <select id="primaryPlatform" v-model="form.primaryPlatform">
-        <option v-for="[value, label] in platforms" :key="value" :value="value">{{ label }}</option>
+        <option v-for="code in platformCodes" :key="code" :value="code">{{ t(`accountIdentity.platform.${code}`) }}</option>
       </select>
       <p v-if="errors.primaryPlatform" class="verification-form__error">{{ errors.primaryPlatform }}</p>
     </div>
 
     <div class="verification-form__field">
-      <label for="gameId">游戏 ID</label>
+      <label for="gameId">{{ t('accountIdentity.fields.gameId') }}</label>
       <input id="gameId" v-model="form.gameId" type="text" maxlength="32" />
       <p v-if="errors.gameId" class="verification-form__error">{{ errors.gameId }}</p>
     </div>
 
     <div class="verification-form__field" :class="{ 'verification-form__field--error': rejectedFields?.includes('gameIdScreenshotUrl') }">
-      <label>游戏 ID 截图</label>
+      <label>{{ t('accountIdentity.fields.screenshot') }}</label>
       <div v-if="screenshotPreview" class="verification-form__preview">
-        <img :src="screenshotPreview" alt="游戏 ID 截图预览" />
-        <button type="button" class="account-btn-secondary" @click="removeScreenshot">删除</button>
+        <img :src="screenshotPreview" :alt="t('accountIdentity.verification.screenshotAlt')" />
+        <button type="button" class="account-btn-secondary" @click="removeScreenshot">{{ t('accountIdentity.actions.delete') }}</button>
       </div>
-      <p class="verification-form__hint">请上传清晰的游戏 ID 截图，需包含平台昵称与 ID 信息</p>
+      <p class="verification-form__hint">{{ t('accountIdentity.verification.screenshotHint') }}</p>
       <label v-else class="verification-form__upload">
         <input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" @change="handleScreenshot" />
-        上传截图
+        {{ t('accountIdentity.verification.uploadScreenshot') }}
       </label>
-      <p v-if="rejectedFields?.includes('gameIdScreenshotUrl')" class="verification-form__error">需重新上传</p>
+      <p v-if="rejectedFields?.includes('gameIdScreenshotUrl')" class="verification-form__error">{{ t('accountIdentity.feedback.reuploadRequired') }}</p>
       <p v-if="errors.gameIdScreenshotUrl" class="verification-form__error">{{ errors.gameIdScreenshotUrl }}</p>
     </div>
 
     <div class="verification-form__field">
-      <label for="gamePosition">2K 角色位置</label>
+      <label for="gamePosition">{{ t('accountIdentity.fields.gamePosition2k') }}</label>
       <select id="gamePosition" v-model="form.gamePosition">
-        <option v-for="[value, label] in positions" :key="value" :value="value">{{ label }}</option>
+        <option v-for="code in positionCodes" :key="code" :value="code">{{ t(`accountIdentity.position.${code}`) }}</option>
       </select>
     </div>
 
     <div class="verification-form__field">
-      <label for="commonPosition">常用位置</label>
+      <label for="commonPosition">{{ t('accountIdentity.fields.position') }}</label>
       <select id="commonPosition" v-model="form.commonPosition">
-        <option v-for="[value, label] in positions" :key="value" :value="value">{{ label }}</option>
+        <option v-for="code in positionCodes" :key="`common-${code}`" :value="code">{{ t(`accountIdentity.position.${code}`) }}</option>
       </select>
     </div>
 
     <div class="verification-form__actions">
       <button type="submit" class="account-btn-primary" :disabled="loading">
-        {{ submitLabel || '提交认证' }}
+        {{ submitLabel || t('accountIdentity.actions.submitCert') }}
       </button>
-      <button v-if="showCancel" type="button" class="account-btn-secondary" @click="emit('cancel')">取消</button>
+      <button v-if="showCancel" type="button" class="account-btn-secondary" @click="emit('cancel')">{{ t('accountIdentity.actions.cancel') }}</button>
     </div>
   </form>
 </template>

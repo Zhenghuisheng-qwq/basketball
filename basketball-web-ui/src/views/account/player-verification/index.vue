@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
@@ -13,6 +14,7 @@ import type { PlayerVerificationSnapshot } from '@/types/account'
 import { formatDateTime } from '@/utils/formatDate'
 
 const accountStore = useAccountStore()
+const { t } = useI18n()
 
 const showSubmitConfirm = ref(false)
 const showWithdrawConfirm = ref(false)
@@ -38,42 +40,42 @@ const bannerConfig = computed(() => {
   switch (status.value) {
     case 'NOT_APPLIED':
       return {
-        title: '尚未申请球员认证',
-        description: '提交游戏资料后由赛事管理员审核',
-        statusText: '未认证',
+        title: t('accountIdentity.verification.notAppliedTitle'),
+        description: t('accountIdentity.verification.notAppliedDesc'),
+        statusText: t('accountIdentity.status.notVerified'),
         statusType: 'warning' as const,
       }
     case 'PENDING':
       return {
-        title: '认证申请审核中',
-        description: '赛事管理员正在审核你提交的认证资料',
-        statusText: '审核中',
+        title: t('accountIdentity.verification.pendingTitle'),
+        description: t('accountIdentity.verification.pendingDesc'),
+        statusText: t('accountIdentity.status.pending'),
         statusType: 'warning' as const,
       }
     case 'APPROVED':
       return {
-        title: '认证资料已生效',
-        description: '当前资料已通过赛事管理员审核',
-        statusText: '认证球员',
+        title: t('accountIdentity.verification.approvedTitle'),
+        description: t('accountIdentity.verification.approvedDesc'),
+        statusText: t('accountIdentity.status.certifiedPlayer'),
         statusType: 'success' as const,
       }
     case 'CHANGE_PENDING':
       return {
-        title: '认证资料变更审核中',
-        description: '当前已通过资料继续生效',
-        statusText: '认证球员',
+        title: t('accountIdentity.verification.changePendingTitle'),
+        description: t('accountIdentity.verification.changePendingDesc'),
+        statusText: t('accountIdentity.status.certifiedPlayer'),
         statusType: 'success' as const,
       }
     case 'REJECTED':
       return {
-        title: '认证未通过',
-        description: '请根据审核意见修改资料后重新提交',
-        statusText: '需修改',
+        title: t('accountIdentity.verification.rejectedTitle'),
+        description: t('accountIdentity.verification.rejectedDesc'),
+        statusText: t('accountIdentity.status.needsChange'),
         statusType: 'danger' as const,
       }
     default:
       return {
-        title: '球员认证',
+        title: t('accountIdentity.verification.fallbackTitle'),
         description: '',
         statusText: '',
         statusType: 'default' as const,
@@ -97,25 +99,25 @@ function confirmSubmit() {
     accountStore.submitPlayerVerification(pendingSubmit.value)
   }
   pendingSubmit.value = null
-  ElMessage.success('认证申请已提交')
+  ElMessage.success(t('accountIdentity.feedback.submitSuccess'))
 }
 
 function confirmWithdraw() {
   accountStore.withdrawPlayerVerification()
   showChangeForm.value = false
-  ElMessage.success('已撤回申请')
+  ElMessage.success(t('accountIdentity.feedback.withdrawDone'))
 }
 </script>
 
 <template>
   <div class="account-view">
     <AccountPageHeader
-      zh-title="球员认证"
+      :zh-title="t('accountIdentity.verification.pageTitle')"
       en-title="PLAYER VERIFICATION"
       :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '球员认证' },
+        { label: t('nav.home'), to: '/home' },
+        { label: t('nav.account'), to: '/account/overview' },
+        { label: t('accountIdentity.verification.crumb') },
       ]"
     />
 
@@ -123,19 +125,19 @@ function confirmWithdraw() {
 
     <!-- NOT_APPLIED -->
     <div v-if="status === 'NOT_APPLIED'" class="verification-layout">
-      <AccountPanel title="认证说明">
+      <AccountPanel :title="t('accountIdentity.verification.introTitle')">
         <p class="verification-intro">
-          提交你的游戏平台、游戏 ID 及角色位置，审核通过后可加入球队并参与赛事。
+          {{ t('accountIdentity.verification.intro') }}
         </p>
       </AccountPanel>
-      <AccountPanel title="申请表">
+      <AccountPanel :title="t('accountIdentity.verification.formTitle')">
         <PlayerVerificationForm @submit="requestSubmit" />
       </AccountPanel>
     </div>
 
     <!-- PENDING -->
     <div v-else-if="status === 'PENDING'" class="verification-layout verification-layout--split">
-      <AccountPanel title="本次提交资料">
+      <AccountPanel :title="t('accountIdentity.verification.submittedTitle')">
         <PlayerVerificationSummary
           v-if="verification"
           :nickname="profile?.nickname || ''"
@@ -146,27 +148,27 @@ function confirmWithdraw() {
         />
       </AccountPanel>
       <PlayerVerificationStatusCard
-        title="当前审核状态"
-        status-text="审核中"
+        :title="t('accountIdentity.verification.reviewCardTitle')"
+        :status-text="t('accountIdentity.status.pending')"
         status-type="warning"
-        description="等待赛事管理员审核。审核结果将通过消息通知发送。"
+        :description="t('accountIdentity.verification.reviewCardDesc')"
       >
         <div class="verification-rules">
-          <p>审核期间</p>
+          <p>{{ t('accountIdentity.verification.duringReview') }}</p>
           <ol>
-            <li>首次认证审核期间暂不生效。</li>
-            <li>如需修改，可以撤回本次申请后重新提交。</li>
+            <li>{{ t('accountIdentity.verification.ruleInactive') }}</li>
+            <li>{{ t('accountIdentity.verification.ruleWithdraw') }}</li>
           </ol>
         </div>
         <button type="button" class="account-btn-secondary" @click="showWithdrawConfirm = true">
-          撤回并修改
+          {{ t('accountIdentity.actions.withdrawAndEdit') }}
         </button>
       </PlayerVerificationStatusCard>
     </div>
 
     <!-- APPROVED -->
     <div v-else-if="status === 'APPROVED' && !showChangeForm" class="verification-layout verification-layout--split">
-      <AccountPanel title="当前生效资料">
+      <AccountPanel :title="t('accountIdentity.verification.effectiveTitle')">
         <PlayerVerificationSummary
           v-if="effectiveData"
           :nickname="profile?.nickname || ''"
@@ -174,22 +176,22 @@ function confirmWithdraw() {
           :data="effectiveData"
         />
         <button type="button" class="account-btn-primary verification-action" @click="showChangeForm = true">
-          申请修改球员认证
+          {{ t('accountIdentity.actions.applyChangeCert') }}
         </button>
       </AccountPanel>
       <div class="verification-side">
         <PlayerVerificationStatusCard
-          title="当前状态"
-          status-text="审核已通过"
+          :title="t('accountIdentity.verification.currentStatus')"
+          :status-text="t('accountIdentity.status.reviewPassed')"
           status-type="success"
-          :description="`生效时间：${formatDateTime(verification?.effectiveAt)}`"
+          :description="t('accountIdentity.verification.effectiveAt', { time: formatDateTime(verification?.effectiveAt) })"
         />
-        <AccountPanel title="修改规则">
+        <AccountPanel :title="t('accountIdentity.verification.rulesTitle')">
           <ol class="verification-rules">
-            <li>认证资料允许申请修改。</li>
-            <li>每次修改均需赛事管理员重新审核。</li>
-            <li>审核期间当前已通过资料继续生效。</li>
-            <li>新申请未通过时，当前资料保持不变。</li>
+            <li>{{ t('accountIdentity.verification.ruleAllowEdit') }}</li>
+            <li>{{ t('accountIdentity.verification.ruleReaudit') }}</li>
+            <li>{{ t('accountIdentity.verification.ruleKeepEffective') }}</li>
+            <li>{{ t('accountIdentity.verification.ruleUnchanged') }}</li>
           </ol>
         </AccountPanel>
       </div>
@@ -198,42 +200,42 @@ function confirmWithdraw() {
     <!-- CHANGE_PENDING -->
     <div v-else-if="status === 'CHANGE_PENDING'" class="verification-layout">
       <div class="verification-layout verification-layout--split">
-        <AccountPanel title="当前生效版本">
+        <AccountPanel :title="t('accountIdentity.verification.effectiveVersion')">
           <PlayerVerificationSummary
             v-if="effectiveData"
             :nickname="profile?.nickname || ''"
             :data="effectiveData"
-            title="当前生效资料"
+            :title="t('accountIdentity.verification.effectiveSummary')"
           />
         </AccountPanel>
-        <AccountPanel title="待审核修改资料">
+        <AccountPanel :title="t('accountIdentity.verification.pendingVersion')">
           <PlayerVerificationSummary
             v-if="pendingData"
             :nickname="profile?.nickname || ''"
             :data="pendingData"
             :submitted-at="verification?.submittedAt"
             :application-no="verification?.applicationNo"
-            title="新提交版本"
+            :title="t('accountIdentity.verification.newVersion')"
           />
         </AccountPanel>
       </div>
       <button type="button" class="account-btn-secondary" @click="showWithdrawConfirm = true">
-        撤回本次修改
+        {{ t('accountIdentity.actions.withdrawChange') }}
       </button>
     </div>
 
     <!-- REJECTED -->
     <div v-else-if="status === 'REJECTED'" class="verification-layout verification-layout--split">
       <div class="verification-reject">
-        <AccountPanel title="审核结果">
-          <p class="verification-reject__title">本次认证未通过</p>
-          <p>审核时间：{{ formatDateTime(verification?.reviewedAt) }}</p>
-          <p class="verification-reject__hint">账号不会被锁定，可以修改后重新提交</p>
+        <AccountPanel :title="t('accountIdentity.review.reviewResult')">
+          <p class="verification-reject__title">{{ t('accountIdentity.verification.rejectedResult') }}</p>
+          <p>{{ t('accountIdentity.verification.reviewedAt', { time: formatDateTime(verification?.reviewedAt) }) }}</p>
+          <p class="verification-reject__hint">{{ t('accountIdentity.verification.notLocked') }}</p>
         </AccountPanel>
-        <AccountPanel title="管理员审核意见">
+        <AccountPanel :title="t('accountIdentity.verification.adminComment')">
           <p>{{ verification?.reviewerComment }}</p>
         </AccountPanel>
-        <AccountPanel title="本次提交资料">
+        <AccountPanel :title="t('accountIdentity.verification.submittedTitle')">
           <PlayerVerificationSummary
             v-if="verification"
             :nickname="profile?.nickname || ''"
@@ -243,19 +245,19 @@ function confirmWithdraw() {
         </AccountPanel>
       </div>
       <div class="verification-side">
-        <AccountPanel title="下一步操作">
+        <AccountPanel :title="t('accountIdentity.verification.nextTitle')">
           <ol class="verification-rules">
-            <li>查看管理员审核意见</li>
-            <li>修改标记的问题资料</li>
-            <li>重新提交认证审核</li>
+            <li>{{ t('accountIdentity.verification.nextRead') }}</li>
+            <li>{{ t('accountIdentity.verification.nextFix') }}</li>
+            <li>{{ t('accountIdentity.verification.nextResubmit') }}</li>
           </ol>
-          <p class="verification-reject__hint">重新提交会生成新的审核记录。原申请与审核结果由系统保留。</p>
+          <p class="verification-reject__hint">{{ t('accountIdentity.verification.resubmitHint') }}</p>
         </AccountPanel>
-        <AccountPanel title="修改并重新提交">
+        <AccountPanel :title="t('accountIdentity.verification.resubmitTitle')">
           <PlayerVerificationForm
             :initial="verification || undefined"
             :rejected-fields="verification?.rejectedFields"
-            submit-label="修改并重新提交"
+            :submit-label="t('accountIdentity.actions.resubmit')"
             @submit="requestSubmit"
           />
         </AccountPanel>
@@ -264,10 +266,10 @@ function confirmWithdraw() {
 
     <!-- Change form from APPROVED -->
     <div v-if="showChangeForm && status === 'APPROVED'" class="verification-layout">
-      <AccountPanel title="申请修改球员认证">
+      <AccountPanel :title="t('accountIdentity.actions.applyChangeCert')">
         <PlayerVerificationForm
           :initial="effectiveData || undefined"
-          submit-label="提交修改申请"
+          :submit-label="t('accountIdentity.actions.submitChangeRequest')"
           @submit="requestSubmit"
           @cancel="showChangeForm = false"
         />
@@ -276,17 +278,19 @@ function confirmWithdraw() {
 
     <AccountConfirmDialog
       v-model="showSubmitConfirm"
-      title="确认提交"
-      message="提交后将进入审核，审核期间不可直接修改。确认提交球员认证？"
-      confirm-text="确认提交"
+      :title="t('accountIdentity.verification.confirmSubmitTitle')"
+      :message="t('accountIdentity.verification.confirmSubmitMessage')"
+      :confirm-text="t('accountIdentity.actions.confirmSubmit')"
+      :cancel-text="t('accountIdentity.actions.cancel')"
       @confirm="confirmSubmit"
     />
 
     <AccountConfirmDialog
       v-model="showWithdrawConfirm"
-      title="确认撤回"
-      message="撤回后本次审核终止，重新提交后重新排队。确认撤回？"
-      confirm-text="确认撤回"
+      :title="t('accountIdentity.verification.confirmWithdrawTitle')"
+      :message="t('accountIdentity.verification.confirmWithdrawMessage')"
+      :confirm-text="t('accountIdentity.actions.confirmWithdraw')"
+      :cancel-text="t('accountIdentity.actions.cancel')"
       @confirm="confirmWithdraw"
     />
   </div>

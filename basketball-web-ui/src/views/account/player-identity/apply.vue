@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
@@ -8,10 +9,10 @@ import AccountPanel from '@/components/account/AccountPanel.vue'
 import PlayerIdentityApplyForm from '../components/PlayerIdentityApplyForm.vue'
 import type { PlayerCertFormPayload } from '../components/PlayerIdentityApplyForm.vue'
 import { useAccountStore } from '@/stores/account'
-import { IDENTITY_PLATFORM_LABELS } from '@/types/account'
 
 const router = useRouter()
 const accountStore = useAccountStore()
+const { t, te } = useI18n()
 const submitting = ref(false)
 
 const profile = computed(() => accountStore.profile)
@@ -43,18 +44,23 @@ onMounted(async () => {
       }
     }
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载认证资料失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountIdentity.feedback.loadCertFailed'))
   }
 })
 
-const statusSummary = computed(() => ({
-  nickname: profile.value?.nickname || account.value?.nickname || '未填写',
-  email: profile.value?.maskedEmail || account.value?.maskedEmail || '未填写',
-  avatar: draft.avatarUrl.trim() ? '已设置' : '未上传',
-  platform: draft.platform ? IDENTITY_PLATFORM_LABELS[draft.platform] : '未选择',
-  gameAccount: draft.gameAccount.trim() || '未填写',
-  position: draft.position || '未选择',
-}))
+const statusSummary = computed(() => {
+  const platformKey = draft.platform ? `accountIdentity.platform.${draft.platform}` : ''
+  return {
+    nickname: profile.value?.nickname || account.value?.nickname || t('accountIdentity.status.notFilled'),
+    email: profile.value?.maskedEmail || account.value?.maskedEmail || t('accountIdentity.status.notFilled'),
+    avatar: draft.avatarUrl.trim() ? t('accountIdentity.status.avatarSet') : t('accountIdentity.status.notUploaded'),
+    platform: platformKey && te(platformKey) ? t(platformKey) : t('accountIdentity.status.notSelected'),
+    gameAccount: draft.gameAccount.trim() || t('accountIdentity.status.notFilled'),
+    position: draft.position && te(`accountIdentity.position.${draft.position}`)
+      ? t(`accountIdentity.position.${draft.position}`)
+      : (draft.position || t('accountIdentity.status.notSelected')),
+  }
+})
 
 async function handleSubmit(data: PlayerCertFormPayload) {
   if (submitting.value) return
@@ -67,10 +73,10 @@ async function handleSubmit(data: PlayerCertFormPayload) {
       avatarFile: data.avatarFile,
       gameScreenshotFile: data.gameScreenshotFile,
     })
-    ElMessage.success('认证申请已提交')
+    ElMessage.success(t('accountIdentity.feedback.submitSuccess'))
     router.push({ name: 'AccountPlayerIdentityStatusPending' })
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '提交失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountIdentity.feedback.submitFailed'))
   } finally {
     submitting.value = false
   }
@@ -80,25 +86,25 @@ async function handleSubmit(data: PlayerCertFormPayload) {
 <template>
   <div class="account-view">
     <AccountPageHeader
-      zh-title="球员认证申请"
+      :zh-title="t('accountIdentity.apply.pageTitle')"
       en-title="PLAYER VERIFICATION APPLICATION"
       :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '球员身份', to: '/account/player-identity' },
-        { label: '认证申请' },
+        { label: t('nav.home'), to: '/home' },
+        { label: t('nav.account'), to: '/account/overview' },
+        { label: t('accountIdentity.title'), to: '/account/player-identity' },
+        { label: t('accountIdentity.apply.crumb') },
       ]"
     />
 
     <AccountStatusBanner
-      title="创建永久球员身份"
-      description="填写赛事球员档案资料并提交管理员审核"
-      :status-text="cert?.applicationStatusText || '资料未提交'"
+      :title="t('accountIdentity.apply.bannerTitle')"
+      :description="t('accountIdentity.apply.bannerDesc')"
+      :status-text="cert?.applicationStatusText || t('accountIdentity.status.notSubmitted')"
       status-type="warning"
     />
 
     <div class="identity-apply-grid">
-      <AccountPanel title="认证资料">
+      <AccountPanel :title="t('accountIdentity.apply.materials')">
         <PlayerIdentityApplyForm
           :initial="{
             avatarUrl: draft.avatarUrl,
@@ -111,7 +117,7 @@ async function handleSubmit(data: PlayerCertFormPayload) {
           <template #actions="{ complete, submit }">
             <div class="identity-apply-footer">
               <button type="button" class="account-btn-secondary" @click="router.push('/account/player-identity')">
-                返回球员身份
+                {{ t('accountIdentity.actions.backToIdentity') }}
               </button>
               <button
                 type="button"
@@ -119,33 +125,33 @@ async function handleSubmit(data: PlayerCertFormPayload) {
                 :disabled="!complete || submitting"
                 @click="submit()"
               >
-                {{ submitting ? '提交中...' : '提交认证申请' }}
+                {{ submitting ? t('accountIdentity.actions.submitting') : t('accountIdentity.actions.submitApplication') }}
               </button>
-              <p v-if="!complete" class="identity-apply-footer__hint">请完成全部必填资料</p>
+              <p v-if="!complete" class="identity-apply-footer__hint">{{ t('accountIdentity.apply.incomplete') }}</p>
             </div>
           </template>
         </PlayerIdentityApplyForm>
       </AccountPanel>
 
       <div class="identity-apply-side">
-        <AccountPanel title="提交说明">
+        <AccountPanel :title="t('accountIdentity.apply.notesTitle')">
           <ul class="identity-entry-rules">
-            <li>请填写你当前常用的平台游戏ID，方便赛事方确认你在游戏中的身份。认证通过后会生成永久 CNPA 球员ID，后续可继续补充或变更其他平台游戏ID。</li>
-            <li>审核通过后生成永久球员 ID，永久球员 ID 不可修改。</li>
-            <li>同一平台的游戏 ID 不得被多个球员重复绑定。</li>
-            <li>提交后进入管理员审核，审核期间不能重复提交。</li>
-            <li>球员认证与具体球队、赛事报名相互独立；游戏平台不代表只能参加该平台赛事。</li>
+            <li>{{ t('accountIdentity.apply.noteCurrentId') }}</li>
+            <li>{{ t('accountIdentity.apply.notePermanentId') }}</li>
+            <li>{{ t('accountIdentity.apply.noteUnique') }}</li>
+            <li>{{ t('accountIdentity.apply.noteReview') }}</li>
+            <li>{{ t('accountIdentity.apply.noteIndependent') }}</li>
           </ul>
         </AccountPanel>
 
-        <AccountPanel title="当前资料状态">
+        <AccountPanel :title="t('accountIdentity.apply.currentTitle')">
           <div class="account-info-list">
-            <div class="account-info-row"><span class="account-info-row__label">昵称</span><span>{{ statusSummary.nickname }}</span></div>
-            <div class="account-info-row"><span class="account-info-row__label">邮箱</span><span>{{ statusSummary.email }}</span></div>
-            <div class="account-info-row"><span class="account-info-row__label">头像</span><span>{{ statusSummary.avatar }}</span></div>
-            <div class="account-info-row"><span class="account-info-row__label">平台</span><span>{{ statusSummary.platform }}</span></div>
-            <div class="account-info-row"><span class="account-info-row__label">游戏 ID</span><span>{{ statusSummary.gameAccount }}</span></div>
-            <div class="account-info-row"><span class="account-info-row__label">常用位置</span><span>{{ statusSummary.position }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.nickname') }}</span><span>{{ statusSummary.nickname }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.email') }}</span><span>{{ statusSummary.email }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.avatar') }}</span><span>{{ statusSummary.avatar }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.platform') }}</span><span>{{ statusSummary.platform }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.gameId') }}</span><span>{{ statusSummary.gameAccount }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.position') }}</span><span>{{ statusSummary.position }}</span></div>
           </div>
         </AccountPanel>
       </div>

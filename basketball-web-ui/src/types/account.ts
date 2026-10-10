@@ -143,6 +143,7 @@ export interface PlatformGameIdRecord {
   platformAccountId?: string
   gameId: string
   status: PlatformGameIdStatus
+  pendingKind?: 'ADD' | 'EDIT'
   statusText: string
   locked: boolean
   lockText: string

@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import WebHeader from '@/components/layout/WebHeader.vue'
 import loginBackground from '@/assets/icon/login/login_background.png'
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -26,7 +29,7 @@ import loginBackground from '@/assets/icon/login/login_background.png'
 
     <footer class="account-layout__footer">
       <div class="account-layout__footer-inner site-shell">
-        <span>CNPA 中国职业电竞篮球联赛</span>
+        <span>{{ t('accountShell.leagueName') }}</span>
         <span>© 2026 CNPA. All rights reserved.</span>
       </div>
     </footer>

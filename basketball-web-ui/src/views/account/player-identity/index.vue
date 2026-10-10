@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
@@ -10,6 +11,7 @@ import { useAccountStore } from '@/stores/account'
 const route = useRoute()
 const router = useRouter()
 const accountStore = useAccountStore()
+const { t } = useI18n()
 
 const identity = computed(() => accountStore.playerIdentity)
 const status = computed(() => identity.value?.status || 'NOT_SUBMITTED')
@@ -41,9 +43,9 @@ watch(
 )
 
 const banner = computed(() => ({
-  title: 'CNPA 永久球员身份',
-  description: '完成一次认证，建立长期有效的球员档案',
-  statusText: cert.value?.applicationStatusText || '未认证',
+  title: t('accountIdentity.index.bannerTitle'),
+  description: t('accountIdentity.index.bannerDesc'),
+  statusText: cert.value?.applicationStatusText || t('accountIdentity.status.notVerified'),
   statusType: 'warning' as const,
 }))
 
@@ -55,43 +57,43 @@ function goApply() {
 <template>
   <div class="account-view">
     <AccountPageHeader
-      zh-title="球员身份"
+      :zh-title="t('accountIdentity.title')"
       en-title="PLAYER IDENTITY"
       :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '球员身份' },
+        { label: t('nav.home'), to: '/home' },
+        { label: t('nav.account'), to: '/account/overview' },
+        { label: t('accountIdentity.title') },
       ]"
     />
 
     <AccountStatusBanner v-bind="banner" />
 
-    <div v-if="accountStore.certLoading" class="identity-loading">加载认证状态中...</div>
+    <div v-if="accountStore.certLoading" class="identity-loading">{{ t('accountIdentity.feedback.loadingCert') }}</div>
 
     <div v-else class="account-grid-2 identity-entry-grid">
-      <AccountPanel title="当前状态">
+      <AccountPanel :title="t('accountIdentity.index.currentStatus')">
         <div class="identity-entry-state">
           <div class="identity-entry-state__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24">
               <path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
             </svg>
           </div>
-          <AccountStatusBadge type="warning" :text="cert?.applicationStatusText || '未认证'" />
+          <AccountStatusBadge type="warning" :text="cert?.applicationStatusText || t('accountIdentity.status.notVerified')" />
           <p class="identity-entry-state__title">
-            {{ cert?.hasPlayerProfile ? '已有球员档案' : '尚未申请球员认证' }}
+            {{ cert?.hasPlayerProfile ? t('accountIdentity.index.hasProfile') : t('accountIdentity.index.notApplied') }}
           </p>
-          <p v-if="cert?.playerNo" class="identity-entry-hint">永久球员 ID：{{ cert.playerNo }}</p>
+          <p v-if="cert?.playerNo" class="identity-entry-hint">{{ t('accountIdentity.index.permanentId', { id: cert.playerNo }) }}</p>
         </div>
       </AccountPanel>
 
-      <AccountPanel title="申请 CNPA 球员认证">
+      <AccountPanel :title="t('accountIdentity.index.applyTitle')">
         <ul class="identity-entry-rules">
-          <li>审核通过后将获得不可修改的永久球员 ID</li>
-          <li>认证资料中的游戏平台与游戏 ID 用于确认你在游戏中的身份，不代表只能参加该平台赛事</li>
-          <li>认证长期有效，无需在每届赛事中重复申请</li>
+          <li>{{ t('accountIdentity.index.rulePermanentId') }}</li>
+          <li>{{ t('accountIdentity.index.rulePlatform') }}</li>
+          <li>{{ t('accountIdentity.index.ruleLongTerm') }}</li>
         </ul>
         <p class="identity-entry-hint">
-          未认证账号不能报名、接受球队邀请、进入阵容或参与转会
+          {{ t('accountIdentity.index.hintBlocked') }}
         </p>
         <div class="account-panel__action">
           <button
@@ -100,7 +102,7 @@ function goApply() {
             :disabled="cert?.canEdit === false"
             @click="goApply"
           >
-            申请球员认证
+            {{ t('accountIdentity.actions.applyCert') }}
           </button>
         </div>
       </AccountPanel>

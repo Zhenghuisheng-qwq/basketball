@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { PlayerVerificationSnapshot } from '@/types/account'
-import { GAME_PLATFORM_LABELS, GAME_POSITION_LABELS } from '@/types/account'
 import { formatDateTime } from '@/utils/formatDate'
 
 const props = defineProps<{
@@ -14,7 +14,21 @@ const props = defineProps<{
   title?: string
 }>()
 
+const { t, te } = useI18n()
+
 const initials = computed(() => props.nickname.slice(0, 2).toUpperCase())
+
+function platformLabel(code?: string) {
+  if (!code) return '-'
+  const key = `accountIdentity.platform.${code}`
+  return te(key) ? t(key) : code
+}
+
+function positionLabel(code?: string) {
+  if (!code) return '-'
+  const key = `accountIdentity.position.${code}`
+  return te(key) ? t(key) : code
+}
 </script>
 
 <template>
@@ -29,31 +43,31 @@ const initials = computed(() => props.nickname.slice(0, 2).toUpperCase())
     </div>
     <dl class="account-info-list">
       <div class="account-field-row">
-        <dt>主要游戏平台</dt>
-        <dd>{{ GAME_PLATFORM_LABELS[data.primaryPlatform] }}</dd>
+        <dt>{{ t('accountIdentity.fields.primaryPlatform') }}</dt>
+        <dd>{{ platformLabel(data.primaryPlatform) }}</dd>
       </div>
       <div class="account-field-row" :class="{ 'field-error': highlightFields?.includes('gameId') }">
-        <dt>游戏 ID</dt>
+        <dt>{{ t('accountIdentity.fields.gameId') }}</dt>
         <dd>{{ data.gameId }}</dd>
       </div>
       <div class="account-field-row" :class="{ 'field-error': highlightFields?.includes('gameIdScreenshotUrl') }">
-        <dt>游戏 ID 截图</dt>
-        <dd>{{ data.gameIdScreenshotUrl ? '已上传' : '未上传' }}</dd>
+        <dt>{{ t('accountIdentity.fields.screenshot') }}</dt>
+        <dd>{{ data.gameIdScreenshotUrl ? t('accountIdentity.status.uploaded') : t('accountIdentity.status.notUploaded') }}</dd>
       </div>
       <div class="account-field-row">
-        <dt>2K 角色位置</dt>
-        <dd>{{ GAME_POSITION_LABELS[data.gamePosition] }}</dd>
+        <dt>{{ t('accountIdentity.fields.gamePosition2k') }}</dt>
+        <dd>{{ positionLabel(data.gamePosition) }}</dd>
       </div>
       <div class="account-field-row">
-        <dt>常用位置</dt>
-        <dd>{{ GAME_POSITION_LABELS[data.commonPosition] }}</dd>
+        <dt>{{ t('accountIdentity.fields.position') }}</dt>
+        <dd>{{ positionLabel(data.commonPosition) }}</dd>
       </div>
       <div v-if="submittedAt" class="account-field-row">
-        <dt>提交时间</dt>
+        <dt>{{ t('accountIdentity.fields.submittedAt') }}</dt>
         <dd>{{ formatDateTime(submittedAt) }}</dd>
       </div>
       <div v-if="applicationNo" class="account-field-row">
-        <dt>申请编号</dt>
+        <dt>{{ t('accountIdentity.fields.applicationNo') }}</dt>
         <dd>{{ applicationNo }}</dd>
       </div>
     </dl>

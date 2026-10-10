@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
@@ -9,37 +10,45 @@ import AccountStepper from '@/components/account/AccountStepper.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import AccountConfirmDialog from '@/components/account/AccountConfirmDialog.vue'
 import { useAccountStore } from '@/stores/account'
-import { IDENTITY_PLATFORM_LABELS, GAME_PLATFORM_LABELS } from '@/types/account'
 import { mapVerificationPlatform } from '@/utils/playerIdentity'
 import { formatDateTime } from '@/utils/formatDate'
 
 const router = useRouter()
 const accountStore = useAccountStore()
+const { t, te } = useI18n()
 const showWithdraw = ref(false)
 
 const account = computed(() => accountStore.currentAccount)
 const verification = computed(() => accountStore.verification)
 
-const steps = [
-  { label: '提交资料', state: 'done' as const },
-  { label: '管理员审核', state: 'current' as const },
-  { label: '认证生效', state: 'upcoming' as const },
-]
+const steps = computed(() => [
+  { label: t('accountIdentity.steps.submit'), state: 'done' as const },
+  { label: t('accountIdentity.steps.review'), state: 'current' as const },
+  { label: t('accountIdentity.steps.active'), state: 'upcoming' as const },
+])
 
 const platformLabel = computed(() => {
   const p = verification.value?.primaryPlatform
   if (!p) return '-'
-  return IDENTITY_PLATFORM_LABELS[mapVerificationPlatform(p)] || GAME_PLATFORM_LABELS[p]
+  const mapped = mapVerificationPlatform(p)
+  const key = `accountIdentity.platform.${mapped}`
+  return te(key) ? t(key) : p
 })
+
+function positionLabel(code?: string | null) {
+  if (!code) return '-'
+  const key = `accountIdentity.position.${code}`
+  return te(key) ? t(key) : code
+}
 
 async function confirmWithdraw() {
   try {
     await accountStore.withdrawPlayerVerification()
     showWithdraw.value = false
-    ElMessage.success('已撤回申请，可修改资料后重新提交')
+    ElMessage.success(t('accountIdentity.feedback.withdrawThenEdit'))
     router.push({ name: 'AccountPlayerIdentityApply' })
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '撤回失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountIdentity.feedback.withdrawFailed'))
   }
 }
 </script>
@@ -47,27 +56,27 @@ async function confirmWithdraw() {
 <template>
   <div class="account-view">
     <AccountPageHeader
-      zh-title="球员认证"
+      :zh-title="t('accountIdentity.review.pageTitle')"
       en-title="PLAYER VERIFICATION"
       :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '球员身份', to: '/account/player-identity' },
-        { label: '审核中' },
+        { label: t('nav.home'), to: '/home' },
+        { label: t('nav.account'), to: '/account/overview' },
+        { label: t('accountIdentity.title'), to: '/account/player-identity' },
+        { label: t('accountIdentity.status.pending') },
       ]"
     />
 
     <AccountStatusBanner
-      title="球员认证申请"
-      description="认证资料已提交，当前由管理员审核"
-      status-text="审核中"
+      :title="t('accountIdentity.review.applicationTitle')"
+      :description="t('accountIdentity.review.pendingDesc')"
+      :status-text="t('accountIdentity.status.pending')"
       status-type="warning"
     />
 
     <AccountStepper :steps="steps" />
 
     <div class="identity-review-grid">
-      <AccountPanel title="本次认证资料">
+      <AccountPanel :title="t('accountIdentity.review.thisSubmission')">
         <div class="identity-review-profile">
           <div class="identity-review-profile__avatar">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -76,39 +85,40 @@ async function confirmWithdraw() {
           </div>
           <div>
             <strong>{{ account?.nickname }}</strong>
-            <AccountStatusBadge type="warning" text="审核中" />
+            <AccountStatusBadge type="warning" :text="t('accountIdentity.status.pending')" />
           </div>
         </div>
         <div class="account-info-list">
-          <div class="account-info-row"><span class="account-info-row__label">游戏平台</span><span>{{ platformLabel }}</span></div>
-          <div class="account-info-row"><span class="account-info-row__label">游戏 ID</span><span>{{ verification?.gameId }}</span></div>
-          <div class="account-info-row"><span class="account-info-row__label">常用位置</span><span>{{ verification?.gamePosition }}</span></div>
-          <div class="account-info-row"><span class="account-info-row__label">证明材料</span><span>已上传 1 份</span></div>
-          <div class="account-info-row"><span class="account-info-row__label">提交时间</span><span>{{ formatDateTime(verification?.submittedAt) }}</span></div>
+          <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.gamePlatform') }}</span><span>{{ platformLabel }}</span></div>
+          <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.gameId') }}</span><span>{{ verification?.gameId }}</span></div>
+          <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.position') }}</span><span>{{ positionLabel(verification?.gamePosition) }}</span></div>
+          <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.proof') }}</span><span>{{ t('accountIdentity.review.proofCount', { count: 1 }) }}</span></div>
+          <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.submittedAt') }}</span><span>{{ formatDateTime(verification?.submittedAt) }}</span></div>
         </div>
       </AccountPanel>
 
-      <AccountPanel title="当前状态">
+      <AccountPanel :title="t('accountIdentity.index.currentStatus')">
         <div class="identity-review-result identity-review-result--pending">
           <div class="identity-review-result__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>
           </div>
-          <strong>球员认证审核中</strong>
-          <AccountStatusBadge type="warning" text="审核中" />
-          <p>管理员将对整份认证资料进行审核</p>
-          <p>审核期间不能重复提交</p>
-          <button type="button" class="account-btn-secondary" @click="showWithdraw = true">撤回修改</button>
+          <strong>{{ t('accountIdentity.review.pendingHeadline') }}</strong>
+          <AccountStatusBadge type="warning" :text="t('accountIdentity.status.pending')" />
+          <p>{{ t('accountIdentity.review.pendingReviewAll') }}</p>
+          <p>{{ t('accountIdentity.review.pendingNoResubmit') }}</p>
+          <button type="button" class="account-btn-secondary" @click="showWithdraw = true">{{ t('accountIdentity.actions.withdrawEdit') }}</button>
         </div>
       </AccountPanel>
     </div>
 
-    <p class="identity-footnote">撤回后可以修改认证资料；再次提交将生成新的审核记录。</p>
+    <p class="identity-footnote">{{ t('accountIdentity.review.pendingFootnote') }}</p>
 
     <AccountConfirmDialog
       v-model="showWithdraw"
-      title="撤回认证申请"
-      message="确认撤回当前审核中的认证申请？撤回后可修改资料并重新提交。"
-      confirm-text="确认撤回"
+      :title="t('accountIdentity.review.withdrawTitle')"
+      :message="t('accountIdentity.review.withdrawMessage')"
+      :confirm-text="t('accountIdentity.actions.confirmWithdraw')"
+      :cancel-text="t('accountIdentity.actions.cancel')"
       @confirm="confirmWithdraw"
     />
   </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
@@ -11,6 +12,7 @@ import { useTeamStore } from '@/stores/team'
 import type { AccountNotificationItem } from '@/types/accountNotifications'
 
 const route = useRoute()
+const { t } = useI18n()
 const notificationStore = useNotificationCenterStore()
 const teamStore = useTeamStore()
 const loading = ref(false)
@@ -25,9 +27,9 @@ const notification = computed(() =>
 )
 
 function getHeroTitle(item: AccountNotificationItem) {
-  if (item.type === 'TEAM_INVITE') return '球队邀请'
-  if (item.type === 'ACCOUNT_SECURITY') return '账号安全提醒'
-  return `${item.typeText}通知`
+  if (item.type === 'TEAM_INVITE') return t('accountShell.notifications.teamInvite')
+  if (item.type === 'ACCOUNT_SECURITY') return t('accountShell.notifications.securityAlert')
+  return t('accountShell.notifications.typedTitle', { type: item.typeText })
 }
 
 const heroTitle = computed(() => (notification.value ? getHeroTitle(notification.value) : ''))
@@ -49,7 +51,7 @@ async function loadNotification() {
       }
     }
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : '加载失败'
+    loadError.value = error instanceof Error ? error.message : t('accountShell.notifications.loadFailedShort')
   } finally {
     loading.value = false
   }
@@ -64,9 +66,9 @@ async function refreshAfterInviteAction(accept: boolean) {
     await teamStore.respondInvitationAction(inviteId, accept)
     const refreshed = await notificationStore.loadDetail(notificationId.value)
     detailItem.value = refreshed
-    ElMessage.success(accept ? '已加入球队' : '已拒绝邀请')
+    ElMessage.success(accept ? t('accountShell.notifications.joined') : t('accountShell.notifications.declined'))
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '操作失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountShell.notifications.actionFailed'))
     throw error
   } finally {
     actionLoading.value = false
@@ -74,14 +76,14 @@ async function refreshAfterInviteAction(accept: boolean) {
 }
 
 async function handleAcceptInvite() {
-  const teamName = notification.value?.teamInvite?.teamName || '该球队'
+  const teamName = notification.value?.teamInvite?.teamName || t('accountShell.notifications.thisTeam')
   try {
     await ElMessageBox.confirm(
-      `确认接受球队「${teamName}」的邀请并加入该球队吗？`,
-      '确认加入球队？',
+      t('accountShell.notifications.acceptMessage', { name: teamName }),
+      t('accountShell.notifications.acceptTitle'),
       {
-        confirmButtonText: '确认加入',
-        cancelButtonText: '取消',
+        confirmButtonText: t('accountShell.notifications.confirmJoin'),
+        cancelButtonText: t('accountShell.common.cancel'),
         type: 'warning',
       },
     )
@@ -92,14 +94,14 @@ async function handleAcceptInvite() {
 }
 
 async function handleRejectInvite() {
-  const teamName = notification.value?.teamInvite?.teamName || '该球队'
+  const teamName = notification.value?.teamInvite?.teamName || t('accountShell.notifications.thisTeam')
   try {
     await ElMessageBox.confirm(
-      `确认拒绝球队「${teamName}」的邀请吗？`,
-      '确认拒绝邀请？',
+      t('accountShell.notifications.rejectMessage', { name: teamName }),
+      t('accountShell.notifications.rejectTitle'),
       {
-        confirmButtonText: '确认拒绝',
-        cancelButtonText: '取消',
+        confirmButtonText: t('accountShell.notifications.confirmReject'),
+        cancelButtonText: t('accountShell.common.cancel'),
         type: 'warning',
       },
     )
@@ -108,6 +110,19 @@ async function handleRejectInvite() {
     // cancelled or failed
   }
 }
+
+const breadcrumbs = computed(() => [
+  { label: t('accountShell.common.home'), to: '/home' },
+  { label: t('accountShell.common.accountCenter'), to: '/account/overview' },
+  { label: t('accountShell.notifications.title'), to: '/account/notifications' },
+  { label: t('accountShell.notifications.detailTitle') },
+])
+
+const detailStatusText = computed(() => {
+  const item = notification.value
+  if (!item) return ''
+  return item.teamInvite?.inviteStatusText || (item.isUnread ? t('accountShell.notifications.unread') : t('accountShell.notifications.read'))
+})
 
 watch(notificationId, () => {
   loadNotification()
@@ -123,17 +138,12 @@ onMounted(() => {
 <template>
   <div class="account-view account-view--notification-detail account-center-vars">
     <AccountPageHeader
-      zh-title="通知详情"
+      :zh-title="t('accountShell.notifications.detailTitle')"
       en-title="NOTIFICATION DETAIL"
-      :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '消息通知', to: '/account/notifications' },
-        { label: '通知详情' },
-      ]"
+      :breadcrumb-items="breadcrumbs"
     />
 
-    <div v-if="loading" class="notification-detail-empty">加载中...</div>
+    <div v-if="loading" class="notification-detail-empty">{{ t('accountShell.common.loading') }}</div>
 
     <AccountEmptyState
       v-else-if="loadError"
@@ -144,7 +154,7 @@ onMounted(() => {
       <AccountStatusBanner
         :title="heroTitle"
         :description="heroDescription"
-        :status-text="notification.teamInvite?.inviteStatusText || (notification.isUnread ? '未读' : '已读')"
+        :status-text="detailStatusText"
         :status-type="notification.teamInvite?.canRespond ? 'warning' : (notification.isUnread ? 'danger' : 'success')"
       />
 
@@ -157,7 +167,7 @@ onMounted(() => {
     </template>
 
     <div v-else class="notification-detail-empty">
-      <AccountEmptyState message="通知不存在" />
+      <AccountEmptyState :message="t('accountShell.notifications.missing')" />
     </div>
   </div>
 </template>

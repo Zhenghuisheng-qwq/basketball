@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   modelValue: boolean
@@ -14,6 +15,7 @@ const emit = defineEmits<{
   confirm: []
 }>()
 
+const { t } = useI18n()
 const confirmBtnRef = ref<HTMLButtonElement | null>(null)
 const triggerRef = ref<HTMLElement | null>(null)
 
@@ -60,16 +62,16 @@ watch(
 <template>
   <Teleport to="body">
     <div v-if="modelValue" class="account-confirm">
-      <button type="button" class="account-confirm__backdrop" aria-label="关闭" @click="close" />
+      <button type="button" class="account-confirm__backdrop" :aria-label="t('accountShell.common.close')" @click="close" />
       <div class="account-confirm__dialog" role="dialog" aria-modal="true" :aria-label="title">
         <h3 class="account-confirm__title">{{ title }}</h3>
         <p class="account-confirm__message">{{ message }}</p>
         <div class="account-confirm__actions">
           <button type="button" class="account-btn-secondary" @click="close">
-            {{ cancelText || '取消' }}
+            {{ cancelText || t('accountShell.common.cancel') }}
           </button>
           <button ref="confirmBtnRef" type="button" class="account-btn-primary" @click="handleConfirm">
-            {{ confirmText || '确认' }}
+            {{ confirmText || t('accountShell.common.confirm') }}
           </button>
         </div>
       </div>

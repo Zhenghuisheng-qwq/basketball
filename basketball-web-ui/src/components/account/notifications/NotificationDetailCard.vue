@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import NotificationIcon from './NotificationIcon.vue'
 import type { AccountNotificationItem } from '@/types/accountNotifications'
+
+const { t } = useI18n()
 
 defineProps<{
   item: AccountNotificationItem
@@ -28,16 +31,16 @@ defineEmits<{
       <img
         v-if="item.teamInvite.teamLogo"
         :src="item.teamInvite.teamLogo"
-        :alt="item.teamInvite.teamName || '球队 Logo'"
+        :alt="item.teamInvite.teamName || t('accountShell.notifications.teamLogoAlt')"
         class="notification-detail-card__team-logo"
       />
       <div v-else class="notification-detail-card__team-logo notification-detail-card__team-logo--placeholder">
-        {{ (item.teamInvite.teamName || '队').slice(0, 1) }}
+        {{ (item.teamInvite.teamName || t('accountShell.notifications.teamInitial')).slice(0, 1) }}
       </div>
       <div>
-        <p class="notification-detail-card__team-name">{{ item.teamInvite.teamName || '未知球队' }}</p>
+        <p class="notification-detail-card__team-name">{{ item.teamInvite.teamName || t('accountShell.notifications.unknownTeam') }}</p>
         <p v-if="item.teamInvite.inviterName" class="notification-detail-card__team-sub">
-          邀请人：{{ item.teamInvite.inviterName }}
+          {{ t('accountShell.notifications.inviter', { name: item.teamInvite.inviterName }) }}
         </p>
       </div>
     </div>
@@ -76,7 +79,7 @@ defineEmits<{
         :disabled="actionLoading"
         @click="$emit('accept-invite')"
       >
-        接受邀请
+        {{ t('accountShell.notifications.accept') }}
       </button>
       <button
         v-if="item.teamInvite?.canRespond"
@@ -85,13 +88,13 @@ defineEmits<{
         :disabled="actionLoading"
         @click="$emit('reject-invite')"
       >
-        拒绝邀请
+        {{ t('accountShell.notifications.reject') }}
       </button>
     </div>
 
     <div v-else-if="item.teamInvite?.inviteStatus === 1" class="notification-detail-card__actions">
       <RouterLink to="/account/team" class="account-btn-primary notification-detail-card__link-btn">
-        查看我的球队
+        {{ t('accountShell.notifications.viewTeam') }}
       </RouterLink>
     </div>
   </article>

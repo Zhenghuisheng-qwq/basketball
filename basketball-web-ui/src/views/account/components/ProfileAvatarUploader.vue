@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -8,10 +9,12 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   hint?: string
 }>(), {
-  actionLabel: '上传头像',
   disabled: false,
-  hint: '支持 JPG / PNG，大小不超过 5MB',
 })
+
+const { t } = useI18n()
+const actionText = computed(() => props.actionLabel || t('accountShell.profile.uploadAvatar'))
+const hintText = computed(() => props.hint || t('accountShell.profile.avatarHint'))
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -48,16 +51,16 @@ function compressImage(file: File): Promise<string> {
         canvas.height = height
         const ctx = canvas.getContext('2d')
         if (!ctx) {
-          reject(new Error('无法处理图片'))
+          reject(new Error(t('accountShell.profile.imageProcessFailed')))
           return
         }
         ctx.drawImage(img, 0, 0, width, height)
         resolve(canvas.toDataURL('image/jpeg', 0.82))
       }
-      img.onerror = () => reject(new Error('图片加载失败'))
+      img.onerror = () => reject(new Error(t('accountShell.profile.imageLoadFailed')))
       img.src = reader.result as string
     }
-    reader.onerror = () => reject(new Error('读取失败'))
+    reader.onerror = () => reject(new Error(t('accountShell.profile.imageReadFailed')))
     reader.readAsDataURL(file)
   })
 }
@@ -70,11 +73,11 @@ async function handleChange(event: Event) {
 
   const allowed = ['image/jpeg', 'image/jpg', 'image/png']
   if (!allowed.includes(file.type)) {
-    emit('error', '仅支持 JPG、JPEG、PNG 格式')
+    emit('error', t('accountShell.profile.avatarType'))
     return
   }
   if (file.size > 5 * 1024 * 1024) {
-    emit('error', '头像大小不能超过 5MB')
+    emit('error', t('accountShell.profile.avatarSize'))
     return
   }
 
@@ -85,7 +88,7 @@ async function handleChange(event: Event) {
     emit('update:modelValue', dataUrl)
     emit('file-selected', file)
   } catch {
-    emit('error', '头像上传失败')
+    emit('error', t('accountShell.profile.avatarUploadFailed'))
   }
 }
 
@@ -119,9 +122,9 @@ function handleImageError() {
         :disabled="disabled"
         @change="handleChange"
       />
-      {{ actionLabel }}
+      {{ actionText }}
     </label>
-    <p class="profile-avatar-uploader__hint">{{ hint }}</p>
+    <p class="profile-avatar-uploader__hint">{{ hintText }}</p>
   </div>
 </template>
 

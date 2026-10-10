@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   percent: number
@@ -14,11 +17,11 @@ const displayPercent = computed(() => `${props.percent}%`)
     <div class="profile-completeness__ring" :style="{ '--percent': percent }">
       <span>{{ displayPercent }}</span>
     </div>
-    <p class="profile-completeness__title">资料完整度</p>
+    <p class="profile-completeness__title">{{ t('accountShell.profile.completeness') }}</p>
     <ul class="profile-completeness__list">
       <li v-for="item in items" :key="item.key" :class="{ 'profile-completeness__item--done': item.done }">
         <span class="profile-completeness__mark" aria-hidden="true">{{ item.done ? '✓' : '' }}</span>
-        <span>{{ item.label }}（{{ item.weight }}%）</span>
+        <span>{{ t('accountShell.profile.completenessItem', { label: item.label, weight: item.weight }) }}</span>
       </li>
     </ul>
   </div>

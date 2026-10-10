@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
@@ -10,15 +11,40 @@ import { useAccountStore } from '@/stores/account'
 
 const router = useRouter()
 const accountStore = useAccountStore()
+const { t } = useI18n()
 
 const account = computed(() => accountStore.currentAccount)
 const limit = computed(() => accountStore.eligibility)
+
+const statusLabel = computed(() => {
+  if (limit.value?.status === 'LIMITED') return t('accountIdentity.eligibility.playLimited')
+  if (limit.value?.status === 'OK') return t('accountIdentity.eligibility.playOk')
+  return limit.value?.statusText || ''
+})
+
+const identityStatusLabel = computed(() => {
+  const text = limit.value?.permanentIdentityStatus || ''
+  if (!text || text === 'KEPT' || text === '继续保留') return t('accountIdentity.eligibility.identityKept')
+  return text
+})
+
+const resultTitleLabel = computed(() => {
+  if (limit.value?.status === 'LIMITED') return t('accountIdentity.eligibility.playLimited')
+  return limit.value?.resultTitle || ''
+})
+
+const resultStatusLabel = computed(() => {
+  if (limit.value?.status === 'LIMITED') return t('accountIdentity.eligibility.playLimited')
+  if (limit.value?.status === 'OK') return t('accountIdentity.eligibility.playOk')
+  if (!limit.value?.resultStatus) return t('accountIdentity.status.effective')
+  return limit.value.resultStatus
+})
 
 onMounted(async () => {
   try {
     await accountStore.loadPlayerPlatformState()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载资格状态失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountIdentity.feedback.loadEligibilityFailed'))
   }
 })
 </script>
@@ -26,51 +52,51 @@ onMounted(async () => {
 <template>
   <div class="account-view">
     <AccountPageHeader
-      zh-title="球员资格状态"
+      :zh-title="t('accountIdentity.eligibility.pageTitle')"
       en-title="PLAYER ELIGIBILITY"
       :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '球员身份', to: '/account/player-identity' },
-        { label: '资格状态' },
+        { label: t('nav.home'), to: '/home' },
+        { label: t('nav.account'), to: '/account/overview' },
+        { label: t('accountIdentity.title'), to: '/account/player-identity' },
+        { label: t('accountIdentity.eligibility.crumb') },
       ]"
     />
 
     <AccountStatusBanner
-      title="赛事参赛资格受限"
-      description="请查看赛事方处理结果与联系说明"
-      status-text="资格受限"
+      :title="t('accountIdentity.eligibility.bannerTitle')"
+      :description="t('accountIdentity.eligibility.bannerDesc')"
+      :status-text="t('accountIdentity.eligibility.limited')"
       status-type="danger"
     />
 
     <div class="identity-review-grid">
-      <AccountPanel title="资格状态">
+      <AccountPanel :title="t('accountIdentity.eligibility.statusTitle')">
         <div class="identity-review-result identity-review-result--warning">
           <div class="identity-review-result__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path fill="currentColor" d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
           </div>
           <div class="account-info-list">
-            <div class="account-info-row"><span class="account-info-row__label">永久球员 ID</span><span>{{ account?.playerNo || limit?.playerNo }}</span></div>
-            <div class="account-info-row"><span class="account-info-row__label">当前状态</span><span>{{ limit?.statusText }}</span></div>
-            <div class="account-info-row"><span class="account-info-row__label">对应赛事</span><span>{{ limit?.tournamentName }}</span></div>
-            <div class="account-info-row"><span class="account-info-row__label">永久球员身份</span><span class="account-status-text--success">{{ limit?.permanentIdentityStatus }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.permanentPlayerId') }}</span><span>{{ account?.playerNo || limit?.playerNo }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.currentStatus') }}</span><span>{{ statusLabel }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.event') }}</span><span>{{ limit?.tournamentName }}</span></div>
+            <div class="account-info-row"><span class="account-info-row__label">{{ t('accountIdentity.fields.permanentIdentity') }}</span><span class="account-status-text--success">{{ identityStatusLabel }}</span></div>
           </div>
         </div>
       </AccountPanel>
 
-      <AccountPanel title="赛事方处理结果">
-        <strong>{{ limit?.resultTitle }}</strong>
-        <AccountStatusBadge type="danger" :text="limit?.resultStatus || '已生效'" />
+      <AccountPanel :title="t('accountIdentity.eligibility.resultTitle')">
+        <strong>{{ resultTitleLabel }}</strong>
+        <AccountStatusBadge type="danger" :text="resultStatusLabel" />
         <p>{{ limit?.reason }}</p>
       </AccountPanel>
     </div>
 
-    <AccountPanel title="联系赛事方说明">
-      <p>如需了解处理依据或提交情况说明，请通过对应赛事公告公布的官方联系方式联系赛事方。</p>
+    <AccountPanel :title="t('accountIdentity.eligibility.contactTitle')">
+      <p>{{ t('accountIdentity.eligibility.contactBody') }}</p>
       <p class="identity-eligibility-notice">{{ limit?.notice }}</p>
       <div class="account-panel__action account-panel__action--right">
         <button type="button" class="account-btn-secondary" @click="router.push('/account/player-identity')">
-          返回球员身份
+          {{ t('accountIdentity.actions.backToIdentity') }}
         </button>
       </div>
     </AccountPanel>

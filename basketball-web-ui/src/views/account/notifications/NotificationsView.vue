@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onActivated, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
@@ -11,6 +12,7 @@ import { useNotificationCenterStore } from '@/stores/notificationCenter'
 import type { NotificationTabKey } from '@/types/accountNotifications'
 
 const router = useRouter()
+const { t } = useI18n()
 const notificationStore = useNotificationCenterStore()
 
 onMounted(async () => {
@@ -23,11 +25,21 @@ onActivated(async () => {
   }
 })
 
-const unreadText = computed(() => `${notificationStore.unreadCount} 条未读`)
+const unreadText = computed(() =>
+  t('accountShell.notifications.unreadCount', { count: notificationStore.unreadCount }),
+)
 
 const emptyMessage = computed(() =>
-  notificationStore.activeTab === 'UNREAD' ? '暂无未读通知' : '暂无通知',
+  notificationStore.activeTab === 'UNREAD'
+    ? t('accountShell.notifications.emptyUnread')
+    : t('accountShell.notifications.emptyAll'),
 )
+
+const breadcrumbs = computed(() => [
+  { label: t('accountShell.common.home'), to: '/home' },
+  { label: t('accountShell.common.accountCenter'), to: '/account/overview' },
+  { label: t('accountShell.notifications.title') },
+])
 
 async function setTab(tab: NotificationTabKey) {
   await notificationStore.loadPage(tab)
@@ -49,34 +61,30 @@ async function handlePageChange(nextPage: number) {
 <template>
   <div class="account-view account-view--notifications account-center-vars">
     <AccountPageHeader
-      zh-title="消息通知"
+      :zh-title="t('accountShell.notifications.title')"
       en-title="NOTIFICATIONS"
-      :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '消息通知' },
-      ]"
+      :breadcrumb-items="breadcrumbs"
     />
 
     <AccountStatusBanner
-      title="账号与赛事通知"
-      description="集中查看审核、邀请、比赛与系统消息"
+      :title="t('accountShell.notifications.bannerTitle')"
+      :description="t('accountShell.notifications.bannerDesc')"
       :status-text="unreadText"
       status-type="danger"
     />
 
-    <AccountPanel title="全部通知">
+    <AccountPanel :title="t('accountShell.notifications.panelTitle')">
       <template #extra>
         <button type="button" class="account-btn-secondary account-btn-secondary--compact" @click="handleMarkAllRead">
-          全部标记为已读
+          {{ t('accountShell.notifications.markAllRead') }}
         </button>
       </template>
 
-      <div v-if="notificationStore.loading" class="notifications-loading">加载中...</div>
+      <div v-if="notificationStore.loading" class="notifications-loading">{{ t('accountShell.common.loading') }}</div>
 
       <AccountEmptyState
         v-else-if="notificationStore.error"
-        message="加载通知失败"
+        :message="t('accountShell.notifications.loadFailed')"
         :subtitle="notificationStore.error"
       />
 

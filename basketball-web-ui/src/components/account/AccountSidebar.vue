@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useAccountStore } from '@/stores/account'
@@ -9,6 +10,7 @@ import { resolveMemberAvatarUrl } from '@/utils/memberAvatar'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const { logout } = useAuth()
 const accountStore = useAccountStore()
 const notificationStore = useNotificationCenterStore()
@@ -49,12 +51,12 @@ interface MenuItem {
 }
 
 const mainMenus = computed<MenuItem[]>(() => [
-  { key: 'overview', label: '概览', routeName: 'AccountOverview' },
-  { key: 'identity', label: '球员身份', to: identityRoute.value },
-  { key: 'team', label: '我的球队', routeName: 'AccountMyTeam' },
-  { key: 'tournaments', label: '我的赛事', routeName: 'AccountMyEvents' },
-  { key: 'notifications', label: '消息通知', routeName: 'AccountNotifications', badge: true },
-  { key: 'settings', label: '账号设置', routeName: 'AccountSettings' },
+  { key: 'overview', label: t('accountShell.sidebar.overview'), routeName: 'AccountOverview' },
+  { key: 'identity', label: t('accountShell.sidebar.identity'), to: identityRoute.value },
+  { key: 'team', label: t('accountShell.sidebar.team'), routeName: 'AccountMyTeam' },
+  { key: 'tournaments', label: t('accountShell.sidebar.events'), routeName: 'AccountMyEvents' },
+  { key: 'notifications', label: t('accountShell.sidebar.notifications'), routeName: 'AccountNotifications', badge: true },
+  { key: 'settings', label: t('accountShell.sidebar.settings'), routeName: 'AccountSettings' },
 ])
 
 function isActive(item: MenuItem) {
@@ -116,7 +118,7 @@ function handleAvatarError() {
       :aria-expanded="drawerOpen"
       @click="toggleDrawer"
     >
-      账号菜单
+      {{ t('accountShell.sidebar.menu') }}
     </button>
 
     <div class="account-sidebar__content account-sidebar__inner">
@@ -127,7 +129,7 @@ function handleAvatarError() {
           <img
             v-if="showAvatarImage"
             :src="avatarUrl"
-            :alt="account?.nickname || '用户头像'"
+            :alt="account?.nickname || t('accountShell.sidebar.avatarAlt')"
             @error="handleAvatarError"
           />
           <svg
@@ -145,24 +147,24 @@ function handleAvatarError() {
 
         <p class="account-sidebar__nickname">{{ displayName }}</p>
         <div class="account-sidebar__identity-tags">
-          <span v-if="!isVerifiedPlayer" class="account-sidebar__identity">基础用户</span>
+          <span v-if="!isVerifiedPlayer" class="account-sidebar__identity">{{ t('accountShell.sidebar.basicUser') }}</span>
           <span
             v-if="isPendingVerification && !isVerifiedPlayer"
             class="account-sidebar__identity account-sidebar__identity--pending"
           >
-            审核中
+            {{ t('accountShell.sidebar.pending') }}
           </span>
           <span
             v-if="isVerifiedPlayer"
             class="account-sidebar__identity account-sidebar__identity--player"
           >
-            认证球员
+            {{ t('accountShell.sidebar.verifiedPlayer') }}
           </span>
         </div>
         <p class="account-sidebar__email">{{ account?.maskedEmail }}</p>
       </div>
 
-      <nav class="account-sidebar__nav" aria-label="个人中心导航">
+      <nav class="account-sidebar__nav" :aria-label="t('accountShell.sidebar.nav')">
         <RouterLink
           v-for="item in mainMenus"
           :key="item.key"
@@ -238,7 +240,7 @@ function handleAvatarError() {
           <svg class="account-sidebar__logout-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
           </svg>
-          退出登录
+          {{ t('accountShell.sidebar.logout') }}
         </button>
       </div>
     </div>
@@ -247,7 +249,7 @@ function handleAvatarError() {
       v-if="drawerOpen"
       type="button"
       class="account-sidebar__backdrop"
-      aria-label="关闭菜单"
+      :aria-label="t('accountShell.sidebar.closeMenu')"
       @click="drawerOpen = false"
     />
   </aside>

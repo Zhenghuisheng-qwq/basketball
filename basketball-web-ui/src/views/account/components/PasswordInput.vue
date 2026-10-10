@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 defineProps<{
   modelValue: string
@@ -37,7 +40,7 @@ function handleInput(event: Event) {
     <button
       type="button"
       class="auth-password-input__toggle"
-      :aria-label="visible ? '隐藏密码' : '显示密码'"
+      :aria-label="visible ? t('accountShell.profile.hidePassword') : t('accountShell.profile.showPassword')"
       @click="visible = !visible"
     >
       <svg v-if="visible" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">

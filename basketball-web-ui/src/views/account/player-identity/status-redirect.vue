@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useAccountStore } from '@/stores/account'
 import {
@@ -10,6 +11,7 @@ import {
 const route = useRoute()
 const router = useRouter()
 const accountStore = useAccountStore()
+const { t } = useI18n()
 
 onMounted(async () => {
   try {
@@ -27,5 +29,5 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="account-view" aria-busy="true" aria-label="正在跳转球员身份状态页" />
+  <div class="account-view" aria-busy="true" :aria-label="t('accountIdentity.feedback.redirecting')" />
 </template>
