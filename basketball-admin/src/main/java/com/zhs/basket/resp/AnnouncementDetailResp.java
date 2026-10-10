@@ -7,4 +7,5 @@ import lombok.EqualsAndHashCode;
 @Data
 public class AnnouncementDetailResp extends AnnouncementListResp {
     private String contentText;
+    private String contentTextEn;
 }

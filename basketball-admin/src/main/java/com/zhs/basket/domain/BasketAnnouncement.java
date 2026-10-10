@@ -12,9 +12,12 @@ public class BasketAnnouncement {
     private Long tournamentId;
     private Long seasonId;
     private String title;
+    private String titleEn;
     private String summary;
+    private String summaryEn;
     private Long coverFileId;
     private String contentText;
+    private String contentTextEn;
     private Long authorId;
     private String authorName;
     private Integer announcementStatus;

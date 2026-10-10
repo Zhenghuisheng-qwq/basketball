@@ -61,8 +61,8 @@ public class BasketPublicAnnouncementServiceImpl implements IBasketPublicAnnounc
         Page<BasketAnnouncement> page = publicSupport.newPage(currentPage, pageSize);
         LambdaQueryWrapper<BasketAnnouncement> wrapper = publishedWrapper()
                 .select(BasketAnnouncement::getId, BasketAnnouncement::getAnnouncementNo,
-                        BasketAnnouncement::getCategoryCode, BasketAnnouncement::getTitle,
-                        BasketAnnouncement::getSummary, BasketAnnouncement::getCoverFileId,
+                        BasketAnnouncement::getCategoryCode,                         BasketAnnouncement::getTitle, BasketAnnouncement::getTitleEn,
+                        BasketAnnouncement::getSummary, BasketAnnouncement::getSummaryEn, BasketAnnouncement::getCoverFileId,
                         BasketAnnouncement::getAuthorName, BasketAnnouncement::getIsTop,
                         BasketAnnouncement::getIsImportant, BasketAnnouncement::getPublishTime,
                         BasketAnnouncement::getViewCount)
@@ -96,6 +96,7 @@ public class BasketPublicAnnouncementServiceImpl implements IBasketPublicAnnounc
         PublicAnnouncementDetailResp detail = new PublicAnnouncementDetailResp();
         fillItem(detail, announcement, loadCoverMap(Collections.singletonList(announcement)));
         detail.setContentText(toPlainText(announcement.getContentText()));
+        detail.setContentTextEn(announcement.getContentTextEn());
         return detail;
     }
 
@@ -105,8 +106,8 @@ public class BasketPublicAnnouncementServiceImpl implements IBasketPublicAnnounc
         PublicAnnouncementAdjacentResp resp = new PublicAnnouncementAdjacentResp();
         BasketAnnouncement previous = announcementDao.selectOne(publishedWrapper()
                 .select(BasketAnnouncement::getId, BasketAnnouncement::getAnnouncementNo,
-                        BasketAnnouncement::getCategoryCode, BasketAnnouncement::getTitle,
-                        BasketAnnouncement::getSummary, BasketAnnouncement::getCoverFileId,
+                        BasketAnnouncement::getCategoryCode,                         BasketAnnouncement::getTitle, BasketAnnouncement::getTitleEn,
+                        BasketAnnouncement::getSummary, BasketAnnouncement::getSummaryEn, BasketAnnouncement::getCoverFileId,
                         BasketAnnouncement::getAuthorName, BasketAnnouncement::getIsTop,
                         BasketAnnouncement::getIsImportant, BasketAnnouncement::getPublishTime,
                         BasketAnnouncement::getViewCount)
@@ -118,8 +119,8 @@ public class BasketPublicAnnouncementServiceImpl implements IBasketPublicAnnounc
                 .last("limit 1"));
         BasketAnnouncement next = announcementDao.selectOne(publishedWrapper()
                 .select(BasketAnnouncement::getId, BasketAnnouncement::getAnnouncementNo,
-                        BasketAnnouncement::getCategoryCode, BasketAnnouncement::getTitle,
-                        BasketAnnouncement::getSummary, BasketAnnouncement::getCoverFileId,
+                        BasketAnnouncement::getCategoryCode,                         BasketAnnouncement::getTitle, BasketAnnouncement::getTitleEn,
+                        BasketAnnouncement::getSummary, BasketAnnouncement::getSummaryEn, BasketAnnouncement::getCoverFileId,
                         BasketAnnouncement::getAuthorName, BasketAnnouncement::getIsTop,
                         BasketAnnouncement::getIsImportant, BasketAnnouncement::getPublishTime,
                         BasketAnnouncement::getViewCount)
@@ -155,8 +156,8 @@ public class BasketPublicAnnouncementServiceImpl implements IBasketPublicAnnounc
         int size = Math.clamp(limit, 1, BasketPublicConstants.MAX_SIZE);
         List<BasketAnnouncement> list = announcementDao.selectList(publishedWrapper()
                 .select(BasketAnnouncement::getId, BasketAnnouncement::getAnnouncementNo,
-                        BasketAnnouncement::getCategoryCode, BasketAnnouncement::getTitle,
-                        BasketAnnouncement::getSummary, BasketAnnouncement::getCoverFileId,
+                        BasketAnnouncement::getCategoryCode,                         BasketAnnouncement::getTitle, BasketAnnouncement::getTitleEn,
+                        BasketAnnouncement::getSummary, BasketAnnouncement::getSummaryEn, BasketAnnouncement::getCoverFileId,
                         BasketAnnouncement::getAuthorName, BasketAnnouncement::getIsTop,
                         BasketAnnouncement::getIsImportant, BasketAnnouncement::getPublishTime,
                         BasketAnnouncement::getViewCount)
@@ -257,7 +258,9 @@ public class BasketPublicAnnouncementServiceImpl implements IBasketPublicAnnounc
         vo.setCategoryCode(item.getCategoryCode());
         vo.setCategoryName(PublicAnnouncementCategoryEnum.resolveName(item.getCategoryCode()));
         vo.setTitle(item.getTitle());
+        vo.setTitleEn(item.getTitleEn());
         vo.setSummary(item.getSummary());
+        vo.setSummaryEn(item.getSummaryEn());
         vo.setCoverUrl(coverMap.get(item.getCoverFileId()));
         vo.setAuthorName(item.getAuthorName());
         vo.setIsTop(item.getIsTop());

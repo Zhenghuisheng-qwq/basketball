@@ -16,7 +16,7 @@ import {
   parseAnnouncementKeyword,
   parseAnnouncementPage,
 } from '@/utils/announcementNavigate'
-import { displayText, toNumber } from '@/utils/publicDisplay'
+import { displayText, localizedText, toNumber } from '@/utils/publicDisplay'
 import AnnouncementHero from './components/AnnouncementHero.vue'
 import AnnouncementCategoryTabs from './components/AnnouncementCategoryTabs.vue'
 import AnnouncementSearch from './components/AnnouncementSearch.vue'
@@ -30,7 +30,8 @@ const { t } = useI18n()
 const listHeadRef = ref<HTMLElement | null>(null)
 
 const categories = ref<AnnouncementCategory[]>([])
-const items = ref<AnnouncementListItem[]>([])
+const rawItems = ref<PublicAnnouncementItemResp[]>([])
+const items = computed(() => rawItems.value.map(mapItem))
 const total = ref(0)
 const totalPages = ref(1)
 const listState = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
@@ -59,11 +60,11 @@ const emptyText = computed(() => {
 function mapItem(item: PublicAnnouncementItemResp): AnnouncementListItem {
   return {
     id: String(item.announcementId),
-    title: displayText(item.title, t('publicPages.announcement.untitled')),
+    title: localizedText(item.title, item.titleEn, t('publicPages.announcement.untitled')),
     categoryCode: displayText(item.categoryCode, 'OTHER'),
     categoryName: displayText(item.categoryName, t('publicPages.announcement.other')),
     pinned: toNumber(item.isTop, 0) === 1,
-    summary: displayText(item.summary, ''),
+    summary: localizedText(item.summary, item.summaryEn, ''),
     authorName: displayText(item.authorName, 'CNPA'),
     publishTime: item.publishTime || '',
     publishDateText: formatAnnouncementDate(item.publishTime),
@@ -101,7 +102,7 @@ async function loadList() {
     })
     if (current !== listReq) return
     const data = res.data
-    items.value = (data?.records ?? []).map(mapItem)
+    rawItems.value = data?.records ?? []
     total.value = Number(data?.total || 0)
     totalPages.value = Math.max(1, Number(data?.pages || 1))
     listState.value = items.value.length ? 'success' : 'empty'
@@ -110,7 +111,7 @@ async function loadList() {
     }
   } catch (err) {
     if (current !== listReq) return
-    items.value = []
+    rawItems.value = []
     total.value = 0
     totalPages.value = 1
     listState.value = 'error'

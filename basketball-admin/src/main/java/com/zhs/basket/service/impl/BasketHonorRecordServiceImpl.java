@@ -114,7 +114,9 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         record.setPlayerId(req.getPlayerId());
         record.setMatchId(req.getMatchId());
         record.setHonorTitle(StringUtils.isEmpty(req.getHonorTitle()) ? category.getHonorName() : req.getHonorTitle());
+        record.setHonorTitleEn(req.getHonorTitleEn());
         record.setHonorSubtitle(req.getHonorSubtitle());
+        record.setHonorSubtitleEn(req.getHonorSubtitleEn());
         record.setHonorValue(req.getHonorValue());
         record.setAwardDate(req.getAwardDate() == null ? now : req.getAwardDate());
         record.setCoverFileId(req.getCoverFileId());
@@ -159,8 +161,14 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         if (req.getHonorTitle() != null) {
             existing.setHonorTitle(req.getHonorTitle());
         }
+        if (req.getHonorTitleEn() != null) {
+            existing.setHonorTitleEn(req.getHonorTitleEn());
+        }
         if (req.getHonorSubtitle() != null) {
             existing.setHonorSubtitle(req.getHonorSubtitle());
+        }
+        if (req.getHonorSubtitleEn() != null) {
+            existing.setHonorSubtitleEn(req.getHonorSubtitleEn());
         }
         if (req.getHonorValue() != null) {
             existing.setHonorValue(req.getHonorValue());

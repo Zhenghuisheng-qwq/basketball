@@ -16,7 +16,7 @@ import type {
 } from '@/api/types/v4Public'
 import type { PublicSeasonItemVo, PublicSeasonOverviewVo, PublicTournamentItemVo } from '@/api/types/public'
 import { translate } from '@/i18n'
-import { displayText } from '@/utils/publicDisplay'
+import { displayText, localizedText } from '@/utils/publicDisplay'
 import { v4PlatformLabel, v4PublicLifecycleLabel, v4SeriesLabel } from '@/utils/v4Display'
 import type { LeagueHeroMetaItem } from '../types/events'
 
@@ -40,11 +40,11 @@ function seasonToPublicItem(season: V4PublicSeasonItem): PublicSeasonItemVo {
     seasonId: season.seasonId,
     tournamentId: season.seriesId,
     tournamentName: season.seriesName || v4SeriesLabel(season.seriesCode),
-    seasonName: season.displayTitle || season.seasonName || '',
+    seasonName: localizedText(season.displayTitle, season.displayTitleEn, season.seasonName || ''),
     seasonYear: season.seasonYear != null ? String(season.seasonYear) : '',
     seasonStartTime: season.matchStartTime || season.registrationStartTime || '',
     seasonEndTime: season.matchEndTime || season.registrationEndTime || '',
-    competitionSeasonName: season.displayTitle || season.seasonName || '',
+    competitionSeasonName: localizedText(season.displayTitle, season.displayTitleEn, season.seasonName || ''),
     competitionSeasonYear: season.seasonYear ?? null,
     maxTeamCount: season.divisions?.[0]?.maxTeamCount ?? null,
   }
@@ -56,8 +56,8 @@ export function usePublicSeasonContext() {
 
   const tournaments = ref<PublicTournamentItemVo[]>([])
   const seriesList = ref<V4PublicSeriesItem[]>([])
-  const seasons = ref<PublicSeasonItemVo[]>([])
   const rawSeasons = ref<V4PublicSeasonItem[]>([])
+  const seasons = computed(() => rawSeasons.value.map(seasonToPublicItem))
   const seasonDetail = ref<V4PublicSeasonDetail | null>(null)
   const divisionDetail = ref<V4PublicDivisionDetail | null>(null)
   const overview = ref<PublicSeasonOverviewVo | null>(null)
@@ -128,7 +128,11 @@ export function usePublicSeasonContext() {
         key: 'season',
         icon: 'calendar',
         title: translate('eventsPage.hero.season'),
-        value: displayText(season?.displayTitle || season?.seasonName || season?.seasonYear, '--'),
+        value: localizedText(
+          season?.displayTitle || season?.seasonName || season?.seasonYear,
+          season?.displayTitleEn,
+          '--',
+        ),
       },
       {
         key: 'teams',
@@ -173,7 +177,6 @@ export function usePublicSeasonContext() {
   async function loadSeasonsBySeriesCode(seriesCode: string) {
     const reqId = ++seasonListReq
     if (!seriesCode) {
-      seasons.value = []
       rawSeasons.value = []
       seasonState.value = 'empty'
       return
@@ -183,12 +186,10 @@ export function usePublicSeasonContext() {
       const res = await getV4PublicSeasonList({ seriesCode })
       if (reqId !== seasonListReq) return
       rawSeasons.value = res.data ?? []
-      seasons.value = rawSeasons.value.map(seasonToPublicItem)
-      seasonState.value = seasons.value.length ? 'success' : 'empty'
+      seasonState.value = rawSeasons.value.length ? 'success' : 'empty'
     } catch (err) {
       if (reqId !== seasonListReq) return
       rawSeasons.value = []
-      seasons.value = []
       seasonState.value = 'error'
       errorMessage.value = err instanceof Error ? err.message : translate('eventsPage.hero.loadSeasonsFailed')
     }

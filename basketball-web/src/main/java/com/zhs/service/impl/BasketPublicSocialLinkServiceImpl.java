@@ -51,8 +51,11 @@ public class BasketPublicSocialLinkServiceImpl implements IBasketPublicSocialLin
             vo.setId(item.getId());
             vo.setPlatformCode(item.getPlatformCode());
             vo.setTitle(item.getTitle());
+            vo.setTitleEn(item.getTitleEn());
             vo.setSubtitle(item.getSubtitle());
+            vo.setSubtitleEn(item.getSubtitleEn());
             vo.setButtonText(item.getButtonText());
+            vo.setButtonTextEn(item.getButtonTextEn());
             vo.setJumpUrl(sanitizeJumpUrl(item.getJumpUrl()));
             vo.setSortOrder(item.getSortOrder());
             result.add(vo);

@@ -26,10 +26,14 @@ public class V4PublicMatchDetailResp {
 
     private String seasonName;
 
+    private String seasonNameEn;
+
     @JsonSerialize(using = ToStringSerializer.class)
     private Long divisionId;
 
     private String divisionName;
+
+    private String divisionNameEn;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long stageId;

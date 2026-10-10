@@ -325,7 +325,9 @@ public class BasketPublicHonorSupport {
             vo.setTeamId(record.getTeamId());
             vo.setPlayerId(record.getPlayerId());
             vo.setHonorTitle(record.getHonorTitle());
+            vo.setHonorTitleEn(record.getHonorTitleEn());
             vo.setHonorSubtitle(record.getHonorSubtitle());
+            vo.setHonorSubtitleEn(record.getHonorSubtitleEn());
             vo.setHonorValue(record.getHonorValue());
             vo.setAwardDate(record.getAwardDate());
             vo.setDisplayOrder(record.getDisplayOrder());
@@ -345,6 +347,7 @@ public class BasketPublicHonorSupport {
             BasketSeason season = seasonMap.get(record.getSeasonId());
             if (season != null) {
                 vo.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+                vo.setSeasonNameEn(season.getDisplayTitleEn());
             }
             BasketTeam team = teamMap.get(record.getTeamId());
             if (team != null) {
@@ -367,6 +370,7 @@ public class BasketPublicHonorSupport {
         dest.setTournamentName(src.getTournamentName());
         dest.setSeasonId(src.getSeasonId());
         dest.setSeasonName(src.getSeasonName());
+        dest.setSeasonNameEn(src.getSeasonNameEn());
         dest.setHonorCode(src.getHonorCode());
         dest.setHonorName(src.getHonorName());
         dest.setHonorScope(src.getHonorScope());
@@ -378,7 +382,9 @@ public class BasketPublicHonorSupport {
         dest.setPlayerName(src.getPlayerName());
         dest.setPlayerAvatarUrl(src.getPlayerAvatarUrl());
         dest.setHonorTitle(src.getHonorTitle());
+        dest.setHonorTitleEn(src.getHonorTitleEn());
         dest.setHonorSubtitle(src.getHonorSubtitle());
+        dest.setHonorSubtitleEn(src.getHonorSubtitleEn());
         dest.setHonorValue(src.getHonorValue());
         dest.setAwardDate(src.getAwardDate());
         dest.setCoverUrl(src.getCoverUrl());

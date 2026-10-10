@@ -32,6 +32,8 @@ public class BasketDivision implements Serializable {
 
     private String divisionName;
 
+    private String divisionNameEn;
+
     private String registrationMode;
 
     private String formatType;

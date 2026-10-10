@@ -5,7 +5,9 @@
         <id property="id" column="id"/>
         <result property="bannerName" column="banner_name"/>
         <result property="title" column="title"/>
+        <result property="titleEn" column="title_en"/>
         <result property="subtitle" column="subtitle"/>
+        <result property="subtitleEn" column="subtitle_en"/>
         <result property="imageFileId" column="image_file_id"/>
         <result property="positionCode" column="position_code"/>
         <result property="targetType" column="target_type"/>
@@ -20,7 +22,7 @@
     </resultMap>
 
     <sql id="listSelect">
-        select b.id, b.banner_name as bannerName, b.title, b.subtitle, b.image_file_id as imageFileId,
+        select b.id, b.banner_name as bannerName, b.title, b.title_en as titleEn, b.subtitle, b.subtitle_en as subtitleEn, b.image_file_id as imageFileId,
                img.access_url as imageUrl, b.position_code as positionCode, b.target_type as targetType,
                b.target_value as targetValue, b.start_time as startTime, b.end_time as endTime,
                b.banner_status as bannerStatus, b.sort_no as sortNo,
@@ -30,7 +32,7 @@
     </sql>
 
     <select id="selectById" resultMap="BasketHomeBannerResult">
-        select id, banner_name, title, subtitle, image_file_id, position_code, target_type, target_value,
+        select id, banner_name, title, title_en, subtitle, subtitle_en, image_file_id, position_code, target_type, target_value,
                start_time, end_time, banner_status, sort_no, create_time, update_time, is_delete
         from basket_home_banner where id = #{id} and is_delete = 0
     </select>
@@ -53,10 +55,10 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_home_banner (
-            banner_name, title, subtitle, image_file_id, position_code, target_type, target_value,
+            banner_name, title, title_en, subtitle, subtitle_en, image_file_id, position_code, target_type, target_value,
             start_time, end_time, banner_status, sort_no, create_time, update_time, is_delete
         ) values (
-            #{bannerName}, #{title}, #{subtitle}, #{imageFileId}, #{positionCode}, #{targetType}, #{targetValue},
+            #{bannerName}, #{title}, #{titleEn}, #{subtitle}, #{subtitleEn}, #{imageFileId}, #{positionCode}, #{targetType}, #{targetValue},
             #{startTime}, #{endTime}, #{bannerStatus}, #{sortNo}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
@@ -66,7 +68,9 @@
         <set>
             <if test="bannerName != null">banner_name = #{bannerName},</if>
             <if test="title != null">title = #{title},</if>
+            <if test="titleEn != null">title_en = #{titleEn},</if>
             <if test="subtitle != null">subtitle = #{subtitle},</if>
+            <if test="subtitleEn != null">subtitle_en = #{subtitleEn},</if>
             <if test="imageFileId != null">image_file_id = #{imageFileId},</if>
             <if test="positionCode != null">position_code = #{positionCode},</if>
             <if test="targetType != null">target_type = #{targetType},</if>

@@ -26,7 +26,11 @@ public class V4PublicSeasonItemResp {
 
     private String displayTitle;
 
+    private String displayTitleEn;
+
     private String description;
+
+    private String descriptionEn;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long coverFileId;

@@ -8,6 +8,7 @@ import LeagueTabs from './components/LeagueTabs.vue'
 import LeagueOverview from './components/LeagueOverview.vue'
 import LeagueSchedule from './components/LeagueSchedule.vue'
 import LeagueStage from './components/LeagueStage.vue'
+import { localizedText } from '@/utils/publicDisplay'
 import { v4PlatformLabel } from '@/utils/v4Display'
 import './styles/events.scss'
 
@@ -20,10 +21,10 @@ provide('publicSeasonContext', seasonContext)
 const divisions = computed(() => seasonContext.seasonDetail.value?.divisions || [])
 const activeDivisionId = computed(() => seasonContext.divisionId.value)
 
-function divisionLabel(division: { platformCode?: string; divisionName?: string; lineupMaxCount?: number }) {
+function divisionLabel(division: { platformCode?: string; divisionName?: string; divisionNameEn?: string | null; lineupMaxCount?: number }) {
   const platform = v4PlatformLabel(division.platformCode)
   const mode = division.lineupMaxCount === 3 ? '3V3' : division.lineupMaxCount === 5 ? '5V5' : ''
-  const name = division.divisionName || ''
+  const name = localizedText(division.divisionName, division.divisionNameEn, '')
   return [platform, mode, name].filter(Boolean).join(' · ')
 }
 </script>

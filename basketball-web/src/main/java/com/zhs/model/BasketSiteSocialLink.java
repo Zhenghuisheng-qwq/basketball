@@ -25,11 +25,20 @@ public class BasketSiteSocialLink implements Serializable {
     @ApiModelProperty("标题")
     private String title;
 
+    @ApiModelProperty("英文标题")
+    private String titleEn;
+
     @ApiModelProperty("描述")
     private String subtitle;
 
+    @ApiModelProperty("英文描述")
+    private String subtitleEn;
+
     @ApiModelProperty("按钮文案")
     private String buttonText;
+
+    @ApiModelProperty("英文按钮文案")
+    private String buttonTextEn;
 
     @ApiModelProperty("跳转链接")
     private String jumpUrl;

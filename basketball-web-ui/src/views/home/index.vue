@@ -20,6 +20,7 @@ import type {
 import { formatAnnouncementDate, goToAnnouncementList } from '@/utils/announcementNavigate'
 import {
   displayText,
+  localizedText,
   formatDateTime,
   initials,
   mapMatchStatus,
@@ -47,6 +48,7 @@ type HomeEventCard = {
   seasonStatus: string | null
   divisionId: string | null
   divisionName: string | null
+  divisionNameEn: string | null
   currentStageName: string | null
   matchStartTime: string | null
   matchEndTime: string | null
@@ -55,6 +57,8 @@ type HomeEventCard = {
 type HomeBannerItem = {
   id: string
   image: string
+  title: string
+  subtitle: string
 }
 
 const router = useRouter()
@@ -84,7 +88,10 @@ const HOME_EVENT_TEMPLATES: Array<Pick<HomeEventCard, 'seriesCode' | 'title' | '
   { seriesCode: 'OPEN', title: 'CNPA OPEN', icon: iconOpen },
 ]
 
-const banners = ref<HomeBannerItem[]>([])
+const rawBanners = ref<PublicHomeBannerResp[]>([])
+const banners = computed(() => rawBanners.value
+  .map((item) => mapBanner(item))
+  .filter((item): item is HomeBannerItem => Boolean(item)))
 const matches = ref<PublicMatchItemVo[]>([])
 const currentEventCards = ref<HomeEventCard[]>(HOME_EVENT_TEMPLATES.map((item) => emptyEventCard(item)))
 const eventNews = ref<PublicAnnouncementItemResp[]>([])
@@ -134,6 +141,7 @@ function emptyEventCard(template: Pick<HomeEventCard, 'seriesCode' | 'title' | '
     seasonStatus: null,
     divisionId: null,
     divisionName: null,
+    divisionNameEn: null,
     currentStageName: null,
     matchStartTime: null,
     matchEndTime: null,
@@ -160,6 +168,8 @@ function mapBanner(item: PublicHomeBannerResp): HomeBannerItem | null {
   return {
     id: item.bannerId,
     image,
+    title: localizedText(item.title, item.titleEn, ''),
+    subtitle: localizedText(item.subtitle, item.subtitleEn, ''),
   }
 }
 
@@ -254,12 +264,10 @@ async function loadBanners() {
   bannerError.value = ''
   try {
     const res = await getPublicHomeBanners()
-    banners.value = (res.data ?? [])
-      .map((item) => mapBanner(item))
-      .filter((item): item is HomeBannerItem => Boolean(item))
-    bannerState.value = banners.value.length ? 'success' : 'empty'
+    rawBanners.value = res.data ?? []
+    bannerState.value = rawBanners.value.some((item) => item.imageUrl?.trim()) ? 'success' : 'empty'
   } catch (err) {
-    banners.value = []
+    rawBanners.value = []
     bannerState.value = 'error'
     bannerError.value = err instanceof Error && err.message ? err.message : t('home.bannerError')
   }
@@ -328,6 +336,7 @@ async function loadCurrentEvents() {
         seasonStatus: season?.seasonStatus?.trim() || null,
         divisionId: division?.divisionId?.trim() || null,
         divisionName: division?.divisionName?.trim() || null,
+        divisionNameEn: division?.divisionNameEn?.trim() || null,
         matchStartTime: season?.matchStartTime || null,
         matchEndTime: season?.matchEndTime || null,
       }
@@ -574,7 +583,7 @@ onMounted(() => {
                   <li v-for="item in visibleNews" :key="item.announcementId">
                     <button type="button" class="news-list__item" @click="openAnnouncement(item.announcementId)">
                       <span class="news-list__icon" aria-hidden="true" />
-                      <strong>{{ displayText(item.title) }}</strong>
+                      <strong>{{ localizedText(item.title, item.titleEn, t('publicPages.announcement.untitled')) }}</strong>
                       <time>{{ formatNewsDate(item.publishTime) }}</time>
                     </button>
                   </li>
@@ -615,7 +624,7 @@ onMounted(() => {
                       <div v-if="card.seasonId" class="event-details">
                         <div v-if="card.divisionName" class="event-detail-item">
                           <img src="@/assets/icon/home/stage.png" alt="" class="event-detail-icon" />
-                          <span>{{ t('home.currentDivision', { name: card.divisionName }) }}</span>
+                          <span>{{ t('home.currentDivision', { name: localizedText(card.divisionName, card.divisionNameEn, '') }) }}</span>
                         </div>
                         <div v-if="card.seasonStatus" class="event-detail-item">
                           <img src="@/assets/icon/home/user.png" alt="" class="event-detail-icon" />

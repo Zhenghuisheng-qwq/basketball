@@ -41,8 +41,14 @@ public class BasketHomeBanner implements Serializable {
     @ApiModelProperty(value = "横幅标题")
     private String title;
 
+    @ApiModelProperty(value = "英文横幅标题")
+    private String titleEn;
+
     @ApiModelProperty(value = "横幅副标题")
     private String subtitle;
+
+    @ApiModelProperty(value = "英文横幅副标题")
+    private String subtitleEn;
 
     @JsonSerialize(using = ToStringSerializer.class)
     @ApiModelProperty(value = "图片文件主键")

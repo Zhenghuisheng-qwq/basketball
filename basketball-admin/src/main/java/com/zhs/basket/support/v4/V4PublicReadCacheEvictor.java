@@ -66,6 +66,7 @@ public class V4PublicReadCacheEvictor {
         if (event.getSeasonId() != null) {
             keys.add(PREFIX + "v4:season:" + event.getSeasonId());
             keys.add(PREFIX + "v4:division-list:" + event.getSeasonId());
+            addKeys(keys, PREFIX + "v4:season:list:*");
         }
         if (event.getStageId() != null) {
             addKeys(keys, PREFIX + "v4:stage:standings:" + event.getStageId() + "*");

@@ -21,11 +21,15 @@ public class V4PublicDivisionDetailResp {
 
     private String seasonTitle;
 
+    private String seasonTitleEn;
+
     private String seasonName;
 
     private String platformCode;
 
     private String divisionName;
+
+    private String divisionNameEn;
 
     private String registrationMode;
 

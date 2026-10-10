@@ -13,6 +13,7 @@ public class BasketDivision {
     private String platformCode;
     private String gameMode;
     private String divisionName;
+    private String divisionNameEn;
     private String registrationMode;
     private String formatType;
     private Long formatTemplateId;

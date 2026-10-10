@@ -68,8 +68,14 @@ public class BasketHonorRecord implements Serializable {
     @ApiModelProperty(value = "荣誉标题")
     private String honorTitle;
 
+    @ApiModelProperty(value = "英文荣誉标题")
+    private String honorTitleEn;
+
     @ApiModelProperty(value = "荣誉副标题")
     private String honorSubtitle;
+
+    @ApiModelProperty(value = "英文荣誉副标题")
+    private String honorSubtitleEn;
 
     @ApiModelProperty(value = "荣誉数值")
     private String honorValue;

@@ -8,9 +8,12 @@
         <result property="tournamentId" column="tournament_id"/>
         <result property="seasonId" column="season_id"/>
         <result property="title" column="title"/>
+        <result property="titleEn" column="title_en"/>
         <result property="summary" column="summary"/>
+        <result property="summaryEn" column="summary_en"/>
         <result property="coverFileId" column="cover_file_id"/>
         <result property="contentText" column="content_text"/>
+        <result property="contentTextEn" column="content_text_en"/>
         <result property="authorId" column="author_id"/>
         <result property="authorName" column="author_name"/>
         <result property="announcementStatus" column="announcement_status"/>
@@ -32,8 +35,8 @@
         select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode,
                a.tournament_id as tournamentId, a.season_id as seasonId,
                se.season_name as seasonName, tm.series_name as tournamentName,
-               a.title,
-               a.summary, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
+               a.title, a.title_en as titleEn,
+               a.summary, a.summary_en as summaryEn, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
                a.author_id as authorId, a.author_name as authorName,
                a.announcement_status as announcementStatus, a.public_scope as publicScope,
                a.is_top as isTop, a.is_important as isImportant, a.publish_time as publishTime,
@@ -48,7 +51,7 @@
     </sql>
 
     <select id="selectById" resultMap="BasketAnnouncementResult">
-        select id, announcement_no, category_code, tournament_id, season_id, title, summary, cover_file_id, content_text,
+        select id, announcement_no, category_code, tournament_id, season_id, title, title_en, summary, summary_en, cover_file_id, content_text, content_text_en,
                author_id, author_name, announcement_status, public_scope, is_top, is_important,
                publish_time, scheduled_publish_time, offline_time, superseded_by, rule_version,
                view_count, create_time, update_time, is_delete
@@ -59,9 +62,9 @@
         select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode,
                a.tournament_id as tournamentId, a.season_id as seasonId,
                se.season_name as seasonName, tm.series_name as tournamentName,
-               a.title,
-               a.summary, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
-               a.content_text as contentText, a.author_id as authorId, a.author_name as authorName,
+               a.title, a.title_en as titleEn,
+               a.summary, a.summary_en as summaryEn, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
+               a.content_text as contentText, a.content_text_en as contentTextEn, a.author_id as authorId, a.author_name as authorName,
                a.announcement_status as announcementStatus, a.public_scope as publicScope,
                a.is_top as isTop, a.is_important as isImportant, a.publish_time as publishTime,
                a.scheduled_publish_time as scheduledPublishTime,
@@ -98,12 +101,12 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_announcement (
-            announcement_no, category_code, tournament_id, season_id, title, summary, cover_file_id, content_text,
+            announcement_no, category_code, tournament_id, season_id, title, title_en, summary, summary_en, cover_file_id, content_text, content_text_en,
             author_id, author_name, announcement_status, public_scope, is_top, is_important,
             publish_time, scheduled_publish_time, offline_time, superseded_by, rule_version,
             view_count, create_time, update_time, is_delete
         ) values (
-            #{announcementNo}, #{categoryCode}, #{tournamentId}, #{seasonId}, #{title}, #{summary}, #{coverFileId}, #{contentText},
+            #{announcementNo}, #{categoryCode}, #{tournamentId}, #{seasonId}, #{title}, #{titleEn}, #{summary}, #{summaryEn}, #{coverFileId}, #{contentText}, #{contentTextEn},
             #{authorId}, #{authorName}, #{announcementStatus}, #{publicScope}, #{isTop}, #{isImportant},
             #{publishTime}, #{scheduledPublishTime}, #{offlineTime}, #{supersededBy}, #{ruleVersion},
             #{viewCount}, #{createTime}, #{updateTime}, #{isDelete}
@@ -117,9 +120,12 @@
             <if test="tournamentId != null">tournament_id = #{tournamentId},</if>
             <if test="seasonId != null">season_id = #{seasonId},</if>
             <if test="title != null">title = #{title},</if>
+            <if test="titleEn != null">title_en = #{titleEn},</if>
             <if test="summary != null">summary = #{summary},</if>
+            <if test="summaryEn != null">summary_en = #{summaryEn},</if>
             <if test="coverFileId != null">cover_file_id = #{coverFileId},</if>
             <if test="contentText != null">content_text = #{contentText},</if>
+            <if test="contentTextEn != null">content_text_en = #{contentTextEn},</if>
             <if test="publicScope != null">public_scope = #{publicScope},</if>
             <if test="isImportant != null">is_important = #{isImportant},</if>
             <if test="announcementStatus != null">announcement_status = #{announcementStatus},</if>
@@ -168,8 +174,8 @@
         select a.id, a.announcement_no as announcementNo, a.category_code as categoryCode,
                a.tournament_id as tournamentId, a.season_id as seasonId,
                se.season_name as seasonName, tm.series_name as tournamentName,
-               a.title, a.summary, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
-               a.content_text as contentText, a.author_id as authorId, a.author_name as authorName,
+               a.title, a.title_en as titleEn, a.summary, a.summary_en as summaryEn, a.cover_file_id as coverFileId, cf.access_url as coverUrl,
+               a.content_text as contentText, a.content_text_en as contentTextEn, a.author_id as authorId, a.author_name as authorName,
                a.announcement_status as announcementStatus, a.public_scope as publicScope,
                a.is_top as isTop, a.is_important as isImportant, a.publish_time as publishTime,
                a.scheduled_publish_time as scheduledPublishTime,

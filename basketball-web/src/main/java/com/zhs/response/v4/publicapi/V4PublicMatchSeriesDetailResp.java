@@ -58,9 +58,13 @@ public class V4PublicMatchSeriesDetailResp {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long seasonId;
     private String seasonName;
+
+    private String seasonNameEn;
     private String eventSeriesCode;
     private String eventSeriesName;
     private String divisionName;
+
+    private String divisionNameEn;
     private String gameMode;
     private List<V4PublicMatchSeriesGameResp> games;
     private List<V4PublicMatchTeamStatItemResp> teamStats;

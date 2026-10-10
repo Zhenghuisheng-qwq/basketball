@@ -26,7 +26,7 @@ import type {
   V4SeasonDetailTab,
 } from '@/api/types/v4Public'
 import SafeImage from '@/components/common/SafeImage.vue'
-import { displayText, formatDateTime, formatDecimal, initials } from '@/utils/publicDisplay'
+import { displayText, formatDateTime, formatDecimal, initials, localizedText } from '@/utils/publicDisplay'
 import {
   formatScore,
   formatSeriesSetScore,
@@ -341,8 +341,8 @@ onMounted(() => {
         <div v-else-if="error" class="v4-state v4-state--error">{{ error }}</div>
         <template v-else-if="season">
           <p class="v4-events-hero__eyebrow">{{ v4SeriesLabel(season.seriesCode) }} · {{ season.seasonYear }}</p>
-          <h1 class="v4-events-hero__title">{{ displayText(season.displayTitle) }}</h1>
-          <p class="v4-events-hero__desc">{{ displayText(season.description, t('eventsPage.detail.noIntro')) }}</p>
+          <h1 class="v4-events-hero__title">{{ localizedText(season.displayTitle, season.displayTitleEn) }}</h1>
+          <p class="v4-events-hero__desc">{{ localizedText(season.description, season.descriptionEn, t('eventsPage.detail.noIntro')) }}</p>
           <div class="v4-season-card__tags">
             <span class="v4-tag">{{ v4SeasonStatusLabel(season.seasonStatus) }}</span>
             <span class="v4-tag">{{ t('eventsPage.count.teamTag', { count: season.eventTeamCount ?? 0 }) }}</span>
@@ -405,7 +405,7 @@ onMounted(() => {
           </div>
           <div class="v4-overview-item">
             <dt>{{ t('eventsPage.detail.currentDivision') }}</dt>
-            <dd>{{ displayText(currentDivision?.divisionName, v4PlatformLabel(currentDivision?.platformCode)) }}</dd>
+            <dd>{{ localizedText(currentDivision?.divisionName, currentDivision?.divisionNameEn, v4PlatformLabel(currentDivision?.platformCode)) }}</dd>
           </div>
         </div>
 

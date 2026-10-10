@@ -31,8 +31,14 @@ public class PublicAnnouncementItemResp implements Serializable {
     @ApiModelProperty("标题")
     private String title;
 
+    @ApiModelProperty("英文标题")
+    private String titleEn;
+
     @ApiModelProperty("摘要")
     private String summary;
+
+    @ApiModelProperty("英文摘要")
+    private String summaryEn;
 
     @ApiModelProperty("封面 URL")
     private String coverUrl;

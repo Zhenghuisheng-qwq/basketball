@@ -14,6 +14,8 @@ public class V4PublicDivisionBriefResp {
 
     private String divisionName;
 
+    private String divisionNameEn;
+
     private String divisionStatus;
 
     private Integer maxTeamCount;

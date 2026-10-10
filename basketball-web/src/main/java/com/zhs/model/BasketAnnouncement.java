@@ -52,8 +52,14 @@ public class BasketAnnouncement implements Serializable {
     @ApiModelProperty(value = "公告标题")
     private String title;
 
+    @ApiModelProperty(value = "英文公告标题")
+    private String titleEn;
+
     @ApiModelProperty(value = "公告摘要")
     private String summary;
+
+    @ApiModelProperty(value = "英文公告摘要")
+    private String summaryEn;
 
     @JsonSerialize(using = ToStringSerializer.class)
     @ApiModelProperty(value = "封面文件主键")
@@ -62,6 +68,9 @@ public class BasketAnnouncement implements Serializable {
 
     @ApiModelProperty(value = "公告正文")
     private Object contentText;
+
+    @ApiModelProperty(value = "英文公告正文")
+    private String contentTextEn;
 
     @JsonSerialize(using = ToStringSerializer.class)
     @ApiModelProperty(value = "发布人主键")

@@ -44,10 +44,14 @@ public class V4PublicEventTeamItemResp {
 
     private String divisionName;
 
+    private String divisionNameEn;
+
     @JsonSerialize(using = ToStringSerializer.class)
     private Long seasonId;
 
     private String seasonName;
+
+    private String seasonNameEn;
 
     private String seriesCode;
 

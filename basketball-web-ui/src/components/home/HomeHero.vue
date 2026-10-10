@@ -8,6 +8,8 @@ const { t } = useI18n()
 export interface HomeHeroBanner {
   id: string
   image: string
+  title?: string
+  subtitle?: string
 }
 
 const props = defineProps<{
@@ -42,7 +44,7 @@ function nextBanner() {
         <img
           class="home-hero__image"
           :src="backgroundImage"
-          :alt="t('home.heroAlt')"
+          :alt="activeBanner?.title || t('home.heroAlt')"
           fetchpriority="high"
           draggable="false"
         />
@@ -54,6 +56,10 @@ function nextBanner() {
           draggable="false"
         />
         <h1 id="home-hero-title" class="home-hero__sr-only">CNPA</h1>
+        <p v-if="activeBanner?.title || activeBanner?.subtitle" class="home-hero__caption">
+          <strong v-if="activeBanner?.title">{{ activeBanner.title }}</strong>
+          <span v-if="activeBanner?.subtitle">{{ activeBanner.subtitle }}</span>
+        </p>
 
         <div
           v-if="props.banners.length > 1"

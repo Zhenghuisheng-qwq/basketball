@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
+import { localizedText } from '@/utils/publicDisplay'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { pickCompetitionSeriesCode, resolveCompetitionTheme } from '@/config/competitionTheme'
@@ -22,10 +23,11 @@ const seriesCode = computed(() => {
   )
 })
 const aboutTheme = computed(() => resolveCompetitionTheme(seriesCode.value))
-const description = computed(() => {
-  const value = ctx?.overview.value?.description
-  return typeof value === 'string' ? value.trim() : ''
-})
+const description = computed(() => localizedText(
+  ctx?.seasonDetail.value?.description,
+  ctx?.seasonDetail.value?.descriptionEn,
+  '',
+))
 </script>
 <template>
   <section class="site-section site-section--dark league-about" :aria-label="aboutLabel">

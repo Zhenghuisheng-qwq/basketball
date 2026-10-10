@@ -15,7 +15,9 @@ public class AnnouncementListResp {
     private Long seasonId;
     private String seasonName;
     private String title;
+    private String titleEn;
     private String summary;
+    private String summaryEn;
     private Long coverFileId;
     private String coverUrl;
     private Long authorId;

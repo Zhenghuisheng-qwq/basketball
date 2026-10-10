@@ -5,8 +5,11 @@
         <id property="id" column="id"/>
         <result property="platformCode" column="platform_code"/>
         <result property="title" column="title"/>
+        <result property="titleEn" column="title_en"/>
         <result property="subtitle" column="subtitle"/>
+        <result property="subtitleEn" column="subtitle_en"/>
         <result property="buttonText" column="button_text"/>
+        <result property="buttonTextEn" column="button_text_en"/>
         <result property="jumpUrl" column="jump_url"/>
         <result property="sortOrder" column="sort_order"/>
         <result property="status" column="status"/>
@@ -16,15 +19,15 @@
     </resultMap>
 
     <select id="selectById" resultMap="BasketSiteSocialLinkResult">
-        select id, platform_code, title, subtitle, button_text, jump_url, sort_order, status,
+        select id, platform_code, title, title_en, subtitle, subtitle_en, button_text, button_text_en, jump_url, sort_order, status,
                create_time, update_time, is_delete
         from basket_site_social_link
         where id = #{id} and is_delete = 0
     </select>
 
     <select id="selectList" resultType="com.zhs.basket.resp.SiteSocialLinkListResp">
-        select id, platform_code as platformCode, title, subtitle,
-               button_text as buttonText, jump_url as jumpUrl, sort_order as sortOrder,
+        select id, platform_code as platformCode, title, title_en as titleEn, subtitle, subtitle_en as subtitleEn,
+               button_text as buttonText, button_text_en as buttonTextEn, jump_url as jumpUrl, sort_order as sortOrder,
                status, create_time as createTime, update_time as updateTime
         from basket_site_social_link
         where is_delete = 0
@@ -35,8 +38,11 @@
         update basket_site_social_link
         <set>
             <if test="title != null">title = #{title},</if>
+            <if test="titleEn != null">title_en = #{titleEn},</if>
             <if test="subtitle != null">subtitle = #{subtitle},</if>
+            <if test="subtitleEn != null">subtitle_en = #{subtitleEn},</if>
             <if test="buttonText != null">button_text = #{buttonText},</if>
+            <if test="buttonTextEn != null">button_text_en = #{buttonTextEn},</if>
             jump_url = #{jumpUrl},
             <if test="sortOrder != null">sort_order = #{sortOrder},</if>
             <if test="status != null">status = #{status},</if>

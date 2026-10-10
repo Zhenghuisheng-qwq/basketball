@@ -12,7 +12,9 @@ public class HonorRecordEditReq {
     private Long playerId;
     private Long matchId;
     private String honorTitle;
+    private String honorTitleEn;
     private String honorSubtitle;
+    private String honorSubtitleEn;
     private String honorValue;
     private Date awardDate;
     private Long coverFileId;

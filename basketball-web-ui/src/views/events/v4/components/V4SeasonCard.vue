@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { V4PublicSeasonItem } from '@/api/types/v4Public'
-import { displayText, formatDateTime } from '@/utils/publicDisplay'
+import { displayText, formatDateTime, localizedText } from '@/utils/publicDisplay'
 import {
   isSeasonRegistrationOpen,
   v4GameModeLabel,
@@ -29,7 +29,11 @@ const coverUrl = computed(() => props.season.bannerUrl || props.season.coverUrl 
 const showCover = computed(() => Boolean(coverUrl.value?.trim()) && !imageFailed.value)
 
 const displayTitle = computed(() =>
-  displayText(props.season.displayTitle, displayText(props.season.seasonName, t('eventsPage.list.unnamedSeason'))),
+  localizedText(
+    props.season.displayTitle,
+    props.season.displayTitleEn,
+    displayText(props.season.seasonName, t('eventsPage.list.unnamedSeason')),
+  ),
 )
 
 const secondaryTitle = computed(() => {

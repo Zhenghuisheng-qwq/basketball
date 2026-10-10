@@ -14,6 +14,8 @@ public class V4PublicDivisionListItemResp {
 
     private String divisionName;
 
+    private String divisionNameEn;
+
     private String platformCode;
 
     private String gameMode;

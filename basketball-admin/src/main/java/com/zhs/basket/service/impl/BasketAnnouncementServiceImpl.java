@@ -89,9 +89,12 @@ public class BasketAnnouncementServiceImpl implements IBasketAnnouncementService
         announcement.setCategoryCode(category.getCode());
         applyRuleMetadata(announcement, req.getTournamentId(), req.getSeasonId(), req.getRuleVersion());
         announcement.setTitle(req.getTitle().trim());
+        announcement.setTitleEn(req.getTitleEn());
         announcement.setSummary(req.getSummary());
+        announcement.setSummaryEn(req.getSummaryEn());
         announcement.setCoverFileId(req.getCoverFileId());
         announcement.setContentText(content);
+        announcement.setContentTextEn(ContentTextSanitizer.optionalPlainText(req.getContentTextEn()));
         try {
             announcement.setAuthorId(SecurityUtils.getUserId());
             announcement.setAuthorName(SecurityUtils.getUsername());
@@ -138,14 +141,23 @@ public class BasketAnnouncementServiceImpl implements IBasketAnnouncementService
         if (req.getTitle() != null) {
             existing.setTitle(req.getTitle().trim());
         }
+        if (req.getTitleEn() != null) {
+            existing.setTitleEn(req.getTitleEn());
+        }
         if (req.getSummary() != null) {
             existing.setSummary(req.getSummary());
+        }
+        if (req.getSummaryEn() != null) {
+            existing.setSummaryEn(req.getSummaryEn());
         }
         if (req.getCoverFileId() != null) {
             existing.setCoverFileId(req.getCoverFileId());
         }
         if (req.getContentText() != null) {
             existing.setContentText(ContentTextSanitizer.requirePlainText(req.getContentText()));
+        }
+        if (req.getContentTextEn() != null) {
+            existing.setContentTextEn(ContentTextSanitizer.optionalPlainText(req.getContentTextEn()));
         }
         if (req.getPublicScope() != null) {
             existing.setPublicScope(req.getPublicScope());

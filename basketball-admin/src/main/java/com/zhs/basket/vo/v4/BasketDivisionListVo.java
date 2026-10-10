@@ -16,6 +16,7 @@ public class BasketDivisionListVo {
     private String gameModeName;
     private String platformName;
     private String divisionName;
+    private String divisionNameEn;
     private String registrationMode;
     private String registrationModeName;
     private String formatType;

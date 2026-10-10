@@ -98,6 +98,9 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         BasketDivision entity = new BasketDivision();
         BeanUtils.copyBeanProp(entity, req);
         entity.setDivisionName(req.getDivisionName().trim());
+        if (req.getDivisionNameEn() != null) {
+            entity.setDivisionNameEn(req.getDivisionNameEn().trim());
+        }
         entity.setRegistrationMode(resolveRegistrationMode(req.getRegistrationMode()));
         entity.setFormatType(StringUtils.isNotEmpty(req.getFormatType())
                 ? req.getFormatType() : FormatTypeEnum.REGULAR_ROUND_ROBIN.getCode());
@@ -234,6 +237,9 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         if (req.getDivisionName() != null) {
             division.setDivisionName(req.getDivisionName().trim());
         }
+        if (req.getDivisionNameEn() != null) {
+            division.setDivisionNameEn(req.getDivisionNameEn().trim());
+        }
         if (req.getRegistrationMode() != null && !req.getRegistrationMode().equals(division.getRegistrationMode())) {
             ruleMutableSpecification.assertCanChangeKeyFields(division);
             validateRegistrationModeWritable(req.getRegistrationMode());
@@ -313,6 +319,9 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         }
         if (req.getDivisionName() != null) {
             division.setDivisionName(req.getDivisionName().trim());
+        }
+        if (req.getDivisionNameEn() != null) {
+            division.setDivisionNameEn(req.getDivisionNameEn().trim());
         }
         if (req.getMaxTeamCount() != null) {
             division.setMaxTeamCount(req.getMaxTeamCount());

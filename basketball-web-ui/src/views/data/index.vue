@@ -9,7 +9,7 @@ import {
   getV4PublicTeamStat,
 } from '@/api/v4Public'
 import type { V4PublicPlayerStatItem, V4PublicTeamStatItem } from '@/api/types/v4Public'
-import { displayText, toNumber } from '@/utils/publicDisplay'
+import { displayText, localizedText, toNumber } from '@/utils/publicDisplay'
 import { v4PlatformLabel, v4SeriesLabel } from '@/utils/v4Display'
 import DataHero from './components/DataHero.vue'
 import DataTypeTabs from './components/DataTypeTabs.vue'
@@ -25,7 +25,7 @@ import type {
 
 const route = useRoute()
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const activeDataType = ref<DataType>('team')
 const activeStatisticType = ref<StatisticType>('average')
@@ -161,9 +161,9 @@ async function loadSeasons() {
         if (!division.divisionId) continue
         groupMap.get(seasonKey)!.tournaments.push({
           id: division.divisionId,
-          name: displayText(division.divisionName, division.divisionId),
+          name: localizedText(division.divisionName, division.divisionNameEn, division.divisionId),
           season: seasonKey,
-          label: `${v4SeriesLabel(season.seriesCode)} · ${displayText(season.displayTitle)} · ${v4PlatformLabel(division.platformCode)}`,
+          label: `${v4SeriesLabel(season.seriesCode)} · ${localizedText(season.displayTitle, season.displayTitleEn)} · ${v4PlatformLabel(division.platformCode)}`,
         })
       }
     }
@@ -275,6 +275,10 @@ watch(
     void loadSeasons()
   },
 )
+
+watch(locale, () => {
+  void loadSeasons()
+})
 
 onMounted(async () => {
   applyRouteQuery()

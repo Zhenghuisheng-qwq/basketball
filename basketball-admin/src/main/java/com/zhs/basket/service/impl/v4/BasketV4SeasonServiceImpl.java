@@ -106,6 +106,12 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
             if (req.getDisplayTitle() != null) {
                 season.setDisplayTitle(req.getDisplayTitle());
             }
+            if (req.getDisplayTitleEn() != null) {
+                season.setDisplayTitleEn(req.getDisplayTitleEn());
+            }
+            if (req.getDescriptionEn() != null) {
+                season.setDescriptionEn(req.getDescriptionEn());
+            }
             if (req.getCoverFileId() != null) {
                 season.setCoverFileId(req.getCoverFileId());
             }
@@ -132,8 +138,14 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
             if (req.getDisplayTitle() != null) {
                 season.setDisplayTitle(req.getDisplayTitle());
             }
+            if (req.getDisplayTitleEn() != null) {
+                season.setDisplayTitleEn(req.getDisplayTitleEn());
+            }
             if (req.getDescription() != null) {
                 season.setDescription(req.getDescription());
+            }
+            if (req.getDescriptionEn() != null) {
+                season.setDescriptionEn(req.getDescriptionEn());
             }
             if (req.getCoverFileId() != null) {
                 season.setCoverFileId(req.getCoverFileId());

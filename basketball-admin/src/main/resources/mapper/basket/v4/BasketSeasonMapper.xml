@@ -8,7 +8,9 @@
         <result property="seasonYear" column="season_year" />
         <result property="seasonName" column="season_name" />
         <result property="displayTitle" column="display_title" />
+        <result property="displayTitleEn" column="display_title_en" />
         <result property="description" column="description" />
+        <result property="descriptionEn" column="description_en" />
         <result property="coverFileId" column="cover_file_id" />
         <result property="bannerFileId" column="banner_file_id" />
         <result property="seasonStartTime" column="match_start_time" />
@@ -28,7 +30,9 @@
         <result property="seasonYear" column="season_year" />
         <result property="seasonName" column="season_name" />
         <result property="displayTitle" column="display_title" />
+        <result property="displayTitleEn" column="display_title_en" />
         <result property="description" column="description" />
+        <result property="descriptionEn" column="description_en" />
         <result property="coverFileId" column="cover_file_id" />
         <result property="bannerFileId" column="banner_file_id" />
         <result property="coverUrl" column="cover_url" />
@@ -42,7 +46,7 @@
         <result property="updateTime" column="update_time" />
     </resultMap>
 
-    <sql id="BaseColumns">id, series_id, season_year, season_name, display_title, description, cover_file_id, banner_file_id, match_start_time, match_end_time, publish_status, season_status, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, series_id, season_year, season_name, display_title, display_title_en, description, description_en, cover_file_id, banner_file_id, match_start_time, match_end_time, publish_status, season_status, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketSeasonResult">
         select <include refid="BaseColumns" /> from basket_season
@@ -58,7 +62,9 @@
             se.season_year,
             se.season_name,
             se.display_title,
+            se.display_title_en,
             se.description,
+            se.description_en,
             se.cover_file_id,
             se.banner_file_id,
             cf.access_url as cover_url,
@@ -103,11 +109,11 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_season (
-            series_id, season_year, season_name, display_title, description,
+            series_id, season_year, season_name, display_title, display_title_en, description, description_en,
             cover_file_id, banner_file_id, match_start_time, match_end_time,
             publish_status, season_status, create_time, update_time, is_delete
         ) values (
-            #{seriesId}, #{seasonYear}, #{seasonName}, #{displayTitle}, #{description},
+            #{seriesId}, #{seasonYear}, #{seasonName}, #{displayTitle}, #{displayTitleEn}, #{description}, #{descriptionEn},
             #{coverFileId}, #{bannerFileId}, #{seasonStartTime}, #{seasonEndTime},
             #{publishStatus}, #{seasonStatus}, #{createTime}, #{updateTime}, #{isDelete}
         )
@@ -120,7 +126,9 @@
             <if test="seasonYear != null">season_year = #{seasonYear},</if>
             <if test="seasonName != null">season_name = #{seasonName},</if>
             <if test="displayTitle != null">display_title = #{displayTitle},</if>
+            <if test="displayTitleEn != null">display_title_en = #{displayTitleEn},</if>
             <if test="description != null">description = #{description},</if>
+            <if test="descriptionEn != null">description_en = #{descriptionEn},</if>
             <if test="coverFileId != null">cover_file_id = #{coverFileId},</if>
             <if test="bannerFileId != null">banner_file_id = #{bannerFileId},</if>
             <if test="seasonStartTime != null">match_start_time = #{seasonStartTime},</if>

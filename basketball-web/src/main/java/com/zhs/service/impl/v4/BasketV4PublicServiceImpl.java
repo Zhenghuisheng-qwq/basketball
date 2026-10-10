@@ -118,6 +118,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             V4PublicDivisionListItemResp item = new V4PublicDivisionListItemResp();
             item.setDivisionId(division.getId());
             item.setDivisionName(division.getDivisionName());
+            item.setDivisionNameEn(division.getDivisionNameEn());
             item.setPlatformCode(division.getPlatformCode());
             item.setGameMode(division.getGameMode());
             item.setRegistrationMode(division.getRegistrationMode());
@@ -283,9 +284,11 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         resp.setSeriesCode(series != null ? series.getSeriesCode() : null);
         resp.setSeriesName(series != null ? series.getSeriesName() : null);
         resp.setSeasonTitle(season != null ? resolveSeasonTitle(season) : null);
+        resp.setSeasonTitleEn(season != null ? season.getDisplayTitleEn() : null);
         resp.setSeasonName(season != null ? resolveSeasonTitle(season) : null);
         resp.setPlatformCode(division.getPlatformCode());
         resp.setDivisionName(division.getDivisionName());
+        resp.setDivisionNameEn(division.getDivisionNameEn());
         resp.setRegistrationMode(division.getRegistrationMode());
         resp.setFormatType(division.getFormatType());
         resp.setMaxTeamCount(division.getMaxTeamCount());
@@ -970,6 +973,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             vo.setDivisionId(division.getId());
             vo.setPlatformCode(division.getPlatformCode());
             vo.setDivisionName(division.getDivisionName());
+            vo.setDivisionNameEn(division.getDivisionNameEn());
             vo.setDivisionStatus(division.getDivisionStatus());
             vo.setMaxTeamCount(division.getMaxTeamCount());
             vo.setLineupMinCount(division.getLineupMinCount());
@@ -991,7 +995,9 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         vo.setSeasonYear(season.getSeasonYear());
         vo.setSeasonName(season.getSeasonName());
         vo.setDisplayTitle(resolveSeasonTitle(season));
+        vo.setDisplayTitleEn(season.getDisplayTitleEn());
         vo.setDescription(season.getDescription());
+        vo.setDescriptionEn(season.getDescriptionEn());
         vo.setCoverFileId(season.getCoverFileId());
         vo.setCoverUrl(urlMap.get(season.getCoverFileId()));
         vo.setBannerFileId(season.getBannerFileId());
@@ -1061,7 +1067,9 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         resp.setSeasonYear(season.getSeasonYear());
         resp.setSeasonName(season.getSeasonName());
         resp.setDisplayTitle(resolveSeasonTitle(season));
+        resp.setDisplayTitleEn(season.getDisplayTitleEn());
         resp.setDescription(season.getDescription());
+        resp.setDescriptionEn(season.getDescriptionEn());
         resp.setCoverFileId(season.getCoverFileId());
         resp.setCoverUrl(urlMap.get(season.getCoverFileId()));
         resp.setBannerFileId(season.getBannerFileId());
@@ -1247,6 +1255,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         }
         vo.setDivisionId(division.getId());
         vo.setDivisionName(division.getDivisionName());
+        vo.setDivisionNameEn(division.getDivisionNameEn());
         vo.setPlatformCode(division.getPlatformCode() != null ? division.getPlatformCode() : team.getPlatformCode());
         vo.setGameMode(division.getGameMode());
         BasketSeason season = seasonDao.selectById(division.getSeasonId());
@@ -1255,6 +1264,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         }
         vo.setSeasonId(season.getId());
         vo.setSeasonName(resolveSeasonTitle(season));
+        vo.setSeasonNameEn(season.getDisplayTitleEn());
         BasketSeries series = seriesDao.selectById(season.getSeriesId());
         if (series != null) {
             vo.setSeriesCode(series.getSeriesCode());
@@ -1536,6 +1546,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             return;
         }
         detail.setDivisionName(division.getDivisionName());
+        detail.setDivisionNameEn(division.getDivisionNameEn());
         detail.setGameMode(division.getGameMode());
         BasketSeason season = seasonDao.selectById(division.getSeasonId());
         if (season == null || !Objects.equals(season.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
@@ -1543,6 +1554,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         }
         detail.setSeasonId(season.getId());
         detail.setSeasonName(StringUtils.hasText(season.getDisplayTitle()) ? season.getDisplayTitle() : season.getSeasonName());
+        detail.setSeasonNameEn(season.getDisplayTitleEn());
         if (season.getSeriesId() == null) {
             return;
         }
@@ -1638,6 +1650,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                                                              BasketSeason season) {
         if (season != null && Objects.equals(season.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
             resp.setSeasonName(StringUtils.hasText(season.getDisplayTitle()) ? season.getDisplayTitle() : season.getSeasonName());
+            resp.setSeasonNameEn(season.getDisplayTitleEn());
             resp.setSeriesId(season.getSeriesId());
             if (season.getSeriesId() != null) {
                 BasketSeries series = seriesDao.selectById(season.getSeriesId());
@@ -1650,6 +1663,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         BasketDivision division = divisionDao.selectById(match.getDivisionId());
         if (division != null && Objects.equals(division.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
             resp.setDivisionName(division.getDivisionName());
+            resp.setDivisionNameEn(division.getDivisionNameEn());
             resp.setGameMode(division.getGameMode());
         }
         List<V4PublicStageItemResp> stages = List.of();

@@ -61,7 +61,9 @@ public class BasketPublicBannerServiceImpl implements IBasketPublicBannerService
             PublicHomeBannerResp vo = new PublicHomeBannerResp();
             vo.setBannerId(item.getId());
             vo.setTitle(item.getTitle());
+            vo.setTitleEn(item.getTitleEn());
             vo.setSubtitle(item.getSubtitle());
+            vo.setSubtitleEn(item.getSubtitleEn());
             vo.setImageUrl(urlMap.get(item.getImageFileId()));
             vo.setPositionCode(item.getPositionCode());
             vo.setTargetType(item.getTargetType());

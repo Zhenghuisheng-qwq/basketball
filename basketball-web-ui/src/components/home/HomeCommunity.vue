@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getPublicSocialLinks } from '@/api/publicSite'
+import type { PublicSocialLinkResp } from '@/api/types/public'
 import { isSafeHttpUrl, SOCIAL_PLATFORM_ICONS } from '@/constants/communityLinks'
+import { localizedText } from '@/utils/publicDisplay'
 
 const { t } = useI18n()
 
@@ -17,30 +19,30 @@ type CommunityCard = {
   clickable: boolean
 }
 
-const cards = ref<CommunityCard[]>([])
+const rawLinks = ref<PublicSocialLinkResp[]>([])
+const cards = computed<CommunityCard[]>(() => rawLinks.value
+  .filter((item) => item.platformCode && SOCIAL_PLATFORM_ICONS[item.platformCode])
+  .map((item) => {
+    const url = item.jumpUrl?.trim() || ''
+    const clickable = isSafeHttpUrl(url)
+    return {
+      id: String(item.id),
+      platformCode: item.platformCode,
+      title: localizedText(item.title, item.titleEn, ''),
+      description: localizedText(item.subtitle, item.subtitleEn, ''),
+      action: localizedText(item.buttonText, item.buttonTextEn, ''),
+      url: clickable ? url : '',
+      icon: SOCIAL_PLATFORM_ICONS[item.platformCode],
+      clickable,
+    }
+  }))
 
 onMounted(async () => {
   try {
     const res = await getPublicSocialLinks()
-    const list = res.data || []
-    cards.value = list
-      .filter((item) => item.platformCode && SOCIAL_PLATFORM_ICONS[item.platformCode])
-      .map((item) => {
-        const url = item.jumpUrl?.trim() || ''
-        const clickable = isSafeHttpUrl(url)
-        return {
-          id: String(item.id),
-          platformCode: item.platformCode,
-          title: item.title || '',
-          description: item.subtitle || '',
-          action: item.buttonText || '',
-          url: clickable ? url : '',
-          icon: SOCIAL_PLATFORM_ICONS[item.platformCode],
-          clickable,
-        }
-      })
+    rawLinks.value = res.data || []
   } catch {
-    cards.value = []
+    rawLinks.value = []
   }
 })
 

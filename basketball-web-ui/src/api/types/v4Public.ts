@@ -2,6 +2,7 @@ export interface V4PublicDivisionBrief {
   divisionId: string
   platformCode: string
   divisionName: string
+  divisionNameEn?: string | null
   divisionStatus: string
   maxTeamCount?: number
   lineupMinCount?: number
@@ -31,7 +32,9 @@ export interface V4PublicSeasonItem {
   seasonYear?: number
   seasonName?: string
   displayTitle: string
+  displayTitleEn?: string | null
   description?: string
+  descriptionEn?: string | null
   coverFileId?: string
   coverUrl?: string
   bannerFileId?: string
@@ -65,9 +68,11 @@ export interface V4PublicDivisionDetail {
   seriesCode?: string
   seriesName?: string
   seasonTitle?: string
+  seasonTitleEn?: string | null
   seasonName?: string
   platformCode: string
   divisionName: string
+  divisionNameEn?: string | null
   registrationMode?: string
   formatType?: string
   maxTeamCount?: number
@@ -100,8 +105,10 @@ export interface V4PublicEventTeamItem {
   temporaryTeam?: boolean
   divisionId?: string
   divisionName?: string
+  divisionNameEn?: string | null
   seasonId?: string
   seasonName?: string
+  seasonNameEn?: string | null
   seriesCode?: string
   seriesName?: string
   gameMode?: string

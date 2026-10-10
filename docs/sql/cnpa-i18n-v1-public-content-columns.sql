@@ -64,4 +64,46 @@ CALL cnpa_i18n_add_column(
   'ALTER TABLE `basket_announcement` ADD COLUMN `content_text_en` LONGTEXT NULL COMMENT ''英文公告正文'' AFTER `content_text`'
 );
 
+CALL cnpa_i18n_add_column(
+  'basket_home_banner',
+  'title_en',
+  'ALTER TABLE `basket_home_banner` ADD COLUMN `title_en` VARCHAR(256) NULL COMMENT ''英文横幅标题'' AFTER `title`'
+);
+
+CALL cnpa_i18n_add_column(
+  'basket_home_banner',
+  'subtitle_en',
+  'ALTER TABLE `basket_home_banner` ADD COLUMN `subtitle_en` VARCHAR(500) NULL COMMENT ''英文横幅副标题'' AFTER `subtitle`'
+);
+
+CALL cnpa_i18n_add_column(
+  'basket_site_social_link',
+  'title_en',
+  'ALTER TABLE `basket_site_social_link` ADD COLUMN `title_en` VARCHAR(64) NULL COMMENT ''英文入口标题'' AFTER `title`'
+);
+
+CALL cnpa_i18n_add_column(
+  'basket_site_social_link',
+  'subtitle_en',
+  'ALTER TABLE `basket_site_social_link` ADD COLUMN `subtitle_en` VARCHAR(128) NULL COMMENT ''英文入口描述'' AFTER `subtitle`'
+);
+
+CALL cnpa_i18n_add_column(
+  'basket_site_social_link',
+  'button_text_en',
+  'ALTER TABLE `basket_site_social_link` ADD COLUMN `button_text_en` VARCHAR(32) NULL COMMENT ''英文按钮文案'' AFTER `button_text`'
+);
+
+CALL cnpa_i18n_add_column(
+  'basket_honor_record',
+  'honor_title_en',
+  'ALTER TABLE `basket_honor_record` ADD COLUMN `honor_title_en` VARCHAR(256) NULL COMMENT ''英文荣誉标题'' AFTER `honor_title`'
+);
+
+CALL cnpa_i18n_add_column(
+  'basket_honor_record',
+  'honor_subtitle_en',
+  'ALTER TABLE `basket_honor_record` ADD COLUMN `honor_subtitle_en` VARCHAR(256) NULL COMMENT ''英文荣誉副标题'' AFTER `honor_subtitle`'
+);
+
 DROP PROCEDURE IF EXISTS cnpa_i18n_add_column;

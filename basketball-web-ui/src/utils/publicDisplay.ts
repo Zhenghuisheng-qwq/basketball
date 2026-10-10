@@ -1,9 +1,19 @@
-import { translate } from '@/i18n'
+import { i18n, translate } from '@/i18n'
 
 export function displayText(value: unknown, fallback = '--'): string {
   if (value === null || value === undefined) return fallback
   const text = String(value).trim()
   return text === '' ? fallback : text
+}
+
+export function localizedText(primary: unknown, english: unknown, fallback = '--'): string {
+  const locale = i18n.global.locale
+  const current = typeof locale === 'string' ? locale : locale.value
+  if (current === 'en-US') {
+    const translated = displayText(english, '')
+    if (translated) return translated
+  }
+  return displayText(primary, fallback)
 }
 
 export function displayNumber(value: unknown, fallback = '0'): string {

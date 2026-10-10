@@ -13,7 +13,9 @@ public class BasketSeason {
     private Integer seasonYear;
     private String seasonName;
     private String displayTitle;
+    private String displayTitleEn;
     private String description;
+    private String descriptionEn;
     private Long coverFileId;
     private Long bannerFileId;
     /** 赛季展示周期开始（DB: match_start_time） */

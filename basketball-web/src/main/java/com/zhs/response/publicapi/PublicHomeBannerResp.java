@@ -19,8 +19,14 @@ public class PublicHomeBannerResp implements Serializable {
     @ApiModelProperty("标题")
     private String title;
 
+    @ApiModelProperty("英文标题")
+    private String titleEn;
+
     @ApiModelProperty("副标题")
     private String subtitle;
+
+    @ApiModelProperty("英文副标题")
+    private String subtitleEn;
 
     @ApiModelProperty("图片 URL")
     private String imageUrl;

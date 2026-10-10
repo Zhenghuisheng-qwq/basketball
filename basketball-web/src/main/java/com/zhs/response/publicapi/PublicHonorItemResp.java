@@ -33,6 +33,9 @@ public class PublicHonorItemResp implements Serializable {
     @ApiModelProperty("赛季名称")
     private String seasonName;
 
+    @ApiModelProperty("英文赛季展示名")
+    private String seasonNameEn;
+
     @ApiModelProperty("荣誉编码")
     private String honorCode;
 
@@ -68,8 +71,14 @@ public class PublicHonorItemResp implements Serializable {
     @ApiModelProperty("荣誉标题")
     private String honorTitle;
 
+    @ApiModelProperty("英文荣誉标题")
+    private String honorTitleEn;
+
     @ApiModelProperty("荣誉副标题")
     private String honorSubtitle;
+
+    @ApiModelProperty("英文荣誉副标题")
+    private String honorSubtitleEn;
 
     @ApiModelProperty("荣誉数值")
     private String honorValue;

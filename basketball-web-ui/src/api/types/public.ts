@@ -129,8 +129,11 @@ export interface PublicSocialLinkResp {
   id: string
   platformCode: string
   title?: string | null
+  titleEn?: string | null
   subtitle?: string | null
+  subtitleEn?: string | null
   buttonText?: string | null
+  buttonTextEn?: string | null
   jumpUrl?: string | null
   sortOrder?: number | null
 }
@@ -138,7 +141,9 @@ export interface PublicSocialLinkResp {
 export interface PublicHomeBannerResp {
   bannerId: string
   title?: string | null
+  titleEn?: string | null
   subtitle?: string | null
+  subtitleEn?: string | null
   imageUrl?: string | null
   positionCode?: string | null
   targetType?: string | null
@@ -157,7 +162,9 @@ export interface PublicAnnouncementItemResp {
   categoryCode?: string | null
   categoryName?: string | null
   title?: string | null
+  titleEn?: string | null
   summary?: string | null
+  summaryEn?: string | null
   coverUrl?: string | null
   authorName?: string | null
   isTop?: number | null
@@ -169,6 +176,7 @@ export interface PublicAnnouncementItemResp {
 export interface PublicAnnouncementDetailResp extends PublicAnnouncementItemResp {
   /** 正文纯文本，勿当 HTML 渲染 */
   contentText?: string | null
+  contentTextEn?: string | null
 }
 
 export interface PublicAnnouncementAdjacentResp {
@@ -232,6 +240,7 @@ export interface PublicHonorItemResp {
   tournamentName?: string | null
   seasonId?: string | null
   seasonName?: string | null
+  seasonNameEn?: string | null
   honorCode?: string | null
   honorName?: string | null
   honorScope?: string | null
@@ -243,7 +252,9 @@ export interface PublicHonorItemResp {
   playerName?: string | null
   playerAvatarUrl?: string | null
   honorTitle?: string | null
+  honorTitleEn?: string | null
   honorSubtitle?: string | null
+  honorSubtitleEn?: string | null
   honorValue?: string | null
   awardDate?: string | null
   coverUrl?: string | null

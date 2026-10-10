@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getPublicSocialLinks } from '@/api/publicSite'
+import type { PublicSocialLinkResp } from '@/api/types/public'
 import { isSafeHttpUrl } from '@/constants/communityLinks'
+import { localizedText } from '@/utils/publicDisplay'
 
 type CommunityCard = {
   id: string
@@ -21,25 +23,26 @@ const iconMap: Record<string, string> = {
 }
 
 const { t } = useI18n()
-const links = ref<CommunityCard[]>([])
+const rawLinks = ref<PublicSocialLinkResp[]>([])
+const links = computed<CommunityCard[]>(() => (rawLinks.value || []).map((item) => {
+  const url = item.jumpUrl?.trim() || ''
+  const clickable = isSafeHttpUrl(url)
+  return {
+    id: String(item.id),
+    platformCode: item.platformCode,
+    title: localizedText(item.title, item.titleEn, ''),
+    description: localizedText(item.subtitle, item.subtitleEn, ''),
+    url: clickable ? url : '',
+    clickable,
+  }
+}))
 
 onMounted(async () => {
   try {
     const res = await getPublicSocialLinks()
-    links.value = (res.data || []).map((item) => {
-      const url = item.jumpUrl?.trim() || ''
-      const clickable = isSafeHttpUrl(url)
-      return {
-        id: String(item.id),
-        platformCode: item.platformCode,
-        title: item.title || '',
-        description: item.subtitle || '',
-        url: clickable ? url : '',
-        clickable,
-      }
-    })
+    rawLinks.value = res.data || []
   } catch {
-    links.value = []
+    rawLinks.value = []
   }
 })
 

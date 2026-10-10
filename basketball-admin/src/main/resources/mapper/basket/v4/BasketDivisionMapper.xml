@@ -8,6 +8,7 @@
         <result property="platformCode" column="platform_code" />
         <result property="gameMode" column="game_mode" />
         <result property="divisionName" column="division_name" />
+        <result property="divisionNameEn" column="division_name_en" />
         <result property="registrationMode" column="registration_mode" />
         <result property="formatType" column="format_type" />
         <result property="formatTemplateId" column="format_template_id" />
@@ -36,6 +37,7 @@
         <result property="platformCode" column="platform_code" />
         <result property="gameMode" column="game_mode" />
         <result property="divisionName" column="division_name" />
+        <result property="divisionNameEn" column="division_name_en" />
         <result property="registrationMode" column="registration_mode" />
         <result property="formatType" column="format_type" />
         <result property="formatTemplateId" column="format_template_id" />
@@ -59,7 +61,7 @@
         <result property="updateTime" column="update_time" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, platform_code, game_mode, division_name, registration_mode, format_type, format_template_id, format_snapshot_id, max_team_count, max_person_count, lineup_min_count, lineup_max_count, registration_start_time, registration_end_time, match_start_time, match_end_time, division_status, sort_order, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, platform_code, game_mode, division_name, division_name_en, registration_mode, format_type, format_template_id, format_snapshot_id, max_team_count, max_person_count, lineup_min_count, lineup_max_count, registration_start_time, registration_end_time, match_start_time, match_end_time, division_status, sort_order, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketDivisionResult">
         select <include refid="BaseColumns" /> from basket_division
@@ -88,6 +90,7 @@
             d.platform_code,
             d.game_mode,
             d.division_name,
+            d.division_name_en,
             d.registration_mode,
             d.format_type,
             d.format_template_id,
@@ -152,9 +155,9 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_division (
-            season_id, platform_code, game_mode, division_name, registration_mode, format_type, format_template_id, format_snapshot_id, max_team_count, max_person_count, lineup_min_count, lineup_max_count, registration_start_time, registration_end_time, match_start_time, match_end_time, division_status, sort_order, create_time, update_time, is_delete
+            season_id, platform_code, game_mode, division_name, division_name_en, registration_mode, format_type, format_template_id, format_snapshot_id, max_team_count, max_person_count, lineup_min_count, lineup_max_count, registration_start_time, registration_end_time, match_start_time, match_end_time, division_status, sort_order, create_time, update_time, is_delete
         ) values (
-            #{seasonId}, #{platformCode}, #{gameMode}, #{divisionName}, #{registrationMode}, #{formatType}, #{formatTemplateId}, #{formatSnapshotId}, #{maxTeamCount}, #{maxPersonCount}, #{lineupMinCount}, #{lineupMaxCount}, #{registrationStartTime}, #{registrationEndTime}, #{matchStartTime}, #{matchEndTime}, #{divisionStatus}, #{sortOrder}, #{createTime}, #{updateTime}, #{isDelete}
+            #{seasonId}, #{platformCode}, #{gameMode}, #{divisionName}, #{divisionNameEn}, #{registrationMode}, #{formatType}, #{formatTemplateId}, #{formatSnapshotId}, #{maxTeamCount}, #{maxPersonCount}, #{lineupMinCount}, #{lineupMaxCount}, #{registrationStartTime}, #{registrationEndTime}, #{matchStartTime}, #{matchEndTime}, #{divisionStatus}, #{sortOrder}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -165,6 +168,7 @@
             <if test="platformCode != null">platform_code = #{platformCode},</if>
             <if test="gameMode != null">game_mode = #{gameMode},</if>
             <if test="divisionName != null">division_name = #{divisionName},</if>
+            <if test="divisionNameEn != null">division_name_en = #{divisionNameEn},</if>
             <if test="formatTemplateId != null">format_template_id = #{formatTemplateId},</if>
             <if test="formatSnapshotId != null">format_snapshot_id = #{formatSnapshotId},</if>
             <if test="registrationMode != null">registration_mode = #{registrationMode},</if>

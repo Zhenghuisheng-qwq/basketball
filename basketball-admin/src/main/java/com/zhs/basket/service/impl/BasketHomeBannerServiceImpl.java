@@ -63,7 +63,9 @@ public class BasketHomeBannerServiceImpl implements IBasketHomeBannerService {
         BasketHomeBanner banner = new BasketHomeBanner();
         banner.setBannerName(req.getBannerName().trim());
         banner.setTitle(req.getTitle());
+        banner.setTitleEn(req.getTitleEn());
         banner.setSubtitle(req.getSubtitle());
+        banner.setSubtitleEn(req.getSubtitleEn());
         banner.setImageFileId(req.getImageFileId());
         banner.setPositionCode(StringUtils.isEmpty(req.getPositionCode()) ? DEFAULT_POSITION : req.getPositionCode());
         banner.setTargetType(targetType.getCode());
@@ -93,8 +95,14 @@ public class BasketHomeBannerServiceImpl implements IBasketHomeBannerService {
         if (req.getTitle() != null) {
             existing.setTitle(req.getTitle());
         }
+        if (req.getTitleEn() != null) {
+            existing.setTitleEn(req.getTitleEn());
+        }
         if (req.getSubtitle() != null) {
             existing.setSubtitle(req.getSubtitle());
+        }
+        if (req.getSubtitleEn() != null) {
+            existing.setSubtitleEn(req.getSubtitleEn());
         }
         if (req.getImageFileId() != null) {
             existing.setImageFileId(req.getImageFileId());

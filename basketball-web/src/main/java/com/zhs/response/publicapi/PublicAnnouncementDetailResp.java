@@ -12,4 +12,7 @@ public class PublicAnnouncementDetailResp extends PublicAnnouncementItemResp {
 
     @ApiModelProperty("正文纯文本（前端勿当 HTML 渲染）")
     private String contentText;
+
+    @ApiModelProperty("英文正文")
+    private String contentTextEn;
 }

@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import PublicHero from '@/components/layout/PublicHero.vue'
 import type { V4PublicDivisionBrief, V4PublicSeasonItem } from '@/api/types/v4Public'
-import { displayText } from '@/utils/publicDisplay'
+import { localizedText } from '@/utils/publicDisplay'
 import { v4PlatformLabel, v4SeriesLabel } from '@/utils/v4Display'
 
 const props = defineProps<{
@@ -39,12 +39,12 @@ const seasonLabel = computed(() => {
   if (props.loading) return t('publicPages.data.loadingSeasons')
   if (props.error) return props.error
   if (!selectedSeason.value) return t('publicPages.data.selectSeason')
-  return `${v4SeriesLabel(selectedSeason.value.seriesCode)} · ${displayText(selectedSeason.value.displayTitle)}`
+  return `${v4SeriesLabel(selectedSeason.value.seriesCode)} · ${localizedText(selectedSeason.value.displayTitle, selectedSeason.value.displayTitleEn)}`
 })
 
 const divisionLabel = computed(() => {
   if (!selectedDivision.value) return t('publicPages.data.selectDivision')
-  return `${v4PlatformLabel(selectedDivision.value.platformCode)} · ${displayText(selectedDivision.value.divisionName)}`
+  return `${v4PlatformLabel(selectedDivision.value.platformCode)} · ${localizedText(selectedDivision.value.divisionName, selectedDivision.value.divisionNameEn)}`
 })
 
 const seasonGroups = computed(() => {
@@ -143,7 +143,7 @@ onBeforeUnmount(() => {
               :aria-selected="season.seasonId === selectedSeasonId"
               @click="selectSeason(season.seasonId)"
             >
-              <span>{{ displayText(season.displayTitle) }}</span>
+              <span>{{ localizedText(season.displayTitle, season.displayTitleEn) }}</span>
               <span class="v4-data-selector__check" aria-hidden="true" />
             </button>
           </div>
@@ -183,7 +183,7 @@ onBeforeUnmount(() => {
             :aria-selected="division.divisionId === selectedDivisionId"
             @click="selectDivision(division.divisionId)"
           >
-            <span>{{ v4PlatformLabel(division.platformCode) }} · {{ displayText(division.divisionName) }}</span>
+            <span>{{ v4PlatformLabel(division.platformCode) }} · {{ localizedText(division.divisionName, division.divisionNameEn) }}</span>
             <span class="v4-data-selector__check" aria-hidden="true" />
           </button>
         </div>

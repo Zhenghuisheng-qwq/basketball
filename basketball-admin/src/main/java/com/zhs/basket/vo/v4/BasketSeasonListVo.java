@@ -13,7 +13,9 @@ public class BasketSeasonListVo {
     private Integer seasonYear;
     private String seasonName;
     private String displayTitle;
+    private String displayTitleEn;
     private String description;
+    private String descriptionEn;
     private Long coverFileId;
     private Long bannerFileId;
     private String coverUrl;

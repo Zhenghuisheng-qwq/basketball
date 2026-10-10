@@ -66,8 +66,17 @@ public class BasketSiteSocialLinkServiceImpl implements IBasketSiteSocialLinkSer
         }
 
         existing.setTitle(title);
+        if (req.getTitleEn() != null) {
+            existing.setTitleEn(optionalText(req.getTitleEn(), "英文标题", 64));
+        }
         existing.setSubtitle(subtitle);
+        if (req.getSubtitleEn() != null) {
+            existing.setSubtitleEn(optionalText(req.getSubtitleEn(), "英文描述", 128));
+        }
         existing.setButtonText(buttonText);
+        if (req.getButtonTextEn() != null) {
+            existing.setButtonTextEn(optionalText(req.getButtonTextEn(), "英文按钮文字", 32));
+        }
         existing.setJumpUrl(jumpUrl);
         existing.setSortOrder(sortOrder);
         existing.setStatus(status);

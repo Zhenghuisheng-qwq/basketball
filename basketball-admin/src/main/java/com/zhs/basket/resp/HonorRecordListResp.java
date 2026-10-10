@@ -21,7 +21,9 @@ public class HonorRecordListResp {
     private String playerName;
     private Long matchId;
     private String honorTitle;
+    private String honorTitleEn;
     private String honorSubtitle;
+    private String honorSubtitleEn;
     private String honorValue;
     private Date awardDate;
     private Long coverFileId;

@@ -18,7 +18,7 @@ import type {
   PublicTournamentItemVo,
 } from '@/api/types/public'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
-import { displayText, formatDateTime } from '@/utils/publicDisplay'
+import { displayText, formatDateTime, localizedText } from '@/utils/publicDisplay'
 import type { ChampionRosterMember } from '../types'
 import mrtMidBackground from '@/assets/icon/mrt/mrt_mid.png'
 
@@ -258,7 +258,7 @@ function awardDateText(value?: string | null) {
             {{ displayText(currentTournament?.tournamentName || championHonor.tournamentName) }}
           </p>
           <p class="event-champion-card__desc">
-            {{ displayText(championHonor.honorSubtitle || championHonor.honorTitle, t('publicPages.hall.publishedHonor')) }}
+            {{ localizedText(championHonor.honorSubtitle || championHonor.honorTitle, championHonor.honorSubtitleEn || championHonor.honorTitleEn, t('publicPages.hall.publishedHonor')) }}
           </p>
           <div class="event-champion-card__date-block">
             <span>{{ t('publicPages.hall.awardDate') }}</span>
@@ -328,7 +328,7 @@ function awardDateText(value?: string | null) {
                 {{ displayText(item.teamName) }}
               </button>
               <p class="event-other-honor__meta">
-                {{ displayText(item.seasonName, t('publicPages.hall.season')) }} · {{ awardDateText(item.awardDate) }}
+                {{ localizedText(item.seasonName, item.seasonNameEn, t('publicPages.hall.season')) }} · {{ awardDateText(item.awardDate) }}
               </p>
             </div>
           </article>

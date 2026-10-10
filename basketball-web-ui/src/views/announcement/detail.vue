@@ -7,14 +7,14 @@ import {
   getPublicAnnouncementDetail,
   getPublicAnnouncementPreviousNext,
 } from '@/api/publicAnnouncement'
-import type { PublicAnnouncementItemResp } from '@/api/types/public'
+import type { PublicAnnouncementDetailResp, PublicAnnouncementItemResp } from '@/api/types/public'
 import {
   buildAnnouncementDetailFromQuery,
   formatAnnouncementDate,
   goToAnnouncementDetail,
   goToAnnouncementList,
 } from '@/utils/announcementNavigate'
-import { displayText } from '@/utils/publicDisplay'
+import { displayText, localizedText } from '@/utils/publicDisplay'
 import AnnouncementHero from './components/AnnouncementHero.vue'
 import AnnouncementContentRenderer from './components/AnnouncementContentRenderer.vue'
 import type { AnnouncementDetail } from './types'
@@ -23,7 +23,24 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
-const announcement = ref<AnnouncementDetail | null>(null)
+const rawDetail = ref<PublicAnnouncementDetailResp | null>(null)
+const announcement = computed<AnnouncementDetail | null>(() => {
+  const data = rawDetail.value
+  if (!data) return null
+  return {
+    id: String(data.announcementId),
+    title: localizedText(data.title, data.titleEn, t('publicPages.announcement.untitled')),
+    categoryCode: displayText(data.categoryCode, 'OTHER'),
+    categoryName: displayText(data.categoryName, t('publicPages.announcement.other')),
+    pinned: Number(data.isTop || 0) === 1,
+    summary: localizedText(data.summary, data.summaryEn, ''),
+    authorName: displayText(data.authorName, 'CNPA'),
+    publishTime: data.publishTime || '',
+    publishDateText: formatAnnouncementDate(data.publishTime),
+    viewCount: Number(data.viewCount || 0),
+    contentText: localizedText(data.contentText, data.contentTextEn, ''),
+  }
+})
 const previous = ref<PublicAnnouncementItemResp | null>(null)
 const next = ref<PublicAnnouncementItemResp | null>(null)
 const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
@@ -36,7 +53,7 @@ const listState = computed(() => buildAnnouncementDetailFromQuery(route.query))
 async function loadDetail(id: string) {
   const current = ++reqId
   if (!id) {
-    announcement.value = null
+    rawDetail.value = null
     state.value = 'empty'
     return
   }
@@ -52,30 +69,18 @@ async function loadDetail(id: string) {
     if (current !== reqId) return
     const data = detailRes.data
     if (!data) {
-      announcement.value = null
+      rawDetail.value = null
       state.value = 'empty'
       return
     }
-    announcement.value = {
-      id: String(data.announcementId),
-      title: displayText(data.title, t('publicPages.announcement.untitled')),
-      categoryCode: displayText(data.categoryCode, 'OTHER'),
-      categoryName: displayText(data.categoryName, t('publicPages.announcement.other')),
-      pinned: Number(data.isTop || 0) === 1,
-      summary: displayText(data.summary, ''),
-      authorName: displayText(data.authorName, 'CNPA'),
-      publishTime: data.publishTime || '',
-      publishDateText: formatAnnouncementDate(data.publishTime),
-      viewCount: Number(data.viewCount || 0),
-      contentText: data.contentText ?? '',
-    }
+    rawDetail.value = data
     previous.value = adjacentRes?.data?.previous ?? null
     next.value = adjacentRes?.data?.next ?? null
     state.value = 'success'
-    document.title = t('common.documentTitle', { page: announcement.value.title })
+    document.title = t('common.documentTitle', { page: announcement.value?.title || '' })
   } catch (err) {
     if (current !== reqId) return
-    announcement.value = null
+    rawDetail.value = null
     state.value = 'error'
     errorMessage.value = err instanceof Error ? err.message : t('publicPages.announcement.loadDetailFailed')
   }
@@ -177,7 +182,7 @@ watch(
                     @click="openAdjacent(previous)"
                   >
                     <span>{{ t('publicPages.announcement.previous') }}</span>
-                    <strong>{{ previous ? displayText(previous.title) : t('publicPages.announcement.noEarlier') }}</strong>
+                    <strong>{{ previous ? localizedText(previous.title, previous.titleEn) : t('publicPages.announcement.noEarlier') }}</strong>
                   </button>
                   <button
                     type="button"
@@ -186,7 +191,7 @@ watch(
                     @click="openAdjacent(next)"
                   >
                     <span>{{ t('publicPages.announcement.next') }}</span>
-                    <strong>{{ next ? displayText(next.title) : t('publicPages.announcement.noNewer') }}</strong>
+                    <strong>{{ next ? localizedText(next.title, next.titleEn) : t('publicPages.announcement.noNewer') }}</strong>
                   </button>
                 </nav>
 
