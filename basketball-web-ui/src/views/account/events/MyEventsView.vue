@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
@@ -40,6 +41,7 @@ import type { AvailableEvent, MyApplication, MyEventsTabKey, ParticipatingEvent 
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const teamStore = useTeamStore()
 const accountStore = useAccountStore()
 
@@ -83,13 +85,13 @@ const footerNote = computed(() => getFooterNote(activeTab.value, roleMode.value)
 const emptyMessage = computed(() => getEmptyMessage(activeTab.value, roleMode.value))
 
 const bannerStatus = computed(() => {
-  if (loading.value) return { text: '加载中', type: 'info' as const }
-  if (loadError.value) return { text: '加载失败', type: 'danger' as const }
-  if (!accountStore.isVerifiedPlayer) return { text: '未认证球员', type: 'warning' as const }
-  if (roleMode.value === 'NO_TEAM') return { text: '未加入球队', type: 'info' as const }
-  if (roleMode.value === 'TEAM_MEMBER') return { text: '球队成员', type: 'info' as const }
-  if (roleMode.value === 'TEAM_CAPTAIN') return { text: '有效队长', type: 'success' as const }
-  return { text: '球员', type: 'info' as const }
+  if (loading.value) return { text: t('accountEvents.page.loading'), type: 'info' as const }
+  if (loadError.value) return { text: t('accountEvents.page.loadFailed'), type: 'danger' as const }
+  if (!accountStore.isVerifiedPlayer) return { text: t('accountEvents.page.unverified'), type: 'warning' as const }
+  if (roleMode.value === 'NO_TEAM') return { text: t('accountEvents.page.noTeam'), type: 'info' as const }
+  if (roleMode.value === 'TEAM_MEMBER') return { text: t('accountEvents.page.teamMember'), type: 'info' as const }
+  if (roleMode.value === 'TEAM_CAPTAIN') return { text: t('accountEvents.page.activeCaptain'), type: 'success' as const }
+  return { text: t('accountEvents.page.player'), type: 'info' as const }
 })
 
 function setTab(tab: MyEventsTabKey) {
@@ -131,7 +133,7 @@ async function loadAvailableEvents(page = availablePage.value, pageSize = availa
     availablePageSize.value = size
     availableTotal.value = total
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : '加载失败'
+    loadError.value = error instanceof Error ? error.message : t('accountEvents.common.loadFailed')
     availableEvents.value = []
     availableTotal.value = 0
   } finally {
@@ -152,7 +154,7 @@ async function loadApplications() {
     const personalApps = (personalRes.data || []).map(mapV4PersonalRegistrationToApplication)
     myApplications.value = [...teamApps, ...personalApps]
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : '加载失败'
+    loadError.value = error instanceof Error ? error.message : t('accountEvents.common.loadFailed')
     myApplications.value = []
   } finally {
     loading.value = false
@@ -179,7 +181,7 @@ async function loadJoinedEvents(page = joinedPage.value, pageSize = joinedPageSi
     joinedPageSize.value = size
     joinedTotal.value = total
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : '加载失败'
+    loadError.value = error instanceof Error ? error.message : t('accountEvents.common.loadFailed')
     participatingEvents.value = []
     joinedTotal.value = 0
   } finally {
@@ -207,7 +209,7 @@ onMounted(async () => {
     await teamStore.bootstrap().catch(() => undefined)
     await loadActiveTab()
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : '加载失败'
+    loadError.value = error instanceof Error ? error.message : t('accountEvents.common.loadFailed')
   }
 })
 
@@ -269,7 +271,7 @@ function handleAvailableAction(event: AvailableEvent) {
     ElMessage.warning(event.disabledReason)
     return
   }
-  ElMessage.warning('当前不可操作')
+  ElMessage.warning(t('accountEvents.common.actionUnavailable'))
 }
 
 function handleApplicationAction(application: MyApplication) {
@@ -310,9 +312,9 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
       :zh-title="tabMeta.title"
       :en-title="tabMeta.subtitle"
       :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '我的赛事' },
+        { label: t('accountEvents.breadcrumb.home'), to: '/home' },
+        { label: t('accountEvents.breadcrumb.account'), to: '/account/overview' },
+        { label: t('accountEvents.breadcrumb.myEvents') },
       ]"
     />
 
@@ -327,13 +329,13 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
     <MyEventsTabs :active-tab="activeTab" :tabs="visibleTabs" @change="setTab" />
 
     <p v-if="loadError" class="my-events-error">{{ loadError }}</p>
-    <p v-else-if="loading && activeTab !== 'schedule'" class="my-events-loading">加载中…</p>
+    <p v-else-if="loading && activeTab !== 'schedule'" class="my-events-loading">{{ t('accountEvents.common.loading') }}</p>
 
     <template v-else-if="activeTab === 'available'">
       <AccountEmptyState
         v-if="!availableEvents.length"
         :message="emptyMessage"
-        :subtitle="roleMode === 'NO_TEAM' ? '加入球队后，可由队长统一报名赛事' : undefined"
+        :subtitle="roleMode === 'NO_TEAM' ? t('accountEvents.empty.availableNoTeamSubtitle') : undefined"
         large
       />
       <template v-else>
@@ -347,9 +349,9 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
           :page-size="availablePageSize"
           :total="availableTotal"
           :page-size-options="pageSizeOptions"
-          :meta-text="`共 ${availableTotal} 条可参与赛事`"
+          :meta-text="t('accountEvents.pagination.availableTotal', { total: availableTotal })"
           :disabled="loading"
-          aria-label="可参与赛事分页"
+          :aria-label="t('accountEvents.pagination.availableAria')"
           @update:page="(p) => loadAvailableEvents(p, availablePageSize)"
           @update:page-size="(s) => loadAvailableEvents(1, s)"
         />
@@ -361,7 +363,7 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
       <AccountEmptyState
         v-if="!myApplications.length"
         :message="emptyMessage"
-        :subtitle="roleMode === 'TEAM_MEMBER' ? '请等待队长代表球队报名赛事' : '队长提交赛事报名后，记录将显示在这里'"
+        :subtitle="roleMode === 'TEAM_MEMBER' ? t('accountEvents.empty.applicationsMemberSubtitle') : t('accountEvents.empty.applicationsSubtitle')"
         large
       />
       <MyApplicationList
@@ -375,7 +377,7 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
       <AccountEmptyState
         v-if="!participatingEvents.length"
         :message="emptyMessage"
-        subtitle="报名审核通过并进入正式阵容后，记录将显示在这里"
+        :subtitle="t('accountEvents.empty.joinedSubtitle')"
         large
       />
       <template v-else>
@@ -389,9 +391,9 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
           :page-size="joinedPageSize"
           :total="joinedTotal"
           :page-size-options="pageSizeOptions"
-          :meta-text="`共 ${joinedTotal} 条已参与赛事`"
+          :meta-text="t('accountEvents.pagination.joinedTotal', { total: joinedTotal })"
           :disabled="loading"
-          aria-label="已参与赛事分页"
+          :aria-label="t('accountEvents.pagination.joinedAria')"
           @update:page="(p) => loadJoinedEvents(p, joinedPageSize)"
           @update:page-size="(s) => loadJoinedEvents(1, s)"
         />

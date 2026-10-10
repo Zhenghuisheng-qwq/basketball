@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
@@ -24,6 +25,7 @@ import { formatDateTimeShort } from '@/utils/participationMappers'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const pageLoading = ref(true)
 const loadError = ref('')
@@ -73,9 +75,9 @@ const bannerStatus = computed(() => {
     }
   }
   if (division.value?.cannotRegisterReason) {
-    return { text: '不可报名', type: 'danger' as const }
+    return { text: t('accountEvents.common.cannotRegister'), type: 'danger' as const }
   }
-  return { text: '未报名', type: 'info' as const }
+  return { text: t('accountEvents.common.notRegistered'), type: 'info' as const }
 })
 
 const eligibilityHint = computed(() => {
@@ -83,7 +85,7 @@ const eligibilityHint = computed(() => {
   if (division.value.canRegister) return ''
   if (division.value.cannotRegisterReason) return division.value.cannotRegisterReason
   if ((division.value.registrationWindowStatus || '').toUpperCase() === 'CLOSED' && division.value.registrationEndTime) {
-    return `报名已于 ${formatDateTimeShort(division.value.registrationEndTime)} 截止`
+    return t('accountEvents.common.closedAt', { time: formatDateTimeShort(division.value.registrationEndTime) })
   }
   return ''
 })
@@ -91,23 +93,23 @@ const eligibilityHint = computed(() => {
 const emptyRosterHint = computed(() => {
   if (!division.value) return ''
   if (teamMemberCount.value <= 0) {
-    return '当前球队暂无成员。请先前往「我的球队 → 成员管理」邀请成员补充阵容。'
+    return t('accountEvents.registration.emptyNoMembers')
   }
   if (eligibleCount.value <= 0) {
-    const platform = v4PlatformLabel(division.value.platformCode) || '对应平台'
-    return `当前球队成员暂无符合 ${platform} 赛事资格的球员。请先完成游戏平台身份认证。`
+    const platform = v4PlatformLabel(division.value.platformCode) || t('accountEvents.registration.fallbackPlatform')
+    return t('accountEvents.registration.emptyNoEligible', { platform })
   }
-  return '暂无可选参赛球员'
+  return t('accountEvents.registration.emptyNoPlayers')
 })
 
 const submitHint = computed(() => {
   if (selectedCount.value < rosterMin.value) {
-    return `至少选择 ${rosterMin.value} 名符合资格球员才能提交审核（当前 ${selectedCount.value} / ${rosterMin.value}）`
+    return t('accountEvents.registration.minPlayersSubmit', { min: rosterMin.value, current: selectedCount.value })
   }
   if (selectedCount.value > rosterMax.value) {
-    return `阵容最多 ${rosterMax.value} 人`
+    return t('accountEvents.registration.rosterMax', { max: rosterMax.value })
   }
-  return `草稿可不足最低人数；提交审核需要 ${rosterMin.value}~${rosterMax.value} 人`
+  return t('accountEvents.registration.draftRange', { min: rosterMin.value, max: rosterMax.value })
 })
 
 function normalizeContext(ctx: V4RegistrationDivisionContext): V4RegistrationDivisionContext {
@@ -149,7 +151,7 @@ async function bootstrap() {
   division.value = null
   try {
     if (!divisionId.value) {
-      loadError.value = '无效赛事'
+      loadError.value = t('accountEvents.registration.invalidEvent')
       return
     }
 
@@ -159,7 +161,7 @@ async function bootstrap() {
     ])
     const ctx = contextRes.data
     if (!ctx || ctx.divisionExists === false) {
-      loadError.value = '赛事不存在或已失效'
+      loadError.value = t('accountEvents.registration.eventMissing')
       return
     }
     division.value = normalizeContext(ctx)
@@ -188,7 +190,7 @@ async function bootstrap() {
     }
     selectedPlayerIds.value = defaultSelectedIds(eligiblePlayers.value, existingSelected)
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : '加载失败'
+    loadError.value = error instanceof Error ? error.message : t('accountEvents.common.loadFailed')
   } finally {
     pageLoading.value = false
   }
@@ -211,19 +213,19 @@ function togglePlayer(player: V4RegistrationRosterPlayer) {
 
 async function handleSave() {
   if (!canMutate.value) {
-    ElMessage.warning(eligibilityHint.value || '当前不可报名')
+    ElMessage.warning(eligibilityHint.value || t('accountEvents.registration.cannotRegisterNow'))
     return
   }
   if (!division.value?.grantTeamId) {
-    ElMessage.warning('无有效队长授权球队')
+    ElMessage.warning(t('accountEvents.registration.noGrantTeam'))
     return
   }
   if (!selectedPlayerIds.value.length) {
-    ElMessage.warning('请至少选择队长进入阵容草稿')
+    ElMessage.warning(t('accountEvents.registration.selectCaptain'))
     return
   }
   if (selectedPlayerIds.value.length > rosterMax.value) {
-    ElMessage.warning(`阵容最多 ${rosterMax.value} 人`)
+    ElMessage.warning(t('accountEvents.registration.rosterMax', { max: rosterMax.value }))
     return
   }
   saving.value = true
@@ -236,12 +238,12 @@ async function handleSave() {
     registrationId.value = String(res.data || registrationId.value)
     ElMessage.success(
       selectedCount.value < rosterMin.value
-        ? `草稿已保存（当前 ${selectedCount.value}/${rosterMin.value}，提交前需补齐）`
-        : '草稿已保存',
+        ? t('accountEvents.registration.draftSavedPartial', { current: selectedCount.value, min: rosterMin.value })
+        : t('accountEvents.common.draftSaved'),
     )
     await bootstrap()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '保存失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -249,7 +251,7 @@ async function handleSave() {
 
 async function handleSubmit() {
   if (!canMutate.value) {
-    ElMessage.warning(eligibilityHint.value || '当前不可报名')
+    ElMessage.warning(eligibilityHint.value || t('accountEvents.registration.cannotRegisterNow'))
     return
   }
   if (!canSubmit.value) {
@@ -261,16 +263,16 @@ async function handleSubmit() {
   }
   if (!registrationId.value) return
   if (selectedCount.value < rosterMin.value) {
-    ElMessage.warning(`至少选择 ${rosterMin.value} 名符合资格球员`)
+    ElMessage.warning(t('accountEvents.registration.minPlayers', { min: rosterMin.value }))
     return
   }
   submitting.value = true
   try {
     await submitV4Registration({ registrationId: registrationId.value })
-    ElMessage.success('已提交审核')
+    ElMessage.success(t('accountEvents.common.submittedReview'))
     router.push('/account/my-events?tab=applications')
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '提交失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.submitFailed'))
   } finally {
     submitting.value = false
   }
@@ -280,10 +282,10 @@ async function handleWithdraw() {
   if (!registrationId.value) return
   try {
     await withdrawV4Registration({ registrationId: registrationId.value })
-    ElMessage.success('已撤回')
+    ElMessage.success(t('accountEvents.common.withdrawn'))
     await bootstrap()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '撤回失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.withdrawFailed'))
   }
 }
 
@@ -295,51 +297,49 @@ onMounted(() => {
 <template>
   <div class="account-view">
     <AccountPageHeader
-      zh-title="球队报名"
+      :zh-title="t('accountEvents.registration.pageTitle')"
       en-title="TEAM REGISTRATION"
       :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '我的赛事', to: '/account/my-events?tab=available' },
-        { label: '球队报名' },
+        { label: t('accountEvents.breadcrumb.home'), to: '/home' },
+        { label: t('accountEvents.breadcrumb.account'), to: '/account/overview' },
+        { label: t('accountEvents.breadcrumb.myEvents'), to: '/account/my-events?tab=available' },
+        { label: t('accountEvents.breadcrumb.teamRegistration') },
       ]"
     />
 
     <AccountStatusBanner
-      title="球队报名"
-      :description="division?.seasonTitle || '选择参赛阵容并提交报名审核'"
+      :title="t('accountEvents.registration.pageTitle')"
+      :description="division?.seasonTitle || t('accountEvents.registration.bannerDesc')"
       :status-text="bannerStatus.text"
       :status-type="bannerStatus.type"
     />
 
-    <p v-if="pageLoading" class="v4-reg-loading">加载中…</p>
+    <p v-if="pageLoading" class="v4-reg-loading">{{ t('accountEvents.registration.loading') }}</p>
     <p v-else-if="loadError" class="v4-reg-error">{{ loadError }}</p>
 
     <template v-else-if="division">
-      <AccountPanel title="赛事信息">
+      <AccountPanel :title="t('accountEvents.registration.eventInfo')">
         <p>{{ division.seriesName }} · {{ division.seasonTitle }}</p>
         <p>{{ division.divisionName }} · {{ v4PlatformLabel(division.platformCode) }} · {{ v4GameModeLabel(division.gameMode) }}</p>
         <p class="v4-reg-hint">{{ rosterRuleText }}</p>
         <p v-if="division.registrationStartTime || division.registrationEndTime" class="v4-reg-hint">
-          报名时间：{{ formatDateTimeShort(division.registrationStartTime) }}
-          ~
-          {{ formatDateTimeShort(division.registrationEndTime) }}
+          {{ t('accountEvents.registration.window', { start: formatDateTimeShort(division.registrationStartTime), end: formatDateTimeShort(division.registrationEndTime) }) }}
         </p>
         <p v-if="eligibilityHint" class="v4-reg-warn">{{ eligibilityHint }}</p>
       </AccountPanel>
 
-      <AccountPanel title="选择阵容">
+      <AccountPanel :title="t('accountEvents.registration.selectRoster')">
         <div class="v4-reg-team-meta">
-          <p>当前报名球队：<strong>{{ division.grantTeamName || '暂无球队' }}</strong></p>
-          <p>当前球队人数：{{ teamMemberCount }} 人</p>
-          <p>符合报名资格：{{ eligibleCount }} 人</p>
-          <p>阵容要求：{{ rosterMin }} ~ {{ rosterMax }} 人</p>
-          <p class="v4-reg-hint">审核中不占名额；审核通过后进入已参加赛事。</p>
+          <p>{{ t('accountEvents.registration.currentTeam') }}<strong>{{ division.grantTeamName || t('accountEvents.registration.noTeam') }}</strong></p>
+          <p>{{ t('accountEvents.registration.teamSize', { count: teamMemberCount }) }}</p>
+          <p>{{ t('accountEvents.registration.eligibleCount', { count: eligibleCount }) }}</p>
+          <p>{{ t('accountEvents.registration.rosterNeed', { min: rosterMin, max: rosterMax }) }}</p>
+          <p class="v4-reg-hint">{{ t('accountEvents.registration.reviewHint') }}</p>
           <p class="v4-reg-hint">{{ submitHint }}</p>
         </div>
 
         <div v-if="eligiblePlayers.length" class="v4-reg-roster">
-          <p class="v4-reg-section-title">可选球员</p>
+          <p class="v4-reg-section-title">{{ t('accountEvents.registration.eligiblePlayers') }}</p>
           <label
             v-for="player in eligiblePlayers"
             :key="String(player.playerId)"
@@ -354,9 +354,9 @@ onMounted(() => {
             <span class="v4-reg-player-main">
               <strong>{{ player.playerNo || player.playerId }}</strong>
               <span>{{ player.displayName || '-' }}</span>
-              <span>{{ player.platformGameId || `${v4PlatformLabel(division.platformCode)} 未绑定` }}</span>
+              <span>{{ player.platformGameId || t('accountEvents.registration.unbound', { platform: v4PlatformLabel(division.platformCode) }) }}</span>
             </span>
-            <AccountStatusBadge :text="player.roleTypeText || (isCaptainPlayer(player) ? '队长' : '队员')" />
+            <AccountStatusBadge :text="player.roleTypeText || (isCaptainPlayer(player) ? t('accountEvents.common.captain') : t('accountEvents.common.member'))" />
           </label>
         </div>
 
@@ -367,12 +367,12 @@ onMounted(() => {
             class="account-btn-secondary"
             @click="router.push('/account/team')"
           >
-            管理球队成员
+            {{ t('accountEvents.registration.manageMembers') }}
           </button>
         </div>
 
         <div v-if="ineligiblePlayers.length" class="v4-reg-roster v4-reg-roster--ineligible">
-          <p class="v4-reg-section-title">不可选成员</p>
+          <p class="v4-reg-section-title">{{ t('accountEvents.registration.ineligiblePlayers') }}</p>
           <div
             v-for="player in ineligiblePlayers"
             :key="`ineligible-${player.playerId || player.teamMemberId}`"
@@ -381,9 +381,9 @@ onMounted(() => {
             <span class="v4-reg-player-main">
               <strong>{{ player.playerNo || player.playerId || '-' }}</strong>
               <span>{{ player.displayName || '-' }}</span>
-              <span class="v4-reg-warn-inline">{{ player.reasonMessage || '不符合参赛资格' }}</span>
+              <span class="v4-reg-warn-inline">{{ player.reasonMessage || t('accountEvents.registration.ineligible') }}</span>
             </span>
-            <AccountStatusBadge :text="player.roleTypeText || '队员'" />
+            <AccountStatusBadge :text="player.roleTypeText || t('accountEvents.common.member')" />
           </div>
         </div>
       </AccountPanel>
@@ -396,7 +396,7 @@ onMounted(() => {
           :disabled="saving || !selectedPlayerIds.length"
           @click="handleSave"
         >
-          保存草稿
+          {{ t('accountEvents.common.saveDraft') }}
         </button>
         <button
           v-if="!isReadonly"
@@ -405,7 +405,7 @@ onMounted(() => {
           :disabled="submitting || !canSubmit"
           @click="handleSubmit"
         >
-          提交审核
+          {{ t('accountEvents.common.submitReview') }}
         </button>
         <button
           v-if="division.myRegistrationStatus === 'PENDING_REVIEW'"
@@ -413,10 +413,10 @@ onMounted(() => {
           class="account-btn-secondary"
           @click="handleWithdraw"
         >
-          撤回
+          {{ t('accountEvents.common.withdraw') }}
         </button>
         <button type="button" class="account-btn-secondary" @click="router.push('/account/my-events?tab=applications')">
-          返回我的报名
+          {{ t('accountEvents.common.backToApplications') }}
         </button>
       </div>
     </template>

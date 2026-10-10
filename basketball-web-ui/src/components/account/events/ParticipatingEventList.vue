@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import EventStatusBadge from './EventStatusBadge.vue'
 import type { ParticipatingEvent } from '@/types/accountEvents'
+
+const { t } = useI18n()
 
 defineProps<{
   events: ParticipatingEvent[]
@@ -25,11 +28,11 @@ const emit = defineEmits<{
           <span>{{ item.platform }}</span>
         </div>
         <div class="my-events-list__meta">
-          <span>参与方式：{{ item.participationTypeText }}</span>
-          <span>本届身份：{{ item.identityText }}</span>
-          <span v-if="item.stageSummary">当前阶段：{{ item.stageSummary }}</span>
+          <span>{{ t('accountEvents.joined.participation', { type: item.participationTypeText }) }}</span>
+          <span>{{ t('accountEvents.joined.identity', { identity: item.identityText }) }}</span>
+          <span v-if="item.stageSummary">{{ t('accountEvents.joined.stage', { stage: item.stageSummary }) }}</span>
           <span v-if="item.rankSummary">{{ item.rankSummary }}</span>
-          <span v-if="item.qualificationSummary">晋级：{{ item.qualificationSummary }}</span>
+          <span v-if="item.qualificationSummary">{{ t('accountEvents.joined.qualification', { status: item.qualificationSummary }) }}</span>
           <EventStatusBadge
             :text="item.statusText"
             :finished="item.status === 'FINISHED'"

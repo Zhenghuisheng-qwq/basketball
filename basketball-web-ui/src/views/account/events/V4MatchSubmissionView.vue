@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
@@ -31,6 +32,15 @@ const PLAYER_STAT_FIELDS = ['points', 'rebound', 'assist', 'steal', 'block', 'fo
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
+
+function seriesStatusLabel(status?: string | null, statusName?: string | null) {
+  const code = (status || '').toUpperCase()
+  if (['PENDING', 'READY', 'RUNNING', 'COMPLETED', 'CANCELLED'].includes(code)) {
+    return v4MatchSeriesStatusLabel(code)
+  }
+  return statusName || v4MatchSeriesStatusLabel(status)
+}
 
 const loading = ref(false)
 const saving = ref(false)
@@ -77,9 +87,9 @@ const fullForm = ref({
 const fullValidation = computed(() => {
   if (!detail.value) return { errors: [] as string[], homeScore: 0, awayScore: 0, pass: false }
   return validateGame({
-    gameLabel: '本场',
-    homeName: detail.value.homeTeamName || '主队',
-    awayName: detail.value.awayTeamName || '客队',
+    gameLabel: t('accountEvents.submission.thisGame'),
+    homeName: detail.value.homeTeamName || t('accountEvents.common.homeTeam'),
+    awayName: detail.value.awayTeamName || t('accountEvents.common.awayTeam'),
     homePlayers: fullForm.value.homeStats,
     awayPlayers: fullForm.value.awayStats,
     periods: fullForm.value.periods,
@@ -145,8 +155,8 @@ function emptyPlayerRow(): V4MatchSubmissionPlayerStat {
 }
 
 function playerLabel(player: V4MatchSubmissionEligiblePlayer): string {
-  const name = player.playerName || player.gameId || '未命名球员'
-  const extra = [player.jerseyNo ? `#${player.jerseyNo}` : '', player.isCaptain ? '队长' : '']
+  const name = player.playerName || player.gameId || t('accountEvents.common.unnamedPlayer')
+  const extra = [player.jerseyNo ? `#${player.jerseyNo}` : '', player.isCaptain ? t('accountEvents.common.captain') : '']
     .filter(Boolean)
     .join(' · ')
   return extra ? `${name}（${extra}）` : name
@@ -170,7 +180,7 @@ function ensurePlayerRows(existing: V4MatchSubmissionPlayerStat[]) {
 
 function addPlayerStatRow() {
   if (form.value.playerStats.length >= lineupMax.value) {
-    ElMessage.warning(`最多添加 ${lineupMax.value} 名球员`)
+    ElMessage.warning(t('accountEvents.common.maxPlayers', { max: lineupMax.value }))
     return
   }
   form.value.playerStats.push(emptyPlayerRow())
@@ -201,7 +211,7 @@ async function loadDetail() {
     fullForm.value.awayStats = awayStats
     fullForm.value.periods = normalizePeriods(detail.value.periodScores)
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -249,9 +259,9 @@ async function handleSaveDraft() {
     if (res.data) {
       detail.value = { ...detail.value!, submissionId: String(res.data), submissionStatus: 'DRAFT' }
     }
-    ElMessage.success('草稿已保存')
+    ElMessage.success(t('accountEvents.common.draftSaved'))
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '保存失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -260,23 +270,23 @@ async function handleSaveDraft() {
 async function handleSubmitAudit() {
   if (!canEdit.value || skipped.value) return
   if (isFullMatch.value && !fullValidation.value.pass) {
-    ElMessage.warning(fullValidation.value.errors[0] || '请先填写完整比赛数据')
+    ElMessage.warning(fullValidation.value.errors[0] || t('accountEvents.common.fillMatchData'))
     return
   }
   if (!isFullMatch.value && (form.value.homeScore == null || form.value.awayScore == null)) {
-    ElMessage.warning('请填写最终比赛比分')
+    ElMessage.warning(t('accountEvents.common.fillFinalScore'))
     return
   }
   saving.value = true
   try {
     const saveRes = await saveV4MatchSubmissionDraft(buildSavePayload())
     const submissionId = String(saveRes.data || detail.value?.submissionId || '')
-    if (!submissionId) throw new Error('请先保存草稿')
+    if (!submissionId) throw new Error(t('accountEvents.common.saveDraftFirst'))
     await submitV4MatchSubmission({ submissionId })
-    ElMessage.success('已提交审核')
+    ElMessage.success(t('accountEvents.common.submittedReview'))
     await loadDetail()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '提交失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.submitFailed'))
   } finally {
     saving.value = false
   }
@@ -290,10 +300,10 @@ async function handleResubmit() {
       ...buildSavePayload(),
       oldSubmissionId: String(detail.value?.submissionId || ''),
     })
-    ElMessage.success('已重新提交草稿，请再次提交审核')
+    ElMessage.success(t('accountEvents.submission.resubmitDraft'))
     await loadDetail()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '重提失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.resubmitFailed'))
   } finally {
     submitting.value = false
   }
@@ -311,18 +321,18 @@ async function handleUpload(event: Event) {
   if (!files.length || !canEdit.value) return
   const remain = MAX_SCREENSHOTS - form.value.materialFileIds.length
   if (remain <= 0) {
-    ElMessage.warning(`最多上传 ${MAX_SCREENSHOTS} 张截图`)
+    ElMessage.warning(t('accountEvents.common.maxScreenshots', { max: MAX_SCREENSHOTS }))
     return
   }
   uploading.value = true
   try {
     for (const file of files.slice(0, remain)) {
       if (!file.type.startsWith('image/')) {
-        ElMessage.error('请上传图片文件')
+        ElMessage.error(t('accountEvents.common.imageRequired'))
         continue
       }
       if (file.size > 8 * 1024 * 1024) {
-        ElMessage.error('单张截图不能超过 8MB')
+        ElMessage.error(t('accountEvents.common.screenshotTooLarge'))
         continue
       }
       const res = await uploadAccountFile(file, 'MATCH_DATA_SCREENSHOT')
@@ -330,10 +340,14 @@ async function handleUpload(event: Event) {
       if (fileId) form.value.materialFileIds.push(fileId)
     }
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '上传失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.uploadFailed'))
   } finally {
     uploading.value = false
   }
+}
+
+function teamStatLabel(field: 'score' | 'rebound' | 'assist' | 'steal' | 'block' | 'turnover' | 'foul') {
+  return t(`accountEvents.submission.stat.${field}`)
 }
 
 function removeScreenshot(index: number) {
@@ -344,7 +358,7 @@ function removeScreenshot(index: number) {
 const contextLine = computed(() => {
   const d = detail.value
   if (!d) return ''
-  const parts = [d.seasonTitle, d.divisionName || v4PlatformLabel(d.platformCode), d.roundName || (d.roundNo != null ? `第 ${d.roundNo} 轮` : '')]
+  const parts = [d.seasonTitle, d.divisionName || v4PlatformLabel(d.platformCode), d.roundName || (d.roundNo != null ? t('accountEvents.common.roundNo', { round: d.roundNo }) : '')]
   return parts.filter(Boolean).join(' · ')
 })
 
@@ -356,47 +370,47 @@ onMounted(() => {
 <template>
   <div class="account-view fm-page">
     <AccountPageHeader
-      zh-title="比赛数据提交"
+      :zh-title="t('accountEvents.submission.pageTitle')"
       en-title="MATCH DATA SUBMISSION"
       :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '我的赛事', to: '/account/my-events?tab=schedule' },
-        { label: '比赛数据' },
+        { label: t('accountEvents.breadcrumb.home'), to: '/home' },
+        { label: t('accountEvents.breadcrumb.account'), to: '/account/overview' },
+        { label: t('accountEvents.breadcrumb.myEvents'), to: '/account/my-events?tab=schedule' },
+        { label: t('accountEvents.breadcrumb.matchData') },
       ]"
     />
 
     <AccountStatusBanner
-      title="比赛数据提交"
-      :description="detail ? `${detail.homeTeamName} VS ${detail.awayTeamName}` : '加载中'"
+      :title="t('accountEvents.submission.pageTitle')"
+      :description="detail ? `${detail.homeTeamName} VS ${detail.awayTeamName}` : t('accountEvents.common.loadingShort')"
       :status-text="v4SubmissionStatusLabel(detail?.submissionStatus)"
       :status-type="detail?.submissionStatus === 'APPROVED' ? 'success' : detail?.submissionStatus === 'REJECTED' ? 'danger' : 'info'"
     />
 
-    <p v-if="loading" class="v4-sub-loading">加载中…</p>
+    <p v-if="loading" class="v4-sub-loading">{{ t('accountEvents.common.loading') }}</p>
 
     <template v-else-if="detail">
-      <AccountPanel title="比赛信息">
+      <AccountPanel :title="t('accountEvents.submission.matchInfo')">
         <p>{{ contextLine }}</p>
-        <p>比赛时间：{{ formatDateTimeShort(detail.matchTime) }}</p>
+        <p>{{ t('accountEvents.submission.matchTime', { time: formatDateTimeShort(detail.matchTime) }) }}</p>
         <p v-if="detail.seriesContext" class="v4-sub-series">
-          {{ detail.seriesContext.seriesCode || '系列赛' }}
+          {{ detail.seriesContext.seriesCode || t('accountEvents.common.series') }}
           · {{ v4BestOfLabel(detail.seriesContext.bestOf) }}
           · Game {{ detail.seriesContext.seriesGameNo }}
-          · 系列赛当前比分：{{ detail.seriesContext.homeWinCount ?? 0 }} : {{ detail.seriesContext.awayWinCount ?? 0 }}
-          · {{ detail.seriesContext.seriesStatusName || v4MatchSeriesStatusLabel(detail.seriesContext.seriesStatus) }}
+          · {{ t('accountEvents.submission.seriesScore', { home: detail.seriesContext.homeWinCount ?? 0, away: detail.seriesContext.awayWinCount ?? 0 }) }}
+          · {{ seriesStatusLabel(detail.seriesContext.seriesStatus, detail.seriesContext.seriesStatusName) }}
         </p>
-        <p v-if="detail.rejectReason" class="v4-sub-reject">驳回原因：{{ detail.rejectReason }}</p>
-        <p v-if="skipped" class="v4-sub-readonly">{{ detail.seriesContext?.skippedReason || '该系列赛已决出胜负，本局无需进行' }}</p>
-        <p v-else-if="isReadonly" class="v4-sub-readonly">当前状态只读，不可覆盖保存。</p>
+        <p v-if="detail.rejectReason" class="v4-sub-reject">{{ t('accountEvents.common.rejectReason', { reason: detail.rejectReason }) }}</p>
+        <p v-if="skipped" class="v4-sub-readonly">{{ detail.seriesContext?.skippedReason || t('accountEvents.submission.skippedFallback') }}</p>
+        <p v-else-if="isReadonly" class="v4-sub-readonly">{{ t('accountEvents.submission.readonly') }}</p>
         <input ref="fileInput" type="file" accept="image/*" multiple class="v4-sub-file" @change="handleUpload" />
       </AccountPanel>
 
-      <AccountPanel v-if="isFullMatch" title="双方完整比赛数据">
+      <AccountPanel v-if="isFullMatch" :title="t('accountEvents.submission.fullData')">
         <FullMatchGameEditor
-          game-label="本场"
-          :home-name="detail.homeTeamName || '主队'"
-          :away-name="detail.awayTeamName || '客队'"
+          :game-label="t('accountEvents.submission.thisGame')"
+          :home-name="detail.homeTeamName || t('accountEvents.common.homeTeam')"
+          :away-name="detail.awayTeamName || t('accountEvents.common.awayTeam')"
           :home-players="detail.homeEligiblePlayers || eligiblePlayers"
           :away-players="detail.awayEligiblePlayers || []"
           :home-stats="fullForm.homeStats"
@@ -414,25 +428,25 @@ onMounted(() => {
         />
       </AccountPanel>
 
-      <AccountPanel v-if="!isFullMatch" title="对阵与总比分">
-        <p class="v4-sub-hint">请填写最终比赛比分。本轮仍按手工总比分结算，不会自动汇总球员得分。</p>
+      <AccountPanel v-if="!isFullMatch" :title="t('accountEvents.submission.scoreTitle')">
+        <p class="v4-sub-hint">{{ t('accountEvents.submission.scoreHint') }}</p>
         <div class="v4-sub-scores">
           <label>
-            主队 {{ detail.homeTeamName }}
+            {{ t('accountEvents.submission.homeScore', { name: detail.homeTeamName }) }}
             <input v-model.number="form.homeScore" type="number" min="0" :disabled="!canEdit || skipped" />
           </label>
           <label>
-            客队 {{ detail.awayTeamName }}
+            {{ t('accountEvents.submission.awayScore', { name: detail.awayTeamName }) }}
             <input v-model.number="form.awayScore" type="number" min="0" :disabled="!canEdit || skipped" />
           </label>
         </div>
       </AccountPanel>
 
-      <AccountPanel v-if="!isFullMatch" title="本方球队技术统计">
-        <p class="v4-sub-team-name">{{ detail.submitTeamName || '本方球队' }}</p>
+      <AccountPanel v-if="!isFullMatch" :title="t('accountEvents.submission.teamStats')">
+        <p class="v4-sub-team-name">{{ detail.submitTeamName || t('accountEvents.common.ourTeam') }}</p>
         <div class="v4-sub-grid">
           <label v-for="field in ['score', 'rebound', 'assist', 'steal', 'block', 'turnover', 'foul'] as const" :key="field">
-            {{ field === 'score' ? '得分' : field === 'rebound' ? '篮板' : field === 'assist' ? '助攻' : field === 'steal' ? '抢断' : field === 'block' ? '盖帽' : field === 'turnover' ? '失误' : '犯规' }}
+            {{ teamStatLabel(field) }}
             <input v-model.number="form.teamStat[field]" type="number" min="0" :disabled="!canEdit || skipped" />
           </label>
         </div>
@@ -446,13 +460,13 @@ onMounted(() => {
         </div>
       </AccountPanel>
 
-      <AccountPanel v-if="!isFullMatch" title="本方球员技术统计">
+      <AccountPanel v-if="!isFullMatch" :title="t('accountEvents.submission.playerStats')">
         <div class="v4-sub-table-wrap">
           <table class="v4-sub-table">
             <thead>
               <tr>
                 <th>#</th>
-                <th>球员</th>
+                <th>{{ t('accountEvents.common.player') }}</th>
                 <th>PTS</th>
                 <th>REB</th>
                 <th>AST</th>
@@ -468,7 +482,7 @@ onMounted(() => {
                 <td>{{ index + 1 }}</td>
                 <td>
                   <select v-model="row.eventPlayerId" :disabled="!canEdit || skipped">
-                    <option value="">选择球员</option>
+                    <option value="">{{ t('accountEvents.common.selectPlayer') }}</option>
                     <option
                       v-for="player in availablePlayers(index)"
                       :key="String(player.eventPlayerId)"
@@ -482,7 +496,7 @@ onMounted(() => {
                   <input v-model.number="row[field]" type="number" min="0" :disabled="!canEdit || skipped" />
                 </td>
                 <td v-if="canEdit && !skipped">
-                  <button type="button" class="account-btn-secondary v4-sub-mini" @click="removePlayerStatRow(index)">删除</button>
+                  <button type="button" class="account-btn-secondary v4-sub-mini" @click="removePlayerStatRow(index)">{{ t('accountEvents.common.delete') }}</button>
                 </td>
               </tr>
             </tbody>
@@ -495,12 +509,12 @@ onMounted(() => {
           :disabled="form.playerStats.length >= lineupMax"
           @click="addPlayerStatRow"
         >
-          添加球员
+          {{ t('accountEvents.submission.addPlayer') }}
         </button>
       </AccountPanel>
 
-      <AccountPanel v-if="!isFullMatch" title="比赛截图 / 比赛凭证">
-        <p class="v4-sub-hint">请上传本局比赛结果或技术统计截图，供管理员审核。最多 {{ MAX_SCREENSHOTS }} 张。</p>
+      <AccountPanel v-if="!isFullMatch" :title="t('accountEvents.submission.screenshots')">
+        <p class="v4-sub-hint">{{ t('accountEvents.submission.screenshotHint', { max: MAX_SCREENSHOTS }) }}</p>
         <button
           v-if="canEdit && !skipped"
           type="button"
@@ -508,26 +522,26 @@ onMounted(() => {
           :disabled="uploading || form.materialFileIds.length >= MAX_SCREENSHOTS"
           @click="triggerUpload"
         >
-          {{ uploading ? '上传中…' : '+ 上传截图' }}
+          {{ uploading ? t('accountEvents.common.uploading') : t('accountEvents.submission.upload') }}
         </button>
         <div v-if="form.materialFileIds.length" class="v4-sub-shots">
           <figure v-for="(fileId, index) in form.materialFileIds" :key="fileId" class="v4-sub-shot">
             <button type="button" class="v4-sub-shot__thumb" @click="openPreview(fileId)">
-              <img v-if="materialUrls[fileId]" :src="materialUrls[fileId]" alt="比赛截图" />
-              <span v-else class="v4-sub-shot__pending">加载中</span>
+              <img v-if="materialUrls[fileId]" :src="materialUrls[fileId]" :alt="t('accountEvents.common.screenshot')" />
+              <span v-else class="v4-sub-shot__pending">{{ t('accountEvents.common.loadingShort') }}</span>
             </button>
-            <button v-if="canEdit && !skipped" type="button" class="v4-sub-shot__del" @click="removeScreenshot(index)">删除</button>
+            <button v-if="canEdit && !skipped" type="button" class="v4-sub-shot__del" @click="removeScreenshot(index)">{{ t('accountEvents.common.delete') }}</button>
           </figure>
         </div>
       </AccountPanel>
 
-      <AccountPanel title="备注">
+      <AccountPanel :title="t('accountEvents.submission.remark')">
         <textarea v-model="form.submitRemark" rows="3" :disabled="!canEdit || skipped" class="v4-sub-textarea" />
       </AccountPanel>
 
       <div class="v4-sub-actions">
-        <button v-if="canEdit && !skipped" type="button" class="account-btn-secondary" :disabled="saving" @click="handleSaveDraft">保存草稿</button>
-        <button v-if="canEdit && !skipped" type="button" class="account-btn-primary" :disabled="submitting || saving || (isFullMatch && !fullValidation.pass)" @click="handleSubmitAudit">提交审核</button>
+        <button v-if="canEdit && !skipped" type="button" class="account-btn-secondary" :disabled="saving" @click="handleSaveDraft">{{ t('accountEvents.common.saveDraft') }}</button>
+        <button v-if="canEdit && !skipped" type="button" class="account-btn-primary" :disabled="submitting || saving || (isFullMatch && !fullValidation.pass)" @click="handleSubmitAudit">{{ t('accountEvents.common.submitReview') }}</button>
         <button
           v-if="detail.submissionStatus === 'REJECTED' && !skipped"
           type="button"
@@ -535,14 +549,14 @@ onMounted(() => {
           :disabled="submitting"
           @click="handleResubmit"
         >
-          驳回后重提
+          {{ t('accountEvents.common.resubmitAfterReject') }}
         </button>
-        <button type="button" class="account-btn-secondary" @click="router.push('/account/my-events?tab=schedule')">返回我的赛程</button>
+        <button type="button" class="account-btn-secondary" @click="router.push('/account/my-events?tab=schedule')">{{ t('accountEvents.common.backToSchedule') }}</button>
       </div>
     </template>
 
     <div v-if="previewUrl" class="v4-sub-preview" @click.self="closePreview">
-      <img :src="previewUrl" alt="截图预览" />
+      <img :src="previewUrl" :alt="t('accountEvents.common.screenshotPreview')" />
     </div>
   </div>
 </template>

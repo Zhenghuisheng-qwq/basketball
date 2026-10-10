@@ -1,23 +1,33 @@
 import type { AccountEventTab, MyEventsTabKey } from '@/types/accountEvents'
 import type { MyEventsRoleMode } from '@/api/types/myEvents'
+import { translate } from '@/i18n'
 
-export const accountEventTabsAll: AccountEventTab[] = [
-  { key: 'available', label: '可参与赛事', title: '可参与赛事', subtitle: 'AVAILABLE EVENTS' },
-  { key: 'applications', label: '我的报名', title: '我的报名', subtitle: 'MY APPLICATIONS' },
-  { key: 'joined', label: '已参加赛事', title: '已参加赛事', subtitle: 'PARTICIPATING EVENTS' },
-  { key: 'schedule', label: '我的赛程', title: '我的赛程安排', subtitle: 'MY SCHEDULE' },
-]
+function buildAccountEventTabs(): AccountEventTab[] {
+  return [
+    { key: 'available', label: translate('accountEvents.tabs.available'), title: translate('accountEvents.tabs.available'), subtitle: 'AVAILABLE EVENTS' },
+    { key: 'applications', label: translate('accountEvents.tabs.applications'), title: translate('accountEvents.tabs.applications'), subtitle: 'MY APPLICATIONS' },
+    { key: 'joined', label: translate('accountEvents.tabs.joined'), title: translate('accountEvents.tabs.joined'), subtitle: 'PARTICIPATING EVENTS' },
+    { key: 'schedule', label: translate('accountEvents.tabs.schedule'), title: translate('accountEvents.tabs.scheduleTitle'), subtitle: 'MY SCHEDULE' },
+  ]
+}
 
-export const accountEventTabsCaptain: AccountEventTab[] = accountEventTabsAll
+export function accountEventTabsAll(): AccountEventTab[] {
+  return buildAccountEventTabs()
+}
+
+export function accountEventTabsCaptain(): AccountEventTab[] {
+  return buildAccountEventTabs()
+}
 
 export function getTabsForRole(roleMode?: MyEventsRoleMode): AccountEventTab[] {
+  const tabs = buildAccountEventTabs()
   if (roleMode === 'TEAM_CAPTAIN') {
-    return accountEventTabsCaptain
+    return tabs
   }
   if (roleMode === 'NO_TEAM') {
-    return accountEventTabsAll.filter((tab) => tab.key === 'available')
+    return tabs.filter((tab) => tab.key === 'available')
   }
-  return accountEventTabsAll
+  return tabs
 }
 
 export function getTabMeta(tab: string, roleMode?: MyEventsRoleMode) {
@@ -28,56 +38,56 @@ export function getTabMeta(tab: string, roleMode?: MyEventsRoleMode) {
 export function getBannerCopy(tab: string, roleMode?: MyEventsRoleMode): { title: string; description: string } {
   if (roleMode === 'NO_TEAM') {
     return {
-      title: '当前开放赛事',
-      description: '你可以查看当前公开赛事。报名操作由具备对应赛事资格的队长完成。',
+      title: translate('accountEvents.banner.openTitle'),
+      description: translate('accountEvents.banner.noTeamDesc'),
     }
   }
   if (roleMode === 'TEAM_MEMBER') {
     if (tab === 'applications') {
       return {
-        title: '球队报名记录',
-        description: '你当前是球队成员，可查看球队报名状态。赛事报名由队长统一操作。',
+        title: translate('accountEvents.banner.memberApplicationsTitle'),
+        description: translate('accountEvents.banner.memberApplicationsDesc'),
       }
     }
     if (tab === 'joined') {
       return {
-        title: '我的参赛阵容',
-        description: '查看自己在已报名赛事中的阵容入选情况。',
+        title: translate('accountEvents.banner.memberJoinedTitle'),
+        description: translate('accountEvents.banner.memberJoinedDesc'),
       }
     }
     if (tab === 'schedule') {
       return {
-        title: '我的赛程安排',
-        description: '聚合查看你在全部已参加赛事中的比赛安排。',
+        title: translate('accountEvents.banner.memberScheduleTitle'),
+        description: translate('accountEvents.banner.memberScheduleDesc'),
       }
     }
     return {
-      title: '当前开放赛事',
-      description: '你当前是球队成员，可查看球队报名状态。赛事报名由队长统一操作。',
+      title: translate('accountEvents.banner.openTitle'),
+      description: translate('accountEvents.banner.memberDefaultDesc'),
     }
   }
   if (roleMode === 'TEAM_CAPTAIN') {
     if (tab === 'applications') {
       return {
-        title: '已提交的报名申请记录',
-        description: '包含审核中、已通过、已驳回、已撤回与已取消等全部状态。',
+        title: translate('accountEvents.banner.captainApplicationsTitle'),
+        description: translate('accountEvents.banner.captainApplicationsDesc'),
       }
     }
     if (tab === 'joined') {
       return {
-        title: '正式参赛与历史赛事关系',
-        description: '根据本届身份进入对应页面。',
+        title: translate('accountEvents.banner.captainJoinedTitle'),
+        description: translate('accountEvents.banner.captainJoinedDesc'),
       }
     }
     if (tab === 'schedule') {
       return {
-        title: '我的赛程安排',
-        description: '跨赛事查看待比赛、已结束等全部赛程，单赛事详情仍可从「已参加赛事」进入。',
+        title: translate('accountEvents.banner.captainScheduleTitle'),
+        description: translate('accountEvents.banner.captainScheduleDesc'),
       }
     }
     return {
-      title: '当前开放赛事',
-      description: '你可以查看全部赛事，只有已获得报名资格的赛事可以报名。',
+      title: translate('accountEvents.banner.openTitle'),
+      description: translate('accountEvents.banner.captainDefaultDesc'),
     }
   }
   return getBannerCopyLegacy(tab)
@@ -86,78 +96,80 @@ export function getBannerCopy(tab: string, roleMode?: MyEventsRoleMode): { title
 function getBannerCopyLegacy(tab: string): { title: string; description: string } {
   if (tab === 'applications') {
     return {
-      title: '已提交的报名申请记录',
-      description: '包含审核中、已通过、已驳回、已撤回与已取消等全部状态',
+      title: translate('accountEvents.banner.legacyApplicationsTitle'),
+      description: translate('accountEvents.banner.legacyApplicationsDesc'),
     }
   }
   if (tab === 'joined') {
     return {
-      title: '正式参赛与历史赛事关系',
-      description: '根据本届身份进入对应页面',
+      title: translate('accountEvents.banner.legacyJoinedTitle'),
+      description: translate('accountEvents.banner.legacyJoinedDesc'),
     }
   }
   return {
-    title: '当前开放赛事',
-    description: '查看符合账号资格的报名入口',
+    title: translate('accountEvents.banner.legacyDefaultTitle'),
+    description: translate('accountEvents.banner.legacyDefaultDesc'),
   }
 }
 
 export function getFooterNote(tab: string, roleMode?: MyEventsRoleMode): string {
   if (roleMode === 'NO_TEAM') {
-    return '加入球队后，可由队长统一报名赛事。'
+    return translate('accountEvents.footer.noTeam')
   }
   if (roleMode === 'TEAM_MEMBER') {
     if (tab === 'applications') {
-      return '当前球队暂无赛事报名记录时，请等待队长报名。'
+      return translate('accountEvents.footer.memberApplications')
     }
-    return '普通成员不能代表球队报名，如需参赛请联系队长。'
+    return translate('accountEvents.footer.memberDefault')
   }
   if (roleMode === 'TEAM_CAPTAIN') {
     if (tab === 'applications') {
-      return '报名申请与正式参赛关系分别展示；审核通过后同一赛事可同时出现在「我的报名」与「已参加赛事」。'
+      return translate('accountEvents.footer.captainApplications')
     }
     if (tab === 'schedule') {
-      return '赛程数据来自您正式参加的赛事。比赛数据提交权限以具体赛区、参赛队伍及当前比赛权限为准。'
+      return translate('accountEvents.footer.schedule')
     }
-    return '队长权限只绑定具体赛事与当前球队；未授权赛事仅可查看不可报名。'
+    return translate('accountEvents.footer.captainDefault')
   }
   if (tab === 'schedule') {
-    return '赛程数据来自您正式参加的赛事。比赛数据提交权限以具体赛区、参赛队伍及当前比赛权限为准。'
+    return translate('accountEvents.footer.schedule')
   }
   return getFooterNoteLegacy(tab)
 }
 
 function getFooterNoteLegacy(tab: string): string {
   if (tab === 'applications') {
-    return '报名申请与正式参赛关系分别展示；审核通过后同一赛事可同时出现在「我的报名」与「已参加赛事」。'
+    return translate('accountEvents.footer.legacyApplications')
   }
   if (tab === 'joined') {
-    return '赛事队长权限只绑定具体赛事与赛事球队；历史赛事为只读。'
+    return translate('accountEvents.footer.legacyJoined')
   }
-  return '名额释放且未截止时，报名入口会重新开放。'
+  return translate('accountEvents.footer.legacyDefault')
 }
 
 export function getEmptyMessage(tab: MyEventsTabKey, roleMode?: MyEventsRoleMode): string {
   if (tab === 'available') {
     if (roleMode === 'NO_TEAM') {
-      return '当前暂无可参与赛事'
+      return translate('accountEvents.empty.noAvailable')
     }
     if (roleMode === 'TEAM_CAPTAIN') {
-      return '暂无可报名赛事'
+      return translate('accountEvents.empty.noRegisterable')
     }
-    return '当前暂无可参与赛事'
+    return translate('accountEvents.empty.noAvailable')
   }
   if (tab === 'applications') {
     if (roleMode === 'TEAM_MEMBER') {
-      return '当前球队暂无赛事报名记录，请等待队长报名。'
+      return translate('accountEvents.empty.memberNoApplications')
     }
-    return '暂无报名记录'
+    return translate('accountEvents.empty.noApplications')
   }
   if (tab === 'schedule') {
-    return '当前筛选条件下暂无比赛'
+    return translate('accountEvents.empty.noSchedule')
   }
-  return '暂无参赛记录'
+  return translate('accountEvents.empty.noJoined')
 }
 
 /** @deprecated 使用 getTabsForRole */
-export const accountEventTabs = accountEventTabsAll
+export function accountEventTabs(): AccountEventTab[] {
+  return buildAccountEventTabs()
+}

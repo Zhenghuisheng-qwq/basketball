@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountStatusBanner from '@/components/account/AccountStatusBanner.vue'
@@ -20,6 +21,7 @@ import { v4SubmissionStatusLabel } from '@/utils/v4AccountEventsMappers'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const matchSeriesId = computed(() => String(route.params.matchSeriesId || ''))
 const loading = ref(false)
 const saving = ref(false)
@@ -67,8 +69,8 @@ const currentValidation = computed(() => {
   if (!currentGame.value || !currentDraft.value || !workspace.value) return { errors: [] as string[], homeScore: 0, awayScore: 0, pass: false, status: 'empty' as const }
   return validateGame({
     gameLabel: `G${currentGame.value.seriesGameNo}`,
-    homeName: workspace.value.homeTeamName || '主队',
-    awayName: workspace.value.awayTeamName || '客队',
+    homeName: workspace.value.homeTeamName || t('accountEvents.common.homeTeam'),
+    awayName: workspace.value.awayTeamName || t('accountEvents.common.awayTeam'),
     homePlayers: currentDraft.value.homeStats,
     awayPlayers: currentDraft.value.awayStats,
     periods: currentDraft.value.periods,
@@ -111,7 +113,7 @@ async function loadWorkspace() {
     ensureDrafts(workspace.value)
     dirtyIds.value = {}
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -132,7 +134,7 @@ async function onDeclaredChange() {
     await persistDeclared()
     await loadWorkspace()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '系列赛比分确认失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.series.declareFailed'))
   }
 }
 
@@ -144,7 +146,7 @@ function markCurrentDirty() {
 async function saveCurrent(complete: boolean) {
   if (!canEdit.value || !currentGame.value || !currentDraft.value) return
   if (complete && !currentValidation.value.pass) {
-    ElMessage.error(currentValidation.value.errors[0] || '请先填写完整比赛数据')
+    ElMessage.error(currentValidation.value.errors[0] || t('accountEvents.common.fillMatchData'))
     return
   }
   saving.value = true
@@ -163,10 +165,10 @@ async function saveCurrent(complete: boolean) {
       submitRemark: currentDraft.value.submitRemark,
       draftComplete: complete,
     })
-    ElMessage.success(complete ? '本场已完成' : '本场已保存')
+    ElMessage.success(complete ? t('accountEvents.series.completed') : t('accountEvents.series.saved'))
     await loadWorkspace()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '保存失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -186,10 +188,10 @@ async function submitSeries() {
       seriesSubmissionId: workspace.value.seriesSubmissionId,
       matchSeriesId: matchSeriesId.value,
     })
-    ElMessage.success('已提交整个系列赛审核')
+    ElMessage.success(t('accountEvents.series.submitted'))
     await loadWorkspace()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '提交失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.submitFailed'))
   } finally {
     saving.value = false
   }
@@ -204,10 +206,10 @@ async function resubmit() {
       matchSeriesId: matchSeriesId.value,
       ...declaredPair(),
     })
-    ElMessage.success('已生成新版本草稿，请修改后再次提交')
+    ElMessage.success(t('accountEvents.series.resubmitDraft'))
     await loadWorkspace()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '重提失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.resubmitFailed'))
   } finally {
     saving.value = false
   }
@@ -232,26 +234,26 @@ onMounted(() => { void loadWorkspace() })
 <template>
   <div class="account-view ss-page">
     <AccountPageHeader
-      zh-title="系列赛数据提交"
+      :zh-title="t('accountEvents.series.pageTitle')"
       en-title="SERIES DATA SUBMISSION"
       :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '我的赛事', to: '/account/my-events?tab=schedule' },
-        { label: '系列赛数据' },
+        { label: t('accountEvents.breadcrumb.home'), to: '/home' },
+        { label: t('accountEvents.breadcrumb.account'), to: '/account/overview' },
+        { label: t('accountEvents.breadcrumb.myEvents'), to: '/account/my-events?tab=schedule' },
+        { label: t('accountEvents.breadcrumb.seriesData') },
       ]"
     />
     <AccountStatusBanner
-      title="系列赛数据提交"
-      :description="workspace ? `${workspace.homeTeamName} VS ${workspace.awayTeamName}` : '加载中'"
+      :title="t('accountEvents.series.pageTitle')"
+      :description="workspace ? `${workspace.homeTeamName} VS ${workspace.awayTeamName}` : t('accountEvents.common.loadingShort')"
       :status-text="v4SubmissionStatusLabel(workspace?.status)"
       :status-type="workspace?.status === 'APPROVED' ? 'success' : workspace?.status === 'REJECTED' ? 'danger' : 'info'"
     />
-    <p v-if="loading">加载中…</p>
+    <p v-if="loading">{{ t('accountEvents.common.loading') }}</p>
     <template v-else-if="workspace && currentGame && currentDraft">
-      <p v-if="workspace.rejectReason" class="ss-reject">驳回原因：{{ workspace.rejectReason }}</p>
+      <p v-if="workspace.rejectReason" class="ss-reject">{{ t('accountEvents.common.rejectReason', { reason: workspace.rejectReason }) }}</p>
       <section class="ss-card">
-        <div class="ss-title">系列赛最终结果</div>
+        <div class="ss-title">{{ t('accountEvents.series.finalResult') }}</div>
         <div class="ss-row">
           <strong>{{ workspace.homeTeamName }}</strong>
           <select v-model="declared" :disabled="!canEdit" @change="onDeclaredChange">
@@ -259,7 +261,7 @@ onMounted(() => { void loadWorkspace() })
           </select>
           <strong>{{ workspace.awayTeamName }}</strong>
         </div>
-        <p>赛制 BO{{ bestOf }} · 实际完成 {{ actualCount }} 场 · 胜者 {{ Number(declared.split('-')[0]) > Number(declared.split('-')[1]) ? workspace.homeTeamName : workspace.awayTeamName }}</p>
+        <p>{{ t('accountEvents.series.formatLine', { bestOf, count: actualCount, winner: Number(declared.split('-')[0]) > Number(declared.split('-')[1]) ? workspace.homeTeamName : workspace.awayTeamName }) }}</p>
       </section>
       <section class="ss-tabs">
         <button
@@ -270,16 +272,16 @@ onMounted(() => { void loadWorkspace() })
           @click="current = index"
         >
           <div>G{{ game.seriesGameNo }}</div>
-          <small>{{ isGameComplete(game) ? '已完成' : '待完善' }}</small>
+          <small>{{ isGameComplete(game) ? t('accountEvents.series.complete') : t('accountEvents.series.incomplete') }}</small>
         </button>
       </section>
       <div class="ss-workspace">
         <section class="ss-card">
-          <div class="ss-title">G{{ currentGame.seriesGameNo }} · 比赛数据</div>
+          <div class="ss-title">{{ t('accountEvents.series.gameData', { no: currentGame.seriesGameNo }) }}</div>
           <FullMatchGameEditor
             :game-label="`G${currentGame.seriesGameNo}`"
-            :home-name="workspace.homeTeamName || '主队'"
-            :away-name="workspace.awayTeamName || '客队'"
+            :home-name="workspace.homeTeamName || t('accountEvents.common.homeTeam')"
+            :away-name="workspace.awayTeamName || t('accountEvents.common.awayTeam')"
             :home-players="workspace.homeEligiblePlayers || []"
             :away-players="workspace.awayEligiblePlayers || []"
             :home-stats="currentDraft.homeStats"
@@ -296,17 +298,17 @@ onMounted(() => { void loadWorkspace() })
           />
           <input ref="fileInput" type="file" accept="image/*" multiple hidden @change="handleUpload" />
           <div class="ss-actions">
-            <button type="button" class="account-btn-secondary" :disabled="current === 0" @click="current -= 1">上一场</button>
-            <button v-if="canEdit" type="button" class="account-btn-secondary" :disabled="saving" @click="saveCurrent(false)">保存本场</button>
-            <button v-if="canEdit" type="button" class="account-btn-primary" :disabled="saving || !currentValidation.pass" @click="saveCurrent(true)">保存本场并完成</button>
-            <button v-if="canEdit" type="button" class="account-btn-primary" :disabled="saving || !currentValidation.pass" @click="saveAndNext">保存并进入下一场</button>
+            <button type="button" class="account-btn-secondary" :disabled="current === 0" @click="current -= 1">{{ t('accountEvents.series.prevGame') }}</button>
+            <button v-if="canEdit" type="button" class="account-btn-secondary" :disabled="saving" @click="saveCurrent(false)">{{ t('accountEvents.series.saveGame') }}</button>
+            <button v-if="canEdit" type="button" class="account-btn-primary" :disabled="saving || !currentValidation.pass" @click="saveCurrent(true)">{{ t('accountEvents.series.saveAndComplete') }}</button>
+            <button v-if="canEdit" type="button" class="account-btn-primary" :disabled="saving || !currentValidation.pass" @click="saveAndNext">{{ t('accountEvents.series.saveAndNext') }}</button>
           </div>
         </section>
         <aside class="ss-card ss-progress">
-          <div class="ss-title">系列赛提交进度</div>
+          <div class="ss-title">{{ t('accountEvents.series.progress') }}</div>
           <div v-for="game in games" :key="`p-${game.matchId}`" class="ss-pitem">
             <span>G{{ game.seriesGameNo }}</span>
-            <b :class="isGameComplete(game) ? 'ok' : 'wait'">{{ isGameComplete(game) ? '✓ 已完成' : '! 待完善' }}</b>
+            <b :class="isGameComplete(game) ? 'ok' : 'wait'">{{ isGameComplete(game) ? t('accountEvents.series.completeMark') : t('accountEvents.series.incompleteMark') }}</b>
           </div>
           <p>{{ completedCount }} / {{ actualCount }}</p>
           <button
@@ -316,7 +318,7 @@ onMounted(() => { void loadWorkspace() })
             :disabled="!canSubmitAll || saving"
             @click="submitSeries"
           >
-            提交整个系列赛审核
+            {{ t('accountEvents.series.submitAll') }}
           </button>
           <button
             v-if="workspace.status === 'REJECTED'"
@@ -325,9 +327,9 @@ onMounted(() => { void loadWorkspace() })
             :disabled="saving"
             @click="resubmit"
           >
-            驳回后重提
+            {{ t('accountEvents.common.resubmitAfterReject') }}
           </button>
-          <button type="button" class="account-btn-secondary ss-submit" @click="router.push('/account/my-events?tab=schedule')">返回我的赛程</button>
+          <button type="button" class="account-btn-secondary ss-submit" @click="router.push('/account/my-events?tab=schedule')">{{ t('accountEvents.common.backToSchedule') }}</button>
         </aside>
       </div>
     </template>

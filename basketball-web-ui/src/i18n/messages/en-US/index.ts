@@ -1,7 +1,9 @@
 import type { MessageSchema } from '../zh-CN'
 import account from './account'
+import accountEvents from './accountEvents'
 import accountIdentity from './accountIdentity'
 import accountShell from './accountShell'
+import accountTeam from './accountTeam'
 import auth from './auth'
 import common from './common'
 import events from './events'
@@ -21,6 +23,8 @@ const messages = {
   account,
   accountShell,
   accountIdentity,
+  accountTeam,
+  accountEvents,
   events,
   eventsPage,
   match,

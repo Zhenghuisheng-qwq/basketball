@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { resolveTeamLogoFallback, resolveTeamLogoUrl } from '@/utils/teamLogo'
+
+const { t } = useI18n()
 
 const props = withDefaults(
   defineProps<{
@@ -20,7 +23,7 @@ const imageError = ref(false)
 const logoSrc = computed(() => resolveTeamLogoUrl(props.logoUrl))
 const fallbackText = computed(() => resolveTeamLogoFallback(props.shortName, props.teamName))
 const showImage = computed(() => Boolean(logoSrc.value) && !imageError.value)
-const imageAlt = computed(() => props.alt || props.teamName || '球队 Logo')
+const imageAlt = computed(() => props.alt || props.teamName || t('accountTeam.logo.alt'))
 
 watch(
   () => props.logoUrl,

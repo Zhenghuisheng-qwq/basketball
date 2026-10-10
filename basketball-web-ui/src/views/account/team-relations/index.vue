@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
+const { t } = useI18n()
 const router = useRouter()
 
 onMounted(() => {
@@ -10,5 +12,5 @@ onMounted(() => {
 </script>
 
 <template>
-  <p>正在跳转到我的球队…</p>
+  <p>{{ t('accountTeam.relations.redirecting') }}</p>
 </template>

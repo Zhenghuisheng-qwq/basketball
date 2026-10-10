@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import {
   bindV4PersonalFormationTeam,
@@ -11,6 +12,7 @@ import {
 import type { V4PersonalFormationAvailableTeam, V4PersonalFormationTask } from '@/api/types/v4PlayerEvents'
 
 const router = useRouter()
+const { t } = useI18n()
 const loading = ref(false)
 const tasks = ref<V4PersonalFormationTask[]>([])
 const selectedTeamId = ref<Record<string, string>>({})
@@ -24,13 +26,13 @@ function isVersionedFormation(task: V4PersonalFormationTask) {
 
 function formationStatusLabel(status?: string) {
   switch ((status || '').toUpperCase()) {
-    case 'CAPTAIN_ASSIGNED': return '已指定队长'
-    case 'TEAM_FORMING': return '组队中'
-    case 'READY_TO_CONFIRM': return '待确认'
-    case 'CONFIRMED': return '已确认'
-    case 'CONVERTED': return '已转换'
-    case 'DRAFT': return '已分配临时球队'
-    default: return status || '进行中'
+    case 'CAPTAIN_ASSIGNED': return t('accountEvents.formation.status.CAPTAIN_ASSIGNED')
+    case 'TEAM_FORMING': return t('accountEvents.formation.status.TEAM_FORMING')
+    case 'READY_TO_CONFIRM': return t('accountEvents.formation.status.READY_TO_CONFIRM')
+    case 'CONFIRMED': return t('accountEvents.formation.status.CONFIRMED')
+    case 'CONVERTED': return t('accountEvents.formation.status.CONVERTED')
+    case 'DRAFT': return t('accountEvents.formation.status.DRAFT')
+    default: return status || t('accountEvents.common.inProgress')
   }
 }
 
@@ -59,7 +61,7 @@ async function loadAvailableTeams(task: V4PersonalFormationTask) {
       selectedTeamId.value[task.drawTeamId] = task.longTermTeamId
     }
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载候选球队失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.formation.loadTeamsFailed'))
   } finally {
     loadingTeamsMap.value[task.drawTeamId] = false
   }
@@ -75,21 +77,21 @@ async function handleBind(task: V4PersonalFormationTask) {
   const teamId = selectedTeamId.value[task.drawTeamId]
   const selected = selectedAvailableTeam(task)
   if (!teamId || !selected) {
-    ElMessage.warning('请选择要绑定的长期球队')
+    ElMessage.warning(t('accountEvents.formation.selectTeam'))
     return
   }
   if (!selected.canBind) {
-    ElMessage.warning(selected.unavailableReason || '所选球队不可绑定')
+    ElMessage.warning(selected.unavailableReason || t('accountEvents.formation.teamUnavailable'))
     return
   }
   actingTeamId.value = task.drawTeamId
   try {
     await bindV4PersonalFormationTeam({ drawTeamId: task.drawTeamId, longTermTeamId: teamId })
-    ElMessage.success('绑定成功')
+    ElMessage.success(t('accountEvents.formation.bindSuccess'))
     availableTeamsMap.value[task.drawTeamId] = []
     await loadTasks()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '绑定失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.formation.bindFailed'))
   } finally {
     actingTeamId.value = ''
   }
@@ -99,10 +101,10 @@ async function handleConfirm(task: V4PersonalFormationTask) {
   actingTeamId.value = task.drawTeamId
   try {
     await confirmV4PersonalFormation(task.drawTeamId)
-    ElMessage.success('成队确认成功')
+    ElMessage.success(t('accountEvents.formation.confirmSuccess'))
     await loadTasks()
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '确认失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.formation.confirmFailed'))
   } finally {
     actingTeamId.value = ''
   }
@@ -118,31 +120,30 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section v-if="loading" class="formation-panel">加载组队任务中…</section>
+  <section v-if="loading" class="formation-panel">{{ t('accountEvents.formation.loading') }}</section>
   <section v-else-if="tasks.length" class="formation-panel">
-    <h3 class="formation-panel__title">个人成队任务</h3>
+    <h3 class="formation-panel__title">{{ t('accountEvents.formation.title') }}</h3>
     <article v-for="task in tasks" :key="task.drawTeamId" class="formation-panel__item">
       <div class="formation-panel__head">
         <strong>{{ task.temporaryTeamName || task.temporaryTeamCode }}</strong>
         <span>{{ task.divisionName }}</span>
       </div>
       <p class="formation-panel__meta">
-        状态：{{ formationStatusLabel(task.formationStatus) }}
-        · 成员 {{ task.actualMemberCount ?? 0 }}/{{ task.expectedMemberCount ?? '-' }}
-        <span v-if="task.longTermTeamName"> · 已绑定：{{ task.longTermTeamName }}</span>
+        {{ t('accountEvents.formation.meta', { status: formationStatusLabel(task.formationStatus), actual: task.actualMemberCount ?? 0, expected: task.expectedMemberCount ?? '-' }) }}
+        <span v-if="task.longTermTeamName"> · {{ t('accountEvents.formation.bound', { name: task.longTermTeamName }) }}</span>
       </p>
       <ul v-if="task.members?.length" class="formation-panel__members">
         <li v-for="member in task.members" :key="member.playerId">
           {{ member.playerName || member.playerId }}
-          <span>{{ member.assignmentRole === 'CAPTAIN' ? '（队长）' : '' }}</span>
+          <span>{{ member.assignmentRole === 'CAPTAIN' ? t('accountEvents.common.captainMark') : '' }}</span>
         </li>
       </ul>
       <div v-if="isVersionedFormation(task)" class="formation-panel__meta">
-        已分配临时球队，锁定后可进入本队比赛提交。
+        {{ t('accountEvents.formation.lockedHint') }}
       </div>
       <div v-else-if="task.formationStatus !== 'CONVERTED'" class="formation-panel__actions">
         <button type="button" class="account-btn-secondary" @click="loadAvailableTeams(task)">
-          {{ loadingTeamsMap[task.drawTeamId] ? '加载中…' : '加载候选球队' }}
+          {{ loadingTeamsMap[task.drawTeamId] ? t('accountEvents.common.loading') : t('accountEvents.formation.loadTeams') }}
         </button>
         <template v-if="availableTeamsMap[task.drawTeamId]?.length">
           <div class="formation-panel__team-list">
@@ -161,20 +162,17 @@ onMounted(async () => {
               <div>
                 <strong>{{ team.teamName }}</strong>
                 <p>
-                  成员 {{ team.currentMemberCount ?? 0 }}
-                  · 已匹配 {{ team.matchedAssignedMemberCount ?? 0 }}
-                  · 缺失 {{ team.missingAssignedMemberCount ?? 0 }}
-                  · 额外 {{ team.extraMemberCount ?? 0 }}
+                  {{ t('accountEvents.formation.teamCounts', { members: team.currentMemberCount ?? 0, matched: team.matchedAssignedMemberCount ?? 0, missing: team.missingAssignedMemberCount ?? 0, extra: team.extraMemberCount ?? 0 }) }}
                 </p>
-                <p v-if="team.canBind" class="ok">可绑定</p>
-                <p v-else class="warn">{{ team.unavailableReason || '不可绑定' }}</p>
+                <p v-if="team.canBind" class="ok">{{ t('accountEvents.formation.canBind') }}</p>
+                <p v-else class="warn">{{ team.unavailableReason || t('accountEvents.formation.cannotBind') }}</p>
               </div>
             </label>
           </div>
         </template>
         <p v-else-if="availableTeamsMap[task.drawTeamId] && !availableTeamsMap[task.drawTeamId].length" class="formation-panel__empty">
-          暂无可用长期球队，
-          <button type="button" class="link-btn" @click="goCreateTeam">创建长期球队</button>
+          {{ t('accountEvents.formation.noTeams') }}
+          <button type="button" class="link-btn" @click="goCreateTeam">{{ t('accountEvents.formation.createTeam') }}</button>
         </p>
         <button
           type="button"
@@ -182,7 +180,7 @@ onMounted(async () => {
           :disabled="actingTeamId === task.drawTeamId"
           @click="handleBind(task)"
         >
-          绑定球队
+          {{ t('accountEvents.formation.bind') }}
         </button>
         <button
           type="button"
@@ -190,7 +188,7 @@ onMounted(async () => {
           :disabled="actingTeamId === task.drawTeamId"
           @click="handleConfirm(task)"
         >
-          确认成队
+          {{ t('accountEvents.formation.confirm') }}
         </button>
       </div>
     </article>

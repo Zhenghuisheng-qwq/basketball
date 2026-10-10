@@ -6,6 +6,7 @@ import type {
   V4PersonalAvailableDivision,
 } from '@/api/types/v4PlayerEvents'
 import type { AvailableEvent, MyApplication, ParticipatingEvent } from '@/types/accountEvents'
+import { translate } from '@/i18n'
 import { formatDateTimeShort } from '@/utils/participationMappers'
 import { v4PlatformLabel } from '@/utils/v4Display'
 
@@ -13,79 +14,79 @@ export function v4RegistrationStatusLabel(status?: string | null, participationR
   const code = (status || '').toUpperCase()
   const role = (participationRole || '').toUpperCase()
   if (code === 'APPROVED' && role === 'FORMAL') {
-    return '正式参赛'
+    return translate('accountEvents.common.formalEntry')
   }
   if (code === 'APPROVED' && role && role !== 'FORMAL') {
-    return '审核通过 / 等待最终名单'
+    return translate('accountEvents.common.approvedWaitingRoster')
   }
   switch (code) {
     case 'DRAFT':
-      return '草稿'
+      return translate('accountEvents.common.draft')
     case 'PENDING_REVIEW':
-      return '审核中'
+      return translate('accountEvents.common.pendingReview')
     case 'REJECTED':
-      return '已驳回'
+      return translate('accountEvents.common.rejected')
     case 'WITHDRAWN':
-      return '已撤回'
+      return translate('accountEvents.common.withdrawn')
     case 'APPROVED':
-      return '已通过'
+      return translate('accountEvents.common.approved')
     case 'CANCELLED':
-      return '已取消'
+      return translate('accountEvents.common.cancelled')
     default:
-      return status || '未知'
+      return status || translate('accountEvents.common.unknown')
   }
 }
 
 export function v4SubmissionStatusLabel(status?: string | null): string {
   switch ((status || '').toUpperCase()) {
     case 'DRAFT':
-      return '待提交'
+      return translate('accountEvents.common.awaitingSubmit')
     case 'PENDING_REVIEW':
-      return '审核中'
+      return translate('accountEvents.common.pendingReview')
     case 'REJECTED':
-      return '已驳回'
+      return translate('accountEvents.common.rejected')
     case 'APPROVED':
-      return '已通过'
+      return translate('accountEvents.common.approved')
     case 'SUPERSEDED':
-      return '已作废'
+      return translate('accountEvents.common.superseded')
     case 'CANCELLED':
-      return '已取消'
+      return translate('accountEvents.common.cancelled')
     default:
-      return status ? '未提交' : '未提交'
+      return status ? translate('accountEvents.common.notSubmitted') : translate('accountEvents.common.notSubmitted')
   }
 }
 
 export function v4GrantStatusLabel(status?: string | null): string {
   switch ((status || '').toUpperCase()) {
     case 'ACTIVE':
-      return '已授权'
+      return translate('accountEvents.common.granted')
     case 'REVOKED':
-      return '已撤销'
+      return translate('accountEvents.common.revoked')
     case 'EXPIRED':
-      return '已过期'
+      return translate('accountEvents.common.expired')
     default:
-      return status ? '无授权' : '无授权'
+      return status ? translate('accountEvents.common.noGrant') : translate('accountEvents.common.noGrant')
   }
 }
 
 export function v4PersonalRegistrationStatusLabel(status?: string | null): string {
   switch ((status || '').toUpperCase()) {
     case 'DRAFT':
-      return '草稿'
+      return translate('accountEvents.common.draft')
     case 'PENDING_REVIEW':
-      return '待审核'
+      return translate('accountEvents.common.awaitingReview')
     case 'APPROVED':
-      return '审核通过，等待组队'
+      return translate('accountEvents.common.approvedWaitingFormation')
     case 'REJECTED':
-      return '已驳回'
+      return translate('accountEvents.common.rejected')
     case 'WITHDRAWN':
-      return '已撤回'
+      return translate('accountEvents.common.withdrawn')
     case 'ASSIGNED':
-      return '已分配临时球队'
+      return translate('accountEvents.common.assignedTempTeam')
     case 'CONVERTED':
-      return '已锁定临时球队'
+      return translate('accountEvents.common.lockedTempTeam')
     default:
-      return status || '未知'
+      return status || translate('accountEvents.common.unknown')
   }
 }
 
@@ -93,33 +94,33 @@ export function mapV4PersonalDivisionToAvailableEvent(item: V4PersonalAvailableD
   const canRegister = Boolean(item.canRegister)
   const status = (item.myRegistrationStatus || '').toUpperCase()
   let actionType: AvailableEvent['actionType'] = 'DISABLED'
-  let actionText = '不可报名'
+  let actionText = translate('accountEvents.common.cannotRegister')
   if (canRegister) {
     actionType = 'INDIVIDUAL_REGISTRATION'
-    actionText = '个人报名'
+    actionText = translate('accountEvents.common.personalRegistration')
   } else if (status === 'DRAFT' || status === 'REJECTED' || status === 'WITHDRAWN') {
     actionType = 'MANAGE_REGISTRATION'
-    actionText = status === 'DRAFT' ? '继续编辑' : '修改重提'
+    actionText = status === 'DRAFT' ? translate('accountEvents.common.continueEdit') : translate('accountEvents.common.reviseResubmit')
   } else if (status === 'PENDING_REVIEW') {
     actionType = 'VIEW_REGISTRATION'
-    actionText = '查看报名'
+    actionText = translate('accountEvents.common.viewRegistration')
   } else if (status === 'APPROVED' || status === 'ASSIGNED') {
     actionType = 'VIEW_REGISTRATION'
-    actionText = '查看进度'
+    actionText = translate('accountEvents.common.viewProgress')
   } else if (status === 'CONVERTED') {
     actionType = 'GO_JOINED'
-    actionText = '进入赛事'
+    actionText = translate('accountEvents.common.enterEvent')
   }
   return {
     divisionId: item.divisionId,
     seasonId: item.seasonId,
-    tournamentName: item.seriesName || item.seasonTitle || '赛事',
+    tournamentName: item.seriesName || item.seasonTitle || translate('accountEvents.common.event'),
     seasonName: item.seasonTitle,
     displayTitle: item.divisionName,
     platform: v4PlatformLabel(item.platformCode),
     platformCode: item.platformCode,
     registrationType: 'INDIVIDUAL',
-    registrationTypeText: '个人报名',
+    registrationTypeText: translate('accountEvents.common.personalRegistration'),
     deadline: item.registrationEndTime || '',
     signupStartTime: item.registrationStartTime,
     matchStartTime: item.matchStartTime,
@@ -141,34 +142,36 @@ export function mapV4PersonalRegistrationToApplication(item: V4MyPersonalRegistr
   const assigned = Boolean(item.assignedDrawTeamId)
   const locked = Boolean(item.formationLocked) || status === 'CONVERTED'
   const pending = status === 'PENDING_REVIEW' || status === 'ASSIGNED'
-  let actionText = '查看详情'
+  let actionText = translate('accountEvents.common.viewDetail')
   if (status === 'DRAFT' || status === 'REJECTED' || status === 'WITHDRAWN') {
-    actionText = status === 'DRAFT' ? '继续编辑' : '修改重提'
+    actionText = status === 'DRAFT' ? translate('accountEvents.common.continueEdit') : translate('accountEvents.common.reviseResubmit')
   }
   let statusText = v4PersonalRegistrationStatusLabel(status)
   let statusHint = item.rejectReason || undefined
   if (locked) {
-    statusText = '已锁定临时球队'
+    statusText = translate('accountEvents.common.lockedTempTeam')
     statusHint = item.assignedTemporaryTeamName
-      ? `临时球队：${item.assignedTemporaryTeamName}${item.assignedCaptainName ? '，队长：' + item.assignedCaptainName : ''}，可进入本队比赛`
-      : '已锁定临时球队，可进入本队比赛'
+      ? (item.assignedCaptainName
+        ? translate('accountEvents.common.tempTeamLine', { name: item.assignedTemporaryTeamName, captain: item.assignedCaptainName })
+        : translate('accountEvents.common.tempTeamNamed', { name: item.assignedTemporaryTeamName }))
+      : translate('accountEvents.common.tempTeamReady')
   } else if (assigned || status === 'ASSIGNED') {
-    statusText = '已分配临时球队'
+    statusText = translate('accountEvents.common.assignedTempTeam')
     statusHint = item.assignedTemporaryTeamName
-      ? `已分配临时球队：${item.assignedTemporaryTeamName}`
-      : '已分配临时球队'
+      ? translate('accountEvents.common.assignedTempLine', { name: item.assignedTemporaryTeamName })
+      : translate('accountEvents.common.assignedTempTeam')
   } else if (status === 'APPROVED') {
-    statusText = '审核通过，等待组队'
-    statusHint = '审核通过，等待组队'
+    statusText = translate('accountEvents.common.approvedWaitingFormation')
+    statusHint = translate('accountEvents.common.approvedWaitingFormation')
   }
   return {
     applicationId: item.personalRegistrationId,
     divisionId: item.divisionId || '',
-    tournamentName: item.seasonTitle || '赛事',
+    tournamentName: item.seasonTitle || translate('accountEvents.common.event'),
     platformGroupLabel: item.divisionName,
     platform: v4PlatformLabel(item.platformCode),
     applicationType: 'INDIVIDUAL',
-    applicationTypeText: '个人报名',
+    applicationTypeText: translate('accountEvents.common.personalRegistration'),
     status,
     statusText,
     pending,
@@ -183,26 +186,26 @@ function teamRegistrationEntryActionText(reasonCode?: string, reasonMessage?: st
   const code = (reasonCode || '').toUpperCase()
   switch (code) {
     case 'NO_CAPTAIN_GRANT':
-      return '未获队长授权'
+      return translate('accountEvents.common.noCaptainGrant')
     case 'NO_TEAM':
-      return '尚未创建球队'
+      return translate('accountEvents.common.noTeamYet')
     case 'TEAM_NOT_CERTIFIED':
-      return '球队未认证'
+      return translate('accountEvents.common.teamNotCertified')
     case 'TEAM_DIVISION_MISMATCH':
-      return '球队赛事不匹配'
+      return translate('accountEvents.common.teamMismatch')
     case 'TEAM_ARCHIVED':
-      return '球队已归档'
+      return translate('accountEvents.common.teamArchived')
     case 'REGISTRATION_CLOSED':
-      return '报名已截止'
+      return translate('accountEvents.common.registrationClosed')
     case 'NOT_STARTED':
-      return '报名未开始'
+      return translate('accountEvents.common.registrationNotStarted')
     case 'ALREADY_PENDING':
     case 'ALREADY_APPROVED':
-      return '查看报名'
+      return translate('accountEvents.common.viewRegistration')
     case 'QUOTA_FULL':
-      return '名额已满'
+      return translate('accountEvents.common.quotaFull')
     default:
-      return reasonMessage ? '不可报名' : '不可报名'
+      return reasonMessage ? translate('accountEvents.common.cannotRegister') : translate('accountEvents.common.cannotRegister')
   }
 }
 
@@ -211,51 +214,57 @@ export function mapV4DivisionToAvailableEvent(item: V4AvailableDivision): Availa
   const canView = Boolean(item.canViewRegistration) || Boolean(item.myRegistrationId || item.myRegistrationStatus)
   const status = (item.myRegistrationStatus || '').toUpperCase()
   const windowCode = (item.registrationWindowStatus || '').toUpperCase()
-  const windowLabel = item.registrationWindowStatusLabel
-    || (windowCode === 'NOT_STARTED' ? '报名未开始'
-      : windowCode === 'CLOSED' ? '报名已截止'
-        : windowCode === 'OPEN' ? '报名中'
-          : '报名中')
+  const windowLabel = windowCode === 'NOT_STARTED'
+    ? translate('accountEvents.common.registrationNotStarted')
+    : windowCode === 'CLOSED'
+      ? translate('accountEvents.common.registrationClosed')
+      : windowCode === 'OPEN'
+        ? translate('accountEvents.common.registrationOpen')
+        : (item.registrationWindowStatusLabel || translate('accountEvents.common.registrationOpen'))
 
   let actionType: AvailableEvent['actionType'] = 'DISABLED'
-  let actionText = '不可报名'
+  let actionText = translate('accountEvents.common.cannotRegister')
   if (canRegister) {
     if (status === 'DRAFT') {
       actionType = 'MANAGE_REGISTRATION'
-      actionText = '继续编辑'
+      actionText = translate('accountEvents.common.continueEdit')
     } else if (status === 'REJECTED' || status === 'WITHDRAWN') {
       actionType = 'MANAGE_REGISTRATION'
-      actionText = '修改重提'
+      actionText = translate('accountEvents.common.reviseResubmit')
     } else {
       actionType = 'TEAM_REGISTRATION'
-      actionText = '去报名'
+      actionText = translate('accountEvents.common.goRegister')
     }
   } else if (status === 'APPROVED') {
     actionType = 'GO_JOINED'
-    actionText = '进入赛事'
+    actionText = translate('accountEvents.common.enterEvent')
   } else if (canView || status === 'PENDING_REVIEW' || status === 'DRAFT' || status === 'REJECTED' || status === 'WITHDRAWN') {
     actionType = 'VIEW_REGISTRATION'
-    actionText = '查看报名'
+    actionText = translate('accountEvents.common.viewRegistration')
   } else {
     actionText = teamRegistrationEntryActionText(item.cannotRegisterReasonCode, item.cannotRegisterReason)
   }
 
+  const reasonFromCode = item.cannotRegisterReasonCode
+    ? teamRegistrationEntryActionText(item.cannotRegisterReasonCode, item.cannotRegisterReason)
+    : undefined
   const disabledReason = canRegister
     ? undefined
-    : (item.cannotRegisterReason
+    : (reasonFromCode
+      || item.cannotRegisterReason
       || (windowCode === 'CLOSED' && item.registrationEndTime
-        ? `报名已于 ${formatDateTimeShort(item.registrationEndTime)} 截止`
+        ? translate('accountEvents.common.closedAt', { time: formatDateTimeShort(item.registrationEndTime) })
         : undefined))
 
   return {
     divisionId: String(item.divisionId ?? ''),
     seasonId: item.seasonId != null ? String(item.seasonId) : undefined,
-    tournamentName: item.seriesName || item.seasonTitle || '赛事',
+    tournamentName: item.seriesName || item.seasonTitle || translate('accountEvents.common.event'),
     seasonName: item.seasonTitle,
     platform: v4PlatformLabel(item.platformCode),
     platformCode: item.platformCode,
     registrationType: 'TEAM',
-    registrationTypeText: '球队报名',
+    registrationTypeText: translate('accountEvents.common.teamRegistration'),
     deadline: item.registrationEndTime || '',
     signupStartTime: item.registrationStartTime,
     matchStartTime: item.matchStartTime,
@@ -269,7 +278,7 @@ export function mapV4DivisionToAvailableEvent(item: V4AvailableDivision): Availa
     disabledReason,
     canRegister,
     teamName: item.grantTeamName,
-    teamRegistrationStatusText: status ? v4RegistrationStatusLabel(status, item.participationRole) : '未报名',
+    teamRegistrationStatusText: status ? v4RegistrationStatusLabel(status, item.participationRole) : translate('accountEvents.common.notRegistered'),
     captainGrantStatusText: v4GrantStatusLabel(item.myGrantStatus),
     registrationStatus: item.myRegistrationStatus,
     registrationId: item.myRegistrationId != null ? String(item.myRegistrationId) : undefined,
@@ -283,42 +292,42 @@ export function mapV4DivisionToAvailableEvent(item: V4AvailableDivision): Availa
 export function mapV4RegistrationToApplication(item: V4MyRegistration): MyApplication {
   const status = (item.registrationStatus || '').toUpperCase()
   const pending = status === 'PENDING_REVIEW'
-  let actionText = '查看详情'
+  let actionText = translate('accountEvents.common.viewDetail')
   let actionType: MyApplication['actionType'] = 'VIEW_APPLICATION_STATUS'
   let showAction = true
 
   if (status === 'DRAFT') {
-    actionText = '继续编辑'
+    actionText = translate('accountEvents.common.continueEdit')
     actionType = 'VIEW_TEAM_APPLICATION'
   } else if (status === 'REJECTED') {
-    actionText = '修改后重提'
+    actionText = translate('accountEvents.common.reviseAndResubmit')
     actionType = 'RESUBMIT'
   } else if (status === 'WITHDRAWN') {
-    actionText = '重新提交'
+    actionText = translate('accountEvents.common.submitAgain')
     actionType = 'RESUBMIT'
   } else if (status === 'APPROVED') {
-    actionText = item.participationRole === 'FORMAL' ? '进入赛事' : '查看详情'
+    actionText = item.participationRole === 'FORMAL' ? translate('accountEvents.common.enterEvent') : translate('accountEvents.common.viewDetail')
     actionType = 'VIEW_APPLICATION_STATUS'
   } else if (status === 'PENDING_REVIEW') {
-    actionText = '审核中'
+    actionText = translate('accountEvents.common.pendingReview')
     showAction = false
   } else if (status === 'CANCELLED') {
     showAction = false
   }
 
   const statusHint = status === 'PENDING_REVIEW'
-    ? '审核中不占名额，请耐心等待审核结果'
+    ? translate('accountEvents.common.reviewNoQuota')
     : item.rejectReason
-      ? `驳回原因：${item.rejectReason}`
+      ? translate('accountEvents.common.rejectReason', { reason: item.rejectReason })
       : undefined
 
   return {
     applicationId: item.registrationId,
     divisionId: item.divisionId || item.seasonId || '',
-    tournamentName: item.seasonTitle || '赛事',
+    tournamentName: item.seasonTitle || translate('accountEvents.common.event'),
     platform: v4PlatformLabel(item.platformCode),
     applicationType: 'TEAM',
-    applicationTypeText: '球队报名',
+    applicationTypeText: translate('accountEvents.common.teamRegistration'),
     status,
     statusText: v4RegistrationStatusLabel(status, item.participationRole),
     statusHint,
@@ -336,44 +345,46 @@ export function mapV4EventToParticipating(item: V4MyEvent): ParticipatingEvent {
   const isCaptain = item.roleInTeam === 'CAPTAIN'
   const pendingCount = item.pendingSubmissionCount ?? 0
   const stageLabel = item.legacyEvent
-    ? '历史赛事'
+    ? translate('accountEvents.common.historical')
     : [item.currentStageName, item.currentGroupName].filter(Boolean).join(' · ') || undefined
   const rankLabel = item.standingRank != null
-    ? `排名 ${item.standingRank}${item.standingPoints != null ? ` · ${item.standingPoints} 分` : ''}`
+    ? (item.standingPoints != null
+      ? translate('accountEvents.common.rankPoints', { rank: item.standingRank, points: item.standingPoints })
+      : translate('accountEvents.common.rank', { rank: item.standingRank }))
     : undefined
   const qualLabel = item.qualificationStatusName && item.qualificationStatusName !== item.qualificationStatus
     ? item.qualificationStatusName
     : item.qualificationStatus === 'CONFIRMED'
-      ? '已晋级'
+      ? translate('accountEvents.common.qualified')
       : item.qualificationStatus === 'PREVIEW'
-        ? '晋级预览'
+        ? translate('accountEvents.common.qualificationPreview')
         : undefined
   return {
     relationId: item.eventTeamId,
     eventTeamId: item.eventTeamId,
     divisionId: item.divisionId,
-    tournamentName: item.seriesName || item.seasonTitle || '赛事',
+    tournamentName: item.seriesName || item.seasonTitle || translate('accountEvents.common.event'),
     platform: `${item.seasonTitle || ''} / ${item.platformName || item.platformCode || ''} / ${item.divisionName || ''}`.replace(/^ \/ | \/ $/g, ''),
     participationType: 'TEAM',
-    participationTypeText: '球队参赛',
+    participationTypeText: translate('accountEvents.common.teamEntry'),
     identityType: item.roleInTeam || 'PLAYER',
-    identityText: isCaptain ? '队长' : '队员',
+    identityText: isCaptain ? translate('accountEvents.common.captainRole') : translate('accountEvents.common.memberRole'),
     status: item.eventTeamStatus || '',
-    statusText: item.legacyEvent ? '历史赛事' : (item.divisionStatus || '进行中'),
+    statusText: item.legacyEvent ? translate('accountEvents.common.historical') : (item.divisionStatus || translate('accountEvents.common.inProgress')),
     pendingTaskCount: pendingCount,
-    pendingTaskText: pendingCount > 0 ? `${pendingCount} 场比赛数据待提交` : undefined,
+    pendingTaskText: pendingCount > 0 ? translate('accountEvents.common.pendingMatchData', { count: pendingCount }) : undefined,
     stageSummary: stageLabel,
     rankSummary: rankLabel,
     qualificationSummary: qualLabel,
-    nextMatchSummary: item.nextMatchTime ? `下场 ${item.nextMatchTime}` : undefined,
-    latestMatchSummary: item.latestMatchResult ? `最近 ${item.latestMatchResult}` : undefined,
-    actionText: '查看赛程',
+    nextMatchSummary: item.nextMatchTime ? translate('accountEvents.common.nextMatch', { time: item.nextMatchTime }) : undefined,
+    latestMatchSummary: item.latestMatchResult ? translate('accountEvents.common.latestMatch', { result: item.latestMatchResult }) : undefined,
+    actionText: translate('accountEvents.common.viewSchedule'),
     actionType: 'VIEW_EVENT_RELATION',
     actionRoute: `/account/my-events?tab=schedule&divisionId=${item.divisionId}`,
     isCaptain,
     rosterLocked: true,
     showMatchDataEntry: pendingCount > 0 || (item.matchCount ?? 0) > 0,
-    matchDataActionText: pendingCount > 0 ? '提交比赛数据' : '查看比赛数据',
+    matchDataActionText: pendingCount > 0 ? translate('accountEvents.common.submitMatchData') : translate('accountEvents.common.viewMatchData'),
     matchDataActionRoute: `/account/my-events?tab=schedule&divisionId=${item.divisionId}${pendingCount > 0 ? '&onlyPendingSubmit=1' : ''}`,
     matchDataActionType: pendingCount > 0 ? 'SUBMIT_MATCH_DATA' : 'VIEW_MATCH_DATA_LIST',
     matchDataPrimary: pendingCount > 0,

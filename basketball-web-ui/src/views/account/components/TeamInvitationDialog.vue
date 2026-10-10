@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { TeamInvitation } from '@/types/account'
 import { formatDateTime } from '@/utils/formatDate'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   modelValue: boolean
@@ -27,22 +30,22 @@ function close() {
 <template>
   <Teleport to="body">
     <div v-if="open && invitation" class="invitation-dialog">
-      <button type="button" class="invitation-dialog__backdrop" aria-label="关闭" @click="close" />
-      <div class="invitation-dialog__panel" role="dialog" aria-modal="true" aria-label="处理球队邀请">
-        <h3>球队邀请</h3>
+      <button type="button" class="invitation-dialog__backdrop" :aria-label="t('accountTeam.invitationDialog.close')" @click="close" />
+      <div class="invitation-dialog__panel" role="dialog" aria-modal="true" :aria-label="t('accountTeam.invitationDialog.aria')">
+        <h3>{{ t('accountTeam.invitationDialog.title') }}</h3>
         <dl class="account-info-list">
-          <div class="account-field-row"><dt>球队名称</dt><dd>{{ invitation.teamName }}</dd></div>
-          <div class="account-field-row"><dt>赛事名称</dt><dd>{{ invitation.tournamentName }}</dd></div>
-          <div class="account-field-row"><dt>邀请位置</dt><dd>{{ invitation.inviteRole }}</dd></div>
-          <div class="account-field-row"><dt>邀请时间</dt><dd>{{ formatDateTime(invitation.createdAt) }}</dd></div>
-          <div class="account-field-row"><dt>过期时间</dt><dd>{{ formatDateTime(invitation.expiresAt) }}</dd></div>
+          <div class="account-field-row"><dt>{{ t('accountTeam.invitationDialog.teamName') }}</dt><dd>{{ invitation.teamName }}</dd></div>
+          <div class="account-field-row"><dt>{{ t('accountTeam.invitationDialog.eventName') }}</dt><dd>{{ invitation.tournamentName }}</dd></div>
+          <div class="account-field-row"><dt>{{ t('accountTeam.invitationDialog.inviteRole') }}</dt><dd>{{ invitation.inviteRole }}</dd></div>
+          <div class="account-field-row"><dt>{{ t('accountTeam.invitationDialog.invitedAt') }}</dt><dd>{{ formatDateTime(invitation.createdAt) }}</dd></div>
+          <div class="account-field-row"><dt>{{ t('accountTeam.invitationDialog.expiresAt') }}</dt><dd>{{ formatDateTime(invitation.expiresAt) }}</dd></div>
         </dl>
         <div class="invitation-dialog__actions">
           <button type="button" class="account-btn-secondary" @click="emit('reject', invitation.id); close()">
-            拒绝邀请
+            {{ t('accountTeam.invitationDialog.reject') }}
           </button>
           <button type="button" class="account-btn-primary" @click="emit('accept', invitation.id); close()">
-            接受邀请
+            {{ t('accountTeam.invitationDialog.accept') }}
           </button>
         </div>
       </div>

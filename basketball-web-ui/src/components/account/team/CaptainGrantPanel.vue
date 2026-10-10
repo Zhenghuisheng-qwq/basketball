@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
 import type { CaptainQualificationDto } from '@/api/types/teamCaptain'
 import { formatDateTime } from '@/utils/formatDate'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   qualification: CaptainQualificationDto | null
@@ -17,10 +20,10 @@ const isRevoked = computed(() => Boolean(props.qualification?.grantRevoked))
 type StatusTone = 'success' | 'warning' | 'danger' | 'default'
 
 const statusLabel = computed(() => {
-  if (isActive.value) return '有效'
-  if (isRevoked.value) return '已收回'
-  if (hasGrant.value) return '已失效'
-  return '未开通'
+  if (isActive.value) return t('accountTeam.grant.active')
+  if (isRevoked.value) return t('accountTeam.grant.revoked')
+  if (hasGrant.value) return t('accountTeam.grant.invalid')
+  return t('accountTeam.grant.inactive')
 })
 
 const statusTone = computed<StatusTone>(() => {
@@ -32,15 +35,15 @@ const statusTone = computed<StatusTone>(() => {
 
 const subtitle = computed(() => {
   if (isActive.value) {
-    return '当前账号已开通队长权限，可在授权赛事范围内管理球队并报名赛事。'
+    return t('accountTeam.grant.activeHint')
   }
   if (isRevoked.value) {
-    return '您的队长权限已被收回；历史球队和赛事记录仍可查看。'
+    return t('accountTeam.grant.revokedHint')
   }
   if (hasGrant.value) {
-    return props.qualification?.invalidReason || '当前队长权限无效，暂不能管理球队或报名赛事。'
+    return props.qualification?.invalidReason || t('accountTeam.grant.invalidFallback')
   }
-  return '队长权限由平台根据赛事缴费结果后台授予，用户不能主动申请。'
+  return t('accountTeam.grant.inactiveHint')
 })
 
 const validityLabel = computed(() => {
@@ -56,22 +59,22 @@ const showSummaryGrid = computed(() => hasGrant.value || isActive.value)
 </script>
 
 <template>
-  <AccountPanel title="队长权限" class="captain-grant-panel">
-    <p v-if="loading" class="captain-grant__loading">加载中…</p>
+  <AccountPanel :title="t('accountTeam.grant.title')" class="captain-grant-panel">
+    <p v-if="loading" class="captain-grant__loading">{{ t('accountTeam.grant.loading') }}</p>
 
     <template v-else>
       <p class="captain-grant__subtitle">{{ subtitle }}</p>
 
       <div v-if="showSummaryGrid" class="captain-grant__grid">
         <div class="captain-grant__cell">
-          <span class="captain-grant__cell-label">授权状态</span>
+          <span class="captain-grant__cell-label">{{ t('accountTeam.grant.status') }}</span>
           <div class="captain-grant__cell-value">
             <AccountStatusBadge :text="statusLabel" :type="statusTone" />
           </div>
         </div>
 
         <div class="captain-grant__cell captain-grant__cell--validity">
-          <span class="captain-grant__cell-label">有效期</span>
+          <span class="captain-grant__cell-label">{{ t('accountTeam.grant.validity') }}</span>
           <span class="captain-grant__cell-value captain-grant__cell-value--validity">
             {{ validityLabel }}
           </span>

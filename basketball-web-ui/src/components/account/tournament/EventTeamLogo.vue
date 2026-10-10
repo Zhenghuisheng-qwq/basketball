@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   logoUrl?: string
@@ -33,7 +36,7 @@ function onError() {
       `event-team-logo--${size || 'md'}`,
       variant === 'versus' ? 'event-team-logo--versus' : '',
     ]"
-    :aria-label="`${teamCode} 球队 Logo`"
+    :aria-label="t('accountTeam.common.logoAlt', { code: teamCode })"
   >
     <img
       v-if="showImage"

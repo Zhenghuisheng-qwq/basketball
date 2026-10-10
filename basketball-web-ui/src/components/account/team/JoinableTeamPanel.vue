@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AccountPanel from '@/components/account/AccountPanel.vue'
@@ -10,6 +11,7 @@ import { useTeamStore } from '@/stores/team'
 import type { TeamSummaryDto } from '@/api/types/teamAccount'
 import { v4GameModeLabel, v4PlatformLabel } from '@/utils/v4Display'
 
+const { t } = useI18n()
 const teamStore = useTeamStore()
 const router = useRouter()
 
@@ -21,11 +23,11 @@ const applyReason = ref('')
 const submitting = ref(false)
 
 const pageSizeOptions = [10, 20, 50]
-const paginationMeta = computed(() => `共 ${teamStore.joinableTotal} 支可加入球队`)
+const paginationMeta = computed(() => t('accountTeam.joinable.meta', { total: teamStore.joinableTotal }))
 
 function memberCountText(team: TeamSummaryDto) {
   const current = team.memberCount ?? team.currentMemberCount ?? 0
-  return `${current} 人`
+  return t('accountTeam.common.people', { count: current })
 }
 
 function teamLogoInitial(team: TeamSummaryDto) {
@@ -41,33 +43,33 @@ function formatEventContext(team: TeamSummaryDto) {
     platform ? v4PlatformLabel(platform) : '',
     team.gameMode ? v4GameModeLabel(team.gameMode) : '',
   ].filter(Boolean)
-  return parts.join(' · ') || '赛事信息暂无'
+  return parts.join(' · ') || t('accountTeam.joinable.eventMissing')
 }
 
 function resolveTeamStatus(team: TeamSummaryDto): { text: string; type: 'success' | 'warning' | 'danger' | 'default' } {
   if (team.hasPendingApply || team.disabledReason === '申请审核中') {
-    return { text: '已申请', type: 'warning' }
+    return { text: t('accountTeam.joinable.applied'), type: 'warning' }
   }
   if (team.disabledReason === '球队已满') {
-    return { text: '已满', type: 'danger' }
+    return { text: t('accountTeam.joinable.full'), type: 'danger' }
   }
   if (team.canApply !== false) {
-    return { text: '可申请', type: 'success' }
+    return { text: t('accountTeam.joinable.canApply'), type: 'success' }
   }
-  return { text: '不可申请', type: 'default' }
+  return { text: t('accountTeam.joinable.cannotApply'), type: 'default' }
 }
 
 function resolveApplyButtonText(team: TeamSummaryDto) {
   if (team.hasPendingApply || team.disabledReason === '申请审核中') {
-    return '申请中'
+    return t('accountTeam.joinable.applying')
   }
   if (team.disabledReason === '球队已满') {
-    return '球队已满'
+    return t('accountTeam.joinable.teamFull')
   }
   if (team.canApply === false) {
-    return '不可申请'
+    return t('accountTeam.joinable.cannotApply')
   }
-  return '申请加入'
+  return t('accountTeam.joinable.apply')
 }
 
 function isApplyDisabled(team: TeamSummaryDto) {
@@ -143,7 +145,7 @@ async function submitApply() {
       applyingTeam.value.teamId,
       applyReason.value.trim() || undefined,
     )
-    ElMessage.success('加入申请已提交')
+    ElMessage.success(t('accountTeam.joinable.submitted'))
     showApplyDialog.value = false
     applyingTeam.value = null
     applyReason.value = ''
@@ -152,7 +154,7 @@ async function submitApply() {
       teamStore.loadMyJoinApplications(),
     ])
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '申请失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountTeam.joinable.failed'))
   } finally {
     submitting.value = false
   }
@@ -162,15 +164,15 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
 </script>
 
 <template>
-  <AccountPanel title="可加入球队">
-    <p class="joinable-hint">仅展示当前未结束赛事中开放招募的球队；同一 Division 只能加入一支。</p>
+  <AccountPanel :title="t('accountTeam.joinable.title')">
+    <p class="joinable-hint">{{ t('accountTeam.joinable.hint') }}</p>
 
-    <section class="joinable-toolbar" aria-label="搜索可加入球队">
+    <section class="joinable-toolbar" :aria-label="t('accountTeam.joinable.searchAria')">
       <input
         v-model="searchKeyword"
         type="search"
         class="joinable-toolbar__input"
-        placeholder="请输入球队名称 / 简称"
+        :placeholder="t('accountTeam.joinable.searchPlaceholder')"
         @keyup.enter="searchJoinable"
       >
       <button
@@ -179,7 +181,7 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
         :disabled="teamStore.joinableLoading"
         @click="searchJoinable"
       >
-        搜索
+        {{ t('accountTeam.common.search') }}
       </button>
       <button
         type="button"
@@ -187,13 +189,13 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
         :disabled="teamStore.joinableLoading"
         @click="resetSearch"
       >
-        重置
+        {{ t('accountTeam.common.reset') }}
       </button>
     </section>
 
-    <section class="joinable-list" aria-label="可加入球队列表">
+    <section class="joinable-list" :aria-label="t('accountTeam.joinable.listAria')">
       <div v-if="teamStore.joinableLoading" class="joinable-list__loading">
-        加载中…
+        {{ t('accountTeam.joinable.loading') }}
       </div>
 
       <template v-else-if="teamStore.joinableTeams.length">
@@ -201,13 +203,13 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
           <table class="team-table joinable-table">
             <thead>
               <tr>
-                <th>球队名称</th>
-                <th>所属赛事</th>
-                <th>简称</th>
-                <th>队长</th>
-                <th>当前人数</th>
-                <th>状态</th>
-                <th class="joinable-table__actions-col">操作</th>
+                <th>{{ t('accountTeam.joinable.teamName') }}</th>
+                <th>{{ t('accountTeam.joinable.event') }}</th>
+                <th>{{ t('accountTeam.joinable.shortName') }}</th>
+                <th>{{ t('accountTeam.joinable.captain') }}</th>
+                <th>{{ t('accountTeam.joinable.memberCount') }}</th>
+                <th>{{ t('accountTeam.joinable.status') }}</th>
+                <th class="joinable-table__actions-col">{{ t('accountTeam.joinable.actions') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -246,7 +248,7 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
                     class="account-btn-secondary team-table__btn"
                     @click="viewTeamDetail(team.teamId)"
                   >
-                    查看详情
+                    {{ t('accountTeam.joinable.viewDetail') }}
                   </button>
                   <button
                     type="button"
@@ -270,7 +272,7 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
           :page-size-options="pageSizeOptions"
           :meta-text="paginationMeta"
           :disabled="teamStore.joinableLoading"
-          aria-label="可加入球队分页"
+          :aria-label="t('accountTeam.joinable.aria')"
           @update:page="changePage"
           @update:page-size="changePageSize"
         />
@@ -278,15 +280,15 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
 
       <AccountEmptyState
         v-else
-        message="暂无可加入球队"
+        :message="t('accountTeam.joinable.empty')"
       />
     </section>
 
     <Teleport to="body">
       <div v-if="showApplyDialog && applyingTeam" class="team-dialog">
-        <button type="button" class="team-dialog__backdrop" aria-label="关闭" @click="closeApplyDialog" />
+        <button type="button" class="team-dialog__backdrop" :aria-label="t('accountTeam.joinable.close')" @click="closeApplyDialog" />
         <div class="team-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="join-apply-title">
-          <h3 id="join-apply-title">申请加入球队</h3>
+          <h3 id="join-apply-title">{{ t('accountTeam.joinable.dialogTitle') }}</h3>
           <div v-if="applyingTeam" class="joinable-apply-header">
             <img
               v-if="applyingTeam.logoUrl"
@@ -303,25 +305,25 @@ defineExpose({ loadCurrentPlatform: () => loadJoinableTeams(1), loadJoinableTeam
             </span>
             <div>
               <p class="joinable-apply-header__name">{{ applyingTeam.teamName }}</p>
-              <p class="joinable-apply-header__meta">当前人数 {{ memberCountText(applyingTeam) }}</p>
+              <p class="joinable-apply-header__meta">{{ t('accountTeam.joinable.currentMembers', { count: memberCountText(applyingTeam) }) }}</p>
             </div>
           </div>
           <label class="joinable-apply-field">
-            <span class="joinable-apply-field__label">申请原因</span>
+            <span class="joinable-apply-field__label">{{ t('accountTeam.joinable.reason') }}</span>
             <textarea
               v-model="applyReason"
               rows="4"
               maxlength="200"
-              placeholder="请简单说明加入球队的原因，方便队长审核"
+              :placeholder="t('accountTeam.joinable.reasonPlaceholder')"
             />
           </label>
-          <p class="joinable-apply-tip">请简单说明加入球队的原因，方便队长审核。</p>
+          <p class="joinable-apply-tip">{{ t('accountTeam.joinable.reasonTip') }}</p>
           <div class="team-dialog__actions">
             <button type="button" class="account-btn-secondary" :disabled="submitting" @click="closeApplyDialog">
-              取消
+              {{ t('accountTeam.common.cancel') }}
             </button>
             <button type="button" class="account-btn-primary" :disabled="submitting" @click="submitApply">
-              {{ submitting ? '提交中…' : '提交申请' }}
+              {{ submitting ? t('accountTeam.joinable.submitting') : t('accountTeam.joinable.submit') }}
             </button>
           </div>
         </div>

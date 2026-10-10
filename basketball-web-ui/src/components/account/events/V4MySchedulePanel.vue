@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
 import SafeImage from '@/components/common/SafeImage.vue'
 import { getAccountFileUrl } from '@/api/accountFile'
@@ -17,6 +18,7 @@ const props = defineProps<{
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const accountStore = useAccountStore()
 
 type ScheduleFilter = 'upcoming' | 'all' | 'finished'
@@ -66,19 +68,19 @@ const displayedRows = computed(() => {
 const emptyCopy = computed(() => {
   if (scheduleFilter.value === 'finished') {
     return {
-      message: '暂无已结束赛程',
-      subtitle: '比赛结束后会显示在这里，也可切换「全部赛程」查看全部场次。',
+      message: t('accountEvents.schedule.emptyFinished'),
+      subtitle: t('accountEvents.schedule.emptyFinishedHint'),
     }
   }
   if (scheduleFilter.value === 'all') {
     return {
-      message: '暂无赛程',
-      subtitle: '通过报名审核并生成赛程后，比赛将显示在这里。',
+      message: t('accountEvents.schedule.emptyAll'),
+      subtitle: t('accountEvents.schedule.emptyAllHint'),
     }
   }
   return {
-    message: '暂无待比赛赛程',
-    subtitle: '当前没有即将开始的比赛，可切换「已结束」或「全部赛程」查看历史比赛。',
+    message: t('accountEvents.schedule.emptyUpcoming'),
+    subtitle: t('accountEvents.schedule.emptyUpcomingHint'),
   }
 })
 
@@ -101,7 +103,7 @@ async function loadList() {
     summary.value = res.data?.summary || {}
     rows.value = res.data?.items || []
   } catch {
-    loadError.value = '赛程加载失败，请稍后重试'
+    loadError.value = t('accountEvents.schedule.loadFailed')
     rows.value = []
     summary.value = {}
   } finally {
@@ -115,7 +117,7 @@ function teamInitials(name?: string | null, shortName?: string | null): string {
 }
 
 function resolveEventTitle(row: V4MyScheduleItem): string {
-  return row.seriesName || row.seasonTitle || 'CNPA 赛事'
+  return row.seriesName || row.seasonTitle || t('accountEvents.schedule.cnpaEvent')
 }
 
 function resolveSeasonLine(row: V4MyScheduleItem): string {
@@ -124,13 +126,46 @@ function resolveSeasonLine(row: V4MyScheduleItem): string {
 }
 
 function resolveRoundLine(row: V4MyScheduleItem): string {
-  const parts = [row.stageName, row.groupName, row.roundName].filter(Boolean)
+  const parts = [row.stageName, row.groupName, roundLabel(row)].filter(Boolean)
   if (row.bestOf && row.bestOf > 1 && row.seriesGameNo) {
     parts.push(`${v4BestOfLabel(row.bestOf)} · Game ${row.seriesGameNo}`)
   }
   if (parts.length) return parts.join(' · ')
-  if (row.roundNo) return `常规赛第 ${row.roundNo} 轮`
-  return '常规赛'
+  if (row.roundNo) return t('accountEvents.common.regularRound', { round: row.roundNo })
+  return t('accountEvents.common.regularSeason')
+}
+
+function roundLabel(row: V4MyScheduleItem): string {
+  if (!row.roundNo || row.roundNo <= 0) return row.groupName || row.roundName || ''
+  const stage = `${row.stageCode || ''} ${row.stageType || ''}`.toUpperCase()
+  if (stage.includes('KNOCKOUT') || stage.includes('PLAYOFF')) {
+    const teamsInRound = 1 << row.roundNo
+    if (teamsInRound === 8) return t('accountEvents.schedule.quarterfinal')
+    if (teamsInRound === 4) return t('accountEvents.schedule.semifinal')
+    if (teamsInRound === 2) return t('accountEvents.schedule.final')
+    return t('accountEvents.schedule.knockoutRound', { round: row.roundNo })
+  }
+  if (stage.includes('GROUP')) {
+    return row.groupName
+      ? t('accountEvents.schedule.groupRound', { group: row.groupName, round: row.roundNo })
+      : t('accountEvents.schedule.groupRoundPlain', { round: row.roundNo })
+  }
+  if (row.roundNo) return t('accountEvents.common.regularRound', { round: row.roundNo })
+  return row.roundName || ''
+}
+
+function seriesStatusText(row: V4MyScheduleItem): string {
+  const code = (row.matchSeriesStatus || '').toUpperCase()
+  if (['PENDING', 'READY', 'RUNNING', 'COMPLETED', 'CANCELLED'].includes(code)) {
+    return v4MatchSeriesStatusLabel(code)
+  }
+  return row.matchSeriesStatusName || v4MatchSeriesStatusLabel(row.matchSeriesStatus)
+}
+
+function isSeriesSkipped(row: V4MyScheduleItem): boolean {
+  if (!row.matchSeriesId || (row.matchSeriesStatus || '').toUpperCase() !== 'COMPLETED') return false
+  const status = (row.matchStatus || '').toUpperCase()
+  return status !== 'FINISHED' && status !== 'FORFEITED' && status !== 'CANCELLED'
 }
 
 type ScheduleBlock =
@@ -157,22 +192,48 @@ const scheduleBlocks = computed<ScheduleBlock[]>(() => {
   return blocks
 })
 
-function isSkippedGame(row: V4MyScheduleItem): boolean {
-  return row.userActionType === 'NONE' || Boolean(row.cannotSubmitReason && row.cannotSubmitReason.includes('无需进行'))
+function gameActionText(row: V4MyScheduleItem): string {
+  const matchStatus = (row.matchStatus || '').toUpperCase()
+  const submission = (row.mySubmissionStatus || '').toUpperCase()
+  if (matchStatus === 'CANCELLED') return t('accountEvents.schedule.actionCancelled')
+  if (isSeriesSkipped(row)) return t('accountEvents.common.notNeeded')
+  if (submission === 'PENDING_REVIEW') return t('accountEvents.schedule.actionViewSubmission')
+  if (submission === 'APPROVED') return t('accountEvents.schedule.actionViewData')
+  if (submission === 'REJECTED') return t('accountEvents.schedule.actionResubmit')
+  if ((row.userActionType || '').toUpperCase() === 'SUBMIT') {
+    return submission === 'DRAFT'
+      ? t('accountEvents.schedule.actionContinue')
+      : t('accountEvents.schedule.actionSubmit')
+  }
+  if ((row.userActionType || '').toUpperCase() === 'VIEW_SUBMISSION') {
+    return t('accountEvents.schedule.actionViewSubmissionDetail')
+  }
+  return t('accountEvents.schedule.actionViewDetail')
 }
 
-function gameActionText(row: V4MyScheduleItem): string {
-  if (isSkippedGame(row)) return '无需进行'
-  return row.userActionText || '查看提交'
+function cannotSubmitText(row: V4MyScheduleItem): string {
+  const matchStatus = (row.matchStatus || '').toUpperCase()
+  const submission = (row.mySubmissionStatus || '').toUpperCase()
+  if (!row.myEventTeamId) return t('accountEvents.schedule.reasonNotYourTeam')
+  if (row.publishStatus && row.publishStatus.toUpperCase() !== 'PUBLISHED') return t('accountEvents.schedule.reasonUnpublished')
+  if (matchStatus === 'CANCELLED') return t('accountEvents.schedule.reasonCancelled')
+  if (isSeriesSkipped(row)) return t('accountEvents.schedule.reasonSeriesDecided')
+  if (submission === 'PENDING_REVIEW') return t('accountEvents.schedule.reasonInReview')
+  if (submission === 'APPROVED') return t('accountEvents.schedule.reasonApproved')
+  if (matchStatus === 'PLAYING') return t('accountEvents.schedule.reasonPlaying')
+  if (matchStatus && !['FINISHED', 'FORFEITED', 'CANCELLED', 'PLAYING'].includes(matchStatus) && !row.canSubmit) {
+    return t('accountEvents.schedule.reasonNotEnded')
+  }
+  return row.cannotSubmitReason || ''
 }
 
 function formatMatchDate(value?: string): string {
-  if (!value) return '时间待定'
+  if (!value) return t('accountEvents.common.timeTbd')
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '时间待定'
+  if (Number.isNaN(date.getTime())) return t('accountEvents.common.timeTbd')
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
-  return `${month}月${day}日`
+  return t('accountEvents.schedule.monthDay', { month, day })
 }
 
 function formatMatchClock(value?: string): string {
@@ -270,46 +331,46 @@ watch(
   <div class="v4-schedule-panel">
     <div v-if="!isVerified" class="v4-schedule-panel__empty-wrap">
       <AccountEmptyState
-        message="完成球员认证后，可在此查看个人赛程安排。"
-        subtitle="认证通过后可聚合查看全部已参加赛事的比赛安排"
+        :message="t('accountEvents.schedule.verifyMessage')"
+        :subtitle="t('accountEvents.schedule.verifySubtitle')"
         large
       />
       <button type="button" class="account-btn-primary v4-schedule-panel__empty-action" @click="goCertification">
-        前往球员认证
+        {{ t('accountEvents.schedule.goVerify') }}
       </button>
     </div>
 
     <template v-else>
-      <section class="v4-schedule-overview" aria-label="赛程概览">
+      <section class="v4-schedule-overview" :aria-label="t('accountEvents.schedule.overviewAria')">
         <div class="v4-schedule-overview__grid">
           <div class="v4-schedule-overview__stat">
             <span class="v4-schedule-overview__value">{{ upcomingCount }}</span>
-            <span class="v4-schedule-overview__label">待比赛</span>
+            <span class="v4-schedule-overview__label">{{ t('accountEvents.schedule.upcoming') }}</span>
           </div>
           <div class="v4-schedule-overview__stat">
             <span class="v4-schedule-overview__value">{{ pendingSubmitCount }}</span>
-            <span class="v4-schedule-overview__label">待提交</span>
+            <span class="v4-schedule-overview__label">{{ t('accountEvents.schedule.pendingSubmit') }}</span>
           </div>
           <div class="v4-schedule-overview__stat">
             <span class="v4-schedule-overview__value">{{ reviewingCount }}</span>
-            <span class="v4-schedule-overview__label">审核中</span>
+            <span class="v4-schedule-overview__label">{{ t('accountEvents.schedule.reviewing') }}</span>
           </div>
           <div class="v4-schedule-overview__stat">
             <span class="v4-schedule-overview__value">{{ finishedCount }}</span>
-            <span class="v4-schedule-overview__label">已结束</span>
+            <span class="v4-schedule-overview__label">{{ t('accountEvents.schedule.finished') }}</span>
           </div>
         </div>
       </section>
 
       <div class="v4-schedule-panel__toolbar">
-        <div class="v4-schedule-segment" role="tablist" aria-label="赛程筛选">
+        <div class="v4-schedule-segment" role="tablist" :aria-label="t('accountEvents.schedule.filterAria')">
           <button
             type="button"
             class="v4-schedule-segment__btn"
             :class="{ 'v4-schedule-segment__btn--active': scheduleFilter === 'upcoming' }"
             @click="scheduleFilter = 'upcoming'"
           >
-            待比赛
+            {{ t('accountEvents.schedule.upcoming') }}
             <span class="v4-schedule-segment__count">{{ upcomingCount }}</span>
           </button>
           <button
@@ -318,7 +379,7 @@ watch(
             :class="{ 'v4-schedule-segment__btn--active': scheduleFilter === 'all' }"
             @click="scheduleFilter = 'all'"
           >
-            全部赛程
+            {{ t('accountEvents.schedule.all') }}
             <span class="v4-schedule-segment__count">{{ totalCount }}</span>
           </button>
           <button
@@ -327,7 +388,7 @@ watch(
             :class="{ 'v4-schedule-segment__btn--active': scheduleFilter === 'finished' }"
             @click="scheduleFilter = 'finished'"
           >
-            已结束
+            {{ t('accountEvents.schedule.finished') }}
             <span class="v4-schedule-segment__count">{{ finishedCount }}</span>
           </button>
         </div>
@@ -339,7 +400,7 @@ watch(
 
       <div v-else-if="loadError" class="v4-schedule-panel__error-box">
         <p>{{ loadError }}</p>
-        <button type="button" class="account-btn-secondary" @click="loadList">重新加载</button>
+        <button type="button" class="account-btn-secondary" @click="loadList">{{ t('accountEvents.common.reload') }}</button>
       </div>
 
       <AccountEmptyState
@@ -355,10 +416,10 @@ watch(
             <header class="v4-series-card__head">
               <div>
                 <p class="v4-match-card__series">{{ resolveEventTitle(block.rows[0]) }}</p>
-                <p class="v4-match-card__meta">{{ resolveSeasonLine(block.rows[0]) }} · {{ block.rows[0].roundName || resolveRoundLine(block.rows[0]) }}</p>
-                <p class="v4-series-card__code">{{ block.rows[0].matchSeriesCode || '系列赛' }} · {{ v4BestOfLabel(block.rows[0].bestOf) }}</p>
+                <p class="v4-match-card__meta">{{ resolveSeasonLine(block.rows[0]) }} · {{ roundLabel(block.rows[0]) || resolveRoundLine(block.rows[0]) }}</p>
+                <p class="v4-series-card__code">{{ block.rows[0].matchSeriesCode || t('accountEvents.common.series') }} · {{ v4BestOfLabel(block.rows[0].bestOf) }}</p>
               </div>
-              <span class="v4-match-card__status">{{ block.rows[0].matchSeriesStatusName || v4MatchSeriesStatusLabel(block.rows[0].matchSeriesStatus) }}</span>
+              <span class="v4-match-card__status">{{ seriesStatusText(block.rows[0]) }}</span>
             </header>
             <div class="v4-series-card__score">
               <strong>{{ block.rows[0].homeTeamName }}</strong>
@@ -371,12 +432,12 @@ watch(
                   <strong>Game {{ row.seriesGameNo }}</strong>
                   <span>{{ row.homeTeamName }} vs {{ row.awayTeamName }}</span>
                   <span v-if="showScore(row)">{{ formatCenterScore(row) }}</span>
-                  <span v-else>未开赛</span>
+                  <span v-else>{{ t('accountEvents.common.notStarted') }}</span>
                   <span>{{ v4MatchStatusLabel(row.matchStatus) }}</span>
                   <span>{{ v4SubmissionStatusLabel(row.mySubmissionStatus) }}</span>
                 </div>
                 <div class="v4-series-game__action">
-                  <span v-if="isSkippedGame(row)" class="v4-series-game__skip">无需进行</span>
+                  <span v-if="isSeriesSkipped(row)" class="v4-series-game__skip">{{ t('accountEvents.common.notNeeded') }}</span>
                   <button
                     v-else-if="canPrimaryAction(row)"
                     type="button"
@@ -429,7 +490,7 @@ watch(
             <div class="v4-match-card__center">
               <template v-if="showScore(block.row)">
                 <p class="v4-match-card__score">{{ formatCenterScore(block.row) }}</p>
-                <span class="v4-match-card__center-label">已结束</span>
+                <span class="v4-match-card__center-label">{{ t('accountEvents.common.finished') }}</span>
               </template>
               <template v-else>
                 <p class="v4-match-card__date">{{ formatMatchDate(block.row.matchTime) }}</p>
@@ -455,26 +516,26 @@ watch(
 
           <div class="v4-match-card__footer">
             <div class="v4-match-card__info">
-              <span>比赛时间：{{ formatDateTimeShort(block.row.matchTime) || '时间待定' }}</span>
-              <span v-if="block.row.matchNo">场次：{{ block.row.matchNo }}</span>
+              <span>{{ t('accountEvents.schedule.matchTime', { time: formatDateTimeShort(block.row.matchTime) || t('accountEvents.common.timeTbd') }) }}</span>
+              <span v-if="block.row.matchNo">{{ t('accountEvents.schedule.matchNo', { no: block.row.matchNo }) }}</span>
             </div>
 
             <div class="v4-match-card__submission-row">
               <div class="v4-submission-chip" :class="`v4-submission-chip--${submissionTone(block.row.mySubmissionStatus)}`">
-                <span class="v4-submission-chip__label">本方提交</span>
+                <span class="v4-submission-chip__label">{{ t('accountEvents.schedule.mySubmission') }}</span>
                 <strong>{{ v4SubmissionStatusLabel(block.row.mySubmissionStatus) }}</strong>
               </div>
               <div class="v4-submission-chip" :class="`v4-submission-chip--${submissionTone(block.row.opponentSubmissionStatus)}`">
-                <span class="v4-submission-chip__label">对方提交</span>
+                <span class="v4-submission-chip__label">{{ t('accountEvents.schedule.opponentSubmission') }}</span>
                 <strong>{{ v4SubmissionStatusLabel(block.row.opponentSubmissionStatus) }}</strong>
               </div>
             </div>
 
             <p v-if="block.row.latestRejectReason" class="v4-match-card__reject">
-              驳回原因：{{ block.row.latestRejectReason }}
+              {{ t('accountEvents.common.rejectReason', { reason: block.row.latestRejectReason }) }}
             </p>
-            <p v-else-if="block.row.cannotSubmitReason && !canPrimaryAction(block.row)" class="v4-match-card__hint">
-              {{ block.row.cannotSubmitReason }}
+            <p v-else-if="cannotSubmitText(block.row) && !canPrimaryAction(block.row)" class="v4-match-card__hint">
+              {{ cannotSubmitText(block.row) }}
             </p>
 
             <div class="v4-match-card__actions">
@@ -500,7 +561,7 @@ watch(
         </template>
       </div>
       <p class="v4-schedule-panel__footnote">
-        赛程数据来自您正式参加的赛事。比赛数据提交权限以具体赛区、参赛队伍及当前比赛权限为准。
+        {{ t('accountEvents.footer.schedule') }}
       </p>
     </template>
   </div>

@@ -1,3 +1,5 @@
+import { translate } from '@/i18n'
+
 export interface FullMatchPlayerRow {
   eventPlayerId?: string
   playerName?: string
@@ -132,7 +134,7 @@ export function validatePlayerRow(prefix: string, row: FullMatchPlayerRow, requi
   const errors: string[] = []
   const valued = hasAnyStat(row)
   if (valued && !String(row.eventPlayerId || '').trim()) {
-    errors.push(`${prefix}尚未选择球员`)
+    errors.push(translate('accountEvents.validation.playerMissing', { prefix }))
     return errors
   }
   if (!valued && !String(row.eventPlayerId || '').trim()) return errors
@@ -144,15 +146,15 @@ export function validatePlayerRow(prefix: string, row: FullMatchPlayerRow, requi
   const ftm = nvl(row.freeThrowMade)
   const fta = nvl(row.freeThrowAttempt)
   const ints = [pts, nvl(row.rebound), nvl(row.assist), nvl(row.steal), nvl(row.block), nvl(row.foul), nvl(row.turnover), fgm, fga, tpm, tpa, ftm, fta]
-  if (ints.some((v) => v < 0 || !Number.isInteger(v))) errors.push(`${prefix}所有数值必须为大于等于 0 的整数`)
+  if (ints.some((v) => v < 0 || !Number.isInteger(v))) errors.push(translate('accountEvents.validation.integers', { prefix }))
   if (!requireComplete && !valued) return errors
-  if (fgm > fga) errors.push(`${prefix}：FGM ${fgm} 大于 FGA ${fga}`)
-  if (tpm > tpa) errors.push(`${prefix}：3PM ${tpm} 大于 3PA ${tpa}`)
-  if (ftm > fta) errors.push(`${prefix}：FTM ${ftm} 大于 FTA ${fta}`)
-  if (tpm > fgm) errors.push(`${prefix}：3PM ${tpm} 大于 FGM ${fgm}`)
-  if (tpa > fga) errors.push(`${prefix}：3PA ${tpa} 大于 FGA ${fga}`)
+  if (fgm > fga) errors.push(translate('accountEvents.validation.statGreater', { prefix, left: 'FGM', leftValue: fgm, right: 'FGA', rightValue: fga }))
+  if (tpm > tpa) errors.push(translate('accountEvents.validation.statGreater', { prefix, left: '3PM', leftValue: tpm, right: '3PA', rightValue: tpa }))
+  if (ftm > fta) errors.push(translate('accountEvents.validation.statGreater', { prefix, left: 'FTM', leftValue: ftm, right: 'FTA', rightValue: fta }))
+  if (tpm > fgm) errors.push(translate('accountEvents.validation.statGreater', { prefix, left: '3PM', leftValue: tpm, right: 'FGM', rightValue: fgm }))
+  if (tpa > fga) errors.push(translate('accountEvents.validation.statGreater', { prefix, left: '3PA', leftValue: tpa, right: 'FGA', rightValue: fga }))
   const expected = expectedPoints(fgm, tpm, ftm)
-  if (pts !== expected) errors.push(`${prefix}：PTS ${pts} 与公式 (FGM-3PM)×2+3PM×3+FTM=${expected} 不一致`)
+  if (pts !== expected) errors.push(translate('accountEvents.validation.pointsFormula', { prefix, points: pts, expected }))
   return errors
 }
 
@@ -161,14 +163,14 @@ export function validateTeamPlayers(gameLabel: string, teamName: string, rows: F
   const used = usedRows(rows)
   const seen = new Set<string>()
   used.forEach((row, index) => {
-    const name = row.playerName || `第 ${index + 1} 行`
+    const name = row.playerName || translate('accountEvents.validation.row', { index: index + 1 })
     const prefix = `${gameLabel} · ${teamName} · ${name}`
     const id = String(row.eventPlayerId || '')
-    if (id && seen.has(id)) errors.push(`${prefix}：同一球队同一场不能重复选择球员`)
+    if (id && seen.has(id)) errors.push(translate('accountEvents.validation.duplicatePlayer', { prefix }))
     if (id) seen.add(id)
     errors.push(...validatePlayerRow(prefix, row, requireComplete))
   })
-  if (requireComplete && used.length === 0) errors.push(`${gameLabel} · ${teamName}至少需要一名球员数据`)
+  if (requireComplete && used.length === 0) errors.push(translate('accountEvents.validation.playerRequired', { game: gameLabel, team: teamName }))
   return errors
 }
 
@@ -194,19 +196,19 @@ export function validateGame(opts: {
   const homeQ = quarters.home
   const awayQ = quarters.away
   if (needPeriod && !empty && (homeScore > 0 || awayScore > 0 || homeQ > 0 || awayQ > 0)) {
-    if (homeQ !== homeScore) errors.push(`${opts.gameLabel} · ${opts.homeName}：四节得分合计 ${homeQ}，与最终比分 ${homeScore} 不一致`)
-    if (awayQ !== awayScore) errors.push(`${opts.gameLabel} · ${opts.awayName}：四节得分合计 ${awayQ}，与最终比分 ${awayScore} 不一致`)
+    if (homeQ !== homeScore) errors.push(translate('accountEvents.validation.quarterMismatch', { game: opts.gameLabel, team: opts.homeName, period: homeQ, score: homeScore }))
+    if (awayQ !== awayScore) errors.push(translate('accountEvents.validation.quarterMismatch', { game: opts.gameLabel, team: opts.awayName, period: awayQ, score: awayScore }))
   }
   const homeReady = usedRows(opts.homePlayers).some((row) => String(row.eventPlayerId || '').trim())
   const awayReady = usedRows(opts.awayPlayers).some((row) => String(row.eventPlayerId || '').trim())
   if (opts.requireComplete && !empty) {
-    if (!homeReady) errors.push(`${opts.gameLabel} · ${opts.homeName}至少需要一名球员数据`)
-    if (!awayReady) errors.push(`${opts.gameLabel} · ${opts.awayName}至少需要一名球员数据`)
+    if (!homeReady) errors.push(translate('accountEvents.validation.playerRequired', { game: opts.gameLabel, team: opts.homeName }))
+    if (!awayReady) errors.push(translate('accountEvents.validation.playerRequired', { game: opts.gameLabel, team: opts.awayName }))
     if (!hasScoreValue(homeScore) || !hasScoreValue(awayScore) || homeScore < 0 || awayScore < 0) {
-      errors.push(`${opts.gameLabel}：双方比分必须填写且不能为负数`)
+      errors.push(translate('accountEvents.validation.scoreRequired', { game: opts.gameLabel }))
     }
-    if (homeScore === awayScore) errors.push(`${opts.gameLabel}：比赛不允许平局`)
-    if (opts.materialCount <= 0) errors.push(`${opts.gameLabel}：请上传本场证明材料`)
+    if (homeScore === awayScore) errors.push(translate('accountEvents.validation.noTie', { game: opts.gameLabel }))
+    if (opts.materialCount <= 0) errors.push(translate('accountEvents.validation.proofRequired', { game: opts.gameLabel }))
   }
   const periodOk = !needPeriod || (homeQ === homeScore && awayQ === awayScore)
   const pass = !empty

@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { ScheduleSubmissionSideView } from '@/types/v4ScheduleCard'
+
+const { t } = useI18n()
 
 defineProps<{
   mySubmission: ScheduleSubmissionSideView
@@ -18,7 +21,7 @@ defineProps<{
         <p class="schedule-submission-status__side">{{ mySubmission.sideLabel }}</p>
         <p class="schedule-submission-status__label">{{ mySubmission.statusLabel }}</p>
         <p v-if="mySubmission.detail" class="schedule-submission-status__detail">
-          驳回原因：{{ mySubmission.detail }}
+          {{ t('accountEvents.common.rejectReason', { reason: mySubmission.detail }) }}
         </p>
       </article>
 

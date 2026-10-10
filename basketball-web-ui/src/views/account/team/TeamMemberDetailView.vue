@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
 import AccountPanel from '@/components/account/AccountPanel.vue'
@@ -11,8 +12,19 @@ import { resolveMemberAvatarUrl } from '@/utils/memberAvatar'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
 import { formatDateTime } from '@/utils/formatDate'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const KNOWN_POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C'] as const
+
+function positionText(code?: string | null, name?: string | null) {
+  if (!code) return name || t('accountTeam.position.unsetLong')
+  const normalized = code.trim().toUpperCase()
+  if ((KNOWN_POSITIONS as readonly string[]).includes(normalized)) {
+    return `${normalized} ${t(`accountTeam.position.${normalized}`)}`
+  }
+  return name ? `${normalized} ${name}` : normalized
+}
 
 const loading = ref(false)
 const loadError = ref('')
@@ -26,8 +38,8 @@ const gameIdLines = computed(() => {
   const items = detail.value?.platformGameIds || []
   if (items.length) {
     return items.map((item) => {
-      const platform = item.platformCode || item.platformName || '未知'
-      return `${platform}：${item.gameId || '-'}`
+      const platform = item.platformCode || item.platformName || t('accountTeam.memberDetail.unknownPlatform')
+      return t('accountTeam.common.platformId', { platform, id: item.gameId || '-' })
     })
   }
   if (detail.value?.gameIdSummary && detail.value.gameIdSummary !== '未绑定') {
@@ -50,7 +62,7 @@ const hasEventInfo = computed(() => {
 
 async function loadDetail() {
   if (!teamId.value || !teamMemberId.value) {
-    loadError.value = '缺少球队或成员参数'
+    loadError.value = t('accountTeam.memberDetail.missingParams')
     detail.value = null
     return
   }
@@ -61,7 +73,7 @@ async function loadDetail() {
     detail.value = res.data
   } catch (error) {
     detail.value = null
-    loadError.value = error instanceof Error ? error.message : '加载成员资料失败'
+    loadError.value = error instanceof Error ? error.message : t('accountTeam.memberDetail.loadFailed')
   } finally {
     loading.value = false
   }
@@ -93,128 +105,128 @@ onMounted(() => {
 <template>
   <div class="account-view account-view--team-member-detail account-center-vars">
     <AccountPageHeader
-      zh-title="队员资料"
-      en-title="TEAM MEMBER DETAIL"
+      :zh-title="t('accountTeam.memberDetail.title')"
+      :en-title="t('accountTeam.memberDetail.titleEn')"
       :breadcrumb-items="[
-        { label: '首页', to: '/home' },
-        { label: '个人中心', to: '/account/overview' },
-        { label: '我的球队', to: '/account/team' },
-        { label: '队员资料' },
+        { label: t('accountTeam.breadcrumb.home'), to: '/home' },
+        { label: t('accountTeam.breadcrumb.account'), to: '/account/overview' },
+        { label: t('accountTeam.breadcrumb.team'), to: '/account/team' },
+        { label: t('accountTeam.breadcrumb.member') },
       ]"
     />
 
-    <div v-if="loading" class="member-detail__state">成员资料加载中...</div>
+    <div v-if="loading" class="member-detail__state">{{ t('accountTeam.memberDetail.loading') }}</div>
     <AccountEmptyState v-else-if="loadError" :message="loadError" />
 
     <template v-else-if="detail">
       <section class="member-detail__hero">
         <div class="member-detail__hero-main">
           <div class="member-detail__avatar">
-            <img :src="avatarUrl" :alt="detail.nickname || '队员'" />
+            <img :src="avatarUrl" :alt="detail.nickname || t('accountTeam.memberDetail.avatarAlt')" />
           </div>
           <div class="member-detail__hero-meta">
             <div class="member-detail__name-row">
-              <h2>{{ detail.nickname || '未设置昵称' }}</h2>
+              <h2>{{ detail.nickname || t('accountTeam.memberDetail.unnamed') }}</h2>
               <AccountStatusBadge
                 v-if="detail.isCaptain"
                 type="danger"
-                text="队长"
+                :text="t('accountTeam.memberDetail.captain')"
               />
               <AccountStatusBadge
                 v-else
                 type="default"
-                :text="detail.roleInTeamText || '队员'"
+                :text="detail.roleInTeamText || t('accountTeam.memberDetail.player')"
               />
             </div>
-            <p class="member-detail__sub">{{ detail.playerNo || '暂无球员编号' }}</p>
+            <p class="member-detail__sub">{{ detail.playerNo || t('accountTeam.memberDetail.noPlayerNo') }}</p>
             <p class="member-detail__sub">
               {{ detail.teamName || '-' }}
-              · {{ detail.positionName || detail.positionCode || '未设置位置' }}
+              · {{ positionText(detail.positionCode, detail.positionName) }}
               · {{ detail.memberStatusText || '-' }}
             </p>
           </div>
         </div>
         <div class="member-detail__hero-actions">
-          <button type="button" class="account-btn-secondary" @click="goBackMembers">返回成员管理</button>
+          <button type="button" class="account-btn-secondary" @click="goBackMembers">{{ t('accountTeam.memberDetail.back') }}</button>
           <button
             v-if="detail.playerId"
             type="button"
             class="account-btn-secondary"
             @click="openPublicCareer"
           >
-            生涯数据
+            {{ t('accountTeam.memberDetail.career') }}
           </button>
         </div>
       </section>
 
       <div class="member-detail__grid">
-        <AccountPanel title="基础资料">
+        <AccountPanel :title="t('accountTeam.memberDetail.basic')">
           <dl class="member-detail__dl">
-            <div><dt>球员昵称</dt><dd>{{ displayOrDash(detail.nickname) }}</dd></div>
-            <div><dt>CNPA 编号</dt><dd>{{ displayOrDash(detail.playerNo) }}</dd></div>
-            <div><dt>常用位置</dt><dd>{{ displayOrDash(detail.positionName || detail.positionCode) }}</dd></div>
-            <div><dt>加入时间</dt><dd>{{ detail.joinTime ? formatDateTime(detail.joinTime) : '-' }}</dd></div>
-            <div><dt>球衣号</dt><dd>{{ displayOrDash(detail.jerseyNo) }}</dd></div>
-            <div><dt>成员身份</dt><dd>{{ displayOrDash(detail.roleInTeamText) }}</dd></div>
-            <div><dt>成员状态</dt><dd>{{ displayOrDash(detail.memberStatusText) }}</dd></div>
-            <div><dt>入队方式</dt><dd>{{ displayOrDash(detail.sourceTypeText || detail.sourceType) }}</dd></div>
+            <div><dt>{{ t('accountTeam.memberDetail.nickname') }}</dt><dd>{{ displayOrDash(detail.nickname) }}</dd></div>
+            <div><dt>{{ t('accountTeam.memberDetail.playerNo') }}</dt><dd>{{ displayOrDash(detail.playerNo) }}</dd></div>
+            <div><dt>{{ t('accountTeam.memberDetail.position') }}</dt><dd>{{ detail.positionCode || detail.positionName ? positionText(detail.positionCode, detail.positionName) : '-' }}</dd></div>
+            <div><dt>{{ t('accountTeam.memberDetail.joinedAt') }}</dt><dd>{{ detail.joinTime ? formatDateTime(detail.joinTime) : '-' }}</dd></div>
+            <div><dt>{{ t('accountTeam.memberDetail.jerseyNo') }}</dt><dd>{{ displayOrDash(detail.jerseyNo) }}</dd></div>
+            <div><dt>{{ t('accountTeam.memberDetail.role') }}</dt><dd>{{ displayOrDash(detail.roleInTeamText) }}</dd></div>
+            <div><dt>{{ t('accountTeam.memberDetail.memberStatus') }}</dt><dd>{{ displayOrDash(detail.memberStatusText) }}</dd></div>
+            <div><dt>{{ t('accountTeam.memberDetail.source') }}</dt><dd>{{ displayOrDash(detail.sourceTypeText || detail.sourceType) }}</dd></div>
           </dl>
         </AccountPanel>
 
-        <AccountPanel title="游戏 ID">
+        <AccountPanel :title="t('accountTeam.memberDetail.gameIds')">
           <ul v-if="gameIdLines.length" class="member-detail__gameids">
             <li v-for="line in gameIdLines" :key="line">{{ line }}</li>
           </ul>
-          <p v-else class="member-detail__empty">未绑定</p>
-          <p class="member-detail__hint">游戏 ID 用于确认球员在各平台中的身份，不代表球员归属某一平台。</p>
+          <p v-else class="member-detail__empty">{{ t('accountTeam.memberDetail.unbound') }}</p>
+          <p class="member-detail__hint">{{ t('accountTeam.memberDetail.gameIdHint') }}</p>
         </AccountPanel>
 
-        <AccountPanel title="本队参赛信息">
+        <AccountPanel :title="t('accountTeam.memberDetail.eventInfo')">
           <template v-if="hasEventInfo">
             <dl class="member-detail__dl">
-              <div><dt>当前赛事</dt><dd>{{ displayOrDash(detail.currentEventName) }}</dd></div>
-              <div><dt>当前赛事平台</dt><dd>{{ displayOrDash(detail.currentEventPlatform) }}</dd></div>
-              <div><dt>当前阵容状态</dt><dd>{{ displayOrDash(detail.currentRosterStatus) }}</dd></div>
-              <div><dt>参赛赛事数</dt><dd>{{ displayOrDash(detail.participatedEventCount) }}</dd></div>
-              <div><dt>最近比赛</dt><dd>{{ displayOrDash(detail.latestMatchSummary || detail.latestMatchTime) }}</dd></div>
+              <div><dt>{{ t('accountTeam.memberDetail.currentEvent') }}</dt><dd>{{ displayOrDash(detail.currentEventName) }}</dd></div>
+              <div><dt>{{ t('accountTeam.memberDetail.currentPlatform') }}</dt><dd>{{ displayOrDash(detail.currentEventPlatform) }}</dd></div>
+              <div><dt>{{ t('accountTeam.memberDetail.rosterStatus') }}</dt><dd>{{ displayOrDash(detail.currentRosterStatus) }}</dd></div>
+              <div><dt>{{ t('accountTeam.memberDetail.eventCount') }}</dt><dd>{{ displayOrDash(detail.participatedEventCount) }}</dd></div>
+              <div><dt>{{ t('accountTeam.memberDetail.latestMatch') }}</dt><dd>{{ displayOrDash(detail.latestMatchSummary || detail.latestMatchTime) }}</dd></div>
             </dl>
           </template>
-          <p v-else class="member-detail__empty">暂无本队参赛记录</p>
+          <p v-else class="member-detail__empty">{{ t('accountTeam.memberDetail.eventEmpty') }}</p>
         </AccountPanel>
 
-        <AccountPanel title="数据摘要">
+        <AccountPanel :title="t('accountTeam.memberDetail.stats')">
           <template v-if="hasStatSummary">
             <dl class="member-detail__dl member-detail__dl--stats">
-              <div><dt>场次</dt><dd>{{ displayOrDash(detail.totalMatches) }}</dd></div>
-              <div><dt>得分</dt><dd>{{ displayOrDash(detail.totalPoints) }}</dd></div>
-              <div><dt>篮板</dt><dd>{{ displayOrDash(detail.totalRebounds) }}</dd></div>
-              <div><dt>助攻</dt><dd>{{ displayOrDash(detail.totalAssists) }}</dd></div>
-              <div><dt>场均得分</dt><dd>{{ displayOrDash(detail.avgPoints) }}</dd></div>
-              <div><dt>场均篮板</dt><dd>{{ displayOrDash(detail.avgRebounds) }}</dd></div>
-              <div><dt>场均助攻</dt><dd>{{ displayOrDash(detail.avgAssists) }}</dd></div>
+              <div><dt>{{ t('accountTeam.memberDetail.matches') }}</dt><dd>{{ displayOrDash(detail.totalMatches) }}</dd></div>
+              <div><dt>{{ t('accountTeam.memberDetail.points') }}</dt><dd>{{ displayOrDash(detail.totalPoints) }}</dd></div>
+              <div><dt>{{ t('accountTeam.memberDetail.rebounds') }}</dt><dd>{{ displayOrDash(detail.totalRebounds) }}</dd></div>
+              <div><dt>{{ t('accountTeam.memberDetail.assists') }}</dt><dd>{{ displayOrDash(detail.totalAssists) }}</dd></div>
+              <div><dt>{{ t('accountTeam.memberDetail.avgPoints') }}</dt><dd>{{ displayOrDash(detail.avgPoints) }}</dd></div>
+              <div><dt>{{ t('accountTeam.memberDetail.avgRebounds') }}</dt><dd>{{ displayOrDash(detail.avgRebounds) }}</dd></div>
+              <div><dt>{{ t('accountTeam.memberDetail.avgAssists') }}</dt><dd>{{ displayOrDash(detail.avgAssists) }}</dd></div>
             </dl>
           </template>
-          <p v-else class="member-detail__empty">暂无本队比赛数据</p>
+          <p v-else class="member-detail__empty">{{ t('accountTeam.memberDetail.statsEmpty') }}</p>
         </AccountPanel>
 
-        <AccountPanel title="记录">
+        <AccountPanel :title="t('accountTeam.memberDetail.records')">
           <div class="member-detail__records">
             <div>
-              <h3>最近比赛</h3>
+              <h3>{{ t('accountTeam.memberDetail.latestMatch') }}</h3>
               <p class="member-detail__empty">
-                {{ detail.recentMatches?.length ? `共 ${detail.recentMatches.length} 条` : '暂无数据' }}
+                {{ detail.recentMatches?.length ? t('accountTeam.common.recordCount', { count: detail.recentMatches.length }) : t('accountTeam.memberDetail.noData') }}
               </p>
             </div>
             <div>
-              <h3>处罚记录</h3>
+              <h3>{{ t('accountTeam.memberDetail.punishments') }}</h3>
               <p class="member-detail__empty">
-                {{ detail.punishmentRecords?.length ? `共 ${detail.punishmentRecords.length} 条` : '暂无数据' }}
+                {{ detail.punishmentRecords?.length ? t('accountTeam.common.recordCount', { count: detail.punishmentRecords.length }) : t('accountTeam.memberDetail.noData') }}
               </p>
             </div>
             <div>
-              <h3>审核记录</h3>
+              <h3>{{ t('accountTeam.memberDetail.audits') }}</h3>
               <p class="member-detail__empty">
-                {{ detail.auditRecords?.length ? `共 ${detail.auditRecords.length} 条` : '暂无数据' }}
+                {{ detail.auditRecords?.length ? t('accountTeam.common.recordCount', { count: detail.auditRecords.length }) : t('accountTeam.memberDetail.noData') }}
               </p>
             </div>
           </div>

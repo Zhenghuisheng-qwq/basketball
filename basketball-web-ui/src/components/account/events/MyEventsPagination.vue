@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = withDefaults(defineProps<{
   page: number
@@ -12,8 +13,10 @@ const props = withDefaults(defineProps<{
 }>(), {
   pageSizeOptions: () => [5, 10, 20],
   disabled: false,
-  ariaLabel: '列表分页',
+  ariaLabel: '',
 })
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   'update:page': [page: number]
@@ -21,7 +24,8 @@ const emit = defineEmits<{
 }>()
 
 const totalPages = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)))
-const resolvedMeta = computed(() => props.metaText || `共 ${props.total} 条`)
+const resolvedAriaLabel = computed(() => props.ariaLabel || t('accountEvents.pagination.ariaList'))
+const resolvedMeta = computed(() => props.metaText || t('accountEvents.pagination.total', { total: props.total }))
 
 function handlePageSizeChange(event: Event) {
   if (props.disabled) return
@@ -33,10 +37,10 @@ function handlePageSizeChange(event: Event) {
 </script>
 
 <template>
-  <nav v-if="total > 0" class="my-events-pagination" :aria-label="ariaLabel">
+  <nav v-if="total > 0" class="my-events-pagination" :aria-label="resolvedAriaLabel">
     <span class="my-events-pagination__meta">{{ resolvedMeta }}</span>
     <label class="my-events-pagination__size">
-      每页
+      {{ t('accountEvents.pagination.perPage') }}
       <select
         class="my-events-pagination__size-select"
         :value="pageSize"
@@ -45,7 +49,7 @@ function handlePageSizeChange(event: Event) {
       >
         <option v-for="size in pageSizeOptions" :key="size" :value="size">{{ size }}</option>
       </select>
-      条
+      {{ t('accountEvents.pagination.items') }}
     </label>
     <button
       type="button"
@@ -53,7 +57,7 @@ function handlePageSizeChange(event: Event) {
       :disabled="disabled || page <= 1"
       @click="emit('update:page', page - 1)"
     >
-      上一页
+      {{ t('accountEvents.pagination.prev') }}
     </button>
     <span class="my-events-pagination__current">{{ page }} / {{ totalPages }}</span>
     <button
@@ -62,7 +66,7 @@ function handlePageSizeChange(event: Event) {
       :disabled="disabled || page >= totalPages"
       @click="emit('update:page', page + 1)"
     >
-      下一页
+      {{ t('accountEvents.pagination.next') }}
     </button>
   </nav>
 </template>

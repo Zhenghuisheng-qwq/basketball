@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import EventStatusBadge from './EventStatusBadge.vue'
 import type { MyApplication } from '@/types/accountEvents'
+
+const { t } = useI18n()
 
 defineProps<{
   applications: MyApplication[]
@@ -22,18 +25,18 @@ const emit = defineEmits<{
       <div class="my-events-list__main">
         <div class="my-events-list__head">
           <strong>{{ item.tournamentName }}</strong>
-          <span>{{ item.platformGroupLabel || (item.platform ? `${item.platform} 组` : '') }}</span>
+          <span>{{ item.platformGroupLabel || (item.platform ? t('accountEvents.applications.platformGroup', { platform: item.platform }) : '') }}</span>
         </div>
         <div class="my-events-list__meta">
-          <span>报名类型：{{ item.applicationTypeText }}</span>
+          <span>{{ t('accountEvents.applications.type', { type: item.applicationTypeText }) }}</span>
           <EventStatusBadge :text="item.statusText" :pending="item.pending" />
         </div>
         <p v-if="item.statusHint" class="my-events-list__extra">{{ item.statusHint }}</p>
-        <p v-else-if="item.invitedTeamCode" class="my-events-list__extra">邀请球队：{{ item.invitedTeamCode }}</p>
+        <p v-else-if="item.invitedTeamCode" class="my-events-list__extra">{{ t('accountEvents.applications.invitedTeam', { code: item.invitedTeamCode }) }}</p>
         <p v-else-if="item.confirmedCount != null" class="my-events-list__extra">
-          {{ item.confirmedCount }} / {{ item.rosterMax }} 人已确认
+          {{ t('accountEvents.applications.confirmed', { confirmed: item.confirmedCount, max: item.rosterMax }) }}
         </p>
-        <p v-else-if="item.submitTime" class="my-events-list__extra">提交时间：{{ item.submitTime }}</p>
+        <p v-else-if="item.submitTime" class="my-events-list__extra">{{ t('accountEvents.applications.submitTime', { time: item.submitTime }) }}</p>
       </div>
       <div v-if="item.showAction !== false" class="my-events-list__action">
         <button

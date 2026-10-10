@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import MatchActionPanel from '@/components/account/events/schedule/MatchActionPanel.vue'
 import MatchEventHeader from '@/components/account/events/schedule/MatchEventHeader.vue'
 import MatchSubmissionStatusPanel from '@/components/account/events/schedule/MatchSubmissionStatusPanel.vue'
@@ -8,6 +9,8 @@ import type { ScheduleMatchCardViewModel } from '@/types/v4ScheduleCard'
 defineProps<{
   card: ScheduleMatchCardViewModel
 }>()
+
+const { t } = useI18n()
 
 const accentClassMap = {
   default: '',
@@ -27,10 +30,10 @@ const accentClassMap = {
     class="schedule-match-card"
     :class="accentClassMap[card.accent]"
   >
-    <span v-if="card.isNextMatch" class="schedule-match-card__next-flag">下一场</span>
+    <span v-if="card.isNextMatch" class="schedule-match-card__next-flag">{{ t('accountEvents.schedule.nextFlag') }}</span>
 
     <p v-if="card.accent === 'my-pending-submit'" class="schedule-match-card__alert">
-      本方数据待提交
+      {{ t('accountEvents.schedule.pendingAlert') }}
     </p>
 
     <div class="schedule-match-card__body">
@@ -45,7 +48,7 @@ const accentClassMap = {
 
     <footer class="schedule-match-card__footer">
       <p v-if="card.matchNo" class="schedule-match-card__match-no">
-        比赛编号：<strong>{{ card.matchNo }}</strong>
+        {{ t('accountEvents.schedule.matchCode') }}<strong>{{ card.matchNo }}</strong>
       </p>
       <MatchActionPanel :actions="card.actions" />
     </footer>

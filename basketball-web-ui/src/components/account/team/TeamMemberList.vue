@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AccountEmptyState from '@/components/account/AccountEmptyState.vue'
@@ -9,15 +10,49 @@ import type { TeamMemberItemDto } from '@/api/types/teamMember'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
 import {
   formatTeamMemberJoinTime,
-  formatTeamMemberMembershipStatus,
-  formatTeamMemberPosition,
-  formatTeamMemberPositionShort,
-  formatTeamMemberRole,
   isTeamCaptainMember,
-  resolveTeamMemberDisplayName,
   resolveMemberPlatformGameId,
   TEAM_MEMBER_PLATFORM_COLUMNS,
 } from '@/utils/teamMemberUi'
+
+const { t } = useI18n()
+const KNOWN_POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C'] as const
+
+function positionFull(code?: string | null, name?: string | null) {
+  if (!code) return t('accountTeam.position.unset')
+  const normalized = code.trim().toUpperCase()
+  if ((KNOWN_POSITIONS as readonly string[]).includes(normalized)) {
+    return `${normalized} ${t(`accountTeam.position.${normalized}`)}`
+  }
+  return name ? `${normalized} ${name}` : normalized
+}
+
+function positionShort(code?: string | null) {
+  return code?.trim() || t('accountTeam.position.unset')
+}
+
+function memberName(member: TeamMemberItemDto) {
+  return member.nickname || member.gameNickname || member.realName || t('accountTeam.members.unnamed')
+}
+
+function memberRole(roleType?: string) {
+  if (roleType === 'CAPTAIN') return t('accountTeam.members.captain')
+  if (roleType === 'MEMBER') return t('accountTeam.members.playerRole')
+  return roleType || '-'
+}
+
+function rosterLabel(rosterType?: string) {
+  if (rosterType === 'OFFICIAL') return t('accountTeam.members.official')
+  if (rosterType === 'TRIAL') return t('accountTeam.members.trial')
+  return rosterType || '-'
+}
+
+function membershipLabel(status?: number, rosterType?: string) {
+  if (status === 0) return t('accountTeam.members.left')
+  if (status === 2) return t('accountTeam.members.removed')
+  if (status === 1) return rosterLabel(rosterType)
+  return '-'
+}
 
 const props = defineProps<{
   members: TeamMemberItemDto[]
@@ -46,11 +81,11 @@ function ensureMemberEdit(member: TeamMemberItemDto) {
 /** 队内私有资料详情（个人中心，需 token） */
 function openProfile(member: TeamMemberItemDto) {
   if (!props.teamId) {
-    ElMessage.warning('缺少球队上下文，无法查看队内资料')
+    ElMessage.warning(t('accountTeam.members.missingTeam'))
     return
   }
   if (!member.teamMemberId) {
-    ElMessage.warning('缺少成员标识')
+    ElMessage.warning(t('accountTeam.members.missingMember'))
     return
   }
   router.push({
@@ -65,7 +100,7 @@ function openProfile(member: TeamMemberItemDto) {
 /** 公开球员生涯数据页（可不依赖 token） */
 function openCareerData(member: TeamMemberItemDto) {
   if (!member.playerId) {
-    ElMessage.warning('暂无球员档案')
+    ElMessage.warning(t('accountTeam.members.noProfile'))
     return
   }
   const extraQuery: Record<string, string> = { dataMode: 'career' }
@@ -76,12 +111,12 @@ function openCareerData(member: TeamMemberItemDto) {
 async function confirmRemove(member: TeamMemberItemDto) {
   try {
     await ElMessageBox.confirm(
-      '移除后该成员将不再属于当前球队，但历史比赛数据会保留。',
-      `确认移除 ${resolveTeamMemberDisplayName(member)}？`,
+      t('accountTeam.members.removeMessage'),
+      t('accountTeam.members.removeTitle', { name: memberName(member) }),
       {
         type: 'warning',
-        confirmButtonText: '确认移除',
-        cancelButtonText: '取消',
+        confirmButtonText: t('accountTeam.members.removeConfirm'),
+        cancelButtonText: t('accountTeam.common.cancel'),
       },
     )
     emit('remove', member)
@@ -99,19 +134,19 @@ function handleSave(member: TeamMemberItemDto) {
 
 <template>
   <div class="team-member-list">
-    <div v-if="loading" class="team-member-list__loading">成员列表加载中...</div>
+    <div v-if="loading" class="team-member-list__loading">{{ t('accountTeam.members.loading') }}</div>
 
     <AccountEmptyState
       v-else-if="!members.length"
-      message="当前球队暂无成员"
-      subtitle="你可以通过邀请球员或处理加入申请来组建球队"
+      :message="t('accountTeam.members.empty')"
+      :subtitle="t('accountTeam.members.emptyHint')"
     />
 
     <template v-else>
-      <div class="team-member-list__table" role="table" aria-label="球队成员列表">
+      <div class="team-member-list__table" role="table" :aria-label="t('accountTeam.members.tableAria')">
         <div class="team-member-list__head" role="row">
-          <div class="team-member-list__cell team-member-list__cell--player" role="columnheader">球员</div>
-          <div class="team-member-list__cell team-member-list__cell--position" role="columnheader">位置</div>
+          <div class="team-member-list__cell team-member-list__cell--player" role="columnheader">{{ t('accountTeam.members.player') }}</div>
+          <div class="team-member-list__cell team-member-list__cell--position" role="columnheader">{{ t('accountTeam.members.position') }}</div>
           <div
             v-for="platform in TEAM_MEMBER_PLATFORM_COLUMNS"
             :key="platform"
@@ -120,10 +155,10 @@ function handleSave(member: TeamMemberItemDto) {
           >
             {{ platform === 'XBOX' ? 'Xbox' : platform }}
           </div>
-          <div class="team-member-list__cell team-member-list__cell--role" role="columnheader">球队角色</div>
-          <div class="team-member-list__cell team-member-list__cell--status" role="columnheader">成员状态</div>
-          <div class="team-member-list__cell team-member-list__cell--join" role="columnheader">加入时间</div>
-          <div class="team-member-list__cell team-member-list__cell--actions" role="columnheader">操作</div>
+          <div class="team-member-list__cell team-member-list__cell--role" role="columnheader">{{ t('accountTeam.members.role') }}</div>
+          <div class="team-member-list__cell team-member-list__cell--status" role="columnheader">{{ t('accountTeam.members.status') }}</div>
+          <div class="team-member-list__cell team-member-list__cell--join" role="columnheader">{{ t('accountTeam.members.joinedAt') }}</div>
+          <div class="team-member-list__cell team-member-list__cell--actions" role="columnheader">{{ t('accountTeam.members.actions') }}</div>
         </div>
 
         <div
@@ -136,7 +171,7 @@ function handleSave(member: TeamMemberItemDto) {
           <div class="team-member-list__cell team-member-list__cell--player" role="cell">
             <div class="team-member-list__player">
               <PlayerAvatar
-                :name="resolveTeamMemberDisplayName(member)"
+                :name="memberName(member)"
                 :avatar-url="member.avatarUrl"
                 :player-no="member.playerNo"
                 :player-id="member.playerId"
@@ -144,22 +179,22 @@ function handleSave(member: TeamMemberItemDto) {
               />
               <div class="team-member-list__player-meta">
                 <div class="team-member-list__player-name">
-                  <strong>{{ resolveTeamMemberDisplayName(member) }}</strong>
+                  <strong>{{ memberName(member) }}</strong>
                   <AccountStatusBadge
                     v-if="isTeamCaptainMember(member)"
                     type="danger"
-                    text="队长"
+                    :text="t('accountTeam.members.captain')"
                     class="team-member-list__captain-badge"
                   />
                 </div>
-                <span class="team-member-list__player-no">{{ member.playerNo || '暂无球员编号' }}</span>
+                <span class="team-member-list__player-no">{{ member.playerNo || t('accountTeam.members.noPlayerNo') }}</span>
               </div>
             </div>
           </div>
 
           <div class="team-member-list__cell team-member-list__cell--position" role="cell">
-            <span class="team-member-list__position" :title="formatTeamMemberPosition(member)">
-              {{ formatTeamMemberPositionShort(member.positionCode) }}
+            <span class="team-member-list__position" :title="positionFull(member.positionCode, member.positionName)">
+              {{ positionShort(member.positionCode) }}
             </span>
           </div>
 
@@ -178,18 +213,18 @@ function handleSave(member: TeamMemberItemDto) {
           </div>
 
           <div class="team-member-list__cell team-member-list__cell--role" role="cell">
-            {{ formatTeamMemberRole(member.roleType) }}
+            {{ memberRole(member.roleType) }}
           </div>
 
           <div class="team-member-list__cell team-member-list__cell--status" role="cell">
             <template v-if="isCaptain">
               <select v-model="ensureMemberEdit(member).rosterType" class="team-member-list__select">
-                <option value="OFFICIAL">正式</option>
-                <option value="TRIAL">试训</option>
+                <option value="OFFICIAL">{{ t('accountTeam.members.official') }}</option>
+                <option value="TRIAL">{{ t('accountTeam.members.trial') }}</option>
               </select>
             </template>
             <template v-else>
-              {{ formatTeamMemberMembershipStatus(member.membershipStatus, member.rosterType) }}
+              {{ membershipLabel(member.membershipStatus, member.rosterType) }}
             </template>
           </div>
 
@@ -205,13 +240,13 @@ function handleSave(member: TeamMemberItemDto) {
                 class="team-member-list__link"
                 @click="handleSave(member)"
               >
-                保存
+                {{ t('accountTeam.members.save') }}
               </button>
               <button type="button" class="team-member-list__link" @click="openProfile(member)">
-                查看资料
+                {{ t('accountTeam.members.profile') }}
               </button>
               <button type="button" class="team-member-list__link" @click="openCareerData(member)">
-                生涯数据
+                {{ t('accountTeam.members.career') }}
               </button>
               <button
                 v-if="isCaptain && !isTeamCaptainMember(member)"
@@ -219,14 +254,14 @@ function handleSave(member: TeamMemberItemDto) {
                 class="team-member-list__link team-member-list__link--danger"
                 @click="confirmRemove(member)"
               >
-                移除
+                {{ t('accountTeam.members.remove') }}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="team-member-list__cards" aria-label="球队成员卡片列表">
+      <div class="team-member-list__cards" :aria-label="t('accountTeam.members.cardsAria')">
         <article
           v-for="member in members"
           :key="`card-${member.teamMemberId}`"
@@ -235,7 +270,7 @@ function handleSave(member: TeamMemberItemDto) {
         >
           <div class="team-member-list__card-head">
             <PlayerAvatar
-              :name="resolveTeamMemberDisplayName(member)"
+              :name="memberName(member)"
               :avatar-url="member.avatarUrl"
               :player-no="member.playerNo"
               :player-id="member.playerId"
@@ -243,20 +278,20 @@ function handleSave(member: TeamMemberItemDto) {
             />
             <div>
               <div class="team-member-list__player-name">
-                <strong>{{ resolveTeamMemberDisplayName(member) }}</strong>
+                <strong>{{ memberName(member) }}</strong>
                 <AccountStatusBadge
                   v-if="isTeamCaptainMember(member)"
                   type="danger"
-                  text="队长"
+                  :text="t('accountTeam.members.captain')"
                   class="team-member-list__captain-badge"
                 />
               </div>
-              <span class="team-member-list__player-no">{{ member.playerNo || '暂无球员编号' }}</span>
+              <span class="team-member-list__player-no">{{ member.playerNo || t('accountTeam.members.noPlayerNo') }}</span>
             </div>
           </div>
 
           <dl class="team-member-list__card-meta">
-            <div><dt>位置</dt><dd :title="formatTeamMemberPosition(member)">{{ formatTeamMemberPositionShort(member.positionCode) }}</dd></div>
+            <div><dt>{{ t('accountTeam.members.position') }}</dt><dd :title="positionFull(member.positionCode, member.positionName)">{{ positionShort(member.positionCode) }}</dd></div>
             <div
               v-for="platform in TEAM_MEMBER_PLATFORM_COLUMNS"
               :key="`card-${member.teamMemberId}-${platform}`"
@@ -264,22 +299,22 @@ function handleSave(member: TeamMemberItemDto) {
               <dt>{{ platform === 'XBOX' ? 'Xbox' : platform }}</dt>
               <dd>{{ resolveMemberPlatformGameId(member, platform) }}</dd>
             </div>
-            <div><dt>球队角色</dt><dd>{{ formatTeamMemberRole(member.roleType) }}</dd></div>
+            <div><dt>{{ t('accountTeam.members.role') }}</dt><dd>{{ memberRole(member.roleType) }}</dd></div>
             <div>
-              <dt>成员状态</dt>
+              <dt>{{ t('accountTeam.members.status') }}</dt>
               <dd>
                 <select
                   v-if="isCaptain"
                   v-model="ensureMemberEdit(member).rosterType"
                   class="team-member-list__select"
                 >
-                  <option value="OFFICIAL">正式</option>
-                  <option value="TRIAL">试训</option>
+                  <option value="OFFICIAL">{{ t('accountTeam.members.official') }}</option>
+                  <option value="TRIAL">{{ t('accountTeam.members.trial') }}</option>
                 </select>
-                <template v-else>{{ formatTeamMemberMembershipStatus(member.membershipStatus, member.rosterType) }}</template>
+                <template v-else>{{ membershipLabel(member.membershipStatus, member.rosterType) }}</template>
               </dd>
             </div>
-            <div><dt>加入时间</dt><dd>{{ formatTeamMemberJoinTime(member.joinTime) }}</dd></div>
+            <div><dt>{{ t('accountTeam.members.joinedAt') }}</dt><dd>{{ formatTeamMemberJoinTime(member.joinTime) }}</dd></div>
           </dl>
 
           <div class="team-member-list__actions team-member-list__actions--card">
@@ -289,13 +324,13 @@ function handleSave(member: TeamMemberItemDto) {
               class="team-member-list__link"
               @click="handleSave(member)"
             >
-              保存
+              {{ t('accountTeam.members.save') }}
             </button>
             <button type="button" class="team-member-list__link" @click="openProfile(member)">
-              查看资料
+              {{ t('accountTeam.members.profile') }}
             </button>
             <button type="button" class="team-member-list__link" @click="openCareerData(member)">
-              生涯数据
+              {{ t('accountTeam.members.career') }}
             </button>
             <button
               v-if="isCaptain && !isTeamCaptainMember(member)"
@@ -303,7 +338,7 @@ function handleSave(member: TeamMemberItemDto) {
               class="team-member-list__link team-member-list__link--danger"
               @click="confirmRemove(member)"
             >
-              移除
+              {{ t('accountTeam.members.remove') }}
             </button>
           </div>
         </article>

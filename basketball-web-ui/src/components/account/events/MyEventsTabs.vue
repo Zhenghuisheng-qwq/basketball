@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { AccountEventTab, MyEventsTabKey } from '@/types/accountEvents'
+
+const { t } = useI18n()
 
 defineProps<{
   activeTab: MyEventsTabKey
@@ -12,7 +15,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <nav class="my-events-tabs" aria-label="我的赛事分类">
+  <nav class="my-events-tabs" :aria-label="t('accountEvents.available.tabsAria')">
     <button
       v-for="tab in tabs"
       :key="tab.key"

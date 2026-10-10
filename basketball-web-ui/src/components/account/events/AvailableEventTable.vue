@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { AvailableEvent } from '@/types/accountEvents'
 import type { MyEventsRoleMode } from '@/api/types/myEvents'
 import { formatDateTimeShort } from '@/utils/participationMappers'
@@ -13,6 +14,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   action: [event: AvailableEvent, actionType?: AvailableEvent['actionType']]
 }>()
+
+const { t } = useI18n()
 
 const isNoTeam = computed(() => props.roleMode === 'NO_TEAM')
 const isCaptain = computed(() => props.roleMode === 'TEAM_CAPTAIN')
@@ -71,29 +74,30 @@ function matchRange(event: AvailableEvent) {
 
 function platformLabel(event: AvailableEvent) {
   if (!event.platform || event.platform === '-') return '-'
-  return event.platform.endsWith('端') ? event.platform : `${event.platform}端`
+  const platform = event.platform.replace(/端$/, '')
+  return t('accountEvents.available.platformClient', { platform })
 }
 </script>
 
 <template>
   <div class="event-list-card">
     <div class="event-table-head" :class="headClass">
-      <span>赛事名称</span>
-      <span>赛季</span>
-      <span>游戏端</span>
-      <span>报名时间</span>
-      <span>比赛时间</span>
-      <span>赛事状态</span>
+      <span>{{ t('accountEvents.available.name') }}</span>
+      <span>{{ t('accountEvents.available.season') }}</span>
+      <span>{{ t('accountEvents.available.platform') }}</span>
+      <span>{{ t('accountEvents.available.signupTime') }}</span>
+      <span>{{ t('accountEvents.available.matchTime') }}</span>
+      <span>{{ t('accountEvents.available.eventStatus') }}</span>
       <template v-if="isNoTeam">
-        <span>我的状态</span>
+        <span>{{ t('accountEvents.available.myStatus') }}</span>
       </template>
       <template v-else>
-        <span>我的球队</span>
-        <span>球队报名</span>
-        <span>我的阵容</span>
-        <span>队长授权</span>
+        <span>{{ t('accountEvents.available.myTeam') }}</span>
+        <span>{{ t('accountEvents.available.teamRegistration') }}</span>
+        <span>{{ t('accountEvents.available.myRoster') }}</span>
+        <span>{{ t('accountEvents.available.captainGrant') }}</span>
       </template>
-      <span>操作</span>
+      <span>{{ t('accountEvents.available.action') }}</span>
     </div>
 
     <div
@@ -120,13 +124,13 @@ function platformLabel(event: AvailableEvent) {
       </span>
 
       <template v-if="isNoTeam">
-        <span>{{ event.userMembershipStatusText || '未加入球队' }}</span>
+        <span>{{ event.userMembershipStatusText || t('accountEvents.available.notInTeam') }}</span>
       </template>
       <template v-else>
         <span>{{ event.teamName || '-' }}</span>
-        <span>{{ event.teamRegistrationStatusText || '未报名' }}</span>
-        <span>{{ event.userRosterStatusText || '暂无阵容' }}</span>
-        <span>{{ isCaptain ? (event.captainGrantStatusText || '-') : '仅队长可操作' }}</span>
+        <span>{{ event.teamRegistrationStatusText || t('accountEvents.available.notRegistered') }}</span>
+        <span>{{ event.userRosterStatusText || t('accountEvents.available.noRoster') }}</span>
+        <span>{{ isCaptain ? (event.captainGrantStatusText || '-') : t('accountEvents.available.captainOnly') }}</span>
       </template>
 
       <div class="event-table-row__action">

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { V4MatchSubmissionEligiblePlayer, V4MatchSubmissionPlayerStat } from '@/api/types/v4MatchSubmission'
 import type { V4MatchSubmissionPeriodScore } from '@/api/types/v4SeriesSubmission'
 import { useAccountFilePreview } from '@/composables/useAccountFilePreview'
@@ -34,6 +35,8 @@ const emit = defineEmits<{
   removeMaterial: [index: number]
   preview: [fileId: string]
 }>()
+
+const { t } = useI18n()
 
 const STAT_COLS = [
   ['points', 'PTS'],
@@ -73,7 +76,7 @@ defineExpose({ validation, homeAgg, awayAgg })
 
 function playerLabel(player: V4MatchSubmissionEligiblePlayer) {
   const no = player.jerseyNo ? `#${player.jerseyNo}` : ''
-  const name = player.playerName || player.gameId || '未命名球员'
+  const name = player.playerName || player.gameId || t('accountEvents.common.unnamedPlayer')
   return [no, name].filter(Boolean).join(' ')
 }
 
@@ -147,13 +150,13 @@ function fieldErr(side: 'home' | 'away', index: number) {
         <span>AWAY</span>
         <strong>{{ awayName }}</strong>
       </div>
-      <p class="fm-board__hint">根据双方球员 PTS 自动计算</p>
+      <p class="fm-board__hint">{{ t('accountEvents.editor.autoScore') }}</p>
     </section>
 
     <section v-if="showPeriods" class="fm-period">
       <div class="fm-sec-head">
-        <strong>节比分</strong>
-        <small>Q1–Q4 可填写，合计须等于上方最终比分</small>
+        <strong>{{ t('accountEvents.editor.periods') }}</strong>
+        <small>{{ t('accountEvents.editor.periodHint') }}</small>
       </div>
       <div class="fm-period__grid">
         <div v-for="(period, index) in periods" :key="period.periodNo" class="fm-q">
@@ -167,16 +170,16 @@ function fieldErr(side: 'home' | 'away', index: number) {
       </div>
       <div class="fm-period__totals">
         <div :class="['fm-ptotal', !periodTouched ? 'is-wait' : homePeriodOk ? 'is-ok' : 'is-bad']">
-          <span>{{ homeName }} 四节合计 {{ validation.homePeriod }}</span>
-          <b v-if="!periodTouched">待填写</b>
-          <b v-else-if="homePeriodOk">✓ 与最终比分 {{ validation.homeScore }} 一致</b>
-          <b v-else>四节得分合计 {{ validation.homePeriod }}，与最终比分 {{ validation.homeScore }} 不一致</b>
+          <span>{{ t('accountEvents.editor.periodTotal', { name: homeName, total: validation.homePeriod }) }}</span>
+          <b v-if="!periodTouched">{{ t('accountEvents.editor.pending') }}</b>
+          <b v-else-if="homePeriodOk">{{ t('accountEvents.editor.periodMatch', { score: validation.homeScore }) }}</b>
+          <b v-else>{{ t('accountEvents.editor.periodMismatch', { period: validation.homePeriod, score: validation.homeScore }) }}</b>
         </div>
         <div :class="['fm-ptotal', !periodTouched ? 'is-wait' : awayPeriodOk ? 'is-ok' : 'is-bad']">
-          <span>{{ awayName }} 四节合计 {{ validation.awayPeriod }}</span>
-          <b v-if="!periodTouched">待填写</b>
-          <b v-else-if="awayPeriodOk">✓ 与最终比分 {{ validation.awayScore }} 一致</b>
-          <b v-else>四节得分合计 {{ validation.awayPeriod }}，与最终比分 {{ validation.awayScore }} 不一致</b>
+          <span>{{ t('accountEvents.editor.periodTotal', { name: awayName, total: validation.awayPeriod }) }}</span>
+          <b v-if="!periodTouched">{{ t('accountEvents.editor.pending') }}</b>
+          <b v-else-if="awayPeriodOk">{{ t('accountEvents.editor.periodMatch', { score: validation.awayScore }) }}</b>
+          <b v-else>{{ t('accountEvents.editor.periodMismatch', { period: validation.awayPeriod, score: validation.awayScore }) }}</b>
         </div>
       </div>
     </section>
@@ -185,7 +188,7 @@ function fieldErr(side: 'home' | 'away', index: number) {
       <article v-for="pack in [{ name: homeName, t: homeAgg }, { name: awayName, t: awayAgg }]" :key="pack.name" class="fm-tcard">
         <header>
           <strong>{{ pack.name }}</strong>
-          <em>自动汇总</em>
+          <em>{{ t('accountEvents.editor.autoTotal') }}</em>
         </header>
         <div class="fm-tcard__stats">
           <div><small>PTS</small><b>{{ pack.t.score }}</b></div>
@@ -205,10 +208,10 @@ function fieldErr(side: 'home' | 'away', index: number) {
     </section>
 
     <section :class="['fm-valid', `is-${validation.status}`]">
-      <strong v-if="validation.status === 'pass'">✓ 本场数据校验通过</strong>
-      <strong v-else-if="validation.status === 'empty'">待填写比赛数据</strong>
-      <strong v-else>本场数据尚未通过校验</strong>
-      <p v-if="validation.status === 'empty'">请填写双方球员{{ showPeriods ? '、节比分' : '' }}，并上传本场截图。</p>
+      <strong v-if="validation.status === 'pass'">{{ t('accountEvents.editor.validPass') }}</strong>
+      <strong v-else-if="validation.status === 'empty'">{{ t('accountEvents.editor.validEmpty') }}</strong>
+      <strong v-else>{{ t('accountEvents.editor.validFail') }}</strong>
+      <p v-if="validation.status === 'empty'">{{ showPeriods ? t('accountEvents.editor.fillEmptyPeriods') : t('accountEvents.editor.fillEmpty') }}</p>
       <ul v-else-if="validation.errors.length">
         <li v-for="item in validation.errors.slice(0, 6)" :key="item">{{ item }}</li>
       </ul>
@@ -216,20 +219,20 @@ function fieldErr(side: 'home' | 'away', index: number) {
 
     <section v-for="side in (['home', 'away'] as const)" :key="side" class="fm-plist">
       <div class="fm-plist__head">
-        <strong>{{ side === 'home' ? homeName : awayName }} · 球员数据</strong>
-        <button v-if="!readonly" type="button" class="account-btn-secondary" @click="addRow(side)">＋ 添加球员</button>
+        <strong>{{ t('accountEvents.editor.playerData', { name: side === 'home' ? homeName : awayName }) }}</strong>
+        <button v-if="!readonly" type="button" class="account-btn-secondary" @click="addRow(side)">{{ t('accountEvents.editor.addPlayer') }}</button>
       </div>
       <div class="fm-plist__card">
         <div class="fm-table-wrap">
           <table class="fm-table">
             <thead>
               <tr>
-                <th class="is-player">球员</th>
+                <th class="is-player">{{ t('accountEvents.common.player') }}</th>
                 <th v-for="col in STAT_COLS" :key="col[0]">{{ col[1] }}</th>
-                <th title="总运动战命中/出手（含三分）">FGM/FGA</th>
+                <th :title="t('accountEvents.editor.fgmTitle')">FGM/FGA</th>
                 <th>3PM/3PA</th>
                 <th>FTM/FTA</th>
-                <th v-if="!readonly" class="is-op">操作</th>
+                <th v-if="!readonly" class="is-op">{{ t('accountEvents.editor.action') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -241,12 +244,12 @@ function fieldErr(side: 'home' | 'away', index: number) {
                     :value="String(row.eventPlayerId || '')"
                     @change="updateRow(side, index, 'eventPlayerId', ($event.target as HTMLSelectElement).value)"
                   >
-                    <option value="">选择球员</option>
+                    <option value="">{{ t('accountEvents.common.selectPlayer') }}</option>
                     <option v-for="player in available(side, index)" :key="String(player.eventPlayerId)" :value="String(player.eventPlayerId)">
-                      {{ playerLabel(player) }}{{ player.isCaptain ? ' · 队长' : '' }}
+                      {{ playerLabel(player) }}{{ player.isCaptain ? t('accountEvents.common.captainSuffix') : '' }}
                     </option>
                   </select>
-                  <small v-if="findPlayer(side, row.eventPlayerId)?.isCaptain" class="fm-cap">队长</small>
+                  <small v-if="findPlayer(side, row.eventPlayerId)?.isCaptain" class="fm-cap">{{ t('accountEvents.common.captain') }}</small>
                 </td>
                 <td v-for="col in STAT_COLS" :key="col[0]">
                   <input
@@ -280,7 +283,7 @@ function fieldErr(side: 'home' | 'away', index: number) {
                   </div>
                 </td>
                 <td v-if="!readonly" class="is-op">
-                  <button type="button" class="fm-del" @click="removeRow(side, index)">删除</button>
+                  <button type="button" class="fm-del" @click="removeRow(side, index)">{{ t('accountEvents.common.delete') }}</button>
                 </td>
               </tr>
             </tbody>
@@ -291,23 +294,23 @@ function fieldErr(side: 'home' | 'away', index: number) {
 
     <section class="fm-shots">
       <div class="fm-sec-head">
-        <strong>比赛截图 / 比赛凭证</strong>
-        <button v-if="!readonly" type="button" class="account-btn-secondary" @click="emit('upload')">＋ 上传截图</button>
+        <strong>{{ t('accountEvents.editor.screenshots') }}</strong>
+        <button v-if="!readonly" type="button" class="account-btn-secondary" @click="emit('upload')">{{ t('accountEvents.editor.upload') }}</button>
       </div>
-      <p class="fm-shots__hint">上传本场完整比赛结算截图，用于管理员审核。</p>
+      <p class="fm-shots__hint">{{ t('accountEvents.editor.screenshotHint') }}</p>
       <div class="fm-shots__grid">
         <figure v-for="(fileId, index) in materialFileIds" :key="fileId">
           <button type="button" @click="openPreview(fileId); emit('preview', fileId)">
-            <img v-if="materialUrls[fileId]" :src="materialUrls[fileId]" alt="比赛截图" />
-            <span v-else class="fm-shot-pending">加载中</span>
+            <img v-if="materialUrls[fileId]" :src="materialUrls[fileId]" :alt="t('accountEvents.common.screenshot')" />
+            <span v-else class="fm-shot-pending">{{ t('accountEvents.common.loadingShort') }}</span>
           </button>
-          <button v-if="!readonly" type="button" class="fm-del" @click="emit('removeMaterial', index)">删除</button>
+          <button v-if="!readonly" type="button" class="fm-del" @click="emit('removeMaterial', index)">{{ t('accountEvents.common.delete') }}</button>
         </figure>
-        <button v-if="!readonly" type="button" class="fm-shots__add" @click="emit('upload')">＋ 添加截图</button>
+        <button v-if="!readonly" type="button" class="fm-shots__add" @click="emit('upload')">{{ t('accountEvents.editor.addScreenshot') }}</button>
       </div>
     </section>
     <div v-if="previewUrl" class="fm-preview" @click.self="closePreview">
-      <img :src="previewUrl" alt="截图预览" />
+      <img :src="previewUrl" :alt="t('accountEvents.common.screenshotPreview')" />
     </div>
   </div>
 </template>

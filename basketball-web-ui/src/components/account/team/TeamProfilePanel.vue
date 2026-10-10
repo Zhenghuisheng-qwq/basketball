@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AccountPanel from '@/components/account/AccountPanel.vue'
 import AccountStatusBadge from '@/components/account/AccountStatusBadge.vue'
@@ -21,6 +22,8 @@ import type {
 } from '@/api/types/teamProfileChange'
 import { formatDateTime } from '@/utils/formatDate'
 
+const { t } = useI18n()
+
 const props = defineProps<{
   teamId: string
   teamDetail?: TeamDetailDto | null
@@ -32,21 +35,22 @@ const emit = defineEmits<{
   refreshed: []
 }>()
 
-const PROFILE_CHANGE_STATUS: Record<number, string> = {
-  1: '待审核',
-  2: '审核中',
-  3: '已通过',
-  4: '已驳回',
-  5: '已取消',
+function profileChangeLabel(status?: number) {
+  if (status === 1) return t('accountTeam.profile.change.pending')
+  if (status === 2) return t('accountTeam.profile.change.reviewing')
+  if (status === 3) return t('accountTeam.profile.change.approved')
+  if (status === 4) return t('accountTeam.profile.change.rejected')
+  if (status === 5) return t('accountTeam.profile.change.cancelled')
+  return ''
 }
 
-const HISTORY_STATUS_OPTIONS = [
-  { label: '全部', value: '' as const },
-  { label: '待审核', value: 1 },
-  { label: '已通过', value: 3 },
-  { label: '已驳回', value: 4 },
-  { label: '已取消', value: 5 },
-]
+const historyStatusOptions = computed(() => [
+  { label: t('accountTeam.profile.filter.all'), value: '' as const },
+  { label: t('accountTeam.profile.filter.pending'), value: 1 },
+  { label: t('accountTeam.profile.filter.approved'), value: 3 },
+  { label: t('accountTeam.profile.filter.rejected'), value: 4 },
+  { label: t('accountTeam.profile.filter.cancelled'), value: 5 },
+])
 
 const loading = ref(false)
 const actionLoading = ref(false)
@@ -98,20 +102,26 @@ const displayAuditStatusText = computed(() => {
   if (hasPendingChange.value) {
     const status = pendingChange.value?.auditStatus
     return status != null
-      ? PROFILE_CHANGE_STATUS[status] || pendingChange.value?.auditStatusText || '待审核'
-      : '待审核'
+      ? profileChangeLabel(status) || pendingChange.value?.auditStatusText || t('accountTeam.profile.change.pending')
+      : t('accountTeam.profile.change.pending')
   }
   const latest = recentHistory.value[0]
-  if (latest?.auditStatus === 4) return '已驳回'
-  if (latest?.auditStatus === 3) return '已通过'
-  return '无待审核'
+  if (latest?.auditStatus === 4) return t('accountTeam.profile.change.rejected')
+  if (latest?.auditStatus === 3) return t('accountTeam.profile.change.approved')
+  return t('accountTeam.profile.nonePending')
 })
 
 const displayAuditStatusType = computed(() => {
-  const text = displayAuditStatusText.value
-  if (text === '待审核' || text === '审核中') return 'warning'
-  if (text === '已驳回') return 'danger'
-  if (text === '已通过') return 'success'
+  if (hasPendingChange.value) {
+    const status = pendingChange.value?.auditStatus
+    if (status === 1 || status === 2 || status == null) return 'warning'
+    if (status === 4) return 'danger'
+    if (status === 3) return 'success'
+    return 'default'
+  }
+  const latest = recentHistory.value[0]
+  if (latest?.auditStatus === 4) return 'danger'
+  if (latest?.auditStatus === 3) return 'success'
   return 'default'
 })
 
@@ -136,12 +146,12 @@ const historyHasFilter = computed(() =>
 )
 
 const historyEmptyText = computed(() =>
-  historyHasFilter.value ? '暂无符合条件的审核历史' : '暂无审核历史记录',
+  historyHasFilter.value ? t('accountTeam.profile.historyFilteredEmpty') : t('accountTeam.profile.historyEmpty'),
 )
 
 const submitButtonText = computed(() => {
-  if (useAuditFlow.value) return '提交资料变更审核'
-  return '保存资料'
+  if (useAuditFlow.value) return t('accountTeam.profile.submitChange')
+  return t('accountTeam.profile.save')
 })
 
 const canOpenEditDialog = computed(() => {
@@ -159,7 +169,7 @@ function historyStatusType(status?: number): 'success' | 'warning' | 'danger' | 
 }
 
 function publicStatusText(status?: number) {
-  return status === 1 ? '公开' : '非公开'
+  return status === 1 ? t('accountTeam.profile.public') : t('accountTeam.profile.private')
 }
 
 function applyFormFromOfficial(detail?: TeamDetailDto | null) {
@@ -197,7 +207,7 @@ async function loadProfileEditData() {
     hasPendingChange.value = Boolean(res.data.hasPendingChange)
     recentHistory.value = res.data.recentHistory || []
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载资料审核信息失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountTeam.profile.loadAuditFailed'))
   } finally {
     loading.value = false
   }
@@ -237,9 +247,9 @@ async function prepareEditForm() {
 async function openEditDialog() {
   if (!canOpenEditDialog.value) {
     if (isCertPending.value) {
-      ElMessage.warning('球队认证审核中，审核完成前暂不可修改球队认证资料')
+      ElMessage.warning(t('accountTeam.profile.certPendingWarn'))
     } else if (showPendingHint.value) {
-      ElMessage.warning('当前已有待审核的资料变更，请等待审核完成或先取消后再提交')
+      ElMessage.warning(t('accountTeam.profile.pendingWarn'))
     }
     return
   }
@@ -265,11 +275,11 @@ async function handleLogoUpload(event: Event) {
       const { bindTeamLogo } = await import('@/api/accountTeam')
       const updated = await bindTeamLogo(props.teamId, { fileId: res.data.fileId })
       profileLogoPreviewUrl.value = updated.data.logoUrl || res.data.accessUrl
-      ElMessage.success('Logo 已更新')
+      ElMessage.success(t('accountTeam.profile.logoUpdated'))
       emit('refreshed')
     }
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : 'Logo 上传失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountTeam.profile.logoFailed'))
   }
 }
 
@@ -288,8 +298,8 @@ async function submitDirectProfile() {
     publicStatus: profileForm.publicStatus,
   })
   ElMessage.success(isCertRejected.value
-    ? '待认证资料已保存，请点击「重新提交认证」'
-    : '资料已保存，请点击「提交认证」进入审核')
+    ? t('accountTeam.profile.savedResubmit')
+    : t('accountTeam.profile.savedSubmit'))
   showEditDialog.value = false
   emit('refreshed')
 }
@@ -306,13 +316,13 @@ async function submitAuditProfile() {
       description: profileForm.description.trim() || undefined,
       changeReason: profileForm.changeReason.trim() || undefined,
     })
-    ElMessage.success('变更申请已提交，等待审核')
+    ElMessage.success(t('accountTeam.profile.changeSubmitted'))
     showEditDialog.value = false
     profileLogoFileId.value = ''
     await loadProfileEditData()
     emit('refreshed')
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '提交失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountTeam.profile.submitFailed'))
   } finally {
     actionLoading.value = false
   }
@@ -324,11 +334,11 @@ async function handleSubmitCertification() {
   try {
     await submitTeamCertification(props.teamId)
     ElMessage.success(isCertRejected.value
-      ? '已重新提交球队认证，请等待审核'
-      : '已提交球队认证，请等待审核')
+      ? t('accountTeam.profile.certResubmitted')
+      : t('accountTeam.profile.certSubmitted'))
     emit('refreshed')
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '提交认证失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountTeam.profile.certFailed'))
   } finally {
     actionLoading.value = false
   }
@@ -337,7 +347,7 @@ async function handleSubmitCertification() {
 async function handleSubmit() {
   if (!props.canManage) return
   if (!profileForm.teamName.trim()) {
-    ElMessage.warning('请输入球队名称')
+    ElMessage.warning(t('accountTeam.profile.nameRequired'))
     return
   }
   if (useAuditFlow.value) {
@@ -347,7 +357,7 @@ async function handleSubmit() {
     try {
       await submitDirectProfile()
     } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : '保存失败')
+      ElMessage.error(error instanceof Error ? error.message : t('accountTeam.profile.saveFailed'))
     } finally {
       actionLoading.value = false
     }
@@ -358,9 +368,13 @@ async function handleCancelPending() {
   if (!props.teamId || !pendingChange.value?.changeId) return
   try {
     await ElMessageBox.confirm(
-      '确认取消本次球队资料变更申请？取消后正式资料不会变化。',
-      '取消申请',
-      { type: 'warning' },
+      t('accountTeam.profile.cancelConfirm'),
+      t('accountTeam.profile.cancelTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('accountTeam.common.confirm'),
+        cancelButtonText: t('accountTeam.common.cancel'),
+      },
     )
   } catch {
     return
@@ -368,12 +382,12 @@ async function handleCancelPending() {
   actionLoading.value = true
   try {
     await cancelTeamProfileChange(props.teamId, pendingChange.value.changeId)
-    ElMessage.success('变更申请已取消')
+    ElMessage.success(t('accountTeam.profile.cancelled'))
     showEditDialog.value = false
     await loadProfileEditData()
     emit('refreshed')
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '取消失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountTeam.profile.cancelFailed'))
   } finally {
     actionLoading.value = false
   }
@@ -395,7 +409,7 @@ async function loadHistory() {
     historyPage.pageSize = res.data.size || res.data.pageSize || historyPage.pageSize
     historyPage.pages = res.data.pages || 0
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载历史记录失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountTeam.profile.historyFailed'))
   } finally {
     historyLoading.value = false
   }
@@ -443,7 +457,7 @@ async function openDetail(changeId: string) {
     const res = await getTeamProfileChangeDetail(props.teamId, changeId)
     changeDetail.value = res.data
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载详情失败')
+    ElMessage.error(error instanceof Error ? error.message : t('accountTeam.profile.detailFailed'))
   } finally {
     detailLoading.value = false
   }
@@ -458,7 +472,7 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
 
 <template>
   <div class="team-profile-panel" v-loading="loading">
-    <AccountPanel :title="isCertApproved ? '当前正式资料' : '球队资料'">
+    <AccountPanel :title="isCertApproved ? t('accountTeam.profile.official') : t('accountTeam.profile.title')">
       <template v-if="canManage" #extra>
         <div class="team-profile-panel__actions">
           <button
@@ -467,7 +481,7 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
             class="account-btn-secondary"
             @click="openEditDialog"
           >
-            {{ isCertRejected ? '修改球队资料' : '编辑资料' }}
+            {{ isCertRejected ? t('accountTeam.profile.editRejected') : t('accountTeam.profile.edit') }}
           </button>
           <button
             v-if="canSubmitCertification"
@@ -476,7 +490,7 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
             :disabled="actionLoading"
             @click="handleSubmitCertification"
           >
-            {{ isCertRejected ? '重新提交认证' : '提交认证' }}
+            {{ isCertRejected ? t('accountTeam.profile.resubmitCert') : t('accountTeam.profile.submitCert') }}
           </button>
           <button
             v-if="useAuditFlow"
@@ -484,7 +498,7 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
             class="account-btn-secondary"
             @click="openHistoryDialog"
           >
-            资料变更历史
+            {{ t('accountTeam.profile.history') }}
           </button>
         </div>
       </template>
@@ -498,20 +512,20 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
         />
         <dl class="account-info-list team-profile-card__info">
           <div class="account-field-row">
-            <dt>球队名称</dt>
+            <dt>{{ t('accountTeam.profile.teamName') }}</dt>
             <dd>{{ officialProfile?.teamName || '-' }}</dd>
           </div>
           <div class="account-field-row">
-            <dt>球队简称</dt>
+            <dt>{{ t('accountTeam.profile.shortName') }}</dt>
             <dd>{{ officialProfile?.shortName || '-' }}</dd>
           </div>
           <div class="account-field-row">
-            <dt>公开状态</dt>
+            <dt>{{ t('accountTeam.profile.publicStatus') }}</dt>
             <dd>{{ publicStatusText(officialProfile?.publicStatus) }}</dd>
           </div>
           <div class="account-field-row">
-            <dt>球队介绍</dt>
-            <dd>{{ officialProfile?.description || '暂无' }}</dd>
+            <dt>{{ t('accountTeam.profile.intro') }}</dt>
+            <dd>{{ officialProfile?.description || t('accountTeam.common.empty') }}</dd>
           </div>
         </dl>
       </div>
@@ -520,18 +534,19 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
       <div v-if="canManage && !isCertApproved" class="team-profile-status-bar">
         <div class="team-profile-status-bar__main">
           <p v-if="isCertPending" class="team-profile-status-bar__text">
-            球队认证审核中。审核完成前暂不可修改球队认证资料。
+            {{ t('accountTeam.profile.certPending') }}
           </p>
           <p v-else-if="isCertRejected" class="team-profile-status-bar__text team-profile-status-bar__text--danger">
-            球队认证未通过{{ certificationRejectRemark ? `：${certificationRejectRemark}` : '' }}。
-            请修改资料后重新提交认证。
+            {{ certificationRejectRemark
+              ? t('accountTeam.profile.certRejectedWithRemark', { remark: certificationRejectRemark })
+              : t('accountTeam.profile.certRejected') }}
           </p>
           <p v-else-if="isCertDraft" class="team-profile-status-bar__text">
-            请完善球队资料后提交认证，提交后将进入「球队认证审核」。
+            {{ t('accountTeam.profile.certDraft') }}
           </p>
         </div>
         <AccountStatusBadge
-          :text="isCertPending ? '认证审核中' : (isCertRejected ? '认证未通过' : '待提交认证')"
+          :text="isCertPending ? t('accountTeam.profile.badgePending') : (isCertRejected ? t('accountTeam.profile.badgeRejected') : t('accountTeam.profile.badgeDraft'))"
           :type="isCertRejected ? 'danger' : 'warning'"
         />
       </div>
@@ -539,20 +554,21 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
       <div v-if="useAuditFlow" class="team-profile-status-bar">
         <div class="team-profile-status-bar__main">
           <p v-if="showPendingHint" class="team-profile-status-bar__text">
-            当前存在待审核的球队资料变更，审核通过前不会影响正式资料。
+            {{ t('accountTeam.profile.pendingHint') }}
           </p>
           <p v-else-if="showRejectedHint" class="team-profile-status-bar__text team-profile-status-bar__text--danger">
-            上次球队资料修改未通过{{ latestRejectedRemark ? `：${latestRejectedRemark}` : '' }}。
-            可重新提交新的资料变更。
+            {{ latestRejectedRemark
+              ? t('accountTeam.profile.rejectedHintWithRemark', { remark: latestRejectedRemark })
+              : t('accountTeam.profile.rejectedHint') }}
           </p>
           <p v-else class="team-profile-status-bar__text team-profile-status-bar__text--muted">
-            资料变更需提交审核，通过后才会更新正式展示内容。
+            {{ t('accountTeam.profile.auditHint') }}
           </p>
 
           <div v-if="showPendingHint" class="team-profile-status-bar__links">
-            <button type="button" class="team-profile-link-btn" @click="openPendingEdit">查看待审内容</button>
+            <button type="button" class="team-profile-link-btn" @click="openPendingEdit">{{ t('accountTeam.profile.viewPending') }}</button>
             <button type="button" class="team-profile-link-btn team-profile-link-btn--danger" @click="handleCancelPending">
-              取消申请
+              {{ t('accountTeam.profile.cancelRequest') }}
             </button>
           </div>
         </div>
@@ -566,7 +582,7 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
     <!-- 编辑资料弹窗 -->
     <el-dialog
       v-model="showEditDialog"
-      title="编辑球队资料"
+      :title="t('accountTeam.profile.editTitle')"
       width="92%"
       class="team-profile-dialog"
       append-to-body
@@ -574,14 +590,17 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
     >
       <div v-loading="editDialogLoading" class="team-profile-edit">
         <p v-if="isCertRejected && !useAuditFlow" class="team-profile-edit__hint team-profile-edit__hint--danger">
-          认证未通过{{ certificationRejectRemark ? `：${certificationRejectRemark}` : '' }}。
-          修改后请保存，再点击「重新提交认证」。
+          {{ certificationRejectRemark
+            ? t('accountTeam.profile.editRejectedHintWithRemark', { remark: certificationRejectRemark })
+            : t('accountTeam.profile.editRejectedHint') }}
         </p>
         <p v-else-if="isCertDraft && !useAuditFlow" class="team-profile-edit__hint">
-          当前为待认证草稿，保存后请提交球队认证。
+          {{ t('accountTeam.profile.editDraftHint') }}
         </p>
         <p v-else-if="showRejectedHint" class="team-profile-edit__hint team-profile-edit__hint--danger">
-          上次资料变更被驳回，请修改后重新提交{{ latestRejectedRemark ? `（原因：${latestRejectedRemark}）` : '' }}。
+          {{ latestRejectedRemark
+            ? t('accountTeam.profile.changeRejectedHintWithRemark', { remark: latestRejectedRemark })
+            : t('accountTeam.profile.changeRejectedHint') }}
         </p>
 
         <div class="team-profile-edit__logo">
@@ -593,42 +612,42 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
           />
           <div class="team-profile-edit__logo-actions">
             <label class="account-btn-secondary team-logo-upload">
-              更换 Logo
+              {{ t('accountTeam.profile.changeLogo') }}
               <input type="file" accept="image/*" hidden @change="handleLogoUpload" />
             </label>
             <p class="team-tip">
-              {{ useAuditFlow ? '上传后需提交审核，通过后才会更新正式 Logo。' : '支持 JPG / PNG，上传后立即保存到待认证资料。' }}
+              {{ useAuditFlow ? t('accountTeam.profile.logoAuditHint') : t('accountTeam.profile.logoDraftHint') }}
             </p>
           </div>
         </div>
 
         <div class="team-form-grid">
-          <label>球队名称<input v-model="profileForm.teamName" type="text" maxlength="30" /></label>
-          <label>球队简称<input v-model="profileForm.shortName" type="text" maxlength="12" /></label>
+          <label>{{ t('accountTeam.profile.teamName') }}<input v-model="profileForm.teamName" type="text" maxlength="30" /></label>
+          <label>{{ t('accountTeam.profile.shortName') }}<input v-model="profileForm.shortName" type="text" maxlength="12" /></label>
           <label>
-            公开状态
+            {{ t('accountTeam.profile.publicStatus') }}
             <select v-model.number="profileForm.publicStatus">
-              <option :value="1">公开</option>
-              <option :value="0">非公开</option>
+              <option :value="1">{{ t('accountTeam.profile.public') }}</option>
+              <option :value="0">{{ t('accountTeam.profile.private') }}</option>
             </select>
           </label>
           <label class="team-form-full">
-            球队介绍
+            {{ t('accountTeam.profile.intro') }}
             <textarea v-model="profileForm.description" rows="3" maxlength="500" />
           </label>
           <label v-if="useAuditFlow" class="team-form-full">
-            变更说明（可选）
-            <textarea v-model="profileForm.changeReason" rows="2" maxlength="200" placeholder="简要说明本次资料变更原因" />
+            {{ t('accountTeam.profile.changeReason') }}
+            <textarea v-model="profileForm.changeReason" rows="2" maxlength="200" :placeholder="t('accountTeam.profile.changeReasonPlaceholder')" />
           </label>
         </div>
 
-        <p v-if="useAuditFlow" class="team-tip">公开状态修改后立即生效，无需审核。</p>
+        <p v-if="useAuditFlow" class="team-tip">{{ t('accountTeam.profile.publicImmediate') }}</p>
       </div>
 
       <template #footer>
         <div class="team-profile-edit__footer">
           <div class="team-profile-edit__footer-right">
-            <button type="button" class="account-btn-secondary" @click="showEditDialog = false">取消</button>
+            <button type="button" class="account-btn-secondary" @click="showEditDialog = false">{{ t('accountTeam.common.cancel') }}</button>
             <button
               type="button"
               class="account-btn-primary"
@@ -645,7 +664,7 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
     <!-- 审核历史弹窗 -->
     <el-dialog
       v-model="showHistoryDialog"
-      title="球队资料审核历史"
+      :title="t('accountTeam.profile.historyTitle')"
       width="72%"
       align-center
       class="team-profile-history-dialog"
@@ -656,26 +675,26 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
       <div class="team-profile-history-body">
         <div class="team-profile-history-filters">
           <label class="team-profile-history-filters__status">
-            审核状态
+            {{ t('accountTeam.profile.auditStatus') }}
             <select v-model="historyAuditStatus" class="team-profile-history-filters__select" @change="handleHistoryFilter">
-              <option v-for="item in HISTORY_STATUS_OPTIONS" :key="String(item.value)" :value="item.value">
+              <option v-for="item in historyStatusOptions" :key="String(item.value)" :value="item.value">
                 {{ item.label }}
               </option>
             </select>
           </label>
           <label class="team-profile-history-filters__keyword">
-            关键词
+            {{ t('accountTeam.profile.keyword') }}
             <input
               v-model="historyKeyword"
               type="text"
               class="team-profile-history-filters__input"
-              placeholder="变更编号 / 备注"
+              :placeholder="t('accountTeam.profile.keywordPlaceholder')"
               @keyup.enter="handleHistoryFilter"
             />
           </label>
           <div class="team-profile-history-filters__actions">
-            <button type="button" class="account-btn-secondary" @click="handleHistoryFilter">搜索</button>
-            <button type="button" class="account-btn-secondary" @click="handleHistoryReset">重置</button>
+            <button type="button" class="account-btn-secondary" @click="handleHistoryFilter">{{ t('accountTeam.common.search') }}</button>
+            <button type="button" class="account-btn-secondary" @click="handleHistoryReset">{{ t('accountTeam.common.reset') }}</button>
           </div>
         </div>
 
@@ -687,9 +706,9 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
             :empty-text="historyEmptyText"
             table-layout="fixed"
           >
-            <el-table-column label="变更编号" prop="changeNo" min-width="120" show-overflow-tooltip />
-            <el-table-column label="变更摘要" prop="changeSummary" min-width="100" show-overflow-tooltip />
-            <el-table-column label="审核状态" width="92">
+            <el-table-column :label="t('accountTeam.profile.changeNo')" prop="changeNo" min-width="120" show-overflow-tooltip />
+            <el-table-column :label="t('accountTeam.profile.changeSummary')" prop="changeSummary" min-width="100" show-overflow-tooltip />
+            <el-table-column :label="t('accountTeam.profile.auditStatus')" width="92">
               <template #default="{ row }">
                 <AccountStatusBadge
                   :text="row.auditStatusText || '-'"
@@ -697,15 +716,15 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
                 />
               </template>
             </el-table-column>
-            <el-table-column label="提交时间" min-width="132">
+            <el-table-column :label="t('accountTeam.profile.submitTime')" min-width="132">
               <template #default="{ row }">{{ formatDateTime(row.submitTime) }}</template>
             </el-table-column>
-            <el-table-column label="审核时间" min-width="132">
+            <el-table-column :label="t('accountTeam.profile.auditTime')" min-width="132">
               <template #default="{ row }">{{ row.auditTime ? formatDateTime(row.auditTime) : '-' }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="88" align="center">
+            <el-table-column :label="t('accountTeam.common.actions')" width="88" align="center">
               <template #default="{ row }">
-                <button type="button" class="team-profile-link-btn" @click="openDetail(row.changeId)">查看详情</button>
+                <button type="button" class="team-profile-link-btn" @click="openDetail(row.changeId)">{{ t('accountTeam.profile.viewDetail') }}</button>
               </template>
             </el-table-column>
           </el-table>
@@ -722,14 +741,14 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
       </div>
 
       <template #footer>
-        <button type="button" class="account-btn-secondary" @click="showHistoryDialog = false">关闭</button>
+        <button type="button" class="account-btn-secondary" @click="showHistoryDialog = false">{{ t('accountTeam.common.close') }}</button>
       </template>
     </el-dialog>
 
     <!-- 历史详情弹窗 -->
     <el-dialog
       v-model="showDetailDialog"
-      title="变更详情"
+      :title="t('accountTeam.profile.detailTitle')"
       width="64%"
       align-center
       class="team-profile-detail-dialog"
@@ -739,7 +758,7 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
       <div v-loading="detailLoading" class="team-profile-change-detail team-profile-detail-body">
         <template v-if="changeDetail">
           <div class="team-profile-detail-head">
-            <p>变更编号：{{ changeDetail.changeNo }}</p>
+            <p>{{ t('accountTeam.profile.changeNoLine', { no: changeDetail.changeNo }) }}</p>
             <AccountStatusBadge
               :text="changeDetail.auditStatusText || '-'"
               :type="historyStatusType(changeDetail.auditStatus)"
@@ -747,48 +766,48 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
           </div>
           <div class="team-profile-change-detail__compare">
             <div class="team-profile-change-detail__col">
-              <h4>变更前</h4>
-              <p>球队名称：{{ changeDetail.oldTeamName || '-' }}</p>
-              <p>球队简称：{{ changeDetail.oldTeamShortName || '-' }}</p>
-              <p>公开状态：{{ publicStatusText(changeDetail.oldPublicStatus) }}</p>
-              <p>球队介绍：{{ changeDetail.oldDescription || '暂无' }}</p>
-              <p class="team-profile-change-detail__logo-label">Logo</p>
+              <h4>{{ t('accountTeam.profile.before') }}</h4>
+              <p>{{ t('accountTeam.profile.nameLine', { value: changeDetail.oldTeamName || '-' }) }}</p>
+              <p>{{ t('accountTeam.profile.shortNameLine', { value: changeDetail.oldTeamShortName || '-' }) }}</p>
+              <p>{{ t('accountTeam.profile.publicLine', { value: publicStatusText(changeDetail.oldPublicStatus) }) }}</p>
+              <p>{{ t('accountTeam.profile.introLine', { value: changeDetail.oldDescription || t('accountTeam.common.empty') }) }}</p>
+              <p class="team-profile-change-detail__logo-label">{{ t('accountTeam.profile.logo') }}</p>
               <AccountTeamLogo
                 :logo-url="changeDetail.oldLogoUrl"
                 :team-name="changeDetail.oldTeamName"
                 size="sm"
               />
-              <p v-if="!changeDetail.oldLogoUrl" class="team-tip">未设置</p>
+              <p v-if="!changeDetail.oldLogoUrl" class="team-tip">{{ t('accountTeam.profile.logoUnset') }}</p>
             </div>
             <div class="team-profile-change-detail__col">
-              <h4>变更后</h4>
-              <p>球队名称：{{ changeDetail.newTeamName || '-' }}</p>
-              <p>球队简称：{{ changeDetail.newTeamShortName || '-' }}</p>
-              <p>公开状态：{{ publicStatusText(changeDetail.newPublicStatus) }}</p>
-              <p>球队介绍：{{ changeDetail.newDescription || '暂无' }}</p>
-              <p class="team-profile-change-detail__logo-label">Logo</p>
+              <h4>{{ t('accountTeam.profile.after') }}</h4>
+              <p>{{ t('accountTeam.profile.nameLine', { value: changeDetail.newTeamName || '-' }) }}</p>
+              <p>{{ t('accountTeam.profile.shortNameLine', { value: changeDetail.newTeamShortName || '-' }) }}</p>
+              <p>{{ t('accountTeam.profile.publicLine', { value: publicStatusText(changeDetail.newPublicStatus) }) }}</p>
+              <p>{{ t('accountTeam.profile.introLine', { value: changeDetail.newDescription || t('accountTeam.common.empty') }) }}</p>
+              <p class="team-profile-change-detail__logo-label">{{ t('accountTeam.profile.logo') }}</p>
               <AccountTeamLogo
                 :logo-url="changeDetail.newLogoUrl"
                 :team-name="changeDetail.newTeamName"
                 size="sm"
               />
-              <p v-if="!changeDetail.newLogoUrl" class="team-tip">未设置</p>
+              <p v-if="!changeDetail.newLogoUrl" class="team-tip">{{ t('accountTeam.profile.logoUnset') }}</p>
             </div>
           </div>
 
           <div class="team-profile-change-detail__rows">
-            <p>球队名称：{{ formatCompare(changeDetail.oldTeamName, changeDetail.newTeamName) }}</p>
-            <p>球队简称：{{ formatCompare(changeDetail.oldTeamShortName, changeDetail.newTeamShortName) }}</p>
-            <p>公开状态：{{ formatCompare(publicStatusText(changeDetail.oldPublicStatus), publicStatusText(changeDetail.newPublicStatus)) }}</p>
-            <p>球队介绍：{{ formatCompare(changeDetail.oldDescription, changeDetail.newDescription) }}</p>
+            <p>{{ t('accountTeam.profile.nameLine', { value: formatCompare(changeDetail.oldTeamName, changeDetail.newTeamName) }) }}</p>
+            <p>{{ t('accountTeam.profile.shortNameLine', { value: formatCompare(changeDetail.oldTeamShortName, changeDetail.newTeamShortName) }) }}</p>
+            <p>{{ t('accountTeam.profile.publicLine', { value: formatCompare(publicStatusText(changeDetail.oldPublicStatus), publicStatusText(changeDetail.newPublicStatus)) }) }}</p>
+            <p>{{ t('accountTeam.profile.introLine', { value: formatCompare(changeDetail.oldDescription, changeDetail.newDescription) }) }}</p>
           </div>
 
           <div class="team-profile-change-detail__meta">
-            <p>提交人：{{ changeDetail.submitUserName || changeDetail.submitPlayerNo || '-' }}</p>
-            <p>提交时间：{{ formatDateTime(changeDetail.submitTime) }}</p>
-            <p>审核状态：{{ changeDetail.auditStatusText }}</p>
-            <p v-if="changeDetail.auditTime">审核时间：{{ formatDateTime(changeDetail.auditTime) }}</p>
-            <p v-if="changeDetail.auditRemark">审核备注：{{ changeDetail.auditRemark }}</p>
+            <p>{{ t('accountTeam.profile.submitter', { name: changeDetail.submitUserName || changeDetail.submitPlayerNo || '-' }) }}</p>
+            <p>{{ t('accountTeam.profile.submitTimeLine', { time: formatDateTime(changeDetail.submitTime) }) }}</p>
+            <p>{{ t('accountTeam.profile.auditStatusLine', { status: changeDetail.auditStatusText }) }}</p>
+            <p v-if="changeDetail.auditTime">{{ t('accountTeam.profile.auditTimeLine', { time: formatDateTime(changeDetail.auditTime) }) }}</p>
+            <p v-if="changeDetail.auditRemark">{{ t('accountTeam.profile.auditRemarkLine', { remark: changeDetail.auditRemark }) }}</p>
           </div>
         </template>
       </div>

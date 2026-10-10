@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   page: number
@@ -27,10 +30,12 @@ function changePage(next: number) {
     v-if="showPagination"
     class="team-list-pagination"
     :class="{ 'team-list-pagination--compact': compact }"
-    aria-label="列表分页"
+    :aria-label="t('accountTeam.pagination.aria')"
   >
     <span class="team-list-pagination__meta">
-      共 {{ total }} 条<span v-if="compact"> · {{ page }}/{{ totalPages }}</span><template v-else>，第 {{ page }} / {{ totalPages }} 页</template>
+      {{ compact
+        ? t('accountTeam.pagination.compact', { total, page, pages: totalPages })
+        : t('accountTeam.pagination.full', { total, page, pages: totalPages }) }}
     </span>
     <div class="team-list-pagination__controls">
       <button
@@ -39,7 +44,7 @@ function changePage(next: number) {
         :disabled="page <= 1 || loading"
         @click="changePage(page - 1)"
       >
-        上一页
+        {{ t('accountTeam.pagination.prev') }}
       </button>
       <template v-if="!compact">
         <button
@@ -60,7 +65,7 @@ function changePage(next: number) {
         :disabled="page >= totalPages || loading"
         @click="changePage(page + 1)"
       >
-        下一页
+        {{ t('accountTeam.pagination.next') }}
       </button>
     </div>
   </nav>

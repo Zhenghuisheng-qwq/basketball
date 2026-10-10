@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import TeamLogoPlaceholder from '@/components/account/events/schedule/TeamLogoPlaceholder.vue'
 import type { ScheduleVersusCenterView, ScheduleVersusTeamView } from '@/types/v4ScheduleCard'
 
@@ -7,6 +8,8 @@ defineProps<{
   away: ScheduleVersusTeamView
   center: ScheduleVersusCenterView
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -20,13 +23,13 @@ defineProps<{
       <div class="schedule-versus-panel__team-name" :title="home.name">{{ home.name }}</div>
       <div class="schedule-versus-panel__team-short">{{ home.shortName }}</div>
       <span v-if="home.isMine" class="schedule-versus-panel__team-tag schedule-versus-panel__team-tag--mine">
-        我的球队
+        {{ t('accountEvents.schedule.myTeam') }}
       </span>
       <span
         v-else-if="home.isWinner"
         class="schedule-versus-panel__team-tag schedule-versus-panel__team-tag--winner"
       >
-        胜
+        {{ t('accountEvents.schedule.win') }}
       </span>
     </div>
 
@@ -62,13 +65,13 @@ defineProps<{
       <div class="schedule-versus-panel__team-name" :title="away.name">{{ away.name }}</div>
       <div class="schedule-versus-panel__team-short">{{ away.shortName }}</div>
       <span v-if="away.isMine" class="schedule-versus-panel__team-tag schedule-versus-panel__team-tag--mine">
-        我的球队
+        {{ t('accountEvents.schedule.myTeam') }}
       </span>
       <span
         v-else-if="away.isWinner"
         class="schedule-versus-panel__team-tag schedule-versus-panel__team-tag--winner"
       >
-        胜
+        {{ t('accountEvents.schedule.win') }}
       </span>
     </div>
   </div>
