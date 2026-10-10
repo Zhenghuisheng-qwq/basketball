@@ -70,16 +70,16 @@ export function buildTeamShortName(name?: string | null): string {
 export function scheduleMatchStatusLabel(status?: string | null): string {
   switch (normalizeStatus(status)) {
     case PLAYING:
-      return '比赛中'
+      return translate('accountEvents.schedule.live')
     case FINISHED:
-      return '已结束'
+      return translate('accountEvents.schedule.finished')
     case CANCELLED:
-      return '已取消'
+      return translate('accountEvents.schedule.cancelled')
     case FORFEITED:
-      return '已弃赛'
+      return translate('accountEvents.schedule.forfeited')
     case SCHEDULED:
     default:
-      return '未开始'
+      return translate('accountEvents.schedule.notStarted')
   }
 }
 
@@ -88,22 +88,28 @@ export function scheduleSubmissionLabel(
   side: 'my' | 'opponent',
 ): string {
   const normalized = normalizeStatus(status)
-  if (!normalized) return side === 'my' ? '待提交' : '等待提交'
+  if (!normalized) return side === 'my'
+    ? translate('accountEvents.schedule.pendingSubmit')
+    : translate('accountEvents.schedule.waitingOpponent')
   switch (normalized) {
     case 'DRAFT':
-      return side === 'my' ? '待提交' : '等待提交'
+      return side === 'my'
+        ? translate('accountEvents.schedule.pendingSubmit')
+        : translate('accountEvents.schedule.waitingOpponent')
     case 'PENDING_REVIEW':
-      return '审核中'
+      return translate('accountEvents.schedule.reviewing')
     case 'APPROVED':
-      return '已审核通过'
+      return translate('accountEvents.schedule.submissionApproved')
     case 'REJECTED':
-      return '已驳回'
+      return translate('accountEvents.schedule.submissionRejected')
     case 'SUPERSEDED':
-      return '已作废'
+      return translate('accountEvents.schedule.superseded')
     case 'CANCELLED':
-      return '已取消'
+      return translate('accountEvents.schedule.cancelled')
     default:
-      return side === 'my' ? '待提交' : '等待提交'
+      return side === 'my'
+        ? translate('accountEvents.schedule.pendingSubmit')
+        : translate('accountEvents.schedule.waitingOpponent')
   }
 }
 
@@ -138,12 +144,15 @@ function buildRoundLine(row: V4MyScheduleItem): string {
   if (row.matchSeriesId && row.bestOf && row.bestOf > 1) {
     const gamePart = row.seriesGameNo ? `Game ${row.seriesGameNo}/${row.bestOf}` : `BO${row.bestOf}`
     const setScore = row.seriesHomeWinCount != null && row.seriesAwayWinCount != null
-      ? ` · 局分 ${row.seriesHomeWinCount}:${row.seriesAwayWinCount}`
+      ? translate('accountEvents.schedule.setScore', {
+        home: row.seriesHomeWinCount,
+        away: row.seriesAwayWinCount,
+      })
       : ''
     return `${gamePart}${setScore}`
   }
-  if (row.roundNo) return `第 ${row.roundNo} 轮`
-  return '轮次待定'
+  if (row.roundNo) return translate('accountEvents.schedule.roundLine', { round: row.roundNo })
+  return translate('accountEvents.schedule.roundPending')
 }
 
 function buildMatchStatusTone(status: string): ScheduleMatchCardViewModel['header']['matchStatusTone'] {
@@ -167,7 +176,9 @@ function buildSubmissionSide(
     ? row.latestRejectReason
     : undefined
   return {
-    sideLabel: side === 'my' ? '本方提交' : '对方提交',
+    sideLabel: side === 'my'
+      ? translate('accountEvents.schedule.mySubmission')
+      : translate('accountEvents.schedule.opponentSubmission'),
     statusLabel: scheduleSubmissionLabel(status, side),
     tone: scheduleSubmissionTone(status, side),
     detail,
@@ -198,7 +209,7 @@ function buildCenterView(row: V4MyScheduleItem): ScheduleVersusCenterView {
       mode: 'playing',
       homeScore: row.homeScore ?? undefined,
       awayScore: row.awayScore ?? undefined,
-      statusText: '比赛中',
+      statusText: translate('accountEvents.schedule.live'),
       dateText: formatScheduleMatchDate(row.matchTime),
       timeText: formatScheduleMatchTime(row.matchTime),
     }
@@ -210,12 +221,12 @@ function buildCenterView(row: V4MyScheduleItem): ScheduleVersusCenterView {
         mode: 'score',
         homeScore: row.homeScore,
         awayScore: row.awayScore,
-        statusText: '比赛已结束',
+        statusText: translate('accountEvents.schedule.ended'),
       }
     }
     return {
       mode: 'status',
-      statusText: '比赛已结束',
+      statusText: translate('accountEvents.schedule.ended'),
     }
   }
 
@@ -223,7 +234,7 @@ function buildCenterView(row: V4MyScheduleItem): ScheduleVersusCenterView {
     mode: 'upcoming',
     dateText: formatScheduleMatchDate(row.matchTime),
     timeText: formatScheduleMatchTime(row.matchTime) || undefined,
-    statusText: '未开始',
+    statusText: translate('accountEvents.schedule.notStarted'),
     countdownHint: buildCountdownHint(row.matchTime),
   }
 }
@@ -237,10 +248,10 @@ function buildCountdownHint(matchTime?: string | null): string | undefined {
   const hours = Math.floor(diffMs / (1000 * 60 * 60))
   if (hours < 24) {
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
-    return `距开赛 ${hours} 小时 ${minutes} 分钟`
+    return translate('accountEvents.schedule.countdownHours', { hours, minutes })
   }
   const days = Math.floor(hours / 24)
-  return `距开赛 ${days} 天`
+  return translate('accountEvents.schedule.countdownDays', { days })
 }
 
 function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
@@ -265,7 +276,7 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
   if (isAbnormalMatchStatus(matchStatus)) {
     return {
       secondary: {
-        label: '查看本场详情',
+        label: translate('accountEvents.schedule.actionViewDetail'),
         kind: 'secondary',
         route: detailRoute,
       },
@@ -274,7 +285,9 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
   }
 
   if (canSubmitData(row)) {
-    const label = myStatus === 'REJECTED' ? '修改并重新提交' : '提交比赛数据'
+    const label = myStatus === 'REJECTED'
+      ? translate('accountEvents.schedule.actionResubmit')
+      : translate('accountEvents.schedule.actionSubmit')
     return {
       primary: {
         label,
@@ -282,7 +295,7 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
         route: submitRoute,
       },
       secondary: {
-        label: '查看本场详情',
+        label: translate('accountEvents.schedule.actionViewDetail'),
         kind: 'secondary',
         route: detailRoute,
       },
@@ -292,12 +305,12 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
   if (myStatus === 'PENDING_REVIEW') {
     return {
       primary: {
-        label: '查看提交详情',
+        label: translate('accountEvents.schedule.actionViewSubmissionDetail'),
         kind: 'secondary',
         route: submitRoute,
       },
       secondary: {
-        label: '查看本场详情',
+        label: translate('accountEvents.schedule.actionViewDetail'),
         kind: 'secondary',
         route: detailRoute,
       },
@@ -307,34 +320,34 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
   if (myStatus === 'APPROVED' && opponentStatus !== 'APPROVED') {
     return {
       secondary: {
-        label: '查看提交详情',
+        label: translate('accountEvents.schedule.actionViewSubmissionDetail'),
         kind: 'secondary',
         route: submitRoute,
       },
-      hint: '本方数据已完成，当前无需操作，等待对方提交。',
+      hint: translate('accountEvents.schedule.hintWaitingOpponent'),
     }
   }
 
   if (myStatus === 'APPROVED' && opponentStatus === 'APPROVED') {
     return {
       primary: {
-        label: '查看双方提交',
+        label: translate('accountEvents.schedule.viewBoth'),
         kind: 'secondary',
         route: detailRoute,
       },
       secondary: {
-        label: '查看本场详情',
+        label: translate('accountEvents.schedule.actionViewDetail'),
         kind: 'secondary',
         route: detailRoute,
       },
-      hint: '比赛数据已确认',
+      hint: translate('accountEvents.schedule.hintConfirmed'),
     }
   }
 
   if (isUpcomingMatch(matchStatus)) {
     return {
       secondary: {
-        label: '查看本场详情',
+        label: translate('accountEvents.schedule.actionViewDetail'),
         kind: 'secondary',
         route: detailRoute,
       },
@@ -344,12 +357,12 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
   if (isFinishedMatch(matchStatus) && myStatus) {
     return {
       primary: {
-        label: '查看提交详情',
+        label: translate('accountEvents.schedule.actionViewSubmissionDetail'),
         kind: 'secondary',
         route: submitRoute,
       },
       secondary: {
-        label: '查看本场详情',
+        label: translate('accountEvents.schedule.actionViewDetail'),
         kind: 'secondary',
         route: detailRoute,
       },
@@ -360,7 +373,7 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
   if (isFinishedMatch(matchStatus)) {
     return {
       secondary: {
-        label: '查看本场详情',
+        label: translate('accountEvents.schedule.actionViewDetail'),
         kind: 'secondary',
         route: detailRoute,
       },
@@ -370,7 +383,7 @@ function buildActions(row: V4MyScheduleItem): ScheduleMatchActionsView {
 
   return {
     secondary: {
-      label: '查看本场详情',
+      label: translate('accountEvents.schedule.actionViewDetail'),
       kind: 'secondary',
       route: detailRoute,
     },
@@ -422,7 +435,7 @@ export function mapScheduleRowToCardView(
     key: `${row.matchId}-${row.myEventTeamId || 'none'}`,
     accent: resolveAccent(row),
     header: {
-      seasonTitle: (row.seasonTitle || '赛事').trim(),
+      seasonTitle: (row.seasonTitle || translate('accountEvents.schedule.eventFallback')).trim(),
       divisionLine: buildDivisionLine(row),
       roundLine: buildRoundLine(row),
       matchStatusLabel: scheduleMatchStatusLabel(matchStatus),
@@ -430,7 +443,7 @@ export function mapScheduleRowToCardView(
     },
     home: {
       eventTeamId: row.homeEventTeamId,
-      name: row.homeTeamName || '主队',
+      name: row.homeTeamName || translate('accountEvents.schedule.homeTeam'),
       shortName: buildTeamShortName(row.homeTeamName),
       logoUrl: logoResolver(row.homeTeamLogoFileId),
       isMine: myEventTeamId === row.homeEventTeamId,
@@ -438,7 +451,7 @@ export function mapScheduleRowToCardView(
     },
     away: {
       eventTeamId: row.awayEventTeamId,
-      name: row.awayTeamName || '客队',
+      name: row.awayTeamName || translate('accountEvents.schedule.awayTeam'),
       shortName: buildTeamShortName(row.awayTeamName),
       logoUrl: logoResolver(row.awayTeamLogoFileId),
       isMine: myEventTeamId === row.awayEventTeamId,
@@ -485,17 +498,17 @@ export function buildScheduleListSections(
   }
 
   if (!includeFinished) {
-    pushSection('pending', '待处理', pendingRows)
-    pushSection('upcoming', '待比赛', upcomingRows)
+    pushSection('pending', translate('accountEvents.schedule.sectionPending'), pendingRows)
+    pushSection('upcoming', translate('accountEvents.schedule.upcoming'), upcomingRows)
     if (sections[0]?.items[0]) sections[0].items[0].isNextMatch = true
     else if (sections[1]?.items[0]) sections[1].items[0].isNextMatch = true
     return sections
   }
 
-  pushSection('pending', '待处理', pendingRows)
-  pushSection('upcoming', '近期赛程', upcomingRows)
-  pushSection('finished', '历史赛程', finishedRows)
-  pushSection('abnormal', '异常赛程', abnormalRows)
+  pushSection('pending', translate('accountEvents.schedule.sectionPending'), pendingRows)
+  pushSection('upcoming', translate('accountEvents.schedule.sectionRecent'), upcomingRows)
+  pushSection('finished', translate('accountEvents.schedule.sectionHistory'), finishedRows)
+  pushSection('abnormal', translate('accountEvents.schedule.sectionAbnormal'), abnormalRows)
 
   const firstUpcoming = sections.find((section) => section.key === 'upcoming')?.items[0]
     || sections.find((section) => section.key === 'pending')?.items[0]

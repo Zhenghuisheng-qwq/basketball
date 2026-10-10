@@ -287,6 +287,7 @@ export default {
     removeTitle: 'Remove {name}?',
     removeConfirm: 'Remove',
     unnamed: 'Unnamed player',
+    notSet: 'Not set',
     updated: 'Member updated',
     updateFailed: 'Failed to update',
     removedDone: 'Member removed',

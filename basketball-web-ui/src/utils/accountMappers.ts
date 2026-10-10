@@ -57,14 +57,16 @@ export function normalizePendingTaskPath(task: PendingTaskDto): string {
 export function mapPlatformAccountItem(item: PlatformAccountItemDto): PlatformGameIdRecord {
   const platform = (item.platform || 'PC') as IdentityPlatform
   let status: PlatformGameIdStatus
-  let statusText = item.accountStatusText || '未绑定'
+  let statusText = item.accountStatusText || translate('accountIdentity.platformStatus.unbound')
 
   if (item.pendingChange) {
     status = 'PENDING'
-    statusText = item.accountStatus == null ? '新增审核中' : '修改审核中'
+    statusText = item.accountStatus == null
+      ? translate('accountIdentity.platformStatus.addPending')
+      : translate('accountIdentity.platformStatus.editPending')
   } else if (item.accountStatus == null) {
     status = 'UNBOUND'
-    statusText = '未绑定'
+    statusText = translate('accountIdentity.platformStatus.unbound')
   } else if (item.accountStatus === 1) {
     status = 'EFFECTIVE'
   } else if (item.accountStatus === 0) {
@@ -101,10 +103,10 @@ export function mapPlatformChangeHistoryItem(item: PlatformChangeHistoryItemDto)
 }
 
 function resolveChangeTypeName(changeType?: string): string {
-  if (changeType === 'INITIAL_BIND') return '首次绑定'
-  if (changeType === 'UPDATE_GAME_ID' || changeType === 'CHANGE_GAME_ID') return '修改游戏 ID'
-  if (changeType === 'ADD_PLATFORM') return '首次绑定'
-  return changeType || '变更'
+  if (changeType === 'INITIAL_BIND') return translate('accountIdentity.changeType.INITIAL_BIND')
+  if (changeType === 'UPDATE_GAME_ID' || changeType === 'CHANGE_GAME_ID') return translate('accountIdentity.changeType.UPDATE_GAME_ID')
+  if (changeType === 'ADD_PLATFORM') return translate('accountIdentity.changeType.ADD_PLATFORM')
+  return changeType || translate('accountIdentity.changeType.OTHER')
 }
 
 export function mapEligibilityStatus(dto: PlayerEligibilityStatusDto): EligibilityLimit {
@@ -112,10 +114,12 @@ export function mapEligibilityStatus(dto: PlayerEligibilityStatusDto): Eligibili
   return {
     playerNo: dto.playerNo || '',
     status: limited ? 'LIMITED' : 'OK',
-    statusText: dto.playerStatusText || (limited ? '参赛资格受限' : '参赛资格正常'),
+    statusText: dto.playerStatusText || (limited
+      ? translate('accountIdentity.platformStatus.limited')
+      : translate('accountIdentity.platformStatus.eligible')),
     tournamentName: '',
     permanentIdentityStatus: 'KEPT',
-    resultTitle: limited ? '参赛资格受限' : '',
+    resultTitle: limited ? translate('accountIdentity.platformStatus.limited') : '',
     resultStatus: dto.playerStatusText || '',
     reason: dto.notice || '',
     notice: dto.notice || '',
@@ -294,17 +298,17 @@ export function mapTeamRegistrationStatus(status?: number | null): TeamRegistrat
 }
 
 export function mapTeamRegistrationStatusText(status?: number | null): string {
-  if (status == null) return '未知'
-  if (status === 1) return '审核中'
+  if (status == null) return translate('accountEvents.block.unknownStatus')
+  if (status === 1) return translate('accountEvents.common.pendingReview')
   const mapped = mapTeamRegistrationStatus(status)
   const labels: Record<TeamRegistrationStatusCode, string> = {
-    DRAFT: '待提交',
-    SUBMITTED: '审核中',
-    REVIEWING: '审核中',
-    APPROVED: '已通过',
-    REJECTED: '未通过',
-    WITHDRAWN: '已撤回',
-    CANCELLED: '已取消',
+    DRAFT: translate('accountEvents.common.awaitingSubmit'),
+    SUBMITTED: translate('accountEvents.common.pendingReview'),
+    REVIEWING: translate('accountEvents.common.pendingReview'),
+    APPROVED: translate('accountEvents.common.approved'),
+    REJECTED: translate('accountEvents.common.rejected'),
+    WITHDRAWN: translate('accountEvents.common.withdrawn'),
+    CANCELLED: translate('accountEvents.common.cancelled'),
   }
   return labels[mapped]
 }

@@ -287,6 +287,7 @@ export default {
     removeTitle: '确认移除 {name}？',
     removeConfirm: '确认移除',
     unnamed: '未命名球员',
+    notSet: '未设置',
     updated: '成员信息已更新',
     updateFailed: '更新失败',
     removedDone: '成员已移除',

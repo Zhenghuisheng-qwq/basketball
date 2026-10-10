@@ -769,17 +769,17 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   function getOpenRegistrationBlockReason(): string {
-    if (!currentAccount.value?.emailVerified) return '请先完成邮箱验证'
-    if (!isVerifiedPlayer.value) return '请先完成球员身份认证'
-    if (!certifiedPlayerForOpen.value?.playerNo) return '尚未生成永久球员 ID，无法报名'
-    if (!certifiedPlayerForOpen.value.gameId) return '请先绑定并生效对应平台的游戏 ID'
-    if (eligibilityLimited.value) return '你在该赛事的参赛资格受限，无法报名'
-    if (openTournament.value.quotaLeft <= 0 && openTournament.value.quotaTotal > 0) return '名额已满，无法提交报名'
-    if (openTournament.value.status === 'REGISTRATION_CLOSED') return '报名已关闭'
-    if (isRegistrationDeadlinePassed(openTournament.value.registrationDeadline)) return '报名已截止'
-    if (openApplication.value?.status === 'PENDING') return '当前报名审核中，不能重复提交'
-    if (openApplication.value?.status === 'APPROVED') return '你已报名并通过审核，不能重复提交'
-    if (openApplication.value?.status === 'CANCELLED') return '该赛事报名已取消'
+    if (!currentAccount.value?.emailVerified) return translate('accountEvents.block.email')
+    if (!isVerifiedPlayer.value) return translate('accountEvents.block.player')
+    if (!certifiedPlayerForOpen.value?.playerNo) return translate('accountEvents.block.playerNo')
+    if (!certifiedPlayerForOpen.value.gameId) return translate('accountEvents.block.gameId')
+    if (eligibilityLimited.value) return translate('accountEvents.block.eligibility')
+    if (openTournament.value.quotaLeft <= 0 && openTournament.value.quotaTotal > 0) return translate('accountEvents.block.quota')
+    if (openTournament.value.status === 'REGISTRATION_CLOSED') return translate('accountEvents.block.closed')
+    if (isRegistrationDeadlinePassed(openTournament.value.registrationDeadline)) return translate('accountEvents.block.deadline')
+    if (openApplication.value?.status === 'PENDING') return translate('accountEvents.block.pending')
+    if (openApplication.value?.status === 'APPROVED') return translate('accountEvents.block.approved')
+    if (openApplication.value?.status === 'CANCELLED') return translate('accountEvents.block.cancelled')
     return ''
   }
 

@@ -107,6 +107,8 @@ export default {
     addPending: 'New ID in review',
     editPending: 'Change in review',
     awaiting: 'Awaiting review',
+    limited: 'Not eligible',
+    eligible: 'Eligible',
   },
   steps: {
     submit: 'Submit profile',

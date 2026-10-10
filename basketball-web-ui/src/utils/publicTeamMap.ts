@@ -6,6 +6,7 @@ import type {
   PublicTeamRosterItemVo,
   PublicTeamSeasonStatVo,
 } from '@/api/types/public'
+import { translate } from '@/i18n'
 import { descriptionToText, displayText, formatDateTime, mapMatchStatus, toNumber } from '@/utils/publicDisplay'
 import { v4GameModeLabel, v4PlatformLabel } from '@/utils/v4Display'
 import type { TeamBase, TeamMatchRecord, TeamRosterPlayer, TeamSeasonAverages } from '@/types/team'
@@ -48,7 +49,7 @@ export function mapPublicTeamToBase(
       detail.legacyTeam ? '历史球队' : '当前赛事',
     ),
     seasonYear: new Date().getFullYear(),
-    description: descriptionToText(detail.description) || '暂无球队简介',
+    description: descriptionToText(detail.description) || translate('publicPages.team.noBio'),
     wins: toNumber(extras?.wins, 0),
     losses: toNumber(extras?.losses, 0),
     ranking: toNumber(extras?.ranking, 0),

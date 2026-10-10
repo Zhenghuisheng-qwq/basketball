@@ -107,6 +107,8 @@ export default {
     addPending: '新增审核中',
     editPending: '修改审核中',
     awaiting: '待审核',
+    limited: '参赛资格受限',
+    eligible: '参赛资格正常',
   },
   steps: {
     submit: '提交资料',

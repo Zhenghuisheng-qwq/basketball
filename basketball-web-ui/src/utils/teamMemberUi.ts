@@ -1,34 +1,34 @@
-import { POSITION_LABELS } from '@/constants/rosterRules'
+import { translate } from '@/i18n'
+import { formatPositionLabel } from '@/constants/rosterRules'
 import type { TeamMemberItemDto } from '@/api/types/teamMember'
 import { formatDate } from '@/utils/formatDate'
 
 export function formatTeamMemberRole(roleType?: string): string {
-  if (roleType === 'CAPTAIN') return '队长'
-  if (roleType === 'MEMBER') return '队员'
+  if (roleType === 'CAPTAIN') return translate('accountTeam.members.captain')
+  if (roleType === 'MEMBER') return translate('accountTeam.members.playerRole')
   return roleType || '-'
 }
 
 export function formatTeamMemberRosterType(rosterType?: string): string {
-  if (rosterType === 'OFFICIAL') return '正式'
-  if (rosterType === 'TRIAL') return '试训'
+  if (rosterType === 'OFFICIAL') return translate('accountTeam.members.official')
+  if (rosterType === 'TRIAL') return translate('accountTeam.members.trial')
   return rosterType || '-'
 }
 
 export function formatTeamMemberMembershipStatus(status?: number, rosterType?: string): string {
-  if (status === 0) return '已离队'
-  if (status === 2) return '已移除'
+  if (status === 0) return translate('accountTeam.members.left')
+  if (status === 2) return translate('accountTeam.members.removed')
   if (status === 1) return formatTeamMemberRosterType(rosterType)
   return '-'
 }
 
 export function formatTeamMemberPosition(member: Pick<TeamMemberItemDto, 'positionCode' | 'positionName'>): string {
-  if (!member.positionCode) return '未设置'
-  const label = member.positionName || POSITION_LABELS[member.positionCode]
-  return label ? `${member.positionCode} ${label}` : member.positionCode
+  if (!member.positionCode) return translate('accountTeam.members.notSet')
+  return formatPositionLabel(member.positionCode)
 }
 
 export function formatTeamMemberPositionShort(code?: string): string {
-  return code || '未设置'
+  return code || translate('accountTeam.members.notSet')
 }
 
 export function formatTeamMemberJoinTime(value?: string): string {
@@ -37,7 +37,7 @@ export function formatTeamMemberJoinTime(value?: string): string {
 }
 
 export function resolveTeamMemberDisplayName(member: TeamMemberItemDto): string {
-  return member.nickname || member.gameNickname || member.realName || '未命名球员'
+  return member.nickname || member.gameNickname || member.realName || translate('accountTeam.members.unnamed')
 }
 
 export function resolveTeamMemberAvatarFallback(member: TeamMemberItemDto): string {

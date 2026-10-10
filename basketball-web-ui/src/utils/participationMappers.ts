@@ -11,6 +11,7 @@ import type {
 import type { PlayerMatchTaskItem } from '@/api/matchData'
 import type { AvailableEvent, MyApplication, ParticipatingEvent } from '@/types/accountEvents'
 import type { EventTeam, EventTournament, RosterMember, TransferRecord } from '@/types/eventTeam'
+import { translate } from '@/i18n'
 import { resolveSeasonRosterLimits } from '@/constants/rosterRules'
 import { OPEN_APPLICATION_STATUS_LABELS } from '@/types/account'
 
@@ -400,21 +401,23 @@ export function mapOpenRegistrationToApplication(item: OpenRegistrationItemDto):
 
 function mapTeamRegistrationStatusText(status?: number): string {
   switch (status) {
-    case 0: return '待提交'
-    case 1: return '审核中'
-    case 2: return '审核中'
-    case 3: return '已通过'
-    case 4: return '已驳回'
-    case 5: return '已撤回'
-    case 6: return '已取消'
-    default: return status == null ? '未知' : `状态 ${status}`
+    case 0: return translate('accountEvents.common.awaitingSubmit')
+    case 1: return translate('accountEvents.common.pendingReview')
+    case 2: return translate('accountEvents.common.pendingReview')
+    case 3: return translate('accountEvents.common.approved')
+    case 4: return translate('accountEvents.common.rejected')
+    case 5: return translate('accountEvents.common.withdrawn')
+    case 6: return translate('accountEvents.common.cancelled')
+    default: return status == null
+      ? translate('accountEvents.block.unknownStatus')
+      : translate('accountEvents.block.statusCode', { status })
   }
 }
 
 export function formatParticipationIdentityText(rosterRole?: string | null, isCaptain?: boolean): string {
-  if (isCaptain || rosterRole?.toUpperCase() === 'CAPTAIN') return '队长'
-  if (rosterRole?.toUpperCase() === 'PLAYER') return '球员'
-  return rosterRole || '球员'
+  if (isCaptain || rosterRole?.toUpperCase() === 'CAPTAIN') return translate('accountEvents.common.captainRole')
+  if (rosterRole?.toUpperCase() === 'PLAYER') return translate('accountEvents.common.memberRole')
+  return rosterRole || translate('accountEvents.common.memberRole')
 }
 
 export const MATCH_STATUS_FINISHED = 3
