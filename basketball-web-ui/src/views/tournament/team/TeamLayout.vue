@@ -1,22 +1,24 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import TeamHero from '@/components/team/TeamHero.vue'
 import TeamSubNav from '@/components/team/TeamSubNav.vue'
 import { usePublicTeamPage } from './composables/usePublicTeamPage'
 import './styles/team.scss'
 
 const ctx = usePublicTeamPage()
+const { t } = useI18n()
 </script>
 
 <template>
   <div class="team-page">
     <div class="site-shell team-page__shell">
-      <div v-if="ctx.state.value === 'loading'" class="team-page__state">加载中...</div>
+      <div v-if="ctx.state.value === 'loading'" class="team-page__state">{{ t('publicPages.team.loading') }}</div>
       <div v-else-if="ctx.state.value === 'error'" class="team-page__state is-error">
-        {{ ctx.errorMessage.value || '加载球队失败' }}
-        <button type="button" class="team-page__retry" @click="ctx.reload()">重试</button>
+        {{ ctx.errorMessage.value || t('publicPages.team.loadFailed') }}
+        <button type="button" class="team-page__retry" @click="ctx.reload()">{{ t('publicPages.team.retry') }}</button>
       </div>
       <div v-else-if="ctx.state.value === 'empty' || !ctx.teamView.value" class="team-page__state">
-        球队不存在或未公开
+        {{ t('publicPages.team.notPublic') }}
       </div>
       <template v-else>
         <TeamHero :team="ctx.teamView.value" :team-id="ctx.teamId.value" />

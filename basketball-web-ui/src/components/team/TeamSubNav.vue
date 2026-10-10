@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
 defineProps<{
   teamId: string
 }>()
 
 const route = useRoute()
+const { t } = useI18n()
 const keepQuery = () => {
   const query: Record<string, string> = {}
   if (route.query.divisionId) query.divisionId = String(route.query.divisionId)
@@ -13,16 +16,16 @@ const keepQuery = () => {
   return query
 }
 
-const tabs = [
-  { label: '总览', path: 'overview' },
-  { label: '比赛', path: 'matches' },
-  { label: '数据', path: 'stats' },
-  { label: '档案', path: 'archive' },
-] as const
+const tabs = computed(() => [
+  { label: t('publicPages.team.tabOverview'), path: 'overview' },
+  { label: t('publicPages.team.tabMatches'), path: 'matches' },
+  { label: t('publicPages.team.tabData'), path: 'stats' },
+  { label: t('publicPages.team.tabArchive'), path: 'archive' },
+])
 </script>
 
 <template>
-  <nav class="team-sub-nav" aria-label="球队二级导航">
+  <nav class="team-sub-nav" :aria-label="t('publicPages.team.navAria')">
     <router-link
       v-for="tab in tabs"
       :key="tab.path"

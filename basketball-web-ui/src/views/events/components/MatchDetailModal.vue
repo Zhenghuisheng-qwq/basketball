@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getV4PublicMatchDetail } from '@/api/v4Public'
 import type { PublicMatchDetailVo } from '@/api/types/public'
 import {
@@ -18,6 +19,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
 }>()
+
+const { t } = useI18n()
 
 type MatchDetailView = PublicMatchDetailVo & {
   officialStatus?: string
@@ -50,7 +53,7 @@ async function loadDetail(matchId: string) {
     if (!raw) {
       detail.value = null
       state.value = 'error'
-      errorMessage.value = '暂无比赛详情'
+      errorMessage.value = ''
       return
     }
     detail.value = {
@@ -74,7 +77,7 @@ async function loadDetail(matchId: string) {
     if (current !== reqId) return
     detail.value = null
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载比赛详情失败'
+    errorMessage.value = err instanceof Error ? err.message : t('eventsPage.schedule.loadDetailFailed')
   }
 }
 
@@ -94,11 +97,11 @@ watch(
 <template>
   <div v-if="visible && match" class="modal-mask" @click.self="emit('close')">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="match-detail-title">
-      <button type="button" class="modal-close" aria-label="关闭" @click="emit('close')">×</button>
-      <h3 id="match-detail-title">比赛详情</h3>
+      <button type="button" class="modal-close" :aria-label="t('eventsPage.aria.close')" @click="emit('close')">×</button>
+      <h3 id="match-detail-title">{{ t('eventsPage.schedule.detail') }}</h3>
 
-      <div v-if="state === 'loading'" class="modal-state">加载中...</div>
-      <div v-else-if="state === 'error'" class="modal-state is-error">{{ errorMessage }}</div>
+      <div v-if="state === 'loading'" class="modal-state">{{ t('common.loading') }}</div>
+      <div v-else-if="state === 'error'" class="modal-state is-error">{{ errorMessage || t('eventsPage.schedule.noDetail') }}</div>
       <template v-else-if="detail">
         <p class="modal-meta">
           {{ formatDateTime(detail.scheduledStartTime).full }} ·

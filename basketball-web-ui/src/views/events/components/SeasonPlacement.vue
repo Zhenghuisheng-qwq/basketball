@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { inject, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import PaperSection from '@/components/common/PaperSection.vue'
 import TeamLogo from '@/components/team/TeamLogo.vue'
@@ -10,6 +11,7 @@ import type { usePublicSeasonContext } from '../composables/usePublicSeasonConte
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
 const ctx = inject<SeasonContext | null>('publicSeasonContext', null)
+const { t } = useI18n()
 const router = useRouter()
 
 const placement = ref<PublicSeasonPlacementResp | null>(null)
@@ -38,7 +40,7 @@ async function load(divisionId: string) {
     if (current !== reqId) return
     placement.value = null
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载赛季名次失败'
+    errorMessage.value = err instanceof Error ? err.message : ''
   }
 }
 
@@ -65,15 +67,15 @@ function openTeam(teamId?: string | null) {
       <div class="season-placement__inner">
         <div class="season-placement__header">
           <div class="section-head-group">
-            <h2 class="cnpa-paper-section__title">赛季名次</h2>
+            <h2 class="cnpa-paper-section__title">{{ t('eventsPage.placement.title') }}</h2>
             <span class="cnpa-paper-section__subtitle">Season Placement</span>
           </div>
         </div>
 
-        <div v-if="state === 'loading'" class="season-placement__empty">加载中...</div>
-        <div v-else-if="state === 'error'" class="season-placement__empty">{{ errorMessage }}</div>
+        <div v-if="state === 'loading'" class="season-placement__empty">{{ t('common.loading') }}</div>
+        <div v-else-if="state === 'error'" class="season-placement__empty">{{ errorMessage || t('eventsPage.placement.loadFailed') }}</div>
         <div v-else-if="state === 'unpublished' || state === 'empty'" class="season-placement__empty">
-          冠亚军尚未发布
+          {{ t('eventsPage.placement.unpublished') }}
         </div>
         <div v-else class="season-placement__grid">
           <button
@@ -82,7 +84,7 @@ function openTeam(teamId?: string | null) {
             :disabled="!placement?.championTeamId"
             @click="openTeam(placement?.championTeamId)"
           >
-            <span class="season-placement__label">冠军</span>
+            <span class="season-placement__label">{{ t('eventsPage.placement.champion') }}</span>
             <TeamLogo
               :team="{
                 id: String(placement?.championTeamId || ''),
@@ -92,7 +94,7 @@ function openTeam(teamId?: string | null) {
               }"
               size="lg"
             />
-            <strong>{{ displayText(placement?.championTeamName, '待公布') }}</strong>
+            <strong>{{ displayText(placement?.championTeamName, t('eventsPage.placement.pending')) }}</strong>
           </button>
           <button
             type="button"
@@ -100,7 +102,7 @@ function openTeam(teamId?: string | null) {
             :disabled="!placement?.runnerUpTeamId"
             @click="openTeam(placement?.runnerUpTeamId)"
           >
-            <span class="season-placement__label">亚军</span>
+            <span class="season-placement__label">{{ t('eventsPage.placement.runnerUp') }}</span>
             <TeamLogo
               :team="{
                 id: String(placement?.runnerUpTeamId || ''),
@@ -110,7 +112,7 @@ function openTeam(teamId?: string | null) {
               }"
               size="lg"
             />
-            <strong>{{ displayText(placement?.runnerUpTeamName, '待公布') }}</strong>
+            <strong>{{ displayText(placement?.runnerUpTeamName, t('eventsPage.placement.pending')) }}</strong>
           </button>
         </div>
       </div>

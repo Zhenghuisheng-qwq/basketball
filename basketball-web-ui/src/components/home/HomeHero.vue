@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import defaultHeroImage from '@/assets/icon/home_top.png'
+
+const { t } = useI18n()
 
 export interface HomeHeroBanner {
   id: string
@@ -39,7 +42,7 @@ function nextBanner() {
         <img
           class="home-hero__image"
           :src="backgroundImage"
-          alt="CNPA 中国玩家篮球竞技赛事平台"
+          :alt="t('home.heroAlt')"
           fetchpriority="high"
           draggable="false"
         />
@@ -56,18 +59,18 @@ function nextBanner() {
           v-if="props.banners.length > 1"
           class="home-hero__controls"
           role="group"
-          aria-label="CNPA 宣传视觉轮播控制"
+          :aria-label="t('home.heroControls')"
         >
           <button
             type="button"
             class="home-hero__arrow home-hero__arrow--previous"
-            aria-label="上一张宣传视觉"
+            :aria-label="t('home.heroPrev')"
             @click="previousBanner"
           >
             <span aria-hidden="true">&#8249;</span>
           </button>
 
-          <div class="home-hero__dots" role="tablist" aria-label="选择宣传视觉">
+          <div class="home-hero__dots" role="tablist" :aria-label="t('home.heroDots')">
             <button
               v-for="(banner, index) in props.banners"
               :key="banner.id"
@@ -76,7 +79,7 @@ function nextBanner() {
               :class="{ 'home-hero__dot--active': activeIndex === index }"
               role="tab"
               :aria-selected="activeIndex === index"
-              :aria-label="`切换到第 ${index + 1} 张宣传视觉`"
+              :aria-label="t('home.heroSlide', { index: index + 1 })"
               @click="selectBanner(index)"
             />
           </div>
@@ -84,16 +87,16 @@ function nextBanner() {
           <button
             type="button"
             class="home-hero__arrow home-hero__arrow--next"
-            aria-label="下一张宣传视觉"
+            :aria-label="t('home.heroNext')"
             @click="nextBanner"
           >
             <span aria-hidden="true">&#8250;</span>
           </button>
         </div>
 
-        <p v-if="props.loading" class="home-hero__status" aria-live="polite">品牌视觉加载中</p>
+        <p v-if="props.loading" class="home-hero__status" aria-live="polite">{{ t('home.heroLoading') }}</p>
         <p v-else-if="props.errorMessage" class="home-hero__status home-hero__status--error" aria-live="polite">
-          宣传视觉暂不可用，已展示品牌视觉
+          {{ t('home.heroFallback') }}
         </p>
       </div>
     </div>

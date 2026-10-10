@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { AnnouncementListItem } from '../types'
 
 defineProps<{
@@ -8,6 +9,8 @@ defineProps<{
 const emit = defineEmits<{
   click: [id: string]
 }>()
+
+const { t } = useI18n()
 
 function handleClick(id: string) {
   emit('click', id)
@@ -24,7 +27,7 @@ function handleClick(id: string) {
     @keyup.enter="handleClick(item.id)"
   >
     <div class="announcement-list-item__tags">
-      <span v-if="item.pinned" class="announcement-list-item__pin">置顶</span>
+      <span v-if="item.pinned" class="announcement-list-item__pin">{{ t('publicPages.announcement.pinned') }}</span>
       <span
         class="announcement-list-item__category"
         :class="`announcement-list-item__category--${item.categoryCode.toLowerCase()}`"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import PlayerMatchTable from './PlayerMatchTable.vue'
 import type { PlayerDetailData } from '../types'
 
@@ -10,9 +11,14 @@ const props = defineProps<{
 
 const pageSize = 10
 const currentPage = ref(1)
-const resultFilter = ref('全部结果')
+const resultFilter = ref<'all' | 'WIN' | 'LOSS'>('all')
+const { t } = useI18n()
 
-const resultOptions = ['全部结果', '胜利', '失败']
+const resultOptions = computed(() => [
+  { value: 'all' as const, label: t('publicPages.player.allResults') },
+  { value: 'WIN' as const, label: t('publicPages.player.win') },
+  { value: 'LOSS' as const, label: t('publicPages.player.loss') },
+])
 const scopeLabel = computed(() => {
   const profile = props.detail.profile
   const season = String(profile.seasonName || '').trim()
@@ -27,13 +33,12 @@ const scopeLabel = computed(() => {
     const covered = unique.some((item) => item.includes(part) || part.includes(item))
     if (!covered) unique.push(part)
   }
-  return unique.join(' · ') || '当前赛事范围'
+  return unique.join(' · ') || t('publicPages.player.currentScope')
 })
 
 const filteredMatches = computed(() => {
   return props.detail.allMatches.filter((row) => {
-    if (resultFilter.value === '胜利' && row.result !== 'WIN') return false
-    if (resultFilter.value === '失败' && row.result !== 'LOSS') return false
+    if (resultFilter.value !== 'all' && row.result !== resultFilter.value) return false
     return true
   })
 })
@@ -58,22 +63,22 @@ function goPage(page: number) {
   <div class="player-detail-matches">
     <div class="player-detail-section-head">
       <div class="player-detail-section-head__group">
-        <h2 class="player-detail-section-head__title">比赛记录</h2>
+        <h2 class="player-detail-section-head__title">{{ t('publicPages.player.matchHistory') }}</h2>
         <span class="player-detail-section-head__sub">Match History</span>
       </div>
     </div>
 
     <div class="player-detail-filter-row">
       <div class="player-detail-scope">
-        <span>当前赛事范围</span>
+        <span>{{ t('publicPages.player.currentScope') }}</span>
         <strong>{{ scopeLabel }}</strong>
       </div>
       <select v-model="resultFilter">
-        <option v-for="item in resultOptions" :key="item" :value="item">{{ item }}</option>
+        <option v-for="item in resultOptions" :key="item.value" :value="item.value">{{ item.label }}</option>
       </select>
     </div>
 
-    <div v-if="filteredMatches.length === 0" class="player-detail-empty-inline">暂无当前赛事比赛记录</div>
+    <div v-if="filteredMatches.length === 0" class="player-detail-empty-inline">{{ t('publicPages.player.noMatchRecords') }}</div>
 
     <template v-else>
       <PlayerMatchTable :rows="pageMatches" />

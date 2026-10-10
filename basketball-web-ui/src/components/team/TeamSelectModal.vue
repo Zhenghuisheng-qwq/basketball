@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getV4PublicTeamList } from '@/api/v4Public'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import { displayText } from '@/utils/publicDisplay'
@@ -20,8 +21,8 @@ const props = withDefaults(
     divisionId?: string
   }>(),
   {
-    title: '选择对比球队',
-    subtitle: '从当前赛事参赛球队中选择一支球队进行对比',
+    title: '',
+    subtitle: '',
     competitionText: '',
     currentTeamId: '',
     disabledTeamIds: () => [],
@@ -36,6 +37,10 @@ const emit = defineEmits<{
   close: []
   select: [teamId: string]
 }>()
+
+const { t } = useI18n()
+const heading = computed(() => props.title || t('publicPages.team.selectCompareTitle'))
+const subheading = computed(() => props.subtitle || t('publicPages.team.selectCompareSubtitle'))
 
 const fetchedTeams = ref<TeamBase[]>([])
 const fetchState = ref<'idle' | 'loading' | 'success' | 'empty' | 'error'>('idle')
@@ -137,8 +142,8 @@ onUnmounted(() => {
       >
         <div class="team-select-modal__header">
           <div class="team-select-modal__heading">
-            <h2 id="team-select-title" class="team-select-modal__title">{{ title }}</h2>
-            <p class="team-select-modal__subtitle">{{ subtitle }}</p>
+            <h2 id="team-select-title" class="team-select-modal__title">{{ heading }}</h2>
+            <p class="team-select-modal__subtitle">{{ subheading }}</p>
           </div>
 
           <div class="team-select-modal__actions">
@@ -146,7 +151,7 @@ onUnmounted(() => {
             <button
               type="button"
               class="team-select-modal__close"
-              aria-label="关闭"
+              :aria-label="t('publicPages.team.close')"
               @click="emit('close')"
             >
               ×
@@ -155,12 +160,12 @@ onUnmounted(() => {
         </div>
 
         <div class="team-select-modal__body">
-          <div v-if="listState === 'loading'" class="team-select-modal__state">加载中...</div>
+          <div v-if="listState === 'loading'" class="team-select-modal__state">{{ t('publicPages.team.loading') }}</div>
           <div v-else-if="listState === 'error'" class="team-select-modal__state is-error">
-            加载球队列表失败
+            {{ t('publicPages.team.loadTeamListFailed') }}
           </div>
           <div v-else-if="!hasComparableTeams" class="team-select-modal__state">
-            暂无其他可对比球队
+            {{ t('publicPages.team.noCompareTeams') }}
           </div>
 
           <div v-else class="team-select-grid">
@@ -179,7 +184,7 @@ onUnmounted(() => {
             >
               <TeamLogo :team="team" size="selector" class="team-select-card__logo" />
               <span class="team-select-card__name">{{ displayText(team.name) }}</span>
-              <span v-if="isCurrent(team.id)" class="team-select-card__badge">当前球队</span>
+              <span v-if="isCurrent(team.id)" class="team-select-card__badge">{{ t('publicPages.team.currentTeam') }}</span>
             </button>
           </div>
         </div>

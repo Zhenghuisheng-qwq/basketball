@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { buildPaginationItems } from '@/utils/announcementNavigate'
 
 const props = defineProps<{
@@ -10,6 +11,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:page': [value: number]
 }>()
+
+const { t } = useI18n()
 
 const pageItems = computed(() => buildPaginationItems(props.page, props.totalPages))
 
@@ -23,13 +26,13 @@ function goPage(next: number) {
   <nav
     v-if="totalPages > 1"
     class="announcement-pagination"
-    aria-label="公告列表分页"
+    :aria-label="t('publicPages.announcement.pagination')"
   >
     <button
       type="button"
       class="announcement-pagination__nav"
       :disabled="page <= 1"
-      aria-label="上一页"
+      :aria-label="t('publicPages.announcement.prevPage')"
       @click="goPage(page - 1)"
     >
       ‹
@@ -52,7 +55,7 @@ function goPage(next: number) {
       type="button"
       class="announcement-pagination__nav"
       :disabled="page >= totalPages"
-      aria-label="下一页"
+      :aria-label="t('publicPages.announcement.nextPage')"
       @click="goPage(page + 1)"
     >
       ›

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import PaperTear from '@/components/common/PaperTear.vue'
 import {
@@ -24,6 +25,7 @@ import type {
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const activeDataType = ref<DataType>('team')
 const activeStatisticType = ref<StatisticType>('average')
@@ -48,7 +50,7 @@ function avgOrZero(totalValue: number, games: number) {
 }
 
 function mapTeamRow(item: V4PublicTeamStatItem, index: number): TeamStatistics {
-  const name = displayText(item.teamName, '未知球队')
+  const name = displayText(item.teamName, t('publicPages.data.unknownTeam'))
   const games = toNumber(item.matchCount, 0)
   const wins = toNumber(item.winCount, 0)
   const losses = toNumber(item.loseCount, 0)
@@ -96,7 +98,7 @@ function mapPlayerRow(item: V4PublicPlayerStatItem, index: number): PlayerStatis
     id: sourcePlayerId || String(item.eventPlayerId),
     playerId: sourcePlayerId,
     rank: index + 1,
-    playerName: displayText(item.playerName, '未知球员'),
+    playerName: displayText(item.playerName, t('publicPages.data.unknownPlayer')),
     teamId: '',
     teamName,
     teamAbbr: teamName.slice(0, 6),
@@ -147,7 +149,7 @@ async function loadSeasons() {
         season.seasonYear
           ? `${v4SeriesLabel(season.seriesCode)} ${season.seasonYear}`
           : season.displayTitle || season.seriesName,
-        '赛季',
+        t('publicPages.data.season'),
       )
       if (!groupMap.has(seasonKey)) {
         groupMap.set(seasonKey, { season: seasonKey, tournaments: [] })
@@ -171,7 +173,7 @@ async function loadSeasons() {
     }
   } catch (err) {
     seasonGroups.value = []
-    seasonError.value = err instanceof Error ? err.message : '加载赛季失败'
+    seasonError.value = err instanceof Error ? err.message : t('publicPages.data.loadSeasonsFailed')
   } finally {
     seasonLoading.value = false
   }
@@ -199,7 +201,7 @@ async function loadTable() {
   } catch (err) {
     if (current !== reqId) return
     allRows.value = []
-    tableError.value = err instanceof Error ? err.message : '加载数据失败'
+    tableError.value = err instanceof Error ? err.message : t('publicPages.data.loadDataFailed')
   } finally {
     if (current === reqId) tableLoading.value = false
   }
@@ -302,14 +304,14 @@ onMounted(async () => {
           <div class="data-center-panel__shell">
             <div class="site-shell-inner data-center-panel__body">
               <div class="data-center-panel__toolbar">
-                <div class="data-stat-switch" role="group" aria-label="统计类型">
+                <div class="data-stat-switch" role="group" :aria-label="t('publicPages.data.statType')">
                   <button
                     type="button"
                     class="data-stat-switch__btn"
                     :class="{ 'is-active': activeStatisticType === 'average' }"
                     @click="activeStatisticType = 'average'"
                   >
-                    场均
+                    {{ t('publicPages.data.average') }}
                   </button>
                   <button
                     type="button"
@@ -317,7 +319,7 @@ onMounted(async () => {
                     :class="{ 'is-active': activeStatisticType === 'total' }"
                     @click="activeStatisticType = 'total'"
                   >
-                    总计
+                    {{ t('publicPages.data.total') }}
                   </button>
                 </div>
               </div>

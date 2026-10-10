@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import teamBackground from '@/assets/icon/tournament/team_background.png'
 import captainIcon from '@/assets/icon/team/master.png'
@@ -20,24 +21,28 @@ const props = defineProps<{
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const compareModalVisible = ref(false)
 const teamPageCtx = inject(PUBLIC_TEAM_PAGE_KEY, null)
 
-const stageLabels: Record<TeamStage, string> = {
-  regular: '常规赛',
-  playoffs: '季后赛',
-}
+const stageLabels = computed<Record<TeamStage, string>>(() => ({
+  regular: t('publicPages.team.regular'),
+  playoffs: t('publicPages.team.playoffs'),
+}))
 
-const stageLabel = computed(() => stageLabels[props.team.currentStage])
+const stageLabel = computed(() => stageLabels.value[props.team.currentStage])
 
-const recordText = computed(() => `${props.team.wins}胜${props.team.losses}负`)
+const recordText = computed(() => t('publicPages.team.record', {
+  wins: props.team.wins,
+  losses: props.team.losses,
+}))
 
 const dqSummary = computed(() => (props.team.activeDisciplineSummary || []).find((item) => item.penaltyCode === 'EVENT_DISQUALIFICATION')
   || (props.team.disqualified ? {
-    penaltyLabel: '取消赛事资格',
-    statusLabel: '生效中',
+    penaltyLabel: t('publicPages.team.dqPenalty'),
+    statusLabel: t('publicPages.team.active'),
     effectiveStartTime: '',
-    description: '该球队在本届赛事中的参赛资格已取消。',
+    description: t('publicPages.team.dqDescription'),
   } : null))
 
 const dqHint = computed(() => {
@@ -48,7 +53,7 @@ const dqHint = computed(() => {
 
 const heroDescription = computed(() => {
   if (props.team.disqualified) {
-    return dqSummary.value?.description || '该球队在本届赛事中的参赛资格已取消。'
+    return dqSummary.value?.description || t('publicPages.team.dqDescription')
   }
   return props.team.description
 })
@@ -109,31 +114,31 @@ const infoCards = computed<HeroInfoCard[]>(() => [
   {
     key: 'captain',
     icon: captainIcon,
-    label: '队长',
+    label: t('publicPages.team.captain'),
     value: props.team.captainName,
   },
   {
     key: 'platform',
     icon: platformIcon,
-    label: '比赛平台',
+    label: t('publicPages.team.platform'),
     value: props.team.platform?.trim() || '--',
   },
   {
     key: 'stage',
     icon: stageIcon,
-    label: '当前阶段',
+    label: t('publicPages.team.currentStage'),
     value: stageLabel.value,
   },
   {
     key: 'roster',
     icon: rosterIcon,
-    label: '注册阵容',
-    value: `${props.team.rosterCount} 人`,
+    label: t('publicPages.team.roster'),
+    value: t('publicPages.team.rosterCount', { count: props.team.rosterCount }),
   },
 ])
 </script>
 <template>
-  <section class="team-hero" aria-label="球队详情头部">
+  <section class="team-hero" :aria-label="t('publicPages.team.heroAria')">
     <div class="team-hero__bg" :style="heroBgStyle" aria-hidden="true" />
     <div class="team-hero__watermark" aria-hidden="true">
       <TeamLogo :team="team" size="hero" />
@@ -152,8 +157,8 @@ const infoCards = computed<HeroInfoCard[]>(() => [
               v-if="team.disqualified"
               class="team-hero__badge team-hero__badge--dq"
               :title="dqHint"
-            >赛事资格已取消</span>
-            <span v-else-if="team.verified" class="team-hero__badge">已认证</span>
+            >{{ t('publicPages.team.dqBadge') }}</span>
+            <span v-else-if="team.verified" class="team-hero__badge">{{ t('publicPages.team.verified') }}</span>
           </div>
           <p v-if="team.disqualified && dqHint" class="team-hero__dq-hint">{{ dqHint }}</p>
 
@@ -162,18 +167,18 @@ const infoCards = computed<HeroInfoCard[]>(() => [
           <div class="team-hero__stats">
             <span class="team-hero__stat">{{ recordText }}</span>
             <span class="team-hero__stat-divider">|</span>
-            <span class="team-hero__stat">排名第{{ team.ranking }}</span>
+            <span class="team-hero__stat">{{ t('publicPages.team.rankNo', { rank: team.ranking }) }}</span>
             <button type="button" class="team-hero__compare-btn" @click="openCompareModal">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                 <path d="M7 7h11l-3-3M17 17H6l3 3" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
-              球队对比
+              {{ t('publicPages.team.compare') }}
             </button>
           </div>
         </div>
       </div>
 
-      <div class="team-hero__info-panel" aria-label="球队基本信息">
+      <div class="team-hero__info-panel" :aria-label="t('publicPages.team.infoAria')">
         <div
           v-for="card in infoCards"
           :key="card.key"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { sundayWeekDays, weekNumberOf } from '../utils/scheduleCalendar'
 import { todayDateKey } from '@/utils/scheduleDateKey'
 
@@ -22,10 +23,11 @@ const emit = defineEmits<{
   toggleTeamFilter: []
 }>()
 
+const { t } = useI18n()
 const today = computed(() => todayDateKey())
 const weekDays = computed(() => sundayWeekDays(props.weekStart, props.dateCounts || {}))
-const weekLabel = computed(() => `第${props.weekNumber || weekNumberOf(props.weekStart)}周`)
-const teamButtonLabel = computed(() => props.selectedTeamName || '选择球队')
+const weekLabel = computed(() => t('eventsPage.count.week', { week: props.weekNumber || weekNumberOf(props.weekStart) }))
+const teamButtonLabel = computed(() => props.selectedTeamName || t('eventsPage.teams.select'))
 
 function onSelect(date: string) {
   if (date && date === props.selectedDate) {
@@ -36,16 +38,16 @@ function onSelect(date: string) {
 }
 
 function countText(count: number) {
-  return count > 0 ? `${count}场` : ''
+  return count > 0 ? t('eventsPage.count.dayGames', { count }) : ''
 }
 </script>
 
 <template>
-  <section class="calendar-toolbar" aria-label="赛程周日历">
+  <section class="calendar-toolbar" :aria-label="t('eventsPage.aria.weekCalendar')">
     <div class="week-control">
-      <button type="button" class="arrow-btn" aria-label="上一周" @click="emit('prevWeek')">‹</button>
+      <button type="button" class="arrow-btn" :aria-label="t('eventsPage.aria.prevWeek')" @click="emit('prevWeek')">‹</button>
       <strong class="week-number">{{ weekLabel }}</strong>
-      <button type="button" class="arrow-btn" aria-label="下一周" @click="emit('nextWeek')">›</button>
+      <button type="button" class="arrow-btn" :aria-label="t('eventsPage.aria.nextWeek')" @click="emit('nextWeek')">›</button>
     </div>
 
     <div class="week-days" role="tablist">
@@ -56,7 +58,7 @@ function countText(count: number) {
         :aria-pressed="!selectedDate"
         @click="emit('clearDate')"
       >
-        <span class="day-main">全部 ALL</span>
+        <span class="day-main">{{ t('eventsPage.schedule.weekAll') }}</span>
       </button>
 
       <button
@@ -89,7 +91,7 @@ function countText(count: number) {
           <rect x="1.5" y="2.5" width="13" height="12" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4" />
           <path d="M1.5 6h13M5 1.2v3.2M11 1.2v3.2" fill="none" stroke="currentColor" stroke-width="1.4" />
         </svg>
-        <span>日历</span>
+        <span>{{ t('eventsPage.schedule.calendar') }}</span>
       </button>
       <button
         type="button"

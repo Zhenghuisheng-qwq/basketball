@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import PaperTear from '@/components/common/PaperTear.vue'
 import {
@@ -25,6 +26,7 @@ import type { AnnouncementCategory, AnnouncementListItem } from './types'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const listHeadRef = ref<HTMLElement | null>(null)
 
 const categories = ref<AnnouncementCategory[]>([])
@@ -44,22 +46,22 @@ const keyword = computed(() => parseAnnouncementKeyword(route.query.keyword))
 const page = computed(() => parseAnnouncementPage(route.query.page, 1))
 
 const emptyText = computed(() => {
-  if (listState.value === 'error') return listError.value || '加载公告失败'
+  if (listState.value === 'error') return listError.value || t('publicPages.announcement.loadListFailed')
   if (keyword.value.trim()) {
-    return `未找到与“${keyword.value.trim()}”相关的公告`
+    return t('publicPages.announcement.noKeywordMatch', { keyword: keyword.value.trim() })
   }
   if (category.value !== 'ALL') {
-    return '当前分类暂无公告'
+    return t('publicPages.announcement.emptyCategory')
   }
-  return '暂无公告'
+  return t('publicPages.announcement.empty')
 })
 
 function mapItem(item: PublicAnnouncementItemResp): AnnouncementListItem {
   return {
     id: String(item.announcementId),
-    title: displayText(item.title, '未命名公告'),
+    title: displayText(item.title, t('publicPages.announcement.untitled')),
     categoryCode: displayText(item.categoryCode, 'OTHER'),
-    categoryName: displayText(item.categoryName, '其他'),
+    categoryName: displayText(item.categoryName, t('publicPages.announcement.other')),
     pinned: toNumber(item.isTop, 0) === 1,
     summary: displayText(item.summary, ''),
     authorName: displayText(item.authorName, 'CNPA'),
@@ -112,7 +114,7 @@ async function loadList() {
     total.value = 0
     totalPages.value = 1
     listState.value = 'error'
-    listError.value = err instanceof Error ? err.message : '加载公告失败'
+    listError.value = err instanceof Error ? err.message : t('publicPages.announcement.loadListFailed')
   }
 }
 
@@ -176,11 +178,11 @@ watch(
           <div class="cnpa-paper-section__content announcement-list-page__inner">
             <header ref="listHeadRef" class="announcement-list-page__heading">
               <div class="announcement-list-page__title-block">
-                <h2 class="announcement-list-page__title">官方公告</h2>
+                <h2 class="announcement-list-page__title">{{ t('publicPages.announcement.official') }}</h2>
                 <p class="announcement-list-page__subtitle">OFFICIAL NOTICES</p>
-                <p class="announcement-list-page__desc">全站公开公告发布时间持续更新</p>
+                <p class="announcement-list-page__desc">{{ t('publicPages.announcement.listDesc') }}</p>
               </div>
-              <p class="announcement-list-page__count">共 {{ total }} 条公告</p>
+              <p class="announcement-list-page__count">{{ t('publicPages.announcement.count', { count: total }) }}</p>
             </header>
 
             <div class="announcement-list-page__toolbar">
@@ -195,7 +197,7 @@ watch(
               />
             </div>
 
-            <div v-if="listState === 'loading'" class="announcement-list-page__state">加载中...</div>
+            <div v-if="listState === 'loading'" class="announcement-list-page__state">{{ t('publicPages.announcement.loading') }}</div>
             <AnnouncementList
               v-else
               :items="items"

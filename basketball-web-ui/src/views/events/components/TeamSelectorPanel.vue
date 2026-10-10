@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { ScheduleTeamOption } from '../utils/scheduleTeamFilter'
 import type { Team } from '../types/events'
 import TeamLogo from './TeamLogo.vue'
@@ -13,6 +14,8 @@ defineProps<{
 const emit = defineEmits<{
   select: [teamId: string | null]
 }>()
+
+const { t } = useI18n()
 
 function toTeam(option: ScheduleTeamOption): Team {
   return {
@@ -36,9 +39,9 @@ function displayName(option: ScheduleTeamOption): string {
     class="team-panel schedule-panel cnpa-paper-section cnpa-paper-section--gray cnpa-paper-floating-panel"
     @click.stop
   >
-    <h3>选择参赛战队</h3>
-    <p v-if="loading" class="team-hint">赛程加载中…</p>
-    <p v-else-if="error" class="team-hint">赛程加载失败，请稍后重试</p>
+    <h3>{{ t('eventsPage.teams.selectSquads') }}</h3>
+    <p v-if="loading" class="team-hint">{{ t('eventsPage.schedule.loading') }}</p>
+    <p v-else-if="error" class="team-hint">{{ t('eventsPage.schedule.loadFailedRetry') }}</p>
     <div v-else class="team-list">
       <button
         type="button"
@@ -47,11 +50,11 @@ function displayName(option: ScheduleTeamOption): string {
         @click="emit('select', null)"
       >
         <span class="team-all">ALL</span>
-        <span>全部战队</span>
+        <span>{{ t('eventsPage.teams.allSquads') }}</span>
         <span v-if="selectedTeamId == null || selectedTeamId === ''" class="check">●</span>
       </button>
 
-      <p v-if="!teams.length" class="team-empty">当日暂无参赛球队</p>
+      <p v-if="!teams.length" class="team-empty">{{ t('eventsPage.teams.noneToday') }}</p>
 
       <button
         v-for="team in teams"

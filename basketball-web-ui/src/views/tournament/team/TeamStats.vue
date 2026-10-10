@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { getV4PublicMatchDetail, getV4PublicPlayerStat, getV4PublicTeamStat } from '@/api/v4Public'
 import type {
@@ -56,6 +57,7 @@ const singleNumericColumns: Array<
 > = ['points', 'rebounds', 'assists', 'steals', 'blocks', 'fouls', 'turnovers']
 
 const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
@@ -101,7 +103,7 @@ const competitionOptions = computed(() => {
 })
 
 const seasonCardTitle = computed(() => ({
-  cn: '赛事场均',
+  cn: t('publicPages.team.eventAverages'),
   en: 'Event Averages',
 }))
 
@@ -110,13 +112,13 @@ type MetricTier = 'primary' | 'secondary' | 'tertiary'
 const seasonStatItems = computed(() => {
   if (!seasonStats.value) return []
   return [
-    { key: 'points', label: '得分', value: seasonStats.value.points, tier: 'primary' as MetricTier },
-    { key: 'rebounds', label: '篮板', value: seasonStats.value.rebounds, tier: 'secondary' as MetricTier },
-    { key: 'assists', label: '助攻', value: seasonStats.value.assists, tier: 'secondary' as MetricTier },
-    { key: 'steals', label: '抢断', value: seasonStats.value.steals, tier: 'tertiary' as MetricTier },
-    { key: 'blocks', label: '盖帽', value: seasonStats.value.blocks, tier: 'tertiary' as MetricTier },
-    { key: 'fouls', label: '犯规', value: seasonStats.value.fouls, tier: 'tertiary' as MetricTier },
-    { key: 'turnovers', label: '失误', value: seasonStats.value.turnovers, tier: 'tertiary' as MetricTier },
+    { key: 'points', label: t('publicPages.team.points'), value: seasonStats.value.points, tier: 'primary' as MetricTier },
+    { key: 'rebounds', label: t('publicPages.team.rebounds'), value: seasonStats.value.rebounds, tier: 'secondary' as MetricTier },
+    { key: 'assists', label: t('publicPages.team.assists'), value: seasonStats.value.assists, tier: 'secondary' as MetricTier },
+    { key: 'steals', label: t('publicPages.team.steals'), value: seasonStats.value.steals, tier: 'tertiary' as MetricTier },
+    { key: 'blocks', label: t('publicPages.team.blocks'), value: seasonStats.value.blocks, tier: 'tertiary' as MetricTier },
+    { key: 'fouls', label: t('publicPages.team.fouls'), value: seasonStats.value.fouls, tier: 'tertiary' as MetricTier },
+    { key: 'turnovers', label: t('publicPages.team.turnovers'), value: seasonStats.value.turnovers, tier: 'tertiary' as MetricTier },
   ]
 })
 
@@ -185,7 +187,7 @@ async function loadSeasonStats() {
     if (current !== seasonReqId) return
     seasonStatsList.value = []
     seasonStatState.value = 'error'
-    seasonErrorMessage.value = err instanceof Error ? err.message : '加载场均数据失败'
+    seasonErrorMessage.value = err instanceof Error ? err.message : t('publicPages.team.loadAveragesFailed')
   }
 }
 
@@ -224,7 +226,7 @@ async function loadPlayerStats() {
     averagePlayerStats.value = []
     totalPlayerStats.value = []
     playerStatState.value = 'error'
-    playerErrorMessage.value = err instanceof Error ? err.message : '加载球员数据失败'
+    playerErrorMessage.value = err instanceof Error ? err.message : t('publicPages.team.loadPlayersFailed')
   }
 }
 
@@ -252,7 +254,7 @@ async function loadSingleMatchStats() {
     if (current !== singleReqId) return
     singleMatchStats.value = null
     singleMatchState.value = 'error'
-    singleMatchErrorMessage.value = err instanceof Error ? err.message : '加载单场数据失败'
+    singleMatchErrorMessage.value = err instanceof Error ? err.message : t('publicPages.team.loadSingleFailed')
   }
 }
 
@@ -386,14 +388,14 @@ function showSingleTable() {
   <div class="team-stats">
     <div class="team-stats__toolbar">
       <div class="section-head-group">
-        <h2 class="section-head-title">球队数据</h2>
+        <h2 class="section-head-title">{{ t('publicPages.team.teamData') }}</h2>
         <span class="section-head-sub">Team Stats</span>
       </div>
 
       <div class="stats-filters">
         <label v-if="competitionOptions.length" class="filter-select">
           <select v-model="competitionFilter">
-            <option value="all">全部赛事</option>
+            <option value="all">{{ t('publicPages.team.allEvents') }}</option>
             <option v-for="option in competitionOptions" :key="option" :value="option">
               {{ option }}
             </option>
@@ -402,8 +404,8 @@ function showSingleTable() {
 
         <label class="filter-select">
           <select v-model="stageFilter">
-            <option value="regular">常规赛</option>
-            <option value="playoffs">季后赛</option>
+            <option value="regular">{{ t('publicPages.team.regular') }}</option>
+            <option value="playoffs">{{ t('publicPages.team.playoffs') }}</option>
           </select>
         </label>
       </div>
@@ -415,11 +417,11 @@ function showSingleTable() {
         <em>{{ seasonCardTitle.en }}</em>
       </p>
 
-      <div v-if="seasonStatState === 'loading'" class="stats-empty">加载中...</div>
+      <div v-if="seasonStatState === 'loading'" class="stats-empty">{{ t('publicPages.team.loading') }}</div>
       <div v-else-if="seasonStatState === 'error'" class="stats-empty is-error">
-        {{ seasonErrorMessage || '加载场均数据失败' }}
+        {{ seasonErrorMessage || t('publicPages.team.loadAveragesFailed') }}
       </div>
-      <div v-else-if="!seasonStats" class="stats-empty">暂无场均数据</div>
+      <div v-else-if="!seasonStats" class="stats-empty">{{ t('publicPages.team.noAverages') }}</div>
 
       <div v-else class="season-cards">
         <article
@@ -433,14 +435,14 @@ function showSingleTable() {
         </article>
       </div>
       <p class="stats-note stats-note--metrics">
-        场均为本赛事 Division 汇总，暂不按常规赛 / 季后赛拆分。
+        {{ t('publicPages.team.averagesNote') }}
       </p>
     </section>
 
     <section class="stats-section">
       <div class="section-head section-head--compact">
         <div class="section-head-group">
-          <h3 class="section-head-title section-head-title--sm">球员数据</h3>
+          <h3 class="section-head-title section-head-title--sm">{{ t('publicPages.team.playerData') }}</h3>
           <span class="section-head-sub">Player Stats</span>
         </div>
 
@@ -451,7 +453,7 @@ function showSingleTable() {
             :class="{ active: showSummaryTable() && playerStatsMode === 'average' }"
             @click="playerStatsMode = 'average'; playoffStatsMode = 'summary'"
           >
-            场均
+            {{ t('publicPages.team.perGame') }}
           </button>
           <button
             type="button"
@@ -459,7 +461,7 @@ function showSingleTable() {
             :class="{ active: showSummaryTable() && playerStatsMode === 'total' }"
             @click="playerStatsMode = 'total'; playoffStatsMode = 'summary'"
           >
-            累计
+            {{ t('publicPages.team.cumulative') }}
           </button>
           <button
             v-if="stageFilter === 'playoffs'"
@@ -468,34 +470,34 @@ function showSingleTable() {
             :class="{ active: playoffStatsMode === 'single' }"
             @click="playoffStatsMode = 'single'"
           >
-            单场数据
+            {{ t('publicPages.team.singleGame') }}
           </button>
         </div>
       </div>
 
       <div v-if="showSummaryTable()" class="stats-table-wrap">
-        <div v-if="playerStatState === 'loading'" class="stats-empty">加载中...</div>
+        <div v-if="playerStatState === 'loading'" class="stats-empty">{{ t('publicPages.team.loading') }}</div>
         <div v-else-if="playerStatState === 'error'" class="stats-empty is-error">
-          {{ playerErrorMessage || '加载球员数据失败' }}
+          {{ playerErrorMessage || t('publicPages.team.loadPlayersFailed') }}
         </div>
-        <div v-else-if="summaryPlayerStats.length === 0" class="stats-empty">暂无球员数据</div>
+        <div v-else-if="summaryPlayerStats.length === 0" class="stats-empty">{{ t('publicPages.team.noPlayerData') }}</div>
 
         <table v-else class="stats-table">
           <thead>
             <tr>
-              <th class="col-player">球员</th>
-              <th>出场</th>
-              <th>得分</th>
-              <th>篮板</th>
-              <th>助攻</th>
-              <th>抢断</th>
-              <th>盖帽</th>
-              <th>犯规</th>
-              <th>失误</th>
-              <th v-if="showFgPctColumn">投篮命中率</th>
-              <th v-if="showTpPctColumn">三分命中率</th>
-              <th v-if="showFtPctColumn">罚球命中率</th>
-              <th class="col-action">查看</th>
+              <th class="col-player">{{ t('publicPages.team.player') }}</th>
+              <th>{{ t('publicPages.team.games') }}</th>
+              <th>{{ t('publicPages.team.points') }}</th>
+              <th>{{ t('publicPages.team.rebounds') }}</th>
+              <th>{{ t('publicPages.team.assists') }}</th>
+              <th>{{ t('publicPages.team.steals') }}</th>
+              <th>{{ t('publicPages.team.blocks') }}</th>
+              <th>{{ t('publicPages.team.fouls') }}</th>
+              <th>{{ t('publicPages.team.turnovers') }}</th>
+              <th v-if="showFgPctColumn">{{ t('publicPages.team.fgRate') }}</th>
+              <th v-if="showTpPctColumn">{{ t('publicPages.team.tpRate') }}</th>
+              <th v-if="showFtPctColumn">{{ t('publicPages.team.ftRate') }}</th>
+              <th class="col-action">{{ t('publicPages.team.view') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -557,7 +559,7 @@ function showSingleTable() {
               </td>
               <td class="col-action">
                 <button type="button" class="player-action" @click="handlePlayerDetailClick(row.playerId)">
-                  查看球员 →
+                  {{ t('publicPages.team.viewPlayer') }}
                 </button>
               </td>
             </tr>
@@ -566,12 +568,12 @@ function showSingleTable() {
       </div>
 
       <div v-if="showSingleTable()" class="stats-table-wrap">
-        <div v-if="!matchId" class="stats-empty">请从比赛列表选择一场比赛查看单场数据</div>
-        <div v-else-if="singleMatchState === 'loading'" class="stats-empty">加载中...</div>
+        <div v-if="!matchId" class="stats-empty">{{ t('publicPages.team.pickMatch') }}</div>
+        <div v-else-if="singleMatchState === 'loading'" class="stats-empty">{{ t('publicPages.team.loading') }}</div>
         <div v-else-if="singleMatchState === 'error'" class="stats-empty is-error">
-          {{ singleMatchErrorMessage || '加载单场数据失败' }}
+          {{ singleMatchErrorMessage || t('publicPages.team.loadSingleFailed') }}
         </div>
-        <div v-else-if="!singleMatchStats" class="stats-empty">暂无单场数据</div>
+        <div v-else-if="!singleMatchStats" class="stats-empty">{{ t('publicPages.team.noSingleData') }}</div>
 
         <template v-else>
           <p class="single-match-label">{{ singleMatchStats.label }}</p>
@@ -579,19 +581,19 @@ function showSingleTable() {
           <table class="stats-table">
             <thead>
               <tr>
-                <th class="col-player">球员</th>
-                <th>评分</th>
-                <th>得分</th>
-                <th>篮板</th>
-                <th>助攻</th>
-                <th>抢断</th>
-                <th>盖帽</th>
-                <th>犯规</th>
-                <th>失误</th>
-                <th>投篮</th>
-                <th>三分</th>
-                <th>罚球</th>
-                <th class="col-action">查看</th>
+                <th class="col-player">{{ t('publicPages.team.player') }}</th>
+                <th>{{ t('publicPages.team.grade') }}</th>
+                <th>{{ t('publicPages.team.points') }}</th>
+                <th>{{ t('publicPages.team.rebounds') }}</th>
+                <th>{{ t('publicPages.team.assists') }}</th>
+                <th>{{ t('publicPages.team.steals') }}</th>
+                <th>{{ t('publicPages.team.blocks') }}</th>
+                <th>{{ t('publicPages.team.fouls') }}</th>
+                <th>{{ t('publicPages.team.turnovers') }}</th>
+                <th>{{ t('publicPages.team.fieldGoals') }}</th>
+                <th>{{ t('publicPages.team.threePoints') }}</th>
+                <th>{{ t('publicPages.team.freeThrows') }}</th>
+                <th class="col-action">{{ t('publicPages.team.view') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -637,12 +639,12 @@ function showSingleTable() {
                 <td class="is-num">{{ row.ft }}</td>
                 <td class="col-action">
                   <button type="button" class="player-action" @click="handlePlayerDetailClick(row.playerId)">
-                    查看球员 →
+                    {{ t('publicPages.team.viewPlayer') }}
                   </button>
                 </td>
               </tr>
               <tr class="team-total-row">
-                <td class="col-player">球队合计</td>
+                <td class="col-player">{{ t('publicPages.team.teamTotal') }}</td>
                 <td class="is-num">{{ formatSingleValue(singleMatchStats.teamTotal.grade) }}</td>
                 <td class="is-num">{{ singleMatchStats.teamTotal.points }}</td>
                 <td class="is-num">{{ singleMatchStats.teamTotal.rebounds }}</td>
@@ -669,7 +671,7 @@ function showSingleTable() {
             <circle cx="8" cy="5.15" r="0.7" fill="currentColor" />
           </svg>
         </span>
-        数据来源：比赛结束后提交的游戏数据截图，经赛事审核后计入。
+        {{ t('publicPages.team.dataSource') }}
       </p>
     </section>
   </div>

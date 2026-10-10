@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import LeagueHeroMeta from './LeagueHeroMeta.vue'
 import { useLeagueHeroMeta } from '../composables/useLeagueHeroMeta'
@@ -7,10 +8,11 @@ import type { usePublicSeasonContext } from '../composables/usePublicSeasonConte
 import { pickCompetitionSeriesCode, resolveCompetitionTheme } from '@/config/competitionTheme'
 
 const route = useRoute()
+const { t } = useI18n()
 const { heroMetaItems } = useLeagueHeroMeta()
 const ctx = inject<ReturnType<typeof usePublicSeasonContext> | null>('publicSeasonContext', null)
 const seriesLabel = computed(
-  () => ctx?.currentTournament.value?.tournamentName || ctx?.divisionDetail.value?.seriesName || '赛事',
+  () => ctx?.currentTournament.value?.tournamentName || ctx?.divisionDetail.value?.seriesName || t('events.title'),
 )
 const seriesCode = computed(() => {
   const querySeries = route.query.series ?? route.query.seriesCode

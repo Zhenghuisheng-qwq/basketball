@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps<{
   canLoadMore: boolean
   remainingGroups: number
@@ -20,10 +24,10 @@ const emit = defineEmits<{
       class="schedule-load-more__btn"
       @click="emit('loadMore')"
     >
-      <span class="schedule-load-more__title">查看更多赛程 ↓</span>
-      <span class="schedule-load-more__meta">还有 {{ remainingGroups }} 个比赛日 · 已显示 {{ visibleCount }} / {{ total }} 场</span>
+      <span class="schedule-load-more__title">{{ t('eventsPage.schedule.loadMore') }}</span>
+      <span class="schedule-load-more__meta">{{ t('eventsPage.count.remainingDays', { groups: remainingGroups, visible: visibleCount, total }) }}</span>
     </button>
-    <p v-else-if="allLoaded" class="schedule-load-more__done">已展示全部 {{ total }} 场比赛</p>
+    <p v-else-if="allLoaded" class="schedule-load-more__done">{{ t('eventsPage.count.allGames', { total }) }}</p>
   </div>
 </template>
 

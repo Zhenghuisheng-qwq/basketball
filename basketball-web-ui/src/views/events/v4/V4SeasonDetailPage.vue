@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getV4PublicMatchList,
@@ -45,6 +46,7 @@ import '../styles/v4-events.scss'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const seasonId = computed(() => String(route.params.seasonId || ''))
 const activeTab = ref<V4SeasonDetailTab>('overview')
@@ -72,13 +74,31 @@ const expandedTeamId = ref('')
 const expandedTeamDetail = ref<V4PublicEventTeamDetail | null>(null)
 const rosterLoading = ref(false)
 
-const tabs: Array<{ key: V4SeasonDetailTab; label: string }> = [
-  { key: 'overview', label: '赛事概况' },
-  { key: 'teams', label: '参赛队伍' },
-  { key: 'schedule', label: '赛程' },
-  { key: 'standing', label: '积分榜' },
-  { key: 'stats', label: '数据榜单' },
-]
+const tabs = computed<Array<{ key: V4SeasonDetailTab; label: string }>>(() => [
+  { key: 'overview', label: t('eventsPage.nav.detailOverview') },
+  { key: 'teams', label: t('eventsPage.nav.entrants') },
+  { key: 'schedule', label: t('events.schedule') },
+  { key: 'standing', label: t('eventsPage.nav.standings') },
+  { key: 'stats', label: t('eventsPage.nav.stats') },
+])
+
+const scheduleFilters = computed(() => [
+  { key: 'all' as const, label: t('events.all') },
+  { key: 'upcoming' as const, label: t('match.notStarted') },
+  { key: 'finished' as const, label: t('match.finished') },
+])
+
+function standingScopeTitle(scope: V4PublicStageStandingScope) {
+  if (scope.groupName) return scope.groupName
+  if (scope.groupId) return t('eventsPage.standings.groupName', { name: scope.groupId })
+  return t('eventsPage.standings.overall')
+}
+
+function playerRole(player: { isCaptain?: boolean | number | null; isStarter?: boolean | number | null }) {
+  if (player.isCaptain) return t('eventsPage.match.captain')
+  if (player.isStarter) return t('eventsPage.match.starter')
+  return t('eventsPage.match.bench')
+}
 
 const currentDivision = computed(() =>
   season.value?.divisions.find((item) => item.divisionId === activeDivisionId.value) ?? null,
@@ -161,7 +181,7 @@ async function loadSeason() {
     await loadTabData()
   } catch (err) {
     season.value = null
-    error.value = err instanceof Error ? err.message : '加载赛事详情失败'
+    error.value = err instanceof Error ? err.message : t('eventsPage.detail.loadFailed')
   } finally {
     loading.value = false
   }
@@ -316,17 +336,17 @@ onMounted(() => {
   <div class="v4-events-page">
     <section class="site-section v4-events-hero">
       <div class="site-shell">
-        <button type="button" class="v4-btn v4-btn--ghost" @click="backToList">← 返回赛事列表</button>
-        <div v-if="loading" class="v4-state">加载中...</div>
+        <button type="button" class="v4-btn v4-btn--ghost" @click="backToList">{{ t('eventsPage.nav.backToList') }}</button>
+        <div v-if="loading" class="v4-state">{{ t('common.loading') }}</div>
         <div v-else-if="error" class="v4-state v4-state--error">{{ error }}</div>
         <template v-else-if="season">
           <p class="v4-events-hero__eyebrow">{{ v4SeriesLabel(season.seriesCode) }} · {{ season.seasonYear }}</p>
           <h1 class="v4-events-hero__title">{{ displayText(season.displayTitle) }}</h1>
-          <p class="v4-events-hero__desc">{{ displayText(season.description, '暂无赛事简介') }}</p>
+          <p class="v4-events-hero__desc">{{ displayText(season.description, t('eventsPage.detail.noIntro')) }}</p>
           <div class="v4-season-card__tags">
             <span class="v4-tag">{{ v4SeasonStatusLabel(season.seasonStatus) }}</span>
-            <span class="v4-tag">队伍 {{ season.eventTeamCount ?? 0 }}</span>
-            <span class="v4-tag">比赛 {{ season.matchCount ?? 0 }}</span>
+            <span class="v4-tag">{{ t('eventsPage.count.teamTag', { count: season.eventTeamCount ?? 0 }) }}</span>
+            <span class="v4-tag">{{ t('eventsPage.count.matchTag', { count: season.matchCount ?? 0 }) }}</span>
           </div>
           <div class="v4-division-switch">
             <button
@@ -360,38 +380,38 @@ onMounted(() => {
       <div class="site-shell">
         <div v-if="activeTab === 'overview'" class="v4-overview-grid">
           <div class="v4-overview-item">
-            <dt>报名方式</dt>
+            <dt>{{ t('eventsPage.detail.registrationMode') }}</dt>
             <dd>{{ v4RegistrationModeLabel(season.registrationMode) }}</dd>
           </div>
           <div class="v4-overview-item">
-            <dt>赛制</dt>
+            <dt>{{ t('eventsPage.detail.format') }}</dt>
             <dd>{{ v4FormatTypeLabel(season.formatType) }}</dd>
           </div>
           <div class="v4-overview-item">
-            <dt>队伍上限</dt>
+            <dt>{{ t('eventsPage.detail.teamCap') }}</dt>
             <dd>{{ currentDivision?.maxTeamCount ?? '--' }}</dd>
           </div>
           <div class="v4-overview-item">
-            <dt>阵容人数</dt>
+            <dt>{{ t('eventsPage.detail.rosterSize') }}</dt>
             <dd>{{ currentDivision?.lineupMinCount ?? '--' }} - {{ currentDivision?.lineupMaxCount ?? '--' }}</dd>
           </div>
           <div class="v4-overview-item">
-            <dt>报名时间</dt>
+            <dt>{{ t('eventsPage.detail.registrationWindow') }}</dt>
             <dd>{{ formatDateTime(season.registrationStartTime).full }} — {{ formatDateTime(season.registrationEndTime).full }}</dd>
           </div>
           <div class="v4-overview-item">
-            <dt>比赛时间</dt>
+            <dt>{{ t('eventsPage.detail.matchWindow') }}</dt>
             <dd>{{ formatDateTime(season.matchStartTime).full }} — {{ formatDateTime(season.matchEndTime).full }}</dd>
           </div>
           <div class="v4-overview-item">
-            <dt>当前赛区</dt>
+            <dt>{{ t('eventsPage.detail.currentDivision') }}</dt>
             <dd>{{ displayText(currentDivision?.divisionName, v4PlatformLabel(currentDivision?.platformCode)) }}</dd>
           </div>
         </div>
 
         <div v-else-if="activeTab === 'teams'">
-          <div v-if="tabLoading" class="v4-state">加载中...</div>
-          <div v-else-if="!teams.length" class="v4-state">暂无参赛队伍</div>
+          <div v-if="tabLoading" class="v4-state">{{ t('common.loading') }}</div>
+          <div v-else-if="!teams.length" class="v4-state">{{ t('eventsPage.teams.noEntrants') }}</div>
           <div v-else class="v4-team-grid">
             <div v-for="team in teams" :key="team.eventTeamId">
               <article class="v4-team-card" @click="toggleTeamRoster(team)">
@@ -404,28 +424,28 @@ onMounted(() => {
                   />
                   <div>
                     <h3 class="v4-team-card__name">{{ displayText(team.teamName) }}</h3>
-                    <p v-if="team.temporaryTeam" class="v4-team-card__meta">临时参赛球队，仅用于本届赛事</p>
+                    <p v-if="team.temporaryTeam" class="v4-team-card__meta">{{ t('eventsPage.teams.temporary') }}</p>
                     <p class="v4-team-card__meta">
-                      队长 {{ displayText(team.captainName) }} · {{ v4PlatformLabel(team.platformCode) }}
+                      {{ t('eventsPage.teams.captain', { name: displayText(team.captainName) }) }} · {{ v4PlatformLabel(team.platformCode) }}
                     </p>
                   </div>
                 </div>
-                <p class="v4-team-card__meta">点击查看阵容</p>
+                <p class="v4-team-card__meta">{{ t('eventsPage.teams.viewRoster') }}</p>
               </article>
               <div
                 v-if="expandedTeamId === team.eventTeamId"
                 class="v4-roster-panel"
               >
-                <div v-if="rosterLoading" class="v4-state">加载阵容...</div>
-                <div v-else-if="!expandedTeamDetail?.players?.length" class="v4-state">暂无阵容数据</div>
+                <div v-if="rosterLoading" class="v4-state">{{ t('eventsPage.teams.loadingRoster') }}</div>
+                <div v-else-if="!expandedTeamDetail?.players?.length" class="v4-state">{{ t('eventsPage.teams.noRoster') }}</div>
                 <div v-else class="v4-table-wrap">
                   <table class="v4-table">
                     <thead>
                       <tr>
-                        <th>球员</th>
-                        <th>位置</th>
-                        <th>号码</th>
-                        <th>角色</th>
+                        <th>{{ t('eventsPage.match.player') }}</th>
+                        <th>{{ t('eventsPage.match.position') }}</th>
+                        <th>{{ t('eventsPage.match.number') }}</th>
+                        <th>{{ t('eventsPage.match.role') }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -441,7 +461,7 @@ onMounted(() => {
                         </td>
                         <td>{{ displayText(player.position) }}</td>
                         <td>{{ displayText(player.jerseyNo) }}</td>
-                        <td>{{ player.isCaptain ? '队长' : player.isStarter ? '首发' : '替补' }}</td>
+                        <td>{{ playerRole(player) }}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -454,21 +474,21 @@ onMounted(() => {
         <div v-else-if="activeTab === 'schedule'">
           <div class="v4-stats-subtabs">
             <button
-              v-for="item in ([['all', '全部'], ['upcoming', '未开始'], ['finished', '已结束']] as const)"
-              :key="item[0]"
+              v-for="item in scheduleFilters"
+              :key="item.key"
               type="button"
               class="v4-detail-tabs__btn"
-              :class="{ 'v4-detail-tabs__btn--active': scheduleFilter === item[0] }"
-              @click="scheduleFilter = item[0]"
+              :class="{ 'v4-detail-tabs__btn--active': scheduleFilter === item.key }"
+              @click="scheduleFilter = item.key"
             >
-              {{ item[1] }}
+              {{ item.label }}
             </button>
           </div>
-          <div v-if="tabLoading" class="v4-state">加载中...</div>
-          <div v-else-if="!matches.length" class="v4-state">暂无已发布赛程</div>
+          <div v-if="tabLoading" class="v4-state">{{ t('common.loading') }}</div>
+          <div v-else-if="!matches.length" class="v4-state">{{ t('eventsPage.schedule.noPublished') }}</div>
           <div v-else>
             <section v-for="[round, roundMatches] in matchesByRound" :key="round" class="v4-schedule-round">
-              <h3 class="v4-schedule-round__title">第 {{ round }} 轮</h3>
+              <h3 class="v4-schedule-round__title">{{ t('events.round.OTHER', { round }) }}</h3>
               <template v-for="item in groupRoundMatches(roundMatches)" :key="'games' in item ? item.key : item.matchId">
                 <div v-if="'games' in item" class="v4-series-card">
                   <div class="v4-series-card__header">
@@ -476,7 +496,7 @@ onMounted(() => {
                     <span>{{ v4BestOfLabel(item.bestOf) }}</span>
                   </div>
                   <div class="v4-series-card__set-score">
-                    局分 {{ formatSeriesSetScore({
+                    {{ t('eventsPage.schedule.setScore', { score: formatSeriesSetScore({
                       homeWinCount: item.seriesHomeWinCount,
                       awayWinCount: item.seriesAwayWinCount,
                       bestOf: item.bestOf,
@@ -484,7 +504,7 @@ onMounted(() => {
                       winnerEventTeamId: item.winnerEventTeamId,
                       homeEventTeamId: item.homeEventTeamId,
                       awayEventTeamId: item.awayEventTeamId,
-                    }) }}
+                    }) }) }}
                     · {{ item.seriesStatusName || v4MatchSeriesStatusLabel(item.games[0]?.seriesStatus) }}
                   </div>
                   <div
@@ -542,15 +562,15 @@ onMounted(() => {
         </div>
 
         <div v-else-if="activeTab === 'standing'">
-          <div v-if="tabLoading" class="v4-state">加载中...</div>
+          <div v-if="tabLoading" class="v4-state">{{ t('common.loading') }}</div>
           <template v-else-if="stageStandingScopes.length">
             <div v-for="scope in stageStandingScopes" :key="scope.groupScopeKey || 'overall'" class="v4-standing-scope">
-              <h4>{{ scope.groupName || (scope.groupId ? `小组 ${scope.groupId}` : '总积分榜') }}</h4>
+              <h4>{{ standingScopeTitle(scope) }}</h4>
               <div class="v4-table-wrap">
                 <table class="v4-table">
                   <thead>
                     <tr>
-                      <th>排名</th><th>队伍</th><th>胜</th><th>负</th><th>积分</th><th>胜率</th><th>净胜分</th>
+                      <th>{{ t('eventsPage.standings.rank') }}</th><th>{{ t('eventsPage.standings.squad') }}</th><th>{{ t('eventsPage.standings.win') }}</th><th>{{ t('eventsPage.standings.loss') }}</th><th>{{ t('eventsPage.standings.points') }}</th><th>{{ t('eventsPage.standings.winRate') }}</th><th>{{ t('eventsPage.standings.diff') }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -568,18 +588,18 @@ onMounted(() => {
               </div>
             </div>
           </template>
-          <div v-else-if="!standings.length" class="v4-state">暂无积分榜数据</div>
+          <div v-else-if="!standings.length" class="v4-state">{{ t('eventsPage.standings.empty') }}</div>
           <div v-else class="v4-table-wrap">
             <table class="v4-table">
               <thead>
                 <tr>
-                  <th>排名</th>
-                  <th>队伍</th>
-                  <th>胜</th>
-                  <th>负</th>
-                  <th>积分</th>
-                  <th>胜率</th>
-                  <th>净胜分</th>
+                  <th>{{ t('eventsPage.standings.rank') }}</th>
+                  <th>{{ t('eventsPage.standings.squad') }}</th>
+                  <th>{{ t('eventsPage.standings.win') }}</th>
+                  <th>{{ t('eventsPage.standings.loss') }}</th>
+                  <th>{{ t('eventsPage.standings.points') }}</th>
+                  <th>{{ t('eventsPage.standings.winRate') }}</th>
+                  <th>{{ t('eventsPage.standings.diff') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -605,7 +625,7 @@ onMounted(() => {
               :class="{ 'v4-detail-tabs__btn--active': statsSubTab === 'team' }"
               @click="statsSubTab = 'team'"
             >
-              球队统计
+              {{ t('eventsPage.stats.team') }}
             </button>
             <button
               type="button"
@@ -613,7 +633,7 @@ onMounted(() => {
               :class="{ 'v4-detail-tabs__btn--active': statsSubTab === 'player' }"
               @click="statsSubTab = 'player'"
             >
-              球员统计
+              {{ t('eventsPage.stats.player') }}
             </button>
             <button
               type="button"
@@ -621,7 +641,7 @@ onMounted(() => {
               :class="{ 'v4-detail-tabs__btn--active': statsSubTab === 'rank' }"
               @click="statsSubTab = 'rank'"
             >
-              排行榜
+              {{ t('eventsPage.stats.rank') }}
             </button>
           </div>
           <div v-if="statsSubTab === 'rank'" class="v4-stats-subtabs">
@@ -636,22 +656,22 @@ onMounted(() => {
               {{ v4RankTypeLabel(type) }}
             </button>
           </div>
-          <div v-if="tabLoading" class="v4-state">加载中...</div>
+          <div v-if="tabLoading" class="v4-state">{{ t('common.loading') }}</div>
           <template v-else>
             <div v-if="statsSubTab === 'team'">
-              <div v-if="!teamStats.length" class="v4-state">暂无球队统计数据</div>
+              <div v-if="!teamStats.length" class="v4-state">{{ t('eventsPage.stats.noTeam') }}</div>
               <div v-else class="v4-table-wrap">
                 <table class="v4-table">
                   <thead>
                     <tr>
-                      <th>队伍</th>
-                      <th>场次</th>
-                      <th>胜</th>
-                      <th>负</th>
-                      <th>得分</th>
-                      <th>失分</th>
-                      <th>篮板</th>
-                      <th>助攻</th>
+                      <th>{{ t('eventsPage.standings.squad') }}</th>
+                      <th>{{ t('eventsPage.stats.games') }}</th>
+                      <th>{{ t('eventsPage.standings.win') }}</th>
+                      <th>{{ t('eventsPage.standings.loss') }}</th>
+                      <th>{{ t('eventsPage.stats.pointsFor') }}</th>
+                      <th>{{ t('eventsPage.stats.pointsAgainst') }}</th>
+                      <th>{{ t('eventsPage.match.rebound') }}</th>
+                      <th>{{ t('eventsPage.match.assist') }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -670,17 +690,17 @@ onMounted(() => {
               </div>
             </div>
             <div v-else-if="statsSubTab === 'player'">
-              <div v-if="!playerStats.length" class="v4-state">暂无球员统计数据</div>
+              <div v-if="!playerStats.length" class="v4-state">{{ t('eventsPage.stats.noPlayer') }}</div>
               <div v-else class="v4-table-wrap">
                 <table class="v4-table">
                   <thead>
                     <tr>
-                      <th>球员</th>
-                      <th>球队</th>
-                      <th>场次</th>
-                      <th>得分</th>
-                      <th>篮板</th>
-                      <th>助攻</th>
+                      <th>{{ t('eventsPage.match.player') }}</th>
+                      <th>{{ t('eventsPage.match.team') }}</th>
+                      <th>{{ t('eventsPage.stats.games') }}</th>
+                      <th>{{ t('eventsPage.match.points') }}</th>
+                      <th>{{ t('eventsPage.match.rebound') }}</th>
+                      <th>{{ t('eventsPage.match.assist') }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -697,14 +717,14 @@ onMounted(() => {
               </div>
             </div>
             <div v-else>
-              <div v-if="!ranks.length" class="v4-state">暂无排行榜数据</div>
+              <div v-if="!ranks.length" class="v4-state">{{ t('eventsPage.stats.noRank') }}</div>
               <div v-else class="v4-table-wrap">
                 <table class="v4-table">
                   <thead>
                     <tr>
-                      <th>排名</th>
-                      <th>球员/球队</th>
-                      <th>数值</th>
+                      <th>{{ t('eventsPage.standings.rank') }}</th>
+                      <th>{{ t('eventsPage.stats.playerOrTeam') }}</th>
+                      <th>{{ t('eventsPage.stats.value') }}</th>
                     </tr>
                   </thead>
                   <tbody>

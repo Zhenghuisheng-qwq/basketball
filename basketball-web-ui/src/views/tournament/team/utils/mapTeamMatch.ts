@@ -1,4 +1,5 @@
 import type { V4PublicMatchItem } from '@/api/types/v4Public'
+import { translate } from '@/i18n'
 import { isDisqualificationResult } from '@/utils/eventContext'
 import { v4MatchStatusToNumber } from '@/views/events/utils/v4PublicAdapters'
 import { formatDateTime, mapMatchStatus, toNumber } from '@/utils/publicDisplay'
@@ -36,8 +37,8 @@ export function mapV4MatchToTeamRecord(
     ? `${v4BestOfLabel(bestOf)}${gameNo > 0 ? ` G${gameNo}` : ''}`
     : ''
   const stageHeadline = isPlayoff
-    ? (roundNo > 0 ? `第${roundNo}轮` : '季后赛')
-    : '常规赛'
+    ? (roundNo > 0 ? translate('publicPages.team.roundN', { round: roundNo }) : translate('publicPages.team.playoffs'))
+    : translate('publicPages.team.regular')
   const seriesContext = bestOf > 1
     ? `${v4BestOfLabel(bestOf)}${gameNo > 0 ? ` G${gameNo}` : ''}`
     : ''
@@ -47,8 +48,8 @@ export function mapV4MatchToTeamRecord(
     teamId: String(eventTeamId),
     opponentId,
     opponentName: isHome
-      ? item.awayTeamName || '对手'
-      : item.homeTeamName || '对手',
+      ? item.awayTeamName || translate('publicPages.team.opponent')
+      : item.homeTeamName || translate('publicPages.team.opponent'),
     opponentLogoUrl: isHome
       ? item.awayTeamLogoUrl || ''
       : item.homeTeamLogoUrl || '',
@@ -59,14 +60,14 @@ export function mapV4MatchToTeamRecord(
     result,
     status: finished ? 'finished' : 'scheduled',
     stage: isPlayoff ? 'playoffs' : 'regular',
-    competition: [seriesContext, seriesStatusLabel || `第${item.roundNo ?? '--'}轮`].filter(Boolean).join(' · '),
+    competition: [seriesContext, seriesStatusLabel || translate('publicPages.team.roundN', { round: item.roundNo ?? '--' })].filter(Boolean).join(' · '),
     stageHeadline,
     stageMeta: seriesLine || undefined,
     playoffGame: seriesLine || undefined,
     resultType: item.resultType || undefined,
     resultReason: item.resultReason || undefined,
     resultLabel: dq
-      ? (sideLabel || (result === 'win' ? '取消资格判胜' : '取消资格判负'))
+      ? (sideLabel || (result === 'win' ? translate('publicPages.team.dqWin') : translate('publicPages.team.dqLoss')))
       : sideLabel || undefined,
     originalTeamScore: originalTeamScore ?? undefined,
     originalOpponentScore: originalOpponentScore ?? undefined,

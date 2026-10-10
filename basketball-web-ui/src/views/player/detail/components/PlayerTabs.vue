@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { PlayerDetailTab } from '@/utils/playerNavigate'
 
 defineProps<{
@@ -9,15 +11,17 @@ const emit = defineEmits<{
   'update:modelValue': [value: PlayerDetailTab]
 }>()
 
-const tabs: Array<{ value: PlayerDetailTab; label: string }> = [
-  { value: 'overview', label: '总览' },
-  { value: 'matches', label: '比赛' },
-  { value: 'data', label: '数据' },
-  { value: 'career', label: '生涯' },
-]
+const { t } = useI18n()
+
+const tabs = computed<Array<{ value: PlayerDetailTab; label: string }>>(() => [
+  { value: 'overview', label: t('publicPages.player.tabOverview') },
+  { value: 'matches', label: t('publicPages.player.tabMatches') },
+  { value: 'data', label: t('publicPages.player.tabData') },
+  { value: 'career', label: t('publicPages.player.tabCareer') },
+])
 </script>
 <template>
-  <div class="player-detail-tabs" role="tablist" aria-label="球员详情页签">
+  <div class="player-detail-tabs" role="tablist" :aria-label="t('publicPages.player.tabsAria')">
     <button
       v-for="tab in tabs"
       :key="tab.value"

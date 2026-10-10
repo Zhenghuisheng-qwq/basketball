@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { DataType } from '../types'
 
 defineProps<{
@@ -9,13 +11,15 @@ const emit = defineEmits<{
   'update:modelValue': [value: DataType]
 }>()
 
-const tabs: Array<{ value: DataType; label: string }> = [
-  { value: 'team', label: '球队数据' },
-  { value: 'player', label: '个人数据' },
-]
+const { t } = useI18n()
+
+const tabs = computed<Array<{ value: DataType; label: string }>>(() => [
+  { value: 'team', label: t('publicPages.data.teamData') },
+  { value: 'player', label: t('publicPages.data.playerData') },
+])
 </script>
 <template>
-  <div class="data-type-tabs" role="tablist" aria-label="数据类型">
+  <div class="data-type-tabs" role="tablist" :aria-label="t('publicPages.data.dataType')">
     <button
       v-for="tab in tabs"
       :key="tab.value"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import cupIcon from '@/assets/icon/home/cup.png'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import type { PlayerDetailData, PlayerHonor, PlayerTeamHistory } from '../types'
@@ -9,6 +10,7 @@ defineProps<{
 }>()
 
 const router = useRouter()
+const { t } = useI18n()
 
 function honorMeta(honor: PlayerHonor): string {
   return honor.honorValue || honor.honorDate || ''
@@ -48,26 +50,26 @@ function openHonor(tournamentId?: string) {
   <div class="player-detail-career">
     <header class="player-detail-career__intro">
       <h2 class="player-detail-career__title">
-        球员生涯
+        {{ t('publicPages.player.careerTitle') }}
         <span>PLAYER CAREER</span>
       </h2>
       <p class="player-detail-career__desc">
-        记录球员在 CNPA 公开赛事中的荣誉、效力队伍与选手名称变更
+        {{ t('publicPages.player.careerDesc') }}
       </p>
     </header>
 
     <section class="player-detail-career__block" aria-labelledby="player-career-honors">
       <div class="player-detail-career__block-head">
         <div class="player-detail-career__block-title">
-          <h3 id="player-career-honors">球员荣誉</h3>
+          <h3 id="player-career-honors">{{ t('publicPages.player.honors') }}</h3>
           <span>PLAYER HONORS</span>
         </div>
         <p class="player-detail-career__block-meta">
-          个人及团队荣誉 {{ detail.honors.length }}
+          {{ t('publicPages.player.honorCount', { count: detail.honors.length }) }}
         </p>
       </div>
 
-      <div v-if="detail.honors.length === 0" class="player-detail-empty-inline">暂无荣誉记录</div>
+      <div v-if="detail.honors.length === 0" class="player-detail-empty-inline">{{ t('publicPages.player.noHonors') }}</div>
 
       <div v-else class="player-detail-career__honor-list">
         <article
@@ -95,12 +97,12 @@ function openHonor(tournamentId?: string) {
     <section class="player-detail-career__block" aria-labelledby="player-career-teams">
       <div class="player-detail-career__block-head">
         <div class="player-detail-career__block-title">
-          <h3 id="player-career-teams">效力队伍</h3>
+          <h3 id="player-career-teams">{{ t('publicPages.player.teamsPlayed') }}</h3>
           <span>TEAM HISTORY</span>
         </div>
       </div>
 
-      <div v-if="detail.teamHistory.length === 0" class="player-detail-empty-inline">暂无效力记录</div>
+      <div v-if="detail.teamHistory.length === 0" class="player-detail-empty-inline">{{ t('publicPages.player.noTeamHistory') }}</div>
 
       <ol v-else class="career-timeline">
         <li
@@ -112,7 +114,7 @@ function openHonor(tournamentId?: string) {
             <span class="career-timeline__dot" />
           </div>
           <article class="career-timeline__card" :class="{ 'is-current': item.current }">
-            <span v-if="item.current" class="career-timeline__tag">当前</span>
+            <span v-if="item.current" class="career-timeline__tag">{{ t('publicPages.player.current') }}</span>
             <span class="career-timeline__date">{{ item.period }}</span>
             <router-link
               v-if="item.teamId"
@@ -151,7 +153,7 @@ function openHonor(tournamentId?: string) {
     <section class="player-detail-career__block" aria-labelledby="player-career-names">
       <div class="player-detail-career__block-head">
         <div class="player-detail-career__block-title">
-          <h3 id="player-career-names">选手名称</h3>
+          <h3 id="player-career-names">{{ t('publicPages.player.playerNames') }}</h3>
           <span>PLAYER ID HISTORY</span>
         </div>
       </div>
@@ -166,7 +168,7 @@ function openHonor(tournamentId?: string) {
             <span class="career-timeline__dot" />
           </div>
           <article class="career-timeline__card" :class="{ 'is-current': item.current }">
-            <span v-if="item.current" class="career-timeline__tag">当前使用</span>
+            <span v-if="item.current" class="career-timeline__tag">{{ t('publicPages.player.nameInUse') }}</span>
             <span class="career-timeline__date">{{ item.period }}</span>
             <strong class="career-timeline__name">{{ item.playerName }}</strong>
             <span class="career-timeline__desc">{{ item.description }}</span>
@@ -175,7 +177,7 @@ function openHonor(tournamentId?: string) {
       </ol>
 
       <p class="player-detail-career__note">
-        仅展示经赛事审核并实际使用过的球员生涯记录
+        {{ t('publicPages.player.careerNote') }}
       </p>
     </section>
   </div>

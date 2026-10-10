@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getV4PublicStanding, getV4PublicTeamList } from '@/api/v4Public'
 import type { Team } from '../types/events'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
@@ -9,6 +10,7 @@ import TeamLogo from './TeamLogo.vue'
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
 const ctx = inject<SeasonContext>('publicSeasonContext')!
+const { t } = useI18n()
 
 type LeagueTeam = Team & { sourceTeamId?: string }
 
@@ -64,7 +66,7 @@ async function loadTeams(divisionId: string) {
     if (current !== reqId) return
     teams.value = []
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载战队失败'
+    errorMessage.value = err instanceof Error ? err.message : ''
   }
 }
 
@@ -99,13 +101,13 @@ function goPage(index: number) {
       <div class="league-teams__inner">
       <div class="league-teams__header">
         <div class="section-head-group">
-          <h2 class="cnpa-paper-section__title">参赛球队</h2>
+          <h2 class="cnpa-paper-section__title">{{ t('eventsPage.teams.title') }}</h2>
           <span class="cnpa-paper-section__subtitle">{{ ctx.currentTournament?.value?.tournamentName || ctx.divisionDetail?.value?.seriesName || 'Teams' }}</span>
         </div>
       </div>
 
       <div class="carousel">
-        <button type="button" class="carousel-arrow" aria-label="上一页" @click="goPrev">‹</button>
+        <button type="button" class="carousel-arrow" :aria-label="t('eventsPage.aria.prevPage')" @click="goPrev">‹</button>
 
         <div class="team-grid">
           <router-link
@@ -122,12 +124,12 @@ function goPage(index: number) {
             </span>
             <h3>
               {{ team.name }}
-              <em v-if="team.disqualified" class="dq-tag">赛事资格已取消</em>
+              <em v-if="team.disqualified" class="dq-tag">{{ t('eventsPage.teams.disqualified') }}</em>
             </h3>
           </router-link>
         </div>
 
-        <button type="button" class="carousel-arrow" aria-label="下一页" @click="goNext">›</button>
+        <button type="button" class="carousel-arrow" :aria-label="t('eventsPage.aria.nextPage')" @click="goNext">›</button>
       </div>
 
       <div class="carousel-dots">
@@ -137,7 +139,7 @@ function goPage(index: number) {
           type="button"
           class="dot"
           :class="{ active: currentPage === index - 1 }"
-          :aria-label="`第 ${index} 页`"
+          :aria-label="t('eventsPage.count.page', { page: index })"
           @click="goPage(index - 1)"
         />
       </div>

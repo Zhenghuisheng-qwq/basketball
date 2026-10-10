@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   text?: string | null
 }>()
+
+const { t } = useI18n()
 
 const paragraphs = computed(() => {
   const raw = props.text ?? ''
@@ -18,7 +21,7 @@ const paragraphs = computed(() => {
 
 <template>
   <div class="announcement-content-renderer">
-    <p v-if="paragraphs.length === 0" class="announcement-content-renderer__empty">暂无正文内容</p>
+    <p v-if="paragraphs.length === 0" class="announcement-content-renderer__empty">{{ t('publicPages.announcement.noBody') }}</p>
     <p
       v-for="(paragraph, index) in paragraphs"
       :key="index"

@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import ssggTopBackground from '@/assets/icon/ssgg/ssgg_top_background.png'
+
+const { t } = useI18n()
 
 withDefaults(
   defineProps<{
@@ -14,14 +17,14 @@ withDefaults(
 <template>
   <section
     class="announcement-hero-section"
-    :aria-label="variant === 'detail' ? 'CNPA 公告详情' : 'CNPA 公告中心'"
+    :aria-label="variant === 'detail' ? t('publicPages.announcement.detailAria') : t('publicPages.announcement.centerAria')"
   >
     <div class="site-shell">
       <div class="announcement-hero__frame cnpa-public-hero-frame">
         <img
           class="announcement-hero__image"
           :src="ssggTopBackground"
-          alt="CNPA 公告中心 ANNOUNCEMENTS"
+          :alt="t('publicPages.announcement.centerAria')"
           draggable="false"
         />
       </div>

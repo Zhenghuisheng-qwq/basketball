@@ -5,6 +5,7 @@ import type {
   PublicPlayerSeasonStatVo,
 } from '@/api/types/public'
 import type { V4PublicMatchPlayerStatItem } from '@/api/types/v4Public'
+import { translate } from '@/i18n'
 import { displayText, formatDateTime, toNumber } from '@/utils/publicDisplay'
 import { v4PlatformLabel } from '@/utils/v4Display'
 import type {
@@ -23,7 +24,7 @@ export function mapPublicPlayerProfile(
   detail: PublicPlayerDetailVo,
   options?: { divisionId?: string | null },
 ): PlayerProfile {
-  const displayName = displayText(detail.displayName, '未知球员')
+  const displayName = displayText(detail.displayName, translate('publicPages.player.unknownPlayer'))
   const currentTeams = (detail.currentTeams || []).map((item) => {
     const teamName = displayText(item.teamName, '--')
     const eventContext = [item.seasonName, item.divisionName].filter(Boolean).join(' · ')
@@ -32,7 +33,7 @@ export function mapPublicPlayerProfile(
       teamName,
       shortName: displayText(item.shortName, teamName).slice(0, 8),
       logoUrl: item.logoUrl?.trim() || '',
-      eventContext: eventContext || '当前赛事球队',
+      eventContext: eventContext || translate('publicPages.player.currentEventTeam'),
       divisionId: item.divisionId ? String(item.divisionId) : '',
       seriesName: item.seriesName || '',
       seriesCode: item.seriesCode || '',
@@ -69,7 +70,7 @@ export function mapPublicPlayerProfile(
     logoColor: '#c9a360',
     position: displayText(detail.positionCode, '--'),
     platform: v4PlatformLabel(primary?.platformCode) || '--',
-    currentStage: '常规赛',
+    currentStage: translate('publicPages.player.regular'),
     seriesName: primary?.seriesName || '',
     seriesCode: primary?.seriesCode || '',
     seasonName: primary?.seasonName || '',
@@ -84,7 +85,7 @@ export function mapPublicPlayerProfile(
     playerPenaltyTags: (detail.activeDisciplineSummary || [])
       .filter((item) => inPlayerEventScope(item, primary) && item.targetType === 'PLAYER')
       .map((item) => ({
-        tagLabel: item.tagLabel || item.penaltyLabel || '处罚中',
+        tagLabel: item.tagLabel || item.penaltyLabel || translate('publicPages.player.penalized'),
         penaltyLabel: item.penaltyLabel,
         statusLabel: item.statusLabel,
         effectiveStartTime: item.effectiveStartTime,
@@ -120,7 +121,7 @@ export function mapPublicPlayerMatch(
 ): PlayerMatchRecord {
   const isHome = String(item.homeTeamId || '') === String(playerTeamId)
   const opponentId = String((isHome ? item.awayTeamId : item.homeTeamId) || '')
-  const opponentName = displayText(isHome ? item.awayTeamName : item.homeTeamName, '对手')
+  const opponentName = displayText(isHome ? item.awayTeamName : item.homeTeamName, translate('publicPages.player.opponent'))
   const opponentLogoUrl = (isHome ? item.awayTeamLogoUrl : item.homeTeamLogoUrl)?.trim() || ''
   const teamScore = isHome ? item.homeScore : item.awayScore
   const opponentScore = isHome ? item.awayScore : item.homeScore
@@ -142,7 +143,7 @@ export function mapPublicPlayerMatch(
     id: String(item.matchId),
     matchId: String(item.matchId),
     date: dt.date === '--' ? '' : dt.date,
-    tournamentName: displayText(item.groupName, '公开赛事'),
+    tournamentName: displayText(item.groupName, translate('publicPages.player.publicEvent')),
     stageName: displayText(item.stageName, '--'),
     teamName: playerTeamName,
     teamId: playerTeamId,
@@ -152,9 +153,9 @@ export function mapPublicPlayerMatch(
     opponentLogoUrl,
     result,
     resultLabel: dq
-      ? (result === 'WIN' ? '对手取消资格判负' : '球队取消资格判负')
+      ? (result === 'WIN' ? translate('publicPages.player.opponentDqLoss') : translate('publicPages.player.teamDqLoss'))
       : sideLabel || (String(item.resultType || '') === 'FORFEIT'
-        ? (result === 'WIN' ? '判胜' : '判负')
+        ? (result === 'WIN' ? translate('publicPages.player.judgedWin') : translate('publicPages.player.judgedLoss'))
         : undefined),
     originalTeamScore: (isHome ? item.originalHomeScore : item.originalAwayScore) ?? undefined,
     originalOpponentScore: (isHome ? item.originalAwayScore : item.originalHomeScore) ?? undefined,
@@ -185,7 +186,7 @@ function nullablePct(value: number | string | null | undefined): number | null {
 }
 
 function buildSeasonLabel(row: PublicPlayerSeasonStatVo): string {
-  const season = displayText(row.seasonName || row.seriesName, '公开赛季')
+  const season = displayText(row.seasonName || row.seriesName, translate('publicPages.player.publicSeason'))
   const division = displayText(row.divisionName, '')
   if (division && division !== '--' && !season.includes(division)) {
     return `${season} · ${division}`
@@ -238,7 +239,7 @@ export function mapSeasonStageOptions(rows: PublicPlayerSeasonStatVo[]): PlayerS
       id: String(row.divisionId || row.seasonId || row.stageId || index),
       label,
       tournamentName: label,
-      stageLabel: displayText(row.divisionName, '常规赛'),
+      stageLabel: displayText(row.divisionName, translate('publicPages.player.regular')),
       games: toNumber(row.games, 0),
     }
   })
@@ -251,9 +252,9 @@ function seasonPeriodLabel(row: Pick<PublicPlayerSeasonStatVo, 'seasonName' | 's
 function formatCareerPeriod(labels: string[], current: boolean): string {
   const start = labels[0] || ''
   const end = labels[labels.length - 1] || ''
-  if (!start && current) return '至今'
+  if (!start && current) return translate('publicPages.player.present')
   if (!start) return '--'
-  if (current) return `${start} — 至今`
+  if (current) return `${start} — ${translate('publicPages.player.present')}`
   if (end && end !== start) return `${start} — ${end}`
   return start
 }
@@ -326,13 +327,13 @@ export function buildPlayerTeamHistory(
   }
 
   return list.map((item, index) => {
-    let description = '参赛队伍'
-    if (item.current) description = '当前效力队伍'
-    else if (index === 0) description = '首支参赛队伍'
+    let description = translate('publicPages.player.participatingTeam')
+    if (item.current) description = translate('publicPages.player.currentRosterTeam')
+    else if (index === 0) description = translate('publicPages.player.firstTeam')
     return {
       id: index + 1,
       startDate: item.labels[0] || '--',
-      endDate: item.current ? '至今' : (item.labels[item.labels.length - 1] || '--'),
+      endDate: item.current ? translate('publicPages.player.present') : (item.labels[item.labels.length - 1] || '--'),
       period: formatCareerPeriod(item.labels, item.current),
       teamId: item.teamId,
       teamName: item.teamName,
@@ -369,7 +370,7 @@ export function buildPlayerNameHistory(
     })
   }
 
-  const currentName = displayText(profile.displayName, '未知球员')
+  const currentName = displayText(profile.displayName, translate('publicPages.player.unknownPlayer'))
   if (!entries.some((item) => item.playerName === currentName)) {
     entries.push({
       playerName: currentName,
@@ -393,13 +394,13 @@ export function buildPlayerNameHistory(
   }
 
   return entries.map((item, index) => {
-    let description = '曾用名称'
-    if (item.current) description = '当前名称'
-    else if (index === 0) description = '首次注册名称'
+    let description = translate('publicPages.player.formerName')
+    if (item.current) description = translate('publicPages.player.currentName')
+    else if (index === 0) description = translate('publicPages.player.firstRegisteredName')
     return {
       id: index + 1,
       startDate: item.labels[0] || '--',
-      endDate: item.current ? '至今' : (item.labels[item.labels.length - 1] || '--'),
+      endDate: item.current ? translate('publicPages.player.present') : (item.labels[item.labels.length - 1] || '--'),
       period: formatCareerPeriod(item.labels, item.current),
       playerName: item.playerName,
       description,
@@ -413,8 +414,8 @@ export function mapPublicPlayerHonors(rows: PublicHonorItemResp[]): PlayerHonor[
     const honorDate = formatDateTime(item.awardDate).date
     return {
       id: String(item.honorId),
-      seasonName: displayText(item.tournamentName || item.seasonName, '公开赛季'),
-      honorName: displayText(item.honorTitle || item.honorName, '球员荣誉'),
+      seasonName: displayText(item.tournamentName || item.seasonName, translate('publicPages.player.publicSeason')),
+      honorName: displayText(item.honorTitle || item.honorName, translate('publicPages.player.playerHonor')),
       honorDate: honorDate === '--' ? '' : honorDate,
       honorValue: displayText(item.honorValue || item.honorSubtitle, ''),
       honorCode: item.honorCode || '',

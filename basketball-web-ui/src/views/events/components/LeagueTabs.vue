@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { EventTab } from '../types/events'
 
 defineProps<{
@@ -9,14 +11,16 @@ const emit = defineEmits<{
   change: [tab: EventTab]
 }>()
 
-const tabs: Array<{ key: EventTab; label: string }> = [
-  { key: 'overview', label: '总览' },
-  { key: 'schedule', label: '赛程' },
-  { key: 'stage', label: '对阵/赛段' },
-]
+const { t } = useI18n()
+
+const tabs = computed<Array<{ key: EventTab; label: string }>>(() => [
+  { key: 'overview', label: t('eventsPage.nav.overview') },
+  { key: 'schedule', label: t('events.schedule') },
+  { key: 'stage', label: t('eventsPage.nav.stage') },
+])
 </script>
 <template>
-  <nav class="league-tabs" aria-label="赛事二级导航">
+  <nav class="league-tabs" :aria-label="t('eventsPage.aria.leagueNav')">
     <button
       v-for="tab in tabs"
       :key="tab.key"

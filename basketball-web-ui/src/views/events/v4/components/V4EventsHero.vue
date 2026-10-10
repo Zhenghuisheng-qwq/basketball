@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import LeagueHero from '@/views/events/components/LeagueHero.vue'
 import { computed, provide } from 'vue'
-import { V4_SERIES_FILTERS } from '@/utils/v4Display'
+import { useI18n } from 'vue-i18n'
+import { v4SeriesFilters } from '@/utils/v4Display'
 import type { LeagueHeroMetaItem } from '@/views/events/types/events'
 
 const props = defineProps<{
@@ -14,11 +15,13 @@ const emit = defineEmits<{
   'select-series': [code: string]
 }>()
 
+const { t } = useI18n()
+
 const heroMetaItems = computed<LeagueHeroMetaItem[]>(() => [
-  { key: 'season', icon: 'calendar', title: '开放赛季', value: String(props.seasonCount) },
-  { key: 'teams', icon: 'trophy', title: '报名中赛区', value: String(props.registrationOpenDivisionCount) },
-  { key: 'stage', icon: 'stage', title: '支持平台', value: 'PC / PS-Xbox' },
-  { key: 'platform', icon: 'gamepad', title: '比赛模式', value: '5V5 / 3V3' },
+  { key: 'season', icon: 'calendar', title: t('eventsPage.list.openSeasons'), value: String(props.seasonCount) },
+  { key: 'teams', icon: 'trophy', title: t('eventsPage.list.openDivisions'), value: String(props.registrationOpenDivisionCount) },
+  { key: 'stage', icon: 'stage', title: t('eventsPage.list.platforms'), value: 'PC / PS-Xbox' },
+  { key: 'platform', icon: 'gamepad', title: t('eventsPage.list.modes'), value: '5V5 / 3V3' },
 ])
 
 // 复用 master LeagueHeroMeta inject 契约
@@ -34,9 +37,9 @@ provide('publicSeasonContext', {
   <div class="v4-events-hero">
     <div class="site-shell">
       <LeagueHero />
-      <nav class="v4-events-hero__tabs" role="tablist" aria-label="赛事系列筛选">
+      <nav class="v4-events-hero__tabs" role="tablist" :aria-label="t('eventsPage.aria.seriesFilter')">
         <button
-          v-for="item in V4_SERIES_FILTERS"
+          v-for="item in v4SeriesFilters()"
           :key="item.code || 'all'"
           type="button"
           role="tab"

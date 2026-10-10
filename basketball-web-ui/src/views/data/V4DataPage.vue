@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import PublicPageLayout from '@/components/layout/PublicPageLayout.vue'
 import PublicEmptyState from '@/components/common/PublicEmptyState.vue'
@@ -29,6 +30,7 @@ type DataPanel = (typeof DATA_TAB_VALUES)[number]
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const seasons = ref<V4PublicSeasonItem[]>([])
 const selectedSeasonId = ref('')
@@ -50,26 +52,27 @@ const currentSeason = computed(() =>
 
 const divisions = computed<V4PublicDivisionBrief[]>(() => currentSeason.value?.divisions ?? [])
 
-const mainTabs = [
-  ['standing', '积分榜'],
-  ['team', '球队统计'],
-  ['player', '球员统计'],
-  ['rank', '排行榜'],
-] as const
+const mainTabs = computed(() => [
+  ['standing', t('publicPages.data.standing')],
+  ['team', t('publicPages.data.teamStats')],
+  ['player', t('publicPages.data.playerStats')],
+  ['rank', t('publicPages.data.rank')],
+] as const)
 
 const rankTabs = ['PLAYER_SCORE', 'PLAYER_ASSIST', 'PLAYER_REBOUND'] as const
 
 const emptyState = computed(() => {
+  const description = t('publicPages.data.emptyAfterReview')
   if (activePanel.value === 'standing') {
-    return { title: '暂无积分榜数据', description: '比赛数据审核通过后自动生成' }
+    return { title: t('publicPages.data.emptyStanding'), description }
   }
   if (activePanel.value === 'team') {
-    return { title: '暂无球队统计数据', description: '比赛数据审核通过后自动生成' }
+    return { title: t('publicPages.data.emptyTeamStats'), description }
   }
   if (activePanel.value === 'player') {
-    return { title: '暂无球员统计数据', description: '比赛数据审核通过后自动生成' }
+    return { title: t('publicPages.data.emptyPlayerStats'), description }
   }
-  return { title: '暂无排行榜数据', description: '比赛数据审核通过后自动生成' }
+  return { title: t('publicPages.data.emptyRank'), description }
 })
 
 const hasPanelData = computed(() => {
@@ -125,7 +128,7 @@ async function loadSeasons() {
     }
   } catch (err) {
     seasons.value = []
-    error.value = err instanceof Error ? err.message : '加载赛季失败'
+    error.value = err instanceof Error ? err.message : t('publicPages.data.loadSeasonsFailed')
   } finally {
     loading.value = false
   }
@@ -197,7 +200,7 @@ onMounted(async () => {
     </template>
 
     <template #before>
-      <nav class="v4-data-type-tabs" role="tablist" aria-label="数据分类">
+      <nav class="v4-data-type-tabs" role="tablist" :aria-label="t('publicPages.data.dataCategory')">
         <button
           v-for="item in mainTabs"
           :key="item[0]"
@@ -214,7 +217,7 @@ onMounted(async () => {
     </template>
 
     <div class="v4-data-page__shell">
-      <div v-if="activePanel === 'rank'" class="v4-data-subtabs" aria-label="排行榜类型">
+      <div v-if="activePanel === 'rank'" class="v4-data-subtabs" :aria-label="t('publicPages.data.rankType')">
         <button
           v-for="type in rankTabs"
           :key="type"
@@ -228,7 +231,7 @@ onMounted(async () => {
       </div>
 
       <div class="v4-data-panel">
-        <div v-if="panelLoading" class="v4-data-panel__loading">加载中...</div>
+        <div v-if="panelLoading" class="v4-data-panel__loading">{{ t('publicPages.data.loading') }}</div>
         <template v-else-if="!hasPanelData">
           <PublicEmptyState
             :title="emptyState.title"
@@ -240,7 +243,7 @@ onMounted(async () => {
             <table class="v4-data-table">
               <thead>
                 <tr>
-                  <th>排名</th><th>队伍</th><th>胜</th><th>负</th><th>净胜分</th><th>积分</th>
+                  <th>{{ t('publicPages.data.columns.rank') }}</th><th>{{ t('publicPages.data.columns.squad') }}</th><th>{{ t('publicPages.data.columns.wins') }}</th><th>{{ t('publicPages.data.columns.losses') }}</th><th>{{ t('publicPages.data.columns.pointDiff') }}</th><th>{{ t('publicPages.data.columns.standingPoints') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -260,7 +263,7 @@ onMounted(async () => {
             <table class="v4-data-table">
               <thead>
                 <tr>
-                  <th>队伍</th><th>场次</th><th>场均得分</th><th>篮板</th><th>助攻</th>
+                  <th>{{ t('publicPages.data.columns.squad') }}</th><th>{{ t('publicPages.data.columns.games') }}</th><th>{{ t('publicPages.data.columns.avgPoints') }}</th><th>{{ t('publicPages.data.columns.rebounds') }}</th><th>{{ t('publicPages.data.columns.assists') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -279,7 +282,7 @@ onMounted(async () => {
             <table class="v4-data-table">
               <thead>
                 <tr>
-                  <th>球员</th><th>球队</th><th>场均得分</th><th>场均篮板</th><th>场均助攻</th>
+                  <th>{{ t('publicPages.data.columns.player') }}</th><th>{{ t('publicPages.data.columns.team') }}</th><th>{{ t('publicPages.data.columns.avgPoints') }}</th><th>{{ t('publicPages.data.columns.avgRebounds') }}</th><th>{{ t('publicPages.data.columns.avgAssists') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -297,7 +300,7 @@ onMounted(async () => {
           <div v-else class="v4-data-table-wrap">
             <table class="v4-data-table">
               <thead>
-                <tr><th>排名</th><th>名称</th><th>数值</th></tr>
+                <tr><th>{{ t('publicPages.data.columns.rank') }}</th><th>{{ t('publicPages.data.columns.name') }}</th><th>{{ t('publicPages.data.columns.value') }}</th></tr>
               </thead>
               <tbody>
                 <tr v-for="row in ranks" :key="`${row.rankNo}-${row.eventPlayerId || row.eventTeamId}`">

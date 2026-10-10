@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getV4PublicStageList, getV4PublicStageSeries } from '@/api/v4Public'
 import type { V4PublicMatchSeriesDetail, V4PublicStageItem } from '@/api/types/v4Public'
 import PaperSection from '@/components/common/PaperSection.vue'
@@ -30,6 +31,7 @@ const props = withDefaults(
 )
 
 const ctx = inject<SeasonContext>('publicSeasonContext')!
+const { t } = useI18n()
 
 const apiStages = ref<V4PublicStageItem[]>([])
 const seriesByStage = ref<Record<string, V4PublicMatchSeriesDetail[]>>({})
@@ -48,13 +50,13 @@ function mapApiStage(stage: V4PublicStageItem, index: number): CompetitionStage 
   const series = seriesByStage.value[String(stage.stageId)] || []
   const statusLabel = v4StageExecutionStatusLabel(stage.executionStatus, stage.executionStatusName)
   const fields = [
-    { label: '赛制', value: displayText(stage.competitionFormatName || v4FormatTypeLabel(stage.competitionFormat)) },
-    { label: '阶段状态', value: statusLabel },
+    { label: t('eventsPage.stage.format'), value: displayText(stage.competitionFormatName || v4FormatTypeLabel(stage.competitionFormat)) },
+    { label: t('eventsPage.stage.status'), value: statusLabel },
   ]
   const playoffTeams = countSeriesParticipants(series)
   const teamCount = playoffTeams || division?.eventTeamCount
   if (teamCount != null && teamCount > 0) {
-    fields.push({ label: '参赛队伍', value: `${teamCount}支` })
+    fields.push({ label: t('eventsPage.stage.entrants'), value: t('eventsPage.count.teamsShort', { count: teamCount }) })
   }
   const roundLines = summarizeRoundBestOf(series)
   if (roundLines.length) {
@@ -62,15 +64,15 @@ function mapApiStage(stage: V4PublicStageItem, index: number): CompetitionStage 
       fields.push({ label: line.label, value: line.bestOfLabel })
     }
   } else if (!isEliminationStage(stage) && stage.bestOf && stage.bestOf > 0) {
-    fields.push({ label: '比赛规则', value: v4BestOfLabel(stage.bestOf) })
+    fields.push({ label: t('eventsPage.stage.rule'), value: v4BestOfLabel(stage.bestOf) })
   }
   if (stage.advancementCount && stage.advancementCount > 0) {
-    fields.push({ label: '晋级名额', value: `${stage.advancementCount}支` })
+    fields.push({ label: t('eventsPage.stage.advanceSlots'), value: t('eventsPage.count.teamsShort', { count: stage.advancementCount }) })
   }
   return {
     key: String(stage.stageId || `stage-${index + 1}`),
     index: String((stage.stageOrder ?? index + 1)).padStart(2, '0'),
-    name: displayText(stage.stageName || stage.stageTypeName, '阶段'),
+    name: displayText(stage.stageName || stage.stageTypeName, t('eventsPage.stage.fallback')),
     period: statusLabel,
     statusCode: String(stage.executionStatus || '').toUpperCase(),
     fields,
@@ -123,7 +125,7 @@ watch(
     <div class="competition-format__inner">
       <div class="competition-format__header">
         <div class="section-head-group">
-          <h2 class="cnpa-paper-section__title">赛事详情</h2>
+          <h2 class="cnpa-paper-section__title">{{ t('eventsPage.stage.details') }}</h2>
           <span class="cnpa-paper-section__subtitle">Competition Format</span>
         </div>
       </div>
@@ -176,7 +178,7 @@ watch(
       <div class="competition-format__inner">
         <div class="competition-format__header">
           <div class="section-head-group">
-            <h2 class="cnpa-paper-section__title">赛事详情</h2>
+            <h2 class="cnpa-paper-section__title">{{ t('eventsPage.stage.details') }}</h2>
             <span class="cnpa-paper-section__subtitle">Competition Format</span>
           </div>
         </div>

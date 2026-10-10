@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getV4PublicStageBracket, getV4PublicStageSeries } from '@/api/v4Public'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
 import {
@@ -21,12 +22,16 @@ const props = withDefaults(
     hideHeading?: boolean
   }>(),
   {
-    title: '淘汰赛对阵图',
+    title: '',
     titleEn: 'ELIMINATION BRACKET',
-    emptyText: '淘汰赛对阵暂未生成',
+    emptyText: '',
     hideHeading: false,
   },
 )
+
+const { t } = useI18n()
+const resolvedTitle = computed(() => props.title || t('eventsPage.stage.eliminationTitle'))
+const resolvedEmpty = computed(() => props.emptyText || t('eventsPage.stage.eliminationEmpty'))
 
 const ctx = inject<SeasonContext>('publicSeasonContext')!
 
@@ -60,7 +65,7 @@ async function load(stageId?: string) {
     if (current !== reqId) return
     rounds.value = []
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载对阵图失败'
+    errorMessage.value = err instanceof Error ? err.message : ''
   }
 }
 
@@ -138,15 +143,15 @@ function railUnitAdvanced(
       <p v-if="leagueName" class="playoff-bracket__league">{{ leagueName }}</p>
       <h3>
         <i aria-hidden="true" />
-        {{ title }}
+        {{ resolvedTitle }}
         <i aria-hidden="true" />
       </h3>
       <em v-if="titleEn" class="playoff-bracket__en">{{ titleEn }}</em>
     </header>
 
-    <p v-if="state === 'loading'" class="playoff-bracket__state">加载对阵图...</p>
-    <p v-else-if="state === 'error'" class="playoff-bracket__state">{{ errorMessage }}</p>
-    <p v-else-if="state === 'empty'" class="playoff-bracket__state">{{ emptyText }}</p>
+    <p v-if="state === 'loading'" class="playoff-bracket__state">{{ t('eventsPage.bracket.loading') }}</p>
+    <p v-else-if="state === 'error'" class="playoff-bracket__state">{{ errorMessage || t('eventsPage.bracket.loadFailed') }}</p>
+    <p v-else-if="state === 'empty'" class="playoff-bracket__state">{{ resolvedEmpty }}</p>
 
     <div v-else class="playoff-bracket__viewport">
       <div class="playoff-bracket__board" :style="{ minWidth: boardMinWidth }">
@@ -193,7 +198,7 @@ function railUnitAdvanced(
 
         <div class="bracket-final">
           <div class="bracket-round__head bracket-round__head--final">
-            <strong>总决赛</strong>
+            <strong>{{ t('events.round.FINAL') }}</strong>
             <em>FINAL</em>
           </div>
           <div class="bracket-final__body">

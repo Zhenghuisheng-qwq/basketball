@@ -4,6 +4,7 @@ import { getV4PublicSeriesList } from '@/api/v4Public'
 import type { V4PublicSeriesItem } from '@/api/types/v4Public'
 import type { CompetitionOption } from '../types/competition'
 import type { usePublicSeasonContext } from './usePublicSeasonContext'
+import { translate } from '@/i18n'
 import { displayText } from '@/utils/publicDisplay'
 import { v4SeriesLabel } from '@/utils/v4Display'
 import { isSamePublicId, normalizePublicId } from '@/utils/publicId'
@@ -45,8 +46,8 @@ export function useCompetitionSelector() {
       return ctx.tournaments.value.map((item) => ({
         id: normalizePublicId(item.tournamentId),
         code: displayText(item.tournamentNo || item.shortName || item.tournamentId, String(item.tournamentId)),
-        name: displayText(item.tournamentName, '未命名赛事'),
-        shortName: displayText(item.shortName || item.tournamentName, '赛事'),
+        name: displayText(item.tournamentName, translate('eventsPage.hero.unnamedEvent')),
+        shortName: displayText(item.shortName || item.tournamentName, translate('events.title')),
         region: 'domestic' as const,
         logo: item.logoUrl?.trim() || '',
         enabled: true,

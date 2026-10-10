@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getPublicPartners } from '@/api/public/partner'
 import type { PublicPartnerSupportRecordResp } from '@/api/types/public'
 import { displayText, toNumber } from '@/utils/publicDisplay'
 import partnersHeroImg from '@/assets/icon/hzhb/hzhb.png'
 
 const PAGE_SIZE = 8
+const { t, locale } = useI18n()
 
 const loading = ref(false)
 const error = ref('')
@@ -35,7 +37,7 @@ const showPagination = computed(() => pageState.value === 'success' && total.val
 const formattedTotalCash = computed(() => formatMoney(totalCashAmount.value))
 
 function formatMoney(value: number) {
-  return new Intl.NumberFormat('zh-CN', {
+  return new Intl.NumberFormat(locale.value, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number.isFinite(value) ? value : 0)
@@ -80,7 +82,7 @@ async function loadPartners(nextPage = pageNum.value) {
     total.value = 0
     supportRecordCount.value = 0
     totalCashAmount.value = 0
-    error.value = err instanceof Error ? err.message : '合作伙伴数据加载失败，请稍后重试'
+    error.value = err instanceof Error ? err.message : t('publicPages.partners.loadFailed')
   } finally {
     if (current === requestSeq) {
       loading.value = false
@@ -105,13 +107,13 @@ void loadPartners(1)
 
 <template>
   <div class="partners-page">
-    <section class="partners-hero" aria-label="合作伙伴">
+    <section class="partners-hero" :aria-label="t('publicPages.partners.heroAria')">
       <div class="site-shell partners-hero__shell">
         <div class="partners-hero__visual cnpa-public-hero-frame">
           <img
             class="partners-hero__image"
             :src="partnersHeroImg"
-            alt="CNPA 合作伙伴"
+            :alt="t('publicPages.partners.heroAria')"
             draggable="false"
           />
         </div>
@@ -123,19 +125,19 @@ void loadPartners(1)
         <div class="site-shell partners-panel__inner">
           <section class="partners-summary">
             <h2 class="section-heading">
-              <span class="section-heading__cn">感谢支持</span>
+              <span class="section-heading__cn">{{ t('publicPages.partners.thanks') }}</span>
               <span class="section-heading__en">SUPPORT SUMMARY</span>
             </h2>
             <div class="partners-summary__grid">
               <article class="partners-summary__card">
-                <div class="partners-summary__label">支持伙伴总数</div>
+                <div class="partners-summary__label">{{ t('publicPages.partners.partnerCount') }}</div>
                 <div class="partners-summary__number">
                   <template v-if="loading">—</template>
                   <template v-else>{{ formatCount(supportRecordCount) }}</template>
                 </div>
               </article>
               <article class="partners-summary__card">
-                <div class="partners-summary__label">累计赞助金额</div>
+                <div class="partners-summary__label">{{ t('publicPages.partners.totalAmount') }}</div>
                 <div class="partners-summary__number partners-summary__number--money">
                   <span class="currency">¥</span>
                   <template v-if="loading">—</template>
@@ -147,25 +149,25 @@ void loadPartners(1)
 
           <section ref="wallRef" class="partners-wall">
             <h2 class="section-heading">
-              <span class="section-heading__cn">赞助感谢墙</span>
+              <span class="section-heading__cn">{{ t('publicPages.partners.wall') }}</span>
               <span class="section-heading__en">SPONSOR WALL</span>
             </h2>
 
-            <div v-if="pageState === 'loading'" class="partners-state">加载中...</div>
+            <div v-if="pageState === 'loading'" class="partners-state">{{ t('publicPages.partners.loading') }}</div>
             <div v-else-if="pageState === 'error'" class="partners-state partners-state--error">
               <p>{{ error }}</p>
-              <button type="button" class="partners-retry" @click="loadPartners(pageNum)">重新加载</button>
+              <button type="button" class="partners-retry" @click="loadPartners(pageNum)">{{ t('publicPages.partners.reload') }}</button>
             </div>
             <div v-else-if="pageState === 'empty'" class="partners-empty">
-              暂无公开的赞助记录
+              {{ t('publicPages.partners.empty') }}
             </div>
             <div v-else class="partners-table-wrap">
               <table class="partners-table">
                 <thead>
                   <tr>
-                    <th scope="col">支持伙伴</th>
-                    <th scope="col">支持方式</th>
-                    <th scope="col">支持日期</th>
+                    <th scope="col">{{ t('publicPages.partners.partner') }}</th>
+                    <th scope="col">{{ t('publicPages.partners.method') }}</th>
+                    <th scope="col">{{ t('publicPages.partners.date') }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -191,12 +193,12 @@ void loadPartners(1)
               </table>
             </div>
 
-            <nav v-if="showPagination" class="partners-pagination" aria-label="分页">
+            <nav v-if="showPagination" class="partners-pagination" :aria-label="t('publicPages.partners.pagination')">
               <button
                 type="button"
                 class="partners-pagination__btn"
                 :disabled="pageNum <= 1 || loading"
-                aria-label="上一页"
+                :aria-label="t('publicPages.partners.prevPage')"
                 @click="goPage(pageNum - 1)"
               >
                 ‹
@@ -212,7 +214,7 @@ void loadPartners(1)
                 type="button"
                 class="partners-pagination__btn"
                 :disabled="pageNum >= totalPages || loading"
-                aria-label="下一页"
+                :aria-label="t('publicPages.partners.nextPage')"
                 @click="goPage(pageNum + 1)"
               >
                 ›

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import PublicHero from '@/components/layout/PublicHero.vue'
 import type { V4PublicDivisionBrief, V4PublicSeasonItem } from '@/api/types/v4Public'
 import { displayText } from '@/utils/publicDisplay'
@@ -19,6 +20,8 @@ const emit = defineEmits<{
   'update:selectedDivisionId': [value: string]
 }>()
 
+const { t } = useI18n()
+
 type OpenPanel = 'season' | 'division' | null
 
 const openPanel = ref<OpenPanel>(null)
@@ -33,21 +36,21 @@ const selectedDivision = computed(
 )
 
 const seasonLabel = computed(() => {
-  if (props.loading) return '加载赛季...'
+  if (props.loading) return t('publicPages.data.loadingSeasons')
   if (props.error) return props.error
-  if (!selectedSeason.value) return '选择赛季'
+  if (!selectedSeason.value) return t('publicPages.data.selectSeason')
   return `${v4SeriesLabel(selectedSeason.value.seriesCode)} · ${displayText(selectedSeason.value.displayTitle)}`
 })
 
 const divisionLabel = computed(() => {
-  if (!selectedDivision.value) return '选择赛区'
+  if (!selectedDivision.value) return t('publicPages.data.selectDivision')
   return `${v4PlatformLabel(selectedDivision.value.platformCode)} · ${displayText(selectedDivision.value.divisionName)}`
 })
 
 const seasonGroups = computed(() => {
   const map = new Map<string, V4PublicSeasonItem[]>()
   for (const season of props.seasons) {
-    const key = v4SeriesLabel(season.seriesCode) || '赛事系列'
+    const key = v4SeriesLabel(season.seriesCode) || t('publicPages.data.seriesFallback')
     if (!map.has(key)) map.set(key, [])
     map.get(key)!.push(season)
   }
@@ -102,7 +105,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <PublicHero variant="data" ariaLabel="CNPA 数据中心">
+  <PublicHero variant="data" :ariaLabel="t('publicPages.data.heroAria')">
     <div ref="rootRef" class="v4-data-hero__controls">
       <div class="v4-data-selector" :class="{ 'is-open': openPanel === 'season' }">
         <button
@@ -120,10 +123,10 @@ onBeforeUnmount(() => {
           v-show="openPanel === 'season'"
           class="v4-data-selector__dropdown"
           role="listbox"
-          aria-label="赛季列表"
+          :aria-label="t('publicPages.data.seasonList')"
         >
-          <h3 class="v4-data-selector__title">选择赛季</h3>
-          <div v-if="!seasonGroups.length" class="v4-data-selector__empty">暂无赛季</div>
+          <h3 class="v4-data-selector__title">{{ t('publicPages.data.selectSeason') }}</h3>
+          <div v-if="!seasonGroups.length" class="v4-data-selector__empty">{{ t('publicPages.data.noSeasons') }}</div>
           <div
             v-for="group in seasonGroups"
             :key="group.title"
@@ -167,9 +170,9 @@ onBeforeUnmount(() => {
           v-show="openPanel === 'division'"
           class="v4-data-selector__dropdown"
           role="listbox"
-          aria-label="赛区列表"
+          :aria-label="t('publicPages.data.divisionList')"
         >
-          <h3 class="v4-data-selector__title">选择赛区</h3>
+          <h3 class="v4-data-selector__title">{{ t('publicPages.data.selectDivision') }}</h3>
           <button
             v-for="division in divisions"
             :key="division.divisionId"

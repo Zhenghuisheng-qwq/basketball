@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Team } from '@/views/events/types/events'
 import TeamLogo from '@/views/events/components/TeamLogo.vue'
 import {
@@ -18,6 +19,7 @@ const props = defineProps<{
   winnerEventTeamId?: string | null
 }>()
 
+const { t } = useI18n()
 const columns = computed(() => periodColumns(props.periods))
 
 function cell(teamSide: 'away' | 'home', column: { key: string; periodNo?: number }): string {
@@ -43,7 +45,7 @@ function isWinner(team: Team): boolean {
 <template>
   <section class="period-board">
     <div class="period-board__head">
-      <h2>单节比分</h2>
+      <h2>{{ t('eventsPage.match.periodScore') }}</h2>
       <span>QUARTER SCORE</span>
     </div>
     <div class="period-board__scroll">

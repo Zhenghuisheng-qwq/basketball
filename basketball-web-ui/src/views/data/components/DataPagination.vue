@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   currentPage: number
@@ -12,15 +13,17 @@ const emit = defineEmits<{
   'update:pageSize': [value: number]
 }>()
 
+const { t } = useI18n()
+
 const totalPages = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)))
 
 const rangeText = computed(() => {
   if (props.total === 0) {
-    return '显示第 0 - 0 条，共 0 条'
+    return t('publicPages.data.rangeEmpty')
   }
   const start = (props.currentPage - 1) * props.pageSize + 1
   const end = Math.min(props.currentPage * props.pageSize, props.total)
-  return `显示第 ${start} - ${end} 条，共 ${props.total} 条`
+  return t('publicPages.data.range', { start, end, total: props.total })
 })
 
 const pageNumbers = computed(() => {
@@ -49,7 +52,7 @@ function goTo(page: number) {
         type="button"
         class="data-pagination__btn"
         :disabled="currentPage <= 1"
-        aria-label="第一页"
+        :aria-label="t('publicPages.data.firstPage')"
         @click="goTo(1)"
       >
         «
@@ -58,7 +61,7 @@ function goTo(page: number) {
         type="button"
         class="data-pagination__btn"
         :disabled="currentPage <= 1"
-        aria-label="上一页"
+        :aria-label="t('publicPages.data.prevPage')"
         @click="goTo(currentPage - 1)"
       >
         ‹
@@ -78,7 +81,7 @@ function goTo(page: number) {
         type="button"
         class="data-pagination__btn"
         :disabled="currentPage >= totalPages"
-        aria-label="下一页"
+        :aria-label="t('publicPages.data.nextPage')"
         @click="goTo(currentPage + 1)"
       >
         ›
@@ -87,7 +90,7 @@ function goTo(page: number) {
         type="button"
         class="data-pagination__btn"
         :disabled="currentPage >= totalPages"
-        aria-label="最后一页"
+        :aria-label="t('publicPages.data.lastPage')"
         @click="goTo(totalPages)"
       >
         »

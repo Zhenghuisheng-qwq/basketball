@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getV4PublicPlayerStat, getV4PublicTeamList } from '@/api/v4Public'
 import type { V4PublicPlayerStatItem } from '@/api/types/v4Public'
 import { formatDecimal, initials, toNumber } from '@/utils/publicDisplay'
@@ -13,34 +14,32 @@ import TeamLogo from './TeamLogo.vue'
 
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 
+type LeaderRoleKey = 'points' | 'assists' | 'rebounds'
+
 type LeaderView = PlayerLeader & {
-  roleTitle: string
+  roleKey: LeaderRoleKey
   roleEn: string
-  metricLabel: string
 }
 
 const LEADER_CONFIG = [
   {
     key: 'avgPoints' as const,
-    roleTitle: '得分王',
+    roleKey: 'points' as const,
     roleEn: 'POINTS LEADER',
-    metricLabel: '场均得分',
     unit: 'PPG' as const,
     totalKey: 'points' as const,
   },
   {
     key: 'avgAssist' as const,
-    roleTitle: '助攻王',
+    roleKey: 'assists' as const,
     roleEn: 'ASSISTS LEADER',
-    metricLabel: '场均助攻',
     unit: 'APG' as const,
     totalKey: 'assist' as const,
   },
   {
     key: 'avgRebound' as const,
-    roleTitle: '篮板王',
+    roleKey: 'rebounds' as const,
     roleEn: 'REBOUNDS LEADER',
-    metricLabel: '场均篮板',
     unit: 'RPG' as const,
     totalKey: 'rebound' as const,
   },
@@ -82,6 +81,7 @@ function readAvatarUrl(item: V4PublicPlayerStatItem): string {
 }
 
 const ctx = inject<SeasonContext>('publicSeasonContext')!
+const { t } = useI18n()
 
 const seasonLeaders = ref<LeaderView[]>([])
 const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
@@ -121,7 +121,7 @@ async function load(divisionId: string) {
       const teamId = String(leader.eventTeamId || '')
       return {
         id: index + 1,
-        title: config.metricLabel,
+        title: config.roleKey,
         value: Number(formatDecimal(playerAverageValue(leader, config.key, config.totalKey), 1)),
         unit: config.unit,
         playerName: leader.playerName || '--',
@@ -129,9 +129,8 @@ async function load(divisionId: string) {
         teamName: leader.teamName || '',
         teamLogo: logoByTeamId.get(teamId) || '',
         portrait: readAvatarUrl(leader),
-        roleTitle: config.roleTitle,
+        roleKey: config.roleKey,
         roleEn: config.roleEn,
-        metricLabel: config.metricLabel,
       } satisfies LeaderView
     })
     if (current !== reqId) return
@@ -141,7 +140,7 @@ async function load(divisionId: string) {
     if (current !== reqId) return
     seasonLeaders.value = []
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载高光选手失败'
+    errorMessage.value = err instanceof Error ? err.message : ''
   }
 }
 
@@ -160,6 +159,14 @@ function getTeamById(id: number | string) {
   return teamLookup.value(id)
 }
 
+function roleTitle(leader: LeaderView) {
+  return t(`eventsPage.leaders.${leader.roleKey}.title`)
+}
+
+function metricLabel(leader: LeaderView) {
+  return t(`eventsPage.leaders.${leader.roleKey}.metric`)
+}
+
 watch(
   () => ctx.divisionId.value,
   (divisionId) => {
@@ -174,16 +181,16 @@ watch(
     <div class="season-leaders__inner">
       <div class="season-leaders__header">
         <div class="section-head-group">
-          <h2 class="cnpa-paper-section__title">高光选手</h2>
+          <h2 class="cnpa-paper-section__title">{{ t('eventsPage.leaders.title') }}</h2>
           <span class="cnpa-paper-section__subtitle">Season Leaders</span>
         </div>
       </div>
 
-      <div v-if="state === 'loading'" class="season-leaders__state">加载中...</div>
+      <div v-if="state === 'loading'" class="season-leaders__state">{{ t('common.loading') }}</div>
       <div v-else-if="state === 'error'" class="season-leaders__state season-leaders__state--error">
-        {{ errorMessage || '加载高光选手失败' }}
+        {{ errorMessage || t('eventsPage.leaders.loadFailed') }}
       </div>
-      <div v-else-if="state === 'empty'" class="season-leaders__state">暂无高光选手</div>
+      <div v-else-if="state === 'empty'" class="season-leaders__state">{{ t('eventsPage.leaders.empty') }}</div>
       <div v-else class="season-leaders__grid">
         <article v-for="leader in seasonLeaders" :key="leader.id" class="leader-card">
           <div class="leader-card__avatar">
@@ -198,7 +205,7 @@ watch(
 
           <div class="leader-card__body">
             <header class="leader-card__role">
-              <h3>{{ leader.roleTitle }}</h3>
+              <h3>{{ roleTitle(leader) }}</h3>
               <small>{{ leader.roleEn }}</small>
             </header>
 
@@ -221,7 +228,7 @@ watch(
               <span>{{ leader.teamName || '--' }}</span>
             </div>
 
-            <p class="leader-card__metric">{{ leader.metricLabel }}</p>
+            <p class="leader-card__metric">{{ metricLabel(leader) }}</p>
           </div>
         </article>
       </div>

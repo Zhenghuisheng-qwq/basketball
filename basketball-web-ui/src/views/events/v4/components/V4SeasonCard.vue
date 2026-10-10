@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { V4PublicSeasonItem } from '@/api/types/v4Public'
 import { displayText, formatDateTime } from '@/utils/publicDisplay'
 import {
@@ -21,17 +22,18 @@ const emit = defineEmits<{
   select: [season: V4PublicSeasonItem]
 }>()
 
+const { t } = useI18n()
 const imageFailed = ref(false)
 
 const coverUrl = computed(() => props.season.bannerUrl || props.season.coverUrl || '')
 const showCover = computed(() => Boolean(coverUrl.value?.trim()) && !imageFailed.value)
 
 const displayTitle = computed(() =>
-  displayText(props.season.displayTitle, displayText(props.season.seasonName, '未命名赛季')),
+  displayText(props.season.displayTitle, displayText(props.season.seasonName, t('eventsPage.list.unnamedSeason'))),
 )
 
 const secondaryTitle = computed(() => {
-  const parts = [props.season.seasonName, props.season.seasonYear ? `${props.season.seasonYear} 赛季` : '']
+  const parts = [props.season.seasonName, props.season.seasonYear ? t('eventsPage.count.seasonYear', { year: props.season.seasonYear }) : '']
     .filter(Boolean)
     .filter((item) => item !== displayTitle.value)
   return parts.join(' · ')
@@ -56,7 +58,7 @@ const registrationSummary = computed(() =>
 
 const divisionCountText = computed(() => {
   const count = props.season.divisionCount ?? props.season.divisions?.length ?? 0
-  return `${count} 个赛区`
+  return t('eventsPage.count.divisions', { count })
 })
 
 const registrationEndText = computed(() => {
@@ -74,7 +76,7 @@ const matchTimeText = computed(() => {
 })
 
 const actionLabel = computed(() =>
-  isSeasonRegistrationOpen(props.season.seasonStatus) ? '立即查看赛区' : '查看赛事',
+  isSeasonRegistrationOpen(props.season.seasonStatus) ? t('eventsPage.list.viewDivisions') : t('eventsPage.list.viewEvent'),
 )
 
 const statusClass = computed(() => {
@@ -126,30 +128,30 @@ function onImageError() {
 
       <dl class="v4-season-card__summary">
         <div>
-          <dt>平台</dt>
+          <dt>{{ t('eventsPage.list.platform') }}</dt>
           <dd>{{ platformSummary }}</dd>
         </div>
         <div>
-          <dt>模式</dt>
+          <dt>{{ t('eventsPage.list.mode') }}</dt>
           <dd>{{ gameModeSummary }}</dd>
         </div>
         <div>
-          <dt>报名</dt>
+          <dt>{{ t('eventsPage.list.registration') }}</dt>
           <dd>{{ registrationSummary }}</dd>
         </div>
         <div>
-          <dt>赛区</dt>
+          <dt>{{ t('eventsPage.list.division') }}</dt>
           <dd>{{ divisionCountText }}</dd>
         </div>
       </dl>
 
       <dl class="v4-season-card__times">
         <div>
-          <dt>报名截止</dt>
+          <dt>{{ t('eventsPage.list.registrationDeadline') }}</dt>
           <dd>{{ registrationEndText }}</dd>
         </div>
         <div>
-          <dt>比赛时间</dt>
+          <dt>{{ t('eventsPage.list.matchTime') }}</dt>
           <dd>{{ matchTimeText }}</dd>
         </div>
       </dl>

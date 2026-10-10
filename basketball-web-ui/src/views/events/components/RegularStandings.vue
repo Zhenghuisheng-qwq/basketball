@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getV4PublicDivisionSchedule, getV4PublicStageStandings, getV4PublicStanding } from '@/api/v4Public'
-import type { V4PublicStageStandingScope } from '@/api/types/v4Public'
 import TeamEntryLink from '@/components/team/TeamEntryLink.vue'
 import { toNumber } from '@/utils/publicDisplay'
 import type { Standing } from '../types/events'
@@ -26,6 +26,7 @@ import TeamLogo from './TeamLogo.vue'
 
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 const ctx = inject<SeasonContext>('publicSeasonContext')!
+const { t } = useI18n()
 
 const props = defineProps<{
   stageId?: string
@@ -36,9 +37,18 @@ const props = defineProps<{
   zoneTone?: StandingZoneTone
 }>()
 
+type GroupTitleInput = {
+  groupName?: string | null
+  groupCode?: string | null
+  groupKey?: string
+  index: number
+  total: number
+  useStage: boolean
+}
+
 type StandingGroup = {
   key: string
-  title: string
+  titleInput: GroupTitleInput
   qualifyCount?: number | null
   rows: Standing[]
 }
@@ -71,20 +81,26 @@ function mapRows(rawRows: Parameters<typeof v4StandingToPublic>[0][]): Standing[
   })
 }
 
-function groupTitle(scope: V4PublicStageStandingScope, index: number, total: number): string {
-  if (scope.groupName) return scope.groupName
-  if (scope.groupCode) return `${scope.groupCode}组`
-  const key = String(scope.groupScopeKey || scope.groupId || '')
+function groupTitle(input: GroupTitleInput): string {
+  if (input.groupName) return input.groupName
+  if (input.groupCode) return t('eventsPage.standings.groupCode', { code: input.groupCode })
+  const key = input.groupKey || ''
   if (key && key !== '0') {
     const n = Number(key)
     if (Number.isFinite(n) && n > 0 && n <= 26) {
-      return `${String.fromCharCode(64 + n)}组`
+      return t('eventsPage.standings.groupCode', { code: String.fromCharCode(64 + n) })
     }
-    return `小组 ${key}`
+    return t('eventsPage.standings.groupName', { name: key })
   }
-  if (total > 1) return `小组 ${index + 1}`
-  return props.stageName ? `${props.stageName}积分榜` : '积分榜'
+  if (input.total > 1) return t('eventsPage.standings.groupName', { name: input.index + 1 })
+  if (input.useStage && props.stageName) return t('eventsPage.standings.named', { name: props.stageName })
+  return t('eventsPage.standings.title')
 }
+
+const displayGroups = computed(() => groups.value.map((group) => ({
+  ...group,
+  title: groupTitle(group.titleInput),
+})))
 
 const flatStandings = computed(() => groups.value.flatMap((g) => g.rows))
 
@@ -182,7 +198,14 @@ async function load() {
       const mapped = scopes
         .map((scope, index) => ({
           key: String(scope.groupScopeKey ?? scope.groupId ?? index),
-          title: groupTitle(scope, index, scopes.length),
+          titleInput: {
+            groupName: scope.groupName,
+            groupCode: scope.groupCode,
+            groupKey: String(scope.groupScopeKey || scope.groupId || ''),
+            index,
+            total: scopes.length,
+            useStage: false,
+          },
           qualifyCount: resolveQualifyCount(scope.qualifyCount, props.advanceCount) || null,
           rows: mapRows(scope.rows ?? []),
         }))
@@ -204,7 +227,11 @@ async function load() {
     groups.value = rows.length
       ? [{
           key: 'all',
-          title: props.stageName ? `${props.stageName}积分榜` : '积分榜',
+          titleInput: {
+            index: 0,
+            total: 1,
+            useStage: true,
+          },
           qualifyCount: resolveQualifyCount(null, props.advanceCount) || null,
           rows,
         }]
@@ -214,7 +241,7 @@ async function load() {
     if (current !== reqId) return
     groups.value = []
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载积分榜失败'
+    errorMessage.value = err instanceof Error ? err.message : ''
   }
 }
 
@@ -229,12 +256,12 @@ watch(
 
 <template>
   <section class="regular-standings">
-    <p v-if="state === 'loading'" class="standings-note">加载积分榜...</p>
-    <p v-else-if="state === 'error'" class="standings-note">{{ errorMessage }}</p>
-    <p v-else-if="state === 'empty'" class="standings-note">{{ emptyText || '暂无积分榜数据' }}</p>
+    <p v-if="state === 'loading'" class="standings-note">{{ t('eventsPage.standings.loading') }}</p>
+    <p v-else-if="state === 'error'" class="standings-note">{{ errorMessage || t('eventsPage.standings.loadFailed') }}</p>
+    <p v-else-if="state === 'empty'" class="standings-note">{{ emptyText || t('eventsPage.standings.empty') }}</p>
 
     <div v-else class="standings-groups">
-      <div v-for="group in groups" :key="group.key" class="standings-group">
+      <div v-for="group in displayGroups" :key="group.key" class="standings-group">
         <h3 v-if="groups.length > 1 || grouped" class="standings-group__title">{{ group.title }}</h3>
         <div
           class="standings-grid"
@@ -251,12 +278,12 @@ watch(
             </div>
             <div class="table-wrap" :class="{ 'table-wrap--form': formReady }">
               <div class="table-head">
-                <span>排名</span>
-                <span>战队</span>
+                <span>{{ t('eventsPage.standings.rank') }}</span>
+                <span>{{ t('eventsPage.standings.team') }}</span>
                 <div class="stats">
-                  <span>胜</span><span>负</span><span>积分</span><span>净胜分</span>
+                  <span>{{ t('eventsPage.standings.win') }}</span><span>{{ t('eventsPage.standings.loss') }}</span><span>{{ t('eventsPage.standings.points') }}</span><span>{{ t('eventsPage.standings.diff') }}</span>
                 </div>
-                <span v-if="formReady" class="form-head">近况</span>
+                <span v-if="formReady" class="form-head">{{ t('eventsPage.standings.form') }}</span>
               </div>
               <div v-for="row in groupLeftRows(group)" :key="`${group.key}-${row.teamId}`" class="table-row">
                 <span class="rank rank-playoff">{{ row.rank }}</span>
@@ -267,7 +294,7 @@ watch(
                 >
                   <TeamLogo :team="getTeamById(row.teamId)!" size="sm" />
                   <span class="team-name">{{ getTeamById(row.teamId)!.name }}</span>
-                  <em v-if="row.disqualified" class="dq-tag">取消资格</em>
+                  <em v-if="row.disqualified" class="dq-tag">{{ t('eventsPage.standings.disqualified') }}</em>
                 </TeamEntryLink>
                 <span v-else class="team"><span class="team-name">{{ row.teamName }}</span></span>
                 <div class="stats">
@@ -300,12 +327,12 @@ watch(
             </div>
             <div class="table-wrap" :class="{ 'table-wrap--form': formReady }">
               <div class="table-head">
-                <span>排名</span>
-                <span>战队</span>
+                <span>{{ t('eventsPage.standings.rank') }}</span>
+                <span>{{ t('eventsPage.standings.team') }}</span>
                 <div class="stats">
-                  <span>胜</span><span>负</span><span>积分</span><span>净胜分</span>
+                  <span>{{ t('eventsPage.standings.win') }}</span><span>{{ t('eventsPage.standings.loss') }}</span><span>{{ t('eventsPage.standings.points') }}</span><span>{{ t('eventsPage.standings.diff') }}</span>
                 </div>
-                <span v-if="formReady" class="form-head">近况</span>
+                <span v-if="formReady" class="form-head">{{ t('eventsPage.standings.form') }}</span>
               </div>
               <div v-for="row in groupRightRows(group)" :key="`${group.key}-r-${row.teamId}`" class="table-row">
                 <span class="rank rank-regular">{{ row.rank }}</span>
@@ -316,7 +343,7 @@ watch(
                 >
                   <TeamLogo :team="getTeamById(row.teamId)!" size="sm" />
                   <span class="team-name">{{ getTeamById(row.teamId)!.name }}</span>
-                  <em v-if="row.disqualified" class="dq-tag">取消资格</em>
+                  <em v-if="row.disqualified" class="dq-tag">{{ t('eventsPage.standings.disqualified') }}</em>
                 </TeamEntryLink>
                 <span v-else class="team"><span class="team-name">{{ row.teamName }}</span></span>
                 <div class="stats">
@@ -340,7 +367,7 @@ watch(
         </div>
       </div>
     </div>
-    <p v-if="state === 'success' && grouped" class="standings-note">小组积分按 groupScope 隔离展示；晋级规则以赛段配置为准。</p>
+    <p v-if="state === 'success' && grouped" class="standings-note">{{ t('eventsPage.standings.groupedNote') }}</p>
   </section>
 </template>
 

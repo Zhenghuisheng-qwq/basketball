@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { HallTab } from '../types'
 
 defineProps<{
@@ -9,15 +11,17 @@ const emit = defineEmits<{
   'update:modelValue': [value: HallTab]
 }>()
 
-const tabs: Array<{ value: HallTab; label: string }> = [
-  { value: 'weekly', label: '球员荣誉' },
-  { value: 'event', label: '赛事荣誉' },
-  { value: 'champions', label: '历届冠军' },
-]
+const { t } = useI18n()
+
+const tabs = computed<Array<{ value: HallTab; label: string }>>(() => [
+  { value: 'weekly', label: t('publicPages.hall.playerHonors') },
+  { value: 'event', label: t('publicPages.hall.eventHonors') },
+  { value: 'champions', label: t('publicPages.hall.pastChampions') },
+])
 </script>
 
 <template>
-  <div class="hall-tabs" role="tablist" aria-label="名人堂栏目">
+  <div class="hall-tabs" role="tablist" :aria-label="t('publicPages.hall.tabsAria')">
     <button
       v-for="(tab, index) in tabs"
       :key="tab.value"

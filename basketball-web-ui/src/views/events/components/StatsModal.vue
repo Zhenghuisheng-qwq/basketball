@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import { getV4PublicMatchDetail } from '@/api/v4Public'
 import type { PublicMatchDetailVo, PublicMatchPlayerStatVo } from '@/api/types/public'
@@ -14,6 +15,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
 }>()
+
+const { t } = useI18n()
 
 const detail = ref<PublicMatchDetailVo | null>(null)
 const players = ref<PublicMatchPlayerStatVo[]>([])
@@ -33,7 +36,7 @@ async function loadStats(matchId: string) {
       detail.value = null
       players.value = []
       state.value = 'error'
-      errorMessage.value = '暂无技术统计'
+      errorMessage.value = ''
       return
     }
     players.value = (raw.playerStats ?? []).map((item) => ({
@@ -74,7 +77,7 @@ async function loadStats(matchId: string) {
     detail.value = null
     players.value = []
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载技术统计失败'
+    errorMessage.value = err instanceof Error ? err.message : t('eventsPage.stats.loadFailed')
   }
 }
 
@@ -95,25 +98,25 @@ watch(
 <template>
   <div v-if="visible && match" class="modal-mask" @click.self="emit('close')">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="stats-title">
-      <button type="button" class="modal-close" aria-label="关闭" @click="emit('close')">×</button>
-      <h3 id="stats-title">技术统计</h3>
+      <button type="button" class="modal-close" :aria-label="t('eventsPage.aria.close')" @click="emit('close')">×</button>
+      <h3 id="stats-title">{{ t('eventsPage.stats.title') }}</h3>
       <p class="modal-meta">
         {{ displayText(match.awayTeamName) }} vs {{ displayText(match.homeTeamName) }}
       </p>
 
-      <div v-if="state === 'loading'" class="modal-state">加载中...</div>
-      <div v-else-if="state === 'error'" class="modal-state is-error">{{ errorMessage }}</div>
-      <div v-else-if="state === 'empty'" class="modal-state">暂无已确认的技术统计</div>
+      <div v-if="state === 'loading'" class="modal-state">{{ t('common.loading') }}</div>
+      <div v-else-if="state === 'error'" class="modal-state is-error">{{ errorMessage || t('eventsPage.stats.unavailable') }}</div>
+      <div v-else-if="state === 'empty'" class="modal-state">{{ t('eventsPage.stats.empty') }}</div>
       <div v-else class="stats-table-wrap">
         <table class="stats-table">
           <thead>
             <tr>
-              <th>球员</th>
-              <th>球队</th>
-              <th>得分</th>
-              <th>篮板</th>
-              <th>助攻</th>
-              <th>投篮%</th>
+              <th>{{ t('eventsPage.match.player') }}</th>
+              <th>{{ t('eventsPage.match.team') }}</th>
+              <th>{{ t('eventsPage.match.points') }}</th>
+              <th>{{ t('eventsPage.match.rebound') }}</th>
+              <th>{{ t('eventsPage.match.assist') }}</th>
+              <th>{{ t('eventsPage.stats.fieldGoalPct') }}</th>
             </tr>
           </thead>
           <tbody>

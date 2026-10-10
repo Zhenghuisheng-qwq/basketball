@@ -1,4 +1,4 @@
-/** 官网公开数据展示辅助：空值、数字、比赛状态等 */
+import { translate } from '@/i18n'
 
 export function displayText(value: unknown, fallback = '--'): string {
   if (value === null || value === undefined) return fallback
@@ -77,15 +77,15 @@ export function mapMatchStatus(status: number | string | null | undefined): UiMa
 export function matchStatusLabel(status: number | string | null | undefined): string {
   switch (mapMatchStatus(status)) {
     case 'live':
-      return '进行中'
+      return translate('match.live')
     case 'finished':
-      return '已结束'
+      return translate('match.finished')
     case 'postponed':
-      return '已延期'
+      return translate('match.postponed')
     case 'cancelled':
-      return '已取消'
+      return translate('match.cancelled')
     default:
-      return '未开始'
+      return translate('match.notStarted')
   }
 }
 
@@ -96,9 +96,8 @@ export function formatDateTime(value: string | null | undefined): { date: string
   const time = timePart.slice(0, 5) || '--'
   if (!datePart) return { date: '--', time, full: displayText(value) }
   const [, m, d] = datePart.split('-')
-  const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
   const dt = new Date(datePart.replace(/-/g, '/'))
-  const week = Number.isNaN(dt.getTime()) ? '' : weekDays[dt.getDay()]
+  const week = Number.isNaN(dt.getTime()) ? '' : translate(`match.weekday.${dt.getDay()}`)
   const shortDate = m && d ? `${m}.${d}` : datePart
   const full = week ? `${shortDate} ${week} ${time}` : `${shortDate} ${time}`
   return { date: datePart, time, full }
@@ -127,7 +126,7 @@ export function formatStreak(streakType?: string | null, streakCount?: number | 
   const count = toNumber(streakCount, 0)
   if (!count) return '--'
   const type = (streakType || '').toUpperCase()
-  if (type === 'W' || type === 'WIN') return `${count}连胜`
-  if (type === 'L' || type === 'LOSS') return `${count}连败`
+  if (type === 'W' || type === 'WIN') return translate('match.winStreak', { count })
+  if (type === 'L' || type === 'LOSS') return translate('match.lossStreak', { count })
   return `${count}`
 }

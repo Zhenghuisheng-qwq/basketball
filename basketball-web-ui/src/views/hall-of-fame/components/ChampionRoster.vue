@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import HallPlayerSilhouette from './HallPlayerSilhouette.vue'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
@@ -10,6 +11,7 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
+const { t } = useI18n()
 
 const starters = computed(() =>
   props.members.filter((item) => item.role === 'STARTER').sort((a, b) => a.sortOrder - b.sortOrder),
@@ -27,13 +29,13 @@ function openPlayer(playerId: number | string) {
 <template>
   <div class="champion-roster">
     <div class="champion-roster__head">
-      <h3 class="champion-roster__title">冠军阵容</h3>
+      <h3 class="champion-roster__title">{{ t('publicPages.hall.championRoster') }}</h3>
       <span class="champion-roster__sub">CHAMPION ROSTER</span>
     </div>
 
     <div class="champion-roster__body">
       <section v-if="starters.length" class="champion-roster__group">
-        <h4 class="champion-roster__group-title">首发</h4>
+        <h4 class="champion-roster__group-title">{{ t('publicPages.hall.starters') }}</h4>
         <div class="champion-roster__grid">
           <button
             v-for="member in starters"
@@ -50,16 +52,16 @@ function openPlayer(playerId: number | string) {
             <div class="champion-roster__info">
               <strong>
                 {{ member.playerName }}
-                <span v-if="member.captain" class="champion-roster__captain">队长</span>
+                <span v-if="member.captain" class="champion-roster__captain">{{ t('publicPages.hall.captain') }}</span>
               </strong>
-              <span>{{ member.position }}{{ member.appearances > 0 ? ` · 出场 ${member.appearances} 次` : '' }}</span>
+              <span>{{ member.position }}{{ member.appearances > 0 ? t('publicPages.hall.appearanceSuffix', { count: member.appearances }) : '' }}</span>
             </div>
           </button>
         </div>
       </section>
 
       <section v-if="substitutes.length" class="champion-roster__group">
-        <h4 class="champion-roster__group-title">替补</h4>
+        <h4 class="champion-roster__group-title">{{ t('publicPages.hall.substitutes') }}</h4>
         <div class="champion-roster__grid">
           <button
             v-for="member in substitutes"
@@ -76,9 +78,9 @@ function openPlayer(playerId: number | string) {
             <div class="champion-roster__info">
               <strong>
                 {{ member.playerName }}
-                <span v-if="member.captain" class="champion-roster__captain">队长</span>
+                <span v-if="member.captain" class="champion-roster__captain">{{ t('publicPages.hall.captain') }}</span>
               </strong>
-              <span>{{ member.position }}{{ member.appearances > 0 ? ` · 出场 ${member.appearances} 次` : '' }}</span>
+              <span>{{ member.position }}{{ member.appearances > 0 ? t('publicPages.hall.appearanceSuffix', { count: member.appearances }) : '' }}</span>
             </div>
           </button>
         </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import PlayerMatchTable from './PlayerMatchTable.vue'
 import DisciplineStatusPanel from '@/components/discipline/DisciplineStatusPanel.vue'
@@ -10,6 +11,7 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
+const { t } = useI18n()
 
 const seasonStat = computed<PlayerCareerStatistics | null>(() => {
   const divisionId = String(props.detail.profile.divisionId || '')
@@ -22,10 +24,10 @@ const seasonBoxes = computed(() => {
   const row = seasonStat.value
   if (!row) return []
   return [
-    { key: 'games', label: '出场', value: formatStat(row.games, false), accent: false },
-    { key: 'pts', label: '场均得分', value: formatStat(row.points, true), accent: true },
-    { key: 'reb', label: '场均篮板', value: formatStat(row.rebounds, true), accent: false },
-    { key: 'ast', label: '场均助攻', value: formatStat(row.assists, true), accent: false },
+    { key: 'games', label: t('publicPages.player.games'), value: formatStat(row.games, false), accent: false },
+    { key: 'pts', label: t('publicPages.player.avgPoints'), value: formatStat(row.points, true), accent: true },
+    { key: 'reb', label: t('publicPages.player.avgRebounds'), value: formatStat(row.rebounds, true), accent: false },
+    { key: 'ast', label: t('publicPages.player.avgAssists'), value: formatStat(row.assists, true), accent: false },
   ]
 })
 
@@ -51,13 +53,13 @@ function goAllMatches() {
   <div class="player-detail-overview">
     <DisciplineStatusPanel
       :items="detail.profile.activeDisciplineSummary || []"
-      title="处罚状态"
+      :title="t('publicPages.player.penaltyStatus')"
     />
 
     <section class="player-detail-overview__section" aria-labelledby="player-event-stats">
       <div class="player-detail-section-head">
         <div class="player-detail-section-head__group">
-          <h2 id="player-event-stats" class="player-detail-section-head__title">本赛事数据</h2>
+          <h2 id="player-event-stats" class="player-detail-section-head__title">{{ t('publicPages.player.eventStats') }}</h2>
           <span class="player-detail-section-head__sub">Event Stats</span>
         </div>
       </div>
@@ -74,22 +76,22 @@ function goAllMatches() {
         </div>
       </div>
       <div v-else class="player-overview-empty">
-        <strong>暂无本赛事数据</strong>
-        <span>正式比赛审核通过后将在此展示</span>
+        <strong>{{ t('publicPages.player.noEventStats') }}</strong>
+        <span>{{ t('publicPages.player.noEventStatsHint') }}</span>
       </div>
     </section>
 
     <section class="player-detail-overview__section" aria-labelledby="player-honors">
       <div class="player-detail-section-head player-detail-overview__honor-head">
         <div class="player-detail-section-head__group">
-          <h2 id="player-honors" class="player-detail-section-head__title">球员荣誉</h2>
+          <h2 id="player-honors" class="player-detail-section-head__title">{{ t('publicPages.player.honors') }}</h2>
           <span class="player-detail-section-head__sub">Player Honors</span>
         </div>
       </div>
 
       <div v-if="honorItems.length === 0" class="player-overview-empty">
-        <strong>暂无荣誉记录</strong>
-        <span>球员获得赛事荣誉后将在此展示</span>
+        <strong>{{ t('publicPages.player.noHonors') }}</strong>
+        <span>{{ t('publicPages.player.noHonorsHint') }}</span>
       </div>
       <ul v-else class="player-honor-list">
         <li v-for="honor in honorItems" :key="honor.id" class="player-honor-list__item">
@@ -105,7 +107,7 @@ function goAllMatches() {
     <section class="player-detail-overview__section" aria-labelledby="player-recent-matches">
       <div class="player-detail-section-head">
         <div class="player-detail-section-head__group">
-          <h2 id="player-recent-matches" class="player-detail-section-head__title">最近比赛</h2>
+          <h2 id="player-recent-matches" class="player-detail-section-head__title">{{ t('publicPages.player.recentMatches') }}</h2>
           <span class="player-detail-section-head__sub">Recent Matches</span>
         </div>
         <button
@@ -113,7 +115,7 @@ function goAllMatches() {
           class="player-detail-section-head__action player-detail-overview__all-matches"
           @click="goAllMatches"
         >
-          查看全部比赛 →
+          {{ t('publicPages.player.viewAllMatches') }}
         </button>
       </div>
 

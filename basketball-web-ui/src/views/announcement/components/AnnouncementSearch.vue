@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   modelValue: string
 }>()
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   search: [keyword: string]
@@ -42,12 +45,12 @@ function handleKeydown(event: KeyboardEvent) {
       <input
         v-model="draft"
         type="search"
-        placeholder="搜索公告标题"
+        :placeholder="t('publicPages.announcement.searchPlaceholder')"
         autocomplete="off"
         @keydown="handleKeydown"
       />
     </label>
-    <button type="button" class="announcement-search__btn" @click="submitSearch">搜索</button>
+    <button type="button" class="announcement-search__btn" @click="submitSearch">{{ t('publicPages.announcement.search') }}</button>
   </div>
 </template>
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { getV4PublicMatchList } from '@/api/v4Public'
 import TeamLogo from '@/components/team/TeamLogo.vue'
@@ -17,6 +18,7 @@ import DisciplineStatusPanel from '@/components/discipline/DisciplineStatusPanel
 
 const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
 const router = useRouter()
+const { t } = useI18n()
 
 const rosterPageSize = 5
 const rosterPage = ref(0)
@@ -70,7 +72,7 @@ async function loadMatches(teamId: string, divisionId: string) {
     if (reqId !== matchReqId) return
     matchRecords.value = []
     matchState.value = 'error'
-    matchError.value = err instanceof Error ? err.message : '加载比赛失败'
+    matchError.value = err instanceof Error ? err.message : t('publicPages.team.loadMatchesFailed')
   }
 }
 
@@ -91,11 +93,11 @@ function formatDateTime(match: TeamMatchRecord): string {
 }
 
 function getStatusLabel(match: TeamMatchRecord): string {
-  if (match.status === 'scheduled') return '未开始'
+  if (match.status === 'scheduled') return t('publicPages.team.notStarted')
   if (match.resultLabel) return match.resultLabel
-  if (match.result === 'win') return '胜利'
-  if (match.result === 'loss') return '失败'
-  return '已结束'
+  if (match.result === 'win') return t('publicPages.team.win')
+  if (match.result === 'loss') return t('publicPages.team.loss')
+  return t('publicPages.team.finished')
 }
 
 function getStatusClass(match: TeamMatchRecord): string {
@@ -223,21 +225,21 @@ function goMatchPage(page: number) {
   <div class="team-overview">
     <DisciplineStatusPanel
       :items="ctx.teamView.value?.activeDisciplineSummary || ctx.detail.value?.activeDisciplineSummary || []"
-      title="赛事状态"
+      :title="t('publicPages.team.eventStatus')"
     />
     <section class="overview-section roster-section">
       <div class="section-head">
         <div class="section-head-group">
-          <h2 class="section-head-title">本赛季阵容</h2>
+          <h2 class="section-head-title">{{ t('publicPages.team.seasonRoster') }}</h2>
           <span class="section-head-sub">Current Roster</span>
         </div>
       </div>
 
-      <div v-if="ctx.state.value === 'loading'" class="overview-empty">加载中...</div>
+      <div v-if="ctx.state.value === 'loading'" class="overview-empty">{{ t('publicPages.team.loading') }}</div>
       <div v-else-if="ctx.state.value === 'error'" class="overview-empty is-error">
-        {{ ctx.errorMessage.value || '加载阵容失败' }}
+        {{ ctx.errorMessage.value || t('publicPages.team.loadRosterFailed') }}
       </div>
-      <div v-else-if="roster.length === 0" class="overview-empty">暂无阵容数据</div>
+      <div v-else-if="roster.length === 0" class="overview-empty">{{ t('publicPages.team.noRoster') }}</div>
 
       <template v-else>
         <div class="roster-wrap" :class="{ 'is-paged': rosterTotalPages > 1 }">
@@ -245,7 +247,7 @@ function goMatchPage(page: number) {
             v-if="rosterTotalPages > 1"
             type="button"
             class="roster-arrow roster-arrow--left"
-            aria-label="上一页"
+            :aria-label="t('publicPages.team.prevPage')"
             @click="goRosterPrev"
           >
             ‹
@@ -273,7 +275,7 @@ function goMatchPage(page: number) {
               </div>
 
               <div class="player-name">{{ displayText(player.playerName) }}</div>
-              <span v-if="isCaptain(player)" class="captain-badge">队长</span>
+              <span v-if="isCaptain(player)" class="captain-badge">{{ t('publicPages.team.captain') }}</span>
               <div class="player-position">{{ displayText(player.positionCode, '--') }}</div>
             </article>
           </div>
@@ -282,7 +284,7 @@ function goMatchPage(page: number) {
             v-if="rosterTotalPages > 1"
             type="button"
             class="roster-arrow roster-arrow--right"
-            aria-label="下一页"
+            :aria-label="t('publicPages.team.nextPage')"
             @click="goRosterNext"
           >
             ›
@@ -295,7 +297,7 @@ function goMatchPage(page: number) {
               type="button"
               class="dot"
               :class="{ active: rosterPage === index - 1 }"
-              :aria-label="`第 ${index} 页`"
+              :aria-label="t('publicPages.team.pageN', { page: index })"
               @click="goRosterPage(index - 1)"
             />
           </div>
@@ -307,28 +309,28 @@ function goMatchPage(page: number) {
       <div class="match-head">
         <div class="section-head">
           <div class="section-head-group">
-            <h2 class="section-head-title">比赛记录</h2>
+            <h2 class="section-head-title">{{ t('publicPages.team.matchLog') }}</h2>
             <span class="section-head-sub">Match History</span>
           </div>
         </div>
       </div>
 
-      <div v-if="matchState === 'loading'" class="overview-empty">加载中...</div>
+      <div v-if="matchState === 'loading'" class="overview-empty">{{ t('publicPages.team.loading') }}</div>
       <div v-else-if="matchState === 'error'" class="overview-empty is-error">
-        {{ matchError || '加载比赛失败' }}
+        {{ matchError || t('publicPages.team.loadMatchesFailed') }}
       </div>
-      <div v-else-if="recentMatches.length === 0" class="overview-empty">暂无比赛记录</div>
+      <div v-else-if="recentMatches.length === 0" class="overview-empty">{{ t('publicPages.team.noMatches') }}</div>
 
       <template v-else>
         <div class="match-list">
           <div class="match-table">
             <div class="match-history-grid match-table__head">
-              <span>状态</span>
-              <span>日期时间</span>
-              <span>对手</span>
-              <span>比分</span>
-              <span>赛段</span>
-              <span>查看</span>
+              <span>{{ t('publicPages.team.status') }}</span>
+              <span>{{ t('publicPages.team.dateTime') }}</span>
+              <span>{{ t('publicPages.team.opponent') }}</span>
+              <span>{{ t('publicPages.team.score') }}</span>
+              <span>{{ t('publicPages.team.stage') }}</span>
+              <span>{{ t('publicPages.team.view') }}</span>
             </div>
 
             <article v-for="match in pagedRecentMatches" :key="match.id" class="match-history-grid match-table__row">
@@ -366,10 +368,10 @@ function goMatchPage(page: number) {
               </span>
 
               <div class="match-table__actions">
-                <span v-if="match.status === 'scheduled'" class="action-link is-disabled">敬请期待</span>
+                <span v-if="match.status === 'scheduled'" class="action-link is-disabled">{{ t('publicPages.team.comingSoon') }}</span>
                 <template v-else>
                   <button type="button" class="action-link" @click="goMatchStats(match)">
-                    数据统计
+                    {{ t('publicPages.team.boxScore') }}
                   </button>
                   <button type="button" class="action-link" @click="goMatchDetail(match)">
                     {{ publicContestDetailLabel('MATCH') }} →
@@ -388,14 +390,14 @@ function goMatchPage(page: number) {
           </div>
         </div>
 
-        <nav class="match-pagination" aria-label="比赛记录分页">
+        <nav class="match-pagination" :aria-label="t('publicPages.team.matchPagination')">
           <button
             type="button"
             class="match-pagination__nav"
             :disabled="matchCurrentPage <= 1"
             @click="goMatchPrevPage"
           >
-            上一页
+            {{ t('publicPages.team.prevPage') }}
           </button>
 
           <div class="match-pagination__pages">
@@ -417,7 +419,7 @@ function goMatchPage(page: number) {
             :disabled="matchCurrentPage >= matchTotalPages"
             @click="goMatchNextPage"
           >
-            下一页
+            {{ t('publicPages.team.nextPage') }}
           </button>
         </nav>
       </template>

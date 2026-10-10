@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   getPublicPlayerDetail,
   getPublicPlayerHonorPage,
@@ -30,6 +31,7 @@ import { normalizePlayerTab, resolvePlayerId, type PlayerDetailTab } from '@/uti
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const playerId = computed(() => resolvePlayerId(route.params.playerId as string))
 const queryDivisionId = computed(() => String(route.query.divisionId || '').trim())
@@ -94,13 +96,13 @@ async function loadPlayer() {
     detail.honors = mapPublicPlayerHonors(honorRes.data?.records ?? [])
     playerDetail.value = detail
     loadState.value = 'success'
-    document.title = `${profile.displayName} - CNPA 篮球赛事平台`
+    document.title = t('common.documentTitle', { page: profile.displayName })
     void loadPlayerMatches(current, profile)
   } catch (err) {
     if (current !== reqId) return
     playerDetail.value = null
     loadState.value = 'error'
-    loadError.value = err instanceof Error ? err.message : '加载球员详情失败'
+    loadError.value = err instanceof Error ? err.message : t('publicPages.player.loadFailed')
   }
 }
 
@@ -126,9 +128,11 @@ async function loadPlayerMatches(current: number, profile: PlayerProfile) {
         id: mapped.id,
         matchId: mapped.id,
         date: mapped.date,
-        tournamentName: profile.seriesName || profile.seasonName || '公开赛事',
+        tournamentName: profile.seriesName || profile.seasonName || t('publicPages.player.publicEvent'),
         stageName: [
-          mapped.stageHeadline?.startsWith('第') ? mapped.stageHeadline : '',
+          mapped.stage === 'playoffs' && mapped.stageHeadline && mapped.stageHeadline !== t('publicPages.team.playoffs')
+            ? mapped.stageHeadline
+            : '',
           mapped.playoffGame || '',
         ].filter(Boolean).join(' · ')
           || mapped.stageHeadline
@@ -137,12 +141,12 @@ async function loadPlayerMatches(current: number, profile: PlayerProfile) {
         teamName: profile.currentTeamName,
         teamId: profile.eventTeamId || profile.currentTeamId,
         teamLogoUrl: profile.currentTeamLogoUrl,
-        opponentName: mapped.opponentName || '对手',
+        opponentName: mapped.opponentName || t('publicPages.player.opponent'),
         opponentId: mapped.opponentId,
         opponentLogoUrl: mapped.opponentLogoUrl || '',
         result: mapped.result === 'win' ? 'WIN' : 'LOSS',
         resultLabel: mapped.resultType === 'EVENT_DISQUALIFICATION'
-          ? (mapped.result === 'win' ? '对手取消资格判负' : '球队取消资格判负')
+          ? (mapped.result === 'win' ? t('publicPages.player.opponentDqLoss') : t('publicPages.player.teamDqLoss'))
           : mapped.resultLabel,
         teamScore: mapped.teamScore ?? 0,
         opponentScore: mapped.opponentScore ?? 0,
@@ -167,7 +171,7 @@ async function loadPlayerMatches(current: number, profile: PlayerProfile) {
       } satisfies PlayerMatchRecord
     })
     matches.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-    if (inPlayoffs) profile.currentStage = '季后赛'
+    if (inPlayoffs) profile.currentStage = t('publicPages.player.playoffs')
     applyPlayerMatches(matches, profile)
     void hydrateMatchStatsInBackground(current, matches, profile, finishedMatchIds)
   } catch {
@@ -249,12 +253,12 @@ watch(
 <template>
   <div class="player-detail-page">
     <div class="site-shell player-detail-page__shell">
-      <div v-if="loadState === 'loading'" class="player-detail-empty">加载中...</div>
+      <div v-if="loadState === 'loading'" class="player-detail-empty">{{ t('publicPages.player.loading') }}</div>
       <div v-else-if="loadState === 'error'" class="player-detail-empty is-error">
-        {{ loadError || '加载球员详情失败' }}
+        {{ loadError || t('publicPages.player.loadFailed') }}
       </div>
       <div v-else-if="!playerDetail" class="player-detail-empty">
-        球员不存在，请返回数据中心或球队页面重新选择。
+        {{ t('publicPages.player.notFound') }}
       </div>
       <template v-else>
         <PlayerHero :profile="playerDetail.profile" />

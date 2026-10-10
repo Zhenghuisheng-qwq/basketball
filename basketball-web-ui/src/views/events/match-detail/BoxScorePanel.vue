@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Team } from '@/views/events/types/events'
 import type { V4PublicMatchPlayerStatItem, V4PublicMatchTeamStatItem } from '@/api/types/v4Public'
 import TeamLogo from '@/views/events/components/TeamLogo.vue'
@@ -21,11 +22,14 @@ const props = withDefaults(defineProps<{
   hint?: string
   variant?: 'default' | 'series'
 }>(), {
-  title: '比赛技术统计',
+  title: '',
   subtitle: 'BOX SCORE',
   hint: '',
   variant: 'default',
 })
+
+const { t } = useI18n()
+const resolvedTitle = computed(() => props.title || t('eventsPage.match.boxScore'))
 
 const emit = defineEmits<{
   'update:selectedTeamId': [value: string]
@@ -65,11 +69,11 @@ const totalRow = computed(() => {
   <section class="box-score" :class="{ 'box-score--series': variant === 'series' }">
     <div class="box-score__head">
       <div>
-        <h2>{{ title }}</h2>
+        <h2>{{ resolvedTitle }}</h2>
         <span class="box-score__subtitle">{{ subtitle }}</span>
         <small v-if="hint">{{ hint }}</small>
       </div>
-      <div class="box-score__teams" role="tablist" aria-label="球队">
+      <div class="box-score__teams" role="tablist" :aria-label="t('eventsPage.aria.teams')">
         <button
           v-for="team in teams"
           :key="team.teamId || team.name"
@@ -93,22 +97,22 @@ const totalRow = computed(() => {
       </div>
     </div>
 
-    <div v-if="!rows.length" class="box-score__empty">暂无已确认的球员技术统计</div>
+    <div v-if="!rows.length" class="box-score__empty">{{ t('eventsPage.match.noPlayerStats') }}</div>
     <div v-else class="box-score__scroll">
       <table class="box-score__table">
         <thead>
           <tr>
-            <th>球员</th>
-            <th>得分</th>
-            <th>篮板</th>
-            <th>助攻</th>
-            <th>抢断</th>
-            <th>盖帽</th>
-            <th>犯规</th>
-            <th>失误</th>
-            <th>投篮</th>
-            <th>三分</th>
-            <th>罚球</th>
+            <th>{{ t('eventsPage.match.player') }}</th>
+            <th>{{ t('eventsPage.match.points') }}</th>
+            <th>{{ t('eventsPage.match.rebound') }}</th>
+            <th>{{ t('eventsPage.match.assist') }}</th>
+            <th>{{ t('eventsPage.match.steal') }}</th>
+            <th>{{ t('eventsPage.match.block') }}</th>
+            <th>{{ t('eventsPage.match.foul') }}</th>
+            <th>{{ t('eventsPage.match.turnover') }}</th>
+            <th>{{ t('eventsPage.match.fieldGoal') }}</th>
+            <th>{{ t('eventsPage.match.threePoint') }}</th>
+            <th>{{ t('eventsPage.match.freeThrow') }}</th>
           </tr>
         </thead>
         <tbody>

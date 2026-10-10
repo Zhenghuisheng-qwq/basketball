@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import HallPanelHead from './HallPanelHead.vue'
@@ -20,6 +21,7 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const { t } = useI18n()
 const panelRef = ref<HTMLElement | null>(null)
 const pageSize = 8
 
@@ -36,8 +38,8 @@ const yearOptions = computed(() => {
   })
   const sorted = Array.from(years).sort((a, b) => Number(b) - Number(a))
   return [
-    { value: 'ALL', label: '全部年份' },
-    ...sorted.map((year) => ({ value: year, label: `${year} 年` })),
+    { value: 'ALL', label: t('publicPages.hall.allYears') },
+    ...sorted.map((year) => ({ value: year, label: t('publicPages.hall.yearLabel', { year }) })),
   ]
 })
 
@@ -97,7 +99,7 @@ async function loadAll() {
     if (current !== reqId) return
     allChampions.value = []
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载历届冠军失败'
+    errorMessage.value = err instanceof Error ? err.message : t('publicPages.hall.loadChampionsFailed')
   }
 }
 
@@ -153,7 +155,7 @@ function awardDateText(value?: string | null) {
 
 <template>
   <section ref="panelRef" class="past-champions-panel">
-    <HallPanelHead title="历届冠军" subtitle="Past Champions">
+    <HallPanelHead :title="t('publicPages.hall.pastChampions')" subtitle="Past Champions">
       <template #filters>
         <HallSelect
           width="filter"
@@ -164,15 +166,15 @@ function awardDateText(value?: string | null) {
       </template>
     </HallPanelHead>
 
-    <div v-if="state === 'loading'" class="hall-empty">加载中...</div>
+    <div v-if="state === 'loading'" class="hall-empty">{{ t('publicPages.hall.loading') }}</div>
     <div v-else-if="state === 'error'" class="hall-empty">{{ errorMessage }}</div>
     <div v-else-if="state === 'empty' || filtered.length === 0" class="hall-empty">
-      当前筛选条件下暂无冠军记录
+      {{ t('publicPages.hall.noChampions') }}
     </div>
 
     <template v-else>
       <div v-for="group in groupedByYear" :key="group.year" class="past-champions-group">
-        <h3 class="past-champions-group__year">{{ group.year || '未知年份' }}</h3>
+        <h3 class="past-champions-group__year">{{ group.year || t('publicPages.hall.unknownYear') }}</h3>
         <div class="past-champions-grid">
           <article
             v-for="record in group.items"
@@ -183,11 +185,11 @@ function awardDateText(value?: string | null) {
               <div class="past-champion-card__left">
                 <div class="past-champion-card__meta">
                   <span class="past-champion-card__series">
-                    {{ displayText(record.honorName, '冠军') }}
+                    {{ displayText(record.honorName, t('publicPages.hall.championFallback')) }}
                   </span>
                 </div>
                 <p class="past-champion-card__name">
-                  {{ displayText(record.tournamentName, '公开赛事') }}
+                  {{ displayText(record.tournamentName, t('publicPages.hall.publicEvent')) }}
                 </p>
                 <p class="past-champion-card__date">{{ awardDateText(record.awardDate) }}</p>
               </div>
@@ -207,18 +209,18 @@ function awardDateText(value?: string | null) {
                   }"
                   size="xl"
                 />
-                <strong>{{ displayText(record.teamName, '冠军球队') }}</strong>
+                <strong>{{ displayText(record.teamName, t('publicPages.hall.championTeam')) }}</strong>
               </button>
             </div>
 
             <div class="past-champion-card__actions">
               <button type="button" @click="openEventHonor(record.tournamentId, true)">
-                查看冠军阵容
+                {{ t('publicPages.hall.viewChampionRoster') }}
                 <span aria-hidden="true">→</span>
               </button>
               <span class="past-champion-card__divider" aria-hidden="true" />
               <button type="button" @click="openEventHonor(record.tournamentId, false)">
-                进入赛事荣誉
+                {{ t('publicPages.hall.enterEventHonors') }}
                 <span aria-hidden="true">→</span>
               </button>
             </div>

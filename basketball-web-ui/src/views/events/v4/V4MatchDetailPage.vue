@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { getV4PublicMatchDetail, getV4PublicMatchSeries } from '@/api/v4Public'
 import type { V4PublicMatchDetail, V4PublicMatchSeriesDetail } from '@/api/types/v4Public'
@@ -33,6 +34,7 @@ import '../styles/events.scss'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const seriesMode = computed(() => route.name === 'V4MatchSeriesDetail')
 const seriesId = computed(() => String(route.params.seriesId || ''))
@@ -56,7 +58,7 @@ const progressGames = computed(() =>
 const seriesTabs = computed(() => {
   if (!seriesMode.value) return []
   return [
-    { key: SERIES_TOTAL_TAB, label: '系列赛统计' },
+    { key: SERIES_TOTAL_TAB, label: t('eventsPage.match.seriesStats') },
     ...visibleGames.value.map((game) => ({
       key: String(game.matchId),
       label: gameTabLabel(game),
@@ -117,7 +119,7 @@ const advanceLabel = computed(() => {
   if (!seriesMode.value) return ''
   const status = String(series.value?.seriesStatus || '').toUpperCase()
   if (status !== 'COMPLETED' || !series.value?.winnerEventTeamId) return ''
-  return '晋级'
+  return t('eventsPage.match.advance')
 })
 
 const metaText = computed(() => {
@@ -128,8 +130,8 @@ const metaText = computed(() => {
   }
   const m = match.value
   if (!m) return ''
-  const stage = m.stageName || '常规赛'
-  const round = m.roundNo != null ? `第${m.roundNo}轮` : ''
+  const stage = m.stageName || t('events.regularSeason')
+  const round = m.roundNo != null ? t('events.round.OTHER', { round: m.roundNo }) : ''
   const when = formatMatchWhen(m.matchTime)
   return [stage, round, v4BestOfLabel(m.bestOf || 1), when].filter(Boolean).join(' · ')
 })
@@ -137,8 +139,8 @@ const metaText = computed(() => {
 const breadcrumb = computed(() => {
   const eventName = series.value?.eventSeriesName
     || match.value?.seriesName
-    || '赛事'
-  return ['赛事', eventName, seriesMode.value ? publicContestDetailLabel('MATCH_SERIES') : publicContestDetailLabel('MATCH')]
+    || t('events.title')
+  return [t('events.title'), eventName, seriesMode.value ? publicContestDetailLabel('MATCH_SERIES') : publicContestDetailLabel('MATCH')]
 })
 
 const parentSeriesPath = computed(() => {
@@ -180,8 +182,8 @@ const showBoxScore = computed(() => {
 })
 
 const boxTitle = computed(() => {
-  if (seriesMode.value && activeTab.value === SERIES_TOTAL_TAB) return '系列赛累计统计'
-  return '比赛技术统计'
+  if (seriesMode.value && activeTab.value === SERIES_TOTAL_TAB) return t('eventsPage.match.seriesBox')
+  return t('eventsPage.match.boxScore')
 })
 
 const boxSubtitle = computed(() => {
@@ -192,7 +194,7 @@ const boxSubtitle = computed(() => {
 const boxHint = computed(() => {
   if (seriesMode.value && activeTab.value === SERIES_TOTAL_TAB) {
     const n = visibleGames.value.length || progressGames.value.filter((game) => !game.skipped).length
-    return n ? n + ' 场系列赛累计数据' : ''
+    return n ? t('eventsPage.count.seriesTotals', { count: n }) : ''
   }
   if (seriesMode.value && activeGame.value) {
     const no = activeGame.value.seriesGameNo
@@ -280,12 +282,12 @@ async function loadPage() {
   try {
     if (seriesMode.value) {
       if (!seriesId.value) {
-        throw new Error('系列赛主键无效')
+        throw new Error(t('eventsPage.match.invalidSeries'))
       }
       const res = await getV4PublicMatchSeries(seriesId.value)
       series.value = res.data ?? null
       if (!series.value) {
-        throw new Error('暂无系列赛详情')
+        throw new Error(t('eventsPage.match.noSeries'))
       }
       applyTabFromRoute()
       seriesRoundName.value = String(series.value.roundName || '').trim()
@@ -297,16 +299,16 @@ async function loadPage() {
     } else {
       series.value = null
       if (!matchId.value) {
-        throw new Error('比赛主键无效')
+        throw new Error(t('eventsPage.match.invalidMatch'))
       }
       await loadMatchById(matchId.value)
       if (!match.value) {
-        throw new Error('暂无比赛详情')
+        throw new Error(t('eventsPage.match.noMatch'))
       }
     }
     syncSelectedTeam()
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '加载失败'
+    error.value = err instanceof Error ? err.message : t('eventsPage.match.loadFailed')
     if (seriesMode.value) series.value = null
     else match.value = null
   } finally {
@@ -362,7 +364,7 @@ watch([seriesId, matchId, () => route.name], () => {
           <div class="match-detail-hero__shade" aria-hidden="true" />
           <div class="match-detail-hero__body">
         <nav class="match-detail-crumb">
-          <router-link to="/events">赛事</router-link>
+          <router-link to="/events">{{ t('events.title') }}</router-link>
           <span>/</span>
           <router-link :to="seasonPath">{{ breadcrumb[1] }}</router-link>
           <span>/</span>
@@ -372,7 +374,7 @@ watch([seriesId, matchId, () => route.name], () => {
             <router-link :to="parentSeriesPath">{{ publicContestDetailLabel('MATCH_SERIES') }}</router-link>
           </template>
         </nav>
-        <div v-if="loading" class="match-detail-state">加载中...</div>
+        <div v-if="loading" class="match-detail-state">{{ t('common.loading') }}</div>
         <div v-else-if="error" class="match-detail-state is-error">{{ error }}</div>
         <template v-else>
           <MatchScoreboard

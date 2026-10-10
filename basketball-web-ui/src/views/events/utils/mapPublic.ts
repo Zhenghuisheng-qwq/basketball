@@ -1,4 +1,5 @@
 import type { PublicMatchItemVo, PublicStandingItemVo, PublicTeamRankItemVo } from '@/api/types/public'
+import { translate } from '@/i18n'
 import {
   displayText,
   formatDateTime,
@@ -17,7 +18,7 @@ export function toEventTeam(input: {
   losses?: number | null
   disqualified?: boolean | null
 }): Team {
-  const name = displayText(input.teamName, '未知球队')
+  const name = displayText(input.teamName, translate('eventsPage.teams.unknown'))
   const teamId = String(input.teamId)
   return {
     id: teamIdToNumeric(teamId),

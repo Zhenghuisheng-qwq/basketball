@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { AnnouncementCategory } from '../types'
 
 const props = defineProps<{
@@ -11,8 +12,10 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
+const { t } = useI18n()
+
 const tabs = computed(() => [
-  { code: 'ALL', name: '全部' },
+  { code: 'ALL', name: t('publicPages.announcement.all') },
   ...props.categories,
 ])
 
@@ -22,7 +25,7 @@ function selectCategory(code: string) {
 </script>
 
 <template>
-  <div class="announcement-category-tabs" role="tablist" aria-label="公告分类">
+  <div class="announcement-category-tabs" role="tablist" :aria-label="t('publicPages.announcement.categoryAria')">
     <button
       v-for="tab in tabs"
       :key="tab.code"

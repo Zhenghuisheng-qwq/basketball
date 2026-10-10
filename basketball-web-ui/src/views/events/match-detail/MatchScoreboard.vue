@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { Team } from '@/views/events/types/events'
 import TeamLogo from '@/views/events/components/TeamLogo.vue'
 import TeamEntryLink from '@/components/team/TeamEntryLink.vue'
 import { formatExactScore, type ScorePair } from './matchDetailDisplay'
+
+const { t } = useI18n()
 
 defineProps<{
   leftTeam: Team
@@ -54,7 +57,7 @@ function secondaryLine(team: Team): string {
     </TeamEntryLink>
 
     <div class="match-scoreboard__center">
-      <div class="match-scoreboard__score" aria-label="比分">
+      <div class="match-scoreboard__score" :aria-label="t('eventsPage.aria.score')">
         <template v-if="score.kind === 'score'">
           <span
             :class="{

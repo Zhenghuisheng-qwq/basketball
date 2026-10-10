@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import teamBackground from '@/assets/icon/tournament/team_background.png'
 import compareIcon1 from '@/assets/icon/tournament/compare_1.png'
@@ -36,6 +37,7 @@ import './styles/team.scss'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const selectorVisible = ref(false)
 const selectorSide = ref<'left' | 'right'>('right')
@@ -56,10 +58,10 @@ const seasonTitle = ref('')
 let compareReqId = 0
 let teamsReqId = 0
 
-const stageLabels: Record<TeamStage, string> = {
-  regular: '常规赛',
-  playoffs: '季后赛',
-}
+const stageLabels = computed<Record<TeamStage, string>>(() => ({
+  regular: t('publicPages.team.regular'),
+  playoffs: t('publicPages.team.playoffs'),
+}))
 
 function normalizeQueryTeam(value: unknown): string {
   if (typeof value !== 'string' || !value.trim()) return ''
@@ -87,12 +89,12 @@ const selectedDivision = computed(() =>
 )
 
 const compareCompetitionText = computed(() => {
-  if (!selectedSeasonId.value || !selectedDivisionId.value) return '缺少赛事上下文，暂无法比较'
+  if (!selectedSeasonId.value || !selectedDivisionId.value) return t('publicPages.team.missingContext')
   return displayText(
     selectedSeason.value?.displayTitle
       || selectedSeason.value?.seasonName
       || seasonTitle.value,
-    '公开赛季',
+    t('publicPages.team.publicSeason'),
   )
 })
 
@@ -148,10 +150,10 @@ const compareHeroBgStyle = computed(() => ({
 }))
 
 const overviewIconMap: Record<string, string> = {
-  胜率: compareIcon1,
-  场均得分: compareIcon2,
-  场均失分: compareIcon3,
-  场均净胜分: compareIcon4,
+  winRate: compareIcon1,
+  avgPoints: compareIcon2,
+  avgPointsAgainst: compareIcon3,
+  avgPointDiff: compareIcon4,
 }
 
 const selectorContextText = computed(() => {
@@ -194,19 +196,19 @@ interface OverviewMetricDef {
   field: 'winRate' | 'avgPoints' | 'avgPointsAgainst' | 'avgPointDiff'
 }
 
-const overviewMetricDefs: OverviewMetricDef[] = [
-  { key: 'winRate', label: '胜率', formatType: 'percent', higherIsBetter: true, field: 'winRate' },
-  { key: 'avgPoints', label: '场均得分', formatType: 'decimal', higherIsBetter: true, field: 'avgPoints' },
-  { key: 'avgPointsAgainst', label: '场均失分', formatType: 'decimal', higherIsBetter: false, field: 'avgPointsAgainst' },
-  { key: 'avgPointDiff', label: '场均净胜分', formatType: 'signed', higherIsBetter: true, field: 'avgPointDiff' },
-]
+const overviewMetricDefs = computed<OverviewMetricDef[]>(() => [
+  { key: 'winRate', label: t('publicPages.team.winRate'), formatType: 'percent', higherIsBetter: true, field: 'winRate' },
+  { key: 'avgPoints', label: t('publicPages.team.avgPoints'), formatType: 'decimal', higherIsBetter: true, field: 'avgPoints' },
+  { key: 'avgPointsAgainst', label: t('publicPages.team.avgPointsAgainst'), formatType: 'decimal', higherIsBetter: false, field: 'avgPointsAgainst' },
+  { key: 'avgPointDiff', label: t('publicPages.team.avgPointDiff'), formatType: 'signed', higherIsBetter: true, field: 'avgPointDiff' },
+])
 
 const overviewCards = computed(() => {
   if (!leftStat.value && !rightStat.value) return []
   const overview = compareOverviewValuesFromV4Stats(leftStat.value, rightStat.value)
-  return overviewMetricDefs.map((metric) => ({
+  return overviewMetricDefs.value.map((metric) => ({
     ...metric,
-    icon: overviewIconMap[metric.label],
+    icon: overviewIconMap[metric.key],
     leftValue: overview.left[metric.field],
     rightValue: overview.right[metric.field],
   }))
@@ -216,8 +218,15 @@ const comparisonHeadingMeta = computed(() => {
   const leftMeta = v4CompareSideMeta(leftStat.value)
   const rightMeta = v4CompareSideMeta(rightStat.value)
   return {
-    scope: `统计范围：${displayText(selectedSeason.value?.displayTitle || seasonTitle.value, '公开赛季')} 常规赛已审核比赛`,
-    games: `${leftTeam.value.code} ${leftMeta.games}场 · ${rightTeam.value?.code ?? '--'} ${rightMeta.games}场`,
+    scope: t('publicPages.team.compareScope', {
+      season: displayText(selectedSeason.value?.displayTitle || seasonTitle.value, t('publicPages.team.publicSeason')),
+    }),
+    games: t('publicPages.team.compareGames', {
+      left: leftTeam.value.code,
+      leftGames: leftMeta.games,
+      right: rightTeam.value?.code ?? '--',
+      rightGames: rightMeta.games,
+    }),
   }
 })
 
@@ -350,7 +359,7 @@ async function loadCompareData() {
     rightStat.value = null
     compareData.value = null
     compareState.value = 'error'
-    compareErrorMessage.value = err instanceof Error ? err.message : '加载对比数据失败'
+    compareErrorMessage.value = err instanceof Error ? err.message : t('publicPages.team.loadCompareFailed')
   }
 }
 
@@ -406,7 +415,7 @@ onMounted(() => {
 })
 
 function getRecordText(wins: number, losses: number): string {
-  return `${wins}胜${losses}负`
+  return t('publicPages.team.record', { wins, losses })
 }
 
 function openSelector(side: 'left' | 'right') {
@@ -457,8 +466,8 @@ function getTeamNameSizeClass(name: string) {
         <div class="compare-hero__overlay" aria-hidden="true" />
 
         <div class="compare-hero__inner team-compare-content">
-          <nav class="compare-hero__crumb" aria-label="面包屑">
-            <router-link to="/tournament">赛事</router-link>
+          <nav class="compare-hero__crumb" :aria-label="t('publicPages.team.breadcrumb')">
+            <router-link to="/tournament">{{ t('publicPages.team.events') }}</router-link>
             <span>/</span>
             <router-link
               :to="{
@@ -469,10 +478,10 @@ function getTeamNameSizeClass(name: string) {
                 },
               }"
             >
-              {{ selectedSeason?.seriesName || '赛事' }}
+              {{ selectedSeason?.seriesName || t('publicPages.team.events') }}
             </router-link>
             <span>/</span>
-            <b>球队对比</b>
+            <b>{{ t('publicPages.team.compare') }}</b>
           </nav>
 
           <div class="compare-hero__battle team-compare-main">
@@ -488,7 +497,7 @@ function getTeamNameSizeClass(name: string) {
                   {{ getRecordText(leftTeam.wins, leftTeam.losses) }}
                 </div>
                 <div v-if="leftTeam.ranking > 0" class="compare-team__rank">
-                  {{ stageLabels[leftTeam.currentStage] }}第{{ leftTeam.ranking }}
+                  {{ t('publicPages.team.stageRank', { stage: stageLabels[leftTeam.currentStage], rank: leftTeam.ranking }) }}
                 </div>
               </div>
             </div>
@@ -510,7 +519,7 @@ function getTeamNameSizeClass(name: string) {
                     {{ getRecordText(rightTeam.wins, rightTeam.losses) }}
                   </div>
                   <div v-if="rightTeam.ranking > 0" class="compare-team__rank">
-                    {{ stageLabels[rightTeam.currentStage] }}第{{ rightTeam.ranking }}
+                    {{ t('publicPages.team.stageRank', { stage: stageLabels[rightTeam.currentStage], rank: rightTeam.ranking }) }}
                   </div>
                 </div>
               </template>
@@ -520,9 +529,9 @@ function getTeamNameSizeClass(name: string) {
                   ?
                 </div>
                 <div class="compare-team__info">
-                  <div class="compare-team__name compare-team__name--placeholder">请选择对比球队</div>
+                  <div class="compare-team__name compare-team__name--placeholder">{{ t('publicPages.team.selectCompareTeam') }}</div>
                   <div class="compare-team__record compare-team__record--placeholder">
-                    点击更换球队或从弹窗中选择
+                    {{ t('publicPages.team.selectCompareHint') }}
                   </div>
                 </div>
               </template>
@@ -532,7 +541,7 @@ function getTeamNameSizeClass(name: string) {
               <div class="compare-hero__foot-align compare-hero__foot-align--left">
                 <span class="compare-hero__foot-logo-spacer" aria-hidden="true" />
                 <button type="button" class="compare-team__button" @click="openSelector('left')">
-                  更换球队
+                  {{ t('publicPages.team.changeTeam') }}
                 </button>
               </div>
             </div>
@@ -545,7 +554,7 @@ function getTeamNameSizeClass(name: string) {
               <div class="compare-hero__foot-align compare-hero__foot-align--right">
                 <span class="compare-hero__foot-logo-spacer" aria-hidden="true" />
                 <button type="button" class="compare-team__button" @click="openSelector('right')">
-                  更换球队
+                  {{ t('publicPages.team.changeTeam') }}
                 </button>
               </div>
             </div>
@@ -558,7 +567,7 @@ function getTeamNameSizeClass(name: string) {
           <div class="site-shell-inner compare-content team-comparison">
             <header class="comparison-heading">
               <div class="comparison-heading__main">
-                <h2>常规赛数据对比</h2>
+                <h2>{{ t('publicPages.team.regularCompare') }}</h2>
                 <span>REGULAR SEASON COMPARISON</span>
               </div>
 
@@ -568,16 +577,16 @@ function getTeamNameSizeClass(name: string) {
               </div>
             </header>
 
-            <div v-if="!hasValidPair" class="compare-empty">请选择对比球队后查看数据</div>
+            <div v-if="!hasValidPair" class="compare-empty">{{ t('publicPages.team.selectToCompare') }}</div>
 
-            <div v-else-if="compareState === 'loading'" class="compare-empty">加载中...</div>
+            <div v-else-if="compareState === 'loading'" class="compare-empty">{{ t('publicPages.team.loading') }}</div>
 
             <div v-else-if="compareState === 'error'" class="compare-empty is-error">
-              {{ compareErrorMessage || '加载对比数据失败' }}
+              {{ compareErrorMessage || t('publicPages.team.loadCompareFailed') }}
             </div>
 
             <div v-else-if="compareState === 'empty' || !compareData" class="compare-empty">
-              暂无对比数据
+              {{ t('publicPages.team.noCompareData') }}
             </div>
 
             <template v-else-if="compareData && rightTeam">
@@ -598,7 +607,7 @@ function getTeamNameSizeClass(name: string) {
                 </div>
 
                 <section class="metric-section">
-                  <h3 class="metric-section__title">基础数据</h3>
+                  <h3 class="metric-section__title">{{ t('publicPages.team.basicData') }}</h3>
                   <div class="metric-section__rows">
                     <ComparisonMetricRow
                       v-for="stat in compareData.basics"
@@ -609,7 +618,7 @@ function getTeamNameSizeClass(name: string) {
                 </section>
 
                 <section class="metric-section">
-                  <h3 class="metric-section__title">投篮表现</h3>
+                  <h3 class="metric-section__title">{{ t('publicPages.team.shooting') }}</h3>
                   <div class="metric-section__rows">
                     <ComparisonMetricRow
                       v-for="stat in compareData.shooting"
@@ -622,7 +631,7 @@ function getTeamNameSizeClass(name: string) {
                 <div class="comparison-note">
                   <span class="comparison-note__icon" aria-hidden="true">▼</span>
                   <span>
-                    数值越高通常代表表现越优；场均失分、场均失误和场均犯规为数值越低越优。
+                    {{ t('publicPages.team.compareNote') }}
                   </span>
                 </div>
               </section>

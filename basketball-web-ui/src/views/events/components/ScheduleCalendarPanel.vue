@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { buildThreeMonths } from '../utils/scheduleCalendar'
 
 const props = defineProps<{
@@ -14,16 +15,17 @@ const emit = defineEmits<{
   nextMonth: []
 }>()
 
+const { t } = useI18n()
 const months = computed(() => buildThreeMonths(props.monthAnchor, props.selectedDate, props.dateCounts || {}))
-const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+const weekdays = computed(() => [0, 1, 2, 3, 4, 5, 6].map((day) => t(`eventsPage.weekdayChar.${day}`)))
 </script>
 
 <template>
-  <section class="calendar-panel" aria-label="赛程月历">
+  <section class="calendar-panel" :aria-label="t('eventsPage.aria.monthCalendar')">
     <div class="calendar-nav">
-      <button type="button" class="month-arrow" aria-label="上一月" @click="emit('prevMonth')">‹</button>
+      <button type="button" class="month-arrow" :aria-label="t('eventsPage.aria.prevMonth')" @click="emit('prevMonth')">‹</button>
       <span>{{ months[1]?.label || '' }}</span>
-      <button type="button" class="month-arrow" aria-label="下一月" @click="emit('nextMonth')">›</button>
+      <button type="button" class="month-arrow" :aria-label="t('eventsPage.aria.nextMonth')" @click="emit('nextMonth')">›</button>
     </div>
 
     <div class="calendar-months">
@@ -35,7 +37,7 @@ const weekdays = ['日', '一', '二', '三', '四', '五', '六']
       >
         <div class="month-title">{{ month.label }}</div>
         <div class="month-weekdays">
-          <span v-for="day in weekdays" :key="day">{{ day }}</span>
+          <span v-for="(day, index) in weekdays" :key="index">{{ day }}</span>
         </div>
         <div class="month-days">
           <button

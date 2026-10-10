@@ -15,6 +15,7 @@ import type {
   V4PublicSeriesItem,
 } from '@/api/types/v4Public'
 import type { PublicSeasonItemVo, PublicSeasonOverviewVo, PublicTournamentItemVo } from '@/api/types/public'
+import { translate } from '@/i18n'
 import { displayText } from '@/utils/publicDisplay'
 import { v4PlatformLabel, v4PublicLifecycleLabel, v4SeriesLabel } from '@/utils/v4Display'
 import type { LeagueHeroMetaItem } from '../types/events'
@@ -126,25 +127,25 @@ export function usePublicSeasonContext() {
       {
         key: 'season',
         icon: 'calendar',
-        title: '赛季',
+        title: translate('eventsPage.hero.season'),
         value: displayText(season?.displayTitle || season?.seasonName || season?.seasonYear, '--'),
       },
       {
         key: 'teams',
         icon: 'trophy',
-        title: '战队数',
+        title: translate('eventsPage.hero.teamCount'),
         value: String(division?.eventTeamCount ?? detailCounts?.eventTeamCount ?? 0),
       },
       {
         key: 'stage',
         icon: 'stage',
-        title: '当前阶段',
-        value: v4PublicLifecycleLabel(divisionDetail.value?.divisionStatus, season?.seasonStatus, '常规赛'),
+        title: translate('eventsPage.hero.currentStage'),
+        value: v4PublicLifecycleLabel(divisionDetail.value?.divisionStatus, season?.seasonStatus, translate('events.regularSeason')),
       },
       {
         key: 'platform',
         icon: 'gamepad',
-        title: '比赛平台',
+        title: translate('eventsPage.hero.platform'),
         value: displayText(platforms, '--'),
       },
     ]
@@ -165,7 +166,7 @@ export function usePublicSeasonContext() {
       seriesList.value = []
       tournaments.value = []
       tournamentState.value = 'error'
-      errorMessage.value = err instanceof Error ? err.message : '加载赛事系列失败'
+      errorMessage.value = err instanceof Error ? err.message : translate('eventsPage.hero.loadSeriesFailed')
     }
   }
 
@@ -189,7 +190,7 @@ export function usePublicSeasonContext() {
       rawSeasons.value = []
       seasons.value = []
       seasonState.value = 'error'
-      errorMessage.value = err instanceof Error ? err.message : '加载赛季失败'
+      errorMessage.value = err instanceof Error ? err.message : translate('eventsPage.hero.loadSeasonsFailed')
     }
   }
 
@@ -270,7 +271,7 @@ export function usePublicSeasonContext() {
       divisionDetail.value = null
       overview.value = null
       overviewState.value = 'error'
-      errorMessage.value = err instanceof Error ? err.message : '系统异常，请稍后重试'
+      errorMessage.value = err instanceof Error ? err.message : translate('eventsPage.hero.systemError')
     }
   }
 

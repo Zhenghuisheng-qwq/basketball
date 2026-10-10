@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import TornEdge from '@/components/home/TornEdge.vue'
 import HomeCommunity from '@/components/home/HomeCommunity.vue'
@@ -57,23 +58,24 @@ type HomeBannerItem = {
 }
 
 const router = useRouter()
+const { t } = useI18n()
 
 const PREVIEW_MATCH_COUNT = 3
 const MATCH_QUERY_LIMIT = 10
 const PREVIEW_NEWS_COUNT = 7
 
-const homeCompetitionFilters: Array<{ key: HomeCompetitionFilter; label: string }> = [
-  { key: 'ALL', label: '全部赛事' },
-  { key: 'LEAGUE', label: 'League' },
-  { key: 'ARENA', label: 'Arena' },
-  { key: 'CUP', label: 'Cup' },
-  { key: 'OPEN', label: 'Open' },
-]
+const homeCompetitionFilters = computed<Array<{ key: HomeCompetitionFilter; label: string }>>(() => [
+  { key: 'ALL', label: t('home.allEvents') },
+  { key: 'LEAGUE', label: t('home.league') },
+  { key: 'ARENA', label: t('home.arena') },
+  { key: 'CUP', label: t('home.cup') },
+  { key: 'OPEN', label: t('home.open') },
+])
 
-const homeNewsTabs: Array<{ key: HomeNewsTab; label: string }> = [
-  { key: 'EVENT', label: '赛事' },
-  { key: 'NOTICE', label: '公告' },
-]
+const homeNewsTabs = computed<Array<{ key: HomeNewsTab; label: string }>>(() => [
+  { key: 'EVENT', label: t('home.newsEvent') },
+  { key: 'NOTICE', label: t('home.newsNotice') },
+])
 
 const HOME_EVENT_TEMPLATES: Array<Pick<HomeEventCard, 'seriesCode' | 'title' | 'icon'>> = [
   { seriesCode: 'LEAGUE', title: 'CNPA LEAGUE', icon: iconLeague },
@@ -95,6 +97,8 @@ const contentState = ref<SectionState>('loading')
 const matchError = ref('')
 const bannerError = ref('')
 const contentError = ref('')
+const matchErrorText = computed(() => matchError.value || t('home.matchError'))
+const contentErrorText = computed(() => contentError.value || t('home.contentError'))
 
 const brokenLogos = ref<Record<string, boolean>>({})
 const matchCarousel = ref<HTMLElement | null>(null)
@@ -229,11 +233,11 @@ function matchStatus(match: PublicMatchItemVo) {
 function matchActionLabel(match: PublicMatchItemVo): string {
   switch (matchStatus(match)) {
     case 'live':
-      return '进入比赛'
+      return t('home.enterMatch')
     case 'finished':
-      return '查看本场详情'
+      return t('home.viewMatch')
     default:
-      return '未开始'
+      return t('home.notStarted')
   }
 }
 
@@ -257,7 +261,7 @@ async function loadBanners() {
   } catch (err) {
     banners.value = []
     bannerState.value = 'error'
-    bannerError.value = err instanceof Error ? err.message : '加载首页 Banner 失败'
+    bannerError.value = err instanceof Error && err.message ? err.message : t('home.bannerError')
   }
 }
 
@@ -271,7 +275,7 @@ async function loadMatches() {
   } catch (err) {
     matches.value = []
     matchState.value = 'error'
-    matchError.value = err instanceof Error ? err.message : '加载近期赛事失败'
+    matchError.value = err instanceof Error && err.message ? err.message : ''
   }
 }
 
@@ -369,7 +373,7 @@ async function loadHomeContent() {
     eventNews.value = []
     noticeNews.value = []
     contentState.value = 'error'
-    contentError.value = err instanceof Error ? err.message : '加载首页资讯失败'
+    contentError.value = err instanceof Error && err.message ? err.message : ''
   }
 }
 
@@ -415,7 +419,7 @@ onMounted(() => {
             <div class="section-head section-head-dark home-match-header">
               <div>
                 <span class="home-kicker">UPCOMING MATCHES</span>
-                <h2>近期比赛</h2>
+                <h2>{{ t('home.recentMatches') }}</h2>
               </div>
               <button
                 type="button"
@@ -423,12 +427,12 @@ onMounted(() => {
                 :disabled="!currentSeasonId"
                 @click="handleMoreMatches"
               >
-                查看更多
+                {{ t('home.viewMore') }}
                 <span>›</span>
               </button>
             </div>
 
-            <div class="home-competition-filter" aria-label="近期赛事筛选">
+            <div class="home-competition-filter" :aria-label="t('home.filterLabel')">
               <button
                 v-for="filter in homeCompetitionFilters"
                 :key="filter.key"
@@ -441,15 +445,15 @@ onMounted(() => {
               </button>
             </div>
 
-            <div v-if="matchState === 'loading'" class="home-state">加载中...</div>
-            <div v-else-if="matchState === 'error'" class="home-state home-state--error">{{ matchError }}</div>
-            <div v-else-if="matchState === 'empty'" class="home-state">暂无近期赛事</div>
-            <div v-else-if="!filteredMatches.length" class="home-state">暂无该赛事类型比赛</div>
+            <div v-if="matchState === 'loading'" class="home-state">{{ t('common.loading') }}</div>
+            <div v-else-if="matchState === 'error'" class="home-state home-state--error">{{ matchErrorText }}</div>
+            <div v-else-if="matchState === 'empty'" class="home-state">{{ t('home.noRecent') }}</div>
+            <div v-else-if="!filteredMatches.length" class="home-state">{{ t('home.noType') }}</div>
             <div v-else class="home-match-carousel-wrapper">
               <button
                 type="button"
                 class="home-match-arrow home-match-arrow--prev"
-                aria-label="查看上一组比赛"
+                :aria-label="t('home.prevGroup')"
                 @click="scrollMatchesPrev"
               >
                 ‹
@@ -521,7 +525,7 @@ onMounted(() => {
             <button
               type="button"
               class="home-match-arrow home-match-arrow--next"
-              aria-label="查看下一组比赛"
+              :aria-label="t('home.nextGroup')"
               @click="scrollMatchesNext"
             >
               ›
@@ -540,12 +544,12 @@ onMounted(() => {
           <TornEdge position="top" tone="light" variant="wave" />
           <div class="home-combined-inner">
             <div class="combined-layout">
-              <div class="combined-left" aria-label="资讯">
+              <div class="combined-left" :aria-label="t('home.news')">
                 <div class="combined-column-heading combined-column-heading--news">
-                  <h2>最新资讯</h2>
+                  <h2>{{ t('home.latestNews') }}</h2>
                   <span class="home-kicker">LATEST NEWS</span>
                 </div>
-                <div class="news-tabs" role="tablist" aria-label="资讯分类">
+                <div class="news-tabs" role="tablist" :aria-label="t('home.newsTabs')">
                   <button
                     v-for="tab in homeNewsTabs"
                     :key="tab.key"
@@ -559,12 +563,12 @@ onMounted(() => {
                     {{ tab.label }}
                   </button>
                 </div>
-                <div v-if="contentState === 'loading'" class="home-state home-state--inline">加载中...</div>
+                <div v-if="contentState === 'loading'" class="home-state home-state--inline">{{ t('common.loading') }}</div>
                 <div v-else-if="contentState === 'error'" class="home-state home-state--inline home-state--error">
-                  {{ contentError }}
+                  {{ contentErrorText }}
                 </div>
                 <div v-else-if="!visibleNews.length" class="home-state home-state--inline">
-                  {{ activeNewsTab === 'EVENT' ? '暂无赛事资讯' : '暂无公告' }}
+                  {{ activeNewsTab === 'EVENT' ? t('home.noEventNews') : t('home.noNotices') }}
                 </div>
                 <ul v-else class="news-list">
                   <li v-for="item in visibleNews" :key="item.announcementId">
@@ -576,14 +580,14 @@ onMounted(() => {
                   </li>
                 </ul>
                 <button type="button" class="news-more" @click="handleMoreNews">
-                  查看更多新闻
+                  {{ t('home.moreNews') }}
                   <span>→</span>
                 </button>
               </div>
 
               <div class="combined-right">
                 <div class="combined-column-heading combined-column-heading--news">
-                  <h2>当前赛事</h2>
+                  <h2>{{ t('home.currentEvents') }}</h2>
                   <span class="home-kicker">CURRENT EVENTS</span>
                 </div>
 
@@ -602,7 +606,7 @@ onMounted(() => {
                     >
                       {{ v4SeasonStatusLabel(card.seasonStatus) }}
                     </span>
-                    <span v-else-if="!card.seasonId" class="event-status-tag">暂无赛事</span>
+                    <span v-else-if="!card.seasonId" class="event-status-tag">{{ t('home.noEvent') }}</span>
                     <div class="event-icon">
                       <img :src="card.icon" :alt="card.title" />
                     </div>
@@ -611,25 +615,25 @@ onMounted(() => {
                       <div v-if="card.seasonId" class="event-details">
                         <div v-if="card.divisionName" class="event-detail-item">
                           <img src="@/assets/icon/home/stage.png" alt="" class="event-detail-icon" />
-                          <span>当前地区：{{ card.divisionName }}</span>
+                          <span>{{ t('home.currentDivision', { name: card.divisionName }) }}</span>
                         </div>
                         <div v-if="card.seasonStatus" class="event-detail-item">
                           <img src="@/assets/icon/home/user.png" alt="" class="event-detail-icon" />
-                          <span>赛事状态：{{ v4SeasonStatusLabel(card.seasonStatus) }}</span>
+                          <span>{{ t('home.eventStatus', { status: v4SeasonStatusLabel(card.seasonStatus) }) }}</span>
                         </div>
                         <div v-if="card.currentStageName" class="event-detail-item">
                           <img src="@/assets/icon/home/platform.png" alt="" class="event-detail-icon" />
-                          <span>比赛阶段：{{ card.currentStageName }}</span>
+                          <span>{{ t('home.stage', { name: card.currentStageName }) }}</span>
                         </div>
                         <div v-if="formatEventRange(card.matchStartTime, card.matchEndTime)" class="event-detail-item">
                           <img src="@/assets/icon/home/date.png" alt="" class="event-detail-icon" />
-                          <span>时间：{{ formatEventRange(card.matchStartTime, card.matchEndTime) }}</span>
+                          <span>{{ t('home.timeRange', { range: formatEventRange(card.matchStartTime, card.matchEndTime) }) }}</span>
                         </div>
                       </div>
                       <div v-else class="event-details">
                         <div class="event-detail-item">
                           <img src="@/assets/icon/home/stage.png" alt="" class="event-detail-icon" />
-                          <span>暂无赛事</span>
+                          <span>{{ t('home.noEvent') }}</span>
                         </div>
                       </div>
                     </div>

@@ -1,4 +1,5 @@
 import type { Standing } from '../types/events'
+import { translate } from '@/i18n'
 
 /**
  * Qualification Split ≠ Playoff Bracket Half Split
@@ -52,20 +53,22 @@ export function leftZoneCopy(
   const qualify = tone === 'qualify'
   if (layout === 'cutoff' && qualifyCount > 0) {
     return {
-      title: qualify ? `晋级区（前${qualifyCount}名晋级）` : `季后赛区（前${qualifyCount}名晋级）`,
-      hint: qualify ? `前${qualifyCount}名晋级下一阶段` : `前${qualifyCount}名晋级季后赛`,
+      title: translate(qualify ? 'events.zone.qualifyTitle' : 'events.zone.playoffTitle', { count: qualifyCount }),
+      hint: translate(qualify ? 'events.zone.qualifyHint' : 'events.zone.playoffHint', { count: qualifyCount }),
       en: qualify ? 'QUALIFY ZONE' : 'PLAYOFF ZONE',
     }
   }
   const end = Math.max(1, Math.min(splitIndex, rowCount))
   if (qualifyCount > 0 && qualifyCount >= rowCount) {
     return {
-      title: qualify ? `晋级区（前${qualifyCount}名晋级）` : `季后赛区（前${qualifyCount}名晋级）`,
-      hint: qualify ? `全部${rowCount}支晋级下一阶段` : `全部${rowCount}支晋级季后赛`,
+      title: translate(qualify ? 'events.zone.qualifyTitle' : 'events.zone.playoffTitle', { count: qualifyCount }),
+      hint: translate(qualify ? 'events.zone.qualifyAll' : 'events.zone.playoffAll', { count: rowCount }),
       en: qualify ? 'QUALIFY ZONE' : 'PLAYOFF ZONE',
     }
   }
-  return { title: qualify ? `晋级区（1-${end}名）` : `季后赛区（1-${end}名）` }
+  return {
+    title: translate(qualify ? 'events.zone.qualifyRange' : 'events.zone.playoffRange', { end }),
+  }
 }
 
 export function rightZoneCopy(
@@ -78,18 +81,18 @@ export function rightZoneCopy(
   const qualify = tone === 'qualify'
   if (layout === 'cutoff' && qualifyCount > 0) {
     return {
-      title: qualify ? `非晋级区（${qualifyCount + 1}名及以后）` : `非季后赛区（${qualifyCount + 1}名及以后）`,
+      title: translate(qualify ? 'events.zone.qualifyAfter' : 'events.zone.playoffAfter', { start: qualifyCount + 1 }),
       en: qualify ? 'OUTSIDE QUALIFY' : 'OUTSIDE PLAYOFFS',
     }
   }
   const start = Math.min(splitIndex + 1, rowCount)
   if (qualifyCount > 0 && qualifyCount >= rowCount) {
     return {
-      title: qualify ? `晋级区（全部已晋级）` : `季后赛区（全部已晋级）`,
+      title: translate(qualify ? 'events.zone.qualifyAllAdvanced' : 'events.zone.playoffAllAdvanced'),
       en: qualify ? 'QUALIFY ZONE' : 'PLAYOFF ZONE',
     }
   }
-  return { title: `其余排名（${start}名及以后）` }
+  return { title: translate('events.zone.rest', { start }) }
 }
 
 export function splitLeftRows(rows: Standing[], index: number): Standing[] {

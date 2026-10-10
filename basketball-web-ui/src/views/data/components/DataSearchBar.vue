@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps<{
   modelValue: string
   placeholder?: string
@@ -36,7 +40,7 @@ function onKeydown(event: KeyboardEvent) {
         @keydown="onKeydown"
       />
     </label>
-    <button type="button" class="data-search-bar__btn" @click="onSearch">查询</button>
+    <button type="button" class="data-search-bar__btn" @click="onSearch">{{ t('publicPages.data.search') }}</button>
   </div>
 </template>
 

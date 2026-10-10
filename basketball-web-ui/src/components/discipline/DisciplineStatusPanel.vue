@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { PublicActiveDisciplineSummary } from '@/api/types/v4Public'
 
 defineProps<{
   items?: PublicActiveDisciplineSummary[] | null
   title?: string
 }>()
+
+const { t } = useI18n()
 
 function formatTime(value?: string) {
   if (!value) return '--'
@@ -15,24 +18,24 @@ function formatTime(value?: string) {
 <template>
   <section v-if="items?.length" class="discipline-status-panel">
     <div class="discipline-status-panel__head">
-      <h3>{{ title || '赛事状态' }}</h3>
-      <span>当前有效处罚</span>
+      <h3>{{ title || t('publicPages.team.eventStatus') }}</h3>
+      <span>{{ t('publicPages.team.disciplineActive') }}</span>
     </div>
     <article v-for="(item, index) in items" :key="`${item.penaltyCode}-${index}`" class="discipline-status-panel__item">
       <div class="discipline-status-panel__row">
-        <em>处罚类型</em>
+        <em>{{ t('publicPages.team.penaltyType') }}</em>
         <strong>{{ item.penaltyLabel || item.tagLabel || '--' }}</strong>
       </div>
       <div class="discipline-status-panel__row">
-        <em>生效时间</em>
+        <em>{{ t('publicPages.team.effectiveTime') }}</em>
         <strong>{{ formatTime(item.effectiveStartTime) }}</strong>
       </div>
       <div class="discipline-status-panel__row">
-        <em>状态</em>
-        <strong>{{ item.statusLabel || '生效中' }}</strong>
+        <em>{{ t('publicPages.team.status') }}</em>
+        <strong>{{ item.statusLabel || t('publicPages.team.active') }}</strong>
       </div>
       <p v-if="item.description" class="discipline-status-panel__desc">{{ item.description }}</p>
-      <p v-if="item.publicReason" class="discipline-status-panel__desc">原因：{{ item.publicReason }}</p>
+      <p v-if="item.publicReason" class="discipline-status-panel__desc">{{ t('publicPages.team.reason', { reason: item.publicReason }) }}</p>
     </article>
   </section>
 </template>

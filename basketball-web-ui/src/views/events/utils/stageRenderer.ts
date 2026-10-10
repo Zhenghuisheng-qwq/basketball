@@ -1,4 +1,5 @@
 import type { V4PublicStageItem } from '@/api/types/v4Public'
+import { translate } from '@/i18n'
 
 export type StageRendererKind = 'ROUND_ROBIN' | 'GROUP_STAGE' | 'SINGLE_ELIMINATION' | 'PLAYOFF'
 
@@ -63,39 +64,39 @@ export function stageSelectorLabel(stage?: StageLike | null): string {
   if (named) return named
   switch (resolveStageRendererKind(stage)) {
     case 'GROUP_STAGE':
-      return '小组赛'
+      return translate('eventsPage.stage.group')
     case 'SINGLE_ELIMINATION':
-      return '淘汰赛'
+      return translate('eventsPage.stage.elimination')
     case 'PLAYOFF':
-      return '季后赛'
+      return translate('eventsPage.stage.playoff')
     default:
-      return '常规赛'
+      return translate('events.regularSeason')
   }
 }
 
 export function stageHeading(stage?: StageLike | null): { title: string; titleEn: string } {
   switch (resolveStageRendererKind(stage)) {
     case 'GROUP_STAGE':
-      return { title: '小组赛', titleEn: 'GROUP STAGE' }
+      return { title: translate('eventsPage.stage.groupTitle'), titleEn: 'GROUP STAGE' }
     case 'SINGLE_ELIMINATION':
-      return { title: '淘汰赛对阵图', titleEn: 'ELIMINATION BRACKET' }
+      return { title: translate('eventsPage.stage.eliminationTitle'), titleEn: 'ELIMINATION BRACKET' }
     case 'PLAYOFF':
-      return { title: '季后赛对阵图', titleEn: 'PLAYOFF BRACKET' }
+      return { title: translate('eventsPage.stage.playoffTitle'), titleEn: 'PLAYOFF BRACKET' }
     default:
-      return { title: '常规赛', titleEn: 'REGULAR SEASON' }
+      return { title: translate('events.regularSeason'), titleEn: 'REGULAR SEASON' }
   }
 }
 
 export function stageEmptyText(stage?: StageLike | null): string {
   switch (resolveStageRendererKind(stage)) {
     case 'GROUP_STAGE':
-      return '小组赛数据暂未生成'
+      return translate('eventsPage.stage.groupEmpty')
     case 'SINGLE_ELIMINATION':
-      return '淘汰赛对阵暂未生成'
+      return translate('eventsPage.stage.eliminationEmpty')
     case 'PLAYOFF':
-      return '季后赛对阵暂未生成'
+      return translate('eventsPage.stage.playoffEmpty')
     default:
-      return '常规赛积分暂未生成'
+      return translate('eventsPage.stage.regularEmpty')
   }
 }
 

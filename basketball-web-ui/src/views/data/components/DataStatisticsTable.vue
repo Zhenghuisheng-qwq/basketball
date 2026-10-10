@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import {
   formatRate,
@@ -22,6 +23,7 @@ const props = defineProps<{
   emptyText?: string
 }>()
 
+const { t } = useI18n()
 const brokenLogos = reactive<Record<string, boolean>>({})
 
 const columns = computed(() =>
@@ -145,9 +147,9 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
 
 <template>
   <div class="data-table-scroll">
-    <div v-if="loading" class="data-table-state">加载中...</div>
+    <div v-if="loading" class="data-table-state">{{ t('publicPages.data.loading') }}</div>
     <div v-else-if="error" class="data-table-state is-error">{{ error }}</div>
-    <div v-else-if="rows.length === 0" class="data-table-state">{{ emptyText || '暂无数据' }}</div>
+    <div v-else-if="rows.length === 0" class="data-table-state">{{ emptyText || t('publicPages.data.empty') }}</div>
     <table v-else class="data-table">
       <thead>
         <tr>

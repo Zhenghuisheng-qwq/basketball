@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { isValidDateKey, todayDateKey } from '@/utils/scheduleDateKey'
 import { useCalendar } from '../composables/useCalendar'
 
@@ -12,6 +13,8 @@ const emit = defineEmits<{
   shift: [offset: number]
 }>()
 
+const { t } = useI18n()
+const weekdays = computed(() => [0, 1, 2, 3, 4, 5, 6].map((day) => t(`eventsPage.weekdayChar.${day}`)))
 const initialDate = isValidDateKey(props.selectedDate) ? props.selectedDate : todayDateKey()
 const { monthLabel, getThreeMonths, setAnchorFromDate, shiftMonths } = useCalendar(initialDate)
 
@@ -35,11 +38,11 @@ function handleShift(offset: number) {
     @click.stop
   >
     <div class="calendar-head">
-      <button type="button" class="month-arrow" aria-label="上一组月份" @click="handleShift(-3)">
+      <button type="button" class="month-arrow" :aria-label="t('eventsPage.aria.prevMonthGroup')" @click="handleShift(-3)">
         ‹
       </button>
       <span>{{ monthLabel }}</span>
-      <button type="button" class="month-arrow" aria-label="下一组月份" @click="handleShift(3)">
+      <button type="button" class="month-arrow" :aria-label="t('eventsPage.aria.nextMonthGroup')" @click="handleShift(3)">
         ›
       </button>
     </div>
@@ -48,7 +51,7 @@ function handleShift(offset: number) {
       <div v-for="month in months" :key="`${month.year}-${month.month}`" class="month-block">
         <h4>{{ month.label }}</h4>
         <div class="weekday-row">
-          <span v-for="day in ['日', '一', '二', '三', '四', '五', '六']" :key="day">{{ day }}</span>
+          <span v-for="(day, index) in weekdays" :key="index">{{ day }}</span>
         </div>
         <div class="days-grid">
           <span

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { TeamCompareBarStat } from '@/types/team'
 import {
   formatMetricValue,
@@ -11,6 +12,8 @@ import {
 const props = defineProps<{
   stat: TeamCompareBarStat
 }>()
+
+const { t } = useI18n()
 
 const formatType = computed(() => getMetricFormatType(props.stat.key))
 
@@ -30,12 +33,12 @@ const rightPercent = computed(() =>
 )
 
 const leftAriaLabel = computed(() => {
-  if (winner.value === 'left') return `${leftDisplay.value}，领先`
+  if (winner.value === 'left') return t('publicPages.team.leading', { value: leftDisplay.value })
   return leftDisplay.value
 })
 
 const rightAriaLabel = computed(() => {
-  if (winner.value === 'right') return `${rightDisplay.value}，领先`
+  if (winner.value === 'right') return t('publicPages.team.leading', { value: rightDisplay.value })
   return rightDisplay.value
 })
 </script>

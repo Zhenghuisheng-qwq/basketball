@@ -1,4 +1,5 @@
 import type { V4PublicMatchDetail, V4PublicPlayerStatItem } from '@/api/types/v4Public'
+import { translate } from '@/i18n'
 import { displayText, formatDateTime, toNumber } from '@/utils/publicDisplay'
 import { calculateAverage } from '@/utils/statAverage'
 import type {
@@ -39,7 +40,7 @@ export function mapV4PlayerStatToAverage(item: V4PublicPlayerStatItem): TeamPlay
   const games = toNumber(item.matchCount, 0)
   return {
     playerId: publicPlayerRouteId(item),
-    nickname: displayText(item.playerName, '未知球员'),
+    nickname: displayText(item.playerName, translate('publicPages.team.unknownPlayer')),
     avatar: '',
     games,
     points: item.avgPoints != null ? toNumber(item.avgPoints, 0) : calculateAverage(item.points, games),
@@ -58,7 +59,7 @@ export function mapV4PlayerStatToAverage(item: V4PublicPlayerStatItem): TeamPlay
 export function mapV4PlayerStatToTotal(item: V4PublicPlayerStatItem): TeamPlayerTotalStat {
   return {
     playerId: publicPlayerRouteId(item),
-    nickname: displayText(item.playerName, '未知球员'),
+    nickname: displayText(item.playerName, translate('publicPages.team.unknownPlayer')),
     avatar: '',
     games: toNumber(item.matchCount, 0),
     points: toNumber(item.points, 0),
@@ -77,7 +78,7 @@ export function mapV4PlayerStatToTotal(item: V4PublicPlayerStatItem): TeamPlayer
 function mapV4MatchPlayerStat(item: V4PublicMatchDetail['playerStats'][number]): TeamSingleMatchPlayerStat {
   return {
     playerId: publicPlayerRouteId(item),
-    nickname: displayText(item.playerName, '未知球员'),
+    nickname: displayText(item.playerName, translate('publicPages.team.unknownPlayer')),
     avatar: '',
     grade: '—',
     points: toNumber(item.points, 0),
@@ -129,7 +130,7 @@ export function mapV4MatchDetailToSingleMatchStats(
   })
 
   const dt = formatDateTime(detail.matchTime)
-  const label = displayText(dt.full, '单场数据')
+  const label = displayText(dt.full, translate('publicPages.team.singleGame'))
 
   return {
     matchId: String(detail.matchId),

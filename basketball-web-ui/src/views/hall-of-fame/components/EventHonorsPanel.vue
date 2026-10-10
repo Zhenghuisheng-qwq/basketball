@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import HallPanelHead from './HallPanelHead.vue'
@@ -36,6 +37,7 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const { t } = useI18n()
 
 const tournaments = ref<PublicTournamentItemVo[]>([])
 const honors = ref<PublicHonorItemResp[]>([])
@@ -48,7 +50,7 @@ let honorReq = 0
 const tournamentOptions = computed(() =>
   tournaments.value.map((item) => ({
     value: item.tournamentId,
-    label: displayText(item.tournamentName || item.shortName, '公开赛事'),
+    label: displayText(item.tournamentName || item.shortName, t('publicPages.hall.publicEvent')),
   })),
 )
 
@@ -89,7 +91,7 @@ const rosterMembers = computed<ChampionRosterMember[]>(() => {
       tournamentId: String(detail.tournamentId || props.tournamentId),
       teamId: String(item.teamId || detail.teamId || ''),
       playerId: item.playerId || '',
-      playerName: displayText(item.playerName, '球员'),
+      playerName: displayText(item.playerName, t('publicPages.hall.player')),
       playerAvatarUrl: item.avatarUrl || '',
       position: displayText(item.positionCode, '--'),
       role,
@@ -123,7 +125,7 @@ async function loadTournaments() {
     if (current !== tournamentReq) return
     tournaments.value = []
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载赛事失败'
+    errorMessage.value = err instanceof Error ? err.message : t('publicPages.hall.loadEventsFailed')
   }
 }
 
@@ -168,7 +170,7 @@ async function loadHonors(tournamentId: string) {
     if (current !== honorReq) return
     honors.value = []
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载赛事荣誉失败'
+    errorMessage.value = err instanceof Error ? err.message : t('publicPages.hall.loadEventHonorsFailed')
   }
 }
 
@@ -214,7 +216,7 @@ function awardDateText(value?: string | null) {
 
 <template>
   <section class="event-honors-panel">
-    <HallPanelHead title="赛事荣誉" subtitle="EVENT HONORS" layout="inline">
+    <HallPanelHead :title="t('publicPages.hall.eventHonors')" subtitle="EVENT HONORS" layout="inline">
       <template #filters>
         <HallSelect
           :model-value="tournamentId || tournamentOptions[0]?.value || ''"
@@ -225,9 +227,9 @@ function awardDateText(value?: string | null) {
       </template>
     </HallPanelHead>
 
-    <div v-if="state === 'loading'" class="hall-empty">加载中...</div>
+    <div v-if="state === 'loading'" class="hall-empty">{{ t('publicPages.hall.loading') }}</div>
     <div v-else-if="state === 'error'" class="hall-empty">{{ errorMessage }}</div>
-    <div v-else-if="state === 'empty'" class="hall-empty">该赛事暂无已发布荣誉</div>
+    <div v-else-if="state === 'empty'" class="hall-empty">{{ t('publicPages.hall.noEventHonors') }}</div>
 
     <template v-else>
       <article
@@ -242,13 +244,13 @@ function awardDateText(value?: string | null) {
           @click="openTeam(championHonor.teamId)"
         >
           <p class="event-champion-card__label">
-            {{ displayText(championHonor.honorName, '赛事冠军') }}
+            {{ displayText(championHonor.honorName, t('publicPages.hall.champion')) }}
           </p>
           <span class="event-champion-card__label-en">CHAMPION</span>
           <span class="event-champion-card__logo">
             <TeamLogo v-if="championTeam" :team="championTeam" size="xl" />
           </span>
-          <strong>{{ displayText(championHonor.teamName, '冠军球队') }}</strong>
+          <strong>{{ displayText(championHonor.teamName, t('publicPages.hall.championTeam')) }}</strong>
         </button>
 
         <div class="event-champion-card__info">
@@ -256,10 +258,10 @@ function awardDateText(value?: string | null) {
             {{ displayText(currentTournament?.tournamentName || championHonor.tournamentName) }}
           </p>
           <p class="event-champion-card__desc">
-            {{ displayText(championHonor.honorSubtitle || championHonor.honorTitle, '已发布赛事荣誉') }}
+            {{ displayText(championHonor.honorSubtitle || championHonor.honorTitle, t('publicPages.hall.publishedHonor')) }}
           </p>
           <div class="event-champion-card__date-block">
-            <span>授予日期</span>
+            <span>{{ t('publicPages.hall.awardDate') }}</span>
             <strong>{{ awardDateText(championHonor.awardDate) }}</strong>
           </div>
           <button
@@ -268,7 +270,7 @@ function awardDateText(value?: string | null) {
             class="event-champion-card__btn"
             @click="toggleRoster"
           >
-            {{ rosterExpanded ? '收起冠军阵容' : '查看冠军阵容' }}
+            {{ rosterExpanded ? t('publicPages.hall.collapseRoster') : t('publicPages.hall.viewRoster') }}
             <span aria-hidden="true">›</span>
           </button>
         </div>
@@ -282,7 +284,7 @@ function awardDateText(value?: string | null) {
       />
 
       <div v-if="otherHonors.length" class="event-other-honors">
-        <h3 class="event-other-honors__title">其他赛事荣誉</h3>
+        <h3 class="event-other-honors__title">{{ t('publicPages.hall.otherHonors') }}</h3>
         <div class="event-other-honors__grid">
           <article
             v-for="item in otherHonors"
@@ -291,7 +293,7 @@ function awardDateText(value?: string | null) {
           >
             <div v-if="item.playerId" class="event-other-honor__avatar">
               <HallPlayerSilhouette
-                :name="displayText(item.playerName, '球员')"
+                :name="displayText(item.playerName, t('publicPages.hall.player'))"
                 :avatar-url="item.playerAvatarUrl || ''"
                 size="roster"
               />
@@ -326,7 +328,7 @@ function awardDateText(value?: string | null) {
                 {{ displayText(item.teamName) }}
               </button>
               <p class="event-other-honor__meta">
-                {{ displayText(item.seasonName, '赛季') }} · {{ awardDateText(item.awardDate) }}
+                {{ displayText(item.seasonName, t('publicPages.hall.season')) }} · {{ awardDateText(item.awardDate) }}
               </p>
             </div>
           </article>

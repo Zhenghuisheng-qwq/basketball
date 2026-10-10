@@ -1,4 +1,5 @@
 import type { V4PublicMatchItem, V4PublicMatchSeriesDetail } from '@/api/types/v4Public'
+import { translate } from '@/i18n'
 import { toNumber } from '@/utils/publicDisplay'
 import { v4BestOfLabel } from '@/utils/v4Display'
 import type { PlayoffRoundKey, PlayoffSeries } from '../types/events'
@@ -22,24 +23,24 @@ export function classifyPlayoffRound(
   roundNo: number,
 ): { key: PlayoffRoundKey; label: string; labelEn: string } {
   if (seriesCount === 1 && isLastRound) {
-    return { key: 'final', label: '总决赛', labelEn: 'FINAL' }
+    return { key: 'final', label: translate('events.round.FINAL'), labelEn: 'FINAL' }
   }
   if (seriesCount === 2) {
-    return { key: 'semifinal', label: '半决赛', labelEn: 'SEMIFINAL' }
+    return { key: 'semifinal', label: translate('events.round.SF'), labelEn: 'SEMIFINAL' }
   }
   if (seriesCount === 4) {
-    return { key: 'quarterfinal', label: '八强', labelEn: 'QUARTERFINAL' }
+    return { key: 'quarterfinal', label: translate('events.round.R8'), labelEn: 'QUARTERFINAL' }
   }
   if (seriesCount === 8) {
-    return { key: 'round16', label: '16强', labelEn: 'ROUND OF 16' }
+    return { key: 'round16', label: translate('events.round.R16'), labelEn: 'ROUND OF 16' }
   }
   if (seriesCount === 16) {
-    return { key: 'round32', label: '32强', labelEn: 'ROUND OF 32' }
+    return { key: 'round32', label: translate('events.round.R32'), labelEn: 'ROUND OF 32' }
   }
   if (isLastRound) {
-    return { key: 'final', label: '总决赛', labelEn: 'FINAL' }
+    return { key: 'final', label: translate('events.round.FINAL'), labelEn: 'FINAL' }
   }
-  return { key: 'other', label: `第${roundNo}轮`, labelEn: `ROUND ${roundNo}` }
+  return { key: 'other', label: translate('events.round.OTHER', { round: roundNo }), labelEn: `ROUND ${roundNo}` }
 }
 
 function publicTeamId(id?: string | number | null): string {

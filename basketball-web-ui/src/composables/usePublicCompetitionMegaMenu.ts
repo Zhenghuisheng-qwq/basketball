@@ -1,4 +1,5 @@
 import { computed, ref, watch, type ComputedRef } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import {
   competitionMenuGroups,
@@ -12,6 +13,7 @@ export type OpenMenu = MegaMenuType | null
 const CLOSE_DELAY_MS = 200
 
 export function usePublicCompetitionMegaMenu() {
+  const { t } = useI18n()
   const route = useRoute()
   const router = useRouter()
 
@@ -101,7 +103,10 @@ export function usePublicCompetitionMegaMenu() {
 
   const currentGroups = computed(() => {
     if (!openMenu.value) return []
-    return competitionMenuGroups[openMenu.value]
+    return competitionMenuGroups[openMenu.value].map((group) => ({
+      title: t(group.titleKey),
+      entries: group.entries,
+    }))
   })
 
   watch(

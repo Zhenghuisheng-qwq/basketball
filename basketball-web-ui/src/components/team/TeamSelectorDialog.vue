@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   getV4PublicSeasonList,
   getV4PublicStanding,
@@ -35,10 +36,12 @@ const emit = defineEmits<{
   select: [teamId: string]
 }>()
 
-const stageLabels: Record<TeamStage, string> = {
-  regular: '常规赛',
-  playoffs: '季后赛',
-}
+const { t } = useI18n()
+
+const stageLabels = computed<Record<TeamStage, string>>(() => ({
+  regular: t('publicPages.team.regular'),
+  playoffs: t('publicPages.team.playoffs'),
+}))
 
 const fetchedTeams = ref<TeamBase[]>([])
 const fetchState = ref<'idle' | 'loading' | 'success' | 'empty' | 'error'>('idle')
@@ -49,8 +52,8 @@ const resolvedTeams = computed(() => props.teams ?? fetchedTeams.value)
 const headerMeta = computed(() => {
   if (props.competitionText) return props.competitionText
   const team = resolvedTeams.value.find((item) => item.id === props.leftTeamId)
-  if (team) return `${team.seasonName} · ${stageLabels[team.currentStage]}`
-  return `${stageLabels.regular}`
+  if (team) return `${team.seasonName} · ${stageLabels.value[team.currentStage]}`
+  return `${stageLabels.value.regular}`
 })
 
 function isInCompare(teamId: string): boolean {
@@ -169,8 +172,8 @@ onUnmounted(() => {
       >
         <div class="team-selector-dialog__header">
           <div class="team-selector-dialog__heading">
-            <h2 id="team-selector-title" class="team-selector-dialog__title">选择球队</h2>
-            <p class="team-selector-dialog__subtitle">点击球队即可完成更换</p>
+            <h2 id="team-selector-title" class="team-selector-dialog__title">{{ t('publicPages.team.selectTeam') }}</h2>
+            <p class="team-selector-dialog__subtitle">{{ t('publicPages.team.selectTeamHint') }}</p>
           </div>
 
           <div class="team-selector-dialog__actions">
@@ -178,7 +181,7 @@ onUnmounted(() => {
             <button
               type="button"
               class="team-selector-dialog__close"
-              aria-label="关闭"
+              :aria-label="t('publicPages.team.close')"
               @click="emit('close')"
             >
               ×
@@ -187,17 +190,17 @@ onUnmounted(() => {
         </div>
 
         <p class="team-selector-dialog__side-hint">
-          正在更换{{ side === 'left' ? '左侧' : '右侧' }}球队
+          {{ t('publicPages.team.replacingSide', { side: side === 'left' ? t('publicPages.team.sideLeft') : t('publicPages.team.sideRight') }) }}
         </p>
 
         <div v-if="fetchState === 'loading' && !teams" class="team-selector-dialog__state">
-          加载中...
+          {{ t('publicPages.team.loading') }}
         </div>
         <div v-else-if="fetchState === 'error' && !teams" class="team-selector-dialog__state is-error">
-          加载球队列表失败
+          {{ t('publicPages.team.loadTeamListFailed') }}
         </div>
         <div v-else-if="resolvedTeams.length === 0" class="team-selector-dialog__state">
-          暂无可选球队
+          {{ t('publicPages.team.noSelectableTeams') }}
         </div>
 
         <div v-else class="team-selector-grid">
@@ -212,7 +215,7 @@ onUnmounted(() => {
           >
             <TeamLogo :team="team" size="selector" class="team-selector-card__logo" />
             <span class="team-selector-card__name">{{ displayText(team.name) }}</span>
-            <span v-if="isInCompare(team.id)" class="team-selector-card__badge">已在对比</span>
+            <span v-if="isInCompare(team.id)" class="team-selector-card__badge">{{ t('publicPages.team.alreadyCompared') }}</span>
           </button>
         </div>
       </div>

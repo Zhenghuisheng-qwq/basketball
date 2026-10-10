@@ -1,19 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { LeagueHeroMetaIcon, LeagueHeroMetaItem } from '../types/events'
 
 defineProps<{
   items: LeagueHeroMetaItem[]
 }>()
 
-const iconLabels: Record<LeagueHeroMetaIcon, string> = {
-  calendar: '赛季',
-  trophy: '战队',
-  stage: '阶段',
-  gamepad: '平台',
-}
+const { t } = useI18n()
+
+const iconLabels = computed<Record<LeagueHeroMetaIcon, string>>(() => ({
+  calendar: t('eventsPage.hero.season'),
+  trophy: t('eventsPage.hero.teams'),
+  stage: t('eventsPage.hero.stage'),
+  gamepad: t('eventsPage.hero.metaPlatform'),
+}))
 </script>
 <template>
-  <div class="league-hero-meta" aria-label="赛事基本信息">
+  <div class="league-hero-meta" :aria-label="t('eventsPage.aria.heroMeta')">
     <div v-for="item in items" :key="item.key" class="league-hero-meta__item">
       <div class="league-hero-meta__icon" aria-hidden="true">
         <svg

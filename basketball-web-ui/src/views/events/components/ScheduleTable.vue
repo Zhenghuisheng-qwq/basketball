@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import TeamEntryLink from '@/components/team/TeamEntryLink.vue'
 import type { V4PublicScheduleItem } from '@/api/types/v4Public'
 import TeamLogo from './TeamLogo.vue'
@@ -17,6 +18,8 @@ import {
   type ScheduleScoreView,
 } from '../utils/scheduleRowDisplay'
 
+const { t } = useI18n()
+
 defineProps<{
   items: V4PublicScheduleItem[]
   hideDateOnRow?: boolean
@@ -31,7 +34,7 @@ const emit = defineEmits<{
 }>()
 
 function clockText(item: V4PublicScheduleItem): string {
-  return formatScheduleClock(item.startTime) || '待定'
+  return formatScheduleClock(item.startTime) || t('match.tbd')
 }
 
 function matchNoText(item: V4PublicScheduleItem): string {
@@ -74,7 +77,7 @@ function teamName(item: V4PublicScheduleItem, side: 'home' | 'away'): string {
 }
 
 function stageText(item: V4PublicScheduleItem): string {
-  return formatStageRoundBlock(item).stage || '常规赛'
+  return formatStageRoundBlock(item).stage || t('events.regularSeason')
 }
 
 function roundText(item: V4PublicScheduleItem): string {
@@ -85,17 +88,17 @@ function roundText(item: V4PublicScheduleItem): string {
 <template>
   <div class="schedule-table">
     <div class="schedule-grid schedule-header" aria-hidden="true">
-      <div>时间</div>
-      <div>客队</div>
-      <div>比分</div>
-      <div>主队</div>
-      <div>赛事阶段</div>
+      <div>{{ t('eventsPage.schedule.time') }}</div>
+      <div>{{ t('eventsPage.schedule.away') }}</div>
+      <div>{{ t('eventsPage.schedule.score') }}</div>
+      <div>{{ t('eventsPage.schedule.home') }}</div>
+      <div>{{ t('eventsPage.schedule.stage') }}</div>
       <div>BO</div>
-      <div>状态</div>
-      <div>操作</div>
+      <div>{{ t('eventsPage.schedule.status') }}</div>
+      <div>{{ t('eventsPage.schedule.action') }}</div>
     </div>
 
-    <p v-if="items.length === 0" class="schedule-table__empty">{{ emptyText || '当前筛选条件下暂无赛程' }}</p>
+    <p v-if="items.length === 0" class="schedule-table__empty">{{ emptyText || t('eventsPage.schedule.emptyFilter') }}</p>
 
     <article
       v-for="item in items"
@@ -125,7 +128,7 @@ function roundText(item: V4PublicScheduleItem): string {
           </div>
         </template>
         <div v-else-if="scoreView(item).kind === 'forfeit'" class="score score--forfeit">
-          {{ [scoreView(item).leftLabel, scoreView(item).rightLabel].filter(Boolean).join(' / ') || scoreView(item).caption || '弃权' }}
+          {{ [scoreView(item).leftLabel, scoreView(item).rightLabel].filter(Boolean).join(' / ') || scoreView(item).caption || t('match.forfeit') }}
         </div>
         <div v-else class="score-vs">VS</div>
       </div>
@@ -161,7 +164,7 @@ function roundText(item: V4PublicScheduleItem): string {
             <rect x="3.2" y="7" width="9.6" height="7" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4" />
             <path d="M5.2 7V5.3a2.8 2.8 0 0 1 5.6 0V7" fill="none" stroke="currentColor" stroke-width="1.4" />
           </svg>
-          敬请期待
+          {{ t('eventsPage.schedule.comingSoon') }}
         </button>
         <button
           v-else

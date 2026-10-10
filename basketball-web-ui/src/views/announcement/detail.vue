@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import PaperTear from '@/components/common/PaperTear.vue'
 import {
@@ -20,6 +21,7 @@ import type { AnnouncementDetail } from './types'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const announcement = ref<AnnouncementDetail | null>(null)
 const previous = ref<PublicAnnouncementItemResp | null>(null)
@@ -56,9 +58,9 @@ async function loadDetail(id: string) {
     }
     announcement.value = {
       id: String(data.announcementId),
-      title: displayText(data.title, '未命名公告'),
+      title: displayText(data.title, t('publicPages.announcement.untitled')),
       categoryCode: displayText(data.categoryCode, 'OTHER'),
-      categoryName: displayText(data.categoryName, '其他'),
+      categoryName: displayText(data.categoryName, t('publicPages.announcement.other')),
       pinned: Number(data.isTop || 0) === 1,
       summary: displayText(data.summary, ''),
       authorName: displayText(data.authorName, 'CNPA'),
@@ -70,12 +72,12 @@ async function loadDetail(id: string) {
     previous.value = adjacentRes?.data?.previous ?? null
     next.value = adjacentRes?.data?.next ?? null
     state.value = 'success'
-    document.title = `${announcement.value.title} - CNPA 篮球赛事平台`
+    document.title = t('common.documentTitle', { page: announcement.value.title })
   } catch (err) {
     if (current !== reqId) return
     announcement.value = null
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载公告详情失败'
+    errorMessage.value = err instanceof Error ? err.message : t('publicPages.announcement.loadDetailFailed')
   }
 }
 
@@ -116,30 +118,30 @@ watch(
           <div class="cnpa-paper-section__content">
             <article class="announcement-detail-page__article">
               <div v-if="state === 'loading'" class="announcement-detail-page__not-found">
-                <p>加载中...</p>
+                <p>{{ t('publicPages.announcement.loading') }}</p>
               </div>
 
               <div v-else-if="state === 'error'" class="announcement-detail-page__not-found">
-                <h1>加载失败</h1>
+                <h1>{{ t('publicPages.announcement.loadFailed') }}</h1>
                 <p>{{ errorMessage }}</p>
                 <button type="button" class="announcement-detail-page__back" @click="backToList">
-                  返回公告中心
+                  {{ t('publicPages.announcement.backToCenter') }}
                 </button>
               </div>
 
               <template v-else-if="announcement">
-                <nav class="announcement-detail-page__breadcrumb" aria-label="面包屑">
-                  <router-link to="/home">首页</router-link>
+                <nav class="announcement-detail-page__breadcrumb" :aria-label="t('publicPages.announcement.breadcrumb')">
+                  <router-link to="/home">{{ t('publicPages.announcement.home') }}</router-link>
                   <span>/</span>
                   <button type="button" class="announcement-detail-page__crumb-btn" @click="backToList">
-                    公告中心
+                    {{ t('publicPages.announcement.center') }}
                   </button>
                   <span>/</span>
                   <span>{{ announcement.categoryName }}</span>
                 </nav>
 
                 <div class="announcement-detail-page__tags">
-                  <span v-if="announcement.pinned" class="announcement-detail-page__pin">置顶</span>
+                  <span v-if="announcement.pinned" class="announcement-detail-page__pin">{{ t('publicPages.announcement.pinned') }}</span>
                   <span
                     class="announcement-detail-page__category"
                     :class="`announcement-detail-page__category--${announcement.categoryCode.toLowerCase()}`"
@@ -154,11 +156,11 @@ watch(
 
                 <div class="announcement-detail-page__meta">
                   <div class="announcement-detail-page__meta-item">
-                    <span class="announcement-detail-page__meta-label">发布人</span>
+                    <span class="announcement-detail-page__meta-label">{{ t('publicPages.announcement.publisher') }}</span>
                     <span class="announcement-detail-page__meta-value">{{ announcement.authorName }}</span>
                   </div>
                   <div class="announcement-detail-page__meta-item">
-                    <span class="announcement-detail-page__meta-label">发布时间</span>
+                    <span class="announcement-detail-page__meta-label">{{ t('publicPages.announcement.publishedAt') }}</span>
                     <time class="announcement-detail-page__meta-value">{{ announcement.publishDateText }}</time>
                   </div>
                 </div>
@@ -167,15 +169,15 @@ watch(
                   <AnnouncementContentRenderer :text="announcement.contentText" />
                 </section>
 
-                <nav class="announcement-detail-page__adjacent" aria-label="上一篇下一篇">
+                <nav class="announcement-detail-page__adjacent" :aria-label="t('publicPages.announcement.adjacent')">
                   <button
                     type="button"
                     class="announcement-detail-page__adjacent-btn"
                     :disabled="!previous"
                     @click="openAdjacent(previous)"
                   >
-                    <span>上一篇</span>
-                    <strong>{{ previous ? displayText(previous.title) : '没有更早的公告' }}</strong>
+                    <span>{{ t('publicPages.announcement.previous') }}</span>
+                    <strong>{{ previous ? displayText(previous.title) : t('publicPages.announcement.noEarlier') }}</strong>
                   </button>
                   <button
                     type="button"
@@ -183,14 +185,14 @@ watch(
                     :disabled="!next"
                     @click="openAdjacent(next)"
                   >
-                    <span>下一篇</span>
-                    <strong>{{ next ? displayText(next.title) : '没有更新的公告' }}</strong>
+                    <span>{{ t('publicPages.announcement.next') }}</span>
+                    <strong>{{ next ? displayText(next.title) : t('publicPages.announcement.noNewer') }}</strong>
                   </button>
                 </nav>
 
                 <footer class="announcement-detail-page__footer">
                   <button type="button" class="announcement-detail-page__back" @click="backToList">
-                    ← 返回公告列表
+                    {{ t('publicPages.announcement.backToList') }}
                   </button>
                   <div class="announcement-detail-page__signature">
                     <p class="announcement-detail-page__publisher">{{ announcement.authorName }}</p>
@@ -200,10 +202,10 @@ watch(
               </template>
 
               <section v-else class="announcement-detail-page__not-found">
-                <h1>公告不存在或已被删除</h1>
-                <p>请返回公告中心浏览其他官方公告。</p>
+                <h1>{{ t('publicPages.announcement.missing') }}</h1>
+                <p>{{ t('publicPages.announcement.missingHint') }}</p>
                 <button type="button" class="announcement-detail-page__back" @click="backToList">
-                  返回公告中心
+                  {{ t('publicPages.announcement.backToCenter') }}
                 </button>
               </section>
             </article>

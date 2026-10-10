@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { publicContestDetailPath, v4BestOfLabel, v4MatchSeriesStatusLabel } from '@/utils/v4Display'
 import type { PlayoffSeries } from '../types/events'
 
@@ -7,6 +8,8 @@ const props = defineProps<{
   series: PlayoffSeries
   emphasize?: boolean
 }>()
+
+const { t } = useI18n()
 
 const seriesPath = computed(() => publicContestDetailPath({
   unitType: props.series.matchSeriesId ? 'MATCH_SERIES' : 'MATCH',
@@ -44,7 +47,7 @@ const footer = computed(() => {
 const rows = computed(() => [
   {
     key: 'home',
-    name: props.series.topTeamName || '待定',
+    name: props.series.topTeamName || t('match.tbd'),
     logo: props.series.topTeamLogo,
     seed: props.series.topSeed,
     score: props.series.topScore,
@@ -52,7 +55,7 @@ const rows = computed(() => [
   },
   {
     key: 'away',
-    name: props.series.bottomTeamName || '待定',
+    name: props.series.bottomTeamName || t('match.tbd'),
     logo: props.series.bottomTeamLogo,
     seed: props.series.bottomSeed,
     score: props.series.bottomScore,
@@ -112,7 +115,7 @@ function badgeText(name: string) {
       <span class="playoff-series-card__name">{{ row.name }}</span>
       <strong class="playoff-series-card__score">{{ scoreText(row.score) }}</strong>
     </div>
-    <div v-if="championName" class="playoff-series-card__champion">总冠军 {{ championName }}</div>
+    <div v-if="championName" class="playoff-series-card__champion">{{ t('eventsPage.bracket.champion', { name: championName }) }}</div>
     <div v-else-if="footer" class="playoff-series-card__foot">
       <i v-if="isLive" class="playoff-series-card__live-dot" aria-hidden="true" />
       <span>{{ footer }}</span>

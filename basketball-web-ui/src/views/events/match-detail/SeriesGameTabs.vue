@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { SERIES_TOTAL_TAB } from './matchDetailDisplay'
 
 export type SeriesTab = {
@@ -16,6 +17,8 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
+const { t } = useI18n()
+
 function select(key: string) {
   emit('update:modelValue', key)
 }
@@ -24,7 +27,7 @@ defineExpose({ SERIES_TOTAL_TAB })
 </script>
 
 <template>
-  <div class="series-game-tabs" role="tablist" aria-label="系列赛场次">
+  <div class="series-game-tabs" role="tablist" :aria-label="t('eventsPage.aria.seriesGames')">
     <button
       v-for="tab in tabs"
       :key="tab.key"

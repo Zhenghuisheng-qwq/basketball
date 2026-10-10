@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import type { V4PublicScheduleItem } from '@/api/types/v4Public'
 import { useScheduleFilters } from '../composables/useScheduleFilters'
@@ -13,6 +14,7 @@ import ScheduleTable from './ScheduleTable.vue'
 import ScheduleLoadMore from './ScheduleLoadMore.vue'
 
 const router = useRouter()
+const { t } = useI18n()
 const ctx = inject<ReturnType<typeof usePublicSeasonContext>>('publicSeasonContext')!
 
 const {
@@ -45,9 +47,9 @@ const {
   errorMessage,
 } = useScheduleFilters()
 
-const filterDateLabel = computed(() => selectedDate.value ? formatDateGroupTitle(selectedDate.value) : '全部日期')
+const filterDateLabel = computed(() => selectedDate.value ? formatDateGroupTitle(selectedDate.value) : t('eventsPage.date.all'))
 const filterTeamLabel = computed(() => {
-  if (!selectedTeam.value) return '全部球队'
+  if (!selectedTeam.value) return t('eventsPage.schedule.allTeams')
   const name = selectedTeam.value.name
   const code = String(selectedTeam.value.shortName || selectedTeam.value.code || '').trim()
   if (!code || code === name || /^CNPA-T-\d+$/i.test(code)) return name
@@ -65,11 +67,13 @@ const emptyFilterText = computed(() => {
   const hasDate = Boolean(selectedDate.value)
   const hasTeam = Boolean(selectedTeamId.value)
   if (hasDate && hasTeam) {
-    return `${selectedTeam.value?.name || '该球队'}在所选日期暂无比赛`
+    return t('eventsPage.schedule.noMatchForTeamOnDate', {
+      team: selectedTeam.value?.name || t('eventsPage.teams.thisTeam'),
+    })
   }
-  if (hasDate) return `${formatDateGroupTitle(selectedDate.value)}暂无比赛`
-  if (hasTeam) return '该球队暂无符合条件的比赛'
-  return '暂无符合条件的比赛'
+  if (hasDate) return t('eventsPage.schedule.noMatchOnDate', { date: formatDateGroupTitle(selectedDate.value) })
+  if (hasTeam) return t('eventsPage.schedule.noMatchForTeam')
+  return t('eventsPage.schedule.noMatch')
 })
 
 const teamStripRef = ref<HTMLElement | null>(null)
@@ -139,10 +143,11 @@ function openSeries(item: V4PublicScheduleItem) {
           <section class="schedule-heading">
             <div class="schedule-heading-copy">
               <div class="schedule-title-row">
-                <h1 class="schedule-title">赛程</h1>
+                <h1 class="schedule-title">{{ t('events.schedule') }}</h1>
                 <span class="schedule-slash">/</span>
                 <span class="schedule-en">SCHEDULE</span>
               </div>
+              <p class="schedule-timezone">{{ t('events.timezone') }}</p>
               <p v-if="currentSeasonLabel" class="schedule-subtitle">{{ currentSeasonLabel }}</p>
             </div>
           </section>
@@ -170,7 +175,7 @@ function openSeries(item: V4PublicScheduleItem) {
                 <span class="summary-divider" />
                 <span>{{ filterTeamLabel }}</span>
               </div>
-              <span class="summary-total">共 <strong>{{ total }}</strong> 场</span>
+              <span class="summary-total">{{ t('eventsPage.count.games', { count: total }) }}</span>
             </section>
 
             <ScheduleCalendarPanel
@@ -192,11 +197,11 @@ function openSeries(item: V4PublicScheduleItem) {
             </div>
           </div>
 
-          <p v-if="state === 'loading'" class="schedule-empty show">赛程加载中…</p>
-          <p v-else-if="state === 'error'" class="schedule-empty show">{{ errorMessage || '赛程加载失败' }}</p>
+          <p v-if="state === 'loading'" class="schedule-empty show">{{ t('eventsPage.schedule.loading') }}</p>
+          <p v-else-if="state === 'error'" class="schedule-empty show">{{ errorMessage || t('eventsPage.schedule.loadFailed') }}</p>
           <div v-else-if="state === 'empty'" class="schedule-empty show">
-            <strong>暂无赛程</strong>
-            <span>当前赛季尚未发布公开比赛</span>
+            <strong>{{ t('eventsPage.schedule.emptyTitle') }}</strong>
+            <span>{{ t('eventsPage.schedule.emptyHint') }}</span>
           </div>
 
           <template v-else>
@@ -204,7 +209,7 @@ function openSeries(item: V4PublicScheduleItem) {
               <section v-for="group in groupedScheduleByDate" :key="group.date" class="date-group">
                 <div class="date-group-title">
                   <strong>{{ groupHead(group).title }}</strong>
-                  <span>共 {{ groupHead(group).count }} 场比赛</span>
+                  <span>{{ t('eventsPage.count.gamesOnDay', { count: groupHead(group).count }) }}</span>
                 </div>
                 <ScheduleTable
                   :items="group.items"
@@ -225,7 +230,7 @@ function openSeries(item: V4PublicScheduleItem) {
             </section>
             <div v-else class="schedule-empty show">
               <strong>{{ emptyFilterText }}</strong>
-              <span>可以尝试切换日期或球队</span>
+              <span>{{ t('eventsPage.schedule.tryFilters') }}</span>
             </div>
           </template>
         </div>
@@ -293,6 +298,13 @@ function openSeries(item: V4PublicScheduleItem) {
   font-style: italic;
   font-weight: 800;
   letter-spacing: 2px;
+}
+
+.schedule-timezone {
+  margin: 8px 0 0;
+  color: #8a8a8a;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .schedule-subtitle {

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 const props = defineProps<{
   page: number
   totalPages: number
@@ -7,6 +9,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:page': [value: number]
 }>()
+
+const { t } = useI18n()
 
 function goPage(next: number) {
   if (next < 1 || next > props.totalPages) return
@@ -22,7 +26,7 @@ function goPage(next: number) {
       :disabled="page <= 1"
       @click="goPage(page - 1)"
     >
-      上一页
+      {{ t('publicPages.hall.prevPage') }}
     </button>
 
     <button
@@ -42,7 +46,7 @@ function goPage(next: number) {
       :disabled="page >= totalPages"
       @click="goPage(page + 1)"
     >
-      下一页
+      {{ t('publicPages.hall.nextPage') }}
     </button>
   </div>
 </template>

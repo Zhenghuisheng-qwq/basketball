@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import type { CalendarDay, CalendarMonth } from '../types/events'
+import { translate } from '@/i18n'
 import {
   calendarRangeLabel,
   formatDateKey,
@@ -48,7 +49,7 @@ function buildMonth(year: number, month: number, selectedDate: string): Calendar
   return {
     year: safeYear,
     month: safeMonth,
-    label: `${safeYear}年${safeMonth + 1}月`,
+    label: translate('eventsPage.date.yearMonth', { year: safeYear, month: safeMonth + 1 }),
     days,
   }
 }
@@ -102,7 +103,7 @@ export function getWeekDates(baseDate: string, weekNumber: number) {
     return {
       date: formatDateKey(current),
       weekday: index,
-      label: `${['周日', '周一', '周二', '周三', '周四', '周五', '周六'][index]} ${current.getMonth() + 1}/${pad(current.getDate())}`,
+      label: `${translate(`match.weekday.${index}`)} ${current.getMonth() + 1}/${pad(current.getDate())}`,
     }
   })
 

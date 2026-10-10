@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, provide } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useEventTab } from './composables/useEventTab'
 import { usePublicSeasonContext } from './composables/usePublicSeasonContext'
 import LeagueHero from './components/LeagueHero.vue'
@@ -10,6 +11,7 @@ import LeagueStage from './components/LeagueStage.vue'
 import { v4PlatformLabel } from '@/utils/v4Display'
 import './styles/events.scss'
 
+const { t } = useI18n()
 const { activeTab, setTab } = useEventTab()
 const seasonContext = usePublicSeasonContext()
 
@@ -31,7 +33,7 @@ function divisionLabel(division: { platformCode?: string; divisionName?: string;
       <div class="site-shell">
         <LeagueHero />
         <LeagueTabs :active-tab="activeTab" @change="setTab" />
-        <div v-if="divisions.length > 1" class="division-switch" aria-label="赛区">
+        <div v-if="divisions.length > 1" class="division-switch" :aria-label="t('eventsPage.aria.division')">
           <button
             v-for="division in divisions"
             :key="division.divisionId"

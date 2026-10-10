@@ -1,10 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   competitionMenuGroups,
   type MegaMenuType,
   type PublicMenuEntry,
 } from '@/constants/publicCompetitionMenu'
+
+const { t } = useI18n()
+
+const eventGroups = computed(() =>
+  competitionMenuGroups.event.map((group) => ({
+    titleKey: group.titleKey,
+    title: t(group.titleKey),
+    entries: group.entries,
+  })),
+)
 
 defineProps<{
   isEventsNavActive: boolean
@@ -39,13 +50,13 @@ function handleNavigate(entry: PublicMenuEntry) {
         :aria-expanded="openSection === 'event'"
         @click="toggleSection('event')"
       >
-        赛事
+        {{ t('nav.events') }}
       </button>
 
       <div v-if="openSection === 'event'" class="mobile-competition-nav__panel">
         <div
-          v-for="group in competitionMenuGroups.event"
-          :key="group.title"
+          v-for="group in eventGroups"
+          :key="group.titleKey"
           class="mobile-competition-nav__group"
         >
           <div class="mobile-competition-nav__group-title">{{ group.title }}</div>

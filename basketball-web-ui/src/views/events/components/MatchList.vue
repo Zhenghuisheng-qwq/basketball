@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import TeamEntryLink from '@/components/team/TeamEntryLink.vue'
 import type { Match, MatchStatus } from '../types/events'
 import { matchAwayTeam, matchHomeTeam } from '../utils/mapPublic'
@@ -16,15 +17,17 @@ const emit = defineEmits<{
   openStats: [match: Match]
 }>()
 
-const statusMap: Record<
+const { t } = useI18n()
+
+const statusMap = computed<Record<
   MatchStatus,
   { label: string; className: string; disabled?: boolean }
-> = {
-  finished: { label: '已结束', className: 'status-finished' },
-  scheduled: { label: '敬请期待', className: 'status-scheduled', disabled: true },
-  live: { label: '进行中', className: 'status-live' },
-  cancelled: { label: '已取消', className: 'status-cancelled', disabled: true },
-}
+>>(() => ({
+  finished: { label: t('match.finished'), className: 'status-finished' },
+  scheduled: { label: t('eventsPage.schedule.comingSoon'), className: 'status-scheduled', disabled: true },
+  live: { label: t('match.live'), className: 'status-live' },
+  cancelled: { label: t('match.cancelled'), className: 'status-cancelled', disabled: true },
+}))
 
 const teamLookup = computed(() => {
   const teams = props.matches.flatMap((match) => [matchAwayTeam(match), matchHomeTeam(match)])
@@ -38,16 +41,16 @@ function getTeamById(id: number | string) {
 <template>
   <div class="match-list">
     <div class="match-head">
-      <span>时间</span>
-      <span>客队</span>
-      <span>比分</span>
-      <span>主队</span>
-      <span>比赛场馆</span>
-      <span>比赛状态</span>
-      <span>相关内容</span>
+      <span>{{ t('eventsPage.schedule.time') }}</span>
+      <span>{{ t('eventsPage.schedule.away') }}</span>
+      <span>{{ t('eventsPage.schedule.score') }}</span>
+      <span>{{ t('eventsPage.schedule.home') }}</span>
+      <span>{{ t('eventsPage.schedule.venue') }}</span>
+      <span>{{ t('eventsPage.schedule.matchStatus') }}</span>
+      <span>{{ t('eventsPage.schedule.related') }}</span>
     </div>
 
-    <div v-if="matches.length === 0" class="match-empty">{{ emptyText || '当前筛选条件下暂无赛程' }}</div>
+    <div v-if="matches.length === 0" class="match-empty">{{ emptyText || t('eventsPage.schedule.emptyFilter') }}</div>
 
     <article v-for="match in matches" :key="match.id" class="match-row">
       <span class="cell time">{{ match.startTime }}</span>
@@ -63,13 +66,13 @@ function getTeamById(id: number | string) {
 
       <div class="cell score-cell sport-num">
         <template v-if="match.resultType === 'EVENT_DISQUALIFICATION' || match.resultType === 'FORFEIT'">
-          <span>{{ match.awayResultLabel || '判负' }}</span>
+          <span>{{ match.awayResultLabel || t('match.forfeitLoss') }}</span>
           <span class="vs">vs</span>
-          <span>{{ match.homeResultLabel || '判胜' }}</span>
+          <span>{{ match.homeResultLabel || t('eventsPage.schedule.forfeitWin') }}</span>
           <small v-if="match.resultReason" class="dq-reason">{{ match.resultReason }}</small>
         </template>
         <template v-else-if="match.status === 'finished' || match.status === 'live'">
-          <small v-if="match.status === 'finished'" class="score-label">最终比分</small>
+          <small v-if="match.status === 'finished'" class="score-label">{{ t('eventsPage.schedule.finalScore') }}</small>
           {{ match.awayScore }} : {{ match.homeScore }}
         </template>
         <template v-else-if="match.status === 'cancelled'">-</template>
@@ -97,7 +100,7 @@ function getTeamById(id: number | string) {
           class="action-btn"
           disabled
         >
-          比赛录像
+          {{ t('eventsPage.schedule.replay') }}
         </button>
         <button
           type="button"
@@ -105,7 +108,7 @@ function getTeamById(id: number | string) {
           :disabled="statusMap[match.status].disabled"
           @click="emit('openDetail', match)"
         >
-          技术统计
+          {{ t('eventsPage.schedule.boxScore') }}
         </button>
       </div>
     </article>

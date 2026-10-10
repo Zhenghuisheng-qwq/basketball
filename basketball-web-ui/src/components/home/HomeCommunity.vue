@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getPublicSocialLinks } from '@/api/publicSite'
 import { isSafeHttpUrl, SOCIAL_PLATFORM_ICONS } from '@/constants/communityLinks'
+
+const { t } = useI18n()
 
 type CommunityCard = {
   id: string
@@ -50,7 +53,7 @@ function openLink(card: CommunityCard) {
 </script>
 
 <template>
-  <section class="site-section home-community-section" aria-label="加入 CNPA">
+  <section class="site-section home-community-section" :aria-label="t('home.join')">
     <div class="site-shell home-community-shell">
       <div class="home-community-paper">
       <img

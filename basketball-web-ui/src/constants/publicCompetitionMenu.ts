@@ -24,7 +24,8 @@ export interface PublicMenuEntry {
 }
 
 export interface PublicMenuGroup {
-  title: string
+  /** vue-i18n key; consumers translate this when the menu renders */
+  titleKey: string
   entries: PublicMenuEntry[]
 }
 
@@ -53,7 +54,7 @@ function eventsSeriesEntry(
 export const competitionMenuGroups: Record<MegaMenuType, PublicMenuGroup[]> = {
   event: [
     {
-      title: '赛事系列',
+      titleKey: 'home.seriesMenu',
       entries: SERIES_ITEMS.map((item) => eventsSeriesEntry(item.code, item.label, item.abbrev, item.icon)),
     },
   ],

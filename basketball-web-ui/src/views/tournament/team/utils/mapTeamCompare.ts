@@ -1,4 +1,5 @@
 import type { V4PublicTeamStatItem } from '@/api/types/v4Public'
+import { translate } from '@/i18n'
 import { toNumber } from '@/utils/publicDisplay'
 import type { TeamCompareBarStat, TeamCompareData } from '@/types/team'
 
@@ -50,45 +51,45 @@ export function buildTeamCompareFromV4Stats(
     basics: [
       createBarStat(
         'rebounds',
-        '场均篮板',
+        translate('publicPages.team.avgRebounds'),
         avgPerGame(left?.rebound, leftGames),
         avgPerGame(right?.rebound, rightGames),
         true,
       ),
       createBarStat(
         'assists',
-        '场均助攻',
+        translate('publicPages.team.avgAssists'),
         avgPerGame(left?.assist, leftGames),
         avgPerGame(right?.assist, rightGames),
         true,
       ),
       createBarStat(
         'steals',
-        '场均抢断',
+        translate('publicPages.team.avgSteals'),
         avgPerGame(left?.steal, leftGames),
         avgPerGame(right?.steal, rightGames),
         true,
       ),
       createBarStat(
         'blocks',
-        '场均盖帽',
+        translate('publicPages.team.avgBlocks'),
         avgPerGame(left?.block, leftGames),
         avgPerGame(right?.block, rightGames),
         true,
       ),
       createBarStat(
         'turnovers',
-        '场均失误',
+        translate('publicPages.team.avgTurnovers'),
         avgPerGame(left?.turnover, leftGames),
         avgPerGame(right?.turnover, rightGames),
         false,
       ),
-      createBarStat('fouls', '场均犯规', 0, 0, false),
+      createBarStat('fouls', translate('publicPages.team.avgFouls'), 0, 0, false),
     ],
     shooting: [
-      createBarStat('fgPct', '投篮命中率', 0, 0, true),
-      createBarStat('tpPct', '三分命中率', 0, 0, true),
-      createBarStat('ftPct', '罚球命中率', 0, 0, true),
+      createBarStat('fgPct', translate('publicPages.team.fgRate'), 0, 0, true),
+      createBarStat('tpPct', translate('publicPages.team.tpRate'), 0, 0, true),
+      createBarStat('ftPct', translate('publicPages.team.ftRate'), 0, 0, true),
     ],
   }
 }
@@ -118,17 +119,17 @@ export function mapPublicTeamCompareVo(vo: {
       avgPointDiff: toNumber(left?.avgPoints, 0) - toNumber(left?.avgPointsAgainst, 0),
     },
     basics: [
-      createBarStat('rebounds', '场均篮板', toNumber(left?.avgRebounds, 0), toNumber(right?.avgRebounds, 0), true),
-      createBarStat('assists', '场均助攻', toNumber(left?.avgAssists, 0), toNumber(right?.avgAssists, 0), true),
-      createBarStat('steals', '场均抢断', toNumber(left?.avgSteals, 0), toNumber(right?.avgSteals, 0), true),
-      createBarStat('blocks', '场均盖帽', toNumber(left?.avgBlocks, 0), toNumber(right?.avgBlocks, 0), true),
-      createBarStat('turnovers', '场均失误', toNumber(left?.avgTurnovers, 0), toNumber(right?.avgTurnovers, 0), false),
-      createBarStat('fouls', '场均犯规', 0, 0, false),
+      createBarStat('rebounds', translate('publicPages.team.avgRebounds'), toNumber(left?.avgRebounds, 0), toNumber(right?.avgRebounds, 0), true),
+      createBarStat('assists', translate('publicPages.team.avgAssists'), toNumber(left?.avgAssists, 0), toNumber(right?.avgAssists, 0), true),
+      createBarStat('steals', translate('publicPages.team.avgSteals'), toNumber(left?.avgSteals, 0), toNumber(right?.avgSteals, 0), true),
+      createBarStat('blocks', translate('publicPages.team.avgBlocks'), toNumber(left?.avgBlocks, 0), toNumber(right?.avgBlocks, 0), true),
+      createBarStat('turnovers', translate('publicPages.team.avgTurnovers'), toNumber(left?.avgTurnovers, 0), toNumber(right?.avgTurnovers, 0), false),
+      createBarStat('fouls', translate('publicPages.team.avgFouls'), 0, 0, false),
     ],
     shooting: [
-      createBarStat('fgPct', '投篮命中率', 0, 0, true),
-      createBarStat('tpPct', '三分命中率', 0, 0, true),
-      createBarStat('ftPct', '罚球命中率', 0, 0, true),
+      createBarStat('fgPct', translate('publicPages.team.fgRate'), 0, 0, true),
+      createBarStat('tpPct', translate('publicPages.team.tpRate'), 0, 0, true),
+      createBarStat('ftPct', translate('publicPages.team.ftRate'), 0, 0, true),
     ],
   }
 }

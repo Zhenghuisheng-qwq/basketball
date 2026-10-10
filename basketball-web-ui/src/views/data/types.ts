@@ -1,3 +1,5 @@
+import { translate } from '@/i18n'
+
 export type DataType = 'team' | 'player'
 export type StatisticType = 'average' | 'total'
 
@@ -98,41 +100,45 @@ export function formatStatNumber(value: number | string, average: boolean): stri
   return String(Math.round(num))
 }
 
+function dataColumn(key: string): string {
+  return translate(`publicPages.data.columns.${key}`)
+}
+
 export function getTeamColumns(statisticType: StatisticType): TableColumn[] {
   const isAverage = statisticType === 'average'
   return [
-    { key: 'rank', label: '排名', width: '60px' },
-    { key: 'team', label: '战队', align: 'left', width: '145px', cellClass: 'is-team' },
-    { key: 'games', label: '场次', width: '70px' },
-    { key: 'winLoss', label: '胜/负', width: '70px' },
-    { key: 'winRate', label: '胜率', width: '72px' },
-    { key: 'points', label: isAverage ? '场均得分' : '总得分', width: '78px' },
-    { key: 'rebounds', label: isAverage ? '场均篮板' : '总篮板', width: '78px' },
-    { key: 'assists', label: isAverage ? '场均助攻' : '总助攻', width: '78px' },
-    { key: 'steals', label: isAverage ? '场均抢断' : '总抢断', width: '78px' },
-    { key: 'blocks', label: isAverage ? '场均盖帽' : '总盖帽', width: '78px' },
-    { key: 'turnovers', label: isAverage ? '场均失误' : '总失误', width: '78px' },
-    { key: 'fieldGoals', label: '投篮%', width: '72px' },
-    { key: 'threePoints', label: '三分%', width: '72px' },
-    { key: 'freeThrows', label: '罚球%', width: '72px' },
+    { key: 'rank', label: dataColumn('rank'), width: '60px' },
+    { key: 'team', label: dataColumn('team'), align: 'left', width: '145px', cellClass: 'is-team' },
+    { key: 'games', label: dataColumn('games'), width: '70px' },
+    { key: 'winLoss', label: dataColumn('winLoss'), width: '70px' },
+    { key: 'winRate', label: dataColumn('winRate'), width: '72px' },
+    { key: 'points', label: dataColumn(isAverage ? 'avgPoints' : 'totalPoints'), width: '78px' },
+    { key: 'rebounds', label: dataColumn(isAverage ? 'avgRebounds' : 'totalRebounds'), width: '78px' },
+    { key: 'assists', label: dataColumn(isAverage ? 'avgAssists' : 'totalAssists'), width: '78px' },
+    { key: 'steals', label: dataColumn(isAverage ? 'avgSteals' : 'totalSteals'), width: '78px' },
+    { key: 'blocks', label: dataColumn(isAverage ? 'avgBlocks' : 'totalBlocks'), width: '78px' },
+    { key: 'turnovers', label: dataColumn(isAverage ? 'avgTurnovers' : 'totalTurnovers'), width: '78px' },
+    { key: 'fieldGoals', label: dataColumn('fgPct'), width: '72px' },
+    { key: 'threePoints', label: dataColumn('tpPct'), width: '72px' },
+    { key: 'freeThrows', label: dataColumn('ftPct'), width: '72px' },
   ]
 }
 
 export function getPlayerColumns(statisticType: StatisticType): TableColumn[] {
   const isAverage = statisticType === 'average'
   return [
-    { key: 'rank', label: '排名', width: '60px' },
-    { key: 'player', label: '球员', align: 'left', width: '165px', cellClass: 'is-player' },
-    { key: 'team', label: '战队', align: 'left', width: '145px', cellClass: 'is-team' },
-    { key: 'position', label: '位置', width: '70px' },
-    { key: 'games', label: '场次', width: '70px' },
-    { key: 'points', label: isAverage ? '场均得分' : '总得分', width: '78px' },
-    { key: 'rebounds', label: isAverage ? '场均篮板' : '总篮板', width: '78px' },
-    { key: 'assists', label: isAverage ? '场均助攻' : '总助攻', width: '78px' },
-    { key: 'steals', label: isAverage ? '场均抢断' : '总抢断', width: '78px' },
-    { key: 'blocks', label: isAverage ? '场均盖帽' : '总盖帽', width: '78px' },
-    { key: 'fieldGoals', label: '投篮%', width: '72px' },
-    { key: 'threePoints', label: '三分%', width: '72px' },
-    { key: 'freeThrows', label: '罚球%', width: '72px' },
+    { key: 'rank', label: dataColumn('rank'), width: '60px' },
+    { key: 'player', label: dataColumn('player'), align: 'left', width: '165px', cellClass: 'is-player' },
+    { key: 'team', label: dataColumn('team'), align: 'left', width: '145px', cellClass: 'is-team' },
+    { key: 'position', label: dataColumn('position'), width: '70px' },
+    { key: 'games', label: dataColumn('games'), width: '70px' },
+    { key: 'points', label: dataColumn(isAverage ? 'avgPoints' : 'totalPoints'), width: '78px' },
+    { key: 'rebounds', label: dataColumn(isAverage ? 'avgRebounds' : 'totalRebounds'), width: '78px' },
+    { key: 'assists', label: dataColumn(isAverage ? 'avgAssists' : 'totalAssists'), width: '78px' },
+    { key: 'steals', label: dataColumn(isAverage ? 'avgSteals' : 'totalSteals'), width: '78px' },
+    { key: 'blocks', label: dataColumn(isAverage ? 'avgBlocks' : 'totalBlocks'), width: '78px' },
+    { key: 'fieldGoals', label: dataColumn('fgPct'), width: '72px' },
+    { key: 'threePoints', label: dataColumn('tpPct'), width: '72px' },
+    { key: 'freeThrows', label: dataColumn('ftPct'), width: '72px' },
   ]
 }

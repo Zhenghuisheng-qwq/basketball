@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { inject, ref, watch } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getV4PublicTeamArchive } from '@/api/v4Public'
 import { displayText, formatDateTime } from '@/utils/publicDisplay'
 import {
@@ -36,31 +37,32 @@ interface TeamLogoHistoryItem {
   date: string
 }
 
-const archiveBlocks: ArchiveBlock[] = [
+const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
+const { t } = useI18n()
+
+const archiveBlocks = computed<ArchiveBlock[]>(() => [
   {
     key: 'honors',
-    title: '球队荣誉',
+    title: t('publicPages.team.honors'),
     subtitle: 'Team Honors',
-    emptyTitle: '暂无球队荣誉',
-    emptyDesc: '球队获得荣誉并发布后将在此展示',
+    emptyTitle: t('publicPages.team.noHonors'),
+    emptyDesc: t('publicPages.team.noHonorsHint'),
   },
   {
     key: 'names',
-    title: '球队名称',
+    title: t('publicPages.team.names'),
     subtitle: 'Name History',
-    emptyTitle: '暂无名称变更记录',
-    emptyDesc: '球队更名记录将在审核通过后展示',
+    emptyTitle: t('publicPages.team.noNames'),
+    emptyDesc: t('publicPages.team.noNamesHint'),
   },
   {
     key: 'logos',
-    title: '球队 Logo',
+    title: t('publicPages.team.logos'),
     subtitle: 'Logo History',
-    emptyTitle: '暂无 Logo 变更记录',
-    emptyDesc: 'Logo 变更记录将在审核通过后展示',
+    emptyTitle: t('publicPages.team.noLogos'),
+    emptyDesc: t('publicPages.team.noLogosHint'),
   },
-]
-
-const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
+])
 
 const archiveState = ref<'loading' | 'success' | 'empty' | 'error'>('empty')
 const archiveError = ref('')
@@ -92,7 +94,7 @@ function hasNamePair(item: TeamNameHistoryItem): boolean {
 }
 
 function singleName(item: TeamNameHistoryItem): string {
-  return item.oldName || item.newName || '名称变更'
+  return item.oldName || item.newName || t('publicPages.team.nameChange')
 }
 
 function hasLogoPair(item: TeamLogoHistoryItem): boolean {
@@ -121,7 +123,7 @@ async function loadArchive() {
     const data = res.data
     honors.value = (data?.honors ?? []).map((item, index) => ({
       id: String(item.honorId || index),
-      honorTitle: displayText(item.honorTitle, '荣誉'),
+      honorTitle: displayText(item.honorTitle, t('publicPages.team.honorFallback')),
       competitionName: rawText(item.competitionName),
       date: formatArchiveDate(item.awardDate),
     }))
@@ -147,7 +149,7 @@ async function loadArchive() {
     nameHistory.value = []
     logoHistory.value = []
     archiveState.value = 'error'
-    archiveError.value = err instanceof Error ? err.message : '加载球队档案失败'
+    archiveError.value = err instanceof Error ? err.message : t('publicPages.team.loadArchiveFailed')
   }
 }
 
@@ -166,10 +168,10 @@ function hasBlockData(key: ArchiveBlock['key']): boolean {
   <div class="team-archive">
     <header class="archive-header">
       <div class="archive-title">
-        <h2 class="archive-title__cn">球队档案</h2>
+        <h2 class="archive-title__cn">{{ t('publicPages.team.archiveTitle') }}</h2>
         <span class="archive-title__en">Team Archive</span>
       </div>
-      <p class="archive-header__desc">记录球队参赛以来的冠军荣誉与品牌变化</p>
+      <p class="archive-header__desc">{{ t('publicPages.team.archiveDesc') }}</p>
     </header>
 
     <section v-for="block in archiveBlocks" :key="block.key" class="archive-block">
@@ -184,7 +186,7 @@ function hasBlockData(key: ArchiveBlock['key']): boolean {
         role="status"
       >
         <div class="empty-row__text">
-          <strong>加载中...</strong>
+          <strong>{{ t('publicPages.team.loading') }}</strong>
         </div>
       </div>
       <div
@@ -193,7 +195,7 @@ function hasBlockData(key: ArchiveBlock['key']): boolean {
         role="alert"
       >
         <div class="empty-row__text">
-          <strong>加载失败</strong>
+          <strong>{{ t('publicPages.team.loadFailedShort') }}</strong>
           <span>{{ archiveError }}</span>
         </div>
       </div>
@@ -255,25 +257,25 @@ function hasBlockData(key: ArchiveBlock['key']): boolean {
             <time v-if="item.date" class="timeline-item__date">{{ item.date }}</time>
             <div v-if="hasLogoPair(item)" class="logo-compare">
               <div class="logo-compare__mark">
-                <img :src="item.oldLogo" alt="变更前 Logo" @error="hideBrokenLogo" />
+                <img :src="item.oldLogo" :alt="t('publicPages.team.logoBefore')" @error="hideBrokenLogo" />
               </div>
               <span class="timeline-item__arrow" aria-hidden="true">→</span>
               <div class="logo-compare__mark">
-                <img :src="item.newLogo" alt="变更后 Logo" @error="hideBrokenLogo" />
+                <img :src="item.newLogo" :alt="t('publicPages.team.logoAfter')" @error="hideBrokenLogo" />
               </div>
             </div>
             <div v-else-if="singleLogo(item)" class="logo-compare">
               <div class="logo-compare__mark">
-                <img :src="singleLogo(item)" alt="球队 Logo" @error="hideBrokenLogo" />
+                <img :src="singleLogo(item)" :alt="t('publicPages.team.teamLogo')" @error="hideBrokenLogo" />
               </div>
             </div>
-            <span class="timeline-item__caption">Logo 更新</span>
+            <span class="timeline-item__caption">{{ t('publicPages.team.logoUpdated') }}</span>
           </div>
         </li>
       </ol>
     </section>
 
-    <p class="archive-note">仅展示赛事审核通过并实际使用过的球队历史记录</p>
+    <p class="archive-note">{{ t('publicPages.team.archiveNote') }}</p>
   </div>
 </template>
 

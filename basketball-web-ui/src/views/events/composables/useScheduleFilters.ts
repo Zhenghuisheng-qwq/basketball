@@ -3,6 +3,7 @@ import { getV4PublicDivisionSchedule, getV4PublicStanding, getV4PublicTeamList }
 import type { V4PublicEventTeamItem, V4PublicScheduleItem } from '@/api/types/v4Public'
 import { v4StandingToPublic } from '../utils/v4PublicAdapters'
 import type { PublicStandingItemVo } from '@/api/types/public'
+import { translate } from '@/i18n'
 import { isValidDateKey, todayDateKey } from '@/utils/scheduleDateKey'
 import type { usePublicSeasonContext } from './usePublicSeasonContext'
 import {
@@ -77,7 +78,7 @@ export function useScheduleFilters() {
       const eventTeamId = String(row.eventTeamId)
       fromEventTeams.push({
         eventTeamId,
-        name: row.teamName || row.teamShortName || '未知球队',
+        name: row.teamName || row.teamShortName || translate('eventsPage.teams.unknown'),
         shortName: row.teamShortName,
         code: row.eventTeamNo || row.teamShortName,
         logoUrl: String(row.teamLogoUrl || '').trim() || logos.get(eventTeamId) || '',
@@ -291,7 +292,7 @@ export function useScheduleFilters() {
       standingRows.value = []
       eventTeams.value = []
       state.value = 'error'
-      errorMessage.value = err instanceof Error ? err.message : '赛程加载失败'
+      errorMessage.value = err instanceof Error ? err.message : translate('eventsPage.schedule.loadFailed')
     }
   }
 

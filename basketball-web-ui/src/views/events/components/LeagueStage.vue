@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import PaperSection from '@/components/common/PaperSection.vue'
 import { getV4PublicStageList } from '@/api/v4Public'
 import type { V4PublicStageItem } from '@/api/types/v4Public'
@@ -21,11 +22,12 @@ import {
 
 type SeasonContext = ReturnType<typeof usePublicSeasonContext>
 const ctx = inject<SeasonContext>('publicSeasonContext')!
+const { t } = useI18n()
 
 const stages = ref<V4PublicStageItem[]>([])
 const selectedStageId = ref('')
 const stagesLoading = ref(false)
-const stagesError = ref('')
+const stagesFailed = ref(false)
 
 const selectedStage = computed(() =>
   stages.value.find((item) => item.stageId === selectedStageId.value) || null,
@@ -57,11 +59,11 @@ async function loadStages(divisionId: string) {
   if (!divisionId) {
     stages.value = []
     selectedStageId.value = ''
-    stagesError.value = ''
+    stagesFailed.value = false
     return
   }
   stagesLoading.value = true
-  stagesError.value = ''
+  stagesFailed.value = false
   try {
     const res = await getV4PublicStageList(divisionId)
     const list = [...(res.data ?? [])].sort(
@@ -73,7 +75,7 @@ async function loadStages(divisionId: string) {
   } catch {
     stages.value = []
     selectedStageId.value = ''
-    stagesError.value = '阶段数据加载失败'
+    stagesFailed.value = true
   } finally {
     stagesLoading.value = false
   }
@@ -99,9 +101,9 @@ watch(
               :options="stageOptions"
               variant="paper"
             />
-            <p v-if="stagesLoading" class="stage-state">加载阶段...</p>
-            <p v-else-if="stagesError" class="stage-state">{{ stagesError }}</p>
-            <p v-else-if="!selectedStageId" class="stage-state">暂无阶段数据</p>
+            <p v-if="stagesLoading" class="stage-state">{{ t('eventsPage.stage.loading') }}</p>
+            <p v-else-if="stagesFailed" class="stage-state">{{ t('eventsPage.stage.loadFailed') }}</p>
+            <p v-else-if="!selectedStageId" class="stage-state">{{ t('eventsPage.stage.empty') }}</p>
             <RegularStandings
               v-else
               :stage-id="selectedStageId"
@@ -132,8 +134,8 @@ watch(
               :stage-title-en="heading.titleEn"
               :stage-live="stageLive"
             />
-            <p v-if="stagesLoading" class="stage-state">加载阶段...</p>
-            <p v-else-if="stagesError" class="stage-state">{{ stagesError }}</p>
+            <p v-if="stagesLoading" class="stage-state">{{ t('eventsPage.stage.loading') }}</p>
+            <p v-else-if="stagesFailed" class="stage-state">{{ t('eventsPage.stage.loadFailed') }}</p>
             <PlayoffBracket
               v-else
               hide-heading

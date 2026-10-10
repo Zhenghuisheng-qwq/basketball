@@ -15,6 +15,7 @@ import type {
   PublicTeamSeasonStatVo,
 } from '@/api/types/public'
 import type { V4PublicDivisionDetail } from '@/api/types/v4Public'
+import { translate } from '@/i18n'
 import { descriptionToText, displayText, toNumber } from '@/utils/publicDisplay'
 import { v4PlatformLabel } from '@/utils/v4Display'
 import type { TeamBase, TeamStage } from '@/types/team'
@@ -78,7 +79,7 @@ export function usePublicTeamPage() {
     if (!detail.value) return null
     const d = detail.value
     const rank = ranking.value[0]
-    const name = displayText(d.teamName, '未知球队')
+    const name = displayText(d.teamName, translate('publicPages.team.unknownTeam'))
     const captainFromRoster =
       roster.value.find((item) => (item.roleType || '').toUpperCase().includes('CAPTAIN'))
         ?.playerName || ''
@@ -99,10 +100,10 @@ export function usePublicTeamPage() {
       verified: toNumber(d.teamStatus, 0) === 1,
       seasonName: displayText(
         seasonTitle.value || d.seasonName || divisionDetail.value?.seasonTitle,
-        '公开赛季',
+        translate('publicPages.team.publicSeason'),
       ),
       seasonYear: new Date().getFullYear(),
-      description: descriptionToText(d.description) || '暂无球队简介',
+      description: descriptionToText(d.description) || translate('publicPages.team.noBio'),
       wins,
       losses,
       ranking: toNumber(rank?.rankNo, 0),
@@ -125,7 +126,7 @@ export function usePublicTeamPage() {
       divisionId.value = ''
       seasonId.value = ''
       state.value = 'error'
-      errorMessage.value = '无效的球队 ID'
+      errorMessage.value = translate('publicPages.team.invalidId')
       return
     }
 
@@ -152,7 +153,7 @@ export function usePublicTeamPage() {
         standingWins.value = 0
         standingLosses.value = 0
         state.value = 'empty'
-        errorMessage.value = '球队不存在或未公开'
+        errorMessage.value = translate('publicPages.team.notPublic')
         return
       }
 
@@ -253,7 +254,7 @@ export function usePublicTeamPage() {
       divisionId.value = ''
       seasonId.value = ''
       state.value = 'error'
-      errorMessage.value = err instanceof Error ? err.message : '加载球队失败'
+      errorMessage.value = err instanceof Error ? err.message : translate('publicPages.team.loadFailed')
     }
   }
 

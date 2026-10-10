@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { ScheduleTeamOption } from '../utils/scheduleTeamFilter'
 import TeamLogo from './TeamLogo.vue'
 import type { Team } from '../types/events'
@@ -15,6 +16,7 @@ const emit = defineEmits<{
   selectTeam: [value: string | null]
 }>()
 
+const { t } = useI18n()
 const expanded = ref(false)
 
 const visibleTeams = computed(() => {
@@ -39,7 +41,7 @@ function toTeam(option: ScheduleTeamOption): Team {
 }
 
 function displayName(option: ScheduleTeamOption): string {
-  return String(option.name || option.shortName || '球队').trim()
+  return String(option.name || option.shortName || t('eventsPage.teams.fallback')).trim()
 }
 
 function isSelected(teamId: string | null): boolean {
@@ -49,7 +51,7 @@ function isSelected(teamId: string | null): boolean {
 </script>
 
 <template>
-  <section class="team-filter" aria-label="选择参赛球队">
+  <section class="team-filter" :aria-label="t('eventsPage.aria.selectTeams')">
     <div class="team-filter-head">
       <button
         type="button"
@@ -58,9 +60,9 @@ function isSelected(teamId: string | null): boolean {
         :aria-pressed="isSelected(null)"
         @click="emit('selectTeam', null)"
       >
-        全部球队
+        {{ t('eventsPage.teams.all') }}
       </button>
-      <span class="team-count">{{ teams.length }} 支参赛球队</span>
+      <span class="team-count">{{ t('eventsPage.count.teams', { count: teams.length }) }}</span>
     </div>
 
     <div class="team-grid">
@@ -85,7 +87,7 @@ function isSelected(teamId: string | null): boolean {
       class="more-teams"
       @click="expanded = true"
     >
-      更多球队
+      {{ t('eventsPage.teams.more') }}
       <span aria-hidden="true">›</span>
     </button>
   </section>

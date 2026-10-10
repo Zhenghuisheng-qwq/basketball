@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { TournamentGroup, TournamentOption } from '../types'
 
 const props = defineProps<{
@@ -13,6 +14,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
+const { t } = useI18n()
 const open = ref(false)
 const keyword = ref('')
 const rootRef = ref<HTMLElement | null>(null)
@@ -100,9 +102,9 @@ onBeforeUnmount(() => {
       @click.stop="toggleDropdown"
     >
       <span class="data-tournament-selector__label">
-        <template v-if="loading">加载赛季中...</template>
+        <template v-if="loading">{{ t('publicPages.data.loadingSeasons') }}</template>
         <template v-else-if="error">{{ error }}</template>
-        <template v-else>{{ selectedTournament?.label || '选择赛季' }}</template>
+        <template v-else>{{ selectedTournament?.label || t('publicPages.data.selectSeason') }}</template>
       </span>
       <span class="data-tournament-selector__arrow" aria-hidden="true" />
     </button>
@@ -111,9 +113,9 @@ onBeforeUnmount(() => {
       v-show="open"
       class="data-tournament-selector__dropdown"
       role="listbox"
-      aria-label="赛季列表"
+      :aria-label="t('publicPages.data.seasonList')"
     >
-      <h3 class="data-tournament-selector__title">选择赛季</h3>
+      <h3 class="data-tournament-selector__title">{{ t('publicPages.data.selectSeason') }}</h3>
 
       <label class="data-tournament-selector__search">
         <span class="data-tournament-selector__search-icon" aria-hidden="true">⌕</span>
@@ -121,12 +123,12 @@ onBeforeUnmount(() => {
           ref="searchInputRef"
           v-model="keyword"
           type="search"
-          placeholder="搜索赛季"
+          :placeholder="t('publicPages.data.searchSeason')"
           autocomplete="off"
         />
       </label>
 
-      <div v-if="!hasMatches" class="data-tournament-selector__empty">暂无匹配赛季</div>
+      <div v-if="!hasMatches" class="data-tournament-selector__empty">{{ t('publicPages.data.noMatchingSeason') }}</div>
 
       <div
         v-for="group in filteredGroups"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import PublicPageLayout from '@/components/layout/PublicPageLayout.vue'
 import { getV4PublicSeasonList } from '@/api/v4Public'
@@ -10,6 +11,7 @@ import './styles/v4-events-list.scss'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const loading = ref(true)
 const error = ref('')
@@ -37,9 +39,9 @@ const registrationOpenDivisionCount = computed(() =>
 const sparseGrid = computed(() => filteredSeasons.value.length > 0 && filteredSeasons.value.length <= 2)
 
 const emptyText = computed(() => {
-  if (listState.value === 'error') return error.value || '加载赛事失败，请稍后重试'
-  if (listState.value === 'filter-empty') return '当前系列暂无已发布赛季'
-  return '暂无已发布赛季，敬请关注后续赛事'
+  if (listState.value === 'error') return error.value || t('eventsPage.list.loadFailed')
+  if (listState.value === 'filter-empty') return t('eventsPage.list.filterEmpty')
+  return t('eventsPage.list.empty')
 })
 
 async function loadSeasons() {
@@ -60,7 +62,7 @@ async function loadSeasons() {
     }
   } catch (err) {
     seasons.value = []
-    error.value = err instanceof Error ? err.message : '加载赛事失败'
+    error.value = err instanceof Error ? err.message : t('eventsPage.list.loadFailedShort')
     listState.value = 'error'
   } finally {
     loading.value = false
@@ -109,12 +111,12 @@ onMounted(() => {
     <div class="v4-events-list-page__shell">
       <header class="v4-events-list-page__heading">
         <div>
-          <h2 class="v4-events-list-page__title">公开赛季</h2>
+          <h2 class="v4-events-list-page__title">{{ t('eventsPage.list.publicSeasons') }}</h2>
           <p class="v4-events-list-page__subtitle">OPEN SEASONS</p>
-          <p class="v4-events-list-page__desc">浏览当前开放报名的 CNPA 线上篮球赛季与赛区</p>
+          <p class="v4-events-list-page__desc">{{ t('eventsPage.list.publicSeasonsDesc') }}</p>
         </div>
         <p v-if="listState === 'success'" class="v4-events-list-page__count">
-          共 {{ filteredSeasons.length }} 个赛季
+          {{ t('eventsPage.count.seasons', { count: filteredSeasons.length }) }}
         </p>
       </header>
 
@@ -124,7 +126,7 @@ onMounted(() => {
 
       <div v-else-if="listState === 'error'" class="v4-events-list-page__state v4-events-list-page__state--error">
         <p>{{ emptyText }}</p>
-        <button type="button" class="v4-events-list-page__retry" @click="loadSeasons">重试</button>
+        <button type="button" class="v4-events-list-page__retry" @click="loadSeasons">{{ t('eventsPage.list.retry') }}</button>
       </div>
 
       <div
@@ -138,7 +140,7 @@ onMounted(() => {
           class="v4-events-list-page__retry v4-events-list-page__retry--ghost"
           @click="selectSeries('')"
         >
-          查看全部系列
+          {{ t('eventsPage.list.viewAllSeries') }}
         </button>
       </div>
 

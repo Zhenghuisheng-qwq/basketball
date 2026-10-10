@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import HallPanelHead from './HallPanelHead.vue'
@@ -19,6 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const { t } = useI18n()
 const pageSize = 8
 
 const items = ref<PublicHonorItemResp[]>([])
@@ -50,7 +52,7 @@ async function load(page: number) {
     if (current !== reqId) return
     items.value = []
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载球员荣誉失败'
+    errorMessage.value = err instanceof Error ? err.message : t('publicPages.hall.loadPlayerHonorsFailed')
   }
 }
 
@@ -80,11 +82,11 @@ function awardDateText(value?: string | null) {
 
 <template>
   <section class="weekly-best-panel">
-    <HallPanelHead title="球员荣誉" subtitle="Player Honors" />
+    <HallPanelHead :title="t('publicPages.hall.playerHonors')" subtitle="Player Honors" />
 
-    <div v-if="state === 'loading'" class="hall-empty">加载中...</div>
+    <div v-if="state === 'loading'" class="hall-empty">{{ t('publicPages.hall.loading') }}</div>
     <div v-else-if="state === 'error'" class="hall-empty">{{ errorMessage }}</div>
-    <div v-else-if="state === 'empty'" class="hall-empty">暂无球员荣誉记录</div>
+    <div v-else-if="state === 'empty'" class="hall-empty">{{ t('publicPages.hall.noPlayerHonors') }}</div>
 
     <template v-else>
       <div class="player-honor-grid">
@@ -96,7 +98,7 @@ function awardDateText(value?: string | null) {
           <div class="weekly-best-card__left">
             <div class="weekly-best-card__visual">
               <HallPlayerSilhouette
-                :name="displayText(item.playerName, '球员')"
+                :name="displayText(item.playerName, t('publicPages.hall.player'))"
                 :avatar-url="item.playerAvatarUrl || ''"
                 size="feature"
               />
@@ -104,14 +106,14 @@ function awardDateText(value?: string | null) {
           </div>
 
           <div class="weekly-best-card__body">
-            <p class="weekly-best-card__label">{{ displayText(item.honorName, '球员荣誉') }}</p>
+            <p class="weekly-best-card__label">{{ displayText(item.honorName, t('publicPages.hall.playerHonors')) }}</p>
             <button
               type="button"
               class="weekly-best-card__name"
               :disabled="!item.playerId"
               @click="openPlayer(item.playerId)"
             >
-              {{ displayText(item.playerName, '未知球员') }}
+              {{ displayText(item.playerName, t('publicPages.hall.unknownPlayer')) }}
             </button>
             <button
               v-if="item.teamId || item.teamName"
@@ -133,11 +135,11 @@ function awardDateText(value?: string | null) {
               <span>{{ displayText(item.teamName) }}</span>
             </button>
             <p class="weekly-best-card__meta">
-              {{ displayText(item.tournamentName, '公开赛事') }}
+              {{ displayText(item.tournamentName, t('publicPages.hall.publicEvent')) }}
               ·
-              {{ displayText(item.seasonName, '赛季') }}
+              {{ displayText(item.seasonName, t('publicPages.hall.season')) }}
             </p>
-            <p class="weekly-best-card__date">授予日期 {{ awardDateText(item.awardDate) }}</p>
+            <p class="weekly-best-card__date">{{ t('publicPages.hall.awardDateValue', { date: awardDateText(item.awardDate) }) }}</p>
             <p v-if="item.honorValue" class="weekly-best-card__value">{{ item.honorValue }}</p>
           </div>
         </article>

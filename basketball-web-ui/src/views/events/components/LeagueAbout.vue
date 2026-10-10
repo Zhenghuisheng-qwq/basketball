@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { pickCompetitionSeriesCode, resolveCompetitionTheme } from '@/config/competitionTheme'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
 
 const route = useRoute()
+const { t } = useI18n()
 const ctx = inject<ReturnType<typeof usePublicSeasonContext> | null>('publicSeasonContext', null)
 const seriesLabel = computed(
-  () => ctx?.currentTournament.value?.tournamentName || ctx?.divisionDetail.value?.seriesName || '赛事',
+  () => ctx?.currentTournament.value?.tournamentName || ctx?.divisionDetail.value?.seriesName || t('events.title'),
 )
+const aboutLabel = computed(() => t('eventsPage.about.label', { name: seriesLabel.value }))
 const seriesCode = computed(() => {
   const querySeries = route.query.series ?? route.query.seriesCode
   return pickCompetitionSeriesCode(
@@ -25,16 +28,16 @@ const description = computed(() => {
 })
 </script>
 <template>
-  <section class="site-section site-section--dark league-about" :aria-label="`关于 ${seriesLabel}`">
+  <section class="site-section site-section--dark league-about" :aria-label="aboutLabel">
     <div class="site-shell">
       <img
         class="league-about__image"
         :src="aboutTheme.footImage"
-        :alt="`关于 ${seriesLabel}`"
+        :alt="aboutLabel"
       />
       <div v-if="description" class="league-about__copy">
         <span class="league-about__eyebrow">ABOUT THE EVENT</span>
-        <h2>赛事介绍</h2>
+        <h2>{{ t('eventsPage.about.title') }}</h2>
         <p>{{ description }}</p>
       </div>
     </div>

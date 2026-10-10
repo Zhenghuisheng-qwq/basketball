@@ -1,4 +1,5 @@
 import type { V4PublicScheduleItem } from '@/api/types/v4Public'
+import { translate } from '@/i18n'
 import {
   formatDateKey,
   isValidDateKey,
@@ -7,8 +8,13 @@ import {
   todayDateKey,
 } from '@/utils/scheduleDateKey'
 
-const WEEKDAY_SHORT = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-const WEEKDAY_FULL = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+function weekdayShort(index: number): string {
+  return translate(`match.weekday.${index}`)
+}
+
+function weekdayFull(index: number): string {
+  return translate(`eventsPage.weekdayFull.${index}`)
+}
 
 export type CalendarDay = {
   date: string
@@ -70,7 +76,7 @@ export function sundayWeekDays(weekStart: string, counts: Record<string, number>
     const date = formatDateKey(current)
     return {
       date,
-      weekday: WEEKDAY_SHORT[index],
+      weekday: weekdayShort(index),
       dateText: monthDayText(current),
       count: counts[date] || 0,
     }
@@ -146,7 +152,10 @@ export function buildMonthView(
   return {
     year: first.getFullYear(),
     month: first.getMonth(),
-    label: String(first.getFullYear()) + '年' + String(first.getMonth() + 1) + '月',
+    label: translate('eventsPage.date.yearMonth', {
+      year: first.getFullYear(),
+      month: first.getMonth() + 1,
+    }),
     center,
     days,
   }
@@ -164,16 +173,22 @@ export function buildThreeMonths(
 }
 
 export function formatDateGroupTitle(dateKey: string): string {
-  if (!isValidDateKey(dateKey)) return '待定日期'
+  if (!isValidDateKey(dateKey)) return translate('eventsPage.date.pending')
   const date = parseDateKey(dateKey)
-  const weekday = WEEKDAY_FULL[date.getDay()]
-  return String(date.getMonth() + 1) + '月' + String(date.getDate()) + '日 · ' + weekday
+  return translate('eventsPage.date.monthDayWeek', {
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+    weekday: weekdayFull(date.getDay()),
+  })
 }
 
 export function formatDateHint(dateKey: string): string {
-  if (!isValidDateKey(dateKey)) return '全部日期'
+  if (!isValidDateKey(dateKey)) return translate('eventsPage.date.all')
   const date = parseDateKey(dateKey)
-  return String(date.getMonth() + 1) + '月' + String(date.getDate()) + '日'
+  return translate('eventsPage.date.monthDay', {
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+  })
 }
 
 export function countScheduleByDate(items: V4PublicScheduleItem[]): Record<string, number> {
@@ -215,7 +230,7 @@ export function groupScheduleByDate(items: V4PublicScheduleItem[]): Array<{ date
   }
   return Array.from(groups.entries()).map(([date, rows]) => ({
     date,
-    title: date === 'UNSCHEDULED' ? '待定日期' : formatDateGroupTitle(date),
+    title: date === 'UNSCHEDULED' ? translate('eventsPage.date.pending') : formatDateGroupTitle(date),
     items: rows,
   }))
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getPublicSocialLinks } from '@/api/publicSite'
 import { isSafeHttpUrl } from '@/constants/communityLinks'
 
@@ -19,6 +20,7 @@ const iconMap: Record<string, string> = {
   DOUYIN: 'D',
 }
 
+const { t } = useI18n()
 const links = ref<CommunityCard[]>([])
 
 onMounted(async () => {
@@ -55,12 +57,12 @@ function handleClick(link: CommunityCard, event?: Event) {
       <div class="site-shell-inner">
       <div class="section-head">
         <div>
-          <h2 class="section-head-title">加入 CNPA</h2>
+          <h2 class="section-head-title">{{ t('eventsPage.community.title') }}</h2>
           <span class="section-head-sub">Join The Community</span>
         </div>
       </div>
 
-      <p class="community-desc">关注赛事动态、参与互动，和观众一起加入 CNPA 社区。</p>
+      <p class="community-desc">{{ t('eventsPage.community.desc') }}</p>
 
       <div class="community-grid">
         <button

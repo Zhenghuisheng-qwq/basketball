@@ -9,7 +9,12 @@ import {
   v4ScheduleStatusLabel,
   v4ScheduleTeamLabel,
 } from '@/utils/v4Display'
+import { translate } from '@/i18n'
 import { isValidDateKey } from '@/utils/scheduleDateKey'
+
+function genericRoundLabel(): string {
+  return translate('events.round.SCHEDULE')
+}
 
 export type ScheduleStatusTone = 'scheduled' | 'live' | 'finished' | 'forfeit' | 'cancelled'
 
@@ -88,14 +93,17 @@ export function formatMatchNo(item: V4PublicScheduleItem): string {
 export function formatRoundLine(item: V4PublicScheduleItem): string {
   const raw = String(item.roundName || '').trim()
   const labeled = v4PublicRoundLabel(item.roundName, item.roundNo)
-  if (labeled && labeled !== '赛程' && labeled !== raw) {
+  const generic = genericRoundLabel()
+  if (labeled && labeled !== generic && labeled !== raw) {
     return labeled
   }
   if (/^R\d+$/i.test(raw)) {
     const roundNo = Number(raw.slice(1))
-    if (roundNo > 0 && ![8, 16, 32].includes(roundNo)) return `第${roundNo}轮`
+    if (roundNo > 0 && ![8, 16, 32].includes(roundNo)) {
+      return translate('events.round.OTHER', { round: roundNo })
+    }
   }
-  return labeled && labeled !== '赛程' ? labeled : ''
+  return labeled && labeled !== generic ? labeled : ''
 }
 
 export function formatStageLine(item: V4PublicScheduleItem): string {
@@ -113,7 +121,7 @@ export function formatRoundSectionTitle(item: V4PublicScheduleItem): string {
   const stage = formatStageLine(item)
   const round = formatRoundLine(item)
   if (stage && round && !round.includes(stage)) return `${stage} · ${round}`
-  return stage || round || '赛程'
+  return stage || round || translate('events.schedule')
 }
 
 export function scheduleRoundGroupKey(item: V4PublicScheduleItem): string {
@@ -145,15 +153,15 @@ export function isScheduleScheduled(item: V4PublicScheduleItem): boolean {
 }
 
 export function scheduleStatusLabel(item: V4PublicScheduleItem): string {
-  if (isOfficialForfeitResult(item.status, item.resultType)) return '弃权'
+  if (isOfficialForfeitResult(item.status, item.resultType)) return translate('match.forfeit')
   if (isScheduleSeries(item)) {
-    if (isScheduleScheduled(item)) return '未开始'
-    if (isScheduleLive(item)) return '进行中'
-    if (isScheduleFinished(item)) return '已结束'
-    if (isScheduleCancelled(item)) return '已取消'
+    if (isScheduleScheduled(item)) return translate('match.notStarted')
+    if (isScheduleLive(item)) return translate('match.live')
+    if (isScheduleFinished(item)) return translate('match.finished')
+    if (isScheduleCancelled(item)) return translate('match.cancelled')
     return v4ScheduleStatusLabel(item.status, item.statusName)
   }
-  if (isScheduleScheduled(item)) return '未开始'
+  if (isScheduleScheduled(item)) return translate('match.notStarted')
   return v4MatchStatusLabel(item.status)
 }
 
@@ -208,7 +216,7 @@ export function scheduleScoreView(item: V4PublicScheduleItem): ScheduleScoreView
         kind: forfeited ? 'forfeit' : 'score',
         left: series.away,
         right: series.home,
-        caption: forfeited ? (item.resultReason || '弃权') : (isScheduleLive(item) ? '进行中' : ''),
+        caption: forfeited ? (item.resultReason || translate('match.forfeit')) : (isScheduleLive(item) ? translate('match.live') : ''),
       }
     }
     return { kind: 'vs' }
@@ -222,7 +230,7 @@ export function scheduleScoreView(item: V4PublicScheduleItem): ScheduleScoreView
       right: hasScore ? Number(item.homeScore) : undefined,
       leftLabel: item.awayResultLabel || undefined,
       rightLabel: item.homeResultLabel || undefined,
-      caption: item.resultReason || '弃权',
+      caption: item.resultReason || translate('match.forfeit'),
     }
   }
 
@@ -232,10 +240,10 @@ export function scheduleScoreView(item: V4PublicScheduleItem): ScheduleScoreView
         kind: 'score',
         left: Number(item.awayScore),
         right: Number(item.homeScore),
-        caption: isScheduleLive(item) ? '进行中' : '',
+        caption: isScheduleLive(item) ? translate('match.live') : '',
       }
     }
-    return isScheduleLive(item) ? { kind: 'score', caption: '进行中' } : { kind: 'vs' }
+    return isScheduleLive(item) ? { kind: 'score', caption: translate('match.live') } : { kind: 'vs' }
   }
 
   return { kind: 'vs' }

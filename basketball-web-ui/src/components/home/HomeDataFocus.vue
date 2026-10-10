@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import TornEdge from '@/components/home/TornEdge.vue'
 import { getPublicHomeDataFocus } from '@/api/publicHome'
-import type { PublicHomeFocusTeamVo, PublicHomePlayerLeaderVo } from '@/api/types/public'
+import type { PublicHomeDataFocusVo, PublicHomeFocusTeamVo, PublicHomePlayerLeaderVo } from '@/api/types/public'
 import { displayText, formatDecimal, initials } from '@/utils/publicDisplay'
 import iconPts from '@/assets/icon/home/basketball1.png'
 import iconAst from '@/assets/icon/home/basketball2.png'
@@ -33,12 +34,14 @@ const props = defineProps<{
   defaultSeriesCode?: SeriesFilter
 }>()
 
-const seriesFilters: Array<{ key: SeriesFilter; label: string }> = [
-  { key: 'LEAGUE', label: 'League' },
-  { key: 'ARENA', label: 'Arena' },
-  { key: 'CUP', label: 'Cup' },
-  { key: 'OPEN', label: 'Open' },
-]
+const { t } = useI18n()
+
+const seriesFilters = computed<Array<{ key: SeriesFilter; label: string }>>(() => [
+  { key: 'LEAGUE', label: t('home.league') },
+  { key: 'ARENA', label: t('home.arena') },
+  { key: 'CUP', label: t('home.cup') },
+  { key: 'OPEN', label: t('home.open') },
+])
 
 const seriesFilter = ref<SeriesFilter>('LEAGUE')
 const userPickedSeries = ref(false)
@@ -46,11 +49,11 @@ const filterOpen = ref(false)
 const state = ref<SectionState>('loading')
 const errorMessage = ref('')
 const brokenLogos = ref<Record<string, boolean>>({})
-const leaders = ref<LeaderCard[]>([])
+const focusData = ref<PublicHomeDataFocusVo | null>(null)
 const featured = ref<PublicHomeFocusTeamVo | null>(null)
 
 const filterLabel = computed(() =>
-  seriesFilters.find((item) => item.key === seriesFilter.value)?.label || '赛事筛选',
+  seriesFilters.value.find((item) => item.key === seriesFilter.value)?.label || t('home.seriesFilter'),
 )
 
 const resolvedSeriesCode = computed(() => seriesFilter.value)
@@ -89,12 +92,12 @@ function toLeaderCard(
   const value = row?.value
   const numeric = value == null || value === '' ? Number.NaN : Number(value)
   return {
-    key: title,
+    key: mark,
     title,
     statLabel,
     mark,
     value: Number.isFinite(numeric) ? formatDecimal(numeric, 1) : '--',
-    playerName: displayText(row?.playerName, '暂无数据'),
+    playerName: displayText(row?.playerName, t('home.noPlayer')),
     avatarUrl: row?.avatarUrl?.trim() || '',
     teamName: row?.teamName?.trim() || '',
     teamLogoUrl: row?.teamLogoUrl?.trim() || '',
@@ -111,20 +114,28 @@ async function load() {
   try {
     const res = await getPublicHomeDataFocus(resolvedSeriesCode.value)
     const data = res.data
-    leaders.value = [
-      toLeaderCard('得分王', '场均得分', 'PTS', data?.pointsLeader),
-      toLeaderCard('助攻王', '场均助攻', 'AST', data?.assistsLeader),
-      toLeaderCard('篮板王', '场均篮板', 'REB', data?.reboundsLeader),
-    ]
+    focusData.value = data ?? null
     featured.value = data?.focusTeam ?? null
     state.value = 'success'
   } catch (err) {
-    leaders.value = []
+    focusData.value = null
     featured.value = null
     state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : '加载数据焦点失败'
+    errorMessage.value = err instanceof Error && err.message ? err.message : ''
   }
 }
+
+const leaders = computed(() => {
+  if (state.value !== 'success') return []
+  const data = focusData.value
+  return [
+    toLeaderCard(t('home.pointsLeader'), t('home.pointsAvg'), 'PTS', data?.pointsLeader),
+    toLeaderCard(t('home.assistsLeader'), t('home.assistsAvg'), 'AST', data?.assistsLeader),
+    toLeaderCard(t('home.reboundsLeader'), t('home.reboundsAvg'), 'REB', data?.reboundsLeader),
+  ]
+})
+
+const focusErrorText = computed(() => errorMessage.value || t('home.focusError'))
 
 function selectSeries(key: SeriesFilter) {
   userPickedSeries.value = true
@@ -159,10 +170,10 @@ watch(
         <TornEdge position="top" tone="light" variant="soft" />
         <div class="paper-band-inner home-data-focus-inner">
           <div class="data-focus-stack">
-            <section class="data-focus-box" aria-label="数据焦点">
+            <section class="data-focus-box" :aria-label="t('home.dataFocus')">
               <div class="data-focus-header">
                 <div class="combined-column-heading combined-column-heading--news">
-                  <h2>数据焦点</h2>
+                  <h2>{{ t('home.dataFocus') }}</h2>
                   <span class="home-kicker">DATA FOCUS</span>
                 </div>
                 <div class="data-focus-filter">
@@ -172,7 +183,7 @@ watch(
                     :aria-expanded="filterOpen"
                     @click="filterOpen = !filterOpen"
                   >
-                    <span>赛事</span>
+                    <span>{{ t('home.seriesFilter') }}</span>
                     <small>{{ filterLabel }} ▼</small>
                   </button>
                   <div v-if="filterOpen" class="data-focus-filter__menu" role="listbox">
@@ -190,9 +201,9 @@ watch(
                 </div>
               </div>
 
-              <div v-if="state === 'loading'" class="home-state">加载中...</div>
-              <div v-else-if="state === 'error'" class="home-state home-state--error">{{ errorMessage }}</div>
-              <div v-else-if="!leaders.length" class="home-state">暂无数据焦点</div>
+              <div v-if="state === 'loading'" class="home-state">{{ t('common.loading') }}</div>
+              <div v-else-if="state === 'error'" class="home-state home-state--error">{{ focusErrorText }}</div>
+              <div v-else-if="!leaders.length" class="home-state">{{ t('home.noFocus') }}</div>
               <div v-else class="data-leader-grid">
                 <article
                   v-for="card in leaders"
@@ -228,16 +239,16 @@ watch(
               </div>
             </section>
 
-            <section class="data-focus-box data-focus-box--featured" aria-label="本周焦点">
+            <section class="data-focus-box data-focus-box--featured" :aria-label="t('home.weeklyFocus')">
               <div class="data-focus-header">
                 <div class="combined-column-heading combined-column-heading--news">
-                  <h2>本周焦点</h2>
+                  <h2>{{ t('home.weeklyFocus') }}</h2>
                   <span class="home-kicker">WEEKLY FOCUS</span>
                 </div>
               </div>
 
-              <div v-if="state === 'loading'" class="home-state">加载中...</div>
-              <div v-else-if="state === 'error'" class="home-state home-state--error">{{ errorMessage }}</div>
+              <div v-if="state === 'loading'" class="home-state">{{ t('common.loading') }}</div>
+              <div v-else-if="state === 'error'" class="home-state home-state--error">{{ focusErrorText }}</div>
               <article v-else-if="featured" class="weekly-focus-card">
                 <div class="weekly-team">
                   <span class="weekly-team__logo">
@@ -251,35 +262,35 @@ watch(
                   </span>
                   <div class="weekly-team__copy">
                     <strong :title="displayText(featured.teamName)">{{ displayText(featured.teamName) }}</strong>
-                    <small>焦点战队</small>
+                    <small>{{ t('home.focusTeam') }}</small>
                   </div>
                 </div>
                 <div class="weekly-stat">
-                  <span>战绩</span>
+                  <span>{{ t('home.record') }}</span>
                   <b v-if="hasFeaturedRecord">
-                    <em>{{ featuredWins }}胜</em>
-                    <i>{{ featuredLosses }}负</i>
+                    <em>{{ t('home.wins', { count: featuredWins }) }}</em>
+                    <i>{{ t('home.losses', { count: featuredLosses }) }}</i>
                   </b>
                   <b v-else>--</b>
-                  <small v-if="featuredWinRate">胜率 {{ featuredWinRate }}</small>
+                  <small v-if="featuredWinRate">{{ t('home.winRate', { rate: featuredWinRate }) }}</small>
                 </div>
                 <div class="weekly-stat">
-                  <span>场均净胜</span>
+                  <span>{{ t('home.margin') }}</span>
                   <b class="is-accent">{{ featuredNet }}</b>
                 </div>
                 <div class="weekly-form">
-                  <span>最近战绩</span>
+                  <span>{{ t('home.recentForm') }}</span>
                   <div v-if="featuredForm.length" class="weekly-form__badges">
                     <i
                       v-for="(item, index) in featuredForm"
                       :key="`${item}-${index}`"
                       :class="item === 'W' ? 'is-win' : 'is-lose'"
-                    >{{ item === 'W' ? '胜' : '负' }}</i>
+                    >{{ item === 'W' ? t('home.win') : t('home.loss') }}</i>
                   </div>
-                  <small v-else>暂无近期战绩</small>
+                  <small v-else>{{ t('home.noRecentForm') }}</small>
                 </div>
               </article>
-              <p v-else class="weekly-focus-empty">本周暂无焦点战队</p>
+              <p v-else class="weekly-focus-empty">{{ t('home.noWeeklyTeam') }}</p>
             </section>
           </div>
         </div>

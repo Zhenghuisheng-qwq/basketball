@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 export type StageOption = {
   value: string
@@ -16,6 +17,7 @@ const props = defineProps<{
   stageLive?: boolean
 }>()
 
+const { t } = useI18n()
 const hasCenter = computed(() => Boolean(props.stageTitle))
 
 const emit = defineEmits<{
@@ -36,7 +38,7 @@ function onStageChange(event: Event) {
     ]"
   >
     <div class="stage-progress-header__titles">
-      <h2 class="stage-progress-header__title">赛事进度</h2>
+      <h2 class="stage-progress-header__title">{{ t('eventsPage.stage.progress') }}</h2>
       <span class="stage-progress-header__subtitle">STAGE PROGRESS</span>
     </div>
 
@@ -46,7 +48,7 @@ function onStageChange(event: Event) {
         <span v-if="contextLabel && stageLive" class="stage-progress-header__context-sep" aria-hidden="true">·</span>
         <span v-if="stageLive" class="stage-progress-header__live-inline">
           <i aria-hidden="true" />
-          进行中
+          {{ t('match.live') }}
         </span>
       </p>
       <h3 class="stage-progress-header__stage">{{ stageTitle }}</h3>
@@ -54,7 +56,7 @@ function onStageChange(event: Event) {
     </div>
 
     <div v-if="props.options.length > 1" class="stage-progress-header__selector">
-      <label class="sr-only" for="stage-progress-select">选择阶段</label>
+      <label class="sr-only" for="stage-progress-select">{{ t('eventsPage.aria.selectStage') }}</label>
       <select
         id="stage-progress-select"
         class="stage-progress-header__select"

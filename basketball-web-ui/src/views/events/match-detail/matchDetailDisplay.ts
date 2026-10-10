@@ -7,6 +7,7 @@ import type {
   V4PublicMatchTeamStatItem,
 } from '@/api/types/v4Public'
 import type { Team } from '@/views/events/types/events'
+import { translate } from '@/i18n'
 import { formatSeriesSetScore, v4MatchStatusLabel } from '@/utils/v4Display'
 
 export const SERIES_TOTAL_TAB = 'SERIES_TOTAL'
@@ -63,8 +64,7 @@ export function formatMatchWhen(value?: string | null, date?: string | null, tim
   if (!datePart) return timePart || ''
   const [, month, day] = datePart.split('-')
   const dt = new Date(datePart.replace(/-/g, '/'))
-  const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
-  const week = Number.isNaN(dt.getTime()) ? '' : weekDays[dt.getDay()]
+  const week = Number.isNaN(dt.getTime()) ? '' : translate(`eventsPage.weekdayFull.${dt.getDay()}`)
   const shortDate = month && day ? `${month}.${day}` : datePart
   const clock = timePart && timePart !== '00:00' ? timePart : ''
   return [shortDate, week, clock].filter(Boolean).join(' · ')
@@ -77,7 +77,7 @@ export function toDetailTeam(
   shortName?: string | null,
 ): Team {
   const id = String(eventTeamId || '')
-  const teamName = String(name || '').trim() || '待定'
+  const teamName = String(name || '').trim() || translate('match.tbd')
   const code = String(shortName || '').trim()
   return {
     id: Number(id) || 0,
@@ -257,7 +257,7 @@ export function officialTeamTotal(
 ): BoxScoreRow {
   const summed: BoxScoreRow = {
     eventPlayerId: 'team-total',
-    playerName: '全队合计',
+    playerName: translate('eventsPage.match.teamTotal'),
     points: sumNullable(players.map((row) => row.points)),
     rebound: sumNullable(players.map((row) => row.rebound)),
     assist: sumNullable(players.map((row) => row.assist)),

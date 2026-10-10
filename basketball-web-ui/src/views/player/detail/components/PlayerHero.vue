@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import teamBackground from '@/assets/icon/tournament/team_background.png'
 import teamIcon from '@/assets/icon/team/master.png'
 import platformIcon from '@/assets/icon/person/platform.png'
@@ -12,6 +13,8 @@ import type { PlayerProfile } from '../types'
 const props = defineProps<{
   profile: PlayerProfile
 }>()
+
+const { t } = useI18n()
 
 const heroBgStyle = computed(() => ({
   backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.55) 48%, rgba(0,0,0,0.32) 100%), url(${teamBackground})`,
@@ -33,48 +36,48 @@ const seasonYear = computed(() => {
 const registrationLine = computed(() => {
   if (!props.profile.verified) return 'CNPA PLAYER'
   return seasonYear.value
-    ? `CNPA ${seasonYear.value} 赛季注册球员`
-    : 'CNPA 赛季注册球员'
+    ? t('publicPages.player.registeredSeason', { year: seasonYear.value })
+    : t('publicPages.player.registered')
 })
 
 const identityLine = computed(() => {
   const team = props.profile.currentTeamAbbr || props.profile.currentTeamName
   const position = props.profile.position
   const parts: string[] = []
-  if (team && team !== '--') parts.push(`所属战队 ${team}`)
-  if (position && position !== '--') parts.push(`主打位置 ${position}`)
+  if (team && team !== '--') parts.push(t('publicPages.player.teamIdentity', { team }))
+  if (position && position !== '--') parts.push(t('publicPages.player.positionIdentity', { position }))
   return parts.join('  |  ')
 })
 
 const infoItems = computed(() => [
   {
     key: 'team',
-    label: '所属战队',
+    label: t('publicPages.player.teamLabel'),
     value: props.profile.currentTeamName,
     icon: teamIcon,
   },
   {
     key: 'platform',
-    label: '比赛平台',
+    label: t('publicPages.player.platform'),
     value: props.profile.platform,
     icon: platformIcon,
   },
   {
     key: 'position',
-    label: '主打位置',
+    label: t('publicPages.player.position'),
     value: props.profile.position,
     icon: positionIcon,
   },
   {
     key: 'stage',
-    label: '当前阶段',
+    label: t('publicPages.player.currentStage'),
     value: props.profile.currentStage,
     icon: stageIcon,
   },
 ])
 </script>
 <template>
-  <section class="player-detail-hero" aria-label="球员详情头部">
+  <section class="player-detail-hero" :aria-label="t('publicPages.player.heroAria')">
     <div class="player-detail-hero__bg" :style="heroBgStyle" aria-hidden="true" />
     <div class="player-detail-hero__logo-bg" aria-hidden="true">
       <TeamLogo :team="teamForLogo" size="hero" />
@@ -101,12 +104,12 @@ const infoItems = computed(() => [
             <span
               v-if="profile.eventTeamDisqualified"
               class="player-detail-hero__badge player-detail-hero__badge--dq"
-              title="所属球队在本届赛事中的参赛资格已取消"
-            >所属球队赛事资格已取消</span>
+              :title="t('publicPages.player.teamDqTitle')"
+            >{{ t('publicPages.player.teamDqBadge') }}</span>
             <span
               v-else-if="profile.verified && !profile.playerPenaltyTags?.length"
               class="player-detail-hero__badge"
-            >✓ 已认证</span>
+            >{{ t('publicPages.player.verified') }}</span>
           </div>
           <p class="player-detail-hero__registration">{{ registrationLine }}</p>
           <p v-if="identityLine" class="player-detail-hero__identity">{{ identityLine }}</p>

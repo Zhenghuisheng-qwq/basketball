@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { Team } from '@/views/events/types/events'
 import type { V4PublicMatchSeriesGame } from '@/api/types/v4Public'
 import { formatExactScore, isPresent } from './matchDetailDisplay'
@@ -13,6 +14,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [matchId: string]
 }>()
+
+const { t } = useI18n()
 
 function teamId(team: Team): string {
   return String(team.teamId || '').trim()
@@ -34,11 +37,11 @@ function gameTone(game: V4PublicMatchSeriesGame): 'completed' | 'live' | 'schedu
 }
 
 function toneLabel(game: V4PublicMatchSeriesGame): string {
-  if (game.skipped) return game.skippedReason || '无需进行'
+  if (game.skipped) return game.skippedReason || t('eventsPage.match.notNeeded')
   const tone = gameTone(game)
-  if (tone === 'live') return '进行中'
-  if (tone === 'cancelled') return game.matchStatusName || '已取消'
-  if (tone === 'scheduled') return '未开始'
+  if (tone === 'live') return t('match.live')
+  if (tone === 'cancelled') return game.matchStatusName || t('match.cancelled')
+  if (tone === 'scheduled') return t('match.notStarted')
   return ''
 }
 
@@ -83,9 +86,9 @@ function onSelect(game: V4PublicMatchSeriesGame) {
 </script>
 
 <template>
-  <section class="series-progress" aria-label="系列赛进程">
+  <section class="series-progress" :aria-label="t('eventsPage.aria.seriesProgress')">
     <div class="series-progress__head">
-      <h2>系列赛进程</h2>
+      <h2>{{ t('eventsPage.match.seriesProgress') }}</h2>
       <span>SERIES GAMES</span>
     </div>
     <div class="series-progress__track">
@@ -115,7 +118,7 @@ function onSelect(game: V4PublicMatchSeriesGame) {
         </p>
         <p class="series-progress__result">
           <span v-if="gameTone(game) === 'live'" class="series-progress__live" aria-hidden="true" />
-          <template v-if="winnerTeam(game)">{{ teamShort(winnerTeam(game)!) }} 胜</template>
+          <template v-if="winnerTeam(game)">{{ t('eventsPage.match.won', { name: teamShort(winnerTeam(game)!) }) }}</template>
           <template v-else>{{ toneLabel(game) }}</template>
         </p>
         <p v-if="gameDate(game.scheduledTime)" class="series-progress__date">{{ gameDate(game.scheduledTime) }}</p>

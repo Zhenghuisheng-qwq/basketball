@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import { normalizeDataMode, type PlayerDataMode } from '@/utils/playerNavigate'
@@ -11,10 +12,12 @@ const props = defineProps<{
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
+const allStages = 'all'
 
 const dataMode = ref<PlayerDataMode>(normalizeDataMode(route.query.dataMode))
 const statMode = ref<'average' | 'total'>('average')
-const seasonFilter = ref('全部赛季')
+const seasonFilter = ref(allStages)
 const selectedStageId = ref(props.detail.seasonStageOptions[0]?.id ?? '')
 const dropdownOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
@@ -27,7 +30,7 @@ const selectedStage = computed(
 
 const careerRows = computed(() => {
   let rows = props.detail.careerStats
-  if (seasonFilter.value !== '全部赛季') {
+  if (seasonFilter.value !== allStages) {
     rows = rows.filter((row) => row.seasonId === seasonFilter.value)
   }
   return rows
@@ -56,7 +59,7 @@ const careerAverageRow = computed(() => {
   return {
     seasonId: '',
     divisionId: '',
-    tournamentName: '生涯平均',
+    tournamentName: t('publicPages.player.careerAverage'),
     teamId: '',
     teamLogoUrl: '',
     teamName: '-',
@@ -204,22 +207,22 @@ onBeforeUnmount(() => {
   <div class="player-detail-data">
     <header class="player-detail-data__intro">
       <h2 class="player-detail-data__title">
-        球员数据
+        {{ t('publicPages.player.playerData') }}
         <span>PLAYER DATA</span>
       </h2>
       <p class="player-detail-data__desc">
-        汇总球员在 CNPA 公开赛事中的生涯与赛季表现，仅统计已审核的正式比赛数据
+        {{ t('publicPages.player.playerDataDesc') }}
       </p>
     </header>
 
-    <div class="player-detail-data__mode-tabs" role="tablist" aria-label="数据范围">
+    <div class="player-detail-data__mode-tabs" role="tablist" :aria-label="t('publicPages.player.dataScope')">
       <button
         type="button"
         class="player-detail-data__mode-tab"
         :class="{ 'is-active': dataMode === 'career' }"
         @click="setDataMode('career')"
       >
-        生涯数据
+        {{ t('publicPages.player.careerData') }}
       </button>
       <button
         type="button"
@@ -227,22 +230,22 @@ onBeforeUnmount(() => {
         :class="{ 'is-active': dataMode === 'season' }"
         @click="setDataMode('season')"
       >
-        赛事数据
+        {{ t('publicPages.player.eventData') }}
       </button>
     </div>
 
     <template v-if="dataMode === 'career'">
-      <section class="player-detail-data__panel" aria-label="生涯数据表">
+      <section class="player-detail-data__panel" :aria-label="t('publicPages.player.careerTable')">
         <div class="player-detail-data__panel-head">
-          <strong>生涯数据</strong>
-          <div class="player-detail-stat-switch" role="group" aria-label="统计类型">
+          <strong>{{ t('publicPages.player.careerData') }}</strong>
+          <div class="player-detail-stat-switch" role="group" :aria-label="t('publicPages.player.statType')">
             <button
               type="button"
               class="player-detail-stat-switch__btn"
               :class="{ 'is-active': statMode === 'average' }"
               @click="statMode = 'average'"
             >
-              场均
+              {{ t('publicPages.player.perGame') }}
             </button>
             <button
               type="button"
@@ -250,27 +253,27 @@ onBeforeUnmount(() => {
               :class="{ 'is-active': statMode === 'total' }"
               @click="statMode = 'total'"
             >
-              累计
+              {{ t('publicPages.player.cumulative') }}
             </button>
           </div>
         </div>
 
         <div class="player-detail-data__panel-filter">
-          <label class="player-detail-data__filter-label" for="player-career-stage-filter">统计赛段</label>
+          <label class="player-detail-data__filter-label" for="player-career-stage-filter">{{ t('publicPages.player.statStage') }}</label>
           <select id="player-career-stage-filter" v-model="seasonFilter">
-            <option value="全部赛季">全部赛段</option>
+            <option :value="allStages">{{ t('publicPages.player.allStages') }}</option>
             <option
               v-for="row in detail.careerStats"
               :key="row.seasonId"
               :value="row.seasonId"
             >
-              {{ row.tournamentName || `赛季 ${row.seasonId}` }}
+              {{ row.tournamentName || t('publicPages.player.seasonWithId', { id: row.seasonId }) }}
             </option>
           </select>
-          <span class="player-detail-data__hint">场均按有效出场场次计算，投篮百分比仅统计有投篮数据的场次</span>
+          <span class="player-detail-data__hint">{{ t('publicPages.player.perGameHint') }}</span>
         </div>
 
-        <div v-if="careerRows.length === 0" class="player-detail-empty-inline">暂无生涯数据</div>
+        <div v-if="careerRows.length === 0" class="player-detail-empty-inline">{{ t('publicPages.player.noCareerData') }}</div>
 
         <div v-else class="player-detail-table-scroll">
           <table class="player-detail-table player-detail-table--career">
@@ -292,20 +295,20 @@ onBeforeUnmount(() => {
             </colgroup>
             <thead>
               <tr>
-                <th class="col-event">赛事</th>
-                <th class="col-team">球队</th>
-                <th class="col-platform">平台</th>
-                <th class="col-gp">出场 <small>GP</small></th>
-                <th class="col-stat">得分 <small>PTS</small></th>
-                <th class="col-stat">篮板 <small>REB</small></th>
-                <th class="col-stat">助攻 <small>AST</small></th>
-                <th class="col-stat">抢断 <small>STL</small></th>
-                <th class="col-stat">盖帽 <small>BLK</small></th>
-                <th class="col-stat">失误 <small>TOV</small></th>
-                <th class="col-stat">犯规 <small>PF</small></th>
-                <th class="col-shooting">投篮% <small>FG</small></th>
-                <th class="col-shooting">三分% <small>3P</small></th>
-                <th class="col-shooting">罚球% <small>FT</small></th>
+                <th class="col-event">{{ t('publicPages.player.event') }}</th>
+                <th class="col-team">{{ t('publicPages.player.team') }}</th>
+                <th class="col-platform">{{ t('publicPages.player.platformCol') }}</th>
+                <th class="col-gp">{{ t('publicPages.player.gp') }} <small>GP</small></th>
+                <th class="col-stat">{{ t('publicPages.player.points') }} <small>PTS</small></th>
+                <th class="col-stat">{{ t('publicPages.player.rebounds') }} <small>REB</small></th>
+                <th class="col-stat">{{ t('publicPages.player.assists') }} <small>AST</small></th>
+                <th class="col-stat">{{ t('publicPages.player.steals') }} <small>STL</small></th>
+                <th class="col-stat">{{ t('publicPages.player.blocks') }} <small>BLK</small></th>
+                <th class="col-stat">{{ t('publicPages.player.turnovers') }} <small>TOV</small></th>
+                <th class="col-stat">{{ t('publicPages.player.fouls') }} <small>PF</small></th>
+                <th class="col-shooting">{{ t('publicPages.player.fgPct') }} <small>FG</small></th>
+                <th class="col-shooting">{{ t('publicPages.player.tpPct') }} <small>3P</small></th>
+                <th class="col-shooting">{{ t('publicPages.player.ftPct') }} <small>FT</small></th>
               </tr>
             </thead>
             <tbody>
@@ -354,24 +357,24 @@ onBeforeUnmount(() => {
         </div>
 
         <p v-if="careerRows.length" class="player-detail-data__source">
-          数据来源：比赛结束后提交并通过赛事审核的比赛数据。
+          {{ t('publicPages.player.dataSource') }}
         </p>
       </section>
     </template>
 
     <template v-else>
-      <section class="player-detail-data__panel" aria-label="赛事数据表">
+      <section class="player-detail-data__panel" :aria-label="t('publicPages.player.eventTable')">
         <div class="player-detail-data__panel-head">
-          <strong>{{ selectedStage?.tournamentName || '赛事数据' }}</strong>
+          <strong>{{ selectedStage?.tournamentName || t('publicPages.player.eventData') }}</strong>
           <span class="player-detail-data__panel-meta">
-            {{ selectedStage?.stageLabel || '常规赛' }} · 共 {{ selectedStage?.games || 0 }} 场
+            {{ t('publicPages.player.stageGames', { stage: selectedStage?.stageLabel || t('publicPages.player.regular'), count: selectedStage?.games || 0 }) }}
           </span>
         </div>
 
         <div class="player-detail-data__panel-filter">
           <div ref="dropdownRef" class="player-detail-stage-selector" :class="{ 'is-open': dropdownOpen }">
             <button type="button" class="player-detail-stage-selector__trigger" @click.stop="toggleDropdown">
-              {{ selectedStage?.label || '暂无赛季' }}
+              {{ selectedStage?.label || t('publicPages.player.noSeason') }}
               <span class="player-detail-stage-selector__arrow" aria-hidden="true" />
             </button>
             <div v-show="dropdownOpen" class="player-detail-stage-selector__dropdown">
@@ -390,7 +393,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div v-if="seasonStatRows.length === 0" class="player-detail-empty-inline">暂无赛事数据</div>
+        <div v-if="seasonStatRows.length === 0" class="player-detail-empty-inline">{{ t('publicPages.player.noEventData') }}</div>
 
         <div v-else class="player-detail-table-scroll">
           <table class="player-detail-table player-detail-table--career player-detail-table--season">
@@ -408,16 +411,16 @@ onBeforeUnmount(() => {
             </colgroup>
             <thead>
               <tr>
-                <th class="col-team">球队</th>
-                <th class="col-gp">出场</th>
-                <th class="col-stat">得分</th>
-                <th class="col-stat">篮板</th>
-                <th class="col-stat">助攻</th>
-                <th class="col-stat">抢断</th>
-                <th class="col-stat">盖帽</th>
-                <th class="col-shooting">投篮%</th>
-                <th class="col-shooting">三分%</th>
-                <th class="col-shooting">罚球%</th>
+                <th class="col-team">{{ t('publicPages.player.team') }}</th>
+                <th class="col-gp">{{ t('publicPages.player.gp') }}</th>
+                <th class="col-stat">{{ t('publicPages.player.points') }}</th>
+                <th class="col-stat">{{ t('publicPages.player.rebounds') }}</th>
+                <th class="col-stat">{{ t('publicPages.player.assists') }}</th>
+                <th class="col-stat">{{ t('publicPages.player.steals') }}</th>
+                <th class="col-stat">{{ t('publicPages.player.blocks') }}</th>
+                <th class="col-shooting">{{ t('publicPages.player.fgPct') }}</th>
+                <th class="col-shooting">{{ t('publicPages.player.tpPct') }}</th>
+                <th class="col-shooting">{{ t('publicPages.player.ftPct') }}</th>
               </tr>
             </thead>
             <tbody>

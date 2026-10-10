@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import { hasMatchSeriesId, publicContestDetailLabel, publicContestDetailPath } from '@/utils/v4Display'
 import type { PlayerMatchRecord } from '../types'
@@ -17,10 +18,11 @@ withDefaults(
 )
 
 const router = useRouter()
+const { t } = useI18n()
 
 function resultLabel(row: PlayerMatchRecord): string {
   if (row.resultLabel) return row.resultLabel
-  return row.result === 'WIN' ? '胜利' : '失败'
+  return row.result === 'WIN' ? t('publicPages.player.win') : t('publicPages.player.loss')
 }
 
 function scoreText(row: PlayerMatchRecord): string {
@@ -41,7 +43,11 @@ function formatLine(row: PlayerMatchRecord): string {
   ) {
     return '--'
   }
-  return `${row.points}分 · ${row.rebounds}板 · ${row.assists}助`
+  return t('publicPages.player.statLine', {
+    points: row.points,
+    rebounds: row.rebounds,
+    assists: row.assists,
+  })
 }
 
 function scoreView(row: PlayerMatchRecord): { left: string; right: string; text: string } {
@@ -89,12 +95,12 @@ function opponentTeam(row: PlayerMatchRecord) {
 <template>
   <div v-if="compact" class="player-recent-matches">
     <div class="player-recent-match-grid player-recent-match-head" aria-hidden="true">
-      <span>日期</span>
-      <span>对手</span>
-      <span>比赛结果</span>
-      <span>个人数据</span>
-      <span>赛段</span>
-      <span>查看</span>
+      <span>{{ t('publicPages.player.date') }}</span>
+      <span>{{ t('publicPages.player.opponent') }}</span>
+      <span>{{ t('publicPages.player.matchResult') }}</span>
+      <span>{{ t('publicPages.player.personalStats') }}</span>
+      <span>{{ t('publicPages.player.stage') }}</span>
+      <span>{{ t('publicPages.player.view') }}</span>
     </div>
 
     <article
@@ -160,21 +166,21 @@ function opponentTeam(row: PlayerMatchRecord) {
       </colgroup>
       <thead>
         <tr>
-          <th class="col-date">日期</th>
-          <th class="col-opponent">对手</th>
-          <th class="col-result">比赛结果</th>
-          <th class="col-stage">赛段</th>
-          <th class="col-minutes">出场时间</th>
-          <th class="col-stat">得分</th>
-          <th class="col-stat">篮板</th>
-          <th class="col-stat">助攻</th>
-          <th class="col-stat">抢断</th>
-          <th class="col-stat">盖帽</th>
-          <th class="col-stat">失误</th>
-          <th class="col-shooting">投篮</th>
-          <th class="col-shooting">三分</th>
-          <th class="col-shooting">罚球</th>
-          <th class="col-action">查看</th>
+          <th class="col-date">{{ t('publicPages.player.date') }}</th>
+          <th class="col-opponent">{{ t('publicPages.player.opponent') }}</th>
+          <th class="col-result">{{ t('publicPages.player.matchResult') }}</th>
+          <th class="col-stage">{{ t('publicPages.player.stage') }}</th>
+          <th class="col-minutes">{{ t('publicPages.player.minutes') }}</th>
+          <th class="col-stat">{{ t('publicPages.player.points') }}</th>
+          <th class="col-stat">{{ t('publicPages.player.rebounds') }}</th>
+          <th class="col-stat">{{ t('publicPages.player.assists') }}</th>
+          <th class="col-stat">{{ t('publicPages.player.steals') }}</th>
+          <th class="col-stat">{{ t('publicPages.player.blocks') }}</th>
+          <th class="col-stat">{{ t('publicPages.player.turnovers') }}</th>
+          <th class="col-shooting">{{ t('publicPages.player.fieldGoals') }}</th>
+          <th class="col-shooting">{{ t('publicPages.player.threePoints') }}</th>
+          <th class="col-shooting">{{ t('publicPages.player.freeThrows') }}</th>
+          <th class="col-action">{{ t('publicPages.player.view') }}</th>
         </tr>
       </thead>
       <tbody>

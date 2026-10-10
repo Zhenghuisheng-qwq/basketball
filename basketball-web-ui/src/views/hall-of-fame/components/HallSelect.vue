@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 export interface HallSelectOption {
   value: string | number
@@ -17,7 +18,7 @@ const props = withDefaults(
     width?: 'default' | 'filter'
   }>(),
   {
-    placeholder: '请选择',
+    placeholder: '',
     triggerVariant: 'dark',
     disabled: false,
     width: 'default',
@@ -28,6 +29,8 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | number]
 }>()
 
+const { t } = useI18n()
+const placeholderText = computed(() => props.placeholder || t('publicPages.hall.pleaseSelect'))
 const open = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
 
@@ -95,7 +98,7 @@ async function handleTriggerClick() {
       :aria-expanded="open"
       @click="handleTriggerClick"
     >
-      <span class="hall-select__label">{{ selectedOption?.label ?? placeholder }}</span>
+      <span class="hall-select__label">{{ selectedOption?.label ?? placeholderText }}</span>
       <span class="hall-select__arrow" aria-hidden="true">▾</span>
     </button>
 

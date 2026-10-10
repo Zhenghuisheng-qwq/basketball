@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onUnmounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import PasswordInput from '@/views/account/components/PasswordInput.vue'
@@ -8,6 +9,11 @@ import { validatePasswordRules } from '@/utils/passwordRules'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
+
+function label(value: string): string {
+  return value.startsWith('auth.') ? t(value) : value
+}
 
 const form = reactive({
   email: '',
@@ -33,30 +39,36 @@ let countdownTimer: ReturnType<typeof setInterval> | null = null
 
 function validateEmail(value: string): string {
   const trimmed = value.trim()
-  if (!trimmed) return '请输入邮箱地址'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return '邮箱格式不正确'
+  if (!trimmed) return 'auth.emailAddressRequired'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return 'auth.emailInvalid'
   return ''
 }
 
 function validateCode(value: string): string {
-  if (!value.trim()) return '请输入验证码'
-  if (!/^\d{6}$/.test(value.trim())) return '验证码为 6 位数字'
+  if (!value.trim()) return 'auth.codeRequired'
+  if (!/^\d{6}$/.test(value.trim())) return 'auth.codeDigits'
   return ''
 }
 
 function validateForm(): boolean {
   errors.email = validateEmail(form.email)
   errors.code = validateCode(form.code)
-  const ruleError = validatePasswordRules(form.password)
-  errors.password = ruleError || (!form.password ? '请输入新密码' : '')
-  if (!form.confirmPassword) errors.confirmPassword = '请确认新密码'
-  else if (form.confirmPassword !== form.password) errors.confirmPassword = '两次密码输入不一致'
+  errors.password = passwordError(form.password)
+  if (!form.confirmPassword) errors.confirmPassword = 'auth.confirmNewPasswordRequired'
+  else if (form.confirmPassword !== form.password) errors.confirmPassword = 'auth.passwordMismatchShort'
   else errors.confirmPassword = ''
   if (!errors.email && !errors.code && !resetBizNo.value) {
-    errors.form = '请先获取邮箱验证码'
+    errors.form = 'auth.getCodeFirst'
     return false
   }
   return !errors.email && !errors.code && !errors.password && !errors.confirmPassword
+}
+
+function passwordError(password: string): string {
+  if (!validatePasswordRules(password)) return ''
+  if (!password) return 'auth.newPasswordPrompt'
+  if (password.length < 8 || password.length > 20) return 'auth.passwordLength'
+  return 'auth.passwordNeedBoth'
 }
 
 function startCountdown(seconds = 60) {
@@ -81,10 +93,10 @@ async function handleSendCode() {
   try {
     const res = await sendEmailCode(form.email.trim().toLowerCase(), 'RESET_PASSWORD')
     resetBizNo.value = res.data.bizNo
-    ElMessage.success('如果邮箱已注册，验证码将发送至该邮箱')
+    ElMessage.success(t('auth.codeSentIfRegistered'))
     startCountdown(res.data.resendSeconds || 60)
   } catch (error) {
-    errors.form = error instanceof Error ? error.message : '验证码发送失败，请稍后重试'
+    errors.form = error instanceof Error && error.message ? error.message : 'auth.codeSendFailed'
   } finally {
     sendingCode.value = false
   }
@@ -103,13 +115,13 @@ async function handleSubmit() {
       password: form.password,
       confirmPassword: form.confirmPassword,
     })
-    ElMessage.success('密码已重置，请使用新密码登录')
+    ElMessage.success(t('auth.resetSuccess'))
     await router.replace({
       path: '/login',
       query: route.query.redirect ? { redirect: route.query.redirect as string } : {},
     })
   } catch (error) {
-    errors.form = error instanceof Error ? error.message : '重置失败'
+    errors.form = error instanceof Error && error.message ? error.message : 'auth.resetFailed'
   } finally {
     loading.value = false
   }
@@ -135,30 +147,30 @@ if (typeof emailQuery === 'string' && emailQuery.trim()) {
       <span class="auth-login__eyebrow-bar" aria-hidden="true" />
       CNPA PLAYER CENTER
     </div>
-    <p class="auth-login__welcome">找回密码</p>
+    <p class="auth-login__welcome">{{ t('auth.forgotPassword') }}</p>
     <header class="auth-login__header">
-      <h1>重置登录密码</h1>
+      <h1>{{ t('auth.resetTitle') }}</h1>
       <p>RESET PASSWORD</p>
     </header>
 
     <form class="auth-form" @submit.prevent="handleSubmit">
       <div class="auth-field">
-        <label class="auth-field__label" for="reset-email">注册邮箱</label>
+        <label class="auth-field__label" for="reset-email">{{ t('auth.registeredEmail') }}</label>
         <input
           id="reset-email"
           v-model="form.email"
           type="email"
           class="auth-input"
           :class="{ 'auth-input--invalid': submitted && errors.email }"
-          placeholder="请输入注册邮箱"
+          :placeholder="t('auth.registeredEmailPrompt')"
           autocomplete="email"
           @blur="errors.email = validateEmail(form.email)"
         />
-        <span v-if="submitted && errors.email" class="auth-field__error">{{ errors.email }}</span>
+        <span v-if="submitted && errors.email" class="auth-field__error">{{ label(errors.email) }}</span>
       </div>
 
       <div class="auth-field">
-        <label class="auth-field__label" for="reset-code">邮箱验证码</label>
+        <label class="auth-field__label" for="reset-code">{{ t('auth.emailCode') }}</label>
         <div class="auth-login__code-row">
           <input
             id="reset-code"
@@ -168,48 +180,48 @@ if (typeof emailQuery === 'string' && emailQuery.trim()) {
             maxlength="6"
             class="auth-input"
             :class="{ 'auth-input--invalid': submitted && errors.code }"
-            placeholder="请输入 6 位验证码"
+            :placeholder="t('auth.codePlaceholder')"
             autocomplete="one-time-code"
           />
           <button type="button" class="auth-login__code-btn" :disabled="sendingCode || countdown > 0" @click="handleSendCode">
-            {{ countdown > 0 ? `${countdown}s` : sendingCode ? '发送中' : '获取验证码' }}
+            {{ countdown > 0 ? `${countdown}s` : sendingCode ? t('auth.sendingShort') : t('auth.getCode') }}
           </button>
         </div>
-        <span v-if="submitted && errors.code" class="auth-field__error">{{ errors.code }}</span>
+        <span v-if="submitted && errors.code" class="auth-field__error">{{ label(errors.code) }}</span>
       </div>
 
       <div class="auth-field">
-        <label class="auth-field__label" for="reset-password">新密码</label>
+        <label class="auth-field__label" for="reset-password">{{ t('auth.newPassword') }}</label>
         <PasswordInput
           id="reset-password"
           v-model="form.password"
-          placeholder="请输入新密码"
+          :placeholder="t('auth.newPasswordPrompt')"
           autocomplete="new-password"
           :invalid="Boolean(submitted && errors.password)"
-          @blur="errors.password = validatePasswordRules(form.password) || ''"
+          @blur="errors.password = passwordError(form.password)"
         />
-        <span v-if="submitted && errors.password" class="auth-field__error">{{ errors.password }}</span>
+        <span v-if="submitted && errors.password" class="auth-field__error">{{ label(errors.password) }}</span>
       </div>
 
       <div class="auth-field">
-        <label class="auth-field__label" for="reset-confirm">确认新密码</label>
+        <label class="auth-field__label" for="reset-confirm">{{ t('auth.confirmNewPassword') }}</label>
         <PasswordInput
           id="reset-confirm"
           v-model="form.confirmPassword"
-          placeholder="请再次输入新密码"
+          :placeholder="t('auth.confirmNewPasswordPlaceholder')"
           autocomplete="new-password"
           :invalid="Boolean(submitted && errors.confirmPassword)"
         />
-        <span v-if="submitted && errors.confirmPassword" class="auth-field__error">{{ errors.confirmPassword }}</span>
+        <span v-if="submitted && errors.confirmPassword" class="auth-field__error">{{ label(errors.confirmPassword) }}</span>
       </div>
 
-      <p v-if="errors.form" class="auth-form__error-banner">{{ errors.form }}</p>
+      <p v-if="errors.form" class="auth-form__error-banner">{{ label(errors.form) }}</p>
       <button type="submit" class="auth-primary-button" :disabled="loading">
-        {{ loading ? '提交中...' : '重置密码' }}
+        {{ loading ? t('auth.submitting') : t('auth.resetAction') }}
       </button>
       <p class="auth-form__footer-link">
-        想起密码了？
-        <button type="button" class="auth-text-link" @click="goLogin">返回登录</button>
+        {{ t('auth.remembered') }}
+        <button type="button" class="auth-text-link" @click="goLogin">{{ t('auth.backToLogin') }}</button>
       </p>
     </form>
   </div>

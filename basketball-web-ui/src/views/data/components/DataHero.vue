@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import dataHeroBg from '@/assets/icon/data_hero_bg.png'
 import type { TournamentGroup } from '../types'
 import TournamentSelector from './TournamentSelector.vue'
@@ -14,17 +15,19 @@ const emit = defineEmits<{
   'update:tournamentId': [value: string]
 }>()
 
+const { t } = useI18n()
+
 function handleTournamentChange(value: string) {
   emit('update:tournamentId', value)
 }
 </script>
 <template>
-  <section class="data-hero" aria-label="CNPA 数据中心">
+  <section class="data-hero" :aria-label="t('publicPages.data.heroAria')">
     <div class="data-hero__visual cnpa-public-hero-frame">
       <img
         class="data-hero__image"
         :src="dataHeroBg"
-        alt="CNPA 数据中心"
+        :alt="t('publicPages.data.heroAria')"
         draggable="false"
       />
       <div class="data-hero__selector">

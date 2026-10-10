@@ -12,6 +12,7 @@ import type {
   V4PublicStandingItem,
   V4PublicTeamStatItem,
 } from '@/api/types/v4Public'
+import { translate } from '@/i18n'
 import { displayText, toNumber } from '@/utils/publicDisplay'
 import { calculateAverage } from '@/utils/statAverage'
 import { v4PlatformLabel } from '@/utils/v4Display'
@@ -42,7 +43,7 @@ export function mapV4TeamDetailToPublic(
     seriesCode?: string
   },
 ): PublicTeamDetailVo {
-  const name = displayText(detail.teamName, '未知球队')
+  const name = displayText(detail.teamName, translate('publicPages.team.unknownTeam'))
   return {
     teamId: String(detail.eventTeamId),
     teamName: name,
@@ -122,7 +123,7 @@ export function mapV4EventTeamToBase(
     rosterCount?: number
   },
 ): TeamBase {
-  const name = displayText(team.teamName, '未知球队')
+  const name = displayText(team.teamName, translate('publicPages.team.unknownTeam'))
   const shortName = displayText(team.teamShortName || name.slice(0, 3), name.slice(0, 3))
   const platform = v4PlatformLabel(team.platformCode)
   const seasonName = displayText(
@@ -131,7 +132,7 @@ export function mapV4EventTeamToBase(
         ? `${extras.seasonName} · ${extras.divisionLabel}`
         : extras.seasonName
       : extras?.divisionLabel,
-    '公开赛季',
+    translate('publicPages.team.publicSeason'),
   )
 
   return {
@@ -148,7 +149,7 @@ export function mapV4EventTeamToBase(
     verified: team.eventTeamStatus === 'ACTIVE',
     seasonName,
     seasonYear: new Date().getFullYear(),
-    description: '暂无球队简介',
+    description: translate('publicPages.team.noBio'),
     wins: toNumber(extras?.wins, 0),
     losses: toNumber(extras?.losses, 0),
     ranking: toNumber(extras?.ranking, 0),
