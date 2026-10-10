@@ -22,7 +22,9 @@ export interface BasketSeasonListVo {
   seasonYear?: number
   seasonName?: string
   displayTitle?: string
+  displayTitleEn?: string
   description?: string
+  descriptionEn?: string
   coverFileId?: number
   bannerFileId?: number
   coverUrl?: string
@@ -45,7 +47,9 @@ export interface BasketSeasonCreateReq {
   seasonYear?: number
   seasonName?: string
   displayTitle?: string
+  displayTitleEn?: string
   description?: string
+  descriptionEn?: string
   coverFileId?: number
   bannerFileId?: number
   seasonStartTime?: string

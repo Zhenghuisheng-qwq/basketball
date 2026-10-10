@@ -23,6 +23,7 @@ export interface BasketDivisionListVo {
   gameMode?: string
   gameModeName?: string
   divisionName?: string
+  divisionNameEn?: string
   registrationMode?: string
   registrationModeName?: string
   formatType?: string
@@ -50,6 +51,7 @@ export interface BasketDivisionCreateReq {
   platformCode?: string
   gameMode?: string
   divisionName?: string
+  divisionNameEn?: string
   registrationMode?: string
   formatType?: string
   formatTemplateId?: number

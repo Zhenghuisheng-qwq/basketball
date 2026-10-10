@@ -44,6 +44,14 @@
           <el-form-item label="赛季简介">
             <el-input v-model="seasonForm.description" type="textarea" :rows="3" maxlength="2000" show-word-limit placeholder="可选，用于前台赛季介绍" />
           </el-form-item>
+          <el-divider content-position="left">英文内容</el-divider>
+          <div class="el-form-item__tip">英文选填。留空时官网英文页面显示中文。</div>
+          <el-form-item label="英文标题">
+            <el-input v-model="seasonForm.displayTitleEn" maxlength="128" show-word-limit />
+          </el-form-item>
+          <el-form-item label="英文简介">
+            <el-input v-model="seasonForm.descriptionEn" type="textarea" :rows="2" maxlength="2000" show-word-limit />
+          </el-form-item>
           <el-form-item label="赛季周期">
             <el-date-picker
               v-model="seasonPeriodRange"
@@ -100,6 +108,9 @@
             </el-form-item>
             <el-form-item label="赛区名称" prop="divisionName">
               <el-input v-model="div.divisionName" placeholder="如 CNPA League 2026 S1 - PS/Xbox 5V5" maxlength="128" show-word-limit @input="() => markDivisionNameManual(div)" />
+            </el-form-item>
+            <el-form-item label="英文名称">
+              <el-input v-model="div.divisionNameEn" maxlength="128" show-word-limit placeholder="选填，留空则官网回退中文" />
             </el-form-item>
             <el-form-item label="报名方式" prop="registrationMode">
               <el-radio-group v-model="div.registrationMode" @change="() => handleDivisionFieldAutoUpdate(div)">
@@ -382,6 +393,7 @@ export interface WizardDivisionDraft {
   platformCode: string
   gameMode: string
   divisionName: string
+  divisionNameEn?: string
   registrationMode: string
   maxTeamCount: number
   formatTemplateId?: number
@@ -454,7 +466,9 @@ const seasonForm = reactive<BasketSeasonCreateReq & { id?: number }>({
   seasonYear: new Date().getFullYear(),
   seasonName: '',
   displayTitle: '',
+  displayTitleEn: '',
   description: '',
+  descriptionEn: '',
   coverFileId: undefined,
   bannerFileId: undefined,
   seasonStartTime: '',
@@ -741,6 +755,7 @@ function createEmptyDivision(): WizardDivisionDraft {
     platformCode: 'PS_XBOX',
     gameMode: 'FIVE_V_FIVE',
     divisionName: '',
+    divisionNameEn: '',
     registrationMode: 'TEAM',
     maxTeamCount: 16,
     formatTemplateId: defaultTemplate?.id,
@@ -891,7 +906,9 @@ function resetWizardState() {
     seasonYear: new Date().getFullYear(),
     seasonName: '',
     displayTitle: '',
+    displayTitleEn: '',
     description: '',
+    descriptionEn: '',
     coverFileId: undefined,
     bannerFileId: undefined,
     seasonStartTime: '',
@@ -933,6 +950,8 @@ async function initWizard() {
         seasonYear: detail.seasonYear,
         seasonName: detail.seasonName,
         displayTitle: detail.displayTitle,
+        displayTitleEn: detail.displayTitleEn || '',
+        descriptionEn: detail.descriptionEn || '',
         description: detail.description,
         coverFileId: detail.coverFileId,
         bannerFileId: detail.bannerFileId,
@@ -952,6 +971,7 @@ async function initWizard() {
           platformCode: d.platformCode || 'PS_XBOX',
           gameMode: d.gameMode || 'FIVE_V_FIVE',
           divisionName: d.divisionName || '',
+          divisionNameEn: d.divisionNameEn || '',
           registrationMode: d.registrationMode || 'TEAM',
           maxTeamCount: d.maxTeamCount || 16,
           formatTemplateId: d.formatTemplateId,
@@ -997,7 +1017,9 @@ function buildSeasonPayload(): BasketSeasonCreateReq {
     seasonYear: seasonForm.seasonYear,
     seasonName: seasonForm.seasonName.trim(),
     displayTitle: seasonForm.displayTitle.trim(),
+    displayTitleEn: seasonForm.displayTitleEn || '',
     description: seasonForm.description?.trim() || undefined,
+    descriptionEn: seasonForm.descriptionEn || '',
     coverFileId: seasonForm.coverFileId,
     bannerFileId: seasonForm.bannerFileId,
     seasonStartTime: seasonForm.seasonStartTime || undefined,
@@ -1011,6 +1033,7 @@ function buildDivisionPayload(div: WizardDivisionDraft, includeTimes: boolean): 
     platformCode: div.platformCode,
     gameMode: div.gameMode,
     divisionName: div.divisionName.trim(),
+    divisionNameEn: div.divisionNameEn || '',
     registrationMode: div.registrationMode,
     formatType: div.formatType,
     formatTemplateId: (div.id && snapshotMap[div.id]?.sourceTemplateId) || div.formatTemplateId,

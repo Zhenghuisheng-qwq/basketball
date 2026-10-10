@@ -124,6 +124,17 @@
         <el-form-item label="正文" prop="contentText">
           <el-input v-model="form.contentText" type="textarea" :rows="10" placeholder="纯文本正文，不支持 HTML" />
         </el-form-item>
+        <el-divider content-position="left">英文内容</el-divider>
+        <div class="el-form-item__tip bilingual-tip">英文选填，与中文正文分开保存。留空时官网英文页面显示中文。规则公告使用同一套字段。</div>
+        <el-form-item label="英文标题">
+          <el-input v-model="form.titleEn" maxlength="256" show-word-limit />
+        </el-form-item>
+        <el-form-item label="英文摘要">
+          <el-input v-model="form.summaryEn" type="textarea" :rows="2" maxlength="1000" show-word-limit />
+        </el-form-item>
+        <el-form-item label="英文正文">
+          <el-input v-model="form.contentTextEn" type="textarea" :rows="8" placeholder="纯文本，不支持 HTML" />
+        </el-form-item>
         <el-form-item label="封面文件ID">
           <el-input-number v-model="form.coverFileId" :min="1" controls-position="right" style="width: 100%" />
         </el-form-item>
@@ -215,8 +226,10 @@ const queryParams = ref<AnnouncementQuery>({
 
 const form = ref<AnnouncementAddReq>({
   categoryCode: 'NOTICE',
-  title: '',
-  contentText: '',
+    title: '',
+    titleEn: '',
+    contentText: '',
+    contentTextEn: '',
   publicScope: 'PUBLIC',
   isImportant: 0
 })
@@ -266,9 +279,12 @@ function resetFormData() {
   form.value = {
     categoryCode: 'NOTICE',
     title: '',
+    titleEn: '',
     summary: undefined,
+    summaryEn: '',
     coverFileId: undefined,
     contentText: '',
+    contentTextEn: '',
     publicScope: 'PUBLIC',
     isImportant: 0
   }
@@ -291,9 +307,12 @@ function handleUpdate(row: AnnouncementListItem) {
     form.value = {
       categoryCode: data.categoryCode,
       title: data.title || '',
+      titleEn: data.titleEn || '',
       summary: data.summary,
+      summaryEn: data.summaryEn || '',
       coverFileId: data.coverFileId,
       contentText: data.contentText || '',
+      contentTextEn: data.contentTextEn || '',
       publicScope: data.publicScope || 'PUBLIC',
       isImportant: data.isImportant ?? 0,
       tournamentId: data.tournamentId,

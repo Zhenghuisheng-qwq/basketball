@@ -97,6 +97,14 @@
         <el-form-item label="副标题">
           <el-input v-model="form.subtitle" />
         </el-form-item>
+        <el-divider content-position="left">英文内容</el-divider>
+        <div class="el-form-item__tip bilingual-tip">英文与这张图片共用一条横幅，不会另建英文 Banner。留空时官网显示中文标题。</div>
+        <el-form-item label="英文标题">
+          <el-input v-model="form.titleEn" maxlength="256" show-word-limit />
+        </el-form-item>
+        <el-form-item label="英文副标题">
+          <el-input v-model="form.subtitleEn" maxlength="500" show-word-limit />
+        </el-form-item>
         <el-form-item label="图片文件ID" prop="imageFileId">
           <el-input-number v-model="form.imageFileId" :min="1" controls-position="right" style="width: 100%" />
         </el-form-item>
@@ -206,7 +214,9 @@ function resetFormData() {
   form.value = {
     bannerName: '',
     title: undefined,
+    titleEn: '',
     subtitle: undefined,
+    subtitleEn: '',
     imageFileId: undefined,
     positionCode: 'HOME_TOP',
     targetType: 'NONE',
@@ -234,7 +244,9 @@ function handleUpdate(row: HomeBannerListItem) {
     form.value = {
       bannerName: data.bannerName || '',
       title: data.title,
+      titleEn: data.titleEn || '',
       subtitle: data.subtitle,
+      subtitleEn: data.subtitleEn || '',
       imageFileId: data.imageFileId,
       positionCode: data.positionCode || 'HOME_TOP',
       targetType: data.targetType || 'NONE',

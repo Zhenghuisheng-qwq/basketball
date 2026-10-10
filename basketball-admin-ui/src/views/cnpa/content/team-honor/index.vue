@@ -107,6 +107,14 @@
         <el-form-item label="副标题">
           <el-input v-model="form.honorSubtitle" />
         </el-form-item>
+        <el-divider content-position="left">英文内容</el-divider>
+        <div class="el-form-item__tip bilingual-tip">英文选填，不改变荣誉归属。留空时官网显示中文标题。</div>
+        <el-form-item label="英文标题">
+          <el-input v-model="form.honorTitleEn" maxlength="256" show-word-limit />
+        </el-form-item>
+        <el-form-item label="英文副标题">
+          <el-input v-model="form.honorSubtitleEn" maxlength="256" show-word-limit />
+        </el-form-item>
         <el-form-item label="封面文件ID">
           <el-input-number v-model="form.coverFileId" :min="1" controls-position="right" style="width: 100%" />
         </el-form-item>
@@ -298,7 +306,9 @@ function resetFormData() {
     honorCode: 'TEAM_HONOR',
     teamId: undefined,
     honorTitle: undefined,
+    honorTitleEn: '',
     honorSubtitle: undefined,
+    honorSubtitleEn: '',
     coverFileId: undefined,
     displayOrder: 0,
     remark: undefined
@@ -331,7 +341,9 @@ function handleUpdate(row: HonorRecordListItem) {
       honorCode: data.honorCode,
       teamId: data.teamId,
       honorTitle: data.honorTitle,
+      honorTitleEn: data.honorTitleEn || '',
       honorSubtitle: data.honorSubtitle,
+      honorSubtitleEn: data.honorSubtitleEn || '',
       coverFileId: data.coverFileId,
       displayOrder: data.displayOrder ?? 0,
       remark: data.remark

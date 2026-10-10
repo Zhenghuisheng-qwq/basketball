@@ -41,8 +41,8 @@
       </el-table-column>
     </el-table>
 
-    <el-dialog title="编辑社群入口" v-model="dialogOpen" width="560px" append-to-body>
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="88px">
+    <el-dialog title="编辑社群入口" v-model="dialogOpen" width="640px" append-to-body>
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="平台">
           <el-input :model-value="platformLabel" disabled />
         </el-form-item>
@@ -54,6 +54,17 @@
         </el-form-item>
         <el-form-item label="按钮文字" prop="buttonText">
           <el-input v-model="form.buttonText" maxlength="32" show-word-limit />
+        </el-form-item>
+        <el-divider content-position="left">英文内容</el-divider>
+        <div class="el-form-item__tip bilingual-tip">英文与这条链接共用平台编码、地址、排序和状态。留空时官网显示中文。</div>
+        <el-form-item label="英文标题">
+          <el-input v-model="form.titleEn" maxlength="64" show-word-limit />
+        </el-form-item>
+        <el-form-item label="英文描述">
+          <el-input v-model="form.subtitleEn" maxlength="128" show-word-limit />
+        </el-form-item>
+        <el-form-item label="英文按钮">
+          <el-input v-model="form.buttonTextEn" maxlength="32" show-word-limit />
         </el-form-item>
         <el-form-item label="跳转链接" prop="jumpUrl">
           <el-input v-model="form.jumpUrl" maxlength="512" show-word-limit placeholder="可选，https:// 优先" />
@@ -89,8 +100,11 @@ const currentPlatformCode = ref('')
 
 const form = ref<SiteSocialLinkEditReq>({
   title: '',
+  titleEn: '',
   subtitle: '',
+  subtitleEn: '',
   buttonText: '',
+  buttonTextEn: '',
   jumpUrl: '',
   sortOrder: 0,
   status: 1
@@ -155,8 +169,11 @@ function handleUpdate(row: SiteSocialLinkItem) {
   currentPlatformCode.value = row.platformCode
   form.value = {
     title: row.title || '',
+    titleEn: row.titleEn || '',
     subtitle: row.subtitle || '',
+    subtitleEn: row.subtitleEn || '',
     buttonText: row.buttonText || '',
+    buttonTextEn: row.buttonTextEn || '',
     jumpUrl: row.jumpUrl || '',
     sortOrder: row.sortOrder ?? 0,
     status: row.status ?? 1
@@ -171,8 +188,11 @@ function submitForm() {
     submitLoading.value = true
     updateSocialLink(currentId.value!, {
       title: form.value.title.trim(),
+      titleEn: (form.value.titleEn || '').trim(),
       subtitle: (form.value.subtitle || '').trim(),
+      subtitleEn: (form.value.subtitleEn || '').trim(),
       buttonText: form.value.buttonText.trim(),
+      buttonTextEn: (form.value.buttonTextEn || '').trim(),
       jumpUrl: (form.value.jumpUrl || '').trim(),
       sortOrder: form.value.sortOrder,
       status: form.value.status

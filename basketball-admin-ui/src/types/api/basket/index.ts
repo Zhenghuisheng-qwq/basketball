@@ -1560,8 +1560,11 @@ export interface SiteSocialLinkItem {
   platformCode: string
   platformName?: string
   title?: string
+  titleEn?: string
   subtitle?: string
+  subtitleEn?: string
   buttonText?: string
+  buttonTextEn?: string
   jumpUrl?: string
   sortOrder?: number
   status?: number
@@ -1572,8 +1575,11 @@ export interface SiteSocialLinkItem {
 
 export interface SiteSocialLinkEditReq {
   title: string
+  titleEn?: string
   subtitle?: string
+  subtitleEn?: string
   buttonText: string
+  buttonTextEn?: string
   jumpUrl?: string
   sortOrder: number
   status: number
@@ -1695,7 +1701,9 @@ export interface HonorRecordListItem {
   playerName?: string
   matchId?: number
   honorTitle?: string
+  honorTitleEn?: string
   honorSubtitle?: string
+  honorSubtitleEn?: string
   honorValue?: string
   awardDate?: string
   coverFileId?: number
@@ -1738,7 +1746,9 @@ export interface HonorRecordAddReq {
   playerId?: number
   matchId?: number
   honorTitle?: string
+  honorTitleEn?: string
   honorSubtitle?: string
+  honorSubtitleEn?: string
   honorValue?: string
   awardDate?: string
   coverFileId?: number
@@ -1753,7 +1763,9 @@ export interface HonorRecordEditReq {
   playerId?: number
   matchId?: number
   honorTitle?: string
+  honorTitleEn?: string
   honorSubtitle?: string
+  honorSubtitleEn?: string
   honorValue?: string
   awardDate?: string
   coverFileId?: number
@@ -1804,7 +1816,9 @@ export interface AnnouncementListItem {
   seasonId?: number
   seasonName?: string
   title?: string
+  titleEn?: string
   summary?: string
+  summaryEn?: string
   coverFileId?: number
   coverUrl?: string
   authorId?: number
@@ -1826,14 +1840,18 @@ export interface AnnouncementListItem {
 
 export interface AnnouncementDetail extends AnnouncementListItem {
   contentText?: string
+  contentTextEn?: string
 }
 
 export interface AnnouncementAddReq {
   categoryCode?: string
   title?: string
+  titleEn?: string
   summary?: string
+  summaryEn?: string
   coverFileId?: number
   contentText?: string
+  contentTextEn?: string
   publicScope?: string
   isImportant?: number
   tournamentId?: number
@@ -1845,9 +1863,12 @@ export interface AnnouncementAddReq {
 export interface AnnouncementEditReq {
   categoryCode?: string
   title?: string
+  titleEn?: string
   summary?: string
+  summaryEn?: string
   coverFileId?: number
   contentText?: string
+  contentTextEn?: string
   publicScope?: string
   isImportant?: number
   tournamentId?: number
@@ -1877,7 +1898,9 @@ export interface HomeBannerListItem {
   id: number
   bannerName?: string
   title?: string
+  titleEn?: string
   subtitle?: string
+  subtitleEn?: string
   imageFileId?: number
   imageUrl?: string
   positionCode?: string
@@ -1895,7 +1918,9 @@ export interface HomeBannerListItem {
 export interface HomeBannerAddReq {
   bannerName?: string
   title?: string
+  titleEn?: string
   subtitle?: string
+  subtitleEn?: string
   imageFileId?: number
   positionCode?: string
   targetType?: string
@@ -1908,7 +1933,9 @@ export interface HomeBannerAddReq {
 export interface HomeBannerEditReq {
   bannerName?: string
   title?: string
+  titleEn?: string
   subtitle?: string
+  subtitleEn?: string
   imageFileId?: number
   positionCode?: string
   targetType?: string

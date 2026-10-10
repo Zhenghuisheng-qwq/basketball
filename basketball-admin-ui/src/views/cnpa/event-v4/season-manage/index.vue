@@ -58,6 +58,13 @@
         <el-table-column label="年份" prop="seasonYear" width="80" />
         <el-table-column label="赛季名称" prop="seasonName" min-width="120" />
         <el-table-column label="前台标题" prop="displayTitle" min-width="140" />
+        <el-table-column label="英文" width="88" align="center">
+          <template #default="scope">
+            <el-tag size="small" :type="scope.row.displayTitleEn || scope.row.descriptionEn ? 'success' : 'info'">
+              {{ scope.row.displayTitleEn || scope.row.descriptionEn ? '已填写' : '未填写' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="赛季周期" min-width="168" show-overflow-tooltip>
           <template #default="scope">
             <span class="time-range">{{ formatV4CompactRange(scope.row.seasonStartTime, scope.row.seasonEndTime) }}</span>
@@ -116,6 +123,9 @@
           <template #default="scope">{{ v4GameModeLabel(scope.row.gameMode) }}</template>
         </el-table-column>
         <el-table-column label="赛区名称" prop="divisionName" min-width="140" />
+        <el-table-column label="英文名称" min-width="120">
+          <template #default="scope">{{ scope.row.divisionNameEn || '未填写' }}</template>
+        </el-table-column>
         <el-table-column label="报名方式" prop="registrationMode" width="108" align="center">
           <template #default="scope">
             <el-tag :type="v4RegistrationModeTagType(scope.row.registrationMode)" size="small" class="nowrap-tag">
@@ -197,6 +207,14 @@
         <el-form-item label="赛季简介">
           <el-input v-model="seasonForm.description" type="textarea" :rows="3" maxlength="2000" show-word-limit placeholder="可选，用于前台赛季介绍" />
         </el-form-item>
+        <el-divider content-position="left">英文内容</el-divider>
+        <div class="el-form-item__tip bilingual-tip">英文选填。留空时官网英文页面显示中文；清空后保存也会回退中文。只改中文时不必重填英文。</div>
+        <el-form-item label="英文标题">
+          <el-input v-model="seasonForm.displayTitleEn" maxlength="128" show-word-limit placeholder="English display title" />
+        </el-form-item>
+        <el-form-item label="英文简介">
+          <el-input v-model="seasonForm.descriptionEn" type="textarea" :rows="3" maxlength="2000" show-word-limit placeholder="English description" />
+        </el-form-item>
         <el-form-item label="赛季周期">
           <el-date-picker
             v-model="seasonPeriodRange"
@@ -246,6 +264,7 @@
             <el-descriptions-item label="年份">{{ seasonDetail.seasonYear }}</el-descriptions-item>
             <el-descriptions-item label="赛季名称">{{ seasonDetail.seasonName }}</el-descriptions-item>
             <el-descriptions-item label="前台标题">{{ seasonDetail.displayTitle }}</el-descriptions-item>
+            <el-descriptions-item label="英文标题">{{ seasonDetail.displayTitleEn || '未填写，官网回退中文' }}</el-descriptions-item>
             <el-descriptions-item label="发布状态">
               <el-tag :type="v4PublishStatusTagType(seasonDetail.publishStatus)" size="small">{{ v4PublishStatusLabel(seasonDetail.publishStatus) }}</el-tag>
             </el-descriptions-item>
@@ -255,6 +274,7 @@
             <el-descriptions-item label="赛季周期" :span="2">{{ formatV4CompactRange(seasonDetail.seasonStartTime, seasonDetail.seasonEndTime) }}</el-descriptions-item>
             <el-descriptions-item label="平台赛区数">{{ seasonDetail.divisionCount ?? seasonDetail.divisions?.length ?? 0 }}</el-descriptions-item>
             <el-descriptions-item label="简介" :span="2">{{ seasonDetail.description || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="英文简介" :span="2">{{ seasonDetail.descriptionEn || '未填写，官网回退中文' }}</el-descriptions-item>
           </el-descriptions>
         </el-tab-pane>
         <el-tab-pane label="赛区管理" name="division">
@@ -324,6 +344,10 @@
         </el-form-item>
         <el-form-item label="赛区名称" prop="divisionName">
           <el-input v-model="divisionForm.divisionName" placeholder="如 League 2026 S1 - PS" />
+        </el-form-item>
+        <el-form-item label="英文名称">
+          <el-input v-model="divisionForm.divisionNameEn" maxlength="128" show-word-limit placeholder="English division name" />
+          <div class="el-form-item__tip">选填，不参与赛区唯一性判断。留空时官网英文页面显示中文名称。</div>
         </el-form-item>
         <el-form-item label="报名方式" prop="registrationMode">
           <el-radio-group v-model="divisionForm.registrationMode">
@@ -518,7 +542,9 @@ const seasonForm = reactive<BasketSeasonCreateReq & { id?: number }>({
   seasonYear: new Date().getFullYear(),
   seasonName: '',
   displayTitle: '',
+  displayTitleEn: '',
   description: '',
+  descriptionEn: '',
   coverFileId: undefined,
   bannerFileId: undefined,
   seasonStartTime: '',
@@ -550,6 +576,7 @@ const divisionForm = reactive<BasketDivisionCreateReq & { id?: number }>({
   platformCode: 'PS_XBOX',
   gameMode: 'FIVE_V_FIVE',
   divisionName: '',
+  divisionNameEn: '',
   registrationMode: 'TEAM',
   formatType: 'REGULAR_ROUND_ROBIN',
   formatTemplateId: undefined,
@@ -596,7 +623,9 @@ function resetSeasonForm() {
     seasonYear: new Date().getFullYear(),
     seasonName: '',
     displayTitle: '',
+    displayTitleEn: '',
     description: '',
+    descriptionEn: '',
     coverFileId: undefined,
     bannerFileId: undefined,
     seasonStartTime: '',
@@ -614,7 +643,9 @@ function applySeasonFormRow(row: BasketSeasonListVo) {
     seasonYear: row.seasonYear,
     seasonName: row.seasonName,
     displayTitle: row.displayTitle,
+    displayTitleEn: row.displayTitleEn || '',
     description: row.description,
+    descriptionEn: row.descriptionEn || '',
     coverFileId: row.coverFileId,
     bannerFileId: row.bannerFileId,
     seasonStartTime: row.seasonStartTime || '',
@@ -754,7 +785,9 @@ function submitSeasonForm() {
       seasonYear: seasonForm.seasonYear,
       seasonName: seasonForm.seasonName,
       displayTitle: seasonForm.displayTitle,
+      displayTitleEn: seasonForm.displayTitleEn || '',
       description: seasonForm.description,
+      descriptionEn: seasonForm.descriptionEn || '',
       coverFileId: seasonForm.coverFileId,
       bannerFileId: seasonForm.bannerFileId,
       seasonStartTime: seasonForm.seasonStartTime || undefined,
@@ -860,6 +893,7 @@ function resetDivisionForm() {
     platformCode: 'PS_XBOX',
     gameMode: 'FIVE_V_FIVE',
     divisionName: '',
+    divisionNameEn: '',
     registrationMode: 'TEAM',
     formatType: 'REGULAR_ROUND_ROBIN',
     formatTemplateId: undefined,

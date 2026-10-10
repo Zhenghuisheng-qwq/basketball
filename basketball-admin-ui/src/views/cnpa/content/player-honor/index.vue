@@ -102,6 +102,17 @@
         <el-form-item label="荣誉标题">
           <el-input v-model="form.honorTitle" />
         </el-form-item>
+        <el-form-item label="副标题">
+          <el-input v-model="form.honorSubtitle" />
+        </el-form-item>
+        <el-divider content-position="left">英文内容</el-divider>
+        <div class="el-form-item__tip bilingual-tip">英文选填，不改变球员、球队和赛季归属。留空时官网显示中文。</div>
+        <el-form-item label="英文标题">
+          <el-input v-model="form.honorTitleEn" maxlength="256" show-word-limit />
+        </el-form-item>
+        <el-form-item label="英文副标题">
+          <el-input v-model="form.honorSubtitleEn" maxlength="256" show-word-limit />
+        </el-form-item>
         <el-form-item label="荣誉值">
           <el-input v-model="form.honorValue" placeholder="如场均得分" />
         </el-form-item>
@@ -314,6 +325,9 @@ function resetFormData() {
     playerId: undefined,
     teamId: undefined,
     honorTitle: undefined,
+    honorTitleEn: '',
+    honorSubtitle: undefined,
+    honorSubtitleEn: '',
     honorValue: undefined,
     coverFileId: undefined,
     displayOrder: 0,
@@ -343,6 +357,9 @@ function handleUpdate(row: HonorRecordListItem) {
       playerId: data.playerId,
       teamId: data.teamId,
       honorTitle: data.honorTitle,
+      honorTitleEn: data.honorTitleEn || '',
+      honorSubtitle: data.honorSubtitle,
+      honorSubtitleEn: data.honorSubtitleEn || '',
       honorValue: data.honorValue,
       coverFileId: data.coverFileId,
       displayOrder: data.displayOrder ?? 0,
