@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import logoImg from '@/assets/icon/logo.png'
+import LocaleSwitch from './LocaleSwitch.vue'
 import PublicCompetitionMegaMenu from './PublicCompetitionMegaMenu.vue'
 import PublicCompetitionMobileMenu from './PublicCompetitionMobileMenu.vue'
 import { usePublicCompetitionMegaMenu } from '@/composables/usePublicCompetitionMegaMenu'
@@ -12,6 +14,7 @@ import { getAvatarInitials } from '@/utils/accountAvatar'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const { isAuthenticated, currentUser, unreadNotificationCount } = useAuth()
 
 const {
@@ -29,14 +32,11 @@ const {
   getEntryHighlight,
 } = usePublicCompetitionMegaMenu()
 
-const navItems = [
-  {
-    label: '名人堂',
-    to: '/hall-of-fame',
-  },
-  { label: '公告', to: '/announcements' },
-  { label: '合作伙伴', to: '/partners' },
-]
+const navItems = computed(() => [
+  { key: 'hall', label: t('nav.hallOfFame'), to: '/hall-of-fame' },
+  { key: 'announcements', label: t('nav.announcements'), to: '/announcements' },
+  { key: 'partners', label: t('nav.partners'), to: '/partners' },
+])
 
 const isMobileMenuOpen = ref(false)
 const isSearchOpen = ref(false)
@@ -69,13 +69,13 @@ const searchResults = computed(() => [] as Array<{
   currentTeamAbbr: string
   position: string
 }>)
-const searchUnavailableMessage = '搜索 API 尚未开放'
+const searchUnavailableMessage = computed(() => t('nav.searchUnavailable'))
 
-const accountLabel = computed(() => currentUser.value?.nickname || '个人中心')
+const accountLabel = computed(() => currentUser.value?.nickname || t('nav.account'))
 const accountInitials = computed(() => getAvatarInitials(currentUser.value?.nickname))
 const showAccountInitials = computed(() => Boolean(accountInitials.value))
 
-function isActive(item: (typeof navItems)[number]) {
+function isActive(item: { to: string }) {
   if (item.to === '/announcements') {
     return route.path.startsWith('/announcements')
   }
@@ -264,7 +264,7 @@ onBeforeUnmount(() => {
           <img class="logo-image" :src="logoImg" alt="CNPA" />
         </div>
 
-        <nav class="header-nav" aria-label="主导航">
+        <nav class="header-nav" :aria-label="t('nav.mainNav')">
           <router-link
             to="/home"
             class="nav-link"
@@ -273,7 +273,7 @@ onBeforeUnmount(() => {
             :class="{ 'nav-link-active': route.path === '/home' && !route.hash }"
             @mouseenter="handleOtherNavMouseEnter"
           >
-            首页
+            {{ t('nav.home') }}
           </router-link>
 
           <div
@@ -293,7 +293,7 @@ onBeforeUnmount(() => {
               @click="handleMegaMenuToggle('event')"
               @keydown="handleEventsTriggerKeyDown"
             >
-              赛事
+              {{ t('nav.events') }}
             </button>
 
             <Transition name="mega-menu">
@@ -307,7 +307,7 @@ onBeforeUnmount(() => {
                 <PublicCompetitionMegaMenu
                   ref="megaMenuRef"
                   type="event"
-                  ariaLabel="赛事导航"
+                  :ariaLabel="t('nav.eventNav')"
                   :groups="currentGroups"
                   :get-entry-highlight="getEntryHighlight"
                   @navigate="navigateMegaMenuEntry"
@@ -324,12 +324,12 @@ onBeforeUnmount(() => {
             :class="{ 'nav-link-active': isDataNavActive }"
             @mouseenter="handleOtherNavMouseEnter"
           >
-            数据
+            {{ t('nav.data') }}
           </router-link>
 
           <router-link
             v-for="item in navItems"
-            :key="item.label"
+            :key="item.key"
             :to="item.to"
             class="nav-link"
             active-class=""
@@ -343,11 +343,12 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="header-actions">
+        <LocaleSwitch />
         <div ref="searchPanelRef" class="header-search">
           <button
             type="button"
             class="search-btn"
-            aria-label="搜索"
+            :aria-label="t('nav.search')"
             :aria-expanded="isSearchOpen"
             @click="toggleSearch"
           >
@@ -364,7 +365,7 @@ onBeforeUnmount(() => {
                 ref="searchInputRef"
                 v-model="searchQuery"
                 type="search"
-                placeholder="搜索球员"
+                :placeholder="t('nav.searchPlayer')"
                 autocomplete="off"
               />
             </label>
@@ -398,19 +399,19 @@ onBeforeUnmount(() => {
               />
             </svg>
           </span>
-          <span class="account-btn__label">个人中心</span>
+          <span class="account-btn__label">{{ t('nav.account') }}</span>
           <span v-if="unreadNotificationCount > 0" class="account-btn__badge">
             {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
           </span>
         </button>
         <template v-else>
-          <button type="button" class="login-btn" @click="goLogin">登录</button>
-          <button type="button" class="register-btn" @click="goRegister">注册</button>
+          <button type="button" class="login-btn" @click="goLogin">{{ t('nav.login') }}</button>
+          <button type="button" class="register-btn" @click="goRegister">{{ t('nav.register') }}</button>
         </template>
         <button
           type="button"
           class="mobile-menu-btn"
-          aria-label="打开导航菜单"
+          :aria-label="t('nav.openMenu')"
           :aria-expanded="isMobileMenuOpen"
           @click="toggleMobileMenu"
         >
@@ -425,14 +426,15 @@ onBeforeUnmount(() => {
       <nav
         v-if="isMobileMenuOpen"
         class="mobile-nav"
-        aria-label="移动端主导航"
+        :aria-label="t('nav.mobileNav')"
       >
+        <LocaleSwitch block />
         <router-link
           to="/home"
           class="mobile-nav__link"
           @click="closeMobileMenu"
         >
-          首页
+          {{ t('nav.home') }}
         </router-link>
 
         <PublicCompetitionMobileMenu
@@ -448,12 +450,12 @@ onBeforeUnmount(() => {
           :class="{ 'mobile-nav__link--active': isDataNavActive }"
           @click="closeMobileMenu"
         >
-          数据
+          {{ t('nav.data') }}
         </router-link>
 
         <router-link
           v-for="item in navItems"
-          :key="item.label"
+          :key="item.key"
           :to="item.to"
           class="mobile-nav__link"
           :class="{ 'mobile-nav__link--active': isActive(item) }"
@@ -468,7 +470,7 @@ onBeforeUnmount(() => {
           class="mobile-nav__link mobile-nav__link--account"
           @click="goAccount(); closeMobileMenu()"
         >
-          个人中心 · {{ accountLabel }}
+          {{ t('nav.accountWithName', { name: accountLabel }) }}
         </button>
         <template v-else>
           <button
@@ -476,14 +478,14 @@ onBeforeUnmount(() => {
             class="mobile-nav__link mobile-nav__link--account"
             @click="goLogin(); closeMobileMenu()"
           >
-            登录
+            {{ t('nav.login') }}
           </button>
           <button
             type="button"
             class="mobile-nav__link mobile-nav__link--account"
             @click="goRegister(); closeMobileMenu()"
           >
-            注册
+            {{ t('nav.register') }}
           </button>
         </template>
       </nav>
@@ -945,6 +947,10 @@ onBeforeUnmount(() => {
   .header-actions {
     margin-left: auto;
     gap: 10px;
+  }
+
+  .header-actions :deep(.locale-switch) {
+    display: none;
   }
 
   .login-btn,

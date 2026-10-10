@@ -1,18 +1,21 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import logoImg from '@/assets/icon/logo.png'
 
+const { t } = useI18n()
+
 const hallLinks = [
-  { label: '周最佳', query: { tab: 'weekly' } },
-  { label: '赛事荣誉', query: { tab: 'event' } },
-  { label: '历届冠军', query: { tab: 'champions' } },
-  { label: '最佳阵容', query: { tab: 'event' } },
+  { key: 'weekly', labelKey: 'nav.footer.weekly', query: { tab: 'weekly' } },
+  { key: 'event', labelKey: 'nav.footer.eventHonors', query: { tab: 'event' } },
+  { key: 'champions', labelKey: 'nav.footer.champions', query: { tab: 'champions' } },
+  { key: 'lineup', labelKey: 'nav.footer.bestLineup', query: { tab: 'event' } },
 ]
 
 const seriesLinks = [
-  { label: 'CNPA League', to: { path: '/tournament', query: { series: 'LEAGUE' } } },
-  { label: 'CNPA Arena', to: { path: '/tournament', query: { series: 'ARENA' } } },
-  { label: 'CNPA Cup', to: { path: '/tournament', query: { series: 'CUP' } } },
-  { label: 'CNPA Open', to: { path: '/tournament', query: { series: 'OPEN' } } },
+  { key: 'league', label: 'CNPA League', to: { path: '/tournament', query: { series: 'LEAGUE' } } },
+  { key: 'arena', label: 'CNPA Arena', to: { path: '/tournament', query: { series: 'ARENA' } } },
+  { key: 'cup', label: 'CNPA Cup', to: { path: '/tournament', query: { series: 'CUP' } } },
+  { key: 'open', label: 'CNPA Open', to: { path: '/tournament', query: { series: 'OPEN' } } },
 ]
 </script>
 
@@ -22,18 +25,14 @@ const seriesLinks = [
       <div class="footer-grid">
         <div class="footer-brand">
           <img :src="logoImg" alt="CNPA" class="footer-logo" />
-          <p>
-            CNPA 以赛事为核心，<br />
-            连接球员、战队、内容，<br />
-            构建属于中国玩家的篮球电竞赛事平台。
-          </p>
+          <p class="footer-brand__text">{{ t('nav.footer.brand') }}</p>
         </div>
 
         <div class="footer-col">
-          <h4>赛事</h4>
+          <h4>{{ t('nav.footer.events') }}</h4>
           <router-link
             v-for="item in seriesLinks"
-            :key="item.label"
+            :key="item.key"
             :to="item.to"
           >
             {{ item.label }}
@@ -41,38 +40,38 @@ const seriesLinks = [
         </div>
 
         <div class="footer-col">
-          <h4>数据</h4>
-          <router-link to="/data">球员数据</router-link>
-          <router-link to="/data">战队数据</router-link>
-          <router-link to="/tournament?tab=schedule">赛事赛程</router-link>
-          <router-link to="/data">数据记录</router-link>
+          <h4>{{ t('nav.footer.data') }}</h4>
+          <router-link to="/data">{{ t('nav.footer.playerData') }}</router-link>
+          <router-link to="/data">{{ t('nav.footer.teamData') }}</router-link>
+          <router-link to="/tournament?tab=schedule">{{ t('nav.footer.schedule') }}</router-link>
+          <router-link to="/data">{{ t('nav.footer.records') }}</router-link>
         </div>
 
         <div class="footer-col">
-          <h4>名人堂</h4>
+          <h4>{{ t('nav.footer.hall') }}</h4>
           <router-link
             v-for="item in hallLinks"
-            :key="item.label"
+            :key="item.key"
             :to="{ path: '/hall-of-fame', query: item.query }"
           >
-            {{ item.label }}
+            {{ t(item.labelKey) }}
           </router-link>
         </div>
 
         <div class="footer-col">
-          <h4>关于 CNPA</h4>
-          <span class="footer-plain">关于我们</span>
-          <router-link to="/announcements">公告中心</router-link>
-          <router-link to="/partners">合作伙伴</router-link>
-          <span class="footer-plain">联系我们</span>
+          <h4>{{ t('nav.footer.about') }}</h4>
+          <span class="footer-plain">{{ t('nav.footer.aboutUs') }}</span>
+          <router-link to="/announcements">{{ t('nav.footer.announcementCenter') }}</router-link>
+          <router-link to="/partners">{{ t('nav.footer.partners') }}</router-link>
+          <span class="footer-plain">{{ t('nav.footer.contact') }}</span>
         </div>
       </div>
 
       <div class="footer-bottom">
-        <span>© 2026 CNPA 中国职业电竞篮球联赛，保留所有权利。</span>
+        <span>{{ t('nav.footer.copyright') }}</span>
         <div class="footer-links">
-          <span class="footer-plain">隐私政策</span>
-          <span class="footer-plain">服务条款</span>
+          <span class="footer-plain">{{ t('nav.footer.privacy') }}</span>
+          <span class="footer-plain">{{ t('nav.footer.terms') }}</span>
         </div>
       </div>
     </div>
@@ -104,6 +103,7 @@ const seriesLinks = [
     font-size: 13px;
     line-height: 1.8;
     color: rgba(255, 255, 255, 0.68);
+    white-space: pre-line;
   }
 }
 

@@ -1,10 +1,23 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElConfigProvider } from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import en from 'element-plus/es/locale/lang/en'
 import WebHeader from '@/components/layout/WebHeader.vue'
 import WebFooter from '@/components/layout/WebFooter.vue'
+import { applyRouteDocumentTitle } from '@/i18n/documentTitle'
+import { useLocaleStore } from '@/stores/locale'
 
 const route = useRoute()
+const localeStore = useLocaleStore()
+const elementLocale = computed(() => (localeStore.locale === 'en-US' ? en : zhCn))
+
+watch(
+  () => [localeStore.locale, route.fullPath] as const,
+  () => applyRouteDocumentTitle(route),
+  { immediate: true },
+)
 
 const isAuthRoute = computed(
   () =>
@@ -19,6 +32,7 @@ const useStandaloneChrome = computed(() => isAuthRoute.value || isAccountRoute.v
 </script>
 
 <template>
+  <el-config-provider :locale="elementLocale">
   <div class="app">
     <WebHeader v-if="!useStandaloneChrome" />
 
@@ -34,6 +48,7 @@ const useStandaloneChrome = computed(() => isAuthRoute.value || isAccountRoute.v
 
     <WebFooter v-if="!useStandaloneChrome" />
   </div>
+  </el-config-provider>
 </template>
 
 <style scoped lang="scss">

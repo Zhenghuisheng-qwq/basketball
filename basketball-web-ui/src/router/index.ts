@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import { applyRouteDocumentTitle } from '@/i18n/documentTitle'
 import { resolveAuthenticatedEntryRedirect } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
 
@@ -787,11 +788,7 @@ router.beforeEach(async (to) => {
 
 
 router.afterEach((to) => {
-
-  const title = (to.meta.title as string) || 'CNPA'
-
-  document.title = `${title} - CNPA 篮球赛事平台`
-
+  applyRouteDocumentTitle(to)
 })
 
 
