@@ -31,6 +31,8 @@ import type {
   AccountNotificationType,
 } from '@/types/accountNotifications'
 import { buildPlayerIdentity } from '@/utils/playerIdentity'
+import { i18n, translate } from '@/i18n'
+import { displayNoticeText, renderNotice } from '@/i18n/noticeTemplates'
 
 const PLAYER_CERT_APPROVED = 3
 const PLAYER_CERT_DRAFT = 0
@@ -372,36 +374,36 @@ function mapTeamInvitePresentation(invite: AccountNotificationTeamInvite): {
   resultText: string
   resultStatus: AccountNotificationResultStatus
 } {
-  const teamName = invite.teamName || '该球队'
+  const teamName = invite.teamName || translate('accountShell.notifications.thisTeam')
   if (invite.inviteStatus === 1) {
-    return { resultText: `您已加入球队「${teamName}」`, resultStatus: 'SUCCESS' }
+    return { resultText: translate('accountShell.notifications.inviteJoined', { name: teamName }), resultStatus: 'SUCCESS' }
   }
   if (invite.inviteStatus === 2) {
-    return { resultText: `您已拒绝球队「${teamName}」的邀请`, resultStatus: 'FAILED' }
+    return { resultText: translate('accountShell.notifications.inviteDeclined', { name: teamName }), resultStatus: 'FAILED' }
   }
   if (invite.inviteStatus === 3) {
-    return { resultText: '该邀请已过期', resultStatus: 'WARNING' }
+    return { resultText: translate('accountShell.notifications.inviteExpired'), resultStatus: 'WARNING' }
   }
   if (invite.inviteStatus === 4) {
-    return { resultText: '该邀请已被队长撤销', resultStatus: 'WARNING' }
+    return { resultText: translate('accountShell.notifications.inviteCancelled'), resultStatus: 'WARNING' }
   }
   if (invite.canRespond && invite.canAccept === false && invite.cannotAcceptReason) {
     return { resultText: invite.cannotAcceptReason, resultStatus: 'WARNING' }
   }
   if (invite.canRespond) {
-    return { resultText: '待处理', resultStatus: 'PENDING' }
+    return { resultText: translate('accountShell.notifications.invitePending'), resultStatus: 'PENDING' }
   }
-  return { resultText: invite.inviteStatusText || '待处理', resultStatus: 'WARNING' }
+  return { resultText: invite.inviteStatusText || translate('accountShell.notifications.invitePending'), resultStatus: 'WARNING' }
 }
 
 function buildTeamInviteMeta(invite: AccountNotificationTeamInvite) {
   return [
-    { label: '邀请球队', value: invite.teamName || '-' },
-    { label: '邀请说明', value: invite.invitationMessage || '邀请加入球队' },
-    { label: '邀请人', value: invite.inviterName || '-' },
-    { label: '邀请时间', value: toIsoDateTime(invite.inviteTime) || '-' },
-    { label: '过期时间', value: toIsoDateTime(invite.expireTime) || '-' },
-    { label: '邀请状态', value: invite.inviteStatusText || '-' },
+    { label: translate('accountShell.notifications.metaTeam'), value: invite.teamName || '-' },
+    { label: translate('accountShell.notifications.metaNote'), value: invite.invitationMessage || translate('accountShell.notifications.metaNoteDefault') },
+    { label: translate('accountShell.notifications.metaInviter'), value: invite.inviterName || '-' },
+    { label: translate('accountShell.notifications.metaInviteTime'), value: toIsoDateTime(invite.inviteTime) || '-' },
+    { label: translate('accountShell.notifications.metaExpireTime'), value: toIsoDateTime(invite.expireTime) || '-' },
+    { label: translate('accountShell.notifications.metaStatus'), value: invite.inviteStatusText || '-' },
   ]
 }
 
@@ -410,26 +412,34 @@ export function mapMessageItemToNotification(item: MessageItemDto): AccountNotif
   const type = mapMessageType(item.messageType, item.bizType)
   const teamInvite = item.teamInvite ? mapTeamInviteDto(item.teamInvite) : undefined
   const invitePresentation = teamInvite ? mapTeamInvitePresentation(teamInvite) : null
+  const locale = String(i18n.global.locale.value || 'zh-CN')
+  const rendered = renderNotice(item.templateCode, item.templateParams, locale)
+  const title = displayNoticeText(item.templateCode, item.title, rendered?.title)
+  const content = displayNoticeText(item.templateCode, item.content, rendered?.body)
 
   return {
     id: item.receiverId,
     type,
-    typeText: type === 'TEAM_INVITE' ? '球队邀请' : (item.messageType || '系统'),
-    title: item.title,
-    summary: (item.content || '').slice(0, 80),
+    typeText: type === 'TEAM_INVITE'
+      ? translate('accountShell.notifications.teamInvite')
+      : (item.messageType || translate('accountShell.notifications.systemType')),
+    title,
+    summary: content.slice(0, 80),
     status: unread ? 'UNREAD' : 'READ',
     isUnread: unread,
     createdAt: toIsoDateTime(item.sentTime),
-    detailTitle: item.title,
-    detailSubtitle: teamInvite?.teamName ? `来自球队「${teamInvite.teamName}」的邀请` : (item.content || ''),
-    body: item.content ? item.content.split('\n').filter(Boolean) : [],
+    detailTitle: title,
+    detailSubtitle: content,
+    body: content ? content.split('\n').filter(Boolean) : [],
     meta: teamInvite
       ? buildTeamInviteMeta(teamInvite)
       : [
-          ...(item.bizType ? [{ label: '业务类型', value: item.bizType }] : []),
-          ...(item.bizId ? [{ label: '关联业务', value: item.bizId }] : []),
+          ...(item.bizType ? [{ label: translate('accountShell.notifications.metaBizType'), value: item.bizType }] : []),
+          ...(item.bizId ? [{ label: translate('accountShell.notifications.metaBizId'), value: item.bizId }] : []),
         ],
-    resultText: invitePresentation?.resultText ?? (unread ? '未读' : '已读'),
+    resultText: invitePresentation?.resultText ?? (unread
+      ? translate('accountShell.notifications.unread')
+      : translate('accountShell.notifications.read')),
     resultStatus: invitePresentation?.resultStatus ?? (unread ? 'PENDING' : 'SUCCESS'),
     teamInvite,
   }

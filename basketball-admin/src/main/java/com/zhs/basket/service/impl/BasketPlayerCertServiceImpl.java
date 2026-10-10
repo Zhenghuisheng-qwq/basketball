@@ -146,7 +146,7 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
         applicationMapper.updatePlayerIdAndNormalized(applicationId, profile.getId(), normalizedGameAccount);
         writeAudit(app, "APPROVE", app.getApplicationStatus(), PlayerCertStatusEnum.APPROVED.getCode(), req.getAuditRemark());
         messageService.sendSiteMessage(app.getMemberId(), auditorId, "PLAYER_CERT", applicationId,
-                "球员认证已通过", "您的球员认证申请已通过审核。");
+                "球员认证已通过", "您的球员认证申请已通过审核。", "PLAYER_CERT_APPROVED", null);
         securityLogWriter.write(app.getMemberId(), "PLAYER_CERT_APPROVED", "球员认证通过", null, "已通过", auditorId);
         if (profile != null) {
             publicReadCachePublisher.playerMutation(profile.getId());
@@ -167,7 +167,8 @@ public class BasketPlayerCertServiceImpl implements IBasketPlayerCertService {
         updateProfileRejected(app, now);
         writeAudit(app, "REJECT", app.getApplicationStatus(), PlayerCertStatusEnum.REJECTED.getCode(), remark);
         messageService.sendSiteMessage(app.getMemberId(), auditorId, "PLAYER_CERT", applicationId,
-                "球员认证已驳回", "您的球员认证申请已被驳回：" + remark);
+                "球员认证已驳回", "您的球员认证申请已被驳回：" + remark,
+                "PLAYER_CERT_REJECTED", NoticeParams.json("remark", remark));
         securityLogWriter.write(app.getMemberId(), "PLAYER_CERT_REJECTED", "球员认证驳回", null, remark, auditorId);
     }
 

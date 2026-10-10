@@ -33,14 +33,25 @@ public class BasketAdminMessageService {
 
     public void sendSiteMessage(Long memberId, Long adminUserId, String bizType, Long bizId,
                                 String title, String content) {
+        sendSiteMessage(memberId, adminUserId, bizType, bizId, title, content, null, null);
+    }
+
+    public void sendSiteMessage(Long memberId, Long adminUserId, String bizType, Long bizId,
+                                String title, String content, String templateCode, String templateParams) {
         if (memberId == null) {
             return;
         }
-        sendSiteMessages(java.util.Collections.singletonList(memberId), adminUserId, bizType, bizId, title, content);
+        sendSiteMessages(java.util.Collections.singletonList(memberId), adminUserId, bizType, bizId,
+                title, content, templateCode, templateParams);
     }
 
     public void sendSiteMessages(List<Long> memberIds, Long adminUserId, String bizType, Long bizId,
                                  String title, String content) {
+        sendSiteMessages(memberIds, adminUserId, bizType, bizId, title, content, null, null);
+    }
+
+    public void sendSiteMessages(List<Long> memberIds, Long adminUserId, String bizType, Long bizId,
+                                 String title, String content, String templateCode, String templateParams) {
         if (CollectionUtils.isEmpty(memberIds)) {
             return;
         }
@@ -55,6 +66,8 @@ public class BasketAdminMessageService {
         task.setMessageType(MESSAGE_TYPE_SITE);
         task.setTitle(title);
         task.setContentText(content);
+        task.setTemplateCode(templateCode);
+        task.setTemplateParams(templateParams);
         task.setBizType(bizType);
         task.setBizId(bizId);
         task.setSendScope(distinctIds.size() == 1 ? SEND_SCOPE_SINGLE : SEND_SCOPE_BATCH);

@@ -22,10 +22,21 @@ import type {
 import { v4PlatformLabel, v4GameModeLabel, v4RosterRuleText } from '@/utils/v4Display'
 import { v4RegistrationStatusLabel } from '@/utils/v4AccountEventsMappers'
 import { formatDateTimeShort } from '@/utils/participationMappers'
+import { isKnownReasonCode } from '@/utils/apiError'
 
 const route = useRoute()
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+function rosterReason(player: V4RegistrationRosterPlayer) {
+  if (isKnownReasonCode(player.reasonCode)) {
+    return t(`errors.${player.reasonCode}`)
+  }
+  if (!String(locale.value).toLowerCase().startsWith('en') && player.reasonMessage) {
+    return player.reasonMessage
+  }
+  return t('accountEvents.registration.ineligible')
+}
 
 const pageLoading = ref(true)
 const loadError = ref('')
@@ -381,7 +392,7 @@ onMounted(() => {
             <span class="v4-reg-player-main">
               <strong>{{ player.playerNo || player.playerId || '-' }}</strong>
               <span>{{ player.displayName || '-' }}</span>
-              <span class="v4-reg-warn-inline">{{ player.reasonMessage || t('accountEvents.registration.ineligible') }}</span>
+              <span class="v4-reg-warn-inline">{{ rosterReason(player) }}</span>
             </span>
             <AccountStatusBadge :text="player.roleTypeText || t('accountEvents.common.member')" />
           </div>

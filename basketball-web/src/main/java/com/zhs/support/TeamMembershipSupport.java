@@ -6,6 +6,7 @@ import com.zhs.dao.BasketTeamJoinApplicationDao;
 import com.zhs.dao.BasketTeamMemberDao;
 import com.zhs.enums.TeamJoinApplicationStatusEnum;
 import com.zhs.enums.TeamMembershipStatusEnum;
+import com.zhs.exception.BusinessReason;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketTeamJoinApplication;
 import com.zhs.model.BasketTeamMember;
@@ -99,15 +100,23 @@ public class TeamMembershipSupport {
     public void assertEligibleToJoinTeam(Long memberId) {
         String reason = resolveJoinIneligibilityReason(memberId);
         if (reason != null) {
-            throw new ServiceException(reason, 403);
+            throw joinBlocked(reason);
         }
     }
 
     public void assertEligibleToJoinTeam(Long memberId, Long divisionId) {
         String reason = resolveJoinIneligibilityReason(memberId, divisionId);
         if (reason != null) {
-            throw new ServiceException(reason, 403);
+            throw joinBlocked(reason);
         }
+    }
+
+    private ServiceException joinBlocked(String reason) {
+        if (BusinessReason.ALREADY_ON_TEAM.message().equals(reason)
+                || "当前账号已加入球队，不能重复加入".equals(reason)) {
+            return new ServiceException(reason, 403, BusinessReason.ALREADY_ON_TEAM.code());
+        }
+        return new ServiceException(reason, 403);
     }
 
     /** @deprecated Legacy slot：仅兼容旧数据读取，新写入请用 division 重载 */
@@ -160,7 +169,7 @@ public class TeamMembershipSupport {
         try {
             teamMemberDao.insert(member);
         } catch (DuplicateKeyException ex) {
-            throw new ServiceException("当前账号已在该赛事加入球队，不能重复加入");
+            throw BusinessReason.ALREADY_ON_TEAM.exception();
         }
     }
 

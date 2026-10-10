@@ -18,6 +18,8 @@ import com.zhs.enums.TeamJoinApplicationStatusEnum;
 import com.zhs.enums.TeamJoinSourceEnum;
 import com.zhs.enums.TeamPublicStatusEnum;
 import com.zhs.enums.TeamStatusEnum;
+import com.zhs.exception.BusinessReason;
+import com.zhs.i18n.NoticeParams;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketPlayerProfile;
@@ -110,7 +112,8 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
 
         businessMessageService.sendSiteMessage(team.getCaptainMemberId(), "球队加入申请",
                 "收到新的加入球队申请", BIZ_TYPE_TEAM_JOIN, application.getId(),
-                "TEAM_JOIN_APPLICATION", String.valueOf(application.getId()));
+                "TEAM_JOIN_APPLICATION", String.valueOf(application.getId()),
+                "TEAM_JOIN_APPLICATION_RECEIVED", NoticeParams.json("teamName", team.getTeamName()));
         Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(Collections.singleton(memberId));
         Map<Long, BasketPlayerProfile> playerProfileMap = loadPlayerProfileMap(Collections.singleton(memberId));
         return toItemResp(application, team, profileMap, playerProfileMap);
@@ -238,7 +241,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
                 .set(BasketTeamJoinApplication::getProcessedTime, now)
                 .set(BasketTeamJoinApplication::getProcessRemark, trimToNull(req.getProcessRemark())));
         if (updated == 0) {
-            throw new ServiceException("申请状态已变更，请刷新后重试");
+            throw BusinessReason.APPLICATION_STATE_CONFLICT.exception();
         }
         application = joinApplicationDao.selectById(applicationPk);
         if (Boolean.TRUE.equals(approve)) {
@@ -247,11 +250,15 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
                     application.getApplicantPlayerId(), TeamJoinSourceEnum.APPLY);
             businessMessageService.sendSiteMessage(application.getApplicantMemberId(), "加入申请已通过",
                     "您的加入球队申请已通过", BIZ_TYPE_TEAM_JOIN, application.getId(),
-                    "TEAM_JOIN_APPLICATION", String.valueOf(application.getId()));
+                    "TEAM_JOIN_APPLICATION", String.valueOf(application.getId()),
+                    "TEAM_JOIN_APPLICATION_APPROVED", NoticeParams.json("teamName", team.getTeamName()));
         } else {
             businessMessageService.sendSiteMessage(application.getApplicantMemberId(), "加入申请已驳回",
                     "您的加入球队申请已被驳回", BIZ_TYPE_TEAM_JOIN, application.getId(),
-                    "TEAM_JOIN_APPLICATION", String.valueOf(application.getId()));
+                    "TEAM_JOIN_APPLICATION", String.valueOf(application.getId()),
+                    "TEAM_JOIN_APPLICATION_REJECTED", NoticeParams.json(
+                            "teamName", team.getTeamName(),
+                            "remark", trimToNull(req.getProcessRemark()) == null ? "" : trimToNull(req.getProcessRemark())));
         }
 
         Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(Collections.singleton(application.getApplicantMemberId()));
@@ -304,7 +311,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         int maxMembers = team.getMaxMemberCount() != null ? team.getMaxMemberCount() : 8;
         int currentMembers = team.getCurrentMemberCount() != null ? team.getCurrentMemberCount() : 0;
         if (currentMembers >= maxMembers) {
-            throw new ServiceException("当前球队成员已满，暂不能申请加入");
+            throw BusinessReason.TEAM_FULL_APPLY.exception();
         }
         return team;
     }
@@ -316,7 +323,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
                 .eq(BasketTeamJoinApplication::getApplicationStatus, TeamJoinApplicationStatusEnum.PENDING.getCode())
                 .eq(BasketTeamJoinApplication::getIsDelete, NOT_DELETED));
         if (count != null && count > 0) {
-            throw new ServiceException("已存在待处理的申请");
+            throw BusinessReason.APPLICATION_PENDING.exception();
         }
     }
 

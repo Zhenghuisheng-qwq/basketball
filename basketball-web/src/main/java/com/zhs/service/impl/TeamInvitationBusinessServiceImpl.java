@@ -19,6 +19,8 @@ import com.zhs.enums.PlatformIdentityStatusEnum;
 import com.zhs.enums.TeamAuditStatusEnum;
 import com.zhs.enums.TeamInvitationStatusEnum;
 import com.zhs.enums.TeamStatusEnum;
+import com.zhs.exception.BusinessReason;
+import com.zhs.i18n.NoticeParams;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketFileAsset;
@@ -144,7 +146,8 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
 
         businessMessageService.sendSiteMessage(inviteeMemberId, "球队邀请",
                 "您收到来自球队「" + team.getTeamName() + "」的邀请",
-                BIZ_TYPE_TEAM_INVITE, invitation.getId(), "TEAM_INVITATION", String.valueOf(invitation.getId()));
+                BIZ_TYPE_TEAM_INVITE, invitation.getId(), "TEAM_INVITATION", String.valueOf(invitation.getId()),
+                "TEAM_INVITATION_RECEIVED", NoticeParams.json("teamName", team.getTeamName()));
         return toItemResp(invitation, team, loadMemberProfileMap(Collections.singleton(inviteeMemberId)), inviteeMemberId);
     }
 
@@ -326,7 +329,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
     private void assertTeamHasCapacity(BasketTeam team) {
         if (team.getMaxMemberCount() != null && team.getCurrentMemberCount() != null
                 && team.getCurrentMemberCount() >= team.getMaxMemberCount()) {
-            throw new ServiceException("球队成员已满");
+            throw BusinessReason.TEAM_FULL.exception();
         }
     }
 
@@ -370,7 +373,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
                 .eq(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.PENDING.getCode())
                 .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED));
         if (count != null && count > 0) {
-            throw new ServiceException("已存在待处理的邀请");
+            throw BusinessReason.INVITATION_PENDING.exception();
         }
     }
 
@@ -402,7 +405,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         if (invitation.getExpireTime() != null && invitation.getExpireTime().before(new Date())) {
             invitation.setInvitationStatus(TeamInvitationStatusEnum.EXPIRED.getCode());
             invitationDao.updateById(invitation);
-            throw new ServiceException("邀请已过期");
+            throw BusinessReason.INVITATION_EXPIRED.exception();
         }
     }
 

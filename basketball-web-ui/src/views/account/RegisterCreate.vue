@@ -235,7 +235,12 @@ function goLogin() {
 
       <label class="form-agreement">
         <input v-model="form.agreed" type="checkbox" />
-        <span>{{ t('auth.agree') }}</span>
+        <span>
+          {{ t('auth.agreeLead') }}
+          <router-link to="/legal/user-agreement">{{ t('auth.userAgreement') }}</router-link>
+          {{ t('auth.agreeAnd') }}
+          <router-link to="/legal/privacy">{{ t('auth.privacyPolicy') }}</router-link>
+        </span>
       </label>
       <span v-if="submitted && errors.agreed" class="form-field__error">{{ label(errors.agreed) }}</span>
       <p v-if="errors.form" class="form-field__error">{{ label(errors.form) }}</p>

@@ -9,6 +9,7 @@ import com.zhs.enums.v4.MatchPublishStatusEnum;
 import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.enums.v4.SubmissionStatusEnum;
 import com.zhs.enums.v4.SubmitterRoleEnum;
+import com.zhs.exception.BusinessReason;
 import com.zhs.exception.ServiceException;
 import com.zhs.mapper.v4.BasketV4PlayerMatchSubmissionMapper;
 import com.zhs.model.BasketPlayerProfile;
@@ -165,9 +166,9 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         if (submission == null) {
             submission = createNewSubmission(match, ctx, memberId, now);
         } else if (SubmissionStatusEnum.APPROVED.getCode().equals(submission.getSubmissionStatus())) {
-            throw new ServiceException("已通过版本不可编辑");
+            throw BusinessReason.SUBMISSION_NOT_EDITABLE.exception();
         } else if (SubmissionStatusEnum.PENDING_REVIEW.getCode().equals(submission.getSubmissionStatus())) {
-            throw new ServiceException("审核中不可覆盖，请等待审核结果");
+            throw BusinessReason.SUBMISSION_IN_REVIEW.exception();
         }
         if (submission.getSeriesSubmissionId() != null && fullMatchSubmissionSupport.isFullMatchReq(req)) {
             throw new ServiceException("系列赛对局请通过系列赛工作台保存");
@@ -215,7 +216,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         }
         if (!SubmissionStatusEnum.DRAFT.getCode().equals(submission.getSubmissionStatus())
                 && !SubmissionStatusEnum.REJECTED.getCode().equals(submission.getSubmissionStatus())) {
-            throw new ServiceException("当前状态不可提交审核");
+            throw BusinessReason.SUBMISSION_NOT_ALLOWED.exception();
         }
         if (submission.getHomeScore() == null || submission.getAwayScore() == null) {
             throw new ServiceException("请先填写总比分");
@@ -581,7 +582,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
     private BasketV4Match requirePublishedMatch(Long matchId) {
         BasketV4Match match = requireMatch(matchId);
         if (!MatchPublishStatusEnum.PUBLISHED.getCode().equals(match.getPublishStatus())) {
-            throw new ServiceException("仅已发布比赛可提交");
+            throw BusinessReason.MATCH_NOT_PUBLISHED.exception();
         }
         if (MatchStatusEnum.CANCELLED.getCode().equals(match.getMatchStatus())) {
             throw new ServiceException("已取消比赛不可提交");
@@ -613,7 +614,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
                 .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)
                 .last("limit 1"));
         if (profile == null) {
-            throw new ServiceException("当前账号未关联认证球员");
+            throw BusinessReason.PLAYER_NOT_ELIGIBLE.exception();
         }
         return profile;
     }

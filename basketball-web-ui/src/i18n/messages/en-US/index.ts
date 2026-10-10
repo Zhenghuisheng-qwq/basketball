@@ -5,6 +5,8 @@ import accountIdentity from './accountIdentity'
 import accountShell from './accountShell'
 import accountTeam from './accountTeam'
 import auth from './auth'
+import errors from './errors'
+import legal from './legal'
 import common from './common'
 import events from './events'
 import eventsPage from './eventsPage'
@@ -20,6 +22,8 @@ const messages = {
   nav,
   home,
   auth,
+  errors,
+  legal,
   account,
   accountShell,
   accountIdentity,

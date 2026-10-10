@@ -7,6 +7,8 @@
         <result property="messageType" column="message_type" />
         <result property="title" column="title" />
         <result property="contentText" column="content_text" />
+        <result property="templateCode" column="template_code" />
+        <result property="templateParams" column="template_params" />
         <result property="bizType" column="biz_type" />
         <result property="bizId" column="biz_id" />
         <result property="sendScope" column="send_scope" />
@@ -21,7 +23,7 @@
         <result property="updateTime" column="update_time" />
         <result property="isDelete" column="is_delete" />
     </resultMap>    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        insert into basket_message_task (task_no, message_type, title, content_text, biz_type, biz_id, send_scope, send_status, scheduled_time, sent_time, total_count, success_count, fail_count, creator_id, create_time, update_time, is_delete) values (#{taskNo}, #{messageType}, #{title}, #{contentText}, #{bizType}, #{bizId}, #{sendScope}, #{sendStatus}, #{scheduledTime}, #{sentTime}, #{totalCount}, #{successCount}, #{failCount}, #{creatorId}, #{createTime}, #{updateTime}, #{isDelete})
+        insert into basket_message_task (task_no, message_type, title, content_text, biz_type, biz_id, send_scope, send_status, scheduled_time, sent_time, total_count, success_count, fail_count, creator_id, create_time, update_time, is_delete<if test="templateCode != null">, template_code, template_params</if>) values (#{taskNo}, #{messageType}, #{title}, #{contentText}, #{bizType}, #{bizId}, #{sendScope}, #{sendStatus}, #{scheduledTime}, #{sentTime}, #{totalCount}, #{successCount}, #{failCount}, #{creatorId}, #{createTime}, #{updateTime}, #{isDelete}<if test="templateCode != null">, #{templateCode}, #{templateParams}</if>)
     </insert>
 
     <select id="countByBizTypeAndBizId" resultType="int">

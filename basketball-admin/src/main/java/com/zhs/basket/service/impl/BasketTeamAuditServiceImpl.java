@@ -22,6 +22,7 @@ import com.zhs.basket.support.BatchAuditSupport;
 import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.service.IBasketTeamAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.NoticeParams;
 import com.zhs.basket.support.TeamNoGenerator;
 import com.zhs.basket.vo.AccountPlayerDetailVo;
 import com.zhs.basket.vo.TeamAuditDetailVo;
@@ -127,7 +128,8 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
             teamMapper.updateMemberCount(teamId, memberCount);
             writeAudit(team, "APPROVE", team.getAuditStatus(), TeamAuditStatusEnum.APPROVED.getCode(), req.getAuditRemark());
             messageService.sendSiteMessage(team.getCaptainMemberId(), SecurityUtils.getUserId(), "TEAM_AUDIT", teamId,
-                    "球队审核已通过", "您的球队「" + team.getTeamName() + "」已通过审核。");
+                    "球队审核已通过", "您的球队「" + team.getTeamName() + "」已通过审核。",
+                    "TEAM_AUDIT_APPROVED", NoticeParams.json("teamName", team.getTeamName()));
         }
         ensureTeamNo(team);
     }
@@ -143,7 +145,8 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         assertSingleRow(rows, "驳回失败");
         writeAudit(team, "REJECT", team.getAuditStatus(), TeamAuditStatusEnum.REJECTED.getCode(), remark);
         messageService.sendSiteMessage(team.getCaptainMemberId(), SecurityUtils.getUserId(), "TEAM_AUDIT", teamId,
-                "球队审核已驳回", remark);
+                "球队审核已驳回", remark,
+                "TEAM_AUDIT_REJECTED", NoticeParams.json("teamName", team.getTeamName(), "remark", remark));
     }
 
     @Override

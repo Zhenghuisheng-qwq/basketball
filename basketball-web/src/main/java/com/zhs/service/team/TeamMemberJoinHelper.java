@@ -15,6 +15,8 @@ import com.zhs.enums.TeamMemberRoleEnum;
 import com.zhs.enums.TeamMembershipStatusEnum;
 import com.zhs.enums.TeamRosterTypeEnum;
 import com.zhs.enums.TeamStatusEnum;
+import com.zhs.exception.BusinessReason;
+import com.zhs.i18n.NoticeParams;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
@@ -88,7 +90,8 @@ public class TeamMemberJoinHelper {
         closePendingInvitesAndApplications(memberId, team.getId());
         businessMessageService.sendSiteMessage(memberId, "加入球队成功",
                 "您已成功加入球队「" + team.getTeamName() + "」",
-                BIZ_TYPE_TEAM_MEMBER, team.getId(), "TEAM", String.valueOf(team.getId()));
+                BIZ_TYPE_TEAM_MEMBER, team.getId(), "TEAM", String.valueOf(team.getId()),
+                "TEAM_JOIN_SUCCEEDED", NoticeParams.json("teamName", team.getTeamName()));
         return member;
     }
 
@@ -172,7 +175,7 @@ public class TeamMemberJoinHelper {
         BasketTeam latest = teamDao.selectById(team.getId());
         if (latest.getMaxMemberCount() != null && latest.getCurrentMemberCount() != null
                 && latest.getCurrentMemberCount() >= latest.getMaxMemberCount()) {
-            throw new ServiceException("球队成员已满");
+            throw BusinessReason.TEAM_FULL.exception();
         }
     }
 }

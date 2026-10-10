@@ -1,10 +1,37 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from 'axios'
+import { i18n } from '@/i18n'
 import { clearAuthSession, getToken, removeToken } from '@/utils/auth'
+import { resolveBusinessMessage } from '@/utils/apiError'
 
 export interface ApiResult<T = unknown> {
   code: number
   msg?: string
+  reasonCode?: string
   data: T
+}
+
+export class ApiBusinessError extends Error {
+  reasonCode?: string
+
+  constructor(message: string, reasonCode?: string) {
+    super(message)
+    this.name = 'ApiBusinessError'
+    this.reasonCode = reasonCode
+  }
+}
+
+function currentLocale() {
+  return String(i18n.global.locale.value || 'zh-CN')
+}
+
+function messageFor(payload?: ApiResult, status?: number) {
+  return resolveBusinessMessage({
+    reasonCode: payload?.reasonCode,
+    serverMessage: payload?.msg || (status ? `请求失败（${status}）` : ''),
+    locale: currentLocale(),
+    generic: String(i18n.global.t('errors.generic')),
+    translate: (code) => String(i18n.global.t(`errors.${code}`)),
+  })
 }
 
 let handling401 = false
@@ -64,6 +91,9 @@ request.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  const locale = currentLocale()
+  config.headers['X-CNPA-Locale'] = locale
+  config.headers['Accept-Language'] = locale
   return config
 })
 
@@ -74,7 +104,7 @@ request.interceptors.response.use(
       if (payload.code === 401) {
         redirectToLogin()
       }
-      return Promise.reject(new Error(payload.msg || '请求失败'))
+      return Promise.reject(new ApiBusinessError(messageFor(payload), payload.reasonCode))
     }
     return payload as unknown as typeof response
   },
@@ -84,8 +114,10 @@ request.interceptors.response.use(
     if (status === 401) {
       redirectToLogin()
     }
-    const message = payload?.msg || (status ? `请求失败（${status}）` : '网络异常，请检查网络后重试')
-    return Promise.reject(new Error(message))
+    const message = payload
+      ? messageFor(payload, status)
+      : String(i18n.global.t('errors.network'))
+    return Promise.reject(new ApiBusinessError(message, payload?.reasonCode))
   },
 )
 

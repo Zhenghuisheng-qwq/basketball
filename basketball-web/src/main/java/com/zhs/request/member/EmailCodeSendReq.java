@@ -15,4 +15,7 @@ public class EmailCodeSendReq implements Serializable {
 
     @ApiModelProperty(value = "用途：REGISTER / RESET_PASSWORD / CHANGE_EMAIL", required = true)
     private String purpose;
+
+    @ApiModelProperty("可选语言：zh-CN 或 en-US。为空时由请求头决定，仍为空则中文")
+    private String locale;
 }

@@ -3,6 +3,8 @@ import { i18n } from '@/i18n'
 
 const routeTitleKeys: Record<string, string> = {
   Home: 'nav.titles.home',
+  UserAgreement: 'legal.userAgreement.title',
+  PrivacyPolicy: 'legal.privacy.title',
   Tournament: 'nav.titles.events',
   V4SeasonDetail: 'nav.titles.eventDetail',
   V4MatchDetail: 'nav.titles.matchDetail',

@@ -234,6 +234,7 @@ export interface V4PersonalAvailableDivision {
   myRegistrationStatus?: string
   canRegister?: boolean
   cannotRegisterReason?: string
+  cannotRegisterReasonCode?: string
 }
 
 export interface V4MyPersonalRegistration {

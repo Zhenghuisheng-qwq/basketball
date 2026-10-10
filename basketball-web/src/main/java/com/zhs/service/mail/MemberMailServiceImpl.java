@@ -1,7 +1,9 @@
 package com.zhs.service.mail;
 
 import com.zhs.enums.VerifyPurposeEnum;
+import com.zhs.exception.BusinessReason;
 import com.zhs.exception.ServiceException;
+import com.zhs.support.MemberLocaleSupport;
 import com.zhs.util.DataMaskUtil;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
@@ -52,25 +54,31 @@ public class MemberMailServiceImpl implements IMemberMailService {
 
     @Override
     public void sendVerifyCodeMail(String toEmail, String code, String purposeLabel, long expireMinutes) {
-        sendVerificationCode(toEmail, code, purposeLabel, expireMinutes);
+        sendVerificationCode(toEmail, code, purposeLabel, expireMinutes, MemberLocaleSupport.ZH_CN);
     }
 
     @Override
     public void sendVerificationCode(String toEmail, String code, VerifyPurposeEnum scene, long expireMinutes) {
-        sendVerificationCode(toEmail, code, scene == null ? "" : scene.getCode(), expireMinutes);
+        sendVerificationCode(toEmail, code, scene, expireMinutes, MemberLocaleSupport.ZH_CN);
     }
 
-    private void sendVerificationCode(String toEmail, String code, String scene, long expireMinutes) {
+    @Override
+    public void sendVerificationCode(String toEmail, String code, VerifyPurposeEnum scene, long expireMinutes, String locale) {
+        sendVerificationCode(toEmail, code, scene == null ? "" : scene.getCode(), expireMinutes, locale);
+    }
+
+    private void sendVerificationCode(String toEmail, String code, String scene, long expireMinutes, String locale) {
+        String resolvedLocale = MemberLocaleSupport.resolve(locale, null, null);
         if (!isConfigured()) {
             log.error("[member-mail] SMTP not configured, cannot send email to={} scene={}",
                     DataMaskUtil.maskEmail(toEmail), scene);
-            throw new ServiceException("验证码发送失败，请稍后重试");
+            throw BusinessReason.VERIFY_CODE_SEND_FAILED.exception();
         }
         JavaMailSender mailSender = javaMailSenderProvider.getIfAvailable();
         if (mailSender == null) {
             log.error("[member-mail] JavaMailSender missing, cannot send email to={} scene={}",
                     DataMaskUtil.maskEmail(toEmail), scene);
-            throw new ServiceException("验证码发送失败，请稍后重试");
+            throw BusinessReason.VERIFY_CODE_SEND_FAILED.exception();
         }
         String from = resolveFrom();
         try {
@@ -82,16 +90,17 @@ public class MemberMailServiceImpl implements IMemberMailService {
                 helper.setFrom(from);
             }
             helper.setTo(toEmail);
-            helper.setSubject(EmailVerificationMailContent.SUBJECT);
-            helper.setText(EmailVerificationMailContent.html(code, expireMinutes), true);
+            helper.setSubject(EmailVerificationMailContent.subject(resolvedLocale));
+            helper.setText(EmailVerificationMailContent.html(code, expireMinutes, resolvedLocale), true);
             mailSender.send(mimeMessage);
-            log.info("[member-mail] verification email sent to={} scene={}", DataMaskUtil.maskEmail(toEmail), scene);
+            log.info("[member-mail] verification email sent to={} scene={} locale={}",
+                    DataMaskUtil.maskEmail(toEmail), scene, resolvedLocale);
         } catch (ServiceException e) {
             throw e;
         } catch (Exception e) {
             log.error("[member-mail] verification email send failed to={} scene={} ex={}",
                     DataMaskUtil.maskEmail(toEmail), scene, e.getClass().getName());
-            throw new ServiceException("验证码发送失败，请稍后重试");
+            throw BusinessReason.VERIFY_CODE_SEND_FAILED.exception();
         }
     }
 

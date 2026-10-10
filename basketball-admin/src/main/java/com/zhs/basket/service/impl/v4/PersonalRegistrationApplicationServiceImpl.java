@@ -11,6 +11,7 @@ import com.zhs.basket.mapper.v4.BasketPersonalRegistrationMapper;
 import com.zhs.basket.query.v4.BasketPersonalRegistrationQuery;
 import com.zhs.basket.service.v4.IPersonalRegistrationApplicationService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.NoticeParams;
 import com.zhs.basket.support.v4.PersonalRegistrationEligibilitySpecification;
 import com.zhs.basket.support.v4.PersonalRegistrationStatusTransition;
 import com.zhs.basket.vo.v4.BasketPersonalRegistrationDetailVo;
@@ -126,7 +127,9 @@ public class PersonalRegistrationApplicationServiceImpl implements IPersonalRegi
                 "PERSONAL_REGISTRATION",
                 registration.getId(),
                 "个人报名已驳回",
-                "您在「" + divisionLabel + "」的个人报名未通过审核，原因：" + rejectReason);
+                "您在「" + divisionLabel + "」的个人报名未通过审核，原因：" + rejectReason,
+                "PERSONAL_REGISTRATION_REJECTED",
+                NoticeParams.json("divisionName", divisionLabel, "remark", rejectReason));
     }
 
     private BasketPersonalRegistration requireRegistration(Long id) {

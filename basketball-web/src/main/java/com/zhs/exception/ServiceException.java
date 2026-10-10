@@ -8,12 +8,17 @@ public final class ServiceException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 错误码
+     * HTTP / 业务数字码，保持原有 400/401/403 语义。
      */
     private Integer code;
 
     /**
-     * 错误提示
+     * 稳定业务原因码。旧客户端可忽略；前端按此选择文案。
+     */
+    private String reasonCode;
+
+    /**
+     * 错误提示（中文，兼容旧客户端）
      */
     private String message;
 
@@ -37,8 +42,23 @@ public final class ServiceException extends RuntimeException {
         this.code = code;
     }
 
+    public ServiceException(String message, String reasonCode) {
+        this.message = message;
+        this.reasonCode = reasonCode;
+    }
+
+    public ServiceException(String message, Integer code, String reasonCode) {
+        this.message = message;
+        this.code = code;
+        this.reasonCode = reasonCode;
+    }
+
     public Integer getCode() {
         return code;
+    }
+
+    public String getReasonCode() {
+        return reasonCode;
     }
 
     @Override

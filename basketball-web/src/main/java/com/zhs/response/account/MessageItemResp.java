@@ -25,6 +25,12 @@ public class MessageItemResp implements Serializable {
     @ApiModelProperty("消息内容")
     private String content;
 
+    @ApiModelProperty("系统模板编码。历史消息为空时前端保留原文")
+    private String templateCode;
+
+    @ApiModelProperty("模板参数 JSON")
+    private String templateParams;
+
     @ApiModelProperty("关联业务类型")
     private String bizType;
 

@@ -8,6 +8,7 @@ import com.zhs.basket.req.MemberProfileChangeApproveReq;
 import com.zhs.basket.req.MemberProfileChangeRejectReq;
 import com.zhs.basket.service.IBasketMemberProfileChangeService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.NoticeParams;
 import com.zhs.basket.vo.MemberProfileChangeDetailVo;
 import com.zhs.basket.vo.MemberProfileChangeListVo;
 import com.zhs.common.exception.ServiceException;
@@ -84,7 +85,9 @@ public class BasketMemberProfileChangeServiceImpl implements IBasketMemberProfil
                 "MEMBER_PROFILE_CHANGE",
                 id,
                 "资料修改已通过",
-                "你的昵称 / 头像修改已审核通过，公开资料已更新。");
+                "你的昵称 / 头像修改已审核通过，公开资料已更新。",
+                "PROFILE_CHANGE_APPROVED",
+                null);
     }
 
     @Override
@@ -112,7 +115,9 @@ public class BasketMemberProfileChangeServiceImpl implements IBasketMemberProfil
                 "MEMBER_PROFILE_CHANGE",
                 id,
                 "资料修改未通过",
-                "你的资料修改未通过审核：" + req.getAuditRemark().trim());
+                "你的资料修改未通过审核：" + req.getAuditRemark().trim(),
+                "PROFILE_CHANGE_REJECTED",
+                NoticeParams.json("remark", req.getAuditRemark().trim()));
     }
 
     private BasketMemberProfileChange requirePendingChange(Long id) {

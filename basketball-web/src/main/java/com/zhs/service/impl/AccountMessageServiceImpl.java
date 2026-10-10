@@ -263,6 +263,8 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
             resp.setMessageType(task.getMessageType());
             resp.setTitle(task.getTitle());
             resp.setContent(toContentString(task.getContentText()));
+            resp.setTemplateCode(task.getTemplateCode());
+            resp.setTemplateParams(task.getTemplateParams());
             resp.setBizType(task.getBizType());
             resp.setBizId(task.getBizId() == null ? null : String.valueOf(task.getBizId()));
             if (includeTeamInvite && memberId != null) {

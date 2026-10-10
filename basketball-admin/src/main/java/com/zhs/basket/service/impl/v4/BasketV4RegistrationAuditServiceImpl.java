@@ -21,6 +21,7 @@ import com.zhs.basket.query.v4.BasketRegistrationAuditQuery;
 import com.zhs.basket.service.v4.IBasketV4EventSnapshotService;
 import com.zhs.basket.service.v4.IBasketV4RegistrationAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.NoticeParams;
 import com.zhs.basket.support.v4.CaptainGrantRuntimeSupport;
 import com.zhs.basket.support.v4.TeamRegistrationEligibilitySpecification;
 import com.zhs.basket.vo.v4.BasketRegistrationAuditDetailVo;
@@ -189,7 +190,9 @@ public class BasketV4RegistrationAuditServiceImpl implements IBasketV4Registrati
                 "TEAM_REGISTRATION",
                 registration.getId(),
                 "球队报名已驳回",
-                subject + "在「" + divisionLabel + "」的报名未通过审核，原因：" + rejectReason);
+                subject + "在「" + divisionLabel + "」的报名未通过审核，原因：" + rejectReason,
+                "TEAM_REGISTRATION_REJECTED",
+                NoticeParams.json("teamLabel", subject, "divisionName", divisionLabel, "remark", rejectReason));
     }
 
     private void writeAudit(BasketRegistration registration, String action, String beforeStatus, String afterStatus,

@@ -11,6 +11,7 @@ import com.zhs.basket.req.TeamProfileChangeApproveReq;
 import com.zhs.basket.req.TeamProfileChangeRejectReq;
 import com.zhs.basket.service.IBasketTeamProfileChangeService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.NoticeParams;
 import com.zhs.basket.vo.TeamProfileChangeDetailVo;
 import com.zhs.basket.vo.TeamProfileChangeListVo;
 import com.zhs.common.exception.ServiceException;
@@ -89,7 +90,8 @@ public class BasketTeamProfileChangeServiceImpl implements IBasketTeamProfileCha
         String teamName = StringUtils.hasText(change.getNewTeamName()) ? change.getNewTeamName() : team.getTeamName();
         messageService.sendSiteMessage(change.getSubmitUserId(), reviewerId, "TEAM_PROFILE_CHANGE", id,
                 "球队资料变更已通过",
-                "您的球队「" + teamName + "」资料变更已通过审核，正式资料已更新。");
+                "您的球队「" + teamName + "」资料变更已通过审核，正式资料已更新。",
+                "TEAM_PROFILE_CHANGE_APPROVED", NoticeParams.json("teamName", teamName));
     }
 
     @Override
@@ -110,7 +112,9 @@ public class BasketTeamProfileChangeServiceImpl implements IBasketTeamProfileCha
         String teamName = team.getTeamName();
         messageService.sendSiteMessage(change.getSubmitUserId(), reviewerId, "TEAM_PROFILE_CHANGE", id,
                 "球队资料变更未通过",
-                "您的球队「" + teamName + "」资料变更未通过审核，原因：" + req.getAuditRemark().trim());
+                "您的球队「" + teamName + "」资料变更未通过审核，原因：" + req.getAuditRemark().trim(),
+                "TEAM_PROFILE_CHANGE_REJECTED",
+                NoticeParams.json("teamName", teamName, "remark", req.getAuditRemark().trim()));
     }
 
     private BasketTeamProfileChange requirePendingChange(Long id) {

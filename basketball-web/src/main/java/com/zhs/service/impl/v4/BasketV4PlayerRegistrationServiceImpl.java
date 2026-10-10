@@ -12,6 +12,7 @@ import com.zhs.enums.v4.GameModeEnum;
 import com.zhs.enums.v4.CaptainGrantStatusEnum;
 import com.zhs.enums.v4.RegistrationModeEnum;
 import com.zhs.enums.v4.RegistrationStatusEnum;
+import com.zhs.exception.BusinessReason;
 import com.zhs.exception.ServiceException;
 import com.zhs.mapper.v4.BasketV4PlayerRegistrationMapper;
 import com.zhs.model.BasketMemberProfile;
@@ -443,7 +444,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
     private BasketCaptainGrant requireActiveGrant(Long divisionId, Long playerId) {
         BasketCaptainGrant grant = captainGrantSupport.findActiveGrantByDivisionPlayer(divisionId, playerId);
         if (!isGrantUsable(grant, new Date())) {
-            throw new ServiceException("无有效队长授权");
+            throw BusinessReason.NO_CAPTAIN_GRANT.exception();
         }
         return grant;
     }
@@ -705,7 +706,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
                 .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)
                 .last("limit 1"));
         if (profile == null) {
-            throw new ServiceException("当前账号未关联认证球员");
+            throw BusinessReason.PLAYER_NOT_ELIGIBLE.exception();
         }
         return profile;
     }
@@ -730,7 +731,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
             throw new ServiceException("球队状态无效");
         }
         if (!Integer.valueOf(TEAM_AUDIT_APPROVED).equals(team.getAuditStatus())) {
-            throw new ServiceException("球队尚未审核通过");
+            throw BusinessReason.TEAM_NOT_APPROVED.exception();
         }
         return team;
     }
@@ -741,7 +742,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
             throw new ServiceException("球员不存在");
         }
         if (!Integer.valueOf(PLAYER_CERT_APPROVED).equals(profile.getCertificationStatus())) {
-            throw new ServiceException("球员尚未完成认证");
+            throw BusinessReason.PLAYER_NOT_CERTIFIED.exception();
         }
         return profile;
     }
@@ -774,7 +775,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
 
     private void rejectPersonalModeDivision(String mode) {
         if (RegistrationModeEnum.PERSONAL.getCode().equals(mode)) {
-            throw new ServiceException("该 Division 为个人报名模式，请使用个人报名入口");
+            throw BusinessReason.DIVISION_PERSONAL_ONLY.exception();
         }
     }
 

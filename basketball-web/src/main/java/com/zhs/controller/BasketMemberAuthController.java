@@ -12,7 +12,9 @@ import com.zhs.response.member.MemberLoginResp;
 import com.zhs.response.member.MemberRegisterResp;
 import com.zhs.response.member.MemberSessionResp;
 import com.zhs.service.IBasketMemberAuthService;
+import com.zhs.support.AgreementCatalog;
 import com.zhs.support.ClientIpResolver;
+import com.zhs.support.MemberLocaleSupport;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -43,7 +45,34 @@ public class BasketMemberAuthController {
     @ApiOperation("发送邮箱验证码")
     @PostMapping("/email-code/send")
     public R<EmailCodeSendResp> sendEmailCode(@RequestBody EmailCodeSendReq req, HttpServletRequest request) {
+        if (req != null) {
+            req.setLocale(MemberLocaleSupport.resolve(
+                    req.getLocale(),
+                    request.getHeader("X-CNPA-Locale"),
+                    request.getHeader("Accept-Language")));
+        }
         return R.ok(basketMemberAuthService.sendEmailCode(req, clientIpResolver.resolve(request)), "验证码已发送");
+    }
+
+    @NoLoginRequest
+    @ApiOperation("当前协议版本。语言切换不改变同意记录版本。")
+    @GetMapping("/agreements")
+    public R<java.util.List<java.util.Map<String, String>>> agreements() {
+        java.util.List<java.util.Map<String, String>> items = new java.util.ArrayList<>();
+        items.add(agreementMeta(AgreementCatalog.USER_AGREEMENT, AgreementCatalog.USER_AGREEMENT_TITLE, "User Agreement"));
+        items.add(agreementMeta(AgreementCatalog.PRIVACY_POLICY, AgreementCatalog.PRIVACY_POLICY_TITLE, "Privacy Policy"));
+        return R.ok(items);
+    }
+
+    private java.util.Map<String, String> agreementMeta(String type, String titleZh, String titleEn) {
+        java.util.Map<String, String> item = new java.util.LinkedHashMap<>();
+        item.put("agreementType", type);
+        item.put("agreementVersion", AgreementCatalog.VERSION);
+        item.put("titleZh", titleZh);
+        item.put("titleEn", titleEn);
+        item.put("englishReviewStatus", AgreementCatalog.ENGLISH_REVIEW_STATUS);
+        item.put("publishedAt", "");
+        return item;
     }
 
     @NoLoginRequest

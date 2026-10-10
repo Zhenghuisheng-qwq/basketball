@@ -15,6 +15,7 @@ import com.zhs.basket.support.BatchAuditSupport;
 import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.service.IBasketPlayerPlatformChangeService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.NoticeParams;
 import com.zhs.basket.support.PlatformIdentityHistoryWriter;
 import com.zhs.basket.vo.PlayerPlatformChangeDetailVo;
 import com.zhs.basket.vo.PlayerPlatformChangeListVo;
@@ -77,7 +78,8 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
                 req != null ? req.getAuditRemark() : null, now, resultAccountId);
         assertSingleRow(rows, "审核通过失败，状态已变更");
         messageService.sendSiteMessage(request.getMemberId(), reviewerId, "PLATFORM_CHANGE", id,
-                "平台游戏ID变更已通过", "您的平台游戏ID变更申请已通过审核。");
+                "平台游戏ID变更已通过", "您的平台游戏ID变更申请已通过审核。",
+                "PLATFORM_CHANGE_APPROVED", null);
     }
 
     @Override
@@ -93,7 +95,8 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
                 PlatformChangeStatusEnum.REJECTED.getCode(), reviewerId, remark, new Date(), null);
         assertSingleRow(rows, "驳回失败，状态已变更");
         messageService.sendSiteMessage(request.getMemberId(), reviewerId, "PLATFORM_CHANGE", id,
-                "平台游戏ID变更已驳回", "您的平台游戏ID变更申请已被驳回：" + remark);
+                "平台游戏ID变更已驳回", "您的平台游戏ID变更申请已被驳回：" + remark,
+                "PLATFORM_CHANGE_REJECTED", NoticeParams.json("remark", remark));
     }
 
     @Override

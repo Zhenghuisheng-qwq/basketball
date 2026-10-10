@@ -19,6 +19,8 @@ export interface MessageItemDto {
   messageType?: string
   title: string
   content?: string
+  templateCode?: string
+  templateParams?: string
   bizType?: string
   bizId?: string
   readStatus?: number

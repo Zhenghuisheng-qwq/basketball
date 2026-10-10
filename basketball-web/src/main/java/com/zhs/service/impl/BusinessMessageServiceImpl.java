@@ -33,13 +33,31 @@ public class BusinessMessageServiceImpl implements IBusinessMessageService {
     @Transactional(rollbackFor = Exception.class)
     public void sendSiteMessage(Long receiverMemberId, String title, String content,
                                 String bizType, Long bizId, String redirectType, String redirectValue) {
-        sendSiteMessageFrom(receiverMemberId, receiverMemberId, title, content, bizType, bizId, redirectType, redirectValue);
+        sendSiteMessage(receiverMemberId, title, content, bizType, bizId, redirectType, redirectValue, null, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void sendSiteMessage(Long receiverMemberId, String title, String content,
+                                String bizType, Long bizId, String redirectType, String redirectValue,
+                                String templateCode, String templateParams) {
+        sendSiteMessageFrom(receiverMemberId, receiverMemberId, title, content, bizType, bizId,
+                redirectType, redirectValue, templateCode, templateParams);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     public void sendSiteMessageFrom(Long senderMemberId, Long receiverMemberId, String title, String content,
                                     String bizType, Long bizId, String redirectType, String redirectValue) {
+        sendSiteMessageFrom(senderMemberId, receiverMemberId, title, content, bizType, bizId,
+                redirectType, redirectValue, null, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
+    public void sendSiteMessageFrom(Long senderMemberId, Long receiverMemberId, String title, String content,
+                                    String bizType, Long bizId, String redirectType, String redirectValue,
+                                    String templateCode, String templateParams) {
         if (receiverMemberId == null) {
             return;
         }
@@ -49,6 +67,8 @@ public class BusinessMessageServiceImpl implements IBusinessMessageService {
         task.setMessageType(MESSAGE_TYPE_SITE);
         task.setTitle(title);
         task.setContentText(content);
+        task.setTemplateCode(templateCode);
+        task.setTemplateParams(templateParams);
         task.setBizType(bizType);
         task.setBizId(bizId);
         task.setSendScope(SEND_SCOPE_SINGLE);

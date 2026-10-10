@@ -26,4 +26,5 @@ public class V4PersonalAvailableDivisionResp {
     private String myRegistrationStatus;
     private Boolean canRegister;
     private String cannotRegisterReason;
+    private String cannotRegisterReasonCode;
 }

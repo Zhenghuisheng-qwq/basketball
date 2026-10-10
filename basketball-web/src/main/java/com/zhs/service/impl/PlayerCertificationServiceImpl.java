@@ -14,6 +14,7 @@ import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.enums.CertMaterialTypeEnum;
 import com.zhs.enums.MessageReadStatusEnum;
 import com.zhs.enums.PlayerCertStatusEnum;
+import com.zhs.exception.BusinessReason;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketAccountSecurityLog;
 import com.zhs.model.BasketFileAsset;
@@ -298,7 +299,7 @@ public class PlayerCertificationServiceImpl implements IPlayerCertificationServi
                         PlayerCertStatusEnum.SUBMITTED.getCode(),
                         PlayerCertStatusEnum.REVIEWING.getCode()));
         if (reviewingCount != null && reviewingCount > 0) {
-            throw new ServiceException("已存在审核中的申请，请等待审核结果");
+            throw BusinessReason.CERT_APPLICATION_PENDING.exception();
         }
     }
 
@@ -309,10 +310,10 @@ public class PlayerCertificationServiceImpl implements IPlayerCertificationServi
         }
         PlayerCertStatusEnum status = PlayerCertStatusEnum.fromCode(latest.getApplicationStatus());
         if (status == PlayerCertStatusEnum.APPROVED) {
-            throw new ServiceException("您已通过球员认证，无需再次申请");
+            throw BusinessReason.ALREADY_CERTIFIED.exception();
         }
         if (status.isReviewing()) {
-            throw new ServiceException("当前有审核中的申请，无法新建草稿");
+            throw BusinessReason.CERT_APPLICATION_PENDING.exception();
         }
     }
 

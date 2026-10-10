@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { i18n } from '@/i18n'
 import {
   getAccountMessageDetail,
   getAccountMessagePage,
@@ -7,13 +8,21 @@ import {
   markAllAccountMessagesRead,
 } from '@/api/accountMessage'
 import { mapMessageItemToNotification } from '@/utils/accountMappers'
-import type { AccountNotificationItem } from '@/types/accountNotifications'
+import type { MessageItemDto } from '@/api/types/accountMessage'
 import type { NotificationTabKey } from '@/types/accountNotifications'
 
 export const NOTIFICATION_PAGE_SIZE = 10
 
 export const useNotificationCenterStore = defineStore('notificationCenter', () => {
-  const items = ref<AccountNotificationItem[]>([])
+  const records = ref<MessageItemDto[]>([])
+  const localeTick = ref(0)
+  watch(() => i18n.global.locale.value, () => {
+    localeTick.value += 1
+  })
+  const items = computed(() => {
+    void localeTick.value
+    return records.value.map(mapMessageItemToNotification)
+  })
   const allCountValue = ref(0)
   const unreadCountValue = ref(0)
   const allPageNum = ref(1)
@@ -63,19 +72,19 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
         readStatus,
       })
       const data = pageRes.data
-      items.value = (data.records || []).map(mapMessageItemToNotification)
+      records.value = data.records || []
       const tabTotal = data.total || 0
       setTabPageTotal(tab, page, tabTotal)
       allCountValue.value = Number(data.allCount ?? allCountValue.value)
       unreadCountValue.value = Number(data.unreadCount ?? unreadCountValue.value)
       activeTab.value = tab
 
-      if (items.value.length === 0 && tabTotal > 0 && page > 1) {
+      if (records.value.length === 0 && tabTotal > 0 && page > 1) {
         const lastPage = Math.max(1, Math.ceil(tabTotal / size))
         await refresh(lastPage, size, resolveReadStatus(tab), tab)
       }
     } catch (err) {
-      error.value = err instanceof Error ? err.message : '加载失败'
+      error.value = err instanceof Error ? err.message : String(i18n.global.t('accountShell.notifications.loadFailed'))
       throw err
     } finally {
       loading.value = false
@@ -97,21 +106,19 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
 
   async function loadDetail(receiverId: string) {
     const res = await getAccountMessageDetail(receiverId)
-    const mapped = mapMessageItemToNotification(res.data)
-    const existingIndex = items.value.findIndex((item) => item.id === receiverId)
+    const existingIndex = records.value.findIndex((item) => item.receiverId === receiverId)
     if (existingIndex >= 0) {
-      items.value[existingIndex] = mapped
+      records.value[existingIndex] = res.data
     }
-    return mapped
+    return mapMessageItemToNotification(res.data)
   }
 
   async function markAsRead(id: string) {
-    const target = items.value.find((item) => item.id === id)
-    const wasUnread = target?.isUnread ?? true
+    const target = records.value.find((item) => item.receiverId === id)
+    const wasUnread = target ? target.readStatus !== 1 : true
     await markAccountMessageRead(id)
-    if (target && target.isUnread) {
-      target.isUnread = false
-      target.status = 'READ'
+    if (target && target.readStatus !== 1) {
+      target.readStatus = 1
     }
     if (wasUnread) {
       unreadCountValue.value = Math.max(0, unreadCountValue.value - 1)
@@ -139,11 +146,12 @@ export const useNotificationCenterStore = defineStore('notificationCenter', () =
   }
 
   function getById(id: string) {
-    return items.value.find((item) => item.id === id)
+    const record = records.value.find((item) => item.receiverId === id)
+    return record ? mapMessageItemToNotification(record) : undefined
   }
 
   function resetState() {
-    items.value = []
+    records.value = []
     allPageTotal.value = 0
     unreadPageTotal.value = 0
     allCountValue.value = 0

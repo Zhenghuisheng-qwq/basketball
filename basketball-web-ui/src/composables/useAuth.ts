@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { translate } from '@/i18n'
+import { ApiBusinessError } from '@/api/request'
 import { useUserStore } from '@/stores/user'
 import { useAccountStore } from '@/stores/account'
 import { useNotificationCenterStore } from '@/stores/notificationCenter'
@@ -11,7 +12,14 @@ export interface AuthLoginResult {
   errorCode?: 'INVALID_CREDENTIALS' | 'ACCOUNT_NOT_FOUND' | 'UNKNOWN'
 }
 
-function mapError(): AuthLoginResult {
+function mapError(error: unknown): AuthLoginResult {
+  if (error instanceof ApiBusinessError && error.message) {
+    return {
+      success: false,
+      message: error.message,
+      errorCode: error.reasonCode === 'INVALID_CREDENTIALS' ? 'INVALID_CREDENTIALS' : 'UNKNOWN',
+    }
+  }
   return {
     success: false,
     message: translate('auth.loginFailed'),
@@ -66,8 +74,8 @@ export function useAuth() {
       await userStore.loginByPassword(email, password, remember)
       await syncAccountAfterLogin(true)
       return { success: true }
-    } catch {
-      return mapError()
+    } catch (error) {
+      return mapError(error)
     }
   }
 

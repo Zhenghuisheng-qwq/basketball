@@ -34,6 +34,34 @@ const router = createRouter({
 
     {
 
+      path: '/legal/user-agreement',
+
+      name: 'UserAgreement',
+
+      component: () => import('@/views/legal/LegalDocumentView.vue'),
+
+      props: { kind: 'userAgreement' },
+
+      meta: { title: '用户协议' },
+
+    },
+
+    {
+
+      path: '/legal/privacy',
+
+      name: 'PrivacyPolicy',
+
+      component: () => import('@/views/legal/LegalDocumentView.vue'),
+
+      props: { kind: 'privacy' },
+
+      meta: { title: '隐私政策' },
+
+    },
+
+    {
+
       path: '/tournament',
 
       name: 'Tournament',

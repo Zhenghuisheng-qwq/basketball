@@ -13,6 +13,7 @@ import com.zhs.enums.v4.DivisionStatusEnum;
 import com.zhs.enums.v4.PersonalAuditActionEnum;
 import com.zhs.enums.v4.PersonalRegistrationStatusEnum;
 import com.zhs.enums.v4.RegistrationModeEnum;
+import com.zhs.exception.BusinessReason;
 import com.zhs.exception.ServiceException;
 import com.zhs.mapper.v4.BasketV4PersonalRegistrationMapper;
 import com.zhs.model.BasketPlayerPlatformAccount;
@@ -194,15 +195,15 @@ public class BasketV4PersonalRegistrationServiceImpl implements IBasketV4Persona
     private void enrichAvailability(V4PersonalAvailableDivisionResp row, Long playerId, Date now) {
         row.setCanRegister(false);
         if (row.getRegistrationStartTime() != null && row.getRegistrationStartTime().after(now)) {
-            row.setCannotRegisterReason("报名尚未开始");
+            markUnavailable(row, BusinessReason.REGISTRATION_NOT_STARTED);
             return;
         }
         if (row.getRegistrationEndTime() != null && row.getRegistrationEndTime().before(now)) {
-            row.setCannotRegisterReason("报名已结束");
+            markUnavailable(row, BusinessReason.REGISTRATION_CLOSED);
             return;
         }
         if (row.getRemainingPersonCount() != null && row.getRemainingPersonCount() <= 0) {
-            row.setCannotRegisterReason("名额已满");
+            markUnavailable(row, BusinessReason.QUOTA_FULL);
             return;
         }
         try {
@@ -210,20 +211,29 @@ public class BasketV4PersonalRegistrationServiceImpl implements IBasketV4Persona
             requirePlatformIdentity(playerId, row.getPlatformCode());
         } catch (ServiceException ex) {
             row.setCannotRegisterReason(ex.getMessage());
+            row.setCannotRegisterReasonCode(ex.getReasonCode() == null
+                    ? BusinessReason.PLAYER_NOT_ELIGIBLE.code() : ex.getReasonCode());
             return;
         }
         if (PersonalRegistrationStatusEnum.PENDING_REVIEW.getCode().equals(row.getMyRegistrationStatus())) {
-            row.setCannotRegisterReason("已有审核中的个人报名");
+            markUnavailable(row, BusinessReason.PERSONAL_REVIEW_PENDING);
             return;
         }
         if (PersonalRegistrationStatusEnum.APPROVED.getCode().equals(row.getMyRegistrationStatus())
                 || PersonalRegistrationStatusEnum.ASSIGNED.getCode().equals(row.getMyRegistrationStatus())
                 || PersonalRegistrationStatusEnum.CONVERTED.getCode().equals(row.getMyRegistrationStatus())) {
-            row.setCannotRegisterReason("已完成个人报名");
+            markUnavailable(row, BusinessReason.PERSONAL_ALREADY_DONE);
             return;
         }
         row.setCanRegister(true);
         row.setCannotRegisterReason(null);
+        row.setCannotRegisterReasonCode(null);
+    }
+
+    private void markUnavailable(V4PersonalAvailableDivisionResp row, BusinessReason reason) {
+        row.setCanRegister(false);
+        row.setCannotRegisterReason(reason.message());
+        row.setCannotRegisterReasonCode(reason.code());
     }
 
     private BasketPersonalRegistration findActiveRegistration(Long divisionId, Long playerId) {
@@ -256,10 +266,10 @@ public class BasketV4PersonalRegistrationServiceImpl implements IBasketV4Persona
             throw new ServiceException("Division 不存在");
         }
         if (!RegistrationModeEnum.PERSONAL.getCode().equals(division.getRegistrationMode())) {
-            throw new ServiceException("该 Division 不支持个人报名");
+            throw BusinessReason.DIVISION_NOT_PERSONAL.exception();
         }
         if (!DivisionStatusEnum.REGISTRATION_OPEN.getCode().equals(division.getDivisionStatus())) {
-            throw new ServiceException("该 Division 尚未开放报名");
+            throw BusinessReason.REGISTRATION_NOT_OPEN.exception();
         }
         return division;
     }
@@ -267,10 +277,10 @@ public class BasketV4PersonalRegistrationServiceImpl implements IBasketV4Persona
     private void validateRegistrationWindow(BasketDivision division) {
         Date now = new Date();
         if (division.getRegistrationStartTime() != null && division.getRegistrationStartTime().after(now)) {
-            throw new ServiceException("报名尚未开始");
+            throw BusinessReason.REGISTRATION_NOT_STARTED.exception();
         }
         if (division.getRegistrationEndTime() != null && division.getRegistrationEndTime().before(now)) {
-            throw new ServiceException("报名已结束");
+            throw BusinessReason.REGISTRATION_CLOSED.exception();
         }
     }
 
@@ -286,14 +296,14 @@ public class BasketV4PersonalRegistrationServiceImpl implements IBasketV4Persona
                         PersonalRegistrationStatusEnum.WITHDRAWN.getCode(),
                         PersonalRegistrationStatusEnum.REJECTED.getCode()));
         if (count != null && count >= division.getMaxPersonCount()) {
-            throw new ServiceException("个人报名名额已满");
+            throw BusinessReason.PERSONAL_QUOTA_FULL.exception();
         }
     }
 
     private void assertNoDuplicatePersonal(Long divisionId, Long playerId, Long excludeId) {
         BasketPersonalRegistration active = findActiveRegistration(divisionId, playerId);
         if (active != null && !active.getId().equals(excludeId)) {
-            throw new ServiceException("您已在该 Division 提交个人报名");
+            throw BusinessReason.PERSONAL_REGISTRATION_EXISTS.exception();
         }
     }
 
@@ -303,7 +313,7 @@ public class BasketV4PersonalRegistrationServiceImpl implements IBasketV4Persona
                 .eq(BasketRegistrationPlayer::getPlayerId, playerId)
                 .eq(BasketRegistrationPlayer::getIsDelete, NOT_DELETED));
         if (count != null && count > 0) {
-            throw new ServiceException("您已通过球队报名参与该 Division，不能重复个人报名");
+            throw BusinessReason.ALREADY_TEAM_REGISTERED.exception();
         }
     }
 
@@ -321,7 +331,7 @@ public class BasketV4PersonalRegistrationServiceImpl implements IBasketV4Persona
                 .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)
                 .last("limit 1"));
         if (profile == null) {
-            throw new ServiceException("当前账号未关联认证球员");
+            throw BusinessReason.PLAYER_NOT_ELIGIBLE.exception();
         }
         return profile;
     }
@@ -332,7 +342,7 @@ public class BasketV4PersonalRegistrationServiceImpl implements IBasketV4Persona
             throw new ServiceException("球员不存在");
         }
         if (!Integer.valueOf(PLAYER_CERT_APPROVED).equals(profile.getCertificationStatus())) {
-            throw new ServiceException("球员尚未完成认证");
+            throw BusinessReason.PLAYER_NOT_CERTIFIED.exception();
         }
         return profile;
     }

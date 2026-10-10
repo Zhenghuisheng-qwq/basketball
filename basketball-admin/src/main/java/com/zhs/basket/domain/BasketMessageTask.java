@@ -10,6 +10,8 @@ public class BasketMessageTask {
     private String messageType;
     private String title;
     private String contentText;
+    private String templateCode;
+    private String templateParams;
     private String bizType;
     private Long bizId;
     private String sendScope;

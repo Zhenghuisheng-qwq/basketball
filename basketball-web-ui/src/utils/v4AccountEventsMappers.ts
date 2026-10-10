@@ -131,7 +131,11 @@ export function mapV4PersonalDivisionToAvailableEvent(item: V4PersonalAvailableD
     eligibilityStatus: canRegister ? 'ELIGIBLE' : 'APPLIED',
     actionText,
     actionType,
-    disabledReason: item.cannotRegisterReason,
+    disabledReason: item.canRegister
+      ? undefined
+      : (item.cannotRegisterReasonCode
+        ? teamRegistrationEntryActionText(item.cannotRegisterReasonCode, item.cannotRegisterReason)
+        : item.cannotRegisterReason),
     canRegister,
     registrationStatus: item.myRegistrationStatus,
   }
@@ -198,12 +202,27 @@ function teamRegistrationEntryActionText(reasonCode?: string, reasonMessage?: st
     case 'REGISTRATION_CLOSED':
       return translate('accountEvents.common.registrationClosed')
     case 'NOT_STARTED':
+    case 'REGISTRATION_NOT_STARTED':
       return translate('accountEvents.common.registrationNotStarted')
     case 'ALREADY_PENDING':
     case 'ALREADY_APPROVED':
       return translate('accountEvents.common.viewRegistration')
     case 'QUOTA_FULL':
+    case 'PERSONAL_QUOTA_FULL':
       return translate('accountEvents.common.quotaFull')
+    case 'PLAYER_NOT_ELIGIBLE':
+    case 'PLAYER_NOT_CERTIFIED':
+      return translate('errors.PLAYER_NOT_CERTIFIED')
+    case 'PERSONAL_REGISTRATION_EXISTS':
+    case 'PERSONAL_REVIEW_PENDING':
+    case 'APPLICATION_PENDING':
+      return translate('errors.APPLICATION_PENDING')
+    case 'ALREADY_TEAM_REGISTERED':
+      return translate('errors.ALREADY_TEAM_REGISTERED')
+    case 'PERSONAL_ALREADY_DONE':
+      return translate('accountEvents.common.approved')
+    case 'REGISTRATION_NOT_OPEN':
+      return translate('errors.REGISTRATION_NOT_OPEN')
     default:
       return reasonMessage ? translate('accountEvents.common.cannotRegister') : translate('accountEvents.common.cannotRegister')
   }

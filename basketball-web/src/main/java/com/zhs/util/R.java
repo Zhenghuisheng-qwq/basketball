@@ -1,5 +1,7 @@
 package com.zhs.util;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.io.Serializable;
 
 /**
@@ -22,6 +24,10 @@ public class R<T> implements Serializable {
 	private int code;
 
 	private String msg;
+
+	/** 稳定业务原因码。成功响应不输出该字段。 */
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	private String reasonCode;
 
 	private T data;
 
@@ -79,6 +85,14 @@ public class R<T> implements Serializable {
 
 	public void setMsg(String msg) {
 		this.msg = msg;
+	}
+
+	public String getReasonCode() {
+		return reasonCode;
+	}
+
+	public void setReasonCode(String reasonCode) {
+		this.reasonCode = reasonCode;
 	}
 
 	public T getData() {

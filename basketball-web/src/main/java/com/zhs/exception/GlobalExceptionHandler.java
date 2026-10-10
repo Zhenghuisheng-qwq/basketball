@@ -17,16 +17,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ServiceException.class)
     public ResponseEntity<R<?>> handleServiceException(ServiceException e) {
         Integer code = e.getCode();
+        int bodyCode = code == null ? 400 : code;
+        R<?> body = R.fail(bodyCode, e.getMessage());
+        body.setReasonCode(e.getReasonCode());
         if (code != null && code == 401) {
-            return ResponseEntity.status(401).body(R.fail(401, e.getMessage()));
+            return ResponseEntity.status(401).body(body);
         }
         if (code != null && code == 403) {
-            return ResponseEntity.status(403).body(R.fail(403, e.getMessage()));
+            return ResponseEntity.status(403).body(body);
         }
-        if (code != null) {
-            return ResponseEntity.ok(R.fail(code, e.getMessage()));
-        }
-        return ResponseEntity.ok(R.fail(400, e.getMessage()));
+        return ResponseEntity.ok(body);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

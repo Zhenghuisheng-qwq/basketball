@@ -1,0 +1,90 @@
+package com.zhs.exception;
+
+/**
+ * 稳定业务原因码。中文 message 保持原接口文案，供旧客户端继续读取。
+ */
+public enum BusinessReason {
+    INVALID_CREDENTIALS("邮箱或密码错误"),
+    ACCOUNT_DISABLED("账号已被禁用"),
+    ACCOUNT_LOCKED("账号已锁定，请稍后再试"),
+    LOGIN_TEMPORARILY_LOCKED("登录失败次数过多，请稍后再试"),
+    EMAIL_NOT_VERIFIED("邮箱尚未验证"),
+    PASSWORD_REQUIRED("密码不能为空"),
+    CURRENT_PASSWORD_REQUIRED("请输入当前密码"),
+    PASSWORD_INCORRECT("当前密码不正确"),
+    PASSWORD_UNCHANGED("新密码不能与当前密码相同"),
+    PASSWORD_LENGTH_INVALID("密码长度应为 8 至 20 位"),
+    PASSWORD_COMPLEXITY("密码需同时包含字母和数字"),
+    PASSWORD_MISMATCH("两次输入的密码不一致"),
+    EMAIL_REQUIRED("邮箱不能为空"),
+    EMAIL_INVALID("邮箱格式不正确"),
+    EMAIL_ALREADY_REGISTERED("邮箱已注册"),
+    EMAIL_TAKEN("新邮箱已被占用"),
+    EMAIL_UNCHANGED("新邮箱不能与当前邮箱相同"),
+    AGREEMENT_REQUIRED("请先阅读并同意用户协议与隐私政策"),
+    VERIFY_CODE_TOO_FREQUENT("验证码发送过于频繁，请稍后再试"),
+    VERIFY_CODE_DAILY_LIMIT("今日验证码发送次数已达上限"),
+    VERIFY_CODE_IP_LIMIT("当前网络发送过于频繁，请稍后再试"),
+    VERIFY_CODE_SEND_FAILED("验证码发送失败，请稍后重试"),
+    VERIFY_CODE_REQUIRED("验证码流水号不能为空"),
+    VERIFY_CODE_INVALID("验证码错误或已过期"),
+    VERIFY_CODE_FORMAT_INVALID("验证码格式不正确"),
+    VERIFY_CODE_EXPIRED("验证码已过期，请重新获取"),
+    VERIFY_CODE_TOO_MANY_FAILURES("验证码错误次数过多，请重新获取"),
+    VERIFY_CODE_MISMATCH("验证码错误"),
+    VERIFY_CODE_USED("验证码已失效"),
+    SESSION_EXPIRED("登录已过期"),
+    UNAUTHORIZED("未登录"),
+    ACCOUNT_NOT_FOUND("账号不存在"),
+    INVALID_REQUEST("请求参数不能为空"),
+    TEAM_FULL("球队成员已满"),
+    TEAM_FULL_APPLY("当前球队成员已满，暂不能申请加入"),
+    APPLICATION_PENDING("已存在待处理的申请"),
+    INVITATION_PENDING("已存在待处理的邀请"),
+    INVITATION_EXPIRED("邀请已过期"),
+    NO_CAPTAIN_GRANT("无有效队长授权"),
+    REGISTRATION_NOT_STARTED("报名尚未开始"),
+    REGISTRATION_CLOSED("报名已结束"),
+    REGISTRATION_NOT_OPEN("该 Division 尚未开放报名"),
+    QUOTA_FULL("名额已满"),
+    PERSONAL_QUOTA_FULL("个人报名名额已满"),
+    PLAYER_NOT_ELIGIBLE("当前账号未关联认证球员"),
+    PLAYER_NOT_CERTIFIED("球员尚未完成认证"),
+    PERSONAL_REGISTRATION_EXISTS("您已在该 Division 提交个人报名"),
+    ALREADY_TEAM_REGISTERED("您已通过球队报名参与该 Division，不能重复个人报名"),
+    PERSONAL_REVIEW_PENDING("已有审核中的个人报名"),
+    PERSONAL_ALREADY_DONE("已完成个人报名"),
+    DIVISION_NOT_PERSONAL("该 Division 不支持个人报名"),
+    DIVISION_PERSONAL_ONLY("该 Division 为个人报名模式，请使用个人报名入口"),
+    TEAM_NOT_APPROVED("球队尚未审核通过"),
+    ALREADY_ON_TEAM("当前账号已在该赛事加入球队，不能重复加入"),
+    CERT_APPLICATION_PENDING("已存在审核中的申请，请等待审核结果"),
+    ALREADY_CERTIFIED("您已通过球员认证，无需再次申请"),
+    APPLICATION_STATE_CONFLICT("申请状态已变更，请刷新后重试"),
+    SUBMISSION_NOT_EDITABLE("已通过版本不可编辑"),
+    SUBMISSION_IN_REVIEW("审核中不可覆盖，请等待审核结果"),
+    SUBMISSION_NOT_ALLOWED("当前状态不可提交审核"),
+    MATCH_NOT_PUBLISHED("仅已发布比赛可提交");
+
+    private final String message;
+
+    BusinessReason(String message) {
+        this.message = message;
+    }
+
+    public String code() {
+        return name();
+    }
+
+    public String message() {
+        return message;
+    }
+
+    public ServiceException exception() {
+        return new ServiceException(message, name());
+    }
+
+    public ServiceException exception(int httpCode) {
+        return new ServiceException(message, httpCode, name());
+    }
+}

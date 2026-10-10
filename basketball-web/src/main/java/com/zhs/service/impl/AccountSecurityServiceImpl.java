@@ -8,6 +8,7 @@ import com.zhs.dao.BasketAccountSecurityLogDao;
 import com.zhs.dao.BasketLoginLogDao;
 import com.zhs.dao.BasketMemberAccountDao;
 import com.zhs.enums.MemberAccountStatusEnum;
+import com.zhs.exception.BusinessReason;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketAccountSecurityLog;
 import com.zhs.model.BasketLoginLog;
@@ -90,27 +91,27 @@ public class AccountSecurityServiceImpl implements IAccountSecurityService {
     @Transactional(rollbackFor = Exception.class)
     public AccountChangePasswordResp changePassword(AccountChangePasswordReq req, String clientIp, String terminalType, String currentToken) {
         if (req == null) {
-            throw new ServiceException("请求参数不能为空");
+            throw BusinessReason.INVALID_REQUEST.exception();
         }
         if (!StringUtils.hasText(req.getOldPassword())) {
-            throw new ServiceException("请输入当前密码");
+            throw BusinessReason.CURRENT_PASSWORD_REQUIRED.exception();
         }
         validatePasswordPair(req.getNewPassword(), req.getConfirmPassword());
 
         Long memberId = UserContext.getRequiredUserId();
         BasketMemberAccount account = memberAccountDao.selectById(memberId);
         if (account == null || !NOT_DELETED.equals(account.getIsDelete())) {
-            throw new ServiceException("账号不存在");
+            throw BusinessReason.ACCOUNT_NOT_FOUND.exception();
         }
         if (!MemberAccountStatusEnum.isNormal(account.getAccountStatus())) {
-            throw new ServiceException("账号已被禁用");
+            throw BusinessReason.ACCOUNT_DISABLED.exception();
         }
         if (!StringUtils.hasText(account.getPasswordHash())
                 || !passwordEncoder.matches(req.getOldPassword(), account.getPasswordHash())) {
-            throw new ServiceException("当前密码不正确");
+            throw BusinessReason.PASSWORD_INCORRECT.exception();
         }
         if (passwordEncoder.matches(req.getNewPassword(), account.getPasswordHash())) {
-            throw new ServiceException("新密码不能与当前密码相同");
+            throw BusinessReason.PASSWORD_UNCHANGED.exception();
         }
 
         Date now = new Date();
@@ -145,16 +146,16 @@ public class AccountSecurityServiceImpl implements IAccountSecurityService {
 
     private void validatePasswordPair(String password, String confirmPassword) {
         if (!StringUtils.hasText(password)) {
-            throw new ServiceException("密码不能为空");
+            throw BusinessReason.PASSWORD_REQUIRED.exception();
         }
         if (password.length() < 8 || password.length() > 20) {
-            throw new ServiceException("密码长度应为 8 至 20 位");
+            throw BusinessReason.PASSWORD_LENGTH_INVALID.exception();
         }
         if (!password.matches(".*[A-Za-z].*") || !password.matches(".*\\d.*")) {
-            throw new ServiceException("密码需同时包含字母和数字");
+            throw BusinessReason.PASSWORD_COMPLEXITY.exception();
         }
         if (!password.equals(confirmPassword)) {
-            throw new ServiceException("两次输入的密码不一致");
+            throw BusinessReason.PASSWORD_MISMATCH.exception();
         }
     }
 

@@ -47,6 +47,12 @@ public class BasketMessageTask implements Serializable {
     @ApiModelProperty(value = "消息内容")
     private Object contentText;
 
+    @ApiModelProperty(value = "系统通知模板编码，历史消息为空")
+    private String templateCode;
+
+    @ApiModelProperty(value = "模板参数 JSON")
+    private String templateParams;
+
     @ApiModelProperty(value = "关联业务类型")
     private String bizType;
 

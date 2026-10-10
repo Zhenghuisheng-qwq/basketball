@@ -70,8 +70,8 @@ const seriesLinks = [
       <div class="footer-bottom">
         <span>{{ t('nav.footer.copyright') }}</span>
         <div class="footer-links">
-          <span class="footer-plain">{{ t('nav.footer.privacy') }}</span>
-          <span class="footer-plain">{{ t('nav.footer.terms') }}</span>
+          <router-link to="/legal/privacy">{{ t('nav.footer.privacy') }}</router-link>
+          <router-link to="/legal/user-agreement">{{ t('nav.footer.terms') }}</router-link>
         </div>
       </div>
     </div>
