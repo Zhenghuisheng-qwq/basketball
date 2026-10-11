@@ -3,7 +3,7 @@
 # 或环境变量：SPRING_PROFILES_ACTIVE=prod,druid
 
 ruoyi:
-  profile: ${RUOYI_UPLOAD_PATH:/home/jsj/uploadPath}
+  profile: /home/jsj/uploadPath
   addressEnabled: false
 
 server:
@@ -20,18 +20,18 @@ spring:
       enabled: false
   data:
     redis:
-      host: ${CNPA_REDIS_HOST}
-      port: ${CNPA_REDIS_PORT:6379}
-      password: ${CNPA_REDIS_PASSWORD:}
+      host: 127.0.0.1
+      port: 6379
+      password: 'CnpaRedis@2026#Cache!'
       database: 0
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driverClassName: com.mysql.cj.jdbc.Driver
     druid:
       master:
-        url: ${CNPA_DATASOURCE_URL}
-        username: ${CNPA_DATASOURCE_USERNAME}
-        password: ${CNPA_DATASOURCE_PASSWORD}
+        url: jdbc:mysql://127.0.0.1:3306/basketball?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+        username: root
+        password: zlzcnpa2026@@qaq
       slave:
         enabled: false
       initialSize: 5
@@ -66,7 +66,7 @@ token:
   # 令牌自定义标识
   header: Authorization
   # 令牌密钥（HS512需要至少64字节/512位）
-  secret: ${CNPA_ADMIN_TOKEN_SECRET}
+  secret: abcdefghijklmnopqrstuvwxyz123456ABCDEFGHIJKLMNOPQRSTUVWXYZ78901234
   # 令牌有效期（默认30分钟）
   expireTime: 30
 
@@ -83,8 +83,8 @@ cnpa:
 # 腾讯云 COS（密钥稍后填写；未配置时不影响本地 /common/upload）
 tencent:
   cos:
-    secret-id: ${CNPA_COS_SECRET_ID:}
-    secret-key: ${CNPA_COS_SECRET_KEY:}
+    secret-id: AKIDhJcr8GD1dFqLixFVehZHrGVYQtATvTr4
+    secret-key: 4xgPytgIh5LZbSXQ9ey61iFZgZUO7iBw
     region: ap-shanghai
     bucket: basketball-1453992653
     # 默认访问域名（不含协议）；后续可换成自定义域名
