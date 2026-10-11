@@ -505,7 +505,7 @@ onMounted(() => {
                       homeEventTeamId: item.homeEventTeamId,
                       awayEventTeamId: item.awayEventTeamId,
                     }) }) }}
-                    · {{ item.seriesStatusName || v4MatchSeriesStatusLabel(item.games[0]?.seriesStatus) }}
+                    · {{ v4MatchSeriesStatusLabel(item.seriesStatus || item.games[0]?.seriesStatus) }}
                   </div>
                   <div
                     v-for="game in item.games"

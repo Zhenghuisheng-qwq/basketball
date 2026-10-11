@@ -8,6 +8,7 @@ import {
   v4PublicRoundLabel,
   v4ScheduleStatusLabel,
   v4ScheduleTeamLabel,
+  v4StageLabel,
 } from '@/utils/v4Display'
 import { translate } from '@/i18n'
 import { isValidDateKey } from '@/utils/scheduleDateKey'
@@ -29,6 +30,13 @@ export type ScheduleScoreView = {
 
 function upper(value?: string | null): string {
   return String(value || '').trim().toUpperCase()
+}
+
+function forfeitSideLabel(winnerId?: string | number | null, sideId?: string | number | null): string | undefined {
+  if (winnerId == null || sideId == null || String(winnerId) === '') return undefined
+  return String(winnerId) === String(sideId)
+    ? translate('eventsPage.match.forfeitWin')
+    : translate('match.forfeitLoss')
 }
 
 export function isScheduleSeries(item: V4PublicScheduleItem): boolean {
@@ -107,7 +115,7 @@ export function formatRoundLine(item: V4PublicScheduleItem): string {
 }
 
 export function formatStageLine(item: V4PublicScheduleItem): string {
-  return String(item.stageName || '').trim()
+  return v4StageLabel(undefined, item.stageName)
 }
 
 export function formatStageRoundBlock(item: V4PublicScheduleItem): { stage: string; round: string } {
@@ -216,7 +224,7 @@ export function scheduleScoreView(item: V4PublicScheduleItem): ScheduleScoreView
         kind: forfeited ? 'forfeit' : 'score',
         left: series.away,
         right: series.home,
-        caption: forfeited ? (item.resultReason || translate('match.forfeit')) : (isScheduleLive(item) ? translate('match.live') : ''),
+        caption: forfeited ? translate('match.forfeit') : (isScheduleLive(item) ? translate('match.live') : ''),
       }
     }
     return { kind: 'vs' }
@@ -228,9 +236,9 @@ export function scheduleScoreView(item: V4PublicScheduleItem): ScheduleScoreView
       kind: 'forfeit',
       left: hasScore ? Number(item.awayScore) : undefined,
       right: hasScore ? Number(item.homeScore) : undefined,
-      leftLabel: item.awayResultLabel || undefined,
-      rightLabel: item.homeResultLabel || undefined,
-      caption: item.resultReason || translate('match.forfeit'),
+      leftLabel: forfeitSideLabel(item.winnerEventTeamId, item.awayEventTeamId),
+      rightLabel: forfeitSideLabel(item.winnerEventTeamId, item.homeEventTeamId),
+      caption: translate('match.forfeit'),
     }
   }
 

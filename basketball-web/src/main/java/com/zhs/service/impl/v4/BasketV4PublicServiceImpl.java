@@ -1389,7 +1389,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             } else if (vo.getHomeSourceDisplay() != null && !vo.getHomeSourceDisplay().isBlank()) {
                 vo.setHomeTeamName(vo.getHomeSourceDisplay());
             } else {
-                vo.setHomeTeamName("待定");
+                vo.setHomeTeamName(null);
             }
             if (away != null) {
                 vo.setAwayTeamName(away.getTeamNameSnapshot());
@@ -1398,7 +1398,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             } else if (vo.getAwaySourceDisplay() != null && !vo.getAwaySourceDisplay().isBlank()) {
                 vo.setAwayTeamName(vo.getAwaySourceDisplay());
             } else {
-                vo.setAwayTeamName("待定");
+                vo.setAwayTeamName(null);
             }
             com.zhs.support.v4.EventTeamPublicDisplaySupport.fillMatch(vo, match, home, away);
             result.add(vo);

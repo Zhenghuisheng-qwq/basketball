@@ -447,12 +447,12 @@ public class V4MatchSeriesDisplaySupport {
             if (series.getHomeSourceDisplay() != null && !series.getHomeSourceDisplay().isBlank()) {
                 vo.setHomeTeamName(series.getHomeSourceDisplay());
             } else {
-                vo.setHomeTeamName("待定");
+                vo.setHomeTeamName(null);
             }
             if (series.getAwaySourceDisplay() != null && !series.getAwaySourceDisplay().isBlank()) {
                 vo.setAwayTeamName(series.getAwaySourceDisplay());
             } else {
-                vo.setAwayTeamName("待定");
+                vo.setAwayTeamName(null);
             }
             return;
         }
@@ -465,8 +465,7 @@ public class V4MatchSeriesDisplaySupport {
         } else if (series.getHomeSourceDisplay() != null && !series.getHomeSourceDisplay().isBlank()) {
             vo.setHomeTeamName(series.getHomeSourceDisplay());
         } else {
-            vo.setHomeTeamName(series.getHomeSourceDisplay() != null && !series.getHomeSourceDisplay().isBlank()
-                    ? series.getHomeSourceDisplay() : "待定");
+            vo.setHomeTeamName(blankToNull(series.getHomeSourceDisplay()));
         }
         BasketEventTeam away = map.get(series.getAwayEventTeamId());
         if (away != null) {
@@ -477,8 +476,7 @@ public class V4MatchSeriesDisplaySupport {
         } else if (series.getAwaySourceDisplay() != null && !series.getAwaySourceDisplay().isBlank()) {
             vo.setAwayTeamName(series.getAwaySourceDisplay());
         } else {
-            vo.setAwayTeamName(series.getAwaySourceDisplay() != null && !series.getAwaySourceDisplay().isBlank()
-                    ? series.getAwaySourceDisplay() : "待定");
+            vo.setAwayTeamName(blankToNull(series.getAwaySourceDisplay()));
         }
         BasketEventTeam winner = map.get(series.getWinnerEventTeamId());
         if (winner != null) {
@@ -788,9 +786,9 @@ public class V4MatchSeriesDisplaySupport {
         BasketEventTeam homeTeam = homeId != null ? teamMap.get(homeId) : null;
         BasketEventTeam awayTeam = awayId != null ? teamMap.get(awayId) : null;
         item.setHomeTeam(homeTeam != null ? homeTeam.getTeamNameSnapshot()
-                : (blankToNull(series.getHomeSourceDisplay()) != null ? series.getHomeSourceDisplay() : "待定"));
+                : blankToNull(series.getHomeSourceDisplay()));
         item.setAwayTeam(awayTeam != null ? awayTeam.getTeamNameSnapshot()
-                : (blankToNull(series.getAwaySourceDisplay()) != null ? series.getAwaySourceDisplay() : "待定"));
+                : blankToNull(series.getAwaySourceDisplay()));
         item.setBestOf(series.getBestOf());
         int[] displayWins = resolveDisplayWinCounts(series);
         int homeWins = displayWins[0];
@@ -845,11 +843,11 @@ public class V4MatchSeriesDisplaySupport {
             item.setAwayTeam(away.getTeamNameSnapshot());
             fillScheduleTeamIdentity(item, away, false);
         }
-        if (item.getHomeTeam() == null || item.getHomeTeam().isBlank()) {
-            item.setHomeTeam("待定");
+        if (item.getHomeTeam() != null && item.getHomeTeam().isBlank()) {
+            item.setHomeTeam(null);
         }
-        if (item.getAwayTeam() == null || item.getAwayTeam().isBlank()) {
-            item.setAwayTeam("待定");
+        if (item.getAwayTeam() != null && item.getAwayTeam().isBlank()) {
+            item.setAwayTeam(null);
         }
         item.setBestOf(1);
         item.setSeriesScore(null);

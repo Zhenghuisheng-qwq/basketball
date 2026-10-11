@@ -72,6 +72,11 @@ export default {
     TEAM: '球队报名',
     PERSONAL: '个人报名',
   },
+  stageType: {
+    REGULAR: '常规赛',
+    GROUP: '小组赛',
+    KNOCKOUT: '淘汰赛',
+  },
   format: {
     REGULAR_ROUND_ROBIN: '单循环',
     ROUND_ROBIN: '单循环',

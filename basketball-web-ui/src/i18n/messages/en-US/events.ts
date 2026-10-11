@@ -72,6 +72,11 @@ export default {
     TEAM: 'Team entry',
     PERSONAL: 'Individual entry',
   },
+  stageType: {
+    REGULAR: 'Regular season',
+    GROUP: 'Group stage',
+    KNOCKOUT: 'Knockout',
+  },
   format: {
     REGULAR_ROUND_ROBIN: 'Round robin',
     ROUND_ROBIN: 'Round robin',

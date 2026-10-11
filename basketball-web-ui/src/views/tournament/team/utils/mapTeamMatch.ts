@@ -3,7 +3,7 @@ import { translate } from '@/i18n'
 import { isDisqualificationResult } from '@/utils/eventContext'
 import { v4MatchStatusToNumber } from '@/views/events/utils/v4PublicAdapters'
 import { formatDateTime, mapMatchStatus, toNumber } from '@/utils/publicDisplay'
-import { v4BestOfLabel } from '@/utils/v4Display'
+import { v4BestOfLabel, v4MatchSeriesStatusLabel } from '@/utils/v4Display'
 import type { TeamBase, TeamMatchRecord } from '@/types/team'
 
 export function mapV4MatchToTeamRecord(
@@ -20,7 +20,6 @@ export function mapV4MatchToTeamRecord(
   const forfeited = String(item.matchStatus || '').toUpperCase() === 'FORFEITED'
   const finished = status === 'finished' || status === 'live' || forfeited
   const dq = isDisqualificationResult(item.resultType)
-  const sideLabel = isHome ? item.homeResultLabel : item.awayResultLabel
   let result: TeamMatchRecord['result']
   if (finished && String(item.winnerEventTeamId || '') === String(eventTeamId)) {
     result = 'win'
@@ -28,7 +27,7 @@ export function mapV4MatchToTeamRecord(
     result = 'loss'
   }
   const dt = formatDateTime(item.matchTime)
-  const seriesStatusLabel = item.seriesStatusName || ''
+  const seriesStatusLabel = item.seriesStatus ? v4MatchSeriesStatusLabel(item.seriesStatus) : ''
   const bestOf = toNumber(item.bestOf, 1)
   const gameNo = toNumber(item.seriesGameNo, 0)
   const roundNo = toNumber(item.roundNo, 0)
@@ -67,8 +66,10 @@ export function mapV4MatchToTeamRecord(
     resultType: item.resultType || undefined,
     resultReason: item.resultReason || undefined,
     resultLabel: dq
-      ? (sideLabel || (result === 'win' ? translate('publicPages.team.dqWin') : translate('publicPages.team.dqLoss')))
-      : sideLabel || undefined,
+      ? (result === 'win' ? translate('publicPages.team.dqWin') : translate('publicPages.team.dqLoss'))
+      : forfeited
+        ? (result === 'win' ? translate('eventsPage.match.forfeitWin') : translate('match.forfeitLoss'))
+        : undefined,
     originalTeamScore: originalTeamScore ?? undefined,
     originalOpponentScore: originalOpponentScore ?? undefined,
     matchSeriesId: item.matchSeriesId ? String(item.matchSeriesId) : undefined,

@@ -13,6 +13,7 @@ import {
   v4MatchStatusLabel,
   v4PublicRoundLabel,
   v4SeriesHeroStatusLabel,
+  v4StageLabel,
 } from '@/utils/v4Display'
 import MatchScoreboard from '../match-detail/MatchScoreboard.vue'
 import SeriesProgress from '../match-detail/SeriesProgress.vue'
@@ -107,7 +108,7 @@ const statusText = computed(() => {
   if (seriesMode.value) {
     return v4SeriesHeroStatusLabel(series.value?.seriesStatus)
   }
-  return v4MatchStatusLabel(match.value?.matchStatus) || match.value?.matchStatusName || '--'
+  return v4MatchStatusLabel(match.value?.matchStatus)
 })
 
 const caption = computed(() => {
@@ -122,15 +123,24 @@ const advanceLabel = computed(() => {
   return t('eventsPage.match.advance')
 })
 
+const seriesNote = computed(() => {
+  if (!seriesMode.value) return ''
+  const type = String(series.value?.resolutionType || '').toUpperCase()
+  if (type === 'FORFEIT') return t('events.resolution.FORFEIT')
+  if (type === 'MANUAL') return String(series.value?.resultReason || '').trim()
+  return ''
+})
+
 const metaText = computed(() => {
   if (seriesMode.value) {
     const s = series.value
-    const round = v4PublicRoundLabel(seriesRoundName.value || s?.stageName, s?.roundNo)
-    return [round, v4BestOfLabel(s?.bestOf)].filter(Boolean).join(' · ')
+    const stage = v4StageLabel(undefined, s?.stageName)
+    const round = v4PublicRoundLabel(seriesRoundName.value, s?.roundNo)
+    return [stage, round, v4BestOfLabel(s?.bestOf)].filter(Boolean).join(' · ')
   }
   const m = match.value
   if (!m) return ''
-  const stage = m.stageName || t('events.regularSeason')
+  const stage = v4StageLabel(m.stageType, m.stageName) || t('events.regularSeason')
   const round = m.roundNo != null ? t('events.round.OTHER', { round: m.roundNo }) : ''
   const when = formatMatchWhen(m.matchTime)
   return [stage, round, v4BestOfLabel(m.bestOf || 1), when].filter(Boolean).join(' · ')
@@ -396,10 +406,10 @@ watch([seriesId, matchId, () => route.name], () => {
             @select="onTabChange"
           />
           <p
-            v-if="seriesMode && activeTab === SERIES_TOTAL_TAB && (series?.resultReason || series?.resultSummary)"
+            v-if="seriesMode && activeTab === SERIES_TOTAL_TAB && seriesNote"
             class="match-detail-reason"
           >
-            {{ series?.resultReason || series?.resultSummary }}
+            {{ seriesNote }}
           </p>
           <SeriesGameTabs
             v-if="showSeriesTabs"

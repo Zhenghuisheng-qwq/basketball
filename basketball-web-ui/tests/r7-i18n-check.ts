@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
 import { displayNoticeText, renderNotice } from '../src/i18n/noticeTemplates.ts'
 import { resolveBusinessMessage } from '../src/utils/apiError.ts'
+import enErrors from '../src/i18n/messages/en-US/errors.ts'
+import zhErrors from '../src/i18n/messages/zh-CN/errors.ts'
+import enEvents from '../src/i18n/messages/en-US/events.ts'
+import zhEvents from '../src/i18n/messages/zh-CN/events.ts'
 
 const zh = {
   INVALID_CREDENTIALS: '邮箱或密码错误',
@@ -64,5 +68,15 @@ const rejected = renderNotice('PLAYER_CERT_REJECTED', JSON.stringify({ remark: '
 assert.ok(rejected)
 assert.equal(rejected.body.includes('照片不清晰'), true)
 assert.equal(rejected.body.toLowerCase().includes('photo is unclear'), false)
+
+for (const code of ['REGISTRATION_NOT_STARTED', 'REGISTRATION_CLOSED', 'QUOTA_FULL', 'PLAYER_NOT_ELIGIBLE'] as const) {
+  assert.match(zhErrors[code], /[\u4e00-\u9fff]/)
+  assert.doesNotMatch(enErrors[code], /[\u4e00-\u9fff]/)
+}
+
+for (const code of ['REGULAR', 'GROUP', 'KNOCKOUT'] as const) {
+  assert.match(zhEvents.stageType[code], /[\u4e00-\u9fff]/)
+  assert.doesNotMatch(enEvents.stageType[code], /[\u4e00-\u9fff]/)
+}
 
 console.log('r7 i18n checks passed')

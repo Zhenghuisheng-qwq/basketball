@@ -110,25 +110,44 @@ export function v4SeriesHeroStatusLabel(status: string | null | undefined): stri
   }
 }
 
+export function v4StageLabel(stageType?: string | null, stageName?: string | null): string {
+  const type = String(stageType || '').trim().toUpperCase()
+  if (type === 'REGULAR' || type === 'GROUP' || type === 'KNOCKOUT') {
+    return codeLabel('events.stageType', type)
+  }
+  const name = String(stageName || '').trim()
+  const asCode = name.toUpperCase()
+  if (asCode === 'REGULAR' || asCode === 'GROUP' || asCode === 'KNOCKOUT') {
+    return codeLabel('events.stageType', asCode)
+  }
+  return name
+}
+
 export function v4PublicRoundLabel(name?: string | null, roundNo?: number | null): string {
   const raw = String(name || '').trim()
   const upper = raw.toUpperCase()
+  if (upper === '--') {
+    return roundNo != null ? translate('events.round.OTHER', { round: roundNo }) : translate('events.round.SCHEDULE')
+  }
   if (upper === 'R32' || upper === 'R16' || upper === 'R8' || upper === 'QF') {
     return codeLabel('events.round', upper)
   }
   if (upper === 'SF' || upper === 'SEMI') return codeLabel('events.round', 'SF')
   if (upper === 'FINAL') return codeLabel('events.round', 'FINAL')
+  if (/^R\d+$/.test(upper)) {
+    return translate('events.round.OTHER', { round: Number(upper.slice(1)) })
+  }
   if (raw) return raw
   return roundNo != null ? translate('events.round.OTHER', { round: roundNo }) : translate('events.round.SCHEDULE')
 }
 
-export function v4ScheduleStatusLabel(status?: string | null, statusName?: string | null): string {
+export function v4ScheduleStatusLabel(status?: string | null, _statusName?: string | null): string {
   const code = String(status || '').toUpperCase()
   if (code === 'READY' || code === 'PENDING' || code === 'SCHEDULED' || code === 'NOT_STARTED') {
     return translate('match.notStarted')
   }
-  if (statusName) return statusName
-  return v4MatchSeriesStatusLabel(status)
+  const labeled = v4MatchSeriesStatusLabel(status)
+  return labeled === '--' ? translate('match.notStarted') : labeled
 }
 
 export function v4ScheduleTeamLabel(name?: string | null, placeholderSource?: string | null): string {
