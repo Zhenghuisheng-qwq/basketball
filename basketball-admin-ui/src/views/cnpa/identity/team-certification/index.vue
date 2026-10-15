@@ -78,7 +78,7 @@
 
     <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
-    <el-drawer v-model="detailOpen" title="球队审核详情" size="720px" append-to-body>
+    <el-drawer v-model="detailOpen" title="球队审核详情" size="860px" append-to-body>
       <div v-loading="detailLoading">
         <template v-if="detail">
           <div class="detail-header">
@@ -130,7 +130,8 @@
           <el-divider content-position="left">成员信息</el-divider>
           <el-table :data="detail.members || []" size="small" empty-text="暂无成员">
             <el-table-column label="昵称" prop="nickname" min-width="120" />
-            <el-table-column label="球员编号" prop="playerNo" min-width="120" />
+            <el-table-column label="球员 ID" prop="playerId" min-width="180" show-overflow-tooltip />
+            <el-table-column label="球员编号" prop="playerNo" min-width="130" />
             <el-table-column label="角色" prop="roleTypeName" width="80" />
           </el-table>
 
