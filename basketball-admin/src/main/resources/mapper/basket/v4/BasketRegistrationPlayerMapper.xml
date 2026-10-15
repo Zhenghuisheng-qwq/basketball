@@ -62,7 +62,7 @@
            and tm.membership_status = 1
            and tm.is_delete = 0
         where rp.registration_id = #{registrationId} and rp.is_delete = 0
-        order by sort_order asc, id asc
+        order by rp.sort_order asc, rp.id asc
     </select>
 
     <select id="selectByRegistrationId" resultMap="BasketRegistrationPlayerResult">
