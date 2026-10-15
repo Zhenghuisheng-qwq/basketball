@@ -23,6 +23,7 @@ import com.zhs.basket.service.v4.IBasketV4RegistrationAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
 import com.zhs.basket.support.NoticeParams;
 import com.zhs.basket.support.v4.CaptainGrantRuntimeSupport;
+import com.zhs.basket.support.v4.CurrentRosterEligibility;
 import com.zhs.basket.support.v4.TeamRegistrationEligibilitySpecification;
 import com.zhs.basket.vo.v4.BasketRegistrationAuditDetailVo;
 import com.zhs.basket.vo.v4.BasketRegistrationAuditListVo;
@@ -66,7 +67,13 @@ public class BasketV4RegistrationAuditServiceImpl implements IBasketV4Registrati
 
     @Override
     public List<BasketRegistrationAuditListVo> selectList(BasketRegistrationAuditQuery query) {
-        return registrationMapper.selectAuditVoList(query);
+        List<BasketRegistrationAuditListVo> rows = registrationMapper.selectAuditVoList(query);
+        for (BasketRegistrationAuditListVo row : rows) {
+            int current = row.getCurrentEligibleCount() == null ? 0 : row.getCurrentEligibleCount();
+            int min = row.getLineupMinCount() == null ? 0 : row.getLineupMinCount();
+            row.setEligibilityStatus(CurrentRosterEligibility.status(row.getRegistrationStatus(), current, min));
+        }
+        return rows;
     }
 
     @Override
@@ -111,6 +118,7 @@ public class BasketV4RegistrationAuditServiceImpl implements IBasketV4Registrati
         if (!RegistrationStatusEnum.PENDING_REVIEW.getCode().equals(registration.getRegistrationStatus())) {
             throw new ServiceException("仅待审核状态可通过");
         }
+        divisionMapper.selectByIdForUpdate(registration.getDivisionId());
         BasketDivision division = requireDivision(registration.getDivisionId());
         List<BasketRegistrationPlayer> players = registrationPlayerMapper.selectByRegistrationId(registrationId);
         BasketCaptainGrant grant = captainGrantMapper.selectActiveByDivisionPlayer(

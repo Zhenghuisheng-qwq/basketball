@@ -2,6 +2,7 @@ package com.zhs.controller.v4;
 
 import com.zhs.request.v4.V4RegistrationIdReq;
 import com.zhs.request.v4.V4RegistrationSaveReq;
+import com.zhs.request.v4.V4RosterChangeSubmitReq;
 import com.zhs.service.v4.IBasketV4PlayerRegistrationService;
 import com.zhs.util.R;
 import io.swagger.annotations.Api;
@@ -40,6 +41,12 @@ public class BasketV4PlayerRegistrationController {
     public R submit(@RequestBody V4RegistrationIdReq req) {
         playerRegistrationService.submitRegistration(req);
         return R.ok();
+    }
+
+    @ApiOperation("申请调整已通过报名名单")
+    @PostMapping("/roster-change")
+    public R rosterChange(@RequestBody V4RosterChangeSubmitReq req) {
+        return R.ok(playerRegistrationService.submitRosterChange(req));
     }
 
     @ApiOperation("撤回报名")

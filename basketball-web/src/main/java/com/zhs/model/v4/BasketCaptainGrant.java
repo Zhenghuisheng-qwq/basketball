@@ -47,6 +47,9 @@ public class BasketCaptainGrant implements Serializable {
 
     private Date validTo;
 
+    /** AUTO_EVENT / CUSTOM；历史数据为空 */
+    private String validToMode;
+
     @JsonSerialize(using = ToStringSerializer.class)
     private Long grantedBy;
 

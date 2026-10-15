@@ -386,6 +386,11 @@ export default {
     emptyNoMembers: 'This team has no members yet. Invite players from My teams → Members.',
     emptyNoEligible: 'No teammate is eligible for {platform}. Complete platform identity verification first.',
     emptyNoPlayers: 'No eligible players to select',
+    rosterBelowMinimum: 'Current eligible roster is {current}, below the minimum of {min}. Add players and submit a roster change.',
+    changeRoster: 'Request roster change',
+    changeRosterHint: 'The current official roster stays in place until an admin approves this change.',
+    changeRosterSubmitted: 'Roster change submitted and waiting for review',
+    changeRosterPending: 'A roster change is already awaiting review',
     fallbackPlatform: 'this platform',
   },
   personal: {

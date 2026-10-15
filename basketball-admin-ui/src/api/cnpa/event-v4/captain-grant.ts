@@ -29,6 +29,9 @@ export interface BasketCaptainGrantListVo {
   grantSource?: string
   validFrom?: string
   validTo?: string
+  validToMode?: string
+  divisionMatchEndTime?: string
+  seasonEndTime?: string
   remark?: string
   createTime?: string
 }
@@ -55,4 +58,16 @@ export function addV4CaptainGrant(data: BasketCaptainGrantCreateReq): Promise<Aj
 
 export function revokeV4CaptainGrant(id: number): Promise<AjaxResult> {
   return request({ url: `/basket/v4/captain-grant/${id}/revoke`, method: 'put' })
+}
+
+export function adjustV4CaptainGrantValidTo(id: number, data: { validToMode: string; validTo?: string }): Promise<AjaxResult> {
+  return request({ url: `/basket/v4/captain-grant/${id}/valid-to`, method: 'put', data })
+}
+
+export function previewV4CaptainGrantSync(ids: number[]): Promise<AjaxResult<{ items: any[] }>> {
+  return request({ url: '/basket/v4/captain-grant/sync-event-time/preview', method: 'post', data: { ids } })
+}
+
+export function syncV4CaptainGrantEventTime(ids: number[]): Promise<AjaxResult<{ items: any[] }>> {
+  return request({ url: '/basket/v4/captain-grant/sync-event-time', method: 'post', data: { ids } })
 }

@@ -33,6 +33,7 @@ public final class BasketEventV4Perms {
     public static final String CAPTAIN_GRANT_QUERY = "basket:v4CaptainGrant:query";
     public static final String CAPTAIN_GRANT_ADD = "basket:v4CaptainGrant:add";
     public static final String CAPTAIN_GRANT_REVOKE = "basket:v4CaptainGrant:revoke";
+    public static final String CAPTAIN_GRANT_EDIT = "basket:v4CaptainGrant:edit";
 
     public static final String REGISTRATION_AUDIT_LIST = "basket:v4RegistrationAudit:list";
     public static final String REGISTRATION_AUDIT_QUERY = "basket:v4RegistrationAudit:query";

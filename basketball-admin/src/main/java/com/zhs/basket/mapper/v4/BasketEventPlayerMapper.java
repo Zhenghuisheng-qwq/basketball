@@ -22,6 +22,11 @@ public interface BasketEventPlayerMapper {
 
     List<BasketEventPlayer> selectByEventTeamId(@Param("eventTeamId") Long eventTeamId);
 
+    BasketEventPlayer selectAnyByEventTeamAndSource(@Param("eventTeamId") Long eventTeamId,
+                                                    @Param("sourcePlayerId") Long sourcePlayerId);
+
+    int revive(BasketEventPlayer entity);
+
     int insert(BasketEventPlayer entity);
 
     int batchInsert(@Param("list") List<BasketEventPlayer> list);

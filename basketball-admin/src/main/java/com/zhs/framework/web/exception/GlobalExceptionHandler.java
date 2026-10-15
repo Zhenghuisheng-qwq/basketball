@@ -3,6 +3,8 @@ package com.zhs.framework.web.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.ibatis.exceptions.PersistenceException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -88,6 +90,25 @@ public class GlobalExceptionHandler
         }
         log.error("请求参数类型不匹配'{}',发生系统异常.", requestURI, e);
         return AjaxResult.error(String.format("请求参数类型不匹配，参数[%s]要求类型为：'%s'，但输入值为：'%s'", e.getName(), e.getRequiredType().getName(), value));
+    }
+
+    /**
+     * 数据库访问异常不把 SQL、Mapper 路径返回给页面。
+     */
+    @ExceptionHandler(DataAccessException.class)
+    public AjaxResult handleDataAccessException(DataAccessException e, HttpServletRequest request)
+    {
+        String requestURI = request.getRequestURI();
+        log.error("请求地址'{}',数据库访问异常.", requestURI, e);
+        return AjaxResult.error("数据处理失败，请稍后重试");
+    }
+
+    @ExceptionHandler(PersistenceException.class)
+    public AjaxResult handlePersistenceException(PersistenceException e, HttpServletRequest request)
+    {
+        String requestURI = request.getRequestURI();
+        log.error("请求地址'{}',数据库访问异常.", requestURI, e);
+        return AjaxResult.error("数据处理失败，请稍后重试");
     }
 
     /**

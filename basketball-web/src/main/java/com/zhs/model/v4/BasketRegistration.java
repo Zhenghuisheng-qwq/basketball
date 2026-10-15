@@ -56,6 +56,8 @@ public class BasketRegistration implements Serializable {
 
     private Integer lineupCount;
 
+    private Integer lineupVersion;
+
     private Date submitTime;
 
     private Date approveTime;

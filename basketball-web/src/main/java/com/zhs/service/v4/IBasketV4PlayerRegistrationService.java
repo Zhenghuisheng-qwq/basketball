@@ -2,6 +2,7 @@ package com.zhs.service.v4;
 
 import com.zhs.request.v4.V4RegistrationIdReq;
 import com.zhs.request.v4.V4RegistrationSaveReq;
+import com.zhs.request.v4.V4RosterChangeSubmitReq;
 import com.zhs.response.v4.V4AvailableDivisionResp;
 import com.zhs.response.v4.V4MyRegistrationResp;
 import com.zhs.response.v4.V4RegistrationDetailResp;
@@ -20,6 +21,8 @@ public interface IBasketV4PlayerRegistrationService {
     void submitRegistration(V4RegistrationIdReq req);
 
     void withdrawRegistration(V4RegistrationIdReq req);
+
+    Long submitRosterChange(V4RosterChangeSubmitReq req);
 
     List<V4MyRegistrationResp> listMyRegistrations();
 

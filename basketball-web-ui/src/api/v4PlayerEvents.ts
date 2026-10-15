@@ -50,6 +50,10 @@ export function submitV4Registration(data: V4RegistrationIdReq) {
   return request.post<any, ApiResult<void>>('/basket/v4/player/registration/submit', data)
 }
 
+export function submitV4RosterChange(data: { registrationId: string; playerIds: string[] }) {
+  return request.post<any, ApiResult<string>>('/basket/v4/player/registration/roster-change', data)
+}
+
 export function withdrawV4Registration(data: V4RegistrationIdReq) {
   return request.post<any, ApiResult<void>>('/basket/v4/player/registration/withdraw', data)
 }

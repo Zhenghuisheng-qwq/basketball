@@ -12,6 +12,9 @@ import com.zhs.basket.mapper.v4.BasketRegistrationMapper;
 import com.zhs.basket.req.AuditFieldInput;
 import com.zhs.basket.service.v4.ITeamRosterAllocationService;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
+import com.zhs.basket.mapper.v4.BasketRegistrationPlayerMapper;
+import com.zhs.basket.support.v4.CurrentRosterEligibility;
+import com.zhs.basket.support.v4.RosterEligibilityQueries;
 import com.zhs.basket.support.v4.roster.ParticipationRoleTransition;
 import com.zhs.basket.support.v4.roster.RosterAllocationPlan;
 import com.zhs.basket.support.v4.roster.RosterAllocationStrategyFactory;
@@ -32,6 +35,10 @@ public class TeamRosterAllocationServiceImpl implements ITeamRosterAllocationSer
 
     @Autowired
     private BasketRegistrationMapper registrationMapper;
+    @Autowired
+    private BasketRegistrationPlayerMapper registrationPlayerMapper;
+    @Autowired
+    private RosterEligibilityQueries eligibilityQueries;
     @Autowired
     private TeamRosterSupport rosterSupport;
     @Autowired
@@ -65,6 +72,7 @@ public class TeamRosterAllocationServiceImpl implements ITeamRosterAllocationSer
         ParticipationRoleTransition.assertCanTransit(from, to);
 
         if (to == ParticipationRoleEnum.FORMAL) {
+            assertCurrentlyEligible(division, registration);
             int formalCount = registrationMapper.countApprovedByDivisionAndRole(
                     divisionId, ParticipationRoleEnum.FORMAL.getCode());
             if (from == ParticipationRoleEnum.FORMAL) {
@@ -96,6 +104,12 @@ public class TeamRosterAllocationServiceImpl implements ITeamRosterAllocationSer
                 continue;
             }
             if (rosterSupport.roleOf(row) == ParticipationRoleEnum.EXCLUDED) {
+                continue;
+            }
+            if (!currentlyEligible(division, row)) {
+                if (rosterSupport.roleOf(row) == ParticipationRoleEnum.FORMAL) {
+                    throw new ServiceException("球队当前有效参赛人数不足，不能进入正式名单分配");
+                }
                 continue;
             }
             allocatable.add(row);
@@ -206,6 +220,20 @@ public class TeamRosterAllocationServiceImpl implements ITeamRosterAllocationSer
             throw new ServiceException("\u62a5\u540d\u4e0d\u5b58\u5728");
         }
         return registration;
+    }
+
+    private void assertCurrentlyEligible(BasketDivision division, BasketRegistration registration) {
+        if (!currentlyEligible(division, registration)) {
+            throw new ServiceException("球队当前有效参赛人数不足，不能进入正式名单");
+        }
+    }
+
+    private boolean currentlyEligible(BasketDivision division, BasketRegistration registration) {
+        int minimum = CurrentRosterEligibility.minimum(division);
+        if (minimum <= 0) {
+            return true;
+        }
+        return eligibilityQueries.eligibleCount(registration.getId(), division.getId()) >= minimum;
     }
 
     private void writeAudit(Long divisionId, Long objectId, String action, String summary,

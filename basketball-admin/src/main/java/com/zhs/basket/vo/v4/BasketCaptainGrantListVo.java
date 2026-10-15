@@ -22,6 +22,9 @@ public class BasketCaptainGrantListVo {
     private String grantSource;
     private Date validFrom;
     private Date validTo;
+    private String validToMode;
+    private Date divisionMatchEndTime;
+    private Date seasonEndTime;
     private String remark;
     private Date createTime;
 }

@@ -19,6 +19,7 @@ import com.zhs.basket.service.v4.IBasketV4DivisionClosingService;
 import com.zhs.basket.service.v4.IBasketV4DivisionService;
 import com.zhs.basket.service.v4.IBasketV4FormatSnapshotService;
 import com.zhs.basket.service.v4.IBasketV4SeasonService;
+import com.zhs.basket.support.v4.CaptainGrantEventSyncSupport;
 import com.zhs.basket.support.v4.BestOfCapabilityGate;
 import com.zhs.basket.support.v4.DivisionSafeRecoverySupport;
 import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
@@ -66,6 +67,8 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     private DivisionSafeRecoverySupport safeRecoverySupport;
     @Autowired
     private V4PublicReadCachePublisher publicReadCachePublisher;
+    @Autowired
+    private CaptainGrantEventSyncSupport captainGrantEventSyncSupport;
 
     @Override
     public List<BasketDivisionListVo> selectList(BasketDivisionQuery query) {
@@ -128,6 +131,7 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     @Transactional(rollbackFor = Exception.class)
     public void update(Long id, BasketDivisionUpdateReq req) {
         BasketDivision division = requireDivision(id);
+        Date previousMatchEnd = division.getMatchEndTime();
         boolean draft = DivisionStatusEnum.DRAFT.getCode().equals(division.getDivisionStatus());
         boolean registrationOpen = DivisionStatusEnum.REGISTRATION_OPEN.getCode().equals(division.getDivisionStatus());
 
@@ -152,6 +156,7 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         if (divisionMapper.updateById(division) != 1) {
             throw new ServiceException("更新 Division 失败");
         }
+        captainGrantEventSyncSupport.onDivisionMatchEndChanged(id, previousMatchEnd, division.getMatchEndTime());
         publicReadCachePublisher.divisionMutation(id, division.getSeasonId());
     }
 

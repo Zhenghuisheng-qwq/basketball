@@ -58,6 +58,12 @@ public class V4RegistrationDivisionContextResp {
     private Integer ineligibleRosterCount;
     /** 入口资格 + 当前符合资格人数是否已达最低阵容（不含用户勾选） */
     private Boolean canSubmitRegistration;
+    /** 已审核名单里仍然在队的人数，不含已离队球员 */
+    private Integer currentEventRosterCount;
+    /** ELIGIBLE / INELIGIBLE / NEEDS_REVIEW */
+    private String eventEligibilityStatus;
+    /** 正式开赛前允许申请调整已审核名单 */
+    private Boolean rosterChangeAllowed;
     private List<V4RegistrationRosterPlayerResp> eligiblePlayers = new ArrayList<>();
     private List<V4RegistrationRosterPlayerResp> ineligiblePlayers = new ArrayList<>();
 }

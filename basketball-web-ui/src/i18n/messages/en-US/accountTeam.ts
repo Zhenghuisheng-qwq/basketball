@@ -438,6 +438,7 @@ export default {
     changeSubmitted: 'Change request submitted and waiting for review',
     submitFailed: 'Failed to submit',
     nameRequired: 'Enter a team name',
+    shortNameRequired: 'Enter a short name',
     certResubmitted: 'Team verification was submitted again. Please wait for review',
     certSubmitted: 'Team verification submitted. Please wait for review',
     certFailed: 'Failed to submit verification',

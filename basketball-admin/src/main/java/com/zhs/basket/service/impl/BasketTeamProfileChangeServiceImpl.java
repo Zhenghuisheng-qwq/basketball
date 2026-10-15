@@ -17,6 +17,8 @@ import com.zhs.basket.vo.TeamProfileChangeListVo;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,8 @@ import java.util.Objects;
 
 @Service
 public class BasketTeamProfileChangeServiceImpl implements IBasketTeamProfileChangeService {
+
+    private static final Logger log = LoggerFactory.getLogger(BasketTeamProfileChangeServiceImpl.class);
 
     private static final List<Integer> PENDING_STATUSES = Arrays.asList(
             TeamProfileChangeAuditStatusEnum.PENDING.getCode(),
@@ -66,16 +70,31 @@ public class BasketTeamProfileChangeServiceImpl implements IBasketTeamProfileCha
         if (!Objects.equals(TeamAuditStatusEnum.APPROVED.getCode(), team.getAuditStatus())) {
             throw new ServiceException("仅已认证通过的球队可审核资料变更");
         }
+        if (!StringUtils.hasText(change.getNewTeamShortName())) {
+            throw new ServiceException("新球队简称不能为空");
+        }
+        String shortName = change.getNewTeamShortName().trim();
         assertTeamNameAvailable(team, change.getNewTeamName());
         assertLogoExists(change.getNewLogoFileId());
+        Integer publicStatus = change.getNewPublicStatus() != null
+                ? change.getNewPublicStatus() : team.getPublicStatus();
+        if (publicStatus == null) {
+            throw new ServiceException("球队公开状态不能为空");
+        }
 
-        int profileRows = teamMapper.updateProfileFromChange(
-                team.getId(),
-                change.getNewTeamName(),
-                change.getNewTeamShortName(),
-                change.getNewLogoFileId(),
-                change.getNewDescription(),
-                change.getNewPublicStatus() != null ? change.getNewPublicStatus() : team.getPublicStatus());
+        int profileRows;
+        try {
+            profileRows = teamMapper.updateProfileFromChange(
+                    team.getId(),
+                    change.getNewTeamName(),
+                    shortName,
+                    change.getNewLogoFileId(),
+                    change.getNewDescription(),
+                    publicStatus);
+        } catch (RuntimeException ex) {
+            log.error("审核通过时更新正式球队资料失败, changeId={}, teamId={}", id, team.getId(), ex);
+            throw new ServiceException("更新正式球队资料失败");
+        }
         if (profileRows != 1) {
             throw new ServiceException("更新正式球队资料失败");
         }

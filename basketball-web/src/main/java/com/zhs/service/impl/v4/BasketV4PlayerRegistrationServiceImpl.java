@@ -21,8 +21,13 @@ import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamMember;
 import com.zhs.model.v4.*;
+import com.zhs.dao.v4.BasketRegistrationRosterChangeDao;
+import com.zhs.dao.v4.BasketRegistrationRosterChangePlayerDao;
+import com.zhs.model.v4.BasketRegistrationRosterChange;
+import com.zhs.model.v4.BasketRegistrationRosterChangePlayer;
 import com.zhs.request.v4.V4RegistrationIdReq;
 import com.zhs.request.v4.V4RegistrationSaveReq;
+import com.zhs.request.v4.V4RosterChangeSubmitReq;
 import com.zhs.response.v4.V4AvailableDivisionResp;
 import com.zhs.response.v4.V4MyRegistrationResp;
 import com.zhs.response.v4.V4RegistrationDetailResp;
@@ -83,6 +88,12 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
     private BasketSeasonDao seasonDao;
     @Resource
     private BasketSeriesDao seriesDao;
+    @Resource
+    private BasketRegistrationRosterChangeDao rosterChangeDao;
+    @Resource
+    private BasketRegistrationRosterChangePlayerDao rosterChangePlayerDao;
+    @Resource
+    private EventRosterMembershipSync eventRosterMembershipSync;
 
     @Override
     public List<V4AvailableDivisionResp> listAvailableDivisions() {
@@ -145,6 +156,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
             resp.setMyRegistrationStatus(registration.getRegistrationStatus());
             resp.setMyRegistrationId(registration.getId());
             resp.setParticipationRole(registration.getParticipationRole());
+            fillEventEligibility(resp, division, registration, team);
         }
 
         Integer approved = playerRegistrationMapper.countApprovedByDivisionId(divisionId);
@@ -176,7 +188,21 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
                 && Objects.equals(TEAM_STATUS_ACTIVE, team.getTeamStatus())
                 && Objects.equals(TEAM_AUDIT_APPROVED, team.getAuditStatus())));
         fillRosterContext(resp, division, team, player.getId());
+        if ("INELIGIBLE".equals(resp.getEventEligibilityStatus())) {
+            int min = resp.getLineupMinCount() != null ? resp.getLineupMinCount() : rosterMin(division);
+            resp.setCannotRegisterReasonCode("ROSTER_BELOW_MINIMUM");
+            resp.setCannotRegisterReason("当前有效参赛人数 " + resp.getCurrentEventRosterCount()
+                    + "，低于赛区最低要求 " + min + "，请补充球员并提交名单变更审核");
+        }
         return resp;
+    }
+
+    private int rosterMin(BasketDivision division) {
+        if (division.getLineupMinCount() != null && division.getLineupMinCount() > 0) {
+            return division.getLineupMinCount();
+        }
+        GameModeEnum mode = GameModeEnum.fromCode(division.getGameMode());
+        return mode == null ? 0 : mode.getMinRosterCount();
     }
 
     @Override
@@ -313,6 +339,68 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long submitRosterChange(V4RosterChangeSubmitReq req) {
+        if (req == null || req.getRegistrationId() == null) {
+            throw new ServiceException("registrationId 不能为空");
+        }
+        BasketRegistration registration = requireCaptainRegistration(req.getRegistrationId());
+        if (!RegistrationStatusEnum.APPROVED.getCode().equals(registration.getRegistrationStatus())) {
+            throw new ServiceException("仅已通过的报名可以申请调整名单");
+        }
+        Long pending = rosterChangeDao.selectCount(new LambdaQueryWrapper<BasketRegistrationRosterChange>()
+                .eq(BasketRegistrationRosterChange::getRegistrationId, registration.getId())
+                .eq(BasketRegistrationRosterChange::getChangeStatus, "PENDING")
+                .eq(BasketRegistrationRosterChange::getIsDelete, NOT_DELETED));
+        if (pending != null && pending > 0) {
+            throw new ServiceException("已有待审核的名单变更，请等待审核完成");
+        }
+        BasketDivision division = requireDivision(registration.getDivisionId());
+        assertRosterChangeWindow(division, registration.getTeamId());
+        List<BasketRegistrationPlayer> lineup = buildLineup(
+                division, registration.getTeamId(), registration.getCaptainPlayerId(), req.getPlayerIds(), true);
+        Date now = new Date();
+        BasketRegistrationRosterChange change = new BasketRegistrationRosterChange();
+        change.setRegistrationId(registration.getId());
+        change.setDivisionId(registration.getDivisionId());
+        change.setSeasonId(registration.getSeasonId());
+        change.setTeamId(registration.getTeamId());
+        change.setChangeStatus("PENDING");
+        change.setBaseLineupVersion(registration.getLineupVersion() == null ? 0 : registration.getLineupVersion());
+        change.setSubmitMemberId(UserContext.getRequiredMemberId());
+        change.setCreateTime(now);
+        change.setUpdateTime(now);
+        change.setIsDelete(NOT_DELETED);
+        rosterChangeDao.insert(change);
+        int sort = 0;
+        for (BasketRegistrationPlayer player : lineup) {
+            BasketRegistrationRosterChangePlayer row = new BasketRegistrationRosterChangePlayer();
+            row.setChangeId(change.getId());
+            row.setPlayerId(player.getPlayerId());
+            row.setIsCaptain(player.getIsCaptain());
+            row.setIsStarter(player.getIsStarter());
+            row.setSortOrder(sort++);
+            row.setCreateTime(now);
+            row.setIsDelete(NOT_DELETED);
+            rosterChangePlayerDao.insert(row);
+        }
+        return change.getId();
+    }
+
+    private void assertRosterChangeWindow(BasketDivision division, Long teamId) {
+        if (division == null) {
+            throw new ServiceException("Division 不存在");
+        }
+        String status = division.getDivisionStatus();
+        if ("FINISHED".equals(status) || "ARCHIVED".equals(status)) {
+            throw new ServiceException("赛区已结束或归档，不能调整参赛名单");
+        }
+        if (!eventRosterMembershipSync.divisionWritable(division.getId())) {
+            throw new ServiceException("比赛已开始或已有球员统计，不能调整参赛名单");
+        }
+    }
+
+    @Override
     public List<V4MyRegistrationResp> listMyRegistrations() {
         return playerRegistrationMapper.selectMyRegistrations(UserContext.getRequiredMemberId());
     }
@@ -403,6 +491,28 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         resp.setRegistrationWindowStatusLabel(eligibility.getWindowStatusLabel());
         resp.setCannotRegisterReasonCode(eligibility.getReasonCode());
         resp.setCannotRegisterReason(eligibility.isCanRegister() ? null : eligibility.getReasonMessage());
+    }
+
+    private void fillEventEligibility(V4RegistrationDivisionContextResp resp,
+                                      BasketDivision division,
+                                      BasketRegistration registration,
+                                      BasketTeam team) {
+        int min = division.getLineupMinCount() != null && division.getLineupMinCount() > 0
+                ? division.getLineupMinCount()
+                : GameModeEnum.fromCode(division.getGameMode()) == null
+                ? 0
+                : GameModeEnum.fromCode(division.getGameMode()).getMinRosterCount();
+        Long teamId = registration.getTeamId() != null ? registration.getTeamId() : (team == null ? null : team.getId());
+        int current = eventRosterMembershipSync.countEffectiveRoster(registration.getId(), teamId);
+        resp.setCurrentEventRosterCount(current);
+        String status = registration.getRegistrationStatus();
+        if ("APPROVED".equals(status)) {
+            resp.setEventEligibilityStatus(min <= 0 || current >= min ? "ELIGIBLE" : "INELIGIBLE");
+        } else if ("PENDING_REVIEW".equals(status)) {
+            resp.setEventEligibilityStatus("NEEDS_REVIEW");
+        }
+        boolean approved = "APPROVED".equals(status);
+        resp.setRosterChangeAllowed(approved && eventRosterMembershipSync.divisionWritable(division.getId()));
     }
 
     private void fillDivisionContextBase(V4RegistrationDivisionContextResp resp, BasketDivision division) {

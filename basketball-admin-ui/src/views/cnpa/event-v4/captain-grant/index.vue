@@ -38,10 +38,12 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button type="primary" plain icon="Plus" @click="openAdd" v-hasPermi="['basket:v4CaptainGrant:add']">新增授权</el-button>
+        <el-button type="success" plain :disabled="!selectedRows.length" @click="openSync" v-hasPermi="['basket:v4CaptainGrant:edit']">同步赛事时间</el-button>
       </el-col>
     </el-row>
 
-    <el-table v-loading="loading" :data="dataList" border>
+    <el-table v-loading="loading" :data="dataList" border @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="48" />
       <el-table-column label="ID" prop="id" width="70" />
       <el-table-column label="赛季" prop="seasonTitle" min-width="140" />
       <el-table-column label="平台赛区" prop="divisionName" min-width="120" />
@@ -64,11 +66,15 @@
         </template>
       </el-table-column>
       <el-table-column label="来源" prop="grantSource" width="110" />
+      <el-table-column label="到期方式" width="110">
+        <template #default="scope">{{ validToModeLabel(scope.row.validToMode) }}</template>
+      </el-table-column>
       <el-table-column label="有效期" min-width="180">
         <template #default="scope">{{ formatRange(scope.row.validFrom, scope.row.validTo) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="120" fixed="right">
+      <el-table-column label="操作" width="200" fixed="right">
         <template #default="scope">
+          <el-button link type="primary" @click="openAdjust(scope.row)" v-hasPermi="['basket:v4CaptainGrant:edit']" v-if="scope.row.grantStatus === 'ACTIVE'">调整有效期</el-button>
           <el-button link type="danger" @click="handleRevoke(scope.row)" v-hasPermi="['basket:v4CaptainGrant:revoke']" v-if="scope.row.grantStatus === 'ACTIVE'">撤销</el-button>
         </template>
       </el-table-column>
@@ -121,12 +127,61 @@
         <el-button type="primary" @click="submitAdd">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="adjustOpen" title="调整有效期" width="560px" append-to-body>
+      <el-descriptions :column="1" border class="mb8">
+        <el-descriptions-item label="赛事">{{ adjustRow?.seasonTitle || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="赛区">{{ adjustRow?.divisionName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="授权账号">{{ adjustRow?.memberNickname || '-' }} / {{ adjustRow?.memberId || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="Player ID">{{ adjustRow?.playerId || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="当前生效时间">{{ parseTime(adjustRow?.validFrom) || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="当前失效时间">{{ parseTime(adjustRow?.validTo) || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="当前授权模式">{{ validToModeLabel(adjustRow?.validToMode) }}</el-descriptions-item>
+        <el-descriptions-item label="当前赛事结束时间">{{ parseTime(adjustRow?.divisionMatchEndTime || adjustRow?.seasonEndTime) || '-' }}</el-descriptions-item>
+      </el-descriptions>
+      <el-form label-width="120px">
+        <el-form-item label="到期方式">
+          <el-radio-group v-model="adjustMode">
+            <el-radio label="CUSTOM">手动指定到期时间</el-radio>
+            <el-radio label="AUTO_EVENT">恢复跟随赛事结束时间</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="adjustMode === 'CUSTOM'" label="新的截止时间">
+          <el-date-picker v-model="adjustValidTo" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="adjustOpen = false">取消</el-button>
+        <el-button type="primary" @click="submitAdjust">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="syncOpen" title="同步赛事时间" width="760px" append-to-body>
+      <el-alert title="只更新勾选且仍生效的授权。已撤销、已过期不会恢复。赛区已有比赛结束时间时，不会改成赛季结束时间。" type="warning" :closable="false" class="mb8" />
+      <el-table :data="syncItems" border>
+        <el-table-column label="授权" prop="id" width="80" />
+        <el-table-column label="当前到期" min-width="160">
+          <template #default="scope">{{ parseTime(scope.row.currentValidTo) || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="同步后到期" min-width="160">
+          <template #default="scope">{{ parseTime(scope.row.targetValidTo) || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="来源" width="100">
+          <template #default="scope">{{ scope.row.eventEndSource === 'DIVISION' ? '赛区结束' : (scope.row.eventEndSource === 'SEASON' ? '赛季结束' : '-') }}</template>
+        </el-table-column>
+        <el-table-column label="说明" prop="message" min-width="220" />
+      </el-table>
+      <template #footer>
+        <el-button @click="syncOpen = false">取消</el-button>
+        <el-button type="primary" :disabled="!syncItems.some(item => item.applicable)" @click="submitSync">确认同步</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts" name="CnpaEventV4CaptainGrant">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { addV4CaptainGrant, listV4CaptainGrant, resolveV4CaptainGrantValidTo, revokeV4CaptainGrant, type BasketCaptainGrantCreateReq, type BasketCaptainGrantQuery } from '@/api/cnpa/event-v4/captain-grant'
+import { addV4CaptainGrant, adjustV4CaptainGrantValidTo, listV4CaptainGrant, previewV4CaptainGrantSync, resolveV4CaptainGrantValidTo, revokeV4CaptainGrant, syncV4CaptainGrantEventTime, type BasketCaptainGrantCreateReq, type BasketCaptainGrantListVo, type BasketCaptainGrantQuery } from '@/api/cnpa/event-v4/captain-grant'
 import { listV4AdminDivisionOptions, listV4AdminGrantablePlayerOptions, listV4AdminSeasonOptions, type V4AdminGrantablePlayerOptionVo, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
 import { V4_GRANT_STATUS_FILTER_OPTIONS, v4GrantStatusLabel, v4GrantStatusTagType } from '@/utils/v4AdminDisplay'
 import { parseTime } from '@/utils/ruoyi'
@@ -134,7 +189,14 @@ import { parseTime } from '@/utils/ruoyi'
 const { proxy } = getCurrentInstance() as any
 const loading = ref(false)
 const total = ref(0)
-const dataList = ref<any[]>([])
+const dataList = ref<BasketCaptainGrantListVo[]>([])
+const selectedRows = ref<BasketCaptainGrantListVo[]>([])
+const adjustOpen = ref(false)
+const adjustRow = ref<BasketCaptainGrantListVo>()
+const adjustMode = ref<'CUSTOM' | 'AUTO_EVENT'>('CUSTOM')
+const adjustValidTo = ref<string>()
+const syncOpen = ref(false)
+const syncItems = ref<any[]>([])
 const addOpen = ref(false)
 const formRef = ref()
 const seasonOptions = ref<V4AdminOptionVo[]>([])
@@ -279,6 +341,64 @@ function submitAdd() {
       addOpen.value = false
       getList()
     })
+  })
+}
+
+function validToModeLabel(mode?: string) {
+  if (mode === 'AUTO_EVENT') return '跟随赛事'
+  if (mode === 'CUSTOM') return '手动指定'
+  return '历史未确认'
+}
+
+function onSelectionChange(rows: BasketCaptainGrantListVo[]) {
+  selectedRows.value = rows
+}
+
+function openAdjust(row: BasketCaptainGrantListVo) {
+  adjustRow.value = row
+  adjustMode.value = row.validToMode === 'AUTO_EVENT' ? 'AUTO_EVENT' : 'CUSTOM'
+  adjustValidTo.value = row.validTo
+  adjustOpen.value = true
+}
+
+function submitAdjust() {
+  if (!adjustRow.value?.id) return
+  if (adjustMode.value === 'CUSTOM' && !adjustValidTo.value) {
+    proxy.$modal.msgError('请填写授权截止时间')
+    return
+  }
+  adjustV4CaptainGrantValidTo(adjustRow.value.id, {
+    validToMode: adjustMode.value,
+    validTo: adjustMode.value === 'CUSTOM' ? adjustValidTo.value : undefined
+  }).then(() => {
+    proxy.$modal.msgSuccess('有效期已更新')
+    adjustOpen.value = false
+    getList()
+  })
+}
+
+function openSync() {
+  const ids = selectedRows.value.map(row => row.id).filter((id): id is number => !!id)
+  if (!ids.length) return
+  previewV4CaptainGrantSync(ids).then(res => {
+    syncItems.value = res.data?.items || []
+    syncOpen.value = true
+  })
+}
+
+function submitSync() {
+  const ids = syncItems.value.filter(item => item.applicable).map(item => item.id)
+  if (!ids.length) return
+  syncV4CaptainGrantEventTime(ids).then(res => {
+    syncItems.value = res.data?.items || []
+    const failed = syncItems.value.filter(item => !item.applicable)
+    if (failed.length) {
+      proxy.$modal.msgWarning(`已处理，${failed.length} 条未同步`)
+    } else {
+      proxy.$modal.msgSuccess('已同步到当前赛事结束时间')
+      syncOpen.value = false
+    }
+    getList()
   })
 }
 

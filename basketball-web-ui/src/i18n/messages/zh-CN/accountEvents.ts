@@ -386,6 +386,11 @@ export default {
     emptyNoMembers: '当前球队暂无成员。请先前往「我的球队 → 成员管理」邀请成员补充阵容。',
     emptyNoEligible: '当前球队成员暂无符合 {platform} 赛事资格的球员。请先完成游戏平台身份认证。',
     emptyNoPlayers: '暂无可选参赛球员',
+    rosterBelowMinimum: '当前有效参赛 {current} 人，低于最低要求 {min} 人，请补充球员并提交名单变更',
+    changeRoster: '申请调整参赛名单',
+    changeRosterHint: '当前有效名单保持不变。提交后等待管理员审核，通过后才会替换本届参赛名单。',
+    changeRosterSubmitted: '名单变更已提交，等待审核',
+    changeRosterPending: '已有待审核的名单变更',
     fallbackPlatform: '对应平台',
   },
   personal: {

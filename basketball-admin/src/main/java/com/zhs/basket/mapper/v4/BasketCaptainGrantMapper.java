@@ -6,6 +6,7 @@ import com.zhs.basket.vo.AccountPlayerCaptainGrantVo;
 import com.zhs.basket.vo.v4.BasketCaptainGrantListVo;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Date;
 import java.util.List;
 
 public interface BasketCaptainGrantMapper {
@@ -45,6 +46,16 @@ public interface BasketCaptainGrantMapper {
     int insert(BasketCaptainGrant entity);
 
     int updateById(BasketCaptainGrant entity);
+
+    int updateValidWindow(@Param("id") Long id,
+                          @Param("validTo") Date validTo,
+                          @Param("validToMode") String validToMode,
+                          @Param("expectedValidTo") Date expectedValidTo,
+                          @Param("expectedValidToMode") String expectedValidToMode);
+
+    List<BasketCaptainGrant> selectAutoEventByDivisionId(@Param("divisionId") Long divisionId);
+
+    List<BasketCaptainGrant> selectAutoEventDependingOnSeason(@Param("seasonId") Long seasonId);
 
     int revokeById(@Param("id") Long id);
 

@@ -323,7 +323,10 @@ public class TeamProfileChangeServiceImpl implements ITeamProfileChangeService {
         if (teamName.length() < 2 || teamName.length() > 30) {
             throw new ServiceException("球队名称长度应为 2-30 字");
         }
-        if (shortName != null && (shortName.length() < 1 || shortName.length() > 12)) {
+        if (shortName == null) {
+            throw new ServiceException("球队简称不能为空");
+        }
+        if (shortName.length() > 12) {
             throw new ServiceException("球队简称长度应为 1-12 字");
         }
         if (description != null && description.length() > 500) {

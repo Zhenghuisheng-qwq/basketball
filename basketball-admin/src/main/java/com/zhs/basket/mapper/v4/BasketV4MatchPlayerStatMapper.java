@@ -13,6 +13,10 @@ public interface BasketV4MatchPlayerStatMapper {
     List<BasketV4MatchPlayerStat> selectList(BasketV4MatchPlayerStat query);
     BasketV4MatchPlayerStat selectByMatchAndEventPlayer(@Param("matchId") Long matchId, @Param("eventPlayerId") Long eventPlayerId);
     List<BasketV4MatchPlayerStat> selectByDivisionId(@Param("divisionId") Long divisionId);
+
+    int countByDivisionId(@Param("divisionId") Long divisionId);
+
+    int countByEventPlayerId(@Param("eventPlayerId") Long eventPlayerId);
     int insert(BasketV4MatchPlayerStat entity);
     int updateById(BasketV4MatchPlayerStat entity);
     int softDelete(@Param("id") Long id);

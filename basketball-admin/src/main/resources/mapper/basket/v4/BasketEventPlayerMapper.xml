@@ -100,6 +100,13 @@
         limit 1
     </select>
 
+    <select id="selectAnyByEventTeamAndSource" resultMap="BasketEventPlayerResult">
+        select <include refid="BaseColumns" /> from basket_event_player
+        where event_team_id = #{eventTeamId} and source_player_id = #{sourcePlayerId}
+        order by is_delete asc, id desc
+        limit 1
+    </select>
+
     <select id="selectByEventTeamId" resultMap="BasketEventPlayerResult">
         select <include refid="BaseColumns" /> from basket_event_player
         where event_team_id = #{eventTeamId} and is_delete = 0
@@ -144,6 +151,23 @@
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="revive">
+        update basket_event_player
+        set is_delete = 0,
+            member_id = #{memberId},
+            platform_identity_id = #{platformIdentityId},
+            platform_code = #{platformCode},
+            game_id_snapshot = #{gameIdSnapshot},
+            player_name_snapshot = #{playerNameSnapshot},
+            position = #{position},
+            jersey_no = #{jerseyNo},
+            is_captain = #{isCaptain},
+            is_starter = #{isStarter},
+            event_player_status = #{eventPlayerStatus},
+            update_time = now()
+        where id = #{id}
     </update>
 
     <update id="softDelete">

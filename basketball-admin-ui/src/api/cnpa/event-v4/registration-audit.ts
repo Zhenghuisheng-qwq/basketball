@@ -77,3 +77,15 @@ export function approveV4RegistrationAudit(registrationId: number): Promise<Ajax
 export function rejectV4RegistrationAudit(registrationId: number, data: { rejectReason: string; auditRemark?: string }): Promise<AjaxResult> {
   return request({ url: `/basket/v4/registration-audit/${registrationId}/reject`, method: 'post', data })
 }
+
+export function listV4RosterChanges(divisionId: number): Promise<AjaxResult<any[]>> {
+  return request({ url: '/basket/v4/registration-audit/roster-changes', method: 'get', params: { divisionId } })
+}
+
+export function approveV4RosterChange(changeId: number): Promise<AjaxResult> {
+  return request({ url: `/basket/v4/registration-audit/roster-changes/${changeId}/approve`, method: 'post' })
+}
+
+export function rejectV4RosterChange(changeId: number, data: { rejectReason: string }): Promise<AjaxResult> {
+  return request({ url: `/basket/v4/registration-audit/roster-changes/${changeId}/reject`, method: 'post', data })
+}

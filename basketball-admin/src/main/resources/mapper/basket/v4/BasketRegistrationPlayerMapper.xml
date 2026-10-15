@@ -33,6 +33,7 @@
         <result property="jerseyNo" column="jersey_no" />
         <result property="isCaptain" column="is_captain" />
         <result property="isStarter" column="is_starter" />
+        <result property="currentMember" column="current_member" />
     </resultMap>
 
     <sql id="BaseColumns">id, registration_id, division_id, season_id, team_id, player_id, member_id, platform_identity_id, platform_code, game_id_snapshot, player_name_snapshot, position, jersey_no, is_captain, is_starter, sort_order, create_time, update_time, is_delete</sql>
@@ -49,9 +50,18 @@
     </select>
 
     <select id="selectVoByRegistrationId" resultMap="BasketRegistrationPlayerVoResult">
-        select player_id, player_name_snapshot, game_id_snapshot, platform_code, position, jersey_no, is_captain, is_starter
-        from basket_registration_player
-        where registration_id = #{registrationId} and is_delete = 0
+        select rp.player_id, rp.player_name_snapshot, rp.game_id_snapshot, rp.platform_code, rp.position,
+               rp.jersey_no, rp.is_captain, rp.is_starter,
+               case when tm.id is null then 0 else 1 end as current_member
+        from basket_registration_player rp
+        left join basket_registration r on r.id = rp.registration_id
+        left join basket_team_member tm
+            on tm.team_id = r.team_id
+           and tm.player_id = rp.player_id
+           and tm.is_current = 1
+           and tm.membership_status = 1
+           and tm.is_delete = 0
+        where rp.registration_id = #{registrationId} and rp.is_delete = 0
         order by sort_order asc, id asc
     </select>
 
@@ -110,14 +120,69 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <select id="countRosterPlayers" resultType="int">
+        select count(1)
+        from basket_registration_player
+        where registration_id = #{registrationId}
+          and is_delete = 0
+    </select>
+
+    <select id="countActiveMember" resultType="int">
+        select count(1)
+        from basket_team_member
+        where team_id = #{teamId}
+          and player_id = #{playerId}
+          and is_current = 1
+          and membership_status = 1
+          and is_delete = 0
+    </select>
+
+    <select id="countCurrentEligible" resultType="int">
+        select count(1)
+        from basket_registration_player rp
+        inner join basket_registration r on r.id = rp.registration_id and r.is_delete = 0
+        inner join basket_team_member tm
+            on tm.team_id = r.team_id
+           and tm.player_id = rp.player_id
+           and tm.is_current = 1
+           and tm.membership_status = 1
+           and tm.is_delete = 0
+        where rp.registration_id = #{registrationId}
+          and rp.is_delete = 0
+    </select>
+
     <select id="countActivePlayerInDivision" resultType="int">
         select count(1)
         from basket_registration_player rp
         inner join basket_registration r on r.id = rp.registration_id and r.is_delete = 0
+        inner join basket_division d on d.id = r.division_id and d.is_delete = 0
+        left join basket_team_member tm
+            on tm.team_id = r.team_id
+           and tm.player_id = rp.player_id
+           and tm.is_current = 1
+           and tm.membership_status = 1
+           and tm.is_delete = 0
         where rp.is_delete = 0
           and rp.division_id = #{divisionId}
           and rp.player_id = #{playerId}
-          and r.registration_status not in ('WITHDRAWN', 'REJECTED', 'CANCELLED')
+          and r.registration_status in ('PENDING_REVIEW', 'APPROVED')
+          and (
+            d.division_status in ('FINISHED', 'ARCHIVED')
+            or exists (
+                select 1 from basket_match m
+                where m.division_id = r.division_id and m.is_delete = 0
+                  and m.match_status in ('PLAYING', 'FINISHED', 'FORFEITED')
+            )
+            or exists (
+                select 1 from basket_match_player_stat s
+                where s.division_id = r.division_id and s.is_delete = 0
+            )
+            or exists (
+                select 1 from basket_match_submission_player_stat ss
+                where ss.division_id = r.division_id and ss.is_delete = 0
+            )
+            or tm.id is not null
+          )
         <if test="excludeRegistrationId != null">and r.id != #{excludeRegistrationId}</if>
     </select>
 

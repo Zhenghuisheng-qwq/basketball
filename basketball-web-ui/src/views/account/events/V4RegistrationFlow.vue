@@ -13,6 +13,7 @@ import {
   getV4RegistrationDivisionContext,
   saveV4Registration,
   submitV4Registration,
+  submitV4RosterChange,
   withdrawV4Registration,
 } from '@/api/v4PlayerEvents'
 import type {
@@ -58,7 +59,10 @@ const eligibleCount = computed(() => division.value?.eligibleRosterCount ?? elig
 const selectedCount = computed(() => selectedPlayerIds.value.length)
 
 const canMutate = computed(() => Boolean(division.value?.canRegister))
+const rosterChangeMode = ref(false)
+const canRequestRosterChange = computed(() => Boolean(division.value?.rosterChangeAllowed && registrationId.value))
 const isReadonly = computed(() => {
+  if (rosterChangeMode.value) return false
   const status = (division.value?.myRegistrationStatus || '').toUpperCase()
   if (!canMutate.value) return true
   return status === 'PENDING_REVIEW' || status === 'APPROVED' || status === 'CANCELLED'
@@ -70,6 +74,15 @@ const canSubmit = computed(() => {
 })
 
 const bannerStatus = computed(() => {
+  if ((division.value?.eventEligibilityStatus || '').toUpperCase() === 'INELIGIBLE') {
+    return {
+      text: t('accountEvents.registration.rosterBelowMinimum', {
+        current: division.value?.currentEventRosterCount ?? 0,
+        min: rosterMin.value,
+      }),
+      type: 'danger' as const,
+    }
+  }
   const regStatus = (division.value?.myRegistrationStatus || '').toUpperCase()
   if (regStatus) {
     return {
@@ -260,6 +273,28 @@ async function handleSave() {
   }
 }
 
+async function handleRosterChange() {
+  if (!canRequestRosterChange.value || !registrationId.value || !division.value?.grantTeamId) return
+  if (selectedCount.value < rosterMin.value || selectedCount.value > rosterMax.value) {
+    ElMessage.warning(t('accountEvents.registration.minPlayersSubmit', { min: rosterMin.value, current: selectedCount.value }))
+    return
+  }
+  submitting.value = true
+  try {
+    await submitV4RosterChange({
+      registrationId: registrationId.value,
+      playerIds: selectedPlayerIds.value,
+    })
+    ElMessage.success(t('accountEvents.registration.changeRosterSubmitted'))
+    rosterChangeMode.value = false
+    await bootstrap()
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.submitFailed'))
+  } finally {
+    submitting.value = false
+  }
+}
+
 async function handleSubmit() {
   if (!canMutate.value) {
     ElMessage.warning(eligibilityHint.value || t('accountEvents.registration.cannotRegisterNow'))
@@ -401,7 +436,7 @@ onMounted(() => {
 
       <div class="v4-reg-actions">
         <button
-          v-if="!isReadonly"
+          v-if="!isReadonly && !rosterChangeMode"
           type="button"
           class="account-btn-secondary"
           :disabled="saving || !selectedPlayerIds.length"
@@ -410,7 +445,25 @@ onMounted(() => {
           {{ t('accountEvents.common.saveDraft') }}
         </button>
         <button
-          v-if="!isReadonly"
+          v-if="canRequestRosterChange && !rosterChangeMode"
+          type="button"
+          class="account-btn-primary"
+          @click="rosterChangeMode = true"
+        >
+          {{ t('accountEvents.registration.changeRoster') }}
+        </button>
+        <p v-if="rosterChangeMode" class="v4-reg-hint">{{ t('accountEvents.registration.changeRosterHint') }}</p>
+        <button
+          v-if="rosterChangeMode"
+          type="button"
+          class="account-btn-primary"
+          :disabled="submitting"
+          @click="handleRosterChange"
+        >
+          {{ t('accountEvents.registration.changeRoster') }}
+        </button>
+        <button
+          v-if="!isReadonly && !rosterChangeMode"
           type="button"
           class="account-btn-primary"
           :disabled="submitting || !canSubmit"

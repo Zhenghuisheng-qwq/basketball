@@ -38,6 +38,8 @@ public interface BasketV4MatchMapper {
 
     int countByDivisionId(@Param("divisionId") Long divisionId);
 
+    int countStartedByDivisionId(@Param("divisionId") Long divisionId);
+
     int countByDivisionIdAndStageCode(@Param("divisionId") Long divisionId, @Param("stageCode") String stageCode);
 
     List<BasketV4Match> selectByStageId(@Param("stageId") Long stageId);

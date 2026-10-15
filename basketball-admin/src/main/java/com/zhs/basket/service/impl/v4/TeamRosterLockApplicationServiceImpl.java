@@ -12,6 +12,9 @@ import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionRosterEntryMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionRosterVersionMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationMapper;
+import com.zhs.basket.mapper.v4.BasketRegistrationPlayerMapper;
+import com.zhs.basket.support.v4.CurrentRosterEligibility;
+import com.zhs.basket.support.v4.RosterEligibilityQueries;
 import com.zhs.basket.req.AuditFieldInput;
 import com.zhs.basket.service.v4.IBasketV4EventSnapshotService;
 import com.zhs.basket.service.v4.IBasketV4RosterVersionService;
@@ -48,6 +51,10 @@ public class TeamRosterLockApplicationServiceImpl implements ITeamRosterLockAppl
     @Autowired
     private BasketRegistrationMapper registrationMapper;
     @Autowired
+    private BasketRegistrationPlayerMapper registrationPlayerMapper;
+    @Autowired
+    private RosterEligibilityQueries eligibilityQueries;
+    @Autowired
     private BasketTeamMapper teamMapper;
     @Autowired
     private BasketDivisionRosterEntryMapper rosterEntryMapper;
@@ -78,6 +85,7 @@ public class TeamRosterLockApplicationServiceImpl implements ITeamRosterLockAppl
         rosterSupport.requireTeamMode(division);
         RuleVersionView ruleVersion = validateRule(division);
         List<BasketRegistration> registrations = registrationMapper.selectByDivisionId(divisionId);
+        validateCurrentEligibility(division, registrations);
         validateAllocation(division, registrations);
         validateFormalCapacity(division, registrations);
         validateCandidateOrder(registrations);
@@ -177,6 +185,21 @@ public class TeamRosterLockApplicationServiceImpl implements ITeamRosterLockAppl
             throw new ServiceException("\u89c4\u5219\u7248\u672c\u5c1a\u672a\u9501\u5b9a\uff0c\u4e0d\u80fd\u9501\u5b9a\u6700\u7ec8\u540d\u5355");
         }
         return ruleVersion;
+    }
+
+    private void validateCurrentEligibility(BasketDivision division, List<BasketRegistration> registrations) {
+        int minimum = CurrentRosterEligibility.minimum(division);
+        if (minimum <= 0) {
+            return;
+        }
+        for (BasketRegistration row : registrations) {
+            if (!rosterSupport.isApproved(row) || rosterSupport.roleOf(row) != ParticipationRoleEnum.FORMAL) {
+                continue;
+            }
+            if (eligibilityQueries.eligibleCount(row.getId(), division.getId()) < minimum) {
+                throw new ServiceException("球队当前有效参赛人数不足，不能锁定正式名单");
+            }
+        }
     }
 
     private void validateAllocation(BasketDivision division, List<BasketRegistration> registrations) {

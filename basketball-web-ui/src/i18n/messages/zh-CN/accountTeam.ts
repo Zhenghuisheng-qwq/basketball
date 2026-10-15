@@ -438,6 +438,7 @@ export default {
     changeSubmitted: '变更申请已提交，等待审核',
     submitFailed: '提交失败',
     nameRequired: '请输入球队名称',
+    shortNameRequired: '请输入球队简称',
     certResubmitted: '已重新提交球队认证，请等待审核',
     certSubmitted: '已提交球队认证，请等待审核',
     certFailed: '提交认证失败',

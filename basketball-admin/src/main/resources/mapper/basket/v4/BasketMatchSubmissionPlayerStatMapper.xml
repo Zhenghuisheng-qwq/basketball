@@ -89,6 +89,16 @@
         order by id asc
     </select>
 
+    <select id="countByDivisionId" resultType="int">
+        select count(1) from basket_match_submission_player_stat
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
+    <select id="countByEventPlayerId" resultType="int">
+        select count(1) from basket_match_submission_player_stat
+        where event_player_id = #{eventPlayerId} and is_delete = 0
+    </select>
+
     <update id="deleteBySubmissionId">
         update basket_match_submission_player_stat
         set is_delete = 1, update_time = now()

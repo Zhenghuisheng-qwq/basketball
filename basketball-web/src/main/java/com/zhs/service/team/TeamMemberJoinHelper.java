@@ -23,6 +23,7 @@ import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamMember;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.IBusinessMessageService;
+import com.zhs.service.impl.v4.EventRosterMembershipSync;
 import com.zhs.support.TeamMembershipSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
@@ -55,6 +56,8 @@ public class TeamMemberJoinHelper {
     private TeamMembershipSupport teamMembershipSupport;
     @Resource
     private ICaptainPermissionService captainPermissionService;
+    @Resource
+    private EventRosterMembershipSync eventRosterMembershipSync;
 
     @Transactional(rollbackFor = Exception.class)
     public BasketTeamMember addMember(BasketTeam team, Long memberId, Long playerId, TeamJoinSourceEnum joinSource) {
@@ -67,6 +70,7 @@ public class TeamMemberJoinHelper {
         assertTeamHasCapacity(team);
         captainPermissionService.requireCertifiedPlayer(memberId);
         teamMembershipSupport.assertEligibleToJoinTeam(memberId, team.getDivisionId());
+        eventRosterMembershipSync.retireStaleBeforeRejoin(team.getId(), playerId);
 
         Date now = new Date();
         BasketTeamMember member = new BasketTeamMember();

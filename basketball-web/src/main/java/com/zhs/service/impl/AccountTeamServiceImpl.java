@@ -545,7 +545,16 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
                 assertTeamNameUnique(team.getDivisionId(), req.getTeamName().trim(), team.getId());
                 team.setTeamName(req.getTeamName().trim());
             }
-            team.setShortName(trimToNull(req.getShortName()));
+            if (StringUtils.hasText(req.getTeamName()) || req.getShortName() != null) {
+                String newShortName = trimToNull(req.getShortName());
+                if (newShortName == null) {
+                    throw new ServiceException("球队简称不能为空");
+                }
+                if (newShortName.length() > 12) {
+                    throw new ServiceException("球队简称长度应为 1-12 字");
+                }
+                team.setShortName(newShortName);
+            }
             team.setGameTerminal(trimToNull(req.getGameTerminal()));
             team.setDescription(trimToNull(req.getDescription()));
             team.setRegionCode(trimToNull(req.getRegionCode()));

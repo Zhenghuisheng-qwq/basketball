@@ -14,6 +14,7 @@ import com.zhs.basket.mapper.v4.BasketSeriesMapper;
 import com.zhs.basket.query.v4.BasketDivisionQuery;
 import com.zhs.basket.query.v4.BasketSeasonQuery;
 import com.zhs.basket.service.v4.IBasketV4SeasonService;
+import com.zhs.basket.support.v4.CaptainGrantEventSyncSupport;
 import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.vo.v4.BasketSeasonDetailVo;
 import com.zhs.basket.vo.v4.BasketSeasonListVo;
@@ -40,6 +41,8 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
     private BasketDivisionMapper divisionMapper;
     @Autowired
     private V4PublicReadCachePublisher publicReadCachePublisher;
+    @Autowired
+    private CaptainGrantEventSyncSupport captainGrantEventSyncSupport;
 
     @Override
     public List<BasketSeasonListVo> selectList(BasketSeasonQuery query) {
@@ -85,6 +88,7 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
     @Transactional(rollbackFor = Exception.class)
     public void update(Long id, BasketSeasonUpdateReq req) {
         BasketSeason season = requireSeason(id);
+        Date previousSeasonEnd = season.getSeasonEndTime();
         int divisionCount = seasonMapper.countDivisionBySeasonId(id);
         boolean published = PublishStatusEnum.PUBLISHED.getCode().equals(season.getPublishStatus());
         boolean archived = SeasonStatusEnum.ARCHIVED.getCode().equals(season.getSeasonStatus());
@@ -167,6 +171,7 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
         if (seasonMapper.updateById(season) != 1) {
             throw new ServiceException("更新 Season 失败");
         }
+        captainGrantEventSyncSupport.onSeasonEndChanged(id, previousSeasonEnd, season.getSeasonEndTime());
         publicReadCachePublisher.seasonMutation(id);
     }
 

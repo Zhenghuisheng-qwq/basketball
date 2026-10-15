@@ -9,6 +9,8 @@ import com.zhs.basket.mapper.BasketPlayerProfileMapper;
 import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IBasketV4EventSnapshotService;
+import com.zhs.basket.support.v4.PreMatchEventPlayerSync;
+import com.zhs.basket.support.v4.RosterEligibilityQueries;
 import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +43,10 @@ public class BasketV4EventSnapshotServiceImpl implements IBasketV4EventSnapshotS
     private BasketPlayerProfileMapper playerProfileMapper;
     @Autowired
     private V4PublicReadCachePublisher publicReadCachePublisher;
+    @Autowired
+    private PreMatchEventPlayerSync eventPlayerSync;
+    @Autowired
+    private RosterEligibilityQueries eligibilityQueries;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -71,12 +77,15 @@ public class BasketV4EventSnapshotServiceImpl implements IBasketV4EventSnapshotS
                 existingTeam.setRosterVersionId(rosterVersionId);
                 existingTeam.setRegistrationId(registration.getId());
                 eventTeamMapper.updateById(existingTeam);
+                if (!eligibilityQueries.frozen(registration.getDivisionId())) {
+                    eventPlayerSync.syncWritable(registration);
+                }
                 return;
             }
             throw new ServiceException("该 Division 下已存在该球队的赛事快照");
         }
 
-        List<BasketRegistrationPlayer> players = registrationPlayerMapper.selectByRegistrationId(registration.getId());
+        List<BasketRegistrationPlayer> players = eventPlayerSync.legalPlayers(registration);
         if (players.isEmpty()) {
             throw new ServiceException("报名阵容为空，无法生成快照");
         }

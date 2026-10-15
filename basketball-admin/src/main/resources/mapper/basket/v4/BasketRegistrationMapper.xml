@@ -17,6 +17,7 @@
         <result property="participationRole" column="participation_role" />
         <result property="candidateOrder" column="candidate_order" />
         <result property="lineupCount" column="lineup_count" />
+        <result property="lineupVersion" column="lineup_version" />
         <result property="submitTime" column="submit_time" />
         <result property="approveTime" column="approve_time" />
         <result property="rejectReason" column="reject_reason" />
@@ -38,11 +39,14 @@
         <result property="captainPlayerId" column="captain_player_id" />
         <result property="captainPlayerName" column="captain_player_name" />
         <result property="lineupCount" column="lineup_count" />
+        <result property="lineupMinCount" column="lineup_min_count" />
+        <result property="currentEligibleCount" column="current_eligible_count" />
+        <result property="lineupVersion" column="lineup_version" />
         <result property="registrationStatus" column="registration_status" />
         <result property="submitTime" column="submit_time" />
     </resultMap>
 
-    <sql id="BaseColumns">id, season_id, division_id, registration_mode, registration_source, source_personal_draw_team_id, source_personal_draw_batch_id, team_id, captain_player_id, captain_member_id, registration_status, participation_role, candidate_order, lineup_count, submit_time, approve_time, reject_reason, withdraw_time, audit_user_id, audit_remark, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, season_id, division_id, registration_mode, registration_source, source_personal_draw_team_id, source_personal_draw_batch_id, team_id, captain_player_id, captain_member_id, registration_status, participation_role, candidate_order, lineup_count, lineup_version, submit_time, approve_time, reject_reason, withdraw_time, audit_user_id, audit_remark, create_time, update_time, is_delete</sql>
 
     <select id="selectById" resultMap="BasketRegistrationResult">
         select <include refid="BaseColumns" /> from basket_registration
@@ -101,6 +105,37 @@
             r.captain_player_id,
             coalesce(p.game_nickname, mp.nickname) as captain_player_name,
             r.lineup_count,
+            d.lineup_min_count,
+            (
+                select count(1)
+                from basket_registration_player rp
+                where rp.registration_id = r.id
+                  and rp.is_delete = 0
+                  and (
+                    d.division_status in ('FINISHED', 'ARCHIVED')
+                    or exists (
+                        select 1 from basket_match m
+                        where m.division_id = r.division_id and m.is_delete = 0
+                          and m.match_status in ('PLAYING', 'FINISHED', 'FORFEITED')
+                    )
+                    or exists (
+                        select 1 from basket_match_player_stat s
+                        where s.division_id = r.division_id and s.is_delete = 0
+                    )
+                    or exists (
+                        select 1 from basket_match_submission_player_stat ss
+                        where ss.division_id = r.division_id and ss.is_delete = 0
+                    )
+                    or exists (
+                        select 1 from basket_team_member tm
+                        where tm.team_id = r.team_id
+                          and tm.player_id = rp.player_id
+                          and tm.is_current = 1
+                          and tm.membership_status = 1
+                          and tm.is_delete = 0
+                    )
+                  )
+            ) as current_eligible_count,
             r.registration_status,
             r.submit_time
         from basket_registration r
@@ -165,6 +200,7 @@
             <if test="participationRole != null">participation_role = #{participationRole},</if>
             <if test="candidateOrder != null">candidate_order = #{candidateOrder},</if>
             <if test="lineupCount != null">lineup_count = #{lineupCount},</if>
+            <if test="lineupVersion != null">lineup_version = #{lineupVersion},</if>
             <if test="submitTime != null">submit_time = #{submitTime},</if>
             <if test="approveTime != null">approve_time = #{approveTime},</if>
             <if test="rejectReason != null">reject_reason = #{rejectReason},</if>
@@ -174,6 +210,17 @@
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="bumpLineupVersion">
+        update basket_registration
+        set lineup_count = #{lineupCount},
+            lineup_version = lineup_version + 1,
+            update_time = now()
+        where id = #{id}
+          and is_delete = 0
+          and registration_status = 'APPROVED'
+          and lineup_version = #{expectedVersion}
     </update>
 
     <update id="softDelete">

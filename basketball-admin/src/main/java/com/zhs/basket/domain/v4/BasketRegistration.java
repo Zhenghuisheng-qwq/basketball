@@ -22,6 +22,7 @@ public class BasketRegistration {
     private String participationRole;
     private Integer candidateOrder;
     private Integer lineupCount;
+    private Integer lineupVersion;
     private Date submitTime;
     private Date approveTime;
     private String rejectReason;

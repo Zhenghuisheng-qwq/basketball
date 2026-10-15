@@ -13,6 +13,7 @@
         <result property="activeUniqueKey" column="active_unique_key" />
         <result property="validFrom" column="valid_from" />
         <result property="validTo" column="valid_to" />
+        <result property="validToMode" column="valid_to_mode" />
         <result property="grantedBy" column="granted_by" />
         <result property="remark" column="remark" />
         <result property="grantSource" column="grant_source" />
@@ -37,6 +38,9 @@
         <result property="grantStatus" column="grant_status" />
         <result property="validFrom" column="valid_from" />
         <result property="validTo" column="valid_to" />
+        <result property="validToMode" column="valid_to_mode" />
+        <result property="divisionMatchEndTime" column="division_match_end_time" />
+        <result property="seasonEndTime" column="season_end_time" />
         <result property="remark" column="remark" />
         <result property="createTime" column="create_time" />
         <result property="grantSource" column="grant_source" />
@@ -44,7 +48,7 @@
         <result property="teamBoundLabel" column="team_bound_label" />
     </resultMap>
 
-    <sql id="BaseColumns">id, division_id, season_id, team_id, player_id, member_id, grant_status, active_unique_key, valid_from, valid_to, granted_by, remark, grant_source, source_draw_team_id, create_time, update_time, is_delete</sql>
+    <sql id="BaseColumns">id, division_id, season_id, team_id, player_id, member_id, grant_status, active_unique_key, valid_from, valid_to, valid_to_mode, granted_by, remark, grant_source, source_draw_team_id, create_time, update_time, is_delete</sql>
 
     <sql id="NotDeleted">is_delete = 0</sql>
 
@@ -76,6 +80,9 @@
             g.grant_status,
             g.valid_from,
             g.valid_to,
+            g.valid_to_mode,
+            d.match_end_time as division_match_end_time,
+            se.match_end_time as season_end_time,
             g.remark,
             g.grant_source,
             case when g.team_id is null then '尚未绑定球队' else t.team_name end as team_bound_label,
@@ -184,11 +191,11 @@
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_captain_grant (
             division_id, season_id, team_id, player_id, member_id, grant_status, active_unique_key,
-            valid_from, valid_to, granted_by, remark, grant_source, source_draw_team_id,
+            valid_from, valid_to, valid_to_mode, granted_by, remark, grant_source, source_draw_team_id,
             create_time, update_time, is_delete
         ) values (
             #{divisionId}, #{seasonId}, #{teamId}, #{playerId}, #{memberId}, #{grantStatus}, #{activeUniqueKey},
-            #{validFrom}, #{validTo}, #{grantedBy}, #{remark}, #{grantSource}, #{sourceDrawTeamId},
+            #{validFrom}, #{validTo}, #{validToMode}, #{grantedBy}, #{remark}, #{grantSource}, #{sourceDrawTeamId},
             #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
@@ -205,12 +212,46 @@
             <if test="activeUniqueKey != null">active_unique_key = #{activeUniqueKey},</if>
             <if test="validFrom != null">valid_from = #{validFrom},</if>
             <if test="validTo != null">valid_to = #{validTo},</if>
+            <if test="validToMode != null">valid_to_mode = #{validToMode},</if>
             <if test="grantedBy != null">granted_by = #{grantedBy},</if>
             <if test="remark != null">remark = #{remark},</if>
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0
     </update>
+
+    <update id="updateValidWindow">
+        update basket_captain_grant
+        set valid_to = #{validTo},
+            valid_to_mode = #{validToMode},
+            update_time = now()
+        where id = #{id}
+          and is_delete = 0
+          and grant_status = 'ACTIVE'
+          and ((valid_to is null and #{expectedValidTo} is null) or valid_to = #{expectedValidTo})
+          and ((valid_to_mode is null and #{expectedValidToMode} is null) or valid_to_mode = #{expectedValidToMode})
+    </update>
+
+    <select id="selectAutoEventByDivisionId" resultMap="BasketCaptainGrantResult">
+        select <include refid="BaseColumns" /> from basket_captain_grant
+        where is_delete = 0
+          and division_id = #{divisionId}
+          and grant_status = 'ACTIVE'
+          and valid_to_mode = 'AUTO_EVENT'
+    </select>
+
+    <select id="selectAutoEventDependingOnSeason" resultMap="BasketCaptainGrantResult">
+        select g.id, g.division_id, g.season_id, g.team_id, g.player_id, g.member_id, g.grant_status,
+               g.active_unique_key, g.valid_from, g.valid_to, g.valid_to_mode, g.granted_by, g.remark,
+               g.grant_source, g.source_draw_team_id, g.create_time, g.update_time, g.is_delete
+        from basket_captain_grant g
+        inner join basket_division d on d.id = g.division_id and d.is_delete = 0
+        where g.is_delete = 0
+          and g.season_id = #{seasonId}
+          and g.grant_status = 'ACTIVE'
+          and g.valid_to_mode = 'AUTO_EVENT'
+          and d.match_end_time is null
+    </select>
 
     <update id="revokeById">
         update basket_captain_grant

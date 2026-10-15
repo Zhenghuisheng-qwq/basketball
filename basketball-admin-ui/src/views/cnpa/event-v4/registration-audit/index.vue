@@ -49,6 +49,16 @@
           <el-table-column label="球队" prop="teamName" min-width="120" />
           <el-table-column label="队长" prop="captainPlayerName" min-width="100" />
           <el-table-column label="阵容人数" prop="lineupCount" width="90" align="center" />
+          <el-table-column label="当前资格" width="120" align="center">
+            <template #default="scope">
+              <el-tag v-if="scope.row.eligibilityStatus === 'INELIGIBLE'" type="danger" size="small">
+                人数不足 {{ scope.row.currentEligibleCount }}/{{ scope.row.lineupMinCount }}
+              </el-tag>
+              <el-tag v-else-if="scope.row.eligibilityStatus === 'NEEDS_REVIEW'" type="warning" size="small">待审核</el-tag>
+              <el-tag v-else-if="scope.row.eligibilityStatus === 'ELIGIBLE'" type="success" size="small">符合</el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
           <el-table-column label="状态" prop="registrationStatus" width="110" align="center">
             <template #default="scope">
               <el-tag :type="v4RegistrationStatusTagType(scope.row.registrationStatus)" size="small" class="nowrap-tag">
@@ -68,6 +78,7 @@
           </el-table-column>
         </el-table>
         <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+        <RosterChangePanel :division-id="queryParams.divisionId" />
       </el-tab-pane>
 
       <!-- 球队最终名单 -->
@@ -364,6 +375,9 @@
           <el-table-column label="队长" width="70">
             <template #default="scope">{{ scope.row.isCaptain === 1 ? '是' : '否' }}</template>
           </el-table-column>
+          <el-table-column label="当前队员" width="90">
+            <template #default="scope">{{ scope.row.currentMember === 1 ? '在队' : '已离队' }}</template>
+          </el-table-column>
         </el-table>
         <el-divider content-position="left">审核流水</el-divider>
         <el-table :data="detail.audits || []" size="small" border>
@@ -652,6 +666,7 @@
 <script setup lang="ts" name="CnpaEventV4RegistrationAudit">
 import { computed, getCurrentInstance, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import RosterChangePanel from './RosterChangePanel.vue'
 import DivisionEventSelector from '../components/DivisionEventSelector.vue'
 import DivisionContextHeader from '../components/DivisionContextHeader.vue'
 import WorkflowBlockedState from '../components/WorkflowBlockedState.vue'

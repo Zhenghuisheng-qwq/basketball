@@ -293,7 +293,7 @@ async function submitDirectProfile() {
   if (!props.teamId) return
   await updateTeam(props.teamId, {
     teamName: profileForm.teamName.trim(),
-    shortName: profileForm.shortName.trim() || undefined,
+    shortName: profileForm.shortName.trim(),
     description: profileForm.description.trim() || undefined,
     publicStatus: profileForm.publicStatus,
   })
@@ -311,7 +311,7 @@ async function submitAuditProfile() {
     await savePublicStatusIfNeeded()
     await submitTeamProfileChange(props.teamId, {
       teamName: profileForm.teamName.trim(),
-      teamShortName: profileForm.shortName.trim() || undefined,
+      teamShortName: profileForm.shortName.trim(),
       logoFileId: profileLogoFileId.value || undefined,
       description: profileForm.description.trim() || undefined,
       changeReason: profileForm.changeReason.trim() || undefined,
@@ -348,6 +348,10 @@ async function handleSubmit() {
   if (!props.canManage) return
   if (!profileForm.teamName.trim()) {
     ElMessage.warning(t('accountTeam.profile.nameRequired'))
+    return
+  }
+  if (!profileForm.shortName.trim()) {
+    ElMessage.warning(t('accountTeam.profile.shortNameRequired'))
     return
   }
   if (useAuditFlow.value) {
@@ -623,7 +627,7 @@ function formatCompare(oldVal?: string | null, newVal?: string | null) {
 
         <div class="team-form-grid">
           <label>{{ t('accountTeam.profile.teamName') }}<input v-model="profileForm.teamName" type="text" maxlength="30" /></label>
-          <label>{{ t('accountTeam.profile.shortName') }}<input v-model="profileForm.shortName" type="text" maxlength="12" /></label>
+          <label>{{ t('accountTeam.profile.shortName') }}<input v-model="profileForm.shortName" type="text" maxlength="12" required /></label>
           <label>
             {{ t('accountTeam.profile.publicStatus') }}
             <select v-model.number="profileForm.publicStatus">

@@ -3,6 +3,7 @@ package com.zhs.web.controller.basket.v4;
 import com.zhs.basket.constant.BasketEventV4Perms;
 import com.zhs.basket.dto.v4.BasketRegistrationAuditRejectReq;
 import com.zhs.basket.query.v4.BasketRegistrationAuditQuery;
+import com.zhs.basket.service.impl.v4.BasketV4RosterChangeAuditServiceImpl;
 import com.zhs.basket.service.v4.IBasketV4RegistrationAuditService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
@@ -19,6 +20,30 @@ public class BasketV4RegistrationAuditController extends BaseController {
 
     @Autowired
     private IBasketV4RegistrationAuditService registrationAuditService;
+    @Autowired
+    private BasketV4RosterChangeAuditServiceImpl rosterChangeAuditService;
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.REGISTRATION_AUDIT_LIST + "')")
+    @GetMapping("/roster-changes")
+    public AjaxResult rosterChanges(@RequestParam Long divisionId) {
+        return success(rosterChangeAuditService.listPending(divisionId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.REGISTRATION_AUDIT_APPROVE + "')")
+    @Log(title = "V4名单变更通过", businessType = BusinessType.UPDATE)
+    @PostMapping("/roster-changes/{changeId}/approve")
+    public AjaxResult approveRosterChange(@PathVariable Long changeId) {
+        rosterChangeAuditService.approve(changeId);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.REGISTRATION_AUDIT_REJECT + "')")
+    @Log(title = "V4名单变更驳回", businessType = BusinessType.UPDATE)
+    @PostMapping("/roster-changes/{changeId}/reject")
+    public AjaxResult rejectRosterChange(@PathVariable Long changeId, @RequestBody BasketRegistrationAuditRejectReq req) {
+        rosterChangeAuditService.reject(changeId, req);
+        return success();
+    }
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.REGISTRATION_AUDIT_LIST + "')")
     @GetMapping("/list")

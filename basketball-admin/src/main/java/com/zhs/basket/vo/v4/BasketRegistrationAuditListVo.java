@@ -14,6 +14,9 @@ public class BasketRegistrationAuditListVo {
     private Long captainPlayerId;
     private String captainPlayerName;
     private Integer lineupCount;
+    private Integer lineupMinCount;
+    private Integer currentEligibleCount;
+    private String eligibilityStatus;
     private String registrationStatus;
     private Date submitTime;
 }

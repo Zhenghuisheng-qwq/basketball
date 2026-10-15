@@ -19,6 +19,8 @@ public class BasketCaptainGrant {
     private String activeUniqueKey;
     private Date validFrom;
     private Date validTo;
+    /** AUTO_EVENT / CUSTOM；历史数据为空，表示尚未确认，不自动改期 */
+    private String validToMode;
     private Long grantedBy;
     private String remark;
     private String grantSource;

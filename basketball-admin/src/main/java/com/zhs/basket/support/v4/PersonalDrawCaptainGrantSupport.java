@@ -5,6 +5,7 @@ import com.zhs.basket.domain.v4.BasketCaptainGrant;
 import com.zhs.basket.domain.v4.BasketDivision;
 import com.zhs.basket.domain.v4.BasketPersonalDrawTeam;
 import com.zhs.basket.enums.v4.CaptainGrantSourceEnum;
+import com.zhs.basket.enums.v4.CaptainGrantValidToModeEnum;
 import com.zhs.basket.enums.v4.CaptainGrantStatusEnum;
 import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
 import com.zhs.basket.mapper.v4.BasketPersonalDrawTeamMapper;
@@ -68,6 +69,7 @@ public class PersonalDrawCaptainGrantSupport {
         grant.setActiveUniqueKey(CaptainGrantActiveKeySupport.buildActiveUniqueKey(division.getId(), drawTeam.getCaptainPlayerId()));
         grant.setValidFrom(now);
         grant.setValidTo(validTo);
+        grant.setValidToMode(CaptainGrantValidToModeEnum.AUTO_EVENT.getCode());
         grant.setGrantedBy(SecurityUtils.getUserId());
         grant.setRemark("个人抽签成队自动授权");
         grant.setGrantSource(CaptainGrantSourceEnum.PERSONAL_DRAW.getCode());

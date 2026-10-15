@@ -260,7 +260,9 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   APPROVE: '通过',
   REJECT: '驳回',
   WITHDRAW: '撤回',
-  RESUBMIT: '重新提交'
+  RESUBMIT: '重新提交',
+  MEMBER_LEFT: '队员离队',
+  ROSTER_CHANGE: '名单变更'
 }
 
 const AUDIT_RESULT_LABELS: Record<string, string> = {

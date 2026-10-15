@@ -9,6 +9,8 @@ public enum CaptainGrantLogActionTypeEnum {
     CHANGE_TEAM("CHANGE_TEAM", "变更绑定球队"),
     REVOKE("REVOKE", "收回权限"),
     EXPIRE("EXPIRE", "赛事结束自动失效"),
+    ADJUST_VALID_TO("ADJUST_VALID_TO", "调整授权有效期"),
+    SYNC_EVENT_TIME("SYNC_EVENT_TIME", "同步赛事结束时间"),
     UPDATE_REMARK("UPDATE_REMARK", "修改备注"),
     PAYMENT_CONFIRM("PAYMENT_CONFIRM", "确认缴费");
 

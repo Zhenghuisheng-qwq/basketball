@@ -34,5 +34,7 @@ public interface BasketRegistrationMapper {
 
     int updateById(BasketRegistration entity);
 
+    int bumpLineupVersion(@Param("id") Long id, @Param("lineupCount") Integer lineupCount, @Param("expectedVersion") Integer expectedVersion);
+
     int softDelete(@Param("id") Long id);
 }

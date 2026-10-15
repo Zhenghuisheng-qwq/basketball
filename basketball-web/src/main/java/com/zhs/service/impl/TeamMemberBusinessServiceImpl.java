@@ -19,6 +19,7 @@ import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamInvitation;
 import com.zhs.model.BasketTeamMember;
 import com.zhs.request.team.TeamMemberUpdateReq;
+import com.zhs.service.impl.v4.EventRosterMembershipSync;
 import com.zhs.response.team.CandidatePlayerItemResp;
 import com.zhs.response.team.CandidatePlayerPageResp;
 import com.zhs.response.team.TeamMemberDetailResp;
@@ -92,6 +93,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     private TeamMembershipSupport teamMembershipSupport;
     @Resource
     private BasketPublicSupport publicSupport;
+    @Resource
+    private EventRosterMembershipSync eventRosterMembershipSync;
 
     @Override
     public IPage<TeamMemberItemResp> pageMembers(String teamId, Integer currentPage, Integer pageSize) {
@@ -246,8 +249,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         if (TeamMemberRoleEnum.CAPTAIN.getCode().equals(target.getRoleType())) {
             throw new ServiceException("不能移除队长");
         }
-        assertNotInActiveRegistration(target);
         markMemberRemoved(target, "被队长移除");
+        eventRosterMembershipSync.releaseFromWritableRegistrations(teamPk, target.getPlayerId(), "队长移除球员，已从开赛前报名名单释放");
         teamMemberJoinHelper.clearActiveMemberSlot(target);
         clearPlayerCurrentTeam(target.getPlayerId(), teamPk);
         teamMemberJoinHelper.recalculateCurrentMemberCount(teamPk);
@@ -264,8 +267,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         if (TeamMemberRoleEnum.CAPTAIN.getCode().equals(membership.getRoleType())) {
             throw new ServiceException("队长不能直接离队");
         }
-        assertNotInActiveRegistration(membership);
         markMemberLeft(membership, "主动离队");
+        eventRosterMembershipSync.releaseFromWritableRegistrations(teamPk, membership.getPlayerId(), "球员离队，已从开赛前报名名单释放");
         teamMemberJoinHelper.clearActiveMemberSlot(membership);
         clearPlayerCurrentTeam(membership.getPlayerId(), teamPk);
         teamMemberJoinHelper.recalculateCurrentMemberCount(teamPk);
@@ -478,10 +481,6 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         CandidatePlayerPageResp respPage = new CandidatePlayerPageResp(page, size, total);
         respPage.setRecords(records);
         return respPage;
-    }
-
-    private void assertNotInActiveRegistration(BasketTeamMember member) {
-        // legacy registration domain removed in R5
     }
 
     private void markMemberRemoved(BasketTeamMember member, String reason) {

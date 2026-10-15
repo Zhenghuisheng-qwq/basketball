@@ -25,6 +25,12 @@ public interface BasketRegistrationPlayerMapper {
 
     int softDelete(@Param("id") Long id);
 
+    int countCurrentEligible(@Param("registrationId") Long registrationId);
+
+    int countRosterPlayers(@Param("registrationId") Long registrationId);
+
+    int countActiveMember(@Param("teamId") Long teamId, @Param("playerId") Long playerId);
+
     int countActivePlayerInDivision(@Param("divisionId") Long divisionId,
                                     @Param("playerId") Long playerId,
                                     @Param("excludeRegistrationId") Long excludeRegistrationId);

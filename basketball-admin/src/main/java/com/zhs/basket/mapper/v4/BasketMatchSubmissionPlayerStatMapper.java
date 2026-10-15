@@ -16,4 +16,8 @@ public interface BasketMatchSubmissionPlayerStatMapper {
     int insert(BasketMatchSubmissionPlayerStat entity);
     int updateById(BasketMatchSubmissionPlayerStat entity);
     int softDelete(@Param("id") Long id);
+
+    int countByDivisionId(@Param("divisionId") Long divisionId);
+
+    int countByEventPlayerId(@Param("eventPlayerId") Long eventPlayerId);
 }
